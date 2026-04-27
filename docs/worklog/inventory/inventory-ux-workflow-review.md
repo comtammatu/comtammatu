@@ -53,7 +53,7 @@ flowchart LR
     HQ -->|"Transfer trực tiếp"| BW
     CK -->|"Production Order"| CK
     CK -->|"Transfer thành phẩm"| BW
-    BW -->|"Stock issue (kitchen_use)"| BK
+    BW -->|"Intra-branch transfer (Cấp bếp)"| BK
     BK -->|"Consumption theo món bán"| POS
 
     HQ --- CTRL
@@ -79,9 +79,9 @@ flowchart TD
     B["Nhà cung cấp giao hàng"]
     C["Tạo / kiểm GRN"]
     D["Cập nhật tồn HQ + WAC"]
-    E["Nhập Supplier Invoice"]
-    F["3-way matching"]
-    G["Chốt công nợ NCC"]
+    E["Finance P1: Supplier Invoice"]
+    F["Finance P1: 3-way matching"]
+    G["Finance P1: Chốt công nợ NCC"]
 
     A --> B --> C --> D --> E --> F --> G
 ```
@@ -147,7 +147,7 @@ flowchart TD
     B["Xác nhận hàng thực nhận"]
     C["Tồn vào kho chi nhánh"]
     D["Điều phối xuống bếp chi nhánh"]
-    E["Tạo stock_issue(kitchen_use)"]
+    E["Tạo intra-branch transfer (Cấp bếp)"]
     F["Bếp chi nhánh sẵn sàng bán"]
 
     A --> B --> C --> D --> E --> F
@@ -158,7 +158,7 @@ UX note:
 - Đây là điểm rối nhất của Inventory branch flow.
 - Trong nghiệp vụ, đây là một chuỗi liền nhau.
 - Trong UI, phần `nhận hàng` nằm trong `transfers`, còn `cấp xuống bếp` lại nằm trong `issues`.
-- User phải tự hiểu rằng `issues/kitchen_use` chính là bước tiếp theo sau `received`, nhưng hệ thống chưa dẫn sang bước này.
+- User phải tự hiểu rằng intra-branch transfer `Cấp bếp` chính là bước tiếp theo sau `received`, nhưng hệ thống chưa dẫn sang bước này.
 
 ### 2.5 Tiêu hao bán hàng tại chi nhánh
 
@@ -301,7 +301,7 @@ Khi chưa chốt nghĩa của từ `Receiving`, UX sẽ luôn mơ hồ.
 - hủy hỏng,
 - cấp phát bếp chi nhánh.
 
-Nhưng với branch operator, `kitchen_use` không phải "issue bất thường", mà là bước vận hành chuẩn hằng ngày.
+Nhưng với branch operator, `Cấp bếp` không phải "issue bất thường", mà là bước vận hành chuẩn hằng ngày bằng intra-branch transfer.
 
 Vì vậy đặt nó dưới `Xuất kho` làm người dùng phải dịch lại trong đầu:
 
@@ -402,7 +402,7 @@ flowchart LR
     BM["Branch manager"]
     OPS["OPS / Kế toán"]
 
-    HQ -->|"PO / GRN / Invoice / outbound transfer"| H1["HQ hub"]
+    HQ -->|"PO / GRN / outbound transfer"| H1["HQ hub"]
     CK -->|"production / outbound finished goods"| H2["Central kitchen hub"]
     BM -->|"receipt / kitchen allocation / stocktake"| H3["Branch operations hub"]
     OPS -->|"reports / AP aging / variance"| H4["Control hub"]
@@ -421,7 +421,7 @@ Trước khi sửa UI, nên chốt 6 câu này:
 2. `Kho chi nhánh -> Bếp chi nhánh` có tiếp tục đặt dưới `Issues` hay tách thành nhãn `Cấp bếp`?
 3. `Ingredients / Suppliers / Recipes` có nên sống ở menu chính hay chỉ ở `Danh mục/Settings`?
 4. `Production` có nên bị ẩn hoàn toàn với non-`super_manager` ngay từ nav?
-5. Branch manager có quyền tạo transfer hay chỉ nhận transfer và tạo `kitchen_use`?
+5. Branch manager có quyền tạo transfer liên-site hay chỉ nhận inbound transfer và tạo intra-branch transfer `Cấp bếp`?
 6. Dashboard mỗi role có nên đổi từ `overview cards` sang `task queue`?
 
 ## 7. Kết luận

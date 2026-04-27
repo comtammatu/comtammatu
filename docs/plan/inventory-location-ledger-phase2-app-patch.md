@@ -70,8 +70,8 @@ Các function cần đổi trực tiếp:
 Patch intent:
 
 - `createStockIssueDraft`:
-  - insert thêm `source_location_id`
-  - nếu `issue_type = kitchen_use`, insert thêm `target_location_id = default_consumption`
+  - chỉ còn xử lý `consumption`, `writeoff`, `other`
+  - không reintroduce `issue_type = kitchen_use`
 - `fetchStockIssues` / `fetchStockIssueDetail`:
   - select thêm `source_location_id`, `target_location_id`
   - join names nếu UI cần
@@ -209,7 +209,7 @@ Không cần patch lớn ngay:
 Patch app dual-write chỉ được coi là sẵn sàng khi:
 
 1. mọi insert movement trực tiếp có thể ghi `location_id`
-2. issue draft cho `kitchen_use` có thể gắn source/target locations
+2. flow `Cấp bếp` có thể commit intra-branch transfer với from/to locations
 3. transfer draft có thể resolve from/to locations
 4. stocktake session có thể tạo với default receive location
 5. không có regression ở surface `/admin/inventory/*`

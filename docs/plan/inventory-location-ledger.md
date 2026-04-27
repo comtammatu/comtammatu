@@ -10,7 +10,7 @@ Pilot contract hiện tại đã chốt:
 
 - `HQ -> Kho chi nhánh` dùng `stock_transfer`
 - `Bếp trung tâm -> Kho chi nhánh` dùng `stock_transfer`
-- `Kho chi nhánh -> Bếp chi nhánh` dùng `stock_issue(issue_type = kitchen_use)`
+- `Kho chi nhánh -> Bếp chi nhánh` dùng intra-branch `stock_transfer` từ location kho sang location bếp/default consumption. `stock_issue(issue_type = kitchen_use)` đã retired.
 
 Contract này đủ tốt để pilot chạy, nhưng ledger hiện vẫn hạch toán theo `branch_id`. Điều đó có nghĩa:
 
@@ -123,7 +123,7 @@ Gợi ý semantics:
 
 - `transfer_out`: trừ tại `from_location_id`
 - `transfer_in`: cộng tại `to_location_id`
-- `kitchen_use`: trừ tại warehouse source location
+- intra-branch `Cấp bếp`: `transfer_out` tại warehouse source location và `transfer_in` tại kitchen/default consumption target location
 - `consumption`: trừ tại location tiêu hao mặc định của branch
 
 ### 6.3 `stock_transfers`
@@ -145,7 +145,7 @@ Nên bổ sung:
 Quy ước:
 
 - `writeoff`, `consumption`, `other`: có thể chỉ cần `source_location_id`
-- `kitchen_use`: nên có cả `source_location_id` và `target_location_id`
+- `Cấp bếp`: phải có cả `from_location_id` và `to_location_id`, cùng `branch_id`
 
 ### 6.5 `stocktake_sessions`
 
@@ -248,7 +248,7 @@ Không nên encode `location scope` vào JWT ở giai đoạn đầu.
 - seed 2 locations cho branch thường:
   - `warehouse`
   - `kitchen`
-- đổi `kitchen_use` để ghi nhận đủ source/target locations
+- ghi nhận `Cấp bếp` bằng intra-branch transfer đủ source/target locations
 - đổi `consume_stock_for_order` sang `default_consumption`
 
 ### Phase 4: Switch reports and UI
@@ -275,7 +275,7 @@ Không nên encode `location scope` vào JWT ở giai đoạn đầu.
 
 Thứ tự an toàn nhất là:
 
-1. Giữ pilot contract hiện tại với `stock_issue(kitchen_use)`
+1. Retire pilot contract cũ `stock_issue(kitchen_use)`; contract hiện hành dùng intra-branch `stock_transfer`
 2. Chỉ mở project `inventory_locations` khi có nhu cầu kiểm kê / variance thật theo kho-vs-bếp
 3. Khi mở project, triển khai theo `Phase 1 -> Phase 5`, không nhảy thẳng vào full cutover
 

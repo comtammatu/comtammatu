@@ -50,12 +50,12 @@ Nếu cần chi tiết quyền xem/tạo/xác nhận, xem [inventory-rbac-matrix
 
 | Bước | Chứng từ / thao tác hệ thống | Kết quả kho |
 | ---- | --------------------------- | ----------- |
-| Mua từ NCC | `PO`, `GRN`, `supplier_invoice` | Tăng tồn nguyên liệu tại CW hoặc CK |
+| Mua từ NCC | `PO`, `GRN` | Tăng tồn nguyên liệu tại CW hoặc CK |
 | CW cấp phát cho bếp trung tâm | `stock_transfer` | CW giảm, bếp trung tâm tăng nguyên liệu |
 | CW cấp phát cho kho chi nhánh | `stock_transfer` | CW giảm, kho chi nhánh tăng tồn |
 | Bếp trung tâm sản xuất | `production_order` | Bếp giảm nguyên liệu, tăng thành phẩm |
 | Bếp trung tâm cấp phát cho kho chi nhánh | `stock_transfer` | Bếp giảm thành phẩm, kho chi nhánh tăng tồn |
-| Kho chi nhánh cấp phát cho bếp chi nhánh | `stock_issue(issue_type = kitchen_use)` | Kho chi nhánh giảm; hệ thống ghi nhận cấp phát nội bộ trong cùng site chi nhánh |
+| Kho chi nhánh cấp phát cho bếp chi nhánh | intra-branch `stock_transfer` | Kho chi nhánh giảm; bếp chi nhánh/default consumption tăng trong cùng site chi nhánh |
 | Chi nhánh bán hàng | POS / order completed | Site chi nhánh giảm tồn theo tiêu hao |
 | Kiểm kê | `stocktake` / `adjustment` | Điều chỉnh về tồn thực tế |
 
@@ -67,7 +67,7 @@ Nếu cần chi tiết quyền xem/tạo/xác nhận, xem [inventory-rbac-matrix
 2. Khi hàng tới, tạo `GRN` tại CW hoặc CK.
 3. Kiểm số lượng, đơn giá, batch, hạn dùng, nhiệt độ nhận hàng nếu cần.
 4. Xác nhận `GRN` để cộng tồn CW/CK và cập nhật WAC.
-5. Nhập `supplier_invoice` để làm 3-way matching với `PO` và `GRN`.
+5. Nếu Finance cần đối soát ngay, nhập `supplier_invoice` để làm 3-way matching với `PO` và `GRN`; đây là handoff Finance P1, không chặn Inventory pilot.
 
 Điểm kiểm soát:
 - GRN chỉ được tạo tại site có `branch_kind IN ('central_warehouse', 'central_kitchen')`.
@@ -130,14 +130,14 @@ CW có thể cấp phát theo hai hướng hợp lệ trong pilot:
 ### 4.5 Kho chi nhánh cấp phát cho bếp chi nhánh
 
 1. Quản lý chi nhánh điều phối hàng từ kho chi nhánh xuống bếp chi nhánh theo nhu cầu bán.
-2. Tạo `stock_issue` với `issue_type = kitchen_use` (chỉ hợp lệ tại `branch_kind = 'branch'`).
-3. Xác nhận phiếu để hệ thống trừ tồn tại site chi nhánh và lưu audit trail cấp phát nội bộ.
+2. Tạo intra-branch `stock_transfer` từ location kho chi nhánh sang location bếp chi nhánh/default consumption.
+3. Commit phiếu một bước để hệ thống trừ tồn location kho, cộng tồn location bếp, và lưu audit trail cấp phát nội bộ.
 4. Không nhập hàng NCC trực tiếp tại bước này.
 
 Điểm kiểm soát:
-- Đây là bước nội bộ trong cùng site `branch`, chưa tách thành node schema riêng.
-- `stock_issue(kitchen_use)` là chứng từ chuẩn cho bước này trong pilot.
-- Không hiểu bước này như một transfer giữa hai stock bucket riêng; hiện DB vẫn hạch toán cùng `branch_id`.
+- Đây là bước nội bộ trong cùng site `branch`; không dùng state machine vận chuyển 5 bước.
+- `stock_issue(issue_type = kitchen_use)` đã retired và không được dùng cho pilot.
+- Không dùng fallback silent sang location khác; thiếu location bếp/default consumption là lỗi cấu hình phải sửa trước khi bán.
 - Không bỏ qua ghi nhận luồng nội bộ nếu dẫn tới lệch giữa kho chi nhánh và bếp chi nhánh.
 
 ### 4.6 Bán hàng và tiêu hao tại chi nhánh
@@ -177,7 +177,7 @@ CW có thể cấp phát theo hai hướng hợp lệ trong pilot:
 ### Kho Tổng / CW
 
 - Tất cả `GRN` trong ngày đã confirm.
-- `supplier_invoice` mới đã được nhập nếu có.
+- `supplier_invoice` mới được ghi nhận nếu Finance P1 đang vận hành; không coi là điều kiện đóng ngày của Inventory pilot.
 - Không còn transfer CW → bếp trung tâm hoặc CW → kho chi nhánh bị treo vô lý.
 
 ### Bếp trung tâm / CK

@@ -27,7 +27,7 @@ Không mở thêm role mới, không đổi ACL business boundary, không mở E
 
 Quyết định:
 
-- `Receiving` chỉ đại diện cho luồng `PO -> GRN -> supplier_invoice` tại HQ.
+- `Receiving` chỉ đại diện cho luồng `PO -> GRN` tại HQ trong Inventory pilot. `supplier_invoice` là Finance P1/handoff, không nằm trong daily operator path.
 - Không dùng `Receiving` như nhãn generic cho mọi thao tác nhận hàng.
 
 Hệ quả UI:
@@ -40,13 +40,13 @@ Hệ quả UI:
 
 Quyết định:
 
-- Giữ backend document hiện tại là `stock_issue(issue_type = kitchen_use)`.
-- Đổi lớp nhãn và mental model ở UI từ `Issues` sang `Cấp bếp` cho flow này.
+- Backend document hiện tại là intra-branch `stock_transfer`, commit một bước từ location kho chi nhánh sang location bếp chi nhánh/default consumption.
+- Đổi lớp nhãn và mental model ở UI từ generic `Điều chuyển` sang `Cấp bếp` cho flow này.
 
 Hệ quả UI:
 
-- `kitchen_use` là bước vận hành chuẩn, không nên bị cảm nhận như ngoại lệ.
-- Nếu vẫn giữ module `Issues`, module đó nên nghiêng về write-off, hao hụt, hoặc xuất bất thường.
+- `stock_issue(issue_type = kitchen_use)` đã retired và không được dùng trong contract ship.
+- Nếu vẫn giữ module `Issues`, module đó chỉ nên nghiêng về consumption/write-off/other, hao hụt, hoặc xuất bất thường.
 - Sau khi chi nhánh `received` transfer, UI nên gợi bước tiếp theo là `Cấp bếp`.
 
 ### 3. `Ingredients / Suppliers / Recipes` chỉ sống ở `Danh mục`
@@ -81,7 +81,7 @@ Quyết định:
 
 - `branch_manager` trong pilot hiện tại chỉ:
   - xác nhận nhận transfer,
-  - tạo `kitchen_use`,
+  - tạo intra-branch transfer `Cấp bếp`,
   - kiểm kê,
   - adjustment/write-off theo scope chi nhánh.
 - `branch_manager` không tạo inter-site transfer outbound/inbound workflow mới.

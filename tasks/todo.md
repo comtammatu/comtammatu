@@ -34,9 +34,9 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 - [ ] Phase 2 dual-write + cutover
 - [ ] Seed 1 `inventory_locations` kitchen/warehouse per branch (`is_default_consumption`)
 - [ ] Rút gọn state machine Kho CN → Bếp CN: `draft → confirmed` (cùng roof, không in_transit)
-- [ ] Cho phép transfer ngược Bếp CN → Kho CN (giới hạn 24h)
-- [ ] `consume_stock_for_order` resolve kitchen location, fallback warehouse + log warning
-- [ ] Retire `stock_issue(issue_type='kitchen_use')` — freeze insert mới, read-only history
+- [ ] Implement intra-branch transfer một bước cho `Kho CN -> Bếp CN` (`Cấp bếp`) bằng RPC atomic riêng
+- [ ] `consume_stock_for_order` phải resolve `default_consumption`; nếu thiếu thì fail hard/setup gate, không fallback silent
+- [x] Retire `stock_issue(issue_type='kitchen_use')` — runtime CHECK đã chặn; docs active phải trỏ sang intra-branch transfer
 
 ## Doc maintenance reminders
 

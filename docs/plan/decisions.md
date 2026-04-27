@@ -10,7 +10,7 @@
 - Allowed: CW→CK, CW→Branch, CK→Branch, intra-branch.
 - Rejected: CK→CW, CW↔CW, CK↔CK, Branch→*.
 
-**Stock issue kitchen_use rule** (enforced by `enforce_stock_issue_kitchen_use_scope`): `stock_issue(issue_type = 'kitchen_use')` is only valid at `branch_kind = 'branch'`, not at CW or CK.
+**Superseded stock issue kitchen_use rule:** `stock_issue(issue_type = 'kitchen_use')` used to be valid only at `branch_kind = 'branch'`, but this rule is retired. Current contract: `Kho chi nhánh -> Bếp chi nhánh` uses an intra-branch `stock_transfer` with warehouse/source location and kitchen/default-consumption target location.
 
 **Rationale:** Pilot now plans more than one Kho Tổng and more than one Bếp Trung Tâm. The legacy `is_headquarters` flag assumed a singleton and does not scale.
 
@@ -20,7 +20,7 @@
 - Replaces `enforce_po_branch_is_headquarters` trigger → `enforce_po_grn_branch_is_procurement` (accepts CW + CK)
 - Drops `set_headquarters` RPC (replace with `set_branch_kind`)
 - Adds `enforce_stock_transfer_direction` trigger with direction matrix above
-- Adds `enforce_stock_issue_kitchen_use_scope` trigger: `kitchen_use` only valid at `branch_kind='branch'`
+- Superseded later by `20260426100100_retire_kitchen_use_issue_type.sql`: no new `kitchen_use`; use intra-branch transfer for `Cấp bếp`
 
 **Superseded:** prior ADRs (D007 `set_headquarters`) are superseded for the CW/CK flow; other parts untouched.
 

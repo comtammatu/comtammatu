@@ -11,6 +11,7 @@ Nơi lưu các artefact theo dõi tiến độ và adoption.
 - [inventory/evidence-log.md](inventory/evidence-log.md): log evidence cho từng round QA UI/UX
 - [inventory/inventory-ux-workflow-review.md](inventory/inventory-ux-workflow-review.md): review workflow/IA trước refactor UI
 - [inventory/inventory-ux-contract.md](inventory/inventory-ux-contract.md): contract UX đã chốt cho pilot hiện tại
+- [inventory/inventory-pilot-contract-v2.md](inventory/inventory-pilot-contract-v2.md): handoff contract + prompt cho Inventory pilot 4 điểm
 
 ## Quy tắc
 

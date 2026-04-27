@@ -140,15 +140,15 @@ Updated: `2026-04-17`
 - `steps`:
   1. Từ dashboard, mở task `Nhận transfer`.
   2. Trên transfer detail, đi đủ `confirmed_receive -> received`.
-  3. Quay lại dashboard hoặc `/inventory/issues`, tạo phiếu `kitchen_use`.
-  4. Thêm line, xác nhận cấp bếp, kiểm reasoning visibility và feedback.
+  3. Quay lại dashboard hoặc `/inventory/transfers`, tạo intra-branch transfer `Cấp bếp`.
+  4. Thêm line, commit một bước, kiểm reasoning visibility và feedback.
   5. Vào `/inventory/stock`, kiểm user có hiểu tồn vừa thay đổi không.
   6. Chạy hoặc đối chiếu bridge `POS/KDS completed -> consumption`.
   7. Cuối ca vào `/inventory/stocktake`, hoàn tất một phiên kiểm kê.
   8. Kiểm `/inventory/expiry` cho lô cần xử lý.
 - `expected next step`:
   - sau `received`, UI phải gợi đủ rõ sang `Cấp bếp`;
-  - sau `kitchen_use`, user hiểu tồn kho branch đã giảm vì cấp phát nội bộ;
+  - sau intra-branch transfer `Cấp bếp`, user hiểu tồn kho kho chi nhánh giảm và tồn bếp chi nhánh/default consumption tăng;
   - sau stocktake, user hiểu variance/resolution.
 - `handoff`: báo chênh lệch lớn hoặc expiry risk cho OPS/HQ
 - `success`:

@@ -6,7 +6,7 @@
 >
 > - `HQ` có thể chuyển thẳng về `Kho chi nhánh`.
 > - `Bếp trung tâm` là một node sản xuất/phân phối hợp lệ, không phải hop bắt buộc.
-> - `Kho chi nhánh` và `Bếp chi nhánh` hiện là hai điểm vận hành trong cùng site `branch`, chưa tách thành node schema riêng trong DB.
+> - `Kho chi nhánh` và `Bếp chi nhánh` là hai điểm vận hành trong cùng site `branch`, tách bằng `inventory_locations`; cấp bếp dùng intra-branch transfer.
 
 ---
 

@@ -19,7 +19,7 @@ Updated: `2026-04-17`
 | `/inventory` | Quick actions | `Nhập nguyên liệu` | `super_manager` tại `warehouse` | desktop | Mở procurement hub | Route đổi sang `/inventory/receiving` | Dẫn đúng HQ procurement loop | `P0` |
 | `/inventory` | Quick actions | `Tạo lệnh sản xuất` | `super_manager` tại `central_kitchen` | tablet, desktop | Mở production hub | Route đổi sang `/inventory/production` | Dẫn đúng central kitchen loop | `P0` |
 | `/inventory` | Quick actions | `Nhận transfer` | `branch_manager` tại `branch` | tablet, mobile, desktop | Mở transfer list | Route đổi sang `/inventory/transfers` | Dẫn đúng branch inbound flow | `P0` |
-| `/inventory` | Quick actions | `Cấp bếp` | `branch_manager` tại `branch` | tablet, mobile | Mở issue list | Route đổi sang `/inventory/issues` | Dẫn đúng branch kitchen flow | `P0` |
+| `/inventory` | Quick actions | `Cấp bếp` | `branch_manager` tại `branch` | tablet, mobile | Mở intra-branch transfer queue/dialog | Route đổi sang `/inventory/transfers` | Dẫn đúng branch kitchen flow | `P0` |
 | `/inventory` | Task queue | task cards | role phù hợp với site | mixed theo vai trò | Card phải là next best action | Card copy, badge, link rõ | User hiểu bước kế tiếp mà không đoán | `P0` |
 | `/inventory` | Alerts | alert cards | role phù hợp với data scope | mixed theo vai trò | Link sang route xử lý phù hợp | Badge/alert rõ urgency | User đi từ alert sang action thật | `P1` |
 | `/inventory` | Shell nav | `Receiving` | chỉ `super_manager`/procurement roles | desktop, tablet | Hiện như HQ hub, không generic receiving | Nav highlight đúng | Không kéo branch vào procurement | `P0` |
@@ -71,14 +71,14 @@ Updated: `2026-04-17`
 | `/inventory/grn/[id]` | Footer | `Chốt nhập kho` | `super_manager`, GRN `draft` | desktop, tablet | Confirm GRN | Toast + badge + refresh | Tăng tồn HQ, cập nhật WAC | `P0` |
 | `/inventory/grn/[id]` | Linked PO | PO code link | `super_manager` | desktop | Mở PO gốc | Link rõ | Giảm lạc ngữ cảnh procurement | `P2` |
 
-## 6. Supplier Invoices
+## 6. Supplier Invoices / Finance P1
 
 | Route | Section | Button/CTA | Visible for role | Visible on device | Expected behavior | Expected feedback | Expected downstream effect | Severity if broken |
 | ----- | ------- | ---------- | ---------------- | ----------------- | ----------------- | ----------------- | -------------------------- | ------------------ |
-| `/inventory/supplier-invoices` | Header/list controls | `Tạo hóa đơn NCC` | `super_manager` | desktop, tablet | Mở create dialog | Dialog rõ supplier/GRN/value | Nối GRN -> invoice | `P0` |
+| `/inventory/supplier-invoices` | Header/list controls | `Tạo hóa đơn NCC` | `super_manager` | desktop, tablet | Mở create dialog | Dialog rõ supplier/GRN/value | Nối GRN -> invoice | `P1` |
 | `/inventory/supplier-invoices` | Filters | supplier/match/payment/overdue | `super_manager` | desktop, tablet | Lọc đúng | Highlight overdue rõ | Đọc backlog AP nhanh | `P1` |
-| `/inventory/supplier-invoices` | Detail pane | `Tính lại đối soát` | `super_manager` | desktop | Recompute matching | Toast + match status đổi | 3-way matching nhất quán | `P0` |
-| `/inventory/supplier-invoices` | Detail pane | `Ghi nhận thanh toán` | `super_manager` | desktop, tablet | Mở payment dialog và cập nhật paid amount | Toast + payment status đổi | AP aging giảm đúng | `P0` |
+| `/inventory/supplier-invoices` | Detail pane | `Tính lại đối soát` | `super_manager` | desktop | Recompute matching | Toast + match status đổi | 3-way matching nhất quán | `P1` |
+| `/inventory/supplier-invoices` | Detail pane | `Ghi nhận thanh toán` | `super_manager` | desktop, tablet | Mở payment dialog và cập nhật paid amount | Toast + payment status đổi | AP aging giảm đúng | `Deferred` |
 | `/inventory/supplier-invoices` | Visual state | overdue emphasis | `super_manager` | desktop, tablet | Invoice overdue nổi bật nhưng không gây hiểu sai | Badge/copy rõ | Ưu tiên công nợ đến hạn | `P1` |
 
 ## 7. Transfers
@@ -98,12 +98,12 @@ Updated: `2026-04-17`
 
 | Route | Section | Button/CTA | Visible for role | Visible on device | Expected behavior | Expected feedback | Expected downstream effect | Severity if broken |
 | ----- | ------- | ---------- | ---------------- | ----------------- | ----------------- | ----------------- | -------------------------- | ------------------ |
-| `/inventory/issues` | Header | `Tạo phiếu cấp bếp` | `branch_manager`, `area_manager`, `super_manager` theo scope | tablet, mobile, desktop | Mở dialog tạo phiếu | Toast sau create + redirect detail | Bắt đầu flow `kitchen_use` | `P0` |
+| `/inventory/transfers` | Header/task | `Tạo cấp bếp` | `branch_manager` tại `branch` | tablet, mobile, desktop | Mở dialog intra-branch transfer | Toast sau commit + stock/location refresh | Bắt đầu flow cấp bếp bằng intra-branch transfer | `P0` |
 | `/inventory/issues` | Header | `Xuất báo cáo (sắp mở)` | roles vào được page | desktop | Rõ là placeholder, không giả workflow thật | Disabled/label rõ | Không gây hiểu nhầm là live export | `P1` |
 | `/inventory/issues` | Filters | status/type filters | roles vào được page | tablet, mobile, desktop | Lọc đúng phiếu | Counter/table đổi rõ | Tìm nhanh phiếu vận hành | `P2` |
 | `/inventory/issues/[id]` | Header/table | `Thêm nguyên liệu` | creator role hợp lệ, issue `draft` | tablet, desktop | Mở add-line dialog | Dialog/row update rõ | Chuẩn bị phiếu đủ line để confirm | `P0` |
 | `/inventory/issues/[id]` | Table row | delete line | creator role hợp lệ, issue `draft` | tablet, mobile, desktop | Xóa line với confirm hợp lý | Toast + table refresh | Giảm line sai trước confirm | `P1` |
-| `/inventory/issues/[id]` | Footer/dialog | `Xác nhận cấp bếp` / confirm issue | creator role hợp lệ | tablet, mobile, desktop | Confirm issue và trừ tồn | Toast + badge/status + stock impact | Ghi nhận `kitchen_use` rõ ràng | `P0` |
+| `/inventory/transfers/[id]` | Footer/dialog | `Xác nhận cấp bếp` | creator role hợp lệ | tablet, mobile, desktop | Commit intra-branch transfer một bước | Toast + badge/status + stock impact | Ghi nhận cấp bếp rõ ràng bằng `transfer_out` / `transfer_in` theo location | `P0` |
 | `/inventory/issues/[id]` | Footer/dialog | `Hủy phiếu xuất` | creator role hợp lệ | tablet, mobile, desktop | Cancel issue | Toast + badge/status | Ngăn phiếu nháp sai đi tiếp | `P1` |
 | `/inventory/issues/[id]` | Line fields | reason visibility | roles vào được detail | tablet, mobile, desktop | User nhìn ra lý do xuất | Field/value readable | Audit trail có nghĩa | `P1` |
 

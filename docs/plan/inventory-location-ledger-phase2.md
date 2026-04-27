@@ -87,7 +87,7 @@ Backfill:
 
 - `source_location_id = default_issue location` của `branch_id`
 - `target_location_id = NULL` cho issue thường
-- `target_location_id = default_consumption location` nếu `issue_type = 'kitchen_use'`
+- `stock_issue(issue_type = 'kitchen_use')` đã retired; cấp bếp không dùng `stock_issues`
 
 ### 3.5 `stocktake_sessions`
 
@@ -161,10 +161,12 @@ Phase 2:
 - update `stock_levels` theo `location_id`
 - vẫn giữ `branch_id` checks để backward compatible
 
-Riêng `kitchen_use`:
+Riêng flow `Cấp bếp`:
 
-- `source_location_id = default_issue`
-- `target_location_id = default_consumption`
+- chạy qua intra-branch `stock_transfer`
+- `from_location_id = default_issue` hoặc warehouse location
+- `to_location_id = default_consumption` hoặc kitchen location
+- commit atomic một bước, không dùng state machine liên-site 5 bước
 
 ### 5.3 `complete_stocktake`
 
@@ -226,7 +228,7 @@ Phase 2 chỉ được coi là xong khi tất cả điều kiện sau đều đ�
 
 1. Tất cả bảng compatibility columns đã backfill đủ
 2. Không còn row `NULL` ở các cột location mới cho dữ liệu active
-3. `confirm_stock_issue` vẫn chạy đúng cho `kitchen_use`
+3. `confirm_stock_issue` vẫn chạy đúng cho `consumption`, `writeoff`, `other`; `kitchen_use` bị CHECK constraint reject
 4. `create_stocktake_session` và `complete_stocktake` vẫn hoạt động
 5. transfer flow vẫn pass cho:
    - `HQ -> Kho chi nhánh`
@@ -270,6 +272,6 @@ Phase 2 chỉ được coi là xong khi tất cả điều kiện sau đều đ�
 Những việc này để Phase 3 trở đi:
 
 - seed riêng `Kho chi nhánh` và `Bếp chi nhánh` cho branch thường
-- chuyển `kitchen_use` thành internal transfer đầy đủ
+- chuyển cấp bếp thành internal transfer đầy đủ
 - stocktake riêng cho bếp chi nhánh thật
 - UI bắt chọn location ở mọi action

@@ -129,11 +129,9 @@ Mỗi flow phải log:
 - Từ `PO` đã gửi hoặc nhận dở, tạo `GRN` thật
 - Confirm `GRN`
 - Kiểm tra tồn HQ tăng đúng
-- Nhập `supplier_invoice`
-- Recompute matching
-- Ghi nhận thanh toán
-- Kiểm tra 3-way matching không drift vocabulary giữa UI và doc
-- Kiểm dashboard và `Receiving` có dẫn đúng từng bước, không bắt user tự đoán PO -> GRN -> invoice
+- Nếu Finance P1 được bật, nhập `supplier_invoice` và recompute matching như một handoff riêng
+- Không coi ghi nhận thanh toán / AP aging là pilot gate của Inventory
+- Kiểm dashboard và `Receiving` có dẫn đúng từng bước PO -> GRN, không bắt user tự đoán bước tồn kho kế tiếp
 
 ### 3.2 HQ outbound transfer
 
@@ -166,11 +164,11 @@ Mỗi flow phải log:
 
 ### 3.5 Kho chi nhánh -> Bếp chi nhánh
 
-- Kiểm tra flow `Cấp bếp` tại `/inventory/issues`
-- Xác nhận branch dashboard dẫn đúng sang `transfers` và `issues`, không dẫn sang `receiving`
+- Kiểm tra flow `Cấp bếp` bằng intra-branch transfer tại `/inventory/transfers`
+- Xác nhận branch dashboard dẫn đúng sang inbound receive và intra-branch `Cấp bếp`, không dẫn sang `receiving`
 - Xác nhận luồng này không bị bỏ quên trong SOP / UI / báo cáo
-- Nếu hiện đang hạch toán trong cùng `branch`, ghi rõ evidence và boundary
-- Sau `kitchen_use`, user phải hiểu tồn kho đã thay đổi vì cấp phát nội bộ
+- Nếu hiện đang hạch toán trong cùng `branch`, ghi rõ evidence theo `from_location_id` / `to_location_id`
+- Sau intra-branch transfer `Cấp bếp`, user phải hiểu tồn kho location kho đã giảm và location bếp/default consumption đã tăng
 
 ### 3.6 Stocktake
 
@@ -184,10 +182,10 @@ Mỗi flow phải log:
 
 - Reorder alert hiển thị đúng khi dưới `reorder_point`
 - Expiry alert hiển thị đúng theo window tài liệu quy định
-- Nếu surface có `AP aging` hoặc inventory value, số liệu không lỗi obvious
+- Nếu surface có `AP aging` hoặc inventory value, số liệu không lỗi obvious và được đánh dấu là oversight/Finance P1 nếu chưa live
 - Các CTA chưa mở phải được ghi rõ `sắp mở` hoặc chuyển thành điều hướng thật; không để disabled button gây hiểu nhầm là đã có workflow
 - Report cards `sắp mở` không được trông giống feature live
-- AP aging link phải dẫn đúng sang công nợ NCC
+- AP aging link phải dẫn đúng sang công nợ NCC nếu Finance P1 đang bật; nếu không, ẩn khỏi frontline pilot
 
 ### 3.8 POS/KDS bridge
 

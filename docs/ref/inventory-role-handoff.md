@@ -100,9 +100,9 @@ Trong hệ thống hiện tại, phần AP/reporting có thể đi qua `super_ma
 
 ### Việc phải làm
 
-- Đối soát `PO -> GRN -> supplier_invoice`.
+- Đối soát `PO -> GRN`; `supplier_invoice` là Finance P1/handoff khi được bật.
 - Theo dõi transfer treo và chênh lệch kiểm kê.
-- Theo dõi giá vốn và báo cáo AP aging.
+- Theo dõi giá vốn; AP aging là Finance P1, không phải daily Inventory pilot gate.
 - Báo lại các site nếu có số liệu bất thường.
 
 ### Theo dõi mỗi ngày
