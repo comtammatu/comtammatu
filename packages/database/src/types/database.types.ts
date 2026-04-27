@@ -7017,6 +7017,16 @@ export type Database = {
         Args: { p_branch_id: number; p_flag_key: string }
         Returns: boolean
       }
+      log_audit: {
+        Args: {
+          p_action: string
+          p_entity_id?: number
+          p_entity_type: string
+          p_new?: Json
+          p_old?: Json
+        }
+        Returns: number
+      }
       mark_all_notifications_read: { Args: never; Returns: number }
       mark_order_item_served: { Args: { p_item_id: number }; Returns: Json }
       merge_orders: {

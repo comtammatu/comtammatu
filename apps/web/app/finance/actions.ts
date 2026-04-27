@@ -172,8 +172,6 @@ export async function createTaxInvoice(
     }
 
     await logAudit(supabase, {
-      tenantId: claims.tenant_id,
-      userId: user.id,
       action: "create",
       entityType: "tax_invoice",
       entityId: skipInvoice?.id ?? null,
@@ -278,8 +276,6 @@ export async function createTaxInvoice(
   }
 
   await logAudit(supabase, {
-    tenantId: claims.tenant_id,
-    userId: user.id,
     action: "create",
     entityType: "tax_invoice",
     entityId: invoice?.id ?? null,
@@ -374,8 +370,6 @@ export async function cancelTaxInvoice(
   }
 
   await logAudit(supabase, {
-    tenantId: claims.tenant_id,
-    userId: user.id,
     action: "cancel",
     entityType: "tax_invoice",
     entityId: parsed.data.invoiceId,

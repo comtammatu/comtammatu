@@ -289,8 +289,6 @@ export const approvePayroll = withAction(
     }
 
     logAudit(supabase, {
-      tenantId: claims.tenant_id,
-      userId: user.id,
       action: "approve",
       entityType: "payroll_period",
       entityId: data.periodId,
@@ -327,8 +325,6 @@ export const markPayrollPaid = withAction(
     }
 
     logAudit(supabase, {
-      tenantId: claims.tenant_id,
-      userId: user.id,
       action: "pay",
       entityType: "payroll_period",
       entityId: data.periodId,

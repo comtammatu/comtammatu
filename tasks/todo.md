@@ -36,7 +36,7 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 - [ ] **POS calls provider before DB lock** — RPC fail = orphan gateway order.
 
 ### M6 Finance
-- [ ] **Audit log INSERT REVOKE + `log_audit()` SECURITY DEFINER RPC** — currently any authenticated user can POST `/rest/v1/audit_logs` to forge/smear history.
+- [x] **Audit log INSERT REVOKE + `log_audit()` SECURITY DEFINER RPC** (2026-04-28). Migration `20260505020000_audit_logs_rpc_only_insert.sql`; helper at `apps/web/app/admin/_lib/audit.ts` wraps the RPC; 7 callers in finance/HR drop `tenantId`/`userId` (forced server-side). See regression rule AUDIT-LOG-INSERT-RPC-ONLY.
 - [ ] HĐĐT `cancel reason` min 20 chars (NĐ70/2023) — currently `.optional()`.
 - [ ] `voidJournalEntry` post-close period guard — invalidates signed BCTC.
 - [ ] `fetchAuditLogs` returns `*` (PII via `old_data`/`ip_address`).

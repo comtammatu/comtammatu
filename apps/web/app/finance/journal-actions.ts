@@ -208,8 +208,6 @@ export const postJournalEntry = withAction(
     }
 
     logAudit(supabase, {
-      tenantId: claims.tenant_id,
-      userId: user.id,
       action: "post",
       entityType: "journal_entry",
       entityId: data.id,
@@ -241,8 +239,6 @@ export const voidJournalEntry = withAction(
     }
 
     logAudit(supabase, {
-      tenantId: claims.tenant_id,
-      userId: user.id,
       action: "void",
       entityType: "journal_entry",
       entityId: data.entryId,

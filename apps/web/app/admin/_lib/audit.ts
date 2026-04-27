@@ -1,20 +1,21 @@
 "use server";
 
+import type { createClient } from "@comtammatu/database/supabase/server";
+
+type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
+
 /**
- * Insert an audit log entry. Fire-and-forget — does not throw on failure.
- * Used by finance/payroll actions for compliance tracking.
+ * Append a row to `audit_logs` via the `log_audit` RPC. Fire-and-forget —
+ * does not throw on failure. Used by finance/payroll actions for
+ * compliance tracking.
+ *
+ * `tenant_id` and `user_id` are forced server-side from auth claims by
+ * the SECURITY DEFINER RPC; callers cannot pass them. Direct INSERT on
+ * `audit_logs` is revoked.
  */
 export async function logAudit(
-  supabase: {
-    from: (table: string) => {
-      insert: (data: Record<string, unknown>) => {
-        then: (fn: () => void) => void;
-      };
-    };
-  },
+  supabase: SupabaseServerClient,
   params: {
-    tenantId: number;
-    userId: string;
     action: string;
     entityType: string;
     entityId: number | null;
@@ -22,18 +23,11 @@ export async function logAudit(
     newData?: Record<string, unknown> | null;
   },
 ): Promise<void> {
-  await supabase
-    .from("audit_logs")
-    .insert({
-      tenant_id: params.tenantId,
-      user_id: params.userId,
-      action: params.action,
-      entity_type: params.entityType,
-      entity_id: params.entityId,
-      old_data: params.oldData ?? null,
-      new_data: params.newData ?? null,
-    })
-    .then(() => {
-      /* fire-and-forget */
-    });
+  await supabase.rpc("log_audit", {
+    p_action: params.action,
+    p_entity_type: params.entityType,
+    p_entity_id: params.entityId ?? undefined,
+    p_old: (params.oldData ?? null) as never,
+    p_new: (params.newData ?? null) as never,
+  });
 }
