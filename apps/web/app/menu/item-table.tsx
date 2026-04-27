@@ -73,7 +73,7 @@ export function ItemTable({ items, categories, tenantId }: ItemTableProps) {
               <TableHead>Tên món</TableHead>
               <TableHead className="hidden sm:table-cell">{FORM_VI.category}</TableHead>
               <TableHead className="hidden md:table-cell text-right">
-                Giá
+                {FORM_VI.price}
               </TableHead>
               <TableHead>{FORM_VI.status}</TableHead>
               <TableHead className="w-12" />

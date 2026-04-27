@@ -69,6 +69,7 @@ const FORM_MAP = {
   "Đơn vị": "unit",
   "Lý do": "reason",
   "Tổng cộng": "totalAmount",
+  "Tổng tiền": "totalAmount",
   "Tạm tính": "subtotal",
   "Thành tiền": "amount",
   "Giá trị": "value",
@@ -78,6 +79,12 @@ const FORM_MAP = {
   "Đến ngày": "toDate",
   "Thao tác": "action",
   "Danh mục": "category",
+  "Tên": "name",
+  "Loại": "type",
+  "Ngày": "date",
+  "Tổng": "total",
+  "Thuế": "tax",
+  "Giá": "price",
 };
 
 // Domain noun mapping for standalone JSX text.

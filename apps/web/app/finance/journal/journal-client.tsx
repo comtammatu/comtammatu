@@ -166,7 +166,7 @@ export function JournalClient({ entries: initial, accounts }: Props) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-28">Ngày</TableHead>
+                <TableHead className="w-28">{FORM_VI.date}</TableHead>
                 <TableHead>{FORM_VI.description}</TableHead>
                 <TableHead className="w-24">Tham chiếu</TableHead>
                 <TableHead className="w-24">{FORM_VI.status}</TableHead>

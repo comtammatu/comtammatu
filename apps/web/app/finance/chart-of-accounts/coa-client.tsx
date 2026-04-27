@@ -150,7 +150,7 @@ export function ChartOfAccountsClient({
               <TableRow>
                 <TableHead className="w-32">Mã TK</TableHead>
                 <TableHead>Tên tài khoản</TableHead>
-                <TableHead className="w-32">Loại</TableHead>
+                <TableHead className="w-32">{FORM_VI.type}</TableHead>
                 <TableHead className="w-24 text-center">{FORM_VI.status}</TableHead>
                 <TableHead className="w-24" />
               </TableRow>

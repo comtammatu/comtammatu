@@ -753,7 +753,7 @@ export function PODetailClient({
                     </span>
                   </div>
                   <div className="flex items-center justify-between gap-3">
-                    <span className="text-muted-foreground">Thuế</span>
+                    <span className="text-muted-foreground">{FORM_VI.tax}</span>
                     <span className="font-semibold">
                       {formatVND(taxAmount)}đ
                     </span>

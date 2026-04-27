@@ -262,7 +262,7 @@ export function RevenueReportClient({
                     </p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">Thuế</p>
+                    <p className="text-muted-foreground">{FORM_VI.tax}</p>
                     <p className="mt-1 tabular-nums">
                       {(r.total_tax ?? 0).toLocaleString("vi-VN")} ₫
                     </p>
@@ -276,7 +276,7 @@ export function RevenueReportClient({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-28">Ngày</TableHead>
+                  <TableHead className="w-28">{FORM_VI.date}</TableHead>
                   <TableHead className="w-20 text-right">Đơn</TableHead>
                   <TableHead className="w-36 text-right">
                     Doanh thu (₫)

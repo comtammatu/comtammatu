@@ -205,7 +205,7 @@ export function RevenueOverview({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Ngày</TableHead>
+                    <TableHead>{FORM_VI.date}</TableHead>
                     <TableHead className="text-right">Đơn hàng</TableHead>
                     <TableHead className="text-right">Doanh thu</TableHead>
                   </TableRow>

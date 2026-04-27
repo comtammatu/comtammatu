@@ -188,7 +188,7 @@ export function IngredientTable({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Tên</TableHead>
+                  <TableHead>{FORM_VI.name}</TableHead>
                   <TableHead>SKU</TableHead>
                   <TableHead>{FORM_VI.unit}</TableHead>
                   <TableHead className="text-right">Giá nhập</TableHead>

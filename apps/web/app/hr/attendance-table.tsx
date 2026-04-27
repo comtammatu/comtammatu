@@ -234,7 +234,7 @@ function SummaryView({ data }: { data: AttendanceSummaryRow[] }) {
             <TableHead className="text-center">Đi trễ</TableHead>
             <TableHead className="text-center">Vắng</TableHead>
             <TableHead className="text-center">Nửa ngày</TableHead>
-            <TableHead className="text-center">Tổng</TableHead>
+            <TableHead className="text-center">{FORM_VI.total}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -287,7 +287,7 @@ function DetailView({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Ngày</TableHead>
+            <TableHead>{FORM_VI.date}</TableHead>
             <TableHead>{STAFF_VI.long}</TableHead>
             <TableHead>Ca</TableHead>
             <TableHead>Vào</TableHead>

@@ -241,7 +241,7 @@ export function OrderDetailSheet({
                   <TableRow>
                     <TableHead className="py-2">Món</TableHead>
                     <TableHead className="py-2 text-center w-12">SL</TableHead>
-                    <TableHead className="py-2 text-right">Giá</TableHead>
+                    <TableHead className="py-2 text-right">{FORM_VI.price}</TableHead>
                     <TableHead className="py-2 text-right">T.Tiền</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -302,7 +302,7 @@ export function OrderDetailSheet({
             )}
             {hasTax && (
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Thuế</span>
+                <span className="text-muted-foreground">{FORM_VI.tax}</span>
                 <span className="font-mono">{formatVND(order.tax_amount)}</span>
               </div>
             )}

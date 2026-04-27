@@ -123,7 +123,7 @@ export function LocationBreakdownTable({
               ))}
               {canViewCost && sorted.length > 1 ? (
                 <TableRow className="font-semibold">
-                  <TableCell>Tổng</TableCell>
+                  <TableCell>{FORM_VI.total}</TableCell>
                   <TableCell className="text-right tabular-nums">
                     {sorted.reduce((s, l) => s + l.skuCount, 0)}
                   </TableCell>

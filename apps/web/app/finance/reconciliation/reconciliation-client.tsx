@@ -361,7 +361,7 @@ export function ReconciliationClient({
                       Tham chiếu
                     </TableHead>
                     <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                      Ngày
+                      {FORM_VI.date}
                     </TableHead>
                     <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                       {BRANCH_VI.long}

@@ -69,7 +69,7 @@ export function BranchTable({ branches }: BranchTableProps) {
           <TableHeader>
             <TableRow>
               <TableHead>Điểm vận hành</TableHead>
-              <TableHead className="hidden sm:table-cell">Loại</TableHead>
+              <TableHead className="hidden sm:table-cell">{FORM_VI.type}</TableHead>
               <TableHead className="hidden sm:table-cell">Địa chỉ</TableHead>
               <TableHead className="hidden md:table-cell">Điện thoại</TableHead>
               <TableHead>{FORM_VI.status}</TableHead>

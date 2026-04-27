@@ -59,7 +59,7 @@ export function CategoryTable({ categories }: CategoryTableProps) {
           <TableHeader>
             <TableRow>
               <TableHead>Tên danh mục</TableHead>
-              <TableHead className="hidden sm:table-cell">Loại</TableHead>
+              <TableHead className="hidden sm:table-cell">{FORM_VI.type}</TableHead>
               <TableHead className="hidden md:table-cell">Bếp in</TableHead>
               <TableHead className="hidden md:table-cell">Thứ tự</TableHead>
               <TableHead>{FORM_VI.status}</TableHead>

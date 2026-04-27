@@ -30,6 +30,7 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 
+import { FORM_VI } from "@comtammatu/shared/messages";
 const STATUS_LABELS: Record<string, string> = {
   present: "Có mặt",
   late: "Đi trễ",
@@ -181,7 +182,7 @@ export default async function EmployeeAttendancePage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Ngày</TableHead>
+                      <TableHead>{FORM_VI.date}</TableHead>
                       <TableHead>Ca</TableHead>
                       <TableHead>Vào</TableHead>
                       <TableHead>Ra</TableHead>

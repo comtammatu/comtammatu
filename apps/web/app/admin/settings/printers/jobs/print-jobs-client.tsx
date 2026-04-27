@@ -187,7 +187,7 @@ export function PrintJobsClient({
           <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
             <tr>
               <th className="px-3 py-2 text-left">#</th>
-              <th className="px-3 py-2 text-left">Loại</th>
+              <th className="px-3 py-2 text-left">{FORM_VI.type}</th>
               <th className="px-3 py-2 text-left">Máy in</th>
               <th className="px-3 py-2 text-left">{FORM_VI.status}</th>
               <th className="px-3 py-2 text-right">Thử</th>

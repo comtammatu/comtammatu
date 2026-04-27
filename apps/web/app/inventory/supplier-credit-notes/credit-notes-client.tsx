@@ -166,9 +166,9 @@ export function CreditNotesClient({
                 <TableRow>
                   <TableHead>Mã</TableHead>
                   <TableHead>NCC</TableHead>
-                  <TableHead>Loại</TableHead>
+                  <TableHead>{FORM_VI.type}</TableHead>
                   <TableHead>Phiếu trả</TableHead>
-                  <TableHead className="text-right">Tổng</TableHead>
+                  <TableHead className="text-right">{FORM_VI.total}</TableHead>
                   <TableHead className="text-right">Đã áp</TableHead>
                   <TableHead className="text-right">Còn lại</TableHead>
                   <TableHead>{FORM_VI.status}</TableHead>

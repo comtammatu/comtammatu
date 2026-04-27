@@ -112,7 +112,7 @@ export function ChartOfAccountsClient({ accounts: initial }: Props) {
               <TableRow>
                 <TableHead className="w-28">Mã TK</TableHead>
                 <TableHead>Tên tài khoản</TableHead>
-                <TableHead className="w-36">Loại</TableHead>
+                <TableHead className="w-36">{FORM_VI.type}</TableHead>
                 <TableHead className="w-24">{FORM_VI.status}</TableHead>
                 <TableHead className="w-20" />
               </TableRow>

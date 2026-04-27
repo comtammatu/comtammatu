@@ -20,7 +20,7 @@ import {
 } from "@comtammatu/ui/components/card";
 import { upsertPrinter, deletePrinter } from "./actions";
 
-import { ACTIONS_VI, BRANCH_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
 export type Branch = { id: number; name: string };
 
 export type Printer = {
@@ -297,7 +297,7 @@ function PrinterForm({
             )}
           </div>
           <div className="space-y-2">
-            <Label>Tên</Label>
+            <Label>{FORM_VI.name}</Label>
             <Input
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}

@@ -249,7 +249,7 @@ export function PosSessionsClient({
                       <TableHead>Giờ</TableHead>
                       <TableHead>{FORM_VI.status}</TableHead>
                       <TableHead>Thanh toán</TableHead>
-                      <TableHead className="text-right">Tổng</TableHead>
+                      <TableHead className="text-right">{FORM_VI.total}</TableHead>
                       <TableHead className="w-8" />
                     </TableRow>
                   </TableHeader>

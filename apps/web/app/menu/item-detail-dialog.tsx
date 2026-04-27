@@ -29,6 +29,7 @@ import { FormattedNumberInput } from "@/components/form";
 
 /* ─── Local Types ─── */
 
+import { FORM_VI } from "@comtammatu/shared/messages";
 interface VariantEntry {
   id?: number;
   name: string;
@@ -298,7 +299,7 @@ export function ItemDetailDialog({
                   className="flex items-end gap-2"
                 >
                   <div className="flex-1 space-y-1">
-                    <Label className="text-xs">Tên</Label>
+                    <Label className="text-xs">{FORM_VI.name}</Label>
                     <Input
                       value={v.name}
                       onChange={(e) =>
@@ -366,7 +367,7 @@ export function ItemDetailDialog({
                   className="flex items-end gap-2"
                 >
                   <div className="flex-1 space-y-1">
-                    <Label className="text-xs">Tên</Label>
+                    <Label className="text-xs">{FORM_VI.name}</Label>
                     <Input
                       value={m.name}
                       onChange={(e) =>
@@ -376,7 +377,7 @@ export function ItemDetailDialog({
                     />
                   </div>
                   <div className="w-28 space-y-1">
-                    <Label className="text-xs">Giá</Label>
+                    <Label className="text-xs">{FORM_VI.price}</Label>
                     <FormattedNumberInput
                       defaultValue={String(m.price)}
                       maxFractionDigits={0}

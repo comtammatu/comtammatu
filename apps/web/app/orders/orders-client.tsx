@@ -345,7 +345,7 @@ export function OrdersClient({
                     <p className="mt-1 font-medium">{order.created_by_name}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-muted-foreground">Tổng tiền</p>
+                    <p className="text-muted-foreground">{FORM_VI.totalAmount}</p>
                     <p className="mt-1 font-mono font-medium">
                       {formatVND(order.total_amount)}
                     </p>
@@ -388,7 +388,7 @@ export function OrdersClient({
                   <TableHead className="hidden lg:table-cell">
                     Thời gian
                   </TableHead>
-                  <TableHead className="text-right">Tổng tiền</TableHead>
+                  <TableHead className="text-right">{FORM_VI.totalAmount}</TableHead>
                   <TableHead className="hidden sm:table-cell">
                     Thanh toán
                   </TableHead>

@@ -265,7 +265,7 @@ export function ItemCustomizer({
                 {/* Variants */}
                 {item.menu_item_variants.length > 0 && (
                   <div>
-                    <h3 className="mb-2 text-base font-semibold">Loại</h3>
+                    <h3 className="mb-2 text-base font-semibold">{FORM_VI.type}</h3>
                     <div className="flex flex-wrap gap-2">
                       {item.menu_item_variants.map((v) => {
                         const isSelected = selectedVariant?.id === v.id;

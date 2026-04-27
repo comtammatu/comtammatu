@@ -250,7 +250,7 @@ export function ReceivingClient({
                     <TableHead className="min-w-32">Thời gian</TableHead>
                     <TableHead className="min-w-32">{FORM_VI.status}</TableHead>
                     <TableHead className="min-w-28 text-right">
-                      Tổng tiền
+                      {FORM_VI.totalAmount}
                     </TableHead>
                   </TableRow>
                 </TableHeader>

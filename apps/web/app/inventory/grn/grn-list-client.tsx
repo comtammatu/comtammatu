@@ -176,7 +176,7 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
                     <TableHead>Nhà cung cấp</TableHead>
                     <TableHead>PO liên kết</TableHead>
                     <TableHead>Ngày kiểm nhận</TableHead>
-                    <TableHead>Tổng tiền</TableHead>
+                    <TableHead>{FORM_VI.totalAmount}</TableHead>
                     <TableHead>{FORM_VI.status}</TableHead>
                     <TableHead className="w-10" />
                   </TableRow>
