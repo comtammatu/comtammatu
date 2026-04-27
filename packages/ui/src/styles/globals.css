@@ -377,6 +377,10 @@
 /* Override: print mode for POS bill receipt — force black-ink-on-white-paper
  * regardless of host theme. Without this, dark mode prints as white text on
  * black bg = unreadable receipt + ribbon-burning ink waste on thermal printers.
+ * Also neutralize any inherited line-clamp / overflow:hidden / max-width:
+ * legal text (branch.address, order.note) MUST print in full — silent clipping
+ * on 80mm thermal paper = e-invoice mismatch + service failure. See named
+ * regression NO-CLAMP-ON-RECEIPT-LEGAL-FIELDS (tasks/regressions.md).
  * Container = `#pos-receipt` in bill-receipt-summary.tsx. */
 @media print {
   :root {
@@ -387,5 +391,8 @@
     color: black !important;
     background: white !important;
     border-color: black !important;
+    -webkit-line-clamp: unset !important;
+    overflow: visible !important;
+    max-width: none !important;
   }
 }
