@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Building as IconBuilding, Clock as IconClock, Ellipsis as IconDots, Pencil as IconPencil, ToggleLeft as IconToggleLeft, ToggleRight as IconToggleRight } from "lucide-react";
+import { Building as IconBuilding, Clock as IconClock, Ellipsis as IconDots, Pencil as IconPencil, Shield as IconShield, ToggleLeft as IconToggleLeft, ToggleRight as IconToggleRight } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -26,6 +26,7 @@ import {
 import { toggleBranchActive } from "./actions";
 import { BranchFormDialog } from "./branch-form-dialog";
 import { AttendanceConfigDialog } from "./attendance-config-dialog";
+import { NetworkConfigDialog } from "./network-config-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { TableEmptyStateRow } from "../../components/table-empty-state-row";
 
@@ -51,6 +52,7 @@ export function BranchTable({ branches }: BranchTableProps) {
   const [attendanceBranch, setAttendanceBranch] = useState<BranchRow | null>(
     null,
   );
+  const [networkBranch, setNetworkBranch] = useState<BranchRow | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function handleToggleActive(id: number) {
@@ -156,6 +158,12 @@ export function BranchTable({ branches }: BranchTableProps) {
                         <IconClock className="mr-2 size-4" />
                         Cấu hình chấm công
                       </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => setNetworkBranch(branch)}
+                      >
+                        <IconShield className="mr-2 size-4" />
+                        Cổng mạng POS/KDS
+                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>
@@ -182,6 +190,14 @@ export function BranchTable({ branches }: BranchTableProps) {
             longitude: attendanceBranch.longitude,
             hasSecret: attendanceBranch.hasAttendanceSecret,
           }}
+        />
+      )}
+
+      {networkBranch && (
+        <NetworkConfigDialog
+          open={!!networkBranch}
+          onOpenChange={(open) => !open && setNetworkBranch(null)}
+          branch={{ id: networkBranch.id, name: networkBranch.name }}
         />
       )}
     </>
