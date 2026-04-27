@@ -66,6 +66,13 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // /api/branch-presence is a Bearer-token endpoint (print-agent heartbeat).
+  // Skip session-based auth so unauthenticated agent requests reach the route
+  // handler's timing-safe token check instead of being redirected to /login.
+  if (pathname === "/api/branch-presence") {
+    return NextResponse.next();
+  }
+
   // Refresh session + get user
   const { user, response, supabase } = await updateSession(request);
 
