@@ -3910,6 +3910,80 @@ export type Database = {
           },
         ]
       }
+      refunds: {
+        Row: {
+          amount: number
+          approved_by: string | null
+          branch_id: number
+          created_at: string
+          created_by: string
+          id: number
+          order_id: number
+          payment_id: number
+          reason: string
+          status: string
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          approved_by?: string | null
+          branch_id: number
+          created_at?: string
+          created_by: string
+          id?: never
+          order_id: number
+          payment_id: number
+          reason: string
+          status?: string
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          approved_by?: string | null
+          branch_id?: number
+          created_at?: string
+          created_by?: string
+          id?: never
+          order_id?: number
+          payment_id?: number
+          reason?: string
+          status?: string
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "refunds_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "refunds_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "refunds_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "refunds_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       role_templates: {
         Row: {
           created_at: string
