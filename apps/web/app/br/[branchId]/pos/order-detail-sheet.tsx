@@ -47,7 +47,7 @@ import { ACTIVE_POS_STATUSES } from "./order-history";
 import { messages } from "@lib/messages";
 import { OrderItemRow } from "./_components/order-detail/order-item-row";
 import type { OrderItemRowData } from "./_components/order-detail/order-item-row";
-import { useSwipeReveal } from "./_hooks/use-swipe-reveal";
+import { OrderItemActionsSheet } from "./_components/order-detail/order-item-actions-sheet";
 import { VoidItemDialog } from "./_components/order-detail/void-item-dialog";
 import { CancelOrderDialog } from "./_components/order-detail/cancel-order-dialog";
 import { TransferTableDialog } from "./_components/order-detail/transfer-table-dialog";
@@ -68,13 +68,6 @@ export type OrderDetailData = Omit<OrderData, "order_items"> & {
 function canAppendOrderStatus(status: string): boolean {
   return ACTIVE_POS_STATUSES.includes(status);
 }
-
-// Swipe reveals up to 2 buttons (Phục vụ + Hủy) at 80px each. Activation/
-// threshold tuned to match the cart-pane swipe-to-delete gesture so the
-// feel is identical across the POS sheets.
-const ITEM_REVEAL_WIDTH = 160;
-const ITEM_SWIPE_ACTIVATION_PX = 8;
-const ITEM_SWIPE_THRESHOLD_PX = 40;
 
 const ORDER_DETAIL_LOADING_TEXT = {
   append: "Th\u00eam m\u00f3n",
@@ -132,12 +125,7 @@ function OrderDetailLoadingFixture() {
           aria-label={ORDER_DETAIL_LOADING_TEXT.aria}
         >
           {ORDER_DETAIL_SKELETON_ITEMS.map((row) => (
-            <OrderItemRow
-              key={row.id}
-              row={row}
-              canManage={false}
-              onVoid={() => undefined}
-            />
+            <OrderItemRow key={row.id} row={row} />
           ))}
         </ul>
       </ScrollArea>
@@ -266,19 +254,13 @@ export function OrderDetailSheet({
   const [showDiscount, setShowDiscount] = useState(false);
   const [showSplit, setShowSplit] = useState(false);
   const [showMerge, setShowMerge] = useState(false);
-  const swipe = useSwipeReveal({
-    revealWidth: ITEM_REVEAL_WIDTH,
-    activationPx: ITEM_SWIPE_ACTIVATION_PX,
-    threshold: ITEM_SWIPE_THRESHOLD_PX,
-  });
-  const clearSwipeReveal = swipe.clearReveal;
-  // Reset reveal whenever the sheet switches orders or closes — otherwise a
-  // row revealed in order A would still appear "open" when order B paints
-  // (item ids don't overlap, but the revealedKey lookup compares strings
-  // and the visual state is best treated as transient per-sheet-session).
+  // Tap-to-open per-item actions sheet. Reset on orderId change so a sheet
+  // opened on order A doesn't leak into order B (item ids don't overlap
+  // but visual state should be transient per-detail-session).
+  const [actionsItemId, setActionsItemId] = useState<number | null>(null);
   useEffect(() => {
-    clearSwipeReveal();
-  }, [orderId, clearSwipeReveal]);
+    setActionsItemId(null);
+  }, [orderId]);
 
   const load = useCallback(() => {
     if (orderId === null) {
@@ -507,12 +489,21 @@ export function OrderDetailSheet({
       const r = await markOrderItemServed(itemId);
       if (r.success) {
         notify.success("Đã phục vụ món");
+        setActionsItemId(null);
         await onOrderUpdated?.();
         load();
       } else {
         notify.error(r.error ?? messages.pos.order.statusUpdateFailed);
       }
     });
+  };
+
+  // From the per-item actions sheet → close it and open the existing
+  // VoidItemDialog (which collects the lý-do-hủy reason). Sequencing the
+  // two prevents stacked focus traps from fighting on mobile.
+  const handleVoidRequest = (itemId: number) => {
+    setActionsItemId(null);
+    setVoidItemId(itemId);
   };
 
   const handleReorder = () => {
@@ -796,10 +787,7 @@ export function OrderDetailSheet({
                     <OrderItemRow
                       key={row.id}
                       row={row}
-                      canManage={canManage}
-                      onVoid={setVoidItemId}
-                      onMarkServed={handleMarkItemServed}
-                      swipe={swipe}
+                      onTap={setActionsItemId}
                     />
                   ))}
                 </ul>
@@ -956,6 +944,17 @@ export function OrderDetailSheet({
           )}
         </SheetContent>
       </Sheet>
+
+      <OrderItemActionsSheet
+        item={
+          data?.order_items.find((item) => item.id === actionsItemId) ?? null
+        }
+        canManage={canManage}
+        isPending={isPending}
+        onClose={() => setActionsItemId(null)}
+        onMarkServed={handleMarkItemServed}
+        onVoidRequest={handleVoidRequest}
+      />
 
       <VoidItemDialog
         open={voidItemId !== null}
