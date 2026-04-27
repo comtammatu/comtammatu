@@ -27,7 +27,11 @@ const branchSchema = z.object({
     .trim()
     .max(300, { error: "Địa chỉ tối đa 300 ký tự" })
     .optional(),
-  phone: z.string().trim().optional(),
+  phone: z
+    .string()
+    .trim()
+    .max(30, { error: "Số điện thoại tối đa 30 ký tự" })
+    .optional(),
   branchKind: z.enum(["branch", "central_kitchen", "central_warehouse"]),
 });
 

@@ -11,8 +11,14 @@ const ROLES = PROCUREMENT_ROLES;
 
 const supplierSchema = z.object({
   name: z.string().min(1, { error: "Tên NCC không được để trống" }),
-  tax_code: z.string().optional(),
-  phone: z.string().optional(),
+  tax_code: z
+    .string()
+    .max(20, { error: "Mã số thuế tối đa 20 ký tự" })
+    .optional(),
+  phone: z
+    .string()
+    .max(30, { error: "Số điện thoại tối đa 30 ký tự" })
+    .optional(),
   address: z
     .string()
     .max(300, { error: "Địa chỉ tối đa 300 ký tự" })

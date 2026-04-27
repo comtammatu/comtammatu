@@ -32,8 +32,16 @@ export interface SupplierRow {
 
 const supplierSchema = z.object({
   name: z.string().trim().min(1, { error: "Tên nhà cung cấp không được trống" }),
-  tax_code: z.string().trim().optional(),
-  phone: z.string().trim().optional(),
+  tax_code: z
+    .string()
+    .trim()
+    .max(20, { error: "Mã số thuế tối đa 20 ký tự" })
+    .optional(),
+  phone: z
+    .string()
+    .trim()
+    .max(30, { error: "Số điện thoại tối đa 30 ký tự" })
+    .optional(),
   address: z
     .string()
     .trim()
