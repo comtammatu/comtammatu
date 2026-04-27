@@ -20,6 +20,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { FormattedNumberInput } from "@/components/form";
 import { confirmCashPayment } from "../../payment-actions";
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 interface CashTenderedDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -176,7 +177,7 @@ export function CashTenderedDialog({
             onClick={() => onOpenChange(false)}
             disabled={pending}
           >
-            Hủy
+            {ACTIONS_VI.cancel}
           </Button>
           <Button
             type="button"

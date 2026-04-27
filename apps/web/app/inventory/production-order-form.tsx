@@ -42,6 +42,7 @@ import type { BranchOption, FinishedGoodOption } from "./production-types";
 
 /* ─── Schema ─── */
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 const productionLineRowSchema = z.object({
   finished_good_id: z
     .string()
@@ -427,7 +428,7 @@ export function ProductionOrderForm({
               onClick={() => setIsDialogOpen(false)}
               disabled={isPending}
             >
-              Hủy
+              {ACTIONS_VI.cancel}
             </Button>
             <Button type="submit" disabled={isPending || !actionsEnabled}>
               {isPending && <Spinner className="mr-2" />}

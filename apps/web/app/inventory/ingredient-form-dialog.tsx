@@ -20,7 +20,7 @@ import { createIngredient, updateIngredient } from "./actions";
 import type { IngredientRow } from "./_lib/types";
 import { STORAGE_OPTIONS, ITEM_KIND_OPTIONS } from "./_lib/constants";
 import { parseOptionalNumber } from "./_lib/format";
-import { ERRORS_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, ERRORS_VI } from "@comtammatu/shared/messages";
 
 /* ─── Schema ─── */
 
@@ -353,11 +353,11 @@ function IngredientFormContent({
             disabled={isPending}
             className="h-10"
           >
-            Hủy
+            {ACTIONS_VI.cancel}
           </Button>
           <Button type="submit" disabled={isPending} className="h-10">
             {isPending && <Spinner className="mr-2" />}
-            {isEdit ? "Cập nhật" : "Tạo mới"}
+            {isEdit ? ACTIONS_VI.update : ACTIONS_VI.create}
           </Button>
         </DialogFooter>
       </form>

@@ -59,6 +59,7 @@ import {
 } from "../../_lib/ui";
 import type { IngredientRow } from "../../page";
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 export type GRNDetailItem = {
   lineId: number;
   ingredientId: number;
@@ -809,7 +810,7 @@ function AddGrnLineDialog({
               variant="outline"
               onClick={() => onOpenChange(false)}
             >
-              Hủy
+              {ACTIONS_VI.cancel}
             </Button>
             <Button type="submit" disabled={isPending}>
               <IconPlus className="size-4" />

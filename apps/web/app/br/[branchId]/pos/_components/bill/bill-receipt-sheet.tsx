@@ -64,6 +64,7 @@ import {
   type InvoiceFormState,
 } from "./invoice-form-section";
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 interface BillReceiptProps {
   branchId: number;
   orderId: number | null;
@@ -713,7 +714,7 @@ export function BillReceipt({
             </ScrollArea>
             <DialogFooter>
               <Button type="button" onClick={onClose}>
-                Đóng
+                {ACTIONS_VI.close}
               </Button>
             </DialogFooter>
           </div>
@@ -917,7 +918,7 @@ export function BillReceipt({
                 onClick={onClose}
                 disabled={actionPending}
               >
-                Hủy
+                {ACTIONS_VI.cancel}
               </Button>
             </DialogFooter>
           </>

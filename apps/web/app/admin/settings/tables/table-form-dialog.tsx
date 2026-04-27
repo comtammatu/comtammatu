@@ -12,6 +12,7 @@ import { STATUS_OPTIONS, TABLE_STATUSES } from "./constants";
 import type { ZoneRow } from "./zone-table";
 import type { TableRow } from "./table-table";
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 const NO_ZONE = "none";
 
 const tableSchema = z.object({
@@ -74,7 +75,7 @@ export function TableFormDialog({
         isEdit ? "Chỉnh sửa thông tin bàn" : "Nhập thông tin bàn mới"
       }
       successMessage={isEdit ? "Đã cập nhật bàn" : "Đã tạo bàn mới"}
-      submitLabel={isEdit ? "Cập nhật" : "Tạo mới"}
+      submitLabel={isEdit ? ACTIONS_VI.update : ACTIONS_VI.create}
       onSubmit={async (values) => {
         const payload: Record<string, unknown> = {
           number: values.number,

@@ -28,6 +28,7 @@ import { HARDBLOCK_REASON_LABELS_VI } from "@comtammatu/shared/labels";
 import { PhotoUploadInput } from "./photo-upload-input";
 import { submitHardblockOverride } from "../variance-actions";
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 const NOTE_MIN = 50;
 
 type HardblockReason = keyof typeof HARDBLOCK_REASON_LABELS_VI;
@@ -207,7 +208,7 @@ export function HardblockOverrideDialog({
             onClick={() => handleClose(false)}
             disabled={isSubmitting}
           >
-            Hủy
+            {ACTIONS_VI.cancel}
           </Button>
           <Button
             variant="destructive"

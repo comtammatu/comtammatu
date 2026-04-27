@@ -67,6 +67,7 @@ import {
 } from "../../issue-actions";
 import type { IngredientRow } from "../../page";
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 type IssueRecord = {
   id: number;
   issue_number: string;
@@ -834,7 +835,7 @@ function AddIssueLineDialog({
               variant="outline"
               onClick={() => onOpenChange(false)}
             >
-              Hủy
+              {ACTIONS_VI.cancel}
             </Button>
             <Button type="submit" disabled={isPending}>
               {isPending ? "Đang lưu..." : "Lưu dòng"}

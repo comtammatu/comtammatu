@@ -49,6 +49,7 @@ import { PosSidebarContent } from "./pos-sidebar-panel";
 // participate in HDDT-PAYMENT-FIRST-FAILSOFT-ORPHAN +
 // HDDT-FORM-PAYLOAD-FREEZE-AT-CLICK + POS-PAYMENT-REUSE-UNIQUE-SLOT;
 // any chunk-load latency mid-payment is an unrecoverable cash risk.
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 const HotkeyOverlay = dynamic(
   () =>
     import("./_components/hotkey-overlay").then((m) => ({
@@ -1096,7 +1097,7 @@ function PosDesktopInner({
           onClick={cancelAppendWorkflow}
         >
           <IconX data-icon="inline-start" />
-          Hủy
+          {ACTIONS_VI.cancel}
         </Button>
       </div>
     ) : null;

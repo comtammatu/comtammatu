@@ -19,6 +19,7 @@ import {
   type StocktakeConflictRow,
 } from "../../stocktake-actions";
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 const CONFLICT_TYPE_VI: Record<StocktakeConflictRow["conflictType"], string> = {
   is_final_overwrite: "Ghi đè dòng đã final",
   concurrent_round_submit: "Submit trùng round",
@@ -97,7 +98,7 @@ export function ConflictsQueueClient({
             size="sm"
             onClick={() => router.refresh()}
           >
-            Làm mới
+            {ACTIONS_VI.refresh}
           </Button>
         </div>
 
@@ -302,7 +303,7 @@ function ConflictRow({ row, onResolved }: ConflictRowProps) {
               onClick={() => setShowManual(false)}
               disabled={pending}
             >
-              Hủy
+              {ACTIONS_VI.cancel}
             </Button>
           </div>
         ) : (

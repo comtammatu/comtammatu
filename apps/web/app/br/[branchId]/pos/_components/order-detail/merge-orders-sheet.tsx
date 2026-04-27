@@ -21,6 +21,7 @@ import { Skeleton } from "@comtammatu/ui/components/skeleton";
 import { fetchSiblingOrdersForTable } from "../../actions";
 import type { SiblingOrderRow } from "../../discount-actions";
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 interface MergeOrdersSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -165,7 +166,7 @@ export function MergeOrdersSheet({
                   variant="outline"
                   onClick={load}
                 >
-                  Thử lại
+                  {ACTIONS_VI.retry}
                 </Button>
               </div>
             )}
@@ -235,7 +236,7 @@ export function MergeOrdersSheet({
               disabled={isPending}
               onClick={handleClose}
             >
-              Hủy
+              {ACTIONS_VI.cancel}
             </Button>
             <Button
               type="button"

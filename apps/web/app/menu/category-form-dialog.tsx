@@ -6,6 +6,7 @@ import { createCategory, updateCategory } from "./actions";
 import { CATEGORY_TYPE_LABELS } from "./category-labels";
 import type { CategoryRow } from "./category-table";
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 const categoryTypeValues = Object.keys(CATEGORY_TYPE_LABELS) as [
   keyof typeof CATEGORY_TYPE_LABELS,
   ...Array<keyof typeof CATEGORY_TYPE_LABELS>,
@@ -65,7 +66,7 @@ export function CategoryFormDialog({
       entityKey={category?.id ?? "new"}
       title={isEdit ? "Chỉnh sửa danh mục" : "Thêm danh mục mới"}
       successMessage={isEdit ? "Đã cập nhật danh mục" : "Đã tạo danh mục mới"}
-      submitLabel={isEdit ? "Cập nhật" : "Tạo mới"}
+      submitLabel={isEdit ? ACTIONS_VI.update : ACTIONS_VI.create}
       onSubmit={async (values) => {
         const fd = valuesToFormData(values);
         if (isEdit && category) {

@@ -167,7 +167,7 @@ export function ProductionStats({
                 <div className="text-2xl font-semibold tabular-nums">
                   {item.value}
                 </div>
-                <div className="text-xs text-muted-foreground">
+                <div className="line-clamp-2 break-words text-xs text-muted-foreground">
                   {item.description}
                 </div>
               </div>

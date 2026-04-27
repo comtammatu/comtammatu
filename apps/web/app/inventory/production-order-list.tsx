@@ -57,6 +57,7 @@ import {
 } from "./production-types";
 import type { ProductionOrderRow } from "./production-types";
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 interface ProductionOrderListProps {
   orders: ProductionOrderRow[];
   canConfirmProduction: boolean;
@@ -154,7 +155,7 @@ export function ProductionOrderList({
           onClick={() => handleCancel(order.id)}
           disabled={isPending}
         >
-          Hủy
+          {ACTIONS_VI.cancel}
         </Button>
       </>
     );

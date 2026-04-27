@@ -8,6 +8,7 @@ import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 const BUCKET = "menu-images";
 const MAX_SIZE = 5 * 1024 * 1024;
 const ACCEPTED = ["image/jpeg", "image/png", "image/webp"];
@@ -148,7 +149,7 @@ export function MenuImageInput({
               onClick={() => onChange(null)}
             >
               <IconTrash className="size-4" />
-              Xóa
+              {ACTIONS_VI.delete}
             </Button>
           </div>
         </div>

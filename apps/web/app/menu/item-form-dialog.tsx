@@ -16,15 +16,23 @@ import { MenuImageInput } from "./menu-image-input";
 import type { CategoryRow } from "./category-table";
 import type { ItemRow } from "./item-table";
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 const itemSchema = z.object({
-  name: z.string().trim().min(1, { error: "Tên món không được trống" }),
+  name: z
+    .string()
+    .trim()
+    .min(1, { error: "Tên món không được trống" })
+    .max(100, { error: "Tên món tối đa 100 ký tự" }),
   category_id: z.string().min(1, { error: "Vui lòng chọn danh mục" }),
   base_price: z
     .string()
     .trim()
     .min(1, { error: "Giá không được trống" })
     .refine((v) => Number(v) >= 0, { error: "Giá không hợp lệ" }),
-  description: z.string().optional(),
+  description: z
+    .string()
+    .max(500, { error: "Mô tả tối đa 500 ký tự" })
+    .optional(),
   image_url: z.string().nullable().optional(),
 });
 
@@ -74,7 +82,7 @@ export function ItemFormDialog({
       entityKey={item?.id ?? "new"}
       title={isEdit ? "Chỉnh sửa món" : "Thêm món mới"}
       successMessage={isEdit ? "Đã cập nhật món" : "Đã tạo món mới"}
-      submitLabel={isEdit ? "Cập nhật" : "Tạo mới"}
+      submitLabel={isEdit ? ACTIONS_VI.update : ACTIONS_VI.create}
       onSubmit={async (values) => {
         const fd = valuesToFormData(values);
         // valuesToFormData skips null/empty — set explicitly so server can clear it.

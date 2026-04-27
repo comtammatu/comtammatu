@@ -22,7 +22,7 @@ import {
   TextareaField,
 } from "@/components/form";
 import { adjustStock } from "../actions";
-import { ERRORS_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, ERRORS_VI } from "@comtammatu/shared/messages";
 
 const ADJUST_TYPE_OPTIONS = [
   { value: "adjustment", label: "Điều chỉnh thủ công" },
@@ -169,7 +169,7 @@ export function AdjustStockDialog({
               onClick={() => onOpenChange(false)}
               disabled={isPending}
             >
-              Hủy
+              {ACTIONS_VI.cancel}
             </Button>
             <Button type="submit" disabled={isPending}>
               {isPending && <Spinner className="mr-2" />}

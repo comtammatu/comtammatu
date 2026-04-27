@@ -35,7 +35,7 @@ import {
 import { toast } from "@comtammatu/ui/components/sonner";
 import { FormattedNumberInput } from "../_components/formatted-number-input";
 import { upsertRecipeLines } from "../procurement-actions";
-import { ERRORS_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, ERRORS_VI } from "@comtammatu/shared/messages";
 
 export interface MenuItemOption {
   id: number;
@@ -69,7 +69,10 @@ const recipeLineRowSchema = z.object({
     .string()
     .min(1, { error: "Nhập yield" })
     .refine((v) => Number(v) > 0, { error: "Yield phải > 0" }),
-  note: z.string().optional(),
+  note: z
+    .string()
+    .max(200, { error: "Ghi chú tối đa 200 ký tự" })
+    .optional(),
 });
 
 const recipeSchema = z.object({
@@ -486,7 +489,7 @@ export function RecipeLineDialog({
               disabled={isPending}
               className="h-10"
             >
-              Hủy
+              {ACTIONS_VI.cancel}
             </Button>
             <Button type="submit" disabled={isPending} className="h-10">
               {isPending && <Spinner className="mr-2" />}

@@ -19,6 +19,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { TextField, TextareaField } from "@/components/form";
 import { createSupplier, updateSupplier } from "../procurement-actions";
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 export interface SupplierRow {
   id: number;
   name: string;
@@ -33,8 +34,16 @@ const supplierSchema = z.object({
   name: z.string().trim().min(1, { error: "Tên nhà cung cấp không được trống" }),
   tax_code: z.string().trim().optional(),
   phone: z.string().trim().optional(),
-  address: z.string().trim().optional(),
-  notes: z.string().trim().optional(),
+  address: z
+    .string()
+    .trim()
+    .max(300, { error: "Địa chỉ tối đa 300 ký tự" })
+    .optional(),
+  notes: z
+    .string()
+    .trim()
+    .max(500, { error: "Ghi chú tối đa 500 ký tự" })
+    .optional(),
 });
 
 type SupplierFormValues = z.infer<typeof supplierSchema>;
@@ -163,11 +172,11 @@ export function SupplierDialog({
               onClick={() => onOpenChange(false)}
               disabled={isPending}
             >
-              Hủy
+              {ACTIONS_VI.cancel}
             </Button>
             <Button type="submit" disabled={isPending}>
               {isPending && <Spinner className="mr-2" />}
-              {isEdit ? "Cập nhật" : "Lưu"}
+              {isEdit ? ACTIONS_VI.update : ACTIONS_VI.save}
             </Button>
           </DialogFooter>
         </form>

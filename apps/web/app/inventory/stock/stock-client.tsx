@@ -54,6 +54,7 @@ import { CATEGORY_TONE_CLASS } from "../_lib/constants";
 import { createStockIssueDraft, upsertStockIssueLine } from "../issue-actions";
 import { AdjustStockDialog } from "./adjust-stock-dialog";
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 export type StockIngredient = {
   id: number;
   name: string;
@@ -428,7 +429,7 @@ function QuickStockIssueDialog({
               onClick={() => onOpenChange(false)}
               disabled={isPending}
             >
-              Hủy
+              {ACTIONS_VI.cancel}
             </Button>
             <Button type="submit" disabled={isPending}>
               {isPending ? "Đang tạo..." : "Tạo phiếu"}

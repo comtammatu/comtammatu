@@ -37,6 +37,7 @@ import { FormattedNumberInput } from "@/components/form";
 
 /* ─── Context shape from server component ─── */
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 export interface WasteFormContext {
   tenantId: number;
   branch: { id: number; name: string; kind: string };
@@ -473,7 +474,7 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
           onClick={() => router.back()}
           disabled={isSubmitting}
         >
-          Hủy
+          {ACTIONS_VI.cancel}
         </Button>
         <Button onClick={handleSubmit} disabled={isSubmitting}>
           {isSubmitting ? <Spinner /> : "Tạo phiếu"}

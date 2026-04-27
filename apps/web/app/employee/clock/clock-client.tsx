@@ -28,6 +28,7 @@ import { clockIn, clockOut } from "./actions";
 
 /* ─── Types ─── */
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 interface Branch {
   id: number;
   name: string;
@@ -529,7 +530,7 @@ export function ClockClient({
                 setError(null);
               }}
             >
-              Quay lại
+              {ACTIONS_VI.back}
             </Button>
             <Button
               className="flex-1"
@@ -571,7 +572,7 @@ export function ClockClient({
             }
           }}
         >
-          Thử lại
+          {ACTIONS_VI.retry}
         </Button>
       )}
 

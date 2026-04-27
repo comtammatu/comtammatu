@@ -44,6 +44,7 @@ import { useActiveTable } from "../_hooks/use-active-table";
 import { useSwipeReveal } from "../_hooks/use-swipe-reveal";
 import { PosLineItemCompact } from "./pos-line-item-compact";
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 const DELETE_REVEAL_WIDTH = 80;
 const SWIPE_ACTIVATION_PX = 8;
 const SWIPE_REVEAL_THRESHOLD_PX = 40;
@@ -306,7 +307,7 @@ function CartPaneComponent({
                         swipe.setRevealedKey(null);
                       }}
                     >
-                      Xóa
+                      {ACTIONS_VI.delete}
                     </Button>
                     <Item
                       variant="outline"

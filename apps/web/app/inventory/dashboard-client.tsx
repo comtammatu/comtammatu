@@ -538,7 +538,7 @@ export function DashboardClient(props: DashboardProps) {
                         <p className="text-sm font-medium leading-tight">
                           {task.title}
                         </p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="line-clamp-2 break-words text-xs text-muted-foreground">
                           {task.description}
                         </p>
                       </div>

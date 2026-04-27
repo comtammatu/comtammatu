@@ -92,6 +92,7 @@ import type {
 
 /* ─── Schema ─── */
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 const recipeLineItemSchema = z.object({
   ingredient_id: z
     .string()
@@ -752,7 +753,7 @@ export function ProductionRecipePanel({
                 onClick={() => handleRecipeDialogOpenChange(false)}
                 disabled={isPending}
               >
-                Hủy
+                {ACTIONS_VI.cancel}
               </Button>
               <Button type="submit" disabled={isPending}>
                 {isPending && <Spinner data-icon="inline-start" />}

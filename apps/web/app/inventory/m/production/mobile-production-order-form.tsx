@@ -46,6 +46,7 @@ import type {
 
 /* ─── Schema ─── */
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 const productionLineRowSchema = z.object({
   finished_good_id: z
     .string()
@@ -452,7 +453,7 @@ export function MobileProductionOrderForm({
               onClick={() => setIsOpen(false)}
               disabled={isPending}
             >
-              Hủy
+              {ACTIONS_VI.cancel}
             </Button>
             <Button type="submit" disabled={isPending || !actionsEnabled}>
               {isPending ? <Spinner className="mr-2" /> : null}

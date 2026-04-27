@@ -29,6 +29,7 @@ import {
   type ImportIngredientSummary,
 } from "../actions";
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 export function IngredientImportExportMenu({
   onImported,
 }: {
@@ -253,7 +254,7 @@ function IngredientImportDialog({
               onClick={handleClose}
               disabled={isPending}
             >
-              Đóng
+              {ACTIONS_VI.close}
             </Button>
             <Button type="submit" disabled={isPending}>
               {isPending && <Spinner className="mr-2" />}

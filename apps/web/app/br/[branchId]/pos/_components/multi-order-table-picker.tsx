@@ -16,6 +16,7 @@ import { Plus as IconPlus } from "lucide-react";
 import type { SessionOrder } from "../order-history";
 import { getPosOrderStatusInfo } from "../_lib/order-status-display";
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 interface MultiOrderTablePickerProps {
   open: boolean;
   tableNumber: number | null;
@@ -88,7 +89,7 @@ export function MultiOrderTablePicker({
             Tạo đơn mới trên bàn này
           </Button>
           <Button type="button" variant="ghost" onClick={onClose}>
-            Đóng
+            {ACTIONS_VI.close}
           </Button>
         </DrawerFooter>
       </DrawerContent>

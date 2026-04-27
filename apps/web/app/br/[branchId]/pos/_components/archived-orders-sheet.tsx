@@ -47,6 +47,7 @@ import {
   type ArchivedScope,
 } from "../_hooks/use-archived-orders";
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 interface ArchivedOrdersSheetProps {
   branchId: number;
   sessionId: number;
@@ -178,7 +179,7 @@ export function ArchivedOrdersSheet({
                 onClick={reload}
               >
                 <IconRefresh data-icon="inline-start" />
-                Thử lại
+                {ACTIONS_VI.retry}
               </Button>
             </Empty>
           ) : isLoading ? (

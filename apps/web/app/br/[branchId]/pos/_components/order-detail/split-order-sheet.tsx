@@ -17,6 +17,7 @@ import {
 import { getPosLineItemDisplayName } from "../../types";
 import type { OrderItemRowData } from "./order-item-row";
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 interface SplitOrderSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -186,7 +187,7 @@ export function SplitOrderSheet({
               disabled={isPending}
               onClick={handleClose}
             >
-              Hủy
+              {ACTIONS_VI.cancel}
             </Button>
             <Button
               type="button"

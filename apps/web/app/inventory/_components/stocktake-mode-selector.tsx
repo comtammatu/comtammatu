@@ -127,7 +127,7 @@ export function StocktakeModeSelector({
                 ) : null}
               </div>
             </div>
-            <p className="text-xs text-muted-foreground">{meta.description}</p>
+            <p className="line-clamp-2 break-words text-xs text-muted-foreground">{meta.description}</p>
           </label>
         );
       })}

@@ -50,6 +50,7 @@ import {
 } from "../../_lib/ui";
 import type { IngredientRow } from "../../page";
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 export type PODetail = {
   id: number;
   code: string;
@@ -725,7 +726,7 @@ export function PODetailClient({
                         className="h-9"
                       >
                         <IconPlus className="size-4" />
-                        Thêm
+                        {ACTIONS_VI.add}
                       </Button>
                     </form>
                   ) : null}

@@ -10,6 +10,7 @@ import {
 import { createBranch, updateBranch } from "./actions";
 import type { BranchRow } from "./branch-table";
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 const BRANCH_KIND_OPTIONS = [
   { value: "branch", label: "Chi nhánh" },
   { value: "central_warehouse", label: "Kho tổng" },
@@ -21,7 +22,11 @@ const branchSchema = z.object({
     .string()
     .trim()
     .min(1, { error: "Tên điểm vận hành không được trống" }),
-  address: z.string().trim().optional(),
+  address: z
+    .string()
+    .trim()
+    .max(300, { error: "Địa chỉ tối đa 300 ký tự" })
+    .optional(),
   phone: z.string().trim().optional(),
   branchKind: z.enum(["branch", "central_kitchen", "central_warehouse"]),
 });
@@ -67,7 +72,7 @@ export function BranchFormDialog({
       successMessage={
         isEdit ? "Đã cập nhật điểm vận hành" : "Đã tạo điểm vận hành mới"
       }
-      submitLabel={isEdit ? "Cập nhật" : "Tạo mới"}
+      submitLabel={isEdit ? ACTIONS_VI.update : ACTIONS_VI.create}
       onSubmit={async (values) => {
         const fd = valuesToFormData(values);
         if (isEdit && branch) {

@@ -50,6 +50,7 @@ import { InteractiveCard } from "../_components/interactive-card";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import { createStocktakeSession, fetchStocktakeSessions } from "../actions";
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 export interface StocktakeSessionRow {
   id: number;
   branch_id: number;
@@ -345,7 +346,7 @@ export function StocktakeListClient({
               onClick={() => setDialogOpen(false)}
               disabled={isPending}
             >
-              Hủy
+              {ACTIONS_VI.cancel}
             </Button>
             <Button
               onClick={handleDialogConfirm}

@@ -20,6 +20,7 @@ import {
 } from "@comtammatu/ui/components/card";
 import { upsertPrinter, deletePrinter } from "./actions";
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 export type Branch = { id: number; name: string };
 
 export type Printer = {
@@ -121,7 +122,7 @@ export function PrintersClient(props: {
                           size="sm"
                           onClick={() => setEditing(p)}
                         >
-                          Sửa
+                          {ACTIONS_VI.edit}
                         </Button>
                       ) : (
                         <Button
@@ -130,7 +131,7 @@ export function PrintersClient(props: {
                             setAdding({ branch_id: b.id, role })
                           }
                         >
-                          Thêm
+                          {ACTIONS_VI.add}
                         </Button>
                       )}
                     </div>
@@ -396,11 +397,11 @@ function PrinterForm({
         <div className="flex justify-end gap-2">
           {initial ? (
             <Button variant="outline" onClick={remove} disabled={pending}>
-              Xóa
+              {ACTIONS_VI.delete}
             </Button>
           ) : null}
           <Button variant="outline" onClick={onClose} disabled={pending}>
-            Hủy
+            {ACTIONS_VI.cancel}
           </Button>
           <Button onClick={save} disabled={pending}>
             {pending ? "Đang lưu..." : "Lưu"}

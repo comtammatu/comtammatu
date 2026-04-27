@@ -58,19 +58,33 @@ const imageUrlField = z
   .default("");
 
 const createItemSchema = z.object({
-  name: z.string().min(1, { error: "Tên món không được để trống" }),
+  name: z
+    .string()
+    .min(1, { error: "Tên món không được để trống" })
+    .max(100, { error: "Tên món tối đa 100 ký tự" }),
   category_id: z.coerce.number().int().positive({ error: "Chọn danh mục" }),
   base_price: z.coerce.number().min(0, { error: "Giá không hợp lệ" }),
-  description: z.string().optional().default(""),
+  description: z
+    .string()
+    .max(500, { error: "Mô tả tối đa 500 ký tự" })
+    .optional()
+    .default(""),
   image_url: imageUrlField,
 });
 
 const updateItemSchema = z.object({
   id: z.coerce.number().int().positive(),
-  name: z.string().min(1, { error: "Tên món không được để trống" }),
+  name: z
+    .string()
+    .min(1, { error: "Tên món không được để trống" })
+    .max(100, { error: "Tên món tối đa 100 ký tự" }),
   category_id: z.coerce.number().int().positive({ error: "Chọn danh mục" }),
   base_price: z.coerce.number().min(0, { error: "Giá không hợp lệ" }),
-  description: z.string().optional().default(""),
+  description: z
+    .string()
+    .max(500, { error: "Mô tả tối đa 500 ký tự" })
+    .optional()
+    .default(""),
   image_url: imageUrlField,
 });
 

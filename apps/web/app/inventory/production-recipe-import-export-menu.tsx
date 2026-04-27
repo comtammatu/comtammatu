@@ -43,6 +43,7 @@ import {
   type ImportProductionRecipeSummary,
 } from "./production-actions";
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 export function ProductionRecipeImportExportMenu({
   onImported,
 }: {
@@ -274,7 +275,7 @@ function ProductionRecipeImportDialog({
               }}
               disabled={isPending}
             >
-              Đóng
+              {ACTIONS_VI.close}
             </Button>
             <Button type="submit" disabled={isPending}>
               {isPending && <Spinner data-icon="inline-start" />}

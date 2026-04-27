@@ -53,6 +53,7 @@ import type {
 import type { SupplierRow } from "../../suppliers/suppliers-client";
 import type { IngredientRow } from "../../page";
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 interface LocalLine {
   ingredientId: number;
   ingredientName: string;
@@ -370,7 +371,7 @@ export function NewPoClient({
               <Link
                 href={branchId ? `${poBasePath}?branchId=${branchId}` : poBasePath}
               >
-                Hủy
+                {ACTIONS_VI.cancel}
               </Link>
             </Button>
             <div className="flex items-center gap-3">
@@ -718,7 +719,7 @@ function SuggestionsPanel({
                               ) : (
                                 <>
                                   <IconPlus className="mr-0.5 size-3" />
-                                  Thêm
+                                  {ACTIONS_VI.add}
                                 </>
                               )}
                             </Button>

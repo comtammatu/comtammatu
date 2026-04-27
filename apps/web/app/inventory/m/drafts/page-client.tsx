@@ -17,6 +17,7 @@ import {
 } from "../../_lib/mobile-draft";
 import { formatVND } from "../../_lib/format";
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 function formatUpdatedAt(value: string): string {
   return new Intl.DateTimeFormat("vi-VN", {
     dateStyle: "short",
@@ -126,7 +127,7 @@ export function MobileDraftsClient({ userKey }: { userKey: string }) {
                     onClick={() => discardDraft(draft)}
                   >
                     <IconTrash className="size-4" />
-                    Xóa
+                    {ACTIONS_VI.delete}
                   </Button>
                 </div>
               </CardContent>

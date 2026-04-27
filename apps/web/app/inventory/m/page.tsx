@@ -206,7 +206,7 @@ export default async function InventoryMobileHub() {
                   <p className="text-base font-semibold leading-tight">
                     {tile.title}
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="line-clamp-2 break-words text-xs text-muted-foreground">
                     {tile.description}
                   </p>
                   {tile.badge ? (
@@ -240,11 +240,11 @@ export default async function InventoryMobileHub() {
                   <span className="flex size-9 items-center justify-center rounded-lg bg-muted text-muted-foreground">
                     <Icon className="size-5" />
                   </span>
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-sm font-semibold leading-tight">
                       {tile.title}
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="line-clamp-2 break-words text-xs text-muted-foreground">
                       {tile.description}
                     </p>
                   </div>

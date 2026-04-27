@@ -33,6 +33,7 @@ import {
   type DenominationCounts,
 } from "./_components/close-session/denomination-input";
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 interface CloseSummary {
   opening_cash: number;
   closing_cash: number;
@@ -299,7 +300,7 @@ export function CloseSessionSheet({
                   onClick={() => onOpenChange(false)}
                   disabled={isPending}
                 >
-                  Hủy
+                  {ACTIONS_VI.cancel}
                 </Button>
                 <Button
                   type="button"

@@ -35,6 +35,7 @@ import { formatBranchSiteLabel } from "../_lib/branch-site-labels";
 import { createStockTransfer } from "../transfer-actions";
 import type { IngredientRow } from "../page";
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 export interface BranchForTransfer {
   id: number;
   name: string;
@@ -660,7 +661,7 @@ export function CreateTransferDialog({
               variant="outline"
               onClick={() => onOpenChange(false)}
             >
-              Hủy
+              {ACTIONS_VI.cancel}
             </Button>
             <Button type="submit" disabled={submitDisabled}>
               {isPending ? "Đang tạo…" : "Tạo phiếu"}

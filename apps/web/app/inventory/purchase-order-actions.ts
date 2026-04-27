@@ -53,7 +53,10 @@ export async function fetchPurchaseOrders(
 const poCreateSchema = z.object({
   supplierId: z.coerce.number().int().positive(),
   branchId: z.coerce.number().int().positive(),
-  notes: z.string().optional(),
+  notes: z
+    .string()
+    .max(500, { error: "Ghi chú tối đa 500 ký tự" })
+    .optional(),
 });
 
 export const createPurchaseOrder = withAction(

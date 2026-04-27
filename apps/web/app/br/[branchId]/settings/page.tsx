@@ -138,7 +138,7 @@ export default async function BranchSettingsHubPage({
                     <p className="text-sm font-semibold text-foreground">
                       {tile.title}
                     </p>
-                    <p className="text-sm leading-6 text-muted-foreground">
+                    <p className="line-clamp-2 break-words text-sm leading-6 text-muted-foreground">
                       {tile.description}
                     </p>
                   </div>

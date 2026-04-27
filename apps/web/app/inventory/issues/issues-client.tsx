@@ -60,6 +60,7 @@ import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import { tNav } from "../_lib/dictionary";
 import { createStockIssueDraft } from "../issue-actions";
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 export type IssueRow = {
   id: number;
   code: string;
@@ -519,7 +520,7 @@ export function IssuesClient({
                 variant="outline"
                 onClick={() => setCreateOpen(false)}
               >
-                Hủy
+                {ACTIONS_VI.cancel}
               </Button>
               <Button type="submit" disabled={isPending}>
                 {isPending ? "Đang tạo..." : "Tạo phiếu"}

@@ -11,6 +11,7 @@ import { FormDialog, TextField, valuesToFormData } from "@/components/form";
 import { createTerminal, updateTerminal } from "./actions";
 import type { TerminalRow } from "./terminals-client";
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 const terminalSchema = z.object({
   name: z.string().trim().min(1, { error: "Tên máy không được trống" }),
   device_id: z.string().trim().optional(),
@@ -56,7 +57,7 @@ export function TerminalFormDialog({
         isEdit ? "Chỉnh sửa thông tin máy POS" : "Nhập thông tin máy POS mới"
       }
       successMessage={isEdit ? "Đã cập nhật máy POS" : "Đã tạo máy POS"}
-      submitLabel={isEdit ? "Cập nhật" : "Tạo mới"}
+      submitLabel={isEdit ? ACTIONS_VI.update : ACTIONS_VI.create}
       onSubmit={async (values) => {
         const payload: Record<string, unknown> = {
           name: values.name,

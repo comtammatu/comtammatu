@@ -38,6 +38,7 @@ import {
 import { formatVND } from "../../../../_lib/format";
 import { createGrnDraft, upsertGrnLine } from "../../../../grn-actions";
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 type Ingredient = {
   id: number;
   name: string;
@@ -619,7 +620,7 @@ function LineEditSheet({
                     onClick={onRemove}
                     className="flex-1"
                   >
-                    Xóa
+                    {ACTIONS_VI.delete}
                   </TouchButton>
                 ) : null}
                 <TouchButton
@@ -628,7 +629,7 @@ function LineEditSheet({
                   onClick={onClose}
                   className="flex-1"
                 >
-                  Đóng
+                  {ACTIONS_VI.close}
                 </TouchButton>
               </div>
             </SheetFooter>

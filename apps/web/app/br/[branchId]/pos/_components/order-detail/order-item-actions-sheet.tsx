@@ -21,6 +21,7 @@ import {
 import { PosLineItemCompact } from "../pos-line-item-compact";
 import type { OrderItemRowData } from "./order-item-row";
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 const STATUS_LABELS: Record<string, string> = {
   pending: "Chờ",
   preparing: "Đang làm",
@@ -169,7 +170,7 @@ export function OrderItemActionsSheet({
             className="w-full"
             onClick={onClose}
           >
-            Đóng
+            {ACTIONS_VI.close}
           </Button>
         </div>
       </SheetContent>

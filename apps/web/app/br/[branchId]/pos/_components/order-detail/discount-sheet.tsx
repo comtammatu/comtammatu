@@ -21,6 +21,7 @@ import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { FormattedNumberInput } from "@/components/form";
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 export type DiscountType = "pct" | "vnd";
 
 interface DiscountSheetProps {
@@ -241,7 +242,7 @@ export function DiscountSheet({
               disabled={isPending}
               onClick={handleClose}
             >
-              Hủy
+              {ACTIONS_VI.cancel}
             </Button>
             <Button type="button" disabled={!canApply} onClick={handleApply}>
               Áp dụng

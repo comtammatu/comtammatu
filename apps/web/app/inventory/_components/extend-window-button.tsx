@@ -26,6 +26,7 @@ import { cn } from "@comtammatu/ui";
 import { AlarmClockPlus as IconClockPlus } from "lucide-react";
 import { extendExpressWindow } from "../variance-actions";
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 const NOTE_MIN = 10;
 const MINUTE_OPTIONS = [15, 30, 45, 60] as const;
 
@@ -170,7 +171,7 @@ export function ExtendWindowButton({
             onClick={() => handleClose(false)}
             disabled={isSubmitting}
           >
-            Hủy
+            {ACTIONS_VI.cancel}
           </Button>
           <Button onClick={handleSubmit} disabled={!canSubmit}>
             {isSubmitting ? <Spinner /> : `Extend +${minutes}p`}

@@ -13,8 +13,14 @@ const supplierSchema = z.object({
   name: z.string().min(1, { error: "Tên NCC không được để trống" }),
   tax_code: z.string().optional(),
   phone: z.string().optional(),
-  address: z.string().optional(),
-  notes: z.string().optional(),
+  address: z
+    .string()
+    .max(300, { error: "Địa chỉ tối đa 300 ký tự" })
+    .optional(),
+  notes: z
+    .string()
+    .max(500, { error: "Ghi chú tối đa 500 ký tự" })
+    .optional(),
   paymentTermsDays: z.coerce.number().int().min(0).optional().nullable(),
   paymentTermsNote: z.string().optional(),
 });

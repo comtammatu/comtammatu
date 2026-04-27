@@ -1,8 +1,17 @@
 #!/usr/bin/env node
 // One-shot i18n codemod for the text-consolidation Phase 2 sweep.
-// Replaces `?? "Đã xảy ra lỗi"` / `?? "Lỗi không xác định"` / `?? "Lỗi"`
-// with shared ERRORS_VI references, adding the import if missing.
-// Idempotent: skips files that already use the canonical reference.
+//
+// Replaces:
+//   1. `?? "Đã xảy ra lỗi"`        → `?? ERRORS_VI.fallback`
+//   2. `?? "Lỗi không xác định"`   → `?? ERRORS_VI.unknown`
+//   3. `?? "Lỗi"`                  → `?? ERRORS_VI.fallback`
+//   4. Standalone-line JSX verb text (Hủy/Đóng/Lưu/Tạo mới/Cập nhật/
+//      Sửa/Xóa/Thêm/Làm mới/Thử lại) → `{ACTIONS_VI.<verb>}`
+//   5. Ternary `? "Cập nhật" : "Tạo mới"` → ACTIONS_VI references
+//
+// Adds the import from `@comtammatu/shared/messages` if missing, merges
+// into existing one otherwise. Idempotent: skips files that already use
+// the canonical reference.
 
 import fs from "node:fs";
 import path from "node:path";
@@ -10,13 +19,29 @@ import path from "node:path";
 const root = path.resolve(process.cwd(), "apps/web/app");
 const exts = new Set([".ts", ".tsx"]);
 
-const PATTERNS = [
+const SHARED_PATH = "@comtammatu/shared/messages";
+
+const ERROR_PATTERNS = [
   { re: /\?\? "Đã xảy ra lỗi"/g, to: "?? ERRORS_VI.fallback", needs: "ERRORS_VI" },
   { re: /\?\? "Lỗi không xác định"/g, to: "?? ERRORS_VI.unknown", needs: "ERRORS_VI" },
   { re: /\?\? "Lỗi"(?!\s*\.)/g, to: "?? ERRORS_VI.fallback", needs: "ERRORS_VI" },
 ];
 
-const SHARED_PATH = "@comtammatu/shared/messages";
+// Verb → ACTIONS_VI key. Only generic verbs that map cleanly; do not include
+// domain-specific phrases ("Lưu cài đặt", "Tạo hồ sơ", etc.).
+const VERB_MAP = {
+  Hủy: "cancel",
+  Đóng: "close",
+  Lưu: "save",
+  "Tạo mới": "create",
+  "Cập nhật": "update",
+  Sửa: "edit",
+  Xóa: "delete",
+  Thêm: "add",
+  "Làm mới": "refresh",
+  "Thử lại": "retry",
+  "Quay lại": "back",
+};
 
 function* walk(dir) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -33,7 +58,9 @@ function ensureImport(content, names) {
   );
   const existing = content.match(importRe);
   if (existing) {
-    const have = new Set(existing[1].split(",").map((s) => s.trim()).filter(Boolean));
+    const have = new Set(
+      existing[1].split(",").map((s) => s.trim()).filter(Boolean),
+    );
     let changed = false;
     for (const n of names) {
       if (!have.has(n)) {
@@ -48,37 +75,129 @@ function ensureImport(content, names) {
       `import { ${sorted.join(", ")} } from "${SHARED_PATH}"`,
     );
   }
-  // No existing shared/messages import — insert after last import line.
+  // No existing shared/messages import — insert at end of import zone.
+  // Walk the top of the file, tracking whether we're inside a multiline
+  // import statement. The boundary is the first non-import / non-blank /
+  // non-comment line we encounter outside an import.
   const lines = content.split(/\r?\n/);
-  let lastImport = -1;
-  for (let i = 0; i < lines.length; i++) {
-    if (/^import\s/.test(lines[i])) lastImport = i;
+  let i = 0;
+  let inMultiline = false;
+  let boundary = -1;
+  let sawImport = false;
+  while (i < lines.length) {
+    const line = lines[i];
+    const trimmed = line.trim();
+    if (inMultiline) {
+      if (/from\s+["'][^"']+["']\s*;?\s*$/.test(trimmed)) inMultiline = false;
+      i++;
+      continue;
+    }
+    if (trimmed === "" || trimmed.startsWith("//") || trimmed.startsWith("/*")) {
+      i++;
+      continue;
+    }
+    // Allow leading directives ("use client" / "use server") and other
+    // string-literal prologues to remain at the very top.
+    if (!sawImport && /^["'][^"']+["']\s*;?\s*$/.test(trimmed)) {
+      i++;
+      continue;
+    }
+    if (/^import\s/.test(trimmed)) {
+      sawImport = true;
+      // Single-line import ends with `from "..."` on the same line.
+      if (!/from\s+["'][^"']+["']\s*;?\s*$/.test(trimmed)) {
+        inMultiline = true;
+      }
+      i++;
+      continue;
+    }
+    // First non-import, non-blank, non-comment line — boundary found.
+    boundary = i;
+    break;
   }
-  if (lastImport === -1) return content; // no imports? skip
+  if (boundary === -1) boundary = i;
+  // If no imports at all, refuse to insert (file likely doesn't need it).
+  if (!sawImport) return content;
   const sorted = [...names].sort();
   lines.splice(
-    lastImport + 1,
+    boundary,
     0,
     `import { ${sorted.join(", ")} } from "${SHARED_PATH}";`,
   );
   return lines.join("\n");
 }
 
+// Match a JSX text line that is purely a verb. Looks at surrounding lines
+// to confirm context (previous line ends with `>` and next line starts
+// with `<` or `</`).
+function migrateStandaloneVerbs(content) {
+  const lines = content.split(/\r?\n/);
+  let needs = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const m = line.match(/^(\s+)([\p{L}\s]+?)\s*$/u);
+    if (!m) continue;
+    const verb = m[2].trim();
+    if (!Object.prototype.hasOwnProperty.call(VERB_MAP, verb)) continue;
+    // Confirm flanking JSX context:
+    const prev = (lines[i - 1] ?? "").trimEnd();
+    const next = (lines[i + 1] ?? "").trimStart();
+    const flanksJsx =
+      (prev.endsWith(">") || prev.endsWith("}>")) &&
+      (next.startsWith("<") || next.startsWith("</"));
+    if (!flanksJsx) continue;
+    lines[i] = `${m[1]}{ACTIONS_VI.${VERB_MAP[verb]}}`;
+    needs = true;
+  }
+  return { content: lines.join("\n"), needs };
+}
+
+// Match ternary `? "VerbA" : "VerbB"` and replace with ACTIONS_VI refs when
+// both arms map.
+function migrateTernaryVerbs(content) {
+  let needs = false;
+  const ternaryRe = /\?\s*"([^"]+)"\s*:\s*"([^"]+)"/g;
+  const next = content.replace(ternaryRe, (m, a, b) => {
+    const ak = VERB_MAP[a];
+    const bk = VERB_MAP[b];
+    if (!ak || !bk) return m;
+    needs = true;
+    return `? ACTIONS_VI.${ak} : ACTIONS_VI.${bk}`;
+  });
+  return { content: next, needs };
+}
+
 let touched = 0;
 for (const file of walk(root)) {
   let content = fs.readFileSync(file, "utf8");
-  let needs = new Set();
-  let next = content;
-  for (const { re, to, needs: n } of PATTERNS) {
-    if (re.test(next)) {
+  const original = content;
+  const needs = new Set();
+
+  for (const { re, to, needs: n } of ERROR_PATTERNS) {
+    if (re.test(content)) {
       needs.add(n);
-      next = next.replace(re, to);
+      content = content.replace(re, to);
     }
   }
-  if (needs.size === 0) continue;
-  next = ensureImport(next, needs);
-  if (next !== content) {
-    fs.writeFileSync(file, next);
+
+  const v1 = migrateStandaloneVerbs(content);
+  if (v1.needs) {
+    needs.add("ACTIONS_VI");
+    content = v1.content;
+  }
+
+  const v2 = migrateTernaryVerbs(content);
+  if (v2.needs) {
+    needs.add("ACTIONS_VI");
+    content = v2.content;
+  }
+
+  if (needs.size > 0 && content !== original) {
+    content = ensureImport(content, needs);
+  }
+
+  if (content !== original) {
+    fs.writeFileSync(file, content);
     touched++;
     console.log("migrated:", path.relative(process.cwd(), file));
   }

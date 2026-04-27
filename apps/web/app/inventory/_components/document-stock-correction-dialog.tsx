@@ -30,6 +30,7 @@ import {
   type InventoryCorrectionDocumentType,
 } from "../document-correction-actions";
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 export type CorrectionBranchOption = {
   id: number;
   name: string;
@@ -249,7 +250,7 @@ export function DocumentStockCorrectionDialog({
               onClick={() => setOpen(false)}
               disabled={isPending}
             >
-              Hủy
+              {ACTIONS_VI.cancel}
             </Button>
             <Button type="submit" disabled={isPending}>
               {isPending ? <Spinner className="mr-2" /> : null}

@@ -29,6 +29,7 @@ import {
   type ImportMenuSummary,
 } from "./actions";
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 export function MenuImportExportMenu() {
   const [isExporting, startExport] = useTransition();
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -264,7 +265,7 @@ function MenuImportDialog({
               onClick={handleClose}
               disabled={isPending}
             >
-              Đóng
+              {ACTIONS_VI.close}
             </Button>
             <Button type="submit" disabled={isPending}>
               {isPending && <Spinner className="mr-2" />}

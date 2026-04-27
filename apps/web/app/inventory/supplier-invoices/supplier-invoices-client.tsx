@@ -62,6 +62,7 @@ import {
   getInventoryStatusLabel,
 } from "../_lib/ui";
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 export type SupplierInvoiceRow = {
   id: number;
   supplierId: number;
@@ -988,7 +989,7 @@ export function SupplierInvoicesClient({
               onClick={() => setCreateOpen(false)}
               disabled={isPending}
             >
-              Hủy
+              {ACTIONS_VI.cancel}
             </Button>
             <Button
               type="button"
@@ -1041,7 +1042,7 @@ export function SupplierInvoicesClient({
               onClick={() => setPaymentOpen(false)}
               disabled={isPending}
             >
-              Hủy
+              {ACTIONS_VI.cancel}
             </Button>
             <Button type="button" onClick={handleMarkPaid} disabled={isPending}>
               Cập nhật thanh toán

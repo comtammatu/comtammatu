@@ -155,7 +155,7 @@ export function KdsCancelStagePicker({
                   )}
                 </span>
               </div>
-              <p className="text-xs text-muted-foreground">{meta.description}</p>
+              <p className="line-clamp-2 break-words text-xs text-muted-foreground">{meta.description}</p>
               <div className="flex items-center gap-1 pt-1">
                 {meta.producesWaste ? (
                   <Badge

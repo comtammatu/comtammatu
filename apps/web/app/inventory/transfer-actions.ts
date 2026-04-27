@@ -164,7 +164,10 @@ const transferCreateSchema = z.object({
   toBranchId: z.coerce.number().int().positive(),
   fromLocationId: z.coerce.number().int().positive().optional(),
   toLocationId: z.coerce.number().int().positive().optional(),
-  notes: z.string().optional(),
+  notes: z
+    .string()
+    .max(500, { error: "Ghi chú tối đa 500 ký tự" })
+    .optional(),
   vehicleInfo: z.string().optional(),
   lines: z.array(transferLineInputSchema).optional(),
 });

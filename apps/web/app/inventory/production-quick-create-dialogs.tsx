@@ -23,6 +23,7 @@ import type {
 } from "./production-types";
 import { STORAGE_OPTIONS } from "./_lib/constants";
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 type StorageType = "ambient" | "refrigerated" | "frozen";
 
 const quickCreateSchema = z.object({
@@ -181,7 +182,7 @@ function QuickCreateDialog<TCreated>({
               onClick={() => onOpenChange(false)}
               disabled={isPending}
             >
-              Hủy
+              {ACTIONS_VI.cancel}
             </Button>
             <Button type="submit" disabled={isPending}>
               {isPending && <Spinner className="mr-2" />}
