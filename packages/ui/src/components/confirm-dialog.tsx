@@ -84,7 +84,7 @@ export function ConfirmDialogProvider() {
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel onClick={() => settle(false)}>
-            {opts?.cancelText ?? "Huỷ"}
+            {opts?.cancelText ?? "Hủy"}
           </AlertDialogCancel>
           <AlertDialogAction
             variant={variant}

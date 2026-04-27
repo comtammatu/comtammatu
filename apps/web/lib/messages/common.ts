@@ -1,13 +1,15 @@
+import { ACTIONS_VI, ERRORS_VI, STATES_VI } from "@comtammatu/shared/messages"
+
 export const common = {
-  errorFallback: "Có lỗi xảy ra, vui lòng thử lại",
-  saved: "Đã lưu thay đổi",
-  created: "Tạo mới thành công",
-  updated: "Cập nhật thành công",
-  deleted: "Đã xoá",
-  confirmTitle: "Xác nhận",
-  confirmCancel: "Huỷ",
-  confirmOk: "Xác nhận",
-  sessionExpired: "Phiên đăng nhập hết hạn",
-  forbidden: "Bạn không có quyền thực hiện thao tác này",
-  networkError: "Mất kết nối, vui lòng thử lại",
+  errorFallback: ERRORS_VI.fallback,
+  saved: STATES_VI.saved,
+  created: STATES_VI.created,
+  updated: STATES_VI.updated,
+  deleted: STATES_VI.deleted,
+  confirmTitle: ACTIONS_VI.confirm,
+  confirmCancel: ACTIONS_VI.cancel,
+  confirmOk: ACTIONS_VI.confirm,
+  sessionExpired: ERRORS_VI.sessionExpired,
+  forbidden: ERRORS_VI.forbidden,
+  networkError: ERRORS_VI.networkError,
 } as const

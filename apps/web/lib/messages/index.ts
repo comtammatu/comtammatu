@@ -1,3 +1,5 @@
+import { interpolate } from "@comtammatu/shared/messages"
+
 import { auth } from "./auth"
 import { common } from "./common"
 import { inventory } from "./inventory"
@@ -12,17 +14,4 @@ export const messages = {
   pos,
 } as const
 
-/**
- * Interpolate `{placeholder}` tokens in a message template.
- * Unknown keys are preserved as-is to make the miss visible in UI.
- */
-export function m(
-  template: string,
-  vars?: Record<string, string | number>,
-): string {
-  if (!vars) return template
-  return template.replace(/\{(\w+)\}/g, (_, key: string) => {
-    const val = vars[key]
-    return val === undefined ? `{${key}}` : String(val)
-  })
-}
+export const m = interpolate

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { ACTIONS_VI, BRANCH_VI, STATES_VI } from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -49,7 +50,7 @@ const STATUS_LABEL: Record<string, string> = {
   printed: "Đã in",
   failed: "Lỗi",
   expired: "Hết hạn",
-  cancelled: "Đã huỷ",
+  cancelled: STATES_VI.cancelled,
 };
 
 const STATUS_VARIANT: Record<
@@ -66,10 +67,10 @@ const STATUS_VARIANT: Record<
 
 const JOB_TYPE_LABEL: Record<string, string> = {
   kitchen_ticket: "Phiếu bếp",
-  receipt: "Hoá đơn",
+  receipt: "Hóa đơn",
   provisional_bill: "Phiếu tạm tính",
   reprint: "In lại",
-  cancel_ticket: "Phiếu huỷ",
+  cancel_ticket: "Phiếu hủy",
 };
 
 function formatTime(iso: string | null): string {
@@ -126,10 +127,10 @@ export function PrintJobsClient({
             onValueChange={(v) => updateParam("branch", v === "all" ? null : v)}
           >
             <SelectTrigger className="h-9 w-44">
-              <SelectValue placeholder="Tất cả chi nhánh" />
+              <SelectValue placeholder={BRANCH_VI.selectAll} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Tất cả chi nhánh</SelectItem>
+              <SelectItem value="all">{BRANCH_VI.selectAll}</SelectItem>
               {branches.map((b) => (
                 <SelectItem key={b.id} value={String(b.id)}>
                   {b.name}
@@ -177,7 +178,7 @@ export function PrintJobsClient({
           onClick={() => router.refresh()}
         >
           <IconRefresh className="size-3.5" />
-          Làm mới
+          {ACTIONS_VI.refresh}
         </Button>
       </div>
 
@@ -261,7 +262,7 @@ export function PrintJobsClient({
                         onClick={() => handleRetry(j.id)}
                       >
                         <IconRotate className="size-3.5" />
-                        Thử lại
+                        {ACTIONS_VI.retry}
                       </Button>
                     ) : null}
                   </td>

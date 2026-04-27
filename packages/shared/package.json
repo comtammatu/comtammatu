@@ -11,6 +11,7 @@
     "./types": "./src/types/action-result.ts",
     "./labels": "./src/labels/index.ts",
     "./menu": "./src/menu/category-labels.ts",
+    "./messages": "./src/messages/index.ts",
     "./providers": "./src/providers/index.ts",
     "./payroll": "./src/payroll/calculate.ts"
   },

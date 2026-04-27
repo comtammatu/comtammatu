@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Ellipsis as IconDots, Pencil as IconPencil, Trash as IconTrash, MapPin as IconMapPin } from "lucide-react";
+import { ACTIONS_VI, STATES_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   DropdownMenu,
@@ -55,7 +56,7 @@ export function ZoneTable({ zones }: ZoneTableProps) {
       if (!result.success) {
         toast.error(result.error);
       } else {
-        toast.success("Đã xóa khu vực");
+        toast.success(`${STATES_VI.deleted} khu vực`);
       }
       setDeleteId(null);
     });
@@ -101,7 +102,7 @@ export function ZoneTable({ zones }: ZoneTableProps) {
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => setEditZone(zone)}>
                         <IconPencil className="mr-2 size-4" />
-                        Sửa
+                        {ACTIONS_VI.edit}
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
@@ -109,7 +110,7 @@ export function ZoneTable({ zones }: ZoneTableProps) {
                         onClick={() => setDeleteId(zone.id)}
                       >
                         <IconTrash className="mr-2 size-4" />
-                        Xóa
+                        {ACTIONS_VI.delete}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -142,13 +143,13 @@ export function ZoneTable({ zones }: ZoneTableProps) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isPending}>Hủy</AlertDialogCancel>
+            <AlertDialogCancel disabled={isPending}>{ACTIONS_VI.cancel}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={isPending}
               onClick={() => deleteId !== null && handleDelete(deleteId)}
             >
-              Xóa
+              {ACTIONS_VI.delete}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

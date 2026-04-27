@@ -3,7 +3,7 @@ export const inventory = {
     created: "Tạo phiếu nhập {code} thành công",
     updated: "Cập nhật phiếu nhập {code} thành công",
     approved: "Đã duyệt phiếu nhập {code}",
-    cancelled: "Đã huỷ phiếu nhập {code}",
+    cancelled: "Đã hủy phiếu nhập {code}",
     confirmed: "Đã chốt nhập kho",
     confirmedWithReview:
       "Đã chốt nhập kho. {count} dòng cần kiểm tra giá lệch lớn.",
@@ -15,8 +15,8 @@ export const inventory = {
     approveConfirmTitle: "Duyệt phiếu nhập?",
     approveConfirmDesc:
       "Sau khi duyệt, phiếu nhập không thể chỉnh sửa và tồn kho sẽ được cập nhật.",
-    cancelConfirmTitle: "Huỷ phiếu nhập?",
-    cancelConfirmDesc: "Phiếu nhập sẽ bị đánh dấu huỷ và không thể hoàn tác.",
+    cancelConfirmTitle: "Hủy phiếu nhập?",
+    cancelConfirmDesc: "Phiếu nhập sẽ bị đánh dấu hủy và không thể hòan tác.",
     confirmGrnTitle: "Chốt nhập kho?",
     confirmGrnDesc:
       "Sau khi chốt, phiếu nhập không thể chỉnh sửa và tồn kho sẽ được cập nhật ngay.",
@@ -28,7 +28,7 @@ export const inventory = {
     created: "Tạo đơn đặt hàng {code} thành công",
     updated: "Cập nhật đơn đặt hàng {code} thành công",
     approved: "Đã duyệt đơn đặt hàng {code}",
-    cancelled: "Đã huỷ đơn đặt hàng {code}",
+    cancelled: "Đã hủy đơn đặt hàng {code}",
   },
   transfer: {
     created: "Tạo chuyển kho {code} thành công",
