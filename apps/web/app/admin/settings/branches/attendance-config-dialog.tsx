@@ -16,6 +16,7 @@ import {
 } from "@comtammatu/ui/components/dialog";
 import { FieldGroup } from "@comtammatu/ui/components/field";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { ACTIONS_VI, ERRORS_VI } from "@comtammatu/shared/messages";
 import { TextField, valuesToFormData } from "@/components/form";
 import {
   updateBranchCoordinates,
@@ -129,7 +130,7 @@ export function AttendanceConfigDialog({
       fd.set("branchId", String(branch.id));
       const result = await updateBranchCoordinates(null, fd);
       if (!result.success) {
-        setCoordsError(result.error ?? "Đã xảy ra lỗi");
+        setCoordsError(result.error ?? ERRORS_VI.fallback);
         return;
       }
       toast.success("Đã cập nhật tọa độ GPS");
@@ -144,7 +145,7 @@ export function AttendanceConfigDialog({
         setTodayDate(result.data.date);
         toast.success("Đã tạo mã bí mật mới");
       } else {
-        toast.error(result.error ?? "Lỗi");
+        toast.error(result.error ?? ERRORS_VI.fallback);
       }
     });
   }
@@ -156,7 +157,7 @@ export function AttendanceConfigDialog({
         setTodayCode(result.data.code);
         setTodayDate(result.data.date);
       } else {
-        toast.error(result.error ?? "Lỗi");
+        toast.error(result.error ?? ERRORS_VI.fallback);
       }
     });
   }
@@ -234,7 +235,7 @@ export function AttendanceConfigDialog({
 
                 <Button type="submit" size="sm" disabled={coordsPending}>
                   {coordsPending && <Spinner className="mr-2" />}
-                  Lưu tọa độ
+                  {ACTIONS_VI.save} tọa độ
                 </Button>
               </FieldGroup>
             </form>
@@ -301,7 +302,7 @@ export function AttendanceConfigDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Đóng
+            {ACTIONS_VI.close}
           </Button>
         </DialogFooter>
       </DialogContent>

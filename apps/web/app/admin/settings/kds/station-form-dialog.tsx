@@ -23,6 +23,7 @@ import {
   FieldLabel,
 } from "@comtammatu/ui/components/field";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { ACTIONS_VI, ERRORS_VI } from "@comtammatu/shared/messages";
 import { TextField, valuesToFormData } from "@/components/form";
 import {
   createStation,
@@ -110,7 +111,7 @@ export function StationFormDialog({
         : await createStation(null, fd);
 
       if (!mainResult.success) {
-        setServerError(mainResult.error ?? "Đã xảy ra lỗi");
+        setServerError(mainResult.error ?? ERRORS_VI.fallback);
         return;
       }
 
@@ -244,11 +245,11 @@ export function StationFormDialog({
               onClick={() => onOpenChange(false)}
               disabled={isPending}
             >
-              Hủy
+              {ACTIONS_VI.cancel}
             </Button>
             <Button type="submit" disabled={isPending}>
               {isPending && <Spinner className="mr-2" />}
-              {isEdit ? "Cập nhật" : "Tạo mới"}
+              {isEdit ? ACTIONS_VI.update : ACTIONS_VI.create}
             </Button>
           </DialogFooter>
         </form>

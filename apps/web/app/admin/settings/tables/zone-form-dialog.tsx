@@ -1,6 +1,7 @@
 "use client";
 
 import { z } from "zod";
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { FormDialog, TextField, valuesToFormData } from "@/components/form";
 import { createZone, updateZone } from "./actions";
 import type { ZoneRow } from "./zone-table";
@@ -46,7 +47,7 @@ export function ZoneFormDialog({
         isEdit ? "Chỉnh sửa thông tin khu vực" : "Nhập thông tin khu vực mới"
       }
       successMessage={isEdit ? "Đã cập nhật khu vực" : "Đã tạo khu vực mới"}
-      submitLabel={isEdit ? "Cập nhật" : "Tạo mới"}
+      submitLabel={isEdit ? ACTIONS_VI.update : ACTIONS_VI.create}
       onSubmit={async (values) => {
         const fd = valuesToFormData(values);
         fd.set("branch_id", String(branchId));

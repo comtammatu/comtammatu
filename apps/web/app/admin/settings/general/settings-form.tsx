@@ -15,6 +15,7 @@ import {
 } from "@comtammatu/ui/components/card";
 import { FieldGroup } from "@comtammatu/ui/components/field";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { ACTIONS_VI, ERRORS_VI } from "@comtammatu/shared/messages";
 import { SYSTEM_SETTING_KEYS } from "@comtammatu/shared/settings";
 import { TextField, valuesToFormData } from "@/components/form";
 import { updateSettings } from "./actions";
@@ -79,10 +80,10 @@ export function SettingsForm({ settings }: SettingsFormProps) {
       const fd = valuesToFormData(values);
       const result = await updateSettings(null, fd);
       if (!result.success) {
-        setServerError(result.error ?? "Đã xảy ra lỗi");
+        setServerError(result.error ?? ERRORS_VI.fallback);
         return;
       }
-      toast.success("Đã lưu cài đặt");
+      toast.success(`${ACTIONS_VI.save} cài đặt`);
     });
   }
 
@@ -160,7 +161,7 @@ export function SettingsForm({ settings }: SettingsFormProps) {
       <div className="flex justify-end">
         <Button type="submit" disabled={isPending}>
           {isPending && <Spinner className="mr-2" />}
-          Lưu cài đặt
+          {ACTIONS_VI.save} cài đặt
         </Button>
       </div>
     </form>
