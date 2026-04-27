@@ -61,6 +61,7 @@ export interface ProductionSurfaceData {
   canManageRecipes: boolean;
   canCreateProduction: boolean;
   canConfirmProduction: boolean;
+  canAdjustStock: boolean;
   centralKitchenBranches: BranchOption[];
   ingredients: IngredientOption[];
   finishedGoods: FinishedGoodOption[];
@@ -152,6 +153,7 @@ export async function loadProductionSurfaceData({
     canManageRecipes,
     canCreateProduction,
     canConfirmProduction,
+    canAdjustStock,
     hasBranchAccess,
   ] = await Promise.all([
     currentUserHasOneOfPermissions(supabase, PRODUCTION_OPEN_PERMISSIONS),
@@ -165,6 +167,7 @@ export async function loadProductionSurfaceData({
       supabase,
       PERMISSION_KEYS.INVENTORY_PRODUCTION_CONFIRM,
     ),
+    currentUserHasAnyPermission(supabase, PERMISSION_KEYS.INVENTORY_WRITE),
     hasCurrentProductionBranchAccess(supabase, claims),
   ]);
 
@@ -232,6 +235,7 @@ export async function loadProductionSurfaceData({
     canManageRecipes,
     canCreateProduction,
     canConfirmProduction,
+    canAdjustStock,
     centralKitchenBranches,
     ingredients,
     finishedGoods,

@@ -44,6 +44,7 @@ import {
 } from "@comtammatu/ui/components/table";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { DocumentStockCorrectionDialog } from "./_components/document-stock-correction-dialog";
 import { TableEmptyStateRow } from "./_components/table-empty-state-row";
 import {
   cancelProductionOrder,
@@ -59,6 +60,7 @@ import type { ProductionOrderRow } from "./production-types";
 interface ProductionOrderListProps {
   orders: ProductionOrderRow[];
   canConfirmProduction: boolean;
+  canAdjustStock: boolean;
 }
 
 function formatOrderDate(value: string) {
@@ -77,6 +79,7 @@ function formatCost(value: number) {
 export function ProductionOrderList({
   orders,
   canConfirmProduction,
+  canAdjustStock,
 }: ProductionOrderListProps) {
   const router = useRouter();
   const isMobile = useIsMobile();
@@ -108,6 +111,27 @@ export function ProductionOrderList({
   }
 
   function renderOrderActions(order: ProductionOrderRow) {
+    if (
+      order.status === "completed" &&
+      canAdjustStock &&
+      order.items.length > 0
+    ) {
+      return (
+        <DocumentStockCorrectionDialog
+          documentType="production_order"
+          documentId={order.id}
+          documentCode={order.production_number}
+          branchOptions={[{ id: order.branch_id, name: order.branch_name }]}
+          itemOptions={order.items.map((item) => ({
+            ingredientId: item.finished_good_id,
+            name: item.finished_good_name,
+            unit: item.unit,
+          }))}
+          buttonSize="sm"
+        />
+      );
+    }
+
     if (order.status !== "draft" || !canConfirmProduction) {
       return <span className="text-sm text-muted-foreground">-</span>;
     }

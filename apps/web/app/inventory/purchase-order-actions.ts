@@ -277,23 +277,64 @@ export async function updatePurchaseOrderStatus(
     .eq("tenant_id", claims.tenant_id)
     .single();
   if (pe || !po) return { success: false, error: "Không tìm thấy PO." };
-  if (po.status !== "draft") {
-    return {
-      success: false,
-      error: "Chỉ gửi/hủy PO đang ở trạng thái nháp.",
-    };
-  }
   if (!canAccessProcurementBranch(claims, po.branch_id)) {
     return { success: false, error: "Bạn chỉ được cập nhật PO của kho mình." };
   }
 
-  const { error } = await supabase
+  if (parsed.data.status === "sent" && po.status !== "draft") {
+    return {
+      success: false,
+      error: "Chỉ gửi PO khi PO đang ở trạng thái nháp.",
+    };
+  }
+
+  if (
+    parsed.data.status === "cancelled" &&
+    po.status !== "draft" &&
+    po.status !== "sent"
+  ) {
+    return {
+      success: false,
+      error: "Chỉ hủy PO nháp hoặc PO đã gửi nhưng chưa nhận hàng.",
+    };
+  }
+
+  if (parsed.data.status === "cancelled" && po.status === "sent") {
+    const { count, error: grnError } = await supabase
+      .from("goods_received_notes")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", claims.tenant_id)
+      .eq("po_id", po.id)
+      .neq("status", "cancelled");
+
+    if (grnError) {
+      return { success: false, error: "Không thể kiểm tra phiếu nhận hàng." };
+    }
+    if ((count ?? 0) > 0) {
+      return {
+        success: false,
+        error:
+          "PO đã có phiếu nhận hàng nên không thể hủy trực tiếp. Hãy xử lý bằng điều chỉnh/đối soát GRN.",
+      };
+    }
+  }
+
+  const { data: updated, error } = await supabase
     .from("purchase_orders")
     .update({ status: parsed.data.status })
     .eq("id", parsed.data.poId)
-    .eq("tenant_id", claims.tenant_id);
+    .eq("tenant_id", claims.tenant_id)
+    .eq("status", po.status)
+    .select("id")
+    .maybeSingle();
   if (error)
     return { success: false, error: "Không thể cập nhật trạng thái PO." };
+  if (!updated) {
+    return {
+      success: false,
+      error: "Trạng thái PO đã thay đổi. Vui lòng tải lại và thử lại.",
+    };
+  }
   return { success: true };
 }
 

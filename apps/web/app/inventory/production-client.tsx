@@ -21,6 +21,7 @@ interface ProductionHubClientProps {
   canManageRecipes: boolean;
   canCreateProduction: boolean;
   canConfirmProduction: boolean;
+  canAdjustStock: boolean;
   centralKitchenBranches: BranchOption[];
   ingredients: IngredientOption[];
   finishedGoods: FinishedGoodOption[];
@@ -33,6 +34,7 @@ export function ProductionHubClient({
   canManageRecipes,
   canCreateProduction,
   canConfirmProduction,
+  canAdjustStock,
   centralKitchenBranches,
   ingredients,
   finishedGoods,
@@ -96,6 +98,7 @@ export function ProductionHubClient({
         <ProductionOrderList
           orders={orders}
           canConfirmProduction={canConfirmProduction}
+          canAdjustStock={canAdjustStock}
         />
 
         <ProductionRecipePanel

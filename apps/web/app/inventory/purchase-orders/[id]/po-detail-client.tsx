@@ -106,7 +106,9 @@ export function PODetailClient({
     po.supplierInfo.contact,
     po.supplierInfo.payment,
   ].some((value) => value && value !== "—");
-  const canSendOrCancel = po.status === "draft";
+  const canEditLines = po.status === "draft";
+  const canSendPo = po.status === "draft";
+  const canCancelPo = po.status === "draft" || po.status === "sent";
   const canCreateGrn =
     po.status === "sent" || po.status === "partially_received";
   const [lines, setLines] = useState<EditablePoLine[]>(() =>
@@ -141,9 +143,7 @@ export function PODetailClient({
   function handleAddIngredientChange(value: string) {
     setAddIngredientId(value);
     const ingredient = ingredients.find((item) => item.id === Number(value));
-    setAddUnit(
-      ingredient?.purchase_unit ?? ingredient?.unit ?? "",
-    );
+    setAddUnit(ingredient?.purchase_unit ?? ingredient?.unit ?? "");
     setAddPrice(
       ingredient?.unit_cost != null ? String(Number(ingredient.unit_cost)) : "",
     );
@@ -421,7 +421,7 @@ export function PODetailClient({
                             </div>
                             <div className="flex items-center gap-2">
                               <VarianceBadge variance={item.variance} />
-                              {canSendOrCancel ? (
+                              {canEditLines ? (
                                 <Button
                                   type="button"
                                   variant="ghost"
@@ -438,7 +438,7 @@ export function PODetailClient({
                           <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                             <div>
                               <p className="text-muted-foreground">Số lượng</p>
-                              {canSendOrCancel ? (
+                              {canEditLines ? (
                                 <FormattedNumberInput
                                   value={String(item.qty)}
                                   onValueChange={(value) =>
@@ -457,7 +457,7 @@ export function PODetailClient({
                             </div>
                             <div>
                               <p className="text-muted-foreground">Đơn giá</p>
-                              {canSendOrCancel ? (
+                              {canEditLines ? (
                                 <FormattedNumberInput
                                   value={
                                     item.price != null ? String(item.price) : ""
@@ -478,7 +478,7 @@ export function PODetailClient({
                                 </p>
                               )}
                             </div>
-                            {canSendOrCancel ? (
+                            {canEditLines ? (
                               <div className="col-span-2">
                                 <p className="text-muted-foreground">Đơn vị</p>
                                 <Input
@@ -498,7 +498,7 @@ export function PODetailClient({
                               </p>
                             </div>
                           </div>
-                          {canSendOrCancel ? (
+                          {canEditLines ? (
                             <Button
                               type="button"
                               variant="outline"
@@ -549,7 +549,7 @@ export function PODetailClient({
                                 <span className="text-xs text-muted-foreground">
                                   {item.sku}
                                 </span>
-                                {canSendOrCancel ? (
+                                {canEditLines ? (
                                   <Input
                                     value={item.unit}
                                     readOnly
@@ -561,7 +561,7 @@ export function PODetailClient({
                               </div>
                             </TableCell>
                             <TableCell className="px-6 py-4 text-right font-mono tabular-nums">
-                              {canSendOrCancel ? (
+                              {canEditLines ? (
                                 <FormattedNumberInput
                                   value={String(item.qty)}
                                   onValueChange={(value) =>
@@ -577,7 +577,7 @@ export function PODetailClient({
                               )}
                             </TableCell>
                             <TableCell className="px-6 py-4 text-right font-mono tabular-nums">
-                              {canSendOrCancel ? (
+                              {canEditLines ? (
                                 <FormattedNumberInput
                                   value={
                                     item.price != null ? String(item.price) : ""
@@ -603,7 +603,7 @@ export function PODetailClient({
                               <VarianceBadge variance={item.variance} />
                             </TableCell>
                             <TableCell className="px-6 py-4 text-right">
-                              {canSendOrCancel ? (
+                              {canEditLines ? (
                                 <div className="flex justify-end gap-2">
                                   <Button
                                     type="button"
@@ -673,7 +673,7 @@ export function PODetailClient({
                     </Table>
                   </div>
 
-                  {canSendOrCancel ? (
+                  {canEditLines ? (
                     <form
                       onSubmit={handleAddLine}
                       className="grid gap-3 border-t bg-muted/5 p-4 sm:grid-cols-2 lg:grid-cols-5"
@@ -812,7 +812,7 @@ export function PODetailClient({
             <Button
               type="button"
               variant="ghost"
-              disabled={isPending || !canSendOrCancel}
+              disabled={isPending || !canCancelPo}
               className="min-h-11 rounded-full px-6 font-bold text-destructive"
               onClick={handleCancelPo}
             >
@@ -821,12 +821,12 @@ export function PODetailClient({
             </Button>
             <Button
               type="button"
-              disabled={isPending || (!canSendOrCancel && !canCreateGrn)}
+              disabled={isPending || (!canSendPo && !canCreateGrn)}
               className="min-h-11 rounded-full px-10 font-bold shadow-lg"
-              onClick={canSendOrCancel ? handleSendPo : handleCreateGrn}
+              onClick={canSendPo ? handleSendPo : handleCreateGrn}
             >
               <IconCircleCheck className="size-5" />
-              {canSendOrCancel ? "Gửi PO cho NCC" : "Sang bước tạo GRN"}
+              {canSendPo ? "Gửi PO cho NCC" : "Sang bước tạo GRN"}
             </Button>
           </footer>
         </div>

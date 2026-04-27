@@ -7,6 +7,7 @@ export default async function ProductionPage() {
     canManageRecipes,
     canCreateProduction,
     canConfirmProduction,
+    canAdjustStock,
     centralKitchenBranches,
     ingredients,
     finishedGoods,
@@ -20,6 +21,7 @@ export default async function ProductionPage() {
       canManageRecipes={canManageRecipes}
       canCreateProduction={canCreateProduction}
       canConfirmProduction={canConfirmProduction}
+      canAdjustStock={canAdjustStock}
       centralKitchenBranches={centralKitchenBranches}
       ingredients={ingredients}
       finishedGoods={finishedGoods}

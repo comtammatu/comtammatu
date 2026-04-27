@@ -45,6 +45,7 @@ import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { notify } from "@comtammatu/ui/lib/notify";
 import { Combobox } from "@/components/form";
 import { InventoryHeader } from "../../_components/inventory-header";
+import { DocumentStockCorrectionDialog } from "../../_components/document-stock-correction-dialog";
 import { FormattedNumberInput } from "../../_components/formatted-number-input";
 import { formatVND } from "../../_lib/format";
 import { confirmGrn } from "../../procurement-actions";
@@ -124,9 +125,11 @@ function deriveVariance(
 export function GRNDetailClient({
   grn,
   ingredients,
+  canAdjustStock,
 }: {
   grn: GRNDetail;
   ingredients: IngredientRow[];
+  canAdjustStock: boolean;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -537,6 +540,19 @@ export function GRNDetailClient({
                   <IconPackageOff className="size-4" />
                   Lập phiếu trả NCC
                 </Button>
+              ) : null}
+              {!isDraft && canAdjustStock && lines.length > 0 ? (
+                <DocumentStockCorrectionDialog
+                  documentType="grn"
+                  documentId={grn.id}
+                  documentCode={grn.code}
+                  branchOptions={[{ id: grn.branchId, name: "Kho nhận" }]}
+                  itemOptions={lines.map((line) => ({
+                    ingredientId: line.ingredientId,
+                    name: line.name,
+                    unit: line.unit,
+                  }))}
+                />
               ) : null}
             </div>
 

@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { PROCUREMENT_ROLES, PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { currentUserHasPermission } from "@/_lib/permissions";
 import { getAuthContextWithPermission } from "../../_lib/auth";
 import { fetchIngredients } from "../../actions";
 import { fetchGrnDetail } from "../../procurement-actions";
@@ -160,6 +161,16 @@ export default async function GRNDetailPage({
   const ingredients: IngredientRow[] = ingredientsRes.success
     ? ((ingredientsRes.data ?? []) as IngredientRow[])
     : [];
+  const canAdjustStock = await currentUserHasPermission(
+    d.grn.branch_id,
+    PERMISSION_KEYS.INVENTORY_WRITE,
+  );
 
-  return <GRNDetailClient grn={grn} ingredients={ingredients} />;
+  return (
+    <GRNDetailClient
+      grn={grn}
+      ingredients={ingredients}
+      canAdjustStock={canAdjustStock}
+    />
+  );
 }

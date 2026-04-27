@@ -5,6 +5,7 @@ import type { ActionResult } from "@comtammatu/shared/types";
 import {
   INVENTORY_CATALOG_ROLES,
   INVENTORY_OPS_ROLES,
+  PERMISSION_KEYS,
 } from "@comtammatu/shared/auth";
 import { getAuthContext, getAuthContextWithAnyPermission } from "./_lib/auth";
 import { withAction } from "@/_lib/with-action";
@@ -278,6 +279,18 @@ export const adjustStock = withAction(
       claims.branch_id !== data.branchId
     ) {
       return { success: false, error: "Không có quyền truy cập chi nhánh này" };
+    }
+
+    const { data: hasWritePermission, error: permissionError } =
+      await supabase.rpc("has_permission", {
+        p_branch_id: data.branchId,
+        p_key: PERMISSION_KEYS.INVENTORY_WRITE,
+      });
+    if (permissionError || hasWritePermission !== true) {
+      return {
+        success: false,
+        error: "Không có quyền điều chỉnh tồn kho.",
+      };
     }
 
     const defaultLocationId = await resolveDefaultInventoryLocation(

@@ -1,4 +1,6 @@
 import { notFound } from "next/navigation";
+import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { currentUserHasPermission } from "@/_lib/permissions";
 import { fetchIngredients } from "../../actions";
 import { fetchStockIssueDetail } from "../../issue-actions";
 import { IssueDetailClient } from "./issue-detail-client";
@@ -29,7 +31,11 @@ export default async function IssueDetailPage({
       notes: string | null;
       issued_at: string;
       branch_id: number;
-      branches: { id: number; name: string; branch_kind?: string | null } | null;
+      branches: {
+        id: number;
+        name: string;
+        branch_kind?: string | null;
+      } | null;
     };
     lines: Array<{
       id: number;
@@ -45,6 +51,10 @@ export default async function IssueDetailPage({
   const ingredients: IngredientRow[] = ingredientsRes.success
     ? ((ingredientsRes.data ?? []) as IngredientRow[])
     : [];
+  const canAdjustStock = await currentUserHasPermission(
+    d.issue.branch_id,
+    PERMISSION_KEYS.INVENTORY_WRITE,
+  );
 
   return (
     <IssueDetailClient
@@ -52,6 +62,7 @@ export default async function IssueDetailPage({
       initialIssue={d.issue}
       initialLines={d.lines}
       ingredients={ingredients}
+      canAdjustStock={canAdjustStock}
     />
   );
 }

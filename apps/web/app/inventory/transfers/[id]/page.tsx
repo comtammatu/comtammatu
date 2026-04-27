@@ -1,5 +1,9 @@
 import { createClient } from "@comtammatu/database/supabase/server";
-import { extractClaimsFromAccessToken } from "@comtammatu/shared/auth";
+import {
+  extractClaimsFromAccessToken,
+  PERMISSION_KEYS,
+} from "@comtammatu/shared/auth";
+import { currentUserHasPermission } from "@/_lib/permissions";
 import { notFound } from "next/navigation";
 import { fetchStockTransferDetail } from "../../transfer-actions";
 import { formatDateTime } from "../../_lib/format";
@@ -111,12 +115,41 @@ export default async function TransferDetailPage({
     total: subtotal,
     items,
   };
+  const [canAdjustFrom, canAdjustTo] = await Promise.all([
+    currentUserHasPermission(
+      d.transfer.from_branch_id,
+      PERMISSION_KEYS.INVENTORY_WRITE,
+    ),
+    currentUserHasPermission(
+      d.transfer.to_branch_id,
+      PERMISSION_KEYS.INVENTORY_WRITE,
+    ),
+  ]);
+  const correctionBranches = [
+    canAdjustFrom
+      ? {
+          id: d.transfer.from_branch_id,
+          name:
+            d.transfer.from_branch_name ??
+            `Chi nhánh #${d.transfer.from_branch_id}`,
+        }
+      : null,
+    canAdjustTo && d.transfer.status === "received"
+      ? {
+          id: d.transfer.to_branch_id,
+          name:
+            d.transfer.to_branch_name ??
+            `Chi nhánh #${d.transfer.to_branch_id}`,
+        }
+      : null,
+  ].filter((branch): branch is { id: number; name: string } => branch != null);
 
   return (
     <TransferDetailClient
       transfer={transfer}
       userRole={claims?.user_role ?? "branch_manager"}
       userBranchId={scope?.selectedBranchId ?? null}
+      correctionBranches={correctionBranches}
     />
   );
 }
