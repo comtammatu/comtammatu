@@ -13,6 +13,7 @@ import {
 } from "@comtammatu/ui/components/select";
 import type { InventoryBranchOption } from "../_lib/inventory-scope";
 
+import { BRANCH_VI } from "@comtammatu/shared/messages";
 interface InventoryBranchFilterProps {
   branches: InventoryBranchOption[];
   defaultBranchId: number | null;
@@ -57,7 +58,7 @@ export function InventoryBranchFilter({
     <Select value={String(currentId)} onValueChange={handleChange}>
       <SelectTrigger className="h-9 min-w-0 w-full justify-start overflow-hidden rounded-md border bg-sidebar-accent/40 px-2 py-1.5 text-left text-sm font-medium text-sidebar-foreground shadow-none hover:bg-sidebar-accent/60 focus-visible:ring-sidebar-ring [&>svg:last-child]:ml-auto [&_[data-slot=select-value]]:min-w-0 [&_[data-slot=select-value]]:flex-1 [&_[data-slot=select-value]]:truncate">
         <IconBuildingStore className="size-4 shrink-0" />
-        <SelectValue placeholder="Chọn chi nhánh">
+        <SelectValue placeholder={BRANCH_VI.select}>
           <span className="block min-w-0 truncate">
             {currentBranch?.name ?? "Chọn chi nhánh"}
           </span>

@@ -47,7 +47,7 @@ import {
   type ArchivedScope,
 } from "../_hooks/use-archived-orders";
 
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, STATES_VI } from "@comtammatu/shared/messages";
 interface ArchivedOrdersSheetProps {
   branchId: number;
   sessionId: number;
@@ -187,7 +187,7 @@ export function ArchivedOrdersSheet({
               <EmptyHeader>
                 <EmptyTitle>
                   <Spinner data-icon="inline-start" />
-                  Đang tải...
+                  {STATES_VI.loading}
                 </EmptyTitle>
               </EmptyHeader>
             </Empty>

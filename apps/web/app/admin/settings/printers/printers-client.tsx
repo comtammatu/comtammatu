@@ -20,7 +20,7 @@ import {
 } from "@comtammatu/ui/components/card";
 import { upsertPrinter, deletePrinter } from "./actions";
 
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, BRANCH_VI } from "@comtammatu/shared/messages";
 export type Branch = { id: number; name: string };
 
 export type Printer = {
@@ -247,7 +247,7 @@ function PrinterForm({
                 }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Chọn chi nhánh" />
+                  <SelectValue placeholder={BRANCH_VI.select} />
                 </SelectTrigger>
                 <SelectContent>
                   {branches.map((b) => (

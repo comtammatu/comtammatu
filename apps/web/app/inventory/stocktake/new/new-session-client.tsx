@@ -22,6 +22,7 @@ import {
 } from "../../_components/stocktake-mode-selector";
 import { startStocktake } from "../../stocktake-actions";
 
+import { BRANCH_VI } from "@comtammatu/shared/messages";
 interface BranchOpt {
   id: number;
   name: string;
@@ -107,7 +108,7 @@ export function NewStocktakeSessionClient({
                     }}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Chọn chi nhánh" />
+                      <SelectValue placeholder={BRANCH_VI.select} />
                     </SelectTrigger>
                     <SelectContent>
                       {branches.map((b) => (

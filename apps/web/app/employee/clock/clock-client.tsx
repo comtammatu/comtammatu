@@ -28,7 +28,7 @@ import { clockIn, clockOut } from "./actions";
 
 /* ─── Types ─── */
 
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, BRANCH_VI } from "@comtammatu/shared/messages";
 interface Branch {
   id: number;
   name: string;
@@ -471,7 +471,7 @@ export function ClockClient({
               }}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Chọn chi nhánh" />
+                <SelectValue placeholder={BRANCH_VI.select} />
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>

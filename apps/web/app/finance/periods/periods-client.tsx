@@ -21,7 +21,7 @@ import {
   DialogDescription,
 } from "@comtammatu/ui/components/dialog";
 import { Lock as IconLock, Plus as IconPlus, FileSearch as IconFileSearch } from "lucide-react";
-import { ACTIONS_VI, ERRORS_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, ERRORS_VI, STATES_VI } from "@comtammatu/shared/messages";
 import {
   openFiscalPeriod,
   closeFiscalPeriod,
@@ -287,7 +287,7 @@ export function PeriodsClient({ periods: initial }: Props) {
           </DialogHeader>
           {reconLoading ? (
             <p className="py-6 text-center text-muted-foreground">
-              Đang tải...
+              {STATES_VI.loading}
             </p>
           ) : reconData ? (
             <div className="rounded-md border">

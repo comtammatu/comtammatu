@@ -57,6 +57,12 @@ const config = {
   version: process.env.AGENT_VERSION ?? "0.1.0",
   transport: parseTransport(process.env.AGENT_TRANSPORT),
   printMode: parsePrintMode(process.env.PRINT_MODE),
+  // Network gate: agent registers its NAT egress IP every 5 min via the
+  // web app's /api/branch-presence endpoint. Web app then enforces "POS/KDS
+  // only from devices on this branch's wifi" in proxy.ts.
+  // Optional — leave WEB_BASE_URL unset to disable presence registration.
+  webBaseUrl: process.env.WEB_BASE_URL ?? null,
+  presenceToken: process.env.PRINT_AGENT_PRESENCE_TOKEN ?? null,
 };
 
 const printerCache = new Map<number, PrinterRow>();
@@ -120,6 +126,48 @@ async function heartbeat(supabase: SupabaseClient): Promise<void> {
     { onConflict: "branch_id" },
   );
   if (error) console.error("[agent] heartbeat failed:", error.message);
+}
+
+/**
+ * Register this branch's NAT egress IP with the web app so that
+ * proxy.ts can allow POS/KDS access from devices sharing the same wifi.
+ *
+ * The web app reads the IP from the request itself (x-real-ip) — we do
+ * NOT pass it in the body, since a leaked token would otherwise let
+ * an attacker register an arbitrary IP. The body carries only identity
+ * (tenant + branch + agent_id) for audit.
+ */
+async function registerPresence(): Promise<void> {
+  if (!config.webBaseUrl || !config.presenceToken) return;
+  try {
+    const resp = await fetch(`${config.webBaseUrl}/api/branch-presence`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${config.presenceToken}`,
+      },
+      body: JSON.stringify({
+        tenant_id: config.tenantId,
+        branch_id: config.branchId,
+        agent_id: config.agentId,
+      }),
+    });
+    if (!resp.ok) {
+      console.error(
+        `[agent] presence register failed: ${resp.status} ${resp.statusText}`,
+      );
+      return;
+    }
+    const data = (await resp.json()) as { ok?: boolean; ip?: string; error?: string };
+    if (data.ok) {
+      console.log(`[agent] presence registered ip=${data.ip}`);
+    } else {
+      console.error(`[agent] presence register rejected: ${data.error ?? "unknown"}`);
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[agent] presence register error: ${msg}`);
+  }
 }
 
 async function claimJob(
@@ -279,6 +327,7 @@ async function main() {
 
   await loadPrinters(supabase);
   await heartbeat(supabase);
+  await registerPresence();
   await drainPending(supabase);
 
   let initialSubscribeSeen = false;
@@ -322,6 +371,9 @@ async function main() {
 
   setInterval(() => void heartbeat(supabase), 30_000);
   setInterval(() => void loadPrinters(supabase), 5 * 60_000);
+  // Presence: re-register every 5 min so trusted-IP row stays fresh within
+  // the 30-min grace window enforced by web proxy.
+  setInterval(() => void registerPresence(), 5 * 60_000);
   // Worst-case latency for a job INSERTed during a WS disconnect:
   // bounded by this interval (was 60_000 — too slow for a kitchen).
   setInterval(() => void drainPending(supabase), 15_000);

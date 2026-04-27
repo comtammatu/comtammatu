@@ -18,6 +18,7 @@ import {
 import { formatVND } from "@comtammatu/shared/format";
 import type { DailyRevenueRow, TopItemRow } from "./page";
 
+import { STATES_VI } from "@comtammatu/shared/messages";
 interface RevenueOverviewProps {
   dailyRevenue: DailyRevenueRow[];
   topItems: TopItemRow[];
@@ -100,7 +101,7 @@ export function RevenueOverview({
           <CardContent className="space-y-4 p-4 sm:p-6">
             {topItems.length === 0 ? (
               <div className="rounded-lg border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
-                Chưa có dữ liệu
+                {STATES_VI.empty}
               </div>
             ) : null}
 
@@ -145,7 +146,7 @@ export function RevenueOverview({
                         colSpan={3}
                         className="py-8 text-center text-sm text-muted-foreground"
                       >
-                        Chưa có dữ liệu
+                        {STATES_VI.empty}
                       </TableCell>
                     </TableRow>
                   )}
@@ -177,7 +178,7 @@ export function RevenueOverview({
           <CardContent className="space-y-4 p-4 sm:p-6">
             {last7.length === 0 ? (
               <div className="rounded-lg border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
-                Chưa có dữ liệu
+                {STATES_VI.empty}
               </div>
             ) : null}
 
@@ -216,7 +217,7 @@ export function RevenueOverview({
                         colSpan={3}
                         className="py-8 text-center text-sm text-muted-foreground"
                       >
-                        Chưa có dữ liệu
+                        {STATES_VI.empty}
                       </TableCell>
                     </TableRow>
                   )}

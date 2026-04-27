@@ -106,6 +106,7 @@ export const PERMISSION_KEYS = {
   SETTINGS_BRANCH: "settings:branch",
   SETTINGS_TENANT: "settings:tenant",
   SETTINGS_INTEGRATIONS: "settings:integrations",
+  SETTINGS_BRANCH_NETWORK: "settings:branch_network",
 
   // pos
   POS_USE: "pos:use",
@@ -131,7 +132,7 @@ export const PERMISSION_KEYS = {
 export type PermissionKey = (typeof PERMISSION_KEYS)[keyof typeof PERMISSION_KEYS];
 
 /** Total count (static assertion — update when adding keys) */
-export const PERMISSION_KEY_COUNT = 84;
+export const PERMISSION_KEY_COUNT = 85;
 
 /**
  * Pure function: check if a permission set contains a given key.

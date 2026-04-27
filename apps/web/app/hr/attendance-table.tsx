@@ -20,7 +20,7 @@ import {
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import { ERRORS_VI } from "@comtammatu/shared/messages";
+import { BRANCH_VI, ERRORS_VI } from "@comtammatu/shared/messages";
 import {
   fetchAttendance,
   fetchAttendanceSummary,
@@ -148,7 +148,7 @@ export function AttendanceTable({ branches }: AttendanceTableProps) {
           onValueChange={(v) => loadData(Number(v), selectedMonth)}
         >
           <SelectTrigger className="w-48">
-            <SelectValue placeholder="Chọn chi nhánh" />
+            <SelectValue placeholder={BRANCH_VI.select} />
           </SelectTrigger>
           <SelectContent>
             {branches.map((b) => (

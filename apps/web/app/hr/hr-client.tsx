@@ -25,6 +25,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { Button } from "@comtammatu/ui/components/button";
 import { UserPlus as IconUserPlus } from "lucide-react";
 
+import { BRANCH_VI } from "@comtammatu/shared/messages";
 interface HrClientProps {
   employees: EmployeeRow[];
   branches: BranchOption[];
@@ -90,7 +91,7 @@ export function HrClient({ employees, branches }: HrClientProps) {
             onValueChange={(v) => loadShifts(Number(v))}
           >
             <SelectTrigger className="w-48">
-              <SelectValue placeholder="Chọn chi nhánh" />
+              <SelectValue placeholder={BRANCH_VI.select} />
             </SelectTrigger>
             <SelectContent>
               {branches.map((b) => (

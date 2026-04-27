@@ -152,6 +152,70 @@ function migrateStandaloneVerbs(content) {
   return { content: lines.join("\n"), needs };
 }
 
+// Match standalone-line state phrases (loading/processing/empty etc.) and
+// replace with STATES_VI references.
+const STATE_MAP = {
+  "Đang tải…": "loading",
+  "Đang tải...": "loading",
+  "Đang xử lý…": "processing",
+  "Đang xử lý...": "processing",
+  "Đang lưu…": "saving",
+  "Đang lưu...": "saving",
+  "Chưa có dữ liệu": "empty",
+  "Không tìm thấy kết quả": "noResults",
+};
+function migrateStandaloneStates(content) {
+  const lines = content.split(/\r?\n/);
+  let needs = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const m = line.match(/^(\s+)(.+?)\s*$/);
+    if (!m) continue;
+    const text = m[2].trim();
+    if (!Object.prototype.hasOwnProperty.call(STATE_MAP, text)) continue;
+    const prev = (lines[i - 1] ?? "").trimEnd();
+    const next = (lines[i + 1] ?? "").trimStart();
+    const flanksJsx =
+      (prev.endsWith(">") || prev.endsWith("}>")) &&
+      (next.startsWith("<") || next.startsWith("</"));
+    if (!flanksJsx) continue;
+    lines[i] = `${m[1]}{STATES_VI.${STATE_MAP[text]}}`;
+    needs = true;
+  }
+  return { content: lines.join("\n"), needs };
+}
+
+// Branch select / selectAll attribute and JSX text.
+function migrateBranchPhrases(content) {
+  let needs = false;
+  let next = content;
+  const patterns = [
+    {
+      re: /placeholder="Tất cả chi nhánh"/g,
+      to: "placeholder={BRANCH_VI.selectAll}",
+    },
+    {
+      re: />Tất cả chi nhánh</g,
+      to: ">{BRANCH_VI.selectAll}<",
+    },
+    {
+      re: /placeholder="Chọn chi nhánh"/g,
+      to: "placeholder={BRANCH_VI.select}",
+    },
+    {
+      re: />Chọn chi nhánh</g,
+      to: ">{BRANCH_VI.select}<",
+    },
+  ];
+  for (const { re, to } of patterns) {
+    if (re.test(next)) {
+      needs = true;
+      next = next.replace(re, to);
+    }
+  }
+  return { content: next, needs };
+}
+
 // Match ternary `? "VerbA" : "VerbB"` and replace with ACTIONS_VI refs when
 // both arms map.
 function migrateTernaryVerbs(content) {
@@ -190,6 +254,18 @@ for (const file of walk(root)) {
   if (v2.needs) {
     needs.add("ACTIONS_VI");
     content = v2.content;
+  }
+
+  const v3 = migrateStandaloneStates(content);
+  if (v3.needs) {
+    needs.add("STATES_VI");
+    content = v3.content;
+  }
+
+  const v4 = migrateBranchPhrases(content);
+  if (v4.needs) {
+    needs.add("BRANCH_VI");
+    content = v4.content;
   }
 
   if (needs.size > 0 && content !== original) {

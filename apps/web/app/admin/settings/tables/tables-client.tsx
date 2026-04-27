@@ -24,6 +24,7 @@ import type { ZoneRow } from "./zone-table";
 import type { TableRow } from "./table-table";
 import { EmptyStatePanel } from "../../components/empty-state-panel";
 
+import { BRANCH_VI } from "@comtammatu/shared/messages";
 export interface BranchOption {
   id: number;
   name: string;
@@ -65,7 +66,7 @@ export function TablesClient({ branches, zones, tables }: TablesClientProps) {
           onValueChange={(v) => setSelectedBranchId(Number(v))}
         >
           <SelectTrigger className="w-60">
-            <SelectValue placeholder="Chọn chi nhánh" />
+            <SelectValue placeholder={BRANCH_VI.select} />
           </SelectTrigger>
           <SelectContent>
             {branches.map((b) => (

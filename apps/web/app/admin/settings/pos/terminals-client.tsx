@@ -23,6 +23,7 @@ import { ExternalLink as IconExternalLink, Pencil as IconPencil, Plus as IconPlu
 import { TerminalFormDialog } from "./terminal-form-dialog";
 import { EmptyStatePanel } from "../../components/empty-state-panel";
 
+import { BRANCH_VI } from "@comtammatu/shared/messages";
 export interface TerminalRow {
   id: number;
   name: string;
@@ -73,7 +74,7 @@ export function TerminalsClient({ branches, terminals }: TerminalsClientProps) {
             onValueChange={(v) => setSelectedBranchId(Number(v))}
           >
             <SelectTrigger className="w-60">
-              <SelectValue placeholder="Chọn chi nhánh" />
+              <SelectValue placeholder={BRANCH_VI.select} />
             </SelectTrigger>
             <SelectContent>
               {branches.map((b) => (

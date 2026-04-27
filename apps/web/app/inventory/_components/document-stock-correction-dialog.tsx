@@ -30,7 +30,7 @@ import {
   type InventoryCorrectionDocumentType,
 } from "../document-correction-actions";
 
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, BRANCH_VI } from "@comtammatu/shared/messages";
 export type CorrectionBranchOption = {
   id: number;
   name: string;
@@ -180,7 +180,7 @@ export function DocumentStockCorrectionDialog({
                 disabled={branchOptions.length <= 1}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Chọn chi nhánh" />
+                  <SelectValue placeholder={BRANCH_VI.select} />
                 </SelectTrigger>
                 <SelectContent>
                   {branchOptions.map((branch) => (

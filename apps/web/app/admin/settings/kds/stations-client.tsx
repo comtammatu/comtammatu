@@ -24,6 +24,7 @@ import { EmptyStatePanel } from "../../components/empty-state-panel";
 
 /* ─── Types ─── */
 
+import { BRANCH_VI } from "@comtammatu/shared/messages";
 export interface StationRow {
   id: number;
   name: string;
@@ -92,7 +93,7 @@ export function StationsClient({
           onValueChange={(v) => setSelectedBranchId(Number(v))}
         >
           <SelectTrigger className="w-60">
-            <SelectValue placeholder="Chọn chi nhánh" />
+            <SelectValue placeholder={BRANCH_VI.select} />
           </SelectTrigger>
           <SelectContent>
             {branches.map((b) => (

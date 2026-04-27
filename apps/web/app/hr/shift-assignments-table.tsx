@@ -46,7 +46,7 @@ import {
 } from "./shift-assignment-actions";
 import { fetchShifts } from "./actions";
 import type { BranchOption, ShiftRow } from "./page";
-import { ACTIONS_VI, ERRORS_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, BRANCH_VI, ERRORS_VI } from "@comtammatu/shared/messages";
 
 /* ─── Types ─── */
 
@@ -248,7 +248,7 @@ export function ShiftAssignmentsTable({
           onValueChange={(v) => handleBranchChange(Number(v))}
         >
           <SelectTrigger className="w-48">
-            <SelectValue placeholder="Chọn chi nhánh" />
+            <SelectValue placeholder={BRANCH_VI.select} />
           </SelectTrigger>
           <SelectContent>
             {branches.map((b) => (

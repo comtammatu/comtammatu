@@ -23,6 +23,7 @@ export type OrderKey = keyof typeof ORDER_VI;
 export const BRANCH_VI = {
   long: "Chi nhánh",
   acronym: "CN",
+  select: "Chọn chi nhánh",
   selectAll: "Tất cả chi nhánh",
   scope: "Phạm vi chi nhánh",
 } as const;

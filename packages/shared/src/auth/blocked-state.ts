@@ -2,7 +2,8 @@ export type BlockedStateReasonCode =
   | "insufficient-permission"
   | "missing-auth-context"
   | "branch-scope-mismatch"
-  | "central-warehouse-branch-restricted";
+  | "central-warehouse-branch-restricted"
+  | "untrusted-network";
 
 export interface BlockedStateCopy {
   title: string;
@@ -59,6 +60,15 @@ const BLOCKED_STATE_REASON_COPY: Record<
     toastMessage: "POS/KDS không mở trên kho tổng/bếp trung tâm.",
     tone: "warning",
   },
+  "untrusted-network": {
+    title: "Không thuộc mạng cửa hàng",
+    description:
+      "POS và KDS chỉ hoạt động khi thiết bị nối vào wifi của chi nhánh. Bạn đang ở mạng khác — vui lòng kết nối wifi cửa hàng và thử lại.",
+    nextStep:
+      "Kiểm tra wifi cửa hàng. Nếu vừa đổi mạng / đổi nhà mạng, báo quản lý để cấu hình lại IP tin cậy.",
+    toastMessage: "Thiết bị không nằm trong mạng cửa hàng.",
+    tone: "warning",
+  },
 };
 
 interface SearchParamsReader {
@@ -72,7 +82,8 @@ export function isBlockedStateReasonCode(
     value === "insufficient-permission" ||
     value === "missing-auth-context" ||
     value === "branch-scope-mismatch" ||
-    value === "central-warehouse-branch-restricted"
+    value === "central-warehouse-branch-restricted" ||
+    value === "untrusted-network"
   );
 }
 

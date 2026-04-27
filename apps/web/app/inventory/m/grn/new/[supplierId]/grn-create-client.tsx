@@ -38,7 +38,7 @@ import {
 import { formatVND } from "../../../../_lib/format";
 import { createGrnDraft, upsertGrnLine } from "../../../../grn-actions";
 
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, STATES_VI } from "@comtammatu/shared/messages";
 type Ingredient = {
   id: number;
   name: string;
@@ -416,7 +416,7 @@ export function GrnCreateClient({
           {submitting ? (
             <>
               <Spinner className="size-5" />
-              Đang lưu...
+              {STATES_VI.saving}
             </>
           ) : lineCount === 0 ? (
             "Thêm mặt hàng để tiếp tục"

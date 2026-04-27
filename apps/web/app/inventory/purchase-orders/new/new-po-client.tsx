@@ -53,7 +53,7 @@ import type {
 import type { SupplierRow } from "../../suppliers/suppliers-client";
 import type { IngredientRow } from "../../page";
 
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, STATES_VI } from "@comtammatu/shared/messages";
 interface LocalLine {
   ingredientId: number;
   ingredientName: string;
@@ -563,7 +563,7 @@ function SuggestionsPanel({
                     </Select>
                     {isLoading && (
                       <span className="text-xs text-muted-foreground">
-                        Đang tải…
+                        {STATES_VI.loading}
                       </span>
                     )}
                   </div>

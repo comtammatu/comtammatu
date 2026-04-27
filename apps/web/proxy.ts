@@ -16,6 +16,7 @@ import {
   type JwtClaims,
   type ModuleKey,
 } from "@comtammatu/shared/auth";
+import { getClientIp } from "@lib/network/client-ip";
 
 /** Create a redirect that preserves Set-Cookie from updateSession response */
 function redirectWithCookies(
@@ -202,6 +203,42 @@ export async function proxy(request: NextRequest) {
               response,
               "central-warehouse-branch-restricted",
             );
+          }
+
+          // Network gate: only devices sharing NAT egress IP with the branch's
+          // print-agent (registered via /api/branch-presence) may load POS/KDS.
+          // Defense-in-depth ONLY — RLS + JWT remain the source of truth for
+          // data access (PostgREST direct calls bypass this gate). Kill-switch
+          // via POS_NETWORK_GATE=off for incident response.
+          //
+          // Admin roles already fail the branch-scope check above (their
+          // branch_id is null), so they never reach this point — no explicit
+          // bypass needed here.
+          if (process.env.POS_NETWORK_GATE !== "off") {
+            const clientIp = getClientIp(request.headers);
+            const graceCutoff = new Date(
+              Date.now() - 30 * 60_000,
+            ).toISOString();
+            let trusted = false;
+            if (clientIp) {
+              const { data: trustRow } = await supabase
+                .from("branch_trusted_egress_ips")
+                .select("id")
+                .eq("branch_id", routeBranchId)
+                .eq("tenant_id", claims.tenant_id)
+                .eq("ip_address", clientIp)
+                .is("revoked_at", null)
+                .gte("last_seen_at", graceCutoff)
+                .maybeSingle();
+              trusted = trustRow !== null;
+            }
+            if (!trusted) {
+              return redirectToAccessDenied(
+                request,
+                response,
+                "untrusted-network",
+              );
+            }
           }
         }
       }

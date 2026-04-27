@@ -60,7 +60,7 @@ import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import { tNav } from "../_lib/dictionary";
 import { createStockIssueDraft } from "../issue-actions";
 
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, BRANCH_VI } from "@comtammatu/shared/messages";
 export type IssueRow = {
   id: number;
   code: string;
@@ -463,7 +463,7 @@ export function IssuesClient({
               <Label>Chi nhánh *</Label>
               <Select value={branchId} onValueChange={setBranchId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Chọn chi nhánh" />
+                  <SelectValue placeholder={BRANCH_VI.select} />
                 </SelectTrigger>
                 <SelectContent>
                   {branches.map((branch) => (
