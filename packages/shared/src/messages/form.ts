@@ -1,0 +1,29 @@
+// Generic form/table labels (Vietnamese). For form labels, table headers,
+// and column captions whose meaning is the same across modules.
+// Domain-specific labels (e.g., "Tên ca", "Mã PO") stay in module dicts.
+export const FORM_VI = {
+  name: "Tên",
+  status: "Trạng thái",
+  type: "Loại",
+  unit: "Đơn vị",
+  quantity: "Số lượng",
+  notes: "Ghi chú",
+  reason: "Lý do",
+  date: "Ngày",
+  fromDate: "Từ ngày",
+  toDate: "Đến ngày",
+  category: "Danh mục",
+  description: "Diễn giải",
+  action: "Thao tác",
+  total: "Tổng",
+  totalAmount: "Tổng cộng",
+  subtotal: "Tạm tính",
+  amount: "Thành tiền",
+  value: "Giá trị",
+  tax: "Thuế",
+  price: "Giá",
+  unitPrice: "Đơn giá",
+  required: "Bắt buộc",
+  optional: "Tùy chọn",
+} as const;
+export type FormKey = keyof typeof FORM_VI;
