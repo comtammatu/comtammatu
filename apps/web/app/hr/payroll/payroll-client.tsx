@@ -21,7 +21,7 @@ import {
   approvePayroll,
 } from "../payroll-actions";
 import type { PayrollPeriodRow } from "./page";
-import { ERRORS_VI } from "@comtammatu/shared/messages";
+import { ERRORS_VI, FORM_VI } from "@comtammatu/shared/messages";
 
 interface Props {
   periods: PayrollPeriodRow[];
@@ -130,12 +130,12 @@ export function PayrollClient({ periods: initialPeriods }: Props) {
           <TableHeader>
             <TableRow>
               <TableHead>Kỳ lương</TableHead>
-              <TableHead>Trạng thái</TableHead>
+              <TableHead>{FORM_VI.status}</TableHead>
               <TableHead className="text-right">Tổng lương gộp</TableHead>
               <TableHead className="text-right">Tổng BHXH/YT/TN</TableHead>
               <TableHead className="text-right">Tổng thuế TNCN</TableHead>
               <TableHead className="text-right">Tổng lương thực lĩnh</TableHead>
-              <TableHead className="text-right">Thao tác</TableHead>
+              <TableHead className="text-right">{FORM_VI.action}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

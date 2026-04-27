@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { TriangleAlert as IconAlertTriangle, ChevronRight as IconChevronRight, CircleCheck as IconCircleCheck, LoaderCircle as IconLoader2 } from "lucide-react";
-import { BRANCH_VI } from "@comtammatu/shared/messages";
+import { BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -176,7 +176,7 @@ export function ReconciliationClient({
           <CardContent className="grid gap-3 p-4 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end">
             <div className="space-y-1.5">
               <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Chi nhánh
+                {BRANCH_VI.long}
               </label>
               <Select
                 value={branchId == null ? "all" : String(branchId)}
@@ -199,7 +199,7 @@ export function ReconciliationClient({
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Từ ngày
+                {FORM_VI.fromDate}
               </label>
               <Input
                 type="date"
@@ -209,7 +209,7 @@ export function ReconciliationClient({
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Đến ngày
+                {FORM_VI.toDate}
               </label>
               <Input
                 type="date"
@@ -281,7 +281,7 @@ export function ReconciliationClient({
                         Chênh lệch
                       </TableHead>
                       <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        Trạng thái
+                        {FORM_VI.status}
                       </TableHead>
                       <TableHead className="text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
                         Drilldown
@@ -364,7 +364,7 @@ export function ReconciliationClient({
                       Ngày
                     </TableHead>
                     <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                      Chi nhánh
+                      {BRANCH_VI.long}
                     </TableHead>
                     <TableHead className="text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
                       Số tiền
@@ -583,7 +583,7 @@ function DesyncTable({
                 Đơn
               </TableHead>
               <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Chi nhánh
+                {BRANCH_VI.long}
               </TableHead>
               <TableHead className="text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 Số tiền

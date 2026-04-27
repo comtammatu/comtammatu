@@ -46,7 +46,7 @@ import type {
 
 /* ─── Schema ─── */
 
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
 const productionLineRowSchema = z.object({
   finished_good_id: z
     .string()
@@ -106,7 +106,7 @@ function LineRowCard({
   return (
     <div className="space-y-3 rounded-xl border bg-card p-3">
       <div className="space-y-2">
-        <Label>Thành phẩm</Label>
+        <Label>{PRODUCT_VI.finishedGood}</Label>
         <Controller
           control={control}
           name={`lines.${index}.finished_good_id`}
@@ -135,7 +135,7 @@ function LineRowCard({
 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
-          <Label>Số lượng</Label>
+          <Label>{FORM_VI.quantity}</Label>
           <Controller
             control={control}
             name={`lines.${index}.quantity`}
@@ -155,7 +155,7 @@ function LineRowCard({
           />
         </div>
         <div className="space-y-2">
-          <Label>Đơn vị</Label>
+          <Label>{FORM_VI.unit}</Label>
           <Controller
             control={control}
             name={`lines.${index}.unit`}
@@ -389,7 +389,7 @@ export function MobileProductionOrderForm({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="mobile-production-notes">Ghi chú</Label>
+              <Label htmlFor="mobile-production-notes">{FORM_VI.notes}</Label>
               <Controller
                 control={form.control}
                 name="notes"
@@ -406,7 +406,7 @@ export function MobileProductionOrderForm({
 
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-3">
-                <Label>Thành phẩm</Label>
+                <Label>{PRODUCT_VI.finishedGood}</Label>
                 <Button
                   type="button"
                   variant="outline"

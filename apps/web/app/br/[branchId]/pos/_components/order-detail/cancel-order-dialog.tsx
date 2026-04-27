@@ -19,6 +19,7 @@ import { Textarea } from "@comtammatu/ui/components/textarea";
 import { QuickReasonChips } from "../quick-reason-chips";
 import { CANCEL_ORDER_PRESETS } from "../quick-reason-presets";
 
+import { FORM_VI } from "@comtammatu/shared/messages";
 interface CancelOrderDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -64,7 +65,7 @@ export function CancelOrderDialog({
         <FieldGroup className="py-2">
           <Field data-invalid={!reasonReady && trimmedLen > 0}>
             <FieldLabel htmlFor="cancel-reason" className="sr-only">
-              Lý do
+              {FORM_VI.reason}
             </FieldLabel>
             <QuickReasonChips
               presets={CANCEL_ORDER_PRESETS}

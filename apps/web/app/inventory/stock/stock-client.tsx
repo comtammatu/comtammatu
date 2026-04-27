@@ -54,7 +54,7 @@ import { CATEGORY_TONE_CLASS } from "../_lib/constants";
 import { createStockIssueDraft, upsertStockIssueLine } from "../issue-actions";
 import { AdjustStockDialog } from "./adjust-stock-dialog";
 
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
 export type StockIngredient = {
   id: number;
   name: string;
@@ -388,7 +388,7 @@ function QuickStockIssueDialog({
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="quick-issue-qty">Số lượng</Label>
+              <Label htmlFor="quick-issue-qty">{FORM_VI.quantity}</Label>
               <FormattedNumberInput
                 id="quick-issue-qty"
                 value={quantity}
@@ -399,7 +399,7 @@ function QuickStockIssueDialog({
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="quick-issue-unit">Đơn vị</Label>
+              <Label htmlFor="quick-issue-unit">{FORM_VI.unit}</Label>
               <Input
                 id="quick-issue-unit"
                 value={unit}
@@ -411,7 +411,7 @@ function QuickStockIssueDialog({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="quick-issue-reason">Lý do</Label>
+            <Label htmlFor="quick-issue-reason">{FORM_VI.reason}</Label>
             <Textarea
               id="quick-issue-reason"
               value={reason}
@@ -784,7 +784,7 @@ export function StockClient({
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-xs text-muted-foreground">Giá trị</p>
+                      <p className="text-xs text-muted-foreground">{FORM_VI.value}</p>
                       <p className="font-semibold tabular-nums">
                         {formatVND(stockValue(item))} đ
                       </p>
@@ -856,8 +856,8 @@ export function StockClient({
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/20 hover:bg-muted/20">
-                      <TableHead className="min-w-56">Nguyên liệu</TableHead>
-                      <TableHead className="min-w-32">Danh mục</TableHead>
+                      <TableHead className="min-w-56">{PRODUCT_VI.rawIngredient}</TableHead>
+                      <TableHead className="min-w-32">{FORM_VI.category}</TableHead>
                       <TableHead className="min-w-24 text-right">Tồn</TableHead>
                       <TableHead className="min-w-24 text-right">
                         Khả dụng
@@ -867,7 +867,7 @@ export function StockClient({
                       </TableHead>
                       <TableHead className="min-w-24 text-right">WAC</TableHead>
                       <TableHead className="min-w-28 text-right">
-                        Giá trị
+                        {FORM_VI.value}
                       </TableHead>
                     </TableRow>
                   </TableHeader>

@@ -21,7 +21,7 @@ import {
 } from "../../payroll-actions";
 import type { PayrollEntryRow } from "./page";
 import { useState } from "react";
-import { ERRORS_VI } from "@comtammatu/shared/messages";
+import { ERRORS_VI, STAFF_VI } from "@comtammatu/shared/messages";
 
 const fmt = (n: number) =>
   n.toLocaleString("vi-VN", { maximumFractionDigits: 0 });
@@ -141,7 +141,7 @@ export function PayrollDetailClient({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Nhân viên</TableHead>
+              <TableHead>{STAFF_VI.long}</TableHead>
               <TableHead className="text-right">Ngày công</TableHead>
               <TableHead className="text-right">Lương Gross</TableHead>
               <TableHead className="text-right">BH NLĐ</TableHead>

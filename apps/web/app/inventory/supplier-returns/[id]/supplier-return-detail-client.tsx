@@ -29,6 +29,7 @@ import {
   transitionSupplierReturn,
 } from "../../supplier-return-actions";
 
+import { FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
 type Props = {
   data: {
     header: {
@@ -216,10 +217,10 @@ export function SupplierReturnDetailClient({ data }: Props) {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Nguyên liệu</TableHead>
-                    <TableHead className="text-right">Số lượng</TableHead>
-                    <TableHead className="text-right">Đơn giá</TableHead>
-                    <TableHead className="text-right">Thành tiền</TableHead>
+                    <TableHead>{PRODUCT_VI.rawIngredient}</TableHead>
+                    <TableHead className="text-right">{FORM_VI.quantity}</TableHead>
+                    <TableHead className="text-right">{FORM_VI.unitPrice}</TableHead>
+                    <TableHead className="text-right">{FORM_VI.amount}</TableHead>
                     <TableHead>Lý do chi tiết</TableHead>
                     <TableHead>Ảnh</TableHead>
                   </TableRow>

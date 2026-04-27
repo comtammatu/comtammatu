@@ -37,7 +37,7 @@ import { FormattedNumberInput } from "@/components/form";
 
 /* ─── Context shape from server component ─── */
 
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
 export interface WasteFormContext {
   tenantId: number;
   branch: { id: number; name: string; kind: string };
@@ -345,7 +345,7 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div>
-                    <Label>Nguyên liệu</Label>
+                    <Label>{PRODUCT_VI.rawIngredient}</Label>
                     <SearchableSelect
                       options={ingredientOptions}
                       value={
@@ -369,7 +369,7 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <Label htmlFor={`qty-${line.uid}`}>Số lượng</Label>
+                      <Label htmlFor={`qty-${line.uid}`}>{FORM_VI.quantity}</Label>
                       <FormattedNumberInput
                         id={`qty-${line.uid}`}
                         maxFractionDigits={3}
@@ -402,7 +402,7 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
                   </div>
 
                   <div>
-                    <Label htmlFor={`reason-${line.uid}`}>Lý do</Label>
+                    <Label htmlFor={`reason-${line.uid}`}>{FORM_VI.reason}</Label>
                     <WasteReasonDropdown
                       id={`reason-${line.uid}`}
                       value={line.reasonCode as never}

@@ -19,6 +19,7 @@ import { Textarea } from "@comtammatu/ui/components/textarea";
 import { QuickReasonChips } from "../quick-reason-chips";
 import { VOID_ITEM_PRESETS } from "../quick-reason-presets";
 
+import { FORM_VI } from "@comtammatu/shared/messages";
 interface VoidItemDialogProps {
   open: boolean;
   reason: string;
@@ -64,7 +65,7 @@ export function VoidItemDialog({
         <FieldGroup className="py-2">
           <Field data-invalid={!reasonReady && trimmedLen > 0}>
             <FieldLabel htmlFor="void-reason" className="sr-only">
-              Lý do
+              {FORM_VI.reason}
             </FieldLabel>
             <QuickReasonChips
               presets={VOID_ITEM_PRESETS}

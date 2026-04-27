@@ -14,7 +14,7 @@ import {
 } from "@comtammatu/ui/components/table";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { ERRORS_VI } from "@comtammatu/shared/messages";
+import { ERRORS_VI, FORM_VI } from "@comtammatu/shared/messages";
 import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
 import { CircleOff as IconCircleOff, Plus as IconPlus, RefreshCw as IconRefresh } from "lucide-react";
 import type { AccountRow } from "./page";
@@ -151,7 +151,7 @@ export function ChartOfAccountsClient({
                 <TableHead className="w-32">Mã TK</TableHead>
                 <TableHead>Tên tài khoản</TableHead>
                 <TableHead className="w-32">Loại</TableHead>
-                <TableHead className="w-24 text-center">Trạng thái</TableHead>
+                <TableHead className="w-24 text-center">{FORM_VI.status}</TableHead>
                 <TableHead className="w-24" />
               </TableRow>
             </TableHeader>

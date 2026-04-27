@@ -238,7 +238,7 @@ function PrinterForm({
       <CardContent className="space-y-4">
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <Label>Chi nhánh</Label>
+            <Label>{BRANCH_VI.long}</Label>
             {branches.length > 1 && !initial ? (
               <Select
                 value={form.branch_id ? String(form.branch_id) : undefined}

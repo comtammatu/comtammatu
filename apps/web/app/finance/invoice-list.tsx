@@ -28,6 +28,7 @@ import { cancelTaxInvoice } from "./actions";
 import type { InvoiceRow } from "./page";
 import { TableEmptyStateRow } from "@/admin/components/table-empty-state-row";
 
+import { FORM_VI } from "@comtammatu/shared/messages";
 const STATUS_LABEL: Record<string, string> = {
   draft: "Nháp",
   issued: "Đã phát hành",
@@ -124,7 +125,7 @@ export function InvoiceList({ initialInvoices }: InvoiceListProps) {
                   ) : null}
                 </div>
                 <div className="text-left sm:text-right">
-                  <p className="text-muted-foreground">Giá trị</p>
+                  <p className="text-muted-foreground">{FORM_VI.value}</p>
                   <p className="mt-1 font-mono font-semibold">
                     {formatVND(inv.total_amount)}
                   </p>
@@ -157,8 +158,8 @@ export function InvoiceList({ initialInvoices }: InvoiceListProps) {
                 <TableHead>Số HĐ</TableHead>
                 <TableHead>Đơn hàng</TableHead>
                 <TableHead>Người mua</TableHead>
-                <TableHead className="text-right">Giá trị</TableHead>
-                <TableHead>Trạng thái</TableHead>
+                <TableHead className="text-right">{FORM_VI.value}</TableHead>
+                <TableHead>{FORM_VI.status}</TableHead>
                 <TableHead>Thời gian</TableHead>
                 <TableHead className="w-16" />
               </TableRow>

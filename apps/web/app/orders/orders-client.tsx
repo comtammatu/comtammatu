@@ -3,7 +3,7 @@
 import { useState, useTransition, useMemo } from "react";
 import { ShoppingBag as IconShoppingBag } from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
-import { BRANCH_VI, STATES_VI } from "@comtammatu/shared/messages";
+import { BRANCH_VI, FORM_VI, STAFF_VI, STATES_VI } from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
@@ -188,7 +188,7 @@ export function OrdersClient({
       <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-card p-3">
         <div className="flex w-full flex-col gap-1.5 sm:w-44 sm:flex-none">
           <Label htmlFor="date-from" className="text-xs">
-            Từ ngày
+            {FORM_VI.fromDate}
           </Label>
           <Input
             id="date-from"
@@ -201,7 +201,7 @@ export function OrdersClient({
 
         <div className="flex w-full flex-col gap-1.5 sm:w-44 sm:flex-none">
           <Label htmlFor="date-to" className="text-xs">
-            Đến ngày
+            {FORM_VI.toDate}
           </Label>
           <Input
             id="date-to"
@@ -214,7 +214,7 @@ export function OrdersClient({
 
         <div className="flex w-full flex-col gap-1.5 sm:w-44 sm:flex-none">
           <Label htmlFor="status-filter" className="text-xs">
-            Trạng thái
+            {FORM_VI.status}
           </Label>
           <Select value={status} onValueChange={setStatus}>
             <SelectTrigger id="status-filter" className="w-full sm:w-40">
@@ -233,7 +233,7 @@ export function OrdersClient({
         {showBranchFilter && branches.length > 0 && (
           <div className="flex w-full flex-col gap-1.5 sm:w-48 sm:flex-none">
             <Label htmlFor="branch-filter" className="text-xs">
-              Chi nhánh
+              {BRANCH_VI.long}
             </Label>
             <Select value={branchId} onValueChange={setBranchId}>
               <SelectTrigger id="branch-filter" className="w-full sm:w-44">
@@ -341,7 +341,7 @@ export function OrdersClient({
                 </div>
                 <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                   <div>
-                    <p className="text-muted-foreground">Nhân viên</p>
+                    <p className="text-muted-foreground">{STAFF_VI.long}</p>
                     <p className="mt-1 font-medium">{order.created_by_name}</p>
                   </div>
                   <div className="text-right">
@@ -380,10 +380,10 @@ export function OrdersClient({
                 <TableRow>
                   <TableHead>Mã đơn</TableHead>
                   <TableHead className="hidden sm:table-cell">
-                    Chi nhánh
+                    {BRANCH_VI.long}
                   </TableHead>
                   <TableHead className="hidden md:table-cell">
-                    Nhân viên
+                    {STAFF_VI.long}
                   </TableHead>
                   <TableHead className="hidden lg:table-cell">
                     Thời gian
@@ -392,7 +392,7 @@ export function OrdersClient({
                   <TableHead className="hidden sm:table-cell">
                     Thanh toán
                   </TableHead>
-                  <TableHead>Trạng thái</TableHead>
+                  <TableHead>{FORM_VI.status}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

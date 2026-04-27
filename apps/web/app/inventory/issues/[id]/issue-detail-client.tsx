@@ -67,7 +67,7 @@ import {
 } from "../../issue-actions";
 import type { IngredientRow } from "../../page";
 
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
 type IssueRecord = {
   id: number;
   issue_number: string;
@@ -398,13 +398,13 @@ export function IssueDetailClient({
                           </div>
                           <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                             <div>
-                              <p className="text-muted-foreground">Số lượng</p>
+                              <p className="text-muted-foreground">{FORM_VI.quantity}</p>
                               <p className="font-semibold">
                                 {formatQty(Number(line.quantity ?? 0))}
                               </p>
                             </div>
                             <div>
-                              <p className="text-muted-foreground">Đơn vị</p>
+                              <p className="text-muted-foreground">{FORM_VI.unit}</p>
                               <p className="font-semibold">
                                 {line.unit ?? line.ingredients?.unit ?? "—"}
                               </p>
@@ -419,7 +419,7 @@ export function IssueDetailClient({
                             </div>
                             <div>
                               <p className="text-muted-foreground">
-                                Thành tiền
+                                {FORM_VI.amount}
                               </p>
                               <p className="font-semibold text-primary">
                                 {formatVND(Number(line.total_cost ?? 0))}
@@ -624,7 +624,7 @@ export function IssueDetailClient({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Quay lại</AlertDialogCancel>
+            <AlertDialogCancel>{ACTIONS_VI.back}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmIssue}
               disabled={isPending}
@@ -668,7 +668,7 @@ export function IssueDetailClient({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Quay lại</AlertDialogCancel>
+            <AlertDialogCancel>{ACTIONS_VI.back}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteLine}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"

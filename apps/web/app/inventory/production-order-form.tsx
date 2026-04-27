@@ -42,7 +42,7 @@ import type { BranchOption, FinishedGoodOption } from "./production-types";
 
 /* ─── Schema ─── */
 
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
 const productionLineRowSchema = z.object({
   finished_good_id: z
     .string()
@@ -365,7 +365,7 @@ export function ProductionOrderForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="notes">Ghi chú</Label>
+            <Label htmlFor="notes">{FORM_VI.notes}</Label>
             <Controller
               control={form.control}
               name="notes"
@@ -382,7 +382,7 @@ export function ProductionOrderForm({
 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label>Thành phẩm</Label>
+              <Label>{PRODUCT_VI.finishedGood}</Label>
               <Button
                 type="button"
                 variant="outline"

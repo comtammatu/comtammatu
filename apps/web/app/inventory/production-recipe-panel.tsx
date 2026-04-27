@@ -92,7 +92,7 @@ import type {
 
 /* ─── Schema ─── */
 
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
 const recipeLineItemSchema = z.object({
   ingredient_id: z
     .string()
@@ -790,7 +790,7 @@ export function ProductionRecipePanel({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isPending}>Hủy</AlertDialogCancel>
+            <AlertDialogCancel disabled={isPending}>{ACTIONS_VI.cancel}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleRecipeGroupDelete}
               disabled={isPending}
@@ -861,10 +861,10 @@ export function ProductionRecipePanel({
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Nguyên liệu</TableHead>
-                      <TableHead>Số lượng</TableHead>
+                      <TableHead>{PRODUCT_VI.rawIngredient}</TableHead>
+                      <TableHead>{FORM_VI.quantity}</TableHead>
                       <TableHead>Yield</TableHead>
-                      <TableHead>Ghi chú</TableHead>
+                      <TableHead>{FORM_VI.notes}</TableHead>
                       {canManageRecipes ? <TableHead className="w-24" /> : null}
                     </TableRow>
                   </TableHeader>

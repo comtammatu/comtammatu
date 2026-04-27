@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ACTIONS_VI, BRANCH_VI, STATES_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, BRANCH_VI, FORM_VI, STATES_VI } from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -189,7 +189,7 @@ export function PrintJobsClient({
               <th className="px-3 py-2 text-left">#</th>
               <th className="px-3 py-2 text-left">Loại</th>
               <th className="px-3 py-2 text-left">Máy in</th>
-              <th className="px-3 py-2 text-left">Trạng thái</th>
+              <th className="px-3 py-2 text-left">{FORM_VI.status}</th>
               <th className="px-3 py-2 text-right">Thử</th>
               <th className="px-3 py-2 text-left">Tạo lúc</th>
               <th className="px-3 py-2 text-left">In lúc</th>

@@ -19,6 +19,7 @@ import { InventoryPageContent } from "../_components/inventory-page-layout";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import { formatVND } from "../_lib/format";
 
+import { FORM_VI } from "@comtammatu/shared/messages";
 type ReturnRow = {
   id: number;
   return_number: string;
@@ -105,10 +106,10 @@ export function SupplierReturnsClient({
                   <TableHead>Kho</TableHead>
                   <TableHead>GRN</TableHead>
                   <TableHead>Nguồn</TableHead>
-                  <TableHead>Lý do</TableHead>
+                  <TableHead>{FORM_VI.reason}</TableHead>
                   <TableHead>Cách xử lý</TableHead>
-                  <TableHead>Trạng thái</TableHead>
-                  <TableHead className="text-right">Giá trị</TableHead>
+                  <TableHead>{FORM_VI.status}</TableHead>
+                  <TableHead className="text-right">{FORM_VI.value}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

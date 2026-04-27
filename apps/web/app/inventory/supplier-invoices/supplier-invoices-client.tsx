@@ -62,7 +62,7 @@ import {
   getInventoryStatusLabel,
 } from "../_lib/ui";
 
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
 export type SupplierInvoiceRow = {
   id: number;
   supplierId: number;
@@ -601,7 +601,7 @@ export function SupplierInvoicesClient({
                         Còn lại
                       </TableHead>
                       <TableHead className="w-28 text-right">
-                        Thao tác
+                        {FORM_VI.action}
                       </TableHead>
                     </TableRow>
                   </TableHeader>
@@ -939,7 +939,7 @@ export function SupplierInvoicesClient({
 
             <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-2">
-                <Label>Tạm tính</Label>
+                <Label>{FORM_VI.subtotal}</Label>
                 <FormattedNumberInput
                   value={subtotal}
                   onValueChange={setSubtotal}
@@ -964,7 +964,7 @@ export function SupplierInvoicesClient({
                 <span className="font-mono">{formatVND(vatAmount)}đ</span>
               </div>
               <div className="mt-2 flex items-center justify-between gap-3">
-                <span className="text-muted-foreground">Tổng cộng</span>
+                <span className="text-muted-foreground">{FORM_VI.totalAmount}</span>
                 <span className="font-mono font-semibold">
                   {formatVND(totalAmount)}đ
                 </span>

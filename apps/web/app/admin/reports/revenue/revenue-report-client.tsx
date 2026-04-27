@@ -21,7 +21,7 @@ import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import { fetchDailyRevenue } from "../../../finance/actions";
 import type { DailyRevenueRow } from "./page";
-import { ERRORS_VI } from "@comtammatu/shared/messages";
+import { ERRORS_VI, FORM_VI } from "@comtammatu/shared/messages";
 
 interface Props {
   initialRows: DailyRevenueRow[];
@@ -101,7 +101,7 @@ export function RevenueReportClient({
 
       <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-card p-3 items-end gap-3">
         <div className="grid min-w-44 flex-1 gap-1.5 sm:max-w-44 sm:flex-none">
-          <Label className="text-xs">Từ ngày</Label>
+          <Label className="text-xs">{FORM_VI.fromDate}</Label>
           <Input
             type="date"
             value={startDate}
@@ -111,7 +111,7 @@ export function RevenueReportClient({
           />
         </div>
         <div className="grid min-w-44 flex-1 gap-1.5 sm:max-w-44 sm:flex-none">
-          <Label className="text-xs">Đến ngày</Label>
+          <Label className="text-xs">{FORM_VI.toDate}</Label>
           <Input
             type="date"
             value={endDate}
@@ -328,7 +328,7 @@ export function RevenueReportClient({
               {rows.length > 0 && (
                 <TableFooter>
                   <TableRow className="hover:bg-transparent">
-                    <TableCell className="font-medium">Tổng cộng</TableCell>
+                    <TableCell className="font-medium">{FORM_VI.totalAmount}</TableCell>
                     <TableCell className="text-right tabular-nums font-medium">
                       {totalOrders.toLocaleString("vi-VN")}
                     </TableCell>

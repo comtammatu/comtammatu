@@ -15,6 +15,7 @@ import { formatVND } from "@comtammatu/shared/format";
 import type { EmployeeRow } from "./page";
 import { TableEmptyStateRow } from "../admin/components/table-empty-state-row";
 
+import { BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
 const CONTRACT_LABELS: Record<string, string> = {
   probation: "Thử việc",
   fixed_term: "Có thời hạn",
@@ -33,11 +34,11 @@ export function EmployeeTable({ employees }: EmployeeTableProps) {
           <TableRow>
             <TableHead>Họ tên</TableHead>
             <TableHead className="hidden sm:table-cell">Mã NV</TableHead>
-            <TableHead className="hidden md:table-cell">Chi nhánh</TableHead>
+            <TableHead className="hidden md:table-cell">{BRANCH_VI.long}</TableHead>
             <TableHead className="hidden md:table-cell">Vai trò</TableHead>
             <TableHead className="hidden lg:table-cell">Hợp đồng</TableHead>
             <TableHead className="hidden lg:table-cell">Lương cơ bản</TableHead>
-            <TableHead>Trạng thái</TableHead>
+            <TableHead>{FORM_VI.status}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>

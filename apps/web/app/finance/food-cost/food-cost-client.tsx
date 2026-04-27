@@ -15,7 +15,7 @@ import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import { fetchFoodCost } from "../accounting-actions";
 import type { FoodCostRow } from "./page";
-import { ERRORS_VI } from "@comtammatu/shared/messages";
+import { ERRORS_VI, FORM_VI } from "@comtammatu/shared/messages";
 
 interface Props {
   initialRows: FoodCostRow[];
@@ -77,7 +77,7 @@ export function FoodCostClient({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-card p-3">
         <div className="grid gap-1.5">
-          <Label className="text-xs">Từ ngày</Label>
+          <Label className="text-xs">{FORM_VI.fromDate}</Label>
           <Input
             type="date"
             className="w-40"
@@ -88,7 +88,7 @@ export function FoodCostClient({
           />
         </div>
         <div className="grid gap-1.5">
-          <Label className="text-xs">Đến ngày</Label>
+          <Label className="text-xs">{FORM_VI.toDate}</Label>
           <Input
             type="date"
             className="w-40"

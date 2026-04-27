@@ -40,6 +40,7 @@ import { TableEmptyStateRow } from "./_components/table-empty-state-row";
 import type { IngredientRow } from "./_lib/types";
 import { STORAGE_LABELS, ITEM_KIND_LABELS } from "./_lib/constants";
 
+import { FORM_VI } from "@comtammatu/shared/messages";
 interface IngredientTableProps {
   ingredients: IngredientRow[];
   onIngredientAdded: (ingredient: IngredientRow) => void;
@@ -189,9 +190,9 @@ export function IngredientTable({
                 <TableRow>
                   <TableHead>Tên</TableHead>
                   <TableHead>SKU</TableHead>
-                  <TableHead>Đơn vị</TableHead>
+                  <TableHead>{FORM_VI.unit}</TableHead>
                   <TableHead className="text-right">Giá nhập</TableHead>
-                  <TableHead>Danh mục</TableHead>
+                  <TableHead>{FORM_VI.category}</TableHead>
                   <TableHead>Lưu trữ</TableHead>
                   {canManageCatalog && <TableHead className="w-12" />}
                 </TableRow>

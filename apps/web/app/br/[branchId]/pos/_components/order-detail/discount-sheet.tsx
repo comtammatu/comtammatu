@@ -21,7 +21,7 @@ import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { FormattedNumberInput } from "@/components/form";
 
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
 export type DiscountType = "pct" | "vnd";
 
 interface DiscountSheetProps {
@@ -195,7 +195,7 @@ export function DiscountSheet({
 
           <div className="rounded-md border border-border/60 bg-muted/40 p-3 text-sm">
             <div className="flex justify-between text-muted-foreground">
-              <span>Tạm tính</span>
+              <span>{FORM_VI.subtotal}</span>
               <span className="tabular-nums">{formatVND(subtotal)}</span>
             </div>
             {serviceCharge > 0 && (

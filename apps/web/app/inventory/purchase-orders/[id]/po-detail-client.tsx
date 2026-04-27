@@ -50,7 +50,7 @@ import {
 } from "../../_lib/ui";
 import type { IngredientRow } from "../../page";
 
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
 export type PODetail = {
   id: number;
   code: string;
@@ -371,7 +371,7 @@ export function PODetailClient({
             </Card>
             <Card>
               <CardContent>
-                <Badge variant="secondary">Tổng cộng</Badge>
+                <Badge variant="secondary">{FORM_VI.totalAmount}</Badge>
                 <p className="mt-3 text-2xl font-semibold text-primary">
                   {formatVND(grandTotal)}{" "}
                   <span className="text-xs font-normal">VNĐ</span>
@@ -438,7 +438,7 @@ export function PODetailClient({
                           </div>
                           <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                             <div>
-                              <p className="text-muted-foreground">Số lượng</p>
+                              <p className="text-muted-foreground">{FORM_VI.quantity}</p>
                               {canEditLines ? (
                                 <FormattedNumberInput
                                   value={String(item.qty)}
@@ -457,7 +457,7 @@ export function PODetailClient({
                               )}
                             </div>
                             <div>
-                              <p className="text-muted-foreground">Đơn giá</p>
+                              <p className="text-muted-foreground">{FORM_VI.unitPrice}</p>
                               {canEditLines ? (
                                 <FormattedNumberInput
                                   value={
@@ -481,7 +481,7 @@ export function PODetailClient({
                             </div>
                             {canEditLines ? (
                               <div className="col-span-2">
-                                <p className="text-muted-foreground">Đơn vị</p>
+                                <p className="text-muted-foreground">{FORM_VI.unit}</p>
                                 <Input
                                   value={item.unit}
                                   readOnly
@@ -492,7 +492,7 @@ export function PODetailClient({
                             ) : null}
                             <div className="col-span-2">
                               <p className="text-muted-foreground">
-                                Thành tiền
+                                {FORM_VI.amount}
                               </p>
                               <p className="font-semibold text-primary">
                                 {formatVND(computePoLineTotal(item))}đ
@@ -663,7 +663,7 @@ export function PODetailClient({
                             colSpan={3}
                             className="px-6 py-3 text-right text-sm font-bold"
                           >
-                            Tổng cộng
+                            {FORM_VI.totalAmount}
                           </TableCell>
                           <TableCell className="px-6 py-3 text-right font-mono tabular-nums font-bold text-primary">
                             {formatVND(grandTotal)}đ
@@ -759,7 +759,7 @@ export function PODetailClient({
                     </span>
                   </div>
                   <div className="border-t border-border pt-3">
-                    <p className="text-muted-foreground">Tổng cộng</p>
+                    <p className="text-muted-foreground">{FORM_VI.totalAmount}</p>
                     <p className="mt-1 text-2xl font-black text-primary">
                       {formatVND(grandTotal)}đ
                     </p>

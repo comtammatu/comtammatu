@@ -17,6 +17,7 @@ import { ShiftFormDialog } from "./shift-form-dialog";
 import type { BranchOption, ShiftRow } from "./page";
 import { TableEmptyStateRow } from "../admin/components/table-empty-state-row";
 
+import { BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
 interface ShiftsTableProps {
   shifts: ShiftRow[];
   branches: BranchOption[];
@@ -54,10 +55,10 @@ export function ShiftsTable({
           <TableHeader>
             <TableRow>
               <TableHead>Tên ca</TableHead>
-              <TableHead>Chi nhánh</TableHead>
+              <TableHead>{BRANCH_VI.long}</TableHead>
               <TableHead>Giờ bắt đầu</TableHead>
               <TableHead>Giờ kết thúc</TableHead>
-              <TableHead>Trạng thái</TableHead>
+              <TableHead>{FORM_VI.status}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

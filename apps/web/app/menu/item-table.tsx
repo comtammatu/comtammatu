@@ -29,6 +29,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import type { CategoryRow } from "./category-table";
 import { TableEmptyStateRow } from "@/admin/components/table-empty-state-row";
 
+import { FORM_VI } from "@comtammatu/shared/messages";
 export interface ItemRow {
   id: number;
   name: string;
@@ -70,11 +71,11 @@ export function ItemTable({ items, categories, tenantId }: ItemTableProps) {
             <TableRow>
               <TableHead className="w-16">Ảnh</TableHead>
               <TableHead>Tên món</TableHead>
-              <TableHead className="hidden sm:table-cell">Danh mục</TableHead>
+              <TableHead className="hidden sm:table-cell">{FORM_VI.category}</TableHead>
               <TableHead className="hidden md:table-cell text-right">
                 Giá
               </TableHead>
-              <TableHead>Trạng thái</TableHead>
+              <TableHead>{FORM_VI.status}</TableHead>
               <TableHead className="w-12" />
             </TableRow>
           </TableHeader>

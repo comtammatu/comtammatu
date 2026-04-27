@@ -21,7 +21,7 @@ import {
   DialogDescription,
 } from "@comtammatu/ui/components/dialog";
 import { Lock as IconLock, Plus as IconPlus, FileSearch as IconFileSearch } from "lucide-react";
-import { ACTIONS_VI, ERRORS_VI, STATES_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, ERRORS_VI, FORM_VI, STATES_VI } from "@comtammatu/shared/messages";
 import {
   openFiscalPeriod,
   closeFiscalPeriod,
@@ -172,10 +172,10 @@ export function PeriodsClient({ periods: initial }: Props) {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-32">Kỳ</TableHead>
-                <TableHead className="w-28">Trạng thái</TableHead>
+                <TableHead className="w-28">{FORM_VI.status}</TableHead>
                 <TableHead>Ngày đóng</TableHead>
-                <TableHead>Ghi chú</TableHead>
-                <TableHead className="w-48 text-right">Thao tác</TableHead>
+                <TableHead>{FORM_VI.notes}</TableHead>
+                <TableHead className="w-48 text-right">{FORM_VI.action}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

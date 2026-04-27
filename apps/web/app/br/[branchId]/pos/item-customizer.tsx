@@ -27,6 +27,7 @@ import type { MenuItem, MenuVariant } from "./pos-menu-types";
 import { QuickReasonChips } from "./_components/quick-reason-chips";
 import { ITEM_NOTE_PRESETS } from "./_components/quick-reason-presets";
 
+import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
 interface ItemCustomizerProps {
   item: MenuItem | null;
   onClose: () => void;
@@ -294,7 +295,7 @@ export function ItemCustomizer({
                 {/* Modifiers */}
                 {item.menu_item_modifiers.length > 0 && (
                   <div>
-                    <h3 className="mb-2 text-base font-semibold">Thêm</h3>
+                    <h3 className="mb-2 text-base font-semibold">{ACTIONS_VI.add}</h3>
                     <div className="flex flex-col gap-2">
                       {item.menu_item_modifiers.map((m) => (
                         <Item
@@ -417,7 +418,7 @@ export function ItemCustomizer({
                     htmlFor="item-note"
                     className="mb-2 text-base font-semibold"
                   >
-                    Ghi chú
+                    {FORM_VI.notes}
                   </Label>
                   <QuickReasonChips
                     presets={ITEM_NOTE_PRESETS}
@@ -442,7 +443,7 @@ export function ItemCustomizer({
             <Separator />
             <div className="flex items-center justify-between gap-3 p-4">
               <div>
-                <p className="text-sm text-muted-foreground">Tạm tính</p>
+                <p className="text-sm text-muted-foreground">{FORM_VI.subtotal}</p>
                 <p className="text-xl font-bold text-primary tabular-nums">
                   {formatVND(totalPrice)}
                 </p>

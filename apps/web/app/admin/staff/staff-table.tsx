@@ -26,6 +26,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { ROLE_LABELS } from "./role-labels";
 import { TableEmptyStateRow } from "../components/table-empty-state-row";
 
+import { BRANCH_VI, FORM_VI, STAFF_VI } from "@comtammatu/shared/messages";
 export interface BranchOption {
   id: number;
   name: string;
@@ -149,19 +150,19 @@ export function StaffTable({ staff, branches }: StaffTableProps) {
           <TableHeader>
             <TableRow className="bg-muted/50 hover:bg-muted/50">
               <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Nhân viên
+                {STAFF_VI.long}
               </TableHead>
               <TableHead className="hidden text-xs font-medium uppercase tracking-wider text-muted-foreground sm:table-cell">
                 Vai trò
               </TableHead>
               <TableHead className="hidden text-xs font-medium uppercase tracking-wider text-muted-foreground md:table-cell">
-                Chi nhánh
+                {BRANCH_VI.long}
               </TableHead>
               <TableHead className="hidden text-xs font-medium uppercase tracking-wider text-muted-foreground lg:table-cell">
                 SĐT
               </TableHead>
               <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Trạng thái
+                {FORM_VI.status}
               </TableHead>
               <TableHead className="w-12" />
             </TableRow>

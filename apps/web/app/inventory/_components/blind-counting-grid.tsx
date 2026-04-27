@@ -12,6 +12,7 @@ import { AbcClassChip } from "./abc-class-chip";
 import type { StocktakeLineBlind } from "../stocktake-actions";
 import type { DraftCounts } from "./stocktake-draft-saver";
 
+import { FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
 interface BlindCountingGridProps {
   lines: StocktakeLineBlind[];
   counts: DraftCounts;
@@ -100,11 +101,11 @@ export function BlindCountingGrid({
         <table className="w-full text-sm">
           <thead className="bg-muted/40">
             <tr className="text-left text-xs uppercase text-muted-foreground">
-              <th className="px-3 py-2 font-medium">Nguyên liệu</th>
+              <th className="px-3 py-2 font-medium">{PRODUCT_VI.rawIngredient}</th>
               <th className="px-3 py-2 font-medium">ABC</th>
-              <th className="px-3 py-2 font-medium">Đơn vị</th>
+              <th className="px-3 py-2 font-medium">{FORM_VI.unit}</th>
               <th className="px-3 py-2 text-right font-medium">Số đếm</th>
-              <th className="px-3 py-2 text-right font-medium">Trạng thái</th>
+              <th className="px-3 py-2 text-right font-medium">{FORM_VI.status}</th>
             </tr>
           </thead>
           <tbody>

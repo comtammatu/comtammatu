@@ -35,7 +35,7 @@ import {
 import { toast } from "@comtammatu/ui/components/sonner";
 import { FormattedNumberInput } from "../_components/formatted-number-input";
 import { upsertRecipeLines } from "../procurement-actions";
-import { ACTIONS_VI, ERRORS_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, ERRORS_VI, FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
 
 export interface MenuItemOption {
   id: number;
@@ -441,11 +441,11 @@ export function RecipeLineDialog({
 
             <div className="overflow-hidden rounded-md border">
               <div className="grid grid-cols-[minmax(0,2.4fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_minmax(0,1.4fr)_auto] items-center gap-2 border-b bg-muted/40 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                <div>Nguyên liệu</div>
-                <div>Số lượng</div>
-                <div>Đơn vị</div>
+                <div>{PRODUCT_VI.rawIngredient}</div>
+                <div>{FORM_VI.quantity}</div>
+                <div>{FORM_VI.unit}</div>
                 <div>Yield</div>
-                <div>Ghi chú</div>
+                <div>{FORM_VI.notes}</div>
                 <div className="w-8" />
               </div>
 

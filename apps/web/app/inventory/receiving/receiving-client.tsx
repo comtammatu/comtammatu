@@ -23,6 +23,7 @@ import { tNav, tRoute } from "../_lib/dictionary";
 import { formatVND } from "../_lib/format";
 import type { RecentActivityItem } from "../procurement-actions";
 
+import { FORM_VI } from "@comtammatu/shared/messages";
 function activityHref(item: RecentActivityItem): string {
   if (item.type === "po") return `/inventory/purchase-orders/${item.id}`;
   if (item.type === "grn") return `/inventory/grn/${item.id}`;
@@ -247,7 +248,7 @@ export function ReceivingClient({
                     <TableHead className="min-w-36">Mã phiếu</TableHead>
                     <TableHead className="min-w-44">Nhà cung cấp</TableHead>
                     <TableHead className="min-w-32">Thời gian</TableHead>
-                    <TableHead className="min-w-32">Trạng thái</TableHead>
+                    <TableHead className="min-w-32">{FORM_VI.status}</TableHead>
                     <TableHead className="min-w-28 text-right">
                       Tổng tiền
                     </TableHead>

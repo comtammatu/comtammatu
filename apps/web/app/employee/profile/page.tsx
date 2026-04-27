@@ -21,7 +21,7 @@ import { getEmployeeContext } from "../_lib/employee-context";
 import { getMyTrustScore } from "@/inventory/trust-actions";
 import { TrustScoreBadge } from "@/inventory/_components/trust-score-badge";
 
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, BRANCH_VI } from "@comtammatu/shared/messages";
 export default async function ProfilePage() {
   const { session, claims } = await loadAuthState();
   const ctx = await getEmployeeContext();
@@ -89,7 +89,7 @@ export default async function ProfilePage() {
                   <IconBuilding />
                 </ItemMedia>
                 <ItemContent>
-                  <ItemTitle>Chi nhánh</ItemTitle>
+                  <ItemTitle>{BRANCH_VI.long}</ItemTitle>
                   <p className="text-sm font-medium">{ctx.branchName}</p>
                 </ItemContent>
               </Item>

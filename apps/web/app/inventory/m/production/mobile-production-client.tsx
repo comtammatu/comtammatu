@@ -52,6 +52,7 @@ import type {
   ProductionRecipeRow,
 } from "../../production-types";
 
+import { ACTIONS_VI, FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
 interface MobileProductionClientProps {
   canManageCatalog: boolean;
   canManageRecipes: boolean;
@@ -344,7 +345,7 @@ function ProductionOrderCardList({
 
               <div className="grid grid-cols-2 gap-3 rounded-xl bg-muted/30 p-3">
                 <div>
-                  <p className="text-xs text-muted-foreground">Thành phẩm</p>
+                  <p className="text-xs text-muted-foreground">{PRODUCT_VI.finishedGood}</p>
                   <p className="text-sm font-semibold">
                     {order.items.length} dòng
                   </p>
@@ -371,7 +372,7 @@ function ProductionOrderCardList({
 
               {order.notes ? (
                 <div className="rounded-xl border border-dashed bg-muted/20 p-3">
-                  <p className="text-xs text-muted-foreground">Ghi chú</p>
+                  <p className="text-xs text-muted-foreground">{FORM_VI.notes}</p>
                   <p className="mt-1 line-clamp-3 break-words text-sm">
                     {order.notes}
                   </p>
@@ -425,7 +426,7 @@ function ProductionOrderCardList({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isPending}>Quay lại</AlertDialogCancel>
+            <AlertDialogCancel disabled={isPending}>{ACTIONS_VI.back}</AlertDialogCancel>
             <AlertDialogAction onClick={handleCancel} disabled={isPending}>
               Hủy lệnh
             </AlertDialogAction>

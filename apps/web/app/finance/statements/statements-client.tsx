@@ -36,6 +36,7 @@ import {
   type Tt200ReportLine,
 } from "../statement-actions";
 
+import { FORM_VI } from "@comtammatu/shared/messages";
 type B01Report = Tt200ReportEnvelope<{ as_of_date: string }>;
 type B02Report = Tt200ReportEnvelope<{ start_date: string; end_date: string }>;
 type GtgtReport = Tt200ReportEnvelope<{ period: string }>;
@@ -106,7 +107,7 @@ export function StatementsClient() {
           <CardContent className="grid gap-3 p-4 sm:grid-cols-[1fr_auto] sm:items-end">
             <div className="space-y-1.5">
               <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Đến ngày
+                {FORM_VI.toDate}
               </Label>
               <Input
                 type="date"
@@ -139,7 +140,7 @@ export function StatementsClient() {
           <CardContent className="grid gap-3 p-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
             <div className="space-y-1.5">
               <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Từ ngày
+                {FORM_VI.fromDate}
               </Label>
               <Input
                 type="date"
@@ -149,7 +150,7 @@ export function StatementsClient() {
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Đến ngày
+                {FORM_VI.toDate}
               </Label>
               <Input
                 type="date"

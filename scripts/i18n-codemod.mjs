@@ -54,6 +54,40 @@ function* walk(dir) {
   }
 }
 
+// Skip files where receipt-legal text must stay verbatim per
+// NO-CLAMP-ON-RECEIPT-LEGAL-FIELDS / LEGAL_FIXED_VI policy.
+function isLegalFixedFile(filePath) {
+  const norm = filePath.replace(/\\/g, "/");
+  return /\/pos\/_components\/bill\//.test(norm);
+}
+
+// Generic form/table labels (Vietnamese) → FORM_VI keys.
+const FORM_MAP = {
+  "Trạng thái": "status",
+  "Ghi chú": "notes",
+  "Số lượng": "quantity",
+  "Đơn vị": "unit",
+  "Lý do": "reason",
+  "Tổng cộng": "totalAmount",
+  "Tạm tính": "subtotal",
+  "Thành tiền": "amount",
+  "Giá trị": "value",
+  "Đơn giá": "unitPrice",
+  "Diễn giải": "description",
+  "Từ ngày": "fromDate",
+  "Đến ngày": "toDate",
+  "Thao tác": "action",
+  "Danh mục": "category",
+};
+
+// Domain noun mapping for standalone JSX text.
+const DOMAIN_MAP = {
+  "Chi nhánh": { ref: "BRANCH_VI.long", needs: "BRANCH_VI" },
+  "Nguyên liệu": { ref: "PRODUCT_VI.rawIngredient", needs: "PRODUCT_VI" },
+  "Thành phẩm": { ref: "PRODUCT_VI.finishedGood", needs: "PRODUCT_VI" },
+  "Nhân viên": { ref: "STAFF_VI.long", needs: "STAFF_VI" },
+};
+
 function ensureImport(content, names) {
   const importRe = new RegExp(
     `import\\s*\\{([^}]+)\\}\\s*from\\s*["']${SHARED_PATH.replace(/[/]/g, "\\/")}["']`,
@@ -194,6 +228,63 @@ function migrateStandaloneStates(content) {
   return { content: lines.join("\n"), needs };
 }
 
+// Inline JSX text patterns (>X<) for verbs, form labels, and domain
+// nouns. Different from migrateStandaloneVerbs which only catches own-line
+// text.
+function migrateInlineJsxText(content) {
+  let next = content;
+  const seen = new Set();
+  for (const [verb, key] of Object.entries(VERB_MAP)) {
+    const re = new RegExp(`>${verb.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&")}<`, "g");
+    if (re.test(next)) {
+      next = next.replace(re, `>{ACTIONS_VI.${key}}<`);
+      seen.add("ACTIONS_VI");
+    }
+  }
+  for (const [phrase, key] of Object.entries(FORM_MAP)) {
+    const re = new RegExp(`>${phrase.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&")}<`, "g");
+    if (re.test(next)) {
+      next = next.replace(re, `>{FORM_VI.${key}}<`);
+      seen.add("FORM_VI");
+    }
+  }
+  for (const [phrase, { ref, needs }] of Object.entries(DOMAIN_MAP)) {
+    const re = new RegExp(`>${phrase.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&")}<`, "g");
+    if (re.test(next)) {
+      next = next.replace(re, `>{${ref}}<`);
+      seen.add(needs);
+    }
+  }
+  return { content: next, needs: [...seen] };
+}
+
+// Standalone-line FORM_VI / DOMAIN_MAP labels.
+function migrateStandaloneFormDomain(content) {
+  const lines = content.split(/\r?\n/);
+  const seen = new Set();
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const m = line.match(/^(\s+)(.+?)\s*$/);
+    if (!m) continue;
+    const text = m[2].trim();
+    const prev = (lines[i - 1] ?? "").trimEnd();
+    const next = (lines[i + 1] ?? "").trimStart();
+    const flanksJsx =
+      (prev.endsWith(">") || prev.endsWith("}>")) &&
+      (next.startsWith("<") || next.startsWith("</"));
+    if (!flanksJsx) continue;
+    if (Object.prototype.hasOwnProperty.call(FORM_MAP, text)) {
+      lines[i] = `${m[1]}{FORM_VI.${FORM_MAP[text]}}`;
+      seen.add("FORM_VI");
+    } else if (Object.prototype.hasOwnProperty.call(DOMAIN_MAP, text)) {
+      const { ref, needs } = DOMAIN_MAP[text];
+      lines[i] = `${m[1]}{${ref}}`;
+      seen.add(needs);
+    }
+  }
+  return { content: lines.join("\n"), needs: [...seen] };
+}
+
 // Branch select / selectAll attribute and JSX text.
 function migrateBranchPhrases(content) {
   let needs = false;
@@ -242,6 +333,7 @@ function migrateTernaryVerbs(content) {
 
 let touched = 0;
 for (const file of walk(root)) {
+  if (isLegalFixedFile(file)) continue;
   let content = fs.readFileSync(file, "utf8");
   const original = content;
   const needs = new Set();
@@ -276,6 +368,14 @@ for (const file of walk(root)) {
     needs.add("BRANCH_VI");
     content = v4.content;
   }
+
+  const v5 = migrateInlineJsxText(content);
+  for (const n of v5.needs) needs.add(n);
+  content = v5.content;
+
+  const v6 = migrateStandaloneFormDomain(content);
+  for (const n of v6.needs) needs.add(n);
+  content = v6.content;
 
   if (needs.size > 0 && content !== original) {
     content = ensureImport(content, needs);

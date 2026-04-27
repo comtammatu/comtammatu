@@ -99,7 +99,7 @@ export function NewStocktakeSessionClient({
 
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label>Chi nhánh</Label>
+                  <Label>{BRANCH_VI.long}</Label>
                   <Select
                     value={branchId ? String(branchId) : ""}
                     onValueChange={(v) => {
@@ -176,7 +176,7 @@ export function NewStocktakeSessionClient({
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Chi nhánh</span>
+                <span className="text-muted-foreground">{BRANCH_VI.long}</span>
                 <span className="font-medium">
                   {branches.find((b) => b.id === branchId)?.name ?? "—"}
                 </span>

@@ -56,6 +56,7 @@ import { InteractiveCard } from "../_components/interactive-card";
 import { StatusBadge } from "../_components/status-badge";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 
+import { FORM_VI } from "@comtammatu/shared/messages";
 export type { BranchForTransfer, InventoryLocation };
 
 export interface TransferListRow {
@@ -380,7 +381,7 @@ export function TransfersListClient({
                 <TableRow>
                   <TableHead>Số phiếu</TableHead>
                   <TableHead>Lộ trình</TableHead>
-                  <TableHead>Trạng thái</TableHead>
+                  <TableHead>{FORM_VI.status}</TableHead>
                   <TableHead>Ngày tạo</TableHead>
                   <TableHead>Ngày xuất / nhận</TableHead>
                   <TableHead className="w-10" />

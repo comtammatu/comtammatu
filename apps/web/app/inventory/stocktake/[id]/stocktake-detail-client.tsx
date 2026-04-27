@@ -42,6 +42,7 @@ import {
 
 /* ─── Types ─── */
 
+import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
 interface StocktakeSession {
   id: number;
   branch_id: number;
@@ -379,7 +380,7 @@ export function StocktakeDetailClient({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isPending}>Hủy</AlertDialogCancel>
+            <AlertDialogCancel disabled={isPending}>{ACTIONS_VI.cancel}</AlertDialogCancel>
             <AlertDialogAction onClick={handleComplete} disabled={isPending}>
               {isPending ? "Đang xử lý..." : "Chốt kết quả"}
             </AlertDialogAction>
@@ -398,7 +399,7 @@ export function StocktakeDetailClient({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isPending}>Quay lại</AlertDialogCancel>
+            <AlertDialogCancel disabled={isPending}>{ACTIONS_VI.back}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleCancel}
               disabled={isPending}
@@ -507,7 +508,7 @@ function CountingPhase({
                   {tTerm("ingredient")}
                 </TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                  Đơn vị
+                  {FORM_VI.unit}
                 </TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wider">
                   SL thực đếm
@@ -690,7 +691,7 @@ function ResultsPhase({
                       {tTerm("ingredient")}
                     </TableHead>
                     <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                      Đơn vị
+                      {FORM_VI.unit}
                     </TableHead>
                     <TableHead className="text-xs font-semibold uppercase tracking-wider">
                       SL hệ thống
@@ -702,7 +703,7 @@ function ResultsPhase({
                       Chênh lệch
                     </TableHead>
                     <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                      Lý do
+                      {FORM_VI.reason}
                     </TableHead>
                   </TableRow>
                 </TableHeader>

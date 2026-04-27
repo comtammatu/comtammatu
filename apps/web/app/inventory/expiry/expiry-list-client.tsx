@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { CircleCheck as IconCircleCheck, Search as IconSearch, Trash as IconTrash } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
-import { BRANCH_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, BRANCH_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
@@ -267,7 +267,7 @@ export function ExpiryListClient({
               <TableHeader>
                 <TableRow>
                   <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                    Nguyên liệu
+                    {PRODUCT_VI.rawIngredient}
                   </TableHead>
                   <TableHead className="text-xs font-semibold uppercase tracking-wider">
                     Lô hàng
@@ -282,7 +282,7 @@ export function ExpiryListClient({
                     Phiếu nhập
                   </TableHead>
                   <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                    Chi nhánh
+                    {BRANCH_VI.long}
                   </TableHead>
                   <TableHead className="text-xs font-semibold uppercase tracking-wider">
                     Hành động
@@ -556,7 +556,7 @@ export function ExpiryListClient({
             />
           </div>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isPending}>Hủy</AlertDialogCancel>
+            <AlertDialogCancel disabled={isPending}>{ACTIONS_VI.cancel}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmWriteOff}
               disabled={

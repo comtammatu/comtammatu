@@ -16,6 +16,7 @@ import {
 import { InventoryHeader } from "../_components/inventory-header";
 import { tStatus } from "../_lib/dictionary";
 
+import { BRANCH_VI, FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
 export type ExpiryAlertRow = {
   id: number;
   ingredientName: string;
@@ -82,13 +83,13 @@ export function ExpiryClient({ alerts }: { alerts: ExpiryAlertRow[] }) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nguyên liệu</TableHead>
+                <TableHead>{PRODUCT_VI.rawIngredient}</TableHead>
                 <TableHead>Số lô</TableHead>
                 <TableHead>Ngày hết hạn</TableHead>
                 <TableHead className="text-center">Ngày còn lại</TableHead>
                 <TableHead>Phiếu nhập</TableHead>
-                <TableHead>Chi nhánh</TableHead>
-                <TableHead className="text-right">Thao tác</TableHead>
+                <TableHead>{BRANCH_VI.long}</TableHead>
+                <TableHead className="text-right">{FORM_VI.action}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

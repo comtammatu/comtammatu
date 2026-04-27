@@ -5,6 +5,8 @@ export type { StateKey } from "./states";
 export { ERRORS_VI } from "./errors";
 export type { ErrorKey } from "./errors";
 export { interpolate } from "./interpolate";
+export { FORM_VI } from "./form";
+export type { FormKey } from "./form";
 export {
   ORDER_VI,
   BRANCH_VI,

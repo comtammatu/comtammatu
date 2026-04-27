@@ -38,7 +38,7 @@ import {
 import { formatVND } from "../../../../_lib/format";
 import { createGrnDraft, upsertGrnLine } from "../../../../grn-actions";
 
-import { ACTIONS_VI, STATES_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, FORM_VI, STATES_VI } from "@comtammatu/shared/messages";
 type Ingredient = {
   id: number;
   name: string;
@@ -538,7 +538,7 @@ function LineEditSheet({
                   className="flex flex-col items-start gap-1 rounded-xl border bg-card px-3 py-3 text-left transition active:scale-[0.99]"
                 >
                   <span className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Số lượng
+                    {FORM_VI.quantity}
                   </span>
                   <span className="text-2xl font-semibold tabular-nums">
                     {edit.quantity}
@@ -553,7 +553,7 @@ function LineEditSheet({
                   className="flex flex-col items-start gap-1 rounded-xl border bg-card px-3 py-3 text-left transition active:scale-[0.99]"
                 >
                   <span className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Đơn giá
+                    {FORM_VI.unitPrice}
                   </span>
                   <span className="text-2xl font-semibold tabular-nums">
                     {formatVND(edit.unitCost)}
@@ -566,7 +566,7 @@ function LineEditSheet({
 
               <div className="rounded-xl bg-muted/50 px-3 py-2.5">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Thành tiền</span>
+                  <span className="text-muted-foreground">{FORM_VI.amount}</span>
                   <span className="text-base font-semibold">
                     {formatVND(lineTotal)} đ
                   </span>

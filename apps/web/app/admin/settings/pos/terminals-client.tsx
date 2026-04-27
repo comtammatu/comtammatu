@@ -23,7 +23,7 @@ import { ExternalLink as IconExternalLink, Pencil as IconPencil, Plus as IconPlu
 import { TerminalFormDialog } from "./terminal-form-dialog";
 import { EmptyStatePanel } from "../../components/empty-state-panel";
 
-import { BRANCH_VI } from "@comtammatu/shared/messages";
+import { BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
 export interface TerminalRow {
   id: number;
   name: string;
@@ -121,7 +121,7 @@ export function TerminalsClient({ branches, terminals }: TerminalsClientProps) {
                 <TableRow>
                   <TableHead className="w-50">Tên máy</TableHead>
                   <TableHead>Mã thiết bị</TableHead>
-                  <TableHead className="w-25 text-center">Trạng thái</TableHead>
+                  <TableHead className="w-25 text-center">{FORM_VI.status}</TableHead>
                   <TableHead className="w-20" />
                 </TableRow>
               </TableHeader>

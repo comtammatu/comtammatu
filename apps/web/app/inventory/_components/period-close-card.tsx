@@ -33,6 +33,7 @@ import {
   reopenPeriod,
 } from "../dashboard-actions";
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 export type PeriodRow = {
   year: number;
   month: number;
@@ -258,7 +259,7 @@ function ConfirmDestructiveButton({
           </div>
         ) : null}
         <AlertDialogFooter>
-          <AlertDialogCancel>Hủy</AlertDialogCancel>
+          <AlertDialogCancel>{ACTIONS_VI.cancel}</AlertDialogCancel>
           <AlertDialogAction
             disabled={!canConfirm}
             onClick={() => {

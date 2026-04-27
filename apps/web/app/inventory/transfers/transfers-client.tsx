@@ -27,6 +27,7 @@ import {
 } from "../_lib/ui";
 import { matchesSearch } from "@lib/search";
 
+import { FORM_VI } from "@comtammatu/shared/messages";
 export type TransferRow = {
   id: number;
   code: string;
@@ -116,7 +117,7 @@ export function TransfersClient({ transfers }: { transfers: TransferRow[] }) {
                   <TableRow>
                     <TableHead>Số phiếu</TableHead>
                     <TableHead>Lộ trình</TableHead>
-                    <TableHead>Trạng thái</TableHead>
+                    <TableHead>{FORM_VI.status}</TableHead>
                     <TableHead>Ngày tạo</TableHead>
                     <TableHead className="w-10" />
                   </TableRow>

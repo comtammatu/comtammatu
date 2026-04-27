@@ -21,6 +21,7 @@ import { Minus as IconMinus, Plus as IconPlus } from "lucide-react";
 import { QuickReasonChips } from "../quick-reason-chips";
 import { REDUCE_ITEM_PRESETS } from "../quick-reason-presets";
 
+import { FORM_VI } from "@comtammatu/shared/messages";
 interface ReduceQuantityDialogProps {
   open: boolean;
   /** Current quantity on the order_item row — drives stepper bounds. */
@@ -137,7 +138,7 @@ export function ReduceQuantityDialog({
 
           <Field data-invalid={!reasonReady && trimmedLen > 0}>
             <FieldLabel htmlFor="reduce-reason" className="sr-only">
-              Lý do
+              {FORM_VI.reason}
             </FieldLabel>
             <QuickReasonChips
               presets={REDUCE_ITEM_PRESETS}

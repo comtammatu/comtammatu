@@ -60,7 +60,7 @@ import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import { tNav } from "../_lib/dictionary";
 import { createStockIssueDraft } from "../issue-actions";
 
-import { ACTIONS_VI, BRANCH_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
 export type IssueRow = {
   id: number;
   code: string;
@@ -378,9 +378,9 @@ export function IssuesClient({
                   <TableRow>
                     <TableHead>Mã phiếu</TableHead>
                     <TableHead>Loại xuất</TableHead>
-                    <TableHead>Chi nhánh</TableHead>
+                    <TableHead>{BRANCH_VI.long}</TableHead>
                     <TableHead>Ngày tạo</TableHead>
-                    <TableHead>Trạng thái</TableHead>
+                    <TableHead>{FORM_VI.status}</TableHead>
                     <TableHead className="w-10" />
                   </TableRow>
                 </TableHeader>
@@ -504,7 +504,7 @@ export function IssuesClient({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="issue-notes">Ghi chú</Label>
+              <Label htmlFor="issue-notes">{FORM_VI.notes}</Label>
               <Textarea
                 id="issue-notes"
                 value={notes}

@@ -12,6 +12,7 @@ import { ItemTable } from "./item-table";
 import { AddItemButton } from "./add-item-button";
 import { MenuImportExportMenu } from "./import-export-menu";
 
+import { FORM_VI } from "@comtammatu/shared/messages";
 export default async function MenuPage() {
   const { supabase, claims } = await loadAuthState();
 
@@ -76,7 +77,7 @@ export default async function MenuPage() {
                 </span>
               </TabsTrigger>
               <TabsTrigger value="categories" className="px-5">
-                Danh mục
+                {FORM_VI.category}
                 <span className="ml-1.5 rounded-full bg-muted px-1.5 py-0.5 text-xs font-medium tabular-nums">
                   {categories.length}
                 </span>

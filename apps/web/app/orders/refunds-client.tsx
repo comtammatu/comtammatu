@@ -26,7 +26,7 @@ import { TableEmptyStateRow } from "@/admin/components/table-empty-state-row";
 
 /* ─── Status helpers ─── */
 
-import { STATES_VI } from "@comtammatu/shared/messages";
+import { BRANCH_VI, FORM_VI, STATES_VI } from "@comtammatu/shared/messages";
 const REFUND_STATUS_LABELS: Record<string, string> = {
   pending: "Chờ duyệt",
   approved: "Đã duyệt",
@@ -232,7 +232,7 @@ export function RefundsClient({
                     <p className="mt-1 font-medium">{refund.created_by_name}</p>
                   </div>
                   <div className="col-span-2">
-                    <p className="text-muted-foreground">Lý do</p>
+                    <p className="text-muted-foreground">{FORM_VI.reason}</p>
                     <p className="mt-1">{refund.reason}</p>
                   </div>
                 </div>
@@ -293,17 +293,17 @@ export function RefundsClient({
                 <TableRow>
                   <TableHead>Mã đơn</TableHead>
                   <TableHead className="hidden sm:table-cell">
-                    Chi nhánh
+                    {BRANCH_VI.long}
                   </TableHead>
                   <TableHead className="text-right">Số tiền</TableHead>
-                  <TableHead className="hidden md:table-cell">Lý do</TableHead>
+                  <TableHead className="hidden md:table-cell">{FORM_VI.reason}</TableHead>
                   <TableHead className="hidden lg:table-cell">
                     Người tạo
                   </TableHead>
                   <TableHead className="hidden lg:table-cell">
                     Thời gian
                   </TableHead>
-                  <TableHead>Trạng thái</TableHead>
+                  <TableHead>{FORM_VI.status}</TableHead>
                   {canApprove && (
                     <TableHead className="text-right">Hành động</TableHead>
                   )}

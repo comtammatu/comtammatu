@@ -18,7 +18,7 @@ import {
 import { formatVND } from "@comtammatu/shared/format";
 import type { DailyRevenueRow, TopItemRow } from "./page";
 
-import { STATES_VI } from "@comtammatu/shared/messages";
+import { FORM_VI, STATES_VI } from "@comtammatu/shared/messages";
 interface RevenueOverviewProps {
   dailyRevenue: DailyRevenueRow[];
   topItems: TopItemRow[];
@@ -114,7 +114,7 @@ export function RevenueOverview({
                   <p className="font-medium">{item.item_name}</p>
                   <div className="mt-3 flex items-center justify-between gap-3 text-sm">
                     <div>
-                      <p className="text-muted-foreground">Số lượng</p>
+                      <p className="text-muted-foreground">{FORM_VI.quantity}</p>
                       <p className="font-semibold tabular-nums">
                         {item.quantity_sold.toLocaleString("vi-VN")}
                       </p>
@@ -135,7 +135,7 @@ export function RevenueOverview({
                 <TableHeader>
                   <TableRow>
                     <TableHead>Tên món</TableHead>
-                    <TableHead className="text-right">Số lượng</TableHead>
+                    <TableHead className="text-right">{FORM_VI.quantity}</TableHead>
                     <TableHead className="text-right">Doanh thu</TableHead>
                   </TableRow>
                 </TableHeader>

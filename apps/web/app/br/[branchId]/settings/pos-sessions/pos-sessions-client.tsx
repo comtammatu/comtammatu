@@ -43,6 +43,7 @@ import {
 } from "@comtammatu/ui/components/table";
 import { CloseSessionSheet } from "../../pos/close-session-sheet";
 
+import { FORM_VI } from "@comtammatu/shared/messages";
 export interface PosSessionRow {
   id: number;
   // Per-branch model (Owner D7, 2026-04-27): nullable. NULL = ca chung của
@@ -246,7 +247,7 @@ export function PosSessionsClient({
                     <TableRow>
                       <TableHead>Bill</TableHead>
                       <TableHead>Giờ</TableHead>
-                      <TableHead>Trạng thái</TableHead>
+                      <TableHead>{FORM_VI.status}</TableHead>
                       <TableHead>Thanh toán</TableHead>
                       <TableHead className="text-right">Tổng</TableHead>
                       <TableHead className="w-8" />

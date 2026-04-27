@@ -35,7 +35,7 @@ import { formatBranchSiteLabel } from "../_lib/branch-site-labels";
 import { createStockTransfer } from "../transfer-actions";
 import type { IngredientRow } from "../page";
 
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
 export interface BranchForTransfer {
   id: number;
   name: string;
@@ -638,7 +638,7 @@ export function CreateTransferDialog({
             </div>
           )}
           <div className="space-y-1.5">
-            <Label htmlFor="notes">Ghi chú</Label>
+            <Label htmlFor="notes">{FORM_VI.notes}</Label>
             <Textarea
               id="notes"
               name="notes"

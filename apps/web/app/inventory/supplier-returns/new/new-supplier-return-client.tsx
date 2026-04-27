@@ -30,6 +30,7 @@ import { PhotoUploadInput } from "../../_components/photo-upload-input";
 import { formatVND } from "../../_lib/format";
 import { createSupplierReturnFromStock } from "../../supplier-return-actions";
 
+import { FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
 type Branch = { id: number; name: string };
 type Supplier = { id: number; name: string };
 type Ingredient = {
@@ -260,7 +261,7 @@ export function NewSupplierReturnClient({
                 </Select>
               </div>
               <div className="space-y-1">
-                <Label>Lý do</Label>
+                <Label>{FORM_VI.reason}</Label>
                 <Select value={reason} onValueChange={setReason}>
                   <SelectTrigger>
                     <SelectValue />
@@ -290,7 +291,7 @@ export function NewSupplierReturnClient({
                 </Select>
               </div>
               <div className="space-y-1 md:col-span-2">
-                <Label>Ghi chú</Label>
+                <Label>{FORM_VI.notes}</Label>
                 <Textarea
                   rows={2}
                   value={notes}
@@ -327,7 +328,7 @@ export function NewSupplierReturnClient({
                     <div className="grid gap-3 md:grid-cols-12">
                       <div className="md:col-span-5">
                         <Label className="text-xs text-muted-foreground">
-                          Nguyên liệu
+                          {PRODUCT_VI.rawIngredient}
                         </Label>
                         <Select
                           value={line.ingredientId?.toString() ?? ""}
@@ -380,7 +381,7 @@ export function NewSupplierReturnClient({
                       </div>
                       <div className="md:col-span-2">
                         <Label className="text-xs text-muted-foreground">
-                          Thành tiền
+                          {FORM_VI.amount}
                         </Label>
                         <p className="mt-2 font-mono text-sm font-semibold">
                           {formatVND(lineTotal)} ₫

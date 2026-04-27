@@ -28,7 +28,7 @@ import { HARDBLOCK_REASON_LABELS_VI } from "@comtammatu/shared/labels";
 import { PhotoUploadInput } from "./photo-upload-input";
 import { submitHardblockOverride } from "../variance-actions";
 
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
 const NOTE_MIN = 50;
 
 type HardblockReason = keyof typeof HARDBLOCK_REASON_LABELS_VI;
@@ -156,7 +156,7 @@ export function HardblockOverrideDialog({
 
           <div>
             <Label htmlFor="hb-reason" className="text-sm font-medium">
-              Lý do
+              {FORM_VI.reason}
             </Label>
             <Select
               value={reasonCode}

@@ -40,6 +40,7 @@ import { IngredientDialog } from "./ingredient-dialog";
 import type { IngredientRow } from "../_lib/types";
 import { IngredientImportExportMenu } from "./import-export-menu";
 
+import { ACTIONS_VI, FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
 const preservationOptions = [
   { value: "all", label: "Mọi bảo quản" },
   { value: "refrigerated", label: "Mát" },
@@ -251,7 +252,7 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
                         className="min-h-10"
                       >
                         <IconPencil className="size-4" />
-                        <span className="ml-1">Sửa</span>
+                        <span className="ml-1">{ACTIONS_VI.edit}</span>
                       </Button>
                     </div>
                   </InteractiveCard>
@@ -293,14 +294,14 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="min-w-52">Nguyên liệu</TableHead>
+                    <TableHead className="min-w-52">{PRODUCT_VI.rawIngredient}</TableHead>
                     <TableHead className="min-w-28">SKU</TableHead>
-                    <TableHead className="min-w-40">Đơn vị</TableHead>
+                    <TableHead className="min-w-40">{FORM_VI.unit}</TableHead>
                     <TableHead className="min-w-36">Bảo quản</TableHead>
                     <TableHead className="min-w-32">Giá tham chiếu</TableHead>
                     <TableHead className="min-w-44">Ngưỡng tồn</TableHead>
-                    <TableHead className="min-w-28">Trạng thái</TableHead>
-                    <TableHead className="w-24 text-right">Thao tác</TableHead>
+                    <TableHead className="min-w-28">{FORM_VI.status}</TableHead>
+                    <TableHead className="w-24 text-right">{FORM_VI.action}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

@@ -24,7 +24,7 @@ import { EmptyStatePanel } from "../../components/empty-state-panel";
 
 /* ─── Types ─── */
 
-import { BRANCH_VI } from "@comtammatu/shared/messages";
+import { BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
 export interface StationRow {
   id: number;
   name: string;
@@ -131,7 +131,7 @@ export function StationsClient({
                   <TableHead className="w-50">Tên trạm</TableHead>
                   <TableHead className="w-25 text-center">Thứ tự</TableHead>
                   <TableHead>Danh mục món ăn</TableHead>
-                  <TableHead className="w-25 text-center">Trạng thái</TableHead>
+                  <TableHead className="w-25 text-center">{FORM_VI.status}</TableHead>
                   <TableHead className="w-20" />
                 </TableRow>
               </TableHeader>

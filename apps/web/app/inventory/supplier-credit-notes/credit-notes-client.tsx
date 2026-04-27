@@ -43,6 +43,7 @@ import {
   fetchOpenInvoicesForSupplier,
 } from "../credit-note-actions";
 
+import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
 type CreditNoteRow = {
   id: number;
   credit_number: string;
@@ -170,7 +171,7 @@ export function CreditNotesClient({
                   <TableHead className="text-right">Tổng</TableHead>
                   <TableHead className="text-right">Đã áp</TableHead>
                   <TableHead className="text-right">Còn lại</TableHead>
-                  <TableHead>Trạng thái</TableHead>
+                  <TableHead>{FORM_VI.status}</TableHead>
                   <TableHead>Hóa đơn áp</TableHead>
                   <TableHead></TableHead>
                 </TableRow>
@@ -328,7 +329,7 @@ export function CreditNotesClient({
           ) : null}
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="ghost">Hủy</Button>
+              <Button variant="ghost">{ACTIONS_VI.cancel}</Button>
             </DialogClose>
             <Button
               onClick={handleApply}

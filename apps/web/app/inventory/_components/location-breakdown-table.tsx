@@ -20,6 +20,7 @@ import { cn } from "@comtammatu/ui";
 import { formatVND } from "@comtammatu/shared/format";
 import type { DashboardLocation } from "../dashboard-actions";
 
+import { FORM_VI } from "@comtammatu/shared/messages";
 const LOCATION_KIND_VI: Record<string, string> = {
   warehouse: "Kho",
   kitchen: "Bếp",
@@ -77,9 +78,9 @@ export function LocationBreakdownTable({
               <TableRow>
                 <TableHead>Location</TableHead>
                 <TableHead className="text-right">SKU</TableHead>
-                <TableHead className="text-right">Số lượng</TableHead>
+                <TableHead className="text-right">{FORM_VI.quantity}</TableHead>
                 {canViewCost ? (
-                  <TableHead className="text-right">Giá trị</TableHead>
+                  <TableHead className="text-right">{FORM_VI.value}</TableHead>
                 ) : null}
                 <TableHead className="text-right">Alert</TableHead>
               </TableRow>

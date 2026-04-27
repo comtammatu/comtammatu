@@ -1,6 +1,7 @@
 import { Utensils as IconToolsKitchen } from "lucide-react";
 import { LoginForm } from "./login-form";
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 export default async function LoginPage({
   searchParams,
 }: {
@@ -23,7 +24,7 @@ export default async function LoginPage({
       {/* Login form */}
       <section className="flex flex-1 items-center justify-center p-6 sm:p-8">
         <div className="w-full max-w-sm space-y-6">
-          <h2 className="font-heading text-xl font-semibold">Đăng nhập</h2>
+          <h2 className="font-heading text-xl font-semibold">{ACTIONS_VI.signIn}</h2>
           <LoginForm returnTo={sp.returnTo} />
         </div>
       </section>

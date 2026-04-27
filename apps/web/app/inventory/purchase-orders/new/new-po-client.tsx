@@ -53,7 +53,7 @@ import type {
 import type { SupplierRow } from "../../suppliers/suppliers-client";
 import type { IngredientRow } from "../../page";
 
-import { ACTIONS_VI, STATES_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, FORM_VI, PRODUCT_VI, STATES_VI } from "@comtammatu/shared/messages";
 interface LocalLine {
   ingredientId: number;
   ingredientName: string;
@@ -437,7 +437,7 @@ function SupplierSection({
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="notes">Ghi chú</Label>
+            <Label htmlFor="notes">{FORM_VI.notes}</Label>
             <Textarea
               id="notes"
               value={notes}
@@ -661,7 +661,7 @@ function SuggestionsPanel({
                   /* Desktop: grid layout */
                   <div className="space-y-1">
                     <div className="grid grid-cols-12 gap-2 px-2 pb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      <span className="col-span-3">Nguyên liệu</span>
+                      <span className="col-span-3">{PRODUCT_VI.rawIngredient}</span>
                       <span className="col-span-2 text-right">Tồn HQ</span>
                       <span className="col-span-2 text-right">
                         Tiêu thụ/ngày
@@ -834,7 +834,7 @@ function LineItemsSection({
           <div className="-m-4 md:-m-5">
             <div className="flex items-center justify-between border-b bg-muted/30 px-4 py-2.5 md:px-5">
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Nguyên liệu
+                {PRODUCT_VI.rawIngredient}
               </span>
               {hasValue && (
                 <span className="text-sm font-semibold font-mono">
@@ -978,10 +978,10 @@ function LineItemsSection({
           {/* Table header */}
           <div className="grid grid-cols-[2fr_80px_70px_120px_120px_40px] gap-0 border-b bg-muted/30 px-3 py-2 md:px-5">
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Nguyên liệu
+              {PRODUCT_VI.rawIngredient}
             </span>
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground text-right">
-              Số lượng
+              {FORM_VI.quantity}
             </span>
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground pl-2">
               ĐV
@@ -990,7 +990,7 @@ function LineItemsSection({
               Đơn giá (₫)
             </span>
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground text-right">
-              Thành tiền
+              {FORM_VI.amount}
             </span>
             <span />
           </div>

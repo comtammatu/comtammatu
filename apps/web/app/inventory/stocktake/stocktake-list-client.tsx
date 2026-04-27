@@ -50,7 +50,7 @@ import { InteractiveCard } from "../_components/interactive-card";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import { createStocktakeSession, fetchStocktakeSessions } from "../actions";
 
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
 export interface StocktakeSessionRow {
   id: number;
   branch_id: number;
@@ -261,9 +261,9 @@ export function StocktakeListClient({
                 <TableHeader>
                   <TableRow>
                     <TableHead>Mã phiên</TableHead>
-                    <TableHead>Chi nhánh</TableHead>
+                    <TableHead>{BRANCH_VI.long}</TableHead>
                     <TableHead>Ngày bắt đầu</TableHead>
-                    <TableHead>Trạng thái</TableHead>
+                    <TableHead>{FORM_VI.status}</TableHead>
                     <TableHead className="w-10" />
                   </TableRow>
                 </TableHeader>
@@ -323,7 +323,7 @@ export function StocktakeListClient({
             <DialogTitle>Chọn chi nhánh kiểm kê</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <Label htmlFor="branch-select">Chi nhánh</Label>
+            <Label htmlFor="branch-select">{BRANCH_VI.long}</Label>
             <Select
               value={selectedBranchId}
               onValueChange={setSelectedBranchId}

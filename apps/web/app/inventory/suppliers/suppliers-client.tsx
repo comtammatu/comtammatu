@@ -44,6 +44,7 @@ import { deleteSupplier, fetchSuppliers } from "../procurement-actions";
 import { SupplierDialog } from "./supplier-dialog";
 import type { SupplierRow } from "./supplier-dialog";
 
+import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
 export type { SupplierRow } from "./supplier-dialog";
 
 const avatarColors = [
@@ -235,8 +236,8 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
                     <TableHead>Mã số thuế</TableHead>
                     <TableHead>Điện thoại</TableHead>
                     <TableHead>Địa chỉ</TableHead>
-                    <TableHead>Trạng thái</TableHead>
-                    <TableHead className="w-24 text-right">Thao tác</TableHead>
+                    <TableHead>{FORM_VI.status}</TableHead>
+                    <TableHead className="w-24 text-right">{FORM_VI.action}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -334,7 +335,7 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isPending}>Hủy</AlertDialogCancel>
+            <AlertDialogCancel disabled={isPending}>{ACTIONS_VI.cancel}</AlertDialogCancel>
             <AlertDialogAction
               disabled={isPending}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"

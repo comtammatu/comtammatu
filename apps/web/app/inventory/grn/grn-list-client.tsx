@@ -40,6 +40,7 @@ import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import { formatVND } from "../_lib/format";
 import { tNav } from "../_lib/dictionary";
 
+import { FORM_VI } from "@comtammatu/shared/messages";
 export type GrnRow = {
   id: number;
   code: string;
@@ -176,7 +177,7 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
                     <TableHead>PO liên kết</TableHead>
                     <TableHead>Ngày kiểm nhận</TableHead>
                     <TableHead>Tổng tiền</TableHead>
-                    <TableHead>Trạng thái</TableHead>
+                    <TableHead>{FORM_VI.status}</TableHead>
                     <TableHead className="w-10" />
                   </TableRow>
                 </TableHeader>

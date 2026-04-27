@@ -29,6 +29,7 @@ import { AttendanceConfigDialog } from "./attendance-config-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { TableEmptyStateRow } from "../../components/table-empty-state-row";
 
+import { FORM_VI } from "@comtammatu/shared/messages";
 export interface BranchRow {
   id: number;
   name: string;
@@ -71,7 +72,7 @@ export function BranchTable({ branches }: BranchTableProps) {
               <TableHead className="hidden sm:table-cell">Loại</TableHead>
               <TableHead className="hidden sm:table-cell">Địa chỉ</TableHead>
               <TableHead className="hidden md:table-cell">Điện thoại</TableHead>
-              <TableHead>Trạng thái</TableHead>
+              <TableHead>{FORM_VI.status}</TableHead>
               <TableHead className="w-12" />
             </TableRow>
           </TableHeader>

@@ -319,7 +319,7 @@ export function ClockClient({
           <CardContent className="flex flex-col gap-2 text-sm">
             {status.branchName && (
               <div className="flex justify-between gap-3">
-                <span className="text-muted-foreground">Chi nhánh</span>
+                <span className="text-muted-foreground">{BRANCH_VI.long}</span>
                 <span className="font-medium">{status.branchName}</span>
               </div>
             )}
@@ -460,7 +460,7 @@ export function ClockClient({
         state !== "verifying" &&
         state !== "success" && (
           <div className="flex w-full max-w-xs flex-col gap-2">
-            <Label>Chi nhánh</Label>
+            <Label>{BRANCH_VI.long}</Label>
             <Select
               value={selectedBranchId?.toString() ?? ""}
               onValueChange={(v) => {

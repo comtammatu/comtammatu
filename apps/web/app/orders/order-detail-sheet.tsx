@@ -20,6 +20,7 @@ import type { OrderRow } from "./actions";
 
 /* ─── Helpers ─── */
 
+import { BRANCH_VI, FORM_VI, STAFF_VI } from "@comtammatu/shared/messages";
 const ORDER_STATUS_LABELS: Record<string, string> = {
   pending: "Chờ xử lý",
   in_progress: "Đang làm",
@@ -106,7 +107,7 @@ export function OrderDetailSheet({
         {/* ─── Order info ─── */}
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-            <span className="text-muted-foreground">Trạng thái</span>
+            <span className="text-muted-foreground">{FORM_VI.status}</span>
             <div>
               <Badge
                 variant={
@@ -125,10 +126,10 @@ export function OrderDetailSheet({
               </Badge>
             </div>
 
-            <span className="text-muted-foreground">Chi nhánh</span>
+            <span className="text-muted-foreground">{BRANCH_VI.long}</span>
             <span>{order.branch_name}</span>
 
-            <span className="text-muted-foreground">Nhân viên</span>
+            <span className="text-muted-foreground">{STAFF_VI.long}</span>
             <span>{order.created_by_name}</span>
 
             <span className="text-muted-foreground">Thời gian</span>
@@ -288,7 +289,7 @@ export function OrderDetailSheet({
           {/* ─── Totals ─── */}
           <div className="rounded-md border p-3 space-y-1.5 text-sm">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Tạm tính</span>
+              <span className="text-muted-foreground">{FORM_VI.subtotal}</span>
               <span className="font-mono">{formatVND(order.subtotal)}</span>
             </div>
             {hasDiscount && (
@@ -314,7 +315,7 @@ export function OrderDetailSheet({
               </div>
             )}
             <div className="flex justify-between border-t pt-1.5 font-semibold">
-              <span>Tổng cộng</span>
+              <span>{FORM_VI.totalAmount}</span>
               <span className="font-mono">{formatVND(order.total_amount)}</span>
             </div>
           </div>

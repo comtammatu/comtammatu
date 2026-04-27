@@ -5,6 +5,7 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { OctagonAlert as IconAlertOctagon, FlagTriangleRight as IconFlag3, Check as IconCheck } from "lucide-react";
 import { AbcClassChip } from "./abc-class-chip";
 
+import { FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
 interface RoundCount {
   roundNo: 1 | 2 | 3 | 4;
   countedQuantity: number | null;
@@ -157,13 +158,13 @@ export function VarianceHeatmapTable({
       <table className="w-full text-sm">
         <thead className="bg-muted/40 text-xs uppercase text-muted-foreground">
           <tr>
-            <th className="px-3 py-2 text-left font-medium">Nguyên liệu</th>
+            <th className="px-3 py-2 text-left font-medium">{PRODUCT_VI.rawIngredient}</th>
             <th className="px-3 py-2 text-left font-medium">ABC</th>
             <th className="px-3 py-2 text-right font-medium">R1</th>
             <th className="px-3 py-2 text-right font-medium">R2</th>
             <th className="px-3 py-2 text-right font-medium">R3</th>
             <th className="px-3 py-2 text-right font-medium">R4</th>
-            <th className="px-3 py-2 text-right font-medium">Trạng thái</th>
+            <th className="px-3 py-2 text-right font-medium">{FORM_VI.status}</th>
           </tr>
         </thead>
         <tbody>

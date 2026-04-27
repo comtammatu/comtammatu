@@ -29,7 +29,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { Plus as IconPlus, Trash as IconTrash } from "lucide-react";
-import { ACTIONS_VI, ERRORS_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, ERRORS_VI, FORM_VI } from "@comtammatu/shared/messages";
 import { FormattedNumberInput } from "@/components/form";
 import { createJournalEntry } from "../accounting-actions";
 import type { JournalEntryRow, AccountOption } from "./page";
@@ -167,9 +167,9 @@ export function JournalClient({ entries: initial, accounts }: Props) {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-28">Ngày</TableHead>
-                <TableHead>Diễn giải</TableHead>
+                <TableHead>{FORM_VI.description}</TableHead>
                 <TableHead className="w-24">Tham chiếu</TableHead>
-                <TableHead className="w-24">Trạng thái</TableHead>
+                <TableHead className="w-24">{FORM_VI.status}</TableHead>
                 <TableHead className="w-32 text-right">Tổng nợ (₫)</TableHead>
               </TableRow>
             </TableHeader>
@@ -235,7 +235,7 @@ export function JournalClient({ entries: initial, accounts }: Props) {
                 />
               </div>
               <div className="grid gap-1.5">
-                <Label>Diễn giải</Label>
+                <Label>{FORM_VI.description}</Label>
                 <Input
                   placeholder="Mô tả nghiệp vụ"
                   value={form.description}
@@ -345,7 +345,7 @@ export function JournalClient({ entries: initial, accounts }: Props) {
                       </TableRow>
                     ))}
                     <TableRow className="bg-muted/40">
-                      <TableCell className="font-medium">Tổng cộng</TableCell>
+                      <TableCell className="font-medium">{FORM_VI.totalAmount}</TableCell>
                       <TableCell className="text-right tabular-nums font-medium">
                         {totalDebit.toLocaleString("vi-VN")}
                       </TableCell>

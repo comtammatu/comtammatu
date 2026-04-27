@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { BRANCH_VI } from "@comtammatu/shared/messages";
+import { BRANCH_VI, FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
@@ -104,7 +104,7 @@ export function StockMovementClient({
       {/* Filters */}
       <div className="flex flex-wrap items-end gap-3">
         <div className="w-full space-y-1.5 sm:w-44 sm:flex-none">
-          <Label htmlFor="startDate">Từ ngày</Label>
+          <Label htmlFor="startDate">{FORM_VI.fromDate}</Label>
           <Input
             id="startDate"
             type="date"
@@ -114,7 +114,7 @@ export function StockMovementClient({
           />
         </div>
         <div className="w-full space-y-1.5 sm:w-44 sm:flex-none">
-          <Label htmlFor="endDate">Đến ngày</Label>
+          <Label htmlFor="endDate">{FORM_VI.toDate}</Label>
           <Input
             id="endDate"
             type="date"
@@ -125,7 +125,7 @@ export function StockMovementClient({
         </div>
         {!userBranchId && (
           <div className="w-full space-y-1.5 sm:w-48 sm:flex-none">
-            <Label>Chi nhánh</Label>
+            <Label>{BRANCH_VI.long}</Label>
             <Select value={branchId} onValueChange={setBranchId}>
               <SelectTrigger className="w-full sm:w-44">
                 <SelectValue placeholder="Tất cả" />
@@ -283,7 +283,7 @@ export function StockMovementClient({
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="min-w-44">Nguyên liệu</TableHead>
+                        <TableHead className="min-w-44">{PRODUCT_VI.rawIngredient}</TableHead>
                         <TableHead className="w-16">ĐV</TableHead>
                         <TableHead className="w-24 text-right">
                           Tồn đầu kỳ
@@ -426,7 +426,7 @@ export function StockMovementClient({
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="min-w-44">Chi nhánh</TableHead>
+                        <TableHead className="min-w-44">{BRANCH_VI.long}</TableHead>
                         <TableHead className="w-24 text-right">
                           Nhập (GRN)
                         </TableHead>

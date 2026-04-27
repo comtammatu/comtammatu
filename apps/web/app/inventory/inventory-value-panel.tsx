@@ -36,6 +36,7 @@ import {
   fetchInventoryValueSystem,
 } from "./inventory-value-actions";
 
+import { BRANCH_VI } from "@comtammatu/shared/messages";
 interface InventoryValuePanelProps {
   visibility: InventoryValueVisibility;
 }
@@ -350,7 +351,7 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
                     <TableHeader>
                       <TableRow>
                         <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                          Chi nhánh
+                          {BRANCH_VI.long}
                         </TableHead>
                         <TableHead className="text-right text-xs font-semibold uppercase tracking-wider">
                           Giá trị tồn kho

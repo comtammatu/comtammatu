@@ -25,7 +25,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { Button } from "@comtammatu/ui/components/button";
 import { UserPlus as IconUserPlus } from "lucide-react";
 
-import { BRANCH_VI } from "@comtammatu/shared/messages";
+import { BRANCH_VI, STAFF_VI } from "@comtammatu/shared/messages";
 interface HrClientProps {
   employees: EmployeeRow[];
   branches: BranchOption[];
@@ -64,7 +64,7 @@ export function HrClient({ employees, branches }: HrClientProps) {
   return (
     <Tabs defaultValue="employees" onValueChange={handleTabChange}>
       <TabsList>
-        <TabsTrigger value="employees">Nhân viên</TabsTrigger>
+        <TabsTrigger value="employees">{STAFF_VI.long}</TabsTrigger>
         <TabsTrigger value="shifts">Ca làm</TabsTrigger>
         <TabsTrigger value="assignments">Phân ca</TabsTrigger>
         <TabsTrigger value="attendance">Chấm công</TabsTrigger>

@@ -50,6 +50,7 @@ import {
   getInventoryStatusLabel,
 } from "../../_lib/ui";
 
+import { FORM_VI } from "@comtammatu/shared/messages";
 export type TransferDetail = {
   id: number;
   code: string;
@@ -401,7 +402,7 @@ export function TransferDetailClient({
                             </p>
                           </div>
                           <div>
-                            <p className="text-muted-foreground">Thành tiền</p>
+                            <p className="text-muted-foreground">{FORM_VI.amount}</p>
                             <p className="font-semibold text-primary">
                               {formatVND(item.total)}
                             </p>

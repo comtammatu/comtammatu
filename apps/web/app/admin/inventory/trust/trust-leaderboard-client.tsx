@@ -20,6 +20,7 @@ import { Search as IconSearch, ShieldCheck as IconShieldCheck, TriangleAlert as 
 import { TrustScoreBadge } from "@/inventory/_components/trust-score-badge";
 import type { TrustScoreRow } from "@/inventory/trust-actions";
 
+import { ACTIONS_VI, BRANCH_VI, STAFF_VI } from "@comtammatu/shared/messages";
 interface BranchOption {
   id: number;
   name: string;
@@ -134,7 +135,7 @@ export function TrustLeaderboardClient({
           </CardTitle>
           <div className="flex flex-wrap items-center gap-2">
             <div className="space-y-1.5">
-              <Label className="sr-only">Chi nhánh</Label>
+              <Label className="sr-only">{BRANCH_VI.long}</Label>
               <Select
                 value={selectBranchId}
                 onValueChange={(v) => {
@@ -179,7 +180,7 @@ export function TrustLeaderboardClient({
               <thead className="bg-muted/40 text-xs uppercase text-muted-foreground">
                 <tr>
                   <th className="px-3 py-2 text-right font-medium">#</th>
-                  <th className="px-3 py-2 text-left font-medium">Nhân viên</th>
+                  <th className="px-3 py-2 text-left font-medium">{STAFF_VI.long}</th>
                   <th className="px-3 py-2 text-left font-medium">Tier</th>
                   <th className="px-3 py-2 text-right font-medium">Score (lưu)</th>
                   {includeComputed ? (
@@ -190,7 +191,7 @@ export function TrustLeaderboardClient({
                   <th className="px-3 py-2 text-right font-medium">GRN 30d</th>
                   <th className="px-3 py-2 text-right font-medium">Incident</th>
                   <th className="px-3 py-2 text-left font-medium">Incident gần nhất</th>
-                  <th className="px-3 py-2 text-left font-medium">Cập nhật</th>
+                  <th className="px-3 py-2 text-left font-medium">{ACTIONS_VI.update}</th>
                 </tr>
               </thead>
               <tbody>

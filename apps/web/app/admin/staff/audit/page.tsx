@@ -18,6 +18,7 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 
+import { BRANCH_VI } from "@comtammatu/shared/messages";
 interface Props {
   searchParams: Promise<{
     action?: string;
@@ -137,7 +138,7 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
                     Permission
                   </TableHead>
                   <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Chi nhánh
+                    {BRANCH_VI.long}
                   </TableHead>
                   <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                     Hạn

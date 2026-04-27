@@ -57,7 +57,7 @@ import {
 } from "./production-types";
 import type { ProductionOrderRow } from "./production-types";
 
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
 interface ProductionOrderListProps {
   orders: ProductionOrderRow[];
   canConfirmProduction: boolean;
@@ -246,8 +246,8 @@ export function ProductionOrderList({
               <TableRow>
                 <TableHead>Số lệnh</TableHead>
                 <TableHead>Bếp trung tâm</TableHead>
-                <TableHead>Thành phẩm</TableHead>
-                <TableHead>Trạng thái</TableHead>
+                <TableHead>{PRODUCT_VI.finishedGood}</TableHead>
+                <TableHead>{FORM_VI.status}</TableHead>
                 <TableHead>Tổng chi phí</TableHead>
                 <TableHead className="w-40" />
               </TableRow>

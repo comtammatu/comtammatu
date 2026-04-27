@@ -28,6 +28,7 @@ import type {
   RecipeLineDraft,
 } from "./recipe-line-dialog";
 
+import { FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
 export type RecipeItem = {
   ingredientId: number;
   ingredientName: string;
@@ -155,11 +156,11 @@ export function RecipesClient({
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Nguyên liệu</TableHead>
-                        <TableHead>Số lượng</TableHead>
-                        <TableHead>Đơn vị</TableHead>
+                        <TableHead>{PRODUCT_VI.rawIngredient}</TableHead>
+                        <TableHead>{FORM_VI.quantity}</TableHead>
+                        <TableHead>{FORM_VI.unit}</TableHead>
                         <TableHead className="text-center">Yield</TableHead>
-                        <TableHead>Ghi chú</TableHead>
+                        <TableHead>{FORM_VI.notes}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>

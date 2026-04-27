@@ -41,6 +41,7 @@ import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import { tRoute, tStatus } from "../_lib/dictionary";
 import type { SupplierRow } from "../suppliers/suppliers-client";
 
+import { FORM_VI } from "@comtammatu/shared/messages";
 export interface PurchaseOrderRow {
   id: number;
   po_number: string;
@@ -271,10 +272,10 @@ export function PurchaseOrdersClient({
                   <TableRow>
                     <TableHead className="min-w-40">Số PO</TableHead>
                     <TableHead className="min-w-52">Nhà cung cấp</TableHead>
-                    <TableHead className="min-w-36">Trạng thái</TableHead>
+                    <TableHead className="min-w-36">{FORM_VI.status}</TableHead>
                     <TableHead className="min-w-32">Ngày đặt</TableHead>
-                    <TableHead>Ghi chú</TableHead>
-                    <TableHead className="w-28 text-right">Thao tác</TableHead>
+                    <TableHead>{FORM_VI.notes}</TableHead>
+                    <TableHead className="w-28 text-right">{FORM_VI.action}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

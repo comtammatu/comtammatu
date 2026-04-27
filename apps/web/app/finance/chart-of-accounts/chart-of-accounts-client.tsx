@@ -31,7 +31,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
-import { ACTIONS_VI, ERRORS_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, ERRORS_VI, FORM_VI } from "@comtammatu/shared/messages";
 import { Plus as IconPlus } from "lucide-react";
 import { createAccount, updateAccount } from "../accounting-actions";
 import type { AccountRow } from "./page";
@@ -113,7 +113,7 @@ export function ChartOfAccountsClient({ accounts: initial }: Props) {
                 <TableHead className="w-28">Mã TK</TableHead>
                 <TableHead>Tên tài khoản</TableHead>
                 <TableHead className="w-36">Loại</TableHead>
-                <TableHead className="w-24">Trạng thái</TableHead>
+                <TableHead className="w-24">{FORM_VI.status}</TableHead>
                 <TableHead className="w-20" />
               </TableRow>
             </TableHeader>

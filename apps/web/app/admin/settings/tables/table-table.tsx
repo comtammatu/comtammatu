@@ -35,7 +35,7 @@ import type { TableStatus } from "./constants";
 import { TableFormDialog } from "./table-form-dialog";
 import type { ZoneRow } from "./zone-table";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { ACTIONS_VI, STATES_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, FORM_VI, STATES_VI } from "@comtammatu/shared/messages";
 import { TableEmptyStateRow } from "../../components/table-empty-state-row";
 
 export interface TableRow {
@@ -80,7 +80,7 @@ export function TableTable({ tables, zones }: TableTableProps) {
               <TableHead>Bàn</TableHead>
               <TableHead>Khu vực</TableHead>
               <TableHead className="hidden md:table-cell">Sức chứa</TableHead>
-              <TableHead>Trạng thái</TableHead>
+              <TableHead>{FORM_VI.status}</TableHead>
               <TableHead className="w-12" />
             </TRow>
           </TableHeader>

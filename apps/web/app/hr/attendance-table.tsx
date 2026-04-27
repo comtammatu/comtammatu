@@ -20,7 +20,7 @@ import {
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import { BRANCH_VI, ERRORS_VI } from "@comtammatu/shared/messages";
+import { BRANCH_VI, ERRORS_VI, FORM_VI, STAFF_VI } from "@comtammatu/shared/messages";
 import {
   fetchAttendance,
   fetchAttendanceSummary,
@@ -288,12 +288,12 @@ function DetailView({
         <TableHeader>
           <TableRow>
             <TableHead>Ngày</TableHead>
-            <TableHead>Nhân viên</TableHead>
+            <TableHead>{STAFF_VI.long}</TableHead>
             <TableHead>Ca</TableHead>
             <TableHead>Vào</TableHead>
             <TableHead>Ra</TableHead>
-            <TableHead>Trạng thái</TableHead>
-            <TableHead>Ghi chú</TableHead>
+            <TableHead>{FORM_VI.status}</TableHead>
+            <TableHead>{FORM_VI.notes}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
