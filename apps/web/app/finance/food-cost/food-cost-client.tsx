@@ -15,7 +15,7 @@ import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import { fetchFoodCost } from "../accounting-actions";
 import type { FoodCostRow } from "./page";
-import { ERRORS_VI, FORM_VI } from "@comtammatu/shared/messages";
+import { ERRORS_VI, FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
 
 interface Props {
   initialRows: FoodCostRow[];
@@ -134,7 +134,7 @@ export function FoodCostClient({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Món</TableHead>
+                <TableHead>{PRODUCT_VI.posItem}</TableHead>
                 <TableHead className="w-24 text-right">SL bán</TableHead>
                 <TableHead className="w-36 text-right">Doanh thu (₫)</TableHead>
                 <TableHead className="w-36 text-right">Food cost (₫)</TableHead>

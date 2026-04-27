@@ -18,7 +18,7 @@ import {
 import { formatVND } from "@comtammatu/shared/format";
 import type { DailyRevenueRow, TopItemRow } from "./page";
 
-import { FORM_VI, STATES_VI } from "@comtammatu/shared/messages";
+import { FORM_VI, ORDER_VI, STATES_VI } from "@comtammatu/shared/messages";
 interface RevenueOverviewProps {
   dailyRevenue: DailyRevenueRow[];
   topItems: TopItemRow[];
@@ -206,7 +206,7 @@ export function RevenueOverview({
                 <TableHeader>
                   <TableRow>
                     <TableHead>{FORM_VI.date}</TableHead>
-                    <TableHead className="text-right">Đơn hàng</TableHead>
+                    <TableHead className="text-right">{ORDER_VI.long}</TableHead>
                     <TableHead className="text-right">Doanh thu</TableHead>
                   </TableRow>
                 </TableHeader>

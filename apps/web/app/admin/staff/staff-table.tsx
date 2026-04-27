@@ -93,7 +93,7 @@ export function StaffTable({ staff, branches }: StaffTableProps) {
             </div>
             <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
               <div>
-                <p className="text-muted-foreground">Vai trò</p>
+                <p className="text-muted-foreground">{STAFF_VI.role}</p>
                 <p className="mt-1">
                   {ROLE_LABELS[member.role as keyof typeof ROLE_LABELS] ??
                     member.role}
@@ -153,7 +153,7 @@ export function StaffTable({ staff, branches }: StaffTableProps) {
                 {STAFF_VI.long}
               </TableHead>
               <TableHead className="hidden text-xs font-medium uppercase tracking-wider text-muted-foreground sm:table-cell">
-                Vai trò
+                {STAFF_VI.role}
               </TableHead>
               <TableHead className="hidden text-xs font-medium uppercase tracking-wider text-muted-foreground md:table-cell">
                 {BRANCH_VI.long}

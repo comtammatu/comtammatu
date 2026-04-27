@@ -43,7 +43,7 @@ import {
 } from "@comtammatu/ui/components/table";
 import { CloseSessionSheet } from "../../pos/close-session-sheet";
 
-import { FORM_VI } from "@comtammatu/shared/messages";
+import { FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
 export interface PosSessionRow {
   id: number;
   // Per-branch model (Owner D7, 2026-04-27): nullable. NULL = ca chung của
@@ -563,7 +563,7 @@ function OrderDetailSheet({
 
               <div>
                 <h4 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                  Món
+                  {PRODUCT_VI.posItem}
                 </h4>
                 <div className="mt-2 divide-y rounded-lg border">
                   {order.order_items.map((item) => (

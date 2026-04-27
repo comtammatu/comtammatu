@@ -44,6 +44,7 @@ import { tNav, tStatus } from "./_lib/dictionary";
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 type DashboardSiteKind = "central_warehouse" | "central_kitchen" | "branch";
 
 export type DashboardProps = {
@@ -563,7 +564,7 @@ export function DashboardClient(props: DashboardProps) {
                   </CardDescription>
                 </div>
                 <Button variant="ghost" size="sm" asChild>
-                  <Link href={paths.expiry}>Xem tất cả</Link>
+                  <Link href={paths.expiry}>{ACTIONS_VI.viewAll}</Link>
                 </Button>
               </div>
             </CardHeader>
@@ -666,7 +667,7 @@ export function DashboardClient(props: DashboardProps) {
                   </CardDescription>
                 </div>
                 <Button variant="ghost" size="sm" asChild>
-                  <Link href={paths.transfers}>Xem tất cả</Link>
+                  <Link href={paths.transfers}>{ACTIONS_VI.viewAll}</Link>
                 </Button>
               </div>
             </CardHeader>
@@ -712,7 +713,7 @@ export function DashboardClient(props: DashboardProps) {
                   </CardDescription>
                 </div>
                 <Button variant="ghost" size="sm" asChild>
-                  <Link href={paths.stocktake}>Xem tất cả</Link>
+                  <Link href={paths.stocktake}>{ACTIONS_VI.viewAll}</Link>
                 </Button>
               </div>
             </CardHeader>

@@ -16,6 +16,7 @@ import type {
   TicketStatusFilter,
 } from "../types";
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 const TICKET_STATUS_OPTIONS: FilterOption<TicketStatusFilter>[] = [
   { value: "all", label: "Tất cả" },
   { value: "active", label: "Còn việc" },
@@ -54,7 +55,7 @@ export function FilterBar({
       <div className="flex min-w-0 flex-wrap items-center gap-2">
         <div className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
           <IconFilter className="size-4 shrink-0" aria-hidden />
-          <span className="hidden text-sm font-medium sm:inline">Lọc</span>
+          <span className="hidden text-sm font-medium sm:inline">{ACTIONS_VI.filter}</span>
         </div>
 
         <Select

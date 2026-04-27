@@ -31,6 +31,7 @@ import {
   type ShellNavGroup,
 } from "@/lib/shell-primitives";
 
+import { ORDER_VI } from "@comtammatu/shared/messages";
 const NAV_GROUPS: ShellNavGroup[] = [
   {
     title: "Đơn hàng",
@@ -80,7 +81,7 @@ export function OrdersShell({ children, user, role }: OrdersShellProps) {
               <p className="text-xs font-semibold uppercase tracking-wide text-sidebar-foreground/60">
                 Đối soát
               </p>
-              <p className="text-lg font-semibold leading-none">Đơn hàng</p>
+              <p className="text-lg font-semibold leading-none">{ORDER_VI.long}</p>
             </div>
           </div>
         </SidebarHeader>

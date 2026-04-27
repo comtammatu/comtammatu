@@ -43,6 +43,18 @@ const VERB_MAP = {
   "Quay lại": "back",
   "Đăng nhập": "signIn",
   "Đăng xuất": "signOut",
+  "Xem tất cả": "viewAll",
+  "Xem chi tiết": "viewDetails",
+  "Xem thêm": "showMore",
+  "Thu gọn": "showLess",
+  "Tìm kiếm": "search",
+  Lọc: "filter",
+  "Đặt lại": "reset",
+  Gửi: "submit",
+  "Sao chép": "copy",
+  In: "print",
+  Xuất: "export",
+  Nhập: "import",
 };
 
 function* walk(dir) {
@@ -93,6 +105,16 @@ const DOMAIN_MAP = {
   "Nguyên liệu": { ref: "PRODUCT_VI.rawIngredient", needs: "PRODUCT_VI" },
   "Thành phẩm": { ref: "PRODUCT_VI.finishedGood", needs: "PRODUCT_VI" },
   "Nhân viên": { ref: "STAFF_VI.long", needs: "STAFF_VI" },
+  Món: { ref: "PRODUCT_VI.posItem", needs: "PRODUCT_VI" },
+  "Mặt hàng": { ref: "PRODUCT_VI.inventoryItem", needs: "PRODUCT_VI" },
+  "Sản phẩm": { ref: "PRODUCT_VI.catalogItem", needs: "PRODUCT_VI" },
+  "Khách hàng": { ref: "CUSTOMER_VI.long", needs: "CUSTOMER_VI" },
+  "Đơn hàng": { ref: "ORDER_VI.long", needs: "ORDER_VI" },
+  Bàn: { ref: "TABLE_VI.long", needs: "TABLE_VI" },
+  "Khu vực": { ref: "TABLE_VI.area", needs: "TABLE_VI" },
+  "Vai trò": { ref: "STAFF_VI.role", needs: "STAFF_VI" },
+  "Vị trí": { ref: "STAFF_VI.position", needs: "STAFF_VI" },
+  "Chức vụ": { ref: "STAFF_VI.role", needs: "STAFF_VI" },
 };
 
 function ensureImport(content, names) {

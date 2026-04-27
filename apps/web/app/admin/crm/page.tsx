@@ -1,6 +1,7 @@
 import { Heart as IconHeart } from "lucide-react";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
 
+import { CUSTOMER_VI } from "@comtammatu/shared/messages";
 export default function CrmPage() {
   return (
     <div className="space-y-5 lg:space-y-6">
@@ -8,11 +9,11 @@ export default function CrmPage() {
         <CardContent className="p-5 sm:p-6">
           <div className="space-y-3">
             <span className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
-              Khách hàng
+              {CUSTOMER_VI.long}
             </span>
             <div className="space-y-2">
               <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-                Khách hàng
+                {CUSTOMER_VI.long}
               </h2>
             </div>
           </div>

@@ -18,6 +18,7 @@ import {
 } from "@comtammatu/ui/components/tabs";
 import { UrlTabs } from "@/_components/url-tabs";
 
+import { ORDER_VI } from "@comtammatu/shared/messages";
 export default async function OrdersPage() {
   const { claims } = await loadAuthState();
 
@@ -32,7 +33,7 @@ export default async function OrdersPage() {
         <Card>
           <CardContent className="p-5 sm:p-6">
             <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-              Đơn hàng
+              {ORDER_VI.long}
             </h2>
           </CardContent>
         </Card>
@@ -69,7 +70,7 @@ export default async function OrdersPage() {
               </span>
               <div className="space-y-2">
                 <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-                  Đơn hàng
+                  {ORDER_VI.long}
                 </h2>
                 <p className="max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">
                   Theo dõi đơn bán và hòan tiền trong cùng một nơi để xử lý

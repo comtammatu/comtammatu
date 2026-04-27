@@ -4,6 +4,7 @@ import { fetchAreas } from "./actions";
 import { AreasManager } from "./areas-manager";
 import type { Area } from "./areas-manager";
 
+import { TABLE_VI } from "@comtammatu/shared/messages";
 export default async function AreasPage() {
   const { supabase, claims } = await loadAuthState();
 
@@ -24,7 +25,7 @@ export default async function AreasPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold">Khu vực</h2>
+        <h2 className="text-xl font-semibold">{TABLE_VI.area}</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Nhóm các chi nhánh thành khu vực để phân quyền cho Quản lý vùng
           (area_manager).

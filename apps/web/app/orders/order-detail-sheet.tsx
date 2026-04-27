@@ -20,7 +20,7 @@ import type { OrderRow } from "./actions";
 
 /* ─── Helpers ─── */
 
-import { BRANCH_VI, FORM_VI, STAFF_VI } from "@comtammatu/shared/messages";
+import { BRANCH_VI, FORM_VI, PRODUCT_VI, STAFF_VI } from "@comtammatu/shared/messages";
 const ORDER_STATUS_LABELS: Record<string, string> = {
   pending: "Chờ xử lý",
   in_progress: "Đang làm",
@@ -239,7 +239,7 @@ export function OrderDetailSheet({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="py-2">Món</TableHead>
+                    <TableHead className="py-2">{PRODUCT_VI.posItem}</TableHead>
                     <TableHead className="py-2 text-center w-12">SL</TableHead>
                     <TableHead className="py-2 text-right">{FORM_VI.price}</TableHead>
                     <TableHead className="py-2 text-right">T.Tiền</TableHead>

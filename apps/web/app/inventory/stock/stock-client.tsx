@@ -821,7 +821,7 @@ export function StockClient({
                           })
                         }
                       >
-                        Xuất
+                        {ACTIONS_VI.export}
                       </Button>
                     ) : null}
                     {permissions.canCreateStocktake ? (

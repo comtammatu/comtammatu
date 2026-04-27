@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import type { BranchTable } from "./page";
 
+import { TABLE_VI } from "@comtammatu/shared/messages";
 interface PosTableGateProps {
   tables: BranchTable[];
   selectedTableId: number | null;
@@ -73,7 +74,7 @@ const TableButton = memo(function TableButton({
     >
       <div className="flex w-full min-w-0 items-center justify-between gap-1.5">
         <p className="shrink-0 text-xs font-semibold uppercase tracking-wide opacity-60 @[9rem]/table-card:text-sm">
-          Bàn
+          {TABLE_VI.long}
         </p>
         <Badge
           variant={

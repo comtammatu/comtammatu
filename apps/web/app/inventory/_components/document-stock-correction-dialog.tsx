@@ -30,7 +30,7 @@ import {
   type InventoryCorrectionDocumentType,
 } from "../document-correction-actions";
 
-import { ACTIONS_VI, BRANCH_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, BRANCH_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
 export type CorrectionBranchOption = {
   id: number;
   name: string;
@@ -193,7 +193,7 @@ export function DocumentStockCorrectionDialog({
             </div>
 
             <div className="space-y-1.5">
-              <Label>Mặt hàng</Label>
+              <Label>{PRODUCT_VI.inventoryItem}</Label>
               <Select value={ingredientId} onValueChange={setIngredientId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Chọn mặt hàng" />

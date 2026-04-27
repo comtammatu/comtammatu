@@ -21,7 +21,7 @@ import {
   approvePayroll,
 } from "../payroll-actions";
 import type { PayrollPeriodRow } from "./page";
-import { ERRORS_VI, FORM_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, ERRORS_VI, FORM_VI } from "@comtammatu/shared/messages";
 
 interface Props {
   periods: PayrollPeriodRow[];
@@ -216,7 +216,7 @@ export function PayrollClient({ periods: initialPeriods }: Props) {
                     {p.status === "approved" && (
                       <Link href={`/hr/payroll/${p.id}`}>
                         <Button size="sm" variant="outline">
-                          Xem chi tiết
+                          {ACTIONS_VI.viewDetails}
                         </Button>
                       </Link>
                     )}
