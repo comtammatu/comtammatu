@@ -41,7 +41,7 @@ export function PayslipClient({ entries }: { entries: PayslipEntry[] }) {
   return (
     <div className="flex flex-col gap-4">
       {entries.map((entry) => {
-        const period = entry.payroll_periods?.[0];
+        const period = entry.payroll_periods;
         const status = period?.status ?? "paid";
         const statusLabel = PERIOD_STATUS_LABELS[status] ?? status;
 

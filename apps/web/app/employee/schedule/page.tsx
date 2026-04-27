@@ -49,6 +49,8 @@ export default async function SchedulePage() {
     .order("date");
 
   const initialShifts: ScheduleShift[] = (data ?? []).map((row) => {
+    // supabase-js typegen infers M:1 FK as array, but PostgREST returns
+    // a single object at runtime. Cast through unknown to match runtime.
     const shift = row.shifts as unknown as {
       name: string;
       start_time: string;

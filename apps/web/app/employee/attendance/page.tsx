@@ -134,7 +134,7 @@ export default async function EmployeeAttendancePage() {
                     <ItemContent>
                       <ItemTitle className="font-mono">{r.date}</ItemTitle>
                       <ItemDescription>
-                        {r.shifts?.[0]?.name ?? "Không có ca"}
+                        {r.shifts?.name ?? "Không có ca"}
                       </ItemDescription>
                       <div className="grid grid-cols-2 gap-3 text-sm">
                         <div>
@@ -196,7 +196,7 @@ export default async function EmployeeAttendancePage() {
                           {r.date}
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
-                          {r.shifts?.[0]?.name ?? "—"}
+                          {r.shifts?.name ?? "—"}
                         </TableCell>
                         <TableCell className="font-mono text-sm">
                           {r.check_in
@@ -244,5 +244,5 @@ interface AttendanceRow {
   check_out: string | null;
   status: string;
   note: string | null;
-  shifts: { name: string }[] | null;
+  shifts: { name: string } | null;
 }

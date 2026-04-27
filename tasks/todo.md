@@ -13,7 +13,7 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 
 ## Pre-deploy fixes
 
-- [ ] **Employee page WIP** (cần local DB): `pnpm db:types` regen → fix sai cast `as Type[]` trong `app/employee/{attendance,payslip,schedule}/page.tsx` (supabase-js trả FK relation thành array, không object)
+- [x] **Employee page FK casts** (2026-04-27): `pnpm db:types` regen + treat M:1 FK joins as object (`r.shifts?.name`, not `?.[0]?.name`) in `app/employee/{attendance,payslip,schedule}/page.tsx`. See lesson #10 — supabase-js typegen quirk: `isOneToOne: false` infers array but PostgREST runtime returns single object for M:1.
 - [ ] Inventory smoke pre-pilot theo `docs/runbooks/inventory/pre-release-qa.md`
 - [ ] Uptime monitor on `/api/health` (UptimeRobot — ops, không phải code)
 - [ ] Ops reconciliation query trước Momo go-live — payment/order desync surfacing trong /admin/finance

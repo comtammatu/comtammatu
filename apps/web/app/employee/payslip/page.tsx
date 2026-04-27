@@ -82,5 +82,5 @@ export interface PayslipEntry {
     period_month: number;
     period_year: number;
     status: string;
-  }[] | null;
+  } | null;
 }
