@@ -85,7 +85,9 @@ export function CreateTransferDialog({
   userRole: StaffRole;
   onCreated: (id: number) => void;
 }) {
-  const [slipKind, setSlipKind] = useState<SlipKind>("outbound");
+  const isBranchManager = userRole === "branch_manager";
+  const initialSlipKind: SlipKind = isBranchManager ? "internal" : "outbound";
+  const [slipKind, setSlipKind] = useState<SlipKind>(initialSlipKind);
   const [outboundDest, setOutboundDest] = useState<OutboundDest>("hq");
   const [outboundOtherBranchId, setOutboundOtherBranchId] = useState("");
   const [inboundFromBranchId, setInboundFromBranchId] = useState("");
@@ -103,15 +105,19 @@ export function CreateTransferDialog({
   const operational = branches.filter((b) => !isProcurementBranch(b));
   const canBranchToBranch = operational.length >= 2;
   const canInternalTransfer = userBranchId != null && locations.length >= 2;
+  const canCreateInterSite = !isBranchManager;
+  const tabCount = (canCreateInterSite ? 2 : 0) + (canInternalTransfer ? 1 : 0);
+  const tabsGridClass =
+    tabCount <= 1
+      ? "grid-cols-1"
+      : tabCount === 2
+        ? "grid-cols-2"
+        : "grid-cols-3";
 
   const isUserHq =
     hqBranchId != null && userBranchId != null && userBranchId === hqBranchId;
   const isUserOperational =
     hqBranchId != null && userBranchId != null && userBranchId !== hqBranchId;
-  const isBranchManager =
-    userRole === "branch_manager" ||
-    userRole === "warehouse_manager" ||
-    userRole === "production_manager";
 
   const myBranchName = useMemo(() => {
     if (userBranchId == null) return null;
@@ -125,7 +131,7 @@ export function CreateTransferDialog({
   );
 
   function resetForm() {
-    setSlipKind("outbound");
+    setSlipKind(initialSlipKind);
     setOutboundDest("hq");
     setOutboundOtherBranchId("");
     setInboundFromBranchId("");
@@ -214,7 +220,11 @@ export function CreateTransferDialog({
         return;
       }
       const msg =
-        slipKind === "inbound" ? "Đã tạo phiếu nhập" : "Đã tạo phiếu xuất";
+        slipKind === "internal"
+          ? "Đã cấp bếp"
+          : slipKind === "inbound"
+            ? "Đã tạo phiếu nhập"
+            : "Đã tạo phiếu xuất";
       toast.success(msg);
       onOpenChange(false);
       resetForm();
@@ -231,6 +241,10 @@ export function CreateTransferDialog({
 
     const linesPayload = buildLinesPayload(draftLines);
     if (linesPayload === undefined) return;
+    if (isBranchManager && slipKind !== "internal") {
+      toast.error("Quản lý chi nhánh chỉ tạo Cấp bếp nội bộ.");
+      return;
+    }
 
     // Resolve fromBranchId / toBranchId based on slip direction
     let fromId: number | undefined;
@@ -317,25 +331,34 @@ export function CreateTransferDialog({
     >
       <DialogContent className="max-h-dvh overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Tạo phiếu luân chuyển</DialogTitle>
+          <DialogTitle>
+            {isBranchManager ? "Tạo Cấp bếp" : "Tạo phiếu luân chuyển"}
+          </DialogTitle>
           <DialogDescription>
-            Chọn hướng luân chuyển, thêm nguyên liệu và nhập số lượng để tạo
-            phiếu nháp trước khi xuất hoặc nhận kho.
+            {isBranchManager
+              ? "Chọn kho chi nhánh gửi, bếp chi nhánh nhận và nguyên liệu cần cấp."
+              : "Chọn hướng luân chuyển, thêm nguyên liệu và nhập số lượng để tạo phiếu nháp trước khi xuất hoặc nhận kho."}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-4">
           {/* Step 1: Direction */}
           <Tabs
             value={slipKind}
-            onValueChange={(v) => setSlipKind(v as SlipKind)}
+            onValueChange={(v) => {
+              const next = v as SlipKind;
+              if (isBranchManager && next !== "internal") return;
+              setSlipKind(next);
+            }}
           >
-            <TabsList
-              className={`grid w-full ${canInternalTransfer ? "grid-cols-3" : "grid-cols-2"}`}
-            >
-              <TabsTrigger value="inbound">Phiếu nhập</TabsTrigger>
-              <TabsTrigger value="outbound">Phiếu xuất</TabsTrigger>
+            <TabsList className={`grid w-full ${tabsGridClass}`}>
+              {canCreateInterSite && (
+                <TabsTrigger value="inbound">Phiếu nhập</TabsTrigger>
+              )}
+              {canCreateInterSite && (
+                <TabsTrigger value="outbound">Phiếu xuất</TabsTrigger>
+              )}
               {canInternalTransfer && (
-                <TabsTrigger value="internal">Nội bộ</TabsTrigger>
+                <TabsTrigger value="internal">Cấp bếp</TabsTrigger>
               )}
             </TabsList>
             <TabsContent value="inbound" className="space-y-3 pt-2">
@@ -470,7 +493,7 @@ export function CreateTransferDialog({
             </TabsContent>
             <TabsContent value="internal" className="space-y-3 pt-2">
               <p className="text-sm text-muted-foreground">
-                Chuyển hàng giữa hai vị trí kho trong cùng chi nhánh.
+                Chuyển một bước từ kho chi nhánh sang bếp chi nhánh.
               </p>
               <div className="space-y-1.5">
                 <Label>Vị trí gửi *</Label>
@@ -607,10 +630,12 @@ export function CreateTransferDialog({
             )}
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="vehicleInfo">Xe / người giao</Label>
-            <Input id="vehicleInfo" name="vehicleInfo" />
-          </div>
+          {slipKind !== "internal" && (
+            <div className="space-y-1.5">
+              <Label htmlFor="vehicleInfo">Xe / người giao</Label>
+              <Input id="vehicleInfo" name="vehicleInfo" />
+            </div>
+          )}
           <div className="space-y-1.5">
             <Label htmlFor="notes">Ghi chú</Label>
             <Textarea

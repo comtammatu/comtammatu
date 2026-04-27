@@ -99,6 +99,29 @@ Chỉ điền khi kết thúc round:
 | P1 resolved or explicitly accepted | `no` | Có `INV-UIUX-001`, `002`, `005` đang mở |
 | Docs aligned (`inventory.md`, `SOP`, `RBAC`, UX contract) | `partial` | RBAC route boundary nhìn chung đúng, nhưng owner UX framing và branch transfer CTA đang lệch contract |
 
+## 6. Contract V2 implementation evidence - 2026-04-27
+
+Scope closed in this patch:
+
+- `INV-UIUX-001`: `/inventory/transfers` now labels the branch manager primary CTA as `Cap bep`; the branch manager create dialog only exposes the intra-branch flow.
+- `INV-UIUX-002`: `/inventory/issues` hides the export/report action on branch issue surfaces and adds `DialogDescription` to the live create dialog.
+- `INV-UIUX-005`: owner/area dashboard quick actions now use oversight framing (`Giam sat nhanh`) instead of operator CTAs.
+
+Runtime evidence:
+
+- `pnpm typecheck`: pass.
+- `pnpm lint`: pass.
+- `supabase migration list --linked --output json`: new migration `20260427103652` is local-only.
+- `supabase db push --linked --include-all --dry-run`: would push only `20260427103652_inventory_pilot_contract_v2.sql`.
+- `supabase db lint --linked --schema public,auth,storage --level warning --fail-on none --output json`: pass command with existing warnings only (`transition_order_item_status`, `toggle_profile_active`, `save_station_categories`, `confirm_goods_receipt_note`, `create_supplier_return_from_stock`, `create_order`, `enqueue_provisional_bill`, `storage.search_by_timestamp`).
+- `pnpm build`: pass on final rerun. Earlier transient runs failed once after Serwist service-worker bundling and once during a diagnostic non-standard `NODE_ENV=development` run; those did not reproduce in the final production build.
+
+Grep evidence:
+
+- Runtime issue options remain `consumption | writeoff | other`; `kitchen_use` only appears in retired comments and rejection tests.
+- New RPC gates enforce `inventory:transfer_create`, `inventory:transfer_ship`, and `inventory:transfer_receive`.
+- POS consumption now raises `default_consumption_location_missing` instead of falling back to `default_receive`.
+
 ### Final call
 
 - `ready`
@@ -108,4 +131,4 @@ Reason:
 
 - Chưa đủ coverage cho sign-off UI/UX Inventory.
 - Có `P1` mở ở branch transfers, branch issues placeholder, và owner dashboard framing.
-- Cần chạy tiếp Wave 2 chi tiết (PO/GRN/invoice), Wave 4 downstream `received -> kitchen_use -> POS bridge`, và Wave 5 `area_manager`.
+- Cần chạy tiếp Wave 2 chi tiết (PO/GRN), Wave 4 downstream `received -> intra-branch Cấp bếp transfer -> POS bridge`, và Wave 5 `area_manager`.

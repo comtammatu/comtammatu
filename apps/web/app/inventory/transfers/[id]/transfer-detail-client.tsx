@@ -98,6 +98,7 @@ export function TransferDetailClient({
   });
   const [shortNote, setShortNote] = useState("");
   const isReceiveMode = transfer.status === "confirmed_receive";
+  const isIntraBranch = transfer.fromBranchId === transfer.toBranchId;
   const shortLines = useMemo(() => {
     if (!isReceiveMode) return 0;
     let count = 0;
@@ -145,12 +146,12 @@ export function TransferDetailClient({
   const actionConfig = useMemo(() => {
     if (transfer.status === "draft") {
       return {
-        label: "Xác nhận xuất kho",
+        label: isIntraBranch ? "Xác nhận Cấp bếp" : "Xác nhận xuất kho",
         action: "confirm_ship" as const,
         enabled:
-          userRole !== "branch_manager" ||
-          userBranchId == null ||
-          userBranchId === transfer.fromBranchId,
+          userRole === "branch_manager"
+            ? isIntraBranch && userBranchId === transfer.fromBranchId
+            : true,
       };
     }
     if (transfer.status === "confirmed_ship") {
@@ -158,9 +159,9 @@ export function TransferDetailClient({
         label: "Chuyển sang đang vận chuyển",
         action: "mark_in_transit" as const,
         enabled:
-          userRole !== "branch_manager" ||
-          userBranchId == null ||
-          userBranchId === transfer.fromBranchId,
+          userRole === "branch_manager"
+            ? false
+            : userBranchId == null || userBranchId === transfer.fromBranchId,
       };
     }
     if (transfer.status === "in_transit") {
@@ -189,6 +190,7 @@ export function TransferDetailClient({
     transfer.fromBranchId,
     transfer.status,
     transfer.toBranchId,
+    isIntraBranch,
     userBranchId,
     userRole,
   ]);

@@ -2,7 +2,25 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { TriangleAlert as IconAlertTriangle, ArrowLeftRight as IconArrowLeftRight, ArrowRight as IconArrowRight, ChartBar as IconChartBar, SquareCheck as IconSquareCheck, ChefHat as IconChefHat, ClipboardList as IconClipboardList, Clock as IconClock, Factory as IconBuildingFactory, Hourglass as IconHourglass, Lightbulb as IconBulb, Package as IconPackage, PackageX as IconPackageOff, Receipt as IconReceipt, ShoppingCart as IconShoppingCart, Truck as IconTruck } from "lucide-react";
+import {
+  TriangleAlert as IconAlertTriangle,
+  ArrowLeftRight as IconArrowLeftRight,
+  ArrowRight as IconArrowRight,
+  ChartBar as IconChartBar,
+  SquareCheck as IconSquareCheck,
+  ChefHat as IconChefHat,
+  ClipboardList as IconClipboardList,
+  Clock as IconClock,
+  Factory as IconBuildingFactory,
+  Hourglass as IconHourglass,
+  Lightbulb as IconBulb,
+  Package as IconPackage,
+  PackageX as IconPackageOff,
+  Receipt as IconReceipt,
+  ShoppingCart as IconShoppingCart,
+  Truck as IconTruck,
+} from "lucide-react";
+import type { StaffRole } from "@comtammatu/shared/auth";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -32,6 +50,7 @@ export type DashboardProps = {
   routeBase: InventoryRouteBase;
   siteName: string;
   siteKind: DashboardSiteKind;
+  userRole: StaffRole;
   showProcurement: boolean;
   totalStockValue: number;
   pendingPO: number;
@@ -117,6 +136,16 @@ function buildQuickActions(
     { label: tNav("issues"), icon: IconChefHat, href: p.issues },
     { label: tNav("stock"), icon: IconPackage, href: p.stock },
     { label: tNav("stocktake"), icon: IconClipboardList, href: p.stocktake },
+  ];
+}
+
+function buildOversightActions(routeBase: InventoryRouteBase) {
+  const p = getInventoryPaths(routeBase);
+  return [
+    { label: "Tồn cần xử lý", icon: IconPackage, href: p.stock, primary: true },
+    { label: tNav("reports"), icon: IconChartBar, href: p.reports },
+    { label: tNav("stocktake"), icon: IconClipboardList, href: p.stocktake },
+    { label: "Cảnh báo hạn dùng", icon: IconHourglass, href: p.expiry },
   ];
 }
 
@@ -287,6 +316,7 @@ export function DashboardClient(props: DashboardProps) {
     routeBase,
     siteName,
     siteKind,
+    userRole,
     showProcurement,
     totalStockValue,
     pendingPO,
@@ -299,7 +329,10 @@ export function DashboardClient(props: DashboardProps) {
 
   const isMobile = useIsMobile();
   const paths = getInventoryPaths(routeBase);
-  const quickActions = buildQuickActions(siteKind, routeBase);
+  const isOversight = userRole === "owner" || userRole === "area_manager";
+  const quickActions = isOversight
+    ? buildOversightActions(routeBase)
+    : buildQuickActions(siteKind, routeBase);
   const tasks = buildTasks(props);
 
   const activeTransferList = transfers
@@ -416,13 +449,20 @@ export function DashboardClient(props: DashboardProps) {
         {/* Quick actions */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Thao tác nhanh</CardTitle>
+            <CardTitle className="text-sm">
+              {isOversight ? "Giám sát nhanh" : "Thao tác nhanh"}
+            </CardTitle>
             <CardDescription className="text-xs">
-              {siteKind === "central_warehouse" &&
+              {isOversight && "Ngoại lệ, báo cáo và trạng thái tồn cần rà soát"}
+              {!isOversight &&
+                siteKind === "central_warehouse" &&
                 "Các thao tác phổ biến tại trụ sở"}
-              {siteKind === "central_kitchen" &&
+              {!isOversight &&
+                siteKind === "central_kitchen" &&
                 "Các thao tác phổ biến tại bếp trung tâm"}
-              {siteKind === "branch" && "Các thao tác phổ biến tại chi nhánh"}
+              {!isOversight &&
+                siteKind === "branch" &&
+                "Các thao tác phổ biến tại chi nhánh"}
             </CardDescription>
           </CardHeader>
           <CardContent>

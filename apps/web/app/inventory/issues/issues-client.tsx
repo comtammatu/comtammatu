@@ -3,13 +3,21 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight as IconArrowRight, FileDown as IconFileDownload, FilterX as IconFilterX, EllipsisVertical as IconDotsVertical, Plus as IconPlus, Search as IconSearch } from "lucide-react";
+import {
+  ArrowRight as IconArrowRight,
+  FileDown as IconFileDownload,
+  FilterX as IconFilterX,
+  EllipsisVertical as IconDotsVertical,
+  Plus as IconPlus,
+  Search as IconSearch,
+} from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -145,6 +153,9 @@ export function IssuesClient({
   const [issueType, setIssueType] = useState<IssueTypeValue>("consumption");
   const [notes, setNotes] = useState("");
   const [isPending, startTransition] = useTransition();
+  const selectedBranchKind =
+    branches.find((b) => b.id === Number(branchId))?.branchKind ?? null;
+  const showExportAction = !isMobile && selectedBranchKind !== "branch";
 
   const filtered = useMemo(() => {
     let result = issues;
@@ -299,7 +310,7 @@ export function IssuesClient({
         title={tNav("issues", "navigation")}
         actions={
           <>
-            {!isMobile && (
+            {showExportAction && (
               <Button
                 type="button"
                 variant="outline"
@@ -438,13 +449,13 @@ export function IssuesClient({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {isStorageBranchKind(
-                branches.find((b) => b.id === Number(branchId))?.branchKind ??
-                  null,
-              )
+              {isStorageBranchKind(selectedBranchKind)
                 ? "Tạo phiếu hao hụt kho"
                 : "Tạo phiếu xuất kho"}
             </DialogTitle>
+            <DialogDescription>
+              Chọn điểm vận hành và loại xuất kho cần ghi nhận.
+            </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleCreate} className="space-y-4">
             <div className="space-y-1.5">

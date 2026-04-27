@@ -1,4 +1,5 @@
 import { canAccess, PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import type { StaffRole } from "@comtammatu/shared/auth";
 import { loadAuthState } from "@/_lib/auth";
 import { currentUserHasPermissionAny } from "@/_lib/permissions";
 import {
@@ -51,6 +52,7 @@ type DashboardExpiry = {
 export type InventoryDashboardData = {
   siteName: string;
   siteKind: DashboardSiteKind;
+  userRole: StaffRole;
   showProcurement: boolean;
   totalStockValue: number;
   pendingPO: number;
@@ -219,6 +221,7 @@ export async function loadInventoryDashboardData(
   return {
     siteName,
     siteKind,
+    userRole: claims.user_role,
     showProcurement,
     totalStockValue,
     pendingPO,

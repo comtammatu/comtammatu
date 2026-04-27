@@ -3,7 +3,16 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight as IconArrowRight, CircleCheck as IconCircleCheck, ChevronRight as IconChevronRight, PackagePlus as IconPackageImport, PackageX as IconPackageOff, Plus as IconPlus, Search as IconSearch, Send as IconSend } from "lucide-react";
+import {
+  ArrowRight as IconArrowRight,
+  CircleCheck as IconCircleCheck,
+  ChevronRight as IconChevronRight,
+  PackagePlus as IconPackageImport,
+  PackageX as IconPackageOff,
+  Plus as IconPlus,
+  Search as IconSearch,
+  Send as IconSend,
+} from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
@@ -135,8 +144,11 @@ export function TransfersListClient({
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [activeTab, setActiveTab] = useState<Tab>("receive");
 
-  const canCreate =
-    branches.length >= 2 || (userBranchId != null && locations.length >= 2);
+  const isBranchManager = userRole === "branch_manager";
+  const canCreate = isBranchManager
+    ? userBranchId != null && locations.length >= 2
+    : branches.length >= 2 || (userBranchId != null && locations.length >= 2);
+  const createLabel = isBranchManager ? "Cấp bếp" : "Tạo phiếu";
 
   const tabGroups = useMemo(() => {
     const groups: Record<Tab, TransferListRow[]> = {
@@ -200,7 +212,7 @@ export function TransfersListClient({
             canCreate ? (
               <Button size="sm" onClick={() => setOpen(true)}>
                 <IconPlus className="size-4" />
-                Tạo phiếu
+                {createLabel}
               </Button>
             ) : undefined
           }
@@ -320,7 +332,7 @@ export function TransfersListClient({
           canCreate ? (
             <Button size="sm" onClick={() => setOpen(true)}>
               <IconPlus className="size-4" />
-              Tạo phiếu
+              {createLabel}
             </Button>
           ) : undefined
         }
@@ -460,7 +472,11 @@ function MobileTransferCard({
   basePath: string;
 }) {
   const Icon =
-    tab === "receive" ? IconPackageImport : tab === "dispatch" ? IconSend : IconCircleCheck;
+    tab === "receive"
+      ? IconPackageImport
+      : tab === "dispatch"
+        ? IconSend
+        : IconCircleCheck;
 
   return (
     <InteractiveCard asChild minHeight="mobile" className="h-auto">

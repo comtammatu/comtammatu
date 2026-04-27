@@ -20,6 +20,8 @@ type PosSupabase = NonNullable<
 >["supabase"];
 
 const POS_ROLES = MODULE_ACL.pos.allowedRoles;
+const POS_CONSUMPTION_SETUP_ERROR =
+  "Chi nhánh chưa cấu hình Bếp chi nhánh/default_consumption cho POS. Thiết lập vị trí tiêu hao mặc định trước khi thanh toán.";
 
 const branchIdSchema = z.coerce
   .number()
@@ -52,6 +54,14 @@ function mapPaymentRpcError(message: string): string | null {
   const normalized = message.toLowerCase();
 
   if (
+    normalized.includes("default_consumption_location_missing") ||
+    normalized.includes("consume_location_missing") ||
+    normalized.includes("default_consumption")
+  ) {
+    return POS_CONSUMPTION_SETUP_ERROR;
+  }
+
+  if (
     normalized.includes("posting_rule_not_found") ||
     normalized.includes("gl_account_not_found") ||
     normalized.includes("fiscal_period_closed")
@@ -61,6 +71,28 @@ function mapPaymentRpcError(message: string): string | null {
 
   if (normalized.includes("tenant_mismatch")) {
     return "Không thể xử lý thanh toán cho chi nhánh này.";
+  }
+
+  return null;
+}
+
+async function verifyDefaultConsumptionLocation(
+  supabase: PosSupabase,
+  tenantId: number,
+  branchId: number,
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("inventory_locations")
+    .select("id")
+    .eq("tenant_id", tenantId)
+    .eq("branch_id", branchId)
+    .eq("is_active", true)
+    .eq("is_default_consumption", true)
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !data) {
+    return POS_CONSUMPTION_SETUP_ERROR;
   }
 
   return null;
@@ -274,6 +306,15 @@ export async function createPayment(
     };
   }
 
+  if (parsedPayment.data.method === "cash") {
+    const setupError = await verifyDefaultConsumptionLocation(
+      supabase,
+      claims.tenant_id,
+      parsedBranch.data,
+    );
+    if (setupError) return { success: false, error: setupError };
+  }
+
   // Build provider: VietQR reads per-tenant bank config from system_settings
   // (with ENV fallback) so owners can rotate STK without redeploy.
   let provider: PaymentProvider | null;
@@ -393,6 +434,14 @@ export async function createPayment(
       parsedPayment.data.orderId,
     );
     if (stockErr) {
+      const mappedError = mapPaymentRpcError(stockErr.message ?? "");
+      if (mappedError) {
+        console.error(
+          "[createPayment] consume_stock_for_order setup failed:",
+          stockErr.message,
+        );
+        return { success: false, error: mappedError };
+      }
       // Non-fatal: payment succeeded, stock reconciliation can be done manually.
       // See tasks/todo.md for payment-order desync recovery query.
       console.error(
@@ -494,6 +543,13 @@ export async function confirmPayment(
     return { success: false, error: "Thanh toán không ở trạng thái chờ." };
   }
 
+  const setupError = await verifyDefaultConsumptionLocation(
+    supabase,
+    claims.tenant_id,
+    claims.branch_id,
+  );
+  if (setupError) return { success: false, error: setupError };
+
   // Atomic RPC: confirm payment + update order + auto-post GL journal
   // Must run BEFORE stock consumption so if it fails, no stock is deducted.
   const { error: rpcError } = await supabase.rpc("confirm_payment_and_post", {
@@ -528,6 +584,14 @@ export async function confirmPayment(
     payment.order_id,
   );
   if (stockErr) {
+    const mappedError = mapPaymentRpcError(stockErr.message ?? "");
+    if (mappedError) {
+      console.error(
+        "[confirmPayment] consume_stock_for_order setup failed:",
+        stockErr.message,
+      );
+      return { success: false, error: mappedError };
+    }
     console.error(
       "[confirmPayment] consume_stock_for_order failed:",
       stockErr.message,
@@ -722,7 +786,18 @@ export async function confirmCashPayment(
   );
   if (!ctx) return { success: false, error: "Không có quyền thanh toán" };
 
-  const { supabase } = ctx;
+  const { supabase, claims } = ctx;
+
+  if (claims.branch_id === null) {
+    return { success: false, error: "Không xác định được chi nhánh" };
+  }
+
+  const setupError = await verifyDefaultConsumptionLocation(
+    supabase,
+    claims.tenant_id,
+    claims.branch_id,
+  );
+  if (setupError) return { success: false, error: setupError };
 
   const { data, error } = await supabase.rpc("confirm_cash_payment", {
     p_order_id: parsed.data.orderId,
@@ -752,6 +827,10 @@ export async function confirmCashPayment(
     }
     if (msg.includes("tenant mismatch")) {
       return { success: false, error: "Không có quyền truy cập đơn này" };
+    }
+    const mappedError = mapPaymentRpcError(msg);
+    if (mappedError) {
+      return { success: false, error: mappedError };
     }
     if (msg.includes("no active") && msg.includes("printer")) {
       return {
