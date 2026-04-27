@@ -474,6 +474,80 @@ export type Database = {
           },
         ]
       }
+      branch_trusted_egress_ips: {
+        Row: {
+          branch_id: number
+          created_at: string
+          first_seen_at: string
+          id: number
+          ip_address: unknown
+          last_seen_at: string
+          registered_by_agent_id: string | null
+          registered_by_user: string | null
+          registered_via: string
+          revoked_at: string | null
+          revoked_by_user: string | null
+          tenant_id: number
+        }
+        Insert: {
+          branch_id: number
+          created_at?: string
+          first_seen_at?: string
+          id?: never
+          ip_address: unknown
+          last_seen_at?: string
+          registered_by_agent_id?: string | null
+          registered_by_user?: string | null
+          registered_via: string
+          revoked_at?: string | null
+          revoked_by_user?: string | null
+          tenant_id: number
+        }
+        Update: {
+          branch_id?: number
+          created_at?: string
+          first_seen_at?: string
+          id?: never
+          ip_address?: unknown
+          last_seen_at?: string
+          registered_by_agent_id?: string | null
+          registered_by_user?: string | null
+          registered_via?: string
+          revoked_at?: string | null
+          revoked_by_user?: string | null
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_trusted_egress_ips_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_trusted_egress_ips_registered_by_user_fkey"
+            columns: ["registered_by_user"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_trusted_egress_ips_revoked_by_user_fkey"
+            columns: ["revoked_by_user"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_trusted_egress_ips_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       branch_zones: {
         Row: {
           branch_id: number
