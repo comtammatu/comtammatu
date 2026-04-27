@@ -254,6 +254,13 @@ function PosDesktopInner({
 
   const [customizerItem, setCustomizerItem] = useState<MenuItem | null>(null);
   const [editingCartItem, setEditingCartItem] = useState<CartItem | null>(null);
+  // Tap-to-edit for an item already in the append draft. Mirrors editingCartItem
+  // but targets the local appendDraftItems list instead of the cart store —
+  // lets the cashier add a note (or change variant/qty) on a row that landed
+  // in the draft via the fast no-variant tap path.
+  const [editingAppendItem, setEditingAppendItem] = useState<CartItem | null>(
+    null,
+  );
   const [isPending, startTransition] = useTransition();
   const [showCloseSession, setShowCloseSession] = useState(false);
   const [billOrderId, setBillOrderId] = useState<number | null>(null);
@@ -385,6 +392,7 @@ function PosDesktopInner({
 
   useEffect(() => {
     setAppendDraftItems([]);
+    setEditingAppendItem(null);
   }, [appendTarget?.orderId]);
 
   // Count active orders per table — drives the"N đơn" badge on multi-order
@@ -474,6 +482,20 @@ function PosDesktopInner({
     );
   }, []);
 
+  const handleAppendDraftItemEdit = useCallback(
+    (cartItem: CartItem) => {
+      const menuItem = menuItemById.get(cartItem.menu_item_id);
+      if (!menuItem) {
+        toast.error("Món này không còn trong thực đơn.");
+        return;
+      }
+      setEditingCartItem(null);
+      setEditingAppendItem(cartItem);
+      setCustomizerItem(menuItem);
+    },
+    [menuItemById],
+  );
+
   const cancelAppendWorkflow = useCallback(() => {
     if (appendTarget == null) return;
 
@@ -482,6 +504,7 @@ function PosDesktopInner({
     clearAppendTarget();
     setCustomizerItem(null);
     setEditingCartItem(null);
+    setEditingAppendItem(null);
     setCartDrawerOpen(false);
     focusOrderWorkflow(target.orderId, target.orderNumber);
   }, [appendTarget, clearAppendTarget, focusOrderWorkflow]);
@@ -504,6 +527,7 @@ function PosDesktopInner({
         clearAppendTarget();
         setCustomizerItem(null);
         setEditingCartItem(null);
+        setEditingAppendItem(null);
         setCartDrawerOpen(false);
         focusOrderWorkflow(target.orderId, target.orderNumber);
       },
@@ -692,6 +716,7 @@ function PosDesktopInner({
         }
         if (hasVariants || hasModifiers || hasSides) {
           setEditingCartItem(null);
+          setEditingAppendItem(null);
           setCustomizerItem(item);
         } else {
           const line: CartItem = {
@@ -710,6 +735,7 @@ function PosDesktopInner({
 
       if (hasVariants || hasModifiers || hasSides) {
         setEditingCartItem(null);
+        setEditingAppendItem(null);
         setCustomizerItem(item);
       } else {
         setShowOrders(false);
@@ -727,6 +753,7 @@ function PosDesktopInner({
         return;
       }
 
+      setEditingAppendItem(null);
       setEditingCartItem(cartItem);
       setCustomizerItem(menuItem);
     },
@@ -787,6 +814,48 @@ function PosDesktopInner({
         return;
       }
 
+      if (editingAppendItem) {
+        if (appendSubmitting) {
+          toast.message("Đang gửi món thêm, vui lòng chờ...");
+          return;
+        }
+        const hasNote = note !== undefined && note.length > 0;
+        const baseKey = makeCartKey(item.id, variantId, modifiers, sides);
+        const key = hasNote ? makeNotedCartKey(baseKey) : baseKey;
+        const updatedItem: CartItem = {
+          key,
+          menu_item_id: item.id,
+          item_name: item.name,
+          variant_id: variantId,
+          variant_name: variantName,
+          quantity,
+          unit_price: unitPrice,
+          modifiers,
+          sides,
+          note,
+        };
+        setAppendDraftItems((currentItems) => {
+          const hasCollision = currentItems.some(
+            (it) => it.key === key && it.key !== editingAppendItem.key,
+          );
+          if (hasCollision && key !== editingAppendItem.key) {
+            return currentItems
+              .filter((it) => it.key !== editingAppendItem.key)
+              .map((it) =>
+                it.key === key
+                  ? { ...it, quantity: it.quantity + quantity }
+                  : it,
+              );
+          }
+          return currentItems.map((it) =>
+            it.key === editingAppendItem.key ? updatedItem : it,
+          );
+        });
+        setEditingAppendItem(null);
+        setCustomizerItem(null);
+        return;
+      }
+
       if (appendTarget) {
         if (appendSubmitting) {
           toast.message("Đang gửi món thêm, vui lòng chờ...");
@@ -829,6 +898,7 @@ function PosDesktopInner({
       appendSubmitting,
       appendTarget,
       cartStore,
+      editingAppendItem,
       editingCartItem,
       replaceCartItems,
     ],
@@ -941,6 +1011,7 @@ function PosDesktopInner({
         onSubmit: handleSubmitAppendDraft,
         onCancel: cancelAppendWorkflow,
         onRemoveItem: removeAppendDraftItem,
+        onEditItem: handleAppendDraftItemEdit,
       },
       onSubmitOrder: handleSubmitOrder,
       onOrderTypeChange: handleOrderTypeChange,
@@ -960,6 +1031,7 @@ function PosDesktopInner({
       handleSubmitAppendDraft,
       cancelAppendWorkflow,
       removeAppendDraftItem,
+      handleAppendDraftItemEdit,
       handleSubmitOrder,
       handleOrderTypeChange,
       handleCartItemCustomize,
@@ -1204,11 +1276,18 @@ function PosDesktopInner({
         onClose={() => {
           setCustomizerItem(null);
           setEditingCartItem(null);
+          setEditingAppendItem(null);
         }}
         onConfirm={handleCustomizerConfirm}
-        mode={editingCartItem ? "edit" : appendTarget ? "append" : "new"}
+        mode={
+          editingCartItem || editingAppendItem
+            ? "edit"
+            : appendTarget
+              ? "append"
+              : "new"
+        }
         appendOrderLabel={appendTarget?.orderNumber ?? null}
-        initialCartItem={editingCartItem}
+        initialCartItem={editingCartItem ?? editingAppendItem}
       />
 
       <OrderDetailSheet

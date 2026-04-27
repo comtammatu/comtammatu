@@ -92,6 +92,7 @@ function SplitSidebarComponent({
               onSubmit={appendDraft.onSubmit}
               onCancel={appendDraft.onCancel}
               onRemoveItem={appendDraft.onRemoveItem}
+              onEditItem={appendDraft.onEditItem}
             />
           ) : (
             <CartPane

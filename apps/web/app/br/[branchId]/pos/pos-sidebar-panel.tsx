@@ -76,6 +76,7 @@ interface PosSidebarContentProps {
     onSubmit: () => void;
     onCancel: () => void;
     onRemoveItem: (key: string) => void;
+    onEditItem: (item: CartItem) => void;
   };
   onClosePane?: () => void;
   onSubmitOrder: () => void;
@@ -115,6 +116,7 @@ function PosSidebarContentComponent({
         onCancel={appendDraft.onCancel}
         onClosePane={onClosePane}
         onRemoveItem={appendDraft.onRemoveItem}
+        onEditItem={appendDraft.onEditItem}
       />
     );
   }

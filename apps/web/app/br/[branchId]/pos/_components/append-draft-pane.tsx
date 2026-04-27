@@ -14,6 +14,7 @@ import {
 import { Item } from "@comtammatu/ui/components/item";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Spinner } from "@comtammatu/ui/components/spinner";
+import { cn } from "@comtammatu/ui";
 import {
   Plus as IconPlus,
   Send as IconSend,
@@ -37,6 +38,12 @@ interface AppendDraftPaneProps {
   onCancel: () => void;
   onClosePane?: () => void;
   onRemoveItem: (key: string) => void;
+  /**
+   * Tap on a draft row to edit (variant / modifiers / note / quantity). Mirrors
+   * the cart pane so items added without options can still get a note appended
+   * later — without this, no-variant items land in the draft as static rows.
+   */
+  onEditItem: (item: CartItem) => void;
 }
 
 function AppendDraftPaneComponent({
@@ -47,6 +54,7 @@ function AppendDraftPaneComponent({
   onCancel,
   onClosePane,
   onRemoveItem,
+  onEditItem,
 }: AppendDraftPaneProps) {
   const quantity = items.reduce((sum, item) => sum + item.quantity, 0);
   const total = calcCartTotal(items);
@@ -111,15 +119,26 @@ function AppendDraftPaneComponent({
                   <Item
                     variant="outline"
                     size="sm"
-                    className="h-20 rounded-none bg-card px-3 py-2 pr-12 sm:px-4 sm:pr-14"
+                    className={cn(
+                      "h-20 rounded-none bg-card p-0 pr-12 shadow-sm transition-colors hover:shadow-md sm:pr-14",
+                    )}
                   >
-                    <PosLineItemCompact
-                      quantity={item.quantity}
-                      title={displayName}
-                      total={formatVND(subtotal)}
-                      options={summary.options}
-                      note={summary.note}
-                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="h-full w-full justify-start whitespace-normal rounded-none px-3 py-2 text-left hover:bg-transparent sm:px-4"
+                      aria-label={`Sửa ${displayName} trong món thêm`}
+                      disabled={isSubmitting}
+                      onClick={() => onEditItem(item)}
+                    >
+                      <PosLineItemCompact
+                        quantity={item.quantity}
+                        title={displayName}
+                        total={formatVND(subtotal)}
+                        options={summary.options}
+                        note={summary.note}
+                      />
+                    </Button>
                   </Item>
                   <Button
                     type="button"
