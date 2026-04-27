@@ -21,7 +21,7 @@ type PosSupabase = NonNullable<
 
 const POS_ROLES = MODULE_ACL.pos.allowedRoles;
 const POS_CONSUMPTION_SETUP_ERROR =
-  "Chi nhánh chưa cấu hình Bếp chi nhánh/default_consumption cho POS. Thiết lập vị trí tiêu hao mặc định trước khi thanh toán.";
+  "Chi nhánh chưa cấu hình Bếp chi nhánh cho POS. Thiết lập vị trí bếp trước khi thanh toán.";
 
 const branchIdSchema = z.coerce
   .number()
@@ -55,6 +55,7 @@ function mapPaymentRpcError(message: string): string | null {
 
   if (
     normalized.includes("default_consumption_location_missing") ||
+    normalized.includes("consumption_location_missing") ||
     normalized.includes("consume_location_missing") ||
     normalized.includes("default_consumption")
   ) {
@@ -76,7 +77,7 @@ function mapPaymentRpcError(message: string): string | null {
   return null;
 }
 
-async function verifyDefaultConsumptionLocation(
+async function verifyConsumptionLocation(
   supabase: PosSupabase,
   tenantId: number,
   branchId: number,
@@ -87,7 +88,7 @@ async function verifyDefaultConsumptionLocation(
     .eq("tenant_id", tenantId)
     .eq("branch_id", branchId)
     .eq("is_active", true)
-    .eq("is_default_consumption", true)
+    .eq("location_kind", "kitchen")
     .limit(1)
     .maybeSingle();
 
@@ -307,7 +308,7 @@ export async function createPayment(
   }
 
   if (parsedPayment.data.method === "cash") {
-    const setupError = await verifyDefaultConsumptionLocation(
+    const setupError = await verifyConsumptionLocation(
       supabase,
       claims.tenant_id,
       parsedBranch.data,
@@ -543,7 +544,7 @@ export async function confirmPayment(
     return { success: false, error: "Thanh toán không ở trạng thái chờ." };
   }
 
-  const setupError = await verifyDefaultConsumptionLocation(
+  const setupError = await verifyConsumptionLocation(
     supabase,
     claims.tenant_id,
     claims.branch_id,
@@ -792,7 +793,7 @@ export async function confirmCashPayment(
     return { success: false, error: "Không xác định được chi nhánh" };
   }
 
-  const setupError = await verifyDefaultConsumptionLocation(
+  const setupError = await verifyConsumptionLocation(
     supabase,
     claims.tenant_id,
     claims.branch_id,

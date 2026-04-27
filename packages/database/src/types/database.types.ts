@@ -6406,6 +6406,17 @@ export type Database = {
         Args: { p_round_no: number; p_session_id: number }
         Returns: Json
       }
+      commit_intra_branch_transfer: {
+        Args: {
+          p_branch_id: number
+          p_from_location_id: number
+          p_lines?: Json
+          p_notes?: string
+          p_to_location_id: number
+          p_transfer_number: string
+        }
+        Returns: Json
+      }
       complete_payment_and_consume_stock: {
         Args: {
           p_actor_id?: string
@@ -6446,17 +6457,6 @@ export type Database = {
       }
       confirm_cash_payment: {
         Args: { p_cash_received: number; p_order_id: number }
-        Returns: Json
-      }
-      commit_intra_branch_transfer: {
-        Args: {
-          p_branch_id: number
-          p_from_location_id: number
-          p_lines?: Json
-          p_notes?: string
-          p_to_location_id: number
-          p_transfer_number: string
-        }
         Returns: Json
       }
       confirm_goods_receipt_note: { Args: { p_grn_id: number }; Returns: Json }
