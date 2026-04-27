@@ -17,6 +17,7 @@ import {
   CardTitle,
 } from "@comtammatu/ui/components/card";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { ACTIONS_VI, ERRORS_VI } from "@comtammatu/shared/messages";
 import { SYSTEM_SETTING_KEYS } from "@comtammatu/shared/settings";
 import { updatePaymentSettings } from "./actions";
 
@@ -95,7 +96,7 @@ export function PaymentsForm({
       );
       const result = await updatePaymentSettings(null, fd);
       if (!result.success) {
-        setServerError(result.error ?? "Đã xảy ra lỗi");
+        setServerError(result.error ?? ERRORS_VI.fallback);
         return;
       }
       toast.success("Đã lưu cài đặt thanh toán");
@@ -254,7 +255,7 @@ export function PaymentsForm({
       <div className="flex justify-end">
         <Button type="submit" disabled={isPending}>
           {isPending && <Spinner className="mr-2" />}
-          Lưu cài đặt
+          {ACTIONS_VI.save} cài đặt
         </Button>
       </div>
     </form>

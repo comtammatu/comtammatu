@@ -21,6 +21,7 @@ import {
   DialogDescription,
 } from "@comtammatu/ui/components/dialog";
 import { Lock as IconLock, Plus as IconPlus, FileSearch as IconFileSearch } from "lucide-react";
+import { ACTIONS_VI, ERRORS_VI } from "@comtammatu/shared/messages";
 import {
   openFiscalPeriod,
   closeFiscalPeriod,
@@ -73,7 +74,7 @@ export function PeriodsClient({ periods: initial }: Props) {
         month: now.getMonth() + 1,
       });
       if (!res.success) {
-        setError(res.error ?? "Lỗi không xác định");
+        setError(res.error ?? ERRORS_VI.unknown);
         return;
       }
       const newPeriod = res.data as FiscalPeriodRow;
@@ -103,7 +104,7 @@ export function PeriodsClient({ periods: initial }: Props) {
         month: closeTarget.period_month,
       });
       if (!res.success) {
-        setError(res.error ?? "Lỗi không xác định");
+        setError(res.error ?? ERRORS_VI.unknown);
         setCloseTarget(null);
         return;
       }
@@ -260,7 +261,7 @@ export function PeriodsClient({ periods: initial }: Props) {
           </p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCloseTarget(null)}>
-              Hủy
+              {ACTIONS_VI.cancel}
             </Button>
             <Button onClick={confirmClose} disabled={isPending}>
               Đóng kỳ
@@ -343,7 +344,7 @@ export function PeriodsClient({ periods: initial }: Props) {
                 setReconData(null);
               }}
             >
-              Đóng
+              {ACTIONS_VI.close}
             </Button>
           </DialogFooter>
         </DialogContent>

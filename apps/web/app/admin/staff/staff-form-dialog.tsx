@@ -15,6 +15,7 @@ import {
 } from "@comtammatu/ui/components/dialog";
 import { FieldGroup } from "@comtammatu/ui/components/field";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { ACTIONS_VI, ERRORS_VI } from "@comtammatu/shared/messages";
 import { HQ_EXCLUDED_OPERATIONAL_ROLES } from "@comtammatu/shared/auth";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { SelectField, TextField, valuesToFormData } from "@/components/form";
@@ -142,7 +143,7 @@ export function StaffFormDialog({
         ? await updateStaff(null, fd)
         : await createStaff(null, fd);
       if (!result.success) {
-        setServerError(result.error ?? "Đã xảy ra lỗi");
+        setServerError(result.error ?? ERRORS_VI.fallback);
         return;
       }
       onOpenChange(false);
@@ -235,11 +236,11 @@ export function StaffFormDialog({
               onClick={() => onOpenChange(false)}
               disabled={isPending}
             >
-              Hủy
+              {ACTIONS_VI.cancel}
             </Button>
             <Button type="submit" disabled={isPending}>
               {isPending && <Spinner className="mr-2" />}
-              {isEdit ? "Cập nhật" : "Tạo mới"}
+              {isEdit ? ACTIONS_VI.update : ACTIONS_VI.create}
             </Button>
           </DialogFooter>
         </form>

@@ -29,6 +29,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { Plus as IconPlus, Trash as IconTrash } from "lucide-react";
+import { ACTIONS_VI, ERRORS_VI } from "@comtammatu/shared/messages";
 import { FormattedNumberInput } from "@/components/form";
 import { createJournalEntry } from "../accounting-actions";
 import type { JournalEntryRow, AccountOption } from "./page";
@@ -98,7 +99,7 @@ export function JournalClient({ entries: initial, accounts }: Props) {
       });
 
       if (!res.success) {
-        setError(res.error ?? "Lỗi không xác định");
+        setError(res.error ?? ERRORS_VI.unknown);
         return;
       }
 
@@ -368,7 +369,7 @@ export function JournalClient({ entries: initial, accounts }: Props) {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>
-              Hủy
+              {ACTIONS_VI.cancel}
             </Button>
             <Button
               onClick={handleSubmit}

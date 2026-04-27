@@ -35,6 +35,7 @@ import type { TableStatus } from "./constants";
 import { TableFormDialog } from "./table-form-dialog";
 import type { ZoneRow } from "./zone-table";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { ACTIONS_VI, STATES_VI } from "@comtammatu/shared/messages";
 import { TableEmptyStateRow } from "../../components/table-empty-state-row";
 
 export interface TableRow {
@@ -65,7 +66,7 @@ export function TableTable({ tables, zones }: TableTableProps) {
     if (!result.success) {
       toast.error(result.error);
     } else {
-      toast.success("Đã xóa bàn");
+      toast.success(`${STATES_VI.deleted} bàn`);
       setDeleteId(null);
     }
   }
@@ -127,7 +128,7 @@ export function TableTable({ tables, zones }: TableTableProps) {
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onSelect={() => setEditTable(table)}>
                         <IconPencil className="mr-2 size-4" />
-                        Sửa
+                        {ACTIONS_VI.edit}
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
@@ -135,7 +136,7 @@ export function TableTable({ tables, zones }: TableTableProps) {
                         onSelect={() => setDeleteId(table.id)}
                       >
                         <IconTrash className="mr-2 size-4" />
-                        Xóa
+                        {ACTIONS_VI.delete}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -169,14 +170,14 @@ export function TableTable({ tables, zones }: TableTableProps) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={pendingDeleteId !== null}>
-              Hủy
+              {ACTIONS_VI.cancel}
             </AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={pendingDeleteId !== null}
               onClick={(e) => deleteId !== null && handleDelete(e, deleteId)}
             >
-              Xóa
+              {ACTIONS_VI.delete}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

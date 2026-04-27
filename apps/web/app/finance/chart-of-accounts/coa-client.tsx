@@ -14,6 +14,8 @@ import {
 } from "@comtammatu/ui/components/table";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { ERRORS_VI } from "@comtammatu/shared/messages";
+import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
 import { CircleOff as IconCircleOff, Plus as IconPlus, RefreshCw as IconRefresh } from "lucide-react";
 import type { AccountRow } from "./page";
 import {
@@ -84,7 +86,7 @@ export function ChartOfAccountsClient({
           ),
         );
       } else {
-        toast.error(result.error ?? "Lỗi");
+        toast.error(result.error ?? ERRORS_VI.fallback);
       }
     });
   }
@@ -195,7 +197,7 @@ export function ChartOfAccountsClient({
                     <Badge
                       variant={account.is_active ? "default" : "secondary"}
                     >
-                      {account.is_active ? "Hoạt động" : "Tắt"}
+                      {account.is_active ? ACTIVE_STATE_LABELS_VI.active : "Tắt"}
                     </Badge>
                   </TableCell>
                   <TableCell>

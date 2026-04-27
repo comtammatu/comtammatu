@@ -31,6 +31,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
+import { ACTIONS_VI, ERRORS_VI } from "@comtammatu/shared/messages";
 import { Plus as IconPlus } from "lucide-react";
 import { createAccount, updateAccount } from "../accounting-actions";
 import type { AccountRow } from "./page";
@@ -70,7 +71,7 @@ export function ChartOfAccountsClient({ accounts: initial }: Props) {
         parentId: form.parentId ? Number(form.parentId) : undefined,
       });
       if (!res.success) {
-        setError(res.error ?? "Lỗi không xác định");
+        setError(res.error ?? ERRORS_VI.unknown);
         return;
       }
       // Optimistic: reload by adding the new account
@@ -239,13 +240,13 @@ export function ChartOfAccountsClient({ accounts: initial }: Props) {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>
-              Hủy
+              {ACTIONS_VI.cancel}
             </Button>
             <Button
               onClick={handleSubmit}
               disabled={isPending || !form.code || !form.name}
             >
-              Lưu
+              {ACTIONS_VI.save}
             </Button>
           </DialogFooter>
         </DialogContent>
