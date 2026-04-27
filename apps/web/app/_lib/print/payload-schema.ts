@@ -88,7 +88,7 @@ export const provisionalBillPayloadSchema = z.object({
   payment_qr: paymentQrSchema.nullable().optional(),
 });
 
-// ─── Final receipt (HOÁ ĐƠN THANH TOÁN) ──────────────────────────────────
+// ─── Final receipt (HÓA ĐƠN THANH TOÁN) ──────────────────────────────────
 
 export const receiptPayloadSchema = z.object({
   kind: z.literal("receipt"),
@@ -108,7 +108,7 @@ export const receiptPayloadSchema = z.object({
   cash_change: z.number().nullable().optional(),
 });
 
-// ─── Cancel ticket (PHIẾU HUỶ MÓN) ───────────────────────────────────────
+// ─── Cancel ticket (PHIẾU HỦY MÓN) ───────────────────────────────────────
 
 /** Single cancelled item — shape matches the kitchen ticket item so chefs can
  * visually map to the original order. Prices intentionally omitted (kitchen

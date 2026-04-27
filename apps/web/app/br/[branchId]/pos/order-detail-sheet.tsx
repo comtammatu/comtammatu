@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { formatVND } from "@comtammatu/shared/format";
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
 import { Button } from "@comtammatu/ui/components/button";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
@@ -21,6 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@comtammatu/ui/components/dropdown-menu";
 import { Item } from "@comtammatu/ui/components/item";
+import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 import { Skeleton } from "@comtammatu/ui/components/skeleton";
 import { notify } from "@comtammatu/ui/lib/notify";
 import {
@@ -821,7 +823,7 @@ export function OrderDetailSheet({
                 size="sm"
                 onClick={() => load()}
               >
-                Thử lại
+                {ACTIONS_VI.retry}
               </Button>
             </div>
           )}
@@ -842,12 +844,9 @@ export function OrderDetailSheet({
                   ))}
                 </ul>
                 {data.note && (
-                  <p className="px-3 text-sm text-muted-foreground sm:px-4">
-                    <span className="font-medium text-foreground">
-                      Ghi chú:{""}
-                    </span>
+                  <NoteCallout label="Ghi chú" className="mx-3 sm:mx-4">
                     {data.note}
-                  </p>
+                  </NoteCallout>
                 )}
               </ScrollArea>
 
@@ -958,7 +957,7 @@ export function OrderDetailSheet({
                                 disabled={isPending}
                                 onClick={() => setShowSplit(true)}
                               >
-                                Tách hoá đơn
+                                Tách hóa đơn
                               </DropdownMenuItem>
                             )}
                             {canShowMerge && (
@@ -966,7 +965,7 @@ export function OrderDetailSheet({
                                 disabled={isPending}
                                 onClick={() => setShowMerge(true)}
                               >
-                                Gộp hoá đơn
+                                Gộp hóa đơn
                               </DropdownMenuItem>
                             )}
                           </DropdownMenuGroup>

@@ -258,7 +258,7 @@ export function CloseSessionSheet({
                 >
                   <AlertDescription className="text-current">
                     {summary.cash_difference === 0
-                      ? "Số dư khớp hoàn toàn. Có thể chốt ca."
+                      ? "Số dư khớp hòan toàn. Có thể chốt ca."
                       : !significantDiff
                         ? "Chênh lệch nhỏ, xác nhận lại trước khi chốt."
                         : `Lệch quỹ vượt ngưỡng (> ${formatVND(summary.variance_threshold)}). Đã gửi cảnh báo cho quản lý.`}

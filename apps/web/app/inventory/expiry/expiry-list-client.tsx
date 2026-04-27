@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { CircleCheck as IconCircleCheck, Search as IconSearch, Trash as IconTrash } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
+import { BRANCH_VI } from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
@@ -386,7 +387,7 @@ export function ExpiryListClient({
                 <SelectValue placeholder="Chi nhánh" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tất cả chi nhánh</SelectItem>
+                <SelectItem value="all">{BRANCH_VI.selectAll}</SelectItem>
                 {branches.map((b) => (
                   <SelectItem key={b.id} value={String(b.id)}>
                     {b.name}

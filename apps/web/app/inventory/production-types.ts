@@ -117,7 +117,7 @@ export function getProductionReadinessSummary({
 
 export function orderStatusLabel(status: string) {
   if (status === "draft") return "Nháp";
-  if (status === "completed") return "Đã hoàn tất";
+  if (status === "completed") return "Đã hòan tất";
   if (status === "cancelled") return "Đã hủy";
   return status;
 }

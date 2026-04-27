@@ -115,8 +115,10 @@ export function PostingRulesClient({ rules: initial, accounts }: Props) {
                     <TableCell className="font-mono text-xs">
                       {rule.rule_code}
                     </TableCell>
-                    <TableCell className="text-sm">
-                      {rule.description}
+                    <TableCell className="max-w-md text-sm">
+                      <span className="line-clamp-2 break-words">
+                        {rule.description}
+                      </span>
                     </TableCell>
                     <TableCell>
                       <Select

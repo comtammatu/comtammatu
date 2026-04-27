@@ -196,7 +196,7 @@ function AutoWasteCard({ row }: { row: AutoWasteRow }) {
           ))}
         </ul>
         {row.notes ? (
-          <p className="mt-2 text-xs text-muted-foreground">
+          <p className="mt-2 line-clamp-2 break-words text-xs text-muted-foreground">
             {row.notes}
           </p>
         ) : null}

@@ -309,7 +309,7 @@ export function ClockClient({
           <IconCircleCheck className="size-12 text-success" />
         </div>
         <div className="text-center">
-          <h2 className="text-lg font-semibold">Đã hoàn thành chấm công</h2>
+          <h2 className="text-lg font-semibold">Đã hòan thành chấm công</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Hôm nay bạn đã chấm công đầy đủ
           </p>

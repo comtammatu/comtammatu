@@ -105,7 +105,7 @@ export function HardblockOverrideDialog({
         toast.error(res.error ?? "Không override được");
         return;
       }
-      toast.success("Đã ghi nhận override — dòng được mở khoá");
+      toast.success("Đã ghi nhận override — dòng được mở khóa");
       onSuccess?.();
       handleClose(false);
     });
@@ -207,7 +207,7 @@ export function HardblockOverrideDialog({
             onClick={() => handleClose(false)}
             disabled={isSubmitting}
           >
-            Huỷ
+            Hủy
           </Button>
           <Button
             variant="destructive"

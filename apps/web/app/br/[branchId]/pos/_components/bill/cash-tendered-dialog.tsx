@@ -81,7 +81,7 @@ export function CashTenderedDialog({
         // any printer error as a warning so the cashier can re-print once
         // the printer is back. Money is already in the drawer.
         if (result.data.print_warning) {
-          toast.warning("Không in được hoá đơn", {
+          toast.warning("Không in được hóa đơn", {
             description: `${result.data.print_warning} — bấm "in lại" sau khi sửa máy in.`,
           });
         }
@@ -176,7 +176,7 @@ export function CashTenderedDialog({
             onClick={() => onOpenChange(false)}
             disabled={pending}
           >
-            Huỷ
+            Hủy
           </Button>
           <Button
             type="button"

@@ -166,8 +166,8 @@ export const WASTE_REASON_LABELS_VI = {
   found_missing: "Phát hiện thiếu",
   theft_suspected: "Nghi ngờ mất cắp",
   customer_return: "Khách trả",
-  kds_cancel_mid_cook: "KDS huỷ giữa nấu",
-  kds_cancel_after_cook: "KDS huỷ sau nấu",
+  kds_cancel_mid_cook: "KDS hủy giữa nấu",
+  kds_cancel_after_cook: "KDS hủy sau nấu",
   other: "Khác",
 } as const;
 
@@ -191,8 +191,8 @@ export const STOCKTAKE_MODE_LABELS_VI = {
 /** Stocktake session status */
 export const STOCKTAKE_STATUS_LABELS_VI = {
   in_progress: "Đang đếm",
-  completed: "Đã hoàn thành",
-  cancelled: "Đã huỷ",
+  completed: "Đã hòan thành",
+  cancelled: "Đã hủy",
 } as const;
 
 /** Shift segments (anti-split policy) */
@@ -214,7 +214,7 @@ export const CONFLICT_RESOLUTION_LABELS_VI = {
   keep_server: "Giữ số trên server",
   apply_client: "Áp số từ thiết bị",
   manual_value: "Nhập số khác",
-  reject: "Huỷ (không áp dụng)",
+  reject: "Hủy (không áp dụng)",
 } as const;
 
 /** Offline stocktake conflict types */
@@ -267,7 +267,7 @@ export const INVENTORY_ERROR_LABELS_VI = {
   shift_cap_exceeded: "Vượt hạn mức waste ca này",
   branch_daily_cap_exceeded: "Vượt cap waste ngày của chi nhánh",
   self_approval_forbidden: "Không thể tự duyệt phiếu của mình",
-  period_hard_closed: "Kỳ kế toán đã khoá cứng",
+  period_hard_closed: "Kỳ kế toán đã khóa cứng",
   zone_lock_held_by_other: "Vùng đang được người khác đếm",
   baseline_unavailable: "Chưa đủ dữ liệu giá — cần QLV duyệt thủ công",
   hardblock_evidence_required: "Cần upload PDF bằng chứng",

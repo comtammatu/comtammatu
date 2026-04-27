@@ -70,7 +70,7 @@ export default async function BranchSettingsHubPage({
     {
       href: `/br/${branchId}/settings/printers`,
       title: "Máy in",
-      description: "Hoá đơn, bếp 1, bếp 2 — cấu hình & trạng thái agent.",
+      description: "Hóa đơn, bếp 1, bếp 2 — cấu hình & trạng thái agent.",
       icon: <IconPrinter className="size-5" />,
     },
   ];

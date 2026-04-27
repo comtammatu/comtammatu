@@ -164,7 +164,7 @@ function LineRowCells({
           onClick={onRemove}
           disabled={!canRemove}
           className="self-start"
-          aria-label="Xoá dòng"
+          aria-label="Xóa dòng"
         >
           <IconCircleOff className="size-4" />
         </Button>

@@ -302,7 +302,7 @@ function ConflictRow({ row, onResolved }: ConflictRowProps) {
               onClick={() => setShowManual(false)}
               disabled={pending}
             >
-              Huỷ
+              Hủy
             </Button>
           </div>
         ) : (

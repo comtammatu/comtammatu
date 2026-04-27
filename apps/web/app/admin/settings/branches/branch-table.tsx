@@ -100,8 +100,13 @@ export function BranchTable({ branches }: BranchTableProps) {
                     {getSiteKindLabelVi(branch.branch_kind ?? "branch")}
                   </Badge>
                 </TableCell>
-                <TableCell className="hidden text-muted-foreground sm:table-cell">
-                  {branch.address || "—"}
+                <TableCell className="hidden max-w-xs sm:table-cell">
+                  <span
+                    className="block truncate text-muted-foreground"
+                    title={branch.address ?? undefined}
+                  >
+                    {branch.address || "—"}
+                  </span>
                 </TableCell>
                 <TableCell className="hidden text-muted-foreground md:table-cell">
                   {branch.phone || "—"}

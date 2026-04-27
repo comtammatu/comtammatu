@@ -197,7 +197,7 @@ test.describe("POS-03 Tạo đơn mới + gửi bếp", () => {
       id: "step-05-ready-to-submit",
       flowId: FLOW,
       module: MODULE,
-      step: { number: 5, total: TOTAL, title: "Gửi bếp — hoàn tất" },
+      step: { number: 5, total: TOTAL, title: "Gửi bếp — hòan tất" },
       setup: async (p) => {
         await gotoMenuViaTable(p, ctx.branchId);
         await tapBasicMenuItem(p);

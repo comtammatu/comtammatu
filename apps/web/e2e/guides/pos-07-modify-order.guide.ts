@@ -4,16 +4,16 @@
  * Hub các thao tác chỉnh sửa đơn:
  *   - Chuyển bàn — di chuyển đơn sang bàn khác
  *   - Hủy đơn — hủy toàn bộ (cần lý do)
- *   - Tách hoá đơn — chia 1 đơn thành 2 (chia tiền cho khách)
- *   - Gộp hoá đơn — gộp nhiều đơn thành 1 (1 khách trả hết)
+ *   - Tách hóa đơn — chia 1 đơn thành 2 (chia tiền cho khách)
+ *   - Gộp hóa đơn — gộp nhiều đơn thành 1 (1 khách trả hết)
  *   - (Per-item void: vuốt món sang trái → mention trong markdown, không capture)
  *
  * 4 main steps + 1 variant:
  *   step-01-more-menu        — dropdown "Khác..." mở, thấy các option
  *   step-02-cancel-confirm   — dialog xác nhận Hủy đơn (cần lý do)
  *   step-03-transfer-picker  — picker chọn bàn mới
- *   step-04-split-flow       — UI tách hoá đơn
- *   variant-merge-flow       — UI gộp hoá đơn
+ *   step-04-split-flow       — UI tách hóa đơn
+ *   variant-merge-flow       — UI gộp hóa đơn
  *
  * Chạy: pnpm --filter @comtammatu/web guides:capture --grep="POS-07"
  */
@@ -171,12 +171,12 @@ test.describe("POS-07 Sửa đơn — chuyển bàn / hủy / tách / gộp", ()
       id: "step-04-split-flow",
       flowId: FLOW,
       module: MODULE,
-      step: { number: 4, total: TOTAL, title: "Tách hoá đơn" },
+      step: { number: 4, total: TOTAL, title: "Tách hóa đơn" },
       setup: async (p) => {
         await gotoOrderDetail(p, ctx.branchId);
         await openMoreMenu(p);
         const splitItem = p
-          .getByRole("menuitem", { name: /Tách hoá đơn|Tách hóa đơn/i })
+          .getByRole("menuitem", { name: /Tách hóa đơn|Tách hóa đơn/i })
           .first();
         await splitItem.click();
         // Đợi split UI
@@ -208,13 +208,13 @@ test.describe("POS-07 Sửa đơn — chuyển bàn / hủy / tách / gộp", ()
       step: {
         number: 1,
         total: 1,
-        title: "Variant — Gộp hoá đơn",
+        title: "Variant — Gộp hóa đơn",
       },
       setup: async (p) => {
         await gotoOrderDetail(p, ctx.branchId);
         await openMoreMenu(p);
         const mergeItem = p
-          .getByRole("menuitem", { name: /Gộp hoá đơn|Gộp hóa đơn/i })
+          .getByRole("menuitem", { name: /Gộp hóa đơn|Gộp hóa đơn/i })
           .first();
         // Merge có thể disabled nếu không có đơn khác cùng bàn — capture as-is
         await mergeItem.click().catch(() => {});

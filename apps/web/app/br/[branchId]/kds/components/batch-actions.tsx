@@ -72,7 +72,7 @@ export function BatchActions({
             ) : (
               <IconCheck data-icon="inline-start" aria-hidden />
             )}
-            Hoàn thành {preparingTickets.length} món
+            Hòan thành {preparingTickets.length} món
           </Button>
         )}
       </div>

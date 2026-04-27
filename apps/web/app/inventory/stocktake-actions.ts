@@ -477,10 +477,10 @@ export async function finalizeStocktake(
     if (error.code === "22023") {
       return {
         success: false,
-        error: "Chưa thể hoàn tất: còn dòng chưa final hoặc còn xung đột cần xử lý.",
+        error: "Chưa thể hòan tất: còn dòng chưa final hoặc còn xung đột cần xử lý.",
       };
     }
-    return { success: false, error: "Không hoàn tất được kiểm kê." };
+    return { success: false, error: "Không hòan tất được kiểm kê." };
   }
 
   const raw = (data ?? {}) as Record<string, unknown>;

@@ -158,7 +158,7 @@ export function RevenueReportClient({
             {totalOrders.toLocaleString("vi-VN")}
           </p>
           <p className="mt-2 text-sm text-muted-foreground">
-            Khối lượng đơn đã hoàn tất trong giai đoạn chọn.
+            Khối lượng đơn đã hòan tất trong giai đoạn chọn.
           </p>
         </div>
         <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">

@@ -329,7 +329,7 @@ export function TransferDetailClient({
                 <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   Ghi chú vận chuyển
                 </p>
-                <p className="mt-1 text-sm italic">
+                <p className="mt-1 line-clamp-3 break-words text-sm italic">
                   &ldquo;{transfer.note}&rdquo;
                 </p>
               </CardContent>
@@ -623,7 +623,7 @@ export function TransferDetailClient({
               onClick={handlePrimaryAction}
             >
               <IconCircleCheck className="size-5" />
-              {actionConfig?.label ?? "Phiếu đã hoàn tất"}
+              {actionConfig?.label ?? "Phiếu đã hòan tất"}
             </Button>
           </footer>
         </div>

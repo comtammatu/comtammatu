@@ -178,7 +178,7 @@ export default async function MobileTransferHome({
               ? "Khi kho gửi xác nhận xuất, phiếu sẽ hiện ở đây để bạn nhận."
               : activeTab === "dispatch"
                 ? "Tạo phiếu mới ở giao diện desktop nếu cần."
-                : "Các phiếu đã hoàn tất sẽ được lưu ở đây."
+                : "Các phiếu đã hòan tất sẽ được lưu ở đây."
           }
         />
       ) : (
@@ -228,7 +228,7 @@ function TransferRowCard({
       className: "bg-success/15 text-success-foreground",
     },
     completed: {
-      label: "Hoàn thành",
+      label: "Hòan thành",
       className: "bg-success/15 text-success-foreground",
     },
     cancelled: {

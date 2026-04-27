@@ -49,7 +49,7 @@ type PrinterRole = "receipt" | "kitchen_1" | "kitchen_2";
 type ConnectionType = "lan" | "usb";
 
 const ROLE_LABEL: Record<PrinterRole, string> = {
-  receipt: "Hoá đơn",
+  receipt: "Hóa đơn",
   kitchen_1: "Bếp 1",
   kitchen_2: "Bếp 2",
 };
@@ -396,11 +396,11 @@ function PrinterForm({
         <div className="flex justify-end gap-2">
           {initial ? (
             <Button variant="outline" onClick={remove} disabled={pending}>
-              Xoá
+              Xóa
             </Button>
           ) : null}
           <Button variant="outline" onClick={onClose} disabled={pending}>
-            Huỷ
+            Hủy
           </Button>
           <Button onClick={save} disabled={pending}>
             {pending ? "Đang lưu..." : "Lưu"}

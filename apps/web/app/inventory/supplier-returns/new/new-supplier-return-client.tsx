@@ -51,7 +51,7 @@ type Line = {
 const RESOLUTION_OPTIONS = [
   { value: "replacement", label: "NCC giao bù" },
   { value: "credit_note", label: "Credit note (giảm công nợ)" },
-  { value: "cash_refund", label: "Hoàn tiền mặt" },
+  { value: "cash_refund", label: "Hòan tiền mặt" },
 ] as const;
 
 const REASON_OPTIONS = [

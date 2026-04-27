@@ -134,7 +134,7 @@ export async function createTaxInvoice(
   // D4 short-circuit (owner 2026-04-26): no MST → skip MISA call, insert
   // an audit row with status='not_required'. Khách comp meal / khách lẻ
   // không yêu cầu HĐĐT thì không tốn MISA quota; nếu sau này khách quay
-  // lại nhập MST, createTaxInvoice gọi lần nữa sẽ insert hoá đơn thật
+  // lại nhập MST, createTaxInvoice gọi lần nữa sẽ insert hóa đơn thật
   // (uq_tax_invoices_active_per_order loại trừ not_required).
   const buyerTaxCodeTrimmed = parsed.data.buyerTaxCode?.trim() ?? "";
   const hasMst = buyerTaxCodeTrimmed.length > 0;

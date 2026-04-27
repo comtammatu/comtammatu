@@ -382,7 +382,7 @@ function renderReceiptBitmap(p: ReceiptPayload): Uint8Array {
   const parts: Uint8Array[] = [init(), lineSpacingZero()];
   parts.push(...renderBillHeader(p));
   parts.push(divider("="));
-  parts.push(line("HOÁ ĐƠN THANH TOÁN", { bold: true, double: true, align: "center" }));
+  parts.push(line("HÓA ĐƠN THANH TOÁN", { bold: true, double: true, align: "center" }));
   parts.push(divider("="));
   parts.push(...renderBillMeta(p));
   if (p.payment_method) {
@@ -405,14 +405,14 @@ function renderReceiptBitmap(p: ReceiptPayload): Uint8Array {
   return concat(parts);
 }
 
-// ─── Cancel ticket (PHIẾU HUỶ MÓN) ───────────────────────────────────────
+// ─── Cancel ticket (PHIẾU HỦY MÓN) ───────────────────────────────────────
 
 function renderCancelTicketBitmap(p: CancelTicketPayload): Uint8Array {
   const parts: Uint8Array[] = [init(), lineSpacingZero()];
 
-  // HUỶ MÓN banner — inverse video for instant kitchen attention
+  // HỦY MÓN banner — inverse video for instant kitchen attention
   parts.push(divider("="));
-  parts.push(line("HUỶ MÓN", {
+  parts.push(line("HỦY MÓN", {
     bold: true,
     double: true,
     align: "center",
@@ -438,7 +438,7 @@ function renderCancelTicketBitmap(p: CancelTicketPayload): Uint8Array {
     padRight(`Giờ: ${meta.time || p.printed_at}`, 24),
   ));
   if (p.voided_by) {
-    parts.push(line(`Người huỷ: ${p.voided_by}`));
+    parts.push(line(`Người hủy: ${p.voided_by}`));
   }
 
   // Items — same layout as kitchen ticket so chef maps visually
@@ -455,7 +455,7 @@ function renderCancelTicketBitmap(p: CancelTicketPayload): Uint8Array {
       const segs: Segment[] = [
         { text: prefixText, bold: true, double: true, strikethrough: true },
         // Strikethrough on the item name itself — extra visual cue beyond
-        // the HUỶ MÓN banner so chef sees "gạch ngang" at a glance.
+        // the HỦY MÓN banner so chef sees "gạch ngang" at a glance.
         { text: chunk, bold: true, double: true, strikethrough: true },
       ];
       parts.push(renderMixedRow(segs));
@@ -580,7 +580,7 @@ function renderShiftCloseReportBitmap(p: ShiftCloseReportPayload): Uint8Array {
     parts.push(line(pair48("Đơn chuyển ca sau", `${p.unpaid_order_count} đơn`)));
   }
   if (p.cancelled_order_count > 0) {
-    parts.push(line(pair48("Đơn đã huỷ", `${p.cancelled_order_count} đơn`)));
+    parts.push(line(pair48("Đơn đã hủy", `${p.cancelled_order_count} đơn`)));
   }
   parts.push(divider("="));
   parts.push(line(

@@ -115,18 +115,18 @@ export async function printReceipt(
     if (msg.includes("no active") && msg.includes("printer")) {
       return {
         success: false,
-        error: "Chi nhánh chưa cấu hình máy in hoá đơn. Liên hệ quản lý.",
+        error: "Chi nhánh chưa cấu hình máy in hóa đơn. Liên hệ quản lý.",
       };
     }
     if (msg.includes("permission denied")) {
-      return { success: false, error: "Không có quyền in hoá đơn" };
+      return { success: false, error: "Không có quyền in hóa đơn" };
     }
     if (msg.includes("tenant mismatch")) {
       return { success: false, error: "Không có quyền truy cập đơn này" };
     }
     return {
       success: false,
-      error: "Không thể in hoá đơn. Vui lòng thử lại.",
+      error: "Không thể in hóa đơn. Vui lòng thử lại.",
     };
   }
 
@@ -137,7 +137,7 @@ export async function printReceipt(
   if (!result) {
     return {
       success: false,
-      error: "Không thể in hoá đơn. Vui lòng thử lại.",
+      error: "Không thể in hóa đơn. Vui lòng thử lại.",
     };
   }
 
@@ -234,7 +234,7 @@ export async function printProvisionalBill(
     if (msg.includes("no active") && msg.includes("printer")) {
       return {
         success: false,
-        error: "Chi nhánh chưa cấu hình máy in hoá đơn. Liên hệ quản lý.",
+        error: "Chi nhánh chưa cấu hình máy in hóa đơn. Liên hệ quản lý.",
       };
     }
     if (msg.includes("permission denied")) {

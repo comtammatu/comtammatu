@@ -162,7 +162,7 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
           </p>
         ) : null}
         {transfer.notes ? (
-          <p className="rounded-md bg-muted/40 px-2 py-1.5 text-xs text-muted-foreground">
+          <p className="line-clamp-3 break-words rounded-md bg-muted/40 px-2 py-1.5 text-xs text-muted-foreground">
             {transfer.notes}
           </p>
         ) : null}

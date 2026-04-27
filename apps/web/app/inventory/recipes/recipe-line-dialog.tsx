@@ -221,7 +221,7 @@ function LineRowCells({
           size="icon"
           onClick={onRemove}
           disabled={!canRemove}
-          aria-label="Xoá dòng"
+          aria-label="Xóa dòng"
         >
           <IconTrash className="size-4 text-muted-foreground" />
         </Button>

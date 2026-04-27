@@ -59,7 +59,7 @@ export default async function PrintersPage() {
         <div>
           <h2 className="text-xl font-semibold">Máy in</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Cấu hình 3 máy in mỗi chi nhánh: hoá đơn, bếp 1, bếp 2
+            Cấu hình 3 máy in mỗi chi nhánh: hóa đơn, bếp 1, bếp 2
           </p>
         </div>
         <Button asChild variant="outline" size="sm" className="gap-1">

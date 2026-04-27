@@ -238,7 +238,7 @@ export function InvoiceList({ initialInvoices }: InvoiceListProps) {
               <strong>
                 {cancelTarget?.invoice_number ?? `#${cancelTarget?.id}`}
               </strong>
-              ? Hành động này không thể hoàn tác.
+              ? Hành động này không thể hòan tác.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

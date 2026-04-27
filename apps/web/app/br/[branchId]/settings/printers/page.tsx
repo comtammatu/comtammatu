@@ -57,7 +57,7 @@ export default async function BranchPrintersPage({
         <div>
           <h2 className="text-xl font-semibold">Máy in</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Cấu hình 3 máy in của {branchRes.data.name}: hoá đơn, bếp 1, bếp 2
+            Cấu hình 3 máy in của {branchRes.data.name}: hóa đơn, bếp 1, bếp 2
           </p>
         </div>
       </div>

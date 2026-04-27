@@ -1120,7 +1120,7 @@ function PosDesktopInner({
           onClick={() => {
             if (cartItemCount > 0) {
               toast.message(
-                "Giỏ đang có món. Xoá đơn nháp trong giỏ rồi mới đổi sang Tại bàn.",
+                "Giỏ đang có món. Xóa đơn nháp trong giỏ rồi mới đổi sang Tại bàn.",
               );
               setShowOrders(false);
               setCartDrawerOpen(true);

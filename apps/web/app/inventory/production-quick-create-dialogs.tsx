@@ -215,7 +215,7 @@ const FINISHED_GOOD_CONFIG: QuickCreateDialogConfig = {
 const RAW_INGREDIENT_CONFIG: QuickCreateDialogConfig = {
   title: "Thêm nguyên liệu mới",
   intro:
-    "Tạo nhanh nguyên liệu đầu vào để hoàn thiện BOM và chuẩn bị cho lệnh sản xuất.",
+    "Tạo nhanh nguyên liệu đầu vào để hòan thiện BOM và chuẩn bị cho lệnh sản xuất.",
   nameLabel: "Tên nguyên liệu",
   namePlaceholder: "VD: Nước mắm pha",
   unitLabel: "Đơn vị",

@@ -199,10 +199,12 @@ export function PermissionsClient({
                       .filter((p) => p.module === mod)
                       .map((p) => (
                         <SelectItem key={p.key} value={p.key}>
-                          <span className="font-mono text-xs">{p.key}</span>
-                          <span className="ml-2 text-muted-foreground">
-                            — {p.description}
-                          </span>
+                          <div className="flex min-w-0 flex-col items-start gap-0.5">
+                            <span className="font-mono text-xs">{p.key}</span>
+                            <span className="break-words text-xs text-muted-foreground">
+                              {p.description}
+                            </span>
+                          </div>
                         </SelectItem>
                       ))}
                   </div>
@@ -276,7 +278,7 @@ export function PermissionsClient({
             />
           </label>
           <p className="text-xs text-muted-foreground">
-            Template cộng dồn với quyền hiện có — chỉ thêm, không xoá. Nếu đặt hạn, tất cả quyền mới cùng hạn.
+            Template cộng dồn với quyền hiện có — chỉ thêm, không xóa. Nếu đặt hạn, tất cả quyền mới cùng hạn.
           </p>
           <Button
             onClick={handleApplyTemplate}

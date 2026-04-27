@@ -4,7 +4,7 @@
  * Mục đích: làm rõ `served` = món đã ra bàn (audit-only), KHÔNG phải
  * thanh toán xong và KHÔNG khóa thao tác sau (vẫn append/void/transfer
  * được). Thường dùng để KDS biết món nào đã ra hết, hoặc waiter báo
- * cashier biết đơn đã hoàn thành phục vụ trước khi tính tiền.
+ * cashier biết đơn đã hòan thành phục vụ trước khi tính tiền.
  *
  * 3 main steps + 1 variant:
  *   step-01-order-detail     — chi tiết đơn với 4 nút action visible

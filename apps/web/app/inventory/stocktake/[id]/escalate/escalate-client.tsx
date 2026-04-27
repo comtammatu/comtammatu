@@ -169,7 +169,7 @@ export function EscalateClient({
                 </CardTitle>
                 <p className="mt-1 text-sm text-muted-foreground">
                   Mỗi dòng chưa đóng cần final qty + ghi chú ≥ {MIN_NOTE_LENGTH} ký tự.
-                  Action áp dụng ngay vào round-1 và khoá dòng.
+                  Action áp dụng ngay vào round-1 và khóa dòng.
                 </p>
               </div>
               <Button

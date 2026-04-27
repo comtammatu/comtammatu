@@ -82,7 +82,7 @@ export async function createWasteEntry(
     STAFF_ROLES,
     PERMISSION_KEYS.INVENTORY_WRITEOFF,
   );
-  if (!ctx) return { success: false, error: "Không có quyền tạo phiếu huỷ" };
+  if (!ctx) return { success: false, error: "Không có quyền tạo phiếu hủy" };
   const { supabase } = ctx;
 
   const { data, error } = await supabase.rpc("create_waste_entry", {
@@ -101,10 +101,10 @@ export async function createWasteEntry(
     if (error.code === "22023") {
       return {
         success: false,
-        error: "Dữ liệu huỷ hàng không hợp lệ hoặc thiếu bằng chứng bắt buộc.",
+        error: "Dữ liệu hủy hàng không hợp lệ hoặc thiếu bằng chứng bắt buộc.",
       };
     }
-    return { success: false, error: "Không tạo được phiếu huỷ" };
+    return { success: false, error: "Không tạo được phiếu hủy" };
   }
 
   const raw = (data ?? {}) as Record<string, unknown>;

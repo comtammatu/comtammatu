@@ -43,7 +43,7 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
           <>
             <p className="text-xs">{order.branches.name}</p>
             {order.branches.address && (
-              <p className="text-xs text-muted-foreground">
+              <p className="break-words text-xs text-muted-foreground">
                 {order.branches.address}
               </p>
             )}
@@ -164,7 +164,7 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
       {order.note && (
         <>
           <Separator className="my-2" />
-          <div className="text-xs">
+          <div className="break-words text-xs">
             <span className="font-medium">Ghi chú: </span>
             <span className="text-muted-foreground">{order.note}</span>
           </div>

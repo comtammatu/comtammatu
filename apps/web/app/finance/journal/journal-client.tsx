@@ -193,7 +193,11 @@ export function JournalClient({ entries: initial, accounts }: Props) {
                       <TableCell className="tabular-nums">
                         {e.entry_date}
                       </TableCell>
-                      <TableCell>{e.description}</TableCell>
+                      <TableCell className="max-w-sm">
+                        <span className="line-clamp-2 break-words">
+                          {e.description}
+                        </span>
+                      </TableCell>
                       <TableCell className="text-muted-foreground text-sm">
                         {e.ref_type ? `${e.ref_type}#${e.ref_id}` : "—"}
                       </TableCell>

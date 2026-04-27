@@ -170,7 +170,7 @@ export function ExtendWindowButton({
             onClick={() => handleClose(false)}
             disabled={isSubmitting}
           >
-            Huỷ
+            Hủy
           </Button>
           <Button onClick={handleSubmit} disabled={!canSubmit}>
             {isSubmitting ? <Spinner /> : `Extend +${minutes}p`}

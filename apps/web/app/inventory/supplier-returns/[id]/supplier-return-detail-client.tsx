@@ -64,7 +64,7 @@ const STATUS_LABEL: Record<string, string> = {
   draft: "Nháp",
   sent: "Đã gửi NCC",
   credited: "Đã nhận credit",
-  refunded: "Đã hoàn tiền",
+  refunded: "Đã hòan tiền",
   cancelled: "Đã hủy",
 };
 
@@ -85,7 +85,7 @@ const REASON_LABEL: Record<string, string> = {
 const RESOLUTION_LABEL: Record<string, string> = {
   replacement: "NCC giao bù",
   credit_note: "Credit note",
-  cash_refund: "Hoàn tiền mặt",
+  cash_refund: "Hòan tiền mặt",
 };
 
 export function SupplierReturnDetailClient({ data }: Props) {
@@ -127,7 +127,7 @@ export function SupplierReturnDetailClient({ data }: Props) {
         target === "credited"
           ? `Đã ghi credit note${result?.credit_number ? ` ${result.credit_number}` : ""}.`
           : target === "refunded"
-            ? `Đã ghi hoàn tiền${result?.credit_number ? ` ${result.credit_number}` : ""}.`
+            ? `Đã ghi hòan tiền${result?.credit_number ? ` ${result.credit_number}` : ""}.`
             : "Đã hủy phiếu trả.";
       toast.success(msg);
       router.refresh();
@@ -199,7 +199,11 @@ export function SupplierReturnDetailClient({ data }: Props) {
                 <Row label="Xác nhận lúc">{formatDate(header.confirmed_at)}</Row>
               ) : null}
               {header.notes ? (
-                <Row label="Ghi chú">{header.notes}</Row>
+                <Row label="Ghi chú">
+                  <span className="line-clamp-3 break-words">
+                    {header.notes}
+                  </span>
+                </Row>
               ) : null}
             </CardContent>
           </Card>
@@ -288,7 +292,7 @@ export function SupplierReturnDetailClient({ data }: Props) {
               ) : null}
               {canTransitionRefund ? (
                 <Button onClick={() => handleTransition("refunded")} disabled={isPending}>
-                  <IconWallet className="size-4" /> Ghi nhận hoàn tiền
+                  <IconWallet className="size-4" /> Ghi nhận hòan tiền
                 </Button>
               ) : null}
             </div>

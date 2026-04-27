@@ -131,7 +131,7 @@ export function MergeOrdersSheet({
     <Sheet open={open} onOpenChange={(o) => !o && handleClose()}>
       <SheetContent side="right" className="flex w-full flex-col sm:max-w-md">
         <SheetHeader className="border-b border-border/60 px-3 py-2.5 text-left sm:px-4">
-          <SheetTitle>Gộp hoá đơn</SheetTitle>
+          <SheetTitle>Gộp hóa đơn</SheetTitle>
           <SheetDescription>
             {headerSubtitle ? `${headerSubtitle} · ` : ""}
             Chọn đơn cùng bàn để gộp. Đơn hiện tại sẽ chuyển sang trạng thái

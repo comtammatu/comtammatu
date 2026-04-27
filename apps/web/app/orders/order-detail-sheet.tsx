@@ -24,7 +24,7 @@ const ORDER_STATUS_LABELS: Record<string, string> = {
   pending: "Chờ xử lý",
   in_progress: "Đang làm",
   ready: "Sẵn sàng",
-  completed: "Hoàn thành",
+  completed: "Hòan thành",
   cancelled: "Đã hủy",
 };
 
@@ -38,7 +38,7 @@ const PAYMENT_STATUS_LABELS: Record<string, string> = {
   pending: "Chờ thanh toán",
   paid: "Đã thanh toán",
   failed: "Thất bại",
-  refunded: "Hoàn tiền",
+  refunded: "Hòan tiền",
 };
 
 function orderStatusTone(

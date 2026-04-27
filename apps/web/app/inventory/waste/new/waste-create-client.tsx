@@ -224,7 +224,7 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
         sourceType: "manual",
       });
       if (!res.success) {
-        toast.error(res.error ?? "Không tạo được phiếu huỷ");
+        toast.error(res.error ?? "Không tạo được phiếu hủy");
         return;
       }
       toast.success(
@@ -238,7 +238,7 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
     <div className="container mx-auto max-w-4xl space-y-4 py-6">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">Phiếu huỷ hàng (waste)</h1>
+          <h1 className="text-2xl font-semibold">Phiếu hủy hàng (waste)</h1>
           <p className="text-sm text-muted-foreground">
             {context.branch.name}{" "}
             <Badge variant="outline" className="ml-1 text-xs">
@@ -333,7 +333,7 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
                           type="button"
                           onClick={() => removeLine(line.uid)}
                           disabled={isSubmitting}
-                          aria-label="Xoá dòng"
+                          aria-label="Xóa dòng"
                           className="text-destructive"
                         >
                           <IconTrash className="size-4" />
@@ -473,7 +473,7 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
           onClick={() => router.back()}
           disabled={isSubmitting}
         >
-          Huỷ
+          Hủy
         </Button>
         <Button onClick={handleSubmit} disabled={isSubmitting}>
           {isSubmitting ? <Spinner /> : "Tạo phiếu"}

@@ -426,7 +426,7 @@ export async function createStocktakeSession(
     if (error.code === PG_ERR.UNIQUE_VIOLATION) {
       return {
         success: false,
-        error: "Chi nhánh này đang có phiên kiểm kê chưa hoàn tất.",
+        error: "Chi nhánh này đang có phiên kiểm kê chưa hòan tất.",
       };
     }
     if (error.code === PG_ERR.INSUFFICIENT_PRIVILEGE) {
@@ -602,7 +602,7 @@ export const updateStocktakeLine = withAction(
     if (session.status !== "in_progress") {
       return {
         success: false,
-        error: "Phiên kiểm kê đã hoàn tất hoặc đã hủy.",
+        error: "Phiên kiểm kê đã hòan tất hoặc đã hủy.",
       };
     }
 
@@ -677,7 +677,7 @@ export async function completeStocktake(
     if (msg.includes("session_not_found")) {
       return { success: false, error: "Không tìm thấy phiên kiểm kê." };
     }
-    return { success: false, error: "Không thể hoàn tất kiểm kê." };
+    return { success: false, error: "Không thể hòan tất kiểm kê." };
   }
 
   return { success: true, data };

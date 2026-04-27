@@ -67,7 +67,7 @@ function mapPaymentRpcError(message: string): string | null {
     normalized.includes("gl_account_not_found") ||
     normalized.includes("fiscal_period_closed")
   ) {
-    return "Thanh toán tạm thời chưa thể hoàn tất do cấu hình kế toán chưa sẵn sàng. Vui lòng liên hệ quản lý.";
+    return "Thanh toán tạm thời chưa thể hòan tất do cấu hình kế toán chưa sẵn sàng. Vui lòng liên hệ quản lý.";
   }
 
   if (normalized.includes("tenant_mismatch")) {
@@ -560,11 +560,11 @@ export async function confirmPayment(
     const printMsg = String(printErr.message ?? "").toLowerCase();
     let userError: string;
     if (printMsg.includes("no active") && printMsg.includes("printer")) {
-      userError = "Chi nhánh chưa cấu hình máy in hoá đơn.";
+      userError = "Chi nhánh chưa cấu hình máy in hóa đơn.";
     } else if (printMsg.includes("permission denied")) {
-      userError = "Không có quyền in hoá đơn.";
+      userError = "Không có quyền in hóa đơn.";
     } else {
-      userError = "Không thể gửi hoá đơn tới máy in.";
+      userError = "Không thể gửi hóa đơn tới máy in.";
     }
     console.error(
       "[confirmPayment] enqueue_receipt_print failed:",
@@ -775,7 +775,7 @@ export async function confirmCashPayment(
     if (msg.includes("no active") && msg.includes("printer")) {
       return {
         success: false,
-        error: "Chi nhánh chưa cấu hình máy in hoá đơn. Liên hệ quản lý.",
+        error: "Chi nhánh chưa cấu hình máy in hóa đơn. Liên hệ quản lý.",
       };
     }
     return {

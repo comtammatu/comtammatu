@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
+import { BRANCH_VI } from "@comtammatu/shared/messages";
 import { MANAGEABLE_ROLES } from "./role-labels";
 import type { BranchOption } from "./staff-table";
 
@@ -54,10 +55,10 @@ export function StaffFilters({ branches }: StaffFiltersProps) {
         onValueChange={(v) => updateFilter("branch", v)}
       >
         <SelectTrigger className="w-45">
-          <SelectValue placeholder="Tất cả chi nhánh" />
+          <SelectValue placeholder={BRANCH_VI.selectAll} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">Tất cả chi nhánh</SelectItem>
+          <SelectItem value="all">{BRANCH_VI.selectAll}</SelectItem>
           {branches.map((b) => (
             <SelectItem key={b.id} value={b.id.toString()}>
               {b.name}

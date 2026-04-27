@@ -16,6 +16,7 @@ import { formatVND } from "@comtammatu/shared/format";
 import { cn } from "@comtammatu/ui";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Card,
@@ -117,7 +118,7 @@ const ORDER_STATUS_LABEL: Record<string, string> = {
   preparing: "Đang làm",
   ready: "Sẵn sàng",
   served: "Đã phục vụ",
-  completed: "Hoàn thành",
+  completed: "Hòan thành",
   cancelled: "Đã hủy",
 };
 
@@ -408,7 +409,7 @@ function SessionDetailCard({
           <Alert className="border-success/20 bg-success/10 text-success">
             <IconCircleCheck className="size-4" />
             <AlertDescription className="text-current">
-              Số dư khớp hoàn toàn.
+              Số dư khớp hòan toàn.
             </AlertDescription>
           </Alert>
         ) : null}
@@ -497,12 +498,7 @@ function SessionDetailCard({
         ) : null}
 
         {session.note ? (
-          <div className="rounded-lg border px-3 py-2">
-            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Ghi chú ca
-            </div>
-            <p className="mt-1 text-sm">{session.note}</p>
-          </div>
+          <NoteCallout label="Ghi chú ca">{session.note}</NoteCallout>
         ) : null}
       </CardContent>
     </Card>
@@ -588,7 +584,7 @@ function OrderDetailSheet({
                           {formatVND(item.unit_price)} ×{item.quantity}
                           {item.status === "cancelled" ? (
                             <span className="ml-2 text-destructive">
-                              (đã huỷ)
+                              (đã hủy)
                             </span>
                           ) : null}
                         </div>
@@ -640,12 +636,7 @@ function OrderDetailSheet({
               </div>
 
               {order.note ? (
-                <div className="rounded-lg border px-3 py-2">
-                  <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Ghi chú bill
-                  </div>
-                  <p className="mt-1 text-sm">{order.note}</p>
-                </div>
+                <NoteCallout label="Ghi chú bill">{order.note}</NoteCallout>
               ) : null}
             </div>
           ) : null}

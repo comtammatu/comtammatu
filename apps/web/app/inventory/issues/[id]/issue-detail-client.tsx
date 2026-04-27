@@ -305,7 +305,7 @@ export function IssueDetailClient({
                 <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   {surface.noteLabel}
                 </p>
-                <p className="mt-1 text-sm text-muted-foreground">
+                <p className="mt-1 line-clamp-3 break-words text-sm text-muted-foreground">
                   {issue.notes}
                 </p>
               </CardContent>
@@ -599,7 +599,7 @@ export function IssueDetailClient({
             <AlertDialogTitle>{surface.confirmTitle}</AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-2">
-                <p>Thao tác này sẽ trừ tồn kho và không thể hoàn tác.</p>
+                <p>Thao tác này sẽ trừ tồn kho và không thể hòan tác.</p>
                 {lines.length > 0 ? (
                   <Card className="bg-muted/30 text-left">
                     <CardContent className="space-y-2 pt-6">

@@ -182,8 +182,10 @@ export function RecipesClient({
                           <TableCell className="text-center">
                             <YieldBadge value={item.yieldFactor} />
                           </TableCell>
-                          <TableCell className="text-xs italic text-muted-foreground">
-                            {item.note ?? "—"}
+                          <TableCell className="max-w-xs text-xs italic text-muted-foreground">
+                            <span className="line-clamp-2 break-words">
+                              {item.note ?? "—"}
+                            </span>
                           </TableCell>
                         </TableRow>
                       ))}

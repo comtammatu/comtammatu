@@ -110,7 +110,7 @@ export function MobileProductionClient({
         icon: IconClipboardList,
       },
       {
-        label: "Đã hoàn tất",
+        label: "Đã hòan tất",
         value: String(orderGroups.completed.length),
         icon: IconPackageImport,
       },
@@ -250,8 +250,8 @@ export function MobileProductionClient({
           <ProductionOrderCardList
             orders={orderGroups.completed}
             canConfirmProduction={canConfirmProduction}
-            emptyTitle="Chưa có lệnh hoàn tất"
-            emptyDescription="Sau khi xác nhận, lệnh hoàn tất sẽ hiện ở đây để chuẩn bị điều chuyển."
+            emptyTitle="Chưa có lệnh hòan tất"
+            emptyDescription="Sau khi xác nhận, lệnh hòan tất sẽ hiện ở đây để chuẩn bị điều chuyển."
           />
         </TabsContent>
 
@@ -372,7 +372,9 @@ function ProductionOrderCardList({
               {order.notes ? (
                 <div className="rounded-xl border border-dashed bg-muted/20 p-3">
                   <p className="text-xs text-muted-foreground">Ghi chú</p>
-                  <p className="mt-1 text-sm">{order.notes}</p>
+                  <p className="mt-1 line-clamp-3 break-words text-sm">
+                    {order.notes}
+                  </p>
                 </div>
               ) : null}
 

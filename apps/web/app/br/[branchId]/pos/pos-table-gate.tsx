@@ -108,7 +108,7 @@ const TableButton = memo(function TableButton({
               variant="secondary"
               className="w-fit text-[10px] font-semibold @[9rem]/table-card:text-xs"
             >
-              {orderCount} hoá đơn
+              {orderCount} hóa đơn
             </Badge>
           )}
         </div>

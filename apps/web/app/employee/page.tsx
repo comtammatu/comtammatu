@@ -278,7 +278,7 @@ export default async function EmployeePage() {
                 </div>
                 <div>
                   <p className="text-sm font-semibold">
-                    Đã hoàn thành hôm nay
+                    Đã hòan thành hôm nay
                   </p>
                   {clockBranchName && (
                     <p className="text-xs text-muted-foreground">

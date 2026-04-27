@@ -985,12 +985,12 @@ export async function voidOrderItem(
       const msg = String(printError.message ?? "").toLowerCase();
       if (msg.includes("permission denied")) {
         printWarning =
-          "Đã huỷ món. Không có quyền in phiếu huỷ — báo bếp thủ công.";
+          "Đã hủy món. Không có quyền in phiếu hủy — báo bếp thủ công.";
       } else if (msg.includes("tenant mismatch")) {
-        printWarning = "Đã huỷ món. Lỗi quyền tenant khi in phiếu huỷ.";
+        printWarning = "Đã hủy món. Lỗi quyền tenant khi in phiếu hủy.";
       } else {
         printWarning =
-          "Đã huỷ món. Không in được phiếu huỷ — kiểm tra máy in bếp.";
+          "Đã hủy món. Không in được phiếu hủy — kiểm tra máy in bếp.";
       }
     } else {
       // RPC returns {skipped: true, reason: 'no_slot'|'no_printer'|...} when
@@ -1001,13 +1001,13 @@ export async function voidOrderItem(
         ? (printData as { reason?: string }).reason
         : undefined;
       if (skipReason === "no_printer") {
-        printWarning = "Đã huỷ món. Máy in bếp offline — báo bếp trực tiếp.";
+        printWarning = "Đã hủy món. Máy in bếp offline — báo bếp trực tiếp.";
       } else if (skipReason === "no_slot") {
         printWarning =
-          "Đã huỷ món. Món không thuộc khu vực bếp (đồ uống chai?) — báo bar trực tiếp.";
+          "Đã hủy món. Món không thuộc khu vực bếp (đồ uống chai?) — báo bar trực tiếp.";
       } else if (skipReason === "feature_disabled") {
         printWarning =
-          "Đã huỷ món. Tính năng in phiếu huỷ đang tắt — báo bếp trực tiếp.";
+          "Đã hủy món. Tính năng in phiếu hủy đang tắt — báo bếp trực tiếp.";
       }
     }
   }
@@ -1263,13 +1263,13 @@ export async function cancelOrder(
     const reasons = result?.skip_reasons ?? [];
     const has = (k: string) => reasons.some((r) => r.startsWith(k));
     if (has("no_printer")) {
-      printWarning = `Đã huỷ đơn. ${skipped} món bếp/bar không nhận được phiếu báo huỷ (máy in offline) — báo trực tiếp.`;
+      printWarning = `Đã hủy đơn. ${skipped} món bếp/bar không nhận được phiếu báo hủy (máy in offline) — báo trực tiếp.`;
     } else if (has("no_slot")) {
-      printWarning = `Đã huỷ đơn. ${skipped} món không có khu vực bếp (đồ uống chai?) — báo bar trực tiếp.`;
+      printWarning = `Đã hủy đơn. ${skipped} món không có khu vực bếp (đồ uống chai?) — báo bar trực tiếp.`;
     } else if (has("feature_disabled")) {
-      printWarning = "Đã huỷ đơn. Tính năng in phiếu huỷ đang tắt — báo bếp trực tiếp.";
+      printWarning = "Đã hủy đơn. Tính năng in phiếu hủy đang tắt — báo bếp trực tiếp.";
     } else {
-      printWarning = `Đã huỷ đơn. ${skipped} phiếu huỷ không in được — báo bếp/bar trực tiếp.`;
+      printWarning = `Đã hủy đơn. ${skipped} phiếu hủy không in được — báo bếp/bar trực tiếp.`;
     }
   }
 
@@ -1377,7 +1377,7 @@ export async function updateOrderStatus(
     if (msg.includes("complete requires")) {
       return {
         success: false,
-        error: "Đánh dấu phục vụ trước khi hoàn thành.",
+        error: "Đánh dấu phục vụ trước khi hòan thành.",
       };
     }
     if (msg.includes("items not terminal")) {

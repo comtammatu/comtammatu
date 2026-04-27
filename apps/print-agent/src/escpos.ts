@@ -65,7 +65,7 @@ const boldOn = () => buf([ESC, 0x45, 0x01]);
 const boldOff = () => buf([ESC, 0x45, 0x00]);
 const sizeDouble = () => buf([GS, 0x21, 0x11]);
 const sizeNormal = () => buf([GS, 0x21, 0x00]);
-/** Inverse video (white-on-black). Used by HUỶ MÓN banner on cancel
+/** Inverse video (white-on-black). Used by HỦY MÓN banner on cancel
  * tickets so the chef spots it across the kitchen. Universally supported
  * on ESC/POS thermal printers. */
 const inverseOn = () => buf([GS, 0x42, 0x01]);
@@ -233,7 +233,7 @@ export type ReceiptPayload = BillBase & {
 
 /** Printed when a waiter/cashier voids an item that was already sent to
  * kitchen. Backend fills payload from the void RPC path; renderer draws
- * an inverse-video HUỶ MÓN banner so chef spots it across the room. */
+ * an inverse-video HỦY MÓN banner so chef spots it across the room. */
 export type CancelTicketPayload = {
   kind: "cancel_ticket";
   order_number: string;
@@ -641,7 +641,7 @@ export function renderReceipt(p: ReceiptPayload): Uint8Array {
   parts.push(...renderBillHeader(p));
   parts.push(divider("="));
   parts.push(alignCenter(), sizeDouble(), boldOn());
-  parts.push(line("HOÁ ĐƠN THANH TOÁN"));
+  parts.push(line("HÓA ĐƠN THANH TOÁN"));
   parts.push(sizeNormal(), boldOff(), alignLeft());
   parts.push(divider("="));
   parts.push(...renderBillMeta(p));
@@ -668,15 +668,15 @@ export function renderReceipt(p: ReceiptPayload): Uint8Array {
   return concat(parts);
 }
 
-// ─── Cancel ticket (PHIẾU HUỶ MÓN) ───────────────────────────────────────
+// ─── Cancel ticket (PHIẾU HỦY MÓN) ───────────────────────────────────────
 
 export function renderCancelTicket(p: CancelTicketPayload): Uint8Array {
   const parts: Uint8Array[] = [init()];
 
-  // --- HUỶ MÓN banner — inverse video so chef spots it instantly ---
+  // --- HỦY MÓN banner — inverse video so chef spots it instantly ---
   parts.push(divider("="));
   parts.push(alignCenter(), inverseOn(), sizeDouble(), boldOn());
-  parts.push(line("   HUỶ MÓN   "));
+  parts.push(line("   HỦY MÓN   "));
   parts.push(sizeNormal(), boldOff(), inverseOff());
   parts.push(divider("="));
 
@@ -702,7 +702,7 @@ export function renderCancelTicket(p: CancelTicketPayload): Uint8Array {
     ),
   );
   if (p.voided_by) {
-    parts.push(line(`Người huỷ: ${p.voided_by}`));
+    parts.push(line(`Người hủy: ${p.voided_by}`));
   }
 
   // --- Items table (same layout as kitchen ticket for visual match) ---
@@ -855,7 +855,7 @@ export function renderShiftCloseReport(p: ShiftCloseReportPayload): Uint8Array {
     parts.push(pair("Đơn chuyển ca sau", `${p.unpaid_order_count} đơn`));
   }
   if (p.cancelled_order_count > 0) {
-    parts.push(pair("Đơn đã huỷ", `${p.cancelled_order_count} đơn`));
+    parts.push(pair("Đơn đã hủy", `${p.cancelled_order_count} đơn`));
   }
   parts.push(divider("="));
   parts.push(boldOn(), sizeDouble());

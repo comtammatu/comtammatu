@@ -158,7 +158,7 @@ export function OrdersShell({ children, user, role }: OrdersShellProps) {
                 {pageTitle}
               </h1>
               <p className="max-w-3xl text-sm leading-6 text-muted-foreground sm:text-base">
-                Tra cứu lịch sử đơn hàng, xử lý hoàn tiền và đối soát doanh thu.
+                Tra cứu lịch sử đơn hàng, xử lý hòan tiền và đối soát doanh thu.
               </p>
             </div>
           </div>

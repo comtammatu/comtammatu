@@ -258,7 +258,7 @@ function ConfirmDestructiveButton({
           </div>
         ) : null}
         <AlertDialogFooter>
-          <AlertDialogCancel>Huỷ</AlertDialogCancel>
+          <AlertDialogCancel>Hủy</AlertDialogCancel>
           <AlertDialogAction
             disabled={!canConfirm}
             onClick={() => {

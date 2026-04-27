@@ -95,18 +95,18 @@ export async function createRefund(input: {
   // Branch-scoped roles can only refund their own branch's payments
   if (claims.user_role === "branch_manager" || claims.user_role === "cashier") {
     if (claims.branch_id == null || payment.branch_id !== claims.branch_id) {
-      return { success: false, error: "Không có quyền hoàn tiền đơn này" };
+      return { success: false, error: "Không có quyền hòan tiền đơn này" };
     }
   }
 
   if (payment.status === "refunded") {
-    return { success: false, error: "Thanh toán đã được hoàn tiền trước đó" };
+    return { success: false, error: "Thanh toán đã được hòan tiền trước đó" };
   }
 
   if (amount > payment.amount) {
     return {
       success: false,
-      error: "Số tiền hoàn không được vượt quá số tiền thanh toán",
+      error: "Số tiền hòan không được vượt quá số tiền thanh toán",
     };
   }
 
@@ -126,7 +126,7 @@ export async function createRefund(input: {
     .single();
 
   if (insertErr || !refund) {
-    return { success: false, error: "Không thể tạo yêu cầu hoàn tiền" };
+    return { success: false, error: "Không thể tạo yêu cầu hòan tiền" };
   }
 
   return { success: true, data: { refundId: refund.id } };
@@ -156,11 +156,11 @@ export async function approveRefund(input: {
     .single();
 
   if (fetchErr || !refund) {
-    return { success: false, error: "Không tìm thấy yêu cầu hoàn tiền" };
+    return { success: false, error: "Không tìm thấy yêu cầu hòan tiền" };
   }
 
   if (refund.status !== "pending") {
-    return { success: false, error: "Yêu cầu hoàn tiền đã được xử lý" };
+    return { success: false, error: "Yêu cầu hòan tiền đã được xử lý" };
   }
 
   const newStatus = approved ? "approved" : "rejected";
@@ -172,7 +172,7 @@ export async function approveRefund(input: {
     .eq("tenant_id", claims.tenant_id);
 
   if (updateErr) {
-    return { success: false, error: "Không thể cập nhật yêu cầu hoàn tiền" };
+    return { success: false, error: "Không thể cập nhật yêu cầu hòan tiền" };
   }
 
   // If approved, mark the payment as refunded
@@ -237,7 +237,7 @@ export async function fetchRefunds(
   const { data, error } = await query;
 
   if (error) {
-    return { success: false, error: "Không thể tải danh sách hoàn tiền" };
+    return { success: false, error: "Không thể tải danh sách hòan tiền" };
   }
 
   const rows = data ?? [];

@@ -78,7 +78,7 @@ const STATUS_LABEL: Record<string, string> = {
 
 const KIND_LABEL: Record<string, string> = {
   credit_note: "Credit note",
-  cash_refund: "Hoàn tiền mặt",
+  cash_refund: "Hòan tiền mặt",
 };
 
 export function CreditNotesClient({
@@ -153,7 +153,7 @@ export function CreditNotesClient({
           <AlertDescription>
             Ghi có phát sinh khi phiếu trả NCC chuyển sang trạng thái{" "}
             <strong>credited</strong> hoặc <strong>refunded</strong>. Phiếu ghi
-            có có thể áp vào hóa đơn còn nợ của cùng NCC để giảm công nợ. Hoàn
+            có có thể áp vào hóa đơn còn nợ của cùng NCC để giảm công nợ. Hòan
             tiền mặt được đóng ngay khi phát hành (không áp).
           </AlertDescription>
         </Alert>

@@ -254,7 +254,7 @@ function buildTasks(props: DashboardProps): TaskItem[] {
     items.push({
       key: "st",
       title: `${props.activeStocktakes} phiên kiểm kê đang mở`,
-      description: "Hoàn tất để khóa chênh lệch.",
+      description: "Hòan tất để khóa chênh lệch.",
       href: paths.stocktake,
       icon: <IconClipboardList className="size-4" />,
       severity: "success",
@@ -290,7 +290,7 @@ function buildTasks(props: DashboardProps): TaskItem[] {
     items.push({
       key: "returns",
       title: `${props.pendingSupplierReturns} phiếu trả NCC chờ xử lý`,
-      description: "Xác nhận hoặc ghi credit/hoàn tiền.",
+      description: "Xác nhận hoặc ghi credit/hòan tiền.",
       href: paths.supplierReturns,
       icon: <IconPackageOff className="size-4" />,
       severity: "warning",

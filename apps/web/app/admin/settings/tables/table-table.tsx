@@ -164,7 +164,7 @@ export function TableTable({ tables, zones }: TableTableProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Xóa bàn?</AlertDialogTitle>
             <AlertDialogDescription>
-              Bàn sẽ bị xóa vĩnh viễn. Hành động này không thể hoàn tác.
+              Bàn sẽ bị xóa vĩnh viễn. Hành động này không thể hòan tác.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

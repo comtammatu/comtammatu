@@ -203,13 +203,13 @@ function buildProvisionalBill(): Uint8Array {
   return concat(parts);
 }
 
-// ─── Final receipt (HOÁ ĐƠN THANH TOÁN) ─────────────────────────────────
+// ─── Final receipt (HÓA ĐƠN THANH TOÁN) ─────────────────────────────────
 
 function buildReceipt(): Uint8Array {
   const parts: Uint8Array[] = [init(), lineSpacingZero()];
   parts.push(...buildHeader());
   parts.push(divider("="));
-  parts.push(line("HOÁ ĐƠN THANH TOÁN", { bold: true, double: true, align: "center" }));
+  parts.push(line("HÓA ĐƠN THANH TOÁN", { bold: true, double: true, align: "center" }));
   parts.push(divider("="));
   parts.push(line(pair48("Đơn hàng:", "ORD-2026-001")));
   parts.push(line(pair48("Ngày:", "14:30 24/04/2026")));

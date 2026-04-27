@@ -254,7 +254,7 @@ function WasteApprovalCard({
           </ul>
 
           {row.notes ? (
-            <p className="text-xs italic text-muted-foreground">
+            <p className="line-clamp-2 break-words text-xs italic text-muted-foreground">
               Ghi chú: {row.notes}
             </p>
           ) : null}

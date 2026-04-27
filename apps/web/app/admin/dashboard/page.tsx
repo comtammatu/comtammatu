@@ -63,7 +63,7 @@ const ORDER_STATUS_LABELS: Record<string, string> = {
   pending: "Chờ",
   in_progress: "Đang làm",
   ready: "Sẵn sàng",
-  completed: "Hoàn thành",
+  completed: "Hòan thành",
   cancelled: "Hủy",
 };
 

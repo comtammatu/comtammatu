@@ -131,7 +131,7 @@ export function RefundsClient({
             {formatVND(totalRefundAmount)}
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Tổng số tiền hoàn của tập kết quả đang xem.
+            Tổng số tiền hòan của tập kết quả đang xem.
           </p>
         </div>
       </div>
@@ -139,10 +139,10 @@ export function RefundsClient({
       <div className="rounded-lg border bg-card text-card-foreground shadow-sm flex flex-wrap items-center justify-between gap-4 p-4">
         <div className="space-y-1.5">
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-            Điều phối hoàn tiền
+            Điều phối hòan tiền
           </p>
           <p className="text-sm text-muted-foreground">
-            {refunds.length} yêu cầu hoàn tiền trong danh sách hiện tại.
+            {refunds.length} yêu cầu hòan tiền trong danh sách hiện tại.
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="warning" className="rounded-full px-3 py-1.5">
@@ -172,9 +172,9 @@ export function RefundsClient({
 
       <Card>
         <CardHeader>
-          <CardTitle>Yêu cầu hoàn tiền</CardTitle>
+          <CardTitle>Yêu cầu hòan tiền</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Duyệt, từ chối và rà soát các yêu cầu hoàn tiền tại một nơi.
+            Duyệt, từ chối và rà soát các yêu cầu hòan tiền tại một nơi.
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -182,7 +182,7 @@ export function RefundsClient({
             <div className="rounded-lg border bg-muted/30 text-card-foreground border-dashed px-6 py-16 text-center">
               <IconRotate className="mx-auto size-8 text-muted-foreground" />
               <p className="mt-3 text-sm font-medium">
-                Không có yêu cầu hoàn tiền nào
+                Không có yêu cầu hòan tiền nào
               </p>
               <p className="mt-1 text-sm text-muted-foreground">
                 Dữ liệu trống cho bộ lọc hiện tại.
@@ -313,7 +313,7 @@ export function RefundsClient({
                   <TableEmptyStateRow
                     colSpan={canApprove ? 8 : 7}
                     paddingClassName="py-16"
-                    title="Không có yêu cầu hoàn tiền nào"
+                    title="Không có yêu cầu hòan tiền nào"
                     description="Dữ liệu trống cho bộ lọc hiện tại."
                     icon={
                       <IconRotate className="mx-auto size-8 text-muted-foreground" />

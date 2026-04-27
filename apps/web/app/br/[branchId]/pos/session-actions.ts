@@ -466,7 +466,7 @@ export async function closePosSession(
       printWarning = "Đã chốt ca. Không có quyền in phiếu chốt — báo quản lý.";
     } else if (m.includes("no active") && m.includes("printer")) {
       printWarning =
-        "Đã chốt ca. Chi nhánh chưa có máy in hoá đơn — không in được phiếu chốt.";
+        "Đã chốt ca. Chi nhánh chưa có máy in hóa đơn — không in được phiếu chốt.";
     } else {
       printWarning = "Đã chốt ca. Không in được phiếu chốt — kiểm tra máy in.";
     }

@@ -72,7 +72,7 @@ export default async function OrdersPage() {
                   Đơn hàng
                 </h2>
                 <p className="max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">
-                  Theo dõi đơn bán và hoàn tiền trong cùng một nơi để xử lý
+                  Theo dõi đơn bán và hòan tiền trong cùng một nơi để xử lý
                   nhanh.
                 </p>
               </div>
@@ -89,7 +89,7 @@ export default async function OrdersPage() {
         <CardHeader>
           <CardTitle>Điều phối giao dịch</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Theo dõi trạng thái đơn bán và các yêu cầu hoàn tiền.
+            Theo dõi trạng thái đơn bán và các yêu cầu hòan tiền.
           </p>
         </CardHeader>
         <CardContent>
@@ -105,7 +105,7 @@ export default async function OrdersPage() {
                 value="refunds"
                 className="rounded-full px-4 data-[state=active]:bg-background data-[state=active]:shadow-sm"
               >
-                Hoàn tiền
+                Hòan tiền
                 {pendingRefundCount > 0 && (
                   <span className="ml-1.5 rounded-full bg-destructive px-1.5 py-0.5 text-xs font-medium text-destructive-foreground">
                     {pendingRefundCount}

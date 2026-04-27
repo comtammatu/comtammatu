@@ -13,7 +13,7 @@ export interface HandleOptions<T> {
 }
 
 /**
- * Chuẩn hoá xử lý ActionResult từ Server Action:
+ * Chuẩn hóa xử lý ActionResult từ Server Action:
  * - success=true  → gọi `onSuccess`, toast success nếu có `successMsg`
  * - success=false → gọi `onError`, toast error với `result.error` hoặc fallback
  *

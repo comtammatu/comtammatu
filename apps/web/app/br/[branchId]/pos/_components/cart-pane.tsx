@@ -446,7 +446,7 @@ function CartPaneComponent({
                   cart.items.length > 0 &&
                   cart.orderType === "dine_in" && (
                     <p className="text-center text-sm text-muted-foreground">
-                      Vui lòng chọn bàn để hoàn tất đơn tại chỗ.
+                      Vui lòng chọn bàn để hòan tất đơn tại chỗ.
                     </p>
                   )}
               </CardContent>
@@ -461,7 +461,7 @@ function CartPaneComponent({
             <AlertDialogTitle>Xóa đơn nháp?</AlertDialogTitle>
             <AlertDialogDescription>
               Tất cả {cart.items.length} món sẽ bị xóa khỏi đơn nháp. Hành động
-              này không thể hoàn tác.
+              này không thể hòan tác.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { TriangleAlert as IconAlertTriangle, ChevronRight as IconChevronRight, CircleCheck as IconCircleCheck, LoaderCircle as IconLoader2 } from "lucide-react";
+import { BRANCH_VI } from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -184,10 +185,10 @@ export function ReconciliationClient({
                 }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Tất cả chi nhánh" />
+                  <SelectValue placeholder={BRANCH_VI.selectAll} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tất cả chi nhánh</SelectItem>
+                  <SelectItem value="all">{BRANCH_VI.selectAll}</SelectItem>
                   {branches.map((b) => (
                     <SelectItem key={b.id} value={String(b.id)}>
                       {b.name}
@@ -388,8 +389,10 @@ export function ReconciliationClient({
                       <TableCell className="text-right font-medium">
                         {formatVND(Number(row.amount))}
                       </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {row.description ?? "—"}
+                      <TableCell className="max-w-sm text-xs text-muted-foreground">
+                        <span className="line-clamp-2 break-words">
+                          {row.description ?? "—"}
+                        </span>
                       </TableCell>
                     </TableRow>
                   ))}

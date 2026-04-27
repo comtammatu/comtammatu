@@ -42,7 +42,7 @@ const GROUPS: HotkeyGroup[] = [
     title: "Ca làm",
     rows: [
       { keys: ["F10"], label: "Mở sheet đóng ca" },
-      { keys: ["Esc"], label: "Đóng sheet / huỷ thao tác" },
+      { keys: ["Esc"], label: "Đóng sheet / hủy thao tác" },
     ],
   },
   {

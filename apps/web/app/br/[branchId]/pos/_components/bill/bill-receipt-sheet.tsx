@@ -597,7 +597,7 @@ export function BillReceipt({
         // Receipt enqueue is fail-soft inside confirm_cash_payment — surface
         // any printer error as a warning so cashier knows to re-print later.
         if (result.data?.print_warning) {
-          toast.warning("Không in được hoá đơn", {
+          toast.warning("Không in được hóa đơn", {
             description: `${result.data.print_warning} — bấm "in lại" sau khi sửa máy in.`,
           });
         }
@@ -615,12 +615,12 @@ export function BillReceipt({
       if (result.success) {
         const print = result.data?.print;
         if (print?.failed) {
-          toast.warning("Đã thanh toán — chưa gửi được hoá đơn tới máy in", {
+          toast.warning("Đã thanh toán — chưa gửi được hóa đơn tới máy in", {
             description:
               print.error ?? "Vui lòng in lại từ màn hình quản lý đơn.",
           });
         } else {
-          toast.success("Đã thanh toán & gửi hoá đơn tới máy in");
+          toast.success("Đã thanh toán & gửi hóa đơn tới máy in");
         }
         await onOrderUpdated?.();
         onClose();

@@ -777,7 +777,7 @@ export function PODetailClient({
                         <p className="text-xs uppercase tracking-wider text-muted-foreground">
                           Địa chỉ xuất hóa đơn
                         </p>
-                        <p className="mt-1 font-medium">
+                        <p className="mt-1 break-words font-medium">
                           {po.supplierInfo.address}
                         </p>
                       </div>

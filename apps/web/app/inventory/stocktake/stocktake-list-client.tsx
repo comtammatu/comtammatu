@@ -187,7 +187,7 @@ export function StocktakeListClient({
                 Đang thực hiện ({statusCounts["in_progress"] ?? 0})
               </SelectItem>
               <SelectItem value="completed">
-                Hoàn tất ({statusCounts["completed"] ?? 0})
+                Hòan tất ({statusCounts["completed"] ?? 0})
               </SelectItem>
               <SelectItem value="cancelled">
                 Đã hủy ({statusCounts["cancelled"] ?? 0})

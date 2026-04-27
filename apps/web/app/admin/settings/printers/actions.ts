@@ -180,7 +180,7 @@ export async function deletePrinter(
     .eq("id", parsed.data)
     .eq("tenant_id", claims.tenant_id);
   if (error) {
-    return { success: false, error: "Không thể xoá máy in" };
+    return { success: false, error: "Không thể xóa máy in" };
   }
   revalidatePrinterPaths(existing.branch_id);
   return { success: true, data: null };

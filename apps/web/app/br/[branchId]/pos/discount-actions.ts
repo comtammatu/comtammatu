@@ -66,7 +66,7 @@ function mapDiscountRpcError(message: string): string {
     return "Đơn đã thanh toán, không thể sửa chiết khấu.";
   }
   if (msg.includes("order terminal")) {
-    return "Đơn đã hủy hoặc hoàn tất.";
+    return "Đơn đã hủy hoặc hòan tất.";
   }
   // Constraint violation when discount metadata partially set (race / bug)
   if (msg.includes("orders_discount_metadata_paired")) {
@@ -93,7 +93,7 @@ function mapDiscountRpcError(message: string): string {
     return "Đơn có thanh toán đang chờ — vui lòng hủy QR trước khi tách.";
   }
   if (msg.includes("split_merge_disabled")) {
-    return "Tính năng tách/gộp hoá đơn đang tắt.";
+    return "Tính năng tách/gộp hóa đơn đang tắt.";
   }
 
   // Merge-specific
@@ -113,7 +113,7 @@ function mapDiscountRpcError(message: string): string {
     return "Một trong hai đơn đã được gộp trước đó.";
   }
   if (msg.includes("merge_terminal")) {
-    return "Một trong hai đơn đã hủy hoặc hoàn tất.";
+    return "Một trong hai đơn đã hủy hoặc hòan tất.";
   }
   if (msg.includes("merge_paid")) {
     return "Một trong hai đơn đã thanh toán.";

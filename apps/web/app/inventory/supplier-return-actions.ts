@@ -243,13 +243,13 @@ function mapTransitionError(raw: string | undefined): string {
   if (!raw) return "Không thể chuyển trạng thái phiếu trả.";
   if (raw.includes("forbidden")) return "Không có quyền thực hiện thao tác này.";
   if (raw.includes("cannot_cancel_after_credit"))
-    return "Không thể hủy phiếu đã ghi credit / hoàn tiền.";
+    return "Không thể hủy phiếu đã ghi credit / hòan tiền.";
   if (raw.includes("must_be_sent_before_credit"))
-    return "Phải xác nhận gửi NCC trước khi ghi credit / hoàn tiền.";
+    return "Phải xác nhận gửi NCC trước khi ghi credit / hòan tiền.";
   if (raw.includes("resolution_mismatch_credit"))
     return "Phiếu này không phải credit_note — không thể chuyển sang đã credit.";
   if (raw.includes("resolution_mismatch_refund"))
-    return "Phiếu này không phải cash_refund — không thể chuyển sang đã hoàn tiền.";
+    return "Phiếu này không phải cash_refund — không thể chuyển sang đã hòan tiền.";
   if (raw.includes("invalid_target_status"))
     return "Trạng thái đích không hợp lệ.";
   if (raw.includes("return_not_found")) return "Không tìm thấy phiếu trả.";

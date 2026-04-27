@@ -92,7 +92,7 @@ export type RenderOpts = {
   bold?: boolean;
   double?: boolean;
   align?: "left" | "center" | "right";
-  /** Inverse video (white text on black) — used for HUỶ MÓN banner on
+  /** Inverse video (white text on black) — used for HỦY MÓN banner on
    * cancel tickets. Paints a solid black line, writes white glyphs. */
   inverse?: boolean;
   /** Strike-through: draw a horizontal black line through the text middle

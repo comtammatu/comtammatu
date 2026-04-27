@@ -38,7 +38,7 @@ const STATUS_LABEL: Record<string, string> = {
   draft: "Nháp",
   sent: "Đã gửi NCC",
   credited: "Đã nhận credit",
-  refunded: "Đã hoàn tiền",
+  refunded: "Đã hòan tiền",
   cancelled: "Đã hủy",
 };
 
@@ -59,7 +59,7 @@ const REASON_LABEL: Record<string, string> = {
 const RESOLUTION_LABEL: Record<string, string> = {
   replacement: "Giao bù",
   credit_note: "Credit note",
-  cash_refund: "Hoàn tiền",
+  cash_refund: "Hòan tiền",
 };
 
 function statusVariant(s: string) {

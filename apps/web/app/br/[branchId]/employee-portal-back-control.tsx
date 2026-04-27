@@ -27,7 +27,7 @@ export function EmployeePortalBackControl({
         aria-label="Quay lại Cổng nhân viên"
       >
         <IconDoorEnter className="size-3 shrink-0 sm:size-3.5" />
-        <span>Thoát</span>
+        <span>Thóat</span>
       </Link>
     </Button>
   );

@@ -62,7 +62,7 @@ const STAGE_META: Record<KdsCancelStage, StageMeta> = {
     key: "after_cook",
     label: "Sau khi nấu xong",
     description:
-      "Đã hoàn thành món — hủy ở stage này = waste 100% recipe.",
+      "Đã hòan thành món — hủy ở stage này = waste 100% recipe.",
     producesWaste: true,
   },
 };

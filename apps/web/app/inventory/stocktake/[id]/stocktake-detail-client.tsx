@@ -76,7 +76,7 @@ const STATUS_META: Record<string, { label: string; className: string }> = {
     className: "bg-warning/10 text-warning border-warning/30",
   },
   completed: {
-    label: "Hoàn tất",
+    label: "Hòan tất",
     className: "bg-success/10 text-success border-success/30",
   },
   cancelled: {
@@ -128,7 +128,7 @@ export function StocktakeDetailClient({
       minute: "2-digit",
     })}`,
     session.completed_at
-      ? `Hoàn tất: ${new Date(session.completed_at).toLocaleDateString(
+      ? `Hòan tất: ${new Date(session.completed_at).toLocaleDateString(
           "vi-VN",
           {
             day: "2-digit",
@@ -204,11 +204,11 @@ export function StocktakeDetailClient({
     startTransition(async () => {
       const res = await completeStocktake(session.id);
       if (!res.success) {
-        toast.error(res.error ?? "Không thể hoàn tất kiểm kê.");
+        toast.error(res.error ?? "Không thể hòan tất kiểm kê.");
         setCompleteDialogOpen(false);
         return;
       }
-      toast.success("Đã hoàn tất kiểm kê");
+      toast.success("Đã hòan tất kiểm kê");
       setCompleteDialogOpen(false);
       refreshData();
     });
@@ -273,7 +273,7 @@ export function StocktakeDetailClient({
                 disabled={isPending}
               >
                 <IconCircleCheck className="mr-2 size-4" />
-                Hoàn tất kiểm kê
+                Hòan tất kiểm kê
               </Button>
             </>
           ) : null}

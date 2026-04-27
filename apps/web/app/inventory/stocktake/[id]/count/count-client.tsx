@@ -296,7 +296,7 @@ export function StocktakeCountClient({
             >
               {!editable ? (
                 <Button variant="outline" size="sm" disabled>
-                  {status === "completed" ? "Đã hoàn thành" : "Không thể sửa"}
+                  {status === "completed" ? "Đã hòan thành" : "Không thể sửa"}
                 </Button>
               ) : null}
               {editable ? (

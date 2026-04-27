@@ -75,7 +75,7 @@ const SAMPLES: Array<{
   { text: "ĐT: 028.1234.5678", align: "center" },
   { text: "MST: 0123456789", align: "center" },
   { text: "=".repeat(48) },
-  { text: "HOÁ ĐƠN THANH TOÁN", bold: true, double: true, align: "center" },
+  { text: "HÓA ĐƠN THANH TOÁN", bold: true, double: true, align: "center" },
   { text: "=".repeat(48) },
   { text: pair48("Đơn hàng:", "ORD-2026-001") },
   { text: pair48("Ngày:", "14:30 24/04/2026") },

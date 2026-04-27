@@ -161,7 +161,7 @@ test.describe("Transfer direction — CW→CK happy path (Scenario 3)", () => {
         .toMatch(/receiving|received/);
 
       // Confirm receive (complete the receipt)
-      const finishBtn = page.getByRole("button", { name: /hoàn tất nhận|xác nhận nhập/i });
+      const finishBtn = page.getByRole("button", { name: /hòan tất nhận|xác nhận nhập/i });
       if (await finishBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
         await finishBtn.click();
       }

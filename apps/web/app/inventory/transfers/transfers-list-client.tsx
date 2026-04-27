@@ -291,7 +291,7 @@ export function TransfersListClient({
                     ? "Khi kho gửi xác nhận xuất, phiếu sẽ hiện ở đây."
                     : activeTab === "dispatch"
                       ? "Tạo phiếu mới nếu cần."
-                      : "Các phiếu đã hoàn tất sẽ được lưu ở đây."}
+                      : "Các phiếu đã hòan tất sẽ được lưu ở đây."}
               </p>
             </div>
           ) : (
