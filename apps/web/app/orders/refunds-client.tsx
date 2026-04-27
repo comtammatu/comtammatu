@@ -26,6 +26,7 @@ import { TableEmptyStateRow } from "@/admin/components/table-empty-state-row";
 
 /* ─── Status helpers ─── */
 
+import { STATES_VI } from "@comtammatu/shared/messages";
 const REFUND_STATUS_LABELS: Record<string, string> = {
   pending: "Chờ duyệt",
   approved: "Đã duyệt",
@@ -114,7 +115,7 @@ export function RefundsClient({
         </div>
         <div className="rounded-lg border bg-muted/30 text-card-foreground p-5 transition-all hover:-translate-y-0.5 hover:shadow-md">
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-            Đã duyệt
+            {STATES_VI.approved}
           </p>
           <p className="mt-2 text-2xl font-semibold tabular-nums">
             {approvedCount}

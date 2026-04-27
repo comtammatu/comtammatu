@@ -3,7 +3,7 @@
 import { useState, useTransition, useMemo } from "react";
 import { ShoppingBag as IconShoppingBag } from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
-import { BRANCH_VI } from "@comtammatu/shared/messages";
+import { BRANCH_VI, STATES_VI } from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
@@ -162,7 +162,7 @@ export function OrdersClient({
         </div>
         <div className="rounded-lg border bg-muted/30 text-card-foreground p-5 transition-all hover:-translate-y-0.5 hover:shadow-md">
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-            Hòan thành
+            {STATES_VI.completed}
           </p>
           <p className="mt-2 text-2xl font-semibold tabular-nums">
             {orderSummary.completed}

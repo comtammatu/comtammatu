@@ -41,6 +41,8 @@ const VERB_MAP = {
   "Làm mới": "refresh",
   "Thử lại": "retry",
   "Quay lại": "back",
+  "Đăng nhập": "signIn",
+  "Đăng xuất": "signOut",
 };
 
 function* walk(dir) {
@@ -157,12 +159,19 @@ function migrateStandaloneVerbs(content) {
 const STATE_MAP = {
   "Đang tải…": "loading",
   "Đang tải...": "loading",
+  "Đang tải": "loading",
   "Đang xử lý…": "processing",
   "Đang xử lý...": "processing",
   "Đang lưu…": "saving",
   "Đang lưu...": "saving",
   "Chưa có dữ liệu": "empty",
   "Không tìm thấy kết quả": "noResults",
+  "Đã hủy": "cancelled",
+  "Hoàn thành": "completed",
+  "Hòan thành": "completed",
+  "Đã duyệt": "approved",
+  "Đã từ chối": "rejected",
+  "Đang chờ": "pending",
 };
 function migrateStandaloneStates(content) {
   const lines = content.split(/\r?\n/);

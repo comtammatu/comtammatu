@@ -23,6 +23,7 @@ import { getEmployeeContext } from "./_lib/employee-context";
 import { loadAuthState } from "@/_lib/auth";
 import { getTodayVN, formatTimeVN } from "./_lib/vn-business-date";
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 const PORTAL_ICON_MAP: Record<string, ElementType> = {
   LayoutDashboard: IconLayoutDashboard,
   BarChart3: IconChartBar,
@@ -456,7 +457,7 @@ export default async function EmployeePage() {
           className="gap-2 rounded-full px-4"
         >
           <IconLogout className="size-4" />
-          Đăng xuất
+          {ACTIONS_VI.signOut}
         </Button>
       </form>
     </div>

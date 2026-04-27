@@ -21,6 +21,7 @@ import { getEmployeeContext } from "../_lib/employee-context";
 import { getMyTrustScore } from "@/inventory/trust-actions";
 import { TrustScoreBadge } from "@/inventory/_components/trust-score-badge";
 
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 export default async function ProfilePage() {
   const { session, claims } = await loadAuthState();
   const ctx = await getEmployeeContext();
@@ -150,7 +151,7 @@ export default async function ProfilePage() {
       <form action="/api/auth/signout" method="post">
         <Button type="submit" variant="outline">
           <IconLogout data-icon="inline-start" />
-          Đăng xuất
+          {ACTIONS_VI.signOut}
         </Button>
       </form>
     </div>

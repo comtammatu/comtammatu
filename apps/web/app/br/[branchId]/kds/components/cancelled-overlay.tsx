@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 
+import { STATES_VI } from "@comtammatu/shared/messages";
 const FADE_AFTER_MS = 30_000;
 
 export function CancelledOverlay() {
@@ -23,7 +24,7 @@ export function CancelledOverlay() {
       aria-hidden
     >
       <Badge variant="destructive" className="text-xs font-bold uppercase">
-        Đã hủy
+        {STATES_VI.cancelled}
       </Badge>
     </div>
   );

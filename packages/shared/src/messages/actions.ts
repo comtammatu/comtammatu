@@ -42,6 +42,8 @@ export const ACTIONS_VI = {
   restore: "Khôi phục",
   selectAll: "Chọn tất cả",
   deselectAll: "Bỏ chọn",
+  signIn: "Đăng nhập",
+  signOut: "Đăng xuất",
 } as const;
 
 export type ActionKey = keyof typeof ACTIONS_VI;

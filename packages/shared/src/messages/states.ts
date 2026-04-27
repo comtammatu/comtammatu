@@ -16,6 +16,7 @@ export const STATES_VI = {
   approved: "Đã duyệt",
   rejected: "Đã từ chối",
   cancelled: "Đã hủy",
+  completed: "Hoàn thành",
   pending: "Đang chờ",
   required: "Bắt buộc",
   optional: "Tùy chọn",
