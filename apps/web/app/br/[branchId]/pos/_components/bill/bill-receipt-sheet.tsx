@@ -302,6 +302,9 @@ export function BillReceipt({
   // method including cash), sheet close, orderId change.
   const [pendingOfflineMethod, setPendingOfflineMethod] =
     useState<PaymentMethod | null>(null);
+  // Tracks orderId we've already auto-fired QR createPayment for, so the
+  // auto-trigger fires once per dialog open even when render deps churn.
+  const autoQrTriggeredRef = useRef<number | null>(null);
 
   const totalAmount = Number(order?.total_amount ?? 0);
   const cashReceived = Number(cashInput) || 0;
@@ -332,6 +335,7 @@ export function BillReceipt({
       setPendingExtras(null);
       setInvoiceForm(EMPTY_INVOICE_FORM);
       setPendingOfflineMethod(null);
+      autoQrTriggeredRef.current = null;
       return;
     }
 
@@ -520,6 +524,39 @@ export function BillReceipt({
     if (!isOnline) return;
     handleSelectMethod(pendingOfflineMethod);
   }, [isOnline, pendingOfflineMethod, handleSelectMethod]);
+
+  // Auto-create the QR payment when the bill dialog opens with a non-cash
+  // method pre-selected (waiter case — no `pos:confirm_payment`). Without
+  // this, "Chuyển khoản" is highlighted but the QR area sits at "Đang tạo"
+  // until the user re-taps the already-selected button. Bypasses for
+  // offline (handleSelectMethod offline-restore takes over later), already-
+  // issued QR, in-flight QR, and read-only orders.
+  useEffect(() => {
+    if (orderId === null) return;
+    if (!order || methods.length === 0) return;
+    if (selectedMethod === "cash") return;
+    if (pendingExtras !== null || methodPending) return;
+    if (!isOnline) return;
+    if (
+      order.payment_status === "paid" ||
+      order.status === "completed" ||
+      order.status === "cancelled"
+    ) {
+      return;
+    }
+    if (autoQrTriggeredRef.current === orderId) return;
+    autoQrTriggeredRef.current = orderId;
+    handleSelectMethod(selectedMethod);
+  }, [
+    orderId,
+    order,
+    methods,
+    selectedMethod,
+    pendingExtras,
+    methodPending,
+    isOnline,
+    handleSelectMethod,
+  ]);
 
   const handleConfirmPaid = useCallback(() => {
     if (!order || orderId === null || !canConfirmPaid) return;
