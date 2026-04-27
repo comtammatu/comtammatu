@@ -20,6 +20,7 @@ import {
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Spinner } from "@comtammatu/ui/components/spinner";
+import { ERRORS_VI } from "@comtammatu/shared/messages";
 import {
   fetchAttendance,
   fetchAttendanceSummary,
@@ -97,14 +98,14 @@ export function AttendanceTable({ branches }: AttendanceTableProps) {
         if (result.success) {
           setSummary((result.data ?? []) as AttendanceSummaryRow[]);
         } else {
-          toast.error(result.error ?? "Lỗi");
+          toast.error(result.error ?? ERRORS_VI.fallback);
         }
       } else {
         const result = await fetchAttendance({ branchId, month });
         if (result.success) {
           setRecords((result.data ?? []) as AttendanceRecord[]);
         } else {
-          toast.error(result.error ?? "Lỗi");
+          toast.error(result.error ?? ERRORS_VI.fallback);
         }
       }
     });
@@ -124,7 +125,7 @@ export function AttendanceTable({ branches }: AttendanceTableProps) {
         );
         toast.success("Đã cập nhật trạng thái");
       } else {
-        toast.error(result.error ?? "Lỗi");
+        toast.error(result.error ?? ERRORS_VI.fallback);
       }
     });
   }

@@ -15,6 +15,7 @@ import {
 import { FieldGroup } from "@comtammatu/ui/components/field";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { ACTIONS_VI, ERRORS_VI } from "@comtammatu/shared/messages";
 import { NumberField, SelectField, TextField } from "@/components/form";
 import { createEmployee } from "./actions";
 
@@ -101,7 +102,7 @@ export function EmployeeFormDialog({
         dependentsCount: parseOptionalNumber(values.dependents_count) ?? 0,
       });
       if (!result.success) {
-        setServerError(result.error ?? "Đã xảy ra lỗi");
+        setServerError(result.error ?? ERRORS_VI.fallback);
         return;
       }
       toast.success("Đã tạo hồ sơ nhân viên mới");
@@ -203,7 +204,7 @@ export function EmployeeFormDialog({
               onClick={() => onOpenChange(false)}
               disabled={isPending}
             >
-              Hủy
+              {ACTIONS_VI.cancel}
             </Button>
             <Button type="submit" disabled={isPending}>
               {isPending && <Spinner className="mr-2" />}

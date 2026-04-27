@@ -15,6 +15,7 @@ import {
 import { FieldGroup } from "@comtammatu/ui/components/field";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { ACTIONS_VI, ERRORS_VI } from "@comtammatu/shared/messages";
 import { SelectField, TextField } from "@/components/form";
 import { createShift } from "./actions";
 import type { BranchOption, ShiftRow } from "./page";
@@ -83,7 +84,7 @@ export function ShiftFormDialog({
         endTime: values.end_time,
       });
       if (!result.success) {
-        setServerError(result.error ?? "Đã xảy ra lỗi");
+        setServerError(result.error ?? ERRORS_VI.fallback);
         return;
       }
       toast.success("Đã tạo ca làm việc mới");
@@ -158,7 +159,7 @@ export function ShiftFormDialog({
               onClick={() => onOpenChange(false)}
               disabled={isPending}
             >
-              Hủy
+              {ACTIONS_VI.cancel}
             </Button>
             <Button type="submit" disabled={isPending}>
               {isPending && <Spinner className="mr-2" />}
