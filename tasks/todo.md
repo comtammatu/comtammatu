@@ -26,7 +26,7 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 
 > Full findings under each agent in session log. Quick wins applied above; these need design.
 
-### M4 Payments
+### M4 Payments — see `docs/plan/m4-payments-fix.md` (drafted 2026-04-28)
 - [ ] **`approveRefund` doesn't actually refund** — flips `payments.status='refunded'` but no GL reversal, no stock restore, no cash drawer reversal. Need `reverse_payment_and_post(p_refund_id)` RPC running atomic.
 - [ ] **Refund auth `area_manager` scope hole** — `area_manager` in CREATE_ROLES with no branch check; can refund any branch. Same for `payment.status='completed'` precondition (today: refund could target `pending`/`failed` payment).
 - [ ] **MoMo webhook tenant binding hole** — `provider_ref=orderId AND method='momo'` with no `tenant_id`. Leaked secret + collision = cross-tenant payment forgery. Need partnerCode + tenant verify before RPC.
