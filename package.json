@@ -16,7 +16,8 @@
     "typecheck": "turbo typecheck",
     "bones:build": "pnpm --filter @comtammatu/web bones:build",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
-    "db:types": "supabase gen types typescript --project-id $SUPABASE_PROJECT_ID 2>/dev/null > packages/database/src/types/database.types.ts"
+    "db:types": "node scripts/gen-types.mjs",
+    "clean:web": "node scripts/clean-web.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

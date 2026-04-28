@@ -52,3 +52,18 @@
     - Pattern: `select("*, parent(...)")` with `child.parent_id → parent.id` (M:1, no UNIQUE on FK column). supabase-js typegen marks the relation `isOneToOne: false` and infers TS type as `Parent[]`. PostgREST runtime returns a single `{ ... } | null` object. Code that follows TS inference (`row.parent?.[0]?.name`) reads `undefined` against the real object payload.
     - Rule: For M:1 embeds, treat the FK field as `{ ... } | null` (object), matching runtime. Use `row.parent as unknown as { ... } | null` (or pre-typed interface) to bridge supabase-js typegen quirk. Match `apps/web/app/hr/attendance-table.tsx` (`record.shifts?.name`).
     - Prevention: Whenever you write `?.[0]?` on a select-embed, stop and check direction: if `child.fk → parent.pk` (M:1) it is an object, not an array; reserve `[0]` for reverse 1:M embeds.
+
+11. **`pnpm db:types` MUST run after every supabase migration that adds/changes RPCs or tables**
+    - Pattern: Applied a migration creating `fn_generate_b03_dn` RPC, wrote a server action calling `supabase.rpc("fn_generate_b03_dn", ...)`, ran `pnpm typecheck` (passed) + `pnpm lint` (passed) → ran `pnpm build` → FAIL with `Argument of type '"fn_generate_b03_dn"' is not assignable to parameter of type ...154 more...`. The RPC was missing from `database.types.ts`.
+    - Rule: After ANY `supabase db push`, regenerate types BEFORE running gates: `supabase db push && pnpm db:types && pnpm typecheck && pnpm lint && pnpm build`. Skipping the regen leaves stale types that may pass turbo-cached typecheck but fail Next.js build's stricter inline TypeScript pass.
+    - Prevention: Treat `db push → db:types` as a single atomic step; never invoke push without regen following. CLAUDE.md already documents this; the lesson is to MENTALLY treat them as one command.
+
+12. **Next.js 16.2 webpack + serwist intermittent cache poisoning**
+    - Pattern: After regenerating `database.types.ts` mid-session, `pnpm build` failed with `uncaughtException TypeError: Cannot read properties of undefined (reading 'length') at ignore-listed frames` — error originates in Next.js / serwist internals, not user code. Compile passed; the failure was in the post-compile manifest step. Clearing `.next` + `.turbo` resolved.
+    - Rule: When `pnpm build` fails with a `TypeError ... ignore-listed frames` from inside Next.js / serwist after a types regeneration, the cause is webpack/serwist manifest desync — not code. Clear `apps/web/.next` and `apps/web/.turbo` and rebuild. Use `pnpm clean:web && pnpm build` as the single recovery sequence.
+    - Prevention: Added `pnpm clean:web` script at root (uses `node scripts/clean-web.mjs`, cross-platform). When changing types in mid-session, default to clean rebuild to avoid the trap.
+
+13. **Bash `run_in_background` notification exit-code is unreliable; ALWAYS read the output file**
+    - Pattern: Background `pnpm build` reported `exit code 0` in the system task-notification, but reading the output file showed `ELIFECYCLE Command failed with exit code 1` and a `Failed to type check` error. The notification mechanism does NOT reliably capture true exit status for chained pnpm/turbo invocations on Windows pnpm shim.
+    - Rule: After every Bash `run_in_background` task completion, READ the output file before treating it as success. The summary `Tasks: N successful, M total` line in the file is authoritative; the notification's exit-code is advisory.
+    - Prevention: Develop the habit `tail -10 <output_file>` immediately after each bg notification, treat the notification as "done" not "succeeded". For build/test gates, parse for `Failed:` token explicitly — exit-0 + `Failed:` line = real failure.
