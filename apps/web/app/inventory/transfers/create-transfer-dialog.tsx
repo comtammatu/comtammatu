@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { Plus as IconPlus, Trash as IconTrash } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { Button } from "@comtammatu/ui/components/button";
@@ -48,6 +48,7 @@ export interface InventoryLocation {
   name: string;
   code: string;
   location_kind: string;
+  is_default_consumption?: boolean | null;
 }
 
 type SlipKind = "inbound" | "outbound" | "internal";
@@ -130,6 +131,42 @@ export function CreateTransferDialog({
     () => ingredients.filter((i) => i.is_active),
     [ingredients],
   );
+  const defaultInternalFromLocationId = useMemo(() => {
+    const loc =
+      locations.find((item) => item.location_kind === "warehouse") ??
+      locations.find((item) => item.location_kind !== "kitchen") ??
+      locations[0];
+    return loc ? String(loc.id) : "";
+  }, [locations]);
+  const defaultInternalToLocationId = useMemo(() => {
+    const loc =
+      locations.find(
+        (item) =>
+          item.location_kind === "kitchen" &&
+          item.is_default_consumption === true &&
+          String(item.id) !== defaultInternalFromLocationId,
+      ) ??
+      locations.find(
+        (item) =>
+          item.location_kind === "kitchen" &&
+          String(item.id) !== defaultInternalFromLocationId,
+      ) ??
+      locations.find(
+        (item) => String(item.id) !== defaultInternalFromLocationId,
+      );
+    return loc ? String(loc.id) : "";
+  }, [defaultInternalFromLocationId, locations]);
+
+  useEffect(() => {
+    if (!open || slipKind !== "internal") return;
+    setIntraFromLocationId((current) => current || defaultInternalFromLocationId);
+    setIntraToLocationId((current) => current || defaultInternalToLocationId);
+  }, [
+    defaultInternalFromLocationId,
+    defaultInternalToLocationId,
+    open,
+    slipKind,
+  ]);
 
   function resetForm() {
     setSlipKind(initialSlipKind);
@@ -529,6 +566,7 @@ export function CreateTransferDialog({
                       .map((loc) => (
                         <SelectItem key={loc.id} value={String(loc.id)}>
                           {loc.name}
+                          {loc.is_default_consumption ? " · Bếp mặc định" : ""}
                         </SelectItem>
                       ))}
                   </SelectContent>

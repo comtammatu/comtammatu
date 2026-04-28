@@ -20,7 +20,10 @@ import type { IngredientRow } from "../page";
 export default async function TransfersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ branchId?: string | string[] }>;
+  searchParams: Promise<{
+    branchId?: string | string[];
+    create?: string | string[];
+  }>;
 }) {
   const params = await searchParams;
   const { supabase, claims } = await loadAuthState();
@@ -55,6 +58,9 @@ export default async function TransfersPage({
   const locations: InventoryLocation[] = locRes.success
     ? ((locRes.data ?? []) as InventoryLocation[])
     : [];
+  const createParam = Array.isArray(params.create)
+    ? params.create[0]
+    : params.create;
 
   return (
     <TransfersListClient
@@ -66,6 +72,7 @@ export default async function TransfersPage({
       userBranchId={userBranchId}
       userRole={claims.user_role}
       basePath="/inventory/transfers"
+      initialCreateOpen={createParam === "cap-bep"}
     />
   );
 }

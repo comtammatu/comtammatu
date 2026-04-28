@@ -129,14 +129,18 @@ function buildQuickActions(
 
   return [
     {
-      label: "Nhận điều chuyển",
+      label: "Nhận hàng",
       icon: IconTruck,
       href: p.transfers,
       primary: true,
     },
-    { label: tNav("issues"), icon: IconChefHat, href: p.issues },
-    { label: tNav("stock"), icon: IconPackage, href: p.stock },
+    {
+      label: "Cấp bếp",
+      icon: IconChefHat,
+      href: `${p.transfers}?create=cap-bep`,
+    },
     { label: tNav("stocktake"), icon: IconClipboardList, href: p.stocktake },
+    { label: "Tồn cần xử lý", icon: IconPackage, href: p.stock },
   ];
 }
 
@@ -243,9 +247,9 @@ function buildTasks(props: DashboardProps): TaskItem[] {
       });
     items.push({
       key: "issues",
-      title: "Ghi nhận xuất kho nội bộ",
-      description: "Tiêu hao / hủy hỏng / hao hụt kho (khác luân chuyển).",
-      href: paths.issues,
+      title: "Cấp bếp cho ca bán",
+      description: "Chuyển từ kho chi nhánh sang bếp chi nhánh trước giờ bán.",
+      href: `${paths.transfers}?create=cap-bep`,
       icon: <IconSquareCheck className="size-4" />,
       severity: "info",
     });

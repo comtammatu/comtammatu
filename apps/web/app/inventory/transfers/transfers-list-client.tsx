@@ -127,6 +127,7 @@ export function TransfersListClient({
   userBranchId,
   userRole,
   basePath = "/inventory/transfers",
+  initialCreateOpen = false,
 }: {
   initial: TransferListRow[];
   branches: BranchForTransfer[];
@@ -136,20 +137,27 @@ export function TransfersListClient({
   userBranchId: number | null;
   userRole: StaffRole;
   basePath?: string;
+  initialCreateOpen?: boolean;
 }) {
   const router = useRouter();
   const isMobile = useIsMobile();
-  const [rows, setRows] = useState(initial);
-  const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [activeTab, setActiveTab] = useState<Tab>("receive");
-
   const isBranchManager = userRole === "branch_manager";
   const canCreate = isBranchManager
     ? userBranchId != null && locations.length >= 2
     : branches.length >= 2 || (userBranchId != null && locations.length >= 2);
+  const [rows, setRows] = useState(initial);
+  const [open, setOpen] = useState(() => initialCreateOpen && canCreate);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [activeTab, setActiveTab] = useState<Tab>("receive");
+
   const createLabel = isBranchManager ? "Cấp bếp" : "Tạo phiếu";
+  const pageTitle = isBranchManager
+    ? "Nhận hàng & Cấp bếp"
+    : "Điều chuyển nội bộ";
+  const tabLabels: Record<Tab, string> = isBranchManager
+    ? { receive: "Cần nhận", dispatch: "Cấp bếp", history: "Lịch sử" }
+    : TAB_LABELS;
 
   const tabGroups = useMemo(() => {
     const groups: Record<Tab, TransferListRow[]> = {
@@ -208,7 +216,7 @@ export function TransfersListClient({
     return (
       <>
         <InventoryHeader
-          title="Điều chuyển nội bộ"
+          title={pageTitle}
           actions={
             canCreate ? (
               <Button size="sm" onClick={() => setOpen(true)}>
@@ -221,7 +229,7 @@ export function TransfersListClient({
         <InventoryPageContent width="narrow">
           {/* Tab navigation */}
           <nav className="grid grid-cols-3 gap-1 rounded-md border bg-muted/30 p-1">
-            {(Object.keys(TAB_LABELS) as Tab[]).map((tab) => {
+            {(Object.keys(tabLabels) as Tab[]).map((tab) => {
               const active = tab === activeTab;
               return (
                 <button
@@ -235,7 +243,7 @@ export function TransfersListClient({
                       : "text-muted-foreground hover:text-foreground",
                   )}
                 >
-                  {TAB_LABELS[tab]}
+                  {tabLabels[tab]}
                   {tabCounts[tab] > 0 && (
                     <span
                       className={cn(
@@ -328,7 +336,7 @@ export function TransfersListClient({
   return (
     <>
       <InventoryHeader
-        title="Điều chuyển nội bộ"
+        title={pageTitle}
         actions={
           canCreate ? (
             <Button size="sm" onClick={() => setOpen(true)}>

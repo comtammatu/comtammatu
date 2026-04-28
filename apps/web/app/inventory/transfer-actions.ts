@@ -543,7 +543,7 @@ export async function fetchInventoryLocationsForBranch(
 
   const { data, error } = await supabase
     .from("inventory_locations")
-    .select("id, name, code, location_kind")
+    .select("id, name, code, location_kind, is_default_consumption")
     .eq("tenant_id", claims.tenant_id)
     .eq("branch_id", id.data)
     .eq("is_active", true)

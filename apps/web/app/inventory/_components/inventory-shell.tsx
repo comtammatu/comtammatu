@@ -3,7 +3,23 @@
 import { useMemo, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { ArrowDownToLine as IconArrowBarDown, ChartBar as IconChartBar, ClipboardList as IconClipboardList, ClipboardCheck as IconClipboardCheck, Factory as IconBuildingFactory, FileText as IconFileText, Hourglass as IconHourglass, LayoutDashboard as IconLayoutDashboard, LogOut as IconLogout, CreditCard as IconCreditCard, Package as IconPackage, PackageX as IconPackageOff, Receipt as IconReceipt, Bot as IconRobot, Settings as IconSettings, ShoppingCart as IconShoppingCart, Store as IconBuildingStore, Truck as IconTruck, Users as IconUsers, Utensils as IconToolsKitchen, OctagonAlert as IconAlertOctagon, Trash as IconTrash } from "lucide-react";
+import {
+  ChartBar as IconChartBar,
+  ClipboardList as IconClipboardList,
+  Factory as IconBuildingFactory,
+  FileText as IconFileText,
+  Hourglass as IconHourglass,
+  LayoutDashboard as IconLayoutDashboard,
+  LogOut as IconLogout,
+  Package as IconPackage,
+  Receipt as IconReceipt,
+  Settings as IconSettings,
+  ShoppingCart as IconShoppingCart,
+  Store as IconBuildingStore,
+  Truck as IconTruck,
+  Users as IconUsers,
+  Utensils as IconToolsKitchen,
+} from "lucide-react";
 import { ROLE_LABEL_VI, type StaffRole } from "@comtammatu/shared/auth";
 import { getInventorySiteKindLabelVi } from "@comtammatu/shared/labels";
 import { Button } from "@comtammatu/ui/components/button";
@@ -44,12 +60,14 @@ interface InventoryShellProps {
 }
 
 function buildInventoryGroups({
+  userRole,
   showProcurement,
   showProduction,
   showCatalogManagement,
   showSettings,
   siteKind,
 }: {
+  userRole: StaffRole;
   showProcurement: boolean;
   showProduction: boolean;
   showCatalogManagement: boolean;
@@ -57,22 +75,25 @@ function buildInventoryGroups({
   siteKind: string;
 }): ShellNavGroup[] {
   const isBranchSite = siteKind === "branch";
-  // Sidebar label flips by site kind: operational branch => "Phiếu xuất kho"
-  // (tiêu hao/khác), storage site (CW/CK) => "Phiếu hao hụt kho".
-  const issueLabel = isBranchSite ? "Phiếu xuất kho" : "Phiếu hao hụt kho";
+  const isBranchManager = userRole === "branch_manager";
+  const isOversight = userRole === "owner" || userRole === "area_manager";
+  const showBackOffice =
+    !isBranchManager &&
+    !isOversight &&
+    (showSettings || showProcurement || showCatalogManagement);
   const groups: ShellNavGroup[] = [
     {
-      title: "Tổng quan",
+      title: "Hôm nay",
       items: [
         {
           href: "/inventory",
-          label: "Tổng quan",
+          label: "Hôm nay",
           icon: IconLayoutDashboard,
           exact: true,
         },
         {
           href: "/inventory/stock",
-          label: tNav("stock", "navigation"),
+          label: isBranchSite ? "Tồn cần xử lý" : tNav("stock", "navigation"),
           icon: IconPackage,
         },
       ],
@@ -81,7 +102,7 @@ function buildInventoryGroups({
 
   if (showProcurement) {
     groups.push({
-      title: "Mua hàng",
+      title: "Nhập hàng HQ",
       items: [
         {
           href: "/inventory/purchase-orders",
@@ -93,56 +114,28 @@ function buildInventoryGroups({
           label: tNav("grn", "navigation"),
           icon: IconReceipt,
         },
-        {
-          href: "/inventory/supplier-invoices",
-          label: tNav("supplierInvoices", "navigation"),
-          icon: IconFileText,
-        },
-        {
-          href: "/inventory/supplier-returns",
-          label: tNav("supplierReturns", "navigation"),
-          icon: IconPackageOff,
-        },
-        {
-          href: "/inventory/supplier-credit-notes",
-          label: tNav("supplierCreditNotes", "navigation"),
-          icon: IconCreditCard,
-        },
       ],
     });
   }
 
   groups.push({
-    title: "Điều chuyển",
+    title: isBranchSite ? "Vận hành chi nhánh" : "Điều chuyển nội bộ",
     items: [
       {
         href: "/inventory/transfers",
-        label: "Phiếu điều chuyển",
+        label: isBranchSite ? "Nhận hàng & Cấp bếp" : "Phiếu điều chuyển",
         icon: IconTruck,
       },
     ],
   });
 
   groups.push({
-    title: isBranchSite ? "Xuất kho" : "Hao hụt kho",
+    title: "Ngoại lệ tồn kho",
     items: [
-      { href: "/inventory/issues", label: issueLabel, icon: IconArrowBarDown },
-    ],
-  });
-
-  groups.push({
-    title: "Hao hụt",
-    items: [
-      { href: "/inventory/waste/new", label: "Tạo phiếu hao hụt", icon: IconTrash },
       {
-        href: "/inventory/waste/approvals",
-        label: "Duyệt hao hụt",
-        icon: IconClipboardCheck,
-      },
-      {
-        href: "/inventory/waste/auto",
-        label: "Phát hiện tự động",
-        icon: IconRobot,
+        href: "/inventory/issues",
+        label: "Hao hụt / điều chỉnh",
+        icon: IconFileText,
       },
     ],
   });
@@ -169,11 +162,6 @@ function buildInventoryGroups({
         icon: IconClipboardList,
       },
       {
-        href: "/inventory/stocktake/conflicts",
-        label: "Xử lý lệch",
-        icon: IconAlertOctagon,
-      },
-      {
         href: "/inventory/expiry",
         label: tNav("expiry", "navigation"),
         icon: IconHourglass,
@@ -186,47 +174,49 @@ function buildInventoryGroups({
     ],
   });
 
-  groups.push({
-    title: "Quản lý",
-    items: [
-      ...(showSettings
-        ? [
-            {
-              href: "/inventory/settings",
-              label: tNav("settings", "navigation"),
-              icon: IconSettings,
-            },
-          ]
-        : []),
-      ...(showProcurement
-        ? [
-            {
-              href: "/inventory/suppliers",
-              label: tNav("suppliers", "navigation"),
-              icon: IconUsers,
-            },
-          ]
-        : []),
-      ...(showCatalogManagement
-        ? [
-            {
-              href: "/inventory/ingredients",
-              label: tNav("ingredients", "navigation"),
-              icon: IconFileText,
-            },
-          ]
-        : []),
-      ...(showProcurement
-        ? [
-            {
-              href: "/inventory/recipes",
-              label: tNav("recipes", "navigation"),
-              icon: IconToolsKitchen,
-            },
-          ]
-        : []),
-    ],
-  });
+  if (showBackOffice) {
+    groups.push({
+      title: "Danh mục & cấu hình",
+      items: [
+        ...(showSettings
+          ? [
+              {
+                href: "/inventory/settings",
+                label: tNav("settings", "navigation"),
+                icon: IconSettings,
+              },
+            ]
+          : []),
+        ...(showProcurement
+          ? [
+              {
+                href: "/inventory/suppliers",
+                label: tNav("suppliers", "navigation"),
+                icon: IconUsers,
+              },
+            ]
+          : []),
+        ...(showCatalogManagement
+          ? [
+              {
+                href: "/inventory/ingredients",
+                label: tNav("ingredients", "navigation"),
+                icon: IconFileText,
+              },
+            ]
+          : []),
+        ...(showProcurement
+          ? [
+              {
+                href: "/inventory/recipes",
+                label: tNav("recipes", "navigation"),
+                icon: IconToolsKitchen,
+              },
+            ]
+          : []),
+      ],
+    });
+  }
 
   return groups.map((group) => ({
     ...group,
@@ -276,6 +266,7 @@ export function InventoryShell({
   const groups = useMemo(
     () =>
       buildInventoryGroups({
+        userRole,
         showProcurement,
         showProduction,
         showCatalogManagement,
@@ -288,6 +279,7 @@ export function InventoryShell({
       showProcurement,
       showProduction,
       showSettings,
+      userRole,
     ],
   );
 
