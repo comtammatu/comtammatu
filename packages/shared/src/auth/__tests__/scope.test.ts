@@ -213,6 +213,7 @@ test("resolvePostLoginRedirect → branch_manager on own POS → allowed", () =>
 
 test("isPublicAppPath PWA manifests bypass auth proxy", () => {
   assert.equal(isPublicAppPath("/manifest.webmanifest"), true);
+  assert.equal(isPublicAppPath("/sw.js"), true);
   assert.equal(isPublicAppPath("/br/3/pos/manifest.webmanifest"), true);
   assert.equal(isPublicAppPath("/br/3/pos"), false);
   assert.equal(isPublicAppPath("/br/abc/pos/manifest.webmanifest"), false);

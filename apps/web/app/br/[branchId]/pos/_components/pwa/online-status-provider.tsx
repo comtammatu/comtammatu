@@ -22,11 +22,23 @@ interface BeforeInstallPromptEvent extends Event {
 interface PosPwaContextValue {
   isOnline: boolean;
   isStandalone: boolean;
+  isIos: boolean;
   installPrompt: BeforeInstallPromptEvent | null;
   clearInstallPrompt: () => void;
 }
 
 const PosPwaContext = createContext<PosPwaContextValue | null>(null);
+
+function isIosLikePlatform(): boolean {
+  const navigatorWithTouchPoints = navigator as Navigator & {
+    maxTouchPoints?: number;
+  };
+  return (
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" &&
+      (navigatorWithTouchPoints.maxTouchPoints ?? 0) > 1)
+  );
+}
 
 function isRunningStandalone(): boolean {
   const navigatorWithStandalone = navigator as Navigator & {
@@ -44,11 +56,13 @@ export function PosPwaProvider({ children }: { children: ReactNode }) {
   // device boots offline.
   const [isOnline, setIsOnline] = useState(true);
   const [isStandalone, setIsStandalone] = useState(false);
+  const [isIos, setIsIos] = useState(false);
   const [installPrompt, setInstallPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
     setIsOnline(navigator.onLine);
+    setIsIos(isIosLikePlatform());
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
     window.addEventListener("online", handleOnline);
@@ -91,8 +105,14 @@ export function PosPwaProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<PosPwaContextValue>(
-    () => ({ isOnline, isStandalone, installPrompt, clearInstallPrompt }),
-    [isOnline, isStandalone, installPrompt, clearInstallPrompt],
+    () => ({
+      isOnline,
+      isStandalone,
+      isIos,
+      installPrompt,
+      clearInstallPrompt,
+    }),
+    [isOnline, isStandalone, isIos, installPrompt, clearInstallPrompt],
   );
 
   return (
@@ -112,6 +132,12 @@ export function useIsStandalone(): boolean {
   const ctx = useContext(PosPwaContext);
   if (ctx == null) return false;
   return ctx.isStandalone;
+}
+
+export function useIsIosPwaInstall(): boolean {
+  const ctx = useContext(PosPwaContext);
+  if (ctx == null) return false;
+  return ctx.isIos && !ctx.isStandalone;
 }
 
 interface InstallPromptHandle {
