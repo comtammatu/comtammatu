@@ -310,9 +310,21 @@ export async function clearOrderDiscount(
 
 const splitInputSchema = z.object({
   sourceOrderId: orderIdSchema,
-  itemIds: z
-    .array(z.coerce.number().int().positive({ error: "Item ID không hợp lệ" }))
-    .min(1, { error: "Chọn ít nhất 1 món để tách" }),
+  // Each entry: move `quantity` units of `itemId` from source to new order.
+  // quantity == row.quantity → full-line move (in-place UPDATE order_id);
+  // quantity <  row.quantity → partial (clone sang đơn mới, giảm qty source).
+  // Cho phép tách "2 Cơm sườn" (1 row qty=2) thành 2 bill mỗi 1 phần.
+  items: z
+    .array(
+      z.object({
+        itemId: z.coerce.number().int().positive({ error: "Item ID không hợp lệ" }),
+        quantity: z.coerce
+          .number()
+          .int()
+          .positive({ error: "Số lượng phải ≥ 1" }),
+      }),
+    )
+    .min(1, { error: "Chọn ít nhất 1 phần để tách" }),
   idempotencyKey: idempotencyKeySchema,
 });
 
@@ -320,7 +332,7 @@ export async function splitOrder(
   branchId: number,
   input: {
     sourceOrderId: number;
-    itemIds: number[];
+    items: Array<{ itemId: number; quantity: number }>;
     idempotencyKey?: string;
   },
 ): Promise<
@@ -376,7 +388,10 @@ export async function splitOrder(
 
   const { data, error } = await supabase.rpc("split_order", {
     p_source_order_id: parsed.data.sourceOrderId,
-    p_item_ids: parsed.data.itemIds,
+    p_item_partials: parsed.data.items.map((it) => ({
+      item_id: it.itemId,
+      quantity: it.quantity,
+    })),
     p_idempotency_key: parsed.data.idempotencyKey ?? undefined,
   });
 

@@ -609,7 +609,9 @@ export function OrderDetailSheet({
     });
   };
 
-  const handleSplit = (selectedItemIds: number[]) => {
+  const handleSplit = (
+    partials: Array<{ itemId: number; quantity: number }>,
+  ) => {
     if (orderId === null) return;
     // Mint client UUID so a network retry replays cleanly via
     // orders.idempotency_key on the new (split-out) order.
@@ -617,7 +619,7 @@ export function OrderDetailSheet({
     startTransition(async () => {
       const r = await splitOrder(branchId, {
         sourceOrderId: orderId,
-        itemIds: selectedItemIds,
+        items: partials,
         idempotencyKey,
       });
       if (r.success && r.data) {
@@ -671,6 +673,12 @@ export function OrderDetailSheet({
   const reduceItem = data?.order_items.find((item) => item.id === reduceItemId);
   const activeItemCount =
     data?.order_items.filter((item) => item.status !== "cancelled").length ?? 0;
+  // Tổng số PHẦN (đơn vị quantity) đang active trên đơn — drives the Tách
+  // hoá đơn gate so 1 row qty=2 (e.g. "2 Cơm sườn") still qualifies.
+  const activeUnitCount =
+    data?.order_items
+      .filter((item) => item.status !== "cancelled")
+      .reduce((sum, item) => sum + item.quantity, 0) ?? 0;
 
   const canShowCancel =
     canManage && data && !["completed", "cancelled"].includes(data.status);
@@ -697,7 +705,7 @@ export function OrderDetailSheet({
   const canShowSplit =
     canShowPaymentAction &&
     data?.order_type === "dine_in" &&
-    activeItemCount >= 2;
+    activeUnitCount >= 2;
   const tableSiblingCount =
     data?.table_id != null
       ? (orderCountByTable?.get(data.table_id) ?? 0)

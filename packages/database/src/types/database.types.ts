@@ -7166,7 +7166,7 @@ export type Database = {
       split_order: {
         Args: {
           p_idempotency_key?: string
-          p_item_ids: number[]
+          p_item_partials: Json
           p_source_order_id: number
         }
         Returns: Json
