@@ -307,7 +307,7 @@ const markPayrollPaidSchema = z.object({
 
 export const markPayrollPaid = withAction(
   { roles: ["owner"] as const, schema: markPayrollPaidSchema },
-  async (data, { supabase, claims, user }) => {
+  async (data, { supabase, claims }) => {
     const { data: updated, error } = await supabase
       .from("payroll_periods")
       .update({

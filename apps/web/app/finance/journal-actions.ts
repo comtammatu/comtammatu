@@ -223,7 +223,7 @@ export const postJournalEntry = withAction(
 
 export const voidJournalEntry = withAction(
   { roles: JOURNAL_WRITE_ROLES, schema: voidSchema, permission: PERMISSION_KEYS.FINANCE_EXPENSE_APPROVE },
-  async (data, { supabase, claims, user }) => {
+  async (data, { supabase, claims }) => {
     const { error } = await supabase
       .from("journal_entries")
       .update({

@@ -318,7 +318,7 @@ export async function cancelTaxInvoice(
   );
   if (!ctx) return { success: false, error: "Không có quyền hủy hóa đơn." };
 
-  const { supabase, claims, user } = ctx;
+  const { supabase, claims } = ctx;
 
   const { data: invoice, error: fetchErr } = await supabase
     .from("tax_invoices")
