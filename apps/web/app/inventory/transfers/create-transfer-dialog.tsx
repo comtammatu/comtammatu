@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { Plus as IconPlus, Trash as IconTrash } from "lucide-react";
+import {
+  Plus as IconPlus,
+  Trash as IconTrash,
+  TriangleAlert as IconTriangleAlert,
+} from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -30,6 +34,7 @@ import {
 } from "@comtammatu/ui/components/tabs";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
+import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 import { FormattedNumberInput } from "../_components/formatted-number-input";
 import { formatBranchSiteLabel } from "../_lib/branch-site-labels";
 import { createStockTransfer } from "../transfer-actions";
@@ -131,39 +136,57 @@ export function CreateTransferDialog({
     () => ingredients.filter((i) => i.is_active),
     [ingredients],
   );
+  const internalSourceLocations = useMemo(
+    () => locations.filter((item) => item.location_kind === "warehouse"),
+    [locations],
+  );
+  const defaultConsumptionKitchenLocations = useMemo(
+    () =>
+      locations.filter(
+        (item) =>
+          item.location_kind === "kitchen" &&
+          item.is_default_consumption === true,
+      ),
+    [locations],
+  );
   const defaultInternalFromLocationId = useMemo(() => {
-    const loc =
-      locations.find((item) => item.location_kind === "warehouse") ??
-      locations.find((item) => item.location_kind !== "kitchen") ??
-      locations[0];
+    const loc = internalSourceLocations[0];
     return loc ? String(loc.id) : "";
-  }, [locations]);
+  }, [internalSourceLocations]);
   const defaultInternalToLocationId = useMemo(() => {
-    const loc =
-      locations.find(
-        (item) =>
-          item.location_kind === "kitchen" &&
-          item.is_default_consumption === true &&
-          String(item.id) !== defaultInternalFromLocationId,
-      ) ??
-      locations.find(
-        (item) =>
-          item.location_kind === "kitchen" &&
-          String(item.id) !== defaultInternalFromLocationId,
-      ) ??
-      locations.find(
-        (item) => String(item.id) !== defaultInternalFromLocationId,
-      );
+    const loc = defaultConsumptionKitchenLocations.find(
+      (item) => String(item.id) !== defaultInternalFromLocationId,
+    );
     return loc ? String(loc.id) : "";
-  }, [defaultInternalFromLocationId, locations]);
+  }, [defaultConsumptionKitchenLocations, defaultInternalFromLocationId]);
+  const canSubmitInternalTransfer =
+    defaultInternalFromLocationId.length > 0 &&
+    defaultInternalToLocationId.length > 0;
+  const internalSetupMessage = !defaultInternalFromLocationId
+    ? "Chi nhánh chưa có vị trí kho gửi. Cần cấu hình kho chi nhánh trước khi Cấp bếp."
+    : !defaultInternalToLocationId
+      ? "Chi nhánh chưa có Bếp mặc định. Cần đánh dấu một vị trí bếp là Bếp mặc định trước khi Cấp bếp."
+      : null;
 
   useEffect(() => {
     if (!open || slipKind !== "internal") return;
-    setIntraFromLocationId((current) => current || defaultInternalFromLocationId);
-    setIntraToLocationId((current) => current || defaultInternalToLocationId);
+    setIntraFromLocationId((current) =>
+      internalSourceLocations.some((loc) => String(loc.id) === current)
+        ? current
+        : defaultInternalFromLocationId,
+    );
+    setIntraToLocationId((current) =>
+      defaultConsumptionKitchenLocations.some(
+        (loc) => String(loc.id) === current,
+      )
+        ? current
+        : defaultInternalToLocationId,
+    );
   }, [
+    defaultConsumptionKitchenLocations,
     defaultInternalFromLocationId,
     defaultInternalToLocationId,
+    internalSourceLocations,
     open,
     slipKind,
   ]);
@@ -277,8 +300,6 @@ export function CreateTransferDialog({
     const notes = String(fd.get("notes") ?? "") || undefined;
     const vehicleInfo = String(fd.get("vehicleInfo") ?? "") || undefined;
 
-    const linesPayload = buildLinesPayload(draftLines);
-    if (linesPayload === undefined) return;
     if (isBranchManager && slipKind !== "internal") {
       toast.error("Quản lý chi nhánh chỉ tạo Cấp bếp nội bộ.");
       return;
@@ -293,6 +314,13 @@ export function CreateTransferDialog({
     if (slipKind === "internal") {
       if (!userBranchId) {
         toast.error("Tài khoản cần gắn với chi nhánh để chuyển nội bộ.");
+        return;
+      }
+      if (!canSubmitInternalTransfer) {
+        toast.error(
+          internalSetupMessage ??
+            "Chi nhánh chưa đủ cấu hình để tạo Cấp bếp.",
+        );
         return;
       }
       fromLocId = Number(intraFromLocationId) || undefined;
@@ -324,6 +352,9 @@ export function CreateTransferDialog({
       }
     }
 
+    const linesPayload = buildLinesPayload(draftLines);
+    if (linesPayload === undefined) return;
+
     if (!fromId || !toId) {
       toast.error("Chọn kho gửi và kho nhận.");
       return;
@@ -343,7 +374,8 @@ export function CreateTransferDialog({
   const submitDisabled =
     isPending ||
     (slipKind === "internal" &&
-      (!intraFromLocationId ||
+      (!canSubmitInternalTransfer ||
+        !intraFromLocationId ||
         !intraToLocationId ||
         intraFromLocationId === intraToLocationId)) ||
     (slipKind === "outbound" &&
@@ -533,17 +565,30 @@ export function CreateTransferDialog({
               <p className="text-sm text-muted-foreground">
                 Chuyển một bước từ kho chi nhánh sang bếp chi nhánh.
               </p>
+              {internalSetupMessage ? (
+                <NoteCallout
+                  tone="warning"
+                  icon={<IconTriangleAlert className="size-4" />}
+                  label="Chưa thể Cấp bếp"
+                >
+                  {internalSetupMessage}
+                </NoteCallout>
+              ) : null}
               <div className="space-y-1.5">
                 <Label>Vị trí gửi *</Label>
                 <Select
                   value={intraFromLocationId}
-                  onValueChange={setIntraFromLocationId}
+                  onValueChange={(value) => {
+                    setIntraFromLocationId(value);
+                    if (intraToLocationId === value) setIntraToLocationId("");
+                  }}
+                  disabled={!defaultInternalFromLocationId}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Chọn vị trí kho gửi" />
                   </SelectTrigger>
                   <SelectContent>
-                    {locations.map((loc) => (
+                    {internalSourceLocations.map((loc) => (
                       <SelectItem key={loc.id} value={String(loc.id)}>
                         {loc.name}
                       </SelectItem>
@@ -556,12 +601,13 @@ export function CreateTransferDialog({
                 <Select
                   value={intraToLocationId}
                   onValueChange={setIntraToLocationId}
+                  disabled={!defaultInternalToLocationId}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Chọn vị trí kho nhận" />
                   </SelectTrigger>
                   <SelectContent>
-                    {locations
+                    {defaultConsumptionKitchenLocations
                       .filter((loc) => String(loc.id) !== intraFromLocationId)
                       .map((loc) => (
                         <SelectItem key={loc.id} value={String(loc.id)}>

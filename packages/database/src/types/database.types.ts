@@ -6781,6 +6781,10 @@ export type Database = {
         Args: { p_session_id: number }
         Returns: Json
       }
+      ensure_branch_inventory_location_defaults: {
+        Args: { p_branch_id: number; p_tenant_id: number }
+        Returns: undefined
+      }
       escalate_round_4: {
         Args: {
           p_final_qty: number
