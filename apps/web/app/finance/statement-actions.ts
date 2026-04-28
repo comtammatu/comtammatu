@@ -407,6 +407,76 @@ export const generateB02DN = withAction(
   },
 );
 
+/* ─── TT200 BCTC: B03-DN (Báo cáo lưu chuyển tiền tệ — gián tiếp) ─── */
+
+export interface CashflowConsistencyCheck {
+  opening_cash: number;
+  closing_cash: number;
+  closing_minus_opening: number;
+  net_cashflow: number;
+  difference: number;
+  consistent: boolean;
+}
+
+export const generateB03DN = withAction(
+  {
+    roles: STATEMENT_ROLES,
+    schema: incomeStatementSchema,
+    permission: PERMISSION_KEYS.FINANCE_VIEW,
+  },
+  async (data, { supabase, claims }) => {
+    const { data: result, error } = await supabase.rpc("fn_generate_b03_dn", {
+      p_tenant_id: claims.tenant_id,
+      p_start_date: data.startDate,
+      p_end_date: data.endDate,
+    });
+
+    if (error) {
+      if (error.code === "22023") {
+        return { success: false, error: "Khoảng ngày không hợp lệ." };
+      }
+      return { success: false, error: "Không thể tạo Báo cáo lưu chuyển tiền tệ." };
+    }
+
+    const env = result as unknown as {
+      form: string;
+      tenant_id: number;
+      start_date: string;
+      end_date: string;
+      status: "draft" | "final";
+      generated_at: string;
+      lines: Tt200ReportLine[];
+      consistency_check: CashflowConsistencyCheck;
+    };
+
+    return {
+      success: true,
+      data: {
+        form: env.form,
+        status: env.status,
+        generated_at: env.generated_at,
+        lines: env.lines.map((l) => ({ ...l, amount: Number(l.amount) })),
+        meta: {
+          start_date: env.start_date,
+          end_date: env.end_date,
+          consistency_check: {
+            opening_cash: Number(env.consistency_check.opening_cash),
+            closing_cash: Number(env.consistency_check.closing_cash),
+            closing_minus_opening: Number(env.consistency_check.closing_minus_opening),
+            net_cashflow: Number(env.consistency_check.net_cashflow),
+            difference: Number(env.consistency_check.difference),
+            consistent: env.consistency_check.consistent,
+          },
+        },
+      } as Tt200ReportEnvelope<{
+        start_date: string;
+        end_date: string;
+        consistency_check: CashflowConsistencyCheck;
+      }>,
+    };
+  },
+);
+
 /* ─── TT200 form 01-GTGT (Tờ khai thuế GTGT) ─── */
 
 export const generateForm01Gtgt = withAction(

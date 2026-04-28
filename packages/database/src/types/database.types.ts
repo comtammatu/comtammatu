@@ -6851,6 +6851,10 @@ export type Database = {
         Args: { p_end_date: string; p_start_date: string; p_tenant_id: number }
         Returns: Json
       }
+      fn_generate_b03_dn: {
+        Args: { p_end_date: string; p_start_date: string; p_tenant_id: number }
+        Returns: Json
+      }
       fn_generate_form_01_gtgt: {
         Args: { p_month: number; p_tenant_id: number; p_year: number }
         Returns: Json

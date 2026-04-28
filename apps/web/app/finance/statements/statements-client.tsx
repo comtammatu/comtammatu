@@ -31,7 +31,9 @@ import { formatVND } from "@comtammatu/shared/format";
 import {
   generateB01DN,
   generateB02DN,
+  generateB03DN,
   generateForm01Gtgt,
+  type CashflowConsistencyCheck,
   type Tt200ReportEnvelope,
   type Tt200ReportLine,
 } from "../statement-actions";
@@ -39,6 +41,11 @@ import {
 import { FORM_VI } from "@comtammatu/shared/messages";
 type B01Report = Tt200ReportEnvelope<{ as_of_date: string }>;
 type B02Report = Tt200ReportEnvelope<{ start_date: string; end_date: string }>;
+type B03Report = Tt200ReportEnvelope<{
+  start_date: string;
+  end_date: string;
+  consistency_check: CashflowConsistencyCheck;
+}>;
 type GtgtReport = Tt200ReportEnvelope<{ period: string }>;
 
 export function StatementsClient() {
@@ -54,6 +61,10 @@ export function StatementsClient() {
   const [b02Start, setB02Start] = useState(monthStart);
   const [b02End, setB02End] = useState(today);
   const [b02Data, setB02Data] = useState<B02Report | null>(null);
+
+  const [b03Start, setB03Start] = useState(monthStart);
+  const [b03End, setB03End] = useState(today);
+  const [b03Data, setB03Data] = useState<B03Report | null>(null);
 
   const [vatPeriod, setVatPeriod] = useState(monthOnly);
   const [vatData, setVatData] = useState<GtgtReport | null>(null);
@@ -83,6 +94,20 @@ export function StatementsClient() {
     });
   }
 
+  function handleB03() {
+    startTransition(async () => {
+      const res = await generateB03DN({
+        startDate: b03Start,
+        endDate: b03End,
+      });
+      if (res.success) {
+        setB03Data(res.data as B03Report);
+      } else {
+        toast.error(res.error ?? "Lỗi tạo báo cáo.");
+      }
+    });
+  }
+
   function handleGtgt() {
     startTransition(async () => {
       const res = await generateForm01Gtgt({ period: vatPeriod });
@@ -99,6 +124,7 @@ export function StatementsClient() {
       <TabsList className="h-auto w-full justify-start gap-2 overflow-x-auto p-2">
         <TabsTrigger value="b01">B01-DN · CĐKT</TabsTrigger>
         <TabsTrigger value="b02">B02-DN · KQKD</TabsTrigger>
+        <TabsTrigger value="b03">B03-DN · LCTT</TabsTrigger>
         <TabsTrigger value="gtgt">01/GTGT · Thuế GTGT</TabsTrigger>
       </TabsList>
 
@@ -176,6 +202,50 @@ export function StatementsClient() {
         )}
       </TabsContent>
 
+      <TabsContent value="b03" className="mt-0 space-y-4">
+        <Card>
+          <CardContent className="grid gap-3 p-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {FORM_VI.fromDate}
+              </Label>
+              <Input
+                type="date"
+                value={b03Start}
+                onChange={(e) => setB03Start(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {FORM_VI.toDate}
+              </Label>
+              <Input
+                type="date"
+                value={b03End}
+                onChange={(e) => setB03End(e.target.value)}
+              />
+            </div>
+            <Button onClick={handleB03} disabled={isPending}>
+              {isPending ? <IconLoader2 className="size-4 animate-spin" /> : null}
+              Tạo LCTT
+            </Button>
+          </CardContent>
+        </Card>
+
+        {b03Data ? (
+          <>
+            <Tt200Report
+              title="B03-DN — Báo Cáo Lưu Chuyển Tiền Tệ (gián tiếp)"
+              subtitle={`${b03Data.meta.start_date} → ${b03Data.meta.end_date}`}
+              data={b03Data}
+            />
+            <CashflowConsistencyBanner check={b03Data.meta.consistency_check} />
+          </>
+        ) : (
+          <EmptyState />
+        )}
+      </TabsContent>
+
       <TabsContent value="gtgt" className="mt-0 space-y-4">
         <Card>
           <CardContent className="grid gap-3 p-4 sm:grid-cols-[1fr_auto] sm:items-end">
@@ -216,6 +286,81 @@ function EmptyState() {
     <p className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
       Chọn kỳ và nhấn nút <strong>Tạo</strong> để xem báo cáo.
     </p>
+  );
+}
+
+function CashflowConsistencyBanner({
+  check,
+}: {
+  check: CashflowConsistencyCheck;
+}) {
+  const Icon = check.consistent ? IconCircleCheck : IconAlertTriangle;
+  return (
+    <Card>
+      <CardHeader className="space-y-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge
+            variant={check.consistent ? "secondary" : "destructive"}
+            className="gap-1"
+          >
+            <Icon className="size-3" />
+            {check.consistent
+              ? "Đối chiếu cân khớp"
+              : "Lệch sổ — kế toán phải kiểm tra"}
+          </Badge>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          B03-DN audit invariant: tiền cuối kỳ − tiền đầu kỳ phải bằng lưu
+          chuyển tiền thuần trong kỳ. Lệch &gt; 1 VND đồng nghĩa có bút toán
+          tiền (111/112) chưa khớp với operating/investing/financing buckets
+          — thường do định khoản sai cashflow_section trên tài khoản.
+        </p>
+      </CardHeader>
+      <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <ConsistencyStat
+          label="Tiền đầu kỳ (60)"
+          value={check.opening_cash}
+        />
+        <ConsistencyStat
+          label="Tiền cuối kỳ (70)"
+          value={check.closing_cash}
+        />
+        <ConsistencyStat
+          label="LCT thuần (50)"
+          value={check.net_cashflow}
+        />
+        <ConsistencyStat
+          label="Chênh lệch"
+          value={check.difference}
+          tone={check.consistent ? undefined : "destructive"}
+        />
+      </CardContent>
+    </Card>
+  );
+}
+
+function ConsistencyStat({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number;
+  tone?: "destructive";
+}) {
+  const valueClass =
+    tone === "destructive"
+      ? "text-destructive"
+      : "text-foreground";
+  return (
+    <div className="space-y-0.5">
+      <p className="text-xs uppercase tracking-wide text-muted-foreground">
+        {label}
+      </p>
+      <p className={`font-mono text-lg font-semibold ${valueClass}`}>
+        {formatVND(value)}
+      </p>
+    </div>
   );
 }
 
