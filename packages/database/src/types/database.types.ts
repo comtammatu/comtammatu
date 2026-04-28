@@ -2104,6 +2104,7 @@ export type Database = {
           sort_order: number
           tenant_id: number
           updated_at: string
+          vat_rate: number
         }
         Insert: {
           base_price: number
@@ -2117,6 +2118,7 @@ export type Database = {
           sort_order?: number
           tenant_id: number
           updated_at?: string
+          vat_rate?: number
         }
         Update: {
           base_price?: number
@@ -2130,6 +2132,7 @@ export type Database = {
           sort_order?: number
           tenant_id?: number
           updated_at?: string
+          vat_rate?: number
         }
         Relationships: [
           {
@@ -2356,6 +2359,7 @@ export type Database = {
           updated_at: string
           variant_id: number | null
           variant_name: string | null
+          vat_rate: number
         }
         Insert: {
           cancel_reason?: string | null
@@ -2377,6 +2381,7 @@ export type Database = {
           updated_at?: string
           variant_id?: number | null
           variant_name?: string | null
+          vat_rate?: number
         }
         Update: {
           cancel_reason?: string | null
@@ -2398,6 +2403,7 @@ export type Database = {
           updated_at?: string
           variant_id?: number | null
           variant_name?: string | null
+          vat_rate?: number
         }
         Relationships: [
           {

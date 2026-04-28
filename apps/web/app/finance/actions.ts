@@ -74,11 +74,14 @@ export async function createTaxInvoice(
 
   const { supabase, claims, user } = ctx;
 
-  // Fetch order with line items — must be paid
+  // Fetch order with line items — must be paid. order_items.vat_rate is
+  // the per-line snapshot populated at INSERT time by trigger
+  // trg_order_items_populate_vat_rate (migration 20260509000000) — needed
+  // for correct mixed-rate aggregation per rule VAT-PER-LINE-NOT-PER-INVOICE.
   const { data: order, error: orderErr } = await supabase
     .from("orders")
     .select(
-      "id, branch_id, subtotal, tax_amount, total_amount, payment_status, order_items(id, item_name, variant_name, quantity, unit_price, subtotal, status)",
+      "id, branch_id, subtotal, tax_amount, total_amount, payment_status, order_items(id, item_name, variant_name, quantity, unit_price, subtotal, status, vat_rate)",
     )
     .eq("id", parsed.data.orderId)
     .eq("tenant_id", claims.tenant_id)
@@ -118,18 +121,72 @@ export async function createTaxInvoice(
     return { success: false, error: "Đơn hàng đã có hóa đơn." };
   }
 
-  // Read VAT rate from system_settings (falls back to default)
-  const { data: vatSetting } = await supabase
-    .from("system_settings")
-    .select("value")
-    .eq("tenant_id", claims.tenant_id)
-    .eq("key", SYSTEM_SETTING_KEYS.VAT_RATE)
-    .maybeSingle();
-  const vatRate = Number(
-    vatSetting?.value ?? SYSTEM_SETTING_DEFAULTS[SYSTEM_SETTING_KEYS.VAT_RATE],
+  // Per-line VAT aggregation (rule VAT-PER-LINE-NOT-PER-INVOICE).
+  // Each order_item carries its own vat_rate snapshot. For uniform-rate
+  // orders this is mathematically equivalent to the legacy
+  // `total / (1 + system_rate)` formula; for mixed-rate orders
+  // (cơm 8% + bia 10%) it produces the correct subtotal/VAT breakdown
+  // that the legacy single-rate division could not.
+  const activeItems = order.order_items.filter(
+    (item) => item.status !== "cancelled",
   );
-  const subtotal = Number(order.total_amount) / (1 + vatRate / 100);
-  const vatAmount = Number(order.total_amount) - subtotal;
+  const orderTotal = Number(order.total_amount);
+  const itemGrossSum = activeItems.reduce(
+    (s, i) => s + Number(i.subtotal),
+    0,
+  );
+
+  let subtotal: number;
+  let vatAmount: number;
+  let vatRate: number;
+
+  if (activeItems.length > 0 && itemGrossSum > 0) {
+    // Scale absorbs order-level discount: sum of items.subtotal is
+    // pre-discount, order.total_amount is post-discount. Discount allocated
+    // proportionally across lines at the same rate.
+    const scale = orderTotal / itemGrossSum;
+    const grossByRate = new Map<number, number>();
+    for (const item of activeItems) {
+      const rate = Number(item.vat_rate);
+      const gross = Number(item.subtotal) * scale;
+      grossByRate.set(rate, (grossByRate.get(rate) ?? 0) + gross);
+    }
+
+    let sumSub = 0;
+    let sumVat = 0;
+    let predRate = 0;
+    let predGross = -1;
+    for (const [rate, gross] of grossByRate) {
+      const lineSub = gross / (1 + rate / 100);
+      const lineVat = gross - lineSub;
+      sumSub += lineSub;
+      sumVat += lineVat;
+      if (gross > predGross) {
+        predRate = rate;
+        predGross = gross;
+      }
+    }
+    subtotal = sumSub;
+    vatAmount = sumVat;
+    // Header rate = predominant by gross weight. For mixed-rate orders
+    // (grossByRate.size > 1) this is informational; UI can flag mixed.
+    vatRate = predRate;
+  } else {
+    // Edge: no active items or zero subtotal. Fall back to system_settings
+    // VAT rate so the not_required audit row has a sensible header rate.
+    const { data: vatSetting } = await supabase
+      .from("system_settings")
+      .select("value")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("key", SYSTEM_SETTING_KEYS.VAT_RATE)
+      .maybeSingle();
+    vatRate = Number(
+      vatSetting?.value ??
+        SYSTEM_SETTING_DEFAULTS[SYSTEM_SETTING_KEYS.VAT_RATE],
+    );
+    subtotal = orderTotal / (1 + vatRate / 100);
+    vatAmount = orderTotal - subtotal;
+  }
 
   // D4 short-circuit (owner 2026-04-26): no MST → skip MISA call, insert
   // an audit row with status='not_required'. Khách comp meal / khách lẻ
@@ -190,11 +247,8 @@ export async function createTaxInvoice(
   let invoiceStatus: "draft" | "signing" | "submitted" | "issued";
   let providerData: Record<string, unknown> | undefined;
 
-  // Build invoice line items from order_items (exclude cancelled)
-  const activeItems = order.order_items.filter(
-    (item) => item.status !== "cancelled",
-  );
-
+  // activeItems already computed above for VAT aggregation; the empty-
+  // items check still applies here (HĐĐT to MISA cannot have zero lines).
   if (activeItems.length === 0) {
     return {
       success: false,
