@@ -34,7 +34,6 @@ const createCategorySchema = z.object({
   name: z.string().min(1, { error: "Tên danh mục không được để trống" }),
   type: z.enum(CATEGORY_TYPES, { error: "Loại danh mục không hợp lệ" }),
   sort_order: z.coerce.number().int().min(0).default(0),
-  kitchen_printer: z.coerce.number().int().min(1).max(2).default(1),
 });
 
 const updateCategorySchema = z.object({
@@ -42,7 +41,6 @@ const updateCategorySchema = z.object({
   name: z.string().min(1, { error: "Tên danh mục không được để trống" }),
   type: z.enum(CATEGORY_TYPES, { error: "Loại danh mục không hợp lệ" }),
   sort_order: z.coerce.number().int().min(0).default(0),
-  kitchen_printer: z.coerce.number().int().min(1).max(2).default(1),
 });
 
 /* ─── Item Schemas ─── */
@@ -138,7 +136,6 @@ export const createCategory = withFormAction(
       name: fd.get("name"),
       type: fd.get("type"),
       sort_order: fd.get("sort_order") || 0,
-      kitchen_printer: fd.get("kitchen_printer") || 1,
     }),
   },
   async (data, { supabase, claims }) => {
@@ -147,7 +144,6 @@ export const createCategory = withFormAction(
       name: data.name,
       type: data.type,
       sort_order: data.sort_order,
-      kitchen_printer: data.kitchen_printer,
     });
 
     if (error) {
@@ -168,7 +164,6 @@ export const updateCategory = withFormAction(
       name: fd.get("name"),
       type: fd.get("type"),
       sort_order: fd.get("sort_order") || 0,
-      kitchen_printer: fd.get("kitchen_printer") || 1,
     }),
   },
   async (data, { supabase, claims }) => {
@@ -178,7 +173,6 @@ export const updateCategory = withFormAction(
         name: data.name,
         type: data.type,
         sort_order: data.sort_order,
-        kitchen_printer: data.kitchen_printer,
       })
       .eq("id", data.id)
       .eq("tenant_id", claims.tenant_id);
@@ -193,7 +187,11 @@ export const updateCategory = withFormAction(
 );
 
 export const toggleCategoryActive = withAction(
-  { roles: MENU_MANAGER_ROLES, schema: toggleIdSchema, permission: PERMISSION_KEYS.MENU_WRITE },
+  {
+    roles: MENU_MANAGER_ROLES,
+    schema: toggleIdSchema,
+    permission: PERMISSION_KEYS.MENU_WRITE,
+  },
   async (data, { supabase }) => {
     const { error } = await supabase.rpc("toggle_category_active", {
       p_id: data.id,
@@ -280,7 +278,11 @@ export const updateItem = withFormAction(
 );
 
 export const toggleItemActive = withAction(
-  { roles: MENU_MANAGER_ROLES, schema: toggleIdSchema, permission: PERMISSION_KEYS.MENU_WRITE },
+  {
+    roles: MENU_MANAGER_ROLES,
+    schema: toggleIdSchema,
+    permission: PERMISSION_KEYS.MENU_WRITE,
+  },
   async (data, { supabase }) => {
     const { error } = await supabase.rpc("toggle_item_active", {
       p_id: data.id,
@@ -301,7 +303,11 @@ export const toggleItemActive = withAction(
 /* ─── Variants ─── */
 
 export const saveVariants = withAction(
-  { roles: MENU_MANAGER_ROLES, schema: saveVariantsSchema, permission: PERMISSION_KEYS.MENU_WRITE },
+  {
+    roles: MENU_MANAGER_ROLES,
+    schema: saveVariantsSchema,
+    permission: PERMISSION_KEYS.MENU_WRITE,
+  },
   async (data, { supabase }) => {
     const { error } = await supabase.rpc("save_item_variants", {
       p_item_id: data.itemId,
@@ -327,7 +333,11 @@ export const saveVariants = withAction(
 /* ─── Modifiers ─── */
 
 export const saveModifiers = withAction(
-  { roles: MENU_MANAGER_ROLES, schema: saveModifiersSchema, permission: PERMISSION_KEYS.MENU_WRITE },
+  {
+    roles: MENU_MANAGER_ROLES,
+    schema: saveModifiersSchema,
+    permission: PERMISSION_KEYS.MENU_WRITE,
+  },
   async (data, { supabase }) => {
     const { error } = await supabase.rpc("save_item_modifiers", {
       p_item_id: data.itemId,
@@ -353,7 +363,11 @@ export const saveModifiers = withAction(
 /* ─── Available Sides ─── */
 
 export const saveSides = withAction(
-  { roles: MENU_MANAGER_ROLES, schema: saveSidesSchema, permission: PERMISSION_KEYS.MENU_WRITE },
+  {
+    roles: MENU_MANAGER_ROLES,
+    schema: saveSidesSchema,
+    permission: PERMISSION_KEYS.MENU_WRITE,
+  },
   async (data, { supabase }) => {
     const { error } = await supabase.rpc("save_item_sides", {
       p_main_item_id: data.mainItemId,
@@ -384,17 +398,18 @@ const CATEGORY_TYPE_LABELS: Record<(typeof CATEGORY_TYPES)[number], string> = {
   dessert: "Tráng miệng",
 };
 
-const CATEGORY_TYPE_BY_LABEL: Record<string, (typeof CATEGORY_TYPES)[number]> = {
-  "món chính": "main_dish",
-  "main_dish": "main_dish",
-  "món phụ": "side_dish",
-  "side_dish": "side_dish",
-  "thức uống": "drink",
-  "nước": "drink",
-  "drink": "drink",
-  "tráng miệng": "dessert",
-  "dessert": "dessert",
-};
+const CATEGORY_TYPE_BY_LABEL: Record<string, (typeof CATEGORY_TYPES)[number]> =
+  {
+    "món chính": "main_dish",
+    main_dish: "main_dish",
+    "món phụ": "side_dish",
+    side_dish: "side_dish",
+    "thức uống": "drink",
+    nước: "drink",
+    drink: "drink",
+    "tráng miệng": "dessert",
+    dessert: "dessert",
+  };
 
 interface MenuExportCategory {
   name: string;
@@ -521,51 +536,63 @@ function buildMenuSheets(
 }
 
 type ExportMenuResult =
-  | { success: true; data: { filename: string; base64: string; format: "xlsx" | "csv" } }
+  | {
+      success: true;
+      data: { filename: string; base64: string; format: "xlsx" | "csv" };
+    }
   | { success: false; error: string };
 
 export async function exportMenu(
   format: "xlsx" | "csv" = "xlsx",
 ): Promise<ExportMenuResult> {
-  const ctx = await getAuthContextWithPermission(MENU_MANAGER_ROLES, PERMISSION_KEYS.MENU_WRITE);
+  const ctx = await getAuthContextWithPermission(
+    MENU_MANAGER_ROLES,
+    PERMISSION_KEYS.MENU_WRITE,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
 
-  const [catRes, itemRes, variantRes, modifierRes, sideRes] = await Promise.all([
-    supabase
-      .from("menu_categories")
-      .select("name, type, sort_order, is_active")
-      .eq("tenant_id", claims.tenant_id)
-      .order("sort_order")
-      .order("name"),
-    supabase
-      .from("menu_items")
-      .select(
-        "name, base_price, description, sort_order, is_active, menu_categories(name)",
-      )
-      .eq("tenant_id", claims.tenant_id)
-      .order("sort_order")
-      .order("name"),
-    supabase
-      .from("menu_item_variants")
-      .select("name, price_adjustment, sort_order, menu_items(name)")
-      .eq("tenant_id", claims.tenant_id)
-      .order("sort_order"),
-    supabase
-      .from("menu_item_modifiers")
-      .select("name, price, sort_order, menu_items(name)")
-      .eq("tenant_id", claims.tenant_id)
-      .order("sort_order"),
-    supabase
-      .from("menu_item_available_sides")
-      .select(
-        "is_default, main:main_item_id(name), side:side_item_id(name)",
-      )
-      .eq("tenant_id", claims.tenant_id),
-  ]);
+  const [catRes, itemRes, variantRes, modifierRes, sideRes] = await Promise.all(
+    [
+      supabase
+        .from("menu_categories")
+        .select("name, type, sort_order, is_active")
+        .eq("tenant_id", claims.tenant_id)
+        .order("sort_order")
+        .order("name"),
+      supabase
+        .from("menu_items")
+        .select(
+          "name, base_price, description, sort_order, is_active, menu_categories(name)",
+        )
+        .eq("tenant_id", claims.tenant_id)
+        .order("sort_order")
+        .order("name"),
+      supabase
+        .from("menu_item_variants")
+        .select("name, price_adjustment, sort_order, menu_items(name)")
+        .eq("tenant_id", claims.tenant_id)
+        .order("sort_order"),
+      supabase
+        .from("menu_item_modifiers")
+        .select("name, price, sort_order, menu_items(name)")
+        .eq("tenant_id", claims.tenant_id)
+        .order("sort_order"),
+      supabase
+        .from("menu_item_available_sides")
+        .select("is_default, main:main_item_id(name), side:side_item_id(name)")
+        .eq("tenant_id", claims.tenant_id),
+    ],
+  );
 
-  if (catRes.error || itemRes.error || variantRes.error || modifierRes.error || sideRes.error) {
+  if (
+    catRes.error ||
+    itemRes.error ||
+    variantRes.error ||
+    modifierRes.error ||
+    sideRes.error
+  ) {
     return { success: false, error: "Không thể tải dữ liệu menu." };
   }
 
@@ -664,10 +691,24 @@ const importItemRowSchema = z.object({
 function parseBoolean(raw: string | undefined): boolean {
   if (!raw) return true;
   const s = raw.trim().toLowerCase();
-  if (s === "" || s === "có" || s === "co" || s === "true" || s === "1" || s === "yes" || s === "x") {
+  if (
+    s === "" ||
+    s === "có" ||
+    s === "co" ||
+    s === "true" ||
+    s === "1" ||
+    s === "yes" ||
+    s === "x"
+  ) {
     return true;
   }
-  if (s === "không" || s === "khong" || s === "false" || s === "0" || s === "no") {
+  if (
+    s === "không" ||
+    s === "khong" ||
+    s === "false" ||
+    s === "0" ||
+    s === "no"
+  ) {
     return false;
   }
   return true;
@@ -723,8 +764,13 @@ type ImportMenuResult =
     }
   | { success: false; error: string; issues?: ImportIssue[] };
 
-export async function importMenu(formData: FormData): Promise<ImportMenuResult> {
-  const ctx = await getAuthContextWithPermission(MENU_MANAGER_ROLES, PERMISSION_KEYS.MENU_WRITE);
+export async function importMenu(
+  formData: FormData,
+): Promise<ImportMenuResult> {
+  const ctx = await getAuthContextWithPermission(
+    MENU_MANAGER_ROLES,
+    PERMISSION_KEYS.MENU_WRITE,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const file = formData.get("file");
@@ -788,11 +834,17 @@ export async function importMenu(formData: FormData): Promise<ImportMenuResult> 
     }
   }
 
-  if (!categorySheet && !itemSheet && !variantSheet && !modifierSheet && !sideSheet) {
+  if (
+    !categorySheet &&
+    !itemSheet &&
+    !variantSheet &&
+    !modifierSheet &&
+    !sideSheet
+  ) {
     return {
       success: false,
       error:
-        'Không tìm thấy sheet nào phù hợp. Vui lòng tải template để xem định dạng.',
+        "Không tìm thấy sheet nào phù hợp. Vui lòng tải template để xem định dạng.",
     };
   }
 
@@ -996,7 +1048,10 @@ export async function importMenu(formData: FormData): Promise<ImportMenuResult> 
       .select("id, name")
       .eq("tenant_id", claims.tenant_id);
     if (itemErr) {
-      return { success: false, error: "Không thể tra món để import biến thể/topping/món phụ." };
+      return {
+        success: false,
+        error: "Không thể tra món để import biến thể/topping/món phụ.",
+      };
     }
     itemIdByName = new Map(
       (allItems ?? []).map((it) => [it.name.toLowerCase(), it.id]),
@@ -1007,7 +1062,14 @@ export async function importMenu(formData: FormData): Promise<ImportMenuResult> 
   if (variantSheet) {
     const groups = new Map<
       string,
-      { itemName: string; variants: { name: string; price_adjustment: number; sort_order: number }[] }
+      {
+        itemName: string;
+        variants: {
+          name: string;
+          price_adjustment: number;
+          sort_order: number;
+        }[];
+      }
     >();
 
     variantSheet.rows.forEach((raw, idx) => {
@@ -1015,7 +1077,8 @@ export async function importMenu(formData: FormData): Promise<ImportMenuResult> 
       const parsedRow = importVariantRowSchema.safeParse({
         item_name: raw["Tên món"] ?? raw["item_name"],
         name: raw["Tên biến thể"] ?? raw["name"],
-        price_adjustment: raw["Chênh lệch giá (VND)"] ?? raw["price_adjustment"] ?? 0,
+        price_adjustment:
+          raw["Chênh lệch giá (VND)"] ?? raw["price_adjustment"] ?? 0,
         sort_order: raw["Thứ tự"] ?? raw["sort_order"] ?? 0,
       });
       if (!parsedRow.success) {
@@ -1091,7 +1154,10 @@ export async function importMenu(formData: FormData): Promise<ImportMenuResult> 
   if (modifierSheet) {
     const groups = new Map<
       string,
-      { itemName: string; modifiers: { name: string; price: number; sort_order: number }[] }
+      {
+        itemName: string;
+        modifiers: { name: string; price: number; sort_order: number }[];
+      }
     >();
 
     modifierSheet.rows.forEach((raw, idx) => {
@@ -1128,7 +1194,11 @@ export async function importMenu(formData: FormData): Promise<ImportMenuResult> 
         sort_order: parsedRow.data.sort_order,
       };
       if (existing) existing.modifiers.push(entry);
-      else groups.set(key, { itemName: parsedRow.data.item_name, modifiers: [entry] });
+      else
+        groups.set(key, {
+          itemName: parsedRow.data.item_name,
+          modifiers: [entry],
+        });
     });
 
     if (issues.length > 0) {
@@ -1209,9 +1279,16 @@ export async function importMenu(formData: FormData): Promise<ImportMenuResult> 
         return;
       }
       const existing = groups.get(mainKey);
-      const entry = { side_item_id: sideId, is_default: parsedRow.data.is_default };
+      const entry = {
+        side_item_id: sideId,
+        is_default: parsedRow.data.is_default,
+      };
       if (existing) existing.sides.push(entry);
-      else groups.set(mainKey, { mainItemName: parsedRow.data.main_item_name, sides: [entry] });
+      else
+        groups.set(mainKey, {
+          mainItemName: parsedRow.data.main_item_name,
+          sides: [entry],
+        });
     });
 
     if (issues.length > 0) {
@@ -1244,7 +1321,10 @@ export async function importMenu(formData: FormData): Promise<ImportMenuResult> 
 }
 
 export async function downloadMenuTemplate(): Promise<ActionResult> {
-  const ctx = await getAuthContextWithPermission(MENU_MANAGER_ROLES, PERMISSION_KEYS.MENU_WRITE);
+  const ctx = await getAuthContextWithPermission(
+    MENU_MANAGER_ROLES,
+    PERMISSION_KEYS.MENU_WRITE,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const sheets = buildMenuSheets(

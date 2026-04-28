@@ -3408,6 +3408,111 @@ export type Database = {
           },
         ]
       }
+      printer_menu_categories: {
+        Row: {
+          branch_id: number
+          category_id: number
+          created_at: string
+          id: number
+          printer_id: number
+          tenant_id: number
+        }
+        Insert: {
+          branch_id: number
+          category_id: number
+          created_at?: string
+          id?: never
+          printer_id: number
+          tenant_id: number
+        }
+        Update: {
+          branch_id?: number
+          category_id?: number
+          created_at?: string
+          id?: never
+          printer_id?: number
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "printer_menu_categories_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "printer_menu_categories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "menu_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "printer_menu_categories_printer_id_tenant_id_branch_id_fkey"
+            columns: ["printer_id", "tenant_id", "branch_id"]
+            isOneToOne: false
+            referencedRelation: "printers"
+            referencedColumns: ["id", "tenant_id", "branch_id"]
+          },
+          {
+            foreignKeyName: "printer_menu_categories_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      printer_print_types: {
+        Row: {
+          branch_id: number
+          created_at: string
+          id: number
+          print_type: string
+          printer_id: number
+          tenant_id: number
+        }
+        Insert: {
+          branch_id: number
+          created_at?: string
+          id?: never
+          print_type: string
+          printer_id: number
+          tenant_id: number
+        }
+        Update: {
+          branch_id?: number
+          created_at?: string
+          id?: never
+          print_type?: string
+          printer_id?: number
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "printer_print_types_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "printer_print_types_printer_id_tenant_id_branch_id_fkey"
+            columns: ["printer_id", "tenant_id", "branch_id"]
+            isOneToOne: false
+            referencedRelation: "printers"
+            referencedColumns: ["id", "tenant_id", "branch_id"]
+          },
+          {
+            foreignKeyName: "printer_print_types_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       printers: {
         Row: {
           branch_id: number
@@ -7103,6 +7208,10 @@ export type Database = {
         Args: { p_month: number; p_tenant_id: number; p_year: number }
         Returns: undefined
       }
+      resolve_branch_printer_for_type: {
+        Args: { p_branch_id: number; p_print_type: string; p_tenant_id: number }
+        Returns: number
+      }
       resolve_po_price: {
         Args: { p_ingredient_id: number; p_supplier_id: number; p_uom: string }
         Returns: {
@@ -7284,6 +7393,25 @@ export type Database = {
       update_pos_order_status: {
         Args: { p_new_status: string; p_order_id: number }
         Returns: Json
+      }
+      upsert_printer_with_routes: {
+        Args: {
+          p_branch_id?: number
+          p_category_ids?: number[]
+          p_code_page?: string
+          p_connection_type?: string
+          p_is_active?: boolean
+          p_lan_host?: string
+          p_lan_port?: number
+          p_name?: string
+          p_paper_width_mm?: number
+          p_print_types?: string[]
+          p_printer_id?: number
+          p_role?: string
+          p_usb_product_id?: string
+          p_usb_vendor_id?: string
+        }
+        Returns: number
       }
       upsert_production_recipe_lines: {
         Args: { p_finished_good_id: number; p_lines: Json }

@@ -19,7 +19,7 @@ export default async function MenuPage() {
   const [categoriesRes, itemsRes] = await Promise.all([
     supabase
       .from("menu_categories")
-      .select("id, name, type, sort_order, is_active, kitchen_printer")
+      .select("id, name, type, sort_order, is_active")
       .order("sort_order")
       .order("name"),
     supabase

@@ -1,7 +1,13 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Ellipsis as IconDots, Pencil as IconPencil, ToggleLeft as IconToggleLeft, ToggleRight as IconToggleRight, FolderOpen as IconFolderOpen } from "lucide-react";
+import {
+  Ellipsis as IconDots,
+  Pencil as IconPencil,
+  ToggleLeft as IconToggleLeft,
+  ToggleRight as IconToggleRight,
+  FolderOpen as IconFolderOpen,
+} from "lucide-react";
 import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -32,7 +38,6 @@ export interface CategoryRow {
   type: string;
   sort_order: number;
   is_active: boolean;
-  kitchen_printer: number;
 }
 
 interface CategoryTableProps {
@@ -59,8 +64,9 @@ export function CategoryTable({ categories }: CategoryTableProps) {
           <TableHeader>
             <TableRow>
               <TableHead>Tên danh mục</TableHead>
-              <TableHead className="hidden sm:table-cell">{FORM_VI.type}</TableHead>
-              <TableHead className="hidden md:table-cell">Bếp in</TableHead>
+              <TableHead className="hidden sm:table-cell">
+                {FORM_VI.type}
+              </TableHead>
               <TableHead className="hidden md:table-cell">Thứ tự</TableHead>
               <TableHead>{FORM_VI.status}</TableHead>
               <TableHead className="w-12" />
@@ -69,7 +75,7 @@ export function CategoryTable({ categories }: CategoryTableProps) {
           <TableBody>
             {categories.length === 0 && (
               <TableEmptyStateRow
-                colSpan={6}
+                colSpan={5}
                 title="Chưa có danh mục nào"
                 icon={
                   <IconFolderOpen className="mx-auto size-8 text-muted-foreground" />
@@ -94,11 +100,6 @@ export function CategoryTable({ categories }: CategoryTableProps) {
                 <TableCell className="hidden sm:table-cell">
                   <Badge variant="secondary">
                     {CATEGORY_TYPE_LABELS[cat.type] ?? cat.type}
-                  </Badge>
-                </TableCell>
-                <TableCell className="hidden md:table-cell">
-                  <Badge variant="outline">
-                    Bếp {cat.kitchen_printer}
                   </Badge>
                 </TableCell>
                 <TableCell className="hidden text-muted-foreground md:table-cell">

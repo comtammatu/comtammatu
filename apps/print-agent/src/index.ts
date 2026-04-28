@@ -22,9 +22,21 @@ type PrintJobRow = {
   tenant_id: number;
   branch_id: number;
   printer_id: number;
-  job_type: "kitchen_ticket" | "receipt" | "reprint" | "cancel_ticket";
+  job_type:
+    | "kitchen_ticket"
+    | "receipt"
+    | "reprint"
+    | "cancel_ticket"
+    | "provisional_bill"
+    | "shift_close_report";
   payload: PrintPayload;
-  status: "pending" | "processing" | "printed" | "failed" | "expired" | "cancelled";
+  status:
+    | "pending"
+    | "processing"
+    | "printed"
+    | "failed"
+    | "expired"
+    | "cancelled";
 };
 
 type Transport = "lan" | "all";
@@ -98,7 +110,9 @@ async function loadPrinters(supabase: SupabaseClient): Promise<void> {
   for (const p of (data ?? []) as PrinterRow[]) {
     printerCache.set(p.id, p);
   }
-  console.log(`[agent] loaded ${printerCache.size} printers for branch ${config.branchId}`);
+  console.log(
+    `[agent] loaded ${printerCache.size} printers for branch ${config.branchId}`,
+  );
 
   if (config.transport === "lan") {
     const usbActive = [...printerCache.values()].filter(
@@ -158,11 +172,17 @@ async function registerPresence(): Promise<void> {
       );
       return;
     }
-    const data = (await resp.json()) as { ok?: boolean; ip?: string; error?: string };
+    const data = (await resp.json()) as {
+      ok?: boolean;
+      ip?: string;
+      error?: string;
+    };
     if (data.ok) {
       console.log(`[agent] presence registered ip=${data.ip}`);
     } else {
-      console.error(`[agent] presence register rejected: ${data.error ?? "unknown"}`);
+      console.error(
+        `[agent] presence register rejected: ${data.error ?? "unknown"}`,
+      );
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -218,7 +238,8 @@ async function dispatch(job: PrintJobRow): Promise<void> {
       : renderPayload(job.payload);
 
   if (printer.connection_type === "lan") {
-    if (!printer.lan_host) throw new Error(`printer ${printer.id} missing lan_host`);
+    if (!printer.lan_host)
+      throw new Error(`printer ${printer.id} missing lan_host`);
     await sendRawLAN(printer.lan_host, printer.lan_port ?? 9100, bytes);
     return;
   }
@@ -258,7 +279,12 @@ async function processJob(
     .eq("id", jobId)
     .single();
   if (error || !data) {
-    await completeJob(supabase, jobId, false, `fetch failed: ${error?.message}`);
+    await completeJob(
+      supabase,
+      jobId,
+      false,
+      `fetch failed: ${error?.message}`,
+    );
     return;
   }
   const job = data as unknown as PrintJobRow;
@@ -286,7 +312,10 @@ async function drainPending(supabase: SupabaseClient): Promise<void> {
     console.error("[agent] drain failed:", error.message);
     return;
   }
-  for (const row of (data ?? []) as Array<{ id: number; printer_id: number | null }>) {
+  for (const row of (data ?? []) as Array<{
+    id: number;
+    printer_id: number | null;
+  }>) {
     await processJob(supabase, row.id, row.printer_id);
   }
 }
@@ -319,7 +348,9 @@ async function main() {
     `[agent] starting ${config.agentId} v${config.version} branch=${config.branchId} transport=${config.transport} print_mode=${config.printMode}`,
   );
   if (config.transport === "lan") {
-    console.log("[agent] USB dispatch disabled; only LAN (TCP:9100) printers will be served");
+    console.log(
+      "[agent] USB dispatch disabled; only LAN (TCP:9100) printers will be served",
+    );
   }
   const supabase = createClient(config.supabaseUrl, config.serviceKey, {
     auth: { persistSession: false, autoRefreshToken: false },

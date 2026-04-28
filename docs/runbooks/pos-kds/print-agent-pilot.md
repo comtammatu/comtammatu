@@ -23,9 +23,9 @@ Complete all items before opening the branch for the day.
       reachable from the POS PC subnet
 - [ ] For USB printers: `usb_vendor_id` filled (`usb_product_id` optional),
       WinUSB driver bound (Zadig) — confirm via `usb.getDeviceList()`
-- [ ] `menu_categories.kitchen_printer` set to `1` or `2` for every category that
-      should route to a kitchen — categories without this value will NOT be
-      included in kitchen tickets
+- [ ] `/admin/settings/printers` — each branch kitchen printer has the right
+      print types (`kitchen_ticket`, `cancel_ticket`) and menu categories assigned.
+      Categories not assigned to a branch printer are not included in kitchen tickets.
 - [ ] Cashier + chef accounts have `pos:send_kitchen` + `pos:print` permissions
       (auto-provisioned via role template)
 
@@ -70,11 +70,11 @@ Document completion: tick this checklist, sign, file with branch opening checkli
 
 ## 2. During service — standard flow
 
-| Action at POS | System behaviour |
-|---|---|
-| Add items, click **Gửi bếp** | `enqueue_kitchen_print` → 1-2 jobs inserted → agent claims → ticket(s) print |
-| Click **In hoá đơn** on an open order | `enqueue_receipt_print` → 1 job → receipt prints |
-| Retry a failed job | Manager opens monitor → **Thử lại** → job back to `pending` with audited `last_retried_by/at` |
+| Action at POS                         | System behaviour                                                                              |
+| ------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Add items, click **Gửi bếp**          | `enqueue_kitchen_print` → 1-2 jobs inserted → agent claims → ticket(s) print                  |
+| Click **In hoá đơn** on an open order | `enqueue_receipt_print` → 1 job → receipt prints                                              |
+| Retry a failed job                    | Manager opens monitor → **Thử lại** → job back to `pending` with audited `last_retried_by/at` |
 
 Idempotency: repeated clicks within the same second-bucket produce the same
 `idempotency_key` and are deduped at the DB (no double printing).
@@ -167,16 +167,17 @@ expected live backlog only.
 
 ## 5. Rollout checklist (2-week pilot → fleet)
 
-| Day | Milestone | Owner |
-|---|---|---|
-| D0 | Pilot branch pre-flight (§0) complete | Branch manager |
-| D0 | Smoke test signed off | Ops lead |
-| D1–D3 | Daily check-in at 08:30 — badge green, 0 stuck `failed` jobs | Branch manager |
-| D7 | Mid-pilot review — failed job count, MTTR, retry success rate | Ops + Eng |
-| D14 | Go/no-go decision for fleet rollout | Ops lead |
-| D14+ | Fleet rollout: 1 branch per day, same checklist | Branch managers |
+| Day   | Milestone                                                     | Owner           |
+| ----- | ------------------------------------------------------------- | --------------- |
+| D0    | Pilot branch pre-flight (§0) complete                         | Branch manager  |
+| D0    | Smoke test signed off                                         | Ops lead        |
+| D1–D3 | Daily check-in at 08:30 — badge green, 0 stuck `failed` jobs  | Branch manager  |
+| D7    | Mid-pilot review — failed job count, MTTR, retry success rate | Ops + Eng       |
+| D14   | Go/no-go decision for fleet rollout                           | Ops lead        |
+| D14+  | Fleet rollout: 1 branch per day, same checklist               | Branch managers |
 
 Go criteria for fleet rollout:
+
 - Fewer than 2 `failed` jobs per branch per day that required manual retry.
 - Agent uptime ≥ 99% measured by `printer_agent_status.is_online`.
 - Zero reports of duplicate tickets.
