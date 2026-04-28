@@ -89,9 +89,17 @@ const postIdSchema = z.object({
   id: z.coerce.number().int().positive({ error: "Entry ID không hợp lệ" }),
 });
 
+// Rule JE-VOID-REVERSING-ONLY: void reason ≥20 chars (mirrors
+// HDDT-CANCEL-REASON-MIN-20). A void leaves the row in sổ cái
+// permanently; the auditor needs a real, descriptive reason —
+// "đảo bút toán" (15 chars) is useless to a tax inspection.
 const voidSchema = z.object({
   entryId: z.coerce.number().int().positive(),
-  reason: z.string().min(1, "Lý do không được trống"),
+  reason: z
+    .string()
+    .trim()
+    .min(20, "Lý do hủy phải có ít nhất 20 ký tự")
+    .max(500, "Lý do hủy quá dài"),
 });
 
 /* ─── Create Journal Entry ─── */
@@ -235,6 +243,19 @@ export const voidJournalEntry = withAction(
       .in("status", ["draft", "posted"]);
 
     if (error) {
+      // Period-close guard trigger raises 23514 with sentinel
+      // 'period_closed_cannot_void:' prefix per migration
+      // 20260507000000_finance_phase1_journal_entry_period_guard_and_continuity.sql.
+      if (
+        error.code === "23514" &&
+        error.message.includes("period_closed_cannot_void")
+      ) {
+        return {
+          success: false,
+          error:
+            "Không thể hủy bút toán đã ghi vào kỳ kế toán đã đóng. Hãy tạo bút toán đảo trong kỳ hiện tại.",
+        };
+      }
       return { success: false, error: "Không thể hủy bút toán." };
     }
 
