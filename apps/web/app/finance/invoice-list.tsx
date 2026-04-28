@@ -4,6 +4,8 @@ import { useState, useTransition } from "react";
 import { FileX as IconFileX, Receipt as IconReceipt } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { Label } from "@comtammatu/ui/components/label";
+import { Textarea } from "@comtammatu/ui/components/textarea";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -58,19 +60,33 @@ interface InvoiceListProps {
   initialInvoices: InvoiceRow[];
 }
 
+const CANCEL_REASON_MIN = 20;
+const CANCEL_REASON_MAX = 500;
+
 export function InvoiceList({ initialInvoices }: InvoiceListProps) {
   const [invoices, setInvoices] = useState(initialInvoices);
   const [cancelTarget, setCancelTarget] = useState<InvoiceRow | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
   const [isPending, startTransition] = useTransition();
 
+  const trimmedReason = cancelReason.trim();
+  const reasonValid =
+    trimmedReason.length >= CANCEL_REASON_MIN &&
+    trimmedReason.length <= CANCEL_REASON_MAX;
+
+  function resetCancelDialog() {
+    setCancelTarget(null);
+    setCancelReason("");
+  }
+
   function handleCancel() {
-    if (!cancelTarget) return;
+    if (!cancelTarget || !reasonValid) return;
     const id = cancelTarget.id;
+    const reason = trimmedReason;
     startTransition(async () => {
-      const result = await cancelTaxInvoice(id, "Hủy theo yêu cầu");
+      const result = await cancelTaxInvoice(id, reason);
       if (!result.success) {
         toast.error(result.error ?? "Không thể hủy hóa đơn");
-        setCancelTarget(null);
         return;
       }
       toast.success("Đã hủy hóa đơn");
@@ -79,7 +95,7 @@ export function InvoiceList({ initialInvoices }: InvoiceListProps) {
           inv.id === id ? { ...inv, status: "cancelled" } : inv,
         ),
       );
-      setCancelTarget(null);
+      resetCancelDialog();
     });
   }
 
@@ -229,7 +245,7 @@ export function InvoiceList({ initialInvoices }: InvoiceListProps) {
 
       <AlertDialog
         open={!!cancelTarget}
-        onOpenChange={(open) => !open && setCancelTarget(null)}
+        onOpenChange={(open) => !open && resetCancelDialog()}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -239,14 +255,32 @@ export function InvoiceList({ initialInvoices }: InvoiceListProps) {
               <strong>
                 {cancelTarget?.invoice_number ?? `#${cancelTarget?.id}`}
               </strong>
-              ? Hành động này không thể hòan tác.
+              ? Hành động này không thể hòan tác. Lý do hủy được lưu vào
+              hồ sơ HĐĐT theo yêu cầu của Nghị định 70/2025.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <div className="grid gap-2">
+            <Label htmlFor="invoice-cancel-reason">
+              Lý do hủy (tối thiểu {CANCEL_REASON_MIN} ký tự)
+            </Label>
+            <Textarea
+              id="invoice-cancel-reason"
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder="Ví dụ: Khách hàng yêu cầu xuất lại HĐĐT vì sai mã số thuế."
+              rows={3}
+              maxLength={CANCEL_REASON_MAX}
+              disabled={isPending}
+            />
+            <p className="text-xs text-muted-foreground">
+              {trimmedReason.length}/{CANCEL_REASON_MAX}
+            </p>
+          </div>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isPending}>Không</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleCancel}
-              disabled={isPending}
+              disabled={isPending || !reasonValid}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Hủy hóa đơn

@@ -291,14 +291,18 @@ const cancelInvoiceSchema = z.object({
   invoiceId: z.coerce.number().int().positive(),
   reason: z
     .string()
+    .trim()
     .min(20, "Lý do hủy phải có ít nhất 20 ký tự")
-    .max(500, "Lý do hủy quá dài")
-    .optional(),
+    .max(500, "Lý do hủy quá dài"),
 });
 
+// NĐ70/2025 (and earlier 13/2023) requires every HĐĐT cancellation to
+// carry a real, descriptive reason. Reason is REQUIRED — never default
+// to a placeholder like "Hủy theo yêu cầu" (15 chars, tells auditor
+// nothing).
 export async function cancelTaxInvoice(
   invoiceId: number,
-  reason?: string,
+  reason: string,
 ): Promise<ActionResult> {
   const parsed = cancelInvoiceSchema.safeParse({ invoiceId, reason });
   if (!parsed.success) {
@@ -331,7 +335,7 @@ export async function cancelTaxInvoice(
     return { success: false, error: "Chỉ có thể hủy hóa đơn đã phát hành." };
   }
 
-  const cancelReason = parsed.data.reason ?? "Hủy theo yêu cầu";
+  const cancelReason = parsed.data.reason;
 
   // DB transition runs FIRST so that the app's source of truth flips
   // atomically to 'cancelled'. Provider cancel runs after — if it fails,
@@ -578,9 +582,14 @@ export async function fetchAuditLogs(
 
   const { supabase, claims } = ctx;
 
+  // Explicit column list — drop ip_address (request-level PII) and
+  // raw `old_data`/`new_data` blobs (buyer addresses, MST, salaries
+  // depending on entity_type). The action+entity_id pair is enough to
+  // reconstruct who did what to which row; if a deeper audit is needed,
+  // a future RPC can return diffs gated on a per-event permission.
   let query = supabase
     .from("audit_logs")
-    .select("*")
+    .select("id, action, entity_type, entity_id, user_id, created_at")
     .eq("tenant_id", claims.tenant_id)
     .order("created_at", { ascending: false })
     .limit(parsedLimit.success && parsedLimit.data ? parsedLimit.data : 100);

@@ -37,9 +37,9 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 
 ### M6 Finance
 - [x] **Audit log INSERT REVOKE + `log_audit()` SECURITY DEFINER RPC** (2026-04-28). Migration `20260505020000_audit_logs_rpc_only_insert.sql`; helper at `apps/web/app/admin/_lib/audit.ts` wraps the RPC; 7 callers in finance/HR drop `tenantId`/`userId` (forced server-side). See regression rule AUDIT-LOG-INSERT-RPC-ONLY.
-- [ ] HĐĐT `cancel reason` min 20 chars (NĐ70/2023) — currently `.optional()`.
+- [x] **HĐĐT `cancel reason` min 20 chars** (2026-04-28). Schema dropped `.optional()`, UI collects via Textarea with counter, removed `"Hủy theo yêu cầu"` 15-char placeholder fallback. NĐ70/2025 compliant. See regression rule HDDT-CANCEL-REASON-MIN-20.
+- [x] **`fetchAuditLogs` PII strip** (2026-04-28). Replaced `.select("*")` with explicit `id, action, entity_type, entity_id, user_id, created_at`. Drops `ip_address` + `old_data`/`new_data` blobs. See regression rule AUDIT-LOG-SELECT-EXPLICIT-COLUMNS.
 - [ ] `voidJournalEntry` post-close period guard — invalidates signed BCTC.
-- [ ] `fetchAuditLogs` returns `*` (PII via `old_data`/`ip_address`).
 
 ### M7 Payroll
 - [ ] **`payroll_entries_select` RLS** — add `EXISTS(payroll_periods WHERE status='paid')` to self branch.
