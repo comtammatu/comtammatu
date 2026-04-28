@@ -51,6 +51,7 @@ import {
 import { printProvisionalBill } from "../../print-actions";
 import { useIsOnline } from "../pwa/online-status-provider";
 import { BillReceiptSummary } from "./bill-receipt-summary";
+import { OrderTotalsSummary } from "../order-totals-summary";
 import type {
   BillReceiptIntent,
   OrderData,
@@ -771,14 +772,17 @@ export function BillReceipt({
               {selectedMethod === "cash" ? (
                 <Card size="sm">
                   <CardContent className="flex flex-col gap-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-sm text-muted-foreground">
-                        Tổng tạm tính
-                      </span>
-                      <span className="text-lg font-bold tabular-nums">
-                        {formatVND(totalAmount)}
-                      </span>
-                    </div>
+                    {order && (
+                      <OrderTotalsSummary
+                        subtotal={order.subtotal}
+                        serviceCharge={order.service_charge}
+                        discountAmount={order.discount_amount}
+                        discountType={order.discount_type}
+                        discountValue={order.discount_value}
+                        discountNote={order.discount_note}
+                        totalAmount={order.total_amount}
+                      />
+                    )}
 
                     <div className="relative">
                       <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">
@@ -832,14 +836,17 @@ export function BillReceipt({
               ) : (
                 <Card size="sm">
                   <CardContent className="flex flex-col gap-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-sm text-muted-foreground">
-                        Tổng tạm tính
-                      </span>
-                      <span className="text-lg font-bold tabular-nums">
-                        {formatVND(totalAmount)}
-                      </span>
-                    </div>
+                    {order && (
+                      <OrderTotalsSummary
+                        subtotal={order.subtotal}
+                        serviceCharge={order.service_charge}
+                        discountAmount={order.discount_amount}
+                        discountType={order.discount_type}
+                        discountValue={order.discount_value}
+                        discountNote={order.discount_note}
+                        totalAmount={order.total_amount}
+                      />
+                    )}
 
                     {methodPending ? (
                       <AppBoneyardSkeleton

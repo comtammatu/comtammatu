@@ -58,6 +58,7 @@ import { TransferTableDialog } from "./_components/order-detail/transfer-table-d
 import { DiscountSheet } from "./_components/order-detail/discount-sheet";
 import { SplitOrderSheet } from "./_components/order-detail/split-order-sheet";
 import { MergeOrdersSheet } from "./_components/order-detail/merge-orders-sheet";
+import { OrderTotalsSummary } from "./_components/order-totals-summary";
 import type { OrderData } from "./_components/bill/bill-receipt-types";
 import type { SessionOrder } from "./order-history";
 
@@ -859,6 +860,19 @@ export function OrderDetailSheet({
               </ScrollArea>
 
               <div className="mt-auto flex shrink-0 flex-col gap-2 border-t px-3 py-3 sm:px-4">
+                {activeItemCount > 0 && (
+                  <OrderTotalsSummary
+                    subtotal={data.subtotal}
+                    serviceCharge={data.service_charge}
+                    discountAmount={data.discount_amount}
+                    discountType={data.discount_type}
+                    discountValue={data.discount_value}
+                    discountNote={data.discount_note}
+                    totalAmount={data.total_amount}
+                    variant="compact"
+                  />
+                )}
+
                 {canShowPaymentAction && (
                   <Button
                     type="button"
