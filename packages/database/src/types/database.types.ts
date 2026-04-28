@@ -651,6 +651,7 @@ export type Database = {
           account_code: string
           account_name: string
           account_type: string
+          cashflow_section: string
           created_at: string
           id: number
           is_active: boolean
@@ -663,6 +664,7 @@ export type Database = {
           account_code: string
           account_name: string
           account_type: string
+          cashflow_section?: string
           created_at?: string
           id?: never
           is_active?: boolean
@@ -675,6 +677,7 @@ export type Database = {
           account_code?: string
           account_name?: string
           account_type?: string
+          cashflow_section?: string
           created_at?: string
           id?: never
           is_active?: boolean
