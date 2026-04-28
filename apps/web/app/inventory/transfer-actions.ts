@@ -320,7 +320,7 @@ export async function createStockTransfer(
         return {
           success: false,
           error:
-            "Cấp bếp cần gửi từ kho chi nhánh vào Bếp mặc định. Kiểm tra cấu hình vị trí kho.",
+            "Cấp bếp cần gửi từ kho chi nhánh sang một vị trí bếp cùng chi nhánh. Kiểm tra cấu hình kho/bếp.",
         };
       }
       return { success: false, error: "Không thể tạo Cấp bếp." };

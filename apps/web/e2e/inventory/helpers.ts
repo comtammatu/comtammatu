@@ -128,6 +128,9 @@ export async function ensureIngredient(
       tenant_id: tenantId,
       name,
       unit: "kg",
+      purchase_unit: "kg",
+      measure_unit: "kg",
+      purchase_to_measure_factor: 1,
       unit_cost: 10000,
       is_active: true,
     })
@@ -177,16 +180,46 @@ export async function ensureInventoryLocation(
   supabase: ServiceClient,
   tenantId: number,
   branchId: number,
-  locationKind: "receive" | "issue" | "storage" = "storage",
+  locationKind: "receive" | "issue" | "storage" | "warehouse" | "kitchen" = "storage",
 ): Promise<number> {
   const name = `E2E Loc ${branchId} ${locationKind}`;
 
-  const { data: existing } = await supabase
+  const { data: branch, error: branchErr } = await supabase
+    .from("branches")
+    .select("branch_kind")
+    .eq("tenant_id", tenantId)
+    .eq("id", branchId)
+    .single();
+
+  if (branchErr || !branch) {
+    throw new Error(`Failed to resolve branch for E2E location: ${branchErr?.message}`);
+  }
+
+  const desiredLocationKind =
+    locationKind === "kitchen"
+      ? "kitchen"
+      : locationKind === "receive" && branch.branch_kind === "central_kitchen"
+        ? "kitchen"
+        : "warehouse";
+
+  let existingQuery = supabase
     .from("inventory_locations")
     .select("id")
     .eq("tenant_id", tenantId)
     .eq("branch_id", branchId)
-    .eq("name", name)
+    .eq("is_active", true);
+
+  if (locationKind === "receive") {
+    existingQuery = existingQuery.eq("is_default_receive", true);
+  } else if (locationKind === "issue") {
+    existingQuery = existingQuery.eq("is_default_issue", true);
+  } else {
+    existingQuery = existingQuery.eq("location_kind", desiredLocationKind);
+  }
+
+  const { data: existing } = await existingQuery
+    .order("sort_order", { ascending: true })
+    .limit(1)
     .maybeSingle();
 
   if (existing) return existing.id;
@@ -201,10 +234,11 @@ export async function ensureInventoryLocation(
       branch_id: branchId,
       name,
       code: `E2E-${branchId}-${locationKind}`,
-      location_kind: locationKind === "storage" ? "storage" : locationKind,
+      location_kind: desiredLocationKind,
       is_active: true,
       is_default_receive: isDefaultReceive,
       is_default_issue: isDefaultIssue,
+      is_default_consumption: false,
       sort_order: 999,
     })
     .select("id")
@@ -228,7 +262,7 @@ export async function seedStockLevel(
   branchId: number,
   ingredientId: number,
   qty: number,
-  locationId?: number,
+  locationId: number,
 ): Promise<void> {
   const { error } = await supabase.from("stock_levels").upsert(
     {
@@ -237,9 +271,9 @@ export async function seedStockLevel(
       ingredient_id: ingredientId,
       current_quantity: qty,
       avg_unit_cost: 10000,
-      location_id: locationId ?? null,
+      location_id: locationId,
     },
-    { onConflict: "tenant_id,branch_id,ingredient_id" },
+    { onConflict: "ingredient_id,branch_id,location_id,tenant_id" },
   );
   if (error) throw new Error(`Failed to seed stock_levels: ${error.message}`);
 }
@@ -251,16 +285,24 @@ export async function getStockLevel(
   tenantId: number,
   branchId: number,
   ingredientId: number,
+  locationId?: number,
 ): Promise<number | null> {
-  const { data } = await supabase
+  const query = supabase
     .from("stock_levels")
     .select("current_quantity")
     .eq("tenant_id", tenantId)
     .eq("branch_id", branchId)
-    .eq("ingredient_id", ingredientId)
-    .maybeSingle();
+    .eq("ingredient_id", ingredientId);
 
-  return data ? Number(data.current_quantity) : null;
+  if (locationId != null) {
+    const { data } = await query.eq("location_id", locationId).maybeSingle();
+    return data ? Number(data.current_quantity) : null;
+  }
+
+  const { data } = await query;
+  if (!data || data.length === 0) return null;
+
+  return data.reduce((sum, row) => sum + Number(row.current_quantity ?? 0), 0);
 }
 
 // ─── GRN helpers ──────────────────────────────────────────────────────────────
@@ -397,6 +439,7 @@ export async function createTestTransferDraft(
       to_branch_id: opts.toBranchId,
       transfer_number: transferNumber,
       status: "draft",
+      created_by: opts.createdByUserId,
       from_location_id: opts.fromLocationId ?? null,
       to_location_id: opts.toLocationId ?? null,
     })
@@ -513,19 +556,31 @@ export async function resolveUserByEmail(
 
   const { data: profile, error: pErr } = await supabase
     .from("profiles")
-    .select("id, tenant_id, branch_id, role")
+    .select("id, tenant_id, branch_id, position_id")
     .eq("id", authUser.id)
     .single();
 
   if (pErr || !profile)
     throw new Error(`Profile not found for ${email}: ${pErr?.message}`);
 
+  const { data: position, error: posErr } = profile.position_id
+    ? await supabase
+        .from("positions")
+        .select("legacy_role_code")
+        .eq("id", profile.position_id)
+        .maybeSingle()
+    : { data: null, error: null };
+
+  if (posErr) {
+    throw new Error(`Position not found for ${email}: ${posErr.message}`);
+  }
+
   return {
     userId: profile.id,
     email,
     tenantId: profile.tenant_id,
     branchId: profile.branch_id,
-    role: profile.role,
+    role: position?.legacy_role_code ?? "",
   };
 }
 
@@ -542,11 +597,28 @@ export async function resolveInventoryManagerUser(
     return resolveUserByEmail(supabase, managerEmail);
   }
 
-  // Fallback: discover any warehouse_manager in the tenant
+  // Fallback: discover any warehouse_manager in the tenant.
+  const { data: positions, error: posErr } = await supabase
+    .from("positions")
+    .select("id")
+    .eq("legacy_role_code", "warehouse_manager");
+
+  if (posErr) {
+    throw new Error(`Failed to resolve warehouse_manager positions: ${posErr.message}`);
+  }
+
+  const positionIds = (positions ?? []).map((position) => position.id);
+  if (positionIds.length === 0) {
+    throw new Error(
+      "No warehouse_manager position found. " +
+        "Set E2E_INVENTORY_MANAGER_EMAIL in .env.test.local or seed a warehouse_manager account.",
+    );
+  }
+
   const { data: profile, error } = await supabase
     .from("profiles")
-    .select("id, tenant_id, branch_id, role")
-    .eq("role", "warehouse_manager")
+    .select("id, tenant_id, branch_id, position_id")
+    .in("position_id", positionIds)
     .limit(1)
     .maybeSingle();
 
@@ -567,6 +639,6 @@ export async function resolveInventoryManagerUser(
     email: authUser?.email ?? "",
     tenantId: profile.tenant_id,
     branchId: profile.branch_id,
-    role: profile.role,
+    role: "warehouse_manager",
   };
 }

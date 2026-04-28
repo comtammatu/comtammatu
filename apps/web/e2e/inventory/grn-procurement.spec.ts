@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import {
   createServiceClient,
   resolveTenantId,
@@ -43,6 +43,20 @@ interface GrnFixtures {
   supplierId: number;
   ingredientId: number;
   adminUserId: string;
+}
+
+async function isAccessDenied(page: Page) {
+  const blockedPath = await page
+    .locator("main")
+    .getByText(/\/inventory\//i)
+    .isVisible({ timeout: 1_000 })
+    .catch(() => false);
+  const loginLink = await page
+    .locator('main a[href="/login"]')
+    .isVisible({ timeout: 1_000 })
+    .catch(() => false);
+
+  return blockedPath && loginLink;
 }
 
 async function buildGrnFixtures(): Promise<GrnFixtures> {
@@ -106,10 +120,20 @@ test.describe("GRN at central_warehouse — happy path (Scenario 1)", () => {
       // Navigate to GRN detail page and confirm
       await page.goto(`/inventory/grn/${grn.id}`);
       await page.waitForLoadState("networkidle");
+      if (await isAccessDenied(page)) {
+        test.skip(
+          true,
+          "E2E auth user cannot access Inventory GRN UI. Use owner, super_manager, warehouse_manager, or production_manager for UI happy-path coverage.",
+        );
+        return;
+      }
 
-      const confirmBtn = page.getByRole("button", { name: /xác nhận nhập|duyệt phiếu/i });
+      const confirmBtn = page.getByRole("button", { name: /ch.t nh.p kho|x.c nh.n nh.p|duy.t phi.u/i });
       await expect(confirmBtn).toBeVisible({ timeout: 10_000 });
       await confirmBtn.click();
+      const confirmDialog = page.getByRole("alertdialog");
+      await expect(confirmDialog).toBeVisible({ timeout: 5_000 });
+      await confirmDialog.getByRole("button", { name: /ch.t nh.p kho/i }).click();
 
       // Wait for status update
       await expect
@@ -189,10 +213,20 @@ test.describe("GRN at central_kitchen — new flow (Scenario 2)", () => {
     try {
       await page.goto(`/inventory/grn/${grn.id}`);
       await page.waitForLoadState("networkidle");
+      if (await isAccessDenied(page)) {
+        test.skip(
+          true,
+          "E2E auth user cannot access Inventory GRN UI. Use owner, super_manager, warehouse_manager, or production_manager for UI happy-path coverage.",
+        );
+        return;
+      }
 
-      const confirmBtn = page.getByRole("button", { name: /xác nhận nhập|duyệt phiếu/i });
+      const confirmBtn = page.getByRole("button", { name: /ch.t nh.p kho|x.c nh.n nh.p|duy.t phi.u/i });
       await expect(confirmBtn).toBeVisible({ timeout: 10_000 });
       await confirmBtn.click();
+      const confirmDialog = page.getByRole("alertdialog");
+      await expect(confirmDialog).toBeVisible({ timeout: 5_000 });
+      await confirmDialog.getByRole("button", { name: /ch.t nh.p kho/i }).click();
 
       await expect
         .poll(

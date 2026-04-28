@@ -140,13 +140,15 @@ export function CreateTransferDialog({
     () => locations.filter((item) => item.location_kind === "warehouse"),
     [locations],
   );
-  const defaultConsumptionKitchenLocations = useMemo(
+  const internalKitchenLocations = useMemo(
     () =>
-      locations.filter(
-        (item) =>
-          item.location_kind === "kitchen" &&
-          item.is_default_consumption === true,
-      ),
+      locations
+        .filter((item) => item.location_kind === "kitchen")
+        .sort(
+          (a, b) =>
+            Number(b.is_default_consumption === true) -
+            Number(a.is_default_consumption === true),
+        ),
     [locations],
   );
   const defaultInternalFromLocationId = useMemo(() => {
@@ -154,18 +156,30 @@ export function CreateTransferDialog({
     return loc ? String(loc.id) : "";
   }, [internalSourceLocations]);
   const defaultInternalToLocationId = useMemo(() => {
-    const loc = defaultConsumptionKitchenLocations.find(
+    const loc = internalKitchenLocations.find(
       (item) => String(item.id) !== defaultInternalFromLocationId,
     );
     return loc ? String(loc.id) : "";
-  }, [defaultConsumptionKitchenLocations, defaultInternalFromLocationId]);
+  }, [internalKitchenLocations, defaultInternalFromLocationId]);
   const canSubmitInternalTransfer =
     defaultInternalFromLocationId.length > 0 &&
     defaultInternalToLocationId.length > 0;
   const internalSetupMessage = !defaultInternalFromLocationId
     ? "Chi nhánh chưa có vị trí kho gửi. Cần cấu hình kho chi nhánh trước khi Cấp bếp."
     : !defaultInternalToLocationId
-      ? "Chi nhánh chưa có Bếp mặc định. Cần đánh dấu một vị trí bếp là Bếp mặc định trước khi Cấp bếp."
+      ? "Chi nhánh chưa có vị trí bếp nhận. Cần cấu hình một vị trí bếp trước khi Cấp bếp."
+      : null;
+  const selectedInternalKitchen = useMemo(
+    () =>
+      internalKitchenLocations.find(
+        (loc) => String(loc.id) === intraToLocationId,
+      ) ?? null,
+    [internalKitchenLocations, intraToLocationId],
+  );
+  const selectedInternalKitchenWarning =
+    selectedInternalKitchen &&
+    selectedInternalKitchen.is_default_consumption !== true
+      ? "Vị trí bếp này chưa được đánh dấu Bếp mặc định. Phiếu vẫn được tạo; hệ thống sẽ ghi cảnh báo vận hành để đội kho kiểm tra cấu hình."
       : null;
 
   useEffect(() => {
@@ -176,16 +190,14 @@ export function CreateTransferDialog({
         : defaultInternalFromLocationId,
     );
     setIntraToLocationId((current) =>
-      defaultConsumptionKitchenLocations.some(
-        (loc) => String(loc.id) === current,
-      )
+      internalKitchenLocations.some((loc) => String(loc.id) === current)
         ? current
         : defaultInternalToLocationId,
     );
   }, [
-    defaultConsumptionKitchenLocations,
     defaultInternalFromLocationId,
     defaultInternalToLocationId,
+    internalKitchenLocations,
     internalSourceLocations,
     open,
     slipKind,
@@ -607,7 +619,7 @@ export function CreateTransferDialog({
                     <SelectValue placeholder="Chọn vị trí kho nhận" />
                   </SelectTrigger>
                   <SelectContent>
-                    {defaultConsumptionKitchenLocations
+                    {internalKitchenLocations
                       .filter((loc) => String(loc.id) !== intraFromLocationId)
                       .map((loc) => (
                         <SelectItem key={loc.id} value={String(loc.id)}>
@@ -618,6 +630,15 @@ export function CreateTransferDialog({
                   </SelectContent>
                 </Select>
               </div>
+              {selectedInternalKitchenWarning ? (
+                <NoteCallout
+                  tone="warning"
+                  icon={<IconTriangleAlert className="size-4" />}
+                  label="Cấu hình bếp cần rà soát"
+                >
+                  {selectedInternalKitchenWarning}
+                </NoteCallout>
+              ) : null}
             </TabsContent>
           </Tabs>
 

@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import {
   createServiceClient,
   resolveTenantId,
@@ -9,6 +9,7 @@ import {
   createTestTransferDraft,
   getTransferStatus,
   getStockLevel,
+  resolveUserByEmail,
 } from "./helpers";
 
 /**
@@ -54,6 +55,20 @@ interface InventoryFixtures {
   adminUserId: string;
 }
 
+async function isAccessDenied(page: Page) {
+  const blockedPath = await page
+    .locator("main")
+    .getByText(/\/inventory\//i)
+    .isVisible({ timeout: 1_000 })
+    .catch(() => false);
+  const loginLink = await page
+    .locator('main a[href="/login"]')
+    .isVisible({ timeout: 1_000 })
+    .catch(() => false);
+
+  return blockedPath && loginLink;
+}
+
 async function buildFixtures(): Promise<InventoryFixtures> {
   const supabase = createServiceClient();
   const tenantId = await resolveTenantId(supabase);
@@ -68,7 +83,7 @@ async function buildFixtures(): Promise<InventoryFixtures> {
 
   const [cwLocId, ckLocId, cw2LocId] = await Promise.all([
     ensureInventoryLocation(supabase, tenantId, cw1.id, "issue"),
-    ensureInventoryLocation(supabase, tenantId, ck.id, "receive"),
+    ensureInventoryLocation(supabase, tenantId, ck.id, "kitchen"),
     ensureInventoryLocation(supabase, tenantId, cw2.id, "receive"),
   ]);
 
@@ -98,8 +113,181 @@ async function buildFixtures(): Promise<InventoryFixtures> {
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
+test.describe("Cấp bếp default_consumption warn-only contract", () => {
+  test("dialog allows an active kitchen even when no kitchen is marked default_consumption", async ({
+    page,
+  }) => {
+    const supabase = createServiceClient();
+    const fx = await buildFixtures();
+
+    let targetBranchId = fx.branchId;
+    const authEmail = process.env.E2E_CASHIER_EMAIL;
+    if (authEmail) {
+      const authUser = await resolveUserByEmail(supabase, authEmail);
+      const tenantWide = [
+        "owner",
+        "super_manager",
+        "office",
+        "area_manager",
+      ].includes(authUser.role);
+      if (!tenantWide && authUser.branchId != null) {
+        targetBranchId = authUser.branchId;
+      }
+    }
+
+    const { data: branch, error: branchErr } = await supabase
+      .from("branches")
+      .select("branch_kind")
+      .eq("tenant_id", fx.tenantId)
+      .eq("id", targetBranchId)
+      .single();
+    if (branchErr || !branch || branch.branch_kind !== "branch") {
+      test.skip(true, "Cấp bếp UI needs an operational branch context.");
+      return;
+    }
+
+    await ensureInventoryLocation(
+      supabase,
+      fx.tenantId,
+      targetBranchId,
+      "issue",
+    );
+    await ensureInventoryLocation(
+      supabase,
+      fx.tenantId,
+      targetBranchId,
+      "kitchen",
+    );
+
+    const { data: previousDefaults, error: defaultsErr } = await supabase
+      .from("inventory_locations")
+      .select("id")
+      .eq("tenant_id", fx.tenantId)
+      .eq("branch_id", targetBranchId)
+      .eq("location_kind", "kitchen")
+      .eq("is_active", true)
+      .eq("is_default_consumption", true);
+    if (defaultsErr) {
+      throw new Error(
+        `Failed to resolve default kitchens: ${defaultsErr.message}`,
+      );
+    }
+
+    let nonDefaultKitchenId: number | null = null;
+    const marker = Date.now();
+    const nonDefaultKitchenName = `E2E Non-default kitchen ${marker}`;
+    try {
+      const { data: nonDefaultKitchen, error: insertErr } = await supabase
+        .from("inventory_locations")
+        .insert({
+          tenant_id: fx.tenantId,
+          branch_id: targetBranchId,
+          name: nonDefaultKitchenName,
+          code: `E2E-NONDEF-${targetBranchId}-${marker}`,
+          location_kind: "kitchen",
+          is_active: true,
+          is_default_receive: false,
+          is_default_issue: false,
+          is_default_consumption: false,
+          sort_order: 998,
+        })
+        .select("id")
+        .single();
+      if (insertErr || !nonDefaultKitchen) {
+        throw new Error(
+          `Failed to create non-default kitchen: ${insertErr?.message}`,
+        );
+      }
+      nonDefaultKitchenId = nonDefaultKitchen.id;
+
+      const { error: clearDefaultErr } = await supabase
+        .from("inventory_locations")
+        .update({ is_default_consumption: false })
+        .eq("tenant_id", fx.tenantId)
+        .eq("branch_id", targetBranchId)
+        .eq("location_kind", "kitchen")
+        .eq("is_active", true);
+      if (clearDefaultErr) {
+        throw new Error(
+          `Failed to clear default kitchen flag: ${clearDefaultErr.message}`,
+        );
+      }
+
+      await page.goto(
+        `/inventory/transfers?branchId=${targetBranchId}&create=cap-bep`,
+      );
+      await page.waitForLoadState("networkidle");
+      if (await isAccessDenied(page)) {
+        test.skip(true, "E2E auth user cannot access Inventory transfer UI.");
+        return;
+      }
+
+      const dialog = page.getByRole("dialog");
+      if (!(await dialog.isVisible({ timeout: 10_000 }).catch(() => false))) {
+        test.skip(
+          true,
+          "Transfer create dialog is not available to this E2E user.",
+        );
+        return;
+      }
+
+      const capBepTab = dialog.getByRole("tab", { name: /Cấp bếp/i });
+      if (await capBepTab.isVisible({ timeout: 1_000 }).catch(() => false)) {
+        await capBepTab.click();
+      }
+
+      await expect(dialog.getByText("Cấu hình bếp cần rà soát")).toBeVisible({
+        timeout: 10_000,
+      });
+      await expect(
+        dialog.getByText("Chi nhánh chưa có Bếp mặc định"),
+      ).toHaveCount(0);
+
+      const receiveLocationSelect = dialog.getByRole("combobox").nth(1);
+      await expect(receiveLocationSelect).toBeEnabled();
+      await receiveLocationSelect.click();
+      await expect(
+        page.getByRole("option", { name: new RegExp(nonDefaultKitchenName) }),
+      ).toBeVisible({ timeout: 5_000 });
+      await page.keyboard.press("Escape");
+
+      const ingredientSelect = dialog.getByRole("combobox").nth(2);
+      await ingredientSelect.click();
+      await page
+        .getByRole("option", { name: /E2E Ingredient transfer/i })
+        .first()
+        .click();
+      await dialog
+        .getByRole("button", { name: "Thêm nguyên liệu" })
+        .click();
+      await dialog.getByPlaceholder("SL").fill("1");
+
+      await expect(
+        dialog.getByRole("button", { name: "Tạo phiếu" }),
+      ).toBeEnabled();
+    } finally {
+      if (nonDefaultKitchenId != null) {
+        await supabase
+          .from("inventory_locations")
+          .delete()
+          .eq("id", nonDefaultKitchenId)
+          .eq("tenant_id", fx.tenantId);
+      }
+
+      const restoreDefaultId = previousDefaults?.[0]?.id;
+      if (restoreDefaultId != null) {
+        await supabase
+          .from("inventory_locations")
+          .update({ is_default_consumption: true })
+          .eq("id", restoreDefaultId)
+          .eq("tenant_id", fx.tenantId);
+      }
+    }
+  });
+});
+
 test.describe("Transfer direction — CW→CK happy path (Scenario 3)", () => {
-  test("transfer CW→CK progresses draft→shipped→in_transit→received and stock levels move correctly", async ({
+  test("transfer CW→CK progresses draft→confirmed_ship→in_transit→confirmed_receive→received and stock levels move correctly", async ({
     page,
   }) => {
     const supabase = createServiceClient();
@@ -120,25 +308,37 @@ test.describe("Transfer direction — CW→CK happy path (Scenario 3)", () => {
 
     try {
       // ── confirm_ship ───────────────────────────────────────────────────────
-      await page.goto(`/inventory/transfers/${transfer.id}`);
+      await page.goto(`/inventory/transfers/${transfer.id}?branchId=${fx.cw1Id}`);
       await page.waitForLoadState("networkidle");
+      if (await isAccessDenied(page)) {
+        test.skip(
+          true,
+          "E2E auth user cannot access Inventory transfer UI. Use owner, super_manager, warehouse_manager, or production_manager for UI happy-path coverage.",
+        );
+        return;
+      }
 
       // Click "Xác nhận xuất kho" button
-      const confirmShipBtn = page.getByRole("button", { name: /xác nhận xuất/i });
+      const confirmShipBtn = page.getByRole("button", { name: /x.c nh.n xu.t/i });
       await expect(confirmShipBtn).toBeVisible({ timeout: 10_000 });
+      await expect(confirmShipBtn).toBeEnabled({ timeout: 10_000 });
       await confirmShipBtn.click();
 
       // Wait for status to update in DB (RPC is async relative to UI rerender)
       await expect
         .poll(
           () => getTransferStatus(supabase, fx.tenantId, transfer.id),
-          { timeout: 15_000, message: "status should become shipped after confirm_ship" },
+          { timeout: 15_000, message: "status should become confirmed_ship after confirm_ship" },
         )
-        .toBe("shipped");
+        .toBe("confirmed_ship");
+
+      await page.goto(`/inventory/transfers/${transfer.id}?branchId=${fx.cw1Id}`);
+      await page.waitForLoadState("networkidle");
 
       // ── mark_in_transit ────────────────────────────────────────────────────
-      const inTransitBtn = page.getByRole("button", { name: /đang vận chuyển|bắt đầu vận chuyển/i });
+      const inTransitBtn = page.getByRole("button", { name: /.ang v.n chuy.n|b.t .au v.n chuy.n/i });
       await expect(inTransitBtn).toBeVisible({ timeout: 8_000 });
+      await expect(inTransitBtn).toBeEnabled({ timeout: 10_000 });
       await inTransitBtn.click();
 
       await expect
@@ -148,23 +348,30 @@ test.describe("Transfer direction — CW→CK happy path (Scenario 3)", () => {
         )
         .toBe("in_transit");
 
+      await page.goto(`/inventory/transfers/${transfer.id}?branchId=${fx.ckId}`);
+      await page.waitForLoadState("networkidle");
+
       // ── confirm_receive ────────────────────────────────────────────────────
-      const receiveBtn = page.getByRole("button", { name: /xác nhận nhận|kiểm nhận/i });
+      const receiveBtn = page.getByRole("button", { name: /x.c nh.n nh.n|ki.m nh.n|b.t .au ki.m nh.n/i });
       await expect(receiveBtn).toBeVisible({ timeout: 8_000 });
+      await expect(receiveBtn).toBeEnabled({ timeout: 10_000 });
       await receiveBtn.click();
 
       await expect
         .poll(
           () => getTransferStatus(supabase, fx.tenantId, transfer.id),
-          { timeout: 15_000, message: "status should become receiving" },
+          { timeout: 15_000, message: "status should become confirmed_receive" },
         )
-        .toMatch(/receiving|received/);
+        .toBe("confirmed_receive");
+
+      await page.goto(`/inventory/transfers/${transfer.id}?branchId=${fx.ckId}`);
+      await page.waitForLoadState("networkidle");
 
       // Confirm receive (complete the receipt)
-      const finishBtn = page.getByRole("button", { name: /hòan tất nhận|xác nhận nhập/i });
-      if (await finishBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
-        await finishBtn.click();
-      }
+      const finishBtn = page.getByRole("button", { name: /ho.n t.t nh.n|x.c nh.n nh.n h.ng|x.c nh.n nh.p/i });
+      await expect(finishBtn).toBeVisible({ timeout: 8_000 });
+      await expect(finishBtn).toBeEnabled({ timeout: 10_000 });
+      await finishBtn.click();
 
       await expect
         .poll(
@@ -212,6 +419,7 @@ test.describe("Transfer direction — CK→CW rejected (Scenario 4)", () => {
         to_branch_id: fx.cw1Id,
         transfer_number: `TRF-E2E-CK-CW-${Date.now()}`,
         status: "draft",
+        created_by: fx.adminUserId,
       });
 
       // Trigger must reject with a check violation (ERRCODE 23514)
@@ -251,6 +459,7 @@ test.describe("Transfer direction — CW→CW rejected (Scenario 5)", () => {
       to_branch_id: fx.cw2Id,
       transfer_number: `TRF-E2E-CW-CW-${Date.now()}`,
       status: "draft",
+      created_by: fx.adminUserId,
     });
 
     // enforce_stock_transfer_direction must reject CW→CW (two different CW branches)
