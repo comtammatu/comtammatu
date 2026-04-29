@@ -11,12 +11,19 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 - [ ] P3: Login rate limit fail-open khi Upstash unreachable — documented design decision, cần observability
 - [ ] 10 SECURITY DEFINER RPCs còn gọi `auth_role()` (legacy compat, không chặn ship — migrate dần qua batches α4b/α4c): `admin_update_profile`, `bump_kds_ticket`, `can_access_branch`, `close_fiscal_period`, `create_supplier_payment`, `gl_reconciliation`, `post_payroll_journal`, `recall_kds_ticket`, `set_branch_kind`, `toggle_profile_active`
 
+## Active branches (in flight, on origin)
+
+- `m4-payments-fix` (75e8250, 2026-04-29) — foundation slice of m4-payments-fix.md: 2 migrations + with-action.ts requireBranchScope + redactCredentials utility + 7 new regression rules. AWAITING `supabase db push` + `pnpm db:types`. Next slice wires reverse_payment_and_post RPC, recompute_total, and TS callers.
+- `d011-v2` (f051e8e, 2026-04-29) — D011 v2 no-wait pieces: provider resolver + LocalMisaProvider + ADR + runbook. Sequenced AFTER m4 lands. Spike branch `d011-spike` preserved as v1 reference (never to merge).
+
 ## Pre-deploy fixes
 
 - [x] **Employee page FK casts** (2026-04-27): `pnpm db:types` regen + treat M:1 FK joins as object (`r.shifts?.name`, not `?.[0]?.name`) in `app/employee/{attendance,payslip,schedule}/page.tsx`. See lesson #10 — supabase-js typegen quirk: `isOneToOne: false` infers array but PostgREST runtime returns single object for M:1.
 - [x] **POS network gate D9** (2026-04-27): `branch_trusted_egress_ips` + `/api/branch-presence` Bearer endpoint + admin dialog wired into branch table. Proxy bypass for presence endpoint (without it, agent POSTs were redirected to /login).
 - [x] **Stale shift_assignments_select RLS** (2026-04-27): tightened to self + permission; tenant-wide leak closed.
 - [x] **refunds table** (2026-04-27): table now exists; `@ts-nocheck` removed from `app/orders/refund-actions.ts`. STORAGE ONLY — see P0 list below for correctness gaps.
+- [x] **m4 P1-A webhook_events idempotency table** (2026-04-29, branch m4-payments-fix): UNIQUE(provider, request_id), RLS for finance:view, GRANTs. AWAITING APPLY.
+- [x] **m4 P1-E with-action.ts requireBranchScope option** (2026-04-29, branch m4-payments-fix): branch_manager/cashier with null branch_id rejected before widening to tenant. Opt-in; callers wire in next slice.
 - [ ] Inventory smoke pre-pilot theo `docs/runbooks/inventory/pre-release-qa.md`
 - [ ] Uptime monitor on `/api/health` (UptimeRobot — ops, không phải code)
 - [ ] Ops reconciliation query trước Momo go-live — payment/order desync surfacing trong /admin/finance
@@ -26,14 +33,14 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 
 > Full findings under each agent in session log. Quick wins applied above; these need design.
 
-### M4 Payments — see `docs/plan/m4-payments-fix.md` (drafted 2026-04-28)
-- [ ] **`approveRefund` doesn't actually refund** — flips `payments.status='refunded'` but no GL reversal, no stock restore, no cash drawer reversal. Need `reverse_payment_and_post(p_refund_id)` RPC running atomic.
-- [ ] **Refund auth `area_manager` scope hole** — `area_manager` in CREATE_ROLES with no branch check; can refund any branch. Same for `payment.status='completed'` precondition (today: refund could target `pending`/`failed` payment).
-- [ ] **MoMo webhook tenant binding hole** — `provider_ref=orderId AND method='momo'` with no `tenant_id`. Leaked secret + collision = cross-tenant payment forgery. Need partnerCode + tenant verify before RPC.
-- [ ] **Stock consumption fail-soft on hot-path** — webhook doesn't check `result.stock_consumed` from `complete_payment_and_consume_stock`; money paid + zero stock deducted silently.
-- [ ] **Server-recompute `total_amount`** missing in `confirm_cash_payment`/`complete_payment_and_consume_stock` — discount_amount tampering vector.
-- [ ] **Webhook idempotency table** missing — replay overwrites `provider_data`.
-- [ ] **POS calls provider before DB lock** — RPC fail = orphan gateway order.
+### M4 Payments — see `docs/plan/m4-payments-fix.md` (drafted 2026-04-28); foundation slice on `m4-payments-fix` branch (2026-04-29)
+- [ ] **`approveRefund` doesn't actually refund** — flips `payments.status='refunded'` but no GL reversal, no stock restore, no cash drawer reversal. Need `reverse_payment_and_post(p_refund_id)` RPC running atomic. **STAGED:** foundation columns + `orders:refund_approve` permission key on m4-payments-fix branch. **WAITING:** owner apply migrations + RPC body in next slice.
+- [ ] **Refund auth `area_manager` scope hole** — `area_manager` in CREATE_ROLES with no branch check; can refund any branch. Same for `payment.status='completed'` precondition (today: refund could target `pending`/`failed` payment). **WAITING:** TS edit to refund-actions.ts after types regenerate.
+- [ ] **MoMo webhook tenant binding hole** — `provider_ref=orderId AND method='momo'` with no `tenant_id`. Leaked secret + collision = cross-tenant payment forgery. Need partnerCode + tenant verify before RPC. **WAITING:** TS edit to momo webhook after types regenerate.
+- [ ] **Stock consumption fail-soft on hot-path** — webhook doesn't check `result.stock_consumed` from `complete_payment_and_consume_stock`; money paid + zero stock deducted silently. **STAGED:** `payments.stock_consumed_status` column added on m4-payments-fix branch. **WAITING:** RPC body rewrite + caller integration.
+- [ ] **Server-recompute `total_amount`** missing in `confirm_cash_payment`/`complete_payment_and_consume_stock` — discount_amount tampering vector. **WAITING:** payment_recompute_total migration in next slice.
+- [x] **Webhook idempotency table** (2026-04-29, m4-payments-fix branch): `webhook_events(provider, request_id, ...)` with UNIQUE constraint shipped. AWAITING APPLY.
+- [ ] **POS calls provider before DB lock** — RPC fail = orphan gateway order. **DEFER-WITH-MITIGATION** per m4 plan.
 
 ### M6 Finance
 - [x] **Audit log INSERT REVOKE + `log_audit()` SECURITY DEFINER RPC** (2026-04-28). Migration `20260505020000_audit_logs_rpc_only_insert.sql`; helper at `apps/web/app/admin/_lib/audit.ts` wraps the RPC; 7 callers in finance/HR drop `tenantId`/`userId` (forced server-side). See regression rule AUDIT-LOG-INSERT-RPC-ONLY.

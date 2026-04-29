@@ -2,6 +2,36 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased] — m4-payments-fix foundation + D011 v2 no-wait pieces (2026-04-29)
+
+### Added
+- **`webhook_events` table** with `UNIQUE (provider, request_id)` for payment-webhook idempotency. RLS allows `finance:view` SELECT; INSERT only via service_role webhook handlers. (Branch `m4-payments-fix`.)
+- **`refunds.approved_at TIMESTAMPTZ`** column populated by the upcoming `reverse_payment_and_post` RPC.
+- **`payments.stock_consumed_status TEXT`** column (nullable until recompute migration adds CHECK) — replaces the boolean `stock_consumed` return signal with a queryable status enum (`ok | out_of_stock | recipe_missing | internal_error`).
+- **Permission key `orders:refund_approve`** seeded into the `owner` and `super_manager` role templates. Distinct from existing `orders:refund` (creation); approval requires escalation.
+- **`redactCredentials()` utility** (`packages/shared/src/utils/redact-credentials.ts`) — case-insensitive exact-key allowlist that strips secrets before they hit `audit_logs`. 11 unit tests.
+- **`with-action.ts` `requireBranchScope` option** — branch_manager / cashier with null `branch_id` are rejected with `branch_scope_unset` instead of widening to tenant scope.
+- **Test runner wired into turbo:** new `test` task + root `pnpm test` and `pnpm verify` aggregate.
+- **D011 v2 ADR** (`docs/plan/decisions.md`) sequencing the provider-config + local-fallback layer AFTER m4-payments-fix lands. (Branch `d011-v2`.)
+- **D011 v2 provider resolver** (`packages/shared/src/providers/config.ts`) and **LocalMisaProvider** (`packages/shared/src/providers/impl/misa-local.ts`) staged as pure logic. (Branch `d011-v2`.)
+- **Provider QA runbook** at `docs/runbooks/finance/providers-pre-release-qa.md`.
+- **7 new regression rules** capturing the m4 + D011 design contracts:
+  - `AUDIT-NEVER-LOG-CREDENTIALS`
+  - `WEBHOOK-MUST-IDEMPOTENT`
+  - `WEBHOOK-MUST-BIND-TENANT`
+  - `STOCK-CONSUME-MUST-CHECK-RESULT`
+  - `PAYMENT-AMOUNT-MUST-RECOMPUTE-SERVER`
+  - `REFUND-MUST-CHECK-PAYMENT-COMPLETED`
+  - `REFUND-MUST-REVERSE-ATOMICALLY`
+
+### Pending (next slice — WAITING owner apply migrations + `pnpm db:types`)
+- `reverse_payment_and_post(p_refund_id)` atomic RPC + `restore_stock_for_order` helper (m4 P0-1)
+- `create_refund` RPC with `payment.status='completed'` precondition + `area_manager` scope check (m4 P0-5)
+- `payment_recompute_total` migration rewriting `confirm_cash_payment` + `complete_payment_and_consume_stock` to add server-side total recompute and `stock_consumed_status` enum return (m4 P0-3 + P0-4)
+- `posting_rule_refund_approve` seed (m4 §3.6)
+- TS callers: `apps/web/app/orders/refund-actions.ts`, `apps/web/app/api/webhooks/momo/route.ts`, `apps/web/app/br/[branchId]/pos/payment-actions.ts`
+- D011 v2 PR-1+: `provider_configs` table, `confirm_manual_payment` wrapper RPC, admin UI
+
 ## [1.1.0.0] - 2026-04-15
 
 ### Added
