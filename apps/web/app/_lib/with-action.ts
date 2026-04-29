@@ -34,6 +34,15 @@ export function withAction<TSchema extends z.ZodType>(
     schema: TSchema;
     permission?: PermissionKey | string;
     anyPermission?: readonly (PermissionKey | string)[];
+    /**
+     * When true and the authenticated role is `branch_manager` or `cashier`
+     * with `claims.branch_id == null`, reject with `branch_scope_unset`
+     * instead of allowing tenant-wide writes. Per m4-payments-fix P1-E:
+     * a branch-restricted role with no branch grant must NOT widen to
+     * tenant scope. Apply to refund, payment, and any branch-scoped
+     * mutating action.
+     */
+    requireBranchScope?: boolean;
   },
   handler: (
     data: z.infer<TSchema>,
@@ -54,6 +63,14 @@ export function withAction<TSchema extends z.ZodType>(
         ? await getAuthContextWithPermission(opts.roles, opts.permission)
         : await getAuthContext(opts.roles);
     if (!ctx) return { success: false, error: "Không có quyền" };
+    if (
+      opts.requireBranchScope &&
+      (ctx.claims.user_role === "branch_manager" ||
+        ctx.claims.user_role === "cashier") &&
+      ctx.claims.branch_id == null
+    ) {
+      return { success: false, error: "Tài khoản chưa được gán chi nhánh" };
+    }
     return handler(result.data, ctx);
   };
 }
