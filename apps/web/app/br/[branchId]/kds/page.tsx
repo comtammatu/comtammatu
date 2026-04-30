@@ -65,6 +65,26 @@ export default async function KdsPage({
   const stations = (rawStations ?? []) as KdsStation[];
   const tickets = (rawTickets ?? []) as KdsTicket[];
 
+  // No active stations = orders silently never reach KDS (route_order_to_kds
+  // skips the INSERT when no station exists). Surface this clearly so the
+  // chef knows the cause instead of staring at "Bếp đang rảnh" while POS
+  // queues fill up.
+  if (stations.length === 0) {
+    return (
+      <div className="flex h-dvh items-center justify-center p-6">
+        <Alert variant="destructive" className="max-w-md">
+          <IconAlertCircle />
+          <AlertDescription>
+            Chi nhánh chưa có trạm bếp KDS đang hoạt động. Quản lý cần tạo
+            ít nhất một trạm tại{" "}
+            <strong>Quản trị → Cài đặt → Trạm bếp (KDS)</strong> để đơn từ POS
+            hiển thị trên màn hình bếp.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
   // Fallback station detection: a station with zero category mappings receives
   // unrouted items. Surface these on the board as "Chưa phân trạm".
   let fallbackStationIds: number[] = [];
