@@ -1,13 +1,30 @@
 import { createClient } from "@comtammatu/database/supabase/server";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
-import { fetchDailyRevenue } from "../../../finance/actions";
+import {
+  fetchRevenueRollup,
+  type RevenueGranularity,
+} from "../../../finance/actions";
 import { RevenueReportClient } from "./revenue-report-client";
 
-export default async function RevenueReportPage() {
+const VALID_GRANULARITIES: readonly RevenueGranularity[] = [
+  "day",
+  "week",
+  "month",
+] as const;
+
+export default async function RevenueReportPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    granularity?: string;
+    start?: string;
+    end?: string;
+  }>;
+}) {
+  const sp = await searchParams;
   const supabase = await createClient();
 
-  // Revenue report defaults to the first active operational branch (POS produces revenue).
   const { data: defaultBranch } = await supabase
     .from("branches")
     .select("id, name")
@@ -19,17 +36,32 @@ export default async function RevenueReportPage() {
 
   const branchId = defaultBranch?.id ?? 0;
 
-  const endDate = new Date().toISOString().slice(0, 10);
-  const startDate = new Date(Date.now() - 29 * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .slice(0, 10);
+  const granularity = (
+    VALID_GRANULARITIES.includes(sp.granularity as RevenueGranularity)
+      ? sp.granularity
+      : "day"
+  ) as RevenueGranularity;
+
+  // Default range tuỳ granularity: day → 30d, week → 12w, month → 12m.
+  const today = new Date();
+  const defaultEnd = today.toISOString().slice(0, 10);
+  const defaultStart = (() => {
+    const d = new Date(today);
+    if (granularity === "day") d.setDate(d.getDate() - 29);
+    else if (granularity === "week") d.setDate(d.getDate() - 7 * 12);
+    else d.setMonth(d.getMonth() - 12);
+    return d.toISOString().slice(0, 10);
+  })();
+
+  const startDate = isValidIsoDate(sp.start) ? sp.start : defaultStart;
+  const endDate = isValidIsoDate(sp.end) ? sp.end : defaultEnd;
 
   const result =
     branchId > 0
-      ? await fetchDailyRevenue(branchId, startDate, endDate)
+      ? await fetchRevenueRollup(branchId, startDate, endDate, granularity)
       : { success: true as const, data: [] };
 
-  const rows = result.success ? ((result.data ?? []) as DailyRevenueRow[]) : [];
+  const rows = result.success ? ((result.data ?? []) as RollupRow[]) : [];
 
   return (
     <div className="space-y-5 lg:space-y-6">
@@ -52,15 +84,20 @@ export default async function RevenueReportPage() {
         initialBranchId={branchId}
         initialStart={startDate}
         initialEnd={endDate}
+        initialGranularity={granularity}
       />
     </div>
   );
 }
 
-export interface DailyRevenueRow {
-  date: string;
-  branch_id: number;
-  tenant_id: number;
+function isValidIsoDate(value: string | undefined): value is string {
+  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+export interface RollupRow {
+  period_start: string;
+  period_end: string;
+  period_label: string;
   order_count: number;
   total_revenue: number | null;
   total_tax: number | null;

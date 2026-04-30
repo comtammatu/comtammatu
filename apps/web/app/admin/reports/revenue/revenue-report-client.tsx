@@ -16,18 +16,60 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from "@comtammatu/ui/components/tabs";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
-import { fetchDailyRevenue } from "../../../finance/actions";
-import type { DailyRevenueRow } from "./page";
+import {
+  fetchRevenueRollup,
+  type RevenueGranularity,
+} from "../../../finance/actions";
+import type { RollupRow } from "./page";
 import { ERRORS_VI, FORM_VI } from "@comtammatu/shared/messages";
 
 interface Props {
-  initialRows: DailyRevenueRow[];
+  initialRows: RollupRow[];
   initialBranchId: number;
   initialStart: string;
   initialEnd: string;
+  initialGranularity: RevenueGranularity;
+}
+
+const GRANULARITY_LABEL: Record<RevenueGranularity, string> = {
+  day: "Theo ngày",
+  week: "Theo tuần",
+  month: "Theo tháng",
+};
+
+const PERIOD_HEADER_LABEL: Record<RevenueGranularity, string> = {
+  day: "Ngày",
+  week: "Tuần",
+  month: "Tháng",
+};
+
+const AVERAGE_LABEL: Record<RevenueGranularity, string> = {
+  day: "Trung bình mỗi ngày",
+  week: "Trung bình mỗi tuần",
+  month: "Trung bình mỗi tháng",
+};
+
+function shiftDefaultRange(
+  granularity: RevenueGranularity,
+  endIso: string,
+): { start: string; end: string } {
+  const end = new Date(endIso);
+  const start = new Date(end);
+  if (granularity === "day") start.setDate(start.getDate() - 29);
+  else if (granularity === "week") start.setDate(start.getDate() - 7 * 12);
+  else start.setMonth(start.getMonth() - 12);
+  return {
+    start: start.toISOString().slice(0, 10),
+    end: end.toISOString().slice(0, 10),
+  };
 }
 
 export function RevenueReportClient({
@@ -35,27 +77,54 @@ export function RevenueReportClient({
   initialBranchId,
   initialStart,
   initialEnd,
+  initialGranularity,
 }: Props) {
   const [rows, setRows] = useState(initialRows);
+  const [granularity, setGranularity] = useState<RevenueGranularity>(
+    initialGranularity,
+  );
   const [startDate, setStartDate] = useState(initialStart);
   const [endDate, setEndDate] = useState(initialEnd);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  function handleFilter() {
+  function reload(
+    nextGran: RevenueGranularity,
+    nextStart: string,
+    nextEnd: string,
+  ) {
     setError(null);
     startTransition(async () => {
       if (initialBranchId <= 0) {
         setError("Không tìm thấy chi nhánh tổng hợp.");
         return;
       }
-      const res = await fetchDailyRevenue(initialBranchId, startDate, endDate);
+      const res = await fetchRevenueRollup(
+        initialBranchId,
+        nextStart,
+        nextEnd,
+        nextGran,
+      );
       if (!res.success) {
         setError(res.error ?? ERRORS_VI.unknown);
         return;
       }
-      setRows((res.data ?? []) as DailyRevenueRow[]);
+      setRows((res.data ?? []) as RollupRow[]);
     });
+  }
+
+  function handleGranularityChange(next: string) {
+    const value = next as RevenueGranularity;
+    setGranularity(value);
+    // Auto-shift range cho default phù hợp granularity mới.
+    const { start, end } = shiftDefaultRange(value, endDate);
+    setStartDate(start);
+    setEndDate(end);
+    reload(value, start, end);
+  }
+
+  function handleFilter() {
+    reload(granularity, startDate, endDate);
   }
 
   const totalRevenue = rows.reduce((s, r) => s + (r.total_revenue ?? 0), 0);
@@ -78,11 +147,12 @@ export function RevenueReportClient({
               </span>
               <div className="space-y-2">
                 <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-                  Doanh thu theo ngày
+                  Doanh thu {GRANULARITY_LABEL[granularity].toLowerCase()}
                 </h2>
                 <p className="max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">
-                  Tổng hợp doanh thu, số đơn và cơ cấu thanh toán theo từng ngày
-                  để theo dõi nhịp bán hàng toàn chi nhánh.
+                  Tổng hợp doanh thu, số đơn và cơ cấu thanh toán theo từng kỳ
+                  để theo dõi nhịp bán hàng toàn chi nhánh. Chỉ tính đơn đã
+                  thanh toán; ngày tính theo giờ Việt Nam.
                 </p>
               </div>
             </div>
@@ -98,6 +168,14 @@ export function RevenueReportClient({
           </div>
         </CardContent>
       </Card>
+
+      <Tabs value={granularity} onValueChange={handleGranularityChange}>
+        <TabsList>
+          <TabsTrigger value="day">{GRANULARITY_LABEL.day}</TabsTrigger>
+          <TabsTrigger value="week">{GRANULARITY_LABEL.week}</TabsTrigger>
+          <TabsTrigger value="month">{GRANULARITY_LABEL.month}</TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-card p-3 items-end gap-3">
         <div className="grid min-w-44 flex-1 gap-1.5 sm:max-w-44 sm:flex-none">
@@ -133,7 +211,7 @@ export function RevenueReportClient({
             <p className="text-right text-sm text-destructive">{error}</p>
           ) : (
             <p className="text-right text-sm text-muted-foreground">
-              {rows.length} ngày có dữ liệu
+              {rows.length} kỳ có dữ liệu
             </p>
           )}
         </div>
@@ -175,13 +253,13 @@ export function RevenueReportClient({
         </div>
         <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
           <p className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
-            Trung bình mỗi ngày
+            {AVERAGE_LABEL[granularity]}
           </p>
           <p className="mt-3 text-3xl font-semibold tabular-nums text-foreground">
             {rows.length > 0 ? averageRevenue.toLocaleString("vi-VN") : "—"} ₫
           </p>
           <p className="mt-2 text-sm text-muted-foreground">
-            Doanh thu trung bình mỗi ngày trong khoảng đang xem.
+            Doanh thu trung bình mỗi kỳ trong khoảng đang xem.
           </p>
         </div>
       </div>
@@ -190,8 +268,7 @@ export function RevenueReportClient({
         <CardHeader>
           <CardTitle>Bảng doanh thu chi tiết</CardTitle>
           <p className="text-sm text-muted-foreground">
-            So sánh từng ngày theo tổng doanh thu, cơ cấu thanh toán và tiền
-            thuế.
+            So sánh từng kỳ theo tổng doanh thu, cơ cấu thanh toán và tiền thuế.
           </p>
         </CardHeader>
         <CardContent className="px-4 sm:px-5">
@@ -230,11 +307,11 @@ export function RevenueReportClient({
           <div className="space-y-3 md:hidden">
             {rows.map((r) => (
               <div
-                key={r.date}
+                key={r.period_start}
                 className="rounded-lg border bg-muted/30 text-card-foreground p-4"
               >
                 <div className="flex items-center justify-between gap-3">
-                  <p className="font-medium tabular-nums">{r.date}</p>
+                  <p className="font-medium tabular-nums">{r.period_label}</p>
                   <p className="text-sm text-muted-foreground">
                     {r.order_count.toLocaleString("vi-VN")} đơn
                   </p>
@@ -276,7 +353,9 @@ export function RevenueReportClient({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-28">{FORM_VI.date}</TableHead>
+                  <TableHead className="w-44">
+                    {PERIOD_HEADER_LABEL[granularity]}
+                  </TableHead>
                   <TableHead className="w-20 text-right">Đơn</TableHead>
                   <TableHead className="w-36 text-right">
                     Doanh thu (₫)
@@ -301,8 +380,10 @@ export function RevenueReportClient({
                   </TableRow>
                 ) : (
                   rows.map((r) => (
-                    <TableRow key={r.date}>
-                      <TableCell className="tabular-nums">{r.date}</TableCell>
+                    <TableRow key={r.period_start}>
+                      <TableCell className="tabular-nums">
+                        {r.period_label}
+                      </TableCell>
                       <TableCell className="text-right tabular-nums">
                         {r.order_count.toLocaleString("vi-VN")}
                       </TableCell>
@@ -328,7 +409,9 @@ export function RevenueReportClient({
               {rows.length > 0 && (
                 <TableFooter>
                   <TableRow className="hover:bg-transparent">
-                    <TableCell className="font-medium">{FORM_VI.totalAmount}</TableCell>
+                    <TableCell className="font-medium">
+                      {FORM_VI.totalAmount}
+                    </TableCell>
                     <TableCell className="text-right tabular-nums font-medium">
                       {totalOrders.toLocaleString("vi-VN")}
                     </TableCell>
