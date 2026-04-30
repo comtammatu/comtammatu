@@ -227,6 +227,20 @@ export async function submitOrder(
         errorCode: POS_ERROR_CODES.SCOPE_SESSION_NOT_OPEN,
       };
     }
+    if (errMsg.includes("daily_limit_item_disabled")) {
+      return {
+        success: false,
+        error: "Có món đã bị tắt trong ngày — bỏ khỏi giỏ trước khi đặt.",
+        errorCode: POS_ERROR_CODES.DAILY_LIMIT_ITEM_DISABLED,
+      };
+    }
+    if (errMsg.includes("daily_limit_exceeded")) {
+      return {
+        success: false,
+        error: "Có món đã hết suất hôm nay — giảm số lượng hoặc đổi món.",
+        errorCode: POS_ERROR_CODES.DAILY_LIMIT_EXCEEDED,
+      };
+    }
     if (error.message?.includes("empty")) {
       return {
         success: false,
@@ -852,6 +866,18 @@ export async function appendOrderItems(
       return {
         success: false,
         error: "Món không còn trong thực đơn hoặc đã ngừng bán.",
+      };
+    }
+    if (msg.includes("daily_limit_item_disabled")) {
+      return {
+        success: false,
+        error: "Có món đã bị tắt trong ngày — bỏ khỏi giỏ trước khi đặt.",
+      };
+    }
+    if (msg.includes("daily_limit_exceeded")) {
+      return {
+        success: false,
+        error: "Có món đã hết suất hôm nay — giảm số lượng hoặc đổi món.",
       };
     }
     return {

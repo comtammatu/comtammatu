@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Armchair as IconArmchair, ArrowLeft as IconArrowLeft, ArrowRight as IconArrowRight, ListChecks as IconChecklist, Monitor as IconDeviceDesktop, LayoutGrid as IconLayoutGrid, Printer as IconPrinter, ReceiptText as IconReceipt2 } from "lucide-react";
+import { Armchair as IconArmchair, ArrowLeft as IconArrowLeft, ArrowRight as IconArrowRight, Gauge as IconGauge, ListChecks as IconChecklist, Monitor as IconDeviceDesktop, LayoutGrid as IconLayoutGrid, Printer as IconPrinter, ReceiptText as IconReceipt2 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -72,6 +72,13 @@ export default async function BranchSettingsHubPage({
       title: "Máy in",
       description: "Hóa đơn, bếp 1, bếp 2 — cấu hình & trạng thái agent.",
       icon: <IconPrinter className="size-5" />,
+    },
+    {
+      href: `/br/${branchId}/menu-limits`,
+      title: "Hạn mức bán hàng ngày",
+      description:
+        "Đặt số phần tối đa mỗi món hôm nay (vd. 30 Sườn cốt lết) hoặc tắt món. Quản lý/POS/Bếp đều chỉnh được.",
+      icon: <IconGauge className="size-5" />,
     },
   ];
 

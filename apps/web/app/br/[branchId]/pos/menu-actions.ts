@@ -101,6 +101,37 @@ export async function fetchMenuForPos(branchId: number): Promise<ActionResult> {
     }
   }
 
+  // Pull today's per-item caps so the UI can disable / annotate sold-out
+  // items. RPC is cheap (≤ a few rows per branch) and bypasses RLS via
+  // SECURITY DEFINER while still scope-checking against the JWT branch.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: limitRows } = await (supabase as any).rpc(
+    "get_branch_menu_daily_limits_for_pos",
+    { p_branch_id: parsedBranchId.data },
+  );
+  const limitsByItemId = new Map<
+    number,
+    {
+      limit_quantity: number | null;
+      is_disabled: boolean;
+      sold_today: number;
+    }
+  >();
+  if (Array.isArray(limitRows)) {
+    for (const row of limitRows as Array<{
+      menu_item_id: number;
+      limit_quantity: number | null;
+      is_disabled: boolean;
+      sold_today: number;
+    }>) {
+      limitsByItemId.set(row.menu_item_id, {
+        limit_quantity: row.limit_quantity,
+        is_disabled: row.is_disabled,
+        sold_today: row.sold_today,
+      });
+    }
+  }
+
   // Filter nested variants/modifiers to active only, resolve side_item
   const menu = (categories ?? []).map((cat) => ({
     ...cat,
@@ -119,6 +150,7 @@ export async function fetchMenuForPos(branchId: number): Promise<ActionResult> {
           return { id: s.id, is_default: s.is_default, side_item: sideItem };
         })
         .filter((s) => s !== null),
+      daily_limit: limitsByItemId.get(item.id) ?? null,
     })),
   }));
 

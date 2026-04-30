@@ -159,14 +159,15 @@ export async function proxy(request: NextRequest) {
       }
     }
 
-    // Branch-scoped routes (POS/KDS + branch_settings) enforce URL branchId
-    // matches the user's assigned branch_id. Admin-level roles
+    // Branch-scoped routes (POS/KDS + branch_settings + menu-limits) enforce
+    // URL branchId matches the user's assigned branch_id. Admin-level roles
     // (owner/super_manager/area_manager) may traverse any branch's settings.
     // POS/KDS also require the branch be operational (not warehouse/central_kitchen).
     if (
       moduleKey === "pos" ||
       moduleKey === "kds" ||
-      moduleKey === "branch_settings"
+      moduleKey === "branch_settings" ||
+      moduleKey === "branch_menu_limits"
     ) {
       const routePath = surface === "beta" ? stripBetaPrefix(pathname) : pathname;
       const pathMatch = routePath.match(/^\/br\/(\d+)\//);
@@ -179,7 +180,8 @@ export async function proxy(request: NextRequest) {
           "area_manager",
         ];
         const allowCrossBranch =
-          moduleKey === "branch_settings" &&
+          (moduleKey === "branch_settings" ||
+            moduleKey === "branch_menu_limits") &&
           crossBranchRoles.includes(claims.user_role);
 
         if (

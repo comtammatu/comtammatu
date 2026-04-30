@@ -22,6 +22,19 @@ export interface MenuAvailableSide {
   side_item: { id: number; name: string; base_price: number };
 }
 
+/**
+ * Per-day sales limit attached to a menu item for THIS branch.
+ * Absent (`null`) when no limit is configured for today.
+ */
+export interface MenuItemDailyLimit {
+  /** Cap on portions sellable today; null = unlimited. */
+  limit_quantity: number | null;
+  /** Manager toggled the item OFF for the day. */
+  is_disabled: boolean;
+  /** Portions already taken by accepted orders today. */
+  sold_today: number;
+}
+
 export interface MenuItem {
   id: number;
   name: string;
@@ -32,6 +45,21 @@ export interface MenuItem {
   menu_item_variants: MenuVariant[];
   menu_item_modifiers: MenuModifier[];
   menu_item_available_sides: MenuAvailableSide[];
+  daily_limit: MenuItemDailyLimit | null;
+}
+
+/** UI helper: how many portions may still be added to the cart. */
+export function remainingDailyQuota(item: MenuItem): number | null {
+  if (!item.daily_limit) return null;
+  if (item.daily_limit.limit_quantity == null) return null;
+  return Math.max(0, item.daily_limit.limit_quantity - item.daily_limit.sold_today);
+}
+
+export function isItemBlockedByDailyLimit(item: MenuItem): boolean {
+  if (!item.daily_limit) return false;
+  if (item.daily_limit.is_disabled) return true;
+  const remaining = remainingDailyQuota(item);
+  return remaining !== null && remaining <= 0;
 }
 
 export interface MenuCategory {

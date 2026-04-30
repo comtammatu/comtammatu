@@ -17,6 +17,7 @@ export type ModuleLabelKey =
   | "pos"
   | "kds"
   | "branch_settings"
+  | "branch_menu_limits"
   | "employee"
   | "notifications";
 
@@ -41,6 +42,7 @@ export const MODULE_LABELS_VI: Record<ModuleLabelKey, string> = {
   pos: "POS",
   kds: "KDS",
   branch_settings: "Cài đặt chi nhánh",
+  branch_menu_limits: "Hạn mức bán hàng ngày",
   employee: "Cổng nhân viên",
   notifications: "Thông báo",
 };
