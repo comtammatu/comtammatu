@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased] — m4-payments-fix slice 2 (deep RPCs, 2026-04-30)
+
+### Added
+- **`reverse_payment_and_post(p_refund_id)` atomic RPC** — locks refund→payment→order, posts a balanced GL reversal journal (Dr `5111` / Cr `1111` cash or Cr `1121` bank), restores stock when consumption happened, flips `payments.status='refunded'` + `orders.payment_status='refunded'`, stamps `refund.approved_at/by`, writes one `audit_logs` row. Idempotent on already-approved refunds. Gated by `orders:refund_approve`. (Migration `20260510020000`.)
+- **`restore_stock_for_order(p_order_id, p_actor_id)` internal helper** — walks order_items × recipes, INSERTs positive stock_movements with `type='refund_restore'`. REVOKEd from `authenticated`; only callable from SECURITY DEFINER paths. (Migration `20260510020000`.)
+- **`create_refund(p_payment_id, p_amount, p_reason)` RPC** — replaces direct INSERT in `refund-actions.ts`. Validates `payment.status='completed'` (the missing precondition), enforces `sum(pending+approved refunds) ≤ payment.amount`, writes audit row. (Migration `20260510030000`.)
+- **`stock_movements.type` CHECK extended** to include `refund_restore` (additive).
+- **`journal_entries.reference_type` CHECK extended** to include `refund` (additive). Prior values `transfer` and `production` also enumerated explicitly so the constraint matches all existing posting paths.
+
 ## [Unreleased] — m4-payments-fix foundation + D011 v2 no-wait pieces (2026-04-29)
 
 ### Added
