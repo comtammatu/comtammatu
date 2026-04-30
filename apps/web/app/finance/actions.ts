@@ -559,6 +559,55 @@ export async function fetchDailyRevenue(
   return { success: true, data: data ?? [] };
 }
 
+/* ─── fetchRevenueRollup — aggregate mv_daily_revenue theo day/week/month ─ */
+
+const REVENUE_GRANULARITY = ["day", "week", "month"] as const;
+export type RevenueGranularity = (typeof REVENUE_GRANULARITY)[number];
+
+export async function fetchRevenueRollup(
+  branchId: number,
+  startDate: string,
+  endDate: string,
+  granularity: RevenueGranularity,
+): Promise<ActionResult> {
+  const parsedBranch = z.coerce.number().int().positive().safeParse(branchId);
+  if (!parsedBranch.success) {
+    return { success: false, error: "Branch ID không hợp lệ" };
+  }
+
+  const parsedStart = z.string().date().safeParse(startDate);
+  const parsedEnd = z.string().date().safeParse(endDate);
+  if (!parsedStart.success || !parsedEnd.success) {
+    return { success: false, error: "Ngày không hợp lệ (YYYY-MM-DD)" };
+  }
+
+  const parsedGran = z.enum(REVENUE_GRANULARITY).safeParse(granularity);
+  if (!parsedGran.success) {
+    return { success: false, error: "Granularity không hợp lệ" };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    REPORT_ROLES,
+    PERMISSION_KEYS.FINANCE_VIEW,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { supabase } = ctx;
+
+  const { data, error } = await supabase.rpc("get_revenue_rollup", {
+    p_branch_id: parsedBranch.data,
+    p_start_date: parsedStart.data,
+    p_end_date: parsedEnd.data,
+    p_granularity: parsedGran.data,
+  });
+
+  if (error) {
+    return { success: false, error: "Không thể tải dữ liệu doanh thu." };
+  }
+
+  return { success: true, data: data ?? [] };
+}
+
 export async function fetchTopItems(
   branchId: number,
   periodStart: string,

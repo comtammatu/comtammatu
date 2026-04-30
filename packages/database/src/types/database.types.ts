@@ -7064,6 +7064,29 @@ export type Database = {
         }[]
       }
       get_inventory_dashboard: { Args: { p_branch_id: number }; Returns: Json }
+      get_pos_session_report: {
+        Args: { p_session_id: number }
+        Returns: Json
+      }
+      get_revenue_rollup: {
+        Args: {
+          p_branch_id: number
+          p_end_date: string
+          p_granularity: string
+          p_start_date: string
+        }
+        Returns: {
+          cash_revenue: number
+          momo_revenue: number
+          order_count: number
+          period_end: string
+          period_label: string
+          period_start: string
+          total_revenue: number
+          total_tax: number
+          vietqr_revenue: number
+        }[]
+      }
       get_stocktake_lines_blind: {
         Args: { p_session_id: number }
         Returns: {
