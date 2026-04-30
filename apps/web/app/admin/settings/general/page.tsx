@@ -30,7 +30,7 @@ export default async function GeneralSettingsPage() {
           Thuế, phí dịch vụ và thông tin cửa hàng
         </p>
       </div>
-      <SettingsForm settings={settings} />
+      <SettingsForm settings={settings} timezone={claims.tenant_timezone} />
     </div>
   );
 }

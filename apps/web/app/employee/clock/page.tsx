@@ -27,7 +27,7 @@ export default async function ClockPage() {
   const { supabase, claims, employeeId } = ctx;
 
   // Get today's attendance status
-  const today = getTodayVN();
+  const today = getTodayVN(claims.tenant_timezone);
   const { data: record } = await supabase
     .from("attendance_records")
     .select("check_in, check_out, branch_id, branches ( name )")

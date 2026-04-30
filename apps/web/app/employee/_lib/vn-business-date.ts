@@ -1,16 +1,20 @@
-/**
- * Get today's date string in Asia/Ho_Chi_Minh timezone (YYYY-MM-DD).
- * Used for all employee self-service date calculations.
- */
-export function getTodayVN(): string {
-  return new Date().toLocaleDateString("sv-SE", {
-    timeZone: "Asia/Ho_Chi_Minh",
-  });
-}
+import {
+  formatTimeVN as formatTimeInTz,
+  todayInTz,
+} from "@comtammatu/shared/datetime";
 
 /**
- * Get the Monday of the week containing the given date.
+ * Today's YYYY-MM-DD in the tenant timezone (callers pass tz from
+ * `useTenantTimezone()` on client or `claims.tenant_timezone` on server).
+ *
+ * Never reads the host clock — a Windows box on UTC-7 still produces the
+ * correct VN business date.
  */
+export function getTodayVN(tz: string): string {
+  return todayInTz(tz);
+}
+
+/** Monday of the ISO week containing the given date, computed in UTC. */
 export function getMondayOfWeek(date: Date): Date {
   const d = new Date(date);
   const day = d.getDay();
@@ -19,9 +23,7 @@ export function getMondayOfWeek(date: Date): Date {
   return d;
 }
 
-/**
- * Format a Date to YYYY-MM-DD string.
- */
+/** Format a Date as YYYY-MM-DD using its UTC components. */
 export function toDateStr(d: Date): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -29,24 +31,16 @@ export function toDateStr(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-/**
- * Format an ISO timestamp to Vietnamese locale time string (HH:MM).
- */
-export function formatTimeVN(iso: string): string {
-  return new Date(iso).toLocaleTimeString("vi-VN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "Asia/Ho_Chi_Minh",
-  });
+/** Format an ISO timestamp as `HH:MM` in tenant tz. */
+export function formatTimeVN(iso: string, tz: string): string {
+  return formatTimeInTz(iso, tz);
 }
 
 /**
- * Format a date string (YYYY-MM-DD) to Vietnamese display format (DD/MM/YYYY).
+ * Format a YYYY-MM-DD calendar date as DD/MM/YYYY. Pure string transform —
+ * timezone-agnostic, since the input is already a calendar date.
  */
 export function formatDateVN(dateStr: string): string {
-  const d = new Date(dateStr + "T00:00:00");
-  const day = d.getDate().toString().padStart(2, "0");
-  const month = (d.getMonth() + 1).toString().padStart(2, "0");
-  const year = d.getFullYear();
+  const [year, month, day] = dateStr.split("-");
   return `${day}/${month}/${year}`;
 }

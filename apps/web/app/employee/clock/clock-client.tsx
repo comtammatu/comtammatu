@@ -24,6 +24,8 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { cn } from "@comtammatu/ui";
+import { formatTimeVN } from "@comtammatu/shared/datetime";
+import { useTenantTimezone } from "@/_lib/timezone-context";
 import { clockIn, clockOut } from "./actions";
 
 /* ─── Types ─── */
@@ -104,14 +106,6 @@ function haversineMeters(
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString("vi-VN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "Asia/Ho_Chi_Minh",
-  });
-}
-
 /* ─── Component ─── */
 
 export function ClockClient({
@@ -119,6 +113,8 @@ export function ClockClient({
   branches,
   defaultBranchId,
 }: ClockClientProps) {
+  const tz = useTenantTimezone();
+  const formatTime = (iso: string) => formatTimeVN(iso, tz);
   const [state, setState] = useState<ClockState>("idle");
   const [status, setStatus] = useState(initialStatus);
   const [error, setError] = useState<string | null>(null);

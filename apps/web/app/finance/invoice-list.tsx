@@ -26,6 +26,8 @@ import {
 } from "@comtammatu/ui/components/table";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { formatVND } from "@comtammatu/shared/format";
+import { formatDateTimeVN } from "@comtammatu/shared/datetime";
+import { useTenantTimezone } from "@/_lib/timezone-context";
 import { cancelTaxInvoice } from "./actions";
 import type { InvoiceRow } from "./page";
 import { TableEmptyStateRow } from "@/admin/components/table-empty-state-row";
@@ -46,16 +48,6 @@ const STATUS_VARIANT: Record<
   cancelled: "destructive",
 };
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString("vi-VN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 interface InvoiceListProps {
   initialInvoices: InvoiceRow[];
 }
@@ -64,6 +56,8 @@ const CANCEL_REASON_MIN = 20;
 const CANCEL_REASON_MAX = 500;
 
 export function InvoiceList({ initialInvoices }: InvoiceListProps) {
+  const tz = useTenantTimezone();
+  const formatDate = (iso: string) => formatDateTimeVN(iso, tz);
   const [invoices, setInvoices] = useState(initialInvoices);
   const [cancelTarget, setCancelTarget] = useState<InvoiceRow | null>(null);
   const [cancelReason, setCancelReason] = useState("");

@@ -21,6 +21,8 @@ import {
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { BRANCH_VI, ERRORS_VI, FORM_VI, STAFF_VI } from "@comtammatu/shared/messages";
+import { formatTimeVN } from "@comtammatu/shared/datetime";
+import { useTenantTimezone } from "@/_lib/timezone-context";
 import {
   fetchAttendance,
   fetchAttendanceSummary,
@@ -274,6 +276,7 @@ function DetailView({
   onStatusChange: (id: number, status: string) => void;
   isPending: boolean;
 }) {
+  const tz = useTenantTimezone();
   if (data.length === 0) {
     return (
       <p className="py-8 text-center text-sm text-muted-foreground">
@@ -307,20 +310,10 @@ function DetailView({
                 {record.shifts?.name ?? "—"}
               </TableCell>
               <TableCell className="font-mono text-sm">
-                {record.check_in
-                  ? new Date(record.check_in).toLocaleTimeString("vi-VN", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })
-                  : "—"}
+                {record.check_in ? formatTimeVN(record.check_in, tz) : "—"}
               </TableCell>
               <TableCell className="font-mono text-sm">
-                {record.check_out
-                  ? new Date(record.check_out).toLocaleTimeString("vi-VN", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })
-                  : "—"}
+                {record.check_out ? formatTimeVN(record.check_out, tz) : "—"}
               </TableCell>
               <TableCell>
                 <Select

@@ -1,7 +1,9 @@
 "use client";
 
 import { formatVND } from "@comtammatu/shared/format";
+import { formatDateTimeVN } from "@comtammatu/shared/datetime";
 import { Separator } from "@comtammatu/ui/components/separator";
+import { useTenantTimezone } from "@/_lib/timezone-context";
 import {
   getPosLineItemDisplayName,
   getPosLineItemOptionLines,
@@ -13,17 +15,8 @@ interface BillReceiptSummaryProps {
   order: OrderData;
 }
 
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleString("vi-VN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
+  const tz = useTenantTimezone();
   const isPaid =
     order.payment_status === "paid" || order.status === "completed";
   const paymentLabel =
@@ -60,7 +53,7 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
         </div>
         <div className="flex justify-between">
           <span>Ngày:</span>
-          <span>{formatDate(order.created_at)}</span>
+          <span>{formatDateTimeVN(order.created_at, tz)}</span>
         </div>
         <div className="flex justify-between">
           <span>Loại:</span>

@@ -1,7 +1,29 @@
 import { createClient } from "@comtammatu/database/supabase/server";
 import { extractClaimsFromAccessToken } from "@comtammatu/shared/auth";
 import type { JwtClaims, PermissionKey, StaffRole } from "@comtammatu/shared/auth";
+import { DEFAULT_TENANT_TIMEZONE } from "@comtammatu/shared/datetime";
 import type { Session } from "@supabase/supabase-js";
+
+/**
+ * Best-effort tenant timezone read for layouts that can't (or shouldn't)
+ * throw on missing auth — e.g. the root layout, which also wraps `/login`
+ * and other unauthenticated pages.
+ *
+ * Never inspects the host clock. Falls back to {@link DEFAULT_TENANT_TIMEZONE}
+ * so the {@link TimezoneProvider} always carries a deterministic value.
+ */
+export async function readTenantTimezone(): Promise<string> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const claims = extractClaimsFromAccessToken(session?.access_token);
+    return claims?.tenant_timezone ?? DEFAULT_TENANT_TIMEZONE;
+  } catch {
+    return DEFAULT_TENANT_TIMEZONE;
+  }
+}
 
 /**
  * Get authenticated user context with role authorization.

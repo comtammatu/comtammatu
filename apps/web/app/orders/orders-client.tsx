@@ -3,7 +3,9 @@
 import { useState, useTransition, useMemo } from "react";
 import { ShoppingBag as IconShoppingBag } from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
+import { formatDateTimeVN } from "@comtammatu/shared/datetime";
 import { BRANCH_VI, FORM_VI, STAFF_VI, STATES_VI } from "@comtammatu/shared/messages";
+import { useTenantTimezone } from "@/_lib/timezone-context";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
@@ -91,6 +93,7 @@ export function OrdersClient({
   branches,
   showBranchFilter,
 }: OrdersClientProps) {
+  const tz = useTenantTimezone();
   const [orders, setOrders] = useState<OrderRow[]>(initialOrders);
   const [selectedOrder, setSelectedOrder] = useState<OrderRow | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -353,13 +356,7 @@ export function OrdersClient({
                 </div>
                 <div className="mt-4 flex items-center justify-between gap-3">
                   <p className="text-xs text-muted-foreground">
-                    {new Date(order.created_at).toLocaleString("vi-VN", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      year: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+                    {formatDateTimeVN(order.created_at, tz)}
                   </p>
                   {order.payment_method ? (
                     <Badge variant="outline" className="text-xs">
@@ -429,13 +426,7 @@ export function OrdersClient({
                       {order.created_by_name}
                     </TableCell>
                     <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
-                      {new Date(order.created_at).toLocaleString("vi-VN", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      {formatDateTimeVN(order.created_at, tz)}
                     </TableCell>
                     <TableCell className="text-right font-mono font-medium">
                       {formatVND(order.total_amount)}

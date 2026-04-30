@@ -145,7 +145,7 @@ export default async function EmployeePage() {
   let clockBranchName: string | null = null;
 
   if (ctx) {
-    const today = getTodayVN();
+    const today = getTodayVN(claims.tenant_timezone);
     const { data: record } = await ctx.supabase
       .from("attendance_records")
       .select("check_in, check_out, branches ( name )")
@@ -177,7 +177,7 @@ export default async function EmployeePage() {
   } | null = null;
 
   if (ctx) {
-    const today = getTodayVN();
+    const today = getTodayVN(claims.tenant_timezone);
     const { data: upcoming } = await ctx.supabase
       .from("shift_assignments")
       .select("date, shifts ( name, start_time, end_time )")
@@ -254,7 +254,7 @@ export default async function EmployeePage() {
                 <div>
                   <span className="text-muted-foreground">Vào </span>
                   <span className="font-mono font-medium">
-                    {checkInTime ? formatTimeVN(checkInTime) : "—"}
+                    {checkInTime ? formatTimeVN(checkInTime, claims.tenant_timezone) : "—"}
                   </span>
                 </div>
                 <div>
@@ -292,13 +292,13 @@ export default async function EmployeePage() {
                 <div>
                   <span className="text-muted-foreground">Vào </span>
                   <span className="font-mono font-medium">
-                    {checkInTime ? formatTimeVN(checkInTime) : "—"}
+                    {checkInTime ? formatTimeVN(checkInTime, claims.tenant_timezone) : "—"}
                   </span>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Ra </span>
                   <span className="font-mono font-medium">
-                    {checkOutTime ? formatTimeVN(checkOutTime) : "—"}
+                    {checkOutTime ? formatTimeVN(checkOutTime, claims.tenant_timezone) : "—"}
                   </span>
                 </div>
               </div>
@@ -344,7 +344,7 @@ export default async function EmployeePage() {
                 {nextShift.startTime} – {nextShift.endTime}
               </p>
               <p className="text-xs text-muted-foreground">
-                {nextShift.date === getTodayVN() ? "Hôm nay" : nextShift.date}
+                {nextShift.date === getTodayVN(claims.tenant_timezone) ? "Hôm nay" : nextShift.date}
               </p>
             </div>
             <Button asChild variant="ghost" size="icon">

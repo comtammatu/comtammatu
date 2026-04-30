@@ -1,7 +1,9 @@
 "use client";
 
 import { formatVND } from "@comtammatu/shared/format";
+import { formatDateTimeVN } from "@comtammatu/shared/datetime";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { useTenantTimezone } from "@/_lib/timezone-context";
 import {
   Sheet,
   SheetContent,
@@ -89,6 +91,7 @@ export function OrderDetailSheet({
   open,
   onOpenChange,
 }: OrderDetailSheetProps) {
+  const tz = useTenantTimezone();
   if (!order) return null;
 
   const hasDiscount = order.discount_amount > 0;
@@ -134,13 +137,7 @@ export function OrderDetailSheet({
 
             <span className="text-muted-foreground">Thời gian</span>
             <span>
-              {new Date(order.created_at).toLocaleString("vi-VN", {
-                day: "2-digit",
-                month: "2-digit",
-                year: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
+              {formatDateTimeVN(order.created_at, tz)}
             </span>
 
             <span className="text-muted-foreground">Loại đơn</span>

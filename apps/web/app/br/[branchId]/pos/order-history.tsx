@@ -22,6 +22,8 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { formatVND } from "@comtammatu/shared/format";
+import { formatTimeVN } from "@comtammatu/shared/datetime";
+import { useTenantTimezone } from "@/_lib/timezone-context";
 import type { BillReceiptIntent } from "./_components/bill/bill-receipt-types";
 import { getPosOrderStatusInfo } from "./_lib/order-status-display";
 
@@ -37,8 +39,8 @@ export interface SessionOrder {
   tables: { number: number } | null;
 }
 
-function getOrderMetaLabel(order: SessionOrder): string {
-  return `${getOrderContextLabel(order)} - ${formatTime(order.created_at)}`;
+function getOrderMetaLabel(order: SessionOrder, tz: string): string {
+  return `${getOrderContextLabel(order)} - ${formatTimeVN(order.created_at, tz)}`;
 }
 
 function compareOrdersNewestFirst(a: SessionOrder, b: SessionOrder): number {
@@ -46,13 +48,6 @@ function compareOrdersNewestFirst(a: SessionOrder, b: SessionOrder): number {
   if (byCreatedAt !== 0) return byCreatedAt;
 
   return b.id - a.id;
-}
-
-function formatTime(dateStr: string): string {
-  return new Date(dateStr).toLocaleTimeString("vi-VN", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }
 
 function getOrderContextLabel(order: SessionOrder): string {
@@ -88,6 +83,7 @@ export function OrderCardSummary({
   amountClassName?: string;
   rightMeta: ReactNode;
 }) {
+  const tz = useTenantTimezone();
   return (
     <ItemContent className="w-full min-w-0 gap-1.5">
       <ItemTitle className="w-full min-w-0 justify-between gap-3 text-base">
@@ -102,7 +98,7 @@ export function OrderCardSummary({
         </span>
       </ItemTitle>
       <ItemDescription className="flex w-full min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-        <span className="min-w-0 truncate">{getOrderMetaLabel(order)}</span>
+        <span className="min-w-0 truncate">{getOrderMetaLabel(order, tz)}</span>
         <span className="ml-auto flex flex-wrap items-center justify-end gap-1">
           {rightMeta}
         </span>

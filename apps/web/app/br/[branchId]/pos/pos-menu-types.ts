@@ -51,11 +51,10 @@ export const MENU_ZONE_ORDER: CategoryType[] = [
 
 /* ─── Helpers ─── */
 
-export function formatTime(dateStr: string): string {
-  return new Date(dateStr).toLocaleTimeString("vi-VN", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+import { formatTimeVN } from "@comtammatu/shared/datetime";
+
+export function formatTime(dateStr: string, tz: string): string {
+  return formatTimeVN(dateStr, tz);
 }
 
 export type PosFlowStepState = "done" | "current" | "todo";

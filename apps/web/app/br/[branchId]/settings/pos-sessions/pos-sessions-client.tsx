@@ -13,6 +13,8 @@ import {
   ChevronRight as IconChevronRight,
 } from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
+import { formatInTz, formatTimeVN } from "@comtammatu/shared/datetime";
+import { useTenantTimezone } from "@/_lib/timezone-context";
 import { cn } from "@comtammatu/ui";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -155,6 +157,7 @@ export function PosSessionsClient({
   orders,
   canOverrideVariance,
 }: PosSessionsClientProps) {
+  const tz = useTenantTimezone();
   const [closeSheetOpen, setCloseSheetOpen] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
   const selectedSession =
@@ -206,7 +209,7 @@ export function PosSessionsClient({
                       {resolveSessionLabel(session)}
                     </span>
                     <span className="block truncate text-xs text-muted-foreground">
-                      {formatDateTime(session.opened_at)}
+                      {formatDateTime(session.opened_at, tz)}
                     </span>
                   </span>
                   {breached ? (
@@ -270,7 +273,7 @@ export function PosSessionsClient({
                               : "Mang về"}
                           </div>
                         </TableCell>
-                        <TableCell>{formatTime(order.created_at)}</TableCell>
+                        <TableCell>{formatTime(order.created_at, tz)}</TableCell>
                         <TableCell>
                           <Badge
                             variant={
@@ -362,6 +365,7 @@ function SessionDetailCard({
   summary: SessionSummary;
   onCloseShift: () => void;
 }) {
+  const tz = useTenantTimezone();
   const breached = isVarianceBreached(session);
   const threshold = computeVarianceThreshold(session.expected_cash);
   const isOpen = session.status === "open";
@@ -373,12 +377,12 @@ function SessionDetailCard({
           <CardTitle>{resolveSessionLabel(session)}</CardTitle>
           <p className="text-sm text-muted-foreground">
             Mở bởi {session.opened_by_profile?.full_name ?? "—"} ·{" "}
-            {formatDateTime(session.opened_at)}
+            {formatDateTime(session.opened_at, tz)}
           </p>
           {!isOpen ? (
             <p className="text-sm text-muted-foreground">
               Đóng bởi {session.closed_by_profile?.full_name ?? "—"} ·{" "}
-              {formatDateTime(session.closed_at)} · Kéo dài{" "}
+              {formatDateTime(session.closed_at, tz)} · Kéo dài{" "}
               {formatDuration(session.opened_at, session.closed_at)}
             </p>
           ) : null}
@@ -515,6 +519,7 @@ function OrderDetailSheet({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const tz = useTenantTimezone();
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -527,7 +532,7 @@ function OrderDetailSheet({
           </SheetTitle>
           <SheetDescription>
             {order
-              ? `${order.order_type === "dine_in" ? `Bàn ${order.tables?.number ?? "-"}` : "Mang về"} · ${formatDateTime(order.created_at)}`
+              ? `${order.order_type === "dine_in" ? `Bàn ${order.tables?.number ?? "-"}` : "Mang về"} · ${formatDateTime(order.created_at, tz)}`
               : ""}
           </SheetDescription>
         </SheetHeader>
@@ -771,21 +776,18 @@ function countItems(order: PosSessionOrder): number {
   return order.order_items.reduce((sum, item) => sum + item.quantity, 0);
 }
 
-function formatDateTime(value: string | null): string {
+function formatDateTime(value: string | null, tz: string): string {
   if (!value) return "-";
-  return new Intl.DateTimeFormat("vi-VN", {
+  return formatInTz(value, tz, {
     day: "2-digit",
     month: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
-  }).format(new Date(value));
+  });
 }
 
-function formatTime(value: string): string {
-  return new Intl.DateTimeFormat("vi-VN", {
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
+function formatTime(value: string, tz: string): string {
+  return formatTimeVN(value, tz);
 }
 
 function formatDuration(start: string, end: string | null): string {

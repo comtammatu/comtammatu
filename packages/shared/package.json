@@ -13,12 +13,13 @@
     "./menu": "./src/menu/category-labels.ts",
     "./messages": "./src/messages/index.ts",
     "./providers": "./src/providers/index.ts",
-    "./payroll": "./src/payroll/calculate.ts"
+    "./payroll": "./src/payroll/calculate.ts",
+    "./datetime": "./src/datetime/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/",
-    "test": "tsx --test src/auth/__tests__/*.test.ts src/utils/__tests__/*.test.ts"
+    "test": "tsx --test src/auth/__tests__/*.test.ts src/utils/__tests__/*.test.ts src/datetime/__tests__/*.test.ts"
   },
   "devDependencies": {
     "@types/node": "^25.5.0",

@@ -7,6 +7,8 @@ import { ThemeProvider } from "@comtammatu/ui/components/theme-provider";
 import { TooltipProvider } from "@comtammatu/ui/components/tooltip";
 import { BoneyardRegistry } from "./_components/boneyard-registry";
 import { NotificationBellFloating } from "./_components/notification-bell-floating";
+import { readTenantTimezone } from "./_lib/auth";
+import { TimezoneProvider } from "./_lib/timezone-context";
 import "@comtammatu/ui/globals.css";
 import { cn } from "@/lib/utils";
 
@@ -45,7 +47,13 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  const tenantTimezone = await readTenantTimezone();
+
   return (
     <html
       lang="vi"
@@ -65,11 +73,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           enableSystem
           disableTransitionOnChange
         >
-          <BoneyardRegistry />
-          <TooltipProvider>{children}</TooltipProvider>
-          <NotificationBellFloating />
-          <Toaster richColors position="top-right" />
-          <ConfirmDialogProvider />
+          <TimezoneProvider value={tenantTimezone}>
+            <BoneyardRegistry />
+            <TooltipProvider>{children}</TooltipProvider>
+            <NotificationBellFloating />
+            <Toaster richColors position="top-right" />
+            <ConfirmDialogProvider />
+          </TimezoneProvider>
         </ThemeProvider>
       </body>
     </html>

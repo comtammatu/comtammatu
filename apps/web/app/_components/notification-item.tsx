@@ -3,7 +3,9 @@
 import { useRouter } from "next/navigation";
 import { cn } from "@comtammatu/ui";
 import { TriangleAlert as IconAlertTriangle, CircleCheck as IconCircleCheck, ClipboardList as IconClipboardList, Info as IconInfoCircle, PackageOpen as IconPackageExport, ShoppingBag as IconShoppingBag, Truck as IconTruck } from "lucide-react";
+import { formatDateVN } from "@comtammatu/shared/datetime";
 import type { NotificationItem as NotificationItemModel } from "@/_actions/notifications";
+import { useTenantTimezone } from "@/_lib/timezone-context";
 import { messages } from "@lib/messages";
 
 function iconFor(kind: string) {
@@ -37,7 +39,7 @@ function toneFor(severity: NotificationItemModel["severity"]) {
   }
 }
 
-function relativeTime(iso: string) {
+function relativeTime(iso: string, tz: string) {
   const t = messages.notifications.time;
   const now = Date.now();
   const then = new Date(iso).getTime();
@@ -49,7 +51,7 @@ function relativeTime(iso: string) {
   if (hr < 24) return `${hr} ${t.hours}`;
   const day = Math.floor(hr / 24);
   if (day < 30) return `${day} ${t.days}`;
-  return new Date(iso).toLocaleDateString("vi-VN");
+  return formatDateVN(iso, tz);
 }
 
 interface Props {
@@ -60,6 +62,7 @@ interface Props {
 
 export function NotificationItem({ item, onRead, onNavigate }: Props) {
   const router = useRouter();
+  const tz = useTenantTimezone();
   const Icon = iconFor(item.kind);
   const tone = toneFor(item.severity);
   const unread = item.read_at === null;
@@ -114,7 +117,7 @@ export function NotificationItem({ item, onRead, onNavigate }: Props) {
           </p>
         )}
         <p className="text-2xs text-muted-foreground">
-          {kindLabel} · {relativeTime(item.created_at)}
+          {kindLabel} · {relativeTime(item.created_at, tz)}
         </p>
       </div>
     </button>

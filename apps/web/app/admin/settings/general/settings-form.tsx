@@ -13,7 +13,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@comtammatu/ui/components/card";
-import { FieldGroup } from "@comtammatu/ui/components/field";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@comtammatu/ui/components/field";
+import { Input } from "@comtammatu/ui/components/input";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { ACTIONS_VI, ERRORS_VI } from "@comtammatu/shared/messages";
 import { SYSTEM_SETTING_KEYS } from "@comtammatu/shared/settings";
@@ -57,9 +63,16 @@ type SettingsFormValues = z.infer<typeof settingsSchema>;
 
 interface SettingsFormProps {
   settings: Record<string, string>;
+  /**
+   * Tenant IANA timezone (e.g. `Asia/Ho_Chi_Minh`). Read-only here — changing
+   * the tenant timezone will land in a follow-up that also covers JWT refresh
+   * and downstream audit trail considerations. For now we surface the value
+   * so admins can confirm what every receipt and report formats against.
+   */
+  timezone: string;
 }
 
-export function SettingsForm({ settings }: SettingsFormProps) {
+export function SettingsForm({ settings, timezone }: SettingsFormProps) {
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -123,6 +136,32 @@ export function SettingsForm({ settings }: SettingsFormProps) {
               name="currency"
               label="Đơn vị tiền tệ"
             />
+          </FieldGroup>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Múi giờ</CardTitle>
+          <CardDescription>
+            Áp dụng cho hóa đơn, báo cáo và mọi mốc thời gian hiển thị toàn hệ
+            thống. Không phụ thuộc múi giờ máy người dùng.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <FieldGroup>
+            <Field>
+              <FieldLabel htmlFor="tenant-timezone">Múi giờ tenant</FieldLabel>
+              <Input
+                id="tenant-timezone"
+                value={timezone}
+                readOnly
+                aria-readonly
+              />
+              <FieldDescription>
+                Cố định theo cấu hình tenant. Liên hệ chủ sở hữu để thay đổi.
+              </FieldDescription>
+            </Field>
           </FieldGroup>
         </CardContent>
       </Card>

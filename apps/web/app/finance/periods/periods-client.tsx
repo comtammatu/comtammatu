@@ -22,6 +22,8 @@ import {
 } from "@comtammatu/ui/components/dialog";
 import { Lock as IconLock, Plus as IconPlus, FileSearch as IconFileSearch } from "lucide-react";
 import { ACTIONS_VI, ERRORS_VI, FORM_VI, STATES_VI } from "@comtammatu/shared/messages";
+import { formatDateVN } from "@comtammatu/shared/datetime";
+import { useTenantTimezone } from "@/_lib/timezone-context";
 import {
   openFiscalPeriod,
   closeFiscalPeriod,
@@ -50,6 +52,7 @@ function formatPeriod(month: number, year: number) {
 }
 
 export function PeriodsClient({ periods: initial }: Props) {
+  const tz = useTenantTimezone();
   const [periods, setPeriods] = useState(initial);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -201,9 +204,7 @@ export function PeriodsClient({ periods: initial }: Props) {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {p.closed_at
-                        ? new Date(p.closed_at).toLocaleDateString("vi-VN")
-                        : "—"}
+                      {p.closed_at ? formatDateVN(p.closed_at, tz) : "—"}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground max-w-xs truncate">
                       {p.notes ?? "—"}

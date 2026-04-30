@@ -6,7 +6,7 @@ import {
   stripBetaPrefix,
 } from "./route-resolution";
 import type { JwtClaims, ScopeIds, StaffRole } from "./types";
-import { ADMIN_ROLES, BRANCH_ROLES } from "./types";
+import { ADMIN_ROLES, BRANCH_ROLES, DEFAULT_TENANT_TIMEZONE } from "./types";
 
 export type AuthSurface = "legacy" | "beta";
 
@@ -25,6 +25,7 @@ export function extractClaims(
   const branchId = appMetadata.branch_id;
   const areaId = appMetadata.area_id;
   const position = appMetadata.position;
+  const tenantTimezone = appMetadata.tenant_timezone;
 
   return {
     tenant_id: tenantId,
@@ -32,6 +33,10 @@ export function extractClaims(
     area_id: typeof areaId === "number" ? areaId : null,
     user_role: role as StaffRole,
     position: typeof position === "string" ? position : undefined,
+    tenant_timezone:
+      typeof tenantTimezone === "string" && tenantTimezone.length > 0
+        ? tenantTimezone
+        : DEFAULT_TENANT_TIMEZONE,
   };
 }
 

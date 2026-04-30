@@ -18,6 +18,8 @@ import { Plus as IconPlus } from "lucide-react";
 import { createPayrollPeriod, fetchPayrollPeriods } from "../payroll-actions";
 import type { PayrollPeriodRow } from "./page";
 import { ERRORS_VI, FORM_VI } from "@comtammatu/shared/messages";
+import { formatDateVN } from "@comtammatu/shared/datetime";
+import { useTenantTimezone } from "@/_lib/timezone-context";
 
 const STATUS_LABELS: Record<string, string> = {
   draft: "Nháp",
@@ -41,6 +43,7 @@ export function PayrollListClient({
 }: {
   initialPeriods: PayrollPeriodRow[];
 }) {
+  const tz = useTenantTimezone();
   const [periods, setPeriods] = useState(initialPeriods);
   const [isPending, startTransition] = useTransition();
 
@@ -112,14 +115,10 @@ export function PayrollListClient({
                   </Badge>
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
-                  {p.approved_at
-                    ? new Date(p.approved_at).toLocaleDateString("vi-VN")
-                    : "—"}
+                  {p.approved_at ? formatDateVN(p.approved_at, tz) : "—"}
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
-                  {p.paid_at
-                    ? new Date(p.paid_at).toLocaleDateString("vi-VN")
-                    : "—"}
+                  {p.paid_at ? formatDateVN(p.paid_at, tz) : "—"}
                 </TableCell>
                 <TableCell>
                   <Button variant="ghost" size="sm" asChild>

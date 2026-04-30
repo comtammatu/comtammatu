@@ -3,7 +3,9 @@
 import { useState, useTransition } from "react";
 import { RotateCcw as IconRotate, CircleCheck as IconCircleCheck, CircleX as IconCircleX } from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
+import { formatDateTimeVN } from "@comtammatu/shared/datetime";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { useTenantTimezone } from "@/_lib/timezone-context";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
@@ -61,6 +63,7 @@ export function RefundsClient({
   initialRefunds,
   canApprove,
 }: RefundsClientProps) {
+  const tz = useTenantTimezone();
   const [refunds, setRefunds] = useState<RefundRow[]>(initialRefunds);
   const [isPending, startTransition] = useTransition();
   const [actioningId, setActioningId] = useState<number | null>(null);
@@ -238,13 +241,7 @@ export function RefundsClient({
                 </div>
                 <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                   <p className="text-xs text-muted-foreground">
-                    {new Date(refund.created_at).toLocaleString("vi-VN", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      year: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+                    {formatDateTimeVN(refund.created_at, tz)}
                   </p>
                   {canApprove && refund.status === "pending" ? (
                     <div className="flex w-full gap-2 sm:w-auto">
@@ -341,13 +338,7 @@ export function RefundsClient({
                       {refund.created_by_name}
                     </TableCell>
                     <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
-                      {new Date(refund.created_at).toLocaleString("vi-VN", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      {formatDateTimeVN(refund.created_at, tz)}
                     </TableCell>
                     <TableCell>
                       <Badge

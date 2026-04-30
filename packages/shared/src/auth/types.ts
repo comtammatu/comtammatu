@@ -90,6 +90,9 @@ export const ROLE_LABEL_VI: Record<StaffRole, string> = {
   office: "Văn phòng",
 };
 
+/** Default IANA timezone used when JWT claim is absent (e.g. legacy session). */
+export const DEFAULT_TENANT_TIMEZONE = "Asia/Ho_Chi_Minh";
+
 /** JWT custom claims injected by Supabase auth hook */
 export interface JwtClaims {
   tenant_id: number;
@@ -102,6 +105,13 @@ export interface JwtClaims {
    * legacy RLS/policies until M5 cleanup.
    */
   position?: string;
+  /**
+   * IANA tenant timezone (e.g. `Asia/Ho_Chi_Minh`). Always present after the
+   * 20260511000000 migration; falls back to {@link DEFAULT_TENANT_TIMEZONE}
+   * for sessions issued before that hook update so display logic never reads
+   * the user's PC clock.
+   */
+  tenant_timezone: string;
 }
 
 /** Scope IDs extracted from URL or JWT */

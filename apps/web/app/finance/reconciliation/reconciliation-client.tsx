@@ -3,6 +3,8 @@
 import { useState, useTransition } from "react";
 import { TriangleAlert as IconAlertTriangle, ChevronRight as IconChevronRight, CircleCheck as IconCircleCheck, LoaderCircle as IconLoader2 } from "lucide-react";
 import { BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
+import { formatDateTimeVN } from "@comtammatu/shared/datetime";
+import { useTenantTimezone } from "@/_lib/timezone-context";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -99,6 +101,7 @@ export function ReconciliationClient({
   defaultStartDate,
   defaultEndDate,
 }: ReconciliationClientProps) {
+  const tz = useTenantTimezone();
   const [branchId, setBranchId] = useState<number | null>(null);
   const [startDate, setStartDate] = useState(defaultStartDate);
   const [endDate, setEndDate] = useState(defaultEndDate);
@@ -381,7 +384,7 @@ export function ReconciliationClient({
                         {row.ref_label}
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
-                        {new Date(row.ref_date).toLocaleString("vi-VN")}
+                        {formatDateTimeVN(row.ref_date, tz)}
                       </TableCell>
                       <TableCell className="text-sm">
                         {branchName(row.branch_id)}
@@ -552,6 +555,7 @@ function DesyncTable({
   rows: DesyncRow[];
   branchName: (id: number | null) => string;
 }) {
+  const tz = useTenantTimezone();
   if (rows.length === 0) {
     return (
       <Card>
@@ -635,7 +639,7 @@ function DesyncTable({
                 </TableCell>
                 <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
                   {r.payment_paid_at
-                    ? new Date(r.payment_paid_at).toLocaleString("vi-VN")
+                    ? formatDateTimeVN(r.payment_paid_at, tz)
                     : "—"}
                 </TableCell>
                 <TableCell className="text-right text-xs text-muted-foreground">

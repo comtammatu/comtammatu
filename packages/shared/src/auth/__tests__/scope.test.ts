@@ -22,6 +22,7 @@ function makeClaims(
     branch_id: branchId,
     area_id: null,
     user_role: role,
+    tenant_timezone: "Asia/Ho_Chi_Minh",
   };
 }
 
