@@ -15,6 +15,7 @@ interface InventoryPageContentProps {
   children: ReactNode;
   className?: string;
   contentClassName?: string;
+  scroll?: boolean;
   width?: "wide" | "narrow";
 }
 
@@ -22,12 +23,14 @@ export function InventoryPageContent({
   children,
   className,
   contentClassName,
+  scroll = true,
   width = "wide",
 }: InventoryPageContentProps) {
   return (
     <div
       className={cn(
-        "no-scrollbar min-h-0 flex-1 overflow-auto p-4",
+        "no-scrollbar min-h-0 flex-1 p-4",
+        scroll ? "overflow-auto" : "overflow-visible",
         className,
       )}
     >

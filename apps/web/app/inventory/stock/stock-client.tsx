@@ -3,7 +3,16 @@
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRightToLine as IconArrowBarRight, ClipboardList as IconClipboardList, Pencil as IconPencil, Receipt as IconReceipt, Search as IconSearch, ShoppingCart as IconShoppingCart, Trash as IconTrash, Truck as IconTruck } from "lucide-react";
+import {
+  ArrowRightToLine as IconArrowBarRight,
+  ClipboardList as IconClipboardList,
+  Pencil as IconPencil,
+  Receipt as IconReceipt,
+  Search as IconSearch,
+  ShoppingCart as IconShoppingCart,
+  Trash as IconTrash,
+  Truck as IconTruck,
+} from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -566,9 +575,10 @@ export function StockClient({
   const liveLabel = new Date().toLocaleDateString("vi-VN");
 
   return (
-    <>
+    <div className="no-scrollbar min-h-0 flex-1 overflow-auto bg-background">
       <InventoryHeader
         title="Tồn kho"
+        className="static"
         actions={
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="hidden sm:inline-flex">
@@ -582,6 +592,7 @@ export function StockClient({
         width={isMobile ? "narrow" : "wide"}
         className={isMobile ? undefined : "p-3"}
         contentClassName={isMobile ? undefined : "max-w-none gap-2"}
+        scroll={false}
       >
         <div className="flex flex-wrap items-center gap-2 border bg-card p-2">
           {permissions.canReceiveGrn ? (
@@ -784,7 +795,9 @@ export function StockClient({
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-xs text-muted-foreground">{FORM_VI.value}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {FORM_VI.value}
+                      </p>
                       <p className="font-semibold tabular-nums">
                         {formatVND(stockValue(item))} đ
                       </p>
@@ -856,8 +869,12 @@ export function StockClient({
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/20 hover:bg-muted/20">
-                      <TableHead className="min-w-56">{PRODUCT_VI.rawIngredient}</TableHead>
-                      <TableHead className="min-w-32">{FORM_VI.category}</TableHead>
+                      <TableHead className="min-w-56">
+                        {PRODUCT_VI.rawIngredient}
+                      </TableHead>
+                      <TableHead className="min-w-32">
+                        {FORM_VI.category}
+                      </TableHead>
                       <TableHead className="min-w-24 text-right">Tồn</TableHead>
                       <TableHead className="min-w-24 text-right">
                         Khả dụng
@@ -1210,6 +1227,6 @@ export function StockClient({
           />
         ) : null}
       </InventoryPageContent>
-    </>
+    </div>
   );
 }
