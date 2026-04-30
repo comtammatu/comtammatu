@@ -1,7 +1,10 @@
 import { canAccess, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { loadAuthState } from "@/_lib/auth";
-import { currentUserHasPermissionAny } from "@/_lib/permissions";
+import {
+  currentUserHasAnyPermissionAny,
+  currentUserHasPermissionAny,
+} from "@/_lib/permissions";
 import {
   fetchReorderAlerts,
   fetchExpiryAlerts,
@@ -12,6 +15,11 @@ import { fetchStockTransfers } from "../transfer-actions";
 import { fetchInventoryValueSystem } from "../inventory-value-actions";
 import { formatDate } from "./format";
 import { resolveInventoryBranchScope } from "./inventory-scope";
+import {
+  canAccessProductionSurface,
+  hasCurrentProductionBranchAccess,
+  PRODUCTION_OPEN_PERMISSIONS,
+} from "../production-data";
 
 type DashboardSiteKind = "central_warehouse" | "central_kitchen" | "branch";
 
@@ -54,6 +62,8 @@ export type InventoryDashboardData = {
   siteKind: DashboardSiteKind;
   userRole: StaffRole;
   showProcurement: boolean;
+  showProduction: boolean;
+  selectedBranchId: number | null;
   totalStockValue: number;
   pendingPO: number;
   activeTransfers: number;
@@ -100,6 +110,12 @@ export async function loadInventoryDashboardData(
   const showProcurement =
     canAccess(claims.user_role, "inventory_procurement") &&
     (await currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_READ));
+  const showProduction =
+    claims.user_role !== "owner" &&
+    claims.user_role !== "area_manager" &&
+    canAccessProductionSurface(claims.user_role) &&
+    (await currentUserHasAnyPermissionAny(PRODUCTION_OPEN_PERMISSIONS)) &&
+    (await hasCurrentProductionBranchAccess(supabase, claims));
 
   const scope = await resolveInventoryBranchScope(
     supabase,
@@ -223,6 +239,8 @@ export async function loadInventoryDashboardData(
     siteKind,
     userRole: claims.user_role,
     showProcurement,
+    showProduction,
+    selectedBranchId: scope.selectedBranchId,
     totalStockValue,
     pendingPO,
     activeTransfers,

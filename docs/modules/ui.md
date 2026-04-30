@@ -72,6 +72,7 @@ Khong fork primitive theo surface.
 Operational surfaces (POS, KDS) support keyboard shortcuts cho power users. Shortcut helper duy nhat: `useKeyboardShortcut` tai `apps/web/app/_lib/use-keyboard-shortcut.ts`.
 
 Convention:
+
 - Shortcut don phim (`T`, `D`, `/`) mac dinh KHONG fire khi focus dang o input/textarea/contenteditable.
 - Shortcut co meta (`Cmd+Enter`, `Ctrl+K`) co the dung `fireInInput: true` de fire ca khi dang go.
 - `Escape` de clear filter hoac dong dialog (Radix tu lo dong dialog).
@@ -107,6 +108,10 @@ App-local form helpers song tai `apps/web/app/components/form/`. Dung cho moi di
 
 - `TextField` — text Input + RHF useController
 - `NumberField` — `FormattedNumberInput` (VND format) + RHF
+- `MoneyVndInput` / `MoneyVndField` — VND integer amount, grouped display, raw numeric-string submit
+- `QuantityInput` / `QuantityField` — inventory quantity, default 3 decimal places, grouped display
+- `TaxRateBpsInput` / `TaxRateBpsField` — tax basis points integer, raw numeric-string submit
+- `BusinessDateField` — RHF date picker, displays `dd/mm/yyyy`, stores `yyyy-mm-dd`, optional branch timezone note
 - `SelectField` — Select voi `options={[{value, label}]}`
 - `TextareaField` — Textarea + RHF
 - `FormDialog` — generic Dialog + `useForm` + `zodResolver` + `useTransition`
@@ -115,6 +120,42 @@ App-local form helpers song tai `apps/web/app/components/form/`. Dung cho moi di
 Import: `import { TextField, FormDialog, ... } from "@/components/form"`.
 
 Schema: luon dung Zod 4 voi `{ error: "..." }` (khong dung `{ message }`).
+
+### Form Mode Decision
+
+- Dung RHF + Zod khi form co line array, hon 4 field, can inline validation truoc submit, hoac can pending/dirty submit UX. PO, GRN, transfer lines, stocktake, adjustment, va production forms thuoc nhom nay.
+- Dung plain `<form action>` cho login, sign out, va single-reason confirm don gian khi state da reload qua redirect.
+- Shared schema can import ca client va server thi dat tai `packages/shared/src/forms/<name>.ts`; schema chi dung noi bo route co the dat gan route.
+- Validation field-level hien inline. Business error khong map duoc field thi hien toast/action message an toan, khong expose raw Supabase/Postgres error.
+
+### Feedback Decision
+
+- Sonner la feedback mac dinh cho success/action outcome: `Da luu`, `Da xac nhan GRN`, `Khong the tao phieu`.
+- URL flash/search params khong dung cho non-auth success/error. Redirect den `/access-denied?reason=` chi dung cho permission, auth, hoac scope failure.
+- Durable notification chi dung khi co follow-up cross-role/branch, SLA, approval, hoac exception can ton tai sau reload.
+
+### Inventory Flow Decision
+
+Inventory IA phai bam 3 luong chinh:
+
+1. `Kiem soat ton` — Ton kho, Kiem ke, Han dung, Hao hut/dieu chinh, Bao cao.
+2. `Nhap/Nhan/Doi soat` — Don dat hang, Phieu nhap/GRN, supplier invoice/price variance, receiving exception.
+3. `Dieu phoi/San xuat` — Dieu chuyen, Lenh san xuat, BOM/recipe issue, yield.
+
+Sidebar labels phai ngan va scan duoc trong rail co dinh. Ten day du cua luong dat trong page title, breadcrumb, tab, hoac empty state thay vi ep vao group label dai.
+
+### Overlay Decision
+
+- Page: long form, nhieu dong, keyboard-heavy workflow nhu GRN 20 line, transfer detail edit, stocktake session.
+- Sheet: focused data entry/action ngan; bottom sheet tren mobile va side sheet tren desktop khi implementation can responsive surface.
+- Dialog: short contextual task khong destructive.
+- AlertDialog: destructive/irreversible confirm nhu void order, deactivate, inactive lifecycle transition.
+
+### Audit And Permission Decision
+
+- Detail page co audit nhu `Tabs [Overview | Lines | Lich su]`; `Lich su` filter `audit_logs` bang `entity_type` + `entity_id`, hien actor, action, timestamp, old/new diff khi co.
+- Tenant-wide `/admin/audit` la compliance search surface, khong bat buoc cho Inventory Lite MVP.
+- Neu user thieu quyen permanent thi hide action. Neu bi block tam thoi do business state, show disabled + explain inline/tooltip, vi du chua mo ca hoac ky da khoa.
 
 ## Composition Rules
 

@@ -3,18 +3,16 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import {
+  type LucideIcon,
   TriangleAlert as IconAlertTriangle,
   ArrowLeftRight as IconArrowLeftRight,
   ArrowRight as IconArrowRight,
-  ChartBar as IconChartBar,
   SquareCheck as IconSquareCheck,
-  ChefHat as IconChefHat,
   ClipboardList as IconClipboardList,
   Clock as IconClock,
   Factory as IconBuildingFactory,
   Hourglass as IconHourglass,
   Lightbulb as IconBulb,
-  Package as IconPackage,
   PackageX as IconPackageOff,
   Receipt as IconReceipt,
   ShoppingCart as IconShoppingCart,
@@ -53,6 +51,8 @@ export type DashboardProps = {
   siteKind: DashboardSiteKind;
   userRole: StaffRole;
   showProcurement: boolean;
+  showProduction: boolean;
+  selectedBranchId: number | null;
   totalStockValue: number;
   pendingPO: number;
   activeTransfers: number;
@@ -91,66 +91,149 @@ export type DashboardProps = {
   }>;
 };
 
-/* ------------------------------------------------------------------ */
-/*  Quick actions per site kind                                        */
-/* ------------------------------------------------------------------ */
+type FlowAction = {
+  label: string;
+  href: string;
+  primary?: boolean;
+};
 
-function buildQuickActions(
-  siteKind: DashboardSiteKind,
-  routeBase: InventoryRouteBase,
-) {
-  const p = getInventoryPaths(routeBase);
+type FlowCard = {
+  key: string;
+  title: string;
+  description: string;
+  href: string;
+  icon: LucideIcon;
+  metric: string;
+  metricLabel: string;
+  statusLabel: string;
+  tone: "default" | "destructive" | "warning" | "info" | "success";
+  actions: FlowAction[];
+};
 
-  if (siteKind === "central_warehouse")
-    return [
-      {
-        label: "Nhập nguyên liệu",
-        icon: IconShoppingCart,
-        href: p.receiving,
-        primary: true,
-      },
-      { label: tNav("transfers"), icon: IconArrowLeftRight, href: p.transfers },
-      { label: tNav("stocktake"), icon: IconClipboardList, href: p.stocktake },
-      { label: tNav("reports"), icon: IconChartBar, href: p.reports },
-    ];
-
-  if (siteKind === "central_kitchen")
-    return [
-      {
-        label: "Tạo lệnh sản xuất",
-        icon: IconBuildingFactory,
-        href: p.production,
-        primary: true,
-      },
-      { label: "Xuất thành phẩm", icon: IconPackage, href: p.transfers },
-      { label: tNav("stocktake"), icon: IconClipboardList, href: p.stocktake },
-      { label: tNav("reports"), icon: IconChartBar, href: p.reports },
-    ];
-
-  return [
-    {
-      label: "Nhận hàng",
-      icon: IconTruck,
-      href: p.transfers,
-      primary: true,
-    },
-    {
-      label: "Cấp bếp",
-      icon: IconChefHat,
-      href: `${p.transfers}?create=cap-bep`,
-    },
-    { label: tNav("stocktake"), icon: IconClipboardList, href: p.stocktake },
-    { label: "Tồn cần xử lý", icon: IconPackage, href: p.stock },
-  ];
+function appendBranchId(href: string, branchId: number | null): string {
+  if (branchId == null || href.includes("branchId=")) return href;
+  return `${href}${href.includes("?") ? "&" : "?"}branchId=${branchId}`;
 }
 
-function buildOversightActions(routeBase: InventoryRouteBase) {
-  const p = getInventoryPaths(routeBase);
+function buildFlowCards(props: DashboardProps): FlowCard[] {
+  const paths = getInventoryPaths(props.routeBase);
+  const openTransfers = props.transfers.filter((t) => isTransferOpen(t.status));
+  const inbound = openTransfers.filter((t) => t.toBranch === props.siteName);
+  const outbound = openTransfers.filter((t) => t.fromBranch === props.siteName);
+  const exceptionCount =
+    props.activeStocktakes +
+    props.expiryAlerts.length +
+    props.reorderAlerts.length +
+    props.priceReviewCount +
+    props.pendingSupplierReturns;
+
+  const sourceActions: FlowAction[] = props.showProcurement
+    ? [
+        {
+          label: tNav("purchaseOrders", "navigation"),
+          href: paths.purchaseOrders,
+          primary: true,
+        },
+        { label: tNav("grn", "navigation"), href: paths.grn },
+        {
+          label: tNav("supplierReturns", "navigation"),
+          href: paths.supplierReturns,
+        },
+      ]
+    : [
+        { label: "Phiếu đến", href: paths.transfers, primary: true },
+        { label: tNav("stock", "navigation"), href: paths.stock },
+      ];
+
+  const movementActions: FlowAction[] = [
+    {
+      label:
+        props.siteKind === "branch"
+          ? "Nhận hàng & cấp bếp"
+          : tNav("transfers", "navigation"),
+      href: paths.transfers,
+      primary: true,
+    },
+  ];
+
+  if (props.showProduction) {
+    movementActions.push({ label: "Lệnh sản xuất", href: paths.production });
+  }
+
+  if (props.siteKind === "branch") {
+    movementActions.push({
+      label: "Cấp bếp",
+      href: `${paths.transfers}?create=cap-bep`,
+    });
+  }
+
   return [
-    { label: "Tồn cần xử lý", icon: IconPackage, href: p.stock, primary: true },
-    { label: tNav("reports"), icon: IconChartBar, href: p.reports },
-    { label: tNav("stocktake"), icon: IconClipboardList, href: p.stocktake },
-    { label: "Cảnh báo hạn dùng", icon: IconHourglass, href: p.expiry },
+    {
+      key: "control",
+      title: "1. Kiểm soát tồn",
+      description:
+        "Nắm tồn hiện tại, kiểm kê, hạn dùng, tồn thấp và các lệch số cần xử lý trong ngày.",
+      href: paths.stocktake,
+      icon: IconClipboardList,
+      metric: String(exceptionCount),
+      metricLabel: "điểm cần kiểm soát",
+      statusLabel: `${props.activeStocktakes} kiểm kê / ${props.expiryAlerts.length} hạn dùng`,
+      tone:
+        props.expiryAlerts.length > 0 || props.reorderAlerts.length > 0
+          ? "warning"
+          : props.activeStocktakes > 0
+            ? "success"
+            : "default",
+      actions: [
+        {
+          label: tNav("stocktake", "navigation"),
+          href: paths.stocktake,
+          primary: true,
+        },
+        { label: tNav("expiry", "navigation"), href: paths.expiry },
+        { label: tNav("issues", "navigation"), href: paths.issues },
+        { label: tNav("reports", "navigation"), href: paths.reports },
+      ],
+    },
+    {
+      key: "source",
+      title: "2. Nhập - Nhận hàng - Đối soát",
+      description: props.showProcurement
+        ? "Theo dõi PO, GRN, hóa đơn NCC và lệch giá/số lượng trước khi hàng vào tồn."
+        : "Chi nhánh nhận hàng qua điều chuyển nội bộ và đối soát số thực nhận.",
+      href: props.showProcurement ? paths.purchaseOrders : paths.transfers,
+      icon: props.showProcurement ? IconShoppingCart : IconTruck,
+      metric: String(props.showProcurement ? props.pendingPO : inbound.length),
+      metricLabel: props.showProcurement ? "PO đang chờ" : "phiếu đến",
+      statusLabel: props.showProcurement
+        ? `${props.priceReviewCount} dòng cần đối soát`
+        : `${inbound.length} phiếu cần nhận`,
+      tone:
+        (props.showProcurement && props.pendingPO > 0) || inbound.length > 0
+          ? "info"
+          : "default",
+      actions: sourceActions,
+    },
+    {
+      key: "movement",
+      title: "3. Điều phối và sản xuất",
+      description:
+        props.siteKind === "central_kitchen"
+          ? "Nhận nguyên liệu, chạy lệnh sản xuất, rồi xuất thành phẩm về chi nhánh."
+          : props.siteKind === "branch"
+            ? "Nhận hàng về kho chi nhánh và cấp phát xuống bếp chi nhánh theo ca bán."
+            : "Xuất hàng từ kho tổng sang bếp trung tâm hoặc kho chi nhánh.",
+      href: paths.transfers,
+      icon:
+        props.siteKind === "central_kitchen"
+          ? IconBuildingFactory
+          : IconArrowLeftRight,
+      metric: String(props.activeTransfers),
+      metricLabel: "phiếu đang chạy",
+      statusLabel: `${inbound.length} đến / ${outbound.length} đi`,
+      tone: props.activeTransfers > 0 ? "info" : "default",
+      actions: movementActions,
+    },
   ];
 }
 
@@ -321,7 +404,6 @@ export function DashboardClient(props: DashboardProps) {
     routeBase,
     siteName,
     siteKind,
-    userRole,
     showProcurement,
     totalStockValue,
     pendingPO,
@@ -334,10 +416,9 @@ export function DashboardClient(props: DashboardProps) {
 
   const isMobile = useIsMobile();
   const paths = getInventoryPaths(routeBase);
-  const isOversight = userRole === "owner" || userRole === "area_manager";
-  const quickActions = isOversight
-    ? buildOversightActions(routeBase)
-    : buildQuickActions(siteKind, routeBase);
+  const flowCards = buildFlowCards(props);
+  const withBranch = (href: string) =>
+    appendBranchId(href, props.selectedBranchId);
   const tasks = buildTasks(props);
 
   const activeTransferList = transfers
@@ -372,6 +453,92 @@ export function DashboardClient(props: DashboardProps) {
         width={isMobile ? "narrow" : "wide"}
         contentClassName="gap-6"
       >
+        <section className="flex flex-col gap-3">
+          <div className="flex flex-col gap-1">
+            <h2 className="text-base font-semibold">3 luồng vận hành chính</h2>
+            <p className="text-sm text-muted-foreground">
+              Bám theo 3 luồng cốt lõi: kiểm soát tồn, nhập - nhận hàng - đối
+              soát, điều phối và sản xuất.
+            </p>
+          </div>
+          <div className="grid gap-3 lg:grid-cols-3">
+            {flowCards.map((flow) => {
+              const Icon = flow.icon;
+
+              return (
+                <Card
+                  key={flow.key}
+                  className={cn(
+                    "overflow-hidden",
+                    flow.tone === "destructive" &&
+                      "border-destructive/40 bg-destructive/5",
+                    flow.tone === "warning" &&
+                      "border-warning/40 bg-warning/10",
+                    flow.tone === "info" && "border-info/40 bg-info/10",
+                    flow.tone === "success" &&
+                      "border-success/40 bg-success/10",
+                  )}
+                >
+                  <CardHeader className="gap-3 pb-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex min-w-0 items-start gap-3">
+                        <div className="flex size-9 shrink-0 items-center justify-center rounded-md border bg-background">
+                          <Icon className="size-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <CardTitle className="text-base leading-tight">
+                            {flow.title}
+                          </CardTitle>
+                          <CardDescription className="mt-1 line-clamp-2">
+                            {flow.description}
+                          </CardDescription>
+                        </div>
+                      </div>
+                      <Badge variant="secondary" className="shrink-0">
+                        {flow.metric}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between gap-3 rounded-md border bg-background/80 px-3 py-2">
+                      <div>
+                        <p className="text-xs text-muted-foreground">
+                          {flow.metricLabel}
+                        </p>
+                        <p className="text-sm font-medium">
+                          {flow.statusLabel}
+                        </p>
+                      </div>
+                      <Button variant="ghost" size="icon-sm" asChild>
+                        <Link
+                          href={withBranch(flow.href)}
+                          aria-label={flow.title}
+                        >
+                          <IconArrowRight />
+                        </Link>
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-2">
+                      {flow.actions.map((action) => (
+                        <Button
+                          key={`${flow.key}-${action.label}`}
+                          variant={action.primary ? "default" : "outline"}
+                          size="sm"
+                          asChild
+                        >
+                          <Link href={withBranch(action.href)}>
+                            {action.label}
+                          </Link>
+                        </Button>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </section>
+
         {/* KPI cards */}
         <div
           className={cn(
@@ -451,47 +618,6 @@ export function DashboardClient(props: DashboardProps) {
           ))}
         </div>
 
-        {/* Quick actions */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm">
-              {isOversight ? "Giám sát nhanh" : "Thao tác nhanh"}
-            </CardTitle>
-            <CardDescription className="text-xs">
-              {isOversight && "Ngoại lệ, báo cáo và trạng thái tồn cần rà soát"}
-              {!isOversight &&
-                siteKind === "central_warehouse" &&
-                "Các thao tác phổ biến tại trụ sở"}
-              {!isOversight &&
-                siteKind === "central_kitchen" &&
-                "Các thao tác phổ biến tại bếp trung tâm"}
-              {!isOversight &&
-                siteKind === "branch" &&
-                "Các thao tác phổ biến tại chi nhánh"}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div
-              className={cn("flex gap-2", isMobile ? "flex-col" : "flex-wrap")}
-            >
-              {quickActions.map((a) => (
-                <Button
-                  key={a.label}
-                  variant={a.primary ? "default" : "outline"}
-                  size={isMobile ? "lg" : "sm"}
-                  className={cn(isMobile && "justify-start")}
-                  asChild
-                >
-                  <Link href={a.href}>
-                    <a.icon className="mr-2 size-4" />
-                    {a.label}
-                  </Link>
-                </Button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Tasks + Alerts */}
         <div
           className={cn(
@@ -527,7 +653,7 @@ export function DashboardClient(props: DashboardProps) {
                   {tasks.map((task) => (
                     <Link
                       key={task.key}
-                      href={task.href}
+                      href={withBranch(task.href)}
                       className={cn(
                         "flex items-start gap-3 rounded-lg border p-3 transition-colors hover:bg-accent active:scale-[0.99]",
                         isMobile && "min-h-14",
@@ -568,7 +694,9 @@ export function DashboardClient(props: DashboardProps) {
                   </CardDescription>
                 </div>
                 <Button variant="ghost" size="sm" asChild>
-                  <Link href={paths.expiry}>{ACTIONS_VI.viewAll}</Link>
+                  <Link href={withBranch(paths.expiry)}>
+                    {ACTIONS_VI.viewAll}
+                  </Link>
                 </Button>
               </div>
             </CardHeader>
@@ -577,7 +705,9 @@ export function DashboardClient(props: DashboardProps) {
                 {reorderAlerts.slice(0, isMobile ? 2 : 3).map((item) => (
                   <Link
                     key={`r-${item.ingredientId}-${item.branchId}`}
-                    href={showProcurement ? paths.purchaseOrders : paths.stock}
+                    href={withBranch(
+                      showProcurement ? paths.purchaseOrders : paths.stock,
+                    )}
                     className={cn(
                       "flex items-start gap-3 rounded-lg border border-destructive/50 bg-destructive/5 p-3 transition-colors hover:bg-accent",
                       isMobile && "min-h-14",
@@ -602,7 +732,7 @@ export function DashboardClient(props: DashboardProps) {
                 {expiryAlerts.slice(0, isMobile ? 2 : 3).map((item) => (
                   <Link
                     key={`e-${item.id}`}
-                    href={paths.expiry}
+                    href={withBranch(paths.expiry)}
                     className={cn(
                       "flex items-start gap-3 rounded-lg border p-3 transition-colors hover:bg-accent",
                       item.urgency === "critical"
@@ -671,7 +801,9 @@ export function DashboardClient(props: DashboardProps) {
                   </CardDescription>
                 </div>
                 <Button variant="ghost" size="sm" asChild>
-                  <Link href={paths.transfers}>{ACTIONS_VI.viewAll}</Link>
+                  <Link href={withBranch(paths.transfers)}>
+                    {ACTIONS_VI.viewAll}
+                  </Link>
                 </Button>
               </div>
             </CardHeader>
@@ -685,7 +817,7 @@ export function DashboardClient(props: DashboardProps) {
                   {activeTransferList.map((t) => (
                     <Link
                       key={t.id}
-                      href={paths.transferDetail(t.id)}
+                      href={withBranch(paths.transferDetail(t.id))}
                       className={cn(
                         "block rounded-lg border p-3 transition-colors hover:bg-accent active:scale-[0.99]",
                         isMobile && "min-h-14",
@@ -717,7 +849,9 @@ export function DashboardClient(props: DashboardProps) {
                   </CardDescription>
                 </div>
                 <Button variant="ghost" size="sm" asChild>
-                  <Link href={paths.stocktake}>{ACTIONS_VI.viewAll}</Link>
+                  <Link href={withBranch(paths.stocktake)}>
+                    {ACTIONS_VI.viewAll}
+                  </Link>
                 </Button>
               </div>
             </CardHeader>
@@ -731,7 +865,7 @@ export function DashboardClient(props: DashboardProps) {
                   {activeStocktakeList.map((s) => (
                     <Link
                       key={s.id}
-                      href={paths.stocktakeDetail(s.id)}
+                      href={withBranch(paths.stocktakeDetail(s.id))}
                       className={cn(
                         "block rounded-lg border p-3 transition-colors hover:bg-accent active:scale-[0.99]",
                         isMobile && "min-h-14",

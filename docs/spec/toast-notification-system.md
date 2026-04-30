@@ -1,6 +1,6 @@
 # Toast And Notification System
 
-> Status: design contract | Updated: 2026-04-25 | Scope: app-wide transient toast, durable in-app notifications, and external notification outbox
+> Status: design contract | Updated: 2026-04-28 | Scope: app-wide transient toast, durable in-app notifications, and external notification outbox
 
 ## UI Scope Declaration
 
@@ -97,29 +97,29 @@ Out of scope for the current contract:
 
 ## Decision Matrix
 
-| Scenario | Toast | In-app notification | External outbox |
-| --- | --- | --- | --- |
-| Form saved by current user | Yes | No | No |
-| Client validation fails | Yes or inline field error | No | No |
-| Payment confirmed | Yes | Usually no | Optional only if finance needs alert |
-| Auto-waste soft-fails after POS void succeeds | Warning toast | Optional task for admin if follow-up is required | Optional |
-| GRN price variance needs approval | Yes for submitter | Yes for approver role | Optional |
-| Stock low recurring alert | No unless user triggered check | Yes with dedup key | Optional |
-| Stocktake conflict created offline | Yes after sync | Yes for QLV/Admin queue | Optional |
-| KDS ticket received | Usually no toast if visible in live queue | Optional only for cross-station handoff | No |
-| Print job retry failed | Error toast for operator | Yes for settings/admin if repeated | Optional |
+| Scenario                                      | Toast                                     | In-app notification                              | External outbox                      |
+| --------------------------------------------- | ----------------------------------------- | ------------------------------------------------ | ------------------------------------ |
+| Form saved by current user                    | Yes                                       | No                                               | No                                   |
+| Client validation fails                       | Yes or inline field error                 | No                                               | No                                   |
+| Payment confirmed                             | Yes                                       | Usually no                                       | Optional only if finance needs alert |
+| Auto-waste soft-fails after POS void succeeds | Warning toast                             | Optional task for admin if follow-up is required | Optional                             |
+| GRN price variance needs approval             | Yes for submitter                         | Yes for approver role                            | Optional                             |
+| Stock low recurring alert                     | No unless user triggered check            | Yes with dedup key                               | Optional                             |
+| Stocktake conflict created offline            | Yes after sync                            | Yes for QLV/Admin queue                          | Optional                             |
+| KDS ticket received                           | Usually no toast if visible in live queue | Optional only for cross-station handoff          | No                                   |
+| Print job retry failed                        | Error toast for operator                  | Yes for settings/admin if repeated               | Optional                             |
 
 ## Severity Contract
 
 Toast and notification severities must mean the same thing:
 
-| Severity | Toast API | Notification `severity` | Meaning | User expectation |
-| --- | --- | --- | --- | --- |
-| Success | `toast.success` | Not stored as durable severity | Completed action | No further action unless description says so |
-| Info | `toast.info` or `toast.message` | `info` | Neutral update or normal handoff | Read or open when convenient |
-| Warning | `toast.warning` | `warning` | Action succeeded with risk, delay, exception, or follow-up | Review soon |
-| Critical | `toast.error` for failed current action | `critical` | Blocked workflow, SLA breach, hard block, or high-risk exception | Act now |
-| Loading | `toast.loading` | Not stored | Visible latency | Wait or cancel if supported |
+| Severity | Toast API                               | Notification `severity`        | Meaning                                                          | User expectation                             |
+| -------- | --------------------------------------- | ------------------------------ | ---------------------------------------------------------------- | -------------------------------------------- |
+| Success  | `toast.success`                         | Not stored as durable severity | Completed action                                                 | No further action unless description says so |
+| Info     | `toast.info` or `toast.message`         | `info`                         | Neutral update or normal handoff                                 | Read or open when convenient                 |
+| Warning  | `toast.warning`                         | `warning`                      | Action succeeded with risk, delay, exception, or follow-up       | Review soon                                  |
+| Critical | `toast.error` for failed current action | `critical`                     | Blocked workflow, SLA breach, hard block, or high-risk exception | Act now                                      |
+| Loading  | `toast.loading`                         | Not stored                     | Visible latency                                                  | Wait or cancel if supported                  |
 
 Do not store durable success notifications for routine local actions. They pollute the feed and make real work harder to see.
 
@@ -242,14 +242,14 @@ Use `dedup_key` for noisy events.
 
 Recommended patterns:
 
-| Event | Dedup key |
-| --- | --- |
-| Stock low | `inventory.stock_low:{branch_id}:{ingredient_id}` |
-| Expiry soon | `inventory.expiry_soon:{branch_id}:{lot_id}:{date}` |
+| Event              | Dedup key                                                 |
+| ------------------ | --------------------------------------------------------- |
+| Stock low          | `inventory.stock_low:{branch_id}:{ingredient_id}`         |
+| Expiry soon        | `inventory.expiry_soon:{branch_id}:{lot_id}:{date}`       |
 | GRN price variance | `procurement.grn_price_variance:{grn_id}:{ingredient_id}` |
-| Stocktake conflict | `stocktake.conflict:{session_id}:{line_id}` |
-| Integration failed | `system.integration_failed:{integration}:{date}` |
-| SLA breach | `workflow.sla:{entity_type}:{entity_id}:{sla_name}` |
+| Stocktake conflict | `stocktake.conflict:{session_id}:{line_id}`               |
+| Integration failed | `system.integration_failed:{integration}:{date}`          |
+| SLA breach         | `workflow.sla:{entity_type}:{entity_id}:{sla_name}`       |
 
 If an event can occur multiple times legitimately, include the domain event id. If repeated rows add no value, keep the dedup key stable and update metadata or rely on `ON CONFLICT`.
 
@@ -270,16 +270,17 @@ Rules:
 - Put secondary details in Sonner `description` only when it changes what the user should do next.
 - Avoid stacked duplicate toasts from rapid clicks; disable pending buttons or use a stable toast id.
 - Do not render custom toast containers or page-local toast systems.
+- Do not use URL flash/search params for non-auth action feedback. Route-level redirects with reasons are reserved for permission, auth, and scope failures such as `/access-denied?reason=...`.
 
 Recommended copy pattern:
 
-| Variant | Meaning | Example |
-| --- | --- | --- |
-| `success` | Action completed and no further action is needed | `Đã lưu cài đặt` |
-| `info` / `message` | Neutral state or next-step hint | `Đang chờ thanh toán` |
-| `warning` | Parent action succeeded but follow-up is needed | `Waste auto đã gửi nhưng admin cần xử lý` |
-| `error` | Action failed and the current user can retry or correct input | `Không thể xác nhận thanh toán` |
-| `loading` | Action is in progress and should resolve/update | `Đang xử lý...` |
+| Variant            | Meaning                                                       | Example                                   |
+| ------------------ | ------------------------------------------------------------- | ----------------------------------------- |
+| `success`          | Action completed and no further action is needed              | `Đã lưu cài đặt`                          |
+| `info` / `message` | Neutral state or next-step hint                               | `Đang chờ thanh toán`                     |
+| `warning`          | Parent action succeeded but follow-up is needed               | `Waste auto đã gửi nhưng admin cần xử lý` |
+| `error`            | Action failed and the current user can retry or correct input | `Không thể xác nhận thanh toán`           |
+| `loading`          | Action is in progress and should resolve/update               | `Đang xử lý...`                           |
 
 ## Toast Copy Rules
 
@@ -528,19 +529,19 @@ Documentation-only verification:
 
 ## Test Matrix
 
-| Area | Test |
-| --- | --- |
-| Toast success | Trigger a known successful action and verify one success toast appears |
-| Toast error | Force a safe action failure and verify sanitized Vietnamese copy |
-| Toast duplicate | Double-click pending action and verify no toast storm |
-| Notification visibility | Same tenant role sees row; unrelated role/branch does not |
-| Notification unread | New row increments unread count |
-| Mark read | Clicking item marks it read and optionally navigates |
-| Mark all | Visible unread rows become read for current user only |
-| Expiry | Expired row no longer counts as unread active work |
-| Dedup | Repeated event does not create duplicate active rows |
-| Outbox skipped | No webhook configured marks rows skipped |
-| Outbox failed | Non-2xx delivery increments retries and stores safe error metadata |
+| Area                    | Test                                                                   |
+| ----------------------- | ---------------------------------------------------------------------- |
+| Toast success           | Trigger a known successful action and verify one success toast appears |
+| Toast error             | Force a safe action failure and verify sanitized Vietnamese copy       |
+| Toast duplicate         | Double-click pending action and verify no toast storm                  |
+| Notification visibility | Same tenant role sees row; unrelated role/branch does not              |
+| Notification unread     | New row increments unread count                                        |
+| Mark read               | Clicking item marks it read and optionally navigates                   |
+| Mark all                | Visible unread rows become read for current user only                  |
+| Expiry                  | Expired row no longer counts as unread active work                     |
+| Dedup                   | Repeated event does not create duplicate active rows                   |
+| Outbox skipped          | No webhook configured marks rows skipped                               |
+| Outbox failed           | Non-2xx delivery increments retries and stores safe error metadata     |
 
 ## Rollout Plan
 

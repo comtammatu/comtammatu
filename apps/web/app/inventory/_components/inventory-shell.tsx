@@ -83,7 +83,7 @@ function buildInventoryGroups({
     (showSettings || showProcurement || showCatalogManagement);
   const groups: ShellNavGroup[] = [
     {
-      title: "Hôm nay",
+      title: "Điểm vào",
       items: [
         {
           href: "/inventory",
@@ -91,18 +91,44 @@ function buildInventoryGroups({
           icon: IconLayoutDashboard,
           exact: true,
         },
-        {
-          href: "/inventory/stock",
-          label: isBranchSite ? "Tồn cần xử lý" : tNav("stock", "navigation"),
-          icon: IconPackage,
-        },
       ],
     },
   ];
 
+  groups.push({
+    title: "1 · Kiểm soát tồn",
+    items: [
+      {
+        href: "/inventory/stock",
+        label: isBranchSite ? "Tồn cần xử lý" : tNav("stock", "navigation"),
+        icon: IconPackage,
+      },
+      {
+        href: "/inventory/stocktake",
+        label: tNav("stocktake", "navigation"),
+        icon: IconClipboardList,
+      },
+      {
+        href: "/inventory/expiry",
+        label: tNav("expiry", "navigation"),
+        icon: IconHourglass,
+      },
+      {
+        href: "/inventory/issues",
+        label: "Hao hụt/điều chỉnh",
+        icon: IconFileText,
+      },
+      {
+        href: "/inventory/reports",
+        label: tNav("reports", "navigation"),
+        icon: IconChartBar,
+      },
+    ],
+  });
+
   if (showProcurement) {
     groups.push({
-      title: "Nhập hàng HQ",
+      title: "2 · Nhập/Nhận/Đối soát",
       items: [
         {
           href: "/inventory/purchase-orders",
@@ -119,64 +145,28 @@ function buildInventoryGroups({
   }
 
   groups.push({
-    title: isBranchSite ? "Vận hành chi nhánh" : "Điều chuyển nội bộ",
+    title: "3 · Điều phối/Sản xuất",
     items: [
       {
         href: "/inventory/transfers",
-        label: isBranchSite ? "Nhận hàng & Cấp bếp" : "Phiếu điều chuyển",
+        label: isBranchSite ? "Nhận hàng & cấp bếp" : "Điều chuyển",
         icon: IconTruck,
       },
-    ],
-  });
-
-  groups.push({
-    title: "Ngoại lệ tồn kho",
-    items: [
-      {
-        href: "/inventory/issues",
-        label: "Hao hụt / điều chỉnh",
-        icon: IconFileText,
-      },
-    ],
-  });
-
-  if (showProduction) {
-    groups.push({
-      title: "Bếp trung tâm",
-      items: [
-        {
-          href: "/inventory/production",
-          label: "Lệnh sản xuất",
-          icon: IconBuildingFactory,
-        },
-      ],
-    });
-  }
-
-  groups.push({
-    title: "Kiểm soát",
-    items: [
-      {
-        href: "/inventory/stocktake",
-        label: tNav("stocktake", "navigation"),
-        icon: IconClipboardList,
-      },
-      {
-        href: "/inventory/expiry",
-        label: tNav("expiry", "navigation"),
-        icon: IconHourglass,
-      },
-      {
-        href: "/inventory/reports",
-        label: tNav("reports", "navigation"),
-        icon: IconChartBar,
-      },
+      ...(showProduction
+        ? [
+            {
+              href: "/inventory/production",
+              label: "Lệnh sản xuất",
+              icon: IconBuildingFactory,
+            },
+          ]
+        : []),
     ],
   });
 
   if (showBackOffice) {
     groups.push({
-      title: "Danh mục & cấu hình",
+      title: "Danh mục",
       items: [
         ...(showSettings
           ? [
@@ -305,9 +295,7 @@ export function InventoryShell({
             </div>
             <div className="flex flex-col group-data-[collapsible=icon]:hidden">
               <span className="text-sm font-semibold">Cơm Tấm Má Tư</span>
-              <span className="text-xs text-muted-foreground">
-                Quản lý kho
-              </span>
+              <span className="text-xs text-muted-foreground">Quản lý kho</span>
             </div>
           </div>
           {allowedBranches.length > 1 ? (
@@ -337,7 +325,9 @@ export function InventoryShell({
         <SidebarContent>
           {groups.map((group) => (
             <SidebarGroup key={group.title}>
-              <SidebarGroupLabel>{group.title}</SidebarGroupLabel>
+              <SidebarGroupLabel className="truncate">
+                {group.title}
+              </SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
                   {group.items.map((item) => {
@@ -355,7 +345,7 @@ export function InventoryShell({
                         >
                           <Link href={href}>
                             <Icon className="size-4" />
-                            <span>{item.label}</span>
+                            <span className="truncate">{item.label}</span>
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>

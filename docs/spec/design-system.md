@@ -1,6 +1,6 @@
 # Design System - Com Tam Ma Tu Web App
 
-> Version: 14.0.0 | Updated: 2026-04-25 | Status: locked baseline for UI/UX rebuild
+> Version: 14.0.1 | Updated: 2026-04-28 | Status: locked baseline for UI/UX rebuild
 
 ## Decision
 
@@ -72,22 +72,22 @@ The only shared primitive layer is `packages/ui/src/components/*`.
 
 Default primitive mapping:
 
-| Need | Use |
-| --- | --- |
-| command/action | `Button`, `ButtonGroup`, `Toggle`, `ToggleGroup` |
-| state label | `Badge` |
-| framed repeated item | `Card` |
-| dense data | `Table` |
-| segmented view | `Tabs` |
-| form input | `Input`, `Textarea`, `Select`, `Checkbox`, `RadioGroup`, `Switch`, `Slider` |
-| dialog flow | `Dialog`, `AlertDialog`, `Sheet`, `Drawer` |
-| empty/no result/error | `Empty` or approved wrappers around `Empty` |
-| loading | `Spinner`, `Skeleton`, `Progress` |
-| list row | `Item`, `ItemGroup` |
-| search/filter shell | `InputGroup`, `Combobox` helpers where appropriate |
-| route context | `Sidebar`, `Breadcrumb`, `Separator` |
-| keyboard hint | `Kbd`, `KbdGroup` |
-| transient feedback | `Sonner` |
+| Need                  | Use                                                                         |
+| --------------------- | --------------------------------------------------------------------------- |
+| command/action        | `Button`, `ButtonGroup`, `Toggle`, `ToggleGroup`                            |
+| state label           | `Badge`                                                                     |
+| framed repeated item  | `Card`                                                                      |
+| dense data            | `Table`                                                                     |
+| segmented view        | `Tabs`                                                                      |
+| form input            | `Input`, `Textarea`, `Select`, `Checkbox`, `RadioGroup`, `Switch`, `Slider` |
+| dialog flow           | `Dialog`, `AlertDialog`, `Sheet`, `Drawer`                                  |
+| empty/no result/error | `Empty` or approved wrappers around `Empty`                                 |
+| loading               | `Spinner`, `Skeleton`, `Progress`                                           |
+| list row              | `Item`, `ItemGroup`                                                         |
+| search/filter shell   | `InputGroup`, `Combobox` helpers where appropriate                          |
+| route context         | `Sidebar`, `Breadcrumb`, `Separator`                                        |
+| keyboard hint         | `Kbd`, `KbdGroup`                                                           |
+| transient feedback    | `Sonner`                                                                    |
 
 Toast and durable notification behavior is specified in `docs/spec/toast-notification-system.md`.
 
@@ -136,6 +136,17 @@ Forbidden wrappers:
 - Workflow-first: receiving, issuing, transfers, stocktake, supplier documents, and exceptions come before analytics.
 - Keep procurement and inventory terms aligned with `docs/ref/glossary.md`.
 - Dense tables are expected, but row actions and destructive actions must stay visually separated.
+- Route IA must stay anchored to three operator flows:
+  1. Kiem soat ton: stock on hand, stocktake, expiry, waste/adjustment, reporting.
+  2. Nhap/Nhan/Doi soat: purchase order, GRN, supplier invoice/price variance, receiving exceptions.
+  3. Dieu phoi/San xuat: transfer, production order, BOM/recipe issue and yield.
+- Sidebar group labels must be compact enough for the fixed rail. Use detail page headings and breadcrumbs for full workflow wording.
+- Complex Inventory forms use RHF + Zod + app form helpers when they have line arrays, more than four fields, inline pre-submit validation, or pending submit UX. Plain `<form action>` is only for auth, sign out, or single-reason confirmations.
+- Use Sonner for success/action-level feedback, inline field errors for validation, and `/access-denied?reason=` only for permission, auth, or scope failures.
+- Entity audit history belongs inline on detail pages as a `Lich su` tab filtered by `audit_logs.entity_type` and `audit_logs.entity_id`. Tenant-wide audit search is a compliance surface, not the MVP detail-view default.
+- Page is for long forms and line-heavy workflows, Sheet is for focused data entry, Dialog is for short contextual tasks, and AlertDialog is for destructive or irreversible confirmation.
+- Inventory money, quantity, tax-rate, and business-date inputs must use the shared app form wrappers instead of ad hoc parsing or `type="number"`.
+- Hide permanently unauthorized actions. Show disabled controls with explanatory copy only for temporary operational blockers such as missing shift, locked period, or incomplete prerequisite state.
 
 ### Employee
 

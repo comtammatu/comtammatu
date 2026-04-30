@@ -50,3 +50,9 @@ Every task (feature/bug/refactor) MUST qua 4 agents trước khi code. Skip CH�
 | QA/QC    | `oh-my-claudecode:critic`    | test plan, regression risks, quality gates    |
 
 Flow: spawn 4 song song với task + `CLAUDE.md` + `tasks/regressions.md` → synthesize agreements/conflicts → unified contract → Sr. Dev implement → verify với QA + BA + PM + green build. Full protocol: wiki `team-agent-workflow-4-agent-debate.md`.
+
+## gstack
+
+For all web browsing use the `/browse` skill from gstack. Never use `mcp__claude-in-chrome__*` tools.
+
+Available gstack skills: `/office-hours`, `/plan-ceo-review`, `/plan-eng-review`, `/plan-design-review`, `/design-consultation`, `/design-shotgun`, `/design-html`, `/review`, `/ship`, `/land-and-deploy`, `/canary`, `/benchmark`, `/browse`, `/connect-chrome`, `/qa`, `/qa-only`, `/design-review`, `/setup-browser-cookies`, `/setup-deploy`, `/setup-gbrain`, `/retro`, `/investigate`, `/document-release`, `/codex`, `/cso`, `/autoplan`, `/plan-devex-review`, `/devex-review`, `/careful`, `/freeze`, `/guard`, `/unfreeze`, `/gstack-upgrade`, `/learn`.

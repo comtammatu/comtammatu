@@ -48,6 +48,16 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 - [x] **`fetchAuditLogs` PII strip** (2026-04-28). Replaced `.select("*")` with explicit `id, action, entity_type, entity_id, user_id, created_at`. Drops `ip_address` + `old_data`/`new_data` blobs. See regression rule AUDIT-LOG-SELECT-EXPLICIT-COLUMNS.
 - [ ] `voidJournalEntry` post-close period guard — invalidates signed BCTC.
 
+### M6 Finance — HĐĐT compliance (audit 2026-04-28)
+
+> Compliance audit `docs/ref/einvoice-tax.md` ↔ implementation. Pilot OK với cashier issue path; các gap dưới chặn scale + production-grade NĐ70/2025.
+
+- [ ] **P0: HĐĐT reconcile cron (orphan `signing`)** — `tax_invoices.signing_started_at` đã set bởi `transition_tax_invoice_state`; cần job poll `provider.getStatus()` cho invoices `status='signing' AND signing_started_at < now()-10min`, resolve về `issued`/`draft`. MISA timeout mid-publish hiện để HĐ kẹt mãi, không biết CQT đã cấp mã chưa. Cần owner D về cron infra (Vercel cron / Supabase pg_cron / Edge Function).
+- [ ] **P0: HĐĐT replace flow (TT 78)** — schema (`replaced_by_id`) + RPC matrix (`issued → replaced`) sẵn sàng, nhưng không có UI/action `replaceTaxInvoice(oldId, newPayload, biên_bản)`. Issued HĐ sai thông tin khách → owner hiện chỉ cancel được (mất doanh thu trên báo cáo) — non-compliant TT 78.
+- [ ] **P1: HĐĐT provider config qua `system_settings` (encrypted)** — `apps/web/lib/invoice-provider-init.ts` đọc `process.env.MISA_API_KEY`/`COMPANY_TAX_CODE`; spec yêu cầu encrypted DB row + thêm `einvoice_template_code` + `einvoice_series`. MISA hiện auto-pick series → mismatch risk khi đăng ký >1 mẫu HĐ. Block trước khi owner đổi provider hoặc đăng ký multi-template.
+- [ ] **P1: HĐĐT PDF/XML persist + download UI** — cột `tax_invoices.pdf_url`/`xml_url` rỗng; `MisaProvider.createInvoice` không return URL sau `publish`; `invoice-list.tsx` không có nút tải. Khách yêu cầu HĐ qua email/in lại không phục vụ được. Cần extend `MisaProvider` + UI button.
+- [ ] **P2: 3-way matching UI cho `supplier_invoices`** — bảng + columns (`matching_status`, `is_vat_deductible`, `declared_period`) đã có nhưng không có UI workflow PO ↔ GRN ↔ Supplier Invoice. Kế toán phải đối chiếu tay → không export được Tờ khai 01/GTGT đúng.
+
 ### M7 Payroll
 - [ ] **`payroll_entries_select` RLS** — add `EXISTS(payroll_periods WHERE status='paid')` to self branch.
 - [ ] `branch_manager` with null `branch_id` widens to tenant-wide writes — guard at action level.

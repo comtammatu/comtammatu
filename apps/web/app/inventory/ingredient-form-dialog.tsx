@@ -15,7 +15,13 @@ import {
 import { FieldGroup } from "@comtammatu/ui/components/field";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { NumberField, SelectField, TextField } from "@/components/form";
+import {
+  MoneyVndField,
+  NumberField,
+  QuantityField,
+  SelectField,
+  TextField,
+} from "@/components/form";
 import { createIngredient, updateIngredient } from "./actions";
 import type { IngredientRow } from "./_lib/types";
 import { STORAGE_OPTIONS, ITEM_KIND_OPTIONS } from "./_lib/constants";
@@ -285,11 +291,10 @@ function IngredientFormContent({
               label="Danh mục"
               placeholder="Thịt, Rau củ..."
             />
-            <NumberField
+            <MoneyVndField
               control={form.control}
               name="unit_cost"
               label="Giá nhập tham chiếu (VND)"
-              maxFractionDigits={0}
               placeholder="0"
             />
           </div>
@@ -310,19 +315,19 @@ function IngredientFormContent({
           </div>
 
           <div className="grid grid-cols-3 gap-4">
-            <NumberField
+            <QuantityField
               control={form.control}
               name="min_stock_level"
               label="Tồn tối thiểu"
               maxFractionDigits={2}
             />
-            <NumberField
+            <QuantityField
               control={form.control}
               name="max_stock_level"
               label="Tồn tối đa"
               maxFractionDigits={2}
             />
-            <NumberField
+            <QuantityField
               control={form.control}
               name="reorder_point"
               label="Điểm đặt hàng"
