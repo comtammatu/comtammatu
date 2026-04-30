@@ -11,6 +11,7 @@ import {
   type PosSessionOrder,
   type PosSessionRow,
 } from "./pos-sessions-client";
+import { getPosSessionReport, type PosSessionReport } from "./report-actions";
 
 export default async function BranchPosSessionsPage({
   params,
@@ -100,6 +101,7 @@ export default async function BranchPosSessionsPage({
   const selectedSessionId = resolveSelectedSessionId(sp.session, sessionRows);
 
   let orders: PosSessionOrder[] = [];
+  let report: PosSessionReport | null = null;
   if (selectedSessionId != null) {
     const { data: orderRows, error: orderError } = await supabase
       .from("orders")
@@ -154,6 +156,11 @@ export default async function BranchPosSessionsPage({
         subtotal: Number(item.subtotal),
       })),
     }));
+
+    const reportResult = await getPosSessionReport(selectedSessionId);
+    if (reportResult.success && reportResult.data) {
+      report = reportResult.data;
+    }
   }
 
   return (
@@ -176,6 +183,7 @@ export default async function BranchPosSessionsPage({
         sessions={sessionRows}
         selectedSessionId={selectedSessionId}
         orders={orders}
+        report={report}
         canOverrideVariance={permFlags.canOverrideVariance}
       />
     </div>

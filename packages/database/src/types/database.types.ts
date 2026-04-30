@@ -7064,6 +7064,10 @@ export type Database = {
         }[]
       }
       get_inventory_dashboard: { Args: { p_branch_id: number }; Returns: Json }
+      get_pos_session_report: {
+        Args: { p_session_id: number }
+        Returns: Json
+      }
       get_stocktake_lines_blind: {
         Args: { p_session_id: number }
         Returns: {

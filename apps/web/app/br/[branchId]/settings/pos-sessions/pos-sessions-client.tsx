@@ -24,6 +24,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@comtammatu/ui/components/card";
+import { Progress } from "@comtammatu/ui/components/progress";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Separator } from "@comtammatu/ui/components/separator";
 import {
@@ -42,6 +43,7 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 import { CloseSessionSheet } from "../../pos/close-session-sheet";
+import type { PosSessionReport } from "./report-actions";
 
 import { FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
 export interface PosSessionRow {
@@ -108,6 +110,7 @@ interface PosSessionsClientProps {
   sessions: PosSessionRow[];
   selectedSessionId: number | null;
   orders: PosSessionOrder[];
+  report: PosSessionReport | null;
   /** @deprecated D8 (2026-04-27): variance gate retired. Prop giữ để
    * backward-compat với CloseSessionSheet, không gate UI nữa. */
   canOverrideVariance: boolean;
@@ -153,6 +156,7 @@ export function PosSessionsClient({
   sessions,
   selectedSessionId,
   orders,
+  report,
   canOverrideVariance,
 }: PosSessionsClientProps) {
   const [closeSheetOpen, setCloseSheetOpen] = useState(false);
@@ -232,6 +236,8 @@ export function PosSessionsClient({
               summary={summary}
               onCloseShift={() => setCloseSheetOpen(true)}
             />
+
+            {report ? <SessionReportCard report={report} /> : null}
 
             <Card>
               <CardHeader className="gap-2">
@@ -503,6 +509,201 @@ function SessionDetailCard({
         ) : null}
       </CardContent>
     </Card>
+  );
+}
+
+const ITEM_SOURCE_LABEL: Record<"main" | "side" | "modifier", string> = {
+  main: "Món chính",
+  side: "Side/Combo",
+  modifier: "Topping",
+};
+
+function formatHourRange(hour: number): string {
+  const start = `${hour.toString().padStart(2, "0")}:00`;
+  const end = `${((hour + 1) % 24).toString().padStart(2, "0")}:00`;
+  return `${start}–${end}`;
+}
+
+function SessionReportCard({ report }: { report: PosSessionReport }) {
+  const { totals, top_items, category_breakdown, aov_bins, peak_hour, discounts } =
+    report;
+  const maxBinCount = Math.max(1, ...aov_bins.map((b) => b.count));
+  const maxCategoryRevenue = Math.max(1, ...category_breakdown.map((c) => c.revenue));
+
+  return (
+    <Card>
+      <CardHeader className="gap-2">
+        <CardTitle>Báo cáo chi tiết ca</CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Tổng kết món bán ra, danh mục, giá trị bill và giờ cao điểm.
+          Tất cả tính trên đơn đã thanh toán, đã trừ đơn hủy.
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <Metric
+            icon={<IconReceipt className="size-4" />}
+            label="Giá trị TB / bill (AOV)"
+            value={formatVND(totals.aov)}
+          />
+          <Metric
+            icon={<IconToolsKitchen2 className="size-4" />}
+            label="Tổng món bán"
+            value={String(totals.total_items)}
+          />
+          <Metric
+            icon={<IconAlertTriangle className="size-4" />}
+            label="Món bị huỷ"
+            value={String(totals.void_item_count)}
+            tone={totals.void_item_count > 0 ? "warning" : "muted"}
+          />
+          <Metric
+            icon={<IconClock className="size-4" />}
+            label="Giờ cao điểm"
+            value={
+              peak_hour
+                ? `${formatHourRange(peak_hour.hour)} · ${peak_hour.order_count} đơn`
+                : "—"
+            }
+          />
+        </div>
+
+        {top_items.length > 0 ? (
+          <div>
+            <SectionLabel>Top món bán chạy</SectionLabel>
+            <ScrollArea className="max-h-72">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Tên</TableHead>
+                    <TableHead>Loại</TableHead>
+                    <TableHead className="text-right">SL</TableHead>
+                    <TableHead className="text-right">Doanh thu</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {top_items.map((item, idx) => (
+                    <TableRow key={`${item.source}-${item.name}-${idx}`}>
+                      <TableCell className="font-medium">{item.name}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
+                          {ITEM_SOURCE_LABEL[item.source]}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {item.qty}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatVND(item.revenue)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+          </div>
+        ) : (
+          <NoteCallout label="Top món">Ca chưa có món bán ra.</NoteCallout>
+        )}
+
+        {category_breakdown.length > 0 ? (
+          <div>
+            <SectionLabel>Doanh thu theo danh mục</SectionLabel>
+            <div className="space-y-2">
+              {category_breakdown.map((cat) => (
+                <div
+                  key={`${cat.category_id}-${cat.category_name}`}
+                  className="space-y-1"
+                >
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium">{cat.category_name}</span>
+                    <span className="tabular-nums text-muted-foreground">
+                      {cat.qty} món · {formatVND(cat.revenue)}
+                    </span>
+                  </div>
+                  <Progress
+                    value={(cat.revenue / maxCategoryRevenue) * 100}
+                    className="h-2"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        {aov_bins.length > 0 ? (
+          <div>
+            <SectionLabel>Phân bố giá trị bill</SectionLabel>
+            <div className="space-y-2">
+              {aov_bins.map((bin) => (
+                <div key={bin.label} className="space-y-1">
+                  <div className="flex items-center justify-between text-sm">
+                    <span>{bin.label}</span>
+                    <span className="tabular-nums text-muted-foreground">
+                      {bin.count} bill
+                    </span>
+                  </div>
+                  <Progress
+                    value={(bin.count / maxBinCount) * 100}
+                    className="h-2"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        {discounts.count > 0 ? (
+          <div>
+            <SectionLabel>
+              Giảm giá ({discounts.count} bill · {formatVND(discounts.total)})
+            </SectionLabel>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Bill</TableHead>
+                  <TableHead>Loại</TableHead>
+                  <TableHead className="text-right">Giảm</TableHead>
+                  <TableHead>Ghi chú</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {discounts.top_orders.map((order) => (
+                  <TableRow key={order.order_id}>
+                    <TableCell className="font-medium">
+                      {order.order_number}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">
+                        {order.type === "pct"
+                          ? `${order.value ?? 0}%`
+                          : order.type === "vnd"
+                            ? "VND"
+                            : "—"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      -{formatVND(order.amount)}
+                    </TableCell>
+                    <TableCell className="max-w-xs truncate text-muted-foreground">
+                      {order.note ?? "—"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}
+
+function SectionLabel({ children }: { children: ReactNode }) {
+  return (
+    <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+      {children}
+    </div>
   );
 }
 
