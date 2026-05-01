@@ -1,0 +1,1087 @@
+"use client";
+
+import { useMemo, useState, useTransition } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@comtammatu/ui/components/table";
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from "@comtammatu/ui/components/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@comtammatu/ui/components/select";
+import {
+  Empty,
+  EmptyHeader,
+  EmptyTitle,
+} from "@comtammatu/ui/components/empty";
+import { Button } from "@comtammatu/ui/components/button";
+import { Input } from "@comtammatu/ui/components/input";
+import { Label } from "@comtammatu/ui/components/label";
+import { Badge } from "@comtammatu/ui/components/badge";
+import { formatVND } from "@comtammatu/shared/format";
+import { FORM_VI } from "@comtammatu/shared/messages";
+import { refreshMaterializedViews } from "../actions";
+import type { RevenueGranularity } from "../actions";
+import type {
+  AccessibleBranch,
+  CashVarianceSummary,
+  ComparePeriod,
+  KpiBundle,
+  ReconcileSnippet,
+  RollupRow,
+} from "./page";
+
+interface Props {
+  branches: AccessibleBranch[];
+  initialBranchId: number | null;
+  initialRows: RollupRow[];
+  initialKpis: KpiBundle | null;
+  initialCompare: ComparePeriod | null;
+  initialReconcile: ReconcileSnippet | null;
+  initialCashVariance: CashVarianceSummary | null;
+  initialStart: string;
+  initialEnd: string;
+  initialGranularity: RevenueGranularity;
+  initialError: string | null;
+}
+
+const GRANULARITY_LABEL: Record<RevenueGranularity, string> = {
+  day: "Theo ngày",
+  week: "Theo tuần",
+  month: "Theo tháng",
+};
+
+const PERIOD_HEADER_LABEL: Record<RevenueGranularity, string> = {
+  day: "Ngày",
+  week: "Tuần",
+  month: "Tháng",
+};
+
+const ALL_BRANCHES_VALUE = "all";
+
+function formatPercent(value: number, total: number): string {
+  if (total <= 0) return "0%";
+  return `${Math.round((value / total) * 100)}%`;
+}
+
+function formatRefreshedAt(iso: string): string {
+  const d = new Date(iso);
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  const minutesAgo = Math.max(0, Math.floor((Date.now() - d.getTime()) / 60000));
+  return `Cập nhật lúc ${hh}:${mm} (${minutesAgo} phút trước)`;
+}
+
+interface AggregatedRow {
+  period_start: string;
+  period_end: string;
+  period_label: string;
+  order_count: number;
+  total_revenue: number;
+  total_tax: number;
+  cash_revenue: number;
+  vietqr_revenue: number;
+  momo_revenue: number;
+  total_covers: number;
+  branch_ids: number[];
+}
+
+// For "all branches" mode the RPC returns rows per (period × branch).
+// Aggregate them per period for the time-series table; the per-branch
+// breakdown is shown separately in BranchBreakdown.
+function aggregateRowsByPeriod(rows: RollupRow[]): AggregatedRow[] {
+  const map = new Map<string, AggregatedRow>();
+  for (const r of rows) {
+    const key = `${r.period_start}|${r.period_end}`;
+    const existing = map.get(key);
+    if (existing) {
+      existing.order_count += r.order_count;
+      existing.total_revenue += r.total_revenue ?? 0;
+      existing.total_tax += r.total_tax ?? 0;
+      existing.cash_revenue += r.cash_revenue ?? 0;
+      existing.vietqr_revenue += r.vietqr_revenue ?? 0;
+      existing.momo_revenue += r.momo_revenue ?? 0;
+      existing.total_covers += r.total_covers;
+      if (!existing.branch_ids.includes(r.branch_id)) {
+        existing.branch_ids.push(r.branch_id);
+      }
+    } else {
+      map.set(key, {
+        period_start: r.period_start,
+        period_end: r.period_end,
+        period_label: r.period_label,
+        order_count: r.order_count,
+        total_revenue: r.total_revenue ?? 0,
+        total_tax: r.total_tax ?? 0,
+        cash_revenue: r.cash_revenue ?? 0,
+        vietqr_revenue: r.vietqr_revenue ?? 0,
+        momo_revenue: r.momo_revenue ?? 0,
+        total_covers: r.total_covers,
+        branch_ids: [r.branch_id],
+      });
+    }
+  }
+  return Array.from(map.values()).sort((a, b) =>
+    a.period_start.localeCompare(b.period_start),
+  );
+}
+
+export function RevenueClient({
+  branches,
+  initialBranchId,
+  initialRows,
+  initialKpis,
+  initialCompare,
+  initialReconcile,
+  initialCashVariance,
+  initialStart,
+  initialEnd,
+  initialGranularity,
+  initialError,
+}: Props) {
+  const router = useRouter();
+  const [granularity, setGranularity] =
+    useState<RevenueGranularity>(initialGranularity);
+  const [startDate, setStartDate] = useState(initialStart);
+  const [endDate, setEndDate] = useState(initialEnd);
+  const [branchId, setBranchId] = useState<number | null>(initialBranchId);
+  const [compareEnabled, setCompareEnabled] = useState<boolean>(
+    Boolean(initialCompare),
+  );
+  const [isPending, startTransition] = useTransition();
+  const [refreshError, setRefreshError] = useState<string | null>(null);
+
+  const branchLabel = useMemo(() => {
+    if (branchId == null) return "Tất cả chi nhánh";
+    return branches.find((b) => b.id === branchId)?.name ?? `Chi nhánh ${branchId}`;
+  }, [branchId, branches]);
+
+  const aggregated = useMemo(() => aggregateRowsByPeriod(initialRows), [initialRows]);
+
+  const branchTotals = useMemo(() => {
+    if (branchId != null) return [];
+    const map = new Map<number, { branchId: number; revenue: number; orders: number }>();
+    for (const r of initialRows) {
+      const existing = map.get(r.branch_id);
+      const rev = r.total_revenue ?? 0;
+      if (existing) {
+        existing.revenue += rev;
+        existing.orders += r.order_count;
+      } else {
+        map.set(r.branch_id, {
+          branchId: r.branch_id,
+          revenue: rev,
+          orders: r.order_count,
+        });
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => b.revenue - a.revenue);
+  }, [initialRows, branchId]);
+
+  function pushFilters(next: {
+    granularity?: RevenueGranularity;
+    start?: string;
+    end?: string;
+    branchId?: number | null;
+    compare?: boolean;
+  }) {
+    const params = new URLSearchParams();
+    const g = next.granularity ?? granularity;
+    const s = next.start ?? startDate;
+    const e = next.end ?? endDate;
+    const b = next.branchId === undefined ? branchId : next.branchId;
+    const c = next.compare === undefined ? compareEnabled : next.compare;
+    params.set("granularity", g);
+    params.set("start", s);
+    params.set("end", e);
+    params.set("branch", b == null ? ALL_BRANCHES_VALUE : String(b));
+    if (c) params.set("compare", "prev");
+    startTransition(() => {
+      router.replace(`/finance/revenue?${params.toString()}`);
+      router.refresh();
+    });
+  }
+
+  function handleToggleCompare() {
+    const next = !compareEnabled;
+    setCompareEnabled(next);
+    pushFilters({ compare: next });
+  }
+
+  function handleGranularityChange(next: string) {
+    const value = next as RevenueGranularity;
+    // Auto-shift range để phù hợp granularity mới: day=30d, week=12w, month=12m.
+    const today = new Date();
+    const end = today.toISOString().slice(0, 10);
+    const d = new Date(today);
+    if (value === "day") d.setDate(d.getDate() - 29);
+    else if (value === "week") d.setDate(d.getDate() - 7 * 12);
+    else d.setMonth(d.getMonth() - 12);
+    const start = d.toISOString().slice(0, 10);
+    setGranularity(value);
+    setStartDate(start);
+    setEndDate(end);
+    pushFilters({ granularity: value, start, end });
+  }
+
+  function handleBranchChange(value: string) {
+    const next = value === ALL_BRANCHES_VALUE ? null : Number(value);
+    setBranchId(next);
+    pushFilters({ branchId: next });
+  }
+
+  function handleApplyDateRange() {
+    pushFilters({});
+  }
+
+  async function handleRefresh() {
+    setRefreshError(null);
+    startTransition(async () => {
+      const res = await refreshMaterializedViews();
+      if (!res.success) {
+        setRefreshError(res.error ?? "Không thể làm mới dữ liệu.");
+        return;
+      }
+      router.refresh();
+    });
+  }
+
+  function handleExportCsv() {
+    // CSV xuất từ aggregated rows (period-level đã gộp branch). Format
+    // VN-friendly: dấu chấm làm thousand separator, không format số kiểu
+    // Excel làm mất leading zero. UTF-8 BOM giúp Excel mở đúng dấu.
+    const sep = ";"; // semicolon — Excel VN locale parse số có dấu phẩy
+    const header = [
+      "Kỳ",
+      "Số đơn",
+      "Lượt khách",
+      "Doanh thu",
+      "Tiền mặt",
+      "VietQR",
+      "MoMo",
+      "VAT",
+    ];
+    const escape = (s: string) =>
+      s.includes(sep) || s.includes('"') || s.includes("\n")
+        ? `"${s.replace(/"/g, '""')}"`
+        : s;
+    const lines: string[] = [header.map(escape).join(sep)];
+    for (const r of aggregated) {
+      lines.push(
+        [
+          r.period_label,
+          String(r.order_count),
+          String(r.total_covers),
+          String(Math.round(r.total_revenue)),
+          String(Math.round(r.cash_revenue)),
+          String(Math.round(r.vietqr_revenue)),
+          String(Math.round(r.momo_revenue)),
+          String(Math.round(r.total_tax)),
+        ]
+          .map(escape)
+          .join(sep),
+      );
+    }
+    if (kpis) {
+      lines.push(
+        [
+          "Tổng",
+          String(kpis.order_count),
+          String(kpis.total_covers),
+          String(Math.round(kpis.net_revenue)),
+          String(Math.round(kpis.cash_revenue)),
+          String(Math.round(kpis.vietqr_revenue)),
+          String(Math.round(kpis.momo_revenue)),
+          String(Math.round(kpis.total_tax)),
+        ]
+          .map(escape)
+          .join(sep),
+      );
+    }
+    const csv = "﻿" + lines.join("\n"); // BOM
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const branchSlug = branchId == null ? "all" : `cn-${branchId}`;
+    const filename = `doanh-thu-${branchSlug}-${startDate}_${endDate}.csv`;
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  const kpis = initialKpis;
+  const prev = initialCompare?.kpis ?? null;
+  const grossRevenue = kpis ? kpis.subtotal_revenue + kpis.discount_amount : 0;
+  const aov =
+    kpis && kpis.total_covers > 0
+      ? Math.round(kpis.net_revenue / kpis.total_covers)
+      : 0;
+  const prevAov =
+    prev && prev.total_covers > 0
+      ? Math.round(prev.net_revenue / prev.total_covers)
+      : 0;
+  const voidedPct =
+    kpis && kpis.net_revenue > 0
+      ? (kpis.voided_amount / (kpis.net_revenue + kpis.voided_amount)) * 100
+      : 0;
+  const prevVoidedPct =
+    prev && prev.net_revenue > 0
+      ? (prev.voided_amount / (prev.net_revenue + prev.voided_amount)) * 100
+      : 0;
+  const discountPct =
+    kpis && grossRevenue > 0
+      ? (kpis.discount_amount / grossRevenue) * 100
+      : 0;
+  const prevGrossRevenue = prev ? prev.subtotal_revenue + prev.discount_amount : 0;
+  const prevDiscountPct =
+    prev && prevGrossRevenue > 0
+      ? (prev.discount_amount / prevGrossRevenue) * 100
+      : 0;
+
+  const channelTotal =
+    (kpis?.cash_revenue ?? 0) +
+    (kpis?.vietqr_revenue ?? 0) +
+    (kpis?.momo_revenue ?? 0);
+  const channelOther = (kpis?.net_revenue ?? 0) - channelTotal;
+
+  return (
+    <div className="space-y-5">
+      <Card>
+        <CardContent className="p-5 sm:p-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="space-y-2">
+              <Badge variant="secondary">Báo cáo doanh thu</Badge>
+              <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+                Doanh thu {GRANULARITY_LABEL[granularity].toLowerCase()} · {branchLabel}
+              </h2>
+              <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
+                Số liệu tổng hợp theo ngày thanh toán (giờ Việt Nam). Click một
+                kỳ trong bảng để xem danh sách đơn theo giờ.
+              </p>
+              {kpis ? (
+                <p className="text-xs text-muted-foreground">
+                  {formatRefreshedAt(kpis.refreshed_at)}
+                </p>
+              ) : null}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant={compareEnabled ? "default" : "outline"}
+                size="sm"
+                onClick={handleToggleCompare}
+                disabled={isPending}
+              >
+                {compareEnabled ? "Tắt so sánh kỳ trước" : "So sánh kỳ trước"}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportCsv}
+                disabled={aggregated.length === 0}
+              >
+                Xuất CSV
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefresh}
+                disabled={isPending}
+              >
+                {isPending ? "Đang tải..." : "Làm mới dữ liệu"}
+              </Button>
+            </div>
+          </div>
+          {refreshError ? (
+            <p className="mt-3 text-sm text-destructive">{refreshError}</p>
+          ) : null}
+          {initialError ? (
+            <p className="mt-3 text-sm text-destructive">{initialError}</p>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4 lg:items-end">
+        <div className="grid gap-1.5">
+          <Label className="text-xs">Chi nhánh</Label>
+          <Select
+            value={branchId == null ? ALL_BRANCHES_VALUE : String(branchId)}
+            onValueChange={handleBranchChange}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Chọn chi nhánh" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL_BRANCHES_VALUE}>
+                Tất cả ({branches.length} chi nhánh)
+              </SelectItem>
+              {branches.map((b) => (
+                <SelectItem key={b.id} value={String(b.id)}>
+                  {b.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="grid gap-1.5">
+          <Label className="text-xs">Mức tổng hợp</Label>
+          <Tabs value={granularity} onValueChange={handleGranularityChange}>
+            <TabsList className="w-full">
+              <TabsTrigger value="day" className="flex-1">
+                Ngày
+              </TabsTrigger>
+              <TabsTrigger value="week" className="flex-1">
+                Tuần
+              </TabsTrigger>
+              <TabsTrigger value="month" className="flex-1">
+                Tháng
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+        <div className="grid gap-1.5">
+          <Label className="text-xs">{FORM_VI.fromDate}</Label>
+          <Input
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+          />
+        </div>
+        <div className="grid gap-1.5">
+          <Label className="text-xs">{FORM_VI.toDate}</Label>
+          <div className="flex gap-2">
+            <Input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
+            <Button
+              size="sm"
+              onClick={handleApplyDateRange}
+              disabled={isPending}
+            >
+              Áp dụng
+            </Button>
+          </div>
+        </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <KpiCard
+          label="Doanh thu thuần"
+          value={formatVND(kpis?.net_revenue ?? 0)}
+          hint={kpis ? `Trước thuế ${formatVND(kpis.subtotal_revenue)}` : "—"}
+          tone="primary"
+          delta={
+            initialCompare
+              ? buildDelta(kpis?.net_revenue ?? 0, prev?.net_revenue ?? 0, "currency")
+              : null
+          }
+        />
+        <KpiCard
+          label="Số đơn"
+          value={(kpis?.order_count ?? 0).toLocaleString("vi-VN")}
+          hint={`${(kpis?.total_covers ?? 0).toLocaleString("vi-VN")} lượt khách`}
+          delta={
+            initialCompare
+              ? buildDelta(kpis?.order_count ?? 0, prev?.order_count ?? 0, "count")
+              : null
+          }
+        />
+        <KpiCard
+          label="Trung bình / khách"
+          value={aov > 0 ? formatVND(aov) : "—"}
+          hint="Doanh thu / lượt khách"
+          delta={
+            initialCompare ? buildDelta(aov, prevAov, "currency") : null
+          }
+        />
+        <KpiCard
+          label="Tỉ lệ hoàn / hủy"
+          value={`${voidedPct.toFixed(1)}%`}
+          hint={
+            kpis
+              ? `${formatVND(kpis.voided_amount)} · ${kpis.voided_count} đơn`
+              : "—"
+          }
+          tone={voidedPct > 2 ? "warning" : undefined}
+          delta={
+            initialCompare
+              ? buildDelta(voidedPct, prevVoidedPct, "percent_lower_better")
+              : null
+          }
+        />
+        <KpiCard
+          label="Tỉ lệ giảm giá"
+          value={`${discountPct.toFixed(1)}%`}
+          hint={kpis ? formatVND(kpis.discount_amount) : "—"}
+          delta={
+            initialCompare
+              ? buildDelta(discountPct, prevDiscountPct, "percent_lower_better")
+              : null
+          }
+        />
+      </div>
+
+      {initialCompare ? (
+        <p className="text-xs text-muted-foreground">
+          So với kỳ trước · {initialCompare.start} → {initialCompare.end}
+          {prev ? null : " · không có dữ liệu kỳ trước"}
+        </p>
+      ) : null}
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        {initialReconcile ? (
+          <ReconcileCard reconcile={initialReconcile} />
+        ) : null}
+        {initialCashVariance ? (
+          <CashVarianceCard variance={initialCashVariance} />
+        ) : null}
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <BreakdownCard
+          title="Cơ cấu thanh toán"
+          rows={[
+            {
+              label: "Tiền mặt",
+              value: kpis?.cash_revenue ?? 0,
+              total: kpis?.net_revenue ?? 0,
+            },
+            {
+              label: "VietQR",
+              value: kpis?.vietqr_revenue ?? 0,
+              total: kpis?.net_revenue ?? 0,
+            },
+            {
+              label: "MoMo",
+              value: kpis?.momo_revenue ?? 0,
+              total: kpis?.net_revenue ?? 0,
+            },
+            ...(channelOther > 1
+              ? [
+                  {
+                    label: "Khác",
+                    value: channelOther,
+                    total: kpis?.net_revenue ?? 0,
+                  },
+                ]
+              : []),
+          ]}
+        />
+        <BreakdownCard
+          title="Tại quán / Mang đi"
+          rows={[
+            {
+              label: "Tại quán",
+              value: kpis?.dine_in_revenue ?? 0,
+              total: kpis?.net_revenue ?? 0,
+            },
+            {
+              label: "Mang đi",
+              value: kpis?.takeaway_revenue ?? 0,
+              total: kpis?.net_revenue ?? 0,
+            },
+          ]}
+        />
+        <BreakdownCard
+          title="Thuế VAT đầu ra"
+          rows={[
+            {
+              label: "VAT 8%",
+              value: kpis?.vat_8_amount ?? 0,
+              total: kpis?.total_tax ?? 0,
+            },
+            {
+              label: "VAT 10%",
+              value: kpis?.vat_10_amount ?? 0,
+              total: kpis?.total_tax ?? 0,
+            },
+          ]}
+          footer={
+            kpis ? `Tổng thuế: ${formatVND(kpis.total_tax)}` : undefined
+          }
+        />
+      </div>
+
+      {branchId == null && branchTotals.length > 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">
+              Doanh thu theo chi nhánh trong kỳ
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Chi nhánh</TableHead>
+                  <TableHead className="text-right">Đơn</TableHead>
+                  <TableHead className="text-right">Doanh thu</TableHead>
+                  <TableHead className="w-32 text-right">Hành động</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {branchTotals.map((bt) => {
+                  const name =
+                    branches.find((b) => b.id === bt.branchId)?.name ??
+                    `Chi nhánh ${bt.branchId}`;
+                  const params = new URLSearchParams({
+                    granularity,
+                    start: startDate,
+                    end: endDate,
+                    branch: String(bt.branchId),
+                  });
+                  return (
+                    <TableRow key={bt.branchId}>
+                      <TableCell className="font-medium">{name}</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {bt.orders.toLocaleString("vi-VN")}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatVND(bt.revenue)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button asChild size="sm" variant="outline">
+                          <Link href={`/finance/revenue?${params.toString()}`}>
+                            Xem chi nhánh
+                          </Link>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Bảng doanh thu theo kỳ</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            {branchId == null
+              ? "Tổng hợp các chi nhánh bạn có quyền xem. Click một ngày để xem chi tiết đơn — sẽ chọn chi nhánh trước nếu đang xem 'Tất cả'."
+              : "Click một kỳ để xem danh sách đơn theo giờ."}
+          </p>
+        </CardHeader>
+        <CardContent>
+          {aggregated.length === 0 ? (
+            <Empty className="py-8">
+              <EmptyHeader>
+                <EmptyTitle className="text-sm font-semibold">
+                  Không có dữ liệu trong khoảng đã chọn.
+                </EmptyTitle>
+              </EmptyHeader>
+            </Empty>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{PERIOD_HEADER_LABEL[granularity]}</TableHead>
+                  <TableHead className="text-right">Đơn</TableHead>
+                  <TableHead className="text-right">Khách</TableHead>
+                  <TableHead className="text-right">Doanh thu</TableHead>
+                  <TableHead className="text-right">Tiền mặt</TableHead>
+                  <TableHead className="text-right">VietQR</TableHead>
+                  <TableHead className="text-right">MoMo</TableHead>
+                  <TableHead className="text-right">VAT</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {aggregated.map((r) => {
+                  const drillBranchId =
+                    branchId != null
+                      ? branchId
+                      : r.branch_ids.length === 1
+                        ? r.branch_ids[0]
+                        : null;
+                  const canDrill =
+                    granularity === "day" && drillBranchId != null;
+                  return (
+                    <TableRow
+                      key={r.period_start}
+                      className={canDrill ? "cursor-pointer" : undefined}
+                    >
+                      <TableCell className="font-medium tabular-nums">
+                        {canDrill ? (
+                          <Link
+                            href={`/finance/revenue/${r.period_start}?branch=${drillBranchId}`}
+                            className="text-primary underline-offset-2 hover:underline"
+                          >
+                            {r.period_label}
+                          </Link>
+                        ) : (
+                          r.period_label
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {r.order_count.toLocaleString("vi-VN")}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {r.total_covers.toLocaleString("vi-VN")}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums font-medium">
+                        {formatVND(r.total_revenue)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-muted-foreground">
+                        {formatVND(r.cash_revenue)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-muted-foreground">
+                        {formatVND(r.vietqr_revenue)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-muted-foreground">
+                        {formatVND(r.momo_revenue)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-muted-foreground">
+                        {formatVND(r.total_tax)}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+              <TableFooter>
+                <TableRow className="hover:bg-transparent">
+                  <TableCell className="font-medium">Tổng</TableCell>
+                  <TableCell className="text-right tabular-nums font-medium">
+                    {(kpis?.order_count ?? 0).toLocaleString("vi-VN")}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums font-medium">
+                    {(kpis?.total_covers ?? 0).toLocaleString("vi-VN")}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums font-bold">
+                    {formatVND(kpis?.net_revenue ?? 0)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {formatVND(kpis?.cash_revenue ?? 0)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {formatVND(kpis?.vietqr_revenue ?? 0)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {formatVND(kpis?.momo_revenue ?? 0)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {formatVND(kpis?.total_tax ?? 0)}
+                  </TableCell>
+                </TableRow>
+              </TableFooter>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+interface DeltaInfo {
+  display: string; // human label e.g. "+12% vs trước"
+  // sign tells the renderer which semantic color to apply.
+  // "good" = improvement (revenue up, voided down). "bad" = regression.
+  // "neutral" = no prev data or zero base.
+  sign: "good" | "bad" | "neutral";
+}
+
+type DeltaKind = "currency" | "count" | "percent_lower_better";
+
+function buildDelta(
+  current: number,
+  previous: number,
+  kind: DeltaKind,
+): DeltaInfo {
+  if (previous === 0 && current === 0) {
+    return { display: "= 0", sign: "neutral" };
+  }
+  if (previous === 0) {
+    return { display: "Mới", sign: "neutral" };
+  }
+  const diff = current - previous;
+  const pct = (diff / Math.abs(previous)) * 100;
+  const arrow = diff > 0 ? "▲" : diff < 0 ? "▼" : "•";
+  const display = `${arrow} ${Math.abs(pct).toFixed(1)}%`;
+  // Lower-better metrics flip the goodness mapping.
+  const isImprovement =
+    kind === "percent_lower_better" ? diff < 0 : diff > 0;
+  const isRegression =
+    kind === "percent_lower_better" ? diff > 0 : diff < 0;
+  const sign: DeltaInfo["sign"] = isImprovement
+    ? "good"
+    : isRegression
+      ? "bad"
+      : "neutral";
+  return { display, sign };
+}
+
+function KpiCard({
+  label,
+  value,
+  hint,
+  tone,
+  delta,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+  tone?: "primary" | "warning";
+  delta?: DeltaInfo | null;
+}) {
+  return (
+    <Card>
+      <CardContent className="space-y-1.5 p-4">
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          {label}
+        </p>
+        <p
+          className={
+            tone === "primary"
+              ? "text-2xl font-bold tabular-nums text-primary"
+              : tone === "warning"
+                ? "text-2xl font-bold tabular-nums text-warning"
+                : "text-2xl font-bold tabular-nums text-foreground"
+          }
+        >
+          {value}
+        </p>
+        {delta ? (
+          <p
+            className={
+              delta.sign === "good"
+                ? "text-xs font-medium text-success"
+                : delta.sign === "bad"
+                  ? "text-xs font-medium text-destructive"
+                  : "text-xs font-medium text-muted-foreground"
+            }
+          >
+            {delta.display}
+          </p>
+        ) : null}
+        {hint ? (
+          <p className="text-xs text-muted-foreground">{hint}</p>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}
+
+function CashVarianceCard({ variance }: { variance: CashVarianceSummary }) {
+  // Tone: signed total_variance đo "ròng" (thừa - thiếu). Owner thường
+  // care về abs_variance_total + cờ "có lệch âm tập trung 1 cashier?"
+  // (BA #9). > 0.5% revenue threshold thường dùng — ở đây không có
+  // mẫu số revenue trong card này, nên dùng abs_variance_total trực
+  // tiếp + đếm short_count để gắn cờ.
+  const hasShortPattern = variance.short_count >= 3;
+  const tone =
+    variance.abs_variance_total === 0
+      ? "good"
+      : hasShortPattern
+        ? "bad"
+        : "warn";
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Lệch tiền cuối ca</CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Tổng hợp `cash_difference` của các ca POS đã đóng trong khoảng. Lệch
+          âm cùng 1 thu ngân lặp lại nhiều ca = tín hiệu cần kiểm tra.
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-3 p-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div>
+            <p className="text-xs text-muted-foreground">Số ca đã đóng</p>
+            <p className="text-lg font-semibold tabular-nums">
+              {variance.session_count.toLocaleString("vi-VN")}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Lệch ròng</p>
+            <p
+              className={
+                tone === "good"
+                  ? "text-lg font-semibold tabular-nums text-success"
+                  : tone === "bad"
+                    ? "text-lg font-semibold tabular-nums text-destructive"
+                    : "text-lg font-semibold tabular-nums text-warning"
+              }
+            >
+              {variance.total_variance >= 0 ? "+" : ""}
+              {formatVND(variance.total_variance)}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">
+              Lệch thiếu ({variance.short_count})
+            </p>
+            <p className="text-lg font-semibold tabular-nums text-destructive">
+              {formatVND(variance.short_total)}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">
+              Lệch thừa ({variance.over_count})
+            </p>
+            <p className="text-lg font-semibold tabular-nums text-success">
+              +{formatVND(variance.over_total)}
+            </p>
+          </div>
+        </div>
+        {variance.worst_cashiers.length > 0 ? (
+          <div className="space-y-1.5 border-t pt-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Top thu ngân lệch nhiều
+            </p>
+            <ul className="space-y-1">
+              {variance.worst_cashiers.map((c) => (
+                <li
+                  key={c.cashier_id ?? c.cashier_name}
+                  className="flex items-center justify-between text-sm"
+                >
+                  <span className="truncate">
+                    {c.cashier_name}
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      {c.session_count} ca
+                    </span>
+                  </span>
+                  <span
+                    className={
+                      c.net_variance < 0
+                        ? "tabular-nums text-destructive"
+                        : "tabular-nums text-success"
+                    }
+                  >
+                    {c.net_variance >= 0 ? "+" : ""}
+                    {formatVND(c.net_variance)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <p className="border-t pt-3 text-xs text-muted-foreground">
+            Không có ca nào lệch trong khoảng — tốt.
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ReconcileCard({ reconcile }: { reconcile: ReconcileSnippet }) {
+  const TOLERANCE = 1;
+  const diff = reconcile.difference;
+  const matched = Math.abs(diff) <= TOLERANCE;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">
+          Đối chiếu sổ phụ POS ↔ sổ cái
+        </CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Tổng doanh thu thanh toán (POS) so với tổng có TK 511 + 33311 đã hạch
+          toán trong khoảng đang xem.
+        </p>
+      </CardHeader>
+      <CardContent className="grid gap-3 p-4 sm:grid-cols-3">
+        <div>
+          <p className="text-xs text-muted-foreground">POS (sổ phụ)</p>
+          <p className="text-lg font-semibold tabular-nums">
+            {formatVND(reconcile.subledger_total)}
+          </p>
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground">Sổ cái (511 + 33311)</p>
+          <p className="text-lg font-semibold tabular-nums">
+            {formatVND(reconcile.gl_total)}
+          </p>
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground">Chênh lệch</p>
+          <p
+            className={
+              matched
+                ? "text-lg font-semibold tabular-nums text-success"
+                : "text-lg font-semibold tabular-nums text-destructive"
+            }
+          >
+            {matched ? "Khớp" : formatVND(diff)}
+          </p>
+        </div>
+        <div className="sm:col-span-3">
+          <Button asChild size="sm" variant="outline">
+            <Link
+              href={`/finance/reconciliation?since=${reconcile.start}`}
+            >
+              Mở trang đối chiếu
+            </Link>
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function BreakdownCard({
+  title,
+  rows,
+  footer,
+}: {
+  title: string;
+  rows: { label: string; value: number; total: number }[];
+  footer?: string;
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-sm">{title}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2 p-4">
+        {rows.map((r) => (
+          <div
+            key={r.label}
+            className="flex items-baseline justify-between gap-3 text-sm"
+          >
+            <span className="text-muted-foreground">{r.label}</span>
+            <span className="tabular-nums font-medium">
+              {formatVND(r.value)}
+              <span className="ml-2 text-xs text-muted-foreground">
+                {formatPercent(r.value, r.total)}
+              </span>
+            </span>
+          </div>
+        ))}
+        {footer ? (
+          <p className="border-t pt-2 text-xs text-muted-foreground">
+            {footer}
+          </p>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}

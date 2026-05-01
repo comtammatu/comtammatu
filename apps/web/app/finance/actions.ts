@@ -564,13 +564,23 @@ export async function fetchDailyRevenue(
 const REVENUE_GRANULARITY = ["day", "week", "month"] as const;
 export type RevenueGranularity = (typeof REVENUE_GRANULARITY)[number];
 
+// p_branch_id null = aggregate qua mọi branch caller có finance:view.
+// Khi null, ACL được enforce bên trong RPC qua has_permission(branch, key)
+// per row. Khi specific, RPC kiểm tra has_permission(p_branch_id, key)
+// một lần ở entry.
 export async function fetchRevenueRollup(
-  branchId: number,
+  branchId: number | null,
   startDate: string,
   endDate: string,
   granularity: RevenueGranularity,
 ): Promise<ActionResult> {
-  const parsedBranch = z.coerce.number().int().positive().safeParse(branchId);
+  const parsedBranch = z
+    .coerce
+    .number()
+    .int()
+    .positive()
+    .nullable()
+    .safeParse(branchId);
   if (!parsedBranch.success) {
     return { success: false, error: "Branch ID không hợp lệ" };
   }
@@ -606,6 +616,243 @@ export async function fetchRevenueRollup(
   }
 
   return { success: true, data: data ?? [] };
+}
+
+/* ─── fetchRevenueKpis — single-row hero metrics for /finance/revenue ─ */
+
+export async function fetchRevenueKpis(
+  branchId: number | null,
+  startDate: string,
+  endDate: string,
+): Promise<ActionResult> {
+  const parsedBranch = z
+    .coerce
+    .number()
+    .int()
+    .positive()
+    .nullable()
+    .safeParse(branchId);
+  if (!parsedBranch.success) {
+    return { success: false, error: "Branch ID không hợp lệ" };
+  }
+
+  const parsedStart = z.string().date().safeParse(startDate);
+  const parsedEnd = z.string().date().safeParse(endDate);
+  if (!parsedStart.success || !parsedEnd.success) {
+    return { success: false, error: "Ngày không hợp lệ (YYYY-MM-DD)" };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    REPORT_ROLES,
+    PERMISSION_KEYS.FINANCE_VIEW,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { data, error } = await ctx.supabase.rpc("get_revenue_kpis", {
+    p_branch_id: parsedBranch.data,
+    p_start_date: parsedStart.data,
+    p_end_date: parsedEnd.data,
+  });
+
+  if (error) {
+    return { success: false, error: "Không thể tải chỉ số KPI." };
+  }
+
+  // RPC returns a single-row resultset.
+  return { success: true, data: data?.[0] ?? null };
+}
+
+/* ─── fetchOrdersForDay — drill-down list cho 1 (branch, date) ─ */
+
+export async function fetchOrdersForDay(
+  branchId: number,
+  date: string,
+): Promise<ActionResult> {
+  const parsedBranch = z.coerce.number().int().positive().safeParse(branchId);
+  if (!parsedBranch.success) {
+    return { success: false, error: "Branch ID không hợp lệ" };
+  }
+
+  const parsedDate = z.string().date().safeParse(date);
+  if (!parsedDate.success) {
+    return { success: false, error: "Ngày không hợp lệ (YYYY-MM-DD)" };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    REPORT_ROLES,
+    PERMISSION_KEYS.FINANCE_VIEW,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { data, error } = await ctx.supabase.rpc("get_orders_for_day", {
+    p_branch_id: parsedBranch.data,
+    p_date: parsedDate.data,
+  });
+
+  if (error) {
+    return { success: false, error: "Không thể tải danh sách đơn." };
+  }
+
+  return { success: true, data: data ?? [] };
+}
+
+/* ─── fetchReconciliationByDay — Phase 3: per-day DT vs Sổ ─ */
+
+export async function fetchReconciliationByDay(
+  branchId: number | null,
+  startDate: string,
+  endDate: string,
+): Promise<ActionResult> {
+  const parsedBranch = z
+    .coerce
+    .number()
+    .int()
+    .positive()
+    .nullable()
+    .safeParse(branchId);
+  if (!parsedBranch.success) {
+    return { success: false, error: "Branch ID không hợp lệ" };
+  }
+
+  const parsedStart = z.string().date().safeParse(startDate);
+  const parsedEnd = z.string().date().safeParse(endDate);
+  if (!parsedStart.success || !parsedEnd.success) {
+    return { success: false, error: "Ngày không hợp lệ (YYYY-MM-DD)" };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    REPORT_ROLES,
+    PERMISSION_KEYS.FINANCE_VIEW,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { data, error } = await ctx.supabase.rpc(
+    "fn_reconcile_sales_by_day",
+    {
+      p_branch_id: parsedBranch.data,
+      p_start_date: parsedStart.data,
+      p_end_date: parsedEnd.data,
+    },
+  );
+
+  if (error) {
+    return { success: false, error: "Không thể tải đối chiếu theo ngày." };
+  }
+
+  return { success: true, data: data ?? [] };
+}
+
+/* ─── fetchCashVarianceSummary — Phase 3: lệch tiền cuối ca ─ */
+
+export async function fetchCashVarianceSummary(
+  branchId: number | null,
+  startDate: string,
+  endDate: string,
+): Promise<ActionResult> {
+  const parsedBranch = z
+    .coerce
+    .number()
+    .int()
+    .positive()
+    .nullable()
+    .safeParse(branchId);
+  if (!parsedBranch.success) {
+    return { success: false, error: "Branch ID không hợp lệ" };
+  }
+
+  const parsedStart = z.string().date().safeParse(startDate);
+  const parsedEnd = z.string().date().safeParse(endDate);
+  if (!parsedStart.success || !parsedEnd.success) {
+    return { success: false, error: "Ngày không hợp lệ (YYYY-MM-DD)" };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    REPORT_ROLES,
+    PERMISSION_KEYS.FINANCE_VIEW,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { data, error } = await ctx.supabase.rpc(
+    "get_cash_variance_summary",
+    {
+      p_branch_id: parsedBranch.data,
+      p_start_date: parsedStart.data,
+      p_end_date: parsedEnd.data,
+    },
+  );
+
+  if (error) {
+    return { success: false, error: "Không thể tải dữ liệu lệch tiền." };
+  }
+
+  return { success: true, data: data?.[0] ?? null };
+}
+
+/* ─── fetchAccessibleBranches — branches user có finance:view ─ */
+// Branch picker source. Owner/super_manager: all active operational
+// branches. area_manager: branches in their area. branch_manager:
+// only their own branch. Filter by `branch_kind='branch'` để loại
+// "tenant" / "area" rows (logical containers, không phát sinh DT).
+export async function fetchAccessibleBranches(): Promise<ActionResult> {
+  const ctx = await getAuthContextWithPermission(
+    REPORT_ROLES,
+    PERMISSION_KEYS.FINANCE_VIEW,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { supabase, claims } = ctx;
+
+  // Tenant-wide roles see all operational branches.
+  if (claims.user_role === "owner" || claims.user_role === "super_manager") {
+    const { data, error } = await supabase
+      .from("branches")
+      .select("id, name")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("branch_kind", "branch")
+      .eq("is_active", true)
+      .order("name");
+    if (error) {
+      return { success: false, error: "Không thể tải danh sách chi nhánh." };
+    }
+    return { success: true, data: data ?? [] };
+  }
+
+  // area_manager: scope qua area_branches mapping.
+  if (claims.user_role === "area_manager" && claims.area_id != null) {
+    const { data, error } = await supabase
+      .from("area_branches")
+      .select("branch_id, branches!inner(id, name, is_active, branch_kind)")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("area_id", claims.area_id)
+      .eq("branches.is_active", true)
+      .eq("branches.branch_kind", "branch");
+    if (error) {
+      return { success: false, error: "Không thể tải danh sách chi nhánh." };
+    }
+    const rows = (data ?? [])
+      .map((r) => r.branches)
+      .filter((b): b is { id: number; name: string; is_active: boolean; branch_kind: string } => Boolean(b))
+      .map((b) => ({ id: b.id, name: b.name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    return { success: true, data: rows };
+  }
+
+  // branch_manager / cashier scope: chỉ thấy chi nhánh của mình.
+  if (claims.branch_id != null) {
+    const { data, error } = await supabase
+      .from("branches")
+      .select("id, name")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("id", claims.branch_id)
+      .eq("is_active", true)
+      .maybeSingle();
+    if (error || !data) {
+      return { success: true, data: [] };
+    }
+    return { success: true, data: [data] };
+  }
+
+  return { success: true, data: [] };
 }
 
 export async function fetchTopItems(

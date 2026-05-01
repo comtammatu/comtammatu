@@ -6507,9 +6507,14 @@ export type Database = {
           branch_id: number | null
           cash_revenue: number | null
           date: string | null
+          dine_in_revenue: number | null
+          discount_amount: number | null
           momo_revenue: number | null
           order_count: number | null
+          subtotal_revenue: number | null
+          takeaway_revenue: number | null
           tenant_id: number | null
+          total_covers: number | null
           total_revenue: number | null
           total_tax: number | null
           vietqr_revenue: number | null
@@ -6685,6 +6690,21 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      mv_refresh_log: {
+        Row: {
+          refreshed_at: string
+          view_name: string
+        }
+        Insert: {
+          refreshed_at?: string
+          view_name: string
+        }
+        Update: {
+          refreshed_at?: string
+          view_name?: string
+        }
+        Relationships: []
       }
       mv_top_items: {
         Row: {
@@ -7244,6 +7264,19 @@ export type Database = {
           ref_label: string
         }[]
       }
+      fn_reconcile_sales_by_day: {
+        Args: {
+          p_branch_id: number | null
+          p_end_date: string
+          p_start_date: string
+        }
+        Returns: {
+          date: string
+          revenue_paid: number
+          gl_credit: number
+          diff: number
+        }[]
+      }
       fn_reconcile_period: {
         Args: {
           p_branch_id?: number
@@ -7329,23 +7362,94 @@ export type Database = {
       }
       get_inventory_dashboard: { Args: { p_branch_id: number }; Returns: Json }
       get_pos_session_report: { Args: { p_session_id: number }; Returns: Json }
+      get_cash_variance_summary: {
+        Args: {
+          p_branch_id: number | null
+          p_end_date: string
+          p_start_date: string
+        }
+        Returns: {
+          session_count: number
+          total_variance: number
+          abs_variance_total: number
+          short_count: number
+          short_total: number
+          over_count: number
+          over_total: number
+          worst_cashiers: Json
+        }[]
+      }
+      get_revenue_kpis: {
+        Args: {
+          p_branch_id: number | null
+          p_end_date: string
+          p_start_date: string
+        }
+        Returns: {
+          cash_revenue: number
+          dine_in_revenue: number
+          discount_amount: number
+          momo_revenue: number
+          net_revenue: number
+          order_count: number
+          refreshed_at: string
+          subtotal_revenue: number
+          takeaway_revenue: number
+          total_covers: number
+          total_tax: number
+          vat_8_amount: number
+          vat_10_amount: number
+          vietqr_revenue: number
+          voided_amount: number
+          voided_count: number
+        }[]
+      }
       get_revenue_rollup: {
         Args: {
-          p_branch_id: number
+          p_branch_id: number | null
           p_end_date: string
           p_granularity: string
           p_start_date: string
         }
         Returns: {
+          branch_id: number
           cash_revenue: number
+          dine_in_revenue: number
+          discount_amount: number
           momo_revenue: number
           order_count: number
           period_end: string
           period_label: string
           period_start: string
+          subtotal_revenue: number
+          takeaway_revenue: number
+          total_covers: number
           total_revenue: number
           total_tax: number
           vietqr_revenue: number
+        }[]
+      }
+      get_orders_for_day: {
+        Args: {
+          p_branch_id: number
+          p_date: string
+        }
+        Returns: {
+          branch_id: number
+          customer_count: number
+          discount_amount: number
+          invoice_number: string | null
+          invoice_status: string | null
+          item_count: number
+          order_id: number
+          order_number: string
+          order_type: string
+          paid_at: string
+          paid_hour: number
+          payment_method: string | null
+          subtotal: number
+          tax_amount: number
+          total_amount: number
         }[]
       }
       get_stocktake_lines_blind: {

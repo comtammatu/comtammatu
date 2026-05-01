@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { TriangleAlert as IconAlertTriangle, ChevronRight as IconChevronRight, CircleCheck as IconCircleCheck, LoaderCircle as IconLoader2 } from "lucide-react";
+import { TriangleAlert as IconAlertTriangle, ChevronRight as IconChevronRight, CircleCheck as IconCircleCheck } from "lucide-react";
 import { BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -27,6 +27,13 @@ import {
   SheetTitle,
 } from "@comtammatu/ui/components/sheet";
 import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@comtammatu/ui/components/empty";
+import { Spinner } from "@comtammatu/ui/components/spinner";
+import {
   Table,
   TableBody,
   TableCell,
@@ -41,6 +48,7 @@ import {
   TabsTrigger,
 } from "@comtammatu/ui/components/tabs";
 import { formatVND } from "@comtammatu/shared/format";
+import { fetchReconciliationByDay } from "../actions";
 import {
   fetchReconciliation,
   fetchReconciliationDrilldown,
@@ -49,6 +57,13 @@ import {
   type ReconciliationDrilldownRow,
   type ReconciliationReport,
 } from "../reconciliation-actions";
+
+interface ReconcileByDayRow {
+  date: string;
+  revenue_paid: number;
+  gl_credit: number;
+  diff: number;
+}
 
 const TOLERANCE_VND = 1;
 
@@ -106,6 +121,9 @@ export function ReconciliationClient({
   const [error, setError] = useState<string | null>(null);
   const [isLoading, startTransition] = useTransition();
   const [drilldown, setDrilldown] = useState<DrilldownState>(initialDrilldown);
+  const [byDayRows, setByDayRows] = useState<ReconcileByDayRow[]>([]);
+  const [byDayLoading, setByDayLoading] = useState(false);
+  const [byDayError, setByDayError] = useState<string | null>(null);
 
   const branchName = (id: number | null) =>
     id == null ? "—" : (branches.find((b) => b.id === id)?.name ?? `#${id}`);
@@ -125,6 +143,19 @@ export function ReconciliationClient({
       }
       setReport(res.data as ReconciliationReport);
     });
+  }
+
+  async function loadByDay() {
+    setByDayLoading(true);
+    setByDayError(null);
+    const res = await fetchReconciliationByDay(branchId, startDate, endDate);
+    setByDayLoading(false);
+    if (!res.success) {
+      setByDayError(res.error ?? "Không thể tải đối chiếu theo ngày.");
+      setByDayRows([]);
+      return;
+    }
+    setByDayRows((res.data as ReconcileByDayRow[]) ?? []);
   }
 
   async function openDrilldown(
@@ -166,6 +197,7 @@ export function ReconciliationClient({
     <Tabs defaultValue="period" className="space-y-4">
       <TabsList className="h-auto w-full justify-start gap-2 overflow-x-auto p-2">
         <TabsTrigger value="period">Đối chiếu kỳ</TabsTrigger>
+        <TabsTrigger value="by-day">DT theo ngày</TabsTrigger>
         <TabsTrigger value="desync">
           Lệch payment ↔ đơn ({desync.length})
         </TabsTrigger>
@@ -222,9 +254,7 @@ export function ReconciliationClient({
               disabled={isLoading}
               className="self-end"
             >
-              {isLoading ? (
-                <IconLoader2 className="size-4 animate-spin" />
-              ) : null}
+              {isLoading ? <Spinner /> : null}
               Đối chiếu
             </Button>
           </CardContent>
@@ -303,10 +333,74 @@ export function ReconciliationClient({
             </Card>
           </>
         ) : (
-          <p className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
-            Chọn khoảng ngày và nhấn <strong>Đối chiếu</strong> để tải kết quả.
-          </p>
+          <Empty className="py-8">
+            <EmptyHeader>
+              <EmptyTitle className="text-sm font-semibold">Chưa có kết quả</EmptyTitle>
+              <EmptyDescription className="text-xs leading-5">
+                Chọn khoảng ngày và nhấn <strong>Đối chiếu</strong> để tải kết quả.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         )}
+      </TabsContent>
+
+      <TabsContent value="by-day" className="mt-0 space-y-4">
+        <Card>
+          <CardContent className="grid gap-3 p-4 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {BRANCH_VI.acronym}
+              </label>
+              <Select
+                value={branchId == null ? "all" : String(branchId)}
+                onValueChange={(value) =>
+                  setBranchId(value === "all" ? null : Number(value))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tất cả chi nhánh</SelectItem>
+                  {branches.map((b) => (
+                    <SelectItem key={b.id} value={String(b.id)}>
+                      {b.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {FORM_VI.fromDate}
+              </label>
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {FORM_VI.toDate}
+              </label>
+              <Input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+            </div>
+            <Button onClick={loadByDay} disabled={byDayLoading}>
+              {byDayLoading ? "Đang tải..." : "Đối chiếu theo ngày"}
+            </Button>
+          </CardContent>
+        </Card>
+
+        <ByDayTable
+          rows={byDayRows}
+          loading={byDayLoading}
+          error={byDayError}
+        />
       </TabsContent>
 
       <TabsContent value="desync" className="mt-0">
@@ -342,9 +436,9 @@ export function ReconciliationClient({
           </SheetHeader>
           <div className="px-4 pb-4">
             {drilldown.loading ? (
-              <p className="py-10 text-center text-sm text-muted-foreground">
-                <IconLoader2 className="mx-auto size-5 animate-spin" />
-              </p>
+              <div className="flex justify-center py-10 text-muted-foreground">
+                <Spinner className="size-5" />
+              </div>
             ) : drilldown.error ? (
               <p className="py-10 text-center text-sm text-destructive">
                 {drilldown.error}
@@ -542,6 +636,137 @@ function CategoryRow({
         </div>
       </TableCell>
     </TableRow>
+  );
+}
+
+function ByDayTable({
+  rows,
+  loading,
+  error,
+}: {
+  rows: ReconcileByDayRow[];
+  loading: boolean;
+  error: string | null;
+}) {
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center p-10">
+          <Spinner />
+        </CardContent>
+      </Card>
+    );
+  }
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <p className="text-sm text-destructive">{error}</p>
+        </CardContent>
+      </Card>
+    );
+  }
+  if (rows.length === 0) {
+    return (
+      <Card>
+        <CardContent className="p-10 text-center text-sm text-muted-foreground">
+          Chọn khoảng ngày và bấm &quot;Đối chiếu theo ngày&quot; để xem chênh
+          lệch DT POS ↔ Sổ cái cho từng ngày.
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const totalRevenue = rows.reduce((s, r) => s + r.revenue_paid, 0);
+  const totalGl = rows.reduce((s, r) => s + r.gl_credit, 0);
+  const totalDiff = totalRevenue - totalGl;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">
+          Đối chiếu DT POS ↔ Sổ cái — theo ngày
+        </CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Cột POS bucket theo `paid_at`, cột Sổ cái bucket theo `entry_date`,
+          cùng giờ Việt Nam. Ngày khớp đến ±1 ₫ được đánh dấu &quot;Khớp&quot;.
+        </p>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Ngày</TableHead>
+              <TableHead className="text-right">POS (sổ phụ)</TableHead>
+              <TableHead className="text-right">Sổ cái 511+33311</TableHead>
+              <TableHead className="text-right">Chênh lệch</TableHead>
+              <TableHead className="w-32">Trạng thái</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map((r) => {
+              const matched = Math.abs(r.diff) <= TOLERANCE_VND;
+              return (
+                <TableRow key={r.date}>
+                  <TableCell className="tabular-nums font-medium">
+                    {r.date}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {formatVND(r.revenue_paid)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {formatVND(r.gl_credit)}
+                  </TableCell>
+                  <TableCell
+                    className={
+                      matched
+                        ? "text-right tabular-nums text-success"
+                        : "text-right tabular-nums font-medium text-destructive"
+                    }
+                  >
+                    {matched ? "0" : formatVND(r.diff)}
+                  </TableCell>
+                  <TableCell>
+                    {matched ? (
+                      <Badge variant="success" className="gap-1">
+                        <IconCircleCheck className="size-3.5" />
+                        Khớp
+                      </Badge>
+                    ) : (
+                      <Badge variant="destructive" className="gap-1">
+                        <IconAlertTriangle className="size-3.5" />
+                        Lệch
+                      </Badge>
+                    )}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+            <TableRow className="bg-muted/40">
+              <TableCell className="font-medium">Tổng</TableCell>
+              <TableCell className="text-right tabular-nums font-medium">
+                {formatVND(totalRevenue)}
+              </TableCell>
+              <TableCell className="text-right tabular-nums font-medium">
+                {formatVND(totalGl)}
+              </TableCell>
+              <TableCell
+                className={
+                  Math.abs(totalDiff) <= TOLERANCE_VND
+                    ? "text-right tabular-nums font-bold text-success"
+                    : "text-right tabular-nums font-bold text-destructive"
+                }
+              >
+                {Math.abs(totalDiff) <= TOLERANCE_VND
+                  ? "Khớp"
+                  : formatVND(totalDiff)}
+              </TableCell>
+              <TableCell />
+            </TableRow>
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
   );
 }
 
