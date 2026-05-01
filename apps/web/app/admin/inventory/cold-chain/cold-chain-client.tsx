@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { formatDateTimeVN } from "@comtammatu/shared/datetime";
+import { useTenantTimezone } from "@/_lib/timezone-context";
 import {
   Card,
   CardContent,
@@ -35,6 +37,7 @@ interface Props {
  * Item-level overrides (ingredients.review_override) managed elsewhere.
  */
 export function ColdChainClient({ initial }: Props) {
+  const tz = useTenantTimezone();
   const [rows, setRows] = useState(initial);
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [, startSave] = useTransition();
@@ -131,7 +134,7 @@ export function ColdChainClient({ initial }: Props) {
                       </div>
                       {row.updatedAt ? (
                         <p className="mt-1 text-xs text-muted-foreground">
-                          Cập nhật: {new Date(row.updatedAt).toLocaleString("vi-VN")}
+                          Cập nhật: {formatDateTimeVN(row.updatedAt, tz)}
                         </p>
                       ) : null}
                     </div>

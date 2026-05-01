@@ -2,6 +2,8 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { formatInTz } from "@comtammatu/shared/datetime";
+import { useTenantTimezone } from "@/_lib/timezone-context";
 import {
   TriangleAlert as IconAlertTriangle,
   ArrowLeftRight as IconArrowLeftRight,
@@ -332,6 +334,7 @@ export function DashboardClient(props: DashboardProps) {
     stocktakeSessions,
   } = props;
 
+  const tz = useTenantTimezone();
   const isMobile = useIsMobile();
   const paths = getInventoryPaths(routeBase);
   const isOversight = userRole === "owner" || userRole === "area_manager";
@@ -365,7 +368,7 @@ export function DashboardClient(props: DashboardProps) {
     <>
       <InventoryHeader
         title={tNav("home")}
-        description={`${siteName} • ${new Date().toLocaleDateString("vi-VN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}`}
+        description={`${siteName} • ${formatInTz(new Date(), tz, { weekday: "long", day: "numeric", month: "long", year: "numeric" })}`}
       />
 
       <InventoryPageContent

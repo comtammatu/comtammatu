@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { formatInTz, formatDateVN } from "@comtammatu/shared/datetime";
+import { useTenantTimezone } from "@/_lib/timezone-context";
 import {
   ArrowRight as IconArrowRight,
   CircleCheck as IconCircleCheck,
@@ -139,6 +141,7 @@ export function TransfersListClient({
   basePath?: string;
   initialCreateOpen?: boolean;
 }) {
+  const tz = useTenantTimezone();
   const router = useRouter();
   const isMobile = useIsMobile();
   const isBranchManager = userRole === "branch_manager";
@@ -408,9 +411,9 @@ export function TransfersListClient({
                 )}
                 {searchFiltered.map((r) => {
                   const dateDisplay = r.shipped_at
-                    ? `Xuất: ${new Date(r.shipped_at).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" })}`
+                    ? `Xuất: ${formatInTz(r.shipped_at, tz, { day: "2-digit", month: "2-digit" })}`
                     : r.received_at
-                      ? `Nhận: ${new Date(r.received_at).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" })}`
+                      ? `Nhận: ${formatInTz(r.received_at, tz, { day: "2-digit", month: "2-digit" })}`
                       : "—";
 
                   return (
@@ -429,11 +432,7 @@ export function TransfersListClient({
                         <StatusBadge status={r.status} size="sm" />
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
-                        {new Date(r.created_at).toLocaleDateString("vi-VN", {
-                          day: "2-digit",
-                          month: "2-digit",
-                          year: "numeric",
-                        })}
+                        {formatDateVN(r.created_at, tz)}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {dateDisplay}
@@ -480,6 +479,7 @@ function MobileTransferCard({
   tab: Tab;
   basePath: string;
 }) {
+  const tz = useTenantTimezone();
   const Icon =
     tab === "receive"
       ? IconPackageImport
@@ -507,14 +507,7 @@ function MobileTransferCard({
           </p>
           {(row.shipped_at || row.created_at) && (
             <p className="mt-0.5 text-xs text-muted-foreground">
-              {new Date(row.shipped_at ?? row.created_at).toLocaleDateString(
-                "vi-VN",
-                {
-                  day: "2-digit",
-                  month: "2-digit",
-                  year: "numeric",
-                },
-              )}
+              {formatDateVN(row.shipped_at ?? row.created_at, tz)}
             </p>
           )}
         </div>

@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { formatDateVN } from "@comtammatu/shared/datetime";
+import { useTenantTimezone } from "@/_lib/timezone-context";
 import { ArrowRight as IconArrowRight, Plus as IconPlus, Search as IconSearch } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -62,13 +64,6 @@ const STATUS_KEYS = [
   "cancelled",
 ] as const;
 
-function formatDate(value: string) {
-  return new Date(value).toLocaleDateString("vi-VN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-}
 
 export function PurchaseOrdersClient({
   initial,
@@ -81,6 +76,8 @@ export function PurchaseOrdersClient({
   purchaseOrdersBasePath?: string;
   suppliersPath?: string;
 }) {
+  const tz = useTenantTimezone();
+  const formatDate = (value: string) => formatDateVN(value, tz);
   const [rows] = useState(initial);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState(ALL_FILTER_VALUE);

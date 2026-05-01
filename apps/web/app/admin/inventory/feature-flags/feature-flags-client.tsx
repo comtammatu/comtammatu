@@ -2,6 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { cn } from "@comtammatu/ui";
+import { formatDateTimeVN } from "@comtammatu/shared/datetime";
+import { useTenantTimezone } from "@/_lib/timezone-context";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -37,6 +39,14 @@ interface Props {
  * non-deferred inventory flag for the chosen branch in one click.
  */
 export function FeatureFlagsClient({ matrix }: Props) {
+  const tz = useTenantTimezone();
+  const formatDate = (iso: string): string => {
+    try {
+      return formatDateTimeVN(iso, tz);
+    } catch {
+      return iso;
+    }
+  };
   const [state, setState] = useState(matrix.state);
   const [pending, startTransition] = useTransition();
 
@@ -258,16 +268,3 @@ export function FeatureFlagsClient({ matrix }: Props) {
   );
 }
 
-function formatDate(iso: string): string {
-  try {
-    return new Date(iso).toLocaleString("vi-VN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return iso;
-  }
-}

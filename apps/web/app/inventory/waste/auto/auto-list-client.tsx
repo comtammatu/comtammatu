@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { cn } from "@comtammatu/ui";
+import { formatDateTimeVN } from "@comtammatu/shared/datetime";
+import { useTenantTimezone } from "@/_lib/timezone-context";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@comtammatu/ui/components/card";
@@ -120,6 +122,15 @@ export function AutoWasteListClient({ branchId, rows }: Props) {
 }
 
 function AutoWasteCard({ row }: { row: AutoWasteRow }) {
+  const tz = useTenantTimezone();
+  const formatDateTime = (iso: string): string => {
+    if (!iso) return "—";
+    try {
+      return formatDateTimeVN(iso, tz);
+    } catch {
+      return iso;
+    }
+  };
   const src = SOURCE_LABEL_VI[row.sourceType] ?? {
     label: row.sourceType,
     tone: "border-muted bg-muted/40 text-muted-foreground",
@@ -225,17 +236,3 @@ function formatVnd(n: number): string {
   });
 }
 
-function formatDateTime(iso: string): string {
-  if (!iso) return "—";
-  try {
-    return new Date(iso).toLocaleString("vi-VN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return iso;
-  }
-}

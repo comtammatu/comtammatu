@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { TriangleAlert as IconAlertTriangle, CircleCheck as IconCircleCheck, Search as IconSearch } from "lucide-react";
+import { formatDateVN } from "@comtammatu/shared/datetime";
+import { useTenantTimezone } from "@/_lib/timezone-context";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -106,15 +108,6 @@ const PAYMENT_STATUS_OPTIONS = [
   { value: "paid", label: "Đã thanh toán" },
 ] as const;
 
-function formatDate(value: string | null) {
-  if (!value) return "Chưa có";
-
-  return new Date(value).toLocaleDateString("vi-VN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-}
 
 function getOutstandingAmount(invoice: SupplierInvoiceRow) {
   return Math.max(invoice.amount - invoice.paidAmount, 0);
@@ -143,6 +136,9 @@ export function SupplierInvoicesClient({
   suppliers: SupplierOption[];
   grns: GrnOption[];
 }) {
+  const tz = useTenantTimezone();
+  const formatDate = (value: string | null) =>
+    value ? formatDateVN(value, tz) : "Chưa có";
   const [rows, setRows] = useState(invoices);
   const [search, setSearch] = useState("");
   const [supplierFilter, setSupplierFilter] = useState(ALL_FILTER_VALUE);

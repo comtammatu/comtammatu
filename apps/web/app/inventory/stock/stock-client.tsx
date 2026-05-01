@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { formatDateVN } from "@comtammatu/shared/datetime";
+import { useTenantTimezone } from "@/_lib/timezone-context";
 import { ArrowRightToLine as IconArrowBarRight, ClipboardList as IconClipboardList, Pencil as IconPencil, Receipt as IconReceipt, Search as IconSearch, ShoppingCart as IconShoppingCart, Trash as IconTrash, Truck as IconTruck } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -458,6 +460,7 @@ export function StockClient({
   permissions: StockActionPermissions;
   movementHistory: StockMovementHistory[];
 }) {
+  const tz = useTenantTimezone();
   const router = useRouter();
   const isMobile = useIsMobile();
   const [activeCategory, setActiveCategory] = useState("all");
@@ -563,7 +566,7 @@ export function StockClient({
     0,
   );
   const visibleTotalValue = branchValue ?? filteredValue;
-  const liveLabel = new Date().toLocaleDateString("vi-VN");
+  const liveLabel = formatDateVN(new Date(), tz);
 
   return (
     <>

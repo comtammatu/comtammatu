@@ -16,17 +16,16 @@ import {
   type GrnDraft,
 } from "../../_lib/mobile-draft";
 import { formatVND } from "../../_lib/format";
+import { formatInTz } from "@comtammatu/shared/datetime";
+import { useTenantTimezone } from "@/_lib/timezone-context";
 
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
-function formatUpdatedAt(value: string): string {
-  return new Intl.DateTimeFormat("vi-VN", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(new Date(value));
-}
 
 export function MobileDraftsClient({ userKey }: { userKey: string }) {
   const router = useRouter();
+  const tz = useTenantTimezone();
+  const formatUpdatedAt = (value: string): string =>
+    formatInTz(value, tz, { dateStyle: "short", timeStyle: "short" });
   const [drafts, setDrafts] = React.useState<GrnDraft[]>([]);
 
   const reloadDrafts = React.useCallback(() => {

@@ -2,6 +2,8 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { formatInTz } from "@comtammatu/shared/datetime";
+import { useTenantTimezone } from "@/_lib/timezone-context";
 import {
   CircleCheck as IconCircleCheck,
   ClipboardList as IconClipboardList,
@@ -64,8 +66,8 @@ interface ProductionOrderListProps {
   canAdjustStock: boolean;
 }
 
-function formatOrderDate(value: string) {
-  return new Date(value).toLocaleString("vi-VN", {
+function formatOrderDate(value: string, tz: string) {
+  return formatInTz(value, tz, {
     day: "2-digit",
     month: "2-digit",
     hour: "2-digit",
@@ -82,6 +84,7 @@ export function ProductionOrderList({
   canConfirmProduction,
   canAdjustStock,
 }: ProductionOrderListProps) {
+  const tz = useTenantTimezone();
   const router = useRouter();
   const isMobile = useIsMobile();
   const [isPending, startTransition] = useTransition();
@@ -214,7 +217,7 @@ export function ProductionOrderList({
                   </ItemHeader>
                   <ItemContent className="basis-full">
                     <ItemDescription>
-                      {order.branch_name} · {formatOrderDate(order.created_at)}
+                      {order.branch_name} · {formatOrderDate(order.created_at, tz)}
                     </ItemDescription>
                     <div className="flex flex-wrap gap-1.5">
                       {order.items.map((item) => (
@@ -269,7 +272,7 @@ export function ProductionOrderList({
                   <TableCell className="font-medium">
                     <div>{order.production_number}</div>
                     <div className="text-xs text-muted-foreground">
-                      {formatOrderDate(order.created_at)}
+                      {formatOrderDate(order.created_at, tz)}
                     </div>
                   </TableCell>
                   <TableCell>{order.branch_name}</TableCell>

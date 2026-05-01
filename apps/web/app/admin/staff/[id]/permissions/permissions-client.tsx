@@ -2,6 +2,8 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { Plus as IconPlus, Trash as IconTrash, Layers as IconStack } from "lucide-react";
+import { formatDateTimeVN, formatDateVN } from "@comtammatu/shared/datetime";
+import { useTenantTimezone } from "@/_lib/timezone-context";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -351,6 +353,7 @@ function GrantList({
   onRevoke: (g: Grant) => void;
   disabled: boolean;
 }) {
+  const tz = useTenantTimezone();
   const now = Date.now();
   return (
     <ul className="flex flex-wrap gap-2">
@@ -382,10 +385,10 @@ function GrantList({
                     ? "text-warning"
                     : "text-muted-foreground"
                 }`}
-                title={new Date(g.validUntil).toLocaleString("vi-VN")}
+                title={formatDateTimeVN(g.validUntil, tz)}
               >
                 {expired ? "hết hạn" : "đến"}{" "}
-                {new Date(g.validUntil).toLocaleDateString("vi-VN")}
+                {formatDateVN(g.validUntil, tz)}
               </span>
             )}
             <Button

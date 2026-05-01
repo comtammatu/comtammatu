@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { formatDateTimeVN } from "@comtammatu/shared/datetime";
+import { useTenantTimezone } from "@/_lib/timezone-context";
 import {
   Card,
   CardContent,
@@ -102,6 +104,7 @@ function ExpressWindowSection({
   branchId: number;
   initial: BranchRow["window"];
 }) {
+  const tz = useTenantTimezone();
   const [enabled, setEnabled] = useState(initial.enabled);
   const [startTime, setStartTime] = useState(initial.startTime.slice(0, 5));
   const [endTime, setEndTime] = useState(initial.endTime.slice(0, 5));
@@ -177,7 +180,7 @@ function ExpressWindowSection({
       </div>
       {initial.updatedAt ? (
         <p className="text-xs text-muted-foreground">
-          Cập nhật lần cuối: {new Date(initial.updatedAt).toLocaleString("vi-VN")}
+          Cập nhật lần cuối: {formatDateTimeVN(initial.updatedAt, tz)}
         </p>
       ) : null}
       <div className="flex justify-end">

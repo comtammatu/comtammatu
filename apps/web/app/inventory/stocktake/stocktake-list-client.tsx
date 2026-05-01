@@ -3,6 +3,8 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { formatDateVN } from "@comtammatu/shared/datetime";
+import { useTenantTimezone } from "@/_lib/timezone-context";
 import { ArrowRight as IconArrowRight, ClipboardCheck as IconClipboardCheck, Plus as IconPlus, Search as IconSearch } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -69,14 +71,6 @@ export interface BranchOption {
   is_active: boolean;
 }
 
-function formatDateShort(dateStr: string | null): string {
-  if (!dateStr) return "—";
-  return new Date(dateStr).toLocaleDateString("vi-VN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-}
 
 export function StocktakeListClient({
   initial,
@@ -91,6 +85,9 @@ export function StocktakeListClient({
   userBranchId: number | null;
   routeBase?: string;
 }) {
+  const tz = useTenantTimezone();
+  const formatDateShort = (dateStr: string | null): string =>
+    dateStr ? formatDateVN(dateStr, tz) : "—";
   const router = useRouter();
   const isMobile = useIsMobile();
   const [rows, setRows] = useState(initial);

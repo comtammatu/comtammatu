@@ -9,6 +9,7 @@ import {
   PERMISSION_KEYS,
   type StaffRole,
 } from "@comtammatu/shared/auth";
+import { todayInTz } from "@comtammatu/shared/datetime";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "../../admin/_lib/auth";
 
@@ -21,13 +22,6 @@ const MAX_DISTANCE_METERS = 200;
 const CONFIG_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
 
 /* ─── Helpers ─── */
-
-/** Get today's date string in Asia/Ho_Chi_Minh timezone (YYYY-MM-DD) */
-function getTodayVN(): string {
-  return new Date().toLocaleDateString("sv-SE", {
-    timeZone: "Asia/Ho_Chi_Minh",
-  });
-}
 
 /** Compute HMAC-SHA256 daily code: first 6 hex chars of HMAC(secret, YYYY-MM-DD) */
 function computeDailyCode(secret: string, dateStr: string): string {
@@ -120,7 +114,7 @@ export async function clockIn(input: {
   }
 
   // 2. Check not already clocked in today
-  const today = getTodayVN();
+  const today = todayInTz(claims.tenant_timezone);
   const { data: existing } = await supabase
     .from("attendance_records")
     .select("id, check_out")
@@ -245,7 +239,7 @@ export async function clockOut(): Promise<
   }
 
   // Find today's open record
-  const today = getTodayVN();
+  const today = todayInTz(claims.tenant_timezone);
   const { data: record } = await supabase
     .from("attendance_records")
     .select("id")
@@ -309,7 +303,7 @@ export async function getAttendanceStatus(): Promise<
     };
   }
 
-  const today = getTodayVN();
+  const today = todayInTz(claims.tenant_timezone);
   const { data: record } = await supabase
     .from("attendance_records")
     .select("check_in, check_out, branch_id, branches ( name )")
@@ -371,7 +365,7 @@ export async function generateDailyCode(
     };
   }
 
-  const today = getTodayVN();
+  const today = todayInTz(claims.tenant_timezone);
   const code = computeDailyCode(config.attendance_secret, today);
 
   return {

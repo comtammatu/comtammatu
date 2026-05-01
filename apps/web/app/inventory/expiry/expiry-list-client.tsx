@@ -4,6 +4,8 @@ import { useMemo, useState, useTransition } from "react";
 import { CircleCheck as IconCircleCheck, Search as IconSearch, Trash as IconTrash } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { ACTIONS_VI, BRANCH_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
+import { formatDateVN } from "@comtammatu/shared/datetime";
+import { useTenantTimezone } from "@/_lib/timezone-context";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
@@ -96,6 +98,7 @@ export function ExpiryListClient({
   userRole: StaffRole;
   userBranchId: number | null;
 }) {
+  const tz = useTenantTimezone();
   const [alerts, setAlerts] = useState(initial);
   const [search, setSearch] = useState("");
   const [branchFilter, setBranchFilter] = useState<string>(
@@ -313,11 +316,7 @@ export function ExpiryListClient({
                       {alert.batch_number ?? "\u2014"}
                     </TableCell>
                     <TableCell className="text-sm tabular-nums text-muted-foreground">
-                      {new Date(alert.expiry_date).toLocaleDateString("vi-VN", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "numeric",
-                      })}
+                      {formatDateVN(alert.expiry_date, tz)}
                     </TableCell>
                     <TableCell>
                       {alert.urgency === "expired" ? (

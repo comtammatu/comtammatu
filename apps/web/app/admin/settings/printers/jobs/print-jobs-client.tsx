@@ -3,6 +3,8 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ACTIONS_VI, BRANCH_VI, FORM_VI, STATES_VI } from "@comtammatu/shared/messages";
+import { formatInTz } from "@comtammatu/shared/datetime";
+import { useTenantTimezone } from "@/_lib/timezone-context";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -73,16 +75,6 @@ const JOB_TYPE_LABEL: Record<string, string> = {
   cancel_ticket: "Phiếu hủy",
 };
 
-function formatTime(iso: string | null): string {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  return d.toLocaleString("vi-VN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    day: "2-digit",
-    month: "2-digit",
-  });
-}
 
 export function PrintJobsClient({
   jobs,
@@ -92,6 +84,16 @@ export function PrintJobsClient({
   filterJobType,
   currentBranchLocked,
 }: Props) {
+  const tz = useTenantTimezone();
+  const formatTime = (iso: string | null): string =>
+    iso
+      ? formatInTz(iso, tz, {
+          hour: "2-digit",
+          minute: "2-digit",
+          day: "2-digit",
+          month: "2-digit",
+        })
+      : "—";
   const router = useRouter();
   const [pendingJobId, setPendingJobId] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();

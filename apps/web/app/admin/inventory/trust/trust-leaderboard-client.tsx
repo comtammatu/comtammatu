@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { cn } from "@comtammatu/ui";
+import { formatDateTimeVN } from "@comtammatu/shared/datetime";
+import { useTenantTimezone } from "@/_lib/timezone-context";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@comtammatu/ui/components/card";
@@ -49,6 +51,14 @@ export function TrustLeaderboardClient({
   rows,
   includeComputed,
 }: Props) {
+  const tz = useTenantTimezone();
+  const formatDate = (iso: string): string => {
+    try {
+      return formatDateTimeVN(iso, tz);
+    } catch {
+      return iso;
+    }
+  };
   const [query, setQuery] = useState("");
 
   const filtered = useMemo(() => {
@@ -291,16 +301,3 @@ function TierCard({
   );
 }
 
-function formatDate(iso: string): string {
-  try {
-    return new Date(iso).toLocaleString("vi-VN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return iso;
-  }
-}

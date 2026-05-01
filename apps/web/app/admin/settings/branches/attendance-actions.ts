@@ -3,6 +3,7 @@
 import { randomBytes, createHmac } from "node:crypto";
 import { z } from "zod";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
+import { todayInTz } from "@comtammatu/shared/datetime";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
@@ -25,12 +26,6 @@ const updateCoordsSchema = z.object({
 // 20260417000000_attendance_pwa.sql — remove after pnpm db:types
 
 /* ─── Helpers ─── */
-
-function getTodayVN(): string {
-  return new Date().toLocaleDateString("sv-SE", {
-    timeZone: "Asia/Ho_Chi_Minh",
-  });
-}
 
 function computeDailyCode(secret: string, dateStr: string): string {
   return createHmac("sha256", secret).update(dateStr).digest("hex").slice(0, 6);
@@ -135,7 +130,7 @@ export async function generateAttendanceSecret(
     }
   }
 
-  const today = getTodayVN();
+  const today = todayInTz(claims.tenant_timezone);
   const code = computeDailyCode(secret, today);
 
   revalidateSurfacePath("/admin/settings/branches");
@@ -171,7 +166,7 @@ export async function getTodayCode(
     };
   }
 
-  const today = getTodayVN();
+  const today = todayInTz(claims.tenant_timezone);
   const code = computeDailyCode(config.attendance_secret, today);
 
   return { success: true, data: { code, date: today } };

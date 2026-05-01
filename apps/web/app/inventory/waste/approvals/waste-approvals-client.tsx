@@ -2,6 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { formatDateTimeVN } from "@comtammatu/shared/datetime";
+import { useTenantTimezone } from "@/_lib/timezone-context";
 import {
   Card,
   CardContent,
@@ -122,6 +124,7 @@ function WasteApprovalCard({
   row: PendingWasteRow;
   onResolved: (issueId: number) => void;
 }) {
+  const tz = useTenantTimezone();
   const router = useRouter();
   const [note, setNote] = useState("");
   const [pending, setPending] = useState<"approved" | "rejected" | null>(null);
@@ -188,7 +191,7 @@ function WasteApprovalCard({
                   </Badge>
                 ) : null}
                 {" • "}
-                {new Date(row.issuedAt).toLocaleString("vi-VN")}
+                {formatDateTimeVN(row.issuedAt, tz)}
               </CardDescription>
             </div>
             <div className="text-right">

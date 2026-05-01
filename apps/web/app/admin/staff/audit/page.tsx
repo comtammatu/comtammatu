@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { ArrowLeft as IconArrowLeft, History as IconHistory } from "lucide-react";
 import { createClient } from "@comtammatu/database/supabase/server";
+import { formatDateTimeVN, formatDateVN } from "@comtammatu/shared/datetime";
+import { loadAuthState } from "@/_lib/auth";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -34,6 +36,8 @@ interface Props {
  */
 export default async function PermissionAuditPage({ searchParams }: Props) {
   const params = await searchParams;
+  const { claims } = await loadAuthState();
+  const tz = claims.tenant_timezone;
   const supabase = await createClient();
 
   // Fetch audit rows (RLS-filtered) — newest first, up to 200
@@ -159,7 +163,7 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
                   return (
                     <TableRow key={r.id}>
                       <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
-                        {new Date(r.at).toLocaleString("vi-VN")}
+                        {formatDateTimeVN(r.at, tz)}
                       </TableCell>
                       <TableCell>
                         <Badge variant={actionVariant}>{r.action}</Badge>
@@ -195,9 +199,7 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
                             `#${r.branch_id}`)}
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
-                        {validUntil
-                          ? new Date(validUntil).toLocaleDateString("vi-VN")
-                          : "vĩnh viễn"}
+                        {validUntil ? formatDateVN(validUntil, tz) : "vĩnh viễn"}
                       </TableCell>
                     </TableRow>
                   );

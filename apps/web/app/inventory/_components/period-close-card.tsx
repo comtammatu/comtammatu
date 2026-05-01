@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { formatDateTimeVN } from "@comtammatu/shared/datetime";
+import { useTenantTimezone } from "@/_lib/timezone-context";
 import {
   Card,
   CardContent,
@@ -66,6 +68,14 @@ export function PeriodCloseCard({
   onChanged,
   className,
 }: PeriodCloseCardProps) {
+  const tz = useTenantTimezone();
+  const fmt = (iso: string): string => {
+    try {
+      return formatDateTimeVN(iso, tz);
+    } catch {
+      return iso;
+    }
+  };
   const [isBusy, startAction] = useTransition();
   const monthLabel = `${String(period.month).padStart(2, "0")}/${period.year}`;
 
@@ -276,10 +286,3 @@ function ConfirmDestructiveButton({
   );
 }
 
-function fmt(iso: string): string {
-  try {
-    return new Date(iso).toLocaleString("vi-VN");
-  } catch {
-    return iso;
-  }
-}

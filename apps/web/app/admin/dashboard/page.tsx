@@ -10,6 +10,7 @@ import {
 } from "@comtammatu/ui/components/card";
 import { canAccess } from "@comtammatu/shared/auth";
 import { formatVND } from "@comtammatu/shared/format";
+import { formatTimeVN } from "@comtammatu/shared/datetime";
 import { loadAuthState } from "@/_lib/auth";
 import {
   Empty,
@@ -72,15 +73,10 @@ function computeChange(today: number, yesterday: number): number {
   return ((today - yesterday) / yesterday) * 100;
 }
 
-function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString("vi-VN", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 export default async function DashboardPage() {
   const { claims } = await loadAuthState();
+  const tz = claims.tenant_timezone;
+  const formatTime = (iso: string) => formatTimeVN(iso, tz);
 
   const stats = await fetchDashboardStats();
   const revenueChange = computeChange(

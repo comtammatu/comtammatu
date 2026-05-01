@@ -2,6 +2,8 @@
 
 import { useCallback, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
+import { formatDateTimeVN } from "@comtammatu/shared/datetime";
+import { useTenantTimezone } from "@/_lib/timezone-context";
 import { ArrowLeft as IconArrowLeft, Ban as IconBan, Check as IconCheck, CircleCheck as IconCircleCheck, ClipboardCheck as IconClipboardCheck, CircleX as IconCircleX } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -96,6 +98,7 @@ export function StocktakeDetailClient({
   routeBase?: string;
   inventoryBasePath?: string;
 }) {
+  const tz = useTenantTimezone();
   const isMobile = useIsMobile();
   const [isPending, startTransition] = useTransition();
   const [session, setSession] = useState<StocktakeSession>(initialSession);
@@ -121,24 +124,9 @@ export function StocktakeDetailClient({
     [lines],
   );
   const headerDescription = [
-    `Ngày tạo: ${new Date(session.created_at).toLocaleDateString("vi-VN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    })}`,
+    `Ngày tạo: ${formatDateTimeVN(session.created_at, tz)}`,
     session.completed_at
-      ? `Hòan tất: ${new Date(session.completed_at).toLocaleDateString(
-          "vi-VN",
-          {
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-          },
-        )}`
+      ? `Hòan tất: ${formatDateTimeVN(session.completed_at, tz)}`
       : null,
     session.notes ? `Ghi chú: ${session.notes}` : null,
   ]

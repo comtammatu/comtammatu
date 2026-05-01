@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft as IconArrowLeft } from "lucide-react";
 import { createClient } from "@comtammatu/database/supabase/server";
+import { formatDateTimeVN } from "@comtammatu/shared/datetime";
+import { loadAuthState } from "@/_lib/auth";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Card,
@@ -24,6 +26,8 @@ interface Props {
 
 export default async function StaffPermissionsPage({ params }: Props) {
   const { id } = await params;
+  const { claims } = await loadAuthState();
+  const tz = claims.tenant_timezone;
   const supabase = await createClient();
 
   // Target profile (RLS: viewer must have staff:view or hr:view_employee)
@@ -177,7 +181,7 @@ export default async function StaffPermissionsPage({ params }: Props) {
                   </ItemContent>
                   <ItemActions>
                     <span className="text-xs text-muted-foreground">
-                      {new Date(a.at).toLocaleString("vi-VN")}
+                      {formatDateTimeVN(a.at, tz)}
                     </span>
                   </ItemActions>
                 </Item>

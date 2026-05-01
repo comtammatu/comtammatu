@@ -24,6 +24,8 @@ import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
 import { AlarmClockPlus as IconClockPlus } from "lucide-react";
+import { formatTimeVN } from "@comtammatu/shared/datetime";
+import { useTenantTimezone } from "@/_lib/timezone-context";
 import { extendExpressWindow } from "../variance-actions";
 
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
@@ -53,6 +55,7 @@ export function ExtendWindowButton({
   disabled,
   className,
 }: ExtendWindowButtonProps) {
+  const tz = useTenantTimezone();
   const [open, setOpen] = useState(false);
   const [minutes, setMinutes] = useState<number>(30);
   const [note, setNote] = useState("");
@@ -79,7 +82,7 @@ export function ExtendWindowButton({
         return;
       }
       toast.success(
-        `Đã extend +${minutes} phút • kết thúc: ${res.data?.extendedUntil ? new Date(res.data.extendedUntil).toLocaleTimeString("vi-VN") : "?"}`,
+        `Đã extend +${minutes} phút • kết thúc: ${res.data?.extendedUntil ? formatTimeVN(res.data.extendedUntil, tz) : "?"}`,
       );
       if (res.data?.extendedUntil) {
         onSuccess?.(res.data.extendedUntil);

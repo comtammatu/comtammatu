@@ -1,4 +1,5 @@
 import { getEmployeeContext } from "../_lib/employee-context";
+import { formatTimeVN } from "@comtammatu/shared/datetime";
 import {
   Card,
   CardContent,
@@ -143,13 +144,7 @@ export default async function EmployeeAttendancePage() {
                           </p>
                           <p className="font-mono text-foreground">
                             {r.check_in
-                              ? new Date(r.check_in).toLocaleTimeString(
-                                  "vi-VN",
-                                  {
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  },
-                                )
+                              ? formatTimeVN(r.check_in, claims.tenant_timezone)
                               : "—"}
                           </p>
                         </div>
@@ -157,13 +152,7 @@ export default async function EmployeeAttendancePage() {
                           <p className="text-xs text-muted-foreground">Ra ca</p>
                           <p className="font-mono text-foreground">
                             {r.check_out
-                              ? new Date(r.check_out).toLocaleTimeString(
-                                  "vi-VN",
-                                  {
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  },
-                                )
+                              ? formatTimeVN(r.check_out, claims.tenant_timezone)
                               : "—"}
                           </p>
                         </div>
@@ -200,21 +189,12 @@ export default async function EmployeeAttendancePage() {
                         </TableCell>
                         <TableCell className="font-mono text-sm">
                           {r.check_in
-                            ? new Date(r.check_in).toLocaleTimeString("vi-VN", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })
+                            ? formatTimeVN(r.check_in, claims.tenant_timezone)
                             : "—"}
                         </TableCell>
                         <TableCell className="font-mono text-sm">
                           {r.check_out
-                            ? new Date(r.check_out).toLocaleTimeString(
-                                "vi-VN",
-                                {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                },
-                              )
+                            ? formatTimeVN(r.check_out, claims.tenant_timezone)
                             : "—"}
                         </TableCell>
                         <TableCell>
