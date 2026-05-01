@@ -604,8 +604,11 @@ export async function fetchRevenueRollup(
 
   const { supabase } = ctx;
 
+  // Supabase TS gen emits p_branch_id as non-nullable, but the RPC accepts
+  // NULL = aggregate over all branches caller has finance:view on. Cast to
+  // satisfy the type while preserving runtime null pass-through.
   const { data, error } = await supabase.rpc("get_revenue_rollup", {
-    p_branch_id: parsedBranch.data,
+    p_branch_id: parsedBranch.data as number,
     p_start_date: parsedStart.data,
     p_end_date: parsedEnd.data,
     p_granularity: parsedGran.data,
@@ -648,8 +651,9 @@ export async function fetchRevenueKpis(
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
+  // Same NULL-branch pass-through as get_revenue_rollup.
   const { data, error } = await ctx.supabase.rpc("get_revenue_kpis", {
-    p_branch_id: parsedBranch.data,
+    p_branch_id: parsedBranch.data as number,
     p_start_date: parsedStart.data,
     p_end_date: parsedEnd.data,
   });
@@ -726,10 +730,11 @@ export async function fetchReconciliationByDay(
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
+  // Same NULL-branch pass-through as get_revenue_rollup.
   const { data, error } = await ctx.supabase.rpc(
     "fn_reconcile_sales_by_day",
     {
-      p_branch_id: parsedBranch.data,
+      p_branch_id: parsedBranch.data as number,
       p_start_date: parsedStart.data,
       p_end_date: parsedEnd.data,
     },
@@ -772,10 +777,11 @@ export async function fetchCashVarianceSummary(
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
+  // Same NULL-branch pass-through as get_revenue_rollup.
   const { data, error } = await ctx.supabase.rpc(
     "get_cash_variance_summary",
     {
-      p_branch_id: parsedBranch.data,
+      p_branch_id: parsedBranch.data as number,
       p_start_date: parsedStart.data,
       p_end_date: parsedEnd.data,
     },
