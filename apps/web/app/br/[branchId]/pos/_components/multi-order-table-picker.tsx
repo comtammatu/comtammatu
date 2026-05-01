@@ -39,10 +39,10 @@ export function MultiOrderTablePicker({
       <DrawerContent className="mx-auto max-w-md sm:max-w-lg">
         <DrawerHeader>
           <DrawerTitle>
-            Bàn {tableNumber ?? "—"} — {orders.length} đơn
+            Bàn {tableNumber ?? "—"} · {orders.length} đơn
           </DrawerTitle>
-          <DrawerDescription>
-            Chọn đơn để xem chi tiết, hoặc tạo đơn mới trên bàn này.
+          <DrawerDescription className="sr-only">
+            Chọn đơn để mở hoặc tạo đơn mới.
           </DrawerDescription>
         </DrawerHeader>
 
@@ -86,7 +86,7 @@ export function MultiOrderTablePicker({
             onClick={onCreateNew}
           >
             <IconPlus data-icon="inline-start" />
-            Tạo đơn mới trên bàn này
+            Tạo đơn mới
           </Button>
           <Button type="button" variant="ghost" onClick={onClose}>
             {ACTIONS_VI.close}

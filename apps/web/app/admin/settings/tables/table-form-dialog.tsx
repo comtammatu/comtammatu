@@ -71,9 +71,6 @@ export function TableFormDialog({
       defaultValues={toFormValues(table)}
       entityKey={table?.id ?? "new"}
       title={isEdit ? "Chỉnh sửa bàn" : "Thêm bàn mới"}
-      description={
-        isEdit ? "Chỉnh sửa thông tin bàn" : "Nhập thông tin bàn mới"
-      }
       successMessage={isEdit ? "Đã cập nhật bàn" : "Đã tạo bàn mới"}
       submitLabel={isEdit ? ACTIONS_VI.update : ACTIONS_VI.create}
       onSubmit={async (values) => {

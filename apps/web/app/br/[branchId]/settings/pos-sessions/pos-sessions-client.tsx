@@ -30,7 +30,6 @@ import { Separator } from "@comtammatu/ui/components/separator";
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
   SheetHeader,
   SheetTitle,
 } from "@comtammatu/ui/components/sheet";
@@ -725,12 +724,10 @@ function OrderDetailSheet({
         <SheetHeader className="border-b px-4 pt-5 pb-3 text-left">
           <SheetTitle>
             Bill {order?.order_number ?? ""}
-          </SheetTitle>
-          <SheetDescription>
             {order
-              ? `${order.order_type === "dine_in" ? `Bàn ${order.tables?.number ?? "-"}` : "Mang về"} · ${formatDateTime(order.created_at)}`
+              ? ` · ${order.order_type === "dine_in" ? `Bàn ${order.tables?.number ?? "-"}` : "Mang về"} · ${formatDateTime(order.created_at)}`
               : ""}
-          </SheetDescription>
+          </SheetTitle>
         </SheetHeader>
 
         <ScrollArea className="min-h-0 flex-1">

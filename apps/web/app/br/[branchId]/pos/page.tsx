@@ -58,26 +58,6 @@ export default async function PosPage({
           icon: <IconAlertTriangle className="size-3.5" />,
           variant: "destructive",
         }}
-        steps={[
-          {
-            label: "Bước 1",
-            title: "Kiểm tra phiên",
-            description: "Đang xác minh ca làm.",
-            tone: "current",
-          },
-          {
-            label: "Bước 2",
-            title: "Tải máy POS",
-            description: "Đang tải máy POS.",
-            tone: "pending",
-          },
-          {
-            label: "Bước 3",
-            title: "Mở màn hình bán hàng",
-            description: "Mở quầy bán hàng.",
-            tone: "pending",
-          },
-        ]}
       />
     );
   }
@@ -99,26 +79,6 @@ export default async function PosPage({
             icon: <IconAlertTriangle className="size-3.5" />,
             variant: "warning",
           }}
-          steps={[
-            {
-              label: "Bước 1",
-              title: "Kiểm tra phiên",
-              description: "Chưa có ca mở.",
-              tone: "done",
-            },
-            {
-              label: "Bước 2",
-              title: "Thu ngân mở ca",
-              description: "Yêu cầu thu ngân mở ca trên máy POS.",
-              tone: "current",
-            },
-            {
-              label: "Bước 3",
-              title: "Vào bán hàng",
-              description: "Quay lại sau khi ca đã mở.",
-              tone: "pending",
-            },
-          ]}
         />
       );
     }
@@ -138,26 +98,6 @@ export default async function PosPage({
             icon: <IconAlertTriangle className="size-3.5" />,
             variant: "warning",
           }}
-          steps={[
-            {
-              label: "Bước 1",
-              title: "Kiểm tra phiên",
-              description: "Chưa có ca mở.",
-              tone: "done",
-            },
-            {
-              label: "Bước 2",
-              title: "Tải máy POS",
-              description: "Đang tải máy POS.",
-              tone: "current",
-            },
-            {
-              label: "Bước 3",
-              title: "Mở ca",
-              description: "Sẵn sàng mở ca.",
-              tone: "pending",
-            },
-          ]}
         />
       );
     }
@@ -214,26 +154,6 @@ export default async function PosPage({
           icon: <IconAlertTriangle className="size-3.5" />,
           variant: "warning",
         }}
-        steps={[
-          {
-            label: "Bước 1",
-            title: "Ca đang mở",
-            description: "Phiên bán hàng đã sẵn sàng.",
-            tone: "done",
-          },
-          {
-            label: "Bước 2",
-            title: "Đồng bộ menu",
-            description: "Đang nạp món và bàn.",
-            tone: "current",
-          },
-          {
-            label: "Bước 3",
-            title: "Sẵn sàng tạo đơn",
-            description: "Sẵn sàng phục vụ khách.",
-            tone: "pending",
-          },
-        ]}
       />
     );
   }

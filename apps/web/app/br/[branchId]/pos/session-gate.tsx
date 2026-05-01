@@ -12,7 +12,6 @@ import { Button } from "@comtammatu/ui/components/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
@@ -98,11 +97,6 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
                   Chi nhánh #{branchId}
                 </Badge>
                 <CardTitle className="text-2xl">Mở ca bán hàng</CardTitle>
-                <CardDescription>
-                  Nhập tiền đầu ca để bắt đầu nhận đơn. Chi nhánh chỉ có 1 ca
-                  POS hoạt động cùng lúc — các nhân viên khác cùng chi nhánh
-                  sẽ tự động bán trên ca này.
-                </CardDescription>
               </div>
               <div className="flex size-11 shrink-0 items-center justify-center bg-primary/10 text-primary">
                 <IconDeviceDesktop className="size-5" />

@@ -20,6 +20,7 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
+import { EmptyStatePanel } from "../components/empty-state-panel";
 import { toggleStaffActive } from "./actions";
 import { StaffFormDialog } from "./staff-form-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
@@ -64,10 +65,10 @@ export function StaffTable({ staff, branches }: StaffTableProps) {
   return (
     <>
       {staff.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border px-6 py-16 text-center">
-          <IconUsers className="mx-auto size-8 text-muted-foreground" />
-          <p className="mt-3 text-sm font-medium">Chưa có nhân viên nào</p>
-        </div>
+        <EmptyStatePanel
+          title="Chưa có nhân viên nào"
+          icon={<IconUsers />}
+        />
       ) : null}
 
       <div className="space-y-3 md:hidden">

@@ -108,7 +108,7 @@ export default async function BranchSettingsHubPage({
           </Link>
         </Button>
         <div className="min-w-0">
-          <h2 className="text-xl font-semibold">Thiết lập chi nhánh</h2>
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Thiết lập chi nhánh</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {branch.name}
             {isHq ? " · Trụ sở (không dùng POS/Bàn/Máy in)" : ""}

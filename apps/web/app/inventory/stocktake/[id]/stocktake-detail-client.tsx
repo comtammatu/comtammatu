@@ -18,6 +18,13 @@ import {
 } from "@comtammatu/ui/components/alert-dialog";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@comtammatu/ui/components/empty";
+import { Progress } from "@comtammatu/ui/components/progress";
+import {
   Table,
   TableBody,
   TableCell,
@@ -251,7 +258,7 @@ export function StocktakeDetailClient({
             Kiểm soát cuối ca
           </p>
           <div className="space-y-1">
-            <h1 className="text-3xl font-semibold tracking-tight">
+            <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
               {`KK-${session.id}`}
             </h1>
             <p className="text-sm text-muted-foreground">{headerDescription}</p>
@@ -322,12 +329,7 @@ export function StocktakeDetailClient({
                 </span>{" "}
                 đã đếm ({progressPct}%)
               </span>
-              <div className="h-2 flex-1 max-w-48 rounded-full bg-muted">
-                <div
-                  className="h-full rounded-full bg-primary transition-all"
-                  style={{ width: `${progressPct}%` }}
-                />
-              </div>
+              <Progress value={progressPct} className="h-2 max-w-48 flex-1" />
             </div>
           </CardContent>
         </Card>
@@ -436,15 +438,17 @@ function CountingPhase({
       <Card className="overflow-hidden rounded-lg">
         <CardContent className="p-0">
           {lines.length === 0 ? (
-            <div className="px-6 py-10 text-center">
-              <p className="text-base font-semibold">
-                Không có nguyên liệu để kiểm kê
-              </p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Kho hiện chưa có dòng tồn nào cần thực hiện kiểm kê trong phiên
-                này.
-              </p>
-            </div>
+            <Empty className="py-8">
+              <EmptyHeader>
+                <EmptyTitle className="text-sm font-semibold">
+                  Không có nguyên liệu để kiểm kê
+                </EmptyTitle>
+                <EmptyDescription className="text-xs leading-5">
+                  Kho hiện chưa có dòng tồn nào cần thực hiện kiểm kê trong phiên
+                  này.
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
           ) : (
             <div className="-m-4 divide-y md:-m-5">
               {lines.map((line) => (
@@ -628,15 +632,17 @@ function ResultsPhase({
         <Card className="overflow-hidden rounded-lg">
           <CardContent className="p-0">
             {lines.length === 0 ? (
-              <div className="px-6 py-10 text-center">
-                <p className="text-base font-semibold">
-                  Không có dữ liệu kiểm kê
-                </p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Kết quả chênh lệch sẽ xuất hiện tại đây sau khi phiên kiểm kê
-                  có dữ liệu.
-                </p>
-              </div>
+              <Empty className="py-8">
+                <EmptyHeader>
+                  <EmptyTitle className="text-sm font-semibold">
+                    Không có dữ liệu kiểm kê
+                  </EmptyTitle>
+                  <EmptyDescription className="text-xs leading-5">
+                    Kết quả chênh lệch sẽ xuất hiện tại đây sau khi phiên kiểm kê
+                    có dữ liệu.
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
             ) : (
               <div className="-m-4 divide-y md:-m-5">
                 {lines.map((line) => {

@@ -80,7 +80,8 @@ const ArchivedOrdersSheet = dynamic(
     })),
   { ssr: false },
 );
-import { fetchActiveOrderForTable } from "./actions";
+import { fetchActiveOrderForTable, editPendingOrderItem } from "./actions";
+import type { OrderItemRowData } from "./_components/order-detail/order-item-row";
 import { usePosAppend } from "./_hooks/use-pos-append";
 import { submitPosOrderWithRetry } from "./_utils/submit-with-retry";
 import type { CartItem, CartModifier, CartSide, OrderType } from "./types";
@@ -262,6 +263,14 @@ function PosDesktopInner({
   const [editingAppendItem, setEditingAppendItem] = useState<CartItem | null>(
     null,
   );
+  // Tap-to-edit cho món ĐÃ GỬI bếp khi status='pending'. Lưu order_item_id
+  // riêng để onConfirm gọi editPendingOrderItem (không in-place mutate cart
+  // store). seedCartItem chỉ dùng để pre-populate customizer state — KHÔNG
+  // ghi vào cart store. Server RPC re-validate status='pending'.
+  const [editingSentItem, setEditingSentItem] = useState<{
+    orderItemId: number;
+    seedCartItem: CartItem;
+  } | null>(null);
   const [isPending, startTransition] = useTransition();
   const [showCloseSession, setShowCloseSession] = useState(false);
   const [billOrderId, setBillOrderId] = useState<number | null>(null);
@@ -761,6 +770,42 @@ function PosDesktopInner({
     [menuItemById],
   );
 
+  // OrderDetailSheet → "Sửa món" tap. Lookup MenuItem từ menuItemById
+  // (nếu menu thay đổi/đã reload, item.menu_item_id có thể không còn) +
+  // construct seedCartItem từ row snapshot để customizer pre-populate state.
+  // Server-side guard re-validates status='pending'; UI gate là UX hint.
+  const handleStartEditSent = useCallback(
+    (snapshot: OrderItemRowData) => {
+      if (snapshot.menu_item_id == null) {
+        toast.error("Thiếu dữ liệu món — tải lại đơn rồi thử lại.");
+        return;
+      }
+      const menuItem = menuItemById.get(snapshot.menu_item_id);
+      if (!menuItem) {
+        toast.error("Món này không còn trong thực đơn.");
+        return;
+      }
+      const seedCartItem: CartItem = {
+        key: `edit-sent-${String(snapshot.id)}`,
+        menu_item_id: snapshot.menu_item_id,
+        item_name: snapshot.item_name,
+        variant_id: snapshot.variant_id ?? undefined,
+        variant_name: snapshot.variant_name ?? undefined,
+        quantity: snapshot.quantity,
+        unit_price: snapshot.unit_price,
+        modifiers: snapshot.modifiers,
+        sides: snapshot.sides,
+        note: snapshot.note ?? undefined,
+      };
+      // Clear other editing modes — chỉ 1 customizer flow active một lúc.
+      setEditingCartItem(null);
+      setEditingAppendItem(null);
+      setEditingSentItem({ orderItemId: snapshot.id, seedCartItem });
+      setCustomizerItem(menuItem);
+    },
+    [menuItemById],
+  );
+
   const handleCustomizerConfirm = useCallback(
     (
       item: MenuItem,
@@ -772,6 +817,36 @@ function PosDesktopInner({
       note: string | undefined,
       quantity: number,
     ) => {
+      // edit-sent: call server action — không in-place mutate cart store.
+      // Đặt branch này TRƯỚC editingCartItem/editingAppendItem để safety:
+      // editingSentItem chỉ set khi parent gọi handleStartEditSent.
+      if (editingSentItem) {
+        const orderItemId = editingSentItem.orderItemId;
+        startTransition(async () => {
+          const r = await editPendingOrderItem(orderItemId, {
+            variantId: variantId ?? null,
+            variantName: variantName ?? null,
+            unitPrice,
+            modifiers,
+            sides,
+            note: note ?? null,
+            quantity,
+          });
+          if (r.success) {
+            toast.success("Đã cập nhật món");
+            if (r.data?.wasSentToKitchen) {
+              toast.message("Phiếu bếp đã in trước đó — báo bếp cập nhật");
+            }
+            void refreshOperational();
+            setEditingSentItem(null);
+            setCustomizerItem(null);
+          } else {
+            toast.error(r.error ?? "Không thể sửa món.");
+          }
+        });
+        return;
+      }
+
       if (editingCartItem) {
         const hasNote = note !== undefined && note.length > 0;
         const baseKey = makeCartKey(item.id, variantId, modifiers, sides);
@@ -901,6 +976,8 @@ function PosDesktopInner({
       cartStore,
       editingAppendItem,
       editingCartItem,
+      editingSentItem,
+      refreshOperational,
       replaceCartItems,
     ],
   );
@@ -1110,46 +1187,26 @@ function PosDesktopInner({
         : `Bàn ${selectedTableNumber ?? ""}`
     : undefined;
 
-  const mobileHeaderContextAction =
-    menuContextReady && appendTarget == null ? (
-      cartOrderType === "takeaway" ? (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="h-7 min-h-0 shrink-0 px-2 text-xs font-bold"
-          onClick={() => {
-            if (cartItemCount > 0) {
-              toast.message(
-                "Giỏ đang có món. Xóa đơn nháp trong giỏ rồi mới đổi sang Tại bàn.",
-              );
-              setShowOrders(false);
-              setCartDrawerOpen(true);
-              return;
-            }
-            setShowOrders(false);
-            setCartDrawerOpen(false);
-            handleOrderTypeChange("dine_in");
-          }}
-        >
-          Chọn bàn
-        </Button>
-      ) : (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="h-7 min-h-0 shrink-0 px-2 text-xs font-bold"
-          onClick={() => {
-            setShowOrders(false);
-            setCartDrawerOpen(false);
-            setActiveTable(null);
-          }}
-        >
-          Đổi bàn
-        </Button>
-      )
-    ) : null;
+  // "Đổi bàn" / "Chọn bàn" trước đây ở header nhưng bị chen với "Thoát" + "Chốt ca"
+  // và đã có icon LayoutGrid trên FAB. Giờ gom hết vào FAB (xem PosMobileActionBar)
+  // để header chỉ còn 1 menu overflow ⋮.
+  const handleSwitchTableMode = useCallback(() => {
+    if (cartOrderType === "dine_in") {
+      setShowOrders(false);
+      setCartDrawerOpen(false);
+      setActiveTable(null);
+      return;
+    }
+    if (cartItemCount > 0) {
+      toast.message("Giỏ đang có món — xoá giỏ rồi mới đổi sang Tại bàn.");
+      setShowOrders(false);
+      setCartDrawerOpen(true);
+      return;
+    }
+    setShowOrders(false);
+    setCartDrawerOpen(false);
+    handleOrderTypeChange("dine_in");
+  }, [cartItemCount, cartOrderType, handleOrderTypeChange, setActiveTable]);
 
   const mobileSidebarDrawer = isMobile ? (
     <Drawer
@@ -1210,7 +1267,6 @@ function PosDesktopInner({
           canCloseShift={canCloseShift}
           onShowCloseSession={openCloseSession}
           contextLabel={mobileHeaderContextLabel}
-          contextAction={mobileHeaderContextAction}
         />
       </div>
 
@@ -1255,12 +1311,7 @@ function PosDesktopInner({
           void refreshOrders();
           setCartDrawerOpen(true);
         }}
-        onEnterTablePicker={() => {
-          setShowOrders(false);
-          setCartDrawerOpen(false);
-          handleOrderTypeChange("dine_in");
-          setActiveTable(null);
-        }}
+        onSwitchTableMode={handleSwitchTableMode}
         onOpenCartDrawer={() => {
           setShowOrders(false);
           setCartDrawerOpen(true);
@@ -1278,17 +1329,24 @@ function PosDesktopInner({
           setCustomizerItem(null);
           setEditingCartItem(null);
           setEditingAppendItem(null);
+          setEditingSentItem(null);
         }}
         onConfirm={handleCustomizerConfirm}
         mode={
-          editingCartItem || editingAppendItem
-            ? "edit"
-            : appendTarget
-              ? "append"
-              : "new"
+          editingSentItem
+            ? "edit-sent"
+            : editingCartItem || editingAppendItem
+              ? "edit"
+              : appendTarget
+                ? "append"
+                : "new"
         }
         appendOrderLabel={appendTarget?.orderNumber ?? null}
-        initialCartItem={editingCartItem ?? editingAppendItem}
+        initialCartItem={
+          editingSentItem?.seedCartItem ??
+          editingCartItem ??
+          editingAppendItem
+        }
       />
 
       <OrderDetailSheet
@@ -1317,17 +1375,24 @@ function PosDesktopInner({
           setCartDrawerOpen(false);
           startAppendTarget(oid, onum);
           setShowOrders(false);
-          toast.message("Chọn món trên menu, kiểm tra lại rồi gửi món thêm");
+          toast.message("Chạm món trên menu để thêm");
+        }}
+        onStartEditSent={(snapshot) => {
+          // Close detail trước rồi mới mở customizer — tránh stack 2 sheet
+          // trên mobile (focus trap fight). refresh on confirm via
+          // refreshOperational sẽ re-open detail nếu user click lại.
+          closeOrderDetail();
+          handleStartEditSent(snapshot);
         }}
         onReorderToCart={(items, skippedCount) => {
           replaceCartItems(items);
           setShowOrders(false);
           if (skippedCount > 0) {
             toast.message(
-              `Đã bỏ qua ${String(skippedCount)} món không còn trong thực đơn.`,
+              `Bỏ qua ${String(skippedCount)} món đã rời thực đơn.`,
             );
           } else {
-            toast.success("Đã tạo giỏ đơn mới từ đơn cũ");
+            toast.success("Đã sao chép vào giỏ");
           }
         }}
         tables={tables}

@@ -43,7 +43,7 @@ export default async function PosSettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold">POS</h2>
+        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">POS</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Quản lý máy POS theo chi nhánh để mở ca và chọn đúng quầy làm việc.
         </p>

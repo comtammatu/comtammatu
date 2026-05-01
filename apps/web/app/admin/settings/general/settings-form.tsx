@@ -9,7 +9,6 @@ import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@comtammatu/ui/components/card";
@@ -96,7 +95,6 @@ export function SettingsForm({ settings }: SettingsFormProps) {
       <Card>
         <CardHeader>
           <CardTitle>Thuế & Phí</CardTitle>
-          <CardDescription>Áp dụng cho toàn hệ thống</CardDescription>
         </CardHeader>
         <CardContent>
           <FieldGroup className="grid gap-4 sm:grid-cols-2">
@@ -130,7 +128,6 @@ export function SettingsForm({ settings }: SettingsFormProps) {
       <Card>
         <CardHeader>
           <CardTitle>Thông tin liên hệ</CardTitle>
-          <CardDescription>Hiển thị trên hóa đơn</CardDescription>
         </CardHeader>
         <CardContent>
           <FieldGroup className="grid gap-4 sm:grid-cols-2">

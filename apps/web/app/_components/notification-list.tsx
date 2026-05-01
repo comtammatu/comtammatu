@@ -2,6 +2,13 @@
 
 import Link from "next/link";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@comtammatu/ui/components/empty";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Skeleton } from "@comtammatu/ui/components/skeleton";
 import { Inbox as IconInbox } from "lucide-react";
@@ -163,15 +170,19 @@ export function NotificationList({
           snapshotConfig={{ excludeSelectors: ["svg"] }}
         >
           {items.length === 0 && !loading ? (
-            <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
-              <IconInbox className="size-8 text-muted-foreground" aria-hidden />
-              <p className="text-sm font-medium">
-                {messages.notifications.empty}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {messages.notifications.emptyHint}
-              </p>
-            </div>
+            <Empty className="py-10">
+              <EmptyMedia variant="icon">
+                <IconInbox aria-hidden />
+              </EmptyMedia>
+              <EmptyHeader>
+                <EmptyTitle className="text-sm font-semibold">
+                  {messages.notifications.empty}
+                </EmptyTitle>
+                <EmptyDescription className="text-xs leading-5">
+                  {messages.notifications.emptyHint}
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
           ) : (
             <NotificationRows
               items={items}

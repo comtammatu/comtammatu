@@ -7,6 +7,12 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@comtammatu/ui/components/empty";
+import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
@@ -217,18 +223,20 @@ export function PurchaseOrdersClient({
             {isMobile ? (
               <div className="divide-y">
                 {filteredRows.length === 0 ? (
-                  <div className="px-4 py-10 text-center">
-                    <p className="text-base font-semibold">
-                      {showEmptyResults
-                        ? "Không tìm thấy đơn đặt hàng phù hợp"
-                        : "Chưa có đơn đặt hàng"}
-                    </p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {showEmptyResults
-                        ? "Thử đổi bộ lọc hoặc từ khóa để xem thêm kết quả."
-                        : 'Nhấn "Tạo PO" để bắt đầu lập đơn mua đầu tiên.'}
-                    </p>
-                  </div>
+                  <Empty className="py-8">
+                    <EmptyHeader>
+                      <EmptyTitle className="text-sm font-semibold">
+                        {showEmptyResults
+                          ? "Không tìm thấy đơn đặt hàng phù hợp"
+                          : "Chưa có đơn đặt hàng"}
+                      </EmptyTitle>
+                      <EmptyDescription className="text-xs leading-5">
+                        {showEmptyResults
+                          ? "Thử đổi bộ lọc hoặc từ khóa để xem thêm kết quả."
+                          : 'Nhấn "Tạo PO" để bắt đầu lập đơn mua đầu tiên.'}
+                      </EmptyDescription>
+                    </EmptyHeader>
+                  </Empty>
                 ) : null}
 
                 {filteredRows.map((row) => (

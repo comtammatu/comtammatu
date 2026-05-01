@@ -409,7 +409,7 @@ export function GRNDetailClient({
               <p className="text-sm font-medium text-muted-foreground">
                 Phiếu nhập kho
               </p>
-              <h1 className="text-3xl font-semibold tracking-tight">
+              <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
                 {grn.code}
               </h1>
               <p className="text-sm text-muted-foreground">
@@ -1101,7 +1101,8 @@ function LineRow({
 
   if (!isDraft) {
     return (
-      <div className="rounded-lg border bg-muted/30 p-4">
+      <Card className="bg-muted/30">
+        <CardContent className="p-4">
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="font-bold">{line.name}</p>
@@ -1157,13 +1158,15 @@ function LineRow({
             Cần kiểm tra
           </Badge>
         ) : null}
-      </div>
+        </CardContent>
+      </Card>
     );
   }
 
   // Draft mode — editable
   return (
-    <div className="space-y-3 rounded-lg border bg-card p-4">
+    <Card>
+      <CardContent className="space-y-3 p-4">
       <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="font-bold">{line.name}</p>
@@ -1332,7 +1335,8 @@ function LineRow({
           onChange={(e) => onChange({ lot: e.target.value })}
         />
       </Field>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
 

@@ -7,6 +7,11 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
+  Empty,
+  EmptyHeader,
+  EmptyTitle,
+} from "@comtammatu/ui/components/empty";
+import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
@@ -127,11 +132,15 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
         {isMobile ? (
           <div className="flex flex-col gap-2">
             {filtered.length === 0 ? (
-              <div className="py-12 text-center text-sm text-muted-foreground">
-                {search.trim() || statusFilter !== "all"
-                  ? "Không tìm thấy phiếu nhập phù hợp"
-                  : "Chưa có phiếu nhập kho nào"}
-              </div>
+              <Empty className="py-8">
+                <EmptyHeader>
+                  <EmptyTitle className="text-sm font-semibold">
+                    {search.trim() || statusFilter !== "all"
+                      ? "Không tìm thấy phiếu nhập phù hợp"
+                      : "Chưa có phiếu nhập kho nào"}
+                  </EmptyTitle>
+                </EmptyHeader>
+              </Empty>
             ) : (
               filtered.map((g) => (
                 <InteractiveCard

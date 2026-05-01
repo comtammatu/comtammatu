@@ -16,6 +16,12 @@ import {
   DialogTitle,
 } from "@comtammatu/ui/components/dialog";
 import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@comtammatu/ui/components/empty";
+import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
@@ -217,14 +223,18 @@ export function StocktakeListClient({
         {isMobile ? (
           <div className="flex flex-col gap-2">
             {filtered.length === 0 ? (
-              <div className="px-4 py-16 text-center">
-                <IconClipboardCheck className="mx-auto size-10 text-muted-foreground/40" />
-                <p className="mt-2 text-sm font-medium text-muted-foreground">
-                  {search || statusFilter !== "all"
-                    ? "Không tìm thấy phiên nào"
-                    : "Chưa có phiên kiểm kê nào"}
-                </p>
-              </div>
+              <Empty className="border bg-card py-10">
+                <EmptyMedia variant="icon">
+                  <IconClipboardCheck />
+                </EmptyMedia>
+                <EmptyHeader>
+                  <EmptyTitle className="text-sm font-semibold">
+                    {search || statusFilter !== "all"
+                      ? "Không tìm thấy phiên nào"
+                      : "Chưa có phiên kiểm kê nào"}
+                  </EmptyTitle>
+                </EmptyHeader>
+              </Empty>
             ) : (
               filtered.map((r) => (
                 <InteractiveCard

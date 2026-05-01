@@ -92,7 +92,7 @@ export default async function BranchPrintersPage({
   }));
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 p-4 md:p-6">
+    <div className="mx-auto max-w-5xl space-y-6 p-4 md:p-6">
       <div className="flex items-center gap-3">
         <Button asChild variant="outline" size="sm" className="gap-1">
           <Link href={`/br/${branchId}/pos`}>
@@ -101,7 +101,7 @@ export default async function BranchPrintersPage({
           </Link>
         </Button>
         <div>
-          <h2 className="text-xl font-semibold">Máy in</h2>
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Máy in</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Cấu hình 3 máy in của {branchRes.data.name}: hóa đơn, bếp 1, bếp 2
           </p>

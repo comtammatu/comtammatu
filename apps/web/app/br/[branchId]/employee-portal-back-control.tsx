@@ -16,7 +16,7 @@ export function EmployeePortalBackControl({
       variant="ghost"
       size="sm"
       className={cn(
-        "h-7 shrink-0 gap-1 px-1.5 text-xs text-muted-foreground sm:px-2",
+        "h-9 min-h-9 shrink-0 gap-1.5 px-2.5 text-sm text-muted-foreground",
         className,
       )}
       asChild
@@ -26,8 +26,8 @@ export function EmployeePortalBackControl({
         title="Quay lại Cổng nhân viên"
         aria-label="Quay lại Cổng nhân viên"
       >
-        <IconDoorEnter className="size-3 shrink-0 sm:size-3.5" />
-        <span>Thóat</span>
+        <IconDoorEnter className="size-4 shrink-0" />
+        <span>Thoát</span>
       </Link>
     </Button>
   );

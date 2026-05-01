@@ -88,8 +88,7 @@ export function ReduceQuantityDialog({
             {itemLabel ? `Giảm SL: ${itemLabel}` : "Giảm số lượng?"}
           </AlertDialogTitle>
           <AlertDialogDescription>
-            Số lượng hiện tại: {currentQuantity}. Chọn số lượng mới (
-            {minQty}–{maxQty}). Đã gửi bếp sẽ in phiếu báo giảm.
+            Hiện tại {currentQuantity}. Mới: {minQty}–{maxQty}.
           </AlertDialogDescription>
         </AlertDialogHeader>
 

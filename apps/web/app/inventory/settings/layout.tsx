@@ -43,9 +43,9 @@ export default async function InventorySettingsLayout({
               <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 Settings
               </p>
-              <p className="font-heading text-2xl font-semibold">
+              <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
                 Chính sách & mặc định
-              </p>
+              </h1>
               <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
                 Khu vực này chỉ giữ các cấu hình hành vi hoặc policy của
                 Inventory. Dữ liệu master data đã được dồn về nhóm `Quản lý`

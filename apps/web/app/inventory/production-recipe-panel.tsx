@@ -33,7 +33,6 @@ import {
   Card,
   CardAction,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@comtammatu/ui/components/card";
@@ -538,10 +537,6 @@ export function ProductionRecipePanel({
             <IconClipboardList />
             Công thức sản xuất
           </CardTitle>
-          <CardDescription>
-            Quản trị BOM theo từng thành phẩm; mỗi BOM có thể gồm nhiều nguyên
-            liệu đầu vào.
-          </CardDescription>
           {canManageRecipes ? (
             <CardAction className="col-span-full row-auto flex flex-wrap justify-start gap-2 sm:col-start-2 sm:row-span-2 sm:row-start-1 sm:justify-self-end">
               <ProductionRecipeImportExportMenu
@@ -572,7 +567,7 @@ export function ProductionRecipePanel({
         open={recipeDialogOpen}
         onOpenChange={handleRecipeDialogOpenChange}
       >
-        <DialogContent className="max-h-screen overflow-y-auto sm:max-w-5xl">
+        <DialogContent className="sm:max-w-5xl">
           <DialogHeader>
             <DialogTitle>
               {finishedGoodLocked ? "Cập nhật BOM" : "Nhập BOM sản xuất"}
@@ -830,9 +825,6 @@ export function ProductionRecipePanel({
                     {group.lines.length} nguyên liệu
                   </Badge>
                 </CardTitle>
-                <CardDescription>
-                  Định mức nguyên liệu của thành phẩm.
-                </CardDescription>
                 {canManageRecipes ? (
                   <CardAction className="col-span-full row-auto flex flex-wrap justify-start gap-2 sm:col-start-2 sm:row-span-2 sm:row-start-1 sm:justify-self-end">
                     <Button

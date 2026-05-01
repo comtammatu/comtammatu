@@ -9,6 +9,12 @@ import {
   Card,
   CardContent,
 } from "@comtammatu/ui/components/card";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@comtammatu/ui/components/empty";
 import { InventoryHeader } from "../_components/inventory-header";
 import { SimpleBarChart, TrendSparkline } from "../_lib/chart-primitives";
 import { formatVND } from "../_lib/format";
@@ -249,23 +255,25 @@ export function ReportsClient({
                 </p>
               </>
             ) : (
-              <div className="flex min-h-40 flex-col items-center justify-center rounded-lg border border-dashed bg-muted/20 px-6 py-10 text-center">
-                <p className="text-base font-semibold">
-                  Chưa có đủ dữ liệu food cost
-                </p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Cần thêm dữ liệu thực tế.
-                </p>
-              </div>
+              <Empty className="min-h-40 py-8">
+                <EmptyHeader>
+                  <EmptyTitle className="text-sm font-semibold">
+                    Chưa có đủ dữ liệu food cost
+                  </EmptyTitle>
+                  <EmptyDescription className="text-xs leading-5">
+                    Cần thêm dữ liệu thực tế.
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
             )}
           </CardContent>
         </Card>
       </div>
 
       {/* Report catalog */}
-      <p className="font-heading text-xl font-semibold text-foreground">
+      <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">
         Báo cáo chi tiết
-      </p>
+      </h2>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
           {

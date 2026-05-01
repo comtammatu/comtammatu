@@ -113,7 +113,7 @@ export default async function PrintersPage() {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold">Máy in</h2>
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Máy in</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Cấu hình máy in theo từng chi nhánh: loại phiếu và danh mục món in
             trên từng máy.

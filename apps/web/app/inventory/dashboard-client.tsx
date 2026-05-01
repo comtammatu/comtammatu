@@ -689,9 +689,6 @@ export function DashboardClient(props: DashboardProps) {
                   <CardTitle className="text-sm">
                     Cảnh báo và luồng ưu tiên
                   </CardTitle>
-                  <CardDescription className="text-xs">
-                    Các vấn đề cần chú ý
-                  </CardDescription>
                 </div>
                 <Button variant="ghost" size="sm" asChild>
                   <Link href={withBranch(paths.expiry)}>

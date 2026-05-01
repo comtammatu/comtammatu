@@ -16,7 +16,6 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Empty,
-  EmptyDescription,
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
@@ -282,9 +281,6 @@ function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
         </EmptyMedia>
         <EmptyHeader>
           <EmptyTitle>Chưa có món trong thực đơn</EmptyTitle>
-          <EmptyDescription>
-            Thêm danh mục và món trong quản trị để phục vụ tại POS.
-          </EmptyDescription>
         </EmptyHeader>
       </Empty>
     );
@@ -405,9 +401,6 @@ function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
               </EmptyMedia>
               <EmptyHeader>
                 <EmptyTitle>Không tìm thấy món phù hợp</EmptyTitle>
-                <EmptyDescription>
-                  Xóa tìm kiếm hoặc chọn danh mục khác để tiếp tục.
-                </EmptyDescription>
               </EmptyHeader>
             </Empty>
           ) : null}

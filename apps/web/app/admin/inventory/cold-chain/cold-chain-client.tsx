@@ -4,7 +4,6 @@ import { useState, useTransition } from "react";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@comtammatu/ui/components/card";
@@ -79,24 +78,20 @@ export function ColdChainClient({ initial }: Props) {
   const flaggedCount = rows.filter((r) => r.requiresManualReview).length;
 
   return (
-    <div className="container mx-auto max-w-3xl space-y-4 py-6">
+    <div className="space-y-4">
       <div className="flex items-center gap-2">
         <IconSnowflake className="size-6 text-info" />
-        <h1 className="text-2xl font-semibold">Danh mục cần duyệt thủ công</h1>
+        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Danh mục cần duyệt thủ công</h1>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Cold-chain + manual-review categories</CardTitle>
-          <CardDescription>
-            Bật cho nhóm hàng cần kiểm tra thủ công mỗi lần nhập (thịt tươi,
-            sữa, hải sản, v.v.). Mọi GRN có SKU thuộc nhóm đã bật sẽ{" "}
-            <strong>không auto-approve</strong> (điều kiện c7 fail).
-            <br />
-            Hiện đang bật: <Badge variant="secondary">{flaggedCount}</Badge> /
-            {" "}
-            {rows.length} nhóm.
-          </CardDescription>
+          <CardTitle className="flex items-center gap-2">
+            Cold-chain + manual-review categories
+            <Badge variant="secondary">
+              {flaggedCount}/{rows.length}
+            </Badge>
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {rows.length === 0 ? (
@@ -124,7 +119,7 @@ export function ColdChainClient({ initial }: Props) {
                           {row.itemCount} SKU
                         </Badge>
                         {row.requiresManualReview ? (
-                          <Badge className="bg-info/15 text-info border-info/40 border text-xs">
+                          <Badge variant="info" className="text-xs">
                             Manual review
                           </Badge>
                         ) : null}

@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@comtammatu/ui/components/card";
 import { Label } from "@comtammatu/ui/components/label";
@@ -153,9 +154,9 @@ export function NewStocktakeSessionClient({
                     Chỉ thay đổi qua chính sách kiểm kê đã audit.
                   </div>
                 </div>
-                <span className="rounded-md border bg-muted px-2 py-1 text-xs font-medium">
+                <Badge variant={effectiveBlind ? "default" : "outline"}>
                   {effectiveBlind ? "BẬT" : "TẮT"}
-                </span>
+                </Badge>
               </div>
             </CardContent>
           </Card>

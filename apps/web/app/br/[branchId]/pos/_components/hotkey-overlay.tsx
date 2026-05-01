@@ -3,7 +3,6 @@
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
   SheetHeader,
   SheetTitle,
 } from "@comtammatu/ui/components/sheet";
@@ -62,11 +61,7 @@ export function HotkeyOverlay({ open, onOpenChange }: HotkeyOverlayProps) {
       <SheetContent side="bottom" className="max-h-dvh p-0">
         <div className="flex max-h-dvh flex-col overflow-hidden">
           <SheetHeader className="border-b px-5 pt-5 pb-3 text-left">
-            <SheetTitle>Phím tắt POS</SheetTitle>
-            <SheetDescription>
-              Dùng bàn phím để thao tác nhanh hơn. Phím không áp dụng khi đang
-              gõ trong ô nhập (ngoại trừ ⌘/Ctrl + Enter).
-            </SheetDescription>
+            <SheetTitle>Phím tắt</SheetTitle>
           </SheetHeader>
 
           <div className="flex-1 overflow-y-auto px-5 py-4">

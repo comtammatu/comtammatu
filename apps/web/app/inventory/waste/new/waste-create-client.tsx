@@ -239,7 +239,7 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
     <div className="container mx-auto max-w-4xl space-y-4 py-6">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">Phiếu hủy hàng (waste)</h1>
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Phiếu hủy hàng (waste)</h1>
           <p className="text-sm text-muted-foreground">
             {context.branch.name}{" "}
             <Badge variant="outline" className="ml-1 text-xs">

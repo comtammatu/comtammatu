@@ -302,7 +302,7 @@ export function NewPoClient({
             <p className="text-sm font-medium text-muted-foreground">
               Procurement Draft
             </p>
-            <h1 className="text-3xl font-semibold tracking-tight">
+            <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
               Tạo đơn đặt hàng
             </h1>
             <p className="text-sm text-muted-foreground">

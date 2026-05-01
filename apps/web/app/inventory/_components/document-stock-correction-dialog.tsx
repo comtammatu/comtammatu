@@ -7,7 +7,6 @@ import { Button } from "@comtammatu/ui/components/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -163,11 +162,7 @@ export function DocumentStockCorrectionDialog({
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Điều chỉnh tồn kho</DialogTitle>
-          <DialogDescription>
-            Tạo bút toán điều chỉnh cho {documentCode}; chứng từ gốc không bị
-            sửa trực tiếp.
-          </DialogDescription>
+          <DialogTitle>Điều chỉnh tồn — {documentCode}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">

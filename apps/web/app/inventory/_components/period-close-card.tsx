@@ -149,13 +149,11 @@ export function PeriodCloseCard({
                 </Badge>
               )}
             </CardTitle>
-            <CardDescription>
-              {isHardClosed
-                ? `Hard closed: ${fmt(period.hardClosedAt!)}`
-                : isSoftClosed
-                  ? `Soft closed: ${fmt(period.softClosedAt!)} — back-dated posts tự shift sang kỳ sau`
-                  : "Mở — mọi mutation được ghi bình thường"}
-            </CardDescription>
+            {isHardClosed ? (
+              <CardDescription>{fmt(period.hardClosedAt!)}</CardDescription>
+            ) : isSoftClosed ? (
+              <CardDescription>{fmt(period.softClosedAt!)}</CardDescription>
+            ) : null}
           </div>
         </div>
       </CardHeader>

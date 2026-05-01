@@ -5,6 +5,12 @@ import { ArrowRight as IconArrowRight, ClipboardCheck as IconClipboardCheck, Fil
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@comtammatu/ui/components/empty";
+import {
   Table,
   TableBody,
   TableCell,
@@ -200,14 +206,16 @@ export function ReceivingClient({
                   </p>
                 </div>
                 {recentActivity.length === 0 ? (
-                  <div className="px-4 py-10 text-center">
-                    <p className="text-sm font-semibold">
-                      Chưa có hoạt động nào
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      PO, GRN và hóa đơn mới sẽ xuất hiện tại đây khi phát sinh.
-                    </p>
-                  </div>
+                  <Empty className="py-8">
+                    <EmptyHeader>
+                      <EmptyTitle className="text-sm font-semibold">
+                        Chưa có hoạt động nào
+                      </EmptyTitle>
+                      <EmptyDescription className="text-xs leading-5">
+                        PO, GRN và hóa đơn mới sẽ xuất hiện tại đây khi phát sinh.
+                      </EmptyDescription>
+                    </EmptyHeader>
+                  </Empty>
                 ) : (
                   recentActivity.map((item) => (
                     <InteractiveCard

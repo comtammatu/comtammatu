@@ -22,11 +22,11 @@ export function PeriodAdminClient({ initial }: Props) {
   const router = useRouter();
 
   return (
-    <div className="container mx-auto max-w-3xl space-y-4 py-6">
+    <div className="space-y-4">
       <div className="flex items-center gap-2">
         <IconCalendarStats className="size-6 text-info" />
         <div>
-          <h1 className="text-2xl font-semibold">Kỳ kế toán</h1>
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Kỳ kế toán</h1>
           <p className="text-sm text-muted-foreground">
             Soft close tự động ngày 5 tháng sau • hard close ngày 15 (cron).
             Reopen cần typed confirm + audit trail.

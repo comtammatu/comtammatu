@@ -149,7 +149,7 @@ export function SupplierReturnDetailClient({ data }: Props) {
         }
       />
       <div className="flex-1 overflow-auto p-4">
-        <div className="mx-auto max-w-6xl space-y-6">
+        <div className="mx-auto max-w-7xl space-y-6">
           {header.source === "post_receipt" && header.status === "draft" ? (
             <Alert>
               <IconInfoCircle className="size-4" />

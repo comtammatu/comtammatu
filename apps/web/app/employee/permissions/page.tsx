@@ -3,7 +3,6 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@comtammatu/ui/components/card";
@@ -38,9 +37,6 @@ export default async function PermissionsPage() {
           <CardTitle className="flex items-center gap-2 text-base">
             <IconShieldCheck className="size-4" /> Quyền hạn của tôi
           </CardTitle>
-          <CardDescription>
-            Trang kiểm tra quyền hiện tại của tài khoản đang đăng nhập.
-          </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-2 text-sm">
           <div className="flex items-center gap-2">

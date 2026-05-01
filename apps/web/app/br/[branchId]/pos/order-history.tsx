@@ -7,7 +7,6 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Empty,
-  EmptyDescription,
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
@@ -136,7 +135,7 @@ interface ActiveOrdersListProps {
 
 /**
  * Sidebar list of orders the cashier still needs to act on (kitchen flow
- * + payment). Provider holds active rows only; archived ("Đơn hòan thành") lives
+ * + payment). Provider holds active rows only; archived ("Đơn hoàn thành") lives
  * in `_components/archived-orders-sheet.tsx`. We still defensively filter
  * by status because the provider can briefly show a paid row between the
  * realtime payload arriving and the terminal-flip removal landing.
@@ -166,9 +165,6 @@ function ActiveOrdersListComponent({
         </EmptyMedia>
         <EmptyHeader>
           <EmptyTitle>Không có hóa đơn</EmptyTitle>
-          <EmptyDescription>
-            Đơn mới sẽ hiện ở đây. Hóa đơn đã thanh toán xem ở "Đơn hòan thành".
-          </EmptyDescription>
         </EmptyHeader>
       </Empty>
     );

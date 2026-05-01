@@ -6,7 +6,6 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Empty,
-  EmptyDescription,
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
@@ -156,9 +155,6 @@ function PosTableGateComponent({
           </EmptyMedia>
           <EmptyHeader>
             <EmptyTitle>Chưa có bàn</EmptyTitle>
-            <EmptyDescription>
-              Liên hệ quản lý để thiết lập bàn trước khi bán tại chỗ.
-            </EmptyDescription>
           </EmptyHeader>
         </Empty>
       ) : (

@@ -7,6 +7,7 @@ import {
   Plus as IconPlus,
   Receipt as IconReceipt,
   ShoppingCart as IconShoppingCart,
+  Utensils as IconUtensils,
 } from "lucide-react";
 import type { OrderType } from "../types";
 
@@ -21,8 +22,13 @@ export interface PosMobileActionBarProps {
   ordersCount: number;
   /** Opens the orders drawer view (refreshes then shows). */
   onOpenOrdersDrawer: () => void;
-  /** Jumps back to table picker (dine_in mode, table cleared). */
-  onEnterTablePicker: () => void;
+  /**
+   * "Đổi bàn" / "Chọn bàn" / "Tại bàn" — chuyển context bàn. Trước đây nằm
+   * trên header dạng nút h-7 nhỏ, đã chen với "Thoát" + "Chốt ca" và bị
+   * duplicate với icon LayoutGrid trong FAB. Gom về FAB để mỗi action có 1
+   * nút duy nhất, đủ to cho ngón cái.
+   */
+  onSwitchTableMode: () => void;
   /** Opens the cart drawer in its non-orders view. */
   onOpenCartDrawer: () => void;
   /** Opens the append-draft drawer while adding items to an existing order. */
@@ -38,9 +44,6 @@ const ACTION_PRIMARY_BUTTON_CLASS =
 const ACTION_SECONDARY_BUTTON_CLASS =
   "min-h-14 min-w-14 flex-1 border border-border bg-secondary text-base font-bold text-secondary-foreground shadow-lg";
 
-const ACTION_ICON_BUTTON_CLASS =
-  "min-h-14 min-w-14 border border-border bg-secondary px-3 text-base font-bold text-secondary-foreground shadow-lg";
-
 function PosMobileActionBarComponent({
   isMobile,
   isAppendingToOrder,
@@ -51,7 +54,7 @@ function PosMobileActionBarComponent({
   appendDraftQuantity,
   ordersCount,
   onOpenOrdersDrawer,
-  onEnterTablePicker,
+  onSwitchTableMode,
   onOpenCartDrawer,
   onOpenAppendDrawer,
 }: PosMobileActionBarProps) {
@@ -76,9 +79,11 @@ function PosMobileActionBarComponent({
     );
   }
 
-  return (
-    <div className={ACTION_BAR_CLASS}>
-      {!menuContextReady && (
+  // Chưa chọn bàn / chưa setup → CTA duy nhất là mở danh sách đơn trong ca,
+  // tránh ngộ nhận có thể đặt món khi context chưa ready.
+  if (!menuContextReady) {
+    return (
+      <div className={ACTION_BAR_CLASS}>
         <Button
           type="button"
           variant="secondary"
@@ -91,51 +96,61 @@ function PosMobileActionBarComponent({
             <span className="tabular-nums">{ordersCount}</span>
           )}
         </Button>
-      )}
-      {menuContextReady &&
-        cartOrderType === "dine_in" &&
-        selectedTableId !== null && (
-          <Button
-            type="button"
-            variant="outline"
-            className={ACTION_ICON_BUTTON_CLASS}
-            onClick={onEnterTablePicker}
-            aria-label="Xem bàn"
-          >
-            <IconLayoutGrid />
-          </Button>
-        )}
-      {menuContextReady && ordersCount > 0 && (
+      </div>
+    );
+  }
+
+  // Đã có context (Bàn N hoặc Mang về). 3 nút bằng nhau, đủ to cho ngón cái:
+  //   [Đổi/Chọn bàn — outline]  [Đơn trong ca — outline]  [Giỏ mới — primary]
+  // Nút "Đổi bàn" hiện cả khi đang "Mang về" (label "Chọn bàn") để cashier
+  // chuyển nhanh sang dine-in mà không phải tìm trong header.
+  const switchLabel = cartOrderType === "dine_in" ? "Đổi bàn" : "Chọn bàn";
+  const SwitchIcon = cartOrderType === "dine_in" ? IconLayoutGrid : IconUtensils;
+
+  return (
+    <div className={ACTION_BAR_CLASS}>
+      <Button
+        type="button"
+        variant="secondary"
+        className={ACTION_SECONDARY_BUTTON_CLASS}
+        onClick={onSwitchTableMode}
+        aria-label={switchLabel}
+        disabled={
+          cartOrderType === "dine_in" && selectedTableId === null
+        }
+      >
+        <SwitchIcon data-icon="inline-start" />
+        <span>{switchLabel}</span>
+      </Button>
+      {ordersCount > 0 && (
         <Button
           type="button"
           variant="secondary"
-          className={ACTION_ICON_BUTTON_CLASS}
+          className={ACTION_SECONDARY_BUTTON_CLASS}
           onClick={onOpenOrdersDrawer}
           aria-label="Mở đơn trong ca"
         >
-          <IconReceipt />
-          <span className="sr-only">Đơn trong ca</span>
+          <IconReceipt data-icon="inline-start" />
+          <span>Đơn ca</span>
           <span className="tabular-nums">{ordersCount}</span>
         </Button>
       )}
-      {menuContextReady && (
-        <Button
-          type="button"
-          className={ACTION_PRIMARY_BUTTON_CLASS}
-          onClick={onOpenCartDrawer}
-          aria-label="Mở giỏ đơn mới"
-        >
-          <IconShoppingCart data-icon="inline-start" />
-          {cartQuantity > 0 ? (
-            <>
-              <span>Giỏ mới</span>
-              <span className="tabular-nums">{cartQuantity}</span>
-            </>
-          ) : (
-            <span>Giỏ đơn mới</span>
-          )}
-        </Button>
-      )}
+      <Button
+        type="button"
+        className={ACTION_PRIMARY_BUTTON_CLASS}
+        onClick={onOpenCartDrawer}
+        aria-label="Mở giỏ đơn mới"
+      >
+        <IconShoppingCart data-icon="inline-start" />
+        {cartQuantity > 0 ? (
+          <>
+            <span>Giỏ mới</span>
+            <span className="tabular-nums">{cartQuantity}</span>
+          </>
+        ) : (
+          <span>Giỏ mới</span>
+        )}
+      </Button>
     </div>
   );
 }

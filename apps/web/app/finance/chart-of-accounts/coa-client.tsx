@@ -5,6 +5,14 @@ import { Button } from "@comtammatu/ui/components/button";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@comtammatu/ui/components/empty";
+import {
   Table,
   TableBody,
   TableCell,
@@ -93,37 +101,36 @@ export function ChartOfAccountsClient({
 
   if (accounts.length === 0) {
     return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center gap-4 py-12 text-center">
-          <div className="flex size-14 items-center justify-center rounded-full border bg-muted text-primary">
-            <IconCircleOff className="size-8" />
-          </div>
-          <div className="space-y-1.5">
-            <h3 className="text-2xl font-semibold">
-              Chưa có hệ thống tài khoản
-            </h3>
-            <p className="max-w-md text-sm leading-6 text-muted-foreground">
-              Khởi tạo VAS để bắt đầu hạch toán.
-            </p>
-          </div>
-          <div className="flex flex-wrap justify-center gap-2">
-            <Button onClick={handleSeed} disabled={isPending}>
-              {isPending ? (
-                <Spinner className="mr-2" />
-              ) : (
-                <IconPlus className="mr-2 size-4" />
-              )}
-              Khởi tạo hệ thống tài khoản VAS
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <Empty className="border bg-card py-12">
+        <EmptyMedia variant="icon">
+          <IconCircleOff />
+        </EmptyMedia>
+        <EmptyHeader>
+          <EmptyTitle className="text-2xl font-semibold">
+            Chưa có hệ thống tài khoản
+          </EmptyTitle>
+          <EmptyDescription className="max-w-md text-sm leading-6">
+            Khởi tạo VAS để bắt đầu hạch toán.
+          </EmptyDescription>
+        </EmptyHeader>
+        <EmptyContent className="flex-row flex-wrap justify-center gap-2">
+          <Button onClick={handleSeed} disabled={isPending}>
+            {isPending ? (
+              <Spinner className="mr-2" />
+            ) : (
+              <IconPlus className="mr-2 size-4" />
+            )}
+            Khởi tạo hệ thống tài khoản VAS
+          </Button>
+        </EmptyContent>
+      </Empty>
     );
   }
 
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border bg-card shadow-sm flex flex-wrap items-center justify-between gap-4 p-4">
+      <Card>
+        <CardContent className="flex flex-wrap items-center justify-between gap-4 p-4">
         <div className="space-y-1.5">
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
             Danh mục tài khoản
@@ -141,7 +148,8 @@ export function ChartOfAccountsClient({
           <IconRefresh className="mr-2 size-4" />
           Kiểm tra thiếu
         </Button>
-      </div>
+        </CardContent>
+      </Card>
 
       <Card className="overflow-hidden rounded-lg">
         <CardContent className="px-4 sm:px-5">

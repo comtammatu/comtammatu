@@ -51,7 +51,7 @@ export default async function BranchMenuLimitsPage({
           </Link>
         </Button>
         <div className="min-w-0">
-          <h2 className="text-xl font-semibold">Hạn mức bán hàng ngày</h2>
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Hạn mức bán hàng ngày</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {branch.name} · {today}
           </p>

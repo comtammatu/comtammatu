@@ -34,7 +34,7 @@ export default async function PaymentSettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold">Thanh toán</h2>
+        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Thanh toán</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Bật VietQR và MoMo trên POS sau khi đã đặt biến môi trường trên
           hosting (Vercel / server).

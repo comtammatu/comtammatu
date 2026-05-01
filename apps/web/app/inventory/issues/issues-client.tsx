@@ -15,9 +15,13 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
+  Empty,
+  EmptyHeader,
+  EmptyTitle,
+} from "@comtammatu/ui/components/empty";
+import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -335,11 +339,15 @@ export function IssuesClient({
         {isMobile ? (
           <div className="flex flex-col gap-2">
             {filtered.length === 0 ? (
-              <div className="py-12 text-center text-sm text-muted-foreground">
-                {hasActiveFilters
-                  ? "Không tìm thấy phiếu xuất phù hợp"
-                  : "Chưa có phiếu xuất kho nào"}
-              </div>
+              <Empty className="py-8">
+                <EmptyHeader>
+                  <EmptyTitle className="text-sm font-semibold">
+                    {hasActiveFilters
+                      ? "Không tìm thấy phiếu xuất phù hợp"
+                      : "Chưa có phiếu xuất kho nào"}
+                  </EmptyTitle>
+                </EmptyHeader>
+              </Empty>
             ) : (
               filtered.map((item) => (
                 <InteractiveCard
@@ -454,9 +462,6 @@ export function IssuesClient({
                 ? "Tạo phiếu hao hụt kho"
                 : "Tạo phiếu xuất kho"}
             </DialogTitle>
-            <DialogDescription>
-              Chọn điểm vận hành và loại xuất kho cần ghi nhận.
-            </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleCreate} className="space-y-4">
             <div className="space-y-1.5">

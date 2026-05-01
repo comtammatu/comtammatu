@@ -17,6 +17,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@comtammatu/ui/components/dialog";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@comtammatu/ui/components/empty";
 import { Input } from "@comtammatu/ui/components/input";
 import {
   InputGroup,
@@ -851,15 +857,17 @@ export function SupplierInvoicesClient({
                   )}
                 </div>
               ) : (
-                <div className="rounded-lg border border-dashed px-6 py-10 text-center">
-                  <p className="text-base font-semibold">
-                    Chưa có hóa đơn để phân tích
-                  </p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Chọn một hóa đơn từ danh sách bên trái để xem chi tiết công
-                    nợ và trạng thái đối soát.
-                  </p>
-                </div>
+                <Empty className="py-8">
+                  <EmptyHeader>
+                    <EmptyTitle className="text-sm font-semibold">
+                      Chưa có hóa đơn để phân tích
+                    </EmptyTitle>
+                    <EmptyDescription className="text-xs leading-5">
+                      Chọn một hóa đơn từ danh sách bên trái để xem chi tiết công
+                      nợ và trạng thái đối soát.
+                    </EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
               )}
             </CardContent>
           </Card>

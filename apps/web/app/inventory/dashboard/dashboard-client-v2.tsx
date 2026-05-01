@@ -1,6 +1,7 @@
 "use client";
 
 import { Badge } from "@comtammatu/ui/components/badge";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { DashboardSummaryCards } from "@/inventory/_components/dashboard-summary-cards";
 import { LocationBreakdownTable } from "@/inventory/_components/location-breakdown-table";
 import { AlertsDrawer } from "@/inventory/_components/alerts-drawer";
@@ -30,10 +31,10 @@ export function DashboardClientV2({
   dashboard,
 }: Props) {
   return (
-    <div className="container mx-auto max-w-6xl space-y-4 py-6">
+    <div className="mx-auto max-w-7xl space-y-4">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
             Inventory dashboard
             <Badge variant="outline" className="ml-2 text-xs">
               v2 pilot
@@ -82,7 +83,8 @@ export function DashboardClientV2({
 function TopAlertsCard({ dashboard }: { dashboard: InventoryDashboard }) {
   const alerts = dashboard.topAlerts;
   return (
-    <section className="rounded-lg border bg-card p-4">
+    <Card>
+      <CardContent className="p-4">
       <div className="mb-2 flex items-center justify-between">
         <h3 className="text-sm font-semibold">Top 5 alerts</h3>
         {alerts.length > 0 ? (
@@ -126,14 +128,16 @@ function TopAlertsCard({ dashboard }: { dashboard: InventoryDashboard }) {
           ))}
         </ul>
       )}
-    </section>
+      </CardContent>
+    </Card>
   );
 }
 
 function InTransitCard({ dashboard }: { dashboard: InventoryDashboard }) {
   const items = dashboard.inTransit;
   return (
-    <section className="rounded-lg border bg-card p-4">
+    <Card>
+      <CardContent className="p-4">
       <div className="mb-2 flex items-center justify-between">
         <h3 className="text-sm font-semibold">Đang vận chuyển</h3>
         {items.length > 0 ? (
@@ -157,6 +161,7 @@ function InTransitCard({ dashboard }: { dashboard: InventoryDashboard }) {
           ))}
         </ul>
       )}
-    </section>
+      </CardContent>
+    </Card>
   );
 }

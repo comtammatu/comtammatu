@@ -74,7 +74,7 @@ export default async function KdsSettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold">Trạm bếp (KDS)</h2>
+        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Trạm bếp (KDS)</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Quản lý trạm hiển thị bếp và gán danh mục món ăn
         </p>

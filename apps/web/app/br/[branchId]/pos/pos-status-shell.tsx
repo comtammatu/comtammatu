@@ -9,15 +9,6 @@ import {
   EmptyTitle,
 } from "@comtammatu/ui/components/empty";
 
-type StepTone = "done" | "current" | "pending";
-
-export interface PosStatusStep {
-  label: string;
-  title: string;
-  description: string;
-  tone?: StepTone;
-}
-
 export interface PosStatusShellProps {
   icon: ReactNode;
   title: string;
@@ -27,7 +18,6 @@ export interface PosStatusShellProps {
     icon: ReactNode;
     variant?: "destructive" | "warning" | "info";
   };
-  steps?: PosStatusStep[];
 }
 
 export function PosStatusShell({

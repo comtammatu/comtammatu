@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { ROLE_LABEL_VI, type StaffRole } from "@comtammatu/shared/auth";
 import { getInventorySiteKindLabelVi } from "@comtammatu/shared/labels";
+import { Avatar, AvatarFallback } from "@comtammatu/ui/components/avatar";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Sidebar,
@@ -360,9 +361,11 @@ export function InventoryShell({
         <SidebarFooter className="p-2">
           <SidebarSeparator />
           <div className="flex items-center gap-2 px-1 pt-2 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-1 group-data-[collapsible=icon]:px-0">
-            <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">
-              {user.name.charAt(0)}
-            </div>
+            <Avatar size="sm" className="size-6">
+              <AvatarFallback className="text-xs">
+                {user.name.charAt(0)}
+              </AvatarFallback>
+            </Avatar>
             <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
               <p className="truncate text-xs font-medium">{user.name}</p>
               <p className="truncate text-xs text-muted-foreground">

@@ -182,13 +182,12 @@ export function StockMovementClient({
         <EmptyStatePanel
           className="py-12"
           title="Chọn kỳ báo cáo"
-          description="Chọn khoảng thời gian và nhấn Xem báo cáo để hiển thị biến động tồn kho."
         />
       )}
 
       {loaded && (
         <Tabs defaultValue="detail">
-          <TabsList className="h-auto w-full justify-start gap-2 overflow-x-auto rounded-lg border border-border/70 bg-muted/40 p-2">
+          <TabsList variant="toolbar">
             <TabsTrigger value="detail">
               Chi tiết ({movementRows.length})
             </TabsTrigger>

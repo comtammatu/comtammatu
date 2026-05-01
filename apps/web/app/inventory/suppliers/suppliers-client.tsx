@@ -6,6 +6,11 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
+  Empty,
+  EmptyHeader,
+  EmptyTitle,
+} from "@comtammatu/ui/components/empty";
+import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
@@ -165,11 +170,15 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
         {isMobile ? (
           <div className="flex flex-col gap-2">
             {filtered.length === 0 ? (
-              <div className="py-12 text-center text-sm text-muted-foreground">
-                {search.trim()
-                  ? "Không tìm thấy nhà cung cấp phù hợp"
-                  : "Chưa có nhà cung cấp nào"}
-              </div>
+              <Empty className="py-8">
+                <EmptyHeader>
+                  <EmptyTitle className="text-sm font-semibold">
+                    {search.trim()
+                      ? "Không tìm thấy nhà cung cấp phù hợp"
+                      : "Chưa có nhà cung cấp nào"}
+                  </EmptyTitle>
+                </EmptyHeader>
+              </Empty>
             ) : (
               filtered.map((s, i) => (
                 <InteractiveCard

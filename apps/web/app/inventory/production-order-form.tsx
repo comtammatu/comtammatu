@@ -300,7 +300,7 @@ export function ProductionOrderForm({
           Tạo lệnh sản xuất
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-h-screen overflow-y-auto sm:max-w-3xl">
+      <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>Tạo lệnh sản xuất</DialogTitle>
         </DialogHeader>

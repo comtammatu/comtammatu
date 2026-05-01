@@ -17,6 +17,13 @@ import type { StaffRole } from "@comtammatu/shared/auth";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@comtammatu/ui/components/empty";
+import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
@@ -276,33 +283,37 @@ export function TransfersListClient({
 
           {/* Mobile cards */}
           {searchFiltered.length === 0 ? (
-            <div className="py-16 text-center">
-              {activeTab === "receive" ? (
-                <IconPackageImport className="mx-auto size-10 text-muted-foreground/40" />
-              ) : activeTab === "dispatch" ? (
-                <IconSend className="mx-auto size-10 text-muted-foreground/40" />
-              ) : (
-                <IconPackageOff className="mx-auto size-10 text-muted-foreground/40" />
-              )}
-              <p className="mt-2 text-sm font-medium text-muted-foreground">
-                {search
-                  ? "Không tìm thấy phiếu nào"
-                  : activeTab === "receive"
-                    ? "Không có phiếu cần nhận"
-                    : activeTab === "dispatch"
-                      ? "Không có phiếu đang soạn"
-                      : "Chưa có lịch sử điều chuyển"}
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground/70">
-                {search
-                  ? "Thử tìm kiếm khác hoặc xóa bộ lọc."
-                  : activeTab === "receive"
-                    ? "Khi kho gửi xác nhận xuất, phiếu sẽ hiện ở đây."
-                    : activeTab === "dispatch"
-                      ? "Tạo phiếu mới nếu cần."
-                      : "Các phiếu đã hòan tất sẽ được lưu ở đây."}
-              </p>
-            </div>
+            <Empty className="border bg-card py-10">
+              <EmptyMedia variant="icon">
+                {activeTab === "receive" ? (
+                  <IconPackageImport />
+                ) : activeTab === "dispatch" ? (
+                  <IconSend />
+                ) : (
+                  <IconPackageOff />
+                )}
+              </EmptyMedia>
+              <EmptyHeader>
+                <EmptyTitle className="text-sm font-semibold">
+                  {search
+                    ? "Không tìm thấy phiếu nào"
+                    : activeTab === "receive"
+                      ? "Không có phiếu cần nhận"
+                      : activeTab === "dispatch"
+                        ? "Không có phiếu đang soạn"
+                        : "Chưa có lịch sử điều chuyển"}
+                </EmptyTitle>
+                <EmptyDescription className="text-xs leading-5">
+                  {search
+                    ? "Thử tìm kiếm khác hoặc xóa bộ lọc."
+                    : activeTab === "receive"
+                      ? "Khi kho gửi xác nhận xuất, phiếu sẽ hiện ở đây."
+                      : activeTab === "dispatch"
+                        ? "Tạo phiếu mới nếu cần."
+                        : "Các phiếu đã hòan tất sẽ được lưu ở đây."}
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
           ) : (
             <div className="flex flex-col gap-2">
               {searchFiltered.map((r) => (

@@ -16,7 +16,6 @@ import { Item, ItemGroup } from "@comtammatu/ui/components/item";
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
   SheetHeader,
   SheetTitle,
 } from "@comtammatu/ui/components/sheet";
@@ -199,14 +198,9 @@ export function ArchivedOrdersSheet({
               <EmptyHeader>
                 <EmptyTitle>
                   {debouncedQuery !== ""
-                    ? "Không tìm thấy đơn"
+                    ? `Không có đơn khớp "${debouncedQuery}"`
                     : "Chưa có đơn đã xử lý"}
                 </EmptyTitle>
-                <EmptyDescription>
-                  {debouncedQuery !== ""
-                    ? `Không có đơn nào khớp "${debouncedQuery}".`
-                    : "Đơn đã thanh toán hoặc đã hủy sẽ xuất hiện tại đây."}
-                </EmptyDescription>
               </EmptyHeader>
             </Empty>
           ) : (
@@ -275,9 +269,6 @@ export function ArchivedOrdersSheet({
               </Badge>
             ) : null}
           </SheetTitle>
-          <SheetDescription>
-            Hóa đơn đã thanh toán hoặc đã hủy. Bấm vào dòng để in lại.
-          </SheetDescription>
         </SheetHeader>
         {body}
       </SheetContent>

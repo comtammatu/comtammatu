@@ -12,7 +12,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@comtammatu/ui/components/table";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { TableEmptyStateRow } from "@/components/table-empty-state-row";
 import { RefreshCw as IconRefresh, RotateCcw as IconRotate } from "lucide-react";
 import { retryJobFromMonitor } from "./actions";
 
@@ -182,96 +191,90 @@ export function PrintJobsClient({
         </Button>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-border/60">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
-            <tr>
-              <th className="px-3 py-2 text-left">#</th>
-              <th className="px-3 py-2 text-left">{FORM_VI.type}</th>
-              <th className="px-3 py-2 text-left">Máy in</th>
-              <th className="px-3 py-2 text-left">{FORM_VI.status}</th>
-              <th className="px-3 py-2 text-right">Thử</th>
-              <th className="px-3 py-2 text-left">Tạo lúc</th>
-              <th className="px-3 py-2 text-left">In lúc</th>
-              <th className="px-3 py-2 text-left">Lỗi</th>
-              <th className="px-3 py-2 text-right">Hành động</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border/50">
-            {jobs.length === 0 && (
-              <tr>
-                <td
-                  colSpan={9}
-                  className="px-3 py-10 text-center text-sm text-muted-foreground"
-                >
-                  Chưa có job in nào khớp bộ lọc
-                </td>
-              </tr>
-            )}
-            {jobs.map((j) => {
-              const canRetry = j.status === "failed" || j.status === "expired";
-              return (
-                <tr key={j.id} className="hover:bg-muted/20">
-                  <td className="px-3 py-2 font-mono text-xs">{j.id}</td>
-                  <td className="px-3 py-2">
-                    {JOB_TYPE_LABEL[j.job_type] ?? j.job_type}
-                  </td>
-                  <td className="px-3 py-2">
-                    <div className="text-xs">
-                      <div>{j.printer_name ?? `#${j.printer_id}`}</div>
-                      {j.printer_role && (
-                        <div className="text-muted-foreground">
-                          {j.printer_role}
-                        </div>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-3 py-2">
-                    <Badge variant={STATUS_VARIANT[j.status] ?? "outline"}>
-                      {STATUS_LABEL[j.status] ?? j.status}
-                    </Badge>
-                  </td>
-                  <td className="px-3 py-2 text-right text-xs tabular-nums">
-                    {j.attempts}
-                    {j.retry_count > 0 && (
-                      <span className="text-muted-foreground">
-                        {" "}
-                        (+{j.retry_count})
-                      </span>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>#</TableHead>
+            <TableHead>{FORM_VI.type}</TableHead>
+            <TableHead>Máy in</TableHead>
+            <TableHead>{FORM_VI.status}</TableHead>
+            <TableHead className="text-right">Thử</TableHead>
+            <TableHead>Tạo lúc</TableHead>
+            <TableHead>In lúc</TableHead>
+            <TableHead>Lỗi</TableHead>
+            <TableHead className="text-right">Hành động</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {jobs.length === 0 ? (
+            <TableEmptyStateRow
+              colSpan={9}
+              title="Chưa có job in nào khớp bộ lọc"
+            />
+          ) : null}
+          {jobs.map((j) => {
+            const canRetry = j.status === "failed" || j.status === "expired";
+            return (
+              <TableRow key={j.id}>
+                <TableCell className="font-mono text-xs">{j.id}</TableCell>
+                <TableCell>
+                  {JOB_TYPE_LABEL[j.job_type] ?? j.job_type}
+                </TableCell>
+                <TableCell>
+                  <div className="text-xs">
+                    <div>{j.printer_name ?? `#${j.printer_id}`}</div>
+                    {j.printer_role && (
+                      <div className="text-muted-foreground">
+                        {j.printer_role}
+                      </div>
                     )}
-                  </td>
-                  <td className="px-3 py-2 text-xs text-muted-foreground">
-                    {formatTime(j.created_at)}
-                  </td>
-                  <td className="px-3 py-2 text-xs text-muted-foreground">
-                    {formatTime(j.printed_at)}
-                  </td>
-                  <td
-                    className="max-w-xs truncate px-3 py-2 text-xs text-destructive"
-                    title={j.last_error ?? ""}
-                  >
-                    {j.last_error ?? ""}
-                  </td>
-                  <td className="px-3 py-2 text-right">
-                    {canRetry ? (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-8 gap-1"
-                        disabled={isPending && pendingJobId === j.id}
-                        onClick={() => handleRetry(j.id)}
-                      >
-                        <IconRotate className="size-3.5" />
-                        {ACTIONS_VI.retry}
-                      </Button>
-                    ) : null}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Badge variant={STATUS_VARIANT[j.status] ?? "outline"}>
+                    {STATUS_LABEL[j.status] ?? j.status}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-right text-xs tabular-nums">
+                  {j.attempts}
+                  {j.retry_count > 0 && (
+                    <span className="text-muted-foreground">
+                      {" "}
+                      (+{j.retry_count})
+                    </span>
+                  )}
+                </TableCell>
+                <TableCell className="text-xs text-muted-foreground">
+                  {formatTime(j.created_at)}
+                </TableCell>
+                <TableCell className="text-xs text-muted-foreground">
+                  {formatTime(j.printed_at)}
+                </TableCell>
+                <TableCell
+                  className="max-w-xs truncate text-xs text-destructive"
+                  title={j.last_error ?? ""}
+                >
+                  {j.last_error ?? ""}
+                </TableCell>
+                <TableCell className="text-right">
+                  {canRetry ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 gap-1"
+                      disabled={isPending && pendingJobId === j.id}
+                      onClick={() => handleRetry(j.id)}
+                    >
+                      <IconRotate className="size-3.5" />
+                      {ACTIONS_VI.retry}
+                    </Button>
+                  ) : null}
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
     </div>
   );
 }

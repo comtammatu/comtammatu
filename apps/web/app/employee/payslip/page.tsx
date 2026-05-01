@@ -2,7 +2,6 @@ import { getEmployeeContext } from "../_lib/employee-context";
 import { PayslipClient } from "./payslip-client";
 import {
   Card,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@comtammatu/ui/components/card";
@@ -54,9 +53,6 @@ export default async function PayslipPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-xl">Phiếu lương</CardTitle>
-          <CardDescription>
-            Các kỳ lương đã phát hành.
-          </CardDescription>
         </CardHeader>
       </Card>
 

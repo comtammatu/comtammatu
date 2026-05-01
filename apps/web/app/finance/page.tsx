@@ -1,5 +1,5 @@
 import { createClient } from "@comtammatu/database/supabase/server";
-import { Card, CardContent } from "@comtammatu/ui/components/card";
+import { PageHero } from "@/components/page-hero";
 import { FinanceClient } from "./finance-client";
 import { fetchDailyRevenue, fetchTaxInvoices, fetchTopItems } from "./actions";
 
@@ -51,20 +51,7 @@ export default async function FinancePage() {
 
   return (
     <div className="space-y-5 lg:space-y-6">
-      <Card>
-        <CardContent className="p-5 sm:p-6">
-          <div className="space-y-3">
-              <span className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
-                Kế toán
-              </span>
-            <div className="space-y-2">
-              <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-                Tài chính
-              </h2>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <PageHero eyebrow="Kế toán" title="Tài chính" />
       <FinanceClient
         dailyRevenue={dailyRevenue}
         topItems={topItems}

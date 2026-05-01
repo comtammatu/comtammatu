@@ -11,6 +11,7 @@ import {
 import { canAccess } from "@comtammatu/shared/auth";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import { loadAuthState } from "@/_lib/auth";
+import { PageHero } from "@/components/page-hero";
 import {
   SurfaceLinkCard,
   type SurfaceLinkCardProps,
@@ -100,34 +101,21 @@ export default async function ReportsPage() {
 
   return (
     <div className="space-y-5 lg:space-y-6">
-      <Card>
-        <CardContent className="p-5 sm:p-6">
-          <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-            <div className="space-y-3">
-              <span className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
-                {APP_COPY_VI.executiveReporting}
-              </span>
-              <div className="space-y-2">
-                <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-                  Báo cáo điều hành
-                </h2>
-                <p className="max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">
-                  Xem nhanh các báo cáo quan trọng về doanh thu, tồn kho, tài
-                  chính và tiền lương.
-                </p>
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 self-start">
-              <Button asChild variant="outline" size="sm">
-                <Link href="/admin/dashboard">Về Admin</Link>
-              </Button>
-              <Button asChild size="sm">
-                <Link href="/admin/settings">Mở cài đặt</Link>
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <PageHero
+        eyebrow={APP_COPY_VI.executiveReporting}
+        title="Báo cáo điều hành"
+        description="Xem nhanh các báo cáo quan trọng về doanh thu, tồn kho, tài chính và tiền lương."
+        actions={
+          <>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/admin/dashboard">Về Admin</Link>
+            </Button>
+            <Button asChild size="sm">
+              <Link href="/admin/settings">Mở cài đặt</Link>
+            </Button>
+          </>
+        }
+      />
 
       <Card>
         <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">

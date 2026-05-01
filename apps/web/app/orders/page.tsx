@@ -4,6 +4,7 @@ import { fetchOrders } from "./actions";
 import { fetchRefunds } from "./refund-actions";
 import { OrdersClient } from "./orders-client";
 import { RefundsClient } from "./refunds-client";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Card,
@@ -16,6 +17,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@comtammatu/ui/components/tabs";
+import { PageHero } from "@/components/page-hero";
 import { UrlTabs } from "@/_components/url-tabs";
 
 import { ORDER_VI } from "@comtammatu/shared/messages";
@@ -30,13 +32,7 @@ export default async function OrdersPage() {
   if (!ordersResult.success || !ordersResult.data) {
     return (
       <div className="space-y-5 lg:space-y-6">
-        <Card>
-          <CardContent className="p-5 sm:p-6">
-            <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-              {ORDER_VI.long}
-            </h2>
-          </CardContent>
-        </Card>
+        <PageHero title={ORDER_VI.long} />
         <p className="text-sm text-destructive">
           {ordersResult.error ?? "Không thể tải đơn hàng"}
         </p>
@@ -61,31 +57,16 @@ export default async function OrdersPage() {
   ).length;
   return (
     <div className="space-y-5 lg:space-y-6">
-      <Card>
-        <CardContent className="p-5 sm:p-6">
-          <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-            <div className="space-y-3">
-              <span className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
-                Điều phối giao dịch
-              </span>
-              <div className="space-y-2">
-                <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-                  {ORDER_VI.long}
-                </h2>
-                <p className="max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">
-                  Theo dõi đơn bán và hòan tiền trong cùng một nơi để xử lý
-                  nhanh.
-                </p>
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 self-start">
-              <Button asChild variant="outline" size="sm">
-                <Link href="/admin/reports">Báo cáo</Link>
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <PageHero
+        eyebrow="Điều phối giao dịch"
+        title={ORDER_VI.long}
+        description="Theo dõi đơn bán và hòan tiền trong cùng một nơi để xử lý nhanh."
+        actions={
+          <Button asChild variant="outline" size="sm">
+            <Link href="/admin/reports">Báo cáo</Link>
+          </Button>
+        }
+      />
       <Card>
         <CardHeader>
           <CardTitle>Điều phối giao dịch</CardTitle>
@@ -95,7 +76,7 @@ export default async function OrdersPage() {
         </CardHeader>
         <CardContent>
           <UrlTabs defaultValue="orders">
-            <TabsList className="rounded-lg border bg-card shadow-sm h-auto w-full justify-start gap-2 overflow-x-auto p-2">
+            <TabsList variant="toolbar" className="bg-card shadow-sm">
               <TabsTrigger
                 value="orders"
                 className="rounded-full px-4 data-[state=active]:bg-background data-[state=active]:shadow-sm"
@@ -108,9 +89,9 @@ export default async function OrdersPage() {
               >
                 Hòan tiền
                 {pendingRefundCount > 0 && (
-                  <span className="ml-1.5 rounded-full bg-destructive px-1.5 py-0.5 text-xs font-medium text-destructive-foreground">
+                  <Badge variant="destructive" className="ml-1.5">
                     {pendingRefundCount}
-                  </span>
+                  </Badge>
                 )}
               </TabsTrigger>
             </TabsList>

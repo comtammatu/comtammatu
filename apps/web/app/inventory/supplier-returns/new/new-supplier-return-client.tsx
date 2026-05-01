@@ -321,10 +321,8 @@ export function NewSupplierReturnClient({
                   : null;
                 const lineTotal = line.quantity * line.unitCost;
                 return (
-                  <div
-                    key={idx}
-                    className="space-y-3 rounded-lg border bg-card p-3"
-                  >
+                  <Card key={idx}>
+                    <CardContent className="space-y-3 p-3">
                     <div className="grid gap-3 md:grid-cols-12">
                       <div className="md:col-span-5">
                         <Label className="text-xs text-muted-foreground">
@@ -429,7 +427,8 @@ export function NewSupplierReturnClient({
                         />
                       </div>
                     </div>
-                  </div>
+                    </CardContent>
+                  </Card>
                 );
               })}
             </CardContent>

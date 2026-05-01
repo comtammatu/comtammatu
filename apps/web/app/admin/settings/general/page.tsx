@@ -25,7 +25,7 @@ export default async function GeneralSettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold">Cài đặt chung</h2>
+        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Cài đặt chung</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Thuế, phí dịch vụ và thông tin cửa hàng
         </p>

@@ -110,7 +110,6 @@ export function AreasManager({ areas, branches }: AreasManagerProps) {
       {areas.length === 0 ? (
         <EmptyStatePanel
           title="Chưa có khu vực nào"
-          description="Tạo khu vực để phân nhóm chi nhánh."
           icon={<IconMapPin className="size-10 text-muted-foreground" />}
           className="p-8"
         />

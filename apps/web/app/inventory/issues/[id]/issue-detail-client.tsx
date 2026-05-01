@@ -35,6 +35,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@comtammatu/ui/components/card";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@comtammatu/ui/components/empty";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import { Textarea } from "@comtammatu/ui/components/textarea";
@@ -257,7 +263,7 @@ export function IssueDetailClient({
                 {surface.eyebrow}
               </p>
               <div className="space-y-1">
-                <h1 className="text-3xl font-semibold tracking-tight">
+                <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
                   {issue.issue_number}
                 </h1>
                 <p className="text-sm text-muted-foreground">
@@ -353,20 +359,20 @@ export function IssueDetailClient({
             </CardHeader>
             <CardContent>
               {lines.length === 0 ? (
-                <div className="px-6 py-10">
-                  <div className="rounded-lg border border-dashed px-6 py-10 text-center">
-                    <p className="text-base font-semibold">
+                <Empty className="m-4 py-8">
+                  <EmptyHeader>
+                    <EmptyTitle className="text-sm font-semibold">
                       {isDraft
                         ? "Chưa có dòng nguyên liệu"
                         : `${surface.label} khong co dong nguyen lieu`}
-                    </p>
-                    <p className="mt-1 text-sm text-muted-foreground">
+                    </EmptyTitle>
+                    <EmptyDescription className="text-xs leading-5">
                       {isDraft
                         ? `Them it nhat mot dong de ${surface.confirmAction.toLowerCase()}.`
                         : "Danh sach nguyen lieu se hien thi o day neu phieu co du lieu."}
-                    </p>
-                  </div>
-                </div>
+                    </EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
               ) : (
                 <>
                   <div className="space-y-3 p-4 md:hidden">

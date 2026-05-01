@@ -31,6 +31,8 @@ const tabsListVariants = cva(
       variant: {
         default: "bg-muted",
         line: "gap-1 bg-transparent",
+        toolbar:
+          "h-auto w-full justify-start gap-2 overflow-x-auto border bg-muted/40 p-2",
       },
     },
     defaultVariants: {

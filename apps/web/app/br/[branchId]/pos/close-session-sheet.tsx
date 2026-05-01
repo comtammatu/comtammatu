@@ -13,7 +13,6 @@ import { Separator } from "@comtammatu/ui/components/separator";
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
   SheetHeader,
   SheetTitle,
 } from "@comtammatu/ui/components/sheet";
@@ -146,8 +145,6 @@ export function CloseSessionSheet({
     summary !== null &&
     Math.abs(summary.cash_difference) > summary.variance_threshold;
 
-  const stepIndex = step === "count" ? 1 : 2;
-
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent
@@ -155,11 +152,9 @@ export function CloseSessionSheet({
         className="flex w-full flex-col p-0 data-[side=right]:w-full sm:max-w-lg"
       >
         <SheetHeader className="border-b px-3 pt-5 pb-3 text-left sm:px-5">
-          <SheetTitle>Đóng ca bán hàng</SheetTitle>
-          <SheetDescription>
-            Bước {stepIndex}/2 —{""}
-            {step === "count" ? "Đếm tiền mặt cuối ca" : "Đối soát & xác nhận"}
-          </SheetDescription>
+          <SheetTitle>
+            Đóng ca · {step === "count" ? "Đếm tiền mặt" : "Đối soát"}
+          </SheetTitle>
           <div className="mt-2">
             <Progress value={step === "count" ? 50 : 100} className="h-2" />
           </div>
@@ -259,7 +254,7 @@ export function CloseSessionSheet({
                 >
                   <AlertDescription className="text-current">
                     {summary.cash_difference === 0
-                      ? "Số dư khớp hòan toàn. Có thể chốt ca."
+                      ? "Số dư khớp hoàn toàn. Có thể chốt ca."
                       : !significantDiff
                         ? "Chênh lệch nhỏ, xác nhận lại trước khi chốt."
                         : `Lệch quỹ vượt ngưỡng (> ${formatVND(summary.variance_threshold)}). Đã gửi cảnh báo cho quản lý.`}

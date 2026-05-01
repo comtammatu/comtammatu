@@ -138,7 +138,7 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
               Value Visibility
             </p>
             <div className="space-y-1">
-              <h1 className="text-3xl font-semibold tracking-tight">
+              <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
                 Giá trị tồn kho
               </h1>
               <p className="text-sm text-muted-foreground">
@@ -159,7 +159,7 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
         </div>
         <div className="flex items-center gap-2">
           {tabCount > 1 && (
-            <TabsList className="h-auto justify-start gap-2 overflow-x-auto rounded-lg border bg-muted/40 p-2">
+            <TabsList variant="toolbar" className="w-fit">
               {visibility.system && (
                 <TabsTrigger value="system">Toàn hệ thống</TabsTrigger>
               )}

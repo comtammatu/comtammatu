@@ -44,7 +44,7 @@ export default async function AccessDeniedPage({
           </Badge>
         </div>
         <div className="space-y-2">
-          <CardTitle className="font-heading text-2xl sm:text-3xl">
+          <CardTitle className="text-2xl font-semibold tracking-tight sm:text-3xl">
             {copy.title}
           </CardTitle>
           <CardDescription className="text-sm leading-6 sm:text-base">

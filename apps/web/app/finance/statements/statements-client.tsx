@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { TriangleAlert as IconAlertTriangle, CircleCheck as IconCircleCheck, LoaderCircle as IconLoader2 } from "lucide-react";
+import { TriangleAlert as IconAlertTriangle, CircleCheck as IconCircleCheck } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -12,6 +12,13 @@ import {
 } from "@comtammatu/ui/components/card";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@comtammatu/ui/components/empty";
+import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
   Table,
   TableBody,
@@ -143,7 +150,7 @@ export function StatementsClient() {
               />
             </div>
             <Button onClick={handleB01} disabled={isPending}>
-              {isPending ? <IconLoader2 className="size-4 animate-spin" /> : null}
+              {isPending ? <Spinner /> : null}
               Tạo Bảng cân đối
             </Button>
           </CardContent>
@@ -185,7 +192,7 @@ export function StatementsClient() {
               />
             </div>
             <Button onClick={handleB02} disabled={isPending}>
-              {isPending ? <IconLoader2 className="size-4 animate-spin" /> : null}
+              {isPending ? <Spinner /> : null}
               Tạo KQKD
             </Button>
           </CardContent>
@@ -226,7 +233,7 @@ export function StatementsClient() {
               />
             </div>
             <Button onClick={handleB03} disabled={isPending}>
-              {isPending ? <IconLoader2 className="size-4 animate-spin" /> : null}
+              {isPending ? <Spinner /> : null}
               Tạo LCTT
             </Button>
           </CardContent>
@@ -261,7 +268,7 @@ export function StatementsClient() {
               />
             </div>
             <Button onClick={handleGtgt} disabled={isPending}>
-              {isPending ? <IconLoader2 className="size-4 animate-spin" /> : null}
+              {isPending ? <Spinner /> : null}
               Tạo Tờ khai
             </Button>
           </CardContent>
@@ -283,9 +290,14 @@ export function StatementsClient() {
 
 function EmptyState() {
   return (
-    <p className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
-      Chọn kỳ và nhấn nút <strong>Tạo</strong> để xem báo cáo.
-    </p>
+    <Empty className="py-8">
+      <EmptyHeader>
+        <EmptyTitle className="text-sm font-semibold">Chưa có báo cáo</EmptyTitle>
+        <EmptyDescription className="text-xs leading-5">
+          Chọn kỳ và nhấn nút <strong>Tạo</strong> để xem báo cáo.
+        </EmptyDescription>
+      </EmptyHeader>
+    </Empty>
   );
 }
 

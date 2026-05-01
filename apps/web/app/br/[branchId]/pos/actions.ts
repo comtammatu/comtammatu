@@ -18,6 +18,7 @@ export {
   appendOrderItems,
   voidOrderItem,
   reduceOrderItemQuantity,
+  editPendingOrderItem,
   cancelOrder,
   transferOrderTable,
   updateOrderStatus,

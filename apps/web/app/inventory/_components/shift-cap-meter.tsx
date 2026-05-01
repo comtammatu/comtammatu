@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@comtammatu/ui";
+import { Progress, type ProgressTone } from "@comtammatu/ui/components/progress";
 import { formatVND } from "@comtammatu/shared/format";
 
 interface ShiftCapMeterProps {
@@ -42,12 +43,12 @@ export function ShiftCapMeter({
   const pctDisplay = Math.round(pct * 100);
   const willExceed = projected >= shiftCap;
 
-  const tone =
+  const tone: ProgressTone =
     pct >= 0.9 || willExceed
-      ? "bg-destructive"
+      ? "destructive"
       : pct >= 0.7
-        ? "bg-warning"
-        : "bg-success";
+        ? "warning"
+        : "success";
 
   const wrapTone =
     pct >= 0.9 || willExceed
@@ -78,12 +79,7 @@ export function ShiftCapMeter({
           <span className="ml-1 text-muted-foreground">{pctDisplay}%</span>
         </div>
       </div>
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-        <div
-          className={cn("h-full transition-all", tone)}
-          style={{ width: `${pctDisplay}%` }}
-        />
-      </div>
+      <Progress value={pctDisplay} tone={tone} className="h-1.5 rounded-full" />
       {willExceed ? (
         <p className="text-destructive">
           ⚠ Phiếu này sẽ trigger tier 2 → QLV phải duyệt

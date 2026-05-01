@@ -6,13 +6,20 @@ import { formatVND } from "@comtammatu/shared/format";
 import { BRANCH_VI, FORM_VI, STAFF_VI, STATES_VI } from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from "@comtammatu/ui/components/card";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@comtammatu/ui/components/empty";
+import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import {
@@ -149,43 +156,50 @@ export function OrdersClient({
   return (
     <>
       <div className="grid gap-3 md:grid-cols-3">
-        <div className="rounded-lg border bg-muted/30 text-card-foreground p-5 transition-all hover:-translate-y-0.5 hover:shadow-md">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-            Đang xử lý
-          </p>
-          <p className="mt-2 text-2xl font-semibold tabular-nums">
-            {orderSummary.pending}
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Đơn đang chờ hoặc đang làm cần theo dõi.
-          </p>
-        </div>
-        <div className="rounded-lg border bg-muted/30 text-card-foreground p-5 transition-all hover:-translate-y-0.5 hover:shadow-md">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-            {STATES_VI.completed}
-          </p>
-          <p className="mt-2 text-2xl font-semibold tabular-nums">
-            {orderSummary.completed}
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Đơn đã hòan tất trong tập kết quả hiện tại.
-          </p>
-        </div>
-        <div className="rounded-lg border bg-muted/30 text-card-foreground p-5 transition-all hover:-translate-y-0.5 hover:shadow-md">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-            Giá trị đơn
-          </p>
-          <p className="mt-2 text-2xl font-semibold tabular-nums">
-            {formatVND(orderSummary.revenue)}
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Tổng doanh thu hiển thị sau khi áp bộ lọc.
-          </p>
-        </div>
+        <Card>
+          <CardContent className="p-5">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              Đang xử lý
+            </p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums">
+              {orderSummary.pending}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Đơn đang chờ hoặc đang làm cần theo dõi.
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-5">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              {STATES_VI.completed}
+            </p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums">
+              {orderSummary.completed}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Đơn đã hòan tất trong tập kết quả hiện tại.
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-5">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              Giá trị đơn
+            </p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums">
+              {formatVND(orderSummary.revenue)}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Tổng doanh thu hiển thị sau khi áp bộ lọc.
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* ─── Filter bar ─── */}
-      <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-card p-3">
+      <Card>
+        <CardContent className="flex flex-wrap items-center gap-2 p-3">
         <div className="flex w-full flex-col gap-1.5 sm:w-44 sm:flex-none">
           <Label htmlFor="date-from" className="text-xs">
             {FORM_VI.fromDate}
@@ -272,7 +286,8 @@ export function OrdersClient({
             </Button>
           )}
         </div>
-      </div>
+        </CardContent>
+      </Card>
 
       <div className="rounded-lg border bg-muted/30 text-card-foreground flex flex-wrap items-center justify-between gap-3 px-4 py-3">
         <p className="text-sm text-muted-foreground">
@@ -295,15 +310,19 @@ export function OrdersClient({
         </CardHeader>
         <CardContent className="space-y-4">
           {displayOrders.length === 0 ? (
-            <div className="rounded-lg border bg-muted/30 text-card-foreground border-dashed px-6 py-16 text-center">
-              <IconShoppingBag className="mx-auto size-8 text-muted-foreground" />
-              <p className="mt-3 text-sm font-medium">Không có đơn hàng nào</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {hasFilters
-                  ? "Thử xóa bộ lọc hoặc đổi mốc thời gian để mở rộng kết quả."
-                  : "Hệ thống chưa có đơn nào trong phạm vi đang xem."}
-              </p>
-            </div>
+            <Empty className="border bg-card py-10">
+              <EmptyMedia variant="icon">
+                <IconShoppingBag />
+              </EmptyMedia>
+              <EmptyHeader>
+                <EmptyTitle className="text-sm font-semibold">Không có đơn hàng nào</EmptyTitle>
+                <EmptyDescription className="text-xs leading-5">
+                  {hasFilters
+                    ? "Thử xóa bộ lọc hoặc đổi mốc thời gian để mở rộng kết quả."
+                    : "Hệ thống chưa có đơn nào trong phạm vi đang xem."}
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
           ) : null}
 
           <div className="space-y-3 md:hidden">

@@ -112,8 +112,7 @@ export function ExtendWindowButton({
         <DialogHeader>
           <DialogTitle>Extend Express window</DialogTitle>
           <DialogDescription>
-            Kéo dài cửa sổ auto-approve hôm nay thêm tối đa 60 phút. QL CN được
-            extend 3 lần/tuần. Admin sẽ nhận notification realtime.
+            Kéo dài cửa sổ auto-approve tối đa 60 phút.
           </DialogDescription>
         </DialogHeader>
 

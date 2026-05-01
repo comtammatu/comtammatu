@@ -18,6 +18,13 @@ import {
   AlertDialogTitle,
 } from "@comtammatu/ui/components/alert-dialog";
 import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@comtammatu/ui/components/empty";
+import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
@@ -207,15 +214,19 @@ export function ExpiryListClient({
           {isMobile ? (
             <div className="divide-y">
               {items.length === 0 && (
-                <div className="py-16 text-center">
-                  <IconCircleCheck className="mx-auto size-10 text-success/40" />
-                  <p className="mt-2 text-sm font-medium text-muted-foreground">
-                    Không có hàng sắp hết hạn
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground/70">
-                    Tất cả nguyên liệu còn trong hạn sử dụng
-                  </p>
-                </div>
+                <Empty className="border-0 py-10">
+                  <EmptyMedia variant="icon">
+                    <IconCircleCheck />
+                  </EmptyMedia>
+                  <EmptyHeader>
+                    <EmptyTitle className="text-sm font-semibold">
+                      Không có hàng sắp hết hạn
+                    </EmptyTitle>
+                    <EmptyDescription className="text-xs leading-5">
+                      Tất cả nguyên liệu còn trong hạn sử dụng
+                    </EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
               )}
               {items.map((alert, idx) => {
                 const meta = URGENCY_META[alert.urgency] ?? {

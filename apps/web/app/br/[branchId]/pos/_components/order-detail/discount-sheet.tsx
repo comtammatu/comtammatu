@@ -12,7 +12,6 @@ import {
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
   SheetFooter,
   SheetHeader,
   SheetTitle,
@@ -131,11 +130,7 @@ export function DiscountSheet({
     <Sheet open={open} onOpenChange={(o) => !o && handleClose()}>
       <SheetContent side="right" className="flex w-full flex-col sm:max-w-md">
         <SheetHeader className="border-b border-border/60 px-3 py-2.5 text-left sm:px-4">
-          <SheetTitle>Chiết khấu đơn</SheetTitle>
-          <SheetDescription>
-            Áp giảm giá cho toàn bộ đơn (theo % hoặc VNĐ). Bắt buộc kèm ghi chú
-            lý do.
-          </SheetDescription>
+          <SheetTitle>Chiết khấu</SheetTitle>
         </SheetHeader>
 
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-3 py-4 sm:px-4">

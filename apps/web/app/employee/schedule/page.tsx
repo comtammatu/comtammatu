@@ -3,7 +3,6 @@ import { ScheduleClient } from "./schedule-client";
 import type { ScheduleShift } from "./actions";
 import {
   Card,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@comtammatu/ui/components/card";
@@ -69,7 +68,6 @@ export default async function SchedulePage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-xl">Lịch ca</CardTitle>
-          <CardDescription>Lịch làm việc theo tuần.</CardDescription>
         </CardHeader>
       </Card>
 

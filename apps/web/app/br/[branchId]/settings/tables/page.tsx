@@ -68,7 +68,7 @@ export default async function BranchTablesSettingsPage({
           </Link>
         </Button>
         <div className="min-w-0">
-          <h2 className="text-xl font-semibold">Bàn & Khu vực</h2>
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Bàn & Khu vực</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {branchRes.data.name}
           </p>

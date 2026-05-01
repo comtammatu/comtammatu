@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowLeft as IconArrowLeft } from "lucide-react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { Button } from "@comtammatu/ui/components/button";
-import { Card, CardContent } from "@comtammatu/ui/components/card";
+import { PageHero } from "@/components/page-hero";
 import { ReconciliationClient } from "./reconciliation-client";
 
 interface Props {
@@ -47,33 +47,16 @@ export default async function ReconciliationPage({ searchParams }: Props) {
 
   return (
     <div className="space-y-5 lg:space-y-6">
-      <Card>
-        <CardContent className="space-y-3 p-5 sm:p-6">
-          <Button
-            asChild
-            variant="ghost"
-            size="sm"
-            className="-ml-3 self-start"
-          >
-            <Link href="/finance">
-              <IconArrowLeft className="mr-1 size-4" /> Quay lại Tài chính
-            </Link>
-          </Button>
-          <span className="inline-flex items-center rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
-            Tài chính
-          </span>
-          <div className="space-y-2">
-            <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-              Đối chiếu sổ phụ ↔ sổ cái
-            </h2>
-            <p className="max-w-3xl text-sm text-muted-foreground">
-              So sánh tổng phát sinh sổ phụ (POS, kho, nhân sự, công nợ) với
-              tổng bút toán đã ghi nhận trong sổ cái. Khi có chênh lệch, drilldown
-              để xem chứng từ gốc và bút toán liên quan.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      <Button asChild variant="ghost" size="sm" className="-ml-3 self-start">
+        <Link href="/finance">
+          <IconArrowLeft className="mr-1 size-4" /> Quay lại Tài chính
+        </Link>
+      </Button>
+      <PageHero
+        eyebrow="Tài chính"
+        title="Đối chiếu sổ phụ ↔ sổ cái"
+        description="So sánh tổng phát sinh sổ phụ (POS, kho, nhân sự, công nợ) với tổng bút toán đã ghi nhận trong sổ cái. Khi có chênh lệch, drilldown để xem chứng từ gốc và bút toán liên quan."
+      />
 
       <ReconciliationClient
         branches={branchOptions}

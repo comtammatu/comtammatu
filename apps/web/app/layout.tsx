@@ -2,11 +2,11 @@ import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { JetBrains_Mono } from "next/font/google";
 import { ConfirmDialogProvider } from "@comtammatu/ui/components/confirm-dialog";
-import { Toaster } from "@comtammatu/ui/components/sonner";
 import { ThemeProvider } from "@comtammatu/ui/components/theme-provider";
 import { TooltipProvider } from "@comtammatu/ui/components/tooltip";
 import { BoneyardRegistry } from "./_components/boneyard-registry";
 import { NotificationBellFloating } from "./_components/notification-bell-floating";
+import { ResponsiveToaster } from "./_components/responsive-toaster";
 import "@comtammatu/ui/globals.css";
 import { cn } from "@/lib/utils";
 
@@ -68,7 +68,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <BoneyardRegistry />
           <TooltipProvider>{children}</TooltipProvider>
           <NotificationBellFloating />
-          <Toaster richColors position="top-right" />
+          <ResponsiveToaster />
           <ConfirmDialogProvider />
         </ThemeProvider>
       </body>

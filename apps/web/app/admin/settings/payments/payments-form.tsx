@@ -12,7 +12,6 @@ import { Switch } from "@comtammatu/ui/components/switch";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@comtammatu/ui/components/card";
@@ -112,9 +111,6 @@ export function PaymentsForm({
       <Card>
         <CardHeader>
           <CardTitle>Phương thức thanh toán trên POS</CardTitle>
-          <CardDescription>
-            Bật kênh đã cấu hình env. Tiền mặt luôn khả dụng.
-          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-3 rounded-lg border p-4">

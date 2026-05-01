@@ -368,8 +368,7 @@ export function RecipeLineDialog({
             {isEdit ? "Sửa định mức món bán" : "Tạo định mức món bán"}
           </DialogTitle>
           <DialogDescription>
-            Định mức này xác định lượng nguyên liệu tiêu hao khi bán 1 phần món
-            trên menu. BOM sản xuất thành phẩm nằm ở luồng sản xuất riêng.
+            Lượng nguyên liệu cho 1 phần món trên menu (khác BOM sản xuất).
           </DialogDescription>
         </DialogHeader>
 

@@ -4,6 +4,12 @@ import { useState, useTransition } from "react";
 import { FileX as IconFileX, Receipt as IconReceipt } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@comtammatu/ui/components/empty";
 import { Label } from "@comtammatu/ui/components/label";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import {
@@ -103,12 +109,16 @@ export function InvoiceList({ initialInvoices }: InvoiceListProps) {
     <>
       <div className="space-y-4">
         {invoices.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border px-6 py-10 text-center">
-            <IconReceipt className="mx-auto size-8 text-muted-foreground" />
-            <p className="mt-3 text-sm text-muted-foreground">
-              Chưa có hóa đơn nào
-            </p>
-          </div>
+          <Empty className="py-8">
+            <EmptyMedia variant="icon">
+              <IconReceipt />
+            </EmptyMedia>
+            <EmptyHeader>
+              <EmptyTitle className="text-sm font-semibold">
+                Chưa có hóa đơn nào
+              </EmptyTitle>
+            </EmptyHeader>
+          </Empty>
         ) : null}
 
         <div className="space-y-3 md:hidden">

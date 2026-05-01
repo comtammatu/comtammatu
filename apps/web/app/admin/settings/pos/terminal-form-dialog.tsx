@@ -53,9 +53,6 @@ export function TerminalFormDialog({
       defaultValues={toFormValues(terminal)}
       entityKey={terminal?.id ?? "new"}
       title={isEdit ? "Chỉnh sửa máy POS" : "Thêm máy POS mới"}
-      description={
-        isEdit ? "Chỉnh sửa thông tin máy POS" : "Nhập thông tin máy POS mới"
-      }
       successMessage={isEdit ? "Đã cập nhật máy POS" : "Đã tạo máy POS"}
       submitLabel={isEdit ? ACTIONS_VI.update : ACTIONS_VI.create}
       onSubmit={async (values) => {

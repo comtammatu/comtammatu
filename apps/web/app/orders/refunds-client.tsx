@@ -13,6 +13,13 @@ import {
   CardTitle,
 } from "@comtammatu/ui/components/card";
 import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@comtammatu/ui/components/empty";
+import {
   Table,
   TableBody,
   TableCell,
@@ -102,72 +109,80 @@ export function RefundsClient({
   return (
     <>
       <div className="grid gap-3 md:grid-cols-3">
-        <div className="rounded-lg border bg-muted/30 text-card-foreground p-5 transition-all hover:-translate-y-0.5 hover:shadow-md">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-            Chờ duyệt
-          </p>
-          <p className="mt-2 text-2xl font-semibold tabular-nums">
-            {pendingCount}
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Các yêu cầu cần quyết định ngay.
-          </p>
-        </div>
-        <div className="rounded-lg border bg-muted/30 text-card-foreground p-5 transition-all hover:-translate-y-0.5 hover:shadow-md">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-            {STATES_VI.approved}
-          </p>
-          <p className="mt-2 text-2xl font-semibold tabular-nums">
-            {approvedCount}
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Yêu cầu đã được xử lý trong danh sách hiện tại.
-          </p>
-        </div>
-        <div className="rounded-lg border bg-muted/30 text-card-foreground p-5 transition-all hover:-translate-y-0.5 hover:shadow-md">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-            Tổng giá trị
-          </p>
-          <p className="mt-2 text-2xl font-semibold tabular-nums">
-            {formatVND(totalRefundAmount)}
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Tổng số tiền hòan của tập kết quả đang xem.
-          </p>
-        </div>
+        <Card>
+          <CardContent className="p-5">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              Chờ duyệt
+            </p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums">
+              {pendingCount}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Các yêu cầu cần quyết định ngay.
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-5">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              {STATES_VI.approved}
+            </p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums">
+              {approvedCount}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Yêu cầu đã được xử lý trong danh sách hiện tại.
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-5">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              Tổng giá trị
+            </p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums">
+              {formatVND(totalRefundAmount)}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Tổng số tiền hòan của tập kết quả đang xem.
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
-      <div className="rounded-lg border bg-card text-card-foreground shadow-sm flex flex-wrap items-center justify-between gap-4 p-4">
-        <div className="space-y-1.5">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-            Điều phối hòan tiền
-          </p>
-          <p className="text-sm text-muted-foreground">
-            {refunds.length} yêu cầu hòan tiền trong danh sách hiện tại.
-          </p>
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="warning" className="rounded-full px-3 py-1.5">
-              {pendingCount} chờ duyệt
-            </Badge>
-            <Badge variant="success" className="rounded-full px-3 py-1.5">
-              {approvedCount} đã duyệt
-            </Badge>
+      <Card>
+        <CardContent className="flex flex-wrap items-center justify-between gap-4 p-4">
+          <div className="space-y-1.5">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              Điều phối hòan tiền
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {refunds.length} yêu cầu hòan tiền trong danh sách hiện tại.
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="warning" className="rounded-full px-3 py-1.5">
+                {pendingCount} chờ duyệt
+              </Badge>
+              <Badge variant="success" className="rounded-full px-3 py-1.5">
+                {approvedCount} đã duyệt
+              </Badge>
+            </div>
           </div>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={refreshRefunds}
-          disabled={isPending}
-        >
-          {isPending ? (
-            <Spinner className="mr-1.5 size-3.5" />
-          ) : (
-            <IconRotate className="mr-1.5 size-3.5" />
-          )}
-          Làm mới
-        </Button>
-      </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={refreshRefunds}
+            disabled={isPending}
+          >
+            {isPending ? (
+              <Spinner className="mr-1.5 size-3.5" />
+            ) : (
+              <IconRotate className="mr-1.5 size-3.5" />
+            )}
+            Làm mới
+          </Button>
+        </CardContent>
+      </Card>
 
       {errorMsg && <p className="text-sm text-destructive">{errorMsg}</p>}
 
@@ -180,23 +195,25 @@ export function RefundsClient({
         </CardHeader>
         <CardContent className="space-y-4">
           {refunds.length === 0 ? (
-            <div className="rounded-lg border bg-muted/30 text-card-foreground border-dashed px-6 py-16 text-center">
-              <IconRotate className="mx-auto size-8 text-muted-foreground" />
-              <p className="mt-3 text-sm font-medium">
-                Không có yêu cầu hòan tiền nào
-              </p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Dữ liệu trống cho bộ lọc hiện tại.
-              </p>
-            </div>
+            <Empty className="border bg-card py-10">
+              <EmptyMedia variant="icon">
+                <IconRotate />
+              </EmptyMedia>
+              <EmptyHeader>
+                <EmptyTitle className="text-sm font-semibold">
+                  Không có yêu cầu hòan tiền nào
+                </EmptyTitle>
+                <EmptyDescription className="text-xs leading-5">
+                  Dữ liệu trống cho bộ lọc hiện tại.
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
           ) : null}
 
           <div className="space-y-3 md:hidden">
             {refunds.map((refund) => (
-              <div
-                key={refund.id}
-                className="rounded-lg border bg-muted/30 text-card-foreground p-4"
-              >
+              <Card key={refund.id}>
+                <CardContent className="p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="font-mono text-sm font-medium">
@@ -283,7 +300,8 @@ export function RefundsClient({
                     </span>
                   )}
                 </div>
-              </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
 

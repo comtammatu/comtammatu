@@ -2,7 +2,6 @@ import { getEmployeeContext } from "../_lib/employee-context";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@comtammatu/ui/components/card";
@@ -90,7 +89,6 @@ export default async function EmployeeAttendancePage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-xl">Lịch sử chấm công</CardTitle>
-          <CardDescription>30 ngày gần nhất.</CardDescription>
         </CardHeader>
       </Card>
 

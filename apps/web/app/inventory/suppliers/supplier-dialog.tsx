@@ -7,7 +7,6 @@ import { z } from "zod";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -136,11 +135,6 @@ export function SupplierDialog({
           <DialogTitle>
             {isEdit ? "Sửa nhà cung cấp" : "Thêm nhà cung cấp"}
           </DialogTitle>
-          <DialogDescription>
-            {isEdit
-              ? "Cập nhật thông tin nhà cung cấp."
-              : "Nhập thông tin nhà cung cấp mới."}
-          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={form.handleSubmit(onValid)} noValidate>

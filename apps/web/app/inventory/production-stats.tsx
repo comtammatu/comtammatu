@@ -20,7 +20,6 @@ import {
   Card,
   CardAction,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@comtammatu/ui/components/card";
@@ -140,9 +139,6 @@ export function ProductionStats({
             <IconFactory />
             Trạm điều phối sản xuất
           </CardTitle>
-          <CardDescription>
-            Theo dõi readiness, lệnh nháp và độ phủ BOM trước khi chốt sản xuất.
-          </CardDescription>
           <CardAction>
             <Badge variant={readinessReady ? "success" : "warning"}>
               {readinessReady ? (

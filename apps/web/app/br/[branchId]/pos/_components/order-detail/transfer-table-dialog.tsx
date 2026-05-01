@@ -4,7 +4,6 @@ import { Button } from "@comtammatu/ui/components/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -77,13 +76,9 @@ export function TransferTableDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            Chuyển {orderNumber ? `đơn ${orderNumber}` : "đơn"} sang bàn khác
+            Chuyển bàn{orderNumber ? ` · ${orderNumber}` : ""} · từ{" "}
+            {currentTableLabel}
           </DialogTitle>
-          <DialogDescription>
-            Chuyển đơn từ {currentTableLabel} sang bàn trống hoặc bàn đang
-            dùng (đơn sẽ ghép vào). Thao tác này không hủy món và không
-            thanh toán đơn.
-          </DialogDescription>
         </DialogHeader>
 
         <FieldGroup>

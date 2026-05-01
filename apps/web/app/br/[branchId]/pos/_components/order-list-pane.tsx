@@ -25,7 +25,7 @@ interface OrderListPaneProps {
   ) => void;
   onClosePane?: () => void;
   /**
-   * Opens the "Đơn hòan thành" sheet (paid + cancelled orders, paginated).
+   * Opens the "Đơn hoàn thành" sheet (paid + cancelled orders, paginated).
    * Provided by the shell. Replaces the inline archived list — at scale
    * (200-300 đơn/ngày) the inline list dragged the sidebar's render and
    * pulled rows the cashier rarely touches.
@@ -98,7 +98,7 @@ function OrderListPaneComponent({
         >
           <span className="flex items-center gap-2">
             <IconClock data-icon="inline-start" />
-            Đơn hòan thành
+            Đơn hoàn thành
           </span>
           <IconChevronRight data-icon="inline-end" />
         </Button>

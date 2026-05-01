@@ -2,7 +2,16 @@
 
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@comtammatu/ui/components/table";
 import { OctagonAlert as IconAlertOctagon, FlagTriangleRight as IconFlag3, Check as IconCheck } from "lucide-react";
+import { TableEmptyStateRow } from "@/components/table-empty-state-row";
 import { AbcClassChip } from "./abc-class-chip";
 
 import { FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
@@ -59,36 +68,33 @@ export function VarianceHeatmapRow({
   const median = values.length > 0 ? computeMedian(values) : null;
 
   return (
-    <tr
+    <TableRow
       data-slot="variance-heatmap-row"
       data-ingredient-id={ingredientId}
       data-state={isFinal ? "final" : needsRecount ? "needs-recount" : "open"}
       onClick={onClick}
       className={cn(
-        "border-t align-middle",
+        "align-middle",
         isFinal ? "bg-success/10" : needsRecount ? "bg-tier-note/10" : "",
-        onClick && "cursor-pointer hover:bg-muted/40",
+        onClick && "cursor-pointer",
         className,
       )}
     >
-      <td className="px-3 py-2">
+      <TableCell>
         <div className="font-medium">{ingredientName}</div>
         <div className="text-xs text-muted-foreground">{unit}</div>
-      </td>
-      <td className="px-3 py-2">
+      </TableCell>
+      <TableCell>
         <AbcClassChip class_={abcClass} compact withTooltip />
-      </td>
+      </TableCell>
       {[1, 2, 3, 4].map((rn) => {
         const r = roundsByNo.get(rn);
         const qty = r?.countedQuantity ?? null;
         const tone = median !== null && qty !== null ? cellTone(qty, median, thresholdPct) : "";
         return (
-          <td
+          <TableCell
             key={rn}
-            className={cn(
-              "px-3 py-2 text-right tabular-nums",
-              tone,
-            )}
+            className={cn("text-right tabular-nums", tone)}
             data-round={rn}
           >
             {qty === null ? (
@@ -96,10 +102,10 @@ export function VarianceHeatmapRow({
             ) : (
               <span className="font-medium">{formatQty(qty)}</span>
             )}
-          </td>
+          </TableCell>
         );
       })}
-      <td className="px-3 py-2 text-right">
+      <TableCell className="text-right">
         {isFinal ? (
           <Badge variant="outline" className="gap-1 border-success/40 text-success">
             <IconCheck className="size-3.5" /> Final
@@ -111,8 +117,8 @@ export function VarianceHeatmapRow({
         ) : (
           <Badge variant="outline">Chờ</Badge>
         )}
-      </td>
-    </tr>
+      </TableCell>
+    </TableRow>
   );
 }
 
@@ -154,36 +160,35 @@ export function VarianceHeatmapTable({
   className,
 }: VarianceHeatmapTableProps) {
   return (
-    <div className={cn("overflow-hidden rounded-md border", className)}>
-      <table className="w-full text-sm">
-        <thead className="bg-muted/40 text-xs uppercase text-muted-foreground">
-          <tr>
-            <th className="px-3 py-2 text-left font-medium">{PRODUCT_VI.rawIngredient}</th>
-            <th className="px-3 py-2 text-left font-medium">ABC</th>
-            <th className="px-3 py-2 text-right font-medium">R1</th>
-            <th className="px-3 py-2 text-right font-medium">R2</th>
-            <th className="px-3 py-2 text-right font-medium">R3</th>
-            <th className="px-3 py-2 text-right font-medium">R4</th>
-            <th className="px-3 py-2 text-right font-medium">{FORM_VI.status}</th>
-          </tr>
-        </thead>
-        <tbody>
+    <div className={className}>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>{PRODUCT_VI.rawIngredient}</TableHead>
+            <TableHead>ABC</TableHead>
+            <TableHead className="text-right">R1</TableHead>
+            <TableHead className="text-right">R2</TableHead>
+            <TableHead className="text-right">R3</TableHead>
+            <TableHead className="text-right">R4</TableHead>
+            <TableHead className="text-right">{FORM_VI.status}</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {rows.length === 0 ? (
-            <tr>
-              <td colSpan={7} className="px-3 py-6 text-center text-muted-foreground">
-                Chưa có dòng biến động nào.
-                {showEscalateIcon ? null : (
-                  <span className="ml-2">
-                    <IconAlertOctagon className="inline size-3.5 -translate-y-[1px]" />
-                  </span>
-                )}
-              </td>
-            </tr>
+            <TableEmptyStateRow
+              colSpan={7}
+              title="Chưa có dòng biến động nào."
+              icon={
+                showEscalateIcon ? null : (
+                  <IconAlertOctagon className="size-4" />
+                )
+              }
+            />
           ) : (
             rows.map((r) => <VarianceHeatmapRow key={r.ingredientId} {...r} />)
           )}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }

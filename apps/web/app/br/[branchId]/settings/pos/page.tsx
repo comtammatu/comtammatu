@@ -44,7 +44,7 @@ export default async function BranchPosSettingsPage({
   if (terminalsRes.error) throw new Error("Không thể tải máy POS");
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 p-4 md:p-6">
+    <div className="mx-auto max-w-5xl space-y-6 p-4 md:p-6">
       <div className="flex items-center gap-3">
         <Button asChild variant="outline" size="sm" className="gap-1">
           <Link href={`/br/${branchId}/settings`}>
@@ -53,7 +53,7 @@ export default async function BranchPosSettingsPage({
           </Link>
         </Button>
         <div className="min-w-0">
-          <h2 className="text-xl font-semibold">POS</h2>
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">POS</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {branchRes.data.name}
           </p>

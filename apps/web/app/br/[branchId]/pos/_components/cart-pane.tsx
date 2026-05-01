@@ -382,7 +382,7 @@ function CartPaneComponent({
                 id="pos-order-note-hint"
                 className="hidden text-xs leading-5 text-muted-foreground sm:block"
               >
-                Tối đa 500 ký tự. Áp dụng cho toàn đơn.
+                Tối đa 500 ký tự.
               </p>
             </div>
 
@@ -426,18 +426,16 @@ function CartPaneComponent({
                       <AlertDialogTitle>
                         {cart.orderType === "takeaway"
                           ? "Gửi đơn mang về?"
-                          : `Gửi đơn mới cho bàn ${selectedTableNumber ?? "đã chọn"}?`}
+                          : `Gửi cho bàn ${selectedTableNumber ?? ""}?`}
                       </AlertDialogTitle>
                       <AlertDialogDescription>
-                        {cart.orderType === "takeaway"
-                          ? `Tạo đơn mang về mới • ${totalQuantity} món • ${formatVND(cart.total)}`
-                          : `Tạo đơn mới tại bàn ${selectedTableNumber ?? "đã chọn"} • ${totalQuantity} món • ${formatVND(cart.total)}`}
+                        {totalQuantity} món · {formatVND(cart.total)}
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                      <AlertDialogCancel>Sửa đơn nháp</AlertDialogCancel>
+                      <AlertDialogCancel>Sửa lại</AlertDialogCancel>
                       <AlertDialogAction onClick={onSubmitOrder}>
-                        Gửi đơn mới
+                        Gửi đơn
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
@@ -447,7 +445,7 @@ function CartPaneComponent({
                   cart.items.length > 0 &&
                   cart.orderType === "dine_in" && (
                     <p className="text-center text-sm text-muted-foreground">
-                      Vui lòng chọn bàn để hòan tất đơn tại chỗ.
+                      Chọn bàn để gửi đơn.
                     </p>
                   )}
               </CardContent>
@@ -461,12 +459,11 @@ function CartPaneComponent({
           <AlertDialogHeader>
             <AlertDialogTitle>Xóa đơn nháp?</AlertDialogTitle>
             <AlertDialogDescription>
-              Tất cả {cart.items.length} món sẽ bị xóa khỏi đơn nháp. Hành động
-              này không thể hòan tác.
+              {cart.items.length} món sẽ bị xóa.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Giữ đơn nháp</AlertDialogCancel>
+            <AlertDialogCancel>Giữ lại</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               onClick={() => {
@@ -474,7 +471,7 @@ function CartPaneComponent({
                 setClearConfirmOpen(false);
               }}
             >
-              Xóa đơn nháp
+              Xóa
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

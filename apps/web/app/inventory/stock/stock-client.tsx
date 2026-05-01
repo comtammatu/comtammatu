@@ -22,6 +22,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@comtammatu/ui/components/dialog";
+import {
+  Empty,
+  EmptyHeader,
+  EmptyTitle,
+} from "@comtammatu/ui/components/empty";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import {
@@ -744,11 +749,15 @@ export function StockClient({
         {isMobile ? (
           <div className="flex flex-col gap-2">
             {filtered.length === 0 ? (
-              <div className="py-12 text-center text-sm text-muted-foreground">
-                {searchQuery.trim()
-                  ? "Không tìm thấy nguyên liệu phù hợp"
-                  : "Chưa có dữ liệu tồn kho"}
-              </div>
+              <Empty className="py-8">
+                <EmptyHeader>
+                  <EmptyTitle className="text-sm font-semibold">
+                    {searchQuery.trim()
+                      ? "Không tìm thấy nguyên liệu phù hợp"
+                      : "Chưa có dữ liệu tồn kho"}
+                  </EmptyTitle>
+                </EmptyHeader>
+              </Empty>
             ) : (
               filtered.map((item) => (
                 <InteractiveCard

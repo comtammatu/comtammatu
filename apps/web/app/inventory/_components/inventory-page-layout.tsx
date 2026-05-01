@@ -1,15 +1,6 @@
 import type { ReactNode } from "react";
-import type { LucideIcon } from "lucide-react";
-import { CircleCheck as IconCircleCheck } from "lucide-react";
 import { cn } from "@comtammatu/ui";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@comtammatu/ui/components/empty";
 
 interface InventoryPageContentProps {
   children: ReactNode;
@@ -64,33 +55,5 @@ export function InventoryFilterBar({
         {children}
       </CardContent>
     </Card>
-  );
-}
-
-interface InventoryEmptyStateProps {
-  title: string;
-  description?: string;
-  icon?: LucideIcon;
-  className?: string;
-}
-
-export function InventoryEmptyState({
-  title,
-  description,
-  icon: Icon = IconCircleCheck,
-  className,
-}: InventoryEmptyStateProps) {
-  return (
-    <Empty className={cn("border border-dashed bg-muted/30 py-10", className)}>
-      <EmptyMedia variant="icon">
-        <Icon />
-      </EmptyMedia>
-      <EmptyHeader>
-        <EmptyTitle>{title}</EmptyTitle>
-        {description ? (
-          <EmptyDescription>{description}</EmptyDescription>
-        ) : null}
-      </EmptyHeader>
-    </Empty>
   );
 }

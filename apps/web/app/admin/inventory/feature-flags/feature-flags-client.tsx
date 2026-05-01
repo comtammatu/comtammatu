@@ -7,11 +7,18 @@ import { Button } from "@comtammatu/ui/components/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@comtammatu/ui/components/card";
 import { Switch } from "@comtammatu/ui/components/switch";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@comtammatu/ui/components/table";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Flag as IconFlag, Bolt as IconBolt, Info as IconInfoCircle } from "lucide-react";
 import {
@@ -120,25 +127,18 @@ export function FeatureFlagsClient({ matrix }: Props) {
   }
 
   return (
-    <div className="container mx-auto max-w-6xl space-y-4 py-6">
+    <div className="space-y-4">
       <header>
-        <h1 className="flex items-center gap-2 text-2xl font-semibold">
+        <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight sm:text-3xl">
           <IconFlag className="size-6 text-warning-foreground" />
           Feature flags kho hàng
         </h1>
-        <p className="text-sm text-muted-foreground">
-          Bật/tắt từng module mới per chi nhánh. Module bị tắt sẽ tự redirect
-          về UI legacy — code đã deploy, chỉ đổi cờ ở đây.
-        </p>
       </header>
 
       <Card>
         <CardHeader className="flex flex-wrap items-start justify-between gap-3 pb-2">
           <div>
             <CardTitle className="text-base">Ma trận branch × flag</CardTitle>
-            <CardDescription>
-              Nhấn switch để đổi trạng thái. Hover để xem ai bật/tắt lần cuối.
-            </CardDescription>
           </div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <IconInfoCircle className="size-4" />
@@ -147,90 +147,81 @@ export function FeatureFlagsClient({ matrix }: Props) {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/40 text-xs uppercase text-muted-foreground">
-                <tr>
-                  <th className="sticky left-0 z-10 bg-muted/40 px-3 py-2 text-left font-medium">
-                    Tính năng
-                  </th>
-                  {matrix.branches.map((b) => (
-                    <th
-                      key={b.id}
-                      className="px-3 py-2 text-center font-medium"
-                    >
-                      {b.name}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {matrix.flags.map((meta) => (
-                  <tr
-                    key={meta.key}
-                    className="border-t align-middle"
-                    data-flag-key={meta.key}
-                  >
-                    <td className="sticky left-0 z-10 bg-background px-3 py-2">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-3xs">
-                          {meta.sprint}
-                        </Badge>
-                        <span className="font-medium">{meta.label}</span>
-                      </div>
-                      <p className="mt-0.5 max-w-80 text-xs text-muted-foreground">
-                        {meta.description}
-                      </p>
-                      <code className="mt-0.5 block text-2xs text-muted-foreground">
-                        {meta.key}
-                      </code>
-                    </td>
-                    {matrix.branches.map((b) => {
-                      const cell = state[meta.key]?.[b.id];
-                      const enabled = cell?.enabled ?? false;
-                      const tooltip = cell
-                        ? `${enabled ? "BẬT" : "TẮT"}${
-                            cell.enabledByName
-                              ? ` bởi ${cell.enabledByName}`
-                              : ""
-                          }${
-                            cell.enabledAt
-                              ? ` · ${formatDate(cell.enabledAt)}`
-                              : ""
-                          }`
-                        : "Chưa có bản ghi (mặc định TẮT)";
-                      const deferred = meta.sprint.includes("deferred");
-                      return (
-                        <td
-                          key={b.id}
-                          className="px-3 py-2 text-center"
-                          title={tooltip}
-                        >
-                          <Switch
-                            checked={enabled}
-                            disabled={pending || deferred}
-                            onCheckedChange={(next) =>
-                              toggle(b.id, meta.key, next)
-                            }
-                          />
-                        </td>
-                      );
-                    })}
-                  </tr>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="sticky left-0 z-10 bg-muted">
+                  Tính năng
+                </TableHead>
+                {matrix.branches.map((b) => (
+                  <TableHead key={b.id} className="text-center">
+                    {b.name}
+                  </TableHead>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {matrix.flags.map((meta) => (
+                <TableRow
+                  key={meta.key}
+                  className="align-middle"
+                  data-flag-key={meta.key}
+                >
+                  <TableCell className="sticky left-0 z-10 bg-background">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-3xs">
+                        {meta.sprint}
+                      </Badge>
+                      <span className="font-medium">{meta.label}</span>
+                    </div>
+                    <p className="mt-0.5 max-w-80 text-xs text-muted-foreground">
+                      {meta.description}
+                    </p>
+                    <code className="mt-0.5 block text-2xs text-muted-foreground">
+                      {meta.key}
+                    </code>
+                  </TableCell>
+                  {matrix.branches.map((b) => {
+                    const cell = state[meta.key]?.[b.id];
+                    const enabled = cell?.enabled ?? false;
+                    const tooltip = cell
+                      ? `${enabled ? "BẬT" : "TẮT"}${
+                          cell.enabledByName
+                            ? ` bởi ${cell.enabledByName}`
+                            : ""
+                        }${
+                          cell.enabledAt
+                            ? ` · ${formatDate(cell.enabledAt)}`
+                            : ""
+                        }`
+                      : "Chưa có bản ghi (mặc định TẮT)";
+                    const deferred = meta.sprint.includes("deferred");
+                    return (
+                      <TableCell
+                        key={b.id}
+                        className="text-center"
+                        title={tooltip}
+                      >
+                        <Switch
+                          checked={enabled}
+                          disabled={pending || deferred}
+                          onCheckedChange={(next) =>
+                            toggle(b.id, meta.key, next)
+                          }
+                        />
+                      </TableCell>
+                    );
+                  })}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Hành động nhanh — bật pilot</CardTitle>
-          <CardDescription>
-            Một click bật mọi flag non-deferred cho chi nhánh. Hữu ích khi
-            onboarding pilot branch mới.
-          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-2">

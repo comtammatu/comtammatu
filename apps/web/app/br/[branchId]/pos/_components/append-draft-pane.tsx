@@ -6,7 +6,6 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Empty,
-  EmptyDescription,
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
@@ -63,17 +62,12 @@ function AppendDraftPaneComponent({
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-background">
       <div className="shrink-0 border-b border-border/60 px-3 py-3 sm:px-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="truncate text-base font-semibold tracking-tight text-foreground sm:text-xl">
-                Món thêm
-              </h2>
-              <Badge variant="warning">Đơn #{orderNumber}</Badge>
-            </div>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Chọn món trên menu, kiểm tra lại rồi gửi vào đơn.
-            </p>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <h2 className="truncate text-base font-semibold tracking-tight text-foreground sm:text-xl">
+              Món thêm
+            </h2>
+            <Badge variant="warning">#{orderNumber}</Badge>
           </div>
           <Button
             type="button"
@@ -97,9 +91,6 @@ function AppendDraftPaneComponent({
             </EmptyMedia>
             <EmptyHeader>
               <EmptyTitle>Chưa có món thêm</EmptyTitle>
-              <EmptyDescription>
-                Chạm món trên menu để đưa vào danh sách gửi thêm.
-              </EmptyDescription>
             </EmptyHeader>
           </Empty>
         </div>
@@ -160,14 +151,9 @@ function AppendDraftPaneComponent({
 
       <div className="shrink-0 border-t border-border/60 bg-background px-3 py-3 sm:px-4">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Sẽ gửi thêm
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {quantity} món cho đơn #{orderNumber}
-            </p>
-          </div>
+          <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            {quantity} món
+          </p>
           <p className="text-xl font-bold text-primary tabular-nums">
             {formatVND(total)}
           </p>
@@ -180,7 +166,7 @@ function AppendDraftPaneComponent({
             disabled={isSubmitting}
             onClick={onCancel}
           >
-            Hủy thêm món
+            Hủy
           </Button>
           <Button
             type="button"
@@ -193,7 +179,7 @@ function AppendDraftPaneComponent({
             ) : (
               <IconSend data-icon="inline-start" />
             )}
-            Gửi món thêm
+            Gửi
           </Button>
         </div>
       </div>

@@ -170,11 +170,11 @@ export default async function PrintJobsPage({
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Button asChild variant="ghost" size="sm" className="h-7 px-2">
               <Link href="/admin/settings/printers">
-                <IconArrowLeft className="size-3.5" /> Máy in
+                <IconArrowLeft className="size-4" /> Máy in
               </Link>
             </Button>
           </div>
-          <h2 className="mt-1 text-xl font-semibold">Giám sát in</h2>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">Giám sát in</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Trạng thái hàng đợi in và máy in đang kết nối
           </p>

@@ -5,7 +5,6 @@ import { Button } from "@comtammatu/ui/components/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@comtammatu/ui/components/card";
@@ -77,9 +76,6 @@ export default async function ProfilePage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-xl">Hồ sơ đang dùng</CardTitle>
-          <CardDescription>
-            Thông tin nhân viên gắn với tài khoản này.
-          </CardDescription>
         </CardHeader>
         <CardContent>
           <ItemGroup>

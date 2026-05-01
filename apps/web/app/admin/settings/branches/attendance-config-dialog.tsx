@@ -290,6 +290,7 @@ export function AttendanceConfigDialog({
                     onClick={handleCopyCode}
                   >
                     <IconCopy className="size-4" />
+                    <span className="sr-only">Sao chép mã</span>
                   </Button>
                 </div>
                 <p className="mt-2 text-xs text-muted-foreground">

@@ -36,6 +36,7 @@ import {
   TriangleAlert as IconAlertTriangle,
   Banknote as IconCash,
   CreditCard as IconCreditCard,
+  Printer as IconPrinter,
   QrCode as IconQrcode,
   Receipt as IconReceipt,
 } from "lucide-react";
@@ -48,7 +49,7 @@ import {
   createPayment,
   fetchPaymentMethodsForPos,
 } from "../../payment-actions";
-import { printProvisionalBill } from "../../print-actions";
+import { printProvisionalBill, printReceipt } from "../../print-actions";
 import { useIsOnline } from "../pwa/online-status-provider";
 import { BillReceiptSummary } from "./bill-receipt-summary";
 import { OrderTotalsSummary } from "../order-totals-summary";
@@ -617,12 +618,11 @@ export function BillReceipt({
       if (result.success) {
         const print = result.data?.print;
         if (print?.failed) {
-          toast.warning("Đã thanh toán — chưa gửi được hóa đơn tới máy in", {
-            description:
-              print.error ?? "Vui lòng in lại từ màn hình quản lý đơn.",
+          toast.warning("Chưa in được hóa đơn", {
+            description: print.error ?? "Mở đơn để in lại.",
           });
         } else {
-          toast.success("Đã thanh toán & gửi hóa đơn tới máy in");
+          toast.success("Đã thanh toán · đã gửi máy in");
         }
         await onOrderUpdated?.();
         onClose();
@@ -655,6 +655,21 @@ export function BillReceipt({
     });
   }, [orderId]);
 
+  // In lại hóa đơn cho đơn đã thanh toán / cancelled. Reuse printPending
+  // state — hai thao tác không xảy ra cùng lúc (provisional chỉ trên đơn
+  // chưa paid; reprint chỉ trên đơn read-only).
+  const handleReprintReceipt = useCallback(() => {
+    if (orderId === null) return;
+    startPrintTransition(async () => {
+      const result = await printReceipt(orderId);
+      if (result.success) {
+        toast.success("Đã gửi hóa đơn tới máy in");
+      } else {
+        toast.error(result.error ?? "Không thể in hóa đơn");
+      }
+    });
+  }, [orderId]);
+
   const MethodIcon = METHOD_META[selectedMethod]?.icon ?? IconCreditCard;
   const isReceiptIntent = intent === "receipt";
   const isReadOnlyOrder =
@@ -664,11 +679,11 @@ export function BillReceipt({
   const showUnservedWarning =
     order != null && !isReadOnlyOrder && order.status !== "served";
   const dialogTitle =
-    isReceiptIntent || isReadOnlyOrder ? "Hóa đơn" : "Phương thức thanh toán";
+    isReceiptIntent || isReadOnlyOrder ? "Hóa đơn" : "Thanh toán";
   const dialogDescription =
     isReceiptIntent || isReadOnlyOrder
-      ? "Xem lại chi tiết hóa đơn đã xử lý."
-      : "Chọn tiền mặt hoặc chuyển khoản và xác nhận thanh toán.";
+      ? "Hóa đơn đã xử lý."
+      : "Chọn phương thức và xác nhận.";
 
   return (
     <Dialog open={orderId !== null} onOpenChange={handleOpenChange}>
@@ -714,6 +729,19 @@ export function BillReceipt({
               <BillReceiptSummary order={order} />
             </ScrollArea>
             <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleReprintReceipt}
+                disabled={printPending}
+              >
+                {printPending ? (
+                  <Spinner data-icon="inline-start" />
+                ) : (
+                  <IconPrinter data-icon="inline-start" />
+                )}
+                In lại
+              </Button>
               <Button type="button" onClick={onClose}>
                 {ACTIONS_VI.close}
               </Button>
@@ -725,10 +753,9 @@ export function BillReceipt({
               {showUnservedWarning ? (
                 <Alert className="border-warning/20 bg-warning/10 text-warning">
                   <IconAlertTriangle />
-                  <AlertTitle>Đơn chưa đánh dấu đã phục vụ</AlertTitle>
+                  <AlertTitle>Chưa đánh dấu phục vụ</AlertTitle>
                   <AlertDescription>
-                    Có thể thanh toán ngay. Nút"Đã phục vụ" chỉ cập nhật trạng
-                    thái phục vụ, không khóa thanh toán.
+                    Vẫn có thể thu tiền.
                   </AlertDescription>
                 </Alert>
               ) : null}
@@ -761,11 +788,11 @@ export function BillReceipt({
 
               {pendingOfflineMethod !== null && (
                 <p className="text-sm text-muted-foreground">
-                  Sẽ tự chọn{" "}
+                  Mất mạng — sẽ tự chọn{" "}
                   <span className="font-medium text-foreground">
                     {METHOD_META[pendingOfflineMethod].label}
                   </span>{" "}
-                  khi có mạng.
+                  khi online.
                 </p>
               )}
 

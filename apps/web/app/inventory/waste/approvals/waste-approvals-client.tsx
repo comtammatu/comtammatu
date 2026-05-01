@@ -65,7 +65,7 @@ export function WasteApprovalsClient({ initial, branchFilter }: Props) {
     <div className="container mx-auto max-w-4xl space-y-4 py-6">
       <div className="flex items-center justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-semibold flex items-center gap-2">
+          <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight sm:text-3xl">
             <IconClock className="size-6 text-tier-note" />
             Duyệt waste — chờ QLV
           </h1>

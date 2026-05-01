@@ -13,6 +13,12 @@ import {
   CardTitle,
 } from "@comtammatu/ui/components/card";
 import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@comtammatu/ui/components/empty";
+import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
@@ -130,14 +136,18 @@ export function IngredientTable({
           {isMobile ? (
             <div className="space-y-3">
               {filtered.length === 0 && (
-                <div className="py-16 text-center">
-                  <IconPackage className="mx-auto size-8 text-muted-foreground" />
-                  <p className="mt-2 text-sm font-medium text-muted-foreground">
-                    {search
-                      ? "Không tìm thấy nguyên liệu nào"
-                      : "Chưa có nguyên liệu nào"}
-                  </p>
-                </div>
+                <Empty className="py-10">
+                  <EmptyMedia variant="icon">
+                    <IconPackage />
+                  </EmptyMedia>
+                  <EmptyHeader>
+                    <EmptyTitle className="text-sm font-semibold">
+                      {search
+                        ? "Không tìm thấy nguyên liệu nào"
+                        : "Chưa có nguyên liệu nào"}
+                    </EmptyTitle>
+                  </EmptyHeader>
+                </Empty>
               )}
               {filtered.map((ing) => (
                 <Item

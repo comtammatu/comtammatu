@@ -28,7 +28,6 @@ import { Combobox } from "@/components/form";
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
   SheetFooter,
   SheetHeader,
   SheetTitle,
@@ -324,9 +323,6 @@ export function MobileProductionOrderForm({
       <SheetContent side="bottom" className="max-h-screen overflow-y-auto">
         <SheetHeader className="border-b px-4 py-4">
           <SheetTitle>Tạo lệnh sản xuất</SheetTitle>
-          <SheetDescription>
-            Nhập thành phẩm cần làm ngay trong ca hiện tại.
-          </SheetDescription>
         </SheetHeader>
 
         <form onSubmit={form.handleSubmit(onValid)} noValidate>

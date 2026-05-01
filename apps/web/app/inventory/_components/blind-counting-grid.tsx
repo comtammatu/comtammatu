@@ -5,8 +5,17 @@ import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@comtammatu/ui/components/table";
 import { matchesSearch } from "@lib/search";
 import { Search as IconSearch, Check as IconCheck, FlagTriangleRight as IconFlag3 } from "lucide-react";
+import { TableEmptyStateRow } from "@/components/table-empty-state-row";
 import { FormattedNumberInput } from "./formatted-number-input";
 import { AbcClassChip } from "./abc-class-chip";
 import type { StocktakeLineBlind } from "../stocktake-actions";
@@ -97,41 +106,35 @@ export function BlindCountingGrid({
         ) : null}
       </div>
 
-      <div className="overflow-hidden rounded-md border">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/40">
-            <tr className="text-left text-xs uppercase text-muted-foreground">
-              <th className="px-3 py-2 font-medium">{PRODUCT_VI.rawIngredient}</th>
-              <th className="px-3 py-2 font-medium">ABC</th>
-              <th className="px-3 py-2 font-medium">{FORM_VI.unit}</th>
-              <th className="px-3 py-2 text-right font-medium">Số đếm</th>
-              <th className="px-3 py-2 text-right font-medium">{FORM_VI.status}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={5}
-                  className="px-3 py-6 text-center text-muted-foreground"
-                >
-                  Không có dòng nào khớp bộ lọc.
-                </td>
-              </tr>
-            ) : (
-              filtered.map((line) => (
-                <CountRow
-                  key={line.lineId}
-                  line={line}
-                  value={counts[line.ingredientId]?.qty ?? null}
-                  readOnly={readOnly || line.isFinal}
-                  onChange={(qty) => onCountChange(line.ingredientId, qty)}
-                />
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>{PRODUCT_VI.rawIngredient}</TableHead>
+            <TableHead>ABC</TableHead>
+            <TableHead>{FORM_VI.unit}</TableHead>
+            <TableHead className="text-right">Số đếm</TableHead>
+            <TableHead className="text-right">{FORM_VI.status}</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {filtered.length === 0 ? (
+            <TableEmptyStateRow
+              colSpan={5}
+              title="Không có dòng nào khớp bộ lọc."
+            />
+          ) : (
+            filtered.map((line) => (
+              <CountRow
+                key={line.lineId}
+                line={line}
+                value={counts[line.ingredientId]?.qty ?? null}
+                readOnly={readOnly || line.isFinal}
+                onChange={(qty) => onCountChange(line.ingredientId, qty)}
+              />
+            ))
+          )}
+        </TableBody>
+      </Table>
     </div>
   );
 }
@@ -154,20 +157,20 @@ function CountRow({
       : "";
 
   return (
-    <tr
-      className={cn("border-t align-middle", rowTone)}
+    <TableRow
+      className={cn("align-middle", rowTone)}
       data-row-state={
         line.isFinal ? "final" : line.needsRecount ? "needs-recount" : "open"
       }
     >
-      <td className="px-3 py-2">
+      <TableCell>
         <div className="font-medium">{line.ingredientName}</div>
-      </td>
-      <td className="px-3 py-2">
+      </TableCell>
+      <TableCell>
         <AbcClassChip class_={line.abcClass} compact withTooltip />
-      </td>
-      <td className="px-3 py-2 text-muted-foreground">{line.unit}</td>
-      <td className="px-3 py-2 text-right">
+      </TableCell>
+      <TableCell className="text-muted-foreground">{line.unit}</TableCell>
+      <TableCell className="text-right">
         <FormattedNumberInput
           value={value === null ? "" : String(value)}
           disabled={readOnly}
@@ -181,8 +184,8 @@ function CountRow({
           data-slot="blind-counting-grid-qty"
           data-ingredient-id={line.ingredientId}
         />
-      </td>
-      <td className="px-3 py-2 text-right">
+      </TableCell>
+      <TableCell className="text-right">
         <div className="inline-flex items-center gap-1">
           {line.isFinal ? (
             <Badge variant="outline" className="gap-1 border-success/40 text-success">
@@ -199,8 +202,8 @@ function CountRow({
             <Badge variant="outline">R{line.roundNo}</Badge>
           )}
         </div>
-      </td>
-    </tr>
+      </TableCell>
+    </TableRow>
   );
 }
 

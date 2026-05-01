@@ -43,9 +43,6 @@ export function ZoneFormDialog({
       defaultValues={toFormValues(zone)}
       entityKey={zone?.id ?? "new"}
       title={isEdit ? "Chỉnh sửa khu vực" : "Thêm khu vực mới"}
-      description={
-        isEdit ? "Chỉnh sửa thông tin khu vực" : "Nhập thông tin khu vực mới"
-      }
       successMessage={isEdit ? "Đã cập nhật khu vực" : "Đã tạo khu vực mới"}
       submitLabel={isEdit ? ACTIONS_VI.update : ACTIONS_VI.create}
       onSubmit={async (values) => {

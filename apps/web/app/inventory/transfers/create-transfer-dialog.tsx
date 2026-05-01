@@ -11,7 +11,6 @@ import { Button } from "@comtammatu/ui/components/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -411,16 +410,11 @@ export function CreateTransferDialog({
         if (!o) resetForm();
       }}
     >
-      <DialogContent className="max-h-dvh overflow-y-auto sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
             {isBranchManager ? "Tạo Cấp bếp" : "Tạo phiếu luân chuyển"}
           </DialogTitle>
-          <DialogDescription>
-            {isBranchManager
-              ? "Chọn kho chi nhánh gửi, bếp chi nhánh nhận và nguyên liệu cần cấp."
-              : "Chọn hướng luân chuyển, thêm nguyên liệu và nhập số lượng để tạo phiếu nháp trước khi xuất hoặc nhận kho."}
-          </DialogDescription>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-4">
           {/* Step 1: Direction */}

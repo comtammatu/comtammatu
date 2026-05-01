@@ -75,7 +75,8 @@ export function FoodCostClient({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-card p-3">
+      <Card>
+        <CardContent className="flex flex-wrap items-center gap-2 p-3">
         <div className="grid gap-1.5">
           <Label className="text-xs">{FORM_VI.fromDate}</Label>
           <Input
@@ -102,7 +103,8 @@ export function FoodCostClient({
           {isPending ? "Đang tải..." : "Lọc"}
         </Button>
         {error && <p className="text-sm text-destructive">{error}</p>}
-      </div>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-3 sm:grid-cols-3">
         <Card>

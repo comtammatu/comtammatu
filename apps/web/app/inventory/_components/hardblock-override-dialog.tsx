@@ -134,8 +134,7 @@ export function HardblockOverrideDialog({
             {typeof variancePct === "number"
               ? ` ${variancePct > 0 ? "+" : ""}${variancePct.toFixed(1)}%`
               : " ≥100%"}
-            . QLV cần cung cấp bằng chứng + lý do + ghi chú ≥{NOTE_MIN} ký tự.
-            Rate-limit 2 lần/tuần. Sau khi override, baseline của (NCC, SKU) bị tạm dừng 30 ngày.
+            . Rate-limit 2/tuần · pause baseline 30 ngày.
           </DialogDescription>
         </DialogHeader>
 

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { canAccess } from "@comtammatu/shared/auth";
 import { loadAuthState } from "@/_lib/auth";
+import { EmptyStatePanel } from "@/admin/components/empty-state-panel";
 import { getFeatureFlagMatrix } from "@/inventory/feature-flag-actions";
 import { FeatureFlagsClient } from "./feature-flags-client";
 
@@ -13,9 +14,10 @@ export default async function FeatureFlagsAdminPage() {
   const res = await getFeatureFlagMatrix();
   if (!res.success || !res.data) {
     return (
-      <div className="py-10 text-center text-sm text-muted-foreground">
-        {res.success ? "Không tải được feature flag" : res.error}
-      </div>
+      <EmptyStatePanel
+        mode="error"
+        title={res.success ? "Không tải được feature flag" : res.error}
+      />
     );
   }
 

@@ -13,7 +13,6 @@ import {
   Card,
   CardAction,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@comtammatu/ui/components/card";
@@ -168,10 +167,6 @@ export function ProductionOrderList({
           <IconClipboardList />
           Lệnh sản xuất
         </CardTitle>
-        <CardDescription>
-          Chốt lệnh nháp để trừ nguyên liệu theo BOM và nhập thành phẩm vào tồn
-          bếp trung tâm.
-        </CardDescription>
         <CardAction>
           <Badge variant={draftCount > 0 ? "warning" : "secondary"}>
             {draftCount} lệnh nháp

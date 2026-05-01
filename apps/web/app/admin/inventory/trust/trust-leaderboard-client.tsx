@@ -16,7 +16,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@comtammatu/ui/components/table";
 import { Search as IconSearch, ShieldCheck as IconShieldCheck, TriangleAlert as IconAlertTriangle, Flame as IconFlame } from "lucide-react";
+import { TableEmptyStateRow } from "@/components/table-empty-state-row";
 import { TrustScoreBadge } from "@/inventory/_components/trust-score-badge";
 import type { TrustScoreRow } from "@/inventory/trust-actions";
 
@@ -72,10 +81,10 @@ export function TrustLeaderboardClient({
   const selectBranchId = String(branchId);
 
   return (
-    <div className="container mx-auto max-w-6xl space-y-4 py-6">
+    <div className="space-y-4">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="flex items-center gap-2 text-2xl font-semibold">
+          <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight sm:text-3xl">
             <IconShieldCheck className="size-6 text-tier-elite" />
             Trust leaderboard
           </h1>
@@ -169,95 +178,95 @@ export function TrustLeaderboardClient({
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          {filtered.length === 0 ? (
-            <div className="py-10 text-center text-sm text-muted-foreground">
-              {rows.length === 0
-                ? "Chi nhánh này chưa có bản ghi trust score."
-                : "Không user nào khớp bộ lọc."}
-            </div>
-          ) : (
-            <table className="w-full text-sm">
-              <thead className="bg-muted/40 text-xs uppercase text-muted-foreground">
-                <tr>
-                  <th className="px-3 py-2 text-right font-medium">#</th>
-                  <th className="px-3 py-2 text-left font-medium">{STAFF_VI.long}</th>
-                  <th className="px-3 py-2 text-left font-medium">Tier</th>
-                  <th className="px-3 py-2 text-right font-medium">Score (lưu)</th>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="text-right">#</TableHead>
+                <TableHead>{STAFF_VI.long}</TableHead>
+                <TableHead>Tier</TableHead>
+                <TableHead className="text-right">Score (lưu)</TableHead>
+                {includeComputed ? (
+                  <TableHead className="text-right">Score (live)</TableHead>
+                ) : null}
+                <TableHead className="text-right">GRN 30d</TableHead>
+                <TableHead className="text-right">Incident</TableHead>
+                <TableHead>Incident gần nhất</TableHead>
+                <TableHead>{ACTIONS_VI.update}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.length === 0 ? (
+                <TableEmptyStateRow
+                  colSpan={includeComputed ? 9 : 8}
+                  title={
+                    rows.length === 0
+                      ? "Chi nhánh này chưa có bản ghi trust score."
+                      : "Không user nào khớp bộ lọc."
+                  }
+                />
+              ) : null}
+              {filtered.map((r, idx) => (
+                <TableRow key={r.userId} className="align-middle">
+                  <TableCell className="text-right font-medium tabular-nums text-muted-foreground">
+                    {idx + 1}
+                  </TableCell>
+                  <TableCell className="font-medium">
+                    {r.fullName || "(Chưa cập nhật)"}
+                    <div className="text-xs text-muted-foreground">
+                      {r.userId.slice(0, 8)}…
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <TrustScoreBadge
+                      score={r.score}
+                      computedScore={r.computedScore}
+                      compact
+                      withTooltip
+                    />
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {Math.round(r.score)}
+                  </TableCell>
                   {includeComputed ? (
-                    <th className="px-3 py-2 text-right font-medium">
-                      Score (live)
-                    </th>
-                  ) : null}
-                  <th className="px-3 py-2 text-right font-medium">GRN 30d</th>
-                  <th className="px-3 py-2 text-right font-medium">Incident</th>
-                  <th className="px-3 py-2 text-left font-medium">Incident gần nhất</th>
-                  <th className="px-3 py-2 text-left font-medium">{ACTIONS_VI.update}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((r, idx) => (
-                  <tr key={r.userId} className="border-t align-middle">
-                    <td className="px-3 py-2 text-right font-medium tabular-nums text-muted-foreground">
-                      {idx + 1}
-                    </td>
-                    <td className="px-3 py-2 font-medium">
-                      {r.fullName || "(Chưa cập nhật)"}
-                      <div className="text-xs text-muted-foreground">
-                        {r.userId.slice(0, 8)}…
-                      </div>
-                    </td>
-                    <td className="px-3 py-2">
-                      <TrustScoreBadge
-                        score={r.score}
-                        computedScore={r.computedScore}
-                        compact
-                        withTooltip
-                      />
-                    </td>
-                    <td className="px-3 py-2 text-right tabular-nums">
-                      {Math.round(r.score)}
-                    </td>
-                    {includeComputed ? (
-                      <td
-                        className={cn(
-                          "px-3 py-2 text-right tabular-nums font-medium",
-                          typeof r.computedScore === "number" &&
-                            Math.abs(r.computedScore - r.score) > 2
-                            ? "text-warning-foreground"
-                            : "",
-                        )}
-                      >
-                        {typeof r.computedScore === "number"
-                          ? Math.round(r.computedScore)
-                          : "—"}
-                      </td>
-                    ) : null}
-                    <td className="px-3 py-2 text-right tabular-nums">
-                      {r.grnCount30d}
-                    </td>
-                    <td className="px-3 py-2 text-right tabular-nums">
-                      {r.varianceIncidents30d > 0 ? (
-                        <Badge
-                          variant="outline"
-                          className="border-destructive/40 text-destructive"
-                        >
-                          {r.varianceIncidents30d}
-                        </Badge>
-                      ) : (
-                        <span className="text-muted-foreground">0</span>
+                    <TableCell
+                      className={cn(
+                        "text-right tabular-nums font-medium",
+                        typeof r.computedScore === "number" &&
+                          Math.abs(r.computedScore - r.score) > 2
+                          ? "text-warning-foreground"
+                          : "",
                       )}
-                    </td>
-                    <td className="px-3 py-2 text-xs text-muted-foreground">
-                      {r.lastIncidentAt ? formatDate(r.lastIncidentAt) : "—"}
-                    </td>
-                    <td className="px-3 py-2 text-xs text-muted-foreground">
-                      {formatDate(r.updatedAt)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+                    >
+                      {typeof r.computedScore === "number"
+                        ? Math.round(r.computedScore)
+                        : "—"}
+                    </TableCell>
+                  ) : null}
+                  <TableCell className="text-right tabular-nums">
+                    {r.grnCount30d}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {r.varianceIncidents30d > 0 ? (
+                      <Badge
+                        variant="outline"
+                        className="border-destructive/40 text-destructive"
+                      >
+                        {r.varianceIncidents30d}
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground">0</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {r.lastIncidentAt ? formatDate(r.lastIncidentAt) : "—"}
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {formatDate(r.updatedAt)}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
     </div>

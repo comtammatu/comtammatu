@@ -4,7 +4,6 @@ import { useState, useTransition } from "react";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@comtammatu/ui/components/card";
@@ -41,10 +40,10 @@ interface Props {
 
 export function ExpressWindowsClient({ initial }: Props) {
   return (
-    <div className="container mx-auto max-w-3xl space-y-4 py-6">
+    <div className="space-y-4">
       <div className="flex items-center gap-2">
         <IconClockHour6 className="size-6 text-info" />
-        <h1 className="text-2xl font-semibold">
+        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
           Express window & Override code (theo chi nhánh)
         </h1>
       </div>
@@ -78,9 +77,6 @@ function BranchSettingsCard({ branch }: { branch: BranchRow }) {
               {branch.timezone}
             </Badge>
           </CardTitle>
-          <CardDescription>
-            Cấu hình Express auto-approve window và rotate mã override tier-2.
-          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <ExpressWindowSection
