@@ -233,6 +233,8 @@ GRANT EXECUTE ON FUNCTION public.release_zone_lock(BIGINT, TEXT) TO authenticate
 -- (F) Enhanced submit_count_round — offline guards + conflict
 -- =============================================================
 
+DROP FUNCTION IF EXISTS public.submit_count_round(BIGINT, SMALLINT, JSONB);
+
 CREATE OR REPLACE FUNCTION public.submit_count_round(
   p_session_id BIGINT,
   p_round_no   SMALLINT,

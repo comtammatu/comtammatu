@@ -1,4 +1,8 @@
-project_id = "xdpsjuelxlnylahjgstk" # Fill with your Supabase project ID
+project_id = "nppfnlnnrynnitcwdyht"
+
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]
 
 [auth]
 enabled = true

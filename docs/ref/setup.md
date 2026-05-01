@@ -117,7 +117,7 @@ WHERE id = '<user-uuid>';
 
 ### Seed QA Test Accounts (dev / staging)
 
-Chạy `scripts/sql/seed_dev_auth_users.sql` trong Supabase SQL Editor (role `postgres`) — idempotent, có thể chạy lại nhiều lần.
+Preferred CLI: `supabase db query --linked --file supabase/seed.sql`. SQL Editor fallback: run `scripts/sql/seed_dev_auth_users.sql` as role `postgres`. The seed is idempotent and can be rerun.
 
 Mật khẩu tất cả: `Test1234!`. Bao phủ toàn bộ `STAFF_ROLES`:
 
