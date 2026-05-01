@@ -37,7 +37,12 @@ import {
   ShoppingCart as IconShoppingCart,
   X as IconX,
 } from "lucide-react";
-import type { MenuCategory, MenuItem } from "./pos-menu-types";
+import {
+  isItemBlockedByDailyLimit,
+  remainingDailyQuota,
+  type MenuCategory,
+  type MenuItem,
+} from "./pos-menu-types";
 
 interface PosMenuGridProps {
   categories: MenuCategory[];
@@ -63,15 +68,37 @@ const MenuItemButton = memo(function MenuItemButton({
   sparseMenu,
   onItemTap,
 }: MenuItemButtonProps) {
-  const handleClick = useCallback(() => onItemTap(item), [item, onItemTap]);
+  const blocked = isItemBlockedByDailyLimit(item);
+  const remaining = remainingDailyQuota(item);
+  const handleClick = useCallback(() => {
+    if (blocked) return;
+    onItemTap(item);
+  }, [blocked, item, onItemTap]);
+
+  const limitBadgeLabel = item.daily_limit?.is_disabled
+    ? "Đang tắt"
+    : blocked
+      ? "Hết suất"
+      : remaining !== null && remaining <= 5
+        ? `Còn ${remaining} suất`
+        : null;
+  const limitBadgeVariant: "destructive" | "warning" | undefined =
+    item.daily_limit?.is_disabled || blocked
+      ? "destructive"
+      : remaining !== null && remaining <= 5
+        ? "warning"
+        : undefined;
 
   return (
     <Button
       type="button"
       variant="outline"
+      disabled={blocked}
+      aria-disabled={blocked}
       className={cn(
         "h-auto min-h-56 min-w-0 w-full cursor-pointer flex-col items-stretch justify-between gap-2 p-2.5 text-left whitespace-normal shadow-sm transition-transform hover:border-primary/30 hover:shadow-md active:scale-95 md:min-h-64 md:gap-0 md:p-5 lg:min-h-72",
         sparseMenu && "md:min-h-64 md:p-6",
+        blocked && "opacity-60 grayscale hover:border-input hover:shadow-sm",
       )}
       onClick={handleClick}
     >
@@ -104,6 +131,14 @@ const MenuItemButton = memo(function MenuItemButton({
             >
               {item.name}
             </p>
+            {limitBadgeLabel ? (
+              <Badge
+                variant={limitBadgeVariant}
+                className="shrink-0 text-xs"
+              >
+                {limitBadgeLabel}
+              </Badge>
+            ) : null}
           </div>
         </div>
       </div>

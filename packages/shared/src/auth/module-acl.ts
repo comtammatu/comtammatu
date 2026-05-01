@@ -23,6 +23,7 @@ export type ModuleKey =
   | "pos"
   | "kds"
   | "branch_settings"
+  | "branch_menu_limits"
   | "employee"
   | "notifications";
 
@@ -125,6 +126,23 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     path: "/br/*/settings",
     allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager"],
     label: getModuleLabelVi("branch_settings"),
+  },
+  /**
+   * Daily sales limits per (branch, menu item). Distinct from
+   * branch_settings so cashier + chef can co-own quota adjustments
+   * without inheriting access to printer/POS/zone configuration.
+   */
+  branch_menu_limits: {
+    path: "/br/*/menu-limits",
+    allowedRoles: [
+      "owner",
+      "super_manager",
+      "area_manager",
+      "branch_manager",
+      "cashier",
+      "chef",
+    ],
+    label: getModuleLabelVi("branch_menu_limits"),
   },
   employee: {
     path: "/employee",
