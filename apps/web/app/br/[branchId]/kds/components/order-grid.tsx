@@ -65,7 +65,7 @@ export function OrderGrid({
         <div className={cn(gridClass)}>
           {displayOrders.map((order) => (
             <OrderCard
-              key={order.orderId}
+              key={order.groupKey}
               order={order}
               onBump={onBump}
               onRecall={onRecall}

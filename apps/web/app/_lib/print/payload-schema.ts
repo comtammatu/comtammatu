@@ -67,10 +67,13 @@ const billBaseFields = {
 
 export const kitchenTicketPayloadSchema = z.object({
   kind: z.literal("kitchen_ticket"),
+  kitchen_ticket_number: z.string().optional(),
+  source_order_number: z.string().optional(),
   order_number: z.string(),
   order_type: z.enum(["dine_in", "takeaway"]),
   table_number: z.number().int().nullable().optional(),
   send_seq: z.number().int(),
+  send_kind: z.enum(["initial", "append", "manual"]).optional(),
   slot: z.number().int().min(1).max(2),
   /** ≥2 triggers "IN LẠI LẦN #N" banner in the renderer. */
   reprint_seq: z.number().int().nullable().optional(),

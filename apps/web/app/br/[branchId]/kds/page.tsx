@@ -8,6 +8,7 @@ import type {
   KdsTicket,
   KdsOrderInfo,
   KdsOrderItem,
+  KdsKitchenSendBatch,
 } from "./types";
 
 export default async function KdsPage({
@@ -43,7 +44,7 @@ export default async function KdsPage({
   const { data: rawTickets, error: ticketsError } = await supabase
     .from("kds_tickets")
     .select(
-      "id, station_id, order_id, order_item_id, status, bumped_at, created_at",
+      "id, station_id, order_id, order_item_id, kitchen_send_batch_id, status, bumped_at, created_at",
     )
     .eq("branch_id", branchIdNum)
     .in("status", ["pending", "preparing", "ready"])
@@ -93,6 +94,7 @@ export default async function KdsPage({
 
   let orders: KdsOrderInfo[] = [];
   let orderItems: KdsOrderItem[] = [];
+  let kitchenBatches: KdsKitchenSendBatch[] = [];
 
   if (orderIds.length > 0) {
     const [ordersRes, itemsRes] = await Promise.all([
@@ -114,6 +116,22 @@ export default async function KdsPage({
     orderItems = (itemsRes.data ?? []) as unknown as KdsOrderItem[];
   }
 
+  const batchIds = [
+    ...new Set(
+      tickets
+        .map((ticket) => ticket.kitchen_send_batch_id)
+        .filter((id): id is number => id !== null),
+    ),
+  ];
+
+  if (batchIds.length > 0) {
+    const { data: rawBatches } = await supabase
+      .from("kitchen_send_batches")
+      .select("id, order_id, kitchen_ticket_number, send_seq, kind, created_at")
+      .in("id", batchIds);
+    kitchenBatches = (rawBatches ?? []) as unknown as KdsKitchenSendBatch[];
+  }
+
   return (
     <KdsBoard
       branchId={branchIdNum}
@@ -124,6 +142,7 @@ export default async function KdsPage({
       initialTickets={tickets}
       initialOrders={orders}
       initialOrderItems={orderItems}
+      initialKitchenBatches={kitchenBatches}
     />
   );
 }

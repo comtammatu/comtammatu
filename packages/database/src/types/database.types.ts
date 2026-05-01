@@ -1818,6 +1818,7 @@ export type Database = {
           bumped_by: string | null
           created_at: string
           id: number
+          kitchen_send_batch_id: number | null
           order_id: number
           order_item_id: number
           station_id: number
@@ -1831,6 +1832,7 @@ export type Database = {
           bumped_by?: string | null
           created_at?: string
           id?: never
+          kitchen_send_batch_id?: number | null
           order_id: number
           order_item_id: number
           station_id: number
@@ -1844,6 +1846,7 @@ export type Database = {
           bumped_by?: string | null
           created_at?: string
           id?: never
+          kitchen_send_batch_id?: number | null
           order_id?: number
           order_item_id?: number
           station_id?: number
@@ -1864,6 +1867,13 @@ export type Database = {
             columns: ["bumped_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kds_tickets_kitchen_send_batch_id_fkey"
+            columns: ["kitchen_send_batch_id"]
+            isOneToOne: false
+            referencedRelation: "kitchen_send_batches"
             referencedColumns: ["id"]
           },
           {
@@ -1889,6 +1899,119 @@ export type Database = {
           },
           {
             foreignKeyName: "kds_tickets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kitchen_daily_counters: {
+        Row: {
+          branch_id: number
+          counter_date: string
+          id: number
+          last_seq: number
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          branch_id: number
+          counter_date: string
+          id?: never
+          last_seq?: number
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: number
+          counter_date?: string
+          id?: never
+          last_seq?: number
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kitchen_daily_counters_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kitchen_daily_counters_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kitchen_send_batches: {
+        Row: {
+          branch_id: number
+          counter_date: string
+          created_at: string
+          created_by: string | null
+          id: number
+          kind: string
+          kitchen_ticket_number: string
+          order_id: number
+          send_seq: number
+          tenant_id: number
+          ticket_seq: number
+        }
+        Insert: {
+          branch_id: number
+          counter_date: string
+          created_at?: string
+          created_by?: string | null
+          id?: never
+          kind?: string
+          kitchen_ticket_number: string
+          order_id: number
+          send_seq: number
+          tenant_id: number
+          ticket_seq: number
+        }
+        Update: {
+          branch_id?: number
+          counter_date?: string
+          created_at?: string
+          created_by?: string | null
+          id?: never
+          kind?: string
+          kitchen_ticket_number?: string
+          order_id?: number
+          send_seq?: number
+          tenant_id?: number
+          ticket_seq?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kitchen_send_batches_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kitchen_send_batches_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kitchen_send_batches_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kitchen_send_batches_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -2299,7 +2422,6 @@ export type Database = {
           counter_date: string
           id: number
           last_seq: number
-          order_type: string
           tenant_id: number
           updated_at: string
         }
@@ -2308,7 +2430,6 @@ export type Database = {
           counter_date: string
           id?: never
           last_seq?: number
-          order_type?: string
           tenant_id: number
           updated_at?: string
         }
@@ -2317,7 +2438,6 @@ export type Database = {
           counter_date?: string
           id?: never
           last_seq?: number
-          order_type?: string
           tenant_id?: number
           updated_at?: string
         }
@@ -2654,6 +2774,7 @@ export type Database = {
           provider_data: Json | null
           provider_ref: string | null
           status: string
+          stock_consumed_status: string | null
           tenant_id: number
           updated_at: string
         }
@@ -2670,6 +2791,7 @@ export type Database = {
           provider_data?: Json | null
           provider_ref?: string | null
           status?: string
+          stock_consumed_status?: string | null
           tenant_id: number
           updated_at?: string
         }
@@ -2686,6 +2808,7 @@ export type Database = {
           provider_data?: Json | null
           provider_ref?: string | null
           status?: string
+          stock_consumed_status?: string | null
           tenant_id?: number
           updated_at?: string
         }
@@ -4027,6 +4150,7 @@ export type Database = {
       refunds: {
         Row: {
           amount: number
+          approved_at: string | null
           approved_by: string | null
           branch_id: number
           created_at: string
@@ -4041,6 +4165,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          approved_at?: string | null
           approved_by?: string | null
           branch_id: number
           created_at?: string
@@ -4055,6 +4180,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          approved_at?: string | null
           approved_by?: string | null
           branch_id?: number
           created_at?: string
@@ -6253,6 +6379,66 @@ export type Database = {
           },
         ]
       }
+      webhook_events: {
+        Row: {
+          created_at: string
+          error_code: string | null
+          http_status: number | null
+          id: number
+          payload: Json
+          payment_id: number | null
+          processed_at: string | null
+          processing_status: string
+          provider: string
+          request_id: string
+          signature_valid: boolean
+          tenant_id: number
+        }
+        Insert: {
+          created_at?: string
+          error_code?: string | null
+          http_status?: number | null
+          id?: never
+          payload: Json
+          payment_id?: number | null
+          processed_at?: string | null
+          processing_status?: string
+          provider: string
+          request_id: string
+          signature_valid?: boolean
+          tenant_id: number
+        }
+        Update: {
+          created_at?: string
+          error_code?: string | null
+          http_status?: number | null
+          id?: never
+          payload?: Json
+          payment_id?: number | null
+          processed_at?: string | null
+          processing_status?: string
+          provider?: string
+          request_id?: string
+          signature_valid?: boolean
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_events_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "webhook_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       mv_daily_revenue: {
@@ -6787,6 +6973,10 @@ export type Database = {
         }
         Returns: Json
       }
+      create_refund: {
+        Args: { p_amount: number; p_payment_id: number; p_reason: string }
+        Returns: Json
+      }
       create_stock_transfer_draft: {
         Args: {
           p_from_branch_id: number
@@ -7064,10 +7254,7 @@ export type Database = {
         }[]
       }
       get_inventory_dashboard: { Args: { p_branch_id: number }; Returns: Json }
-      get_pos_session_report: {
-        Args: { p_session_id: number }
-        Returns: Json
-      }
+      get_pos_session_report: { Args: { p_session_id: number }; Returns: Json }
       get_revenue_rollup: {
         Args: {
           p_branch_id: number
@@ -7266,7 +7453,12 @@ export type Database = {
         }
         Returns: Json
       }
+      restore_stock_for_order: {
+        Args: { p_actor_id: string; p_order_id: number }
+        Returns: number
+      }
       retry_print_job: { Args: { p_job_id: number }; Returns: boolean }
+      reverse_payment_and_post: { Args: { p_refund_id: number }; Returns: Json }
       revoke_permission: {
         Args: {
           p_branch_id: number
@@ -7312,14 +7504,23 @@ export type Database = {
         Args: { p_branch_id: number; p_kind?: string }
         Returns: undefined
       }
-      split_order: {
-        Args: {
-          p_idempotency_key?: string
-          p_item_partials: Json
-          p_source_order_id: number
-        }
-        Returns: Json
-      }
+      split_order:
+        | {
+            Args: {
+              p_idempotency_key?: string
+              p_item_ids: number[]
+              p_source_order_id: number
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_idempotency_key?: string
+              p_item_partials: Json
+              p_source_order_id: number
+            }
+            Returns: Json
+          }
       start_stocktake: {
         Args: {
           p_auditor_id?: string

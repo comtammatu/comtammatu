@@ -22,6 +22,8 @@ const LINE_WIDTH = 48;
 /** Max double-size chars per line in kitchen item rows. Prefix "    | " uses
  * 6 normal cells, leaving 42 cells = 21 double-size chars. */
 const KITCHEN_NAME_WIDTH_DOUBLE = 21;
+const KITCHEN_DETAIL_WIDTH_DOUBLE = 20;
+const KITCHEN_FULL_WIDTH_DOUBLE = 24;
 
 /**
  * ESC/POS code-page register for CP1258 (Vietnamese). Varies by printer firmware:
@@ -150,10 +152,13 @@ export type SideLine = { name?: string; side_item_name?: string; quantity?: numb
 
 export type KitchenPayload = {
   kind: "kitchen_ticket";
+  kitchen_ticket_number?: string;
+  source_order_number?: string;
   order_number: string;
   order_type: "dine_in" | "takeaway";
   table_number?: number | null;
   send_seq: number;
+  send_kind?: "initial" | "append" | "manual";
   slot: number;
   /** >=2 = reprint of the same send batch; renders "IN LẠI LẦN #N" banner. */
   reprint_seq?: number | null;
@@ -370,6 +375,24 @@ const kitchenItemRow = (qty: number, name: string): Uint8Array[] => {
 const kitchenDetailLine = (prefix: string, text: string): Uint8Array =>
   line(`    |   ${prefix}${text}`);
 
+const kitchenImportantDetailRows = (
+  prefix: string,
+  text: string,
+): Uint8Array[] => {
+  const chunks = wrapText(`${prefix}${text}`, KITCHEN_DETAIL_WIDTH_DOUBLE);
+  return chunks.map((chunk) =>
+    concat([
+      encodeText("    |   "),
+      sizeDouble(),
+      boldOn(),
+      encodeText(chunk),
+      boldOff(),
+      sizeNormal(),
+      newline(),
+    ]),
+  );
+};
+
 export function renderKitchenTicket(p: KitchenPayload): Uint8Array {
   const parts: Uint8Array[] = [init()];
 
@@ -381,8 +404,16 @@ export function renderKitchenTicket(p: KitchenPayload): Uint8Array {
         ? `BÀN ${p.table_number}`
         : "TẠI CHỖ"
       : "MANG VỀ";
-  parts.push(line(`${dest} · ${p.order_number}`));
+  const ticketNumber = p.kitchen_ticket_number ?? p.order_number;
+  const sourceOrderNumber = p.source_order_number ?? p.order_number;
+  parts.push(line(`${dest} · ${ticketNumber}`));
   parts.push(sizeNormal(), boldOff());
+
+  if (p.send_kind === "append") {
+    parts.push(sizeDouble(), boldOn());
+    parts.push(line("GỌI THÊM"));
+    parts.push(sizeNormal(), boldOff());
+  }
 
   // --- Reprint banner (only when reprint_seq >= 2) ---
   if ((p.reprint_seq ?? 0) >= 2) {
@@ -398,10 +429,11 @@ export function renderKitchenTicket(p: KitchenPayload): Uint8Array {
   parts.push(alignLeft());
   parts.push(
     line(
-      padRight(`Đơn: ${p.order_number}`, 24) +
+      padRight(`Phiếu: ${ticketNumber}`, 24) +
         padRight(`Lần gửi: ${p.send_seq}`, 24),
     ),
   );
+  parts.push(line(padRight(`HĐ: ${sourceOrderNumber}`, 24)));
   parts.push(
     line(
       padRight(`Bếp: ${p.slot}`, 24) +
@@ -440,8 +472,7 @@ export function renderKitchenTicket(p: KitchenPayload): Uint8Array {
       }
     }
     if (it.note) {
-      // Item note at normal size but bold, so chef doesn't miss it.
-      parts.push(encodeText(`    |   `), boldOn(), encodeText(`* ${it.note}`), boldOff(), newline());
+      parts.push(...kitchenImportantDetailRows("* ", it.note));
     }
   });
   parts.push(line(KITCHEN_BORDER));
@@ -451,9 +482,10 @@ export function renderKitchenTicket(p: KitchenPayload): Uint8Array {
     parts.push(divider("="));
     parts.push(alignCenter(), sizeDouble(), boldOn());
     parts.push(line("GHI CHÚ"));
-    parts.push(sizeNormal());
-    parts.push(line(p.note));
-    parts.push(boldOff(), alignLeft());
+    for (const chunk of wrapText(p.note, KITCHEN_FULL_WIDTH_DOUBLE)) {
+      parts.push(line(chunk));
+    }
+    parts.push(sizeNormal(), boldOff(), alignLeft());
     parts.push(divider("="));
   }
 

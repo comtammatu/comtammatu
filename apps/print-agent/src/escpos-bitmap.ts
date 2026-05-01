@@ -143,6 +143,7 @@ const KITCHEN_BORDER = "-".repeat(4) + "+" + "-".repeat(CHARS_PER_LINE_NORMAL - 
  * size (chef requested bigger qty), so prefix consumes 6 chars × 24 dots = 144
  * dots. Remaining 432 dots / 24 = 18 chars at double for the item name. */
 const KITCHEN_NAME_WIDTH_DOUBLE = 18;
+const KITCHEN_DETAIL_WIDTH_DOUBLE = 20;
 /** Indent under kitchen border for variant/modifier/side/note rows: 8 normal
  * cells (matches " SL | " column width). */
 const KITCHEN_DETAIL_INDENT = "    |   ";
@@ -157,8 +158,14 @@ function renderKitchenTicketBitmap(p: KitchenPayload): Uint8Array {
         ? `BÀN ${p.table_number}`
         : "TẠI CHỖ"
       : "MANG VỀ";
-  const banner = `${dest} · ${p.order_number}`;
+  const ticketNumber = p.kitchen_ticket_number ?? p.order_number;
+  const sourceOrderNumber = p.source_order_number ?? p.order_number;
+  const banner = `${dest} · ${ticketNumber}`;
   parts.push(line(banner, { bold: true, double: true, align: "center" }));
+
+  if (p.send_kind === "append") {
+    parts.push(line("GỌI THÊM", { bold: true, double: true, align: "center" }));
+  }
 
   if ((p.reprint_seq ?? 0) >= 2) {
     parts.push(divider("="));
@@ -169,9 +176,10 @@ function renderKitchenTicketBitmap(p: KitchenPayload): Uint8Array {
   // Meta rows
   const meta = splitDateTime(p.printed_at);
   parts.push(line(
-    padRight(`Đơn: ${p.order_number}`, 24) +
+    padRight(`Phiếu: ${ticketNumber}`, 24) +
     padRight(`Lần gửi: ${p.send_seq}`, 24),
   ));
+  parts.push(line(padRight(`HĐ: ${sourceOrderNumber}`, 24)));
   parts.push(line(
     padRight(`Bếp: ${p.slot}`, 24) +
     padRight(`Giờ: ${meta.time || p.printed_at}`, 24),
@@ -211,14 +219,23 @@ function renderKitchenTicketBitmap(p: KitchenPayload): Uint8Array {
         const sideName = s.name ?? s.side_item_name;
         if (sideName) {
           const text = `- ${sideName}${s.quantity ? ` x${s.quantity}` : ""}`;
-          parts.push(renderMixedRow([
-            { text: KITCHEN_DETAIL_INDENT },
-            { text, bold: true, double: true },
-          ]));
+          for (const chunk of wrapText(text, KITCHEN_DETAIL_WIDTH_DOUBLE)) {
+            parts.push(renderMixedRow([
+              { text: KITCHEN_DETAIL_INDENT },
+              { text: chunk, bold: true, double: true },
+            ]));
+          }
         }
       }
     }
-    if (it.note) parts.push(line(`${KITCHEN_DETAIL_INDENT}* ${it.note}`, { bold: true }));
+    if (it.note) {
+      for (const chunk of wrapText(`* ${it.note}`, KITCHEN_DETAIL_WIDTH_DOUBLE)) {
+        parts.push(renderMixedRow([
+          { text: KITCHEN_DETAIL_INDENT },
+          { text: chunk, bold: true, double: true },
+        ]));
+      }
+    }
   });
   parts.push(line(KITCHEN_BORDER));
 
@@ -226,8 +243,8 @@ function renderKitchenTicketBitmap(p: KitchenPayload): Uint8Array {
   if (p.note) {
     parts.push(divider("="));
     parts.push(line("GHI CHÚ", { bold: true, double: true, align: "center" }));
-    for (const chunk of wrapText(p.note, CHARS_PER_LINE_NORMAL)) {
-      parts.push(line(chunk, { align: "center" }));
+    for (const chunk of wrapText(p.note, CHARS_PER_LINE_DOUBLE)) {
+      parts.push(line(chunk, { bold: true, double: true, align: "center" }));
     }
     parts.push(divider("="));
   }

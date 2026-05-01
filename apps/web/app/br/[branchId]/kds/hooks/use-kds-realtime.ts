@@ -3,7 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@comtammatu/database/supabase/client";
 import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
-import type { KdsOrderInfo, KdsOrderItem, KdsTicket } from "../types";
+import type {
+  KdsKitchenSendBatch,
+  KdsOrderInfo,
+  KdsOrderItem,
+  KdsTicket,
+} from "../types";
 
 const POLL_INTERVAL_MS = 12_000;
 const POLL_STALE_MS = 12_000;
@@ -23,12 +28,14 @@ export interface UseKdsRealtimeArgs {
   initialTickets: KdsTicket[];
   initialOrders: KdsOrderInfo[];
   initialOrderItems: KdsOrderItem[];
+  initialKitchenBatches: KdsKitchenSendBatch[];
 }
 
 export interface KdsRealtimeState {
   tickets: KdsTicket[];
   orders: Map<number, KdsOrderInfo>;
   orderItems: Map<number, KdsOrderItem[]>;
+  kitchenBatches: Map<number, KdsKitchenSendBatch>;
   setTickets: React.Dispatch<React.SetStateAction<KdsTicket[]>>;
   refreshBoardSnapshot: () => Promise<void>;
 }
@@ -38,6 +45,7 @@ export function useKdsRealtime({
   initialTickets,
   initialOrders,
   initialOrderItems,
+  initialKitchenBatches,
 }: UseKdsRealtimeArgs): KdsRealtimeState {
   const [tickets, setTickets] = useState<KdsTicket[]>(initialTickets);
   const [orders, setOrders] = useState<Map<number, KdsOrderInfo>>(
@@ -46,9 +54,13 @@ export function useKdsRealtime({
   const [orderItems, setOrderItems] = useState<Map<number, KdsOrderItem[]>>(
     () => buildOrderItemMap(initialOrderItems),
   );
+  const [kitchenBatches, setKitchenBatches] = useState<
+    Map<number, KdsKitchenSendBatch>
+  >(() => new Map(initialKitchenBatches.map((batch) => [batch.id, batch])));
 
   const supabaseRef = useRef(createClient());
   const ordersRef = useRef(orders);
+  const kitchenBatchesRef = useRef(kitchenBatches);
   const lastSnapshotSyncRef = useRef(Date.now());
   const refreshBoardSnapshotRef =
     useRef<() => Promise<void>>(() => Promise.resolve());
@@ -57,6 +69,10 @@ export function useKdsRealtime({
   useEffect(() => {
     ordersRef.current = orders;
   }, [orders]);
+
+  useEffect(() => {
+    kitchenBatchesRef.current = kitchenBatches;
+  }, [kitchenBatches]);
 
   const fetchOrderInfo = useCallback(async (orderId: number) => {
     const supabase = supabaseRef.current;
@@ -94,6 +110,23 @@ export function useKdsRealtime({
     }
   }, []);
 
+  const fetchKitchenBatchInfo = useCallback(async (batchId: number) => {
+    const supabase = supabaseRef.current;
+    const { data } = await supabase
+      .from("kitchen_send_batches")
+      .select("id, order_id, kitchen_ticket_number, send_seq, kind, created_at")
+      .eq("id", batchId)
+      .single();
+
+    if (!data) return;
+
+    setKitchenBatches((prev) => {
+      const next = new Map(prev);
+      next.set(batchId, data as unknown as KdsKitchenSendBatch);
+      return next;
+    });
+  }, []);
+
   const syncOrderItemStatusFromTicket = useCallback((ticket: KdsTicket) => {
     setOrderItems((prev) => {
       const items = prev.get(ticket.order_id);
@@ -122,7 +155,7 @@ export function useKdsRealtime({
     const { data: freshTickets, error: ticketsError } = await supabase
       .from("kds_tickets")
       .select(
-        "id, station_id, order_id, order_item_id, status, bumped_at, created_at",
+        "id, station_id, order_id, order_item_id, kitchen_send_batch_id, status, bumped_at, created_at",
       )
       .eq("branch_id", branchId)
       .in("status", ["pending", "preparing", "ready"])
@@ -132,16 +165,24 @@ export function useKdsRealtime({
 
     const nextTickets = freshTickets as KdsTicket[];
     const orderIds = [...new Set(nextTickets.map((ticket) => ticket.order_id))];
+    const batchIds = [
+      ...new Set(
+        nextTickets
+          .map((ticket) => ticket.kitchen_send_batch_id)
+          .filter((id): id is number => id !== null),
+      ),
+    ];
 
     if (orderIds.length === 0) {
       setTickets(nextTickets);
       setOrders(new Map());
       setOrderItems(new Map());
+      setKitchenBatches(new Map());
       lastSnapshotSyncRef.current = Date.now();
       return;
     }
 
-    const [orderRes, itemsRes] = await Promise.all([
+    const [orderRes, itemsRes, batchRes] = await Promise.all([
       supabase
         .from("orders")
         .select(
@@ -154,9 +195,17 @@ export function useKdsRealtime({
           "id, order_id, item_name, variant_name, quantity, unit_price, status, note, modifiers, sides",
         )
         .in("order_id", orderIds),
+      batchIds.length > 0
+        ? supabase
+            .from("kitchen_send_batches")
+            .select(
+              "id, order_id, kitchen_ticket_number, send_seq, kind, created_at",
+            )
+            .in("id", batchIds)
+        : Promise.resolve({ data: [], error: null }),
     ]);
 
-    if (orderRes.error || itemsRes.error) return;
+    if (orderRes.error || itemsRes.error || batchRes.error) return;
 
     setTickets(nextTickets);
     setOrders(
@@ -170,6 +219,13 @@ export function useKdsRealtime({
     setOrderItems(
       buildOrderItemMap((itemsRes.data ?? []) as unknown as KdsOrderItem[]),
     );
+    setKitchenBatches(
+      new Map(
+        ((batchRes.data ?? []) as unknown as KdsKitchenSendBatch[]).map(
+          (batch) => [batch.id, batch],
+        ),
+      ),
+    );
     lastSnapshotSyncRef.current = Date.now();
   }, [branchId]);
 
@@ -178,11 +234,13 @@ export function useKdsRealtime({
   }, [refreshBoardSnapshot]);
 
   const fetchOrderInfoRef = useRef(fetchOrderInfo);
+  const fetchKitchenBatchInfoRef = useRef(fetchKitchenBatchInfo);
   const syncOrderItemStatusFromTicketRef = useRef(syncOrderItemStatusFromTicket);
   useEffect(() => {
     fetchOrderInfoRef.current = fetchOrderInfo;
+    fetchKitchenBatchInfoRef.current = fetchKitchenBatchInfo;
     syncOrderItemStatusFromTicketRef.current = syncOrderItemStatusFromTicket;
-  }, [fetchOrderInfo, syncOrderItemStatusFromTicket]);
+  }, [fetchOrderInfo, fetchKitchenBatchInfo, syncOrderItemStatusFromTicket]);
 
   useRealtimeChannel(
     (supabase) =>
@@ -207,6 +265,13 @@ export function useKdsRealtime({
               if (!ordersRef.current.has(orderId)) {
                 void fetchOrderInfoRef.current(orderId);
               }
+              const batchId = newTicket.kitchen_send_batch_id;
+              if (
+                batchId !== null &&
+                !kitchenBatchesRef.current.has(batchId)
+              ) {
+                void fetchKitchenBatchInfoRef.current(batchId);
+              }
             } else if (payload.eventType === "UPDATE") {
               const updated = payload.new as KdsTicket;
               setTickets((prev) =>
@@ -214,6 +279,13 @@ export function useKdsRealtime({
               );
               syncOrderItemStatusFromTicketRef.current(updated);
               lastSnapshotSyncRef.current = Date.now();
+              const batchId = updated.kitchen_send_batch_id;
+              if (
+                batchId !== null &&
+                !kitchenBatchesRef.current.has(batchId)
+              ) {
+                void fetchKitchenBatchInfoRef.current(batchId);
+              }
             } else if (payload.eventType === "DELETE") {
               const deleted = payload.old as { id: number };
               setTickets((prev) => prev.filter((t) => t.id !== deleted.id));
@@ -254,6 +326,7 @@ export function useKdsRealtime({
     tickets,
     orders,
     orderItems,
+    kitchenBatches,
     setTickets,
     refreshBoardSnapshot,
   };

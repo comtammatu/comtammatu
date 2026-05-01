@@ -12,8 +12,19 @@ export interface KdsTicket {
   station_id: number;
   order_id: number;
   order_item_id: number;
+  kitchen_send_batch_id: number | null;
   status: string;
   bumped_at: string | null;
+  created_at: string;
+}
+
+/** Kitchen send batch for queue numbering. */
+export interface KdsKitchenSendBatch {
+  id: number;
+  order_id: number;
+  kitchen_ticket_number: string;
+  send_seq: number;
+  kind: string;
   created_at: string;
 }
 
@@ -58,11 +69,15 @@ export interface KdsOrderItem {
 
 /** Grouped order with its tickets and items for display */
 export interface KdsOrder {
+  groupKey: string;
   orderId: number;
   orderNumber: string;
+  kitchenTicketNumber: string;
   orderType: string;
   tableNumber: number | null;
   createdAt: string;
+  sendSeq: number | null;
+  sendKind: string | null;
   tickets: KdsTicket[];
   items: KdsOrderItem[];
 }
@@ -80,6 +95,7 @@ export interface KdsBoardProps {
   initialTickets: KdsTicket[];
   initialOrders: KdsOrderInfo[];
   initialOrderItems: KdsOrderItem[];
+  initialKitchenBatches: KdsKitchenSendBatch[];
 }
 
 /** URL query: status filter */

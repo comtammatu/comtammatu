@@ -8,8 +8,11 @@ import { AgeBadge } from "./age-badge";
 
 interface OrderCardHeaderProps {
   orderNumber: string;
+  kitchenTicketNumber: string;
   orderType: string;
   tableNumber: number | null;
+  sendSeq: number | null;
+  sendKind: string | null;
   elapsedMinutes: number;
   isComplete: boolean;
   bgClass: string;
@@ -17,13 +20,17 @@ interface OrderCardHeaderProps {
 
 export function OrderCardHeader({
   orderNumber,
+  kitchenTicketNumber,
   orderType,
   tableNumber,
+  sendSeq,
+  sendKind,
   elapsedMinutes,
   isComplete,
   bgClass,
 }: OrderCardHeaderProps) {
   const typeLabel = getOrderTypeLabel(orderType);
+  const isAppend = sendKind === "append";
 
   return (
     <CardHeader
@@ -34,9 +41,23 @@ export function OrderCardHeader({
     >
       <div className="flex min-w-0 flex-col gap-1">
         <span className="text-xl font-black leading-none tabular-nums md:text-2xl">
-          {orderNumber}
+          {kitchenTicketNumber}
         </span>
         <div className="flex flex-wrap items-center gap-1.5">
+          {isAppend && (
+            <Badge
+              variant="destructive"
+              className="px-2 py-0.5 text-xs font-semibold"
+            >
+              Gọi thêm
+            </Badge>
+          )}
+          <Badge
+            variant="outline"
+            className="px-2 py-0.5 text-xs font-semibold"
+          >
+            HĐ {orderNumber}
+          </Badge>
           <Badge
             variant="outline"
             className="px-2 py-0.5 text-xs font-semibold"
@@ -49,6 +70,14 @@ export function OrderCardHeader({
               className="px-2 py-0.5 text-xs font-semibold"
             >
               Bàn {tableNumber}
+            </Badge>
+          )}
+          {sendSeq !== null && (
+            <Badge
+              variant="secondary"
+              className="px-2 py-0.5 text-xs font-semibold"
+            >
+              Lần {sendSeq}
             </Badge>
           )}
         </div>

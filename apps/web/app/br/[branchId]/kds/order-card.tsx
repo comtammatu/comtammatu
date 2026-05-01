@@ -103,7 +103,7 @@ export function OrderCard({
 
   return (
     <Card
-      data-testid={`kds-order-card-${String(order.orderId)}`}
+      data-testid={`kds-order-card-${order.groupKey}`}
       className={cn(
         "gap-0 py-0 border-l-2 transition-shadow hover:shadow-md",
         borderClass,
@@ -113,8 +113,11 @@ export function OrderCard({
     >
       <OrderCardHeader
         orderNumber={order.orderNumber}
+        kitchenTicketNumber={order.kitchenTicketNumber}
         orderType={order.orderType}
         tableNumber={order.tableNumber}
+        sendSeq={order.sendSeq}
+        sendKind={order.sendKind}
         elapsedMinutes={elapsed}
         isComplete={isComplete}
         bgClass={ageStyle.bg}

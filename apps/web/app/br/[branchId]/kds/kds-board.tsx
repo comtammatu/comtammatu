@@ -73,13 +73,22 @@ export function KdsBoard({
   initialTickets,
   initialOrders,
   initialOrderItems,
+  initialKitchenBatches,
 }: KdsBoardProps) {
-  const { tickets, orders, orderItems, setTickets, refreshBoardSnapshot } =
+  const {
+    tickets,
+    orders,
+    orderItems,
+    kitchenBatches,
+    setTickets,
+    refreshBoardSnapshot,
+  } =
     useKdsRealtime({
       branchId,
       initialTickets,
       initialOrders,
       initialOrderItems,
+      initialKitchenBatches,
     });
 
   const filters = useKdsFilters(stations);
@@ -127,17 +136,28 @@ export function KdsBoard({
   }, [tickets, filters.activeStationId]);
 
   const groupedOrders = useMemo<KdsOrder[]>(() => {
-    const orderMap = new Map<number, KdsTicket[]>();
+    const orderMap = new Map<string, KdsTicket[]>();
     for (const ticket of filteredTickets) {
-      const existing = orderMap.get(ticket.order_id) ?? [];
+      const groupKey =
+        ticket.kitchen_send_batch_id !== null
+          ? `batch-${String(ticket.kitchen_send_batch_id)}`
+          : String(ticket.order_id);
+      const existing = orderMap.get(groupKey) ?? [];
       existing.push(ticket);
-      orderMap.set(ticket.order_id, existing);
+      orderMap.set(groupKey, existing);
     }
 
     const isStationScoped = filters.activeStationId !== null;
     const result: KdsOrder[] = [];
-    for (const [orderId, orderTickets] of orderMap) {
+    for (const [groupKey, orderTickets] of orderMap) {
+      const firstTicket = orderTickets[0];
+      if (!firstTicket) continue;
+      const orderId = firstTicket.order_id;
       const orderInfo = orders.get(orderId);
+      const batch =
+        firstTicket.kitchen_send_batch_id !== null
+          ? kitchenBatches.get(firstTicket.kitchen_send_batch_id)
+          : undefined;
       const allItems = (orderItems.get(orderId) ?? []) as KdsOrderItem[];
       // When a station is selected, show only the items routed to tickets
       // at that station — otherwise the card leaks items from other stations.
@@ -148,11 +168,19 @@ export function KdsBoard({
           })()
         : allItems;
       result.push({
+        groupKey,
         orderId,
         orderNumber: orderInfo?.order_number ?? `#${String(orderId)}`,
+        kitchenTicketNumber:
+          batch?.kitchen_ticket_number ??
+          orderInfo?.order_number ??
+          `#${String(orderId)}`,
         orderType: orderInfo?.order_type ?? "dine_in",
         tableNumber: orderInfo?.tables?.number ?? null,
-        createdAt: orderInfo?.created_at ?? orderTickets[0]?.created_at ?? "",
+        createdAt:
+          batch?.created_at ?? orderInfo?.created_at ?? firstTicket.created_at,
+        sendSeq: batch?.send_seq ?? null,
+        sendKind: batch?.kind ?? null,
         tickets: orderTickets,
         items: scopedItems,
       });
@@ -164,7 +192,13 @@ export function KdsBoard({
     );
 
     return result;
-  }, [filteredTickets, orders, orderItems, filters.activeStationId]);
+  }, [
+    filteredTickets,
+    orders,
+    orderItems,
+    kitchenBatches,
+    filters.activeStationId,
+  ]);
 
   const displayOrders = useMemo(() => {
     let list = groupedOrders;
