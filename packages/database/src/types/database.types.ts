@@ -413,6 +413,67 @@ export type Database = {
           },
         ]
       }
+      branch_menu_item_daily_limits: {
+        Row: {
+          branch_id: number
+          created_at: string
+          id: number
+          is_disabled: boolean
+          limit_date: string
+          limit_quantity: number | null
+          menu_item_id: number
+          sold_today: number
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          branch_id: number
+          created_at?: string
+          id?: never
+          is_disabled?: boolean
+          limit_date?: string
+          limit_quantity?: number | null
+          menu_item_id: number
+          sold_today?: number
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: number
+          created_at?: string
+          id?: never
+          is_disabled?: boolean
+          limit_date?: string
+          limit_quantity?: number | null
+          menu_item_id?: number
+          sold_today?: number
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_menu_item_daily_limits_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_menu_item_daily_limits_menu_item_id_fkey"
+            columns: ["menu_item_id"]
+            isOneToOne: false
+            referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_menu_item_daily_limits_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       branch_override_attempts: {
         Row: {
           attempted_at: string
@@ -6833,6 +6894,10 @@ export type Database = {
         Args: { p_threshold?: string }
         Returns: number
       }
+      clear_branch_menu_daily_limit: {
+        Args: { p_branch_id: number; p_menu_item_id: number }
+        Returns: Json
+      }
       clear_order_discount: { Args: { p_order_id: number }; Returns: Json }
       close_fiscal_period: {
         Args: {
@@ -7188,6 +7253,15 @@ export type Database = {
         }
         Returns: Json
       }
+      get_branch_menu_daily_limits_for_pos: {
+        Args: { p_branch_id: number }
+        Returns: {
+          is_disabled: boolean
+          limit_quantity: number
+          menu_item_id: number
+          sold_today: number
+        }[]
+      }
       get_daily_revenue: {
         Args: { p_branch_id: number; p_end_date: string; p_start_date: string }
         Returns: {
@@ -7349,6 +7423,21 @@ export type Database = {
         Args: { p_branch_id: number; p_flag_key: string }
         Returns: boolean
       }
+      list_branch_menu_daily_limits: {
+        Args: { p_branch_id: number; p_limit_date?: string }
+        Returns: {
+          base_price: number
+          category_id: number
+          category_name: string
+          is_disabled: boolean
+          item_name: string
+          limit_date: string
+          limit_id: number
+          limit_quantity: number
+          menu_item_id: number
+          sold_today: number
+        }[]
+      }
       log_audit: {
         Args: {
           p_action: string
@@ -7504,23 +7593,23 @@ export type Database = {
         Args: { p_branch_id: number; p_kind?: string }
         Returns: undefined
       }
-      split_order:
-        | {
-            Args: {
-              p_idempotency_key?: string
-              p_item_ids: number[]
-              p_source_order_id: number
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_idempotency_key?: string
-              p_item_partials: Json
-              p_source_order_id: number
-            }
-            Returns: Json
-          }
+      set_branch_menu_daily_limit: {
+        Args: {
+          p_branch_id: number
+          p_is_disabled: boolean
+          p_limit_quantity: number
+          p_menu_item_id: number
+        }
+        Returns: Json
+      }
+      split_order: {
+        Args: {
+          p_idempotency_key?: string
+          p_item_partials: Json
+          p_source_order_id: number
+        }
+        Returns: Json
+      }
       start_stocktake: {
         Args: {
           p_auditor_id?: string

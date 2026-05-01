@@ -32,7 +32,19 @@ ALTER TABLE public.stock_movements
 
 ALTER TABLE public.stock_movements
   ADD CONSTRAINT stock_movements_type_check
-    CHECK (type IN ('adjustment', 'count_adjustment', 'consumption', 'refund_restore'));
+    CHECK (type IN (
+      'adjustment',
+      'count_adjustment',
+      'consumption',
+      'grn_receipt',
+      'grn_amend',
+      'transfer_out',
+      'transfer_in',
+      'production_consumption',
+      'production_output',
+      'supplier_return',
+      'refund_restore'
+    ));
 
 ALTER TABLE public.journal_entries
   DROP CONSTRAINT IF EXISTS journal_entries_reference_type_check;
