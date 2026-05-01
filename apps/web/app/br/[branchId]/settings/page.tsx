@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Armchair as IconArmchair, ArrowLeft as IconArrowLeft, ArrowRight as IconArrowRight, Gauge as IconGauge, ListChecks as IconChecklist, Monitor as IconDeviceDesktop, LayoutGrid as IconLayoutGrid, Printer as IconPrinter, ReceiptText as IconReceipt2 } from "lucide-react";
+import { Armchair as IconArmchair, ArrowLeft as IconArrowLeft, ArrowRight as IconArrowRight, ChefHat as IconChefHat, Gauge as IconGauge, ListChecks as IconChecklist, Monitor as IconDeviceDesktop, LayoutGrid as IconLayoutGrid, Printer as IconPrinter, ReceiptText as IconReceipt2 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -72,6 +72,12 @@ export default async function BranchSettingsHubPage({
       title: "Máy in",
       description: "Hóa đơn, bếp 1, bếp 2 — cấu hình & trạng thái agent.",
       icon: <IconPrinter className="size-5" />,
+    },
+    {
+      href: `/br/${branchId}/settings/kds`,
+      title: "Trạm bếp (KDS)",
+      description: "Trạm hiển thị bếp và gán danh mục món ăn cho từng trạm.",
+      icon: <IconChefHat className="size-5" />,
     },
     {
       href: `/br/${branchId}/menu-limits`,
