@@ -147,6 +147,14 @@ export async function fetchMenuForPos(branchId: number): Promise<ActionResult> {
         .map((s) => {
           const sideItem = itemLookup.get(s.side_item_id);
           if (!sideItem) return null;
+          const sideLimit = limitsByItemId.get(s.side_item_id);
+          if (sideLimit?.is_disabled) return null;
+          if (
+            sideLimit?.limit_quantity != null &&
+            sideLimit.sold_today >= sideLimit.limit_quantity
+          ) {
+            return null;
+          }
           return { id: s.id, is_default: s.is_default, side_item: sideItem };
         })
         .filter((s) => s !== null),
