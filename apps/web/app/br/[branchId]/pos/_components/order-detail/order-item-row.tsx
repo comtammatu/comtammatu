@@ -22,6 +22,11 @@ export interface OrderItemRowData {
   modifiers: CartModifier[];
   sides: CartSide[];
   note: string | null;
+  /** Optional: only present when SELECT includes them (fetchOrderDetail,
+   * fetchActiveOrderForTable). Needed by "Sửa món pending" flow to seed the
+   * customizer with current variant + lookup MenuItem. */
+  menu_item_id?: number;
+  variant_id?: number | null;
 }
 
 interface OrderItemRowProps {

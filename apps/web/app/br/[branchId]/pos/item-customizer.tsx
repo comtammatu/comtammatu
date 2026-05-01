@@ -41,8 +41,13 @@ interface ItemCustomizerProps {
     note: string | undefined,
     quantity: number,
   ) => void;
-  /** Thêm món vào đơn đã có (copy nút/tiêu đề) */
-  mode?: "new" | "append" | "edit";
+  /**
+   * - `new`: thêm món vào giỏ đơn mới
+   * - `append`: thêm món vào đơn đã gửi (append draft)
+   * - `edit`: sửa món trong giỏ chưa gửi
+   * - `edit-sent`: sửa món ĐÃ GỬI bếp khi status='pending' (server-side gated).
+   *   Parent gọi `editPendingOrderItem` server action sau khi onConfirm fire. */
+  mode?: "new" | "append" | "edit" | "edit-sent";
   appendOrderLabel?: string | null;
   initialCartItem?: CartItem | null;
 }
@@ -249,14 +254,16 @@ export function ItemCustomizer({
                 className={cn(
                   "text-left",
                   mode === "new" && !item.description && "sr-only",
+                  mode === "edit" && "sr-only",
                 )}
               >
                 {mode === "append" && appendOrderLabel
-                  ? `Thêm món vào đơn #${appendOrderLabel}`
+                  ? `Đơn #${appendOrderLabel}`
                   : mode === "edit"
-                    ? "Cập nhật lựa chọn trong giỏ đơn mới"
-                    : (item.description ??
-                      "Tùy chọn món (biến thể, topping, món kèm)")}
+                    ? "Sửa món trong giỏ"
+                    : mode === "edit-sent"
+                      ? "Sửa món đã gửi (chưa làm)"
+                      : (item.description ?? "Tùy chọn món")}
               </SheetDescription>
             </SheetHeader>
 
@@ -431,7 +438,7 @@ export function ItemCustomizer({
                     id="item-note"
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
-                    placeholder="Bấm gợi ý hoặc gõ thêm chi tiết..."
+                    placeholder="Ghi chú thêm..."
                     rows={2}
                     maxLength={200}
                   />
@@ -480,10 +487,12 @@ export function ItemCustomizer({
                 onClick={handleConfirm}
               >
                 {mode === "append"
-                  ? "Đưa vào món thêm"
+                  ? "Thêm vào đơn"
                   : mode === "edit"
                     ? "Cập nhật"
-                    : "Thêm vào giỏ đơn mới"}
+                    : mode === "edit-sent"
+                      ? "Cập nhật món đã gửi"
+                      : "Thêm vào giỏ"}
               </Button>
             </div>
           </div>

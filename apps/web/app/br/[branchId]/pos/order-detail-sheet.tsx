@@ -26,7 +26,15 @@ import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 import { Skeleton } from "@comtammatu/ui/components/skeleton";
 import { notify } from "@comtammatu/ui/lib/notify";
 import {
+  ArrowRightLeft as IconArrowRightLeft,
+  CircleDollarSign as IconCircleDollarSign,
+  Copy as IconCopy,
   Ellipsis as IconDots,
+  Merge as IconMerge,
+  Printer as IconPrinter,
+  Receipt as IconReceipt,
+  Split as IconSplit,
+  Trash2 as IconTrash,
   X as IconX,
 } from "lucide-react";
 import { AppBoneyardSkeleton } from "../../../_components/boneyard-skeleton";
@@ -44,6 +52,7 @@ import {
   splitOrder,
   mergeOrders,
 } from "./actions";
+import { printReceipt } from "./print-actions";
 import { getPosLineItemDisplayName, type CartItem } from "./types";
 import type { BranchTable } from "./page";
 import { ACTIVE_POS_STATUSES } from "./order-history";
@@ -135,15 +144,24 @@ function OrderDetailLoadingFixture() {
         </ul>
       </ScrollArea>
       <div className="mt-auto flex shrink-0 flex-col gap-2 border-t px-3 py-3 sm:px-4">
-        <Button type="button" size="lg" className="w-full">
-          {ORDER_DETAIL_LOADING_TEXT.payment} - {formatVND(165000)}
+        <Button type="button" size="lg" className="min-h-12 w-full">
+          {ORDER_DETAIL_LOADING_TEXT.payment} · {formatVND(165000)}
         </Button>
         <div className="flex gap-2">
-          <Button type="button" variant="outline" className="flex-1">
+          <Button type="button" variant="outline" className="min-h-12 flex-1">
             {ORDER_DETAIL_LOADING_TEXT.append}
           </Button>
-          <Button type="button" variant="secondary" className="flex-1">
+          <Button type="button" variant="secondary" className="min-h-12 flex-1">
             {ORDER_DETAIL_LOADING_TEXT.served}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="size-12 shrink-0"
+            aria-label="Thao tác khác"
+          >
+            <IconDots />
           </Button>
         </div>
       </div>
@@ -176,8 +194,11 @@ function OrderDetailSheetSkeletonFallback() {
         </ul>
       </ScrollArea>
       <div className="mt-auto flex shrink-0 flex-col gap-2 border-t px-3 py-3 sm:px-4">
-        <Skeleton className="h-9 w-full" />
-        <Skeleton className="h-7 w-full" />
+        <Skeleton className="h-12 w-full" />
+        <div className="flex gap-2">
+          <Skeleton className="h-12 flex-1" />
+          <Skeleton className="size-12 shrink-0" />
+        </div>
       </div>
       <span className="sr-only">{ORDER_DETAIL_LOADING_TEXT.sr}</span>
     </>
@@ -221,6 +242,12 @@ export interface OrderDetailSheetProps {
   onOpenBill: (orderId: number, seed: OrderData) => void;
   /** Start append flow: parent closes sheet and sets append target on menu */
   onStartAppend: (orderId: number, orderNumber: string) => void;
+  /**
+   * Start "Sửa món pending" flow — only fires for items where status='pending'.
+   * Parent owns the menu lookup (menuItemById) + customizer state, so this
+   * sheet just hands off the snapshot. Optional: not all hosts (mobile waiter
+   * portal) need edit yet. */
+  onStartEditSent?: (snapshot: OrderItemRowData) => void;
   onReorderToCart: (items: CartItem[], skippedCount: number) => void;
   tables: BranchTable[];
   /** Map<table_id, count of active orders> — drives the "N đơn" indicator
@@ -241,6 +268,7 @@ export function OrderDetailSheet({
   onClose,
   onOpenBill,
   onStartAppend,
+  onStartEditSent,
   onReorderToCart,
   tables,
   orderCountByTable,
@@ -514,6 +542,21 @@ export function OrderDetailSheet({
     setVoidItemId(itemId);
   };
 
+  // From the per-item actions sheet → close it and hand off to parent for
+  // the edit-sent flow. Parent owns menu lookup + customizer state so it
+  // can pre-populate variants/modifiers from the row snapshot. Server RPC
+  // re-validates status='pending' regardless of UI gate.
+  const handleEditRequest = (itemId: number) => {
+    const target = data?.order_items.find((item) => item.id === itemId);
+    if (!target || target.status !== "pending") return;
+    if (target.menu_item_id == null) {
+      notify.error("Thiếu dữ liệu món — tải lại đơn rồi thử lại.");
+      return;
+    }
+    setActionsItemId(null);
+    onStartEditSent?.(target);
+  };
+
   // From the per-item actions sheet → open ReduceQuantityDialog seeded with
   // current qty - 1 (most common case: khách bớt 1 phần). Reset reason so
   // any prior cancel-flow text doesn't leak into reduce.
@@ -567,6 +610,18 @@ export function OrderDetailSheet({
         onClose();
       } else {
         notify.error(r.error ?? messages.pos.order.reorderLoadFailed);
+      }
+    });
+  };
+
+  const handleReprintReceipt = () => {
+    if (orderId === null) return;
+    startTransition(async () => {
+      const r = await printReceipt(orderId);
+      if (r.success) {
+        notify.success("Đã gửi hóa đơn tới máy in");
+      } else {
+        notify.error(r.error ?? "Không thể in hóa đơn");
       }
     });
   };
@@ -716,9 +771,13 @@ export function OrderDetailSheet({
     data?.order_type === "dine_in" &&
     data?.table_id != null &&
     tableSiblingCount >= 2;
+  // "Chuyển bàn" gom vào dropdown ⋮ thay vì 1 nút full-width riêng — giảm
+  // chiều cao footer + giúp cashier giữ ngón cái gần CTA chính (Thanh toán
+  // / Thêm món / Phục vụ).
   const canShowMoreMenu =
     canShowBillInMenu ||
     canShowReorder ||
+    canShowTransfer ||
     canShowCancel ||
     canShowDiscount ||
     canShowSplit ||
@@ -877,23 +936,25 @@ export function OrderDetailSheet({
                   <Button
                     type="button"
                     size="lg"
-                    className="w-full"
+                    className="min-h-12 w-full"
                     onClick={() => {
                       onOpenBill(data.id, data);
                       onClose();
                     }}
                   >
-                    Thanh toán - {formatVND(data.total_amount)}
+                    Thanh toán · {formatVND(data.total_amount)}
                   </Button>
                 )}
 
-                {(canAppendOrderStatus(data.status) || canMarkServed) && (
+                {(canAppendOrderStatus(data.status) ||
+                  canMarkServed ||
+                  canShowMoreMenu) && (
                   <div className="flex gap-2">
                     {canAppendOrderStatus(data.status) && (
                       <Button
                         type="button"
                         variant="outline"
-                        className="flex-1"
+                        className="min-h-12 flex-1"
                         onClick={() => {
                           onStartAppend(data.id, data.order_number);
                         }}
@@ -905,110 +966,131 @@ export function OrderDetailSheet({
                       <Button
                         type="button"
                         variant="secondary"
-                        className="flex-1"
+                        className="min-h-12 flex-1"
                         disabled={isPending}
                         onClick={() => void handleStatus("served")}
                       >
                         Phục vụ
                       </Button>
                     )}
+                    {canShowMoreMenu && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            aria-label="Thao tác khác"
+                            className={
+                              canAppendOrderStatus(data.status) || canMarkServed
+                                ? "size-12 shrink-0"
+                                : "min-h-12 flex-1"
+                            }
+                          >
+                            <IconDots />
+                            {!canAppendOrderStatus(data.status) &&
+                              !canMarkServed && (
+                                <span className="ml-1.5">Thao tác</span>
+                              )}
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56">
+                          <DropdownMenuGroup>
+                            {canShowBillInMenu && (
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  onOpenBill(data.id, data);
+                                  onClose();
+                                }}
+                              >
+                                <IconReceipt />
+                                Hóa đơn
+                              </DropdownMenuItem>
+                            )}
+                            {canShowBillInMenu && (
+                              <DropdownMenuItem
+                                disabled={isPending}
+                                onClick={() => handleReprintReceipt()}
+                              >
+                                <IconPrinter />
+                                In lại hóa đơn
+                              </DropdownMenuItem>
+                            )}
+                            {canShowTransfer && (
+                              <DropdownMenuItem
+                                disabled={isPending}
+                                onClick={() => setShowTransfer(true)}
+                              >
+                                <IconArrowRightLeft />
+                                Chuyển bàn
+                              </DropdownMenuItem>
+                            )}
+                            {canShowReorder && (
+                              <DropdownMenuItem
+                                onClick={() => void handleReorder()}
+                              >
+                                <IconCopy />
+                                Tạo đơn mới
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuGroup>
+                          {(canShowDiscount ||
+                            canShowSplit ||
+                            canShowMerge) && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuGroup>
+                                {canShowDiscount && (
+                                  <DropdownMenuItem
+                                    disabled={isPending}
+                                    onClick={() => setShowDiscount(true)}
+                                  >
+                                    <IconCircleDollarSign />
+                                    {data.discount_amount > 0
+                                      ? "Sửa chiết khấu"
+                                      : "Chiết khấu"}
+                                  </DropdownMenuItem>
+                                )}
+                                {canShowSplit && (
+                                  <DropdownMenuItem
+                                    disabled={isPending}
+                                    onClick={() => setShowSplit(true)}
+                                  >
+                                    <IconSplit />
+                                    Tách hóa đơn
+                                  </DropdownMenuItem>
+                                )}
+                                {canShowMerge && (
+                                  <DropdownMenuItem
+                                    disabled={isPending}
+                                    onClick={() => setShowMerge(true)}
+                                  >
+                                    <IconMerge />
+                                    Gộp hóa đơn
+                                  </DropdownMenuItem>
+                                )}
+                              </DropdownMenuGroup>
+                            </>
+                          )}
+                          {canShowCancel && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuGroup>
+                                <DropdownMenuItem
+                                  variant="destructive"
+                                  disabled={isPending}
+                                  onClick={() => setShowCancel(true)}
+                                >
+                                  <IconTrash />
+                                  Hủy đơn
+                                </DropdownMenuItem>
+                              </DropdownMenuGroup>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </div>
-                )}
-
-                {canShowTransfer && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                    disabled={isPending}
-                    onClick={() => setShowTransfer(true)}
-                  >
-                    Chuyển bàn
-                  </Button>
-                )}
-
-                {canShowMoreMenu && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-9 w-full text-muted-foreground"
-                      >
-                        <IconDots data-icon="inline-start" />
-                        Khác…
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56">
-                      <DropdownMenuGroup>
-                        {canShowBillInMenu && (
-                          <DropdownMenuItem
-                            onClick={() => {
-                              onOpenBill(data.id, data);
-                              onClose();
-                            }}
-                          >
-                            Hóa đơn
-                          </DropdownMenuItem>
-                        )}
-                        {canShowReorder && (
-                          <DropdownMenuItem
-                            onClick={() => void handleReorder()}
-                          >
-                            Tạo đơn mới từ đơn này
-                          </DropdownMenuItem>
-                        )}
-                      </DropdownMenuGroup>
-                      {(canShowDiscount || canShowSplit || canShowMerge) && (
-                        <>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuGroup>
-                            {canShowDiscount && (
-                              <DropdownMenuItem
-                                disabled={isPending}
-                                onClick={() => setShowDiscount(true)}
-                              >
-                                {data.discount_amount > 0
-                                  ? "Sửa chiết khấu"
-                                  : "Chiết khấu"}
-                              </DropdownMenuItem>
-                            )}
-                            {canShowSplit && (
-                              <DropdownMenuItem
-                                disabled={isPending}
-                                onClick={() => setShowSplit(true)}
-                              >
-                                Tách hóa đơn
-                              </DropdownMenuItem>
-                            )}
-                            {canShowMerge && (
-                              <DropdownMenuItem
-                                disabled={isPending}
-                                onClick={() => setShowMerge(true)}
-                              >
-                                Gộp hóa đơn
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuGroup>
-                        </>
-                      )}
-                      {canShowCancel && (
-                        <>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuGroup>
-                            <DropdownMenuItem
-                              variant="destructive"
-                              disabled={isPending}
-                              onClick={() => setShowCancel(true)}
-                            >
-                              Hủy đơn
-                            </DropdownMenuItem>
-                          </DropdownMenuGroup>
-                        </>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
                 )}
               </div>
             </>
@@ -1026,6 +1108,7 @@ export function OrderDetailSheet({
         onMarkServed={handleMarkItemServed}
         onVoidRequest={handleVoidRequest}
         onReduceRequest={handleReduceRequest}
+        onEditRequest={onStartEditSent ? handleEditRequest : undefined}
       />
 
       <VoidItemDialog

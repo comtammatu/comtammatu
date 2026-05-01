@@ -9,7 +9,13 @@ import {
 } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission, probePermission } from "../../_lib/auth";
-import { cartStateSchema, calcItemSubtotal, cartItemSchema } from "./types";
+import {
+  cartStateSchema,
+  calcItemSubtotal,
+  cartItemSchema,
+  cartModifierSchema,
+  cartSideSchema,
+} from "./types";
 import type { CartState, CartItem } from "./types";
 import { POS_ERROR_CODES } from "./_utils/error-codes";
 
@@ -552,7 +558,8 @@ export async function fetchActiveOrderForTable(
         sides,
         note,
         status,
-        menu_item_id
+        menu_item_id,
+        variant_id
       )
     `,
       )
@@ -738,7 +745,8 @@ export async function fetchOrderDetail(orderId: number): Promise<
         sides,
         note,
         status,
-        menu_item_id
+        menu_item_id,
+        variant_id
       )
     `,
     )
@@ -1208,6 +1216,172 @@ export async function reduceOrderItemQuantity(
   };
 }
 
+/* ─── editPendingOrderItem ─── */
+
+const editPendingItemSchema = z.object({
+  orderItemId: z.coerce.number().int().positive({ error: "Món không hợp lệ" }),
+  // variantId nullable: món có thể không có biến thể.
+  variantId: z.coerce.number().int().positive().nullable(),
+  variantName: z.string().trim().max(100).nullable(),
+  // Server cũng validate >= 0; client clamp để stepper-bound chặt.
+  unitPrice: z.coerce.number().min(0, { error: "Đơn giá không hợp lệ" }),
+  modifiers: z.array(cartModifierSchema),
+  sides: z.array(cartSideSchema),
+  // Mirror cartItem.note: optional, max 200 ký tự (theo item-customizer maxLength).
+  note: z.string().max(200).nullable().optional(),
+  quantity: z.coerce.number().int().min(1).max(99),
+});
+
+export type EditPendingOrderItemInput = z.infer<typeof editPendingItemSchema>;
+
+/**
+ * Sửa món đã gửi (variant/topping/sides/note/qty/unit_price) khi
+ * `order_items.status='pending'` — chef chưa bắt đầu nấu. Cashier dùng
+ * primitive này để fix nhầm size/topping NGAY sau "Gửi đơn" mà không phải
+ * huỷ + thêm món (bị split audit + 2 phiếu bếp).
+ *
+ * Server không re-fetch giá từ menu — `unit_price` do client compute (mirror
+ * create_order/append_order_items) để giá đã thoả thuận khách lock-in.
+ * RPC vẫn validate menu_item active + variant active để chặn edit-after-disable.
+ *
+ * KHÔNG enqueue phiếu in "thay đổi" tự động — phiếu giấy đã in (nếu có)
+ * stale, KDS card refetch qua `kds_tickets.updated_at` bump là source of
+ * truth. Caller có thể hiển thị toast nhắc operator báo bếp khi
+ * `was_sent_to_kitchen=true`.
+ */
+// Skip withAction: positional + complex payload + POS_VOID_ROLES
+export async function editPendingOrderItem(
+  orderItemId: number,
+  input: Omit<EditPendingOrderItemInput, "orderItemId">,
+): Promise<
+  ActionResult<{
+    oldQuantity: number;
+    newQuantity: number;
+    /** True khi phiếu bếp đã in trước lúc sửa — UI nên cảnh báo operator
+     * báo lại với chef vì phiếu giấy stale (KDS screen sẽ tự refetch). */
+    wasSentToKitchen: boolean;
+  }>
+> {
+  const parsed = editPendingItemSchema.safeParse({ orderItemId, ...input });
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+    };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    POS_VOID_ROLES,
+    PERMISSION_KEYS.POS_VOID_ORDER,
+  );
+  if (!ctx) {
+    return { success: false, error: "Cần quyền hủy đơn POS để sửa món." };
+  }
+
+  const { supabase } = ctx;
+
+  const trimmedNote = parsed.data.note?.trim();
+  const noteOrNull =
+    typeof trimmedNote === "string" && trimmedNote.length > 0
+      ? trimmedNote
+      : null;
+  const variantNameOrNull =
+    parsed.data.variantName != null && parsed.data.variantName.length > 0
+      ? parsed.data.variantName
+      : null;
+
+  // RPC accepts JSONB — pass plain JS objects, supabase-js serializes.
+  const rpcModifiers = parsed.data.modifiers.map((m) => ({
+    modifier_id: m.modifier_id,
+    name: m.name,
+    price: m.price,
+  }));
+  const rpcSides = parsed.data.sides.map((s) => ({
+    side_item_id: s.side_item_id,
+    name: s.name,
+    price: s.price,
+    quantity: s.quantity,
+    is_default: s.is_default,
+  }));
+
+  // RPC types not yet regenerated (migration pending owner apply per
+  // CLAUDE.md: dev/test push OK, production file→PR→merge→manual apply →
+  // pnpm db:types). Cast mirrors existing pattern in menu-actions.ts for
+  // get_branch_menu_daily_limits_for_pos. After owner applies + db:types,
+  // remove the cast.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any).rpc(
+    "edit_pending_order_item",
+    {
+      p_order_item_id: parsed.data.orderItemId,
+      p_variant_id: parsed.data.variantId,
+      p_variant_name: variantNameOrNull,
+      p_unit_price: parsed.data.unitPrice,
+      p_modifiers: rpcModifiers,
+      p_sides: rpcSides,
+      p_note: noteOrNull,
+      p_quantity: parsed.data.quantity,
+    },
+  );
+
+  if (error) {
+    const msg = String(error.message ?? "").toLowerCase();
+    if (msg.includes("forbidden")) {
+      return { success: false, error: "Cần quyền hủy đơn POS để sửa món." };
+    }
+    if (msg.includes("not editable") || msg.includes("preparing") || msg.includes("ready")) {
+      return {
+        success: false,
+        error: "Chỉ sửa được món khi chưa được làm. Hãy hủy món + thêm món mới.",
+      };
+    }
+    if (msg.includes("order terminal")) {
+      return { success: false, error: "Đơn đã đóng, không thể sửa món." };
+    }
+    if (msg.includes("order already paid")) {
+      return { success: false, error: "Đơn đã thanh toán, không thể sửa món." };
+    }
+    if (msg.includes("menu item inactive")) {
+      return {
+        success: false,
+        error: "Món đã ngừng bán — hãy hủy món và chọn món khác.",
+      };
+    }
+    if (msg.includes("variant inactive")) {
+      return {
+        success: false,
+        error: "Biến thể không còn khả dụng — chọn biến thể khác.",
+      };
+    }
+    if (msg.includes("feature disabled")) {
+      return {
+        success: false,
+        error: "Tính năng sửa món đang tắt — liên hệ quản lý.",
+      };
+    }
+    return { success: false, error: "Không thể sửa món. Vui lòng thử lại." };
+  }
+
+  const result = data as unknown as {
+    old_quantity: number;
+    new_quantity: number;
+    was_sent_to_kitchen?: boolean;
+  } | null;
+
+  if (!result) {
+    return { success: false, error: "Không thể sửa món. Vui lòng thử lại." };
+  }
+
+  return {
+    success: true,
+    data: {
+      oldQuantity: result.old_quantity,
+      newQuantity: result.new_quantity,
+      wasSentToKitchen: result.was_sent_to_kitchen === true,
+    },
+  };
+}
+
 /* ─── cancelOrder ─── */
 
 const cancelOrderSchema = z.object({
@@ -1403,7 +1577,7 @@ export async function updateOrderStatus(
     if (msg.includes("complete requires")) {
       return {
         success: false,
-        error: "Đánh dấu phục vụ trước khi hòan thành.",
+        error: "Đánh dấu phục vụ trước khi hoàn thành.",
       };
     }
     if (msg.includes("items not terminal")) {

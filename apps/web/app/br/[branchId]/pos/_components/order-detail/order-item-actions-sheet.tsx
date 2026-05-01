@@ -12,6 +12,7 @@ import {
 import {
   Check as IconCheck,
   Minus as IconMinus,
+  Pencil as IconPencil,
   X as IconX,
 } from "lucide-react";
 import {
@@ -38,6 +39,10 @@ interface OrderItemActionsSheetProps {
   onMarkServed: (itemId: number) => void;
   onVoidRequest: (itemId: number) => void;
   onReduceRequest: (itemId: number) => void;
+  /** Mở "Sửa món" flow — chỉ available khi status='pending' (chef chưa làm)
+   * và parent supply menu lookup. Optional vì caller cũ (employee waiter
+   * portal) chưa cần đến. */
+  onEditRequest?: (itemId: number) => void;
 }
 
 export function OrderItemActionsSheet({
@@ -48,6 +53,7 @@ export function OrderItemActionsSheet({
   onMarkServed,
   onVoidRequest,
   onReduceRequest,
+  onEditRequest,
 }: OrderItemActionsSheetProps) {
   const cancelled = item?.status === "cancelled";
   const served = item?.status === "served";
@@ -61,6 +67,15 @@ export function OrderItemActionsSheet({
   // nothing to reduce — force the cashier into "Hủy món" so KDS card flips
   // cancelled instead of leaving a zombie qty=0 row.
   const canReduce = canManage && actionable && (item?.quantity ?? 0) >= 2;
+  // Edit gates strictly on status='pending' — mirror server RPC. Khi chef
+  // đã chuyển preparing/ready, đổi variant/topping = phí thực phẩm; cashier
+  // phải dùng Hủy + Thêm. menu_item_id phải có để parent lookup MenuItem.
+  const canEdit =
+    canManage &&
+    item != null &&
+    item.status === "pending" &&
+    item.menu_item_id != null &&
+    onEditRequest != null;
   const displayName = item ? getPosLineItemDisplayName(item) : "";
   const summary = item
     ? getPosLineItemSummary(item)
@@ -128,6 +143,21 @@ export function OrderItemActionsSheet({
               Đã phục vụ
             </Button>
           )}
+          {canEdit && (
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              className="w-full"
+              disabled={isPending}
+              onClick={() => {
+                if (item && onEditRequest) onEditRequest(item.id);
+              }}
+            >
+              <IconPencil data-icon="inline-start" />
+              Sửa món
+            </Button>
+          )}
           {canReduce && (
             <Button
               type="button"
@@ -158,7 +188,7 @@ export function OrderItemActionsSheet({
               Hủy món
             </Button>
           )}
-          {!canMarkServed && !canVoid && !canReduce && (
+          {!canMarkServed && !canVoid && !canReduce && !canEdit && (
             <p className="py-4 text-center text-sm text-muted-foreground">
               Không có thao tác khả dụng cho món này.
             </p>
