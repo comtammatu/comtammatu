@@ -14,8 +14,9 @@ import {
   Download as IconDownload,
   Share2 as IconShare,
   WifiOff as IconWifiOff,
+  X as IconX,
 } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   useInstallPrompt,
   useIsIosPwaInstall,
@@ -23,13 +24,19 @@ import {
   useIsStandalone,
 } from "./online-status-provider";
 
+const DISMISS_STORAGE_KEY = "pos-pwa-install-dismissed";
+
 const POS_PWA_COPY = {
   regionLabel: "POS - cài đặt và trạng thái kết nối",
   offline:
     "Mất kết nối - không thể tạo đơn hoặc xác nhận thanh toán.",
   iosInstallHint: "iOS: dùng Chia sẻ để thêm POS vào Màn hình chính.",
+  iosInstallHintShort: "iOS: thêm vào Màn hình",
   browserInstallHint: "Cài đặt POS để mở nhanh như ứng dụng.",
+  browserInstallHintShort: "Cài POS",
   installButton: "Cài đặt POS",
+  installButtonShort: "Cài",
+  dismissLabel: "Tạm ẩn lời nhắc",
   installButtonLabel: "Cài đặt POS lên thiết bị",
   iosDialogTitle: "Cài đặt POS trên iOS",
   iosDialogDescription:
@@ -49,6 +56,19 @@ export function PosPwaToolbar() {
   const install = useInstallPrompt();
   const [installPending, setInstallPending] = useState(false);
   const [iosDialogOpen, setIosDialogOpen] = useState(false);
+  const [installDismissed, setInstallDismissed] = useState(false);
+
+  // Hydrate dismiss flag from localStorage. Only the install hint can be
+  // dismissed — offline alert always shows because it's a critical state.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const stored = window.localStorage.getItem(DISMISS_STORAGE_KEY);
+      if (stored === "true") setInstallDismissed(true);
+    } catch {
+      // localStorage may be blocked in private mode — ignore.
+    }
+  }, []);
 
   const hasBrowserPrompt = install != null && install.available;
   const installAvailable = hasBrowserPrompt || isIosPwaInstall;
@@ -67,12 +87,29 @@ export function PosPwaToolbar() {
     }
   }, [install, installPending, isIosPwaInstall]);
 
+  const handleDismiss = useCallback(() => {
+    setInstallDismissed(true);
+    try {
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(DISMISS_STORAGE_KEY, "true");
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
   if (isStandalone) return null;
+  // User đã ẩn lời nhắc cài + đang online → không render gì (banner offline
+  // vẫn ưu tiên hiện vì là critical state, bypass dismiss).
+  if (isOnline && installDismissed) return null;
+  // Đang online nhưng không thể cài (browser không hỗ trợ) → cũng ẩn luôn,
+  // tránh chiếm row top vô ích.
+  if (isOnline && !installAvailable) return null;
 
   return (
     <>
       <div
-        className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border/60 bg-background/80 px-2 py-1.5 md:px-4"
+        className="flex shrink-0 items-center gap-1.5 border-b border-border/60 bg-background/80 px-2 py-1 md:gap-2 md:px-4 md:py-1.5"
         role="region"
         aria-label={POS_PWA_COPY.regionLabel}
       >
@@ -85,12 +122,17 @@ export function PosPwaToolbar() {
             <span className="truncate">{POS_PWA_COPY.offline}</span>
           </div>
         ) : (
-          <div className="flex min-w-0 flex-1 items-center gap-2 text-sm font-semibold text-foreground">
-            <IconDownload className="size-4 shrink-0 text-muted-foreground" />
-            <span className="truncate">
+          <div className="flex min-w-0 flex-1 items-center gap-1.5 text-xs font-medium text-muted-foreground md:gap-2 md:text-sm md:font-semibold md:text-foreground">
+            <IconDownload className="size-3.5 shrink-0 md:size-4" />
+            <span className="hidden truncate md:inline">
               {isIosPwaInstall
                 ? POS_PWA_COPY.iosInstallHint
                 : POS_PWA_COPY.browserInstallHint}
+            </span>
+            <span className="truncate md:hidden">
+              {isIosPwaInstall
+                ? POS_PWA_COPY.iosInstallHintShort
+                : POS_PWA_COPY.browserInstallHintShort}
             </span>
           </div>
         )}
@@ -98,7 +140,7 @@ export function PosPwaToolbar() {
           type="button"
           variant="outline"
           size="sm"
-          className="h-9 shrink-0 gap-1 px-3 text-sm font-semibold"
+          className="h-8 shrink-0 gap-1 px-2 text-xs font-semibold md:h-9 md:px-3 md:text-sm"
           onClick={handleInstall}
           disabled={!installAvailable || installPending}
           aria-label={POS_PWA_COPY.installButtonLabel}
@@ -108,8 +150,21 @@ export function PosPwaToolbar() {
           ) : (
             <IconDownload data-icon="inline-start" />
           )}
-          {POS_PWA_COPY.installButton}
+          <span className="md:hidden">{POS_PWA_COPY.installButtonShort}</span>
+          <span className="hidden md:inline">{POS_PWA_COPY.installButton}</span>
         </Button>
+        {isOnline && installAvailable ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-8 shrink-0 text-muted-foreground md:size-9"
+            onClick={handleDismiss}
+            aria-label={POS_PWA_COPY.dismissLabel}
+          >
+            <IconX className="size-3.5 md:size-4" />
+          </Button>
+        ) : null}
       </div>
       <Dialog open={iosDialogOpen} onOpenChange={setIosDialogOpen}>
         <DialogContent>

@@ -2,6 +2,7 @@
 
 import { cn } from "@comtammatu/ui";
 import { formatVND } from "@comtammatu/shared/format";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Item } from "@comtammatu/ui/components/item";
 import {
@@ -34,12 +35,22 @@ interface OrderItemRowProps {
   onTap?: (itemId: number) => void;
 }
 
-const ITEM_STATUS_LABELS: Record<string, { label: string }> = {
-  pending: { label: "Chờ" },
-  preparing: { label: "Đang làm" },
-  ready: { label: "Sẵn sàng" },
-  served: { label: "Đã phục vụ" },
-  cancelled: { label: "Đã hủy" },
+type StatusBadgeVariant =
+  | "warning"
+  | "info"
+  | "success"
+  | "destructive"
+  | "outline";
+
+const ITEM_STATUS_META: Record<
+  string,
+  { label: string; variant: StatusBadgeVariant }
+> = {
+  pending: { label: "Chờ", variant: "warning" },
+  preparing: { label: "Đang làm", variant: "warning" },
+  ready: { label: "Sẵn sàng", variant: "info" },
+  served: { label: "Đã phục vụ", variant: "success" },
+  cancelled: { label: "Đã hủy", variant: "destructive" },
 };
 
 function getItemStatusToneClass(status: string): string {
@@ -61,7 +72,8 @@ function getItemStatusToneClass(status: string): string {
 export function OrderItemRow({ row, onTap }: OrderItemRowProps) {
   const cancelled = row.status === "cancelled";
   const displayName = getPosLineItemDisplayName(row);
-  const statusInfo = ITEM_STATUS_LABELS[row.status] ?? { label: row.status };
+  const statusInfo =
+    ITEM_STATUS_META[row.status] ?? { label: row.status, variant: "outline" };
   const summary = getPosLineItemSummary(row);
 
   return (
@@ -97,8 +109,15 @@ export function OrderItemRow({ row, onTap }: OrderItemRowProps) {
             }
             optionsClassName={cancelled ? "line-through opacity-60" : undefined}
             noteClassName={cancelled ? "line-through opacity-60" : undefined}
+            afterTitle={
+              <Badge
+                variant={statusInfo.variant}
+                className="h-5 shrink-0 px-1.5 py-0 text-[10px] font-semibold uppercase tracking-wide"
+              >
+                {statusInfo.label}
+              </Badge>
+            }
           />
-          <span className="sr-only">Trạng thái: {statusInfo.label}</span>
         </Button>
       </Item>
     </li>

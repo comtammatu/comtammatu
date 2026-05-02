@@ -257,7 +257,7 @@ export function ArchivedOrdersSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="flex w-full flex-col p-0 sm:max-w-md"
+        className="flex flex-col p-0 data-[side=right]:w-full data-[side=right]:sm:max-w-md"
       >
         <SheetHeader className="border-b px-5 pt-5 pb-3 text-left">
           <SheetTitle className="flex items-center gap-2">

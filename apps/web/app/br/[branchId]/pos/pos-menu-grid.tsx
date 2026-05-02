@@ -34,6 +34,7 @@ import {
   ChefHat as IconChefHat,
   Search as IconSearch,
   ShoppingCart as IconShoppingCart,
+  Utensils as IconUtensils,
   X as IconX,
 } from "lucide-react";
 import {
@@ -94,68 +95,70 @@ const MenuItemButton = memo(function MenuItemButton({
       variant="outline"
       disabled={blocked}
       aria-disabled={blocked}
+      aria-label={`${item.name}, ${formatVND(item.base_price)}`}
       className={cn(
-        "h-auto min-h-56 min-w-0 w-full cursor-pointer flex-col items-stretch justify-between gap-2 p-2.5 text-left whitespace-normal shadow-sm transition-transform hover:border-primary/30 hover:shadow-md active:scale-95 md:min-h-64 md:gap-0 md:p-5 lg:min-h-72",
-        sparseMenu && "md:min-h-64 md:p-6",
-        blocked && "opacity-60 grayscale hover:border-input hover:shadow-sm",
+        // aspect-[4/5] giữ card scale theo width — không lấy min-h cố định
+        // gây quá cao trên mobile. iPhone 390px width → 2-col gap-3 → mỗi
+        // card ~181×226px, vừa scan-rộng nhưng không tốn dọc.
+        "group relative aspect-[4/5] h-auto min-w-0 w-full overflow-hidden p-0 text-left shadow-sm transition-transform hover:shadow-md active:scale-[0.97]",
+        sparseMenu && "md:aspect-[3/2]",
+        blocked && "opacity-60 grayscale hover:shadow-sm",
       )}
       onClick={handleClick}
     >
-      <div className="flex h-full w-full flex-col justify-between gap-2 md:gap-3">
-        <div className="flex min-w-0 flex-col gap-2">
-          {item.image_url ? (
-            <div className="relative aspect-square w-full shrink-0 overflow-hidden rounded-md bg-muted">
-              <Image
-                src={item.image_url}
-                alt=""
-                fill
-                sizes="(min-width: 1536px) 16vw, (min-width: 1280px) 22vw, (min-width: 640px) 33vw, 50vw"
-                className="object-contain"
-                loading="lazy"
-                decoding="async"
-              />
-            </div>
-          ) : (
-            <div
-              className="aspect-square w-full shrink-0 rounded-md bg-muted/40"
-              aria-hidden
-            />
-          )}
-          <div className="flex items-start justify-between gap-2">
-            <p
-              className={cn(
-                "line-clamp-2 min-w-0 text-sm font-semibold leading-snug text-foreground md:text-lg",
-                sparseMenu && "md:text-3xl",
-              )}
-            >
-              {item.name}
-            </p>
-            {limitBadgeLabel ? (
-              <Badge
-                variant={limitBadgeVariant}
-                className="shrink-0 text-xs"
-              >
-                {limitBadgeLabel}
-              </Badge>
-            ) : null}
-          </div>
-        </div>
-      </div>
+      {/* Ảnh phủ kín thẻ — `object-cover` cắt vừa khung, ảnh món luôn được
+          điền hết khung không có viền trắng. Khi không có ảnh, fallback bằng
+          icon Utensils tone muted. */}
+      <span className="absolute inset-0 block">
+        {item.image_url ? (
+          <Image
+            src={item.image_url}
+            alt=""
+            fill
+            sizes="(min-width: 1536px) 16vw, (min-width: 1280px) 22vw, (min-width: 640px) 33vw, 50vw"
+            className="object-cover"
+            loading="lazy"
+            decoding="async"
+          />
+        ) : (
+          <span className="flex h-full w-full items-center justify-center bg-muted/60">
+            <IconUtensils className="size-16 text-muted-foreground/30 md:size-20" />
+          </span>
+        )}
+      </span>
 
-      <div className="mt-auto flex flex-col gap-2 pt-1 md:gap-4 md:pt-6">
-        <div className="flex items-end justify-between gap-3">
-          <div>
-            <p
-              className={cn(
-                "text-base font-bold text-primary tabular-nums sm:mt-1 md:text-2xl",
-                sparseMenu && "md:text-4xl",
-              )}
-            >
-              {formatVND(item.base_price)}
-            </p>
-          </div>
-        </div>
-      </div>
+      {/* Gradient đen từ dưới lên — giúp tên món nền trắng đọc rõ trên ảnh sáng. */}
+      <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-transparent" />
+
+      {/* Giá — góc trên phải, badge primary nổi với shadow. */}
+      <span
+        className={cn(
+          "absolute right-2 top-2 z-10 inline-flex items-center rounded-md bg-primary px-2 py-1 text-sm font-bold tabular-nums text-primary-foreground shadow-md md:right-3 md:top-3 md:text-base",
+          sparseMenu && "md:text-lg",
+        )}
+      >
+        {formatVND(item.base_price)}
+      </span>
+
+      {/* Daily-limit badge — góc trên trái, không che giá. */}
+      {limitBadgeLabel ? (
+        <Badge
+          variant={limitBadgeVariant}
+          className="absolute left-2 top-2 z-10 text-xs shadow-md md:left-3 md:top-3"
+        >
+          {limitBadgeLabel}
+        </Badge>
+      ) : null}
+
+      {/* Tên món — overlay đáy ảnh, text trắng + drop-shadow chống lệch nền. */}
+      <span
+        className={cn(
+          "absolute inset-x-3 bottom-3 z-10 line-clamp-2 text-base font-bold leading-snug text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)] md:inset-x-4 md:bottom-4 md:text-lg",
+          sparseMenu && "md:text-2xl",
+        )}
+      >
+        {item.name}
+      </span>
     </Button>
   );
 });
@@ -168,7 +171,7 @@ const MenuItemGrid = memo(function MenuItemGrid({
   return (
     <div
       className={cn(
-        "grid grid-cols-2 gap-2 md:gap-3",
+        "grid grid-cols-2 gap-3",
         sparseMenu
           ? "md:grid-cols-1"
           : "sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4",
@@ -189,6 +192,10 @@ const MenuItemGrid = memo(function MenuItemGrid({
 function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
   const [, startMenuTransition] = useTransition();
   const [activeTabValue, setActiveTabValue] = useState<string>(ALL_MENU_VALUE);
+  // Mobile: search input ẩn mặc định, hiện khi user tap icon 🔍.
+  // Khi active, input thay chỗ tabs row (cùng 1 dòng) + nút "Hủy" để collapse.
+  // Desktop (md+) luôn hiện cả 2 cùng dòng nên flag này không ảnh hưởng.
+  const [isSearchActive, setIsSearchActive] = useState(false);
 
   const availableCategories = useMemo(
     () => categories.filter((category) => category.menu_items.length > 0),
@@ -257,6 +264,11 @@ function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
     [],
   );
   const clearQuery = useCallback(() => setQuery(""), []);
+  const openSearch = useCallback(() => setIsSearchActive(true), []);
+  const cancelSearch = useCallback(() => {
+    setIsSearchActive(false);
+    setQuery("");
+  }, []);
   const handleCategoryChange = useCallback(
     (value: string) => {
       if (
@@ -286,75 +298,115 @@ function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
     );
   }
 
+  const searchInput = (
+    <InputGroup className="h-11 w-full md:max-w-md xl:w-64 xl:max-w-none xl:flex-none 2xl:w-72">
+      <InputGroupAddon>
+        <IconSearch />
+      </InputGroupAddon>
+      <InputGroupInput
+        id="pos-menu-search"
+        value={query}
+        onChange={handleQueryChange}
+        autoFocus={isSearchActive}
+        placeholder="Tìm món..."
+        aria-label="Tìm món"
+      />
+      {query.trim() !== "" && (
+        <InputGroupAddon align="inline-end">
+          <InputGroupButton
+            size="icon-xs"
+            aria-label="Xóa tìm kiếm"
+            onClick={clearQuery}
+          >
+            <IconX />
+          </InputGroupButton>
+        </InputGroupAddon>
+      )}
+    </InputGroup>
+  );
+
+  // Tabs unified mobile + desktop: bỏ TabsList muted container, mỗi tab là 1
+  // chip standalone bg-muted/50 — active flip sang primary để nổi rõ. Badge
+  // số lượng (chỉ sm+) tự đảo màu khi tab active để không lẫn vào primary bg.
+  // QUAN TRỌNG: shadcn TabsTrigger default có `flex-1` (auto-stretch chia
+  // đều TabsList width) — phải dùng `!flex-none` để không bị ép kích thước,
+  // chip giữ width theo content và scroll ngang khi tràn.
+  const tabPillClassName =
+    "group/tab !flex-none h-11 gap-1.5 bg-muted/50 px-3 py-0 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm md:gap-2 md:px-4";
+  const tabBadgeClassName =
+    "hidden shrink-0 text-xs sm:inline-flex group-data-[state=active]/tab:border-primary-foreground/30 group-data-[state=active]/tab:bg-primary-foreground/15 group-data-[state=active]/tab:text-primary-foreground";
+  const unifiedTabs = (
+    <Tabs
+      value={activeTabValue}
+      onValueChange={handleCategoryChange}
+      className="min-w-0 flex-1 gap-0 overflow-x-auto overflow-y-hidden xl:flex-1"
+    >
+      <TabsList
+        aria-label="Danh mục món"
+        className="!h-auto w-max min-w-full !justify-start gap-1.5 !bg-transparent !p-0 md:gap-2"
+      >
+        <TabsTrigger value={ALL_MENU_VALUE} className={tabPillClassName}>
+          Tất cả
+          <Badge variant="outline" className={tabBadgeClassName}>
+            {allMenuItemCount}
+          </Badge>
+        </TabsTrigger>
+        {availableCategories.map((category) => (
+          <TabsTrigger
+            key={category.id}
+            value={String(category.id)}
+            className={tabPillClassName}
+          >
+            {category.name}
+            <Badge variant="outline" className={tabBadgeClassName}>
+              {category.menu_items.length}
+            </Badge>
+          </TabsTrigger>
+        ))}
+      </TabsList>
+    </Tabs>
+  );
+
   return (
     <div className="flex min-h-0 flex-1 overflow-hidden bg-background">
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <div className="border-b border-border/60 bg-background px-2 py-1 md:px-5 md:py-4 lg:px-6">
-          <div className="flex flex-col gap-1 md:gap-3">
-            <div className="flex flex-col gap-1 md:gap-2 xl:flex-row xl:items-center">
-              <InputGroup className="h-8 w-full md:h-11 md:max-w-md xl:w-64 xl:max-w-none xl:flex-none 2xl:w-72">
-                <InputGroupAddon>
-                  <IconSearch />
-                </InputGroupAddon>
-                <InputGroupInput
-                  id="pos-menu-search"
-                  value={query}
-                  onChange={handleQueryChange}
-                  placeholder="Tìm món, topping, ghi chú món..."
-                  aria-label="Tìm món"
-                />
-                {query.trim() !== "" && (
-                  <InputGroupAddon align="inline-end">
-                    <InputGroupButton
-                      size="icon-xs"
-                      aria-label="Xóa tìm kiếm"
-                      onClick={clearQuery}
-                    >
-                      <IconX />
-                    </InputGroupButton>
-                  </InputGroupAddon>
-                )}
-              </InputGroup>
-
-              <Tabs
-                value={activeTabValue}
-                onValueChange={handleCategoryChange}
-                className="min-w-0 w-full gap-0 overflow-x-auto overflow-y-hidden xl:flex-1"
-              >
-                <TabsList
-                  aria-label="Danh mục món"
-                  className="h-8 w-max min-w-full justify-start gap-1 md:h-11 md:gap-2"
+        <div className="border-b border-border/60 bg-background px-2 py-2 md:px-5 md:py-4 lg:px-6">
+          {/* Mobile: 1 row — search-pill (size-11 rounded-full bg-muted/50) +
+              tab pills cùng style. Tap search → input + nút Hủy thay chỗ tabs. */}
+          <div className="flex items-center gap-1.5 md:hidden">
+            {isSearchActive ? (
+              <>
+                <div className="min-w-0 flex-1">{searchInput}</div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-11 shrink-0 px-3 text-sm font-semibold"
+                  onClick={cancelSearch}
                 >
-                  <TabsTrigger
-                    value={ALL_MENU_VALUE}
-                    className="h-full shrink-0 gap-1 px-2 py-0 text-xs font-semibold md:gap-2 md:px-4 md:text-sm"
-                  >
-                    Tất cả
-                    <Badge
-                      variant="outline"
-                      className="hidden text-sm sm:inline-flex"
-                    >
-                      {allMenuItemCount}
-                    </Badge>
-                  </TabsTrigger>
-                  {availableCategories.map((category) => (
-                    <TabsTrigger
-                      key={category.id}
-                      value={String(category.id)}
-                      className="h-full shrink-0 gap-1 px-2 py-0 text-xs font-semibold md:gap-2 md:px-4 md:text-sm"
-                    >
-                      {category.name}
-                      <Badge
-                        variant="outline"
-                        className="hidden text-sm sm:inline-flex"
-                      >
-                        {category.menu_items.length}
-                      </Badge>
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-              </Tabs>
-            </div>
+                  Hủy
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="h-11 shrink-0 bg-muted/50 px-3 text-muted-foreground hover:bg-muted"
+                  aria-label="Tìm món"
+                  onClick={openSearch}
+                >
+                  <IconSearch />
+                </Button>
+                {unifiedTabs}
+              </>
+            )}
+          </div>
+
+          {/* Desktop (md+): search + tabs cùng dòng. */}
+          <div className="hidden md:flex md:items-center md:gap-3">
+            {searchInput}
+            {unifiedTabs}
           </div>
         </div>
 
@@ -364,10 +416,10 @@ function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
               {visibleCategories.map((category) => (
                 <section
                   key={category.id}
-                  className="flex min-w-0 flex-col gap-2 md:gap-3"
+                  className="flex min-w-0 flex-col gap-3"
                 >
-                  <div className="flex min-w-0 items-center justify-between gap-3">
-                    <h2 className="truncate text-sm font-semibold text-foreground md:text-base">
+                  <div className="sticky top-0 z-10 -mx-2 flex min-w-0 items-center justify-between gap-3 bg-background/95 px-2 py-2 backdrop-blur md:static md:mx-0 md:bg-transparent md:px-0 md:py-0 md:backdrop-blur-none">
+                    <h2 className="truncate text-base font-bold text-foreground md:text-base md:font-semibold">
                       {category.name}
                     </h2>
                     <Badge variant="outline" className="shrink-0 text-sm">

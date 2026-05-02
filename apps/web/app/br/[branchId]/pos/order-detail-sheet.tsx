@@ -806,7 +806,7 @@ export function OrderDetailSheet({
         <SheetContent
           side="right"
           showCloseButton={false}
-          className="flex w-full max-w-full flex-col overflow-hidden sm:max-w-md"
+          className="flex flex-col overflow-hidden data-[side=right]:w-full data-[side=right]:max-w-full data-[side=right]:sm:max-w-md"
         >
           <SheetHeader className="border-b border-border/60 px-3 py-2.5 text-left sm:px-4">
             <div className="flex items-center justify-between gap-3">
