@@ -12,9 +12,17 @@ import {
 } from "react";
 import type { ActiveSession, BranchTable } from "../page";
 import type { SessionOrder } from "../order-history";
-import { fetchActiveOrders, fetchTablesForBranch } from "../actions";
+import {
+  fetchActiveOrders,
+  fetchDailyLimitsForPos,
+  fetchTablesForBranch,
+} from "../actions";
 import { CartStore } from "./cart-store";
 import { useOrderSync } from "../hooks/use-order-sync";
+import {
+  useDailyLimitSync,
+  type DailyLimitsMap,
+} from "../hooks/use-daily-limit-sync";
 import { makeDeduper } from "../_utils/make-deduper";
 import type { OrderType } from "../types";
 
@@ -77,6 +85,15 @@ const OperationalDispatchContext = createContext<OperationalDispatch | null>(
   null,
 );
 
+/**
+ * Live daily-limit slice keyed by `menu_item_id`. Seeded from RSC's
+ * `fetchMenuForPos` and patched in real time via `useDailyLimitSync` so
+ * `sold_today` / `is_disabled` flips render across all open POS tabs on
+ * the same branch within ~1s. Items NOT in the map have no daily limit
+ * configured (semantically `daily_limit: null` per `pos-menu-types.ts`).
+ */
+const DailyLimitsContext = createContext<DailyLimitsMap | null>(null);
+
 // Monotonic counter that bumps every time an order flips into a terminal
 // status (paid / completed / cancelled). The "Đã xử lý" sheet's pagination
 // hook reads this token; when it changes while the sheet is open, the
@@ -118,6 +135,15 @@ export function usePosArchivedInvalidationToken(): number {
   return useContext(ArchivedInvalidationContext);
 }
 
+export function usePosDailyLimits(): DailyLimitsMap {
+  const ctx = useContext(DailyLimitsContext);
+  if (!ctx)
+    throw new Error(
+      "usePosDailyLimits must be used inside PosDesktopProvider",
+    );
+  return ctx;
+}
+
 /* ─── Provider ─── */
 
 interface PosDesktopProviderProps {
@@ -134,6 +160,14 @@ interface PosDesktopProviderProps {
    * refresh — only the very first mount-time SUBSCRIBED is skipped.
    */
   initialOrdersSeeded: boolean;
+  /**
+   * Seed map of `menu_item_id → MenuItemDailyLimit` derived from the
+   * RSC `fetchMenuForPos` response. Mounts the live slice; subsequent
+   * mutations arrive via `useDailyLimitSync`. Items without a daily
+   * limit row simply aren't keys in the map — semantic equivalent of
+   * `daily_limit: null` per `pos-menu-types.ts`.
+   */
+  initialDailyLimits: DailyLimitsMap;
   children: ReactNode;
 }
 
@@ -144,10 +178,13 @@ export function PosDesktopProvider({
   initialOrderType,
   initialOrders,
   initialOrdersSeeded,
+  initialDailyLimits,
   children,
 }: PosDesktopProviderProps) {
   const [orders, setOrders] = useState<SessionOrder[]>(initialOrders);
   const [tables, setTables] = useState<BranchTable[]>(initialTables);
+  const [dailyLimits, setDailyLimits] =
+    useState<DailyLimitsMap>(initialDailyLimits);
   const [archivedToken, setArchivedToken] = useState(0);
   const bumpArchivedToken = useCallback(() => {
     setArchivedToken((t) => t + 1);
@@ -178,11 +215,39 @@ export function PosDesktopProvider({
     setTables(initialTables);
   }, [initialTables]);
 
+  // Re-seed limits when the RSC snapshot rotates (router.refresh after a
+  // manager toggles is_disabled, or after the page rerenders post-shift-
+  // open). Mirrors `setTables(initialTables)` above. useState's initial-
+  // value-only semantics would otherwise leave the live slice stale on
+  // RSC reseed.
+  useEffect(() => {
+    setDailyLimits(initialDailyLimits);
+  }, [initialDailyLimits]);
+
   const loadOrders = useCallback(async () => {
     const result = await fetchActiveOrders(branchId);
     if (result.success && result.data) {
       setOrders(result.data as SessionOrder[]);
     }
+  }, [branchId]);
+
+  const loadDailyLimits = useCallback(async () => {
+    const result = await fetchDailyLimitsForPos(branchId);
+    if (!result.success || !Array.isArray(result.data)) return;
+    const map: DailyLimitsMap = new Map();
+    for (const row of result.data as Array<{
+      menu_item_id: number;
+      limit_quantity: number | null;
+      is_disabled: boolean;
+      sold_today: number;
+    }>) {
+      map.set(row.menu_item_id, {
+        limit_quantity: row.limit_quantity,
+        is_disabled: row.is_disabled,
+        sold_today: row.sold_today,
+      });
+    }
+    setDailyLimits(map);
   }, [branchId]);
 
   const refreshAll = useCallback(async () => {
@@ -216,6 +281,10 @@ export function PosDesktopProvider({
     () => makeDeduper(refreshAll),
     [refreshAll],
   );
+  const refreshDailyLimitsDeduped = useMemo(
+    () => makeDeduper(loadDailyLimits),
+    [loadDailyLimits],
+  );
 
   useOrderSync({
     branchId,
@@ -226,6 +295,16 @@ export function PosDesktopProvider({
     refreshAll: refreshAllDeduped,
     onArchivedInvalidate: bumpArchivedToken,
     skipFirstSubscribedRefresh: initialOrdersSeeded,
+  });
+
+  // RSC always seeds the limits map (even if empty) — initial SUBSCRIBED
+  // skips its catchup; reconnect SUBSCRIBED refetches via dedupe to fill
+  // events missed during disconnect.
+  useDailyLimitSync({
+    branchId,
+    setLimits: setDailyLimits,
+    refreshLimits: refreshDailyLimitsDeduped,
+    skipFirstSubscribedRefresh: true,
   });
 
   const dispatchValue = useMemo<OperationalDispatch>(
@@ -245,9 +324,11 @@ export function PosDesktopProvider({
         <OperationalDispatchContext.Provider value={dispatchValue}>
           <OrdersContext.Provider value={orders}>
             <TablesContext.Provider value={tables}>
-              <ArchivedInvalidationContext.Provider value={archivedToken}>
-                {children}
-              </ArchivedInvalidationContext.Provider>
+              <DailyLimitsContext.Provider value={dailyLimits}>
+                <ArchivedInvalidationContext.Provider value={archivedToken}>
+                  {children}
+                </ArchivedInvalidationContext.Provider>
+              </DailyLimitsContext.Provider>
             </TablesContext.Provider>
           </OrdersContext.Provider>
         </OperationalDispatchContext.Provider>

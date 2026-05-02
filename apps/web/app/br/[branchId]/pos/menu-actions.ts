@@ -164,3 +164,41 @@ export async function fetchMenuForPos(branchId: number): Promise<ActionResult> {
 
   return { success: true, data: menu };
 }
+
+/**
+ * Lean limits-only fetch for realtime catchup. Used by `useDailyLimitSync`
+ * on SUBSCRIBED reconnect to fill events missed during disconnect — keeps
+ * categories/variants/sides static (set at SSR by `fetchMenuForPos`) and
+ * refreshes only the volatile `sold_today` + `is_disabled` slice.
+ */
+export async function fetchDailyLimitsForPos(
+  branchId: number,
+): Promise<ActionResult> {
+  const parsedBranchId = branchIdSchema.safeParse(branchId);
+  if (!parsedBranchId.success) {
+    return { success: false, error: "Branch ID không hợp lệ" };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    POS_ROLES,
+    PERMISSION_KEYS.POS_USE,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { supabase, claims } = ctx;
+  if (claims.branch_id !== parsedBranchId.data) {
+    return { success: false, error: "Không có quyền truy cập chi nhánh này" };
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any).rpc(
+    "get_branch_menu_daily_limits_for_pos",
+    { p_branch_id: parsedBranchId.data },
+  );
+
+  if (error) {
+    return { success: false, error: "Không thể tải giới hạn bán hàng." };
+  }
+
+  return { success: true, data: Array.isArray(data) ? data : [] };
+}

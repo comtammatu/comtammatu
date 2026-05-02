@@ -6,7 +6,7 @@
  * - order-actions.ts   — order lifecycle
  * - session-actions.ts — tables + POS terminal/session management
  */
-export { fetchMenuForPos } from "./menu-actions";
+export { fetchMenuForPos, fetchDailyLimitsForPos } from "./menu-actions";
 
 export {
   submitOrder,
