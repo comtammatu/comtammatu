@@ -95,12 +95,14 @@ import type {
 import type { OrderDetailData } from "./order-detail-sheet";
 import {
   PosDesktopProvider,
+  usePosDailyLimits,
   usePosOperationalDispatch,
   usePosOrders,
   usePosTables,
   usePosCartStore,
   usePosSession,
 } from "./_providers/pos-desktop-provider";
+import type { DailyLimitsMap } from "./hooks/use-daily-limit-sync";
 import {
   useCartActions,
   useCartItemCount,
@@ -146,6 +148,22 @@ function isOrderAwaitingPayment(order: {
 }
 
 export function PosDesktopShell(props: PosDesktopShellProps) {
+  // Extract the volatile slice (sold_today / is_disabled / limit_quantity)
+  // from RSC's `fetchMenuForPos` snapshot so the provider can patch it in
+  // real time via `useDailyLimitSync` without re-fetching the whole menu
+  // structure on each event. Items without a limit row simply aren't keys.
+  const initialDailyLimits = useMemo<DailyLimitsMap>(() => {
+    const map: DailyLimitsMap = new Map();
+    for (const category of props.categories) {
+      for (const item of category.menu_items) {
+        if (item.daily_limit) {
+          map.set(item.id, item.daily_limit);
+        }
+      }
+    }
+    return map;
+  }, [props.categories]);
+
   return (
     <PosDesktopProvider
       branchId={props.branchId}
@@ -154,6 +172,7 @@ export function PosDesktopShell(props: PosDesktopShellProps) {
       initialOrderType={props.initialOrderType}
       initialOrders={props.initialOrders}
       initialOrdersSeeded={props.initialOrdersSeeded}
+      initialDailyLimits={initialDailyLimits}
     >
       <PosDesktopInner
         categories={props.categories}
@@ -168,7 +187,7 @@ export function PosDesktopShell(props: PosDesktopShellProps) {
 /* ─── Inner (consumes hooks) ─── */
 
 function PosDesktopInner({
-  categories,
+  categories: initialCategories,
   canCloseShift,
   canConfirmCash,
   canOverrideVariance,
@@ -181,7 +200,28 @@ function PosDesktopInner({
   const { branchId, session } = usePosSession();
   const orders = usePosOrders();
   const tables = usePosTables();
+  const dailyLimits = usePosDailyLimits();
   const { refreshOrders, refreshOrdersDeduped } = usePosOperationalDispatch();
+
+  // Merge the static menu structure (categories / variants / modifiers /
+  // sides — set at SSR by `fetchMenuForPos` and stable mid-shift) with
+  // the live `daily_limit` slice patched by `useDailyLimitSync`. Map
+  // misses resolve to `null` (unlimited) which matches the semantics in
+  // `pos-menu-types.ts`. Sides filtering remains the SSR snapshot —
+  // the customizer dropdown won't restore a side that hits its limit
+  // mid-shift until page reload (acceptable MVP gap; primary surface
+  // is the menu grid badge).
+  const categories = useMemo<MenuCategory[]>(
+    () =>
+      initialCategories.map((cat) => ({
+        ...cat,
+        menu_items: cat.menu_items.map((item) => ({
+          ...item,
+          daily_limit: dailyLimits.get(item.id) ?? null,
+        })),
+      })),
+    [initialCategories, dailyLimits],
+  );
   const cartStore = usePosCartStore();
   const cartOrderType = useCartOrderType();
   const cartItemCount = useCartItemCount();
