@@ -217,10 +217,15 @@
  * Re-sync: diff against node_modules/shadcn/dist/tailwind.css when bumping shadcn.
  * ============================================================ */
 
-/* Override: font-sans → mono — project brand uses JetBrains Mono everywhere
- * (Vietnamese diacritics render most cleanly in mono at 17px). */
+/* Override: Inter for body + headings — Inter ships full Vietnamese tonal
+ * coverage (latin-ext + vietnamese subsets) and reads more naturally than
+ * mono at long-form copy. JetBrains Mono is retained for `font-mono`
+ * tabular use cases (price columns, IDs, stock movements, codes) where
+ * digit alignment matters. Brand decision: 2026-05-03 (was JetBrains Mono
+ * everywhere; switched to Inter for body/heading per stakeholder request). */
 @theme inline {
-  --font-sans: var(--font-mono);
+  --font-sans: var(--font-sans);
+  --font-heading: var(--font-sans);
 }
 
 /* Override: micro text sizes for compact labels (uppercase tracking-wider helpers
@@ -365,7 +370,7 @@
 
 @layer base {
   html {
-    @apply font-mono;
+    @apply font-sans;
     font-size: 17px;
   }
 

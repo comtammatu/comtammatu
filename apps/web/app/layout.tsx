@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
-import { JetBrains_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import { ConfirmDialogProvider } from "@comtammatu/ui/components/confirm-dialog";
 import { ThemeProvider } from "@comtammatu/ui/components/theme-provider";
 import { TooltipProvider } from "@comtammatu/ui/components/tooltip";
@@ -9,6 +9,12 @@ import { NotificationBellFloating } from "./_components/notification-bell-floati
 import { ResponsiveToaster } from "./_components/responsive-toaster";
 import "@comtammatu/ui/globals.css";
 import { cn } from "@/lib/utils";
+
+const fontSans = Inter({
+  subsets: ["latin", "latin-ext", "vietnamese"],
+  variable: "--font-sans",
+  display: "swap",
+});
 
 const fontMono = JetBrains_Mono({
   subsets: ["latin", "latin-ext"],
@@ -49,10 +55,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
       lang="vi"
-      className={cn(fontMono.variable, "font-mono")}
+      className={cn(fontSans.variable, fontMono.variable, "font-sans")}
       suppressHydrationWarning
     >
-      <body className="min-h-screen bg-background font-mono text-foreground antialiased">
+      <body className="min-h-screen bg-background font-sans text-foreground antialiased">
         <a
           href="#main-content"
           className="sr-only z-50 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
