@@ -68,6 +68,44 @@ export type FetchOrdersFilters = {
   dateTo?: string;
 };
 
+/* ─── Audit log types ─── */
+
+/** Hành động đã được parse từ `order_status_history.note` thành dạng người dùng đọc được. */
+export type AuditAction =
+  | "create"
+  | "status_change"
+  | "cancel"
+  | "void_item"
+  | "auto_cancel_voided_all"
+  | "discount_apply"
+  | "discount_clear"
+  | "items_added"
+  | "split_to"
+  | "split_from"
+  | "merged_into"
+  | "merged_from"
+  | "transfer_table"
+  | "edit_item"
+  | "mark_item_served"
+  | "other";
+
+export interface OrderAuditEntry {
+  id: number;
+  at: string;
+  by_name: string;
+  from_status: string | null;
+  to_status: string;
+  action: AuditAction;
+  /** Nhãn ngắn người dùng đọc được, vd "Hủy đơn", "Hủy món", "Áp chiết khấu". */
+  label: string;
+  /** Lý do / chi tiết bổ sung (hậu tố sau dấu ":" trong note gốc). */
+  reason: string | null;
+  /** Note gốc, giữ lại để debug khi label="Hành động khác". */
+  raw_note: string | null;
+}
+
+const auditOrderIdSchema = z.coerce.number().int().positive();
+
 /* ─── Action ─── */
 
 export async function fetchOrders(
@@ -194,4 +232,203 @@ export async function fetchOrders(
   }
 
   return { success: true, data: { orders, branches: branchesData } };
+}
+
+/* ─── fetchOrderAuditLog — timeline cho admin order detail ─── */
+
+/**
+ * Parse `order_status_history.note` thành nhãn người-đọc-được. Các convention
+ * note đến từ các RPC sau (đã grep migrations 20260405-20260513):
+ *   - create_order:           note=NULL,   to_status='new'
+ *   - cancel_order:           note=<reason>
+ *   - void_order_item:        note='void_item <id>: <reason>'
+ *   - void_order_item all:    note='auto_cancel_all_items_voided: <reason>'
+ *   - apply_order_discount:   note='discount_applied: pct 10 (5000đ) :: <reason>'
+ *   - clear_order_discount:   note='discount_cleared (was Xđ)'
+ *   - append_order_items:     note='items_added: <comma-sep names>'
+ *   - split_order (source):   note='split_to: TC-... (moved N units across M lines)'
+ *   - split_order (new):      note='split_from: order#N'
+ *   - merge_orders, transfer_table, etc. fall through to "other"
+ */
+function parseAuditNote(
+  note: string | null,
+  toStatus: string,
+  fromStatus: string | null,
+): Pick<OrderAuditEntry, "action" | "label" | "reason"> {
+  if (note == null) {
+    if (fromStatus == null && toStatus === "new") {
+      return { action: "create", label: "Tạo đơn", reason: null };
+    }
+    return {
+      action: "status_change",
+      label: `Trạng thái → ${toStatus}`,
+      reason: null,
+    };
+  }
+
+  if (note.startsWith("void_item ")) {
+    // 'void_item 123: reason text'
+    const colon = note.indexOf(":");
+    const reason = colon > -1 ? note.slice(colon + 1).trim() : null;
+    return { action: "void_item", label: "Hủy món", reason };
+  }
+
+  if (note.startsWith("auto_cancel_all_items_voided")) {
+    const colon = note.indexOf(":");
+    const reason = colon > -1 ? note.slice(colon + 1).trim() : null;
+    return {
+      action: "auto_cancel_voided_all",
+      label: "Tự hủy đơn (do hủy hết món)",
+      reason,
+    };
+  }
+
+  if (note.startsWith("discount_applied")) {
+    // 'discount_applied: pct 10 (5000đ) :: reason'
+    const dblColon = note.indexOf("::");
+    const reason = dblColon > -1 ? note.slice(dblColon + 2).trim() : null;
+    const meta =
+      dblColon > -1
+        ? note.slice(note.indexOf(":") + 1, dblColon).trim()
+        : note.slice(note.indexOf(":") + 1).trim();
+    return {
+      action: "discount_apply",
+      label: `Áp chiết khấu (${meta})`,
+      reason,
+    };
+  }
+
+  if (note.startsWith("discount_cleared")) {
+    return { action: "discount_clear", label: "Bỏ chiết khấu", reason: null };
+  }
+
+  if (note.startsWith("items_added")) {
+    const colon = note.indexOf(":");
+    const reason = colon > -1 ? note.slice(colon + 1).trim() : null;
+    return { action: "items_added", label: "Thêm món", reason };
+  }
+
+  if (note.startsWith("split_to")) {
+    const colon = note.indexOf(":");
+    const reason = colon > -1 ? note.slice(colon + 1).trim() : null;
+    return { action: "split_to", label: "Tách đơn", reason };
+  }
+
+  if (note.startsWith("split_from")) {
+    const colon = note.indexOf(":");
+    const reason = colon > -1 ? note.slice(colon + 1).trim() : null;
+    return {
+      action: "split_from",
+      label: "Tách từ đơn khác",
+      reason,
+    };
+  }
+
+  if (note.startsWith("merged_into")) {
+    // 'merged_into: TC-... (#N), moved X items'
+    const colon = note.indexOf(":");
+    const reason = colon > -1 ? note.slice(colon + 1).trim() : null;
+    return { action: "merged_into", label: "Gộp vào đơn khác", reason };
+  }
+
+  if (note.startsWith("merged_from")) {
+    // 'merged_from: TC-... (#N), received X items'
+    const colon = note.indexOf(":");
+    const reason = colon > -1 ? note.slice(colon + 1).trim() : null;
+    return { action: "merged_from", label: "Nhận từ đơn khác", reason };
+  }
+
+  if (note.startsWith("transfer_table")) {
+    // 'transfer_table -> 12'
+    const arrow = note.indexOf("->");
+    const reason = arrow > -1 ? `Bàn ${note.slice(arrow + 2).trim()}` : null;
+    return { action: "transfer_table", label: "Chuyển bàn", reason };
+  }
+
+  if (note.startsWith("edit_item ")) {
+    // 'edit_item 123: qty 2->3, unit 65000->70000'
+    const colon = note.indexOf(":");
+    const reason = colon > -1 ? note.slice(colon + 1).trim() : null;
+    return { action: "edit_item", label: "Sửa món", reason };
+  }
+
+  if (note.startsWith("mark_item_served ")) {
+    // 'mark_item_served 123' — không có lý do, raw_note đã đủ context.
+    return { action: "mark_item_served", label: "Phục vụ món", reason: null };
+  }
+
+  // cancel_order chỉ ghi p_reason → toStatus='cancelled', note là raw reason.
+  if (toStatus === "cancelled") {
+    return { action: "cancel", label: "Hủy đơn", reason: note };
+  }
+
+  return {
+    action: "other",
+    label: `Trạng thái → ${toStatus}`,
+    reason: note,
+  };
+}
+
+const ORDERS_READ_ROLES: StaffRole[] = [
+  "owner",
+  "super_manager",
+  "area_manager",
+  "branch_manager",
+  "cashier",
+];
+
+export async function fetchOrderAuditLog(
+  orderId: number,
+): Promise<ActionResult<OrderAuditEntry[]>> {
+  const parsed = auditOrderIdSchema.safeParse(orderId);
+  if (!parsed.success) {
+    return { success: false, error: "Order ID không hợp lệ" };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    ORDERS_READ_ROLES,
+    PERMISSION_KEYS.ORDERS_READ,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("order_status_history")
+    .select(
+      `id, created_at, from_status, to_status, note,
+       profiles!order_status_history_changed_by_fkey(full_name)`,
+    )
+    .eq("order_id", parsed.data)
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true });
+
+  if (error) {
+    return {
+      success: false,
+      error: "Không thể tải lịch sử thao tác. Vui lòng thử lại.",
+    };
+  }
+
+  const entries: OrderAuditEntry[] = (data ?? []).map((row) => {
+    const parsedNote = parseAuditNote(
+      row.note ?? null,
+      row.to_status,
+      row.from_status,
+    );
+    return {
+      id: row.id,
+      at: row.created_at,
+      by_name:
+        (row.profiles as { full_name: string } | null)?.full_name ?? "—",
+      from_status: row.from_status,
+      to_status: row.to_status,
+      action: parsedNote.action,
+      label: parsedNote.label,
+      reason: parsedNote.reason,
+      raw_note: row.note,
+    };
+  });
+
+  return { success: true, data: entries };
 }

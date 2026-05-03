@@ -72,6 +72,9 @@ export const kitchenTicketPayloadSchema = z.object({
   order_number: z.string(),
   order_type: z.enum(["dine_in", "takeaway"]),
   table_number: z.number().int().nullable().optional(),
+  /** Tên người tạo đơn (= profiles.full_name của orders.created_by). Bếp
+   * dùng để biết hỏi nhân viên nào khi cần xác nhận. */
+  cashier_name: z.string().optional(),
   send_seq: z.number().int(),
   send_kind: z.enum(["initial", "append", "manual"]).optional(),
   slot: z.number().int().min(1).max(2),

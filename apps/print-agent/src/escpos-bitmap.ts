@@ -184,6 +184,9 @@ function renderKitchenTicketBitmap(p: KitchenPayload): Uint8Array {
     padRight(`Bếp: ${p.slot}`, 24) +
     padRight(`Giờ: ${meta.time || p.printed_at}`, 24),
   ));
+  if (p.cashier_name) {
+    parts.push(line(`Người order: ${p.cashier_name}`));
+  }
 
   // Table header
   parts.push(line(KITCHEN_BORDER));
@@ -294,7 +297,7 @@ function renderBillMeta(p: BillBase): Uint8Array[] {
   parts.push(line(pair48("Đơn hàng:", p.order_number)));
   parts.push(line(pair48("Ngày:", `${created.time} ${created.date}`.trim())));
   parts.push(line(pair48("Loại:", orderKind)));
-  if (p.cashier_name) parts.push(line(pair48("Thu ngân:", p.cashier_name)));
+  if (p.cashier_name) parts.push(line(pair48("Người order:", p.cashier_name)));
   return parts;
 }
 
@@ -559,7 +562,7 @@ function renderShiftCloseReportBitmap(p: ShiftCloseReportPayload): Uint8Array {
   // Cashier + duration
   const opened = splitDateTime(p.opened_at);
   const closed = splitDateTime(p.closed_at);
-  if (p.cashier_name) parts.push(line(pair48("Thu ngân:", p.cashier_name)));
+  if (p.cashier_name) parts.push(line(pair48("Người order:", p.cashier_name)));
   parts.push(line(pair48("Mở ca:", `${opened.time} ${opened.date}`.trim())));
   parts.push(line(pair48("Đóng ca:", `${closed.time} ${closed.date}`.trim())));
   const duration = formatDuration(p.opened_at, p.closed_at);

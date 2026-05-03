@@ -547,6 +547,9 @@ export async function fetchActiveOrderForTable(
         name,
         address
       ),
+      profiles!orders_created_by_fkey (
+        full_name
+      ),
       order_items (
         id,
         item_name,
@@ -644,6 +647,9 @@ export async function fetchOrderForBill(
         name,
         address
       ),
+      profiles!orders_created_by_fkey (
+        full_name
+      ),
       order_items (
         id,
         item_name,
@@ -733,6 +739,9 @@ export async function fetchOrderDetail(orderId: number): Promise<
       branches (
         name,
         address
+      ),
+      profiles!orders_created_by_fkey (
+        full_name
       ),
       order_items (
         id,

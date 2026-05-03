@@ -157,6 +157,8 @@ export type KitchenPayload = {
   order_number: string;
   order_type: "dine_in" | "takeaway";
   table_number?: number | null;
+  /** Tên nhân viên tạo đơn — render thành "NV: <name>" trong meta phiếu bếp. */
+  cashier_name?: string;
   send_seq: number;
   send_kind?: "initial" | "append" | "manual";
   slot: number;
@@ -440,6 +442,9 @@ export function renderKitchenTicket(p: KitchenPayload): Uint8Array {
         padRight(`Giờ: ${meta.time || p.printed_at}`, 24),
     ),
   );
+  if (p.cashier_name) {
+    parts.push(line(`Người order: ${p.cashier_name}`));
+  }
 
   // --- Table header ---
   parts.push(line(KITCHEN_BORDER));
@@ -550,7 +555,7 @@ const renderBillMeta = (p: BillBase): Uint8Array[] => {
   parts.push(pair("Đơn hàng:", `${p.order_number}`));
   parts.push(pair("Ngày:", `${created.time} ${created.date}`.trim()));
   parts.push(pair("Loại:", orderKind));
-  if (p.cashier_name) parts.push(pair("Thu ngân:", p.cashier_name));
+  if (p.cashier_name) parts.push(pair("Người order:", p.cashier_name));
   return parts;
 };
 

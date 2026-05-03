@@ -1,5 +1,7 @@
 "use client";
 
+import { useCallback, useEffect, useState, useTransition } from "react";
+import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
 import { formatVND } from "@comtammatu/shared/format";
 import { Badge } from "@comtammatu/ui/components/badge";
 import {
@@ -16,11 +18,11 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
-import type { OrderRow } from "./actions";
+import { fetchOrderAuditLog, type OrderAuditEntry, type OrderRow } from "./actions";
 
 /* ─── Helpers ─── */
 
-import { BRANCH_VI, FORM_VI, PRODUCT_VI, STAFF_VI } from "@comtammatu/shared/messages";
+import { BRANCH_VI, FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
 const ORDER_STATUS_LABELS: Record<string, string> = {
   pending: "Chờ xử lý",
   in_progress: "Đang làm",
@@ -89,6 +91,66 @@ export function OrderDetailSheet({
   open,
   onOpenChange,
 }: OrderDetailSheetProps) {
+  const [audit, setAudit] = useState<OrderAuditEntry[] | null>(null);
+  const [auditError, setAuditError] = useState<string | null>(null);
+  const [auditPending, startAuditTransition] = useTransition();
+
+  const orderId = order?.id ?? null;
+
+  // Fetch lịch sử thao tác. Tách thành callback để vừa dùng cho mount-effect
+  // vừa dùng cho realtime callback (chia sẻ logic, không bị stale closure).
+  const loadAudit = useCallback((id: number) => {
+    startAuditTransition(async () => {
+      const result = await fetchOrderAuditLog(id);
+      if (result.success && result.data) {
+        setAudit(result.data);
+        setAuditError(null);
+      } else {
+        setAuditError(result.error ?? "Không thể tải lịch sử");
+      }
+    });
+  }, []);
+
+  // Lazy fetch khi sheet mở cho 1 đơn cụ thể. Reset khi đổi đơn / đóng sheet
+  // để tránh hiển thị stale của đơn trước.
+  useEffect(() => {
+    if (!open || orderId == null) {
+      setAudit(null);
+      setAuditError(null);
+      return;
+    }
+    setAudit(null);
+    setAuditError(null);
+    loadAudit(orderId);
+  }, [open, orderId, loadAudit]);
+
+  // Realtime: cashier ở terminal khác hủy/sửa/phục vụ → INSERT vào
+  // order_status_history. Subscribe filter `order_id=eq.X` để timeline tự
+  // refresh mà quản lý không phải đóng/mở lại sheet. Migration
+  // 20260520010000_audit_log_completeness.sql đã add table vào
+  // supabase_realtime publication.
+  useRealtimeChannel(
+    (supabase) => {
+      if (!open || orderId == null) return null;
+      return supabase
+        .channel(`admin-order-audit-${String(orderId)}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "order_status_history",
+            filter: `order_id=eq.${String(orderId)}`,
+          },
+          () => {
+            loadAudit(orderId);
+          },
+        )
+        .subscribe();
+    },
+    [open, orderId, loadAudit],
+  );
+
   if (!order) return null;
 
   const hasDiscount = order.discount_amount > 0;
@@ -129,7 +191,7 @@ export function OrderDetailSheet({
             <span className="text-muted-foreground">{BRANCH_VI.long}</span>
             <span>{order.branch_name}</span>
 
-            <span className="text-muted-foreground">{STAFF_VI.long}</span>
+            <span className="text-muted-foreground">Người order</span>
             <span>{order.created_by_name}</span>
 
             <span className="text-muted-foreground">Thời gian</span>
@@ -318,6 +380,55 @@ export function OrderDetailSheet({
               <span>{FORM_VI.totalAmount}</span>
               <span className="font-mono">{formatVND(order.total_amount)}</span>
             </div>
+          </div>
+
+          {/* ─── Audit timeline ─── */}
+          <div>
+            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Lịch sử thao tác
+            </p>
+            {auditPending && (
+              <p className="text-sm text-muted-foreground">Đang tải…</p>
+            )}
+            {auditError && (
+              <p className="text-sm text-destructive">{auditError}</p>
+            )}
+            {!auditPending && !auditError && audit && audit.length === 0 && (
+              <p className="text-sm text-muted-foreground">
+                Chưa có thao tác nào được ghi nhận.
+              </p>
+            )}
+            {!auditPending && !auditError && audit && audit.length > 0 && (
+              <ol className="space-y-2">
+                {audit.map((entry) => (
+                  <li
+                    key={entry.id}
+                    className="rounded-md border p-3 text-sm"
+                  >
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <span className="font-medium">{entry.label}</span>
+                      <span className="font-mono text-xs text-muted-foreground">
+                        {new Date(entry.at).toLocaleString("vi-VN", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Bởi <span className="font-medium text-foreground">{entry.by_name}</span>
+                    </p>
+                    {entry.reason && (
+                      <p className="mt-1 text-sm">
+                        <span className="text-muted-foreground">Lý do: </span>
+                        {entry.reason}
+                      </p>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            )}
           </div>
         </div>
       </SheetContent>

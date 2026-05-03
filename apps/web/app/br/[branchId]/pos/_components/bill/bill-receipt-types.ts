@@ -40,6 +40,10 @@ export interface OrderData {
   merged_into_order_id: number | null;
   tables: { number: number } | null;
   branches: { name: string; address: string | null } | null;
+  /** profiles.full_name của orders.created_by — người tạo/order đơn.
+   * Shape khớp supabase select join `profiles!orders_created_by_fkey(full_name)`.
+   * Optional để giữ back-compat với fixture payload (vd RECEIPT_LOADING_ORDER). */
+  profiles?: { full_name: string } | null;
   order_items: OrderItem[];
 }
 
