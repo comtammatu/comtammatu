@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import dynamic from "next/dynamic";
 import { formatVND } from "@comtammatu/shared/format";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
@@ -65,8 +66,25 @@ import { ReduceQuantityDialog } from "./_components/order-detail/reduce-quantity
 import { CancelOrderDialog } from "./_components/order-detail/cancel-order-dialog";
 import { TransferTableDialog } from "./_components/order-detail/transfer-table-dialog";
 import { DiscountSheet } from "./_components/order-detail/discount-sheet";
-import { SplitOrderSheet } from "./_components/order-detail/split-order-sheet";
-import { MergeOrdersSheet } from "./_components/order-detail/merge-orders-sheet";
+// Dynamic imports — both sheets are tap-gated overflow actions ("Tách đơn"
+// / "Ghép đơn"), not on the hot cashier path. Keeping them out of the
+// initial chunk shrinks the order-detail bundle. ssr:false because both
+// sheets rely on browser-only state (Sheet portal, swipe handlers) and
+// have no SSR-rendered shell value.
+const SplitOrderSheet = dynamic(
+  () =>
+    import("./_components/order-detail/split-order-sheet").then(
+      (m) => m.SplitOrderSheet,
+    ),
+  { ssr: false },
+);
+const MergeOrdersSheet = dynamic(
+  () =>
+    import("./_components/order-detail/merge-orders-sheet").then(
+      (m) => m.MergeOrdersSheet,
+    ),
+  { ssr: false },
+);
 import { OrderTotalsSummary } from "./_components/order-totals-summary";
 import type { OrderData } from "./_components/bill/bill-receipt-types";
 import type { SessionOrder } from "./order-history";
@@ -898,6 +916,11 @@ export function OrderDetailSheet({
 
           {data && !error && (
             <>
+              {data.profiles?.full_name && (
+                <p className="px-3 pt-2 text-xs text-muted-foreground sm:px-4">
+                  Người order: <span className="font-medium text-foreground">{data.profiles.full_name}</span>
+                </p>
+              )}
               <ScrollArea className="min-h-0 w-full min-w-0 max-w-full flex-1 overflow-hidden">
                 <ul
                   className="flex w-full min-w-0 max-w-full flex-col gap-2 overflow-hidden px-3 py-2 sm:px-4"

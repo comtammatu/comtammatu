@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   useTransition,
 } from "react";
@@ -878,8 +879,10 @@ function PosDesktopInner({
               toast.message("Phiếu bếp đã in trước đó — báo bếp cập nhật");
             }
             void refreshOperational();
-            setEditingSentItem(null);
-            setCustomizerItem(null);
+            // closeCustomizerAndMaybeReopenDetail clears editing state +
+            // reopens the order detail sheet from the pre-customize
+            // snapshot so cashier sees the freshly-edited order.
+            closeCustomizerAndMaybeReopenDetail();
           } else {
             toast.error(r.error ?? "Không thể sửa món.");
           }
@@ -1061,6 +1064,47 @@ function PosDesktopInner({
     setOrderDetailSummary(null);
   }, []);
 
+  // POS-DETAIL-REOPEN-AFTER-CUSTOMIZER: when cashier taps "Sửa món" inside
+  // the order detail sheet, the detail closes (avoid mobile sheet stacking
+  // / focus-trap fight) and the customizer takes over. Without this ref,
+  // dismissing the customizer drops cashier to the menu — they have to
+  // navigate back to the order. Snapshot the detail context here so the
+  // customizer close path can restore it.
+  const pendingDetailReopenRef = useRef<{
+    id: number;
+    orderNumber: string | null;
+    summary: SessionOrder | null;
+  } | null>(null);
+
+  const closeCustomizerAndMaybeReopenDetail = useCallback(() => {
+    setCustomizerItem(null);
+    setEditingCartItem(null);
+    setEditingAppendItem(null);
+    setEditingSentItem(null);
+    const pending = pendingDetailReopenRef.current;
+    if (pending !== null) {
+      pendingDetailReopenRef.current = null;
+      // Inline the openDetail body (rather than calling openDetail) to
+      // keep this callback stable with no useCallback dep on a hook
+      // declared later in the file. The detail sheet refetches on its
+      // own when seed=null, picking up the freshly-edited unit_price /
+      // subtotal from the server.
+      setCartDrawerOpen(false);
+      setOrderDetailSeed(null);
+      setOrderDetailSummary(pending.summary);
+      setOrderDetailId(pending.id);
+      setOrderDetailNumber(pending.orderNumber);
+    }
+  }, []);
+
+  // Single source for F9 hotkey + mobile pay-quick-tap. Memoized so the
+  // boolean prop fed to PosMobileActionBar doesn't flip identity on every
+  // realtime tick where orders changed but the awaiting slice did not.
+  const latestAwaitingPaymentOrderId = useMemo<number | null>(() => {
+    const awaiting = orders.find(isOrderAwaitingPayment);
+    return awaiting?.id ?? null;
+  }, [orders]);
+
   useKeyboardShortcut([
     {
       key: "?",
@@ -1093,9 +1137,8 @@ function PosDesktopInner({
       key: "F9",
       preventDefault: true,
       handler: () => {
-        const awaiting = orders.find(isOrderAwaitingPayment);
-        if (awaiting) {
-          openBill(awaiting.id);
+        if (latestAwaitingPaymentOrderId !== null) {
+          openBill(latestAwaitingPaymentOrderId);
         } else {
           toast.message("Không có đơn chờ thanh toán");
         }
@@ -1346,6 +1389,7 @@ function PosDesktopInner({
         cartQuantity={cartQuantity}
         appendDraftQuantity={appendDraftQuantity}
         ordersCount={orders.length}
+        hasAwaitingPayment={latestAwaitingPaymentOrderId !== null}
         onOpenOrdersDrawer={() => {
           setShowOrders(true);
           void refreshOrders();
@@ -1360,17 +1404,19 @@ function PosDesktopInner({
           setShowOrders(false);
           setCartDrawerOpen(true);
         }}
+        onOpenLatestPaymentBill={() => {
+          if (latestAwaitingPaymentOrderId !== null) {
+            openBill(latestAwaitingPaymentOrderId, "receipt");
+          } else {
+            toast.message("Không có đơn chờ thanh toán");
+          }
+        }}
       />
       {mobileSidebarDrawer}
 
       <ItemCustomizer
         item={customizerItem}
-        onClose={() => {
-          setCustomizerItem(null);
-          setEditingCartItem(null);
-          setEditingAppendItem(null);
-          setEditingSentItem(null);
-        }}
+        onClose={closeCustomizerAndMaybeReopenDetail}
         onConfirm={handleCustomizerConfirm}
         mode={
           editingSentItem
@@ -1419,8 +1465,17 @@ function PosDesktopInner({
         }}
         onStartEditSent={(snapshot) => {
           // Close detail trước rồi mới mở customizer — tránh stack 2 sheet
-          // trên mobile (focus trap fight). refresh on confirm via
-          // refreshOperational sẽ re-open detail nếu user click lại.
+          // trên mobile (focus trap fight). Snapshot the detail context
+          // first so closeCustomizerAndMaybeReopenDetail can restore it
+          // after the customizer dismisses (POS-DETAIL-REOPEN-AFTER-
+          // CUSTOMIZER).
+          if (orderDetailId !== null) {
+            pendingDetailReopenRef.current = {
+              id: orderDetailId,
+              orderNumber: orderDetailNumber,
+              summary: orderDetailSummary,
+            };
+          }
           closeOrderDetail();
           handleStartEditSent(snapshot);
         }}

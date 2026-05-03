@@ -3,6 +3,7 @@
 import { memo } from "react";
 import { Button } from "@comtammatu/ui/components/button";
 import {
+  Banknote as IconBanknote,
   LayoutGrid as IconLayoutGrid,
   Plus as IconPlus,
   Receipt as IconReceipt,
@@ -20,6 +21,13 @@ export interface PosMobileActionBarProps {
   cartQuantity: number;
   appendDraftQuantity: number;
   ordersCount: number;
+  /**
+   * Mobile pay-quick-tap: opens the bill receipt for the most recent
+   * awaiting-payment order without forcing cashier through the orders
+   * drawer. `null` means no order awaits payment — button is hidden.
+   * Mirrors the F9 hotkey shortcut on desktop.
+   */
+  hasAwaitingPayment: boolean;
   /** Opens the orders drawer view (refreshes then shows). */
   onOpenOrdersDrawer: () => void;
   /**
@@ -33,6 +41,8 @@ export interface PosMobileActionBarProps {
   onOpenCartDrawer: () => void;
   /** Opens the append-draft drawer while adding items to an existing order. */
   onOpenAppendDrawer: () => void;
+  /** Opens bill receipt for the latest awaiting-payment order. */
+  onOpenLatestPaymentBill: () => void;
 }
 
 const ACTION_BAR_CLASS =
@@ -44,6 +54,12 @@ const ACTION_PRIMARY_BUTTON_CLASS =
 const ACTION_SECONDARY_BUTTON_CLASS =
   "min-h-14 min-w-14 flex-1 border border-border bg-secondary text-base font-bold text-secondary-foreground shadow-lg";
 
+// Pay button stands out with a success-tinted gradient — cashier eye-tracks
+// it for tiền-mặt rush hour without confusing it with the green "Đặt món"
+// primary on the cart drawer.
+const ACTION_PAY_BUTTON_CLASS =
+  "min-h-14 min-w-14 flex-1 bg-success text-success-foreground hover:bg-success/90 text-base font-bold shadow-lg";
+
 function PosMobileActionBarComponent({
   isMobile,
   isAppendingToOrder,
@@ -53,10 +69,12 @@ function PosMobileActionBarComponent({
   cartQuantity,
   appendDraftQuantity,
   ordersCount,
+  hasAwaitingPayment,
   onOpenOrdersDrawer,
   onSwitchTableMode,
   onOpenCartDrawer,
   onOpenAppendDrawer,
+  onOpenLatestPaymentBill,
 }: PosMobileActionBarProps) {
   if (!isMobile) return null;
 
@@ -133,6 +151,17 @@ function PosMobileActionBarComponent({
           <IconReceipt data-icon="inline-start" />
           <span>Đơn ca</span>
           <span className="tabular-nums">{ordersCount}</span>
+        </Button>
+      )}
+      {hasAwaitingPayment && (
+        <Button
+          type="button"
+          className={ACTION_PAY_BUTTON_CLASS}
+          onClick={onOpenLatestPaymentBill}
+          aria-label="Thanh toán đơn chờ thu tiền"
+        >
+          <IconBanknote data-icon="inline-start" />
+          <span>Thu</span>
         </Button>
       )}
       <Button

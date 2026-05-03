@@ -293,6 +293,30 @@ export function useKdsRealtime({
             }
           },
         )
+        // KDS-TRANSFER-TABLE-SYNC: orders UPDATE filtered to this branch.
+        // We only re-fetch when table_id actually changed and we have the
+        // order cached — most order UPDATEs (status, totals, payment) are
+        // no-ops for KDS rendering. orders is in supabase_realtime with
+        // REPLICA IDENTITY FULL (migration 20260425024802) so payload.old
+        // carries the prior table_id.
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "orders",
+            filter: `branch_id=eq.${String(branchId)}`,
+          },
+          (payload) => {
+            const oldRow = payload.old as { id?: number; table_id?: number | null };
+            const newRow = payload.new as { id?: number; table_id?: number | null };
+            const orderId = newRow.id;
+            if (orderId === undefined) return;
+            if (!ordersRef.current.has(orderId)) return;
+            if (oldRow.table_id === newRow.table_id) return;
+            void fetchOrderInfoRef.current(orderId);
+          },
+        )
         .subscribe((status) => {
           if (status !== "SUBSCRIBED") return;
           // Skip the FIRST SUBSCRIBED — board state is already seeded from

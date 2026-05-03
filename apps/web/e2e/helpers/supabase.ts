@@ -753,3 +753,250 @@ export async function getKdsTicketStatus(
 
   return data?.status ?? null;
 }
+
+/**
+ * Force a KDS ticket to `ready` via service role (bypasses bump RPC auth).
+ * Used by mixed-status payment test to simulate "chef bumped one item but
+ * not the other" before cashier hits Pay.
+ */
+export async function bumpTicketToReady(ticketId: number): Promise<void> {
+  const supabase = createServiceClient();
+  const { error } = await supabase
+    .from("kds_tickets")
+    .update({ status: "ready", bumped_at: new Date().toISOString() })
+    .eq("id", ticketId);
+
+  if (error) {
+    throw new Error(`Failed to bump ticket ${ticketId} to ready: ${error.message}`);
+  }
+}
+
+/**
+ * Add a second order_item + matching kds_ticket to an existing test order.
+ * Used by mixed-status payment test to create an order with two items,
+ * one of which can be bumped to ready while the other stays pending.
+ */
+export async function addOrderItemToTestOrder(opts: {
+  orderId: number;
+  tenantId: number;
+  branchId: number;
+}): Promise<{ orderItemId: number; ticketId: number }> {
+  const supabase = createServiceClient();
+
+  const context = await resolvePosTestContext();
+  const stationId = await ensureKdsStation(
+    supabase,
+    opts.tenantId,
+    opts.branchId,
+  );
+
+  const { data: orderItem, error: itemErr } = await supabase
+    .from("order_items")
+    .insert({
+      tenant_id: opts.tenantId,
+      order_id: opts.orderId,
+      menu_item_id: context.menuItemId,
+      item_name: `${context.menuItemName} (2)`,
+      quantity: 1,
+      unit_price: context.unitPrice,
+      modifiers: [],
+      sides: [],
+      subtotal: context.unitPrice,
+      status: "pending",
+    })
+    .select("id")
+    .single();
+
+  if (itemErr || !orderItem) {
+    throw new Error(`Failed to add second item: ${itemErr?.message}`);
+  }
+
+  const { data: ticket, error: ticketErr } = await supabase
+    .from("kds_tickets")
+    .insert({
+      tenant_id: opts.tenantId,
+      branch_id: opts.branchId,
+      station_id: stationId,
+      order_id: opts.orderId,
+      order_item_id: orderItem.id,
+      status: "pending",
+    })
+    .select("id")
+    .single();
+
+  if (ticketErr || !ticket) {
+    throw new Error(`Failed to add second ticket: ${ticketErr?.message}`);
+  }
+
+  // Recompute order totals to reflect 2 items.
+  const { data: items } = await supabase
+    .from("order_items")
+    .select("subtotal")
+    .eq("order_id", opts.orderId)
+    .neq("status", "cancelled");
+
+  const subtotal = (items ?? []).reduce(
+    (sum, row) => sum + Number(row.subtotal ?? 0),
+    0,
+  );
+  await supabase
+    .from("orders")
+    .update({ subtotal, total_amount: subtotal })
+    .eq("id", opts.orderId);
+
+  return { orderItemId: orderItem.id, ticketId: ticket.id };
+}
+
+/**
+ * Read the (post-recompute) subtotal of a single order_item.
+ * Used by edit-pending-pricing spec to verify server-side recompute.
+ */
+export async function getOrderItemSubtotal(
+  itemId: number,
+): Promise<number | null> {
+  const supabase = createServiceClient();
+  const { data } = await supabase
+    .from("order_items")
+    .select("subtotal")
+    .eq("id", itemId)
+    .single();
+
+  return data ? Number(data.subtotal) : null;
+}
+
+export async function getOrderTotal(orderId: number): Promise<number | null> {
+  const supabase = createServiceClient();
+  const { data } = await supabase
+    .from("orders")
+    .select("total_amount")
+    .eq("id", orderId)
+    .single();
+
+  return data ? Number(data.total_amount) : null;
+}
+
+export async function getOrderDiscountAmount(
+  orderId: number,
+): Promise<number | null> {
+  const supabase = createServiceClient();
+  const { data } = await supabase
+    .from("orders")
+    .select("discount_amount")
+    .eq("id", orderId)
+    .single();
+
+  return data ? Number(data.discount_amount) : null;
+}
+
+/**
+ * Apply a percentage-based discount to an order via service-role write.
+ * Mirrors the metadata shape that compute_discount_amount expects so
+ * subsequent recompute paths (append/edit/void) honor the percentage.
+ */
+export async function setOrderDiscountPercent(
+  orderId: number,
+  percent: number,
+): Promise<void> {
+  const supabase = createServiceClient();
+  const { data: order, error: readErr } = await supabase
+    .from("orders")
+    .select("subtotal")
+    .eq("id", orderId)
+    .single();
+
+  if (readErr || !order) {
+    throw new Error(`Failed to read order ${orderId}: ${readErr?.message}`);
+  }
+
+  const subtotal = Number(order.subtotal);
+  const discountAmount = Math.floor((subtotal * percent) / 100);
+
+  const { error } = await supabase
+    .from("orders")
+    .update({
+      discount_type: "pct",
+      discount_value: percent,
+      discount_amount: discountAmount,
+      total_amount: subtotal - discountAmount,
+    })
+    .eq("id", orderId);
+
+  if (error) {
+    throw new Error(`Failed to set discount: ${error.message}`);
+  }
+}
+
+/**
+ * Set today's daily-limit row for (branch, menu item) — creates if absent.
+ * `limitQuantity=null` means uncapped; pass an integer to cap.
+ */
+export async function setBranchMenuDailyLimit(opts: {
+  branchId: number;
+  tenantId: number;
+  menuItemId: number;
+  limitQuantity: number | null;
+}): Promise<void> {
+  const supabase = createServiceClient();
+  const today = new Date().toISOString().slice(0, 10);
+
+  const { error } = await supabase
+    .from("branch_menu_item_daily_limits")
+    .upsert(
+      {
+        tenant_id: opts.tenantId,
+        branch_id: opts.branchId,
+        menu_item_id: opts.menuItemId,
+        limit_date: today,
+        limit_quantity: opts.limitQuantity,
+        is_disabled: false,
+        sold_today: 0,
+      },
+      { onConflict: "branch_id,menu_item_id,limit_date" },
+    );
+
+  if (error) {
+    throw new Error(`Failed to set daily limit: ${error.message}`);
+  }
+}
+
+export async function getBranchMenuDailyLimitSoldToday(opts: {
+  branchId: number;
+  menuItemId: number;
+}): Promise<number | null> {
+  const supabase = createServiceClient();
+  const today = new Date().toISOString().slice(0, 10);
+
+  const { data } = await supabase
+    .from("branch_menu_item_daily_limits")
+    .select("sold_today")
+    .eq("branch_id", opts.branchId)
+    .eq("menu_item_id", opts.menuItemId)
+    .eq("limit_date", today)
+    .maybeSingle();
+
+  return data ? Number(data.sold_today) : null;
+}
+
+export async function cleanupBranchMenuDailyLimit(opts: {
+  branchId: number;
+  menuItemId: number;
+}): Promise<void> {
+  const supabase = createServiceClient();
+  const today = new Date().toISOString().slice(0, 10);
+
+  await supabase
+    .from("branch_menu_item_daily_limits")
+    .delete()
+    .eq("branch_id", opts.branchId)
+    .eq("menu_item_id", opts.menuItemId)
+    .eq("limit_date", today);
+}
+
+/**
+ * Resolve a fresh PosTestContext (cashier + branch + menu item + table).
+ * Re-export of the internal helper so specs that don't go through
+ * createTestOrder can still grab branch/tenant/menuItem ids.
+ */
+export async function getPosTestContext() {
+  return resolvePosTestContext();
+}

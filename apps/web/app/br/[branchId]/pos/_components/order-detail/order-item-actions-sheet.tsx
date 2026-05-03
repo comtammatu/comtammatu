@@ -133,7 +133,7 @@ export function OrderItemActionsSheet({
             <Button
               type="button"
               size="lg"
-              className="w-full bg-success text-success-foreground hover:bg-success/90"
+              className="min-h-11 w-full bg-success text-success-foreground hover:bg-success/90"
               disabled={isPending}
               onClick={() => {
                 if (item) onMarkServed(item.id);
@@ -148,7 +148,7 @@ export function OrderItemActionsSheet({
               type="button"
               variant="outline"
               size="lg"
-              className="w-full"
+              className="min-h-11 w-full"
               disabled={isPending}
               onClick={() => {
                 if (item && onEditRequest) onEditRequest(item.id);
@@ -163,7 +163,7 @@ export function OrderItemActionsSheet({
               type="button"
               variant="outline"
               size="lg"
-              className="w-full"
+              className="min-h-11 w-full"
               disabled={isPending}
               onClick={() => {
                 if (item) onReduceRequest(item.id);
@@ -178,7 +178,7 @@ export function OrderItemActionsSheet({
               type="button"
               variant="destructive"
               size="lg"
-              className="w-full"
+              className="min-h-11 w-full"
               disabled={isPending}
               onClick={() => {
                 if (item) onVoidRequest(item.id);
@@ -197,7 +197,7 @@ export function OrderItemActionsSheet({
             type="button"
             variant="outline"
             size="lg"
-            className="w-full"
+            className="min-h-11 w-full"
             onClick={onClose}
           >
             {ACTIONS_VI.close}

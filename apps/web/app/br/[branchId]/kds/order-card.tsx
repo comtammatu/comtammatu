@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import { cn } from "@comtammatu/ui";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { useBoardTick } from "./hooks/use-board-tick";
@@ -34,7 +34,7 @@ interface OrderCardProps {
   className?: string;
 }
 
-export function OrderCard({
+function OrderCardComponent({
   order,
   onBump,
   onRecall,
@@ -167,3 +167,87 @@ export function OrderCard({
     </Card>
   );
 }
+
+// Tight propsAreEqual: at peak hour the board may render 30+ cards, every
+// kds_tickets UPDATE causes setTickets in use-kds-realtime → groupedOrders
+// recomputes a fresh array → without memo every card re-reconciles. We
+// only re-render when this specific order's data actually moved or its
+// tickets are in/out of the pendingTicketIds optimistic set.
+function arePropsEqual(prev: OrderCardProps, next: OrderCardProps): boolean {
+  if (prev.canMarkReady !== next.canMarkReady) return false;
+  if (prev.canRecall !== next.canRecall) return false;
+  if (prev.className !== next.className) return false;
+  if (prev.onBump !== next.onBump) return false;
+  if (prev.onRecall !== next.onRecall) return false;
+
+  const a = prev.order;
+  const b = next.order;
+  if (a === b) {
+    return arePendingSetsEqualForOrder(
+      prev.pendingTicketIds,
+      next.pendingTicketIds,
+      a.tickets,
+    );
+  }
+
+  if (
+    a.groupKey !== b.groupKey ||
+    a.orderNumber !== b.orderNumber ||
+    a.tableNumber !== b.tableNumber ||
+    a.kitchenTicketNumber !== b.kitchenTicketNumber ||
+    a.sendSeq !== b.sendSeq ||
+    a.sendKind !== b.sendKind ||
+    a.orderType !== b.orderType ||
+    a.createdAt !== b.createdAt
+  ) {
+    return false;
+  }
+
+  if (a.tickets.length !== b.tickets.length) return false;
+  for (let i = 0; i < a.tickets.length; i++) {
+    const ta = a.tickets[i]!;
+    const tb = b.tickets[i]!;
+    if (
+      ta.id !== tb.id ||
+      ta.status !== tb.status ||
+      ta.bumped_at !== tb.bumped_at ||
+      ta.kitchen_send_batch_id !== tb.kitchen_send_batch_id
+    ) {
+      return false;
+    }
+  }
+
+  if (a.items.length !== b.items.length) return false;
+  for (let i = 0; i < a.items.length; i++) {
+    const ia = a.items[i]!;
+    const ib = b.items[i]!;
+    if (
+      ia.id !== ib.id ||
+      ia.status !== ib.status ||
+      ia.quantity !== ib.quantity
+    ) {
+      return false;
+    }
+  }
+
+  return arePendingSetsEqualForOrder(
+    prev.pendingTicketIds,
+    next.pendingTicketIds,
+    a.tickets,
+  );
+}
+
+function arePendingSetsEqualForOrder(
+  prev: Set<number>,
+  next: Set<number>,
+  tickets: KdsTicket[],
+): boolean {
+  // The Set identity changes whenever ANY ticket optimistic-mutates board-
+  // wide, but only THIS order's tickets matter for this card.
+  for (const t of tickets) {
+    if (prev.has(t.id) !== next.has(t.id)) return false;
+  }
+  return true;
+}
+
+export const OrderCard = memo(OrderCardComponent, arePropsEqual);

@@ -56,9 +56,8 @@ export function useRealtimeChannel(
     let channel: RealtimeChannel | null = null;
     let cancelled = false;
 
-    void supabase.auth.getSession().then(({ data }) => {
+    const subscribeWithToken = (token: string | null) => {
       if (cancelled) return;
-      const token = data.session?.access_token ?? null;
       if (token !== null) {
         // Defense-in-depth: pin the JWT onto the realtime client before
         // subscribe. supabase-js normally does this on the SIGNED_IN
@@ -67,10 +66,41 @@ export function useRealtimeChannel(
         void supabase.realtime.setAuth(token);
       }
       channel = setupRef.current(supabase);
-    });
+    };
+
+    void supabase.auth
+      .getSession()
+      .then(({ data }) => subscribeWithToken(data.session?.access_token ?? null));
+
+    // REALTIME-CHANNEL-RESUBSCRIBE-ON-TOKEN-REFRESH: when supabase-js
+    // rotates the JWT (default ~1h, configurable), the connection-level
+    // setAuth keeps WebSocket auth fresh, BUT the per-channel
+    // `realtime.subscription.claims_role` is stamped at subscribe time
+    // and not re-evaluated. After rotation, RLS-protected events stop
+    // reaching this channel silently. Tear down + resubscribe so the
+    // new claims_role is baked in. SIGNED_OUT also tears down — caller
+    // re-mounts on next sign-in.
+    const { data: authSub } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (cancelled) return;
+        if (event === "TOKEN_REFRESHED" || event === "SIGNED_IN") {
+          if (channel !== null) {
+            void supabase.removeChannel(channel);
+            channel = null;
+          }
+          subscribeWithToken(session?.access_token ?? null);
+        } else if (event === "SIGNED_OUT") {
+          if (channel !== null) {
+            void supabase.removeChannel(channel);
+            channel = null;
+          }
+        }
+      },
+    );
 
     return () => {
       cancelled = true;
+      authSub.subscription.unsubscribe();
       if (channel !== null) {
         void supabase.removeChannel(channel);
       }

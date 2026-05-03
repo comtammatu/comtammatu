@@ -378,7 +378,7 @@ export function ItemCustomizer({
                                   type="button"
                                   variant="outline"
                                   size="icon"
-                                  className="size-8"
+                                  className="size-11"
                                   disabled={
                                     !isSelected || displaySideQuantity <= 1
                                   }
@@ -401,7 +401,7 @@ export function ItemCustomizer({
                                   type="button"
                                   variant="outline"
                                   size="icon"
-                                  className="size-8"
+                                  className="size-11"
                                   disabled={!isSelected}
                                   aria-label={`Tăng ${s.side_item.name}`}
                                   onClick={() =>
@@ -460,7 +460,7 @@ export function ItemCustomizer({
                   type="button"
                   variant="outline"
                   size="icon"
-                  className="size-9"
+                  className="size-11"
                   disabled={quantity <= 1}
                   aria-label="Giảm số lượng"
                   onClick={() => updateQuantity(-1)}
@@ -474,7 +474,7 @@ export function ItemCustomizer({
                   type="button"
                   variant="outline"
                   size="icon"
-                  className="size-9"
+                  className="size-11"
                   aria-label="Tăng số lượng"
                   onClick={() => updateQuantity(1)}
                 >
