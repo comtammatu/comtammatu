@@ -20,6 +20,7 @@ apps/web/public/swe-worker-*.js
 # build
 dist/
 apps/print-agent/dist-bin/
+apps/print-agent/dist-bundle/
 
 # misc
 .DS_Store
