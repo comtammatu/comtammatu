@@ -66,7 +66,11 @@ const config = {
   branchId: Number(requireEnv("AGENT_BRANCH_ID")),
   tenantId: Number(requireEnv("AGENT_TENANT_ID")),
   agentId: process.env.AGENT_ID ?? `agent-${process.pid}`,
-  version: process.env.AGENT_VERSION ?? "0.1.0",
+  // Default fallback bumped 2026-05-03: 0.1.0 → 0.2.0 marks release with
+  // payment label sync, cancel ticket note, sides bold, Phiếu/HĐ dedup,
+  // shift-close cashier label fix. Used by SQL view `v_print_agent_fleet`
+  // to identify chi nhánh chưa migrate (vẫn báo 0.1.0 = .exe legacy).
+  version: process.env.AGENT_VERSION ?? "0.2.0",
   transport: parseTransport(process.env.AGENT_TRANSPORT),
   printMode: parsePrintMode(process.env.PRINT_MODE),
   // Network gate: agent registers its NAT egress IP every 5 min via the

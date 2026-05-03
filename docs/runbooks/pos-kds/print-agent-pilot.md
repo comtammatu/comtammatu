@@ -31,21 +31,47 @@ Complete all items before opening the branch for the day.
 
 ### Windows PC per branch
 
+- [ ] **Node.js 24+** installed (`node --version` ≥ v24). Download from nodejs.org.
+      KHÔNG dùng .exe build — pkg path đã retire (xem README.md "Prerequisites").
 - [ ] NSSM installed (`choco install nssm` or download from nssm.cc)
-- [ ] `.env` copied next to `dist-bin/comtammatu-print-agent.exe` containing:
+- [ ] `apps/print-agent/dist/` copied to máy POS (sau khi rebuild qua `pnpm build`)
+- [ ] `.env` đặt tại `apps/print-agent/dist-bin/.env` (legacy path, script
+      `install-service.ps1` reference) chứa:
   ```
   SUPABASE_URL=https://<ref>.supabase.co
   SUPABASE_SERVICE_ROLE_KEY=<service role JWT>
   AGENT_TENANT_ID=<numeric>
   AGENT_BRANCH_ID=<numeric>
   AGENT_ID=pos-<branch-slug>
-  AGENT_VERSION=0.1.0
+  AGENT_VERSION=0.2.0
   ```
+  > **Note**: bump `AGENT_VERSION` mỗi release (sync với `package.json`).
+  > SQL view `v_print_agent_fleet` dùng version này để track chi nhánh nào
+  > chưa migrate.
 - [ ] Run `apps\print-agent\scripts\install-service.ps1` as Administrator
 - [ ] `Get-Service ComTamMaTu-PrintAgent` → `Running`
 - [ ] `C:\ProgramData\ComTamMaTu\print-agent\logs\agent.out.log` shows
       `realtime status=SUBSCRIBED` within 10 seconds
 - [ ] POS header shows **"Máy in: online"** badge (green)
+
+### Migration .exe → Node (chi nhánh đang chạy .exe legacy)
+
+Một số chi nhánh deploy trước commit `98ce5c7` (2026-04-end) vẫn chạy
+`comtammatu-print-agent.exe`. Migration sang Node path:
+
+1. **Install Node 24+** trên máy POS (nếu chưa có)
+2. **Stop service cũ**: `Stop-Service ComTamMaTu-PrintAgent`
+3. **Backup** `.exe` cũ + `.env` (phòng rollback)
+4. **Copy** `apps/print-agent/dist/` mới (build từ máy CI/dev)
+5. **Re-run** `install-service.ps1` as Administrator — script sẽ:
+   - `nssm remove` service cũ (point to `.exe`)
+   - `nssm install` service mới (point to `node.exe dist/index.js`)
+   - Load `.env` vào service environment
+6. **Start service**: `Start-Service ComTamMaTu-PrintAgent`
+7. **Verify** `agent.out.log` → `realtime status=SUBSCRIBED` + POS badge xanh
+
+Rollback nếu fail: copy `.exe` backup về + thay nssm `Application` thành
+đường dẫn `.exe` cũ.
 
 ### Smoke test (staff manager on site)
 

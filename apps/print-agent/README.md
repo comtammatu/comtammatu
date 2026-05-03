@@ -24,7 +24,9 @@ Browser POS ─ Server Action ─▶ Postgres RPC ─▶ print_jobs row
 
 ## Prerequisites
 
-- Node.js 24 (for `pnpm dev`) OR the packaged `.exe` (no Node needed)
+- Node.js 24+ (required — agent runs as `node dist/index.js`, KHÔNG dùng pkg `.exe` build
+  vì @yao-pkg/pkg có ESM issues với `dist/render-bitmap.js` từ 2026-04, xem commit
+  `98ce5c7`)
 - Windows 10 / 11 or Windows Server 2019+
 - For Windows Service install: [NSSM](https://nssm.cc/) on `PATH` (`choco install nssm`)
 - Supabase service role key (agent runs as service principal, not a user)
@@ -40,14 +42,15 @@ pnpm install
 pnpm dev
 ```
 
-## Build binary
+## Build
 
 ```bash
 pnpm build          # tsc → dist/
-pnpm package        # @yao-pkg/pkg → dist-bin/comtammatu-print-agent.exe
 ```
 
-Binary target: `node24-win-x64`. Native `usb` bindings are included via `pkg.assets`.
+`dist/` contains the compiled JS entry point (`dist/index.js`) that the Windows
+Service launches via `node.exe`. No standalone binary — see "Prerequisites" for
+why pkg path was retired.
 
 ## Install as Windows Service
 
@@ -57,8 +60,9 @@ cd apps\print-agent
 .\scripts\install-service.ps1
 ```
 
-The script reads `.env` next to the exe and registers a service `ComTamMaTu-PrintAgent`
-with auto-restart on crash. Logs rotate at 10 MB each:
+The script reads `.env` from `dist-bin/.env` (legacy path; service `WorkingDir`
+points there but service entry is `node dist/index.js`) and registers service
+`ComTamMaTu-PrintAgent` with auto-restart on crash. Logs rotate at 10 MB each:
 
 ```
 C:\ProgramData\ComTamMaTu\print-agent\logs\agent.out.log

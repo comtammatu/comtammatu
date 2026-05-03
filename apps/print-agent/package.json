@@ -1,6 +1,6 @@
 {
   "name": "@comtammatu/print-agent",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "main": "dist/index.js",
@@ -15,8 +15,7 @@
     "test:codepage": "tsx scripts/test-codepage.ts",
     "test:bitmap": "tsx scripts/test-bitmap.ts",
     "test:vn27": "tsx scripts/test-vn27.ts",
-    "test:all": "tsx scripts/test-all.ts",
-    "package": "pkg . --output dist-bin/comtammatu-print-agent.exe --public --no-bytecode"
+    "test:all": "tsx scripts/test-all.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.58.0",
@@ -29,18 +28,7 @@
   },
   "devDependencies": {
     "@types/node": "^25.5.0",
-    "@yao-pkg/pkg": "^6.9.0",
     "tsx": "^4.21.0",
     "typescript": "^6.0.3"
-  },
-  "pkg": {
-    "targets": [
-      "node24-win-x64"
-    ],
-    "outputPath": "dist-bin",
-    "assets": [
-      "node_modules/usb/prebuilds/**/*",
-      "assets/fonts/**/*"
-    ]
   }
 }
