@@ -24,7 +24,11 @@ import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { ERRORS_VI, FORM_VI } from "@comtammatu/shared/messages";
 import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
-import { CircleOff as IconCircleOff, Plus as IconPlus, RefreshCw as IconRefresh } from "lucide-react";
+import {
+  CircleOff as IconCircleOff,
+  Plus as IconPlus,
+  RefreshCw as IconRefresh,
+} from "lucide-react";
 import type { AccountRow } from "./page";
 import {
   seedChartOfAccounts,
@@ -131,35 +135,37 @@ export function ChartOfAccountsClient({
     <div className="space-y-4">
       <Card>
         <CardContent className="flex flex-wrap items-center justify-between gap-4 p-4">
-        <div className="space-y-1.5">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-            Danh mục tài khoản
-          </p>
-          <p className="text-sm text-muted-foreground">
-            {accounts.length} tài khoản.
-          </p>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleSeed}
-          disabled={isPending}
-        >
-          <IconRefresh className="mr-2 size-4" />
-          Kiểm tra thiếu
-        </Button>
+          <div className="space-y-1.5">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              Danh mục tài khoản
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {accounts.length} tài khoản.
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSeed}
+            disabled={isPending}
+          >
+            <IconRefresh className="mr-2 size-4" />
+            Kiểm tra thiếu
+          </Button>
         </CardContent>
       </Card>
 
       <Card className="overflow-hidden rounded-lg">
-        <CardContent className="px-4 sm:px-5">
+        <CardContent className="overflow-x-auto px-4 sm:px-5">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead className="w-32">Mã TK</TableHead>
                 <TableHead>Tên tài khoản</TableHead>
                 <TableHead className="w-32">{FORM_VI.type}</TableHead>
-                <TableHead className="w-24 text-center">{FORM_VI.status}</TableHead>
+                <TableHead className="w-24 text-center">
+                  {FORM_VI.status}
+                </TableHead>
                 <TableHead className="w-24" />
               </TableRow>
             </TableHeader>
@@ -205,7 +211,9 @@ export function ChartOfAccountsClient({
                     <Badge
                       variant={account.is_active ? "default" : "secondary"}
                     >
-                      {account.is_active ? ACTIVE_STATE_LABELS_VI.active : "Tắt"}
+                      {account.is_active
+                        ? ACTIVE_STATE_LABELS_VI.active
+                        : "Tắt"}
                     </Badge>
                   </TableCell>
                   <TableCell>

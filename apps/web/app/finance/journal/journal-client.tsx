@@ -162,7 +162,7 @@ export function JournalClient({ entries: initial, accounts }: Props) {
       </div>
 
       <Card className="overflow-hidden">
-        <CardContent className="px-4 sm:px-5">
+        <CardContent className="overflow-x-auto px-4 sm:px-5">
           <Table>
             <TableHeader>
               <TableRow>
@@ -345,7 +345,9 @@ export function JournalClient({ entries: initial, accounts }: Props) {
                       </TableRow>
                     ))}
                     <TableRow className="bg-muted/40">
-                      <TableCell className="font-medium">{FORM_VI.totalAmount}</TableCell>
+                      <TableCell className="font-medium">
+                        {FORM_VI.totalAmount}
+                      </TableCell>
                       <TableCell className="text-right tabular-nums font-medium">
                         {totalDebit.toLocaleString("vi-VN")}
                       </TableCell>

@@ -5,6 +5,7 @@ import {
   fetchRevenueRollup,
   type RevenueGranularity,
 } from "../actions";
+import type { FinanceLayoutMode } from "../page";
 import {
   fetchReconciliation,
   type ReconciliationReport,
@@ -16,6 +17,7 @@ const VALID_GRANULARITIES: readonly RevenueGranularity[] = [
   "week",
   "month",
 ] as const;
+const VALID_LAYOUTS: readonly FinanceLayoutMode[] = ["simple", "advanced"];
 
 export interface RollupRow {
   period_start: string;
@@ -96,9 +98,10 @@ function isValidIsoDate(value: string | undefined): value is string {
   return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
 
-function defaultRangeFor(
-  granularity: RevenueGranularity,
-): { start: string; end: string } {
+function defaultRangeFor(granularity: RevenueGranularity): {
+  start: string;
+  end: string;
+} {
   const today = new Date();
   const end = today.toISOString().slice(0, 10);
   const d = new Date(today);
@@ -111,7 +114,10 @@ function defaultRangeFor(
 // Prev period = same length, ending the day before current start.
 // Day-count length keeps WoW/MoM "vs same number of days" rather than
 // "calendar prev month" — owner thấy delta là apples-to-apples.
-function prevPeriodFor(start: string, end: string): { start: string; end: string } {
+function prevPeriodFor(
+  start: string,
+  end: string,
+): { start: string; end: string } {
   const startMs = new Date(`${start}T00:00:00Z`).getTime();
   const endMs = new Date(`${end}T00:00:00Z`).getTime();
   const lengthMs = endMs - startMs; // inclusive length in ms
@@ -130,6 +136,7 @@ export default async function RevenueReportPage({
     start?: string;
     end?: string;
     compare?: string;
+    layout?: string;
   }>;
 }) {
   const sp = await searchParams;
@@ -153,6 +160,9 @@ export default async function RevenueReportPage({
 
   const compareEnabled = sp.compare === "prev";
   const prevRange = compareEnabled ? prevPeriodFor(startDate, endDate) : null;
+  const layout = VALID_LAYOUTS.includes(sp.layout as FinanceLayoutMode)
+    ? (sp.layout as FinanceLayoutMode)
+    : "simple";
 
   const [
     branchesRes,
@@ -179,9 +189,7 @@ export default async function RevenueReportPage({
   const branches = (
     branchesRes.success ? (branchesRes.data ?? []) : []
   ) as AccessibleBranch[];
-  const rows = (
-    rollupRes.success ? (rollupRes.data ?? []) : []
-  ) as RollupRow[];
+  const rows = (rollupRes.success ? (rollupRes.data ?? []) : []) as RollupRow[];
   const kpis = (kpisRes.success ? kpisRes.data : null) as KpiBundle | null;
   const prevKpis = (
     prevKpisRes.success ? prevKpisRes.data : null
@@ -256,6 +264,7 @@ export default async function RevenueReportPage({
       initialStart={startDate}
       initialEnd={endDate}
       initialGranularity={granularity}
+      initialLayout={layout}
       initialError={errorMessage ?? null}
     />
   );

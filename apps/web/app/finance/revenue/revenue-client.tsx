@@ -18,11 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-} from "@comtammatu/ui/components/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
 import {
   Select,
   SelectContent,
@@ -43,6 +39,8 @@ import { formatVND } from "@comtammatu/shared/format";
 import { FORM_VI } from "@comtammatu/shared/messages";
 import { refreshMaterializedViews } from "../actions";
 import type { RevenueGranularity } from "../actions";
+import type { FinanceLayoutMode } from "../page";
+import { useFinanceRealtimeRefresh } from "../use-finance-realtime-refresh";
 import type {
   AccessibleBranch,
   CashVarianceSummary,
@@ -63,6 +61,7 @@ interface Props {
   initialStart: string;
   initialEnd: string;
   initialGranularity: RevenueGranularity;
+  initialLayout: FinanceLayoutMode;
   initialError: string | null;
 }
 
@@ -89,7 +88,10 @@ function formatRefreshedAt(iso: string): string {
   const d = new Date(iso);
   const hh = String(d.getHours()).padStart(2, "0");
   const mm = String(d.getMinutes()).padStart(2, "0");
-  const minutesAgo = Math.max(0, Math.floor((Date.now() - d.getTime()) / 60000));
+  const minutesAgo = Math.max(
+    0,
+    Math.floor((Date.now() - d.getTime()) / 60000),
+  );
   return `Cập nhật lúc ${hh}:${mm} (${minutesAgo} phút trước)`;
 }
 
@@ -158,11 +160,13 @@ export function RevenueClient({
   initialStart,
   initialEnd,
   initialGranularity,
+  initialLayout,
   initialError,
 }: Props) {
   const router = useRouter();
   const [granularity, setGranularity] =
     useState<RevenueGranularity>(initialGranularity);
+  const [layout, setLayout] = useState<FinanceLayoutMode>(initialLayout);
   const [startDate, setStartDate] = useState(initialStart);
   const [endDate, setEndDate] = useState(initialEnd);
   const [branchId, setBranchId] = useState<number | null>(initialBranchId);
@@ -172,16 +176,26 @@ export function RevenueClient({
   const [isPending, startTransition] = useTransition();
   const [refreshError, setRefreshError] = useState<string | null>(null);
 
+  useFinanceRealtimeRefresh({ branchId });
+
   const branchLabel = useMemo(() => {
     if (branchId == null) return "Tất cả chi nhánh";
-    return branches.find((b) => b.id === branchId)?.name ?? `Chi nhánh ${branchId}`;
+    return (
+      branches.find((b) => b.id === branchId)?.name ?? `Chi nhánh ${branchId}`
+    );
   }, [branchId, branches]);
 
-  const aggregated = useMemo(() => aggregateRowsByPeriod(initialRows), [initialRows]);
+  const aggregated = useMemo(
+    () => aggregateRowsByPeriod(initialRows),
+    [initialRows],
+  );
 
   const branchTotals = useMemo(() => {
     if (branchId != null) return [];
-    const map = new Map<number, { branchId: number; revenue: number; orders: number }>();
+    const map = new Map<
+      number,
+      { branchId: number; revenue: number; orders: number }
+    >();
     for (const r of initialRows) {
       const existing = map.get(r.branch_id);
       const rev = r.total_revenue ?? 0;
@@ -205,6 +219,7 @@ export function RevenueClient({
     end?: string;
     branchId?: number | null;
     compare?: boolean;
+    layout?: FinanceLayoutMode;
   }) {
     const params = new URLSearchParams();
     const g = next.granularity ?? granularity;
@@ -212,10 +227,12 @@ export function RevenueClient({
     const e = next.end ?? endDate;
     const b = next.branchId === undefined ? branchId : next.branchId;
     const c = next.compare === undefined ? compareEnabled : next.compare;
+    const l = next.layout ?? layout;
     params.set("granularity", g);
     params.set("start", s);
     params.set("end", e);
     params.set("branch", b == null ? ALL_BRANCHES_VALUE : String(b));
+    params.set("layout", l);
     if (c) params.set("compare", "prev");
     startTransition(() => {
       router.replace(`/finance/revenue?${params.toString()}`);
@@ -227,6 +244,11 @@ export function RevenueClient({
     const next = !compareEnabled;
     setCompareEnabled(next);
     pushFilters({ compare: next });
+  }
+
+  function handleLayoutChange(next: FinanceLayoutMode) {
+    setLayout(next);
+    pushFilters({ layout: next });
   }
 
   function handleGranularityChange(next: string) {
@@ -354,10 +376,10 @@ export function RevenueClient({
       ? (prev.voided_amount / (prev.net_revenue + prev.voided_amount)) * 100
       : 0;
   const discountPct =
-    kpis && grossRevenue > 0
-      ? (kpis.discount_amount / grossRevenue) * 100
-      : 0;
-  const prevGrossRevenue = prev ? prev.subtotal_revenue + prev.discount_amount : 0;
+    kpis && grossRevenue > 0 ? (kpis.discount_amount / grossRevenue) * 100 : 0;
+  const prevGrossRevenue = prev
+    ? prev.subtotal_revenue + prev.discount_amount
+    : 0;
   const prevDiscountPct =
     prev && prevGrossRevenue > 0
       ? (prev.discount_amount / prevGrossRevenue) * 100
@@ -377,7 +399,8 @@ export function RevenueClient({
             <div className="space-y-2">
               <Badge variant="secondary">Báo cáo doanh thu</Badge>
               <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-                Doanh thu {GRANULARITY_LABEL[granularity].toLowerCase()} · {branchLabel}
+                Doanh thu {GRANULARITY_LABEL[granularity].toLowerCase()} ·{" "}
+                {branchLabel}
               </h2>
               <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
                 Số liệu tổng hợp theo ngày thanh toán (giờ Việt Nam). Click một
@@ -390,6 +413,7 @@ export function RevenueClient({
               ) : null}
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              <LayoutPicker value={layout} onChange={handleLayoutChange} />
               <Button
                 variant={compareEnabled ? "default" : "outline"}
                 size="sm"
@@ -427,80 +451,84 @@ export function RevenueClient({
 
       <Card>
         <CardContent className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4 lg:items-end">
-        <div className="grid gap-1.5">
-          <Label className="text-xs">Chi nhánh</Label>
-          <Select
-            value={branchId == null ? ALL_BRANCHES_VALUE : String(branchId)}
-            onValueChange={handleBranchChange}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Chọn chi nhánh" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL_BRANCHES_VALUE}>
-                Tất cả ({branches.length} chi nhánh)
-              </SelectItem>
-              {branches.map((b) => (
-                <SelectItem key={b.id} value={String(b.id)}>
-                  {b.name}
+          <div className="grid gap-1.5">
+            <Label className="text-xs">Chi nhánh</Label>
+            <Select
+              value={branchId == null ? ALL_BRANCHES_VALUE : String(branchId)}
+              onValueChange={handleBranchChange}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Chọn chi nhánh" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL_BRANCHES_VALUE}>
+                  Tất cả ({branches.length} chi nhánh)
                 </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="grid gap-1.5">
-          <Label className="text-xs">Mức tổng hợp</Label>
-          <Tabs value={granularity} onValueChange={handleGranularityChange}>
-            <TabsList className="w-full">
-              <TabsTrigger value="day" className="flex-1">
-                Ngày
-              </TabsTrigger>
-              <TabsTrigger value="week" className="flex-1">
-                Tuần
-              </TabsTrigger>
-              <TabsTrigger value="month" className="flex-1">
-                Tháng
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
-        <div className="grid gap-1.5">
-          <Label className="text-xs">{FORM_VI.fromDate}</Label>
-          <Input
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-          />
-        </div>
-        <div className="grid gap-1.5">
-          <Label className="text-xs">{FORM_VI.toDate}</Label>
-          <div className="flex gap-2">
+                {branches.map((b) => (
+                  <SelectItem key={b.id} value={String(b.id)}>
+                    {b.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid gap-1.5">
+            <Label className="text-xs">Mức tổng hợp</Label>
+            <Tabs value={granularity} onValueChange={handleGranularityChange}>
+              <TabsList className="w-full">
+                <TabsTrigger value="day" className="flex-1">
+                  Ngày
+                </TabsTrigger>
+                <TabsTrigger value="week" className="flex-1">
+                  Tuần
+                </TabsTrigger>
+                <TabsTrigger value="month" className="flex-1">
+                  Tháng
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+          <div className="grid gap-1.5">
+            <Label className="text-xs">{FORM_VI.fromDate}</Label>
             <Input
               type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
             />
-            <Button
-              size="sm"
-              onClick={handleApplyDateRange}
-              disabled={isPending}
-            >
-              Áp dụng
-            </Button>
           </div>
-        </div>
+          <div className="grid gap-1.5">
+            <Label className="text-xs">{FORM_VI.toDate}</Label>
+            <div className="flex gap-2">
+              <Input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+              <Button
+                size="sm"
+                onClick={handleApplyDateRange}
+                disabled={isPending}
+              >
+                Áp dụng
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <KpiCard
-          label="Doanh thu thuần"
+          label="Tổng tiền đã thu"
           value={formatVND(kpis?.net_revenue ?? 0)}
-          hint={kpis ? `Trước thuế ${formatVND(kpis.subtotal_revenue)}` : "—"}
+          hint={kpis ? `Trước VAT ${formatVND(kpis.subtotal_revenue)}` : "—"}
           tone="primary"
           delta={
             initialCompare
-              ? buildDelta(kpis?.net_revenue ?? 0, prev?.net_revenue ?? 0, "currency")
+              ? buildDelta(
+                  kpis?.net_revenue ?? 0,
+                  prev?.net_revenue ?? 0,
+                  "currency",
+                )
               : null
           }
         />
@@ -510,7 +538,11 @@ export function RevenueClient({
           hint={`${(kpis?.total_covers ?? 0).toLocaleString("vi-VN")} lượt khách`}
           delta={
             initialCompare
-              ? buildDelta(kpis?.order_count ?? 0, prev?.order_count ?? 0, "count")
+              ? buildDelta(
+                  kpis?.order_count ?? 0,
+                  prev?.order_count ?? 0,
+                  "count",
+                )
               : null
           }
         />
@@ -518,9 +550,7 @@ export function RevenueClient({
           label="Trung bình / khách"
           value={aov > 0 ? formatVND(aov) : "—"}
           hint="Doanh thu / lượt khách"
-          delta={
-            initialCompare ? buildDelta(aov, prevAov, "currency") : null
-          }
+          delta={initialCompare ? buildDelta(aov, prevAov, "currency") : null}
         />
         <KpiCard
           label="Tỉ lệ hoàn / hủy"
@@ -556,247 +586,269 @@ export function RevenueClient({
         </p>
       ) : null}
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        {initialReconcile ? (
-          <ReconcileCard reconcile={initialReconcile} />
-        ) : null}
-        {initialCashVariance ? (
-          <CashVarianceCard variance={initialCashVariance} />
-        ) : null}
-      </div>
+      {layout === "simple" ? (
+        <SimpleRevenueSummary
+          aggregated={aggregated}
+          branchTotals={branchTotals}
+          branches={branches}
+          branchId={branchId}
+          granularity={granularity}
+          startDate={startDate}
+          endDate={endDate}
+          kpis={kpis}
+        />
+      ) : (
+        <>
+          <div className="grid gap-4 lg:grid-cols-2">
+            {initialReconcile ? (
+              <ReconcileCard reconcile={initialReconcile} />
+            ) : null}
+            {initialCashVariance ? (
+              <CashVarianceCard variance={initialCashVariance} />
+            ) : null}
+          </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <BreakdownCard
-          title="Cơ cấu thanh toán"
-          rows={[
-            {
-              label: "Tiền mặt",
-              value: kpis?.cash_revenue ?? 0,
-              total: kpis?.net_revenue ?? 0,
-            },
-            {
-              label: "VietQR",
-              value: kpis?.vietqr_revenue ?? 0,
-              total: kpis?.net_revenue ?? 0,
-            },
-            {
-              label: "MoMo",
-              value: kpis?.momo_revenue ?? 0,
-              total: kpis?.net_revenue ?? 0,
-            },
-            ...(channelOther > 1
-              ? [
-                  {
-                    label: "Khác",
-                    value: channelOther,
-                    total: kpis?.net_revenue ?? 0,
-                  },
-                ]
-              : []),
-          ]}
-        />
-        <BreakdownCard
-          title="Tại quán / Mang đi"
-          rows={[
-            {
-              label: "Tại quán",
-              value: kpis?.dine_in_revenue ?? 0,
-              total: kpis?.net_revenue ?? 0,
-            },
-            {
-              label: "Mang đi",
-              value: kpis?.takeaway_revenue ?? 0,
-              total: kpis?.net_revenue ?? 0,
-            },
-          ]}
-        />
-        <BreakdownCard
-          title="Thuế VAT đầu ra"
-          rows={[
-            {
-              label: "VAT 8%",
-              value: kpis?.vat_8_amount ?? 0,
-              total: kpis?.total_tax ?? 0,
-            },
-            {
-              label: "VAT 10%",
-              value: kpis?.vat_10_amount ?? 0,
-              total: kpis?.total_tax ?? 0,
-            },
-          ]}
-          footer={
-            kpis ? `Tổng thuế: ${formatVND(kpis.total_tax)}` : undefined
-          }
-        />
-      </div>
+          <div className="grid gap-4 lg:grid-cols-3">
+            <BreakdownCard
+              title="Cơ cấu thanh toán"
+              rows={[
+                {
+                  label: "Tiền mặt",
+                  value: kpis?.cash_revenue ?? 0,
+                  total: kpis?.net_revenue ?? 0,
+                },
+                {
+                  label: "VietQR",
+                  value: kpis?.vietqr_revenue ?? 0,
+                  total: kpis?.net_revenue ?? 0,
+                },
+                {
+                  label: "MoMo",
+                  value: kpis?.momo_revenue ?? 0,
+                  total: kpis?.net_revenue ?? 0,
+                },
+                ...(channelOther > 1
+                  ? [
+                      {
+                        label: "Khác",
+                        value: channelOther,
+                        total: kpis?.net_revenue ?? 0,
+                      },
+                    ]
+                  : []),
+              ]}
+            />
+            <BreakdownCard
+              title="Tại quán / Mang đi"
+              rows={[
+                {
+                  label: "Tại quán",
+                  value: kpis?.dine_in_revenue ?? 0,
+                  total: kpis?.net_revenue ?? 0,
+                },
+                {
+                  label: "Mang đi",
+                  value: kpis?.takeaway_revenue ?? 0,
+                  total: kpis?.net_revenue ?? 0,
+                },
+              ]}
+            />
+            <BreakdownCard
+              title="Thuế VAT đầu ra"
+              rows={[
+                {
+                  label: "VAT 8%",
+                  value: kpis?.vat_8_amount ?? 0,
+                  total: kpis?.total_tax ?? 0,
+                },
+                {
+                  label: "VAT 10%",
+                  value: kpis?.vat_10_amount ?? 0,
+                  total: kpis?.total_tax ?? 0,
+                },
+              ]}
+              footer={
+                kpis ? `Tổng thuế: ${formatVND(kpis.total_tax)}` : undefined
+              }
+            />
+          </div>
 
-      {branchId == null && branchTotals.length > 0 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">
-              Doanh thu theo chi nhánh trong kỳ
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Chi nhánh</TableHead>
-                  <TableHead className="text-right">Đơn</TableHead>
-                  <TableHead className="text-right">Doanh thu</TableHead>
-                  <TableHead className="w-32 text-right">Hành động</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {branchTotals.map((bt) => {
-                  const name =
-                    branches.find((b) => b.id === bt.branchId)?.name ??
-                    `Chi nhánh ${bt.branchId}`;
-                  const params = new URLSearchParams({
-                    granularity,
-                    start: startDate,
-                    end: endDate,
-                    branch: String(bt.branchId),
-                  });
-                  return (
-                    <TableRow key={bt.branchId}>
-                      <TableCell className="font-medium">{name}</TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {bt.orders.toLocaleString("vi-VN")}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {formatVND(bt.revenue)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button asChild size="sm" variant="outline">
-                          <Link href={`/finance/revenue?${params.toString()}`}>
-                            Xem chi nhánh
-                          </Link>
-                        </Button>
-                      </TableCell>
+          {branchId == null && branchTotals.length > 0 ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">
+                  Doanh thu theo chi nhánh trong kỳ
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Chi nhánh</TableHead>
+                      <TableHead className="text-right">Đơn</TableHead>
+                      <TableHead className="text-right">Doanh thu</TableHead>
+                      <TableHead className="w-32 text-right">
+                        Hành động
+                      </TableHead>
                     </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      ) : null}
+                  </TableHeader>
+                  <TableBody>
+                    {branchTotals.map((bt) => {
+                      const name =
+                        branches.find((b) => b.id === bt.branchId)?.name ??
+                        `Chi nhánh ${bt.branchId}`;
+                      const params = new URLSearchParams({
+                        granularity,
+                        start: startDate,
+                        end: endDate,
+                        branch: String(bt.branchId),
+                        layout: "advanced",
+                      });
+                      return (
+                        <TableRow key={bt.branchId}>
+                          <TableCell className="font-medium">{name}</TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {bt.orders.toLocaleString("vi-VN")}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {formatVND(bt.revenue)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button asChild size="sm" variant="outline">
+                              <Link
+                                href={`/finance/revenue?${params.toString()}`}
+                              >
+                                Xem chi nhánh
+                              </Link>
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          ) : null}
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Bảng doanh thu theo kỳ</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            {branchId == null
-              ? "Tổng hợp các chi nhánh bạn có quyền xem. Click một ngày để xem chi tiết đơn — sẽ chọn chi nhánh trước nếu đang xem 'Tất cả'."
-              : "Click một kỳ để xem danh sách đơn theo giờ."}
-          </p>
-        </CardHeader>
-        <CardContent>
-          {aggregated.length === 0 ? (
-            <Empty className="py-8">
-              <EmptyHeader>
-                <EmptyTitle className="text-sm font-semibold">
-                  Không có dữ liệu trong khoảng đã chọn.
-                </EmptyTitle>
-              </EmptyHeader>
-            </Empty>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{PERIOD_HEADER_LABEL[granularity]}</TableHead>
-                  <TableHead className="text-right">Đơn</TableHead>
-                  <TableHead className="text-right">Khách</TableHead>
-                  <TableHead className="text-right">Doanh thu</TableHead>
-                  <TableHead className="text-right">Tiền mặt</TableHead>
-                  <TableHead className="text-right">VietQR</TableHead>
-                  <TableHead className="text-right">MoMo</TableHead>
-                  <TableHead className="text-right">VAT</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {aggregated.map((r) => {
-                  const drillBranchId =
-                    branchId != null
-                      ? branchId
-                      : r.branch_ids.length === 1
-                        ? r.branch_ids[0]
-                        : null;
-                  const canDrill =
-                    granularity === "day" && drillBranchId != null;
-                  return (
-                    <TableRow
-                      key={r.period_start}
-                      className={canDrill ? "cursor-pointer" : undefined}
-                    >
-                      <TableCell className="font-medium tabular-nums">
-                        {canDrill ? (
-                          <Link
-                            href={`/finance/revenue/${r.period_start}?branch=${drillBranchId}`}
-                            className="text-primary underline-offset-2 hover:underline"
-                          >
-                            {r.period_label}
-                          </Link>
-                        ) : (
-                          r.period_label
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {r.order_count.toLocaleString("vi-VN")}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {r.total_covers.toLocaleString("vi-VN")}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">
+                Bảng doanh thu theo kỳ
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                {branchId == null
+                  ? "Tổng hợp các chi nhánh bạn có quyền xem. Click một ngày để xem chi tiết đơn — sẽ chọn chi nhánh trước nếu đang xem 'Tất cả'."
+                  : "Click một kỳ để xem danh sách đơn theo giờ."}
+              </p>
+            </CardHeader>
+            <CardContent className="overflow-x-auto">
+              {aggregated.length === 0 ? (
+                <Empty className="py-8">
+                  <EmptyHeader>
+                    <EmptyTitle className="text-sm font-semibold">
+                      Không có dữ liệu trong khoảng đã chọn.
+                    </EmptyTitle>
+                  </EmptyHeader>
+                </Empty>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{PERIOD_HEADER_LABEL[granularity]}</TableHead>
+                      <TableHead className="text-right">Đơn</TableHead>
+                      <TableHead className="text-right">Khách</TableHead>
+                      <TableHead className="text-right">Doanh thu</TableHead>
+                      <TableHead className="text-right">Tiền mặt</TableHead>
+                      <TableHead className="text-right">VietQR</TableHead>
+                      <TableHead className="text-right">MoMo</TableHead>
+                      <TableHead className="text-right">VAT</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {aggregated.map((r) => {
+                      const drillBranchId =
+                        branchId != null
+                          ? branchId
+                          : r.branch_ids.length === 1
+                            ? r.branch_ids[0]
+                            : null;
+                      const canDrill =
+                        granularity === "day" && drillBranchId != null;
+                      return (
+                        <TableRow
+                          key={r.period_start}
+                          className={canDrill ? "cursor-pointer" : undefined}
+                        >
+                          <TableCell className="font-medium tabular-nums">
+                            {canDrill ? (
+                              <Link
+                                href={`/finance/revenue/${r.period_start}?branch=${drillBranchId}`}
+                                className="text-primary underline-offset-2 hover:underline"
+                              >
+                                {r.period_label}
+                              </Link>
+                            ) : (
+                              r.period_label
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {r.order_count.toLocaleString("vi-VN")}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {r.total_covers.toLocaleString("vi-VN")}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums font-medium">
+                            {formatVND(r.total_revenue)}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums text-muted-foreground">
+                            {formatVND(r.cash_revenue)}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums text-muted-foreground">
+                            {formatVND(r.vietqr_revenue)}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums text-muted-foreground">
+                            {formatVND(r.momo_revenue)}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums text-muted-foreground">
+                            {formatVND(r.total_tax)}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                  <TableFooter>
+                    <TableRow className="hover:bg-transparent">
+                      <TableCell className="font-medium">Tổng</TableCell>
+                      <TableCell className="text-right tabular-nums font-medium">
+                        {(kpis?.order_count ?? 0).toLocaleString("vi-VN")}
                       </TableCell>
                       <TableCell className="text-right tabular-nums font-medium">
-                        {formatVND(r.total_revenue)}
+                        {(kpis?.total_covers ?? 0).toLocaleString("vi-VN")}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums text-muted-foreground">
-                        {formatVND(r.cash_revenue)}
+                      <TableCell className="text-right tabular-nums font-bold">
+                        {formatVND(kpis?.net_revenue ?? 0)}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums text-muted-foreground">
-                        {formatVND(r.vietqr_revenue)}
+                      <TableCell className="text-right tabular-nums">
+                        {formatVND(kpis?.cash_revenue ?? 0)}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums text-muted-foreground">
-                        {formatVND(r.momo_revenue)}
+                      <TableCell className="text-right tabular-nums">
+                        {formatVND(kpis?.vietqr_revenue ?? 0)}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums text-muted-foreground">
-                        {formatVND(r.total_tax)}
+                      <TableCell className="text-right tabular-nums">
+                        {formatVND(kpis?.momo_revenue ?? 0)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatVND(kpis?.total_tax ?? 0)}
                       </TableCell>
                     </TableRow>
-                  );
-                })}
-              </TableBody>
-              <TableFooter>
-                <TableRow className="hover:bg-transparent">
-                  <TableCell className="font-medium">Tổng</TableCell>
-                  <TableCell className="text-right tabular-nums font-medium">
-                    {(kpis?.order_count ?? 0).toLocaleString("vi-VN")}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums font-medium">
-                    {(kpis?.total_covers ?? 0).toLocaleString("vi-VN")}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums font-bold">
-                    {formatVND(kpis?.net_revenue ?? 0)}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {formatVND(kpis?.cash_revenue ?? 0)}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {formatVND(kpis?.vietqr_revenue ?? 0)}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {formatVND(kpis?.momo_revenue ?? 0)}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {formatVND(kpis?.total_tax ?? 0)}
-                  </TableCell>
-                </TableRow>
-              </TableFooter>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                  </TableFooter>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </>
+      )}
     </div>
   );
 }
@@ -827,16 +879,226 @@ function buildDelta(
   const arrow = diff > 0 ? "▲" : diff < 0 ? "▼" : "•";
   const display = `${arrow} ${Math.abs(pct).toFixed(1)}%`;
   // Lower-better metrics flip the goodness mapping.
-  const isImprovement =
-    kind === "percent_lower_better" ? diff < 0 : diff > 0;
-  const isRegression =
-    kind === "percent_lower_better" ? diff > 0 : diff < 0;
+  const isImprovement = kind === "percent_lower_better" ? diff < 0 : diff > 0;
+  const isRegression = kind === "percent_lower_better" ? diff > 0 : diff < 0;
   const sign: DeltaInfo["sign"] = isImprovement
     ? "good"
     : isRegression
       ? "bad"
       : "neutral";
   return { display, sign };
+}
+
+function LayoutPicker({
+  value,
+  onChange,
+}: {
+  value: FinanceLayoutMode;
+  onChange: (value: FinanceLayoutMode) => void;
+}) {
+  return (
+    <Tabs
+      value={value}
+      onValueChange={(next) => onChange(next as FinanceLayoutMode)}
+    >
+      <TabsList className="w-full sm:w-auto">
+        <TabsTrigger value="simple" className="flex-1 sm:flex-none">
+          Đơn giản
+        </TabsTrigger>
+        <TabsTrigger value="advanced" className="flex-1 sm:flex-none">
+          Chuyên sâu
+        </TabsTrigger>
+      </TabsList>
+    </Tabs>
+  );
+}
+
+function SimpleRevenueSummary({
+  aggregated,
+  branchTotals,
+  branches,
+  branchId,
+  granularity,
+  startDate,
+  endDate,
+  kpis,
+}: {
+  aggregated: AggregatedRow[];
+  branchTotals: Array<{ branchId: number; revenue: number; orders: number }>;
+  branches: AccessibleBranch[];
+  branchId: number | null;
+  granularity: RevenueGranularity;
+  startDate: string;
+  endDate: string;
+  kpis: KpiBundle | null;
+}) {
+  const rows = [...aggregated].reverse().slice(0, 10);
+  const paymentTotal =
+    (kpis?.cash_revenue ?? 0) +
+    (kpis?.vietqr_revenue ?? 0) +
+    (kpis?.momo_revenue ?? 0);
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-base">Doanh thu theo kỳ</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              {startDate} → {endDate}
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {rows.length === 0 ? (
+              <Empty className="py-8">
+                <EmptyHeader>
+                  <EmptyTitle className="text-sm font-semibold">
+                    Không có dữ liệu trong khoảng đã chọn.
+                  </EmptyTitle>
+                </EmptyHeader>
+              </Empty>
+            ) : (
+              rows.map((row) => {
+                const drillBranchId =
+                  branchId != null
+                    ? branchId
+                    : row.branch_ids.length === 1
+                      ? row.branch_ids[0]
+                      : null;
+                const canDrill = granularity === "day" && drillBranchId != null;
+                return (
+                  <div
+                    key={row.period_start}
+                    className="flex items-center justify-between gap-3 border-b py-2 last:border-b-0"
+                  >
+                    <div>
+                      {canDrill ? (
+                        <Link
+                          href={`/finance/revenue/${row.period_start}?branch=${drillBranchId}`}
+                          className="font-medium text-primary underline-offset-2 hover:underline"
+                        >
+                          {row.period_label}
+                        </Link>
+                      ) : (
+                        <p className="font-medium">{row.period_label}</p>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        {row.order_count.toLocaleString("vi-VN")} đơn ·{" "}
+                        {row.total_covers.toLocaleString("vi-VN")} khách
+                      </p>
+                    </div>
+                    <p className="text-right font-semibold tabular-nums">
+                      {formatVND(row.total_revenue)}
+                    </p>
+                  </div>
+                );
+              })
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Cơ cấu nhanh</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <CompactBreakdown
+              label="Tiền mặt"
+              value={kpis?.cash_revenue ?? 0}
+              total={paymentTotal}
+            />
+            <CompactBreakdown
+              label="VietQR"
+              value={kpis?.vietqr_revenue ?? 0}
+              total={paymentTotal}
+            />
+            <CompactBreakdown
+              label="MoMo"
+              value={kpis?.momo_revenue ?? 0}
+              total={paymentTotal}
+            />
+            <div className="border-t pt-3">
+              <CompactBreakdown
+                label="Tại quán"
+                value={kpis?.dine_in_revenue ?? 0}
+                total={kpis?.net_revenue ?? 0}
+              />
+              <CompactBreakdown
+                label="Mang đi"
+                value={kpis?.takeaway_revenue ?? 0}
+                total={kpis?.net_revenue ?? 0}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {branchId == null && branchTotals.length > 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Chi nhánh nổi bật</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {branchTotals.slice(0, 6).map((branch) => {
+              const name =
+                branches.find((b) => b.id === branch.branchId)?.name ??
+                `Chi nhánh ${branch.branchId}`;
+              const params = new URLSearchParams({
+                granularity,
+                start: startDate,
+                end: endDate,
+                branch: String(branch.branchId),
+                layout: "simple",
+              });
+              return (
+                <div
+                  key={branch.branchId}
+                  className="flex items-center justify-between gap-3 border-b py-2 last:border-b-0"
+                >
+                  <div>
+                    <Link
+                      href={`/finance/revenue?${params.toString()}`}
+                      className="font-medium text-primary underline-offset-2 hover:underline"
+                    >
+                      {name}
+                    </Link>
+                    <p className="text-xs text-muted-foreground">
+                      {branch.orders.toLocaleString("vi-VN")} đơn
+                    </p>
+                  </div>
+                  <p className="text-right font-semibold tabular-nums">
+                    {formatVND(branch.revenue)}
+                  </p>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      ) : null}
+    </div>
+  );
+}
+
+function CompactBreakdown({
+  label,
+  value,
+  total,
+}: {
+  label: string;
+  value: number;
+  total: number;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 text-sm">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="text-right font-medium tabular-nums">
+        {formatVND(value)}
+        <span className="ml-2 text-xs text-muted-foreground">
+          {formatPercent(value, total)}
+        </span>
+      </span>
+    </div>
+  );
 }
 
 function KpiCard({
@@ -882,9 +1144,7 @@ function KpiCard({
             {delta.display}
           </p>
         ) : null}
-        {hint ? (
-          <p className="text-xs text-muted-foreground">{hint}</p>
-        ) : null}
+        {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
       </CardContent>
     </Card>
   );
@@ -1035,9 +1295,7 @@ function ReconcileCard({ reconcile }: { reconcile: ReconcileSnippet }) {
         </div>
         <div className="sm:col-span-3">
           <Button asChild size="sm" variant="outline">
-            <Link
-              href={`/finance/reconciliation?since=${reconcile.start}`}
-            >
+            <Link href={`/finance/reconciliation?since=${reconcile.start}`}>
               Mở trang đối chiếu
             </Link>
           </Button>

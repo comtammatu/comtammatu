@@ -77,32 +77,32 @@ export function FoodCostClient({
     <div className="space-y-4">
       <Card>
         <CardContent className="flex flex-wrap items-center gap-2 p-3">
-        <div className="grid gap-1.5">
-          <Label className="text-xs">{FORM_VI.fromDate}</Label>
-          <Input
-            type="date"
-            className="w-40"
-            value={startDate}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              setStartDate(e.target.value)
-            }
-          />
-        </div>
-        <div className="grid gap-1.5">
-          <Label className="text-xs">{FORM_VI.toDate}</Label>
-          <Input
-            type="date"
-            className="w-40"
-            value={endDate}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              setEndDate(e.target.value)
-            }
-          />
-        </div>
-        <Button onClick={handleFilter} disabled={isPending} size="sm">
-          {isPending ? "Đang tải..." : "Lọc"}
-        </Button>
-        {error && <p className="text-sm text-destructive">{error}</p>}
+          <div className="grid gap-1.5">
+            <Label className="text-xs">{FORM_VI.fromDate}</Label>
+            <Input
+              type="date"
+              className="w-40"
+              value={startDate}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setStartDate(e.target.value)
+              }
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <Label className="text-xs">{FORM_VI.toDate}</Label>
+            <Input
+              type="date"
+              className="w-40"
+              value={endDate}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setEndDate(e.target.value)
+              }
+            />
+          </div>
+          <Button onClick={handleFilter} disabled={isPending} size="sm">
+            {isPending ? "Đang tải..." : "Lọc"}
+          </Button>
+          {error && <p className="text-sm text-destructive">{error}</p>}
         </CardContent>
       </Card>
 
@@ -132,7 +132,7 @@ export function FoodCostClient({
       </div>
 
       <Card className="overflow-hidden">
-        <CardContent className="px-4 sm:px-5">
+        <CardContent className="overflow-x-auto px-4 sm:px-5">
           <Table>
             <TableHeader>
               <TableRow>

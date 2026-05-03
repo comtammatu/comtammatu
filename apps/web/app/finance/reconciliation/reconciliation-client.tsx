@@ -1,7 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { TriangleAlert as IconAlertTriangle, ChevronRight as IconChevronRight, CircleCheck as IconCircleCheck } from "lucide-react";
+import {
+  TriangleAlert as IconAlertTriangle,
+  ChevronRight as IconChevronRight,
+  CircleCheck as IconCircleCheck,
+} from "lucide-react";
 import { BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -183,9 +187,7 @@ export function ReconciliationClient({
       ...prev,
       loading: false,
       rows: res.success ? (res.data as ReconciliationDrilldownRow[]) : [],
-      error: res.success
-        ? null
-        : (res.error ?? "Không thể tải chi tiết."),
+      error: res.success ? null : (res.error ?? "Không thể tải chi tiết."),
     }));
   }
 
@@ -283,7 +285,9 @@ export function ReconciliationClient({
               <SummaryCard
                 title="Số mục lệch"
                 value={`${summary.exceptions} / ${report.categories.length}`}
-                hint={summary.exceptions === 0 ? "Khớp toàn bộ" : "Cần kiểm tra"}
+                hint={
+                  summary.exceptions === 0 ? "Khớp toàn bộ" : "Cần kiểm tra"
+                }
                 highlight={summary.exceptions > 0}
               />
             </div>
@@ -294,7 +298,7 @@ export function ReconciliationClient({
                   Chi tiết theo nhóm hạch toán
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-0">
+              <CardContent className="overflow-x-auto p-0">
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/50 hover:bg-muted/50">
@@ -335,9 +339,12 @@ export function ReconciliationClient({
         ) : (
           <Empty className="py-8">
             <EmptyHeader>
-              <EmptyTitle className="text-sm font-semibold">Chưa có kết quả</EmptyTitle>
+              <EmptyTitle className="text-sm font-semibold">
+                Chưa có kết quả
+              </EmptyTitle>
               <EmptyDescription className="text-xs leading-5">
-                Chọn khoảng ngày và nhấn <strong>Đối chiếu</strong> để tải kết quả.
+                Chọn khoảng ngày và nhấn <strong>Đối chiếu</strong> để tải kết
+                quả.
               </EmptyDescription>
             </EmptyHeader>
           </Empty>
@@ -404,28 +411,18 @@ export function ReconciliationClient({
       </TabsContent>
 
       <TabsContent value="desync" className="mt-0">
-        <DesyncTable
-          rows={desync}
-          branchName={branchName}
-        />
+        <DesyncTable rows={desync} branchName={branchName} />
       </TabsContent>
 
       <Sheet
         open={drilldown.open}
-        onOpenChange={(open) =>
-          setDrilldown((prev) => ({ ...prev, open }))
-        }
+        onOpenChange={(open) => setDrilldown((prev) => ({ ...prev, open }))}
       >
-        <SheetContent
-          side="right"
-          className="w-full sm:max-w-2xl"
-        >
+        <SheetContent side="right" className="w-full sm:max-w-2xl">
           <SheetHeader>
             <SheetTitle>
               Chi tiết{" "}
-              {drilldown.category
-                ? labelForCategory(drilldown.category)
-                : ""}
+              {drilldown.category ? labelForCategory(drilldown.category) : ""}
             </SheetTitle>
             <SheetDescription>
               {drilldown.side === "subledger"
@@ -551,9 +548,7 @@ function SummaryCard({
         >
           {value}
         </p>
-        {hint ? (
-          <p className="text-xs text-muted-foreground">{hint}</p>
-        ) : null}
+        {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
       </CardContent>
     </Card>
   );
@@ -566,10 +561,7 @@ function CategoryRow({
 }: {
   cat: ReconciliationCategoryRow;
   branchActive: boolean;
-  onDrill: (
-    category: ReconciliationCategory,
-    side: "subledger" | "gl",
-  ) => void;
+  onDrill: (category: ReconciliationCategory, side: "subledger" | "gl") => void;
 }) {
   const tenantWideOnly = !cat.branch_scoped && branchActive;
   const diff = cat.difference == null ? null : Number(cat.difference);
@@ -692,7 +684,7 @@ function ByDayTable({
           cùng giờ Việt Nam. Ngày khớp đến ±1 ₫ được đánh dấu &quot;Khớp&quot;.
         </p>
       </CardHeader>
-      <CardContent>
+      <CardContent className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -797,7 +789,7 @@ function DesyncTable({
           {rows.length} mục cần kiểm tra
         </CardTitle>
       </CardHeader>
-      <CardContent className="p-0">
+      <CardContent className="overflow-x-auto p-0">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50 hover:bg-muted/50">

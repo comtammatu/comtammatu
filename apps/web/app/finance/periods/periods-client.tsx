@@ -20,8 +20,17 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@comtammatu/ui/components/dialog";
-import { Lock as IconLock, Plus as IconPlus, FileSearch as IconFileSearch } from "lucide-react";
-import { ACTIONS_VI, ERRORS_VI, FORM_VI, STATES_VI } from "@comtammatu/shared/messages";
+import {
+  Lock as IconLock,
+  Plus as IconPlus,
+  FileSearch as IconFileSearch,
+} from "lucide-react";
+import {
+  ACTIONS_VI,
+  ERRORS_VI,
+  FORM_VI,
+  STATES_VI,
+} from "@comtammatu/shared/messages";
 import {
   openFiscalPeriod,
   closeFiscalPeriod,
@@ -167,7 +176,7 @@ export function PeriodsClient({ periods: initial }: Props) {
       {error && <p className="text-sm text-destructive">{error}</p>}
 
       <Card className="overflow-hidden">
-        <CardContent className="px-4 sm:px-5">
+        <CardContent className="overflow-x-auto px-4 sm:px-5">
           <Table>
             <TableHeader>
               <TableRow>
@@ -175,7 +184,9 @@ export function PeriodsClient({ periods: initial }: Props) {
                 <TableHead className="w-28">{FORM_VI.status}</TableHead>
                 <TableHead>Ngày đóng</TableHead>
                 <TableHead>{FORM_VI.notes}</TableHead>
-                <TableHead className="w-48 text-right">{FORM_VI.action}</TableHead>
+                <TableHead className="w-48 text-right">
+                  {FORM_VI.action}
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

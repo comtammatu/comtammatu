@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { TriangleAlert as IconAlertTriangle, CircleCheck as IconCircleCheck } from "lucide-react";
+import {
+  TriangleAlert as IconAlertTriangle,
+  CircleCheck as IconCircleCheck,
+} from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -292,7 +295,9 @@ function EmptyState() {
   return (
     <Empty className="py-8">
       <EmptyHeader>
-        <EmptyTitle className="text-sm font-semibold">Chưa có báo cáo</EmptyTitle>
+        <EmptyTitle className="text-sm font-semibold">
+          Chưa có báo cáo
+        </EmptyTitle>
         <EmptyDescription className="text-xs leading-5">
           Chọn kỳ và nhấn nút <strong>Tạo</strong> để xem báo cáo.
         </EmptyDescription>
@@ -324,23 +329,14 @@ function CashflowConsistencyBanner({
         <p className="text-xs text-muted-foreground">
           B03-DN audit invariant: tiền cuối kỳ − tiền đầu kỳ phải bằng lưu
           chuyển tiền thuần trong kỳ. Lệch &gt; 1 VND đồng nghĩa có bút toán
-          tiền (111/112) chưa khớp với operating/investing/financing buckets
-          — thường do định khoản sai cashflow_section trên tài khoản.
+          tiền (111/112) chưa khớp với operating/investing/financing buckets —
+          thường do định khoản sai cashflow_section trên tài khoản.
         </p>
       </CardHeader>
       <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <ConsistencyStat
-          label="Tiền đầu kỳ (60)"
-          value={check.opening_cash}
-        />
-        <ConsistencyStat
-          label="Tiền cuối kỳ (70)"
-          value={check.closing_cash}
-        />
-        <ConsistencyStat
-          label="LCT thuần (50)"
-          value={check.net_cashflow}
-        />
+        <ConsistencyStat label="Tiền đầu kỳ (60)" value={check.opening_cash} />
+        <ConsistencyStat label="Tiền cuối kỳ (70)" value={check.closing_cash} />
+        <ConsistencyStat label="LCT thuần (50)" value={check.net_cashflow} />
         <ConsistencyStat
           label="Chênh lệch"
           value={check.difference}
@@ -361,9 +357,7 @@ function ConsistencyStat({
   tone?: "destructive";
 }) {
   const valueClass =
-    tone === "destructive"
-      ? "text-destructive"
-      : "text-foreground";
+    tone === "destructive" ? "text-destructive" : "text-foreground";
   return (
     <div className="space-y-0.5">
       <p className="text-xs uppercase tracking-wide text-muted-foreground">
@@ -415,7 +409,7 @@ function Tt200Report<TMeta extends object>({
           </p>
         ) : null}
       </CardHeader>
-      <CardContent className="p-0">
+      <CardContent className="overflow-x-auto p-0">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50 hover:bg-muted/50">

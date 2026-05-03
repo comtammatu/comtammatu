@@ -45,13 +45,10 @@ const createInvoiceSchema = z
       .optional(),
     buyerAddress: z.string().trim().max(500).optional(),
   })
-  .refine(
-    (v) => !v.buyerTaxCode || (v.buyerName && v.buyerName.length > 0),
-    {
-      error: "Có MST thì phải nhập tên người mua",
-      path: ["buyerName"],
-    },
-  );
+  .refine((v) => !v.buyerTaxCode || (v.buyerName && v.buyerName.length > 0), {
+    error: "Có MST thì phải nhập tên người mua",
+    path: ["buyerName"],
+  });
 
 /**
  * Create a draft tax invoice for an order.
@@ -69,7 +66,10 @@ export async function createTaxInvoice(
     };
   }
 
-  const ctx = await getAuthContextWithPermission(INVOICE_CREATE_ROLES, PERMISSION_KEYS.ORDERS_WRITE);
+  const ctx = await getAuthContextWithPermission(
+    INVOICE_CREATE_ROLES,
+    PERMISSION_KEYS.ORDERS_WRITE,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims, user } = ctx;
@@ -131,10 +131,7 @@ export async function createTaxInvoice(
     (item) => item.status !== "cancelled",
   );
   const orderTotal = Number(order.total_amount);
-  const itemGrossSum = activeItems.reduce(
-    (s, i) => s + Number(i.subtotal),
-    0,
-  );
+  const itemGrossSum = activeItems.reduce((s, i) => s + Number(i.subtotal), 0);
 
   let subtotal: number;
   let vatAmount: number;
@@ -405,7 +402,10 @@ export async function cancelTaxInvoice(
 
   if (rpcErr) {
     if (rpcErr.code === "22023") {
-      return { success: false, error: "Trạng thái hóa đơn không cho phép hủy." };
+      return {
+        success: false,
+        error: "Trạng thái hóa đơn không cho phép hủy.",
+      };
     }
     if (rpcErr.code === "42501") {
       return { success: false, error: "Không có quyền hủy hóa đơn." };
@@ -492,7 +492,10 @@ export async function fetchTaxInvoices(
     return { success: false, error: "Branch ID không hợp lệ" };
   }
 
-  const ctx = await getAuthContextWithPermission(FINANCE_ROLES, PERMISSION_KEYS.SETTINGS_TENANT);
+  const ctx = await getAuthContextWithPermission(
+    FINANCE_ROLES,
+    PERMISSION_KEYS.SETTINGS_TENANT,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -541,7 +544,10 @@ export async function fetchDailyRevenue(
     return { success: false, error: "Ngày không hợp lệ (YYYY-MM-DD)" };
   }
 
-  const ctx = await getAuthContextWithPermission(REPORT_ROLES, PERMISSION_KEYS.FINANCE_VIEW);
+  const ctx = await getAuthContextWithPermission(
+    REPORT_ROLES,
+    PERMISSION_KEYS.FINANCE_VIEW,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase } = ctx;
@@ -574,8 +580,7 @@ export async function fetchRevenueRollup(
   endDate: string,
   granularity: RevenueGranularity,
 ): Promise<ActionResult> {
-  const parsedBranch = z
-    .coerce
+  const parsedBranch = z.coerce
     .number()
     .int()
     .positive()
@@ -628,8 +633,7 @@ export async function fetchRevenueKpis(
   startDate: string,
   endDate: string,
 ): Promise<ActionResult> {
-  const parsedBranch = z
-    .coerce
+  const parsedBranch = z.coerce
     .number()
     .int()
     .positive()
@@ -707,8 +711,7 @@ export async function fetchReconciliationByDay(
   startDate: string,
   endDate: string,
 ): Promise<ActionResult> {
-  const parsedBranch = z
-    .coerce
+  const parsedBranch = z.coerce
     .number()
     .int()
     .positive()
@@ -731,14 +734,11 @@ export async function fetchReconciliationByDay(
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   // Same NULL-branch pass-through as get_revenue_rollup.
-  const { data, error } = await ctx.supabase.rpc(
-    "fn_reconcile_sales_by_day",
-    {
-      p_branch_id: parsedBranch.data as number,
-      p_start_date: parsedStart.data,
-      p_end_date: parsedEnd.data,
-    },
-  );
+  const { data, error } = await ctx.supabase.rpc("fn_reconcile_sales_by_day", {
+    p_branch_id: parsedBranch.data as number,
+    p_start_date: parsedStart.data,
+    p_end_date: parsedEnd.data,
+  });
 
   if (error) {
     return { success: false, error: "Không thể tải đối chiếu theo ngày." };
@@ -754,8 +754,7 @@ export async function fetchCashVarianceSummary(
   startDate: string,
   endDate: string,
 ): Promise<ActionResult> {
-  const parsedBranch = z
-    .coerce
+  const parsedBranch = z.coerce
     .number()
     .int()
     .positive()
@@ -778,14 +777,11 @@ export async function fetchCashVarianceSummary(
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   // Same NULL-branch pass-through as get_revenue_rollup.
-  const { data, error } = await ctx.supabase.rpc(
-    "get_cash_variance_summary",
-    {
-      p_branch_id: parsedBranch.data as number,
-      p_start_date: parsedStart.data,
-      p_end_date: parsedEnd.data,
-    },
-  );
+  const { data, error } = await ctx.supabase.rpc("get_cash_variance_summary", {
+    p_branch_id: parsedBranch.data as number,
+    p_start_date: parsedStart.data,
+    p_end_date: parsedEnd.data,
+  });
 
   if (error) {
     return { success: false, error: "Không thể tải dữ liệu lệch tiền." };
@@ -837,7 +833,16 @@ export async function fetchAccessibleBranches(): Promise<ActionResult> {
     }
     const rows = (data ?? [])
       .map((r) => r.branches)
-      .filter((b): b is { id: number; name: string; is_active: boolean; branch_kind: string } => Boolean(b))
+      .filter(
+        (
+          b,
+        ): b is {
+          id: number;
+          name: string;
+          is_active: boolean;
+          branch_kind: string;
+        } => Boolean(b),
+      )
       .map((b) => ({ id: b.id, name: b.name }))
       .sort((a, b) => a.name.localeCompare(b.name));
     return { success: true, data: rows };
@@ -862,10 +867,15 @@ export async function fetchAccessibleBranches(): Promise<ActionResult> {
 }
 
 export async function fetchTopItems(
-  branchId: number,
+  branchId: number | null,
   periodStart: string,
 ): Promise<ActionResult> {
-  const parsedBranch = z.coerce.number().int().positive().safeParse(branchId);
+  const parsedBranch = z.coerce
+    .number()
+    .int()
+    .positive()
+    .nullable()
+    .safeParse(branchId);
   if (!parsedBranch.success) {
     return { success: false, error: "Branch ID không hợp lệ" };
   }
@@ -881,7 +891,10 @@ export async function fetchTopItems(
     };
   }
 
-  const ctx = await getAuthContextWithPermission(REPORT_ROLES, PERMISSION_KEYS.FINANCE_VIEW);
+  const ctx = await getAuthContextWithPermission(
+    REPORT_ROLES,
+    PERMISSION_KEYS.FINANCE_VIEW,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase } = ctx;
@@ -890,7 +903,7 @@ export async function fetchTopItems(
   // SECURITY DEFINER wrapper that re-checks tenant_id + branch + ACL.
   // See migration 20260427000000_secure_finance_mvs_revoke_grants.sql.
   const { data, error } = await supabase.rpc("get_top_items", {
-    p_branch_id: parsedBranch.data,
+    p_branch_id: parsedBranch.data as number,
     p_period_start: parsedPeriod.data,
     p_limit: 20,
   });
@@ -905,7 +918,10 @@ export async function fetchTopItems(
 /* ─── Refresh Materialized Views ─── */
 
 export async function refreshMaterializedViews(): Promise<ActionResult> {
-  const ctx = await getAuthContextWithPermission(FINANCE_ROLES, PERMISSION_KEYS.SETTINGS_TENANT);
+  const ctx = await getAuthContextWithPermission(
+    FINANCE_ROLES,
+    PERMISSION_KEYS.SETTINGS_TENANT,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase } = ctx;
@@ -933,7 +949,10 @@ export async function fetchAuditLogs(
     .optional()
     .safeParse(limitCount);
 
-  const ctx = await getAuthContextWithPermission(FINANCE_ROLES, PERMISSION_KEYS.SETTINGS_TENANT);
+  const ctx = await getAuthContextWithPermission(
+    FINANCE_ROLES,
+    PERMISSION_KEYS.SETTINGS_TENANT,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;

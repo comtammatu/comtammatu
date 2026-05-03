@@ -95,7 +95,7 @@ export function PostingRulesClient({ rules: initial, accounts }: Props) {
               {TYPE_LABELS[type] ?? type}
             </Badge>
           </div>
-          <CardContent className="px-4 sm:px-5">
+          <CardContent className="overflow-x-auto px-4 sm:px-5">
             <Table>
               <TableHeader>
                 <TableRow>
