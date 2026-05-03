@@ -98,30 +98,50 @@ const METHOD_META: Record<
   momo: { label: PAYMENT_METHOD_LABELS_VI.momo, icon: IconCreditCard },
 };
 
+const VND_DENOMINATIONS = [
+  500_000, 200_000, 100_000, 50_000, 20_000, 10_000, 5_000, 2_000, 1_000, 500,
+] as const;
+
+function greedyNoteCount(amount: number): number {
+  let count = 0;
+  let rest = Math.round(amount);
+  for (const note of VND_DENOMINATIONS) {
+    if (rest <= 0) break;
+    const k = Math.floor(rest / note);
+    count += k;
+    rest -= k * note;
+  }
+  return count + (rest > 0 ? 1 : 0);
+}
+
 function buildCashSuggestions(totalAmount: number): number[] {
   const total = Math.max(0, Math.round(totalAmount));
-  const nextThousand = Math.ceil((total + 1) / 1000) * 1000;
-  const nextFiveThousand = Math.ceil(total / 5000) * 5000;
-  const nextTenThousand = Math.ceil(total / 10000) * 10000;
-  const nextTwentyThousandAfterTen = nextTenThousand + 10000;
-  const nextLarge =
-    total <= 100000
-      ? 100000
-      : total <= 200000
-        ? 200000
-        : Math.ceil(total / 500000) * 500000;
+  if (!Number.isFinite(total) || total === 0) return [];
 
-  return Array.from(
-    new Set([
-      total,
-      nextThousand,
-      nextFiveThousand,
-      nextTenThousand,
-      nextTwentyThousandAfterTen,
-      nextLarge,
-    ]),
-  )
-    .filter((value) => value >= total && value > 0)
+  const HIGHEST_NOTE = 500_000;
+  const exactNotes = greedyNoteCount(total);
+  const candidates = new Set<number>([total]);
+
+  if (total < HIGHEST_NOTE) {
+    candidates.add(Math.ceil(total / 10_000) * 10_000);
+    candidates.add(Math.ceil(total / 50_000) * 50_000);
+    candidates.add(Math.ceil(total / 100_000) * 100_000);
+    for (const note of [50_000, 100_000, 200_000, HIGHEST_NOTE]) {
+      if (note >= total) candidates.add(note);
+    }
+  } else {
+    candidates.add(Math.ceil(total / 50_000) * 50_000);
+    candidates.add(Math.ceil(total / 100_000) * 100_000);
+    for (let k = Math.ceil(total / HIGHEST_NOTE); k <= exactNotes + 1; k++) {
+      candidates.add(k * HIGHEST_NOTE);
+    }
+  }
+
+  return Array.from(candidates)
+    .filter(
+      (value) =>
+        value >= total && value > 0 && greedyNoteCount(value) <= exactNotes,
+    )
     .sort((a, b) => a - b)
     .slice(0, 6);
 }
@@ -323,6 +343,19 @@ export function BillReceipt({
     (selectedMethod === "cash"
       ? cashReceived >= totalAmount
       : Boolean(pendingExtras?.payment_id));
+
+  // Tooltip giải thích lý do disabled — cashier nhìn vào nút mờ phải biết
+  // mình thiếu thao tác gì (mất kết nối, MST sai, khách chưa đủ tiền, chưa
+  // tạo QR). Không cần Tooltip component vì native `title=` đủ ngắn gọn.
+  const disabledReason = canConfirmPaid
+    ? null
+    : !isOnline
+      ? "Mất kết nối — không thể thanh toán khi offline"
+      : !invoiceValid
+        ? "Cần điền đủ MST và tên khách trước khi xuất hoá đơn"
+        : selectedMethod === "cash"
+          ? "Khách chưa thanh toán đủ tổng đơn"
+          : "Chờ tạo QR rồi mới xác nhận được";
 
   const cashSuggestions = useMemo(
     () => buildCashSuggestions(totalAmount),
@@ -943,6 +976,7 @@ export function BillReceipt({
                 disabled={
                   isPending || methodPending || actionPending || !canConfirmPaid
                 }
+                title={disabledReason ?? undefined}
               >
                 {actionPending ? <Spinner data-icon="inline-start" /> : null}
                 Đã thanh toán
