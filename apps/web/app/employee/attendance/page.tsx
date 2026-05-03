@@ -1,10 +1,3 @@
-import { getEmployeeContext } from "../_lib/employee-context";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
 import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
 import {
   Empty,
@@ -28,8 +21,15 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
-
 import { FORM_VI } from "@comtammatu/shared/messages";
+import {
+  EmployeeDetailList,
+  EmployeePage,
+  EmployeePanel,
+} from "../components/employee-page";
+import { getEmployeeContext } from "../_lib/employee-context";
+import { formatDateVN, formatTimeVN } from "../_lib/vn-business-date";
+
 const STATUS_LABELS: Record<string, string> = {
   present: "Có mặt",
   late: "Đi trễ",
@@ -49,21 +49,25 @@ export default async function EmployeeAttendancePage() {
 
   if (!ctx) {
     return (
-      <Empty>
-        <EmptyHeader>
-          <EmptyTitle>Không tìm thấy hồ sơ nhân viên</EmptyTitle>
-          <EmptyDescription>
-            Không thể truy xuất hồ sơ nhân viên từ tài khoản này. Vui lòng liên
-            hệ quản trị viên.
-          </EmptyDescription>
-        </EmptyHeader>
-      </Empty>
+      <EmployeePage
+        title="Ngày công"
+        description="Lịch sử vào ca, ra ca trong 30 ngày gần nhất."
+      >
+        <Empty>
+          <EmptyHeader>
+            <EmptyTitle>Không tìm thấy hồ sơ nhân viên</EmptyTitle>
+            <EmptyDescription>
+              Không thể truy xuất hồ sơ nhân viên từ tài khoản này. Vui lòng
+              liên hệ quản trị viên.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      </EmployeePage>
     );
   }
 
   const { supabase, claims, employeeId } = ctx;
 
-  // Get last 30 days attendance
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
     .toISOString()
     .split("T")[0];
@@ -77,7 +81,6 @@ export default async function EmployeeAttendancePage() {
     .order("date", { ascending: false });
 
   const attendance = (records ?? []) as unknown as AttendanceRow[];
-  // Summary
   const present = attendance.filter(
     (r) => r.status === "present" || r.status === "late",
   ).length;
@@ -85,153 +88,124 @@ export default async function EmployeeAttendancePage() {
   const halfDay = attendance.filter((r) => r.status === "half_day").length;
 
   return (
-    <div className="flex flex-col gap-5">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-xl">Lịch sử chấm công</CardTitle>
-        </CardHeader>
-      </Card>
+    <EmployeePage
+      title="Ngày công"
+      description="Lịch sử vào ca, ra ca trong 30 ngày gần nhất."
+      badge={{ children: "30 ngày", variant: "outline" }}
+    >
+      <EmployeePanel title="Tổng quan">
+        <EmployeeDetailList
+          columns={3}
+          rows={[
+            { label: "Có mặt", value: present },
+            { label: "Vắng", value: absent },
+            { label: "Nửa ngày", value: halfDay },
+          ]}
+        />
+      </EmployeePanel>
 
-      <div className="grid grid-cols-3 gap-3">
-        <Card>
-          <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-success">{present}</p>
-            <p className="text-xs text-muted-foreground">Có mặt</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-destructive">{absent}</p>
-            <p className="text-xs text-muted-foreground">Vắng</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-info">{halfDay}</p>
-            <p className="text-xs text-muted-foreground">Nửa ngày</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardContent className="overflow-hidden p-0">
-          {attendance.length === 0 ? (
-            <Empty>
-              <EmptyHeader>
-                <EmptyTitle>Chưa có dữ liệu chấm công</EmptyTitle>
-                <EmptyDescription>
-                  Các lần vào ca, ra ca sẽ hiển thị tại đây.
-                </EmptyDescription>
-              </EmptyHeader>
-            </Empty>
-          ) : (
-            <>
-              <ItemGroup className="p-4 md:hidden">
-                {attendance.map((r) => (
-                  <Item key={r.id} variant="outline" className="items-start">
-                    <ItemContent>
-                      <ItemTitle className="font-mono">{r.date}</ItemTitle>
-                      <ItemDescription>
-                        {r.shifts?.name ?? "Không có ca"}
-                      </ItemDescription>
-                      <div className="grid grid-cols-2 gap-3 text-sm">
-                        <div>
-                          <p className="text-xs text-muted-foreground">
-                            Vào ca
-                          </p>
-                          <p className="font-mono text-foreground">
-                            {r.check_in
-                              ? new Date(r.check_in).toLocaleTimeString(
-                                  "vi-VN",
-                                  {
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  },
-                                )
-                              : "—"}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Ra ca</p>
-                          <p className="font-mono text-foreground">
-                            {r.check_out
-                              ? new Date(r.check_out).toLocaleTimeString(
-                                  "vi-VN",
-                                  {
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  },
-                                )
-                              : "—"}
-                          </p>
-                        </div>
+      <EmployeePanel
+        title="Lịch sử chấm công"
+        description="Mỗi dòng là một ngày công đã ghi nhận."
+      >
+        {attendance.length === 0 ? (
+          <Empty>
+            <EmptyHeader>
+              <EmptyTitle>Chưa có dữ liệu chấm công</EmptyTitle>
+              <EmptyDescription>
+                Các lần vào ca, ra ca sẽ hiển thị tại đây.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        ) : (
+          <>
+            <ItemGroup className="md:hidden">
+              {attendance.map((record) => (
+                <Item key={record.id} variant="outline" className="items-start">
+                  <ItemContent>
+                    <ItemTitle>{formatDateVN(record.date)}</ItemTitle>
+                    <ItemDescription>
+                      {record.shifts?.name ?? "Không có ca"}
+                    </ItemDescription>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Vào ca</p>
+                        <p className="font-mono text-foreground">
+                          {record.check_in
+                            ? formatTimeVN(record.check_in)
+                            : "—"}
+                        </p>
                       </div>
-                    </ItemContent>
-                    <ItemActions>
-                      <Badge variant={STATUS_VARIANTS[r.status] ?? "secondary"}>
-                        {STATUS_LABELS[r.status] ?? r.status}
-                      </Badge>
-                    </ItemActions>
-                  </Item>
-                ))}
-              </ItemGroup>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Ra ca</p>
+                        <p className="font-mono text-foreground">
+                          {record.check_out
+                            ? formatTimeVN(record.check_out)
+                            : "—"}
+                        </p>
+                      </div>
+                    </div>
+                    {record.note ? (
+                      <ItemDescription>{record.note}</ItemDescription>
+                    ) : null}
+                  </ItemContent>
+                  <ItemActions>
+                    <Badge
+                      variant={STATUS_VARIANTS[record.status] ?? "secondary"}
+                    >
+                      {STATUS_LABELS[record.status] ?? record.status}
+                    </Badge>
+                  </ItemActions>
+                </Item>
+              ))}
+            </ItemGroup>
 
-              <div className="hidden md:block">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{FORM_VI.date}</TableHead>
-                      <TableHead>Ca</TableHead>
-                      <TableHead>Vào</TableHead>
-                      <TableHead>Ra</TableHead>
-                      <TableHead>TT</TableHead>
+            <div className="hidden md:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{FORM_VI.date}</TableHead>
+                    <TableHead>Ca</TableHead>
+                    <TableHead>Vào</TableHead>
+                    <TableHead>Ra</TableHead>
+                    <TableHead>Trạng thái</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {attendance.map((record) => (
+                    <TableRow key={record.id}>
+                      <TableCell className="font-mono text-sm">
+                        {formatDateVN(record.date)}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {record.shifts?.name ?? "—"}
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">
+                        {record.check_in ? formatTimeVN(record.check_in) : "—"}
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">
+                        {record.check_out
+                          ? formatTimeVN(record.check_out)
+                          : "—"}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            STATUS_VARIANTS[record.status] ?? "secondary"
+                          }
+                        >
+                          {STATUS_LABELS[record.status] ?? record.status}
+                        </Badge>
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {attendance.map((r) => (
-                      <TableRow key={r.id}>
-                        <TableCell className="font-mono text-sm">
-                          {r.date}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {r.shifts?.name ?? "—"}
-                        </TableCell>
-                        <TableCell className="font-mono text-sm">
-                          {r.check_in
-                            ? new Date(r.check_in).toLocaleTimeString("vi-VN", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })
-                            : "—"}
-                        </TableCell>
-                        <TableCell className="font-mono text-sm">
-                          {r.check_out
-                            ? new Date(r.check_out).toLocaleTimeString(
-                                "vi-VN",
-                                {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                },
-                              )
-                            : "—"}
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={STATUS_VARIANTS[r.status] ?? "secondary"}
-                          >
-                            {STATUS_LABELS[r.status] ?? r.status}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </>
+        )}
+      </EmployeePanel>
+    </EmployeePage>
   );
 }
 

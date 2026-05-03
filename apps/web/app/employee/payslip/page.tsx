@@ -1,30 +1,31 @@
 import { getEmployeeContext } from "../_lib/employee-context";
 import { PayslipClient } from "./payslip-client";
 import {
-  Card,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
-import {
   Empty,
   EmptyDescription,
   EmptyHeader,
   EmptyTitle,
 } from "@comtammatu/ui/components/empty";
+import { EmployeePage } from "../components/employee-page";
 
 export default async function PayslipPage() {
   const ctx = await getEmployeeContext();
 
   if (!ctx) {
     return (
-      <Empty>
-        <EmptyHeader>
-          <EmptyTitle>Không tìm thấy hồ sơ nhân viên</EmptyTitle>
-          <EmptyDescription>
-            Liên hệ quản lý để kiểm tra hồ sơ.
-          </EmptyDescription>
-        </EmptyHeader>
-      </Empty>
+      <EmployeePage
+        title="Phiếu lương"
+        description="Chỉ hiển thị các kỳ lương đã phát hành cho nhân viên."
+      >
+        <Empty>
+          <EmptyHeader>
+            <EmptyTitle>Không tìm thấy hồ sơ nhân viên</EmptyTitle>
+            <EmptyDescription>
+              Liên hệ quản lý để kiểm tra hồ sơ.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      </EmployeePage>
     );
   }
 
@@ -49,15 +50,12 @@ export default async function PayslipPage() {
     .limit(12);
 
   return (
-    <div className="flex flex-col gap-5">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-xl">Phiếu lương</CardTitle>
-        </CardHeader>
-      </Card>
-
+    <EmployeePage
+      title="Phiếu lương"
+      description="Chỉ hiển thị các kỳ lương đã phát hành cho nhân viên."
+    >
       <PayslipClient entries={(entries ?? []) as unknown as PayslipEntry[]} />
-    </div>
+    </EmployeePage>
   );
 }
 

@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { Settings as IconSettings } from "lucide-react";
+import { Settings as IconSettings, User as IconUser } from "lucide-react";
 import { canAccess, ROLE_LABEL_VI } from "@comtammatu/shared/auth";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { getEmployeeContext } from "../_lib/employee-context";
 import { loadAuthState } from "@/_lib/auth";
+import { EmployeeDesktopNav } from "./bottom-nav";
 
 export async function MobileHeader() {
   const { claims } = await loadAuthState();
@@ -25,22 +26,34 @@ export async function MobileHeader() {
             {branchName ?? "Chưa gắn chi nhánh"}
           </p>
         </div>
+        <div className="hidden min-w-0 flex-1 justify-center lg:flex">
+          <EmployeeDesktopNav />
+        </div>
         <div className="flex shrink-0 items-center gap-2">
+          <Button asChild variant="outline" size="icon-sm" aria-label="Cá nhân">
+            <Link href="/employee/profile">
+              <IconUser className="size-4" />
+            </Link>
+          </Button>
           {settingsHref ? (
             <Button
               asChild
               variant="outline"
               size="icon-sm"
               aria-label="Cài đặt"
-              title="Cài đặt"
             >
               <Link href={settingsHref}>
                 <IconSettings className="size-4" />
               </Link>
             </Button>
           ) : null}
-          <Badge variant="outline">{roleLabel}</Badge>
-          <Badge variant={branchName ? "success" : "warning"}>
+          <Badge variant="outline" className="hidden sm:inline-flex">
+            {roleLabel}
+          </Badge>
+          <Badge
+            variant={branchName ? "success" : "warning"}
+            className="hidden sm:inline-flex"
+          >
             {branchName ? "Chi nhánh" : "Thiếu chi nhánh"}
           </Badge>
         </div>

@@ -2,16 +2,12 @@ import { getEmployeeContext } from "../_lib/employee-context";
 import { ScheduleClient } from "./schedule-client";
 import type { ScheduleShift } from "./actions";
 import {
-  Card,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
-import {
   Empty,
   EmptyDescription,
   EmptyHeader,
   EmptyTitle,
 } from "@comtammatu/ui/components/empty";
+import { EmployeePage } from "../components/employee-page";
 import { getMondayOfWeek, toDateStr } from "../_lib/vn-business-date";
 
 export default async function SchedulePage() {
@@ -19,14 +15,19 @@ export default async function SchedulePage() {
 
   if (!ctx) {
     return (
-      <Empty>
-        <EmptyHeader>
-          <EmptyTitle>Chưa có hồ sơ nhân viên</EmptyTitle>
-          <EmptyDescription>
-            Tài khoản chưa được liên kết hồ sơ nhân viên. Liên hệ quản lý.
-          </EmptyDescription>
-        </EmptyHeader>
-      </Empty>
+      <EmployeePage
+        title="Lịch ca"
+        description="Xem ca làm theo tuần và quay nhanh về tuần hiện tại."
+      >
+        <Empty>
+          <EmptyHeader>
+            <EmptyTitle>Chưa có hồ sơ nhân viên</EmptyTitle>
+            <EmptyDescription>
+              Tài khoản chưa được liên kết hồ sơ nhân viên. Liên hệ quản lý.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      </EmployeePage>
     );
   }
 
@@ -64,17 +65,14 @@ export default async function SchedulePage() {
   });
 
   return (
-    <div className="flex flex-col gap-5">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-xl">Lịch ca</CardTitle>
-        </CardHeader>
-      </Card>
-
+    <EmployeePage
+      title="Lịch ca"
+      description="Xem ca làm theo tuần và quay nhanh về tuần hiện tại."
+    >
       <ScheduleClient
         initialShifts={initialShifts}
         initialWeekStart={weekStart}
       />
-    </div>
+    </EmployeePage>
   );
 }

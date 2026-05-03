@@ -8,7 +8,7 @@ export default function EmployeeLayout({ children }: { children: ReactNode }) {
       <MobileHeader />
       <main
         id="main-content"
-        className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-5 px-3 py-4 pb-28 sm:px-4 lg:px-6 lg:pb-8"
+        className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-3 py-4 pb-28 sm:px-4 lg:pb-8"
       >
         {children}
       </main>

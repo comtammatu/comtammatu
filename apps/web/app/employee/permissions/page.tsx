@@ -1,12 +1,6 @@
 import { ShieldCheck as IconShieldCheck } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
-import {
   Empty,
   EmptyDescription,
   EmptyHeader,
@@ -14,12 +8,12 @@ import {
 } from "@comtammatu/ui/components/empty";
 import { loadAuthState } from "@/_lib/auth";
 import { fetchCurrentUserPermissions } from "@/_lib/permissions";
+import {
+  EmployeeDetailList,
+  EmployeePage,
+  EmployeePanel,
+} from "../components/employee-page";
 
-/**
- * Auth v2 self-service — shows the current user's JWT position + permission grants.
- * Used for manual QA verification during migration rollout. Visible to any
- * authenticated user (RLS restricts staff_permissions to self).
- */
 export default async function PermissionsPage() {
   const { claims } = await loadAuthState();
 
@@ -31,84 +25,77 @@ export default async function PermissionsPage() {
   const legacyRole = claims.user_role;
 
   return (
-    <div className="flex flex-col gap-4">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <IconShieldCheck className="size-4" /> Quyền hạn của tôi
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-2 text-sm">
-          <div className="flex items-center gap-2">
-            <span className="text-muted-foreground">Mã chức vụ:</span>
-            <Badge variant="secondary">{position ?? "Chưa gắn"}</Badge>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-muted-foreground">Vai trò cũ:</span>
-            <Badge variant="outline">{legacyRole}</Badge>
-          </div>
-          <p className="text-muted-foreground text-xs">
-            Chức vụ là nhãn HR. Quyền truy cập hệ thống được quyết định bởi{" "}
-            <code>staff_permissions</code>, không phải chức vụ.
-          </p>
-        </CardContent>
-      </Card>
+    <EmployeePage
+      title="Quyền hạn của tôi"
+      description="Xem chức vụ và các quyền truy cập đang có hiệu lực."
+    >
+      <EmployeePanel
+        icon={IconShieldCheck}
+        title="Thông tin truy cập"
+        description="Chức vụ là nhãn nhân sự; quyền hệ thống được cấp riêng."
+        tone="info"
+      >
+        <EmployeeDetailList
+          rows={[
+            {
+              label: "Mã chức vụ",
+              value: position ?? "Chưa gắn",
+              muted: !position,
+            },
+            {
+              label: "Vai trò tương thích",
+              value: legacyRole,
+            },
+          ]}
+        />
+      </EmployeePanel>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">
-            Quyền tenant-wide ({tenantPerms.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {tenantPerms.length === 0 ? (
-            <Empty>
-              <EmptyHeader>
-                <EmptyTitle>Không có quyền tenant-wide</EmptyTitle>
-                <EmptyDescription>
-                  Tài khoản này không có grant cấp tenant.
-                </EmptyDescription>
-              </EmptyHeader>
-            </Empty>
-          ) : (
-            <div className="flex flex-wrap gap-1.5">
-              {tenantPerms.map((p) => (
-                <Badge key={p.permissionKey} variant="secondary">
-                  {p.permissionKey}
-                </Badge>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <PermissionCard
+        title={`Quyền cấp tenant (${tenantPerms.length})`}
+        emptyTitle="Không có quyền cấp tenant"
+        emptyDescription="Tài khoản này không có grant cấp tenant."
+        permissions={tenantPerms.map((permission) => permission.permissionKey)}
+      />
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">
-            Quyền theo chi nhánh hiện tại ({scopedPerms.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {scopedPerms.length === 0 ? (
-            <Empty>
-              <EmptyHeader>
-                <EmptyTitle>Không có quyền theo chi nhánh</EmptyTitle>
-                <EmptyDescription>
-                  Không có grant cho branch_id={claims.branch_id ?? "null"}.
-                </EmptyDescription>
-              </EmptyHeader>
-            </Empty>
-          ) : (
-            <div className="flex flex-wrap gap-1.5">
-              {scopedPerms.map((p) => (
-                <Badge key={`${p.branchId}:${p.permissionKey}`}>
-                  {p.permissionKey}
-                </Badge>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+      <PermissionCard
+        title={`Quyền theo chi nhánh (${scopedPerms.length})`}
+        emptyTitle="Không có quyền theo chi nhánh"
+        emptyDescription="Không có grant cho chi nhánh hiện tại."
+        permissions={scopedPerms.map((permission) => permission.permissionKey)}
+      />
+    </EmployeePage>
+  );
+}
+
+function PermissionCard({
+  title,
+  emptyTitle,
+  emptyDescription,
+  permissions,
+}: {
+  title: string;
+  emptyTitle: string;
+  emptyDescription: string;
+  permissions: string[];
+}) {
+  return (
+    <EmployeePanel title={title}>
+      {permissions.length === 0 ? (
+        <Empty>
+          <EmptyHeader>
+            <EmptyTitle>{emptyTitle}</EmptyTitle>
+            <EmptyDescription>{emptyDescription}</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      ) : (
+        <div className="flex flex-wrap gap-1.5">
+          {permissions.map((permission) => (
+            <Badge key={permission} variant="secondary">
+              {permission}
+            </Badge>
+          ))}
+        </div>
+      )}
+    </EmployeePanel>
   );
 }

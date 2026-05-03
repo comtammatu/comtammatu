@@ -1,24 +1,16 @@
 "use client";
 
-import { cn } from "@comtammatu/ui";
-import { Badge } from "@comtammatu/ui/components/badge";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
 import {
   Empty,
   EmptyDescription,
   EmptyHeader,
   EmptyTitle,
 } from "@comtammatu/ui/components/empty";
-import { Separator } from "@comtammatu/ui/components/separator";
+import { EmployeeDetailList, EmployeePanel } from "../components/employee-page";
 import type { PayslipEntry } from "./page";
 
 const fmt = (n: number) =>
-  n.toLocaleString("vi-VN", { maximumFractionDigits: 0 });
+  `${n.toLocaleString("vi-VN", { maximumFractionDigits: 0 })} ₫`;
 
 const PERIOD_STATUS_LABELS: Record<string, string> = {
   paid: "Đã trả",
@@ -39,99 +31,75 @@ export function PayslipClient({ entries }: { entries: PayslipEntry[] }) {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3">
       {entries.map((entry) => {
         const period = entry.payroll_periods;
         const status = period?.status ?? "paid";
         const statusLabel = PERIOD_STATUS_LABELS[status] ?? status;
 
         return (
-          <Card key={entry.id}>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base">
-                  {period?.period_month && period?.period_year
-                    ? `Tháng ${period.period_month}/${period.period_year}`
-                    : "Kỳ lương"}
-                </CardTitle>
-                <Badge variant="success">
-                  {statusLabel}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-2 text-sm">
-              <Row
-                label="Ngày công"
-                value={`${Number(entry.working_days)}/${Number(entry.standard_days)}`}
-              />
-              <Row label="Lương Gross" value={fmt(Number(entry.gross_total))} />
-              <Row
-                label="BH (NLĐ đóng)"
-                value={`-${fmt(Number(entry.total_insurance_employee))}`}
-                muted
-              />
-              <Row
-                label="Giảm trừ bản thân"
-                value={`-${fmt(Number(entry.personal_deduction))}`}
-                muted
-              />
-              {Number(entry.dependent_count) > 0 && (
-                <Row
-                  label={`Giảm trừ NPT (${entry.dependent_count} người)`}
-                  value={`-${fmt(Number(entry.dependent_deduction))}`}
-                  muted
-                />
-              )}
-              <Row
-                label="Thu nhập tính thuế"
-                value={fmt(Number(entry.taxable_income))}
-              />
-              <Row
-                label="Thuế TNCN"
-                value={
-                  Number(entry.pit_tax) > 0
-                    ? `-${fmt(Number(entry.pit_tax))}`
-                    : "0"
-                }
-                muted
-              />
-              <Separator />
-              <Row
-                label="Thực lĩnh"
-                value={fmt(Number(entry.net_salary))}
-                bold
-              />
-            </CardContent>
-          </Card>
+          <EmployeePanel
+            key={entry.id}
+            title={
+              period?.period_month && period?.period_year
+                ? `Tháng ${period.period_month}/${period.period_year}`
+                : "Kỳ lương"
+            }
+            description={`Ngày công ${Number(entry.working_days)}/${Number(entry.standard_days)}`}
+            badge={{ children: statusLabel, variant: "success" }}
+          >
+            <EmployeeDetailList
+              columns={1}
+              rows={[
+                {
+                  label: "Thực lĩnh",
+                  value: (
+                    <span className="font-mono text-base font-semibold text-primary">
+                      {fmt(Number(entry.net_salary))}
+                    </span>
+                  ),
+                },
+                { label: "Lương gộp", value: fmt(Number(entry.gross_total)) },
+                {
+                  label: "BH (NLĐ đóng)",
+                  value: `-${fmt(Number(entry.total_insurance_employee))}`,
+                  muted: true,
+                },
+                {
+                  label: "Giảm trừ bản thân",
+                  value: `-${fmt(Number(entry.personal_deduction))}`,
+                  muted: true,
+                },
+                ...(Number(entry.dependent_count) > 0
+                  ? [
+                      {
+                        label: `Giảm trừ người phụ thuộc (${entry.dependent_count})`,
+                        value: `-${fmt(Number(entry.dependent_deduction))}`,
+                        muted: true,
+                      },
+                    ]
+                  : []),
+                {
+                  label: "Thu nhập tính thuế",
+                  value: fmt(Number(entry.taxable_income)),
+                },
+                {
+                  label: "Thuế TNCN",
+                  value:
+                    Number(entry.pit_tax) > 0
+                      ? `-${fmt(Number(entry.pit_tax))}`
+                      : "0",
+                  muted: true,
+                },
+                {
+                  label: "Ngày công",
+                  value: `${Number(entry.working_days)}/${Number(entry.standard_days)}`,
+                },
+              ]}
+            />
+          </EmployeePanel>
         );
       })}
-    </div>
-  );
-}
-
-function Row({
-  label,
-  value,
-  bold,
-  muted,
-}: {
-  label: string;
-  value: string;
-  bold?: boolean;
-  muted?: boolean;
-}) {
-  return (
-    <div className="flex justify-between">
-      <span className={muted ? "text-muted-foreground" : ""}>{label}</span>
-      <span
-        className={cn(
-          "font-mono",
-          bold && "text-lg font-bold text-primary",
-          muted && "text-muted-foreground",
-        )}
-      >
-        {value}
-      </span>
     </div>
   );
 }

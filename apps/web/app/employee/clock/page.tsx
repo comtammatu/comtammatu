@@ -1,5 +1,6 @@
 import { getEmployeeContext } from "../_lib/employee-context";
 import { ClockClient } from "./clock-client";
+import { EmployeePage } from "../components/employee-page";
 import {
   Empty,
   EmptyDescription,
@@ -13,14 +14,19 @@ export default async function ClockPage() {
 
   if (!ctx) {
     return (
-      <Empty>
-        <EmptyHeader>
-          <EmptyTitle>Chưa có hồ sơ nhân viên</EmptyTitle>
-          <EmptyDescription>
-            Tài khoản chưa được liên kết hồ sơ nhân viên. Liên hệ quản lý.
-          </EmptyDescription>
-        </EmptyHeader>
-      </Empty>
+      <EmployeePage
+        title="Chấm công"
+        description="Chấm công vào, ra bằng GPS và mã chi nhánh."
+      >
+        <Empty>
+          <EmptyHeader>
+            <EmptyTitle>Chưa có hồ sơ nhân viên</EmptyTitle>
+            <EmptyDescription>
+              Tài khoản chưa được liên kết hồ sơ nhân viên. Liên hệ quản lý.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      </EmployeePage>
     );
   }
 
@@ -53,19 +59,27 @@ export default async function ClockPage() {
       lng: Number(b.longitude),
     }));
 
-  const branchData = record?.branches as unknown as { name: string } | null | undefined;
+  const branchData = record?.branches as unknown as
+    | { name: string }
+    | null
+    | undefined;
 
   return (
-    <ClockClient
-      initialStatus={{
-        clockedIn: !!record?.check_in && !record?.check_out,
-        clockedOut: !!record?.check_out,
-        checkInTime: record?.check_in ?? null,
-        checkOutTime: record?.check_out ?? null,
-        branchName: branchData?.name ?? null,
-      }}
-      branches={activeBranches}
-      defaultBranchId={claims.branch_id}
-    />
+    <EmployeePage
+      title="Chấm công"
+      description="Chấm công vào, ra bằng GPS và mã chi nhánh."
+    >
+      <ClockClient
+        initialStatus={{
+          clockedIn: !!record?.check_in && !record?.check_out,
+          clockedOut: !!record?.check_out,
+          checkInTime: record?.check_in ?? null,
+          checkOutTime: record?.check_out ?? null,
+          branchName: branchData?.name ?? null,
+        }}
+        branches={activeBranches}
+        defaultBranchId={claims.branch_id}
+      />
+    </EmployeePage>
   );
 }

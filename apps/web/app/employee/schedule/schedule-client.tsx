@@ -6,7 +6,6 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Empty,
-  EmptyContent,
   EmptyDescription,
   EmptyHeader,
   EmptyMedia,
@@ -18,11 +17,18 @@ import {
   ItemContent,
   ItemDescription,
   ItemGroup,
+  ItemMedia,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { Skeleton } from "@comtammatu/ui/components/skeleton";
-import { CalendarDays as IconCalendarEvent, ChevronLeft as IconChevronLeft, ChevronRight as IconChevronRight, RefreshCw as IconRefresh } from "lucide-react";
+import {
+  CalendarDays as IconCalendarEvent,
+  ChevronLeft as IconChevronLeft,
+  ChevronRight as IconChevronRight,
+  RefreshCw as IconRefresh,
+} from "lucide-react";
 import { AppBoneyardSkeleton } from "../../_components/boneyard-skeleton";
+import { EmployeePanel } from "../components/employee-page";
 import { fetchMySchedule, type ScheduleShift } from "./actions";
 
 const TEXT = {
@@ -122,17 +128,19 @@ interface ScheduleClientProps {
 
 function ScheduleSkeletonFallback() {
   return (
-    <div className="flex flex-col gap-3">
+    <ItemGroup>
       {Array.from({ length: 7 }).map((_, i) => (
-        <div key={i} className="flex items-center gap-3 rounded-xl border p-4">
-          <Skeleton className="size-10 rounded-lg" />
-          <div className="flex flex-1 flex-col gap-2">
+        <Item key={i} variant="outline">
+          <ItemMedia>
+            <Skeleton className="size-8 rounded-md" />
+          </ItemMedia>
+          <ItemContent>
             <Skeleton className="h-4 w-24" />
             <Skeleton className="h-3 w-32" />
-          </div>
-        </div>
+          </ItemContent>
+        </Item>
       ))}
-    </div>
+    </ItemGroup>
   );
 }
 
@@ -259,51 +267,55 @@ export function ScheduleClient({
     : formatDate(weekStart);
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between gap-2">
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={goToPrevWeek}
-          disabled={isPending}
-          aria-label={TEXT.prevWeek}
-        >
-          <IconChevronLeft />
-        </Button>
+    <>
+      <EmployeePanel title="Tuần đang xem">
+        <div className="flex items-center justify-between gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={goToPrevWeek}
+            disabled={isPending}
+            aria-label={TEXT.prevWeek}
+          >
+            <IconChevronLeft />
+          </Button>
 
-        <div className="flex flex-1 flex-col items-center gap-1">
-          <p className="text-sm font-medium">{weekLabel}</p>
-          {!isCurrentWeek && (
-            <Button
-              type="button"
-              variant="link"
-              size="sm"
-              onClick={goToCurrentWeek}
-              disabled={isPending}
-            >
-              {TEXT.currentWeek}
-            </Button>
-          )}
+          <div className="flex flex-1 flex-col items-center gap-1 text-center">
+            <p className="text-sm font-medium">{weekLabel}</p>
+            {!isCurrentWeek ? (
+              <Button
+                type="button"
+                variant="link"
+                size="sm"
+                onClick={goToCurrentWeek}
+                disabled={isPending}
+              >
+                {TEXT.currentWeek}
+              </Button>
+            ) : (
+              <Badge variant="info">{TEXT.currentWeek}</Badge>
+            )}
+          </div>
+
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={goToNextWeek}
+            disabled={isPending}
+            aria-label={TEXT.nextWeek}
+          >
+            <IconChevronRight />
+          </Button>
         </div>
-
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={goToNextWeek}
-          disabled={isPending}
-          aria-label={TEXT.nextWeek}
-        >
-          <IconChevronRight />
-        </Button>
-      </div>
+      </EmployeePanel>
 
       {error && (
-        <Empty className="border border-destructive/30 bg-destructive/5">
-          <EmptyHeader>
-            <EmptyTitle>{TEXT.loadError}</EmptyTitle>
-            <EmptyDescription>{error}</EmptyDescription>
-          </EmptyHeader>
-          <EmptyContent>
+        <EmployeePanel
+          title={TEXT.loadError}
+          description={error}
+          tone="destructive"
+        >
+          <div className="flex">
             <Button
               variant="outline"
               size="sm"
@@ -313,31 +325,33 @@ export function ScheduleClient({
               <IconRefresh data-icon="inline-start" />
               {TEXT.retry}
             </Button>
-          </EmptyContent>
-        </Empty>
+          </div>
+        </EmployeePanel>
       )}
 
       {!error && (
-        <AppBoneyardSkeleton
-          name="employee-schedule-week"
-          loading={isPending}
-          fixture={
+        <EmployeePanel title="Lịch trong tuần">
+          <AppBoneyardSkeleton
+            name="employee-schedule-week"
+            loading={isPending}
+            fixture={
+              <ScheduleWeekList
+                shifts={SCHEDULE_SKELETON_FIXTURE_SHIFTS}
+                todayStr={SCHEDULE_SKELETON_TODAY}
+                weekDates={SCHEDULE_SKELETON_FIXTURE_DATES}
+              />
+            }
+            fallback={<ScheduleSkeletonFallback />}
+            snapshotConfig={{ excludeSelectors: ["svg"] }}
+          >
             <ScheduleWeekList
-              shifts={SCHEDULE_SKELETON_FIXTURE_SHIFTS}
-              todayStr={SCHEDULE_SKELETON_TODAY}
-              weekDates={SCHEDULE_SKELETON_FIXTURE_DATES}
+              shifts={shifts}
+              todayStr={todayStr}
+              weekDates={weekDates}
             />
-          }
-          fallback={<ScheduleSkeletonFallback />}
-          snapshotConfig={{ excludeSelectors: ["svg"] }}
-        >
-          <ScheduleWeekList
-            shifts={shifts}
-            todayStr={todayStr}
-            weekDates={weekDates}
-          />
-        </AppBoneyardSkeleton>
+          </AppBoneyardSkeleton>
+        </EmployeePanel>
       )}
-    </div>
+    </>
   );
 }
