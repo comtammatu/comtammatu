@@ -11,6 +11,7 @@ The rebuild should make daily operation faster, reduce visual drift between modu
 ## Non-Negotiables
 
 - Design system contract: `docs/spec/design-system.md`
+- Markdown layout map: `docs/plan/ui-ux-markdown-layout-map.md`
 - Page contracts: `docs/plan/ui-ux-page-contracts.md`
 - UI implementation rules: `docs/modules/ui.md`
 - Regression rules: `tasks/regressions.md`
@@ -51,6 +52,7 @@ Acceptance:
 
 Scope:
 
+- Use `docs/plan/ui-ux-markdown-layout-map.md` as the cross-module layout source before editing runtime UI.
 - Refresh `docs/ui-audit-map.md`.
 - For each route family, define primary user job, main workflow state, current drift, and required primitives.
 - Prioritize `P0`: POS, KDS, login.
@@ -58,6 +60,7 @@ Scope:
 Acceptance:
 
 - Every target route has a one-page route contract before code changes.
+- Every route family maps to one of the shared shells in the markdown layout map.
 - Drift is classified as visual, UX flow, copy, or behavior.
 - Work can be split into small PRs.
 

@@ -2,6 +2,8 @@
 
 > Updated: 2026-04-25 | Use with `docs/spec/design-system.md`
 
+Cross-module markdown layout source: `docs/plan/ui-ux-markdown-layout-map.md`.
+
 ## Page Order
 
 Priority order for the rebuild:
@@ -1112,7 +1114,7 @@ Acceptance:
 - A staff member without HR permissions can use all self-service routes.
 - No raw Supabase/Postgres error message reaches the client.
 - No `"use client"` component imports `@comtammatu/database` barrel.
-- UI follows radix-lyra, stone, tabler, and existing shadcn primitive catalog.
+- UI follows radix-lyra, neutral, lucide, and existing shadcn primitive catalog.
 - `pnpm typecheck && pnpm lint && pnpm build` passes.
 
 ### `/employee` — Portal Home (Task Hub)
