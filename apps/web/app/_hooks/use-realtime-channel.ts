@@ -56,8 +56,32 @@ export function useRealtimeChannel(
     let channel: RealtimeChannel | null = null;
     let cancelled = false;
 
+    // REALTIME-EVICT-CHANNEL-SYNC-AFTER-REMOVE: `removeChannel` is async
+    // — it awaits the server `phx_close` ACK before its `_onClose`
+    // callback evicts from `socket.channels`. realtime-js's
+    // `channel(topic)` dedups by topic and returns the existing channel
+    // from that list, so any re-subscribe (auth event race, navigation
+    // remount, strict-mode double-mount) that runs before the leave
+    // round-trip completes hands back the stale, already-subscribed
+    // channel — calling `.on('postgres_changes', ...)` on it then
+    // throws "cannot add `postgres_changes` callbacks for ... after
+    // `subscribe()`". Mirror what `_onClose` does (filter the channels
+    // array by topic) NOW so the next `supabase.channel(topic)` builds
+    // a fresh channel. The async leave still runs, idempotent.
+    type RealtimeInternals = { _remove: (c: RealtimeChannel) => void };
+    const teardownChannel = () => {
+      if (channel === null) return;
+      const stale = channel;
+      channel = null;
+      void supabase.removeChannel(stale);
+      (supabase.realtime as unknown as RealtimeInternals)._remove(stale);
+    };
+
     const subscribeWithToken = (token: string | null) => {
       if (cancelled) return;
+      // Always tear down before re-subscribe — covers the auth-event race
+      // where TOKEN_REFRESHED fires while a prior subscribe just landed.
+      teardownChannel();
       if (token !== null) {
         // Defense-in-depth: pin the JWT onto the realtime client before
         // subscribe. supabase-js normally does this on the SIGNED_IN
@@ -84,16 +108,9 @@ export function useRealtimeChannel(
       (event, session) => {
         if (cancelled) return;
         if (event === "TOKEN_REFRESHED" || event === "SIGNED_IN") {
-          if (channel !== null) {
-            void supabase.removeChannel(channel);
-            channel = null;
-          }
           subscribeWithToken(session?.access_token ?? null);
         } else if (event === "SIGNED_OUT") {
-          if (channel !== null) {
-            void supabase.removeChannel(channel);
-            channel = null;
-          }
+          teardownChannel();
         }
       },
     );
@@ -101,9 +118,7 @@ export function useRealtimeChannel(
     return () => {
       cancelled = true;
       authSub.subscription.unsubscribe();
-      if (channel !== null) {
-        void supabase.removeChannel(channel);
-      }
+      teardownChannel();
     };
   }, deps);
 }
