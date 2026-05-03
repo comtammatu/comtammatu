@@ -40,4 +40,7 @@ export {
   getVarianceTierLabelVi,
   getWasteReasonLabelVi,
   getStocktakeModeLabelVi,
+  PAYMENT_METHOD_LABELS_VI,
+  PAYMENT_METHOD_LABELS_FULL_VI,
+  getPaymentMethodLabelVi,
 } from "./vi";

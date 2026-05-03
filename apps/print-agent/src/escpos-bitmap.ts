@@ -115,8 +115,13 @@ const splitDateTime = (iso: string | undefined): { date: string; time: string } 
   return { date: `${day ?? ""}/${m ?? ""}/${y ?? ""}`, time: hhmm };
 };
 
+// MIRRORS packages/shared/src/labels/vi.ts PAYMENT_METHOD_LABELS_VI.
+// Print-agent ships as a standalone .exe (@yao-pkg/pkg) and cannot import
+// workspace packages — keep this map in sync with the canonical source AND
+// with escpos.ts:PAYMENT_LABEL (text-mode parity).
 const PAYMENT_LABEL: Record<string, string> = {
   cash: "Tiền mặt",
+  vietqr: "VietQR",
   bank_transfer: "Chuyển khoản",
   momo: "MoMo",
 };
@@ -173,13 +178,16 @@ function renderKitchenTicketBitmap(p: KitchenPayload): Uint8Array {
   }
   parts.push(divider("="));
 
-  // Meta rows
+  // Meta rows. Bỏ "HĐ:" khi trùng "Phiếu:" (legacy data hoặc fallback) để
+  // khỏi in 2 dòng số giống nhau.
   const meta = splitDateTime(p.printed_at);
   parts.push(line(
     padRight(`Phiếu: ${ticketNumber}`, 24) +
     padRight(`Lần gửi: ${p.send_seq}`, 24),
   ));
-  parts.push(line(padRight(`HĐ: ${sourceOrderNumber}`, 24)));
+  if (sourceOrderNumber !== ticketNumber) {
+    parts.push(line(padRight(`HĐ: ${sourceOrderNumber}`, 24)));
+  }
   parts.push(line(
     padRight(`Bếp: ${p.slot}`, 24) +
     padRight(`Giờ: ${meta.time || p.printed_at}`, 24),
@@ -499,6 +507,18 @@ function renderCancelTicketBitmap(p: CancelTicketPayload): Uint8Array {
         }
       }
     }
+    // B6: per-item note. Strikethrough cùng item block để giữ visual unity
+    // (HỦY MÓN banner + LÝ DO ở cuối đã đủ context — note với strike nói
+    // "không nấu nữa" áp dụng cho cả note đính kèm). Wrap, không cắt — xem
+    // regressions.md NO-CLAMP-ON-KITCHEN-NOTES.
+    if (it.note) {
+      for (const chunk of wrapText(`* ${it.note}`, KITCHEN_DETAIL_WIDTH_DOUBLE)) {
+        parts.push(renderMixedRow([
+          { text: KITCHEN_DETAIL_INDENT },
+          { text: chunk, bold: true, double: true, strikethrough: true },
+        ]));
+      }
+    }
   });
   parts.push(line(KITCHEN_BORDER));
 
@@ -518,6 +538,9 @@ function renderCancelTicketBitmap(p: CancelTicketPayload): Uint8Array {
 
 // ─── Shift close report (PHIẾU CHỐT CA) ──────────────────────────────────
 
+// MIRRORS packages/shared/src/labels/vi.ts PAYMENT_METHOD_LABELS_FULL_VI.
+// Long-form labels for shift-close report. Keep in sync with
+// escpos.ts:PAYMENT_METHOD_LABEL.
 const PAYMENT_METHOD_LABEL_FULL: Record<string, string> = {
   cash: "Tiền mặt",
   vietqr: "Chuyển khoản (VietQR)",
@@ -562,7 +585,7 @@ function renderShiftCloseReportBitmap(p: ShiftCloseReportPayload): Uint8Array {
   // Cashier + duration
   const opened = splitDateTime(p.opened_at);
   const closed = splitDateTime(p.closed_at);
-  if (p.cashier_name) parts.push(line(pair48("Người order:", p.cashier_name)));
+  if (p.cashier_name) parts.push(line(pair48("Thu ngân:", p.cashier_name)));
   parts.push(line(pair48("Mở ca:", `${opened.time} ${opened.date}`.trim())));
   parts.push(line(pair48("Đóng ca:", `${closed.time} ${closed.date}`.trim())));
   const duration = formatDuration(p.opened_at, p.closed_at);

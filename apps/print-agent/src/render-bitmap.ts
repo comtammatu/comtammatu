@@ -31,9 +31,11 @@ const DRAW_WIDTH = DOTS_WIDTH - MARGIN_LEFT - MARGIN_RIGHT; // 576 dots
 //
 // Canvas:
 //   Width:          576 dots         (matches printer printable width)
-//   Left margin:      8 dots (~1mm)  (safety for paper edge clipping)
-//   Right margin:     8 dots
-//   Drawing area:   560 dots         (= DRAW_WIDTH)
+//   Left margin:      0 dots         (full-bleed; thin glyphs may clip ~1 dot
+//                                      on left edge — accepted trade-off so
+//                                      48 chars × 12 dots fills exactly 576)
+//   Right margin:     0 dots
+//   Drawing area:   576 dots         (= DRAW_WIDTH)
 //
 // Normal size (default for text, meta rows, table borders):
 //   Font:           Roboto Mono Regular 20px

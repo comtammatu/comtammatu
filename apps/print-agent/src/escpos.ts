@@ -256,6 +256,9 @@ export type CancelTicketPayload = {
     quantity: number;
     modifiers?: ModifierLine[] | null;
     sides?: SideLine[] | null;
+    /** B6: parity with KitchenPayload.items[].note. Bếp dùng để biết
+     * món có note nào bị huỷ (đặc biệt critical với allergy notes). */
+    note?: string | null;
   }>;
   reason: string;
   voided_by?: string;
@@ -323,6 +326,10 @@ const splitDateTime = (iso: string | undefined): { date: string; time: string } 
   return { date: `${day ?? ""}/${m ?? ""}/${y ?? ""}`, time: hhmm };
 };
 
+// MIRRORS packages/shared/src/labels/vi.ts PAYMENT_METHOD_LABELS_VI.
+// Print-agent ships as a standalone .exe (@yao-pkg/pkg) and cannot import
+// workspace packages — keep this map in sync with the canonical source AND
+// with escpos-bitmap.ts:PAYMENT_LABEL (text/bitmap parity).
 const PAYMENT_LABEL: Record<string, string> = {
   cash: "Tiền mặt",
   vietqr: "VietQR",
@@ -427,6 +434,8 @@ export function renderKitchenTicket(p: KitchenPayload): Uint8Array {
   parts.push(divider("="));
 
   // --- Meta row (order, send seq, slot, time) ---
+  // Khi kitchen_ticket_number trùng order_number (legacy data hoặc fallback),
+  // bỏ dòng "HĐ:" để khỏi in 2 dòng số giống nhau (lãng phí giấy + bếp đọc trùng).
   const meta = splitDateTime(p.printed_at);
   parts.push(alignLeft());
   parts.push(
@@ -435,7 +444,9 @@ export function renderKitchenTicket(p: KitchenPayload): Uint8Array {
         padRight(`Lần gửi: ${p.send_seq}`, 24),
     ),
   );
-  parts.push(line(padRight(`HĐ: ${sourceOrderNumber}`, 24)));
+  if (sourceOrderNumber !== ticketNumber) {
+    parts.push(line(padRight(`HĐ: ${sourceOrderNumber}`, 24)));
+  }
   parts.push(
     line(
       padRight(`Bếp: ${p.slot}`, 24) +
@@ -470,8 +481,13 @@ export function renderKitchenTicket(p: KitchenPayload): Uint8Array {
       for (const s of it.sides) {
         const sideName = s.name ?? s.side_item_name;
         if (sideName) {
+          // B4: parity với bitmap-mode — sides ("món ăn kèm") render ở
+          // double-bold để bếp đọc rõ across kitchen, theo yêu cầu chủ quán.
           parts.push(
-            kitchenDetailLine("- ", `${sideName}${s.quantity ? ` x${s.quantity}` : ""}`),
+            ...kitchenImportantDetailRows(
+              "- ",
+              `${sideName}${s.quantity ? ` x${s.quantity}` : ""}`,
+            ),
           );
         }
       }
@@ -769,14 +785,23 @@ export function renderCancelTicket(p: CancelTicketPayload): Uint8Array {
       for (const s of it.sides) {
         const sideName = s.name ?? s.side_item_name;
         if (sideName) {
+          // B4 parity: sides ở double-bold giống phiếu bếp gốc + bitmap mode.
+          // Bếp xem phiếu hủy mapping 1-1 với phiếu bếp đã in trước đó.
           parts.push(
-            kitchenDetailLine(
+            ...kitchenImportantDetailRows(
               "- ",
               `${sideName}${s.quantity ? ` x${s.quantity}` : ""}`,
             ),
           );
         }
       }
+    }
+    // B6: per-item note. Render trong cùng underline run với rest of item
+    // block để giữ visual unity (item bị huỷ — note cũng "không còn hiệu
+    // lực"). Dùng cùng helper double-bold như phiếu bếp gốc — bếp đã quen
+    // pattern * + bold = lệnh chế biến quan trọng.
+    if (it.note) {
+      parts.push(...kitchenImportantDetailRows("* ", it.note));
     }
     parts.push(underlineOff());
   });
@@ -801,6 +826,9 @@ export function renderCancelTicket(p: CancelTicketPayload): Uint8Array {
 
 // ─── Shift close report (PHIẾU CHỐT CA) ──────────────────────────────────
 
+// MIRRORS packages/shared/src/labels/vi.ts PAYMENT_METHOD_LABELS_FULL_VI.
+// Long-form labels for shift-close report (kế toán đọc cần phân biệt rõ
+// kênh tiền vào). Keep in sync with escpos-bitmap.ts:PAYMENT_METHOD_LABEL_FULL.
 const PAYMENT_METHOD_LABEL: Record<string, string> = {
   cash: "Tiền mặt",
   vietqr: "Chuyển khoản (VietQR)",

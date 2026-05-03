@@ -118,13 +118,16 @@ export const receiptPayloadSchema = z.object({
 
 /** Single cancelled item — shape matches the kitchen ticket item so chefs can
  * visually map to the original order. Prices intentionally omitted (kitchen
- * never sees money). */
+ * never sees money). `note` (B6): per-item ghi chú từ POS — bếp dùng để
+ * disambiguate khi có nhiều món cùng tên (vd "ít muối" vs "không hành").
+ * Optional vì jobs cũ trong queue chưa có field này. */
 const cancelItemSchema = z.object({
   item_name: z.string(),
   variant_name: z.string().nullable().optional(),
   quantity: z.number().int(),
   modifiers: z.array(itemModifierSchema).nullable().optional(),
   sides: z.array(itemSideSchema).nullable().optional(),
+  note: z.string().nullable().optional(),
 });
 
 export const cancelTicketPayloadSchema = z.object({

@@ -11,6 +11,7 @@ import {
 import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
 import type { ComponentType } from "react";
 import { formatVND } from "@comtammatu/shared/format";
+import { PAYMENT_METHOD_LABELS_VI } from "@comtammatu/shared/labels";
 import type { PaymentMethod } from "@comtammatu/shared/providers";
 import {
   Alert,
@@ -92,9 +93,9 @@ const METHOD_META: Record<
     icon: ComponentType<{ className?: string }>;
   }
 > = {
-  cash: { label: "Tiền mặt", icon: IconCash },
-  vietqr: { label: "Chuyển khoản", icon: IconQrcode },
-  momo: { label: "MoMo", icon: IconCreditCard },
+  cash: { label: PAYMENT_METHOD_LABELS_VI.cash, icon: IconCash },
+  vietqr: { label: PAYMENT_METHOD_LABELS_VI.vietqr, icon: IconQrcode },
+  momo: { label: PAYMENT_METHOD_LABELS_VI.momo, icon: IconCreditCard },
 };
 
 function buildCashSuggestions(totalAmount: number): number[] {

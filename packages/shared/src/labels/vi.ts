@@ -292,3 +292,34 @@ export function getWasteReasonLabelVi(code: string): string {
 export function getStocktakeModeLabelVi(mode: string): string {
   return (STOCKTAKE_MODE_LABELS_VI as Record<string, string>)[mode] ?? mode;
 }
+
+// ─── Payment method labels ────────────────────────────────────────────────
+//
+// Canonical Vietnamese labels for `orders.payment_method`. Source of truth
+// for POS UI + finance reports + admin surfaces.
+//
+// MIRRORED in apps/print-agent/src/escpos.ts and escpos-bitmap.ts because
+// print-agent ships as a standalone .exe (@yao-pkg/pkg) and cannot import
+// workspace packages — keep both copies in sync. See glossary.md (Thanh toán).
+//
+// `bank_transfer` belongs to GL supplier-payment flow (TT 25/2018 hóa đơn
+// ≥ 20tr), NOT POS — kept here for finance/accounting surfaces.
+export const PAYMENT_METHOD_LABELS_VI = {
+  cash: "Tiền mặt",
+  vietqr: "VietQR",
+  momo: "MoMo",
+  bank_transfer: "Chuyển khoản",
+} as const;
+
+/** Long form for shift-close / accounting reports where ambiguity must be
+ * eliminated (kế toán đọc cần phân biệt rõ kênh tiền). */
+export const PAYMENT_METHOD_LABELS_FULL_VI = {
+  ...PAYMENT_METHOD_LABELS_VI,
+  vietqr: "Chuyển khoản (VietQR)",
+  unknown: "Khác",
+} as const;
+
+export function getPaymentMethodLabelVi(method: string | null | undefined): string {
+  if (!method) return "";
+  return (PAYMENT_METHOD_LABELS_VI as Record<string, string>)[method] ?? method;
+}
