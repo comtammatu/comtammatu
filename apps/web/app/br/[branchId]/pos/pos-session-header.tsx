@@ -15,6 +15,7 @@ import {
 } from "@comtammatu/ui/components/dropdown-menu";
 import { useTheme } from "@comtammatu/ui/components/theme-provider";
 import {
+  ArrowLeft as IconArrowLeft,
   Monitor as IconDeviceDesktop,
   LogIn as IconDoorEnter,
   Moon as IconMoon,
@@ -37,6 +38,12 @@ interface PosSessionHeaderProps {
    * có context (chưa chọn bàn / mới mở POS) header rơi về tên terminal.
    */
   contextLabel?: string;
+  /**
+   * Mobile: nút back arrow cạnh contextLabel — quay lại table gate / trang
+   * chính POS. Hidden khi undefined (desktop sidebar, hoặc menu chưa ready,
+   * hoặc đang appending — banner "Huỷ" đã serve role thoát).
+   */
+  onBack?: () => void;
 }
 
 function PosSessionHeaderComponent({
@@ -44,15 +51,30 @@ function PosSessionHeaderComponent({
   canCloseShift,
   onShowCloseSession,
   contextLabel,
+  onBack,
 }: PosSessionHeaderProps) {
   return (
     <div className="border-b border-border/60 px-2 py-2 md:px-3 md:py-1.5">
       <div className="flex w-full items-center justify-between gap-2">
-        {/* Desktop sidebar: back link inline. Mobile: gom vào overflow menu
-            để header chỉ còn title + 1 nút duy nhất. */}
+        {/* Desktop sidebar: back link inline. Mobile: "Thoát" gom vào overflow
+            menu, còn nút back-to-table-gate (onBack) render bên dưới cạnh
+            contextLabel. */}
         <div className="hidden md:block">
           <EmployeePortalBackControl />
         </div>
+
+        {onBack ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-11 shrink-0 md:hidden"
+            onClick={onBack}
+            aria-label="Quay lại trang chính"
+          >
+            <IconArrowLeft />
+          </Button>
+        ) : null}
 
         <div className="flex min-w-0 flex-1 items-center justify-start gap-1.5 md:justify-center">
           {contextLabel ? (

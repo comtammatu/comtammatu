@@ -1270,9 +1270,9 @@ function PosDesktopInner({
         : `Bàn ${selectedTableNumber ?? ""}`
     : undefined;
 
-  // "Đổi bàn" / "Chọn bàn" trước đây ở header nhưng bị chen với "Thoát" + "Chốt ca"
-  // và đã có icon LayoutGrid trên FAB. Giờ gom hết vào FAB (xem PosMobileActionBar)
-  // để header chỉ còn 1 menu overflow ⋮.
+  // Back-to-main handler: dine_in → clear table → table gate; takeaway →
+  // flip mode → table gate. Wired to mobile header back arrow (next to số
+  // bàn) — bottom action bar không còn "Đổi bàn" để cashier khỏi với xa.
   const handleSwitchTableMode = useCallback(() => {
     if (cartOrderType === "dine_in") {
       setShowOrders(false);
@@ -1350,6 +1350,11 @@ function PosDesktopInner({
           canCloseShift={canCloseShift}
           onShowCloseSession={openCloseSession}
           contextLabel={mobileHeaderContextLabel}
+          onBack={
+            orderContextReady && !isAppendingToOrder
+              ? handleSwitchTableMode
+              : undefined
+          }
         />
       </div>
 
@@ -1384,18 +1389,14 @@ function PosDesktopInner({
         isMobile={isMobile}
         isAppendingToOrder={isAppendingToOrder}
         menuContextReady={menuContextReady}
-        cartOrderType={cartOrderType}
-        selectedTableId={selectedTableId}
         cartQuantity={cartQuantity}
         appendDraftQuantity={appendDraftQuantity}
         ordersCount={orders.length}
-        hasAwaitingPayment={latestAwaitingPaymentOrderId !== null}
         onOpenOrdersDrawer={() => {
           setShowOrders(true);
           void refreshOrders();
           setCartDrawerOpen(true);
         }}
-        onSwitchTableMode={handleSwitchTableMode}
         onOpenCartDrawer={() => {
           setShowOrders(false);
           setCartDrawerOpen(true);
@@ -1403,13 +1404,6 @@ function PosDesktopInner({
         onOpenAppendDrawer={() => {
           setShowOrders(false);
           setCartDrawerOpen(true);
-        }}
-        onOpenLatestPaymentBill={() => {
-          if (latestAwaitingPaymentOrderId !== null) {
-            openBill(latestAwaitingPaymentOrderId, "receipt");
-          } else {
-            toast.message("Không có đơn chờ thanh toán");
-          }
         }}
       />
       {mobileSidebarDrawer}
