@@ -1669,7 +1669,13 @@ export async function markOrderItemServed(
 
 export async function fetchOrderItemsForReorder(
   orderId: number,
-): Promise<ActionResult<{ items: CartItem[]; skippedCount: number }>> {
+): Promise<
+  ActionResult<{
+    items: CartItem[];
+    skippedCount: number;
+    priceChangedCount: number;
+  }>
+> {
   const parsedId = orderIdSchema.safeParse(orderId);
   if (!parsedId.success) {
     return { success: false, error: "Order ID không hợp lệ" };
@@ -1723,27 +1729,11 @@ export async function fetchOrderItemsForReorder(
   });
   const menuIds = [...new Set([...mainIds, ...sideIds])];
   if (menuIds.length === 0) {
-    return { success: true, data: { items: [], skippedCount: 0 } };
-  }
-
-  const { data: menuRows, error: menuErr } = await supabase
-    .from("menu_items")
-    .select("id, is_active, base_price")
-    .eq("tenant_id", claims.tenant_id)
-    .in("id", menuIds);
-
-  if (menuErr) {
     return {
-      success: false,
-      error: "Không thể kiểm tra thực đơn.",
+      success: true,
+      data: { items: [], skippedCount: 0, priceChangedCount: 0 },
     };
   }
-
-  const livePrices = new Map(
-    (menuRows ?? [])
-      .filter((m) => m.is_active === true)
-      .map((m) => [m.id, Number(m.base_price)]),
-  );
 
   const variantIds = [
     ...new Set(
@@ -1752,28 +1742,6 @@ export async function fetchOrderItemsForReorder(
         .filter((id): id is number => typeof id === "number"),
     ),
   ];
-
-  const liveVariantAdj = new Map<number, number>();
-  if (variantIds.length > 0) {
-    const { data: variantRows, error: variantErr } = await supabase
-      .from("menu_item_variants")
-      .select("id, is_active, price_adjustment")
-      .eq("tenant_id", claims.tenant_id)
-      .in("id", variantIds);
-
-    if (variantErr) {
-      return {
-        success: false,
-        error: "Không thể kiểm tra biến thể thực đơn.",
-      };
-    }
-
-    for (const v of variantRows ?? []) {
-      if (v.is_active === true) {
-        liveVariantAdj.set(v.id, Number(v.price_adjustment ?? 0));
-      }
-    }
-  }
 
   const modifierIds = [
     ...new Set(
@@ -1786,30 +1754,67 @@ export async function fetchOrderItemsForReorder(
     ),
   ];
 
-  const liveModifierPrices = new Map<number, number>();
-  if (modifierIds.length > 0) {
-    const { data: modifierRows, error: modifierErr } = await supabase
-      .from("menu_item_modifiers")
-      .select("id, is_active, price")
+  // Parallel fetch: menu base prices, variant adjustments, modifier prices.
+  // Trước đây chạy tuần tự ⇒ 3 round-trips; reorder chậm khi mạng lag. Three
+  // queries không phụ thuộc nhau, an toàn để Promise.all → 1 wall-time RTT.
+  const [menuRes, variantRes, modifierRes] = await Promise.all([
+    supabase
+      .from("menu_items")
+      .select("id, is_active, base_price")
       .eq("tenant_id", claims.tenant_id)
-      .in("id", modifierIds);
+      .in("id", menuIds),
+    variantIds.length > 0
+      ? supabase
+          .from("menu_item_variants")
+          .select("id, is_active, price_adjustment")
+          .eq("tenant_id", claims.tenant_id)
+          .in("id", variantIds)
+      : Promise.resolve(null),
+    modifierIds.length > 0
+      ? supabase
+          .from("menu_item_modifiers")
+          .select("id, is_active, price")
+          .eq("tenant_id", claims.tenant_id)
+          .in("id", modifierIds)
+      : Promise.resolve(null),
+  ]);
 
-    if (modifierErr) {
-      return {
-        success: false,
-        error: "Không thể kiểm tra tùy chọn thực đơn.",
-      };
+  if (menuRes.error) {
+    return { success: false, error: "Không thể kiểm tra thực đơn." };
+  }
+  if (variantRes && variantRes.error) {
+    return { success: false, error: "Không thể kiểm tra biến thể thực đơn." };
+  }
+  if (modifierRes && modifierRes.error) {
+    return { success: false, error: "Không thể kiểm tra tùy chọn thực đơn." };
+  }
+
+  const livePrices = new Map(
+    (menuRes.data ?? [])
+      .filter((m) => m.is_active === true)
+      .map((m) => [m.id, Number(m.base_price)]),
+  );
+
+  const liveVariantAdj = new Map<number, number>();
+  for (const v of variantRes?.data ?? []) {
+    if (v.is_active === true) {
+      liveVariantAdj.set(v.id, Number(v.price_adjustment ?? 0));
     }
+  }
 
-    for (const m of modifierRows ?? []) {
-      if (m.is_active === true) {
-        liveModifierPrices.set(m.id, Number(m.price ?? 0));
-      }
+  const liveModifierPrices = new Map<number, number>();
+  for (const m of modifierRes?.data ?? []) {
+    if (m.is_active === true) {
+      liveModifierPrices.set(m.id, Number(m.price ?? 0));
     }
   }
 
   const cartItems: CartItem[] = [];
   let skippedCount = 0;
+  // Đếm dòng có chênh lệch giữa giá lưu trên `order_items.unit_price` (snapshot
+  // lúc gửi bếp) và giá menu hiện tại (base + variant). Cashier cần biết để
+  // không reorder mặc định mà bỏ qua giá đã đổi sau đó.
+  let priceChangedCount = 0;
 
   for (const r of rows ?? []) {
     const basePrice = livePrices.get(r.menu_item_id);
@@ -1826,6 +1831,11 @@ export async function fetchOrderItemsForReorder(
     }
     const variantAdj =
       variantId != null ? (liveVariantAdj.get(variantId) ?? 0) : 0;
+
+    const newUnitPrice = basePrice + variantAdj;
+    if (Math.abs(newUnitPrice - Number(r.unit_price)) > 0.5) {
+      priceChangedCount += 1;
+    }
 
     const modsRaw = Array.isArray(r.modifiers)
       ? (r.modifiers as { modifier_id: number; name: string; price: number }[])
@@ -1885,7 +1895,7 @@ export async function fetchOrderItemsForReorder(
       item_name: r.item_name,
       variant_name: r.variant_name ?? undefined,
       quantity: r.quantity,
-      unit_price: basePrice + variantAdj,
+      unit_price: newUnitPrice,
       modifiers: liveMods,
       sides: liveSides,
       note: r.note ?? undefined,
@@ -1894,6 +1904,6 @@ export async function fetchOrderItemsForReorder(
 
   return {
     success: true,
-    data: { items: cartItems, skippedCount },
+    data: { items: cartItems, skippedCount, priceChangedCount },
   };
 }

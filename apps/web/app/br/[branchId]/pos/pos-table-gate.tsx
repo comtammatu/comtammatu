@@ -86,7 +86,7 @@ const TableButton = memo(function TableButton({
                   : "secondary"
           }
           className={cn(
-            "min-w-0 truncate text-[10px] font-semibold @[9rem]/table-card:text-xs",
+            "min-w-0 truncate text-xs font-semibold",
             isSelected &&
               "border-primary-foreground/30 bg-primary-foreground/15 text-primary-foreground",
           )}
@@ -106,7 +106,7 @@ const TableButton = memo(function TableButton({
           {orderCount >= 2 && (
             <Badge
               variant="secondary"
-              className="w-fit text-[10px] font-semibold @[9rem]/table-card:text-xs"
+              className="w-fit text-xs font-semibold"
             >
               {orderCount} hóa đơn
             </Badge>

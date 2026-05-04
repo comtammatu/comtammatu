@@ -94,7 +94,7 @@ export function OrderItemActionsSheet({
       <SheetContent
         side="bottom"
         showCloseButton={false}
-        className="flex max-h-[80vh] flex-col gap-0 px-0 pb-[env(safe-area-inset-bottom)] sm:mx-auto sm:max-w-md"
+        className="pos-safe-bottom max-h-dvh-80 flex flex-col gap-0 px-0 sm:mx-auto sm:max-w-md"
       >
         <SheetHeader className="border-b border-border/60 px-3 py-2.5 text-left sm:px-4">
           <SheetTitle className="text-base">Thao tác món</SheetTitle>

@@ -112,8 +112,13 @@ export function useCart() {
   const snapshot = useCartSnapshot();
   const actions = useCartActions();
 
-  const total = calcCartTotal(snapshot.items);
-  const quantity = snapshot.items.reduce((sum, i) => sum + i.quantity, 0);
+  const { total, quantity } = useMemo(
+    () => ({
+      total: calcCartTotal(snapshot.items),
+      quantity: snapshot.items.reduce((sum, i) => sum + i.quantity, 0),
+    }),
+    [snapshot.items],
+  );
 
   return {
     items: snapshot.items,

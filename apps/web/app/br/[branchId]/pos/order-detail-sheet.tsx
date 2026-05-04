@@ -266,7 +266,11 @@ export interface OrderDetailSheetProps {
    * sheet just hands off the snapshot. Optional: not all hosts (mobile waiter
    * portal) need edit yet. */
   onStartEditSent?: (snapshot: OrderItemRowData) => void;
-  onReorderToCart: (items: CartItem[], skippedCount: number) => void;
+  onReorderToCart: (
+    items: CartItem[],
+    skippedCount: number,
+    priceChangedCount: number,
+  ) => void;
   tables: BranchTable[];
   /** Map<table_id, count of active orders> — drives the "N đơn" indicator
    * in the transfer-table dropdown so the cashier sees that the target
@@ -624,7 +628,11 @@ export function OrderDetailSheet({
     startTransition(async () => {
       const r = await fetchOrderItemsForReorder(orderId);
       if (r.success && r.data) {
-        onReorderToCart(r.data.items, r.data.skippedCount);
+        onReorderToCart(
+          r.data.items,
+          r.data.skippedCount,
+          r.data.priceChangedCount,
+        );
         onClose();
       } else {
         notify.error(r.error ?? messages.pos.order.reorderLoadFailed);
@@ -668,10 +676,10 @@ export function OrderDetailSheet({
     });
   };
 
-  const handleClearDiscount = () => {
+  const handleClearDiscount = (reason: string) => {
     if (orderId === null) return;
     startTransition(async () => {
-      const r = await clearOrderDiscount(branchId, orderId);
+      const r = await clearOrderDiscount(branchId, orderId, reason);
       if (r.success) {
         notify.success("Đã bỏ chiết khấu");
         setShowDiscount(false);

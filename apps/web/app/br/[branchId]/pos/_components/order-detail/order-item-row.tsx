@@ -112,7 +112,7 @@ export function OrderItemRow({ row, onTap }: OrderItemRowProps) {
             afterTitle={
               <Badge
                 variant={statusInfo.variant}
-                className="h-5 shrink-0 px-1.5 py-0 text-[10px] font-semibold uppercase tracking-wide"
+                className="h-5 shrink-0 px-1.5 py-0 text-xs font-semibold uppercase tracking-wide"
               >
                 {statusInfo.label}
               </Badge>

@@ -1473,7 +1473,7 @@ function PosDesktopInner({
           closeOrderDetail();
           handleStartEditSent(snapshot);
         }}
-        onReorderToCart={(items, skippedCount) => {
+        onReorderToCart={(items, skippedCount, priceChangedCount) => {
           replaceCartItems(items);
           setShowOrders(false);
           if (skippedCount > 0) {
@@ -1482,6 +1482,11 @@ function PosDesktopInner({
             );
           } else {
             toast.success("Đã sao chép vào giỏ");
+          }
+          if (priceChangedCount > 0) {
+            toast.warning(
+              `${String(priceChangedCount)} món đã đổi giá kể từ đơn cũ — kiểm tra trước khi gửi bếp.`,
+            );
           }
         }}
         tables={tables}

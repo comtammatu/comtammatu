@@ -153,7 +153,7 @@ const MenuItemButton = memo(function MenuItemButton({
       {/* Tên món — overlay đáy ảnh, text trắng + drop-shadow chống lệch nền. */}
       <span
         className={cn(
-          "absolute inset-x-3 bottom-3 z-10 line-clamp-2 text-base font-bold leading-snug text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)] md:inset-x-4 md:bottom-4 md:text-lg",
+          "pos-text-overlay absolute inset-x-3 bottom-3 z-10 line-clamp-2 text-base font-bold leading-snug text-white md:inset-x-4 md:bottom-4 md:text-lg",
           sparseMenu && "md:text-2xl",
         )}
       >

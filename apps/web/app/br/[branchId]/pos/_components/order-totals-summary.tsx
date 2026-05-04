@@ -74,12 +74,7 @@ export function OrderTotalsSummary({
             <span className="tabular-nums">-{formatVND(discountAmount)}</span>
           </div>
           {discountNote && (
-            <div
-              className={cn(
-                "italic text-muted-foreground",
-                isCompact ? "text-[11px]" : "text-xs",
-              )}
-            >
+            <div className="text-xs italic text-muted-foreground">
               Lý do: {discountNote}
             </div>
           )}

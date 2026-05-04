@@ -157,7 +157,7 @@ function CartPaneComponent({
                     type="button"
                     variant="outline"
                     size="sm"
-                    className="h-10 min-h-10 min-w-10 px-3 text-sm text-muted-foreground sm:min-h-11 sm:min-w-11"
+                    className="min-h-11 min-w-11 px-3 text-sm text-muted-foreground"
                     onClick={() => {
                       if (onReturnToTables) {
                         onReturnToTables();
@@ -175,7 +175,7 @@ function CartPaneComponent({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="h-10 min-h-10 min-w-10 shrink-0 px-3 text-sm text-muted-foreground sm:min-h-11 sm:min-w-11"
+                  className="min-h-11 min-w-11 shrink-0 px-3 text-sm text-muted-foreground"
                   onClick={() => setClearConfirmOpen(true)}
                 >
                   <IconTrash data-icon="inline-start" />

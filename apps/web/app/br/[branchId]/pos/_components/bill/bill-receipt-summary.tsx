@@ -150,7 +150,7 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
           </div>
         )}
         {order.discount_amount > 0 && order.discount_note && (
-          <div className="text-[11px] italic text-muted-foreground">
+          <div className="text-xs italic text-muted-foreground">
             Lý do: {order.discount_note}
           </div>
         )}

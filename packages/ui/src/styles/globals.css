@@ -339,6 +339,22 @@
   max-height: 95dvh;
 }
 
+/* Override: 80% of dynamic viewport for short bottom sheets (item action
+ * picker, quick reason chips) — keep underlying menu visible while the
+ * sheet is open so cashier doesn't lose context. */
+@utility max-h-dvh-80 {
+  max-height: 80dvh;
+}
+
+/* Override: drop-shadow for white text overlaid on POS menu item images.
+ * The default Tailwind drop-shadow utilities are too light (opacity 5–7%)
+ * to maintain WCAG contrast against the wide range of food photos a tenant
+ * can upload, so we pin a stronger 60% black for legibility. Filter rather
+ * than `text-shadow` so it composes with the element's existing transforms. */
+@utility pos-text-overlay {
+  filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.6));
+}
+
 /* Override: iOS + Android safe-area handling for POS floating bars.
  * iOS home indicator (~34pt) and Android gesture/3-button nav sit inside
  * `inset-x-3 bottom-3` floating action bars under PWA standalone mode

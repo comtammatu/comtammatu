@@ -43,8 +43,9 @@ interface DiscountSheetProps {
     value: number;
     note: string;
   }) => void;
-  /** Bỏ chiết khấu (gọi clear_order_discount). Chỉ active khi đang có discount. */
-  onClear: () => void;
+  /** Bỏ chiết khấu (gọi clear_order_discount). Chỉ active khi đang có discount.
+   * Reason ≥3 ký tự — cùng ô textarea với "Áp dụng" để giữ UX gọn. */
+  onClear: (reason: string) => void;
 }
 
 /**
@@ -115,6 +116,7 @@ export function DiscountSheet({
   const noteValid = noteTrimLen >= 3;
   const valueValid = previewDiscountAmount > 0;
   const canApply = noteValid && valueValid && !isPending;
+  const canClear = hasExistingDiscount && noteValid && !isPending;
 
   const handleClose = () => {
     if (isPending) return;
@@ -124,6 +126,11 @@ export function DiscountSheet({
   const handleApply = () => {
     if (!canApply) return;
     onSubmit({ type, value: numericValue, note: note.trim() });
+  };
+
+  const handleClear = () => {
+    if (!canClear) return;
+    onClear(note.trim());
   };
 
   return (
@@ -183,7 +190,8 @@ export function DiscountSheet({
                 rows={2}
               />
               <FieldDescription>
-                Tối thiểu 3 ký tự. ({noteTrimLen}/3)
+                Tối thiểu 3 ký tự. ({noteTrimLen}/3) — dùng cho cả "Áp
+                dụng" và "Bỏ chiết khấu" (lưu vào nhật ký kiểm toán).
               </FieldDescription>
             </Field>
           </FieldGroup>
@@ -221,8 +229,13 @@ export function DiscountSheet({
             <Button
               type="button"
               variant="destructive"
-              disabled={isPending}
-              onClick={onClear}
+              disabled={!canClear}
+              onClick={handleClear}
+              title={
+                !noteValid
+                  ? "Nhập lý do bỏ chiết khấu (≥3 ký tự) — sẽ lưu vào nhật ký kiểm toán."
+                  : undefined
+              }
               className="sm:order-first"
             >
               Bỏ chiết khấu

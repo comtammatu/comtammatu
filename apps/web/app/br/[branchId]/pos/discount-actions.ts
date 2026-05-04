@@ -4,6 +4,7 @@ import { z } from "zod";
 import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "../../_lib/auth";
+import { logAudit } from "../../../admin/_lib/audit";
 import { POS_ERROR_CODES } from "./_utils/error-codes";
 
 /* ─── Constants ─── */
@@ -254,18 +255,31 @@ export async function applyOrderDiscount(
 
 /* ─── clearOrderDiscount ─── */
 
+const clearDiscountInputSchema = z.object({
+  orderId: orderIdSchema,
+  reason: z
+    .string()
+    .trim()
+    .min(3, { error: "Lý do bỏ chiết khấu tối thiểu 3 ký tự" })
+    .max(200, { error: "Lý do quá dài (max 200 ký tự)" }),
+});
+
 export async function clearOrderDiscount(
   branchId: number,
   orderId: number,
+  reason: string,
 ): Promise<ActionResult<{ order_id: number; total_amount: number }>> {
   const parsedBranch = branchIdSchema.safeParse(branchId);
   if (!parsedBranch.success) {
     return { success: false, error: "Branch ID không hợp lệ" };
   }
 
-  const parsedOrder = orderIdSchema.safeParse(orderId);
-  if (!parsedOrder.success) {
-    return { success: false, error: "Order ID không hợp lệ" };
+  const parsed = clearDiscountInputSchema.safeParse({ orderId, reason });
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+    };
   }
 
   const ctx = await getAuthContextWithPermission(
@@ -280,8 +294,19 @@ export async function clearOrderDiscount(
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }
 
+  // Snapshot discount cũ ngay TRƯỚC RPC để audit ghi lại đầy đủ — sau RPC
+  // các cột này về NULL nên không recover được nữa. Đơn nằm khác branch sẽ
+  // bị RLS lọc → `oldData=null`, RPC vẫn raise tenant/branch mismatch.
+  const { data: existing } = await supabase
+    .from("orders")
+    .select("discount_type, discount_value, discount_amount, discount_note")
+    .eq("id", parsed.data.orderId)
+    .eq("tenant_id", claims.tenant_id)
+    .eq("branch_id", parsedBranch.data)
+    .maybeSingle();
+
   const { data, error } = await supabase.rpc("clear_order_discount", {
-    p_order_id: parsedOrder.data,
+    p_order_id: parsed.data.orderId,
   });
 
   if (error) {
@@ -296,6 +321,27 @@ export async function clearOrderDiscount(
   if (!result) {
     return { success: false, error: "Không thể bỏ chiết khấu. Vui lòng thử lại." };
   }
+
+  // Fire-and-forget audit. Cashier xoá chiết khấu = tác động tài chính
+  // nên cần trace lý do; đối xứng với `apply_order_discount` (đã ghi note
+  // vào `orders.discount_note`) và `void_order_item` (RPC tự log).
+  await logAudit(supabase, {
+    action: "order.discount.cleared",
+    entityType: "orders",
+    entityId: result.order_id,
+    oldData: existing
+      ? {
+          discount_type: existing.discount_type,
+          discount_value: existing.discount_value,
+          discount_amount: existing.discount_amount,
+          discount_note: existing.discount_note,
+        }
+      : null,
+    newData: {
+      reason: parsed.data.reason,
+      total_amount: Number(result.total_amount),
+    },
+  });
 
   return {
     success: true,
