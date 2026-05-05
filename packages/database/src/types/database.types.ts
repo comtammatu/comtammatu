@@ -7879,6 +7879,17 @@ export type Database = {
           vietqr_revenue: number
         }[]
       }
+      get_finance_dashboard_summary: {
+        Args: { p_branch_id?: number; p_end_date: string; p_start_date: string }
+        Returns: {
+          failed_webhook_count: number
+          invoice_attention_count: number
+          invoice_issued_count: number
+          invoice_not_required_count: number
+          journal_draft_count: number
+          journal_posted_count: number
+        }[]
+      }
       get_food_cost: {
         Args: {
           p_branch_id?: number
