@@ -153,6 +153,10 @@ const VI_DICTIONARY: InventoryDictionary = {
       short: "SL hệ thống",
       long: "Số lượng hệ thống",
     },
+    preStocktakeQuantity: {
+      short: "SL trước kiểm kê",
+      long: "Số lượng trước kiểm kê",
+    },
     countedQuantity: {
       short: "SL thực đếm",
       long: "Số lượng thực đếm",
