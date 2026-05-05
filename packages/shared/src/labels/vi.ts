@@ -18,7 +18,8 @@ export type ModuleLabelKey =
   | "kds"
   | "branch_settings"
   | "employee"
-  | "notifications";
+  | "notifications"
+  | "feedback";
 
 type SiteLike = {
   branch_kind?: string | null;
@@ -43,6 +44,7 @@ export const MODULE_LABELS_VI: Record<ModuleLabelKey, string> = {
   branch_settings: "Cài đặt chi nhánh",
   employee: "Cổng nhân viên",
   notifications: "Thông báo",
+  feedback: "Phản ánh khách",
 };
 
 export const NAV_GROUP_LABELS_VI = {

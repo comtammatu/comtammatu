@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
-import type { Database } from "../types/database.types";
+import type { Database } from "../index";
 
 /**
  * Middleware Supabase client — refreshes session cookies.

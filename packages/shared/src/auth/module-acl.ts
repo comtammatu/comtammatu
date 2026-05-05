@@ -24,7 +24,8 @@ export type ModuleKey =
   | "kds"
   | "branch_settings"
   | "employee"
-  | "notifications";
+  | "notifications"
+  | "feedback";
 
 interface ModuleAcl {
   path: string;
@@ -135,6 +136,11 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     path: "/notifications",
     allowedRoles: STAFF_ROLES,
     label: getModuleLabelVi("notifications"),
+  },
+  feedback: {
+    path: "/admin/feedback",
+    allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager"],
+    label: getModuleLabelVi("feedback"),
   },
 };
 

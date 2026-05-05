@@ -3,7 +3,7 @@
 import { Fragment, useMemo, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChartBar as IconChartBar, Briefcase as IconBriefcase, ChefHat as IconChefHat, LayoutDashboard as IconLayoutDashboard, LogOut as IconLogout, Monitor as IconDeviceDesktop, Package as IconPackage, Receipt as IconReceipt, Settings as IconSettings, ShieldCheck as IconShieldCheck, Users as IconUsers, Utensils as IconToolsKitchen, Wallet as IconWallet } from "lucide-react";
+import { ChartBar as IconChartBar, Briefcase as IconBriefcase, ChefHat as IconChefHat, LayoutDashboard as IconLayoutDashboard, LogOut as IconLogout, MessageSquare as IconMessageSquare, Monitor as IconDeviceDesktop, Package as IconPackage, Receipt as IconReceipt, Settings as IconSettings, ShieldCheck as IconShieldCheck, Users as IconUsers, Utensils as IconToolsKitchen, Wallet as IconWallet } from "lucide-react";
 import { canAccess, type StaffRole } from "@comtammatu/shared/auth";
 import {
   ROLE_LABEL_VI,
@@ -56,6 +56,7 @@ const ADMIN_ICON_MAP: Record<string, React.ElementType> = {
   Receipt: IconReceipt,
   ToolsKitchen: IconToolsKitchen,
   ShieldCheck: IconShieldCheck,
+  MessageSquare: IconMessageSquare,
 };
 
 function mapResolvedNavGroups(

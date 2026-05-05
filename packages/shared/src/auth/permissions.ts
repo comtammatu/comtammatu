@@ -89,6 +89,15 @@ export const PERMISSION_KEYS = {
   CRM_WRITE: "crm:write",
   CRM_CAMPAIGN_SEND: "crm:campaign_send",
 
+  // feedback (QR phản ánh khách)
+  FEEDBACK_VIEW: "feedback:view",
+  FEEDBACK_VIEW_PHONE: "feedback:view_phone",
+  FEEDBACK_VIEW_REPORT: "feedback:view_report",
+  FEEDBACK_MANAGE_QR: "feedback:manage_qr",
+  FEEDBACK_MANAGE_TELEGRAM: "feedback:manage_telegram",
+  FEEDBACK_MANAGE_SETTINGS: "feedback:manage_settings",
+  FEEDBACK_MODERATE: "feedback:moderate",
+
   // finance
   FINANCE_VIEW: "finance:view",
   FINANCE_EXPENSE_CREATE: "finance:expense_create",
@@ -133,7 +142,7 @@ export const PERMISSION_KEYS = {
 export type PermissionKey = (typeof PERMISSION_KEYS)[keyof typeof PERMISSION_KEYS];
 
 /** Total count (static assertion — update when adding keys) */
-export const PERMISSION_KEY_COUNT = 86;
+export const PERMISSION_KEY_COUNT = 93;
 
 /**
  * Pure function: check if a permission set contains a given key.

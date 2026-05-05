@@ -21,3 +21,17 @@ export const loginRateLimit = new Ratelimit({
   limiter: Ratelimit.slidingWindow(10, "5 m"),
   prefix: "rl:login",
 });
+
+/** Feedback submit rate limiter per QR token: 5 submissions per 30 minutes */
+export const feedbackTokenRateLimit = new Ratelimit({
+  redis: getRedis(),
+  limiter: Ratelimit.slidingWindow(5, "30 m"),
+  prefix: "feedback:tok",
+});
+
+/** Feedback submit rate limiter per IP: 20 submissions per 30 minutes */
+export const feedbackIpRateLimit = new Ratelimit({
+  redis: getRedis(),
+  limiter: Ratelimit.slidingWindow(20, "30 m"),
+  prefix: "feedback:ip",
+});
