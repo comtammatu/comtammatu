@@ -6,6 +6,7 @@ export const PUBLIC_APP_PATHS = [
   "/manifest.webmanifest",
   "/sw.js",
   "/access-denied",
+  "/payment/momo",
 ] as const;
 export const BETA_ROUTE_PREFIX = "/beta" as const;
 

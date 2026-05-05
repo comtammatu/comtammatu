@@ -69,6 +69,7 @@ export const PERMISSION_KEYS = {
   ORDERS_WRITE: "orders:write",
   ORDERS_VOID: "orders:void",
   ORDERS_REFUND: "orders:refund",
+  ORDERS_REFUND_APPROVE: "orders:refund_approve",
 
   // staff
   STAFF_VIEW: "staff:view",
@@ -133,7 +134,7 @@ export const PERMISSION_KEYS = {
 export type PermissionKey = (typeof PERMISSION_KEYS)[keyof typeof PERMISSION_KEYS];
 
 /** Total count (static assertion — update when adding keys) */
-export const PERMISSION_KEY_COUNT = 86;
+export const PERMISSION_KEY_COUNT = 87;
 
 /**
  * Pure function: check if a permission set contains a given key.

@@ -12,6 +12,70 @@ export type ActionContext = NonNullable<
   Awaited<ReturnType<typeof getAuthContext>>
 >;
 
+type PermissionLike = PermissionKey | string;
+
+type BaseActionOptions<TSchema extends z.ZodType> = {
+  roles: readonly StaffRole[];
+  schema: TSchema;
+  permission?: PermissionLike;
+  anyPermission?: readonly PermissionLike[];
+};
+
+type DirectActionOptions<TSchema extends z.ZodType> =
+  BaseActionOptions<TSchema> & {
+    /**
+     * When true and the authenticated role is `branch_manager` or `cashier`
+     * with `claims.branch_id == null`, reject with `branch_scope_unset`
+     * instead of allowing tenant-wide writes. Per m4-payments-fix P1-E:
+     * a branch-restricted role with no branch grant must NOT widen to
+     * tenant scope. Apply to refund, payment, and any branch-scoped
+     * mutating action.
+     */
+    requireBranchScope?: boolean;
+  };
+
+type FormActionOptions<TSchema extends z.ZodType> =
+  BaseActionOptions<TSchema> & {
+    extract: (fd: FormData) => unknown;
+  };
+
+const DEFAULT_VALIDATION_ERROR = "Dữ liệu không hợp lệ";
+const FORBIDDEN_ERROR = "Không có quyền";
+const BRANCH_SCOPE_UNSET_ERROR = "Tài khoản chưa được gán chi nhánh";
+
+async function resolveActionContext(
+  opts: Pick<
+    BaseActionOptions<z.ZodType>,
+    "roles" | "permission" | "anyPermission"
+  >,
+): Promise<ActionContext | null> {
+  if (opts.anyPermission) {
+    return getAuthContextWithAnyPermission(opts.roles, opts.anyPermission);
+  }
+
+  if (opts.permission) {
+    return getAuthContextWithPermission(opts.roles, opts.permission);
+  }
+
+  return getAuthContext(opts.roles);
+}
+
+function actionFailure(error: string): ActionResult {
+  return { success: false, error };
+}
+
+function validationFailure(message: string | undefined): ActionResult {
+  return actionFailure(message ?? DEFAULT_VALIDATION_ERROR);
+}
+
+function lacksRequiredBranchScope(ctx: ActionContext): boolean {
+  return (
+    (ctx.claims.user_role === "branch_manager" ||
+      ctx.claims.user_role === "cashier") &&
+    ctx.claims.branch_id == null
+  );
+}
+
 /**
  * Auth + Zod validation wrapper for direct-input server actions.
  *
@@ -29,21 +93,7 @@ export type ActionContext = NonNullable<
  * );
  */
 export function withAction<TSchema extends z.ZodType>(
-  opts: {
-    roles: readonly StaffRole[];
-    schema: TSchema;
-    permission?: PermissionKey | string;
-    anyPermission?: readonly (PermissionKey | string)[];
-    /**
-     * When true and the authenticated role is `branch_manager` or `cashier`
-     * with `claims.branch_id == null`, reject with `branch_scope_unset`
-     * instead of allowing tenant-wide writes. Per m4-payments-fix P1-E:
-     * a branch-restricted role with no branch grant must NOT widen to
-     * tenant scope. Apply to refund, payment, and any branch-scoped
-     * mutating action.
-     */
-    requireBranchScope?: boolean;
-  },
+  opts: DirectActionOptions<TSchema>,
   handler: (
     data: z.infer<TSchema>,
     ctx: ActionContext,
@@ -52,25 +102,16 @@ export function withAction<TSchema extends z.ZodType>(
   return async (input) => {
     const result = opts.schema.safeParse(input);
     if (!result.success) {
-      return {
-        success: false,
-        error: result.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
-      };
+      return validationFailure(result.error.issues[0]?.message);
     }
-    const ctx = opts.anyPermission
-      ? await getAuthContextWithAnyPermission(opts.roles, opts.anyPermission)
-      : opts.permission
-        ? await getAuthContextWithPermission(opts.roles, opts.permission)
-        : await getAuthContext(opts.roles);
-    if (!ctx) return { success: false, error: "Không có quyền" };
-    if (
-      opts.requireBranchScope &&
-      (ctx.claims.user_role === "branch_manager" ||
-        ctx.claims.user_role === "cashier") &&
-      ctx.claims.branch_id == null
-    ) {
-      return { success: false, error: "Tài khoản chưa được gán chi nhánh" };
+
+    const ctx = await resolveActionContext(opts);
+    if (!ctx) return actionFailure(FORBIDDEN_ERROR);
+
+    if (opts.requireBranchScope && lacksRequiredBranchScope(ctx)) {
+      return actionFailure(BRANCH_SCOPE_UNSET_ERROR);
     }
+
     return handler(result.data, ctx);
   };
 }
@@ -101,13 +142,7 @@ export function withAction<TSchema extends z.ZodType>(
  * );
  */
 export function withFormAction<TSchema extends z.ZodType>(
-  opts: {
-    roles: readonly StaffRole[];
-    schema: TSchema;
-    extract: (fd: FormData) => unknown;
-    permission?: PermissionKey | string;
-    anyPermission?: readonly (PermissionKey | string)[];
-  },
+  opts: FormActionOptions<TSchema>,
   handler: (
     data: z.infer<TSchema>,
     ctx: ActionContext,
@@ -120,17 +155,12 @@ export function withFormAction<TSchema extends z.ZodType>(
     const raw = opts.extract(formData);
     const result = opts.schema.safeParse(raw);
     if (!result.success) {
-      return {
-        success: false,
-        error: result.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
-      };
+      return validationFailure(result.error.issues[0]?.message);
     }
-    const ctx = opts.anyPermission
-      ? await getAuthContextWithAnyPermission(opts.roles, opts.anyPermission)
-      : opts.permission
-        ? await getAuthContextWithPermission(opts.roles, opts.permission)
-        : await getAuthContext(opts.roles);
-    if (!ctx) return { success: false, error: "Không có quyền" };
+
+    const ctx = await resolveActionContext(opts);
+    if (!ctx) return actionFailure(FORBIDDEN_ERROR);
+
     return handler(result.data, ctx);
   };
 }
