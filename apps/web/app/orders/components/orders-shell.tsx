@@ -13,7 +13,7 @@ import { ORDER_VI } from "@comtammatu/shared/messages";
 const NAV_GROUPS: ShellNavGroup[] = [
   {
     title: "Đơn hàng",
-    items: [{ href: "/orders", label: "Tổng quan", icon: IconReceipt }],
+    items: [{ href: "/orders", label: "Đơn hàng", icon: IconReceipt }],
   },
 ];
 

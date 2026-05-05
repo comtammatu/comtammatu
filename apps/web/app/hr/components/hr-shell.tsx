@@ -20,7 +20,7 @@ const NAV_GROUPS: ShellNavGroup[] = [
   {
     title: "Nhân sự",
     items: [
-      { href: "/hr", label: "Tổng quan", icon: IconBriefcase },
+      { href: "/hr", label: "Nhân sự", icon: IconBriefcase },
       {
         href: "/hr/employees",
         label: "Nhân viên",

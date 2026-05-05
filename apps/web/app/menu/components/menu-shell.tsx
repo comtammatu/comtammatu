@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { LayoutDashboard as IconLayoutDashboard, Utensils as IconToolsKitchen } from "lucide-react";
+import {
+  LayoutDashboard as IconLayoutDashboard,
+  Utensils as IconToolsKitchen,
+} from "lucide-react";
 import type { ReactNode } from "react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { Button } from "@comtammatu/ui/components/button";
@@ -11,9 +14,7 @@ import type { ShellNavGroup } from "@/lib/shell-primitives";
 const NAV_GROUPS: ShellNavGroup[] = [
   {
     title: "Thực đơn",
-    items: [
-      { href: "/menu", label: "Tổng quan", icon: IconLayoutDashboard },
-    ],
+    items: [{ href: "/menu", label: "Thực đơn", icon: IconLayoutDashboard }],
   },
 ];
 

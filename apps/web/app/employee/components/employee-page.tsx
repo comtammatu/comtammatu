@@ -15,7 +15,6 @@ import {
   Item,
   ItemActions,
   ItemContent,
-  ItemDescription,
   ItemGroup,
   ItemMedia,
   ItemTitle,
@@ -52,7 +51,6 @@ interface EmployeePageProps {
 
 export function EmployeePage({
   title,
-  description,
   badge,
   action,
   children,
@@ -71,11 +69,6 @@ export function EmployeePage({
               </Badge>
             ) : null}
           </div>
-          {description ? (
-            <p className="max-w-2xl text-sm text-muted-foreground">
-              {description}
-            </p>
-          ) : null}
         </div>
         {action ? (
           <div className="flex shrink-0 items-center">{action}</div>
@@ -231,7 +224,6 @@ export function EmployeeActionItem({
   href,
   icon: Icon,
   title,
-  description,
 }: EmployeeActionItemProps) {
   return (
     <Item asChild variant="outline" className="items-center">
@@ -243,9 +235,6 @@ export function EmployeeActionItem({
         ) : null}
         <ItemContent>
           <ItemTitle>{title}</ItemTitle>
-          {description ? (
-            <ItemDescription>{description}</ItemDescription>
-          ) : null}
         </ItemContent>
         <ItemActions>
           <IconChevronRight className="size-4 text-muted-foreground" />

@@ -1,12 +1,10 @@
 "use client";
 
 import { Fragment, useMemo, type ComponentType, type ReactNode } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  ArrowLeft as IconArrowLeft,
-  LogOut as IconLogout,
-} from "lucide-react";
+import { ArrowLeft as IconArrowLeft, LogOut as IconLogout } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { ROLE_LABEL_VI } from "@comtammatu/shared/auth";
 import { Avatar, AvatarFallback } from "@comtammatu/ui/components/avatar";
@@ -41,10 +39,14 @@ import {
   type ShellNavGroup,
 } from "@/lib/shell-primitives";
 
+const DEFAULT_BRAND_MARK_SRC = "/brand/logo-matu-seal.png";
+
 interface BrandConfig {
   icon: ComponentType<{ className?: string }>;
   subLabel: string;
   mainLabel: ReactNode;
+  logoSrc?: string | null;
+  logoAlt?: string;
   /** Show "back to admin" link above brand block. Default true. */
   showBackLink?: boolean;
 }
@@ -92,6 +94,8 @@ export function AppShell({
   }, [navGroups, pathname, defaultPageTitle]);
 
   const BrandIcon = brand.icon;
+  const logoSrc =
+    brand.logoSrc === undefined ? DEFAULT_BRAND_MARK_SRC : brand.logoSrc;
   const showBackLink = brand.showBackLink ?? true;
   const triggerClass = collapsible === "icon" ? undefined : "md:hidden";
   const breadcrumbSegments = pageHeader.breadcrumbSegments ?? [];
@@ -110,14 +114,30 @@ export function AppShell({
             </Link>
           ) : null}
           <div className="flex items-center gap-3">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
-              <BrandIcon className="size-5" />
+            <div
+              className={
+                logoSrc
+                  ? "flex size-10 shrink-0 items-center justify-center rounded-md border bg-sidebar-accent p-1"
+                  : "flex size-10 shrink-0 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground"
+              }
+            >
+              {logoSrc ? (
+                <Image
+                  src={logoSrc}
+                  alt={brand.logoAlt ?? "Cơm Tấm Má Tư"}
+                  width={64}
+                  height={64}
+                  className="size-full object-contain"
+                />
+              ) : (
+                <BrandIcon className="size-5" />
+              )}
             </div>
             <div className="min-w-0 flex-1 space-y-0.5 group-data-[collapsible=icon]:hidden">
               <p className="text-xs font-semibold uppercase tracking-wide text-sidebar-foreground/60">
                 {brand.subLabel}
               </p>
-              <p className="text-lg font-semibold leading-none">
+              <p className="font-heading text-lg font-semibold leading-none">
                 {brand.mainLabel}
               </p>
             </div>
@@ -185,48 +205,43 @@ export function AppShell({
       </Sidebar>
 
       <SidebarInset>
-        <header className="flex flex-col gap-4 border-b p-4 xl:flex-row xl:items-start xl:justify-between">
-          <div className="flex-1 space-y-3">
-            <div className="flex flex-wrap items-center gap-2">
+        <header className="border-b px-4 py-3">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex min-w-0 flex-1 items-center gap-3">
               <SidebarTrigger className={triggerClass} />
-              {breadcrumbSegments.length > 0 ? (
-                <Breadcrumb>
-                  <BreadcrumbList>
-                    {breadcrumbSegments.map((segment, idx) => (
-                      <Fragment key={`${segment}-${String(idx)}`}>
-                        <BreadcrumbItem>
-                          <BreadcrumbPage className="font-normal text-muted-foreground">
-                            {segment}
-                          </BreadcrumbPage>
-                        </BreadcrumbItem>
-                        {idx < breadcrumbSegments.length - 1 && (
-                          <BreadcrumbSeparator />
-                        )}
-                      </Fragment>
-                    ))}
-                  </BreadcrumbList>
-                </Breadcrumb>
-              ) : pageHeader.crumbLabel ? (
-                <Badge variant="outline">{pageHeader.crumbLabel}</Badge>
-              ) : null}
-              <Badge variant="secondary">{ROLE_LABEL_VI[role]}</Badge>
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                {breadcrumbSegments.length > 0 ? (
+                  <Breadcrumb>
+                    <BreadcrumbList>
+                      {breadcrumbSegments.map((segment, idx) => (
+                        <Fragment key={`${segment}-${String(idx)}`}>
+                          <BreadcrumbItem>
+                            <BreadcrumbPage className="font-normal text-muted-foreground">
+                              {segment}
+                            </BreadcrumbPage>
+                          </BreadcrumbItem>
+                          {idx < breadcrumbSegments.length - 1 && (
+                            <BreadcrumbSeparator />
+                          )}
+                        </Fragment>
+                      ))}
+                    </BreadcrumbList>
+                  </Breadcrumb>
+                ) : pageHeader.crumbLabel ? (
+                  <Badge variant="outline">{pageHeader.crumbLabel}</Badge>
+                ) : null}
+                <span className="truncate text-sm font-medium">
+                  {pageTitle}
+                </span>
+                <h1 className="sr-only">{pageTitle}</h1>
+              </div>
             </div>
-            <div className="space-y-1.5">
-              <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-                {pageTitle}
-              </h1>
-              {pageHeader.description ? (
-                <p className="max-w-3xl text-sm leading-6 text-muted-foreground sm:text-base">
-                  {pageHeader.description}
-                </p>
-              ) : null}
-            </div>
+            {pageHeader.actions ? (
+              <div className="flex shrink-0 flex-wrap items-center gap-2">
+                {pageHeader.actions}
+              </div>
+            ) : null}
           </div>
-          {pageHeader.actions ? (
-            <div className="flex flex-wrap items-center gap-2">
-              {pageHeader.actions}
-            </div>
-          ) : null}
         </header>
 
         <main id="main-content" className="flex-1 p-4">

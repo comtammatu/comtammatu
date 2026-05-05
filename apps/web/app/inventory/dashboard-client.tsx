@@ -402,7 +402,6 @@ const severityDot: Record<string, string> = {
 export function DashboardClient(props: DashboardProps) {
   const {
     routeBase,
-    siteName,
     siteKind,
     showProcurement,
     totalStockValue,
@@ -444,23 +443,14 @@ export function DashboardClient(props: DashboardProps) {
 
   return (
     <>
-      <InventoryHeader
-        title={tNav("home")}
-        description={`${siteName} • ${new Date().toLocaleDateString("vi-VN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}`}
-      />
+      <InventoryHeader title={tNav("home")} />
 
       <InventoryPageContent
         width={isMobile ? "narrow" : "wide"}
         contentClassName="gap-6"
       >
         <section className="flex flex-col gap-3">
-          <div className="flex flex-col gap-1">
-            <h2 className="text-base font-semibold">3 luồng vận hành chính</h2>
-            <p className="text-sm text-muted-foreground">
-              Bám theo 3 luồng cốt lõi: kiểm soát tồn, nhập - nhận hàng - đối
-              soát, điều phối và sản xuất.
-            </p>
-          </div>
+          <h2 className="text-base font-semibold">3 luồng vận hành chính</h2>
           <div className="grid gap-3 lg:grid-cols-3">
             {flowCards.map((flow) => {
               const Icon = flow.icon;

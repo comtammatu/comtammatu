@@ -1,8 +1,7 @@
 export const ITEM_NOTE_PRESETS = [
   "Không mỡ hành",
-  "Không nước mắm",
+  "Không đồ chua",
   "Ít cơm",
-  "Thêm cơm",
   "Để riêng",
   "Mang về",
 ] as const;
@@ -10,15 +9,12 @@ export const ITEM_NOTE_PRESETS = [
 export const VOID_ITEM_PRESETS = [
   "Khách đổi ý",
   "Bếp hết món",
-  "Nhập nhầm món",
-  "Sai biến thể",
+  "Nhập sai món",
   "Khách trả món",
-  "Hết nguyên liệu",
 ] as const;
 
 export const REDUCE_ITEM_PRESETS = [
   "Khách bớt phần",
-  "Khách no không hết",
   "Nhập dư số lượng",
   "Hết một phần nguyên liệu",
 ] as const;
@@ -27,7 +23,7 @@ export const CANCEL_ORDER_PRESETS = [
   "Khách rời quán",
   "Khách đổi ý",
   "Lỗi tạo đơn",
-  "Hết món chính",
+  "Hết món",
   "Sai bàn",
   "Trùng đơn",
 ] as const;

@@ -14,7 +14,6 @@ interface InventoryHeaderProps {
 
 export function InventoryHeader({
   title,
-  description,
   actions,
   className,
 }: InventoryHeaderProps) {
@@ -31,11 +30,6 @@ export function InventoryHeader({
       <div className="flex min-w-0 flex-1 items-center gap-4">
         <div className="flex min-w-0 flex-col">
           <h1 className="text-sm font-semibold leading-tight">{title}</h1>
-          {description ? (
-            <p className="truncate text-xs text-muted-foreground">
-              {description}
-            </p>
-          ) : null}
         </div>
       </div>
 
