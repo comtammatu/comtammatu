@@ -31,7 +31,7 @@ import {
 import { Plus as IconPlus, Trash as IconTrash } from "lucide-react";
 import { ACTIONS_VI, ERRORS_VI, FORM_VI } from "@comtammatu/shared/messages";
 import { FormattedNumberInput } from "@/components/form";
-import { createJournalEntry } from "../accounting-actions";
+import { createJournalEntry, postJournalEntry } from "../journal-actions";
 import type { JournalEntryRow, AccountOption } from "./page";
 
 interface Props {
@@ -45,6 +45,16 @@ interface LineForm {
   credit: string;
 }
 
+const REFERENCE_TYPES = [
+  { value: "manual", label: "Thủ công" },
+  { value: "adjustment", label: "Điều chỉnh" },
+  { value: "sale", label: "Bán hàng" },
+  { value: "purchase", label: "Mua hàng" },
+  { value: "payroll", label: "Lương" },
+] as const;
+
+type ReferenceType = (typeof REFERENCE_TYPES)[number]["value"];
+
 const emptyLine = (): LineForm => ({ accountId: "", debit: "", credit: "" });
 
 export function JournalClient({ entries: initial, accounts }: Props) {
@@ -53,10 +63,15 @@ export function JournalClient({ entries: initial, accounts }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<{
+    entryDate: string;
+    description: string;
+    refType: ReferenceType;
+    refId: string;
+  }>({
     entryDate: new Date().toISOString().slice(0, 10),
     description: "",
-    refType: "",
+    refType: "manual",
     refId: "",
   });
   const [lines, setLines] = useState<LineForm[]>([emptyLine(), emptyLine()]);
@@ -86,15 +101,15 @@ export function JournalClient({ entries: initial, accounts }: Props) {
         .filter((l) => l.accountId)
         .map((l) => ({
           accountId: Number(l.accountId),
-          debit: Number(l.debit) || 0,
-          credit: Number(l.credit) || 0,
+          debitAmount: Number(l.debit) || 0,
+          creditAmount: Number(l.credit) || 0,
         }));
 
       const res = await createJournalEntry({
         entryDate: form.entryDate,
         description: form.description,
-        refType: form.refType || undefined,
-        refId: form.refId ? Number(form.refId) : undefined,
+        referenceType: form.refType,
+        referenceId: form.refId ? Number(form.refId) : undefined,
         lines: parsedLines,
       });
 
@@ -111,15 +126,15 @@ export function JournalClient({ entries: initial, accounts }: Props) {
           "JE-pending",
         entry_date: form.entryDate,
         description: form.description,
-        ref_type: form.refType || null,
+        ref_type: form.refType,
         ref_id: form.refId ? Number(form.refId) : null,
-        status: "posted",
+        status: "draft",
         created_at: new Date().toISOString(),
         journal_entry_lines: parsedLines.map((l, idx) => ({
           id: idx,
           account_id: l.accountId,
-          debit: l.debit,
-          credit: l.credit,
+          debit: l.debitAmount,
+          credit: l.creditAmount,
           description: null,
         })),
       };
@@ -128,10 +143,27 @@ export function JournalClient({ entries: initial, accounts }: Props) {
       setForm({
         entryDate: new Date().toISOString().slice(0, 10),
         description: "",
-        refType: "",
+        refType: "manual",
         refId: "",
       });
       setLines([emptyLine(), emptyLine()]);
+    });
+  }
+
+  function handlePost(entryId: number) {
+    setError(null);
+    startTransition(async () => {
+      const res = await postJournalEntry({ id: entryId });
+      if (!res.success) {
+        setError(res.error ?? ERRORS_VI.unknown);
+        return;
+      }
+
+      setEntries((prev) =>
+        prev.map((entry) =>
+          entry.id === entryId ? { ...entry, status: "posted" } : entry,
+        ),
+      );
     });
   }
 
@@ -171,13 +203,14 @@ export function JournalClient({ entries: initial, accounts }: Props) {
                 <TableHead className="w-24">Tham chiếu</TableHead>
                 <TableHead className="w-24">{FORM_VI.status}</TableHead>
                 <TableHead className="w-32 text-right">Tổng nợ (₫)</TableHead>
+                <TableHead className="w-24" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {entries.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={5}
+                    colSpan={6}
                     className="py-10 text-center text-muted-foreground"
                   >
                     Chưa có bút toán nào.
@@ -207,6 +240,18 @@ export function JournalClient({ entries: initial, accounts }: Props) {
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
                         {totalDr.toLocaleString("vi-VN")}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {e.status === "draft" ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={isPending}
+                            onClick={() => handlePost(e.id)}
+                          >
+                            Ghi sổ
+                          </Button>
+                        ) : null}
                       </TableCell>
                     </TableRow>
                   );
@@ -248,13 +293,23 @@ export function JournalClient({ entries: initial, accounts }: Props) {
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-1.5">
                 <Label>Loại tham chiếu</Label>
-                <Input
-                  placeholder="VD: order, invoice"
+                <Select
                   value={form.refType}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    setForm((f) => ({ ...f, refType: e.target.value }))
+                  onValueChange={(value: ReferenceType) =>
+                    setForm((f) => ({ ...f, refType: value }))
                   }
-                />
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {REFERENCE_TYPES.map((type) => (
+                      <SelectItem key={type.value} value={type.value}>
+                        {type.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="grid gap-1.5">
                 <Label>ID tham chiếu</Label>
@@ -382,7 +437,7 @@ export function JournalClient({ entries: initial, accounts }: Props) {
                 lines.filter((l) => l.accountId).length < 2
               }
             >
-              Ghi sổ
+              Tạo nháp
             </Button>
           </DialogFooter>
         </DialogContent>

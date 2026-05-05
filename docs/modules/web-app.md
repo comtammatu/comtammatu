@@ -30,11 +30,7 @@ apps/web/app/
 │   ├── hr/                 # Admin-side HR reporting entrypoints (deep links continue to /hr workspace)
 │   │   └── payroll/        # Payroll periods list + [periodId] detail
 │   ├── crm/                # Placeholder / deferred
-│   ├── finance/            # Finance workflows + HĐĐT / VAS reporting
-│   │   ├── chart-of-accounts/ # Chart of accounts management
-│   │   ├── journal/        # Journal entries
-│   │   ├── food-cost/      # Food cost analysis
-│   │   └── statements/     # Financial statements
+│   ├── finance/            # Compatibility redirect → /finance/*
 │   ├── reports/            # CEO/HQ reports hub
 │   │   ├── revenue/        # Revenue reports
 │   │   ├── inventory-value/ # Inventory valuation reports
@@ -100,6 +96,19 @@ apps/web/app/
 │   ├── layout.tsx          # HR shell with auth guard
 │   ├── page.tsx            # HR dashboard
 │   └── payroll/            # Payroll periods list + [periodId] detail
+│
+├── finance/                # Finance workspace + HĐĐT / VAS reporting
+│   ├── layout.tsx          # Finance shell with auth guard
+│   ├── page.tsx            # Revenue + invoice overview
+│   ├── revenue/            # Revenue rollups + drilldown
+│   ├── reconciliation/     # POS/subledger ↔ GL reconciliation
+│   ├── chart-of-accounts/  # Chart of accounts management
+│   ├── journal/            # Journal entries
+│   ├── posting-rules/      # GL posting rules
+│   ├── food-cost/          # Food cost analysis
+│   ├── periods/            # Fiscal period management
+│   ├── audit-trail/        # Finance audit log
+│   └── statements/         # Financial statements
 │
 └── api/
     ├── health/route.ts     # GET health check

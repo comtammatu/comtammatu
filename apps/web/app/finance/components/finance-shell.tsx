@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import {
+  ArrowLeftRight as IconArrowLeftRight,
   ChartBar as IconChartBar,
   Book as IconBook,
   CalendarDays as IconCalendarEvent,
@@ -24,6 +25,11 @@ const NAV_GROUPS: ShellNavGroup[] = [
     items: [
       { href: "/finance", label: "Tài chính", icon: IconWallet },
       { href: "/finance/revenue", label: "Doanh thu", icon: IconTrendingUp },
+      {
+        href: "/finance/reconciliation",
+        label: "Đối chiếu",
+        icon: IconArrowLeftRight,
+      },
     ],
   },
   {

@@ -212,6 +212,16 @@ export const postJournalEntry = withAction(
       .eq("tenant_id", claims.tenant_id);
 
     if (error) {
+      if (
+        error.code === "23514" &&
+        error.message.includes("fiscal_period_closed_cannot_post")
+      ) {
+        return {
+          success: false,
+          error:
+            "Không thể ghi sổ vào kỳ kế toán đã đóng. Hãy chọn kỳ hiện tại hoặc mở lại kỳ theo quy trình.",
+        };
+      }
       return { success: false, error: "Không thể ghi sổ." };
     }
 
