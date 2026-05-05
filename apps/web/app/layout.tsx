@@ -1,18 +1,25 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono, Montserrat } from "next/font/google";
 import { ConfirmDialogProvider } from "@comtammatu/ui/components/confirm-dialog";
 import { ThemeProvider } from "@comtammatu/ui/components/theme-provider";
 import { TooltipProvider } from "@comtammatu/ui/components/tooltip";
 import { BoneyardRegistry } from "./_components/boneyard-registry";
 import { NotificationBellFloating } from "./_components/notification-bell-floating";
 import { ResponsiveToaster } from "./_components/responsive-toaster";
+import { SerwistProvider } from "./serwist-provider";
 import "@comtammatu/ui/globals.css";
 import { cn } from "@/lib/utils";
 
 const fontSans = Inter({
   subsets: ["latin", "latin-ext", "vietnamese"],
   variable: "--font-sans",
+  display: "swap",
+});
+
+const fontHeading = Montserrat({
+  subsets: ["latin", "latin-ext", "vietnamese"],
+  variable: "--font-matu-heading",
   display: "swap",
 });
 
@@ -45,8 +52,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#171717" },
+    { media: "(prefers-color-scheme: light)", color: "#fff6ee" },
+    { media: "(prefers-color-scheme: dark)", color: "#0d1b2a" },
   ],
   viewportFit: "cover",
 };
@@ -55,7 +62,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
       lang="vi"
-      className={cn(fontSans.variable, fontMono.variable, "font-sans")}
+      className={cn(
+        fontSans.variable,
+        fontHeading.variable,
+        fontMono.variable,
+        "font-sans",
+      )}
       suppressHydrationWarning
     >
       <body className="min-h-screen bg-background font-sans text-foreground antialiased">
@@ -72,7 +84,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           disableTransitionOnChange
         >
           <BoneyardRegistry />
-          <TooltipProvider>{children}</TooltipProvider>
+          <SerwistProvider
+            swUrl="/sw.js"
+            disable={process.env.NODE_ENV === "development"}
+          >
+            <TooltipProvider>{children}</TooltipProvider>
+          </SerwistProvider>
           <NotificationBellFloating />
           <ResponsiveToaster />
           <ConfirmDialogProvider />
