@@ -2,7 +2,11 @@
 
 import { z } from "zod";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { getAuthContextWithPermission } from "@/_lib/auth";
+import {
+  getAuthContext,
+  getAuthContextWithPermission,
+  probePermission,
+} from "@/_lib/auth";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 
 /* ─── Allowed roles ─── */
@@ -60,6 +64,49 @@ export interface RefundRow {
   approved_by_name: string | null;
 }
 
+type RefundRpcResult = {
+  status?: string;
+  refund_id?: number;
+};
+
+function mapRefundRpcError(message: string): string {
+  const normalized = message.toLowerCase();
+
+  if (
+    normalized.includes("payment_not_completed") ||
+    normalized.includes("refund requires completed")
+  ) {
+    return "Chỉ có thể hòan tiền thanh toán đã hoàn tất";
+  }
+  if (
+    normalized.includes("refund_exceeds_remaining") ||
+    normalized.includes("exceeds payment amount")
+  ) {
+    return "Số tiền hòan vượt quá phần còn lại của thanh toán";
+  }
+  if (
+    normalized.includes("permission denied") ||
+    normalized.includes("forbidden")
+  ) {
+    return "Không có quyền";
+  }
+  if (normalized.includes("not found")) {
+    return "Không tìm thấy yêu cầu hoặc thanh toán";
+  }
+  if (
+    normalized.includes("chart_of_accounts") ||
+    normalized.includes("posting") ||
+    normalized.includes("journal")
+  ) {
+    return "Chưa thể xử lý do cấu hình kế toán chưa sẵn sàng";
+  }
+  if (normalized.includes("restore_stock_for_order")) {
+    return "Không thể khôi phục tồn kho khi hòan tiền";
+  }
+
+  return "Không thể xử lý hòan tiền";
+}
+
 /* ─── Actions ─── */
 
 export async function createRefund(input: {
@@ -72,10 +119,10 @@ export async function createRefund(input: {
     return { success: false, error: "Dữ liệu không hợp lệ" };
   }
 
-  const ctx = await getAuthContextWithPermission(CREATE_ROLES, PERMISSION_KEYS.ORDERS_REFUND);
+  const ctx = await getAuthContext(CREATE_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
-  const { supabase, claims, user } = ctx;
+  const { supabase, claims } = ctx;
   const { paymentId, amount, reason } = parsed.data;
 
   // Fetch payment — verify it belongs to the same tenant
@@ -90,15 +137,20 @@ export async function createRefund(input: {
     return { success: false, error: "Không tìm thấy thanh toán" };
   }
 
-  // Branch-scoped roles can only refund their own branch's payments
-  if (claims.user_role === "branch_manager" || claims.user_role === "cashier") {
-    if (claims.branch_id == null || payment.branch_id !== claims.branch_id) {
-      return { success: false, error: "Không có quyền hòan tiền đơn này" };
-    }
+  const canRefundBranch = await probePermission(
+    ctx,
+    PERMISSION_KEYS.ORDERS_REFUND,
+    payment.branch_id,
+  );
+  if (!canRefundBranch) {
+    return { success: false, error: "Không có quyền hòan tiền đơn này" };
   }
 
-  if (payment.status === "refunded") {
-    return { success: false, error: "Thanh toán đã được hòan tiền trước đó" };
+  if (payment.status !== "completed") {
+    return {
+      success: false,
+      error: "Chỉ có thể hòan tiền thanh toán đã hoàn tất",
+    };
   }
 
   if (amount > payment.amount) {
@@ -108,26 +160,25 @@ export async function createRefund(input: {
     };
   }
 
-  const { data: refund, error: insertErr } = await supabase
-    .from("refunds")
-    .insert({
-      tenant_id: claims.tenant_id,
-      branch_id: payment.branch_id,
-      payment_id: payment.id,
-      order_id: payment.order_id,
-      amount,
-      reason,
-      status: "pending",
-      created_by: user.id,
-    })
-    .select("id")
-    .single();
+  const { data: rpcData, error: rpcErr } = await supabase.rpc(
+    "create_refund",
+    {
+      p_payment_id: payment.id,
+      p_amount: amount,
+      p_reason: reason,
+    },
+  );
 
-  if (insertErr || !refund) {
+  if (rpcErr) {
+    return { success: false, error: mapRefundRpcError(rpcErr.message ?? "") };
+  }
+
+  const result = rpcData as RefundRpcResult | null;
+  if (result?.status !== "created" || typeof result.refund_id !== "number") {
     return { success: false, error: "Không thể tạo yêu cầu hòan tiền" };
   }
 
-  return { success: true, data: { refundId: refund.id } };
+  return { success: true, data: { refundId: result.refund_id } };
 }
 
 export async function approveRefund(input: {
@@ -139,7 +190,10 @@ export async function approveRefund(input: {
     return { success: false, error: "Dữ liệu không hợp lệ" };
   }
 
-  const ctx = await getAuthContextWithPermission(APPROVE_ROLES, PERMISSION_KEYS.ORDERS_REFUND);
+  const ctx = await getAuthContextWithPermission(
+    APPROVE_ROLES,
+    PERMISSION_KEYS.ORDERS_REFUND_APPROVE,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims, user } = ctx;
@@ -148,7 +202,7 @@ export async function approveRefund(input: {
   // Fetch refund — verify tenant ownership
   const { data: refund, error: fetchErr } = await supabase
     .from("refunds")
-    .select("id, status, payment_id, tenant_id")
+    .select("id, status, payment_id, tenant_id, branch_id")
     .eq("id", refundId)
     .eq("tenant_id", claims.tenant_id)
     .single();
@@ -161,32 +215,46 @@ export async function approveRefund(input: {
     return { success: false, error: "Yêu cầu hòan tiền đã được xử lý" };
   }
 
-  const newStatus = approved ? "approved" : "rejected";
+  const canApproveBranch = await probePermission(
+    ctx,
+    PERMISSION_KEYS.ORDERS_REFUND_APPROVE,
+    refund.branch_id,
+  );
+  if (!canApproveBranch) {
+    return { success: false, error: "Không có quyền" };
+  }
+
+  if (approved) {
+    const { data: rpcData, error: rpcErr } = await supabase.rpc(
+      "reverse_payment_and_post",
+      {
+        p_refund_id: refundId,
+      },
+    );
+
+    if (rpcErr) {
+      return { success: false, error: mapRefundRpcError(rpcErr.message ?? "") };
+    }
+
+    const result = rpcData as RefundRpcResult | null;
+    if (
+      result?.status !== "approved" &&
+      result?.status !== "already_approved"
+    ) {
+      return { success: false, error: "Không thể duyệt yêu cầu hòan tiền" };
+    }
+
+    return { success: true };
+  }
 
   const { error: updateErr } = await supabase
     .from("refunds")
-    .update({ status: newStatus, approved_by: user.id })
+    .update({ status: "rejected", approved_by: user.id })
     .eq("id", refundId)
     .eq("tenant_id", claims.tenant_id);
 
   if (updateErr) {
     return { success: false, error: "Không thể cập nhật yêu cầu hòan tiền" };
-  }
-
-  // If approved, mark the payment as refunded
-  if (approved) {
-    const { error: paymentErr } = await supabase
-      .from("payments")
-      .update({ status: "refunded" })
-      .eq("id", refund.payment_id)
-      .eq("tenant_id", claims.tenant_id);
-
-    if (paymentErr) {
-      return {
-        success: false,
-        error: "Không thể cập nhật trạng thái thanh toán",
-      };
-    }
   }
 
   return { success: true };
