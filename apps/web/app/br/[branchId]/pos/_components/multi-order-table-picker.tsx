@@ -3,6 +3,12 @@
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
+  Item,
+  ItemContent,
+  ItemFooter,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
+import {
   Drawer,
   DrawerContent,
   DrawerDescription,
@@ -12,9 +18,14 @@ import {
 } from "@comtammatu/ui/components/drawer";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { formatVND } from "@comtammatu/shared/format";
-import { Plus as IconPlus } from "lucide-react";
+import {
+  ClipboardList as IconClipboardList,
+  CreditCard as IconCreditCard,
+  Plus as IconPlus,
+} from "lucide-react";
 import type { SessionOrder } from "../order-history";
 import { getPosOrderStatusInfo } from "../_lib/order-status-display";
+import { messages } from "@lib/messages";
 
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 interface MultiOrderTablePickerProps {
@@ -22,6 +33,8 @@ interface MultiOrderTablePickerProps {
   tableNumber: number | null;
   orders: SessionOrder[];
   onOpenOrder: (orderId: number, orderNumber: string) => void;
+  onPayOrder: (orderId: number) => void;
+  onAppendOrder: (orderId: number, orderNumber: string) => void;
   onCreateNew: () => void;
   onClose: () => void;
 }
@@ -31,6 +44,8 @@ export function MultiOrderTablePicker({
   tableNumber,
   orders,
   onOpenOrder,
+  onPayOrder,
+  onAppendOrder,
   onCreateNew,
   onClose,
 }: MultiOrderTablePickerProps) {
@@ -39,10 +54,10 @@ export function MultiOrderTablePicker({
       <DrawerContent className="mx-auto max-w-md sm:max-w-lg">
         <DrawerHeader>
           <DrawerTitle>
-            Bàn {tableNumber ?? "—"} · {orders.length} đơn
+            {messages.pos.multiOrderTablePicker.title(tableNumber, orders.length)}
           </DrawerTitle>
           <DrawerDescription className="sr-only">
-            Chọn đơn để mở hoặc tạo đơn mới.
+            {messages.pos.multiOrderTablePicker.description}
           </DrawerDescription>
         </DrawerHeader>
 
@@ -51,28 +66,65 @@ export function MultiOrderTablePicker({
             {orders.map((order) => {
               const statusInfo = getPosOrderStatusInfo(order);
               return (
-                <Button
+                <Item
                   key={order.id}
-                  type="button"
                   variant="outline"
-                  onClick={() => onOpenOrder(order.id, order.order_number)}
-                  className="h-auto w-full justify-between p-3 text-left whitespace-normal transition-colors hover:border-primary/40 hover:bg-accent"
+                  size="sm"
+                  className="bg-card"
                 >
-                  <div className="flex min-w-0 flex-col gap-1">
-                    <p className="truncate text-sm font-semibold">
-                      {order.order_number}
-                    </p>
-                    <Badge
-                      variant={statusInfo.variant}
-                      className="w-fit text-xs tabular-nums"
+                  <ItemContent className="w-full min-w-0 gap-1">
+                    <ItemTitle className="w-full min-w-0 justify-between gap-3 text-base">
+                      <span className="min-w-0 truncate">
+                        #{order.order_number}
+                      </span>
+                      <span className="shrink-0 text-right font-bold tabular-nums text-primary">
+                        {formatVND(order.total_amount)}
+                      </span>
+                    </ItemTitle>
+                    <div className="flex items-center justify-end gap-2">
+                      <Badge
+                        variant={statusInfo.variant}
+                        className="w-fit text-xs tabular-nums"
+                      >
+                        {statusInfo.label}
+                      </Badge>
+                    </div>
+                  </ItemContent>
+                  <ItemFooter className="mt-1.5 grid grid-cols-1 gap-2 border-t border-border/60 pt-2 sm:grid-cols-3">
+                    <Button
+                      type="button"
+                      variant="default"
+                      size="sm"
+                      className="h-11 px-2 text-sm"
+                      onClick={() => onPayOrder(order.id)}
                     >
-                      {statusInfo.label}
-                    </Badge>
-                  </div>
-                  <p className="shrink-0 text-base font-semibold tabular-nums">
-                    {formatVND(order.total_amount)}
-                  </p>
-                </Button>
+                      <IconCreditCard data-icon="inline-start" />
+                      {messages.pos.multiOrderTablePicker.payment}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      className="h-11 px-2 text-sm"
+                      onClick={() =>
+                        onAppendOrder(order.id, order.order_number)
+                      }
+                    >
+                      <IconPlus data-icon="inline-start" />
+                      {messages.pos.multiOrderTablePicker.appendItems}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-11 px-2 text-sm"
+                      onClick={() => onOpenOrder(order.id, order.order_number)}
+                    >
+                      <IconClipboardList data-icon="inline-start" />
+                      {messages.pos.multiOrderTablePicker.handle}
+                    </Button>
+                  </ItemFooter>
+                </Item>
               );
             })}
           </div>
@@ -86,7 +138,7 @@ export function MultiOrderTablePicker({
             onClick={onCreateNew}
           >
             <IconPlus data-icon="inline-start" />
-            Tạo đơn mới
+            {messages.pos.multiOrderTablePicker.createNew}
           </Button>
           <Button type="button" variant="ghost" onClick={onClose}>
             {ACTIONS_VI.close}

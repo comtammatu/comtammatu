@@ -670,6 +670,59 @@ export async function fetchRevenueKpis(
   return { success: true, data: data?.[0] ?? null };
 }
 
+/* ─── fetchFinanceDashboardSummary — work-queue counters for /finance ─── */
+
+const dashboardSummarySchema = z.object({
+  branchId: z.coerce.number().int().positive().nullable(),
+  startDate: z.string().date(),
+  endDate: z.string().date(),
+});
+
+export interface FinanceDashboardSummary {
+  invoice_attention_count: number;
+  invoice_issued_count: number;
+  invoice_not_required_count: number;
+  journal_draft_count: number;
+  journal_posted_count: number;
+  failed_webhook_count: number;
+}
+
+export async function fetchFinanceDashboardSummary(
+  branchId: number | null,
+  startDate: string,
+  endDate: string,
+): Promise<ActionResult> {
+  const parsed = dashboardSummarySchema.safeParse({
+    branchId,
+    startDate,
+    endDate,
+  });
+  if (!parsed.success || parsed.data.startDate > parsed.data.endDate) {
+    return { success: false, error: "Tham số dashboard không hợp lệ." };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    FINANCE_ROLES,
+    PERMISSION_KEYS.FINANCE_VIEW,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { data, error } = await ctx.supabase.rpc(
+    "get_finance_dashboard_summary",
+    {
+      p_start_date: parsed.data.startDate,
+      p_end_date: parsed.data.endDate,
+      p_branch_id: parsed.data.branchId ?? undefined,
+    },
+  );
+
+  if (error) {
+    return { success: false, error: "Không thể tải chỉ số dashboard." };
+  }
+
+  return { success: true, data: data?.[0] ?? null };
+}
+
 /* ─── fetchOrdersForDay — drill-down list cho 1 (branch, date) ─ */
 
 export async function fetchOrdersForDay(

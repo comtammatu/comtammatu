@@ -31,6 +31,7 @@ import {
 import { Plus as IconPlus, Trash as IconTrash } from "lucide-react";
 import { ACTIONS_VI, ERRORS_VI, FORM_VI } from "@comtammatu/shared/messages";
 import { FormattedNumberInput } from "@/components/form";
+import { messages } from "@lib/messages";
 import { createJournalEntry, postJournalEntry } from "../journal-actions";
 import type { JournalEntryRow, AccountOption } from "./page";
 
@@ -45,13 +46,7 @@ interface LineForm {
   credit: string;
 }
 
-const REFERENCE_TYPES = [
-  { value: "manual", label: "Thủ công" },
-  { value: "adjustment", label: "Điều chỉnh" },
-  { value: "sale", label: "Bán hàng" },
-  { value: "purchase", label: "Mua hàng" },
-  { value: "payroll", label: "Lương" },
-] as const;
+const REFERENCE_TYPES = messages.finance.journal.referenceTypes;
 
 type ReferenceType = (typeof REFERENCE_TYPES)[number]["value"];
 
@@ -172,10 +167,10 @@ export function JournalClient({ entries: initial, accounts }: Props) {
     if (s === "posted") {
       return (
         <span className="flex items-center gap-1.5">
-          <Badge variant="success">Đã ghi sổ</Badge>
+          <Badge variant="success">{messages.finance.journal.posted}</Badge>
           {isAuto && (
             <Badge variant="outline" className="text-xs">
-              Tự động
+              {messages.finance.journal.automatic}
             </Badge>
           )}
         </span>
@@ -189,7 +184,7 @@ export function JournalClient({ entries: initial, accounts }: Props) {
       <div className="flex justify-end">
         <Button onClick={() => setOpen(true)} size="sm">
           <IconPlus className="mr-1.5 size-4" />
-          Tạo bút toán
+          {messages.finance.journal.createEntry}
         </Button>
       </div>
 
@@ -200,9 +195,13 @@ export function JournalClient({ entries: initial, accounts }: Props) {
               <TableRow>
                 <TableHead className="w-28">{FORM_VI.date}</TableHead>
                 <TableHead>{FORM_VI.description}</TableHead>
-                <TableHead className="w-24">Tham chiếu</TableHead>
+                <TableHead className="w-24">
+                  {messages.finance.journal.reference}
+                </TableHead>
                 <TableHead className="w-24">{FORM_VI.status}</TableHead>
-                <TableHead className="w-32 text-right">Tổng nợ (₫)</TableHead>
+                <TableHead className="w-32 text-right">
+                  {messages.finance.journal.totalDebitCurrency}
+                </TableHead>
                 <TableHead className="w-24" />
               </TableRow>
             </TableHeader>
@@ -213,7 +212,7 @@ export function JournalClient({ entries: initial, accounts }: Props) {
                     colSpan={6}
                     className="py-10 text-center text-muted-foreground"
                   >
-                    Chưa có bút toán nào.
+                    {messages.finance.journal.emptyEntries}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -249,7 +248,7 @@ export function JournalClient({ entries: initial, accounts }: Props) {
                             disabled={isPending}
                             onClick={() => handlePost(e.id)}
                           >
-                            Ghi sổ
+                            {messages.finance.journal.post}
                           </Button>
                         ) : null}
                       </TableCell>
@@ -265,12 +264,12 @@ export function JournalClient({ entries: initial, accounts }: Props) {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Tạo bút toán</DialogTitle>
+            <DialogTitle>{messages.finance.journal.createEntry}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-2">
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-1.5">
-                <Label>Ngày hạch toán</Label>
+                <Label>{messages.finance.journal.entryDate}</Label>
                 <Input
                   type="date"
                   value={form.entryDate}
@@ -282,7 +281,7 @@ export function JournalClient({ entries: initial, accounts }: Props) {
               <div className="grid gap-1.5">
                 <Label>{FORM_VI.description}</Label>
                 <Input
-                  placeholder="Mô tả nghiệp vụ"
+                  placeholder={messages.finance.journal.descriptionPlaceholder}
                   value={form.description}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                     setForm((f) => ({ ...f, description: e.target.value }))
@@ -292,7 +291,7 @@ export function JournalClient({ entries: initial, accounts }: Props) {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-1.5">
-                <Label>Loại tham chiếu</Label>
+                <Label>{messages.finance.journal.referenceType}</Label>
                 <Select
                   value={form.refType}
                   onValueChange={(value: ReferenceType) =>
@@ -312,7 +311,7 @@ export function JournalClient({ entries: initial, accounts }: Props) {
                 </Select>
               </div>
               <div className="grid gap-1.5">
-                <Label>ID tham chiếu</Label>
+                <Label>{messages.finance.journal.referenceId}</Label>
                 <Input
                   type="number"
                   placeholder="ID"
@@ -327,18 +326,23 @@ export function JournalClient({ entries: initial, accounts }: Props) {
             {/* Lines */}
             <div className="grid gap-2">
               <div className="flex items-center justify-between">
-                <Label>Dòng bút toán</Label>
+                <Label>{messages.finance.journal.lines}</Label>
                 <Button variant="ghost" size="sm" onClick={addLine}>
-                  <IconPlus className="size-4" /> Thêm dòng
+                  <IconPlus className="size-4" />
+                  {messages.finance.journal.addLine}
                 </Button>
               </div>
               <div className="rounded-md border">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Tài khoản</TableHead>
-                      <TableHead className="w-32 text-right">Nợ (₫)</TableHead>
-                      <TableHead className="w-32 text-right">Có (₫)</TableHead>
+                      <TableHead>{messages.finance.journal.account}</TableHead>
+                      <TableHead className="w-32 text-right">
+                        {messages.finance.journal.debitCurrency}
+                      </TableHead>
+                      <TableHead className="w-32 text-right">
+                        {messages.finance.journal.creditCurrency}
+                      </TableHead>
                       <TableHead className="w-10" />
                     </TableRow>
                   </TableHeader>
@@ -353,7 +357,11 @@ export function JournalClient({ entries: initial, accounts }: Props) {
                             }
                           >
                             <SelectTrigger className="h-8">
-                              <SelectValue placeholder="Chọn tài khoản" />
+                              <SelectValue
+                                placeholder={
+                                  messages.finance.journal.accountPlaceholder
+                                }
+                              />
                             </SelectTrigger>
                             <SelectContent>
                               {accounts
@@ -416,8 +424,9 @@ export function JournalClient({ entries: initial, accounts }: Props) {
               </div>
               {!isBalanced && totalDebit + totalCredit > 0 && (
                 <p className="text-sm text-destructive">
-                  Bút toán mất cân đối: chênh lệch{" "}
-                  {Math.abs(totalDebit - totalCredit).toLocaleString("vi-VN")} ₫
+                  {messages.finance.journal.imbalance(
+                    Math.abs(totalDebit - totalCredit).toLocaleString("vi-VN"),
+                  )}
                 </p>
               )}
             </div>
@@ -437,7 +446,7 @@ export function JournalClient({ entries: initial, accounts }: Props) {
                 lines.filter((l) => l.accountId).length < 2
               }
             >
-              Tạo nháp
+              {messages.finance.journal.createDraft}
             </Button>
           </DialogFooter>
         </DialogContent>

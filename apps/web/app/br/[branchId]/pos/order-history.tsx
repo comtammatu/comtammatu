@@ -1,17 +1,13 @@
 "use client";
 
 import { memo, useMemo, type ReactNode } from "react";
+import { AppEmptyState } from "@/components/surface";
 import { cn } from "@comtammatu/ui";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Empty,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@comtammatu/ui/components/empty";
 import { Receipt as IconReceipt } from "lucide-react";
+import { messages } from "@lib/messages";
 import {
   Item,
   ItemContent,
@@ -47,6 +43,26 @@ function compareOrdersNewestFirst(a: SessionOrder, b: SessionOrder): number {
   return b.id - a.id;
 }
 
+function getOrderActionPriority(order: SessionOrder): number {
+  if (order.payment_status === "paid") return 99;
+  if (order.status === "served" || order.status === "ready") return 0;
+  if (order.order_type === "takeaway") return 1;
+  if (order.status === "preparing") return 2;
+  if (order.status === "confirmed") return 3;
+  if (order.status === "new") return 4;
+  return 5;
+}
+
+export function compareOrdersByNextAction(
+  a: SessionOrder,
+  b: SessionOrder,
+): number {
+  const byPriority = getOrderActionPriority(a) - getOrderActionPriority(b);
+  if (byPriority !== 0) return byPriority;
+
+  return compareOrdersNewestFirst(a, b);
+}
+
 function formatTime(dateStr: string): string {
   return new Date(dateStr).toLocaleTimeString("vi-VN", {
     hour: "2-digit",
@@ -56,10 +72,10 @@ function formatTime(dateStr: string): string {
 
 function getOrderContextLabel(order: SessionOrder): string {
   if (order.order_type === "dine_in") {
-    return `Bàn ${order.tables?.number ?? "—"}`;
+    return messages.pos.orderHistory.dineIn(order.tables?.number ?? "—");
   }
 
-  return "Mang về";
+  return messages.pos.orderHistory.takeaway;
 }
 
 export function OrderStatusBadge({ order }: { order: SessionOrder }) {
@@ -153,20 +169,17 @@ function ActiveOrdersListComponent({
             ACTIVE_POS_STATUSES.includes(order.status) &&
             order.payment_status !== "paid",
         )
-        .sort(compareOrdersNewestFirst),
+        .sort(compareOrdersByNextAction),
     [orders],
   );
 
   if (activeOrders.length === 0) {
     return (
-      <Empty className="flex-1 px-6">
-        <EmptyMedia variant="icon">
-          <IconReceipt />
-        </EmptyMedia>
-        <EmptyHeader>
-          <EmptyTitle>Không có hóa đơn</EmptyTitle>
-        </EmptyHeader>
-      </Empty>
+      <AppEmptyState
+        title={messages.pos.orderHistory.empty}
+        icon={<IconReceipt />}
+        className="flex-1 px-6"
+      />
     );
   }
 
@@ -198,7 +211,7 @@ function ActiveOrdersListComponent({
                             variant="warning"
                             className="text-sm font-semibold"
                           >
-                            Chờ thanh toán
+                            {messages.pos.orderHistory.waitingPayment}
                           </Badge>
                         ) : null}
                       </>
@@ -214,7 +227,7 @@ function ActiveOrdersListComponent({
                         onViewDetail(order.id, order.order_number, order)
                       }
                     >
-                      Xử lý đơn
+                      {messages.pos.orderHistory.handleOrder}
                     </Button>
                     <Button
                       data-testid={`pos-order-bill-${order.id}`}
@@ -224,7 +237,7 @@ function ActiveOrdersListComponent({
                       onClick={() => onViewBill(order.id, "payment")}
                     >
                       <IconReceipt data-icon="inline-start" />
-                      Thanh toán
+                      {messages.pos.orderHistory.payment}
                     </Button>
                   </ItemFooter>
                 </Item>

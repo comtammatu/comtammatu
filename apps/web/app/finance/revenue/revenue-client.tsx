@@ -41,6 +41,7 @@ import { refreshMaterializedViews } from "../actions";
 import type { RevenueGranularity } from "../actions";
 import type { FinanceLayoutMode } from "../page";
 import { useFinanceRealtimeRefresh } from "../use-finance-realtime-refresh";
+import { messages } from "@lib/messages";
 import type {
   AccessibleBranch,
   CashVarianceSummary,
@@ -65,16 +66,18 @@ interface Props {
   initialError: string | null;
 }
 
+const revenueCopy = messages.finance.revenueReport;
+
 const GRANULARITY_LABEL: Record<RevenueGranularity, string> = {
-  day: "Theo ngày",
-  week: "Theo tuần",
-  month: "Theo tháng",
+  day: revenueCopy.granularityLabel.day,
+  week: revenueCopy.granularityLabel.week,
+  month: revenueCopy.granularityLabel.month,
 };
 
 const PERIOD_HEADER_LABEL: Record<RevenueGranularity, string> = {
-  day: "Ngày",
-  week: "Tuần",
-  month: "Tháng",
+  day: revenueCopy.periodHeader.day,
+  week: revenueCopy.periodHeader.week,
+  month: revenueCopy.periodHeader.month,
 };
 
 const ALL_BRANCHES_VALUE = "all";
@@ -92,7 +95,7 @@ function formatRefreshedAt(iso: string): string {
     0,
     Math.floor((Date.now() - d.getTime()) / 60000),
   );
-  return `Cập nhật lúc ${hh}:${mm} (${minutesAgo} phút trước)`;
+  return revenueCopy.refreshedAt(`${hh}:${mm}`, minutesAgo);
 }
 
 interface AggregatedRow {
@@ -179,9 +182,10 @@ export function RevenueClient({
   useFinanceRealtimeRefresh({ branchId });
 
   const branchLabel = useMemo(() => {
-    if (branchId == null) return "Tất cả chi nhánh";
+    if (branchId == null) return messages.finance.common.allBranches;
     return (
-      branches.find((b) => b.id === branchId)?.name ?? `Chi nhánh ${branchId}`
+      branches.find((b) => b.id === branchId)?.name ??
+      messages.finance.common.branchFallback(branchId)
     );
   }, [branchId, branches]);
 
@@ -397,14 +401,12 @@ export function RevenueClient({
         <CardContent className="p-5 sm:p-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="space-y-2">
-              <Badge variant="secondary">Báo cáo doanh thu</Badge>
-              <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-                Doanh thu {GRANULARITY_LABEL[granularity].toLowerCase()} ·{" "}
-                {branchLabel}
+              <Badge variant="secondary">{revenueCopy.badge}</Badge>
+              <h2 className="font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
+                {revenueCopy.title(GRANULARITY_LABEL[granularity], branchLabel)}
               </h2>
               <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-                Số liệu tổng hợp theo ngày thanh toán (giờ Việt Nam). Click một
-                kỳ trong bảng để xem danh sách đơn theo giờ.
+                {revenueCopy.description}
               </p>
               {kpis ? (
                 <p className="text-xs text-muted-foreground">
@@ -420,7 +422,9 @@ export function RevenueClient({
                 onClick={handleToggleCompare}
                 disabled={isPending}
               >
-                {compareEnabled ? "Tắt so sánh kỳ trước" : "So sánh kỳ trước"}
+                {compareEnabled
+                  ? revenueCopy.compareOn
+                  : revenueCopy.compareOff}
               </Button>
               <Button
                 variant="outline"
@@ -428,7 +432,7 @@ export function RevenueClient({
                 onClick={handleExportCsv}
                 disabled={aggregated.length === 0}
               >
-                Xuất CSV
+                {revenueCopy.exportCsv}
               </Button>
               <Button
                 variant="outline"
@@ -436,7 +440,7 @@ export function RevenueClient({
                 onClick={handleRefresh}
                 disabled={isPending}
               >
-                {isPending ? "Đang tải..." : "Làm mới dữ liệu"}
+                {isPending ? messages.finance.common.loading : revenueCopy.refreshData}
               </Button>
             </div>
           </div>
@@ -452,17 +456,17 @@ export function RevenueClient({
       <Card>
         <CardContent className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4 lg:items-end">
           <div className="grid gap-1.5">
-            <Label className="text-xs">Chi nhánh</Label>
+            <Label className="text-xs">{revenueCopy.branch}</Label>
             <Select
               value={branchId == null ? ALL_BRANCHES_VALUE : String(branchId)}
               onValueChange={handleBranchChange}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Chọn chi nhánh" />
+                <SelectValue placeholder={revenueCopy.branchPlaceholder} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value={ALL_BRANCHES_VALUE}>
-                  Tất cả ({branches.length} chi nhánh)
+                  {revenueCopy.allBranchesCount(branches.length)}
                 </SelectItem>
                 {branches.map((b) => (
                   <SelectItem key={b.id} value={String(b.id)}>
@@ -473,17 +477,17 @@ export function RevenueClient({
             </Select>
           </div>
           <div className="grid gap-1.5">
-            <Label className="text-xs">Mức tổng hợp</Label>
+            <Label className="text-xs">{revenueCopy.granularity}</Label>
             <Tabs value={granularity} onValueChange={handleGranularityChange}>
               <TabsList className="w-full">
                 <TabsTrigger value="day" className="flex-1">
-                  Ngày
+                  {revenueCopy.day}
                 </TabsTrigger>
                 <TabsTrigger value="week" className="flex-1">
-                  Tuần
+                  {revenueCopy.week}
                 </TabsTrigger>
                 <TabsTrigger value="month" className="flex-1">
-                  Tháng
+                  {revenueCopy.month}
                 </TabsTrigger>
               </TabsList>
             </Tabs>
@@ -509,7 +513,7 @@ export function RevenueClient({
                 onClick={handleApplyDateRange}
                 disabled={isPending}
               >
-                Áp dụng
+                {revenueCopy.apply}
               </Button>
             </div>
           </div>
@@ -518,9 +522,9 @@ export function RevenueClient({
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <KpiCard
-          label="Tổng tiền đã thu"
+          label={revenueCopy.totalCollected}
           value={formatVND(kpis?.net_revenue ?? 0)}
-          hint={kpis ? `Trước VAT ${formatVND(kpis.subtotal_revenue)}` : "—"}
+          hint={kpis ? revenueCopy.beforeVat(formatVND(kpis.subtotal_revenue)) : "—"}
           tone="primary"
           delta={
             initialCompare
@@ -533,9 +537,11 @@ export function RevenueClient({
           }
         />
         <KpiCard
-          label="Số đơn"
+          label={revenueCopy.orderCount}
           value={(kpis?.order_count ?? 0).toLocaleString("vi-VN")}
-          hint={`${(kpis?.total_covers ?? 0).toLocaleString("vi-VN")} lượt khách`}
+          hint={revenueCopy.customerVisits(
+            (kpis?.total_covers ?? 0).toLocaleString("vi-VN"),
+          )}
           delta={
             initialCompare
               ? buildDelta(
@@ -547,17 +553,20 @@ export function RevenueClient({
           }
         />
         <KpiCard
-          label="Trung bình / khách"
+          label={revenueCopy.averagePerGuest}
           value={aov > 0 ? formatVND(aov) : "—"}
-          hint="Doanh thu / lượt khách"
+          hint={revenueCopy.revenuePerGuest}
           delta={initialCompare ? buildDelta(aov, prevAov, "currency") : null}
         />
         <KpiCard
-          label="Tỉ lệ hoàn / hủy"
+          label={revenueCopy.voidRate}
           value={`${voidedPct.toFixed(1)}%`}
           hint={
             kpis
-              ? `${formatVND(kpis.voided_amount)} · ${kpis.voided_count} đơn`
+              ? revenueCopy.voidHint(
+                  formatVND(kpis.voided_amount),
+                  kpis.voided_count,
+                )
               : "—"
           }
           tone={voidedPct > 2 ? "warning" : undefined}
@@ -568,7 +577,7 @@ export function RevenueClient({
           }
         />
         <KpiCard
-          label="Tỉ lệ giảm giá"
+          label={revenueCopy.discountRate}
           value={`${discountPct.toFixed(1)}%`}
           hint={kpis ? formatVND(kpis.discount_amount) : "—"}
           delta={
@@ -581,8 +590,8 @@ export function RevenueClient({
 
       {initialCompare ? (
         <p className="text-xs text-muted-foreground">
-          So với kỳ trước · {initialCompare.start} → {initialCompare.end}
-          {prev ? null : " · không có dữ liệu kỳ trước"}
+          {revenueCopy.comparePeriod(initialCompare.start, initialCompare.end)}
+          {prev ? null : revenueCopy.noPreviousDataSuffix}
         </p>
       ) : null}
 
@@ -610,10 +619,10 @@ export function RevenueClient({
 
           <div className="grid gap-4 lg:grid-cols-3">
             <BreakdownCard
-              title="Cơ cấu thanh toán"
+              title={revenueCopy.paymentBreakdown}
               rows={[
                 {
-                  label: "Tiền mặt",
+                  label: revenueCopy.cash,
                   value: kpis?.cash_revenue ?? 0,
                   total: kpis?.net_revenue ?? 0,
                 },
@@ -630,7 +639,7 @@ export function RevenueClient({
                 ...(channelOther > 1
                   ? [
                       {
-                        label: "Khác",
+                        label: revenueCopy.other,
                         value: channelOther,
                         total: kpis?.net_revenue ?? 0,
                       },
@@ -639,22 +648,22 @@ export function RevenueClient({
               ]}
             />
             <BreakdownCard
-              title="Tại quán / Mang đi"
+              title={revenueCopy.dineTakeaway}
               rows={[
                 {
-                  label: "Tại quán",
+                  label: revenueCopy.dineIn,
                   value: kpis?.dine_in_revenue ?? 0,
                   total: kpis?.net_revenue ?? 0,
                 },
                 {
-                  label: "Mang đi",
+                  label: revenueCopy.takeaway,
                   value: kpis?.takeaway_revenue ?? 0,
                   total: kpis?.net_revenue ?? 0,
                 },
               ]}
             />
             <BreakdownCard
-              title="Thuế VAT đầu ra"
+              title={revenueCopy.outputVat}
               rows={[
                 {
                   label: "VAT 8%",
@@ -668,7 +677,7 @@ export function RevenueClient({
                 },
               ]}
               footer={
-                kpis ? `Tổng thuế: ${formatVND(kpis.total_tax)}` : undefined
+                kpis ? revenueCopy.totalTax(formatVND(kpis.total_tax)) : undefined
               }
             />
           </div>
@@ -677,18 +686,22 @@ export function RevenueClient({
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">
-                  Doanh thu theo chi nhánh trong kỳ
+                  {revenueCopy.branchRevenueTitle}
                 </CardTitle>
               </CardHeader>
               <CardContent className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Chi nhánh</TableHead>
-                      <TableHead className="text-right">Đơn</TableHead>
-                      <TableHead className="text-right">Doanh thu</TableHead>
+                      <TableHead>{revenueCopy.branch}</TableHead>
+                      <TableHead className="text-right">
+                        {revenueCopy.orders}
+                      </TableHead>
+                      <TableHead className="text-right">
+                        {revenueCopy.revenue}
+                      </TableHead>
                       <TableHead className="w-32 text-right">
-                        Hành động
+                        {revenueCopy.action}
                       </TableHead>
                     </TableRow>
                   </TableHeader>
@@ -696,7 +709,7 @@ export function RevenueClient({
                     {branchTotals.map((bt) => {
                       const name =
                         branches.find((b) => b.id === bt.branchId)?.name ??
-                        `Chi nhánh ${bt.branchId}`;
+                        messages.finance.common.branchFallback(bt.branchId);
                       const params = new URLSearchParams({
                         granularity,
                         start: startDate,
@@ -718,7 +731,7 @@ export function RevenueClient({
                               <Link
                                 href={`/finance/revenue?${params.toString()}`}
                               >
-                                Xem chi nhánh
+                                {revenueCopy.viewBranch}
                               </Link>
                             </Button>
                           </TableCell>
@@ -734,12 +747,12 @@ export function RevenueClient({
           <Card>
             <CardHeader>
               <CardTitle className="text-base">
-                Bảng doanh thu theo kỳ
+                {revenueCopy.periodRevenueTable}
               </CardTitle>
               <p className="text-sm text-muted-foreground">
                 {branchId == null
-                  ? "Tổng hợp các chi nhánh bạn có quyền xem. Click một ngày để xem chi tiết đơn — sẽ chọn chi nhánh trước nếu đang xem 'Tất cả'."
-                  : "Click một kỳ để xem danh sách đơn theo giờ."}
+                  ? revenueCopy.periodTableDescriptionAll
+                  : revenueCopy.periodTableDescriptionSingle}
               </p>
             </CardHeader>
             <CardContent className="overflow-x-auto">
@@ -747,7 +760,7 @@ export function RevenueClient({
                 <Empty className="py-8">
                   <EmptyHeader>
                     <EmptyTitle className="text-sm font-semibold">
-                      Không có dữ liệu trong khoảng đã chọn.
+                      {revenueCopy.emptyRange}
                     </EmptyTitle>
                   </EmptyHeader>
                 </Empty>
@@ -756,10 +769,18 @@ export function RevenueClient({
                   <TableHeader>
                     <TableRow>
                       <TableHead>{PERIOD_HEADER_LABEL[granularity]}</TableHead>
-                      <TableHead className="text-right">Đơn</TableHead>
-                      <TableHead className="text-right">Khách</TableHead>
-                      <TableHead className="text-right">Doanh thu</TableHead>
-                      <TableHead className="text-right">Tiền mặt</TableHead>
+                      <TableHead className="text-right">
+                        {revenueCopy.orders}
+                      </TableHead>
+                      <TableHead className="text-right">
+                        {revenueCopy.customers}
+                      </TableHead>
+                      <TableHead className="text-right">
+                        {revenueCopy.revenue}
+                      </TableHead>
+                      <TableHead className="text-right">
+                        {revenueCopy.cash}
+                      </TableHead>
                       <TableHead className="text-right">VietQR</TableHead>
                       <TableHead className="text-right">MoMo</TableHead>
                       <TableHead className="text-right">VAT</TableHead>
@@ -819,7 +840,9 @@ export function RevenueClient({
                   </TableBody>
                   <TableFooter>
                     <TableRow className="hover:bg-transparent">
-                      <TableCell className="font-medium">Tổng</TableCell>
+                      <TableCell className="font-medium">
+                        {revenueCopy.total}
+                      </TableCell>
                       <TableCell className="text-right tabular-nums font-medium">
                         {(kpis?.order_count ?? 0).toLocaleString("vi-VN")}
                       </TableCell>
@@ -903,10 +926,10 @@ function LayoutPicker({
     >
       <TabsList className="w-full sm:w-auto">
         <TabsTrigger value="simple" className="flex-1 sm:flex-none">
-          Đơn giản
+          {revenueCopy.layoutSimple}
         </TabsTrigger>
         <TabsTrigger value="advanced" className="flex-1 sm:flex-none">
-          Chuyên sâu
+          {revenueCopy.layoutAdvanced}
         </TabsTrigger>
       </TabsList>
     </Tabs>
@@ -943,7 +966,9 @@ function SimpleRevenueSummary({
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle className="text-base">Doanh thu theo kỳ</CardTitle>
+            <CardTitle className="text-base">
+              {revenueCopy.revenueByPeriod}
+            </CardTitle>
             <p className="text-sm text-muted-foreground">
               {startDate} → {endDate}
             </p>
@@ -951,10 +976,10 @@ function SimpleRevenueSummary({
           <CardContent className="space-y-3">
             {rows.length === 0 ? (
               <Empty className="py-8">
-                <EmptyHeader>
-                  <EmptyTitle className="text-sm font-semibold">
-                    Không có dữ liệu trong khoảng đã chọn.
-                  </EmptyTitle>
+                  <EmptyHeader>
+                    <EmptyTitle className="text-sm font-semibold">
+                    {revenueCopy.emptyRange}
+                    </EmptyTitle>
                 </EmptyHeader>
               </Empty>
             ) : (
@@ -983,8 +1008,10 @@ function SimpleRevenueSummary({
                         <p className="font-medium">{row.period_label}</p>
                       )}
                       <p className="text-xs text-muted-foreground">
-                        {row.order_count.toLocaleString("vi-VN")} đơn ·{" "}
-                        {row.total_covers.toLocaleString("vi-VN")} khách
+                        {revenueCopy.orderCustomerLine(
+                          row.order_count.toLocaleString("vi-VN"),
+                          row.total_covers.toLocaleString("vi-VN"),
+                        )}
                       </p>
                     </div>
                     <p className="text-right font-semibold tabular-nums">
@@ -999,11 +1026,13 @@ function SimpleRevenueSummary({
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Cơ cấu nhanh</CardTitle>
+            <CardTitle className="text-base">
+              {revenueCopy.quickStructure}
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <CompactBreakdown
-              label="Tiền mặt"
+              label={revenueCopy.cash}
               value={kpis?.cash_revenue ?? 0}
               total={paymentTotal}
             />
@@ -1019,12 +1048,12 @@ function SimpleRevenueSummary({
             />
             <div className="border-t pt-3">
               <CompactBreakdown
-                label="Tại quán"
+                label={revenueCopy.dineIn}
                 value={kpis?.dine_in_revenue ?? 0}
                 total={kpis?.net_revenue ?? 0}
               />
               <CompactBreakdown
-                label="Mang đi"
+                label={revenueCopy.takeaway}
                 value={kpis?.takeaway_revenue ?? 0}
                 total={kpis?.net_revenue ?? 0}
               />
@@ -1036,13 +1065,15 @@ function SimpleRevenueSummary({
       {branchId == null && branchTotals.length > 0 ? (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Chi nhánh nổi bật</CardTitle>
+            <CardTitle className="text-base">
+              {revenueCopy.highlightedBranches}
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {branchTotals.slice(0, 6).map((branch) => {
               const name =
                 branches.find((b) => b.id === branch.branchId)?.name ??
-                `Chi nhánh ${branch.branchId}`;
+                messages.finance.common.branchFallback(branch.branchId);
               const params = new URLSearchParams({
                 granularity,
                 start: startDate,
@@ -1063,7 +1094,9 @@ function SimpleRevenueSummary({
                       {name}
                     </Link>
                     <p className="text-xs text-muted-foreground">
-                      {branch.orders.toLocaleString("vi-VN")} đơn
+                      {revenueCopy.ordersLine(
+                        branch.orders.toLocaleString("vi-VN"),
+                      )}
                     </p>
                   </div>
                   <p className="text-right font-semibold tabular-nums">
@@ -1166,22 +1199,25 @@ function CashVarianceCard({ variance }: { variance: CashVarianceSummary }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Lệch tiền cuối ca</CardTitle>
+        <CardTitle className="text-base">{revenueCopy.cashVarianceTitle}</CardTitle>
         <p className="text-sm text-muted-foreground">
-          Tổng hợp `cash_difference` của các ca POS đã đóng trong khoảng. Lệch
-          âm cùng 1 thu ngân lặp lại nhiều ca = tín hiệu cần kiểm tra.
+          {revenueCopy.cashVarianceDescription}
         </p>
       </CardHeader>
       <CardContent className="space-y-3 p-4">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div>
-            <p className="text-xs text-muted-foreground">Số ca đã đóng</p>
+            <p className="text-xs text-muted-foreground">
+              {revenueCopy.closedSessions}
+            </p>
             <p className="text-lg font-semibold tabular-nums">
               {variance.session_count.toLocaleString("vi-VN")}
             </p>
           </div>
           <div>
-            <p className="text-xs text-muted-foreground">Lệch ròng</p>
+            <p className="text-xs text-muted-foreground">
+              {revenueCopy.netVariance}
+            </p>
             <p
               className={
                 tone === "good"
@@ -1197,7 +1233,7 @@ function CashVarianceCard({ variance }: { variance: CashVarianceSummary }) {
           </div>
           <div>
             <p className="text-xs text-muted-foreground">
-              Lệch thiếu ({variance.short_count})
+              {revenueCopy.shortVariance(variance.short_count)}
             </p>
             <p className="text-lg font-semibold tabular-nums text-destructive">
               {formatVND(variance.short_total)}
@@ -1205,7 +1241,7 @@ function CashVarianceCard({ variance }: { variance: CashVarianceSummary }) {
           </div>
           <div>
             <p className="text-xs text-muted-foreground">
-              Lệch thừa ({variance.over_count})
+              {revenueCopy.overVariance(variance.over_count)}
             </p>
             <p className="text-lg font-semibold tabular-nums text-success">
               +{formatVND(variance.over_total)}
@@ -1215,7 +1251,7 @@ function CashVarianceCard({ variance }: { variance: CashVarianceSummary }) {
         {variance.worst_cashiers.length > 0 ? (
           <div className="space-y-1.5 border-t pt-3">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Top thu ngân lệch nhiều
+              {revenueCopy.topVarianceCashiers}
             </p>
             <ul className="space-y-1">
               {variance.worst_cashiers.map((c) => (
@@ -1226,7 +1262,7 @@ function CashVarianceCard({ variance }: { variance: CashVarianceSummary }) {
                   <span className="truncate">
                     {c.cashier_name}
                     <span className="ml-2 text-xs text-muted-foreground">
-                      {c.session_count} ca
+                      {revenueCopy.sessionCount(c.session_count)}
                     </span>
                   </span>
                   <span
@@ -1245,7 +1281,7 @@ function CashVarianceCard({ variance }: { variance: CashVarianceSummary }) {
           </div>
         ) : (
           <p className="border-t pt-3 text-xs text-muted-foreground">
-            Không có ca nào lệch trong khoảng — tốt.
+            {revenueCopy.noVariance}
           </p>
         )}
       </CardContent>
@@ -1261,28 +1297,33 @@ function ReconcileCard({ reconcile }: { reconcile: ReconcileSnippet }) {
     <Card>
       <CardHeader>
         <CardTitle className="text-base">
-          Đối chiếu sổ phụ POS ↔ sổ cái
+          {revenueCopy.reconciliationTitle}
         </CardTitle>
         <p className="text-sm text-muted-foreground">
-          Tổng doanh thu thanh toán (POS) so với tổng có TK 511 + 33311 đã hạch
-          toán trong khoảng đang xem.
+          {revenueCopy.reconciliationDescription}
         </p>
       </CardHeader>
       <CardContent className="grid gap-3 p-4 sm:grid-cols-3">
         <div>
-          <p className="text-xs text-muted-foreground">POS (sổ phụ)</p>
+          <p className="text-xs text-muted-foreground">
+            {revenueCopy.posSubledger}
+          </p>
           <p className="text-lg font-semibold tabular-nums">
             {formatVND(reconcile.subledger_total)}
           </p>
         </div>
         <div>
-          <p className="text-xs text-muted-foreground">Sổ cái (511 + 33311)</p>
+          <p className="text-xs text-muted-foreground">
+            {revenueCopy.generalLedger}
+          </p>
           <p className="text-lg font-semibold tabular-nums">
             {formatVND(reconcile.gl_total)}
           </p>
         </div>
         <div>
-          <p className="text-xs text-muted-foreground">Chênh lệch</p>
+          <p className="text-xs text-muted-foreground">
+            {revenueCopy.difference}
+          </p>
           <p
             className={
               matched
@@ -1290,13 +1331,13 @@ function ReconcileCard({ reconcile }: { reconcile: ReconcileSnippet }) {
                 : "text-lg font-semibold tabular-nums text-destructive"
             }
           >
-            {matched ? "Khớp" : formatVND(diff)}
+            {matched ? revenueCopy.matched : formatVND(diff)}
           </p>
         </div>
         <div className="sm:col-span-3">
           <Button asChild size="sm" variant="outline">
             <Link href={`/finance/reconciliation?since=${reconcile.start}`}>
-              Mở trang đối chiếu
+              {revenueCopy.openReconciliation}
             </Link>
           </Button>
         </div>

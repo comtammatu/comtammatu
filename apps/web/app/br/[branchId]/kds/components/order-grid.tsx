@@ -1,14 +1,8 @@
 "use client";
 
+import { AppEmptyState } from "@/components/surface";
 import { cn } from "@comtammatu/ui";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@comtammatu/ui/components/empty";
 import { ChefHat as IconChefHat } from "lucide-react";
 import { OrderCard } from "../order-card";
 import type { KdsOrder } from "../types";
@@ -43,23 +37,19 @@ export function OrderGrid({
     <ScrollArea className="min-h-0 flex-1">
       {displayOrders.length === 0 ? (
         <div className="flex min-h-80 items-center justify-center p-6 md:min-h-96">
-          <Empty>
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <IconChefHat />
-              </EmptyMedia>
-              <EmptyTitle>
-                {hasGroupedOrders
-                  ? "Không có đơn phù hợp bộ lọc"
-                  : "Bếp đang rảnh"}
-              </EmptyTitle>
-              <EmptyDescription>
-                {hasGroupedOrders
-                  ? "Thay đổi bộ lọc để xem thêm đơn."
-                  : "Chưa có đơn hàng mới."}
-              </EmptyDescription>
-            </EmptyHeader>
-          </Empty>
+          <AppEmptyState
+            title={
+              hasGroupedOrders
+                ? "Không có đơn phù hợp bộ lọc"
+                : "Bếp đang rảnh"
+            }
+            description={
+              hasGroupedOrders
+                ? "Thay đổi bộ lọc để xem thêm đơn."
+                : "Chưa có đơn hàng mới."
+            }
+            icon={<IconChefHat />}
+          />
         </div>
       ) : (
         <div className={cn(gridClass)}>

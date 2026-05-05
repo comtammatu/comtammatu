@@ -53,6 +53,7 @@ import {
 } from "@comtammatu/ui/components/tabs";
 import { formatVND } from "@comtammatu/shared/format";
 import { fetchReconciliationByDay } from "../actions";
+import { messages } from "@lib/messages";
 import {
   fetchReconciliation,
   fetchReconciliationDrilldown,
@@ -61,6 +62,8 @@ import {
   type ReconciliationDrilldownRow,
   type ReconciliationReport,
 } from "../reconciliation-actions";
+
+const reconciliationCopy = messages.finance.reconciliation;
 
 interface ReconcileByDayRow {
   date: string;
@@ -130,7 +133,10 @@ export function ReconciliationClient({
   const [byDayError, setByDayError] = useState<string | null>(null);
 
   const branchName = (id: number | null) =>
-    id == null ? "—" : (branches.find((b) => b.id === id)?.name ?? `#${id}`);
+    id == null
+      ? messages.finance.common.noValue
+      : (branches.find((b) => b.id === id)?.name ??
+        messages.finance.common.branchFallback(id));
 
   function handleRun() {
     setError(null);
@@ -141,7 +147,7 @@ export function ReconciliationClient({
         endDate,
       });
       if (!res.success) {
-        setError(res.error ?? "Không thể tải dữ liệu.");
+        setError(res.error ?? reconciliationCopy.errors.loadData);
         setReport(null);
         return;
       }
@@ -155,7 +161,7 @@ export function ReconciliationClient({
     const res = await fetchReconciliationByDay(branchId, startDate, endDate);
     setByDayLoading(false);
     if (!res.success) {
-      setByDayError(res.error ?? "Không thể tải đối chiếu theo ngày.");
+      setByDayError(res.error ?? reconciliationCopy.errors.loadByDay);
       setByDayRows([]);
       return;
     }
@@ -187,7 +193,7 @@ export function ReconciliationClient({
       ...prev,
       loading: false,
       rows: res.success ? (res.data as ReconciliationDrilldownRow[]) : [],
-      error: res.success ? null : (res.error ?? "Không thể tải chi tiết."),
+      error: res.success ? null : (res.error ?? reconciliationCopy.errors.loadDrilldown),
     }));
   }
 
@@ -198,10 +204,10 @@ export function ReconciliationClient({
   return (
     <Tabs defaultValue="period" className="space-y-4">
       <TabsList className="h-auto w-full justify-start gap-2 overflow-x-auto p-2">
-        <TabsTrigger value="period">Đối chiếu kỳ</TabsTrigger>
-        <TabsTrigger value="by-day">DT theo ngày</TabsTrigger>
+        <TabsTrigger value="period">{reconciliationCopy.tabs.period}</TabsTrigger>
+        <TabsTrigger value="by-day">{reconciliationCopy.tabs.byDay}</TabsTrigger>
         <TabsTrigger value="desync">
-          Lệch payment ↔ đơn ({desync.length})
+          {reconciliationCopy.tabs.desync(desync.length)}
         </TabsTrigger>
       </TabsList>
 
@@ -257,7 +263,7 @@ export function ReconciliationClient({
               className="self-end"
             >
               {isLoading ? <Spinner /> : null}
-              Đối chiếu
+              {reconciliationCopy.actions.run}
             </Button>
           </CardContent>
         </Card>
@@ -272,21 +278,25 @@ export function ReconciliationClient({
           <>
             <div className="grid gap-3 sm:grid-cols-3">
               <SummaryCard
-                title="Khoảng đối chiếu"
+                title={reconciliationCopy.summary.range}
                 value={`${report.start_date} → ${report.end_date}`}
                 hint={branchName(report.branch_id)}
               />
               <SummaryCard
-                title="Tổng chênh lệch"
+                title={reconciliationCopy.summary.totalDifference}
                 value={formatVND(summary.totalDiff)}
-                hint={`Dung sai: ${formatVND(TOLERANCE_VND)}`}
+                hint={reconciliationCopy.summary.tolerance(
+                  formatVND(TOLERANCE_VND),
+                )}
                 highlight={Math.abs(summary.totalDiff) > TOLERANCE_VND}
               />
               <SummaryCard
-                title="Số mục lệch"
+                title={reconciliationCopy.summary.exceptionCount}
                 value={`${summary.exceptions} / ${report.categories.length}`}
                 hint={
-                  summary.exceptions === 0 ? "Khớp toàn bộ" : "Cần kiểm tra"
+                  summary.exceptions === 0
+                    ? reconciliationCopy.summary.matchedAll
+                    : reconciliationCopy.summary.needsReview
                 }
                 highlight={summary.exceptions > 0}
               />
@@ -295,7 +305,7 @@ export function ReconciliationClient({
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">
-                  Chi tiết theo nhóm hạch toán
+                  {reconciliationCopy.table.categoryDetailTitle}
                 </CardTitle>
               </CardHeader>
               <CardContent className="overflow-x-auto p-0">
@@ -303,22 +313,22 @@ export function ReconciliationClient({
                   <TableHeader>
                     <TableRow className="bg-muted/50 hover:bg-muted/50">
                       <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        Nhóm
+                        {reconciliationCopy.table.group}
                       </TableHead>
                       <TableHead className="text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        Sổ phụ
+                        {reconciliationCopy.table.subledger}
                       </TableHead>
                       <TableHead className="text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        Sổ cái
+                        {reconciliationCopy.table.gl}
                       </TableHead>
                       <TableHead className="text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        Chênh lệch
+                        {reconciliationCopy.table.difference}
                       </TableHead>
                       <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                         {FORM_VI.status}
                       </TableHead>
                       <TableHead className="text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        Drilldown
+                        {reconciliationCopy.table.drilldown}
                       </TableHead>
                     </TableRow>
                   </TableHeader>
@@ -340,11 +350,10 @@ export function ReconciliationClient({
           <Empty className="py-8">
             <EmptyHeader>
               <EmptyTitle className="text-sm font-semibold">
-                Chưa có kết quả
+                {reconciliationCopy.emptyResultTitle}
               </EmptyTitle>
               <EmptyDescription className="text-xs leading-5">
-                Chọn khoảng ngày và nhấn <strong>Đối chiếu</strong> để tải kết
-                quả.
+                {reconciliationCopy.emptyResultDescription}
               </EmptyDescription>
             </EmptyHeader>
           </Empty>
@@ -368,7 +377,7 @@ export function ReconciliationClient({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tất cả chi nhánh</SelectItem>
+                  <SelectItem value="all">{BRANCH_VI.selectAll}</SelectItem>
                   {branches.map((b) => (
                     <SelectItem key={b.id} value={String(b.id)}>
                       {b.name}
@@ -398,7 +407,9 @@ export function ReconciliationClient({
               />
             </div>
             <Button onClick={loadByDay} disabled={byDayLoading}>
-              {byDayLoading ? "Đang tải..." : "Đối chiếu theo ngày"}
+              {byDayLoading
+                ? messages.finance.common.loading
+                : reconciliationCopy.actions.runByDay}
             </Button>
           </CardContent>
         </Card>
@@ -421,14 +432,14 @@ export function ReconciliationClient({
         <SheetContent side="right" className="w-full sm:max-w-2xl">
           <SheetHeader>
             <SheetTitle>
-              Chi tiết{" "}
-              {drilldown.category ? labelForCategory(drilldown.category) : ""}
+              {reconciliationCopy.drilldown.title(
+                drilldown.category ? labelForCategory(drilldown.category) : "",
+              )}
             </SheetTitle>
             <SheetDescription>
               {drilldown.side === "subledger"
-                ? "Sổ phụ — chứng từ gốc"
-                : "Sổ cái — bút toán đã ghi nhận"}{" "}
-              · tối đa 200 dòng gần nhất
+                ? reconciliationCopy.drilldown.subledgerDescription
+                : reconciliationCopy.drilldown.glDescription}
             </SheetDescription>
           </SheetHeader>
           <div className="px-4 pb-4">
@@ -442,14 +453,14 @@ export function ReconciliationClient({
               </p>
             ) : drilldown.rows.length === 0 ? (
               <p className="py-10 text-center text-sm text-muted-foreground">
-                Không có dữ liệu trong khoảng đã chọn.
+                {reconciliationCopy.emptyRange}
               </p>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/50 hover:bg-muted/50">
                     <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                      Tham chiếu
+                      {reconciliationCopy.table.reference}
                     </TableHead>
                     <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                       {FORM_VI.date}
@@ -458,10 +469,10 @@ export function ReconciliationClient({
                       {BRANCH_VI.long}
                     </TableHead>
                     <TableHead className="text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                      Số tiền
+                      {reconciliationCopy.table.amount}
                     </TableHead>
                     <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                      Mô tả
+                      {reconciliationCopy.table.description}
                     </TableHead>
                   </TableRow>
                 </TableHeader>
@@ -482,7 +493,7 @@ export function ReconciliationClient({
                       </TableCell>
                       <TableCell className="max-w-sm text-xs text-muted-foreground">
                         <span className="line-clamp-2 break-words">
-                          {row.description ?? "—"}
+                          {row.description ?? messages.finance.common.noValue}
                         </span>
                       </TableCell>
                     </TableRow>
@@ -512,15 +523,15 @@ function summarize(rows: ReconciliationCategoryRow[]) {
 function labelForCategory(c: ReconciliationCategory): string {
   switch (c) {
     case "sales":
-      return "Doanh thu + VAT (511+33311)";
+      return reconciliationCopy.categoryLabels.sales;
     case "cogs":
-      return "Giá vốn (621)";
+      return reconciliationCopy.categoryLabels.cogs;
     case "inventory_in":
-      return "Nhập kho NVL (152)";
+      return reconciliationCopy.categoryLabels.inventoryIn;
     case "payroll":
-      return "Lương nhân công (622)";
+      return reconciliationCopy.categoryLabels.payroll;
     case "ap_payment":
-      return "Thanh toán NCC (331)";
+      return reconciliationCopy.categoryLabels.apPayment;
   }
 }
 
@@ -575,35 +586,39 @@ function CategoryRow({
       </TableCell>
       <TableCell className="text-right">
         {cat.subledger_total == null
-          ? "—"
+          ? messages.finance.common.noValue
           : formatVND(Number(cat.subledger_total))}
       </TableCell>
       <TableCell className="text-right">
-        {cat.gl_total == null ? "—" : formatVND(Number(cat.gl_total))}
+        {cat.gl_total == null
+          ? messages.finance.common.noValue
+          : formatVND(Number(cat.gl_total))}
       </TableCell>
       <TableCell
         className={`text-right ${
           isException ? "font-semibold text-warning-foreground" : ""
         }`}
       >
-        {diff == null ? "—" : formatVND(diff)}
+        {diff == null ? messages.finance.common.noValue : formatVND(diff)}
       </TableCell>
       <TableCell>
         {tenantWideOnly ? (
           <Badge variant="outline" className="text-xs">
-            Toàn doanh nghiệp
+            {reconciliationCopy.status.enterpriseWide}
           </Badge>
         ) : isException ? (
           <Badge variant="destructive" className="gap-1 text-xs">
-            <IconAlertTriangle className="size-3" /> Lệch
+            <IconAlertTriangle className="size-3" />
+            {reconciliationCopy.status.different}
           </Badge>
         ) : diff == null ? (
           <Badge variant="outline" className="text-xs">
-            Không áp dụng
+            {reconciliationCopy.status.notApplicable}
           </Badge>
         ) : (
           <Badge variant="secondary" className="gap-1 text-xs">
-            <IconCircleCheck className="size-3" /> Khớp
+            <IconCircleCheck className="size-3" />
+            {reconciliationCopy.status.matched}
           </Badge>
         )}
       </TableCell>
@@ -615,7 +630,8 @@ function CategoryRow({
             disabled={tenantWideOnly}
             onClick={() => onDrill(cat.category, "subledger")}
           >
-            Sổ phụ <IconChevronRight className="ml-1 size-3" />
+            {reconciliationCopy.table.subledger}
+            <IconChevronRight className="ml-1 size-3" />
           </Button>
           <Button
             size="sm"
@@ -623,7 +639,8 @@ function CategoryRow({
             disabled={tenantWideOnly}
             onClick={() => onDrill(cat.category, "gl")}
           >
-            Sổ cái <IconChevronRight className="ml-1 size-3" />
+            {reconciliationCopy.table.gl}
+            <IconChevronRight className="ml-1 size-3" />
           </Button>
         </div>
       </TableCell>
@@ -662,8 +679,7 @@ function ByDayTable({
     return (
       <Card>
         <CardContent className="p-10 text-center text-sm text-muted-foreground">
-          Chọn khoảng ngày và bấm &quot;Đối chiếu theo ngày&quot; để xem chênh
-          lệch DT POS ↔ Sổ cái cho từng ngày.
+          {reconciliationCopy.byDay.emptyDescription}
         </CardContent>
       </Card>
     );
@@ -677,22 +693,27 @@ function ByDayTable({
     <Card>
       <CardHeader>
         <CardTitle className="text-base">
-          Đối chiếu DT POS ↔ Sổ cái — theo ngày
+          {reconciliationCopy.byDay.title}
         </CardTitle>
         <p className="text-sm text-muted-foreground">
-          Cột POS bucket theo `paid_at`, cột Sổ cái bucket theo `entry_date`,
-          cùng giờ Việt Nam. Ngày khớp đến ±1 ₫ được đánh dấu &quot;Khớp&quot;.
+          {reconciliationCopy.byDay.description}
         </p>
       </CardHeader>
       <CardContent className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Ngày</TableHead>
-              <TableHead className="text-right">POS (sổ phụ)</TableHead>
-              <TableHead className="text-right">Sổ cái 511+33311</TableHead>
-              <TableHead className="text-right">Chênh lệch</TableHead>
-              <TableHead className="w-32">Trạng thái</TableHead>
+              <TableHead>{reconciliationCopy.byDay.date}</TableHead>
+              <TableHead className="text-right">
+                {reconciliationCopy.byDay.posSubledger}
+              </TableHead>
+              <TableHead className="text-right">
+                {reconciliationCopy.byDay.glSalesVat}
+              </TableHead>
+              <TableHead className="text-right">
+                {reconciliationCopy.table.difference}
+              </TableHead>
+              <TableHead className="w-32">{FORM_VI.status}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -716,18 +737,18 @@ function ByDayTable({
                         : "text-right tabular-nums font-medium text-destructive"
                     }
                   >
-                    {matched ? "0" : formatVND(r.diff)}
+                    {matched ? reconciliationCopy.byDay.zero : formatVND(r.diff)}
                   </TableCell>
                   <TableCell>
                     {matched ? (
                       <Badge variant="success" className="gap-1">
                         <IconCircleCheck className="size-3.5" />
-                        Khớp
+                        {reconciliationCopy.status.matched}
                       </Badge>
                     ) : (
                       <Badge variant="destructive" className="gap-1">
                         <IconAlertTriangle className="size-3.5" />
-                        Lệch
+                        {reconciliationCopy.status.different}
                       </Badge>
                     )}
                   </TableCell>
@@ -735,7 +756,9 @@ function ByDayTable({
               );
             })}
             <TableRow className="bg-muted/40">
-              <TableCell className="font-medium">Tổng</TableCell>
+              <TableCell className="font-medium">
+                {reconciliationCopy.byDay.total}
+              </TableCell>
               <TableCell className="text-right tabular-nums font-medium">
                 {formatVND(totalRevenue)}
               </TableCell>
@@ -750,7 +773,7 @@ function ByDayTable({
                 }
               >
                 {Math.abs(totalDiff) <= TOLERANCE_VND
-                  ? "Khớp"
+                  ? reconciliationCopy.status.matched
                   : formatVND(totalDiff)}
               </TableCell>
               <TableCell />
@@ -774,8 +797,7 @@ function DesyncTable({
       <Card>
         <CardContent className="flex items-center gap-2 p-6 text-sm text-muted-foreground">
           <IconCircleCheck className="size-4 text-success" />
-          Tất cả thanh toán đều khớp trạng thái đơn trong cửa sổ 30 ngày gần
-          nhất.
+          {reconciliationCopy.desync.emptyDescription}
         </CardContent>
       </Card>
     );
@@ -786,7 +808,7 @@ function DesyncTable({
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <IconAlertTriangle className="size-4 text-warning-foreground" />
-          {rows.length} mục cần kiểm tra
+          {reconciliationCopy.desync.reviewCount(rows.length)}
         </CardTitle>
       </CardHeader>
       <CardContent className="overflow-x-auto p-0">
@@ -794,28 +816,28 @@ function DesyncTable({
           <TableHeader>
             <TableRow className="bg-muted/50 hover:bg-muted/50">
               <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Payment
+                {reconciliationCopy.desync.payment}
               </TableHead>
               <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Đơn
+                {reconciliationCopy.desync.order}
               </TableHead>
               <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 {BRANCH_VI.long}
               </TableHead>
               <TableHead className="text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Số tiền
+                {reconciliationCopy.table.amount}
               </TableHead>
               <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Phương thức
+                {reconciliationCopy.desync.method}
               </TableHead>
               <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Order status
+                {reconciliationCopy.desync.orderStatus}
               </TableHead>
               <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Paid lúc
+                {reconciliationCopy.desync.paidAt}
               </TableHead>
               <TableHead className="text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Lệch
+                {reconciliationCopy.desync.ageDiff}
               </TableHead>
             </TableRow>
           </TableHeader>
@@ -836,7 +858,7 @@ function DesyncTable({
                 </TableCell>
                 <TableCell>
                   <Badge variant="outline" className="font-mono text-xs">
-                    {r.payment_method ?? "—"}
+                    {r.payment_method ?? messages.finance.common.noValue}
                   </Badge>
                 </TableCell>
                 <TableCell>
@@ -847,16 +869,18 @@ function DesyncTable({
                         : "outline"
                     }
                   >
-                    {r.order_payment_status ?? "unpaid"}
+                    {r.order_payment_status ?? reconciliationCopy.desync.unpaid}
                   </Badge>
                 </TableCell>
                 <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
                   {r.payment_paid_at
                     ? new Date(r.payment_paid_at).toLocaleString("vi-VN")
-                    : "—"}
+                    : messages.finance.common.noValue}
                 </TableCell>
                 <TableCell className="text-right text-xs text-muted-foreground">
-                  {r.age_minutes != null ? `${r.age_minutes} phút` : "—"}
+                  {r.age_minutes != null
+                    ? reconciliationCopy.desync.minutes(r.age_minutes)
+                    : messages.finance.common.noValue}
                 </TableCell>
               </TableRow>
             ))}

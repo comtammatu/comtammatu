@@ -49,6 +49,10 @@ import {
 } from "../statement-actions";
 
 import { FORM_VI } from "@comtammatu/shared/messages";
+import { messages } from "@lib/messages";
+
+const financeCopy = messages.finance;
+
 type B01Report = Tt200ReportEnvelope<{ as_of_date: string }>;
 type B02Report = Tt200ReportEnvelope<{ start_date: string; end_date: string }>;
 type B03Report = Tt200ReportEnvelope<{
@@ -57,6 +61,18 @@ type B03Report = Tt200ReportEnvelope<{
   consistency_check: CashflowConsistencyCheck;
 }>;
 type GtgtReport = Tt200ReportEnvelope<{ period: string }>;
+
+const REPORT_LINE_INDENT_CLASS: Record<number, string> = {
+  1: "pl-0",
+  2: "pl-6",
+  3: "pl-12",
+  4: "pl-16",
+  5: "pl-20",
+};
+
+function reportLineIndentClass(level: number): string {
+  return REPORT_LINE_INDENT_CLASS[level] ?? "pl-20";
+}
 
 export function StatementsClient() {
   const [isPending, startTransition] = useTransition();
@@ -85,7 +101,7 @@ export function StatementsClient() {
       if (res.success) {
         setB01Data(res.data as B01Report);
       } else {
-        toast.error(res.error ?? "Lỗi tạo báo cáo.");
+        toast.error(res.error ?? financeCopy.common.reportError);
       }
     });
   }
@@ -99,7 +115,7 @@ export function StatementsClient() {
       if (res.success) {
         setB02Data(res.data as B02Report);
       } else {
-        toast.error(res.error ?? "Lỗi tạo báo cáo.");
+        toast.error(res.error ?? financeCopy.common.reportError);
       }
     });
   }
@@ -113,7 +129,7 @@ export function StatementsClient() {
       if (res.success) {
         setB03Data(res.data as B03Report);
       } else {
-        toast.error(res.error ?? "Lỗi tạo báo cáo.");
+        toast.error(res.error ?? financeCopy.common.reportError);
       }
     });
   }
@@ -124,7 +140,7 @@ export function StatementsClient() {
       if (res.success) {
         setVatData(res.data as GtgtReport);
       } else {
-        toast.error(res.error ?? "Lỗi tạo báo cáo.");
+        toast.error(res.error ?? financeCopy.common.reportError);
       }
     });
   }
@@ -132,10 +148,12 @@ export function StatementsClient() {
   return (
     <Tabs defaultValue="b01" className="space-y-4">
       <TabsList className="h-auto w-full justify-start gap-2 overflow-x-auto p-2">
-        <TabsTrigger value="b01">B01-DN · CĐKT</TabsTrigger>
-        <TabsTrigger value="b02">B02-DN · KQKD</TabsTrigger>
-        <TabsTrigger value="b03">B03-DN · LCTT</TabsTrigger>
-        <TabsTrigger value="gtgt">01/GTGT · Thuế GTGT</TabsTrigger>
+        <TabsTrigger value="b01">{financeCopy.statements.tabs.b01}</TabsTrigger>
+        <TabsTrigger value="b02">{financeCopy.statements.tabs.b02}</TabsTrigger>
+        <TabsTrigger value="b03">{financeCopy.statements.tabs.b03}</TabsTrigger>
+        <TabsTrigger value="gtgt">
+          {financeCopy.statements.tabs.gtgt}
+        </TabsTrigger>
       </TabsList>
 
       <TabsContent value="b01" className="mt-0 space-y-4">
@@ -154,15 +172,17 @@ export function StatementsClient() {
             </div>
             <Button onClick={handleB01} disabled={isPending}>
               {isPending ? <Spinner /> : null}
-              Tạo Bảng cân đối
+              {financeCopy.statements.createBalanceSheet}
             </Button>
           </CardContent>
         </Card>
 
         {b01Data ? (
           <Tt200Report
-            title="B01-DN — Bảng Cân Đối Kế Toán"
-            subtitle={`Đến ngày ${b01Data.meta.as_of_date}`}
+            title={financeCopy.statements.reports.b01Title}
+            subtitle={financeCopy.statements.reports.b01Subtitle(
+              b01Data.meta.as_of_date,
+            )}
             data={b01Data}
             assertion={(lines) => assertEquality(lines, "270", "440")}
           />
@@ -196,15 +216,18 @@ export function StatementsClient() {
             </div>
             <Button onClick={handleB02} disabled={isPending}>
               {isPending ? <Spinner /> : null}
-              Tạo KQKD
+              {financeCopy.statements.createIncomeStatement}
             </Button>
           </CardContent>
         </Card>
 
         {b02Data ? (
           <Tt200Report
-            title="B02-DN — Báo Cáo Kết Quả Kinh Doanh"
-            subtitle={`${b02Data.meta.start_date} → ${b02Data.meta.end_date}`}
+            title={financeCopy.statements.reports.b02Title}
+            subtitle={financeCopy.statements.reports.rangeSubtitle(
+              b02Data.meta.start_date,
+              b02Data.meta.end_date,
+            )}
             data={b02Data}
           />
         ) : (
@@ -237,7 +260,7 @@ export function StatementsClient() {
             </div>
             <Button onClick={handleB03} disabled={isPending}>
               {isPending ? <Spinner /> : null}
-              Tạo LCTT
+              {financeCopy.statements.createCashflow}
             </Button>
           </CardContent>
         </Card>
@@ -245,8 +268,11 @@ export function StatementsClient() {
         {b03Data ? (
           <>
             <Tt200Report
-              title="B03-DN — Báo Cáo Lưu Chuyển Tiền Tệ (gián tiếp)"
-              subtitle={`${b03Data.meta.start_date} → ${b03Data.meta.end_date}`}
+              title={financeCopy.statements.reports.b03Title}
+              subtitle={financeCopy.statements.reports.rangeSubtitle(
+                b03Data.meta.start_date,
+                b03Data.meta.end_date,
+              )}
               data={b03Data}
             />
             <CashflowConsistencyBanner check={b03Data.meta.consistency_check} />
@@ -261,7 +287,7 @@ export function StatementsClient() {
           <CardContent className="grid gap-3 p-4 sm:grid-cols-[1fr_auto] sm:items-end">
             <div className="space-y-1.5">
               <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Kỳ kê khai (YYYY-MM)
+                {financeCopy.statements.vatPeriod}
               </Label>
               <Input
                 type="month"
@@ -272,15 +298,17 @@ export function StatementsClient() {
             </div>
             <Button onClick={handleGtgt} disabled={isPending}>
               {isPending ? <Spinner /> : null}
-              Tạo Tờ khai
+              {financeCopy.statements.createVatReturn}
             </Button>
           </CardContent>
         </Card>
 
         {vatData ? (
           <Tt200Report
-            title="01/GTGT — Tờ Khai Thuế Giá Trị Gia Tăng"
-            subtitle={`Kỳ ${vatData.meta.period}`}
+            title={financeCopy.statements.reports.gtgtTitle}
+            subtitle={financeCopy.statements.reports.gtgtSubtitle(
+              vatData.meta.period,
+            )}
             data={vatData}
           />
         ) : (
@@ -296,10 +324,10 @@ function EmptyState() {
     <Empty className="py-8">
       <EmptyHeader>
         <EmptyTitle className="text-sm font-semibold">
-          Chưa có báo cáo
+          {financeCopy.statements.emptyTitle}
         </EmptyTitle>
         <EmptyDescription className="text-xs leading-5">
-          Chọn kỳ và nhấn nút <strong>Tạo</strong> để xem báo cáo.
+          {financeCopy.statements.emptyDescription}
         </EmptyDescription>
       </EmptyHeader>
     </Empty>
@@ -322,23 +350,29 @@ function CashflowConsistencyBanner({
           >
             <Icon className="size-3" />
             {check.consistent
-              ? "Đối chiếu cân khớp"
-              : "Lệch sổ — kế toán phải kiểm tra"}
+              ? financeCopy.statements.consistency.balanced
+              : financeCopy.statements.consistency.mismatch}
           </Badge>
         </div>
         <p className="text-xs text-muted-foreground">
-          B03-DN audit invariant: tiền cuối kỳ − tiền đầu kỳ phải bằng lưu
-          chuyển tiền thuần trong kỳ. Lệch &gt; 1 VND đồng nghĩa có bút toán
-          tiền (111/112) chưa khớp với operating/investing/financing buckets —
-          thường do định khoản sai cashflow_section trên tài khoản.
+          {financeCopy.statements.consistency.description}
         </p>
       </CardHeader>
       <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <ConsistencyStat label="Tiền đầu kỳ (60)" value={check.opening_cash} />
-        <ConsistencyStat label="Tiền cuối kỳ (70)" value={check.closing_cash} />
-        <ConsistencyStat label="LCT thuần (50)" value={check.net_cashflow} />
         <ConsistencyStat
-          label="Chênh lệch"
+          label={financeCopy.statements.consistency.openingCash}
+          value={check.opening_cash}
+        />
+        <ConsistencyStat
+          label={financeCopy.statements.consistency.closingCash}
+          value={check.closing_cash}
+        />
+        <ConsistencyStat
+          label={financeCopy.statements.consistency.netCashflow}
+          value={check.net_cashflow}
+        />
+        <ConsistencyStat
+          label={financeCopy.statements.consistency.difference}
           value={check.difference}
           tone={check.consistent ? undefined : "destructive"}
         />
@@ -393,12 +427,13 @@ function Tt200Report<TMeta extends object>({
           <CardTitle className="text-base">{title}</CardTitle>
           {isDraft ? (
             <Badge variant="destructive" className="gap-1">
-              <IconAlertTriangle className="size-3" /> BẢN NHÁP — kế toán phải
-              đối chiếu trước khi nộp
+              <IconAlertTriangle className="size-3" />
+              <span>{financeCopy.statements.badges.draft}</span>
             </Badge>
           ) : (
             <Badge variant="secondary" className="gap-1">
-              <IconCircleCheck className="size-3" /> Kỳ đã khóa sổ
+              <IconCircleCheck className="size-3" />
+              <span>{financeCopy.statements.badges.final}</span>
             </Badge>
           )}
         </div>
@@ -414,13 +449,13 @@ function Tt200Report<TMeta extends object>({
           <TableHeader>
             <TableRow className="bg-muted/50 hover:bg-muted/50">
               <TableHead className="w-24 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Mã số
+                {financeCopy.statements.table.code}
               </TableHead>
               <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Chỉ tiêu
+                {financeCopy.statements.table.line}
               </TableHead>
               <TableHead className="w-44 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Số tiền (VND)
+                {financeCopy.statements.table.amount}
               </TableHead>
             </TableRow>
           </TableHeader>
@@ -433,9 +468,7 @@ function Tt200Report<TMeta extends object>({
                 <TableCell className="font-mono text-xs">
                   {line.line_code}
                 </TableCell>
-                <TableCell
-                  style={{ paddingLeft: `${(line.level - 1) * 1.5}rem` }}
-                >
+                <TableCell className={reportLineIndentClass(line.level)}>
                   {line.line_label}
                 </TableCell>
                 <TableCell className="text-right font-mono">
@@ -460,7 +493,13 @@ function assertEquality(
   if (!a || !b) return null;
   const diff = Math.abs(Number(a.amount) - Number(b.amount));
   if (diff > 1) {
-    return `Cảnh báo: ${codeA} (${formatVND(Number(a.amount))}) ≠ ${codeB} (${formatVND(Number(b.amount))}); chênh lệch ${formatVND(diff)}. Kiểm tra bút toán trước khi nộp.`;
+    return financeCopy.statements.assertionWarning(
+      codeA,
+      formatVND(Number(a.amount)),
+      codeB,
+      formatVND(Number(b.amount)),
+      formatVND(diff),
+    );
   }
   return null;
 }

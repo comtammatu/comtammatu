@@ -1,21 +1,12 @@
 import type { ReactNode } from "react";
-import { TableCell, TableRow } from "@comtammatu/ui/components/table";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@comtammatu/ui/components/empty";
 import { cn } from "@comtammatu/ui";
+import { TableCell, TableRow } from "@comtammatu/ui/components/table";
+import { AppEmptyState, type AppEmptyStateMode } from "./surface";
 
-type EmptyStateMode = "no-data" | "no-results" | "no-access";
-
-const TABLE_EMPTY_STATE_COPY: Partial<Record<EmptyStateMode, string>> = {
-  "no-data": "Chưa có dữ liệu",
-  "no-results": "Không có kết quả phù hợp",
-  "no-access": "Không có quyền truy cập",
-};
+type EmptyStateMode = Extract<
+  AppEmptyStateMode,
+  "no-data" | "no-results" | "no-access"
+>;
 
 interface TableEmptyStateRowProps {
   colSpan: number;
@@ -34,24 +25,20 @@ export function TableEmptyStateRow({
   icon,
   paddingClassName = "py-12",
 }: TableEmptyStateRowProps) {
-  const resolvedTitle = title ?? TABLE_EMPTY_STATE_COPY[mode];
-
   return (
     <TableRow>
-      <TableCell colSpan={colSpan} className={cn(paddingClassName, "text-center")}>
-        <Empty className="mx-auto max-w-sm border bg-card py-6">
-          {icon ? <EmptyMedia variant="icon">{icon}</EmptyMedia> : null}
-          <EmptyHeader>
-            <EmptyTitle className="text-sm font-semibold">
-              {resolvedTitle}
-            </EmptyTitle>
-            {description ? (
-              <EmptyDescription className="text-xs leading-5">
-                {description}
-              </EmptyDescription>
-            ) : null}
-          </EmptyHeader>
-        </Empty>
+      <TableCell
+        colSpan={colSpan}
+        className={cn(paddingClassName, "text-center")}
+      >
+        <AppEmptyState
+          compact
+          title={title}
+          mode={mode}
+          description={description}
+          icon={icon}
+          className="mx-auto max-w-sm"
+        />
       </TableCell>
     </TableRow>
   );

@@ -1,15 +1,33 @@
 import { PageHero } from "@/components/page-hero";
+import { messages } from "@lib/messages";
 import { FinanceClient } from "./finance-client";
 import {
   fetchAccessibleBranches,
+  fetchCashVarianceSummary,
+  fetchFinanceDashboardSummary,
   fetchRevenueRollup,
   fetchRevenueKpis,
   fetchTaxInvoices,
   fetchTopItems,
 } from "./actions";
-import type { AccessibleBranch, KpiBundle, RollupRow } from "./revenue/page";
+import { fetchFoodCost } from "./accounting-actions";
+import { fetchFiscalPeriods } from "./period-actions";
+import {
+  fetchReconciliation,
+  type ReconciliationReport,
+} from "./reconciliation-actions";
+import type {
+  AccessibleBranch,
+  CashVarianceSummary,
+  KpiBundle,
+  RollupRow,
+} from "./revenue/page";
+import type { FinanceDashboardSummary } from "./actions";
 
 export type FinanceLayoutMode = "simple" | "advanced";
+
+const RECONCILIATION_TOLERANCE = 1;
+const FOOD_COST_EXCEPTION_THRESHOLD = 60;
 
 function isFinanceLayoutMode(
   value: string | undefined,
@@ -100,6 +118,11 @@ export default async function FinancePage({
     todayKpisRes,
     yesterdayKpisRes,
     monthKpisRes,
+    dashboardSummaryRes,
+    fiscalPeriodsRes,
+    reconciliationRes,
+    cashVarianceRes,
+    foodCostRes,
   ] = await Promise.all([
     fetchRevenueRollup(branchId, startDate, endDate, "day"),
     fetchTopItems(branchId, periodStart),
@@ -107,6 +130,15 @@ export default async function FinancePage({
     fetchRevenueKpis(branchId, today, today),
     fetchRevenueKpis(branchId, yesterday, yesterday),
     fetchRevenueKpis(branchId, periodStart, today),
+    fetchFinanceDashboardSummary(branchId, periodStart, today),
+    fetchFiscalPeriods(),
+    fetchReconciliation({ branchId, startDate: periodStart, endDate: today }),
+    fetchCashVarianceSummary(branchId, periodStart, today),
+    fetchFoodCost({
+      startDate: periodStart,
+      endDate: today,
+      ...(branchId != null ? { branchId } : {}),
+    }),
   ]);
 
   const dailyRevenue = dailyRevenueRes.success
@@ -127,13 +159,78 @@ export default async function FinancePage({
   const monthKpis = (
     monthKpisRes.success ? monthKpisRes.data : null
   ) as KpiBundle | null;
+  const dashboardSummary = (
+    dashboardSummaryRes.success ? dashboardSummaryRes.data : null
+  ) as FinanceDashboardSummary | null;
+
+  const currentPeriodYear = Number(today.slice(0, 4));
+  const currentPeriodMonth = Number(today.slice(5, 7));
+  const fiscalPeriods = fiscalPeriodsRes.success
+    ? ((fiscalPeriodsRes.data ?? []) as FiscalPeriodRow[])
+    : [];
+  const currentPeriod = fiscalPeriods.find(
+    (period) =>
+      period.period_year === currentPeriodYear &&
+      period.period_month === currentPeriodMonth,
+  );
+
+  let reconciliationExceptionCount = 0;
+  let reconciliationDifference = 0;
+  if (reconciliationRes.success && reconciliationRes.data) {
+    const report = reconciliationRes.data as ReconciliationReport;
+    reconciliationExceptionCount = report.categories.filter(
+      (category) =>
+        Math.abs(Number(category.difference ?? 0)) > RECONCILIATION_TOLERANCE,
+    ).length;
+    reconciliationDifference = report.categories.reduce(
+      (sum, category) => sum + Math.abs(Number(category.difference ?? 0)),
+      0,
+    );
+  }
+
+  let cashVarianceSessionCount = 0;
+  let cashVarianceAbsAmount = 0;
+  if (cashVarianceRes.success && cashVarianceRes.data) {
+    const raw = cashVarianceRes.data as CashVarianceSummary;
+    cashVarianceSessionCount = Number(raw.session_count ?? 0);
+    cashVarianceAbsAmount = Number(raw.abs_variance_total ?? 0);
+  }
+
+  const foodCostRows = foodCostRes.success
+    ? ((foodCostRes.data ?? []) as FinanceFoodCostRow[])
+    : [];
+  const foodCostExceptions = foodCostRows
+    .filter(
+      (row) =>
+        Number(row.food_cost_pct ?? 0) >= FOOD_COST_EXCEPTION_THRESHOLD,
+    )
+    .sort(
+      (a, b) =>
+        Number(b.food_cost_pct ?? 0) - Number(a.food_cost_pct ?? 0),
+    );
+  const topFoodCostException = foodCostExceptions[0] ?? null;
+
+  const dashboardHealth: FinanceDashboardHealth = {
+    currentPeriodLabel: `T${String(currentPeriodMonth).padStart(2, "0")}/${currentPeriodYear}`,
+    currentPeriodStatus: currentPeriod?.status ?? "missing",
+    reconciliationExceptionCount,
+    reconciliationDifference,
+    cashVarianceSessionCount,
+    cashVarianceAbsAmount,
+    foodCostExceptionCount: foodCostExceptions.length,
+    topFoodCostExceptionName: topFoodCostException?.item_name ?? null,
+    topFoodCostExceptionPct:
+      topFoodCostException?.food_cost_pct == null
+        ? null
+        : Number(topFoodCostException.food_cost_pct),
+  };
 
   return (
     <div className="space-y-5 lg:space-y-6">
       <PageHero
-        eyebrow="Kế toán"
-        title="Tài chính"
-        description="Theo dõi doanh thu live, HĐĐT, đối chiếu và sổ kế toán trong một module."
+        eyebrow={messages.finance.page.eyebrow}
+        title={messages.finance.page.title}
+        description={messages.finance.page.description}
       />
       <FinanceClient
         layout={layout}
@@ -147,6 +244,8 @@ export default async function FinancePage({
         dailyRevenue={dailyRevenue}
         topItems={topItems}
         invoices={invoices}
+        dashboardSummary={dashboardSummary}
+        dashboardHealth={dashboardHealth}
       />
     </div>
   );
@@ -192,3 +291,33 @@ export interface InvoiceRow {
   created_at: string;
   orders: { order_number: string } | null;
 }
+
+export interface FiscalPeriodRow {
+  id: number;
+  period_month: number;
+  period_year: number;
+  status: string;
+  closed_by: string | null;
+  closed_at: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+interface FinanceFoodCostRow {
+  item_name: string | null;
+  food_cost_pct: number | null;
+}
+
+export interface FinanceDashboardHealth {
+  currentPeriodLabel: string;
+  currentPeriodStatus: string;
+  reconciliationExceptionCount: number;
+  reconciliationDifference: number;
+  cashVarianceSessionCount: number;
+  cashVarianceAbsAmount: number;
+  foodCostExceptionCount: number;
+  topFoodCostExceptionName: string | null;
+  topFoodCostExceptionPct: number | null;
+}
+
+export type { FinanceDashboardSummary } from "./actions";

@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { canManageBranchFloorSettings } from "@comtammatu/shared/auth";
 import { loadAuthState } from "@/_lib/auth";
 import { TablesClient } from "./tables-client";
+import { SettingsPageShell } from "../settings-page-shell";
+import { messages } from "@lib/messages";
 
 export default async function TablesPage() {
   const { supabase, claims } = await loadAuthState();
@@ -61,15 +63,11 @@ export default async function TablesPage() {
   }));
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Bàn & Khu vực</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Quản lý khu vực và bàn ăn theo chi nhánh
-        </p>
-      </div>
-
+    <SettingsPageShell
+      title={messages.settings.pages.tablesTitle}
+      description={messages.settings.pages.tablesDescription}
+    >
       <TablesClient branches={branches} zones={zones} tables={tables} />
-    </div>
+    </SettingsPageShell>
   );
 }

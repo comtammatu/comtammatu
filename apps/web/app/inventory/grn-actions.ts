@@ -289,7 +289,7 @@ const grnLineSchema = z.object({
   priceOverridePhotoUrl: z.string().trim().url().optional().nullable(),
   // Short-delivery handling (set by user when received < ordered beyond tolerance)
   shortDeliveryAction: z
-    .enum(["accept_and_close", "wait_backorder", "request_credit"])
+    .enum(["accept_and_close", "wait_backorder"])
     .optional()
     .nullable(),
 });
@@ -1489,73 +1489,3 @@ export async function fetchMenuItemsForRecipes(): Promise<ActionResult> {
   if (error) return { success: false, error: "Không thể tải món." };
   return { success: true, data: data ?? [] };
 }
-
-/* ─── AP Payment ─── */
-
-const markPaidSchema = z.object({
-  invoiceId: z.coerce.number().int().positive(),
-  amount: z.coerce
-    .number()
-    .positive({ error: "Số tiền thanh toán phải lớn hơn 0" }),
-  paidAt: z.string().optional(),
-});
-
-export const markInvoicePaid = withAction(
-  {
-    roles: ROLES,
-    schema: markPaidSchema,
-    permission: PERMISSION_KEYS.PROCUREMENT_INVOICE_MATCH,
-  },
-  async (data, { supabase, claims }) => {
-    // 1. Fetch invoice totals
-    const { data: invoice, error: fetchErr } = await supabase
-      .from("supplier_invoices")
-      .select("id, total_amount, paid_amount")
-      .eq("id", data.invoiceId)
-      .eq("tenant_id", claims.tenant_id)
-      .single();
-
-    if (fetchErr || !invoice) {
-      return { success: false, error: "Không tìm thấy hóa đơn." };
-    }
-
-    const currentPaid = Number(invoice.paid_amount ?? 0);
-    const totalAmount = Number(invoice.total_amount);
-    const newPaid = currentPaid + data.amount;
-
-    if (newPaid > totalAmount) {
-      return {
-        success: false,
-        error: `Số tiền vượt quá tổng hóa đơn. Còn lại: ${(totalAmount - currentPaid).toLocaleString("vi-VN")} đ`,
-      };
-    }
-
-    const paymentStatus = newPaid >= totalAmount ? "paid" : "partial";
-    const paidAt = data.paidAt ?? new Date().toISOString();
-
-    // 2. Update invoice (optimistic concurrency: match current paid_amount to prevent race)
-    // TODO: migrate to atomic RPC (UPDATE SET paid_amount = paid_amount + $1 WHERE paid_amount + $1 <= total_amount)
-    const { data: updated, error: updateErr } = await supabase
-      .from("supplier_invoices")
-      .update({
-        paid_amount: newPaid,
-        payment_status: paymentStatus,
-        paid_at: paidAt,
-      })
-      .eq("id", data.invoiceId)
-      .eq("tenant_id", claims.tenant_id)
-      .eq("paid_amount", currentPaid) // optimistic lock: fail if concurrent write changed paid_amount
-      .select("id, payment_status, paid_amount, paid_at")
-      .single();
-
-    if (updateErr || !updated) {
-      return {
-        success: false,
-        error:
-          "Không thể cập nhật thanh toán. Có thể đã có thay đổi đồng thời — vui lòng tải lại.",
-      };
-    }
-
-    return { success: true, data: updated };
-  },
-);

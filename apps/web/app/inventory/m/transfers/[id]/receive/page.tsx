@@ -3,9 +3,22 @@ import { createClient } from "@comtammatu/database/supabase/server";
 import {
   extractClaimsFromAccessToken,
   INVENTORY_OPS_ROLES,
+  PERMISSION_KEYS,
+  type StaffRole,
 } from "@comtammatu/shared/auth";
 import { TransferReceiveClient } from "./transfer-receive-client";
 import { getBranchSiteDisplayName } from "../../../../_lib/branch-site-labels";
+
+const BRANCH_SCOPED_TRANSFER_ROLES: readonly StaffRole[] = [
+  "branch_manager",
+  "warehouse_manager",
+  "production_manager",
+];
+const RECEIVE_STATES = ["in_transit", "confirmed_receive"];
+
+function isBranchScopedTransferRole(role: StaffRole): boolean {
+  return BRANCH_SCOPED_TRANSFER_ROLES.includes(role);
+}
 
 export default async function MobileTransferReceivePage({
   params,
@@ -27,30 +40,57 @@ export default async function MobileTransferReceivePage({
     redirect("/access-denied?reason=insufficient-permission");
   }
 
-  const [transferRes, branchesRes] = await Promise.all([
+  const transferRes = await supabase
+    .from("stock_transfers")
+    .select(
+      "id, transfer_number, status, from_branch_id, to_branch_id, notes, shipped_at",
+    )
+    .eq("id", id)
+    .eq("tenant_id", claims.tenant_id)
+    .maybeSingle();
+
+  if (!transferRes.data) redirect("/inventory/m/transfers");
+  const transfer = transferRes.data;
+
+  if (
+    transfer.from_branch_id === transfer.to_branch_id ||
+    !RECEIVE_STATES.includes(transfer.status)
+  ) {
+    redirect("/inventory/m/transfers");
+  }
+
+  if (
+    isBranchScopedTransferRole(claims.user_role) &&
+    (claims.branch_id == null || transfer.to_branch_id !== claims.branch_id)
+  ) {
+    redirect("/access-denied?reason=insufficient-permission");
+  }
+
+  const { data: canReceive, error: permissionError } = await supabase.rpc(
+    "has_permission",
+    {
+      p_branch_id: transfer.to_branch_id,
+      p_key: PERMISSION_KEYS.INVENTORY_TRANSFER_RECEIVE,
+    },
+  );
+  if (permissionError || canReceive !== true) {
+    redirect("/access-denied?reason=insufficient-permission");
+  }
+
+  const [linesRes, branchesRes] = await Promise.all([
     supabase
-      .from("stock_transfers")
+      .from("stock_transfer_items")
       .select(
-        "id, transfer_number, status, from_branch_id, to_branch_id, notes, shipped_at",
+        "id, ingredient_id, quantity, unit, quantity_received, ingredients ( id, name, unit, purchase_unit )",
       )
-      .eq("id", id)
-      .eq("tenant_id", claims.tenant_id)
-      .maybeSingle(),
+      .eq("transfer_id", id)
+      .eq("tenant_id", claims.tenant_id),
     supabase
       .from("branches")
       .select("id, name, branch_kind")
-      .eq("tenant_id", claims.tenant_id),
+      .eq("tenant_id", claims.tenant_id)
+      .in("id", [transfer.from_branch_id, transfer.to_branch_id]),
   ]);
-
-  if (!transferRes.data) redirect("/inventory/m/transfers");
-
-  const linesRes = await supabase
-    .from("stock_transfer_items")
-    .select(
-      "id, ingredient_id, quantity, unit, quantity_received, ingredients ( id, name, unit, purchase_unit )",
-    )
-    .eq("transfer_id", id)
-    .eq("tenant_id", claims.tenant_id);
 
   const branchName = new Map(
     (branchesRes.data ?? []).map(
@@ -74,8 +114,6 @@ export default async function MobileTransferReceivePage({
       receivedQty: Number(l.quantity_received ?? 0),
     };
   });
-
-  const transfer = transferRes.data;
 
   return (
     <TransferReceiveClient

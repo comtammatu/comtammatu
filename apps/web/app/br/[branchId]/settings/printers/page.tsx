@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Button } from "@comtammatu/ui/components/button";
 import { ArrowLeft as IconArrowLeft } from "lucide-react";
 import { loadAuthState } from "@/_lib/auth";
+import { messages } from "@lib/messages";
 import {
   PrintersClient,
   type Agent,
@@ -97,13 +98,15 @@ export default async function BranchPrintersPage({
         <Button asChild variant="outline" size="sm" className="gap-1">
           <Link href={`/br/${branchId}/pos`}>
             <IconArrowLeft className="size-4" />
-            Về POS
+            {messages.settings.branch.posBack}
           </Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Máy in</h1>
+          <h1 className="font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
+            {messages.settings.pages.printersTitle}
+          </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Cấu hình 3 máy in của {branchRes.data.name}: hóa đơn, bếp 1, bếp 2
+            {messages.settings.branch.printersDescription(branchRes.data.name)}
           </p>
         </div>
       </div>

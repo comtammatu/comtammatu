@@ -35,6 +35,9 @@ import type {
   MovementReportRow,
   BranchMovementSummaryRow,
 } from "../../../inventory/report-actions";
+import { messages } from "@lib/messages";
+
+const stockMovementCopy = messages.admin.reports.stockMovement;
 
 interface StockMovementClientProps {
   branches: { id: number; name: string }[];
@@ -52,7 +55,7 @@ function defaultDateRange() {
 }
 
 function fmt(n: number) {
-  if (n === 0) return "—";
+  if (n === 0) return messages.inventory.common.noValue;
   return n.toLocaleString("vi-VN", { maximumFractionDigits: 2 });
 }
 
@@ -82,7 +85,7 @@ export function StockMovementClient({
       ]);
 
       if (!movRes.success) {
-        setError(movRes.error ?? "Lỗi tải báo cáo");
+        setError(movRes.error ?? stockMovementCopy.loadError);
         return;
       }
       setMovementRows(movRes.data ?? []);
@@ -128,7 +131,7 @@ export function StockMovementClient({
             <Label>{BRANCH_VI.long}</Label>
             <Select value={branchId} onValueChange={setBranchId}>
               <SelectTrigger className="w-full sm:w-44">
-                <SelectValue placeholder="Tất cả" />
+                <SelectValue placeholder={stockMovementCopy.allBranchesPlaceholder} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{BRANCH_VI.selectAll}</SelectItem>
@@ -148,7 +151,7 @@ export function StockMovementClient({
             onClick={() => setPreset(7)}
             className="flex-1 text-xs sm:flex-none"
           >
-            7 ngày
+            {stockMovementCopy.dayPreset(7)}
           </Button>
           <Button
             variant="outline"
@@ -156,7 +159,7 @@ export function StockMovementClient({
             onClick={() => setPreset(14)}
             className="flex-1 text-xs sm:flex-none"
           >
-            14 ngày
+            {stockMovementCopy.dayPreset(14)}
           </Button>
           <Button
             variant="outline"
@@ -164,7 +167,7 @@ export function StockMovementClient({
             onClick={() => setPreset(30)}
             className="flex-1 text-xs sm:flex-none"
           >
-            30 ngày
+            {stockMovementCopy.dayPreset(30)}
           </Button>
         </div>
         <Button
@@ -172,7 +175,7 @@ export function StockMovementClient({
           disabled={isPending}
           className="w-full sm:w-auto"
         >
-          {isPending ? "Đang tải..." : "Xem báo cáo"}
+          {isPending ? stockMovementCopy.loading : stockMovementCopy.viewReport}
         </Button>
       </div>
 
@@ -181,7 +184,7 @@ export function StockMovementClient({
       {!loaded && !error && (
         <EmptyStatePanel
           className="py-12"
-          title="Chọn kỳ báo cáo"
+          title={stockMovementCopy.choosePeriodTitle}
         />
       )}
 
@@ -189,10 +192,10 @@ export function StockMovementClient({
         <Tabs defaultValue="detail">
           <TabsList variant="toolbar">
             <TabsTrigger value="detail">
-              Chi tiết ({movementRows.length})
+              {stockMovementCopy.detailTab(movementRows.length)}
             </TabsTrigger>
             <TabsTrigger value="branch">
-              Theo chi nhánh ({branchRows.length})
+              {stockMovementCopy.branchTab(branchRows.length)}
             </TabsTrigger>
           </TabsList>
 
@@ -200,8 +203,8 @@ export function StockMovementClient({
             {movementRows.length === 0 ? (
               <EmptyStatePanel
                 className="py-12"
-                title="Không có dữ liệu"
-                description="Không có biến động tồn kho trong kỳ đã chọn."
+                title={stockMovementCopy.emptyTitle}
+                description={stockMovementCopy.detailEmptyDescription}
               />
             ) : (
               <>
@@ -220,7 +223,7 @@ export function StockMovementClient({
                         </div>
                         <div className="text-right">
                           <p className="text-xs text-muted-foreground">
-                            Tồn cuối
+                            {stockMovementCopy.closing}
                           </p>
                           <p className="font-mono font-semibold">
                             {fmt(row.closing)}
@@ -229,47 +232,63 @@ export function StockMovementClient({
                       </div>
                       <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                         <div>
-                          <p className="text-muted-foreground">Tồn đầu</p>
+                          <p className="text-muted-foreground">
+                            {stockMovementCopy.opening}
+                          </p>
                           <p className="mt-1 font-mono">{fmt(row.opening)}</p>
                         </div>
                         <div>
-                          <p className="text-muted-foreground">Nhập (GRN)</p>
+                          <p className="text-muted-foreground">
+                            {stockMovementCopy.grnReceipt}
+                          </p>
                           <p className="mt-1 font-mono text-success">
                             {fmt(row.grn_receipt)}
                           </p>
                         </div>
                         <div>
-                          <p className="text-muted-foreground">SX tiêu hao</p>
+                          <p className="text-muted-foreground">
+                            {stockMovementCopy.productionConsumption}
+                          </p>
                           <p className="mt-1 font-mono text-destructive">
                             {fmt(row.production_consumption)}
                           </p>
                         </div>
                         <div>
-                          <p className="text-muted-foreground">SX nhập</p>
+                          <p className="text-muted-foreground">
+                            {stockMovementCopy.productionOutput}
+                          </p>
                           <p className="mt-1 font-mono text-success">
                             {fmt(row.production_output)}
                           </p>
                         </div>
                         <div>
-                          <p className="text-muted-foreground">Chuyển vào</p>
+                          <p className="text-muted-foreground">
+                            {stockMovementCopy.transferIn}
+                          </p>
                           <p className="mt-1 font-mono text-success">
                             {fmt(row.transfer_in)}
                           </p>
                         </div>
                         <div>
-                          <p className="text-muted-foreground">Chuyển ra</p>
+                          <p className="text-muted-foreground">
+                            {stockMovementCopy.transferOut}
+                          </p>
                           <p className="mt-1 font-mono text-destructive">
                             {fmt(row.transfer_out)}
                           </p>
                         </div>
                         <div>
-                          <p className="text-muted-foreground">Tiêu thụ</p>
+                          <p className="text-muted-foreground">
+                            {stockMovementCopy.consumption}
+                          </p>
                           <p className="mt-1 font-mono text-destructive">
                             {fmt(row.consumption)}
                           </p>
                         </div>
                         <div>
-                          <p className="text-muted-foreground">Điều chỉnh</p>
+                          <p className="text-muted-foreground">
+                            {stockMovementCopy.adjustment}
+                          </p>
                           <p className="mt-1 font-mono">
                             {fmt(row.adjustment)}
                           </p>
@@ -282,34 +301,38 @@ export function StockMovementClient({
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="min-w-44">{PRODUCT_VI.rawIngredient}</TableHead>
-                        <TableHead className="w-16">ĐV</TableHead>
-                        <TableHead className="w-24 text-right">
-                          Tồn đầu kỳ
+                        <TableHead className="min-w-44">
+                          {PRODUCT_VI.rawIngredient}
+                        </TableHead>
+                        <TableHead className="w-16">
+                          {stockMovementCopy.unit}
                         </TableHead>
                         <TableHead className="w-24 text-right">
-                          Nhập (GRN)
+                          {stockMovementCopy.openingPeriod}
                         </TableHead>
                         <TableHead className="w-24 text-right">
-                          SX tiêu hao
+                          {stockMovementCopy.grnReceipt}
                         </TableHead>
                         <TableHead className="w-24 text-right">
-                          SX nhập
+                          {stockMovementCopy.productionConsumption}
                         </TableHead>
                         <TableHead className="w-24 text-right">
-                          Chuyển vào
+                          {stockMovementCopy.productionOutput}
                         </TableHead>
                         <TableHead className="w-24 text-right">
-                          Chuyển ra
+                          {stockMovementCopy.transferIn}
                         </TableHead>
                         <TableHead className="w-24 text-right">
-                          Tiêu thụ
+                          {stockMovementCopy.transferOut}
                         </TableHead>
                         <TableHead className="w-24 text-right">
-                          Điều chỉnh
+                          {stockMovementCopy.consumption}
                         </TableHead>
                         <TableHead className="w-24 text-right">
-                          Tồn cuối kỳ
+                          {stockMovementCopy.adjustment}
+                        </TableHead>
+                        <TableHead className="w-24 text-right">
+                          {stockMovementCopy.closingPeriod}
                         </TableHead>
                       </TableRow>
                     </TableHeader>
@@ -362,8 +385,8 @@ export function StockMovementClient({
             {branchRows.length === 0 ? (
               <EmptyStatePanel
                 className="py-12"
-                title="Không có dữ liệu"
-                description="Không có biến động tồn kho theo chi nhánh trong kỳ đã chọn."
+                title={stockMovementCopy.emptyTitle}
+                description={stockMovementCopy.branchEmptyDescription}
               />
             ) : (
               <>
@@ -376,43 +399,57 @@ export function StockMovementClient({
                       <p className="font-medium">{row.branch_name}</p>
                       <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                         <div>
-                          <p className="text-muted-foreground">Nhập (GRN)</p>
+                          <p className="text-muted-foreground">
+                            {stockMovementCopy.grnReceipt}
+                          </p>
                           <p className="mt-1 font-mono text-success">
                             {fmt(row.grn_receipt)}
                           </p>
                         </div>
                         <div>
-                          <p className="text-muted-foreground">SX tiêu hao</p>
+                          <p className="text-muted-foreground">
+                            {stockMovementCopy.productionConsumption}
+                          </p>
                           <p className="mt-1 font-mono text-destructive">
                             {fmt(row.production_consumption)}
                           </p>
                         </div>
                         <div>
-                          <p className="text-muted-foreground">SX nhập</p>
+                          <p className="text-muted-foreground">
+                            {stockMovementCopy.productionOutput}
+                          </p>
                           <p className="mt-1 font-mono text-success">
                             {fmt(row.production_output)}
                           </p>
                         </div>
                         <div>
-                          <p className="text-muted-foreground">Chuyển vào</p>
+                          <p className="text-muted-foreground">
+                            {stockMovementCopy.transferIn}
+                          </p>
                           <p className="mt-1 font-mono text-success">
                             {fmt(row.transfer_in)}
                           </p>
                         </div>
                         <div>
-                          <p className="text-muted-foreground">Chuyển ra</p>
+                          <p className="text-muted-foreground">
+                            {stockMovementCopy.transferOut}
+                          </p>
                           <p className="mt-1 font-mono text-destructive">
                             {fmt(row.transfer_out)}
                           </p>
                         </div>
                         <div>
-                          <p className="text-muted-foreground">Tiêu thụ</p>
+                          <p className="text-muted-foreground">
+                            {stockMovementCopy.consumption}
+                          </p>
                           <p className="mt-1 font-mono text-destructive">
                             {fmt(row.consumption)}
                           </p>
                         </div>
                         <div>
-                          <p className="text-muted-foreground">Điều chỉnh</p>
+                          <p className="text-muted-foreground">
+                            {stockMovementCopy.adjustment}
+                          </p>
                           <p className="mt-1 font-mono">
                             {fmt(row.adjustment)}
                           </p>
@@ -425,27 +462,29 @@ export function StockMovementClient({
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="min-w-44">{BRANCH_VI.long}</TableHead>
-                        <TableHead className="w-24 text-right">
-                          Nhập (GRN)
+                        <TableHead className="min-w-44">
+                          {BRANCH_VI.long}
                         </TableHead>
                         <TableHead className="w-24 text-right">
-                          SX tiêu hao
+                          {stockMovementCopy.grnReceipt}
                         </TableHead>
                         <TableHead className="w-24 text-right">
-                          SX nhập
+                          {stockMovementCopy.productionConsumption}
                         </TableHead>
                         <TableHead className="w-24 text-right">
-                          Chuyển vào
+                          {stockMovementCopy.productionOutput}
                         </TableHead>
                         <TableHead className="w-24 text-right">
-                          Chuyển ra
+                          {stockMovementCopy.transferIn}
                         </TableHead>
                         <TableHead className="w-24 text-right">
-                          Tiêu thụ
+                          {stockMovementCopy.transferOut}
                         </TableHead>
                         <TableHead className="w-24 text-right">
-                          Điều chỉnh
+                          {stockMovementCopy.consumption}
+                        </TableHead>
+                        <TableHead className="w-24 text-right">
+                          {stockMovementCopy.adjustment}
                         </TableHead>
                       </TableRow>
                     </TableHeader>

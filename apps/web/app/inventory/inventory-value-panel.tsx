@@ -35,6 +35,7 @@ import {
   fetchInventoryValueByBranch,
   fetchInventoryValueSystem,
 } from "./inventory-value-actions";
+import { messages } from "@lib/messages";
 
 import { BRANCH_VI, TABLE_VI } from "@comtammatu/shared/messages";
 interface InventoryValuePanelProps {
@@ -135,14 +136,14 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-1">
             <p className="text-sm font-medium text-muted-foreground">
-              Value Visibility
+              {messages.inventory.value.eyebrow}
             </p>
             <div className="space-y-1">
-              <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-                Giá trị tồn kho
+              <h1 className="font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
+                {messages.inventory.value.title}
               </h1>
               <p className="text-sm text-muted-foreground">
-                Xem nhanh tổng giá trị theo đúng phạm vi được phân quyền.
+                {messages.inventory.value.description}
               </p>
             </div>
           </div>
@@ -161,13 +162,19 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
           {tabCount > 1 && (
             <TabsList variant="toolbar" className="w-fit">
               {visibility.system && (
-                <TabsTrigger value="system">Toàn hệ thống</TabsTrigger>
+                <TabsTrigger value="system">
+                  {messages.inventory.value.tabs.system}
+                </TabsTrigger>
               )}
               {visibility.area && (
-                <TabsTrigger value="area">Theo khu vực</TabsTrigger>
+                <TabsTrigger value="area">
+                  {messages.inventory.value.tabs.area}
+                </TabsTrigger>
               )}
               {visibility.branch && (
-                <TabsTrigger value="branch">Theo chi nhánh</TabsTrigger>
+                <TabsTrigger value="branch">
+                  {messages.inventory.value.tabs.branch}
+                </TabsTrigger>
               )}
             </TabsList>
           )}
@@ -182,7 +189,7 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
                 <Card className="bg-muted/30">
                   <CardContent className="p-4">
                     <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
-                      Giá trị hiện tại
+                      {messages.inventory.value.currentValue}
                     </p>
                     <p className="mt-2 text-3xl font-semibold tracking-tight tabular-nums">
                       {systemTotal == null ? "—" : formatVND(systemTotal)}
@@ -192,13 +199,13 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
                 <Card className="bg-muted/30">
                   <CardContent className="p-4">
                     <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
-                      Phạm vi xem
+                      {messages.inventory.value.viewScope}
                     </p>
                     <p className="mt-2 text-base font-semibold">
-                      Toàn hệ thống
+                      {messages.inventory.value.systemScope}
                     </p>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Tổng hợp tất cả chi nhánh theo WAC hoặc giá tham chiếu.
+                      {messages.inventory.value.systemDescription}
                     </p>
                   </CardContent>
                 </Card>
@@ -227,7 +234,7 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
               <CardContent className="space-y-4 pt-6">
                 <SummaryBox>
                   <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
-                    Tổng theo khu vực
+                    {messages.inventory.value.areaTotal}
                   </p>
                   <p className="mt-2 text-2xl font-semibold tabular-nums">
                     {formatVND(areaTotal)}
@@ -255,7 +262,7 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
               <CardContent className="space-y-4 pt-6">
                 <SummaryBox>
                   <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
-                    Tổng theo khu vực
+                    {messages.inventory.value.areaTotal}
                   </p>
                   <p className="mt-2 text-2xl font-semibold tabular-nums">
                     {formatVND(areaTotal)}
@@ -269,7 +276,7 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
                           {TABLE_VI.area}
                         </TableHead>
                         <TableHead className="text-right text-xs font-semibold uppercase tracking-wider">
-                          Giá trị tồn kho
+                          {messages.inventory.value.inventoryValue}
                         </TableHead>
                       </TableRow>
                     </TableHeader>
@@ -312,7 +319,7 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
               <CardContent className="space-y-4 pt-6">
                 <SummaryBox>
                   <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
-                    Tổng theo chi nhánh
+                    {messages.inventory.value.branchTotal}
                   </p>
                   <p className="mt-2 text-2xl font-semibold tabular-nums">
                     {formatVND(branchTotal)}
@@ -340,7 +347,7 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
               <CardContent className="space-y-4 pt-6">
                 <SummaryBox>
                   <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
-                    Tổng theo chi nhánh
+                    {messages.inventory.value.branchTotal}
                   </p>
                   <p className="mt-2 text-2xl font-semibold tabular-nums">
                     {formatVND(branchTotal)}
@@ -354,7 +361,7 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
                           {BRANCH_VI.long}
                         </TableHead>
                         <TableHead className="text-right text-xs font-semibold uppercase tracking-wider">
-                          Giá trị tồn kho
+                          {messages.inventory.value.inventoryValue}
                         </TableHead>
                       </TableRow>
                     </TableHeader>

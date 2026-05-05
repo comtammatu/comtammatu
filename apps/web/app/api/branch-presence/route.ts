@@ -11,6 +11,10 @@
  * Supabase service-role key — separate token so it can be rotated
  * independently when an agent host is decommissioned.
  *
+ * Residual accepted risk for this slice: the token is still global. If it
+ * leaks, an attacker who knows a valid tenant/branch/agent tuple can forge
+ * presence for that tuple until per-agent tokens ship.
+ *
  * The IP is read SERVER-SIDE from `x-real-ip` / `x-forwarded-for`
  * (via getClientIp helper) — NEVER trust the body. Any IP the agent
  * could put in the body could be put there by a leaked-token attacker.
@@ -20,6 +24,8 @@ import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { getClientIp } from "@lib/network/client-ip";
 
 export const runtime = "nodejs";
+
+const HEARTBEAT_WRITE_MIN_INTERVAL_MS = 60_000;
 
 interface PresenceBody {
   tenant_id?: number;
@@ -97,30 +103,136 @@ export async function POST(request: Request) {
   }
 
   const supabase = createServiceClient();
+  const now = new Date();
+  const nowIso = now.toISOString();
 
-  // Upsert: refresh last_seen_at on existing trusted IP, or insert new row.
-  // Write-amplification guard: only update last_seen_at when row is older
-  // than 60s — agent may heartbeat more often without thrashing the row.
-  const { error } = await supabase
-    .from("branch_trusted_egress_ips")
-    .upsert(
-      {
-        tenant_id: tenantId,
-        branch_id: branchId,
-        ip_address: ip,
-        registered_via: "agent",
-        registered_by_agent_id: agentId,
-        last_seen_at: new Date().toISOString(),
-        revoked_at: null,
-      },
-      { onConflict: "tenant_id,branch_id,ip_address" },
-    );
+  const { data: agent, error: agentError } = await supabase
+    .from("printer_agents")
+    .select("branch_id")
+    .eq("tenant_id", tenantId)
+    .eq("branch_id", branchId)
+    .eq("agent_id", agentId)
+    .maybeSingle();
 
-  if (error) {
-    console.error("[branch-presence] upsert failed", { tenantId, branchId, ip, error: error.message });
+  if (agentError) {
+    console.error("[branch-presence] agent validation failed", {
+      tenantId,
+      branchId,
+      agentId,
+      code: agentError.code,
+    });
     return NextResponse.json(
       { ok: false, error: "registration failed" },
       { status: 500 },
+    );
+  }
+
+  if (!agent) {
+    return NextResponse.json(
+      { ok: false, error: "agent not registered" },
+      { status: 403 },
+    );
+  }
+
+  const { data: existing, error: existingError } = await supabase
+    .from("branch_trusted_egress_ips")
+    .select("id, last_seen_at, revoked_at")
+    .eq("tenant_id", tenantId)
+    .eq("branch_id", branchId)
+    .eq("ip_address", ip)
+    .maybeSingle();
+
+  if (existingError) {
+    console.error("[branch-presence] lookup failed", {
+      tenantId,
+      branchId,
+      ip,
+      code: existingError.code,
+    });
+    return NextResponse.json(
+      { ok: false, error: "registration failed" },
+      { status: 500 },
+    );
+  }
+
+  if (existing?.revoked_at) {
+    return NextResponse.json(
+      { ok: false, error: "ip revoked" },
+      { status: 403 },
+    );
+  }
+
+  if (existing) {
+    const lastSeenAt = Date.parse(existing.last_seen_at);
+    if (
+      Number.isFinite(lastSeenAt) &&
+      now.getTime() - lastSeenAt < HEARTBEAT_WRITE_MIN_INTERVAL_MS
+    ) {
+      return NextResponse.json({ ok: true, ip, skipped: true });
+    }
+
+    const { data: updated, error: updateError } = await supabase
+      .from("branch_trusted_egress_ips")
+      .update({
+        registered_via: "agent",
+        registered_by_agent_id: agentId,
+        last_seen_at: nowIso,
+      })
+      .eq("id", existing.id)
+      .is("revoked_at", null)
+      .select("id")
+      .maybeSingle();
+
+    if (updateError) {
+      console.error("[branch-presence] update failed", {
+        tenantId,
+        branchId,
+        ip,
+        code: updateError.code,
+      });
+      return NextResponse.json(
+        { ok: false, error: "registration failed" },
+        { status: 500 },
+      );
+    }
+
+    if (!updated) {
+      return NextResponse.json(
+        { ok: false, error: "ip revoked" },
+        { status: 403 },
+      );
+    }
+
+    return NextResponse.json({ ok: true, ip });
+  }
+
+  const { error: insertError } = await supabase
+    .from("branch_trusted_egress_ips")
+    .insert({
+      tenant_id: tenantId,
+      branch_id: branchId,
+      ip_address: ip,
+      registered_via: "agent",
+      registered_by_agent_id: agentId,
+      last_seen_at: nowIso,
+    });
+
+  if (insertError) {
+    console.error("[branch-presence] insert failed", {
+      tenantId,
+      branchId,
+      ip,
+      code: insertError.code,
+    });
+    return NextResponse.json(
+      {
+        ok: false,
+        error:
+          insertError.code === "23505"
+            ? "registration conflict"
+            : "registration failed",
+      },
+      { status: insertError.code === "23505" ? 409 : 500 },
     );
   }
 

@@ -17,7 +17,10 @@ const REPORT_ROLES: readonly StaffRole[] = [
 /* ─── Chart of Accounts ──────────────────────────────────────────────────── */
 
 export async function fetchChartOfAccounts(): Promise<ActionResult> {
-  const ctx = await getAuthContextWithPermission(FINANCE_ROLES, PERMISSION_KEYS.SETTINGS_TENANT);
+  const ctx = await getAuthContextWithPermission(
+    FINANCE_ROLES,
+    PERMISSION_KEYS.SETTINGS_TENANT,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -43,7 +46,11 @@ const createAccountSchema = z.object({
 });
 
 export const createAccount = withAction(
-  { roles: FINANCE_ROLES, schema: createAccountSchema, permission: PERMISSION_KEYS.SETTINGS_TENANT },
+  {
+    roles: FINANCE_ROLES,
+    schema: createAccountSchema,
+    permission: PERMISSION_KEYS.SETTINGS_TENANT,
+  },
   async (data, { supabase, claims }) => {
     const { data: result, error } = await supabase
       .from("chart_of_accounts")
@@ -72,7 +79,11 @@ const updateAccountSchema = z.object({
 });
 
 export const updateAccount = withAction(
-  { roles: FINANCE_ROLES, schema: updateAccountSchema, permission: PERMISSION_KEYS.SETTINGS_TENANT },
+  {
+    roles: FINANCE_ROLES,
+    schema: updateAccountSchema,
+    permission: PERMISSION_KEYS.SETTINGS_TENANT,
+  },
   async (data, { supabase, claims }) => {
     const updatePayload: Record<string, unknown> = {};
     if (data.name !== undefined) updatePayload.name = data.name;
@@ -107,7 +118,10 @@ export async function fetchJournalEntries(
     return { success: false, error: "Ngày không hợp lệ (YYYY-MM-DD)" };
   }
 
-  const ctx = await getAuthContextWithPermission(FINANCE_ROLES, PERMISSION_KEYS.SETTINGS_TENANT);
+  const ctx = await getAuthContextWithPermission(
+    FINANCE_ROLES,
+    PERMISSION_KEYS.SETTINGS_TENANT,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -115,8 +129,8 @@ export async function fetchJournalEntries(
   let query = supabase
     .from("journal_entries")
     .select(
-      `id, entry_number, entry_date, description, ref_type, ref_id, status, created_at,
-       journal_entry_lines(id, account_id, debit, credit, description)`,
+      `id, entry_number, entry_date, description, reference_type, reference_id, status, created_at,
+       journal_entry_lines(id, account_id, debit_amount, credit_amount, description)`,
     )
     .eq("tenant_id", claims.tenant_id)
     .order("entry_date", { ascending: false })
@@ -175,30 +189,32 @@ export async function createJournalEntry(
     };
   }
 
-  const ctx = await getAuthContextWithPermission(FINANCE_ROLES, PERMISSION_KEYS.SETTINGS_TENANT);
+  const ctx = await getAuthContextWithPermission(
+    FINANCE_ROLES,
+    PERMISSION_KEYS.FINANCE_EXPENSE_APPROVE,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
 
   const lines = parsed.data.lines.map((l) => ({
     account_id: l.accountId,
-    debit: l.debit,
-    credit: l.credit,
+    debit_amount: l.debit,
+    credit_amount: l.credit,
     description: l.description ?? null,
   }));
 
-  // RPC create_journal_entry pending migration — cast until db:types
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any).rpc("create_journal_entry", {
-    p_tenant_id: claims.tenant_id,
-    p_branch_id: claims.branch_id ?? 0,
-    p_entry_date: parsed.data.entryDate,
-    p_description: parsed.data.description,
-    p_ref_type: parsed.data.refType ?? "",
-    p_ref_id: parsed.data.refId ?? 0,
-    // p_lines type is Json in generated types; cast through unknown for structural compatibility
-    p_lines: lines as unknown as string,
-  });
+  const { data, error } = await supabase.rpc(
+    "create_manual_journal_entry",
+    {
+      p_entry_date: parsed.data.entryDate,
+      p_description: parsed.data.description,
+      p_lines: lines,
+      p_reference_type: parsed.data.refType ?? "manual",
+      p_reference_id: parsed.data.refId ?? undefined,
+      p_branch_id: claims.branch_id ?? undefined,
+    },
+  );
 
   if (error) {
     return { success: false, error: "Không thể tạo bút toán." };
@@ -223,7 +239,10 @@ export async function fetchFoodCost(
     return { success: false, error: "Tham số không hợp lệ" };
   }
 
-  const ctx = await getAuthContextWithPermission(REPORT_ROLES, PERMISSION_KEYS.FINANCE_VIEW);
+  const ctx = await getAuthContextWithPermission(
+    REPORT_ROLES,
+    PERMISSION_KEYS.FINANCE_VIEW,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase } = ctx;

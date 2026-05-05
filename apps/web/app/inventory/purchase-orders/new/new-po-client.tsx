@@ -52,6 +52,7 @@ import type {
 } from "../../procurement-actions";
 import type { SupplierRow } from "../../suppliers/suppliers-client";
 import type { IngredientRow } from "../../page";
+import { messages } from "@lib/messages";
 
 import { ACTIONS_VI, FORM_VI, PRODUCT_VI, STATES_VI } from "@comtammatu/shared/messages";
 interface LocalLine {
@@ -286,13 +287,14 @@ export function NewPoClient({
   return (
     <>
       <InventoryHeader
-        title="Tạo đơn đặt hàng"
+        title={messages.inventory.po.newTitle}
         actions={
           <Link
             href={poBasePath}
             className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
           >
-            <IconArrowLeft className="size-4" /> Danh sách PO
+            <IconArrowLeft className="size-4" />
+            {messages.inventory.po.list}
           </Link>
         }
       />
@@ -300,14 +302,13 @@ export function NewPoClient({
         <div className="mx-auto max-w-4xl space-y-5">
           <div className="space-y-1">
             <p className="text-sm font-medium text-muted-foreground">
-              Procurement Draft
+              {messages.inventory.po.draftEyebrow}
             </p>
-            <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-              Tạo đơn đặt hàng
+            <h1 className="font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
+              {messages.inventory.po.newTitle}
             </h1>
             <p className="text-sm text-muted-foreground">
-              Lập PO từ nhà cung cấp, xem gợi ý nhu cầu và đối chiếu giá tham
-              khảo trong cùng một màn hình.
+              {messages.inventory.po.draftDescription}
             </p>
           </div>
 
@@ -377,15 +378,21 @@ export function NewPoClient({
             <div className="flex items-center gap-3">
               {lines.length > 0 && (
                 <span className="text-sm text-muted-foreground">
-                  {lines.length} dòng
-                  {hasValue && ` · ${totalValue.toLocaleString("vi-VN")} ₫`}
+                  {messages.inventory.po.lineCount(lines.length)}
+                  {hasValue
+                    ? messages.inventory.po.totalAmountSuffix(
+                        totalValue.toLocaleString("vi-VN"),
+                      )
+                    : ""}
                 </span>
               )}
               <Button
                 onClick={submit}
                 disabled={isPending || !supplierId || lines.length === 0}
               >
-                {isPending ? "Đang tạo…" : "Tạo PO"}
+                {isPending
+                  ? messages.inventory.po.creating
+                  : messages.inventory.po.createPo}
               </Button>
             </div>
           </div>
@@ -414,16 +421,17 @@ function SupplierSection({
   return (
     <Card className="rounded-lg">
       <CardHeader className="gap-1">
-        <CardTitle>Thông tin đầu đơn</CardTitle>
+        <CardTitle>{messages.inventory.po.headerInfoTitle}</CardTitle>
         <p className="text-sm text-muted-foreground">
-          Chọn nhà cung cấp và ghi chú cho phiếu mua.
+          {messages.inventory.po.headerInfoDescription}
         </p>
       </CardHeader>
       <CardContent>
         <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
           <div className="space-y-1.5">
             <Label>
-              Nhà cung cấp <span className="text-destructive">*</span>
+              {messages.inventory.po.supplierRequired}{" "}
+              <span className="text-destructive">*</span>
             </Label>
             <Combobox
               value={supplierId}
@@ -432,8 +440,8 @@ function SupplierSection({
                 value: String(s.id),
                 label: s.name,
               }))}
-              placeholder="Chọn nhà cung cấp"
-              searchPlaceholder="Tìm nhà cung cấp..."
+              placeholder={messages.inventory.po.supplierPlaceholder}
+              searchPlaceholder={messages.inventory.po.supplierSearchPlaceholder}
             />
           </div>
           <div className="space-y-1.5">
@@ -443,7 +451,7 @@ function SupplierSection({
               value={notes}
               onChange={(e) => onNotesChange(e.target.value)}
               rows={3}
-              placeholder="Ghi chú đơn hàng…"
+              placeholder={messages.inventory.po.notesPlaceholder}
               className="min-h-24"
             />
           </div>
@@ -506,7 +514,9 @@ function SuggestionsPanel({
               >
                 <div className="flex items-center gap-2">
                   <IconBulb className="size-4 text-info" />
-                  <span className="text-sm font-semibold">Gợi ý đặt hàng</span>
+                  <span className="text-sm font-semibold">
+                    {messages.inventory.po.suggestionsTitle}
+                  </span>
                   {suggestions.length > 0 && (
                     <Badge variant="info">{suggestions.length}</Badge>
                   )}
@@ -522,7 +532,9 @@ function SuggestionsPanel({
                 {/* Branch + period selector + bulk action */}
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-xs text-muted-foreground">Kho</span>
+                    <span className="text-xs text-muted-foreground">
+                      {messages.inventory.po.warehouseShort}
+                    </span>
                     {showBranchSwitcher ? (
                       <Select
                         value={branchId ? String(branchId) : ""}
@@ -545,7 +557,7 @@ function SuggestionsPanel({
                     )}
                     <span className="text-xs text-muted-foreground">·</span>
                     <span className="text-xs text-muted-foreground">
-                      Tiêu thụ trung bình
+                      {messages.inventory.po.averageConsumption}
                     </span>
                     <Select
                       value={String(periodDays)}
@@ -556,9 +568,15 @@ function SuggestionsPanel({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="7">7 ngày</SelectItem>
-                        <SelectItem value="14">14 ngày</SelectItem>
-                        <SelectItem value="30">30 ngày</SelectItem>
+                        <SelectItem value="7">
+                          {messages.inventory.po.sevenDays}
+                        </SelectItem>
+                        <SelectItem value="14">
+                          {messages.inventory.po.fourteenDays}
+                        </SelectItem>
+                        <SelectItem value="30">
+                          {messages.inventory.po.thirtyDays}
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                     {isLoading && (
@@ -575,7 +593,7 @@ function SuggestionsPanel({
                       onClick={onAddAll}
                     >
                       <IconCirclePlus className="mr-1 size-3.5" />
-                      Thêm tất cả ({addableCount})
+                      {messages.inventory.po.addAll(addableCount)}
                     </Button>
                   )}
                 </div>
@@ -585,11 +603,10 @@ function SuggestionsPanel({
                   <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed bg-background/35 px-6 py-8 text-center">
                     <IconPackage className="size-5 text-muted-foreground" />
                     <p className="text-base font-semibold">
-                      Tồn kho đang ổn định
+                      {messages.inventory.po.stableStockTitle}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Hệ thống chưa phát hiện nguyên liệu nào cần ưu tiên đặt
-                      thêm trong giai đoạn này.
+                      {messages.inventory.po.stableStockDescription}
                     </p>
                   </div>
                 ) : isMobile ? (
@@ -621,15 +638,15 @@ function SuggestionsPanel({
                                   variant="destructive"
                                   className="text-xs shrink-0"
                                 >
-                                  Thấp
+                                  {messages.inventory.po.low}
                                 </Badge>
                               )}
                             </ItemTitle>
                             <ItemDescription>
-                              Tồn: {s.hq_current_qty.toLocaleString("vi-VN")}{" "}
-                              · TB: ~
-                              {s.avg_daily_consumption.toLocaleString("vi-VN")}
-                              /ngày
+                              {messages.inventory.po.suggestionDescription(
+                                s.hq_current_qty.toLocaleString("vi-VN"),
+                                s.avg_daily_consumption.toLocaleString("vi-VN"),
+                              )}
                             </ItemDescription>
                           </ItemContent>
                           <ItemActions>
@@ -647,7 +664,7 @@ function SuggestionsPanel({
                               onClick={() => onAddSuggestion(s)}
                             >
                               {alreadyAdded ? (
-                                "Đã thêm"
+                                messages.inventory.po.alreadyAdded
                               ) : (
                                 <IconPlus className="size-3.5" />
                               )}
@@ -662,12 +679,18 @@ function SuggestionsPanel({
                   <div className="space-y-1">
                     <div className="grid grid-cols-12 gap-2 px-2 pb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                       <span className="col-span-3">{PRODUCT_VI.rawIngredient}</span>
-                      <span className="col-span-2 text-right">Tồn HQ</span>
                       <span className="col-span-2 text-right">
-                        Tiêu thụ/ngày
+                        {messages.inventory.po.hqStock}
                       </span>
-                      <span className="col-span-2 text-right">Gợi ý SL</span>
-                      <span className="col-span-1">ĐV</span>
+                      <span className="col-span-2 text-right">
+                        {messages.inventory.po.consumptionPerDay}
+                      </span>
+                      <span className="col-span-2 text-right">
+                        {messages.inventory.po.suggestedQty}
+                      </span>
+                      <span className="col-span-1">
+                        {messages.inventory.po.unitShort}
+                      </span>
                       <span className="col-span-2" />
                     </div>
 
@@ -690,7 +713,7 @@ function SuggestionsPanel({
                             </span>
                             {s.below_reorder && (
                               <Badge variant="destructive" className="text-xs">
-                                Thấp
+                                {messages.inventory.po.low}
                               </Badge>
                             )}
                           </div>
@@ -845,10 +868,11 @@ function LineItemsSection({
 
             {lines.length === 0 ? (
               <div className="px-6 py-8 text-center">
-                <p className="text-base font-semibold">Chưa có nguyên liệu</p>
+                <p className="text-base font-semibold">
+                  {messages.inventory.po.emptyIngredientsTitle}
+                </p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Thêm dòng bên dưới hoặc chọn nhanh từ gợi ý đặt hàng để bắt
-                  đầu tạo PO.
+                  {messages.inventory.po.emptyIngredientsDescription}
                 </p>
               </div>
             ) : (
@@ -867,7 +891,11 @@ function LineItemsSection({
                         <p className="text-xs text-muted-foreground">
                           {l.quantity.toLocaleString("vi-VN")} {l.unit}
                           {l.unitPriceEst != null && (
-                            <> · {l.unitPriceEst.toLocaleString("vi-VN")} ₫</>
+                            <>
+                              {messages.inventory.po.totalAmountSuffix(
+                                l.unitPriceEst.toLocaleString("vi-VN"),
+                              )}
+                            </>
                           )}
                         </p>
                         {dev && Math.abs(dev.deviation_pct) > 5 && (
@@ -889,7 +917,7 @@ function LineItemsSection({
                           size="icon-sm"
                           onClick={() => onRemoveLine(idx)}
                           className="size-7 rounded-lg border-none bg-transparent text-muted-foreground shadow-none hover:bg-destructive/10 hover:text-destructive"
-                          aria-label="Xóa dòng"
+                          aria-label={messages.inventory.po.removeLineAria}
                         >
                           <IconTrash className="size-3.5" />
                         </Button>
@@ -914,14 +942,14 @@ function LineItemsSection({
                   hint: i.purchase_unit ?? i.unit,
                   keywords: [i.sku ?? "", i.category ?? ""],
                 }))}
-                placeholder="+ Chọn nguyên liệu"
-                searchPlaceholder="Tìm tên, SKU, danh mục..."
+                placeholder={messages.inventory.po.ingredientPlaceholder}
+                searchPlaceholder={messages.inventory.po.ingredientSearchPlaceholder}
                 triggerClassName="h-8 border-dashed text-sm"
               />
               <div className="grid grid-cols-3 gap-2">
                 <FormattedNumberInput
                   ref={qtyRef}
-                  placeholder="SL"
+                  placeholder={messages.inventory.po.quantityShort}
                   className="h-8 text-sm"
                   value={qtyInput}
                   onValueChange={setQtyInput}
@@ -930,7 +958,7 @@ function LineItemsSection({
                 />
                 <Input
                   name="unit"
-                  placeholder="ĐV"
+                  placeholder={messages.inventory.po.unitShort}
                   value={unit}
                   readOnly
                   aria-readonly="true"
@@ -939,7 +967,7 @@ function LineItemsSection({
                 />
                 <FormattedNumberInput
                   ref={priceRef}
-                  placeholder="Giá"
+                  placeholder={messages.inventory.po.pricePlaceholder}
                   className="h-8 text-sm"
                   value={unitPriceInput}
                   onValueChange={setUnitPriceInput}
@@ -954,13 +982,13 @@ function LineItemsSection({
                 className="w-full"
               >
                 <IconPlus className="mr-1 size-3.5" />
-                Thêm dòng
+                {messages.inventory.po.addLine}
               </Button>
               {addRowDeviation &&
                 Math.abs(addRowDeviation.deviation_pct) > 5 && (
                   <InlineDeviationHint
                     deviation={addRowDeviation}
-                    unit={unit || "ĐV"}
+                    unit={unit || messages.inventory.po.unitShort}
                   />
                 )}
             </form>
@@ -983,11 +1011,11 @@ function LineItemsSection({
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground text-right">
               {FORM_VI.quantity}
             </span>
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground pl-2">
-              ĐV
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground pl-2">
+              {messages.inventory.po.unitShort}
             </span>
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground text-right">
-              Đơn giá (₫)
+              {messages.inventory.po.unitPrice}
             </span>
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground text-right">
               {FORM_VI.amount}
@@ -998,10 +1026,11 @@ function LineItemsSection({
           {/* Existing lines */}
           {lines.length === 0 ? (
             <div className="px-6 py-8 text-center">
-              <p className="text-base font-semibold">Chưa có nguyên liệu</p>
+              <p className="text-base font-semibold">
+                {messages.inventory.po.emptyIngredientsTitle}
+              </p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Thêm dòng bên dưới hoặc chọn nhanh từ gợi ý đặt hàng để bắt đầu
-                tạo PO.
+                {messages.inventory.po.emptyIngredientsDescription}
               </p>
             </div>
           ) : (
@@ -1044,7 +1073,7 @@ function LineItemsSection({
                         size="icon-sm"
                         onClick={() => onRemoveLine(idx)}
                         className="size-7 rounded-lg border-none bg-transparent text-muted-foreground shadow-none hover:bg-destructive/10 hover:text-destructive"
-                        aria-label="Xóa dòng"
+                        aria-label={messages.inventory.po.removeLineAria}
                       >
                         <IconTrash className="size-3.5" />
                       </Button>
@@ -1057,10 +1086,12 @@ function LineItemsSection({
               {hasValue && (
                 <div className="grid grid-cols-[2fr_80px_70px_120px_120px_40px] gap-0 items-center border-b px-3 py-2 bg-muted/10">
                   <span className="col-span-4 text-xs font-semibold text-right text-muted-foreground uppercase tracking-wider">
-                    Tổng dự kiến
+                    {messages.inventory.po.estimatedTotal}
                   </span>
                   <span className="text-sm font-semibold font-mono text-right">
-                    {totalValue.toLocaleString("vi-VN")} ₫
+                    {messages.inventory.common.currency(
+                      totalValue.toLocaleString("vi-VN"),
+                    )}
                   </span>
                   <span />
                 </div>
@@ -1083,15 +1114,15 @@ function LineItemsSection({
                   hint: i.purchase_unit ?? i.unit,
                   keywords: [i.sku ?? "", i.category ?? ""],
                 }))}
-                placeholder="+ Chọn nguyên liệu"
-                searchPlaceholder="Tìm tên, SKU, danh mục..."
+                placeholder={messages.inventory.po.ingredientPlaceholder}
+                searchPlaceholder={messages.inventory.po.ingredientSearchPlaceholder}
                 triggerClassName="h-8 border-dashed text-sm"
               />
             </div>
             <div>
               <FormattedNumberInput
                 ref={qtyRef}
-                placeholder="SL"
+                placeholder={messages.inventory.po.quantityShort}
                 className="h-8 text-sm text-right"
                 value={qtyInput}
                 onValueChange={setQtyInput}
@@ -1102,7 +1133,7 @@ function LineItemsSection({
             <div className="pl-2">
               <Input
                 name="unit"
-                placeholder="ĐV"
+                placeholder={messages.inventory.po.unitShort}
                 value={unit}
                 readOnly
                 aria-readonly="true"
@@ -1113,7 +1144,7 @@ function LineItemsSection({
             <div className="pl-2">
               <FormattedNumberInput
                 ref={priceRef}
-                placeholder="Giá (tùy chọn)"
+                placeholder={messages.inventory.po.priceOptionalPlaceholder}
                 className="h-8 text-sm text-right"
                 value={unitPriceInput}
                 onValueChange={setUnitPriceInput}
@@ -1127,7 +1158,7 @@ function LineItemsSection({
                 disabled={!ingredientId}
                 size="icon"
                 className="size-7"
-                aria-label="Thêm dòng"
+                aria-label={messages.inventory.po.addLine}
               >
                 <IconPlus className="size-3.5" />
               </Button>
@@ -1138,7 +1169,7 @@ function LineItemsSection({
             <div className="px-3 pb-2 -mt-0.5">
               <InlineDeviationHint
                 deviation={addRowDeviation}
-                unit={unit || "ĐV"}
+                unit={unit || messages.inventory.po.unitShort}
               />
             </div>
           )}
@@ -1170,12 +1201,13 @@ function InlineDeviationHint({
     >
       <Icon className="size-3" />
       <span>
-        TB {deviation.sample_count} lần:{" "}
-        <span className="font-mono font-semibold">
-          {deviation.avg_price.toLocaleString("vi-VN")} ₫
-        </span>
-        /{unit} ({sign}
-        {deviation.deviation_pct}%)
+        {messages.inventory.po.deviationHint(
+          deviation.sample_count,
+          deviation.avg_price.toLocaleString("vi-VN"),
+          unit,
+          sign,
+          deviation.deviation_pct,
+        )}
       </span>
     </span>
   );

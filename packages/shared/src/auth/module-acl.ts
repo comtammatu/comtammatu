@@ -56,19 +56,13 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     label: getModuleLabelVi("inventory_procurement"),
   },
   /**
-   * Cấu hình kho — admin tools: trust leaderboard, cold-chain policy,
-   * express windows, feature flags. Route gate passes these roles into
-   * the hub page; each sub-tool keeps its own fine-grained permission gate.
+   * Retired Inventory v1 admin surface. Runtime Inventory work is canonical
+   * under `/inventory/*`; keep the module key only so old URLs resolve through
+   * the shared ACL instead of becoming an unclassified admin route.
    */
   inventory_admin: {
     path: "/admin/inventory",
-    allowedRoles: [
-      "owner",
-      "super_manager",
-      "area_manager",
-      "branch_manager",
-      "warehouse_manager",
-    ],
+    allowedRoles: [],
     label: getModuleLabelVi("inventory_admin"),
   },
   orders: {

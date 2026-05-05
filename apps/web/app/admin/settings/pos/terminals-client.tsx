@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { AppEmptyState, AppToolbar } from "@/components/surface";
 import {
   Select,
   SelectContent,
@@ -21,7 +22,7 @@ import {
 import { Badge } from "@comtammatu/ui/components/badge";
 import { ExternalLink as IconExternalLink, Pencil as IconPencil, Plus as IconPlus } from "lucide-react";
 import { TerminalFormDialog } from "./terminal-form-dialog";
-import { EmptyStatePanel } from "../../components/empty-state-panel";
+import { messages } from "@lib/messages";
 
 import { BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
 export interface TerminalRow {
@@ -57,18 +58,20 @@ export function TerminalsClient({ branches, terminals }: TerminalsClientProps) {
 
   if (branches.length === 0) {
     return (
-      <EmptyStatePanel
-        title="Chưa có chi nhánh nào"
-        description="Tạo chi nhánh trước."
+      <AppEmptyState
+        title={messages.settings.common.noBranches}
+        description={messages.settings.common.createBranchFirst}
       />
     );
   }
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-4">
+      <AppToolbar>
         <div className="flex items-center gap-2">
-          <label className="text-sm font-medium">Chi nhánh:</label>
+          <label className="text-sm font-medium">
+            {messages.settings.common.branchLabel}
+          </label>
           <Select
             value={selectedBranchId?.toString() ?? ""}
             onValueChange={(v) => setSelectedBranchId(Number(v))}
@@ -89,14 +92,12 @@ export function TerminalsClient({ branches, terminals }: TerminalsClientProps) {
           <Button variant="outline" size="sm" asChild>
             <Link href={`/br/${selectedBranchId}/pos`}>
               <IconExternalLink className="mr-2 size-4" />
-              Mở giao diện POS
+              {messages.settings.pos.openPosUi}
             </Link>
           </Button>
         )}
-      </div>
 
-      <div className="space-y-4">
-        <div className="flex justify-end">
+        <div className="ml-auto">
           <Button
             onClick={() => {
               setEditTerminal(null);
@@ -105,22 +106,27 @@ export function TerminalsClient({ branches, terminals }: TerminalsClientProps) {
             disabled={selectedBranchId === null}
           >
             <IconPlus className="mr-2 size-4" />
-            Thêm máy POS
+            {messages.settings.pos.addTerminal}
           </Button>
         </div>
+      </AppToolbar>
 
+      <div>
         {filteredTerminals.length === 0 ? (
-          <EmptyStatePanel
+          <AppEmptyState
             className="py-8"
-            title="Chưa có máy POS nào cho chi nhánh này"
+            title={messages.settings.pos.emptyForBranch}
+            compact
           />
         ) : (
           <div className="rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-50">Tên máy</TableHead>
-                  <TableHead>Mã thiết bị</TableHead>
+                  <TableHead className="w-50">
+                    {messages.settings.pos.terminalName}
+                  </TableHead>
+                  <TableHead>{messages.settings.pos.deviceId}</TableHead>
                   <TableHead className="w-25 text-center">{FORM_VI.status}</TableHead>
                   <TableHead className="w-20" />
                 </TableRow>
@@ -139,7 +145,9 @@ export function TerminalsClient({ branches, terminals }: TerminalsClientProps) {
                         variant={terminal.is_active ? "success" : "secondary"}
                         className="text-xs"
                       >
-                        {terminal.is_active ? "Hoạt động" : "Tạm tắt"}
+                        {terminal.is_active
+                          ? messages.settings.common.active
+                          : messages.settings.common.inactive}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -152,7 +160,9 @@ export function TerminalsClient({ branches, terminals }: TerminalsClientProps) {
                         }}
                       >
                         <IconPencil className="size-4" />
-                        <span className="sr-only">Chỉnh sửa</span>
+                        <span className="sr-only">
+                          {messages.settings.common.edit}
+                        </span>
                       </Button>
                     </TableCell>
                   </TableRow>

@@ -53,7 +53,7 @@ Acceptance:
 Scope:
 
 - Use `docs/plan/ui-ux-markdown-layout-map.md` as the cross-module layout source before editing runtime UI.
-- Refresh `docs/ui-audit-map.md`.
+- Refresh `docs/plan/ui-audit-map.md`.
 - For each route family, define primary user job, main workflow state, current drift, and required primitives.
 - Prioritize `P0`: POS, KDS, login.
 

@@ -3,9 +3,16 @@
 import { formatVND } from "@comtammatu/shared/format";
 import { Separator } from "@comtammatu/ui/components/separator";
 import {
+  BrandLockup,
+  BRAND_LOCKUP_EYEBROW,
+  BRAND_LOCKUP_NAME,
+  BRAND_LOCKUP_TAGLINE,
+} from "@/components/brand";
+import {
   getPosLineItemDisplayName,
   getPosLineItemOptionLines,
 } from "../../types";
+import { messages } from "@lib/messages";
 import { METHOD_LABELS } from "./bill-receipt-types";
 import type { OrderData } from "./bill-receipt-types";
 
@@ -28,17 +35,28 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
     order.payment_status === "paid" || order.status === "completed";
   const paymentLabel =
     order.status === "cancelled"
-      ? "Đã hủy"
+      ? messages.pos.receipt.paymentCancelled
       : isPaid
         ? (METHOD_LABELS[order.payment_method ?? ""] ??
           order.payment_method ??
-          "Đã thanh toán")
-        : "Chưa thanh toán";
+          messages.pos.receipt.paymentPaid)
+        : messages.pos.receipt.paymentUnpaid;
 
   return (
     <div id="pos-receipt" className="px-4 py-3">
       <div className="text-center">
-        <h2 className="text-base font-bold">CƠM TẤM MÁ TƯ</h2>
+        <div className="flex justify-center print:hidden">
+          <BrandLockup decorative size="sm" className="h-14" />
+        </div>
+        <div className="hidden print:block">
+          <p className="font-heading text-xs font-semibold tracking-wide">
+            {BRAND_LOCKUP_EYEBROW}
+          </p>
+          <h2 className="font-heading text-lg font-bold">
+            {BRAND_LOCKUP_NAME}
+          </h2>
+          <p className="text-xs">{BRAND_LOCKUP_TAGLINE}</p>
+        </div>
         {order.branches && (
           <>
             <p className="text-xs">{order.branches.name}</p>
@@ -55,25 +73,29 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
 
       <div className="flex flex-col gap-0.5 text-xs">
         <div className="flex justify-between">
-          <span>Đơn hàng:</span>
+          <span>{messages.pos.receipt.order}</span>
           <span className="font-medium">#{order.order_number}</span>
         </div>
         <div className="flex justify-between">
-          <span>Ngày:</span>
+          <span>{messages.pos.receipt.date}</span>
           <span>{formatDate(order.created_at)}</span>
         </div>
         <div className="flex justify-between">
-          <span>Loại:</span>
-          <span>{order.order_type === "dine_in" ? "Tại bàn" : "Mang về"}</span>
+          <span>{messages.pos.receipt.orderType}</span>
+          <span>
+            {order.order_type === "dine_in"
+              ? messages.pos.receipt.dineIn
+              : messages.pos.receipt.takeaway}
+          </span>
         </div>
         {order.tables && (
           <div className="flex justify-between">
-            <span>Bàn:</span>
+            <span>{messages.pos.receipt.table}</span>
             <span>{order.tables.number}</span>
           </div>
         )}
         <div className="flex justify-between">
-          <span>Thanh toán:</span>
+          <span>{messages.pos.receipt.payment}</span>
           <span className="font-medium">{paymentLabel}</span>
         </div>
       </div>
@@ -82,8 +104,8 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
 
       <div className="text-xs">
         <div className="flex items-center justify-between border-b pb-1 font-medium text-muted-foreground">
-          <span>Món</span>
-          <span className="text-right">Thành tiền</span>
+          <span>{messages.pos.receipt.item}</span>
+          <span className="text-right">{messages.pos.receipt.amount}</span>
         </div>
         <div className="divide-y divide-dashed">
           {order.order_items.map((item) => {
@@ -110,7 +132,10 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
                     {formatVND(item.subtotal)}
                   </div>
                   <div className="mt-0.5 text-muted-foreground">
-                    {item.quantity} × {formatVND(item.unit_price)}
+                    {messages.pos.receipt.lineUnitPrice(
+                      item.quantity,
+                      formatVND(item.unit_price),
+                    )}
                   </div>
                 </div>
               </div>
@@ -123,25 +148,25 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
 
       <div className="flex flex-col gap-1 text-xs">
         <div className="flex justify-between">
-          <span>Tạm tính</span>
+          <span>{messages.pos.receipt.subtotal}</span>
           <span>{formatVND(order.subtotal)}</span>
         </div>
         {order.tax_amount > 0 && (
           <div className="flex justify-between">
-            <span>Thuế</span>
+            <span>{messages.pos.receipt.tax}</span>
             <span>{formatVND(order.tax_amount)}</span>
           </div>
         )}
         {order.service_charge > 0 && (
           <div className="flex justify-between">
-            <span>Phí dịch vụ</span>
+            <span>{messages.pos.receipt.serviceCharge}</span>
             <span>{formatVND(order.service_charge)}</span>
           </div>
         )}
         {order.discount_amount > 0 && (
           <div className="flex justify-between">
             <span>
-              Giảm giá
+              {messages.pos.receipt.discount}
               {order.discount_type === "pct" && order.discount_value != null
                 ? ` (${order.discount_value}%)`
                 : ""}
@@ -151,12 +176,12 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
         )}
         {order.discount_amount > 0 && order.discount_note && (
           <div className="text-xs italic text-muted-foreground">
-            Lý do: {order.discount_note}
+            {messages.pos.receipt.discountReason} {order.discount_note}
           </div>
         )}
         <Separator className="my-1" />
         <div className="flex justify-between text-sm font-bold">
-          <span>TỔNG CỘNG</span>
+          <span>{messages.pos.receipt.total}</span>
           <span>{formatVND(order.total_amount)}</span>
         </div>
       </div>
@@ -165,7 +190,7 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
         <>
           <Separator className="my-2" />
           <div className="break-words text-xs">
-            <span className="font-medium">Ghi chú: </span>
+            <span className="font-medium">{messages.pos.receipt.note} </span>
             <span className="text-muted-foreground">{order.note}</span>
           </div>
         </>
@@ -174,7 +199,7 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
       <Separator className="my-2" />
 
       <p className="text-center text-xs text-muted-foreground">
-        Cảm ơn quý khách!
+        {messages.pos.receipt.thanks}
       </p>
     </div>
   );

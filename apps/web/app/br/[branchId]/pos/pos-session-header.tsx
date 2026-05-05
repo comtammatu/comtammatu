@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { memo, useEffect, useState } from "react";
 import { Button } from "@comtammatu/ui/components/button";
+import { messages } from "@lib/messages";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@comtammatu/ui/components/dropdown-menu";
 import { useTheme } from "@comtammatu/ui/components/theme-provider";
+import { BrandMark } from "@/components/brand";
 import {
   ArrowLeft as IconArrowLeft,
   Monitor as IconDeviceDesktop,
@@ -70,15 +72,16 @@ function PosSessionHeaderComponent({
             size="icon"
             className="size-11 shrink-0 md:hidden"
             onClick={onBack}
-            aria-label="Quay lại trang chính"
+            aria-label={messages.pos.sessionHeader.backAria}
           >
             <IconArrowLeft />
           </Button>
         ) : null}
 
         <div className="flex min-w-0 flex-1 items-center justify-start gap-1.5 md:justify-center">
+          <BrandMark decorative size="xs" className="shrink-0" />
           {contextLabel ? (
-            <span className="min-w-0 truncate text-base font-bold text-foreground md:text-sm md:font-semibold">
+            <span className="font-heading min-w-0 truncate text-base font-bold text-foreground md:text-sm md:font-semibold">
               {contextLabel}
             </span>
           ) : (
@@ -110,9 +113,9 @@ function PosSessionHeaderComponent({
               size="sm"
               className="h-9 min-h-9 shrink-0 px-3 text-sm font-semibold text-muted-foreground hover:text-destructive"
               onClick={onShowCloseSession}
-              aria-label="Chốt ca POS"
+              aria-label={messages.pos.sessionHeader.closeShiftAria}
             >
-              Chốt ca
+              {messages.pos.sessionHeader.closeShift}
             </Button>
           ) : null}
         </div>
@@ -145,7 +148,7 @@ function PosMobileMoreMenu({
           variant="ghost"
           size="icon"
           className="size-10 shrink-0"
-          aria-label="Mở menu POS"
+          aria-label={messages.pos.sessionHeader.moreMenuAria}
         >
           <IconMoreVertical />
         </Button>
@@ -154,14 +157,14 @@ function PosMobileMoreMenu({
         <DropdownMenuItem asChild>
           <Link href="/employee">
             <IconDoorEnter />
-            Cổng nhân viên
+            {messages.pos.sessionHeader.employeePortal}
           </Link>
         </DropdownMenuItem>
 
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
             {isDark ? <IconMoon /> : <IconSun />}
-            Giao diện
+            {messages.pos.sessionHeader.appearance}
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent>
             <DropdownMenuItem
@@ -169,21 +172,21 @@ function PosMobileMoreMenu({
               data-active={current === "light"}
             >
               <IconSun />
-              Sáng
+              {messages.pos.sessionHeader.light}
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => setTheme("dark")}
               data-active={current === "dark"}
             >
               <IconMoon />
-              Tối
+              {messages.pos.sessionHeader.dark}
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => setTheme("system")}
               data-active={current === "system"}
             >
               <IconDeviceDesktop />
-              Hệ thống
+              {messages.pos.sessionHeader.system}
             </DropdownMenuItem>
           </DropdownMenuSubContent>
         </DropdownMenuSub>
@@ -196,7 +199,7 @@ function PosMobileMoreMenu({
               className="text-destructive focus:text-destructive"
             >
               <IconPowerOff />
-              Chốt ca
+              {messages.pos.sessionHeader.closeShift}
             </DropdownMenuItem>
           </>
         ) : null}

@@ -2,12 +2,13 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { AppEmptyState, AppSection, AppToolbar } from "@/components/surface";
 import { Button } from "@comtammatu/ui/components/button";
-import { Card } from "@comtammatu/ui/components/card";
 import { Input } from "@comtammatu/ui/components/input";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Plus as IconPlus, X as IconX, MapPin as IconMapPin } from "lucide-react";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { messages } from "@lib/messages";
 import {
   Select,
   SelectContent,
@@ -20,7 +21,6 @@ import {
   assignBranchToArea,
   removeBranchFromArea,
 } from "./actions";
-import { EmptyStatePanel } from "../../components/empty-state-panel";
 
 interface AreaBranch {
   id: number;
@@ -88,9 +88,9 @@ export function AreasManager({ areas, branches }: AreasManagerProps) {
   return (
     <div className="space-y-4">
       {/* Create new area */}
-      <div className="flex items-center gap-2">
+      <AppToolbar>
         <Input
-          placeholder="Tên khu vực mới..."
+          placeholder={messages.settings.areas.newAreaPlaceholder}
           value={newAreaName}
           onChange={(e) => setNewAreaName(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleCreateArea()}
@@ -102,14 +102,14 @@ export function AreasManager({ areas, branches }: AreasManagerProps) {
           disabled={isPending || !newAreaName.trim()}
         >
           <IconPlus className="mr-1 size-4" />
-          Tạo khu vực
+          {messages.settings.areas.create}
         </Button>
-      </div>
+      </AppToolbar>
 
       {/* Area list */}
       {areas.length === 0 ? (
-        <EmptyStatePanel
-          title="Chưa có khu vực nào"
+        <AppEmptyState
+          title={messages.settings.areas.empty}
           icon={<IconMapPin className="size-10 text-muted-foreground" />}
           className="p-8"
         />
@@ -121,14 +121,15 @@ export function AreasManager({ areas, branches }: AreasManagerProps) {
             );
 
             return (
-              <Card key={area.id} className="p-4">
-                <h3 className="font-semibold">{area.name}</h3>
-
-                {/* Assigned branches */}
-                <div className="mt-3 space-y-1">
+              <AppSection
+                key={area.id}
+                title={area.name}
+                contentClassName="gap-3"
+              >
+                <div className="space-y-1">
                   {area.area_branches.length === 0 ? (
                     <p className="text-xs text-muted-foreground">
-                      Chưa gán chi nhánh
+                      {messages.settings.areas.noAssignedBranch}
                     </p>
                   ) : (
                     area.area_branches.map((ab) => (
@@ -153,31 +154,30 @@ export function AreasManager({ areas, branches }: AreasManagerProps) {
                   )}
                 </div>
 
-                {/* Add branch */}
                 {availableBranches.length > 0 && (
-                  <div className="mt-3">
-                    <Select
-                      value=""
-                      onValueChange={(val) => {
-                        const branchId = Number(val);
-                        if (branchId) handleAssignBranch(area.id, branchId);
-                      }}
-                      disabled={isPending}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="+ Thêm chi nhánh..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableBranches.map((b) => (
-                          <SelectItem key={b.id} value={b.id.toString()}>
-                            {b.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <Select
+                    value=""
+                    onValueChange={(val) => {
+                      const branchId = Number(val);
+                      if (branchId) handleAssignBranch(area.id, branchId);
+                    }}
+                    disabled={isPending}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue
+                        placeholder={messages.settings.areas.addBranchPlaceholder}
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableBranches.map((b) => (
+                        <SelectItem key={b.id} value={b.id.toString()}>
+                          {b.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 )}
-              </Card>
+              </AppSection>
             );
           })}
         </div>

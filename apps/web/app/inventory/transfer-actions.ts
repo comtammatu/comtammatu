@@ -2,7 +2,12 @@
 
 import { randomUUID } from "crypto";
 import { z } from "zod";
-import { INVENTORY_OPS_ROLES, PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import {
+  INVENTORY_OPS_ROLES,
+  PERMISSION_KEYS,
+  type JwtClaims,
+  type StaffRole,
+} from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContext, getAuthContextWithPermission } from "./_lib/auth";
 import { withAction } from "@/_lib/with-action";
@@ -12,6 +17,84 @@ import { PG_ERR } from "./_lib/constants";
 import { getBranchSiteDisplayName } from "./_lib/branch-site-labels";
 
 const ROLES = INVENTORY_OPS_ROLES;
+const BRANCH_SCOPED_TRANSFER_ROLES: readonly StaffRole[] = [
+  "branch_manager",
+  "warehouse_manager",
+  "production_manager",
+];
+const BRANCH_MANAGER_INTER_SITE_TRANSFER_ERROR =
+  "Quản lý chi nhánh chỉ được nhận phiếu inbound hoặc tạo Cấp bếp nội bộ.";
+
+function isBranchScopedTransferRole(role: StaffRole): boolean {
+  return BRANCH_SCOPED_TRANSFER_ROLES.includes(role);
+}
+
+function transferInvolvesBranch(
+  transfer: Pick<TransferPermissionRow, "from_branch_id" | "to_branch_id">,
+  branchId: number,
+): boolean {
+  return (
+    transfer.from_branch_id === branchId || transfer.to_branch_id === branchId
+  );
+}
+
+function isAllowedInterSiteDirection(
+  fromKind: string,
+  toKind: string,
+): boolean {
+  return (
+    (fromKind === "central_warehouse" &&
+      (toKind === "central_kitchen" || toKind === "branch")) ||
+    (fromKind === "central_kitchen" && toKind === "branch")
+  );
+}
+
+function enforceTransferActionScope(
+  claims: JwtClaims,
+  transfer: TransferPermissionRow,
+  side: "from" | "to",
+  requiredPermission: string,
+): string | null {
+  if (!isBranchScopedTransferRole(claims.user_role)) return null;
+
+  const ownBranchId = claims.branch_id;
+  if (ownBranchId == null) {
+    return "Tài khoản cần gắn với kho vận hành.";
+  }
+
+  if (claims.user_role === "branch_manager") {
+    const isOwnIntraBranch =
+      transfer.from_branch_id === ownBranchId &&
+      transfer.to_branch_id === ownBranchId;
+
+    if (requiredPermission === PERMISSION_KEYS.INVENTORY_TRANSFER_SHIP) {
+      return BRANCH_MANAGER_INTER_SITE_TRANSFER_ERROR;
+    }
+
+    if (
+      requiredPermission === PERMISSION_KEYS.INVENTORY_TRANSFER_CREATE &&
+      !isOwnIntraBranch
+    ) {
+      return BRANCH_MANAGER_INTER_SITE_TRANSFER_ERROR;
+    }
+
+    if (
+      requiredPermission === PERMISSION_KEYS.INVENTORY_TRANSFER_RECEIVE &&
+      transfer.to_branch_id !== ownBranchId
+    ) {
+      return "Bạn chỉ được nhận phiếu về chi nhánh của mình.";
+    }
+  }
+
+  if (side === "from" && transfer.from_branch_id !== ownBranchId) {
+    return "Bạn chỉ được thao tác phiếu xuất từ kho của mình.";
+  }
+  if (side === "to" && transfer.to_branch_id !== ownBranchId) {
+    return "Bạn chỉ được thao tác phiếu nhận về kho của mình.";
+  }
+
+  return null;
+}
 
 type TransferPermissionRow = {
   id: number;
@@ -55,6 +138,15 @@ async function loadTransferForPermission(
     side === "from" ? transfer.from_branch_id : transfer.to_branch_id;
   const requiredPermission =
     typeof permission === "function" ? permission(transfer) : permission;
+  const scopeError = enforceTransferActionScope(
+    claims,
+    transfer,
+    side,
+    requiredPermission,
+  );
+  if (scopeError) {
+    return { success: false, error: scopeError };
+  }
   const { data: allowed, error: permissionError } = await supabase.rpc(
     "has_permission",
     {
@@ -71,6 +163,7 @@ async function loadTransferForPermission(
 
 export async function fetchStockTransferDetail(
   transferId: number,
+  branchId?: number,
 ): Promise<ActionResult> {
   const id = z.coerce.number().int().positive().safeParse(transferId);
   if (!id.success) return { success: false, error: "ID không hợp lệ" };
@@ -88,6 +181,20 @@ export async function fetchStockTransferDetail(
     .single();
   if (e1 || !tr)
     return { success: false, error: "Không tìm thấy phiếu chuyển." };
+  const requestedBranchId = branchId ?? null;
+  if (isBranchScopedTransferRole(claims.user_role)) {
+    if (
+      claims.branch_id == null ||
+      !transferInvolvesBranch(tr, claims.branch_id)
+    ) {
+      return { success: false, error: "Không tìm thấy phiếu chuyển." };
+    }
+  } else if (
+    requestedBranchId != null &&
+    !transferInvolvesBranch(tr, requestedBranchId)
+  ) {
+    return { success: false, error: "Không tìm thấy phiếu chuyển." };
+  }
   const { data: lines, error: e2 } = await supabase
     .from("stock_transfer_items")
     .select("*, ingredients ( id, name, unit, purchase_unit )")
@@ -126,8 +233,13 @@ export async function fetchStockTransfers(
     )
     .eq("tenant_id", claims.tenant_id);
 
-  // Explicit filter wins; otherwise branch-scoped roles are limited to their own branch.
-  const involvingBranch = branchId ?? claims.branch_id ?? null;
+  const requestedBranchId = branchId ?? null;
+  const involvingBranch = isBranchScopedTransferRole(claims.user_role)
+    ? claims.branch_id
+    : requestedBranchId;
+  if (isBranchScopedTransferRole(claims.user_role) && involvingBranch == null) {
+    return { success: false, error: "Tài khoản cần gắn với kho vận hành." };
+  }
   if (involvingBranch != null) {
     transferQuery = transferQuery.or(
       `from_branch_id.eq.${involvingBranch},to_branch_id.eq.${involvingBranch}`,
@@ -164,10 +276,7 @@ const transferCreateSchema = z.object({
   toBranchId: z.coerce.number().int().positive(),
   fromLocationId: z.coerce.number().int().positive().optional(),
   toLocationId: z.coerce.number().int().positive().optional(),
-  notes: z
-    .string()
-    .max(500, { error: "Ghi chú tối đa 500 ký tự" })
-    .optional(),
+  notes: z.string().max(500, { error: "Ghi chú tối đa 500 ký tự" }).optional(),
   vehicleInfo: z.string().optional(),
   lines: z.array(transferLineInputSchema).optional(),
 });
@@ -208,11 +317,27 @@ export async function createStockTransfer(
 
   const isIntraBranch = fromBranchId === toBranchId;
 
-  if (claims.user_role === "branch_manager" && !isIntraBranch) {
+  if (
+    claims.user_role === "branch_manager" &&
+    (claims.branch_id == null ||
+      !isIntraBranch ||
+      fromBranchId !== claims.branch_id ||
+      toBranchId !== claims.branch_id)
+  ) {
     return {
       success: false,
-      error:
-        "Quản lý chi nhánh chỉ được nhận phiếu inbound hoặc tạo Cấp bếp nội bộ.",
+      error: BRANCH_MANAGER_INTER_SITE_TRANSFER_ERROR,
+    };
+  }
+
+  if (
+    (claims.user_role === "warehouse_manager" ||
+      claims.user_role === "production_manager") &&
+    (claims.branch_id == null || fromBranchId !== claims.branch_id)
+  ) {
+    return {
+      success: false,
+      error: "Bạn chỉ được tạo phiếu xuất từ kho của mình.",
     };
   }
 
@@ -240,11 +365,11 @@ export async function createStockTransfer(
     if (!fromKind || !toKind) {
       return { success: false, error: "Chi nhánh không hợp lệ." };
     }
-    // branch → branch not allowed (Kho Bếp CN1 → Kho Bếp CN2)
-    if (fromKind === "branch" && toKind === "branch") {
+    if (!isAllowedInterSiteDirection(fromKind, toKind)) {
       return {
         success: false,
-        error: "Không được chuyển giữa hai chi nhánh vận hành.",
+        error:
+          "Luồng luân chuyển không hợp lệ. Chỉ hỗ trợ Kho tổng → Bếp trung tâm/Chi nhánh hoặc Bếp trung tâm → Chi nhánh.",
       };
     }
   }
@@ -381,6 +506,38 @@ const transferLineSchema = z.object({
 export const upsertTransferLine = withAction(
   { roles: ROLES, schema: transferLineSchema },
   async (d, { supabase, claims }) => {
+    const { data: transfer, error: transferError } = await supabase
+      .from("stock_transfers")
+      .select(
+        "id, tenant_id, from_branch_id, to_branch_id, from_location_id, to_location_id, status",
+      )
+      .eq("tenant_id", claims.tenant_id)
+      .eq("id", d.transferId)
+      .single();
+    if (transferError || !transfer) {
+      return { success: false, error: "Không tìm thấy phiếu chuyển." };
+    }
+    if (transfer.status !== "draft") {
+      return { success: false, error: "Chỉ được sửa dòng khi phiếu còn nháp." };
+    }
+    const scopeError = enforceTransferActionScope(
+      claims,
+      transfer,
+      "from",
+      PERMISSION_KEYS.INVENTORY_TRANSFER_CREATE,
+    );
+    if (scopeError) return { success: false, error: scopeError };
+    const { data: allowed, error: permissionError } = await supabase.rpc(
+      "has_permission",
+      {
+        p_branch_id: transfer.from_branch_id,
+        p_key: PERMISSION_KEYS.INVENTORY_TRANSFER_CREATE,
+      },
+    );
+    if (permissionError || allowed !== true) {
+      return { success: false, error: "Không có quyền" };
+    }
+
     const { error } = await supabase.from("stock_transfer_items").upsert(
       {
         tenant_id: claims.tenant_id,
@@ -513,10 +670,22 @@ export async function fetchBranchesForTransfer(): Promise<ActionResult> {
     PERMISSION_KEYS.INVENTORY_READ,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
-  const { supabase } = ctx;
+  const { supabase, claims } = ctx;
   const { data, error } = await supabase.rpc("stock_transfer_list_branches");
   if (error) return { success: false, error: "Không thể tải danh sách kho." };
-  return { success: true, data: data ?? [] };
+  const branches = data ?? [];
+  if (claims.user_role === "branch_manager") {
+    return {
+      success: true,
+      data:
+        claims.branch_id == null
+          ? []
+          : branches.filter(
+              (branch: { id: number }) => branch.id === claims.branch_id,
+            ),
+    };
+  }
+  return { success: true, data: branches };
 }
 
 export async function fetchInventoryLocationsForBranch(

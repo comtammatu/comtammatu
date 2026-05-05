@@ -145,7 +145,7 @@ function CartPaneComponent({
         {!shouldShowOrderTypeSelector && (
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <h2 className="truncate text-base font-semibold tracking-tight text-foreground sm:text-xl">
+              <h2 className="font-heading truncate text-base font-semibold tracking-tight text-foreground sm:text-xl">
                 {contextLabel}
               </h2>
             </div>

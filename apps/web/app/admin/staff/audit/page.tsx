@@ -17,6 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
+import { messages } from "@lib/messages";
 
 import { BRANCH_VI } from "@comtammatu/shared/messages";
 interface Props {
@@ -80,6 +81,7 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
   const branchNameById = new Map<number, string>(
     (branches ?? []).map((b) => [b.id, b.name]),
   );
+  const copy = messages.admin.staffAudit;
 
   return (
     <div className="space-y-5 lg:space-y-6">
@@ -89,17 +91,17 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
             <Button asChild variant="ghost" size="sm" className="-ml-3 self-start">
               <Link href="/admin/staff">
                 <IconArrowLeft className="mr-1 size-4" />
-                Quay lại danh sách nhân viên
+                {copy.backToStaff}
               </Link>
             </Button>
             <div className="flex items-center gap-3">
               <IconHistory className="size-7 text-muted-foreground" />
               <div>
-                <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-                  Nhật ký quyền hạn
+                <h2 className="font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
+                  {copy.title}
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Mọi thao tác gán/thu hồi quyền + áp dụng template. Ghi log không thay đổi được.
+                  {copy.description}
                 </p>
               </div>
             </div>
@@ -110,29 +112,29 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">
-            {auditRows.length} mục gần nhất
+            {copy.recentItems(auditRows.length)}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {auditRows.length === 0 ? (
             <p className="p-6 text-center text-sm text-muted-foreground">
-              Không có thay đổi nào.
+              {copy.empty}
             </p>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50 hover:bg-muted/50">
                   <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Thời gian
+                    {copy.time}
                   </TableHead>
                   <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Hành động
+                    {copy.action}
                   </TableHead>
                   <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Người thao tác
+                    {copy.actor}
                   </TableHead>
                   <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Đối tượng
+                    {copy.target}
                   </TableHead>
                   <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                     Permission
@@ -141,7 +143,7 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
                     {BRANCH_VI.long}
                   </TableHead>
                   <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Hạn
+                    {copy.expires}
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -190,14 +192,14 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {r.branch_id === null
-                          ? "tenant-wide"
+                          ? copy.tenantWide
                           : (branchNameById.get(r.branch_id) ??
                             `#${r.branch_id}`)}
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {validUntil
                           ? new Date(validUntil).toLocaleDateString("vi-VN")
-                          : "vĩnh viễn"}
+                          : copy.forever}
                       </TableCell>
                     </TableRow>
                   );

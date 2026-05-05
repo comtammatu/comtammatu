@@ -27,7 +27,7 @@ export default async function WasteNewPage({ searchParams }: PageProps) {
   const { supabase, claims } = ctx;
 
   if (branchId === null) {
-    redirect("/inventory/waste?error=branch_required");
+    redirect("/inventory/issues?error=branch_required");
   }
 
   // Feature flag gate: S11 waste redesign must be enabled per-branch before UI shows
@@ -37,7 +37,7 @@ export default async function WasteNewPage({ searchParams }: PageProps) {
     INVENTORY_FEATURE_FLAGS.S11_WASTE_TIER,
   );
   if (!flagEnabled) {
-    redirect("/inventory/issues?error=waste_v2_not_enabled");
+    redirect(`/inventory/issues?branchId=${branchId}&error=waste_v2_not_enabled`);
   }
 
   // Fetch branch detail + locations at this branch + active ingredients
@@ -64,7 +64,7 @@ export default async function WasteNewPage({ searchParams }: PageProps) {
   ]);
 
   if (!branchRes.data) {
-    redirect("/inventory/waste?error=branch_not_found");
+    redirect(`/inventory/issues?branchId=${branchId}&error=branch_not_found`);
   }
 
   const context: WasteFormContext = {

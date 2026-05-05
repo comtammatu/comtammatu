@@ -21,7 +21,7 @@ const ROUTES: ReadonlyArray<{ name: string; path: string }> = [
   { name: "pos-desktop", path: "/br/1/pos" },
   { name: "kds-queue", path: "/br/1/kds" },
   { name: "inventory-dashboard", path: "/inventory/dashboard?branchId=1" },
-  { name: "admin-trust", path: "/admin/inventory/trust?branchId=1" },
+  { name: "inventory-stock", path: "/inventory/stock?branchId=1" },
   { name: "employee-portal", path: "/employee" },
 ];
 

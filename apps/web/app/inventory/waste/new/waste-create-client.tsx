@@ -34,6 +34,7 @@ import { AntiSplitRollingMeter } from "@/inventory/_components/anti-split-rollin
 import { createWasteEntry } from "@/inventory/waste-actions";
 import { formatVND } from "@comtammatu/shared/format";
 import { FormattedNumberInput } from "@/components/form";
+import { messages } from "@lib/messages";
 
 /* ─── Context shape from server component ─── */
 
@@ -239,11 +240,14 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
     <div className="container mx-auto max-w-4xl space-y-4 py-6">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Phiếu hủy hàng (waste)</h1>
+          <h1 className="font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
+            {messages.inventory.waste.title}
+          </h1>
           <p className="text-sm text-muted-foreground">
             {context.branch.name}{" "}
             <Badge variant="outline" className="ml-1 text-xs">
-              shift: {context.capStatus.shiftKey || "?"}
+              {messages.inventory.waste.shiftPrefix}{" "}
+              {context.capStatus.shiftKey || "?"}
             </Badge>
           </p>
         </div>
@@ -264,22 +268,23 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Thông tin chung</CardTitle>
+          <CardTitle className="text-base">
+            {messages.inventory.waste.generalInfoTitle}
+          </CardTitle>
           <CardDescription>
-            Các dòng sẽ tự compute tier trên server. Dòng có tier ≥1 cần ảnh;
-            tier 2 cần QLV duyệt (4-eye, không tự duyệt).
+            {messages.inventory.waste.generalInfoDescription}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <div>
-            <Label htmlFor="waste-loc">Location</Label>
+            <Label htmlFor="waste-loc">{messages.inventory.waste.location}</Label>
             <Select
               value={locationId !== null ? String(locationId) : ""}
               onValueChange={(v) => setLocationId(Number(v))}
               disabled={isSubmitting}
             >
               <SelectTrigger id="waste-loc">
-                <SelectValue placeholder="Chọn location" />
+                <SelectValue placeholder={messages.inventory.waste.chooseLocation} />
               </SelectTrigger>
               <SelectContent>
                 {context.locations.map((l) => (
@@ -291,7 +296,9 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
             </Select>
           </div>
           <div>
-            <Label htmlFor="waste-form-notes">Ghi chú chung (optional)</Label>
+            <Label htmlFor="waste-form-notes">
+              {messages.inventory.waste.generalNotes}
+            </Label>
             <Textarea
               id="waste-form-notes"
               value={formNotes}
@@ -320,7 +327,9 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
               <Card>
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between gap-2">
-                    <CardTitle className="text-sm">Dòng #{idx + 1}</CardTitle>
+                    <CardTitle className="text-sm">
+                      {messages.inventory.waste.lineTitle(idx + 1)}
+                    </CardTitle>
                     <div className="flex items-center gap-2">
                       <WasteTierBadge
                         tier={preview.tier}
@@ -334,7 +343,7 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
                           type="button"
                           onClick={() => removeLine(line.uid)}
                           disabled={isSubmitting}
-                          aria-label="Xóa dòng"
+                          aria-label={messages.inventory.waste.removeLineAria}
                           className="text-destructive"
                         >
                           <IconTrash className="size-4" />
@@ -352,7 +361,7 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
                         line.ingredientId !== null ? String(line.ingredientId) : ""
                       }
                       onValueChange={(v) => handleIngredientChange(line.uid, v)}
-                      placeholder="Chọn nguyên liệu"
+                      placeholder={messages.inventory.waste.chooseIngredient}
                     />
                   </div>
 
@@ -383,7 +392,7 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
                     </div>
                     <div>
                       <Label htmlFor={`cost-${line.uid}`}>
-                        Đơn giá (VND / {line.unit})
+                        {messages.inventory.waste.unitCostLabel(line.unit)}
                       </Label>
                       <FormattedNumberInput
                         id={`cost-${line.uid}`}
@@ -396,7 +405,7 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
                         placeholder="0"
                       />
                       <p className="mt-1 text-xs text-muted-foreground tabular-nums">
-                        Value: {formatVND(value)}
+                        {messages.inventory.waste.value(formatVND(value))}
                       </p>
                     </div>
                   </div>
@@ -416,7 +425,7 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
                   {preview.photoRequired ? (
                     <div>
                       <Label>
-                        Ảnh chứng minh (bắt buộc tier {preview.tier})
+                        {messages.inventory.waste.proofPhotoLabel(preview.tier)}
                       </Label>
                       <WastePhotoUpload
                         tenantId={context.tenantId}
@@ -433,7 +442,9 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
                   ) : null}
 
                   <div>
-                    <Label htmlFor={`note-${line.uid}`}>Ghi chú dòng</Label>
+                    <Label htmlFor={`note-${line.uid}`}>
+                      {messages.inventory.waste.lineNotes}
+                    </Label>
                     <Textarea
                       id={`note-${line.uid}`}
                       value={line.note}
@@ -456,7 +467,7 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
           onClick={addLine}
           disabled={isSubmitting}
         >
-          + Thêm dòng
+          {messages.inventory.waste.addLine}
         </Button>
         <div
           className={cn(
@@ -464,7 +475,7 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
             totalValue >= 500_000 ? "text-destructive" : "",
           )}
         >
-          Tổng: {formatVND(totalValue)}
+          {messages.inventory.waste.total(formatVND(totalValue))}
         </div>
       </div>
 
@@ -477,7 +488,7 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
           {ACTIONS_VI.cancel}
         </Button>
         <Button onClick={handleSubmit} disabled={isSubmitting}>
-          {isSubmitting ? <Spinner /> : "Tạo phiếu"}
+          {isSubmitting ? <Spinner /> : messages.inventory.waste.createSlip}
         </Button>
       </div>
     </div>

@@ -8073,6 +8073,7 @@ export type Database = {
         Args: { p_branch_id: number; p_flag_key: string }
         Returns: boolean
       }
+      is_inventory_production_operator: { Args: never; Returns: boolean }
       list_branch_menu_daily_limits: {
         Args: { p_branch_id: number; p_limit_date?: string }
         Returns: {

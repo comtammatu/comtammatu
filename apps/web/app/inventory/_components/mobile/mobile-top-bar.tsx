@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { LogOut as IconLogout, Warehouse as IconBuildingWarehouse } from "lucide-react";
+import { LogOut as IconLogout } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
+import { BrandMark } from "@/components/brand";
+import { messages } from "@lib/messages";
 
 interface MobileTopBarProps {
   siteName: string;
@@ -14,15 +16,15 @@ export function MobileTopBar({ siteName }: MobileTopBarProps) {
       <Link
         href="/inventory/m"
         className="flex items-center gap-2 font-semibold"
-        aria-label="Về trang chủ kho"
+        aria-label={messages.inventory.shell.mobileHomeAria}
       >
-        <span className="inline-flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-          <IconBuildingWarehouse className="size-5" />
+        <span className="inline-flex size-9 items-center justify-center rounded-lg border bg-background p-1">
+          <BrandMark decorative className="size-full" />
         </span>
         <span className="text-sm leading-tight">
-          <span className="block">Kho Má Tư</span>
+          <span className="block">{messages.inventory.shell.mobileBrand}</span>
           <span className="block text-xs font-normal text-muted-foreground">
-            Mobile
+            {messages.inventory.shell.mobileMode}
           </span>
         </span>
       </Link>
@@ -37,7 +39,7 @@ export function MobileTopBar({ siteName }: MobileTopBarProps) {
           variant="outline"
           size="icon-lg"
           className="size-10 rounded-lg text-muted-foreground"
-          aria-label="Đăng xuất"
+          aria-label={messages.inventory.common.signOut}
         >
           <IconLogout className="size-5" />
         </Button>

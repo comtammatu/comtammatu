@@ -26,8 +26,6 @@ const VI_DICTIONARY: InventoryDictionary = {
     purchaseOrders: { short: "Đơn đặt hàng", long: "Đơn đặt hàng NCC" },
     grn: { short: "Phiếu nhập", long: "Phiếu nhập kho" },
     supplierInvoices: { long: "Hóa đơn NCC" },
-    supplierReturns: { short: "Trả NCC", long: "Phiếu trả nhà cung cấp" },
-    supplierCreditNotes: { long: "Ghi có NCC" },
     transfers: { short: "Điều chuyển", long: "Điều chuyển nội bộ" },
     stocktake: { long: "Kiểm kê" },
     issues: { short: "Xuất kho", long: "Xuất kho nội bộ" },
@@ -65,15 +63,6 @@ const VI_DICTIONARY: InventoryDictionary = {
     },
     "/inventory/grn": { short: "Phiếu nhập", long: "Phiếu nhập kho" },
     "/inventory/supplier-invoices": { long: "Hóa đơn NCC" },
-    "/inventory/supplier-returns": {
-      short: "Trả NCC",
-      long: "Phiếu trả nhà cung cấp",
-    },
-    "/inventory/supplier-returns/new": {
-      short: "Tạo phiếu trả",
-      long: "Tạo phiếu trả NCC từ kho",
-    },
-    "/inventory/supplier-credit-notes": { long: "Ghi có NCC" },
     "/inventory/settings/qc": {
       short: "Cài đặt QC",
       long: "Cài đặt QC nhập kho",

@@ -62,18 +62,20 @@ Hệ quả UI:
 - `Settings` chỉ giữ những thứ là cấu hình hành vi, policy, hoặc defaults.
 - Nếu route cũ vẫn còn để tương thích, navigation không nên render trùng entry point.
 
-### 4. `Production` bị ẩn hoàn toàn với non-`super_manager`
+### 4. `Production` chỉ dành cho production operator
 
 Quyết định:
 
 - Navigation phải phản ánh đúng quyền thực tế.
 - Người không có quyền không nên thấy entry nav của `Production`.
+- Operator production là `super_manager` và `production_manager`; `owner` có access kiểm tra/khẩn cấp nhưng không là CTA hằng ngày.
+- `area_manager` và `branch_manager` không được mở production Server Actions, RPC hoặc RLS-backed direct table access, kể cả khi có manual production/menu grant.
 
 Hệ quả UI:
 
-- `Production` chỉ hiện cho `super_manager` trong pilot hiện tại.
+- `Production` chỉ hiện cho `super_manager` / `production_manager` trong pilot hiện tại.
 - Không dùng pattern “hiện menu rồi chặn khi vào trang” cho flow này.
-- Khi có role riêng cho bếp trung tâm trong tương lai, mở lại theo ACL mới.
+- Owner có thể deep-link để kiểm tra/khẩn cấp; dashboard/nav không quảng bá owner như daily production operator.
 
 ### 5. `branch_manager` không tạo inter-site transfer
 

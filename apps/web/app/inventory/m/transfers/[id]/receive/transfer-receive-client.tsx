@@ -2,7 +2,13 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight as IconArrowRight, Check as IconCheck, PackagePlus as IconPackageImport, Pencil as IconPencil, TriangleAlert as IconAlertTriangle } from "lucide-react";
+import {
+  ArrowRight as IconArrowRight,
+  Check as IconCheck,
+  PackagePlus as IconPackageImport,
+  Pencil as IconPencil,
+  TriangleAlert as IconAlertTriangle,
+} from "lucide-react";
 import { Card } from "@comtammatu/ui/components/card";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
@@ -95,6 +101,15 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
 
   async function submit() {
     if (!canSubmit) return;
+    for (const line of lines) {
+      const qty = values[line.ingredientId] ?? 0;
+      if (qty > line.sentQty) {
+        setError(
+          `Số lượng nhận không được vượt quá số lượng xuất cho ${line.ingredientName}.`,
+        );
+        return;
+      }
+    }
     setPending(true);
     setError(null);
     const items: Record<string, { qty: number; note?: string }> = {};
@@ -183,11 +198,7 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
               disabled={startingReceive}
               className="h-12 w-full text-sm"
             >
-              {startingReceive ? (
-                <Spinner />
-              ) : (
-                <IconCheck className="size-4" />
-              )}
+              {startingReceive ? <Spinner /> : <IconCheck className="size-4" />}
               Bắt đầu kiểm nhận
             </Button>
           </AlertDescription>
@@ -269,12 +280,8 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
 
       {hasShort && !needsReceiveMode ? (
         <Card className="gap-2 p-4">
-          <label
-            htmlFor="short-note"
-            className="text-sm font-semibold"
-          >
-            Ghi chú thiếu hụt{" "}
-            <span className="text-destructive">*</span>
+          <label htmlFor="short-note" className="text-sm font-semibold">
+            Ghi chú thiếu hụt <span className="text-destructive">*</span>
           </label>
           <Textarea
             id="short-note"
@@ -345,7 +352,7 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
           if (!next) setEditing(null);
         }}
         title={editing ? `Nhận ${editing.ingredientName}` : ""}
-        initialValue={editing ? values[editing.ingredientId] ?? 0 : 0}
+        initialValue={editing ? (values[editing.ingredientId] ?? 0) : 0}
         suffix={editing?.unit}
         onConfirm={(value) => {
           if (!editing) return;

@@ -2,9 +2,9 @@
 
 import { z } from "zod";
 import { headers } from "next/headers";
-import type { StaffRole } from "@comtammatu/shared/auth";
+import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
-import { withAction } from "@/_lib/with-action";
+import { type ActionContext, withAction } from "@/_lib/with-action";
 import { getClientIp } from "@lib/network/client-ip";
 
 const NETWORK_ADMIN_ROLES: StaffRole[] = ["owner", "super_manager"];
@@ -28,12 +28,33 @@ export interface TrustedIpRow {
   revoked_at: string | null;
 }
 
+async function branchBelongsToTenant(
+  supabase: ActionContext["supabase"],
+  tenantId: number,
+  branchId: number,
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("branches")
+    .select("id")
+    .eq("id", branchId)
+    .eq("tenant_id", tenantId)
+    .maybeSingle();
+
+  return !error && data !== null;
+}
+
 export const listTrustedIps = withAction(
   {
     roles: NETWORK_ADMIN_ROLES,
     schema: branchIdSchema,
+    permission: PERMISSION_KEYS.SETTINGS_BRANCH_NETWORK,
+    permissionBranchId: (data) => data.branchId,
   },
   async (data, { supabase, claims }) => {
+    if (!(await branchBelongsToTenant(supabase, claims.tenant_id, data.branchId))) {
+      return { success: false, error: "Chi nhánh không hợp lệ." };
+    }
+
     const { data: rows, error } = await supabase
       .from("branch_trusted_egress_ips")
       .select(
@@ -65,8 +86,14 @@ export const trustCurrentIp = withAction(
   {
     roles: NETWORK_ADMIN_ROLES,
     schema: branchIdSchema,
+    permission: PERMISSION_KEYS.SETTINGS_BRANCH_NETWORK,
+    permissionBranchId: (data) => data.branchId,
   },
   async (data, { supabase, claims, user }) => {
+    if (!(await branchBelongsToTenant(supabase, claims.tenant_id, data.branchId))) {
+      return { success: false, error: "Chi nhánh không hợp lệ." };
+    }
+
     const headerStore = await headers();
     const ip = getClientIp(headerStore);
     if (!ip) {
@@ -84,9 +111,11 @@ export const trustCurrentIp = withAction(
           branch_id: data.branchId,
           ip_address: ip,
           registered_via: "manual",
+          registered_by_agent_id: null,
           registered_by_user: user.id,
           last_seen_at: new Date().toISOString(),
           revoked_at: null,
+          revoked_by_user: null,
         },
         { onConflict: "tenant_id,branch_id,ip_address" },
       );
@@ -111,8 +140,14 @@ export const revokeTrustedIp = withAction(
   {
     roles: NETWORK_ADMIN_ROLES,
     schema: revokeSchema,
+    permission: PERMISSION_KEYS.SETTINGS_BRANCH_NETWORK,
+    permissionBranchId: (data) => data.branchId,
   },
   async (data, { supabase, claims, user }) => {
+    if (!(await branchBelongsToTenant(supabase, claims.tenant_id, data.branchId))) {
+      return { success: false, error: "Chi nhánh không hợp lệ." };
+    }
+
     const { error } = await supabase
       .from("branch_trusted_egress_ips")
       .update({

@@ -24,6 +24,7 @@ import {
 } from "@comtammatu/ui/components/field";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { ACTIONS_VI, ERRORS_VI } from "@comtammatu/shared/messages";
+import { AppEmptyState } from "@/components/surface";
 import { TextField, valuesToFormData } from "@/components/form";
 import {
   createStation,
@@ -31,7 +32,6 @@ import {
   updateStation,
 } from "./actions";
 import type { CategoryOption, StationRow } from "./stations-client";
-import { EmptyStatePanel } from "../../components/empty-state-panel";
 
 const stationSchema = z.object({
   name: z.string().trim().min(1, { error: "Tên trạm không được trống" }),
@@ -220,9 +220,10 @@ export function StationFormDialog({
                         </label>
                       ))}
                       {categories.length === 0 && (
-                        <EmptyStatePanel
-                          className="bg-transparent py-6"
+                        <AppEmptyState
+                          className="border-0 bg-transparent py-6"
                           title="Chưa có danh mục nào"
+                          compact
                         />
                       )}
                     </div>

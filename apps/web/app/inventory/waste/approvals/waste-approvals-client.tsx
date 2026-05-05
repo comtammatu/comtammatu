@@ -15,12 +15,12 @@ import { Textarea } from "@comtammatu/ui/components/textarea";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
-import Link from "next/link";
-import { Check as IconCheck, X as IconX, Clock as IconClock, Bot as IconRobot } from "lucide-react";
+import { Check as IconCheck, X as IconX, Clock as IconClock } from "lucide-react";
 import { WasteTierBadge } from "@/inventory/_components/waste-tier-badge";
 import { approveWaste } from "@/inventory/waste-actions";
 import { formatVND } from "@comtammatu/shared/format";
 import { getWasteReasonLabelVi } from "@comtammatu/shared/labels";
+import { messages } from "@lib/messages";
 
 export type PendingWasteItem = {
   itemId: number;
@@ -60,42 +60,28 @@ interface Props {
 
 export function WasteApprovalsClient({ initial, branchFilter }: Props) {
   const [rows, setRows] = useState(initial);
+  const copy = messages.inventory.waste.approvals;
 
   return (
     <div className="container mx-auto max-w-4xl space-y-4 py-6">
       <div className="flex items-center justify-between gap-2">
         <div>
-          <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight sm:text-3xl">
+          <h1 className="font-heading flex items-center gap-2 text-2xl font-semibold tracking-tight sm:text-3xl">
             <IconClock className="size-6 text-tier-note" />
-            Duyệt waste — chờ QLV
+            {copy.title}
           </h1>
           <p className="text-sm text-muted-foreground">
-            4-eye principle: không tự duyệt phiếu của mình
-            {branchFilter !== null ? ` • CN #${branchFilter}` : null}
+            {copy.principle}
+            {branchFilter !== null ? copy.branchSuffix(branchFilter) : null}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button type="button" variant="outline" size="sm" asChild>
-            {/* S11-ext gate (inv_s11_ext_auto_waste) — non-pilot branches redirect. */}
-            <Link
-              href={
-                branchFilter !== null
-                  ? `/inventory/waste/auto?branchId=${branchFilter}`
-                  : "/inventory/waste/auto"
-              }
-            >
-              <IconRobot className="size-4" />
-              Auto-waste
-            </Link>
-          </Button>
-          <Badge variant="secondary">{rows.length} phiếu</Badge>
-        </div>
+        <Badge variant="secondary">{copy.count(rows.length)}</Badge>
       </div>
 
       {rows.length === 0 ? (
         <Card>
           <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            Không có phiếu chờ duyệt.
+            {copy.empty}
           </CardContent>
         </Card>
       ) : (
@@ -126,6 +112,7 @@ function WasteApprovalCard({
   const [note, setNote] = useState("");
   const [pending, setPending] = useState<"approved" | "rejected" | null>(null);
   const [, startTransition] = useTransition();
+  const copy = messages.inventory.waste.approvals;
 
   function handleDecision(decision: "approved" | "rejected") {
     if (row.isSelfCreated) {
@@ -184,7 +171,7 @@ function WasteApprovalCard({
                 {row.createdByName}
                 {row.isSelfCreated ? (
                   <Badge className="ml-2 bg-warning/15 text-warning-foreground border-warning/40 border text-xs">
-                    Bạn tạo — không thể tự duyệt
+                    {copy.selfCreatedBadge}
                   </Badge>
                 ) : null}
                 {" • "}
@@ -196,7 +183,7 @@ function WasteApprovalCard({
                 {formatVND(row.totalValue)}
               </div>
               <div className="text-xs text-muted-foreground">
-                {row.items.length} dòng
+                {copy.lineCount(row.items.length)}
               </div>
             </div>
           </div>
@@ -218,12 +205,12 @@ function WasteApprovalCard({
                       </span>
                     </div>
                     <div className="text-xs text-muted-foreground">
-                      Lý do: {getWasteReasonLabelVi(it.reasonCode)}
+                      {copy.reason(getWasteReasonLabelVi(it.reasonCode))}
                       {typeof it.qtyRatio === "number" && it.qtyRatio > 0
-                        ? ` • qty ratio: ${Math.round(it.qtyRatio * 100)}% tồn location`
+                        ? copy.qtyRatio(Math.round(it.qtyRatio * 100))
                         : ""}
                       {typeof it.rolling15MinSum === "number" && it.rolling15MinSum > 0
-                        ? ` • rolling 15m: ${formatVND(it.rolling15MinSum)}`
+                        ? copy.rolling15m(formatVND(it.rolling15MinSum))
                         : ""}
                     </div>
                   </div>
@@ -244,7 +231,7 @@ function WasteApprovalCard({
                         rel="noreferrer"
                         className="text-xs text-primary underline"
                       >
-                        Xem ảnh
+                        {copy.viewPhoto}
                       </a>
                     ))}
                   </div>
@@ -255,7 +242,7 @@ function WasteApprovalCard({
 
           {row.notes ? (
             <p className="line-clamp-2 break-words text-xs italic text-muted-foreground">
-              Ghi chú: {row.notes}
+              {copy.notes(row.notes)}
             </p>
           ) : null}
 
@@ -265,7 +252,7 @@ function WasteApprovalCard({
               onChange={(e) => setNote(e.target.value)}
               disabled={pending !== null || row.isSelfCreated}
               rows={2}
-              placeholder="Ghi chú khi duyệt/từ chối (optional)…"
+              placeholder={copy.reviewNotePlaceholder}
             />
           </div>
 
@@ -277,14 +264,14 @@ function WasteApprovalCard({
               className="text-destructive"
             >
               {pending === "rejected" ? <Spinner /> : <IconX className="size-4" />}
-              Từ chối
+              {copy.reject}
             </Button>
             <Button
               onClick={() => handleDecision("approved")}
               disabled={pending !== null || row.isSelfCreated}
             >
               {pending === "approved" ? <Spinner /> : <IconCheck className="size-4" />}
-              Duyệt
+              {copy.approve}
             </Button>
           </div>
         </CardContent>

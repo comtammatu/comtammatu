@@ -17,60 +17,79 @@ import type { ReactNode } from "react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { Button } from "@comtammatu/ui/components/button";
 import { AppShell } from "@/components/app-shell";
+import { messages } from "@lib/messages";
 import type { ShellNavGroup } from "@/lib/shell-primitives";
+
+const financeCopy = messages.finance;
 
 const NAV_GROUPS: ShellNavGroup[] = [
   {
-    title: "Tổng quan",
+    title: financeCopy.nav.groups.overview,
     items: [
-      { href: "/finance", label: "Tài chính", icon: IconWallet },
-      { href: "/finance/revenue", label: "Doanh thu", icon: IconTrendingUp },
+      { href: "/finance", label: financeCopy.nav.items.finance, icon: IconWallet },
+      {
+        href: "/finance/revenue",
+        label: financeCopy.nav.items.revenue,
+        icon: IconTrendingUp,
+      },
       {
         href: "/finance/reconciliation",
-        label: "Đối chiếu",
+        label: financeCopy.nav.items.reconciliation,
         icon: IconArrowLeftRight,
       },
     ],
   },
   {
-    title: "Kế toán",
+    title: financeCopy.nav.groups.accounting,
     items: [
       {
         href: "/finance/chart-of-accounts",
-        label: "Hệ thống tài khoản",
+        label: financeCopy.nav.items.chartOfAccounts,
         icon: IconBook,
       },
-      { href: "/finance/journal", label: "Sổ nhật ký", icon: IconFileText },
+      {
+        href: "/finance/journal",
+        label: financeCopy.nav.items.journal,
+        icon: IconFileText,
+      },
       {
         href: "/finance/posting-rules",
-        label: "Quy tắc hạch toán",
+        label: financeCopy.nav.items.postingRules,
         icon: IconSettings2,
       },
     ],
   },
   {
-    title: "Báo cáo",
+    title: financeCopy.nav.groups.reports,
     items: [
       {
         href: "/finance/statements",
-        label: "Báo cáo tài chính",
+        label: financeCopy.nav.items.statements,
         icon: IconChartBar,
       },
-      { href: "/finance/food-cost", label: "Giá vốn món", icon: IconReceipt },
+      {
+        href: "/finance/food-cost",
+        label: financeCopy.nav.items.foodCost,
+        icon: IconReceipt,
+      },
     ],
   },
   {
-    title: "Chu kỳ",
+    title: financeCopy.nav.groups.cycle,
     items: [
-      { href: "/finance/periods", label: "Kỳ kế toán", icon: IconCalendarEvent },
+      {
+        href: "/finance/periods",
+        label: financeCopy.nav.items.periods,
+        icon: IconCalendarEvent,
+      },
     ],
   },
   {
-    title: "Kiểm toán",
+    title: financeCopy.nav.groups.audit,
     items: [
       {
         href: "/finance/audit-trail",
-        label: "Nhật ký kiểm toán",
+        label: financeCopy.nav.items.auditTrail,
         icon: IconScrollText,
       },
     ],
@@ -90,22 +109,23 @@ export function FinanceShell({ children, user, role }: FinanceShellProps) {
       role={role}
       brand={{
         icon: IconWallet,
-        subLabel: "Kế toán",
-        mainLabel: "Tài chính",
+        subLabel: financeCopy.shell.subLabel,
+        mainLabel: financeCopy.shell.mainLabel,
       }}
       navGroups={NAV_GROUPS}
-      defaultPageTitle="Tài chính"
+      defaultPageTitle={financeCopy.shell.defaultPageTitle}
       pageHeader={{
-        crumbLabel: "Kế toán · Tài chính",
-        description:
-          "Tập trung sổ sách, báo cáo và HĐĐT trong cùng cấu trúc điều hướng.",
+        crumbLabel: financeCopy.shell.crumbLabel,
+        description: financeCopy.shell.description,
         actions: (
           <>
             <Button asChild variant="outline" size="sm">
-              <Link href="/admin/dashboard">Quản trị</Link>
+              <Link href="/admin/dashboard">{financeCopy.shell.admin}</Link>
             </Button>
             <Button asChild size="sm">
-              <Link href="/finance/statements">Báo cáo tài chính</Link>
+              <Link href="/finance/statements">
+                {financeCopy.shell.financialStatements}
+              </Link>
             </Button>
           </>
         ),

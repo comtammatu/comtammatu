@@ -1,18 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { AppEmptyState } from "@/components/surface";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@comtammatu/ui/components/empty";
-import { Item, ItemGroup } from "@comtammatu/ui/components/item";
+import { Item, ItemFooter, ItemGroup } from "@comtammatu/ui/components/item";
 import {
   Sheet,
   SheetContent,
@@ -47,6 +41,7 @@ import {
 } from "../_hooks/use-archived-orders";
 
 import { ACTIONS_VI, STATES_VI } from "@comtammatu/shared/messages";
+import { messages } from "@lib/messages";
 interface ArchivedOrdersSheetProps {
   branchId: number;
   sessionId: number;
@@ -130,11 +125,11 @@ export function ArchivedOrdersSheet({
           <Input
             type="search"
             inputMode="search"
-            placeholder="Tìm số đơn..."
+            placeholder={messages.pos.archivedOrders.searchPlaceholder}
             className="h-10 pl-9 text-base"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            aria-label="Tìm theo số đơn"
+            aria-label={messages.pos.archivedOrders.searchAria}
             data-testid="pos-archived-search"
           />
         </div>
@@ -151,13 +146,13 @@ export function ArchivedOrdersSheet({
             value="session"
             className="h-full justify-center text-sm font-semibold"
           >
-            Ca này
+            {messages.pos.archivedOrders.currentSession}
           </ToggleGroupItem>
           <ToggleGroupItem
             value="today"
             className="h-full justify-center text-sm font-semibold"
           >
-            Cả chi nhánh
+            {messages.pos.archivedOrders.branchToday}
           </ToggleGroupItem>
         </ToggleGroup>
       </div>
@@ -165,11 +160,12 @@ export function ArchivedOrdersSheet({
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex flex-col gap-2 px-3 py-3">
           {error !== null ? (
-            <Empty className="min-h-32">
-              <EmptyHeader>
-                <EmptyTitle>Không tải được lịch sử</EmptyTitle>
-                <EmptyDescription>{error}</EmptyDescription>
-              </EmptyHeader>
+            <AppEmptyState
+              title={messages.pos.archivedOrders.loadFailed}
+              description={error}
+              className="min-h-32"
+              compact
+            >
               <Button
                 type="button"
                 variant="outline"
@@ -180,29 +176,25 @@ export function ArchivedOrdersSheet({
                 <IconRefresh data-icon="inline-start" />
                 {ACTIONS_VI.retry}
               </Button>
-            </Empty>
+            </AppEmptyState>
           ) : isLoading ? (
-            <Empty className="min-h-32">
-              <EmptyHeader>
-                <EmptyTitle>
-                  <Spinner data-icon="inline-start" />
-                  {STATES_VI.loading}
-                </EmptyTitle>
-              </EmptyHeader>
-            </Empty>
+            <AppEmptyState
+              title={STATES_VI.loading}
+              icon={<Spinner />}
+              className="min-h-32"
+              compact
+            />
           ) : orders.length === 0 ? (
-            <Empty className="min-h-32">
-              <EmptyMedia variant="icon">
-                <IconReceipt />
-              </EmptyMedia>
-              <EmptyHeader>
-                <EmptyTitle>
-                  {debouncedQuery !== ""
-                    ? `Không có đơn khớp "${debouncedQuery}"`
-                    : "Chưa có đơn đã xử lý"}
-                </EmptyTitle>
-              </EmptyHeader>
-            </Empty>
+            <AppEmptyState
+              title={
+                debouncedQuery !== ""
+                  ? messages.pos.archivedOrders.emptyMatch(debouncedQuery)
+                  : messages.pos.archivedOrders.empty
+              }
+              icon={<IconReceipt />}
+              className="min-h-32"
+              compact
+            />
           ) : (
             <ItemGroup className="gap-2">
               {orders.map((order) => (
@@ -224,11 +216,11 @@ export function ArchivedOrdersSheet({
           {isLoadingMore ? (
             <div className="flex items-center justify-center py-3 text-sm text-muted-foreground">
               <Spinner data-icon="inline-start" />
-              Đang tải thêm...
+              {messages.pos.archivedOrders.loadingMore}
             </div>
           ) : !hasMore && orders.length > 0 ? (
             <div className="py-3 text-center text-sm text-muted-foreground">
-              Đã hết lịch sử
+              {messages.pos.archivedOrders.end}
             </div>
           ) : null}
         </div>
@@ -243,9 +235,11 @@ export function ArchivedOrdersSheet({
           showHandle
           className="h-dvh max-h-dvh p-0 data-[vaul-drawer-direction=bottom]:top-0 data-[vaul-drawer-direction=bottom]:mt-0 data-[vaul-drawer-direction=bottom]:max-h-dvh before:inset-0 before:rounded-none before:border-0 before:bg-background"
         >
-          <DrawerTitle className="sr-only">Đơn đã xử lý</DrawerTitle>
+          <DrawerTitle className="sr-only">
+            {messages.pos.archivedOrders.sheetTitle}
+          </DrawerTitle>
           <DrawerDescription className="sr-only">
-            Danh sách hóa đơn đã thanh toán hoặc đã hủy.
+            {messages.pos.archivedOrders.description}
           </DrawerDescription>
           {body}
         </DrawerContent>
@@ -261,7 +255,7 @@ export function ArchivedOrdersSheet({
       >
         <SheetHeader className="border-b px-5 pt-5 pb-3 text-left">
           <SheetTitle className="flex items-center gap-2">
-            Đơn đã xử lý
+            {messages.pos.archivedOrders.sheetTitle}
             {orders.length > 0 ? (
               <Badge variant="secondary" className="text-xs">
                 {orders.length}
@@ -288,21 +282,28 @@ function ArchivedOrderRow({
       data-testid={`pos-archived-bill-${order.id}`}
       variant="outline"
       size="sm"
-      role="button"
-      tabIndex={0}
-      aria-label={`Mở hóa đơn #${order.order_number}`}
-      className="cursor-pointer bg-card transition-colors hover:bg-muted/50 focus-visible:bg-muted/50"
-      onClick={() => onViewBill(order.id, "receipt")}
-      onKeyDown={(event) => {
-        if (event.key !== "Enter" && event.key !== " ") return;
-        event.preventDefault();
-        onViewBill(order.id, "receipt");
-      }}
+      role="listitem"
+      className="bg-card"
     >
       <OrderCardSummary
         order={order}
         rightMeta={<OrderStatusBadge order={order} />}
       />
+      <ItemFooter className="mt-1.5 justify-end border-t border-border/60 pt-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-10 px-3 text-sm"
+          aria-label={messages.pos.archivedOrders.openReceiptAria(
+            order.order_number,
+          )}
+          onClick={() => onViewBill(order.id, "receipt")}
+        >
+          <IconReceipt data-icon="inline-start" />
+          {messages.pos.archivedOrders.viewReceipt}
+        </Button>
+      </ItemFooter>
     </Item>
   );
 }

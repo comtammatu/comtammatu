@@ -1,4 +1,4 @@
-import { Utensils as IconToolsKitchen } from "lucide-react";
+import { BRAND_NAME, BrandLockup } from "@/components/brand";
 import { LoginForm } from "./login-form";
 
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
@@ -13,12 +13,15 @@ export default async function LoginPage({
     <main className="flex min-h-dvh flex-col lg:grid lg:grid-cols-2">
       {/* Brand — compact on mobile, full-height panel on desktop */}
       <div className="flex flex-col items-center gap-3 px-6 pt-10 pb-4 lg:justify-center lg:bg-primary lg:p-12">
-        <div className="flex size-14 items-center justify-center rounded-xl bg-primary/15 text-primary lg:size-16 lg:bg-primary-foreground/20 lg:text-primary-foreground lg:rounded-2xl">
-          <IconToolsKitchen className="size-6 lg:size-7" />
+        <div className="rounded-2xl border bg-background/95 p-3 shadow-sm lg:bg-primary-foreground">
+          <BrandLockup
+            decorative
+            size="md"
+            priority
+            className="lg:h-28"
+          />
         </div>
-        <h1 className="font-heading text-lg font-semibold lg:text-2xl lg:text-primary-foreground">
-          Cơm Tấm Má Tư
-        </h1>
+        <h1 className="font-heading sr-only">{BRAND_NAME}</h1>
       </div>
 
       {/* Login form */}

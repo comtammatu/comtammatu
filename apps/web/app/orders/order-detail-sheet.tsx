@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, useTransition } from "react";
 import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
+import { cn } from "@comtammatu/ui";
 import { formatVND } from "@comtammatu/shared/format";
 import { Badge } from "@comtammatu/ui/components/badge";
 import {
@@ -11,18 +12,60 @@ import {
   SheetTitle,
 } from "@comtammatu/ui/components/sheet";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@comtammatu/ui/components/table";
-import { fetchOrderAuditLog, type OrderAuditEntry, type OrderRow } from "./actions";
+  fetchOrderAuditLog,
+  fetchOrderItems,
+  type OrderAuditEntry,
+  type OrderItem,
+  type OrderItemModifier,
+  type OrderItemSide,
+  type OrderRow,
+} from "./actions";
 
 /* ─── Helpers ─── */
 
-import { BRANCH_VI, FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
+import { BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
+
+type ItemStatusBadge = "warning" | "info" | "success" | "destructive" | "outline";
+
+const ITEM_STATUS_META: Record<
+  string,
+  { label: string; variant: ItemStatusBadge }
+> = {
+  pending: { label: "Chờ", variant: "warning" },
+  preparing: { label: "Đang làm", variant: "warning" },
+  ready: { label: "Sẵn sàng", variant: "info" },
+  served: { label: "Đã phục vụ", variant: "success" },
+  cancelled: { label: "Đã hủy", variant: "destructive" },
+};
+
+function itemStatusToneClass(status: string): string {
+  switch (status) {
+    case "pending":
+    case "preparing":
+      return "border-warning/30 bg-warning/5";
+    case "ready":
+      return "border-info/30 bg-info/5";
+    case "served":
+      return "border-success/30 bg-success/5";
+    case "cancelled":
+      return "border-destructive/40 bg-destructive/5 border-dashed";
+    default:
+      return "bg-card";
+  }
+}
+
+function formatModifier(m: OrderItemModifier): string {
+  return m.price > 0 ? `${m.name} (+${formatVND(m.price)})` : m.name;
+}
+
+function formatSide(s: OrderItemSide): string {
+  const qty = s.quantity ?? 1;
+  const qtySuffix = qty > 1 ? ` x${qty}` : "";
+  const totalPrice = s.price * qty;
+  return totalPrice > 0
+    ? `${s.name}${qtySuffix} (+${formatVND(totalPrice)})`
+    : `${s.name}${qtySuffix}`;
+}
 const ORDER_STATUS_LABELS: Record<string, string> = {
   pending: "Chờ xử lý",
   in_progress: "Đang làm",
@@ -94,6 +137,9 @@ export function OrderDetailSheet({
   const [audit, setAudit] = useState<OrderAuditEntry[] | null>(null);
   const [auditError, setAuditError] = useState<string | null>(null);
   const [auditPending, startAuditTransition] = useTransition();
+  const [items, setItems] = useState<OrderItem[] | null>(null);
+  const [itemsError, setItemsError] = useState<string | null>(null);
+  const [itemsPending, startItemsTransition] = useTransition();
 
   const orderId = order?.id ?? null;
 
@@ -111,24 +157,45 @@ export function OrderDetailSheet({
     });
   }, []);
 
+  // List view bỏ items để giữ payload nhỏ — load on-demand. order_items
+  // intentionally KHÔNG có trong realtime publication; ta piggyback signal
+  // từ order_status_history (cùng RPC ghi cả 2) để refresh items.
+  const loadItems = useCallback((id: number) => {
+    startItemsTransition(async () => {
+      const result = await fetchOrderItems(id);
+      if (result.success && result.data) {
+        setItems(result.data);
+        setItemsError(null);
+      } else {
+        setItemsError(result.error ?? "Không thể tải món");
+      }
+    });
+  }, []);
+
   // Lazy fetch khi sheet mở cho 1 đơn cụ thể. Reset khi đổi đơn / đóng sheet
   // để tránh hiển thị stale của đơn trước.
   useEffect(() => {
     if (!open || orderId == null) {
       setAudit(null);
       setAuditError(null);
+      setItems(null);
+      setItemsError(null);
       return;
     }
     setAudit(null);
     setAuditError(null);
+    setItems(null);
+    setItemsError(null);
     loadAudit(orderId);
-  }, [open, orderId, loadAudit]);
+    loadItems(orderId);
+  }, [open, orderId, loadAudit, loadItems]);
 
   // Realtime: cashier ở terminal khác hủy/sửa/phục vụ → INSERT vào
   // order_status_history. Subscribe filter `order_id=eq.X` để timeline tự
   // refresh mà quản lý không phải đóng/mở lại sheet. Migration
   // 20260520010000_audit_log_completeness.sql đã add table vào
-  // supabase_realtime publication.
+  // supabase_realtime publication. order_items không có trong publication
+  // (xem 20260428000000_pos_realtime_publication.sql) nên ta refetch cùng.
   useRealtimeChannel(
     (supabase) => {
       if (!open || orderId == null) return null;
@@ -144,11 +211,12 @@ export function OrderDetailSheet({
           },
           () => {
             loadAudit(orderId);
+            loadItems(orderId);
           },
         )
         .subscribe();
     },
-    [open, orderId, loadAudit],
+    [open, orderId, loadAudit, loadItems],
   );
 
   if (!order) return null;
@@ -259,93 +327,167 @@ export function OrderDetailSheet({
 
           {/* ─── Items ─── */}
           <div>
-            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Món gọi ({order.items.length})
-            </p>
-            <div className="space-y-3 md:hidden">
-              {order.items.length === 0 ? (
-                <div className="rounded-md border px-4 py-6 text-center text-sm text-muted-foreground">
-                  Không có món nào
-                </div>
-              ) : (
-                order.items.map((item) => (
-                  <div key={item.id} className="rounded-md border p-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <span className="text-sm font-medium">
-                          {item.item_name}
-                        </span>
-                        {item.variant_name && (
-                          <p className="text-xs text-muted-foreground">
-                            {item.variant_name}
-                          </p>
-                        )}
-                      </div>
-                      <span className="text-sm font-medium">
-                        x{item.quantity}
-                      </span>
-                    </div>
-                    <div className="mt-3 flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">
-                        {formatVND(item.unit_price)}
-                      </span>
-                      <span className="font-mono font-medium">
-                        {formatVND(item.subtotal)}
-                      </span>
-                    </div>
-                  </div>
-                ))
+            <div className="mb-2 flex items-baseline justify-between gap-2">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Món gọi{items ? ` (${items.length})` : ""}
+              </p>
+              {items && items.some((i) => i.status === "cancelled") && (
+                <p className="text-xs text-muted-foreground">
+                  Có {items.filter((i) => i.status === "cancelled").length} món
+                  đã hủy
+                </p>
               )}
             </div>
-            <div className="hidden rounded-md border md:block">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="py-2">{PRODUCT_VI.posItem}</TableHead>
-                    <TableHead className="py-2 text-center w-12">SL</TableHead>
-                    <TableHead className="py-2 text-right">{FORM_VI.price}</TableHead>
-                    <TableHead className="py-2 text-right">T.Tiền</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {order.items.length === 0 && (
-                    <TableRow>
-                      <TableCell
-                        colSpan={4}
-                        className="py-6 text-center text-sm text-muted-foreground"
-                      >
-                        Không có món nào
-                      </TableCell>
-                    </TableRow>
-                  )}
-                  {order.items.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell className="py-2">
-                        <div>
-                          <span className="text-sm font-medium">
-                            {item.item_name}
-                          </span>
+            {itemsError && (
+              <p className="mb-2 text-sm text-destructive">{itemsError}</p>
+            )}
+            {!itemsError && items === null && itemsPending && (
+              <div className="rounded-md border px-4 py-6 text-center text-sm text-muted-foreground">
+                Đang tải món…
+              </div>
+            )}
+            {!itemsError && items !== null && items.length === 0 && (
+              <div className="rounded-md border px-4 py-6 text-center text-sm text-muted-foreground">
+                Không có món nào
+              </div>
+            )}
+            {!itemsError && items !== null && items.length > 0 && (
+              <ul className="space-y-2">
+                {items.map((item) => {
+                  const isCancelled = item.status === "cancelled";
+                  const statusInfo = ITEM_STATUS_META[item.status] ?? {
+                    label: item.status,
+                    variant: "outline" as ItemStatusBadge,
+                  };
+                  const modifierLine =
+                    item.modifiers.length > 0
+                      ? `Tuỳ chọn: ${item.modifiers.map(formatModifier).join(", ")}`
+                      : null;
+                  const sideLine =
+                    item.sides.length > 0
+                      ? `Kèm: ${item.sides.map(formatSide).join(", ")}`
+                      : null;
+                  return (
+                    <li
+                      key={item.id}
+                      className={cn(
+                        "rounded-md border p-3 transition-colors",
+                        itemStatusToneClass(item.status),
+                      )}
+                    >
+                      {/* Top row: name + status badge ↔ qty × price */}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span
+                              className={cn(
+                                "text-sm font-semibold",
+                                isCancelled &&
+                                  "line-through text-muted-foreground",
+                              )}
+                            >
+                              {item.item_name}
+                            </span>
+                            <Badge
+                              variant={statusInfo.variant}
+                              className="h-5 px-1.5 text-xs font-semibold uppercase tracking-wide"
+                            >
+                              {statusInfo.label}
+                            </Badge>
+                          </div>
                           {item.variant_name && (
-                            <p className="text-xs text-muted-foreground">
+                            <p
+                              className={cn(
+                                "mt-0.5 text-xs text-muted-foreground",
+                                isCancelled && "line-through",
+                              )}
+                            >
                               {item.variant_name}
                             </p>
                           )}
                         </div>
-                      </TableCell>
-                      <TableCell className="py-2 text-center text-sm">
-                        {item.quantity}
-                      </TableCell>
-                      <TableCell className="py-2 text-right font-mono text-sm">
-                        {formatVND(item.unit_price)}
-                      </TableCell>
-                      <TableCell className="py-2 text-right font-mono text-sm font-medium">
-                        {formatVND(item.subtotal)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                        <div className="shrink-0 text-right">
+                          <p
+                            className={cn(
+                              "font-mono text-sm font-semibold",
+                              isCancelled &&
+                                "line-through text-muted-foreground",
+                            )}
+                          >
+                            {formatVND(item.subtotal)}
+                          </p>
+                          <p className="font-mono text-xs text-muted-foreground">
+                            {item.quantity} × {formatVND(item.unit_price)}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Detail rows: modifiers / sides / note / cancel reason */}
+                      {(modifierLine ||
+                        sideLine ||
+                        item.note ||
+                        (isCancelled && item.cancel_reason)) && (
+                        <dl className="mt-2 space-y-1 border-t pt-2 text-xs">
+                          {modifierLine && (
+                            <div
+                              className={cn(
+                                "flex gap-2",
+                                isCancelled && "line-through opacity-70",
+                              )}
+                            >
+                              <dt className="shrink-0 text-muted-foreground">
+                                Tuỳ chọn
+                              </dt>
+                              <dd className="text-foreground">
+                                {item.modifiers.map(formatModifier).join(", ")}
+                              </dd>
+                            </div>
+                          )}
+                          {sideLine && (
+                            <div
+                              className={cn(
+                                "flex gap-2",
+                                isCancelled && "line-through opacity-70",
+                              )}
+                            >
+                              <dt className="shrink-0 text-muted-foreground">
+                                Kèm
+                              </dt>
+                              <dd className="text-foreground">
+                                {item.sides.map(formatSide).join(", ")}
+                              </dd>
+                            </div>
+                          )}
+                          {item.note && (
+                            <div
+                              className={cn(
+                                "flex gap-2",
+                                isCancelled && "line-through opacity-70",
+                              )}
+                            >
+                              <dt className="shrink-0 text-muted-foreground">
+                                Ghi chú
+                              </dt>
+                              <dd className="text-foreground">{item.note}</dd>
+                            </div>
+                          )}
+                          {isCancelled && item.cancel_reason && (
+                            <div className="flex gap-2">
+                              <dt className="shrink-0 text-destructive">
+                                Lý do hủy
+                              </dt>
+                              <dd className="text-foreground">
+                                {item.cancel_reason}
+                              </dd>
+                            </div>
+                          )}
+                        </dl>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </div>
 
           {/* ─── Totals ─── */}

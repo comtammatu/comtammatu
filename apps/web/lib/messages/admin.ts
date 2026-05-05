@@ -1,0 +1,46 @@
+export const admin = {
+  reports: {
+    stockMovement: {
+      loadError: "Lỗi tải báo cáo",
+      allBranchesPlaceholder: "Tất cả",
+      dayPreset: (days: number) => `${days} ngày`,
+      loading: "Đang tải...",
+      viewReport: "Xem báo cáo",
+      choosePeriodTitle: "Chọn kỳ báo cáo",
+      detailTab: (count: number) => `Chi tiết (${count})`,
+      branchTab: (count: number) => `Theo chi nhánh (${count})`,
+      emptyTitle: "Không có dữ liệu",
+      detailEmptyDescription:
+        "Không có biến động tồn kho trong kỳ đã chọn.",
+      branchEmptyDescription:
+        "Không có biến động tồn kho theo chi nhánh trong kỳ đã chọn.",
+      unit: "ĐV",
+      opening: "Tồn đầu",
+      openingPeriod: "Tồn đầu kỳ",
+      closing: "Tồn cuối",
+      closingPeriod: "Tồn cuối kỳ",
+      grnReceipt: "Nhập (GRN)",
+      productionConsumption: "SX tiêu hao",
+      productionOutput: "SX nhập",
+      transferIn: "Chuyển vào",
+      transferOut: "Chuyển ra",
+      consumption: "Tiêu thụ",
+      adjustment: "Điều chỉnh",
+    },
+  },
+  staffAudit: {
+    backToStaff: "Quay lại danh sách nhân viên",
+    title: "Nhật ký quyền hạn",
+    description:
+      "Mọi thao tác gán/thu hồi quyền + áp dụng template. Ghi log không thay đổi được.",
+    recentItems: (count: number) => `${count} mục gần nhất`,
+    empty: "Không có thay đổi nào.",
+    time: "Thời gian",
+    action: "Hành động",
+    actor: "Người thao tác",
+    target: "Đối tượng",
+    expires: "Hạn",
+    tenantWide: "tenant-wide",
+    forever: "vĩnh viễn",
+  },
+} as const

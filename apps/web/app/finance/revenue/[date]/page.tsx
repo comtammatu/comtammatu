@@ -211,7 +211,7 @@ export default async function RevenueDrillPage({
       <Card>
         <CardContent className="p-5">
           <div className="space-y-1.5">
-            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+            <h2 className="font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
               {branchName} · {date}
             </h2>
             <p className="text-sm text-muted-foreground">

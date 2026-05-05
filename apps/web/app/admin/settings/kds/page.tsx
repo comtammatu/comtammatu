@@ -3,6 +3,8 @@ import { canManageBranchFloorSettings } from "@comtammatu/shared/auth";
 import { loadAuthState } from "@/_lib/auth";
 import { StationsClient } from "./stations-client";
 import type { StationRow, CategoryOption } from "./stations-client";
+import { SettingsPageShell } from "../settings-page-shell";
+import { messages } from "@lib/messages";
 
 export default async function KdsSettingsPage() {
   const { supabase, claims } = await loadAuthState();
@@ -72,19 +74,15 @@ export default async function KdsSettingsPage() {
   const categories = categoriesRes.data as CategoryOption[];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Trạm bếp (KDS)</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Quản lý trạm hiển thị bếp và gán danh mục món ăn
-        </p>
-      </div>
-
+    <SettingsPageShell
+      title={messages.settings.pages.kdsTitle}
+      description={messages.settings.pages.kdsDescription}
+    >
       <StationsClient
         branches={branches}
         stations={stations}
         categories={categories}
       />
-    </div>
+    </SettingsPageShell>
   );
 }

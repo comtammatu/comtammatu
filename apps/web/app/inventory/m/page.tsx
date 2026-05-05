@@ -1,9 +1,18 @@
 import Link from "next/link";
-import { ArrowRight as IconArrowRight, ChartBar as IconChartBar, ClipboardList as IconClipboardList, Factory as IconBuildingFactory, Package as IconPackage, Receipt as IconReceipt, Truck as IconTruck } from "lucide-react";
+import {
+  ArrowRight as IconArrowRight,
+  ChartBar as IconChartBar,
+  ClipboardList as IconClipboardList,
+  Factory as IconBuildingFactory,
+  Package as IconPackage,
+  Receipt as IconReceipt,
+  Truck as IconTruck,
+} from "lucide-react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import {
   extractClaimsFromAccessToken,
   PERMISSION_KEYS,
+  type StaffRole,
 } from "@comtammatu/shared/auth";
 import {
   currentUserHasAnyPermissionAny,
@@ -27,6 +36,15 @@ type ActionTile = {
   description: string;
   badge?: string;
 };
+const BRANCH_SCOPED_TRANSFER_ROLES: readonly StaffRole[] = [
+  "branch_manager",
+  "warehouse_manager",
+  "production_manager",
+];
+
+function isBranchScopedTransferRole(role: StaffRole): boolean {
+  return BRANCH_SCOPED_TRANSFER_ROLES.includes(role);
+}
 
 async function fetchHubCounts(): Promise<{
   openPoCount: number;
@@ -73,6 +91,22 @@ async function fetchHubCounts(): Promise<{
     hasProductionPermission &&
     hasProductionBranchAccess;
 
+  const transferQuery = supabase
+    .from("stock_transfers")
+    .select("id", { count: "exact", head: true })
+    .eq("tenant_id", claims.tenant_id)
+    .in("status", ["confirmed_ship", "in_transit", "confirmed_receive"]);
+  const scopedTransferQuery =
+    isBranchScopedTransferRole(claims.user_role) && claims.branch_id != null
+      ? transferQuery.or(
+          `from_branch_id.eq.${claims.branch_id},to_branch_id.eq.${claims.branch_id}`,
+        )
+      : transferQuery;
+  const transferCountRequest =
+    isBranchScopedTransferRole(claims.user_role) && claims.branch_id == null
+      ? Promise.resolve({ count: 0 })
+      : scopedTransferQuery;
+
   const [poRes, tfRes, draftProductionRes] = await Promise.all([
     canOpenProcurement
       ? supabase
@@ -81,11 +115,7 @@ async function fetchHubCounts(): Promise<{
           .eq("tenant_id", claims.tenant_id)
           .in("status", ["sent", "partially_received"])
       : Promise.resolve({ count: 0 }),
-    supabase
-      .from("stock_transfers")
-      .select("id", { count: "exact", head: true })
-      .eq("tenant_id", claims.tenant_id)
-      .in("status", ["confirmed_ship", "in_transit", "confirmed_receive"]),
+    transferCountRequest,
     canOpenProduction
       ? (() => {
           let query = supabase

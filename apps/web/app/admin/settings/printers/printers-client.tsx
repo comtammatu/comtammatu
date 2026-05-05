@@ -1,16 +1,19 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { AppSection } from "@/components/surface";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
 import { Input } from "@comtammatu/ui/components/input";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemGroup,
+  ItemHeader,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 import { Label } from "@comtammatu/ui/components/label";
 import {
   Select,
@@ -148,26 +151,30 @@ export function PrintersClient(props: {
         );
         const agent = agentByBranch.get(branch.id);
         return (
-          <Card key={branch.id}>
-            <CardHeader className="flex flex-row items-center justify-between gap-3">
-              <CardTitle>{branch.name}</CardTitle>
-              <Badge variant={agent?.is_online ? "default" : "outline"}>
-                Agent: {agent?.is_online ? "Online" : "Offline"}
-              </Badge>
-            </CardHeader>
-            <CardContent className="space-y-3">
+          <AppSection
+            key={branch.id}
+            title={branch.name}
+            badge={{
+              children: `Agent: ${agent?.is_online ? "Online" : "Offline"}`,
+              variant: agent?.is_online ? "default" : "outline",
+            }}
+          >
+            <ItemGroup className="gap-3">
               {ROLE_ORDER.map((role) => {
                 const printer = byRole.get(role);
                 const printTypes = asPrintTypes(printer?.print_types ?? []);
                 const categoryIds = printer?.category_ids ?? [];
                 return (
-                  <div
+                  <Item
                     key={role}
-                    className="flex flex-col gap-3 rounded-md border border-border/70 p-3 md:flex-row md:items-center md:justify-between"
+                    variant="outline"
+                    className="gap-3 md:flex-nowrap md:items-center"
                   >
-                    <div className="space-y-2">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-medium">{ROLE_LABEL[role]}</span>
+                    <ItemContent className="min-w-0">
+                      <ItemHeader className="justify-start gap-2">
+                        <ItemTitle className="text-sm">
+                          {ROLE_LABEL[role]}
+                        </ItemTitle>
                         {printer?.is_active ? (
                           <Badge variant="default">{PRINTER_COPY.active}</Badge>
                         ) : printer ? (
@@ -179,7 +186,7 @@ export function PrintersClient(props: {
                             {PRINTER_COPY.unconfigured}
                           </Badge>
                         )}
-                      </div>
+                      </ItemHeader>
                       {printer ? (
                         <div className="space-y-1 text-sm text-muted-foreground">
                           <p>
@@ -214,8 +221,8 @@ export function PrintersClient(props: {
                           </div>
                         </div>
                       ) : null}
-                    </div>
-                    <div className="flex gap-2">
+                    </ItemContent>
+                    <ItemActions className="ml-auto">
                       {printer ? (
                         <Button
                           variant="outline"
@@ -234,12 +241,12 @@ export function PrintersClient(props: {
                           {ACTIONS_VI.add}
                         </Button>
                       )}
-                    </div>
-                  </div>
+                    </ItemActions>
+                  </Item>
                 );
               })}
-            </CardContent>
-          </Card>
+            </ItemGroup>
+          </AppSection>
         );
       })}
 
@@ -370,11 +377,10 @@ function PrinterForm({
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{initial ? "Sửa máy in" : "Thêm máy in"}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <AppSection
+      title={initial ? "Sửa máy in" : "Thêm máy in"}
+      contentClassName="gap-4"
+    >
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label>{BRANCH_VI.long}</Label>
@@ -585,7 +591,6 @@ function PrinterForm({
             {pending ? "Đang lưu..." : "Lưu"}
           </Button>
         </div>
-      </CardContent>
-    </Card>
+    </AppSection>
   );
 }

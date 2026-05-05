@@ -3,13 +3,17 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
+import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import {
   getAuthContextWithAnyPermission,
   getAuthContextWithPermission,
 } from "./_lib/auth";
 import { withAction } from "@/_lib/with-action";
 import { PG_ERR } from "./_lib/constants";
+import {
+  isProductionBranchScopedRole,
+  PRODUCTION_OPERATOR_ROLES,
+} from "./_lib/production-roles";
 import {
   buildCsv,
   buildXlsx,
@@ -26,16 +30,10 @@ import {
  * 'inventory:production_confirm')` and `has_permission_any('menu:write')` — so this
  * list only controls "who can reach the surface at all".
  *
- * Mirrors `PROCUREMENT_ROLES` shape: include every role that may hold the underlying
- * permission grants (owner bypass + super/area/branch managers + bếp trưởng/production_manager).
+ * Manual permission grants do not broaden this role contract: production is
+ * operated by owner/super_manager/production_manager only.
  */
-const PRODUCTION_ROLES: readonly StaffRole[] = [
-  "owner",
-  "super_manager",
-  "area_manager",
-  "branch_manager",
-  "production_manager",
-];
+const PRODUCTION_ROLES = PRODUCTION_OPERATOR_ROLES;
 
 const PRODUCTION_ORDER_PERMISSIONS = [
   PERMISSION_KEYS.INVENTORY_PRODUCTION_CREATE,
@@ -48,19 +46,12 @@ const PRODUCTION_RECIPE_READ_PERMISSIONS = [
 ] as const;
 
 /**
- * Roles whose operational context is a single branch and therefore must be pinned
- * to a `central_kitchen` branch when acting on production surfaces. Tenant-wide
- * roles (owner, super_manager, area_manager) bypass this check because their
+ * Roles whose operational context is a single branch and therefore must be
+ * pinned to a `central_kitchen` branch when acting on production surfaces.
+ * Tenant-wide roles (owner, super_manager) bypass this check because their
  * scope is broader than a single site.
  */
-const CK_BRANCH_SCOPED_ROLES: readonly StaffRole[] = [
-  "branch_manager",
-  "production_manager",
-];
-
-function isCentralKitchenScopedRole(role: StaffRole): boolean {
-  return (CK_BRANCH_SCOPED_ROLES as readonly string[]).includes(role);
-}
+const isCentralKitchenScopedRole = isProductionBranchScopedRole;
 
 const productionLineSchema = z.object({
   finishedGoodId: z.coerce.number().int().positive(),
@@ -887,8 +878,8 @@ export async function fetchProductionOrders(): Promise<
     .eq("tenant_id", claims.tenant_id)
     .order("created_at", { ascending: false });
 
-  // Branch-scoped roles (branch_manager, production_manager/bếp trưởng) see only
-  // their own branch's orders. Tenant-wide roles keep full tenant visibility.
+  // Branch-scoped production managers see only their own CK branch's orders.
+  // Tenant-wide roles keep full tenant visibility.
   if (
     isCentralKitchenScopedRole(claims.user_role) &&
     claims.branch_id != null
@@ -950,6 +941,7 @@ export const createProductionOrder = withAction(
     roles: PRODUCTION_ROLES,
     schema: createProductionOrderSchema,
     permission: PERMISSION_KEYS.INVENTORY_PRODUCTION_CREATE,
+    permissionBranchId: (data) => data.branchId,
   },
   async (data, { supabase }) => {
     const sb = supabase as unknown as RpcClient;

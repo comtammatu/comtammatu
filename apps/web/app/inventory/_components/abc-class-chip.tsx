@@ -14,7 +14,7 @@ interface AbcClassChipProps {
 
 /**
  * Pareto A/B/C pill (S13a).
- * A class triggers stricter recount thresholds (3%/100k vs 5%/200k).
+ * A class uses a tighter follow-up threshold (3%/100k vs 5%/200k).
  */
 export function AbcClassChip({
   class_,
@@ -33,7 +33,7 @@ export function AbcClassChip({
   const label = compact ? class_ : ABC_CLASS_LABELS_VI[class_];
   const tooltip = withTooltip
     ? class_ === "A"
-      ? "Nhóm A — ngưỡng recount chặt: 3% hoặc 100k VND"
+      ? "Nhóm A — ngưỡng kiểm tra chặt: 3% hoặc 100k VND"
       : class_ === "B"
         ? "Nhóm B — ngưỡng 5% hoặc 200k VND"
         : "Nhóm C — ngưỡng 5% hoặc 200k VND"

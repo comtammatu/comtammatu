@@ -53,6 +53,7 @@ import {
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui";
+import { messages } from "@lib/messages";
 import { matchesSearch } from "@lib/search";
 import { InventoryHeader } from "../_components/inventory-header";
 import {
@@ -69,6 +70,10 @@ import { createStockIssueDraft, upsertStockIssueLine } from "../issue-actions";
 import { AdjustStockDialog } from "./adjust-stock-dialog";
 
 import { ACTIONS_VI, FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
+
+const stockCopy = messages.inventory.stock;
+const inventoryCommon = messages.inventory.common;
+
 export type StockIngredient = {
   id: number;
   name: string;
@@ -130,22 +135,22 @@ type QuickIssueTarget = {
 };
 
 const stockFilterOptions: { value: StockFilter; label: string }[] = [
-  { value: "all", label: "Tất cả" },
-  { value: "in_stock", label: "Còn hàng" },
-  { value: "low", label: "Thấp" },
-  { value: "out", label: "Hết hàng" },
+  { value: "all", label: stockCopy.filters.all },
+  { value: "in_stock", label: stockCopy.filters.inStock },
+  { value: "low", label: stockCopy.filters.low },
+  { value: "out", label: stockCopy.filters.out },
 ];
 
 const riskFilterOptions: { value: RiskFilter; label: string }[] = [
-  { value: "all", label: "Tất cả rủi ro" },
-  { value: "reorder", label: "Chạm reorder" },
-  { value: "not_counted", label: "Chưa kiểm kê" },
+  { value: "all", label: stockCopy.filters.allRisk },
+  { value: "reorder", label: stockCopy.filters.reorder },
+  { value: "not_counted", label: stockCopy.filters.notCounted },
 ];
 
 const sortOptions: { value: SortMode; label: string }[] = [
-  { value: "priority", label: "Ưu tiên cần xử lý" },
-  { value: "name", label: "Tên A-Z" },
-  { value: "value_desc", label: "Giá trị cao trước" },
+  { value: "priority", label: stockCopy.filters.priority },
+  { value: "name", label: stockCopy.filters.name },
+  { value: "value_desc", label: stockCopy.filters.valueDesc },
 ];
 
 const quickIssueTypeOptions: {
@@ -155,18 +160,18 @@ const quickIssueTypeOptions: {
 }[] = [
   {
     value: "consumption",
-    label: "Xuất / tiêu hao",
-    reasonPlaceholder: "Ví dụ: cấp phát cho bếp ca chiều",
+    label: stockCopy.quickIssue.options.consumption,
+    reasonPlaceholder: stockCopy.quickIssue.placeholders.consumption,
   },
   {
     value: "writeoff",
-    label: "Hao hụt / hủy hỏng",
-    reasonPlaceholder: "Ví dụ: chai vỡ, đổ, hàng hỏng",
+    label: stockCopy.quickIssue.options.writeoff,
+    reasonPlaceholder: stockCopy.quickIssue.placeholders.writeoff,
   },
   {
     value: "other",
-    label: "Xuất khác",
-    reasonPlaceholder: "Nhập rõ lý do xuất kho",
+    label: stockCopy.quickIssue.options.other,
+    reasonPlaceholder: stockCopy.quickIssue.placeholders.other,
   },
 ];
 
@@ -192,31 +197,39 @@ function isReorderRisk(item: StockIngredient): boolean {
 }
 
 function movementLabel(movement: StockMovementHistory): string {
-  if (movement.type === "grn_receipt") return "Nhập GRN";
-  if (movement.type === "transfer_in") return "Nhận chuyển";
-  if (movement.type === "transfer_out") return "Xuất chuyển";
-  if (movement.type === "production_consumption") return "Xuất sản xuất";
-  if (movement.type === "production_output") return "Nhập sản xuất";
-  if (movement.type === "count_adjustment") return "Kiểm kê";
-  if (movement.type === "adjustment") return "Điều chỉnh";
+  if (movement.type === "grn_receipt") return stockCopy.movement.grnReceipt;
+  if (movement.type === "transfer_in") return stockCopy.movement.transferIn;
+  if (movement.type === "transfer_out") return stockCopy.movement.transferOut;
+  if (movement.type === "production_consumption")
+    return stockCopy.movement.productionConsumption;
+  if (movement.type === "production_output")
+    return stockCopy.movement.productionOutput;
+  if (movement.type === "count_adjustment")
+    return stockCopy.movement.countAdjustment;
+  if (movement.type === "adjustment") return stockCopy.movement.adjustment;
   if (movement.type === "consumption") {
-    if (movement.movementSubtype === "storage_loss") return "Hao hụt kho";
-    if (movement.movementSubtype === "sale_consumption") return "Tiêu hao bán";
-    if (movement.movementSubtype === "writeoff") return "Hủy / ghi hao";
-    if (movement.movementSubtype === "other") return "Xuất khác";
-    return "Xuất kho";
+    if (movement.movementSubtype === "storage_loss")
+      return stockCopy.movement.storageLoss;
+    if (movement.movementSubtype === "sale_consumption")
+      return stockCopy.movement.saleConsumption;
+    if (movement.movementSubtype === "writeoff")
+      return stockCopy.movement.writeoff;
+    if (movement.movementSubtype === "other") return stockCopy.movement.other;
+    return stockCopy.movement.issueStock;
   }
-  if (movement.type === "writeoff") return "Hủy / ghi hao";
+  if (movement.type === "writeoff") return stockCopy.movement.writeoff;
   return movement.type.replaceAll("_", " ");
 }
 
 function movementReference(movement: StockMovementHistory): string | null {
   if (movement.grnId != null) return `GRN #${movement.grnId}`;
-  if (movement.transferId != null) return `Điều chuyển #${movement.transferId}`;
-  if (movement.issueId != null) return `Phiếu xuất #${movement.issueId}`;
+  if (movement.transferId != null)
+    return stockCopy.movement.transferRef(movement.transferId);
+  if (movement.issueId != null)
+    return stockCopy.movement.issueRef(movement.issueId);
   if (movement.productionOrderId != null)
-    return `Lệnh SX #${movement.productionOrderId}`;
-  if (movement.orderId != null) return `Đơn bán #${movement.orderId}`;
+    return stockCopy.movement.productionRef(movement.productionOrderId);
+  if (movement.orderId != null) return stockCopy.movement.orderRef(movement.orderId);
   return null;
 }
 
@@ -292,7 +305,10 @@ function QuickStockIssueDialog({
   const activeIssueType = quickIssueTypeOptions.find(
     (option) => option.value === issueType,
   );
-  const title = issueType === "writeoff" ? "Hao hụt nhanh" : "Xuất kho nhanh";
+  const title =
+    issueType === "writeoff"
+      ? stockCopy.quickIssue.writeoffTitle
+      : stockCopy.quickIssue.issueTitle;
 
   function resetForm() {
     setIssueType(target.issueType);
@@ -305,19 +321,19 @@ function QuickStockIssueDialog({
     event.preventDefault();
     const parsedQuantity = Number(quantity);
     if (!Number.isFinite(parsedQuantity) || parsedQuantity <= 0) {
-      toast.error("Số lượng phải lớn hơn 0.");
+      toast.error(stockCopy.quickIssue.quantityPositive);
       return;
     }
     if (parsedQuantity > target.ingredient.qty) {
-      toast.error("Số lượng vượt tồn hiện tại.");
+      toast.error(stockCopy.quickIssue.quantityExceedsStock);
       return;
     }
     if (!unit.trim()) {
-      toast.error("Đơn vị không được để trống.");
+      toast.error(stockCopy.quickIssue.unitRequired);
       return;
     }
     if (!reason.trim()) {
-      toast.error("Lý do là bắt buộc để lưu vết.");
+      toast.error(stockCopy.quickIssue.reasonRequired);
       return;
     }
 
@@ -325,10 +341,10 @@ function QuickStockIssueDialog({
       const draftRes = await createStockIssueDraft({
         branchId,
         issueType,
-        notes: `Tạo nhanh từ tồn kho: ${target.ingredient.name}`,
+        notes: stockCopy.quickIssue.draftNotes(target.ingredient.name),
       });
       if (!draftRes.success || !draftRes.data) {
-        toast.error(draftRes.error ?? "Không thể tạo phiếu xuất kho.");
+        toast.error(draftRes.error ?? stockCopy.quickIssue.createDraftFailed);
         return;
       }
 
@@ -342,14 +358,13 @@ function QuickStockIssueDialog({
       });
       if (!lineRes.success) {
         toast.error(
-          lineRes.error ??
-            "Đã tạo phiếu nhưng chưa thêm được dòng nguyên liệu.",
+          lineRes.error ?? stockCopy.quickIssue.addLineFailed,
         );
         router.push(`/inventory/issues/${issueId}`);
         return;
       }
 
-      toast.success(`Đã tạo phiếu có sẵn ${target.ingredient.name}.`);
+      toast.success(stockCopy.quickIssue.created(target.ingredient.name));
       onOpenChange(false);
       resetForm();
       router.push(`/inventory/issues/${issueId}`);
@@ -372,16 +387,17 @@ function QuickStockIssueDialog({
           <div className="rounded-md border bg-muted/20 px-3 py-2">
             <p className="font-medium">{target.ingredient.name}</p>
             <p className="text-xs text-muted-foreground">
-              {target.ingredient.sku}
-              {target.ingredient.category
-                ? ` · ${target.ingredient.category}`
-                : ""}{" "}
-              · Tồn {formatQty(target.ingredient.qty)} {target.ingredient.unit}
+              {stockCopy.quickIssue.stockLine(
+                target.ingredient.sku,
+                target.ingredient.category,
+                formatQty(target.ingredient.qty),
+                target.ingredient.unit,
+              )}
             </p>
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label>Nghiệp vụ</Label>
+            <Label>{stockCopy.quickIssue.operation}</Label>
             <Select
               value={issueType}
               onValueChange={(value) => setIssueType(value as QuickIssueType)}
@@ -446,7 +462,9 @@ function QuickStockIssueDialog({
               {ACTIONS_VI.cancel}
             </Button>
             <Button type="submit" disabled={isPending}>
-              {isPending ? "Đang tạo..." : "Tạo phiếu"}
+              {isPending
+                ? stockCopy.quickIssue.creating
+                : stockCopy.quickIssue.createSlip}
             </Button>
           </DialogFooter>
         </form>
@@ -582,7 +600,7 @@ export function StockClient({
   return (
     <div className="no-scrollbar min-h-0 flex-1 overflow-auto bg-background">
       <InventoryHeader
-        title="Tồn kho"
+        title={stockCopy.title}
         className="static"
         actions={
           <div className="flex items-center gap-2">
@@ -604,7 +622,7 @@ export function StockClient({
             <QuickActionButton
               href={branchHref(branchId, "/inventory/grn")}
               icon={IconReceipt}
-              label="Nhận GRN"
+              label={stockCopy.actions.receiveGrn}
               primary
             />
           ) : null}
@@ -612,28 +630,28 @@ export function StockClient({
             <QuickActionButton
               href={branchHref(branchId, "/inventory/transfers")}
               icon={IconTruck}
-              label="Điều chuyển"
+              label={stockCopy.actions.transfer}
             />
           ) : null}
           {permissions.canCreateStocktake ? (
             <QuickActionButton
               href={branchHref(branchId, "/inventory/stocktake")}
               icon={IconClipboardList}
-              label="Kiểm kê"
+              label={stockCopy.actions.stocktake}
             />
           ) : null}
           {permissions.canWriteoff ? (
             <QuickActionButton
               href={branchHref(branchId, "/inventory/waste/new")}
               icon={IconTrash}
-              label="Hao hụt"
+              label={stockCopy.actions.waste}
             />
           ) : null}
           {permissions.canCreatePurchaseOrder ? (
             <QuickActionButton
               href={branchHref(branchId, "/inventory/purchase-orders/new")}
               icon={IconShoppingCart}
-              label="Đề xuất mua"
+              label={stockCopy.actions.purchaseSuggestion}
             />
           ) : null}
 
@@ -644,7 +662,7 @@ export function StockClient({
             <InputGroupInput
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="Tìm nhanh: tên hoặc SKU"
+              placeholder={stockCopy.filters.searchPlaceholder}
               inputMode="search"
             />
           </InputGroup>
@@ -652,27 +670,27 @@ export function StockClient({
 
         <div className="flex flex-wrap items-center divide-x overflow-hidden border bg-card">
           <SummaryMetric
-            label="Kho chọn"
-            value={`${formatVND(visibleTotalValue)} đ`}
+            label={stockCopy.metrics.selectedWarehouse}
+            value={inventoryCommon.currencyCompact(formatVND(visibleTotalValue))}
           />
           {totalValue != null ? (
             <SummaryMetric
-              label="Toàn hệ thống"
-              value={`${formatVND(totalValue)} đ`}
+              label={stockCopy.metrics.wholeSystem}
+              value={inventoryCommon.currencyCompact(formatVND(totalValue))}
             />
           ) : null}
           <SummaryMetric
-            label="Dưới ngưỡng"
+            label={stockCopy.metrics.underThreshold}
             value={String(summary.underThresholdCount)}
             tone={summary.underThresholdCount > 0 ? "warning" : "muted"}
           />
           <SummaryMetric
-            label="Cận date"
+            label={stockCopy.metrics.nearExpiry}
             value={String(summary.expiryCount)}
             tone={summary.expiryCount > 0 ? "warning" : "muted"}
           />
           <SummaryMetric
-            label="Chờ xử lý"
+            label={stockCopy.metrics.pending}
             value={String(summary.pendingWorkCount)}
             tone={summary.pendingWorkCount > 0 ? "warning" : "muted"}
           />
@@ -681,10 +699,12 @@ export function StockClient({
         <InventoryFilterBar className="gap-2 p-2">
           <Select value={activeCategory} onValueChange={setActiveCategory}>
             <SelectTrigger className="min-w-40">
-              <SelectValue placeholder="Danh mục" />
+              <SelectValue placeholder={stockCopy.filters.categoryPlaceholder} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Tất cả danh mục</SelectItem>
+              <SelectItem value="all">
+                {stockCopy.filters.allCategories}
+              </SelectItem>
               {categories.map((cat) => (
                 <SelectItem key={cat} value={cat}>
                   {cat}
@@ -698,7 +718,7 @@ export function StockClient({
             onValueChange={(v) => setStockFilter(v as StockFilter)}
           >
             <SelectTrigger className="min-w-36">
-              <SelectValue placeholder="Trạng thái" />
+              <SelectValue placeholder={stockCopy.filters.statusPlaceholder} />
             </SelectTrigger>
             <SelectContent>
               {stockFilterOptions.map((opt) => (
@@ -714,7 +734,7 @@ export function StockClient({
             onValueChange={(v) => setRiskFilter(v as RiskFilter)}
           >
             <SelectTrigger className="min-w-40">
-              <SelectValue placeholder="Rủi ro" />
+              <SelectValue placeholder={stockCopy.filters.riskPlaceholder} />
             </SelectTrigger>
             <SelectContent>
               {riskFilterOptions.map((opt) => (
@@ -730,7 +750,7 @@ export function StockClient({
             onValueChange={(v) => setSortMode(v as SortMode)}
           >
             <SelectTrigger className="min-w-56">
-              <SelectValue placeholder="Sắp xếp" />
+              <SelectValue placeholder={stockCopy.filters.sortPlaceholder} />
             </SelectTrigger>
             <SelectContent>
               {sortOptions.map((opt) => (
@@ -753,8 +773,8 @@ export function StockClient({
                 <EmptyHeader>
                   <EmptyTitle className="text-sm font-semibold">
                     {searchQuery.trim()
-                      ? "Không tìm thấy nguyên liệu phù hợp"
-                      : "Chưa có dữ liệu tồn kho"}
+                      ? stockCopy.empty.search
+                      : stockCopy.empty.noData}
                   </EmptyTitle>
                 </EmptyHeader>
               </Empty>
@@ -791,7 +811,7 @@ export function StockClient({
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>
                       <p className="text-xs text-muted-foreground">
-                        Tồn khả dụng
+                        {stockCopy.table.availableStock}
                       </p>
                       <p
                         className={cn(
@@ -808,16 +828,22 @@ export function StockClient({
                         {FORM_VI.value}
                       </p>
                       <p className="font-semibold tabular-nums">
-                        {formatVND(stockValue(item))} đ
+                        {inventoryCommon.currencyCompact(
+                          formatVND(stockValue(item)),
+                        )}
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">WAC</p>
-                      <p className="tabular-nums">{formatVND(item.cost)} đ</p>
+                      <p className="text-xs text-muted-foreground">
+                        {stockCopy.table.wac}
+                      </p>
+                      <p className="tabular-nums">
+                        {inventoryCommon.currencyCompact(formatVND(item.cost))}
+                      </p>
                     </div>
                     <div className="text-right">
                       <p className="text-xs text-muted-foreground">
-                        Kiểm kê cuối
+                        {stockCopy.table.lastCount}
                       </p>
                       <p>{item.lastCount}</p>
                     </div>
@@ -827,7 +853,7 @@ export function StockClient({
                     {permissions.canReceiveGrn ? (
                       <Button asChild size="xs" variant="outline">
                         <Link href={branchHref(branchId, "/inventory/grn")}>
-                          Nhận
+                          {stockCopy.actions.receive}
                         </Link>
                       </Button>
                     ) : null}
@@ -851,7 +877,7 @@ export function StockClient({
                         <Link
                           href={branchHref(branchId, "/inventory/stocktake")}
                         >
-                          Đếm
+                          {stockCopy.actions.count}
                         </Link>
                       </Button>
                     ) : null}
@@ -861,7 +887,9 @@ export function StockClient({
                         size="icon-xs"
                         variant="ghost"
                         onClick={() => setAdjustTarget(item)}
-                        aria-label={`Điều chỉnh ngoại lệ ${item.name}`}
+                        aria-label={stockCopy.actions.adjustExceptionAria(
+                          item.name,
+                        )}
                       >
                         <IconPencil />
                       </Button>
@@ -884,14 +912,18 @@ export function StockClient({
                       <TableHead className="min-w-32">
                         {FORM_VI.category}
                       </TableHead>
-                      <TableHead className="min-w-24 text-right">Tồn</TableHead>
                       <TableHead className="min-w-24 text-right">
-                        Khả dụng
+                        {stockCopy.table.stock}
+                      </TableHead>
+                      <TableHead className="min-w-24 text-right">
+                        {stockCopy.table.available}
                       </TableHead>
                       <TableHead className="min-w-40 text-right">
-                        Cảnh báo
+                        {stockCopy.table.warning}
                       </TableHead>
-                      <TableHead className="min-w-24 text-right">WAC</TableHead>
+                      <TableHead className="min-w-24 text-right">
+                        {stockCopy.table.wac}
+                      </TableHead>
                       <TableHead className="min-w-28 text-right">
                         {FORM_VI.value}
                       </TableHead>
@@ -903,13 +935,13 @@ export function StockClient({
                         colSpan={7}
                         title={
                           searchQuery.trim()
-                            ? "Không tìm thấy nguyên liệu phù hợp"
-                            : "Chưa có dữ liệu tồn kho"
+                            ? stockCopy.empty.search
+                            : stockCopy.empty.noData
                         }
                         description={
                           searchQuery.trim()
-                            ? "Thử từ khóa hoặc bộ lọc khác."
-                            : "Dữ liệu tồn kho sẽ xuất hiện khi có nguyên liệu và giao dịch phát sinh."
+                            ? stockCopy.empty.searchDescription
+                            : stockCopy.empty.noDataDescription
                         }
                       />
                     ) : null}
@@ -932,7 +964,9 @@ export function StockClient({
                               setSelectedId(item.id);
                             }
                           }}
-                          aria-label={`Xem chi tiết ${item.name}`}
+                          aria-label={stockCopy.actions.viewDetailAria(
+                            item.name,
+                          )}
                         >
                           <TableCell>
                             <div className="space-y-1">
@@ -953,7 +987,9 @@ export function StockClient({
                                 {item.category}
                               </Badge>
                             ) : (
-                              <span className="text-muted-foreground">—</span>
+                              <span className="text-muted-foreground">
+                                {inventoryCommon.noValue}
+                              </span>
                             )}
                           </TableCell>
                           <TableCell
@@ -973,7 +1009,9 @@ export function StockClient({
                             <div className="flex flex-wrap justify-end gap-2">
                               <StatusBadge status={item.status} size="sm" />
                               {item.qty <= item.reorder ? (
-                                <Badge variant="warning">Chạm reorder</Badge>
+                                <Badge variant="warning">
+                                  {stockCopy.filters.reorder}
+                                </Badge>
                               ) : null}
                             </div>
                           </TableCell>
@@ -981,7 +1019,9 @@ export function StockClient({
                             {formatVND(item.cost)}
                           </TableCell>
                           <TableCell className="text-right font-mono font-semibold">
-                            {formatVND(stockValue(item))} đ
+                            {inventoryCommon.currencyCompact(
+                              formatVND(stockValue(item)),
+                            )}
                           </TableCell>
                         </TableRow>
                       );
@@ -997,7 +1037,7 @@ export function StockClient({
                   <div className="space-y-2">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <h2 className="truncate text-base font-semibold">
+                        <h2 className="font-heading truncate text-base font-semibold">
                           {selected.name}
                         </h2>
                         <p className="text-xs text-muted-foreground">
@@ -1012,7 +1052,7 @@ export function StockClient({
                   <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
                     <div>
                       <p className="text-xs text-muted-foreground">
-                        Tồn hiện tại
+                        {stockCopy.table.currentStock}
                       </p>
                       <p className="font-semibold tabular-nums">
                         {formatQty(selected.qty)} {selected.unit}
@@ -1020,27 +1060,33 @@ export function StockClient({
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">
-                        Giá trị tồn
+                        {stockCopy.table.stockValue}
                       </p>
                       <p className="font-semibold tabular-nums">
-                        {formatVND(stockValue(selected))} đ
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">WAC</p>
-                      <p className="tabular-nums">
-                        {formatVND(selected.cost)} đ
+                        {inventoryCommon.currencyCompact(
+                          formatVND(stockValue(selected)),
+                        )}
                       </p>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">
-                        Kiểm kê cuối
+                        {stockCopy.table.wac}
+                      </p>
+                      <p className="tabular-nums">
+                        {inventoryCommon.currencyCompact(
+                          formatVND(selected.cost),
+                        )}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">
+                        {stockCopy.table.lastCount}
                       </p>
                       <p>{selected.lastCount}</p>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">
-                        Ngưỡng min
+                        {stockCopy.table.minThreshold}
                       </p>
                       <p className="tabular-nums">{formatQty(selected.min)}</p>
                     </div>
@@ -1057,7 +1103,7 @@ export function StockClient({
                       <Button asChild size="sm">
                         <Link href={branchHref(branchId, "/inventory/grn")}>
                           <IconReceipt className="size-3.5" />
-                          Nhận hàng
+                          {stockCopy.actions.receiveGoods}
                         </Link>
                       </Button>
                     ) : null}
@@ -1074,7 +1120,7 @@ export function StockClient({
                         }
                       >
                         <IconTruck className="size-3.5" />
-                        Xuất kho
+                        {stockCopy.actions.issueStock}
                       </Button>
                     ) : null}
                     {permissions.canCreateStocktake ? (
@@ -1083,7 +1129,7 @@ export function StockClient({
                           href={branchHref(branchId, "/inventory/stocktake")}
                         >
                           <IconClipboardList className="size-3.5" />
-                          Kiểm kê
+                          {stockCopy.actions.stocktake}
                         </Link>
                       </Button>
                     ) : null}
@@ -1100,13 +1146,13 @@ export function StockClient({
                         }
                       >
                         <IconTrash className="size-3.5" />
-                        Hao hụt
+                        {stockCopy.actions.waste}
                       </Button>
                     ) : null}
                     <Button asChild size="sm" variant="ghost">
                       <Link href={branchHref(branchId, "/inventory/reports")}>
                         <IconArrowBarRight className="size-3.5" />
-                        Xem thẻ kho
+                        {stockCopy.actions.viewStockCard}
                       </Link>
                     </Button>
                     {permissions.canAdjustException ? (
@@ -1117,21 +1163,21 @@ export function StockClient({
                         onClick={() => setAdjustTarget(selected)}
                       >
                         <IconPencil className="size-3.5" />
-                        Ngoại lệ
+                        {stockCopy.actions.exception}
                       </Button>
                     ) : null}
                   </div>
 
                   <div className="space-y-2 border-t pt-3 text-sm">
                     <div className="flex items-center justify-between gap-2">
-                      <p className="font-medium">Lịch sử</p>
+                      <p className="font-medium">{stockCopy.table.history}</p>
                       <Badge variant="outline">
                         {selectedHistory.length}/5
                       </Badge>
                     </div>
                     {selectedHistory.length === 0 ? (
                       <p className="text-xs text-muted-foreground">
-                        Chưa có biến động gần đây cho nguyên liệu này.
+                        {stockCopy.table.noRecentHistory}
                       </p>
                     ) : (
                       <div className="space-y-2">
@@ -1176,7 +1222,11 @@ export function StockClient({
                                     </p>
                                   ) : null}
                                   {movement.unitCost != null ? (
-                                    <p>WAC: {formatVND(movement.unitCost)} đ</p>
+                                    <p>
+                                      {stockCopy.table.wacValue(
+                                        formatVND(movement.unitCost),
+                                      )}
+                                    </p>
                                   ) : null}
                                 </div>
                               ) : null}
@@ -1189,7 +1239,7 @@ export function StockClient({
                 </div>
               ) : (
                 <div className="flex h-full items-center justify-center p-8 text-center text-sm text-muted-foreground">
-                  Chọn một nguyên liệu để xem chi tiết thao tác.
+                  {stockCopy.table.chooseIngredientDetail}
                 </div>
               )}
             </aside>
@@ -1197,14 +1247,10 @@ export function StockClient({
         )}
 
         <div className="border bg-card px-3 py-2 text-xs text-muted-foreground">
-          Tổng theo bộ lọc:{" "}
-          <span className="font-medium text-foreground">
-            {filtered.length} mặt hàng
-          </span>{" "}
-          ·{" "}
-          <span className="font-medium text-foreground">
-            {formatVND(filteredValue)} đ
-          </span>
+          {stockCopy.table.filteredSummary(
+            filtered.length,
+            formatVND(filteredValue),
+          )}
         </div>
 
         {adjustTarget ? (

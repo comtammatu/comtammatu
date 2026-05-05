@@ -247,6 +247,18 @@ export async function submitOrder(
         errorCode: POS_ERROR_CODES.DAILY_LIMIT_EXCEEDED,
       };
     }
+    if (
+      errMsg.includes("stale_side_or_modifier") ||
+      errMsg.includes("stale modifier") ||
+      errMsg.includes("stale side")
+    ) {
+      return {
+        success: false,
+        error:
+          "Tùy chọn món đã thay đổi. Vui lòng mở món và chọn lại trước khi đặt.",
+        errorCode: POS_ERROR_CODES.CART_STALE_MENU_OPTION,
+      };
+    }
     if (error.message?.includes("empty")) {
       return {
         success: false,
@@ -897,6 +909,17 @@ export async function appendOrderItems(
         error: "Có món đã hết suất hôm nay — giảm số lượng hoặc đổi món.",
       };
     }
+    if (
+      msg.includes("stale_side_or_modifier") ||
+      msg.includes("stale modifier") ||
+      msg.includes("stale side")
+    ) {
+      return {
+        success: false,
+        error:
+          "Tùy chọn món đã thay đổi. Vui lòng mở món và chọn lại trước khi thêm.",
+      };
+    }
     return {
       success: false,
       error: "Không thể thêm món. Vui lòng thử lại.",
@@ -1360,6 +1383,17 @@ export async function editPendingOrderItem(
       return {
         success: false,
         error: "Biến thể không còn khả dụng — chọn biến thể khác.",
+      };
+    }
+    if (
+      msg.includes("stale_side_or_modifier") ||
+      msg.includes("stale modifier") ||
+      msg.includes("stale side")
+    ) {
+      return {
+        success: false,
+        error:
+          "Tùy chọn món đã thay đổi. Vui lòng mở món và chọn lại trước khi cập nhật.",
       };
     }
     if (msg.includes("feature disabled")) {

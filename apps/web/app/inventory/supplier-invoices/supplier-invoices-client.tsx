@@ -57,7 +57,6 @@ import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import {
   createSupplierInvoice,
   fetchSupplierInvoices,
-  markInvoicePaid,
   recomputeInvoiceMatching,
 } from "../procurement-actions";
 
@@ -67,6 +66,7 @@ import {
   getInventoryStatusBadgeVariant,
   getInventoryStatusLabel,
 } from "../_lib/ui";
+import { messages } from "@lib/messages";
 
 import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
 export type SupplierInvoiceRow = {
@@ -160,7 +160,6 @@ export function SupplierInvoicesClient({
     invoices[0]?.id ?? null,
   );
   const [createOpen, setCreateOpen] = useState(false);
-  const [paymentOpen, setPaymentOpen] = useState(false);
   const [supplierId, setSupplierId] = useState("");
   const [grnId, setGrnId] = useState("none");
   const [invoiceNumber, setInvoiceNumber] = useState("");
@@ -170,9 +169,9 @@ export function SupplierInvoicesClient({
   const [subtotal, setSubtotal] = useState("");
   const [vatRate, setVatRate] = useState("8");
   const [matchingNotes, setMatchingNotes] = useState("");
-  const [paymentAmount, setPaymentAmount] = useState("");
   const [isPending, startTransition] = useTransition();
   const isMobile = useIsMobile();
+  const copy = messages.inventory.supplierInvoices;
 
   const supplierOptions = useMemo(() => {
     return Array.from(
@@ -367,38 +366,13 @@ export function SupplierInvoicesClient({
     });
   }
 
-  function handleMarkPaid() {
-    if (!selectedInvoice) return;
-    const amount = Number(paymentAmount || 0);
-    if (amount <= 0) {
-      toast.error("Nhập số tiền thanh toán hợp lệ.");
-      return;
-    }
-
-    startTransition(async () => {
-      const res = await markInvoicePaid({
-        invoiceId: selectedInvoice.id,
-        amount,
-        paidAt: new Date().toISOString(),
-      });
-      if (!res.success) {
-        toast.error(res.error ?? "Không thể ghi nhận thanh toán.");
-        return;
-      }
-      toast.success("Đã cập nhật thanh toán hóa đơn.");
-      setPaymentOpen(false);
-      setPaymentAmount("");
-      await reloadInvoices(selectedInvoice.id);
-    });
-  }
-
   return (
     <>
       <InventoryHeader
-        title="Hóa đơn NCC"
+        title={copy.title}
         actions={
           <Button type="button" onClick={() => setCreateOpen(true)}>
-            Ghi nhận hóa đơn NCC
+            {copy.createAction}
           </Button>
         }
       />
@@ -415,7 +389,7 @@ export function SupplierInvoicesClient({
               <InputGroupInput
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Tìm số hóa đơn, NCC hoặc mã GRN"
+                placeholder={copy.searchPlaceholder}
               />
             </InputGroup>
 
@@ -423,12 +397,12 @@ export function SupplierInvoicesClient({
               value={supplierFilter}
               onValueChange={setSupplierFilter}
               options={[
-                { value: ALL_FILTER_VALUE, label: "Tất cả nhà cung cấp" },
+                { value: ALL_FILTER_VALUE, label: copy.allSuppliers },
                 ...supplierOptions,
               ]}
-              placeholder="Nhà cung cấp"
-              searchPlaceholder="Tìm nhà cung cấp..."
-              aria-label="Lọc theo nhà cung cấp"
+              placeholder={copy.supplierPlaceholder}
+              searchPlaceholder={copy.supplierSearchPlaceholder}
+              aria-label={copy.supplierFilterAria}
               triggerClassName="h-10 w-48"
             />
 
@@ -437,11 +411,11 @@ export function SupplierInvoicesClient({
               onValueChange={setMatchStatusFilter}
             >
               <SelectTrigger className="w-48">
-                <SelectValue placeholder="Đối soát" />
+                <SelectValue placeholder={copy.matchingPlaceholder} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value={ALL_FILTER_VALUE}>
-                  Tất cả đối soát
+                  {copy.allMatching}
                 </SelectItem>
                 {MATCH_STATUS_OPTIONS.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
@@ -456,11 +430,11 @@ export function SupplierInvoicesClient({
               onValueChange={setPaymentStatusFilter}
             >
               <SelectTrigger className="w-48">
-                <SelectValue placeholder="Thanh toán" />
+                <SelectValue placeholder={copy.paymentPlaceholder} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value={ALL_FILTER_VALUE}>
-                  Tất cả thanh toán
+                  {copy.allPayments}
                 </SelectItem>
                 {PAYMENT_STATUS_OPTIONS.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
@@ -483,10 +457,10 @@ export function SupplierInvoicesClient({
                   aria-pressed={showOnlyOverdue}
                 >
                   <IconAlertTriangle className="size-4" />
-                  Chỉ xem hóa đơn quá hạn
+                  {copy.overdueOnly}
                 </Button>
                 <Badge variant="outline" className="rounded-full">
-                  {filteredInvoices.length} / {rows.length} hóa đơn
+                  {copy.invoiceCount(filteredInvoices.length, rows.length)}
                 </Badge>
               </div>
 
@@ -497,13 +471,13 @@ export function SupplierInvoicesClient({
                       <CardContent className="py-10 text-center">
                         <p className="text-base font-semibold">
                           {showEmptyResults
-                            ? "Không tìm thấy hóa đơn phù hợp"
-                            : "Chưa có hóa đơn NCC"}
+                            ? copy.emptyMatchedTitle
+                            : copy.emptyInitialTitle}
                         </p>
                         <p className="mt-1 text-sm text-muted-foreground">
                           {showEmptyResults
-                            ? "Thử nới bộ lọc hoặc từ khóa để xem thêm kết quả."
-                            : "Các hóa đơn NCC mới sẽ xuất hiện tại đây sau khi được tạo."}
+                            ? copy.emptyMatchedDescription
+                            : copy.emptyInitialDescription}
                         </p>
                       </CardContent>
                     </Card>
@@ -562,22 +536,24 @@ export function SupplierInvoicesClient({
                         <div className="mt-4 grid gap-2 text-sm">
                           <div className="flex items-center justify-between gap-3">
                             <span className="text-muted-foreground">
-                              Ngày hóa đơn
+                              {copy.invoiceDate}
                             </span>
                             <span>{formatDate(invoice.invoiceDate)}</span>
                           </div>
                           <div className="flex items-center justify-between gap-3">
                             <span className="text-muted-foreground">
-                              Hạn thanh toán
+                              {copy.dueDate}
                             </span>
                             <span>{formatDate(invoice.dueDate)}</span>
                           </div>
                           <div className="flex items-center justify-between gap-3">
                             <span className="text-muted-foreground">
-                              Còn lại
+                              {copy.remaining}
                             </span>
                             <span className="font-mono font-semibold">
-                              {formatVND(outstandingAmount)}đ
+                              {messages.inventory.common.currencyCompact(
+                                formatVND(outstandingAmount),
+                              )}
                             </span>
                           </div>
                         </div>
@@ -588,7 +564,7 @@ export function SupplierInvoicesClient({
                           className="mt-4 w-full"
                           onClick={() => setSelectedInvoiceId(invoice.id)}
                         >
-                          {isActive ? "Đang xem phân tích" : "Xem phân tích"}
+                          {isActive ? copy.analyzing : copy.viewAnalysis}
                         </Button>
                       </CardContent></Card>
                     );
@@ -598,13 +574,23 @@ export function SupplierInvoicesClient({
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="min-w-40">Số hóa đơn</TableHead>
-                      <TableHead className="min-w-52">Nhà cung cấp</TableHead>
-                      <TableHead className="min-w-44">Ngày / hạn</TableHead>
-                      <TableHead className="min-w-36">Đối soát</TableHead>
-                      <TableHead className="min-w-36">Thanh toán</TableHead>
+                      <TableHead className="min-w-40">
+                        {copy.invoiceNumber}
+                      </TableHead>
+                      <TableHead className="min-w-52">
+                        {copy.supplier}
+                      </TableHead>
+                      <TableHead className="min-w-44">
+                        {copy.dateDue}
+                      </TableHead>
+                      <TableHead className="min-w-36">
+                        {copy.matchingPlaceholder}
+                      </TableHead>
+                      <TableHead className="min-w-36">
+                        {copy.paymentPlaceholder}
+                      </TableHead>
                       <TableHead className="min-w-32 text-right">
-                        Còn lại
+                        {copy.remaining}
                       </TableHead>
                       <TableHead className="w-28 text-right">
                         {FORM_VI.action}
@@ -617,13 +603,13 @@ export function SupplierInvoicesClient({
                         colSpan={7}
                         title={
                           showEmptyResults
-                            ? "Không tìm thấy hóa đơn phù hợp"
-                            : "Chưa có hóa đơn NCC"
+                            ? copy.emptyMatchedTitle
+                            : copy.emptyInitialTitle
                         }
                         description={
                           showEmptyResults
-                            ? "Thử nới bộ lọc hoặc từ khóa để xem thêm kết quả."
-                            : "Các hóa đơn NCC mới sẽ xuất hiện tại đây sau khi được tạo."
+                            ? copy.emptyMatchedDescription
+                            : copy.emptyInitialDescription
                         }
                       />
                     ) : null}
@@ -662,7 +648,7 @@ export function SupplierInvoicesClient({
                                   overdue && "font-medium text-destructive",
                                 )}
                               >
-                                Hạn: {formatDate(invoice.dueDate)}
+                                {copy.duePrefix(formatDate(invoice.dueDate))}
                               </p>
                             </div>
                           </TableCell>
@@ -696,7 +682,9 @@ export function SupplierInvoicesClient({
                             </div>
                           </TableCell>
                           <TableCell className="text-right font-mono font-semibold">
-                            {formatVND(outstandingAmount)}đ
+                            {messages.inventory.common.currencyCompact(
+                              formatVND(outstandingAmount),
+                            )}
                           </TableCell>
                           <TableCell className="text-right">
                             <Button
@@ -705,7 +693,7 @@ export function SupplierInvoicesClient({
                               variant={isActive ? "default" : "outline"}
                               onClick={() => setSelectedInvoiceId(invoice.id)}
                             >
-                              {isActive ? "Đang xem" : "Phân tích"}
+                              {isActive ? copy.analyzingShort : copy.analysis}
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -718,9 +706,9 @@ export function SupplierInvoicesClient({
           </Card>
 
           <Card>
-            <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <CardTitle>
-                {selectedInvoice?.code ?? "Chưa chọn hóa đơn"}
+              <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <CardTitle>
+                {selectedInvoice?.code ?? copy.noInvoiceSelected}
               </CardTitle>
               {selectedInvoice ? (
                 <div className="flex flex-wrap justify-end gap-2">
@@ -731,17 +719,7 @@ export function SupplierInvoicesClient({
                     onClick={handleRecomputeMatching}
                     disabled={isPending}
                   >
-                    Tính lại đối soát
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={() => setPaymentOpen(true)}
-                    disabled={
-                      isPending || getOutstandingAmount(selectedInvoice) <= 0
-                    }
-                  >
-                    Ghi nhận thanh toán
+                    {copy.recomputeMatching}
                   </Button>
                   <Badge
                     variant={getInventoryStatusBadgeVariant(
@@ -766,18 +744,22 @@ export function SupplierInvoicesClient({
                   <div className="grid gap-3 sm:grid-cols-2">
                     <Card className="bg-muted/30"><CardContent>
                       <Badge variant="secondary">
-                        Tổng hóa đơn
+                        {copy.totalInvoice}
                       </Badge>
                       <p className="mt-2 font-mono text-xl font-semibold">
-                        {formatVND(selectedInvoice.amount)}đ
+                        {messages.inventory.common.currencyCompact(
+                          formatVND(selectedInvoice.amount),
+                        )}
                       </p>
                     </CardContent></Card>
                     <Card className="bg-muted/30"><CardContent>
                       <Badge variant="secondary">
-                        Còn phải trả
+                        {copy.outstandingPayable}
                       </Badge>
                       <p className="mt-2 font-mono text-xl font-semibold">
-                        {formatVND(getOutstandingAmount(selectedInvoice))}đ
+                        {messages.inventory.common.currencyCompact(
+                          formatVND(getOutstandingAmount(selectedInvoice)),
+                        )}
                       </p>
                     </CardContent></Card>
                   </div>
@@ -785,7 +767,7 @@ export function SupplierInvoicesClient({
                   <div className="space-y-3">
                     <Card className="bg-muted/30 py-0"><CardContent className="flex items-center justify-between gap-3 px-4 py-3">
                       <span className="text-sm text-muted-foreground">
-                        Ngày hóa đơn
+                        {copy.invoiceDate}
                       </span>
                       <span className="text-sm font-medium">
                         {formatDate(selectedInvoice.invoiceDate)}
@@ -793,7 +775,7 @@ export function SupplierInvoicesClient({
                     </CardContent></Card>
                     <Card className="bg-muted/30 py-0"><CardContent className="flex items-center justify-between gap-3 px-4 py-3">
                       <span className="text-sm text-muted-foreground">
-                        Hạn thanh toán
+                        {copy.dueDate}
                       </span>
                       <span
                         className={cn(
@@ -807,18 +789,20 @@ export function SupplierInvoicesClient({
                     </CardContent></Card>
                     <Card className="bg-muted/30 py-0"><CardContent className="flex items-center justify-between gap-3 px-4 py-3">
                       <span className="text-sm text-muted-foreground">
-                        Đã thanh toán
+                        {copy.paidAmount}
                       </span>
                       <span className="text-sm font-medium">
-                        {formatVND(selectedInvoice.paidAmount)}đ
+                        {messages.inventory.common.currencyCompact(
+                          formatVND(selectedInvoice.paidAmount),
+                        )}
                       </span>
                     </CardContent></Card>
                     <Card className="bg-muted/30 py-0"><CardContent className="flex items-center justify-between gap-3 px-4 py-3">
                       <span className="text-sm text-muted-foreground">
-                        GRN liên kết
+                        {copy.linkedGrn}
                       </span>
                       <span className="text-sm font-medium">
-                        {selectedInvoice.grnCode ?? "Chưa liên kết"}
+                        {selectedInvoice.grnCode ?? copy.notLinked}
                       </span>
                     </CardContent></Card>
                   </div>
@@ -830,11 +814,10 @@ export function SupplierInvoicesClient({
                         <IconAlertTriangle className="mt-0.5 size-4 text-destructive" />
                         <div className="space-y-1">
                           <p className="text-sm font-semibold text-destructive">
-                            Chênh lệch đối soát {selectedInvoice.variance}%
+                            {copy.varianceTitle(selectedInvoice.variance)}
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            Kiểm tra lại số lượng thực nhận, đơn giá hoặc khoản
-                            phụ phí trước khi xác nhận thanh toán.
+                            {copy.varianceDescription}
                           </p>
                         </div>
                       </div>
@@ -845,11 +828,10 @@ export function SupplierInvoicesClient({
                         <IconCircleCheck className="mt-0.5 size-4 text-success" />
                         <div className="space-y-1">
                           <p className="text-sm font-semibold text-success">
-                            Hóa đơn đang ở ngưỡng an toàn để xử lý tiếp
+                            {copy.safeTitle}
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            Không có cảnh báo chênh lệch lớn trên dữ liệu hiện
-                            tại.
+                            {copy.safeDescription}
                           </p>
                         </div>
                       </div>
@@ -860,11 +842,10 @@ export function SupplierInvoicesClient({
                 <Empty className="py-8">
                   <EmptyHeader>
                     <EmptyTitle className="text-sm font-semibold">
-                      Chưa có hóa đơn để phân tích
+                      {copy.noAnalysisTitle}
                     </EmptyTitle>
                     <EmptyDescription className="text-xs leading-5">
-                      Chọn một hóa đơn từ danh sách bên trái để xem chi tiết công
-                      nợ và trạng thái đối soát.
+                      {copy.noAnalysisDescription}
                     </EmptyDescription>
                   </EmptyHeader>
                 </Empty>
@@ -878,11 +859,11 @@ export function SupplierInvoicesClient({
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Ghi nhận hóa đơn NCC</DialogTitle>
+            <DialogTitle>{copy.createAction}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-2">
             <div className="grid gap-2">
-              <Label>GRN liên kết</Label>
+              <Label>{copy.linkedGrn}</Label>
               <Select
                 value={grnId}
                 onValueChange={(value) => {
@@ -898,10 +879,10 @@ export function SupplierInvoicesClient({
                 }}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Chọn GRN (tùy chọn)" />
+                  <SelectValue placeholder={copy.chooseGrnOptional} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Không liên kết GRN</SelectItem>
+                  <SelectItem value="none">{copy.noLinkedGrn}</SelectItem>
                   {grns.map((option) => (
                     <SelectItem key={option.id} value={String(option.id)}>
                       {option.code} · {option.supplierName}
@@ -912,10 +893,10 @@ export function SupplierInvoicesClient({
             </div>
 
             <div className="grid gap-2">
-              <Label>Nhà cung cấp</Label>
+              <Label>{copy.supplier}</Label>
               <Select value={supplierId} onValueChange={setSupplierId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Chọn nhà cung cấp" />
+                  <SelectValue placeholder={copy.chooseSupplier} />
                 </SelectTrigger>
                 <SelectContent>
                   {suppliers.map((option) => (
@@ -928,7 +909,7 @@ export function SupplierInvoicesClient({
             </div>
 
             <div className="grid gap-2">
-              <Label>Số hóa đơn</Label>
+              <Label>{copy.invoiceNumber}</Label>
               <Input
                 value={invoiceNumber}
                 onChange={(event) => setInvoiceNumber(event.target.value)}
@@ -937,7 +918,7 @@ export function SupplierInvoicesClient({
             </div>
 
             <div className="grid gap-2">
-              <Label>Ngày hóa đơn</Label>
+              <Label>{copy.invoiceDate}</Label>
               <Input
                 type="date"
                 value={invoiceDate}
@@ -952,7 +933,7 @@ export function SupplierInvoicesClient({
                   value={subtotal}
                   onValueChange={setSubtotal}
                   maxFractionDigits={0}
-                  placeholder="0"
+                  placeholder={copy.subtotalPlaceholder}
                 />
               </div>
               <div className="grid gap-2">
@@ -968,24 +949,26 @@ export function SupplierInvoicesClient({
 
             <div className="rounded-2xl border border-border/60 bg-muted/20 px-4 py-3 text-sm">
               <div className="flex items-center justify-between gap-3">
-                <span className="text-muted-foreground">VAT</span>
-                <span className="font-mono">{formatVND(vatAmount)}đ</span>
+                <span className="text-muted-foreground">{copy.vat}</span>
+                <span className="font-mono">
+                  {messages.inventory.common.currencyCompact(formatVND(vatAmount))}
+                </span>
               </div>
               <div className="mt-2 flex items-center justify-between gap-3">
                 <span className="text-muted-foreground">{FORM_VI.totalAmount}</span>
                 <span className="font-mono font-semibold">
-                  {formatVND(totalAmount)}đ
+                  {messages.inventory.common.currencyCompact(formatVND(totalAmount))}
                 </span>
               </div>
             </div>
 
             <div className="grid gap-2">
-              <Label>Ghi chú đối soát</Label>
+              <Label>{copy.matchingNotes}</Label>
               <Textarea
                 value={matchingNotes}
                 onChange={(event) => setMatchingNotes(event.target.value)}
                 rows={3}
-                placeholder="Ghi chú thêm cho bước matching"
+                placeholder={copy.matchingNotesPlaceholder}
                 className="min-h-24"
               />
             </div>
@@ -1004,60 +987,12 @@ export function SupplierInvoicesClient({
               onClick={handleCreateInvoice}
               disabled={isPending}
             >
-              Lưu hóa đơn
+              {copy.saveInvoice}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={paymentOpen} onOpenChange={setPaymentOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Ghi nhận thanh toán</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-2">
-            <div className="rounded-2xl border border-border/60 bg-muted/20 px-4 py-3 text-sm">
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-muted-foreground">Hóa đơn</span>
-                <span className="font-mono">
-                  {selectedInvoice?.code ?? "—"}
-                </span>
-              </div>
-              <div className="mt-2 flex items-center justify-between gap-3">
-                <span className="text-muted-foreground">Còn phải trả</span>
-                <span className="font-mono font-semibold">
-                  {selectedInvoice
-                    ? `${formatVND(getOutstandingAmount(selectedInvoice))}đ`
-                    : "—"}
-                </span>
-              </div>
-            </div>
-
-            <div className="grid gap-2">
-              <Label>Số tiền thanh toán</Label>
-              <FormattedNumberInput
-                value={paymentAmount}
-                onValueChange={setPaymentAmount}
-                maxFractionDigits={0}
-                placeholder="0"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setPaymentOpen(false)}
-              disabled={isPending}
-            >
-              {ACTIONS_VI.cancel}
-            </Button>
-            <Button type="button" onClick={handleMarkPaid} disabled={isPending}>
-              Cập nhật thanh toán
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }

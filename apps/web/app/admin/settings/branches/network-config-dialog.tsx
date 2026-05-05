@@ -10,6 +10,14 @@ import {
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
   Dialog,
@@ -21,6 +29,8 @@ import {
 } from "@comtammatu/ui/components/dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { ACTIONS_VI, ERRORS_VI, STATES_VI } from "@comtammatu/shared/messages";
+import { AppEmptyState } from "@/components/surface";
+import { messages } from "@lib/messages";
 import {
   listTrustedIps,
   revokeTrustedIp,
@@ -88,7 +98,7 @@ export function NetworkConfigDialog({
       const result = await trustCurrentIp({ branchId: branch.id });
       if (result.success) {
         const ip = (result.data as { ip?: string } | undefined)?.ip;
-        toast.success(ip ? `Đã tin cậy IP ${ip}` : "Đã tin cậy IP hiện tại");
+        toast.success(messages.settings.network.trustedIp(ip));
         await refresh();
       } else {
         toast.error(result.error ?? ERRORS_VI.fallback);
@@ -105,7 +115,7 @@ export function NetworkConfigDialog({
       });
       setRevokePendingId(null);
       if (result.success) {
-        toast.success("Đã thu hồi IP");
+        toast.success(messages.settings.network.revokedIp);
         await refresh();
       } else {
         toast.error(result.error ?? ERRORS_VI.fallback);
@@ -123,13 +133,10 @@ export function NetworkConfigDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <IconShield className="size-5" />
-            Cổng mạng POS/KDS — {branch.name}
+            {messages.settings.network.title(branch.name)}
           </DialogTitle>
           <DialogDescription className="text-sm leading-6">
-            POS và KDS chỉ mở từ thiết bị có cùng IP công cộng (cùng wifi)
-            với máy in agent của chi nhánh. Print-agent tự đăng ký IP mỗi 5
-            phút. Nút bên dưới cho phép tin cậy IP hiện tại của bạn để bootstrap
-            khi agent chưa chạy.
+            {messages.settings.network.description}
           </DialogDescription>
         </DialogHeader>
 
@@ -139,10 +146,11 @@ export function NetworkConfigDialog({
             <div className="flex items-start gap-3 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
               <IconAlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
               <div>
-                <p className="font-medium">Chưa có IP nào được tin cậy</p>
+                <p className="font-medium">
+                  {messages.settings.network.noTrustedTitle}
+                </p>
                 <p className="mt-1 text-muted-foreground">
-                  Đứng trên wifi cửa hàng và bấm "Tin cậy IP hiện tại" để mở
-                  POS/KDS, hoặc cài print-agent — agent sẽ tự đăng ký IP.
+                  {messages.settings.network.noTrustedDescription}
                 </p>
               </div>
             </div>
@@ -152,42 +160,46 @@ export function NetworkConfigDialog({
             <div className="flex items-start gap-3 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
               <IconAlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
               <div>
-                <p className="font-medium">Tất cả IP đã quá 30 phút</p>
+                <p className="font-medium">
+                  {messages.settings.network.staleTitle}
+                </p>
                 <p className="mt-1 text-muted-foreground">
-                  Cashier đang bị chặn POS. Kiểm tra agent có chạy không, hoặc
-                  bấm tin cậy lại IP hiện tại.
+                  {messages.settings.network.staleDescription}
                 </p>
               </div>
             </div>
           )}
 
           {/* Bootstrap action */}
-          <div className="flex flex-col gap-3 rounded-lg border bg-muted/40 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm font-medium">Tin cậy IP hiện tại</p>
-              <p className="text-xs text-muted-foreground">
-                Ghi nhận IP công cộng của thiết bị bạn đang dùng. Phải đứng
-                trên wifi cửa hàng khi bấm.
-              </p>
-            </div>
-            <Button
-              size="sm"
-              onClick={handleTrustCurrent}
-              disabled={trustPending}
-            >
-              {trustPending ? (
-                <Spinner data-icon="inline-start" />
-              ) : (
-                <IconPlus />
-              )}
-              Tin cậy IP hiện tại
-            </Button>
-          </div>
+          <Item variant="muted" className="sm:flex-nowrap">
+            <ItemContent>
+              <ItemTitle className="text-sm">
+                {messages.settings.network.trustCurrentTitle}
+              </ItemTitle>
+              <ItemDescription>
+                {messages.settings.network.trustCurrentDescription}
+              </ItemDescription>
+            </ItemContent>
+            <ItemActions className="ml-auto">
+              <Button
+                size="sm"
+                onClick={handleTrustCurrent}
+                disabled={trustPending}
+              >
+                {trustPending ? (
+                  <Spinner data-icon="inline-start" />
+                ) : (
+                  <IconPlus />
+                )}
+                {messages.settings.network.trustCurrentButton}
+              </Button>
+            </ItemActions>
+          </Item>
 
           {/* Active list */}
           <div>
-            <h3 className="mb-2 text-sm font-medium">
-              Đang hoạt động ({activeRows.length})
+            <h3 className="font-heading mb-2 text-sm font-medium">
+              {messages.settings.network.activeTitle(activeRows.length)}
             </h3>
             {loading ? (
               <div className="flex items-center justify-center py-6 text-sm text-muted-foreground">
@@ -195,18 +207,21 @@ export function NetworkConfigDialog({
                 {STATES_VI.loading}
               </div>
             ) : activeRows.length === 0 ? (
-              <p className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
-                Chưa có IP tin cậy.
-              </p>
+              <AppEmptyState
+                className="border-dashed bg-transparent py-6"
+                title={messages.settings.network.emptyTrusted}
+                compact
+              />
             ) : (
-              <ul className="divide-y rounded-lg border">
+              <ItemGroup>
                 {activeRows.map((row) => (
-                  <li
+                  <Item
                     key={row.id}
-                    className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between"
+                    variant="outline"
+                    className="sm:flex-nowrap"
                   >
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
+                    <ItemContent className="min-w-0">
+                      <ItemTitle className="line-clamp-none flex-wrap text-sm">
                         <IconGlobe className="size-4 text-muted-foreground" />
                         <span className="font-mono text-sm font-medium">
                           {row.ip_address}
@@ -221,64 +236,72 @@ export function NetworkConfigDialog({
                         >
                           {row.registered_via === "agent"
                             ? "agent"
-                            : "thủ công"}
+                            : messages.settings.network.manual}
                         </Badge>
                         {!isFresh(row.last_seen_at) && (
                           <Badge
                             variant="outline"
                             className="border-warning/40 text-warning"
                           >
-                            quá hạn
+                            {messages.settings.network.expired}
                           </Badge>
                         )}
-                      </div>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Hoạt động {formatAge(row.last_seen_at)}
-                        {row.registered_by_agent_id
-                          ? ` • ${row.registered_by_agent_id}`
-                          : ""}
-                      </p>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleRevoke(row.id)}
-                      disabled={revokePendingId === row.id}
-                    >
-                      {revokePendingId === row.id ? (
-                        <Spinner data-icon="inline-start" />
-                      ) : (
-                        <IconShieldOff />
-                      )}
-                      Thu hồi
-                    </Button>
-                  </li>
+                      </ItemTitle>
+                      <ItemDescription>
+                        {messages.settings.network.activeMeta(
+                          formatAge(row.last_seen_at),
+                          row.registered_by_agent_id,
+                        )}
+                      </ItemDescription>
+                    </ItemContent>
+                    <ItemActions className="ml-auto">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleRevoke(row.id)}
+                        disabled={revokePendingId === row.id}
+                      >
+                        {revokePendingId === row.id ? (
+                          <Spinner data-icon="inline-start" />
+                        ) : (
+                          <IconShieldOff />
+                        )}
+                        {messages.settings.network.revoke}
+                      </Button>
+                    </ItemActions>
+                  </Item>
                 ))}
-              </ul>
+              </ItemGroup>
             )}
           </div>
 
           {/* Revoked list (collapsed by default visually) */}
           {revokedRows.length > 0 && (
             <div>
-              <h3 className="mb-2 text-sm font-medium text-muted-foreground">
-                Đã thu hồi ({revokedRows.length})
+              <h3 className="font-heading mb-2 text-sm font-medium text-muted-foreground">
+                {messages.settings.network.revokedTitle(revokedRows.length)}
               </h3>
-              <ul className="divide-y rounded-lg border bg-muted/20">
+              <ItemGroup data-size="xs">
                 {revokedRows.slice(0, 5).map((row) => (
-                  <li
+                  <Item
                     key={row.id}
-                    className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground"
+                    variant="muted"
+                    size="xs"
                   >
-                    <span className="font-mono">{row.ip_address}</span>
-                    <span>•</span>
-                    <span>
-                      Thu hồi{" "}
-                      {row.revoked_at ? formatAge(row.revoked_at) : "không rõ"}
-                    </span>
-                  </li>
+                    <ItemContent className="flex-row items-center gap-2">
+                      <span className="font-mono">{row.ip_address}</span>
+                      <span className="text-muted-foreground">•</span>
+                      <span className="text-muted-foreground">
+                        {messages.settings.network.revokedMeta(
+                          row.revoked_at
+                            ? formatAge(row.revoked_at)
+                            : messages.settings.network.unknown,
+                        )}
+                      </span>
+                    </ItemContent>
+                  </Item>
                 ))}
-              </ul>
+              </ItemGroup>
             </div>
           )}
         </div>

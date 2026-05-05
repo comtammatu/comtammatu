@@ -88,7 +88,11 @@ import { submitPosOrderWithRetry } from "./_utils/submit-with-retry";
 import type { CartItem, CartModifier, CartSide, OrderType } from "./types";
 import type { MenuCategory, MenuItem } from "./pos-menu-types";
 import type { ActiveSession, BranchTable } from "./page";
-import { ACTIVE_POS_STATUSES, type SessionOrder } from "./order-history";
+import {
+  ACTIVE_POS_STATUSES,
+  compareOrdersByNextAction,
+  type SessionOrder,
+} from "./order-history";
 import type {
   BillReceiptIntent,
   OrderData,
@@ -113,6 +117,7 @@ import {
 import { useActiveTable } from "./_hooks/use-active-table";
 import { useAppendTarget } from "./_hooks/use-append-target";
 import { makeCartKey, makeNotedCartKey } from "./_utils/cart-key";
+import { messages } from "@lib/messages";
 
 interface PosDesktopShellProps {
   branchId: number;
@@ -316,6 +321,9 @@ function PosDesktopInner({
   const [showCloseSession, setShowCloseSession] = useState(false);
   const [billOrderId, setBillOrderId] = useState<number | null>(null);
   const [billIntent, setBillIntent] = useState<BillReceiptIntent>("payment");
+  const [postSubmitPaymentOrderId, setPostSubmitPaymentOrderId] = useState<
+    number | null
+  >(null);
   // Seed passed to BillReceipt when we just came from OrderDetailSheet
   // on the same order — lets BillReceipt skip its own fetch. Null for
   // bill opens from any other path (toast action, order-list direct
@@ -478,7 +486,7 @@ function PosDesktopInner({
             (o) =>
               o.table_id === pickerTableId &&
               ACTIVE_POS_STATUSES.includes(o.status),
-          )
+          ).sort(compareOrdersByNextAction)
         : [],
     [pickerTableId, orders],
   );
@@ -662,6 +670,29 @@ function PosDesktopInner({
     [focusOrderWorkflow],
   );
 
+  const handlePayOrderFromPicker = useCallback(
+    (orderId: number) => {
+      setPickerTableId(null);
+      setCartDrawerOpen(false);
+      setPostSubmitPaymentOrderId(null);
+      setBillInitialOrder(null);
+      setBillIntent("payment");
+      setBillOrderId(orderId);
+    },
+    [],
+  );
+
+  const handleAppendOrderFromPicker = useCallback(
+    (orderId: number, orderNumber: string) => {
+      setPickerTableId(null);
+      setCartDrawerOpen(false);
+      startAppendTarget(orderId, orderNumber);
+      setShowOrders(false);
+      toast.message("Chạm món trên menu để thêm");
+    },
+    [startAppendTarget],
+  );
+
   const handleCreateNewOnOccupied = useCallback(() => {
     if (pickerTableId === null) return;
     const tableId = pickerTableId;
@@ -698,10 +729,12 @@ function PosDesktopInner({
     if (!canSubmit) return;
 
     startTransition(async () => {
+      const cartSnapshot = cartStore.getSnapshot();
+      const submittedOrderType = cartSnapshot.orderType;
       const result = await submitPosOrderWithRetry({
         branchId,
         sessionId: session.id,
-        cartSnapshot: cartStore.getSnapshot(),
+        cartSnapshot,
         tableId: selectedTableId,
       });
 
@@ -710,7 +743,10 @@ function PosDesktopInner({
         const orderNumber = result.data.order_number;
         toast.success(`Đặt món thành công — #${orderNumber}`, {
           action: {
-            label: "Xem hóa đơn",
+            label:
+              submittedOrderType === "takeaway"
+                ? "Thanh toán ngay"
+                : "Xem hóa đơn",
             onClick: () => {
               setBillIntent("payment");
               setBillOrderId(orderId);
@@ -725,6 +761,19 @@ function PosDesktopInner({
         }
 
         clearCart();
+        if (submittedOrderType === "takeaway") {
+          setPostSubmitPaymentOrderId(orderId);
+          setShowOrders(false);
+          setOrderDetailId(null);
+          setOrderDetailNumber(null);
+          setOrderDetailSeed(null);
+          setOrderDetailSummary(null);
+          setActiveTable(null);
+          void refreshOperational();
+          return;
+        }
+
+        setPostSubmitPaymentOrderId(null);
         focusOrderWorkflow(orderId, orderNumber);
         setActiveTable(null);
         void refreshOperational();
@@ -1028,6 +1077,7 @@ function PosDesktopInner({
   const openBill = useCallback(
     (id: number, intent: BillReceiptIntent = "payment", seed?: OrderData) => {
       setCartDrawerOpen(false);
+      setPostSubmitPaymentOrderId(null);
       setBillIntent(intent);
       setBillInitialOrder(seed ?? null);
       setBillOrderId(id);
@@ -1101,9 +1151,24 @@ function PosDesktopInner({
   // boolean prop fed to PosMobileActionBar doesn't flip identity on every
   // realtime tick where orders changed but the awaiting slice did not.
   const latestAwaitingPaymentOrderId = useMemo<number | null>(() => {
-    const awaiting = orders.find(isOrderAwaitingPayment);
+    if (postSubmitPaymentOrderId !== null) return postSubmitPaymentOrderId;
+
+    const awaiting = orders
+      .filter(isOrderAwaitingPayment)
+      .sort(compareOrdersByNextAction)[0];
     return awaiting?.id ?? null;
-  }, [orders]);
+  }, [orders, postSubmitPaymentOrderId]);
+
+  useEffect(() => {
+    if (postSubmitPaymentOrderId === null) return;
+
+    const promptOrder = orders.find(
+      (order) => order.id === postSubmitPaymentOrderId,
+    );
+    if (promptOrder && !isOrderAwaitingPayment(promptOrder)) {
+      setPostSubmitPaymentOrderId(null);
+    }
+  }, [orders, postSubmitPaymentOrderId]);
 
   useKeyboardShortcut([
     {
@@ -1208,7 +1273,7 @@ function PosDesktopInner({
       type="single"
       value={cartOrderType}
       className="grid h-10 w-full grid-cols-2 overflow-hidden !rounded-none bg-muted/60"
-      aria-label="Chọn hình thức phục vụ"
+      aria-label={messages.pos.desktop.serviceModeAria}
       onValueChange={(value) => {
         if (value === "dine_in" || value === "takeaway") {
           handleOrderTypeChange(value);
@@ -1220,14 +1285,14 @@ function PosDesktopInner({
         className="h-full min-w-0 justify-center !rounded-none border-r border-border px-0 text-sm font-semibold text-muted-foreground hover:bg-background/70 hover:text-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm"
         disabled={cartItemCount > 0 && cartOrderType !== "dine_in"}
       >
-        Tại bàn
+        {messages.pos.desktop.dineIn}
       </ToggleGroupItem>
       <ToggleGroupItem
         value="takeaway"
         className="h-full min-w-0 justify-center !rounded-none px-0 text-sm font-semibold text-muted-foreground hover:bg-background/70 hover:text-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm"
         disabled={cartItemCount > 0 && cartOrderType !== "takeaway"}
       >
-        Mang về
+        {messages.pos.desktop.takeaway}
       </ToggleGroupItem>
     </ToggleGroup>
   );
@@ -1240,13 +1305,13 @@ function PosDesktopInner({
       >
         <p className="min-w-0 text-base leading-6 text-foreground">
           <span className="font-semibold">
-            Thêm món vào đơn #{appendTarget.orderNumber}
+            {messages.pos.desktop.appendBannerTitle(appendTarget.orderNumber)}
           </span>
           <span className="text-muted-foreground">
             {""}
             {appendDraftQuantity > 0
-              ? `${String(appendDraftQuantity)} món đang chờ gửi.`
-              : "Chọn món trên menu, chưa gửi bếp cho tới khi xác nhận."}
+              ? messages.pos.desktop.appendPending(appendDraftQuantity)
+              : messages.pos.desktop.appendInstruction}
           </span>
         </p>
         <Button
@@ -1264,10 +1329,10 @@ function PosDesktopInner({
 
   const mobileHeaderContextLabel = menuContextReady
     ? appendTarget != null
-      ? `Thêm món #${appendTarget.orderNumber}`
+      ? messages.pos.desktop.mobileHeaderAppend(appendTarget.orderNumber)
       : cartOrderType === "takeaway"
-        ? "Mang về"
-        : `Bàn ${selectedTableNumber ?? ""}`
+        ? messages.pos.desktop.takeaway
+        : messages.pos.desktop.mobileHeaderTable(selectedTableNumber ?? "")
     : undefined;
 
   // Back-to-main handler: dine_in → clear table → table gate; takeaway →
@@ -1392,6 +1457,7 @@ function PosDesktopInner({
         cartQuantity={cartQuantity}
         appendDraftQuantity={appendDraftQuantity}
         ordersCount={orders.length}
+        awaitingPaymentOrderId={latestAwaitingPaymentOrderId}
         onOpenOrdersDrawer={() => {
           setShowOrders(true);
           void refreshOrders();
@@ -1405,6 +1471,7 @@ function PosDesktopInner({
           setShowOrders(false);
           setCartDrawerOpen(true);
         }}
+        onOpenPayment={(orderId) => openBill(orderId, "payment")}
       />
       {mobileSidebarDrawer}
 
@@ -1532,6 +1599,8 @@ function PosDesktopInner({
         tableNumber={pickerTable?.number ?? null}
         orders={pickerOrders}
         onOpenOrder={handleOpenOrderFromPicker}
+        onPayOrder={handlePayOrderFromPicker}
+        onAppendOrder={handleAppendOrderFromPicker}
         onCreateNew={handleCreateNewOnOccupied}
         onClose={handleClosePicker}
       />

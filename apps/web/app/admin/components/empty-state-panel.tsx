@@ -1,22 +1,11 @@
 import type { ReactNode } from "react";
-import {
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@comtammatu/ui/components/empty";
-import { cn } from "@comtammatu/ui";
+import { AppEmptyState, type AppEmptyStateMode } from "@/components/surface";
 
 type EmptyStateMode =
   | "full"
   | "inline"
   | "table-row"
-  | "no-data"
-  | "no-results"
-  | "no-access"
-  | "error";
+  | AppEmptyStateMode;
 
 interface EmptyStatePanelProps {
   title?: string;
@@ -27,32 +16,30 @@ interface EmptyStatePanelProps {
   children?: ReactNode;
 }
 
+function normalizeMode(mode: EmptyStateMode): AppEmptyStateMode {
+  if (mode === "full" || mode === "inline" || mode === "table-row") {
+    return "no-data";
+  }
+  return mode;
+}
+
 export function EmptyStatePanel({
   title,
-  mode: _mode = "no-data",
+  mode = "no-data",
   description,
   icon,
   className,
   children,
 }: EmptyStatePanelProps) {
   return (
-    <Empty className={cn("border bg-card py-12", className)}>
-      {icon ? <EmptyMedia variant="icon">{icon}</EmptyMedia> : null}
-      <EmptyHeader>
-        <EmptyTitle className="text-2xl font-semibold">
-          {title ?? "Chưa có dữ liệu"}
-        </EmptyTitle>
-        {description ? (
-          <EmptyDescription className="max-w-md text-sm leading-6">
-            {description}
-          </EmptyDescription>
-        ) : null}
-      </EmptyHeader>
-      {children ? (
-        <EmptyContent className="flex-row flex-wrap justify-center gap-2">
-          {children}
-        </EmptyContent>
-      ) : null}
-    </Empty>
+    <AppEmptyState
+      title={title}
+      mode={normalizeMode(mode)}
+      description={description}
+      icon={icon}
+      className={className}
+    >
+      {children}
+    </AppEmptyState>
   );
 }

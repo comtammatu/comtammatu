@@ -7,8 +7,6 @@ export type InventoryPaths = {
   purchaseOrders: string;
   grn: string;
   supplierInvoices: string;
-  supplierReturns: string;
-  supplierCreditNotes: string;
   transfers: string;
   transferDetail: (id: number) => string;
   stocktake: string;
@@ -34,8 +32,6 @@ export function getInventoryPaths(base: InventoryRouteBase): InventoryPaths {
     purchaseOrders: joinInventoryPath(base, "/purchase-orders"),
     grn: joinInventoryPath(base, "/grn"),
     supplierInvoices: joinInventoryPath(base, "/supplier-invoices"),
-    supplierReturns: joinInventoryPath(base, "/supplier-returns"),
-    supplierCreditNotes: joinInventoryPath(base, "/supplier-credit-notes"),
     transfers: joinInventoryPath(base, "/transfers"),
     transferDetail: (id: number) => joinInventoryPath(base, `/transfers/${id}`),
     stocktake: joinInventoryPath(base, "/stocktake"),

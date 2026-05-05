@@ -133,7 +133,7 @@ sequenceDiagram
 
 Inventory route ownership note:
 - `/inventory` is the canonical Inventory surface.
-- `/admin/inventory*` has been removed and is no longer a supported route space.
+- `/admin/inventory/*` page files (`cold-chain`, `express-windows`, `feature-flags`, `trust`) still exist on disk but are RETIRED — the `inventory_admin` module ACL in `module-acl.ts` has `allowedRoles: []`, so no role passes the proxy gate. Treat the URL space as unsupported; do not wire new admin features there.
 
 <!-- ORACLE-META
 Updated: 2026-04-15 (status sync: M4/M6/M7 PARTIAL, S8 deferred, H3 deferred)

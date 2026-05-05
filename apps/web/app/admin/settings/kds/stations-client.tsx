@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { AppEmptyState, AppToolbar } from "@/components/surface";
 import {
   Select,
   SelectContent,
@@ -20,7 +21,7 @@ import {
 } from "@comtammatu/ui/components/table";
 import { Plus as IconPlus, Pencil as IconPencil } from "lucide-react";
 import { StationFormDialog } from "./station-form-dialog";
-import { EmptyStatePanel } from "../../components/empty-state-panel";
+import { messages } from "@lib/messages";
 
 /* ─── Types ─── */
 
@@ -77,17 +78,19 @@ export function StationsClient({
 
   if (branches.length === 0) {
     return (
-      <EmptyStatePanel
-        title="Chưa có chi nhánh nào"
-        description="Tạo chi nhánh trước."
+      <AppEmptyState
+        title={messages.settings.common.noBranches}
+        description={messages.settings.common.createBranchFirst}
       />
     );
   }
 
   return (
     <>
-      <div className="flex items-center gap-4">
-        <label className="text-sm font-medium">Chi nhánh:</label>
+      <AppToolbar>
+        <label className="text-sm font-medium">
+          {messages.settings.common.branchLabel}
+        </label>
         <Select
           value={selectedBranchId?.toString() ?? ""}
           onValueChange={(v) => setSelectedBranchId(Number(v))}
@@ -103,34 +106,37 @@ export function StationsClient({
             ))}
           </SelectContent>
         </Select>
-      </div>
+        <Button
+          className="ml-auto"
+          onClick={() => {
+            setEditStation(null);
+            setDialogOpen(true);
+          }}
+        >
+          <IconPlus className="mr-2 size-4" />
+          {messages.settings.kds.addStation}
+        </Button>
+      </AppToolbar>
 
-      <div className="space-y-4">
-        <div className="flex justify-end">
-          <Button
-            onClick={() => {
-              setEditStation(null);
-              setDialogOpen(true);
-            }}
-          >
-            <IconPlus className="mr-2 size-4" />
-            Thêm trạm
-          </Button>
-        </div>
-
+      <div>
         {filteredStations.length === 0 ? (
-          <EmptyStatePanel
+          <AppEmptyState
             className="py-8"
-            title="Chưa có trạm KDS nào cho chi nhánh này"
+            title={messages.settings.kds.emptyForBranch}
+            compact
           />
         ) : (
           <div className="rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-50">Tên trạm</TableHead>
-                  <TableHead className="w-25 text-center">Thứ tự</TableHead>
-                  <TableHead>Danh mục món ăn</TableHead>
+                  <TableHead className="w-50">
+                    {messages.settings.kds.stationName}
+                  </TableHead>
+                  <TableHead className="w-25 text-center">
+                    {messages.settings.kds.position}
+                  </TableHead>
+                  <TableHead>{messages.settings.kds.categories}</TableHead>
                   <TableHead className="w-25 text-center">{FORM_VI.status}</TableHead>
                   <TableHead className="w-20" />
                 </TableRow>
@@ -148,7 +154,7 @@ export function StationsClient({
                       <div className="flex flex-wrap gap-1">
                         {station.category_ids.length === 0 ? (
                           <span className="text-xs text-muted-foreground">
-                            Tất cả (fallback)
+                            {messages.settings.kds.allFallback}
                           </span>
                         ) : (
                           station.category_ids.map((catId) => (
@@ -168,7 +174,9 @@ export function StationsClient({
                         variant={station.is_active ? "success" : "secondary"}
                         className="text-xs"
                       >
-                        {station.is_active ? "Hoạt động" : "Tạm tắt"}
+                        {station.is_active
+                          ? messages.settings.common.active
+                          : messages.settings.common.inactive}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -181,7 +189,9 @@ export function StationsClient({
                         }}
                       >
                         <IconPencil className="size-4" />
-                        <span className="sr-only">Chỉnh sửa</span>
+                        <span className="sr-only">
+                          {messages.settings.common.edit}
+                        </span>
                       </Button>
                     </TableCell>
                   </TableRow>

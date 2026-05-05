@@ -41,38 +41,60 @@ Defined in `packages/database/package.json`:
 ./types              → src/types/database.types.ts
 ```
 
-## Schema (Sprint 1 complete)
+## Schema — Current Shape
 
-19 tables with tenant isolation:
+Source of truth: generated types from the live schema. Snapshot at the time of writing:
 
-| Table                       | RLS                       | Purpose                                     | Since  |
-| --------------------------- | ------------------------- | ------------------------------------------- | ------ |
-| `tenants`                   | tenant_id match           | CTCP legal entity                           | v0.1.0 |
-| `branches`                  | tenant_id match           | Physical locations                          | v0.1.0 |
-| `profiles`                  | role-aware scoping        | Staff accounts (mutations via RPCs only)    | v0.1.0 |
-| `system_settings`           | owner/super_manager write | Tenant-scoped key/value config              | S1-S2  |
-| `menu_categories`           | manager+ write            | Menu category grouping                      | S1-S4  |
-| `menu_items`                | manager+ write            | Menu items with base price                  | S1-S4  |
-| `menu_item_variants`        | manager+ write            | Size/portion variants with price adjustment | S1-S4  |
-| `menu_item_modifiers`       | manager+ write            | Add-on modifiers (extra toppings, etc.)     | S1-S4  |
-| `menu_item_available_sides` | manager+ write            | Junction: which sides pair with which mains | S1-S4  |
-| `branch_zones`              | manager+ write            | Dining zones per branch (Tầng 1, Sân vườn)  | S1-S5  |
-| `tables`                    | manager+ write            | Physical tables with zone, capacity, status | S1-S5  |
-| `orders`                    | branch-scoped RLS         | Order header: status, totals, table ref     | M2     |
-| `order_items`               | via order RLS             | Line items with price, quantity, modifiers  | M2     |
-| `order_status_history`      | via order RLS             | State machine audit trail                   | M2     |
-| `pos_terminals`             | branch-scoped RLS         | POS device registration per branch          | M2     |
-| `pos_sessions`              | branch-scoped RLS         | Cashier shift sessions (open/close)         | M2     |
-| `printer_configs`           | branch-scoped RLS         | Receipt printer configuration per branch    | M2     |
+- **102 tables**, **8 views**, **132 RPC/SQL functions** (count via `awk` over `database.types.ts` per `Tables`/`Views`/`Functions` section markers)
+- **278+ migration files** in `supabase/migrations/`
+- **0 enums** — `staff_role` ENUM was dropped in Auth v2 (M5 cleanup, 2026-04-23); roles are now strings derived from `positions.legacy_role_code`
 
-**RPCs added in M2:**
+### DB Source-of-Truth Ladder
 
-| Function              | Purpose                                                                          |
-| --------------------- | -------------------------------------------------------------------------------- |
-| `create_order()`      | Atomic order + items insert (client pricing — deferred server rehydration to M4) |
-| `close_pos_session()` | Close session with totals reconciliation                                         |
+When facts disagree, trust the higher tier:
 
-Full schema reference: `docs/spec/database-schema.md`
+| Tier | Source                                              | What it tells you                                               |
+| ---- | --------------------------------------------------- | --------------------------------------------------------------- |
+| 1    | `packages/database/src/types/database.types.ts`     | The shape currently usable from app code (post `pnpm db:types`) |
+| 2    | Applied state of dev/prod DB                        | What RLS, defaults, constraints actually enforce right now      |
+| 3    | `supabase/migrations/*.sql`                         | What changes have been authored — file existence ≠ applied      |
+| 4    | Hand-written docs (this file, `database-schema.md`) | Narrative + design rationale; lags 1-3 by definition            |
+
+### Migration Status Vocabulary
+
+Use these labels consistently when communicating migration state:
+
+- **planned** — change discussed, no SQL written yet
+- **drafted** — `.sql` file committed in `supabase/migrations/`, NOT yet applied
+- **applied to dev** — `supabase db push` ran on the dev project; live RLS/columns may differ from prod
+- **types generated** — `pnpm db:types` regenerated `database.types.ts` from the dev DB
+- **prod-applied** — owner ran the migration on the prod Supabase project
+- **UI wired** — Server Actions / pages / RPCs are calling the new shape
+
+A migration file dated AFTER today is normal — the file exists, but apply status is independent.
+
+### Domain Groups
+
+Tables are organized by domain. For per-table columns/constraints, read the migration that created the table or `database.types.ts` directly.
+
+| Domain        | Representative tables                                                                                                                                                  |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Auth v2       | `permission_keys`, `positions`, `role_templates`, `staff_permissions`, `permission_audit_log`                                                                          |
+| Tenant + IA   | `tenants`, `branches`, `profiles`, `areas`, `area_branches`, `system_settings`, `branch_attendance_config`                                                             |
+| Menu          | `menu_categories`, `menu_items`, `menu_item_variants`, `menu_item_modifiers`, `menu_item_available_sides`                                                              |
+| POS           | `pos_terminals`, `pos_sessions`, `branch_zones`, `tables`, `printer_configs`, `branch_menu_item_daily_limits`                                                          |
+| Orders / KDS  | `orders`, `order_items`, `order_status_history`, `kds_stations`, `kds_station_categories`, `kds_tickets`                                                               |
+| Payments      | `payments`, `payment_webhooks`, `refunds`                                                                                                                              |
+| Inventory     | `ingredients`, `recipes`, `stock_levels`, `stock_movements`, `inventory_locations`, `stocktake_sessions`, `stocktake_lines`, `stock_transfers`, `stock_transfer_items` |
+| Procurement   | `suppliers`, `purchase_orders`, `purchase_order_items`, `goods_received_notes`, `grn_items`, `supplier_invoices`, `supplier_returns`                                   |
+| Production    | `production_recipes`, `production_orders`, `production_order_items` — RLS also gates through `is_inventory_production_operator()`                                      |
+| Finance       | `chart_of_accounts`, `journal_entries`, `journal_entry_lines`, `fiscal_periods`, `tax_invoices`, `vas_report_lines`, `audit_logs`                                      |
+| HR            | `employees`, `employment_contracts`, `shifts`, `shift_assignments`, `attendance_records`, `payroll_periods`, `payroll_entries`                                         |
+| Print agent   | `print_jobs` (claim/complete/expire RPCs), `printer_configs`                                                                                                           |
+| Trust / QC    | `branch_trusted_egress_ips`, `branch_override_codes`, `branch_override_attempts`, `inventory_qc_settings`                                                              |
+| Notifications | `notifications`, `branch_feature_flags`                                                                                                                                |
+
+For the per-column / per-policy reference of a specific table, prefer reading the originating migration. The hand-written reference at `docs/spec/database-schema.md` is FROZEN at the Sprint 1 / early-M2 era and has not tracked Auth v2 / M5-Ext / Finance / Production / Print Agent.
 
 ## RLS Pattern
 

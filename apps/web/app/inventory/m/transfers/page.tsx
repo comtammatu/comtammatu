@@ -1,10 +1,19 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowRight as IconArrowRight, CircleCheck as IconCircleCheck, ChevronRight as IconChevronRight, History as IconHistory, PackagePlus as IconPackageImport, PackageX as IconPackageOff, Send as IconSend } from "lucide-react";
+import {
+  ArrowRight as IconArrowRight,
+  CircleCheck as IconCircleCheck,
+  ChevronRight as IconChevronRight,
+  History as IconHistory,
+  PackagePlus as IconPackageImport,
+  PackageX as IconPackageOff,
+  Send as IconSend,
+} from "lucide-react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import {
   extractClaimsFromAccessToken,
   INVENTORY_OPS_ROLES,
+  type StaffRole,
 } from "@comtammatu/shared/auth";
 import { MobilePage } from "../../_components/mobile/mobile-page";
 import { MobileSectionHeader } from "../../_components/mobile/mobile-section-header";
@@ -30,19 +39,38 @@ const TAB_LABELS: Record<Tab, string> = {
   dispatch: "Cần giao",
   history: "Lịch sử",
 };
+const BRANCH_SCOPED_TRANSFER_ROLES: readonly StaffRole[] = [
+  "branch_manager",
+  "warehouse_manager",
+  "production_manager",
+];
 
-function classifyTransfer(status: string, viewerBranchId: number | null, fromId: number, toId: number): Tab | null {
+function isBranchScopedTransferRole(role: StaffRole): boolean {
+  return BRANCH_SCOPED_TRANSFER_ROLES.includes(role);
+}
+
+function classifyTransfer(
+  status: string,
+  viewerBranchId: number | null,
+  fromId: number,
+  toId: number,
+  userRole: StaffRole,
+): Tab | null {
   const receiveStates = ["in_transit", "confirmed_ship", "confirmed_receive"];
   const dispatchStates = ["draft"];
   const terminal = ["received", "cancelled", "completed"];
   if (terminal.includes(status)) return "history";
   if (receiveStates.includes(status)) {
-    if (viewerBranchId != null && viewerBranchId !== toId && viewerBranchId !== fromId) {
+    if (viewerBranchId != null && viewerBranchId !== toId) {
       return "history";
     }
     return "receive";
   }
-  if (dispatchStates.includes(status)) return "dispatch";
+  if (dispatchStates.includes(status)) {
+    if (viewerBranchId != null && viewerBranchId !== fromId) return "history";
+    if (userRole === "branch_manager" && fromId !== toId) return "history";
+    return "dispatch";
+  }
   return "history";
 }
 
@@ -62,6 +90,12 @@ export default async function MobileTransferHome({
   const claims = extractClaimsFromAccessToken(session?.access_token);
   if (!claims || !INVENTORY_OPS_ROLES.includes(claims.user_role)) {
     redirect("/access-denied?reason=insufficient-permission");
+  }
+  if (
+    isBranchScopedTransferRole(claims.user_role) &&
+    claims.branch_id == null
+  ) {
+    redirect("/access-denied?reason=missing-branch-scope");
   }
 
   let query = supabase
@@ -114,6 +148,7 @@ export default async function MobileTransferHome({
       claims.branch_id,
       raw.from_branch_id,
       raw.to_branch_id,
+      claims.user_role,
     );
     if (classification) rawByTab[classification].push(t);
   }
@@ -286,4 +321,3 @@ function TransferRowCard({
     </InteractiveCard>
   );
 }
-

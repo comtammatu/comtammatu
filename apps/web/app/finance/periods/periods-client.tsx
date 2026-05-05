@@ -31,6 +31,9 @@ import {
   FORM_VI,
   STATES_VI,
 } from "@comtammatu/shared/messages";
+import { AppToolbar } from "@/components/surface";
+import { TableEmptyStateRow } from "@/components/table-empty-state-row";
+import { messages } from "@lib/messages";
 import {
   openFiscalPeriod,
   closeFiscalPeriod,
@@ -42,11 +45,8 @@ interface Props {
   periods: FiscalPeriodRow[];
 }
 
-const STATUS_LABEL: Record<string, string> = {
-  open: "Đang mở",
-  closing: "Đang đóng",
-  closed: "Đã đóng",
-};
+const STATUS_LABEL: Record<string, string> =
+  messages.finance.periods.statusLabels;
 
 const STATUS_VARIANT: Record<string, "default" | "secondary" | "outline"> = {
   open: "default",
@@ -165,13 +165,18 @@ export function PeriodsClient({ periods: initial }: Props) {
 
   return (
     <>
-      <div className="flex items-center justify-between">
-        <div />
+      <AppToolbar className="justify-between">
+        <div className="space-y-1">
+          <p className="text-sm font-medium">{messages.finance.periods.title}</p>
+          <p className="text-xs text-muted-foreground">
+            {messages.finance.periods.description}
+          </p>
+        </div>
         <Button onClick={handleOpenCurrent} size="sm" disabled={isPending}>
           <IconPlus className="mr-1.5 size-4" />
-          Mở kỳ tháng hiện tại
+          {messages.finance.periods.openCurrent}
         </Button>
-      </div>
+      </AppToolbar>
 
       {error && <p className="text-sm text-destructive">{error}</p>}
 
@@ -180,9 +185,11 @@ export function PeriodsClient({ periods: initial }: Props) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-32">Kỳ</TableHead>
+                <TableHead className="w-32">
+                  {messages.finance.periods.period}
+                </TableHead>
                 <TableHead className="w-28">{FORM_VI.status}</TableHead>
-                <TableHead>Ngày đóng</TableHead>
+                <TableHead>{messages.finance.periods.closedDate}</TableHead>
                 <TableHead>{FORM_VI.notes}</TableHead>
                 <TableHead className="w-48 text-right">
                   {FORM_VI.action}
@@ -191,15 +198,11 @@ export function PeriodsClient({ periods: initial }: Props) {
             </TableHeader>
             <TableBody>
               {periods.length === 0 ? (
-                <TableRow>
-                  <TableCell
+                  <TableEmptyStateRow
                     colSpan={5}
-                    className="py-10 text-center text-muted-foreground"
-                  >
-                    Chưa có kỳ kế toán nào. Nhấn &quot;Mở kỳ tháng hiện
-                    tại&quot; để bắt đầu.
-                  </TableCell>
-                </TableRow>
+                    title={messages.finance.periods.emptyTitle}
+                    description={messages.finance.periods.emptyDescription}
+                  />
               ) : (
                 periods.map((p) => (
                   <TableRow key={p.id}>
@@ -229,7 +232,7 @@ export function PeriodsClient({ periods: initial }: Props) {
                           }
                         >
                           <IconFileSearch className="mr-1 size-3.5" />
-                          Đối chiếu
+                          {messages.finance.periods.reconcile}
                         </Button>
                         {p.status === "open" && (
                           <Button
@@ -239,7 +242,7 @@ export function PeriodsClient({ periods: initial }: Props) {
                             disabled={isPending}
                           >
                             <IconLock className="mr-1 size-3.5" />
-                            Đóng kỳ
+                            {messages.finance.periods.closePeriod}
                           </Button>
                         )}
                       </div>
@@ -259,23 +262,26 @@ export function PeriodsClient({ periods: initial }: Props) {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Xác nhận đóng kỳ kế toán</DialogTitle>
+            <DialogTitle>
+              {messages.finance.periods.closeDialogTitle}
+            </DialogTitle>
             <DialogDescription>
-              Đóng kỳ{" "}
-              {closeTarget &&
-                formatPeriod(closeTarget.period_month, closeTarget.period_year)}
-              ? Sau khi đóng, không thể ghi sổ bút toán vào kỳ này.
+              {messages.finance.periods.closeDialogDescription(
+                closeTarget
+                  ? formatPeriod(closeTarget.period_month, closeTarget.period_year)
+                  : "",
+              )}
             </DialogDescription>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Hệ thống sẽ làm mới báo cáo, chạy đối chiếu GL, và khóa kỳ.
+            {messages.finance.periods.closeIntro}
           </p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCloseTarget(null)}>
               {ACTIONS_VI.cancel}
             </Button>
             <Button onClick={confirmClose} disabled={isPending}>
-              Đóng kỳ
+              {messages.finance.periods.closePeriod}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -292,8 +298,11 @@ export function PeriodsClient({ periods: initial }: Props) {
         <DialogContent className="sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>
-              Đối chiếu GL —{" "}
-              {reconTarget && formatPeriod(reconTarget.month, reconTarget.year)}
+              {messages.finance.periods.reconTitle(
+                reconTarget
+                  ? formatPeriod(reconTarget.month, reconTarget.year)
+                  : "",
+              )}
             </DialogTitle>
           </DialogHeader>
           {reconLoading ? (
@@ -305,13 +314,15 @@ export function PeriodsClient({ periods: initial }: Props) {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Mục</TableHead>
+                    <TableHead>{messages.finance.periods.item}</TableHead>
                     <TableHead className="w-32 text-right">
-                      Chứng từ gốc
+                      {messages.finance.periods.sourceDocument}
                     </TableHead>
-                    <TableHead className="w-32 text-right">GL</TableHead>
+                    <TableHead className="w-32 text-right">
+                      {messages.finance.periods.gl}
+                    </TableHead>
                     <TableHead className="w-28 text-right">
-                      Chênh lệch
+                      {messages.finance.periods.difference}
                     </TableHead>
                   </TableRow>
                 </TableHeader>
@@ -344,7 +355,7 @@ export function PeriodsClient({ periods: initial }: Props) {
             </div>
           ) : (
             <p className="py-6 text-center text-muted-foreground">
-              Không có dữ liệu.
+              {messages.finance.periods.noData}
             </p>
           )}
           <DialogFooter>

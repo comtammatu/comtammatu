@@ -36,7 +36,6 @@ import {
   ArrowLeft as IconArrowLeft,
   CircleCheck as IconCircleCheck,
   Info as IconInfoCircle,
-  PackageX as IconPackageOff,
   Save as IconDeviceFloppy,
   Plus as IconPlus,
   Trash as IconTrash,
@@ -54,7 +53,6 @@ import {
   deleteGrnLine,
   upsertGrnLine,
 } from "../../grn-actions";
-import { createSupplierReturnFromGrn } from "../../supplier-return-actions";
 import { tRoute } from "../../_lib/dictionary";
 import { m, messages } from "@lib/messages";
 import {
@@ -64,6 +62,10 @@ import {
 import type { IngredientRow } from "../../page";
 
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
+
+const grnCopy = messages.inventory.grn;
+const inventoryCommon = messages.inventory.common;
+
 export type GRNDetailItem = {
   lineId: number;
   ingredientId: number;
@@ -80,11 +82,7 @@ export type GRNDetailItem = {
   priceOverridePhotoUrl: string;
   priceVariancePct: number | null;
   requiresReview: boolean;
-  shortDeliveryAction:
-    | "accept_and_close"
-    | "wait_backorder"
-    | "request_credit"
-    | null;
+  shortDeliveryAction: "accept_and_close" | "wait_backorder" | null;
   unit: string;
   cost: number;
   lot: string;
@@ -145,7 +143,6 @@ export function GRNDetailClient({
   const [isConfirming, startConfirm] = useTransition();
   const [isSaving, startSave] = useTransition();
   const [isAmending, startAmend] = useTransition();
-  const [isCreatingReturn, startCreateReturn] = useTransition();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [amendingLine, setAmendingLine] = useState<EditableLine | null>(null);
   const [lines, setLines] = useState<EditableLine[]>(() =>
@@ -175,9 +172,6 @@ export function GRNDetailClient({
     return { acceptedLines, rejectedLines, reviewLines, total };
   }, [lines, qc.priceVarianceReviewPct]);
 
-  const hasRejections = lines.some(
-    (l) => l.qualityStatus === "rejected" || l.rejected > 0,
-  );
   const dirtyLines = lines.filter((l) => l.dirty);
 
   function patch(idx: number, p: Partial<EditableLine>) {
@@ -218,7 +212,7 @@ export function GRNDetailClient({
           notify.error(
             m(messages.inventory.grn.saveLinesFailed, {
               name: l.name,
-              reason: res.error ?? "Không thể lưu dòng.",
+              reason: res.error ?? grnCopy.saveLineFailed,
             }),
           );
           continue;
@@ -241,10 +235,10 @@ export function GRNDetailClient({
 
   async function handleDeleteLine(line: EditableLine) {
     const ok = await confirm({
-      title: "Xóa dòng GRN?",
+      title: grnCopy.deleteLineTitle,
       description: line.name,
       variant: "destructive",
-      confirmText: "Xóa dòng",
+      confirmText: grnCopy.deleteLineAction,
     });
     if (!ok) return;
 
@@ -254,11 +248,11 @@ export function GRNDetailClient({
         lineId: line.lineId,
       });
       if (!res.success) {
-        notify.error(res.error ?? "Không thể xóa dòng GRN.");
+        notify.error(res.error ?? grnCopy.deleteLineFailed);
         return;
       }
       setLines((prev) => prev.filter((item) => item.lineId !== line.lineId));
-      notify.success("Đã xóa dòng GRN.");
+      notify.success(grnCopy.deleteLineOk);
       router.refresh();
     });
   }
@@ -277,17 +271,17 @@ export function GRNDetailClient({
   function validateBeforeConfirm(): string | null {
     for (const l of lines) {
       if (l.rejected > 0 && !l.rejectionReason.trim()) {
-        return `${l.name}: phải nhập lý do khi có hàng từ chối.`;
+        return grnCopy.validation.rejectReasonRequired(l.name);
       }
       if (
         qc.rejectRequiresPhoto &&
         l.rejected > 0 &&
         !l.rejectedPhotoUrl.trim()
       ) {
-        return `${l.name}: phải đính kèm ảnh khi có hàng từ chối.`;
+        return grnCopy.validation.rejectPhotoRequired(l.name);
       }
       if (l.qualityStatus === "rejected" && l.actual > 0) {
-        return `${l.name}: đã đánh dấu từ chối toàn dòng — số thực nhận phải bằng 0.`;
+        return grnCopy.validation.fullRejectRequiresZero(l.name);
       }
       const tolerance = qc.qtyShortTolerancePct;
       if (
@@ -296,7 +290,7 @@ export function GRNDetailClient({
         l.actual + l.rejected < l.poQuantity * (1 - tolerance / 100) &&
         !l.shortDeliveryAction
       ) {
-        return `${l.name}: thiếu hàng vượt ngưỡng ${tolerance}% — phải chọn cách xử lý.`;
+        return grnCopy.validation.shortageActionRequired(l.name, tolerance);
       }
       const variance = deriveVariance(l.cost, l.poUnitPrice);
       if (
@@ -304,7 +298,7 @@ export function GRNDetailClient({
         Math.abs(variance) > qc.priceVarianceWarnPct &&
         !l.priceOverrideNote.trim()
       ) {
-        return `${l.name}: giá lệch ${variance}% — bắt buộc nhập lý do.`;
+        return grnCopy.validation.priceReasonRequired(l.name, variance);
       }
     }
     return null;
@@ -324,7 +318,7 @@ export function GRNDetailClient({
       title: messages.inventory.grn.confirmGrnTitle,
       description: messages.inventory.grn.confirmGrnDesc,
       variant: "destructive",
-      confirmText: "Chốt nhập kho",
+      confirmText: grnCopy.confirmGrnAction,
     });
     if (!ok) return;
     startConfirm(async () => {
@@ -354,41 +348,17 @@ export function GRNDetailClient({
     });
   }
 
-  function handleCreateReturn() {
-    if (!hasRejections) {
-      notify.error(messages.inventory.grn.returnNoRejection);
-      return;
-    }
-    startCreateReturn(async () => {
-      const res = await createSupplierReturnFromGrn({
-        grnId: grn.id,
-        resolution: "replacement",
-        reason: "damaged",
-        notes: null,
-      });
-      if (!res.success) {
-        notify.error(res.error ?? messages.inventory.grn.returnFailed);
-        return;
-      }
-      const data = res.data as { return_id?: number } | undefined;
-      notify.success(messages.inventory.grn.returnCreated);
-      if (data?.return_id) {
-        router.push(`/inventory/supplier-returns/${data.return_id}`);
-      }
-    });
-  }
-
   return (
     <>
       <InventoryHeader
-        title="Chi tiết phiếu nhập"
+        title={grnCopy.detailTitle}
         actions={
           <Link
             href={isMobile ? "/inventory/m/grn" : "/inventory/grn"}
             className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
           >
             <IconArrowLeft className="size-4" />{" "}
-            {isMobile ? "Quay lại" : tRoute("/inventory/grn", "heading")}
+            {isMobile ? grnCopy.back : tRoute("/inventory/grn", "heading")}
           </Link>
         }
       />
@@ -397,19 +367,16 @@ export function GRNDetailClient({
           {isReview && isDraft ? (
             <Alert>
               <IconInfoCircle className="size-4" />
-              <AlertDescription>
-                Đã lưu phiếu nháp. Kiểm tra số lượng, giá nhập, đánh dấu hàng hư
-                hỏng nếu có, rồi nhấn <strong>Chốt nhập kho</strong>.
-              </AlertDescription>
+              <AlertDescription>{grnCopy.draftSavedReviewHint}</AlertDescription>
             </Alert>
           ) : null}
 
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div className="space-y-1">
               <p className="text-sm font-medium text-muted-foreground">
-                Phiếu nhập kho
+                {grnCopy.documentLabel}
               </p>
-              <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+              <h1 className="font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
                 {grn.code}
               </h1>
               <p className="text-sm text-muted-foreground">
@@ -422,7 +389,7 @@ export function GRNDetailClient({
           </div>
 
           <div className="grid gap-3 md:grid-cols-4">
-            <SummaryCard label="PO liên kết">
+            <SummaryCard label={grnCopy.linkedPo}>
               {grn.poCode && grn.poId ? (
                 <Link
                   href={`/inventory/purchase-orders/${grn.poId}`}
@@ -431,16 +398,20 @@ export function GRNDetailClient({
                   {grn.poCode}
                 </Link>
               ) : (
-                <span className="text-muted-foreground">—</span>
+                <span className="text-muted-foreground">
+                  {inventoryCommon.noValue}
+                </span>
               )}
             </SummaryCard>
-            <SummaryCard label="Nhà cung cấp">{grn.supplier}</SummaryCard>
-            <SummaryCard label="Tổng giá trị nhập">
-              <span className="text-primary">{formatVND(stats.total)} ₫</span>
+            <SummaryCard label={grnCopy.supplier}>{grn.supplier}</SummaryCard>
+            <SummaryCard label={grnCopy.totalReceivedValue}>
+              <span className="text-primary">
+                {inventoryCommon.currency(formatVND(stats.total))}
+              </span>
             </SummaryCard>
-            <SummaryCard label="Cần kiểm tra giá">
+            <SummaryCard label={grnCopy.priceReviewNeeded}>
               <span className={stats.reviewLines > 0 ? "text-destructive" : ""}>
-                {stats.reviewLines} / {lines.length} dòng
+                {grnCopy.reviewRatio(stats.reviewLines, lines.length)}
               </span>
             </SummaryCard>
           </div>
@@ -450,11 +421,15 @@ export function GRNDetailClient({
               <Card className="overflow-hidden">
                 <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="space-y-1">
-                    <CardTitle>Danh sách mặt hàng kiểm nhận</CardTitle>
+                    <CardTitle>{grnCopy.inspectionItemsTitle}</CardTitle>
                     <p className="text-sm text-muted-foreground">
                       {isDraft
-                        ? `Tolerance: thiếu ≤ ${qc.qtyShortTolerancePct}% • Giá lệch ≥ ${qc.priceVarianceWarnPct}% bắt buộc lý do • ≥ ${qc.priceVarianceReviewPct}% gắn cờ kiểm tra`
-                        : `${lines.length} dòng đã chốt`}
+                        ? grnCopy.draftToleranceHint(
+                            qc.qtyShortTolerancePct,
+                            qc.priceVarianceWarnPct,
+                            qc.priceVarianceReviewPct,
+                          )
+                        : grnCopy.finalizedLineCount(lines.length)}
                     </p>
                   </div>
                   {isDraft ? (
@@ -464,7 +439,7 @@ export function GRNDetailClient({
                       onClick={() => setAddDialogOpen(true)}
                     >
                       <IconPlus className="size-4" />
-                      Thêm dòng
+                      {grnCopy.addLine}
                     </Button>
                   ) : null}
                 </CardHeader>
@@ -491,21 +466,21 @@ export function GRNDetailClient({
             <div className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-sm">Tổng hợp QC</CardTitle>
+                  <CardTitle className="text-sm">{grnCopy.qcSummary}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3 text-sm">
                   <Row
-                    label="Hàng đạt chuẩn"
+                    label={grnCopy.acceptedLines}
                     value={`${stats.acceptedLines}/${lines.length}`}
                     tone="success"
                   />
                   <Row
-                    label="Có hàng hư/từ chối"
+                    label={grnCopy.rejectedLines}
                     value={String(stats.rejectedLines)}
                     tone={stats.rejectedLines > 0 ? "warning" : "default"}
                   />
                   <Row
-                    label="Cần kiểm tra giá"
+                    label={grnCopy.priceReviewNeeded}
                     value={String(stats.reviewLines)}
                     tone={stats.reviewLines > 0 ? "warning" : "default"}
                   />
@@ -515,10 +490,10 @@ export function GRNDetailClient({
               <Card className="border-primary/20 bg-primary/5">
                 <CardContent className="space-y-3 pt-6">
                   <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                    Tổng giá trị nhập kho
+                    {grnCopy.totalStockValue}
                   </p>
                   <p className="text-2xl font-black tabular-nums text-primary">
-                    {formatVND(stats.total)} ₫
+                    {inventoryCommon.currency(formatVND(stats.total))}
                   </p>
                 </CardContent>
               </Card>
@@ -538,28 +513,18 @@ export function GRNDetailClient({
                           : "/inventory/grn"
                     }
                   >
-                    <IconArrowLeft className="size-5" /> Quay lại
+                    <IconArrowLeft className="size-5" />
+                    {grnCopy.back}
                   </Link>
                 </Button>
               ) : null}
 
-              {hasRejections ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleCreateReturn}
-                  disabled={isCreatingReturn}
-                >
-                  <IconPackageOff className="size-4" />
-                  Lập phiếu trả NCC
-                </Button>
-              ) : null}
               {!isDraft && canAdjustStock && lines.length > 0 ? (
                 <DocumentStockCorrectionDialog
                   documentType="grn"
                   documentId={grn.id}
                   documentCode={grn.code}
-                  branchOptions={[{ id: grn.branchId, name: "Kho nhận" }]}
+                  branchOptions={[{ id: grn.branchId, name: grnCopy.receivingWarehouse }]}
                   itemOptions={lines.map((line) => ({
                     ingredientId: line.ingredientId,
                     name: line.name,
@@ -578,8 +543,7 @@ export function GRNDetailClient({
                   disabled={isSaving || dirtyLines.length === 0}
                 >
                   <IconDeviceFloppy className="size-5" />
-                  Lưu thay đổi{" "}
-                  {dirtyLines.length > 0 ? `(${dirtyLines.length})` : ""}
+                  {grnCopy.saveChanges(dirtyLines.length)}
                 </Button>
                 <Button
                   type="button"
@@ -587,7 +551,7 @@ export function GRNDetailClient({
                   onClick={handleConfirmGrn}
                 >
                   <IconCircleCheck className="size-5" />
-                  Chốt nhập kho
+                  {grnCopy.confirmGrnAction}
                 </Button>
               </div>
             ) : null}
@@ -672,15 +636,15 @@ function AmendOwnerDialog({
     const trimmedReason = reason.trim();
 
     if (!Number.isFinite(parsedQty) || parsedQty < 0) {
-      notify.error("Số lượng không hợp lệ.");
+      notify.error(grnCopy.validation.invalidQuantity);
       return;
     }
     if (!Number.isFinite(parsedCost) || parsedCost < 0) {
-      notify.error("Đơn giá không hợp lệ.");
+      notify.error(grnCopy.validation.invalidUnitCost);
       return;
     }
     if (trimmedReason.length < 5) {
-      notify.error("Lý do tối thiểu 5 ký tự.");
+      notify.error(grnCopy.validation.reasonMinLength);
       return;
     }
 
@@ -693,10 +657,10 @@ function AmendOwnerDialog({
         reason: trimmedReason,
       });
       if (!res.success) {
-        notify.error(res.error ?? "Không thể sửa dòng phiếu nhập.");
+        notify.error(res.error ?? grnCopy.amend.failed);
         return;
       }
-      notify.success("Đã sửa dòng phiếu nhập (Owner).");
+      notify.success(grnCopy.amend.success);
       onSaved({
         ...line,
         actual: parsedQty,
@@ -711,31 +675,31 @@ function AmendOwnerDialog({
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Sửa dòng phiếu nhập (Owner)</DialogTitle>
+          <DialogTitle>{grnCopy.amend.title}</DialogTitle>
         </DialogHeader>
         {line ? (
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <Alert>
               <IconAlertTriangle className="size-4" />
-              <AlertDescription>
-                Sửa trực tiếp phiếu đã chốt sẽ ghi compensating
-                stock_movement và recompute matching hóa đơn. Hành động được
-                lưu vết audit. Không áp dụng cho phiếu có trả NCC active hoặc
-                hóa đơn đã thanh toán.
-              </AlertDescription>
+              <AlertDescription>{grnCopy.amend.warning}</AlertDescription>
             </Alert>
 
             <div className="rounded-lg border bg-muted/30 p-3 text-sm">
               <p className="font-bold">{line.name}</p>
               <p className="text-xs text-muted-foreground">
-                Hiện tại: {line.actual} {line.unit} @{" "}
-                {line.cost.toLocaleString("vi-VN")} ₫
+                {grnCopy.amend.current(
+                  line.actual,
+                  line.unit,
+                  line.cost.toLocaleString("vi-VN"),
+                )}
               </p>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="amend-qty">Số lượng nhận mới *</Label>
+                <Label htmlFor="amend-qty">
+                  {grnCopy.amend.quantityLabel}
+                </Label>
                 <FormattedNumberInput
                   id="amend-qty"
                   value={quantity}
@@ -745,7 +709,9 @@ function AmendOwnerDialog({
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="amend-cost">Đơn giá mới (₫) *</Label>
+                <Label htmlFor="amend-cost">
+                  {grnCopy.amend.unitCostLabel}
+                </Label>
                 <FormattedNumberInput
                   id="amend-cost"
                   value={unitCost}
@@ -757,14 +723,12 @@ function AmendOwnerDialog({
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="amend-reason">
-                Lý do sửa * (tối thiểu 5 ký tự)
-              </Label>
+              <Label htmlFor="amend-reason">{grnCopy.amend.reasonLabel}</Label>
               <Textarea
                 id="amend-reason"
                 rows={3}
                 value={reason}
-                placeholder="VD: Đối soát cuối tháng phát hiện gõ sai số lượng…"
+                placeholder={grnCopy.amend.reasonPlaceholder}
                 onChange={(event) => setReason(event.target.value)}
               />
             </div>
@@ -780,7 +744,7 @@ function AmendOwnerDialog({
               </Button>
               <Button type="submit" disabled={isPending}>
                 <IconDeviceFloppy className="size-4" />
-                Lưu sửa Owner
+                {grnCopy.amend.saveAction}
               </Button>
             </DialogFooter>
           </form>
@@ -842,19 +806,19 @@ function AddGrnLineDialog({
     );
 
     if (!parsedIngredientId || !ingredient) {
-      notify.error("Chọn nguyên liệu.");
+      notify.error(grnCopy.validation.chooseIngredient);
       return;
     }
     if (!Number.isFinite(parsedQuantity) || parsedQuantity < 0) {
-      notify.error("Số lượng nhận không hợp lệ.");
+      notify.error(grnCopy.validation.invalidReceivedQuantity);
       return;
     }
     if (!unit.trim()) {
-      notify.error("Đơn vị không được để trống.");
+      notify.error(grnCopy.validation.unitRequired);
       return;
     }
     if (!Number.isFinite(parsedUnitCost) || parsedUnitCost < 0) {
-      notify.error("Đơn giá không hợp lệ.");
+      notify.error(grnCopy.validation.invalidUnitCost);
       return;
     }
 
@@ -876,7 +840,7 @@ function AddGrnLineDialog({
         expiryDate: expiryDate || null,
       });
       if (!res.success || !res.data) {
-        notify.error(res.error ?? "Không thể lưu dòng GRN.");
+        notify.error(res.error ?? grnCopy.saveLineFailed);
         return;
       }
 
@@ -902,13 +866,13 @@ function AddGrnLineDialog({
         cost: parsedUnitCost,
         lot: batchNumber.trim(),
         expiry: expiryDate,
-        expiryDisplay: expiryDate || "—",
+        expiryDisplay: expiryDate || inventoryCommon.noValue,
         temp: null,
         qualityStatus: "accepted",
         status: "pass",
         dirty: false,
       });
-      notify.success("Đã lưu dòng GRN.");
+      notify.success(grnCopy.addDialog.success);
       onOpenChange(false);
       resetForm();
     });
@@ -924,11 +888,11 @@ function AddGrnLineDialog({
     >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Thêm dòng phiếu nhập</DialogTitle>
+          <DialogTitle>{grnCopy.addDialog.title}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <Label>Nguyên liệu *</Label>
+            <Label>{grnCopy.addDialog.ingredientLabel}</Label>
             <Combobox
               value={ingredientId}
               onValueChange={handleIngredientChange}
@@ -940,14 +904,16 @@ function AddGrnLineDialog({
                   hint: ingredient.purchase_unit ?? ingredient.unit,
                   keywords: [ingredient.sku ?? "", ingredient.category ?? ""],
                 }))}
-              placeholder="Chọn nguyên liệu"
-              searchPlaceholder="Tìm tên, SKU, danh mục..."
+              placeholder={grnCopy.addDialog.ingredientPlaceholder}
+              searchPlaceholder={grnCopy.addDialog.ingredientSearchPlaceholder}
             />
           </div>
 
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="grn-line-qty">Số lượng nhận *</Label>
+              <Label htmlFor="grn-line-qty">
+                {grnCopy.addDialog.quantityLabel}
+              </Label>
               <FormattedNumberInput
                 id="grn-line-qty"
                 value={quantity}
@@ -957,7 +923,9 @@ function AddGrnLineDialog({
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="grn-line-unit">Đơn vị *</Label>
+              <Label htmlFor="grn-line-unit">
+                {grnCopy.addDialog.unitLabel}
+              </Label>
               <Input
                 id="grn-line-unit"
                 value={unit}
@@ -967,7 +935,9 @@ function AddGrnLineDialog({
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="grn-line-cost">Đơn giá *</Label>
+              <Label htmlFor="grn-line-cost">
+                {grnCopy.addDialog.unitCostLabel}
+              </Label>
               <FormattedNumberInput
                 id="grn-line-cost"
                 value={unitCost}
@@ -980,16 +950,20 @@ function AddGrnLineDialog({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="grn-line-batch">Số lô</Label>
+              <Label htmlFor="grn-line-batch">
+                {grnCopy.addDialog.batchLabel}
+              </Label>
               <Input
                 id="grn-line-batch"
                 value={batchNumber}
                 onChange={(event) => setBatchNumber(event.target.value)}
-                placeholder="—"
+                placeholder={inventoryCommon.noValue}
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="grn-line-expiry">HSD</Label>
+              <Label htmlFor="grn-line-expiry">
+                {grnCopy.addDialog.expiryLabel}
+              </Label>
               <Input
                 id="grn-line-expiry"
                 type="date"
@@ -1009,7 +983,7 @@ function AddGrnLineDialog({
             </Button>
             <Button type="submit" disabled={isPending}>
               <IconPlus className="size-4" />
-              Lưu dòng
+              {grnCopy.addDialog.saveAction}
             </Button>
           </DialogFooter>
         </form>
@@ -1083,7 +1057,9 @@ function LineRow({
 }) {
   const variance = deriveVariance(line.cost, line.poUnitPrice);
   const variancesLabel =
-    variance != null ? `${variance > 0 ? "+" : ""}${variance}%` : "—";
+    variance != null
+      ? `${variance > 0 ? "+" : ""}${variance}%`
+      : inventoryCommon.noValue;
   const varianceTone =
     variance == null
       ? "text-muted-foreground"
@@ -1107,8 +1083,14 @@ function LineRow({
           <div>
             <p className="font-bold">{line.name}</p>
             <p className="text-xs text-muted-foreground">
-              {line.required} {line.unit} đặt → {line.actual} {line.unit} nhận
-              {line.rejected > 0 ? ` • Trả ${line.rejected} ${line.unit}` : ""}
+              {grnCopy.line.orderedReceived(
+                line.required,
+                line.unit,
+                line.actual,
+              )}
+              {line.rejected > 0
+                ? grnCopy.line.rejectedSuffix(line.rejected, line.unit)
+                : ""}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -1119,7 +1101,7 @@ function LineRow({
                 size="sm"
                 onClick={onAmend}
               >
-                Sửa Owner
+                {grnCopy.amend.action}
               </Button>
             ) : null}
             {line.qualityStatus === "rejected" || line.rejected > 0 ? (
@@ -1130,32 +1112,38 @@ function LineRow({
           </div>
         </div>
         <div className="mt-3 grid grid-cols-2 gap-2 text-xs md:grid-cols-4">
-          <Stat label="Giá nhập">{formatVND(line.cost)} ₫</Stat>
-          <Stat label="Giá PO">
-            {line.poUnitPrice != null
-              ? `${formatVND(line.poUnitPrice)} ₫`
-              : "—"}
+          <Stat label={grnCopy.line.importPrice}>
+            {inventoryCommon.currency(formatVND(line.cost))}
           </Stat>
-          <Stat label="Lệch giá">
+          <Stat label={grnCopy.line.poPrice}>
+            {line.poUnitPrice != null
+              ? inventoryCommon.currency(formatVND(line.poUnitPrice))
+              : inventoryCommon.noValue}
+          </Stat>
+          <Stat label={grnCopy.line.priceVariance}>
             <span className={varianceTone}>{variancesLabel}</span>
           </Stat>
-          <Stat label="HSD">{line.expiryDisplay}</Stat>
+          <Stat label={grnCopy.line.expiry}>{line.expiryDisplay}</Stat>
         </div>
         {line.rejectionReason ? (
           <p className="mt-2 text-xs text-muted-foreground">
-            <span className="font-semibold">Lý do từ chối:</span>{" "}
+            <span className="font-semibold">
+              {grnCopy.line.rejectionReason}
+            </span>{" "}
             {line.rejectionReason}
           </p>
         ) : null}
         {line.priceOverrideNote ? (
           <p className="mt-1 text-xs text-muted-foreground">
-            <span className="font-semibold">Lý do giá lệch:</span>{" "}
+            <span className="font-semibold">
+              {grnCopy.line.priceOverrideReason}
+            </span>{" "}
             {line.priceOverrideNote}
           </p>
         ) : null}
         {line.requiresReview ? (
           <Badge variant="destructive" className="mt-2">
-            Cần kiểm tra
+            {grnCopy.line.reviewNeeded}
           </Badge>
         ) : null}
         </CardContent>
@@ -1171,19 +1159,22 @@ function LineRow({
         <div>
           <p className="font-bold">{line.name}</p>
           <p className="text-xs text-muted-foreground">
-            Đặt: {line.poQuantity ?? "—"} {line.unit} • Giá PO:{" "}
+            {grnCopy.line.orderedPoPrice(
+              line.poQuantity ?? inventoryCommon.noValue,
+              line.unit,
+            )}{" "}
             {line.poUnitPrice != null
-              ? `${formatVND(line.poUnitPrice)} ₫`
-              : "—"}
+              ? inventoryCommon.currency(formatVND(line.poUnitPrice))
+              : inventoryCommon.noValue}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <span className={`text-sm ${varianceTone}`}>
-            Lệch giá: {variancesLabel}
+            {grnCopy.line.priceVariance}: {variancesLabel}
           </span>
           {line.dirty ? (
             <Badge variant="outline" className="text-xs">
-              chưa lưu
+              {grnCopy.line.unsaved}
             </Badge>
           ) : null}
           <Button
@@ -1192,7 +1183,7 @@ function LineRow({
             size="icon"
             onClick={onDelete}
             className="text-muted-foreground hover:text-destructive"
-            aria-label="Xóa dòng"
+            aria-label={grnCopy.line.deleteLineAria}
           >
             <IconTrash className="size-4" />
           </Button>
@@ -1200,7 +1191,7 @@ function LineRow({
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Field id={`actual-${idx}`} label={`Thực nhận (${line.unit})`}>
+        <Field id={`actual-${idx}`} label={grnCopy.line.actualLabel(line.unit)}>
           <FormattedNumberInput
             id={`actual-${idx}`}
             maxFractionDigits={3}
@@ -1208,7 +1199,10 @@ function LineRow({
             onValueChange={(value) => onChange({ actual: Number(value || 0) })}
           />
         </Field>
-        <Field id={`rejected-${idx}`} label={`Trả lại (${line.unit})`}>
+        <Field
+          id={`rejected-${idx}`}
+          label={grnCopy.line.rejectedLabel(line.unit)}
+        >
           <FormattedNumberInput
             id={`rejected-${idx}`}
             maxFractionDigits={3}
@@ -1226,7 +1220,7 @@ function LineRow({
             }
           />
         </Field>
-        <Field id={`cost-${idx}`} label="Đơn giá (₫)">
+        <Field id={`cost-${idx}`} label={grnCopy.line.unitCostCurrency}>
           <FormattedNumberInput
             id={`cost-${idx}`}
             maxFractionDigits={0}
@@ -1234,7 +1228,7 @@ function LineRow({
             onValueChange={(value) => onChange({ cost: Number(value || 0) })}
           />
         </Field>
-        <Field id={`expiry-${idx}`} label="HSD">
+        <Field id={`expiry-${idx}`} label={grnCopy.line.expiry}>
           <Input
             id={`expiry-${idx}`}
             type="date"
@@ -1246,18 +1240,18 @@ function LineRow({
 
       {line.rejected > 0 || line.qualityStatus === "rejected" ? (
         <div className="grid gap-3 md:grid-cols-2">
-          <Field id={`reason-${idx}`} label="Lý do từ chối *">
+          <Field id={`reason-${idx}`} label={grnCopy.line.rejectReasonRequired}>
             <Textarea
               id={`reason-${idx}`}
               rows={2}
               value={line.rejectionReason}
-              placeholder="VD: Sườn thâm, đóng gói rách, cận date <3 ngày…"
+              placeholder={grnCopy.line.rejectReasonPlaceholder}
               onChange={(e) => onChange({ rejectionReason: e.target.value })}
             />
           </Field>
           <Field
             id={`reject-photo-${idx}`}
-            label={`Ảnh chứng từ${qc.rejectRequiresPhoto ? " *" : ""}`}
+            label={grnCopy.line.proofPhotoLabel(qc.rejectRequiresPhoto)}
           >
             <PhotoUploadInput
               tenantId={tenantId}
@@ -1271,21 +1265,33 @@ function LineRow({
 
       {variance != null && Math.abs(variance) > qc.priceVarianceWarnPct ? (
         <div className="grid gap-3 md:grid-cols-2">
-          <Field id={`override-${idx}`} label="Lý do giá lệch *">
+          <Field
+            id={`override-${idx}`}
+            label={grnCopy.line.priceOverrideRequired}
+          >
             <Textarea
               id={`override-${idx}`}
               rows={2}
               value={line.priceOverrideNote}
               placeholder={
                 Math.abs(variance) > qc.priceVarianceReviewPct
-                  ? `Giá lệch ${variance}% vượt ngưỡng kiểm tra ${qc.priceVarianceReviewPct}%. Bắt buộc nhập lý do + ảnh hóa đơn NCC.`
-                  : `Giá lệch ${variance}% vượt ngưỡng cảnh báo ${qc.priceVarianceWarnPct}%. Nhập lý do để audit.`
+                  ? grnCopy.line.reviewVariancePlaceholder(
+                      variance,
+                      qc.priceVarianceReviewPct,
+                    )
+                  : grnCopy.line.warnVariancePlaceholder(
+                      variance,
+                      qc.priceVarianceWarnPct,
+                    )
               }
               onChange={(e) => onChange({ priceOverrideNote: e.target.value })}
             />
           </Field>
           {Math.abs(variance) > qc.priceVarianceReviewPct ? (
-            <Field id={`override-photo-${idx}`} label="Ảnh hóa đơn NCC *">
+            <Field
+              id={`override-photo-${idx}`}
+              label={grnCopy.line.supplierInvoicePhoto}
+            >
               <PhotoUploadInput
                 tenantId={tenantId}
                 folder={`grn/${grnId}/price-override/${line.lineId}`}
@@ -1300,7 +1306,7 @@ function LineRow({
       ) : null}
 
       {shortDeliveryRequired ? (
-        <Field id={`short-${idx}`} label="Xử lý hàng thiếu *">
+        <Field id={`short-${idx}`} label={grnCopy.line.shortageAction}>
           <Select
             value={line.shortDeliveryAction ?? ""}
             onValueChange={(v) =>
@@ -1310,28 +1316,25 @@ function LineRow({
             }
           >
             <SelectTrigger id={`short-${idx}`}>
-              <SelectValue placeholder="Chọn cách xử lý…" />
+              <SelectValue placeholder={grnCopy.line.shortagePlaceholder} />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="accept_and_close">
-                Chấp nhận, đóng PO (không chờ giao bù)
+                {grnCopy.line.acceptAndClose}
               </SelectItem>
               <SelectItem value="wait_backorder">
-                Chờ NCC giao bù (giữ PO partially_received)
-              </SelectItem>
-              <SelectItem value="request_credit">
-                Yêu cầu credit note / trả tiền
+                {grnCopy.line.waitBackorder}
               </SelectItem>
             </SelectContent>
           </Select>
         </Field>
       ) : null}
 
-      <Field id={`lot-${idx}`} label="Số lô">
+      <Field id={`lot-${idx}`} label={grnCopy.line.lot}>
         <Input
           id={`lot-${idx}`}
           value={line.lot}
-          placeholder="—"
+          placeholder={inventoryCommon.noValue}
           onChange={(e) => onChange({ lot: e.target.value })}
         />
       </Field>

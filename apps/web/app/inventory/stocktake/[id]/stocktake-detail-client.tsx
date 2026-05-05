@@ -36,6 +36,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui";
+import { messages } from "@lib/messages";
 import { InventoryHeader } from "../../_components/inventory-header";
 import { FormattedNumberInput } from "../../_components/formatted-number-input";
 import { TableEmptyStateRow } from "../../_components/table-empty-state-row";
@@ -50,6 +51,11 @@ import {
 /* ─── Types ─── */
 
 import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
+
+const stocktakeCopy = messages.inventory.stocktake;
+const stocktakeDetailCopy = stocktakeCopy.detail;
+const inventoryCommon = messages.inventory.common;
+
 interface StocktakeSession {
   id: number;
   branch_id: number;
@@ -80,15 +86,15 @@ interface StocktakeLine {
 
 const STATUS_META: Record<string, { label: string; className: string }> = {
   in_progress: {
-    label: "Đang thực hiện",
+    label: stocktakeDetailCopy.status.inProgress,
     className: "bg-warning/10 text-warning border-warning/30",
   },
   completed: {
-    label: "Hòan tất",
+    label: stocktakeDetailCopy.status.completed,
     className: "bg-success/10 text-success border-success/30",
   },
   cancelled: {
-    label: "Đã hủy",
+    label: stocktakeDetailCopy.status.cancelled,
     className: "bg-muted text-muted-foreground",
   },
 };
@@ -128,26 +134,27 @@ export function StocktakeDetailClient({
     [lines],
   );
   const headerDescription = [
-    `Ngày tạo: ${new Date(session.created_at).toLocaleDateString("vi-VN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    })}`,
+    stocktakeDetailCopy.createdAt(
+      new Date(session.created_at).toLocaleDateString("vi-VN", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    ),
     session.completed_at
-      ? `Hòan tất: ${new Date(session.completed_at).toLocaleDateString(
-          "vi-VN",
-          {
+      ? stocktakeDetailCopy.completedAt(
+          new Date(session.completed_at).toLocaleDateString("vi-VN", {
             day: "2-digit",
             month: "2-digit",
             year: "numeric",
             hour: "2-digit",
             minute: "2-digit",
-          },
-        )}`
+          }),
+        )
       : null,
-    session.notes ? `Ghi chú: ${session.notes}` : null,
+    session.notes ? stocktakeDetailCopy.notes(session.notes) : null,
   ]
     .filter(Boolean)
     .join(" • ");
@@ -178,7 +185,7 @@ export function StocktakeDetailClient({
             varianceReason: currentLine.variance_reason ?? undefined,
           });
           if (!res.success) {
-            toast.error(res.error ?? "Không thể cập nhật");
+            toast.error(res.error ?? stocktakeDetailCopy.updateFailed);
           } else {
             setSavedLines((prev) => new Set(prev).add(lineId));
             refreshData();
@@ -200,7 +207,7 @@ export function StocktakeDetailClient({
         varianceReason: reason || undefined,
       });
       if (!res.success) {
-        toast.error(res.error ?? "Không thể cập nhật");
+        toast.error(res.error ?? stocktakeDetailCopy.updateFailed);
       } else {
         setSavedLines((prev) => new Set(prev).add(lineId));
         refreshData();
@@ -212,11 +219,11 @@ export function StocktakeDetailClient({
     startTransition(async () => {
       const res = await completeStocktake(session.id);
       if (!res.success) {
-        toast.error(res.error ?? "Không thể hòan tất kiểm kê.");
+        toast.error(res.error ?? stocktakeDetailCopy.completeFailed);
         setCompleteDialogOpen(false);
         return;
       }
-      toast.success("Đã hòan tất kiểm kê");
+      toast.success(stocktakeDetailCopy.completeOk);
       setCompleteDialogOpen(false);
       refreshData();
     });
@@ -226,11 +233,11 @@ export function StocktakeDetailClient({
     startTransition(async () => {
       const res = await cancelStocktake(session.id);
       if (!res.success) {
-        toast.error(res.error ?? "Không thể hủy phiên kiểm kê.");
+        toast.error(res.error ?? stocktakeDetailCopy.cancelFailed);
         setCancelDialogOpen(false);
         return;
       }
-      toast.success("Đã hủy phiên kiểm kê");
+      toast.success(stocktakeDetailCopy.cancelOk);
       setCancelDialogOpen(false);
       refreshData();
     });
@@ -239,7 +246,7 @@ export function StocktakeDetailClient({
   return (
     <>
       <InventoryHeader
-        title="Chi tiết kiểm kê"
+        title={stocktakeDetailCopy.title}
         actions={
           <Link
             href={`${routeBase}?branchId=${session.branch_id}`}
@@ -255,10 +262,10 @@ export function StocktakeDetailClient({
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-1">
           <p className="text-sm font-medium text-muted-foreground">
-            Kiểm soát cuối ca
+            {stocktakeDetailCopy.controlLabel}
           </p>
           <div className="space-y-1">
-            <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+            <h1 className="font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
               {`KK-${session.id}`}
             </h1>
             <p className="text-sm text-muted-foreground">{headerDescription}</p>
@@ -274,14 +281,14 @@ export function StocktakeDetailClient({
                 disabled={isPending}
               >
                 <IconBan className="mr-2 size-4" />
-                Hủy kiểm kê
+                {stocktakeDetailCopy.cancelAction}
               </Button>
               <Button
                 onClick={() => setCompleteDialogOpen(true)}
                 disabled={isPending}
               >
                 <IconCircleCheck className="mr-2 size-4" />
-                Hòan tất kiểm kê
+                {stocktakeDetailCopy.completeAction}
               </Button>
             </>
           ) : null}
@@ -291,19 +298,19 @@ export function StocktakeDetailClient({
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[
           {
-            label: "Trạng thái",
+            label: stocktakeDetailCopy.metrics.status,
             value: meta.label,
           },
           {
-            label: "Đã đếm",
+            label: stocktakeDetailCopy.metrics.counted,
             value: `${countedCount}/${lines.length}`,
           },
           {
-            label: "Tiến độ",
+            label: stocktakeDetailCopy.metrics.progress,
             value: `${progressPct}%`,
           },
           {
-            label: "Dòng lệch",
+            label: stocktakeDetailCopy.metrics.varianceLines,
             value: String(varianceCount).padStart(2, "0"),
           },
         ].map((item) => (
@@ -323,11 +330,11 @@ export function StocktakeDetailClient({
             <div className="flex items-center gap-3 text-sm">
               <IconClipboardCheck className="size-4 text-muted-foreground" />
               <span className="text-muted-foreground">
-                Tiến độ:{" "}
-                <span className="font-medium text-foreground">
-                  {countedCount}/{lines.length}
-                </span>{" "}
-                đã đếm ({progressPct}%)
+                {stocktakeDetailCopy.progressText(
+                  countedCount,
+                  lines.length,
+                  progressPct,
+                )}
               </span>
               <Progress value={progressPct} className="h-2 max-w-48 flex-1" />
             </div>
@@ -340,10 +347,11 @@ export function StocktakeDetailClient({
         <Card>
           <CardContent className="flex flex-col items-center justify-center gap-2 py-10 text-center">
             <IconCircleX className="size-8 text-muted-foreground" />
-            <p className="text-base font-semibold">Phiên kiểm kê đã bị hủy</p>
+            <p className="text-base font-semibold">
+              {stocktakeDetailCopy.cancelledTitle}
+            </p>
             <p className="text-sm text-muted-foreground">
-              Dữ liệu đếm trước đó không còn hiệu lực và phiên này không thể
-              tiếp tục chỉnh sửa.
+              {stocktakeDetailCopy.cancelledDescription}
             </p>
           </CardContent>
         </Card>
@@ -375,16 +383,19 @@ export function StocktakeDetailClient({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Chốt kết quả kiểm kê?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {stocktakeDetailCopy.completeDialogTitle}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Hành động này sẽ tính chênh lệch và cập nhật tồn kho hệ thống. Sau
-              khi chốt, phiên kiểm kê sẽ chuyển sang lớp đối chiếu kết quả.
+              {stocktakeDetailCopy.completeDialogDescription}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isPending}>{ACTIONS_VI.cancel}</AlertDialogCancel>
             <AlertDialogAction onClick={handleComplete} disabled={isPending}>
-              {isPending ? "Đang xử lý..." : "Chốt kết quả"}
+              {isPending
+                ? stocktakeDetailCopy.processing
+                : stocktakeDetailCopy.completeResultAction}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -394,10 +405,11 @@ export function StocktakeDetailClient({
       <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Hủy phiên kiểm kê?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {stocktakeDetailCopy.cancelDialogTitle}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Tất cả dữ liệu đã đếm sẽ bị hủy và không còn được đối chiếu trong
-              phiên này.
+              {stocktakeDetailCopy.cancelDialogDescription}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -407,7 +419,9 @@ export function StocktakeDetailClient({
               disabled={isPending}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {isPending ? "Đang xử lý..." : "Xác nhận hủy"}
+              {isPending
+                ? stocktakeDetailCopy.processing
+                : stocktakeDetailCopy.confirmCancelAction}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -441,11 +455,10 @@ function CountingPhase({
             <Empty className="py-8">
               <EmptyHeader>
                 <EmptyTitle className="text-sm font-semibold">
-                  Không có nguyên liệu để kiểm kê
+                  {stocktakeDetailCopy.emptyCountTitle}
                 </EmptyTitle>
                 <EmptyDescription className="text-xs leading-5">
-                  Kho hiện chưa có dòng tồn nào cần thực hiện kiểm kê trong phiên
-                  này.
+                  {stocktakeDetailCopy.emptyCountDescription}
                 </EmptyDescription>
               </EmptyHeader>
             </Empty>
@@ -460,12 +473,14 @@ function CountingPhase({
                     {savedLines.has(line.id) && (
                       <span className="inline-flex shrink-0 items-center gap-1 text-xs text-success">
                         <IconCheck className="size-3" />
-                        Đã lưu
+                        {stocktakeDetailCopy.saved}
                       </span>
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {line.ingredients?.purchase_unit ?? line.ingredients?.unit ?? "—"}
+                    {line.ingredients?.purchase_unit ??
+                      line.ingredients?.unit ??
+                      inventoryCommon.noValue}
                   </p>
                   <div className="flex items-center gap-2">
                     <FormattedNumberInput
@@ -475,7 +490,7 @@ function CountingPhase({
                           ? String(line.counted_quantity)
                           : ""
                       }
-                      placeholder="SL thực đếm"
+                      placeholder={stocktakeDetailCopy.countedQtyPlaceholder}
                       className="h-8 flex-1 tabular-nums"
                       onValueBlur={(value) => onLineBlur(line.id, value)}
                       maxFractionDigits={3}
@@ -484,7 +499,7 @@ function CountingPhase({
                     <Input
                       type="text"
                       defaultValue={line.variance_reason ?? ""}
-                      placeholder="Lý do"
+                      placeholder={stocktakeDetailCopy.reasonPlaceholder}
                       className="h-8 flex-1 text-sm"
                       onBlur={(e) =>
                         onReasonBlur(line.id, e.target.value.trim())
@@ -515,10 +530,10 @@ function CountingPhase({
                   {FORM_VI.unit}
                 </TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                  SL thực đếm
+                  {stocktakeDetailCopy.countedQtyPlaceholder}
                 </TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                  Lý do chênh lệch
+                  {stocktakeDetailCopy.varianceReason}
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -527,8 +542,8 @@ function CountingPhase({
                 <TableEmptyStateRow
                   colSpan={4}
                   paddingClassName="py-14"
-                  title="Không có nguyên liệu để kiểm kê"
-                  description="Kho hiện chưa có dòng tồn nào cần thực hiện kiểm kê trong phiên này."
+                  title={stocktakeDetailCopy.emptyCountTitle}
+                  description={stocktakeDetailCopy.emptyCountDescription}
                 />
               )}
               {lines.map((line) => (
@@ -539,13 +554,15 @@ function CountingPhase({
                       {savedLines.has(line.id) && (
                         <span className="inline-flex items-center gap-0.5 text-xs text-success">
                           <IconCheck className="size-3" />
-                          Đã lưu
+                          {stocktakeDetailCopy.saved}
                         </span>
                       )}
                     </div>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {line.ingredients?.purchase_unit ?? line.ingredients?.unit ?? "—"}
+                    {line.ingredients?.purchase_unit ??
+                      line.ingredients?.unit ??
+                      inventoryCommon.noValue}
                   </TableCell>
                   <TableCell>
                     <FormattedNumberInput
@@ -566,7 +583,7 @@ function CountingPhase({
                     <Input
                       type="text"
                       defaultValue={line.variance_reason ?? ""}
-                      placeholder="Lý do (tùy chọn)"
+                      placeholder={stocktakeDetailCopy.optionalReasonPlaceholder}
                       className="h-8 w-48 text-sm"
                       onBlur={(e) =>
                         onReasonBlur(line.id, e.target.value.trim())
@@ -613,18 +630,20 @@ function ResultsPhase({
     <div className="space-y-3">
       {/* Variance legend */}
       <div className="flex flex-wrap items-center gap-4 text-xs">
-        <span className="text-muted-foreground font-medium">Chênh lệch:</span>
+        <span className="text-muted-foreground font-medium">
+          {stocktakeDetailCopy.results.legendTitle}
+        </span>
         <span className="inline-flex items-center gap-1.5">
           <span className="size-2.5 rounded-full bg-success" />
-          {"<"}1% (tốt)
+          {stocktakeDetailCopy.results.good}
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span className="size-2.5 rounded-full bg-warning" />
-          1–5% (cần xem lại)
+          {stocktakeDetailCopy.results.review}
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span className="size-2.5 rounded-full bg-destructive" />
-          {">"}5% (nghiêm trọng)
+          {stocktakeDetailCopy.results.severe}
         </span>
       </div>
 
@@ -635,11 +654,10 @@ function ResultsPhase({
               <Empty className="py-8">
                 <EmptyHeader>
                   <EmptyTitle className="text-sm font-semibold">
-                    Không có dữ liệu kiểm kê
+                    {stocktakeDetailCopy.results.emptyTitle}
                   </EmptyTitle>
                   <EmptyDescription className="text-xs leading-5">
-                    Kết quả chênh lệch sẽ xuất hiện tại đây sau khi phiên kiểm kê
-                    có dữ liệu.
+                    {stocktakeDetailCopy.results.emptyDescription}
                   </EmptyDescription>
                 </EmptyHeader>
               </Empty>
@@ -672,8 +690,10 @@ function ResultsPhase({
                       </div>
                       <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
                         <span>
-                          HT: {line.system_quantity} · Đếm:{" "}
-                          {line.counted_quantity ?? "—"}
+                          {stocktakeDetailCopy.results.systemShort}:{" "}
+                          {line.system_quantity} ·{" "}
+                          {stocktakeDetailCopy.results.countedShort}:{" "}
+                          {line.counted_quantity ?? inventoryCommon.noValue}
                         </span>
                         <span className="truncate text-right">
                           {line.variance_reason ?? ""}
@@ -700,13 +720,13 @@ function ResultsPhase({
                       {FORM_VI.unit}
                     </TableHead>
                     <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                      SL hệ thống
+                      {stocktakeDetailCopy.results.systemQty}
                     </TableHead>
                     <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                      SL thực đếm
+                      {stocktakeDetailCopy.results.countedQty}
                     </TableHead>
                     <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                      Chênh lệch
+                      {stocktakeDetailCopy.results.variance}
                     </TableHead>
                     <TableHead className="text-xs font-semibold uppercase tracking-wider">
                       {FORM_VI.reason}
@@ -718,8 +738,8 @@ function ResultsPhase({
                     <TableEmptyStateRow
                       colSpan={6}
                       paddingClassName="py-14"
-                      title="Không có dữ liệu kiểm kê"
-                      description="Kết quả chênh lệch sẽ xuất hiện tại đây sau khi phiên kiểm kê có dữ liệu."
+                      title={stocktakeDetailCopy.results.emptyTitle}
+                      description={stocktakeDetailCopy.results.emptyDescription}
                     />
                   )}
                   {lines.map((line) => {
@@ -732,13 +752,15 @@ function ResultsPhase({
                           {line.ingredients?.name ?? `#${line.ingredient_id}`}
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
-                          {line.ingredients?.purchase_unit ?? line.ingredients?.unit ?? "—"}
+                          {line.ingredients?.purchase_unit ??
+                            line.ingredients?.unit ??
+                            inventoryCommon.noValue}
                         </TableCell>
                         <TableCell className="text-sm tabular-nums">
                           {line.system_quantity}
                         </TableCell>
                         <TableCell className="text-sm tabular-nums">
-                          {line.counted_quantity ?? "—"}
+                          {line.counted_quantity ?? inventoryCommon.noValue}
                         </TableCell>
                         <TableCell
                           className={cn(
@@ -750,7 +772,7 @@ function ResultsPhase({
                           {variance}
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
-                          {line.variance_reason ?? "—"}
+                          {line.variance_reason ?? inventoryCommon.noValue}
                         </TableCell>
                       </TableRow>
                     );

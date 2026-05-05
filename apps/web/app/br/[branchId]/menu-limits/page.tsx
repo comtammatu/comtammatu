@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft as IconArrowLeft } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { loadAuthState } from "@/_lib/auth";
+import { messages } from "@lib/messages";
 import { fetchBranchMenuDailyLimits } from "./actions";
 import { MenuLimitsTable } from "./menu-limits-table";
 
@@ -47,11 +48,13 @@ export default async function BranchMenuLimitsPage({
         <Button asChild variant="outline" size="sm" className="gap-1">
           <Link href={`/br/${branchId}/settings`}>
             <IconArrowLeft className="size-4" />
-            Cài đặt chi nhánh
+            {messages.settings.branch.branchSettingsBack}
           </Link>
         </Button>
         <div className="min-w-0">
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Hạn mức bán hàng ngày</h1>
+          <h1 className="font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
+            {messages.settings.branch.menuLimitsTitle}
+          </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {branch.name} · {today}
           </p>
@@ -60,17 +63,18 @@ export default async function BranchMenuLimitsPage({
 
       <div className="rounded-md border bg-muted/30 p-4 text-sm leading-6 text-muted-foreground">
         <p>
-          Đặt số phần tối đa mỗi món bán trong ngày — ví dụ 30 suất Sườn cốt lết.
-          Khi POS đã đặt đủ số phần, món sẽ không chọn được đến hết ngày. Bật{" "}
-          <span className="font-medium text-foreground">Tắt món</span> để ẩn món
-          khỏi POS bất kể số lượng.
+          {messages.settings.branch.menuLimitsIntroBefore}{" "}
+          <span className="font-medium text-foreground">
+            {messages.settings.branch.menuLimitsDisabledAction}
+          </span>{" "}
+          {messages.settings.branch.menuLimitsIntroAfter}
         </p>
         <p className="mt-1">
-          Hạn mức tự reset lúc 00:00 (giờ VN). Khi hủy món, hạn mức được trả lại.
+          {messages.settings.branch.menuLimitsResetNote}
         </p>
         {!result.success ? (
           <p className="mt-2 text-destructive">
-            {result.error ?? "Không tải được dữ liệu hạn mức."}
+            {result.error ?? messages.settings.branch.menuLimitsLoadFailed}
           </p>
         ) : null}
       </div>

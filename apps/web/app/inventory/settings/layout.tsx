@@ -7,6 +7,7 @@ import { loadAuthState } from "../../_lib/auth";
 import { currentUserHasAnyPermissionAny } from "../../_lib/permissions";
 import { InventoryHeader } from "../_components/inventory-header";
 import { SettingsSectionNav } from "./settings-section-nav";
+import { messages } from "@lib/messages";
 
 const INVENTORY_SETTINGS_PERMISSIONS = [
   PERMISSION_KEYS.SETTINGS_BRANCH,
@@ -33,7 +34,7 @@ export default async function InventorySettingsLayout({
 
   return (
     <>
-      <InventoryHeader title="Cài đặt" />
+      <InventoryHeader title={messages.inventory.settings.title} />
       <div className="flex-1 overflow-auto p-4">
       <div className="mx-auto max-w-7xl space-y-6">
       <Card>
@@ -41,19 +42,17 @@ export default async function InventorySettingsLayout({
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="space-y-1">
               <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                Settings
+                {messages.inventory.settings.eyebrow}
               </p>
-              <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-                Chính sách & mặc định
+              <h1 className="font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
+                {messages.inventory.settings.policyTitle}
               </h1>
               <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-                Khu vực này chỉ giữ các cấu hình hành vi hoặc policy của
-                Inventory. Dữ liệu master data đã được dồn về nhóm `Quản lý`
-                để tránh trùng cửa vào.
+                {messages.inventory.settings.description}
               </p>
             </div>
             <Badge variant="outline" className="rounded-full">
-              Policy layer
+              {messages.inventory.settings.policyLayer}
             </Badge>
           </div>
           <SettingsSectionNav role={claims.user_role} />

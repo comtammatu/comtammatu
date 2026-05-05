@@ -5,7 +5,6 @@ import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { withAction } from "@/_lib/with-action";
-import { logAudit } from "@/admin/_lib/audit";
 
 const JOURNAL_READ_ROLES: readonly StaffRole[] = [
   "owner",
@@ -30,7 +29,10 @@ export async function fetchJournalEntries(
 ): Promise<ActionResult> {
   const parsed = fetchJournalSchema.optional().safeParse(filters);
 
-  const ctx = await getAuthContextWithPermission(JOURNAL_READ_ROLES, PERMISSION_KEYS.FINANCE_VIEW);
+  const ctx = await getAuthContextWithPermission(
+    JOURNAL_READ_ROLES,
+    PERMISSION_KEYS.FINANCE_VIEW,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -102,11 +104,69 @@ const voidSchema = z.object({
     .max(500, "Lý do hủy quá dài"),
 });
 
+interface JournalRpcResult {
+  id: number;
+  entry_number?: string;
+  status?: string;
+  void_journal_entry_id?: number | null;
+  void_journal_entry_number?: string | null;
+}
+
+const journalRpcResultSchema = z
+  .object({
+    id: z.number(),
+    entry_number: z.string().optional(),
+    status: z.string().optional(),
+    void_journal_entry_id: z.number().nullable().optional(),
+    void_journal_entry_number: z.string().nullable().optional(),
+  })
+  .passthrough();
+
+interface SafeDbError {
+  code?: string;
+  message?: string;
+}
+
+function mapJournalMutationError(error: SafeDbError | null | undefined) {
+  if (!error) return "Không thể xử lý bút toán.";
+  if (error.code === "42501") return "Không có quyền";
+  if (error.code === "P0002") return "Bút toán không tồn tại.";
+  if (error.code === "23503") return "Tài khoản kế toán không hợp lệ.";
+  if (error.code === "23505") {
+    return "Số bút toán bị trùng. Vui lòng thử lại.";
+  }
+  if (error.code === "22023") return "Dữ liệu bút toán không hợp lệ.";
+  if (
+    error.code === "23514" &&
+    (error.message?.includes("fiscal_period_closed_cannot_post") ||
+      error.message?.includes("current_period_closed_cannot_reverse"))
+  ) {
+    return "Không thể ghi sổ vào kỳ kế toán đã đóng. Hãy chọn kỳ hiện tại hoặc mở lại kỳ theo quy trình.";
+  }
+  if (
+    error.code === "23514" &&
+    error.message?.includes("period_closed_cannot_void")
+  ) {
+    return "Không thể hủy bút toán đã ghi vào kỳ kế toán đã đóng. Hãy tạo bút toán đảo trong kỳ hiện tại.";
+  }
+  return "Không thể xử lý bút toán.";
+}
+
+function parseJournalRpcResult(value: unknown): JournalRpcResult | null {
+  const parsed = journalRpcResultSchema.safeParse(value);
+  return parsed.success ? parsed.data : null;
+}
+
 /* ─── Create Journal Entry ─── */
 
 export const createJournalEntry = withAction(
-  { roles: JOURNAL_WRITE_ROLES, schema: createJournalSchema, permission: PERMISSION_KEYS.FINANCE_EXPENSE_APPROVE },
-  async (data, { supabase, claims, user }) => {
+  {
+    roles: JOURNAL_WRITE_ROLES,
+    schema: createJournalSchema,
+    permission: PERMISSION_KEYS.FINANCE_EXPENSE_APPROVE,
+    permissionBranchId: (data) => data.branchId ?? null,
+  },
+  async (data, { supabase }) => {
     // Validate balance: SUM(debit) must equal SUM(credit)
     const totalDebit = data.lines.reduce((sum, l) => sum + l.debitAmount, 0);
     const totalCredit = data.lines.reduce((sum, l) => sum + l.creditAmount, 0);
@@ -119,163 +179,100 @@ export const createJournalEntry = withAction(
     if (totalDebit === 0) {
       return { success: false, error: "Bút toán phải có giá trị > 0" };
     }
-
-    // Generate entry number: JE-YYYYMMDD-NNN
-    const dateStr = data.entryDate.replace(/-/g, "");
-    const { count } = await supabase
-      .from("journal_entries")
-      .select("id", { count: "exact", head: true })
-      .eq("tenant_id", claims.tenant_id)
-      .like("entry_number", `JE-${dateStr}-%`);
-
-    const seq = String((count ?? 0) + 1).padStart(3, "0");
-    const entryNumber = `JE-${dateStr}-${seq}`;
-
-    const { data: entry, error: entryErr } = await supabase
-      .from("journal_entries")
-      .insert({
-        tenant_id: claims.tenant_id,
-        branch_id: data.branchId ?? null,
-        entry_number: entryNumber,
-        entry_date: data.entryDate,
-        description: data.description,
-        reference_type: data.referenceType,
-        reference_id: data.referenceId ?? null,
-        created_by: user.id,
-      })
-      .select("id, entry_number")
-      .single();
-
-    if (entryErr || !entry) {
-      return { success: false, error: "Không thể tạo bút toán." };
+    if (
+      data.lines.some(
+        (line) =>
+          (line.debitAmount === 0 && line.creditAmount === 0) ||
+          (line.debitAmount > 0 && line.creditAmount > 0),
+      )
+    ) {
+      return {
+        success: false,
+        error: "Mỗi dòng bút toán phải nhập đúng một bên Nợ hoặc Có.",
+      };
     }
 
-    const lines = data.lines.map((l) => ({
-      tenant_id: claims.tenant_id,
-      journal_entry_id: entry.id,
-      account_id: l.accountId,
-      debit_amount: l.debitAmount,
-      credit_amount: l.creditAmount,
-      description: l.description ?? null,
+    const lines = data.lines.map((line) => ({
+      account_id: line.accountId,
+      debit_amount: line.debitAmount,
+      credit_amount: line.creditAmount,
+      description: line.description ?? null,
     }));
 
-    const { error: linesErr } = await supabase
-      .from("journal_entry_lines")
-      .insert(lines);
+    const { data: entry, error } = await supabase.rpc(
+      "create_manual_journal_entry",
+      {
+        p_entry_date: data.entryDate,
+        p_description: data.description,
+        p_lines: lines,
+        p_reference_type: data.referenceType,
+        p_reference_id: data.referenceId ?? undefined,
+        p_branch_id: data.branchId ?? undefined,
+      },
+    );
 
-    if (linesErr) {
-      await supabase.from("journal_entries").delete().eq("id", entry.id);
-      return { success: false, error: "Không thể tạo dòng bút toán." };
+    if (error || !entry) {
+      return { success: false, error: mapJournalMutationError(error) };
     }
 
-    return { success: true, data: entry };
+    const result = parseJournalRpcResult(entry);
+    if (!result) return { success: false, error: "Không thể xử lý bút toán." };
+
+    return { success: true, data: result };
   },
 );
 
 /* ─── Post Journal Entry ─── */
 
 export const postJournalEntry = withAction(
-  { roles: JOURNAL_WRITE_ROLES, schema: postIdSchema, permission: PERMISSION_KEYS.FINANCE_EXPENSE_APPROVE },
-  async (data, { supabase, claims, user }) => {
-    const { data: entry, error: fetchErr } = await supabase
-      .from("journal_entries")
-      .select("id, status")
-      .eq("id", data.id)
-      .eq("tenant_id", claims.tenant_id)
-      .single();
-
-    if (fetchErr || !entry) {
-      return { success: false, error: "Bút toán không tồn tại." };
-    }
-
-    if (entry.status !== "draft") {
-      return { success: false, error: "Chỉ có thể ghi sổ bút toán nháp." };
-    }
-
-    const { data: isBalanced } = await supabase.rpc(
-      "validate_journal_balance",
-      { p_entry_id: data.id },
+  {
+    roles: JOURNAL_WRITE_ROLES,
+    schema: postIdSchema,
+    permission: PERMISSION_KEYS.FINANCE_EXPENSE_APPROVE,
+  },
+  async (data, { supabase }) => {
+    const { data: result, error } = await supabase.rpc(
+      "post_manual_journal_entry",
+      {
+        p_entry_id: data.id,
+      },
     );
 
-    if (!isBalanced) {
-      return { success: false, error: "Bút toán không cân bằng." };
+    if (error || !result) {
+      return { success: false, error: mapJournalMutationError(error) };
     }
 
-    const { error } = await supabase
-      .from("journal_entries")
-      .update({
-        status: "posted",
-        posted_by: user.id,
-        posted_at: new Date().toISOString(),
-      })
-      .eq("id", data.id)
-      .eq("tenant_id", claims.tenant_id);
+    const parsed = parseJournalRpcResult(result);
+    if (!parsed) return { success: false, error: "Không thể xử lý bút toán." };
 
-    if (error) {
-      if (
-        error.code === "23514" &&
-        error.message.includes("fiscal_period_closed_cannot_post")
-      ) {
-        return {
-          success: false,
-          error:
-            "Không thể ghi sổ vào kỳ kế toán đã đóng. Hãy chọn kỳ hiện tại hoặc mở lại kỳ theo quy trình.",
-        };
-      }
-      return { success: false, error: "Không thể ghi sổ." };
-    }
-
-    logAudit(supabase, {
-      action: "post",
-      entityType: "journal_entry",
-      entityId: data.id,
-      oldData: { status: "draft" },
-      newData: { status: "posted" },
-    });
-
-    return { success: true };
+    return { success: true, data: parsed };
   },
 );
 
 /* ─── Void Journal Entry ─── */
 
 export const voidJournalEntry = withAction(
-  { roles: JOURNAL_WRITE_ROLES, schema: voidSchema, permission: PERMISSION_KEYS.FINANCE_EXPENSE_APPROVE },
-  async (data, { supabase, claims }) => {
-    const { error } = await supabase
-      .from("journal_entries")
-      .update({
-        status: "voided",
-        voided_reason: data.reason,
-      })
-      .eq("id", data.entryId)
-      .eq("tenant_id", claims.tenant_id)
-      .in("status", ["draft", "posted"]);
+  {
+    roles: JOURNAL_WRITE_ROLES,
+    schema: voidSchema,
+    permission: PERMISSION_KEYS.FINANCE_EXPENSE_APPROVE,
+  },
+  async (data, { supabase }) => {
+    const { data: result, error } = await supabase.rpc(
+      "void_manual_journal_entry",
+      {
+        p_entry_id: data.entryId,
+        p_reason: data.reason,
+      },
+    );
 
-    if (error) {
-      // Period-close guard trigger raises 23514 with sentinel
-      // 'period_closed_cannot_void:' prefix per migration
-      // 20260507000000_finance_phase1_journal_entry_period_guard_and_continuity.sql.
-      if (
-        error.code === "23514" &&
-        error.message.includes("period_closed_cannot_void")
-      ) {
-        return {
-          success: false,
-          error:
-            "Không thể hủy bút toán đã ghi vào kỳ kế toán đã đóng. Hãy tạo bút toán đảo trong kỳ hiện tại.",
-        };
-      }
-      return { success: false, error: "Không thể hủy bút toán." };
+    if (error || !result) {
+      return { success: false, error: mapJournalMutationError(error) };
     }
 
-    logAudit(supabase, {
-      action: "void",
-      entityType: "journal_entry",
-      entityId: data.entryId,
-      newData: { status: "voided", reason: data.reason },
-    });
+    const parsed = parseJournalRpcResult(result);
+    if (!parsed) return { success: false, error: "Không thể xử lý bút toán." };
 
-    return { success: true };
+    return { success: true, data: parsed };
   },
 );

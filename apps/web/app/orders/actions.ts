@@ -27,6 +27,24 @@ const fetchOrdersSchema = z.object({
 
 /* ─── Types ─── */
 
+/** Snapshot shape khớp `order_items.modifiers` JSONB
+ * (migration 20260405070000_create_orders.sql). */
+export interface OrderItemModifier {
+  modifier_id: number;
+  name: string;
+  price: number;
+}
+
+/** Snapshot shape khớp `order_items.sides` JSONB
+ * (migration 20260423200000_pos_order_sides_pricing.sql). */
+export interface OrderItemSide {
+  side_item_id: number;
+  name: string;
+  price: number;
+  quantity?: number;
+  is_default: boolean;
+}
+
 export interface OrderItem {
   id: number;
   item_name: string;
@@ -34,6 +52,11 @@ export interface OrderItem {
   unit_price: number;
   subtotal: number;
   variant_name: string | null;
+  status: string;
+  cancel_reason: string | null;
+  note: string | null;
+  modifiers: OrderItemModifier[];
+  sides: OrderItemSide[];
 }
 
 export interface OrderPayment {
@@ -431,4 +454,67 @@ export async function fetchOrderAuditLog(
   });
 
   return { success: true, data: entries };
+}
+
+/* ─── fetchOrderItems — load on-demand khi mở order detail sheet ─── */
+
+/**
+ * List view (`fetchOrders`) cố tình bỏ items để giữ RSC payload nhỏ. Sheet
+ * gọi action này khi mở để fetch riêng. RLS `order_items_select` join qua
+ * `orders.branch_id` + `has_permission(branch_id, 'orders:read')` đã enforce
+ * branch scope — không cần explicit filter ở đây.
+ *
+ * Không return raw error.message ra client. `cancel_reason` có thể chứa text
+ * tiếng Việt — UI render nguyên dạng.
+ */
+export async function fetchOrderItems(
+  orderId: number,
+): Promise<ActionResult<OrderItem[]>> {
+  const parsed = auditOrderIdSchema.safeParse(orderId);
+  if (!parsed.success) {
+    return { success: false, error: "Order ID không hợp lệ" };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    ORDERS_READ_ROLES,
+    PERMISSION_KEYS.ORDERS_READ,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("order_items")
+    .select(
+      "id, item_name, variant_name, quantity, unit_price, subtotal, status, cancel_reason, note, modifiers, sides",
+    )
+    .eq("order_id", parsed.data)
+    .order("id", { ascending: true });
+
+  if (error) {
+    return {
+      success: false,
+      error: "Không thể tải món của đơn. Vui lòng thử lại.",
+    };
+  }
+
+  const items: OrderItem[] = (data ?? []).map((row) => ({
+    id: row.id,
+    item_name: row.item_name,
+    variant_name: row.variant_name,
+    quantity: row.quantity,
+    unit_price: row.unit_price,
+    subtotal: row.subtotal,
+    status: row.status,
+    cancel_reason: row.cancel_reason,
+    note: row.note,
+    modifiers: Array.isArray(row.modifiers)
+      ? (row.modifiers as unknown as OrderItemModifier[])
+      : [],
+    sides: Array.isArray(row.sides)
+      ? (row.sides as unknown as OrderItemSide[])
+      : [],
+  }));
+
+  return { success: true, data: items };
 }

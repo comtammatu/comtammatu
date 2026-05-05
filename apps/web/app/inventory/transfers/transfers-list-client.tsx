@@ -62,6 +62,7 @@ import {
 import { InteractiveCard } from "../_components/interactive-card";
 import { StatusBadge } from "../_components/status-badge";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
+import { messages } from "@lib/messages";
 
 import { FORM_VI } from "@comtammatu/shared/messages";
 export type { BranchForTransfer, InventoryLocation };
@@ -84,10 +85,12 @@ export interface TransferListRow {
 
 type Tab = "receive" | "dispatch" | "history";
 
+const copy = messages.inventory.transfer;
+
 const TAB_LABELS: Record<Tab, string> = {
-  receive: "Cần nhận",
-  dispatch: "Cần giao",
-  history: "Lịch sử",
+  receive: copy.list.tabs.receive,
+  dispatch: copy.list.tabs.dispatch,
+  history: copy.list.tabs.history,
 };
 
 function classifyTransfer(
@@ -95,6 +98,7 @@ function classifyTransfer(
   viewerBranchId: number | null,
   fromId: number,
   toId: number,
+  userRole: StaffRole,
 ): Tab {
   const receiveStates = ["in_transit", "confirmed_ship", "confirmed_receive"];
   const dispatchStates = ["draft"];
@@ -102,27 +106,27 @@ function classifyTransfer(
 
   if (terminal.includes(status)) return "history";
   if (receiveStates.includes(status)) {
-    if (
-      viewerBranchId != null &&
-      viewerBranchId !== toId &&
-      viewerBranchId !== fromId
-    ) {
+    if (viewerBranchId != null && viewerBranchId !== toId) {
       return "history";
     }
     return "receive";
   }
-  if (dispatchStates.includes(status)) return "dispatch";
+  if (dispatchStates.includes(status)) {
+    if (viewerBranchId != null && viewerBranchId !== fromId) return "history";
+    if (userRole === "branch_manager" && fromId !== toId) return "history";
+    return "dispatch";
+  }
   return "history";
 }
 
 const STATUS_FILTER_OPTIONS = [
-  { value: "all", label: "Tất cả trạng thái" },
-  { value: "draft", label: "Nháp" },
-  { value: "confirmed_ship", label: "Đã xuất kho" },
-  { value: "in_transit", label: "Đang vận chuyển" },
-  { value: "confirmed_receive", label: "Đang kiểm nhận" },
-  { value: "received", label: "Đã nhận" },
-  { value: "cancelled", label: "Đã hủy" },
+  { value: "all", label: copy.list.allStatuses },
+  { value: "draft", label: copy.steps.draft },
+  { value: "confirmed_ship", label: copy.steps.shipped },
+  { value: "in_transit", label: copy.steps.inTransit },
+  { value: "confirmed_receive", label: copy.steps.checking },
+  { value: "received", label: copy.steps.received },
+  { value: "cancelled", label: copy.steps.cancelled },
 ];
 
 export function TransfersListClient({
@@ -149,21 +153,42 @@ export function TransfersListClient({
   const router = useRouter();
   const isMobile = useIsMobile();
   const isBranchManager = userRole === "branch_manager";
+  const userBranchKind =
+    userBranchId == null
+      ? null
+      : (branches.find((branch) => branch.id === userBranchId)?.branch_kind ??
+        null);
+  const canCreateInternal =
+    userBranchId != null &&
+    userBranchKind === "branch" &&
+    locations.length >= 2;
+  const canCreateOutbound =
+    !isBranchManager &&
+    branches.length >= 2 &&
+    ((userBranchId == null && hqBranchId != null) ||
+      userBranchKind === "central_warehouse" ||
+      userBranchKind === "central_kitchen");
   const canCreate = isBranchManager
-    ? userBranchId != null && locations.length >= 2
-    : branches.length >= 2 || (userBranchId != null && locations.length >= 2);
+    ? canCreateInternal
+    : canCreateOutbound || canCreateInternal;
   const [rows, setRows] = useState(initial);
   const [open, setOpen] = useState(() => initialCreateOpen && canCreate);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [activeTab, setActiveTab] = useState<Tab>("receive");
 
-  const createLabel = isBranchManager ? "Cấp bếp" : "Tạo phiếu";
+  const createLabel = isBranchManager
+    ? copy.createKitchenShort
+    : copy.createSlip;
   const pageTitle = isBranchManager
-    ? "Nhận hàng & Cấp bếp"
-    : "Điều chuyển nội bộ";
+    ? copy.receiveKitchenTitle
+    : copy.internalTransferTitle;
   const tabLabels: Record<Tab, string> = isBranchManager
-    ? { receive: "Cần nhận", dispatch: "Cấp bếp", history: "Lịch sử" }
+    ? {
+        receive: copy.list.tabs.receive,
+        dispatch: copy.list.tabs.kitchen,
+        history: copy.list.tabs.history,
+      }
     : TAB_LABELS;
 
   const tabGroups = useMemo(() => {
@@ -178,11 +203,12 @@ export function TransfersListClient({
         userBranchId,
         r.from_branch_id,
         r.to_branch_id,
+        userRole,
       );
       groups[tab].push(r);
     }
     return groups;
-  }, [rows, userBranchId]);
+  }, [rows, userBranchId, userRole]);
 
   const tabCounts = useMemo(
     () => ({
@@ -212,10 +238,15 @@ export function TransfersListClient({
   }, [isMobile, rows, tabGroups, activeTab, search, statusFilter]);
 
   function handleCreated(id: number) {
-    fetchStockTransfers().then((res) => {
+    fetchStockTransfers(userBranchId ?? undefined).then((res) => {
       if (res.success) setRows((res.data ?? []) as TransferListRow[]);
     });
-    router.push(`${basePath}/${id}`);
+    router.push(detailHref(id));
+  }
+
+  function detailHref(id: number): string {
+    const scopeQuery = userBranchId != null ? `?branchId=${userBranchId}` : "";
+    return `${basePath}/${id}${scopeQuery}`;
   }
 
   // ─── Mobile layout ──────────────────────────────────────────────────
@@ -275,7 +306,7 @@ export function TransfersListClient({
             </InputGroupAddon>
             <InputGroupInput
               type="search"
-              placeholder="Tìm số phiếu hoặc tên kho..."
+              placeholder={copy.list.searchPlaceholder}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -296,21 +327,21 @@ export function TransfersListClient({
               <EmptyHeader>
                 <EmptyTitle className="text-sm font-semibold">
                   {search
-                    ? "Không tìm thấy phiếu nào"
+                    ? copy.list.noTransfersFound
                     : activeTab === "receive"
-                      ? "Không có phiếu cần nhận"
+                      ? copy.list.noReceiveTransfers
                       : activeTab === "dispatch"
-                        ? "Không có phiếu đang soạn"
-                        : "Chưa có lịch sử điều chuyển"}
+                        ? copy.list.noDispatchTransfers
+                        : copy.list.noHistory}
                 </EmptyTitle>
                 <EmptyDescription className="text-xs leading-5">
                   {search
-                    ? "Thử tìm kiếm khác hoặc xóa bộ lọc."
+                    ? copy.list.searchEmptyHint
                     : activeTab === "receive"
-                      ? "Khi kho gửi xác nhận xuất, phiếu sẽ hiện ở đây."
+                      ? copy.list.receiveEmptyHint
                       : activeTab === "dispatch"
-                        ? "Tạo phiếu mới nếu cần."
-                        : "Các phiếu đã hòan tất sẽ được lưu ở đây."}
+                        ? copy.list.dispatchEmptyHint
+                        : copy.list.historyEmptyHint}
                 </EmptyDescription>
               </EmptyHeader>
             </Empty>
@@ -321,7 +352,7 @@ export function TransfersListClient({
                   key={r.id}
                   row={r}
                   tab={activeTab}
-                  basePath={basePath}
+                  href={detailHref(r.id)}
                 />
               ))}
             </div>
@@ -363,7 +394,7 @@ export function TransfersListClient({
           <div className="flex flex-1 flex-wrap items-end gap-3">
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-48">
-                <SelectValue placeholder="Tất cả trạng thái" />
+                <SelectValue placeholder={copy.list.allStatuses} />
               </SelectTrigger>
               <SelectContent>
                 {STATUS_FILTER_OPTIONS.map((opt) => (
@@ -379,7 +410,7 @@ export function TransfersListClient({
               </InputGroupAddon>
               <InputGroupInput
                 type="search"
-                placeholder="Tìm số phiếu hoặc tên kho..."
+                placeholder={copy.list.searchPlaceholder}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -398,11 +429,11 @@ export function TransfersListClient({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Số phiếu</TableHead>
-                  <TableHead>Lộ trình</TableHead>
+                  <TableHead>{copy.list.transferNumber}</TableHead>
+                  <TableHead>{copy.list.route}</TableHead>
                   <TableHead>{FORM_VI.status}</TableHead>
-                  <TableHead>Ngày tạo</TableHead>
-                  <TableHead>Ngày xuất / nhận</TableHead>
+                  <TableHead>{copy.list.createdAt}</TableHead>
+                  <TableHead>{copy.list.shippedReceivedAt}</TableHead>
                   <TableHead className="w-10" />
                 </TableRow>
               </TableHeader>
@@ -412,8 +443,8 @@ export function TransfersListClient({
                     colSpan={6}
                     title={
                       search || statusFilter !== "all"
-                        ? "Không tìm thấy phiếu nào"
-                        : "Chưa có phiếu luân chuyển"
+                        ? copy.list.noTransfersFound
+                        : copy.list.emptyTransfers
                     }
                   />
                 )}
@@ -451,7 +482,7 @@ export function TransfersListClient({
                       </TableCell>
                       <TableCell>
                         <Button variant="ghost" size="icon-sm" asChild>
-                          <Link href={`${basePath}/${r.id}`}>
+                          <Link href={detailHref(r.id)}>
                             <IconArrowRight className="size-4" />
                           </Link>
                         </Button>
@@ -485,11 +516,11 @@ export function TransfersListClient({
 function MobileTransferCard({
   row,
   tab,
-  basePath,
+  href,
 }: {
   row: TransferListRow;
   tab: Tab;
-  basePath: string;
+  href: string;
 }) {
   const Icon =
     tab === "receive"
@@ -500,7 +531,7 @@ function MobileTransferCard({
 
   return (
     <InteractiveCard asChild minHeight="mobile" className="h-auto">
-      <Link href={`${basePath}/${row.id}`}>
+      <Link href={href}>
         <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
           <Icon className="size-5" />
         </span>

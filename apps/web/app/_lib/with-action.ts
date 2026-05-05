@@ -19,6 +19,9 @@ type BaseActionOptions<TSchema extends z.ZodType> = {
   schema: TSchema;
   permission?: PermissionLike;
   anyPermission?: readonly PermissionLike[];
+  permissionBranchId?: (
+    data: z.infer<TSchema>,
+  ) => number | null | undefined;
 };
 
 type DirectActionOptions<TSchema extends z.ZodType> =
@@ -48,13 +51,18 @@ async function resolveActionContext(
     BaseActionOptions<z.ZodType>,
     "roles" | "permission" | "anyPermission"
   >,
+  branchId?: number | null,
 ): Promise<ActionContext | null> {
   if (opts.anyPermission) {
-    return getAuthContextWithAnyPermission(opts.roles, opts.anyPermission);
+    return getAuthContextWithAnyPermission(
+      opts.roles,
+      opts.anyPermission,
+      branchId,
+    );
   }
 
   if (opts.permission) {
-    return getAuthContextWithPermission(opts.roles, opts.permission);
+    return getAuthContextWithPermission(opts.roles, opts.permission, branchId);
   }
 
   return getAuthContext(opts.roles);
@@ -105,7 +113,8 @@ export function withAction<TSchema extends z.ZodType>(
       return validationFailure(result.error.issues[0]?.message);
     }
 
-    const ctx = await resolveActionContext(opts);
+    const permissionBranchId = opts.permissionBranchId?.(result.data);
+    const ctx = await resolveActionContext(opts, permissionBranchId);
     if (!ctx) return actionFailure(FORBIDDEN_ERROR);
 
     if (opts.requireBranchScope && lacksRequiredBranchScope(ctx)) {
@@ -158,7 +167,8 @@ export function withFormAction<TSchema extends z.ZodType>(
       return validationFailure(result.error.issues[0]?.message);
     }
 
-    const ctx = await resolveActionContext(opts);
+    const permissionBranchId = opts.permissionBranchId?.(result.data);
+    const ctx = await resolveActionContext(opts, permissionBranchId);
     if (!ctx) return actionFailure(FORBIDDEN_ERROR);
 
     return handler(result.data, ctx);

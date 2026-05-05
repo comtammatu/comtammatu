@@ -12,19 +12,21 @@ import {
   CircleCheck as IconCircleCheck,
   ChevronRight as IconChevronRight,
 } from "lucide-react";
+import { AppEmptyState, AppSection } from "@/components/surface";
+import { TableEmptyStateRow } from "@/components/table-empty-state-row";
 import { formatVND } from "@comtammatu/shared/format";
 import { cn } from "@comtammatu/ui";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { NoteCallout } from "@comtammatu/ui/components/note-callout";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
 import { Progress } from "@comtammatu/ui/components/progress";
+import {
+  Item,
+  ItemContent,
+  ItemHeader,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Separator } from "@comtammatu/ui/components/separator";
 import {
@@ -43,6 +45,7 @@ import {
 } from "@comtammatu/ui/components/table";
 import { CloseSessionSheet } from "../../pos/close-session-sheet";
 import type { PosSessionReport } from "./report-actions";
+import { messages } from "@lib/messages";
 
 import { FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
 export interface PosSessionRow {
@@ -71,7 +74,7 @@ export interface PosSessionRow {
 function resolveSessionLabel(session: PosSessionRow): string {
   if (session.pos_terminals?.name) return session.pos_terminals.name;
   if (session.terminal_id != null) return `POS #${String(session.terminal_id)}`;
-  return "Ca chung của chi nhánh";
+  return messages.settings.posSessions.branchSharedSession;
 }
 
 export interface PosSessionOrderItem {
@@ -121,7 +124,7 @@ const ORDER_STATUS_LABEL: Record<string, string> = {
   preparing: "Đang làm",
   ready: "Sẵn sàng",
   served: "Đã phục vụ",
-  completed: "Hòan thành",
+  completed: "Hoàn thành",
   cancelled: "Đã hủy",
 };
 
@@ -169,63 +172,62 @@ export function PosSessionsClient({
 
   if (sessions.length === 0) {
     return (
-      <Card>
-        <CardContent className="p-6">
-          <p className="text-sm font-medium">Chưa có ca POS nào.</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Khi nhân viên mở ca từ màn hình POS, lịch sử ca sẽ xuất hiện tại đây.
-          </p>
-        </CardContent>
-      </Card>
+      <AppEmptyState
+        title={messages.settings.posSessions.emptyTitle}
+        description={messages.settings.posSessions.emptyDescription}
+      />
     );
   }
 
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(18rem,22rem)_1fr]">
-      <Card className="h-fit">
-        <CardHeader>
-          <CardTitle>Lịch sử ca</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {sessions.map((session) => {
-            const selected = session.id === selectedSessionId;
-            const breached = isVarianceBreached(session);
-            return (
-              <Button
-                asChild
-                key={session.id}
-                variant={selected ? "secondary" : "ghost"}
-                className="h-auto w-full justify-start rounded-lg px-3 py-2"
+      <AppSection
+        title={messages.settings.posSessions.sessionHistory}
+        className="h-fit"
+        contentClassName="gap-2"
+      >
+        {sessions.map((session) => {
+          const selected = session.id === selectedSessionId;
+          const breached = isVarianceBreached(session);
+          return (
+            <Button
+              asChild
+              key={session.id}
+              variant={selected ? "secondary" : "ghost"}
+              className="h-auto w-full justify-start rounded-lg px-3 py-2"
+            >
+              <Link
+                href={`/br/${branchId}/settings/pos-sessions?session=${session.id}`}
+                className="flex min-w-0 items-center gap-3"
               >
-                <Link
-                  href={`/br/${branchId}/settings/pos-sessions?session=${session.id}`}
-                  className="flex min-w-0 items-center gap-3"
-                >
-                  <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                    <IconClock className="size-4" />
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                  <IconClock className="size-4" />
+                </span>
+                <span className="min-w-0 flex-1 text-left">
+                  <span className="block truncate text-sm font-semibold">
+                    {resolveSessionLabel(session)}
                   </span>
-                  <span className="min-w-0 flex-1 text-left">
-                    <span className="block truncate text-sm font-semibold">
-                      {resolveSessionLabel(session)}
-                    </span>
-                    <span className="block truncate text-xs text-muted-foreground">
-                      {formatDateTime(session.opened_at)}
-                    </span>
+                  <span className="block truncate text-xs text-muted-foreground">
+                    {formatDateTime(session.opened_at)}
                   </span>
-                  {breached ? (
-                    <Badge variant="destructive">Lệch</Badge>
-                  ) : null}
-                  <Badge
-                    variant={session.status === "open" ? "warning" : "outline"}
-                  >
-                    {session.status === "open" ? "Đang mở" : "Đã chốt"}
+                </span>
+                {breached ? (
+                  <Badge variant="destructive">
+                    {messages.settings.posSessions.varianceShort}
                   </Badge>
-                </Link>
-              </Button>
-            );
-          })}
-        </CardContent>
-      </Card>
+                ) : null}
+                <Badge
+                  variant={session.status === "open" ? "warning" : "outline"}
+                >
+                  {session.status === "open"
+                    ? messages.settings.posSessions.open
+                    : messages.settings.posSessions.closed}
+                </Badge>
+              </Link>
+            </Button>
+          );
+        })}
+      </AppSection>
 
       <div className="space-y-4">
         {selectedSession ? (
@@ -238,22 +240,22 @@ export function PosSessionsClient({
 
             {report ? <SessionReportCard report={report} /> : null}
 
-            <Card>
-              <CardHeader className="gap-2">
-                <CardTitle>Bill trong ca ({orders.length})</CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  Bấm vào dòng để xem chi tiết bill (món, giảm giá, phí dịch vụ,
-                  thanh toán).
-                </p>
-              </CardHeader>
-              <CardContent>
+            <AppSection
+              title={messages.settings.posSessions.billsInSession(
+                orders.length,
+              )}
+              description={messages.settings.posSessions.billsDescription}
+              contentClassName="overflow-x-auto"
+            >
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Bill</TableHead>
-                      <TableHead>Giờ</TableHead>
+                      <TableHead>{messages.settings.posSessions.bill}</TableHead>
+                      <TableHead>{messages.settings.posSessions.time}</TableHead>
                       <TableHead>{FORM_VI.status}</TableHead>
-                      <TableHead>Thanh toán</TableHead>
+                      <TableHead>
+                        {messages.settings.posSessions.payment}
+                      </TableHead>
                       <TableHead className="text-right">{FORM_VI.total}</TableHead>
                       <TableHead className="w-8" />
                     </TableRow>
@@ -271,8 +273,11 @@ export function PosSessionsClient({
                           </div>
                           <div className="text-xs text-muted-foreground">
                             {order.order_type === "dine_in"
-                              ? `Bàn ${order.tables?.number ?? "-"}${order.customer_count > 0 ? ` · ${order.customer_count} khách` : ""}`
-                              : "Mang về"}
+                              ? messages.settings.posSessions.tableContext(
+                                  order.tables?.number ?? "-",
+                                  order.customer_count,
+                                )
+                              : messages.settings.posSessions.takeaway}
                           </div>
                         </TableCell>
                         <TableCell>{formatTime(order.created_at)}</TableCell>
@@ -296,7 +301,7 @@ export function PosSessionsClient({
                             </span>
                           ) : (
                             <span className="text-muted-foreground">
-                              Chưa TT
+                              {messages.settings.posSessions.unpaidShort}
                             </span>
                           )}
                         </TableCell>
@@ -309,19 +314,15 @@ export function PosSessionsClient({
                       </TableRow>
                     ))}
                     {orders.length === 0 ? (
-                      <TableRow>
-                        <TableCell
-                          colSpan={6}
-                          className="py-8 text-center text-muted-foreground"
-                        >
-                          Ca này chưa có bill.
-                        </TableCell>
-                      </TableRow>
+                      <TableEmptyStateRow
+                        colSpan={6}
+                        title={messages.settings.posSessions.noBills}
+                        paddingClassName="py-8"
+                      />
                     ) : null}
                   </TableBody>
                 </Table>
-              </CardContent>
-            </Card>
+            </AppSection>
           </>
         ) : null}
       </div>
@@ -372,41 +373,56 @@ function SessionDetailCard({
   const isOpen = session.status === "open";
 
   return (
-    <Card>
-      <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <AppSection
+      title={resolveSessionLabel(session)}
+      description={
         <div className="space-y-1">
-          <CardTitle>{resolveSessionLabel(session)}</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Mở bởi {session.opened_by_profile?.full_name ?? "—"} ·{" "}
-            {formatDateTime(session.opened_at)}
+          <p>
+            {messages.settings.posSessions.openedBy(
+              session.opened_by_profile?.full_name ?? "—",
+              formatDateTime(session.opened_at),
+            )}
           </p>
           {!isOpen ? (
-            <p className="text-sm text-muted-foreground">
-              Đóng bởi {session.closed_by_profile?.full_name ?? "—"} ·{" "}
-              {formatDateTime(session.closed_at)} · Kéo dài{" "}
-              {formatDuration(session.opened_at, session.closed_at)}
+            <p>
+              {messages.settings.posSessions.closedBy(
+                session.closed_by_profile?.full_name ?? "—",
+                formatDateTime(session.closed_at),
+                formatDuration(session.opened_at, session.closed_at),
+              )}
             </p>
           ) : null}
         </div>
-        {isOpen ? (
-          <Button onClick={onCloseShift}>Chốt ca</Button>
+      }
+      action={
+        isOpen ? (
+          <Button onClick={onCloseShift}>
+            {messages.settings.posSessions.closeShift}
+          </Button>
         ) : (
           <Badge variant="outline" className="self-start">
-            Đã chốt
+            {messages.settings.posSessions.closed}
           </Badge>
-        )}
-      </CardHeader>
-      <CardContent className="space-y-4">
+        )
+      }
+      contentClassName="gap-4"
+    >
         {breached ? (
           <Alert className="border-destructive/30 bg-destructive/10 text-destructive">
             <IconAlertTriangle className="size-4" />
             <AlertDescription className="text-current">
-              <strong>Lệch quỹ vượt ngưỡng.</strong> Chênh lệch{" "}
-              {formatVND(session.cash_difference ?? 0)} &gt; ngưỡng{" "}
-              {formatVND(threshold)}. Đã gửi cảnh báo cho quản lý.
+              <strong>
+                {messages.settings.posSessions.varianceAlertStrong}
+              </strong>
+              {messages.settings.posSessions.varianceAlert(
+                formatVND(session.cash_difference ?? 0),
+                formatVND(threshold),
+              )}
               {session.variance_approval_note ? (
                 <span className="mt-1 block text-sm">
-                  Ghi chú duyệt: {session.variance_approval_note}
+                  {messages.settings.posSessions.varianceApprovalNote(
+                    session.variance_approval_note,
+                  )}
                 </span>
               ) : null}
             </AlertDescription>
@@ -415,7 +431,7 @@ function SessionDetailCard({
           <Alert className="border-success/20 bg-success/10 text-success">
             <IconCircleCheck className="size-4" />
             <AlertDescription className="text-current">
-              Số dư khớp hòan toàn.
+              {messages.settings.posSessions.cashMatched}
             </AlertDescription>
           </Alert>
         ) : null}
@@ -423,25 +439,25 @@ function SessionDetailCard({
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <Metric
             icon={<IconReceipt className="size-4" />}
-            label="Tổng bill"
+            label={messages.settings.posSessions.totalBills}
             value={String(summary.billCount)}
           />
           <Metric
             icon={<IconCash className="size-4" />}
-            label="Doanh thu (đã thanh toán)"
+            label={messages.settings.posSessions.paidRevenue}
             value={formatVND(summary.revenue)}
           />
           <Metric
             icon={<IconToolsKitchen2 className="size-4" />}
-            label="Món đã phục vụ"
+            label={messages.settings.posSessions.servedItems}
             value={String(summary.servedItems)}
           />
           <Metric
             icon={<IconCash className="size-4" />}
-            label="Chênh lệch quỹ"
+            label={messages.settings.posSessions.cashVariance}
             value={
               session.cash_difference == null
-                ? "Chưa chốt"
+                ? messages.settings.posSessions.notClosed
                 : formatVND(session.cash_difference)
             }
             tone={
@@ -457,28 +473,48 @@ function SessionDetailCard({
         </div>
 
         <div className="grid gap-3 sm:grid-cols-3">
-          <CashLine label="Tiền đầu ca" value={session.opening_cash} />
-          <CashLine label="Tiền kỳ vọng (cash)" value={session.expected_cash} />
-          <CashLine label="Tiền thực đếm" value={session.closing_cash} />
+          <CashLine
+            label={messages.settings.posSessions.openingCash}
+            value={session.opening_cash}
+          />
+          <CashLine
+            label={messages.settings.posSessions.expectedCash}
+            value={session.expected_cash}
+          />
+          <CashLine
+            label={messages.settings.posSessions.countedCash}
+            value={session.closing_cash}
+          />
         </div>
 
         <Separator />
 
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4 text-sm">
-          <KV label="Tiền mặt thu được" value={formatVND(summary.cashRevenue)} />
           <KV
-            label="Chuyển khoản"
+            label={messages.settings.posSessions.cashCollected}
+            value={formatVND(summary.cashRevenue)}
+          />
+          <KV
+            label={messages.settings.posSessions.bankTransfer}
             value={formatVND(summary.noncashRevenue)}
           />
-          <KV label="Đơn đã thanh toán" value={String(summary.paidCount)} />
-          <KV label="Đơn chưa thanh toán" value={String(summary.unpaidCount)} />
+          <KV
+            label={messages.settings.posSessions.paidOrders}
+            value={String(summary.paidCount)}
+          />
+          <KV
+            label={messages.settings.posSessions.unpaidOrders}
+            value={String(summary.unpaidCount)}
+          />
         </div>
 
         {summary.paymentBreakdown.length > 0 ? (
-          <div className="rounded-lg border bg-muted/30 p-3">
-            <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Chi tiết phương thức thanh toán
-            </div>
+          <Item variant="muted" className="block">
+            <ItemHeader>
+              <ItemTitle className="text-xs uppercase text-muted-foreground">
+                {messages.settings.posSessions.paymentBreakdown}
+              </ItemTitle>
+            </ItemHeader>
             <div className="grid gap-1 text-sm">
               {summary.paymentBreakdown.map((row) => (
                 <div
@@ -486,7 +522,10 @@ function SessionDetailCard({
                   className="flex items-center justify-between"
                 >
                   <span>
-                    {paymentMethodLabel(row.method)} · {row.count} đơn
+                    {messages.settings.posSessions.methodCount(
+                      paymentMethodLabel(row.method),
+                      row.count,
+                    )}
                   </span>
                   <span className="font-medium tabular-nums">
                     {formatVND(row.amount)}
@@ -494,27 +533,30 @@ function SessionDetailCard({
                 </div>
               ))}
             </div>
-          </div>
+          </Item>
         ) : null}
 
         {summary.cancelledCount > 0 ? (
           <p className="text-sm text-muted-foreground">
-            {summary.cancelledCount} đơn đã hủy (không tính vào doanh thu).
+            {messages.settings.posSessions.cancelledOrders(
+              summary.cancelledCount,
+            )}
           </p>
         ) : null}
 
         {session.note ? (
-          <NoteCallout label="Ghi chú ca">{session.note}</NoteCallout>
+          <NoteCallout label={messages.settings.posSessions.sessionNote}>
+            {session.note}
+          </NoteCallout>
         ) : null}
-      </CardContent>
-    </Card>
+    </AppSection>
   );
 }
 
 const ITEM_SOURCE_LABEL: Record<"main" | "side" | "modifier", string> = {
-  main: "Món chính",
-  side: "Side/Combo",
-  modifier: "Topping",
+  main: messages.settings.posSessions.mainItem,
+  side: messages.settings.posSessions.sideCombo,
+  modifier: messages.settings.posSessions.modifier,
 };
 
 function formatHourRange(hour: number): string {
@@ -530,38 +572,37 @@ function SessionReportCard({ report }: { report: PosSessionReport }) {
   const maxCategoryRevenue = Math.max(1, ...category_breakdown.map((c) => c.revenue));
 
   return (
-    <Card>
-      <CardHeader className="gap-2">
-        <CardTitle>Báo cáo chi tiết ca</CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Tổng kết món bán ra, danh mục, giá trị bill và giờ cao điểm.
-          Tất cả tính trên đơn đã thanh toán, đã trừ đơn hủy.
-        </p>
-      </CardHeader>
-      <CardContent className="space-y-5">
+    <AppSection
+      title={messages.settings.posSessions.reportTitle}
+      description={messages.settings.posSessions.reportDescription}
+      contentClassName="gap-5"
+    >
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <Metric
             icon={<IconReceipt className="size-4" />}
-            label="Giá trị TB / bill (AOV)"
+            label={messages.settings.posSessions.aov}
             value={formatVND(totals.aov)}
           />
           <Metric
             icon={<IconToolsKitchen2 className="size-4" />}
-            label="Tổng món bán"
+            label={messages.settings.posSessions.totalItems}
             value={String(totals.total_items)}
           />
           <Metric
             icon={<IconAlertTriangle className="size-4" />}
-            label="Món bị huỷ"
+            label={messages.settings.posSessions.voidItems}
             value={String(totals.void_item_count)}
             tone={totals.void_item_count > 0 ? "warning" : "muted"}
           />
           <Metric
             icon={<IconClock className="size-4" />}
-            label="Giờ cao điểm"
+            label={messages.settings.posSessions.peakHour}
             value={
               peak_hour
-                ? `${formatHourRange(peak_hour.hour)} · ${peak_hour.order_count} đơn`
+                ? messages.settings.posSessions.peakHourValue(
+                    formatHourRange(peak_hour.hour),
+                    peak_hour.order_count,
+                  )
                 : "—"
             }
           />
@@ -569,15 +610,21 @@ function SessionReportCard({ report }: { report: PosSessionReport }) {
 
         {top_items.length > 0 ? (
           <div>
-            <SectionLabel>Top món bán chạy</SectionLabel>
+            <SectionLabel>
+              {messages.settings.posSessions.topItems}
+            </SectionLabel>
             <ScrollArea className="max-h-72">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Tên</TableHead>
-                    <TableHead>Loại</TableHead>
-                    <TableHead className="text-right">SL</TableHead>
-                    <TableHead className="text-right">Doanh thu</TableHead>
+                    <TableHead>{messages.settings.posSessions.itemName}</TableHead>
+                    <TableHead>{messages.settings.posSessions.itemType}</TableHead>
+                    <TableHead className="text-right">
+                      {messages.settings.posSessions.quantityShort}
+                    </TableHead>
+                    <TableHead className="text-right">
+                      {messages.settings.posSessions.revenue}
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -602,12 +649,16 @@ function SessionReportCard({ report }: { report: PosSessionReport }) {
             </ScrollArea>
           </div>
         ) : (
-          <NoteCallout label="Top món">Ca chưa có món bán ra.</NoteCallout>
+          <NoteCallout label={messages.settings.posSessions.topItemsEmptyTitle}>
+            {messages.settings.posSessions.topItemsEmptyDescription}
+          </NoteCallout>
         )}
 
         {category_breakdown.length > 0 ? (
           <div>
-            <SectionLabel>Doanh thu theo danh mục</SectionLabel>
+            <SectionLabel>
+              {messages.settings.posSessions.revenueByCategory}
+            </SectionLabel>
             <div className="space-y-2">
               {category_breakdown.map((cat) => (
                 <div
@@ -617,7 +668,10 @@ function SessionReportCard({ report }: { report: PosSessionReport }) {
                   <div className="flex items-center justify-between text-sm">
                     <span className="font-medium">{cat.category_name}</span>
                     <span className="tabular-nums text-muted-foreground">
-                      {cat.qty} món · {formatVND(cat.revenue)}
+                      {messages.settings.posSessions.categoryLine(
+                        cat.qty,
+                        formatVND(cat.revenue),
+                      )}
                     </span>
                   </div>
                   <Progress
@@ -632,14 +686,16 @@ function SessionReportCard({ report }: { report: PosSessionReport }) {
 
         {aov_bins.length > 0 ? (
           <div>
-            <SectionLabel>Phân bố giá trị bill</SectionLabel>
+            <SectionLabel>
+              {messages.settings.posSessions.billValueDistribution}
+            </SectionLabel>
             <div className="space-y-2">
               {aov_bins.map((bin) => (
                 <div key={bin.label} className="space-y-1">
                   <div className="flex items-center justify-between text-sm">
                     <span>{bin.label}</span>
                     <span className="tabular-nums text-muted-foreground">
-                      {bin.count} bill
+                      {messages.settings.posSessions.billCount(bin.count)}
                     </span>
                   </div>
                   <Progress
@@ -655,15 +711,20 @@ function SessionReportCard({ report }: { report: PosSessionReport }) {
         {discounts.count > 0 ? (
           <div>
             <SectionLabel>
-              Giảm giá ({discounts.count} bill · {formatVND(discounts.total)})
+              {messages.settings.posSessions.discountSection(
+                discounts.count,
+                formatVND(discounts.total),
+              )}
             </SectionLabel>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Bill</TableHead>
-                  <TableHead>Loại</TableHead>
-                  <TableHead className="text-right">Giảm</TableHead>
-                  <TableHead>Ghi chú</TableHead>
+                  <TableHead>{messages.settings.posSessions.bill}</TableHead>
+                  <TableHead>{messages.settings.posSessions.itemType}</TableHead>
+                  <TableHead className="text-right">
+                    {messages.settings.posSessions.discount}
+                  </TableHead>
+                  <TableHead>{messages.settings.posSessions.note}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -693,8 +754,7 @@ function SessionReportCard({ report }: { report: PosSessionReport }) {
             </Table>
           </div>
         ) : null}
-      </CardContent>
-    </Card>
+    </AppSection>
   );
 }
 
@@ -723,9 +783,19 @@ function OrderDetailSheet({
       >
         <SheetHeader className="border-b px-4 pt-5 pb-3 text-left">
           <SheetTitle>
-            Bill {order?.order_number ?? ""}
+            {messages.settings.posSessions.orderSheetTitle(
+              order?.order_number ?? "",
+            )}
             {order
-              ? ` · ${order.order_type === "dine_in" ? `Bàn ${order.tables?.number ?? "-"}` : "Mang về"} · ${formatDateTime(order.created_at)}`
+              ? messages.settings.posSessions.orderSheetMeta(
+                  order.order_type === "dine_in"
+                    ? messages.settings.posSessions.tableContext(
+                        order.tables?.number ?? "-",
+                        0,
+                      )
+                    : messages.settings.posSessions.takeaway,
+                  formatDateTime(order.created_at),
+                )
               : ""}
           </SheetTitle>
         </SheetHeader>
@@ -751,23 +821,31 @@ function OrderDetailSheet({
                   }
                 >
                   {order.payment_status === "paid"
-                    ? `Đã thanh toán · ${paymentMethodLabel(order.payment_method)}`
-                    : "Chưa thanh toán"}
+                    ? messages.settings.posSessions.paidWithMethod(
+                        paymentMethodLabel(order.payment_method),
+                      )
+                    : messages.settings.posSessions.unpaid}
                 </Badge>
                 {order.customer_count > 0 ? (
-                  <Badge variant="outline">{order.customer_count} khách</Badge>
+                  <Badge variant="outline">
+                    {messages.settings.posSessions.customerCount(
+                      order.customer_count,
+                    )}
+                  </Badge>
                 ) : null}
               </div>
 
               <div>
-                <h4 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                <h4 className="font-heading text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                   {PRODUCT_VI.posItem}
                 </h4>
                 <div className="mt-2 divide-y rounded-lg border">
                   {order.order_items.map((item) => (
                     <div key={item.id} className="flex gap-3 px-3 py-2">
                       <span className="w-10 shrink-0 font-medium tabular-nums">
-                        ×{item.quantity}
+                        {messages.settings.posSessions.quantityPrefix(
+                          item.quantity,
+                        )}
                       </span>
                       <div className="min-w-0 flex-1">
                         <div className="text-sm font-medium">
@@ -780,10 +858,13 @@ function OrderDetailSheet({
                           ) : null}
                         </div>
                         <div className="text-xs text-muted-foreground tabular-nums">
-                          {formatVND(item.unit_price)} ×{item.quantity}
+                          {messages.settings.posSessions.linePrice(
+                            formatVND(item.unit_price),
+                            item.quantity,
+                          )}
                           {item.status === "cancelled" ? (
                             <span className="ml-2 text-destructive">
-                              (đã hủy)
+                              {messages.settings.posSessions.cancelledItem}
                             </span>
                           ) : null}
                         </div>
@@ -804,38 +885,40 @@ function OrderDetailSheet({
 
               <div className="rounded-lg border px-3 py-2 space-y-1.5 text-sm">
                 <KVRow
-                  label="Tạm tính"
+                  label={messages.settings.posSessions.subtotal}
                   value={formatVND(order.subtotal)}
                 />
                 {order.discount_amount > 0 ? (
                   <KVRow
-                    label="Giảm giá"
+                    label={messages.settings.posSessions.discount}
                     value={`-${formatVND(order.discount_amount)}`}
                     tone="success"
                   />
                 ) : null}
                 {order.service_charge > 0 ? (
                   <KVRow
-                    label="Phí dịch vụ"
+                    label={messages.settings.posSessions.serviceCharge}
                     value={formatVND(order.service_charge)}
                   />
                 ) : null}
                 {order.tax_amount > 0 ? (
                   <KVRow
-                    label="Thuế"
+                    label={messages.settings.posSessions.tax}
                     value={formatVND(order.tax_amount)}
                   />
                 ) : null}
                 <Separator />
                 <KVRow
-                  label="Tổng"
+                  label={messages.settings.posSessions.total}
                   value={formatVND(order.total_amount)}
                   bold
                 />
               </div>
 
               {order.note ? (
-                <NoteCallout label="Ghi chú bill">{order.note}</NoteCallout>
+                <NoteCallout label={messages.settings.posSessions.billNote}>
+                  {order.note}
+                </NoteCallout>
               ) : null}
             </div>
           ) : null}
@@ -857,23 +940,25 @@ function Metric({
   tone?: "muted" | "success" | "warning" | "destructive";
 }) {
   return (
-    <div className="rounded-lg border bg-muted/30 p-3">
-      <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-        {icon}
-        {label}
-      </div>
-      <div
-        className={cn(
-          "mt-2 text-lg font-semibold tabular-nums",
-          tone === "success" && "text-success",
-          tone === "warning" && "text-warning",
-          tone === "destructive" && "text-destructive",
-          tone === "muted" && "text-muted-foreground",
-        )}
-      >
-        {value}
-      </div>
-    </div>
+    <Item variant="muted" className="items-start">
+      <ItemContent>
+        <ItemTitle className="flex items-center gap-2 text-xs text-muted-foreground">
+          {icon}
+          {label}
+        </ItemTitle>
+        <div
+          className={cn(
+            "mt-2 text-lg font-semibold tabular-nums",
+            tone === "success" && "text-success",
+            tone === "warning" && "text-warning",
+            tone === "destructive" && "text-destructive",
+            tone === "muted" && "text-muted-foreground",
+          )}
+        >
+          {value}
+        </div>
+      </ItemContent>
+    </Item>
   );
 }
 
@@ -885,21 +970,25 @@ function CashLine({
   value: number | null;
 }) {
   return (
-    <div className="rounded-lg border px-3 py-2">
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="mt-1 font-medium tabular-nums">
-        {value == null ? "Chưa có" : formatVND(value)}
-      </div>
-    </div>
+    <Item variant="outline" size="xs" className="items-start">
+      <ItemContent>
+        <div className="text-xs text-muted-foreground">{label}</div>
+        <div className="mt-1 font-medium tabular-nums">
+          {value == null
+            ? messages.settings.posSessions.noValue
+            : formatVND(value)}
+        </div>
+      </ItemContent>
+    </Item>
   );
 }
 
 function KV({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between rounded-lg border px-3 py-1.5">
+    <Item variant="outline" size="xs" className="justify-between">
       <span className="text-muted-foreground">{label}</span>
       <span className="font-medium tabular-nums">{value}</span>
-    </div>
+    </Item>
   );
 }
 

@@ -1,16 +1,9 @@
 import Link from "next/link";
 import type { ElementType, ReactNode } from "react";
 import { ChevronRight as IconChevronRight } from "lucide-react";
+import { AppPageHeader, AppSection } from "@/components/surface";
 import { cn } from "@comtammatu/ui";
-import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
+import type { BadgeProps } from "@comtammatu/ui/components/badge";
 import {
   Item,
   ItemActions,
@@ -51,29 +44,20 @@ interface EmployeePageProps {
 
 export function EmployeePage({
   title,
+  description,
   badge,
   action,
   children,
 }: EmployeePageProps) {
   return (
     <div className="flex w-full flex-col gap-4">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0 space-y-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="font-heading text-lg font-semibold tracking-tight">
-              {title}
-            </h1>
-            {badge ? (
-              <Badge variant={badge.variant ?? "secondary"}>
-                {badge.children}
-              </Badge>
-            ) : null}
-          </div>
-        </div>
-        {action ? (
-          <div className="flex shrink-0 items-center">{action}</div>
-        ) : null}
-      </header>
+      <AppPageHeader
+        title={title}
+        description={description}
+        badge={badge}
+        actions={action}
+        titleClassName="text-lg sm:text-lg"
+      />
       <div className="flex flex-col gap-3">{children}</div>
     </div>
   );
@@ -105,45 +89,26 @@ export function EmployeePanel({
   className,
   contentClassName,
 }: EmployeePanelProps) {
-  const hasHeader = Boolean(title || description || Icon || badge || action);
-
   return (
-    <Card className={className}>
-      {hasHeader ? (
-        <CardHeader>
-          <CardTitle className="flex min-w-0 items-center gap-2">
-            {Icon ? (
-              <Icon
-                className={cn("size-4 shrink-0", toneIconClassName[tone])}
-              />
-            ) : null}
-            <span className="min-w-0 truncate">{title}</span>
-          </CardTitle>
-          {description ? (
-            <CardDescription>{description}</CardDescription>
-          ) : null}
-          {badge || action ? (
-            <CardAction className="flex items-center gap-2">
-              {badge ? (
-                <Badge variant={badge.variant ?? toneBadgeVariant[tone]}>
-                  {badge.children}
-                </Badge>
-              ) : null}
-              {action}
-            </CardAction>
-          ) : null}
-        </CardHeader>
-      ) : null}
-      <CardContent
-        className={cn(
-          "flex flex-col gap-3",
-          !hasHeader && "pt-0",
-          contentClassName,
-        )}
-      >
-        {children}
-      </CardContent>
-    </Card>
+    <AppSection
+      title={title}
+      description={description}
+      icon={Icon}
+      iconClassName={toneIconClassName[tone]}
+      badge={
+        badge
+          ? {
+              children: badge.children,
+              variant: badge.variant ?? toneBadgeVariant[tone],
+            }
+          : undefined
+      }
+      action={action}
+      className={className}
+      contentClassName={contentClassName}
+    >
+      {children}
+    </AppSection>
   );
 }
 

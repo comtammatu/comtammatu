@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Button } from "@comtammatu/ui/components/button";
+import { Item, ItemContent, ItemTitle } from "@comtammatu/ui/components/item";
 import { ArrowLeft as IconArrowLeft } from "lucide-react";
 import {
   canManageBranchFloorSettings,
@@ -8,6 +9,8 @@ import {
 } from "@comtammatu/shared/auth";
 import { loadAuthState } from "@/_lib/auth";
 import { PrintJobsClient, type JobRow, type BranchOption } from "./print-jobs-client";
+import { SettingsPageShell } from "../../settings-page-shell";
+import { messages } from "@lib/messages";
 
 type SearchParams = {
   branch?: string;
@@ -164,37 +167,37 @@ export default async function PrintJobsPage({
   const branches = (branchesRes.data ?? []) as BranchOption[];
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Button asChild variant="ghost" size="sm" className="h-7 px-2">
-              <Link href="/admin/settings/printers">
-                <IconArrowLeft className="size-4" /> Máy in
-              </Link>
-            </Button>
-          </div>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">Giám sát in</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Trạng thái hàng đợi in và máy in đang kết nối
-          </p>
-        </div>
-      </div>
+    <SettingsPageShell
+      title={messages.settings.pages.printJobsTitle}
+      description={messages.settings.pages.printJobsDescription}
+      actions={
+        <Button asChild variant="outline" size="sm">
+          <Link href="/admin/settings/printers">
+            <IconArrowLeft className="size-4" />
+            {messages.settings.printers.backPrinters}
+          </Link>
+        </Button>
+      }
+    >
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <StatCard label="Đang chờ" value={pendingRes.count ?? 0} tone="warning" />
         <StatCard
-          label="Lỗi 24h"
+          label={messages.settings.printers.statPending}
+          value={pendingRes.count ?? 0}
+          tone="warning"
+        />
+        <StatCard
+          label={messages.settings.printers.statFailed24h}
           value={failedRes.count ?? 0}
           tone={(failedRes.count ?? 0) > 0 ? "destructive" : "neutral"}
         />
         <StatCard
-          label="Đã in hôm nay"
+          label={messages.settings.printers.statPrintedToday}
           value={printedTodayRes.count ?? 0}
           tone="success"
         />
         <StatCard
-          label="Agent online"
+          label={messages.settings.printers.statAgentOnline}
           value={`${onlineCount} / ${agentTotal}`}
           tone={onlineCount === agentTotal && agentTotal > 0 ? "success" : "warning"}
         />
@@ -208,7 +211,7 @@ export default async function PrintJobsPage({
         filterJobType={filterJobType}
         currentBranchLocked={scopedBranch != null}
       />
-    </div>
+    </SettingsPageShell>
   );
 }
 
@@ -230,10 +233,12 @@ function StatCard({
           ? "border-destructive/30 text-destructive"
           : "border-border/60 text-muted-foreground";
   return (
-    <div className={`rounded-lg border bg-background/60 p-3 ${toneClass}`}>
-      <div className="text-xs uppercase tracking-wide opacity-70">{label}</div>
-      <div className="mt-1 text-2xl font-semibold">{value}</div>
-    </div>
+    <Item variant="outline" className={toneClass}>
+      <ItemContent>
+        <ItemTitle className="text-xs uppercase opacity-70">{label}</ItemTitle>
+        <div className="text-2xl font-semibold">{value}</div>
+      </ItemContent>
+    </Item>
   );
 }
 

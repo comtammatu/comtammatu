@@ -22,8 +22,6 @@ export default async function TransferDetailPage({
   searchParams: Promise<{ branchId?: string | string[] }>;
 }) {
   const { id } = await params;
-  const res = await fetchStockTransferDetail(Number(id));
-  if (!res.success || !res.data) notFound();
   const supabase = await createClient();
   const {
     data: { session },
@@ -38,6 +36,13 @@ export default async function TransferDetailPage({
   const scope = claims
     ? await resolveInventoryBranchScope(supabase, claims, requested)
     : null;
+  const scopedBranchId = scope?.selectedBranchId ?? null;
+
+  const res = await fetchStockTransferDetail(
+    Number(id),
+    scopedBranchId ?? undefined,
+  );
+  if (!res.success || !res.data) notFound();
 
   const d = res.data as {
     transfer: {
@@ -148,7 +153,7 @@ export default async function TransferDetailPage({
     <TransferDetailClient
       transfer={transfer}
       userRole={claims?.user_role ?? "branch_manager"}
-      userBranchId={scope?.selectedBranchId ?? null}
+      userBranchId={scopedBranchId}
       correctionBranches={correctionBranches}
     />
   );

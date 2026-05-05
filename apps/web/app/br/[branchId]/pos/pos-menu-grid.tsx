@@ -11,15 +11,10 @@ import {
   type ChangeEvent,
 } from "react";
 import Image from "next/image";
+import { AppEmptyState } from "@/components/surface";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Empty,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@comtammatu/ui/components/empty";
 import {
   InputGroup,
   InputGroupAddon,
@@ -30,6 +25,7 @@ import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
 import { formatVND } from "@comtammatu/shared/format";
 import { normalizeSearch } from "@lib/search";
+import { messages } from "@lib/messages";
 import {
   ChefHat as IconChefHat,
   Search as IconSearch,
@@ -76,11 +72,11 @@ const MenuItemButton = memo(function MenuItemButton({
   }, [blocked, item, onItemTap]);
 
   const limitBadgeLabel = item.daily_limit?.is_disabled
-    ? "Đang tắt"
+    ? messages.pos.menu.disabled
     : blocked
-      ? "Hết suất"
+      ? messages.pos.menu.soldOut
       : remaining !== null && remaining <= 5
-        ? `Còn ${remaining} suất`
+        ? messages.pos.menu.remaining(remaining)
         : null;
   const limitBadgeVariant: "destructive" | "warning" | undefined =
     item.daily_limit?.is_disabled || blocked
@@ -287,14 +283,11 @@ function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
 
   if (availableCategories.length === 0) {
     return (
-      <Empty className="flex-1">
-        <EmptyMedia variant="icon">
-          <IconChefHat />
-        </EmptyMedia>
-        <EmptyHeader>
-          <EmptyTitle>Chưa có món trong thực đơn</EmptyTitle>
-        </EmptyHeader>
-      </Empty>
+      <AppEmptyState
+        title={messages.pos.menu.empty}
+        icon={<IconChefHat />}
+        className="flex-1"
+      />
     );
   }
 
@@ -308,14 +301,14 @@ function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
         value={query}
         onChange={handleQueryChange}
         autoFocus={isSearchActive}
-        placeholder="Tìm món..."
-        aria-label="Tìm món"
+        placeholder={messages.pos.menu.searchPlaceholder}
+        aria-label={messages.pos.menu.searchAria}
       />
       {query.trim() !== "" && (
         <InputGroupAddon align="inline-end">
           <InputGroupButton
             size="icon-xs"
-            aria-label="Xóa tìm kiếm"
+            aria-label={messages.pos.menu.clearSearchAria}
             onClick={clearQuery}
           >
             <IconX />
@@ -342,11 +335,11 @@ function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
       className="min-w-0 flex-1 gap-0 overflow-x-auto overflow-y-hidden xl:flex-1"
     >
       <TabsList
-        aria-label="Danh mục món"
+        aria-label={messages.pos.menu.categoriesAria}
         className="!h-auto w-max min-w-full !justify-start gap-1.5 !bg-transparent !p-0 md:gap-2"
       >
         <TabsTrigger value={ALL_MENU_VALUE} className={tabPillClassName}>
-          Tất cả
+          {messages.pos.menu.all}
           <Badge variant="outline" className={tabBadgeClassName}>
             {allMenuItemCount}
           </Badge>
@@ -384,7 +377,7 @@ function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
                   className="h-11 shrink-0 px-3 text-sm font-semibold"
                   onClick={cancelSearch}
                 >
-                  Hủy
+                  {messages.pos.menu.cancel}
                 </Button>
               </>
             ) : (
@@ -393,7 +386,7 @@ function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
                   type="button"
                   variant="ghost"
                   className="h-11 shrink-0 bg-muted/50 px-3 text-muted-foreground hover:bg-muted"
-                  aria-label="Tìm món"
+                  aria-label={messages.pos.menu.searchAria}
                   onClick={openSearch}
                 >
                   <IconSearch />
@@ -419,7 +412,7 @@ function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
                   className="flex min-w-0 flex-col gap-3"
                 >
                   <div className="sticky top-0 z-10 -mx-2 flex min-w-0 items-center justify-between gap-3 bg-background/95 px-2 py-2 backdrop-blur md:static md:mx-0 md:bg-transparent md:px-0 md:py-0 md:backdrop-blur-none">
-                    <h2 className="truncate text-base font-bold text-foreground md:text-base md:font-semibold">
+                    <h2 className="font-heading truncate text-base font-bold text-foreground md:text-base md:font-semibold">
                       {category.name}
                     </h2>
                     <Badge variant="outline" className="shrink-0 text-sm">
@@ -447,14 +440,12 @@ function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
           ) : null}
 
           {visibleItems.length === 0 ? (
-            <Empty className="py-12">
-              <EmptyMedia variant="icon">
-                <IconShoppingCart />
-              </EmptyMedia>
-              <EmptyHeader>
-                <EmptyTitle>Không tìm thấy món phù hợp</EmptyTitle>
-              </EmptyHeader>
-            </Empty>
+            <AppEmptyState
+              title={messages.pos.menu.noResults}
+              icon={<IconShoppingCart />}
+              className="m-2"
+              compact
+            />
           ) : null}
         </ScrollArea>
       </div>

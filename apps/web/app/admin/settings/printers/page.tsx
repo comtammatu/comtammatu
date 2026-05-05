@@ -13,6 +13,8 @@ import {
   type Category,
   type Printer,
 } from "./printers-client";
+import { SettingsPageShell } from "../settings-page-shell";
+import { messages } from "@lib/messages";
 
 export default async function PrintersPage() {
   const { supabase, claims } = await loadAuthState();
@@ -110,28 +112,24 @@ export default async function PrintersPage() {
   }));
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Máy in</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Cấu hình máy in theo từng chi nhánh: loại phiếu và danh mục món in
-            trên từng máy.
-          </p>
-        </div>
+    <SettingsPageShell
+      title={messages.settings.pages.printersTitle}
+      description={messages.settings.pages.printersDescription}
+      actions={
         <Button asChild variant="outline" size="sm" className="gap-1">
           <Link href="/admin/settings/printers/jobs">
             <IconActivity className="size-3.5" />
-            Giám sát in
+            {messages.settings.pages.printMonitor}
           </Link>
         </Button>
-      </div>
+      }
+    >
       <PrintersClient
         branches={branchesRes.data ?? []}
         printers={printers as Printer[]}
         agents={(agentsRes.data ?? []) as Agent[]}
         categories={(categoriesRes.data ?? []) as Category[]}
       />
-    </div>
+    </SettingsPageShell>
   );
 }

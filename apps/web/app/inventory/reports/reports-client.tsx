@@ -22,6 +22,7 @@ import {
   resolveInventoryColorValue,
   type InventorySemanticColor,
 } from "../_lib/ui";
+import { messages } from "@lib/messages";
 
 export type ApAgingItem = { range: string; amount: number };
 export type VarianceItem = {
@@ -53,15 +54,23 @@ export function ReportsClient({
   const maxAP = Math.max(...apAging.map((a) => a.amount), 1);
   const trendLabel =
     foodCostTrendDeltaPct == null
-      ? "Chưa đủ dữ liệu để so sánh tháng trước"
+      ? messages.inventory.reports.trendNotEnough
       : foodCostTrendDeltaPct > 0
-        ? `Tăng ${foodCostTrendDeltaPct}% so với tháng trước`
+        ? messages.inventory.reports.trendUp(foodCostTrendDeltaPct)
         : foodCostTrendDeltaPct < 0
-          ? `Giảm ${Math.abs(foodCostTrendDeltaPct)}% so với tháng trước`
-          : "Ổn định so với tháng trước";
+          ? messages.inventory.reports.trendDown(foodCostTrendDeltaPct)
+          : messages.inventory.reports.trendStable;
+  const reportCatalog = messages.inventory.reports.catalog.map(
+    (report, index) => ({
+      ...report,
+      icon: [IconChartBar, IconTrendingUp, IconArrowLeftRight, IconPackage][
+        index
+      ]!,
+    }),
+  );
   return (
     <>
-      <InventoryHeader title="Báo cáo" />
+      <InventoryHeader title={messages.inventory.reports.pageTitle} />
       <div className="flex-1 overflow-auto p-4">
       <div className="mx-auto max-w-7xl space-y-4">
 
@@ -75,26 +84,34 @@ export function ReportsClient({
                 <div className="flex size-10 items-center justify-center rounded-full bg-primary/10">
                   <IconChartBar className="size-5 text-primary" />
                 </div>
-                <h3 className="text-lg font-bold text-foreground">
-                  Biến động kho theo nhóm
+                <h3 className="font-heading text-lg font-bold text-foreground">
+                  {messages.inventory.reports.movementTitle}
                 </h3>
               </div>
               <div className="flex items-center gap-4 text-xs font-medium">
                 <span className="flex items-center gap-1.5">
                   <span className="size-3 rounded-full bg-primary" />
-                  <span className="text-muted-foreground">Nhập kho</span>
+                  <span className="text-muted-foreground">
+                    {messages.inventory.reports.inbound}
+                  </span>
                 </span>
                 <span className="flex items-center gap-1.5">
                   <span className="size-3 rounded-full bg-success" />
-                  <span className="text-muted-foreground">Chuyển vào</span>
+                  <span className="text-muted-foreground">
+                    {messages.inventory.reports.transferIn}
+                  </span>
                 </span>
                 <span className="flex items-center gap-1.5">
                   <span className="size-3 rounded-full bg-destructive" />
-                  <span className="text-muted-foreground">Xuất / tiêu hao</span>
+                  <span className="text-muted-foreground">
+                    {messages.inventory.reports.outboundConsumption}
+                  </span>
                 </span>
                 <span className="flex items-center gap-1.5">
                   <span className="size-3 rounded-full bg-info" />
-                  <span className="text-muted-foreground">Sản xuất</span>
+                  <span className="text-muted-foreground">
+                    {messages.inventory.reports.production}
+                  </span>
                 </span>
               </div>
             </div>
@@ -103,15 +120,17 @@ export function ReportsClient({
             </div>
             <div className="mt-4 flex items-center justify-between">
               <p className="text-sm text-muted-foreground">{trendLabel}</p>
-              <Badge variant="outline">Đang xem snapshot tháng này</Badge>
+              <Badge variant="outline">
+                {messages.inventory.reports.currentMonthSnapshot}
+              </Badge>
             </div>
           </CardContent>
         </Card>
 
         <Card className="col-span-12 lg:col-span-4">
           <CardContent className="p-6">
-            <h3 className="mb-4 text-lg font-bold text-foreground">
-              Công nợ nhà cung cấp
+            <h3 className="font-heading mb-4 text-lg font-bold text-foreground">
+              {messages.inventory.reports.supplierPayables}
             </h3>
             <div className="space-y-4">
               {apAging.map((item, idx) => {
@@ -150,7 +169,9 @@ export function ReportsClient({
                           isOverdue ? "text-destructive" : "text-foreground",
                         )}
                       >
-                        {formatVND(item.amount)}đ
+                        {messages.inventory.reports.amountVnd(
+                          formatVND(item.amount),
+                        )}
                       </span>
                     </div>
                     <div
@@ -177,18 +198,20 @@ export function ReportsClient({
               variant="outline"
               className="mt-6 w-full rounded-full text-muted-foreground"
             >
-              <Link href="/inventory/supplier-invoices">Mở công nợ NCC</Link>
+              <Link href="/inventory/supplier-invoices">
+                {messages.inventory.reports.openSupplierDebt}
+              </Link>
             </Button>
           </CardContent>
         </Card>
 
         <Card className="col-span-12 md:col-span-6">
           <CardContent className="p-6">
-            <h3 className="mb-2 text-lg font-bold text-foreground">
-              Chênh lệch tiêu hao
+            <h3 className="font-heading mb-2 text-lg font-bold text-foreground">
+              {messages.inventory.reports.consumptionVariance}
             </h3>
             <p className="mb-6 text-sm text-muted-foreground">
-              Thực tế vs Định mức Recipe
+              {messages.inventory.reports.recipeActualVsStandard}
             </p>
             <div className="space-y-4">
               {consumptionVariance.map((item) => {
@@ -207,7 +230,7 @@ export function ReportsClient({
                           {item.name}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          Đơn vị: kg
+                          {messages.inventory.reports.unitKg}
                         </p>
                       </div>
                     </div>
@@ -221,7 +244,9 @@ export function ReportsClient({
                         {item.actual}
                       </p>
                       <Badge variant={isUp ? "destructive" : "success"}>
-                        {isUp ? "Vượt định mức" : "Tiết kiệm"}
+                        {isUp
+                          ? messages.inventory.reports.overStandard
+                          : messages.inventory.reports.saving}
                       </Badge>
                     </div>
                   </Card>
@@ -235,10 +260,12 @@ export function ReportsClient({
           <CardContent className="p-6">
             <div className="mb-6 flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-bold text-foreground">
-                  Xu hướng food cost
+                <h3 className="font-heading text-lg font-bold text-foreground">
+                  {messages.inventory.reports.foodCostTrend}
                 </h3>
-                <p className="text-sm text-muted-foreground">Mục tiêu 30%</p>
+                <p className="text-sm text-muted-foreground">
+                  {messages.inventory.reports.foodCostTarget}
+                </p>
               </div>
             </div>
             {foodCostTrendAvailable ? (
@@ -251,17 +278,17 @@ export function ReportsClient({
                   target={30}
                 />
                 <p className="mt-2 text-xs text-muted-foreground">
-                  Food cost theo tháng.
+                  {messages.inventory.reports.foodCostByMonth}
                 </p>
               </>
             ) : (
               <Empty className="min-h-40 py-8">
                 <EmptyHeader>
                   <EmptyTitle className="text-sm font-semibold">
-                    Chưa có đủ dữ liệu food cost
+                    {messages.inventory.reports.foodCostEmptyTitle}
                   </EmptyTitle>
                   <EmptyDescription className="text-xs leading-5">
-                    Cần thêm dữ liệu thực tế.
+                    {messages.inventory.reports.foodCostEmptyDescription}
                   </EmptyDescription>
                 </EmptyHeader>
               </Empty>
@@ -271,39 +298,20 @@ export function ReportsClient({
       </div>
 
       {/* Report catalog */}
-      <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">
-        Báo cáo chi tiết
+      <h2 className="font-heading text-xl font-semibold tracking-tight sm:text-2xl">
+        {messages.inventory.reports.detailTitle}
       </h2>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {[
-          {
-            icon: IconChartBar,
-            title: "Biến động kho chi tiết",
-            desc: "Lịch sử nhập, xuất từng mã.",
-          },
-          {
-            icon: IconTrendingUp,
-            title: "Chênh lệch định mức",
-            desc: "Hao hụt theo định mức.",
-          },
-          {
-            icon: IconArrowLeftRight,
-            title: "Luân chuyển đang vận chuyển",
-            desc: "Hàng đang đi nội bộ.",
-          },
-          {
-            icon: IconPackage,
-            title: "Tồn kho cuối kỳ",
-            desc: "Giá trị tồn khi chốt.",
-          },
-        ].map((report) => (
+        {reportCatalog.map((report) => (
           <Card key={report.title}>
             <CardContent className="p-5">
               <div className="mb-4 flex items-start justify-between gap-3">
                 <div className="flex size-12 items-center justify-center rounded-full bg-muted transition-colors">
                   <report.icon className="size-5 text-muted-foreground" />
                 </div>
-                <Badge variant="outline">Sắp mở</Badge>
+                <Badge variant="outline">
+                  {messages.inventory.reports.comingSoon}
+                </Badge>
               </div>
               <p className="font-bold text-foreground">{report.title}</p>
               <p className="mt-0.5 text-xs text-muted-foreground">

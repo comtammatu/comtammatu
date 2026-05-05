@@ -378,7 +378,6 @@ Route family:
 - `/admin/staff/[id]/permissions`
 - `/admin/staff/audit`
 - `/admin/settings/*`
-- `/admin/inventory/*`
 - `/admin/reports/*`
 - `/admin/accounting/periods`
 - `/admin/crm`
@@ -392,9 +391,8 @@ Route family:
 | Tổng quan vận hành        | Breadcrumb: Quản trị / current module             |
 | Báo cáo                   | Title from active route                           |
 | Nhân viên                 | Actions: Cổng nhân viên, Báo cáo                  |
-| Cấu hình kho              +----------------------------------------------------+
-| Kỳ kế toán                | Page content                                       |
-| Cài đặt                   |                                                    |
+| Kỳ kế toán                +----------------------------------------------------+
+| Cài đặt                   | Page content                                       |
 +---------------------------+----------------------------------------------------+
 ```
 
@@ -412,7 +410,7 @@ Primary job: open the next management surface or review critical operations.
 +--------------------------------------------------------------------------------+
 | Toolbar: scope / refresh                                                        |
 +--------------------------------------------------------------------------------+
-| Action links: Cài đặt, Nhân viên, Báo cáo, Cấu hình kho                         |
+| Action links: Cài đặt, Nhân viên, Báo cáo, Kỳ kế toán                            |
 +--------------------------------------------------------------------------------+
 | Operational snapshot: recent orders, blockers, branch health                    |
 +--------------------------------------------------------------------------------+
@@ -488,23 +486,19 @@ Rules:
 
 ### `/admin/inventory/*`
 
-Primary job: inventory policy and configuration, not daily stock operations.
+Primary job: none. This v1 admin route family is retired; `/inventory/*` is the canonical Inventory workspace.
 
 ```text
 +--------------------------------------------------------------------------------+
-| Policy tool tabs: Feature flags | Cold-chain | Express windows | Trust          |
-+--------------------------------------------------------------------------------+
-| Tool-specific toolbar: branch/category/user filter                              |
-+--------------------------------------------------------------------------------+
-| Policy table / form / audit result                                              |
+| Unsupported route / redirect / 404                                             |
 +--------------------------------------------------------------------------------+
 ```
 
 Rules:
 
-- Clearly label as `Cấu hình kho`.
-- Operational stock work remains under `/inventory/*`.
-- Fine-grained permissions are documented per action.
+- Do not render links, policy tables, or configuration forms from this route family.
+- Do not include this route family in Admin sidebar or app discovery.
+- Operational stock work and Inventory configuration entry points remain under `/inventory/*`.
 
 ### `/admin/reports/*`
 

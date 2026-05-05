@@ -29,7 +29,7 @@ export function InventoryHeader({
 
       <div className="flex min-w-0 flex-1 items-center gap-4">
         <div className="flex min-w-0 flex-col">
-          <h1 className="text-sm font-semibold leading-tight">{title}</h1>
+          <h1 className="font-heading text-sm font-semibold leading-tight">{title}</h1>
         </div>
       </div>
 

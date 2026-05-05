@@ -10,30 +10,30 @@ Authentication and authorization for the entire system. Every request passes thr
 
 ## Components
 
-| File                                               | Purpose                                                                                        | Lines                      |
-| -------------------------------------------------- | ---------------------------------------------------------------------------------------------- | -------------------------- |
-| `packages/shared/src/auth/types.ts`                | Role enum, JWT claims shape (`user_role` + optional `position`), scope types                   | Core types                 |
-| `packages/shared/src/auth/module-acl.ts`           | Module → allowed roles mapping, `canAccess()`, `getAccessibleModules()`                        | Route-level ACL (legacy)   |
-| `packages/shared/src/auth/permissions.ts`          | `PERMISSION_KEYS` (62 keys), `hasPermission()`, `hasAny/All` pure fns — **Auth v2 authz**       | Permission catalog (v2)    |
-| `packages/shared/src/auth/scope.ts`                | `extractClaims()` + `decodeJwtAppMetadata()` + `extractClaimsFromAccessToken()`                | JWT claim extraction       |
-| `packages/shared/src/auth/nav-config.ts`           | Admin sidebar navigation groups filtered by role                                               | UI navigation              |
-| `packages/shared/src/auth/app-discovery.ts`        | Shared app discovery metadata derived from ACL + nav config                                    | Shell discovery contract   |
-| `packages/shared/src/auth/blocked-state.ts`        | Canonical blocked-state reasons, user-facing copy, `buildAccessDeniedPath()`                   | Access-state contract      |
-| `apps/web/app/access-denied/page.tsx`              | Single presentation route for "authenticated but blocked" (renders copy from blocked-state)    | Access-state view          |
-| `apps/web/app/_lib/auth.ts`                        | `loadAuthState()` — shared claims reader for layouts/pages; throws if proxy invariant violated | Layout claims helper       |
-| `apps/web/proxy.ts`                                | Next.js middleware — **single auth gate**: session + claims + module ACL + branch scope        | Request gateway            |
-| `supabase/migrations/*_jwt_custom_claims_hook.sql` | `custom_access_token_hook()` — injects claims into JWT                                         | DB-level auth              |
-| `supabase/migrations/20260422120000_auth_v2_tables.sql` | Auth v2 core tables: `permission_keys`, `positions`, `role_templates`, `staff_permissions` | Auth v2 schema             |
-| `supabase/migrations/20260422120002_auth_v2_has_permission.sql` | `has_permission(branch, key)` / `has_permission_any(key)` SECURITY DEFINER helpers    | Auth v2 RLS helpers        |
-| `apps/web/app/admin/staff/[id]/permissions/`       | Admin UI for grant/revoke + audit (page + client + actions)                                    | Permission admin UI        |
-| `apps/web/app/_lib/permissions.ts`                 | Server helpers `fetchCurrentUserPermissions()` + `currentUserHasPermission()`                   | App-side permission reads  |
+| File                                                            | Purpose                                                                                        | Lines                     |
+| --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------- |
+| `packages/shared/src/auth/types.ts`                             | Role enum, JWT claims shape (`user_role` + optional `position`), scope types                   | Core types                |
+| `packages/shared/src/auth/module-acl.ts`                        | Module → allowed roles mapping, `canAccess()`, `getAccessibleModules()`                        | Route-level ACL (legacy)  |
+| `packages/shared/src/auth/permissions.ts`                       | `PERMISSION_KEYS` (87 keys), `hasPermission()`, `hasAny/All` pure fns — **Auth v2 authz**      | Permission catalog (v2)   |
+| `packages/shared/src/auth/scope.ts`                             | `extractClaims()` + `decodeJwtAppMetadata()` + `extractClaimsFromAccessToken()`                | JWT claim extraction      |
+| `packages/shared/src/auth/nav-config.ts`                        | Admin sidebar navigation groups filtered by role                                               | UI navigation             |
+| `packages/shared/src/auth/app-discovery.ts`                     | Shared app discovery metadata derived from ACL + nav config                                    | Shell discovery contract  |
+| `packages/shared/src/auth/blocked-state.ts`                     | Canonical blocked-state reasons, user-facing copy, `buildAccessDeniedPath()`                   | Access-state contract     |
+| `apps/web/app/access-denied/page.tsx`                           | Single presentation route for "authenticated but blocked" (renders copy from blocked-state)    | Access-state view         |
+| `apps/web/app/_lib/auth.ts`                                     | `loadAuthState()` — shared claims reader for layouts/pages; throws if proxy invariant violated | Layout claims helper      |
+| `apps/web/proxy.ts`                                             | Next.js middleware — **single auth gate**: session + claims + module ACL + branch scope        | Request gateway           |
+| `supabase/migrations/*_jwt_custom_claims_hook.sql`              | `custom_access_token_hook()` — injects claims into JWT                                         | DB-level auth             |
+| `supabase/migrations/20260422120000_auth_v2_tables.sql`         | Auth v2 core tables: `permission_keys`, `positions`, `role_templates`, `staff_permissions`     | Auth v2 schema            |
+| `supabase/migrations/20260422120002_auth_v2_has_permission.sql` | `has_permission(branch, key)` / `has_permission_any(key)` SECURITY DEFINER helpers             | Auth v2 RLS helpers       |
+| `apps/web/app/admin/staff/[id]/permissions/`                    | Admin UI for grant/revoke + audit (page + client + actions)                                    | Permission admin UI       |
+| `apps/web/app/_lib/permissions.ts`                              | Server helpers `fetchCurrentUserPermissions()` + `currentUserHasPermission()`                  | App-side permission reads |
 
 ## Role Hierarchy
 
 ```
 owner                          ← governance + tenant-wide oversight, including orders and inventory
 ├── super_manager              ← Trụ sở: vận hành + catalog NL, procurement
-├── area_manager               ← tenant-wide (no area scoping yet)
+├── area_manager               ← tenant-wide; area scope enforced via per-branch grants in `staff_permissions` (Auth v2)
 ├── branch_manager             ← single branch operations
 │   ├── cashier                ← POS (/br/[branchId]/pos)
 │   ├── waiter                 ← POS (/br/[branchId]/pos)
@@ -45,16 +45,17 @@ Legacy role strings (`owner`, `cashier`, …) still exist as `STAFF_ROLES` TS co
 
 ## Auth v2 — Position vs Permission
 
-| Concept        | Storage                                     | Purpose                                                          |
-| -------------- | ------------------------------------------- | ---------------------------------------------------------------- |
-| **Position**   | `positions` (per tenant) + `profiles.position_id` | HR chức vụ label (cashier, kho_truong, quan_ly_CN, …). Does not gate authz. |
-| **Permission** | `permission_keys` catalog (global)          | Canonical action strings: `inventory:read`, `pos:use`, 62 keys.  |
-| **Grant**      | `staff_permissions(user_id, branch_id, permission_key, valid_from, valid_until)` | Source of truth for authz. `branch_id IS NULL` ⇒ tenant-wide. Temporal window. |
-| **Template**   | `role_templates(permission_keys[])`         | Preset bundle applied when assigning a position (snapshot; edits don't propagate). |
+| Concept        | Storage                                                                          | Purpose                                                                                                                                                       |
+| -------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Position**   | `positions` (per tenant) + `profiles.position_id`                                | HR chức vụ label. Blue still has legacy codes like `kho_truong` / `quan_ly_CN`; green baseline maps these to English codes per ADR-0004. Does not gate authz. |
+| **Permission** | `permission_keys` catalog (global)                                               | Canonical action strings: `inventory:read`, `pos:use`, 87 keys.                                                                                               |
+| **Grant**      | `staff_permissions(user_id, branch_id, permission_key, valid_from, valid_until)` | Source of truth for authz. `branch_id IS NULL` ⇒ tenant-wide. Temporal window.                                                                                |
+| **Template**   | `role_templates(permission_keys[])`                                              | Preset bundle applied when assigning a position (snapshot; edits don't propagate).                                                                            |
 
 **Authz path (every request):** `proxy.ts` still does route-level module ACL via `canAccess(user_role, module)` as the fast gate. Row-level authz delegates to `has_permission(branch_id, key)` in RLS — owner bypass built-in, temporal validity filtered, area_manager scope preserved via per-branch grants (backfilled from `area_branches`).
 
 **Grant/revoke** goes through SECURITY DEFINER RPCs that enforce caller must hold `staff:assign_permission` and log every change to `permission_audit_log`:
+
 - `grant_permission(target, branch, key, template?, valid_from?, valid_until?)`
 - `revoke_permission(target, branch, key)`
 - `apply_template_to_user(target, branch, template, valid_from?, valid_until?)`
@@ -80,28 +81,33 @@ Defined in `packages/shared/src/auth/module-acl.ts`. Single source of truth — 
 
 | Module                                                  | owner | super_mgr | area_mgr | branch_mgr | wh_mgr | prod_mgr | cashier | waiter | chef | office |
 | ------------------------------------------------------- | ----- | --------- | -------- | ---------- | ------ | -------- | ------- | ------ | ---- | ------ |
-| dashboard                                               | ✓     | ✓         | ✓        | ✓          | ✓      | ✓        |         |        |      |        |
-| menu                                                    |       | ✓         | ✓        | ✓          |        |          |         |        |      |        |
+| dashboard                                               | ✓     | ✓         |          |            |        |          |         |        |      |        |
+| menu                                                    | ✓     | ✓         | ✓        | ✓          |        |          |         |        |      |        |
 | inventory                                               | ✓     | ✓         | ✓        | ✓          | ✓      | ✓        |         |        |      |        |
 | inventory_procurement (NCC, PO, GRN, HĐ NCC, công thức) | ✓     | ✓         |          |            | ✓      | ✓        |         |        |      |        |
-| orders                                                  | ✓     | ✓         | ✓        | ✓          |        |          |         |        |      |        |
-| staff                                                   |       | ✓         | ✓        | ✓          |        |          |         |        |      |        |
+| inventory_admin (RETIRED — empty allowed_roles)         |       |           |          |            |        |          |         |        |      |        |
+| orders                                                  | ✓     | ✓         | ✓        | ✓          |        |          | ✓       |        |      |        |
+| staff                                                   | ✓     | ✓         |          |            |        |          |         |        |      |        |
 | hr                                                      | ✓     | ✓         |          |            |        |          |         |        |      |        |
-| crm                                                     |       | ✓         | ✓        |            |        |          |         |        |      |        |
+| crm                                                     | ✓     | ✓         |          |            |        |          |         |        |      |        |
 | finance                                                 | ✓     | ✓         |          |            |        |          |         |        |      |        |
-| reports                                                 | ✓     | ✓         | ✓        | ✓          | ✓      | ✓        |         |        |      |        |
+| accounting (period close/reopen)                        | ✓     | ✓         |          |            |        |          |         |        |      |        |
+| reports                                                 | ✓     | ✓         |          |            |        |          |         |        |      |        |
 | settings                                                | ✓     | ✓         | ✓        | ✓          |        |          |         |        |      |        |
 | pos                                                     |       |           |          | ✓          |        |          | ✓       | ✓      |      |        |
 | kds                                                     |       |           |          | ✓          |        |          |         |        | ✓    |        |
+| branch_settings                                         | ✓     | ✓         | ✓        | ✓          |        |          |         |        |      |        |
+| branch_menu_limits                                      | ✓     | ✓         | ✓        | ✓          |        |          | ✓       |        | ✓    |        |
 | employee                                                | ✓     | ✓         | ✓        | ✓          | ✓      | ✓        | ✓       | ✓      | ✓    | ✓      |
+| notifications                                           | ✓     | ✓         | ✓        | ✓          | ✓      | ✓        | ✓       | ✓      | ✓    | ✓      |
 
 > `wh_mgr` = `warehouse_manager`, `prod_mgr` = `production_manager`. Route-level ACL đọc `user_role` từ JWT, derived từ `positions.legacy_role_code`. Row-level authz vẫn đi qua `has_permission(branch_id, key)` — matrix này chỉ là fast gate.
 >
-> **Phase 2-RPC còn legacy:** 17 SECURITY DEFINER functions vẫn dùng `auth_role()` trong body (xem `docs/ref/inventory-rbac-matrix.md` §6). User có permission đúng nhưng role không thuộc RPC whitelist sẽ bị reject. Migration cutover đang plan; đây không phải lỗi RLS.
+> Inventory mutating RPC chính đã permission-gated; phần `auth_role()` còn lại là route/side/scope guard hoặc legacy helper. Xem `docs/ref/inventory-rbac-matrix.md` §6.
 
 **Owner (chủ sở hữu):** ngoài các module quản trị / giám sát còn có thể vào `orders` và `inventory` để kiểm tra trực tiếp vận hành tenant-level. Tuy vậy owner không được coi là operator hằng ngày trong inventory docs/UI; các bề mặt Inventory hiện tối ưu cho `super_manager`, `area_manager`, `branch_manager`.
 
-**Inventory sub-route ACL:** `inventory` allows `owner`, `super_manager`, `area_manager`, `branch_manager` cho tồn kho, điều chuyển, stocktake, expiry, reports, và branch operations. `inventory_procurement` vẫn hẹp ở cấp trụ sở: `owner` và `super_manager` vào `suppliers`, `purchase-orders`, `grn`, `supplier-invoices`, `recipes`, và `receiving` theo `route-resolution.ts`. `production` không dùng module riêng nhưng page/nav đang giữ hẹp cho `super_manager` ở UI layer và page guard. `branch_manager` vì vậy chỉ nên thấy nhịp branch ops: nhận inbound transfer, tạo intra-branch transfer `Cấp bếp`, stocktake, adjustment/write-off.
+**Inventory sub-route ACL:** `inventory` allows `owner`, `super_manager`, `area_manager`, `branch_manager`, `warehouse_manager`, `production_manager` cho tồn kho, điều chuyển, stocktake, expiry, reports, và branch operations. `inventory_procurement` ở cấp trụ sở/kho: `owner`, `super_manager`, `warehouse_manager`, `production_manager` vào `suppliers`, `purchase-orders`, `grn`, `supplier-invoices`, `recipes`, và `receiving` theo `route-resolution.ts`. `inventory_admin` (`/admin/inventory/*` — `cold-chain`, `express-windows`, `feature-flags`, `trust`) đã RETIRED qua `allowedRoles: []`: page files còn tồn tại nhưng không role nào pass module ACL. `production` không dùng module riêng; Server Actions và DB/RPC/RLS hard-deny `area_manager` và `branch_manager` dù có manual production/menu grant. Operator production là `super_manager` / `production_manager`; `owner` có access kiểm tra/khẩn cấp nhưng không được UX dẫn như operator hằng ngày. `branch_manager` vì vậy chỉ nên thấy nhịp branch ops: nhận inbound transfer, tạo intra-branch transfer `Cấp bếp`, stocktake, adjustment/write-off.
 
 **UX boundary quan trọng:** nav có thể hẹp hơn module-level ACL để giảm nhiễu vận hành. Ví dụ `branch_manager` vẫn vào được `/inventory/transfers` để nhận hàng, nhưng UI không nên quảng bá action tạo inter-site transfer như tác vụ mặc định của vai trò này.
 
@@ -109,7 +115,8 @@ Defined in `packages/shared/src/auth/module-acl.ts`. Single source of truth — 
 
 - `/admin/settings/branches` — owner, super_manager only (page-level redirect)
 - `/admin/settings/general` — owner, super_manager only (page-level redirect)
-- `/admin/settings/tables` — all settings roles (area_manager, branch_manager see only their branch data)
+- `/admin/settings/areas` — owner, super_manager only (page-level redirect)
+- `/admin/settings/tables`, `/admin/settings/kds`, `/admin/settings/pos`, `/admin/settings/payments`, `/admin/settings/printers` — all settings roles (area_manager, branch_manager see only their branch data)
 
 ## Proxy Routing Logic — Single Gate
 
@@ -128,7 +135,7 @@ The resolver `resolvePostLoginRedirect(claims, returnTo, { surface?: "legacy" | 
 
 ### Invariant
 
-> *After `proxy()` returns, any layout or page downstream can assume: the user is authenticated, claims are valid, the role has module access, and — for `/br/[branchId]/{pos,kds}` — branch scope matches.*
+> _After `proxy()` returns, any layout or page downstream can assume: the user is authenticated, claims are valid, the role has module access, and — for `/br/[branchId]/{pos,kds}` — branch scope matches._
 
 `loadAuthState()` throws if the invariant is violated. This surfaces proxy gaps via `error.tsx` rather than masking them with silent redirects.
 
@@ -167,14 +174,14 @@ Single canonical helper cho "send blocked user somewhere they can read what happ
 
 ## Blast Radius
 
-| Change                        | Affected                                                                                        |
-| ----------------------------- | ----------------------------------------------------------------------------------------------- |
-| Add new permission key        | Migration (INSERT into `permission_keys`) + `packages/shared/src/auth/permissions.ts` constant |
-| Add new position              | Migration (INSERT into `positions` with `legacy_role_code` mapping) + seed script              |
-| Add new role_template         | Migration (INSERT into `role_templates`) or via admin RPC                                       |
-| Add new module to route ACL   | module-acl.ts + proxy.ts `resolveModule()` + nav-config.ts                                      |
-| Change JWT claims shape       | hook SQL + types.ts + scope.ts + proxy.ts. Always check `record.tenant_id IS NOT NULL` not `record IS NOT NULL` in plpgsql (see `PLPGSQL-RECORD-IS-NOT-NULL` regression). |
-| Cut a table's RLS to Auth v2  | DROP old policies + CREATE with `has_permission(branch_id, key)` (branch-scoped) or `has_permission_any(key)` (tenant-scoped). Keep structural gates (`branch_kind` checks) separate. |
+| Change                       | Affected                                                                                                                                                                              |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Add new permission key       | Migration (INSERT into `permission_keys`) + `packages/shared/src/auth/permissions.ts` constant                                                                                        |
+| Add new position             | Migration (INSERT into `positions` with `legacy_role_code` mapping) + seed script                                                                                                     |
+| Add new role_template        | Migration (INSERT into `role_templates`) or via admin RPC                                                                                                                             |
+| Add new module to route ACL  | module-acl.ts + proxy.ts `resolveModule()` + nav-config.ts                                                                                                                            |
+| Change JWT claims shape      | hook SQL + types.ts + scope.ts + proxy.ts. Always check `record.tenant_id IS NOT NULL` not `record IS NOT NULL` in plpgsql (see `PLPGSQL-RECORD-IS-NOT-NULL` regression).             |
+| Cut a table's RLS to Auth v2 | DROP old policies + CREATE with `has_permission(branch_id, key)` (branch-scoped) or `has_permission_any(key)` (tenant-scoped). Keep structural gates (`branch_kind` checks) separate. |
 
 ## Design Rationale
 

@@ -21,8 +21,14 @@ Mục tiêu:
 | --- | --- | --- |
 | UI cho người dùng nội bộ | Tiếng Việt | Giữ acronym quen thuộc như `POS`, `KDS`, `HQ`, `GRN`, `WAC` nếu cần ngắn gọn |
 | Docs nghiệp vụ | Tiếng Việt là chính | Lần nhắc đầu có thể ghi `Tiếng Việt (English)` để khóa nghĩa |
-| Code, DB schema, type, RPC, file path | Tiếng Anh | Không đặt identifier bằng tiếng Việt |
+| Code, DB schema, type, RPC, file path | Tiếng Anh | Không đặt identifier bằng tiếng Việt hoặc tiếng Việt không dấu |
 | Comment kỹ thuật | Tiếng Anh hoặc tiếng Việt ngắn gọn | Ưu tiên rõ nghĩa, không trộn 2 nghĩa cho cùng một entity |
+
+Persisted identifiers gồm table/column/function/RPC name, enum value, permission key,
+position code, role template name, feature flag key, URL query token, payload field, và
+storage bucket/object contract. Các identifier này dùng `lower_snake_case` hoặc route
+slug ASCII bằng tiếng Anh. Tiếng Việt chỉ nằm ở label/copy/user data, ví dụ
+`label_vi`, seeded branch names, menu item names, hoặc nội dung in/hiển thị.
 
 ## Quy ước chính tả tiếng Việt
 
@@ -147,8 +153,8 @@ Các cụm dưới đây bị xem là drift và phải thay bằng nhãn tiếng
 | `super_manager` | quản lý tổng | Vận hành cấp tenant (CW + CK) |
 | `area_manager` | quản lý khu vực | Quản trị nhiều chi nhánh |
 | `branch_manager` | quản lý chi nhánh | Quản trị một chi nhánh vận hành |
-| `warehouse_manager` | quản lý kho tổng | Procurement + kho Trụ sở (`kho_truong`, `thu_kho`) |
-| `production_manager` | quản lý sản xuất | Bếp trung tâm (`bep_truong`) |
+| `warehouse_manager` | quản lý kho tổng | Procurement + kho Trụ sở; blue legacy position codes: `kho_truong`, `thu_kho` |
+| `production_manager` | quản lý sản xuất | Bếp trung tâm; blue legacy position code: `bep_truong` |
 | `cashier` | thu ngân | POS |
 | `waiter` | phục vụ | POS |
 | `chef` | bếp | KDS |
@@ -156,11 +162,17 @@ Các cụm dưới đây bị xem là drift và phải thay bằng nhãn tiếng
 
 `user_role` là **legacy claim** trong JWT, derived từ `positions.legacy_role_code`. Vai trò mới (`warehouse_manager`, `production_manager`) được thêm khi Auth v2 tách Kho và Bếp trung tâm thành workstream riêng.
 
+Blue schema hiện còn một số position code tiếng Việt không dấu như `kho_truong`,
+`thu_kho`, `bep_truong`, `phu_bep`, `quan_ly_CN`, `quan_ly_vung`, `ke_toan`, và
+`ke_toan_truong`. Đây là legacy compatibility surface, không phải naming mẫu cho
+schema mới. Green baseline phải map các code này sang English `lower_snake_case`
+theo ADR-0004.
+
 ### Auth v2 — Position ⟂ Permission
 
 | Thuật ngữ | Code identifier | Ý nghĩa |
 | --- | --- | --- |
-| position (chức vụ) | `positions(code, legacy_role_code)` | Nhãn HR của nhân viên. Không gate authz trực tiếp. VD: `bep_truong`, `kho_truong`, `thu_kho`. |
+| position (chức vụ) | `positions(code, legacy_role_code)` | Nhãn HR của nhân viên. Không gate authz trực tiếp. Code mới dùng English, vd `head_chef`, `warehouse_head`, `warehouse_keeper`. |
 | permission key (khóa quyền) | `permission_keys(key)` | Chuỗi canonical cho hành động, vd `inventory:production_create`. Đơn vị authz nhỏ nhất. |
 | template (bộ quyền mẫu) | `role_templates(position_code, permission_keys[])` | Preset quyền gắn với 1 position; snapshot, không propagate khi edit. |
 | grant (cấp quyền) | `staff_permissions(user_id, branch_id, permission_key)` | Quyền thật của user tại branch cụ thể. `branch_id IS NULL` = tenant-wide. |

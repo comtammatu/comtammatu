@@ -10,6 +10,7 @@ import {
   ReceiptText as IconFileInvoice,
   QrCode as IconQrcode,
 } from "lucide-react";
+import { messages } from "@lib/messages";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { METHOD_LABELS } from "./bill-receipt-types";
 
@@ -30,7 +31,9 @@ export function BillReceiptPaymentPicker({
     <Card className="shadow-sm">
       <CardContent className="flex flex-col gap-3 p-3">
         <div className="flex items-center justify-between gap-2">
-          <h4 className="text-base font-semibold">Phương thức thanh toán</h4>
+          <h4 className="font-heading text-base font-semibold">
+            {messages.pos.payment.methodsTitle}
+          </h4>
           <Badge variant="outline">{methods.length}</Badge>
         </div>
 

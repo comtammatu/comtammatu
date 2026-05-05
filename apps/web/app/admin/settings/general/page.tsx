@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { loadAuthState } from "@/_lib/auth";
 import { SYSTEM_SETTING_DEFAULTS } from "@comtammatu/shared/settings";
 import { SettingsForm } from "./settings-form";
+import { SettingsPageShell } from "../settings-page-shell";
+import { messages } from "@lib/messages";
 
 export default async function GeneralSettingsPage() {
   const { supabase, claims } = await loadAuthState();
@@ -23,14 +25,11 @@ export default async function GeneralSettingsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Cài đặt chung</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Thuế, phí dịch vụ và thông tin cửa hàng
-        </p>
-      </div>
+    <SettingsPageShell
+      title={messages.settings.pages.generalTitle}
+      description={messages.settings.pages.generalDescription}
+    >
       <SettingsForm settings={settings} />
-    </div>
+    </SettingsPageShell>
   );
 }

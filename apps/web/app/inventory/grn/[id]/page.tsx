@@ -113,11 +113,10 @@ export default async function GRNDetailPage({
         l.price_variance_pct != null ? Number(l.price_variance_pct) : null,
       requiresReview: Boolean(l.requires_review),
       shortDeliveryAction:
-        (l.short_delivery_action as
-          | "accept_and_close"
-          | "wait_backorder"
-          | "request_credit"
-          | null) ?? null,
+        l.short_delivery_action === "accept_and_close" ||
+        l.short_delivery_action === "wait_backorder"
+          ? l.short_delivery_action
+          : null,
       unit: ing?.purchase_unit || l.unit || ing?.unit || "",
       cost: Number(l.unit_cost ?? 0),
       lot: l.batch_number ?? "",

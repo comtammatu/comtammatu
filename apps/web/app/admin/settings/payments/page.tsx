@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { loadAuthState } from "@/_lib/auth";
 import { SYSTEM_SETTING_DEFAULTS } from "@comtammatu/shared/settings";
 import { PaymentsForm } from "./payments-form";
+import { SettingsPageShell } from "../settings-page-shell";
+import { messages } from "@lib/messages";
 
 export default async function PaymentSettingsPage() {
   const { supabase, claims } = await loadAuthState();
@@ -32,19 +34,15 @@ export default async function PaymentSettingsPage() {
     !!process.env.MOMO_SECRET_KEY;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Thanh toán</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Bật VietQR và MoMo trên POS sau khi đã đặt biến môi trường trên
-          hosting (Vercel / server).
-        </p>
-      </div>
+    <SettingsPageShell
+      title={messages.settings.pages.paymentsTitle}
+      description={messages.settings.pages.paymentsDescription}
+    >
       <PaymentsForm
         settings={settings}
         vietqrEnvConfigured={vietqrEnvConfigured}
         momoEnvConfigured={momoEnvConfigured}
       />
-    </div>
+    </SettingsPageShell>
   );
 }

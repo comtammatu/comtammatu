@@ -69,7 +69,6 @@ export type InventoryDashboardData = {
   activeTransfers: number;
   activeStocktakes: number;
   priceReviewCount: number;
-  pendingSupplierReturns: number;
   reorderAlerts: Array<{
     ingredientId: number;
     branchId: number;
@@ -246,7 +245,6 @@ export async function loadInventoryDashboardData(
     activeTransfers,
     activeStocktakes,
     priceReviewCount: 0,
-    pendingSupplierReturns: 0,
     reorderAlerts,
     expiryAlerts,
     transfers,

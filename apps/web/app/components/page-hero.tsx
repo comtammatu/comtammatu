@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { cn } from "@comtammatu/ui";
+import { AppPageHeader } from "./surface";
 
 interface PageHeroProps {
   eyebrow?: ReactNode;
@@ -9,20 +9,22 @@ interface PageHeroProps {
   className?: string;
 }
 
-export function PageHero({ title, actions, className }: PageHeroProps) {
+export function PageHero({
+  eyebrow,
+  title,
+  description,
+  actions,
+  className,
+}: PageHeroProps) {
   return (
-    <header
-      className={cn(
-        "flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between",
-        className,
-      )}
-    >
-      <h2 className="min-w-0 truncate text-xl font-semibold">{title}</h2>
-      {actions ? (
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          {actions}
-        </div>
-      ) : null}
-    </header>
+    <AppPageHeader
+      headingLevel="h2"
+      eyebrow={eyebrow}
+      title={title}
+      description={description}
+      actions={actions}
+      className={className}
+      titleClassName="truncate text-xl sm:text-xl"
+    />
   );
 }

@@ -3,12 +3,10 @@
 
 /* ============================================================
  * THEME — packages/ui/src/styles/globals.css
- * Source preset: shadcn b1GN1lxvE (radix-lyra style, neutral baseColor)
- * Re-sync command:
- *   pnpm dlx shadcn@latest init -n probe -p b1GN1lxvE -t next --monorepo --pointer
+ * Runtime source: shadcn radix-lyra primitives + Ma Tu Concept 01 tokens.
  *
- * Override governance (rules — also pinned in CLAUDE.md):
- *   1. Additive only — Zone B/C MUST NOT modify a Zone A (preset) variable.
+ * Override governance:
+ *   1. Change global semantic tokens here only; never add route theme files.
  *   2. OKLCH only — no hex/rgb/hsl in any token.
  *   3. Light + dark BOTH required — every custom token defines :root AND .dark.
  *   4. Documented — each override group has an Override: <reason> comment.
@@ -24,14 +22,12 @@
 @source "../**/*.{ts,tsx}";
 
 /* ============================================================
- * ZONE A — PRESET b1GN1lxvE (verbatim, do not edit)
- * Re-sync: copy `:root` + `.dark` + Zone-A `@theme inline` from
- * `pnpm dlx shadcn@latest init --preset b1GN1lxvE --template next --monorepo`.
- * Mappings + values below MUST byte-equal the preset's globals.css.
+ * ZONE A — PRESET FOUNDATION + MA TU CONCEPT 01 SEMANTIC TOKENS
+ * Keep the shadcn token surface stable; tune values only through semantic vars.
  * ============================================================ */
 
 @theme inline {
-  --font-heading: var(--font-mono);
+  --font-heading: var(--font-matu-heading);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -74,72 +70,72 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.147 0.004 49.3);
+  --background: oklch(0.978 0.014 64.3);
+  --foreground: oklch(0.218 0.036 251.3);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.147 0.004 49.3);
+  --card-foreground: oklch(0.218 0.036 251.3);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.147 0.004 49.3);
-  --primary: oklch(0.553 0.195 38.402);
-  --primary-foreground: oklch(0.98 0.016 73.684);
-  --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.21 0.006 285.885);
-  --muted: oklch(0.96 0.002 17.2);
-  --muted-foreground: oklch(0.547 0.021 43.1);
-  --accent: oklch(0.96 0.002 17.2);
-  --accent-foreground: oklch(0.214 0.009 43.1);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0.005 34.3);
-  --input: oklch(0.922 0.005 34.3);
-  --ring: oklch(0.714 0.014 41.2);
-  --chart-1: oklch(0.879 0.169 91.605);
-  --chart-2: oklch(0.769 0.188 70.08);
-  --chart-3: oklch(0.666 0.179 58.318);
-  --chart-4: oklch(0.555 0.163 48.998);
-  --chart-5: oklch(0.473 0.137 46.201);
+  --popover-foreground: oklch(0.218 0.036 251.3);
+  --primary: oklch(0.56 0.18 33);
+  --primary-foreground: oklch(0.978 0.014 64.3);
+  --secondary: oklch(0.961 0.016 64.7);
+  --secondary-foreground: oklch(0.218 0.036 251.3);
+  --muted: oklch(0.956 0.014 67.7);
+  --muted-foreground: oklch(0.512 0.09 62.2);
+  --accent: oklch(0.936 0.018 70.2);
+  --accent-foreground: oklch(0.218 0.036 251.3);
+  --destructive: oklch(0.466 0.147 33.3);
+  --border: oklch(0.903 0.021 72.1);
+  --input: oklch(0.903 0.021 72.1);
+  --ring: oklch(0.77 0.164 73.2);
+  --chart-1: oklch(0.56 0.18 33);
+  --chart-2: oklch(0.77 0.164 73.2);
+  --chart-3: oklch(0.609 0.086 137);
+  --chart-4: oklch(0.218 0.036 251.3);
+  --chart-5: oklch(0.512 0.09 62.2);
   --radius: 0.625rem;
-  --sidebar: oklch(0.986 0.002 67.8);
-  --sidebar-foreground: oklch(0.147 0.004 49.3);
-  --sidebar-primary: oklch(0.646 0.222 41.116);
-  --sidebar-primary-foreground: oklch(0.98 0.016 73.684);
-  --sidebar-accent: oklch(0.96 0.002 17.2);
-  --sidebar-accent-foreground: oklch(0.214 0.009 43.1);
-  --sidebar-border: oklch(0.922 0.005 34.3);
-  --sidebar-ring: oklch(0.714 0.014 41.2);
+  --sidebar: oklch(0.994 0.006 84.6);
+  --sidebar-foreground: oklch(0.218 0.036 251.3);
+  --sidebar-primary: oklch(0.56 0.18 33);
+  --sidebar-primary-foreground: oklch(0.978 0.014 64.3);
+  --sidebar-accent: oklch(0.956 0.014 67.7);
+  --sidebar-accent-foreground: oklch(0.218 0.036 251.3);
+  --sidebar-border: oklch(0.903 0.021 72.1);
+  --sidebar-ring: oklch(0.77 0.164 73.2);
 }
 
 .dark {
-  --background: oklch(0.147 0.004 49.3);
-  --foreground: oklch(0.986 0.002 67.8);
-  --card: oklch(0.214 0.009 43.1);
-  --card-foreground: oklch(0.986 0.002 67.8);
-  --popover: oklch(0.214 0.009 43.1);
-  --popover-foreground: oklch(0.986 0.002 67.8);
-  --primary: oklch(0.47 0.157 37.304);
-  --primary-foreground: oklch(0.98 0.016 73.684);
-  --secondary: oklch(0.274 0.006 286.033);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.268 0.011 36.5);
-  --muted-foreground: oklch(0.714 0.014 41.2);
-  --accent: oklch(0.268 0.011 36.5);
-  --accent-foreground: oklch(0.986 0.002 67.8);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.547 0.021 43.1);
-  --chart-1: oklch(0.879 0.169 91.605);
-  --chart-2: oklch(0.769 0.188 70.08);
-  --chart-3: oklch(0.666 0.179 58.318);
-  --chart-4: oklch(0.555 0.163 48.998);
-  --chart-5: oklch(0.473 0.137 46.201);
-  --sidebar: oklch(0.214 0.009 43.1);
-  --sidebar-foreground: oklch(0.986 0.002 67.8);
-  --sidebar-primary: oklch(0.705 0.213 47.604);
-  --sidebar-primary-foreground: oklch(0.98 0.016 73.684);
-  --sidebar-accent: oklch(0.268 0.011 36.5);
-  --sidebar-accent-foreground: oklch(0.986 0.002 67.8);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.547 0.021 43.1);
+  --background: oklch(0.218 0.036 251.3);
+  --foreground: oklch(0.978 0.014 64.3);
+  --card: oklch(0.249 0.041 256.3);
+  --card-foreground: oklch(0.978 0.014 64.3);
+  --popover: oklch(0.249 0.041 256.3);
+  --popover-foreground: oklch(0.978 0.014 64.3);
+  --primary: oklch(0.617 0.172 34.9);
+  --primary-foreground: oklch(0.978 0.014 64.3);
+  --secondary: oklch(0.281 0.047 254.2);
+  --secondary-foreground: oklch(0.978 0.014 64.3);
+  --muted: oklch(0.281 0.047 254.2);
+  --muted-foreground: oklch(0.782 0.014 78.2);
+  --accent: oklch(0.322 0.044 257.8);
+  --accent-foreground: oklch(0.978 0.014 64.3);
+  --destructive: oklch(0.617 0.172 34.9);
+  --border: oklch(0.978 0.014 64.3 / 14%);
+  --input: oklch(0.978 0.014 64.3 / 18%);
+  --ring: oklch(0.77 0.164 73.2);
+  --chart-1: oklch(0.77 0.164 73.2);
+  --chart-2: oklch(0.617 0.172 34.9);
+  --chart-3: oklch(0.609 0.086 137);
+  --chart-4: oklch(0.869 0.087 60.1);
+  --chart-5: oklch(0.782 0.014 78.2);
+  --sidebar: oklch(0.249 0.041 256.3);
+  --sidebar-foreground: oklch(0.978 0.014 64.3);
+  --sidebar-primary: oklch(0.617 0.172 34.9);
+  --sidebar-primary-foreground: oklch(0.978 0.014 64.3);
+  --sidebar-accent: oklch(0.322 0.044 257.8);
+  --sidebar-accent-foreground: oklch(0.978 0.014 64.3);
+  --sidebar-border: oklch(0.978 0.014 64.3 / 14%);
+  --sidebar-ring: oklch(0.77 0.164 73.2);
 }
 
 @layer base {
@@ -183,13 +179,13 @@
 }
 
 :root {
-  --success: oklch(0.685 0.134 154.6);
-  --success-foreground: oklch(0.983 0.016 154.4);
-  --warning: oklch(0.806 0.15 77.9);
-  --warning-foreground: oklch(0.282 0.043 52.9);
-  --info: oklch(0.656 0.105 234.1);
-  --info-foreground: oklch(0.985 0.014 236.1);
-  --destructive-foreground: oklch(0.985 0.001 106.423);
+  --success: oklch(0.609 0.086 137);
+  --success-foreground: oklch(0.218 0.036 251.3);
+  --warning: oklch(0.77 0.164 73.2);
+  --warning-foreground: oklch(0.218 0.036 251.3);
+  --info: oklch(0.218 0.036 251.3);
+  --info-foreground: oklch(0.978 0.014 64.3);
+  --destructive-foreground: oklch(0.978 0.014 64.3);
   --tier-elite: oklch(0.55 0.18 305);
   --tier-elite-foreground: oklch(0.985 0.001 106.423);
   --tier-note: oklch(0.72 0.16 50);
@@ -197,13 +193,13 @@
 }
 
 .dark {
-  --success: oklch(0.708 0.124 154.6);
-  --success-foreground: oklch(0.181 0.017 154.4);
-  --warning: oklch(0.823 0.136 77.9);
-  --warning-foreground: oklch(0.241 0.043 52.9);
-  --info: oklch(0.704 0.1 234.1);
-  --info-foreground: oklch(0.216 0.018 236.1);
-  --destructive-foreground: oklch(0.985 0.001 106.423);
+  --success: oklch(0.609 0.086 137);
+  --success-foreground: oklch(0.218 0.036 251.3);
+  --warning: oklch(0.77 0.164 73.2);
+  --warning-foreground: oklch(0.218 0.036 251.3);
+  --info: oklch(0.869 0.087 60.1);
+  --info-foreground: oklch(0.218 0.036 251.3);
+  --destructive-foreground: oklch(0.978 0.014 64.3);
   --tier-elite: oklch(0.7 0.15 305);
   --tier-elite-foreground: oklch(0.214 0.009 43.1);
   --tier-note: oklch(0.74 0.14 50);
@@ -217,15 +213,12 @@
  * Re-sync: diff against node_modules/shadcn/dist/tailwind.css when bumping shadcn.
  * ============================================================ */
 
-/* Override: Inter for body + headings — Inter ships full Vietnamese tonal
- * coverage (latin-ext + vietnamese subsets) and reads more naturally than
- * mono at long-form copy. JetBrains Mono is retained for `font-mono`
- * tabular use cases (price columns, IDs, stock movements, codes) where
- * digit alignment matters. Brand decision: 2026-05-03 (was JetBrains Mono
- * everywhere; switched to Inter for body/heading per stakeholder request). */
+/* Override: Montserrat headings + Inter body — Concept 01 specifies
+ * Montserrat for headings and Inter for content. JetBrains Mono is retained
+ * for `font-mono` tabular use cases (price columns, IDs, stock movements,
+ * codes) where digit alignment matters. */
 @theme inline {
   --font-sans: var(--font-sans);
-  --font-heading: var(--font-sans);
 }
 
 /* Override: micro text sizes for compact labels (uppercase tracking-wider helpers

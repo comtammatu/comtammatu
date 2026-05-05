@@ -5,10 +5,14 @@ import {
   PERMISSION_KEYS,
   type JwtClaims,
   type PermissionKey,
-  type StaffRole,
 } from "@comtammatu/shared/auth";
 import { fetchIngredients } from "./actions";
 import { CATALOG_MANAGE_PERMISSIONS } from "./_lib/catalog-permissions";
+import {
+  canAccessProductionSurface,
+  isProductionBranchScopedRole,
+  type ProductionOperatorRole,
+} from "./_lib/production-roles";
 import {
   fetchProductionOrders,
   fetchProductionRecipes,
@@ -21,11 +25,7 @@ import type {
   IngredientOption,
 } from "./production-types";
 
-const PRODUCTION_SURFACE_ROLES = [
-  "owner",
-  "super_manager",
-  "production_manager",
-] as const;
+export { canAccessProductionSurface, isProductionBranchScopedRole };
 
 export const PRODUCTION_OPEN_PERMISSIONS = [
   PERMISSION_KEYS.INVENTORY_PRODUCTION_CREATE,
@@ -33,11 +33,6 @@ export const PRODUCTION_OPEN_PERMISSIONS = [
   PERMISSION_KEYS.MENU_WRITE,
 ] as const;
 
-const PRODUCTION_BRANCH_SCOPED_ROLES = ["production_manager"] as const;
-
-type ProductionSurfaceRole = (typeof PRODUCTION_SURFACE_ROLES)[number];
-type ProductionBranchScopedRole =
-  (typeof PRODUCTION_BRANCH_SCOPED_ROLES)[number];
 type InventorySupabase = Awaited<ReturnType<typeof createClient>>;
 
 type InventoryIngredientRow = {
@@ -56,7 +51,7 @@ type BranchPreviewRow = {
 };
 
 export interface ProductionSurfaceData {
-  role: ProductionSurfaceRole;
+  role: ProductionOperatorRole;
   canManageCatalog: boolean;
   canManageRecipes: boolean;
   canCreateProduction: boolean;
@@ -67,24 +62,6 @@ export interface ProductionSurfaceData {
   finishedGoods: FinishedGoodOption[];
   orders: ProductionOrderRow[];
   recipes: ProductionRecipeRow[];
-}
-
-export function canAccessProductionSurface(
-  role: StaffRole | null | undefined,
-): role is ProductionSurfaceRole {
-  return (
-    role != null &&
-    PRODUCTION_SURFACE_ROLES.includes(role as ProductionSurfaceRole)
-  );
-}
-
-export function isProductionBranchScopedRole(
-  role: StaffRole | null | undefined,
-): role is ProductionBranchScopedRole {
-  return (
-    role != null &&
-    PRODUCTION_BRANCH_SCOPED_ROLES.includes(role as ProductionBranchScopedRole)
-  );
 }
 
 async function currentUserHasAnyPermission(

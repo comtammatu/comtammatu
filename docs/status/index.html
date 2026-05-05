@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,100..900&family=JetBrains+Mono:wght@100..800&family=Montserrat:wght@100..900&display=swap"
       rel="stylesheet"
     />
     <style>
@@ -21,6 +21,10 @@
       }
 
       :root {
+        --font-sans: "Inter", sans-serif;
+        --font-heading: "Montserrat", var(--font-sans);
+        --font-mono: "JetBrains Mono", monospace;
+
         --amber-50: #fffbeb;
         --amber-100: #fef3c7;
         --amber-200: #fde68a;
@@ -77,7 +81,7 @@
       }
 
       html {
-        font-family: "Be Vietnam Pro", sans-serif;
+        font-family: var(--font-sans);
         background: var(--bg);
         color: var(--text);
         font-size: 15px;
@@ -91,6 +95,17 @@
       body {
         min-height: 100vh;
         padding-bottom: 4rem;
+      }
+
+      h1,
+      h2,
+      h3,
+      .topbar-brand,
+      .hero-title,
+      .section-title,
+      .module-name,
+      .info-card-title {
+        font-family: var(--font-heading);
       }
 
       /* ─── Animations ────────────────────────────────────────────────── */
@@ -325,7 +340,7 @@
         font-size: 0.75rem;
         font-weight: 600;
         color: var(--text-2);
-        font-family: "Be Vietnam Pro", monospace;
+        font-family: var(--font-mono);
         transition:
           border-color 0.2s,
           color 0.2s;
@@ -1314,7 +1329,7 @@
             xmlns="http://www.w3.org/2000/svg"
             style="
               overflow: visible;
-              font-family: &quot;Be Vietnam Pro&quot;, sans-serif;
+              font-family: var(--font-sans);
             "
           >
             <defs>

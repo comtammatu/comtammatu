@@ -13,7 +13,6 @@ import {
   Factory as IconBuildingFactory,
   Hourglass as IconHourglass,
   Lightbulb as IconBulb,
-  PackageX as IconPackageOff,
   Receipt as IconReceipt,
   ShoppingCart as IconShoppingCart,
   Truck as IconTruck,
@@ -37,6 +36,7 @@ import { StatusBadge } from "./_components/status-badge";
 import { formatVND } from "./_lib/format";
 import { getInventoryPaths, type InventoryRouteBase } from "./_lib/paths";
 import { tNav, tStatus } from "./_lib/dictionary";
+import { messages } from "@lib/messages";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -58,7 +58,6 @@ export type DashboardProps = {
   activeTransfers: number;
   activeStocktakes: number;
   priceReviewCount: number;
-  pendingSupplierReturns: number;
   reorderAlerts: Array<{
     ingredientId: number;
     branchId: number;
@@ -124,8 +123,7 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
     props.activeStocktakes +
     props.expiryAlerts.length +
     props.reorderAlerts.length +
-    props.priceReviewCount +
-    props.pendingSupplierReturns;
+    props.priceReviewCount;
 
   const sourceActions: FlowAction[] = props.showProcurement
     ? [
@@ -135,10 +133,6 @@ function buildFlowCards(props: DashboardProps): FlowCard[] {
           primary: true,
         },
         { label: tNav("grn", "navigation"), href: paths.grn },
-        {
-          label: tNav("supplierReturns", "navigation"),
-          href: paths.supplierReturns,
-        },
       ]
     : [
         { label: "Phiếu đến", href: paths.transfers, primary: true },
@@ -374,16 +368,6 @@ function buildTasks(props: DashboardProps): TaskItem[] {
       icon: <IconReceipt className="size-4" />,
       severity: "warning",
     });
-  if (showProcurement && props.pendingSupplierReturns > 0)
-    items.push({
-      key: "returns",
-      title: `${props.pendingSupplierReturns} phiếu trả NCC chờ xử lý`,
-      description: "Xác nhận hoặc ghi credit/hòan tiền.",
-      href: paths.supplierReturns,
-      icon: <IconPackageOff className="size-4" />,
-      severity: "warning",
-    });
-
   return items.slice(0, 6);
 }
 
@@ -450,7 +434,9 @@ export function DashboardClient(props: DashboardProps) {
         contentClassName="gap-6"
       >
         <section className="flex flex-col gap-3">
-          <h2 className="text-base font-semibold">3 luồng vận hành chính</h2>
+          <h2 className="font-heading text-base font-semibold">
+            {messages.inventory.dashboard.mainFlowsTitle}
+          </h2>
           <div className="grid gap-3 lg:grid-cols-3">
             {flowCards.map((flow) => {
               const Icon = flow.icon;
@@ -570,14 +556,6 @@ export function DashboardClient(props: DashboardProps) {
                         ? ("destructive" as const)
                         : ("default" as const),
                   },
-                  {
-                    label: "Phiếu trả NCC đang mở",
-                    value: String(props.pendingSupplierReturns),
-                    tone:
-                      props.pendingSupplierReturns > 0
-                        ? ("warning" as const)
-                        : ("default" as const),
-                  },
                 ]
               : []),
           ].map((kpi) => (
@@ -621,10 +599,10 @@ export function DashboardClient(props: DashboardProps) {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-sm">
-                    Việc cần làm ngay trong ca
+                    {messages.inventory.dashboard.shiftTasksTitle}
                   </CardTitle>
                   <CardDescription className="text-xs">
-                    {tasks.length} việc đang chờ xử lý
+                    {messages.inventory.dashboard.pendingTasks(tasks.length)}
                   </CardDescription>
                 </div>
                 <Badge variant="secondary" className="h-6">
@@ -636,7 +614,7 @@ export function DashboardClient(props: DashboardProps) {
             <CardContent>
               {tasks.length === 0 ? (
                 <p className="py-8 text-center text-sm text-muted-foreground">
-                  Không có việc cần xử lý gấp.
+                  {messages.inventory.dashboard.noUrgentTasks}
                 </p>
               ) : (
                 <div className="space-y-2">
@@ -677,7 +655,7 @@ export function DashboardClient(props: DashboardProps) {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-sm">
-                    Cảnh báo và luồng ưu tiên
+                    {messages.inventory.dashboard.priorityAlertsTitle}
                   </CardTitle>
                 </div>
                 <Button variant="ghost" size="sm" asChild>
@@ -706,13 +684,15 @@ export function DashboardClient(props: DashboardProps) {
                         {item.name}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        Tồn {item.current}
-                        {item.unit} / Ngưỡng {item.reorder}
-                        {item.unit}
+                        {messages.inventory.dashboard.reorderStatus(
+                          item.current,
+                          item.unit,
+                          item.reorder,
+                        )}
                       </p>
                     </div>
                     <Badge variant="destructive" className="shrink-0 text-xs">
-                      Tái đặt
+                      {messages.inventory.dashboard.reorder}
                     </Badge>
                   </Link>
                 ))}
@@ -743,8 +723,12 @@ export function DashboardClient(props: DashboardProps) {
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {item.daysLeft <= 0
-                          ? `Quá hạn ${Math.abs(item.daysLeft)} ngày`
-                          : `Còn ${item.daysLeft} ngày`}
+                          ? messages.inventory.dashboard.expiredDays(
+                              item.daysLeft,
+                            )
+                          : messages.inventory.dashboard.remainingDays(
+                              item.daysLeft,
+                            )}
                       </p>
                     </div>
                     <Badge
@@ -761,7 +745,7 @@ export function DashboardClient(props: DashboardProps) {
                 ))}
                 {reorderAlerts.length === 0 && expiryAlerts.length === 0 && (
                   <p className="py-8 text-center text-sm text-muted-foreground">
-                    Không có cảnh báo nào.
+                    {messages.inventory.dashboard.noAlerts}
                   </p>
                 )}
               </div>
@@ -781,10 +765,12 @@ export function DashboardClient(props: DashboardProps) {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-sm">
-                    Theo dõi điều chuyển
+                    {messages.inventory.dashboard.transferTrackingTitle}
                   </CardTitle>
                   <CardDescription className="text-xs">
-                    {activeTransferList.length} phiếu đang xử lý
+                    {messages.inventory.dashboard.activeTransfers(
+                      activeTransferList.length,
+                    )}
                   </CardDescription>
                 </div>
                 <Button variant="ghost" size="sm" asChild>
@@ -797,7 +783,7 @@ export function DashboardClient(props: DashboardProps) {
             <CardContent>
               {activeTransferList.length === 0 ? (
                 <p className="py-8 text-center text-sm text-muted-foreground">
-                  Không có điều chuyển đang xử lý
+                  {messages.inventory.dashboard.noActiveTransfers}
                 </p>
               ) : (
                 <div className="space-y-2">
@@ -830,9 +816,13 @@ export function DashboardClient(props: DashboardProps) {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-sm">Tiến độ kiểm kê</CardTitle>
+                  <CardTitle className="text-sm">
+                    {messages.inventory.dashboard.stocktakeProgress}
+                  </CardTitle>
                   <CardDescription className="text-xs">
-                    {activeStocktakeList.length} phiên đang thực hiện
+                    {messages.inventory.dashboard.activeStocktakes(
+                      activeStocktakeList.length,
+                    )}
                   </CardDescription>
                 </div>
                 <Button variant="ghost" size="sm" asChild>
@@ -845,7 +835,7 @@ export function DashboardClient(props: DashboardProps) {
             <CardContent>
               {activeStocktakeList.length === 0 ? (
                 <p className="py-8 text-center text-sm text-muted-foreground">
-                  Không có phiên kiểm kê đang thực hiện
+                  {messages.inventory.dashboard.noActiveStocktakes}
                 </p>
               ) : (
                 <div className="space-y-2">

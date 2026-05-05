@@ -11,13 +11,20 @@ Tenant (L0, single row: Cơm Tấm Má Tư CTCP)
 ## System Overview
 
 ```
-┌─────────────────────────────────────────────────────┐
-│  Browser                                             │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌────────┐ │
-│  │ Admin    │ │ POS      │ │ KDS      │ │Employee│ │
-│  │ /admin/* │ │ /br/*/pos│ │ /br/*/kds│ │/employee││
-│  └──────────┘ └──────────┘ └──────────┘ └────────┘ │
-└────────────────────┬────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│  Browser                                                                  │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐        │
+│  │ Admin    │ │Inventory │ │ Finance  │ │ HR       │ │Notifs    │        │
+│  │ /admin/* │ │/inventory│ │ /finance │ │ /hr      │ │/notifs.  │        │
+│  └──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘        │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐        │
+│  │ Orders   │ │ POS      │ │ KDS      │ │ Br Settings/Menu Limits        │
+│  │ /orders  │ │ /br/*/pos│ │ /br/*/kds│ │ /br/[id]/{settings,menu-limits}│
+│  └──────────┘ └──────────┘ └──────────┘ └──────────┘ ┌──────────┐        │
+│                                                       │Employee  │        │
+│                                                       │/employee │        │
+│                                                       └──────────┘        │
+└────────────────────┬─────────────────────────────────────────────────────┘
                      │
               ┌──────▼──────┐
               │  proxy.ts   │  Auth + ACL routing
@@ -51,12 +58,14 @@ Every DB query/mutation → RLS → has_permission(branch_id, key) on staff_perm
 
 ### Role → Default Route
 
-| Role                                               | Route                |
-| -------------------------------------------------- | -------------------- |
-| owner, super_manager, area_manager, branch_manager | `/admin/dashboard`   |
-| cashier, waiter                                    | `/br/[branchId]/pos` |
-| chef                                               | `/br/[branchId]/kds` |
-| office                                             | `/employee`          |
+Defined in `getDefaultRedirect(claims)` (`packages/shared/src/auth/scope.ts`).
+
+| Role                                                                                                                  | Route              |
+| --------------------------------------------------------------------------------------------------------------------- | ------------------ |
+| `ADMIN_ROLES` = owner, super_manager                                                                                  | `/admin/dashboard` |
+| All others (area_manager, branch_manager, warehouse_manager, production_manager, cashier, waiter, chef, office) | `/employee`        |
+
+POS/KDS are not anyone's default landing — operators reach `/br/[branchId]/pos` or `/kds` via the employee shell or a direct link.
 
 ## RLS Pattern
 
@@ -91,12 +100,23 @@ USING (branch_id = auth_branch_id()
 
 > Decision: D009 — path-based, không sub-domain. Sub-domain là Post-v1.0.
 
-| Surface  | Route                | Roles                                              |
-| -------- | -------------------- | -------------------------------------------------- |
-| Admin    | `/admin/*`           | owner, super_manager, area_manager, branch_manager |
-| POS      | `/br/[branchId]/pos` | cashier, waiter                                    |
-| KDS      | `/br/[branchId]/kds` | chef                                               |
-| Employee | `/employee/*`        | office                                             |
+Top-level surfaces (see `module-acl.ts` for canonical role lists):
+
+| Surface             | Route                          | Allowed roles (summary)                                              |
+| ------------------- | ------------------------------ | -------------------------------------------------------------------- |
+| Admin               | `/admin/*`                     | owner, super_manager (+ area/branch_manager on settings sub-routes)  |
+| Inventory           | `/inventory/*`                 | owner, super_manager, area_manager, branch_manager, warehouse_manager, production_manager |
+| Finance             | `/finance/*`                   | owner, super_manager                                                 |
+| HR                  | `/hr/*`                        | owner, super_manager                                                 |
+| Orders              | `/orders`                      | owner, super_manager, area_manager, branch_manager, cashier          |
+| Notifications       | `/notifications`               | all staff                                                            |
+| POS                 | `/br/[branchId]/pos`           | cashier, waiter, branch_manager                                      |
+| KDS                 | `/br/[branchId]/kds`           | chef, branch_manager                                                 |
+| Branch settings     | `/br/[branchId]/settings/*`    | owner, super_manager, area_manager, branch_manager                   |
+| Branch menu limits  | `/br/[branchId]/menu-limits`   | owner, super_manager, area_manager, branch_manager, cashier, chef    |
+| Employee            | `/employee/*`                  | all staff                                                            |
+| Access denied       | `/access-denied`               | public (rendered with reason copy from `blocked-state.ts`)           |
+| Payment return      | `/payment/momo/return`         | public (Momo redirect target)                                        |
 
 ## Infrastructure Strategy
 

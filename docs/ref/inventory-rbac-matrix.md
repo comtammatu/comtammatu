@@ -15,13 +15,13 @@
 
 ## 1. Mô hình Auth v2 (tóm tắt cho Inventory)
 
-| Khái niệm | Ý nghĩa | Nằm ở |
-| --- | --- | --- |
-| **Permission key** | Chuỗi hành động canonical (vd `inventory:production_create`). Là đơn vị authz nhỏ nhất. | `permission_keys` catalog + `permissions.ts` |
-| **Position** | Chức vụ HR (vd `bep_truong` = Bếp trưởng). **Không** gate authz trực tiếp. | `positions` (per tenant), `profiles.position_id` |
-| **Template** | Bundle permission preset gắn với 1 position. Snapshot — edit template không propagate. | `role_templates(position_code, permission_keys[])` |
-| **Grant** | Quyền thật của user tại branch cụ thể, dạng (user, branch, key). `branch_id IS NULL` = tenant-wide. | `staff_permissions` |
-| **Legacy role** | `user_role` claim còn ở JWT, derived từ `positions.legacy_role_code`. Phục vụ route-level ACL + 17 RPC chưa migrate. | `module-acl.ts`, `auth_role()` helper |
+| Khái niệm          | Ý nghĩa                                                                                                                                       | Nằm ở                                              |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| **Permission key** | Chuỗi hành động canonical (vd `inventory:production_create`). Là đơn vị authz nhỏ nhất.                                                       | `permission_keys` catalog + `permissions.ts`       |
+| **Position**       | Chức vụ HR (vd `bep_truong` = Bếp trưởng). **Không** gate authz trực tiếp.                                                                    | `positions` (per tenant), `profiles.position_id`   |
+| **Template**       | Bundle permission preset gắn với 1 position. Snapshot — edit template không propagate.                                                        | `role_templates(position_code, permission_keys[])` |
+| **Grant**          | Quyền thật của user tại branch cụ thể, dạng (user, branch, key). `branch_id IS NULL` = tenant-wide.                                           | `staff_permissions`                                |
+| **Legacy role**    | `user_role` claim còn ở JWT, derived từ `positions.legacy_role_code`. Phục vụ route-level ACL và một số role-scope guard còn chủ ý trong RPC. | `module-acl.ts`, `auth_role()` helper              |
 
 **Authz path cho mỗi Inventory request:**
 
@@ -30,23 +30,23 @@
 3. RLS policy trên table dùng `has_permission(branch_id, key)` — row gate.
 4. RPC body (SECURITY DEFINER) thực thi logic + check role/permission nội bộ.
 
-> **Phase 2-RPC còn legacy:** 17 RPC còn gọi `auth_role()` trong body (xem §6). Fix đang plan, không phải bug về RLS.
+> **Phase 2-RPC status:** Inventory mutating RPC chính đã chuyển sang permission gate; phần `auth_role()` còn lại là route/side/scope guard hoặc legacy helper (xem §6).
 
 ---
 
 ## 2. Positions liên quan Inventory (Cơm Tấm Má Tư — tenant_id=1)
 
-| Position code | Label VI | `legacy_role_code` | Scope vận hành mặc định |
-| ------------- | -------- | ------------------ | ----------------------- |
-| `chu_so_huu` | Chủ sở hữu | `owner` | Tenant-wide bypass (owner bypass trong `has_permission()`) |
-| `quan_ly_tong` | Quản lý tổng | `super_manager` | Tenant-wide operations + procurement |
-| `quan_ly_khu_vuc` | Quản lý khu vực | `area_manager` | Branches thuộc area (qua per-branch grants) |
-| `quan_ly_cn` | Quản lý chi nhánh | `branch_manager` | Branch của mình |
-| `kho_truong` | Kho trưởng | `warehouse_manager` | Kho Tổng / CW (procurement + outbound transfer) |
-| `thu_kho` | Thủ kho | `warehouse_manager` | Staff-level warehouse (nhận hàng + stocktake) |
-| `bep_truong` | Bếp trưởng | `production_manager` | Bếp trung tâm (sản xuất + KDS) |
+| Position code   | Label VI           | `legacy_role_code`   | Scope vận hành mặc định                                    |
+| --------------- | ------------------ | -------------------- | ---------------------------------------------------------- |
+| `owner`         | Chủ sở hữu         | `owner`              | Tenant-wide bypass (owner bypass trong `has_permission()`) |
+| `super_manager` | Giám đốc điều hành | `super_manager`      | Tenant-wide operations + procurement                       |
+| `quan_ly_vung`  | Quản lý khu vực    | `area_manager`       | Branches thuộc area (qua per-branch grants)                |
+| `quan_ly_CN`    | Quản lý chi nhánh  | `branch_manager`     | Branch của mình                                            |
+| `kho_truong`    | Kho trưởng         | `warehouse_manager`  | Kho Tổng / CW (procurement + outbound transfer)            |
+| `thu_kho`       | Thủ kho            | `warehouse_manager`  | Staff-level warehouse (nhận hàng + stocktake)              |
+| `bep_truong`    | Bếp trưởng         | `production_manager` | Bếp trung tâm (sản xuất + KDS)                             |
 
-> Các position POS/KDS (`thu_ngan`, `phuc_vu`, `dau_bep`) không có Inventory grant mặc định; chỉ tác động tồn kho gián tiếp qua consumption flow.
+> Các position POS/KDS (`cashier`, `waiter`, `chef`, `phu_bep`) không có Inventory grant mặc định; chỉ tác động tồn kho gián tiếp qua consumption flow.
 
 ---
 
@@ -54,127 +54,133 @@
 
 ### 3.1 Inventory module
 
-| Key | Ý nghĩa |
-| --- | --- |
-| `inventory:read` | Xem tồn kho, movement, alerts |
-| `inventory:write` | Cập nhật catalog nguyên liệu, adjust tồn |
-| `inventory:transfer_create` | Tạo phiếu luân chuyển nội bộ (draft) |
-| `inventory:transfer_ship` | Confirm xuất kho (ship) của phiếu luân chuyển |
-| `inventory:transfer_receive` | Confirm nhận hàng tại điểm đến |
-| `inventory:stocktake_create` | Mở phiên kiểm kê |
-| `inventory:stocktake_complete` | Đóng phiên kiểm kê + post adjustments |
-| `inventory:writeoff` | Ghi hao hụt / waste / hết hạn |
-| `inventory:production_create` | Tạo lệnh sản xuất (bếp trung tâm) |
-| `inventory:production_confirm` | Confirm hoàn thành lệnh sản xuất |
+| Key                            | Ý nghĩa                                       |
+| ------------------------------ | --------------------------------------------- |
+| `inventory:read`               | Xem tồn kho, movement, alerts                 |
+| `inventory:write`              | Cập nhật catalog nguyên liệu, adjust tồn      |
+| `inventory:transfer_create`    | Tạo phiếu luân chuyển nội bộ (draft)          |
+| `inventory:transfer_ship`      | Confirm xuất kho (ship) của phiếu luân chuyển |
+| `inventory:transfer_receive`   | Confirm nhận hàng tại điểm đến                |
+| `inventory:stocktake_create`   | Mở phiên kiểm kê                              |
+| `inventory:stocktake_complete` | Đóng phiên kiểm kê + post adjustments         |
+| `inventory:writeoff`           | Ghi hao hụt / waste / hết hạn                 |
+| `inventory:production_create`  | Tạo lệnh sản xuất (bếp trung tâm)             |
+| `inventory:production_confirm` | Confirm hoàn thành lệnh sản xuất              |
 
 ### 3.2 Procurement module (`inventory_procurement`)
 
-| Key | Ý nghĩa |
-| --- | --- |
-| `procurement:read` | Xem PO, GRN, NCC, hoá đơn mua |
-| `procurement:supplier_manage` | CRUD nhà cung cấp |
-| `procurement:po_create` | Tạo Purchase Order |
-| `procurement:po_approve` | Duyệt PO (thả ra cho NCC) |
-| `procurement:grn_create` | Tạo phiếu nhập kho draft |
-| `procurement:grn_confirm` | Xác nhận GRN → cập nhật tồn |
-| `procurement:invoice_create` | Nhập hoá đơn NCC |
-| `procurement:invoice_match` | 3-way matching PO ↔ GRN ↔ Invoice |
+| Key                           | Ý nghĩa                           |
+| ----------------------------- | --------------------------------- |
+| `procurement:read`            | Xem PO, GRN, NCC, hoá đơn mua     |
+| `procurement:supplier_manage` | CRUD nhà cung cấp                 |
+| `procurement:po_create`       | Tạo Purchase Order                |
+| `procurement:po_approve`      | Duyệt PO (thả ra cho NCC)         |
+| `procurement:grn_create`      | Tạo phiếu nhập kho draft          |
+| `procurement:grn_confirm`     | Xác nhận GRN → cập nhật tồn       |
+| `procurement:invoice_create`  | Nhập hoá đơn NCC                  |
+| `procurement:invoice_match`   | 3-way matching PO ↔ GRN ↔ Invoice |
 
 ### 3.3 Menu-adjacent (recipes)
 
-| Key | Ý nghĩa |
-| --- | --- |
-| `menu:read` | Xem công thức + menu items |
-| `menu:write` | CRUD `recipes`, `production_recipes`, `menu_items` |
-| `menu:manage_category` | Quản lý danh mục |
-| `menu:publish` | Publish thay đổi menu |
+| Key                    | Ý nghĩa                                            |
+| ---------------------- | -------------------------------------------------- |
+| `menu:read`            | Xem công thức + menu items                         |
+| `menu:write`           | CRUD `recipes`, `production_recipes`, `menu_items` |
+| `menu:manage_category` | Quản lý danh mục                                   |
+| `menu:publish`         | Publish thay đổi menu                              |
 
 ---
 
 ## 4. Template matrix — Permissions per Position
 
-Matrix dưới đây là snapshot template (`role_templates.permission_keys`) mà Auth v2 grant tự động khi assign position. Edit template KHÔNG propagate; dùng `sync_missing_permissions_from_template()` để refresh.
+Matrix dưới đây là snapshot template (`role_templates.permission_keys`) mà Auth v2 grant tự động khi assign position, sau các migration contract Inventory v2:
 
-| Permission key | owner bypass | super_manager | area_manager | branch_manager | kho_truong | thu_kho | bep_truong |
-| -------------- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| `inventory:read` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| `inventory:write` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ gap |
-| `inventory:transfer_create` | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ⚠️ gap |
-| `inventory:transfer_ship` | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
-| `inventory:transfer_receive` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
-| `inventory:stocktake_create` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
-| `inventory:stocktake_complete` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
-| `inventory:writeoff` | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
-| `inventory:production_create` | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| `inventory:production_confirm` | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| `procurement:read` | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ⚠️ gap |
-| `procurement:supplier_manage` | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ |
-| `procurement:po_create` | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ |
-| `procurement:po_approve` | ✅ | ✅ | ❌ | ❌ | ⚠️ held | ❌ | ❌ |
-| `procurement:grn_create` | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ |
-| `procurement:grn_confirm` | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ |
-| `procurement:invoice_create` | ✅ | ✅ | ❌ | ❌ | ⚠️ held | ❌ | ❌ |
-| `procurement:invoice_match` | ✅ | ✅ | ❌ | ❌ | ⚠️ held | ❌ | ❌ |
-| `menu:read` | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ |
-| `menu:write` | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ⚠️ gap |
+- `20260423080000_auth_v2_bep_truong_template_fix.sql`
+- `20260505094000_inventory_rbac_template_contract_v2.sql`
+
+Edit template không tự propagate toàn cục. Migration contract v2 backfill grant còn thiếu cho `bep_truong` và expire grant template-derived đã bị remove khỏi `quan_ly_CN` / `quan_ly_vung`; manual override được giữ lại.
+
+| Permission key                 | owner bypass | super_manager | area_manager | branch_manager | kho_truong | thu_kho | bep_truong |
+| ------------------------------ | :----------: | :-----------: | :----------: | :------------: | :--------: | :-----: | :--------: |
+| `inventory:read`               |      ✅      |      ✅       |      ✅      |       ✅       |     ✅     |   ✅    |     ✅     |
+| `inventory:write`              |      ✅      |      ✅       |      ✅      |       ✅       |     ✅     |   ✅    |     ❌     |
+| `inventory:transfer_create`    |      ✅      |      ✅       |      ❌      |      ✅\*      |     ✅     |   ❌    |     ✅     |
+| `inventory:transfer_ship`      |      ✅      |      ✅       |      ❌      |       ❌       |     ✅     |   ❌    |     ✅     |
+| `inventory:transfer_receive`   |      ✅      |      ✅       |      ❌      |      ✅\*      |     ✅     |   ✅    |     ✅     |
+| `inventory:stocktake_create`   |      ✅      |      ✅       |      ✅      |       ✅       |     ✅     |   ✅    |     ❌     |
+| `inventory:stocktake_complete` |      ✅      |      ✅       |      ✅      |       ✅       |     ✅     |   ✅    |     ❌     |
+| `inventory:writeoff`           |      ✅      |      ✅       |      ✅      |       ✅       |     ✅     |   ❌    |     ❌     |
+| `inventory:production_create`  |      ✅      |      ✅       |      ❌      |       ❌       |     ❌     |   ❌    |     ✅     |
+| `inventory:production_confirm` |      ✅      |      ✅       |      ❌      |       ❌       |     ❌     |   ❌    |     ✅     |
+| `procurement:read`             |      ✅      |      ✅       |      ❌      |       ❌       |     ✅     |   ❌    |     ✅     |
+| `procurement:supplier_manage`  |      ✅      |      ✅       |      ❌      |       ❌       |     ✅     |   ❌    |     ❌     |
+| `procurement:po_create`        |      ✅      |      ✅       |      ❌      |       ❌       |     ✅     |   ❌    |     ❌     |
+| `procurement:po_approve`       |      ✅      |      ✅       |      ❌      |       ❌       |  ⚠️ held   |   ❌    |     ❌     |
+| `procurement:grn_create`       |      ✅      |      ✅       |      ❌      |       ❌       |     ✅     |   ❌    |     ❌     |
+| `procurement:grn_confirm`      |      ✅      |      ✅       |      ❌      |       ❌       |     ✅     |   ❌    |     ❌     |
+| `procurement:invoice_create`   |      ✅      |      ✅       |      ❌      |       ❌       |  ⚠️ held   |   ❌    |     ❌     |
+| `procurement:invoice_match`    |      ✅      |      ✅       |      ❌      |       ❌       |  ⚠️ held   |   ❌    |     ❌     |
+| `menu:read`                    |      ✅      |      ✅       |      ✅      |       ✅       |     ❌     |   ❌    |     ✅     |
+| `menu:write`                   |      ✅      |      ✅       |      ❌      |       ❌       |     ❌     |   ❌    |     ✅     |
 
 **Legenda:**
 
 - ✅ = có trong template mặc định (hoặc owner bypass)
+- ✅\* = key có trong template nhưng runtime/app/RPC giới hạn hướng hoặc branch scope
 - ❌ = không trong template
-- ⚠️ **gap** = cần thêm nhưng template hiện tại thiếu, fix scheduled (xem §7)
 - ⚠️ **held** = cố ý không cấp; việc thuộc super_manager / accounting
 
-**Known gaps — template `bep_truong` cần bổ sung (scheduled fix):**
+**Contract notes:**
 
-- `menu:write` — Bếp trưởng cần CRUD `production_recipes`. RLS require `has_permission_any('menu:write')`.
-- `inventory:transfer_create` — Bếp trưởng cần tạo phiếu ship thành phẩm CK → chi nhánh.
-- `procurement:read` — Bếp trưởng cần xem PO/GRN để biết nguyên liệu sắp về.
+- `branch_manager` giữ `inventory:transfer_create` chỉ để commit one-step intra-branch `Cấp bếp`; không được tạo/ship inter-site outbound.
+- `branch_manager` giữ `inventory:transfer_receive` chỉ để nhận inbound về đúng branch của mình.
+- `area_manager` là oversight/review, không phải daily transfer/procurement operator.
+- `bep_truong` / `production_manager` sở hữu vòng CK: receive CW → CK, create/ship CK → branch, và quản trị production recipes.
+- Production hard-deny `area_manager` và `branch_manager` ở Server Actions, RPC và RLS dù có manual grant production/menu; operator production là `super_manager` / `production_manager`, còn `owner` là oversight/emergency access.
 
 ---
 
 ## 5. Data visibility
 
-| Dữ liệu | Quy tắc |
-| ------- | ------- |
-| On-hand quantity (`stock_levels`) | `inventory:read` cần. Scope theo branch grant. Owner + super_manager thấy tenant-wide. |
-| WAC / Average unit cost | Cùng scope với stock_levels; UI có thể ẩn cho branch-level role nếu use case không cần. |
-| Supplier invoice detail | Cần `procurement:read` + scope branch. |
-| Production BOM (`production_recipes`) | Cần `menu:read` (xem) hoặc `menu:write` (CRUD). |
-| Stocktake variance | Cùng scope với stocktake_* grants. |
-| AP aging | Render trong finance/reports, không thuộc Inventory route. |
+| Dữ liệu                               | Quy tắc                                                                                 |
+| ------------------------------------- | --------------------------------------------------------------------------------------- |
+| On-hand quantity (`stock_levels`)     | `inventory:read` cần. Scope theo branch grant. Owner + super_manager thấy tenant-wide.  |
+| WAC / Average unit cost               | Cùng scope với stock_levels; UI có thể ẩn cho branch-level role nếu use case không cần. |
+| Supplier invoice detail               | Cần `procurement:read` + scope branch.                                                  |
+| Production BOM (`production_recipes`) | Cần role production operator + `menu:read` (xem) hoặc `menu:write` (CRUD).              |
+| Stocktake variance                    | Cùng scope với stocktake\_\* grants.                                                    |
+| AP aging                              | Render trong finance/reports, không thuộc Inventory route.                              |
 
 ---
 
-## 6. Hidden legacy surface — 17 RPC còn `auth_role()`
+## 6. RPC gate status
 
-Các SECURITY DEFINER RPC dưới đây bỏ qua RLS nhưng **vẫn check role legacy trong body**. User có permission grant đúng nhưng role không thuộc whitelist sẽ bị RPC reject:
+Inventory RPC chính hiện đã permission-gated:
 
-```
-admin_update_profile, bump_kds_ticket, can_access_branch,
-cancel_production_order, close_fiscal_period, confirm_production_order,
-create_production_order, create_stock_transfer_draft, create_stocktake_session,
-create_supplier_payment, gl_reconciliation, post_payroll_journal,
-recall_kds_ticket, set_branch_kind, stock_transfer_list_branches,
-toggle_profile_active, upsert_recipe_lines
-```
+- `upsert_recipe_lines` → `menu:write`
+- `create_production_order` → `inventory:production_create`
+- `cancel_production_order` / `confirm_production_order` → `inventory:production_confirm`
+- `upsert_production_recipe_lines` → role production operator + `menu:write`
+- `create_stock_transfer_draft` → `inventory:transfer_create`
+- `stock_transfer_mark_in_transit` → `inventory:transfer_ship`
+- `stock_transfer_confirm_receive` / `stock_transfer_receive` → `inventory:transfer_receive`
 
-**Tác động Inventory:**
+Production DB contract dùng helper `is_inventory_production_operator()` cho RPC và RLS của `production_recipes`, `production_orders`, `production_order_items`. Vì vậy manual permission grant không cho `area_manager` / `branch_manager` bypass qua direct RPC hoặc PostgREST.
 
-- `create_production_order`, `confirm_production_order`, `cancel_production_order`, `upsert_recipe_lines`: bếp trưởng bị reject dù có `inventory:production_create`.
-- `create_stock_transfer_draft`, `stock_transfer_list_branches`: kho trưởng / bếp trưởng có thể không list được branches đích để tạo phiếu.
-- `create_stocktake_session`: ảnh hưởng kho trưởng / thủ kho nếu role không match legacy whitelist.
+Một số RPC vẫn dùng `auth_role()` như guard phụ:
 
-Phase 2-RPC cutover là P0 tiếp theo. Khi đó whitelist body sẽ thay bằng `IF has_permission(p_branch, '<key>') ...`.
+- Transfer RPC vẫn kiểm tra role để khóa hướng vận hành: `branch_manager` chỉ nhận inbound / commit `Cấp bếp`, `warehouse_manager` và `production_manager` chỉ thao tác trên branch của mình khi là role branch-scoped.
+- `stock_transfer_list_branches()` còn là helper role-whitelist, nhưng whitelist đã gồm `warehouse_manager` và `production_manager`; route vẫn đi qua module ACL.
+- Non-Inventory RPC legacy không còn là blocker của Inventory contract v2 và không được xem là source of truth cho Inventory action authz.
 
 ---
 
 ## 7. Open Questions / Known Drift
 
-1. **Template `bep_truong` thiếu 3 key** (§4) — đã confirm cần fix. Migration kèm `sync_missing_permissions_from_template` re-grant.
-2. **Server action `production-actions.ts:10`** — `PRODUCTION_ROLES = ["super_manager"]` hardcoded. Migrate sang `currentUserHasPermission("inventory:production_create")`.
-3. **H3 area scoping** — docs cũ ghi DEFERRED; Auth v2 đã giải qua per-branch grants (backfilled từ `area_branches`). Treat là SHIPPED-VIA-AUTH-V2.
-4. **Held permissions của kho_truong** (`po_approve`, `invoice_*`) — cố ý để super_manager / kế toán. Document không ghi là gap.
+1. **Template drift Inventory v1/v2** — closed by `20260505094000_inventory_rbac_template_contract_v2.sql`: add missing CK transfer grants for `bep_truong`, remove procurement keys from `quan_ly_CN`, remove transfer/procurement operator keys from `quan_ly_vung`.
+2. **H3 area scoping** — docs cũ ghi DEFERRED; Auth v2 đã giải qua per-branch grants (backfilled từ `area_branches`). Treat là SHIPPED-VIA-AUTH-V2.
+3. **Held permissions của kho_truong** (`po_approve`, `invoice_*`) — cố ý để super_manager / accounting. Document không ghi là thiếu quyền.
+4. **Manual permission overrides** — migration contract v2 chỉ expire grant có `source_template` trỏ tới template hệ thống hiện tại. Grant thủ công phải review bằng admin/audit flow nếu muốn thu hồi.
 
 ---
 

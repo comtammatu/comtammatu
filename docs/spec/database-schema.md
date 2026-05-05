@@ -1,5 +1,18 @@
 # Database Schema Reference
 
+> **⚠️ FROZEN — Sprint 1 / early-M2 era.** Do not trust the rest of this file as current.
+>
+> This reference still documents the dropped `staff_role` ENUM, the removed `profiles.role` column, and tagged "future" area_manager scoping that has since shipped (Auth v2). Many domains added since (Auth v2, M5-Ext production, Finance, Print Agent, Notifications, Trust/QC) are missing entirely.
+>
+> **Canonical sources for the current schema:**
+> 1. `packages/database/src/types/database.types.ts` (regenerated via `pnpm db:types`)
+> 2. `supabase/migrations/*.sql` — authored changes (file existence ≠ applied)
+> 3. `docs/modules/database.md` — domain groups + source-of-truth ladder
+>
+> The historical content below is preserved for context on early decisions (RLS pattern, snapshot pricing, state machines) but column lists may be stale.
+
+---
+
 ## Core Tables (v0.1.1)
 
 ### tenants

@@ -32,7 +32,7 @@ Updated: `2026-04-17`
   4. Gửi PO, kiểm trạng thái và feedback.
   5. Từ PO, sang bước tạo GRN.
   6. Trên GRN detail, kiểm actual/required/QC/lot/expiry rồi chốt nhập.
-  7. Vào `supplier-invoices`, tạo hóa đơn, chạy `tính lại đối soát`, rồi ghi nhận thanh toán.
+  7. Vào `supplier-invoices`, tạo hóa đơn và chạy `tính lại đối soát`.
 - `expected next step`:
   - dashboard/receiving phải làm rõ được bước kế tiếp sau từng màn;
   - sau PO draft là `Gửi PO`;
@@ -67,7 +67,7 @@ Updated: `2026-04-17`
   1. Thử tạo PO thiếu supplier hoặc thiếu line item.
   2. Thử gửi PO draft khi dữ liệu chưa hợp lệ.
   3. Từ GRN draft, thử chốt khi line/QC chưa hợp lý.
-  4. Từ invoice, thử thanh toán với amount không hợp lệ.
+  4. Từ invoice, xác nhận Inventory không render action ghi nhận thanh toán.
 - `expected next step`: hệ thống phải nói rõ cần bổ sung gì và quay về khu vực nào
 - `handoff`: không có; đây là audit error prevention
 - `success`:
@@ -149,7 +149,7 @@ Updated: `2026-04-17`
 - `expected next step`:
   - sau `received`, UI phải gợi đủ rõ sang `Cấp bếp`;
   - sau intra-branch transfer `Cấp bếp`, user hiểu tồn kho kho chi nhánh giảm và tồn bếp chi nhánh/default consumption tăng;
-  - sau stocktake, user hiểu variance/resolution.
+  - sau stocktake, user hiểu variance/kết quả chốt; conflict/recount S13b không nằm trong daily pilot.
 - `handoff`: báo chênh lệch lớn hoặc expiry risk cho OPS/HQ
 - `success`:
   - đây là journey branch quan trọng nhất và không được cần “người biết hệ thống trước” mới dùng được;
@@ -226,4 +226,3 @@ Updated: `2026-04-17`
 - `success`: owner vẫn đọc được phần cần đọc nhưng UI không cổ vũ hành vi operator
 - `blocked states`: dashboard và CTA trông y như `super_manager` operator
 - `recovery`: log issue ở lớp UX/nav/task framing
-

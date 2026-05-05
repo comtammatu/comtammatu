@@ -1,7 +1,6 @@
 "use client";
 
 import { Fragment, useMemo, type ComponentType, type ReactNode } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ArrowLeft as IconArrowLeft, LogOut as IconLogout } from "lucide-react";
@@ -38,14 +37,14 @@ import {
   isNavItemActive,
   type ShellNavGroup,
 } from "@/lib/shell-primitives";
-
-const DEFAULT_BRAND_MARK_SRC = "/brand/logo-matu-seal.png";
+import { BrandMark, type BrandMarkVariant } from "@/components/brand";
+import { messages } from "@lib/messages";
 
 interface BrandConfig {
   icon: ComponentType<{ className?: string }>;
   subLabel: string;
   mainLabel: ReactNode;
-  logoSrc?: string | null;
+  logoVariant?: BrandMarkVariant | null;
   logoAlt?: string;
   /** Show "back to admin" link above brand block. Default true. */
   showBackLink?: boolean;
@@ -82,6 +81,7 @@ export function AppShell({
   collapsible = "offcanvas",
 }: AppShellProps) {
   const pathname = usePathname();
+  const copy = messages.common;
   const pageTitle = useMemo(() => {
     const active = findActiveNavItem(navGroups, pathname);
     if (!active) return defaultPageTitle;
@@ -94,8 +94,8 @@ export function AppShell({
   }, [navGroups, pathname, defaultPageTitle]);
 
   const BrandIcon = brand.icon;
-  const logoSrc =
-    brand.logoSrc === undefined ? DEFAULT_BRAND_MARK_SRC : brand.logoSrc;
+  const logoVariant =
+    brand.logoVariant === undefined ? "seal" : brand.logoVariant;
   const showBackLink = brand.showBackLink ?? true;
   const triggerClass = collapsible === "icon" ? undefined : "md:hidden";
   const breadcrumbSegments = pageHeader.breadcrumbSegments ?? [];
@@ -110,24 +110,22 @@ export function AppShell({
               className="inline-flex items-center gap-1.5 text-xs font-medium text-sidebar-foreground/65 hover:text-sidebar-foreground group-data-[collapsible=icon]:hidden"
             >
               <IconArrowLeft className="size-3.5" />
-              Quản trị
+              {copy.admin}
             </Link>
           ) : null}
           <div className="flex items-center gap-3">
             <div
               className={
-                logoSrc
+                logoVariant
                   ? "flex size-10 shrink-0 items-center justify-center rounded-md border bg-sidebar-accent p-1"
                   : "flex size-10 shrink-0 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground"
               }
             >
-              {logoSrc ? (
-                <Image
-                  src={logoSrc}
-                  alt={brand.logoAlt ?? "Cơm Tấm Má Tư"}
-                  width={64}
-                  height={64}
-                  className="size-full object-contain"
+              {logoVariant ? (
+                <BrandMark
+                  variant={logoVariant}
+                  alt={brand.logoAlt}
+                  className="size-full"
                 />
               ) : (
                 <BrandIcon className="size-5" />
@@ -195,7 +193,7 @@ export function AppShell({
                 variant="ghost"
                 size="icon-sm"
                 className="text-sidebar-foreground/75 hover:text-sidebar-foreground"
-                aria-label="Đăng xuất"
+                aria-label={copy.signOut}
               >
                 <IconLogout className="size-4" />
               </Button>
@@ -233,7 +231,7 @@ export function AppShell({
                 <span className="truncate text-sm font-medium">
                   {pageTitle}
                 </span>
-                <h1 className="sr-only">{pageTitle}</h1>
+                <h1 className="font-heading sr-only">{pageTitle}</h1>
               </div>
             </div>
             {pageHeader.actions ? (

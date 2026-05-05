@@ -549,7 +549,7 @@ Surface: Admin, `P1`.
 
 Primary user job:
 
-- Manager/admin staff manage tenant-level operations: staff, settings, reports, inventory admin, accounting, CRM.
+- Manager/admin staff manage tenant-level operations: staff, settings, reports, accounting, CRM.
 
 Route contract inventory:
 
@@ -570,7 +570,7 @@ Route contract inventory:
 | `/admin/staff` | Staff management | `staff` | MVP |
 | `/admin/staff/audit` | Staff/admin audit trail | `staff` | Later wave |
 | `/admin/staff/[id]/permissions` | Permission grant/revoke/template | `staff` | MVP |
-| `/admin/inventory/*` | Inventory admin tools | `inventory_admin` | Later wave |
+| `/admin/inventory/*` | Retired Inventory v1 admin tools | `inventory_admin` legacy guard | Retired |
 | `/admin/reports/*` | Executive reports | `reports` | Later wave |
 | `/admin/accounting/periods` | Accounting period close/reopen | `accounting` | Later wave |
 | `/admin/crm` | CRM placeholder | `crm` | Later wave |
@@ -589,7 +589,7 @@ ACL policy:
 - `settings` module: `owner`, `super_manager`, `area_manager`, `branch_manager`.
 - `staff` module: `owner`, `super_manager`.
 - `reports` module: `owner`, `super_manager`.
-- `inventory_admin` module: `owner`, `super_manager`, `area_manager`, `branch_manager`, `warehouse_manager`.
+- `inventory_admin` module: no allowed roles; `/inventory/*` is the canonical Inventory workspace.
 - `accounting` module: `owner`, `super_manager`.
 - `crm` module: `owner`, `super_manager`.
 - Settings sub-pages have additional role restrictions:
@@ -807,9 +807,9 @@ Acceptance:
 - Branch-floor settings use URL params for branch scope.
 - `pnpm typecheck && pnpm lint && pnpm build` passes.
 
-## `/admin/inventory/*` — Inventory Admin Tools
+## `/admin/inventory/*` — Retired Inventory V1 Admin Tools
 
-Surface: Admin Inventory, later wave.
+Surface: Retired route boundary.
 
 Files:
 
@@ -821,58 +821,51 @@ Files:
 
 Primary user job:
 
-- Admin manages inventory policy and configuration tools: feature flags, cold-chain review policies, GRN express windows, and trust leaderboard.
+- None. Inventory operations and configuration entry points live under `/inventory/*`; old admin Inventory URLs must not render live tools.
 
 Change type:
 
-- Auth/nav: yes — Gate 0 fix for empty allowlists (completed).
-- Visual refactor: later wave.
-- UX flow: later wave.
-- Copy: later wave.
-- Behavior: no policy change.
+- Auth/nav: yes — route retired from discovery and ACL.
+- Visual refactor: no.
+- UX flow: yes — old URLs fail instead of opening v1 tools.
+- Copy: no.
+- Behavior: old admin Inventory tools no longer render.
 
 Data source:
 
-- `branch_express_window`, `category_review_policies`, `user_trust_score`, feature flag tables.
+- None for the retired route pages.
 
 Mutation path:
 
-- Existing Server Actions under each inventory admin sub-route.
-- Keep Zod validation and mapped errors.
+- None. Legacy action files may remain latent only when still referenced by v2 runtime code.
 
 Permission and ACL:
 
-- Module ACL: `inventory_admin`
-- Allowed roles: owner, super_manager, area_manager, branch_manager, warehouse_manager.
-- Sub-page permission gates:
-  - Feature flags: `inventory:catalog_review_policy_set` (or appropriate key).
-  - Cold-chain: `inventory:catalog_review_policy_set`.
-  - Express windows: `inventory:grn_express_configure` or `procurement:override_code_rotate`.
-  - Trust leaderboard: `reports:view_branch`.
+- Module ACL: `inventory_admin` legacy guard.
+- Allowed roles: none.
+- Sub-page permission gates: none, because pages return unsupported route behavior before data access.
 
 Scope rule:
 
-- Branch-sensitive tools use explicit branch scope and server validation.
-- Trust leaderboard is a cross-user report and must be gated separately from self-view trust score.
-- `RLS-NOT-APPLIED-ON-MV` applies if any data source uses materialized views.
+- Branch scope stays URL-only under `/inventory/*`.
+- Self-view trust score in the employee profile is separate from the retired admin leaderboard.
+- No materialized view may be exposed through retired admin pages.
 
 UI primitives:
 
-- `Table`, `Badge`, `Button`, `Card`
-- `Select`, `Input` for branch filters
-- `Dialog` or `FormDialog` for CRUD
-- `Empty`, `Spinner`, `Skeleton`
+- None for retired pages.
 
 Regression risks:
 
-- Empty role allowlists were fixed in Gate 0.
-- Arbitrary Tailwind values may exist in current inventory admin UI.
-- Inventory admin can be confused with operational `/inventory/*`.
+- Reintroducing admin Inventory nav or app discovery creates a second Inventory source of truth.
+- Legacy action/client files must not be deleted unless grep and typecheck prove zero v2 callers.
 
 Acceptance:
 
-- Route contract clearly labels these as policy/admin tools, not inventory operations.
-- Fine-grained permission gates are documented per page.
+- `/admin/inventory*` is not discoverable from admin nav or employee app discovery.
+- `/admin/inventory*` does not preserve post-login `returnTo`.
+- `/admin/inventory*` does not render feature flags, cold-chain, express windows, or trust leaderboard tools.
+- Canonical Inventory workflow remains under `/inventory/*`.
 - No raw Supabase/Postgres error message reaches clients.
 
 ## `/admin/reports/*` — Executive Reports

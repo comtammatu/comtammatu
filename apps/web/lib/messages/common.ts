@@ -1,6 +1,10 @@
 import { ACTIONS_VI, ERRORS_VI, STATES_VI } from "@comtammatu/shared/messages"
 
 export const common = {
+  brandName: "Cơm Tấm Má Tư",
+  admin: "Quản trị",
+  signOut: ACTIONS_VI.signOut,
+  skipNavigation: "Bỏ qua điều hướng",
   errorFallback: ERRORS_VI.fallback,
   saved: STATES_VI.saved,
   created: STATES_VI.created,

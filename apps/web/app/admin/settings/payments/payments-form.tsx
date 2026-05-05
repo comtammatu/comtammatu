@@ -4,20 +4,16 @@ import { useState, useTransition } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { AppSection } from "@/components/surface";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import { Switch } from "@comtammatu/ui/components/switch";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { ACTIONS_VI, ERRORS_VI } from "@comtammatu/shared/messages";
+import { ERRORS_VI } from "@comtammatu/shared/messages";
 import { SYSTEM_SETTING_KEYS } from "@comtammatu/shared/settings";
+import { messages } from "@lib/messages";
 import { updatePaymentSettings } from "./actions";
 
 const paymentsSchema = z.object({
@@ -98,7 +94,7 @@ export function PaymentsForm({
         setServerError(result.error ?? ERRORS_VI.fallback);
         return;
       }
-      toast.success("Đã lưu cài đặt thanh toán");
+      toast.success(messages.settings.payments.saved);
     });
   }
 
@@ -108,11 +104,10 @@ export function PaymentsForm({
       noValidate
       className="space-y-6"
     >
-      <Card>
-        <CardHeader>
-          <CardTitle>Phương thức thanh toán trên POS</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
+      <AppSection
+        title={messages.settings.payments.sectionTitle}
+        contentClassName="gap-6"
+      >
           <div className="space-y-3 rounded-lg border p-4">
             <Controller
               control={form.control}
@@ -121,12 +116,16 @@ export function PaymentsForm({
                 <div className="flex flex-row items-start justify-between gap-4">
                   <div className="space-y-1">
                     <Label htmlFor="enable-vietqr" className="text-base">
-                      VietQR (chuyển khoản QR)
+                      {messages.settings.payments.vietqrLabel}
                     </Label>
                     <p className="text-xs text-muted-foreground">
-                      Nhập STK ngân hàng dưới đây. Nếu để trống sẽ dùng biến môi
-                      trường <code className="text-2xs">VIETQR_*</code>{" "}
-                      ({vietqrEnvConfigured ? "✓ có sẵn" : "chưa đặt"}).
+                      {messages.settings.payments.vietqrDescriptionPrefix}{" "}
+                      <code className="text-2xs">VIETQR_*</code>{" "}
+                      (
+                      {vietqrEnvConfigured
+                        ? messages.settings.payments.vietqrEnvReady
+                        : messages.settings.payments.vietqrEnvMissing}
+                      ).
                     </p>
                   </div>
                   <Switch
@@ -142,7 +141,7 @@ export function PaymentsForm({
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="space-y-1">
                 <Label htmlFor="vietqr-bank-code" className="text-xs">
-                  Mã ngân hàng
+                  {messages.settings.payments.bankCode}
                 </Label>
                 <Input
                   id="vietqr-bank-code"
@@ -158,7 +157,7 @@ export function PaymentsForm({
               </div>
               <div className="space-y-1">
                 <Label htmlFor="vietqr-account-no" className="text-xs">
-                  Số tài khoản
+                  {messages.settings.payments.accountNo}
                 </Label>
                 <Input
                   id="vietqr-account-no"
@@ -174,7 +173,7 @@ export function PaymentsForm({
               </div>
               <div className="space-y-1">
                 <Label htmlFor="vietqr-account-name" className="text-xs">
-                  Chủ tài khoản
+                  {messages.settings.payments.accountName}
                 </Label>
                 <Input
                   id="vietqr-account-name"
@@ -189,8 +188,7 @@ export function PaymentsForm({
               </div>
             </div>
             <p className="text-2xs text-muted-foreground">
-              Mã NH: TCB, VCB, BIDV, MB, ACB, TPB, VPB, STB... (Napas BIN cũng
-              chấp nhận, vd 970407 = Techcombank).
+              {messages.settings.payments.bankHelp}
             </p>
           </div>
 
@@ -204,7 +202,7 @@ export function PaymentsForm({
                     MoMo
                   </Label>
                   <p className="text-sm text-muted-foreground">
-                    Cần{" "}
+                    {messages.settings.payments.momoNeeds}{" "}
                     <code className="rounded bg-muted px-1 text-xs">
                       MOMO_PARTNER_CODE
                     </code>
@@ -219,12 +217,14 @@ export function PaymentsForm({
                     .
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Trạng thái env:{" "}
+                    {messages.settings.payments.envStatus}{" "}
                     {momoEnvConfigured ? (
-                      <span className="text-success">✓ Đã cấu hình</span>
+                      <span className="text-success">
+                        {messages.settings.payments.envConfigured}
+                      </span>
                     ) : (
                       <span className="text-warning">
-                        Chưa đủ biến môi trường
+                        {messages.settings.payments.envMissing}
                       </span>
                     )}
                   </p>
@@ -239,8 +239,7 @@ export function PaymentsForm({
               </div>
             )}
           />
-        </CardContent>
-      </Card>
+      </AppSection>
 
       {serverError && (
         <p className="text-sm text-destructive" role="alert">
@@ -251,7 +250,7 @@ export function PaymentsForm({
       <div className="flex justify-end">
         <Button type="submit" disabled={isPending}>
           {isPending && <Spinner className="mr-2" />}
-          {ACTIONS_VI.save} cài đặt
+          {messages.settings.payments.saveSettings}
         </Button>
       </div>
     </form>

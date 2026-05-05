@@ -16,12 +16,15 @@ import { Textarea } from "@comtammatu/ui/components/textarea";
 import { Label } from "@comtammatu/ui/components/label";
 import {
   Sheet,
+  SheetClose,
   SheetContent,
   SheetHeader,
   SheetTitle,
   SheetDescription,
 } from "@comtammatu/ui/components/sheet";
 import { cn } from "@comtammatu/ui";
+import { messages } from "@lib/messages";
+import { X as IconX } from "lucide-react";
 import type { CartItem, CartModifier, CartSide } from "./types";
 import type { MenuItem, MenuVariant } from "./pos-menu-types";
 import { QuickReasonChips } from "./_components/quick-reason-chips";
@@ -226,9 +229,20 @@ export function ItemCustomizer({
     (sideItemId: number, delta: number) => {
       setSelectedSideQuantities((prev) => {
         const current = prev.get(sideItemId);
-        if (current == null) return prev;
+        if (current == null) {
+          if (delta <= 0) return prev;
 
-        const nextQuantity = Math.min(99, Math.max(1, current + delta));
+          const next = new Map(prev);
+          next.set(sideItemId, 1);
+          return next;
+        }
+
+        const nextQuantity = Math.min(99, current + delta);
+        if (nextQuantity <= 0) {
+          const next = new Map(prev);
+          next.delete(sideItemId);
+          return next;
+        }
         if (nextQuantity === current) return prev;
 
         const next = new Map(prev);
@@ -245,11 +259,30 @@ export function ItemCustomizer({
 
   return (
     <Sheet open={item !== null} onOpenChange={resetAndSetItem}>
-      <SheetContent side="bottom" className="h-dvh max-h-dvh p-0">
+      <SheetContent
+        side="bottom"
+        showCloseButton={false}
+        className="h-dvh max-h-dvh p-0"
+      >
         {item && (
           <div className="flex h-full flex-col">
-            <SheetHeader className="px-4 pt-4">
-              <SheetTitle className="text-left">{item.name}</SheetTitle>
+            <SheetHeader className="px-4 pt-4 pb-4">
+              <div className="flex items-center justify-between gap-3">
+                <SheetTitle className="min-w-0 flex-1 truncate text-left">
+                  {item.name}
+                </SheetTitle>
+                <SheetClose asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    className="shrink-0 text-muted-foreground"
+                    aria-label={messages.pos.customizer.closeAria}
+                  >
+                    <IconX />
+                  </Button>
+                </SheetClose>
+              </div>
               <SheetDescription
                 className={cn(
                   "text-left",
@@ -258,12 +291,15 @@ export function ItemCustomizer({
                 )}
               >
                 {mode === "append" && appendOrderLabel
-                  ? `Đơn #${appendOrderLabel}`
+                  ? messages.pos.customizer.appendOrderDescription(
+                      appendOrderLabel,
+                    )
                   : mode === "edit"
-                    ? "Sửa món trong giỏ"
+                    ? messages.pos.customizer.editDescription
                     : mode === "edit-sent"
-                      ? "Sửa món đã gửi (chưa làm)"
-                      : (item.description ?? "Tùy chọn món")}
+                      ? messages.pos.customizer.editSentDescription
+                      : (item.description ??
+                        messages.pos.customizer.defaultDescription)}
               </SheetDescription>
             </SheetHeader>
 
@@ -272,7 +308,7 @@ export function ItemCustomizer({
                 {/* Variants */}
                 {item.menu_item_variants.length > 0 && (
                   <div>
-                    <h3 className="mb-2 text-base font-semibold">{FORM_VI.type}</h3>
+                    <h3 className="font-heading mb-2 text-base font-semibold">{FORM_VI.type}</h3>
                     <div className="flex flex-wrap gap-2">
                       {item.menu_item_variants.map((v) => {
                         const isSelected = selectedVariant?.id === v.id;
@@ -302,7 +338,7 @@ export function ItemCustomizer({
                 {/* Modifiers */}
                 {item.menu_item_modifiers.length > 0 && (
                   <div>
-                    <h3 className="mb-2 text-base font-semibold">{ACTIONS_VI.add}</h3>
+                    <h3 className="font-heading mb-2 text-base font-semibold">{ACTIONS_VI.add}</h3>
                     <div className="flex flex-col gap-2">
                       {item.menu_item_modifiers.map((m) => (
                         <Item
@@ -336,14 +372,16 @@ export function ItemCustomizer({
                 {/* Available Sides */}
                 {item.menu_item_available_sides.length > 0 && (
                   <div>
-                    <h3 className="mb-2 text-base font-semibold">Món kèm</h3>
+                    <h3 className="font-heading mb-2 text-base font-semibold">
+                      {messages.pos.customizer.sides}
+                    </h3>
                     <div className="flex flex-col gap-2">
                       {item.menu_item_available_sides.map((s) => {
                         const sideQuantity = selectedSideQuantities.get(
                           s.side_item.id,
                         );
                         const isSelected = sideQuantity != null;
-                        const displaySideQuantity = sideQuantity ?? 1;
+                        const displaySideQuantity = sideQuantity ?? 0;
                         const sideLineTotal =
                           s.side_item.base_price * displaySideQuantity;
 
@@ -351,66 +389,69 @@ export function ItemCustomizer({
                           <Item
                             key={s.id}
                             variant="outline"
-                            className="hover:bg-accent"
+                            className="flex-nowrap items-start gap-3 hover:bg-accent"
                           >
                             <Checkbox
                               id={`side-${String(s.id)}`}
+                              className="mt-1.5"
                               checked={isSelected}
                               onCheckedChange={() => toggleSide(s.side_item.id)}
                             />
-                            <Label
-                              htmlFor={`side-${String(s.id)}`}
-                              className="min-w-0 flex-1 cursor-pointer text-base font-normal"
-                            >
-                              {s.side_item.name}
-                              {s.is_default && (
-                                <span className="ml-1 text-sm text-muted-foreground">
-                                  (mặc định)
+                            <div className="min-w-0 flex-1">
+                              <Label
+                                htmlFor={`side-${String(s.id)}`}
+                                className="block cursor-pointer text-base leading-snug font-normal whitespace-normal"
+                              >
+                                <span className="break-words">
+                                  {s.side_item.name}
                                 </span>
-                              )}
-                            </Label>
-                            <div className="flex shrink-0 items-center gap-2">
-                              <span className="w-20 text-right text-base font-medium tabular-nums">
+                                {s.is_default && (
+                                  <span className="ml-1 text-sm text-muted-foreground">
+                                    {messages.pos.customizer.defaultSide}
+                                  </span>
+                                )}
+                              </Label>
+                              <span className="mt-1 block text-base font-medium tabular-nums text-muted-foreground">
                                 +{formatVND(sideLineTotal)}
                               </span>
-                              <div className="flex w-24 items-center justify-end gap-1">
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="icon"
-                                  className="size-11"
-                                  disabled={
-                                    !isSelected || displaySideQuantity <= 1
-                                  }
-                                  aria-label={`Giảm ${s.side_item.name}`}
-                                  onClick={() =>
-                                    updateSideQuantity(s.side_item.id, -1)
-                                  }
-                                >
-                                  -
-                                </Button>
-                                <span
-                                  className={cn(
-                                    "w-6 text-center text-base font-semibold tabular-nums",
-                                    !isSelected && "text-muted-foreground",
-                                  )}
-                                >
-                                  {displaySideQuantity}
-                                </span>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="icon"
-                                  className="size-11"
-                                  disabled={!isSelected}
-                                  aria-label={`Tăng ${s.side_item.name}`}
-                                  onClick={() =>
-                                    updateSideQuantity(s.side_item.id, 1)
-                                  }
-                                >
-                                  +
-                                </Button>
-                              </div>
+                            </div>
+                            <div className="flex shrink-0 items-center justify-end gap-1 self-center">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="size-11"
+                                aria-label={messages.pos.customizer.decreaseSideAria(
+                                  s.side_item.name,
+                                )}
+                                onClick={() =>
+                                  updateSideQuantity(s.side_item.id, -1)
+                                }
+                              >
+                                -
+                              </Button>
+                              <span
+                                className={cn(
+                                  "w-6 text-center text-base font-semibold tabular-nums",
+                                  !isSelected && "text-muted-foreground",
+                                )}
+                              >
+                                {displaySideQuantity}
+                              </span>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="size-11"
+                                aria-label={messages.pos.customizer.increaseSideAria(
+                                  s.side_item.name,
+                                )}
+                                onClick={() =>
+                                  updateSideQuantity(s.side_item.id, 1)
+                                }
+                              >
+                                +
+                              </Button>
                             </div>
                           </Item>
                         );
@@ -431,14 +472,14 @@ export function ItemCustomizer({
                     presets={ITEM_NOTE_PRESETS}
                     value={note}
                     onChange={setNote}
-                    ariaLabel="Gợi ý ghi chú món"
+                    ariaLabel={messages.pos.customizer.noteSuggestionsAria}
                     className="mb-2"
                   />
                   <Textarea
                     id="item-note"
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
-                    placeholder="Ghi chú thêm..."
+                    placeholder={messages.pos.customizer.notePlaceholder}
                     rows={2}
                     maxLength={200}
                   />
@@ -462,7 +503,7 @@ export function ItemCustomizer({
                   size="icon"
                   className="size-11"
                   disabled={quantity <= 1}
-                  aria-label="Giảm số lượng"
+                  aria-label={messages.pos.customizer.decreaseQuantityAria}
                   onClick={() => updateQuantity(-1)}
                 >
                   -
@@ -475,7 +516,7 @@ export function ItemCustomizer({
                   variant="outline"
                   size="icon"
                   className="size-11"
-                  aria-label="Tăng số lượng"
+                  aria-label={messages.pos.customizer.increaseQuantityAria}
                   onClick={() => updateQuantity(1)}
                 >
                   +
@@ -487,12 +528,12 @@ export function ItemCustomizer({
                 onClick={handleConfirm}
               >
                 {mode === "append"
-                  ? "Thêm vào đơn"
+                  ? messages.pos.customizer.addToOrder
                   : mode === "edit"
-                    ? "Cập nhật"
+                    ? messages.pos.customizer.update
                     : mode === "edit-sent"
-                      ? "Cập nhật món đã gửi"
-                      : "Thêm vào giỏ"}
+                      ? messages.pos.customizer.updateSent
+                      : messages.pos.customizer.addToCart}
               </Button>
             </div>
           </div>

@@ -15,7 +15,11 @@ import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import { fetchFoodCost } from "../accounting-actions";
 import type { FoodCostRow } from "./page";
+import { formatVND } from "@comtammatu/shared/format";
 import { ERRORS_VI, FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
+import { AppToolbar } from "@/components/surface";
+import { TableEmptyStateRow } from "@/components/table-empty-state-row";
+import { messages } from "@lib/messages";
 
 interface Props {
   initialRows: FoodCostRow[];
@@ -75,57 +79,63 @@ export function FoodCostClient({
 
   return (
     <div className="space-y-4">
-      <Card>
-        <CardContent className="flex flex-wrap items-center gap-2 p-3">
-          <div className="grid gap-1.5">
-            <Label className="text-xs">{FORM_VI.fromDate}</Label>
-            <Input
-              type="date"
-              className="w-40"
-              value={startDate}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setStartDate(e.target.value)
-              }
-            />
-          </div>
-          <div className="grid gap-1.5">
-            <Label className="text-xs">{FORM_VI.toDate}</Label>
-            <Input
-              type="date"
-              className="w-40"
-              value={endDate}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setEndDate(e.target.value)
-              }
-            />
-          </div>
-          <Button onClick={handleFilter} disabled={isPending} size="sm">
-            {isPending ? "Đang tải..." : "Lọc"}
-          </Button>
-          {error && <p className="text-sm text-destructive">{error}</p>}
-        </CardContent>
-      </Card>
+      <AppToolbar className="items-end">
+        <div className="grid gap-1.5">
+          <Label className="text-xs">{FORM_VI.fromDate}</Label>
+          <Input
+            type="date"
+            className="w-40"
+            value={startDate}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setStartDate(e.target.value)
+            }
+          />
+        </div>
+        <div className="grid gap-1.5">
+          <Label className="text-xs">{FORM_VI.toDate}</Label>
+          <Input
+            type="date"
+            className="w-40"
+            value={endDate}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setEndDate(e.target.value)
+            }
+          />
+        </div>
+        <Button onClick={handleFilter} disabled={isPending} size="sm">
+          {isPending
+            ? messages.finance.common.loading
+            : messages.finance.common.filter}
+        </Button>
+        {error && <p className="text-sm text-destructive">{error}</p>}
+      </AppToolbar>
 
       <div className="grid gap-3 sm:grid-cols-3">
         <Card>
           <CardContent className="px-4 py-5">
-            <p className="text-xs text-muted-foreground">Tổng doanh thu</p>
+            <p className="text-xs text-muted-foreground">
+              {messages.finance.foodCost.totalRevenue}
+            </p>
             <p className="mt-1 text-xl font-bold tabular-nums">
-              {totalRevenue.toLocaleString("vi-VN")} ₫
+              {formatVND(totalRevenue)}
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="px-4 py-5">
-            <p className="text-xs text-muted-foreground">Tổng food cost</p>
+            <p className="text-xs text-muted-foreground">
+              {messages.finance.foodCost.totalFoodCost}
+            </p>
             <p className="mt-1 text-xl font-bold tabular-nums">
-              {totalCost.toLocaleString("vi-VN")} ₫
+              {formatVND(totalCost)}
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="px-4 py-5">
-            <p className="text-xs text-muted-foreground">Biên lợi nhuận TB</p>
+            <p className="text-xs text-muted-foreground">
+              {messages.finance.foodCost.averageMargin}
+            </p>
             <p className="mt-1 text-xl font-bold">{avgMargin}%</p>
           </CardContent>
         </Card>
@@ -137,22 +147,28 @@ export function FoodCostClient({
             <TableHeader>
               <TableRow>
                 <TableHead>{PRODUCT_VI.posItem}</TableHead>
-                <TableHead className="w-24 text-right">SL bán</TableHead>
-                <TableHead className="w-36 text-right">Doanh thu (₫)</TableHead>
-                <TableHead className="w-36 text-right">Food cost (₫)</TableHead>
-                <TableHead className="w-24 text-right">Biên lãi</TableHead>
+                <TableHead className="w-24 text-right">
+                  {messages.finance.foodCost.quantitySold}
+                </TableHead>
+                <TableHead className="w-36 text-right">
+                  {messages.finance.foodCost.revenueCurrency}
+                </TableHead>
+                <TableHead className="w-36 text-right">
+                  {messages.finance.foodCost.foodCostCurrency}
+                </TableHead>
+                <TableHead className="w-24 text-right">
+                  {messages.finance.foodCost.margin}
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {rows.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={5}
-                    className="py-10 text-center text-muted-foreground"
-                  >
-                    Không có dữ liệu trong khoảng thời gian này.
-                  </TableCell>
-                </TableRow>
+                <TableEmptyStateRow
+                  colSpan={5}
+                  mode="no-results"
+                  title={messages.finance.foodCost.emptyTitle}
+                  description={messages.finance.foodCost.emptyDescription}
+                />
               ) : (
                 rows.map((r, i) => (
                   <TableRow key={i}>
@@ -161,10 +177,10 @@ export function FoodCostClient({
                       {Number(r.quantity_sold ?? 0).toLocaleString("vi-VN")}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {Number(r.revenue ?? 0).toLocaleString("vi-VN")}
+                      {formatVND(Number(r.revenue ?? 0))}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {Number(r.ingredient_cost ?? 0).toLocaleString("vi-VN")}
+                      {formatVND(Number(r.ingredient_cost ?? 0))}
                     </TableCell>
                     <TableCell
                       className={`text-right font-medium ${marginColor(r)}`}

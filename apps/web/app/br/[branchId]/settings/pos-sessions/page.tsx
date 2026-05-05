@@ -173,7 +173,7 @@ export default async function BranchPosSessionsPage({
           </Link>
         </Button>
         <div className="min-w-0">
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Ca POS</h1>
+          <h1 className="font-heading text-2xl font-semibold tracking-tight sm:text-3xl">Ca POS</h1>
           <p className="mt-1 text-sm text-muted-foreground">{branch.name}</p>
         </div>
       </div>

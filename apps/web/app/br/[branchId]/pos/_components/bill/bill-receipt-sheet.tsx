@@ -44,6 +44,7 @@ import {
 } from "lucide-react";
 import { AppBoneyardSkeleton } from "../../../../../_components/boneyard-skeleton";
 import { FormattedNumberInput } from "@/components/form";
+import { messages } from "@lib/messages";
 import { fetchOrderForBill } from "../../actions";
 import {
   confirmCashPaymentWithInvoice,
@@ -252,12 +253,24 @@ function PaymentQrSkeleton() {
   );
 }
 
+function PaymentQrPlaceholder({
+  Icon,
+}: {
+  Icon: ComponentType<{ className?: string }>;
+}) {
+  return (
+    <Card className="mx-auto size-48 bg-muted/40 py-0">
+      <CardContent className="flex h-full items-center justify-center p-0">
+        <Icon className="size-10 text-muted-foreground" />
+      </CardContent>
+    </Card>
+  );
+}
+
 function PaymentQrLoadingFixture() {
   return (
     <div className="flex flex-col gap-3">
-      <div className="mx-auto flex size-48 items-center justify-center border bg-muted/40">
-        <IconQrcode className="text-muted-foreground" />
-      </div>
+      <PaymentQrPlaceholder Icon={IconQrcode} />
       <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
         <dt className="text-muted-foreground">STK:</dt>
         <dd className="font-mono font-semibold">9704 0000 0000 0000</dd>
@@ -938,7 +951,7 @@ export function BillReceipt({
                 ) : (
                   <IconPrinter data-icon="inline-start" />
                 )}
-                In lại
+                {messages.pos.payment.reprint}
               </Button>
               <Button type="button" onClick={onClose}>
                 {ACTIONS_VI.close}
@@ -951,9 +964,9 @@ export function BillReceipt({
               {showUnservedWarning ? (
                 <Alert className="border-warning/20 bg-warning/10 text-warning">
                   <IconAlertTriangle />
-                  <AlertTitle>Chưa đánh dấu phục vụ</AlertTitle>
+                  <AlertTitle>{messages.pos.payment.unservedTitle}</AlertTitle>
                   <AlertDescription>
-                    Vẫn có thể thu tiền.
+                    {messages.pos.payment.unservedDescription}
                   </AlertDescription>
                 </Alert>
               ) : null}
@@ -986,11 +999,11 @@ export function BillReceipt({
 
               {pendingOfflineMethod !== null && (
                 <p className="text-sm text-muted-foreground">
-                  Mất mạng — sẽ tự chọn{" "}
+                  {messages.pos.payment.offlineWillSelect}{" "}
                   <span className="font-medium text-foreground">
                     {METHOD_META[pendingOfflineMethod].label}
                   </span>{" "}
-                  khi online.
+                  {messages.pos.payment.offlineWhenOnline}
                 </p>
               )}
 
@@ -1011,7 +1024,7 @@ export function BillReceipt({
 
                     <div className="relative">
                       <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">
-                        Tổng nhận
+                        {messages.pos.payment.cashReceived}
                       </span>
                       <FormattedNumberInput
                         id="cash-received"
@@ -1041,11 +1054,13 @@ export function BillReceipt({
 
                     <div className="flex items-center justify-between gap-3 bg-muted/50 p-3">
                       <span className="text-sm font-medium">
-                        Tiền trả khách
+                        {messages.pos.payment.cashChange}
                       </span>
                       <span className="text-lg font-bold tabular-nums">
                         {cashReceived < totalAmount
-                          ? `Thiếu ${formatVND(totalAmount - cashReceived)}`
+                          ? messages.pos.payment.cashShort(
+                              formatVND(totalAmount - cashReceived),
+                            )
                           : formatVND(cashChange)}
                       </span>
                     </div>
@@ -1095,9 +1110,7 @@ export function BillReceipt({
                             preferImage={selectedMethod === "vietqr"}
                           />
                         ) : (
-                          <div className="mx-auto flex size-48 items-center justify-center border bg-muted/40">
-                            <MethodIcon className="size-10 text-muted-foreground" />
-                          </div>
+                          <PaymentQrPlaceholder Icon={MethodIcon} />
                         )}
                         {remotePaymentNeedsRetry ? (
                           <Alert variant="destructive">
@@ -1149,7 +1162,7 @@ export function BillReceipt({
                 ) : (
                   <IconReceipt data-icon="inline-start" />
                 )}
-                In tạm tính
+                {messages.pos.payment.printProvisional}
               </Button>
               <Button
                 data-testid={
@@ -1163,7 +1176,7 @@ export function BillReceipt({
                 title={disabledReason ?? undefined}
               >
                 {actionPending ? <Spinner data-icon="inline-start" /> : null}
-                Đã thanh toán
+                {messages.pos.payment.paidConfirm}
               </Button>
               <Button
                 type="button"

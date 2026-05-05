@@ -3,6 +3,7 @@ import { canManageBranchFloorSettings } from "@comtammatu/shared/auth";
 import { loadAuthState } from "@/_lib/auth";
 import { TerminalsClient } from "./terminals-client";
 import type { TerminalRow, BranchOption } from "./terminals-client";
+import { SettingsPageShell } from "../settings-page-shell";
 
 export default async function PosSettingsPage() {
   const { supabase, claims } = await loadAuthState();
@@ -41,15 +42,11 @@ export default async function PosSettingsPage() {
   const terminals = (terminalsRes.data ?? []) as TerminalRow[];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">POS</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Quản lý máy POS theo chi nhánh để mở ca và chọn đúng quầy làm việc.
-        </p>
-      </div>
-
+    <SettingsPageShell
+      title="POS"
+      description="Quản lý máy POS theo chi nhánh để mở ca và chọn đúng quầy làm việc."
+    >
       <TerminalsClient branches={branches} terminals={terminals} />
-    </div>
+    </SettingsPageShell>
   );
 }

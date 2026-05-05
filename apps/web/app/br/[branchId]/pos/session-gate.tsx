@@ -24,9 +24,10 @@ import {
 } from "@comtammatu/ui/components/field";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { BrandMark } from "@/components/brand";
 import { FormattedNumberInput } from "@/components/form";
+import { messages } from "@lib/messages";
 import {
-  Monitor as IconDeviceDesktop,
   TriangleAlert as IconAlertTriangle,
 } from "lucide-react";
 import { EmployeePortalBackControl } from "../employee-portal-back-control";
@@ -76,10 +77,10 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
       );
 
       if (result.success) {
-        toast.success("Mở ca thành công");
+        toast.success(messages.pos.sessionGate.openSuccess);
         router.refresh();
       } else {
-        toast.error(result.error ?? "Không thể mở ca");
+        toast.error(result.error ?? messages.pos.sessionGate.openFailed);
       }
     });
   }, [branchId, canOpen, cashAmount, router, terminals]);
@@ -94,13 +95,16 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
             <div className="flex items-start justify-between gap-3">
               <div className="flex min-w-0 flex-col gap-2">
                 <Badge variant="outline" className="w-fit">
-                  Chi nhánh #{branchId}
+                  {messages.pos.sessionGate.branch(branchId)}
                 </Badge>
-                <CardTitle className="text-2xl">Mở ca bán hàng</CardTitle>
+                <CardTitle className="text-2xl">
+                  {messages.pos.sessionGate.title}
+                </CardTitle>
               </div>
-              <div className="flex size-11 shrink-0 items-center justify-center bg-primary/10 text-primary">
-                <IconDeviceDesktop className="size-5" />
-              </div>
+              <BrandMark
+                decorative
+                className="size-11 shrink-0 rounded-md bg-card p-1 ring-1 ring-border"
+              />
             </div>
           </CardHeader>
 
@@ -109,16 +113,18 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
               {!branchHasTerminals ? (
                 <Alert className="border-warning/20 bg-warning/10 text-warning">
                   <IconAlertTriangle />
-                  <AlertTitle>Chưa có máy POS</AlertTitle>
+                  <AlertTitle>
+                    {messages.pos.sessionGate.noTerminalTitle}
+                  </AlertTitle>
                   <AlertDescription>
-                    Liên hệ quản lý để thiết lập máy POS trước khi mở ca.
+                    {messages.pos.sessionGate.noTerminalDescription}
                   </AlertDescription>
                 </Alert>
               ) : null}
 
               <Field data-invalid={!hasValidOpeningCash}>
                 <FieldLabel htmlFor="opening-cash">
-                  Tiền đầu ca (VND)
+                  {messages.pos.sessionGate.openingCashLabel}
                 </FieldLabel>
                 <FormattedNumberInput
                   id="opening-cash"
@@ -129,7 +135,7 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
                   aria-invalid={!hasValidOpeningCash}
                 />
                 <FieldDescription>
-                  Ghi số tiền mặt đầu ca để đối soát khi đóng ca.
+                  {messages.pos.sessionGate.openingCashDescription}
                 </FieldDescription>
               </Field>
             </FieldGroup>
@@ -145,10 +151,10 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
               {isPending ? (
                 <>
                   <Spinner data-icon="inline-start" />
-                  Đang mở ca...
+                  {messages.pos.sessionGate.opening}
                 </>
               ) : (
-                "Mở ca POS"
+                messages.pos.sessionGate.open
               )}
             </Button>
           </CardFooter>

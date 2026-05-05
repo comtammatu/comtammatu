@@ -46,6 +46,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { matchesSearch } from "@lib/search";
+import { messages } from "@lib/messages";
 import { InventoryHeader } from "../_components/inventory-header";
 import {
   InventoryFilterBar,
@@ -140,10 +141,10 @@ export function StocktakeListClient({
     startTransition(async () => {
       const res = await createStocktakeSession(branchId);
       if (!res.success) {
-        toast.error(res.error ?? "Không thể tạo phiên kiểm kê.");
+        toast.error(res.error ?? messages.inventory.stocktake.createClassicFailed);
         return;
       }
-      toast.success("Đã tạo phiên kiểm kê");
+      toast.success(messages.inventory.stocktake.classicCreated);
       setDialogOpen(false);
       const again = await fetchStocktakeSessions(branchId);
       if (again.success) setRows((again.data ?? []) as StocktakeSessionRow[]);
@@ -155,7 +156,7 @@ export function StocktakeListClient({
   function handleDialogConfirm() {
     const bid = Number(selectedBranchId);
     if (!bid) {
-      toast.error("Chọn chi nhánh");
+      toast.error(messages.inventory.stocktake.selectBranch);
       return;
     }
     doCreate(bid);
@@ -164,26 +165,20 @@ export function StocktakeListClient({
   return (
     <>
       <InventoryHeader
-        title="Kiểm kê"
+        title={messages.inventory.stocktake.title}
         actions={
           <div className="flex items-center gap-2">
-            <Button type="button" variant="outline" asChild>
-              {/* S13b conflict queue. Route gated by inv_s13b_stocktake_recount. */}
-              <Link href={`${routeBase}/conflicts${branchQuery}`}>
-                Xử lý lệch
-              </Link>
-            </Button>
             <Button type="button" variant="outline" asChild>
               {/* S13a pilot entry. Route is feature-flag gated server-side —
                   non-pilot branches redirect to list with error=stocktake_v2_not_enabled. */}
               <Link href={`${routeBase}/new${branchQuery}`}>
                 <IconClipboardCheck className="size-4" />
-                Kiểm kê v2
+                {messages.inventory.stocktake.v2}
               </Link>
             </Button>
             <Button type="button" onClick={handleCreate} disabled={isPending}>
               <IconPlus className="size-4" />
-              Mở phiên kiểm kê
+              {messages.inventory.stocktake.openSession}
             </Button>
           </div>
         }
@@ -193,18 +188,28 @@ export function StocktakeListClient({
         <InventoryFilterBar>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="min-w-44">
-              <SelectValue placeholder="Trạng thái" />
+              <SelectValue
+                placeholder={messages.inventory.stocktake.statusPlaceholder}
+              />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Tất cả trạng thái</SelectItem>
+              <SelectItem value="all">
+                {messages.inventory.stocktake.allStatuses}
+              </SelectItem>
               <SelectItem value="in_progress">
-                Đang thực hiện ({statusCounts["in_progress"] ?? 0})
+                {messages.inventory.stocktake.inProgressCount(
+                  statusCounts["in_progress"] ?? 0,
+                )}
               </SelectItem>
               <SelectItem value="completed">
-                Hòan tất ({statusCounts["completed"] ?? 0})
+                {messages.inventory.stocktake.completedCount(
+                  statusCounts["completed"] ?? 0,
+                )}
               </SelectItem>
               <SelectItem value="cancelled">
-                Đã hủy ({statusCounts["cancelled"] ?? 0})
+                {messages.inventory.stocktake.cancelledCount(
+                  statusCounts["cancelled"] ?? 0,
+                )}
               </SelectItem>
             </SelectContent>
           </Select>
@@ -214,7 +219,7 @@ export function StocktakeListClient({
               <IconSearch />
             </InputGroupAddon>
             <InputGroupInput
-              placeholder="Tìm mã phiên hoặc tên chi nhánh..."
+              placeholder={messages.inventory.stocktake.searchPlaceholder}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               inputMode="search"
@@ -234,13 +239,13 @@ export function StocktakeListClient({
                 <EmptyMedia variant="icon">
                   <IconClipboardCheck />
                 </EmptyMedia>
-                <EmptyHeader>
-                  <EmptyTitle className="text-sm font-semibold">
-                    {search || statusFilter !== "all"
-                      ? "Không tìm thấy phiên nào"
-                      : "Chưa có phiên kiểm kê nào"}
-                  </EmptyTitle>
-                </EmptyHeader>
+                  <EmptyHeader>
+                    <EmptyTitle className="text-sm font-semibold">
+                      {search || statusFilter !== "all"
+                        ? messages.inventory.stocktake.noSessionsMatched
+                        : messages.inventory.stocktake.noSessions}
+                    </EmptyTitle>
+                  </EmptyHeader>
               </Empty>
             ) : (
               filtered.map((r) => (
@@ -277,9 +282,11 @@ export function StocktakeListClient({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Mã phiên</TableHead>
+                    <TableHead>
+                      {messages.inventory.stocktake.sessionCode}
+                    </TableHead>
                     <TableHead>{BRANCH_VI.long}</TableHead>
-                    <TableHead>Ngày bắt đầu</TableHead>
+                    <TableHead>{messages.inventory.stocktake.startedAt}</TableHead>
                     <TableHead>{FORM_VI.status}</TableHead>
                     <TableHead className="w-10" />
                   </TableRow>
@@ -294,8 +301,8 @@ export function StocktakeListClient({
                       }
                       title={
                         search || statusFilter !== "all"
-                          ? "Không tìm thấy phiên nào"
-                          : "Chưa có phiên kiểm kê nào"
+                          ? messages.inventory.stocktake.noSessionsMatched
+                          : messages.inventory.stocktake.noSessions
                       }
                     />
                   ) : null}
@@ -318,7 +325,7 @@ export function StocktakeListClient({
                           variant="ghost"
                           size="icon-lg"
                           asChild
-                          aria-label="Chi tiết"
+                          aria-label={messages.inventory.stocktake.detailsAria}
                         >
                           <Link
                             href={`${routeBase}/${r.id}?branchId=${r.branch_id}`}
@@ -339,7 +346,9 @@ export function StocktakeListClient({
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Chọn chi nhánh kiểm kê</DialogTitle>
+            <DialogTitle>
+              {messages.inventory.stocktake.chooseBranchTitle}
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <Label htmlFor="branch-select">{BRANCH_VI.long}</Label>
@@ -348,7 +357,9 @@ export function StocktakeListClient({
               onValueChange={setSelectedBranchId}
             >
               <SelectTrigger id="branch-select">
-                <SelectValue placeholder="Chọn chi nhánh..." />
+                <SelectValue
+                  placeholder={messages.inventory.stocktake.chooseBranchPlaceholder}
+                />
               </SelectTrigger>
               <SelectContent>
                 {branches.map((b) => (
@@ -371,7 +382,9 @@ export function StocktakeListClient({
               onClick={handleDialogConfirm}
               disabled={isPending || !selectedBranchId}
             >
-              {isPending ? "Đang tạo..." : "Tạo phiên"}
+              {isPending
+                ? messages.inventory.stocktake.creatingClassic
+                : messages.inventory.stocktake.createClassic}
             </Button>
           </DialogFooter>
         </DialogContent>

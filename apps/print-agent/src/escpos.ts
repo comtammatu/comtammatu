@@ -12,6 +12,18 @@
  */
 
 import iconv from "iconv-lite";
+import {
+  clampQrContent,
+  clampText,
+  getPrintDocument,
+  isRecord,
+  type PrintDocument,
+  type PrintDocumentBlock,
+  type PrintDocumentCashChangeBlock,
+  type PrintDocumentItemsTableBlock,
+  type PrintDocumentPaymentQrBlock,
+  type PrintDocumentTotalsBlock,
+} from "./print-document.js";
 
 const ESC = 0x1b;
 const GS = 0x1d;
@@ -112,14 +124,42 @@ const stripDiacritics = (s: string): string =>
     .replace(/đ/g, "d")
     .replace(/Đ/g, "D");
 
+const VI_TONE_MARKS = new Set([
+  "\u0300",
+  "\u0301",
+  "\u0303",
+  "\u0309",
+  "\u0323",
+]);
+
+const normalizeVietnameseForCp1258 = (s: string): string =>
+  s.normalize("NFD").replace(
+    /(\P{Mark})(\p{Mark}*)/gu,
+    (_match: string, base: string, marks: string) => {
+      if (!marks) return base;
+
+      const shapeMarks: string[] = [];
+      const toneMarks: string[] = [];
+      for (const mark of Array.from(marks)) {
+        if (VI_TONE_MARKS.has(mark)) {
+          toneMarks.push(mark);
+        } else {
+          shapeMarks.push(mark);
+        }
+      }
+
+      return (base + shapeMarks.join("")).normalize("NFC") + toneMarks.join("");
+    },
+  );
+
 const encodeText = (s: string): Uint8Array => {
   if (USE_ASCII) {
     return new TextEncoder().encode(stripDiacritics(s));
   }
-  // CP1258 represents tone marks as combining diacritics, so decompose first
-  // (base letter + combining char) before iconv-lite maps each code point.
-  const decomposed = s.normalize("NFD");
-  const buffer = iconv.encode(decomposed, "windows-1258");
+  // CP1258 keeps shaped Vietnamese vowels (Ă/Â/Ê/Ô/Ơ/Ư) precomposed, while
+  // tone marks are combining bytes. Split only tone marks to avoid "?" output.
+  const cp1258Text = normalizeVietnameseForCp1258(s);
+  const buffer = iconv.encode(cp1258Text, "windows-1258");
   return new Uint8Array(
     buffer.buffer,
     buffer.byteOffset,
@@ -299,12 +339,17 @@ export type ShiftCloseReportPayload = {
   printed_at: string;
 };
 
+export type WithPrintDocument<T> = T & {
+  template_version?: string | number | null;
+  document?: unknown;
+};
+
 export type PrintPayload =
-  | KitchenPayload
-  | ProvisionalBillPayload
-  | ReceiptPayload
-  | CancelTicketPayload
-  | ShiftCloseReportPayload;
+  | WithPrintDocument<KitchenPayload>
+  | WithPrintDocument<ProvisionalBillPayload>
+  | WithPrintDocument<ReceiptPayload>
+  | WithPrintDocument<CancelTicketPayload>
+  | WithPrintDocument<ShiftCloseReportPayload>;
 
 // ─── Formatting helpers ───────────────────────────────────────────────────
 
@@ -336,6 +381,21 @@ const PAYMENT_LABEL: Record<string, string> = {
   bank_transfer: "Chuyển khoản",
   momo: "MoMo",
 };
+
+const BRAND_LOCKUP_EYEBROW = "TIỆM CƠM TẤM";
+const BRAND_LOCKUP_NAME = "MÁ TƯ";
+const BRAND_LOCKUP_TAGLINE = "Thịt tươi 100%";
+
+const renderBrandLockupHeader = (): Uint8Array[] => [
+  alignCenter(),
+  line(BRAND_LOCKUP_EYEBROW),
+  sizeDouble(),
+  boldOn(),
+  line(BRAND_LOCKUP_NAME),
+  boldOff(),
+  sizeNormal(),
+  line(BRAND_LOCKUP_TAGLINE),
+];
 
 /** Break long text into chunks of max `width` chars (word-aware). */
 const wrapText = (s: string, width: number): string[] => {
@@ -546,9 +606,7 @@ const receiptDetailRow = (text: string): string =>
 /** Shared bill header — brand + branch info. */
 const renderBillHeader = (p: BillBase): Uint8Array[] => {
   const parts: Uint8Array[] = [];
-  parts.push(alignCenter(), boldOn());
-  parts.push(line("CƠM TẤM MÁ TƯ"));
-  parts.push(boldOff());
+  parts.push(...renderBrandLockupHeader());
   if (p.branch_name) parts.push(line(p.branch_name));
   if (p.branch_address) parts.push(line(p.branch_address));
   if (p.branch_phone) parts.push(line(`ĐT: ${p.branch_phone}`));
@@ -649,12 +707,314 @@ const renderBillTotals = (p: BillBase): Uint8Array[] => {
 const renderFooter = (): Uint8Array[] => [
   newline(),
   alignCenter(),
-  line("Được phát triển bởi"),
-  line("Cơm Tấm Má Tư"),
+  line(BRAND_LOCKUP_TAGLINE),
   alignLeft(),
   feed(6),
   cutPartial(),
 ];
+
+const pairWithWidth = (label: string, value: string, width: number): string => {
+  const combined = label.length + value.length;
+  const pad = combined >= width ? 1 : width - combined;
+  return label + " ".repeat(pad) + value;
+};
+
+const renderDocumentText = (
+  block: Extract<PrintDocumentBlock, { type: "text" }>,
+): Uint8Array[] => {
+  const text = clampText(block.text);
+  if (!text) return [];
+  const parts: Uint8Array[] = [];
+  if (block.align === "center") parts.push(alignCenter());
+  if (block.align === "left") parts.push(alignLeft());
+  if (block.inverse) parts.push(inverseOn());
+  if (block.double) parts.push(sizeDouble());
+  if (block.bold) parts.push(boldOn());
+  const width = block.double ? KITCHEN_FULL_WIDTH_DOUBLE : LINE_WIDTH;
+  for (const chunk of wrapText(text, width)) {
+    parts.push(line(chunk));
+  }
+  if (block.bold) parts.push(boldOff());
+  if (block.double) parts.push(sizeNormal());
+  if (block.inverse) parts.push(inverseOff());
+  if (block.align && block.align !== "left") parts.push(alignLeft());
+  return parts;
+};
+
+const renderDocumentRow = (
+  block: Extract<PrintDocumentBlock, { type: "row" }>,
+): Uint8Array[] => {
+  const left = clampText(block.left);
+  const right = clampText(block.right);
+  if (!left && !right) return [];
+  const parts: Uint8Array[] = [];
+  if (block.double) parts.push(sizeDouble());
+  if (block.bold) parts.push(boldOn());
+  const width = block.double ? KITCHEN_FULL_WIDTH_DOUBLE : LINE_WIDTH;
+  parts.push(line(pairWithWidth(left, right, width)));
+  if (block.bold) parts.push(boldOff());
+  if (block.double) parts.push(sizeNormal());
+  return parts;
+};
+
+const renderDocumentBrandHeader = (
+  block: Extract<PrintDocumentBlock, { type: "brandHeader" }>,
+): Uint8Array[] => {
+  const eyebrow = clampText(block.eyebrow) || BRAND_LOCKUP_EYEBROW;
+  const name = clampText(block.name) || BRAND_LOCKUP_NAME;
+  const tagline = clampText(block.tagline) || BRAND_LOCKUP_TAGLINE;
+  return [
+    alignCenter(),
+    line(eyebrow),
+    sizeDouble(),
+    boldOn(),
+    line(name),
+    boldOff(),
+    sizeNormal(),
+    line(tagline),
+    alignLeft(),
+  ];
+};
+
+const renderDocumentBranchInfo = (
+  block: Extract<PrintDocumentBlock, { type: "branchInfo" }>,
+): Uint8Array[] => {
+  const rows = [
+    clampText(block.branch_name),
+    clampText(block.branch_address),
+    block.branch_phone ? `ĐT: ${clampText(block.branch_phone)}` : "",
+    block.branch_tax_code ? `MST: ${clampText(block.branch_tax_code)}` : "",
+  ].filter(Boolean);
+  if (rows.length === 0) return [];
+  const parts: Uint8Array[] = [alignCenter()];
+  for (const row of rows) parts.push(line(row));
+  parts.push(alignLeft());
+  return parts;
+};
+
+const normalizeOrderType = (value: unknown): "dine_in" | "takeaway" =>
+  value === "dine_in" ? "dine_in" : "takeaway";
+
+const numberOrZero = (value: unknown): number =>
+  typeof value === "number" && Number.isFinite(value) ? value : 0;
+
+const normalizeReceiptItems = (
+  items: PrintDocumentItemsTableBlock["items"],
+): BillBase["items"] =>
+  (Array.isArray(items) ? items : []).map((item) => ({
+    item_name: clampText(item.item_name) || "",
+    variant_name: item.variant_name ? clampText(item.variant_name) : null,
+    quantity: numberOrZero(item.quantity),
+    unit_price: numberOrZero(item.unit_price),
+    subtotal: numberOrZero(item.subtotal),
+    modifiers: Array.isArray(item.modifiers) ? item.modifiers : null,
+    sides: Array.isArray(item.sides) ? item.sides : null,
+    note: item.note ? clampText(item.note) : null,
+  }));
+
+const billBaseForDocument = (overrides: Partial<BillBase>): BillBase => ({
+  order_number: overrides.order_number ?? "",
+  order_type: overrides.order_type ?? "takeaway",
+  table_number: overrides.table_number,
+  cashier_name: overrides.cashier_name,
+  created_at: overrides.created_at,
+  printed_at: overrides.printed_at ?? "",
+  items: overrides.items ?? [],
+  subtotal: overrides.subtotal ?? 0,
+  tax_amount: overrides.tax_amount,
+  service_charge: overrides.service_charge,
+  discount_amount: overrides.discount_amount,
+  total_amount: overrides.total_amount ?? 0,
+});
+
+const renderDocumentBillMeta = (
+  block: Extract<PrintDocumentBlock, { type: "billMeta" }>,
+): Uint8Array[] =>
+  renderBillMeta(
+    billBaseForDocument({
+      order_number: clampText(block.order_number),
+      order_type: normalizeOrderType(block.order_type),
+      table_number: block.table_number,
+      cashier_name: block.cashier_name ? clampText(block.cashier_name) : "",
+      created_at: block.created_at,
+    }),
+  );
+
+const renderDocumentItemsTable = (
+  block: PrintDocumentItemsTableBlock,
+): Uint8Array[] => {
+  const items = normalizeReceiptItems(block.items);
+  if (items.length === 0) return [];
+  return renderBillItemsTable(billBaseForDocument({ items }));
+};
+
+const renderDocumentTotals = (
+  block: PrintDocumentTotalsBlock,
+): Uint8Array[] =>
+  renderBillTotals(
+    billBaseForDocument({
+      subtotal: numberOrZero(block.subtotal),
+      tax_amount: numberOrZero(block.tax_amount),
+      service_charge: numberOrZero(block.service_charge),
+      discount_amount: numberOrZero(block.discount_amount),
+      total_amount: numberOrZero(block.total_amount),
+    }),
+  );
+
+const renderDocumentPaymentMethod = (
+  block: Extract<PrintDocumentBlock, { type: "paymentMethod" }>,
+): Uint8Array[] => {
+  if (!block.method) return [];
+  const label = PAYMENT_LABEL[block.method] ?? block.method;
+  return [pair("Thanh toán:", label)];
+};
+
+const renderDocumentCashChange = (
+  block: PrintDocumentCashChangeBlock,
+): Uint8Array[] => {
+  if (block.cash_received == null && block.cash_change == null) return [];
+  return [
+    pair("Tiền nhận", fmtMoney(block.cash_received ?? block.total_amount ?? 0)),
+    pair("Tiền trả khách", fmtMoney(block.cash_change ?? 0)),
+    divider("-"),
+  ];
+};
+
+const renderDocumentNote = (
+  block: Extract<PrintDocumentBlock, { type: "note" }>,
+): Uint8Array[] => {
+  const text = clampText(block.text);
+  if (!text) return [];
+  return [line(`${block.prefix ?? "Ghi chú: "}${text}`)];
+};
+
+const renderDocumentPaymentQr = (
+  block: PrintDocumentPaymentQrBlock,
+): Uint8Array[] => {
+  const q = block.qr;
+  const content = clampQrContent(q?.content);
+  if (!q || !content) return [];
+  const parts: Uint8Array[] = [newline(), alignCenter(), boldOn()];
+  parts.push(line(clampText(block.heading) || "QUÉT QR THANH TOÁN"));
+  parts.push(boldOff());
+  parts.push(qrBlock(content, 6));
+  if (q.header_label) parts.push(line(clampText(q.header_label)));
+  if (q.account_no) parts.push(line(`STK: ${clampText(q.account_no)}`));
+  if (q.account_name) parts.push(line(clampText(q.account_name).toUpperCase()));
+  parts.push(line(`Số tiền: ${fmtMoney(q.amount)}`));
+  if (q.description) parts.push(line(`Nội dung: ${clampText(q.description)}`));
+  parts.push(alignLeft());
+  return parts;
+};
+
+const renderDocumentFooter = (
+  block: Extract<PrintDocumentBlock, { type: "footer" }>,
+): Uint8Array[] => {
+  const lines = Array.isArray(block.lines) && block.lines.length > 0
+    ? block.lines.map(clampText).filter(Boolean)
+    : [BRAND_LOCKUP_TAGLINE];
+  const parts: Uint8Array[] = [newline(), alignCenter()];
+  for (const footerLine of lines) parts.push(line(footerLine));
+  parts.push(alignLeft());
+  return parts;
+};
+
+const isKitchenPayload = (value: unknown): value is KitchenPayload =>
+  isRecord(value) && value.kind === "kitchen_ticket" && Array.isArray(value.items);
+
+const isCancelTicketPayload = (value: unknown): value is CancelTicketPayload =>
+  isRecord(value) && value.kind === "cancel_ticket" && Array.isArray(value.items);
+
+const isShiftCloseReportPayload = (
+  value: unknown,
+): value is ShiftCloseReportPayload =>
+  isRecord(value) &&
+  value.kind === "shift_close_report" &&
+  Array.isArray(value.payment_breakdown);
+
+const renderSingleLegacyDocumentBlock = (
+  document: PrintDocument,
+): Uint8Array | null => {
+  if (document.blocks.length !== 1) return null;
+  const block = document.blocks[0];
+  if (!block) return null;
+  if (block.type === "kitchenTicket" && isKitchenPayload(block.payload)) {
+    return renderKitchenTicket(block.payload);
+  }
+  if (block.type === "cancelTicket" && isCancelTicketPayload(block.payload)) {
+    return renderCancelTicket(block.payload);
+  }
+  if (
+    block.type === "shiftCloseReport" &&
+    isShiftCloseReportPayload(block.payload)
+  ) {
+    return renderShiftCloseReport(block.payload);
+  }
+  return null;
+};
+
+const renderPrintDocument = (document: PrintDocument): Uint8Array => {
+  const legacy = renderSingleLegacyDocumentBlock(document);
+  if (legacy) return legacy;
+
+  const parts: Uint8Array[] = [init()];
+  for (const block of document.blocks) {
+    switch (block.type) {
+      case "text":
+        parts.push(...renderDocumentText(block));
+        break;
+      case "row":
+        parts.push(...renderDocumentRow(block));
+        break;
+      case "divider": {
+        const ch = block.char?.slice(0, 1) || "-";
+        parts.push(divider(ch));
+        break;
+      }
+      case "spacer": {
+        const count = Math.max(1, Math.min(5, block.lines ?? 1));
+        parts.push(feed(count));
+        break;
+      }
+      case "brandHeader":
+        parts.push(...renderDocumentBrandHeader(block));
+        break;
+      case "branchInfo":
+        parts.push(...renderDocumentBranchInfo(block));
+        break;
+      case "billMeta":
+        parts.push(...renderDocumentBillMeta(block));
+        break;
+      case "paymentMethod":
+        parts.push(...renderDocumentPaymentMethod(block));
+        break;
+      case "itemsTable":
+        parts.push(...renderDocumentItemsTable(block));
+        break;
+      case "totals":
+        parts.push(...renderDocumentTotals(block));
+        break;
+      case "cashChange":
+        parts.push(...renderDocumentCashChange(block));
+        break;
+      case "note":
+        parts.push(...renderDocumentNote(block));
+        break;
+      case "paymentQr":
+        parts.push(...renderDocumentPaymentQr(block));
+        break;
+      case "footer":
+        parts.push(...renderDocumentFooter(block));
+        break;
+      case "kitchenTicket":
+      case "cancelTicket":
+      case "shiftCloseReport":
+        break;
+    }
+  }
+  parts.push(feed(6), cutPartial());
+  return concat(parts);
+};
 
 export function renderProvisionalBill(p: ProvisionalBillPayload): Uint8Array {
   const parts: Uint8Array[] = [init()];
@@ -858,9 +1218,7 @@ export function renderShiftCloseReport(p: ShiftCloseReportPayload): Uint8Array {
   const parts: Uint8Array[] = [init()];
 
   // Brand + branch
-  parts.push(alignCenter(), boldOn());
-  parts.push(line("CƠM TẤM MÁ TƯ"));
-  parts.push(boldOff());
+  parts.push(...renderBrandLockupHeader());
   if (p.branch_name) parts.push(line(p.branch_name));
   if (p.branch_address) parts.push(line(p.branch_address));
   if (p.branch_phone) parts.push(line(`ĐT: ${p.branch_phone}`));
@@ -954,13 +1312,18 @@ export function renderShiftCloseReport(p: ShiftCloseReportPayload): Uint8Array {
   const printed = splitDateTime(p.printed_at);
   parts.push(newline(), alignCenter());
   parts.push(line(`In lúc: ${printed.time} ${printed.date}`.trim()));
-  parts.push(line("Cơm Tấm Má Tư"));
+  parts.push(line(BRAND_LOCKUP_TAGLINE));
   parts.push(alignLeft());
   parts.push(feed(6), cutPartial());
   return concat(parts);
 }
 
 export function renderPayload(payload: PrintPayload): Uint8Array {
+  const document = getPrintDocument(payload);
+  if (document) {
+    return renderPrintDocument(document);
+  }
+
   switch (payload.kind) {
     case "kitchen_ticket":
       return renderKitchenTicket(payload);

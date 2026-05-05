@@ -33,7 +33,7 @@ interface BlindCountingGridProps {
   blindMode: boolean;
   /** Disable inputs for rounds that are finalized. */
   readOnly?: boolean;
-  /** Optional filter — only show lines flagged needs_recount. Used for R2+. */
+  /** Optional filter — only show lines that need a follow-up count. */
   onlyNeedsRecount?: boolean;
   className?: string;
 }
@@ -44,7 +44,7 @@ interface BlindCountingGridProps {
  * Each row = 1 ingredient. Shows:
  *   - Ingredient name + ABC class chip
  *   - Qty input (FormattedNumberInput, vi-VN grouping)
- *   - Need-recount badge when the server returned is_final=false AND
+ *   - Follow-up badge when the server returned is_final=false AND
  *     this row was touched in a prior round
  *   - Final-tick when is_final
  *
@@ -196,7 +196,7 @@ function CountRow({
               variant="outline"
               className="gap-1 border-tier-note/40 text-tier-note-foreground"
             >
-              <IconFlag3 className="size-3.5" /> Cần recount
+              <IconFlag3 className="size-3.5" /> Cần kiểm tra
             </Badge>
           ) : (
             <Badge variant="outline">R{line.roundNo}</Badge>
@@ -238,7 +238,7 @@ export function BlindCountingGridToolbar({
             variant={onlyRecount ? "default" : "outline"}
             onClick={onToggleOnlyRecount}
           >
-            {onlyRecount ? "Đang lọc: cần recount" : "Chỉ xem cần recount"}
+            {onlyRecount ? "Đang lọc: cần kiểm tra" : "Chỉ xem cần kiểm tra"}
           </Button>
         ) : null}
         {children}
@@ -248,7 +248,7 @@ export function BlindCountingGridToolbar({
         onClick={onSubmit}
         disabled={!canSubmit || submitting}
       >
-        {submitting ? "Đang gửi…" : "Kết thúc round"}
+        {submitting ? "Đang gửi…" : "Lưu số đếm"}
       </Button>
     </div>
   );

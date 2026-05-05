@@ -45,7 +45,7 @@ export function AutoApproveEvalPanel({
     <Card className={cn("", className)} data-slot="auto-approve-panel">
       <CardContent className="space-y-3 py-4">
         <div className="flex items-center justify-between gap-2">
-          <h4 className="text-sm font-semibold">
+          <h4 className="font-heading text-sm font-semibold">
             {evaluation.approved
               ? "Sẽ auto-approve khi submit"
               : "Chưa đủ điều kiện auto-approve"}

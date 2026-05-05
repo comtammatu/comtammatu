@@ -6,6 +6,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Key as IconKey, MapPin as IconMapPin, Copy as IconCopy, RefreshCw as IconRefresh, LocateFixed as IconCurrentLocation } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
   Dialog,
@@ -18,6 +25,7 @@ import { FieldGroup } from "@comtammatu/ui/components/field";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { ACTIONS_VI, ERRORS_VI } from "@comtammatu/shared/messages";
 import { TextField, valuesToFormData } from "@/components/form";
+import { messages } from "@lib/messages";
 import {
   updateBranchCoordinates,
   generateAttendanceSecret,
@@ -96,7 +104,7 @@ export function AttendanceConfigDialog({
 
   function handleGetLocation() {
     if (!navigator.geolocation) {
-      setGeoError("Trình duyệt không hỗ trợ GPS");
+      setGeoError(messages.settings.attendance.gpsUnsupported);
       return;
     }
     setGeoLoading(true);
@@ -115,8 +123,8 @@ export function AttendanceConfigDialog({
         setGeoLoading(false);
         setGeoError(
           err.code === 1
-            ? "Bạn đã từ chối quyền GPS. Vui lòng bật và thử lại."
-            : "Không xác định được vị trí. Vui lòng thử lại.",
+            ? messages.settings.attendance.gpsDenied
+            : messages.settings.attendance.gpsUnavailable,
         );
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
@@ -133,7 +141,7 @@ export function AttendanceConfigDialog({
         setCoordsError(result.error ?? ERRORS_VI.fallback);
         return;
       }
-      toast.success("Đã cập nhật tọa độ GPS");
+      toast.success(messages.settings.attendance.coordinatesUpdated);
     });
   }
 
@@ -143,7 +151,7 @@ export function AttendanceConfigDialog({
       if (result.success && result.data) {
         setTodayCode(result.data.code);
         setTodayDate(result.data.date);
-        toast.success("Đã tạo mã bí mật mới");
+        toast.success(messages.settings.attendance.secretGenerated);
       } else {
         toast.error(result.error ?? ERRORS_VI.fallback);
       }
@@ -165,7 +173,7 @@ export function AttendanceConfigDialog({
   function handleCopyCode() {
     if (todayCode) {
       void navigator.clipboard.writeText(todayCode);
-      toast.success("Đã sao chép mã");
+      toast.success(messages.settings.attendance.codeCopied);
     }
   }
 
@@ -173,7 +181,9 @@ export function AttendanceConfigDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Cấu hình chấm công — {branch.name}</DialogTitle>
+          <DialogTitle>
+            {messages.settings.attendance.title(branch.name)}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">
@@ -181,7 +191,7 @@ export function AttendanceConfigDialog({
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-sm font-medium">
               <IconMapPin className="size-4" />
-              Tọa độ GPS
+              {messages.settings.attendance.gpsTitle}
             </div>
             <form onSubmit={form.handleSubmit(onValidCoords)} noValidate>
               <FieldGroup>
@@ -189,7 +199,7 @@ export function AttendanceConfigDialog({
                   <TextField
                     control={form.control}
                     name="latitude"
-                    label="Vĩ độ (Lat)"
+                    label={messages.settings.attendance.latitudeLabel}
                     type="number"
                     step="0.0000001"
                     placeholder="10.7769"
@@ -198,7 +208,7 @@ export function AttendanceConfigDialog({
                   <TextField
                     control={form.control}
                     name="longitude"
-                    label="Kinh độ (Lng)"
+                    label={messages.settings.attendance.longitudeLabel}
                     type="number"
                     step="0.0000001"
                     placeholder="106.7009"
@@ -219,7 +229,7 @@ export function AttendanceConfigDialog({
                   ) : (
                     <IconCurrentLocation className="mr-2 size-4" />
                   )}
-                  Lấy vị trí hiện tại
+                  {messages.settings.attendance.currentLocation}
                 </Button>
 
                 {geoError && (
@@ -235,7 +245,7 @@ export function AttendanceConfigDialog({
 
                 <Button type="submit" size="sm" disabled={coordsPending}>
                   {coordsPending && <Spinner className="mr-2" />}
-                  {ACTIONS_VI.save} tọa độ
+                  {messages.settings.attendance.saveCoordinates}
                 </Button>
               </FieldGroup>
             </form>
@@ -245,7 +255,7 @@ export function AttendanceConfigDialog({
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-sm font-medium">
               <IconKey className="size-4" />
-              Mã bí mật chấm công
+              {messages.settings.attendance.secretTitle}
             </div>
 
             <div className="flex flex-wrap gap-2">
@@ -260,7 +270,9 @@ export function AttendanceConfigDialog({
                 ) : (
                   <IconRefresh className="mr-2 size-4" />
                 )}
-                {branch.hasSecret ? "Tạo mã mới" : "Tạo mã bí mật"}
+                {branch.hasSecret
+                  ? messages.settings.attendance.generateNewSecret
+                  : messages.settings.attendance.generateSecret}
               </Button>
 
               {branch.hasSecret && (
@@ -270,33 +282,37 @@ export function AttendanceConfigDialog({
                   onClick={handleShowCode}
                   disabled={secretPending}
                 >
-                  Xem mã hôm nay
+                  {messages.settings.attendance.showTodayCode}
                 </Button>
               )}
             </div>
 
             {todayCode && (
-              <div className="rounded-lg border bg-muted/50 p-4">
-                <p className="mb-1 text-xs text-muted-foreground">
-                  Mã chấm công — {todayDate}
-                </p>
-                <div className="flex items-center gap-3">
+              <Item variant="muted" className="items-center sm:flex-nowrap">
+                <ItemContent>
+                  <ItemTitle>
+                    {messages.settings.attendance.codeTitle(todayDate)}
+                  </ItemTitle>
                   <span className="font-mono text-2xl font-bold tracking-widest">
                     {todayCode.toUpperCase()}
                   </span>
+                  <ItemDescription>
+                    {messages.settings.attendance.codeDescription}
+                  </ItemDescription>
+                </ItemContent>
+                <ItemActions className="ml-auto">
                   <Button
                     variant="ghost"
                     size="icon-lg"
                     onClick={handleCopyCode}
                   >
                     <IconCopy className="size-4" />
-                    <span className="sr-only">Sao chép mã</span>
+                    <span className="sr-only">
+                      {messages.settings.attendance.copyCode}
+                    </span>
                   </Button>
-                </div>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  In mã này lên poster tại chi nhánh. Mã thay đổi mỗi ngày.
-                </p>
-              </div>
+                </ItemActions>
+              </Item>
             )}
           </div>
         </div>

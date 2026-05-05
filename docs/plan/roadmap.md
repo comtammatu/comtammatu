@@ -3,6 +3,14 @@
 > Hệ thống Quản lý Vận hành Nhà hàng (Restaurant Operations Management System)
 > Updated: 2026-04-25 | Structure: Module-based
 
+## Status Vocabulary
+
+`SHIPPED` here is module-level: "core flow is in code AND applied AND `/verify` + `/review` passed." When a module reads `PARTIAL`, the gap is usually external (merchant credentials, MISA provider, payroll tax engine) — not unwritten code.
+
+For migration / per-table state, use the implementation-status ladder defined in `docs/modules/database.md` ("Migration Status Vocabulary"): `planned → drafted → applied to dev → types generated → prod-applied → UI wired`. `tasks/todo.md` may show `WAITING APPLY` or `STAGED` — those are points 2-4 on that ladder, NOT the module-level "SHIPPED".
+
+If a fact in this file disagrees with `tasks/todo.md` or runtime, runtime wins. Update this file rather than reconciling silently.
+
 ## Product Identity
 
 Cơm Tấm Má Tư là **ERP vận hành chuỗi nhà hàng** cho chuỗi cơm tấm.

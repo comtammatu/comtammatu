@@ -1,19 +1,15 @@
 "use client";
 
 import { memo } from "react";
+import { AppEmptyState } from "@/components/surface";
 import { formatVND } from "@comtammatu/shared/format";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Empty,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@comtammatu/ui/components/empty";
 import { Item } from "@comtammatu/ui/components/item";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { cn } from "@comtammatu/ui";
+import { messages } from "@lib/messages";
 import {
   Plus as IconPlus,
   Send as IconSend,
@@ -64,8 +60,8 @@ function AppendDraftPaneComponent({
       <div className="shrink-0 border-b border-border/60 px-3 py-3 sm:px-4">
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <h2 className="truncate text-base font-semibold tracking-tight text-foreground sm:text-xl">
-              Món thêm
+            <h2 className="font-heading truncate text-base font-semibold tracking-tight text-foreground sm:text-xl">
+              {messages.pos.appendDraft.title}
             </h2>
             <Badge variant="warning">#{orderNumber}</Badge>
           </div>
@@ -74,7 +70,11 @@ function AppendDraftPaneComponent({
             variant="ghost"
             size="icon-sm"
             className="shrink-0 text-muted-foreground"
-            aria-label={onClosePane ? "Đóng món thêm" : "Hủy thêm món"}
+            aria-label={
+              onClosePane
+                ? messages.pos.appendDraft.closeAria
+                : messages.pos.appendDraft.cancelAria
+            }
             disabled={isSubmitting}
             onClick={onClosePane ?? onCancel}
           >
@@ -85,20 +85,17 @@ function AppendDraftPaneComponent({
 
       {items.length === 0 ? (
         <div className="flex flex-1 items-center justify-center p-4">
-          <Empty className="py-10">
-            <EmptyMedia variant="icon">
-              <IconPlus />
-            </EmptyMedia>
-            <EmptyHeader>
-              <EmptyTitle>Chưa có món thêm</EmptyTitle>
-            </EmptyHeader>
-          </Empty>
+          <AppEmptyState
+            title={messages.pos.appendDraft.empty}
+            icon={<IconPlus />}
+            compact
+          />
         </div>
       ) : (
         <ScrollArea className="min-h-0 flex-1">
           <ul
             className="flex flex-col gap-2 px-3 py-2 sm:px-4"
-            aria-label="Món sẽ gửi thêm"
+            aria-label={messages.pos.appendDraft.listAria}
           >
             {items.map((item) => {
               const displayName = getPosLineItemDisplayName(item);
@@ -118,7 +115,9 @@ function AppendDraftPaneComponent({
                       type="button"
                       variant="ghost"
                       className="h-full w-full justify-start whitespace-normal rounded-none px-3 py-2 text-left hover:bg-transparent sm:px-4"
-                      aria-label={`Sửa ${displayName} trong món thêm`}
+                      aria-label={messages.pos.appendDraft.editItemAria(
+                        displayName,
+                      )}
                       disabled={isSubmitting}
                       onClick={() => onEditItem(item)}
                     >
@@ -136,7 +135,9 @@ function AppendDraftPaneComponent({
                     variant="ghost"
                     size="icon"
                     className="absolute right-2 top-1/2 min-h-11 min-w-11 size-9 -translate-y-1/2 text-muted-foreground hover:text-destructive"
-                    aria-label={`Xóa ${displayName} khỏi món thêm`}
+                    aria-label={messages.pos.appendDraft.removeItemAria(
+                      displayName,
+                    )}
                     disabled={isSubmitting}
                     onClick={() => onRemoveItem(item.key)}
                   >
@@ -152,7 +153,7 @@ function AppendDraftPaneComponent({
       <div className="shrink-0 border-t border-border/60 bg-background px-3 py-3 sm:px-4">
         <div className="mb-3 flex items-center justify-between gap-3">
           <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            {quantity} món
+            {messages.pos.appendDraft.itemCount(quantity)}
           </p>
           <p className="text-xl font-bold text-primary tabular-nums">
             {formatVND(total)}
@@ -166,7 +167,7 @@ function AppendDraftPaneComponent({
             disabled={isSubmitting}
             onClick={onCancel}
           >
-            Hủy
+            {messages.pos.appendDraft.cancel}
           </Button>
           <Button
             type="button"
@@ -179,7 +180,7 @@ function AppendDraftPaneComponent({
             ) : (
               <IconSend data-icon="inline-start" />
             )}
-            Gửi
+            {messages.pos.appendDraft.submit}
           </Button>
         </div>
       </div>

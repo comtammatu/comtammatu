@@ -1,10 +1,10 @@
 # Design System - Com Tam Ma Tu Web App
 
-> Version: 14.0.1 | Updated: 2026-04-28 | Status: locked baseline for UI/UX rebuild
+> Version: 14.2.0 | Updated: 2026-05-05 | Status: locked baseline for UI/UX rebuild
 
 ## Decision
 
-The design system is the current shadcn preset plus the runtime tokens and primitives that already exist in this repo. It is not a separate theme layer, not a new component library, and not a parallel visual language.
+The design system is the current shadcn preset plus the Ma Tu Concept 01 runtime brand tokens and primitives that already exist in this repo. It is not a separate theme layer, not a new component library, and not a parallel visual language.
 
 Active runtime:
 
@@ -14,6 +14,10 @@ Active runtime:
 - `cssVariables`: `true`
 - `iconLibrary`: `lucide`
 - primitive base: Radix/shadcn
+- brand concept: Ma Tu Concept 01
+- brand assets: `/brand/logo-matu.png`, `/brand/logo-matu-seal.png`, `/brand/logo-matu-vertical.png`
+- web brand primitive: `apps/web/app/components/brand.tsx`
+- web app surface adapters: `apps/web/app/components/surface.tsx`
 
 Agents must preserve this decision unless the task explicitly asks to change the design system itself.
 
@@ -39,7 +43,7 @@ Com Tam Ma Tu is an operational restaurant system. The UI should feel calm, fast
 - Inventory surfaces are workflow-first. The user should see pending tasks, required documents, and exception states before secondary analytics.
 - Employee surfaces are lightweight task portals. Keep them narrow, direct, and consistent with the shared shell.
 
-The visual tone is neutral foundation, warm primary action, restrained borders, semantic status colors, and strong spacing discipline.
+The visual tone is rice-cream foundation, terracotta primary action, deep navy text, warm rice-yellow accents, restrained borders, semantic status colors, and strong spacing discipline.
 
 ## Token Contract
 
@@ -53,9 +57,47 @@ Allowed token families:
 - Radius: preset radius tokens only
 - Typography: runtime font variables from `apps/web/app/layout.tsx` and `packages/ui/src/styles/globals.css`
 
+Brand Concept 01 runtime mapping:
+
+- `background`: kem gao foundation.
+- `foreground` / dark mode foundation: xanh dam.
+- `primary`: do gach.
+- `ring` / chart accent: vang gao.
+- `success`: xanh la diu.
+- `muted-foreground` / supporting tone: nau go or xam am depending on theme.
+- Heading font: Montserrat.
+- Body font: Inter.
+- Mono font: JetBrains Mono for tabular operational data.
+
+## Typography Contract
+
+Runtime typography source:
+
+- `apps/web/app/layout.tsx` loads `Inter`, `Montserrat`, and `JetBrains_Mono` through `next/font/google`.
+- `packages/ui/src/styles/globals.css` maps those font variables into Tailwind utilities.
+- `docs/status/index.html` is a static public artifact and must mirror the same font stack with local CSS variables.
+
+Required utility mapping:
+
+| Purpose           | Utility / variable                | Font           |
+| ----------------- | --------------------------------- | -------------- |
+| body/content text | `font-sans` / `--font-sans`       | Inter          |
+| headings/titles   | `font-heading` / `--font-heading` | Montserrat     |
+| operational data  | `font-mono` / `--font-mono`       | JetBrains Mono |
+
+Rules:
+
+- Route/page headings, card titles, dialog titles, sheet titles, section titles, and brand lockup text use `font-heading` unless a shadcn primitive already applies it.
+- Body text, controls, labels, descriptions, table text, and workflow copy inherit `font-sans`.
+- Use `font-mono` only for tabular operational data, IDs, codes, receipt/order numbers, prices, quantities, timestamps, and audit hashes.
+- Do not add route-specific `font-family`, custom font variables, or extra Google font families.
+- Do not reintroduce `Be Vietnam Pro`, Geist, system-only stacks, or per-surface typography exceptions unless the design-system contract is explicitly changed first.
+- When changing typography runtime, update `apps/web/app/layout.tsx`, `packages/ui/src/styles/globals.css`, this contract, `docs/modules/ui.md`, `docs/agent/rules/ui.md`, `tasks/regressions.md`, and any public static artifact that renders the UI brand such as `docs/status/index.html`.
+
 Rules:
 
 - Use semantic Tailwind token classes (`bg-background`, `text-muted-foreground`, `border-border`, `bg-success`, etc.).
+- Use `BrandMark` / `BrandLockup` for web runtime logo rendering; do not reference `/brand/logo-*` directly from route components.
 - Do not hardcode raw palette classes for status meaning (`amber`, `emerald`, `zinc`, etc.) when a semantic token exists.
 - Do not add arbitrary dimensions such as `text-[10px]`, `w-[200px]`, or `h-[3rem]`.
 - Do not add static inline styles for presentation.
@@ -69,6 +111,8 @@ If a new token is truly needed, it must be added to `packages/ui/src/styles/glob
 ## Component Authority
 
 The only shared primitive layer is `packages/ui/src/components/*`.
+
+App-level page, section, toolbar, empty-state, and link-card composition is centralized in `apps/web/app/components/surface.tsx`. These exports are adapters around the shared primitives, not a second primitive library.
 
 Default primitive mapping:
 
@@ -94,7 +138,7 @@ Toast and durable notification behavior is specified in `docs/spec/toast-notific
 Allowed app wrappers:
 
 - Data adapters that fetch, map, or validate domain data.
-- Layout wrappers that arrange primitives without changing the visual contract.
+- Layout wrappers that arrange primitives without changing the visual contract and delegate to `apps/web/app/components/surface.tsx` when they represent page, header, section, toolbar, empty-state, or navigation-card patterns.
 - Form wrappers in `apps/web/app/components/form/`.
 - Domain wrappers that remove repetition while still rendering shadcn primitives.
 
@@ -102,6 +146,7 @@ Forbidden wrappers:
 
 - Wrappers that restyle a primitive into a new visual system.
 - Page-specific clones of `Button`, `Badge`, `Card`, `Table`, `Tabs`, `Input`, or `Select`.
+- Page-specific clones of app page/header/section/toolbar/empty-state/link-card adapters.
 - Compatibility shims for a removed design system.
 - Helpers named like legacy `app-*` surface classes.
 

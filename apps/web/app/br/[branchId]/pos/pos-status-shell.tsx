@@ -1,13 +1,6 @@
 import type { ReactNode } from "react";
+import { AppEmptyState } from "@/components/surface";
 import { Badge } from "@comtammatu/ui/components/badge";
-import { Card, CardContent } from "@comtammatu/ui/components/card";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@comtammatu/ui/components/empty";
 
 export interface PosStatusShellProps {
   icon: ReactNode;
@@ -27,33 +20,20 @@ export function PosStatusShell({
   badge,
 }: PosStatusShellProps) {
   return (
-    <Card>
-      <CardContent className="p-6 sm:p-8">
-        <Empty className="items-start gap-5 border-0 p-0 text-left">
-          <div className="flex w-full flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="flex flex-col gap-4">
-              <EmptyMedia
-                variant="icon"
-                className="size-14 border border-border/70 bg-background/80 text-primary shadow-sm"
-              >
-                {icon}
-              </EmptyMedia>
-              <EmptyHeader className="items-start gap-1.5 text-left">
-                <EmptyTitle className="text-3xl font-semibold tracking-tight">
-                  {title}
-                </EmptyTitle>
-                <EmptyDescription className="max-w-2xl text-base leading-7">
-                  {description}
-                </EmptyDescription>
-              </EmptyHeader>
-            </div>
-            <Badge variant={badge.variant ?? "info"}>
-              {badge.icon}
-              <span>{badge.label}</span>
-            </Badge>
-          </div>
-        </Empty>
-      </CardContent>
-    </Card>
+    <AppEmptyState
+      align="start"
+      className="gap-5 p-6 sm:p-8"
+      description={description}
+      descriptionClassName="max-w-2xl text-base leading-7"
+      icon={icon}
+      iconClassName="size-14 border border-border/70 bg-background/80 text-primary shadow-sm"
+      title={title}
+      titleClassName="text-3xl font-semibold tracking-tight"
+    >
+      <Badge variant={badge.variant ?? "info"}>
+        {badge.icon}
+        <span>{badge.label}</span>
+      </Badge>
+    </AppEmptyState>
   );
 }

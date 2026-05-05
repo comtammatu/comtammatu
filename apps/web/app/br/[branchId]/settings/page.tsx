@@ -1,19 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Armchair as IconArmchair, ArrowLeft as IconArrowLeft, ArrowRight as IconArrowRight, ChefHat as IconChefHat, Gauge as IconGauge, ListChecks as IconChecklist, Monitor as IconDeviceDesktop, LayoutGrid as IconLayoutGrid, Printer as IconPrinter, ReceiptText as IconReceipt2 } from "lucide-react";
-import { Badge } from "@comtammatu/ui/components/badge";
+import type { ElementType } from "react";
+import { Armchair as IconArmchair, ArrowLeft as IconArrowLeft, ChefHat as IconChefHat, Gauge as IconGauge, ListChecks as IconChecklist, Monitor as IconDeviceDesktop, LayoutGrid as IconLayoutGrid, Printer as IconPrinter, ReceiptText as IconReceipt2 } from "lucide-react";
+import { AppLinkCard, AppPage, AppPageHeader, AppSection } from "@/components/surface";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Card,
-  CardContent,
-} from "@comtammatu/ui/components/card";
 import { loadAuthState } from "@/_lib/auth";
+import { messages } from "@lib/messages";
 
 type Tile = {
   href: string;
   title: string;
   description: string;
-  icon: React.ReactNode;
+  icon: ElementType;
 };
 
 export default async function BranchSettingsHubPage({
@@ -47,44 +45,44 @@ export default async function BranchSettingsHubPage({
       href: `/br/${branchId}/settings/tables`,
       title: "Khu vực",
       description: "Khu vực ăn uống trong chi nhánh (Tầng 1, Sân vườn…).",
-      icon: <IconLayoutGrid className="size-5" />,
+      icon: IconLayoutGrid,
     },
     {
       href: `/br/${branchId}/settings/tables`,
       title: "Bàn",
       description: "Danh sách bàn và sức chứa.",
-      icon: <IconArmchair className="size-5" />,
+      icon: IconArmchair,
     },
     {
       href: `/br/${branchId}/settings/pos`,
       title: "POS",
       description: "Máy POS đăng ký tại chi nhánh.",
-      icon: <IconDeviceDesktop className="size-5" />,
+      icon: IconDeviceDesktop,
     },
     {
       href: `/br/${branchId}/settings/pos-sessions`,
       title: "Ca POS",
       description: "Lịch sử ca, bill, doanh thu, số món và đối soát chênh lệch.",
-      icon: <IconReceipt2 className="size-5" />,
+      icon: IconReceipt2,
     },
     {
       href: `/br/${branchId}/settings/printers`,
       title: "Máy in",
       description: "Hóa đơn, bếp 1, bếp 2 — cấu hình & trạng thái agent.",
-      icon: <IconPrinter className="size-5" />,
+      icon: IconPrinter,
     },
     {
       href: `/br/${branchId}/settings/kds`,
       title: "Trạm bếp (KDS)",
       description: "Trạm hiển thị bếp và gán danh mục món ăn cho từng trạm.",
-      icon: <IconChefHat className="size-5" />,
+      icon: IconChefHat,
     },
     {
       href: `/br/${branchId}/menu-limits`,
       title: "Hạn mức bán hàng ngày",
       description:
         "Đặt số phần tối đa mỗi món hôm nay (vd. 30 Sườn cốt lết) hoặc tắt món. Quản lý/POS/Bếp đều chỉnh được.",
-      icon: <IconGauge className="size-5" />,
+      icon: IconGauge,
     },
   ];
 
@@ -93,75 +91,51 @@ export default async function BranchSettingsHubPage({
       href: "/menu",
       title: "Thực đơn",
       description: "Danh mục, món ăn, giá. (Áp dụng toàn hệ thống.)",
-      icon: <IconChecklist className="size-5" />,
+      icon: IconChecklist,
     },
     ...(isHq ? [] : operationalTiles),
   ];
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 p-4 md:p-6">
-      <div className="flex items-center gap-3">
-        <Button asChild variant="outline" size="sm" className="gap-1">
-          <Link href="/employee">
-            <IconArrowLeft className="size-4" />
-            Về Cổng
-          </Link>
-        </Button>
-        <div className="min-w-0">
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Thiết lập chi nhánh</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {branch.name}
-            {isHq ? " · Trụ sở (không dùng POS/Bàn/Máy in)" : ""}
-          </p>
-        </div>
-      </div>
+    <AppPage width="default" className="md:p-6">
+      <AppPageHeader
+        title={messages.settings.branch.hubTitle}
+        description={messages.settings.branch.hubDescription(branch.name, isHq)}
+        actions={
+          <Button asChild variant="outline" size="sm" className="gap-1">
+            <Link href="/employee">
+              <IconArrowLeft className="size-4" />
+              {messages.settings.branch.employeeBack}
+            </Link>
+          </Button>
+        }
+      />
 
       {isHq ? (
-        <Card>
-          <CardContent className="space-y-2 p-5">
-            <Badge variant="warning">Thông tin</Badge>
-            <p className="text-sm text-muted-foreground">
-              Chi nhánh trụ sở/kho trung tâm không áp dụng cấu hình Khu vực,
-              Bàn, POS hay Máy in. Chỉ Thực đơn ở đây là có ý nghĩa.
-            </p>
-          </CardContent>
-        </Card>
+        <AppSection
+          title={messages.settings.branch.infoTitle}
+          badge={{
+            children: messages.settings.branch.hqBadge,
+            variant: "warning",
+          }}
+        >
+          <p className="text-sm leading-6 text-muted-foreground">
+            {messages.settings.branch.hqDescription}
+          </p>
+        </AppSection>
       ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2">
         {tiles.map((tile) => (
-          <Card
+          <AppLinkCard
             key={`${tile.title}-${tile.href}`}
-            className="rounded-lg border bg-muted/30 text-card-foreground"
-          >
-            <CardContent className="p-1">
-              <Button
-                asChild
-                variant="ghost"
-                className="group h-auto w-full justify-start rounded-2xl p-0"
-              >
-                <Link
-                  href={tile.href}
-                  className="flex min-h-16 w-full items-center gap-4 px-3 py-3"
-                >
-                  <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                    {tile.icon}
-                  </span>
-                  <div className="min-w-0 flex-1 text-left">
-                    <p className="text-sm font-semibold text-foreground">
-                      {tile.title}
-                    </p>
-                    <p className="line-clamp-2 break-words text-sm leading-6 text-muted-foreground">
-                      {tile.description}
-                    </p>
-                  </div>
-                  <IconArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
+            href={tile.href}
+            title={tile.title}
+            description={tile.description}
+            icon={tile.icon}
+          />
         ))}
       </div>
-    </div>
+    </AppPage>
   );
 }

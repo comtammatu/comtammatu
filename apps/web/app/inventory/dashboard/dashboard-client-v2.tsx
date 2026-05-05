@@ -7,6 +7,7 @@ import { LocationBreakdownTable } from "@/inventory/_components/location-breakdo
 import { AlertsDrawer } from "@/inventory/_components/alerts-drawer";
 import { DashboardRefreshButton } from "@/inventory/_components/dashboard-refresh-button";
 import type { InventoryDashboard } from "@/inventory/dashboard-actions";
+import { messages } from "@lib/messages";
 
 interface Props {
   branchId: number;
@@ -34,7 +35,7 @@ export function DashboardClientV2({
     <div className="mx-auto max-w-7xl space-y-4">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+          <h1 className="font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
             Inventory dashboard
             <Badge variant="outline" className="ml-2 text-xs">
               v2 pilot
@@ -86,7 +87,9 @@ function TopAlertsCard({ dashboard }: { dashboard: InventoryDashboard }) {
     <Card>
       <CardContent className="p-4">
       <div className="mb-2 flex items-center justify-between">
-        <h3 className="text-sm font-semibold">Top 5 alerts</h3>
+        <h3 className="font-heading text-sm font-semibold">
+          {messages.inventory.dashboard.topAlerts}
+        </h3>
         {alerts.length > 0 ? (
           <Badge
             variant="outline"
@@ -97,7 +100,9 @@ function TopAlertsCard({ dashboard }: { dashboard: InventoryDashboard }) {
         ) : null}
       </div>
       {alerts.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Không có alert.</p>
+        <p className="text-sm text-muted-foreground">
+          {messages.inventory.dashboard.noAlertShort}
+        </p>
       ) : (
         <ul className="space-y-2 text-sm">
           {alerts.map((a) => (
@@ -108,8 +113,15 @@ function TopAlertsCard({ dashboard }: { dashboard: InventoryDashboard }) {
               <div className="min-w-0 flex-1">
                 <div className="truncate font-medium">{a.ingredientName}</div>
                 <div className="truncate text-xs text-muted-foreground">
-                  {a.locationName} • Tồn: {a.currentQuantity}
-                  {a.reorderPoint !== null ? ` / ngưỡng ${a.reorderPoint}` : ""}
+                  {messages.inventory.dashboard.stockLevel(
+                    a.locationName,
+                    a.currentQuantity,
+                  )}
+                  {a.reorderPoint !== null
+                    ? messages.inventory.dashboard.reorderPointSuffix(
+                        a.reorderPoint,
+                      )
+                    : ""}
                 </div>
               </div>
               <Badge
@@ -139,13 +151,17 @@ function InTransitCard({ dashboard }: { dashboard: InventoryDashboard }) {
     <Card>
       <CardContent className="p-4">
       <div className="mb-2 flex items-center justify-between">
-        <h3 className="text-sm font-semibold">Đang vận chuyển</h3>
+        <h3 className="font-heading text-sm font-semibold">
+          {messages.inventory.dashboard.inTransitTitle}
+        </h3>
         {items.length > 0 ? (
           <Badge variant="secondary">{items.length}</Badge>
         ) : null}
       </div>
       {items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Không có chuyển kho.</p>
+        <p className="text-sm text-muted-foreground">
+          {messages.inventory.dashboard.noTransfers}
+        </p>
       ) : (
         <ul className="space-y-1.5 text-sm">
           {items.slice(0, 10).map((t) => (
@@ -155,7 +171,10 @@ function InTransitCard({ dashboard }: { dashboard: InventoryDashboard }) {
             >
               <span className="truncate">{t.ingredientName}</span>
               <span className="tabular-nums text-muted-foreground">
-                {t.totalQuantity} • {t.transferCount} phiếu
+                {messages.inventory.dashboard.transferCount(
+                  t.totalQuantity,
+                  t.transferCount,
+                )}
               </span>
             </li>
           ))}

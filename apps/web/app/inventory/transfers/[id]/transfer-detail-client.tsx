@@ -49,6 +49,7 @@ import {
   getInventoryStatusBadgeVariant,
   getInventoryStatusLabel,
 } from "../../_lib/ui";
+import { messages } from "@lib/messages";
 
 import { FORM_VI } from "@comtammatu/shared/messages";
 export type TransferDetail = {
@@ -89,6 +90,7 @@ export function TransferDetailClient({
   correctionBranches: CorrectionBranchOption[];
 }) {
   const router = useRouter();
+  const copy = messages.inventory.transfer;
   const [isPending, startTransition] = useTransition();
   const [receiveQty, setReceiveQty] = useState<Record<number, string>>(() => {
     const initial: Record<number, string> = {};
@@ -100,6 +102,12 @@ export function TransferDetailClient({
   const [shortNote, setShortNote] = useState("");
   const isReceiveMode = transfer.status === "confirmed_receive";
   const isIntraBranch = transfer.fromBranchId === transfer.toBranchId;
+  const isBranchScopedOps =
+    userRole === "warehouse_manager" || userRole === "production_manager";
+  const transferListHref =
+    userBranchId != null
+      ? `/inventory/transfers?branchId=${userBranchId}`
+      : "/inventory/transfers";
   const shortLines = useMemo(() => {
     if (!isReceiveMode) return 0;
     let count = 0;
@@ -116,12 +124,12 @@ export function TransferDetailClient({
   ).length;
   const transferSteps = [
     {
-      label: "Nháp",
+      label: copy.steps.draft,
       completed: transfer.status !== "draft",
       active: transfer.status === "draft",
     },
     {
-      label: "Đã xuất kho",
+      label: copy.steps.shipped,
       completed:
         transfer.status === "confirmed_ship" ||
         transfer.status === "in_transit" ||
@@ -130,7 +138,7 @@ export function TransferDetailClient({
       active: transfer.status === "confirmed_ship",
     },
     {
-      label: "Đang kiểm nhận",
+      label: copy.steps.checking,
       completed:
         transfer.status === "confirmed_receive" ||
         transfer.status === "received",
@@ -139,7 +147,7 @@ export function TransferDetailClient({
         transfer.status === "confirmed_receive",
     },
     {
-      label: "Đã nhận",
+      label: copy.steps.received,
       completed: transfer.status === "received",
       active: false,
     },
@@ -147,42 +155,52 @@ export function TransferDetailClient({
   const actionConfig = useMemo(() => {
     if (transfer.status === "draft") {
       return {
-        label: isIntraBranch ? "Xác nhận Cấp bếp" : "Xác nhận xuất kho",
+        label: isIntraBranch
+          ? copy.actions.confirmKitchen
+          : copy.actions.confirmShip,
         action: "confirm_ship" as const,
         enabled:
           userRole === "branch_manager"
             ? isIntraBranch && userBranchId === transfer.fromBranchId
-            : true,
+            : isBranchScopedOps
+              ? userBranchId === transfer.fromBranchId
+              : true,
       };
     }
     if (transfer.status === "confirmed_ship") {
       return {
-        label: "Chuyển sang đang vận chuyển",
+        label: copy.actions.markInTransit,
         action: "mark_in_transit" as const,
         enabled:
           userRole === "branch_manager"
             ? false
-            : userBranchId == null || userBranchId === transfer.fromBranchId,
+            : isBranchScopedOps
+              ? userBranchId === transfer.fromBranchId
+              : true,
       };
     }
     if (transfer.status === "in_transit") {
       return {
-        label: "Bắt đầu kiểm nhận",
+        label: copy.actions.confirmReceive,
         action: "confirm_receive" as const,
         enabled:
-          userRole !== "branch_manager" ||
-          userBranchId == null ||
-          userBranchId === transfer.toBranchId,
+          userRole === "branch_manager"
+            ? userBranchId === transfer.toBranchId
+            : isBranchScopedOps
+              ? userBranchId === transfer.toBranchId
+              : true,
       };
     }
     if (transfer.status === "confirmed_receive") {
       return {
-        label: "Xác nhận nhận hàng",
+        label: copy.actions.receive,
         action: "receive" as const,
         enabled:
-          userRole !== "branch_manager" ||
-          userBranchId == null ||
-          userBranchId === transfer.toBranchId,
+          userRole === "branch_manager"
+            ? userBranchId === transfer.toBranchId
+            : isBranchScopedOps
+              ? userBranchId === transfer.toBranchId
+              : true,
       };
     }
 
@@ -192,6 +210,7 @@ export function TransferDetailClient({
     transfer.status,
     transfer.toBranchId,
     isIntraBranch,
+    isBranchScopedOps,
     userBranchId,
     userRole,
   ]);
@@ -222,6 +241,12 @@ export function TransferDetailClient({
             toast.error(`Số lượng nhận không hợp lệ cho ${item.name}.`);
             return;
           }
+          if (qty > item.qty) {
+            toast.error(
+              `Số lượng nhận không được vượt quá số lượng xuất cho ${item.name}.`,
+            );
+            return;
+          }
           payload[String(item.ingredientId)] =
             qty < item.qty && trimmedNote
               ? { qty, note: trimmedNote }
@@ -243,10 +268,10 @@ export function TransferDetailClient({
   return (
     <>
       <InventoryHeader
-        title="Chi tiết điều chuyển"
+        title={copy.detailTitle}
         actions={
           <Link
-            href="/inventory/transfers"
+            href={transferListHref}
             className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
           >
             <IconArrowLeft className="size-4" />{" "}
@@ -259,14 +284,18 @@ export function TransferDetailClient({
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div className="space-y-1">
               <p className="text-sm font-medium text-muted-foreground">
-                Điều chuyển nội bộ
+                {copy.internalTransferTitle}
               </p>
               <div className="space-y-1">
-                <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+                <h1 className="font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
                   {transfer.code}
                 </h1>
                 <p className="text-sm text-muted-foreground">
-                  {`Lộ trình ${transfer.fromBranch} → ${transfer.toBranch} • Mốc gần nhất ${transfer.date}`}
+                  {copy.routeMeta(
+                    transfer.fromBranch,
+                    transfer.toBranch,
+                    transfer.date,
+                  )}
                 </p>
               </div>
             </div>
@@ -287,12 +316,12 @@ export function TransferDetailClient({
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {[
               {
-                label: "Tổng giá trị",
+                label: copy.totalValue,
                 value: `${formatVND(transfer.total)}đ`,
                 icon: null,
               },
               {
-                label: "Tổng mặt hàng",
+                label: copy.totalItems,
                 value: String(transfer.items.length).padStart(2, "0"),
                 icon: null,
               },
@@ -307,7 +336,7 @@ export function TransferDetailClient({
                 icon: <IconMapPin className="size-3 text-info" />,
               },
               {
-                label: "Đã ghi nhận",
+                label: copy.recorded,
                 value: `${String(receivedCount).padStart(2, "0")}/${String(transfer.items.length).padStart(2, "0")}`,
                 icon: null,
               },
@@ -328,7 +357,7 @@ export function TransferDetailClient({
             <Card>
               <CardContent className="pt-6">
                 <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  Ghi chú vận chuyển
+                  {copy.transportNote}
                 </p>
                 <p className="mt-1 line-clamp-3 break-words text-sm italic">
                   &ldquo;{transfer.note}&rdquo;
@@ -347,8 +376,8 @@ export function TransferDetailClient({
                   </div>
                   <span className="text-xs font-medium text-muted-foreground">
                     {isReceiveMode
-                      ? "Nhập số lượng thực nhận từng dòng, ghi chú nếu thiếu"
-                      : "Số lượng nhận hiển thị sau khi xác nhận"}
+                      ? copy.receiveInstructions
+                      : copy.receivedReadonlyHint}
                   </span>
                 </CardHeader>
                 <CardContent className="p-0">
@@ -366,11 +395,15 @@ export function TransferDetailClient({
                         </div>
                         <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                           <div>
-                            <p className="text-muted-foreground">SL gửi</p>
+                            <p className="text-muted-foreground">
+                              {copy.sentQty}
+                            </p>
                             <p className="font-semibold">{item.qty}</p>
                           </div>
                           <div>
-                            <p className="text-muted-foreground">SL nhận</p>
+                            <p className="text-muted-foreground">
+                              {copy.receivedQty}
+                            </p>
                             {isReceiveMode ? (
                               <FormattedNumberInput
                                 value={receiveQty[item.ingredientId] ?? ""}
@@ -389,20 +422,24 @@ export function TransferDetailClient({
                                   item.received
                                 ) : (
                                   <span className="italic text-muted-foreground">
-                                    Chưa nhận
+                                    {copy.notReceived}
                                   </span>
                                 )}
                               </p>
                             )}
                           </div>
                           <div>
-                            <p className="text-muted-foreground">Giá WAC</p>
+                            <p className="text-muted-foreground">
+                              {copy.wacCost}
+                            </p>
                             <p className="font-semibold">
                               {formatVND(item.cost)}
                             </p>
                           </div>
                           <div>
-                            <p className="text-muted-foreground">{FORM_VI.amount}</p>
+                            <p className="text-muted-foreground">
+                              {FORM_VI.amount}
+                            </p>
                             <p className="font-semibold text-primary">
                               {formatVND(item.total)}
                             </p>
@@ -418,11 +455,11 @@ export function TransferDetailClient({
                         <TableRow className="bg-muted/40">
                           {[
                             { label: tTerm("ingredient"), align: "" },
-                            { label: "SL gửi", align: "text-right" },
-                            { label: "Đơn vị", align: "" },
-                            { label: "Giá WAC", align: "text-right" },
-                            { label: "Thành tiền", align: "text-right" },
-                            { label: "SL nhận", align: "text-right" },
+                            { label: copy.sentQty, align: "text-right" },
+                            { label: copy.unit, align: "" },
+                            { label: copy.wacCost, align: "text-right" },
+                            { label: copy.lineAmount, align: "text-right" },
+                            { label: copy.receivedQty, align: "text-right" },
                           ].map((h) => (
                             <TableHead
                               key={h.label}
@@ -438,8 +475,8 @@ export function TransferDetailClient({
                           <TableEmptyStateRow
                             colSpan={6}
                             paddingClassName="py-16"
-                            title="Chưa có nguyên liệu điều chuyển"
-                            description="Danh sách mặt hàng sẽ xuất hiện tại đây khi phiếu có dòng hàng."
+                            title={copy.emptyTransferItemsTitle}
+                            description={copy.emptyTransferItemsDescription}
                           />
                         )}
                         {transfer.items.map((item) => (
@@ -486,7 +523,7 @@ export function TransferDetailClient({
                                 </span>
                               ) : (
                                 <span className="italic text-muted-foreground">
-                                  Chưa nhận
+                                  {copy.notReceived}
                                 </span>
                               )}
                             </TableCell>
@@ -499,10 +536,12 @@ export function TransferDetailClient({
                             colSpan={4}
                             className="px-6 py-3 text-right text-sm text-muted-foreground"
                           >
-                            Giá trị nguyên liệu
+                            {copy.ingredientValue}
                           </TableCell>
                           <TableCell className="px-6 py-3 text-right font-mono tabular-nums">
-                            {formatVND(transfer.subtotal)}đ
+                            {messages.inventory.common.currencyCompact(
+                              formatVND(transfer.subtotal),
+                            )}
                           </TableCell>
                           <TableCell />
                         </TableRow>
@@ -511,10 +550,12 @@ export function TransferDetailClient({
                             colSpan={4}
                             className="px-6 py-3 text-right text-sm text-muted-foreground"
                           >
-                            Phí vận chuyển
+                            {copy.shippingFee}
                           </TableCell>
                           <TableCell className="px-6 py-3 text-right font-mono tabular-nums">
-                            {formatVND(transfer.shipping)}đ
+                            {messages.inventory.common.currencyCompact(
+                              formatVND(transfer.shipping),
+                            )}
                           </TableCell>
                           <TableCell />
                         </TableRow>
@@ -523,10 +564,12 @@ export function TransferDetailClient({
                             colSpan={4}
                             className="px-6 py-3 text-right text-sm font-bold"
                           >
-                            Tổng giá trị
+                            {copy.totalValue}
                           </TableCell>
                           <TableCell className="px-6 py-3 text-right font-mono tabular-nums font-bold text-primary">
-                            {formatVND(transfer.total)}đ
+                            {messages.inventory.common.currencyCompact(
+                              formatVND(transfer.total),
+                            )}
                           </TableCell>
                           <TableCell />
                         </TableRow>
@@ -541,15 +584,17 @@ export function TransferDetailClient({
             <Card className="h-fit border-primary/20 bg-primary/5">
               <CardContent className="space-y-3 pt-6">
                 <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                  Tổng giá trị luân chuyển
+                  {copy.totalTransferValue}
                 </p>
                 <p className="text-2xl font-black tabular-nums text-primary">
-                  {formatVND(transfer.total)}đ
+                  {messages.inventory.common.currencyCompact(
+                    formatVND(transfer.total),
+                  )}
                 </p>
                 <Card>
                   <CardContent className="space-y-1 pt-6">
                     <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                      Tổng mặt hàng
+                      {copy.totalItems}
                     </p>
                     <p className="text-lg font-bold tabular-nums">
                       {String(transfer.items.length).padStart(2, "0")}
@@ -564,22 +609,22 @@ export function TransferDetailClient({
             <Card className="border-warning/30 bg-warning/5">
               <CardContent className="space-y-2 pt-6">
                 <p className="text-sm font-semibold">
-                  Ghi chú thiếu hụt <span className="text-destructive">*</span>
+                  {copy.shortageNoteTitle}{" "}
+                  <span className="text-destructive">*</span>
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {shortLines} mặt hàng thiếu so với phiếu xuất. Ghi chú tối
-                  thiểu 3 ký tự.
+                  {copy.shortageNoteDescription(shortLines)}
                 </p>
                 <Textarea
                   value={shortNote}
                   onChange={(e) => setShortNote(e.target.value)}
                   rows={3}
                   maxLength={300}
-                  placeholder="Ví dụ: thiếu 2kg thịt ba chỉ do giao chưa đủ..."
+                  placeholder={copy.shortageNotePlaceholder}
                 />
                 {!noteOk ? (
                   <p className="text-xs text-destructive">
-                    Ghi chú cần ít nhất 3 ký tự.
+                    {copy.shortageNoteMinLength}
                   </p>
                 ) : null}
               </CardContent>
@@ -595,7 +640,7 @@ export function TransferDetailClient({
                 className="rounded-full px-6 font-bold text-muted-foreground"
               >
                 <IconPrinter className="size-5" />
-                In phiếu
+                {copy.printSlip}
               </Button>
               {transfer.status !== "draft" &&
               correctionBranches.length > 0 &&
@@ -624,7 +669,7 @@ export function TransferDetailClient({
               onClick={handlePrimaryAction}
             >
               <IconCircleCheck className="size-5" />
-              {actionConfig?.label ?? "Phiếu đã hòan tất"}
+              {actionConfig?.label ?? copy.completedSlip}
             </Button>
           </footer>
         </div>

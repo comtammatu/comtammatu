@@ -263,7 +263,7 @@ export function IssueDetailClient({
                 {surface.eyebrow}
               </p>
               <div className="space-y-1">
-                <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+                <h1 className="font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
                   {issue.issue_number}
                 </h1>
                 <p className="text-sm text-muted-foreground">

@@ -7,6 +7,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@comtammatu/ui/components/tabs";
+import { AppEmptyState, AppToolbar } from "@/components/surface";
 import {
   Select,
   SelectContent,
@@ -22,7 +23,6 @@ import { TableTable } from "./table-table";
 import { TableFormDialog } from "./table-form-dialog";
 import type { ZoneRow } from "./zone-table";
 import type { TableRow } from "./table-table";
-import { EmptyStatePanel } from "../../components/empty-state-panel";
 
 import { BRANCH_VI } from "@comtammatu/shared/messages";
 export interface BranchOption {
@@ -50,7 +50,7 @@ export function TablesClient({ branches, zones, tables }: TablesClientProps) {
 
   if (branches.length === 0) {
     return (
-      <EmptyStatePanel
+      <AppEmptyState
         title="Chưa có chi nhánh nào"
         description="Vui lòng tạo chi nhánh trước."
       />
@@ -59,7 +59,7 @@ export function TablesClient({ branches, zones, tables }: TablesClientProps) {
 
   return (
     <>
-      <div className="flex items-center gap-4">
+      <AppToolbar>
         <label className="text-sm font-medium">Chi nhánh:</label>
         <Select
           value={selectedBranchId?.toString() ?? ""}
@@ -76,7 +76,7 @@ export function TablesClient({ branches, zones, tables }: TablesClientProps) {
             ))}
           </SelectContent>
         </Select>
-      </div>
+      </AppToolbar>
 
       <Tabs defaultValue="zones">
         <TabsList>
@@ -89,22 +89,22 @@ export function TablesClient({ branches, zones, tables }: TablesClientProps) {
         </TabsList>
 
         <TabsContent value="zones" className="mt-4 space-y-4">
-          <div className="flex justify-end">
+          <AppToolbar className="justify-end">
             <Button onClick={() => setZoneDialogOpen(true)}>
               <IconPlus className="mr-2 size-4" />
               Thêm khu vực
             </Button>
-          </div>
+          </AppToolbar>
           <ZoneTable zones={filteredZones} />
         </TabsContent>
 
         <TabsContent value="tables" className="mt-4 space-y-4">
-          <div className="flex justify-end">
+          <AppToolbar className="justify-end">
             <Button onClick={() => setTableDialogOpen(true)}>
               <IconPlus className="mr-2 size-4" />
               Thêm bàn
             </Button>
-          </div>
+          </AppToolbar>
           <TableTable tables={filteredTables} zones={filteredZones} />
         </TabsContent>
       </Tabs>

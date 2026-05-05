@@ -20,8 +20,12 @@ Doc chot: `docs/spec/design-system.md`.
 Tat ca UI/UX rebuild phai di theo contract do truoc khi sua runtime. Design system cua repo la:
 
 - shadcn preset hien hanh (`radix-lyra`, preset `b6G3vbGue`, `neutral`, `lucide`)
-- token runtime trong `packages/ui/src/styles/globals.css`
+- Ma Tu Concept 01 brand tokens trong `packages/ui/src/styles/globals.css`
+- Ma Tu Concept 01 typography: Inter body, Montserrat heading, JetBrains Mono operational data
 - primitive source trong `packages/ui/src/components/*`
+- brand assets trong `apps/web/public/brand/`
+- runtime brand primitive trong `apps/web/app/components/brand.tsx`
+- app surface adapters trong `apps/web/app/components/surface.tsx`
 - glossary/copy source trong `docs/ref/glossary.md` va shared label dictionaries
 - toast/notification contract trong `docs/spec/toast-notification-system.md`
 
@@ -37,12 +41,16 @@ Read order cho agent khi lam UI:
 
 ## Reset Contract
 
-Reset hien tai duoc thuc hien bang `shadcn` preset `b6G3vbGue` / `radix-lyra` cho monorepo `apps/web` + `packages/ui`.
+Reset hien tai duoc thuc hien bang `shadcn` preset `b6G3vbGue` / `radix-lyra` cho monorepo `apps/web` + `packages/ui`, sau do map token semantic sang Ma Tu Concept 01.
 
 Dieu nay co nghia:
 
 - foundation phai theo file do `shadcn` bootstrap sinh ra
+- brand color/typography phai di qua semantic token va font variables chung
+- body/content dung `font-sans` (Inter), heading/title dung `font-heading` (Montserrat), operational data/code/id/price/qty dung `font-mono` (JetBrains Mono)
+- static public artifact nhu `docs/status/index.html` phai mirror cung font stack; khong dung lai Be Vietnam Pro, Geist, hoac font rieng theo surface
 - page/shell chi duoc compose tu primitives co san
+- logo/brand lockup trong web runtime phai di qua `BrandMark` / `BrandLockup`
 - khong duoc giu `app-*` helper classes
 - khong duoc giu custom background/theme chrome o root
 
@@ -66,6 +74,19 @@ Primitive source van song tai `packages/ui/src/components/*`, nhung phai tiep tu
 - `spinner` — loading indicator (thay cho `Loader2 + animate-spin`)
 
 Khong fork primitive theo surface.
+
+## App Surface Adapters
+
+`apps/web/app/components/surface.tsx` la adapter layer duy nhat cho cac pattern lap lai o app level:
+
+- `AppPage` cho content container/width/scroll rhythm.
+- `AppPageHeader` cho page heading, description, badge, action.
+- `AppSection` cho card-backed section.
+- `AppToolbar` cho filter/action toolbar.
+- `AppEmptyState` cho empty/no-result/no-access/error state.
+- `AppLinkCard` cho navigation/action card.
+
+Domain wrappers nhu Inventory/Employee/Admin co the giu API rieng de tranh sua hang loat call site, nhung phai delegate ve cac adapter nay thay vi tu style lai `Card`, `Empty`, hoac page container.
 
 ## Keyboard Shortcuts
 
@@ -162,6 +183,7 @@ Sidebar labels phai ngan va scan duoc trong rail co dinh. Ten day du cua luong d
 Cho phep:
 
 - wrapper nho de tap hop du lieu, nav, va structure
+- wrapper domain delegate ve `apps/web/app/components/surface.tsx`
 - dung `className` de sap xep layout co ban
 - compose truc tiep tu shadcn primitives
 
@@ -170,6 +192,7 @@ Khong cho phep:
 - helper class kieu `app-*`
 - custom theme layer
 - wrapper override visual contract cua primitive
+- module tu tao lai page/header/section/toolbar/empty/link-card thay vi delegate ve `apps/web/app/components/surface.tsx`
 - dung `div` / `span` / `p` thuong de gia lap `Card`, `Badge`, `Button`, `Table`, `Tabs`, `Input`, `Select`
 - per-surface `theme.css`
 - shell chrome tu che de thay cho stock shadcn structure

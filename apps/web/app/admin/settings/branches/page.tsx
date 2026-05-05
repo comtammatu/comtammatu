@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { loadAuthState } from "@/_lib/auth";
 import { BranchTable } from "./branch-table";
 import { AddBranchButton } from "./add-branch-button";
+import { SettingsPageShell } from "../settings-page-shell";
+import { messages } from "@lib/messages";
 
 export default async function BranchesPage() {
   const { supabase, claims } = await loadAuthState();
@@ -34,17 +36,12 @@ export default async function BranchesPage() {
   }));
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Điểm vận hành</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {branches?.length ?? 0} điểm vận hành
-          </p>
-        </div>
-        <AddBranchButton />
-      </div>
+    <SettingsPageShell
+      title={messages.settings.pages.branchesTitle}
+      description={messages.settings.pages.branchCount(branches?.length ?? 0)}
+      actions={<AddBranchButton />}
+    >
       <BranchTable branches={branchesWithConfig} />
-    </div>
+    </SettingsPageShell>
   );
 }

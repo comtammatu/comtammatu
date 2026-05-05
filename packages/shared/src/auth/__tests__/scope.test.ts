@@ -88,6 +88,20 @@ test("resolvePostLoginRedirect → returnTo to disallowed module → fallback", 
   );
 });
 
+test("resolvePostLoginRedirect → retired admin inventory returnTo is not preserved", () => {
+  assert.equal(
+    resolvePostLoginRedirect(makeClaims("owner"), "/admin/inventory"),
+    "/admin/dashboard",
+  );
+  assert.equal(
+    resolvePostLoginRedirect(
+      makeClaims("super_manager"),
+      "/admin/inventory/trust?branchId=1",
+    ),
+    "/admin/dashboard",
+  );
+});
+
 test("resolvePostLoginRedirect → former admin roles cannot keep admin returnTo", () => {
   for (const role of [
     "area_manager",
@@ -295,11 +309,9 @@ test("resolveDiscoveredApps → settings entries are discoverable from employee 
       (app) => app.moduleKey === "settings" && app.href === "/admin/settings",
     ),
   );
-  assert.ok(
-    ownerApps.some(
-      (app) =>
-        app.moduleKey === "inventory_admin" && app.href === "/admin/inventory",
-    ),
+  assert.equal(
+    ownerApps.some((app) => app.moduleKey === "inventory_admin"),
+    false,
   );
 
   const branchManagerApps = resolveDiscoveredApps("branch_manager", 3);
@@ -322,6 +334,12 @@ test("resolveDiscoveredApps → settings entries are discoverable from employee 
     cashierApps.some((app) => app.moduleKey === "branch_settings"),
     false,
   );
+});
+
+test("canAccess → retired inventory_admin module is unavailable to every role", () => {
+  for (const role of STAFF_ROLES) {
+    assert.equal(canAccess(role, "inventory_admin"), false);
+  }
 });
 
 test("resolvePostLoginRedirect → beta surface → admin returnTo becomes /beta/admin/dashboard", () => {

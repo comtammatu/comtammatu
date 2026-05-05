@@ -10,6 +10,7 @@ import { ResponsiveToaster } from "./_components/responsive-toaster";
 import { SerwistProvider } from "./serwist-provider";
 import "@comtammatu/ui/globals.css";
 import { cn } from "@/lib/utils";
+import { messages } from "@lib/messages";
 
 const fontSans = Inter({
   subsets: ["latin", "latin-ext", "vietnamese"],
@@ -75,7 +76,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           href="#main-content"
           className="sr-only z-50 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
         >
-          Bỏ qua điều hướng
+          {messages.common.skipNavigation}
         </a>
         <ThemeProvider
           attribute="class"

@@ -39,7 +39,9 @@ import {
   SidebarProvider,
   SidebarSeparator,
 } from "@comtammatu/ui/components/sidebar";
+import { BrandMark } from "@/components/brand";
 import { isNavItemActive, type ShellNavGroup } from "@/lib/shell-primitives";
+import { messages } from "@lib/messages";
 import { tNav } from "../_lib/dictionary";
 import type { InventoryBranchOption } from "../_lib/inventory-scope";
 import { MobileTopBar } from "./mobile/mobile-top-bar";
@@ -299,12 +301,16 @@ export function InventoryShell({
       <Sidebar collapsible="icon">
         <SidebarHeader className="gap-3 p-3">
           <div className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center">
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary text-sm font-bold text-primary-foreground">
-              MT
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-md border bg-sidebar-accent p-0.5">
+              <BrandMark className="size-full" />
             </div>
             <div className="flex flex-col group-data-[collapsible=icon]:hidden">
-              <span className="text-sm font-semibold">Cơm Tấm Má Tư</span>
-              <span className="text-xs text-muted-foreground">Quản lý kho</span>
+              <span className="text-sm font-semibold">
+                {messages.inventory.shell.brandName}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {messages.inventory.shell.moduleName}
+              </span>
             </div>
           </div>
           {allowedBranches.length > 1 && !branchPickerLocked ? (
@@ -387,8 +393,8 @@ export function InventoryShell({
                 variant="ghost"
                 size="icon-sm"
                 className="text-sidebar-foreground/75 hover:text-sidebar-foreground"
-                aria-label="Đăng xuất"
-                title="Đăng xuất"
+                aria-label={messages.inventory.common.signOut}
+                title={messages.inventory.common.signOut}
               >
                 <IconLogout className="size-4" />
               </Button>

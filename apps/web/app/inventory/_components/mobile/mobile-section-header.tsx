@@ -40,7 +40,7 @@ export function MobileSectionHeader({
               {eyebrow}
             </p>
           ) : null}
-          <h1 className="text-xl font-semibold leading-tight tracking-tight">
+          <h1 className="font-heading text-xl font-semibold leading-tight tracking-tight">
             {title}
           </h1>
           {description ? (

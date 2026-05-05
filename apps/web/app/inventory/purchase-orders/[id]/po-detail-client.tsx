@@ -33,6 +33,7 @@ import { Input } from "@comtammatu/ui/components/input";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { Combobox } from "@/components/form";
+import { messages } from "@lib/messages";
 import { FormattedNumberInput } from "../../_components/formatted-number-input";
 import { InventoryHeader } from "../../_components/inventory-header";
 import { TimelineStepper } from "../../_components/timeline-stepper";
@@ -51,6 +52,11 @@ import {
 import type { IngredientRow } from "../../page";
 
 import { ACTIONS_VI, FORM_VI } from "@comtammatu/shared/messages";
+
+const poCopy = messages.inventory.po;
+const poDetailCopy = poCopy.detail;
+const inventoryCommon = messages.inventory.common;
+
 export type PODetail = {
   id: number;
   code: string;
@@ -165,7 +171,7 @@ export function PODetailClient({
     const line = lines[index];
     if (!line) return;
     if (line.qty <= 0 || !line.unit.trim()) {
-      toast.error("Nháº­p sá»‘ lÆ°á»£ng vÃ  Ä‘Æ¡n vá»‹ há»£p lá»‡.");
+      toast.error(poDetailCopy.invalidLine);
       return;
     }
 
@@ -178,7 +184,7 @@ export function PODetailClient({
         unitPriceEst: line.price,
       });
       if (!res.success) {
-        toast.error(res.error ?? "KhÃ´ng thá»ƒ lÆ°u dÃ²ng PO.");
+        toast.error(res.error ?? poDetailCopy.saveLineFailed);
         return;
       }
       setLines((current) =>
@@ -192,7 +198,7 @@ export function PODetailClient({
             : item,
         ),
       );
-      toast.success("ÄÃ£ lÆ°u dÃ²ng PO.");
+      toast.success(poDetailCopy.saveLineOk);
       router.refresh();
     });
   }
@@ -205,15 +211,15 @@ export function PODetailClient({
     const ingredient = ingredients.find((item) => item.id === ingredientId);
 
     if (!ingredientId || !ingredient) {
-      toast.error("Chá»n nguyÃªn liá»‡u.");
+      toast.error(poDetailCopy.chooseIngredient);
       return;
     }
     if (!Number.isFinite(qty) || qty <= 0 || !addUnit.trim()) {
-      toast.error("Nháº­p sá»‘ lÆ°á»£ng vÃ  Ä‘Æ¡n vá»‹ há»£p lá»‡.");
+      toast.error(poDetailCopy.invalidLine);
       return;
     }
     if (price != null && (!Number.isFinite(price) || price < 0)) {
-      toast.error("ÄÆ¡n giÃ¡ khÃ´ng há»£p lá»‡.");
+      toast.error(poDetailCopy.invalidUnitPrice);
       return;
     }
 
@@ -226,7 +232,7 @@ export function PODetailClient({
         unitPriceEst: price,
       });
       if (!res.success || !res.data) {
-        toast.error(res.error ?? "KhÃ´ng thá»ƒ thÃªm dÃ²ng PO.");
+        toast.error(res.error ?? poDetailCopy.addLineFailed);
         return;
       }
 
@@ -254,17 +260,17 @@ export function PODetailClient({
         );
       });
       resetAddLine();
-      toast.success("ÄÃ£ lÆ°u dÃ²ng PO.");
+      toast.success(poDetailCopy.saveLineOk);
       router.refresh();
     });
   }
 
   async function handleDeleteLine(line: EditablePoLine) {
     const ok = await confirm({
-      title: "XÃ³a dÃ²ng PO?",
+      title: poDetailCopy.deleteLineTitle,
       description: line.name,
       variant: "destructive",
-      confirmText: "XÃ³a dÃ²ng",
+      confirmText: poDetailCopy.deleteLineAction,
     });
     if (!ok) return;
 
@@ -274,13 +280,13 @@ export function PODetailClient({
         lineId: line.lineId,
       });
       if (!res.success) {
-        toast.error(res.error ?? "KhÃ´ng thá»ƒ xÃ³a dÃ²ng PO.");
+        toast.error(res.error ?? poDetailCopy.deleteLineFailed);
         return;
       }
       setLines((current) =>
         current.filter((item) => item.lineId !== line.lineId),
       );
-      toast.success("ÄÃ£ xÃ³a dÃ²ng PO.");
+      toast.success(poDetailCopy.deleteLineOk);
       router.refresh();
     });
   }
@@ -289,10 +295,10 @@ export function PODetailClient({
     startTransition(async () => {
       const res = await updatePurchaseOrderStatus(po.id, "sent");
       if (!res.success) {
-        toast.error(res.error ?? "Không thể gửi PO.");
+        toast.error(res.error ?? poDetailCopy.sendFailed);
         return;
       }
-      toast.success("Đã gửi PO cho nhà cung cấp.");
+      toast.success(poDetailCopy.sendOk);
       router.refresh();
     });
   }
@@ -301,10 +307,10 @@ export function PODetailClient({
     startTransition(async () => {
       const res = await updatePurchaseOrderStatus(po.id, "cancelled");
       if (!res.success) {
-        toast.error(res.error ?? "Không thể hủy PO.");
+        toast.error(res.error ?? poDetailCopy.cancelFailed);
         return;
       }
-      toast.success("Đã hủy PO.");
+      toast.success(poDetailCopy.cancelOk);
       router.refresh();
     });
   }
@@ -313,12 +319,12 @@ export function PODetailClient({
     startTransition(async () => {
       const res = await createGrnFromPo(po.id);
       if (!res.success || !res.data) {
-        toast.error(res.error ?? "Không thể tạo GRN từ PO.");
+        toast.error(res.error ?? poDetailCopy.createGrnFailed);
         return;
       }
 
       const created = res.data as { id: number };
-      toast.success("Đã tạo GRN từ PO.");
+      toast.success(poDetailCopy.createGrnOk);
       router.push(`/inventory/grn/${created.id}`);
     });
   }
@@ -326,7 +332,7 @@ export function PODetailClient({
   return (
     <>
       <InventoryHeader
-        title="Chi tiết đơn hàng"
+        title={poDetailCopy.title}
         actions={
           <Link
             href="/inventory/purchase-orders"
@@ -342,14 +348,14 @@ export function PODetailClient({
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div className="space-y-1">
               <p className="text-sm font-medium text-muted-foreground">
-                Nhập hàng HQ
+                {poDetailCopy.hubLabel}
               </p>
               <div className="space-y-1">
-                <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+                <h1 className="font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
                   {po.code}
                 </h1>
                 <p className="text-sm text-muted-foreground">
-                  {`${po.supplier} • ${po.date} • Gửi NCC ${po.sentAt} • Bước mở đầu của hub procurement`}
+                  {poDetailCopy.meta(po.supplier, po.date, po.sentAt)}
                 </p>
               </div>
             </div>
@@ -361,15 +367,15 @@ export function PODetailClient({
           <div className="grid gap-3 md:grid-cols-3">
             <Card>
               <CardContent>
-                <Badge variant="secondary">Nhà cung cấp</Badge>
+                <Badge variant="secondary">{poCopy.supplierRequired}</Badge>
                 <p className="mt-3 text-xl font-semibold">{po.supplier}</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent>
-                <Badge variant="secondary">Tổng tiền hàng</Badge>
+                <Badge variant="secondary">{poDetailCopy.goodsTotal}</Badge>
                 <p className="mt-3 text-xl font-semibold">
-                  {formatVND(totalAmount)} VNĐ
+                  {formatVND(totalAmount)} {poDetailCopy.currencyVnd}
                 </p>
               </CardContent>
             </Card>
@@ -378,7 +384,9 @@ export function PODetailClient({
                 <Badge variant="secondary">{FORM_VI.totalAmount}</Badge>
                 <p className="mt-3 text-2xl font-semibold text-primary">
                   {formatVND(grandTotal)}{" "}
-                  <span className="text-xs font-normal">VNĐ</span>
+                  <span className="text-xs font-normal">
+                    {poDetailCopy.currencyVnd}
+                  </span>
                 </p>
               </CardContent>
             </Card>
@@ -389,14 +397,17 @@ export function PODetailClient({
               <div className="flex justify-center">
                 <TimelineStepper
                   steps={[
-                    { label: "Nháp", date: po.date, completed: true },
+                    { label: poDetailCopy.steps.draft, date: po.date, completed: true },
                     {
-                      label: "Đã gửi",
+                      label: poDetailCopy.steps.sent,
                       date: po.sentAt,
                       completed: po.status !== "draft",
                     },
-                    { label: "Chờ kiểm nhận", active: po.status === "sent" },
-                    { label: "Đã có GRN" },
+                    {
+                      label: poDetailCopy.steps.waitingInspection,
+                      active: po.status === "sent",
+                    },
+                    { label: poDetailCopy.steps.hasGrn },
                   ]}
                 />
               </div>
@@ -407,9 +418,9 @@ export function PODetailClient({
             <div className="lg:col-span-2">
               <Card className="overflow-hidden">
                 <CardHeader className="gap-1">
-                  <CardTitle>Danh mục đặt mua</CardTitle>
+                  <CardTitle>{poDetailCopy.itemCatalogTitle}</CardTitle>
                   <p className="text-sm text-muted-foreground">
-                    {`${lines.length} mặt hàng trong đơn mua này trước khi chuyển sang bước GRN.`}
+                    {poDetailCopy.itemCatalogDescription(lines.length)}
                   </p>
                 </CardHeader>
                 <CardContent className="p-0">
@@ -434,6 +445,7 @@ export function PODetailClient({
                                   disabled={isPending}
                                   onClick={() => void handleDeleteLine(item)}
                                   className="text-muted-foreground hover:text-destructive"
+                                  aria-label={poDetailCopy.deleteLineAria}
                                 >
                                   <IconTrash className="size-4" />
                                 </Button>
@@ -478,8 +490,10 @@ export function PODetailClient({
                               ) : (
                                 <p className="font-semibold">
                                   {item.price != null
-                                    ? `${formatVND(item.price)}đ`
-                                    : "—"}
+                                    ? inventoryCommon.currencyCompact(
+                                        formatVND(item.price),
+                                      )
+                                    : inventoryCommon.noValue}
                                 </p>
                               )}
                             </div>
@@ -499,7 +513,9 @@ export function PODetailClient({
                                 {FORM_VI.amount}
                               </p>
                               <p className="font-semibold text-primary">
-                                {formatVND(computePoLineTotal(item))}đ
+                                {inventoryCommon.currencyCompact(
+                                  formatVND(computePoLineTotal(item)),
+                                )}
                               </p>
                             </div>
                           </div>
@@ -513,7 +529,7 @@ export function PODetailClient({
                               onClick={() => handleSaveLine(index)}
                             >
                               <IconSave className="size-4" />
-                              Lưu dòng
+                              {poDetailCopy.saveLine}
                             </Button>
                           ) : null}
                         </CardContent>
@@ -526,11 +542,14 @@ export function PODetailClient({
                       <TableHeader>
                         <TableRow className="bg-muted/40">
                           {[
-                            { label: "Mặt hàng", align: "" },
-                            { label: "Số lượng", align: "text-right" },
-                            { label: "Đơn giá", align: "text-right" },
-                            { label: "Thành tiền", align: "text-right" },
-                            { label: "Biến động giá", align: "text-right" },
+                            { label: poDetailCopy.item, align: "" },
+                            { label: FORM_VI.quantity, align: "text-right" },
+                            { label: FORM_VI.unitPrice, align: "text-right" },
+                            { label: FORM_VI.amount, align: "text-right" },
+                            {
+                              label: poDetailCopy.priceVariance,
+                              align: "text-right",
+                            },
                             { label: "", align: "text-right" },
                           ].map((h) => (
                             <TableHead
@@ -560,7 +579,7 @@ export function PODetailClient({
                                     readOnly
                                     aria-readonly="true"
                                     className="mt-2 h-8 max-w-24"
-                                    aria-label="Đơn vị"
+                                    aria-label={FORM_VI.unit}
                                   />
                                 ) : null}
                               </div>
@@ -596,13 +615,17 @@ export function PODetailClient({
                                   className="h-8 text-right"
                                 />
                               ) : item.price != null ? (
-                                `${formatVND(item.price)}đ`
+                                inventoryCommon.currencyCompact(
+                                  formatVND(item.price),
+                                )
                               ) : (
-                                "—"
+                                inventoryCommon.noValue
                               )}
                             </TableCell>
                             <TableCell className="px-6 py-4 text-right font-mono tabular-nums font-semibold">
-                              {formatVND(computePoLineTotal(item))}đ
+                              {inventoryCommon.currencyCompact(
+                                formatVND(computePoLineTotal(item)),
+                              )}
                             </TableCell>
                             <TableCell className="px-6 py-4 text-right">
                               <VarianceBadge variance={item.variance} />
@@ -616,7 +639,7 @@ export function PODetailClient({
                                     size="icon"
                                     disabled={isPending || !item.dirty}
                                     onClick={() => handleSaveLine(index)}
-                                    aria-label="Lưu dòng"
+                                    aria-label={poDetailCopy.saveLineAria}
                                   >
                                     <IconSave className="size-4" />
                                   </Button>
@@ -627,7 +650,7 @@ export function PODetailClient({
                                     disabled={isPending}
                                     onClick={() => void handleDeleteLine(item)}
                                     className="text-muted-foreground hover:text-destructive"
-                                    aria-label="Xóa dòng"
+                                    aria-label={poDetailCopy.deleteLineAria}
                                   >
                                     <IconTrash className="size-4" />
                                   </Button>
@@ -643,10 +666,12 @@ export function PODetailClient({
                             colSpan={3}
                             className="px-6 py-3 text-right text-sm text-muted-foreground"
                           >
-                            Tổng tiền hàng
+                            {poDetailCopy.goodsTotal}
                           </TableCell>
                           <TableCell className="px-6 py-3 text-right font-mono tabular-nums font-semibold">
-                            {formatVND(totalAmount)}đ
+                            {inventoryCommon.currencyCompact(
+                              formatVND(totalAmount),
+                            )}
                           </TableCell>
                           <TableCell colSpan={2} />
                         </TableRow>
@@ -655,10 +680,12 @@ export function PODetailClient({
                             colSpan={3}
                             className="px-6 py-3 text-right text-sm text-muted-foreground"
                           >
-                            Thuế (VAT 8%)
+                            {FORM_VI.tax}
                           </TableCell>
                           <TableCell className="px-6 py-3 text-right font-mono tabular-nums">
-                            {formatVND(taxAmount)}đ
+                            {inventoryCommon.currencyCompact(
+                              formatVND(taxAmount),
+                            )}
                           </TableCell>
                           <TableCell colSpan={2} />
                         </TableRow>
@@ -670,7 +697,9 @@ export function PODetailClient({
                             {FORM_VI.totalAmount}
                           </TableCell>
                           <TableCell className="px-6 py-3 text-right font-mono tabular-nums font-bold text-primary">
-                            {formatVND(grandTotal)}đ
+                            {inventoryCommon.currencyCompact(
+                              formatVND(grandTotal),
+                            )}
                           </TableCell>
                           <TableCell colSpan={2} />
                         </TableRow>
@@ -697,15 +726,15 @@ export function PODetailClient({
                               ingredient.category ?? "",
                             ],
                           }))}
-                        placeholder="+ Chọn nguyên liệu"
-                        searchPlaceholder="Tìm tên, SKU, danh mục..."
+                        placeholder={poCopy.ingredientPlaceholder}
+                        searchPlaceholder={poCopy.ingredientSearchPlaceholder}
                         triggerClassName="h-9 border-dashed"
                       />
                       <FormattedNumberInput
                         value={addQty}
                         onValueChange={setAddQty}
                         maxFractionDigits={3}
-                        placeholder="SL"
+                        placeholder={poCopy.quantityShort}
                         className="h-9"
                         required
                       />
@@ -713,7 +742,7 @@ export function PODetailClient({
                         value={addUnit}
                         readOnly
                         aria-readonly="true"
-                        placeholder="ĐV"
+                        placeholder={poCopy.unitShort}
                         className="h-9"
                         required
                       />
@@ -721,7 +750,7 @@ export function PODetailClient({
                         value={addPrice}
                         onValueChange={setAddPrice}
                         maxFractionDigits={0}
-                        placeholder="Giá"
+                        placeholder={poCopy.pricePlaceholder}
                         className="h-9"
                       />
                       <Button
@@ -741,31 +770,35 @@ export function PODetailClient({
             <div className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Tóm tắt đơn mua</CardTitle>
+                  <CardTitle className="text-base">
+                    {poDetailCopy.summaryTitle}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3 text-sm">
                   <div className="flex items-center justify-between gap-3">
-                    <span className="text-muted-foreground">Số mặt hàng</span>
+                    <span className="text-muted-foreground">
+                      {poDetailCopy.itemCount}
+                    </span>
                     <span className="font-semibold">{lines.length}</span>
                   </div>
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-muted-foreground">
-                      Tổng tiền hàng
+                      {poDetailCopy.goodsTotal}
                     </span>
                     <span className="font-semibold">
-                      {formatVND(totalAmount)}đ
+                      {inventoryCommon.currencyCompact(formatVND(totalAmount))}
                     </span>
                   </div>
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-muted-foreground">{FORM_VI.tax}</span>
                     <span className="font-semibold">
-                      {formatVND(taxAmount)}đ
+                      {inventoryCommon.currencyCompact(formatVND(taxAmount))}
                     </span>
                   </div>
                   <div className="border-t border-border pt-3">
                     <p className="text-muted-foreground">{FORM_VI.totalAmount}</p>
                     <p className="mt-1 text-2xl font-black text-primary">
-                      {formatVND(grandTotal)}đ
+                      {inventoryCommon.currencyCompact(formatVND(grandTotal))}
                     </p>
                   </div>
                 </CardContent>
@@ -773,14 +806,16 @@ export function PODetailClient({
 
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Thông tin NCC</CardTitle>
+                  <CardTitle className="text-base">
+                    {poDetailCopy.supplierInfoTitle}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   {supplierInfoAvailable ? (
                     <div className="space-y-3 text-sm">
                       <div>
                         <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                          Địa chỉ xuất hóa đơn
+                          {poDetailCopy.invoiceAddress}
                         </p>
                         <p className="mt-1 break-words font-medium">
                           {po.supplierInfo.address}
@@ -788,7 +823,7 @@ export function PODetailClient({
                       </div>
                       <div>
                         <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                          Người liên hệ
+                          {poDetailCopy.contactPerson}
                         </p>
                         <p className="mt-1 font-medium">
                           {po.supplierInfo.contact}
@@ -796,7 +831,7 @@ export function PODetailClient({
                       </div>
                       <div>
                         <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                          Hạn thanh toán
+                          {poDetailCopy.paymentTerm}
                         </p>
                         <p className="mt-1 font-medium">
                           {po.supplierInfo.payment}
@@ -805,7 +840,7 @@ export function PODetailClient({
                     </div>
                   ) : (
                     <div className="text-sm text-muted-foreground">
-                      Chưa có thêm thông tin nhà cung cấp trong đơn mua này.
+                      {poDetailCopy.supplierInfoEmpty}
                     </div>
                   )}
                 </CardContent>
@@ -822,7 +857,7 @@ export function PODetailClient({
               onClick={handleCancelPo}
             >
               <IconCircleX className="size-5" />
-              Hủy PO
+              {poDetailCopy.cancelPo}
             </Button>
             <Button
               type="button"
@@ -831,7 +866,7 @@ export function PODetailClient({
               onClick={canSendPo ? handleSendPo : handleCreateGrn}
             >
               <IconCircleCheck className="size-5" />
-              {canSendPo ? "Gửi PO cho NCC" : "Sang bước tạo GRN"}
+              {canSendPo ? poDetailCopy.sendPo : poDetailCopy.createGrnStep}
             </Button>
           </footer>
         </div>

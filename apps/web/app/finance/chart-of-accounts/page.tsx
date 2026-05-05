@@ -20,6 +20,7 @@ export interface AccountRow {
   account_code: string;
   account_name: string;
   account_type: string;
+  cashflow_section: string;
   parent_id: number | null;
   level: number;
   is_active: boolean;

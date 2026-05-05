@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { cn } from "@comtammatu/ui";
+import { AppPage } from "@/components/surface";
 
 export function MobilePage({
   children,
@@ -9,13 +9,8 @@ export function MobilePage({
   className?: string;
 }) {
   return (
-    <div
-      className={cn(
-        "mx-auto flex w-full max-w-xl flex-col gap-4 px-4 py-5",
-        className,
-      )}
-    >
+    <AppPage width="narrow" className="py-5" contentClassName={className}>
       {children}
-    </div>
+    </AppPage>
   );
 }

@@ -101,7 +101,7 @@ export default async function StaffPermissionsPage({ params }: Props) {
                 </Link>
               </Button>
               <div>
-                <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+                <h2 className="font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
                   {profile.full_name}
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">

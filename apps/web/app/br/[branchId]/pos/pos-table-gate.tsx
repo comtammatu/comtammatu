@@ -1,16 +1,12 @@
 "use client";
 
 import { memo, useCallback, useMemo } from "react";
+import { AppEmptyState } from "@/components/surface";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Empty,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@comtammatu/ui/components/empty";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
+import { messages } from "@lib/messages";
 import {
   LayoutGrid as IconLayoutGrid,
   MapPin as IconMapPin,
@@ -47,20 +43,20 @@ const TableButton = memo(function TableButton({
   const isAvailable = table.status === "available";
   const isOccupied = table.status === "occupied";
   const statusLabel = isSelected
-    ? "Đang chọn"
+    ? messages.pos.tableGate.selected
     : isAvailable
-      ? "Trống"
+      ? messages.pos.tableGate.available
       : isOccupied
-        ? "Đang dùng"
-        : "Đã đặt";
+        ? messages.pos.tableGate.occupied
+        : messages.pos.tableGate.reserved;
 
   return (
     <Button
       type="button"
       variant={isSelected ? "default" : "outline"}
-      aria-label={`Bàn ${String(table.number)} ${statusLabel}`}
+      aria-label={messages.pos.tableGate.tableAria(table.number, statusLabel)}
       className={cn(
-        "@container/table-card h-32 w-full min-w-0 flex-col items-stretch justify-start gap-2 p-2.5 text-left whitespace-normal hover:shadow-md sm:gap-3 sm:p-3.5 @[11rem]/table-card:h-36 @[14rem]/table-card:h-40 @[14rem]/table-card:p-4 @[18rem]/table-card:h-44",
+        "h-32 w-full min-w-0 flex-col items-stretch justify-start gap-2 p-2.5 text-left whitespace-normal hover:shadow-md sm:h-36 sm:gap-3 sm:p-3 lg:h-40 lg:p-4 xl:h-44",
         isSelected
           ? "shadow-md"
           : isAvailable
@@ -72,7 +68,7 @@ const TableButton = memo(function TableButton({
       onClick={handleClick}
     >
       <div className="flex w-full min-w-0 items-center justify-between gap-1.5">
-        <p className="shrink-0 text-xs font-semibold uppercase tracking-wide opacity-60 @[9rem]/table-card:text-sm">
+        <p className="shrink-0 text-xs font-semibold uppercase tracking-wide opacity-60 sm:text-sm">
           {TABLE_VI.long}
         </p>
         <Badge
@@ -96,19 +92,19 @@ const TableButton = memo(function TableButton({
       </div>
 
       <div className="mt-auto flex w-full min-w-0 items-end justify-between gap-2">
-        <p className="text-3xl font-black leading-none tabular-nums @[9rem]/table-card:text-4xl @[12rem]/table-card:text-5xl @[16rem]/table-card:text-6xl">
+        <p className="text-3xl font-black leading-none tabular-nums sm:text-4xl lg:text-5xl xl:text-6xl">
           {table.number}
         </p>
         <div className="flex shrink-0 flex-col items-end gap-1">
-          <p className="text-sm font-semibold tabular-nums opacity-80 @[9rem]/table-card:text-base @[14rem]/table-card:text-lg">
-            {table.capacity} chỗ
+          <p className="text-sm font-semibold tabular-nums opacity-80 sm:text-base lg:text-lg">
+            {messages.pos.tableGate.capacity(table.capacity)}
           </p>
           {orderCount >= 2 && (
             <Badge
               variant="secondary"
               className="w-fit text-xs font-semibold"
             >
-              {orderCount} hóa đơn
+              {messages.pos.tableGate.multiBill(orderCount)}
             </Badge>
           )}
         </div>
@@ -127,7 +123,8 @@ function PosTableGateComponent({
   const tableGroups = useMemo(() => {
     const map = new Map<string, BranchTable[]>();
     for (const table of tables) {
-      const zoneName = table.branch_zones?.name ?? "Không có khu vực";
+      const zoneName =
+        table.branch_zones?.name ?? messages.pos.tableGate.noZone;
       const group = map.get(zoneName);
       if (group) group.push(table);
       else map.set(zoneName, [table]);
@@ -149,14 +146,11 @@ function PosTableGateComponent({
       )}
     >
       {tables.length === 0 ? (
-        <Empty className="flex-1">
-          <EmptyMedia variant="icon">
-            <IconLayoutGrid />
-          </EmptyMedia>
-          <EmptyHeader>
-            <EmptyTitle>Chưa có bàn</EmptyTitle>
-          </EmptyHeader>
-        </Empty>
+        <AppEmptyState
+          title={messages.pos.tableGate.empty}
+          icon={<IconLayoutGrid />}
+          className="flex-1"
+        />
       ) : (
         <ScrollArea className="min-h-0 flex-1 overflow-hidden">
           <div className="flex w-full flex-col gap-4 px-2 pb-28 pt-2 md:px-4 md:py-4 lg:px-5">
@@ -170,14 +164,16 @@ function PosTableGateComponent({
                         {zoneName}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        {zoneTables.length} bàn
+                        {messages.pos.tableGate.tableCount(zoneTables.length)}
                       </p>
                     </div>
                   </div>
-                  <Badge variant="outline">{availableCount} trống</Badge>
+                  <Badge variant="outline">
+                    {messages.pos.tableGate.availableCount(availableCount)}
+                  </Badge>
                 </div>
 
-                <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,9.5rem),1fr))] gap-2 sm:gap-3 sm:grid-cols-[repeat(auto-fit,minmax(min(100%,11rem),1fr))]">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4 2xl:grid-cols-5">
                   {zoneTables.map((table) => (
                     <TableButton
                       key={table.id}
