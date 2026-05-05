@@ -2,7 +2,7 @@ import {
   registerPaymentProvider,
   CashProvider,
   VietQRProvider,
-  MoMoProvider,
+  createMoMoProviderFromEnv,
 } from "@comtammatu/shared/providers";
 
 let registered = false;
@@ -30,20 +30,8 @@ export function ensurePaymentProvidersRegistered(): void {
     );
   }
 
-  const mPartner = process.env.MOMO_PARTNER_CODE;
-  const mAccess = process.env.MOMO_ACCESS_KEY;
-  const mSecret = process.env.MOMO_SECRET_KEY;
-  const mRedirectUrl = process.env.MOMO_REDIRECT_URL;
-  const mIpnUrl = process.env.MOMO_IPN_URL;
-  if (mPartner && mAccess && mSecret) {
-    if (!mRedirectUrl || !mIpnUrl) return;
-    registerPaymentProvider(
-      new MoMoProvider({
-        partnerCode: mPartner,
-        accessKey: mAccess,
-        secretKey: mSecret,
-        sandbox: process.env.MOMO_SANDBOX === "true",
-      }),
-    );
+  const momoProvider = createMoMoProviderFromEnv(process.env);
+  if (momoProvider) {
+    registerPaymentProvider(momoProvider);
   }
 }

@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import type { Json } from "@comtammatu/database";
 import type { ActionResult } from "@comtammatu/shared/types";
 import {
   getPaymentProvider,
@@ -9,6 +10,7 @@ import {
   VietQRProvider,
   type PaymentMethod,
   type PaymentProvider,
+  type PaymentResult,
 } from "@comtammatu/shared/providers";
 import { SYSTEM_SETTING_KEYS } from "@comtammatu/shared/settings";
 import { ensurePaymentProvidersRegistered } from "../../../../lib/payment-providers-init";
@@ -34,6 +36,8 @@ const paymentSchema = z.object({
   amount: z.coerce.number().positive({ error: "Số tiền không hợp lệ" }),
 });
 
+const orderIdSchema = z.coerce.number().int().positive();
+
 export interface CreatePaymentSuccessData {
   payment_id: number;
   status: string;
@@ -48,6 +52,15 @@ export interface CreatePaymentSuccessData {
     amount?: string;
     description?: string;
   };
+}
+
+export interface PendingRemotePaymentForBillData {
+  method: "vietqr" | "momo";
+  payment_id: number;
+  provider_ref?: string;
+  qr_data?: string;
+  redirect_url?: string;
+  qr_info?: CreatePaymentSuccessData["qr_info"];
 }
 
 function mapPaymentRpcError(message: string): string | null {
@@ -75,6 +88,48 @@ function mapPaymentRpcError(message: string): string | null {
   }
 
   return null;
+}
+
+function sanitizeProviderMessage(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim().replace(/\s+/g, " ");
+  return trimmed ? trimmed.slice(0, 160) : null;
+}
+
+function describeProviderCreateFailure(
+  method: PaymentMethod,
+  providerData?: Record<string, unknown>,
+): string {
+  if (method === "momo") {
+    const message = sanitizeProviderMessage(providerData?.message);
+    if (message) {
+      return `Không tạo được QR MoMo: ${message}`;
+    }
+
+    const error = sanitizeProviderMessage(providerData?.error);
+    if (error?.includes("NEXT_PUBLIC_APP_URL")) {
+      return "Không tạo được QR MoMo vì NEXT_PUBLIC_APP_URL phải là URL HTTPS public để MoMo gọi IPN.";
+    }
+    if (error && /timeout|timed out|aborted/i.test(error)) {
+      return "MoMo phản hồi quá chậm. Vui lòng thử tạo lại QR.";
+    }
+
+    return "Không tạo được QR MoMo. Vui lòng kiểm tra cấu hình MoMo hoặc thử lại.";
+  }
+
+  if (method === "vietqr") {
+    return "Không tạo được thanh toán VietQR. Vui lòng kiểm tra cấu hình ngân hàng.";
+  }
+
+  return "Không thể tạo thanh toán.";
+}
+
+function describeProviderException(method: PaymentMethod, err: unknown): string {
+  const message = err instanceof Error ? err.message : "";
+  if (method === "momo" && message.includes("NEXT_PUBLIC_APP_URL")) {
+    return "Không tạo được QR MoMo vì NEXT_PUBLIC_APP_URL phải là URL HTTPS public để MoMo gọi IPN.";
+  }
+  return describeProviderCreateFailure(method);
 }
 
 function truthySetting(v: string | undefined): boolean {
@@ -125,6 +180,120 @@ async function readVietQrSettings(
       s[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NAME] ||
       process.env.VIETQR_ACCOUNT_NAME ||
       "",
+  };
+}
+
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined;
+}
+
+function strValue(
+  providerData: Record<string, unknown> | undefined,
+  key: string,
+): string | undefined {
+  const value = providerData?.[key];
+  return typeof value === "string" && value.trim() ? value : undefined;
+}
+
+function buildVietQrImageUrlFromProviderData(
+  providerData: Record<string, unknown> | undefined,
+): string | undefined {
+  const bankCode = strValue(providerData, "bankCode");
+  const accountNo = strValue(providerData, "accountNo");
+  if (!bankCode || !accountNo) return undefined;
+
+  const url = new URL(
+    `https://img.vietqr.io/image/${encodeURIComponent(bankCode)}-${encodeURIComponent(accountNo)}-compact.png`,
+  );
+  const amount = strValue(providerData, "amount");
+  const description = strValue(providerData, "description");
+  const accountName = strValue(providerData, "accountName");
+  if (amount) url.searchParams.set("amount", amount);
+  if (description) url.searchParams.set("addInfo", description);
+  if (accountName) url.searchParams.set("accountName", accountName);
+  return url.toString();
+}
+
+function pickRemoteQrData(
+  method: PaymentMethod,
+  providerData: Record<string, unknown> | undefined,
+): string | undefined {
+  if (method === "momo") {
+    // MoMo qrCodeUrl is QR payload data. payUrl/deeplink are navigation
+    // links and must not be rendered as POS QR.
+    return strValue(providerData, "qrCodeUrl");
+  }
+
+  if (method === "vietqr") {
+    return (
+      strValue(providerData, "qrData") ??
+      strValue(providerData, "qrUrl") ??
+      buildVietQrImageUrlFromProviderData(providerData)
+    );
+  }
+
+  return undefined;
+}
+
+function buildStoredProviderData(providerResult: PaymentResult): Json {
+  const raw = {
+    ...(providerResult.providerData ?? {}),
+    providerRef: providerResult.providerRef,
+    qrData: providerResult.qrData,
+    redirectUrl: providerResult.redirectUrl,
+  };
+  return JSON.parse(JSON.stringify(raw)) as Json;
+}
+
+async function persistPendingProviderData(
+  supabase: PosSupabase,
+  input: {
+    paymentId: number;
+    tenantId: number;
+    branchId: number;
+    providerResult: PaymentResult;
+  },
+) {
+  const { error } = await supabase
+    .from("payments")
+    .update({
+      provider_ref: input.providerResult.providerRef,
+      provider_data: buildStoredProviderData(input.providerResult),
+    })
+    .eq("id", input.paymentId)
+    .eq("tenant_id", input.tenantId)
+    .eq("branch_id", input.branchId)
+    .eq("status", "pending");
+
+  if (error) {
+    console.error("[createPayment] provider_data persist failed:", error.code);
+  }
+}
+
+function buildPendingRemotePaymentForBillData(row: {
+  id: number;
+  method: string;
+  provider_ref: string | null;
+  provider_data: unknown;
+}): PendingRemotePaymentForBillData | null {
+  if (row.method !== "vietqr" && row.method !== "momo") return null;
+
+  const method = row.method;
+  const providerData = asRecord(row.provider_data);
+  const qrInfo = pickVietQrInfo(providerData);
+  const qrData = pickRemoteQrData(method, providerData);
+  const redirectUrl =
+    method === "momo" ? undefined : strValue(providerData, "redirectUrl");
+
+  return {
+    method,
+    payment_id: row.id,
+    ...(row.provider_ref ? { provider_ref: row.provider_ref } : {}),
+    ...(qrData ? { qr_data: qrData } : {}),
+    ...(redirectUrl ? { redirect_url: redirectUrl } : {}),
+    ...(qrInfo ? { qr_info: qrInfo } : {}),
   };
 }
 
@@ -312,13 +481,59 @@ export async function createPayment(
     };
   }
 
-  // Call provider to get QR/redirect data (if applicable)
-  const providerResult = await provider.createPayment({
-    tenantId: claims.tenant_id,
-    orderId: parsedPayment.data.orderId,
-    orderNumber: order.order_number,
-    amount: parsedPayment.data.amount,
-  });
+  // Call provider to get QR/redirect data (if applicable).
+  let providerResult: Awaited<ReturnType<PaymentProvider["createPayment"]>>;
+  try {
+    providerResult = await provider.createPayment({
+      tenantId: claims.tenant_id,
+      orderId: parsedPayment.data.orderId,
+      orderNumber: order.order_number,
+      amount: parsedPayment.data.amount,
+    });
+  } catch (err) {
+    console.error("[createPayment] provider threw:", {
+      method: parsedPayment.data.method,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return {
+      success: false,
+      error: describeProviderException(
+        parsedPayment.data.method as PaymentMethod,
+        err,
+      ),
+    };
+  }
+
+  const isRemotePayment = parsedPayment.data.method !== "cash";
+  if (isRemotePayment && providerResult.status === "failed") {
+    console.error("[createPayment] provider failed:", {
+      method: parsedPayment.data.method,
+      providerRef: providerResult.providerRef,
+      resultCode: providerResult.providerData?.resultCode,
+    });
+    return {
+      success: false,
+      error: describeProviderCreateFailure(
+        parsedPayment.data.method as PaymentMethod,
+        providerResult.providerData,
+      ),
+    };
+  }
+
+  if (
+    isRemotePayment &&
+    providerResult.status === "pending" &&
+    !providerResult.qrData &&
+    !providerResult.redirectUrl
+  ) {
+    return {
+      success: false,
+      error:
+        parsedPayment.data.method === "momo"
+          ? "MoMo đã tạo phiên thanh toán nhưng không trả về qrCodeUrl."
+          : "Không tạo được dữ liệu QR cho phương thức thanh toán này.",
+    };
+  }
 
   // Atomic RPC: insert payment + update order in one transaction
   // Prevents race condition where payment exists but order status is stale
@@ -344,15 +559,25 @@ export async function createPayment(
     if (rpcError.code === "23505") {
       const { data: existingPayment, error: existingError } = await supabase
         .from("payments")
-        .select("id, status, provider_ref")
+        .select("id, status, provider_ref, method")
         .eq("order_id", parsedPayment.data.orderId)
         .eq("tenant_id", claims.tenant_id)
         .eq("branch_id", parsedBranch.data)
-        .eq("method", parsedPayment.data.method)
-        .eq("status", "pending")
+        .neq("status", "failed")
         .maybeSingle();
 
-      if (!existingError && existingPayment) {
+      if (
+        !existingError &&
+        existingPayment &&
+        existingPayment.status === "pending" &&
+        existingPayment.method === parsedPayment.data.method
+      ) {
+        await persistPendingProviderData(supabase, {
+          paymentId: existingPayment.id,
+          tenantId: claims.tenant_id,
+          branchId: parsedBranch.data,
+          providerResult,
+        });
         const qrInfo = pickVietQrInfo(providerResult.providerData);
         const providerRef =
           providerResult.providerRef ??
@@ -378,7 +603,8 @@ export async function createPayment(
 
       return {
         success: false,
-        error: "Đơn hàng đang có thanh toán chờ xử lý.",
+        error:
+          "Đơn hàng đang có thanh toán chờ xử lý. Vui lòng tải lại hóa đơn và thử lại.",
       };
     }
     const mappedError = mapPaymentRpcError(msg);
@@ -389,16 +615,29 @@ export async function createPayment(
     return { success: false, error: "Không thể tạo thanh toán." };
   }
 
-  const result = data as { payment_id: number; status: string } | null;
+  const result = data as {
+    payment_id: number;
+    status: string;
+    idempotent?: boolean;
+  } | null;
   if (!result) {
     return { success: false, error: "Không thể tạo thanh toán." };
+  }
+
+  if (isRemotePayment) {
+    await persistPendingProviderData(supabase, {
+      paymentId: result.payment_id,
+      tenantId: claims.tenant_id,
+      branchId: parsedBranch.data,
+      providerResult,
+    });
   }
 
   // For cash payments (status=completed immediately), deduct ingredients from stock.
   // VietQR/Momo deduct after confirm/webhook completes.
   // All stock errors are non-fatal for pilot: stock_levels may not be initialized yet,
   // and insufficient_stock_ingredient errors are expected until stock data is seeded.
-  if (result.status === "completed") {
+  if (result.status === "completed" && !result.idempotent) {
     const { error: stockErr } = await consumeStockForOrderCompat(
       supabase,
       parsedPayment.data.orderId,
@@ -429,6 +668,57 @@ export async function createPayment(
         : {}),
       ...(qrInfo ? { qr_info: qrInfo } : {}),
     },
+  };
+}
+
+export async function fetchPendingRemotePaymentForBill(
+  branchId: number,
+  orderId: number,
+): Promise<ActionResult<PendingRemotePaymentForBillData | null>> {
+  const parsedBranch = branchIdSchema.safeParse(branchId);
+  if (!parsedBranch.success) {
+    return { success: false, error: "Branch ID không hợp lệ" };
+  }
+
+  const parsedOrderId = orderIdSchema.safeParse(orderId);
+  if (!parsedOrderId.success) {
+    return { success: false, error: "Order ID không hợp lệ" };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    POS_ROLES,
+    PERMISSION_KEYS.POS_USE,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { supabase, claims } = ctx;
+
+  if (claims.branch_id !== parsedBranch.data) {
+    return { success: false, error: "Không có quyền truy cập chi nhánh này" };
+  }
+
+  const { data: payment, error } = await supabase
+    .from("payments")
+    .select("id, method, status, provider_ref, provider_data")
+    .eq("order_id", parsedOrderId.data)
+    .eq("tenant_id", claims.tenant_id)
+    .eq("branch_id", parsedBranch.data)
+    .neq("status", "failed")
+    .order("id", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    return { success: false, error: "Không thể tải phiên thanh toán." };
+  }
+
+  if (!payment || payment.status !== "pending") {
+    return { success: true, data: null };
+  }
+
+  return {
+    success: true,
+    data: buildPendingRemotePaymentForBillData(payment),
   };
 }
 

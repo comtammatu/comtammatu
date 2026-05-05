@@ -13,16 +13,34 @@ import type {
  * Production: https://payment.momo.vn/v2/gateway/api
  *
  * Flow:
- * 1. Server creates payment → MoMo returns payUrl
- * 2. Display QR or redirect to payUrl
+ * 1. Server creates payment → MoMo returns qrCodeUrl
+ * 2. POS encodes qrCodeUrl into a QR for the customer to scan
  * 3. Customer pays → MoMo sends webhook (IPN)
  * 4. Webhook handler verifies HMAC → updates payment status
  *
- * Env vars: MOMO_PARTNER_CODE, MOMO_ACCESS_KEY, MOMO_SECRET_KEY, MOMO_SANDBOX
+ * MoMo documents qrCodeUrl as the data for a merchant-presented QR. payUrl is
+ * hosted checkout and deeplink is app navigation, so neither is rendered as a
+ * POS QR. Production merchants must request permission for qrCodeUrl.
+ *
+ * Env vars: MOMO_PARTNER_CODE, MOMO_ACCESS_KEY, MOMO_SECRET_KEY,
+ * MOMO_SANDBOX, NEXT_PUBLIC_APP_URL, MOMO_REDIRECT_URL
  */
 
 const SANDBOX_URL = "https://test-payment.momo.vn/v2/gateway/api/create";
 const PRODUCTION_URL = "https://payment.momo.vn/v2/gateway/api/create";
+const LOCALHOST_NAMES = new Set(["localhost", "127.0.0.1", "::1"]);
+
+function resolveHttpUrl(rawUrl: string, envName: string): URL {
+  try {
+    const parsed = new URL(rawUrl);
+    if (!["http:", "https:"].includes(parsed.protocol)) {
+      throw new Error(`Invalid protocol: ${parsed.protocol}`);
+    }
+    return parsed;
+  } catch {
+    throw new Error(`${envName} is not a valid HTTP(S) URL.`);
+  }
+}
 
 export class MoMoProvider implements PaymentProvider {
   readonly method = "momo" as const;
@@ -59,23 +77,30 @@ export class MoMoProvider implements PaymentProvider {
     const orderInfo =
       request.description ?? `Thanh toan don hang ${request.orderNumber}`;
 
-    // IPN (webhook) and redirect URLs — validate origin to prevent SSRF via env misconfiguration
-    const rawBaseUrl =
-      process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-    let baseUrl: string;
-    try {
-      const parsed = new URL(rawBaseUrl);
-      if (!["http:", "https:"].includes(parsed.protocol)) {
-        throw new Error(`Invalid protocol: ${parsed.protocol}`);
-      }
-      baseUrl = parsed.origin;
-    } catch {
+    // IPN is the source of truth for auto-confirming MoMo payments. Do not
+    // silently fall back to localhost; MoMo cannot call a private dev URL.
+    const rawBaseUrl = process.env.NEXT_PUBLIC_APP_URL;
+    if (!rawBaseUrl) {
       throw new Error(
-        `NEXT_PUBLIC_APP_URL is not a valid HTTP(S) URL: ${rawBaseUrl}`,
+        "NEXT_PUBLIC_APP_URL is required for MoMo IPN auto-confirm.",
       );
     }
+    const parsedBaseUrl = resolveHttpUrl(rawBaseUrl, "NEXT_PUBLIC_APP_URL");
+    const allowLocalhost = process.env.MOMO_ALLOW_LOCALHOST === "true";
+    if (!allowLocalhost && LOCALHOST_NAMES.has(parsedBaseUrl.hostname)) {
+      throw new Error(
+        "NEXT_PUBLIC_APP_URL must be a public URL so MoMo can call IPN.",
+      );
+    }
+    if (!this.isSandbox && parsedBaseUrl.protocol !== "https:") {
+      throw new Error("NEXT_PUBLIC_APP_URL must be HTTPS for MoMo production.");
+    }
+
+    const baseUrl = parsedBaseUrl.origin;
     const ipnUrl = `${baseUrl}/api/webhooks/momo`;
-    const redirectUrl = `${baseUrl}/br/pos/payment-result?orderId=${request.orderId}`;
+    const redirectUrl = process.env.MOMO_REDIRECT_URL
+      ? resolveHttpUrl(process.env.MOMO_REDIRECT_URL, "MOMO_REDIRECT_URL").href
+      : `${baseUrl}/payment/momo/return`;
 
     const requestType = "captureWallet";
     const extraData = Buffer.from(
@@ -110,6 +135,7 @@ export class MoMoProvider implements PaymentProvider {
       ipnUrl,
       extraData,
       requestType,
+      autoCapture: true,
       signature,
       lang: "vi",
     };
@@ -119,13 +145,15 @@ export class MoMoProvider implements PaymentProvider {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
-        signal: AbortSignal.timeout(15_000),
+        signal: AbortSignal.timeout(30_000),
       });
 
       const data = (await res.json()) as {
         resultCode: number;
         message: string;
         payUrl?: string;
+        deeplink?: string;
+        deeplinkMiniApp?: string;
         qrCodeUrl?: string;
         orderId?: string;
       };
@@ -141,14 +169,38 @@ export class MoMoProvider implements PaymentProvider {
         };
       }
 
+      const qrCodeUrl = data.qrCodeUrl?.trim() || undefined;
+      const deeplink = data.deeplink?.trim() || undefined;
+      const payUrl = data.payUrl?.trim() || undefined;
+
+      if (!qrCodeUrl) {
+        return {
+          status: "failed",
+          providerRef: orderId,
+          providerData: {
+            resultCode: data.resultCode,
+            message:
+              "MoMo không trả về qrCodeUrl. Cần bật quyền qrCodeUrl/Dynamic QR cho merchant MoMo.",
+            payUrlReturned: Boolean(data.payUrl),
+            deeplinkReturned: Boolean(data.deeplink),
+            qrCodeUrlReturned: Boolean(data.qrCodeUrl),
+          },
+        };
+      }
+
       return {
         status: "pending",
         providerRef: orderId,
-        redirectUrl: data.payUrl ?? undefined,
-        qrData: data.qrCodeUrl ?? undefined,
+        qrData: qrCodeUrl,
         providerData: {
           momoOrderId: data.orderId,
           requestId,
+          qrSource: "qrCodeUrl",
+          qrCodeUrl,
+          payUrl,
+          deeplink,
+          deeplinkMiniApp: data.deeplinkMiniApp,
+          redirectUrl,
         },
       };
     } catch (err) {
@@ -227,4 +279,31 @@ export class MoMoProvider implements PaymentProvider {
       providerRef: String(p.transId ?? ""),
     };
   }
+}
+
+export interface MoMoProviderEnv extends Record<string, string | undefined> {
+  MOMO_PARTNER_CODE?: string;
+  MOMO_ACCESS_KEY?: string;
+  MOMO_SECRET_KEY?: string;
+  MOMO_SANDBOX?: string;
+  MOMO_REDIRECT_URL?: string;
+}
+
+export function createMoMoProviderFromEnv(
+  env: MoMoProviderEnv,
+): MoMoProvider | null {
+  const partnerCode = env.MOMO_PARTNER_CODE;
+  const accessKey = env.MOMO_ACCESS_KEY;
+  const secretKey = env.MOMO_SECRET_KEY;
+
+  if (!partnerCode || !accessKey || !secretKey) {
+    return null;
+  }
+
+  return new MoMoProvider({
+    partnerCode,
+    accessKey,
+    secretKey,
+    sandbox: env.MOMO_SANDBOX === "true",
+  });
 }

@@ -29,5 +29,5 @@ export {
   buildVietQrEmvco,
   resolveBankBin,
 } from "./impl/vietqr";
-export { MoMoProvider } from "./impl/momo";
+export { MoMoProvider, createMoMoProviderFromEnv } from "./impl/momo";
 export { MisaProvider } from "./impl/misa";

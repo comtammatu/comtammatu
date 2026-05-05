@@ -40,6 +40,7 @@ import {
   Printer as IconPrinter,
   QrCode as IconQrcode,
   Receipt as IconReceipt,
+  Wallet as IconWallet,
 } from "lucide-react";
 import { AppBoneyardSkeleton } from "../../../../../_components/boneyard-skeleton";
 import { FormattedNumberInput } from "@/components/form";
@@ -49,6 +50,7 @@ import {
   confirmPayment,
   createPayment,
   fetchPaymentMethodsForPos,
+  fetchPendingRemotePaymentForBill,
 } from "../../payment-actions";
 import { printProvisionalBill, printReceipt } from "../../print-actions";
 import { useIsOnline } from "../pwa/online-status-provider";
@@ -66,6 +68,7 @@ import {
   isInvoiceFormValid,
   type InvoiceFormState,
 } from "./invoice-form-section";
+import { PaymentQrCode } from "./payment-qr-code";
 
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 interface BillReceiptProps {
@@ -95,8 +98,25 @@ const METHOD_META: Record<
 > = {
   cash: { label: PAYMENT_METHOD_LABELS_VI.cash, icon: IconCash },
   vietqr: { label: PAYMENT_METHOD_LABELS_VI.vietqr, icon: IconQrcode },
-  momo: { label: PAYMENT_METHOD_LABELS_VI.momo, icon: IconCreditCard },
+  momo: { label: PAYMENT_METHOD_LABELS_VI.momo, icon: IconWallet },
 };
+
+const REMOTE_PAYMENT_COPY = {
+  momoWalletLabel: "Ví:",
+  momoWalletValue: "MoMo",
+  momoOrderLabel: "Mã đơn MoMo:",
+  momoStatusLabel: "Trạng thái:",
+  momoPendingStatus: "Chờ MoMo xác nhận tự động",
+  accountLabel: "STK:",
+  descriptionLabel: "Nội dung:",
+  creating: "Đang tạo",
+  unavailable: "Chưa có",
+  qrCreateFailedTitle: "Không tạo được QR",
+  qrUnavailableDescription:
+    "Phiên thanh toán đang chờ nhưng thiếu dữ liệu QR. Tạo lại QR để lấy mã mới.",
+  retryCreate: "Tạo lại QR",
+  qrAltFallback: "thanh toán",
+} as const;
 
 const VND_DENOMINATIONS = [
   500_000, 200_000, 100_000, 50_000, 20_000, 10_000, 5_000, 2_000, 1_000, 500,
@@ -294,6 +314,66 @@ function ReceiptLoadingFixture() {
   );
 }
 
+function RemotePaymentDetails({
+  method,
+  pendingExtras,
+  order,
+  isCreating,
+}: {
+  method: PaymentMethod;
+  pendingExtras: PendingExtras | null;
+  order: OrderData | null;
+  isCreating: boolean;
+}) {
+  if (method === "momo") {
+    return (
+      <div className="space-y-3">
+        <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
+          <dt className="text-muted-foreground">
+            {REMOTE_PAYMENT_COPY.momoWalletLabel}
+          </dt>
+          <dd className="font-medium">
+            {REMOTE_PAYMENT_COPY.momoWalletValue}
+          </dd>
+          <dt className="text-muted-foreground">
+            {REMOTE_PAYMENT_COPY.momoOrderLabel}
+          </dt>
+          <dd className="break-all font-mono">
+            {pendingExtras?.provider_ref ??
+              (isCreating
+                ? REMOTE_PAYMENT_COPY.creating
+                : REMOTE_PAYMENT_COPY.unavailable)}
+          </dd>
+          <dt className="text-muted-foreground">
+            {REMOTE_PAYMENT_COPY.momoStatusLabel}
+          </dt>
+          <dd>{REMOTE_PAYMENT_COPY.momoPendingStatus}</dd>
+        </dl>
+      </div>
+    );
+  }
+
+  return (
+    <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
+      <dt className="text-muted-foreground">
+        {REMOTE_PAYMENT_COPY.accountLabel}
+      </dt>
+      <dd className="font-mono font-semibold">
+        {pendingExtras?.qr_info?.account_no ??
+          (isCreating
+            ? REMOTE_PAYMENT_COPY.creating
+            : REMOTE_PAYMENT_COPY.unavailable)}
+      </dd>
+      <dt className="text-muted-foreground">
+        {REMOTE_PAYMENT_COPY.descriptionLabel}
+      </dt>
+      <dd className="font-mono">
+        {pendingExtras?.qr_info?.description ?? `DH ${order?.order_number ?? ""}`}
+      </dd>
+    </dl>
+  );
+}
+
 export function BillReceipt({
   branchId,
   orderId,
@@ -317,8 +397,11 @@ export function BillReceipt({
     useState<InvoiceFormState>(EMPTY_INVOICE_FORM);
   const [isPending, startTransition] = useTransition();
   const [actionPending, startActionTransition] = useTransition();
-  const [methodPending, startMethodTransition] = useTransition();
+  const [methodPending, setMethodPending] = useState(false);
   const [printPending, startPrintTransition] = useTransition();
+  const [paymentCreateError, setPaymentCreateError] = useState<string | null>(
+    null,
+  );
   const isOnline = useIsOnline();
   // When the cashier taps a non-cash method while offline, remember the
   // intent so we can auto-restore it on reconnect. Without this, every
@@ -329,6 +412,7 @@ export function BillReceipt({
   // Tracks orderId we've already auto-fired QR createPayment for, so the
   // auto-trigger fires once per dialog open even when render deps churn.
   const autoQrTriggeredRef = useRef<number | null>(null);
+  const hydratedPaymentOrderRef = useRef<number | null>(null);
 
   const totalAmount = Number(order?.total_amount ?? 0);
   const cashReceived = Number(cashInput) || 0;
@@ -342,6 +426,8 @@ export function BillReceipt({
     invoiceValid &&
     (selectedMethod === "cash"
       ? cashReceived >= totalAmount
+      : selectedMethod === "momo"
+        ? false
       : Boolean(pendingExtras?.payment_id));
 
   // Tooltip giải thích lý do disabled — cashier nhìn vào nút mờ phải biết
@@ -355,6 +441,8 @@ export function BillReceipt({
         ? "Cần điền đủ MST và tên khách trước khi xuất hoá đơn"
         : selectedMethod === "cash"
           ? "Khách chưa thanh toán đủ tổng đơn"
+          : selectedMethod === "momo"
+            ? "MoMo tự xác nhận qua IPN sau khi khách thanh toán"
           : "Chờ tạo QR rồi mới xác nhận được";
 
   const cashSuggestions = useMemo(
@@ -370,9 +458,12 @@ export function BillReceipt({
       setSelectedMethod(canConfirmCash ? "cash" : "vietqr");
       setCashInput("");
       setPendingExtras(null);
+      setMethodPending(false);
+      setPaymentCreateError(null);
       setInvoiceForm(EMPTY_INVOICE_FORM);
       setPendingOfflineMethod(null);
       autoQrTriggeredRef.current = null;
+      hydratedPaymentOrderRef.current = null;
       return;
     }
 
@@ -518,6 +609,7 @@ export function BillReceipt({
       }
       setPendingOfflineMethod(null);
       setSelectedMethod(method);
+      setPaymentCreateError(null);
 
       if (method === "cash") {
         setPendingExtras(null);
@@ -525,13 +617,63 @@ export function BillReceipt({
         return;
       }
 
-      startMethodTransition(async () => {
-        const result = await createPayment(
-          branchId,
-          orderId,
-          method,
-          Number(order.total_amount),
-        );
+      setPendingExtras(null);
+      setMethodPending(true);
+      void (async () => {
+        try {
+          const result = await createPayment(
+            branchId,
+            orderId,
+            method,
+            Number(order.total_amount),
+          );
+          if (result.success && result.data) {
+            setPendingExtras({
+              payment_id: result.data.payment_id,
+              provider_ref: result.data.provider_ref,
+              qr_data: result.data.qr_data,
+              redirect_url: result.data.redirect_url,
+              qr_info: result.data.qr_info,
+            });
+            setOrder((current) =>
+              current ? { ...current, payment_method: method } : current,
+            );
+          } else {
+            const message = result.error ?? "Không thể tạo thanh toán";
+            setPaymentCreateError(message);
+            toast.error(message);
+          }
+        } catch {
+          setPaymentCreateError("Không thể tạo thanh toán");
+          toast.error("Không thể tạo thanh toán");
+        } finally {
+          setMethodPending(false);
+        }
+      })();
+    },
+    [branchId, isOnline, order, orderId],
+  );
+
+  useEffect(() => {
+    if (orderId === null || !order) return;
+    if (order.payment_status !== "pending") return;
+    if (order.payment_method !== "momo" && order.payment_method !== "vietqr") {
+      return;
+    }
+    if (!methods.includes(order.payment_method)) return;
+
+    setSelectedMethod(order.payment_method);
+    if (pendingExtras !== null) return;
+    if (hydratedPaymentOrderRef.current === orderId) return;
+
+    hydratedPaymentOrderRef.current = orderId;
+    setMethodPending(true);
+    setPaymentCreateError(null);
+
+    let cancelled = false;
+    void fetchPendingRemotePaymentForBill(branchId, orderId)
+      .then((result) => {
+        if (cancelled) return;
         if (result.success && result.data) {
           setPendingExtras({
             payment_id: result.data.payment_id,
@@ -540,16 +682,25 @@ export function BillReceipt({
             redirect_url: result.data.redirect_url,
             qr_info: result.data.qr_info,
           });
-          setOrder((current) =>
-            current ? { ...current, payment_method: method } : current,
+          if (!result.data.qr_data && !result.data.redirect_url) {
+            setPaymentCreateError(
+              REMOTE_PAYMENT_COPY.qrUnavailableDescription,
+            );
+          }
+        } else if (!result.success) {
+          setPaymentCreateError(
+            result.error ?? REMOTE_PAYMENT_COPY.qrUnavailableDescription,
           );
-        } else {
-          toast.error(result.error ?? "Không thể tạo thanh toán");
         }
+      })
+      .finally(() => {
+        if (!cancelled) setMethodPending(false);
       });
-    },
-    [branchId, isOnline, order, orderId],
-  );
+
+    return () => {
+      cancelled = true;
+    };
+  }, [branchId, methods, order, orderId, pendingExtras]);
 
   // Auto-restore the offline-blocked method when the network comes back.
   // Re-uses handleSelectMethod so the offline guard is the single
@@ -718,6 +869,19 @@ export function BillReceipt({
     isReceiptIntent || isReadOnlyOrder
       ? "Hóa đơn đã xử lý."
       : "Chọn phương thức và xác nhận.";
+  const remoteQrValue =
+    selectedMethod === "cash"
+      ? undefined
+      : selectedMethod === "momo"
+        ? pendingExtras?.qr_data
+        : (pendingExtras?.qr_data ?? pendingExtras?.redirect_url);
+  const remotePaymentNeedsRetry =
+    selectedMethod !== "cash" &&
+    !methodPending &&
+    !remoteQrValue &&
+    (paymentCreateError !== null || pendingExtras !== null);
+  const remotePaymentError =
+    paymentCreateError ?? REMOTE_PAYMENT_COPY.qrUnavailableDescription;
 
   return (
     <Dialog open={orderId !== null} onOpenChange={handleOpenChange}>
@@ -921,29 +1085,49 @@ export function BillReceipt({
                       </AppBoneyardSkeleton>
                     ) : (
                       <>
-                        {pendingExtras?.qr_data ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={pendingExtras.qr_data}
-                            alt="QR chuyển khoản"
-                            className="mx-auto max-h-72 w-full max-w-72 object-contain"
+                        {remoteQrValue ? (
+                          <PaymentQrCode
+                            value={remoteQrValue}
+                            alt={`QR ${
+                              METHOD_META[selectedMethod]?.label ??
+                              REMOTE_PAYMENT_COPY.qrAltFallback
+                            }`}
+                            preferImage={selectedMethod === "vietqr"}
                           />
                         ) : (
                           <div className="mx-auto flex size-48 items-center justify-center border bg-muted/40">
                             <MethodIcon className="size-10 text-muted-foreground" />
                           </div>
                         )}
-                        <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
-                          <dt className="text-muted-foreground">STK:</dt>
-                          <dd className="font-mono font-semibold">
-                            {pendingExtras?.qr_info?.account_no ?? "Đang tạo"}
-                          </dd>
-                          <dt className="text-muted-foreground">Nội dung:</dt>
-                          <dd className="font-mono">
-                            {pendingExtras?.qr_info?.description ??
-                              `DH ${order?.order_number ?? ""}`}
-                          </dd>
-                        </dl>
+                        {remotePaymentNeedsRetry ? (
+                          <Alert variant="destructive">
+                            <IconAlertTriangle />
+                            <AlertTitle>
+                              {REMOTE_PAYMENT_COPY.qrCreateFailedTitle}
+                            </AlertTitle>
+                            <AlertDescription>
+                              {remotePaymentError}
+                            </AlertDescription>
+                            <div className="col-start-2 mt-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleSelectMethod(selectedMethod)}
+                                disabled={actionPending || methodPending}
+                              >
+                                <IconQrcode data-icon="inline-start" />
+                                {REMOTE_PAYMENT_COPY.retryCreate}
+                              </Button>
+                            </div>
+                          </Alert>
+                        ) : null}
+                        <RemotePaymentDetails
+                          method={selectedMethod}
+                          pendingExtras={pendingExtras}
+                          order={order}
+                          isCreating={methodPending}
+                        />
                       </>
                     )}
                   </CardContent>

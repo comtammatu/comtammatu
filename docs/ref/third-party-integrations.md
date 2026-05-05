@@ -64,8 +64,8 @@
 | Sandbox          | ✅ Có — Postman collection đầy đủ               |
 | Phí merchant     | **MIỄN PHÍ** (MoMo không thu phí merchant)      |
 | Settlement       | Realtime                                        |
-| Webhook          | ✅ POST JSON callback khi thanh toán thành công |
-| Webhook security | HMAC signature hoặc verif-hash header           |
+| Webhook          | ✅ POST JSON IPN khi giao dịch hoàn tất          |
+| Webhook security | HMAC signature                                  |
 | Fallback         | Nếu timeout → gọi GET order status API          |
 
 **Webhook payload mẫu**:
@@ -86,9 +86,10 @@
 
 ```
 - Luôn verify signature trước khi xử lý webhook
-- resultCode = 0 → thành công; khác 0 → thất bại / pending
-- Retry: MoMo gọi webhook tối đa 3 lần nếu endpoint trả non-200
-- Bảo vệ idempotency: Check orderId đã xử lý chưa trước khi credit
+- POS QR phải dùng `qrCodeUrl`; không render `payUrl`/`deeplink` thành QR
+- Luồng `autoCapture=true`: `resultCode = 0` hoặc `9000` → có thể chốt thanh toán; mã khác → thất bại / pending theo bảng result code
+- IPN hợp lệ phải phản hồi HTTP 204 không body trong 15 giây
+- Bảo vệ idempotency: ghi `webhook_events(provider, request_id)` trước khi gọi RPC chốt thanh toán
 ```
 
 ---
@@ -423,15 +424,18 @@ Giả định: 500 order/ngày, 5 chi nhánh, ~15,000 order/tháng
 
 ```bash
 # Payment
+NEXT_PUBLIC_APP_URL=https://pos.comtammatu.vn # HTTPS public; MoMo gọi IPN vào URL này
+
 VIETQR_API_KEY=
-VIETQR_CLIENT_ID=
 VIETQR_BANK_ID=          # Mã ngân hàng đối tác
 VIETQR_ACCOUNT_NO=       # Số tài khoản merchant
+VIETQR_ACCOUNT_NAME=     # Tên chủ tài khoản hiển thị trên QR
 
-MOMO_PARTNER_CODE=
-MOMO_ACCESS_KEY=
-MOMO_SECRET_KEY=
-MOMO_WEBHOOK_SECRET=
+MOMO_PARTNER_CODE=       # Mã đối tác do MoMo cấp
+MOMO_ACCESS_KEY=         # Access key do MoMo cấp
+MOMO_SECRET_KEY=         # Secret key dùng ký request + verify IPN
+MOMO_SANDBOX=true        # true=test-payment.momo.vn, false/unset=production
+MOMO_REDIRECT_URL=       # Optional trang khách sau thanh toán; không trỏ về POS
 
 # HĐĐT
 EINVOICE_PROVIDER=misa   # misa | viettel | vnpt
