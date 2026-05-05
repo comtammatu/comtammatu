@@ -6,6 +6,24 @@
 
 M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1–M9 — **all SHIPPED**. External integrations (VietQR/Momo/MISA HĐĐT real APIs) blocked on credentials. Detail trong `docs/plan/roadmap.md`.
 
+## Strategic fork prep
+
+- [x] Draft fork-based platform preparation plan: `docs/plan/platform-fork-2026.md`.
+- [x] Create local preparation folder: `/Users/luongthebinh/Downloads/matu-pros`.
+- [x] Draft Cloudflare-first minimal stack decisions: `/Users/luongthebinh/Downloads/matu-pros/STACK_DECISIONS.md`.
+- [x] Draft stack research matrix: `/Users/luongthebinh/Downloads/matu-pros/STACK_RESEARCH.md`.
+- [x] Add Vercel reuse analysis and reject Neon/Vercel-managed Postgres.
+- [x] Clarify Flutter scope as Android and iOS mobile app only; admin web is a separate decision.
+- [x] Lock mobile target: build Android and iOS together from the first Flutter scaffold.
+- [x] Confirm admin web fallback: Next.js on Vercel is acceptable if approved separately.
+- [x] Add canonical stack lock: `/Users/luongthebinh/Downloads/matu-pros/STACK_LOCK.md`.
+- [x] Debate Redis/Bun: no Redis in bootstrap; Node LTS + pnpm is default tooling; Bun is out of bootstrap.
+- [ ] Owner decision: base clean commit vs include current dirty local UI edits in the fork baseline.
+- [x] Owner decision: fork preparation workspace name/location is `/Users/luongthebinh/Downloads/matu-pros`.
+- [ ] Owner decision: when to initialize `matu-pros` as an actual git fork/repository.
+- [ ] Owner decision: greenfield v2 pilot vs migrated-data v2 pilot.
+- [ ] Run required 4-agent debate before the first implementation slice in the fork.
+
 ## Known issues
 
 - [ ] P3: Login rate limit fail-open khi Upstash unreachable — documented design decision, cần observability
