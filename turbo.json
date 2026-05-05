@@ -5,7 +5,16 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [".next/**", "!.next/cache/**", "dist/**"]
+      "outputs": [
+        ".next/**",
+        "!.next/cache/**",
+        "!.next/dev/**",
+        "dist/**",
+        "public/sw.js",
+        "public/sw.js.map",
+        "public/swe-worker-*.js",
+        "public/workbox-*.js"
+      ]
     },
     "lint": {},
     "typecheck": {},

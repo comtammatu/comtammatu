@@ -8,7 +8,9 @@ out/
 
 # serwist (generated service worker)
 apps/web/public/sw.js
+apps/web/public/sw.js.map
 apps/web/public/swe-worker-*.js
+apps/web/public/workbox-*.js
 
 # turbo
 .turbo/

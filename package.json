@@ -12,6 +12,8 @@
     "build": "turbo build",
     "lint": "pnpm lint:copy && pnpm lint:v2-imports && turbo lint",
     "lint:copy": "node scripts/lint-copy.mjs",
+    "lint:i18n": "I18N_BASELINE_DISABLE=1 pnpm --filter @comtammatu/web exec eslint .",
+    "lint:i18n:baseline": "node scripts/update-i18n-baseline.mjs",
     "lint:v2-imports": "node scripts/check-v2-imports.mjs",
     "typecheck": "turbo typecheck",
     "test": "turbo test",
