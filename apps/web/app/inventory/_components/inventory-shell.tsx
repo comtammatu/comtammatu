@@ -60,6 +60,13 @@ interface InventoryShellProps {
   defaultBranchId: number | null;
 }
 
+function isStocktakeSessionPath(pathname: string | null): boolean {
+  const stocktakeMatch = pathname?.match(/^\/inventory\/stocktake\/([^/]+)/);
+  if (!stocktakeMatch) return false;
+  const segment = stocktakeMatch[1] ?? "";
+  return segment !== "new" && segment !== "conflicts";
+}
+
 function buildInventoryGroups({
   userRole,
   showProcurement,
@@ -275,6 +282,7 @@ export function InventoryShell({
   );
 
   const isMobileRoute = pathname?.startsWith("/inventory/m") ?? false;
+  const branchPickerLocked = isStocktakeSessionPath(pathname);
   const siteKindLabel = getInventorySiteKindLabelVi(effectiveSiteKind);
   const showSiteKindLabel = siteKindLabel !== effectiveSiteName;
   if (isMobileRoute) {
@@ -299,7 +307,7 @@ export function InventoryShell({
               <span className="text-xs text-muted-foreground">Quản lý kho</span>
             </div>
           </div>
-          {allowedBranches.length > 1 ? (
+          {allowedBranches.length > 1 && !branchPickerLocked ? (
             <div className="group-data-[collapsible=icon]:hidden">
               <InventoryBranchFilter
                 branches={allowedBranches}

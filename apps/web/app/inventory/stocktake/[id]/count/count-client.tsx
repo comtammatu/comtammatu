@@ -210,7 +210,9 @@ export function StocktakeCountClient({
         toast.warning(
           `Round ${d.roundNo} đóng — còn ${d.needsRecountCount} dòng cần escalation R4`,
         );
-        router.push(`/inventory/stocktake/${sessionId}/escalate`);
+        router.push(
+          `/inventory/stocktake/${sessionId}/escalate?branchId=${branchId}`,
+        );
         return;
       }
       if (d.nextRound) {

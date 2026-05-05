@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight as IconArrowRight, ClipboardCheck as IconClipboardCheck, Plus as IconPlus, Search as IconSearch } from "lucide-react";
@@ -105,6 +105,11 @@ export function StocktakeListClient({
   const [isPending, startTransition] = useTransition();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedBranchId, setSelectedBranchId] = useState("");
+  const branchQuery = userBranchId != null ? `?branchId=${userBranchId}` : "";
+
+  useEffect(() => {
+    setRows(initial);
+  }, [initial]);
 
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -140,10 +145,10 @@ export function StocktakeListClient({
       }
       toast.success("Đã tạo phiên kiểm kê");
       setDialogOpen(false);
-      const again = await fetchStocktakeSessions();
+      const again = await fetchStocktakeSessions(branchId);
       if (again.success) setRows((again.data ?? []) as StocktakeSessionRow[]);
       const id = (res.data as { id: number }).id;
-      router.push(`${routeBase}/${id}`);
+      router.push(`${routeBase}/${id}?branchId=${branchId}`);
     });
   }
 
@@ -164,12 +169,14 @@ export function StocktakeListClient({
           <div className="flex items-center gap-2">
             <Button type="button" variant="outline" asChild>
               {/* S13b conflict queue. Route gated by inv_s13b_stocktake_recount. */}
-              <Link href={`${routeBase}/conflicts`}>Xử lý lệch</Link>
+              <Link href={`${routeBase}/conflicts${branchQuery}`}>
+                Xử lý lệch
+              </Link>
             </Button>
             <Button type="button" variant="outline" asChild>
               {/* S13a pilot entry. Route is feature-flag gated server-side —
                   non-pilot branches redirect to list with error=stocktake_v2_not_enabled. */}
-              <Link href={`${routeBase}/new`}>
+              <Link href={`${routeBase}/new${branchQuery}`}>
                 <IconClipboardCheck className="size-4" />
                 Kiểm kê v2
               </Link>
@@ -244,7 +251,7 @@ export function StocktakeListClient({
                   asChild
                 >
                   <Link
-                    href={`${routeBase}/${r.id}`}
+                    href={`${routeBase}/${r.id}?branchId=${r.branch_id}`}
                     className="flex-col items-stretch gap-2"
                   >
                     <div className="flex items-center justify-between gap-2">
@@ -313,7 +320,9 @@ export function StocktakeListClient({
                           asChild
                           aria-label="Chi tiết"
                         >
-                          <Link href={`${routeBase}/${r.id}`}>
+                          <Link
+                            href={`${routeBase}/${r.id}?branchId=${r.branch_id}`}
+                          >
                             <IconArrowRight className="size-4" />
                           </Link>
                         </Button>

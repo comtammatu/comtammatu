@@ -7,9 +7,14 @@ import {
   INVENTORY_OPS_ROLES,
   PERMISSION_KEYS,
 } from "@comtammatu/shared/auth";
-import { getAuthContext, getAuthContextWithAnyPermission } from "./_lib/auth";
+import {
+  getAuthContext,
+  getAuthContextWithAnyPermission,
+  getAuthContextWithPermission,
+} from "./_lib/auth";
 import { withAction } from "@/_lib/with-action";
 import { resolveDefaultInventoryLocation } from "./_lib/inventory-location-compat";
+import { resolveInventoryBranchScope } from "./_lib/inventory-scope";
 import { CATALOG_MANAGE_PERMISSIONS } from "./_lib/catalog-permissions";
 import {
   STORAGE_TYPE_BY_LABEL,
@@ -398,10 +403,22 @@ export async function createStocktakeSession(
     return { success: false, error: "Branch ID không hợp lệ" };
   }
 
-  const ctx = await getAuthContext(INVENTORY_OPS_ROLES);
+  const ctx = await getAuthContextWithPermission(
+    INVENTORY_OPS_ROLES,
+    PERMISSION_KEYS.INVENTORY_STOCKTAKE_CREATE,
+    parsedBranch.data,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
+  const scope = await resolveInventoryBranchScope(
+    supabase,
+    claims,
+    parsedBranch.data,
+  );
+  if (scope.selectedBranchId !== parsedBranch.data) {
+    return { success: false, error: "Không có quyền truy cập chi nhánh này" };
+  }
 
   if (
     claims.user_role === "branch_manager" &&

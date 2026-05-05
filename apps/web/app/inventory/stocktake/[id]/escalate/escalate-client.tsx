@@ -148,7 +148,7 @@ export function EscalateClient({
         return;
       }
       toast.success("Đã finalize session — trạng thái completed");
-      router.push(`/inventory/stocktake/${sessionId}`);
+      router.push(`/inventory/stocktake/${sessionId}?branchId=${branchId}`);
     });
   }
 

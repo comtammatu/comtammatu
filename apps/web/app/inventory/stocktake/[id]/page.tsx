@@ -1,11 +1,14 @@
 import { notFound, redirect } from "next/navigation";
 import { fetchStocktakeDetail } from "../../actions";
+import { resolveRequestedBranchId } from "../../_lib/inventory-scope";
 import { StocktakeDetailClient } from "./stocktake-detail-client";
 
 export default async function StocktakeDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ branchId?: string | string[]; error?: string }>;
 }) {
   const { id } = await params;
   const sessionId = Number(id);
@@ -49,10 +52,23 @@ export default async function StocktakeDetailPage({
       } | null;
     }>;
   };
+  const sp = await searchParams;
+  const requestedBranchId = await resolveRequestedBranchId(sp.branchId);
+  const sessionBranchId = stocktakeSession.branch_id;
+  const isLegacyStocktake = sp.error === "stocktake_v2_not_enabled";
+  const legacyErrorParam = isLegacyStocktake
+    ? "&error=stocktake_v2_not_enabled"
+    : "";
 
-  if (stocktakeSession.status === "in_progress") {
+  if (requestedBranchId !== sessionBranchId) {
     redirect(
-      `/inventory/stocktake/${sessionId}/count?branchId=${stocktakeSession.branch_id}`,
+      `/inventory/stocktake/${sessionId}?branchId=${sessionBranchId}${legacyErrorParam}`,
+    );
+  }
+
+  if (stocktakeSession.status === "in_progress" && !isLegacyStocktake) {
+    redirect(
+      `/inventory/stocktake/${sessionId}/count?branchId=${sessionBranchId}`,
     );
   }
 

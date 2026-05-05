@@ -34,20 +34,16 @@ export default async function StocktakePage({
     : null;
   const branchFilter = scope?.selectedBranchId ?? undefined;
 
-  const [sessionsRes, branchesRes] = await Promise.all([
-    fetchStocktakeSessions(branchFilter),
-    supabase
-      .from("branches")
-      .select("id, name, is_active, branch_kind")
-      .order("name"),
-  ]);
+  const sessionsRes = await fetchStocktakeSessions(branchFilter);
 
   const sessions: StocktakeSessionRow[] = sessionsRes.success
     ? ((sessionsRes.data ?? []) as StocktakeSessionRow[])
     : [];
-  const branches: BranchOption[] = (branchesRes.data ?? [])
-    .filter((b) => b.is_active === true)
-    .map((b) => ({ ...b, name: getBranchSiteDisplayName(b) })) as BranchOption[];
+  const branches: BranchOption[] = (scope?.allowedBranches ?? []).map((b) => ({
+    id: b.id,
+    name: getBranchSiteDisplayName(b),
+    is_active: true,
+  }));
 
   return (
     <StocktakeListClient

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -53,6 +53,11 @@ export function NewStocktakeSessionClient({
   const [locationId, setLocationId] = useState<number | null>(null);
   const [pending, startTransition] = useTransition();
 
+  useEffect(() => {
+    setBranchId(defaultBranchId);
+    setLocationId(null);
+  }, [defaultBranchId]);
+
   const meta = getModeMeta(mode);
   const effectiveBlind = meta.defaultBlind;
 
@@ -79,7 +84,9 @@ export function NewStocktakeSessionClient({
       toast.success(
         `Đã tạo session #${res.data.sessionId} — ${res.data.seededLines} dòng`,
       );
-      router.push(`/inventory/stocktake/${res.data.sessionId}/count`);
+      router.push(
+        `/inventory/stocktake/${res.data.sessionId}/count?branchId=${branchId}`,
+      );
     });
   }
 

@@ -4,6 +4,7 @@ import {
   INVENTORY_FEATURE_FLAGS,
   isFeatureEnabledForBranch,
 } from "../../../_lib/feature-flags";
+import { resolveRequestedBranchId } from "../../../_lib/inventory-scope";
 import { getStocktakeLinesBlind } from "../../../stocktake-actions";
 import { StocktakeCountClient } from "./count-client";
 
@@ -11,8 +12,10 @@ export const dynamic = "force-dynamic";
 
 export default async function StocktakeCountPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ branchId?: string | string[] }>;
 }) {
   const { id } = await params;
   const sessionId = Number(id);
@@ -26,15 +29,25 @@ export default async function StocktakeCountPage({
     .maybeSingle();
 
   if (!sessionRow) notFound();
+  const sessionBranchId = sessionRow.branch_id as number;
+  const sp = await searchParams;
+  const requestedBranchId = await resolveRequestedBranchId(sp.branchId);
+  if (requestedBranchId !== sessionBranchId) {
+    redirect(
+      `/inventory/stocktake/${sessionId}/count?branchId=${sessionBranchId}`,
+    );
+  }
 
   // Feature flag gate — route the counter to legacy detail when S13a is off.
   const flagEnabled = await isFeatureEnabledForBranch(
     supabase,
-    sessionRow.branch_id as number,
+    sessionBranchId,
     INVENTORY_FEATURE_FLAGS.S13A_STOCKTAKE_V2,
   );
   if (!flagEnabled) {
-    redirect(`/inventory/stocktake/${sessionId}?error=stocktake_v2_not_enabled`);
+    redirect(
+      `/inventory/stocktake/${sessionId}?branchId=${sessionBranchId}&error=stocktake_v2_not_enabled`,
+    );
   }
 
   const linesRes = await getStocktakeLinesBlind(sessionId);
@@ -49,7 +62,7 @@ export default async function StocktakeCountPage({
   return (
     <StocktakeCountClient
       sessionId={sessionId}
-      branchId={sessionRow.branch_id as number}
+      branchId={sessionBranchId}
       status={sessionRow.status as string}
       currentRound={Math.min(4, currentRound) as 1 | 2 | 3 | 4}
       initialLines={linesRes.data}

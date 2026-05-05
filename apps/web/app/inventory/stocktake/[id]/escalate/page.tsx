@@ -4,6 +4,7 @@ import {
   INVENTORY_FEATURE_FLAGS,
   isFeatureEnabledForBranch,
 } from "../../../_lib/feature-flags";
+import { resolveRequestedBranchId } from "../../../_lib/inventory-scope";
 import { getStocktakeLinesBlind } from "../../../stocktake-actions";
 import { EscalateClient } from "./escalate-client";
 
@@ -11,8 +12,10 @@ export const dynamic = "force-dynamic";
 
 export default async function StocktakeEscalatePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ branchId?: string | string[] }>;
 }) {
   const { id } = await params;
   const sessionId = Number(id);
@@ -26,15 +29,25 @@ export default async function StocktakeEscalatePage({
     .maybeSingle();
 
   if (!sessionRow) notFound();
+  const sessionBranchId = sessionRow.branch_id as number;
+  const sp = await searchParams;
+  const requestedBranchId = await resolveRequestedBranchId(sp.branchId);
+  if (requestedBranchId !== sessionBranchId) {
+    redirect(
+      `/inventory/stocktake/${sessionId}/escalate?branchId=${sessionBranchId}`,
+    );
+  }
 
   // Gate: S13b (recount / escalation) must be enabled for this branch.
   const flagEnabled = await isFeatureEnabledForBranch(
     supabase,
-    sessionRow.branch_id as number,
+    sessionBranchId,
     INVENTORY_FEATURE_FLAGS.S13B_STOCKTAKE_RECOUNT,
   );
   if (!flagEnabled) {
-    redirect(`/inventory/stocktake/${sessionId}?error=stocktake_recount_not_enabled`);
+    redirect(
+      `/inventory/stocktake/${sessionId}?branchId=${sessionBranchId}&error=stocktake_recount_not_enabled`,
+    );
   }
 
   const linesRes = await getStocktakeLinesBlind(sessionId);
@@ -43,7 +56,7 @@ export default async function StocktakeEscalatePage({
   return (
     <EscalateClient
       sessionId={sessionId}
-      branchId={sessionRow.branch_id as number}
+      branchId={sessionBranchId}
       status={sessionRow.status as string}
       currentRound={Number(sessionRow.current_round ?? 1) as 1 | 2 | 3 | 4}
       lines={linesRes.data}

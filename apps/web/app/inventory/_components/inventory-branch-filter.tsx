@@ -42,14 +42,18 @@ export function InventoryBranchFilter({
 
   const handleChange = useCallback(
     (value: string) => {
+      const parsed = Number(value);
+      if (!Number.isInteger(parsed) || parsed <= 0 || parsed === currentId) {
+        return;
+      }
       const next = new URLSearchParams(searchParams.toString());
-      next.set("branchId", value);
+      next.set("branchId", String(parsed));
       const query = next.toString();
       router.replace(query ? `${pathname}?${query}` : pathname, {
         scroll: false,
       });
     },
-    [router, pathname, searchParams],
+    [currentId, router, pathname, searchParams],
   );
 
   if (branches.length <= 1 || currentId == null) return null;

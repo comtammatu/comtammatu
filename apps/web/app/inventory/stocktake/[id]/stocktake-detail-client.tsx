@@ -242,7 +242,7 @@ export function StocktakeDetailClient({
         title="Chi tiết kiểm kê"
         actions={
           <Link
-            href={routeBase}
+            href={`${routeBase}?branchId=${session.branch_id}`}
             className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
           >
             <IconArrowLeft className="size-4" /> {tRoute("/inventory/stocktake")}

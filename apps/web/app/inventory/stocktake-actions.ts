@@ -5,6 +5,7 @@ import { z } from "zod";
 import { PERMISSION_KEYS, STAFF_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "./_lib/auth";
+import { resolveInventoryBranchScope } from "./_lib/inventory-scope";
 
 /* ─── Start stocktake (S13a) ─── */
 
@@ -50,9 +51,18 @@ export async function startStocktake(
   const ctx = await getAuthContextWithPermission(
     STAFF_ROLES,
     PERMISSION_KEYS.INVENTORY_STOCKTAKE_CREATE,
+    parsed.data.branchId,
   );
   if (!ctx) return { success: false, error: "Không có quyền tạo stocktake" };
-  const { supabase } = ctx;
+  const { supabase, claims } = ctx;
+  const scope = await resolveInventoryBranchScope(
+    supabase,
+    claims,
+    parsed.data.branchId,
+  );
+  if (scope.selectedBranchId !== parsed.data.branchId) {
+    return { success: false, error: "Không có quyền truy cập chi nhánh này" };
+  }
 
   const { data, error } = await supabase.rpc("start_stocktake", {
     p_branch_id: parsed.data.branchId,
