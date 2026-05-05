@@ -1785,6 +1785,9 @@ export type Database = {
           status: string
           tenant_id: number
           updated_at: string
+          void_journal_entry_id: number | null
+          voided_at: string | null
+          voided_by: string | null
           voided_reason: string | null
         }
         Insert: {
@@ -1802,6 +1805,9 @@ export type Database = {
           status?: string
           tenant_id: number
           updated_at?: string
+          void_journal_entry_id?: number | null
+          voided_at?: string | null
+          voided_by?: string | null
           voided_reason?: string | null
         }
         Update: {
@@ -1819,6 +1825,9 @@ export type Database = {
           status?: string
           tenant_id?: number
           updated_at?: string
+          void_journal_entry_id?: number | null
+          voided_at?: string | null
+          voided_by?: string | null
           voided_reason?: string | null
         }
         Relationships: [
@@ -1841,6 +1850,13 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entries_void_journal_entry_id_fkey"
+            columns: ["void_journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
             referencedColumns: ["id"]
           },
         ]
@@ -3764,6 +3780,93 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      print_template_versions: {
+        Row: {
+          branch_id: number | null
+          content: Json
+          created_at: string
+          created_by: string | null
+          font_profile: string
+          id: number
+          is_active: boolean
+          kind: string
+          name: string
+          paper_width_mm: number
+          tenant_id: number | null
+          updated_at: string
+          updated_by: string | null
+          version: number
+        }
+        Insert: {
+          branch_id?: number | null
+          content: Json
+          created_at?: string
+          created_by?: string | null
+          font_profile?: string
+          id?: never
+          is_active?: boolean
+          kind: string
+          name: string
+          paper_width_mm?: number
+          tenant_id?: number | null
+          updated_at?: string
+          updated_by?: string | null
+          version: number
+        }
+        Update: {
+          branch_id?: number | null
+          content?: Json
+          created_at?: string
+          created_by?: string | null
+          font_profile?: string
+          id?: never
+          is_active?: boolean
+          kind?: string
+          name?: string
+          paper_width_mm?: number
+          tenant_id?: number | null
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "print_template_versions_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "print_template_versions_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "print_template_versions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "print_template_versions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "print_template_versions_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -7301,6 +7404,15 @@ export type Database = {
         }
         Returns: undefined
       }
+      attach_print_document_to_payload: {
+        Args: {
+          p_branch_id: number
+          p_kind: string
+          p_payload: Json
+          p_tenant_id: number
+        }
+        Returns: Json
+      }
       auth_area_id: { Args: never; Returns: number }
       auth_branch_id: { Args: never; Returns: number }
       auth_role: { Args: never; Returns: string }
@@ -7442,6 +7554,17 @@ export type Database = {
         Returns: Json
       }
       count_unread_notifications: { Args: never; Returns: number }
+      create_manual_journal_entry: {
+        Args: {
+          p_branch_id?: number
+          p_description: string
+          p_entry_date: string
+          p_lines: Json
+          p_reference_id?: number
+          p_reference_type?: string
+        }
+        Returns: Json
+      }
       create_order: {
         Args: {
           p_branch_id: number
@@ -7606,6 +7729,10 @@ export type Database = {
       }
       ensure_branch_inventory_location_defaults: {
         Args: { p_branch_id: number; p_tenant_id: number }
+        Returns: undefined
+      }
+      ensure_journal_write_permission: {
+        Args: { p_branch_id?: number }
         Returns: undefined
       }
       escalate_round_4: {
@@ -7973,6 +8100,18 @@ export type Database = {
       }
       mark_all_notifications_read: { Args: never; Returns: number }
       mark_order_item_served: { Args: { p_item_id: number }; Returns: Json }
+      materialize_print_document: {
+        Args: {
+          p_content: Json
+          p_font_profile: string
+          p_kind: string
+          p_paper_width_mm: number
+          p_payload: Json
+          p_template_id: number
+          p_template_version: number
+        }
+        Returns: Json
+      }
       merge_orders: {
         Args: {
           p_idempotency_key?: string
@@ -7980,6 +8119,10 @@ export type Database = {
           p_target_order_id: number
         }
         Returns: Json
+      }
+      next_manual_journal_entry_number: {
+        Args: { p_entry_date: string; p_tenant_id: number }
+        Returns: string
       }
       override_grn_hardblock: {
         Args: {
@@ -8001,9 +8144,22 @@ export type Database = {
           sides_sum: number
         }[]
       }
+      pos_order_modifier_sum: {
+        Args: { p_main_item_id: number; p_modifiers: Json; p_tenant_id: number }
+        Returns: number
+      }
+      post_manual_journal_entry: { Args: { p_entry_id: number }; Returns: Json }
       post_payroll_journal: {
         Args: { p_payroll_period_id: number }
         Returns: number
+      }
+      print_template_default_content: {
+        Args: { p_kind: string }
+        Returns: Json
+      }
+      print_template_interpolate: {
+        Args: { p_payload: Json; p_text: string }
+        Returns: string
       }
       recall_kds_ticket: { Args: { p_ticket_id: number }; Returns: string }
       recompute_supplier_invoice_matching: {
@@ -8054,6 +8210,16 @@ export type Database = {
           source: string
           unit_price: number
           uom: string
+        }[]
+      }
+      resolve_print_template_version: {
+        Args: { p_branch_id: number; p_kind: string; p_tenant_id: number }
+        Returns: {
+          content: Json
+          font_profile: string
+          paper_width_mm: number
+          template_id: number
+          template_version: number
         }[]
       }
       resolve_stocktake_conflict: {
@@ -8264,6 +8430,10 @@ export type Database = {
       verify_branch_override_code: {
         Args: { p_branch_id: number; p_code: string }
         Returns: boolean
+      }
+      void_manual_journal_entry: {
+        Args: { p_entry_id: number; p_reason: string }
+        Returns: Json
       }
       void_order_item: {
         Args: { p_order_item_id: number; p_reason: string }
