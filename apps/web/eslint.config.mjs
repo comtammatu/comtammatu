@@ -1,7 +1,8 @@
 import eslint from "@eslint/js";
 import tseslint from "typescript-eslint";
 import globals from "globals";
-import { dirname } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import nextPlugin from "@next/eslint-plugin-next";
 
@@ -30,11 +31,38 @@ const VI_DIACRITIC_REGEX =
   /[À-ÿĂ-ăĐ-đƠ-ưẠ-ỹ]/;
 const VI_TARGET_ATTRS = /^(title|placeholder|aria-label|alt)$/;
 
+const I18N_BASELINE_PATH = `${__dirname}/eslint-i18n-baseline.json`;
+const I18N_BASELINE_DISABLED = process.env.I18N_BASELINE_DISABLE === "1";
+
+function loadI18nBaseline() {
+  if (I18N_BASELINE_DISABLED || !existsSync(I18N_BASELINE_PATH)) {
+    return new Set();
+  }
+  const baseline = JSON.parse(readFileSync(I18N_BASELINE_PATH, "utf8"));
+  return new Set(Array.isArray(baseline.entries) ? baseline.entries : []);
+}
+
+const i18nBaseline = loadI18nBaseline();
+
+function getI18nBaselineKey(context, node) {
+  const filename = context.filename ?? context.getFilename?.();
+  if (!filename || !node.loc?.start) return null;
+  const relPath = relative(__dirname, filename).split(sep).join("/");
+  return `${relPath}:${node.loc.start.line}:${node.loc.start.column + 1}`;
+}
+
+function reportInlineVietnamese(context, node) {
+  const key = getI18nBaselineKey(context, node);
+  if (key && i18nBaseline.has(key)) return;
+  context.report({ node, messageId: "inlineVN" });
+}
+
 // Custom rule: flag inline Vietnamese strings in JSX text nodes and
 // user-facing attributes (title/placeholder/aria-label/alt). Severity is
-// "warn" during pilot — flip to "error" once Phase 2 sweep clears existing
-// offenders. Escape hatch: `// eslint-disable-next-line` with `vi-allow:`
-// reason for legal-fixed strings (HĐĐT/MST/...) or domain edge cases.
+// "warn" for new offenders. Legacy offenders are explicitly baselined in
+// `eslint-i18n-baseline.json`; run with `I18N_BASELINE_DISABLE=1` to see the
+// full Phase 2 sweep list. Escape hatch: `// eslint-disable-next-line` with
+// `vi-allow:` reason for legal-fixed strings (HĐĐT/MST/...) or domain edge cases.
 // See tasks/regressions.md MESSAGES-SINGLE-SOURCE (2026-04-27).
 const i18nPlugin = {
   rules: {
@@ -55,7 +83,7 @@ const i18nPlugin = {
         return {
           JSXText(node) {
             if (VI_DIACRITIC_REGEX.test(node.value)) {
-              context.report({ node, messageId: "inlineVN" });
+              reportInlineVietnamese(context, node);
             }
           },
           JSXAttribute(node) {
@@ -68,7 +96,7 @@ const i18nPlugin = {
               typeof value.value === "string" &&
               VI_DIACRITIC_REGEX.test(value.value)
             ) {
-              context.report({ node: value, messageId: "inlineVN" });
+              reportInlineVietnamese(context, value);
             }
           },
         };
