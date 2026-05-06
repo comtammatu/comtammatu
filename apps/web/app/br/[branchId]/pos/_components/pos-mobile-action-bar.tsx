@@ -108,6 +108,9 @@ function PosMobileActionBarComponent({
     );
   }
 
+  // Cashier đang build giỏ — single CTA "Giỏ mới" giữ focus 1 task. Bỏ
+  // "Đơn trong ca" để không pull đơn khác lên giữa lúc đặt món; cashier
+  // xem orders qua sidebar/header khi cart trống.
   if (cartQuantity > 0) {
     return (
       <div className={ACTION_BAR_CLASS}>
@@ -121,18 +124,6 @@ function PosMobileActionBarComponent({
           <span>{messages.pos.mobileActionBar.newCart}</span>
           <span className="tabular-nums">{cartQuantity}</span>
         </Button>
-        {ordersCount > 0 && (
-          <Button
-            type="button"
-            variant="secondary"
-            className={ACTION_SECONDARY_BUTTON_CLASS}
-            onClick={onOpenOrdersDrawer}
-          >
-            <IconReceipt data-icon="inline-start" />
-            <span>{messages.pos.mobileActionBar.sessionOrders}</span>
-            <span className="tabular-nums">{ordersCount}</span>
-          </Button>
-        )}
       </div>
     );
   }

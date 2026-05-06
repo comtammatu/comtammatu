@@ -761,6 +761,7 @@ function PosDesktopInner({
         if (submittedOrderType === "takeaway") {
           setPostSubmitPaymentOrderId(orderId);
           setShowOrders(false);
+          setCartDrawerOpen(false);
           setOrderDetailId(null);
           setOrderDetailNumber(null);
           setOrderDetailSeed(null);
