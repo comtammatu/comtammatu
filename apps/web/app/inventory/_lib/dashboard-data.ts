@@ -106,21 +106,42 @@ export async function loadInventoryDashboardData(
 ): Promise<InventoryDashboardData> {
   const { supabase, claims } = await loadAuthState();
 
-  const showProcurement =
-    canAccess(claims.user_role, "inventory_procurement") &&
-    (await currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_READ));
-  const showProduction =
+  // Sync gates first — short-circuit avoids unnecessary RPC fetches when
+  // role/permission map already disqualifies the user.
+  const procurementSyncOk = canAccess(
+    claims.user_role,
+    "inventory_procurement",
+  );
+  const productionSyncOk =
     claims.user_role !== "owner" &&
     claims.user_role !== "area_manager" &&
-    canAccessProductionSurface(claims.user_role) &&
-    (await currentUserHasAnyPermissionAny(PRODUCTION_OPEN_PERMISSIONS)) &&
-    (await hasCurrentProductionBranchAccess(supabase, claims));
+    canAccessProductionSurface(claims.user_role);
 
-  const scope = await resolveInventoryBranchScope(
-    supabase,
-    claims,
-    requestedBranchId,
-  );
+  // Permission RPCs + branch scope are independent — fan them out in
+  // parallel instead of awaiting them serially via &&. Saves 2-3 RTTs
+  // on the dashboard's TTFB. resolveInventoryBranchScope only needs
+  // {supabase, claims} which are already in scope.
+  const [
+    procurementAsync,
+    productionPermissionAsync,
+    productionBranchAsync,
+    scope,
+  ] = await Promise.all([
+    procurementSyncOk
+      ? currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_READ)
+      : Promise.resolve(false),
+    productionSyncOk
+      ? currentUserHasAnyPermissionAny(PRODUCTION_OPEN_PERMISSIONS)
+      : Promise.resolve(false),
+    productionSyncOk
+      ? hasCurrentProductionBranchAccess(supabase, claims)
+      : Promise.resolve(false),
+    resolveInventoryBranchScope(supabase, claims, requestedBranchId),
+  ]);
+
+  const showProcurement = procurementSyncOk && procurementAsync;
+  const showProduction =
+    productionSyncOk && productionPermissionAsync && productionBranchAsync;
 
   const selectedBranch = scope.allowedBranches.find(
     (b) => b.id === scope.selectedBranchId,
