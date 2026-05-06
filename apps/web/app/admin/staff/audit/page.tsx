@@ -56,8 +56,14 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
     query = query.gte("at", `${params.since}T00:00:00Z`);
   }
 
-  const { data: rows } = await query;
-  const auditRows = rows ?? [];
+  // Audit log + branches list have no dependency on each other; profile
+  // lookup needs the userIds from the audit rows, so it stays sequential.
+  // Running audit + branches in parallel saves one RTT off TTFB.
+  const [auditResult, branchesResult] = await Promise.all([
+    query,
+    supabase.from("branches").select("id, name").order("name"),
+  ]);
+  const auditRows = auditResult.data ?? [];
 
   // Look up actor + target names (bulk)
   const userIds = Array.from(
@@ -74,10 +80,7 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
     (profiles ?? []).map((p) => [p.id, p.full_name]),
   );
 
-  const { data: branches } = await supabase
-    .from("branches")
-    .select("id, name")
-    .order("name");
+  const branches = branchesResult.data;
   const branchNameById = new Map<number, string>(
     (branches ?? []).map((b) => [b.id, b.name]),
   );
