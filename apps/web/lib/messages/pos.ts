@@ -174,8 +174,6 @@ export const pos = {
   mobileActionBar: {
     openAppendAria: "Mở món thêm",
     appendItems: "Món thêm",
-    openPayNowAria: "Mở thanh toán ngay",
-    payNow: "Thanh toán ngay",
     sessionOrders: "Đơn trong ca",
     openNewCartAria: "Mở giỏ đơn mới",
     newCart: "Giỏ mới",

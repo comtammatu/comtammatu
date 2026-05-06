@@ -767,6 +767,9 @@ function PosDesktopInner({
           setOrderDetailSeed(null);
           setOrderDetailSummary(null);
           setActiveTable(null);
+          // Reset orderType về home (dine_in nếu có bàn, ngược lại giữ takeaway)
+          // → trang nhảy về "Chọn bàn | Mang về" đối xứng với flow dine_in.
+          setCartOrderType(tables.length > 0 ? "dine_in" : "takeaway");
           void refreshOperational();
           return;
         }
@@ -795,7 +798,9 @@ function PosDesktopInner({
     clearCart,
     selectedTableId,
     setActiveTable,
+    setCartOrderType,
     session.id,
+    tables,
     focusOrderWorkflow,
     refreshOperational,
     router,
@@ -1455,7 +1460,6 @@ function PosDesktopInner({
         cartQuantity={cartQuantity}
         appendDraftQuantity={appendDraftQuantity}
         ordersCount={orders.length}
-        awaitingPaymentOrderId={latestAwaitingPaymentOrderId}
         onOpenOrdersDrawer={() => {
           setShowOrders(true);
           void refreshOrders();
@@ -1469,7 +1473,6 @@ function PosDesktopInner({
           setShowOrders(false);
           setCartDrawerOpen(true);
         }}
-        onOpenPayment={(orderId) => openBill(orderId, "payment")}
       />
       {mobileSidebarDrawer}
 
