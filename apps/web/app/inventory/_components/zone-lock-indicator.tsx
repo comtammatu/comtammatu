@@ -121,11 +121,39 @@ export function ZoneLockIndicator({
   }, [state.kind, effectiveHeartbeat, heartbeat]);
 
   // 1s wall clock for countdown display.
+  // Pause the clock when tab is hidden (purely cosmetic — no business
+  // impact), but NEVER touch the heartbeat above. Heartbeat is a
+  // liveness signal: pausing it would let the lock TTL expire and
+  // another counter could steal the zone (regressions.md
+  // ZONE-LOCK-HEARTBEAT-THIRD-TTL).
   useEffect(() => {
     if (state.kind !== "held") return;
-    clockTimer.current = setInterval(() => setNow(Date.now()), 1000);
+
+    function startClock() {
+      if (clockTimer.current !== null) return;
+      clockTimer.current = setInterval(() => setNow(Date.now()), 1000);
+    }
+    function stopClock() {
+      if (clockTimer.current) {
+        clearInterval(clockTimer.current);
+        clockTimer.current = null;
+      }
+    }
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible") {
+        setNow(Date.now());
+        startClock();
+      } else {
+        stopClock();
+      }
+    }
+
+    if (document.visibilityState === "visible") startClock();
+    document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => {
-      if (clockTimer.current) clearInterval(clockTimer.current);
+      stopClock();
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [state.kind]);
 
