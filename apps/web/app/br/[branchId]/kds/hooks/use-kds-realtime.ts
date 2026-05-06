@@ -346,6 +346,22 @@ export function useKdsRealtime({
     };
   }, [refreshBoardSnapshot]);
 
+  // Resume catch-up: a chef tablet briefly backgrounded (e.g. swap to
+  // recipe lookup) needs an immediate snapshot on return so a missed
+  // ticket from the disconnect window doesn't sit silent until the next
+  // 12s poll tick. Mirrors use-notifications.ts:131-139.
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        void refreshBoardSnapshotRef.current();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, []);
+
   return {
     tickets,
     orders,
