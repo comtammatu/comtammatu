@@ -5,6 +5,10 @@ import { createServiceClient } from "@comtammatu/database/supabase/service";
 import {
   submitFeedbackSchema,
   hashIp,
+  getAllowedOriginsFeedback,
+  getIpHashSalt,
+  getAppUrl,
+  getCronSecret,
   type SubmitFeedbackInput,
 } from "@comtammatu/shared/feedback";
 import {
@@ -35,10 +39,7 @@ export async function submitFeedback(
   // 3. Origin check
   const headersList = await headers();
   const origin = headersList.get("origin") ?? "";
-  const allowedOrigins = (process.env.ALLOWED_ORIGINS_FEEDBACK ?? "")
-    .split(",")
-    .map((o) => o.trim())
-    .filter(Boolean);
+  const allowedOrigins = getAllowedOriginsFeedback();
   if (allowedOrigins.length > 0 && !allowedOrigins.includes(origin)) {
     return { success: false, error: "Forbidden", errorCode: "forbidden" };
   }
@@ -46,7 +47,7 @@ export async function submitFeedback(
   // 4. Hash IP
   const xForwardedFor = headersList.get("x-forwarded-for") ?? "";
   const rawIp = xForwardedFor.split(",")[0]?.trim() ?? "unknown";
-  const salt = process.env.IP_HASH_SALT ?? "";
+  const salt = getIpHashSalt();
   let ipHash: string | null = null;
   try {
     ipHash = await hashIp(rawIp, salt);
@@ -101,8 +102,8 @@ export async function submitFeedback(
   }
 
   // 8. Fire-and-forget Telegram flush for low-rating submissions
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
-  const cronSecret = process.env.CRON_SECRET ?? "";
+  const appUrl = getAppUrl();
+  const cronSecret = getCronSecret();
 
   if (parsed.data.rating <= 3 && appUrl && cronSecret) {
     void fetch(`${appUrl}/api/cron/telegram-flush`, {

@@ -17,7 +17,11 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { enrichFeedback } from "@comtammatu/shared/ai";
-import { checkMonthlyBudget } from "@comtammatu/shared/feedback";
+import {
+  checkMonthlyBudget,
+  getAppUrl,
+  getCronSecret,
+} from "@comtammatu/shared/feedback";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -41,7 +45,7 @@ function unauthorized() {
 }
 
 export async function POST(request: Request) {
-  const expected = process.env.CRON_SECRET;
+  const expected = getCronSecret();
   if (!expected) {
     return NextResponse.json({ ok: false, error: "not configured" }, { status: 500 });
   }
@@ -153,8 +157,8 @@ export async function POST(request: Request) {
         .maybeSingle();
 
       // Fire telegram flush
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
-      const cronSecret = process.env.CRON_SECRET ?? "";
+      const appUrl = getAppUrl();
+      const cronSecret = getCronSecret();
       if (appUrl && cronSecret) {
         void fetch(`${appUrl}/api/cron/telegram-flush`, {
           method: "POST",

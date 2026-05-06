@@ -30,6 +30,9 @@ import {
 import {
   OUTBOX_MAX_ATTEMPTS,
   OUTBOX_BACKOFF_MINUTES,
+  getCronSecret,
+  getTelegramBotToken,
+  getAppUrl,
 } from "@comtammatu/shared/feedback";
 
 export const runtime = "nodejs";
@@ -69,7 +72,7 @@ function backoffMinutes(attempts: number): number {
 }
 
 export async function POST(request: Request) {
-  const expected = process.env.CRON_SECRET;
+  const expected = getCronSecret();
   if (!expected) {
     console.error("[cron/telegram-flush] CRON_SECRET not configured");
     return NextResponse.json(
@@ -86,7 +89,7 @@ export async function POST(request: Request) {
     return unauthorized();
   }
 
-  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  const botToken = getTelegramBotToken();
   if (!botToken) {
     console.error("[cron/telegram-flush] TELEGRAM_BOT_TOKEN not configured");
     return NextResponse.json(
@@ -95,7 +98,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+  const appUrl = getAppUrl();
   const supabase = createServiceClient();
   const counters = { picked: 0, sent: 0, failed: 0, dead: 0 };
 

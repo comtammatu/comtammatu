@@ -11,6 +11,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
+import { getCronSecret } from "@comtammatu/shared/feedback";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,7 +33,7 @@ function unauthorized() {
 }
 
 export async function POST(request: Request) {
-  const expected = process.env.CRON_SECRET;
+  const expected = getCronSecret();
   if (!expected) {
     console.error("[cron/feedback-retention] CRON_SECRET not configured");
     return NextResponse.json({ ok: false, error: "not configured" }, { status: 500 });

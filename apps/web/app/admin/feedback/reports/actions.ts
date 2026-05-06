@@ -1,6 +1,10 @@
 "use server";
 
 import { getAuthContext } from "@/_lib/auth";
+import {
+  getAppUrl,
+  getCronSecret,
+} from "@comtammatu/shared/feedback";
 import type { ActionResult } from "@comtammatu/shared/types";
 
 const OWNER_ONLY: readonly ["owner"] = ["owner"];
@@ -15,8 +19,8 @@ export async function triggerDailyReportNow(): Promise<
   const ctx = await getAuthContext(OWNER_ONLY);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
-  const cronSecret = process.env.CRON_SECRET ?? "";
+  const appUrl = getAppUrl();
+  const cronSecret = getCronSecret();
 
   if (!appUrl || !cronSecret) {
     return { success: false, error: "Chưa cấu hình CRON_SECRET hoặc APP_URL" };

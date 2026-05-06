@@ -19,6 +19,8 @@ import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { generateDailyReport } from "@comtammatu/shared/ai";
 import {
   checkMonthlyBudget,
+  getCronSecret,
+  getTelegramBotToken,
   type FeedbackCategory,
 } from "@comtammatu/shared/feedback";
 import type { AiSeverity } from "@comtammatu/shared/ai";
@@ -66,7 +68,7 @@ function unauthorized() {
 }
 
 export async function POST(request: Request) {
-  const expected = process.env.CRON_SECRET;
+  const expected = getCronSecret();
   if (!expected) {
     return NextResponse.json({ ok: false, error: "not configured" }, { status: 500 });
   }
@@ -79,7 +81,7 @@ export async function POST(request: Request) {
     return unauthorized();
   }
 
-  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  const botToken = getTelegramBotToken();
   const supabase = createServiceClient();
 
   const reportDate = getYesterdayInVietnam();

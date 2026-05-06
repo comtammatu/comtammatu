@@ -5,6 +5,7 @@ import {
   createTelegramDestinationSchema,
   toggleTelegramDestinationSchema,
   updateFeedbackSettingsSchema,
+  getTelegramBotToken,
 } from "@comtammatu/shared/feedback";
 import { sendTelegramMessage } from "@comtammatu/shared/telegram";
 import { getAuthContext } from "@/_lib/auth";
@@ -128,7 +129,7 @@ export async function sendTestTelegram(destinationId: number): Promise<ActionRes
     return { success: false, error: "Destination không tồn tại." };
   }
 
-  const botToken = process.env.TELEGRAM_BOT_TOKEN ?? "";
+  const botToken = getTelegramBotToken();
   if (!botToken) {
     return { success: false, error: "TELEGRAM_BOT_TOKEN chưa được cấu hình." };
   }
