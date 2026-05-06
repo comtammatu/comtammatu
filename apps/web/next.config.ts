@@ -40,6 +40,9 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: "4mb",
     },
+    // Per-icon tree-shaking for lucide-react. Without this, importing
+    // any lucide icon pulls the full barrel into route bundles.
+    optimizePackageImports: ["lucide-react"],
   },
 };
 
