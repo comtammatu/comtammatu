@@ -1,5 +1,6 @@
 import { createClient } from "@comtammatu/database/supabase/server";
 import { loadAuthState } from "@/_lib/auth";
+import { AppPage, AppPageHeader } from "@/components/surface";
 import { FeedbackInboxTable } from "./_components/feedback-inbox-table";
 import type { FeedbackRow } from "./_components/feedback-inbox-table";
 
@@ -115,11 +116,12 @@ export default async function FeedbackPage({
     }));
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Phản ánh khách</h1>
-      </div>
+    <AppPage>
+      <AppPageHeader
+        title="Phản ánh khách"
+        description="Danh sách phản hồi từ khách hàng qua mã QR."
+      />
       <FeedbackInboxTable feedbacks={feedbacks} />
-    </div>
+    </AppPage>
   );
 }

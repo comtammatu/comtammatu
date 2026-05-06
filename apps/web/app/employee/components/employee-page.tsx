@@ -8,6 +8,7 @@ import {
   Item,
   ItemActions,
   ItemContent,
+  ItemDescription,
   ItemGroup,
   ItemMedia,
   ItemTitle,
@@ -132,8 +133,8 @@ export function EmployeeDetailList({
       className={cn(
         "grid gap-x-4 gap-y-3 text-sm",
         columns === 1 && "grid-cols-1",
-        columns === 2 && "grid-cols-2",
-        columns === 3 && "grid-cols-3",
+        columns === 2 && "grid-cols-1 sm:grid-cols-2",
+        columns === 3 && "grid-cols-1 sm:grid-cols-3",
         className,
       )}
     >
@@ -189,6 +190,7 @@ export function EmployeeActionItem({
   href,
   icon: Icon,
   title,
+  description,
 }: EmployeeActionItemProps) {
   return (
     <Item asChild variant="outline" className="items-center">
@@ -200,6 +202,9 @@ export function EmployeeActionItem({
         ) : null}
         <ItemContent>
           <ItemTitle>{title}</ItemTitle>
+          {description ? (
+            <ItemDescription>{description}</ItemDescription>
+          ) : null}
         </ItemContent>
         <ItemActions>
           <IconChevronRight className="size-4 text-muted-foreground" />

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { loadAuthState } from "@/_lib/auth";
+import { AppPage, AppPageHeader } from "@/components/surface";
 import { QrManagementClient } from "./_components/qr-management-client";
 import type { QrCodeRow, BranchOption } from "./_components/qr-management-client";
 
@@ -49,9 +50,12 @@ export default async function QrPage() {
   }));
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-xl font-semibold">Quản lý QR codes</h1>
+    <AppPage>
+      <AppPageHeader
+        title="Quản lý QR codes"
+        description="Tạo và quản lý mã QR cho từng chi nhánh để thu thập phản hồi khách hàng."
+      />
       <QrManagementClient qrCodes={qrCodes} branches={branchOptions} />
-    </div>
+    </AppPage>
   );
 }

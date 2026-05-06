@@ -122,7 +122,43 @@ Per owner decision 2026-05-07: `/inventory/m/*` (14 files) merge into responsive
 
 After merge, delete `m/` subtree.
 
+## After Wave 2 (2026-05-07)
+
+Surfaces migrated: staff list, staff audit, staff permissions detail (+ Tabs), reports (3 PageHero migrations), crm, feedback inbox/qr/reports/settings, accounting/periods.
+
+New helper: `fetchEntityAuditLogs` added to `apps/web/app/admin/_lib/audit.ts` (explicit columns, entity filter, separate from frozen finance audit helper).
+
+### Adapter coverage delta
+
+| Adapter | Wave 1 | After Wave 2 | Delta |
+|---|---|---|---|
+| AppPage | 12 | ~20 | +8 |
+| AppPageHeader | 9 | 21 | +12 |
+| AppSection | 9 | 10 | +1 |
+| AppToolbar | 9 | 10 | +1 |
+| AppEmptyState | 20 | 20 | 0 (no net change; replaced raw empties with AppEmptyState) |
+| AppPageTabs | 2 | 11 | +9 |
+
+### Anti-pattern delta
+
+| Pattern | Wave 1 | After Wave 2 | Target | Status |
+|---|---|---|---|---|
+| `AppPageHeader` callers (files) | 9 | 21 | ≥25 | partial — Wave 3 will add inventory |
+| Hand-rolled Empty `border bg-card` | 5 | 5 | ≤4 | deferred — remaining instances outside Wave 2 scope |
+| `PageHero` callers | 15 | 11 | ≤11 | ✓ met |
+| `font-heading text-2xl\|text-3xl` raw | 22 | 19 | ≤17 | -3 progress; remainder in inventory/finance (Wave 3-4) |
+| `AppPageTabs` usages | 5 | 11 | ≥1 | ✓ first detail-page Tabs live at /admin/staff/[id]/permissions |
+
+### Key decisions made in Wave 2
+
+- Detail-page Tabs pattern established at `/admin/staff/[id]/permissions[Tổng quan|Quyền|Lịch sử]`. History tab uses `permission_audit_log` (not generic `audit_logs` — staff permissions don't go through `logAudit` RPC).
+- `fetchEntityAuditLogs` added for future entity-specific audit feeds in Wave 3+ detail pages.
+- `canCloseOrReopen` threaded to `PeriodAdminClient` per rule UI-PERMISSION-FLAGS-THREADED-NOT-SERVER-ONLY.
+- AlertDialog for close/reopen already in `PeriodCloseCard` (inventory primitive); `period-admin-client.tsx` delegates to it via `strictConfirm` prop.
+- `feedback/settings/page.tsx` migrated from raw `Tabs` to `AppPageTabs`.
+
 ## Open / deferred decisions
 
 - Dashboard v1 (`/inventory`) vs v2 (`/inventory/dashboard`) — debate in progress (background agent). Outcome lands before Wave 3.
 - Whether `app-shell.tsx` is still used as bridge or fully retired — investigate during Wave 1 (notifications uses it? admin uses it via admin-shell wrap?).
+- Hand-rolled `Empty className="border bg-card"` count stuck at 5 — remaining instances are in inventory surfaces (Wave 3 scope).

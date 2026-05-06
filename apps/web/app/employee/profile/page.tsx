@@ -1,15 +1,9 @@
-import {
-  LogOut as IconLogout,
-  ShieldCheck as IconShieldCheck,
-  User as IconUser,
-} from "lucide-react";
+import { LogOut as IconLogout, User as IconUser } from "lucide-react";
 import { ROLE_LABEL_VI } from "@comtammatu/shared/auth";
 import { ACTIONS_VI, BRANCH_VI } from "@comtammatu/shared/messages";
-import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { loadAuthState } from "@/_lib/auth";
-import { TrustScoreBadge } from "@/inventory/_components/trust-score-badge";
-import { getMyTrustScore } from "@/inventory/trust-actions";
+import { messages } from "@lib/messages";
 import {
   EmployeeDetailList,
   EmployeePage,
@@ -17,6 +11,8 @@ import {
 } from "../components/employee-page";
 import { getEmployeeContext } from "../_lib/employee-context";
 import { formatDateVN } from "../_lib/vn-business-date";
+
+const copy = messages.employee.profile;
 
 export default async function ProfilePage() {
   const { session, claims } = await loadAuthState();
@@ -33,88 +29,45 @@ export default async function ProfilePage() {
         .maybeSingle()
     : { data: null };
 
-  const trustRes = ctx?.branchId ? await getMyTrustScore(ctx.branchId) : null;
-  const trust = trustRes?.success ? trustRes.data : null;
-
   const displayName =
     session.user.user_metadata?.["full_name"] ??
     session.user.email ??
-    "Nhân viên";
+    copy.fallbackName;
 
   return (
     <EmployeePage
-      title="Cá nhân"
-      description="Hồ sơ đang dùng cho chấm công, lịch ca và quyền tự phục vụ."
+      title={copy.title}
+      description={copy.description}
       badge={{ children: roleLabel, variant: "outline" }}
     >
       <EmployeePanel
         icon={IconUser}
         title={displayName}
-        description={session.user.email ?? "Chưa có email"}
+        description={session.user.email ?? copy.noEmail}
         tone="info"
       >
         <EmployeeDetailList
           rows={[
             {
               label: BRANCH_VI.long,
-              value: ctx?.branchName ?? "Chưa gắn chi nhánh",
+              value: ctx?.branchName ?? copy.noBranch,
               muted: !ctx?.branchName,
             },
             {
-              label: "Mã nhân viên",
-              value: employee?.employee_code ?? "Chưa có",
+              label: copy.employeeCode,
+              value: employee?.employee_code ?? copy.noEmployeeCode,
               muted: !employee?.employee_code,
             },
             {
-              label: "Ngày bắt đầu",
+              label: copy.startDate,
               value: employee?.start_date
                 ? formatDateVN(employee.start_date)
-                : "Chưa có",
+                : copy.noStartDate,
               muted: !employee?.start_date,
             },
           ]}
         />
       </EmployeePanel>
-
-      {trust ? (
-        <EmployeePanel
-          icon={IconShieldCheck}
-          title="Ghi nhận vận hành"
-          description="Chỉ hiển thị khi tài khoản có dữ liệu tự xem."
-          tone="info"
-        >
-          <EmployeeDetailList
-            columns={1}
-            rows={[
-              {
-                label: "Điểm tin cậy",
-                value: (
-                  <TrustScoreBadge
-                    score={trust.score}
-                    computedScore={trust.computedScore}
-                  />
-                ),
-              },
-              {
-                label: "GRN 30 ngày",
-                value: <Badge variant="outline">{trust.grnCount30d}</Badge>,
-              },
-              ...(trust.varianceIncidents30d > 0
-                ? [
-                    {
-                      label: "Sự cố",
-                      value: (
-                        <Badge variant="warning">
-                          {trust.varianceIncidents30d}
-                        </Badge>
-                      ),
-                    },
-                  ]
-                : []),
-            ]}
-          />
-        </EmployeePanel>
-      ) : null}
 
       <form action="/api/auth/signout" method="post">
         <Button type="submit" variant="outline">

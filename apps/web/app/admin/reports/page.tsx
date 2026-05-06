@@ -11,7 +11,7 @@ import {
 import { canAccess } from "@comtammatu/shared/auth";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import { loadAuthState } from "@/_lib/auth";
-import { PageHero } from "@/components/page-hero";
+import { AppPage, AppPageHeader } from "@/components/surface";
 import {
   SurfaceLinkCard,
   type SurfaceLinkCardProps,
@@ -100,8 +100,8 @@ export default async function ReportsPage() {
   }
 
   return (
-    <div className="space-y-5 lg:space-y-6">
-      <PageHero
+    <AppPage>
+      <AppPageHeader
         eyebrow={APP_COPY_VI.executiveReporting}
         title="Báo cáo điều hành"
         description="Xem nhanh các báo cáo quan trọng về doanh thu, tồn kho, tài chính và tiền lương."
@@ -170,6 +170,6 @@ export default async function ReportsPage() {
           </CardContent>
         </Card>
       ) : null}
-    </div>
+    </AppPage>
   );
 }
