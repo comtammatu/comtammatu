@@ -18,10 +18,11 @@ import {
   Utensils as IconToolsKitchen,
   Wallet as IconWallet,
 } from "lucide-react";
-import { canAccess, type StaffRole } from "@comtammatu/shared/auth";
 import {
+  canAccess,
   resolveAdminNavGroups,
   type ResolvedNavGroup as SharedResolvedNavGroup,
+  type StaffRole,
 } from "@comtammatu/shared/auth";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import { Button } from "@comtammatu/ui/components/button";

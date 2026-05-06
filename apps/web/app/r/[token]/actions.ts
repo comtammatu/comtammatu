@@ -101,37 +101,26 @@ export async function submitFeedback(
   }
 
   // 8. Fire-and-forget Telegram flush for low-rating submissions
-  if (parsed.data.rating <= 3) {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
-    const cronSecret = process.env.CRON_SECRET ?? "";
-    if (appUrl && cronSecret) {
-      // Intentionally NOT awaited
-      void fetch(`${appUrl}/api/cron/telegram-flush`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${cronSecret}` },
-      }).catch(() => {
-        // Fire-and-forget — ignore errors
-      });
-    }
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+  const cronSecret = process.env.CRON_SECRET ?? "";
+
+  if (parsed.data.rating <= 3 && appUrl && cronSecret) {
+    void fetch(`${appUrl}/api/cron/telegram-flush`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${cronSecret}` },
+    }).catch(() => {});
   }
 
   // 9. Fire-and-forget AI enrichment
-  {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
-    const cronSecret = process.env.CRON_SECRET ?? "";
-    if (appUrl && cronSecret && feedbackId) {
-      // Intentionally NOT awaited — enrichment happens asynchronously
-      void fetch(`${appUrl}/api/ai/enrich-feedback`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${cronSecret}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ feedback_id: feedbackId as number }),
-      }).catch(() => {
-        // Fire-and-forget — ignore errors
-      });
-    }
+  if (appUrl && cronSecret && feedbackId) {
+    void fetch(`${appUrl}/api/ai/enrich-feedback`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${cronSecret}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ feedback_id: feedbackId as number }),
+    }).catch(() => {});
   }
 
   return { success: true, data: { feedback_id: feedbackId as number } };

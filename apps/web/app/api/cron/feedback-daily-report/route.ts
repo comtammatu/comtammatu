@@ -36,7 +36,6 @@ const VN_OFFSET_MS = 7 * 60 * 60 * 1000;
 function getYesterdayInVietnam(): string {
   const nowUtc = Date.now();
   const nowVn = new Date(nowUtc + VN_OFFSET_MS);
-  // Subtract 1 day
   const yesterday = new Date(nowVn.getTime() - 24 * 60 * 60 * 1000);
   const y = yesterday.getUTCFullYear();
   const m = String(yesterday.getUTCMonth() + 1).padStart(2, "0");
@@ -45,7 +44,6 @@ function getYesterdayInVietnam(): string {
 }
 
 function toVnDateStart(dateStr: string): string {
-  // dateStr = YYYY-MM-DD → start of day in UTC
   return new Date(`${dateStr}T00:00:00+07:00`).toISOString();
 }
 
@@ -180,7 +178,6 @@ export async function POST(request: Request) {
           continue;
         }
 
-        // Generate report
         const reportResult = await generateDailyReport({
           branch_name: scope.branch_name,
           report_date: reportDate,
@@ -195,7 +192,6 @@ export async function POST(request: Request) {
           })),
         });
 
-        // INSERT report
         const { error: insertErr } = await supabase
           .from("feedback_daily_reports")
           .insert({

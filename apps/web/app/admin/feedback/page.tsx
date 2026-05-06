@@ -19,7 +19,6 @@ export default async function FeedbackPage({
 
   const supabase = await createClient();
 
-  // Build query from VIEW (masked phone)
   let query = supabase
     .from("feedbacks_with_masked_phone")
     .select(
