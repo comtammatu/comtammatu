@@ -3,7 +3,6 @@
 import { memo } from "react";
 import { Button } from "@comtammatu/ui/components/button";
 import {
-  CreditCard as IconCreditCard,
   Plus as IconPlus,
   Receipt as IconReceipt,
   ShoppingCart as IconShoppingCart,
@@ -17,15 +16,12 @@ export interface PosMobileActionBarProps {
   cartQuantity: number;
   appendDraftQuantity: number;
   ordersCount: number;
-  awaitingPaymentOrderId: number | null;
   /** Opens the orders drawer view (refreshes then shows). */
   onOpenOrdersDrawer: () => void;
   /** Opens the cart drawer in its non-orders view. */
   onOpenCartDrawer: () => void;
   /** Opens the append-draft drawer while adding items to an existing order. */
   onOpenAppendDrawer: () => void;
-  /** Opens the bill in payment mode for the most urgent unpaid order. */
-  onOpenPayment: (orderId: number) => void;
 }
 
 const ACTION_BAR_CLASS =
@@ -44,11 +40,9 @@ function PosMobileActionBarComponent({
   cartQuantity,
   appendDraftQuantity,
   ordersCount,
-  awaitingPaymentOrderId,
   onOpenOrdersDrawer,
   onOpenCartDrawer,
   onOpenAppendDrawer,
-  onOpenPayment,
 }: PosMobileActionBarProps) {
   if (!isMobile) return null;
 
@@ -71,25 +65,10 @@ function PosMobileActionBarComponent({
     );
   }
 
-  // Chưa chọn bàn / chưa setup → CTA duy nhất là mở danh sách đơn trong ca,
-  // tránh ngộ nhận có thể đặt món khi context chưa ready.
+  // Chưa chọn bàn / chưa setup → CTA duy nhất là mở danh sách đơn trong ca.
+  // Cashier cần truy cập đơn cũ để append món hoặc thanh toán nhiều đơn mang
+  // về song song — không thể ép vào 1 đơn duy nhất.
   if (!menuContextReady) {
-    if (awaitingPaymentOrderId !== null) {
-      return (
-        <div className={ACTION_BAR_CLASS}>
-          <Button
-            type="button"
-            className={ACTION_PRIMARY_BUTTON_CLASS}
-            onClick={() => onOpenPayment(awaitingPaymentOrderId)}
-            aria-label={messages.pos.mobileActionBar.openPayNowAria}
-          >
-            <IconCreditCard data-icon="inline-start" />
-            <span>{messages.pos.mobileActionBar.payNow}</span>
-          </Button>
-        </div>
-      );
-    }
-
     return (
       <div className={ACTION_BAR_CLASS}>
         <Button
@@ -108,26 +87,6 @@ function PosMobileActionBarComponent({
     );
   }
 
-  // Cashier đang build giỏ — single CTA "Giỏ mới" giữ focus 1 task. Bỏ
-  // "Đơn trong ca" để không pull đơn khác lên giữa lúc đặt món; cashier
-  // xem orders qua sidebar/header khi cart trống.
-  if (cartQuantity > 0) {
-    return (
-      <div className={ACTION_BAR_CLASS}>
-        <Button
-          type="button"
-          className={ACTION_PRIMARY_BUTTON_CLASS}
-          onClick={onOpenCartDrawer}
-          aria-label={messages.pos.mobileActionBar.openNewCartAria}
-        >
-          <IconShoppingCart data-icon="inline-start" />
-          <span>{messages.pos.mobileActionBar.newCart}</span>
-          <span className="tabular-nums">{cartQuantity}</span>
-        </Button>
-      </div>
-    );
-  }
-
   return (
     <div className={ACTION_BAR_CLASS}>
       <Button
@@ -138,19 +97,10 @@ function PosMobileActionBarComponent({
       >
         <IconShoppingCart data-icon="inline-start" />
         <span>{messages.pos.mobileActionBar.newCart}</span>
+        {cartQuantity > 0 && (
+          <span className="tabular-nums">{cartQuantity}</span>
+        )}
       </Button>
-      {awaitingPaymentOrderId !== null && (
-        <Button
-          type="button"
-          variant="secondary"
-          className={ACTION_SECONDARY_BUTTON_CLASS}
-          onClick={() => onOpenPayment(awaitingPaymentOrderId)}
-          aria-label={messages.pos.mobileActionBar.openPayNowAria}
-        >
-          <IconCreditCard data-icon="inline-start" />
-          <span>{messages.pos.mobileActionBar.payNow}</span>
-        </Button>
-      )}
     </div>
   );
 }
