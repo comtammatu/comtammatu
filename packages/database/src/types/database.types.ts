@@ -7437,6 +7437,10 @@ export type Database = {
         Args: { p_order_id: number; p_reason: string }
         Returns: Json
       }
+      cancel_pending_payment: {
+        Args: { p_payment_id: number }
+        Returns: undefined
+      }
       cancel_production_order: { Args: { p_order_id: number }; Returns: Json }
       check_order_ready: { Args: { p_order_id: number }; Returns: undefined }
       claim_print_job: {
@@ -7963,6 +7967,34 @@ export type Database = {
         }[]
       }
       get_pos_session_report: { Args: { p_session_id: number }; Returns: Json }
+      get_revenue_by_cashier: {
+        Args: {
+          p_branch_id?: number
+          p_end_date?: string
+          p_start_date?: string
+        }
+        Returns: {
+          cash_revenue: number
+          cashier_id: string
+          cashier_name: string
+          net_revenue: number
+          order_count: number
+          qr_revenue: number
+        }[]
+      }
+      get_revenue_by_hour: {
+        Args: {
+          p_branch_id?: number
+          p_end_date?: string
+          p_start_date?: string
+        }
+        Returns: {
+          dow: number
+          hour: number
+          net_revenue: number
+          order_count: number
+        }[]
+      }
       get_revenue_kpis: {
         Args: { p_branch_id: number; p_end_date: string; p_start_date: string }
         Returns: {

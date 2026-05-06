@@ -1,14 +1,28 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from "@comtammatu/ui/components/card";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  Tooltip,
+  XAxis,
+  YAxis,
+  type ChartConfig,
+} from "@comtammatu/ui/components/chart";
 import {
   Table,
   TableBody,
@@ -18,92 +32,79 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
-import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@comtammatu/ui/components/select";
 import {
   Empty,
   EmptyHeader,
   EmptyTitle,
 } from "@comtammatu/ui/components/empty";
 import { Button } from "@comtammatu/ui/components/button";
-import { Input } from "@comtammatu/ui/components/input";
-import { Label } from "@comtammatu/ui/components/label";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { formatVND } from "@comtammatu/shared/format";
-import { FORM_VI } from "@comtammatu/shared/messages";
-import { refreshMaterializedViews } from "../actions";
-import type { RevenueGranularity } from "../actions";
-import type { FinanceLayoutMode } from "../page";
-import { useFinanceRealtimeRefresh } from "../use-finance-realtime-refresh";
+import type { FinanceDashboardSummary } from "../actions";
+import type {
+  FinanceDashboardHealth,
+  TopItemRow,
+} from "../_lib/finance-types";
+import type { FinanceParams } from "../_lib/finance-params";
+import { ChartCard } from "../components/chart-card";
+import {
+  buildCompareDelta,
+  type CompareDelta,
+} from "../components/compare-chip";
+import {
+  ExportToolbar,
+  type CsvSection,
+} from "../components/export-toolbar";
+import { FilterBar } from "../components/filter-bar";
+import { HeatmapGrid, type HeatmapCell } from "../components/heatmap-grid";
+import { KpiCard } from "../components/kpi-card";
+import { MvStalenessBanner } from "../components/mv-staleness-banner";
+import { WorkQueueStrip } from "../components/work-queue-strip";
 import { messages } from "@lib/messages";
 import type {
   AccessibleBranch,
   CashVarianceSummary,
+  CashierRow,
   ComparePeriod,
+  HourBucket,
   KpiBundle,
   ReconcileSnippet,
   RollupRow,
 } from "./page";
 
+const filterCopy = messages.finance.filterBar;
+const revCopy = messages.finance.revenue;
+const reconCopy = messages.finance.reconcileCard;
+const cashCopy = messages.finance.cashVarianceCard;
+
 interface Props {
+  params: FinanceParams;
   branches: AccessibleBranch[];
-  initialBranchId: number | null;
-  initialRows: RollupRow[];
-  initialKpis: KpiBundle | null;
-  initialCompare: ComparePeriod | null;
-  initialReconcile: ReconcileSnippet | null;
-  initialCashVariance: CashVarianceSummary | null;
-  initialStart: string;
-  initialEnd: string;
-  initialGranularity: RevenueGranularity;
-  initialLayout: FinanceLayoutMode;
-  initialError: string | null;
+  kpis: KpiBundle | null;
+  compare: ComparePeriod | null;
+  rollupRows: RollupRow[];
+  topItems: TopItemRow[];
+  hourBuckets: HourBucket[];
+  hourlyEnabled: boolean;
+  cashiers: CashierRow[];
+  reconcile: ReconcileSnippet | null;
+  cashVariance: CashVarianceSummary | null;
+  dashboardSummary: FinanceDashboardSummary | null;
+  dashboardHealth: FinanceDashboardHealth;
+  invoiceAttentionCount: number;
+  resolvedStart: string;
+  resolvedEnd: string;
 }
 
-const revenueCopy = messages.finance.revenueReport;
+// ─── Aggregation helpers ────────────────────────────────────────
 
-const GRANULARITY_LABEL: Record<RevenueGranularity, string> = {
-  day: revenueCopy.granularityLabel.day,
-  week: revenueCopy.granularityLabel.week,
-  month: revenueCopy.granularityLabel.month,
-};
-
-const PERIOD_HEADER_LABEL: Record<RevenueGranularity, string> = {
-  day: revenueCopy.periodHeader.day,
-  week: revenueCopy.periodHeader.week,
-  month: revenueCopy.periodHeader.month,
-};
-
-const ALL_BRANCHES_VALUE = "all";
-
-function formatPercent(value: number, total: number): string {
-  if (total <= 0) return "0%";
-  return `${Math.round((value / total) * 100)}%`;
-}
-
-function formatRefreshedAt(iso: string): string {
-  const d = new Date(iso);
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mm = String(d.getMinutes()).padStart(2, "0");
-  const minutesAgo = Math.max(
-    0,
-    Math.floor((Date.now() - d.getTime()) / 60000),
-  );
-  return revenueCopy.refreshedAt(`${hh}:${mm}`, minutesAgo);
-}
-
-interface AggregatedRow {
+interface PeriodAggregateRow {
   period_start: string;
   period_end: string;
   period_label: string;
   order_count: number;
   total_revenue: number;
+  subtotal_revenue: number;
   total_tax: number;
   cash_revenue: number;
   vietqr_revenue: number;
@@ -112,17 +113,15 @@ interface AggregatedRow {
   branch_ids: number[];
 }
 
-// For "all branches" mode the RPC returns rows per (period × branch).
-// Aggregate them per period for the time-series table; the per-branch
-// breakdown is shown separately in BranchBreakdown.
-function aggregateRowsByPeriod(rows: RollupRow[]): AggregatedRow[] {
-  const map = new Map<string, AggregatedRow>();
+function aggregateByPeriod(rows: RollupRow[]): PeriodAggregateRow[] {
+  const map = new Map<string, PeriodAggregateRow>();
   for (const r of rows) {
     const key = `${r.period_start}|${r.period_end}`;
     const existing = map.get(key);
     if (existing) {
       existing.order_count += r.order_count;
       existing.total_revenue += r.total_revenue ?? 0;
+      existing.subtotal_revenue += r.subtotal_revenue ?? 0;
       existing.total_tax += r.total_tax ?? 0;
       existing.cash_revenue += r.cash_revenue ?? 0;
       existing.vietqr_revenue += r.vietqr_revenue ?? 0;
@@ -138,6 +137,7 @@ function aggregateRowsByPeriod(rows: RollupRow[]): AggregatedRow[] {
         period_label: r.period_label,
         order_count: r.order_count,
         total_revenue: r.total_revenue ?? 0,
+        subtotal_revenue: r.subtotal_revenue ?? 0,
         total_tax: r.total_tax ?? 0,
         cash_revenue: r.cash_revenue ?? 0,
         vietqr_revenue: r.vietqr_revenue ?? 0,
@@ -152,1043 +152,833 @@ function aggregateRowsByPeriod(rows: RollupRow[]): AggregatedRow[] {
   );
 }
 
+interface BranchAggregateRow {
+  branchId: number;
+  revenue: number;
+  orders: number;
+}
+
+function aggregateByBranch(
+  rows: RollupRow[],
+  branches: AccessibleBranch[],
+): Array<BranchAggregateRow & { name: string }> {
+  const map = new Map<number, BranchAggregateRow>();
+  for (const r of rows) {
+    const existing = map.get(r.branch_id);
+    const rev = r.subtotal_revenue ?? r.total_revenue ?? 0;
+    if (existing) {
+      existing.revenue += rev;
+      existing.orders += r.order_count;
+    } else {
+      map.set(r.branch_id, {
+        branchId: r.branch_id,
+        revenue: rev,
+        orders: r.order_count,
+      });
+    }
+  }
+  const branchName = (id: number) =>
+    branches.find((b) => b.id === id)?.name ??
+    messages.finance.common.branchFallback(id);
+  return Array.from(map.values())
+    .map((r) => ({ ...r, name: branchName(r.branchId) }))
+    .sort((a, b) => b.revenue - a.revenue);
+}
+
+function bucketsToHeatmap(buckets: HourBucket[]): HeatmapCell[] {
+  return buckets.map((b) => ({
+    dow: b.dow,
+    hour: b.hour,
+    value: Number(b.net_revenue),
+    orderCount: Number(b.order_count),
+  }));
+}
+
+// ─── Component ─────────────────────────────────────────────────
+
 export function RevenueClient({
+  params,
   branches,
-  initialBranchId,
-  initialRows,
-  initialKpis,
-  initialCompare,
-  initialReconcile,
-  initialCashVariance,
-  initialStart,
-  initialEnd,
-  initialGranularity,
-  initialLayout,
-  initialError,
+  kpis,
+  compare,
+  rollupRows,
+  topItems,
+  hourBuckets,
+  hourlyEnabled,
+  cashiers,
+  reconcile,
+  cashVariance,
+  dashboardSummary,
+  dashboardHealth,
+  invoiceAttentionCount,
+  resolvedStart,
+  resolvedEnd,
 }: Props) {
-  const router = useRouter();
-  const [granularity, setGranularity] =
-    useState<RevenueGranularity>(initialGranularity);
-  const [layout, setLayout] = useState<FinanceLayoutMode>(initialLayout);
-  const [startDate, setStartDate] = useState(initialStart);
-  const [endDate, setEndDate] = useState(initialEnd);
-  const [branchId, setBranchId] = useState<number | null>(initialBranchId);
-  const [compareEnabled, setCompareEnabled] = useState<boolean>(
-    Boolean(initialCompare),
+  const periodRows = useMemo(
+    () => aggregateByPeriod(rollupRows),
+    [rollupRows],
   );
-  const [isPending, startTransition] = useTransition();
-  const [refreshError, setRefreshError] = useState<string | null>(null);
-
-  useFinanceRealtimeRefresh({ branchId });
-
-  const branchLabel = useMemo(() => {
-    if (branchId == null) return messages.finance.common.allBranches;
-    return (
-      branches.find((b) => b.id === branchId)?.name ??
-      messages.finance.common.branchFallback(branchId)
-    );
-  }, [branchId, branches]);
-
-  const aggregated = useMemo(
-    () => aggregateRowsByPeriod(initialRows),
-    [initialRows],
+  const branchRows = useMemo(
+    () => aggregateByBranch(rollupRows, branches),
+    [rollupRows, branches],
+  );
+  const heatmapCells = useMemo(
+    () => bucketsToHeatmap(hourBuckets),
+    [hourBuckets],
   );
 
-  const branchTotals = useMemo(() => {
-    if (branchId != null) return [];
-    const map = new Map<
-      number,
-      { branchId: number; revenue: number; orders: number }
-    >();
-    for (const r of initialRows) {
-      const existing = map.get(r.branch_id);
-      const rev = r.total_revenue ?? 0;
-      if (existing) {
-        existing.revenue += rev;
-        existing.orders += r.order_count;
-      } else {
-        map.set(r.branch_id, {
-          branchId: r.branch_id,
-          revenue: rev,
-          orders: r.order_count,
-        });
-      }
-    }
-    return Array.from(map.values()).sort((a, b) => b.revenue - a.revenue);
-  }, [initialRows, branchId]);
-
-  function pushFilters(next: {
-    granularity?: RevenueGranularity;
-    start?: string;
-    end?: string;
-    branchId?: number | null;
-    compare?: boolean;
-    layout?: FinanceLayoutMode;
-  }) {
-    const params = new URLSearchParams();
-    const g = next.granularity ?? granularity;
-    const s = next.start ?? startDate;
-    const e = next.end ?? endDate;
-    const b = next.branchId === undefined ? branchId : next.branchId;
-    const c = next.compare === undefined ? compareEnabled : next.compare;
-    const l = next.layout ?? layout;
-    params.set("granularity", g);
-    params.set("start", s);
-    params.set("end", e);
-    params.set("branch", b == null ? ALL_BRANCHES_VALUE : String(b));
-    params.set("layout", l);
-    if (c) params.set("compare", "prev");
-    startTransition(() => {
-      router.replace(`/finance/revenue?${params.toString()}`);
-      router.refresh();
-    });
-  }
-
-  function handleToggleCompare() {
-    const next = !compareEnabled;
-    setCompareEnabled(next);
-    pushFilters({ compare: next });
-  }
-
-  function handleLayoutChange(next: FinanceLayoutMode) {
-    setLayout(next);
-    pushFilters({ layout: next });
-  }
-
-  function handleGranularityChange(next: string) {
-    const value = next as RevenueGranularity;
-    // Auto-shift range để phù hợp granularity mới: day=30d, week=12w, month=12m.
-    const today = new Date();
-    const end = today.toISOString().slice(0, 10);
-    const d = new Date(today);
-    if (value === "day") d.setDate(d.getDate() - 29);
-    else if (value === "week") d.setDate(d.getDate() - 7 * 12);
-    else d.setMonth(d.getMonth() - 12);
-    const start = d.toISOString().slice(0, 10);
-    setGranularity(value);
-    setStartDate(start);
-    setEndDate(end);
-    pushFilters({ granularity: value, start, end });
-  }
-
-  function handleBranchChange(value: string) {
-    const next = value === ALL_BRANCHES_VALUE ? null : Number(value);
-    setBranchId(next);
-    pushFilters({ branchId: next });
-  }
-
-  function handleApplyDateRange() {
-    pushFilters({});
-  }
-
-  async function handleRefresh() {
-    setRefreshError(null);
-    startTransition(async () => {
-      const res = await refreshMaterializedViews();
-      if (!res.success) {
-        setRefreshError(res.error ?? "Không thể làm mới dữ liệu.");
-        return;
-      }
-      router.refresh();
-    });
-  }
-
-  function handleExportCsv() {
-    // CSV xuất từ aggregated rows (period-level đã gộp branch). Format
-    // VN-friendly: dấu chấm làm thousand separator, không format số kiểu
-    // Excel làm mất leading zero. UTF-8 BOM giúp Excel mở đúng dấu.
-    const sep = ";"; // semicolon — Excel VN locale parse số có dấu phẩy
-    const header = [
-      "Kỳ",
-      "Số đơn",
-      "Lượt khách",
-      "Doanh thu",
-      "Tiền mặt",
-      "VietQR",
-      "MoMo",
-      "VAT",
-    ];
-    const escape = (s: string) =>
-      s.includes(sep) || s.includes('"') || s.includes("\n")
-        ? `"${s.replace(/"/g, '""')}"`
-        : s;
-    const lines: string[] = [header.map(escape).join(sep)];
-    for (const r of aggregated) {
-      lines.push(
-        [
-          r.period_label,
-          String(r.order_count),
-          String(r.total_covers),
-          String(Math.round(r.total_revenue)),
-          String(Math.round(r.cash_revenue)),
-          String(Math.round(r.vietqr_revenue)),
-          String(Math.round(r.momo_revenue)),
-          String(Math.round(r.total_tax)),
-        ]
-          .map(escape)
-          .join(sep),
-      );
-    }
-    if (kpis) {
-      lines.push(
-        [
-          "Tổng",
-          String(kpis.order_count),
-          String(kpis.total_covers),
-          String(Math.round(kpis.net_revenue)),
-          String(Math.round(kpis.cash_revenue)),
-          String(Math.round(kpis.vietqr_revenue)),
-          String(Math.round(kpis.momo_revenue)),
-          String(Math.round(kpis.total_tax)),
-        ]
-          .map(escape)
-          .join(sep),
-      );
-    }
-    const csv = "﻿" + lines.join("\n"); // BOM
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const branchSlug = branchId == null ? "all" : `cn-${branchId}`;
-    const filename = `doanh-thu-${branchSlug}-${startDate}_${endDate}.csv`;
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    a.style.display = "none";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }
-
-  const kpis = initialKpis;
-  const prev = initialCompare?.kpis ?? null;
-  const grossRevenue = kpis ? kpis.subtotal_revenue + kpis.discount_amount : 0;
-  const aov =
+  // ─── KPI semantics (BA §1, Q1-Q3) ──────────────────────────
+  const subtotal = kpis?.subtotal_revenue ?? 0;
+  const grossSales = subtotal + (kpis?.discount_amount ?? 0);
+  const aovPerOrder =
+    kpis && kpis.order_count > 0 ? Math.round(subtotal / kpis.order_count) : 0;
+  const aovPerCover =
     kpis && kpis.total_covers > 0
-      ? Math.round(kpis.net_revenue / kpis.total_covers)
-      : 0;
-  const prevAov =
-    prev && prev.total_covers > 0
-      ? Math.round(prev.net_revenue / prev.total_covers)
-      : 0;
-  const voidedPct =
-    kpis && kpis.net_revenue > 0
-      ? (kpis.voided_amount / (kpis.net_revenue + kpis.voided_amount)) * 100
-      : 0;
-  const prevVoidedPct =
-    prev && prev.net_revenue > 0
-      ? (prev.voided_amount / (prev.net_revenue + prev.voided_amount)) * 100
+      ? Math.round(subtotal / kpis.total_covers)
       : 0;
   const discountPct =
-    kpis && grossRevenue > 0 ? (kpis.discount_amount / grossRevenue) * 100 : 0;
-  const prevGrossRevenue = prev
-    ? prev.subtotal_revenue + prev.discount_amount
-    : 0;
-  const prevDiscountPct =
-    prev && prevGrossRevenue > 0
-      ? (prev.discount_amount / prevGrossRevenue) * 100
-      : 0;
+    grossSales > 0 ? ((kpis?.discount_amount ?? 0) / grossSales) * 100 : 0;
+  const voidedPct =
+    grossSales > 0 ? ((kpis?.voided_amount ?? 0) / grossSales) * 100 : 0;
 
-  const channelTotal =
+  // Compare deltas — null when compare is off.
+  const prev = compare?.kpis ?? null;
+  const prevSubtotal = prev?.subtotal_revenue ?? 0;
+  const prevGross = prevSubtotal + (prev?.discount_amount ?? 0);
+  const prevAovOrder =
+    prev && prev.order_count > 0
+      ? Math.round(prevSubtotal / prev.order_count)
+      : 0;
+  const prevAovCover =
+    prev && prev.total_covers > 0
+      ? Math.round(prevSubtotal / prev.total_covers)
+      : 0;
+  const prevDiscountPct =
+    prevGross > 0 ? ((prev?.discount_amount ?? 0) / prevGross) * 100 : 0;
+  const prevVoidedPct =
+    prevGross > 0 ? ((prev?.voided_amount ?? 0) / prevGross) * 100 : 0;
+
+  function delta(
+    current: number,
+    previous: number,
+    kind: "higher_better" | "lower_better",
+  ): CompareDelta | null {
+    if (!compare) return null;
+    return buildCompareDelta(current, previous, kind);
+  }
+
+  // ─── Trend chart data (line) ───────────────────────────────
+  const trendData = periodRows.map((r) => ({
+    period: r.period_label,
+    revenue: Math.round(r.subtotal_revenue),
+  }));
+
+  // ─── Sparkline data for hero KPI ───────────────────────────
+  const sparkline = trendData.map((p, i) => ({
+    x: String(i),
+    y: p.revenue,
+  }));
+
+  // ─── Payment donut data ────────────────────────────────────
+  const paymentTotal =
     (kpis?.cash_revenue ?? 0) +
     (kpis?.vietqr_revenue ?? 0) +
     (kpis?.momo_revenue ?? 0);
-  const channelOther = (kpis?.net_revenue ?? 0) - channelTotal;
+  const paymentData = [
+    {
+      key: "cash",
+      label: filterCopy.paymentCash.replace("Chỉ ", ""),
+      value: kpis?.cash_revenue ?? 0,
+    },
+    {
+      key: "vietqr",
+      label: "VietQR",
+      value: kpis?.vietqr_revenue ?? 0,
+    },
+    {
+      key: "momo",
+      label: "MoMo",
+      value: kpis?.momo_revenue ?? 0,
+    },
+  ];
 
+  // ─── Filter signature for CSV export ───────────────────────
+  const branchLabel =
+    params.branch == null
+      ? messages.finance.common.allBranches
+      : (branches.find((b) => b.id === params.branch)?.name ??
+          messages.finance.common.branchFallback(params.branch));
+  const granularityLabel =
+    params.gran === "day"
+      ? filterCopy.granularityDay
+      : params.gran === "week"
+        ? filterCopy.granularityWeek
+        : filterCopy.granularityMonth;
+
+  const csvSections: CsvSection[] = [
+    {
+      title: revCopy.csvHeaders.periodSection,
+      header: [
+        revCopy.csvHeaders.colPeriod,
+        revCopy.csvHeaders.colOrders,
+        revCopy.csvHeaders.colCustomers,
+        revCopy.csvHeaders.colNetRevenue,
+        revCopy.csvHeaders.colCash,
+        revCopy.csvHeaders.colVietqr,
+        revCopy.csvHeaders.colMomo,
+        revCopy.csvHeaders.colVat,
+      ],
+      rows: periodRows.map((r) => [
+        r.period_label,
+        r.order_count,
+        r.total_covers,
+        Math.round(r.subtotal_revenue),
+        Math.round(r.cash_revenue),
+        Math.round(r.vietqr_revenue),
+        Math.round(r.momo_revenue),
+        Math.round(r.total_tax),
+      ]),
+      footer: kpis
+        ? [
+            revCopy.csvHeaders.total,
+            kpis.order_count,
+            kpis.total_covers,
+            Math.round(kpis.subtotal_revenue),
+            Math.round(kpis.cash_revenue),
+            Math.round(kpis.vietqr_revenue),
+            Math.round(kpis.momo_revenue),
+            Math.round(kpis.total_tax),
+          ]
+        : undefined,
+    },
+  ];
+
+  if (cashiers.length > 0) {
+    csvSections.push({
+      title: revCopy.csvHeaders.cashierSection,
+      header: [
+        revCopy.csvHeaders.colCashier,
+        revCopy.csvHeaders.colOrders,
+        revCopy.csvHeaders.colNetRevenue,
+        revCopy.csvHeaders.colCash,
+        revCopy.csvHeaders.colQrMomo,
+      ],
+      rows: cashiers.map((c) => [
+        c.cashier_name,
+        Number(c.order_count),
+        Math.round(Number(c.net_revenue)),
+        Math.round(Number(c.cash_revenue)),
+        Math.round(Number(c.qr_revenue)),
+      ]),
+    });
+  }
+
+  const branchSlug = params.branch == null ? "all" : `cn-${params.branch}`;
+  const csvFilename = `doanh-thu-${branchSlug}-${resolvedStart}_${resolvedEnd}`;
+
+  // ─── Render ────────────────────────────────────────────────
   return (
     <div className="space-y-5">
-      <Card>
-        <CardContent className="p-5 sm:p-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div className="space-y-2">
-              <Badge variant="secondary">{revenueCopy.badge}</Badge>
-              <h2 className="font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
-                {revenueCopy.title(GRANULARITY_LABEL[granularity], branchLabel)}
-              </h2>
-              <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-                {revenueCopy.description}
-              </p>
-              {kpis ? (
-                <p className="text-xs text-muted-foreground">
-                  {formatRefreshedAt(kpis.refreshed_at)}
-                </p>
-              ) : null}
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <LayoutPicker value={layout} onChange={handleLayoutChange} />
-              <Button
-                variant={compareEnabled ? "default" : "outline"}
-                size="sm"
-                onClick={handleToggleCompare}
-                disabled={isPending}
-              >
-                {compareEnabled
-                  ? revenueCopy.compareOn
-                  : revenueCopy.compareOff}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleExportCsv}
-                disabled={aggregated.length === 0}
-              >
-                {revenueCopy.exportCsv}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRefresh}
-                disabled={isPending}
-              >
-                {isPending ? messages.finance.common.loading : revenueCopy.refreshData}
-              </Button>
-            </div>
-          </div>
-          {refreshError ? (
-            <p className="mt-3 text-sm text-destructive">{refreshError}</p>
-          ) : null}
-          {initialError ? (
-            <p className="mt-3 text-sm text-destructive">{initialError}</p>
-          ) : null}
-        </CardContent>
-      </Card>
+      {/* Status bar — staleness + export */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <MvStalenessBanner
+          lastRefreshAt={kpis?.refreshed_at ?? null}
+          className="flex-1"
+        />
+        <ExportToolbar
+          filename={csvFilename}
+          signature={{
+            branchLabel,
+            rangeLabel: `${resolvedStart} → ${resolvedEnd}`,
+            granularityLabel,
+            extra:
+              params.payment === "all"
+                ? undefined
+                : [
+                    params.payment === "cash"
+                      ? filterCopy.paymentCash
+                      : params.payment === "vietqr"
+                        ? filterCopy.paymentVietqr
+                        : filterCopy.paymentMomo,
+                  ],
+          }}
+          sections={csvSections}
+        />
+      </div>
 
-      <Card>
-        <CardContent className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4 lg:items-end">
-          <div className="grid gap-1.5">
-            <Label className="text-xs">{revenueCopy.branch}</Label>
-            <Select
-              value={branchId == null ? ALL_BRANCHES_VALUE : String(branchId)}
-              onValueChange={handleBranchChange}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder={revenueCopy.branchPlaceholder} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL_BRANCHES_VALUE}>
-                  {revenueCopy.allBranchesCount(branches.length)}
-                </SelectItem>
-                {branches.map((b) => (
-                  <SelectItem key={b.id} value={String(b.id)}>
-                    {b.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="grid gap-1.5">
-            <Label className="text-xs">{revenueCopy.granularity}</Label>
-            <Tabs value={granularity} onValueChange={handleGranularityChange}>
-              <TabsList className="w-full">
-                <TabsTrigger value="day" className="flex-1">
-                  {revenueCopy.day}
-                </TabsTrigger>
-                <TabsTrigger value="week" className="flex-1">
-                  {revenueCopy.week}
-                </TabsTrigger>
-                <TabsTrigger value="month" className="flex-1">
-                  {revenueCopy.month}
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
-          <div className="grid gap-1.5">
-            <Label className="text-xs">{FORM_VI.fromDate}</Label>
-            <Input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-            />
-          </div>
-          <div className="grid gap-1.5">
-            <Label className="text-xs">{FORM_VI.toDate}</Label>
-            <div className="flex gap-2">
-              <Input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-              />
-              <Button
-                size="sm"
-                onClick={handleApplyDateRange}
-                disabled={isPending}
-              >
-                {revenueCopy.apply}
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Work queue strip — operational alerts visible on every Finance route */}
+      <WorkQueueStrip
+        summary={
+          dashboardSummary
+            ? { ...dashboardSummary, invoice_attention_count: invoiceAttentionCount }
+            : null
+        }
+        health={dashboardHealth}
+      />
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      {/* Filter bar — single source of truth for URL state */}
+      <FilterBar
+        params={params}
+        branches={branches}
+        basePath="/finance/revenue"
+      />
+
+      {/* KPI grid — 8 cards per BA §2 contract */}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard
-          label={revenueCopy.totalCollected}
-          value={formatVND(kpis?.net_revenue ?? 0)}
-          hint={kpis ? revenueCopy.beforeVat(formatVND(kpis.subtotal_revenue)) : "—"}
+          label={revCopy.kpi.netRevenue}
+          value={formatVND(subtotal)}
           tone="primary"
-          delta={
-            initialCompare
-              ? buildDelta(
-                  kpis?.net_revenue ?? 0,
-                  prev?.net_revenue ?? 0,
-                  "currency",
-                )
-              : null
-          }
+          hint={revCopy.kpi.netRevenueHint}
+          delta={delta(subtotal, prevSubtotal, "higher_better")}
+          sparkline={sparkline.length > 0 ? sparkline : undefined}
+          sparklineLabel={revCopy.trendChart.sparklineLabel}
         />
         <KpiCard
-          label={revenueCopy.orderCount}
+          label={revCopy.kpi.orderCount}
           value={(kpis?.order_count ?? 0).toLocaleString("vi-VN")}
-          hint={revenueCopy.customerVisits(
+          hint={revCopy.kpi.orderCountHint(
             (kpis?.total_covers ?? 0).toLocaleString("vi-VN"),
           )}
-          delta={
-            initialCompare
-              ? buildDelta(
-                  kpis?.order_count ?? 0,
-                  prev?.order_count ?? 0,
-                  "count",
-                )
-              : null
+          delta={delta(
+            kpis?.order_count ?? 0,
+            prev?.order_count ?? 0,
+            "higher_better",
+          )}
+        />
+        <KpiCard
+          label={revCopy.kpi.aovOrder}
+          value={aovPerOrder > 0 ? formatVND(aovPerOrder) : "—"}
+          hint={revCopy.kpi.aovOrderHint}
+          delta={delta(aovPerOrder, prevAovOrder, "higher_better")}
+        />
+        <KpiCard
+          label={revCopy.kpi.aovCover}
+          value={aovPerCover > 0 ? formatVND(aovPerCover) : "—"}
+          hint={revCopy.kpi.aovCoverHint}
+          delta={delta(aovPerCover, prevAovCover, "higher_better")}
+        />
+        <KpiCard
+          label={revCopy.kpi.discountRate}
+          value={`${discountPct.toFixed(1)}%`}
+          hint={kpis ? formatVND(kpis.discount_amount) : "—"}
+          tone={
+            discountPct >= 15
+              ? "destructive"
+              : discountPct >= 8
+                ? "warning"
+                : "neutral"
           }
+          delta={delta(discountPct, prevDiscountPct, "lower_better")}
         />
         <KpiCard
-          label={revenueCopy.averagePerGuest}
-          value={aov > 0 ? formatVND(aov) : "—"}
-          hint={revenueCopy.revenuePerGuest}
-          delta={initialCompare ? buildDelta(aov, prevAov, "currency") : null}
-        />
-        <KpiCard
-          label={revenueCopy.voidRate}
+          label={revCopy.kpi.voidRate}
           value={`${voidedPct.toFixed(1)}%`}
           hint={
             kpis
-              ? revenueCopy.voidHint(
+              ? revCopy.kpi.voidHint(
                   formatVND(kpis.voided_amount),
                   kpis.voided_count,
                 )
               : "—"
           }
-          tone={voidedPct > 2 ? "warning" : undefined}
-          delta={
-            initialCompare
-              ? buildDelta(voidedPct, prevVoidedPct, "percent_lower_better")
-              : null
+          tone={
+            voidedPct >= 5
+              ? "destructive"
+              : voidedPct >= 3
+                ? "warning"
+                : "neutral"
           }
+          delta={delta(voidedPct, prevVoidedPct, "lower_better")}
         />
         <KpiCard
-          label={revenueCopy.discountRate}
-          value={`${discountPct.toFixed(1)}%`}
-          hint={kpis ? formatVND(kpis.discount_amount) : "—"}
-          delta={
-            initialCompare
-              ? buildDelta(discountPct, prevDiscountPct, "percent_lower_better")
-              : null
+          label={revCopy.kpi.totalCollected}
+          value={formatVND(kpis?.net_revenue ?? 0)}
+          hint={revCopy.kpi.totalCollectedHint(
+            formatVND(kpis?.total_tax ?? 0),
+          )}
+          href={`/finance/reconciliation?since=${resolvedStart}`}
+          delta={delta(
+            kpis?.net_revenue ?? 0,
+            prev?.net_revenue ?? 0,
+            "higher_better",
+          )}
+        />
+        <KpiCard
+          label={revCopy.kpi.invoices}
+          value={(invoiceAttentionCount + (dashboardSummary?.invoice_issued_count ?? 0)).toLocaleString("vi-VN")}
+          hint={
+            invoiceAttentionCount > 0
+              ? revCopy.kpi.invoicesAttention(invoiceAttentionCount)
+              : revCopy.kpi.invoicesClear
           }
+          tone={invoiceAttentionCount > 0 ? "warning" : "neutral"}
+          href="/finance/invoices"
         />
       </div>
 
-      {initialCompare ? (
+      {/* Compare period footnote */}
+      {compare ? (
         <p className="text-xs text-muted-foreground">
-          {revenueCopy.comparePeriod(initialCompare.start, initialCompare.end)}
-          {prev ? null : revenueCopy.noPreviousDataSuffix}
+          {revCopy.compare.periodLabel} {compare.start} → {compare.end}
+          {prev ? null : revCopy.compare.noPrevData}
         </p>
       ) : null}
 
-      {layout === "simple" ? (
-        <SimpleRevenueSummary
-          aggregated={aggregated}
-          branchTotals={branchTotals}
-          branches={branches}
-          branchId={branchId}
-          granularity={granularity}
-          startDate={startDate}
-          endDate={endDate}
-          kpis={kpis}
-        />
-      ) : (
-        <>
-          <div className="grid gap-4 lg:grid-cols-2">
-            {initialReconcile ? (
-              <ReconcileCard reconcile={initialReconcile} />
-            ) : null}
-            {initialCashVariance ? (
-              <CashVarianceCard variance={initialCashVariance} />
-            ) : null}
-          </div>
+      {/* Big chart row — net revenue trend */}
+      <ChartCard
+        title={revCopy.trendChart.title}
+        description={revCopy.trendChart.description(
+          resolvedStart,
+          resolvedEnd,
+          granularityLabel,
+        )}
+        config={
+          {
+            revenue: {
+              label: revCopy.trendChart.tooltipLabel,
+              theme: { light: "var(--chart-1)", dark: "var(--chart-1)" },
+            },
+          } satisfies ChartConfig
+        }
+        chartClassName="aspect-[3/1]"
+        empty={trendData.length === 0}
+      >
+        <LineChart data={trendData} margin={{ top: 8, right: 12, left: 12, bottom: 8 }}>
+          <CartesianGrid vertical={false} strokeDasharray="3 3" />
+          <XAxis dataKey="period" tickLine={false} axisLine={false} />
+          <YAxis
+            tickLine={false}
+            axisLine={false}
+            width={70}
+            tickFormatter={(v: number) =>
+              new Intl.NumberFormat("vi-VN", { notation: "compact" }).format(v)
+            }
+          />
+          <Tooltip
+            formatter={(value) => [
+              formatVND(Number(value ?? 0)),
+              revCopy.trendChart.tooltipLabel,
+            ]}
+          />
+          <Line
+            type="monotone"
+            dataKey="revenue"
+            stroke="var(--color-revenue)"
+            strokeWidth={2}
+            dot={{ r: 3 }}
+          />
+        </LineChart>
+      </ChartCard>
 
-          <div className="grid gap-4 lg:grid-cols-3">
-            <BreakdownCard
-              title={revenueCopy.paymentBreakdown}
-              rows={[
-                {
-                  label: revenueCopy.cash,
-                  value: kpis?.cash_revenue ?? 0,
-                  total: kpis?.net_revenue ?? 0,
-                },
-                {
-                  label: "VietQR",
-                  value: kpis?.vietqr_revenue ?? 0,
-                  total: kpis?.net_revenue ?? 0,
-                },
-                {
-                  label: "MoMo",
-                  value: kpis?.momo_revenue ?? 0,
-                  total: kpis?.net_revenue ?? 0,
-                },
-                ...(channelOther > 1
-                  ? [
-                      {
-                        label: revenueCopy.other,
-                        value: channelOther,
-                        total: kpis?.net_revenue ?? 0,
-                      },
-                    ]
-                  : []),
+      {/* Mid row — payment donut + branch bar */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <ChartCard
+          title={revCopy.paymentChart.title}
+          description={
+            paymentTotal > 0
+              ? revCopy.paymentChart.total(formatVND(paymentTotal))
+              : revCopy.paymentChart.empty
+          }
+          config={
+            {
+              cash: { label: revCopy.paymentChart.cash, theme: { light: "var(--chart-1)", dark: "var(--chart-1)" } },
+              vietqr: { label: "VietQR", theme: { light: "var(--chart-2)", dark: "var(--chart-2)" } },
+              momo: { label: "MoMo", theme: { light: "var(--chart-3)", dark: "var(--chart-3)" } },
+            } satisfies ChartConfig
+          }
+          chartClassName="aspect-square max-h-72"
+          empty={paymentTotal === 0}
+        >
+          <PieChart>
+            <Pie
+              data={paymentData}
+              dataKey="value"
+              nameKey="key"
+              innerRadius={60}
+              outerRadius={90}
+              paddingAngle={2}
+            >
+              {paymentData.map((entry) => (
+                <Cell
+                  key={entry.key}
+                  fill={`var(--color-${entry.key})`}
+                />
+              ))}
+            </Pie>
+            <Tooltip
+              formatter={(value, _name, item) => [
+                formatVND(Number(value ?? 0)),
+                item && typeof item.payload === "object" && item.payload != null
+                  ? (item.payload as { label: string }).label
+                  : "",
               ]}
             />
-            <BreakdownCard
-              title={revenueCopy.dineTakeaway}
-              rows={[
-                {
-                  label: revenueCopy.dineIn,
-                  value: kpis?.dine_in_revenue ?? 0,
-                  total: kpis?.net_revenue ?? 0,
-                },
-                {
-                  label: revenueCopy.takeaway,
-                  value: kpis?.takeaway_revenue ?? 0,
-                  total: kpis?.net_revenue ?? 0,
-                },
-              ]}
+            <Legend
+              formatter={(_value, entry) => {
+                const key = entry.dataKey as string;
+                const row = paymentData.find((d) => d.key === key);
+                return row?.label ?? key;
+              }}
             />
-            <BreakdownCard
-              title={revenueCopy.outputVat}
-              rows={[
-                {
-                  label: "VAT 8%",
-                  value: kpis?.vat_8_amount ?? 0,
-                  total: kpis?.total_tax ?? 0,
-                },
-                {
-                  label: "VAT 10%",
-                  value: kpis?.vat_10_amount ?? 0,
-                  total: kpis?.total_tax ?? 0,
-                },
-              ]}
-              footer={
-                kpis ? revenueCopy.totalTax(formatVND(kpis.total_tax)) : undefined
+          </PieChart>
+        </ChartCard>
+
+        <ChartCard
+          title={revCopy.branchChart.title}
+          description={
+            params.branch == null
+              ? revCopy.branchChart.descriptionAll
+              : revCopy.branchChart.descriptionSingle
+          }
+          config={
+            {
+              revenue: {
+                label: revCopy.trendChart.tooltipLabel,
+                theme: { light: "var(--chart-1)", dark: "var(--chart-1)" },
+              },
+            } satisfies ChartConfig
+          }
+          chartClassName="aspect-square max-h-72"
+          empty={branchRows.length === 0 || params.branch != null}
+          emptyLabel={
+            params.branch != null
+              ? revCopy.branchChart.emptySingle
+              : revCopy.branchChart.emptyData
+          }
+        >
+          <BarChart data={branchRows.slice(0, 8)} layout="vertical" margin={{ top: 8, right: 24, left: 8, bottom: 8 }}>
+            <CartesianGrid horizontal={false} strokeDasharray="3 3" />
+            <XAxis
+              type="number"
+              tickLine={false}
+              axisLine={false}
+              tickFormatter={(v: number) =>
+                new Intl.NumberFormat("vi-VN", { notation: "compact" }).format(v)
               }
             />
-          </div>
+            <YAxis
+              type="category"
+              dataKey="name"
+              tickLine={false}
+              axisLine={false}
+              width={120}
+            />
+            <Tooltip
+              formatter={(value) => [
+                formatVND(Number(value ?? 0)),
+                revCopy.trendChart.tooltipLabel,
+              ]}
+            />
+            <Bar
+              dataKey="revenue"
+              fill="var(--color-revenue)"
+              radius={[0, 4, 4, 0]}
+            />
+          </BarChart>
+        </ChartCard>
+      </div>
 
-          {branchId == null && branchTotals.length > 0 ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">
-                  {revenueCopy.branchRevenueTitle}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{revenueCopy.branch}</TableHead>
-                      <TableHead className="text-right">
-                        {revenueCopy.orders}
-                      </TableHead>
-                      <TableHead className="text-right">
-                        {revenueCopy.revenue}
-                      </TableHead>
-                      <TableHead className="w-32 text-right">
-                        {revenueCopy.action}
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {branchTotals.map((bt) => {
-                      const name =
-                        branches.find((b) => b.id === bt.branchId)?.name ??
-                        messages.finance.common.branchFallback(bt.branchId);
-                      const params = new URLSearchParams({
-                        granularity,
-                        start: startDate,
-                        end: endDate,
-                        branch: String(bt.branchId),
-                        layout: "advanced",
-                      });
-                      return (
-                        <TableRow key={bt.branchId}>
-                          <TableCell className="font-medium">{name}</TableCell>
-                          <TableCell className="text-right tabular-nums">
-                            {bt.orders.toLocaleString("vi-VN")}
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums">
-                            {formatVND(bt.revenue)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button asChild size="sm" variant="outline">
-                              <Link
-                                href={`/finance/revenue?${params.toString()}`}
-                              >
-                                {revenueCopy.viewBranch}
-                              </Link>
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          ) : null}
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">
-                {revenueCopy.periodRevenueTable}
-              </CardTitle>
-              <p className="text-sm text-muted-foreground">
-                {branchId == null
-                  ? revenueCopy.periodTableDescriptionAll
-                  : revenueCopy.periodTableDescriptionSingle}
-              </p>
-            </CardHeader>
-            <CardContent className="overflow-x-auto">
-              {aggregated.length === 0 ? (
-                <Empty className="py-8">
-                  <EmptyHeader>
-                    <EmptyTitle className="text-sm font-semibold">
-                      {revenueCopy.emptyRange}
-                    </EmptyTitle>
-                  </EmptyHeader>
-                </Empty>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{PERIOD_HEADER_LABEL[granularity]}</TableHead>
-                      <TableHead className="text-right">
-                        {revenueCopy.orders}
-                      </TableHead>
-                      <TableHead className="text-right">
-                        {revenueCopy.customers}
-                      </TableHead>
-                      <TableHead className="text-right">
-                        {revenueCopy.revenue}
-                      </TableHead>
-                      <TableHead className="text-right">
-                        {revenueCopy.cash}
-                      </TableHead>
-                      <TableHead className="text-right">VietQR</TableHead>
-                      <TableHead className="text-right">MoMo</TableHead>
-                      <TableHead className="text-right">VAT</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {aggregated.map((r) => {
-                      const drillBranchId =
-                        branchId != null
-                          ? branchId
-                          : r.branch_ids.length === 1
-                            ? r.branch_ids[0]
-                            : null;
-                      const canDrill =
-                        granularity === "day" && drillBranchId != null;
-                      return (
-                        <TableRow
-                          key={r.period_start}
-                          className={canDrill ? "cursor-pointer" : undefined}
-                        >
-                          <TableCell className="font-medium tabular-nums">
-                            {canDrill ? (
-                              <Link
-                                href={`/finance/revenue/${r.period_start}?branch=${drillBranchId}`}
-                                className="text-primary underline-offset-2 hover:underline"
-                              >
-                                {r.period_label}
-                              </Link>
-                            ) : (
-                              r.period_label
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums">
-                            {r.order_count.toLocaleString("vi-VN")}
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums">
-                            {r.total_covers.toLocaleString("vi-VN")}
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums font-medium">
-                            {formatVND(r.total_revenue)}
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums text-muted-foreground">
-                            {formatVND(r.cash_revenue)}
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums text-muted-foreground">
-                            {formatVND(r.vietqr_revenue)}
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums text-muted-foreground">
-                            {formatVND(r.momo_revenue)}
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums text-muted-foreground">
-                            {formatVND(r.total_tax)}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                  <TableFooter>
-                    <TableRow className="hover:bg-transparent">
-                      <TableCell className="font-medium">
-                        {revenueCopy.total}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums font-medium">
-                        {(kpis?.order_count ?? 0).toLocaleString("vi-VN")}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums font-medium">
-                        {(kpis?.total_covers ?? 0).toLocaleString("vi-VN")}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums font-bold">
-                        {formatVND(kpis?.net_revenue ?? 0)}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {formatVND(kpis?.cash_revenue ?? 0)}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {formatVND(kpis?.vietqr_revenue ?? 0)}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {formatVND(kpis?.momo_revenue ?? 0)}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {formatVND(kpis?.total_tax ?? 0)}
-                      </TableCell>
-                    </TableRow>
-                  </TableFooter>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-        </>
-      )}
-    </div>
-  );
-}
-
-interface DeltaInfo {
-  display: string; // human label e.g. "+12% vs trước"
-  // sign tells the renderer which semantic color to apply.
-  // "good" = improvement (revenue up, voided down). "bad" = regression.
-  // "neutral" = no prev data or zero base.
-  sign: "good" | "bad" | "neutral";
-}
-
-type DeltaKind = "currency" | "count" | "percent_lower_better";
-
-function buildDelta(
-  current: number,
-  previous: number,
-  kind: DeltaKind,
-): DeltaInfo {
-  if (previous === 0 && current === 0) {
-    return { display: "= 0", sign: "neutral" };
-  }
-  if (previous === 0) {
-    return { display: "Mới", sign: "neutral" };
-  }
-  const diff = current - previous;
-  const pct = (diff / Math.abs(previous)) * 100;
-  const arrow = diff > 0 ? "▲" : diff < 0 ? "▼" : "•";
-  const display = `${arrow} ${Math.abs(pct).toFixed(1)}%`;
-  // Lower-better metrics flip the goodness mapping.
-  const isImprovement = kind === "percent_lower_better" ? diff < 0 : diff > 0;
-  const isRegression = kind === "percent_lower_better" ? diff > 0 : diff < 0;
-  const sign: DeltaInfo["sign"] = isImprovement
-    ? "good"
-    : isRegression
-      ? "bad"
-      : "neutral";
-  return { display, sign };
-}
-
-function LayoutPicker({
-  value,
-  onChange,
-}: {
-  value: FinanceLayoutMode;
-  onChange: (value: FinanceLayoutMode) => void;
-}) {
-  return (
-    <Tabs
-      value={value}
-      onValueChange={(next) => onChange(next as FinanceLayoutMode)}
-    >
-      <TabsList className="w-full sm:w-auto">
-        <TabsTrigger value="simple" className="flex-1 sm:flex-none">
-          {revenueCopy.layoutSimple}
-        </TabsTrigger>
-        <TabsTrigger value="advanced" className="flex-1 sm:flex-none">
-          {revenueCopy.layoutAdvanced}
-        </TabsTrigger>
-      </TabsList>
-    </Tabs>
-  );
-}
-
-function SimpleRevenueSummary({
-  aggregated,
-  branchTotals,
-  branches,
-  branchId,
-  granularity,
-  startDate,
-  endDate,
-  kpis,
-}: {
-  aggregated: AggregatedRow[];
-  branchTotals: Array<{ branchId: number; revenue: number; orders: number }>;
-  branches: AccessibleBranch[];
-  branchId: number | null;
-  granularity: RevenueGranularity;
-  startDate: string;
-  endDate: string;
-  kpis: KpiBundle | null;
-}) {
-  const rows = [...aggregated].reverse().slice(0, 10);
-  const paymentTotal =
-    (kpis?.cash_revenue ?? 0) +
-    (kpis?.vietqr_revenue ?? 0) +
-    (kpis?.momo_revenue ?? 0);
-
-  return (
-    <div className="space-y-4">
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader>
+      {/* Heatmap — full width */}
+      <Card>
+        <CardHeader className="flex flex-row items-start justify-between gap-3 pb-2">
+          <div className="space-y-0.5">
             <CardTitle className="text-base">
-              {revenueCopy.revenueByPeriod}
+              {revCopy.heatmap.title}
             </CardTitle>
             <p className="text-sm text-muted-foreground">
-              {startDate} → {endDate}
+              {hourlyEnabled
+                ? revCopy.heatmap.description
+                : revCopy.heatmap.tooLargeRange}
+            </p>
+          </div>
+        </CardHeader>
+        <CardContent className="p-4 sm:p-6 sm:pt-2">
+          {hourlyEnabled && heatmapCells.length > 0 ? (
+            <HeatmapGrid cells={heatmapCells} />
+          ) : (
+            <div className="flex h-32 items-center justify-center rounded-md border border-dashed border-border text-sm text-muted-foreground">
+              {hourlyEnabled
+                ? revCopy.heatmap.empty
+                : revCopy.heatmap.tooLargeEmpty}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Period table */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">{revCopy.periodTable.title}</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            {params.branch == null
+              ? revCopy.periodTable.descriptionAll
+              : revCopy.periodTable.descriptionSingle}
+          </p>
+        </CardHeader>
+        <CardContent className="overflow-x-auto">
+          {periodRows.length === 0 ? (
+            <Empty className="py-8">
+              <EmptyHeader>
+                <EmptyTitle className="text-sm font-semibold">
+                  {revCopy.periodTable.empty}
+                </EmptyTitle>
+              </EmptyHeader>
+            </Empty>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{revCopy.periodTable.colPeriod}</TableHead>
+                  <TableHead className="text-right">{revCopy.periodTable.colOrders}</TableHead>
+                  <TableHead className="text-right">{revCopy.periodTable.colCustomers}</TableHead>
+                  <TableHead className="text-right">{revCopy.periodTable.colNetRevenue}</TableHead>
+                  <TableHead className="text-right">{revCopy.periodTable.colCash}</TableHead>
+                  <TableHead className="text-right">VietQR</TableHead>
+                  <TableHead className="text-right">MoMo</TableHead>
+                  <TableHead className="text-right">{revCopy.periodTable.colVat}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {periodRows.map((r) => {
+                  const drillBranchId =
+                    params.branch != null
+                      ? params.branch
+                      : r.branch_ids.length === 1
+                        ? r.branch_ids[0]
+                        : null;
+                  const canDrill =
+                    params.gran === "day" && drillBranchId != null;
+                  return (
+                    <TableRow key={r.period_start}>
+                      <TableCell className="font-medium tabular-nums">
+                        {canDrill ? (
+                          <Link
+                            href={`/finance/revenue/${r.period_start}?branch=${drillBranchId}`}
+                            className="text-primary underline-offset-2 hover:underline"
+                          >
+                            {r.period_label}
+                          </Link>
+                        ) : (
+                          r.period_label
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {r.order_count.toLocaleString("vi-VN")}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {r.total_covers.toLocaleString("vi-VN")}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums font-medium">
+                        {formatVND(r.subtotal_revenue)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-muted-foreground">
+                        {formatVND(r.cash_revenue)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-muted-foreground">
+                        {formatVND(r.vietqr_revenue)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-muted-foreground">
+                        {formatVND(r.momo_revenue)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-muted-foreground">
+                        {formatVND(r.total_tax)}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+              <TableFooter>
+                <TableRow className="hover:bg-transparent">
+                  <TableCell className="font-medium">{revCopy.periodTable.total}</TableCell>
+                  <TableCell className="text-right tabular-nums font-medium">
+                    {(kpis?.order_count ?? 0).toLocaleString("vi-VN")}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums font-medium">
+                    {(kpis?.total_covers ?? 0).toLocaleString("vi-VN")}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums font-bold">
+                    {formatVND(kpis?.subtotal_revenue ?? 0)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {formatVND(kpis?.cash_revenue ?? 0)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {formatVND(kpis?.vietqr_revenue ?? 0)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {formatVND(kpis?.momo_revenue ?? 0)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {formatVND(kpis?.total_tax ?? 0)}
+                  </TableCell>
+                </TableRow>
+              </TableFooter>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Cashier table + Top items table */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">{revCopy.cashierTable.title}</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              {revCopy.cashierTable.description}
             </p>
           </CardHeader>
-          <CardContent className="space-y-3">
-            {rows.length === 0 ? (
+          <CardContent className="overflow-x-auto">
+            {cashiers.length === 0 ? (
               <Empty className="py-8">
-                  <EmptyHeader>
-                    <EmptyTitle className="text-sm font-semibold">
-                    {revenueCopy.emptyRange}
-                    </EmptyTitle>
+                <EmptyHeader>
+                  <EmptyTitle className="text-sm font-semibold">
+                    {revCopy.cashierTable.empty}
+                  </EmptyTitle>
                 </EmptyHeader>
               </Empty>
             ) : (
-              rows.map((row) => {
-                const drillBranchId =
-                  branchId != null
-                    ? branchId
-                    : row.branch_ids.length === 1
-                      ? row.branch_ids[0]
-                      : null;
-                const canDrill = granularity === "day" && drillBranchId != null;
-                return (
-                  <div
-                    key={row.period_start}
-                    className="flex items-center justify-between gap-3 border-b py-2 last:border-b-0"
-                  >
-                    <div>
-                      {canDrill ? (
-                        <Link
-                          href={`/finance/revenue/${row.period_start}?branch=${drillBranchId}`}
-                          className="font-medium text-primary underline-offset-2 hover:underline"
-                        >
-                          {row.period_label}
-                        </Link>
-                      ) : (
-                        <p className="font-medium">{row.period_label}</p>
-                      )}
-                      <p className="text-xs text-muted-foreground">
-                        {revenueCopy.orderCustomerLine(
-                          row.order_count.toLocaleString("vi-VN"),
-                          row.total_covers.toLocaleString("vi-VN"),
-                        )}
-                      </p>
-                    </div>
-                    <p className="text-right font-semibold tabular-nums">
-                      {formatVND(row.total_revenue)}
-                    </p>
-                  </div>
-                );
-              })
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{revCopy.cashierTable.colCashier}</TableHead>
+                    <TableHead className="text-right">{revCopy.cashierTable.colOrders}</TableHead>
+                    <TableHead className="text-right">{revCopy.cashierTable.colNetRevenue}</TableHead>
+                    <TableHead className="text-right">{revCopy.cashierTable.colCash}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {cashiers.slice(0, 8).map((c) => (
+                    <TableRow key={c.cashier_id ?? c.cashier_name}>
+                      <TableCell className="font-medium">
+                        {c.cashier_name}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {Number(c.order_count).toLocaleString("vi-VN")}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums font-medium">
+                        {formatVND(Number(c.net_revenue))}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-muted-foreground">
+                        {formatVND(Number(c.cash_revenue))}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             )}
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle className="text-base">
-              {revenueCopy.quickStructure}
-            </CardTitle>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">{revCopy.topItems.title}</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              {revCopy.topItems.description}
+            </p>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <CompactBreakdown
-              label={revenueCopy.cash}
-              value={kpis?.cash_revenue ?? 0}
-              total={paymentTotal}
-            />
-            <CompactBreakdown
-              label="VietQR"
-              value={kpis?.vietqr_revenue ?? 0}
-              total={paymentTotal}
-            />
-            <CompactBreakdown
-              label="MoMo"
-              value={kpis?.momo_revenue ?? 0}
-              total={paymentTotal}
-            />
-            <div className="border-t pt-3">
-              <CompactBreakdown
-                label={revenueCopy.dineIn}
-                value={kpis?.dine_in_revenue ?? 0}
-                total={kpis?.net_revenue ?? 0}
-              />
-              <CompactBreakdown
-                label={revenueCopy.takeaway}
-                value={kpis?.takeaway_revenue ?? 0}
-                total={kpis?.net_revenue ?? 0}
-              />
-            </div>
+          <CardContent className="overflow-x-auto">
+            {topItems.length === 0 ? (
+              <Empty className="py-8">
+                <EmptyHeader>
+                  <EmptyTitle className="text-sm font-semibold">
+                    {revCopy.topItems.empty}
+                  </EmptyTitle>
+                </EmptyHeader>
+              </Empty>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{revCopy.topItems.colName}</TableHead>
+                    <TableHead className="text-right">{revCopy.topItems.colQty}</TableHead>
+                    <TableHead className="text-right">{revCopy.topItems.colRevenue}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {topItems.slice(0, 8).map((item) => (
+                    <TableRow key={`${item.branch_id}-${item.menu_item_id}`}>
+                      <TableCell className="font-medium">
+                        {item.item_name}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {Number(item.quantity_sold).toLocaleString("vi-VN")}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatVND(item.revenue)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
       </div>
 
-      {branchId == null && branchTotals.length > 0 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">
-              {revenueCopy.highlightedBranches}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {branchTotals.slice(0, 6).map((branch) => {
-              const name =
-                branches.find((b) => b.id === branch.branchId)?.name ??
-                messages.finance.common.branchFallback(branch.branchId);
-              const params = new URLSearchParams({
-                granularity,
-                start: startDate,
-                end: endDate,
-                branch: String(branch.branchId),
-                layout: "simple",
-              });
-              return (
-                <div
-                  key={branch.branchId}
-                  className="flex items-center justify-between gap-3 border-b py-2 last:border-b-0"
-                >
-                  <div>
-                    <Link
-                      href={`/finance/revenue?${params.toString()}`}
-                      className="font-medium text-primary underline-offset-2 hover:underline"
-                    >
-                      {name}
-                    </Link>
-                    <p className="text-xs text-muted-foreground">
-                      {revenueCopy.ordersLine(
-                        branch.orders.toLocaleString("vi-VN"),
-                      )}
-                    </p>
-                  </div>
-                  <p className="text-right font-semibold tabular-nums">
-                    {formatVND(branch.revenue)}
-                  </p>
-                </div>
-              );
-            })}
-          </CardContent>
-        </Card>
+      {/* Reconcile + Cash variance — surfaces only when data exists */}
+      {(reconcile || cashVariance) ? (
+        <div className="grid gap-4 lg:grid-cols-2">
+          {reconcile ? <ReconcileCard reconcile={reconcile} /> : null}
+          {cashVariance ? <CashVarianceCard variance={cashVariance} /> : null}
+        </div>
       ) : null}
     </div>
   );
 }
 
-function CompactBreakdown({
-  label,
-  value,
-  total,
-}: {
-  label: string;
-  value: number;
-  total: number;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-3 text-sm">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="text-right font-medium tabular-nums">
-        {formatVND(value)}
-        <span className="ml-2 text-xs text-muted-foreground">
-          {formatPercent(value, total)}
-        </span>
-      </span>
-    </div>
-  );
-}
+// ─── Sub-components (preserved from previous client) ────────────
 
-function KpiCard({
-  label,
-  value,
-  hint,
-  tone,
-  delta,
-}: {
-  label: string;
-  value: string;
-  hint?: string;
-  tone?: "primary" | "warning";
-  delta?: DeltaInfo | null;
-}) {
+function ReconcileCard({ reconcile }: { reconcile: ReconcileSnippet }) {
+  const TOLERANCE = 1;
+  const diff = reconcile.difference;
+  const matched = Math.abs(diff) <= TOLERANCE;
   return (
     <Card>
-      <CardContent className="space-y-1.5 p-4">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          {label}
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">{reconCopy.title}</CardTitle>
+        <p className="text-sm text-muted-foreground">
+          {reconCopy.description}
         </p>
-        <p
-          className={
-            tone === "primary"
-              ? "text-2xl font-bold tabular-nums text-primary"
-              : tone === "warning"
-                ? "text-2xl font-bold tabular-nums text-warning"
-                : "text-2xl font-bold tabular-nums text-foreground"
-          }
-        >
-          {value}
-        </p>
-        {delta ? (
+      </CardHeader>
+      <CardContent className="grid gap-3 p-4 sm:grid-cols-3">
+        <div>
+          <p className="text-xs text-muted-foreground">{reconCopy.posSubledger}</p>
+          <p className="text-lg font-semibold tabular-nums">
+            {formatVND(reconcile.subledger_total)}
+          </p>
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground">{reconCopy.generalLedger}</p>
+          <p className="text-lg font-semibold tabular-nums">
+            {formatVND(reconcile.gl_total)}
+          </p>
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground">{reconCopy.difference}</p>
           <p
             className={
-              delta.sign === "good"
-                ? "text-xs font-medium text-success"
-                : delta.sign === "bad"
-                  ? "text-xs font-medium text-destructive"
-                  : "text-xs font-medium text-muted-foreground"
+              matched
+                ? "text-lg font-semibold tabular-nums text-success"
+                : "text-lg font-semibold tabular-nums text-destructive"
             }
           >
-            {delta.display}
+            {matched ? reconCopy.matched : formatVND(diff)}
           </p>
-        ) : null}
-        {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
+        </div>
+        <div className="sm:col-span-3">
+          <Button asChild size="sm" variant="outline">
+            <Link href={`/finance/reconciliation?since=${reconcile.start}`}>
+              {reconCopy.openDetail}
+            </Link>
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
 }
 
 function CashVarianceCard({ variance }: { variance: CashVarianceSummary }) {
-  // Tone: signed total_variance đo "ròng" (thừa - thiếu). Owner thường
-  // care về abs_variance_total + cờ "có lệch âm tập trung 1 cashier?"
-  // (BA #9). > 0.5% revenue threshold thường dùng — ở đây không có
-  // mẫu số revenue trong card này, nên dùng abs_variance_total trực
-  // tiếp + đếm short_count để gắn cờ.
   const hasShortPattern = variance.short_count >= 3;
   const tone =
     variance.abs_variance_total === 0
@@ -1198,26 +988,20 @@ function CashVarianceCard({ variance }: { variance: CashVarianceSummary }) {
         : "warn";
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-base">{revenueCopy.cashVarianceTitle}</CardTitle>
-        <p className="text-sm text-muted-foreground">
-          {revenueCopy.cashVarianceDescription}
-        </p>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">{cashCopy.title}</CardTitle>
+        <p className="text-sm text-muted-foreground">{cashCopy.description}</p>
       </CardHeader>
       <CardContent className="space-y-3 p-4">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div>
-            <p className="text-xs text-muted-foreground">
-              {revenueCopy.closedSessions}
-            </p>
+            <p className="text-xs text-muted-foreground">{cashCopy.closedSessions}</p>
             <p className="text-lg font-semibold tabular-nums">
               {variance.session_count.toLocaleString("vi-VN")}
             </p>
           </div>
           <div>
-            <p className="text-xs text-muted-foreground">
-              {revenueCopy.netVariance}
-            </p>
+            <p className="text-xs text-muted-foreground">{cashCopy.netVariance}</p>
             <p
               className={
                 tone === "good"
@@ -1233,7 +1017,7 @@ function CashVarianceCard({ variance }: { variance: CashVarianceSummary }) {
           </div>
           <div>
             <p className="text-xs text-muted-foreground">
-              {revenueCopy.shortVariance(variance.short_count)}
+              {cashCopy.short(variance.short_count)}
             </p>
             <p className="text-lg font-semibold tabular-nums text-destructive">
               {formatVND(variance.short_total)}
@@ -1241,7 +1025,7 @@ function CashVarianceCard({ variance }: { variance: CashVarianceSummary }) {
           </div>
           <div>
             <p className="text-xs text-muted-foreground">
-              {revenueCopy.overVariance(variance.over_count)}
+              {cashCopy.over(variance.over_count)}
             </p>
             <p className="text-lg font-semibold tabular-nums text-success">
               +{formatVND(variance.over_total)}
@@ -1251,7 +1035,7 @@ function CashVarianceCard({ variance }: { variance: CashVarianceSummary }) {
         {variance.worst_cashiers.length > 0 ? (
           <div className="space-y-1.5 border-t pt-3">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              {revenueCopy.topVarianceCashiers}
+              {cashCopy.topVariance}
             </p>
             <ul className="space-y-1">
               {variance.worst_cashiers.map((c) => (
@@ -1261,9 +1045,9 @@ function CashVarianceCard({ variance }: { variance: CashVarianceSummary }) {
                 >
                   <span className="truncate">
                     {c.cashier_name}
-                    <span className="ml-2 text-xs text-muted-foreground">
-                      {revenueCopy.sessionCount(c.session_count)}
-                    </span>
+                    <Badge variant="secondary" className="ml-2 text-xs">
+                      {cashCopy.sessionCount(c.session_count)}
+                    </Badge>
                   </span>
                   <span
                     className={
@@ -1281,105 +1065,9 @@ function CashVarianceCard({ variance }: { variance: CashVarianceSummary }) {
           </div>
         ) : (
           <p className="border-t pt-3 text-xs text-muted-foreground">
-            {revenueCopy.noVariance}
+            {cashCopy.noVariance}
           </p>
         )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function ReconcileCard({ reconcile }: { reconcile: ReconcileSnippet }) {
-  const TOLERANCE = 1;
-  const diff = reconcile.difference;
-  const matched = Math.abs(diff) <= TOLERANCE;
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">
-          {revenueCopy.reconciliationTitle}
-        </CardTitle>
-        <p className="text-sm text-muted-foreground">
-          {revenueCopy.reconciliationDescription}
-        </p>
-      </CardHeader>
-      <CardContent className="grid gap-3 p-4 sm:grid-cols-3">
-        <div>
-          <p className="text-xs text-muted-foreground">
-            {revenueCopy.posSubledger}
-          </p>
-          <p className="text-lg font-semibold tabular-nums">
-            {formatVND(reconcile.subledger_total)}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs text-muted-foreground">
-            {revenueCopy.generalLedger}
-          </p>
-          <p className="text-lg font-semibold tabular-nums">
-            {formatVND(reconcile.gl_total)}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs text-muted-foreground">
-            {revenueCopy.difference}
-          </p>
-          <p
-            className={
-              matched
-                ? "text-lg font-semibold tabular-nums text-success"
-                : "text-lg font-semibold tabular-nums text-destructive"
-            }
-          >
-            {matched ? revenueCopy.matched : formatVND(diff)}
-          </p>
-        </div>
-        <div className="sm:col-span-3">
-          <Button asChild size="sm" variant="outline">
-            <Link href={`/finance/reconciliation?since=${reconcile.start}`}>
-              {revenueCopy.openReconciliation}
-            </Link>
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function BreakdownCard({
-  title,
-  rows,
-  footer,
-}: {
-  title: string;
-  rows: { label: string; value: number; total: number }[];
-  footer?: string;
-}) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-sm">{title}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-2 p-4">
-        {rows.map((r) => (
-          <div
-            key={r.label}
-            className="flex items-baseline justify-between gap-3 text-sm"
-          >
-            <span className="text-muted-foreground">{r.label}</span>
-            <span className="tabular-nums font-medium">
-              {formatVND(r.value)}
-              <span className="ml-2 text-xs text-muted-foreground">
-                {formatPercent(r.value, r.total)}
-              </span>
-            </span>
-          </div>
-        ))}
-        {footer ? (
-          <p className="border-t pt-2 text-xs text-muted-foreground">
-            {footer}
-          </p>
-        ) : null}
       </CardContent>
     </Card>
   );

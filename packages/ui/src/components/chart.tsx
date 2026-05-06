@@ -371,3 +371,25 @@ export {
   ChartLegendContent,
   ChartStyle,
 }
+
+// Re-export Recharts primitives so consumers in apps/web can compose
+// charts (Line, Bar, Area, Pie...) without adding `recharts` as a
+// direct dependency. Keeps the lib pinned to one version inside
+// packages/ui.
+export {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts"

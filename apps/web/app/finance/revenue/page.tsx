@@ -1,23 +1,38 @@
 import {
   fetchAccessibleBranches,
   fetchCashVarianceSummary,
+  fetchFinanceDashboardSummary,
+  fetchRevenueByCashier,
+  fetchRevenueByHour,
   fetchRevenueKpis,
   fetchRevenueRollup,
-  type RevenueGranularity,
+  fetchTaxInvoices,
+  fetchTopItems,
+  type FinanceDashboardSummary,
 } from "../actions";
-import type { FinanceLayoutMode } from "../page";
+import { fetchFoodCost } from "../accounting-actions";
+import { fetchFiscalPeriods } from "../period-actions";
 import {
   fetchReconciliation,
   type ReconciliationReport,
 } from "../reconciliation-actions";
+import {
+  parseFinanceParams,
+  resolveFinanceRange,
+} from "../_lib/finance-params";
+import type {
+  FinanceDashboardHealth,
+  FiscalPeriodRow,
+  TopItemRow,
+} from "../_lib/finance-types";
 import { RevenueClient } from "./revenue-client";
 
-const VALID_GRANULARITIES: readonly RevenueGranularity[] = [
-  "day",
-  "week",
-  "month",
-] as const;
-const VALID_LAYOUTS: readonly FinanceLayoutMode[] = ["simple", "advanced"];
+// ─── Server Component types ─────────────────────────────────────
+
+export interface AccessibleBranch {
+  id: number;
+  name: string;
+}
 
 export interface RollupRow {
   period_start: string;
@@ -56,11 +71,6 @@ export interface KpiBundle {
   refreshed_at: string;
 }
 
-export interface AccessibleBranch {
-  id: number;
-  name: string;
-}
-
 export interface ReconcileSnippet {
   subledger_total: number;
   gl_total: number;
@@ -94,116 +104,121 @@ export interface CashVarianceSummary {
   worst_cashiers: WorstCashier[];
 }
 
-function isValidIsoDate(value: string | undefined): value is string {
-  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
+export interface HourBucket {
+  dow: number;
+  hour: number;
+  order_count: number;
+  net_revenue: number;
 }
 
-function defaultRangeFor(granularity: RevenueGranularity): {
-  start: string;
-  end: string;
-} {
-  const today = new Date();
-  const end = today.toISOString().slice(0, 10);
-  const d = new Date(today);
-  if (granularity === "day") d.setDate(d.getDate() - 29);
-  else if (granularity === "week") d.setDate(d.getDate() - 7 * 12);
-  else d.setMonth(d.getMonth() - 12);
-  return { start: d.toISOString().slice(0, 10), end };
+export interface CashierRow {
+  cashier_id: string | null;
+  cashier_name: string;
+  order_count: number;
+  net_revenue: number;
+  cash_revenue: number;
+  qr_revenue: number;
 }
 
-// Prev period = same length, ending the day before current start.
-// Day-count length keeps WoW/MoM "vs same number of days" rather than
-// "calendar prev month" — owner thấy delta là apples-to-apples.
-function prevPeriodFor(
-  start: string,
-  end: string,
-): { start: string; end: string } {
-  const startMs = new Date(`${start}T00:00:00Z`).getTime();
-  const endMs = new Date(`${end}T00:00:00Z`).getTime();
-  const lengthMs = endMs - startMs; // inclusive length in ms
-  const prevEndMs = startMs - 24 * 60 * 60 * 1000;
-  const prevStartMs = prevEndMs - lengthMs;
-  const toIso = (ms: number) => new Date(ms).toISOString().slice(0, 10);
-  return { start: toIso(prevStartMs), end: toIso(prevEndMs) };
+interface FinanceFoodCostRow {
+  item_name: string | null;
+  food_cost_pct: number | null;
+}
+
+const RECONCILIATION_TOLERANCE = 1;
+const FOOD_COST_EXCEPTION_THRESHOLD = 60;
+// Hour-of-day RPC caps at 90d. The contract gives owners up to YTD on
+// the same surface, so when the resolved range exceeds 90d we skip
+// fetching the heatmap and show an inline "range too large" hint.
+const HOURLY_MAX_DAYS = 90;
+
+function diffDays(start: string, end: string): number {
+  const s = new Date(`${start}T00:00:00Z`).getTime();
+  const e = new Date(`${end}T00:00:00Z`).getTime();
+  return Math.max(0, Math.round((e - s) / (24 * 60 * 60 * 1000)) + 1);
 }
 
 export default async function RevenueReportPage({
   searchParams,
 }: {
-  searchParams: Promise<{
-    branch?: string;
-    granularity?: string;
-    start?: string;
-    end?: string;
-    compare?: string;
-    layout?: string;
-  }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const sp = await searchParams;
+  const params = parseFinanceParams(sp);
+  const resolved = resolveFinanceRange(params);
 
-  const granularity = (
-    VALID_GRANULARITIES.includes(sp.granularity as RevenueGranularity)
-      ? sp.granularity
-      : "day"
-  ) as RevenueGranularity;
+  const branchesRes = await fetchAccessibleBranches();
+  const branches = (
+    branchesRes.success ? (branchesRes.data ?? []) : []
+  ) as AccessibleBranch[];
 
-  const fallbackRange = defaultRangeFor(granularity);
-  const startDate = isValidIsoDate(sp.start) ? sp.start : fallbackRange.start;
-  const endDate = isValidIsoDate(sp.end) ? sp.end : fallbackRange.end;
-
-  // branch="all" or missing -> null = aggregate every accessible branch.
-  const branchParam = sp.branch;
-  const parsedBranch =
-    branchParam && branchParam !== "all" ? Number(branchParam) : NaN;
-  const branchId =
-    Number.isFinite(parsedBranch) && parsedBranch > 0 ? parsedBranch : null;
-
-  const compareEnabled = sp.compare === "prev";
-  const prevRange = compareEnabled ? prevPeriodFor(startDate, endDate) : null;
-  const layout = VALID_LAYOUTS.includes(sp.layout as FinanceLayoutMode)
-    ? (sp.layout as FinanceLayoutMode)
-    : "simple";
+  const hourlyEnabled = diffDays(resolved.start, resolved.end) <= HOURLY_MAX_DAYS;
 
   const [
-    branchesRes,
     rollupRes,
     kpisRes,
     prevKpisRes,
     reconcileRes,
     cashVarianceRes,
+    topItemsRes,
+    hourRes,
+    cashierRes,
+    dashboardSummaryRes,
+    fiscalPeriodsRes,
+    foodCostRes,
+    invoicesRes,
   ] = await Promise.all([
-    fetchAccessibleBranches(),
-    fetchRevenueRollup(branchId, startDate, endDate, granularity),
-    fetchRevenueKpis(branchId, startDate, endDate),
-    prevRange
-      ? fetchRevenueKpis(branchId, prevRange.start, prevRange.end)
+    fetchRevenueRollup(params.branch, resolved.start, resolved.end, params.gran),
+    fetchRevenueKpis(params.branch, resolved.start, resolved.end),
+    resolved.compare
+      ? fetchRevenueKpis(params.branch, resolved.compare.start, resolved.compare.end)
       : Promise.resolve({ success: true as const, data: null }),
     fetchReconciliation({
-      branchId,
-      startDate,
-      endDate,
+      branchId: params.branch,
+      startDate: resolved.start,
+      endDate: resolved.end,
     }),
-    fetchCashVarianceSummary(branchId, startDate, endDate),
+    fetchCashVarianceSummary(params.branch, resolved.start, resolved.end),
+    fetchTopItems(params.branch, resolved.start.slice(0, 7) + "-01"),
+    hourlyEnabled
+      ? fetchRevenueByHour(params.branch, resolved.start, resolved.end)
+      : Promise.resolve({ success: true as const, data: [] }),
+    fetchRevenueByCashier(params.branch, resolved.start, resolved.end),
+    fetchFinanceDashboardSummary(params.branch, resolved.start, resolved.end),
+    fetchFiscalPeriods(),
+    fetchFoodCost({
+      startDate: resolved.start,
+      endDate: resolved.end,
+      ...(params.branch != null ? { branchId: params.branch } : {}),
+    }),
+    fetchTaxInvoices(params.branch ?? undefined),
   ]);
 
-  const branches = (
-    branchesRes.success ? (branchesRes.data ?? []) : []
-  ) as AccessibleBranch[];
   const rows = (rollupRes.success ? (rollupRes.data ?? []) : []) as RollupRow[];
   const kpis = (kpisRes.success ? kpisRes.data : null) as KpiBundle | null;
   const prevKpis = (
     prevKpisRes.success ? prevKpisRes.data : null
   ) as KpiBundle | null;
+  const topItems = topItemsRes.success
+    ? ((topItemsRes.data ?? []) as TopItemRow[])
+    : [];
+  const hourBuckets = (
+    hourRes.success ? (hourRes.data ?? []) : []
+  ) as HourBucket[];
+  const cashiers = (
+    cashierRes.success ? (cashierRes.data ?? []) : []
+  ) as CashierRow[];
 
-  const compare: ComparePeriod | null =
-    compareEnabled && prevRange
-      ? { start: prevRange.start, end: prevRange.end, kpis: prevKpis }
-      : null;
+  const compare: ComparePeriod | null = resolved.compare
+    ? {
+        start: resolved.compare.start,
+        end: resolved.compare.end,
+        kpis: prevKpis,
+      }
+    : null;
 
-  // Pull the "sales" category (POS revenue vs GL credit on 511+33311) for
-  // the current period — answers "tại sao Revenue page và Statements page
-  // chênh nhau". If reconciliation fails (RPC missing posting setup, etc),
-  // we silently degrade so the revenue surface keeps loading.
+  // Pull the "sales" reconciliation row for the active range — feeds
+  // the inline reconciliation card. If RPC fails we silently degrade.
   let reconcile: ReconcileSnippet | null = null;
   if (reconcileRes.success && reconcileRes.data) {
     const report = reconcileRes.data as ReconciliationReport;
@@ -213,30 +228,16 @@ export default async function RevenueReportPage({
         subledger_total: Number(sales.subledger_total ?? 0),
         gl_total: Number(sales.gl_total ?? 0),
         difference: Number(sales.difference ?? 0),
-        start: startDate,
-        end: endDate,
+        start: resolved.start,
+        end: resolved.end,
       };
     }
   }
 
-  const errorMessage = rollupRes.success ? null : rollupRes.error;
-
-  // Cash variance — pos_sessions.cash_difference đã closed trong khoảng.
-  // Silently degrade nếu RPC fail (deploy thiếu, ACL...) để main page vẫn
-  // load. Chỉ show card khi có ≥1 session để tránh empty noise.
   let cashVariance: CashVarianceSummary | null = null;
   if (cashVarianceRes.success && cashVarianceRes.data) {
-    const raw = cashVarianceRes.data as {
-      session_count: number;
-      total_variance: number;
-      abs_variance_total: number;
-      short_count: number;
-      short_total: number;
-      over_count: number;
-      over_total: number;
-      worst_cashiers: unknown;
-    };
-    if (raw.session_count > 0) {
+    const raw = cashVarianceRes.data as CashVarianceSummary;
+    if (Number(raw.session_count) > 0) {
       cashVariance = {
         session_count: Number(raw.session_count),
         total_variance: Number(raw.total_variance),
@@ -252,20 +253,93 @@ export default async function RevenueReportPage({
     }
   }
 
+  // Work-queue health (period status, recon exceptions, cash variance,
+  // food cost exceptions). Owner sees these on every Finance route via
+  // the shared <WorkQueueStrip>.
+  const dashboardSummary = (
+    dashboardSummaryRes.success ? dashboardSummaryRes.data : null
+  ) as FinanceDashboardSummary | null;
+
+  const fiscalPeriods = fiscalPeriodsRes.success
+    ? ((fiscalPeriodsRes.data ?? []) as FiscalPeriodRow[])
+    : [];
+  const currentPeriodYear = Number(resolved.end.slice(0, 4));
+  const currentPeriodMonth = Number(resolved.end.slice(5, 7));
+  const currentPeriod = fiscalPeriods.find(
+    (p) =>
+      p.period_year === currentPeriodYear &&
+      p.period_month === currentPeriodMonth,
+  );
+
+  let reconciliationExceptionCount = 0;
+  let reconciliationDifference = 0;
+  if (reconcileRes.success && reconcileRes.data) {
+    const report = reconcileRes.data as ReconciliationReport;
+    reconciliationExceptionCount = report.categories.filter(
+      (c) => Math.abs(Number(c.difference ?? 0)) > RECONCILIATION_TOLERANCE,
+    ).length;
+    reconciliationDifference = report.categories.reduce(
+      (sum, c) => sum + Math.abs(Number(c.difference ?? 0)),
+      0,
+    );
+  }
+
+  const cashVarianceSessionCount = cashVariance?.session_count ?? 0;
+  const cashVarianceAbsAmount = cashVariance?.abs_variance_total ?? 0;
+
+  const foodCostRows = foodCostRes.success
+    ? ((foodCostRes.data ?? []) as FinanceFoodCostRow[])
+    : [];
+  const foodCostExceptions = foodCostRows
+    .filter(
+      (row) =>
+        Number(row.food_cost_pct ?? 0) >= FOOD_COST_EXCEPTION_THRESHOLD,
+    )
+    .sort(
+      (a, b) =>
+        Number(b.food_cost_pct ?? 0) - Number(a.food_cost_pct ?? 0),
+    );
+  const topFoodCostException = foodCostExceptions[0] ?? null;
+
+  const dashboardHealth: FinanceDashboardHealth = {
+    currentPeriodLabel: `T${String(currentPeriodMonth).padStart(2, "0")}/${currentPeriodYear}`,
+    currentPeriodStatus: currentPeriod?.status ?? "missing",
+    reconciliationExceptionCount,
+    reconciliationDifference,
+    cashVarianceSessionCount,
+    cashVarianceAbsAmount,
+    foodCostExceptionCount: foodCostExceptions.length,
+    topFoodCostExceptionName: topFoodCostException?.item_name ?? null,
+    topFoodCostExceptionPct:
+      topFoodCostException?.food_cost_pct == null
+        ? null
+        : Number(topFoodCostException.food_cost_pct),
+  };
+
+  const invoiceAttentionCount = invoicesRes.success
+    ? (invoicesRes.data as { status: string }[] | null ?? []).filter((i) =>
+        ["draft", "signing", "submitted"].includes(i.status),
+      ).length
+    : 0;
+
   return (
     <RevenueClient
+      params={params}
       branches={branches}
-      initialBranchId={branchId}
-      initialRows={rows}
-      initialKpis={kpis}
-      initialCompare={compare}
-      initialReconcile={reconcile}
-      initialCashVariance={cashVariance}
-      initialStart={startDate}
-      initialEnd={endDate}
-      initialGranularity={granularity}
-      initialLayout={layout}
-      initialError={errorMessage ?? null}
+      kpis={kpis}
+      compare={compare}
+      rollupRows={rows}
+      topItems={topItems}
+      hourBuckets={hourBuckets}
+      hourlyEnabled={hourlyEnabled}
+      cashiers={cashiers}
+      reconcile={reconcile}
+      cashVariance={cashVariance}
+      dashboardSummary={dashboardSummary}
+      dashboardHealth={dashboardHealth}
+      invoiceAttentionCount={invoiceAttentionCount}
+      resolvedStart={resolved.start}
+      resolvedEnd={resolved.end}
     />
   );
 }

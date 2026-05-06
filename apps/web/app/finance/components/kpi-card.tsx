@@ -1,0 +1,142 @@
+import Link from "next/link";
+import type { ReactNode } from "react";
+import { ArrowUpRight } from "lucide-react";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
+import { cn } from "@comtammatu/ui/lib/utils";
+import { CompareChip, type CompareDelta } from "./compare-chip";
+import { TrendSparkline, type TrendPoint } from "./trend-sparkline";
+
+// KPI card primitive — replaces the bespoke layouts in finance-client and
+// revenue-client. Owner Q-spec acceptance §4: every KPI must have a
+// drill-down link; tone follows BA §2 thresholds; sparkline is optional.
+//
+// Layout:
+//   ┌──────────────────────────────────┐
+//   │ LABEL (uppercase) ↗   ◯ tone dot │
+//   │ VALUE (2xl bold tabular)         │
+//   │ ▲ +12,3% · vs kỳ trước           │
+//   │ Hint                             │
+//   │ ░░░░░░░░░░░░░░░░░░░░░ sparkline  │
+//   └──────────────────────────────────┘
+
+export type KpiTone = "neutral" | "primary" | "success" | "warning" | "destructive";
+
+const VALUE_TONE: Record<KpiTone, string> = {
+  neutral: "text-foreground",
+  primary: "text-primary",
+  success: "text-success",
+  warning: "text-warning",
+  destructive: "text-destructive",
+};
+
+const DOT_TONE: Record<KpiTone, string> = {
+  neutral: "bg-muted",
+  primary: "bg-primary",
+  success: "bg-success",
+  warning: "bg-warning",
+  destructive: "bg-destructive",
+};
+
+interface KpiCardProps {
+  label: string;
+  value: string;
+  /** Compare delta (built via buildCompareDelta) */
+  delta?: CompareDelta | null;
+  /** Compare period label e.g. "vs kỳ trước" */
+  compareHint?: string;
+  /** Inline secondary metric e.g. "Chưa VAT · 1.234 lượt" */
+  hint?: ReactNode;
+  /** Visual tone — primary highlights hero KPI, warning/destructive flag SLA */
+  tone?: KpiTone;
+  /** Drill-down target. When set, the whole card is a Link. */
+  href?: string;
+  /** Optional sparkline series (≤30 points typical) */
+  sparkline?: TrendPoint[];
+  /** Sparkline screen-reader description */
+  sparklineLabel?: string;
+}
+
+export function KpiCard({
+  label,
+  value,
+  delta,
+  compareHint = "vs kỳ trước",
+  hint,
+  tone = "neutral",
+  href,
+  sparkline,
+  sparklineLabel,
+}: KpiCardProps) {
+  const Body = (
+    <CardContent
+      className={cn(
+        "relative space-y-1.5 p-4",
+        href ? "transition-colors hover:bg-muted/40" : undefined,
+      )}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          {label}
+        </p>
+        <span className="flex items-center gap-1.5">
+          <span
+            className={cn("size-1.5 rounded-full", DOT_TONE[tone])}
+            aria-hidden
+          />
+          {href ? (
+            <ArrowUpRight
+              className="size-3.5 text-muted-foreground"
+              aria-hidden
+            />
+          ) : null}
+        </span>
+      </div>
+      <p className={cn("text-2xl font-bold tabular-nums", VALUE_TONE[tone])}>
+        {value}
+      </p>
+      {delta ? (
+        <CompareChip
+          label={delta.label}
+          tone={delta.tone}
+          hint={compareHint}
+        />
+      ) : null}
+      {hint ? (
+        <p className="text-xs text-muted-foreground">{hint}</p>
+      ) : null}
+      {sparkline && sparkline.length > 0 ? (
+        <div className="-mx-1 -mb-1 mt-2 h-8">
+          <TrendSparkline
+            data={sparkline}
+            ariaLabel={sparklineLabel ?? `Xu hướng ${label}`}
+            tone={
+              tone === "destructive"
+                ? "destructive"
+                : tone === "warning"
+                  ? "warning"
+                  : tone === "success"
+                    ? "success"
+                    : "primary"
+            }
+          />
+        </div>
+      ) : null}
+    </CardContent>
+  );
+
+  if (!href) {
+    return <Card>{Body}</Card>;
+  }
+  // Card primitive is a div with no asChild slot, so we wrap the whole
+  // card in a Link. Display:block keeps the card's own layout intact;
+  // the Link gets focus styling so keyboard users see selection rings.
+  return (
+    <Link
+      href={href}
+      className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      aria-label={`${label}: ${value}`}
+    >
+      <Card>{Body}</Card>
+    </Link>
+  );
+}

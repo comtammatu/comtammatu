@@ -843,6 +843,91 @@ export async function fetchCashVarianceSummary(
   return { success: true, data: data?.[0] ?? null };
 }
 
+/* ─── fetchRevenueByHour — heatmap 7×24 cho consolidated revenue ── */
+// 90-day cap enforced at RPC level (matches application guard). Hour
+// bucket dùng `(paid_at AT TIME ZONE 'Asia/Ho_Chi_Minh')` để khớp với
+// rule REVENUE-BUCKET-BY-PAID-AT-LOCAL-TZ. Returns 1 row per (dow, hour).
+export async function fetchRevenueByHour(
+  branchId: number | null,
+  startDate: string,
+  endDate: string,
+): Promise<ActionResult> {
+  const parsedBranch = z.coerce
+    .number()
+    .int()
+    .positive()
+    .nullable()
+    .safeParse(branchId);
+  if (!parsedBranch.success) {
+    return { success: false, error: "Branch ID không hợp lệ" };
+  }
+
+  const parsedStart = z.string().date().safeParse(startDate);
+  const parsedEnd = z.string().date().safeParse(endDate);
+  if (!parsedStart.success || !parsedEnd.success) {
+    return { success: false, error: "Ngày không hợp lệ (YYYY-MM-DD)" };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    REPORT_ROLES,
+    PERMISSION_KEYS.FINANCE_VIEW,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { data, error } = await ctx.supabase.rpc("get_revenue_by_hour", {
+    p_branch_id: parsedBranch.data as number,
+    p_start_date: parsedStart.data,
+    p_end_date: parsedEnd.data,
+  });
+
+  if (error) {
+    return { success: false, error: "Không thể tải dữ liệu doanh thu theo giờ." };
+  }
+
+  return { success: true, data: data ?? [] };
+}
+
+/* ─── fetchRevenueByCashier — bar chart cho cashier productivity ── */
+export async function fetchRevenueByCashier(
+  branchId: number | null,
+  startDate: string,
+  endDate: string,
+): Promise<ActionResult> {
+  const parsedBranch = z.coerce
+    .number()
+    .int()
+    .positive()
+    .nullable()
+    .safeParse(branchId);
+  if (!parsedBranch.success) {
+    return { success: false, error: "Branch ID không hợp lệ" };
+  }
+
+  const parsedStart = z.string().date().safeParse(startDate);
+  const parsedEnd = z.string().date().safeParse(endDate);
+  if (!parsedStart.success || !parsedEnd.success) {
+    return { success: false, error: "Ngày không hợp lệ (YYYY-MM-DD)" };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    REPORT_ROLES,
+    PERMISSION_KEYS.FINANCE_VIEW,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { data, error } = await ctx.supabase.rpc("get_revenue_by_cashier", {
+    p_branch_id: parsedBranch.data as number,
+    p_start_date: parsedStart.data,
+    p_end_date: parsedEnd.data,
+  });
+
+  if (error) {
+    return { success: false, error: "Không thể tải dữ liệu thu ngân." };
+  }
+
+  return { success: true, data: data ?? [] };
+}
+
 /* ─── fetchAccessibleBranches — branches user có finance:view ─ */
 // Branch picker source. Owner/super_manager: all active operational
 // branches. area_manager: branches in their area. branch_manager:

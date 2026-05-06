@@ -33,7 +33,7 @@ import {
 import { toast } from "@comtammatu/ui/components/sonner";
 import { formatVND } from "@comtammatu/shared/format";
 import { cancelTaxInvoice } from "./actions";
-import type { InvoiceRow } from "./page";
+import type { InvoiceRow } from "./_lib/finance-types";
 import { TableEmptyStateRow } from "@/admin/components/table-empty-state-row";
 
 import { FORM_VI, ORDER_VI } from "@comtammatu/shared/messages";
