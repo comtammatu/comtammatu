@@ -1,0 +1,16 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/feedback-daily-report",
+      "schedule": "0 19 * * *"
+    },
+    {
+      "path": "/api/cron/telegram-flush",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/feedback-retention",
+      "schedule": "0 20 * * *"
+    }
+  ]
+}

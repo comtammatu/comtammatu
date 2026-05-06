@@ -8,6 +8,7 @@ import {
   Briefcase as IconBriefcase,
   ChefHat as IconChefHat,
   LayoutDashboard as IconLayoutDashboard,
+  MessageSquare as IconMessageSquare,
   Monitor as IconDeviceDesktop,
   Package as IconPackage,
   Receipt as IconReceipt,
@@ -44,6 +45,7 @@ const ADMIN_ICON_MAP: Record<string, React.ElementType> = {
   Receipt: IconReceipt,
   ToolsKitchen: IconToolsKitchen,
   ShieldCheck: IconShieldCheck,
+  MessageSquare: IconMessageSquare,
 };
 
 function mapResolvedNavGroups(

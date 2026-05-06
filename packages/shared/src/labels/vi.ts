@@ -19,7 +19,8 @@ export type ModuleLabelKey =
   | "branch_settings"
   | "branch_menu_limits"
   | "employee"
-  | "notifications";
+  | "notifications"
+  | "feedback";
 
 type SiteLike = {
   branch_kind?: string | null;
@@ -45,6 +46,7 @@ export const MODULE_LABELS_VI: Record<ModuleLabelKey, string> = {
   branch_menu_limits: "Hạn mức bán hàng ngày",
   employee: "Cổng nhân viên",
   notifications: "Thông báo",
+  feedback: "Phản ánh khách",
 };
 
 export const NAV_GROUP_LABELS_VI = {

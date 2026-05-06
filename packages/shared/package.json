@@ -13,12 +13,19 @@
     "./menu": "./src/menu/category-labels.ts",
     "./messages": "./src/messages/index.ts",
     "./providers": "./src/providers/index.ts",
-    "./payroll": "./src/payroll/calculate.ts"
+    "./payroll": "./src/payroll/calculate.ts",
+    "./feedback": "./src/feedback/index.ts",
+    "./telegram": "./src/telegram/index.ts",
+    "./ai": "./src/ai/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/",
-    "test": "tsx --test src/auth/__tests__/*.test.ts src/providers/__tests__/*.test.ts src/utils/__tests__/*.test.ts"
+    "test": "tsx --test src/auth/__tests__/*.test.ts src/providers/__tests__/*.test.ts src/utils/__tests__/*.test.ts src/feedback/__tests__/*.test.ts src/telegram/__tests__/*.test.ts src/ai/__tests__/*.test.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.54.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/node": "^25.5.0",

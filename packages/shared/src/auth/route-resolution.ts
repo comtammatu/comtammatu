@@ -27,6 +27,8 @@ export function isPublicAppPath(pathname: string): boolean {
   if (pathname.startsWith("/swe-worker-")) return true;
   if (pathname.startsWith("/demo/")) return true;
   if (/^\/br\/\d+\/pos\/manifest\.webmanifest$/.test(pathname)) return true;
+  // /r/ prefix — public QR feedback submission pages (no auth required)
+  if (pathname.startsWith("/r/")) return true;
 
   return PUBLIC_APP_PATHS.some(
     (path) => pathname === path || pathname.startsWith(`${path}/`),
@@ -64,6 +66,7 @@ export function resolveModuleFromPath(pathname: string): ModuleKey | null {
   if (resolvedPathname.startsWith("/admin/settings")) return "settings";
   if (resolvedPathname.startsWith("/admin/inventory")) return "inventory_admin";
   if (resolvedPathname.startsWith("/admin/accounting")) return "accounting";
+  if (resolvedPathname.startsWith("/admin/feedback")) return "feedback";
 
   for (const prefix of INVENTORY_PROCUREMENT_PREFIXES) {
     if (resolvedPathname === prefix || resolvedPathname.startsWith(`${prefix}/`)) {
