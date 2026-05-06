@@ -78,9 +78,27 @@ export function PrinterStatusBadge({
 
   useEffect(() => {
     void fetchStatus();
-    const pollId = setInterval(() => void fetchStatusRef.current(), POLL_INTERVAL_MS);
+    const pollId = setInterval(() => {
+      // Skip the polled fetch when the tab is hidden — wasted work on
+      // backgrounded iPads / sleeping tabs. The realtime channel above
+      // still pushes UPDATE/INSERT events when a row changes; on resume
+      // the visibility-change handler below catches up immediately.
+      if (document.visibilityState === "hidden") return;
+      void fetchStatusRef.current();
+    }, POLL_INTERVAL_MS);
+
+    // Resume catch-up so a stale "online" badge doesn't survive the
+    // first 30s after the cashier returns. Cheap (single maybeSingle).
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        void fetchStatusRef.current();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
     return () => {
       clearInterval(pollId);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [fetchStatus]);
 
