@@ -1,6 +1,8 @@
+"use client";
+
 import Link from "next/link";
-import type { ElementType, ReactNode } from "react";
-import { ArrowRight as IconArrowRight } from "lucide-react";
+import { useState, type ElementType, type ReactNode } from "react";
+import { ArrowRight as IconArrowRight, ChevronDown as IconChevronDown } from "lucide-react";
 import { cn } from "@comtammatu/ui";
 import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
 import {
@@ -8,6 +10,7 @@ import {
   CardAction,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@comtammatu/ui/components/card";
@@ -19,6 +22,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@comtammatu/ui/components/empty";
+import { Separator } from "@comtammatu/ui/components/separator";
 
 type SurfaceWidth = "narrow" | "default" | "wide" | "full";
 type SurfaceTone = "primary" | "success" | "warning" | "info" | "secondary";
@@ -45,6 +49,8 @@ export type AppPageProps = {
   scroll?: boolean;
   width?: SurfaceWidth;
   padded?: boolean;
+  density?: "comfortable" | "compact";
+  mobile?: boolean;
 };
 
 export function AppPage({
@@ -54,20 +60,25 @@ export function AppPage({
   scroll = false,
   width = "wide",
   padded = true,
+  density = "comfortable",
+  mobile = false,
 }: AppPageProps) {
+  const isCompact = density === "compact";
   return (
     <div
       className={cn(
         "min-h-0 flex-1",
         scroll ? "no-scrollbar overflow-auto" : "overflow-visible",
-        padded && "p-4",
+        padded && (isCompact ? "p-3" : "p-4"),
+        mobile && "pb-28",
         className,
       )}
     >
       <div
         className={cn(
-          "mx-auto flex w-full flex-col gap-4",
-          PAGE_WIDTH_CLASSNAME[width],
+          "mx-auto flex w-full flex-col",
+          isCompact ? "gap-3" : "gap-4",
+          mobile ? "max-w-2xl" : PAGE_WIDTH_CLASSNAME[width],
           contentClassName,
         )}
       >
@@ -89,6 +100,9 @@ export type AppPageHeaderProps = {
   actions?: ReactNode;
   className?: string;
   titleClassName?: string;
+  breadcrumb?: ReactNode;
+  tabs?: ReactNode;
+  meta?: ReactNode;
 };
 
 export function AppPageHeader({
@@ -100,49 +114,70 @@ export function AppPageHeader({
   actions,
   className,
   titleClassName,
+  breadcrumb,
+  tabs,
+  meta,
 }: AppPageHeaderProps) {
   const Heading = headingLevel;
 
   return (
-    <header
-      className={cn(
-        "flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between",
-        className,
-      )}
-    >
-      <div className="min-w-0 space-y-1">
-        {eyebrow ? (
-          <div className="text-xs font-medium text-muted-foreground">
-            {eyebrow}
+    <header className={cn("flex flex-col gap-2", className)}>
+      {breadcrumb ? <div>{breadcrumb}</div> : null}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 space-y-1">
+          {eyebrow ? (
+            <div className="text-xs font-medium text-muted-foreground">
+              {eyebrow}
+            </div>
+          ) : null}
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <Heading
+              className={cn(
+                "font-heading min-w-0 text-xl font-semibold tracking-tight sm:text-2xl",
+                titleClassName,
+              )}
+            >
+              {title}
+            </Heading>
+            {badge ? (
+              <Badge variant={badge.variant ?? "secondary"}>{badge.children}</Badge>
+            ) : null}
           </div>
-        ) : null}
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <Heading
-            className={cn(
-              "font-heading min-w-0 text-xl font-semibold tracking-tight sm:text-2xl",
-              titleClassName,
-            )}
-          >
-            {title}
-          </Heading>
-          {badge ? (
-            <Badge variant={badge.variant ?? "secondary"}>{badge.children}</Badge>
+          {description ? (
+            <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
+              {description}
+            </p>
+          ) : null}
+          {meta ? (
+            <div className="text-xs text-muted-foreground">{meta}</div>
           ) : null}
         </div>
-        {description ? (
-          <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-            {description}
-          </p>
+        {actions ? (
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            {actions}
+          </div>
         ) : null}
       </div>
-      {actions ? (
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          {actions}
-        </div>
-      ) : null}
+      {tabs ? <div>{tabs}</div> : null}
     </header>
   );
 }
+
+type AppSectionTone = "default" | "info" | "warning" | "destructive";
+
+const SECTION_TONE_CLASSNAME: Record<AppSectionTone, string> = {
+  default: "",
+  info: "border-info/40 bg-info/5",
+  warning: "border-warning/40 bg-warning/5",
+  destructive: "border-destructive/40 bg-destructive/5",
+};
+
+const SECTION_TONE_ICON_CLASSNAME: Record<AppSectionTone, string> = {
+  default: "text-muted-foreground",
+  info: "text-info",
+  warning: "text-warning",
+  destructive: "text-destructive",
+};
 
 export type AppSectionProps = {
   title?: ReactNode;
@@ -158,6 +193,9 @@ export type AppSectionProps = {
   className?: string;
   contentClassName?: string;
   size?: "default" | "sm";
+  tone?: AppSectionTone;
+  collapsible?: boolean;
+  footer?: ReactNode;
 };
 
 export function AppSection({
@@ -171,18 +209,36 @@ export function AppSection({
   className,
   contentClassName,
   size = "default",
+  tone = "default",
+  collapsible = false,
+  footer,
 }: AppSectionProps) {
-  const hasHeader = Boolean(title || description || Icon || badge || action);
+  const [open, setOpen] = useState(true);
+  const hasHeader = Boolean(title || description || Icon || badge || action || collapsible);
+  const chevronAction = collapsible ? (
+    <button
+      type="button"
+      onClick={() => setOpen((v) => !v)}
+      className="text-muted-foreground hover:text-foreground transition-colors"
+      aria-expanded={open}
+      aria-label={open ? "Thu gọn" : "Mở rộng"}
+    >
+      <IconChevronDown
+        className={cn("size-4 transition-transform", open ? "rotate-0" : "-rotate-90")}
+      />
+    </button>
+  ) : null;
 
   return (
-    <Card size={size} className={className}>
+    <Card size={size} className={cn(SECTION_TONE_CLASSNAME[tone], className)}>
       {hasHeader ? (
         <CardHeader>
           <CardTitle className="flex min-w-0 items-center gap-2">
             {Icon ? (
               <Icon
                 className={cn(
-                  "size-4 shrink-0 text-muted-foreground",
+                  "size-4 shrink-0",
+                  SECTION_TONE_ICON_CLASSNAME[tone],
                   iconClassName,
                 )}
               />
@@ -192,7 +248,7 @@ export function AppSection({
           {description ? (
             <CardDescription>{description}</CardDescription>
           ) : null}
-          {badge || action ? (
+          {badge || action || chevronAction ? (
             <CardAction className="flex items-center gap-2">
               {badge ? (
                 <Badge variant={badge.variant ?? "secondary"}>
@@ -200,35 +256,84 @@ export function AppSection({
                 </Badge>
               ) : null}
               {action}
+              {chevronAction}
             </CardAction>
           ) : null}
         </CardHeader>
       ) : null}
-      <CardContent
-        className={cn(
-          "flex min-w-0 flex-col gap-3",
-          !hasHeader && "pt-0",
-          contentClassName,
-        )}
-      >
-        {children}
-      </CardContent>
+      {open ? (
+        <CardContent
+          className={cn(
+            "flex min-w-0 flex-col gap-3",
+            !hasHeader && "pt-0",
+            contentClassName,
+          )}
+        >
+          {children}
+        </CardContent>
+      ) : null}
+      {open && footer ? (
+        <CardFooter className="flex items-center justify-end gap-2 border-t px-6 py-3">
+          {footer}
+        </CardFooter>
+      ) : null}
     </Card>
   );
 }
 
 export type AppToolbarProps = {
-  children: ReactNode;
+  children?: ReactNode;
   className?: string;
+  search?: ReactNode;
+  filters?: ReactNode;
+  bulk?: ReactNode;
+  actions?: ReactNode;
+  reset?: ReactNode;
 };
 
-export function AppToolbar({ children, className }: AppToolbarProps) {
+export function AppToolbar({
+  children,
+  className,
+  search,
+  filters,
+  bulk,
+  actions,
+  reset,
+}: AppToolbarProps) {
+  const hasSlots = search != null || filters != null || bulk != null || actions != null || reset != null;
+
   return (
     <Card size="sm" className="py-0">
       <CardContent
         className={cn("flex flex-wrap items-center gap-3 p-3", className)}
       >
-        {children}
+        {hasSlots ? (
+          <>
+            {search ? (
+              <div className="flex flex-wrap items-center gap-2">{search}</div>
+            ) : null}
+            {filters ? (
+              <div className="flex flex-wrap items-center gap-2">{filters}</div>
+            ) : null}
+            {bulk ? (
+              <>
+                <Separator orientation="vertical" className="h-6" />
+                <div className="flex flex-wrap items-center gap-2">{bulk}</div>
+              </>
+            ) : null}
+            {actions ? (
+              <>
+                <Separator orientation="vertical" className="h-6" />
+                <div className="flex flex-wrap items-center gap-2">{actions}</div>
+              </>
+            ) : null}
+            {reset ? (
+              <div className="flex flex-wrap items-center gap-2">{reset}</div>
+            ) : null}
+          </>
+        ) : (
+          children
+        )}
       </CardContent>
     </Card>
   );
@@ -327,6 +432,9 @@ export type AppLinkCardProps = {
   icon: ElementType;
   tone?: SurfaceTone;
   ctaLabel?: string;
+  disabled?: boolean;
+  disabledReason?: string;
+  metric?: { value: ReactNode; label?: string };
 };
 
 export function AppLinkCard({
@@ -338,42 +446,80 @@ export function AppLinkCard({
   icon: Icon,
   tone = "primary",
   ctaLabel = "Mở chi tiết",
+  disabled = false,
+  disabledReason,
+  metric,
 }: AppLinkCardProps) {
-  return (
-    <Card className="h-full transition-[box-shadow,border-color] hover:shadow-sm">
-      <CardContent className="h-full p-0">
-        <Link
-          href={href}
-          className="group flex h-full flex-col justify-between gap-5 p-4"
-        >
-          <div className="space-y-4">
-            <div className="flex items-start justify-between gap-3">
-              <div
-                className={cn(
-                  "flex size-10 items-center justify-center rounded-md",
-                  TONE_CLASSNAME[tone],
-                )}
-              >
-                <Icon className="size-5" />
-              </div>
-              {badge ? <Badge variant={badgeVariant}>{badge}</Badge> : null}
-            </div>
-            <div className="min-w-0">
-              <p className="font-heading text-base font-semibold tracking-tight">
-                {title}
-              </p>
-              {description ? (
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  {description}
-                </p>
-              ) : null}
-            </div>
-          </div>
-          <span className="inline-flex items-center gap-1 text-sm font-medium text-primary">
-            {ctaLabel}
-            <IconArrowRight className="size-4" />
+  const topRight = (
+    <div className="flex flex-col items-end gap-1">
+      {badge ? <Badge variant={badgeVariant}>{badge}</Badge> : null}
+      {metric ? (
+        <div className="flex flex-col items-end">
+          <span className="font-mono text-sm font-semibold tabular-nums">
+            {metric.value}
           </span>
-        </Link>
+          {metric.label ? (
+            <span className="text-xs text-muted-foreground">{metric.label}</span>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+
+  const inner = (
+    <div className="group flex h-full flex-col justify-between gap-5 p-4">
+      <div className="space-y-4">
+        <div className="flex items-start justify-between gap-3">
+          <div
+            className={cn(
+              "flex size-10 items-center justify-center rounded-md",
+              TONE_CLASSNAME[tone],
+            )}
+          >
+            <Icon className="size-5" />
+          </div>
+          {(badge ?? metric) ? topRight : null}
+        </div>
+        <div className="min-w-0">
+          <p className="font-heading text-base font-semibold tracking-tight">
+            {title}
+          </p>
+          {description ? (
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              {description}
+            </p>
+          ) : null}
+          {disabled && disabledReason ? (
+            <p className="mt-1 text-xs text-muted-foreground">{disabledReason}</p>
+          ) : null}
+        </div>
+      </div>
+      {!disabled ? (
+        <span className="inline-flex items-center gap-1 text-sm font-medium text-primary">
+          {ctaLabel}
+          <IconArrowRight className="size-4" />
+        </span>
+      ) : null}
+    </div>
+  );
+
+  return (
+    <Card
+      className={cn(
+        "h-full transition-[box-shadow,border-color]",
+        disabled ? "cursor-not-allowed opacity-60" : "hover:shadow-sm",
+      )}
+    >
+      <CardContent className="h-full p-0">
+        {disabled ? (
+          <div aria-disabled="true" className="h-full">
+            {inner}
+          </div>
+        ) : (
+          <Link href={href} className="h-full">
+            {inner}
+          </Link>
+        )}
       </CardContent>
     </Card>
   );
