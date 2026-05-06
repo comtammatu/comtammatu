@@ -74,7 +74,10 @@ export type GRNDetailItem = {
   poQuantity: number | null;
   poUnitPrice: number | null;
   required: number;
+  // Số đã giao (gross delivered từ NCC). Stock impact = actual − rejected.
   actual: number;
+  // Số nhận tốt vào kho thực = actual − rejected (derived ở page.tsx)
+  accepted: number;
   rejected: number;
   rejectionReason: string;
   rejectedPhotoUrl: string;
@@ -156,7 +159,7 @@ export function GRNDetailClient({
 
   const stats = useMemo(() => {
     const acceptedLines = lines.filter(
-      (l) => l.qualityStatus !== "rejected" && l.actual > 0,
+      (l) => l.qualityStatus !== "rejected" && l.actual - l.rejected > 0,
     ).length;
     const rejectedLines = lines.filter(
       (l) => l.qualityStatus === "rejected" || l.rejected > 0,
@@ -168,7 +171,11 @@ export function GRNDetailClient({
         (variance != null && Math.abs(variance) > qc.priceVarianceReviewPct)
       );
     }).length;
-    const total = lines.reduce((sum, l) => sum + l.cost * l.actual, 0);
+    // Tổng giá trị nhập kho = cost × (delivered − rejected)
+    const total = lines.reduce(
+      (sum, l) => sum + l.cost * (l.actual - l.rejected),
+      0,
+    );
     return { acceptedLines, rejectedLines, reviewLines, total };
   }, [lines, qc.priceVarianceReviewPct]);
 
@@ -270,6 +277,9 @@ export function GRNDetailClient({
 
   function validateBeforeConfirm(): string | null {
     for (const l of lines) {
+      if (l.rejected > l.actual) {
+        return grnCopy.validation.rejectedExceedsDelivered(l.name);
+      }
       if (l.rejected > 0 && !l.rejectionReason.trim()) {
         return grnCopy.validation.rejectReasonRequired(l.name);
       }
@@ -280,14 +290,12 @@ export function GRNDetailClient({
       ) {
         return grnCopy.validation.rejectPhotoRequired(l.name);
       }
-      if (l.qualityStatus === "rejected" && l.actual > 0) {
-        return grnCopy.validation.fullRejectRequiresZero(l.name);
-      }
       const tolerance = qc.qtyShortTolerancePct;
+      // Short-delivery: NCC giao ít hơn ngưỡng. Dùng `actual` (gross delivered) trực tiếp.
       if (
         l.poQuantity != null &&
         l.poQuantity > 0 &&
-        l.actual + l.rejected < l.poQuantity * (1 - tolerance / 100) &&
+        l.actual < l.poQuantity * (1 - tolerance / 100) &&
         !l.shortDeliveryAction
       ) {
         return grnCopy.validation.shortageActionRequired(l.name, tolerance);
@@ -664,6 +672,7 @@ function AmendOwnerDialog({
       onSaved({
         ...line,
         actual: parsedQty,
+        accepted: parsedQty - line.rejected,
         cost: parsedCost,
         dirty: false,
       });
@@ -854,6 +863,7 @@ function AddGrnLineDialog({
         poUnitPrice: null,
         required: parsedQuantity,
         actual: parsedQuantity,
+        accepted: parsedQuantity,
         rejected: 0,
         rejectionReason: "",
         rejectedPhotoUrl: "",
@@ -1069,11 +1079,11 @@ function LineRow({
           ? "text-warning font-semibold"
           : "text-muted-foreground";
 
+  // Hàng giao ít: NCC chưa giao đủ ngưỡng so với PO. Dùng số đã giao (actual) trực tiếp.
   const shortDeliveryRequired =
     line.poQuantity != null &&
     line.poQuantity > 0 &&
-    line.actual + line.rejected <
-      line.poQuantity * (1 - qc.qtyShortTolerancePct / 100);
+    line.actual < line.poQuantity * (1 - qc.qtyShortTolerancePct / 100);
 
   if (!isDraft) {
     return (
@@ -1083,14 +1093,13 @@ function LineRow({
           <div>
             <p className="font-bold">{line.name}</p>
             <p className="text-xs text-muted-foreground">
-              {grnCopy.line.orderedReceived(
+              {grnCopy.line.orderedDeliveredAccepted(
                 line.required,
-                line.unit,
                 line.actual,
+                line.actual - line.rejected,
+                line.rejected,
+                line.unit,
               )}
-              {line.rejected > 0
-                ? grnCopy.line.rejectedSuffix(line.rejected, line.unit)
-                : ""}
             </p>
           </div>
           <div className="flex items-center gap-2">

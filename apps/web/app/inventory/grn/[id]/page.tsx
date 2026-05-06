@@ -95,6 +95,9 @@ export default async function GRNDetailPage({
       partial: "warning",
     };
 
+    const delivered = Number(l.received_quantity ?? 0);
+    const rejected = Number(l.rejected_quantity ?? 0);
+
     return {
       lineId: l.id,
       ingredientId: l.ingredient_id,
@@ -103,8 +106,9 @@ export default async function GRNDetailPage({
       poQuantity: l.po_quantity != null ? Number(l.po_quantity) : null,
       poUnitPrice: l.po_unit_price != null ? Number(l.po_unit_price) : null,
       required: Number(l.po_quantity ?? l.received_quantity ?? 0),
-      actual: Number(l.received_quantity ?? 0),
-      rejected: Number(l.rejected_quantity ?? 0),
+      actual: delivered,
+      accepted: delivered - rejected,
+      rejected,
       rejectionReason: l.rejection_reason ?? "",
       rejectedPhotoUrl: l.rejected_photo_url ?? "",
       priceOverrideNote: l.price_override_note ?? "",
@@ -130,8 +134,9 @@ export default async function GRNDetailPage({
     };
   });
 
+  // Tổng giá trị nhập kho = cost × accepted (số thực vào kho sau khi trừ trả NCC)
   const totalAmount = items.reduce(
-    (sum, i) => sum + i.cost * (i.actual - 0),
+    (sum, i) => sum + i.cost * i.accepted,
     0,
   );
 

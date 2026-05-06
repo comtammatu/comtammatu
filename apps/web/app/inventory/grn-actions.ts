@@ -70,7 +70,7 @@ export async function fetchRecentActivity(
   let grnQuery = supabase
     .from("goods_received_notes")
     .select(
-      "id, grn_number, status, received_date, suppliers ( name ), grn_items ( total_cost )",
+      "id, grn_number, status, received_date, suppliers ( name ), grn_items ( received_quantity, rejected_quantity, unit_cost )",
     )
     .eq("tenant_id", claims.tenant_id)
     .order("received_date", { ascending: false })
@@ -124,10 +124,22 @@ export async function fetchRecentActivity(
     }),
     ...(grnRes.data ?? []).map((grn) => {
       const lines =
-        (grn.grn_items as Array<{ total_cost: number | null }> | null) ?? [];
+        (grn.grn_items as Array<{
+          received_quantity: number | null;
+          rejected_quantity: number | null;
+          unit_cost: number | null;
+        }> | null) ?? [];
+      // Tổng giá trị nhập kho = (received − rejected) × unit_cost (số thực vào kho)
       const total =
         lines.length > 0
-          ? lines.reduce((s, l) => s + Number(l.total_cost ?? 0), 0)
+          ? lines.reduce(
+              (s, l) =>
+                s +
+                (Number(l.received_quantity ?? 0) -
+                  Number(l.rejected_quantity ?? 0)) *
+                  Number(l.unit_cost ?? 0),
+              0,
+            )
           : null;
       return {
         id: grn.id,
@@ -169,7 +181,7 @@ export async function fetchGrns(branchId?: number): Promise<ActionResult> {
   let query = supabase
     .from("goods_received_notes")
     .select(
-      "id, grn_number, status, received_date, notes, supplier_id, branch_id, po_id, suppliers ( id, name ), purchase_orders ( po_number ), grn_items ( total_cost )",
+      "id, grn_number, status, received_date, notes, supplier_id, branch_id, po_id, suppliers ( id, name ), purchase_orders ( po_number ), grn_items ( received_quantity, rejected_quantity, unit_cost )",
     )
     .eq("tenant_id", claims.tenant_id)
     .order("received_date", { ascending: false });
@@ -268,31 +280,37 @@ export const createGrnDraft = withAction(
 
 /* ─── upsertGrnLine ─── */
 
-const grnLineSchema = z.object({
-  grnId: z.coerce.number().int().positive(),
-  ingredientId: z.coerce.number().int().positive(),
-  receivedQuantity: z.coerce.number().min(0),
-  unit: z.string().min(1),
-  unitCost: z.coerce.number().min(0),
-  qualityStatus: z
-    .enum(["accepted", "rejected", "partial"])
-    .default("accepted"),
-  receivingTemperature: z.coerce.number().optional().nullable(),
-  batchNumber: z.string().trim().optional().nullable(),
-  expiryDate: z.string().date().optional().nullable(),
-  // QC fields
-  rejectedQuantity: z.coerce.number().min(0).optional(),
-  rejectionReason: z.string().trim().max(500).optional().nullable(),
-  rejectedPhotoUrl: z.string().trim().url().optional().nullable(),
-  // Price-variance audit
-  priceOverrideNote: z.string().trim().max(500).optional().nullable(),
-  priceOverridePhotoUrl: z.string().trim().url().optional().nullable(),
-  // Short-delivery handling (set by user when received < ordered beyond tolerance)
-  shortDeliveryAction: z
-    .enum(["accept_and_close", "wait_backorder"])
-    .optional()
-    .nullable(),
-});
+const grnLineSchema = z
+  .object({
+    grnId: z.coerce.number().int().positive(),
+    ingredientId: z.coerce.number().int().positive(),
+    // Số đã giao (gross delivered). Stock impact = receivedQuantity − rejectedQuantity.
+    receivedQuantity: z.coerce.number().min(0),
+    unit: z.string().min(1),
+    unitCost: z.coerce.number().min(0),
+    qualityStatus: z
+      .enum(["accepted", "rejected", "partial"])
+      .default("accepted"),
+    receivingTemperature: z.coerce.number().optional().nullable(),
+    batchNumber: z.string().trim().optional().nullable(),
+    expiryDate: z.string().date().optional().nullable(),
+    // QC fields — rejectedQuantity là subset của receivedQuantity
+    rejectedQuantity: z.coerce.number().min(0).optional(),
+    rejectionReason: z.string().trim().max(500).optional().nullable(),
+    rejectedPhotoUrl: z.string().trim().url().optional().nullable(),
+    // Price-variance audit
+    priceOverrideNote: z.string().trim().max(500).optional().nullable(),
+    priceOverridePhotoUrl: z.string().trim().url().optional().nullable(),
+    // Short-delivery handling (set by user when delivered < ordered beyond tolerance)
+    shortDeliveryAction: z
+      .enum(["accept_and_close", "wait_backorder"])
+      .optional()
+      .nullable(),
+  })
+  .refine((d) => (d.rejectedQuantity ?? 0) <= d.receivedQuantity, {
+    error: "Số trả NCC không được vượt số đã giao.",
+    path: ["rejectedQuantity"],
+  });
 
 export const upsertGrnLine = withAction(
   {
@@ -324,18 +342,15 @@ export const upsertGrnLine = withAction(
       };
     }
 
-    const rejected = data.rejectedQuantity ?? 0;
+    let rejected = data.rejectedQuantity ?? 0;
+    // Nếu user đánh dấu "rejected" toàn dòng, auto set rejected = received (số đã giao = số bị từ chối).
+    if (data.qualityStatus === "rejected") {
+      rejected = data.receivedQuantity;
+    }
     if (rejected > 0 && !data.rejectionReason) {
       return {
         success: false,
         error: "Phải nhập lý do khi có hàng từ chối nhập.",
-      };
-    }
-    if (data.qualityStatus === "rejected" && data.receivedQuantity > 0) {
-      return {
-        success: false,
-        error:
-          "Đã đánh dấu toàn bộ dòng là từ chối — số thực nhận phải bằng 0.",
       };
     }
 
@@ -467,19 +482,29 @@ export async function confirmGrn(grnId: number): Promise<ActionResult> {
 
 /* ─── amendGrnLine (Owner force-edit on confirmed GRN) ─── */
 
-const amendGrnLineSchema = z.object({
-  grnId: z.coerce.number().int().positive(),
-  lineId: z.coerce.number().int().positive(),
-  receivedQuantity: z.coerce.number().min(0, {
-    error: "Số lượng phải >= 0",
-  }),
-  unitCost: z.coerce.number().min(0, { error: "Đơn giá phải >= 0" }),
-  reason: z
-    .string()
-    .trim()
-    .min(5, { error: "Lý do tối thiểu 5 ký tự" })
-    .max(500, { error: "Lý do tối đa 500 ký tự" }),
-});
+const amendGrnLineSchema = z
+  .object({
+    grnId: z.coerce.number().int().positive(),
+    lineId: z.coerce.number().int().positive(),
+    receivedQuantity: z.coerce.number().min(0, {
+      error: "Số lượng phải >= 0",
+    }),
+    rejectedQuantity: z.coerce.number().min(0).optional().nullable(),
+    unitCost: z.coerce.number().min(0, { error: "Đơn giá phải >= 0" }),
+    reason: z
+      .string()
+      .trim()
+      .min(5, { error: "Lý do tối thiểu 5 ký tự" })
+      .max(500, { error: "Lý do tối đa 500 ký tự" }),
+  })
+  .refine(
+    (d) =>
+      d.rejectedQuantity == null || d.rejectedQuantity <= d.receivedQuantity,
+    {
+      error: "Số trả NCC không được vượt số đã giao.",
+      path: ["rejectedQuantity"],
+    },
+  );
 
 export const amendGrnLine = withAction(
   {
@@ -494,6 +519,7 @@ export const amendGrnLine = withAction(
       p_received_quantity: data.receivedQuantity,
       p_unit_cost: data.unitCost,
       p_reason: data.reason,
+      p_rejected_quantity: data.rejectedQuantity ?? null,
     });
 
     if (error) {
@@ -527,6 +553,12 @@ export const amendGrnLine = withAction(
         return {
           success: false,
           error: "Sửa làm tồn kho âm — không cho phép.",
+        };
+      }
+      if (msg.includes("rejected_exceeds_received")) {
+        return {
+          success: false,
+          error: "Số trả NCC không được vượt số đã giao.",
         };
       }
       if (msg.includes("reason_required_min_5_chars")) {

@@ -286,6 +286,145 @@ test.describe("GRN at central_kitchen — new flow (Scenario 2)", () => {
   });
 });
 
+// ─── Scenario 8: Semantic — received_quantity = "Số đã giao" (gross delivered) ─
+// Stock impact = received_quantity − rejected_quantity (net into stock).
+// Backed by migration 20260530000000_grn_received_means_delivered.sql.
+
+test.describe("GRN net semantic — rejected ≤ delivered (Scenario 8)", () => {
+  test("CHECK constraint blocks rejected_quantity > received_quantity", async () => {
+    const supabase = createServiceClient();
+    const fx = await buildGrnFixtures();
+
+    const { data: grn, error: grnErr } = await supabase
+      .from("goods_received_notes")
+      .insert({
+        tenant_id: fx.tenantId,
+        branch_id: fx.cw1Id,
+        supplier_id: fx.supplierId,
+        grn_number: `GRN-E2E-NET-${Date.now()}`,
+        status: "draft",
+        created_by: fx.adminUserId,
+      })
+      .select("id")
+      .single();
+    expect(grnErr).toBeNull();
+    if (!grn) throw new Error("seed grn failed");
+
+    try {
+      // CHECK constraint: rejected ≤ received
+      const { error } = await supabase.from("grn_items").insert({
+        tenant_id: fx.tenantId,
+        grn_id: grn.id,
+        ingredient_id: fx.ingredientId,
+        received_quantity: 5,
+        rejected_quantity: 7, // > received → must be rejected
+        unit: "kg",
+        unit_cost: 10000,
+        total_cost: 50000,
+        quality_status: "partial",
+      });
+
+      expect(error).not.toBeNull();
+      expect(error!.code).toBe("23514"); // CHECK violation
+      expect(error!.message).toContain("grn_items_rejected_le_received");
+    } finally {
+      await supabase.from("grn_items").delete().eq("grn_id", grn.id);
+      await supabase.from("goods_received_notes").delete().eq("id", grn.id);
+    }
+  });
+
+  test("partial-reject GRN posts NET stock = delivered − rejected", async ({
+    page,
+  }) => {
+    const supabase = createServiceClient();
+    const fx = await buildGrnFixtures();
+
+    const stockBefore =
+      (await getStockLevel(supabase, fx.tenantId, fx.cw1Id, fx.ingredientId)) ?? 0;
+
+    // Seed: delivered=10, rejected=3, expect stock += 7
+    const grnNumber = `GRN-E2E-NET-${Date.now()}`;
+    const { data: grn } = await supabase
+      .from("goods_received_notes")
+      .insert({
+        tenant_id: fx.tenantId,
+        branch_id: fx.cw1Id,
+        supplier_id: fx.supplierId,
+        grn_number: grnNumber,
+        status: "draft",
+        created_by: fx.adminUserId,
+      })
+      .select("id")
+      .single();
+    if (!grn) throw new Error("seed grn failed");
+
+    await supabase.from("grn_items").insert({
+      tenant_id: fx.tenantId,
+      grn_id: grn.id,
+      ingredient_id: fx.ingredientId,
+      received_quantity: 10,
+      rejected_quantity: 3,
+      rejection_reason: "Hàng ẩm mốc 3 đơn vị",
+      unit: "kg",
+      unit_cost: 15000,
+      total_cost: 150000,
+      quality_status: "partial",
+    });
+
+    try {
+      await page.goto(`/inventory/grn/${grn.id}`);
+      await page.waitForLoadState("networkidle");
+      if (await isAccessDenied(page)) {
+        test.skip(true, "E2E auth user cannot access Inventory GRN UI.");
+        return;
+      }
+
+      const confirmBtn = page.getByRole("button", {
+        name: /ch.t nh.p kho|x.c nh.n nh.p|duy.t phi.u/i,
+      });
+      await expect(confirmBtn).toBeVisible({ timeout: 10_000 });
+      await confirmBtn.click();
+      const confirmDialog = page.getByRole("alertdialog");
+      await expect(confirmDialog).toBeVisible({ timeout: 5_000 });
+      await confirmDialog.getByRole("button", { name: /ch.t nh.p kho/i }).click();
+
+      await expect
+        .poll(() => getGrnStatus(supabase, fx.tenantId, grn.id), {
+          timeout: 20_000,
+          message: "GRN should be confirmed",
+        })
+        .toBe("confirmed");
+
+      // Stock += 7 (= 10 delivered − 3 rejected)
+      const stockAfter = await getStockLevel(
+        supabase,
+        fx.tenantId,
+        fx.cw1Id,
+        fx.ingredientId,
+      );
+      expect(stockAfter).toBeCloseTo(stockBefore + 7, 2);
+
+      // stock_movements row recorded with quantity_change = 7
+      const { data: movement } = await supabase
+        .from("stock_movements")
+        .select("quantity_change, type")
+        .eq("grn_id", grn.id)
+        .eq("tenant_id", fx.tenantId)
+        .single();
+      expect(movement?.type).toBe("grn_receipt");
+      expect(Number(movement?.quantity_change)).toBeCloseTo(7, 2);
+    } finally {
+      await supabase
+        .from("stock_movements")
+        .delete()
+        .eq("grn_id", grn.id)
+        .eq("tenant_id", fx.tenantId);
+      await supabase.from("grn_items").delete().eq("grn_id", grn.id);
+      await supabase.from("goods_received_notes").delete().eq("id", grn.id);
+    }
+  });
+});
+
 // ─── Scenario 7: RBAC — warehouse_manager scoped to CW-1 attempts GRN at CW-2 ─
 
 test.describe("RBAC — warehouse_manager cannot create GRN for another CW (Scenario 7)", () => {

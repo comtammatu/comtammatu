@@ -25,8 +25,19 @@ export default async function GRNListPage({
       ((row.purchase_orders as Record<string, unknown>)?.po_number as string) ??
       "—",
     date: row.received_date ? formatDate(row.received_date as string) : "—",
-    total: ((row.grn_items as Array<{ total_cost: number }>) ?? []).reduce(
-      (sum, item) => sum + Number(item.total_cost ?? 0),
+    // Tổng giá trị nhập kho = (delivered − rejected) × unit_cost (số thực vào kho)
+    total: (
+      (row.grn_items as Array<{
+        received_quantity: number | null;
+        rejected_quantity: number | null;
+        unit_cost: number | null;
+      }>) ?? []
+    ).reduce(
+      (sum, item) =>
+        sum +
+        (Number(item.received_quantity ?? 0) -
+          Number(item.rejected_quantity ?? 0)) *
+          Number(item.unit_cost ?? 0),
       0,
     ),
     status: (row.status as string) ?? "pending",

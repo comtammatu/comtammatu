@@ -121,8 +121,8 @@ export const inventory = {
         `${name}: phải nhập lý do khi có hàng từ chối.`,
       rejectPhotoRequired: (name: string) =>
         `${name}: phải đính kèm ảnh khi có hàng từ chối.`,
-      fullRejectRequiresZero: (name: string) =>
-        `${name}: đã đánh dấu từ chối toàn dòng — số thực nhận phải bằng 0.`,
+      rejectedExceedsDelivered: (name: string) =>
+        `${name}: số trả NCC không được vượt số đã giao.`,
       shortageActionRequired: (name: string, tolerance: number) =>
         `${name}: thiếu hàng vượt ngưỡng ${tolerance}% — phải chọn cách xử lý.`,
       priceReasonRequired: (name: string, variance: number) =>
@@ -170,6 +170,17 @@ export const inventory = {
       ) => `${required} ${unit} đặt → ${actual} ${unit} nhận`,
       rejectedSuffix: (quantity: number, unit: string) =>
         ` • Trả ${quantity} ${unit}`,
+      // Hiển thị 4 con số rõ ràng: đặt, đã giao, vào kho thực (giao−trả), trả NCC
+      orderedDeliveredAccepted: (
+        ordered: number,
+        delivered: number,
+        accepted: number,
+        rejected: number,
+        unit: string,
+      ) =>
+        rejected > 0
+          ? `${ordered} ${unit} đặt → ${delivered} ${unit} giao → Nhập kho ${accepted} ${unit} (trả ${rejected} ${unit})`
+          : `${ordered} ${unit} đặt → ${delivered} ${unit} nhập kho`,
       importPrice: "Giá nhập",
       poPrice: "Giá PO",
       priceVariance: "Lệch giá",
@@ -181,8 +192,8 @@ export const inventory = {
         `Đặt: ${quantity} ${unit} • Giá PO:`,
       unsaved: "chưa lưu",
       deleteLineAria: "Xóa dòng",
-      actualLabel: (unit: string) => `Thực nhận (${unit})`,
-      rejectedLabel: (unit: string) => `Trả lại (${unit})`,
+      actualLabel: (unit: string) => `Số đã giao (${unit})`,
+      rejectedLabel: (unit: string) => `Trả NCC (${unit})`,
       unitCostCurrency: "Đơn giá (₫)",
       rejectReasonRequired: "Lý do từ chối *",
       rejectReasonPlaceholder: "VD: Sườn thâm, đóng gói rách, cận date <3 ngày...",
