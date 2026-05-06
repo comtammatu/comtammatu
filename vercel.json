@@ -4,11 +4,5 @@
     "deploymentEnabled": true
   },
   "regions": ["sin1"],
-  "framework": "nextjs",
-  "crons": [
-    {
-      "path": "/api/cron/telegram-flush",
-      "schedule": "*/1 * * * *"
-    }
-  ]
+  "framework": "nextjs"
 }
