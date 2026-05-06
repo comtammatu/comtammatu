@@ -337,4 +337,22 @@ export function useOrderSync({
       window.clearInterval(intervalId);
     };
   }, []);
+
+  // Resume catch-up: when the tab becomes visible after being hidden,
+  // fire one immediate refresh instead of waiting up to STALE_POLL_MS.
+  // Mobile Safari kills WebSockets after ~30s background, so realtime
+  // events fired while hidden may not replay on reconnect — this is the
+  // only safe path to catch a VietQR webhook that committed during the
+  // hidden window. Mirrors use-notifications.ts:131-139 (POS-RESUME-MUST-REFETCH).
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        refreshAllRef.current();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, []);
 }
