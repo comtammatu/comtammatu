@@ -127,6 +127,11 @@ export function ReconciliationClient({
   const [report, setReport] = useState<ReconciliationReport | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, startTransition] = useTransition();
+  // Separate transitions per action so the run/by-day/drilldown buttons
+  // don't share a pending flag (clicking one wouldn't disable the others).
+  // Manual loading state is kept for now — fine-grained UI signals.
+  const [, startByDayTransition] = useTransition();
+  const [, startDrilldownTransition] = useTransition();
   const [drilldown, setDrilldown] = useState<DrilldownState>(initialDrilldown);
   const [byDayRows, setByDayRows] = useState<ReconcileByDayRow[]>([]);
   const [byDayLoading, setByDayLoading] = useState(false);
@@ -155,20 +160,25 @@ export function ReconciliationClient({
     });
   }
 
-  async function loadByDay() {
+  function loadByDay() {
     setByDayLoading(true);
     setByDayError(null);
-    const res = await fetchReconciliationByDay(branchId, startDate, endDate);
-    setByDayLoading(false);
-    if (!res.success) {
-      setByDayError(res.error ?? reconciliationCopy.errors.loadByDay);
-      setByDayRows([]);
-      return;
-    }
-    setByDayRows((res.data as ReconcileByDayRow[]) ?? []);
+    // startTransition marks the post-await state updates as low-priority,
+    // keeping date-input typing and other urgent UI updates unblocked
+    // during the fetch.
+    startByDayTransition(async () => {
+      const res = await fetchReconciliationByDay(branchId, startDate, endDate);
+      setByDayLoading(false);
+      if (!res.success) {
+        setByDayError(res.error ?? reconciliationCopy.errors.loadByDay);
+        setByDayRows([]);
+        return;
+      }
+      setByDayRows((res.data as ReconcileByDayRow[]) ?? []);
+    });
   }
 
-  async function openDrilldown(
+  function openDrilldown(
     category: ReconciliationCategory,
     side: "subledger" | "gl",
   ) {
@@ -181,20 +191,24 @@ export function ReconciliationClient({
       error: null,
     });
 
-    const res = await fetchReconciliationDrilldown({
-      branchId,
-      startDate,
-      endDate,
-      category,
-      side,
-    });
+    startDrilldownTransition(async () => {
+      const res = await fetchReconciliationDrilldown({
+        branchId,
+        startDate,
+        endDate,
+        category,
+        side,
+      });
 
-    setDrilldown((prev) => ({
-      ...prev,
-      loading: false,
-      rows: res.success ? (res.data as ReconciliationDrilldownRow[]) : [],
-      error: res.success ? null : (res.error ?? reconciliationCopy.errors.loadDrilldown),
-    }));
+      setDrilldown((prev) => ({
+        ...prev,
+        loading: false,
+        rows: res.success ? (res.data as ReconciliationDrilldownRow[]) : [],
+        error: res.success
+          ? null
+          : (res.error ?? reconciliationCopy.errors.loadDrilldown),
+      }));
+    });
   }
 
   const summary = report
