@@ -288,25 +288,6 @@ function renderKitchenTicketBitmap(p: KitchenPayload): Uint8Array {
 
 // ─── Receipt / provisional bill shared ───────────────────────────────────
 
-const RECEIPT_BORDER = "+" + "-".repeat(18) + "+" + "-".repeat(4) + "+" +
-  "-".repeat(10) + "+" + "-".repeat(11) + "+";
-const RECEIPT_NAME_W = 16;
-const RECEIPT_QTY_W = 2;
-const RECEIPT_PRICE_W = 8;
-const RECEIPT_TOTAL_W = 9;
-
-const receiptRow = (name: string, qty: string, price: string, total: string): string =>
-  "| " + padRight(name, RECEIPT_NAME_W) + " " +
-  "| " + padLeft(qty, RECEIPT_QTY_W) + " " +
-  "| " + padLeft(price, RECEIPT_PRICE_W) + " " +
-  "| " + padLeft(total, RECEIPT_TOTAL_W) + " |";
-
-const receiptDetailRow = (text: string): string =>
-  "| " + padRight(text, RECEIPT_NAME_W) + " " +
-  "| " + " ".repeat(RECEIPT_QTY_W) + " " +
-  "| " + " ".repeat(RECEIPT_PRICE_W) + " " +
-  "| " + " ".repeat(RECEIPT_TOTAL_W) + " |";
-
 function renderBillHeader(p: BillBase): Uint8Array[] {
   const parts: Uint8Array[] = [];
   parts.push(...renderBrandLockupHeader());
@@ -327,46 +308,49 @@ function renderBillMeta(p: BillBase): Uint8Array[] {
   parts.push(line(pair48("Đơn hàng:", p.order_number)));
   parts.push(line(pair48("Ngày:", `${created.time} ${created.date}`.trim())));
   parts.push(line(pair48("Loại:", orderKind)));
-  if (p.cashier_name) parts.push(line(pair48("Người order:", p.cashier_name)));
+  if (p.order_type === "dine_in" && (p.customer_count ?? 0) > 0) {
+    parts.push(line(pair48("Số khách:", String(p.customer_count))));
+  }
+  if (p.cashier_name) parts.push(line(pair48("Thu ngân:", p.cashier_name)));
+  if (p.split_from_order_number) parts.push(line(pair48("Tách từ đơn:", `#${p.split_from_order_number}`)));
   return parts;
 }
 
+/** 2-line layout: name+total on line 1, qty×price on line 2. */
 function renderItemsTable(p: BillBase): Uint8Array[] {
   const parts: Uint8Array[] = [];
-  parts.push(line(RECEIPT_BORDER));
-  parts.push(line(receiptRow("MÓN", "SL", "GIÁ", "TT"), { bold: true }));
-  parts.push(line(RECEIPT_BORDER));
+  parts.push(divider("-"));
 
   p.items.forEach((it, idx) => {
-    if (idx > 0) parts.push(line(RECEIPT_BORDER));
+    if (idx > 0) parts.push(divider("-"));
     const fullName = it.variant_name ? `${it.item_name} (${it.variant_name})` : it.item_name;
-    const nameChunks = wrapText(fullName, RECEIPT_NAME_W);
-    const first = nameChunks[0] ?? "";
-    parts.push(line(receiptRow(
-      first,
-      String(it.quantity),
-      fmtMoney(it.unit_price),
-      fmtMoney(it.subtotal),
-    )));
-    for (let i = 1; i < nameChunks.length; i += 1) {
-      parts.push(line(receiptDetailRow(`  ${nameChunks[i]}`)));
+    const totalStr = fmtMoney(it.subtotal);
+    const nameAvail = Math.max(16, CHARS_PER_LINE_NORMAL - totalStr.length - 1);
+    const nameChunks = wrapText(fullName, nameAvail);
+    // Line 1: name (left) + total (right)
+    parts.push(line(pair48(nameChunks[0] ?? "", totalStr)));
+    for (let i = 1; i < nameChunks.length; i++) {
+      parts.push(line(nameChunks[i] ?? ""));
     }
     if (it.modifiers && it.modifiers.length > 0) {
       for (const m of it.modifiers) {
-        if (m.name) parts.push(line(receiptDetailRow(`  + ${m.name}`)));
+        if (m.name) parts.push(line(`  + ${m.name}`));
       }
     }
     if (it.sides && it.sides.length > 0) {
       for (const s of it.sides) {
         const sideName = s.name ?? s.side_item_name;
         if (sideName) {
-          parts.push(line(receiptDetailRow(`  - ${sideName}${s.quantity ? ` x${s.quantity}` : ""}`)));
+          parts.push(line(`  - ${sideName}${s.quantity ? ` x${s.quantity}` : ""}`));
         }
       }
     }
-    if (it.note) parts.push(line(receiptDetailRow(`  * ${it.note}`)));
+    if (it.note) parts.push(line(`  * ${it.note}`));
+    // Line 2: qty × unit_price
+    parts.push(line(`  x${it.quantity} × ${fmtMoney(it.unit_price)}`));
   });
-  parts.push(line(RECEIPT_BORDER));
+
+  parts.push(divider("-"));
   return parts;
 }
 
@@ -375,7 +359,14 @@ function renderTotals(p: BillBase): Uint8Array[] {
   parts.push(line(pair48("Tạm tính", fmtMoney(p.subtotal))));
   if ((p.tax_amount ?? 0) > 0) parts.push(line(pair48("Thuế VAT", fmtMoney(p.tax_amount))));
   if ((p.service_charge ?? 0) > 0) parts.push(line(pair48("Phí dịch vụ", fmtMoney(p.service_charge))));
-  if ((p.discount_amount ?? 0) > 0) parts.push(line(pair48("Giảm giá", "-" + fmtMoney(p.discount_amount))));
+  if ((p.discount_amount ?? 0) > 0) {
+    const discountLabel =
+      p.discount_type === "pct" && p.discount_value != null
+        ? `Giảm giá (${p.discount_value}%)`
+        : "Giảm giá";
+    parts.push(line(pair48(discountLabel, "-" + fmtMoney(p.discount_amount))));
+    if (p.discount_note) parts.push(line(`  Lý do: ${p.discount_note}`));
+  }
   parts.push(divider("="));
   parts.push(line(pair24("TỔNG CỘNG", fmtMoney(p.total_amount)), { bold: true, double: true }));
   parts.push(divider("="));
@@ -692,23 +683,24 @@ function renderProvisionalBillBitmap(p: ProvisionalBillPayload): Uint8Array {
   parts.push(...renderTotals(p));
   if (p.note) parts.push(line(`Ghi chú: ${p.note}`));
 
-  // QR block — switch out of raster line-spacing so native QR prints with
-  // normal spacing, then come back in for the footer raster lines.
+  // QR block — skip entirely when tenant has no QR configured
   const q = p.payment_qr;
-  parts.push(lineSpacingDefault(), bl());
-  parts.push(line("QUÉT QR THANH TOÁN", { bold: true, align: "center" }));
-  parts.push(lineSpacingDefault());
-  // Native ESC/POS align-center for the QR raster, then QR itself.
-  parts.push(buf([ESC, 0x61, 0x01])); // align center
-  parts.push(qrBlock(q.content, 6));
-  parts.push(buf([ESC, 0x61, 0x00])); // back to left
-  parts.push(lineSpacingZero());
-  parts.push(line(q.header_label, { align: "center" }));
-  if (q.account_no) parts.push(line(`STK: ${q.account_no}`, { align: "center" }));
-  if (q.account_name) parts.push(line(q.account_name.toUpperCase(), { align: "center" }));
-  parts.push(line(`Số tiền: ${fmtMoney(q.amount)}`, { align: "center" }));
-  parts.push(line(`Nội dung: ${q.description}`, { align: "center" }));
-  parts.push(divider("-"));
+  if (q) {
+    // Switch out of raster line-spacing so native QR prints with normal spacing.
+    parts.push(lineSpacingDefault(), bl());
+    parts.push(line("QUÉT QR THANH TOÁN", { bold: true, align: "center" }));
+    parts.push(lineSpacingDefault());
+    parts.push(buf([ESC, 0x61, 0x01])); // align center
+    parts.push(qrBlock(q.content, 6));
+    parts.push(buf([ESC, 0x61, 0x00])); // back to left
+    parts.push(lineSpacingZero());
+    parts.push(line(q.header_label, { align: "center" }));
+    if (q.account_no) parts.push(line(`STK: ${q.account_no}`, { align: "center" }));
+    if (q.account_name) parts.push(line(q.account_name.toUpperCase(), { align: "center" }));
+    parts.push(line(`Số tiền: ${fmtMoney(q.amount)}`, { align: "center" }));
+    parts.push(line(`Nội dung: ${q.description}`, { align: "center" }));
+    parts.push(divider("-"));
+  }
 
   parts.push(...renderFooter());
   parts.push(lineSpacingDefault(), feed(6), cutPartial());

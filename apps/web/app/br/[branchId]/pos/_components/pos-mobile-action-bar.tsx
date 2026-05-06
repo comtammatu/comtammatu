@@ -137,22 +137,6 @@ function PosMobileActionBarComponent({
     );
   }
 
-  if (awaitingPaymentOrderId !== null) {
-    return (
-      <div className={ACTION_BAR_CLASS}>
-        <Button
-          type="button"
-          className={ACTION_PRIMARY_BUTTON_CLASS}
-          onClick={() => onOpenPayment(awaitingPaymentOrderId)}
-          aria-label={messages.pos.mobileActionBar.openPayNowAria}
-        >
-          <IconCreditCard data-icon="inline-start" />
-          <span>{messages.pos.mobileActionBar.payNow}</span>
-        </Button>
-      </div>
-    );
-  }
-
   return (
     <div className={ACTION_BAR_CLASS}>
       <Button
@@ -164,6 +148,18 @@ function PosMobileActionBarComponent({
         <IconShoppingCart data-icon="inline-start" />
         <span>{messages.pos.mobileActionBar.newCart}</span>
       </Button>
+      {awaitingPaymentOrderId !== null && (
+        <Button
+          type="button"
+          variant="secondary"
+          className={ACTION_SECONDARY_BUTTON_CLASS}
+          onClick={() => onOpenPayment(awaitingPaymentOrderId)}
+          aria-label={messages.pos.mobileActionBar.openPayNowAria}
+        >
+          <IconCreditCard data-icon="inline-start" />
+          <span>{messages.pos.mobileActionBar.payNow}</span>
+        </Button>
+      )}
     </div>
   );
 }

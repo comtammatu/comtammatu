@@ -238,7 +238,9 @@ export type BillBase = {
   order_number: string;
   order_type: "dine_in" | "takeaway";
   table_number?: number | null;
+  customer_count?: number | null;
   cashier_name?: string;
+  split_from_order_number?: string | null;
   note?: string | null;
   items: Array<{
     item_name: string;
@@ -254,6 +256,9 @@ export type BillBase = {
   tax_amount?: number | null;
   service_charge?: number | null;
   discount_amount?: number | null;
+  discount_type?: "pct" | "vnd" | null;
+  discount_value?: number | null;
+  discount_note?: string | null;
   total_amount: number;
   created_at?: string;
   printed_at: string;
@@ -261,8 +266,8 @@ export type BillBase = {
 
 export type ProvisionalBillPayload = BillBase & {
   kind: "provisional_bill";
-  /** Always present on tạm tính (khách cần QR để chuyển khoản/MoMo). */
-  payment_qr: PaymentQR;
+  /** QR thanh toán; null khi tenant chưa cấu hình QR — bỏ qua block QR khi null. */
+  payment_qr: PaymentQR | null;
 };
 
 export type ReceiptPayload = BillBase & {
@@ -576,33 +581,6 @@ export function renderKitchenTicket(p: KitchenPayload): Uint8Array {
 
 // ─── Receipt / provisional bill ───────────────────────────────────────────
 
-/** Receipt table layout: | MÓN(18) | SL(4) | GIÁ(10) | TT(11) | = 48 */
-const RECEIPT_BORDER = "+" + "-".repeat(18) + "+" + "-".repeat(4) + "+" +
-  "-".repeat(10) + "+" + "-".repeat(11) + "+";
-
-const RECEIPT_NAME_CELL_WIDTH = 16; // content inside " ... " padding
-const RECEIPT_SL_CELL_WIDTH = 2;
-const RECEIPT_PRICE_CELL_WIDTH = 8;
-const RECEIPT_TOTAL_CELL_WIDTH = 9;
-
-const receiptTableRow = (
-  name: string,
-  qty: string,
-  price: string,
-  total: string,
-): string =>
-  "| " + padRight(name, RECEIPT_NAME_CELL_WIDTH) + " " +
-  "| " + padLeft(qty, RECEIPT_SL_CELL_WIDTH) + " " +
-  "| " + padLeft(price, RECEIPT_PRICE_CELL_WIDTH) + " " +
-  "| " + padLeft(total, RECEIPT_TOTAL_CELL_WIDTH) + " |";
-
-/** Modifier/side/note row: text in MÓN column, other cells empty. */
-const receiptDetailRow = (text: string): string =>
-  "| " + padRight(text, RECEIPT_NAME_CELL_WIDTH) + " " +
-  "| " + " ".repeat(RECEIPT_SL_CELL_WIDTH) + " " +
-  "| " + " ".repeat(RECEIPT_PRICE_CELL_WIDTH) + " " +
-  "| " + " ".repeat(RECEIPT_TOTAL_CELL_WIDTH) + " |";
-
 /** Shared bill header — brand + branch info. */
 const renderBillHeader = (p: BillBase): Uint8Array[] => {
   const parts: Uint8Array[] = [];
@@ -629,63 +607,52 @@ const renderBillMeta = (p: BillBase): Uint8Array[] => {
   parts.push(pair("Đơn hàng:", `${p.order_number}`));
   parts.push(pair("Ngày:", `${created.time} ${created.date}`.trim()));
   parts.push(pair("Loại:", orderKind));
-  if (p.cashier_name) parts.push(pair("Người order:", p.cashier_name));
+  if (p.order_type === "dine_in" && (p.customer_count ?? 0) > 0) {
+    parts.push(pair("Số khách:", String(p.customer_count)));
+  }
+  if (p.cashier_name) parts.push(pair("Thu ngân:", p.cashier_name));
+  if (p.split_from_order_number) parts.push(pair("Tách từ đơn:", `#${p.split_from_order_number}`));
   return parts;
 };
 
-/** Shared items table. */
+/** Shared items table — 2-line layout: name+total on line 1, qty×price on line 2. */
 const renderBillItemsTable = (p: BillBase): Uint8Array[] => {
   const parts: Uint8Array[] = [];
-  parts.push(line(RECEIPT_BORDER));
-  parts.push(boldOn());
-  parts.push(line(receiptTableRow("MÓN", "SL", "GIÁ", "TT")));
-  parts.push(boldOff());
-  parts.push(line(RECEIPT_BORDER));
+  parts.push(divider("-"));
 
   p.items.forEach((it, idx) => {
-    if (idx > 0) parts.push(line(RECEIPT_BORDER));
+    if (idx > 0) parts.push(divider("-"));
     const fullName = it.variant_name
       ? `${it.item_name} (${it.variant_name})`
       : it.item_name;
-    const nameChunks = wrapText(fullName, RECEIPT_NAME_CELL_WIDTH);
-    const first = nameChunks[0] ?? "";
-    parts.push(
-      line(
-        receiptTableRow(
-          first,
-          String(it.quantity),
-          fmtMoney(it.unit_price),
-          fmtMoney(it.subtotal),
-        ),
-      ),
-    );
-    for (let i = 1; i < nameChunks.length; i += 1) {
-      parts.push(line(receiptDetailRow(`  ${nameChunks[i]}`)));
+    const totalStr = fmtMoney(it.subtotal);
+    const nameAvail = Math.max(16, LINE_WIDTH - totalStr.length - 1);
+    const nameChunks = wrapText(fullName, nameAvail);
+    // Line 1: name (left) + total (right)
+    parts.push(pair(nameChunks[0] ?? "", totalStr));
+    // Continuation name chunks if name wrapped
+    for (let i = 1; i < nameChunks.length; i++) {
+      parts.push(line(nameChunks[i] ?? ""));
     }
     if (it.modifiers && it.modifiers.length > 0) {
       for (const m of it.modifiers) {
-        if (m.name) parts.push(line(receiptDetailRow(`  + ${m.name}`)));
+        if (m.name) parts.push(line(`  + ${m.name}`));
       }
     }
     if (it.sides && it.sides.length > 0) {
       for (const s of it.sides) {
         const sideName = s.name ?? s.side_item_name;
         if (sideName) {
-          parts.push(
-            line(
-              receiptDetailRow(
-                `  - ${sideName}${s.quantity ? ` x${s.quantity}` : ""}`,
-              ),
-            ),
-          );
+          parts.push(line(`  - ${sideName}${s.quantity ? ` x${s.quantity}` : ""}`));
         }
       }
     }
-    if (it.note) {
-      parts.push(line(receiptDetailRow(`  * ${it.note}`)));
-    }
+    if (it.note) parts.push(line(`  * ${it.note}`));
+    // Line 2: qty × unit_price
+    parts.push(line(`  x${it.quantity} × ${fmtMoney(it.unit_price)}`));
   });
-  parts.push(line(RECEIPT_BORDER));
+
+  parts.push(divider("-"));
   return parts;
 };
 
@@ -695,7 +662,14 @@ const renderBillTotals = (p: BillBase): Uint8Array[] => {
   parts.push(pair("Tạm tính", fmtMoney(p.subtotal)));
   if ((p.tax_amount ?? 0) > 0) parts.push(pair("Thuế VAT", fmtMoney(p.tax_amount)));
   if ((p.service_charge ?? 0) > 0) parts.push(pair("Phí dịch vụ", fmtMoney(p.service_charge)));
-  if ((p.discount_amount ?? 0) > 0) parts.push(pair("Giảm giá", "-" + fmtMoney(p.discount_amount)));
+  if ((p.discount_amount ?? 0) > 0) {
+    const discountLabel =
+      p.discount_type === "pct" && p.discount_value != null
+        ? `Giảm giá (${p.discount_value}%)`
+        : "Giảm giá";
+    parts.push(pair(discountLabel, "-" + fmtMoney(p.discount_amount)));
+    if (p.discount_note) parts.push(line(`  Lý do: ${p.discount_note}`));
+  }
   parts.push(divider("="));
   parts.push(boldOn(), sizeDouble());
   parts.push(pair("TỔNG CỘNG", fmtMoney(p.total_amount)));
@@ -1032,18 +1006,20 @@ export function renderProvisionalBill(p: ProvisionalBillPayload): Uint8Array {
     parts.push(line(`Ghi chú: ${p.note}`));
   }
 
-  // QR block (always on tạm tính; backend decides vietqr vs momo)
+  // QR block — skip entirely when tenant has no QR configured
   const q = p.payment_qr;
-  parts.push(newline(), alignCenter(), boldOn());
-  parts.push(line("QUÉT QR THANH TOÁN"));
-  parts.push(boldOff());
-  parts.push(qrBlock(q.content, 6));
-  parts.push(line(q.header_label));
-  if (q.account_no) parts.push(line(`STK: ${q.account_no}`));
-  if (q.account_name) parts.push(line(q.account_name.toUpperCase()));
-  parts.push(line(`Số tiền: ${fmtMoney(q.amount)}`));
-  parts.push(line(`Nội dung: ${q.description}`));
-  parts.push(alignLeft());
+  if (q) {
+    parts.push(newline(), alignCenter(), boldOn());
+    parts.push(line("QUÉT QR THANH TOÁN"));
+    parts.push(boldOff());
+    parts.push(qrBlock(q.content, 6));
+    parts.push(line(q.header_label));
+    if (q.account_no) parts.push(line(`STK: ${q.account_no}`));
+    if (q.account_name) parts.push(line(q.account_name.toUpperCase()));
+    parts.push(line(`Số tiền: ${fmtMoney(q.amount)}`));
+    parts.push(line(`Nội dung: ${q.description}`));
+    parts.push(alignLeft());
+  }
 
   parts.push(...renderFooter());
   return concat(parts);

@@ -40,6 +40,7 @@ import {
   Printer as IconPrinter,
   QrCode as IconQrcode,
   Receipt as IconReceipt,
+  X as IconXCircle,
   Wallet as IconWallet,
 } from "lucide-react";
 import { AppBoneyardSkeleton } from "../../../../../_components/boneyard-skeleton";
@@ -47,11 +48,14 @@ import { FormattedNumberInput } from "@/components/form";
 import { messages } from "@lib/messages";
 import { fetchOrderForBill } from "../../actions";
 import {
+  cancelPendingPayment,
   confirmCashPaymentWithInvoice,
-  confirmPayment,
+  confirmVietQrPaymentWithInvoice,
   createPayment,
   fetchPaymentMethodsForPos,
   fetchPendingRemotePaymentForBill,
+  fetchVietQrConfig,
+  type VietQrConfig,
 } from "../../payment-actions";
 import { printProvisionalBill, printReceipt } from "../../print-actions";
 import { useIsOnline } from "../pwa/online-status-provider";
@@ -302,8 +306,10 @@ const RECEIPT_LOADING_ORDER: OrderData = {
   table_id: 2,
   split_from_order_id: null,
   merged_into_order_id: null,
+  cash_received: null,
+  cash_change: null,
   tables: { number: 2 },
-  branches: { name: "Chi nhánh Đất Đỏ", address: "Ấp Phước Sơn, Xã Đất Đỏ" },
+  branches: { name: "Chi nhánh Đất Đỏ", address: "Ấp Phước Sơn, Xã Đất Đỏ", phone: null },
   order_items: [
     {
       id: 0,
@@ -412,9 +418,11 @@ export function BillReceipt({
   const [actionPending, startActionTransition] = useTransition();
   const [methodPending, setMethodPending] = useState(false);
   const [printPending, startPrintTransition] = useTransition();
+  const [cancelPending, startCancelTransition] = useTransition();
   const [paymentCreateError, setPaymentCreateError] = useState<string | null>(
     null,
   );
+  const [vietQrConfig, setVietQrConfig] = useState<VietQrConfig | null>(null);
   const isOnline = useIsOnline();
   // When the cashier taps a non-cash method while offline, remember the
   // intent so we can auto-restore it on reconnect. Without this, every
@@ -439,9 +447,9 @@ export function BillReceipt({
     invoiceValid &&
     (selectedMethod === "cash"
       ? cashReceived >= totalAmount
-      : selectedMethod === "momo"
-        ? false
-      : Boolean(pendingExtras?.payment_id));
+      : selectedMethod === "vietqr"
+        ? Boolean(vietQrConfig)
+        : false); // MoMo: confirmed via IPN webhook, not cashier action
 
   // Tooltip giải thích lý do disabled — cashier nhìn vào nút mờ phải biết
   // mình thiếu thao tác gì (mất kết nối, MST sai, khách chưa đủ tiền, chưa
@@ -456,7 +464,9 @@ export function BillReceipt({
           ? "Khách chưa thanh toán đủ tổng đơn"
           : selectedMethod === "momo"
             ? "MoMo tự xác nhận qua IPN sau khi khách thanh toán"
-          : "Chờ tạo QR rồi mới xác nhận được";
+          : selectedMethod === "vietqr"
+            ? "VietQR chưa cấu hình — liên hệ quản lý"
+          : null;
 
   const cashSuggestions = useMemo(
     () => buildCashSuggestions(totalAmount),
@@ -473,6 +483,7 @@ export function BillReceipt({
       setPendingExtras(null);
       setMethodPending(false);
       setPaymentCreateError(null);
+      setVietQrConfig(null);
       setInvoiceForm(EMPTY_INVOICE_FORM);
       setPendingOfflineMethod(null);
       autoQrTriggeredRef.current = null;
@@ -491,12 +502,14 @@ export function BillReceipt({
 
     let cancelled = false;
     startTransition(async () => {
-      const [orderResult, methodsResult] = await Promise.all([
-        seededOrder === null
-          ? fetchOrderForBill(orderId)
-          : Promise.resolve(null),
-        fetchPaymentMethodsForPos(branchId),
-      ]);
+      const [orderResult, methodsResult, vietQrConfigResult] =
+        await Promise.all([
+          seededOrder === null
+            ? fetchOrderForBill(orderId)
+            : Promise.resolve(null),
+          fetchPaymentMethodsForPos(branchId),
+          fetchVietQrConfig(branchId),
+        ]);
       if (cancelled) return;
 
       if (orderResult !== null) {
@@ -518,6 +531,10 @@ export function BillReceipt({
         setSelectedMethod(
           nextMethods.includes("cash") ? "cash" : (nextMethods[0] ?? "vietqr"),
         );
+      }
+
+      if (vietQrConfigResult.success) {
+        setVietQrConfig(vietQrConfigResult.data === undefined ? null : vietQrConfigResult.data);
       }
     });
 
@@ -615,29 +632,62 @@ export function BillReceipt({
   const handleSelectMethod = useCallback(
     (method: PaymentMethod) => {
       if (!order || orderId === null) return;
-      if (!isOnline && method !== "cash") {
-        setPendingOfflineMethod(method);
-        toast.error("Mất kết nối — sẽ tự thử lại khi có mạng.");
-        return;
-      }
-      setPendingOfflineMethod(null);
+
       setSelectedMethod(method);
       setPaymentCreateError(null);
+      setPendingExtras(null);
+      setPendingOfflineMethod(null);
 
       if (method === "cash") {
-        setPendingExtras(null);
         setCashInput(String(Math.round(Number(order.total_amount))));
         return;
       }
 
-      setPendingExtras(null);
+      if (method === "vietqr") {
+        // QR generated entirely client-side — no DB row created until cashier
+        // taps "Đã thanh toán". Offline guard not needed for display; confirm
+        // button is gated by isOnline via canConfirmPaid.
+        if (!vietQrConfig) {
+          setPaymentCreateError("VietQR chưa cấu hình — liên hệ quản lý.");
+          return;
+        }
+        const amount = Math.round(Number(order.total_amount));
+        const description = `DH ${order.order_number}`;
+        const qrUrl = new URL(
+          `https://img.vietqr.io/image/${encodeURIComponent(vietQrConfig.bankCode)}-${encodeURIComponent(vietQrConfig.accountNo)}-compact.png`,
+        );
+        qrUrl.searchParams.set("amount", String(amount));
+        qrUrl.searchParams.set("addInfo", description);
+        if (vietQrConfig.accountName) {
+          qrUrl.searchParams.set("accountName", vietQrConfig.accountName);
+        }
+        setPendingExtras({
+          qr_data: qrUrl.toString(),
+          qr_info: {
+            account_no: vietQrConfig.accountNo,
+            account_name: vietQrConfig.accountName || undefined,
+            bank_code: vietQrConfig.bankCode,
+            description,
+          },
+        });
+        return;
+      }
+
+      // MoMo: needs server call to create pending payment row (IPN webhook
+      // relies on the row existing before the customer scans).
+      if (!isOnline) {
+        setPendingOfflineMethod(method);
+        toast.error("Mất kết nối — sẽ tự thử lại khi có mạng.");
+        return;
+      }
+
       setMethodPending(true);
       void (async () => {
         try {
           const result = await createPayment(
             branchId,
             orderId,
-            method,
+            method as "momo",
             Number(order.total_amount),
           );
           if (result.success && result.data) {
@@ -664,21 +714,21 @@ export function BillReceipt({
         }
       })();
     },
-    [branchId, isOnline, order, orderId],
+    [branchId, isOnline, order, orderId, vietQrConfig],
   );
 
   useEffect(() => {
     if (orderId === null || !order) return;
-    if (order.payment_status !== "pending") return;
-    if (order.payment_method !== "momo" && order.payment_method !== "vietqr") {
-      return;
-    }
-    if (!methods.includes(order.payment_method)) return;
-
-    setSelectedMethod(order.payment_method);
+    // In the new flow MoMo orders stay 'unpaid' (not 'pending') while the
+    // payment row is pending. Guard: skip paid orders and non-MoMo methods.
+    // VietQR has no pending DB row — nothing to hydrate.
+    if (order.payment_status === "paid") return;
+    if (order.payment_method !== "momo") return;
+    if (!methods.includes("momo")) return;
     if (pendingExtras !== null) return;
     if (hydratedPaymentOrderRef.current === orderId) return;
 
+    setSelectedMethod(order.payment_method);
     hydratedPaymentOrderRef.current = orderId;
     setMethodPending(true);
     setPaymentCreateError(null);
@@ -807,28 +857,41 @@ export function BillReceipt({
         return;
       }
 
-      const paymentId = pendingExtras?.payment_id;
-      if (!paymentId) return;
-      const result = await confirmPayment(
-        paymentId,
-        pendingExtras.provider_ref ?? "",
+      // VietQR: cashier confirms manually after customer scans and transfers.
+      // confirm_vietqr_payment creates the payment row + posts GL atomically.
+      const result = await confirmVietQrPaymentWithInvoice(
+        branchId,
+        orderId,
+        totalAmount,
+        invoicePayload,
       );
-      if (result.success) {
-        const print = result.data?.print;
-        if (print?.failed) {
-          toast.warning("Chưa in được hóa đơn", {
-            description: print.error ?? "Mở đơn để in lại.",
-          });
-        } else {
-          toast.success("Đã thanh toán · đã gửi máy in");
-        }
-        await onOrderUpdated?.();
-        onClose();
-      } else {
+      if (!result.success) {
         toast.error(result.error ?? "Không thể xác nhận thanh toán");
+        return;
       }
+      const inv = result.data?.invoice ?? null;
+      if (inv == null) {
+        toast.success("Đã thanh toán");
+      } else if (inv.status === "failed") {
+        toast.warning("Đã thanh toán — HĐĐT chưa xuất được", {
+          description: inv.error ?? "Lưu nháp; Finance sẽ xuất lại sau.",
+        });
+      } else {
+        toast.success("Đã thanh toán & xuất HĐĐT", {
+          description: `Số HĐ: ${inv.invoiceNumber ?? `#${inv.invoiceId}`}`,
+        });
+      }
+      if (result.data?.print.failed) {
+        toast.warning("Chưa in được hóa đơn", {
+          description:
+            result.data.print.error ?? "Mở đơn để in lại.",
+        });
+      }
+      await onOrderUpdated?.();
+      onClose();
     });
   }, [
+    branchId,
     canConfirmPaid,
     cashReceived,
     invoiceForm,
@@ -836,9 +899,8 @@ export function BillReceipt({
     onOrderUpdated,
     order,
     orderId,
-    pendingExtras?.payment_id,
-    pendingExtras?.provider_ref,
     selectedMethod,
+    totalAmount,
   ]);
 
   const handlePrintProvisional = useCallback(() => {
@@ -867,6 +929,27 @@ export function BillReceipt({
       }
     });
   }, [orderId]);
+
+  const handleCancelPayment = useCallback(() => {
+    const paymentId = pendingExtras?.payment_id;
+    if (!paymentId) return;
+    startCancelTransition(async () => {
+      const result = await cancelPendingPayment(branchId, paymentId);
+      if (result.success) {
+        setPendingExtras(null);
+        setSelectedMethod(canConfirmCash ? "cash" : "vietqr");
+        autoQrTriggeredRef.current = null;
+        hydratedPaymentOrderRef.current = null;
+        setOrder((cur) =>
+          cur ? { ...cur, payment_status: "unpaid", payment_method: null } : cur,
+        );
+        toast.success(messages.pos.payment.cancelQrSuccess);
+        await onOrderUpdated?.();
+      } else {
+        toast.error(result.error ?? messages.pos.payment.cancelQrFailed);
+      }
+    });
+  }, [branchId, canConfirmCash, onOrderUpdated, pendingExtras?.payment_id]);
 
   const MethodIcon = METHOD_META[selectedMethod]?.icon ?? IconCreditCard;
   const isReceiptIntent = intent === "receipt";
@@ -1164,6 +1247,21 @@ export function BillReceipt({
                 )}
                 {messages.pos.payment.printProvisional}
               </Button>
+              {pendingExtras?.payment_id !== undefined ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleCancelPayment}
+                  disabled={cancelPending || actionPending || methodPending}
+                >
+                  {cancelPending ? (
+                    <Spinner data-icon="inline-start" />
+                  ) : (
+                    <IconXCircle data-icon="inline-start" />
+                  )}
+                  {messages.pos.payment.cancelQr}
+                </Button>
+              ) : null}
               <Button
                 data-testid={
                   selectedMethod === "cash" ? "bill-confirm-cash" : undefined

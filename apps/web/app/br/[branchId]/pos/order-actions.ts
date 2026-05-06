@@ -647,6 +647,8 @@ export async function fetchOrderForBill(
       discount_note,
       total_amount,
       customer_count,
+      cash_received,
+      cash_change,
       note,
       created_at,
       table_id,
@@ -657,7 +659,8 @@ export async function fetchOrderForBill(
       ),
       branches (
         name,
-        address
+        address,
+        phone
       ),
       profiles!orders_created_by_fkey (
         full_name

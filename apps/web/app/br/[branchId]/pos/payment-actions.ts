@@ -7,7 +7,6 @@ import type { ActionResult } from "@comtammatu/shared/types";
 import {
   getPaymentProvider,
   getRegisteredMethods,
-  VietQRProvider,
   type PaymentMethod,
   type PaymentProvider,
   type PaymentResult,
@@ -32,7 +31,7 @@ const branchIdSchema = z.coerce
 
 const paymentSchema = z.object({
   orderId: z.coerce.number().int().positive(),
-  method: z.enum(["cash", "vietqr", "momo"]),
+  method: z.enum(["cash", "momo"]),
   amount: z.coerce.number().positive({ error: "Số tiền không hợp lệ" }),
 });
 
@@ -385,7 +384,7 @@ export async function fetchPaymentMethodsForPos(
 export async function createPayment(
   branchId: number,
   orderId: number,
-  method: "cash" | "vietqr" | "momo",
+  method: "cash" | "momo",
   amount: number,
 ): Promise<ActionResult<CreatePaymentSuccessData>> {
   const parsedBranch = branchIdSchema.safeParse(branchId);
@@ -454,26 +453,7 @@ export async function createPayment(
     };
   }
 
-  // Build provider: VietQR reads per-tenant bank config from system_settings
-  // (with ENV fallback) so owners can rotate STK without redeploy.
-  let provider: PaymentProvider | null;
-  if (parsedPayment.data.method === "vietqr") {
-    const vietqr = await readVietQrSettings(supabase, claims.tenant_id);
-    if (!vietqr.bankCode || !vietqr.accountNo) {
-      return {
-        success: false,
-        error: "Chưa cấu hình STK/ngân hàng VietQR cho chi nhánh.",
-      };
-    }
-    provider = new VietQRProvider({
-      apiKey: "",
-      bankAccount: vietqr.accountNo,
-      bankCode: vietqr.bankCode,
-      accountName: vietqr.accountName || undefined,
-    });
-  } else {
-    provider = getPaymentProvider(parsedPayment.data.method as PaymentMethod);
-  }
+  const provider = getPaymentProvider(parsedPayment.data.method as PaymentMethod);
   if (!provider) {
     return {
       success: false,
@@ -1153,6 +1133,311 @@ export async function confirmCashPaymentWithInvoice(
         invoice: {
           status: "failed",
           error: parsed.error.issues[0]?.message ?? "Dữ liệu HĐĐT không hợp lệ",
+        },
+      },
+    };
+  }
+
+  const invoiceResult = await createTaxInvoice({
+    orderId,
+    ...(parsed.data ?? {}),
+  });
+
+  if (!invoiceResult.success) {
+    return {
+      success: true,
+      data: {
+        ...paymentResult.data,
+        invoice: {
+          status: "failed",
+          error: invoiceResult.error ?? "Không thể xuất hóa đơn",
+        },
+      },
+    };
+  }
+
+  const inv = invoiceResult.data as
+    | { id: number; invoice_number: string | null; status?: string }
+    | undefined;
+
+  return {
+    success: true,
+    data: {
+      ...paymentResult.data,
+      invoice: inv
+        ? {
+            status: (inv.status as InvoiceOutcome["status"]) ?? "issued",
+            invoiceId: inv.id,
+            invoiceNumber: inv.invoice_number,
+          }
+        : { status: "failed", error: "Hóa đơn trả về thiếu dữ liệu." },
+    },
+  };
+}
+
+/* ─── cancelPendingPayment ─── */
+
+/**
+ * Cancel a pending MoMo payment. Flips payment → failed and resets
+ * orders.payment_method/payment_status so the order can be split, merged,
+ * or start a fresh payment session.
+ */
+export async function cancelPendingPayment(
+  branchId: number,
+  paymentId: number,
+): Promise<ActionResult<void>> {
+  const parsedBranch = branchIdSchema.safeParse(branchId);
+  if (!parsedBranch.success) {
+    return { success: false, error: "Branch ID không hợp lệ" };
+  }
+
+  const parsedPayment = z.coerce.number().int().positive().safeParse(paymentId);
+  if (!parsedPayment.success) {
+    return { success: false, error: "Payment ID không hợp lệ" };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    POS_ROLES,
+    PERMISSION_KEYS.POS_USE,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { supabase, claims } = ctx;
+
+  if (claims.branch_id !== parsedBranch.data) {
+    return { success: false, error: "Không có quyền truy cập chi nhánh này" };
+  }
+
+  const { error } = await supabase.rpc("cancel_pending_payment", {
+    p_payment_id: parsedPayment.data,
+    p_tenant_id: claims.tenant_id,
+    p_branch_id: parsedBranch.data,
+  });
+
+  if (error) {
+    const msg = error.message ?? "";
+    if (msg.includes("payment_not_found")) {
+      return { success: false, error: "Không tìm thấy phiên thanh toán." };
+    }
+    if (msg.includes("payment_not_pending")) {
+      return { success: false, error: "Phiên thanh toán đã được xử lý." };
+    }
+    return { success: false, error: "Không thể hủy phiên thanh toán." };
+  }
+
+  return { success: true, data: undefined };
+}
+
+/* ─── fetchVietQrConfig ─── */
+
+export interface VietQrConfig {
+  bankCode: string;
+  accountNo: string;
+  accountName: string;
+}
+
+/**
+ * Returns VietQR bank config for client-side QR URL generation.
+ * Returns null when VietQR is disabled or not configured.
+ */
+export async function fetchVietQrConfig(
+  branchId: number,
+): Promise<ActionResult<VietQrConfig | null>> {
+  const parsedBranch = branchIdSchema.safeParse(branchId);
+  if (!parsedBranch.success) {
+    return { success: false, error: "Branch ID không hợp lệ" };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    POS_ROLES,
+    PERMISSION_KEYS.POS_USE,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { supabase, claims } = ctx;
+
+  if (claims.branch_id !== parsedBranch.data) {
+    return { success: false, error: "Không có quyền truy cập chi nhánh này" };
+  }
+
+  const vietqr = await readVietQrSettings(supabase, claims.tenant_id);
+  if (!vietqr.enabled || !vietqr.bankCode || !vietqr.accountNo) {
+    return { success: true, data: null };
+  }
+
+  return {
+    success: true,
+    data: {
+      bankCode: vietqr.bankCode,
+      accountNo: vietqr.accountNo,
+      accountName: vietqr.accountName,
+    },
+  };
+}
+
+/* ─── confirmVietQrPayment ─── */
+
+export interface ConfirmVietQrPaymentResult {
+  payment_id: number;
+  idempotent: boolean;
+  print: { jobId?: number; failed: boolean; error?: string };
+}
+
+/**
+ * Atomic cashier-confirm for VietQR bank transfer. No payment row is created
+ * until the cashier taps "Đã thanh toán" — QR is generated client-side.
+ * Gated by pos:confirm_payment (cashier / branch_manager+).
+ */
+export async function confirmVietQrPayment(
+  branchId: number,
+  orderId: number,
+  amount: number,
+): Promise<ActionResult<ConfirmVietQrPaymentResult>> {
+  const parsedBranch = branchIdSchema.safeParse(branchId);
+  if (!parsedBranch.success) {
+    return { success: false, error: "Branch ID không hợp lệ" };
+  }
+
+  const parsedOrderId = orderIdSchema.safeParse(orderId);
+  if (!parsedOrderId.success) {
+    return { success: false, error: "Order ID không hợp lệ" };
+  }
+
+  const parsedAmount = z.coerce.number().positive().safeParse(amount);
+  if (!parsedAmount.success) {
+    return { success: false, error: "Số tiền không hợp lệ" };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    POS_ROLES,
+    PERMISSION_KEYS.POS_CONFIRM_PAYMENT,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền thanh toán" };
+
+  const { supabase, claims } = ctx;
+
+  if (claims.branch_id !== parsedBranch.data) {
+    return { success: false, error: "Không có quyền truy cập chi nhánh này" };
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { success: false, error: "Phiên đăng nhập hết hạn" };
+
+  const { data, error: rpcError } = await supabase.rpc(
+    "confirm_vietqr_payment",
+    {
+      p_tenant_id: claims.tenant_id,
+      p_branch_id: parsedBranch.data,
+      p_order_id: parsedOrderId.data,
+      p_amount: parsedAmount.data,
+      p_created_by: user.id,
+    },
+  );
+
+  if (rpcError) {
+    const msg = rpcError.message ?? "";
+    if (msg.includes("order_not_found")) {
+      return { success: false, error: "Đơn hàng không tồn tại." };
+    }
+    if (msg.includes("amount_mismatch")) {
+      return {
+        success: false,
+        error:
+          "Số tiền không khớp với tổng đơn hàng. Khách đã quét QR cũ — vui lòng tạo đơn mới cho phần chênh lệch.",
+      };
+    }
+    if (
+      msg.includes("permission denied") ||
+      msg.includes("pos:confirm_payment")
+    ) {
+      return { success: false, error: "Không có quyền thanh toán" };
+    }
+    const mappedError = mapPaymentRpcError(msg);
+    if (mappedError) {
+      console.error("[confirmVietQrPayment] rpc failed:", msg);
+      return { success: false, error: mappedError };
+    }
+    return { success: false, error: "Không thể xác nhận thanh toán VietQR." };
+  }
+
+  const result = data as {
+    payment_id: number;
+    idempotent: boolean;
+    print: { job_id?: number; failed: boolean; error?: string };
+  } | null;
+
+  if (!result) {
+    return { success: false, error: "Không thể xác nhận thanh toán." };
+  }
+
+  if (!result.idempotent) {
+    const { error: stockErr } = await consumeStockForOrderCompat(
+      supabase,
+      parsedOrderId.data,
+    );
+    if (stockErr) {
+      console.error(
+        "[confirmVietQrPayment] consume_stock_for_order failed:",
+        stockErr.message,
+      );
+    }
+  }
+
+  return {
+    success: true,
+    data: {
+      payment_id: result.payment_id,
+      idempotent: result.idempotent,
+      print: {
+        failed: result.print.failed,
+        ...(result.print.job_id != null ? { jobId: result.print.job_id } : {}),
+        ...(result.print.error ? { error: result.print.error } : {}),
+      },
+    },
+  };
+}
+
+/* ─── confirmVietQrPaymentWithInvoice ─── */
+
+export interface VietQrPaymentWithInvoiceResult
+  extends ConfirmVietQrPaymentResult {
+  invoice: InvoiceOutcome | null;
+}
+
+/**
+ * Orchestrator: confirm VietQR payment, then optionally issue HĐĐT.
+ * Payment commits independently — HĐĐT failure does NOT roll back payment.
+ */
+export async function confirmVietQrPaymentWithInvoice(
+  branchId: number,
+  orderId: number,
+  amount: number,
+  invoice: z.infer<typeof invoicePayloadSchema> | null,
+): Promise<ActionResult<VietQrPaymentWithInvoiceResult>> {
+  const paymentResult = await confirmVietQrPayment(branchId, orderId, amount);
+  if (!paymentResult.success || !paymentResult.data) {
+    return paymentResult as ActionResult<VietQrPaymentWithInvoiceResult>;
+  }
+
+  if (!invoice) {
+    return {
+      success: true,
+      data: { ...paymentResult.data, invoice: null },
+    };
+  }
+
+  const parsed = invoicePayloadSchema.safeParse(invoice);
+  if (!parsed.success) {
+    return {
+      success: true,
+      data: {
+        ...paymentResult.data,
+        invoice: {
+          status: "failed",
+          error:
+            parsed.error.issues[0]?.message ?? "Dữ liệu HĐĐT không hợp lệ",
         },
       },
     };

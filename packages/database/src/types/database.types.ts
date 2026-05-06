@@ -7438,7 +7438,7 @@ export type Database = {
         Returns: Json
       }
       cancel_pending_payment: {
-        Args: { p_payment_id: number }
+        Args: { p_branch_id: number; p_payment_id: number; p_tenant_id: number }
         Returns: undefined
       }
       cancel_production_order: { Args: { p_order_id: number }; Returns: Json }
@@ -7552,6 +7552,16 @@ export type Database = {
       confirm_production_order: { Args: { p_order_id: number }; Returns: Json }
       confirm_stock_issue: { Args: { p_issue_id: number }; Returns: Json }
       confirm_supplier_return: { Args: { p_return_id: number }; Returns: Json }
+      confirm_vietqr_payment: {
+        Args: {
+          p_amount: number
+          p_branch_id: number
+          p_created_by: string
+          p_order_id: number
+          p_tenant_id: number
+        }
+        Returns: Json
+      }
       consume_stock_for_order: { Args: { p_order_id: number }; Returns: Json }
       consume_stock_for_order_service: {
         Args: { p_actor_id?: string; p_order_id: number }

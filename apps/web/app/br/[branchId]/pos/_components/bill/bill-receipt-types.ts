@@ -38,8 +38,10 @@ export interface OrderData {
   split_from_order_id: number | null;
   /** Đơn target nếu đơn này đã bị gộp vào đơn khác. */
   merged_into_order_id: number | null;
+  cash_received: number | null;
+  cash_change: number | null;
   tables: { number: number } | null;
-  branches: { name: string; address: string | null } | null;
+  branches: { name: string; address: string | null; phone: string | null } | null;
   /** profiles.full_name của orders.created_by — người tạo/order đơn.
    * Shape khớp supabase select join `profiles!orders_created_by_fkey(full_name)`.
    * Optional để giữ back-compat với fixture payload (vd RECEIPT_LOADING_ORDER). */

@@ -743,10 +743,7 @@ function PosDesktopInner({
         const orderNumber = result.data.order_number;
         toast.success(`Đặt món thành công — #${orderNumber}`, {
           action: {
-            label:
-              submittedOrderType === "takeaway"
-                ? "Thanh toán ngay"
-                : "Xem hóa đơn",
+            label: "Xem hóa đơn",
             onClick: () => {
               setBillIntent("payment");
               setBillOrderId(orderId);

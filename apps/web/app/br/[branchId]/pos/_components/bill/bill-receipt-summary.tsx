@@ -65,6 +65,11 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
                 {order.branches.address}
               </p>
             )}
+            {order.branches.phone && (
+              <p className="text-xs text-muted-foreground">
+                {messages.pos.receipt.branchPhone(order.branches.phone)}
+              </p>
+            )}
           </>
         )}
       </div>
@@ -92,6 +97,26 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
           <div className="flex justify-between">
             <span>{messages.pos.receipt.table}</span>
             <span>{order.tables.number}</span>
+          </div>
+        )}
+        {order.order_type === "dine_in" && order.customer_count > 0 && (
+          <div className="flex justify-between">
+            <span>{messages.pos.receipt.customerCount}</span>
+            <span>{order.customer_count}</span>
+          </div>
+        )}
+        {order.profiles?.full_name && (
+          <div className="flex justify-between">
+            <span>{messages.pos.receipt.cashier}</span>
+            <span className="font-medium">{order.profiles.full_name}</span>
+          </div>
+        )}
+        {order.split_from_order_id !== null && (
+          <div className="flex justify-between">
+            <span>{messages.pos.receipt.splitFrom}</span>
+            <span className="font-mono text-muted-foreground">
+              #{order.split_from_order_id}
+            </span>
           </div>
         )}
         <div className="flex justify-between">
@@ -184,6 +209,21 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
           <span>{messages.pos.receipt.total}</span>
           <span>{formatVND(order.total_amount)}</span>
         </div>
+        {isPaid && order.payment_method === "cash" && order.cash_received != null && (
+          <>
+            <Separator className="my-1" />
+            <div className="flex justify-between">
+              <span>{messages.pos.receipt.cashReceived}</span>
+              <span className="tabular-nums">{formatVND(order.cash_received)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>{messages.pos.receipt.cashChange}</span>
+              <span className="tabular-nums font-medium">
+                {formatVND(order.cash_change ?? 0)}
+              </span>
+            </div>
+          </>
+        )}
       </div>
 
       {order.note && (

@@ -68,6 +68,9 @@ export const pos = {
     cashShort: (amount: string) => `Thiếu ${amount}`,
     printProvisional: "In tạm tính",
     paidConfirm: "Đã thanh toán",
+    cancelQr: "Hủy QR",
+    cancelQrSuccess: "Đã hủy QR — có thể tạo mới",
+    cancelQrFailed: "Không thể hủy QR",
   },
   receipt: {
     paymentCancelled: "Đã hủy",
@@ -92,6 +95,12 @@ export const pos = {
     thanks: "Cảm ơn quý khách!",
     lineUnitPrice: (quantity: number, unitPrice: string) =>
       `${quantity} × ${unitPrice}`,
+    customerCount: "Số khách",
+    cashier: "Thu ngân",
+    splitFrom: "Đơn tách",
+    cashReceived: "Tiền nhận",
+    cashChange: "Tiền trả khách",
+    branchPhone: (phone: string) => `ĐT: ${phone}`,
   },
   menu: {
     disabled: "Đang tắt",
