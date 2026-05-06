@@ -77,10 +77,10 @@ export async function submitFeedback(
     p_token: meta.token,
     p_rating: parsed.data.rating,
     p_comment: parsed.data.comment,
-    p_phone: parsed.data.phone ?? null,
+    p_phone: parsed.data.phone ?? undefined,
     p_photo_paths: [],
-    p_ip_hash: ipHash,
-    p_user_agent_short: userAgentShort,
+    p_ip_hash: ipHash ?? undefined,
+    p_user_agent_short: userAgentShort ?? undefined,
   });
 
   if (error) {

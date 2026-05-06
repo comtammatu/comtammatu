@@ -17,7 +17,11 @@ import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { generateDailyReport } from "@comtammatu/shared/ai";
-import { checkMonthlyBudget } from "@comtammatu/shared/feedback";
+import {
+  checkMonthlyBudget,
+  type FeedbackCategory,
+} from "@comtammatu/shared/feedback";
+import type { AiSeverity } from "@comtammatu/shared/ai";
 import {
   sendTelegramMessage,
   redactTelegramToken,
@@ -183,8 +187,10 @@ export async function POST(request: Request) {
           feedbacks: feedbacks.map((f) => ({
             rating: f.rating,
             comment: f.comment,
-            ai_categories: f.ai_categories ?? null,
-            ai_severity: f.ai_severity ?? null,
+            ai_categories: (f.ai_categories ?? null) as
+              | FeedbackCategory[]
+              | null,
+            ai_severity: (f.ai_severity ?? null) as AiSeverity | null,
             created_at: f.created_at,
           })),
         });
@@ -199,7 +205,7 @@ export async function POST(request: Request) {
             feedback_count: reportResult.feedback_count,
             avg_rating: reportResult.avg_rating,
             report_md: reportResult.report_md,
-            metrics_json: reportResult.metrics_json,
+            metrics_json: reportResult.metrics_json as never,
             llm_model: reportResult.llm_model,
             llm_cost_usd: reportResult.llm_cost_usd,
           });

@@ -519,7 +519,7 @@ export const amendGrnLine = withAction(
       p_received_quantity: data.receivedQuantity,
       p_unit_cost: data.unitCost,
       p_reason: data.reason,
-      p_rejected_quantity: data.rejectedQuantity ?? null,
+      p_rejected_quantity: data.rejectedQuantity ?? undefined,
     });
 
     if (error) {

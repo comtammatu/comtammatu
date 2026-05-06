@@ -7,10 +7,30 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5"
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
@@ -993,6 +1013,274 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feedback_daily_reports: {
+        Row: {
+          avg_rating: number | null
+          branch_id: number | null
+          feedback_count: number
+          generated_at: string
+          id: number
+          llm_cost_usd: number
+          llm_model: string
+          metrics_json: Json
+          report_date: string
+          report_md: string
+          tenant_id: number
+        }
+        Insert: {
+          avg_rating?: number | null
+          branch_id?: number | null
+          feedback_count?: number
+          generated_at?: string
+          id?: never
+          llm_cost_usd?: number
+          llm_model: string
+          metrics_json?: Json
+          report_date: string
+          report_md: string
+          tenant_id: number
+        }
+        Update: {
+          avg_rating?: number | null
+          branch_id?: number | null
+          feedback_count?: number
+          generated_at?: string
+          id?: never
+          llm_cost_usd?: number
+          llm_model?: string
+          metrics_json?: Json
+          report_date?: string
+          report_md?: string
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_daily_reports_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feedback_daily_reports_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id"]
+          },
+        ]
+      }
+      feedback_qr_codes: {
+        Row: {
+          branch_id: number
+          created_at: string
+          created_by: number | null
+          id: number
+          is_active: boolean
+          label: string
+          rotated_at: string | null
+          table_id: number | null
+          tenant_id: number
+          token: string
+        }
+        Insert: {
+          branch_id: number
+          created_at?: string
+          created_by?: number | null
+          id?: never
+          is_active?: boolean
+          label: string
+          rotated_at?: string | null
+          table_id?: number | null
+          tenant_id: number
+          token: string
+        }
+        Update: {
+          branch_id?: number
+          created_at?: string
+          created_by?: number | null
+          id?: never
+          is_active?: boolean
+          label?: string
+          rotated_at?: string | null
+          table_id?: number | null
+          tenant_id?: number
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_qr_codes_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feedback_qr_codes_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "feedback_qr_codes_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: false
+            referencedRelation: "tables"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feedback_settings: {
+        Row: {
+          ai_monthly_budget_usd: number
+          daily_report_hour_local: number
+          push_mode: string
+          tenant_id: number
+          threshold_rating: number
+          updated_at: string
+          updated_by: number | null
+        }
+        Insert: {
+          ai_monthly_budget_usd?: number
+          daily_report_hour_local?: number
+          push_mode?: string
+          tenant_id: number
+          threshold_rating?: number
+          updated_at?: string
+          updated_by?: number | null
+        }
+        Update: {
+          ai_monthly_budget_usd?: number
+          daily_report_hour_local?: number
+          push_mode?: string
+          tenant_id?: number
+          threshold_rating?: number
+          updated_at?: string
+          updated_by?: number | null
+        }
+        Relationships: []
+      }
+      feedbacks: {
+        Row: {
+          ai_categories: string[] | null
+          ai_processed_at: string | null
+          ai_sentiment_score: number | null
+          ai_severity: string | null
+          ai_summary_vi: string | null
+          alert_priority: number
+          alert_sent_telegram_at: string | null
+          branch_id: number
+          channel: string
+          comment: string
+          created_at: string
+          dish_names_snapshot: string[] | null
+          id: number
+          is_suspect: boolean
+          order_id_snapshot: number | null
+          order_total_snapshot: number | null
+          phone: string | null
+          photo_paths: string[]
+          qr_code_id: number
+          rating: number
+          server_user_id_snapshot: number | null
+          submit_ip_hash: string | null
+          table_id: number | null
+          tenant_id: number
+          user_agent_short: string | null
+        }
+        Insert: {
+          ai_categories?: string[] | null
+          ai_processed_at?: string | null
+          ai_sentiment_score?: number | null
+          ai_severity?: string | null
+          ai_summary_vi?: string | null
+          alert_priority?: number
+          alert_sent_telegram_at?: string | null
+          branch_id: number
+          channel?: string
+          comment: string
+          created_at?: string
+          dish_names_snapshot?: string[] | null
+          id?: never
+          is_suspect?: boolean
+          order_id_snapshot?: number | null
+          order_total_snapshot?: number | null
+          phone?: string | null
+          photo_paths?: string[]
+          qr_code_id: number
+          rating: number
+          server_user_id_snapshot?: number | null
+          submit_ip_hash?: string | null
+          table_id?: number | null
+          tenant_id: number
+          user_agent_short?: string | null
+        }
+        Update: {
+          ai_categories?: string[] | null
+          ai_processed_at?: string | null
+          ai_sentiment_score?: number | null
+          ai_severity?: string | null
+          ai_summary_vi?: string | null
+          alert_priority?: number
+          alert_sent_telegram_at?: string | null
+          branch_id?: number
+          channel?: string
+          comment?: string
+          created_at?: string
+          dish_names_snapshot?: string[] | null
+          id?: never
+          is_suspect?: boolean
+          order_id_snapshot?: number | null
+          order_total_snapshot?: number | null
+          phone?: string | null
+          photo_paths?: string[]
+          qr_code_id?: number
+          rating?: number
+          server_user_id_snapshot?: number | null
+          submit_ip_hash?: string | null
+          table_id?: number | null
+          tenant_id?: number
+          user_agent_short?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedbacks_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feedbacks_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "feedbacks_order_id_snapshot_fkey"
+            columns: ["order_id_snapshot"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feedbacks_qr_code_id_fkey"
+            columns: ["qr_code_id"]
+            isOneToOne: false
+            referencedRelation: "feedback_qr_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feedbacks_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: false
+            referencedRelation: "tables"
             referencedColumns: ["id"]
           },
         ]
@@ -6768,6 +7056,105 @@ export type Database = {
           },
         ]
       }
+      telegram_destinations: {
+        Row: {
+          branch_id: number | null
+          chat_id: string
+          consecutive_failures: number
+          created_at: string
+          created_by: number | null
+          id: number
+          is_active: boolean
+          label: string
+          tenant_id: number
+        }
+        Insert: {
+          branch_id?: number | null
+          chat_id: string
+          consecutive_failures?: number
+          created_at?: string
+          created_by?: number | null
+          id?: never
+          is_active?: boolean
+          label: string
+          tenant_id: number
+        }
+        Update: {
+          branch_id?: number | null
+          chat_id?: string
+          consecutive_failures?: number
+          created_at?: string
+          created_by?: number | null
+          id?: never
+          is_active?: boolean
+          label?: string
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegram_destinations_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "telegram_destinations_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id"]
+          },
+        ]
+      }
+      telegram_outbox: {
+        Row: {
+          attempts: number
+          created_at: string
+          feedback_id: number
+          id: number
+          last_error: string | null
+          next_retry_at: string
+          sent_at: string | null
+          status: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          feedback_id: number
+          id?: never
+          last_error?: string | null
+          next_retry_at?: string
+          sent_at?: string | null
+          status?: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          feedback_id?: number
+          id?: never
+          last_error?: string | null
+          next_retry_at?: string
+          sent_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegram_outbox_feedback_id_fkey"
+            columns: ["feedback_id"]
+            isOneToOne: true
+            referencedRelation: "feedbacks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "telegram_outbox_feedback_id_fkey"
+            columns: ["feedback_id"]
+            isOneToOne: true
+            referencedRelation: "feedbacks_with_masked_phone"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenants: {
         Row: {
           created_at: string | null
@@ -6977,6 +7364,123 @@ export type Database = {
       }
     }
     Views: {
+      feedbacks_with_masked_phone: {
+        Row: {
+          ai_categories: string[] | null
+          ai_processed_at: string | null
+          ai_sentiment_score: number | null
+          ai_severity: string | null
+          ai_summary_vi: string | null
+          alert_priority: number | null
+          alert_sent_telegram_at: string | null
+          branch_id: number | null
+          channel: string | null
+          comment: string | null
+          created_at: string | null
+          dish_names_snapshot: string[] | null
+          has_ip_hash: boolean | null
+          id: number | null
+          is_suspect: boolean | null
+          order_id_snapshot: number | null
+          order_total_snapshot: number | null
+          phone: string | null
+          photo_paths: string[] | null
+          qr_code_id: number | null
+          rating: number | null
+          server_user_id_snapshot: number | null
+          table_id: number | null
+          tenant_id: number | null
+        }
+        Insert: {
+          ai_categories?: string[] | null
+          ai_processed_at?: string | null
+          ai_sentiment_score?: number | null
+          ai_severity?: string | null
+          ai_summary_vi?: string | null
+          alert_priority?: number | null
+          alert_sent_telegram_at?: string | null
+          branch_id?: number | null
+          channel?: string | null
+          comment?: string | null
+          created_at?: string | null
+          dish_names_snapshot?: string[] | null
+          has_ip_hash?: never
+          id?: number | null
+          is_suspect?: boolean | null
+          order_id_snapshot?: number | null
+          order_total_snapshot?: number | null
+          phone?: never
+          photo_paths?: string[] | null
+          qr_code_id?: number | null
+          rating?: number | null
+          server_user_id_snapshot?: number | null
+          table_id?: number | null
+          tenant_id?: number | null
+        }
+        Update: {
+          ai_categories?: string[] | null
+          ai_processed_at?: string | null
+          ai_sentiment_score?: number | null
+          ai_severity?: string | null
+          ai_summary_vi?: string | null
+          alert_priority?: number | null
+          alert_sent_telegram_at?: string | null
+          branch_id?: number | null
+          channel?: string | null
+          comment?: string | null
+          created_at?: string | null
+          dish_names_snapshot?: string[] | null
+          has_ip_hash?: never
+          id?: number | null
+          is_suspect?: boolean | null
+          order_id_snapshot?: number | null
+          order_total_snapshot?: number | null
+          phone?: never
+          photo_paths?: string[] | null
+          qr_code_id?: number | null
+          rating?: number | null
+          server_user_id_snapshot?: number | null
+          table_id?: number | null
+          tenant_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedbacks_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feedbacks_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "feedbacks_order_id_snapshot_fkey"
+            columns: ["order_id_snapshot"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feedbacks_qr_code_id_fkey"
+            columns: ["qr_code_id"]
+            isOneToOne: false
+            referencedRelation: "feedback_qr_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feedbacks_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: false
+            referencedRelation: "tables"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mv_daily_revenue: {
         Row: {
           branch_id: number | null
@@ -7361,6 +7865,7 @@ export type Database = {
           p_line_id: number
           p_reason: string
           p_received_quantity: number
+          p_rejected_quantity?: number
           p_unit_cost: number
         }
         Returns: Json
@@ -7429,6 +7934,10 @@ export type Database = {
           p_reference_type: string
           p_tenant_id: number
         }
+        Returns: number
+      }
+      bulk_mark_feedback_suspect: {
+        Args: { p_feedback_ids: number[]; p_is_suspect: boolean }
         Returns: number
       }
       bump_kds_ticket: { Args: { p_ticket_id: number }; Returns: string }
@@ -7765,6 +8274,11 @@ export type Database = {
       extend_express_window: {
         Args: { p_branch_id: number; p_minutes: number; p_note: string }
         Returns: string
+      }
+      feedback_retention_cleanup: { Args: never; Returns: Json }
+      feedback_validate_categories: {
+        Args: { p_cats: string[] }
+        Returns: boolean
       }
       finalize_paid_order: {
         Args: { p_actor_id?: string; p_order_id: number }
@@ -8345,14 +8859,23 @@ export type Database = {
         }
         Returns: Json
       }
-      split_order: {
-        Args: {
-          p_idempotency_key?: string
-          p_item_partials: Json
-          p_source_order_id: number
-        }
-        Returns: Json
-      }
+      split_order:
+        | {
+            Args: {
+              p_idempotency_key?: string
+              p_item_ids: number[]
+              p_source_order_id: number
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_idempotency_key?: string
+              p_item_partials: Json
+              p_source_order_id: number
+            }
+            Returns: Json
+          }
       start_stocktake: {
         Args: {
           p_auditor_id?: string
@@ -8393,6 +8916,18 @@ export type Database = {
       submit_count_round: {
         Args: { p_counts: Json; p_round_no: number; p_session_id: number }
         Returns: Json
+      }
+      submit_feedback: {
+        Args: {
+          p_comment: string
+          p_ip_hash?: string
+          p_phone?: string
+          p_photo_paths?: string[]
+          p_rating: number
+          p_token: string
+          p_user_agent_short?: string
+        }
+        Returns: number
       }
       sync_insurance_base: {
         Args: { p_employee_id: number }
@@ -8623,7 +9158,11 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },
 } as const
+

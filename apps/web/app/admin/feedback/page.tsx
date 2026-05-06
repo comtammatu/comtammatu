@@ -45,7 +45,13 @@ export default async function FeedbackPage({
   // Fetch QR code labels + branch names via separate queries (hand-coded types
   // do not declare Relationships, so Supabase nested join syntax is rejected
   // at compile time. Two-query approach keeps things type-safe).
-  const qrIds = [...new Set((rawFeedbacks ?? []).map((f) => f.qr_code_id))];
+  const qrIds = [
+    ...new Set(
+      (rawFeedbacks ?? [])
+        .map((f) => f.qr_code_id)
+        .filter((id): id is number => id !== null),
+    ),
+  ];
   const { data: qrCodes } =
     qrIds.length > 0
       ? await supabase
@@ -78,21 +84,36 @@ export default async function FeedbackPage({
     ]),
   );
 
-  const feedbacks: FeedbackRow[] = (rawFeedbacks ?? []).map((f) => ({
-    id: f.id,
-    rating: f.rating,
-    comment: f.comment,
-    phone: f.phone,
-    branch_name: qrMap.get(f.qr_code_id)?.branch_name ?? null,
-    qr_label: qrMap.get(f.qr_code_id)?.label ?? null,
-    created_at: f.created_at,
-    is_suspect: f.is_suspect,
-    ai_categories: f.ai_categories,
-    ai_severity: f.ai_severity,
-    ai_summary_vi: f.ai_summary_vi,
-    ai_sentiment_score: f.ai_sentiment_score,
-    alert_priority: f.alert_priority,
-  }));
+  const feedbacks: FeedbackRow[] = (rawFeedbacks ?? [])
+    .filter(
+      (f): f is typeof f & {
+        id: number;
+        rating: number;
+        comment: string;
+        created_at: string;
+      } =>
+        f.id !== null &&
+        f.rating !== null &&
+        f.comment !== null &&
+        f.created_at !== null,
+    )
+    .map((f) => ({
+      id: f.id,
+      rating: f.rating,
+      comment: f.comment,
+      phone: f.phone,
+      branch_name: f.qr_code_id
+        ? (qrMap.get(f.qr_code_id)?.branch_name ?? null)
+        : null,
+      qr_label: f.qr_code_id ? (qrMap.get(f.qr_code_id)?.label ?? null) : null,
+      created_at: f.created_at,
+      is_suspect: f.is_suspect ?? false,
+      ai_categories: f.ai_categories,
+      ai_severity: f.ai_severity,
+      ai_summary_vi: f.ai_summary_vi,
+      ai_sentiment_score: f.ai_sentiment_score,
+      alert_priority: f.alert_priority ?? 0,
+    }));
 
   return (
     <div className="space-y-4">

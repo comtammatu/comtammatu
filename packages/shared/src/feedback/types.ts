@@ -3,6 +3,10 @@ import type { AiSeverity } from "../ai/feedback-enrichment";
 
 export type { FeedbackCategory, AiSeverity };
 
+export type FeedbackChannel = "qr_scan" | "manual";
+export type TelegramOutboxStatus = "pending" | "sent" | "failed" | "dead";
+export type PushMode = "threshold" | "all" | "none";
+
 export type FeedbackEnrichmentResult = {
   categories: FeedbackCategory[];
   severity: AiSeverity;
