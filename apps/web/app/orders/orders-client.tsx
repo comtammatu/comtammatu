@@ -12,13 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@comtammatu/ui/components/card";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@comtammatu/ui/components/empty";
+import { AppEmptyState } from "@/components/surface";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
@@ -310,19 +304,17 @@ export function OrdersClient({
         </CardHeader>
         <CardContent className="space-y-4">
           {displayOrders.length === 0 ? (
-            <Empty className="border bg-card py-10">
-              <EmptyMedia variant="icon">
-                <IconShoppingBag />
-              </EmptyMedia>
-              <EmptyHeader>
-                <EmptyTitle className="text-sm font-semibold">Không có đơn hàng nào</EmptyTitle>
-                <EmptyDescription className="text-xs leading-5">
-                  {hasFilters
-                    ? "Thử xóa bộ lọc hoặc đổi mốc thời gian để mở rộng kết quả."
-                    : "Hệ thống chưa có đơn nào trong phạm vi đang xem."}
-                </EmptyDescription>
-              </EmptyHeader>
-            </Empty>
+            <AppEmptyState
+              mode={hasFilters ? "no-results" : "no-data"}
+              title="Không có đơn hàng nào"
+              description={
+                hasFilters
+                  ? "Thử xóa bộ lọc hoặc đổi mốc thời gian để mở rộng kết quả."
+                  : "Hệ thống chưa có đơn nào trong phạm vi đang xem."
+              }
+              icon={<IconShoppingBag />}
+              compact
+            />
           ) : null}
 
           <div className="space-y-3 md:hidden">

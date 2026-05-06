@@ -52,6 +52,37 @@
 
 POS/KDS = FROZEN until M4 P0 closes.
 
+## After Wave 1 (2026-05-07)
+
+Surfaces migrated: notifications, orders (NOT refunds), hr landing, admin/dashboard.
+Employee surfaces already delegated to AppPageHeader+AppSection via employee-page.tsx — no changes needed.
+
+### Adapter coverage delta
+
+| Adapter | Baseline | After Wave 1 | Delta |
+|---|---|---|---|
+| AppPage | 4 | 12 | +8 |
+| AppPageHeader | 5 | 9 | +4 |
+| AppSection | 7 | 9 | +2 |
+| AppToolbar | 9 | 9 | 0 |
+| AppEmptyState | 18 | 20 | +2 |
+| AppLinkCard | 3 | 4 | +1 |
+| AppPageTabs | 0 | 2 | +2 |
+
+### Anti-pattern delta
+
+| Pattern | Baseline | After Wave 1 | Delta |
+|---|---|---|---|
+| `AppPageHeader` callers | 5 | 9 | +4 ✓ |
+| Hand-rolled Empty `border bg-card` | 6 | 5 | -1 ✓ |
+| `PageHero` callers | 16 | 15 | -1 ✓ (orders migrated) |
+| `redirect.*\?error=` | 4 | 4 | 0 (all in /inventory, Wave 3) |
+
+### Regression rules added
+
+10 new rules inserted at TOP of `tasks/regressions.md` (dated 2026-05-07):
+UI-PAGE-HEADER-VIA-APP-PAGE-HEADER, UI-NO-COMPETING-CHROME-PRIMITIVE, UI-NO-RAW-TABLE-OUTSIDE-PRIMITIVE, UI-LOADER-VIA-SPINNER-PRIMITIVE, UI-EMPTY-STATE-VIA-APP-EMPTY-STATE, UI-NO-PALETTE-FOR-STATUS, UI-FORM-VIA-FORMDIALOG-FOR-CRUD, UI-TOAST-VIA-SONNER-NEVER-URL-FLASH, UI-AUDIT-LOG-EXPLICIT-COLUMNS-IN-UI, UI-PERMISSION-FLAGS-THREADED-NOT-SERVER-ONLY.
+
 ## 10 new regression rules to add
 
 To be appended to `tasks/regressions.md` after Wave 0:

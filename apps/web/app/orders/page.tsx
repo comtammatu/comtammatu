@@ -4,21 +4,10 @@ import { fetchOrders } from "./actions";
 import { fetchRefunds } from "./refund-actions";
 import { OrdersClient } from "./orders-client";
 import { RefundsClient } from "./refunds-client";
-import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
-import {
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@comtammatu/ui/components/tabs";
-import { PageHero } from "@/components/page-hero";
-import { UrlTabs } from "@/_components/url-tabs";
+import { TabsContent } from "@comtammatu/ui/components/tabs";
+import { AppPage, AppPageHeader, AppEmptyState } from "@/components/surface";
+import { AppPageTabs } from "@/components/app-page-tabs";
 
 import { ORDER_VI } from "@comtammatu/shared/messages";
 export default async function OrdersPage() {
@@ -31,12 +20,13 @@ export default async function OrdersPage() {
 
   if (!ordersResult.success || !ordersResult.data) {
     return (
-      <div className="space-y-5 lg:space-y-6">
-        <PageHero title={ORDER_VI.long} />
-        <p className="text-sm text-destructive">
-          {ordersResult.error ?? "Không thể tải đơn hàng"}
-        </p>
-      </div>
+      <AppPage width="wide">
+        <AppPageHeader title={ORDER_VI.long} />
+        <AppEmptyState
+          mode="error"
+          description={ordersResult.error ?? "Không thể tải đơn hàng"}
+        />
+      </AppPage>
     );
   }
 
@@ -55,9 +45,10 @@ export default async function OrdersPage() {
   const pendingRefundCount = refunds.filter(
     (r) => r.status === "pending",
   ).length;
+
   return (
-    <div className="space-y-5 lg:space-y-6">
-      <PageHero
+    <AppPage width="wide">
+      <AppPageHeader
         eyebrow="Điều phối giao dịch"
         title={ORDER_VI.long}
         description="Theo dõi đơn bán và hòan tiền trong cùng một nơi để xử lý nhanh."
@@ -66,51 +57,32 @@ export default async function OrdersPage() {
             <Link href="/admin/reports">Báo cáo</Link>
           </Button>
         }
+        tabs={
+          <AppPageTabs
+            items={[
+              { value: "orders", label: "Danh sách đơn" },
+              {
+                value: "refunds",
+                label: "Hòan tiền",
+                count: pendingRefundCount > 0 ? pendingRefundCount : undefined,
+              },
+            ]}
+          />
+        }
       />
-      <Card>
-        <CardHeader>
-          <CardTitle>Điều phối giao dịch</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Theo dõi trạng thái đơn bán và các yêu cầu hòan tiền.
-          </p>
-        </CardHeader>
-        <CardContent>
-          <UrlTabs defaultValue="orders">
-            <TabsList variant="toolbar" className="bg-card shadow-sm">
-              <TabsTrigger
-                value="orders"
-                className="rounded-full px-4 data-[state=active]:bg-background data-[state=active]:shadow-sm"
-              >
-                Danh sách đơn
-              </TabsTrigger>
-              <TabsTrigger
-                value="refunds"
-                className="rounded-full px-4 data-[state=active]:bg-background data-[state=active]:shadow-sm"
-              >
-                Hòan tiền
-                {pendingRefundCount > 0 && (
-                  <Badge variant="destructive" className="ml-1.5">
-                    {pendingRefundCount}
-                  </Badge>
-                )}
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="orders" className="mt-5 space-y-4">
-              <OrdersClient
-                initialOrders={orders}
-                branches={branches}
-                showBranchFilter={isManagerOrAbove}
-              />
-            </TabsContent>
-            <TabsContent value="refunds" className="mt-5 space-y-4">
-              <RefundsClient
-                initialRefunds={refunds}
-                canApprove={canApproveRefund}
-              />
-            </TabsContent>
-          </UrlTabs>
-        </CardContent>
-      </Card>
-    </div>
+      <TabsContent value="orders" className="mt-0 space-y-4">
+        <OrdersClient
+          initialOrders={orders}
+          branches={branches}
+          showBranchFilter={isManagerOrAbove}
+        />
+      </TabsContent>
+      <TabsContent value="refunds" className="mt-0 space-y-4">
+        <RefundsClient
+          initialRefunds={refunds}
+          canApprove={canApproveRefund}
+        />
+      </TabsContent>
+    </AppPage>
   );
 }
