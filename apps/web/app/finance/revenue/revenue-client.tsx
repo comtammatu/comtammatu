@@ -103,8 +103,11 @@ interface PeriodAggregateRow {
   period_end: string;
   period_label: string;
   order_count: number;
+  /** Sum of orders.total_amount (post-discount, post-VAT — what customer paid) */
   total_revenue: number;
-  subtotal_revenue: number;
+  /** Sum of orders.subtotal (PRE-discount, pre-VAT) */
+  gross_sales: number;
+  discount_amount: number;
   total_tax: number;
   cash_revenue: number;
   vietqr_revenue: number;
@@ -121,7 +124,8 @@ function aggregateByPeriod(rows: RollupRow[]): PeriodAggregateRow[] {
     if (existing) {
       existing.order_count += r.order_count;
       existing.total_revenue += r.total_revenue ?? 0;
-      existing.subtotal_revenue += r.subtotal_revenue ?? 0;
+      existing.gross_sales += r.subtotal_revenue ?? 0;
+      existing.discount_amount += r.discount_amount ?? 0;
       existing.total_tax += r.total_tax ?? 0;
       existing.cash_revenue += r.cash_revenue ?? 0;
       existing.vietqr_revenue += r.vietqr_revenue ?? 0;
@@ -137,7 +141,8 @@ function aggregateByPeriod(rows: RollupRow[]): PeriodAggregateRow[] {
         period_label: r.period_label,
         order_count: r.order_count,
         total_revenue: r.total_revenue ?? 0,
-        subtotal_revenue: r.subtotal_revenue ?? 0,
+        gross_sales: r.subtotal_revenue ?? 0,
+        discount_amount: r.discount_amount ?? 0,
         total_tax: r.total_tax ?? 0,
         cash_revenue: r.cash_revenue ?? 0,
         vietqr_revenue: r.vietqr_revenue ?? 0,
@@ -150,6 +155,11 @@ function aggregateByPeriod(rows: RollupRow[]): PeriodAggregateRow[] {
   return Array.from(map.values()).sort((a, b) =>
     a.period_start.localeCompare(b.period_start),
   );
+}
+
+/** BA "Doanh thu thuần" per period: gross_sales − discount_amount */
+function netRevenuePreVatFor(r: PeriodAggregateRow): number {
+  return r.gross_sales - r.discount_amount;
 }
 
 interface BranchAggregateRow {
@@ -165,7 +175,9 @@ function aggregateByBranch(
   const map = new Map<number, BranchAggregateRow>();
   for (const r of rows) {
     const existing = map.get(r.branch_id);
-    const rev = r.subtotal_revenue ?? r.total_revenue ?? 0;
+    // BA "Doanh thu thuần": gross_sales − discount_amount per branch
+    const rev =
+      (r.subtotal_revenue ?? 0) - (r.discount_amount ?? 0);
     if (existing) {
       existing.revenue += rev;
       existing.orders += r.order_count;
@@ -228,13 +240,24 @@ export function RevenueClient({
   );
 
   // ─── KPI semantics (BA §1, Q1-Q3) ──────────────────────────
-  const subtotal = kpis?.subtotal_revenue ?? 0;
-  const grossSales = subtotal + (kpis?.discount_amount ?? 0);
+  //
+  // RPC `get_revenue_kpis` field naming differs from BA contract:
+  //   • RPC.subtotal_revenue = sum(orders.subtotal) = PRE-discount, PRE-VAT
+  //     → this is what BA calls "gross_sales"
+  //   • RPC.net_revenue = sum(orders.total_amount) = customer paid total
+  //     (post-discount, post-VAT)
+  //
+  // BA hero "Doanh thu thuần" = post-discount, PRE-VAT = gross - discount
+  // Equivalent: net_revenue - total_tax (when discount accounted in net).
+  const grossSales = kpis?.subtotal_revenue ?? 0; // pre-discount, pre-VAT
+  const netRevenuePreVat = grossSales - (kpis?.discount_amount ?? 0); // BA hero
   const aovPerOrder =
-    kpis && kpis.order_count > 0 ? Math.round(subtotal / kpis.order_count) : 0;
+    kpis && kpis.order_count > 0
+      ? Math.round(netRevenuePreVat / kpis.order_count)
+      : 0;
   const aovPerCover =
     kpis && kpis.total_covers > 0
-      ? Math.round(subtotal / kpis.total_covers)
+      ? Math.round(netRevenuePreVat / kpis.total_covers)
       : 0;
   const discountPct =
     grossSales > 0 ? ((kpis?.discount_amount ?? 0) / grossSales) * 100 : 0;
@@ -243,15 +266,15 @@ export function RevenueClient({
 
   // Compare deltas — null when compare is off.
   const prev = compare?.kpis ?? null;
-  const prevSubtotal = prev?.subtotal_revenue ?? 0;
-  const prevGross = prevSubtotal + (prev?.discount_amount ?? 0);
+  const prevGross = prev?.subtotal_revenue ?? 0;
+  const prevNetPreVat = prevGross - (prev?.discount_amount ?? 0);
   const prevAovOrder =
     prev && prev.order_count > 0
-      ? Math.round(prevSubtotal / prev.order_count)
+      ? Math.round(prevNetPreVat / prev.order_count)
       : 0;
   const prevAovCover =
     prev && prev.total_covers > 0
-      ? Math.round(prevSubtotal / prev.total_covers)
+      ? Math.round(prevNetPreVat / prev.total_covers)
       : 0;
   const prevDiscountPct =
     prevGross > 0 ? ((prev?.discount_amount ?? 0) / prevGross) * 100 : 0;
@@ -270,7 +293,7 @@ export function RevenueClient({
   // ─── Trend chart data (line) ───────────────────────────────
   const trendData = periodRows.map((r) => ({
     period: r.period_label,
-    revenue: Math.round(r.subtotal_revenue),
+    revenue: Math.round(netRevenuePreVatFor(r)),
   }));
 
   // ─── Sparkline data for hero KPI ───────────────────────────
@@ -332,7 +355,7 @@ export function RevenueClient({
         r.period_label,
         r.order_count,
         r.total_covers,
-        Math.round(r.subtotal_revenue),
+        Math.round(netRevenuePreVatFor(r)),
         Math.round(r.cash_revenue),
         Math.round(r.vietqr_revenue),
         Math.round(r.momo_revenue),
@@ -343,7 +366,7 @@ export function RevenueClient({
             revCopy.csvHeaders.total,
             kpis.order_count,
             kpis.total_covers,
-            Math.round(kpis.subtotal_revenue),
+            Math.round(netRevenuePreVat),
             Math.round(kpis.cash_revenue),
             Math.round(kpis.vietqr_revenue),
             Math.round(kpis.momo_revenue),
@@ -427,10 +450,10 @@ export function RevenueClient({
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard
           label={revCopy.kpi.netRevenue}
-          value={formatVND(subtotal)}
+          value={formatVND(netRevenuePreVat)}
           tone="primary"
           hint={revCopy.kpi.netRevenueHint}
-          delta={delta(subtotal, prevSubtotal, "higher_better")}
+          delta={delta(netRevenuePreVat, prevNetPreVat, "higher_better")}
           sparkline={sparkline.length > 0 ? sparkline : undefined}
           sparklineLabel={revCopy.trendChart.sparklineLabel}
         />
@@ -770,7 +793,7 @@ export function RevenueClient({
                         {r.total_covers.toLocaleString("vi-VN")}
                       </TableCell>
                       <TableCell className="text-right tabular-nums font-medium">
-                        {formatVND(r.subtotal_revenue)}
+                        {formatVND(netRevenuePreVatFor(r))}
                       </TableCell>
                       <TableCell className="text-right tabular-nums text-muted-foreground">
                         {formatVND(r.cash_revenue)}
@@ -798,7 +821,7 @@ export function RevenueClient({
                     {(kpis?.total_covers ?? 0).toLocaleString("vi-VN")}
                   </TableCell>
                   <TableCell className="text-right tabular-nums font-bold">
-                    {formatVND(kpis?.subtotal_revenue ?? 0)}
+                    {formatVND(netRevenuePreVat)}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
                     {formatVND(kpis?.cash_revenue ?? 0)}
