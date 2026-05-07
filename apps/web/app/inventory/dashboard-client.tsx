@@ -30,7 +30,7 @@ import {
 } from "@comtammatu/ui/components/card";
 import { Progress } from "@comtammatu/ui/components/progress";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
-import { AppPage, AppPageHeader } from "@/components/surface";
+import { AppEmptyState, AppPage, AppPageHeader } from "@/components/surface";
 import { StatusBadge } from "./_components/status-badge";
 import { formatVND } from "./_lib/format";
 import { getInventoryPaths, type InventoryRouteBase } from "./_lib/paths";
@@ -426,7 +426,19 @@ export function DashboardClient(props: DashboardProps) {
 
   return (
     <AppPage width={isMobile ? "narrow" : "wide"} contentClassName="gap-6">
-      <AppPageHeader eyebrow="Kho hàng" title={tNav("home")} />
+      <AppPageHeader
+        eyebrow={`Kho hàng · ${siteKindLabel}`}
+        title={siteName}
+        description="Tổng quan vận hành kho theo 3 luồng: kiểm soát tồn, nhập–nhận hàng, điều phối–sản xuất."
+        meta={
+          <span className="inline-flex items-center gap-2">
+            <span className="text-muted-foreground">Giá trị tồn kho:</span>
+            <span className="font-mono text-base font-semibold tabular-nums text-foreground">
+              {formatVND(totalStockValue)}đ
+            </span>
+          </span>
+        }
+      />
         <section className="flex flex-col gap-3">
           <h2 className="font-heading text-base font-semibold">
             {messages.inventory.dashboard.mainFlowsTitle}
@@ -439,14 +451,14 @@ export function DashboardClient(props: DashboardProps) {
                 <Card
                   key={flow.key}
                   className={cn(
-                    "overflow-hidden",
+                    "relative overflow-hidden border-l-4",
                     flow.tone === "destructive" &&
-                      "border-destructive/40 bg-destructive/5",
+                      "border-l-destructive bg-destructive/5",
                     flow.tone === "warning" &&
-                      "border-warning/40 bg-warning/10",
-                    flow.tone === "info" && "border-info/40 bg-info/10",
-                    flow.tone === "success" &&
-                      "border-success/40 bg-success/10",
+                      "border-l-warning bg-warning/10",
+                    flow.tone === "info" && "border-l-info bg-info/10",
+                    flow.tone === "success" && "border-l-success bg-success/10",
+                    flow.tone === "default" && "border-l-primary/60",
                   )}
                 >
                   <CardHeader className="gap-3 pb-3">
@@ -464,9 +476,9 @@ export function DashboardClient(props: DashboardProps) {
                           </CardDescription>
                         </div>
                       </div>
-                      <Badge variant="secondary" className="shrink-0">
+                      <span className="font-heading shrink-0 font-mono text-2xl font-bold tabular-nums text-foreground">
                         {flow.metric}
-                      </Badge>
+                      </span>
                     </div>
                     <div className="flex items-center justify-between gap-3 rounded-md border bg-background/80 px-3 py-2">
                       <div>
@@ -607,9 +619,11 @@ export function DashboardClient(props: DashboardProps) {
             </CardHeader>
             <CardContent>
               {tasks.length === 0 ? (
-                <p className="py-8 text-center text-sm text-muted-foreground">
-                  {messages.inventory.dashboard.noUrgentTasks}
-                </p>
+                <AppEmptyState
+                  compact
+                  icon={<IconSquareCheck />}
+                  title={messages.inventory.dashboard.noUrgentTasks}
+                />
               ) : (
                 <div className="space-y-2">
                   {tasks.map((task) => (
