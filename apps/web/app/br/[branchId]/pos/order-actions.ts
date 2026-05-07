@@ -1582,7 +1582,7 @@ export async function transferOrderTable(
   const { data, error } = await supabase.rpc("transfer_order_table", {
     p_order_id: parsed.data.orderId,
     p_new_table_id: parsed.data.newTableId,
-    p_idempotency_key: parsed.data.idempotencyKey ?? null,
+    p_idempotency_key: parsed.data.idempotencyKey,
   });
 
   if (error) {
