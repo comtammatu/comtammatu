@@ -21,7 +21,8 @@ import {
 import { Switch } from "@comtammatu/ui/components/switch";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Save as IconDeviceFloppy } from "lucide-react";
-import { InventoryHeader } from "../../_components/inventory-header";
+import { AppPage, AppPageHeader } from "@/components/surface";
+import { FormattedNumberInput } from "@/inventory/_components/formatted-number-input";
 import { saveQcSettings } from "../../notifications-actions";
 
 type Initial = {
@@ -77,10 +78,9 @@ export function QcSettingsClient({ initial }: { initial: Initial }) {
   }
 
   return (
-    <>
-      <InventoryHeader title="Cài đặt QC nhập kho" />
-      <div className="flex-1 overflow-auto p-4">
-        <div className="mx-auto max-w-3xl space-y-6">
+    <AppPage>
+      <AppPageHeader eyebrow="Kho hàng" title="Cài đặt QC nhập kho" />
+      <div className="mx-auto max-w-3xl space-y-6">
           <Alert>
             <AlertDescription>
               Cấu hình ngưỡng kiểm soát chất lượng cho phiếu nhập (GRN). Các
@@ -96,14 +96,11 @@ export function QcSettingsClient({ initial }: { initial: Initial }) {
             <CardContent className="grid gap-4 md:grid-cols-3">
               <div className="space-y-1">
                 <Label htmlFor="short-tol">Thiếu hàng ≤ (%)</Label>
-                <Input
+                <FormattedNumberInput
                   id="short-tol"
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="0.1"
-                  value={shortTol}
-                  onChange={(e) => setShortTol(Number(e.target.value || 0))}
+                  value={String(shortTol)}
+                  onValueChange={(v) => setShortTol(Number(v || 0))}
+                  maxFractionDigits={1}
                 />
                 <p className="text-xs text-muted-foreground">
                   Dưới ngưỡng → tự chấp nhận, không bắt chọn cách xử lý.
@@ -111,14 +108,11 @@ export function QcSettingsClient({ initial }: { initial: Initial }) {
               </div>
               <div className="space-y-1">
                 <Label htmlFor="warn-pct">Giá lệch cảnh báo ≥ (%)</Label>
-                <Input
+                <FormattedNumberInput
                   id="warn-pct"
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="0.1"
-                  value={warnPct}
-                  onChange={(e) => setWarnPct(Number(e.target.value || 0))}
+                  value={String(warnPct)}
+                  onValueChange={(v) => setWarnPct(Number(v || 0))}
+                  maxFractionDigits={1}
                 />
                 <p className="text-xs text-muted-foreground">
                   Vượt ngưỡng → bắt nhập lý do.
@@ -126,14 +120,11 @@ export function QcSettingsClient({ initial }: { initial: Initial }) {
               </div>
               <div className="space-y-1">
                 <Label htmlFor="review-pct">Giá lệch kiểm tra ≥ (%)</Label>
-                <Input
+                <FormattedNumberInput
                   id="review-pct"
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="0.1"
-                  value={reviewPct}
-                  onChange={(e) => setReviewPct(Number(e.target.value || 0))}
+                  value={String(reviewPct)}
+                  onValueChange={(v) => setReviewPct(Number(v || 0))}
+                  maxFractionDigits={1}
                 />
                 <p className="text-xs text-muted-foreground">
                   Vượt ngưỡng → bắt thêm ảnh hóa đơn + flag review.
@@ -208,8 +199,7 @@ export function QcSettingsClient({ initial }: { initial: Initial }) {
               <IconDeviceFloppy className="size-4" /> Lưu cài đặt
             </Button>
           </footer>
-        </div>
       </div>
-    </>
+    </AppPage>
   );
 }

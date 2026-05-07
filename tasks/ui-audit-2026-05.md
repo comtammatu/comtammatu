@@ -157,8 +157,35 @@ New helper: `fetchEntityAuditLogs` added to `apps/web/app/admin/_lib/audit.ts` (
 - AlertDialog for close/reopen already in `PeriodCloseCard` (inventory primitive); `period-admin-client.tsx` delegates to it via `strictConfirm` prop.
 - `feedback/settings/page.tsx` migrated from raw `Tabs` to `AppPageTabs`.
 
+## After Wave 3a (2026-05-07)
+
+Surfaces migrated: inventory shell (411 → 309 LOC, now delegates to `AppShell` via new `headerExtras` + `mobileTopBar` slots), all inventory list clients (PO, GRN, transfers, stocktake, issues, expiry, waste/{approvals,new}, supplier-invoices, receiving, production, dashboard v1), 5 inventory detail pages get first inventory `AppPageTabs[Tổng quan | Dòng | Lịch sử]` (PO, GRN, transfer, stocktake, issue), 1 URL-flash redirect converted (waste/new), 3 `type="number"` fixes in qc settings, 5 hand-rolled Empty migrations.
+
+New helper: `apps/web/app/inventory/_components/audit-history-list.tsx` — shared `AuditHistoryList` component for inventory detail Lịch sử tabs. Uses `fetchEntityAuditLogs` (Wave 2 helper) with explicit columns, RPC-only.
+
+### Telemetry delta vs Wave 2
+
+| Pattern | Baseline | W1 | W2 | After W3a | Wave 4 target |
+|---|---|---|---|---|---|
+| AppPageHeader files | 5 | 9 | 21 | **44** | ≥50 |
+| AppPageTabs files | 0 | — | 11 | **9** | ≥15 (count fluctuated; 9 distinct surfaces use it now) |
+| Hand-rolled `Empty border bg-card` | 6 | 5 | 5 | **2** | 0 |
+| PageHero callers | 16 | 15 | 11 | **11** | 1 (audit-trail frozen) |
+| raw `font-heading text-2xl/3xl` | 23 | 22 | 19 | **10** | 0 |
+| `redirect(?error=)` non-auth | 4 | 4 | 4 | **1** | 0 (only inventory/dashboard/page.tsx — retires Wave 3b) |
+| `type="number"` | 11 | 11 | 11 | **10** | ≤4 |
+| `Loader2 / animate-spin` | 1 | 1 | 1 | **1** | 0 (mv-staleness-banner Wave 4) |
+| Raw palette leak | 0 | 0 | 0 | **0** | ✓ |
+
+### Key decisions in Wave 3a
+
+- Inventory detail Tabs `[Tổng quan | Dòng | Lịch sử]` ship with empty Lịch sử tabs by design — inventory action handlers do NOT currently call `logAudit` (zero hits in `apps/web/app/inventory/`). Tabs render `AppEmptyState mode="no-data"` until audit instrumentation lands (post-pilot or follow-up). Entity types used: `purchase_order`, `goods_receipt_note`, `stock_transfer`, `stocktake_session`, `stock_issue`.
+- Inventory shell preserves `branchPickerLocked` (stocktake-session lock), 3-flow nav groups, branch filter URL-only flow (rule INVENTORY-BRANCH-FILTER-URL-ONLY), and `isBranchSite` label override ("Tồn cần xử lý").
+- `inventory/waste/new/page.tsx`: redirect-with-flash → inline `AppEmptyState mode="no-access"` for missing branch context.
+- Supplier-returns detail page Tabs migration deferred — Wave 4 cleanup.
+
 ## Open / deferred decisions
 
-- Dashboard v1 (`/inventory`) vs v2 (`/inventory/dashboard`) — debate in progress (background agent). Outcome lands before Wave 3.
-- Whether `app-shell.tsx` is still used as bridge or fully retired — investigate during Wave 1 (notifications uses it? admin uses it via admin-shell wrap?).
-- Hand-rolled `Empty className="border bg-card"` count stuck at 5 — remaining instances are in inventory surfaces (Wave 3 scope).
+- Wave 3b: retire `inventory/dashboard/dashboard-client-v2.tsx` + 4 widgets (location-breakdown-table, alerts-drawer, dashboard-summary-cards, dashboard-refresh-button); redirect `dashboard/page.tsx` → `/inventory` (drops final `?error=` flash); port v2's `get_inventory_dashboard` MV-backed RPC into v1 data path; disable `inv_s12_dashboard_v2` flag; update e2e snapshot at `e2e/visual/theme-baseline.spec.ts:23`; merge `/inventory/m/*` mobile fork (14 files) into responsive routes.
+- Inventory audit instrumentation (logAudit calls in inventory action handlers) — not in any wave; defer post-pilot.
+- `app-shell.tsx` still in active use as inventory shell delegate target (intentional).

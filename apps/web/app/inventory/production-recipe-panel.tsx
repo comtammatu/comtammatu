@@ -49,13 +49,7 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@comtammatu/ui/components/field";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@comtammatu/ui/components/empty";
+import { AppEmptyState } from "@/components/surface";
 import {
   Table,
   TableBody,
@@ -798,22 +792,12 @@ export function ProductionRecipePanel({
       </AlertDialog>
 
       {groupedRecipes.length === 0 ? (
-        <Card>
-          <CardContent>
-            <Empty className="border bg-card py-8">
-              <EmptyMedia variant="icon">
-                <IconClipboardList />
-              </EmptyMedia>
-              <EmptyHeader>
-                <EmptyTitle>Chưa có BOM nào</EmptyTitle>
-                <EmptyDescription>
-                  Hãy thêm ít nhất một dòng nguyên liệu để bắt đầu cấu hình công
-                  thức cho thành phẩm.
-                </EmptyDescription>
-              </EmptyHeader>
-            </Empty>
-          </CardContent>
-        </Card>
+        <AppEmptyState
+          mode="no-data"
+          title="Chưa có BOM nào"
+          description="Hãy thêm ít nhất một dòng nguyên liệu để bắt đầu cấu hình công thức cho thành phẩm."
+          icon={<IconClipboardList className="size-5" />}
+        />
       ) : (
         <div className="flex flex-col gap-4">
           {groupedRecipes.map((group) => (

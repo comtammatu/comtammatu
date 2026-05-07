@@ -54,11 +54,7 @@ import type {
   InventoryLocation,
 } from "./create-transfer-dialog";
 import type { IngredientRow } from "../page";
-import { InventoryHeader } from "../_components/inventory-header";
-import {
-  InventoryFilterBar,
-  InventoryPageContent,
-} from "../_components/inventory-page-layout";
+import { AppPage, AppPageHeader, AppToolbar } from "@/components/surface";
 import { InteractiveCard } from "../_components/interactive-card";
 import { StatusBadge } from "../_components/status-badge";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
@@ -253,18 +249,19 @@ export function TransfersListClient({
   if (isMobile) {
     return (
       <>
-        <InventoryHeader
-          title={pageTitle}
-          actions={
-            canCreate ? (
-              <Button size="sm" onClick={() => setOpen(true)}>
-                <IconPlus className="size-4" />
-                {createLabel}
-              </Button>
-            ) : undefined
-          }
-        />
-        <InventoryPageContent width="narrow">
+        <AppPage width="narrow">
+          <AppPageHeader
+            eyebrow="Kho hàng"
+            title={pageTitle}
+            actions={
+              canCreate ? (
+                <Button size="sm" onClick={() => setOpen(true)}>
+                  <IconPlus className="size-4" />
+                  {createLabel}
+                </Button>
+              ) : undefined
+            }
+          />
           {/* Tab navigation */}
           <nav className="grid grid-cols-3 gap-1 rounded-md border bg-muted/30 p-1">
             {(Object.keys(tabLabels) as Tab[]).map((tab) => {
@@ -357,7 +354,7 @@ export function TransfersListClient({
               ))}
             </div>
           )}
-        </InventoryPageContent>
+        </AppPage>
 
         <CreateTransferDialog
           open={open}
@@ -376,8 +373,9 @@ export function TransfersListClient({
 
   // ─── Desktop layout ─────────────────────────────────────────────────
   return (
-    <>
-      <InventoryHeader
+    <AppPage>
+      <AppPageHeader
+        eyebrow="Kho hàng"
         title={pageTitle}
         actions={
           canCreate ? (
@@ -388,9 +386,7 @@ export function TransfersListClient({
           ) : undefined
         }
       />
-      <InventoryPageContent>
-        {/* Status filter + search */}
-        <InventoryFilterBar>
+      <AppToolbar>
           <div className="flex flex-1 flex-wrap items-end gap-3">
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-48">
@@ -421,7 +417,7 @@ export function TransfersListClient({
               </InputGroupAddon>
             </InputGroup>
           </div>
-        </InventoryFilterBar>
+        </AppToolbar>
 
         {/* Table */}
         <Card>
@@ -494,8 +490,6 @@ export function TransfersListClient({
             </Table>
           </CardContent>
         </Card>
-      </InventoryPageContent>
-
       <CreateTransferDialog
         open={open}
         onOpenChange={setOpen}
@@ -507,7 +501,7 @@ export function TransfersListClient({
         userRole={userRole}
         onCreated={handleCreated}
       />
-    </>
+    </AppPage>
   );
 }
 

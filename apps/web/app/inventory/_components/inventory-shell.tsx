@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, type ReactNode } from "react";
-import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import {
   ChartBar as IconChartBar,
@@ -10,43 +9,23 @@ import {
   FileText as IconFileText,
   Hourglass as IconHourglass,
   LayoutDashboard as IconLayoutDashboard,
-  LogOut as IconLogout,
   Package as IconPackage,
   Receipt as IconReceipt,
   Settings as IconSettings,
   ShoppingCart as IconShoppingCart,
-  Store as IconBuildingStore,
   Truck as IconTruck,
   Users as IconUsers,
   Utensils as IconToolsKitchen,
+  Warehouse as IconWarehouse,
 } from "lucide-react";
-import { ROLE_LABEL_VI, type StaffRole } from "@comtammatu/shared/auth";
-import { getInventorySiteKindLabelVi } from "@comtammatu/shared/labels";
-import { Avatar, AvatarFallback } from "@comtammatu/ui/components/avatar";
-import { Button } from "@comtammatu/ui/components/button";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarInset,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarProvider,
-  SidebarSeparator,
-} from "@comtammatu/ui/components/sidebar";
-import { BrandMark } from "@/components/brand";
-import { isNavItemActive, type ShellNavGroup } from "@/lib/shell-primitives";
+import { type StaffRole } from "@comtammatu/shared/auth";
+import { AppShell } from "@/components/app-shell";
+import type { ShellNavGroup } from "@/lib/shell-primitives";
 import { messages } from "@lib/messages";
 import { tNav } from "../_lib/dictionary";
 import type { InventoryBranchOption } from "../_lib/inventory-scope";
 import { MobileTopBar } from "./mobile/mobile-top-bar";
 import { InventoryBranchFilter } from "./inventory-branch-filter";
-import { InventoryThemeToggle } from "./inventory-theme-toggle";
 
 interface InventoryShellProps {
   children: ReactNode;
@@ -285,8 +264,7 @@ export function InventoryShell({
 
   const isMobileRoute = pathname?.startsWith("/inventory/m") ?? false;
   const branchPickerLocked = isStocktakeSessionPath(pathname);
-  const siteKindLabel = getInventorySiteKindLabelVi(effectiveSiteKind);
-  const showSiteKindLabel = siteKindLabel !== effectiveSiteName;
+
   if (isMobileRoute) {
     return (
       <div className="flex min-h-dvh flex-col bg-background">
@@ -296,116 +274,36 @@ export function InventoryShell({
     );
   }
 
+  const branchFilter =
+    allowedBranches.length > 1 && !branchPickerLocked ? (
+      <InventoryBranchFilter
+        branches={allowedBranches}
+        defaultBranchId={defaultBranchId}
+      />
+    ) : null;
+
   return (
-    <SidebarProvider className="h-svh overflow-hidden">
-      <Sidebar collapsible="icon">
-        <SidebarHeader className="gap-3 p-3">
-          <div className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center">
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-md border bg-sidebar-accent p-0.5">
-              <BrandMark className="size-full" />
-            </div>
-            <div className="flex flex-col group-data-[collapsible=icon]:hidden">
-              <span className="text-sm font-semibold">
-                {messages.inventory.shell.brandName}
-              </span>
-              <span className="text-xs text-muted-foreground">
-                {messages.inventory.shell.moduleName}
-              </span>
-            </div>
-          </div>
-          {allowedBranches.length > 1 && !branchPickerLocked ? (
-            <div className="group-data-[collapsible=icon]:hidden">
-              <InventoryBranchFilter
-                branches={allowedBranches}
-                defaultBranchId={defaultBranchId}
-              />
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 rounded-md border bg-sidebar-accent/40 px-2 py-1.5 text-sm group-data-[collapsible=icon]:hidden">
-              <IconBuildingStore className="size-4 shrink-0" />
-              <div className="flex min-w-0 flex-1 flex-col">
-                <span className="truncate text-xs font-medium">
-                  {effectiveSiteName}
-                </span>
-                {showSiteKindLabel ? (
-                  <span className="truncate text-xs text-muted-foreground">
-                    {siteKindLabel}
-                  </span>
-                ) : null}
-              </div>
-            </div>
-          )}
-        </SidebarHeader>
-
-        <SidebarContent>
-          {groups.map((group) => (
-            <SidebarGroup key={group.title}>
-              <SidebarGroupLabel className="truncate">
-                {group.title}
-              </SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {group.items.map((item) => {
-                    const active = isNavItemActive(item, pathname);
-                    const Icon = item.icon;
-                    const href = activeBranchId
-                      ? `${item.href}?branchId=${activeBranchId}`
-                      : item.href;
-                    return (
-                      <SidebarMenuItem key={item.href}>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={active}
-                          tooltip={item.label}
-                        >
-                          <Link href={href}>
-                            <Icon className="size-4" />
-                            <span className="truncate">{item.label}</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    );
-                  })}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          ))}
-        </SidebarContent>
-
-        <SidebarFooter className="p-2">
-          <SidebarSeparator />
-          <div className="flex items-center gap-2 px-1 pt-2 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-1 group-data-[collapsible=icon]:px-0">
-            <Avatar size="sm" className="size-6">
-              <AvatarFallback className="text-xs">
-                {user.name.charAt(0)}
-              </AvatarFallback>
-            </Avatar>
-            <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
-              <p className="truncate text-xs font-medium">{user.name}</p>
-              <p className="truncate text-xs text-muted-foreground">
-                {ROLE_LABEL_VI[userRole]}
-              </p>
-            </div>
-            <InventoryThemeToggle />
-            <form action="/api/auth/signout" method="post">
-              <Button
-                type="submit"
-                variant="ghost"
-                size="icon-sm"
-                className="text-sidebar-foreground/75 hover:text-sidebar-foreground"
-                aria-label={messages.inventory.common.signOut}
-                title={messages.inventory.common.signOut}
-              >
-                <IconLogout className="size-4" />
-              </Button>
-            </form>
-          </div>
-        </SidebarFooter>
-      </Sidebar>
-
-      <SidebarInset className="min-h-0 min-w-0 overflow-hidden">
-        {children}
-      </SidebarInset>
-    </SidebarProvider>
+    <AppShell
+      user={user}
+      role={userRole}
+      brand={{
+        icon: IconWarehouse,
+        subLabel: messages.inventory.shell.moduleName,
+        mainLabel: messages.inventory.shell.brandName,
+        logoVariant: "seal",
+        showBackLink: true,
+      }}
+      navGroups={groups}
+      defaultPageTitle={messages.inventory.shell.brandName}
+      pageHeader={{
+        headerExtras: branchFilter,
+        mobileTopBar: isMobileRoute ? (
+          <MobileTopBar siteName={effectiveSiteName} />
+        ) : branchFilter,
+      }}
+      collapsible="icon"
+    >
+      {children}
+    </AppShell>
   );
 }

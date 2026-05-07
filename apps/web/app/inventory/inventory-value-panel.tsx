@@ -36,6 +36,7 @@ import {
   fetchInventoryValueSystem,
 } from "./inventory-value-actions";
 import { messages } from "@lib/messages";
+import { AppPageHeader } from "@/components/surface";
 
 import { BRANCH_VI, TABLE_VI } from "@comtammatu/shared/messages";
 interface InventoryValuePanelProps {
@@ -133,31 +134,23 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
   return (
     <Tabs defaultValue={defaultTab} className="space-y-4">
       <div className="space-y-3">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-muted-foreground">
-              {messages.inventory.value.eyebrow}
-            </p>
-            <div className="space-y-1">
-              <h1 className="font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
-                {messages.inventory.value.title}
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                {messages.inventory.value.description}
-              </p>
-            </div>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={refreshAll}
-            disabled={isPending}
-            className="gap-1.5 text-muted-foreground"
-          >
-            {isPending ? <Spinner /> : <IconRefresh className="size-4" />}
-            {APP_COPY_VI.refresh}
-          </Button>
-        </div>
+        <AppPageHeader
+          eyebrow={messages.inventory.value.eyebrow}
+          title={messages.inventory.value.title}
+          description={messages.inventory.value.description}
+          actions={
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={refreshAll}
+              disabled={isPending}
+              className="gap-1.5 text-muted-foreground"
+            >
+              {isPending ? <Spinner /> : <IconRefresh className="size-4" />}
+              {APP_COPY_VI.refresh}
+            </Button>
+          }
+        />
         <div className="flex items-center gap-2">
           {tabCount > 1 && (
             <TabsList variant="toolbar" className="w-fit">

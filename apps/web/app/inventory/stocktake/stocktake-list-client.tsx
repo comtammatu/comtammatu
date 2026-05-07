@@ -16,12 +16,6 @@ import {
   DialogTitle,
 } from "@comtammatu/ui/components/dialog";
 import {
-  Empty,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@comtammatu/ui/components/empty";
-import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
@@ -47,11 +41,7 @@ import { cn } from "@comtammatu/ui";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { matchesSearch } from "@lib/search";
 import { messages } from "@lib/messages";
-import { InventoryHeader } from "../_components/inventory-header";
-import {
-  InventoryFilterBar,
-  InventoryPageContent,
-} from "../_components/inventory-page-layout";
+import { AppEmptyState, AppPage, AppPageHeader, AppToolbar } from "@/components/surface";
 import { StatusBadge } from "../_components/status-badge";
 import { InteractiveCard } from "../_components/interactive-card";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
@@ -163,8 +153,9 @@ export function StocktakeListClient({
   }
 
   return (
-    <>
-      <InventoryHeader
+    <AppPage width={isMobile ? "narrow" : "wide"}>
+      <AppPageHeader
+        eyebrow="Kho hàng"
         title={messages.inventory.stocktake.title}
         actions={
           <div className="flex items-center gap-2">
@@ -183,9 +174,8 @@ export function StocktakeListClient({
           </div>
         }
       />
-      <InventoryPageContent width={isMobile ? "narrow" : "wide"}>
-        {/* Filters */}
-        <InventoryFilterBar>
+      {/* Filters */}
+      <AppToolbar>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="min-w-44">
               <SelectValue
@@ -229,24 +219,20 @@ export function StocktakeListClient({
           <Badge variant="outline" className="rounded-full">
             {filtered.length}/{rows.length}
           </Badge>
-        </InventoryFilterBar>
+        </AppToolbar>
 
         {/* Content */}
         {isMobile ? (
           <div className="flex flex-col gap-2">
             {filtered.length === 0 ? (
-              <Empty className="border bg-card py-10">
-                <EmptyMedia variant="icon">
-                  <IconClipboardCheck />
-                </EmptyMedia>
-                  <EmptyHeader>
-                    <EmptyTitle className="text-sm font-semibold">
-                      {search || statusFilter !== "all"
-                        ? messages.inventory.stocktake.noSessionsMatched
-                        : messages.inventory.stocktake.noSessions}
-                    </EmptyTitle>
-                  </EmptyHeader>
-              </Empty>
+              <AppEmptyState
+                mode={search || statusFilter !== "all" ? "no-results" : "no-data"}
+                title={
+                  search || statusFilter !== "all"
+                    ? messages.inventory.stocktake.noSessionsMatched
+                    : messages.inventory.stocktake.noSessions
+                }
+              />
             ) : (
               filtered.map((r) => (
                 <InteractiveCard
@@ -341,8 +327,6 @@ export function StocktakeListClient({
             </CardContent>
           </Card>
         )}
-      </InventoryPageContent>
-
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
@@ -389,6 +373,6 @@ export function StocktakeListClient({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+    </AppPage>
   );
 }

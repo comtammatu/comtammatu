@@ -6,6 +6,7 @@ import {
 import { currentUserHasPermission } from "@/_lib/permissions";
 import { notFound } from "next/navigation";
 import { fetchStockTransferDetail } from "../../transfer-actions";
+import { fetchEntityAuditLogs } from "@/admin/_lib/audit";
 import { formatDateTime } from "../../_lib/format";
 import {
   resolveInventoryBranchScope,
@@ -38,10 +39,10 @@ export default async function TransferDetailPage({
     : null;
   const scopedBranchId = scope?.selectedBranchId ?? null;
 
-  const res = await fetchStockTransferDetail(
-    Number(id),
-    scopedBranchId ?? undefined,
-  );
+  const [res, auditLogs] = await Promise.all([
+    fetchStockTransferDetail(Number(id), scopedBranchId ?? undefined),
+    fetchEntityAuditLogs("stock_transfer", Number(id), 50),
+  ]);
   if (!res.success || !res.data) notFound();
 
   const d = res.data as {
@@ -155,6 +156,7 @@ export default async function TransferDetailPage({
       userRole={claims?.user_role ?? "branch_manager"}
       userBranchId={scopedBranchId}
       correctionBranches={correctionBranches}
+      auditLogs={auditLogs}
     />
   );
 }

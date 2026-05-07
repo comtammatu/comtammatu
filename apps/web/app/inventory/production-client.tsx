@@ -1,8 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { InventoryHeader } from "./_components/inventory-header";
-import { InventoryPageContent } from "./_components/inventory-page-layout";
+import { AppPage, AppPageHeader } from "@/components/surface";
 import { ProductionStats } from "./production-stats";
 import { ProductionOrderList } from "./production-order-list";
 import { ProductionOrderForm } from "./production-order-form";
@@ -69,8 +68,9 @@ export function ProductionHubClient({
   );
 
   return (
-    <>
-      <InventoryHeader
+    <AppPage>
+      <AppPageHeader
+        eyebrow="Kho hàng"
         title="Bếp trung tâm"
         description="Lệnh sản xuất và BOM thành phẩm"
         actions={
@@ -81,7 +81,6 @@ export function ProductionHubClient({
           />
         }
       />
-      <InventoryPageContent contentClassName="gap-4">
         <ProductionStats
           orders={orders}
           readinessMessage={readinessMessage}
@@ -108,7 +107,6 @@ export function ProductionHubClient({
           ingredients={ingredients}
           recipes={recipes}
         />
-      </InventoryPageContent>
-    </>
+    </AppPage>
   );
 }

@@ -43,7 +43,10 @@ import {
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { notify } from "@comtammatu/ui/lib/notify";
 import { Combobox } from "@/components/form";
-import { InventoryHeader } from "../../_components/inventory-header";
+import { AppPage, AppPageHeader } from "@/components/surface";
+import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
+import { AuditHistoryList } from "../../_components/audit-history-list";
+import type { AuditLogRow } from "@/admin/_lib/audit";
 import { DocumentStockCorrectionDialog } from "../../_components/document-stock-correction-dialog";
 import { FormattedNumberInput } from "../../_components/formatted-number-input";
 import { formatVND } from "../../_lib/format";
@@ -133,11 +136,13 @@ export function GRNDetailClient({
   ingredients,
   canAdjustStock,
   canAmendConfirmed = false,
+  auditLogs = [],
 }: {
   grn: GRNDetail;
   ingredients: IngredientRow[];
   canAdjustStock: boolean;
   canAmendConfirmed?: boolean;
+  auditLogs?: AuditLogRow[];
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -357,10 +362,13 @@ export function GRNDetailClient({
   }
 
   return (
-    <>
-      <InventoryHeader
-        title={grnCopy.detailTitle}
-        actions={
+    <AppPage>
+      <AppPageHeader
+        eyebrow="Kho hàng"
+        title={grn.code}
+        description={`${grn.supplier} • ${grn.date}`}
+        badge={{ children: getInventoryStatusLabel(grn.status), variant: getInventoryStatusBadgeVariant(grn.status) }}
+        breadcrumb={
           <Link
             href={isMobile ? "/inventory/m/grn" : "/inventory/grn"}
             className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
@@ -369,32 +377,22 @@ export function GRNDetailClient({
             {isMobile ? grnCopy.back : tRoute("/inventory/grn", "heading")}
           </Link>
         }
-      />
-      <div className="flex-1 overflow-auto p-4">
-        <div className="mx-auto max-w-7xl space-y-6">
+        tabs={
+          <AppPageTabs
+            items={[
+              { value: "overview", label: "Tổng quan" },
+              { value: "lines", label: "Dòng", count: lines.length },
+              { value: "history", label: "Lịch sử", count: auditLogs.length },
+            ]}
+          >
+            <TabsContent value="overview" className="mt-4">
+              <div className="space-y-6">
           {isReview && isDraft ? (
             <Alert>
               <IconInfoCircle className="size-4" />
               <AlertDescription>{grnCopy.draftSavedReviewHint}</AlertDescription>
             </Alert>
           ) : null}
-
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-muted-foreground">
-                {grnCopy.documentLabel}
-              </p>
-              <h1 className="font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
-                {grn.code}
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                {`${grn.supplier} • ${grn.date}`}
-              </p>
-            </div>
-            <Badge variant={getInventoryStatusBadgeVariant(grn.status)}>
-              {getInventoryStatusLabel(grn.status)}
-            </Badge>
-          </div>
 
           <div className="grid gap-3 md:grid-cols-4">
             <SummaryCard label={grnCopy.linkedPo}>
@@ -423,7 +421,11 @@ export function GRNDetailClient({
               </span>
             </SummaryCard>
           </div>
+              </div>
+            </TabsContent>
 
+            <TabsContent value="lines" className="mt-4">
+              <div className="space-y-6">
           <div className="grid gap-6 lg:grid-cols-3">
             <div className="lg:col-span-2">
               <Card className="overflow-hidden">
@@ -564,8 +566,15 @@ export function GRNDetailClient({
               </div>
             ) : null}
           </footer>
-        </div>
-      </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="history" className="mt-4">
+              <AuditHistoryList logs={auditLogs} />
+            </TabsContent>
+          </AppPageTabs>
+        }
+      />
       <AddGrnLineDialog
         grn={grn}
         ingredients={ingredients}
@@ -591,7 +600,7 @@ export function GRNDetailClient({
         }}
         startTransition={startAmend}
       />
-    </>
+    </AppPage>
   );
 }
 

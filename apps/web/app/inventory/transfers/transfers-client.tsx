@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
-import { InventoryHeader } from "../_components/inventory-header";
+import { AppPage, AppPageHeader } from "@/components/surface";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import {
   getInventoryStatusBadgeVariant,
@@ -59,8 +59,9 @@ export function TransfersClient({ transfers }: { transfers: TransferRow[] }) {
   }, [transfers, statusFilter, searchQuery]);
 
   return (
-    <>
-      <InventoryHeader
+    <AppPage>
+      <AppPageHeader
+        eyebrow="Kho hàng"
         title="Điều chuyển nội bộ"
         actions={
           <Button size="sm">
@@ -69,107 +70,104 @@ export function TransfersClient({ transfers }: { transfers: TransferRow[] }) {
           </Button>
         }
       />
-      <div className="flex-1 overflow-auto p-4">
-        <div className="mx-auto max-w-7xl space-y-4">
-          {/* Status filter buttons */}
-          <div className="flex flex-wrap gap-2">
-            {(
-              [
-                ["all", "Tất cả"],
-                ["draft", "Nháp"],
-                ["in_transit", "Đang vận chuyển"],
-                ["confirmed", "Chờ nhận"],
-                ["received", "Đã nhận"],
-              ] as const
-            ).map(([key, label]) => (
-              <Button
-                key={key}
-                variant={statusFilter === key ? "default" : "outline"}
-                size="sm"
-                onClick={() => setStatusFilter(key)}
-              >
-                {label}
-                <Badge variant="secondary" className="ml-2">
-                  {statusCounts[key]}
-                </Badge>
-              </Button>
-            ))}
-          </div>
 
-          {/* IconSearch */}
-          <InputGroup className="h-10">
-            <InputGroupAddon>
-              <IconSearch />
-            </InputGroupAddon>
-            <InputGroupInput
-              type="search"
-              placeholder="Tìm theo số phiếu, kho xuất/nhận..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </InputGroup>
-
-          {/* Table */}
-          <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Số phiếu</TableHead>
-                    <TableHead>Lộ trình</TableHead>
-                    <TableHead>{FORM_VI.status}</TableHead>
-                    <TableHead>Ngày tạo</TableHead>
-                    <TableHead className="w-10" />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredTransfers.length === 0 && (
-                    <TableEmptyStateRow
-                      colSpan={5}
-                      icon={<IconTruck className="size-5" />}
-                      title="Không tìm thấy phiếu điều chuyển nào"
-                    />
-                  )}
-                  {filteredTransfers.map((t) => (
-                    <TableRow key={t.id}>
-                      <TableCell>
-                        <Link
-                          href={`/inventory/transfers/${t.id}`}
-                          className="font-medium text-primary hover:underline"
-                        >
-                          {t.code}
-                        </Link>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1 text-sm">
-                          <span>{t.fromBranch}</span>
-                          <IconArrowRight className="size-3 text-muted-foreground" />
-                          <span>{t.toBranch}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={getInventoryStatusBadgeVariant(t.status)}>
-                          {getInventoryStatusLabel(t.status)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {t.date}
-                      </TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="icon-sm" asChild>
-                          <Link href={`/inventory/transfers/${t.id}`}>
-                            <IconArrowRight className="size-4" />
-                          </Link>
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </div>
+      {/* Status filter buttons */}
+      <div className="flex flex-wrap gap-2">
+        {(
+          [
+            ["all", "Tất cả"],
+            ["draft", "Nháp"],
+            ["in_transit", "Đang vận chuyển"],
+            ["confirmed", "Chờ nhận"],
+            ["received", "Đã nhận"],
+          ] as const
+        ).map(([key, label]) => (
+          <Button
+            key={key}
+            variant={statusFilter === key ? "default" : "outline"}
+            size="sm"
+            onClick={() => setStatusFilter(key)}
+          >
+            {label}
+            <Badge variant="secondary" className="ml-2">
+              {statusCounts[key]}
+            </Badge>
+          </Button>
+        ))}
       </div>
-    </>
+
+      {/* Search */}
+      <InputGroup className="h-10">
+        <InputGroupAddon>
+          <IconSearch />
+        </InputGroupAddon>
+        <InputGroupInput
+          type="search"
+          placeholder="Tìm theo số phiếu, kho xuất/nhận..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+      </InputGroup>
+
+      {/* Table */}
+      <Card>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Số phiếu</TableHead>
+                <TableHead>Lộ trình</TableHead>
+                <TableHead>{FORM_VI.status}</TableHead>
+                <TableHead>Ngày tạo</TableHead>
+                <TableHead className="w-10" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredTransfers.length === 0 && (
+                <TableEmptyStateRow
+                  colSpan={5}
+                  icon={<IconTruck className="size-5" />}
+                  title="Không tìm thấy phiếu điều chuyển nào"
+                />
+              )}
+              {filteredTransfers.map((t) => (
+                <TableRow key={t.id}>
+                  <TableCell>
+                    <Link
+                      href={`/inventory/transfers/${t.id}`}
+                      className="font-medium text-primary hover:underline"
+                    >
+                      {t.code}
+                    </Link>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1 text-sm">
+                      <span>{t.fromBranch}</span>
+                      <IconArrowRight className="size-3 text-muted-foreground" />
+                      <span>{t.toBranch}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={getInventoryStatusBadgeVariant(t.status)}>
+                      {getInventoryStatusLabel(t.status)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {t.date}
+                  </TableCell>
+                  <TableCell>
+                    <Button variant="ghost" size="icon-sm" asChild>
+                      <Link href={`/inventory/transfers/${t.id}`}>
+                        <IconArrowRight className="size-4" />
+                      </Link>
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </AppPage>
   );
 }

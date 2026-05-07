@@ -35,6 +35,7 @@ import { createWasteEntry } from "@/inventory/waste-actions";
 import { formatVND } from "@comtammatu/shared/format";
 import { FormattedNumberInput } from "@/components/form";
 import { messages } from "@lib/messages";
+import { AppPage, AppPageHeader } from "@/components/surface";
 
 /* ─── Context shape from server component ─── */
 
@@ -237,21 +238,20 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
   }
 
   return (
-    <div className="container mx-auto max-w-4xl space-y-4 py-6">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
-            {messages.inventory.waste.title}
-          </h1>
-          <p className="text-sm text-muted-foreground">
+    <AppPage>
+      <AppPageHeader
+        eyebrow="Kho hàng"
+        title={messages.inventory.waste.title}
+        description={
+          <>
             {context.branch.name}{" "}
             <Badge variant="outline" className="ml-1 text-xs">
               {messages.inventory.waste.shiftPrefix}{" "}
               {context.capStatus.shiftKey || "?"}
             </Badge>
-          </p>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       <BranchDailyCapBanner
         branchToday={context.capStatus.branchToday}
@@ -491,6 +491,6 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
           {isSubmitting ? <Spinner /> : messages.inventory.waste.createSlip}
         </Button>
       </div>
-    </div>
+    </AppPage>
   );
 }

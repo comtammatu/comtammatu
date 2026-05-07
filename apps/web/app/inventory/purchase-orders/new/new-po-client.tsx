@@ -39,7 +39,7 @@ import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui";
 import { Combobox } from "@/components/form";
 import { FormattedNumberInput } from "../../_components/formatted-number-input";
-import { InventoryHeader } from "../../_components/inventory-header";
+import { AppPage, AppPageHeader } from "@/components/surface";
 import {
   createPurchaseOrder,
   fetchPoSuggestions,
@@ -285,10 +285,12 @@ export function NewPoClient({
   ).length;
 
   return (
-    <>
-      <InventoryHeader
+    <AppPage>
+      <AppPageHeader
+        eyebrow={messages.inventory.po.draftEyebrow}
         title={messages.inventory.po.newTitle}
-        actions={
+        description={messages.inventory.po.draftDescription}
+        breadcrumb={
           <Link
             href={poBasePath}
             className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
@@ -298,19 +300,7 @@ export function NewPoClient({
           </Link>
         }
       />
-      <div className="flex-1 overflow-auto p-4">
-        <div className="mx-auto max-w-4xl space-y-5">
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-muted-foreground">
-              {messages.inventory.po.draftEyebrow}
-            </p>
-            <h1 className="font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
-              {messages.inventory.po.newTitle}
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              {messages.inventory.po.draftDescription}
-            </p>
-          </div>
+      <div className="mx-auto max-w-4xl space-y-5">
 
           {/* PO header */}
           <SupplierSection
@@ -396,9 +386,8 @@ export function NewPoClient({
               </Button>
             </div>
           </div>
-        </div>
       </div>
-    </>
+    </AppPage>
   );
 }
 

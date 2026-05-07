@@ -15,11 +15,12 @@ import { Textarea } from "@comtammatu/ui/components/textarea";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
-import { Check as IconCheck, X as IconX, Clock as IconClock } from "lucide-react";
+import { Check as IconCheck, X as IconX } from "lucide-react";
 import { WasteTierBadge } from "@/inventory/_components/waste-tier-badge";
 import { approveWaste } from "@/inventory/waste-actions";
 import { formatVND } from "@comtammatu/shared/format";
 import { getWasteReasonLabelVi } from "@comtammatu/shared/labels";
+import { AppPage, AppPageHeader } from "@/components/surface";
 import { messages } from "@lib/messages";
 
 export type PendingWasteItem = {
@@ -63,20 +64,13 @@ export function WasteApprovalsClient({ initial, branchFilter }: Props) {
   const copy = messages.inventory.waste.approvals;
 
   return (
-    <div className="container mx-auto max-w-4xl space-y-4 py-6">
-      <div className="flex items-center justify-between gap-2">
-        <div>
-          <h1 className="font-heading flex items-center gap-2 text-2xl font-semibold tracking-tight sm:text-3xl">
-            <IconClock className="size-6 text-tier-note" />
-            {copy.title}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {copy.principle}
-            {branchFilter !== null ? copy.branchSuffix(branchFilter) : null}
-          </p>
-        </div>
-        <Badge variant="secondary">{copy.count(rows.length)}</Badge>
-      </div>
+    <AppPage width="default">
+      <AppPageHeader
+        eyebrow="Kho hàng"
+        title={copy.title}
+        description={`${copy.principle}${branchFilter !== null ? copy.branchSuffix(branchFilter) : ""}`}
+        badge={{ children: copy.count(rows.length) }}
+      />
 
       {rows.length === 0 ? (
         <Card>
@@ -97,7 +91,7 @@ export function WasteApprovalsClient({ initial, branchFilter }: Props) {
           ))}
         </ul>
       )}
-    </div>
+    </AppPage>
   );
 }
 

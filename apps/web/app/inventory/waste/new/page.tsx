@@ -7,6 +7,7 @@ import {
 } from "@/inventory/_lib/feature-flags";
 import { resolveRequestedBranchId } from "@/inventory/_lib/inventory-scope";
 import { getWasteCapStatus } from "@/inventory/waste-actions";
+import { AppPage, AppPageHeader, AppEmptyState } from "@/components/surface";
 import { WasteCreateClient, type WasteFormContext } from "./waste-create-client";
 
 export const dynamic = "force-dynamic";
@@ -27,7 +28,16 @@ export default async function WasteNewPage({ searchParams }: PageProps) {
   const { supabase, claims } = ctx;
 
   if (branchId === null) {
-    redirect("/inventory/issues?error=branch_required");
+    return (
+      <AppPage width="default">
+        <AppPageHeader title="Tạo phiếu hao hụt" />
+        <AppEmptyState
+          mode="no-access"
+          title="Cần chọn chi nhánh"
+          description="Chọn chi nhánh ở thanh điều hướng trước khi tạo phiếu hao hụt mới."
+        />
+      </AppPage>
+    );
   }
 
   // Feature flag gate: S11 waste redesign must be enabled per-branch before UI shows
