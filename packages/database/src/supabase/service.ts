@@ -1,5 +1,6 @@
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "../index";
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from "./_env";
 
 /**
  * Service-role Supabase client — bypasses RLS.
@@ -8,7 +9,7 @@ import type { Database } from "../index";
  */
 export function createServiceClient() {
   return createSupabaseClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    getSupabaseUrl(),
+    getSupabaseServiceRoleKey(),
   );
 }
