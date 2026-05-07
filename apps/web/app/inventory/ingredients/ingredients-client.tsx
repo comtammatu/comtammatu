@@ -29,7 +29,7 @@ import {
 import { cn } from "@comtammatu/ui";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { matchesSearch } from "@lib/search";
-import { InventoryHeader } from "../_components/inventory-header";
+import { AppPageHeader, AppEmptyState, AppPage } from "@/components/surface";
 import { InteractiveCard } from "../_components/interactive-card";
 import { StatusBadge } from "../_components/status-badge";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
@@ -170,8 +170,8 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
 
   if (isMobile) {
     return (
-      <>
-        <InventoryHeader
+      <AppPage mobile scroll>
+        <AppPageHeader
           title="Nguyên liệu"
           actions={
             <div className="flex items-center gap-2">
@@ -182,26 +182,16 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
             </div>
           }
         />
-        <div className="flex-1 overflow-auto p-4">
-          <div className="space-y-4">
-            {filterBar}
+        <div className="space-y-4">
+          {filterBar}
 
-            {filtered.length === 0 ? (
-              <Card>
-                <CardContent className="py-10 text-center">
-                  <p className="text-sm font-semibold">
-                    {searchQuery.trim()
-                      ? "Không tìm thấy nguyên liệu phù hợp"
-                      : "Chưa có nguyên liệu"}
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {searchQuery.trim()
-                      ? "Thử bộ lọc hoặc từ khóa khác."
-                      : 'Nhấn "Tạo nguyên liệu" để bắt đầu danh mục.'}
-                  </p>
-                </CardContent>
-              </Card>
-            ) : null}
+          {filtered.length === 0 ? (
+            <AppEmptyState
+              mode={searchQuery.trim() ? "no-results" : "no-data"}
+              title={searchQuery.trim() ? "Không tìm thấy nguyên liệu phù hợp" : "Chưa có nguyên liệu"}
+              description={searchQuery.trim() ? "Thử bộ lọc hoặc từ khóa khác." : 'Nhấn "Tạo nguyên liệu" để bắt đầu danh mục.'}
+            />
+          ) : null}
 
             <div className="space-y-2">
               {filtered.map((item) => {
@@ -260,7 +250,6 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
               })}
             </div>
           </div>
-        </div>
 
         <IngredientDialog
           open={dialogOpen}
@@ -268,13 +257,13 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
           ingredient={editingIngredient}
           onSaved={reload}
         />
-      </>
+      </AppPage>
     );
   }
 
   return (
-    <>
-      <InventoryHeader
+    <AppPage scroll>
+      <AppPageHeader
         title="Nguyên liệu"
         actions={
           <div className="flex items-center gap-2">
@@ -285,8 +274,6 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
           </div>
         }
       />
-      <div className="flex-1 overflow-auto p-4">
-        <div className="mx-auto max-w-7xl space-y-4">
           {filterBar}
 
           <Card>
@@ -397,8 +384,6 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
               </Table>
             </CardContent>
           </Card>
-        </div>
-      </div>
 
       <IngredientDialog
         open={dialogOpen}
@@ -406,6 +391,6 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
         ingredient={editingIngredient}
         onSaved={reload}
       />
-    </>
+    </AppPage>
   );
 }

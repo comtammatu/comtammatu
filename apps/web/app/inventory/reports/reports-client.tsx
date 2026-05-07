@@ -15,7 +15,7 @@ import {
   EmptyHeader,
   EmptyTitle,
 } from "@comtammatu/ui/components/empty";
-import { InventoryHeader } from "../_components/inventory-header";
+import { AppPage, AppPageHeader } from "@/components/surface";
 import { SimpleBarChart, TrendSparkline } from "../_lib/chart-primitives";
 import { formatVND } from "../_lib/format";
 import {
@@ -69,10 +69,8 @@ export function ReportsClient({
     }),
   );
   return (
-    <>
-      <InventoryHeader title={messages.inventory.reports.pageTitle} />
-      <div className="flex-1 overflow-auto p-4">
-      <div className="mx-auto max-w-7xl space-y-4">
+    <AppPage scroll>
+      <AppPageHeader title={messages.inventory.reports.pageTitle} />
 
       {/* Dashboard Grid — 12 col asymmetric */}
       <div className="grid grid-cols-12 gap-4">
@@ -321,8 +319,6 @@ export function ReportsClient({
           </Card>
         ))}
       </div>
-    </div>
-    </div>
-    </>
+    </AppPage>
   );
 }

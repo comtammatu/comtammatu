@@ -37,7 +37,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { matchesSearch } from "@lib/search";
-import { InventoryHeader } from "../_components/inventory-header";
+import { AppPageHeader } from "@/components/surface";
 import {
   InventoryFilterBar,
   InventoryPageContent,
@@ -137,16 +137,16 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
 
   return (
     <>
-      <InventoryHeader
-        title="Nhà cung cấp"
-        actions={
-          <Button type="button" onClick={openCreate}>
-            <IconPlus className="size-4" />
-            Thêm nhà cung cấp
-          </Button>
-        }
-      />
       <InventoryPageContent width={isMobile ? "narrow" : "wide"}>
+        <AppPageHeader
+          title="Nhà cung cấp"
+          actions={
+            <Button type="button" onClick={openCreate}>
+              <IconPlus className="size-4" />
+              Thêm nhà cung cấp
+            </Button>
+          }
+        />
         {/* IconSearch */}
         <InventoryFilterBar>
           <InputGroup className={cn("flex-1", isMobile && "h-12 basis-full")}>

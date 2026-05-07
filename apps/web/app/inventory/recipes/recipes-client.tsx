@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
-import { InventoryHeader } from "../_components/inventory-header";
+import { AppPage, AppPageHeader, AppEmptyState } from "@/components/surface";
 import { formatVND } from "../_lib/format";
 import { RecipeLineDialog } from "./recipe-line-dialog";
 import type {
@@ -102,8 +102,8 @@ export function RecipesClient({
   }
 
   return (
-    <>
-      <InventoryHeader
+    <AppPage scroll>
+      <AppPageHeader
         title="Định mức món bán"
         actions={
           <Button type="button" onClick={openCreate}>
@@ -112,24 +112,16 @@ export function RecipesClient({
           </Button>
         }
       />
-      <div className="flex-1 overflow-auto p-4">
-        <div className="mx-auto max-w-7xl space-y-4">
-          {recipes.length === 0 && (
-            <Card>
-              <CardContent className="py-10 text-center">
-                <p className="text-base font-semibold">
-                  Chưa có định mức món bán nào
-                </p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Định mức món bán là lượng nguyên liệu tiêu hao khi bán 1 phần
-                  menu item. Nhấn &quot;Tạo định mức&quot; để bắt đầu.
-                </p>
-              </CardContent>
-            </Card>
-          )}
+      {recipes.length === 0 && (
+        <AppEmptyState
+          mode="no-data"
+          title="Chưa có định mức món bán nào"
+          description='Định mức món bán là lượng nguyên liệu tiêu hao khi bán 1 phần menu item. Nhấn "Tạo định mức" để bắt đầu.'
+        />
+      )}
 
-          <div className="space-y-4">
-            {recipes.map((recipe) => (
+      <div className="space-y-4">
+        {recipes.map((recipe) => (
               <Card key={recipe.id} className="overflow-hidden">
                 <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="flex flex-wrap items-center gap-2">
@@ -197,18 +189,16 @@ export function RecipesClient({
             ))}
           </div>
 
-          <RecipeLineDialog
-            open={dialogOpen}
-            onOpenChange={setDialogOpen}
-            menuItems={menuItems}
-            ingredients={ingredients}
-            editingMenuItemId={editingMenuItemId}
-            editingLines={editingLines}
-            existingMenuItemIds={existingMenuItemIds}
-            onSaved={handleSaved}
-          />
-        </div>
-      </div>
-    </>
+      <RecipeLineDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        menuItems={menuItems}
+        ingredients={ingredients}
+        editingMenuItemId={editingMenuItemId}
+        editingLines={editingLines}
+        existingMenuItemIds={existingMenuItemIds}
+        onSaved={handleSaved}
+      />
+    </AppPage>
   );
 }

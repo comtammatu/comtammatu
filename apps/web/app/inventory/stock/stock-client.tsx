@@ -55,7 +55,7 @@ import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui";
 import { messages } from "@lib/messages";
 import { matchesSearch } from "@lib/search";
-import { InventoryHeader } from "../_components/inventory-header";
+import { AppPageHeader } from "@/components/surface";
 import {
   InventoryFilterBar,
   InventoryPageContent,
@@ -598,10 +598,14 @@ export function StockClient({
   const liveLabel = new Date().toLocaleDateString("vi-VN");
 
   return (
-    <div className="no-scrollbar min-h-0 flex-1 overflow-auto bg-background">
-      <InventoryHeader
+    <InventoryPageContent
+      width={isMobile ? "narrow" : "wide"}
+      className={isMobile ? undefined : "p-3"}
+      contentClassName={isMobile ? undefined : "max-w-none gap-2"}
+      scroll
+    >
+      <AppPageHeader
         title={stockCopy.title}
-        className="static"
         actions={
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="hidden sm:inline-flex">
@@ -611,12 +615,6 @@ export function StockClient({
           </div>
         }
       />
-      <InventoryPageContent
-        width={isMobile ? "narrow" : "wide"}
-        className={isMobile ? undefined : "p-3"}
-        contentClassName={isMobile ? undefined : "max-w-none gap-2"}
-        scroll={false}
-      >
         <div className="flex flex-wrap items-center gap-2 border bg-card p-2">
           {permissions.canReceiveGrn ? (
             <QuickActionButton
@@ -1282,6 +1280,5 @@ export function StockClient({
           />
         ) : null}
       </InventoryPageContent>
-    </div>
   );
 }
