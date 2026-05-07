@@ -35,7 +35,7 @@ import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { Combobox } from "@/components/form";
 import { messages } from "@lib/messages";
 import { FormattedNumberInput } from "../../_components/formatted-number-input";
-import { AppDetailFooter, AppPage, AppPageHeader } from "@/components/surface";
+import { AppDetailFooter, AppPage, AppPageHeader, AppSection } from "@/components/surface";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { AuditHistoryList } from "../../_components/audit-history-list";
 import type { AuditLogRow } from "@/admin/_lib/audit";
@@ -389,27 +389,25 @@ export function PODetailClient({
             </Card>
           </div>
 
-          <Card>
-            <CardContent className="py-6">
-              <div className="flex justify-center">
-                <TimelineStepper
-                  steps={[
-                    { label: poDetailCopy.steps.draft, date: po.date, completed: true },
-                    {
-                      label: poDetailCopy.steps.sent,
-                      date: po.sentAt,
-                      completed: po.status !== "draft",
-                    },
-                    {
-                      label: poDetailCopy.steps.waitingInspection,
-                      active: po.status === "sent",
-                    },
-                    { label: poDetailCopy.steps.hasGrn },
-                  ]}
-                />
-              </div>
-            </CardContent>
-          </Card>
+          <AppSection contentClassName="py-6">
+            <div className="flex justify-center">
+              <TimelineStepper
+                steps={[
+                  { label: poDetailCopy.steps.draft, date: po.date, completed: true },
+                  {
+                    label: poDetailCopy.steps.sent,
+                    date: po.sentAt,
+                    completed: po.status !== "draft",
+                  },
+                  {
+                    label: poDetailCopy.steps.waitingInspection,
+                    active: po.status === "sent",
+                  },
+                  { label: poDetailCopy.steps.hasGrn },
+                ]}
+              />
+            </div>
+          </AppSection>
               </div>
             </TabsContent>
 
@@ -417,14 +415,12 @@ export function PODetailClient({
               <div className="space-y-6">
           <div className="grid gap-6 lg:grid-cols-3">
             <div className="lg:col-span-2">
-              <Card className="overflow-hidden">
-                <CardHeader className="gap-1">
-                  <CardTitle>{poDetailCopy.itemCatalogTitle}</CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    {poDetailCopy.itemCatalogDescription(lines.length)}
-                  </p>
-                </CardHeader>
-                <CardContent className="p-0">
+              <AppSection
+                className="overflow-hidden"
+                title={poDetailCopy.itemCatalogTitle}
+                description={poDetailCopy.itemCatalogDescription(lines.length)}
+                contentClassName="p-0"
+              >
                   <div className="space-y-3 p-6 md:hidden">
                     {lines.map((item, index) => (
                       <Card key={item.lineId} className="bg-muted/20">
@@ -764,88 +760,73 @@ export function PODetailClient({
                       </Button>
                     </form>
                   ) : null}
-                </CardContent>
-              </Card>
+              </AppSection>
             </div>
 
             <div className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">
-                    {poDetailCopy.summaryTitle}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3 text-sm">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-muted-foreground">
-                      {poDetailCopy.itemCount}
-                    </span>
-                    <span className="font-semibold">{lines.length}</span>
-                  </div>
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-muted-foreground">
-                      {poDetailCopy.goodsTotal}
-                    </span>
-                    <span className="font-semibold">
-                      {inventoryCommon.currencyCompact(formatVND(totalAmount))}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-muted-foreground">{FORM_VI.tax}</span>
-                    <span className="font-semibold">
-                      {inventoryCommon.currencyCompact(formatVND(taxAmount))}
-                    </span>
-                  </div>
-                  <div className="border-t border-border pt-3">
-                    <p className="text-muted-foreground">{FORM_VI.totalAmount}</p>
-                    <p className="mt-1 text-2xl font-black text-primary">
-                      {inventoryCommon.currencyCompact(formatVND(grandTotal))}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
+              <AppSection title={poDetailCopy.summaryTitle} contentClassName="space-y-3 text-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-muted-foreground">
+                    {poDetailCopy.itemCount}
+                  </span>
+                  <span className="font-semibold">{lines.length}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-muted-foreground">
+                    {poDetailCopy.goodsTotal}
+                  </span>
+                  <span className="font-semibold">
+                    {inventoryCommon.currencyCompact(formatVND(totalAmount))}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-muted-foreground">{FORM_VI.tax}</span>
+                  <span className="font-semibold">
+                    {inventoryCommon.currencyCompact(formatVND(taxAmount))}
+                  </span>
+                </div>
+                <div className="border-t border-border pt-3">
+                  <p className="text-muted-foreground">{FORM_VI.totalAmount}</p>
+                  <p className="mt-1 text-2xl font-black text-primary">
+                    {inventoryCommon.currencyCompact(formatVND(grandTotal))}
+                  </p>
+                </div>
+              </AppSection>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">
-                    {poDetailCopy.supplierInfoTitle}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {supplierInfoAvailable ? (
-                    <div className="space-y-3 text-sm">
-                      <div>
-                        <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                          {poDetailCopy.invoiceAddress}
-                        </p>
-                        <p className="mt-1 break-words font-medium">
-                          {po.supplierInfo.address}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                          {poDetailCopy.contactPerson}
-                        </p>
-                        <p className="mt-1 font-medium">
-                          {po.supplierInfo.contact}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                          {poDetailCopy.paymentTerm}
-                        </p>
-                        <p className="mt-1 font-medium">
-                          {po.supplierInfo.payment}
-                        </p>
-                      </div>
+              <AppSection title={poDetailCopy.supplierInfoTitle}>
+                {supplierInfoAvailable ? (
+                  <div className="space-y-3 text-sm">
+                    <div>
+                      <p className="text-xs uppercase tracking-wider text-muted-foreground">
+                        {poDetailCopy.invoiceAddress}
+                      </p>
+                      <p className="mt-1 break-words font-medium">
+                        {po.supplierInfo.address}
+                      </p>
                     </div>
-                  ) : (
-                    <div className="text-sm text-muted-foreground">
-                      {poDetailCopy.supplierInfoEmpty}
+                    <div>
+                      <p className="text-xs uppercase tracking-wider text-muted-foreground">
+                        {poDetailCopy.contactPerson}
+                      </p>
+                      <p className="mt-1 font-medium">
+                        {po.supplierInfo.contact}
+                      </p>
                     </div>
-                  )}
-                </CardContent>
-              </Card>
+                    <div>
+                      <p className="text-xs uppercase tracking-wider text-muted-foreground">
+                        {poDetailCopy.paymentTerm}
+                      </p>
+                      <p className="mt-1 font-medium">
+                        {po.supplierInfo.payment}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-sm text-muted-foreground">
+                    {poDetailCopy.supplierInfoEmpty}
+                  </div>
+                )}
+              </AppSection>
             </div>
           </div>
 

@@ -37,7 +37,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui";
 import { messages } from "@lib/messages";
-import { AppPage, AppPageHeader } from "@/components/surface";
+import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { AuditHistoryList } from "../../_components/audit-history-list";
 import type { AuditLogRow } from "@/admin/_lib/audit";
@@ -324,21 +324,19 @@ export function StocktakeDetailClient({
 
       {/* Progress (in_progress only) */}
       {session.status === "in_progress" && (
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3 text-sm">
-              <IconClipboardCheck className="size-4 text-muted-foreground" />
-              <span className="text-muted-foreground">
-                {stocktakeDetailCopy.progressText(
-                  countedCount,
-                  lines.length,
-                  progressPct,
-                )}
-              </span>
-              <Progress value={progressPct} className="h-2 max-w-48 flex-1" />
-            </div>
-          </CardContent>
-        </Card>
+        <AppSection contentClassName="pt-6">
+          <div className="flex items-center gap-3 text-sm">
+            <IconClipboardCheck className="size-4 text-muted-foreground" />
+            <span className="text-muted-foreground">
+              {stocktakeDetailCopy.progressText(
+                countedCount,
+                lines.length,
+                progressPct,
+              )}
+            </span>
+            <Progress value={progressPct} className="h-2 max-w-48 flex-1" />
+          </div>
+        </AppSection>
       )}
 
       {/* Cancelled state */}
@@ -459,8 +457,7 @@ function CountingPhase({
 }) {
   if (isMobile) {
     return (
-      <Card className="overflow-hidden rounded-lg">
-        <CardContent className="p-0">
+      <AppSection className="overflow-hidden" contentClassName="p-0">
           {lines.length === 0 ? (
             <Empty className="py-8">
               <EmptyHeader>
@@ -521,14 +518,12 @@ function CountingPhase({
               ))}
             </div>
           )}
-        </CardContent>
-      </Card>
+      </AppSection>
     );
   }
 
   return (
-    <Card className="overflow-hidden rounded-lg">
-      <CardContent className="p-0">
+    <AppSection className="overflow-hidden" contentClassName="p-0">
         <div className="-m-4 md:-m-5">
           <Table>
             <TableHeader>
@@ -606,8 +601,7 @@ function CountingPhase({
             </TableBody>
           </Table>
         </div>
-      </CardContent>
-    </Card>
+    </AppSection>
   );
 }
 
@@ -658,8 +652,7 @@ function ResultsPhase({
       </div>
 
       {isMobile ? (
-        <Card className="overflow-hidden rounded-lg">
-          <CardContent className="p-0">
+        <AppSection className="overflow-hidden" contentClassName="p-0">
             {lines.length === 0 ? (
               <Empty className="py-8">
                 <EmptyHeader>
@@ -714,11 +707,9 @@ function ResultsPhase({
                 })}
               </div>
             )}
-          </CardContent>
-        </Card>
+        </AppSection>
       ) : (
-        <Card className="overflow-hidden rounded-lg">
-          <CardContent className="p-0">
+        <AppSection className="overflow-hidden" contentClassName="p-0">
             <div className="-m-4 md:-m-5">
               <Table>
                 <TableHeader>
@@ -790,8 +781,7 @@ function ResultsPhase({
                 </TableBody>
               </Table>
             </div>
-          </CardContent>
-        </Card>
+        </AppSection>
       )}
     </div>
   );

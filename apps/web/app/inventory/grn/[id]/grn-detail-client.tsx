@@ -43,7 +43,7 @@ import {
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { notify } from "@comtammatu/ui/lib/notify";
 import { Combobox } from "@/components/form";
-import { AppDetailFooter, AppPage, AppPageHeader } from "@/components/surface";
+import { AppDetailFooter, AppPage, AppPageHeader, AppSection } from "@/components/surface";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { AuditHistoryList } from "../../_components/audit-history-list";
 import type { AuditLogRow } from "@/admin/_lib/audit";
@@ -428,21 +428,20 @@ export function GRNDetailClient({
               <div className="space-y-6">
           <div className="grid gap-6 lg:grid-cols-3">
             <div className="lg:col-span-2">
-              <Card className="overflow-hidden">
-                <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="space-y-1">
-                    <CardTitle>{grnCopy.inspectionItemsTitle}</CardTitle>
-                    <p className="text-sm text-muted-foreground">
-                      {isDraft
-                        ? grnCopy.draftToleranceHint(
-                            qc.qtyShortTolerancePct,
-                            qc.priceVarianceWarnPct,
-                            qc.priceVarianceReviewPct,
-                          )
-                        : grnCopy.finalizedLineCount(lines.length)}
-                    </p>
-                  </div>
-                  {isDraft ? (
+              <AppSection
+                className="overflow-hidden"
+                title={grnCopy.inspectionItemsTitle}
+                description={
+                  isDraft
+                    ? grnCopy.draftToleranceHint(
+                        qc.qtyShortTolerancePct,
+                        qc.priceVarianceWarnPct,
+                        qc.priceVarianceReviewPct,
+                      )
+                    : grnCopy.finalizedLineCount(lines.length)
+                }
+                action={
+                  isDraft ? (
                     <Button
                       type="button"
                       variant="outline"
@@ -451,51 +450,50 @@ export function GRNDetailClient({
                       <IconPlus className="size-4" />
                       {grnCopy.addLine}
                     </Button>
-                  ) : null}
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {lines.map((line, idx) => (
-                    <LineRow
-                      key={line.lineId}
-                      tenantId={grn.tenantId}
-                      grnId={grn.id}
-                      line={line}
-                      idx={idx}
-                      isDraft={isDraft}
-                      qc={qc}
-                      showAmendAffordance={showAmendAffordance}
-                      onChange={(p) => patch(idx, p)}
-                      onDelete={() => void handleDeleteLine(line)}
-                      onAmend={() => setAmendingLine(line)}
-                    />
-                  ))}
-                </CardContent>
-              </Card>
+                  ) : null
+                }
+                contentClassName="space-y-4"
+              >
+                {lines.map((line, idx) => (
+                  <LineRow
+                    key={line.lineId}
+                    tenantId={grn.tenantId}
+                    grnId={grn.id}
+                    line={line}
+                    idx={idx}
+                    isDraft={isDraft}
+                    qc={qc}
+                    showAmendAffordance={showAmendAffordance}
+                    onChange={(p) => patch(idx, p)}
+                    onDelete={() => void handleDeleteLine(line)}
+                    onAmend={() => setAmendingLine(line)}
+                  />
+                ))}
+              </AppSection>
             </div>
 
             <div className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm">{grnCopy.qcSummary}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3 text-sm">
-                  <Row
-                    label={grnCopy.acceptedLines}
-                    value={`${stats.acceptedLines}/${lines.length}`}
-                    tone="success"
-                  />
-                  <Row
-                    label={grnCopy.rejectedLines}
-                    value={String(stats.rejectedLines)}
-                    tone={stats.rejectedLines > 0 ? "warning" : "default"}
-                  />
-                  <Row
-                    label={grnCopy.priceReviewNeeded}
-                    value={String(stats.reviewLines)}
-                    tone={stats.reviewLines > 0 ? "warning" : "default"}
-                  />
-                </CardContent>
-              </Card>
+              <AppSection
+                size="sm"
+                title={grnCopy.qcSummary}
+                contentClassName="space-y-3 text-sm"
+              >
+                <Row
+                  label={grnCopy.acceptedLines}
+                  value={`${stats.acceptedLines}/${lines.length}`}
+                  tone="success"
+                />
+                <Row
+                  label={grnCopy.rejectedLines}
+                  value={String(stats.rejectedLines)}
+                  tone={stats.rejectedLines > 0 ? "warning" : "default"}
+                />
+                <Row
+                  label={grnCopy.priceReviewNeeded}
+                  value={String(stats.reviewLines)}
+                  tone={stats.reviewLines > 0 ? "warning" : "default"}
+                />
+              </AppSection>
 
               <Card className="border-primary/20 bg-primary/5">
                 <CardContent className="space-y-3 pt-6">

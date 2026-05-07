@@ -34,7 +34,7 @@ import {
   DocumentStockCorrectionDialog,
   type CorrectionBranchOption,
 } from "../../_components/document-stock-correction-dialog";
-import { AppDetailFooter, AppPage, AppPageHeader } from "@/components/surface";
+import { AppDetailFooter, AppPage, AppPageHeader, AppSection } from "@/components/surface";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { AuditHistoryList } from "../../_components/audit-history-list";
 import type { AuditLogRow } from "@/admin/_lib/audit";
@@ -297,13 +297,11 @@ export function TransferDetailClient({
             <TabsContent value="overview" className="mt-4">
               <div className="space-y-6">
           {/* Timeline */}
-          <Card>
-            <CardContent className="py-6">
-              <div className="flex justify-center">
-                <TimelineStepper steps={transferSteps} />
-              </div>
-            </CardContent>
-          </Card>
+          <AppSection contentClassName="py-6">
+            <div className="flex justify-center">
+              <TimelineStepper steps={transferSteps} />
+            </div>
+          </AppSection>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {[
@@ -365,18 +363,16 @@ export function TransferDetailClient({
           <div className="grid gap-6 lg:grid-cols-3">
             {/* Items table */}
             <div className="lg:col-span-2">
-              <Card className="overflow-hidden">
-                <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="space-y-1">
-                    <CardTitle>{tTerm("ingredientsList")}</CardTitle>
-                  </div>
-                  <span className="text-xs font-medium text-muted-foreground">
-                    {isReceiveMode
-                      ? copy.receiveInstructions
-                      : copy.receivedReadonlyHint}
-                  </span>
-                </CardHeader>
-                <CardContent className="p-0">
+              <AppSection
+                className="overflow-hidden"
+                title={tTerm("ingredientsList")}
+                headerHint={
+                  isReceiveMode
+                    ? copy.receiveInstructions
+                    : copy.receivedReadonlyHint
+                }
+                contentClassName="p-0"
+              >
                   <div className="space-y-3 p-6 md:hidden">
                     {transfer.items.map((item) => (
                       <Card key={item.sku || item.name} className="bg-muted/30">
@@ -572,8 +568,7 @@ export function TransferDetailClient({
                       </TableFooter>
                     </Table>
                   </div>
-                </CardContent>
-              </Card>
+              </AppSection>
             </div>
 
             {/* Sidebar value card */}
@@ -602,29 +597,27 @@ export function TransferDetailClient({
           </div>
 
           {isReceiveMode && hasShort ? (
-            <Card className="border-warning/30 bg-warning/5">
-              <CardContent className="space-y-2 pt-6">
-                <p className="text-sm font-semibold">
-                  {copy.shortageNoteTitle}{" "}
-                  <span className="text-destructive">*</span>
+            <AppSection tone="warning" contentClassName="space-y-2 pt-6">
+              <p className="text-sm font-semibold">
+                {copy.shortageNoteTitle}{" "}
+                <span className="text-destructive">*</span>
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {copy.shortageNoteDescription(shortLines)}
+              </p>
+              <Textarea
+                value={shortNote}
+                onChange={(e) => setShortNote(e.target.value)}
+                rows={3}
+                maxLength={300}
+                placeholder={copy.shortageNotePlaceholder}
+              />
+              {!noteOk ? (
+                <p className="text-xs text-destructive">
+                  {copy.shortageNoteMinLength}
                 </p>
-                <p className="text-xs text-muted-foreground">
-                  {copy.shortageNoteDescription(shortLines)}
-                </p>
-                <Textarea
-                  value={shortNote}
-                  onChange={(e) => setShortNote(e.target.value)}
-                  rows={3}
-                  maxLength={300}
-                  placeholder={copy.shortageNotePlaceholder}
-                />
-                {!noteOk ? (
-                  <p className="text-xs text-destructive">
-                    {copy.shortageNoteMinLength}
-                  </p>
-                ) : null}
-              </CardContent>
-            </Card>
+              ) : null}
+            </AppSection>
           ) : null}
 
           {/* Footer Action Bar */}
