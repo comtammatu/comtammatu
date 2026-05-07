@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
+import { Spinner } from "@comtammatu/ui/components/spinner";
 import { cn } from "@comtammatu/ui/lib/utils";
 import { messages } from "@lib/messages";
 import { refreshMaterializedViews } from "../actions";
@@ -93,10 +94,11 @@ export function MvStalenessBanner({
         disabled={isPending}
         className="h-7 gap-1.5 px-2 text-xs"
       >
-        <RefreshCw
-          className={cn("size-3.5", isPending && "animate-spin")}
-          aria-hidden
-        />
+        {isPending ? (
+          <Spinner className="size-3.5" aria-hidden />
+        ) : (
+          <RefreshCw className="size-3.5" aria-hidden />
+        )}
         {isPending ? stalenessCopy.refreshing : stalenessCopy.refresh}
       </Button>
     </div>

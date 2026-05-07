@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowLeft as IconArrowLeft } from "lucide-react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { Button } from "@comtammatu/ui/components/button";
-import { PageHero } from "@/components/page-hero";
+import { AppPage, AppPageHeader } from "@/components/surface";
 import { ReconciliationClient } from "./reconciliation-client";
 
 interface Props {
@@ -46,13 +46,13 @@ export default async function ReconciliationPage({ searchParams }: Props) {
   const defaultEnd = now.toISOString().slice(0, 10);
 
   return (
-    <div className="space-y-5 lg:space-y-6">
+    <AppPage>
       <Button asChild variant="ghost" size="sm" className="-ml-3 self-start">
         <Link href="/finance">
           <IconArrowLeft className="mr-1 size-4" /> Quay lại Tài chính
         </Link>
       </Button>
-      <PageHero
+      <AppPageHeader
         eyebrow="Tài chính"
         title="Đối chiếu sổ phụ ↔ sổ cái"
         description="So sánh tổng phát sinh sổ phụ (POS, kho, nhân sự, công nợ) với tổng bút toán đã ghi nhận trong sổ cái. Khi có chênh lệch, drilldown để xem chứng từ gốc và bút toán liên quan."
@@ -64,6 +64,6 @@ export default async function ReconciliationPage({ searchParams }: Props) {
         defaultStartDate={defaultStart}
         defaultEndDate={defaultEnd}
       />
-    </div>
+    </AppPage>
   );
 }

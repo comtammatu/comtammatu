@@ -184,8 +184,41 @@ New helper: `apps/web/app/inventory/_components/audit-history-list.tsx` — shar
 - `inventory/waste/new/page.tsx`: redirect-with-flash → inline `AppEmptyState mode="no-access"` for missing branch context.
 - Supplier-returns detail page Tabs migration deferred — Wave 4 cleanup.
 
+## After Wave 4b (2026-05-07)
+
+Surfaces migrated: 8 finance list/hub pages from `PageHero` → `AppPageHeader` + `AppPage` chrome (`chart-of-accounts`, `food-cost`, `invoices`, `journal`, `periods`, `posting-rules`, `reconciliation`, `statements`). Revenue detail `[date]/page.tsx` gets `AppPageTabs[Tổng quan | Theo giờ | Danh sách đơn]`. `finance/components/mv-staleness-banner.tsx` Loader2 + animate-spin replaced with `Spinner` primitive.
+
+Note: `finance/page.tsx` has no PageHero (it `redirect()`s to `/finance/revenue?range=today`) — no change needed. `finance/revenue/page.tsx` passes directly to `<RevenueClient/>` with no PageHero wrapper — no change needed. Both are already clean.
+
+### Telemetry delta vs Wave 3a (W4a baseline: AppPageHeader≈46, PageHero=11, Loader2/animate-spin=1, AppPageTabs=9)
+
+| Pattern | W4a baseline | After W4b | Delta | Target met? |
+|---|---|---|---|---|
+| `AppPageHeader` files | ~46 | **58** | +12 | ✓ (target ≥52) |
+| `PageHero` callers (files) | 11 | **3** | -8 | ✓ (target ≤3: page-hero.tsx itself + menu/Wave4c + audit-trail/frozen) |
+| `Loader2 / animate-spin` | 1 | **0** | -1 | ✓ (target 0) |
+| `AppPageTabs` files | 9 | **10** | +1 | ✓ (target ≥10: +1 for revenue/[date]) |
+| Hand-rolled `Empty border bg-card` | 2 | **2** | 0 | unchanged (none in finance) |
+
+### Detail Tabs added
+
+- `/finance/revenue/[date]/page.tsx` — `AppPageTabs[Tổng quan | Theo giờ | Danh sách đơn]` with `paramKey="tab"`. `Lịch sử` tab SKIPPED: revenue data is computed/aggregated from `paid_at` order events; no `audit_logs` entries are written for revenue snapshots. Revenue bucketing logic (REVENUE-BUCKET-BY-PAID-AT-LOCAL-TZ) is untouched — `fetchOrdersForDay(branchId, date)` and `paid_hour` derivation preserved as-is.
+
+### Journal detail route
+
+No `finance/journal/[id]/page.tsx` exists — journal is a single-page list. No detail Tabs to add.
+
+### Key decisions in Wave 4b
+
+- `finance/audit-trail/page.tsx` deliberately left with `PageHero` — frozen per wave contract (HDDT compliance, leak risk). It is the sole finance PageHero caller remaining (plus `page-hero.tsx` itself and `menu/page.tsx` Wave 4c).
+- `finance/invoice-list.tsx` untouched — frozen (HĐĐT compliance NĐ70/2025).
+- `finance/revenue/[date]/page.tsx` early-exit states (invalid date, no-branch picker) left as minimal raw `div` — these are transient error states, not primary page surfaces.
+- `mv-staleness-banner.tsx`: `Spinner` now renders when `isPending=true`, `RefreshCw` when idle. `cn` import retained — still used for outer container className.
+
 ## Open / deferred decisions
 
 - Wave 3b: retire `inventory/dashboard/dashboard-client-v2.tsx` + 4 widgets (location-breakdown-table, alerts-drawer, dashboard-summary-cards, dashboard-refresh-button); redirect `dashboard/page.tsx` → `/inventory` (drops final `?error=` flash); port v2's `get_inventory_dashboard` MV-backed RPC into v1 data path; disable `inv_s12_dashboard_v2` flag; update e2e snapshot at `e2e/visual/theme-baseline.spec.ts:23`; merge `/inventory/m/*` mobile fork (14 files) into responsive routes.
 - Inventory audit instrumentation (logAudit calls in inventory action handlers) — not in any wave; defer post-pilot.
 - `app-shell.tsx` still in active use as inventory shell delegate target (intentional).
+- Wave 4c: `menu/page.tsx` (last non-frozen PageHero caller), HR payroll, supplier-returns detail, inventory settings.
+- `finance/audit-trail/page.tsx`: PageHero caller — will retire when audit-trail unfreeze lands (post-M4 P0 close). After that, `page-hero.tsx` can be deleted.

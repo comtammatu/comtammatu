@@ -1,4 +1,4 @@
-import { PageHero } from "@/components/page-hero";
+import { AppPage, AppPageHeader } from "@/components/surface";
 import { messages } from "@lib/messages";
 import { fetchTaxInvoices } from "../actions";
 import type { InvoiceRow } from "../_lib/finance-types";
@@ -20,13 +20,13 @@ export default async function InvoicesPage({
   const invoices = (res.success ? (res.data ?? []) : []) as InvoiceRow[];
 
   return (
-    <div className="space-y-5">
-      <PageHero
+    <AppPage>
+      <AppPageHeader
         eyebrow={copy.eyebrow}
         title={copy.title}
         description={copy.description}
       />
       <InvoiceList initialInvoices={invoices} />
-    </div>
+    </AppPage>
   );
 }

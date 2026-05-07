@@ -24,6 +24,8 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 import { formatVND } from "@comtammatu/shared/format";
+import { AppPage, AppPageHeader } from "@/components/surface";
+import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { fetchAccessibleBranches, fetchOrdersForDay } from "../../actions";
 
 interface OrderRow {
@@ -197,190 +199,221 @@ export default async function RevenueDrillPage({
   const totalTax = orders.reduce((s, o) => s + Number(o.tax_amount), 0);
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Button asChild variant="ghost" size="sm">
-          <Link href="/finance/revenue" className="gap-2">
-            <IconArrowLeft className="size-4" />
-            Quay lại tổng
-          </Link>
-        </Button>
-        <Badge variant="secondary">Drill-down theo ngày</Badge>
-      </div>
+    <AppPage>
+      <AppPageHeader
+        eyebrow="Tài chính · Doanh thu"
+        title={`${branchName} · ${date}`}
+        description={`Tổng ${totalOrders.toLocaleString("vi-VN")} đơn · ${formatVND(totalRevenue)}. Cột giờ tính theo thời điểm thanh toán (Asia/Ho_Chi_Minh).`}
+        breadcrumb={
+          <Button asChild variant="ghost" size="sm" className="-ml-2">
+            <Link href="/finance/revenue" className="gap-2">
+              <IconArrowLeft className="size-4" />
+              Quay lại tổng
+            </Link>
+          </Button>
+        }
+        badge={{ children: "Drill-down theo ngày", variant: "secondary" }}
+      />
 
-      <Card>
-        <CardContent className="p-5">
-          <div className="space-y-1.5">
-            <h2 className="font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
-              {branchName} · {date}
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              Tổng {totalOrders.toLocaleString("vi-VN")} đơn ·{" "}
-              {formatVND(totalRevenue)}. Cột giờ tính theo thời điểm thanh toán
-              (Asia/Ho_Chi_Minh).
-            </p>
+      <AppPageTabs
+        items={[
+          { value: "tong-quan", label: "Tổng quan" },
+          { value: "theo-gio", label: "Theo giờ", count: hours.length },
+          { value: "danh-sach-don", label: "Danh sách đơn", count: totalOrders },
+        ]}
+        defaultValue="tong-quan"
+        paramKey="tab"
+      >
+        <TabsContent value="tong-quan">
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Card>
+              <CardContent className="p-5">
+                <p className="text-xs text-muted-foreground">Doanh thu</p>
+                <p className="text-2xl font-semibold tabular-nums">
+                  {formatVND(totalRevenue)}
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-5">
+                <p className="text-xs text-muted-foreground">Giảm giá</p>
+                <p className="text-2xl font-semibold tabular-nums">
+                  {formatVND(totalDiscount)}
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-5">
+                <p className="text-xs text-muted-foreground">VAT</p>
+                <p className="text-2xl font-semibold tabular-nums">
+                  {formatVND(totalTax)}
+                </p>
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
+        </TabsContent>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle className="text-base">Doanh thu theo giờ</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 p-4">
-            {hours.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Không có đơn trong ngày này.
-              </p>
-            ) : (
-              hours.map((h) => {
-                const pct = totalRevenue
-                  ? Math.round((h.total_revenue / totalRevenue) * 100)
-                  : 0;
-                return (
-                  <div key={h.hour} className="space-y-1">
-                    <div className="flex items-baseline justify-between text-sm">
-                      <span className="font-medium tabular-nums">
-                        {formatHourBucket(h.hour)}
-                      </span>
-                      <span className="tabular-nums">
-                        {formatVND(h.total_revenue)}
-                        <span className="ml-2 text-xs text-muted-foreground">
-                          {h.order_count} đơn
+        <TabsContent value="theo-gio">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Doanh thu theo giờ</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 p-4">
+              {hours.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Không có đơn trong ngày này.
+                </p>
+              ) : (
+                hours.map((h) => {
+                  const pct = totalRevenue
+                    ? Math.round((h.total_revenue / totalRevenue) * 100)
+                    : 0;
+                  return (
+                    <div key={h.hour} className="space-y-1">
+                      <div className="flex items-baseline justify-between text-sm">
+                        <span className="font-medium tabular-nums">
+                          {formatHourBucket(h.hour)}
                         </span>
-                      </span>
+                        <span className="tabular-nums">
+                          {formatVND(h.total_revenue)}
+                          <span className="ml-2 text-xs text-muted-foreground">
+                            {h.order_count} đơn
+                          </span>
+                        </span>
+                      </div>
+                      <Progress value={pct} className="h-1.5 rounded-full" />
                     </div>
-                    <Progress value={pct} className="h-1.5 rounded-full" />
-                  </div>
-                );
-              })
-            )}
-          </CardContent>
-        </Card>
+                  );
+                })
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-base">
-              Danh sách đơn ({totalOrders.toLocaleString("vi-VN")})
-            </CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Sắp xếp theo thời gian thanh toán. HĐĐT &quot;Không yêu cầu&quot;
-              = khách lẻ không nhập MST.
-            </p>
-          </CardHeader>
-          <CardContent>
-            {orders.length === 0 ? (
-              <Empty className="py-8">
-                <EmptyHeader>
-                  <EmptyTitle className="text-sm font-semibold">
-                    Không có đơn đã thanh toán trong ngày.
-                  </EmptyTitle>
-                </EmptyHeader>
-              </Empty>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Giờ</TableHead>
-                    <TableHead>Mã đơn</TableHead>
-                    <TableHead>Loại</TableHead>
-                    <TableHead className="text-right">Khách</TableHead>
-                    <TableHead className="text-right">Món</TableHead>
-                    <TableHead>Thanh toán</TableHead>
-                    <TableHead className="text-right">Giảm</TableHead>
-                    <TableHead className="text-right">VAT</TableHead>
-                    <TableHead className="text-right">Tổng</TableHead>
-                    <TableHead>HĐĐT</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {orders.map((o) => {
-                    const paid = new Date(o.paid_at);
-                    const hh = String(paid.getHours()).padStart(2, "0");
-                    const mm = String(paid.getMinutes()).padStart(2, "0");
-                    const invoiceLabel =
-                      o.invoice_status === "not_required"
-                        ? "Không yêu cầu"
-                        : o.invoice_status === "issued"
-                          ? `Đã phát hành${o.invoice_number ? ` · ${o.invoice_number}` : ""}`
-                          : o.invoice_status ?? "—";
-                    const invoiceVariant =
-                      o.invoice_status &&
-                      INVOICE_STATUS_VARIANT[o.invoice_status]
-                        ? INVOICE_STATUS_VARIANT[o.invoice_status]
-                        : "outline";
-                    return (
-                      <TableRow key={o.order_id}>
-                        <TableCell className="tabular-nums">
-                          {hh}:{mm}
-                        </TableCell>
-                        <TableCell className="font-mono text-xs">
-                          {o.order_number}
-                        </TableCell>
-                        <TableCell>
-                          {ORDER_TYPE_LABEL[o.order_type] ?? o.order_type}
-                        </TableCell>
-                        <TableCell className="text-right tabular-nums">
-                          {o.customer_count}
-                        </TableCell>
-                        <TableCell className="text-right tabular-nums">
-                          {o.item_count}
-                        </TableCell>
-                        <TableCell>
-                          {o.payment_method
-                            ? (PAYMENT_METHOD_LABEL[o.payment_method] ??
-                              o.payment_method)
-                            : "—"}
-                        </TableCell>
-                        <TableCell className="text-right tabular-nums text-muted-foreground">
-                          {Number(o.discount_amount) > 0
-                            ? formatVND(o.discount_amount)
-                            : "—"}
-                        </TableCell>
-                        <TableCell className="text-right tabular-nums text-muted-foreground">
-                          {formatVND(o.tax_amount)}
-                        </TableCell>
-                        <TableCell className="text-right tabular-nums font-medium">
-                          {formatVND(o.total_amount)}
-                        </TableCell>
-                        <TableCell>
-                          {o.invoice_status ? (
-                            <Badge variant={invoiceVariant}>
-                              {invoiceLabel}
-                            </Badge>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">
-                              Chưa xuất
-                            </span>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-                <TableFooter>
-                  <TableRow className="hover:bg-transparent">
-                    <TableCell colSpan={6} className="font-medium">
-                      Tổng
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatVND(totalDiscount)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatVND(totalTax)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums font-bold">
-                      {formatVND(totalRevenue)}
-                    </TableCell>
-                    <TableCell />
-                  </TableRow>
-                </TableFooter>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+        <TabsContent value="danh-sach-don">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">
+                Danh sách đơn ({totalOrders.toLocaleString("vi-VN")})
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Sắp xếp theo thời gian thanh toán. HĐĐT &quot;Không yêu cầu&quot;
+                = khách lẻ không nhập MST.
+              </p>
+            </CardHeader>
+            <CardContent>
+              {orders.length === 0 ? (
+                <Empty className="py-8">
+                  <EmptyHeader>
+                    <EmptyTitle className="text-sm font-semibold">
+                      Không có đơn đã thanh toán trong ngày.
+                    </EmptyTitle>
+                  </EmptyHeader>
+                </Empty>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Giờ</TableHead>
+                      <TableHead>Mã đơn</TableHead>
+                      <TableHead>Loại</TableHead>
+                      <TableHead className="text-right">Khách</TableHead>
+                      <TableHead className="text-right">Món</TableHead>
+                      <TableHead>Thanh toán</TableHead>
+                      <TableHead className="text-right">Giảm</TableHead>
+                      <TableHead className="text-right">VAT</TableHead>
+                      <TableHead className="text-right">Tổng</TableHead>
+                      <TableHead>HĐĐT</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {orders.map((o) => {
+                      const paid = new Date(o.paid_at);
+                      const hh = String(paid.getHours()).padStart(2, "0");
+                      const mm = String(paid.getMinutes()).padStart(2, "0");
+                      const invoiceLabel =
+                        o.invoice_status === "not_required"
+                          ? "Không yêu cầu"
+                          : o.invoice_status === "issued"
+                            ? `Đã phát hành${o.invoice_number ? ` · ${o.invoice_number}` : ""}`
+                            : o.invoice_status ?? "—";
+                      const invoiceVariant =
+                        o.invoice_status &&
+                        INVOICE_STATUS_VARIANT[o.invoice_status]
+                          ? INVOICE_STATUS_VARIANT[o.invoice_status]
+                          : "outline";
+                      return (
+                        <TableRow key={o.order_id}>
+                          <TableCell className="tabular-nums">
+                            {hh}:{mm}
+                          </TableCell>
+                          <TableCell className="font-mono text-xs">
+                            {o.order_number}
+                          </TableCell>
+                          <TableCell>
+                            {ORDER_TYPE_LABEL[o.order_type] ?? o.order_type}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {o.customer_count}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {o.item_count}
+                          </TableCell>
+                          <TableCell>
+                            {o.payment_method
+                              ? (PAYMENT_METHOD_LABEL[o.payment_method] ??
+                                o.payment_method)
+                              : "—"}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums text-muted-foreground">
+                            {Number(o.discount_amount) > 0
+                              ? formatVND(o.discount_amount)
+                              : "—"}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums text-muted-foreground">
+                            {formatVND(o.tax_amount)}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums font-medium">
+                            {formatVND(o.total_amount)}
+                          </TableCell>
+                          <TableCell>
+                            {o.invoice_status ? (
+                              <Badge variant={invoiceVariant}>
+                                {invoiceLabel}
+                              </Badge>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">
+                                Chưa xuất
+                              </span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                  <TableFooter>
+                    <TableRow className="hover:bg-transparent">
+                      <TableCell colSpan={6} className="font-medium">
+                        Tổng
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatVND(totalDiscount)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatVND(totalTax)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums font-bold">
+                        {formatVND(totalRevenue)}
+                      </TableCell>
+                      <TableCell />
+                    </TableRow>
+                  </TableFooter>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </AppPageTabs>
+    </AppPage>
   );
 }

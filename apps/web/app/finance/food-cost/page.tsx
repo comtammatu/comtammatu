@@ -1,4 +1,4 @@
-import { PageHero } from "@/components/page-hero";
+import { AppPage, AppPageHeader } from "@/components/surface";
 import { messages } from "@lib/messages";
 import { fetchFoodCost } from "../accounting-actions";
 import { fetchAccessibleBranches } from "../actions";
@@ -43,8 +43,8 @@ export default async function FoodCostPage({
   const rows = (foodRes.success ? (foodRes.data ?? []) : []) as FoodCostRow[];
 
   return (
-    <div className="space-y-5 lg:space-y-6">
-      <PageHero
+    <AppPage>
+      <AppPageHeader
         eyebrow={messages.finance.shell.subLabel}
         title={messages.finance.nav.items.foodCost}
       />
@@ -55,6 +55,6 @@ export default async function FoodCostPage({
         resolvedStart={resolved.start}
         resolvedEnd={resolved.end}
       />
-    </div>
+    </AppPage>
   );
 }

@@ -1,4 +1,4 @@
-import { PageHero } from "@/components/page-hero";
+import { AppPage, AppPageHeader } from "@/components/surface";
 import { messages } from "@lib/messages";
 import { fetchChartOfAccounts } from "../chart-of-accounts-actions";
 import { fetchJournalEntries } from "../journal-actions";
@@ -68,13 +68,13 @@ export default async function JournalPage() {
     : [];
 
   return (
-    <div className="space-y-5 lg:space-y-6">
-      <PageHero
+    <AppPage>
+      <AppPageHeader
         eyebrow={messages.finance.journal.pageEyebrow}
         title={messages.finance.journal.pageTitle}
       />
       <JournalClient entries={entries} accounts={accounts} />
-    </div>
+    </AppPage>
   );
 }
 

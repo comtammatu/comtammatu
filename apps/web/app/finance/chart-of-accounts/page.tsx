@@ -1,4 +1,4 @@
-import { PageHero } from "@/components/page-hero";
+import { AppPage, AppPageHeader } from "@/components/surface";
 import { fetchChartOfAccounts } from "../chart-of-accounts-actions";
 import { ChartOfAccountsClient } from "./coa-client";
 
@@ -7,10 +7,10 @@ export default async function ChartOfAccountsPage() {
   const accounts = result.success ? ((result.data ?? []) as AccountRow[]) : [];
 
   return (
-    <div className="space-y-5 lg:space-y-6">
-      <PageHero eyebrow="Tài chính" title="Hệ thống tài khoản" />
+    <AppPage>
+      <AppPageHeader eyebrow="Tài chính" title="Hệ thống tài khoản" />
       <ChartOfAccountsClient initialAccounts={accounts} />
-    </div>
+    </AppPage>
   );
 }
 
