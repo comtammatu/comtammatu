@@ -16,13 +16,7 @@ import {
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@comtammatu/ui/components/empty";
+import { AppEmptyState } from "@/components/surface";
 import {
   InputGroup,
   InputGroupAddon,
@@ -311,37 +305,37 @@ export function TransfersListClient({
 
           {/* Mobile cards */}
           {searchFiltered.length === 0 ? (
-            <Empty className="border bg-card py-10">
-              <EmptyMedia variant="icon">
-                {activeTab === "receive" ? (
+            <AppEmptyState
+              compact
+              mode={search ? "no-results" : "no-data"}
+              icon={
+                activeTab === "receive" ? (
                   <IconPackageImport />
                 ) : activeTab === "dispatch" ? (
                   <IconSend />
                 ) : (
                   <IconPackageOff />
-                )}
-              </EmptyMedia>
-              <EmptyHeader>
-                <EmptyTitle className="text-sm font-semibold">
-                  {search
-                    ? copy.list.noTransfersFound
-                    : activeTab === "receive"
-                      ? copy.list.noReceiveTransfers
-                      : activeTab === "dispatch"
-                        ? copy.list.noDispatchTransfers
-                        : copy.list.noHistory}
-                </EmptyTitle>
-                <EmptyDescription className="text-xs leading-5">
-                  {search
-                    ? copy.list.searchEmptyHint
-                    : activeTab === "receive"
-                      ? copy.list.receiveEmptyHint
-                      : activeTab === "dispatch"
-                        ? copy.list.dispatchEmptyHint
-                        : copy.list.historyEmptyHint}
-                </EmptyDescription>
-              </EmptyHeader>
-            </Empty>
+                )
+              }
+              title={
+                search
+                  ? copy.list.noTransfersFound
+                  : activeTab === "receive"
+                    ? copy.list.noReceiveTransfers
+                    : activeTab === "dispatch"
+                      ? copy.list.noDispatchTransfers
+                      : copy.list.noHistory
+              }
+              description={
+                search
+                  ? copy.list.searchEmptyHint
+                  : activeTab === "receive"
+                    ? copy.list.receiveEmptyHint
+                    : activeTab === "dispatch"
+                      ? copy.list.dispatchEmptyHint
+                      : copy.list.historyEmptyHint
+              }
+            />
           ) : (
             <div className="flex flex-col gap-2">
               {searchFiltered.map((r) => (

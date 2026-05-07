@@ -75,7 +75,7 @@ export function AutoApproveEvalPanel({
               <li
                 key={key}
                 className={cn(
-                  "flex items-center gap-2 rounded-sm px-2 py-1",
+                  "flex items-center gap-2 rounded-md px-2 py-1",
                   ok ? "text-foreground" : "text-destructive",
                 )}
                 data-condition={key}

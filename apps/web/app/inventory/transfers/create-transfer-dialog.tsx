@@ -695,7 +695,7 @@ export function CreateTransferDialog({
                 {draftLines.map((l) => (
                   <div
                     key={l.key}
-                    className="flex items-center gap-2 rounded-xl border border-border/60 bg-muted/20 px-3 py-2"
+                    className="flex items-center gap-2 rounded-lg border border-border/60 bg-muted/20 px-3 py-2"
                   >
                     <span className="min-w-0 flex-1 truncate text-sm font-medium">
                       {l.name}
@@ -720,8 +720,8 @@ export function CreateTransferDialog({
                     <Button
                       type="button"
                       variant="ghost"
-                      size="icon"
-                      className="size-7 shrink-0"
+                      size="icon-sm"
+                      className="shrink-0"
                       onClick={() => removeLine(l.key)}
                       aria-label={messages.inventory.transfer.removeLineAria}
                     >

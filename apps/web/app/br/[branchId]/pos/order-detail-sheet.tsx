@@ -162,14 +162,14 @@ function OrderDetailLoadingFixture() {
         </ul>
       </ScrollArea>
       <div className="mt-auto flex shrink-0 flex-col gap-2 border-t px-3 py-3 sm:px-4">
-        <Button type="button" size="lg" className="min-h-12 w-full">
+        <Button type="button" size="touch" className="w-full">
           {ORDER_DETAIL_LOADING_TEXT.payment} · {formatVND(165000)}
         </Button>
         <div className="flex gap-2">
-          <Button type="button" variant="outline" className="min-h-12 flex-1">
+          <Button type="button" variant="outline" size="touch" className="flex-1">
             {ORDER_DETAIL_LOADING_TEXT.append}
           </Button>
-          <Button type="button" variant="secondary" className="min-h-12 flex-1">
+          <Button type="button" variant="secondary" size="touch" className="flex-1">
             {ORDER_DETAIL_LOADING_TEXT.served}
           </Button>
           <Button
@@ -966,8 +966,8 @@ export function OrderDetailSheet({
                 {canShowPaymentAction && (
                   <Button
                     type="button"
-                    size="lg"
-                    className="min-h-12 w-full"
+                    size="touch"
+                    className="w-full"
                     onClick={() => {
                       onOpenBill(data.id, data);
                       onClose();
@@ -985,7 +985,8 @@ export function OrderDetailSheet({
                       <Button
                         type="button"
                         variant="outline"
-                        className="min-h-12 flex-1"
+                        size="touch"
+                        className="flex-1"
                         onClick={() => {
                           onStartAppend(data.id, data.order_number);
                         }}
@@ -997,7 +998,8 @@ export function OrderDetailSheet({
                       <Button
                         type="button"
                         variant="secondary"
-                        className="min-h-12 flex-1"
+                        size="touch"
+                        className="flex-1"
                         disabled={isPending}
                         onClick={() => void handleStatus("served")}
                       >

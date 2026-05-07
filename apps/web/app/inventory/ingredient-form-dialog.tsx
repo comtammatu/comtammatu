@@ -356,11 +356,11 @@ function IngredientFormContent({
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={isPending}
-            className="h-10"
+            size="lg"
           >
             {ACTIONS_VI.cancel}
           </Button>
-          <Button type="submit" disabled={isPending} className="h-10">
+          <Button type="submit" disabled={isPending} size="lg">
             {isPending && <Spinner className="mr-2" />}
             {isEdit ? ACTIONS_VI.update : ACTIONS_VI.create}
           </Button>

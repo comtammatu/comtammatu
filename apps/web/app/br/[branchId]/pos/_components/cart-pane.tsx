@@ -268,8 +268,8 @@ function CartPaneComponent({
               </p>
             </div>
             <Button
-              className="min-h-14 w-full text-base font-bold"
-              size="lg"
+              className="w-full"
+              size="touch-lg"
               disabled
             >
               Đặt món (0)

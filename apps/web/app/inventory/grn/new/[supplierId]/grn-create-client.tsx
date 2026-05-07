@@ -313,7 +313,6 @@ export function GrnCreateClient({
                     type="button"
                     variant="outline"
                     size="icon-lg"
-                    className="size-9"
                     onClick={() => {
                       const ingredient = ingredients.find(
                         (i) => i.id === line.ingredientId,
@@ -328,7 +327,7 @@ export function GrnCreateClient({
                     type="button"
                     variant="outline"
                     size="icon-lg"
-                    className="size-9 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    className="border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
                     onClick={() => removeLine(line.ingredientId)}
                     aria-label="Xóa dòng"
                   >
@@ -370,7 +369,7 @@ export function GrnCreateClient({
                 key={ingredient.id}
                 type="button"
                 onClick={() => openEdit(ingredient)}
-                className="flex items-center gap-3 rounded-xl border bg-card px-3 py-3 text-left transition hover:bg-accent/40 active:scale-[0.99]"
+                className="flex items-center gap-3 rounded-lg border bg-card px-3 py-3 text-left transition hover:bg-accent/40 active:scale-[0.99]"
               >
                 <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted text-2xs font-bold uppercase text-muted-foreground">
                   {(ingredient.sku ?? ingredient.name).slice(0, 2)}
@@ -534,7 +533,7 @@ function LineEditSheet({
                 <button
                   type="button"
                   onClick={() => onOpenNumpad("qty")}
-                  className="flex flex-col items-start gap-1 rounded-xl border bg-card px-3 py-3 text-left transition active:scale-[0.99]"
+                  className="flex flex-col items-start gap-1 rounded-lg border bg-card px-3 py-3 text-left transition active:scale-[0.99]"
                 >
                   <span className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
                     {FORM_VI.quantity}
@@ -549,7 +548,7 @@ function LineEditSheet({
                 <button
                   type="button"
                   onClick={() => onOpenNumpad("cost")}
-                  className="flex flex-col items-start gap-1 rounded-xl border bg-card px-3 py-3 text-left transition active:scale-[0.99]"
+                  className="flex flex-col items-start gap-1 rounded-lg border bg-card px-3 py-3 text-left transition active:scale-[0.99]"
                 >
                   <span className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
                     {FORM_VI.unitPrice}
@@ -563,7 +562,7 @@ function LineEditSheet({
                 </button>
               </div>
 
-              <div className="rounded-xl bg-muted/50 px-3 py-2.5">
+              <div className="rounded-lg bg-muted/50 px-3 py-2.5">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">{FORM_VI.amount}</span>
                   <span className="text-base font-semibold">

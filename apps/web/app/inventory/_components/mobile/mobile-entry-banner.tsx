@@ -7,9 +7,9 @@ export function MobileEntryBanner() {
   return (
     <Link
       href="/inventory/m"
-      className="group flex items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2.5 text-sm font-medium text-primary transition hover:bg-primary/10 active:scale-[0.99] md:hidden"
+      className="group flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2.5 text-sm font-medium text-primary transition hover:bg-primary/10 active:scale-[0.99] md:hidden"
     >
-      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/15">
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/15">
         <IconDeviceMobile className="size-5" />
       </span>
       <span className="min-w-0 flex-1">

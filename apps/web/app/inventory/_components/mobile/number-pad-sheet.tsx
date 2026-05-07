@@ -102,7 +102,7 @@ export function NumberPadSheet({
             {title}
           </SheetTitle>
           <div className="flex items-baseline gap-2 pt-1">
-            <span className="text-4xl font-semibold tabular-nums">
+            <span className="text-3xl font-semibold tabular-nums">
               {buffer.length === 0 ? "0" : buffer}
             </span>
             {suffix ? (

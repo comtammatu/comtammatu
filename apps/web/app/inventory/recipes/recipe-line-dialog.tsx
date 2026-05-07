@@ -486,11 +486,11 @@ export function RecipeLineDialog({
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={isPending}
-              className="h-10"
+              size="lg"
             >
               {ACTIONS_VI.cancel}
             </Button>
-            <Button type="submit" disabled={isPending} className="h-10">
+            <Button type="submit" disabled={isPending} size="lg">
               {isPending && <Spinner className="mr-2" />}
               {isEdit ? "Cập nhật định mức" : "Lưu định mức"}
             </Button>

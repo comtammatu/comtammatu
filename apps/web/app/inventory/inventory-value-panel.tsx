@@ -184,7 +184,7 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
                     <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
                       {messages.inventory.value.currentValue}
                     </p>
-                    <p className="mt-2 text-3xl font-semibold tracking-tight tabular-nums">
+                    <p className="mt-2 text-2xl font-semibold tracking-tight tabular-nums">
                       {systemTotal == null ? "—" : formatVND(systemTotal)}
                     </p>
                   </CardContent>

@@ -191,7 +191,7 @@ export default async function GrnNewSupplierPage({
                 className="h-auto"
               >
                 <button type="submit" className="w-full text-left">
-                  <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <span className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                     <IconFileTime className="size-6" />
                   </span>
                   <div className="min-w-0 flex-1">

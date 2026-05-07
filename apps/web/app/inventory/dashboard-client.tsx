@@ -452,7 +452,7 @@ export function DashboardClient(props: DashboardProps) {
                   <CardHeader className="gap-3 pb-3">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex min-w-0 items-start gap-3">
-                        <div className="flex size-9 shrink-0 items-center justify-center rounded-md border bg-background">
+                        <div className="flex size-8 shrink-0 items-center justify-center rounded-md border bg-background">
                           <Icon className="size-4" />
                         </div>
                         <div className="min-w-0">

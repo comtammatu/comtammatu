@@ -18,7 +18,7 @@ export function MobileTopBar({ siteName }: MobileTopBarProps) {
         className="flex items-center gap-2 font-semibold"
         aria-label={messages.inventory.shell.mobileHomeAria}
       >
-        <span className="inline-flex size-9 items-center justify-center rounded-lg border bg-background p-1">
+        <span className="inline-flex size-8 items-center justify-center rounded-md border bg-background p-1">
           <BrandMark decorative className="size-full" />
         </span>
         <span className="text-sm leading-tight">

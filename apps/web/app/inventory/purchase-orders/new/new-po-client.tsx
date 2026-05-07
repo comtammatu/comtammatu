@@ -690,7 +690,7 @@ function SuggestionsPanel({
                       return (
                         <div
                           key={s.ingredient_id}
-                          className={`grid grid-cols-12 items-center gap-2 rounded-xl border border-transparent px-3 py-2 text-sm transition-colors ${
+                          className={`grid grid-cols-12 items-center gap-2 rounded-lg border border-transparent px-3 py-2 text-sm transition-colors ${
                             alreadyAdded
                               ? "bg-muted/30 opacity-60"
                               : "bg-background/70 hover:border-info/20 hover:bg-info/5"
@@ -905,7 +905,7 @@ function LineItemsSection({
                           variant="ghost"
                           size="icon-sm"
                           onClick={() => onRemoveLine(idx)}
-                          className="size-7 rounded-lg border-none bg-transparent text-muted-foreground shadow-none hover:bg-destructive/10 hover:text-destructive"
+                          className="rounded-md border-none bg-transparent text-muted-foreground shadow-none hover:bg-destructive/10 hover:text-destructive"
                           aria-label={messages.inventory.po.removeLineAria}
                         >
                           <IconTrash className="size-3.5" />
@@ -1061,7 +1061,7 @@ function LineItemsSection({
                         variant="ghost"
                         size="icon-sm"
                         onClick={() => onRemoveLine(idx)}
-                        className="size-7 rounded-lg border-none bg-transparent text-muted-foreground shadow-none hover:bg-destructive/10 hover:text-destructive"
+                        className="rounded-md border-none bg-transparent text-muted-foreground shadow-none hover:bg-destructive/10 hover:text-destructive"
                         aria-label={messages.inventory.po.removeLineAria}
                       >
                         <IconTrash className="size-3.5" />
@@ -1145,8 +1145,7 @@ function LineItemsSection({
               <Button
                 type="submit"
                 disabled={!ingredientId}
-                size="icon"
-                className="size-7"
+                size="icon-sm"
                 aria-label={messages.inventory.po.addLine}
               >
                 <IconPlus className="size-3.5" />

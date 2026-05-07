@@ -107,11 +107,11 @@ export function PhotoUploadInput({
               alt="attachment"
               width={56}
               height={56}
-              className="size-14 rounded object-cover"
+              className="size-14 rounded-md object-cover"
               unoptimized
             />
           ) : (
-            <div className="flex size-14 items-center justify-center rounded bg-muted text-xs font-bold">
+            <div className="flex size-14 items-center justify-center rounded-md bg-muted text-xs font-bold">
               {isPdf ? "PDF" : "FILE"}
             </div>
           )}

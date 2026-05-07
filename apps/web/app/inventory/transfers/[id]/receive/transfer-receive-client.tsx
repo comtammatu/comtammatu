@@ -217,7 +217,7 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
               <li key={line.id}>
                 <div
                   className={cn(
-                    "flex items-center gap-3 rounded-xl border bg-card px-3 py-3 transition",
+                    "flex items-center gap-3 rounded-lg border bg-card px-3 py-3 transition",
                     short && "border-warning/40 bg-warning/5",
                   )}
                 >

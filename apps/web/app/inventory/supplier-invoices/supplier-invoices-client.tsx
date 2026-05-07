@@ -813,7 +813,7 @@ export function SupplierInvoicesClient({
 
                   {selectedInvoice.variance !== null &&
                   selectedInvoice.variance > 0 ? (
-                    <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4">
+                    <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
                       <div className="flex items-start gap-3">
                         <IconAlertTriangle className="mt-0.5 size-4 text-destructive" />
                         <div className="space-y-1">
@@ -827,7 +827,7 @@ export function SupplierInvoicesClient({
                       </div>
                     </div>
                   ) : (
-                    <div className="rounded-2xl border border-success/30 bg-success/5 p-4">
+                    <div className="rounded-lg border border-success/30 bg-success/5 p-4">
                       <div className="flex items-start gap-3">
                         <IconCircleCheck className="mt-0.5 size-4 text-success" />
                         <div className="space-y-1">
@@ -949,7 +949,7 @@ export function SupplierInvoicesClient({
               </div>
             </div>
 
-            <div className="rounded-2xl border border-border/60 bg-muted/20 px-4 py-3 text-sm">
+            <div className="rounded-lg border border-border/60 bg-muted/20 px-4 py-3 text-sm">
               <div className="flex items-center justify-between gap-3">
                 <span className="text-muted-foreground">{copy.vat}</span>
                 <span className="font-mono">
