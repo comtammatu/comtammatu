@@ -182,6 +182,14 @@ const SECTION_TONE_ICON_CLASSNAME: Record<AppSectionTone, string> = {
 export type AppSectionProps = {
   title?: ReactNode;
   description?: ReactNode;
+  /**
+   * Right-aligned muted hint text shown next to the title on sm: viewport,
+   * stacked below on mobile. Use for short instructional copy that belongs
+   * with the section header but is not a description (e.g. "Cập nhật số
+   * lượng thực nhận" on a receive line list). For action buttons, use
+   * `action` instead.
+   */
+  headerHint?: ReactNode;
   icon?: ReactNode;
   iconClassName?: string;
   badge?: {
@@ -191,6 +199,11 @@ export type AppSectionProps = {
   action?: ReactNode;
   children: ReactNode;
   className?: string;
+  /**
+   * Pass-through className to CardContent. Use `"p-0"` for table-edge
+   * alignment when embedding `<Table>` directly. The default content layout
+   * is `flex min-w-0 flex-col gap-3` — overriding via this prop is supported.
+   */
   contentClassName?: string;
   size?: "default" | "sm";
   tone?: AppSectionTone;
@@ -201,6 +214,7 @@ export type AppSectionProps = {
 export function AppSection({
   title,
   description,
+  headerHint,
   icon,
   iconClassName,
   badge,
@@ -214,7 +228,7 @@ export function AppSection({
   footer,
 }: AppSectionProps) {
   const [open, setOpen] = useState(true);
-  const hasHeader = Boolean(title || description || icon || badge || action || collapsible);
+  const hasHeader = Boolean(title || description || headerHint || icon || badge || action || collapsible);
   const chevronAction = collapsible ? (
     <button
       type="button"
@@ -233,19 +247,31 @@ export function AppSection({
     <Card size={size} className={cn(SECTION_TONE_CLASSNAME[tone], className)}>
       {hasHeader ? (
         <CardHeader>
-          <CardTitle className="flex min-w-0 items-center gap-2">
-            {icon ? (
-              <span
-                className={cn(
-                  "inline-flex shrink-0 [&_svg]:size-4",
-                  SECTION_TONE_ICON_CLASSNAME[tone],
-                  iconClassName,
-                )}
-              >
-                {icon}
+          <CardTitle
+            className={cn(
+              "flex min-w-0 items-center gap-2",
+              headerHint && "flex-col items-start sm:flex-row sm:items-center",
+            )}
+          >
+            <span className="flex min-w-0 flex-1 items-center gap-2">
+              {icon ? (
+                <span
+                  className={cn(
+                    "inline-flex shrink-0 [&_svg]:size-4",
+                    SECTION_TONE_ICON_CLASSNAME[tone],
+                    iconClassName,
+                  )}
+                >
+                  {icon}
+                </span>
+              ) : null}
+              <span className="min-w-0 truncate">{title}</span>
+            </span>
+            {headerHint ? (
+              <span className="shrink-0 text-xs font-medium text-muted-foreground sm:text-right">
+                {headerHint}
               </span>
             ) : null}
-            <span className="min-w-0 truncate">{title}</span>
           </CardTitle>
           {description ? (
             <CardDescription>{description}</CardDescription>
