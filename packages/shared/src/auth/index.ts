@@ -91,10 +91,14 @@ export {
   PUBLIC_APP_PATHS,
   isAdminRoutePath,
   isBetaPath,
+  isFeedbackPublicPath,
   isPublicAppPath,
+  normalizeHost,
+  resolveHostSurface,
   resolveModuleFromPath,
   stripBetaPrefix,
 } from "./route-resolution";
+export type { HostSurface } from "./route-resolution";
 export type {
   BlockedStateCopy,
   BlockedStateReasonCode,

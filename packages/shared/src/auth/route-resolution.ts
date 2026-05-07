@@ -53,6 +53,33 @@ export function isAdminRoutePath(pathname: string): boolean {
   return resolvedPathname === "/admin" || resolvedPathname.startsWith("/admin/");
 }
 
+export type HostSurface = "feedback" | "app" | "unknown";
+
+export function normalizeHost(rawHost: string | null | undefined): string | null {
+  if (!rawHost) return null;
+  const trimmed = rawHost.trim().toLowerCase();
+  if (!trimmed) return null;
+  const portIdx = trimmed.indexOf(":");
+  return portIdx === -1 ? trimmed : trimmed.slice(0, portIdx);
+}
+
+export function resolveHostSurface(
+  rawHost: string | null | undefined,
+  config: { feedbackHost?: string | null; appHost?: string | null },
+): HostSurface {
+  const host = normalizeHost(rawHost);
+  if (!host) return "unknown";
+  const feedback = normalizeHost(config.feedbackHost);
+  const app = normalizeHost(config.appHost);
+  if (feedback && host === feedback) return "feedback";
+  if (app && host === app) return "app";
+  return "unknown";
+}
+
+export function isFeedbackPublicPath(pathname: string): boolean {
+  return pathname.startsWith("/r/");
+}
+
 export function resolveModuleFromPath(pathname: string): ModuleKey | null {
   const resolvedPathname = stripBetaPrefix(pathname);
 

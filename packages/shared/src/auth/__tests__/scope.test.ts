@@ -10,7 +10,12 @@ import { buildAccessDeniedPath } from "../blocked-state";
 import { STAFF_ROLES, type JwtClaims, type StaffRole } from "../types";
 import { canAccess } from "../module-acl";
 import { resolveDiscoveredApps } from "../app-discovery";
-import { isPublicAppPath } from "../route-resolution";
+import {
+  isFeedbackPublicPath,
+  isPublicAppPath,
+  normalizeHost,
+  resolveHostSurface,
+} from "../route-resolution";
 
 function makeClaims(
   role: StaffRole,
@@ -232,6 +237,68 @@ test("isPublicAppPath PWA manifests bypass auth proxy", () => {
   assert.equal(isPublicAppPath("/br/3/pos/manifest.webmanifest"), true);
   assert.equal(isPublicAppPath("/br/3/pos"), false);
   assert.equal(isPublicAppPath("/br/abc/pos/manifest.webmanifest"), false);
+});
+
+test("normalizeHost strips port + lowercases", () => {
+  assert.equal(normalizeHost("Feedback.Matu.VN"), "feedback.matu.vn");
+  assert.equal(normalizeHost("feedback.matu.vn:443"), "feedback.matu.vn");
+  assert.equal(normalizeHost("localhost:3000"), "localhost");
+  assert.equal(normalizeHost("  app.matu.vn  "), "app.matu.vn");
+  assert.equal(normalizeHost(""), null);
+  assert.equal(normalizeHost(null), null);
+  assert.equal(normalizeHost(undefined), null);
+});
+
+test("resolveHostSurface → matches configured hosts case-insensitive, port-agnostic", () => {
+  const cfg = {
+    feedbackHost: "feedback.matu.vn",
+    appHost: "app.matu.vn",
+  };
+  assert.equal(resolveHostSurface("feedback.matu.vn", cfg), "feedback");
+  assert.equal(resolveHostSurface("FEEDBACK.MATU.VN", cfg), "feedback");
+  assert.equal(resolveHostSurface("feedback.matu.vn:443", cfg), "feedback");
+  assert.equal(resolveHostSurface("app.matu.vn", cfg), "app");
+  assert.equal(resolveHostSurface("app.matu.vn:443", cfg), "app");
+});
+
+test("resolveHostSurface → unknown host falls back to 'unknown' (Vercel preview, IP, missing)", () => {
+  const cfg = {
+    feedbackHost: "feedback.matu.vn",
+    appHost: "app.matu.vn",
+  };
+  assert.equal(
+    resolveHostSurface("comtammatu-pr-42.vercel.app", cfg),
+    "unknown",
+  );
+  assert.equal(resolveHostSurface("127.0.0.1", cfg), "unknown");
+  assert.equal(resolveHostSurface(null, cfg), "unknown");
+  assert.equal(resolveHostSurface("", cfg), "unknown");
+});
+
+test("resolveHostSurface → no env configured → all hosts fall through to 'unknown'", () => {
+  // Pre-cutover state: env vars unset → gate is a no-op, behaviour matches
+  // single-host deploy. resolveHostSurface MUST NOT default any host into a
+  // surface when config is empty (would expose admin or feedback wrongly).
+  assert.equal(
+    resolveHostSurface("feedback.matu.vn", { feedbackHost: null, appHost: null }),
+    "unknown",
+  );
+  assert.equal(
+    resolveHostSurface("app.matu.vn", {
+      feedbackHost: undefined,
+      appHost: undefined,
+    }),
+    "unknown",
+  );
+});
+
+test("isFeedbackPublicPath → only /r/* prefix", () => {
+  assert.equal(isFeedbackPublicPath("/r/abc123"), true);
+  assert.equal(isFeedbackPublicPath("/r/abc/thank-you"), true);
+  assert.equal(isFeedbackPublicPath("/r/"), true);
+  assert.equal(isFeedbackPublicPath("/admin/feedback"), false);
+  assert.equal(isFeedbackPublicPath("/api/r/abc"), false);
+  assert.equal(isFeedbackPublicPath("/"), false);
 });
 
 test("resolvePostLoginRedirect → branch settings follows branch scope", () => {
