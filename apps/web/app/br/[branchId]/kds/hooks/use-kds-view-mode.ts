@@ -3,10 +3,14 @@
 import { useCallback, useMemo } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
-export type KdsViewMode = "grid" | "focus";
+/** Two KDS modes:
+ *  - `comprehensive` (mặc định): toàn diện — grid nhiều đơn, scan-by-glance.
+ *  - `focus`: tập trung — 1 đơn duy nhất full màn hình, auto-advance khi xong.
+ */
+export type KdsViewMode = "comprehensive" | "focus";
 
 function parseViewMode(v: string | null): KdsViewMode {
-  return v === "focus" ? "focus" : "grid";
+  return v === "focus" ? "focus" : "comprehensive";
 }
 
 export interface KdsViewModeState {
@@ -27,7 +31,7 @@ export function useKdsViewMode(): KdsViewModeState {
   const setMode = useCallback(
     (next: KdsViewMode) => {
       const params = new URLSearchParams(searchParams.toString());
-      if (next === "grid") params.delete("view");
+      if (next === "comprehensive") params.delete("view");
       else params.set("view", next);
       const q = params.toString();
       router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });

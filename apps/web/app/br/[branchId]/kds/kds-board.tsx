@@ -10,6 +10,7 @@ import { useKdsViewMode } from "./hooks/use-kds-view-mode";
 import { BoardHeader } from "./components/board-header";
 import { StationToggleBar } from "./components/station-toggle-bar";
 import { FilterBar } from "./components/filter-bar";
+import { FocusView } from "./components/focus-view";
 import { OrderGrid } from "./components/order-grid";
 import { UnassignedBanner } from "./components/unassigned-banner";
 import type {
@@ -281,16 +282,27 @@ export function KdsBoard({
           onClearAll={filters.clearAll}
         />
 
-        <OrderGrid
-          displayOrders={displayOrders}
-          hasGroupedOrders={groupedOrders.length > 0}
-          pendingTicketIds={pendingTicketIds}
-          mode={mode}
-          canMarkReady={canMarkReady}
-          canRecall={canRecall}
-          onBump={handleBump}
-          onRecall={handleRecall}
-        />
+        {mode === "focus" ? (
+          <FocusView
+            orders={displayOrders}
+            hasGroupedOrders={groupedOrders.length > 0}
+            pendingTicketIds={pendingTicketIds}
+            canMarkReady={canMarkReady}
+            canRecall={canRecall}
+            onBump={handleBump}
+            onRecall={handleRecall}
+          />
+        ) : (
+          <OrderGrid
+            displayOrders={displayOrders}
+            hasGroupedOrders={groupedOrders.length > 0}
+            pendingTicketIds={pendingTicketIds}
+            canMarkReady={canMarkReady}
+            canRecall={canRecall}
+            onBump={handleBump}
+            onRecall={handleRecall}
+          />
+        )}
       </div>
     </TickProvider>
   );

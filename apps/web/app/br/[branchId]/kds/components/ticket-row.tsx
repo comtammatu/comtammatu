@@ -58,10 +58,10 @@ export function TicketRow(props: TicketRowProps) {
 
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline gap-2">
-            <span className="text-lg font-black leading-tight text-warning tabular-nums md:text-xl">
+            <span className="font-mono text-lg font-semibold leading-tight tabular-nums text-warning md:text-xl">
               {item.quantity}×
             </span>
-            <span className="line-clamp-2 break-words text-lg font-bold leading-tight md:text-xl">
+            <span className="line-clamp-2 break-words text-lg font-semibold leading-tight md:text-xl">
               {item.item_name}
             </span>
           </div>

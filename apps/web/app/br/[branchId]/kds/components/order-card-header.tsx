@@ -40,7 +40,7 @@ export function OrderCardHeader({
       )}
     >
       <div className="flex min-w-0 flex-col gap-1">
-        <span className="text-xl font-black leading-none tabular-nums md:text-2xl">
+        <span className="font-mono text-xl font-semibold leading-none tabular-nums md:text-2xl">
           {kitchenTicketNumber}
         </span>
         <div className="flex flex-wrap items-center gap-1.5">
