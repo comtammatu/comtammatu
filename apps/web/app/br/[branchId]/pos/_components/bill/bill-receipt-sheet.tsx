@@ -47,6 +47,7 @@ import { AppBoneyardSkeleton } from "../../../../../_components/boneyard-skeleto
 import { FormattedNumberInput } from "@/components/form";
 import { messages } from "@lib/messages";
 import { fetchOrderForBill } from "../../actions";
+import type { SessionOrder } from "../../order-history";
 import {
   cancelPendingPayment,
   confirmCashPaymentWithInvoice,
@@ -99,6 +100,14 @@ interface BillReceiptProps {
    * `null` when VietQR is disabled or not configured.
    */
   initialVietQrConfig: VietQrConfig | null;
+  /**
+   * Header-only snapshot từ `usePosOrders()` — đủ để hiển thị `#order_number`
+   * + total trên dialog title trong khi `fetchOrderForBill` chạy nền. Chỉ
+   * dùng cho path không có `initialOrder` (F9 / OrderListPane / picker /
+   * post-submit toast). Khi `initialOrder` match `orderId`, prop này
+   * không có hiệu lực vì full seed đã render bill ngay.
+   */
+  initialHeaderSeed?: SessionOrder | null;
   onOrderUpdated?: () => void | Promise<void>;
   onClose: () => void;
 }
@@ -410,6 +419,7 @@ export function BillReceipt({
   canConfirmCash,
   initialPaymentMethods,
   initialVietQrConfig,
+  initialHeaderSeed,
   onOrderUpdated,
   onClose,
 }: BillReceiptProps) {
@@ -963,8 +973,16 @@ export function BillReceipt({
     order?.status === "cancelled";
   const showUnservedWarning =
     order != null && !isReadOnlyOrder && order.status !== "served";
-  const dialogTitle =
+  const dialogTitleLabel =
     isReceiptIntent || isReadOnlyOrder ? "Hóa đơn" : "Thanh toán";
+  // Header preview: full `order` thắng nếu có; không thì dùng SessionOrder
+  // seed cho non-detail paths (F9 / list / picker / post-submit toast). Cho
+  // cashier xác nhận đúng đơn ngay khi dialog mở, trong lúc fetch chạy nền.
+  const dialogTitleHeader =
+    order ?? (initialHeaderSeed?.id === orderId ? initialHeaderSeed : null);
+  const dialogTitle = dialogTitleHeader
+    ? `${dialogTitleLabel} · #${dialogTitleHeader.order_number} · ${formatVND(Number(dialogTitleHeader.total_amount))}`
+    : dialogTitleLabel;
   const dialogDescription =
     isReceiptIntent || isReadOnlyOrder
       ? "Hóa đơn đã xử lý."

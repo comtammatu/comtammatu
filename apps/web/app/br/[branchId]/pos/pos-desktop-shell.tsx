@@ -343,6 +343,17 @@ function PosDesktopInner({
   const [billInitialOrder, setBillInitialOrder] = useState<OrderData | null>(
     null,
   );
+  // Header-only seed cho non-detail bill paths (F9 / list / picker / post-
+  // submit toast). `usePosOrders()` đã có sẵn snapshot `SessionOrder` —
+  // derive thay vì thêm state. BillReceipt dùng để paint dialog title (số
+  // đơn + total) ngay khi mở, fetch full bill chạy nền.
+  const billHeaderSeed = useMemo<SessionOrder | null>(
+    () =>
+      billOrderId !== null
+        ? (orders.find((order) => order.id === billOrderId) ?? null)
+        : null,
+    [billOrderId, orders],
+  );
   const [orderDetailId, setOrderDetailId] = useState<number | null>(null);
   const [orderDetailNumber, setOrderDetailNumber] = useState<string | null>(
     null,
@@ -1603,6 +1614,7 @@ function PosDesktopInner({
         canConfirmCash={canConfirmCash}
         initialPaymentMethods={initialPaymentMethods}
         initialVietQrConfig={initialVietQrConfig}
+        initialHeaderSeed={billHeaderSeed}
         onOrderUpdated={() => void refreshOperational()}
         onClose={closeBill}
       />
