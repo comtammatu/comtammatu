@@ -94,20 +94,6 @@ export const calculatePayroll = withAction(
       };
     }
 
-    const { data: employees, error: empErr } = await supabase
-      .from("employees")
-      .select("id, base_salary, insurance_base_salary, dependents_count")
-      .eq("tenant_id", claims.tenant_id)
-      .eq("is_active", true);
-
-    if (empErr) {
-      return { success: false, error: "Không thể tải danh sách nhân viên." };
-    }
-
-    if (!employees || employees.length === 0) {
-      return { success: false, error: "Không có nhân viên nào đang hoạt động." };
-    }
-
     const year = period.period_year;
     const month = period.period_month;
     const daysInMonth = new Date(year, month, 0).getDate();
@@ -120,6 +106,71 @@ export const calculatePayroll = withAction(
 
     const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
     const endDate = `${year}-${String(month).padStart(2, "0")}-${daysInMonth}`;
+
+    // Load employees who had any contract overlapping the period.
+    // Do NOT filter by is_active — terminated-within-period employees still
+    // need their final paycheck (BLLĐ Art 48).
+    const { data: employees, error: empErr } = await supabase
+      .from("employees")
+      .select("id, base_salary, dependents_count, termination_date")
+      .eq("tenant_id", claims.tenant_id);
+
+    if (empErr) {
+      return { success: false, error: "Không thể tải danh sách nhân viên." };
+    }
+
+    // insurance_base_salary source of truth = employment_contracts active
+    // during this period (per labor-contracts.md §5.3). Pick the contract
+    // whose start_date ≤ period_end AND (end_date IS NULL OR end_date ≥
+    // period_start) — the one with the latest start_date wins for the
+    // period's effective rate.
+    const { data: contracts, error: contractErr } = await supabase
+      .from("employment_contracts")
+      .select(
+        "employee_id, insurance_base_salary, gross_salary, start_date, end_date, status",
+      )
+      .eq("tenant_id", claims.tenant_id)
+      .lte("start_date", endDate)
+      .or(`end_date.is.null,end_date.gte.${startDate}`);
+
+    if (contractErr) {
+      return { success: false, error: "Không thể tải hợp đồng lao động." };
+    }
+
+    // Map employee_id → applicable contract for this period (latest start_date
+    // that's ≤ endDate). Active OR terminated contracts are valid as long as
+    // they overlapped the period.
+    const contractByEmployee = new Map<
+      number,
+      {
+        insurance_base_salary: number;
+        gross_salary: number;
+        start_date: string;
+      }
+    >();
+    for (const c of contracts ?? []) {
+      const existing = contractByEmployee.get(c.employee_id);
+      if (!existing || c.start_date > existing.start_date) {
+        contractByEmployee.set(c.employee_id, {
+          insurance_base_salary: Number(c.insurance_base_salary ?? 0),
+          gross_salary: Number(c.gross_salary ?? 0),
+          start_date: c.start_date,
+        });
+      }
+    }
+
+    // Skip employees with no contract overlapping the period — they were
+    // not employed during this month.
+    const eligibleEmployees = employees.filter((emp) =>
+      contractByEmployee.has(emp.id),
+    );
+
+    if (eligibleEmployees.length === 0) {
+      return {
+        success: false,
+        error: "Không có nhân viên có hợp đồng trong kỳ này.",
+      };
+    }
 
     const { data: attendance, error: attendanceErr } = await supabase
       .from("attendance_records")
@@ -146,11 +197,17 @@ export const calculatePayroll = withAction(
       attendanceMap.set(rec.employee_id, cur);
     }
 
-    const entries = employees.map((emp) => {
+    const entries = eligibleEmployees.map((emp) => {
       const att = attendanceMap.get(emp.id) ?? { present: 0, half: 0 };
       const workingDays = att.present + att.half * 0.5;
-      const baseSalary = Number(emp.base_salary ?? 0);
-      const insuranceBase = Number(emp.insurance_base_salary ?? baseSalary);
+      const contract = contractByEmployee.get(emp.id)!;
+      // Base salary fallback chain: employees.base_salary → contract.gross_salary
+      const baseSalary = Number(emp.base_salary ?? contract.gross_salary ?? 0);
+      // insurance_base = contract source of truth (NOT employees cache)
+      const insuranceBase =
+        contract.insurance_base_salary > 0
+          ? contract.insurance_base_salary
+          : baseSalary;
 
       const proratedSalary =
         standardDays > 0
@@ -166,6 +223,7 @@ export const calculatePayroll = withAction(
         charityDeduction: 0,
         advanceDeduction: 0,
         otherDeductions: 0,
+        effectiveDate: endDate,
       });
 
       return {
