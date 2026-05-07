@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import dynamic from "next/dynamic";
 import { formatVND } from "@comtammatu/shared/format";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
@@ -91,6 +98,7 @@ const MergeOrdersSheet = dynamic(
 import { OrderTotalsSummary } from "./_components/order-totals-summary";
 import type { OrderData } from "./_components/bill/bill-receipt-types";
 import type { SessionOrder } from "./order-history";
+import { makeDeduper } from "./_utils/make-deduper";
 
 // Superset of bill's OrderData: same top-level fields, but order_items
 // carry extra UI-only fields (status, menu_item_id) used by the detail
@@ -324,24 +332,35 @@ export function OrderDetailSheet({
     setActionsItemId(null);
   }, [orderId]);
 
-  const load = useCallback(() => {
+  const loadAsync = useCallback(async (): Promise<void> => {
     if (orderId === null) {
       setData(null);
       setError(null);
       return;
     }
-    startTransition(async () => {
-      const result = await fetchOrderDetail(orderId);
-      if (result.success && result.data) {
-        setData(result.data.order as unknown as OrderDetailData);
-        setCanManage(result.data.canManageOrders);
-        setError(null);
-      } else {
-        setData(null);
-        setError(result.error ?? messages.pos.order.loadFailed);
-      }
-    });
+    const result = await fetchOrderDetail(orderId);
+    if (result.success && result.data) {
+      setData(result.data.order as unknown as OrderDetailData);
+      setCanManage(result.data.canManageOrders);
+      setError(null);
+    } else {
+      setData(null);
+      setError(result.error ?? messages.pos.order.loadFailed);
+    }
   }, [orderId]);
+
+  // Mount + refresh-token + post-mutation paths: wrap in transition so
+  // `isPending` reflects the in-flight fetch (gates "Chuyển bàn / Đã phục
+  // vụ / Hủy đơn" buttons until fresh data lands).
+  const load = useCallback(() => {
+    startTransition(loadAsync);
+  }, [loadAsync]);
+
+  // Realtime burst guard: orders UPDATE + reconnect SUBSCRIBED can fire
+  // many events within one round-trip (multi-row trigger, reconnect after
+  // sleep). Coalesce to ≤2 fetches (in-flight + 1 trailing). KDS handler
+  // stays raw — cashier expects sub-100ms ticket-status feedback.
+  const loadDeduped = useMemo(() => makeDeduper(loadAsync), [loadAsync]);
 
   // Latest-value refs for the seed inputs. Reading them from refs (not
   // deps) keeps the mount effect from re-firing when the shell clears
@@ -398,9 +417,9 @@ export function OrderDetailSheet({
   //      order_items.status). order_items isn't in the publication, so
   //      neither the list nor the sheet sees per-item status changes
   //      until something else forces a refetch.
-  // Subscribing to orders (id=eq) + kds_tickets (order_id=eq) for the
-  // open order_id fixes both. `load()` already coalesces via React's
-  // useTransition; an extra fetch from a burst is acceptable.
+  // Orders channel + reconnect SUBSCRIBED → `loadDeduped` (in-flight + 1
+  // trailing). KDS channel → raw `load` so per-item status flips reach
+  // the cashier within one render frame.
   // Reconnect-resync (REALTIME-SUBSCRIBE-NEEDS-STATUS-CALLBACK): the
   // first SUBSCRIBED is the initial mount — data is already loaded by
   // the seed effect or the load() call above, so skip a redundant
@@ -426,7 +445,7 @@ export function OrderDetailSheet({
             filter: `id=eq.${String(orderId)}`,
           },
           () => {
-            load();
+            loadDeduped();
           },
         )
         .on(
@@ -447,10 +466,10 @@ export function OrderDetailSheet({
             initialDetailSubscribeSeenRef.current = true;
             return;
           }
-          load();
+          loadDeduped();
         });
     },
-    [load, orderId],
+    [load, loadDeduped, orderId],
   );
 
   const handleOpenChange = (open: boolean) => {
