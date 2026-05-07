@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@comtammatu/ui/components/card";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { InventoryHeader } from "../../../_components/inventory-header";
+import { AppPageHeader } from "@/components/surface";
 import { InventoryPageContent } from "../../../_components/inventory-page-layout";
 import {
   BlindCountingGrid,
@@ -114,13 +114,13 @@ export function StocktakeCountClient({
   }
 
   return (
-    <>
-      <InventoryHeader
+    <InventoryPageContent>
+      <AppPageHeader
+        eyebrow="Kiểm kê"
         title={`Đếm kiểm kê #${sessionId}`}
         description={`CN #${branchId} · Round R${currentRound}`}
       />
-      <InventoryPageContent>
-        <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
           <StocktakeDraftSaverBadge
             status={saveStatus}
             lastSavedAt={lastSavedAt}
@@ -173,7 +173,6 @@ export function StocktakeCountClient({
             </BlindCountingGridToolbar>
           </CardContent>
         </Card>
-      </InventoryPageContent>
-    </>
+    </InventoryPageContent>
   );
 }

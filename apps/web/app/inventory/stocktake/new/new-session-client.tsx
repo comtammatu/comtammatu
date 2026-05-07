@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { InventoryHeader } from "../../_components/inventory-header";
+import { AppPageHeader } from "@/components/surface";
 import { InventoryPageContent } from "../../_components/inventory-page-layout";
 import {
   StocktakeModeSelector,
@@ -95,13 +95,13 @@ export function NewStocktakeSessionClient({
   }
 
   return (
-    <>
-      <InventoryHeader
+    <InventoryPageContent>
+      <AppPageHeader
+        eyebrow="Kiểm kê"
         title={messages.inventory.stocktake.startTitle}
         description={messages.inventory.stocktake.startDescription}
       />
-      <InventoryPageContent>
-        <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-3">
           <Card className="lg:col-span-2">
             <CardHeader>
               <CardTitle>{messages.inventory.stocktake.modeTitle}</CardTitle>
@@ -233,7 +233,6 @@ export function NewStocktakeSessionClient({
             </CardContent>
           </Card>
         </div>
-      </InventoryPageContent>
-    </>
+    </InventoryPageContent>
   );
 }
