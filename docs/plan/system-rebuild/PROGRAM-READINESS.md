@@ -113,13 +113,18 @@ Tất cả in-place sprint trên `blue` đóng băng từ **2026-05-07 23:59 ICT
 
 ### Frozen items + port destination
 
-| In-place artifact | Status hiện tại | Frozen action | Port plan |
+> **Reconciliation 2026-05-07 20:30 ICT (post-sign-off):** Doc viết sớm hơn reality. Verify với git log + Supabase `mcp__supabase__list_migrations` cho thấy **đa số "frozen" items đã merge + apply prod trước thời điểm sign**. True freeze chỉ còn 3 migration chưa apply prod. Bảng cập nhật state thực.
+
+| In-place artifact | Reality state (verified 2026-05-07) | Action | Port plan |
 |---|---|---|---|
-| `finance-redesign.md` 2-week sprint | Khởi động 2026-05-06; P0 foundation chưa bắt đầu | ❄️ Stop sprint, không apply migration `get_revenue_by_hour`/`get_revenue_by_cashier` lên blue | Capabilities (8 KPI cards, filter bar, 4 chart types, reconciliation tolerance) port sang `05-MODULE-CATALOG.md` (Finance) → implement trong **W4** trên green baseline |
-| `m4-payments-fix` branch (refund flow) | RPC `reverse_payment_and_post` + `create_refund` shipped 2026-04-30, `webhook_events` table 2026-04-29; AWAITING owner apply + TS callers | ❄️ Stop owner apply lên blue; preserve branch as reference | RPC bodies + idempotency table → `02-GREEN-BASELINE.md` (Finance/Payments section) → implement trong **W4** |
-| 5 untracked migrations<br>(`20260601000000_audit_logs_..._idx`, `20260601100000_auth_v3_h3a_position_id_required`, `20260601200000_h2a_refunds_update_perm_gate`, `20260601400000_h2b_hr_payroll_perm_gate`, `20260601500000_h3b_tenants_owner_user_id`) | Đã commit dirty, chưa push | ❄️ Stop apply lên blue; chuyển thành reference materials | Logic + invariants → `02-GREEN-BASELINE.md` (Auth + HR sections) → implement trong **W1**/**W4** |
-| `inventory-location-ledger` Phase 1 | Migration `20260417040000_inventory_locations_phase1.sql` ĐÃ APPLY lên blue | ✅ Đã trên blue — keep as starting point | Schema (inventory_locations table + compat columns) → port nguyên trạng vào green baseline trong **W3** |
-| ADR-0005 owner identity dual source | Migration `20260601500000` chưa apply | ❄️ Hold | Schema + decision → green baseline (Auth § tenants.owner_user_id) → **W1** |
+| `finance-redesign.md` 2-week sprint | ✅ Migration `finance_hour_cashier_breakdowns` (= `get_revenue_by_hour`/`get_revenue_by_cashier`) DA apply prod (version `20260506022355`); migrations cha bao gồm `20260507000000_finance_phase1_journal_entry_period_guard_and_continuity` ✅ apply prod | ✅ Vacuously satisfied — apply đã xảy ra trước sign | Capabilities (8 KPI cards, filter bar, 4 chart types, reconciliation tolerance) vẫn port sang `05-MODULE-CATALOG.md` (Finance) → implement trong **W4** trên green baseline (re-build, không carry blue MV) |
+| `m4-payments-fix` branch (refund flow) | ✅ Branch không tồn tại (local/remote/reflog/stash); RPCs `m4_refund_reversal_foundation`, `m4_reverse_payment_and_post_rpc`, `m4_create_refund_rpc` ✅ apply prod (versions `20260510*`); `m4_webhook_events_table` ✅ apply prod | ✅ Vacuously satisfied — branch đã merge sớm | RPC bodies + idempotency table → `02-GREEN-BASELINE.md` (Finance/Payments) → re-implement trong **W4** (không port code, viết lại theo green principle) |
+| 5 "untracked" migrations từ §3 cũ | ✅ Tracked, committed today 12:28-12:30 (5 atomic commits `daf0b3c7`, `20a4e4f0`, `d0987060`, `135c48d7`, `475fe54b`) + pushed origin/main; **3 trong 5 đã apply prod**: `audit_logs_tenant_entity_created_idx` ✅, `h2a_refunds_update_perm_gate` ✅, `h2b_hr_payroll_perm_gate` ✅ | ✅ Vacuously satisfied cho 3 đã apply prod | Logic + invariants → `02-GREEN-BASELINE.md` (Auth + HR sections) → re-write trong **W1**/**W4** |
+| `inventory-location-ledger` Phase 1 | ✅ Migration `20260417040000_inventory_locations_phase1` DA apply prod | ✅ Đã trên blue — keep as starting point | Schema (inventory_locations table + compat columns) → port nguyên trạng vào green baseline trong **W3** |
+| **TRUE FREEZE — 3 migrations trong repo, CHƯA apply prod** | | | |
+| `20260601100000_auth_v3_h3a_position_id_required.sql` | ❄️ Trong repo, chưa apply prod (verified absent từ Supabase migrations table) | ❄️ Hold — không apply | Logic → `02-GREEN-BASELINE.md` Auth § profiles.position_id NOT NULL → **W1** |
+| `20260601500000_h3b_tenants_owner_user_id.sql` (ADR-0005) | ❄️ Trong repo, chưa apply prod | ❄️ Hold | Schema + decision → green baseline Auth § `tenants.owner_user_id` canonical → **W1** |
+| `20260601700000_dead_rpc_drop_tier_a_pilot.sql` (M7) | ❄️ Trong repo, chưa apply prod | ❄️ Hold — drop tier A RPC pilot không tham gia green | Skip — green không carry dead RPC list, baseline sạch từ đầu |
 
 ### Hệ quả của freeze
 
