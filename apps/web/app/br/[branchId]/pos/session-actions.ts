@@ -94,14 +94,32 @@ export async function fetchPosTerminals(
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }
 
-  const { data: terminals, error } = await supabase
-    .from("pos_terminals")
-    .select("id, name, device_id")
-    .eq("branch_id", parsedBranchId.data)
-    .eq("tenant_id", claims.tenant_id)
-    .eq("is_active", true)
-    .order("name", { ascending: true });
+  // Parallelize: terminal list + open-session probe have no data dependency.
+  // Each query is ~80-150ms on the pilot plan; sequencing them stretched the
+  // shift-gate page out for no reason. Promise.all collapses to one RTT.
+  const [terminalsRes, openSessionRes] = await Promise.all([
+    supabase
+      .from("pos_terminals")
+      .select("id, name, device_id")
+      .eq("branch_id", parsedBranchId.data)
+      .eq("tenant_id", claims.tenant_id)
+      .eq("is_active", true)
+      .order("name", { ascending: true }),
+    // Per-branch model (Owner D7, 2026-04-27): branch chỉ có 1 ca mở duy
+    // nhất → flag mở-ca thuộc branch, không thuộc terminal. UI giờ chỉ
+    // dùng list để hiển thị tên máy (audit/preference); việc 1 trong các
+    // máy "đang có ca mở" không còn block các máy khác.
+    supabase
+      .from("pos_sessions")
+      .select("id")
+      .eq("branch_id", parsedBranchId.data)
+      .eq("tenant_id", claims.tenant_id)
+      .eq("status", "open")
+      .limit(1)
+      .maybeSingle(),
+  ]);
 
+  const { data: terminals, error } = terminalsRes;
   if (error) {
     return {
       success: false,
@@ -109,19 +127,7 @@ export async function fetchPosTerminals(
     };
   }
 
-  // Per-branch model (Owner D7, 2026-04-27): branch chỉ có 1 ca mở duy
-  // nhất → flag mở-ca thuộc branch, không thuộc terminal. UI giờ chỉ
-  // dùng list để hiển thị tên máy (audit/preference); việc 1 trong các
-  // máy "đang có ca mở" không còn block các máy khác.
-  const { data: openSession, error: sessionError } = await supabase
-    .from("pos_sessions")
-    .select("id")
-    .eq("branch_id", parsedBranchId.data)
-    .eq("tenant_id", claims.tenant_id)
-    .eq("status", "open")
-    .limit(1)
-    .maybeSingle();
-
+  const { data: openSession, error: sessionError } = openSessionRes;
   if (sessionError) {
     return {
       success: false,

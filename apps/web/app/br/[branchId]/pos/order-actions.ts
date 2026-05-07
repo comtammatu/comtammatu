@@ -1550,14 +1550,20 @@ export async function cancelOrder(
 const transferTableSchema = z.object({
   orderId: z.coerce.number().int().positive({ error: "Đơn không hợp lệ" }),
   newTableId: z.coerce.number().int().positive({ error: "Bàn không hợp lệ" }),
+  idempotencyKey: z.string().uuid({ error: "Mã giao dịch không hợp lệ" }).optional(),
 });
 
-// Skip withAction: positional (orderId, newTableId) args
+// Skip withAction: positional args + optional idempotencyKey
 export async function transferOrderTable(
   orderId: number,
   newTableId: number,
-): Promise<ActionResult> {
-  const parsed = transferTableSchema.safeParse({ orderId, newTableId });
+  idempotencyKey?: string,
+): Promise<ActionResult<{ idempotent?: boolean }>> {
+  const parsed = transferTableSchema.safeParse({
+    orderId,
+    newTableId,
+    idempotencyKey,
+  });
   if (!parsed.success) {
     return {
       success: false,
@@ -1573,9 +1579,10 @@ export async function transferOrderTable(
 
   const { supabase } = ctx;
 
-  const { error } = await supabase.rpc("transfer_order_table", {
+  const { data, error } = await supabase.rpc("transfer_order_table", {
     p_order_id: parsed.data.orderId,
     p_new_table_id: parsed.data.newTableId,
+    p_idempotency_key: parsed.data.idempotencyKey ?? null,
   });
 
   if (error) {
@@ -1598,7 +1605,10 @@ export async function transferOrderTable(
     };
   }
 
-  return { success: true, data: null };
+  const result = data as { idempotent?: boolean } | null;
+  return result?.idempotent
+    ? { success: true, data: { idempotent: true } }
+    : { success: true };
 }
 
 /* ─── updateOrderStatus (POS) ─── */

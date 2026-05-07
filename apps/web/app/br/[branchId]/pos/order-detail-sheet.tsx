@@ -609,10 +609,15 @@ export function OrderDetailSheet({
     const tid = Number.parseInt(transferTableId, 10);
     if (!Number.isFinite(tid)) return;
     if (tid === data?.table_id) return;
+    // Mint per-click idempotency key — covers the network-flap retry case
+    // BA flagged: server commits but client times out, cashier taps again
+    // → server sees same key on retry and returns the prior result instead
+    // of re-executing or rejecting. Aligns transfer with split/merge.
+    const idempotencyKey = crypto.randomUUID();
     startMutation(async () => {
-      const r = await transferOrderTable(orderId, tid);
+      const r = await transferOrderTable(orderId, tid, idempotencyKey);
       if (r.success) {
-        notify.success(messages.pos.order.transferred);
+        if (!r.data?.idempotent) notify.success(messages.pos.order.transferred);
         setShowTransfer(false);
         setTransferTableId("");
         await onOrderUpdated?.();
