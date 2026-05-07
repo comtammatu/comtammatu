@@ -34,7 +34,7 @@ import {
   DocumentStockCorrectionDialog,
   type CorrectionBranchOption,
 } from "../../_components/document-stock-correction-dialog";
-import { AppPage, AppPageHeader } from "@/components/surface";
+import { AppDetailFooter, AppPage, AppPageHeader } from "@/components/surface";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { AuditHistoryList } from "../../_components/audit-history-list";
 import type { AuditLogRow } from "@/admin/_lib/audit";
@@ -628,46 +628,50 @@ export function TransferDetailClient({
           ) : null}
 
           {/* Footer Action Bar */}
-          <footer className="flex flex-col gap-3 border-t border-border py-6 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-col gap-2 sm:flex-row">
+          <AppDetailFooter
+            leading={
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="rounded-full px-6 font-bold text-muted-foreground"
+                >
+                  <IconPrinter className="size-5" />
+                  {copy.printSlip}
+                </Button>
+                {transfer.status !== "draft" &&
+                correctionBranches.length > 0 &&
+                transfer.items.length > 0 ? (
+                  <DocumentStockCorrectionDialog
+                    documentType="transfer"
+                    documentId={transfer.id}
+                    documentCode={transfer.code}
+                    branchOptions={correctionBranches}
+                    itemOptions={transfer.items.map((item) => ({
+                      ingredientId: item.ingredientId,
+                      name: item.name,
+                      unit: item.unit,
+                    }))}
+                  />
+                ) : null}
+              </>
+            }
+            trailing={
               <Button
                 type="button"
-                variant="outline"
-                className="rounded-full px-6 font-bold text-muted-foreground"
+                disabled={
+                  isPending ||
+                  !actionConfig?.enabled ||
+                  (isReceiveMode && actionConfig?.action === "receive" && !noteOk)
+                }
+                className="rounded-full px-10 font-bold shadow-lg"
+                onClick={handlePrimaryAction}
               >
-                <IconPrinter className="size-5" />
-                {copy.printSlip}
+                <IconCircleCheck className="size-5" />
+                {actionConfig?.label ?? copy.completedSlip}
               </Button>
-              {transfer.status !== "draft" &&
-              correctionBranches.length > 0 &&
-              transfer.items.length > 0 ? (
-                <DocumentStockCorrectionDialog
-                  documentType="transfer"
-                  documentId={transfer.id}
-                  documentCode={transfer.code}
-                  branchOptions={correctionBranches}
-                  itemOptions={transfer.items.map((item) => ({
-                    ingredientId: item.ingredientId,
-                    name: item.name,
-                    unit: item.unit,
-                  }))}
-                />
-              ) : null}
-            </div>
-            <Button
-              type="button"
-              disabled={
-                isPending ||
-                !actionConfig?.enabled ||
-                (isReceiveMode && actionConfig?.action === "receive" && !noteOk)
-              }
-              className="rounded-full px-10 font-bold shadow-lg"
-              onClick={handlePrimaryAction}
-            >
-              <IconCircleCheck className="size-5" />
-              {actionConfig?.label ?? copy.completedSlip}
-            </Button>
-          </footer>
+            }
+          />
               </div>
             </TabsContent>
 

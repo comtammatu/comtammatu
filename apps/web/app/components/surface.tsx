@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type ElementType, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { ArrowRight as IconArrowRight, ChevronDown as IconChevronDown } from "lucide-react";
 import { cn } from "@comtammatu/ui";
 import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
@@ -182,7 +182,7 @@ const SECTION_TONE_ICON_CLASSNAME: Record<AppSectionTone, string> = {
 export type AppSectionProps = {
   title?: ReactNode;
   description?: ReactNode;
-  icon?: ElementType;
+  icon?: ReactNode;
   iconClassName?: string;
   badge?: {
     children: ReactNode;
@@ -201,7 +201,7 @@ export type AppSectionProps = {
 export function AppSection({
   title,
   description,
-  icon: Icon,
+  icon,
   iconClassName,
   badge,
   action,
@@ -214,7 +214,7 @@ export function AppSection({
   footer,
 }: AppSectionProps) {
   const [open, setOpen] = useState(true);
-  const hasHeader = Boolean(title || description || Icon || badge || action || collapsible);
+  const hasHeader = Boolean(title || description || icon || badge || action || collapsible);
   const chevronAction = collapsible ? (
     <button
       type="button"
@@ -234,14 +234,16 @@ export function AppSection({
       {hasHeader ? (
         <CardHeader>
           <CardTitle className="flex min-w-0 items-center gap-2">
-            {Icon ? (
-              <Icon
+            {icon ? (
+              <span
                 className={cn(
-                  "size-4 shrink-0",
+                  "inline-flex shrink-0 [&_svg]:size-4",
                   SECTION_TONE_ICON_CLASSNAME[tone],
                   iconClassName,
                 )}
-              />
+              >
+                {icon}
+              </span>
             ) : null}
             <span className="min-w-0 truncate">{title}</span>
           </CardTitle>
@@ -429,7 +431,7 @@ export type AppLinkCardProps = {
   description?: string;
   badge?: string;
   badgeVariant?: BadgeProps["variant"];
-  icon: ElementType;
+  icon: ReactNode;
   tone?: SurfaceTone;
   ctaLabel?: string;
   disabled?: boolean;
@@ -443,7 +445,7 @@ export function AppLinkCard({
   description,
   badge,
   badgeVariant = "secondary",
-  icon: Icon,
+  icon,
   tone = "primary",
   ctaLabel = "Mở chi tiết",
   disabled = false,
@@ -476,7 +478,7 @@ export function AppLinkCard({
               TONE_CLASSNAME[tone],
             )}
           >
-            <Icon className="size-5" />
+            <span className="inline-flex shrink-0 [&_svg]:size-5">{icon}</span>
           </div>
           {(badge ?? metric) ? topRight : null}
         </div>
@@ -522,5 +524,33 @@ export function AppLinkCard({
         )}
       </CardContent>
     </Card>
+  );
+}
+
+export type AppDetailFooterProps = {
+  leading?: ReactNode;
+  trailing?: ReactNode;
+  className?: string;
+};
+
+export function AppDetailFooter({
+  leading,
+  trailing,
+  className,
+}: AppDetailFooterProps) {
+  return (
+    <footer
+      className={cn(
+        "flex flex-col gap-3 border-t border-border py-6 sm:flex-row sm:items-center sm:justify-between",
+        className,
+      )}
+    >
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        {leading}
+      </div>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        {trailing}
+      </div>
+    </footer>
   );
 }

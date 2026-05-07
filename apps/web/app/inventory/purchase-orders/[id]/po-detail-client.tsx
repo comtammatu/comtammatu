@@ -35,7 +35,7 @@ import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { Combobox } from "@/components/form";
 import { messages } from "@lib/messages";
 import { FormattedNumberInput } from "../../_components/formatted-number-input";
-import { AppPage, AppPageHeader } from "@/components/surface";
+import { AppDetailFooter, AppPage, AppPageHeader } from "@/components/surface";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { AuditHistoryList } from "../../_components/audit-history-list";
 import type { AuditLogRow } from "@/admin/_lib/audit";
@@ -849,27 +849,31 @@ export function PODetailClient({
             </div>
           </div>
 
-          <footer className="flex flex-col gap-3 border-t border-border py-6 sm:flex-row sm:items-center sm:justify-between">
-            <Button
-              type="button"
-              variant="ghost"
-              disabled={isPending || !canCancelPo}
-              className="min-h-11 rounded-full px-6 font-bold text-destructive"
-              onClick={handleCancelPo}
-            >
-              <IconCircleX className="size-5" />
-              {poDetailCopy.cancelPo}
-            </Button>
-            <Button
-              type="button"
-              disabled={isPending || (!canSendPo && !canCreateGrn)}
-              className="min-h-11 rounded-full px-10 font-bold shadow-lg"
-              onClick={canSendPo ? handleSendPo : handleCreateGrn}
-            >
-              <IconCircleCheck className="size-5" />
-              {canSendPo ? poDetailCopy.sendPo : poDetailCopy.createGrnStep}
-            </Button>
-          </footer>
+          <AppDetailFooter
+            leading={
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={isPending || !canCancelPo}
+                className="min-h-11 rounded-full px-6 font-bold text-destructive"
+                onClick={handleCancelPo}
+              >
+                <IconCircleX className="size-5" />
+                {poDetailCopy.cancelPo}
+              </Button>
+            }
+            trailing={
+              <Button
+                type="button"
+                disabled={isPending || (!canSendPo && !canCreateGrn)}
+                className="min-h-11 rounded-full px-10 font-bold shadow-lg"
+                onClick={canSendPo ? handleSendPo : handleCreateGrn}
+              >
+                <IconCircleCheck className="size-5" />
+                {canSendPo ? poDetailCopy.sendPo : poDetailCopy.createGrnStep}
+              </Button>
+            }
+          />
               </div>
             </TabsContent>
 

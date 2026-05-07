@@ -43,7 +43,7 @@ import {
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { notify } from "@comtammatu/ui/lib/notify";
 import { Combobox } from "@/components/form";
-import { AppPage, AppPageHeader } from "@/components/surface";
+import { AppDetailFooter, AppPage, AppPageHeader } from "@/components/surface";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { AuditHistoryList } from "../../_components/audit-history-list";
 import type { AuditLogRow } from "@/admin/_lib/audit";
@@ -510,62 +510,64 @@ export function GRNDetailClient({
             </div>
           </div>
 
-          <footer className="flex flex-col gap-3 border-t border-border py-6 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-2">
-              {!isDraft ? (
-                <Button asChild variant="ghost">
-                  <Link
-                    href={
-                      isMobile
-                        ? "/inventory/grn/new"
-                        : grn.poId
-                          ? `/inventory/purchase-orders/${grn.poId}`
-                          : "/inventory/grn"
-                    }
+          <AppDetailFooter
+            leading={
+              <>
+                {!isDraft ? (
+                  <Button asChild variant="ghost">
+                    <Link
+                      href={
+                        isMobile
+                          ? "/inventory/grn/new"
+                          : grn.poId
+                            ? `/inventory/purchase-orders/${grn.poId}`
+                            : "/inventory/grn"
+                      }
+                    >
+                      <IconArrowLeft className="size-5" />
+                      {grnCopy.back}
+                    </Link>
+                  </Button>
+                ) : null}
+                {!isDraft && canAdjustStock && lines.length > 0 ? (
+                  <DocumentStockCorrectionDialog
+                    documentType="grn"
+                    documentId={grn.id}
+                    documentCode={grn.code}
+                    branchOptions={[{ id: grn.branchId, name: grnCopy.receivingWarehouse }]}
+                    itemOptions={lines.map((line) => ({
+                      ingredientId: line.ingredientId,
+                      name: line.name,
+                      unit: line.unit,
+                    }))}
+                  />
+                ) : null}
+              </>
+            }
+            trailing={
+              isDraft ? (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleSave}
+                    disabled={isSaving || dirtyLines.length === 0}
                   >
-                    <IconArrowLeft className="size-5" />
-                    {grnCopy.back}
-                  </Link>
-                </Button>
-              ) : null}
-
-              {!isDraft && canAdjustStock && lines.length > 0 ? (
-                <DocumentStockCorrectionDialog
-                  documentType="grn"
-                  documentId={grn.id}
-                  documentCode={grn.code}
-                  branchOptions={[{ id: grn.branchId, name: grnCopy.receivingWarehouse }]}
-                  itemOptions={lines.map((line) => ({
-                    ingredientId: line.ingredientId,
-                    name: line.name,
-                    unit: line.unit,
-                  }))}
-                />
-              ) : null}
-            </div>
-
-            {isDraft ? (
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleSave}
-                  disabled={isSaving || dirtyLines.length === 0}
-                >
-                  <IconDeviceFloppy className="size-5" />
-                  {grnCopy.saveChanges(dirtyLines.length)}
-                </Button>
-                <Button
-                  type="button"
-                  disabled={isConfirming || dirtyLines.length > 0}
-                  onClick={handleConfirmGrn}
-                >
-                  <IconCircleCheck className="size-5" />
-                  {grnCopy.confirmGrnAction}
-                </Button>
-              </div>
-            ) : null}
-          </footer>
+                    <IconDeviceFloppy className="size-5" />
+                    {grnCopy.saveChanges(dirtyLines.length)}
+                  </Button>
+                  <Button
+                    type="button"
+                    disabled={isConfirming || dirtyLines.length > 0}
+                    onClick={handleConfirmGrn}
+                  >
+                    <IconCircleCheck className="size-5" />
+                    {grnCopy.confirmGrnAction}
+                  </Button>
+                </>
+              ) : null
+            }
+          />
               </div>
             </TabsContent>
 
