@@ -19,7 +19,7 @@ This is the **program-level** roadmap for the brand + whole-system rebuild from 
 | Blue/green strategy | APPROVED | `02-GREEN-BASELINE.md` |
 | Data migration policy | DRAFTED | `03-DATA-MIGRATION-POLICY.md` |
 | Cutover/QA framework | DRAFTED | `04-CUTOVER-QA-RUNBOOK.md` |
-| Owner blocker decisions | PENDING | this doc §3 |
+| Owner blocker decisions | APPROVED 2026-05-07 | this doc §3 |
 | Data audit run | NOT STARTED | depends §3 + audit access |
 | ADRs (auth, DB, rollback, position-code) | DRAFTED | `docs/plan/adr/` |
 | W0–W6 wave plans | NOT WRITTEN | gated on audit results |
@@ -52,16 +52,16 @@ These decisions block **all** wave starts. Owner reviews recommendations below; 
 
 | # | Blocker | Recommendation | Owner Decision | Date | Override notes |
 |---|---|---|---|---|---|
-| B1 | **Rebuild scope** | Full-system, not Inventory-only | ☐ approve / ☐ override | | |
-| B2 | **Data preservation default** | KEEP/MIGRATE legal + operational data; DROP only after audit + sign-off | ☐ approve / ☐ override | | |
-| B3 | **Auth user preservation** | Preserve `auth.users` IDs + emails via Admin API import; force password reset email on first login post-cutover (passwords incompatible across Supabase projects) — see [ADR-0001](plan/adr/0001-auth-migration.md) | ☐ approve / ☐ override | | |
-| B4 | **DB provider** | New Supabase project, same org, same region (ap-southeast-1 Singapore) — see [ADR-0002](plan/adr/0002-database-provider.md) | ☐ approve / ☐ override | | |
-| B5 | **Maintenance window** | Overnight 22:00–04:00 ICT first cutover; 4h window + 2h buffer | ☐ approve / ☐ override | | |
-| B6 | **Blue retention period** | Read-only 12 tháng (đáp ứng tax/audit retention); after 12 months → archive snapshot | ☐ approve / ☐ override | | |
-| B7 | **Reverse-delta (rollback after green writes)** | Build minimal reverse-delta cho revenue tables (`orders`, `payments`, `refunds`); accept continue-forward fix cho `stock_movements`, `attendance` — see [ADR-0003](plan/adr/0003-cutover-rollback.md) | ☐ approve / ☐ override | | |
-| B8 | **Brand authority** | Ma Tu Concept 01 design system; no parallel theme layer; no per-route theme files | ☐ approve / ☐ override | | |
-| B9 | **Identifier language** | Normalize blue Vietnamese/mixed-case technical identifiers into English `lower_snake_case` in green baseline, including position codes like `quan_ly_CN` / `bep_truong` — see [ADR-0004](plan/adr/0004-position-code-normalization.md) | ☐ approve / ☐ override | | |
-| B10 | **Audit access** | Architect lead read-only + service-role-key via 1-week token; results commit to `docs/plan/system-rebuild/audit/results-YYYY-MM-DD.md` | ☐ approve / ☐ override | | |
+| B1 | **Rebuild scope** | Full-system, not Inventory-only | ☑ approve | 2026-05-07 | |
+| B2 | **Data preservation default** | KEEP/MIGRATE legal + operational data; DROP only after audit + sign-off | ☑ approve | 2026-05-07 | |
+| B3 | **Auth user preservation** | Preserve `auth.users` IDs + emails via Admin API import; force password reset email on first login post-cutover (passwords incompatible across Supabase projects) — see [ADR-0001](plan/adr/0001-auth-migration.md) | ☑ approve | 2026-05-07 | |
+| B4 | **DB provider** | New Supabase project, same org, same region (ap-southeast-1 Singapore) — see [ADR-0002](plan/adr/0002-database-provider.md) | ☑ approve | 2026-05-07 | |
+| B5 | **Maintenance window** | Overnight 22:00–04:00 ICT first cutover; 4h window + 2h buffer | ☑ approve | 2026-05-07 | |
+| B6 | **Blue retention period** | Read-only 12 tháng (đáp ứng tax/audit retention); after 12 months → archive snapshot | ☑ approve | 2026-05-07 | |
+| B7 | **Reverse-delta (rollback after green writes)** | Build minimal reverse-delta cho revenue tables (`orders`, `payments`, `refunds`); accept continue-forward fix cho `stock_movements`, `attendance` — see [ADR-0003](plan/adr/0003-cutover-rollback.md) | ☑ approve | 2026-05-07 | |
+| B8 | **Brand authority** | Ma Tu Concept 01 design system; no parallel theme layer; no per-route theme files | ☑ approve | 2026-05-07 | |
+| B9 | **Identifier language** | Normalize blue Vietnamese/mixed-case technical identifiers into English `lower_snake_case` in green baseline, including position codes like `quan_ly_CN` / `bep_truong` — see [ADR-0004](plan/adr/0004-position-code-normalization.md) | ☑ approve | 2026-05-07 | |
+| B10 | **Audit access** | Architect lead read-only + service-role-key via 1-week token; results commit to `docs/plan/system-rebuild/audit/results-YYYY-MM-DD.md` | ☑ approve | 2026-05-07 | |
 
 **Sign-off rule**: B1+B2+B10 must approve to start audit. B3+B4+B5+B6+B7+B8+B9 must approve to start W0 implementation.
 
@@ -107,7 +107,7 @@ These decisions block **all** wave starts. Owner reviews recommendations below; 
 
 | Role | Name | Date | Decision (B1–B10) |
 |---|---|---|---|
-| Owner | _____________ | _____________ | ☐ all approve / ☐ partial / ☐ reject |
+| Owner | ngocnghia128@gmail.com | 2026-05-07 | ☑ all approve |
 | Lead Dev | _____________ | _____________ | ☐ feasible / ☐ revise |
 | Architect | _____________ | _____________ | ☐ baseline ready / ☐ revise |
 | QA Lead | _____________ | _____________ | ☐ verifiable / ☐ revise |
