@@ -84,6 +84,8 @@ export const PERMISSION_KEYS = {
   HR_CONTRACT_SIGN: "hr:contract_sign",
   HR_TERMINATE: "hr:terminate",
   HR_DEPENDENT_MANAGE: "hr:dependent_manage",
+  HR_REGISTER_SHIFT: "hr:register_shift",
+  HR_APPROVE_SHIFT_REQUEST: "hr:approve_shift_request",
 
   // crm
   CRM_READ: "crm:read",
@@ -143,7 +145,7 @@ export const PERMISSION_KEYS = {
 export type PermissionKey = (typeof PERMISSION_KEYS)[keyof typeof PERMISSION_KEYS];
 
 /** Total count (static assertion — update when adding keys) */
-export const PERMISSION_KEY_COUNT = 94;
+export const PERMISSION_KEY_COUNT = 96;
 
 /**
  * Pure function: check if a permission set contains a given key.
