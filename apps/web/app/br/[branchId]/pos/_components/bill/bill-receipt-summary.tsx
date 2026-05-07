@@ -8,10 +8,7 @@ import {
   BRAND_LOCKUP_NAME,
   BRAND_LOCKUP_TAGLINE,
 } from "@/components/brand";
-import {
-  getPosLineItemDisplayName,
-  getPosLineItemOptionLines,
-} from "../../types";
+import { getPosLineItemDisplayName } from "../../types";
 import { messages } from "@lib/messages";
 import { METHOD_LABELS } from "./bill-receipt-types";
 import type { OrderData } from "./bill-receipt-types";
@@ -135,34 +132,79 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
         <div className="divide-y divide-dashed">
           {order.order_items.map((item) => {
             const displayName = getPosLineItemDisplayName(item);
-            const optionLines = getPosLineItemOptionLines(item);
+            // unit_price = base + variant_adj + modifier_sum + sides_sum
+            // (server-recompute) → tách ra để mỗi modifier/side hiển thị
+            // Thành tiền của riêng nó. Yêu cầu chủ quán: "không gộp chung".
+            const modifierSum = item.modifiers.reduce(
+              (sum, m) => sum + m.price,
+              0,
+            );
+            const sidesSum = item.sides.reduce(
+              (sum, s) => sum + s.price * s.quantity,
+              0,
+            );
+            const baseUnit = item.unit_price - modifierSum - sidesSum;
+            const baseTotal = baseUnit * item.quantity;
+            const note = item.note?.trim();
 
             return (
-              <div key={item.id} className="flex gap-3 py-2">
-                <div className="min-w-0 flex-1">
-                  <div className="break-words font-medium leading-snug">
+              <div key={item.id} className="flex flex-col gap-0.5 py-2">
+                <div className="flex gap-3">
+                  <div className="min-w-0 flex-1 break-words font-medium leading-snug">
                     {displayName}
                   </div>
-                  {optionLines.map((line) => (
+                  <div className="shrink-0 whitespace-nowrap text-right font-semibold tabular-nums">
+                    {formatVND(baseTotal)}
+                  </div>
+                </div>
+                <div className="text-right text-muted-foreground tabular-nums">
+                  {messages.pos.receipt.lineUnitPrice(
+                    item.quantity,
+                    formatVND(baseUnit),
+                  )}
+                </div>
+                {item.modifiers.map((m) => {
+                  const modAmt = m.price > 0 ? m.price * item.quantity : 0;
+                  return (
                     <div
-                      key={line}
-                      className="mt-0.5 break-words leading-4 text-muted-foreground"
+                      key={`mod-${String(m.modifier_id)}`}
+                      className="flex gap-3 text-muted-foreground"
                     >
-                      {line}
+                      <div className="min-w-0 flex-1 break-words leading-4">
+                        + {m.name}
+                      </div>
+                      <div className="shrink-0 whitespace-nowrap text-right tabular-nums">
+                        {modAmt > 0 ? formatVND(modAmt) : ""}
+                      </div>
                     </div>
-                  ))}
-                </div>
-                <div className="shrink-0 whitespace-nowrap text-right tabular-nums">
-                  <div className="font-semibold">
-                    {formatVND(item.subtotal)}
+                  );
+                })}
+                {item.sides.map((s) => {
+                  const totalSideQty = s.quantity * item.quantity;
+                  const sideAmt =
+                    s.price > 0 && totalSideQty > 0
+                      ? s.price * totalSideQty
+                      : 0;
+                  return (
+                    <div
+                      key={`side-${String(s.side_item_id)}`}
+                      className="flex gap-3 text-muted-foreground"
+                    >
+                      <div className="min-w-0 flex-1 break-words leading-4">
+                        - {s.name}
+                        {totalSideQty > 1 ? ` x${String(totalSideQty)}` : ""}
+                      </div>
+                      <div className="shrink-0 whitespace-nowrap text-right tabular-nums">
+                        {sideAmt > 0 ? formatVND(sideAmt) : ""}
+                      </div>
+                    </div>
+                  );
+                })}
+                {note && (
+                  <div className="break-words italic leading-4 text-muted-foreground">
+                    {messages.pos.receipt.note} {note}
                   </div>
-                  <div className="mt-0.5 text-muted-foreground">
-                    {messages.pos.receipt.lineUnitPrice(
-                      item.quantity,
-                      formatVND(item.unit_price),
-                    )}
-                  </div>
-                </div>
+                )}
               </div>
             );
           })}

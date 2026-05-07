@@ -66,6 +66,7 @@ export type PrintDocumentReceiptItem = {
   sides?: Array<{
     name?: string;
     side_item_name?: string;
+    price?: number;
     quantity?: number;
   }> | null;
   note?: string | null;

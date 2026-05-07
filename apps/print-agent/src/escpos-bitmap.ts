@@ -251,7 +251,8 @@ function renderKitchenTicketBitmap(p: KitchenPayload): Uint8Array {
       for (const s of it.sides) {
         const sideName = s.name ?? s.side_item_name;
         if (sideName) {
-          const text = `- ${sideName}${s.quantity ? ` x${s.quantity}` : ""}`;
+          const totalSideQty = s.quantity ? s.quantity * it.quantity : 0;
+          const text = `- ${sideName}${totalSideQty ? ` x${totalSideQty}` : ""}`;
           for (const chunk of wrapText(text, KITCHEN_DETAIL_WIDTH_DOUBLE)) {
             parts.push(renderMixedRow([
               { text: KITCHEN_DETAIL_INDENT },
@@ -332,10 +333,11 @@ const RECEIPT_TABLE_BORDER =
 const receiptRow = (no: string, name: string, qty: string, amt: string): string =>
   `${padLeft(no, RECEIPT_COL_NO)} | ${padRight(name, RECEIPT_COL_NAME)} | ${padLeft(qty, RECEIPT_COL_QTY)} | ${padLeft(amt, RECEIPT_COL_AMT)}`;
 
-/** 4-column table: STT | Món | SL | Thành tiền. Modifiers print as their
- * own priced rows. Sides show qty but blank price (free with the dish).
- * Variant prints on its own indented row under the name. Notes are hidden
- * here — kitchen ticket already shows them to chef. */
+/** 4-column table: STT | Món | SL | Thành tiền. Mỗi modifier/side priced
+ * (price > 0) in trên dòng riêng với "Thành tiền" của riêng nó; nếu price 0
+ * hoặc undefined → cột Thành tiền để trống ("ăn kèm miễn phí"). Variant
+ * prints on its own indented row under the name. Note hidden ở receipt —
+ * kitchen ticket đã show với chef. */
 function renderItemsTable(p: BillBase): Uint8Array[] {
   const parts: Uint8Array[] = [];
   parts.push(line(RECEIPT_TABLE_BORDER));
@@ -348,13 +350,20 @@ function renderItemsTable(p: BillBase): Uint8Array[] {
     const stt = String(idx + 1);
     const qty = String(it.quantity);
 
-    // Base = unit_price minus modifier prices. Variant adj + sides stay
-    // folded into base (POS payload doesn't expose them as separate lines).
+    // Tách giá theo từng dòng. unit_price ở DB = base + variant_adj +
+    // modifier_sum + sides_sum (recompute server-side trong create_order /
+    // edit_pending_order_item) → trừ modifier + sides để cô lập base.
     const modifierSum = (it.modifiers ?? []).reduce(
       (sum, m) => sum + (m.price ?? 0),
       0,
     );
-    const baseAmount = fmtMoney((it.unit_price - modifierSum) * it.quantity);
+    const sidesSum = (it.sides ?? []).reduce(
+      (sum, s) => sum + (s.price ?? 0) * (s.quantity ?? 1),
+      0,
+    );
+    const baseAmount = fmtMoney(
+      (it.unit_price - modifierSum - sidesSum) * it.quantity,
+    );
 
     const nameChunks = wrapText(it.item_name, RECEIPT_COL_NAME);
     nameChunks.forEach((chunk, i) => {
@@ -395,14 +404,21 @@ function renderItemsTable(p: BillBase): Uint8Array[] {
       for (const s of it.sides) {
         const sideName = s.name ?? s.side_item_name;
         if (!sideName) continue;
-        const sideQty = s.quantity ? String(s.quantity) : "";
+        const totalSideQty = (s.quantity ?? 0) * it.quantity;
+        const sideQtyStr = totalSideQty ? String(totalSideQty) : "";
+        // Cột "Thành tiền" để trống nếu side miễn phí (price 0/undefined),
+        // theo yêu cầu chủ quán: "không có giá mới để trống".
+        const sideAmt =
+          (s.price ?? 0) > 0 && totalSideQty > 0
+            ? fmtMoney((s.price ?? 0) * totalSideQty)
+            : "";
         const sideChunks = wrapText(`- ${sideName}`, RECEIPT_COL_NAME);
         sideChunks.forEach((chunk, i) => {
           parts.push(line(receiptRow(
             "",
             chunk,
-            i === 0 ? sideQty : "",
-            "",
+            i === 0 ? sideQtyStr : "",
+            i === 0 ? sideAmt : "",
           )));
         });
       }
@@ -861,7 +877,8 @@ function renderCancelTicketBitmap(p: CancelTicketPayload): Uint8Array {
       for (const s of it.sides) {
         const sideName = s.name ?? s.side_item_name;
         if (sideName) {
-          const text = `- ${sideName}${s.quantity ? ` x${s.quantity}` : ""}`;
+          const totalSideQty = s.quantity ? s.quantity * it.quantity : 0;
+          const text = `- ${sideName}${totalSideQty ? ` x${totalSideQty}` : ""}`;
           parts.push(renderMixedRow([
             { text: KITCHEN_DETAIL_INDENT },
             { text, bold: true, double: true, strikethrough: true },

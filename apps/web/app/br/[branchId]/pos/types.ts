@@ -61,6 +61,8 @@ type PosLineItemSideInput = PosLineItemOptionInput & {
 };
 
 type PosLineItemDetailsInput = PosLineItemDisplayInput & {
+  /** Số phần ordered. Sides quantity là per-portion → tổng SL hiển thị = side.quantity × item.quantity. */
+  quantity?: number | null;
   modifiers?: readonly PosLineItemOptionInput[] | null;
   sides?: readonly PosLineItemSideInput[] | null;
   note?: string | null;
@@ -72,8 +74,11 @@ function formatPosLineItemPrice(price: number | null | undefined): string {
     : "";
 }
 
-function formatPosLineItemSide(side: PosLineItemSideInput): string {
-  const quantity = side.quantity ?? 1;
+function formatPosLineItemSide(
+  side: PosLineItemSideInput,
+  parentQuantity: number,
+): string {
+  const quantity = (side.quantity ?? 1) * parentQuantity;
   const quantitySuffix = quantity > 1 ? ` x${String(quantity)}` : "";
   const price = typeof side.price === "number" ? side.price * quantity : null;
 
@@ -103,9 +108,10 @@ export function getPosLineItemOptionLines(
           )
           .join(", ")}`
       : null;
+  const parentQuantity = item.quantity ?? 1;
   const sideLine =
     item.sides && item.sides.length > 0
-      ? `Kèm: ${item.sides.map(formatPosLineItemSide).join(", ")}`
+      ? `Kèm: ${item.sides.map((side) => formatPosLineItemSide(side, parentQuantity)).join(", ")}`
       : null;
   const note = item.note?.trim();
   const noteLine = note ? `Ghi chú: ${note}` : null;
@@ -123,8 +129,11 @@ function formatPosLineItemCompactOption(
   return option.name;
 }
 
-function formatPosLineItemCompactSide(side: PosLineItemSideInput): string {
-  const quantity = side.quantity ?? 1;
+function formatPosLineItemCompactSide(
+  side: PosLineItemSideInput,
+  parentQuantity: number,
+): string {
+  const quantity = (side.quantity ?? 1) * parentQuantity;
   const quantitySuffix = quantity > 1 ? ` x${String(quantity)}` : "";
 
   return `${side.name}${quantitySuffix}`;
@@ -138,6 +147,7 @@ export interface PosLineItemSummary {
 export function getPosLineItemSummary(
   item: PosLineItemDetailsInput,
 ): PosLineItemSummary {
+  const parentQuantity = item.quantity ?? 1;
   const parts: string[] = [];
   if (item.modifiers && item.modifiers.length > 0) {
     for (const modifier of item.modifiers) {
@@ -146,7 +156,7 @@ export function getPosLineItemSummary(
   }
   if (item.sides && item.sides.length > 0) {
     for (const side of item.sides) {
-      parts.push(formatPosLineItemCompactSide(side));
+      parts.push(formatPosLineItemCompactSide(side, parentQuantity));
     }
   }
   const note = item.note?.trim();

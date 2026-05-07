@@ -188,7 +188,7 @@ const padLeft = (s: string, width: number) =>
 // ─── Types ────────────────────────────────────────────────────────────────
 
 export type ModifierLine = { name?: string; price?: number };
-export type SideLine = { name?: string; side_item_name?: string; quantity?: number };
+export type SideLine = { name?: string; side_item_name?: string; price?: number; quantity?: number };
 
 export type KitchenPayload = {
   kind: "kitchen_ticket";
@@ -548,10 +548,11 @@ export function renderKitchenTicket(p: KitchenPayload): Uint8Array {
         if (sideName) {
           // B4: parity với bitmap-mode — sides ("món ăn kèm") render ở
           // double-bold để bếp đọc rõ across kitchen, theo yêu cầu chủ quán.
+          const totalSideQty = s.quantity ? s.quantity * it.quantity : 0;
           parts.push(
             ...kitchenImportantDetailRows(
               "- ",
-              `${sideName}${s.quantity ? ` x${s.quantity}` : ""}`,
+              `${sideName}${totalSideQty ? ` x${totalSideQty}` : ""}`,
             ),
           );
         }
@@ -615,7 +616,9 @@ const renderBillMeta = (p: BillBase): Uint8Array[] => {
   return parts;
 };
 
-/** Shared items table — 2-line layout: name+total on line 1, qty×price on line 2. */
+/** Shared items table — mỗi modifier / side priced in dòng riêng với
+ * Thành tiền cột phải; price 0/undefined → cột phải để trống. Parent line
+ * hiển thị base (đã trừ modifier_sum + sides_sum) × qty. */
 const renderBillItemsTable = (p: BillBase): Uint8Array[] => {
   const parts: Uint8Array[] = [];
   parts.push(divider("-"));
@@ -625,31 +628,52 @@ const renderBillItemsTable = (p: BillBase): Uint8Array[] => {
     const fullName = it.variant_name
       ? `${it.item_name} (${it.variant_name})`
       : it.item_name;
-    const totalStr = fmtMoney(it.subtotal);
+    const modifierSum = (it.modifiers ?? []).reduce(
+      (sum, m) => sum + (m.price ?? 0),
+      0,
+    );
+    const sidesSum = (it.sides ?? []).reduce(
+      (sum, s) => sum + (s.price ?? 0) * (s.quantity ?? 1),
+      0,
+    );
+    const baseUnit = it.unit_price - modifierSum - sidesSum;
+    const baseTotal = baseUnit * it.quantity;
+    const totalStr = fmtMoney(baseTotal);
     const nameAvail = Math.max(16, LINE_WIDTH - totalStr.length - 1);
     const nameChunks = wrapText(fullName, nameAvail);
-    // Line 1: name (left) + total (right)
+    // Line 1: name (left) + base total (right)
     parts.push(pair(nameChunks[0] ?? "", totalStr));
     // Continuation name chunks if name wrapped
     for (let i = 1; i < nameChunks.length; i++) {
       parts.push(line(nameChunks[i] ?? ""));
     }
+    // Line 2: qty × base unit
+    parts.push(line(`  x${it.quantity} × ${fmtMoney(baseUnit)}`));
     if (it.modifiers && it.modifiers.length > 0) {
       for (const m of it.modifiers) {
-        if (m.name) parts.push(line(`  + ${m.name}`));
+        if (!m.name) continue;
+        const modAmt =
+          (m.price ?? 0) > 0
+            ? fmtMoney((m.price ?? 0) * it.quantity)
+            : "";
+        const label = `  + ${m.name}`;
+        parts.push(modAmt ? pair(label, modAmt) : line(label));
       }
     }
     if (it.sides && it.sides.length > 0) {
       for (const s of it.sides) {
         const sideName = s.name ?? s.side_item_name;
-        if (sideName) {
-          parts.push(line(`  - ${sideName}${s.quantity ? ` x${s.quantity}` : ""}`));
-        }
+        if (!sideName) continue;
+        const totalSideQty = (s.quantity ?? 0) * it.quantity;
+        const sideAmt =
+          (s.price ?? 0) > 0 && totalSideQty > 0
+            ? fmtMoney((s.price ?? 0) * totalSideQty)
+            : "";
+        const label = `  - ${sideName}${totalSideQty ? ` x${totalSideQty}` : ""}`;
+        parts.push(sideAmt ? pair(label, sideAmt) : line(label));
       }
     }
     if (it.note) parts.push(line(`  * ${it.note}`));
-    // Line 2: qty × unit_price
-    parts.push(line(`  x${it.quantity} × ${fmtMoney(it.unit_price)}`));
   });
 
   parts.push(divider("-"));
@@ -1123,10 +1147,11 @@ export function renderCancelTicket(p: CancelTicketPayload): Uint8Array {
         if (sideName) {
           // B4 parity: sides ở double-bold giống phiếu bếp gốc + bitmap mode.
           // Bếp xem phiếu hủy mapping 1-1 với phiếu bếp đã in trước đó.
+          const totalSideQty = s.quantity ? s.quantity * it.quantity : 0;
           parts.push(
             ...kitchenImportantDetailRows(
               "- ",
-              `${sideName}${s.quantity ? ` x${s.quantity}` : ""}`,
+              `${sideName}${totalSideQty ? ` x${totalSideQty}` : ""}`,
             ),
           );
         }

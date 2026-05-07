@@ -12,6 +12,9 @@ const itemSideSchema = z.object({
   side_item_id: z.number().int().optional(),
   side_item_name: z.string().optional(),
   name: z.string().optional(),
+  /** Đơn giá per-unit của side. Hoá đơn render dòng riêng với
+   * `price * quantity * parent_qty`; để trống nếu price 0/undefined. */
+  price: z.number().optional(),
   quantity: z.number().int().optional(),
 });
 
