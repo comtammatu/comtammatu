@@ -14,12 +14,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
   Table,
   TableBody,

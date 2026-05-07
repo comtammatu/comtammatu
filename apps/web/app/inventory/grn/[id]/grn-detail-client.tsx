@@ -7,12 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
   Dialog,
   DialogContent,
