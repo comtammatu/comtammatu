@@ -8,6 +8,7 @@ import {
 import { ExpiryListClient } from "@/inventory/expiry/expiry-list-client";
 import type { BranchOption, ExpiryAlertRow } from "@/inventory/page";
 import { getBranchSiteDisplayName } from "@/inventory/_lib/branch-site-labels";
+import { AppPage, AppPageHeader } from "@/components/surface";
 
 export default async function ExpirySettingsPage({
   searchParams,
@@ -48,11 +49,18 @@ export default async function ExpirySettingsPage({
     })) as BranchOption[];
 
   return (
-    <ExpiryListClient
-      initial={alerts}
-      branches={branches}
-      userRole={claims?.user_role ?? "branch_manager"}
-      userBranchId={scope?.selectedBranchId ?? null}
-    />
+    <AppPage>
+      <AppPageHeader
+        eyebrow="Cài đặt kho"
+        title="Cảnh báo hạn sử dụng"
+        description="Quản lý ngưỡng cảnh báo hạn sử dụng nguyên liệu."
+      />
+      <ExpiryListClient
+        initial={alerts}
+        branches={branches}
+        userRole={claims?.user_role ?? "branch_manager"}
+        userBranchId={scope?.selectedBranchId ?? null}
+      />
+    </AppPage>
   );
 }

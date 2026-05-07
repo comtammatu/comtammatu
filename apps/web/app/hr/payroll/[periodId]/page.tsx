@@ -1,12 +1,8 @@
 import { fetchPayrollEntries } from "../../payroll-actions";
-import { TriangleAlert as IconAlertTriangle } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
+import { fetchEntityAuditLogs } from "@/admin/_lib/audit";
+import { AppPage, AppPageHeader, AppEmptyState } from "@/components/surface";
+import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
+import { AuditHistoryList } from "@/inventory/_components/audit-history-list";
 import { PayrollDetailClient } from "./payroll-detail-client";
 
 export default async function PayrollDetailPage({
@@ -19,44 +15,51 @@ export default async function PayrollDetailPage({
 
   if (!id || id <= 0) {
     return (
-      <Card>
-        <CardHeader className="gap-3">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <div className="flex size-8 items-center justify-center rounded-full border bg-muted">
-              <IconAlertTriangle className="size-4" />
-            </div>
-            <CardTitle className="text-xl">ID không hợp lệ</CardTitle>
-          </div>
-          <CardDescription>
-            Không thể mở chi tiết bảng lương vì mã kỳ lương không đúng.
-          </CardDescription>
-        </CardHeader>
-      </Card>
+      <AppPage>
+        <AppEmptyState
+          mode="no-access"
+          title="ID không hợp lệ"
+          description="Không thể mở chi tiết bảng lương vì mã kỳ lương không đúng."
+        />
+      </AppPage>
     );
   }
 
-  const result = await fetchPayrollEntries({ periodId: id });
+  const [result, auditLogs] = await Promise.all([
+    fetchPayrollEntries({ periodId: id }),
+    fetchEntityAuditLogs("payroll_period", id, 50),
+  ]);
   const entries = result.success
     ? ((result.data ?? []) as PayrollEntryRow[])
     : [];
 
   return (
-    <div className="space-y-5">
-      <Card>
-        <CardHeader className="gap-3">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-            Nhân sự & lương
-          </p>
-          <CardTitle>Chi tiết bảng lương</CardTitle>
-          <CardDescription>Kỳ lương #{periodId}</CardDescription>
-        </CardHeader>
-      </Card>
-      <Card>
-        <CardContent>
-          <PayrollDetailClient periodId={id} initialEntries={entries} />
-        </CardContent>
-      </Card>
-    </div>
+    <AppPage>
+      <AppPageHeader
+        eyebrow="Nhân sự & lương"
+        title={`Chi tiết bảng lương`}
+        description={`Kỳ lương #${periodId}`}
+        tabs={
+          <AppPageTabs
+            items={[
+              { value: "overview", label: "Tổng quan" },
+              { value: "entries", label: "Đơn vị", count: entries.length },
+              { value: "history", label: "Lịch sử", count: auditLogs.length },
+            ]}
+          >
+            <TabsContent value="overview" className="mt-4">
+              <PayrollDetailClient periodId={id} initialEntries={entries} />
+            </TabsContent>
+            <TabsContent value="entries" className="mt-4">
+              <PayrollDetailClient periodId={id} initialEntries={entries} />
+            </TabsContent>
+            <TabsContent value="history" className="mt-4">
+              <AuditHistoryList logs={auditLogs} />
+            </TabsContent>
+          </AppPageTabs>
+        }
+      />
+    </AppPage>
   );
 }
 

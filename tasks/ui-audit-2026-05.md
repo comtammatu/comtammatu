@@ -222,3 +222,42 @@ No `finance/journal/[id]/page.tsx` exists — journal is a single-page list. No 
 - `app-shell.tsx` still in active use as inventory shell delegate target (intentional).
 - Wave 4c: `menu/page.tsx` (last non-frozen PageHero caller), HR payroll, supplier-returns detail, inventory settings.
 - `finance/audit-trail/page.tsx`: PageHero caller — will retire when audit-trail unfreeze lands (post-M4 P0 close). After that, `page-hero.tsx` can be deleted.
+
+## After Wave 4c (final) (2026-05-07)
+
+Surfaces migrated: HR payroll landing (`payroll/page.tsx`) + payroll detail (`[periodId]/page.tsx` with `AppPageTabs[Tổng quan | Đơn vị | Lịch sử]` + `fetchEntityAuditLogs("payroll_period", …)`), supplier-returns list + new + detail pages built from `notFound()` stubs (`[id]/page.tsx` with `AppPageTabs[Tổng quan | Dòng | Lịch sử]` + `fetchEntityAuditLogs("supplier_return", …)`), inventory settings expiry page (`/inventory/settings/expiry/page.tsx`) + QC settings page (`/inventory/settings/qc/page.tsx`) wrapped in `AppPage + AppPageHeader`, menu page (`apps/web/app/menu/page.tsx`) `PageHero` → `AppPageHeader`. New files: `supplier-returns-client.tsx` (list table), `supplier-return-detail-client.tsx` (detail table + meta cards).
+
+### Telemetry delta vs Wave 4b
+
+| Pattern | W4b baseline | After W4c (final) | Delta | Target | Status |
+|---|---|---|---|---|---|
+| `AppPageHeader` files | 58 | **66** | +8 | ≥62 | ✓ |
+| `PageHero` callers (files) | 3 | **2** | -1 | 1 (+ page-hero.tsx itself) | ✓ — only `finance/audit-trail/page.tsx` + `page-hero.tsx` |
+| `Loader2 / animate-spin` | 0 | **0** | 0 | 0 | ✓ |
+| `AppPageTabs` files | 10 | **12** | +2 | ≥12 | ✓ |
+| Hand-rolled `Empty border bg-card` | 2 | **2** | 0 | 0 | deferred — outside W4c scope |
+| `font-heading text-2xl/3xl` raw | ~8 | **8** | 0 | ≤3 | internal primitive uses only |
+
+### Wave-by-wave summary table (W0 baseline → W4c final)
+
+| Metric | W0 baseline | W1 | W2 | W3a | W4a/b | W4c (final) |
+|---|---|---|---|---|---|---|
+| AppPageHeader files | 5 | 9 | 21 | 44 | 58 | **66** |
+| AppPageTabs files | 0 | 2 | 11 | 9 | 10 | **12** |
+| PageHero callers (files) | 16 | 15 | 11 | 11 | 3 | **2** |
+| Hand-rolled `Empty border bg-card` | 6 | 5 | 5 | 2 | 2 | **2** |
+| raw `font-heading text-2xl/3xl` | 23 | 22 | 19 | 10 | ~8 | **8** |
+| Loader2 / animate-spin | 1 | 1 | 1 | 1 | 0 | **0** |
+
+### Detail Tabs added in Wave 4c
+
+| Route | Entity type string | Tabs |
+|---|---|---|
+| `/hr/payroll/[periodId]` | `payroll_period` | Tổng quan · Đơn vị · Lịch sử |
+| `/inventory/supplier-returns/[id]` | `supplier_return` | Tổng quan · Dòng · Lịch sử |
+
+### Remaining post-M4-unfreeze cleanup
+
+- `apps/web/app/finance/audit-trail/page.tsx` — sole remaining non-self `PageHero` caller; frozen (HĐĐT/leak risk) until M4 P0 closes. After unfreeze: migrate to `AppPageHeader` + delete `apps/web/app/components/page-hero.tsx`.
+- `Hand-rolled Empty border bg-card` — 2 remaining instances outside W4c scope; retire in follow-up PR.
+- Inventory audit instrumentation (logAudit calls in inventory action handlers) — deferred post-pilot; `Lịch sử` tabs currently show `AppEmptyState mode="no-data"` for inventory entities.

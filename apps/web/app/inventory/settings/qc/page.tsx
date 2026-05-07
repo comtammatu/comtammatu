@@ -3,6 +3,7 @@ import { SUPPLIER_RETURN_ROLES, PERMISSION_KEYS } from "@comtammatu/shared/auth"
 import { getAuthContextWithPermission } from "../../_lib/auth";
 import { fetchQcSettingsForForm } from "../../notifications-actions";
 import { QcSettingsClient } from "./qc-settings-client";
+import { AppPage, AppPageHeader } from "@/components/surface";
 
 export default async function QcSettingsPage() {
   const ctx = await getAuthContextWithPermission(
@@ -30,5 +31,14 @@ export default async function QcSettingsPage() {
         alert_channel: "generic",
       };
 
-  return <QcSettingsClient initial={settings} />;
+  return (
+    <AppPage>
+      <AppPageHeader
+        eyebrow="Cài đặt kho"
+        title="Cài đặt kiểm tra chất lượng"
+        description="Cấu hình ngưỡng dung sai và kênh thông báo QC."
+      />
+      <QcSettingsClient initial={settings} />
+    </AppPage>
+  );
 }
