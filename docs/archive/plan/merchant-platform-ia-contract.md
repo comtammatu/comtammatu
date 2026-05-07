@@ -1,3 +1,5 @@
+> ARCHIVED 2026-05-07 — Folded into 01-BRAND-SOFTWARE-PROGRAM.md
+
 # Merchant Platform IA Contract
 
 > Status: planning contract  

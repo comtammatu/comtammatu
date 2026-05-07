@@ -1,3 +1,5 @@
+> ARCHIVED 2026-05-07 — In-place sprint; capability port in PROGRAM-READINESS.md §3 + 05-MODULE-CATALOG.md (Finance)
+
 # M4 Payments Fix — Pre-Pilot Plan
 
 > Created: 2026-04-28. Author: 4-perspective synthesis (PM/BA/Architect/Critic).

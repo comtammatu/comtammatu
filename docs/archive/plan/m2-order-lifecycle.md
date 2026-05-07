@@ -1,3 +1,5 @@
+> ARCHIVED 2026-05-07 — M-numbering deprecated; capabilities folded into 05-MODULE-CATALOG.md (Orders)
+
 # M2-Ext: POS Order Lifecycle
 
 > Status: PLANNED | Depends: M2 (SHIPPED), M3 (SHIPPED)

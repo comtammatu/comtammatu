@@ -1,3 +1,5 @@
+> ARCHIVED 2026-05-07 — Folded into 01-BRAND-SOFTWARE-PROGRAM.md
+
 # Super App - Merchant Platform Rebuild
 
 > Status: planning baseline  

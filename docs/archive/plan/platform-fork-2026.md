@@ -1,3 +1,5 @@
+> ARCHIVED 2026-05-07 — Fork strategy abandoned 2026-05-06
+
 # Platform Fork 2026
 
 > Status: fork preparation draft  

@@ -1,3 +1,5 @@
+> ARCHIVED 2026-05-07 — Module-level shipped history kept as archive snapshot
+
 # Roadmap — Cơm Tấm Má Tư
 
 > Hệ thống Quản lý Vận hành Nhà hàng (Restaurant Operations Management System)

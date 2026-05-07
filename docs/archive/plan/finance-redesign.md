@@ -1,3 +1,5 @@
+> ARCHIVED 2026-05-07 — In-place sprint frozen 2026-05-07; capability port in PROGRAM-READINESS.md §3 + 05-MODULE-CATALOG.md (Finance)
+
 # Finance Redesign — Contract v1
 
 > **Decision date:** 2026-05-06 · **Owner:** ngocnghia128@gmail.com · **Sprint:** 2 weeks · **Trigger:** "Finance Module, đặc biệt Doanh thu từ POS, cực kì tệ hại — chỉ số loạn, thiếu tool/quick-action/filter, dữ liệu thiếu trực quan."

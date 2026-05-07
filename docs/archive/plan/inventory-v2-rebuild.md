@@ -1,3 +1,5 @@
+> ARCHIVED 2026-05-07 — v2 naming violates locked principle; capabilities folded into 05-MODULE-CATALOG.md
+
 # Inventory V2 Rebuild — New Supabase Project Contract
 
 > **Status:** PROPOSED — owner chose rebuild onto a new database/project.

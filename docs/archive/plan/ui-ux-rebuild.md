@@ -1,3 +1,5 @@
+> ARCHIVED 2026-05-07 — UI rebuild folded into 05-MODULE-CATALOG.md (per module § page contracts)
+
 # UI/UX Rebuild Plan
 
 > Updated: 2026-04-22 | Status: planning baseline

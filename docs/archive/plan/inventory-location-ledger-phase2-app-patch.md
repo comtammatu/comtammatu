@@ -1,3 +1,5 @@
+> ARCHIVED 2026-05-07 — Folded into 05-MODULE-CATALOG.md (Inventory § ledger model)
+
 # Inventory Location Ledger Phase 2 App Patch
 
 > Date: `2026-04-14`  

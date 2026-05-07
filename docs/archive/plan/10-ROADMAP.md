@@ -1,3 +1,5 @@
+> ARCHIVED 2026-05-07 — Folded into PROGRAM-READINESS.md (§3, §6, §7)
+
 # 10 — Program Roadmap (Brand + Software Rebuild)
 
 > **Status:** ACTIVE — owner decisions pending

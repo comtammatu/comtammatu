@@ -1,3 +1,5 @@
+> ARCHIVED 2026-05-07 — Absorbed into 06-WAVE-PLAN.md
+
 # Backlog — Post-Pilot Features
 
 > Features đã review nhưng defer ra sau v1.0.0 pilot.

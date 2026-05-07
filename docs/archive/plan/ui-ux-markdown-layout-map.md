@@ -1,3 +1,5 @@
+> ARCHIVED 2026-05-07 — UI rebuild folded into 05-MODULE-CATALOG.md (per module § page contracts)
+
 # UI/UX Markdown Layout Map
 
 > Created: 2026-05-02

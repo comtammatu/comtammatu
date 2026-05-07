@@ -1,3 +1,5 @@
+> ARCHIVED 2026-05-07 — Capabilities folded into 05-MODULE-CATALOG.md (Inventory)
+
 # Inventory Redesign — Unified Policy Spec
 
 > Workshop chốt từ 4-agent debate (PM / BA / Dev / QA) + owner approval.

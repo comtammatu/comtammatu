@@ -1,3 +1,5 @@
+> ARCHIVED 2026-05-07 — UI debate folded into 05-MODULE-CATALOG.md (Inventory § page contracts)
+
 # Inventory UI/UX Page Debate
 
 > Status: planning draft for discussion.  
