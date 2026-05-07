@@ -18,6 +18,12 @@ import {
 } from "@comtammatu/shared/auth";
 import { getClientIp } from "@lib/network/client-ip";
 
+// Module-level flag — emit one warning per warm Edge instance when the POS
+// network gate is disabled in production. Spec: regressions.md
+// POS-NETWORK-GATE-GRACE-IS-SECURITY-CEILING ("kill-switch is loud, logged
+// in proxy startup"). Vercel log drain captures this for SIEM ingestion.
+let NETWORK_GATE_OFF_WARNED = false;
+
 /** Create a redirect that preserves Set-Cookie from updateSession response */
 function redirectWithCookies(
   url: URL,
@@ -76,6 +82,16 @@ export async function proxy(request: NextRequest) {
   // Refresh session + get user
   const { user, response, supabase } = await updateSession(request);
 
+  // Single session read — reused across login bounce + route ACL.
+  // getSession() is a cookie-only read (no network), and extractClaims
+  // decodes the JWT locally. Hoisting eliminates the previous double-call
+  // race where two reads could observe different cookie snapshots and
+  // sporadically produce claims=null → /access-denied bounce.
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const claims = extractClaimsFromAccessToken(session?.access_token);
+
   // Login page: special handling.
   if (pathname === "/login" || pathname === "/beta/login") {
     if (request.method !== "GET" || request.headers.has("next-action")) {
@@ -84,10 +100,6 @@ export async function proxy(request: NextRequest) {
 
     if (!user) return response; // unauthenticated → show login
     // Authenticated → bounce to role's post-login destination.
-    const {
-      data: { session: loginSession },
-    } = await supabase.auth.getSession();
-    const claims = extractClaimsFromAccessToken(loginSession?.access_token);
     if (claims) {
       const returnTo = request.nextUrl.searchParams.get("returnTo");
       const url = new URL(
@@ -116,13 +128,10 @@ export async function proxy(request: NextRequest) {
   // landing page. Proxy is the single gate: layouts and pages downstream MUST
   // NOT re-check these invariants.
   //
-  // Claims are decoded from the JWT access_token, NOT from `user.app_metadata`.
-  // Supabase-js reads `user.app_metadata` from the `auth.users` row, which does
-  // not include hook-injected claims like `user_role` or `position`.
-  const {
-    data: { session: authSession },
-  } = await supabase.auth.getSession();
-  const claims = extractClaimsFromAccessToken(authSession?.access_token);
+  // Claims were decoded above from the JWT access_token, NOT from
+  // `user.app_metadata`. Supabase-js reads `user.app_metadata` from the
+  // `auth.users` row, which does not include hook-injected claims like
+  // `user_role` or `position`.
   if (!claims) {
     return redirectToAccessDenied(request, response, "missing-auth-context");
   }
@@ -232,6 +241,23 @@ export async function proxy(request: NextRequest) {
           const networkGateEnabled =
             process.env.NODE_ENV === "production"
             && process.env.POS_NETWORK_GATE !== "off";
+
+          // Loud kill-switch: emit one warning per warm Edge instance when
+          // POS_NETWORK_GATE=off in production. SIEM/log-drain ingests this
+          // for alerting. Implements regressions.md
+          // POS-NETWORK-GATE-GRACE-IS-SECURITY-CEILING.
+          if (
+            !networkGateEnabled
+            && process.env.NODE_ENV === "production"
+            && process.env.POS_NETWORK_GATE === "off"
+            && !NETWORK_GATE_OFF_WARNED
+          ) {
+            console.warn(
+              "[network-gate] disabled via POS_NETWORK_GATE=off — POS/KDS perimeter open. See regressions.md POS-NETWORK-GATE-GRACE-IS-SECURITY-CEILING.",
+            );
+            NETWORK_GATE_OFF_WARNED = true;
+          }
+
           if (networkGateEnabled) {
             const clientIp = getClientIp(request.headers);
             const graceCutoff = new Date(
