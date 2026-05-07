@@ -6,6 +6,7 @@ import {
   PERMISSION_KEYS,
   type StaffRole,
 } from "@comtammatu/shared/auth";
+import { updateTag } from "next/cache";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 import { withAction, withFormAction, type ActionContext } from "@/_lib/with-action";
 import { TABLE_STATUSES } from "./constants";
@@ -129,6 +130,8 @@ export const createZone = withFormAction(
     }
 
     revalidateSurfacePath("/admin/settings/tables");
+    // Bust POS cached tables list (apps/web/app/br/[branchId]/pos/session-actions.ts).
+    updateTag("tables");
     return { success: true };
   },
 );
@@ -171,6 +174,8 @@ export const updateZone = withFormAction(
     }
 
     revalidateSurfacePath("/admin/settings/tables");
+    // Bust POS cached tables list (apps/web/app/br/[branchId]/pos/session-actions.ts).
+    updateTag("tables");
     return { success: true };
   },
 );
@@ -199,6 +204,8 @@ export const deleteZone = withAction(
     }
 
     revalidateSurfacePath("/admin/settings/tables");
+    // Bust POS cached tables list (apps/web/app/br/[branchId]/pos/session-actions.ts).
+    updateTag("tables");
     return { success: true };
   },
 );
@@ -245,6 +252,8 @@ export const createTable = withFormAction(
     }
 
     revalidateSurfacePath("/admin/settings/tables");
+    // Bust POS cached tables list (apps/web/app/br/[branchId]/pos/session-actions.ts).
+    updateTag("tables");
     return { success: true };
   },
 );
@@ -296,6 +305,8 @@ export const updateTable = withFormAction(
     }
 
     revalidateSurfacePath("/admin/settings/tables");
+    // Bust POS cached tables list (apps/web/app/br/[branchId]/pos/session-actions.ts).
+    updateTag("tables");
     return { success: true };
   },
 );
@@ -324,6 +335,8 @@ export const deleteTable = withAction(
     }
 
     revalidateSurfacePath("/admin/settings/tables");
+    // Bust POS cached tables list (apps/web/app/br/[branchId]/pos/session-actions.ts).
+    updateTag("tables");
     return { success: true };
   },
 );

@@ -9,7 +9,6 @@ import {
   fetchActiveSession,
   fetchPosTerminals,
   fetchPosPermissionFlags,
-  fetchActiveOrders,
 } from "./actions";
 import {
   fetchPaymentMethodsForPos,
@@ -126,28 +125,27 @@ export default async function PosPage({
   const [
     menuResult,
     tablesResult,
-    ordersResult,
     paymentMethodsResult,
     vietQrConfigResult,
   ] = await Promise.all([
     fetchMenuForPos(branchIdNum),
     fetchTablesForBranch(branchIdNum),
-    fetchActiveOrders(branchIdNum),
     // Tenant-stable settings seeded ở RSC. Admin payment-settings save phải
-    // gọi `revalidatePath('/br/[branchId]/pos', 'page')` để bust seed này.
+    // gọi `revalidatePath('/br/[branchId]/pos', 'page')` + `revalidateTag('payment-config')`
+    // để bust cache.
     fetchPaymentMethodsForPos(branchIdNum),
     fetchVietQrConfig(branchIdNum),
   ]);
 
-  // Seed the POS provider from RSC so the client does not re-fetch on mount.
-  // RSC seed is the active list ("Cần xử lý"). Archived ("Đã xử lý") is a
-  // lazy lookup that only fetches when the cashier opens the sheet.
-  // On RSC fetch failure, seed empty and let useOrderSync's first SUBSCRIBED
-  // callback still fire a full refresh — preserves old behavior as fallback.
-  const initialOrders = (
-    ordersResult.success ? (ordersResult.data ?? []) : []
-  ) as SessionOrder[];
-  const initialOrdersSeeded = ordersResult.success;
+  // Active orders are NOT seeded from RSC — every Server Action triggers a
+  // route revalidation that re-runs page.tsx, and `fetchActiveOrders` was a
+  // ~200ms hot-path tax with no real win (provider's realtime channel keeps
+  // the list authoritative within sub-second of any mutation). The provider
+  // sees `initialOrdersSeeded=false`, so its first SUBSCRIBED callback fires
+  // one `refreshAll` to populate the list (~200ms after hydrate). Cold load
+  // shows the POS shell with empty Orders panel for that brief window.
+  const initialOrders: SessionOrder[] = [];
+  const initialOrdersSeeded = false;
 
   const initialPaymentMethods: readonly PaymentMethod[] =
     paymentMethodsResult.success && paymentMethodsResult.data

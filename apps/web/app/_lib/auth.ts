@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { extractClaimsFromAccessToken } from "@comtammatu/shared/auth";
 import type { JwtClaims, PermissionKey, StaffRole } from "@comtammatu/shared/auth";
@@ -8,8 +9,17 @@ import type { Session } from "@supabase/supabase-js";
  * Returns null if unauthenticated, no claims, or role not in allowedRoles.
  *
  * Canonical copy — module-level `_lib/auth.ts` files re-export from here.
+ *
+ * Wrapped in React `cache()` so within ONE RSC render, parallel actions
+ * sharing the same `allowedRoles` ref (e.g. `MODULE_ACL.pos.allowedRoles`
+ * imported from a single module) dedupe to one `getUser()` HTTP roundtrip
+ * + one `getSession()` cookie read. POS reload calls 7 actions that all
+ * pass `POS_ROLES` — without this cache the page paid 7× ~150-300ms to
+ * Supabase Auth. Cache scope is per-request; production safety unchanged.
  */
-export async function getAuthContext(allowedRoles: readonly StaffRole[]) {
+export const getAuthContext = cache(async function getAuthContext(
+  allowedRoles: readonly StaffRole[],
+) {
   const supabase = await createClient();
 
   // Server Actions use getUser() — it validates the JWT against Supabase Auth
@@ -37,13 +47,20 @@ export async function getAuthContext(allowedRoles: readonly StaffRole[]) {
   if (!allowedRoles.includes(claims.user_role)) return null;
 
   return { supabase, claims, user };
-}
+});
 
 type PermissionLike = PermissionKey | string;
 
 type AuthContext = NonNullable<Awaited<ReturnType<typeof getAuthContext>>>;
 
-async function hasPermissionGrant(
+/**
+ * Cached: identical (ctx, permission, branchId) tuples within one RSC render
+ * dedupe to a single `has_permission`/`has_permission_any` RPC. POS reload
+ * has 6 actions that all check `pos:use` with the same shared `ctx` (from
+ * cached getAuthContext) — collapsing those 6 RPCs to 1 is the second-half
+ * of the auth-fanout fix. Cache is per-request only.
+ */
+const hasPermissionGrant = cache(async function hasPermissionGrant(
   ctx: AuthContext,
   permission: PermissionLike,
   branchId?: number | null,
@@ -60,7 +77,7 @@ async function hasPermissionGrant(
     p_key: permission,
   });
   return !error && data === true;
-}
+});
 
 // Cheap permission probe for callers that already have an `AuthContext`
 // (i.e. resolved `getUser()` + `getSession()` once). Use this for UI hints
@@ -141,8 +158,16 @@ type LoadedAuthState = {
  * `error.tsx` boundaries rather than masking the bug.
  *
  * Returns the Supabase client so callers can avoid creating a second one.
+ *
+ * Wrapped in React `cache()` so repeated calls within ONE RSC render share
+ * the same `{supabase, session, claims}` snapshot — eliminates duplicate
+ * `getSession()` cookie parses when both a layout and its page (or multiple
+ * helpers like `getEmployeeContext` / `mobile-header`) read auth state.
+ * Inventory layout + page used to invoke this twice; Employee home invoked
+ * it three times (page + mobile-header + employee-context). Cache scope is
+ * per-request; production safety unchanged.
  */
-export async function loadAuthState(): Promise<LoadedAuthState> {
+export const loadAuthState = cache(async (): Promise<LoadedAuthState> => {
   const supabase = await createClient();
   const {
     data: { session },
@@ -162,4 +187,4 @@ export async function loadAuthState(): Promise<LoadedAuthState> {
   }
 
   return { supabase, session, claims };
-}
+});

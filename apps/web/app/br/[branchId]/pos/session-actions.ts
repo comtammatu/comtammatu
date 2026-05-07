@@ -1,7 +1,9 @@
 "use server";
 
 import { z } from "zod";
+import { unstable_cache } from "next/cache";
 import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { createServiceClient } from "@comtammatu/database";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContext, getAuthContextWithPermission } from "../../_lib/auth";
 
@@ -13,6 +15,55 @@ const branchIdSchema = z.coerce
   .positive({ error: "Branch ID không hợp lệ" });
 
 /* ─── fetchTablesForBranch ─── */
+
+/**
+ * Cached tables-for-branch. The list is mostly static (admin adds/removes
+ * tables rarely); table.status flips on order open/close are pushed via
+ * realtime (`useOrderSync` `tables` channel) → cached snapshot is fine for
+ * the cold load + post-Server-Action revalidate path.
+ *
+ * Tag: `tables` — admin tables-settings save calls `revalidateTag('tables')`
+ * to force a re-fetch on next request. 5-minute TTL safety net.
+ *
+ * Service-role bypasses RLS but explicit branch+tenant filter inside; outer
+ * Server Action validates caller's branch membership BEFORE invoking.
+ *
+ * Cache key auto-derived from (tenantId, branchId) args.
+ */
+const getCachedTablesForBranch = unstable_cache(
+  async (tenantId: number, branchId: number) => {
+    const sb = createServiceClient();
+    const { data, error } = await sb
+      .from("tables")
+      .select(
+        `
+        id,
+        number,
+        capacity,
+        status,
+        zone_id,
+        branch_zones (
+          id,
+          name
+        )
+      `,
+      )
+      .eq("branch_id", branchId)
+      .eq("tenant_id", tenantId)
+      .neq("status", "maintenance")
+      .order("number", { ascending: true });
+
+    if (error) {
+      throw new Error(`fetchTables: ${error.message}`);
+    }
+    return data ?? [];
+  },
+  ["tables-for-branch"],
+  {
+    revalidate: 300,
+    tags: ["tables"],
+  },
+);
 
 /**
  * Fetch active tables for a branch (excludes maintenance tables).
@@ -32,41 +83,27 @@ export async function fetchTablesForBranch(
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
-  const { supabase, claims } = ctx;
+  const { claims } = ctx;
 
   // Verify branch_id matches JWT claim
   if (claims.branch_id !== parsedBranchId.data) {
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }
 
-  const { data: tables, error } = await supabase
-    .from("tables")
-    .select(
-      `
-      id,
-      number,
-      capacity,
-      status,
-      zone_id,
-      branch_zones (
-        id,
-        name
-      )
-    `,
-    )
-    .eq("branch_id", parsedBranchId.data)
-    .eq("tenant_id", claims.tenant_id)
-    .neq("status", "maintenance")
-    .order("number", { ascending: true });
-
-  if (error) {
+  let tables: Awaited<ReturnType<typeof getCachedTablesForBranch>>;
+  try {
+    tables = await getCachedTablesForBranch(
+      claims.tenant_id,
+      parsedBranchId.data,
+    );
+  } catch {
     return {
       success: false,
       error: "Không thể tải danh sách bàn. Vui lòng thử lại.",
     };
   }
 
-  return { success: true, data: tables ?? [] };
+  return { success: true, data: tables };
 }
 
 /* ─── fetchPosTerminals ─── */

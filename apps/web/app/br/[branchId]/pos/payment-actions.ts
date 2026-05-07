@@ -1,8 +1,10 @@
 "use server";
 
 import { z } from "zod";
+import { unstable_cache } from "next/cache";
 import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import type { Json } from "@comtammatu/database";
+import { createServiceClient } from "@comtammatu/database";
 import type { ActionResult } from "@comtammatu/shared/types";
 import {
   getPaymentProvider,
@@ -340,6 +342,55 @@ async function resolveAllowedPaymentMethods(
   return methods;
 }
 
+/* ─── Cached payment-config helpers ───────────────────────────────────────
+ *
+ * Both `fetchPaymentMethodsForPos` and `fetchVietQrConfig` read tenant-level
+ * `system_settings` rows that change rarely (admin payments-settings page).
+ * These calls fire on every Server Action route revalidation — caching them
+ * collapses ~150ms × 2 fetches to near-zero cache hits.
+ *
+ * Tag: `payment-config` — admin payment-settings save calls
+ *      `revalidateTag('payment-config')` to bust. Existing
+ *      `revalidatePath('/br/[branchId]/pos', 'page')` route bust complements
+ *      the tag bust (both fire on the same admin save).
+ *
+ * Service-role client + explicit `tenant_id` filter inside cache; outer
+ * Server Actions still validate caller's branch membership BEFORE invoking.
+ */
+const getCachedPaymentSettings = unstable_cache(
+  async (tenantId: number) => {
+    const sb = createServiceClient();
+    const { data: rows, error } = await sb
+      .from("system_settings")
+      .select("key, value")
+      .eq("tenant_id", tenantId)
+      .in("key", [
+        SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_VIETQR,
+        SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_MOMO,
+        SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_BANK_CODE,
+        SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NO,
+        SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NAME,
+      ]);
+
+    if (error) {
+      throw new Error(`payment settings: ${error.message}`);
+    }
+
+    const settings: Record<string, string> = {};
+    if (rows) {
+      for (const row of rows) {
+        settings[row.key] = row.value;
+      }
+    }
+    return settings;
+  },
+  ["payment-config"],
+  {
+    revalidate: 600,
+    tags: ["payment-config"],
+  },
+);
+
 /* ─── fetchPaymentMethodsForPos ─── */
 
 /**
@@ -360,16 +411,48 @@ export async function fetchPaymentMethodsForPos(
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
-  const { supabase, claims } = ctx;
+  const { claims } = ctx;
 
   if (claims.branch_id !== parsedBranch.data) {
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }
 
-  const methods = await resolveAllowedPaymentMethods(
-    supabase,
-    claims.tenant_id,
-  );
+  ensurePaymentProvidersRegistered();
+  let settings: Record<string, string>;
+  try {
+    settings = await getCachedPaymentSettings(claims.tenant_id);
+  } catch {
+    return {
+      success: false,
+      error: "Không thể tải cấu hình thanh toán. Vui lòng thử lại.",
+    };
+  }
+
+  const registered = new Set(getRegisteredMethods());
+  const methods: PaymentMethod[] = [];
+
+  if (registered.has("cash")) {
+    methods.push("cash");
+  }
+  if (truthySetting(settings[SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_VIETQR])) {
+    const bank =
+      settings[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_BANK_CODE] ||
+      process.env["VIETQR_BANK_ID"] ||
+      "";
+    const account =
+      settings[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NO] ||
+      process.env["VIETQR_ACCOUNT_NO"] ||
+      "";
+    if (bank && account) {
+      methods.push("vietqr");
+    }
+  }
+  if (
+    truthySetting(settings[SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_MOMO]) &&
+    registered.has("momo")
+  ) {
+    methods.push("momo");
+  }
 
   return { success: true, data: { methods } };
 }
@@ -1243,6 +1326,10 @@ export interface VietQrConfig {
 /**
  * Returns VietQR bank config for client-side QR URL generation.
  * Returns null when VietQR is disabled or not configured.
+ *
+ * Reuses the `payment-config` tag cache — `getCachedPaymentSettings` already
+ * pulls the VietQR rows we need, so a second cache key would just split the
+ * cache for no win. Both fetches share the same revalidate window.
  */
 export async function fetchVietQrConfig(
   branchId: number,
@@ -1258,24 +1345,45 @@ export async function fetchVietQrConfig(
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
-  const { supabase, claims } = ctx;
+  const { claims } = ctx;
 
   if (claims.branch_id !== parsedBranch.data) {
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }
 
-  const vietqr = await readVietQrSettings(supabase, claims.tenant_id);
-  if (!vietqr.enabled || !vietqr.bankCode || !vietqr.accountNo) {
+  let settings: Record<string, string>;
+  try {
+    settings = await getCachedPaymentSettings(claims.tenant_id);
+  } catch {
+    return {
+      success: false,
+      error: "Không thể tải cấu hình VietQR. Vui lòng thử lại.",
+    };
+  }
+
+  const enabled = truthySetting(
+    settings[SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_VIETQR],
+  );
+  const bankCode =
+    settings[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_BANK_CODE] ||
+    process.env["VIETQR_BANK_ID"] ||
+    "";
+  const accountNo =
+    settings[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NO] ||
+    process.env["VIETQR_ACCOUNT_NO"] ||
+    "";
+  const accountName =
+    settings[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NAME] ||
+    process.env["VIETQR_ACCOUNT_NAME"] ||
+    "";
+
+  if (!enabled || !bankCode || !accountNo) {
     return { success: true, data: null };
   }
 
   return {
     success: true,
-    data: {
-      bankCode: vietqr.bankCode,
-      accountNo: vietqr.accountNo,
-      accountName: vietqr.accountName,
-    },
+    data: { bankCode, accountNo, accountName },
   };
 }
 

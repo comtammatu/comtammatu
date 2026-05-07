@@ -1,6 +1,8 @@
 "use server";
 
 import { z } from "zod";
+import { unstable_cache } from "next/cache";
+import { createServiceClient } from "@comtammatu/database";
 import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "../../_lib/auth";
@@ -11,6 +13,80 @@ const branchIdSchema = z.coerce
   .number()
   .int()
   .positive({ error: "Branch ID không hợp lệ" });
+
+/**
+ * Cached menu structure (categories + items + variants + modifiers + sides).
+ * Tenant-scoped, low-volatility — admin menu CRUD invalidates via
+ * `revalidateTag('menu-structure')`. 5-minute TTL is a safety net for any
+ * mutation path that forgets to call revalidateTag.
+ *
+ * Service-role client bypasses RLS but the explicit `tenant_id` filter
+ * preserves tenant isolation. Outer fetchMenuForPos validates the caller's
+ * branch membership BEFORE calling this — never invoke directly.
+ *
+ * Cache key auto-derived from `tenantId` arg (Next.js JSON-serializes args).
+ * Per-branch daily-limits stay UNCACHED — they change with every paid order.
+ */
+const getCachedMenuStructure = unstable_cache(
+  async (tenantId: number) => {
+    const sb = createServiceClient();
+    const { data, error } = await sb
+      .from("menu_categories")
+      .select(
+        `
+        id,
+        name,
+        type,
+        sort_order,
+        menu_items!inner (
+          id,
+          name,
+          base_price,
+          description,
+          image_url,
+          sort_order,
+          menu_item_variants (
+            id,
+            name,
+            price_adjustment,
+            sort_order,
+            is_active
+          ),
+          menu_item_modifiers (
+            id,
+            name,
+            price,
+            sort_order,
+            is_active
+          ),
+          menu_item_available_sides!menu_item_available_sides_main_item_id_fkey (
+            id,
+            is_default,
+            side_item_id
+          )
+        )
+      `,
+      )
+      .eq("tenant_id", tenantId)
+      .eq("is_active", true)
+      .eq("menu_items.is_active", true)
+      .order("sort_order", { ascending: true })
+      .order("sort_order", {
+        ascending: true,
+        referencedTable: "menu_items",
+      });
+
+    if (error) {
+      throw new Error(`fetchMenuStructure: ${error.message}`);
+    }
+    return data ?? [];
+  },
+  ["menu-structure"],
+  {
+    revalidate: 300,
+    tags: ["menu-structure"],
+  },
+);
 
 /**
  * Fetch full menu for POS display: categories -> items -> variants + modifiers + sides.
@@ -35,54 +111,29 @@ export async function fetchMenuForPos(branchId: number): Promise<ActionResult> {
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }
 
-  // Fetch categories + items + variants + modifiers (no self-join for sides)
-  const { data: categories, error: catError } = await supabase
-    .from("menu_categories")
-    .select(
-      `
-      id,
-      name,
-      type,
-      sort_order,
-      menu_items!inner (
-        id,
-        name,
-        base_price,
-        description,
-        image_url,
-        sort_order,
-        menu_item_variants (
-          id,
-          name,
-          price_adjustment,
-          sort_order,
-          is_active
-        ),
-        menu_item_modifiers (
-          id,
-          name,
-          price,
-          sort_order,
-          is_active
-        ),
-        menu_item_available_sides!menu_item_available_sides_main_item_id_fkey (
-          id,
-          is_default,
-          side_item_id
-        )
-      )
-    `,
-    )
-    .eq("tenant_id", claims.tenant_id)
-    .eq("is_active", true)
-    .eq("menu_items.is_active", true)
-    .order("sort_order", { ascending: true })
-    .order("sort_order", {
-      ascending: true,
-      referencedTable: "menu_items",
+  // Parallel: cached menu structure + uncached daily-limits.
+  // Structure cache hit short-circuits the heavy join (~400ms) on every
+  // post-Server-Action route revalidation; daily-limits stays fresh.
+  let categories: Awaited<ReturnType<typeof getCachedMenuStructure>>;
+  let limitRows: unknown;
+  try {
+    const limitsPromise = (
+      supabase as unknown as {
+        rpc: (
+          name: string,
+          args: Record<string, unknown>,
+        ) => Promise<{ data: unknown; error: unknown }>;
+      }
+    ).rpc("get_branch_menu_daily_limits_for_pos", {
+      p_branch_id: parsedBranchId.data,
     });
-
-  if (catError) {
+    const [structure, limitsRes] = await Promise.all([
+      getCachedMenuStructure(claims.tenant_id),
+      limitsPromise,
+    ]);
+    categories = structure;
+    limitRows = limitsRes.data;
+  } catch {
     return { success: false, error: "Không thể tải menu. Vui lòng thử lại." };
   }
 
@@ -100,15 +151,6 @@ export async function fetchMenuForPos(branchId: number): Promise<ActionResult> {
       });
     }
   }
-
-  // Pull today's per-item caps so the UI can disable / annotate sold-out
-  // items. RPC is cheap (≤ a few rows per branch) and bypasses RLS via
-  // SECURITY DEFINER while still scope-checking against the JWT branch.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: limitRows } = await (supabase as any).rpc(
-    "get_branch_menu_daily_limits_for_pos",
-    { p_branch_id: parsedBranchId.data },
-  );
   const limitsByItemId = new Map<
     number,
     {

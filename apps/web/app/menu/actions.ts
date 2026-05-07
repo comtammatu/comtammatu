@@ -4,6 +4,7 @@ import { z } from "zod";
 import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "@/_lib/auth";
+import { updateTag } from "next/cache";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 import { withAction, withFormAction } from "@/_lib/with-action";
 import {
@@ -151,6 +152,8 @@ export const createCategory = withFormAction(
     }
 
     revalidateSurfacePath("/menu");
+    // Bust POS cached menu structure (apps/web/app/br/[branchId]/pos/menu-actions.ts).
+    updateTag("menu-structure");
     return { success: true };
   },
 );
@@ -182,6 +185,8 @@ export const updateCategory = withFormAction(
     }
 
     revalidateSurfacePath("/menu");
+    // Bust POS cached menu structure (apps/web/app/br/[branchId]/pos/menu-actions.ts).
+    updateTag("menu-structure");
     return { success: true };
   },
 );
@@ -205,6 +210,8 @@ export const toggleCategoryActive = withAction(
     }
 
     revalidateSurfacePath("/menu");
+    // Bust POS cached menu structure (apps/web/app/br/[branchId]/pos/menu-actions.ts).
+    updateTag("menu-structure");
     return { success: true };
   },
 );
@@ -238,6 +245,8 @@ export const createItem = withFormAction(
     }
 
     revalidateSurfacePath("/menu");
+    // Bust POS cached menu structure (apps/web/app/br/[branchId]/pos/menu-actions.ts).
+    updateTag("menu-structure");
     return { success: true };
   },
 );
@@ -273,6 +282,8 @@ export const updateItem = withFormAction(
     }
 
     revalidateSurfacePath("/menu");
+    // Bust POS cached menu structure (apps/web/app/br/[branchId]/pos/menu-actions.ts).
+    updateTag("menu-structure");
     return { success: true };
   },
 );
@@ -296,6 +307,8 @@ export const toggleItemActive = withAction(
     }
 
     revalidateSurfacePath("/menu");
+    // Bust POS cached menu structure (apps/web/app/br/[branchId]/pos/menu-actions.ts).
+    updateTag("menu-structure");
     return { success: true };
   },
 );
@@ -326,6 +339,8 @@ export const saveVariants = withAction(
     }
 
     revalidateSurfacePath("/menu");
+    // Bust POS cached menu structure (apps/web/app/br/[branchId]/pos/menu-actions.ts).
+    updateTag("menu-structure");
     return { success: true };
   },
 );
@@ -356,6 +371,8 @@ export const saveModifiers = withAction(
     }
 
     revalidateSurfacePath("/menu");
+    // Bust POS cached menu structure (apps/web/app/br/[branchId]/pos/menu-actions.ts).
+    updateTag("menu-structure");
     return { success: true };
   },
 );
@@ -385,6 +402,8 @@ export const saveSides = withAction(
     }
 
     revalidateSurfacePath("/menu");
+    // Bust POS cached menu structure (apps/web/app/br/[branchId]/pos/menu-actions.ts).
+    updateTag("menu-structure");
     return { success: true };
   },
 );
