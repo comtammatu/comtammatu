@@ -23,6 +23,8 @@ import {
   stringToBase64,
   type SheetDef,
 } from "@/_lib/spreadsheet";
+import { PRODUCTION_ERROR_CODES } from "./production-types";
+import type { ProductionShortageRow } from "./production-types";
 
 /**
  * Route-level fast gate for the production (central kitchen) surface. Fine-grained
@@ -116,9 +118,37 @@ type RpcClient = {
     args: Record<string, unknown>,
   ) => PromiseLike<{
     data: unknown;
-    error: { code?: string; message?: string } | null;
+    error: {
+      code?: string;
+      message?: string;
+      details?: string | null;
+    } | null;
   }>;
 };
+
+const productionShortageListSchema = z.array(
+  z.object({
+    ingredient_id: z.coerce.number().int().positive(),
+    ingredient_name: z.string(),
+    unit: z.string(),
+    needed: z.coerce.number(),
+    on_hand: z.coerce.number(),
+    missing: z.coerce.number(),
+  }),
+);
+
+function parseShortagesDetail(
+  details: string | null | undefined,
+): ProductionShortageRow[] {
+  if (!details) return [];
+  try {
+    const parsed = JSON.parse(details);
+    const result = productionShortageListSchema.safeParse(parsed);
+    return result.success ? result.data : [];
+  } catch {
+    return [];
+  }
+}
 
 type ProductionRecipeSheetRow = {
   finished_good_id: number | "";
@@ -1221,21 +1251,92 @@ export async function confirmProductionOrder(
   });
 
   if (error) {
+    const message = error.message ?? "";
+
     if (error.code === PG_ERR.INSUFFICIENT_PRIVILEGE) {
+      if (message.includes("branch_scope_violation")) {
+        return {
+          success: false,
+          error:
+            "Tài khoản chưa được cấp quyền xác nhận sản xuất tại bếp trung tâm này.",
+        };
+      }
       return {
         success: false,
         error: "Không có quyền xác nhận lệnh sản xuất.",
       };
     }
+
+    if (error.code === "P0002") {
+      if (message.includes("production_location_missing")) {
+        return {
+          success: false,
+          error:
+            "Bếp trung tâm chưa có kho nhận mặc định. Tạo Inventory Location với 'Mặc định nhận hàng'.",
+        };
+      }
+      if (message.includes("production_order_not_found")) {
+        return { success: false, error: "Không tìm thấy lệnh sản xuất." };
+      }
+      return { success: false, error: "Không thể xác nhận lệnh sản xuất." };
+    }
+
     if (
       error.code === PG_ERR.CHECK_VIOLATION ||
       error.code === PG_ERR.INVALID_TEXT_REPRESENTATION ||
       error.code === "P0001"
     ) {
-      if (error.message?.includes("production_recipe_missing")) {
+      if (message.includes("production_recipe_missing")) {
         return {
           success: false,
           error: "Thiếu công thức sản xuất cho thành phẩm này.",
+        };
+      }
+      if (message.includes("insufficient_stock_for_production")) {
+        const shortages = parseShortagesDetail(error.details);
+        const summary =
+          shortages.length > 0
+            ? `Thiếu ${shortages.length} nguyên liệu trong bếp trung tâm.`
+            : "Không đủ tồn kho nguyên liệu trong bếp trung tâm để sản xuất lệnh này.";
+        return {
+          success: false,
+          error: summary,
+          errorCode: PRODUCTION_ERROR_CODES.INSUFFICIENT_STOCK,
+          meta: { shortages },
+        };
+      }
+      if (message.includes("production_conversion_factor_invalid")) {
+        return {
+          success: false,
+          error:
+            "Nguyên liệu thiếu hệ số quy đổi đơn vị mua → đo. Cập nhật trong danh mục nguyên liệu.",
+        };
+      }
+      if (message.includes("production_order_not_draft")) {
+        return {
+          success: false,
+          error: "Lệnh đã được xác nhận hoặc hủy trước đó.",
+        };
+      }
+      if (message.includes("production_order_empty")) {
+        return { success: false, error: "Lệnh sản xuất chưa có thành phẩm." };
+      }
+      if (message.includes("production_cost_invalid")) {
+        return {
+          success: false,
+          error: "Chi phí sản xuất tính ra giá trị âm.",
+        };
+      }
+      if (message.includes("branch_must_be_central_kitchen")) {
+        return {
+          success: false,
+          error: "Chi nhánh không phải bếp trung tâm.",
+        };
+      }
+      if (message.includes("production_item_must_be_finished_good")) {
+        return {
+          success: false,
+          error: "Có dòng không phải thành phẩm trong lệnh.",
         };
       }
       return {

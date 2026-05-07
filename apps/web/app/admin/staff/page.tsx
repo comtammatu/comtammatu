@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { STAFF_ROLES } from "@comtammatu/shared/auth";
 import type { StaffRole } from "@comtammatu/shared/auth";
+import { AppPage, AppPageHeader, AppToolbar } from "@/components/surface";
 import { StaffTable } from "./staff-table";
 import { StaffFilters } from "./staff-filters";
 import { AddStaffButton } from "./add-staff-button";
@@ -69,14 +70,18 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
   const branchOptions = branches ?? [];
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <AppPage>
+      <AppPageHeader
+        title="Nhân viên"
+        description="Quản lý tài khoản và phân quyền nhân viên theo chi nhánh."
+        actions={<AddStaffButton branches={branchOptions} />}
+      />
+      <AppToolbar>
         <Suspense>
           <StaffFilters branches={branchOptions} />
         </Suspense>
-        <AddStaffButton branches={branchOptions} />
-      </div>
+      </AppToolbar>
       <StaffTable staff={staff} branches={branchOptions} />
-    </div>
+    </AppPage>
   );
 }

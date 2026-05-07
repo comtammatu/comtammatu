@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { loadAuthState } from "@/_lib/auth";
+import { AppPage, AppPageHeader } from "@/components/surface";
 import { ReportsList } from "./_components/reports-list";
 import type { DailyReportRow } from "@comtammatu/shared/feedback";
 
@@ -86,9 +87,12 @@ export default async function FeedbackReportsPage({
   }));
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-xl font-semibold">Báo cáo AI hàng ngày</h1>
+    <AppPage>
+      <AppPageHeader
+        title="Báo cáo AI hàng ngày"
+        description="Báo cáo tổng hợp phản hồi khách hàng được tạo tự động bởi AI mỗi ngày."
+      />
       <ReportsList reports={reports} />
-    </div>
+    </AppPage>
   );
 }

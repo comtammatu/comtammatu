@@ -53,11 +53,7 @@ import { cn } from "@comtammatu/ui";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { downloadCsv } from "@/_lib/download-file";
 import { matchesSearch } from "@lib/search";
-import { InventoryHeader } from "../_components/inventory-header";
-import {
-  InventoryFilterBar,
-  InventoryPageContent,
-} from "../_components/inventory-page-layout";
+import { AppPage, AppPageHeader, AppToolbar } from "@/components/surface";
 import { InteractiveCard } from "../_components/interactive-card";
 import { StatusBadge } from "../_components/status-badge";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
@@ -245,7 +241,7 @@ export function IssuesClient({
   }
 
   const filterBar = (
-    <InventoryFilterBar>
+    <AppToolbar>
       <div className="flex flex-1 flex-wrap items-end gap-3">
         <Select value={activeStatus} onValueChange={setActiveStatus}>
           <SelectTrigger className="w-48">
@@ -306,12 +302,13 @@ export function IssuesClient({
           </Button>
         )}
       </div>
-    </InventoryFilterBar>
+    </AppToolbar>
   );
 
   return (
-    <>
-      <InventoryHeader
+    <AppPage width={isMobile ? "narrow" : "wide"}>
+      <AppPageHeader
+        eyebrow="Kho hàng"
         title={tNav("issues", "navigation")}
         actions={
           <>
@@ -332,7 +329,6 @@ export function IssuesClient({
           </>
         }
       />
-      <InventoryPageContent width={isMobile ? "narrow" : "wide"}>
         {filterBar}
 
         {/* Desktop: Table / Mobile: Cards */}
@@ -442,7 +438,6 @@ export function IssuesClient({
             </CardContent>
           </Card>
         )}
-      </InventoryPageContent>
 
       <Dialog
         open={createOpen}
@@ -534,6 +529,6 @@ export function IssuesClient({
           </form>
         </DialogContent>
       </Dialog>
-    </>
+    </AppPage>
   );
 }

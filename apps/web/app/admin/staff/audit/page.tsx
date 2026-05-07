@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft as IconArrowLeft, History as IconHistory } from "lucide-react";
+import { ArrowLeft as IconArrowLeft } from "lucide-react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -17,6 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
+import { AppPage, AppPageHeader, AppEmptyState } from "@/components/surface";
 import { messages } from "@lib/messages";
 
 import { BRANCH_VI } from "@comtammatu/shared/messages";
@@ -56,8 +57,14 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
     query = query.gte("at", `${params.since}T00:00:00Z`);
   }
 
-  const { data: rows } = await query;
-  const auditRows = rows ?? [];
+  // Audit log + branches list have no dependency on each other; profile
+  // lookup needs the userIds from the audit rows, so it stays sequential.
+  // Running audit + branches in parallel saves one RTT off TTFB.
+  const [auditResult, branchesResult] = await Promise.all([
+    query,
+    supabase.from("branches").select("id, name").order("name"),
+  ]);
+  const auditRows = auditResult.data ?? [];
 
   // Look up actor + target names (bulk)
   const userIds = Array.from(
@@ -74,40 +81,26 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
     (profiles ?? []).map((p) => [p.id, p.full_name]),
   );
 
-  const { data: branches } = await supabase
-    .from("branches")
-    .select("id, name")
-    .order("name");
+  const branches = branchesResult.data;
   const branchNameById = new Map<number, string>(
     (branches ?? []).map((b) => [b.id, b.name]),
   );
   const copy = messages.admin.staffAudit;
 
   return (
-    <div className="space-y-5 lg:space-y-6">
-      <Card>
-        <CardContent className="p-5 sm:p-6">
-          <div className="flex flex-col gap-3">
-            <Button asChild variant="ghost" size="sm" className="-ml-3 self-start">
-              <Link href="/admin/staff">
-                <IconArrowLeft className="mr-1 size-4" />
-                {copy.backToStaff}
-              </Link>
-            </Button>
-            <div className="flex items-center gap-3">
-              <IconHistory className="size-7 text-muted-foreground" />
-              <div>
-                <h2 className="font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
-                  {copy.title}
-                </h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {copy.description}
-                </p>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+    <AppPage>
+      <AppPageHeader
+        title={copy.title}
+        description={copy.description}
+        breadcrumb={
+          <Button asChild variant="ghost" size="sm" className="-ml-3">
+            <Link href="/admin/staff">
+              <IconArrowLeft className="mr-1 size-4" />
+              {copy.backToStaff}
+            </Link>
+          </Button>
+        }
+      />
 
       <Card>
         <CardHeader>
@@ -117,9 +110,7 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
         </CardHeader>
         <CardContent className="p-0">
           {auditRows.length === 0 ? (
-            <p className="p-6 text-center text-sm text-muted-foreground">
-              {copy.empty}
-            </p>
+            <AppEmptyState mode="no-data" description={copy.empty} compact />
           ) : (
             <Table>
               <TableHeader>
@@ -209,6 +200,6 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
           )}
         </CardContent>
       </Card>
-    </div>
+    </AppPage>
   );
 }

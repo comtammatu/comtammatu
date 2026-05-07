@@ -3,6 +3,7 @@ import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { currentUserHasPermission } from "@/_lib/permissions";
 import { fetchIngredients } from "../../actions";
 import { fetchStockIssueDetail } from "../../issue-actions";
+import { fetchEntityAuditLogs } from "@/admin/_lib/audit";
 import { IssueDetailClient } from "./issue-detail-client";
 import type { IngredientRow } from "../../page";
 
@@ -15,9 +16,10 @@ export default async function IssueDetailPage({
   const issueId = Number(id);
   if (!Number.isFinite(issueId) || issueId <= 0) notFound();
 
-  const [res, ingredientsRes] = await Promise.all([
+  const [res, ingredientsRes, auditLogs] = await Promise.all([
     fetchStockIssueDetail(issueId),
     fetchIngredients(),
+    fetchEntityAuditLogs("stock_issue", issueId, 50),
   ]);
 
   if (!res.success || !res.data) notFound();
@@ -63,6 +65,7 @@ export default async function IssueDetailPage({
       initialLines={d.lines}
       ingredients={ingredients}
       canAdjustStock={canAdjustStock}
+      auditLogs={auditLogs}
     />
   );
 }

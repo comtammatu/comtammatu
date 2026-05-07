@@ -34,11 +34,7 @@ import {
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui";
 import { matchesSearch } from "@lib/search";
-import { InventoryHeader } from "../_components/inventory-header";
-import {
-  InventoryFilterBar,
-  InventoryPageContent,
-} from "../_components/inventory-page-layout";
+import { AppPage, AppPageHeader, AppToolbar } from "@/components/surface";
 import { InteractiveCard } from "../_components/interactive-card";
 import { StatusBadge } from "../_components/status-badge";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
@@ -83,8 +79,9 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
   }, [grns, search, statusFilter]);
 
   return (
-    <>
-      <InventoryHeader
+    <AppPage width={isMobile ? "narrow" : "wide"}>
+      <AppPageHeader
+        eyebrow="Kho hàng"
         title={tNav("grn", "navigation")}
         actions={
           <Button asChild size="sm">
@@ -95,9 +92,7 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
           </Button>
         }
       />
-      <InventoryPageContent width={isMobile ? "narrow" : "wide"}>
-        {/* Filters */}
-        <InventoryFilterBar>
+      <AppToolbar>
           <InputGroup className={cn("flex-1", isMobile && "h-12 basis-full")}>
             <InputGroupAddon>
               <IconSearch />
@@ -126,7 +121,7 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
           <Badge variant="outline" className="rounded-full">
             {filtered.length}/{grns.length}
           </Badge>
-        </InventoryFilterBar>
+        </AppToolbar>
 
         {/* Desktop: Table / Mobile: Cards */}
         {isMobile ? (
@@ -244,7 +239,6 @@ export function GrnListClient({ grns }: { grns: GrnRow[] }) {
             </CardContent>
           </Card>
         )}
-      </InventoryPageContent>
-    </>
+    </AppPage>
   );
 }

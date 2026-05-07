@@ -2,13 +2,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft as IconArrowLeft } from "lucide-react";
 import { createClient } from "@comtammatu/database/supabase/server";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
 import {
   Item,
   ItemActions,
@@ -16,6 +11,8 @@ import {
   ItemGroup,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
+import { AppPage, AppPageHeader, AppSection, AppEmptyState } from "@/components/surface";
+import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { PermissionsClient } from "./permissions-client";
 
 interface Props {
@@ -44,6 +41,7 @@ export default async function StaffPermissionsPage({ params }: Props) {
     { data: grants },
     { data: position },
     { data: recentAudit },
+    { data: branchRows },
   ] = await Promise.all([
     supabase
       .from("branches")
@@ -76,7 +74,8 @@ export default async function StaffPermissionsPage({ params }: Props) {
       .select("id, action, permission_key, branch_id, at, actor_user_id, source_template_id")
       .eq("target_user_id", id)
       .order("at", { ascending: false })
-      .limit(10),
+      .limit(50),
+    supabase.from("branches").select("id, name").order("name"),
   ]);
 
   const branchList = branches ?? [];
@@ -88,104 +87,178 @@ export default async function StaffPermissionsPage({ params }: Props) {
     ? `${position.label_vi} (${position.code})`
     : "Chưa gán";
 
+  // Resolve actor names for Lịch sử tab
+  const actorIds = Array.from(
+    new Set(auditList.map((a) => a.actor_user_id).filter(Boolean) as string[]),
+  );
+  const { data: actorProfiles } = actorIds.length
+    ? await supabase.from("profiles").select("id, full_name").in("id", actorIds)
+    : { data: [] as { id: string; full_name: string }[] };
+  const nameByUserId = new Map<string, string>(
+    (actorProfiles ?? []).map((p) => [p.id, p.full_name]),
+  );
+
+  const branchNameById = new Map<number, string>(
+    (branchRows ?? []).map((b) => [b.id, b.name]),
+  );
+
+  const defaultBranchName = profile.branch_id
+    ? (branchNameById.get(profile.branch_id) ?? String(profile.branch_id))
+    : "tenant-wide";
+
   return (
-    <div className="space-y-5 lg:space-y-6">
-      <Card>
-        <CardContent className="p-5 sm:p-6">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="space-y-2">
-              <Button asChild variant="ghost" size="sm" className="-ml-3">
-                <Link href="/admin/staff">
-                  <IconArrowLeft className="mr-1 size-4" />
-                  Quay lại danh sách
-                </Link>
-              </Button>
-              <div>
-                <h2 className="font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
-                  {profile.full_name}
-                </h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Chức vụ: {positionLabel} · Legacy role:{" "}
-                  <code>{profile.positions?.legacy_role_code ?? "—"}</code> · Branch mặc định:{" "}
-                  {profile.branch_id ?? "tenant"}
-                </p>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+    <AppPage>
+      <AppPageHeader
+        title={profile.full_name}
+        description={`Chức vụ: ${positionLabel} · Chi nhánh mặc định: ${defaultBranchName}`}
+        breadcrumb={
+          <Button asChild variant="ghost" size="sm" className="-ml-3">
+            <Link href="/admin/staff">
+              <IconArrowLeft className="mr-1 size-4" />
+              Quay lại danh sách
+            </Link>
+          </Button>
+        }
+        badge={
+          profile.is_active
+            ? { children: "Đang hoạt động", variant: "success" as const }
+            : { children: "Ngưng hoạt động", variant: "secondary" as const }
+        }
+        tabs={
+          <AppPageTabs
+            items={[
+              { value: "overview", label: "Tổng quan" },
+              { value: "permissions", label: "Quyền" },
+              { value: "history", label: "Lịch sử" },
+            ]}
+            defaultValue="overview"
+          >
+            <TabsContent value="overview" className="mt-4">
+              <AppSection title="Thông tin nhân viên">
+                <dl className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <dt className="text-xs font-medium text-muted-foreground">Họ tên</dt>
+                    <dd className="mt-0.5 text-sm">{profile.full_name}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-medium text-muted-foreground">Số điện thoại</dt>
+                    <dd className="mt-0.5 font-mono text-sm">{profile.phone ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-medium text-muted-foreground">Chức vụ</dt>
+                    <dd className="mt-0.5 text-sm">{positionLabel}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-medium text-muted-foreground">Chi nhánh mặc định</dt>
+                    <dd className="mt-0.5 text-sm">{defaultBranchName}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-medium text-muted-foreground">Legacy role</dt>
+                    <dd className="mt-0.5 font-mono text-sm">
+                      {profile.positions?.legacy_role_code ?? "—"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-medium text-muted-foreground">Trạng thái</dt>
+                    <dd className="mt-0.5">
+                      <Badge variant={profile.is_active ? "success" : "secondary"}>
+                        {profile.is_active ? "Đang hoạt động" : "Ngưng hoạt động"}
+                      </Badge>
+                    </dd>
+                  </div>
+                </dl>
+              </AppSection>
+            </TabsContent>
 
-      <PermissionsClient
-        targetUserId={profile.id}
-        targetFullName={profile.full_name}
-        currentGrants={grantList.map((g) => ({
-          id: g.id,
-          branchId: g.branch_id,
-          permissionKey: g.permission_key,
-          sourceTemplate: g.source_template,
-          grantedAt: g.granted_at,
-          validUntil: g.valid_until,
-        }))}
-        branches={branchList.map((b) => ({
-          id: b.id,
-          name: b.name,
-          branchKind: b.branch_kind,
-        }))}
-        permissionKeys={permList.map((p) => ({
-          key: p.key,
-          module: p.module,
-          description: p.description,
-          scope: p.scope,
-        }))}
-        templates={templateList.map((t) => ({
-          id: t.id,
-          name: t.name,
-          positionCode: t.position_code,
-          permissionKeys: t.permission_keys,
-        }))}
+            <TabsContent value="permissions" className="mt-4">
+              <PermissionsClient
+                targetUserId={profile.id}
+                targetFullName={profile.full_name}
+                currentGrants={grantList.map((g) => ({
+                  id: g.id,
+                  branchId: g.branch_id,
+                  permissionKey: g.permission_key,
+                  sourceTemplate: g.source_template,
+                  grantedAt: g.granted_at,
+                  validUntil: g.valid_until,
+                }))}
+                branches={branchList.map((b) => ({
+                  id: b.id,
+                  name: b.name,
+                  branchKind: b.branch_kind,
+                }))}
+                permissionKeys={permList.map((p) => ({
+                  key: p.key,
+                  module: p.module,
+                  description: p.description,
+                  scope: p.scope,
+                }))}
+                templates={templateList.map((t) => ({
+                  id: t.id,
+                  name: t.name,
+                  positionCode: t.position_code,
+                  permissionKeys: t.permission_keys,
+                }))}
+              />
+            </TabsContent>
+
+            <TabsContent value="history" className="mt-4">
+              <AppSection title={`Lịch sử thay đổi (${auditList.length} mục gần nhất)`}>
+                {auditList.length === 0 ? (
+                  <AppEmptyState mode="no-data" description="Chưa có thay đổi quyền hạn." compact />
+                ) : (
+                  <ItemGroup>
+                    {auditList.map((a) => (
+                      <Item key={a.id} variant="outline" size="sm">
+                        <ItemContent>
+                          <ItemTitle
+                            className={
+                              a.action === "revoke"
+                                ? "text-destructive"
+                                : undefined
+                            }
+                          >
+                            <Badge
+                              variant={
+                                a.action === "revoke"
+                                  ? "destructive"
+                                  : a.action === "apply_template"
+                                    ? "outline"
+                                    : "default"
+                              }
+                              className="mr-2 text-xs"
+                            >
+                              {a.action}
+                            </Badge>
+                            <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs font-normal">
+                              {a.permission_key}
+                            </code>
+                            <span className="ml-2 text-xs font-normal text-muted-foreground">
+                              {a.branch_id === null
+                                ? "tenant-wide"
+                                : (branchNameById.get(a.branch_id) ?? `branch #${a.branch_id}`)}
+                            </span>
+                          </ItemTitle>
+                          <p className="text-xs text-muted-foreground">
+                            {nameByUserId.get(a.actor_user_id) ?? (
+                              <code>{a.actor_user_id.slice(0, 8)}</code>
+                            )}
+                          </p>
+                        </ItemContent>
+                        <ItemActions>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(a.at).toLocaleString("vi-VN")}
+                          </span>
+                        </ItemActions>
+                      </Item>
+                    ))}
+                  </ItemGroup>
+                )}
+              </AppSection>
+            </TabsContent>
+          </AppPageTabs>
+        }
       />
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">
-            Nhật ký thay đổi (10 mục gần nhất)
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {auditList.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Chưa có thay đổi.</p>
-          ) : (
-            <ItemGroup>
-              {auditList.map((a) => (
-                <Item key={a.id} variant="outline" size="sm">
-                  <ItemContent>
-                    <ItemTitle
-                      className={
-                        a.action === "revoke"
-                          ? "text-destructive"
-                          : undefined
-                      }
-                    >
-                      {a.action}
-                      <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs font-normal">
-                        {a.permission_key}
-                      </code>
-                      <span className="text-xs font-normal text-muted-foreground">
-                        branch={a.branch_id ?? "tenant-wide"}
-                      </span>
-                    </ItemTitle>
-                  </ItemContent>
-                  <ItemActions>
-                    <span className="text-xs text-muted-foreground">
-                      {new Date(a.at).toLocaleString("vi-VN")}
-                    </span>
-                  </ItemActions>
-                </Item>
-              ))}
-            </ItemGroup>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+    </AppPage>
   );
 }

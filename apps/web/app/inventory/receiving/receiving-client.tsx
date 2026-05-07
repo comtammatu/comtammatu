@@ -20,8 +20,7 @@ import {
 } from "@comtammatu/ui/components/table";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui";
-import { InventoryHeader } from "../_components/inventory-header";
-import { InventoryPageContent } from "../_components/inventory-page-layout";
+import { AppPage, AppPageHeader } from "@/components/surface";
 import { InteractiveCard } from "../_components/interactive-card";
 import { StatusBadge } from "../_components/status-badge";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
@@ -109,8 +108,9 @@ export function ReceivingClient({
   } satisfies Record<(typeof WORKFLOW_STEPS)[number]["key"], number>;
 
   return (
-    <>
-      <InventoryHeader
+    <AppPage width={isMobile ? "narrow" : "wide"}>
+      <AppPageHeader
+        eyebrow="Kho hàng"
         title={tRoute("/inventory/receiving", "heading")}
         actions={
           <>
@@ -126,7 +126,6 @@ export function ReceivingClient({
           </>
         }
       />
-      <InventoryPageContent width={isMobile ? "narrow" : "wide"}>
         {/* Pipeline cards */}
         <div className="grid gap-4 xl:grid-cols-3">
           {WORKFLOW_STEPS.map((step, index) => {
@@ -297,7 +296,6 @@ export function ReceivingClient({
             )}
           </CardContent>
         </Card>
-      </InventoryPageContent>
-    </>
+    </AppPage>
   );
 }

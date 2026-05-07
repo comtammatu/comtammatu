@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
   Card,
@@ -8,21 +9,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@comtammatu/ui/components/card";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  Legend,
-  Line,
-  LineChart,
-  Pie,
-  PieChart,
-  Tooltip,
-  XAxis,
-  YAxis,
-  type ChartConfig,
-} from "@comtammatu/ui/components/chart";
 import {
   Table,
   TableBody,
@@ -46,11 +32,31 @@ import type {
   TopItemRow,
 } from "../_lib/finance-types";
 import type { FinanceParams } from "../_lib/finance-params";
-import { ChartCard } from "../components/chart-card";
 import {
   buildCompareDelta,
   type CompareDelta,
 } from "../components/compare-chip";
+
+// Recharts is the heaviest dependency on this route (~95 KB gz). Defer it
+// to a dynamic chunk so KPI cards + work queue strip render before the
+// chart code arrives. ssr:false matches the trend-sparkline pattern —
+// Recharts uses ResizeObserver/useState which mismatch hydration.
+const RevenueChartsBlock = dynamic(
+  () =>
+    import("./revenue-charts-internal").then((m) => m.RevenueChartsBlock),
+  {
+    ssr: false,
+    loading: () => (
+      <>
+        <div className="h-[180px] w-full animate-pulse rounded-md bg-muted/40" />
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="aspect-square max-h-72 w-full animate-pulse rounded-md bg-muted/40" />
+          <div className="aspect-square max-h-72 w-full animate-pulse rounded-md bg-muted/40" />
+        </div>
+      </>
+    ),
+  },
+);
 import {
   ExportToolbar,
   type CsvSection,
@@ -548,159 +554,17 @@ export function RevenueClient({
         </p>
       ) : null}
 
-      {/* Big chart row — net revenue trend */}
-      <ChartCard
-        title={revCopy.trendChart.title}
-        description={revCopy.trendChart.description(
-          resolvedStart,
-          resolvedEnd,
-          granularityLabel,
-        )}
-        config={
-          {
-            revenue: {
-              label: revCopy.trendChart.tooltipLabel,
-              theme: { light: "var(--chart-1)", dark: "var(--chart-1)" },
-            },
-          } satisfies ChartConfig
-        }
-        chartClassName="aspect-[3/1]"
-        empty={trendData.length === 0}
-      >
-        <LineChart data={trendData} margin={{ top: 8, right: 12, left: 12, bottom: 8 }}>
-          <CartesianGrid vertical={false} strokeDasharray="3 3" />
-          <XAxis dataKey="period" tickLine={false} axisLine={false} />
-          <YAxis
-            tickLine={false}
-            axisLine={false}
-            width={70}
-            tickFormatter={(v: number) =>
-              new Intl.NumberFormat("vi-VN", { notation: "compact" }).format(v)
-            }
-          />
-          <Tooltip
-            formatter={(value) => [
-              formatVND(Number(value ?? 0)),
-              revCopy.trendChart.tooltipLabel,
-            ]}
-          />
-          <Line
-            type="monotone"
-            dataKey="revenue"
-            stroke="var(--color-revenue)"
-            strokeWidth={2}
-            dot={{ r: 3 }}
-          />
-        </LineChart>
-      </ChartCard>
-
-      {/* Mid row — payment donut + branch bar */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <ChartCard
-          title={revCopy.paymentChart.title}
-          description={
-            paymentTotal > 0
-              ? revCopy.paymentChart.total(formatVND(paymentTotal))
-              : revCopy.paymentChart.empty
-          }
-          config={
-            {
-              cash: { label: revCopy.paymentChart.cash, theme: { light: "var(--chart-1)", dark: "var(--chart-1)" } },
-              vietqr: { label: "VietQR", theme: { light: "var(--chart-2)", dark: "var(--chart-2)" } },
-              momo: { label: "MoMo", theme: { light: "var(--chart-3)", dark: "var(--chart-3)" } },
-            } satisfies ChartConfig
-          }
-          chartClassName="aspect-square max-h-72"
-          empty={paymentTotal === 0}
-        >
-          <PieChart>
-            <Pie
-              data={paymentData}
-              dataKey="value"
-              nameKey="key"
-              innerRadius={60}
-              outerRadius={90}
-              paddingAngle={2}
-            >
-              {paymentData.map((entry) => (
-                <Cell
-                  key={entry.key}
-                  fill={`var(--color-${entry.key})`}
-                />
-              ))}
-            </Pie>
-            <Tooltip
-              formatter={(value, _name, item) => [
-                formatVND(Number(value ?? 0)),
-                item && typeof item.payload === "object" && item.payload != null
-                  ? (item.payload as { label: string }).label
-                  : "",
-              ]}
-            />
-            <Legend
-              formatter={(_value, entry) => {
-                const key = entry.dataKey as string;
-                const row = paymentData.find((d) => d.key === key);
-                return row?.label ?? key;
-              }}
-            />
-          </PieChart>
-        </ChartCard>
-
-        <ChartCard
-          title={revCopy.branchChart.title}
-          description={
-            params.branch == null
-              ? revCopy.branchChart.descriptionAll
-              : revCopy.branchChart.descriptionSingle
-          }
-          config={
-            {
-              revenue: {
-                label: revCopy.trendChart.tooltipLabel,
-                theme: { light: "var(--chart-1)", dark: "var(--chart-1)" },
-              },
-            } satisfies ChartConfig
-          }
-          chartClassName="aspect-square max-h-72"
-          empty={branchRows.length === 0 || params.branch != null}
-          emptyLabel={
-            params.branch != null
-              ? revCopy.branchChart.emptySingle
-              : revCopy.branchChart.emptyData
-          }
-        >
-          <BarChart data={branchRows.slice(0, 8)} layout="vertical" margin={{ top: 8, right: 24, left: 8, bottom: 8 }}>
-            <CartesianGrid horizontal={false} strokeDasharray="3 3" />
-            <XAxis
-              type="number"
-              tickLine={false}
-              axisLine={false}
-              tickFormatter={(v: number) =>
-                new Intl.NumberFormat("vi-VN", { notation: "compact" }).format(v)
-              }
-            />
-            <YAxis
-              type="category"
-              dataKey="name"
-              tickLine={false}
-              axisLine={false}
-              width={120}
-            />
-            <Tooltip
-              formatter={(value) => [
-                formatVND(Number(value ?? 0)),
-                revCopy.trendChart.tooltipLabel,
-              ]}
-            />
-            <Bar
-              dataKey="revenue"
-              fill="var(--color-revenue)"
-              radius={[0, 4, 4, 0]}
-            />
-          </BarChart>
-        </ChartCard>
-      </div>
+      {/* Charts (trend + payment donut + branch bar) — dynamically loaded */}
+      <RevenueChartsBlock
+        trendData={trendData}
+        resolvedStart={resolvedStart}
+        resolvedEnd={resolvedEnd}
+        granularityLabel={granularityLabel}
+        paymentData={paymentData}
+        paymentTotal={paymentTotal}
+        branchRows={branchRows}
+        branchActive={params.branch != null}
+      />
 
       {/* Heatmap — full width */}
       <Card>

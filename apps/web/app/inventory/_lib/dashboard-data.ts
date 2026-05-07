@@ -12,7 +12,7 @@ import {
 } from "../actions";
 import { fetchPurchaseOrders } from "../procurement-actions";
 import { fetchStockTransfers } from "../transfer-actions";
-import { fetchInventoryValueSystem } from "../inventory-value-actions";
+import { getInventoryDashboard } from "../dashboard-actions";
 import { formatDate } from "./format";
 import { resolveInventoryBranchScope } from "./inventory-scope";
 import {
@@ -106,21 +106,42 @@ export async function loadInventoryDashboardData(
 ): Promise<InventoryDashboardData> {
   const { supabase, claims } = await loadAuthState();
 
-  const showProcurement =
-    canAccess(claims.user_role, "inventory_procurement") &&
-    (await currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_READ));
-  const showProduction =
+  // Sync gates first — short-circuit avoids unnecessary RPC fetches when
+  // role/permission map already disqualifies the user.
+  const procurementSyncOk = canAccess(
+    claims.user_role,
+    "inventory_procurement",
+  );
+  const productionSyncOk =
     claims.user_role !== "owner" &&
     claims.user_role !== "area_manager" &&
-    canAccessProductionSurface(claims.user_role) &&
-    (await currentUserHasAnyPermissionAny(PRODUCTION_OPEN_PERMISSIONS)) &&
-    (await hasCurrentProductionBranchAccess(supabase, claims));
+    canAccessProductionSurface(claims.user_role);
 
-  const scope = await resolveInventoryBranchScope(
-    supabase,
-    claims,
-    requestedBranchId,
-  );
+  // Permission RPCs + branch scope are independent — fan them out in
+  // parallel instead of awaiting them serially via &&. Saves 2-3 RTTs
+  // on the dashboard's TTFB. resolveInventoryBranchScope only needs
+  // {supabase, claims} which are already in scope.
+  const [
+    procurementAsync,
+    productionPermissionAsync,
+    productionBranchAsync,
+    scope,
+  ] = await Promise.all([
+    procurementSyncOk
+      ? currentUserHasPermissionAny(PERMISSION_KEYS.PROCUREMENT_READ)
+      : Promise.resolve(false),
+    productionSyncOk
+      ? currentUserHasAnyPermissionAny(PRODUCTION_OPEN_PERMISSIONS)
+      : Promise.resolve(false),
+    productionSyncOk
+      ? hasCurrentProductionBranchAccess(supabase, claims)
+      : Promise.resolve(false),
+    resolveInventoryBranchScope(supabase, claims, requestedBranchId),
+  ]);
+
+  const showProcurement = procurementSyncOk && procurementAsync;
+  const showProduction =
+    productionSyncOk && productionPermissionAsync && productionBranchAsync;
 
   const selectedBranch = scope.allowedBranches.find(
     (b) => b.id === scope.selectedBranchId,
@@ -149,9 +170,15 @@ export async function loadInventoryDashboardData(
 
   const branchFilter = scope.selectedBranchId ?? undefined;
 
-  const [valueRes, poRes, transferRes, stocktakeRes, reorderRes, expiryRes] =
+  // Fan out operational queries + MV-backed RPC in parallel.
+  // getInventoryDashboard replaces fetchInventoryValueSystem — single RPC
+  // instead of a multi-join query — and preserves cost-gated NULL for users
+  // lacking reports:view_branch/tenant (rule INVENTORY-WAC-STRICT-OVERRIDE).
+  const [dashboardRes, poRes, transferRes, stocktakeRes, reorderRes, expiryRes] =
     await Promise.all([
-      fetchInventoryValueSystem(branchFilter),
+      scope.selectedBranchId != null
+        ? getInventoryDashboard(scope.selectedBranchId)
+        : Promise.resolve(null),
       fetchPurchaseOrders(branchFilter),
       fetchStockTransfers(branchFilter),
       fetchStocktakeSessions(branchFilter),
@@ -159,8 +186,12 @@ export async function loadInventoryDashboardData(
       fetchExpiryAlerts(branchFilter),
     ]);
 
+  // totalStockValue: prefer MV-backed RPC value (cost-gated NULL preserved).
+  // Falls back to 0 if branch scope is unresolved or user lacks cost permission.
   const totalStockValue =
-    valueRes.success && valueRes.data ? valueRes.data.totalValue : 0;
+    dashboardRes != null && dashboardRes.success && dashboardRes.data
+      ? (dashboardRes.data.summary.totalValueVnd ?? 0)
+      : 0;
 
   const pendingPO =
     poRes.success && poRes.data

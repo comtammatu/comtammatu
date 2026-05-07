@@ -21,11 +21,11 @@ import {
 } from "@comtammatu/ui/components/sheet";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { matchesSearch } from "@lib/search";
-import { MobilePage } from "../../../../_components/mobile/mobile-page";
-import { MobileSectionHeader } from "../../../../_components/mobile/mobile-section-header";
-import { MobileEmptyState } from "../../../../_components/mobile/mobile-empty-state";
-import { TouchButton } from "../../../../_components/mobile/touch-button";
-import { NumberPadSheet } from "../../../../_components/mobile/number-pad-sheet";
+import { MobilePage } from "../../../_components/mobile/mobile-page";
+import { MobileSectionHeader } from "../../../_components/mobile/mobile-section-header";
+import { MobileEmptyState } from "../../../_components/mobile/mobile-empty-state";
+import { TouchButton } from "../../../_components/mobile/touch-button";
+import { NumberPadSheet } from "../../../_components/mobile/number-pad-sheet";
 import {
   createEmptyDraft,
   draftTotal,
@@ -34,9 +34,9 @@ import {
   saveDraft,
   type GrnDraft,
   type GrnDraftLine,
-} from "../../../../_lib/mobile-draft";
-import { formatVND } from "../../../../_lib/format";
-import { createGrnDraft, upsertGrnLine } from "../../../../grn-actions";
+} from "../../../_lib/mobile-draft";
+import { formatVND } from "../../../_lib/format";
+import { createGrnDraft, upsertGrnLine } from "../../../grn-actions";
 
 import { ACTIONS_VI, FORM_VI, STATES_VI } from "@comtammatu/shared/messages";
 type Ingredient = {
@@ -182,7 +182,7 @@ export function GrnCreateClient({
     } catch {
       /* ignore */
     }
-    router.push("/inventory/m/grn");
+    router.push("/inventory/grn/new");
   }
 
   async function submit() {
@@ -230,10 +230,9 @@ export function GrnCreateClient({
       } catch {
         /* ignore */
       }
-      router.push(`/inventory/grn/${grn.id}?m=1&review=1`);
+      router.push(`/inventory/grn/${grn.id}?review=1`);
       router.refresh();
     } catch (err) {
-      console.error("submit GRN", err);
       setSubmitError(
         err instanceof Error && err.message
           ? err.message
@@ -248,7 +247,7 @@ export function GrnCreateClient({
     return (
       <MobilePage>
         <MobileSectionHeader
-          backHref="/inventory/m/grn"
+          backHref="/inventory/grn/new"
           backLabel="Đổi nhà cung cấp"
           eyebrow={supplier.name}
           title="Đang chuẩn bị..."
@@ -264,7 +263,7 @@ export function GrnCreateClient({
   return (
     <MobilePage>
       <MobileSectionHeader
-        backHref="/inventory/m/grn"
+        backHref="/inventory/grn/new"
         backLabel="Đổi nhà cung cấp"
         eyebrow="Phiếu nhập mới"
         title={supplier.name}

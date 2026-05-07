@@ -1,12 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { loadAuthState } from "@/_lib/auth";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@comtammatu/ui/components/tabs";
+import { AppPage, AppPageHeader } from "@/components/surface";
+import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { TelegramDestinationsClient } from "./_components/telegram-destinations-client";
 import { AiSettingsClient } from "./_components/ai-settings-client";
 import { getFeedbackSettings } from "./actions";
@@ -73,20 +69,25 @@ export default async function FeedbackSettingsPage() {
         };
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-xl font-semibold">Cài đặt phản hồi</h1>
-      <Tabs defaultValue="telegram">
-        <TabsList>
-          <TabsTrigger value="telegram">Telegram</TabsTrigger>
-          <TabsTrigger value="ai">AI &amp; Báo cáo</TabsTrigger>
-        </TabsList>
+    <AppPage>
+      <AppPageHeader
+        title="Cài đặt phản hồi"
+        description="Cấu hình thông báo Telegram và tự động hoá AI cho phản hồi khách hàng."
+      />
+      <AppPageTabs
+        items={[
+          { value: "telegram", label: "Telegram" },
+          { value: "ai", label: "AI & Báo cáo" },
+        ]}
+        defaultValue="telegram"
+      >
         <TabsContent value="telegram" className="mt-4">
           <TelegramDestinationsClient destinations={destinations} />
         </TabsContent>
         <TabsContent value="ai" className="mt-4">
           <AiSettingsClient settings={settings} />
         </TabsContent>
-      </Tabs>
-    </div>
+      </AppPageTabs>
+    </AppPage>
   );
 }

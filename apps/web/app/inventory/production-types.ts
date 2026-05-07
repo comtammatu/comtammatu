@@ -115,6 +115,19 @@ export function getProductionReadinessSummary({
   };
 }
 
+export interface ProductionShortageRow {
+  ingredient_id: number;
+  ingredient_name: string;
+  unit: string;
+  needed: number;
+  on_hand: number;
+  missing: number;
+}
+
+export const PRODUCTION_ERROR_CODES = {
+  INSUFFICIENT_STOCK: "INSUFFICIENT_STOCK",
+} as const;
+
 export function orderStatusLabel(status: string) {
   if (status === "draft") return "Nháp";
   if (status === "completed") return "Đã hòan tất";

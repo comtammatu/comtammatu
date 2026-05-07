@@ -1,43 +1,29 @@
 import Link from "next/link";
-import type { ElementType } from "react";
 import {
   ArrowRight as IconArrowRight,
-  BarChart3 as IconChartBar,
   Briefcase as IconBriefcase,
+  Building2 as IconBuilding2,
   CalendarDays as IconCalendarEvent,
   ChefHat as IconChefHat,
   Clock as IconClock,
   CreditCard as IconCreditCard,
-  LayoutDashboard as IconLayoutDashboard,
   ListChecks as IconListChecks,
+  ListOrdered as IconListOrdered,
   LogIn as IconDoorEnter,
   LogOut as IconLogout,
+  MessageCircle as IconMessageCircle,
   Monitor as IconDeviceDesktop,
   Package as IconPackage,
-  Receipt as IconReceipt,
   Settings as IconSettings,
-  ShieldCheck as IconShieldCheck,
+  ShoppingBag as IconShoppingBag,
   UserCircle as IconUserCircle,
-  Users as IconUsers,
-  Utensils as IconToolsKitchen,
-  Wallet as IconWallet,
+  UtensilsCrossed as IconUtensilsCrossed,
 } from "lucide-react";
-import {
-  resolveDiscoveredAppGroups,
-  type DiscoveredAppGroup,
-  type DiscoveredAppLink,
-} from "@comtammatu/shared/auth";
+import { canAccess, type ModuleKey } from "@comtammatu/shared/auth";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Item,
-  ItemActions,
-  ItemContent,
-  ItemDescription,
-  ItemMedia,
-  ItemTitle,
-} from "@comtammatu/ui/components/item";
 import { loadAuthState } from "@/_lib/auth";
+import { messages } from "@lib/messages";
 import {
   EmployeeActionItem,
   EmployeeActionList,
@@ -52,110 +38,100 @@ import {
   getTodayVN,
 } from "./_lib/vn-business-date";
 
-const PORTAL_ICON_MAP: Record<string, ElementType> = {
-  LayoutDashboard: IconLayoutDashboard,
-  BarChart3: IconChartBar,
-  Users: IconUsers,
-  Wallet: IconWallet,
-  Package: IconPackage,
-  Briefcase: IconBriefcase,
-  Monitor: IconDeviceDesktop,
-  Settings: IconSettings,
-  ChefHat: IconChefHat,
-  Receipt: IconReceipt,
-  ToolsKitchen: IconToolsKitchen,
-  ShieldCheck: IconShieldCheck,
-};
+const copy = messages.employee.home;
 
-function getPortalBlockedReason(
-  app: DiscoveredAppLink,
-  branchIsHq: boolean,
-): string | null {
-  if (branchIsHq && (app.moduleKey === "pos" || app.moduleKey === "kds")) {
-    return "Điểm vận hành này không dùng POS/KDS.";
-  }
+const OPERATION_HANDOFFS = [
+  {
+    moduleKey: "pos",
+    href: (branchId: number) => `/br/${branchId}/pos`,
+    icon: IconDeviceDesktop,
+    title: copy.posTitle,
+    description: copy.posDescription,
+  },
+  {
+    moduleKey: "kds",
+    href: (branchId: number) => `/br/${branchId}/kds`,
+    icon: IconChefHat,
+    title: copy.kdsTitle,
+    description: copy.kdsDescription,
+  },
+] as const;
 
-  if (
-    app.status === "blocked" &&
-    app.blockedReason === "missing-branch-context"
-  ) {
-    return "Chưa gắn chi nhánh.";
-  }
+const MANAGEMENT_LINKS: ReadonlyArray<{
+  moduleKey: ModuleKey;
+  href: string;
+  icon: typeof IconShoppingBag;
+  title: string;
+  description: string;
+}> = [
+  {
+    moduleKey: "orders",
+    href: "/orders",
+    icon: IconShoppingBag,
+    title: "Đơn hàng",
+    description: "Theo dõi đơn hôm nay + lịch sử",
+  },
+  {
+    moduleKey: "inventory",
+    href: "/inventory",
+    icon: IconPackage,
+    title: "Kho hàng",
+    description: "Tồn kho · Nhập · Chuyển · Sản xuất",
+  },
+  {
+    moduleKey: "menu",
+    href: "/menu",
+    icon: IconUtensilsCrossed,
+    title: "Thực đơn",
+    description: "Cập nhật món + giá + nhóm",
+  },
+  {
+    moduleKey: "settings",
+    href: "/admin/settings",
+    icon: IconSettings,
+    title: "Cài đặt",
+    description: "Bàn · Máy in · POS · KDS",
+  },
+  {
+    moduleKey: "feedback",
+    href: "/admin/feedback",
+    icon: IconMessageCircle,
+    title: "Phản hồi khách",
+    description: "Hộp thư + báo cáo NPS",
+  },
+  {
+    moduleKey: "hr",
+    href: "/hr",
+    icon: IconBriefcase,
+    title: "Nhân sự",
+    description: "Bảng lương + chấm công đội",
+  },
+];
 
-  return null;
-}
-
-function PortalModuleItem({
-  app,
-  branchIsHq,
-}: {
-  app: DiscoveredAppLink;
-  branchIsHq: boolean;
-}) {
-  const Icon = PORTAL_ICON_MAP[app.icon] ?? IconArrowRight;
-  const blockedReason = getPortalBlockedReason(app, branchIsHq);
-
-  if (blockedReason || !app.href) {
-    return (
-      <Item variant="outline" className="items-center opacity-70" aria-disabled>
-        <ItemMedia variant="icon">
-          <Icon />
-        </ItemMedia>
-        <ItemContent>
-          <ItemTitle>{app.label}</ItemTitle>
-          <ItemDescription>{blockedReason ?? "Chưa mở."}</ItemDescription>
-        </ItemContent>
-      </Item>
-    );
-  }
-
-  return (
-    <Item asChild variant="outline" className="items-center">
-      <Link href={app.href}>
-        <ItemMedia variant="icon">
-          <Icon />
-        </ItemMedia>
-        <ItemContent>
-          <ItemTitle>{app.label}</ItemTitle>
-        </ItemContent>
-        <ItemActions>
-          <IconArrowRight className="size-4 text-muted-foreground" />
-        </ItemActions>
-      </Link>
-    </Item>
-  );
-}
-
-function PortalModuleGroups({
-  groups,
-  branchIsHq,
-}: {
-  groups: DiscoveredAppGroup[];
-  branchIsHq: boolean;
-}) {
-  if (groups.length === 0) return null;
-
-  return (
-    <div className="flex flex-col gap-3">
-      {groups.map((group) => (
-        <EmployeePanel
-          key={`${group.surface}-${group.title}`}
-          title={group.title}
-        >
-          <EmployeeActionList columns={2}>
-            {group.items.map((app) => (
-              <PortalModuleItem
-                key={`${app.moduleKey}-${app.href ?? app.blockedReason ?? "blocked"}`}
-                app={app}
-                branchIsHq={branchIsHq}
-              />
-            ))}
-          </EmployeeActionList>
-        </EmployeePanel>
-      ))}
-    </div>
-  );
-}
+const BRANCH_MANAGEMENT_LINKS = (
+  branchId: number,
+): ReadonlyArray<{
+  moduleKey: ModuleKey;
+  href: string;
+  icon: typeof IconShoppingBag;
+  title: string;
+  description: string;
+}> => [
+  {
+    moduleKey: "branch_menu_limits",
+    href: `/br/${branchId}/menu-limits`,
+    icon: IconListOrdered,
+    title: "Hạn mức món bán",
+    description: "Số lượng món bán / ngày",
+  },
+  {
+    moduleKey: "branch_settings",
+    href: `/br/${branchId}/settings`,
+    icon: IconBuilding2,
+    title: "Cài đặt chi nhánh",
+    description: "Cấu hình bàn · POS · máy in",
+  },
+];
 
 export default async function EmployeePage() {
   const { supabase, claims } = await loadAuthState();
@@ -217,7 +193,7 @@ export default async function EmployeePage() {
       } | null;
       nextShift = {
         date: upcoming.date,
-        shiftName: shift?.name ?? "Ca làm",
+        shiftName: shift?.name ?? copy.defaultShiftName,
         startTime: shift?.start_time ?? "—",
         endTime: shift?.end_time ?? "—",
       };
@@ -237,18 +213,26 @@ export default async function EmployeePage() {
       data?.branch_kind === "central_kitchen";
   }
 
-  const moduleGroups = resolveDiscoveredAppGroups(claims.user_role, branchId, {
-    includeBlocked: true,
-  })
-    .map((group) => ({
-      ...group,
-      items: group.items.filter((app) => {
-        if (app.status !== "blocked") return true;
-        if (app.moduleKey !== "branch_settings") return true;
-        return claims.user_role === "branch_manager";
-      }),
-    }))
-    .filter((group) => group.items.length > 0);
+  const operationHandoffs =
+    branchId && !branchIsHq
+      ? OPERATION_HANDOFFS.filter((item) =>
+          canAccess(claims.user_role, item.moduleKey),
+        ).map((item) => ({
+          ...item,
+          href: item.href(branchId),
+        }))
+      : [];
+
+  const managementLinks = MANAGEMENT_LINKS.filter((link) =>
+    canAccess(claims.user_role, link.moduleKey),
+  );
+  const branchManagementLinks = branchId
+    ? BRANCH_MANAGEMENT_LINKS(branchId).filter((link) =>
+        canAccess(claims.user_role, link.moduleKey),
+      )
+    : [];
+  const showManagementPanel =
+    managementLinks.length + branchManagementLinks.length > 0;
 
   const clockTone =
     clockState === "working"
@@ -258,46 +242,39 @@ export default async function EmployeePage() {
         : "warning";
   const clockTitle =
     clockState === "working"
-      ? "Đang làm việc"
+      ? copy.statusWorking
       : clockState === "done"
-        ? "Đã hoàn thành hôm nay"
-        : "Chưa chấm công";
+        ? copy.statusDone
+        : copy.statusNotStarted;
   const clockDescription =
     clockState === "working"
-      ? "Kết thúc ca khi bàn giao xong."
+      ? copy.descriptionWorking
       : clockState === "done"
-        ? "Chấm công hôm nay đã đủ giờ vào và giờ ra."
-        : "Bắt đầu bằng GPS và mã QR tại chi nhánh.";
+        ? copy.descriptionDone
+        : copy.descriptionNotStarted;
 
   return (
-    <EmployeePageShell
-      title="Hôm nay"
-      description="Việc cần làm trong ca: chấm công, lịch ca, ngày công và phiếu lương."
-    >
+    <EmployeePageShell title={copy.title} description={copy.description}>
       <EmployeePanel
         icon={clockState === "not_started" ? IconDoorEnter : IconClock}
-        title={clockTitle}
+        title={copy.clockPanelTitle}
         description={clockDescription}
         tone={clockTone}
-        badge={
-          clockState === "working"
-            ? { children: "Đang mở", variant: "info" }
-            : undefined
-        }
+        badge={{ children: clockTitle, variant: clockTone }}
       >
         <EmployeeDetailList
           rows={[
             {
-              label: "Chi nhánh",
-              value: clockBranchName ?? ctx?.branchName ?? "Chưa gắn",
+              label: copy.branch,
+              value: clockBranchName ?? ctx?.branchName ?? copy.noBranch,
               muted: !clockBranchName && !ctx?.branchName,
             },
             {
-              label: "Giờ vào",
+              label: copy.checkIn,
               value: checkInTime ? formatTimeVN(checkInTime) : "—",
             },
             {
-              label: "Giờ ra",
+              label: copy.checkOut,
               value: checkOutTime ? formatTimeVN(checkOutTime) : "—",
             },
           ]}
@@ -307,7 +284,7 @@ export default async function EmployeePage() {
             <Button asChild size="lg" className="w-full sm:w-fit">
               <Link href="/employee/clock">
                 <IconDoorEnter data-icon="inline-start" />
-                {clockState === "working" ? "Chấm công ra" : "Chấm công vào"}
+                {clockState === "working" ? copy.clockOut : copy.clockIn}
               </Link>
             </Button>
           </div>
@@ -317,26 +294,26 @@ export default async function EmployeePage() {
       {nextShift ? (
         <EmployeePanel
           icon={IconCalendarEvent}
-          title="Ca tiếp theo"
+          title={copy.nextShiftTitle}
           description={nextShift.shiftName}
           tone={nextShift.date === today ? "info" : "default"}
           badge={
             nextShift.date === today
-              ? { children: "Hôm nay", variant: "info" }
+              ? { children: copy.today, variant: "info" }
               : undefined
           }
         >
           <EmployeeDetailList
             rows={[
               {
-                label: "Ngày",
+                label: copy.date,
                 value:
                   nextShift.date === today
-                    ? "Hôm nay"
+                    ? copy.today
                     : formatDateVN(nextShift.date),
               },
               {
-                label: "Khung giờ",
+                label: copy.timeRange,
                 value: `${nextShift.startTime} - ${nextShift.endTime}`,
               },
             ]}
@@ -344,44 +321,105 @@ export default async function EmployeePage() {
           <div className="flex">
             <Button asChild variant="outline" className="w-full sm:w-fit">
               <Link href="/employee/schedule">
-                Xem lịch ca
+                {copy.viewSchedule}
                 <IconArrowRight data-icon="inline-end" />
               </Link>
             </Button>
           </div>
         </EmployeePanel>
+      ) : (
+        <EmployeePanel
+          icon={IconCalendarEvent}
+          title={copy.nextShiftTitle}
+          description={copy.noNextShift}
+          tone="default"
+        >
+          <div className="flex">
+            <Button asChild variant="outline" className="w-full sm:w-fit">
+              <Link href="/employee/schedule">
+                {copy.viewSchedule}
+                <IconArrowRight data-icon="inline-end" />
+              </Link>
+            </Button>
+          </div>
+        </EmployeePanel>
+      )}
+
+      {showManagementPanel ? (
+        <EmployeePanel
+          title="Quản lý"
+          description="Các module bạn có quyền vận hành"
+        >
+          <EmployeeActionList columns={2}>
+            {managementLinks.map((link) => (
+              <EmployeeActionItem
+                key={link.moduleKey}
+                href={link.href}
+                icon={link.icon}
+                title={link.title}
+                description={link.description}
+              />
+            ))}
+            {branchManagementLinks.map((link) => (
+              <EmployeeActionItem
+                key={link.moduleKey}
+                href={link.href}
+                icon={link.icon}
+                title={link.title}
+                description={link.description}
+              />
+            ))}
+          </EmployeeActionList>
+        </EmployeePanel>
       ) : null}
 
-      <EmployeePanel title="Tự phục vụ">
+      <EmployeePanel title={copy.selfServiceTitle}>
         <EmployeeActionList columns={2}>
           <EmployeeActionItem
             href="/employee/schedule"
             icon={IconCalendarEvent}
-            title="Lịch ca"
-            description="Ca làm trong tuần"
+            title={copy.scheduleTitle}
+            description={copy.scheduleDescription}
           />
           <EmployeeActionItem
             href="/employee/attendance"
             icon={IconListChecks}
-            title="Ngày công"
-            description="Lịch sử vào ca, ra ca"
+            title={copy.attendanceTitle}
+            description={copy.attendanceDescription}
           />
           <EmployeeActionItem
             href="/employee/payslip"
             icon={IconCreditCard}
-            title="Phiếu lương"
-            description="Các kỳ lương đã phát hành"
+            title={copy.payslipTitle}
+            description={copy.payslipDescription}
           />
           <EmployeeActionItem
             href="/employee/profile"
             icon={IconUserCircle}
-            title="Cá nhân"
-            description="Hồ sơ, chi nhánh và quyền truy cập"
+            title={copy.profileTitle}
+            description={copy.profileDescription}
           />
         </EmployeeActionList>
       </EmployeePanel>
 
-      <PortalModuleGroups groups={moduleGroups} branchIsHq={branchIsHq} />
+      {operationHandoffs.length > 0 ? (
+        <EmployeePanel
+          title={copy.operationToolsTitle}
+          description={copy.operationToolsDescription}
+        >
+          <EmployeeActionList columns={2}>
+            {operationHandoffs.map((item) => (
+              <EmployeeActionItem
+                key={item.moduleKey}
+                href={item.href}
+                icon={item.icon}
+                title={item.title}
+                description={item.description}
+              />
+            ))}
+          </EmployeeActionList>
+        </EmployeePanel>
+      ) : null}
 
       <form
         action="/api/auth/signout"

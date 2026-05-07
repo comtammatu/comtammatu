@@ -36,11 +36,7 @@ import {
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui";
 import { matchesSearch } from "@lib/search";
-import { InventoryHeader } from "../_components/inventory-header";
-import {
-  InventoryFilterBar,
-  InventoryPageContent,
-} from "../_components/inventory-page-layout";
+import { AppPage, AppPageHeader, AppToolbar } from "@/components/surface";
 import { InteractiveCard } from "../_components/interactive-card";
 import { StatusBadge } from "../_components/status-badge";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
@@ -131,8 +127,9 @@ export function PurchaseOrdersClient({
       supplierFilter !== ALL_FILTER_VALUE);
 
   return (
-    <>
-      <InventoryHeader
+    <AppPage width={isMobile ? "narrow" : "wide"}>
+      <AppPageHeader
+        eyebrow="Kho hàng"
         title={tRoute("/inventory/purchase-orders", "heading")}
         actions={
           <Button asChild disabled={suppliers.length === 0}>
@@ -143,7 +140,6 @@ export function PurchaseOrdersClient({
           </Button>
         }
       />
-      <InventoryPageContent width={isMobile ? "narrow" : "wide"}>
         {suppliers.length === 0 ? (
           <Card className="border-warning/40 bg-warning/10">
             <CardContent className="space-y-4 pt-6">
@@ -160,8 +156,8 @@ export function PurchaseOrdersClient({
           </Card>
         ) : null}
 
-        {/* IconSearch + filters */}
-        <InventoryFilterBar>
+        {/* Toolbar */}
+        <AppToolbar>
           <InputGroup className="h-10 flex-1">
             <InputGroupAddon>
               <IconSearch />
@@ -215,7 +211,7 @@ export function PurchaseOrdersClient({
           <Badge variant="outline" className="rounded-full">
             {filteredRows.length} / {rows.length} PO
           </Badge>
-        </InventoryFilterBar>
+        </AppToolbar>
 
         {/* Table / Mobile list */}
         <Card>
@@ -342,7 +338,6 @@ export function PurchaseOrdersClient({
             )}
           </CardContent>
         </Card>
-      </InventoryPageContent>
-    </>
+    </AppPage>
   );
 }

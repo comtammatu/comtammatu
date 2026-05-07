@@ -4,7 +4,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@comtammatu/ui/components/tabs";
-import { PageHero } from "@/components/page-hero";
+import { AppPage, AppPageHeader } from "@/components/surface";
 import { UrlTabs } from "@/_components/url-tabs";
 import { loadAuthState } from "@/_lib/auth";
 import { CategoryTable } from "./category-table";
@@ -50,8 +50,8 @@ export default async function MenuPage() {
   }));
 
   return (
-    <div className="space-y-5 lg:space-y-6">
-      <PageHero
+    <AppPage>
+      <AppPageHeader
         eyebrow="Danh mục kinh doanh"
         title="Thực đơn"
         actions={<MenuImportExportMenu />}
@@ -102,6 +102,6 @@ export default async function MenuPage() {
           </UrlTabs>
         </CardContent>
       </Card>
-    </div>
+    </AppPage>
   );
 }

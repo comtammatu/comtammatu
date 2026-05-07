@@ -1,5 +1,6 @@
 "use server";
 
+import { createClient as createServerClient } from "@comtammatu/database/supabase/server";
 import type { createClient } from "@comtammatu/database/supabase/server";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
@@ -30,4 +31,47 @@ export async function logAudit(
     p_old: (params.oldData ?? null) as never,
     p_new: (params.newData ?? null) as never,
   });
+}
+
+/**
+ * Explicit columns per rule UI-AUDIT-LOG-EXPLICIT-COLUMNS-IN-UI.
+ * NO ip_address, NO old_data, NO new_data exposed to the UI layer.
+ */
+export type AuditLogRow = {
+  id: number;
+  action: string;
+  entityType: string;
+  entityId: string;
+  userId: string | null;
+  createdAt: string;
+};
+
+/**
+ * Fetch audit_logs rows for a specific entity (entity_type + entity_id).
+ * Explicit columns only — per rule UI-AUDIT-LOG-EXPLICIT-COLUMNS-IN-UI.
+ * Does NOT read ip_address, old_data, or new_data.
+ * Separate from finance/actions.ts:fetchAuditLogs — that file is frozen.
+ */
+export async function fetchEntityAuditLogs(
+  entityType: string,
+  entityId: number,
+  limit = 50,
+): Promise<AuditLogRow[]> {
+  const supabase = await createServerClient();
+  const { data } = await supabase
+    .from("audit_logs")
+    .select("id, action, entity_type, entity_id, user_id, created_at")
+    .eq("entity_type", entityType)
+    .eq("entity_id", entityId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    action: row.action,
+    entityType: row.entity_type,
+    entityId: String(row.entity_id ?? ""),
+    userId: row.user_id,
+    createdAt: row.created_at,
+  }));
 }

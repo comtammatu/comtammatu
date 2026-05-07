@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { fetchStocktakeDetail } from "../../actions";
 import { resolveRequestedBranchId } from "../../_lib/inventory-scope";
+import { fetchEntityAuditLogs } from "@/admin/_lib/audit";
 import { StocktakeDetailClient } from "./stocktake-detail-client";
 
 export default async function StocktakeDetailPage({
@@ -75,12 +76,15 @@ export default async function StocktakeDetailPage({
     );
   }
 
+  const auditLogs = await fetchEntityAuditLogs("stocktake_session", sessionId, 50);
+
   return (
     <StocktakeDetailClient
       session={stocktakeSession}
       lines={lines}
       routeBase="/inventory/stocktake"
       inventoryBasePath="/inventory"
+      auditLogs={auditLogs}
     />
   );
 }

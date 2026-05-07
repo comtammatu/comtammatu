@@ -123,7 +123,7 @@ sequenceDiagram
 | #   | Unknown                                                     | Verification Step         | Impact                   |
 | --- | ----------------------------------------------------------- | ------------------------- | ------------------------ |
 | 1   | area_manager has tenant-wide access (no area scoping table) | Deferred — see roadmap H3 | May need migration later |
-| 2   | No integration tests exist yet                              | Add before v1.0.0 pilot   | Regressions possible     |
+| 2   | E2E test coverage limited to 5 Playwright specs (kds-queue, daily-limit-realtime, payment-cash, edit-pending-pricing, +1) — no unit/component test suite | Expand spec coverage or adopt vitest as M4/M6 wraps up | Refactor regressions possible on uncovered surfaces |
 
 ## Priority Recommendations
 

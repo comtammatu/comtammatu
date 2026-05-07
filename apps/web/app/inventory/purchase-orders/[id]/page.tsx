@@ -4,6 +4,7 @@ import { fetchIngredients } from "../../actions";
 import { fetchPurchaseOrderDetail } from "../../procurement-actions";
 import { getAuthContextWithPermission } from "../../_lib/auth";
 import { formatDate, formatDateTime } from "../../_lib/format";
+import { fetchEntityAuditLogs } from "@/admin/_lib/audit";
 import { PODetailClient } from "./po-detail-client";
 import type { PODetail } from "./po-detail-client";
 import type { IngredientRow } from "../../page";
@@ -14,13 +15,14 @@ export default async function PODetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [res, ingredientsRes, ctx] = await Promise.all([
+  const [res, ingredientsRes, ctx, auditLogs] = await Promise.all([
     fetchPurchaseOrderDetail(Number(id)),
     fetchIngredients(),
     getAuthContextWithPermission(
       PROCUREMENT_ROLES,
       PERMISSION_KEYS.PROCUREMENT_READ,
     ),
+    fetchEntityAuditLogs("purchase_order", Number(id), 50),
   ]);
   if (!res.success || !res.data) notFound();
   const isOwner = ctx?.claims.user_role === "owner";
@@ -98,5 +100,5 @@ export default async function PODetailPage({
     ? ((ingredientsRes.data ?? []) as IngredientRow[])
     : [];
 
-  return <PODetailClient po={po} ingredients={ingredients} isOwner={isOwner} />;
+  return <PODetailClient po={po} ingredients={ingredients} isOwner={isOwner} auditLogs={auditLogs} />;
 }

@@ -52,7 +52,7 @@ import { cn } from "@comtammatu/ui";
 import { Combobox } from "@/components/form";
 import { matchesSearch } from "@lib/search";
 import { FormattedNumberInput } from "../_components/formatted-number-input";
-import { InventoryHeader } from "../_components/inventory-header";
+import { AppPage, AppPageHeader, AppToolbar } from "@/components/surface";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import {
   createSupplierInvoice,
@@ -367,8 +367,9 @@ export function SupplierInvoicesClient({
   }
 
   return (
-    <>
-      <InventoryHeader
+    <AppPage width="full">
+      <AppPageHeader
+        eyebrow="Kho hàng"
         title={copy.title}
         actions={
           <Button type="button" onClick={() => setCreateOpen(true)}>
@@ -376,74 +377,77 @@ export function SupplierInvoicesClient({
           </Button>
         }
       />
-      <div className="flex-1 overflow-auto p-4">
-      <div className="mx-auto max-w-7xl space-y-4">
 
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)]">
-          {/* IconSearch + filters */}
-          <Card className="py-0"><CardContent className="flex flex-wrap items-center gap-3 p-3">
-            <InputGroup className="h-10 flex-1">
-              <InputGroupAddon>
-                <IconSearch />
-              </InputGroupAddon>
-              <InputGroupInput
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder={copy.searchPlaceholder}
-              />
-            </InputGroup>
+          {/* Collapsed to single AppToolbar */}
+          <AppToolbar
+            search={
+              <InputGroup className="h-10 flex-1">
+                <InputGroupAddon>
+                  <IconSearch />
+                </InputGroupAddon>
+                <InputGroupInput
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder={copy.searchPlaceholder}
+                />
+              </InputGroup>
+            }
+            filters={
+              <>
+                <Combobox
+                  value={supplierFilter}
+                  onValueChange={setSupplierFilter}
+                  options={[
+                    { value: ALL_FILTER_VALUE, label: copy.allSuppliers },
+                    ...supplierOptions,
+                  ]}
+                  placeholder={copy.supplierPlaceholder}
+                  searchPlaceholder={copy.supplierSearchPlaceholder}
+                  aria-label={copy.supplierFilterAria}
+                  triggerClassName="h-10 w-48"
+                />
 
-            <Combobox
-              value={supplierFilter}
-              onValueChange={setSupplierFilter}
-              options={[
-                { value: ALL_FILTER_VALUE, label: copy.allSuppliers },
-                ...supplierOptions,
-              ]}
-              placeholder={copy.supplierPlaceholder}
-              searchPlaceholder={copy.supplierSearchPlaceholder}
-              aria-label={copy.supplierFilterAria}
-              triggerClassName="h-10 w-48"
-            />
+                <Select
+                  value={matchStatusFilter}
+                  onValueChange={setMatchStatusFilter}
+                >
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder={copy.matchingPlaceholder} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL_FILTER_VALUE}>
+                      {copy.allMatching}
+                    </SelectItem>
+                    {MATCH_STATUS_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-            <Select
-              value={matchStatusFilter}
-              onValueChange={setMatchStatusFilter}
-            >
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder={copy.matchingPlaceholder} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL_FILTER_VALUE}>
-                  {copy.allMatching}
-                </SelectItem>
-                {MATCH_STATUS_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={paymentStatusFilter}
-              onValueChange={setPaymentStatusFilter}
-            >
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder={copy.paymentPlaceholder} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL_FILTER_VALUE}>
-                  {copy.allPayments}
-                </SelectItem>
-                {PAYMENT_STATUS_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </CardContent></Card>
+                <Select
+                  value={paymentStatusFilter}
+                  onValueChange={setPaymentStatusFilter}
+                >
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder={copy.paymentPlaceholder} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL_FILTER_VALUE}>
+                      {copy.allPayments}
+                    </SelectItem>
+                    {PAYMENT_STATUS_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </>
+            }
+          />
 
           {/* Table */}
           <Card>
@@ -853,8 +857,6 @@ export function SupplierInvoicesClient({
             </CardContent>
           </Card>
         </div>
-      </div>
-      </div>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent>
@@ -992,7 +994,6 @@ export function SupplierInvoicesClient({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-    </>
+    </AppPage>
   );
 }

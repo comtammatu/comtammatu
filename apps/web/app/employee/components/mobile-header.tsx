@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { Settings as IconSettings, User as IconUser } from "lucide-react";
-import { canAccess, ROLE_LABEL_VI } from "@comtammatu/shared/auth";
+import { User as IconUser } from "lucide-react";
+import { ROLE_LABEL_VI } from "@comtammatu/shared/auth";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { BrandMark } from "@/components/brand";
@@ -16,9 +16,6 @@ export async function MobileHeader() {
 
   const roleLabel = ROLE_LABEL_VI[claims.user_role] ?? claims.user_role;
   const branchName = ctx?.branchName ?? null;
-  const settingsHref = canAccess(claims.user_role, "settings")
-    ? "/admin/settings"
-    : null;
 
   return (
     <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur">
@@ -48,18 +45,6 @@ export async function MobileHeader() {
               <IconUser className="size-4" />
             </Link>
           </Button>
-          {settingsHref ? (
-            <Button
-              asChild
-              variant="outline"
-              size="icon-sm"
-              aria-label={copy.settingsAria}
-            >
-              <Link href={settingsHref}>
-                <IconSettings className="size-4" />
-              </Link>
-            </Button>
-          ) : null}
           <Badge variant="outline" className="hidden sm:inline-flex">
             {roleLabel}
           </Badge>

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowLeft as IconArrowLeft } from "lucide-react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { Button } from "@comtammatu/ui/components/button";
-import { PageHero } from "@/components/page-hero";
+import { AppPage, AppPageHeader } from "@/components/surface";
 import { fetchAuditLogs } from "../actions";
 import { AuditTrailClient } from "./audit-trail-client";
 
@@ -65,13 +65,13 @@ export default async function FinanceAuditTrailPage({ searchParams }: PageProps)
   ).sort();
 
   return (
-    <div className="space-y-5 lg:space-y-6">
+    <AppPage width="wide">
       <Button asChild variant="ghost" size="sm" className="-ml-3 self-start">
         <Link href="/finance">
           <IconArrowLeft className="mr-1 size-4" /> Quay lại Tài chính
         </Link>
       </Button>
-      <PageHero
+      <AppPageHeader
         eyebrow="Kế toán · Kiểm toán"
         title="Nhật ký kiểm toán"
         description="Lịch sử mọi thao tác ảnh hưởng tới hóa đơn, sổ kế toán, chu kỳ tài chính và bảng lương. Read-only — không sửa được sự kiện đã ghi."
@@ -83,6 +83,6 @@ export default async function FinanceAuditTrailPage({ searchParams }: PageProps)
         observedTypes={observedTypes}
         limit={limit}
       />
-    </div>
+    </AppPage>
   );
 }

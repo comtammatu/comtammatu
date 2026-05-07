@@ -56,6 +56,10 @@ interface PageHeaderConfig {
   breadcrumbSegments?: string[];
   description?: ReactNode;
   actions?: ReactNode;
+  /** Renders LEFT of actions in the desktop header row, after page title. */
+  headerExtras?: ReactNode;
+  /** Renders BELOW the existing header on screens < md, full-width sticky band. */
+  mobileTopBar?: ReactNode;
 }
 
 export interface AppShellProps {
@@ -233,6 +237,11 @@ export function AppShell({
                 </span>
                 <h1 className="font-heading sr-only">{pageTitle}</h1>
               </div>
+              {pageHeader.headerExtras ? (
+                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                  {pageHeader.headerExtras}
+                </div>
+              ) : null}
             </div>
             {pageHeader.actions ? (
               <div className="flex shrink-0 flex-wrap items-center gap-2">
@@ -240,6 +249,16 @@ export function AppShell({
               </div>
             ) : null}
           </div>
+          {pageHeader.description ? (
+            <p className="mt-1 text-sm text-muted-foreground">
+              {pageHeader.description}
+            </p>
+          ) : null}
+          {pageHeader.mobileTopBar ? (
+            <div className="sticky top-0 z-10 -mx-4 mt-3 w-[calc(100%+2rem)] border-t bg-background px-4 py-2 md:hidden">
+              {pageHeader.mobileTopBar}
+            </div>
+          ) : null}
         </header>
 
         <main id="main-content" className="flex-1 p-4">

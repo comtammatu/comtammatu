@@ -35,7 +35,10 @@ import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { Combobox } from "@/components/form";
 import { messages } from "@lib/messages";
 import { FormattedNumberInput } from "../../_components/formatted-number-input";
-import { InventoryHeader } from "../../_components/inventory-header";
+import { AppPage, AppPageHeader } from "@/components/surface";
+import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
+import { AuditHistoryList } from "../../_components/audit-history-list";
+import type { AuditLogRow } from "@/admin/_lib/audit";
 import { TimelineStepper } from "../../_components/timeline-stepper";
 import { formatVND } from "../../_lib/format";
 import { tRoute } from "../../_lib/dictionary";
@@ -103,10 +106,12 @@ export function PODetailClient({
   po,
   ingredients,
   isOwner = false,
+  auditLogs = [],
 }: {
   po: PODetail;
   ingredients: IngredientRow[];
   isOwner?: boolean;
+  auditLogs?: AuditLogRow[];
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -330,10 +335,13 @@ export function PODetailClient({
   }
 
   return (
-    <>
-      <InventoryHeader
-        title={poDetailCopy.title}
-        actions={
+    <AppPage>
+      <AppPageHeader
+        eyebrow="Kho hàng"
+        title={po.code}
+        description={poDetailCopy.meta(po.supplier, po.date, po.sentAt)}
+        badge={{ children: getInventoryStatusLabel(po.status), variant: getInventoryStatusBadgeVariant(po.status) }}
+        breadcrumb={
           <Link
             href="/inventory/purchase-orders"
             className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
@@ -342,27 +350,16 @@ export function PODetailClient({
             {tRoute("/inventory/purchase-orders", "heading")}
           </Link>
         }
-      />
-      <div className="flex-1 overflow-auto p-4">
-        <div className="mx-auto max-w-7xl space-y-6">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-muted-foreground">
-                {poDetailCopy.hubLabel}
-              </p>
-              <div className="space-y-1">
-                <h1 className="font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
-                  {po.code}
-                </h1>
-                <p className="text-sm text-muted-foreground">
-                  {poDetailCopy.meta(po.supplier, po.date, po.sentAt)}
-                </p>
-              </div>
-            </div>
-            <Badge variant={getInventoryStatusBadgeVariant(po.status)}>
-              {getInventoryStatusLabel(po.status)}
-            </Badge>
-          </div>
+        tabs={
+          <AppPageTabs
+            items={[
+              { value: "overview", label: "Tổng quan" },
+              { value: "lines", label: "Dòng", count: lines.length },
+              { value: "history", label: "Lịch sử", count: auditLogs.length },
+            ]}
+          >
+            <TabsContent value="overview" className="mt-4">
+              <div className="space-y-6">
 
           <div className="grid gap-3 md:grid-cols-3">
             <Card>
@@ -413,7 +410,11 @@ export function PODetailClient({
               </div>
             </CardContent>
           </Card>
+              </div>
+            </TabsContent>
 
+            <TabsContent value="lines" className="mt-4">
+              <div className="space-y-6">
           <div className="grid gap-6 lg:grid-cols-3">
             <div className="lg:col-span-2">
               <Card className="overflow-hidden">
@@ -869,8 +870,15 @@ export function PODetailClient({
               {canSendPo ? poDetailCopy.sendPo : poDetailCopy.createGrnStep}
             </Button>
           </footer>
-        </div>
-      </div>
-    </>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="history" className="mt-4">
+              <AuditHistoryList logs={auditLogs} />
+            </TabsContent>
+          </AppPageTabs>
+        }
+      />
+    </AppPage>
   );
 }

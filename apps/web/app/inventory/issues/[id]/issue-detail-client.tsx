@@ -35,12 +35,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@comtammatu/ui/components/card";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyTitle,
-} from "@comtammatu/ui/components/empty";
+import { AppEmptyState } from "@/components/surface";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import { Textarea } from "@comtammatu/ui/components/textarea";
@@ -54,7 +49,10 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { InventoryHeader } from "../../_components/inventory-header";
+import { AppPage, AppPageHeader } from "@/components/surface";
+import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
+import { AuditHistoryList } from "../../_components/audit-history-list";
+import type { AuditLogRow } from "@/admin/_lib/audit";
 import { FormattedNumberInput } from "../../_components/formatted-number-input";
 import { TableEmptyStateRow } from "../../_components/table-empty-state-row";
 import { DocumentStockCorrectionDialog } from "../../_components/document-stock-correction-dialog";
@@ -156,12 +154,14 @@ export function IssueDetailClient({
   initialLines,
   ingredients,
   canAdjustStock,
+  auditLogs = [],
 }: {
   issueId: number;
   initialIssue: IssueRecord;
   initialLines: IssueLine[];
   ingredients: IngredientRow[];
   canAdjustStock: boolean;
+  auditLogs?: AuditLogRow[];
 }) {
   const router = useRouter();
   const [issue, setIssue] = useState(initialIssue);
@@ -243,10 +243,13 @@ export function IssueDetailClient({
   }
 
   return (
-    <>
-      <InventoryHeader
-        title="Chi tiết xuất kho"
-        actions={
+    <AppPage>
+      <AppPageHeader
+        eyebrow={surface.eyebrow}
+        title={issue.issue_number}
+        description={`${surface.label} tại ${issue.branches?.name ?? `Chi nhánh #${issue.branch_id}`} • ${issue.issued_at ? formatDateTime(issue.issued_at) : "—"}`}
+        badge={{ children: getInventoryStatusLabel(issue.status), variant: getInventoryStatusBadgeVariant(issue.status) }}
+        breadcrumb={
           <Link
             href="/inventory/issues"
             className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
@@ -254,28 +257,16 @@ export function IssueDetailClient({
             <IconArrowLeft className="size-4" /> {tRoute("/inventory/issues")}
           </Link>
         }
-      />
-      <div className="flex-1 overflow-auto p-4">
-        <div className="mx-auto max-w-7xl space-y-6">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-muted-foreground">
-                {surface.eyebrow}
-              </p>
-              <div className="space-y-1">
-                <h1 className="font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
-                  {issue.issue_number}
-                </h1>
-                <p className="text-sm text-muted-foreground">
-                  {`${surface.label} tai ${issue.branches?.name ?? `Chi nhanh #${issue.branch_id}`} • ${issue.issued_at ? formatDateTime(issue.issued_at) : "—"}`}
-                </p>
-              </div>
-            </div>
-            <Badge variant={getInventoryStatusBadgeVariant(issue.status)}>
-              {getInventoryStatusLabel(issue.status)}
-            </Badge>
-          </div>
-
+        tabs={
+          <AppPageTabs
+            items={[
+              { value: "overview", label: "Tổng quan" },
+              { value: "lines", label: "Dòng", count: lines.length },
+              { value: "history", label: "Lịch sử", count: auditLogs.length },
+            ]}
+          >
+            <TabsContent value="overview" className="mt-4">
+              <div className="space-y-6">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {[
               {
@@ -318,7 +309,11 @@ export function IssueDetailClient({
               </CardContent>
             </Card>
           ) : null}
+              </div>
+            </TabsContent>
 
+            <TabsContent value="lines" className="mt-4">
+              <div className="space-y-6">
           <Card className="overflow-hidden">
             <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="space-y-1">
@@ -359,20 +354,14 @@ export function IssueDetailClient({
             </CardHeader>
             <CardContent>
               {lines.length === 0 ? (
-                <Empty className="m-4 py-8">
-                  <EmptyHeader>
-                    <EmptyTitle className="text-sm font-semibold">
-                      {isDraft
-                        ? "Chưa có dòng nguyên liệu"
-                        : `${surface.label} khong co dong nguyen lieu`}
-                    </EmptyTitle>
-                    <EmptyDescription className="text-xs leading-5">
-                      {isDraft
-                        ? `Them it nhat mot dong de ${surface.confirmAction.toLowerCase()}.`
-                        : "Danh sach nguyen lieu se hien thi o day neu phieu co du lieu."}
-                    </EmptyDescription>
-                  </EmptyHeader>
-                </Empty>
+                <AppEmptyState
+                  mode="no-data"
+                  title={isDraft ? "Chưa có dòng nguyên liệu" : `${surface.label} chưa có dòng nguyên liệu`}
+                  description={isDraft
+                    ? `Thêm ít nhất một dòng để ${surface.confirmAction.toLowerCase()}.`
+                    : "Danh sách nguyên liệu sẽ hiển thị ở đây nếu phiếu có dữ liệu."}
+                  compact
+                />
               ) : (
                 <>
                   <div className="space-y-3 p-4 md:hidden">
@@ -587,8 +576,15 @@ export function IssueDetailClient({
               </div>
             </footer>
           ) : null}
-        </div>
-      </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="history" className="mt-4">
+              <AuditHistoryList logs={auditLogs} />
+            </TabsContent>
+          </AppPageTabs>
+        }
+      />
 
       <AddIssueLineDialog
         ingredients={ingredients}
@@ -684,7 +680,7 @@ export function IssueDetailClient({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </AppPage>
   );
 }
 

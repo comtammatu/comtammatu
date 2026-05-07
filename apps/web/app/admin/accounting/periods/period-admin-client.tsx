@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { CalendarCheck as IconCalendarStats } from "lucide-react";
+import { AppPage, AppPageHeader } from "@/components/surface";
 import {
   PeriodCloseCard,
   type PeriodRow,
@@ -12,42 +12,38 @@ export type { PeriodRow };
 
 interface Props {
   initial: PeriodRow[];
+  /** Whether the current user has accounting:period_reopen permission. */
+  canCloseOrReopen: boolean;
 }
 
 /**
  * Accounting periods admin (S12).
  * Shows last 13 months (current + 12 prior) with soft/hard close status.
  * Each card shows live state + actions (gated by accounting:period_reopen).
+ * Destructive actions (close/reopen) are wrapped in AlertDialog inside PeriodCloseCard.
  */
-export function PeriodAdminClient({ initial }: Props) {
+export function PeriodAdminClient({ initial, canCloseOrReopen }: Props) {
   const router = useRouter();
   const copy = messages.finance.periodsAdmin;
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <IconCalendarStats className="size-6 text-info" />
-        <div>
-          <h1 className="font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
-            {copy.title}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {copy.description}
-          </p>
-        </div>
-      </div>
+    <AppPage>
+      <AppPageHeader
+        title={copy.title}
+        description={copy.description}
+      />
 
       <ul className="space-y-3">
         {initial.map((p) => (
           <li key={`${p.year}-${p.month}`}>
             <PeriodCloseCard
               period={p}
-              strictConfirm
+              strictConfirm={canCloseOrReopen}
               onChanged={() => router.refresh()}
             />
           </li>
         ))}
       </ul>
-    </div>
+    </AppPage>
   );
 }

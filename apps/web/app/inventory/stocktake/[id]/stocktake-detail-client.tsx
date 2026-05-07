@@ -37,7 +37,10 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui";
 import { messages } from "@lib/messages";
-import { InventoryHeader } from "../../_components/inventory-header";
+import { AppPage, AppPageHeader } from "@/components/surface";
+import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
+import { AuditHistoryList } from "../../_components/audit-history-list";
+import type { AuditLogRow } from "@/admin/_lib/audit";
 import { FormattedNumberInput } from "../../_components/formatted-number-input";
 import { TableEmptyStateRow } from "../../_components/table-empty-state-row";
 import { tRoute, tTerm } from "../../_lib/dictionary";
@@ -103,11 +106,13 @@ export function StocktakeDetailClient({
   session: initialSession,
   lines: initialLines,
   routeBase = "/inventory/stocktake",
+  auditLogs = [],
 }: {
   session: StocktakeSession;
   lines: StocktakeLine[];
   routeBase?: string;
   inventoryBasePath?: string;
+  auditLogs?: AuditLogRow[];
 }) {
   const isMobile = useIsMobile();
   const [isPending, startTransition] = useTransition();
@@ -244,10 +249,13 @@ export function StocktakeDetailClient({
   }
 
   return (
-    <>
-      <InventoryHeader
-        title={stocktakeDetailCopy.title}
-        actions={
+    <AppPage>
+      <AppPageHeader
+        eyebrow="Kho hàng"
+        title={`KK-${session.id}`}
+        description={headerDescription}
+        badge={{ children: meta.label }}
+        breadcrumb={
           <Link
             href={`${routeBase}?branchId=${session.branch_id}`}
             className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
@@ -255,25 +263,8 @@ export function StocktakeDetailClient({
             <IconArrowLeft className="size-4" /> {tRoute("/inventory/stocktake")}
           </Link>
         }
-      />
-      <div className="flex-1 overflow-auto p-4">
-      <div className="mx-auto max-w-7xl space-y-6">
-
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-        <div className="space-y-1">
-          <p className="text-sm font-medium text-muted-foreground">
-            {stocktakeDetailCopy.controlLabel}
-          </p>
-          <div className="space-y-1">
-            <h1 className="font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
-              {`KK-${session.id}`}
-            </h1>
-            <p className="text-sm text-muted-foreground">{headerDescription}</p>
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge className={cn("text-xs", meta.className)}>{meta.label}</Badge>
-          {session.status === "in_progress" ? (
+        actions={
+          session.status === "in_progress" ? (
             <>
               <Button
                 variant="outline"
@@ -291,10 +282,18 @@ export function StocktakeDetailClient({
                 {stocktakeDetailCopy.completeAction}
               </Button>
             </>
-          ) : null}
-        </div>
-      </div>
-
+          ) : null
+        }
+        tabs={
+          <AppPageTabs
+            items={[
+              { value: "overview", label: "Tổng quan" },
+              { value: "lines", label: "Dòng", count: lines.length },
+              { value: "history", label: "Lịch sử", count: auditLogs.length },
+            ]}
+          >
+            <TabsContent value="overview" className="mt-4">
+              <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[
           {
@@ -356,7 +355,11 @@ export function StocktakeDetailClient({
           </CardContent>
         </Card>
       )}
+              </div>
+            </TabsContent>
 
+            <TabsContent value="lines" className="mt-4">
+              <div className="space-y-6">
       {/* Counting phase (in_progress) */}
       {session.status === "in_progress" && (
         <CountingPhase
@@ -373,8 +376,15 @@ export function StocktakeDetailClient({
       {session.status === "completed" && (
         <ResultsPhase lines={lines} isMobile={isMobile} />
       )}
-      </div>
-      </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="history" className="mt-4">
+              <AuditHistoryList logs={auditLogs} />
+            </TabsContent>
+          </AppPageTabs>
+        }
+      />
 
       {/* Complete confirm dialog */}
       <AlertDialog
@@ -426,7 +436,7 @@ export function StocktakeDetailClient({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </AppPage>
   );
 }
 

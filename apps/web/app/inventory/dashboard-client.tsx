@@ -30,8 +30,7 @@ import {
 } from "@comtammatu/ui/components/card";
 import { Progress } from "@comtammatu/ui/components/progress";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
-import { InventoryHeader } from "./_components/inventory-header";
-import { InventoryPageContent } from "./_components/inventory-page-layout";
+import { AppPage, AppPageHeader } from "@/components/surface";
 import { StatusBadge } from "./_components/status-badge";
 import { formatVND } from "./_lib/format";
 import { getInventoryPaths, type InventoryRouteBase } from "./_lib/paths";
@@ -426,13 +425,8 @@ export function DashboardClient(props: DashboardProps) {
         : "Chi nhánh";
 
   return (
-    <>
-      <InventoryHeader title={tNav("home")} />
-
-      <InventoryPageContent
-        width={isMobile ? "narrow" : "wide"}
-        contentClassName="gap-6"
-      >
+    <AppPage width={isMobile ? "narrow" : "wide"} contentClassName="gap-6">
+      <AppPageHeader eyebrow="Kho hàng" title={tNav("home")} />
         <section className="flex flex-col gap-3">
           <h2 className="font-heading text-base font-semibold">
             {messages.inventory.dashboard.mainFlowsTitle}
@@ -865,7 +859,6 @@ export function DashboardClient(props: DashboardProps) {
             </CardContent>
           </Card>
         </div>
-      </InventoryPageContent>
-    </>
+    </AppPage>
   );
 }

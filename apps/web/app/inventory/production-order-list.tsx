@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   CircleCheck as IconCircleCheck,
@@ -17,12 +17,14 @@ import {
   CardTitle,
 } from "@comtammatu/ui/components/card";
 import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@comtammatu/ui/components/empty";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@comtammatu/ui/components/dialog";
+import { AppEmptyState } from "@/components/surface";
 import {
   Item,
   ItemActions,
@@ -53,8 +55,12 @@ import {
   badgeVariantFromTone,
   orderStatusLabel,
   orderStatusTone,
+  PRODUCTION_ERROR_CODES,
 } from "./production-types";
-import type { ProductionOrderRow } from "./production-types";
+import type {
+  ProductionOrderRow,
+  ProductionShortageRow,
+} from "./production-types";
 
 import { ACTIONS_VI, FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
 interface ProductionOrderListProps {
@@ -84,12 +90,28 @@ export function ProductionOrderList({
   const router = useRouter();
   const isMobile = useIsMobile();
   const [isPending, startTransition] = useTransition();
+  const [shortageInfo, setShortageInfo] = useState<{
+    productionNumber: string;
+    rows: ProductionShortageRow[];
+  } | null>(null);
   const draftCount = orders.filter((order) => order.status === "draft").length;
 
-  function handleConfirm(orderId: number) {
+  function handleConfirm(orderId: number, productionNumber: string) {
     startTransition(async () => {
       const result = await confirmProductionOrder(orderId);
       if (!result.success) {
+        if (
+          result.errorCode === PRODUCTION_ERROR_CODES.INSUFFICIENT_STOCK &&
+          Array.isArray(result.meta?.shortages) &&
+          result.meta.shortages.length > 0
+        ) {
+          setShortageInfo({
+            productionNumber,
+            rows: result.meta.shortages as ProductionShortageRow[],
+          });
+          toast.error(result.error ?? "Không đủ tồn kho");
+          return;
+        }
         toast.error(result.error ?? "Không thể xác nhận");
         return;
       }
@@ -141,7 +163,7 @@ export function ProductionOrderList({
         <Button
           type="button"
           size="sm"
-          onClick={() => handleConfirm(order.id)}
+          onClick={() => handleConfirm(order.id, order.production_number)}
           disabled={isPending}
         >
           <IconCircleCheck data-icon="inline-start" />
@@ -161,6 +183,7 @@ export function ProductionOrderList({
   }
 
   return (
+    <>
     <Card>
       <CardHeader className="border-b">
         <CardTitle className="flex items-center gap-2">
@@ -177,18 +200,12 @@ export function ProductionOrderList({
       {isMobile ? (
         <CardContent className="flex flex-col gap-3">
           {orders.length === 0 ? (
-            <Empty className="border bg-card py-8">
-              <EmptyMedia variant="icon">
-                <IconClipboardList />
-              </EmptyMedia>
-              <EmptyHeader>
-                <EmptyTitle>Chưa có lệnh sản xuất nào</EmptyTitle>
-                <EmptyDescription>
-                  Tạo lệnh mới khi bếp trung tâm đã có BOM và nguyên liệu sẵn
-                  sàng.
-                </EmptyDescription>
-              </EmptyHeader>
-            </Empty>
+            <AppEmptyState
+              mode="no-data"
+              title="Chưa có lệnh sản xuất nào"
+              description="Tạo lệnh mới khi bếp trung tâm đã có BOM và nguyên liệu sẵn sàng."
+              icon={<IconClipboardList className="size-5" />}
+            />
           ) : (
             <ItemGroup>
               {orders.map((order) => (
@@ -305,5 +322,79 @@ export function ProductionOrderList({
         </CardContent>
       )}
     </Card>
+    <ProductionShortageDialog
+      info={shortageInfo}
+      onClose={() => setShortageInfo(null)}
+    />
+    </>
+  );
+}
+
+function formatShortageNumber(value: number) {
+  return value.toLocaleString("vi-VN", { maximumFractionDigits: 3 });
+}
+
+interface ProductionShortageDialogProps {
+  info: { productionNumber: string; rows: ProductionShortageRow[] } | null;
+  onClose: () => void;
+}
+
+function ProductionShortageDialog({
+  info,
+  onClose,
+}: ProductionShortageDialogProps) {
+  const open = info !== null;
+  return (
+    <Dialog open={open} onOpenChange={(next) => (next ? null : onClose())}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Thiếu nguyên liệu để sản xuất</DialogTitle>
+          <DialogDescription>
+            {info
+              ? `Lệnh ${info.productionNumber} chưa đủ nguyên liệu trong kho mặc định của bếp trung tâm. Nhập kho các nguyên liệu dưới đây trước khi xác nhận lại.`
+              : ""}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nguyên liệu</TableHead>
+                <TableHead className="text-right">Cần</TableHead>
+                <TableHead className="text-right">Tồn</TableHead>
+                <TableHead className="text-right">Thiếu</TableHead>
+                <TableHead>Đơn vị</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {info?.rows.map((row) => (
+                <TableRow key={row.ingredient_id}>
+                  <TableCell className="font-medium">
+                    {row.ingredient_name}
+                  </TableCell>
+                  <TableCell className="text-right font-mono tabular-nums">
+                    {formatShortageNumber(row.needed)}
+                  </TableCell>
+                  <TableCell className="text-right font-mono tabular-nums">
+                    {formatShortageNumber(row.on_hand)}
+                  </TableCell>
+                  <TableCell className="text-right font-mono tabular-nums text-destructive">
+                    {formatShortageNumber(row.missing)}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {row.unit}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={onClose}>
+            Đóng
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

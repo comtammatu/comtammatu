@@ -147,14 +147,13 @@ export default async function RevenueReportPage({
   const params = parseFinanceParams(sp);
   const resolved = resolveFinanceRange(params);
 
-  const branchesRes = await fetchAccessibleBranches();
-  const branches = (
-    branchesRes.success ? (branchesRes.data ?? []) : []
-  ) as AccessibleBranch[];
-
   const hourlyEnabled = diffDays(resolved.start, resolved.end) <= HOURLY_MAX_DAYS;
 
+  // Single Promise.all — branches + 12 data RPCs run concurrently. Previous
+  // code awaited branches first then started the data fetch, paying one
+  // unnecessary RTT per page load.
   const [
+    branchesRes,
     rollupRes,
     kpisRes,
     prevKpisRes,
@@ -168,6 +167,7 @@ export default async function RevenueReportPage({
     foodCostRes,
     invoicesRes,
   ] = await Promise.all([
+    fetchAccessibleBranches(),
     fetchRevenueRollup(params.branch, resolved.start, resolved.end, params.gran),
     fetchRevenueKpis(params.branch, resolved.start, resolved.end),
     resolved.compare
@@ -193,6 +193,10 @@ export default async function RevenueReportPage({
     }),
     fetchTaxInvoices(params.branch ?? undefined),
   ]);
+
+  const branches = (
+    branchesRes.success ? (branchesRes.data ?? []) : []
+  ) as AccessibleBranch[];
 
   const rows = (rollupRes.success ? (rollupRes.data ?? []) : []) as RollupRow[];
   const kpis = (kpisRes.success ? kpisRes.data : null) as KpiBundle | null;

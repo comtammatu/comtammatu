@@ -1,4 +1,4 @@
-import { PageHero } from "@/components/page-hero";
+import { AppPage, AppPageHeader } from "@/components/surface";
 import { fetchFiscalPeriods } from "../period-actions";
 import { PeriodsClient } from "./periods-client";
 
@@ -9,8 +9,8 @@ export default async function PeriodsPage() {
     : [];
 
   return (
-    <div className="space-y-5 lg:space-y-6">
-      <PageHero eyebrow="Tài chính" title="Kỳ kế toán" />
+    <AppPage>
+      <AppPageHeader eyebrow="Tài chính" title="Kỳ kế toán" />
       {!result.success ? (
         <p className="py-10 text-center text-destructive">
           {result.error ?? "Không thể tải danh sách kỳ kế toán."}
@@ -18,7 +18,7 @@ export default async function PeriodsPage() {
       ) : (
         <PeriodsClient periods={periods} />
       )}
-    </div>
+    </AppPage>
   );
 }
 

@@ -1,4 +1,4 @@
-import { PageHero } from "@/components/page-hero";
+import { AppPage, AppPageHeader } from "@/components/surface";
 import { fetchPostingRules } from "../posting-rules-actions";
 import { fetchChartOfAccounts } from "../chart-of-accounts-actions";
 import { PostingRulesClient } from "./posting-rules-client";
@@ -17,10 +17,10 @@ export default async function PostingRulesPage() {
     : [];
 
   return (
-    <div className="space-y-5 lg:space-y-6">
-      <PageHero eyebrow="Tài chính" title="Quy tắc hạch toán tự động" />
+    <AppPage>
+      <AppPageHeader eyebrow="Tài chính" title="Quy tắc hạch toán tự động" />
       <PostingRulesClient rules={rules} accounts={accounts} />
-    </div>
+    </AppPage>
   );
 }
 

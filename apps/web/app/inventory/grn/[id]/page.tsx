@@ -6,6 +6,7 @@ import { fetchIngredients } from "../../actions";
 import { fetchGrnDetail } from "../../procurement-actions";
 import { fetchQcSettings, type QcSettings } from "../../_lib/qc-settings";
 import { formatDate } from "../../_lib/format";
+import { fetchEntityAuditLogs } from "@/admin/_lib/audit";
 import { GRNDetailClient } from "./grn-detail-client";
 import type { GRNDetail } from "./grn-detail-client";
 import type { IngredientRow } from "../../page";
@@ -16,9 +17,10 @@ export default async function GRNDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [res, ingredientsRes] = await Promise.all([
+  const [res, ingredientsRes, auditLogs] = await Promise.all([
     fetchGrnDetail(Number(id)),
     fetchIngredients(),
+    fetchEntityAuditLogs("goods_receipt_note", Number(id), 50),
   ]);
   if (!res.success || !res.data) notFound();
 
@@ -180,6 +182,7 @@ export default async function GRNDetailPage({
       ingredients={ingredients}
       canAdjustStock={canAdjustStock}
       canAmendConfirmed={canAmendConfirmed}
+      auditLogs={auditLogs}
     />
   );
 }

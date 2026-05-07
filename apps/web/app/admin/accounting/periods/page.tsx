@@ -49,5 +49,7 @@ export default async function PeriodsAdminPage() {
     };
   });
 
-  return <PeriodAdminClient initial={periods} />;
+  // Thread permission flag to client — rule UI-PERMISSION-FLAGS-THREADED-NOT-SERVER-ONLY.
+  // ctx is non-null here (page redirected above if missing permission), so canCloseOrReopen = true.
+  return <PeriodAdminClient initial={periods} canCloseOrReopen={Boolean(ctx)} />;
 }

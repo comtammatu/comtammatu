@@ -69,16 +69,47 @@ export function useFinanceRealtimeRefresh({
   useEffect(() => {
     if (!enabled) return;
 
-    function handleVisibilityChange() {
-      if (document.visibilityState === "visible") {
-        scheduleRefresh();
+    // Pause polling when tab is hidden. Mobile CPUs throttle background
+    // tabs; firing router.refresh() every 10s while hidden does nothing
+    // useful and stacks up work for when the tab returns. On resume we
+    // catch up exactly once if the interval missed a beat.
+    let lastRefreshAt = Date.now();
+    let interval: ReturnType<typeof setInterval> | null = null;
+
+    function tick() {
+      if (document.visibilityState !== "visible") return;
+      lastRefreshAt = Date.now();
+      scheduleRefresh();
+    }
+
+    function startInterval() {
+      if (interval !== null) return;
+      interval = setInterval(tick, AUTO_REFRESH_MS);
+    }
+    function stopInterval() {
+      if (interval !== null) {
+        clearInterval(interval);
+        interval = null;
       }
     }
 
-    const interval = setInterval(scheduleRefresh, AUTO_REFRESH_MS);
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible") {
+        // Catch up only if the interval would have fired while hidden.
+        if (Date.now() - lastRefreshAt >= AUTO_REFRESH_MS) {
+          lastRefreshAt = Date.now();
+          scheduleRefresh();
+        }
+        startInterval();
+      } else {
+        stopInterval();
+      }
+    }
+
+    if (document.visibilityState === "visible") startInterval();
     document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => {
-      clearInterval(interval);
+      stopInterval();
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       if (timerRef.current !== null) {
         clearTimeout(timerRef.current);

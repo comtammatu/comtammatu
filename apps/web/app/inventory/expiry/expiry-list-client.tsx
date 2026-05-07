@@ -63,11 +63,7 @@ import { cn } from "@comtammatu/ui";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { matchesSearch } from "@lib/search";
 import { FormattedNumberInput } from "../_components/formatted-number-input";
-import { InventoryHeader } from "../_components/inventory-header";
-import {
-  InventoryFilterBar,
-  InventoryPageContent,
-} from "../_components/inventory-page-layout";
+import { AppPage, AppPageHeader, AppToolbar } from "@/components/surface";
 import { adjustStock, fetchExpiryAlerts } from "../actions";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import type { BranchOption, ExpiryAlertRow } from "../page";
@@ -377,11 +373,10 @@ export function ExpiryListClient({
   }
 
   return (
-    <>
-      <InventoryHeader title="Hạn sử dụng" />
-      <InventoryPageContent>
-        {/* IconSearch + branch filter */}
-        <InventoryFilterBar>
+    <AppPage>
+      <AppPageHeader eyebrow="Kho hàng" title="Hạn sử dụng" />
+      {/* IconSearch + branch filter */}
+      <AppToolbar>
           <InputGroup className="h-10 flex-1">
             <InputGroupAddon>
               <IconSearch />
@@ -410,9 +405,9 @@ export function ExpiryListClient({
           <Badge variant="outline" className="rounded-full">
             {displayItems.length} mục
           </Badge>
-        </InventoryFilterBar>
+      </AppToolbar>
 
-        {/* Urgency filter buttons */}
+      {/* Urgency filter buttons */}
         <div className="flex flex-wrap items-center gap-2">
           <Button
             type="button"
@@ -534,8 +529,6 @@ export function ExpiryListClient({
             )}
           </TabsContent>
         </Tabs>
-      </InventoryPageContent>
-
       {/* Write-off AlertDialog */}
       <AlertDialog
         open={writeOff != null}
@@ -582,6 +575,6 @@ export function ExpiryListClient({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </AppPage>
   );
 }
