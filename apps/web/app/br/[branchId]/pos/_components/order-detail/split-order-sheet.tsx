@@ -105,7 +105,12 @@ export function SplitOrderSheet({
   const remainingRows = activeItems.length - fullyMovedRowCount;
   const wouldEmptySource = remainingRows < 1;
   const noneSelected = totalUnitsSelected === 0;
-  const canSubmit = !noneSelected && !wouldEmptySource && !isPending;
+  // TOCTOU defense: if all items got cancelled in another tab while sheet
+  // was open (realtime race), block submit with a clear message instead of
+  // letting the RPC reject with split_source_not_eligible.
+  const noActiveItems = activeItems.length === 0;
+  const canSubmit =
+    !noneSelected && !wouldEmptySource && !isPending && !noActiveItems;
 
   const setPickQty = (id: number, max: number, next: number) => {
     const clamped = Math.max(0, Math.min(max, next));
@@ -230,6 +235,11 @@ export function SplitOrderSheet({
           {wouldEmptySource && !noneSelected && (
             <p className="text-xs text-destructive">
               Không thể tách: phải giữ lại ít nhất 1 món trên đơn gốc.
+            </p>
+          )}
+          {noActiveItems && (
+            <p className="text-xs text-destructive">
+              Đơn không còn món nào để tách (có thể đã được hủy). Vui lòng đóng và tải lại.
             </p>
           )}
           <div className="flex gap-2">

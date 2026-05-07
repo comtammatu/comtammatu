@@ -131,6 +131,7 @@ function mapDiscountRpcError(message: string): string {
     return "Đang có thao tác khác trên đơn này. Vui lòng thử lại.";
   }
 
+  console.error("[discount-actions] [unmapped] rpc error:", message);
   return "Không thể thực hiện thao tác. Vui lòng thử lại.";
 }
 
