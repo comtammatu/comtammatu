@@ -88,6 +88,8 @@ import { submitPosOrderWithRetry } from "./_utils/submit-with-retry";
 import type { CartItem, CartModifier, CartSide, OrderType } from "./types";
 import type { MenuCategory, MenuItem } from "./pos-menu-types";
 import type { ActiveSession, BranchTable } from "./page";
+import type { PaymentMethod } from "@comtammatu/shared/providers";
+import type { VietQrConfig } from "./payment-actions";
 import {
   ACTIVE_POS_STATUSES,
   compareOrdersByNextAction,
@@ -141,6 +143,10 @@ interface PosDesktopShellProps {
   /** `pos:close_shift_variance_override` — cho phép đóng ca khi chênh lệch
    *  vượt ngưỡng (BM+). Cashier không có quyền → block ở UI khi variance gate. */
   canOverrideVariance: boolean;
+  /** Tenant payment methods seeded từ RSC — bill render không phải đợi fetch. */
+  initialPaymentMethods: readonly PaymentMethod[];
+  /** Tenant VietQR config seeded từ RSC; null nếu disable / chưa cấu hình. */
+  initialVietQrConfig: VietQrConfig | null;
 }
 
 function isOrderAwaitingPayment(order: {
@@ -185,6 +191,8 @@ export function PosDesktopShell(props: PosDesktopShellProps) {
         canCloseShift={props.canCloseShift}
         canConfirmCash={props.canConfirmCash}
         canOverrideVariance={props.canOverrideVariance}
+        initialPaymentMethods={props.initialPaymentMethods}
+        initialVietQrConfig={props.initialVietQrConfig}
       />
     </PosDesktopProvider>
   );
@@ -197,11 +205,15 @@ function PosDesktopInner({
   canCloseShift,
   canConfirmCash,
   canOverrideVariance,
+  initialPaymentMethods,
+  initialVietQrConfig,
 }: {
   categories: MenuCategory[];
   canCloseShift: boolean;
   canConfirmCash: boolean;
   canOverrideVariance: boolean;
+  initialPaymentMethods: readonly PaymentMethod[];
+  initialVietQrConfig: VietQrConfig | null;
 }) {
   const { branchId, session } = usePosSession();
   const orders = usePosOrders();
@@ -1589,6 +1601,8 @@ function PosDesktopInner({
         intent={billIntent}
         initialOrder={billInitialOrder}
         canConfirmCash={canConfirmCash}
+        initialPaymentMethods={initialPaymentMethods}
+        initialVietQrConfig={initialVietQrConfig}
         onOrderUpdated={() => void refreshOperational()}
         onClose={closeBill}
       />

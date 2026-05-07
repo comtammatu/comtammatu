@@ -11,6 +11,12 @@ import {
   fetchPosPermissionFlags,
   fetchActiveOrders,
 } from "./actions";
+import {
+  fetchPaymentMethodsForPos,
+  fetchVietQrConfig,
+  type VietQrConfig,
+} from "./payment-actions";
+import type { PaymentMethod } from "@comtammatu/shared/providers";
 import { PosDesktopShell } from "./pos-desktop-shell";
 import type { MenuCategory } from "./pos-menu-types";
 import type { SessionOrder } from "./order-history";
@@ -117,10 +123,20 @@ export default async function PosPage({
     );
   }
 
-  const [menuResult, tablesResult, ordersResult] = await Promise.all([
+  const [
+    menuResult,
+    tablesResult,
+    ordersResult,
+    paymentMethodsResult,
+    vietQrConfigResult,
+  ] = await Promise.all([
     fetchMenuForPos(branchIdNum),
     fetchTablesForBranch(branchIdNum),
     fetchActiveOrders(branchIdNum),
+    // Tenant-stable settings seeded ở RSC. Admin payment-settings save phải
+    // gọi `revalidatePath('/br/[branchId]/pos', 'page')` để bust seed này.
+    fetchPaymentMethodsForPos(branchIdNum),
+    fetchVietQrConfig(branchIdNum),
   ]);
 
   // Seed the POS provider from RSC so the client does not re-fetch on mount.
@@ -132,6 +148,15 @@ export default async function PosPage({
     ordersResult.success ? (ordersResult.data ?? []) : []
   ) as SessionOrder[];
   const initialOrdersSeeded = ordersResult.success;
+
+  const initialPaymentMethods: readonly PaymentMethod[] =
+    paymentMethodsResult.success && paymentMethodsResult.data
+      ? paymentMethodsResult.data.methods
+      : [];
+  const initialVietQrConfig: VietQrConfig | null =
+    vietQrConfigResult.success && vietQrConfigResult.data !== undefined
+      ? vietQrConfigResult.data
+      : null;
 
   const tablesList = (tablesResult.data ?? []) as BranchTable[];
   const tableParamValidForDineIn =
@@ -171,6 +196,8 @@ export default async function PosPage({
         canCloseShift={permFlags.canCloseShift}
         canConfirmCash={permFlags.canConfirmCash}
         canOverrideVariance={permFlags.canOverrideVariance}
+        initialPaymentMethods={initialPaymentMethods}
+        initialVietQrConfig={initialVietQrConfig}
       />
     </Suspense>
   );

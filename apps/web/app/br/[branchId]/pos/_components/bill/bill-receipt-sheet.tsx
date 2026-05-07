@@ -52,9 +52,7 @@ import {
   confirmCashPaymentWithInvoice,
   confirmVietQrPaymentWithInvoice,
   createPayment,
-  fetchPaymentMethodsForPos,
   fetchPendingRemotePaymentForBill,
-  fetchVietQrConfig,
   type VietQrConfig,
 } from "../../payment-actions";
 import { printProvisionalBill, printReceipt } from "../../print-actions";
@@ -90,6 +88,17 @@ interface BillReceiptProps {
    * for POS users because e-wallet settlement is not physical cash handling.
    */
   canConfirmCash: boolean;
+  /**
+   * Tenant-stable payment methods (cash + enabled e-wallets) seeded from RSC
+   * `fetchPaymentMethodsForPos`. Stable for the entire shift — admin changes
+   * trigger `revalidatePath('/br/[branchId]/pos', 'page')` to refresh seeds.
+   */
+  initialPaymentMethods: readonly PaymentMethod[];
+  /**
+   * Tenant-stable VietQR bank config seeded from RSC `fetchVietQrConfig`.
+   * `null` when VietQR is disabled or not configured.
+   */
+  initialVietQrConfig: VietQrConfig | null;
   onOrderUpdated?: () => void | Promise<void>;
   onClose: () => void;
 }
@@ -399,11 +408,24 @@ export function BillReceipt({
   intent = "payment",
   initialOrder,
   canConfirmCash,
+  initialPaymentMethods,
+  initialVietQrConfig,
   onOrderUpdated,
   onClose,
 }: BillReceiptProps) {
   const [order, setOrder] = useState<OrderData | null>(null);
-  const [methods, setMethods] = useState<PaymentMethod[]>([]);
+  // Methods + VietQR config are tenant-stable for the entire shift; seeded
+  // from RSC props so opening the bill no longer waits on 2 settings round-
+  // trips. Admin saves trigger `revalidatePath('/br/[branchId]/pos', 'page')`
+  // so a config change refreshes the seed on next navigation.
+  const methods = useMemo<PaymentMethod[]>(
+    () =>
+      initialPaymentMethods.filter(
+        (method) => method !== "cash" || canConfirmCash,
+      ),
+    [initialPaymentMethods, canConfirmCash],
+  );
+  const vietQrConfig: VietQrConfig | null = initialVietQrConfig;
   const [error, setError] = useState<string | null>(null);
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>(
     canConfirmCash ? "cash" : "vietqr",
@@ -422,7 +444,6 @@ export function BillReceipt({
   const [paymentCreateError, setPaymentCreateError] = useState<string | null>(
     null,
   );
-  const [vietQrConfig, setVietQrConfig] = useState<VietQrConfig | null>(null);
   const isOnline = useIsOnline();
   // When the cashier taps a non-cash method while offline, remember the
   // intent so we can auto-restore it on reconnect. Without this, every
@@ -476,20 +497,25 @@ export function BillReceipt({
   useEffect(() => {
     if (orderId === null) {
       setOrder(null);
-      setMethods([]);
       setError(null);
       setSelectedMethod(canConfirmCash ? "cash" : "vietqr");
       setCashInput("");
       setPendingExtras(null);
       setMethodPending(false);
       setPaymentCreateError(null);
-      setVietQrConfig(null);
       setInvoiceForm(EMPTY_INVOICE_FORM);
       setPendingOfflineMethod(null);
       autoQrTriggeredRef.current = null;
       hydratedPaymentOrderRef.current = null;
       return;
     }
+
+    // Methods are tenant-stable (props-derived) — re-default selectedMethod
+    // immediately on bill open so cashier sees a sensible pick before any
+    // fetch starts. No-op when methods is empty (renders error UI).
+    setSelectedMethod(
+      methods.includes("cash") ? "cash" : (methods[0] ?? "vietqr"),
+    );
 
     const seededOrder =
       initialOrder != null && initialOrder.id === orderId ? initialOrder : null;
@@ -498,50 +524,28 @@ export function BillReceipt({
       setOrder(seededOrder);
       setError(null);
       setCashInput(String(Math.round(Number(seededOrder.total_amount))));
+      return;
     }
 
     let cancelled = false;
     startTransition(async () => {
-      const [orderResult, methodsResult, vietQrConfigResult] =
-        await Promise.all([
-          seededOrder === null
-            ? fetchOrderForBill(orderId)
-            : Promise.resolve(null),
-          fetchPaymentMethodsForPos(branchId),
-          fetchVietQrConfig(branchId),
-        ]);
+      const orderResult = await fetchOrderForBill(orderId);
       if (cancelled) return;
 
-      if (orderResult !== null) {
-        if (orderResult.success && orderResult.data) {
-          const nextOrder = orderResult.data as OrderData;
-          setOrder(nextOrder);
-          setError(null);
-          setCashInput(String(Math.round(Number(nextOrder.total_amount))));
-        } else {
-          setError(orderResult.error ?? "Không thể tải đơn hàng");
-        }
-      }
-
-      if (methodsResult.success && methodsResult.data) {
-        const nextMethods = methodsResult.data.methods.filter(
-          (method) => method !== "cash" || canConfirmCash,
-        );
-        setMethods(nextMethods);
-        setSelectedMethod(
-          nextMethods.includes("cash") ? "cash" : (nextMethods[0] ?? "vietqr"),
-        );
-      }
-
-      if (vietQrConfigResult.success) {
-        setVietQrConfig(vietQrConfigResult.data === undefined ? null : vietQrConfigResult.data);
+      if (orderResult.success && orderResult.data) {
+        const nextOrder = orderResult.data as OrderData;
+        setOrder(nextOrder);
+        setError(null);
+        setCashInput(String(Math.round(Number(nextOrder.total_amount))));
+      } else {
+        setError(orderResult.error ?? "Không thể tải đơn hàng");
       }
     });
 
     return () => {
       cancelled = true;
     };
-  }, [branchId, canConfirmCash, initialOrder, orderId]);
+  }, [canConfirmCash, initialOrder, methods, orderId]);
 
   // Cross-terminal realtime sync. Without this, when cashier on tablet
   // A confirms cash payment for an order, tablet B with the same bill
@@ -989,7 +993,7 @@ export function BillReceipt({
           </DialogDescription>
         </DialogHeader>
 
-        {isPending ? (
+        {!order && !error ? (
           isReceiptIntent ? (
             <AppBoneyardSkeleton
               name="pos-bill-receipt-view"

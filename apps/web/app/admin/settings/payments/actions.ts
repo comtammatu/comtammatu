@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
@@ -87,5 +88,9 @@ export async function updatePaymentSettings(
   }
 
   revalidateSurfacePath("/admin/settings/payments");
+  // POS RSC seeds `paymentMethods` + `vietQrConfig` once per nav (see
+  // `apps/web/app/br/[branchId]/pos/page.tsx`). Bust that seed across all
+  // branches when tenant payment config changes.
+  revalidatePath("/br/[branchId]/pos", "page");
   return { success: true };
 }
