@@ -385,6 +385,7 @@ const severityDot: Record<string, string> = {
 export function DashboardClient(props: DashboardProps) {
   const {
     routeBase,
+    siteName,
     siteKind,
     showProcurement,
     totalStockValue,
