@@ -1,6 +1,5 @@
 # Install Cơm Tấm Má Tư print-agent as a Windows Service via NSSM.
-# Runs via Node.js directly (not packaged exe — pkg/yao-pkg has ESM issues
-# with dist/render-bitmap.js as of 2026-04). Requires Node 24+ installed.
+# Runs via Node.js directly (`node.exe dist\index.js`). Requires Node 24+ installed.
 # Run as Administrator. Reads configuration from .env in dist-bin/.
 
 param(
@@ -45,7 +44,7 @@ $ErrorActionPreference = $prevPref
 
 & $nssm install $ServiceName $NodePath $EntryPath
 & $nssm set $ServiceName AppDirectory $WorkingDir
-& $nssm set $ServiceName Description "Cơm Tấm Má Tư thermal print agent (LAN + USB)"
+& $nssm set $ServiceName Description "Cơm Tấm Má Tư thermal print agent (LAN)"
 & $nssm set $ServiceName Start SERVICE_AUTO_START
 & $nssm set $ServiceName AppStdout (Join-Path $LogDir "agent.out.log")
 & $nssm set $ServiceName AppStderr (Join-Path $LogDir "agent.err.log")

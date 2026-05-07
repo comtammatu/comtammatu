@@ -5,7 +5,7 @@ fallback procedure when a printer or agent fails mid-service.
 
 ## Scope
 
-- **System**: `@comtammatu/print-agent` (Node 24 + `usb` + Supabase Realtime)
+- **System**: `@comtammatu/print-agent` (Node 24 + Supabase Realtime, LAN-only)
 - **Topology**: 1 agent process per branch, 3 printers per branch
   (`receipt`, `kitchen_1`, `kitchen_2`)
 - **Target**: 1 pilot branch for 2 weeks, then fleet-wide rollout
@@ -19,10 +19,8 @@ Complete all items before opening the branch for the day.
 - [ ] Branch exists and is active
 - [ ] `/admin/settings/printers` — 3 printer rows (`receipt` / `kitchen_1` / `kitchen_2`),
       all `is_active = true`
-- [ ] For LAN printers: `lan_host` + `lan_port` (default 9100) filled, printer
-      reachable from the POS PC subnet
-- [ ] For USB printers: `usb_vendor_id` filled (`usb_product_id` optional),
-      WinUSB driver bound (Zadig) — confirm via `usb.getDeviceList()`
+- [ ] `lan_host` + `lan_port` (default 9100) filled for every printer; reachable
+      from the POS PC subnet (`nc <host> 9100` to verify)
 - [ ] `/admin/settings/printers` — each branch kitchen printer has the right
       print types (`kitchen_ticket`, `cancel_ticket`) and menu categories assigned.
       Categories not assigned to a branch printer are not included in kitchen tickets.
@@ -32,46 +30,24 @@ Complete all items before opening the branch for the day.
 ### Windows PC per branch
 
 - [ ] **Node.js 24+** installed (`node --version` ≥ v24). Download from nodejs.org.
-      KHÔNG dùng .exe build — pkg path đã retire (xem README.md "Prerequisites").
 - [ ] NSSM installed (`choco install nssm` or download from nssm.cc)
 - [ ] `apps/print-agent/dist/` copied to máy POS (sau khi rebuild qua `pnpm build`)
-- [ ] `.env` đặt tại `apps/print-agent/dist-bin/.env` (legacy path, script
-      `install-service.ps1` reference) chứa:
+- [ ] `.env` đặt tại `apps/print-agent/dist-bin/.env` chứa:
   ```
   SUPABASE_URL=https://<ref>.supabase.co
   SUPABASE_SERVICE_ROLE_KEY=<service role JWT>
   AGENT_TENANT_ID=<numeric>
   AGENT_BRANCH_ID=<numeric>
   AGENT_ID=pos-<branch-slug>
-  AGENT_VERSION=0.2.0
+  AGENT_VERSION=0.3.0
   ```
   > **Note**: bump `AGENT_VERSION` mỗi release (sync với `package.json`).
-  > SQL view `v_print_agent_fleet` dùng version này để track chi nhánh nào
-  > chưa migrate.
+  > SQL view `v_print_agent_fleet` dùng version này để xác định fleet status.
 - [ ] Run `apps\print-agent\scripts\install-service.ps1` as Administrator
 - [ ] `Get-Service ComTamMaTu-PrintAgent` → `Running`
 - [ ] `C:\ProgramData\ComTamMaTu\print-agent\logs\agent.out.log` shows
       `realtime status=SUBSCRIBED` within 10 seconds
 - [ ] POS header shows **"Máy in: online"** badge (green)
-
-### Migration .exe → Node (chi nhánh đang chạy .exe legacy)
-
-Một số chi nhánh deploy trước commit `98ce5c7` (2026-04-end) vẫn chạy
-`comtammatu-print-agent.exe`. Migration sang Node path:
-
-1. **Install Node 24+** trên máy POS (nếu chưa có)
-2. **Stop service cũ**: `Stop-Service ComTamMaTu-PrintAgent`
-3. **Backup** `.exe` cũ + `.env` (phòng rollback)
-4. **Copy** `apps/print-agent/dist/` mới (build từ máy CI/dev)
-5. **Re-run** `install-service.ps1` as Administrator — script sẽ:
-   - `nssm remove` service cũ (point to `.exe`)
-   - `nssm install` service mới (point to `node.exe dist/index.js`)
-   - Load `.env` vào service environment
-6. **Start service**: `Start-Service ComTamMaTu-PrintAgent`
-7. **Verify** `agent.out.log` → `realtime status=SUBSCRIBED` + POS badge xanh
-
-Rollback nếu fail: copy `.exe` backup về + thay nssm `Application` thành
-đường dẫn `.exe` cũ.
 
 ### Smoke test (staff manager on site)
 
@@ -81,7 +57,7 @@ Rollback nếu fail: copy `.exe` backup về + thay nssm `Application` thành
 3. Close the order → receipt prints.
 4. Power off the kitchen printer. Click **"Gửi bếp"** again on a new order.
 5. Open `/admin/settings/printers/jobs` → the job is in `failed` with a
-   `connect ECONNREFUSED` or USB error message.
+   `connect ECONNREFUSED` or `timed out after 5000ms` message.
 6. Power the printer back on, click **Thử lại** → job transitions to `printed`
    within 3 seconds; `retry_count = 1` in the monitor table.
 
@@ -122,10 +98,10 @@ Idempotency: repeated clicks within the same second-bucket produce the same
 
 1. Open `/admin/settings/printers/jobs`, filter `status = failed`.
 2. Read the `last_error`:
-   - `connect ECONNREFUSED <host>:9100` → LAN printer unreachable; check PoE/power
+   - `connect ECONNREFUSED <host>:9100` → printer unreachable; check PoE/power
      and LAN cable.
-   - `USB printer not found` → cable unplugged or Windows grabbed the device;
-     re-seat USB, re-run Zadig if needed.
+   - `printer <host>:<port> timed out after 5000ms` → printer reachable on layer
+     3 but not accepting raw socket; check it's not paused/offline on its panel.
    - `printer <id> not in cache / inactive` → someone flipped `is_active=false`;
      re-enable at `/admin/settings/printers` and wait up to 5 minutes OR restart
      the service for instant refresh.

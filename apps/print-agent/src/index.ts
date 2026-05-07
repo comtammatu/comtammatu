@@ -8,11 +8,9 @@ type PrinterRow = {
   id: number;
   branch_id: number;
   role: "receipt" | "kitchen_1" | "kitchen_2";
-  connection_type: "lan" | "usb";
+  connection_type: string;
   lan_host: string | null;
   lan_port: number | null;
-  usb_vendor_id: string | null;
-  usb_product_id: string | null;
   paper_width_mm: number;
   is_active: boolean;
 };
@@ -39,19 +37,12 @@ type PrintJobRow = {
     | "cancelled";
 };
 
-type Transport = "lan" | "all";
 type PrintMode = "text" | "bitmap";
 
 const requireEnv = (k: string): string => {
   const v = process.env[k];
   if (!v) throw new Error(`Missing env ${k}`);
   return v;
-};
-
-const parseTransport = (raw: string | undefined): Transport => {
-  const v = (raw ?? "all").toLowerCase();
-  if (v === "lan" || v === "all") return v;
-  throw new Error(`Invalid AGENT_TRANSPORT=${raw} (expected 'lan' or 'all')`);
 };
 
 const parsePrintMode = (raw: string | undefined): PrintMode => {
@@ -66,12 +57,7 @@ const config = {
   branchId: Number(requireEnv("AGENT_BRANCH_ID")),
   tenantId: Number(requireEnv("AGENT_TENANT_ID")),
   agentId: process.env.AGENT_ID ?? `agent-${process.pid}`,
-  // Default fallback bumped 2026-05-03: 0.1.0 → 0.2.0 marks release with
-  // payment label sync, cancel ticket note, sides bold, Phiếu/HĐ dedup,
-  // shift-close cashier label fix. Used by SQL view `v_print_agent_fleet`
-  // to identify chi nhánh chưa migrate (vẫn báo 0.1.0 = .exe legacy).
-  version: process.env.AGENT_VERSION ?? "0.2.0",
-  transport: parseTransport(process.env.AGENT_TRANSPORT),
+  version: process.env.AGENT_VERSION ?? "0.3.0",
   printMode: parsePrintMode(process.env.PRINT_MODE),
   // Network gate: agent registers its NAT egress IP every 5 min via the
   // web app's /api/branch-presence endpoint. Web app then enforces "POS/KDS
@@ -83,29 +69,11 @@ const config = {
 
 const printerCache = new Map<number, PrinterRow>();
 
-// Lazy-load the USB sender so LAN-only deployments (Termux, Raspberry Pi)
-// never require the `usb` native binding at startup.
-type UsbSender = (
-  vendorIdHex: string,
-  productIdHex: string | null,
-  bytes: Uint8Array,
-) => Promise<void>;
-let usbSenderPromise: Promise<UsbSender> | null = null;
-const loadUsbSender = (): Promise<UsbSender> => {
-  if (config.transport === "lan") {
-    return Promise.reject(
-      new Error("USB dispatch disabled (AGENT_TRANSPORT=lan)"),
-    );
-  }
-  usbSenderPromise ??= import("./usb.js").then((m) => m.sendRawUSB);
-  return usbSenderPromise;
-};
-
 async function loadPrinters(supabase: SupabaseClient): Promise<void> {
   const { data, error } = await supabase
     .from("printers")
     .select(
-      "id, branch_id, role, connection_type, lan_host, lan_port, usb_vendor_id, usb_product_id, paper_width_mm, is_active",
+      "id, branch_id, role, connection_type, lan_host, lan_port, paper_width_mm, is_active",
     )
     .eq("branch_id", config.branchId)
     .eq("is_active", true);
@@ -118,16 +86,14 @@ async function loadPrinters(supabase: SupabaseClient): Promise<void> {
     `[agent] loaded ${printerCache.size} printers for branch ${config.branchId}`,
   );
 
-  if (config.transport === "lan") {
-    const usbActive = [...printerCache.values()].filter(
-      (p) => p.connection_type === "usb",
+  const nonLan = [...printerCache.values()].filter(
+    (p) => p.connection_type !== "lan",
+  );
+  if (nonLan.length > 0) {
+    console.warn(
+      `[agent] WARN ${nonLan.length} non-LAN printer(s) active for branch ${config.branchId}; ` +
+        `their jobs will fail — flip printers.connection_type='lan' or deactivate.`,
     );
-    if (usbActive.length > 0) {
-      console.warn(
-        `[agent] WARN transport=lan but ${usbActive.length} USB printer(s) active for branch ${config.branchId}; ` +
-          `jobs targeting them will be left pending for a full agent.`,
-      );
-    }
   }
 }
 
@@ -138,7 +104,6 @@ async function heartbeat(supabase: SupabaseClient): Promise<void> {
       tenant_id: config.tenantId,
       agent_id: config.agentId,
       version: config.version,
-      transport: config.transport,
       last_seen_at: new Date().toISOString(),
     },
     { onConflict: "branch_id" },
@@ -223,57 +188,32 @@ async function completeJob(
   if (error) console.error(`[agent] complete ${jobId} failed:`, error.message);
 }
 
-// Pre-claim capability check: a LAN-only agent must NOT claim a USB job.
-// Claim-then-fail would mark the job `failed` permanently (no requeue path),
-// so we leave the row `pending` for a full agent to pick up.
-function canServePrinter(printer: PrinterRow): boolean {
-  if (config.transport === "all") return true;
-  return printer.connection_type === "lan";
-}
-
 async function dispatch(job: PrintJobRow): Promise<void> {
   const printer = printerCache.get(job.printer_id);
   if (!printer) {
     throw new Error(`printer ${job.printer_id} not in cache / inactive`);
   }
+  if (printer.connection_type !== "lan") {
+    throw new Error(
+      `printer ${printer.id}: only connection_type='lan' is supported (got '${printer.connection_type}')`,
+    );
+  }
+  if (!printer.lan_host) {
+    throw new Error(`printer ${printer.id} missing lan_host`);
+  }
+
   const bytes =
     config.printMode === "bitmap"
       ? await renderPayloadBitmap(job.payload)
       : renderPayload(job.payload);
 
-  if (printer.connection_type === "lan") {
-    if (!printer.lan_host)
-      throw new Error(`printer ${printer.id} missing lan_host`);
-    await sendRawLAN(printer.lan_host, printer.lan_port ?? 9100, bytes);
-    return;
-  }
-
-  if (printer.connection_type === "usb") {
-    if (!printer.usb_vendor_id) {
-      throw new Error(`printer ${printer.id} missing usb_vendor_id`);
-    }
-    const send = await loadUsbSender();
-    await send(printer.usb_vendor_id, printer.usb_product_id, bytes);
-    return;
-  }
-
-  throw new Error(
-    `printer ${printer.id}: unsupported connection_type=${printer.connection_type}`,
-  );
+  await sendRawLAN(printer.lan_host, printer.lan_port ?? 9100, bytes);
 }
 
 async function processJob(
   supabase: SupabaseClient,
   jobId: number,
-  printerId: number | null,
 ): Promise<void> {
-  if (printerId !== null) {
-    const printer = printerCache.get(printerId);
-    if (printer && !canServePrinter(printer)) {
-      return; // leave pending for a capable agent
-    }
-  }
-
   const claimed = await claimJob(supabase, jobId);
   if (!claimed) return;
 
@@ -307,7 +247,7 @@ async function processJob(
 async function drainPending(supabase: SupabaseClient): Promise<void> {
   const { data, error } = await supabase
     .from("print_jobs")
-    .select("id, printer_id")
+    .select("id")
     .eq("branch_id", config.branchId)
     .eq("status", "pending")
     .order("created_at", { ascending: true })
@@ -316,11 +256,8 @@ async function drainPending(supabase: SupabaseClient): Promise<void> {
     console.error("[agent] drain failed:", error.message);
     return;
   }
-  for (const row of (data ?? []) as Array<{
-    id: number;
-    printer_id: number | null;
-  }>) {
-    await processJob(supabase, row.id, row.printer_id);
+  for (const row of (data ?? []) as Array<{ id: number }>) {
+    await processJob(supabase, row.id);
   }
 }
 
@@ -349,13 +286,8 @@ async function reapStuckJobs(supabase: SupabaseClient): Promise<void> {
 
 async function main() {
   console.log(
-    `[agent] starting ${config.agentId} v${config.version} branch=${config.branchId} transport=${config.transport} print_mode=${config.printMode}`,
+    `[agent] starting ${config.agentId} v${config.version} branch=${config.branchId} print_mode=${config.printMode}`,
   );
-  if (config.transport === "lan") {
-    console.log(
-      "[agent] USB dispatch disabled; only LAN (TCP:9100) printers will be served",
-    );
-  }
   const supabase = createClient(config.supabaseUrl, config.serviceKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
@@ -378,13 +310,9 @@ async function main() {
         filter: `branch_id=eq.${config.branchId}`,
       },
       (payload) => {
-        const row = payload.new as {
-          id: number;
-          status: string;
-          printer_id: number | null;
-        };
+        const row = payload.new as { id: number; status: string };
         if (row.status === "pending") {
-          void processJob(supabase, row.id, row.printer_id);
+          void processJob(supabase, row.id);
         }
       },
     )

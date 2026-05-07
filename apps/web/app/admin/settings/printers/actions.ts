@@ -15,15 +15,12 @@ const PRINT_TYPES = [
   "cancel_ticket",
 ] as const;
 
-const printerBaseSchema = z.object({
+const printerSchema = z.object({
   branch_id: z.coerce.number().int().positive(),
   role: z.enum(["receipt", "kitchen_1", "kitchen_2"]),
   name: z.string().trim().min(1, { error: "Nhập tên máy in" }),
-  connection_type: z.enum(["lan", "usb"]),
-  lan_host: z.string().trim().nullable().optional(),
+  lan_host: z.string().trim().min(1, { error: "Nhập LAN host" }),
   lan_port: z.coerce.number().int().min(1).max(65535).nullable().optional(),
-  usb_vendor_id: z.string().trim().nullable().optional(),
-  usb_product_id: z.string().trim().nullable().optional(),
   paper_width_mm: z.union([z.literal(58), z.literal(80)]).default(80),
   code_page: z.string().trim().default("CP1258"),
   is_active: z.boolean().default(true),
@@ -31,14 +28,7 @@ const printerBaseSchema = z.object({
   category_ids: z.array(z.coerce.number().int().positive()).default([]),
 });
 
-const createPrinterSchema = printerBaseSchema.refine(
-  (v) =>
-    (v.connection_type === "lan" && !!v.lan_host) ||
-    (v.connection_type === "usb" && !!v.usb_vendor_id),
-  { error: "Cung cấp LAN host hoặc USB vendor ID" },
-);
-
-type PrinterInput = z.infer<typeof createPrinterSchema>;
+type PrinterInput = z.infer<typeof printerSchema>;
 
 function revalidatePrinterPaths(branchId: number) {
   revalidatePath("/admin/settings/printers");
@@ -48,7 +38,7 @@ function revalidatePrinterPaths(branchId: number) {
 export async function upsertPrinter(
   input: PrinterInput & { id?: number },
 ): Promise<ActionResult<{ id: number }>> {
-  const parsed = createPrinterSchema.safeParse(input);
+  const parsed = printerSchema.safeParse(input);
   if (!parsed.success) {
     return {
       success: false,
@@ -76,23 +66,8 @@ export async function upsertPrinter(
     p_branch_id: parsed.data.branch_id,
     p_role: parsed.data.role,
     p_name: parsed.data.name,
-    p_connection_type: parsed.data.connection_type,
-    p_lan_host:
-      parsed.data.connection_type === "lan"
-        ? (parsed.data.lan_host ?? undefined)
-        : undefined,
-    p_lan_port:
-      parsed.data.connection_type === "lan"
-        ? (parsed.data.lan_port ?? 9100)
-        : undefined,
-    p_usb_vendor_id:
-      parsed.data.connection_type === "usb"
-        ? (parsed.data.usb_vendor_id ?? undefined)
-        : undefined,
-    p_usb_product_id:
-      parsed.data.connection_type === "usb"
-        ? (parsed.data.usb_product_id ?? undefined)
-        : undefined,
+    p_lan_host: parsed.data.lan_host,
+    p_lan_port: parsed.data.lan_port ?? 9100,
     p_paper_width_mm: parsed.data.paper_width_mm,
     p_code_page: parsed.data.code_page,
     p_is_active: parsed.data.is_active,

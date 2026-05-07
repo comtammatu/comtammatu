@@ -223,7 +223,7 @@ Canonical rule (áp dụng 2026-04-24): payment confirmation → `orders.status=
 | `receipt` | phiếu tạm tính / hóa đơn POS | **Không phải** `tax invoice`. In cho khách xem, không có mã CQT |
 | `kitchen ticket` | phiếu bếp | Đồng nghĩa `kds ticket`; dùng khi nói về bản in giấy |
 | `ESC/POS` | ESC/POS | Giao thức máy in nhiệt, giữ nguyên English |
-| `connection_type` | kiểu kết nối máy in | `lan` (TCP:9100) hoặc `usb` |
+| `connection_type` | kiểu kết nối máy in | `lan` (TCP:9100) — LAN-only sau cleanup 2026-05-07 |
 | `print_mode` | chế độ in | `text` (ESC/POS + CP1258) hoặc `bitmap` (rasterize tiếng Việt) |
 
 ### Kế toán và thuế GTGT

@@ -1,14 +1,12 @@
 # @comtammatu/print-agent
 
 Thermal print agent for Cơm Tấm Má Tư. Subscribes to Supabase Realtime for `print_jobs`,
-renders ESC/POS, dispatches to LAN (TCP:9100) or USB thermal printers.
+renders ESC/POS, dispatches to LAN (TCP:9100) thermal printers.
 
 **1 agent per branch** serves all 3 printers at that branch (receipt / kitchen_1 / kitchen_2).
 
-Two transport modes, selected via `AGENT_TRANSPORT`:
-
-- `all` (default) — LAN + USB. Requires `usb` native binding; Windows-only practical target.
-- `lan` — LAN (TCP:9100) only. No native deps. Runs on Termux (Android), Raspberry Pi, any ARM/x64 Linux with Node 24.
+LAN-only. No native deps. Runs on Windows, Termux (Android), Raspberry Pi, any ARM/x64
+Linux with Node 24.
 
 ## Architecture
 
@@ -17,21 +15,17 @@ Browser POS ─ Server Action ─▶ Postgres RPC ─▶ print_jobs row
                                                      │
                                            Realtime INSERT ─▶ Agent (this)
                                                      │
-                                         claim → render → TCP:9100 / USB
+                                            claim → render → TCP:9100
                                                      │
                                             complete_print_job(success)
 ```
 
 ## Prerequisites
 
-- Node.js 24+ (required — agent runs as `node dist/index.js`, KHÔNG dùng pkg `.exe` build
-  vì @yao-pkg/pkg có ESM issues với `dist/render-bitmap.js` từ 2026-04, xem commit
-  `98ce5c7`)
-- Windows 10 / 11 or Windows Server 2019+
-- For Windows Service install: [NSSM](https://nssm.cc/) on `PATH` (`choco install nssm`)
+- Node.js 24+
 - Supabase service role key (agent runs as service principal, not a user)
-- For USB printers on Windows: the printer driver must NOT be installed as a standard
-  Windows printer (Zadig → replace driver with WinUSB if needed)
+- All branch printers must be network-connected with `printers.connection_type='lan'`
+  and `lan_host` filled. Non-LAN printer rows fail dispatch with a clear error.
 
 ## Development
 
@@ -48,11 +42,19 @@ pnpm dev
 pnpm build          # tsc → dist/
 ```
 
-`dist/` contains the compiled JS entry point (`dist/index.js`) that the Windows
-Service launches via `node.exe`. No standalone binary — see "Prerequisites" for
-why pkg path was retired.
+`dist/index.js` is the entry point launched via `node dist/index.js`. There is no
+standalone binary build — agent always runs through Node.
 
-## Install as Windows Service
+## Run
+
+```bash
+pnpm start                 # node dist/index.js
+```
+
+Or run as a long-lived service via your platform's process manager
+(NSSM on Windows, systemd on Linux, termux-services on Android).
+
+### Windows Service via NSSM
 
 ```powershell
 # Run as Administrator
@@ -60,9 +62,8 @@ cd apps\print-agent
 .\scripts\install-service.ps1
 ```
 
-The script reads `.env` from `dist-bin/.env` (legacy path; service `WorkingDir`
-points there but service entry is `node dist/index.js`) and registers service
-`ComTamMaTu-PrintAgent` with auto-restart on crash. Logs rotate at 10 MB each:
+The script registers service `ComTamMaTu-PrintAgent` with auto-restart on crash,
+launching `node.exe dist\index.js`. Logs rotate at 10 MB each:
 
 ```
 C:\ProgramData\ComTamMaTu\print-agent\logs\agent.out.log
@@ -85,10 +86,11 @@ Uninstall:
 | `AGENT_BRANCH_ID` | yes | Numeric branch id this agent serves |
 | `AGENT_ID` | no | Stable identifier (default: `agent-<pid>`) |
 | `AGENT_VERSION` | no | Reported in heartbeat row |
-| `AGENT_TRANSPORT` | no | `all` (default) or `lan`. `lan` skips USB dispatch entirely — safe on hosts without the `usb` native binding. |
 | `PRINT_MODE` | no | `text` (default) emits ESC/POS text commands using the printer's CP1258 firmware font. `bitmap` rasterizes Vietnamese via Roboto Mono TTF and emits raster image commands — use this on PDIT PD805KL / clones whose firmware has no usable CP1258 font. |
 | `PRINT_CODEPAGE_ID` | no | Text-mode only. ESC/POS register index for CP1258. Default `38` (Epson). Xprinter often `30`. |
-| `PRINT_ASCII` | no | Text-mode fallback. `1` to strip Vietnamese diacritics. |
+| `PRINT_ASCII` | no | Text-mode only. `1` to strip Vietnamese diacritics if no codepage works. |
+| `WEB_BASE_URL` | no | Web app base URL for branch-presence registration. |
+| `PRINT_AGENT_PRESENCE_TOKEN` | no | Shared bearer token for `/api/branch-presence`. |
 
 ## Bitmap mode (recommended for PDIT PD805KL)
 
@@ -137,10 +139,11 @@ the paper, find the block whose Vietnamese looks correct, then persist:
 echo "PRINT_CODEPAGE_ID=30" >> .env   # example for Xprinter XP-T80A
 ```
 
-Restart the agent. If **no** codepage renders correctly, fall back to ASCII:
+Restart the agent. If **no** codepage renders correctly, switch to bitmap mode
+above (preferred), or strip diacritics:
 
 ```bash
-echo "PRINT_ASCII=1" >> .env          # strips diacritics, readable but ugly
+echo "PRINT_ASCII=1" >> .env          # readable but ugly
 ```
 
 ## Runtime loops
@@ -148,49 +151,41 @@ echo "PRINT_ASCII=1" >> .env          # strips diacritics, readable but ugly
 - **Realtime INSERT** on `print_jobs` (filter: `branch_id=eq.<BRANCH>`)
 - **Heartbeat** upsert to `printer_agents` every 30s (`is_online` threshold: 60s)
 - **Printer cache refresh** every 5 min
-- **Pending drain** every 60s (safety net for missed Realtime events)
+- **Pending drain** every 15s (safety net for missed Realtime events)
+- **Stuck-job janitor** every 60s (re-pending `processing` rows older than 5 min)
 
-## Running LAN-only on Termux (Android) / Raspberry Pi / other Linux
+## Running on Termux (Android) / Raspberry Pi / other Linux
 
-For branches whose POS is an Android tablet (no Windows PC) and whose printers
-are all network-connected (Xprinter / Epson TM with Ethernet or Wi-Fi):
+For branches whose POS is an Android tablet (no Windows PC):
 
 ```bash
 # Termux (Android): install Node 24
 pkg install nodejs-lts git
 
-# Clone (or copy just apps/print-agent) and install without the native USB binding:
+# Clone (or copy just apps/print-agent) and install:
 git clone <repo> && cd <repo>/apps/print-agent
-pnpm install --no-optional   # or: npm install --omit=optional
+pnpm install
 
 # Configure
 cp .env.example .env
 # ...fill SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, AGENT_TENANT_ID, AGENT_BRANCH_ID
-echo "AGENT_TRANSPORT=lan" >> .env
 
-# Run
-pnpm start
+# Build + run
+pnpm build && pnpm start
 # Or keep alive under Termux:
 #   pkg install termux-services && sv-enable print-agent
 ```
 
-Same flow on Raspberry Pi / any ARM Linux — `--no-optional` (or `optionalDependencies`
-failing silently on platforms without a `usb` prebuild) is how we avoid the native
-compile step.
-
-All printers for this branch must have `printers.connection_type='lan'`. If a USB
-printer row is active on a LAN-only branch, its jobs will remain `pending` —
-the agent logs a WARN at startup.
+Same flow on Raspberry Pi / any ARM Linux.
 
 ## Troubleshooting
 
-- **"USB printer not found"** — verify vendor/product ID with `usb.getDeviceList()` or
-  `lsusb`; on Windows ensure WinUSB driver is bound.
-- **"printer <id> not in cache / inactive"** — flip `printers.is_active=true` then wait
+- **"printer N: only connection_type='lan' is supported"** — a non-LAN printer row
+  was created. Update `printers.connection_type='lan'` and fill `lan_host`, or
+  deactivate the row.
+- **"printer N not in cache / inactive"** — flip `printers.is_active=true` then wait
   up to 5 min, or restart the service.
+- **"printer host:port timed out"** — verify the printer is on the same LAN as the
+  agent host and reachable on TCP:9100 (try `nc <host> 9100`).
 - **Realtime status stuck on `CHANNEL_ERROR`** — check service key validity and
-  `print_jobs` is in `supabase_realtime` publication.
-- **USB jobs stuck `pending` on LAN-only agent** — by design. A LAN-only agent
-  (`AGENT_TRANSPORT=lan`) will not claim jobs whose printer has
-  `connection_type='usb'`. Either flip the printer to LAN, or run a full agent
-  alongside (Phase 2 / currently unsupported — hybrid deployment not yet hardened).
+  that `print_jobs` is in the `supabase_realtime` publication.

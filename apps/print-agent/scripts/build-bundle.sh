@@ -1,14 +1,13 @@
 #!/usr/bin/env bash
 # ============================================================================
 # Build deploy bundle cho print-agent — zip dist/ + scripts/ + assets/ +
-# .env.example + README + migration script.
+# .env.example + README.
 #
 # Output: apps/print-agent/dist-bundle/print-agent-bundle-vX.Y.Z.zip
-# Ops gửi file này cho từng chi nhánh để deploy/migrate. Mỗi chi nhánh:
+# Ops gửi file này cho từng chi nhánh để deploy. Mỗi chi nhánh:
 #   1. Unzip vào C:\ComTamMaTu\print-agent\
 #   2. Copy .env.example → dist-bin/.env, fill credentials
-#   3. Run scripts/install-service.ps1 (lần đầu) hoặc migrate-from-exe.ps1
-#      (chuyển từ .exe legacy)
+#   3. Run scripts/install-service.ps1
 #
 # Run từ root repo: bash apps/print-agent/scripts/build-bundle.sh
 # ============================================================================
@@ -88,14 +87,6 @@ cat > "$STAGING/INSTALL.md" <<EOF
    \`\`\`powershell
    Get-Service ComTamMaTu-PrintAgent
    \`\`\`
-
-## Chi nhánh migrate từ .exe legacy
-
-Cùng bước 1-5 ở trên, nhưng bước 6 chạy:
-\`\`\`powershell
-.\\scripts\\migrate-from-exe.ps1
-\`\`\`
-Script sẽ tự backup .exe + .env cũ, stop service, re-install với Node.
 
 ## Smoke test sau install
 

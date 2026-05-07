@@ -1,6 +1,5 @@
 # Chạy print-agent ở foreground (không cài service).
 # Dùng cho dev/test nhanh. Service production: xem install-service.ps1.
-# Chạy qua Node trực tiếp (bỏ pkg do ESM issue với render-bitmap).
 
 param(
   [string]$NodePath  = (Get-Command node.exe -ErrorAction SilentlyContinue).Source,

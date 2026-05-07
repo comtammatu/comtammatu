@@ -32,7 +32,7 @@ export default async function PrintersPage() {
   let printersQuery = supabase
     .from("printers")
     .select(
-      "id, branch_id, role, name, connection_type, lan_host, lan_port, usb_vendor_id, usb_product_id, paper_width_mm, code_page, is_active",
+      "id, branch_id, role, name, lan_host, lan_port, paper_width_mm, code_page, is_active",
     )
     .order("branch_id")
     .order("role");

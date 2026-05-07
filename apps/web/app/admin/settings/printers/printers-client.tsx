@@ -39,11 +39,8 @@ export type Printer = {
   branch_id: number;
   role: string;
   name: string;
-  connection_type: string;
   lan_host: string | null;
   lan_port: number | null;
-  usb_vendor_id: string | null;
-  usb_product_id: string | null;
   paper_width_mm: number;
   code_page: string;
   is_active: boolean;
@@ -67,7 +64,6 @@ export type Agent = {
 };
 
 type PrinterRole = "receipt" | "kitchen_1" | "kitchen_2";
-type ConnectionType = "lan" | "usb";
 
 const ROLE_LABEL: Record<PrinterRole, string> = {
   receipt: "Máy in thu ngân",
@@ -101,7 +97,6 @@ const PRINTER_COPY = {
   noCategories: "Chưa gán danh mục món",
   slotLabel: "Vị trí máy in",
   samplePrinterPlaceholder: "Ví dụ: Xprinter XP-T80A",
-  connectionLabel: "Kết nối",
   lanPortHelp:
     "Mặc định port 9100 (ESC/POS raw). Chỉ đổi khi máy in yêu cầu port khác.",
   paperWidthLabel: "Khổ giấy",
@@ -190,10 +185,10 @@ export function PrintersClient(props: {
                       {printer ? (
                         <div className="space-y-1 text-sm text-muted-foreground">
                           <p>
-                            {printer.name} ·{" "}
-                            {printer.connection_type === "lan"
-                              ? `${printer.lan_host}${printer.lan_port && printer.lan_port !== 9100 ? `:${printer.lan_port}` : ""}`
-                              : `USB ${printer.usb_vendor_id}${printer.usb_product_id ? `/${printer.usb_product_id}` : ""}`}{" "}
+                            {printer.name} · {printer.lan_host}
+                            {printer.lan_port && printer.lan_port !== 9100
+                              ? `:${printer.lan_port}`
+                              : ""}{" "}
                             · {printer.paper_width_mm}mm · {printer.code_page}
                           </p>
                           <div className="flex flex-wrap gap-1">
@@ -289,11 +284,8 @@ function PrinterForm({
     branch_id: initial?.branch_id ?? preset?.branch_id ?? 0,
     role: initialRole,
     name: initial?.name ?? "",
-    connection_type: (initial?.connection_type ?? "lan") as ConnectionType,
     lan_host: initial?.lan_host ?? "",
     lan_port: initial?.lan_port ?? 9100,
-    usb_vendor_id: initial?.usb_vendor_id ?? "",
-    usb_product_id: initial?.usb_product_id ?? "",
     paper_width_mm: (initial?.paper_width_mm ?? 80) as 58 | 80,
     code_page: initial?.code_page ?? "CP1258",
     is_active: initial?.is_active ?? true,
@@ -344,11 +336,8 @@ function PrinterForm({
         branch_id: form.branch_id,
         role: form.role,
         name: form.name,
-        connection_type: form.connection_type,
-        lan_host: form.lan_host || null,
+        lan_host: form.lan_host,
         lan_port: form.lan_port || null,
-        usb_vendor_id: form.usb_vendor_id || null,
-        usb_product_id: form.usb_product_id || null,
         paper_width_mm: form.paper_width_mm,
         code_page: form.code_page,
         is_active: form.is_active,
@@ -449,62 +438,19 @@ function PrinterForm({
               placeholder={PRINTER_COPY.samplePrinterPlaceholder}
             />
           </div>
-          <div className="space-y-2">
-            <Label>{PRINTER_COPY.connectionLabel}</Label>
-            <Select
-              value={form.connection_type}
-              onValueChange={(value) =>
-                setForm({ ...form, connection_type: value as ConnectionType })
+          <div className="space-y-2 md:col-span-2">
+            <Label>LAN host / IP</Label>
+            <Input
+              value={form.lan_host}
+              onChange={(event) =>
+                setForm({ ...form, lan_host: event.target.value })
               }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="lan">LAN (Ethernet)</SelectItem>
-                <SelectItem value="usb">USB</SelectItem>
-              </SelectContent>
-            </Select>
+              placeholder="192.168.1.50"
+            />
+            <p className="text-xs text-muted-foreground">
+              {PRINTER_COPY.lanPortHelp}
+            </p>
           </div>
-
-          {form.connection_type === "lan" ? (
-            <div className="space-y-2 md:col-span-2">
-              <Label>LAN host / IP</Label>
-              <Input
-                value={form.lan_host}
-                onChange={(event) =>
-                  setForm({ ...form, lan_host: event.target.value })
-                }
-                placeholder="192.168.1.50"
-              />
-              <p className="text-xs text-muted-foreground">
-                {PRINTER_COPY.lanPortHelp}
-              </p>
-            </div>
-          ) : (
-            <>
-              <div className="space-y-2">
-                <Label>USB Vendor ID</Label>
-                <Input
-                  value={form.usb_vendor_id}
-                  onChange={(event) =>
-                    setForm({ ...form, usb_vendor_id: event.target.value })
-                  }
-                  placeholder="0x04b8"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>USB Product ID</Label>
-                <Input
-                  value={form.usb_product_id}
-                  onChange={(event) =>
-                    setForm({ ...form, usb_product_id: event.target.value })
-                  }
-                  placeholder="0x0202"
-                />
-              </div>
-            </>
-          )}
 
           <div className="space-y-2">
             <Label>{PRINTER_COPY.paperWidthLabel}</Label>
