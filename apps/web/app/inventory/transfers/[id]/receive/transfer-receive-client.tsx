@@ -16,15 +16,15 @@ import { Checkbox } from "@comtammatu/ui/components/checkbox";
 import { Button } from "@comtammatu/ui/components/button";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { cn } from "@comtammatu/ui";
-import { MobilePage } from "../../../../_components/mobile/mobile-page";
-import { MobileSectionHeader } from "../../../../_components/mobile/mobile-section-header";
-import { TouchButton } from "../../../../_components/mobile/touch-button";
-import { NumberPadSheet } from "../../../../_components/mobile/number-pad-sheet";
-import { formatQty } from "../../../../_lib/format";
+import { MobilePage } from "../../../_components/mobile/mobile-page";
+import { MobileSectionHeader } from "../../../_components/mobile/mobile-section-header";
+import { TouchButton } from "../../../_components/mobile/touch-button";
+import { NumberPadSheet } from "../../../_components/mobile/number-pad-sheet";
+import { formatQty } from "../../../_lib/format";
 import {
   transferConfirmReceive,
   transferReceive,
-} from "../../../../transfer-actions";
+} from "../../../transfer-actions";
 
 type LineInput = {
   id: number;
@@ -128,15 +128,15 @@ export function TransferReceiveClient({ transfer, lines }: Props) {
       setError(res.error ?? "Không thể xác nhận nhập.");
       return;
     }
-    router.push(`/inventory/m/transfers?tab=history`);
+    router.push(`/inventory/transfers/${transfer.id}`);
     router.refresh();
   }
 
   return (
     <MobilePage>
       <MobileSectionHeader
-        backHref="/inventory/m/transfers?tab=receive"
-        backLabel="Về danh sách"
+        backHref={`/inventory/transfers/${transfer.id}`}
+        backLabel="Về chi tiết phiếu"
         eyebrow="Kiểm nhận"
         title={transfer.code}
       />

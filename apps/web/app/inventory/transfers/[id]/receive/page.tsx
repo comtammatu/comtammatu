@@ -7,7 +7,7 @@ import {
   type StaffRole,
 } from "@comtammatu/shared/auth";
 import { TransferReceiveClient } from "./transfer-receive-client";
-import { getBranchSiteDisplayName } from "../../../../_lib/branch-site-labels";
+import { getBranchSiteDisplayName } from "../../../_lib/branch-site-labels";
 
 const BRANCH_SCOPED_TRANSFER_ROLES: readonly StaffRole[] = [
   "branch_manager",
@@ -20,7 +20,7 @@ function isBranchScopedTransferRole(role: StaffRole): boolean {
   return BRANCH_SCOPED_TRANSFER_ROLES.includes(role);
 }
 
-export default async function MobileTransferReceivePage({
+export default async function TransferReceivePage({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -28,7 +28,7 @@ export default async function MobileTransferReceivePage({
   const { id: idStr } = await params;
   const id = Number(idStr);
   if (!Number.isFinite(id) || id <= 0) {
-    redirect("/inventory/m/transfers");
+    redirect("/inventory/transfers");
   }
 
   const supabase = await createClient();
@@ -49,14 +49,14 @@ export default async function MobileTransferReceivePage({
     .eq("tenant_id", claims.tenant_id)
     .maybeSingle();
 
-  if (!transferRes.data) redirect("/inventory/m/transfers");
+  if (!transferRes.data) redirect("/inventory/transfers");
   const transfer = transferRes.data;
 
   if (
     transfer.from_branch_id === transfer.to_branch_id ||
     !RECEIVE_STATES.includes(transfer.status)
   ) {
-    redirect("/inventory/m/transfers");
+    redirect(`/inventory/transfers/${id}`);
   }
 
   if (

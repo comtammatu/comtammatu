@@ -352,7 +352,7 @@ export function GRNDetailClient({
           : messages.inventory.grn.confirmed,
       );
       if (isMobile) {
-        router.push("/inventory/m/grn");
+        router.push("/inventory/grn/new");
       } else if (grn.poId) {
         router.push(`/inventory/purchase-orders/${grn.poId}`);
       } else {
@@ -370,7 +370,7 @@ export function GRNDetailClient({
         badge={{ children: getInventoryStatusLabel(grn.status), variant: getInventoryStatusBadgeVariant(grn.status) }}
         breadcrumb={
           <Link
-            href={isMobile ? "/inventory/m/grn" : "/inventory/grn"}
+            href={isMobile ? "/inventory/grn/new" : "/inventory/grn"}
             className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
           >
             <IconArrowLeft className="size-4" />{" "}
@@ -517,7 +517,7 @@ export function GRNDetailClient({
                   <Link
                     href={
                       isMobile
-                        ? "/inventory/m/grn"
+                        ? "/inventory/grn/new"
                         : grn.poId
                           ? `/inventory/purchase-orders/${grn.poId}`
                           : "/inventory/grn"

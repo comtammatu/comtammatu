@@ -19,6 +19,7 @@ import {
   Warehouse as IconWarehouse,
 } from "lucide-react";
 import { type StaffRole } from "@comtammatu/shared/auth";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { AppShell } from "@/components/app-shell";
 import type { ShellNavGroup } from "@/lib/shell-primitives";
 import { messages } from "@lib/messages";
@@ -262,17 +263,8 @@ export function InventoryShell({
     ],
   );
 
-  const isMobileRoute = pathname?.startsWith("/inventory/m") ?? false;
+  const isMobile = useIsMobile();
   const branchPickerLocked = isStocktakeSessionPath(pathname);
-
-  if (isMobileRoute) {
-    return (
-      <div className="flex min-h-dvh flex-col bg-background">
-        <MobileTopBar siteName={effectiveSiteName} />
-        <main className="flex-1 pb-24">{children}</main>
-      </div>
-    );
-  }
 
   const branchFilter =
     allowedBranches.length > 1 && !branchPickerLocked ? (
@@ -297,7 +289,7 @@ export function InventoryShell({
       defaultPageTitle={messages.inventory.shell.brandName}
       pageHeader={{
         headerExtras: branchFilter,
-        mobileTopBar: isMobileRoute ? (
+        mobileTopBar: isMobile ? (
           <MobileTopBar siteName={effectiveSiteName} />
         ) : branchFilter,
       }}

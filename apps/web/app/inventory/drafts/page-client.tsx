@@ -6,16 +6,16 @@ import { ClipboardList as IconClipboardList, Pencil as IconPencil, Trash as Icon
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
-import { MobileEmptyState } from "../../_components/mobile/mobile-empty-state";
-import { MobilePage } from "../../_components/mobile/mobile-page";
-import { MobileSectionHeader } from "../../_components/mobile/mobile-section-header";
+import { MobileEmptyState } from "../_components/mobile/mobile-empty-state";
+import { MobilePage } from "../_components/mobile/mobile-page";
+import { MobileSectionHeader } from "../_components/mobile/mobile-section-header";
 import {
   draftTotal,
   listDrafts,
   removeDraft,
   type GrnDraft,
-} from "../../_lib/mobile-draft";
-import { formatVND } from "../../_lib/format";
+} from "../_lib/mobile-draft";
+import { formatVND } from "../_lib/format";
 
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 function formatUpdatedAt(value: string): string {
@@ -46,7 +46,7 @@ export function MobileDraftsClient({ userKey }: { userKey: string }) {
     } catch {
       /* ignore */
     }
-    router.push(`/inventory/m/grn/new/${draft.supplierId}`);
+    router.push(`/inventory/grn/new/${draft.supplierId}`);
   }
 
   function discardDraft(draft: GrnDraft) {
@@ -58,7 +58,7 @@ export function MobileDraftsClient({ userKey }: { userKey: string }) {
   return (
     <MobilePage>
       <MobileSectionHeader
-        backHref="/inventory/m"
+        backHref="/inventory"
         backLabel="Trang chính"
         eyebrow="Phiếu nhập"
         title="Phiếu nháp đã lưu"

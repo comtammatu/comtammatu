@@ -20,7 +20,8 @@ import { test, expect } from "@playwright/test";
 const ROUTES: ReadonlyArray<{ name: string; path: string }> = [
   { name: "pos-desktop", path: "/br/1/pos" },
   { name: "kds-queue", path: "/br/1/kds" },
-  { name: "inventory-dashboard", path: "/inventory/dashboard?branchId=1" },
+  // Wave 3b: /inventory/dashboard now redirects to /inventory. Snapshot rebaseline pending.
+  { name: "inventory-dashboard", path: "/inventory?branchId=1" },
   { name: "inventory-stock", path: "/inventory/stock?branchId=1" },
   { name: "employee-portal", path: "/employee" },
 ];

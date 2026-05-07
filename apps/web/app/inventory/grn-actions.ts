@@ -758,11 +758,11 @@ export async function startGrnFromPo(formData: FormData): Promise<void> {
   const res = await createGrnFromPo(Number(poIdRaw));
   if (!res.success) {
     redirect(
-      `/inventory/m/grn?error=${encodeURIComponent(res.error ?? "Không thể tạo phiếu nhập từ PO.")}`,
+      `/inventory/grn/new?error=${encodeURIComponent(res.error ?? "Không thể tạo phiếu nhập từ PO.")}`,
     );
   }
   const grn = res.data as { id: number };
-  redirect(`/inventory/grn/${grn.id}?m=1&review=1`);
+  redirect(`/inventory/grn/${grn.id}?review=1`);
 }
 
 /* ─── Supplier Invoices ─── */

@@ -7,7 +7,7 @@ import {
 } from "@comtammatu/shared/auth";
 import { MobileDraftsClient } from "./page-client";
 
-export default async function MobileDraftsPage() {
+export default async function DraftsPage() {
   const supabase = await createClient();
   const {
     data: { session },

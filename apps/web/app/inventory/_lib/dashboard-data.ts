@@ -12,7 +12,7 @@ import {
 } from "../actions";
 import { fetchPurchaseOrders } from "../procurement-actions";
 import { fetchStockTransfers } from "../transfer-actions";
-import { fetchInventoryValueSystem } from "../inventory-value-actions";
+import { getInventoryDashboard } from "../dashboard-actions";
 import { formatDate } from "./format";
 import { resolveInventoryBranchScope } from "./inventory-scope";
 import {
@@ -170,9 +170,15 @@ export async function loadInventoryDashboardData(
 
   const branchFilter = scope.selectedBranchId ?? undefined;
 
-  const [valueRes, poRes, transferRes, stocktakeRes, reorderRes, expiryRes] =
+  // Fan out operational queries + MV-backed RPC in parallel.
+  // getInventoryDashboard replaces fetchInventoryValueSystem — single RPC
+  // instead of a multi-join query — and preserves cost-gated NULL for users
+  // lacking reports:view_branch/tenant (rule INVENTORY-WAC-STRICT-OVERRIDE).
+  const [dashboardRes, poRes, transferRes, stocktakeRes, reorderRes, expiryRes] =
     await Promise.all([
-      fetchInventoryValueSystem(branchFilter),
+      scope.selectedBranchId != null
+        ? getInventoryDashboard(scope.selectedBranchId)
+        : Promise.resolve(null),
       fetchPurchaseOrders(branchFilter),
       fetchStockTransfers(branchFilter),
       fetchStocktakeSessions(branchFilter),
@@ -180,8 +186,12 @@ export async function loadInventoryDashboardData(
       fetchExpiryAlerts(branchFilter),
     ]);
 
+  // totalStockValue: prefer MV-backed RPC value (cost-gated NULL preserved).
+  // Falls back to 0 if branch scope is unresolved or user lacks cost permission.
   const totalStockValue =
-    valueRes.success && valueRes.data ? valueRes.data.totalValue : 0;
+    dashboardRes != null && dashboardRes.success && dashboardRes.data
+      ? (dashboardRes.data.summary.totalValueVnd ?? 0)
+      : 0;
 
   const pendingPO =
     poRes.success && poRes.data

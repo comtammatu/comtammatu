@@ -121,7 +121,7 @@ function formatOrderedAt(iso: string | null): string {
   return date.toLocaleDateString("vi-VN");
 }
 
-export default async function MobileGrnSupplierList({
+export default async function GrnNewSupplierPage({
   searchParams,
 }: {
   searchParams: Promise<{ error?: string }>;
@@ -153,8 +153,8 @@ export default async function MobileGrnSupplierList({
   return (
     <MobilePage>
       <MobileSectionHeader
-        backHref="/inventory/m"
-        backLabel="Trang chính"
+        backHref="/inventory/grn"
+        backLabel="Danh sách GRN"
         eyebrow="Nhập hàng"
         title="Chọn nguồn nhập"
         description="Nhận hàng theo đơn đặt hàng (PO) đã gửi hoặc nhập ad-hoc."
@@ -251,7 +251,7 @@ export default async function MobileGrnSupplierList({
                 padding="default"
                 className="h-auto"
               >
-                <Link href={`/inventory/m/grn/new/${supplier.id}`}>
+                <Link href={`/inventory/grn/new/${supplier.id}`}>
                   <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-bold uppercase text-muted-foreground">
                     {initials}
                   </span>

@@ -5,7 +5,7 @@ import {
   extractClaimsFromAccessToken,
   PROCUREMENT_ROLES,
 } from "@comtammatu/shared/auth";
-import { fetchProcurementBranches } from "../../../../_lib/procurement-branches";
+import { fetchProcurementBranches } from "../../../_lib/procurement-branches";
 import { GrnCreateClient } from "./grn-create-client";
 
 type Ingredient = {
@@ -18,7 +18,7 @@ type Ingredient = {
   category: string | null;
 };
 
-export default async function MobileGrnCreatePage({
+export default async function GrnCreatePage({
   params,
 }: {
   params: Promise<{ supplierId: string }>;
@@ -26,7 +26,7 @@ export default async function MobileGrnCreatePage({
   const { supplierId: supplierIdStr } = await params;
   const supplierId = Number(supplierIdStr);
   if (!Number.isFinite(supplierId) || supplierId <= 0) {
-    redirect("/inventory/m/grn");
+    redirect("/inventory/grn/new");
   }
 
   const supabase = await createClient();
@@ -58,7 +58,7 @@ export default async function MobileGrnCreatePage({
       .limit(500),
   ]);
 
-  if (!supplierRes.data) redirect("/inventory/m/grn");
+  if (!supplierRes.data) redirect("/inventory/grn/new");
 
   const branches = await fetchProcurementBranches(supabase, claims.tenant_id);
   const defaultBranchId =
