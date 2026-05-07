@@ -163,7 +163,7 @@ Tất cả in-place sprint trên `blue` đóng băng từ **2026-05-07 23:59 ICT
 | 4 | Employee | W2 | `employee:*` | catalog TBD |
 | 5 | Inventory | W3 | `inventory:*` | catalog TBD (folds 5 inventory plan docs) |
 | 6 | Finance / Accounting | W4 | `finance:*` | catalog TBD (folds finance-redesign + m4) |
-| 7 | HR / Payroll | W4 | `hr:*` | catalog TBD |
+| 7 | Nhân sự & tiền lương | W4 | `hr:*` | catalog TBD |
 | 8 | Orders | W5 | `orders:*` | catalog TBD (folds m2-order-lifecycle) |
 | 9 | POS | W5 | `pos:*` | catalog TBD |
 | 10 | KDS | W5 | `kds:*` | catalog TBD |
@@ -174,7 +174,7 @@ Note: "Master Data" không phải module độc lập — fold vào Auth (tenant
 
 ---
 
-## §5. Cross-Module Dependency Graph
+## §5. Cross-Module Sơ đồ phụ thuộc
 
 (TBD — sẽ vẽ sau khi `05-MODULE-CATALOG.md` xong. Sketch dưới để context):
 
@@ -185,7 +185,7 @@ Auth ──> Admin ──> Master Data
   │
   ├──> Inventory ──> Finance ──> Reporting
   │       │             │
-  │       └──> HR/Payroll
+  │       └──> Nhân sự & tiền lương
   │             │
   └──> Orders ──> POS ──> KDS ──> Print
                    │
@@ -258,7 +258,7 @@ Single source of truth cho mọi blocker. Gộp 10 blockers từ `10-ROADMAP.md 
 | W1 | Login + shared shell + Auth + Master Data | W0 + B1+B2+B3+B4+B19 approved | Auth, Master Data |
 | W2 | Admin + Settings + Staff + Employee | W1 + persona ACL test green | Admin, Employee |
 | W3 | Inventory greenfield (no V1 surface) | W2 + B16+B17 approved + inventory schema baseline | Inventory |
-| W4 | Finance + HR/Payroll (port finance-redesign + m4 logic) | W3 + period/payroll invariants verified | Finance, HR |
+| W4 | Finance + Nhân sự & tiền lương (port finance-redesign + m4 logic) | W3 + period/payroll invariants verified | Finance, HR |
 | W5 | Orders + POS + KDS + Print | W4 + revenue parity confirmed | Orders, POS, KDS, Print |
 | W6 | Notifications + Reporting + final brand pass | W5 + smoke suite green | Notifications, Reporting |
 
