@@ -16,7 +16,7 @@
 | W1 | Login + shared shell + Auth + Master Data | Auth §2 + Master Data §4 (folded) | 2 wks | W0 + B1+B2+B3+B4+B19 | RLS persona tests green; login flow green for all roles |
 | W2 | Admin + Settings + Staff + Employee shell | Admin §3 + Employee shell §5 | 1.5 wks | W1 + B11+B23 | Admin CRUD operational; persona ACL tests green |
 | W3 | Inventory greenfield (no V1 surface) | Inventory §6 | 3.5 wks | W2 + B16+B17+B27–B30 + inventory schema baseline | Inventory persona + workflow E2E (PO→GRN→stock→consume) green |
-| W4 | Finance + HR/Payroll (port logic, no code carry) | Finance §7 + HR §8 | 3 wks | W3 + B19+B31–B38 | Period close + payroll + HĐĐT issue + refund GL reversal E2E green |
+| W4 | Finance + Nhân sự & tiền lương (port logic, no code carry) | Finance §7 + HR §8 | 3 wks | W3 + B19+B31–B38 | Period close + payroll + HĐĐT issue + refund GL reversal E2E green |
 | W5 | Orders + POS + KDS + Print | Orders §9 + POS §10 + KDS §11 + Print §12 | 3 wks | W4 + B41–B50 + revenue parity rehearsal | Revenue path E2E green; webhook idempotency verified; printer smoke test pass |
 | W6 | Notifications + Reporting + final brand pass | Notifications + Reporting §13 + Brand §14.5 final pass | 2 wks | W5 + B51+B52+B53 | Full smoke suite green; persona + device matrix complete |
 
@@ -97,7 +97,7 @@ W0 starts AFTER W0' Tier 1 + velocity baseline confirm scope.
 | Frontend ahead of backend baseline | Low | W0 can ship empty shells; backend wiring waits for W1 |
 | Kitchen-sink page mark "nice-to-have" → not built → drift | High | W0 exit gate makes kitchen-sink BLOCKING. Owner manual review required for sign-off. (Per matu-superapp lesson 2026-05-07.) |
 | Flutter monorepo prep blocking W0 → W0 slip | Medium | Skeleton only (compile + hello-world per flavor); business logic deferred to W5. Velocity baseline (Phase 2) catches if estimate wrong. |
-| 17 wk sequential 1-dev still optimistic per Codex review | High | Velocity baseline produces empirical multiplier. If >1.5×, escalate — hire 2nd dev or scope reduce W4 HR/Payroll, defer to post-v1.0. |
+| 17 wk sequential 1-dev still optimistic per Codex review | High | Velocity baseline produces empirical multiplier. If >1.5×, escalate — hire 2nd dev or scope reduce W4 Nhân sự & tiền lương, defer to post-v1.0. |
 
 ---
 
@@ -332,11 +332,11 @@ Per `05` §6.7:
 
 ---
 
-## §6. W4 — Finance + HR/Payroll
+## §6. W4 — Finance + Nhân sự & tiền lương
 
 ### 6.1 Scope
 
-Finance/Accounting + HR/Payroll cross-module. Modules §7 + §8 of `05`. Capabilities ported from archived `finance-redesign.md` + `m4-payments-fix.md` per `02-GREEN-BASELINE.md` "do not port" list — re-implement on green, no code carry.
+Finance/Accounting + Nhân sự & tiền lương cross-module. Modules §7 + §8 of `05`. Capabilities ported from archived `finance-redesign.md` + `m4-payments-fix.md` per `02-GREEN-BASELINE.md` "do not port" list — re-implement on green, no code carry.
 
 ### 6.2 Deliverables
 
@@ -665,7 +665,7 @@ Terminal wave. Module §13 of `05`. Final brand pass + smoke suite green.
 
 ---
 
-## §9. Cross-Wave Dependency Graph
+## §9. Cross-Wave Sơ đồ phụ thuộc
 
 ```
 W0 (Design Foundation)
@@ -676,7 +676,7 @@ W0 (Design Foundation)
   │      │      │
   │      │      ├──> W3 (Inventory greenfield)
   │      │      │      │
-  │      │      │      └──> W4 (Finance + HR/Payroll)
+  │      │      │      └──> W4 (Finance + Nhân sự & tiền lương)
   │      │      │            │   ↑
   │      │      │            │   └─ Employee data flows wire here
   │      │      │            │

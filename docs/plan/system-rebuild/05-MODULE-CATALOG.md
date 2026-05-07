@@ -20,7 +20,7 @@
 | 4 | Employee | W2 (shell) / W4 (data flows) | `employee:*` (route ACL); RLS self-scope | DRAFT |
 | 5 | Inventory | W3 | `inventory:*`, `procurement:*`, `supplier_return:*` | DRAFT |
 | 6 | Finance / Accounting | W4 | `finance:*`, `accounting:*` | DRAFT |
-| 7 | HR / Payroll | W4 | `hr:*`, `reports:pit_export` | DRAFT |
+| 7 | Nhân sự & tiền lương | W4 | `hr:*`, `reports:pit_export` | DRAFT |
 | 8 | Orders | W5 | `orders:*` | DRAFT |
 | 9 | POS | W5 | `pos:*` | DRAFT |
 | 10 | KDS | W5 | `kds:*` | DRAFT |
@@ -447,7 +447,7 @@ W4 — depends on Inventory (W3) for food cost + AP. Period/payroll invariants v
 
 ---
 
-## §8. HR / Payroll (Module 7, Wave W4)
+## §8. Nhân sự & tiền lương (Module 7, Wave W4)
 
 ### 8.1 Capabilities
 
