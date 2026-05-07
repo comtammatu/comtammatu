@@ -3147,6 +3147,7 @@ export type Database = {
           id: number
           idempotency_key: string | null
           kitchen_send_count: number
+          last_transfer_idempotency_key: string | null
           merge_request_key: string | null
           merged_into_order_id: number | null
           note: string | null
@@ -3179,6 +3180,7 @@ export type Database = {
           id?: never
           idempotency_key?: string | null
           kitchen_send_count?: number
+          last_transfer_idempotency_key?: string | null
           merge_request_key?: string | null
           merged_into_order_id?: number | null
           note?: string | null
@@ -3211,6 +3213,7 @@ export type Database = {
           id?: never
           idempotency_key?: string | null
           kitchen_send_count?: number
+          last_transfer_idempotency_key?: string | null
           merge_request_key?: string | null
           merged_into_order_id?: number | null
           note?: string | null
@@ -8905,7 +8908,11 @@ export type Database = {
       toggle_item_active: { Args: { p_id: number }; Returns: boolean }
       toggle_profile_active: { Args: { p_target_id: string }; Returns: boolean }
       transfer_order_table: {
-        Args: { p_new_table_id: number; p_order_id: number }
+        Args: {
+          p_idempotency_key?: string
+          p_new_table_id: number
+          p_order_id: number
+        }
         Returns: Json
       }
       transition_order_item_status: {
