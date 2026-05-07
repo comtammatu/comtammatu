@@ -15,8 +15,30 @@ const loginSchema = z.object({
   password: z.string().min(1, { error: "Vui lòng nhập mật khẩu" }),
 });
 
-interface LoginState {
-  error: string;
+// Single generic message for all post-validation failure modes (wrong creds,
+// no session post-signIn, no claims). Distinguishable copy leaks credential
+// validity → user enumeration oracle. See regressions.md
+// LOGIN-MESSAGE-MUST-BE-GENERIC.
+const GENERIC_LOGIN_ERROR = "Email hoặc mật khẩu không đúng";
+
+type LoginField = keyof z.infer<typeof loginSchema>;
+
+export interface LoginState {
+  error?: string;
+  fieldErrors?: Partial<Record<LoginField, string>>;
+}
+
+function getFieldErrors(error: z.ZodError): LoginState["fieldErrors"] {
+  const fieldErrors: LoginState["fieldErrors"] = {};
+
+  for (const issue of error.issues) {
+    const field = issue.path[0];
+    if ((field === "email" || field === "password") && !fieldErrors[field]) {
+      fieldErrors[field] = issue.message;
+    }
+  }
+
+  return fieldErrors;
 }
 
 export async function login(
@@ -29,7 +51,10 @@ export async function login(
   });
 
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ" };
+    const fieldErrors = getFieldErrors(parsed.error);
+    return Object.keys(fieldErrors ?? {}).length > 0
+      ? { fieldErrors }
+      : { error: "Dữ liệu không hợp lệ" };
   }
 
   const { email, password } = parsed.data;
@@ -51,9 +76,20 @@ export async function login(
       if (!allowed) {
         return { error: "Quá nhiều lần thử. Vui lòng đợi 5 phút." };
       }
-    } catch (error) {
-      // Fail open — Upstash unreachable, allow login to proceed
-      console.error("loginRateLimit.limit failed (fail-open)", { ip, error });
+    } catch (rateLimitError) {
+      // Fail open — Upstash unreachable, allow login to proceed.
+      // Cannot persist via log_audit RPC: caller is anonymous (no auth.uid()),
+      // RPC raises insufficient_privilege (regressions.md AUDIT-LOG-INSERT-RPC-ONLY).
+      // MVP: structured console.error → Vercel log drain.
+      // TODO: persist via dedicated `security_events` table when that wave ships.
+      console.error("auth.login.rate_limit_failopen", {
+        ip,
+        error:
+          rateLimitError instanceof Error
+            ? rateLimitError.message
+            : String(rateLimitError),
+        ts: new Date().toISOString(),
+      });
     }
   }
 
@@ -65,7 +101,7 @@ export async function login(
   });
 
   if (error) {
-    return { error: "Email hoặc mật khẩu không đúng" };
+    return { error: GENERIC_LOGIN_ERROR };
   }
 
   // Fetch fresh session to get the access token with hook-injected claims
@@ -74,12 +110,29 @@ export async function login(
   } = await supabase.auth.getSession();
 
   if (!session) {
-    return { error: "Không thể đăng nhập. Vui lòng thử lại." };
+    // signInWithPassword reported success but session is missing — cookie write
+    // failed or was cleared mid-request. Sign out to ensure clean state, log for
+    // ops, return generic copy (no enumeration).
+    console.error("auth.login.no_session_after_signin", {
+      ts: new Date().toISOString(),
+    });
+    await supabase.auth.signOut();
+    return { error: GENERIC_LOGIN_ERROR };
   }
 
   const claims = extractClaimsFromAccessToken(session.access_token);
   if (!claims) {
-    return { error: "Tài khoản chưa được phân quyền. Liên hệ quản lý." };
+    // Auth succeeded but JWT hook didn't emit claims (e.g. profile.is_active=false,
+    // missing position_id, hook misconfigured). signInWithPassword already wrote
+    // the session cookie; without signOut here, user enters a proxy bounce loop
+    // (proxy reads claims=null → /access-denied?reason=missing-auth-context).
+    // Generic copy to user (no enumeration); user_id logged for ops debug.
+    console.error("auth.login.claims_missing", {
+      user_id: session.user.id,
+      ts: new Date().toISOString(),
+    });
+    await supabase.auth.signOut();
+    return { error: GENERIC_LOGIN_ERROR };
   }
 
   redirect(resolvePostLoginRedirect(claims, returnTo, { surface }));
