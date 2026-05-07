@@ -20,12 +20,8 @@ export const TouchButton = React.forwardRef<
   return (
     <Button
       ref={ref as unknown as React.Ref<HTMLButtonElement>}
-      size="lg"
-      className={cn(
-        "h-auto min-h-14 px-4 text-base leading-6 font-semibold [&_svg:not([class*='size-'])]:size-5",
-        fullWidth && "w-full",
-        className,
-      )}
+      size="touch-lg"
+      className={cn(fullWidth && "w-full", className)}
       {...props}
     />
   );

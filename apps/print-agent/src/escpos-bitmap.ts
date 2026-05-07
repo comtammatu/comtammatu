@@ -316,41 +316,100 @@ function renderBillMeta(p: BillBase): Uint8Array[] {
   return parts;
 }
 
-/** 2-line layout: name+total on line 1, qty×price on line 2. */
+// Receipt items table — 4 columns + 9 char of separators sum to 48:
+//   STT(2) " | " Món(22) " | " SL(2) " | " Thành tiền(13)
+const RECEIPT_COL_NO = 2;
+const RECEIPT_COL_NAME = 22;
+const RECEIPT_COL_QTY = 2;
+const RECEIPT_COL_AMT = 13;
+
+const RECEIPT_TABLE_BORDER =
+  "-".repeat(RECEIPT_COL_NO + 1) +
+  "+" + "-".repeat(RECEIPT_COL_NAME + 2) +
+  "+" + "-".repeat(RECEIPT_COL_QTY + 2) +
+  "+" + "-".repeat(RECEIPT_COL_AMT + 1);
+
+const receiptRow = (no: string, name: string, qty: string, amt: string): string =>
+  `${padLeft(no, RECEIPT_COL_NO)} | ${padRight(name, RECEIPT_COL_NAME)} | ${padLeft(qty, RECEIPT_COL_QTY)} | ${padLeft(amt, RECEIPT_COL_AMT)}`;
+
+/** 4-column table: STT | Món | SL | Thành tiền. Modifiers print as their
+ * own priced rows. Sides show qty but blank price (free with the dish).
+ * Variant prints on its own indented row under the name. Notes are hidden
+ * here — kitchen ticket already shows them to chef. */
 function renderItemsTable(p: BillBase): Uint8Array[] {
   const parts: Uint8Array[] = [];
-  parts.push(divider("-"));
+  parts.push(line(RECEIPT_TABLE_BORDER));
+  parts.push(line(receiptRow("#", "Món", "SL", "Thành tiền"), { bold: true }));
+  parts.push(line(RECEIPT_TABLE_BORDER));
 
   p.items.forEach((it, idx) => {
-    if (idx > 0) parts.push(divider("-"));
-    const fullName = it.variant_name ? `${it.item_name} (${it.variant_name})` : it.item_name;
-    const totalStr = fmtMoney(it.subtotal);
-    const nameAvail = Math.max(16, CHARS_PER_LINE_NORMAL - totalStr.length - 1);
-    const nameChunks = wrapText(fullName, nameAvail);
-    // Line 1: name (left) + total (right)
-    parts.push(line(pair48(nameChunks[0] ?? "", totalStr)));
-    for (let i = 1; i < nameChunks.length; i++) {
-      parts.push(line(nameChunks[i] ?? ""));
-    }
-    if (it.modifiers && it.modifiers.length > 0) {
-      for (const m of it.modifiers) {
-        if (m.name) parts.push(line(`  + ${m.name}`));
+    if (idx > 0) parts.push(line(RECEIPT_TABLE_BORDER));
+
+    const stt = String(idx + 1);
+    const qty = String(it.quantity);
+
+    // Base = unit_price minus modifier prices. Variant adj + sides stay
+    // folded into base (POS payload doesn't expose them as separate lines).
+    const modifierSum = (it.modifiers ?? []).reduce(
+      (sum, m) => sum + (m.price ?? 0),
+      0,
+    );
+    const baseAmount = fmtMoney((it.unit_price - modifierSum) * it.quantity);
+
+    const nameChunks = wrapText(it.item_name, RECEIPT_COL_NAME);
+    nameChunks.forEach((chunk, i) => {
+      parts.push(line(receiptRow(
+        i === 0 ? stt : "",
+        chunk,
+        i === 0 ? qty : "",
+        i === 0 ? baseAmount : "",
+      )));
+    });
+
+    if (it.variant_name) {
+      const variantChunks = wrapText(`(${it.variant_name})`, RECEIPT_COL_NAME - 2);
+      for (const chunk of variantChunks) {
+        parts.push(line(receiptRow("", `  ${chunk}`, "", "")));
       }
     }
+
+    if (it.modifiers && it.modifiers.length > 0) {
+      for (const m of it.modifiers) {
+        if (!m.name) continue;
+        const modAmt = (m.price ?? 0) > 0
+          ? fmtMoney((m.price ?? 0) * it.quantity)
+          : "";
+        const modChunks = wrapText(`+ ${m.name}`, RECEIPT_COL_NAME);
+        modChunks.forEach((chunk, i) => {
+          parts.push(line(receiptRow(
+            "",
+            chunk,
+            i === 0 ? qty : "",
+            i === 0 ? modAmt : "",
+          )));
+        });
+      }
+    }
+
     if (it.sides && it.sides.length > 0) {
       for (const s of it.sides) {
         const sideName = s.name ?? s.side_item_name;
-        if (sideName) {
-          parts.push(line(`  - ${sideName}${s.quantity ? ` x${s.quantity}` : ""}`));
-        }
+        if (!sideName) continue;
+        const sideQty = s.quantity ? String(s.quantity) : "";
+        const sideChunks = wrapText(`- ${sideName}`, RECEIPT_COL_NAME);
+        sideChunks.forEach((chunk, i) => {
+          parts.push(line(receiptRow(
+            "",
+            chunk,
+            i === 0 ? sideQty : "",
+            "",
+          )));
+        });
       }
     }
-    if (it.note) parts.push(line(`  * ${it.note}`));
-    // Line 2: qty × unit_price
-    parts.push(line(`  x${it.quantity} × ${fmtMoney(it.unit_price)}`));
   });
 
-  parts.push(divider("-"));
+  parts.push(line(RECEIPT_TABLE_BORDER));
   return parts;
 }
 
