@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import type { ElementType } from "react";
+import type { ReactNode } from "react";
 import { Armchair as IconArmchair, ArrowLeft as IconArrowLeft, ChefHat as IconChefHat, Gauge as IconGauge, ListChecks as IconChecklist, Monitor as IconDeviceDesktop, LayoutGrid as IconLayoutGrid, Printer as IconPrinter, ReceiptText as IconReceipt2 } from "lucide-react";
 import { AppLinkCard, AppPage, AppPageHeader, AppSection } from "@/components/surface";
 import { Button } from "@comtammatu/ui/components/button";
@@ -11,7 +11,7 @@ type Tile = {
   href: string;
   title: string;
   description: string;
-  icon: ElementType;
+  icon: ReactNode;
 };
 
 export default async function BranchSettingsHubPage({
@@ -45,44 +45,44 @@ export default async function BranchSettingsHubPage({
       href: `/br/${branchId}/settings/tables`,
       title: "Khu vực",
       description: "Khu vực ăn uống trong chi nhánh (Tầng 1, Sân vườn…).",
-      icon: IconLayoutGrid,
+      icon: <IconLayoutGrid />,
     },
     {
       href: `/br/${branchId}/settings/tables`,
       title: "Bàn",
       description: "Danh sách bàn và sức chứa.",
-      icon: IconArmchair,
+      icon: <IconArmchair />,
     },
     {
       href: `/br/${branchId}/settings/pos`,
       title: "POS",
       description: "Máy POS đăng ký tại chi nhánh.",
-      icon: IconDeviceDesktop,
+      icon: <IconDeviceDesktop />,
     },
     {
       href: `/br/${branchId}/settings/pos-sessions`,
       title: "Ca POS",
       description: "Lịch sử ca, bill, doanh thu, số món và đối soát chênh lệch.",
-      icon: IconReceipt2,
+      icon: <IconReceipt2 />,
     },
     {
       href: `/br/${branchId}/settings/printers`,
       title: "Máy in",
       description: "Hóa đơn, bếp 1, bếp 2 — cấu hình & trạng thái agent.",
-      icon: IconPrinter,
+      icon: <IconPrinter />,
     },
     {
       href: `/br/${branchId}/settings/kds`,
       title: "Trạm bếp (KDS)",
       description: "Trạm hiển thị bếp và gán danh mục món ăn cho từng trạm.",
-      icon: IconChefHat,
+      icon: <IconChefHat />,
     },
     {
       href: `/br/${branchId}/menu-limits`,
       title: "Hạn mức bán hàng ngày",
       description:
         "Đặt số phần tối đa mỗi món hôm nay (vd. 30 Sườn cốt lết) hoặc tắt món. Quản lý/POS/Bếp đều chỉnh được.",
-      icon: IconGauge,
+      icon: <IconGauge />,
     },
   ];
 
@@ -91,7 +91,7 @@ export default async function BranchSettingsHubPage({
       href: "/menu",
       title: "Thực đơn",
       description: "Danh mục, món ăn, giá. (Áp dụng toàn hệ thống.)",
-      icon: IconChecklist,
+      icon: <IconChecklist />,
     },
     ...(isHq ? [] : operationalTiles),
   ];

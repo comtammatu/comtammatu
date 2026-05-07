@@ -64,8 +64,8 @@ export function BottomNav() {
               key={item.href}
               asChild
               variant={active ? "secondary" : "ghost"}
-              size="default"
-              className="h-12 min-w-14 flex-1 flex-col gap-0.5 px-1 py-1 text-2xs sm:min-w-16"
+              size="touch"
+              className="min-w-14 flex-1 flex-col gap-0.5 px-1 text-2xs sm:min-w-16"
             >
               <Link href={item.href} aria-current={active ? "page" : undefined}>
                 <Icon data-icon="inline-start" strokeWidth={active ? 2.4 : 2} />

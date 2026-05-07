@@ -43,3 +43,5 @@ export {
   fetchSiblingOrdersForTable,
 } from "./discount-actions";
 export type { SiblingOrderRow } from "./discount-actions";
+
+export { setOrderServiceCharge } from "./service-charge-actions";

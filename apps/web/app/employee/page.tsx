@@ -1,6 +1,5 @@
 import Link from "next/link";
 import {
-  ArrowRight as IconArrowRight,
   Briefcase as IconBriefcase,
   Building2 as IconBuilding2,
   CalendarDays as IconCalendarEvent,
@@ -68,43 +67,43 @@ const MANAGEMENT_LINKS: ReadonlyArray<{
     moduleKey: "orders",
     href: "/orders",
     icon: IconShoppingBag,
-    title: "Đơn hàng",
-    description: "Theo dõi đơn hôm nay + lịch sử",
+    title: copy.ordersTitle,
+    description: copy.ordersDescription,
   },
   {
     moduleKey: "inventory",
     href: "/inventory",
     icon: IconPackage,
-    title: "Kho hàng",
-    description: "Tồn kho · Nhập · Chuyển · Sản xuất",
+    title: copy.inventoryTitle,
+    description: copy.inventoryDescription,
   },
   {
     moduleKey: "menu",
     href: "/menu",
     icon: IconUtensilsCrossed,
-    title: "Thực đơn",
-    description: "Cập nhật món + giá + nhóm",
+    title: copy.menuTitle,
+    description: copy.menuDescription,
   },
   {
     moduleKey: "settings",
     href: "/admin/settings",
     icon: IconSettings,
-    title: "Cài đặt",
-    description: "Bàn · Máy in · POS · KDS",
+    title: copy.settingsTitle,
+    description: copy.settingsDescription,
   },
   {
     moduleKey: "feedback",
     href: "/admin/feedback",
     icon: IconMessageCircle,
-    title: "Phản hồi khách",
-    description: "Hộp thư + báo cáo NPS",
+    title: copy.feedbackTitle,
+    description: copy.feedbackDescription,
   },
   {
     moduleKey: "hr",
     href: "/hr",
     icon: IconBriefcase,
-    title: "Nhân sự",
-    description: "Bảng lương + chấm công đội",
+    title: copy.hrTitle,
+    description: copy.hrDescription,
   },
 ];
 
@@ -121,15 +120,15 @@ const BRANCH_MANAGEMENT_LINKS = (
     moduleKey: "branch_menu_limits",
     href: `/br/${branchId}/menu-limits`,
     icon: IconListOrdered,
-    title: "Hạn mức món bán",
-    description: "Số lượng món bán / ngày",
+    title: copy.branchMenuLimitsTitle,
+    description: copy.branchMenuLimitsDescription,
   },
   {
     moduleKey: "branch_settings",
     href: `/br/${branchId}/settings`,
     icon: IconBuilding2,
-    title: "Cài đặt chi nhánh",
-    description: "Cấu hình bàn · POS · máy in",
+    title: copy.branchSettingsTitle,
+    description: copy.branchSettingsDescription,
   },
 ];
 
@@ -233,36 +232,51 @@ export default async function EmployeePage() {
     : [];
   const showManagementPanel =
     managementLinks.length + branchManagementLinks.length > 0;
+  const hasEmployeeContext = Boolean(ctx);
 
-  const clockTone =
-    clockState === "working"
+  const clockTone = !hasEmployeeContext
+    ? "warning"
+    : clockState === "working"
       ? "info"
       : clockState === "done"
         ? "success"
         : "warning";
-  const clockTitle =
-    clockState === "working"
+  const clockTitle = !hasEmployeeContext
+    ? copy.statusNoProfile
+    : clockState === "working"
       ? copy.statusWorking
       : clockState === "done"
         ? copy.statusDone
         : copy.statusNotStarted;
-  const clockDescription =
-    clockState === "working"
+  const clockDescription = !hasEmployeeContext
+    ? copy.descriptionNoProfile
+    : clockState === "working"
       ? copy.descriptionWorking
       : clockState === "done"
         ? copy.descriptionDone
         : copy.descriptionNotStarted;
+  const nextShiftDateLabel = nextShift
+    ? nextShift.date === today
+      ? copy.today
+      : formatDateVN(nextShift.date)
+    : null;
+  const nextShiftDescription = nextShift
+    ? `${nextShiftDateLabel} · ${nextShift.startTime} - ${nextShift.endTime}`
+    : copy.noNextShift;
 
   return (
     <EmployeePageShell title={copy.title} description={copy.description}>
       <EmployeePanel
         icon={clockState === "not_started" ? IconDoorEnter : IconClock}
-        title={copy.clockPanelTitle}
+        title={copy.workdayTitle}
         description={clockDescription}
         tone={clockTone}
         badge={{ children: clockTitle, variant: clockTone }}
+        contentClassName="gap-4"
       >
         <EmployeeDetailList
+          columns={3}
+          className="grid-cols-3"
           rows={[
             {
               label: copy.branch,
@@ -279,94 +293,68 @@ export default async function EmployeePage() {
             },
           ]}
         />
-        {clockState !== "done" ? (
-          <div className="flex">
-            <Button asChild size="lg" className="w-full sm:w-fit">
+        <div className="flex">
+          {!hasEmployeeContext ? (
+            <Button
+              asChild
+              variant="outline"
+              size="touch"
+              className="w-full sm:w-fit"
+            >
+              <Link href="/employee/profile">
+                <IconUserCircle data-icon="inline-start" />
+                {copy.profileTitle}
+              </Link>
+            </Button>
+          ) : clockState !== "done" ? (
+            <Button asChild size="touch" className="w-full sm:w-fit">
               <Link href="/employee/clock">
                 <IconDoorEnter data-icon="inline-start" />
                 {clockState === "working" ? copy.clockOut : copy.clockIn}
               </Link>
             </Button>
-          </div>
-        ) : null}
+          ) : (
+            <Button
+              asChild
+              variant="outline"
+              size="touch"
+              className="w-full sm:w-fit"
+            >
+              <Link href="/employee/attendance">
+                <IconListChecks data-icon="inline-start" />
+                {copy.attendanceTitle}
+              </Link>
+            </Button>
+          )}
+        </div>
+        <EmployeeActionItem
+          href="/employee/schedule"
+          icon={IconCalendarEvent}
+          title={
+            nextShift
+              ? `${copy.nextShiftTitle}: ${nextShift.shiftName}`
+              : copy.nextShiftTitle
+          }
+          description={nextShiftDescription}
+          size="sm"
+        />
       </EmployeePanel>
 
-      {nextShift ? (
+      {operationHandoffs.length > 0 ? (
         <EmployeePanel
-          icon={IconCalendarEvent}
-          title={copy.nextShiftTitle}
-          description={nextShift.shiftName}
-          tone={nextShift.date === today ? "info" : "default"}
-          badge={
-            nextShift.date === today
-              ? { children: copy.today, variant: "info" }
-              : undefined
-          }
-        >
-          <EmployeeDetailList
-            rows={[
-              {
-                label: copy.date,
-                value:
-                  nextShift.date === today
-                    ? copy.today
-                    : formatDateVN(nextShift.date),
-              },
-              {
-                label: copy.timeRange,
-                value: `${nextShift.startTime} - ${nextShift.endTime}`,
-              },
-            ]}
-          />
-          <div className="flex">
-            <Button asChild variant="outline" className="w-full sm:w-fit">
-              <Link href="/employee/schedule">
-                {copy.viewSchedule}
-                <IconArrowRight data-icon="inline-end" />
-              </Link>
-            </Button>
-          </div>
-        </EmployeePanel>
-      ) : (
-        <EmployeePanel
-          icon={IconCalendarEvent}
-          title={copy.nextShiftTitle}
-          description={copy.noNextShift}
-          tone="default"
-        >
-          <div className="flex">
-            <Button asChild variant="outline" className="w-full sm:w-fit">
-              <Link href="/employee/schedule">
-                {copy.viewSchedule}
-                <IconArrowRight data-icon="inline-end" />
-              </Link>
-            </Button>
-          </div>
-        </EmployeePanel>
-      )}
-
-      {showManagementPanel ? (
-        <EmployeePanel
-          title="Quản lý"
-          description="Các module bạn có quyền vận hành"
+          title={copy.operationToolsTitle}
+          description={copy.operationToolsDescription}
+          size="sm"
         >
           <EmployeeActionList columns={2}>
-            {managementLinks.map((link) => (
+            {operationHandoffs.map((item) => (
               <EmployeeActionItem
-                key={link.moduleKey}
-                href={link.href}
-                icon={link.icon}
-                title={link.title}
-                description={link.description}
-              />
-            ))}
-            {branchManagementLinks.map((link) => (
-              <EmployeeActionItem
-                key={link.moduleKey}
-                href={link.href}
-                icon={link.icon}
-                title={link.title}
-                description={link.description}
+                key={item.moduleKey}
+                href={item.href}
+                icon={item.icon}
+                title={item.title}
+                description={item.description}
+                size="sm"
               />
             ))}
           </EmployeeActionList>
@@ -402,19 +390,31 @@ export default async function EmployeePage() {
         </EmployeeActionList>
       </EmployeePanel>
 
-      {operationHandoffs.length > 0 ? (
+      {showManagementPanel ? (
         <EmployeePanel
-          title={copy.operationToolsTitle}
-          description={copy.operationToolsDescription}
+          title={copy.managementTitle}
+          description={copy.managementDescription}
+          size="sm"
         >
-          <EmployeeActionList columns={2}>
-            {operationHandoffs.map((item) => (
+          <EmployeeActionList>
+            {managementLinks.map((link) => (
               <EmployeeActionItem
-                key={item.moduleKey}
-                href={item.href}
-                icon={item.icon}
-                title={item.title}
-                description={item.description}
+                key={link.moduleKey}
+                href={link.href}
+                icon={link.icon}
+                title={link.title}
+                description={link.description}
+                size="sm"
+              />
+            ))}
+            {branchManagementLinks.map((link) => (
+              <EmployeeActionItem
+                key={link.moduleKey}
+                href={link.href}
+                icon={link.icon}
+                title={link.title}
+                description={link.description}
+                size="sm"
               />
             ))}
           </EmployeeActionList>
@@ -426,7 +426,7 @@ export default async function EmployeePage() {
         method="post"
         className="flex justify-start"
       >
-        <Button type="submit" variant="outline">
+        <Button type="submit" variant="outline" size="sm">
           <IconLogout data-icon="inline-start" />
           {ACTIONS_VI.signOut}
         </Button>

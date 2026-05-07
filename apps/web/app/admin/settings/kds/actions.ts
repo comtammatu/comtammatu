@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import {
   BRANCH_FLOOR_SETTINGS_ROLES,
@@ -10,6 +11,11 @@ import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 import { withAction, withFormAction, type ActionContext } from "@/_lib/with-action";
+
+function revalidateKdsSettings(branchId: number) {
+  revalidateSurfacePath("/admin/settings/kds");
+  revalidatePath(`/br/${String(branchId)}/settings/kds`);
+}
 
 /* ─── Helpers ─── */
 
@@ -182,7 +188,7 @@ export const createStation = withFormAction(
       };
     }
 
-    revalidateSurfacePath("/admin/settings/kds");
+    revalidateKdsSettings(data.branch_id);
     return { success: true, data: { id: result[0]!.id } };
   },
 );
@@ -222,7 +228,7 @@ export const updateStation = withFormAction(
       query = query.eq("branch_id", claims.branch_id);
     }
 
-    const { data: result, error } = await query.select("id");
+    const { data: result, error } = await query.select("id, branch_id");
 
     if (error) {
       return { success: false, error: mapStationDbError(error.code) };
@@ -235,7 +241,7 @@ export const updateStation = withFormAction(
       };
     }
 
-    revalidateSurfacePath("/admin/settings/kds");
+    revalidateKdsSettings(result[0]!.branch_id);
     return { success: true };
   },
 );
@@ -276,7 +282,7 @@ export const saveStationCategories = withAction(
       };
     }
 
-    revalidateSurfacePath("/admin/settings/kds");
+    revalidateKdsSettings(station.branch_id);
     return { success: true };
   },
 );

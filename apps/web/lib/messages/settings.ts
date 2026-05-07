@@ -231,7 +231,7 @@ export const settings = {
     linePrice: (unitPrice: string, quantity: number) => `${unitPrice} ×${quantity}`,
     cancelledItem: "(đã hủy)",
     subtotal: "Tạm tính",
-    serviceCharge: "Phí dịch vụ",
+    serviceCharge: "Phụ phí",
     tax: "Thuế",
     total: "Tổng",
     billNote: "Ghi chú bill",

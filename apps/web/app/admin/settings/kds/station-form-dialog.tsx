@@ -205,19 +205,22 @@ export function StationFormDialog({
                     </p>
                     <div className="max-h-48 space-y-2 overflow-y-auto rounded-md border p-3">
                       {categories.map((cat) => (
-                        <label
-                          key={cat.id}
-                          className="flex cursor-pointer items-center gap-2"
-                        >
+                        <div key={cat.id} className="flex items-center gap-2">
                           <Checkbox
+                            id={`station-cat-${String(cat.id)}`}
                             checked={selected.has(cat.id)}
                             onCheckedChange={() => toggle(cat.id)}
                           />
-                          <span className="text-sm">{cat.name}</span>
-                          <span className="text-xs text-muted-foreground">
-                            ({cat.type})
-                          </span>
-                        </label>
+                          <Label
+                            htmlFor={`station-cat-${String(cat.id)}`}
+                            className="cursor-pointer text-sm font-normal"
+                          >
+                            {cat.name}
+                            <span className="ml-1 text-xs text-muted-foreground">
+                              ({cat.type})
+                            </span>
+                          </Label>
+                        </div>
                       ))}
                       {categories.length === 0 && (
                         <AppEmptyState

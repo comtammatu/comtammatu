@@ -57,7 +57,7 @@ export function OrderTotalsSummary({
 
       {serviceCharge > 0 && (
         <div className={cn(lineClass, "text-muted-foreground")}>
-          <span>Phí dịch vụ</span>
+          <span>Phụ phí</span>
           <span className="tabular-nums">{formatVND(serviceCharge)}</span>
         </div>
       )}

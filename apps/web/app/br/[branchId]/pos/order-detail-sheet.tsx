@@ -29,6 +29,7 @@ import { notify } from "@comtammatu/ui/lib/notify";
 import {
   ArrowRightLeft as IconArrowRightLeft,
   CircleDollarSign as IconCircleDollarSign,
+  CirclePlus as IconCirclePlus,
   Copy as IconCopy,
   Ellipsis as IconDots,
   Merge as IconMerge,
@@ -50,6 +51,7 @@ import {
   fetchOrderItemsForReorder,
   applyOrderDiscount,
   clearOrderDiscount,
+  setOrderServiceCharge,
   splitOrder,
   mergeOrders,
 } from "./actions";
@@ -66,6 +68,7 @@ import { ReduceQuantityDialog } from "./_components/order-detail/reduce-quantity
 import { CancelOrderDialog } from "./_components/order-detail/cancel-order-dialog";
 import { TransferTableDialog } from "./_components/order-detail/transfer-table-dialog";
 import { DiscountSheet } from "./_components/order-detail/discount-sheet";
+import { ServiceChargeSheet } from "./_components/order-detail/service-charge-sheet";
 // Dynamic imports — both sheets are tap-gated overflow actions ("Tách đơn"
 // / "Ghép đơn"), not on the hot cashier path. Keeping them out of the
 // initial chunk shrinks the order-detail bundle. ssr:false because both
@@ -310,6 +313,7 @@ export function OrderDetailSheet({
   const [showTransfer, setShowTransfer] = useState(false);
   const [transferTableId, setTransferTableId] = useState<string>("");
   const [showDiscount, setShowDiscount] = useState(false);
+  const [showServiceCharge, setShowServiceCharge] = useState(false);
   const [showSplit, setShowSplit] = useState(false);
   const [showMerge, setShowMerge] = useState(false);
   // Tap-to-open per-item actions sheet. Reset on orderId change so a sheet
@@ -691,6 +695,44 @@ export function OrderDetailSheet({
     });
   };
 
+  const handleSetServiceCharge = (input: { amount: number; note: string }) => {
+    if (orderId === null) return;
+    startTransition(async () => {
+      const r = await setOrderServiceCharge(branchId, {
+        orderId,
+        amount: input.amount,
+        note: input.note,
+      });
+      if (r.success) {
+        notify.success("Đã cập nhật phụ phí");
+        setShowServiceCharge(false);
+        await onOrderUpdated?.();
+        load();
+      } else {
+        notify.error(r.error ?? "Không thể cập nhật phụ phí.");
+      }
+    });
+  };
+
+  const handleClearServiceCharge = (reason: string) => {
+    if (orderId === null) return;
+    startTransition(async () => {
+      const r = await setOrderServiceCharge(branchId, {
+        orderId,
+        amount: 0,
+        note: reason,
+      });
+      if (r.success) {
+        notify.success("Đã bỏ phụ phí");
+        setShowServiceCharge(false);
+        await onOrderUpdated?.();
+        load();
+      } else {
+        notify.error(r.error ?? "Không thể bỏ phụ phí.");
+      }
+    });
+  };
+
   const handleSplit = (
     partials: Array<{ itemId: number; quantity: number }>,
   ) => {
@@ -780,12 +822,15 @@ export function OrderDetailSheet({
   const canMarkServed =
     data != null &&
     ["new", "confirmed", "preparing", "ready"].includes(data.status);
-  // Discount/split/merge gating — all require an active+unpaid order. The
-  // server enforces the same conditions; the UI guards just hide entries
-  // that would always reject so the cashier never wastes a tap.
-  const canShowDiscount = canShowPaymentAction;
+  // Financial adjustment / split / merge gating — all require an active
+  // unpaid order with no pending QR. The server enforces the same conditions;
+  // the UI guards just hide entries that would always reject.
+  const canMutateUnpaidOrder =
+    canShowPaymentAction && data?.payment_status !== "pending";
+  const canShowDiscount = canMutateUnpaidOrder;
+  const canShowServiceCharge = canMutateUnpaidOrder;
   const canShowSplit =
-    canShowPaymentAction &&
+    canMutateUnpaidOrder &&
     data?.order_type === "dine_in" &&
     activeUnitCount >= 2;
   const tableSiblingCount =
@@ -793,7 +838,7 @@ export function OrderDetailSheet({
       ? (orderCountByTable?.get(data.table_id) ?? 0)
       : 0;
   const canShowMerge =
-    canShowPaymentAction &&
+    canMutateUnpaidOrder &&
     data?.order_type === "dine_in" &&
     data?.table_id != null &&
     tableSiblingCount >= 2;
@@ -806,6 +851,7 @@ export function OrderDetailSheet({
     canShowTransfer ||
     canShowCancel ||
     canShowDiscount ||
+    canShowServiceCharge ||
     canShowSplit ||
     canShowMerge;
   // Use summary only when it matches the open order — stale summary from a
@@ -1068,6 +1114,7 @@ export function OrderDetailSheet({
                             )}
                           </DropdownMenuGroup>
                           {(canShowDiscount ||
+                            canShowServiceCharge ||
                             canShowSplit ||
                             canShowMerge) && (
                             <>
@@ -1082,6 +1129,17 @@ export function OrderDetailSheet({
                                     {data.discount_amount > 0
                                       ? "Sửa chiết khấu"
                                       : "Chiết khấu"}
+                                  </DropdownMenuItem>
+                                )}
+                                {canShowServiceCharge && (
+                                  <DropdownMenuItem
+                                    disabled={isPending}
+                                    onClick={() => setShowServiceCharge(true)}
+                                  >
+                                    <IconCirclePlus />
+                                    {data.service_charge > 0
+                                      ? "Sửa phụ phí"
+                                      : "Phụ phí"}
                                   </DropdownMenuItem>
                                 )}
                                 {canShowSplit && (
@@ -1209,6 +1267,20 @@ export function OrderDetailSheet({
           isPending={isPending}
           onSubmit={handleApplyDiscount}
           onClear={handleClearDiscount}
+        />
+      )}
+
+      {data && (
+        <ServiceChargeSheet
+          open={showServiceCharge}
+          onOpenChange={setShowServiceCharge}
+          subtotal={data.subtotal}
+          taxAmount={data.tax_amount}
+          discountAmount={data.discount_amount}
+          currentAmount={data.service_charge}
+          isPending={isPending}
+          onSubmit={handleSetServiceCharge}
+          onClear={handleClearServiceCharge}
         />
       )}
 

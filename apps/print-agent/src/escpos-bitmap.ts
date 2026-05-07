@@ -128,9 +128,9 @@ const splitDateTime = (iso: string | undefined): { date: string; time: string } 
 };
 
 // MIRRORS packages/shared/src/labels/vi.ts PAYMENT_METHOD_LABELS_VI.
-// Print-agent ships as a standalone .exe (@yao-pkg/pkg) and cannot import
-// workspace packages — keep this map in sync with the canonical source AND
-// with escpos.ts:PAYMENT_LABEL (text-mode parity).
+// Print-agent runs standalone (no workspace package import) — keep this map
+// in sync with the canonical source AND with escpos.ts:PAYMENT_LABEL
+// (text/bitmap parity).
 const PAYMENT_LABEL: Record<string, string> = {
   cash: "Tiền mặt",
   vietqr: "VietQR",
@@ -417,7 +417,7 @@ function renderTotals(p: BillBase): Uint8Array[] {
   const parts: Uint8Array[] = [];
   parts.push(line(pair48("Tạm tính", fmtMoney(p.subtotal))));
   if ((p.tax_amount ?? 0) > 0) parts.push(line(pair48("Thuế VAT", fmtMoney(p.tax_amount))));
-  if ((p.service_charge ?? 0) > 0) parts.push(line(pair48("Phí dịch vụ", fmtMoney(p.service_charge))));
+  if ((p.service_charge ?? 0) > 0) parts.push(line(pair48("Phụ phí", fmtMoney(p.service_charge))));
   if ((p.discount_amount ?? 0) > 0) {
     const discountLabel =
       p.discount_type === "pct" && p.discount_value != null

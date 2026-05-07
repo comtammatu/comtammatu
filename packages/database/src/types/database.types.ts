@@ -7887,6 +7887,10 @@ export type Database = {
         }
         Returns: Json
       }
+      set_order_service_charge: {
+        Args: { p_amount: number; p_note: string; p_order_id: number }
+        Returns: Json
+      }
       apply_template_to_user: {
         Args: {
           p_branch_id: number

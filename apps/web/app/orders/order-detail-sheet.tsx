@@ -512,7 +512,7 @@ export function OrderDetailSheet({
             )}
             {hasServiceCharge && (
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Phí dịch vụ</span>
+                <span className="text-muted-foreground">Phụ phí</span>
                 <span className="font-mono">
                   {formatVND(order.service_charge)}
                 </span>

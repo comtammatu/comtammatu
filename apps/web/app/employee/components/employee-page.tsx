@@ -32,6 +32,17 @@ const toneBadgeVariant = {
   destructive: "destructive",
 } satisfies Record<EmployeeTone, BadgeProps["variant"]>;
 
+const toneSectionVariant = {
+  default: "default",
+  success: "default",
+  warning: "warning",
+  info: "info",
+  destructive: "destructive",
+} as const satisfies Record<
+  EmployeeTone,
+  "default" | "warning" | "info" | "destructive"
+>;
+
 interface EmployeePageProps {
   title: string;
   description?: string;
@@ -51,13 +62,12 @@ export function EmployeePage({
   children,
 }: EmployeePageProps) {
   return (
-    <div className="flex w-full flex-col gap-4">
+    <div className="flex w-full flex-col gap-3">
       <AppPageHeader
         title={title}
         description={description}
         badge={badge}
         actions={action}
-        titleClassName="text-lg sm:text-lg"
       />
       <div className="flex flex-col gap-3">{children}</div>
     </div>
@@ -77,6 +87,7 @@ interface EmployeePanelProps {
   children: ReactNode;
   className?: string;
   contentClassName?: string;
+  size?: "default" | "sm";
 }
 
 export function EmployeePanel({
@@ -89,12 +100,13 @@ export function EmployeePanel({
   children,
   className,
   contentClassName,
+  size,
 }: EmployeePanelProps) {
   return (
     <AppSection
       title={title}
       description={description}
-      icon={Icon}
+      icon={Icon ? <Icon /> : undefined}
       iconClassName={toneIconClassName[tone]}
       badge={
         badge
@@ -107,6 +119,8 @@ export function EmployeePanel({
       action={action}
       className={className}
       contentClassName={contentClassName}
+      size={size}
+      tone={toneSectionVariant[tone]}
     >
       {children}
     </AppSection>
@@ -168,11 +182,7 @@ export function EmployeeActionList({
 }: EmployeeActionListProps) {
   return (
     <ItemGroup
-      className={cn(
-        "gap-2",
-        columns === 2 && "sm:grid sm:grid-cols-2",
-        className,
-      )}
+      className={cn("gap-2", columns === 2 && "grid grid-cols-2", className)}
     >
       {children}
     </ItemGroup>
@@ -184,6 +194,7 @@ interface EmployeeActionItemProps {
   icon?: ElementType;
   title: string;
   description?: string;
+  size?: "default" | "sm";
 }
 
 export function EmployeeActionItem({
@@ -191,9 +202,10 @@ export function EmployeeActionItem({
   icon: Icon,
   title,
   description,
+  size,
 }: EmployeeActionItemProps) {
   return (
-    <Item asChild variant="outline" className="items-center">
+    <Item asChild variant="outline" size={size} className="items-center">
       <Link href={href}>
         {Icon ? (
           <ItemMedia variant="icon">

@@ -28,7 +28,7 @@ interface DiscountSheetProps {
   onOpenChange: (open: boolean) => void;
   /** Subtotal trước giảm — dùng để live preview + clamp UI. */
   subtotal: number;
-  /** Phí dịch vụ (đang luôn 0 ở pilot) — cộng vào total preview. */
+  /** Phụ phí trên đơn — cộng vào total preview. */
   serviceCharge: number;
   /** Discount hiện tại trên đơn (để pre-fill khi mở edit). */
   current: {
@@ -203,7 +203,7 @@ export function DiscountSheet({
             </div>
             {serviceCharge > 0 && (
               <div className="flex justify-between text-muted-foreground">
-                <span>Phí dịch vụ</span>
+                <span>Phụ phí</span>
                 <span className="tabular-nums">{formatVND(serviceCharge)}</span>
               </div>
             )}

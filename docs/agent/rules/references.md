@@ -4,6 +4,7 @@ Use this file to find the source-of-truth docs for onboarding, implementation pl
 
 ## System Overview
 
+- LLM fast-orientation wiki: `docs/llm-wiki/README.md`
 - Codebase map + module index: `docs/CODEBASE_MAP.md`
 - Auth & ACL: `docs/modules/auth.md`
 - Database: `docs/modules/database.md`
@@ -52,4 +53,3 @@ Use this file to find the source-of-truth docs for onboarding, implementation pl
 - Put retrospective explanations in `tasks/lessons.md`.
 - Keep user-local or machine-local notes out of version-controlled shared rule files.
 - Keep rules concrete and verifiable. Avoid vague guidance such as "write good code" or "be careful".
-

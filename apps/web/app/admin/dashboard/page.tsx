@@ -185,22 +185,25 @@ export default async function DashboardPage() {
             Truy cập nhanh
           </p>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
-            {quickLinks.map((link) => (
-              <AppLinkCard
-                key={link.href}
-                href={link.href}
-                title={link.title}
-                description={link.description}
-                icon={link.icon}
-                ctaLabel="Mở"
-              />
-            ))}
+            {quickLinks.map((link) => {
+              const LinkIcon = link.icon;
+              return (
+                <AppLinkCard
+                  key={link.href}
+                  href={link.href}
+                  title={link.title}
+                  description={link.description}
+                  icon={<LinkIcon />}
+                  ctaLabel="Mở"
+                />
+              );
+            })}
             {claims.branch_id != null && canAccess(claims.user_role, "pos") && (
               <AppLinkCard
                 href={`/br/${claims.branch_id}/pos`}
                 title={`POS chi nhánh #${claims.branch_id}`}
                 description="Màn hình điểm bán hàng"
-                icon={IconDeviceDesktop}
+                icon={<IconDeviceDesktop />}
                 ctaLabel="Mở"
               />
             )}
@@ -209,7 +212,7 @@ export default async function DashboardPage() {
                 href={`/br/${claims.branch_id}/kds`}
                 title={`KDS chi nhánh #${claims.branch_id}`}
                 description="Màn hình hiển thị bếp"
-                icon={IconToolsKitchen}
+                icon={<IconToolsKitchen />}
                 ctaLabel="Mở"
               />
             )}

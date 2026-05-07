@@ -87,7 +87,7 @@ export const pos = {
     amount: "Thành tiền",
     subtotal: "Tạm tính",
     tax: "Thuế",
-    serviceCharge: "Phí dịch vụ",
+    serviceCharge: "Phụ phí",
     discount: "Giảm giá",
     discountReason: "Lý do:",
     total: "TỔNG CỘNG",

@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Inter, JetBrains_Mono, Montserrat } from "next/font/google";
 import { ConfirmDialogProvider } from "@comtammatu/ui/components/confirm-dialog";
 import { ThemeProvider } from "@comtammatu/ui/components/theme-provider";
+import { ThemeScript } from "@comtammatu/ui/components/theme-script";
 import { TooltipProvider } from "@comtammatu/ui/components/tooltip";
 import { BoneyardRegistry } from "./_components/boneyard-registry";
 import { NotificationBellFloating } from "./_components/notification-bell-floating";
@@ -72,6 +73,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       suppressHydrationWarning
     >
       <body className="min-h-screen bg-background font-sans text-foreground antialiased">
+        <ThemeScript defaultTheme="system" />
         <a
           href="#main-content"
           className="sr-only z-50 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground focus:not-sr-only focus:fixed focus:left-4 focus:top-4"

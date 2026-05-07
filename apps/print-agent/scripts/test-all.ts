@@ -163,7 +163,7 @@ function buildTotals(): Uint8Array[] {
   return [
     line(pair48("Tạm tính", "145.000đ")),
     line(pair48("Thuế VAT", "11.600đ")),
-    line(pair48("Phí dịch vụ", "7.250đ")),
+    line(pair48("Phụ phí", "7.250đ")),
     line(pair48("Giảm giá", "-5.000đ")),
     divider("="),
     line(pair24("TỔNG CỘNG", "158.850đ"), { bold: true, double: true }),

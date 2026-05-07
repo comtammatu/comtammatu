@@ -24,14 +24,14 @@ export default async function ReportsPage() {
     {
       title: "Doanh thu",
       href: "/admin/reports/revenue",
-      icon: IconTrendingUp,
+      icon: <IconTrendingUp />,
       tone: "primary" as const,
       badge: "Tổng hợp",
     },
     {
       title: "Giá trị tồn kho",
       href: "/admin/reports/inventory-value",
-      icon: IconPackage,
+      icon: <IconPackage />,
       tone: "info" as const,
       badge: "Tổng hợp",
     },
@@ -40,7 +40,7 @@ export default async function ReportsPage() {
     executiveCards.push({
       title: "Báo cáo tài chính",
       href: "/finance/statements",
-      icon: IconWallet,
+      icon: <IconWallet />,
       tone: "success",
       badge: "Tổng hợp",
     });
@@ -49,7 +49,7 @@ export default async function ReportsPage() {
     executiveCards.push({
       title: "Toàn cảnh bảng lương",
       href: "/hr/payroll",
-      icon: IconBriefcase,
+      icon: <IconBriefcase />,
       tone: "info",
       badge: "Tổng hợp",
     });
@@ -59,7 +59,7 @@ export default async function ReportsPage() {
     {
       title: "Biến động tồn kho",
       href: "/admin/reports/stock-movement",
-      icon: IconArrowLeftRight,
+      icon: <IconArrowLeftRight />,
       tone: "info" as const,
       badge: "Vận hành",
     },
@@ -68,14 +68,14 @@ export default async function ReportsPage() {
     deepDiveCards.push({
       title: "Hệ thống tài khoản",
       href: "/finance/chart-of-accounts",
-      icon: IconBook,
+      icon: <IconBook />,
       tone: "success",
       badge: "Kế toán",
     });
     deepDiveCards.push({
       title: "Tài chính",
       href: "/finance",
-      icon: IconReceipt,
+      icon: <IconReceipt />,
       tone: "success",
       badge: "Chi tiết",
     });
@@ -84,7 +84,7 @@ export default async function ReportsPage() {
     deepDiveCards.push({
       title: "Kho",
       href: "/inventory/reports",
-      icon: IconClipboardList,
+      icon: <IconClipboardList />,
       tone: "info",
       badge: "Chi tiết",
     });
@@ -93,7 +93,7 @@ export default async function ReportsPage() {
     deepDiveCards.push({
       title: "Nhân sự",
       href: "/hr",
-      icon: IconShieldCheck,
+      icon: <IconShieldCheck />,
       tone: "info",
       badge: "Chi tiết",
     });
