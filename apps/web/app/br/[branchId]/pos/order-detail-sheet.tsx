@@ -310,7 +310,20 @@ export function OrderDetailSheet({
   const [data, setData] = useState<OrderDetailData | null>(null);
   const [canManage, setCanManage] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
+  // Two transitions on purpose:
+  //   - `isMutating` gates the action buttons (Confirm in dialogs, Phục vụ /
+  //     Chuyển bàn / Thao tác in the footer). It clears the moment the
+  //     Server Action returns, so cashier can chain the next tap.
+  //   - `isRefetching` covers the background fetchOrderDetail that follows
+  //     a mutation (or initial mount). It keeps the skeleton visible for
+  //     first-load only — once data is in place, refetch is silent and
+  //     does NOT re-disable the action buttons.
+  // Previously a single useTransition combined both, holding the buttons
+  // disabled for ~400-600ms after the RPC completed while the refetch
+  // streamed in. Cashier-perceived "1-2s wait to enable".
+  const [isMutating, startMutation] = useTransition();
+  const [isRefetching, startRefetch] = useTransition();
+  const isPending = isMutating || isRefetching;
   const [voidItemId, setVoidItemId] = useState<number | null>(null);
   const [voidReason, setVoidReason] = useState("");
   const [reduceItemId, setReduceItemId] = useState<number | null>(null);
@@ -349,11 +362,13 @@ export function OrderDetailSheet({
     }
   }, [orderId]);
 
-  // Mount + refresh-token + post-mutation paths: wrap in transition so
-  // `isPending` reflects the in-flight fetch (gates "Chuyển bàn / Đã phục
-  // vụ / Hủy đơn" buttons until fresh data lands).
+  // Mount + refresh-token + post-mutation paths: wrap in the REFETCH
+  // transition only. Action buttons stay enabled while the background
+  // fetch streams in — `isRefetching` gates skeleton visibility (which
+  // matters only on first load when `data` is still null) without
+  // blocking the next cashier tap.
   const load = useCallback(() => {
-    startTransition(loadAsync);
+    startRefetch(loadAsync);
   }, [loadAsync]);
 
   // Realtime burst guard: orders UPDATE + reconnect SUBSCRIBED can fire
@@ -431,6 +446,19 @@ export function OrderDetailSheet({
     initialDetailSubscribeSeenRef.current = false;
   }, [orderId]);
 
+  // Stable refs for callbacks the realtime closures + visibility listener
+  // need to read. Channel handlers run outside React's render scope; capturing
+  // load/loadDeduped/onClose directly would re-create the channel on every
+  // prop change.
+  const loadDedupedRef = useRef(loadDeduped);
+  const loadRef = useRef(load);
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    loadDedupedRef.current = loadDeduped;
+    loadRef.current = load;
+    onCloseRef.current = onClose;
+  }, [load, loadDeduped, onClose]);
+
   useRealtimeChannel(
     (supabase) => {
       if (orderId === null) return null;
@@ -444,8 +472,34 @@ export function OrderDetailSheet({
             table: "orders",
             filter: `id=eq.${String(orderId)}`,
           },
-          () => {
-            loadDeduped();
+          (payload) => {
+            // Cross-tablet auto-close: when terminal A cancels or merges
+            // this order, terminal B's open detail sheet must close so
+            // cashier B doesn't tap "Thanh toán" on a dead order. The
+            // source-tablet flow calls onClose() explicitly after its own
+            // RPC succeeds — this branch only matters when the close is
+            // initiated remotely.
+            if (payload.eventType === "UPDATE") {
+              const updated = payload.new as Record<string, unknown> | null;
+              if (updated) {
+                const status =
+                  typeof updated.status === "string" ? updated.status : null;
+                const mergedInto =
+                  updated.merged_into_order_id !== null &&
+                  updated.merged_into_order_id !== undefined;
+                if (status === "cancelled") {
+                  notify.warning("Đơn đã bị huỷ — đóng chi tiết.");
+                  onCloseRef.current();
+                  return;
+                }
+                if (mergedInto) {
+                  notify.warning("Đơn đã được gộp sang đơn khác — đóng chi tiết.");
+                  onCloseRef.current();
+                  return;
+                }
+              }
+            }
+            loadDedupedRef.current();
           },
         )
         .on(
@@ -457,7 +511,7 @@ export function OrderDetailSheet({
             filter: `order_id=eq.${String(orderId)}`,
           },
           () => {
-            load();
+            loadRef.current();
           },
         )
         .subscribe((status) => {
@@ -466,11 +520,29 @@ export function OrderDetailSheet({
             initialDetailSubscribeSeenRef.current = true;
             return;
           }
-          loadDeduped();
+          loadDedupedRef.current();
         });
     },
-    [load, loadDeduped, orderId],
+    [orderId],
   );
+
+  // Visibility resume catch-up (POS-RESUME-MUST-REFETCH for the detail
+  // surface). Mobile Safari kills WebSockets after ~30s background — events
+  // fired during the hidden window may not replay on reconnect, so a single
+  // dedup'd refetch on visibility=visible covers totals/discount drift the
+  // cashier would otherwise see only after their next tap.
+  useEffect(() => {
+    if (orderId === null) return;
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        loadDedupedRef.current();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [orderId]);
 
   const handleOpenChange = (open: boolean) => {
     if (!open) onClose();
@@ -485,7 +557,7 @@ export function OrderDetailSheet({
       notify.error("Lý do hủy món tối thiểu 5 ký tự");
       return;
     }
-    startTransition(async () => {
+    startMutation(async () => {
       const id = voidItemId;
       const r = await voidOrderItem(id, reason);
       if (r.success) {
@@ -515,7 +587,7 @@ export function OrderDetailSheet({
       notify.error("Lý do hủy đơn tối thiểu 5 ký tự");
       return;
     }
-    startTransition(async () => {
+    startMutation(async () => {
       const r = await cancelOrder(orderId, reason);
       if (r.success) {
         notify.success(messages.pos.order.voided);
@@ -537,14 +609,16 @@ export function OrderDetailSheet({
     const tid = Number.parseInt(transferTableId, 10);
     if (!Number.isFinite(tid)) return;
     if (tid === data?.table_id) return;
-    startTransition(async () => {
+    startMutation(async () => {
       const r = await transferOrderTable(orderId, tid);
       if (r.success) {
         notify.success(messages.pos.order.transferred);
         setShowTransfer(false);
         setTransferTableId("");
         await onOrderUpdated?.();
-        load();
+        // No `load()` here — the detail sheet's own `pos-order-detail-${orderId}`
+        // realtime channel patches `data` via `loadDeduped` on the orders UPDATE
+        // emitted by the RPC commit. Saves ~400-600ms in `isPending` window.
       } else {
         notify.error(r.error ?? messages.pos.order.transferFailed);
       }
@@ -553,7 +627,7 @@ export function OrderDetailSheet({
 
   const handleStatus = (next: "served") => {
     if (orderId === null) return;
-    startTransition(async () => {
+    startMutation(async () => {
       const r = await updateOrderStatus(orderId, next);
       if (r.success) {
         notify.success(messages.pos.order.markedServed);
@@ -566,7 +640,7 @@ export function OrderDetailSheet({
   };
 
   const handleMarkItemServed = (itemId: number) => {
-    startTransition(async () => {
+    startMutation(async () => {
       const r = await markOrderItemServed(itemId);
       if (r.success) {
         notify.success("Đã phục vụ món");
@@ -627,7 +701,7 @@ export function OrderDetailSheet({
       notify.error("Số lượng mới phải nhỏ hơn số lượng hiện tại.");
       return;
     }
-    startTransition(async () => {
+    startMutation(async () => {
       const id = reduceItemId;
       const r = await reduceOrderItemQuantity(id, reduceNewQty, reason);
       if (r.success) {
@@ -648,7 +722,7 @@ export function OrderDetailSheet({
 
   const handleReorder = () => {
     if (orderId === null) return;
-    startTransition(async () => {
+    startMutation(async () => {
       const r = await fetchOrderItemsForReorder(orderId);
       if (r.success && r.data) {
         onReorderToCart(
@@ -665,7 +739,7 @@ export function OrderDetailSheet({
 
   const handleReprintReceipt = () => {
     if (orderId === null) return;
-    startTransition(async () => {
+    startMutation(async () => {
       const r = await printReceipt(orderId);
       if (r.success) {
         notify.success("Đã gửi hóa đơn tới máy in");
@@ -675,13 +749,21 @@ export function OrderDetailSheet({
     });
   };
 
+  // Discount + service-charge handlers: rely on realtime alone for refresh.
+  // - `load()` dropped: detail's own `pos-order-detail-${orderId}` channel
+  //   fires `loadDeduped` on the orders UPDATE emitted by the RPC.
+  // - `onOrderUpdated()` dropped: shell-level `applyOrderUpdate` now patches
+  //   subtotal/discount_*/service_charge/total_amount in place from the same
+  //   realtime payload (use-order-sync.ts), so the orders LIST refresh that
+  //   refreshOperational triggers is redundant for these two flows.
+  // Both rules collapse the cashier-perceived latency from ~1s to ~400ms.
   const handleApplyDiscount = (input: {
     type: "pct" | "vnd";
     value: number;
     note: string;
   }) => {
     if (orderId === null) return;
-    startTransition(async () => {
+    startMutation(async () => {
       const r = await applyOrderDiscount(branchId, {
         orderId,
         type: input.type,
@@ -691,8 +773,6 @@ export function OrderDetailSheet({
       if (r.success) {
         notify.success("Đã áp chiết khấu");
         setShowDiscount(false);
-        await onOrderUpdated?.();
-        load();
       } else {
         notify.error(r.error ?? "Không thể áp chiết khấu.");
       }
@@ -701,13 +781,11 @@ export function OrderDetailSheet({
 
   const handleClearDiscount = (reason: string) => {
     if (orderId === null) return;
-    startTransition(async () => {
+    startMutation(async () => {
       const r = await clearOrderDiscount(branchId, orderId, reason);
       if (r.success) {
         notify.success("Đã bỏ chiết khấu");
         setShowDiscount(false);
-        await onOrderUpdated?.();
-        load();
       } else {
         notify.error(r.error ?? "Không thể bỏ chiết khấu.");
       }
@@ -716,7 +794,7 @@ export function OrderDetailSheet({
 
   const handleSetServiceCharge = (input: { amount: number; note: string }) => {
     if (orderId === null) return;
-    startTransition(async () => {
+    startMutation(async () => {
       const r = await setOrderServiceCharge(branchId, {
         orderId,
         amount: input.amount,
@@ -725,8 +803,6 @@ export function OrderDetailSheet({
       if (r.success) {
         notify.success("Đã cập nhật phụ phí");
         setShowServiceCharge(false);
-        await onOrderUpdated?.();
-        load();
       } else {
         notify.error(r.error ?? "Không thể cập nhật phụ phí.");
       }
@@ -735,7 +811,7 @@ export function OrderDetailSheet({
 
   const handleClearServiceCharge = (reason: string) => {
     if (orderId === null) return;
-    startTransition(async () => {
+    startMutation(async () => {
       const r = await setOrderServiceCharge(branchId, {
         orderId,
         amount: 0,
@@ -744,8 +820,6 @@ export function OrderDetailSheet({
       if (r.success) {
         notify.success("Đã bỏ phụ phí");
         setShowServiceCharge(false);
-        await onOrderUpdated?.();
-        load();
       } else {
         notify.error(r.error ?? "Không thể bỏ phụ phí.");
       }
@@ -759,7 +833,7 @@ export function OrderDetailSheet({
     // Mint client UUID so a network retry replays cleanly via
     // orders.idempotency_key on the new (split-out) order.
     const idempotencyKey = crypto.randomUUID();
-    startTransition(async () => {
+    startMutation(async () => {
       const r = await splitOrder(branchId, {
         sourceOrderId: orderId,
         items: partials,
@@ -771,8 +845,12 @@ export function OrderDetailSheet({
             `Vui lòng in lại tạm tính nếu cần.`,
         );
         setShowSplit(false);
+        // Keep onOrderUpdated so the orders LIST picks up the brand-new row
+        // (realtime INSERT in useOrderSync handles it too, but the parent
+        // also wants tables status to refresh — split can flip the source's
+        // bàn header indicator). `load()` dropped: detail's own realtime
+        // channel patches the source order's mutated totals automatically.
         await onOrderUpdated?.();
-        load();
       } else {
         notify.error(r.error ?? "Không thể tách đơn.");
       }
@@ -782,7 +860,7 @@ export function OrderDetailSheet({
   const handleMerge = (targetOrderId: number) => {
     if (orderId === null) return;
     const idempotencyKey = crypto.randomUUID();
-    startTransition(async () => {
+    startMutation(async () => {
       const r = await mergeOrders(branchId, {
         sourceOrderId: orderId,
         targetOrderId,
@@ -1065,7 +1143,7 @@ export function OrderDetailSheet({
                         variant="secondary"
                         size="touch"
                         className="flex-1"
-                        disabled={isPending}
+                        disabled={isMutating}
                         onClick={() => void handleStatus("served")}
                       >
                         Phục vụ
@@ -1107,7 +1185,7 @@ export function OrderDetailSheet({
                             )}
                             {canShowBillInMenu && (
                               <DropdownMenuItem
-                                disabled={isPending}
+                                disabled={isMutating}
                                 onClick={() => handleReprintReceipt()}
                               >
                                 <IconPrinter />
@@ -1116,7 +1194,7 @@ export function OrderDetailSheet({
                             )}
                             {canShowTransfer && (
                               <DropdownMenuItem
-                                disabled={isPending}
+                                disabled={isMutating}
                                 onClick={() => setShowTransfer(true)}
                               >
                                 <IconArrowRightLeft />
@@ -1141,7 +1219,7 @@ export function OrderDetailSheet({
                               <DropdownMenuGroup>
                                 {canShowDiscount && (
                                   <DropdownMenuItem
-                                    disabled={isPending}
+                                    disabled={isMutating}
                                     onClick={() => setShowDiscount(true)}
                                   >
                                     <IconCircleDollarSign />
@@ -1152,7 +1230,7 @@ export function OrderDetailSheet({
                                 )}
                                 {canShowServiceCharge && (
                                   <DropdownMenuItem
-                                    disabled={isPending}
+                                    disabled={isMutating}
                                     onClick={() => setShowServiceCharge(true)}
                                   >
                                     <IconCirclePlus />
@@ -1163,7 +1241,7 @@ export function OrderDetailSheet({
                                 )}
                                 {canShowSplit && (
                                   <DropdownMenuItem
-                                    disabled={isPending}
+                                    disabled={isMutating}
                                     onClick={() => setShowSplit(true)}
                                   >
                                     <IconSplit />
@@ -1172,7 +1250,7 @@ export function OrderDetailSheet({
                                 )}
                                 {canShowMerge && (
                                   <DropdownMenuItem
-                                    disabled={isPending}
+                                    disabled={isMutating}
                                     onClick={() => setShowMerge(true)}
                                   >
                                     <IconMerge />
@@ -1188,7 +1266,7 @@ export function OrderDetailSheet({
                               <DropdownMenuGroup>
                                 <DropdownMenuItem
                                   variant="destructive"
-                                  disabled={isPending}
+                                  disabled={isMutating}
                                   onClick={() => setShowCancel(true)}
                                 >
                                   <IconTrash />
@@ -1213,7 +1291,7 @@ export function OrderDetailSheet({
           data?.order_items.find((item) => item.id === actionsItemId) ?? null
         }
         canManage={canManage}
-        isPending={isPending}
+        isPending={isMutating}
         onClose={() => setActionsItemId(null)}
         onMarkServed={handleMarkItemServed}
         onVoidRequest={handleVoidRequest}
@@ -1228,7 +1306,7 @@ export function OrderDetailSheet({
         onCancel={() => setVoidItemId(null)}
         onConfirm={handleVoidConfirm}
         itemLabel={voidItem ? getPosLineItemDisplayName(voidItem) : null}
-        isPending={isPending}
+        isPending={isMutating}
       />
 
       <ReduceQuantityDialog
@@ -1241,7 +1319,7 @@ export function OrderDetailSheet({
         onCancel={() => setReduceItemId(null)}
         onConfirm={handleReduceConfirm}
         itemLabel={reduceItem ? getPosLineItemDisplayName(reduceItem) : null}
-        isPending={isPending}
+        isPending={isMutating}
       />
 
       <CancelOrderDialog
@@ -1254,7 +1332,7 @@ export function OrderDetailSheet({
         orderType={data?.order_type ?? null}
         tableNumber={data?.tables?.number ?? null}
         itemCount={activeItemCount}
-        isPending={isPending}
+        isPending={isMutating}
       />
 
       <TransferTableDialog
@@ -1268,7 +1346,7 @@ export function OrderDetailSheet({
         onConfirm={handleTransfer}
         orderNumber={data?.order_number ?? orderNumber}
         currentTableNumber={data?.tables?.number ?? null}
-        isPending={isPending}
+        isPending={isMutating}
       />
 
       {data && (
@@ -1283,7 +1361,7 @@ export function OrderDetailSheet({
             note: data.discount_note,
             amount: data.discount_amount,
           }}
-          isPending={isPending}
+          isPending={isMutating}
           onSubmit={handleApplyDiscount}
           onClear={handleClearDiscount}
         />
@@ -1297,7 +1375,7 @@ export function OrderDetailSheet({
           taxAmount={data.tax_amount}
           discountAmount={data.discount_amount}
           currentAmount={data.service_charge}
-          isPending={isPending}
+          isPending={isMutating}
           onSubmit={handleSetServiceCharge}
           onClear={handleClearServiceCharge}
         />
@@ -1310,7 +1388,7 @@ export function OrderDetailSheet({
           orderNumber={data.order_number}
           tableNumber={data.tables?.number ?? null}
           items={data.order_items}
-          isPending={isPending}
+          isPending={isMutating}
           onSubmit={handleSplit}
         />
       )}
@@ -1327,7 +1405,7 @@ export function OrderDetailSheet({
           sourceHasPctDiscount={
             data.discount_amount > 0 && data.discount_type === "pct"
           }
-          isPending={isPending}
+          isPending={isMutating}
           onSubmit={handleMerge}
         />
       )}
