@@ -109,6 +109,13 @@ export async function getAuthContextWithPermission(
   return allowed ? ctx : null;
 }
 
+/**
+ * OR-semantics: returns ctx if user has ANY of the listed permissions on the
+ * branch (or tenant-wide if branchId null). Probes fire in parallel — single
+ * RTT — instead of the prior `for…await` waterfall. `hasPermissionGrant` is
+ * already cache()-wrapped so duplicate `(ctx, key, branch)` tuples across
+ * sibling helpers in one render dedupe to a single RPC.
+ */
 export async function getAuthContextWithAnyPermission(
   allowedRoles: readonly StaffRole[],
   permissions: readonly PermissionLike[],
@@ -117,15 +124,18 @@ export async function getAuthContextWithAnyPermission(
   const ctx = await getAuthContext(allowedRoles);
   if (!ctx) return null;
 
-  for (const permission of permissions) {
-    if (await hasPermissionGrant(ctx, permission, branchId)) {
-      return ctx;
-    }
-  }
-
-  return null;
+  const grants = await Promise.all(
+    permissions.map((p) => hasPermissionGrant(ctx, p, branchId)),
+  );
+  return grants.some(Boolean) ? ctx : null;
 }
 
+/**
+ * AND-semantics: returns ctx only if user has EVERY listed permission. Same
+ * parallel fan-out as the OR sibling above but ORs collapse with `.every()`
+ * instead of `.some()`. Distinct from `getAuthContextWithAnyPermission` —
+ * do NOT copy `.some(Boolean)` here or the AND gate silently weakens.
+ */
 export async function getAuthContextWithPermissions(
   allowedRoles: readonly StaffRole[],
   permissions: readonly PermissionLike[],
@@ -134,13 +144,10 @@ export async function getAuthContextWithPermissions(
   const ctx = await getAuthContext(allowedRoles);
   if (!ctx) return null;
 
-  for (const permission of permissions) {
-    if (!(await hasPermissionGrant(ctx, permission, branchId))) {
-      return null;
-    }
-  }
-
-  return ctx;
+  const grants = await Promise.all(
+    permissions.map((p) => hasPermissionGrant(ctx, p, branchId)),
+  );
+  return grants.every(Boolean) ? ctx : null;
 }
 
 type LoadedAuthState = {

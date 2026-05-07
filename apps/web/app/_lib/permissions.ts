@@ -6,6 +6,7 @@
  * authz check is needed here (rows are self-filtered).
  */
 
+import { cache } from "react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import type { PermissionKey } from "@comtammatu/shared/auth";
 
@@ -54,8 +55,13 @@ export async function fetchCurrentUserPermissions(
  *
  * Prefer calling this from Server Actions to gate UI. RLS is still the
  * authoritative enforcement layer.
+ *
+ * Wrapped in React `cache()` so identical `(branchId, key)` tuples within ONE
+ * RSC render dedupe to a single RPC. Primitive args (number | null + string)
+ * are value-keyed by `cache()`, so layout + page asking the same question
+ * pay one RPC instead of two. Mirror `auth.ts:hasPermissionGrant` pattern.
  */
-export async function currentUserHasPermission(
+export const currentUserHasPermission = cache(async function currentUserHasPermission(
   branchId: number | null,
   key: PermissionKey | string,
 ): Promise<boolean> {
@@ -73,13 +79,16 @@ export async function currentUserHasPermission(
     p_key: key,
   });
   return !error && data === true;
-}
+});
 
 /**
  * Check if current user has a permission in any branch or tenant scope.
  * Mirrors the RLS helper `public.has_permission_any`, including owner bypass.
+ *
+ * Wrapped in React `cache()` so repeated single-key probes in one render
+ * dedupe (e.g. inventory layout asks `procurement:read`, page asks again).
  */
-export async function currentUserHasPermissionAny(
+export const currentUserHasPermissionAny = cache(async function currentUserHasPermissionAny(
   key: PermissionKey | string,
 ): Promise<boolean> {
   const supabase = await createClient();
@@ -87,15 +96,31 @@ export async function currentUserHasPermissionAny(
     p_key: key,
   });
   return !error && data === true;
-}
+});
 
+/**
+ * Returns true if the user has ANY of the given permission keys (tenant-wide
+ * or branch-scoped). Fires all RPCs in parallel — single network RTT — and
+ * ORs the results. Each individual RPC still runs the `_auth_v2_is_owner`
+ * server-side short-circuit.
+ *
+ * Empty `keys` returns `false` (matches sequential semantics). Errors in
+ * underlying RPCs map to `false` per `currentUserHasPermissionAny`, so the
+ * `Promise.all` never rejects. Intended for small key arrays (≤5); larger
+ * fan-out should consider a batch RPC `has_any_permissions(keys[])` once
+ * pool pressure is observed.
+ *
+ * NOT wrapped in React `cache()` — array argument identity changes per
+ * render, so memoization would never hit. Dedup happens inside the
+ * single-key helper instead.
+ *
+ * Spec: regressions.md MULTI-KEY-PERMISSION-PARALLEL.
+ */
 export async function currentUserHasAnyPermissionAny(
   keys: readonly (PermissionKey | string)[],
 ): Promise<boolean> {
-  for (const key of keys) {
-    if (await currentUserHasPermissionAny(key)) {
-      return true;
-    }
-  }
-  return false;
+  const results = await Promise.all(
+    keys.map((key) => currentUserHasPermissionAny(key)),
+  );
+  return results.some(Boolean);
 }
