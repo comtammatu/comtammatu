@@ -97,9 +97,8 @@ export interface JwtClaims {
   area_id: number | null;
   user_role: StaffRole;
   /**
-   * HR position code (Auth v2). Dual-emitted alongside `user_role` during
-   * transition. Prefer `position` for new code; `user_role` remains for
-   * legacy RLS/policies until M5 cleanup.
+   * HR position code. Dual-emitted alongside `user_role` during transition.
+   * Prefer `position` for new code; `user_role` remains for legacy RLS/policies.
    */
   position?: string;
 }

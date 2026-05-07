@@ -6,7 +6,7 @@ import { HardblockOverrideDialog } from "./hardblock-override-dialog";
 
 /**
  * Shape that any GRN line must expose to render the variance column.
- * Populated from `grn_items` S2 additions:
+ * Populated from `grn_items` variance additions:
  *   - variance_tier, baseline_source, baseline_variance_pct,
  *     is_hard_blocked, baseline_sample_n.
  * Additive — if fields absent, component renders nothing.
@@ -38,7 +38,7 @@ interface GrnLineVarianceColumnProps {
  *
  * Renders nothing when `varianceTier` is null/undefined AND
  * `baselineSource` is not 'paused'/'none' (e.g. legacy rows
- * before S2 variance trigger was installed).
+ * before variance trigger was installed).
  */
 export function GrnLineVarianceColumn({
   line,

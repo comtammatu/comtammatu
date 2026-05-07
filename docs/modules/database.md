@@ -47,7 +47,7 @@ Source of truth: generated types from the live schema. Snapshot at the time of w
 
 - **102 tables**, **8 views**, **132 RPC/SQL functions** (count via `awk` over `database.types.ts` per `Tables`/`Views`/`Functions` section markers)
 - **278+ migration files** in `supabase/migrations/`
-- **0 enums** — `staff_role` ENUM was dropped in Auth v2 (M5 cleanup, 2026-04-23); roles are now strings derived from `positions.legacy_role_code`
+- **0 enums** — `staff_role` ENUM was dropped (Auth cleanup, 2026-04-23); roles are now strings derived from `positions.legacy_role_code`
 
 ### DB Source-of-Truth Ladder
 
@@ -79,7 +79,7 @@ Tables are organized by domain. For per-table columns/constraints, read the migr
 
 | Domain        | Representative tables                                                                                                                                                  |
 | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Auth v2       | `permission_keys`, `positions`, `role_templates`, `staff_permissions`, `permission_audit_log`                                                                          |
+| Auth       | `permission_keys`, `positions`, `role_templates`, `staff_permissions`, `permission_audit_log`                                                                          |
 | Tenant + IA   | `tenants`, `branches`, `profiles`, `areas`, `area_branches`, `system_settings`, `branch_attendance_config`                                                             |
 | Menu          | `menu_categories`, `menu_items`, `menu_item_variants`, `menu_item_modifiers`, `menu_item_available_sides`                                                              |
 | POS           | `pos_terminals`, `pos_sessions`, `branch_zones`, `tables`, `printer_configs`, `branch_menu_item_daily_limits`                                                          |
@@ -94,7 +94,7 @@ Tables are organized by domain. For per-table columns/constraints, read the migr
 | Trust / QC    | `branch_trusted_egress_ips`, `branch_override_codes`, `branch_override_attempts`, `inventory_qc_settings`                                                              |
 | Notifications | `notifications`, `branch_feature_flags`                                                                                                                                |
 
-For the per-column / per-policy reference of a specific table, prefer reading the originating migration. The hand-written reference at `docs/spec/database-schema.md` is FROZEN at the Sprint 1 / early-M2 era and has not tracked Auth v2 / M5-Ext / Finance / Production / Print Agent.
+For the per-column / per-policy reference of a specific table, prefer reading the originating migration. The hand-written reference at `docs/spec/database-schema.md` is FROZEN at early-2026 and has not tracked Auth / Production / Finance / Print Agent and other domains shipped since.
 
 ## RLS Pattern
 
@@ -168,6 +168,6 @@ Migrations live in `supabase/migrations/` with timestamp-prefixed filenames.
 Written by codebase-oracle (manual) | 2026-04-06
 Data: Direct source reading
 Audience: new engineer, feature owner | Confidence: 95%
-Updated: M2 POS tables added (2026-04-06)
+Updated: POS tables added (2026-04-06)
 Unknowns: 0
 -->

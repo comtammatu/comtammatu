@@ -1,6 +1,6 @@
 # Auth & ACL Module
 
-> **Auth v2 (shipped 2026-04-22/23):** Position (HR chức vụ) is separated from Permission (quyền truy cập). Authz runs against a normalized `staff_permissions(user_id, branch_id, permission_key, valid_from, valid_until)` table, gated by RLS via `has_permission(branch_id, key)`. Legacy role strings (`branch_manager`, `cashier`, …) are still emitted in JWT as `user_role` for backward compat — they're derived from `positions.legacy_role_code`. `profiles.role` column + `staff_role` enum **dropped**. See the Auth v2 section below.
+> **Auth (shipped 2026-04-22/23):** Position (HR chức vụ) is separated from Permission (quyền truy cập). Authz runs against a normalized `staff_permissions(user_id, branch_id, permission_key, valid_from, valid_until)` table, gated by RLS via `has_permission(branch_id, key)`. Legacy role strings (`branch_manager`, `cashier`, …) are still emitted in JWT as `user_role` for backward compat — they're derived from `positions.legacy_role_code`. `profiles.role` column + `staff_role` enum **dropped**. See the Auth section below.
 
 ## Overview
 
@@ -14,7 +14,7 @@ Authentication and authorization for the entire system. Every request passes thr
 | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------- |
 | `packages/shared/src/auth/types.ts`                             | Role enum, JWT claims shape (`user_role` + optional `position`), scope types                   | Core types                |
 | `packages/shared/src/auth/module-acl.ts`                        | Module → allowed roles mapping, `canAccess()`, `getAccessibleModules()`                        | Route-level ACL (legacy)  |
-| `packages/shared/src/auth/permissions.ts`                       | `PERMISSION_KEYS` (87 keys), `hasPermission()`, `hasAny/All` pure fns — **Auth v2 authz**      | Permission catalog (v2)   |
+| `packages/shared/src/auth/permissions.ts`                       | `PERMISSION_KEYS` (87 keys), `hasPermission()`, `hasAny/All` pure fns — **Auth authz**      | Permission catalog        |
 | `packages/shared/src/auth/scope.ts`                             | `extractClaims()` + `decodeJwtAppMetadata()` + `extractClaimsFromAccessToken()`                | JWT claim extraction      |
 | `packages/shared/src/auth/nav-config.ts`                        | Admin sidebar navigation groups filtered by role                                               | UI navigation             |
 | `packages/shared/src/auth/app-discovery.ts`                     | Shared app discovery metadata derived from ACL + nav config                                    | Shell discovery contract  |
@@ -23,8 +23,8 @@ Authentication and authorization for the entire system. Every request passes thr
 | `apps/web/app/_lib/auth.ts`                                     | `loadAuthState()` — shared claims reader for layouts/pages; throws if proxy invariant violated | Layout claims helper      |
 | `apps/web/proxy.ts`                                             | Next.js middleware — **single auth gate**: session + claims + module ACL + branch scope        | Request gateway           |
 | `supabase/migrations/*_jwt_custom_claims_hook.sql`              | `custom_access_token_hook()` — injects claims into JWT                                         | DB-level auth             |
-| `supabase/migrations/20260422120000_auth_v2_tables.sql`         | Auth v2 core tables: `permission_keys`, `positions`, `role_templates`, `staff_permissions`     | Auth v2 schema            |
-| `supabase/migrations/20260422120002_auth_v2_has_permission.sql` | `has_permission(branch, key)` / `has_permission_any(key)` SECURITY DEFINER helpers             | Auth v2 RLS helpers       |
+| `supabase/migrations/20260422120000_auth_v2_tables.sql`         | Auth core tables: `permission_keys`, `positions`, `role_templates`, `staff_permissions`     | Auth schema            |
+| `supabase/migrations/20260422120002_auth_v2_has_permission.sql` | `has_permission(branch, key)` / `has_permission_any(key)` SECURITY DEFINER helpers             | Auth RLS helpers       |
 | `apps/web/app/admin/staff/[id]/permissions/`                    | Admin UI for grant/revoke + audit (page + client + actions)                                    | Permission admin UI       |
 | `apps/web/app/_lib/permissions.ts`                              | Server helpers `fetchCurrentUserPermissions()` + `currentUserHasPermission()`                  | App-side permission reads |
 
@@ -33,7 +33,7 @@ Authentication and authorization for the entire system. Every request passes thr
 ```
 owner                          ← governance + tenant-wide oversight, including orders and inventory
 ├── super_manager              ← Trụ sở: vận hành + catalog NL, procurement
-├── area_manager               ← tenant-wide; area scope enforced via per-branch grants in `staff_permissions` (Auth v2)
+├── area_manager               ← tenant-wide; area scope enforced via per-branch grants in `staff_permissions` (Auth)
 ├── branch_manager             ← single branch operations
 │   ├── cashier                ← POS (/br/[branchId]/pos)
 │   ├── waiter                 ← POS (/br/[branchId]/pos)
@@ -41,7 +41,7 @@ owner                          ← governance + tenant-wide oversight, including
 └── office                     ← HQ staff, no branch assignment
 ```
 
-Legacy role strings (`owner`, `cashier`, …) still exist as `STAFF_ROLES` TS constants and are emitted in JWT `user_role` for backward compat. They are **derived** from `positions.legacy_role_code` — the `staff_role` enum + `profiles.role` column were dropped in M5 (2026-04-23). To add a new legacy role value, update `STAFF_ROLES` + `positions.legacy_role_code` mapping in the seed. To add a new HR position, insert into `positions` with the proper `legacy_role_code` bridge.
+Legacy role strings (`owner`, `cashier`, …) still exist as `STAFF_ROLES` TS constants and are emitted in JWT `user_role` for backward compat. They are **derived** from `positions.legacy_role_code` — the `staff_role` enum + `profiles.role` column were dropped (2026-04-23). To add a new legacy role value, update `STAFF_ROLES` + `positions.legacy_role_code` mapping in the seed. To add a new HR position, insert into `positions` with the proper `legacy_role_code` bridge.
 
 ## RLS Gate Choice — `has_permission()` vs `auth_role()`
 
@@ -62,7 +62,7 @@ Two parallel ACL mechanisms exist; pick the right one:
   - Deleting a position with active profiles raises `foreign_key_violation` (SQLSTATE 23503). Admins must reassign profiles before deleting.
 - **Owner identity** is currently HR-position-based (`positions.code='owner'`). `tenants.representative` is a free-text legal-document name (TEXT, not UUID), NOT a user identity oracle. A future `tenants.owner_user_id UUID` column + ADR is tracked as **H3b** (deferred) for defense-in-depth.
 
-## Auth v2 — Position vs Permission
+## Auth — Position vs Permission
 
 | Concept        | Storage                                                                          | Purpose                                                                                                                                                       |
 | -------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -204,7 +204,7 @@ Single canonical helper cho "send blocked user somewhere they can read what happ
 | Add new role_template        | Migration (INSERT into `role_templates`) or via admin RPC                                                                                                                             |
 | Add new module to route ACL  | module-acl.ts + proxy.ts `resolveModule()` + nav-config.ts                                                                                                                            |
 | Change JWT claims shape      | hook SQL + types.ts + scope.ts + proxy.ts. Always check `record.tenant_id IS NOT NULL` not `record IS NOT NULL` in plpgsql (see `PLPGSQL-RECORD-IS-NOT-NULL` regression).             |
-| Cut a table's RLS to Auth v2 | DROP old policies + CREATE with `has_permission(branch_id, key)` (branch-scoped) or `has_permission_any(key)` (tenant-scoped). Keep structural gates (`branch_kind` checks) separate. |
+| Cut a table's RLS to Auth | DROP old policies + CREATE with `has_permission(branch_id, key)` (branch-scoped) or `has_permission_any(key)` (tenant-scoped). Keep structural gates (`branch_kind` checks) separate. |
 
 ## Design Rationale
 

@@ -27,7 +27,7 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
     .eq("is_active", true)
     .order("name");
 
-  // Build staff query — role is now derived via positions.legacy_role_code (auth_v2).
+  // Build staff query — role is now derived via positions.legacy_role_code.
   let query = supabase
     .from("profiles")
     .select(

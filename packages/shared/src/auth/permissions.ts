@@ -29,7 +29,7 @@ export const PERMISSION_KEYS = {
   INVENTORY_WRITEOFF: "inventory:writeoff",
   INVENTORY_PRODUCTION_CREATE: "inventory:production_create",
   INVENTORY_PRODUCTION_CONFIRM: "inventory:production_confirm",
-  // inventory — redesign S0 (waste tier-2, stocktake blind/recount, adjust, GRN express, catalog review)
+  // inventory — waste tier-2, stocktake blind/recount, adjust, GRN express, catalog review
   INVENTORY_WASTE_APPROVE: "inventory:waste_approve",
   INVENTORY_WASTE_BYPASS_PHOTO: "inventory:waste_bypass_photo",
   INVENTORY_STOCKTAKE_RECOUNT: "inventory:stocktake_recount",
@@ -51,7 +51,7 @@ export const PERMISSION_KEYS = {
   PROCUREMENT_INVOICE_CREATE: "procurement:invoice_create",
   PROCUREMENT_INVOICE_MATCH: "procurement:invoice_match",
   PROCUREMENT_SUPPLIER_MANAGE: "procurement:supplier_manage",
-  // procurement — redesign S0 (price list + override code)
+  // procurement — price list + override code
   PROCUREMENT_PRICE_LIST_READ: "procurement:price_list_read",
   PROCUREMENT_PRICE_LIST_WRITE: "procurement:price_list_write",
   PROCUREMENT_OVERRIDE_CODE_ROTATE: "procurement:override_code_rotate",

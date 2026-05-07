@@ -2,7 +2,7 @@
 
 ## Tổng quan
 
-Ứng dụng Next.js 16.2 dùng App Router. 107 page.tsx routes phục vụ các bề mặt: Admin (`/admin/*`), Inventory (`/inventory/*`), Finance (`/finance/*`), HR (`/hr/*`), Orders (`/orders`), Notifications (`/notifications`), POS (`/br/[branchId]/pos`), KDS (`/br/[branchId]/kds`), Branch settings (`/br/[branchId]/settings/*`), Branch menu limits (`/br/[branchId]/menu-limits`), Employee portal (`/employee/*`), plus public surfaces `/login`, `/access-denied`, `/payment/momo/return`. M0 (Khung quản trị) + M1 (Thực đơn) + M2 (POS) + M3 (KDS) đã hoàn thành; Kho hàng hiện là bề mặt vận hành live cho HQ, bếp trung tâm, và chi nhánh.
+Ứng dụng Next.js 16.2 dùng App Router. 107 page.tsx routes phục vụ các bề mặt: Admin (`/admin/*`), Inventory (`/inventory/*`), Finance (`/finance/*`), HR (`/hr/*`), Orders (`/orders`), Notifications (`/notifications`), POS (`/br/[branchId]/pos`), KDS (`/br/[branchId]/kds`), Branch settings (`/br/[branchId]/settings/*`), Branch menu limits (`/br/[branchId]/menu-limits`), Employee portal (`/employee/*`), plus public surfaces `/login`, `/access-denied`, `/payment/momo/return`. Khung quản trị + Thực đơn + POS + KDS đã hoàn thành; Kho hàng hiện là bề mặt vận hành live cho HQ, bếp trung tâm, và chi nhánh.
 
 **Phạm vi sở hữu:** `apps/web/`
 
@@ -36,7 +36,7 @@ apps/web/app/
 │   │   ├── express-windows/ # Express GRN time windows
 │   │   ├── feature-flags/  # Inventory feature flags
 │   │   └── trust/          # Trust leaderboard
-│   ├── staff/              # Staff CRUD with role hierarchy auth (S3), excludes owner/super_manager
+│   ├── staff/              # Staff CRUD with role hierarchy auth, excludes owner/super_manager
 │   │   ├── audit/          # Permission audit log viewer
 │   │   └── [id]/permissions/ # Per-user grant/revoke + template apply
 │   ├── hr/                 # Admin-side HR reporting entrypoints (deep links continue to /hr workspace)
@@ -60,11 +60,11 @@ apps/web/app/
 │       └── printers/       # Printer fleet config + jobs/ child route for queue inspection
 │
 ├── br/[branchId]/
-│   ├── pos/                # POS (cashier, waiter, branch_manager) — M2 shipped
+│   ├── pos/                # POS (cashier, waiter, branch_manager)
 │   │   ├── layout.tsx      # Auth + ACL + branch validation
 │   │   ├── page.tsx        # POS terminal UI
 │   │   └── actions.ts      # Order CRUD, session management
-│   ├── kds/                # KDS (chef, branch_manager) — M3 shipped
+│   ├── kds/                # KDS (chef, branch_manager)
 │   │   ├── layout.tsx      # Auth + ACL + branch validation
 │   │   ├── page.tsx        # KDS board — station tabs, realtime queue
 │   │   ├── actions.ts      # bump/recall tickets, station CRUD, category mapping
@@ -105,7 +105,7 @@ apps/web/app/
 │   ├── stocktake/          # Stocktake list + count + [id] detail; new + conflicts + escalate child routes
 │   ├── issues/             # Stock issue list + [id] detail for consumption/writeoff/other; Cấp bếp lives in transfers
 │   ├── expiry/             # Expiry tracking
-│   ├── waste/              # Waste flow — auto, new, approvals (S0 redesign)
+│   ├── waste/              # Waste flow — auto, new, approvals
 │   ├── reports/            # Inventory reporting with live data
 │   ├── m/                  # Mobile inventory routes — drafts, grn (+ new/[supplierId]), production, stock, transfers/[id]/receive
 │   └── settings/           # Inventory-specific settings

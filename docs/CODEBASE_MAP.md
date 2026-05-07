@@ -3,11 +3,11 @@
 > **Đối tượng:** Kỹ sư mới onboard, người phụ trách feature, người lập kế hoạch sprint
 > **Mục tiêu chính:** (1) Hiểu cấu trúc hệ thống và luồng auth, (2) biết nơi thêm tính năng mới, (3) ước lượng blast radius của thay đổi
 > **Mốc quyết định:** Lập kế hoạch sprint, onboarding, rà soát kiến trúc
-> **Ngoài phạm vi:** Yêu cầu nghiệp vụ (xem `docs/ref/`), chi tiết sprint và đặc tả tính năng (xem `docs/plan/`, ví dụ [`m2-order-lifecycle.md`](plan/m2-order-lifecycle.md))
+> **Ngoài phạm vi:** Yêu cầu nghiệp vụ (xem `docs/ref/`), chi tiết kế hoạch và đặc tả tính năng (xem `docs/plan/system-rebuild/`)
 
 ## Trạng thái
 
-- **Phiên bản hiện tại:** v1.0.0 — M0–M3, M5 SHIPPED. M4/M6/M7 PARTIAL (blocked on external credentials). M5-Ext Phase 0+1 live, S8 (yield + AP) deferred post-pilot.
+- **Phiên bản hiện tại:** v1.0.0 — Auth, Admin, Master Data, Inventory, Orders, POS, KDS, Print SHIPPED. Payments, Finance/HR, Notifications/Reporting PARTIAL (blocked on external credentials).
 - **Mốc tiếp theo:** Pilot Launch v1.0.0 cho mô hình vận hành `HQ -> Bếp trung tâm -> Chi nhánh` — cần wire VietQR/Momo/MISA credentials trước pilot
 - **Tech stack:** Next.js 16.2 | React 19.2 | TypeScript 6.0 | Tailwind 4.2 | Zod 4 | Supabase | Turborepo 2.9
 
@@ -123,11 +123,11 @@ sequenceDiagram
 | #   | Unknown                                                     | Verification Step         | Impact                   |
 | --- | ----------------------------------------------------------- | ------------------------- | ------------------------ |
 | 1   | area_manager has tenant-wide access (no area scoping table) | Deferred — see roadmap H3 | May need migration later |
-| 2   | E2E test coverage limited to 5 Playwright specs (kds-queue, daily-limit-realtime, payment-cash, edit-pending-pricing, +1) — no unit/component test suite | Expand spec coverage or adopt vitest as M4/M6 wraps up | Refactor regressions possible on uncovered surfaces |
+| 2   | E2E test coverage limited to 5 Playwright specs (kds-queue, daily-limit-realtime, payment-cash, edit-pending-pricing, +1) — no unit/component test suite | Expand spec coverage or adopt vitest as Payments + Finance wrap up | Refactor regressions possible on uncovered surfaces |
 
 ## Priority Recommendations
 
-1. **v1.0.0 Pilot Launch:** M0–M3, M5 shipped. M4/M6/M7 partial (blocked on credentials). Focus on wiring real payment/invoice APIs, QA, security review, and validating the `HQ -> Bếp trung tâm -> Chi nhánh` operating path.
+1. **v1.0.0 Pilot Launch:** Auth, Admin, Master Data, Inventory, Orders, POS, KDS, Print shipped. Payments, Finance/HR, Notifications/Reporting partial (blocked on credentials). Focus on wiring real payment/invoice APIs, QA, security review, and validating the `HQ -> Bếp trung tâm -> Chi nhánh` operating path.
 2. **Watch hub files:** Any change to `module-acl.ts` or `types.ts` requires proxy + layout + nav verification.
 3. **RLS pattern:** Every new table must follow the tenant-scoped RLS pattern with explicit GRANTs. See [database.md](modules/database.md).
 
@@ -136,7 +136,7 @@ Inventory route ownership note:
 - `/admin/inventory/*` page files (`cold-chain`, `express-windows`, `feature-flags`, `trust`) still exist on disk but are RETIRED — the `inventory_admin` module ACL in `module-acl.ts` has `allowedRoles: []`, so no role passes the proxy gate. Treat the URL space as unsupported; do not wire new admin features there.
 
 <!-- ORACLE-META
-Updated: 2026-04-15 (status sync: M4/M6/M7 PARTIAL, S8 deferred, H3 deferred)
+Updated: 2026-05-07 (status sync: Payments + Finance/HR + Notifications/Reporting PARTIAL)
 Data: Direct source reading
 Audience: new engineer, feature owner | Confidence: 95%
 Unknowns: 2 items pending verification

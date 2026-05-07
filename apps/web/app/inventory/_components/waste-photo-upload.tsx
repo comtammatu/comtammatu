@@ -14,13 +14,13 @@ interface WastePhotoUploadProps {
 }
 
 /**
- * Waste tier-1 photo capture (S11).
+ * Waste tier-1 photo capture.
  *
  * Camera-only by default: `captureCamera=true` on native file input
  * triggers rear camera on mobile. Desktop browsers fall through to file
  * picker automatically.
  *
- * EXIF ≤5min server validation is DEFERRED to S3-b Edge Function
+ * EXIF ≤5min server validation is DEFERRED to Edge Function
  * (`validate-waste-photo`). Client UI does NOT pre-check EXIF — we trust
  * the camera-capture flag and rely on server rejection.
  */
