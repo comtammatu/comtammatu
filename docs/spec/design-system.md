@@ -108,6 +108,97 @@ Rules:
 
 If a new token is truly needed, it must be added to `packages/ui/src/styles/globals.css`, documented here, and checked against `tasks/regressions.md`.
 
+## Rhythm Contract
+
+Token Contract locks **what** values exist; Rhythm Contract locks **when** to use which value, so spacing, sizing, and density read consistently across modules instead of being a per-module judgment call.
+
+A module that needs to deviate must update this contract first, not patch a single page.
+
+### A. Spacing Rhythm
+
+| Slot                              | Class                          | Notes                                                            |
+| --------------------------------- | ------------------------------ | ---------------------------------------------------------------- |
+| Page outer padding (mobile)       | `p-3`                          | Set by `AppPage` density="compact"                               |
+| Page outer padding (default)      | `p-4`                          | Set by `AppPage` default                                         |
+| Card inner (default)              | `p-4`                          | Set by `Card` primitive                                          |
+| Card inner (size="sm")            | `p-3`                          | Set by `Card data-size=sm`                                       |
+| Toolbar inner                     | `p-3`                          | Set by `AppToolbar`                                              |
+| Section vertical gap              | `gap-4` (default), `gap-3` (compact) | Set by `AppPage`                                           |
+| Within-section element gap        | `gap-2`                        | Default for inline rows / form fields                            |
+| Compact toolbar chip gap          | `gap-1.5`                      | Filter chips, badge clusters                                     |
+| Tight icon-label gap              | `gap-1`                        | Icon + 1–2 word label only                                       |
+
+Allowed gap scale in app code: `1`, `1.5`, `2`, `3`, `4`, `6`. Avoid `5`, `7`, `8` for horizontal flow — they break vertical rhythm with the heading scale below.
+
+Page padding MUST come from `AppPage` (not ad-hoc on the page root). Card padding MUST come from `Card` / `Card size="sm"` (not ad-hoc on `<CardContent>`).
+
+### B. Heading Scale (locked per role)
+
+| Role                   | Class                                                  | Source                |
+| ---------------------- | ------------------------------------------------------ | --------------------- |
+| Page H1                | `font-heading text-xl sm:text-2xl font-semibold`       | `AppPageHeader`       |
+| Section title          | `font-heading text-base font-semibold`                 | `CardTitle`           |
+| Sub-section / list head| `font-heading text-sm font-semibold`                   | `Item title` slot     |
+| Eyebrow / metadata     | `text-xs font-medium uppercase tracking-wide`          | `AppPageHeader.eyebrow` |
+| Dense eyebrow          | `text-2xs font-medium uppercase tracking-wide`         | KDS chrome, audit row meta |
+| Numeric input echo     | `text-3xl font-semibold tabular-nums`                  | Number pad readout, scale display |
+
+`text-4xl`, `text-5xl` are NOT allowed in app surfaces. They live only in marketing/login splash. `text-3xl` is reserved for the numeric-input-echo role above (cashier number pad, scale display) and MUST be paired with `tabular-nums`. `text-3xs` is reserved for SVG axis labels and dense table micro-meta.
+
+`font-bold` only for receipt totals, page headers in print mode, and emphasis inside body copy. Default heading weight is `font-semibold`. `font-black` is not allowed in the app.
+
+### C. Icon Size by Role
+
+| Slot                                  | Class       |
+| ------------------------------------- | ----------- |
+| Inline badge / chip glyph             | `size-3`    |
+| Button `size="sm"` glyph              | `size-3.5`  |
+| Default (button, link, input affix)   | `size-4`    |
+| Section / card title glyph            | `size-5`    |
+| Page-header eyebrow glyph             | `size-6`    |
+| Empty-state media                     | `size-8`–`size-12` (via `EmptyMedia variant="icon"`) |
+| Image / document thumbnail            | `size-12`–`size-16` with `object-cover` (img preview, not glyph) |
+
+`size-7`, `size-9`, `size-11` are NOT allowed in app surfaces. `size-14`, `size-16` are NOT allowed outside `EmptyMedia`, brand lockup, splash imagery, or image/document thumbnails (photo upload preview, supplier doc thumbnail, GRN evidence). Inventory/POS hero glyphs MUST compose `EmptyMedia` or render through a primitive, not free-style `size-12` inside a card.
+
+### D. Height Scale (lock to primitive)
+
+`Button` is the single source of truth for button height. Variants:
+
+| Variant     | Min height       | When                                                              |
+| ----------- | ---------------- | ----------------------------------------------------------------- |
+| `xs`        | `h-6`            | Inline metadata actions, tag pickers                              |
+| `sm`        | `h-7`            | Compact toolbars, dialog footers                                  |
+| `default`   | `h-8`            | Standard CTA, form submit                                         |
+| `lg`        | `h-9`            | Primary CTA, page-header action                                   |
+| `touch`     | `min-h-12`       | Mobile touch button (POS, KDS, mobile inventory) — meets WCAG 2.5.5 enhanced target size |
+| `touch-lg`  | `min-h-14`       | Hero CTA / mobile action bar primary (POS bottom bar, KDS bump)   |
+| `icon-xs`   | `size-6`         | Icon-only inline                                                  |
+| `icon-sm`   | `size-7`         | Icon-only compact                                                 |
+| `icon`      | `size-8`         | Icon-only default                                                 |
+| `icon-lg`   | `size-9`         | Icon-only large                                                   |
+
+Fixed heights `h-10`, `h-11`, `h-12`, `h-14`, `h-16` MUST NOT be applied to `<button>`, `<Link>`, or `<Button>` acting as a button. Min-heights `min-h-12`, `min-h-14`, `min-h-16` MUST come from the `touch` / `touch-lg` variants — do not override on a different variant via `className`. Touch CTAs use `min-h-` rather than fixed `h-` so wrapped labels grow vertically without clipping.
+
+If a new touch tier is genuinely needed (e.g. tablet KDS oversized chef glove targets), add a variant to `Button` cva once. Never fake a button by setting `<button className="min-h-12 ...">` outside the primitive.
+
+`Input` height is fixed at `h-7` from the primitive. Vertical chrome should be controlled with `Field` / `FieldGroup` spacing, not by overriding input height.
+
+### E. Radius Scale (4 tokens only)
+
+| Token          | When                                                                |
+| -------------- | ------------------------------------------------------------------- |
+| `rounded-md`   | Default for input, button, badge, chip, small surface card          |
+| `rounded-lg`   | Card, sheet, dialog, drawer outer                                   |
+| `rounded-full` | Avatar, pill badge, circular icon container                         |
+| `rounded-none` | Explicit reset only (table cell internals, edge-bleed media)        |
+
+`rounded` (no suffix), `rounded-sm`, `rounded-xl`, `rounded-2xl`, `rounded-3xl`, `rounded-4xl` are NOT allowed in app code. The radius primitive token surface (`--radius-sm/md/lg/xl/2xl/3xl/4xl`) exists in `globals.css` for shadcn primitive compatibility — app surfaces consume them indirectly through Card/Sheet/etc., not directly.
+
+### F. Density Modes
+
+`AppPage density="compact"` and `Card size="sm"` are the two switches that move a surface from default to dense without rewriting spacing. POS/KDS/Inventory dense list views compose these. Per-module density classes (`*-dense`, `*-tight`) are not allowed.
+
 ## Component Authority
 
 The only shared primitive layer is `packages/ui/src/components/*`.
