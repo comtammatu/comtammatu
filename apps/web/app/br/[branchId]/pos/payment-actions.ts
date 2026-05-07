@@ -592,6 +592,7 @@ export async function createPayment(
       console.error("[createPayment] rpc failed:", msg);
       return { success: false, error: mappedError };
     }
+    console.error("[createPayment] [unmapped] rpc error:", msg);
     return { success: false, error: "Không thể tạo thanh toán." };
   }
 
@@ -797,6 +798,7 @@ export async function confirmPayment(
       console.error("[confirmPayment] rpc failed:", msg);
       return { success: false, error: mappedError };
     }
+    console.error("[confirmPayment] [unmapped] rpc error:", msg);
     return { success: false, error: "Không thể xác nhận thanh toán." };
   }
 
@@ -1040,6 +1042,7 @@ export async function confirmCashPayment(
     }
     const mappedError = mapPaymentRpcError(msg);
     if (mappedError) {
+      console.error("[confirmCashPayment] rpc failed:", msg);
       return { success: false, error: mappedError };
     }
     if (msg.includes("no active") && msg.includes("printer")) {
@@ -1048,6 +1051,7 @@ export async function confirmCashPayment(
         error: "Chi nhánh chưa cấu hình máy in hóa đơn. Liên hệ quản lý.",
       };
     }
+    console.error("[confirmCashPayment] [unmapped] rpc error:", msg);
     return {
       success: false,
       error: "Không thể xác nhận thanh toán. Vui lòng thử lại.",
@@ -1359,6 +1363,7 @@ export async function confirmVietQrPayment(
       console.error("[confirmVietQrPayment] rpc failed:", msg);
       return { success: false, error: mappedError };
     }
+    console.error("[confirmVietQrPayment] [unmapped] rpc error:", msg);
     return { success: false, error: "Không thể xác nhận thanh toán VietQR." };
   }
 
