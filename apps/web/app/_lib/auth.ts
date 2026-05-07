@@ -16,15 +16,21 @@ export async function getAuthContext(allowedRoles: readonly StaffRole[]) {
   // server, ensuring banned/deleted users are rejected immediately.
   // Pages/layouts can use getSession() (middleware already verified), but
   // mutations must re-verify for defense in depth.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  //
+  // Parallelize the two reads: getUser() makes an HTTP roundtrip to the Auth
+  // server while getSession() decodes the cookie locally. They have no
+  // dependency, so sequencing them only added latency. If getUser() rejects
+  // a banned user we still return null — the parallel session read is
+  // discarded harmlessly (no permission RPC has fired yet).
+  const [userRes, sessionRes] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase.auth.getSession(),
+  ]);
 
+  const user = userRes.data.user;
   if (!user) return null;
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  const session = sessionRes.data.session;
   const claims = extractClaimsFromAccessToken(session?.access_token);
   if (!claims) return null;
 
