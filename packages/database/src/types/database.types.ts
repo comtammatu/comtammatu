@@ -7,30 +7,10 @@ export type Json =
   | Json[]
 
 export type Database = {
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -4165,7 +4145,6 @@ export type Database = {
           branch_id: number
           last_seen_at: string
           tenant_id: number
-          transport: string
           version: string | null
         }
         Insert: {
@@ -4173,7 +4152,6 @@ export type Database = {
           branch_id: number
           last_seen_at?: string
           tenant_id: number
-          transport?: string
           version?: string | null
         }
         Update: {
@@ -4181,7 +4159,6 @@ export type Database = {
           branch_id?: number
           last_seen_at?: string
           tenant_id?: number
-          transport?: string
           version?: string | null
         }
         Relationships: [
@@ -4342,13 +4319,11 @@ export type Database = {
           role: string
           tenant_id: number
           updated_at: string
-          usb_product_id: string | null
-          usb_vendor_id: string | null
         }
         Insert: {
           branch_id: number
           code_page?: string
-          connection_type: string
+          connection_type?: string
           created_at?: string
           id?: never
           is_active?: boolean
@@ -4359,8 +4334,6 @@ export type Database = {
           role: string
           tenant_id: number
           updated_at?: string
-          usb_product_id?: string | null
-          usb_vendor_id?: string | null
         }
         Update: {
           branch_id?: number
@@ -4376,8 +4349,6 @@ export type Database = {
           role?: string
           tenant_id?: number
           updated_at?: string
-          usb_product_id?: string | null
-          usb_vendor_id?: string | null
         }
         Relationships: [
           {
@@ -7747,7 +7718,6 @@ export type Database = {
           is_online: boolean | null
           last_seen_at: string | null
           tenant_id: number | null
-          transport: string | null
           version: string | null
         }
         Insert: {
@@ -7756,7 +7726,6 @@ export type Database = {
           is_online?: never
           last_seen_at?: string | null
           tenant_id?: number | null
-          transport?: string | null
           version?: string | null
         }
         Update: {
@@ -7765,7 +7734,6 @@ export type Database = {
           is_online?: never
           last_seen_at?: string | null
           tenant_id?: number | null
-          transport?: string | null
           version?: string | null
         }
         Relationships: [
@@ -7801,7 +7769,6 @@ export type Database = {
           seconds_since_seen: number | null
           status: string | null
           tenant_id: number | null
-          transport: string | null
           version: string | null
         }
         Relationships: [
@@ -7885,10 +7852,6 @@ export type Database = {
           p_type: string
           p_value: number
         }
-        Returns: Json
-      }
-      set_order_service_charge: {
-        Args: { p_amount: number; p_note: string; p_order_id: number }
         Returns: Json
       }
       apply_template_to_user: {
@@ -8863,23 +8826,18 @@ export type Database = {
         }
         Returns: Json
       }
-      split_order:
-        | {
-            Args: {
-              p_idempotency_key?: string
-              p_item_ids: number[]
-              p_source_order_id: number
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_idempotency_key?: string
-              p_item_partials: Json
-              p_source_order_id: number
-            }
-            Returns: Json
-          }
+      set_order_service_charge: {
+        Args: { p_amount: number; p_note: string; p_order_id: number }
+        Returns: Json
+      }
+      split_order: {
+        Args: {
+          p_idempotency_key?: string
+          p_item_partials: Json
+          p_source_order_id: number
+        }
+        Returns: Json
+      }
       start_stocktake: {
         Args: {
           p_auditor_id?: string
@@ -8994,7 +8952,6 @@ export type Database = {
           p_branch_id?: number
           p_category_ids?: number[]
           p_code_page?: string
-          p_connection_type?: string
           p_is_active?: boolean
           p_lan_host?: string
           p_lan_port?: number
@@ -9003,8 +8960,6 @@ export type Database = {
           p_print_types?: string[]
           p_printer_id?: number
           p_role?: string
-          p_usb_product_id?: string
-          p_usb_vendor_id?: string
         }
         Returns: number
       }
@@ -9162,11 +9117,7 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {},
   },
 } as const
-
