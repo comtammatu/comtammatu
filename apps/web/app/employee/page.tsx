@@ -1,17 +1,25 @@
 import Link from "next/link";
 import {
   ArrowRight as IconArrowRight,
+  Briefcase as IconBriefcase,
+  Building2 as IconBuilding2,
   CalendarDays as IconCalendarEvent,
   ChefHat as IconChefHat,
   Clock as IconClock,
   CreditCard as IconCreditCard,
   ListChecks as IconListChecks,
+  ListOrdered as IconListOrdered,
   LogIn as IconDoorEnter,
   LogOut as IconLogout,
+  MessageCircle as IconMessageCircle,
   Monitor as IconDeviceDesktop,
+  Package as IconPackage,
+  Settings as IconSettings,
+  ShoppingBag as IconShoppingBag,
   UserCircle as IconUserCircle,
+  UtensilsCrossed as IconUtensilsCrossed,
 } from "lucide-react";
-import { canAccess } from "@comtammatu/shared/auth";
+import { canAccess, type ModuleKey } from "@comtammatu/shared/auth";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
 import { loadAuthState } from "@/_lib/auth";
@@ -48,6 +56,82 @@ const OPERATION_HANDOFFS = [
     description: copy.kdsDescription,
   },
 ] as const;
+
+const MANAGEMENT_LINKS: ReadonlyArray<{
+  moduleKey: ModuleKey;
+  href: string;
+  icon: typeof IconShoppingBag;
+  title: string;
+  description: string;
+}> = [
+  {
+    moduleKey: "orders",
+    href: "/orders",
+    icon: IconShoppingBag,
+    title: "Đơn hàng",
+    description: "Theo dõi đơn hôm nay + lịch sử",
+  },
+  {
+    moduleKey: "inventory",
+    href: "/inventory",
+    icon: IconPackage,
+    title: "Kho hàng",
+    description: "Tồn kho · Nhập · Chuyển · Sản xuất",
+  },
+  {
+    moduleKey: "menu",
+    href: "/menu",
+    icon: IconUtensilsCrossed,
+    title: "Thực đơn",
+    description: "Cập nhật món + giá + nhóm",
+  },
+  {
+    moduleKey: "settings",
+    href: "/admin/settings",
+    icon: IconSettings,
+    title: "Cài đặt",
+    description: "Bàn · Máy in · POS · KDS",
+  },
+  {
+    moduleKey: "feedback",
+    href: "/admin/feedback",
+    icon: IconMessageCircle,
+    title: "Phản hồi khách",
+    description: "Hộp thư + báo cáo NPS",
+  },
+  {
+    moduleKey: "hr",
+    href: "/hr",
+    icon: IconBriefcase,
+    title: "Nhân sự",
+    description: "Bảng lương + chấm công đội",
+  },
+];
+
+const BRANCH_MANAGEMENT_LINKS = (
+  branchId: number,
+): ReadonlyArray<{
+  moduleKey: ModuleKey;
+  href: string;
+  icon: typeof IconShoppingBag;
+  title: string;
+  description: string;
+}> => [
+  {
+    moduleKey: "branch_menu_limits",
+    href: `/br/${branchId}/menu-limits`,
+    icon: IconListOrdered,
+    title: "Hạn mức món bán",
+    description: "Số lượng món bán / ngày",
+  },
+  {
+    moduleKey: "branch_settings",
+    href: `/br/${branchId}/settings`,
+    icon: IconBuilding2,
+    title: "Cài đặt chi nhánh",
+    description: "Cấu hình bàn · POS · máy in",
+  },
+];
 
 export default async function EmployeePage() {
   const { supabase, claims } = await loadAuthState();
@@ -138,6 +222,17 @@ export default async function EmployeePage() {
           href: item.href(branchId),
         }))
       : [];
+
+  const managementLinks = MANAGEMENT_LINKS.filter((link) =>
+    canAccess(claims.user_role, link.moduleKey),
+  );
+  const branchManagementLinks = branchId
+    ? BRANCH_MANAGEMENT_LINKS(branchId).filter((link) =>
+        canAccess(claims.user_role, link.moduleKey),
+      )
+    : [];
+  const showManagementPanel =
+    managementLinks.length + branchManagementLinks.length > 0;
 
   const clockTone =
     clockState === "working"
@@ -249,6 +344,34 @@ export default async function EmployeePage() {
           </div>
         </EmployeePanel>
       )}
+
+      {showManagementPanel ? (
+        <EmployeePanel
+          title="Quản lý"
+          description="Các module bạn có quyền vận hành"
+        >
+          <EmployeeActionList columns={2}>
+            {managementLinks.map((link) => (
+              <EmployeeActionItem
+                key={link.moduleKey}
+                href={link.href}
+                icon={link.icon}
+                title={link.title}
+                description={link.description}
+              />
+            ))}
+            {branchManagementLinks.map((link) => (
+              <EmployeeActionItem
+                key={link.moduleKey}
+                href={link.href}
+                icon={link.icon}
+                title={link.title}
+                description={link.description}
+              />
+            ))}
+          </EmployeeActionList>
+        </EmployeePanel>
+      ) : null}
 
       <EmployeePanel title={copy.selfServiceTitle}>
         <EmployeeActionList columns={2}>
