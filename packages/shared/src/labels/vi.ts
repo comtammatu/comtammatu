@@ -325,3 +325,99 @@ export function getPaymentMethodLabelVi(method: string | null | undefined): stri
   if (!method) return "";
   return (PAYMENT_METHOD_LABELS_VI as Record<string, string>)[method] ?? method;
 }
+
+// =============================================================
+// Common UI actions, states, operator errors
+// Adopted 2026-05-07 from matu-superapp lesson "Design System Contract
+// Needs Code, Not Just Markdown" — shared canonical Vietnamese copy per
+// regression rules COPY-LABEL-SOURCE-OF-TRUTH + RAW-ERRORS-NOT-CLIENTS.
+//
+// Use these constants instead of inline hardcoded strings for: button
+// labels, confirmation dialogs, status pills, loading/empty/error states,
+// and operator-facing error messages. NEVER expose raw Postgres / Supabase
+// error text via these — map technical failure to safe Vietnamese copy.
+// =============================================================
+
+export const COMMON_ACTIONS_VI = {
+  confirm: "Xác nhận",
+  cancel: "Hủy",
+  save: "Lưu",
+  saveAndClose: "Lưu và đóng",
+  close: "Đóng",
+  continue: "Tiếp tục",
+  back: "Quay lại",
+  edit: "Chỉnh sửa",
+  delete: "Xóa",
+  remove: "Bỏ",
+  add: "Thêm",
+  submit: "Gửi",
+  send: "Gửi",
+  approve: "Duyệt",
+  reject: "Từ chối",
+  print: "In",
+  export: "Xuất",
+  importAction: "Nhập",
+  search: "Tìm kiếm",
+  filter: "Lọc",
+  reset: "Đặt lại",
+  refresh: "Làm mới",
+  retry: "Thử lại",
+  copy: "Sao chép",
+  view: "Xem",
+  details: "Chi tiết",
+  more: "Xem thêm",
+  yes: "Có",
+  no: "Không",
+} as const;
+
+export const COMMON_STATES_VI = {
+  loading: "Đang tải…",
+  saving: "Đang lưu…",
+  empty: "Không có dữ liệu",
+  noResults: "Không tìm thấy kết quả",
+  error: "Có lỗi xảy ra",
+  success: "Thành công",
+  pending: "Đang chờ",
+  completed: "Hoàn thành",
+  cancelled: "Đã hủy",
+  draft: "Bản nháp",
+  archived: "Đã lưu trữ",
+  active: "Hoạt động",
+  inactive: "Tạm ngưng",
+  reconnecting: "Đang kết nối lại…",
+  stale: "Dữ liệu cũ",
+  offline: "Đang ngoại tuyến",
+} as const;
+
+// Operator-facing error messages — NEVER expose raw Postgres / Supabase error
+// text per RAW-ERRORS-NOT-CLIENTS. Map technical failures here to safe copy.
+export const COMMON_ERRORS_VI = {
+  noPermission: "Bạn không có quyền thực hiện thao tác này.",
+  sessionExpired: "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
+  networkError: "Lỗi kết nối. Vui lòng thử lại.",
+  serverError: "Hệ thống đang gặp sự cố. Vui lòng thử lại sau.",
+  notFound: "Không tìm thấy dữ liệu.",
+  invalidInput: "Dữ liệu không hợp lệ.",
+  conflict: "Dữ liệu đã thay đổi. Vui lòng tải lại.",
+  timeout: "Yêu cầu quá thời gian. Vui lòng thử lại.",
+  branchScopeMismatch: "Bạn không thuộc phạm vi chi nhánh này.",
+  warehouseBranchRestricted: "Kho tổng / bếp trung tâm hạn chế thao tác này.",
+  // Generic auth — anti-enumeration per LOGIN-MESSAGE-MUST-BE-GENERIC
+  loginFailed: "Email hoặc mật khẩu không đúng",
+} as const;
+
+export type CommonActionKey = keyof typeof COMMON_ACTIONS_VI;
+export type CommonStateKey = keyof typeof COMMON_STATES_VI;
+export type CommonErrorKey = keyof typeof COMMON_ERRORS_VI;
+
+export function getCommonActionVi(key: string): string {
+  return (COMMON_ACTIONS_VI as Record<string, string>)[key] ?? key;
+}
+
+export function getCommonStateVi(key: string): string {
+  return (COMMON_STATES_VI as Record<string, string>)[key] ?? key;
+}
+
+export function getCommonErrorVi(key: string): string {
+  return (COMMON_ERRORS_VI as Record<string, string>)[key] ?? "Có lỗi xảy ra";
+}

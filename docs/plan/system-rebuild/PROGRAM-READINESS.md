@@ -242,6 +242,31 @@ Single source of truth cho mọi blocker. Gộp 10 blockers từ `10-ROADMAP.md 
 | B20 | Archive 19 plan docs | YES — list trong §2 | ☑ approve | 2026-05-07 | This doc §2 |
 | B21 | Drop versioned naming patterns | YES — auth v2/v3, inventory v2, M0–M7 milestones bị rename/drop | ☑ approve | 2026-05-07 | This doc §2 |
 
+### W0' steal-first additions (B54–B57) — from /autoplan UC1+UC2+UC3 + ADR=A2 (2026-05-07)
+
+| # | Blocker | Recommendation | Owner | Date | Notes |
+|---|---|---|---|---|---|
+| B54 | Convert `tasks/regressions.md` to `**RULE-NAME**:` named-rule format | YES — adopt matu-superapp parseable convention; enables `check-doc-cross-references.mjs` to validate rule references; agents can grep/load relevant rules without scanning full 62k-token file | pending | — | Phase 1.4 deliverable |
+| B55 | Port matu-superapp CI gates (`check-no-version-suffixes.mjs` + `check-doc-cross-references.mjs`) | YES — solves B21 with CI enforcement (not 1-time grep); baseline tail tracked at `tasks/lint-baseline.md` (13 + 188 known violations across W0'/W1/W3 cleanup waves) | ☑ approve | 2026-05-07 | DONE Phase 0 (commit 38dc365b) |
+| B56 | `require_recent_aal2()` MFA helper for sensitive RPCs | YES — period close, payroll approve, tenant legal change, provider secret rotation MUST gate on fresh AAL2 (per ADR-0011); matu-superapp learned the hard way | pending | — | W4 entry gate; Codex review flagged absent in current plan as CRITICAL |
+| B57 | `private.provider_secrets` table replacing `system_settings.einvoice_provider`/`MOMO_*`/`VIETQR_*` env vars | YES — per ADR-0012 3-tier configuration boundary; current `system_settings` mixes config + secret = RLS leak risk per Codex review; envelope encryption (AES-256-GCM + KMS-sealed data key) | pending | — | W4 schema deliverable; migration plan in ADR-0012 §"Migration From Existing State" |
+
+### Adopted ADR set sign-off (2026-05-07, all `proposed` pending owner accept)
+
+| # | ADR | Description | Status |
+|---|---|---|---|
+| ADR-0006 | Frontline Flutter Client | UC1=YES path locks Flutter for POS/KDS/employee | proposed |
+| ADR-0007 | Branch Hub Architecture | 1 device sole writer per branch + LAN/BT multi-transport | proposed |
+| ADR-0008 | Handheld Failover Mode | Manual emergency direct-cloud per ADR-0007 companion | proposed |
+| ADR-0009 | Background Jobs Runtime | PGMQ + pg_cron + Edge Functions layered model | proposed |
+| ADR-0010 | Flutter Implementation Choices | Riverpod, Drift, go_router, native plugin set | proposed |
+| ADR-0011 | MFA And Recovery | TOTP + `require_recent_aal2()` + backup codes + recovery RPC | proposed |
+| ADR-0012 | Tenant Configuration Separation | `.env` / `public.tenant_settings` / `private.provider_secrets` | proposed |
+| ADR-0013 | Rate Limit Fallback Policy | Renumbered from matu-superapp 0003; per-surface fail-open/closed | proposed |
+| ADR-0014 | Realtime Channel Lifecycle | Renumbered from matu-superapp 0004; Hub fan-out + JWT-refresh resubscribe | proposed |
+
+ADR-0001 (auth-migration) state remains `PROPOSED` — Codex review 2026-05-07 flagged execution layer rỗng despite B3 sign-off; needs detail before W1 entry.
+
 ### Module-specific (B22–Bxx)
 
 (TBD — sẽ điền sau khi `05-MODULE-CATALOG.md` xong. Mỗi module catalog section sẽ có "Sign-off blockers" subsection contributing tới table này.)

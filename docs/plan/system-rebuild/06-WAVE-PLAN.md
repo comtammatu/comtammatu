@@ -12,7 +12,7 @@
 
 | Wave | Scope | Module(s) (per `05`) | Wall time | Entry gate | Exit gate |
 |---|---|---|---|---|---|
-| W0 | Design tokens, typography, logo, app shells | Cross-cutting §14.5 | 1 wk | B8 approved | Design-system locked + primitives reviewed |
+| W0 | Design tokens + kitchen-sink + Vietnamese copy bootstrap + Flutter monorepo prep + app shells | Cross-cutting §14.5 | 2 wks | B8 approved | Design-system locked + primitives reviewed + kitchen-sink BLOCKING ✓ + Flutter monorepo skeleton |
 | W1 | Login + shared shell + Auth + Master Data | Auth §2 + Master Data §4 (folded) | 2 wks | W0 + B1+B2+B3+B4+B19 | RLS persona tests green; login flow green for all roles |
 | W2 | Admin + Settings + Staff + Employee shell | Admin §3 + Employee shell §5 | 1.5 wks | W1 + B11+B23 | Admin CRUD operational; persona ACL tests green |
 | W3 | Inventory greenfield (no V1 surface) | Inventory §6 | 3.5 wks | W2 + B16+B17+B27–B30 + inventory schema baseline | Inventory persona + workflow E2E (PO→GRN→stock→consume) green |
@@ -20,7 +20,7 @@
 | W5 | Orders + POS + KDS + Print | Orders §9 + POS §10 + KDS §11 + Print §12 | 3 wks | W4 + B41–B50 + revenue parity rehearsal | Revenue path E2E green; webhook idempotency verified; printer smoke test pass |
 | W6 | Notifications + Reporting + final brand pass | Notifications + Reporting §13 + Brand §14.5 final pass | 2 wks | W5 + B51+B52+B53 | Full smoke suite green; persona + device matrix complete |
 
-**Total wall time:** 16 wks sequential 1-dev; 10–12 wks parallelized 2-dev (split frontend × backend) per master §7.
+**Total wall time:** 17 wks sequential 1-dev (W0 expanded to 2wk per autoplan 2026-05-07; matu-superapp lesson "Design System Contract Needs Code, Not Just Markdown" + UC1 Flutter monorepo prep); 11–13 wks parallelized 2-dev (split frontend × backend) per master §7. Velocity baseline (W0' Phase 2) measures actual dev hours and may trigger upward revision.
 
 **Cutover:** end of W6, after migration rehearsal × 2 (per `04-CUTOVER-QA-RUNBOOK.md` §Rehearsal Runbook).
 
@@ -41,11 +41,15 @@ Lock the design system before any feature work. Tokens, typography, logo, icons,
 | Logo + icon set | Brand | Ma Tu Concept 01 (B8); SVG + favicon variants |
 | Spacing + radius + shadow scale | Brand | Token-driven; no arbitrary `w-[200px]` / `text-[10px]` |
 | shadcn preset `b1GN1lxvE` applied | Frontend | Per `docs/spec/design-system.md` |
-| App shells (6 surfaces) | Frontend | AdminShell, InventoryShell, FinanceShell, HRShell, EmployeeShell, plus inline POS/KDS shells in `/br/[branchId]/{pos,kds}/layout.tsx` |
+| App shells (6 surfaces) | Frontend | AdminShell, InventoryShell, FinanceShell, HRShell, EmployeeShell, plus inline POS/KDS shells in `/br/[branchId]/{pos,kds}/layout.tsx` (POS/KDS shells RETIRE post-W5 per ADR-0006) |
 | Login shell | Frontend | Strongest brand expression per `01-BRAND-SOFTWARE-PROGRAM.md` |
 | Primitive review | QA + Designer | Confirm: no fake primitives (div/span/p posing as primitives), no fork primitive, no `app-*` per-surface theme |
 | `docs/spec/design-system.md` updated | Designer | Reflect locked tokens |
-| Storybook / preview | Frontend (optional) | Component previews; nice-to-have, not blocking |
+| **Kitchen-sink page (`apps/web/app/admin/kitchen-sink/page.tsx`)** | **Frontend (BLOCKING)** | **Renders every shadcn primitive in `packages/ui/src/components/*` with Vietnamese sample copy. Touch variants demoed. State demonstration (loading/empty/error/success) per surface type. Density demo default vs compact. Convention: adding a primitive without adding to kitchen-sink is incomplete work. Per matu-superapp lesson 2026-05-07 ("Design System Contract Needs Code, Not Just Markdown") + Codex review.** |
+| **Vietnamese copy bootstrap (`packages/shared/src/labels/vi.ts`)** | **Frontend (BLOCKING)** | **`COMMON_ACTIONS_VI` + `COMMON_STATES_VI` + `COMMON_ERRORS_VI` shared label sets seeded. Done as W0' Phase 1.5 (commit pending). Per `COPY-LABEL-SOURCE-OF-TRUTH` regression rule.** |
+| **`tokens.json` audit** | **Frontend (BLOCKING)** | **Confirm all semantic tokens present: foreground/card/popover/secondary/input/ring + brand `--tier-*` + density variants. matu-superapp lesson: token JSON without all foreground tokens = primitives compile with broken contrast. Adopt single-source pattern: hex literals only in token source.** |
+| **Flutter monorepo skeleton** | **Frontend (per UC1=YES)** | **`apps/frontline_flutter/` directory + `pubspec.yaml` + 3 entry points (`lib/main_hub.dart`, `lib/main_handheld.dart`, `lib/main_kds.dart`) + AndroidManifest.xml split per flavor. Per ADR-0006 + ADR-0010. Skeleton compiles clean; hello-world renders per flavor (no business logic yet — that's W5). Velocity baseline (W0' Phase 2) measures dev hours.** |
+| **Design tokens bridge contract** | **Frontend (per UC1)** | **`packages/design-tokens/tokens.json` single source → generates web CSS (`packages/ui/src/styles/`) + Flutter Dart (`apps/frontline_flutter/packages/matu_flutter_tokens/`) via build script. Bridge contract documented; full implementation W5.** |
 
 ### 2.3 Entry gate
 
@@ -56,23 +60,44 @@ Lock the design system before any feature work. Tokens, typography, logo, icons,
 
 - Design tokens locked in `packages/ui/src/styles/` — owner reviews + signs
 - All 6 app shells render with empty content; routing skeleton in place
+- **Kitchen-sink page renders every primitive with Vietnamese sample copy + 5 states (loading/empty/error/success/partial) per surface type — owner manual review checkmark**
+- **`packages/shared/src/labels/vi.ts` `COMMON_ACTIONS_VI` + `COMMON_STATES_VI` + `COMMON_ERRORS_VI` exports landed; existing W1+ developers expected to import from these instead of inline-hardcoding**
+- **`tokens.json` audit complete: all semantic tokens (foreground/card/popover/secondary/input/ring/tier-*) present + verified renders correctly in kitchen-sink**
+- **Flutter monorepo skeleton compiles: `apps/frontline_flutter/` builds cleanly, 3 flavors (hub/handheld/kds) hello-world per flavor, AndroidManifest.xml split per flavor permissions**
+- **Velocity baseline measured (W0' Phase 2): 1 RPC + 1 page + 1 Flutter hello-world + 1 native plugin call dev hours, used to multiply remaining wave plan estimate**
 - Lint rule active: no raw Tailwind palette outside `packages/ui/src/styles/*.css`
 - Lint rule active: no arbitrary dimensions in app code
+- Lint rule active: `pnpm lint:rebuild-strict` (NO-VERSION-SUFFIXES + SAME-PR-DOC-SYNC) at baseline tail per `tasks/lint-baseline.md`
 - Per CLAUDE.md UI rule: "Trước UI rebuild đọc design-system.md → ui.md → tasks/regressions.md và state surface + user job + primitives + regression risks"
-- QA: each shell screenshot at 5 viewports (per `04-CUTOVER-QA-RUNBOOK.md` Device Matrix)
-- Architect: confirms no parallel theme layer / no `app-*` per-surface theme
+- QA: each shell screenshot at 5 viewports (per `04-CUTOVER-QA-RUNBOOK.md` Device Matrix); kitchen-sink screenshot at 5 viewports
+- Architect: confirms no parallel theme layer / no `app-*` per-surface theme; ADR-0006 + ADR-0010 accepted
 
 ### 2.5 Wall time
 
-**1 week.** Sequential — Brand + Frontend + Designer + Architect.
+**2 weeks.** Sequential — Brand + Frontend + Designer + Architect.
+
+Expanded from 1 wk per /autoplan 2026-05-07 — matu-superapp lesson "Design System Contract Needs Code, Not Just Markdown" + Codex review concluded 1 wk for 9 deliverables × multi-role + Flutter monorepo prep is unrealistic. Velocity baseline (W0' Phase 2, 1 wk in parallel) provides empirical multiplier; if baseline shows >1.5× plan, escalate (hire 2nd dev or scope reduce).
+
+**Pre-W0 work (W0' Tier 1):** Done in `rebuild/tier1-port-matu-baseline` branch. Steal-first port from matu-superapp planning baseline:
+- Port CI scripts (`check-no-version-suffixes.mjs` + `check-doc-cross-references.mjs`) — DONE Phase 0
+- Adopt 9 ADRs (0006-0014) + reconcile numbering — DONE Phase 1.1
+- Augment AGENTS.md + change-impact-matrix.md + Vietnamese copy bootstrap — DONE Phase 1.2-1.5
+- Update PROGRAM-READINESS.md §6 with B54-B57 — DONE Phase 1.6
+- Convert `tasks/regressions.md` to `**RULE-NAME**:` format (B54) — Phase 1.4 in progress
+- Velocity baseline sprint — Phase 2 (1 week measurement)
+
+W0 starts AFTER W0' Tier 1 + velocity baseline confirm scope.
 
 ### 2.6 Risks
 
 | Risk | Severity | Mitigation |
 |---|---|---|
-| Token drift from existing components | Medium | Lint rule + grep CI gate |
+| Token drift from existing components | Medium | Lint rule + grep CI gate (`pnpm lint:rebuild-strict`) |
 | Brand cohesion vs operational density (POS/KDS) | High | UX principle: "Operational first" — POS/KDS minimal chrome (per `01-BRAND-SOFTWARE-PROGRAM.md`) |
 | Frontend ahead of backend baseline | Low | W0 can ship empty shells; backend wiring waits for W1 |
+| Kitchen-sink page mark "nice-to-have" → not built → drift | High | W0 exit gate makes kitchen-sink BLOCKING. Owner manual review required for sign-off. (Per matu-superapp lesson 2026-05-07.) |
+| Flutter monorepo prep blocking W0 → W0 slip | Medium | Skeleton only (compile + hello-world per flavor); business logic deferred to W5. Velocity baseline (Phase 2) catches if estimate wrong. |
+| 17 wk sequential 1-dev still optimistic per Codex review | High | Velocity baseline produces empirical multiplier. If >1.5×, escalate — hire 2nd dev or scope reduce W4 HR/Payroll, defer to post-v1.0. |
 
 ---
 
