@@ -45,6 +45,8 @@ export const employee = {
     selfServiceTitle: "Tự phục vụ",
     scheduleTitle: "Lịch ca",
     scheduleDescription: "Ca làm trong tuần",
+    shiftRegisterTitle: "Đăng ký ca",
+    shiftRegisterDescription: "Gửi nguyện vọng ca làm",
     attendanceTitle: "Ngày công",
     attendanceDescription: "Bảng công cá nhân",
     payslipTitle: "Phiếu lương",

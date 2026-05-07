@@ -370,6 +370,12 @@ export default async function EmployeePage() {
             description={copy.scheduleDescription}
           />
           <EmployeeActionItem
+            href="/employee/shift-register"
+            icon={IconCalendarEvent}
+            title={copy.shiftRegisterTitle}
+            description={copy.shiftRegisterDescription}
+          />
+          <EmployeeActionItem
             href="/employee/attendance"
             icon={IconListChecks}
             title={copy.attendanceTitle}
