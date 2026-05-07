@@ -76,11 +76,6 @@ const STATUS_LABELS = {
   cancelled: { label: "Đã huỷ", variant: "secondary" as const },
 };
 
-function formatShortDate(dateStr: string): string {
-  const d = new Date(dateStr + "T00:00:00");
-  return `${d.getDate().toString().padStart(2, "0")}/${(d.getMonth() + 1).toString().padStart(2, "0")}`;
-}
-
 function formatFullDate(dateStr: string): string {
   const d = new Date(dateStr + "T00:00:00");
   return `${d.getDate().toString().padStart(2, "0")}/${(d.getMonth() + 1).toString().padStart(2, "0")}/${d.getFullYear()}`;

@@ -50,7 +50,7 @@ export default async function EmployeeShiftRegisterPage() {
     .lte("date", horizonIso)
     .order("date", { ascending: true });
 
-  const initialRequests = (requestsData ?? []) as InitialRequest[];
+  const initialRequests = (requestsData ?? []) as unknown as InitialRequest[];
 
   return (
     <AppPage width="narrow">

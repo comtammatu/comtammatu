@@ -105,7 +105,7 @@ export const rejectShiftRequest = withAction(
   async (data, { supabase }) => {
     const { error } = await supabase.rpc("reject_shift_request", {
       p_request_id: data.requestId,
-      p_reason: data.reason ?? null,
+      p_reason: data.reason,
     });
 
     if (error) {

@@ -26,7 +26,7 @@ export const submitShiftRequest = withAction(
         p_branch_id: data.branchId,
         p_shift_id: data.shiftId,
         p_date: data.date,
-        p_note: data.note ?? null,
+        p_note: data.note,
       },
     );
 

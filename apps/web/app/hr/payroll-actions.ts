@@ -112,7 +112,7 @@ export const calculatePayroll = withAction(
     // need their final paycheck (BLLĐ Art 48).
     const { data: employees, error: empErr } = await supabase
       .from("employees")
-      .select("id, base_salary, dependents_count, termination_date")
+      .select("id, base_salary, dependents_count")
       .eq("tenant_id", claims.tenant_id);
 
     if (empErr) {
