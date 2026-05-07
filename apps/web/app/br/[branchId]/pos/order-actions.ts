@@ -301,14 +301,30 @@ export async function submitOrder(
 
 /* ─── fetchActiveOrders ─── */
 
+// Widened to mirror SessionOrder so realtime applyOrderUpdate can patch all
+// fields the cashier UI reads (totals, discount metadata, merge/split refs).
+// Adding fields here is REQUIRED before dropping post-mutation refetch — list
+// pane and detail-sheet headers both consume these for in-place updates.
 const ORDER_LIST_SELECT = `
   id,
   order_number,
   order_type,
   status,
   payment_status,
+  payment_method,
+  subtotal,
+  tax_amount,
+  service_charge,
+  discount_amount,
+  discount_type,
+  discount_value,
+  discount_note,
   total_amount,
   table_id,
+  customer_count,
+  note,
+  merged_into_order_id,
+  split_from_order_id,
   created_at,
   tables ( number )
 `;

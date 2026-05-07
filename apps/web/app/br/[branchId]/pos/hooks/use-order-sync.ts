@@ -48,6 +48,31 @@ export interface UseOrderSyncArgs {
   skipFirstSubscribedRefresh?: boolean;
 }
 
+// Coerce a NUMERIC payload field to a number, returning null when the value
+// is null/undefined. supabase-realtime stringifies NUMERIC over the wire
+// (e.g. "165000.00") so always wrap in Number().
+function coerceMoney(value: unknown): number | null {
+  if (value === null || value === undefined) return null;
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+}
+
+// Coerce a nullable string column. Returns `undefined` when payload doesn't
+// carry the field, `null` when explicit null, the string itself otherwise —
+// caller distinguishes "patch absent" from "patch to null".
+function coerceNullableString(value: unknown): string | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  return typeof value === "string" ? value : undefined;
+}
+
+function coerceNullableNumber(value: unknown): number | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  const num = Number(value);
+  return Number.isFinite(num) ? num : undefined;
+}
+
 // Realtime payload row carries only orders-table columns (no join). Spreading
 // raw row over a SessionOrder would leak unknown fields, so we project only
 // the SessionOrder shape and coerce numeric/text variants supabase-realtime
@@ -55,6 +80,12 @@ export interface UseOrderSyncArgs {
 // `transfer_order_table` ghép bàn), we resolve `tables.number` from the
 // cached tables snapshot so the sidebar's `Bàn X` label flips with the
 // new bàn instead of pinning the stale JOIN from `current`.
+//
+// REPLICA IDENTITY FULL on `public.orders` (migration 20260425024802) ensures
+// every UPDATE payload carries the entire row — patches below trust that
+// invariant. If a future migration sets identity back to DEFAULT, only-changed
+// columns would arrive and total/discount/service patches could silently miss
+// → regression test `applyOrderUpdate handles partial payload` documents that.
 function applyOrderUpdate(
   current: SessionOrder,
   payload: Record<string, unknown>,
@@ -66,14 +97,63 @@ function applyOrderUpdate(
   if (typeof payload.order_type === "string")
     next.order_type = payload.order_type;
   if (typeof payload.status === "string") next.status = payload.status;
-  if (payload.payment_status === null) {
-    next.payment_status = null;
-  } else if (typeof payload.payment_status === "string") {
-    next.payment_status = payload.payment_status;
+
+  const paymentStatus = coerceNullableString(payload.payment_status);
+  if (paymentStatus !== undefined) next.payment_status = paymentStatus;
+
+  const paymentMethod = coerceNullableString(payload.payment_method);
+  if (paymentMethod !== undefined) next.payment_method = paymentMethod;
+
+  const subtotal = coerceMoney(payload.subtotal);
+  if (subtotal !== null) next.subtotal = subtotal;
+
+  const taxAmount = coerceMoney(payload.tax_amount);
+  if (taxAmount !== null) next.tax_amount = taxAmount;
+
+  const serviceCharge = coerceMoney(payload.service_charge);
+  if (serviceCharge !== null) next.service_charge = serviceCharge;
+
+  const totalAmount = coerceMoney(payload.total_amount);
+  if (totalAmount !== null) next.total_amount = totalAmount;
+
+  // Discount metadata is paired (CHECK orders_discount_metadata_paired). Patch
+  // all four fields atomically when ANY of them is present in the payload to
+  // avoid a half-applied state where amount=0 but type/value linger from a
+  // prior apply (mirror rule POS-DISCOUNT-CLEAR-METADATA-WHEN-AMOUNT-ZERO).
+  const hasDiscountField =
+    "discount_amount" in payload ||
+    "discount_type" in payload ||
+    "discount_value" in payload ||
+    "discount_note" in payload;
+  if (hasDiscountField) {
+    const discountAmount = coerceMoney(payload.discount_amount);
+    next.discount_amount = discountAmount ?? 0;
+    if (next.discount_amount > 0) {
+      const discountType = coerceNullableString(payload.discount_type);
+      if (discountType !== undefined) next.discount_type = discountType;
+      const discountValue = coerceNullableNumber(payload.discount_value);
+      if (discountValue !== undefined) next.discount_value = discountValue;
+      const discountNote = coerceNullableString(payload.discount_note);
+      if (discountNote !== undefined) next.discount_note = discountNote;
+    } else {
+      next.discount_type = null;
+      next.discount_value = null;
+      next.discount_note = null;
+    }
   }
-  if (payload.total_amount !== undefined && payload.total_amount !== null) {
-    next.total_amount = Number(payload.total_amount);
-  }
+
+  const customerCount = coerceNullableNumber(payload.customer_count);
+  if (customerCount !== undefined) next.customer_count = customerCount;
+
+  const note = coerceNullableString(payload.note);
+  if (note !== undefined) next.note = note;
+
+  const mergedInto = coerceNullableNumber(payload.merged_into_order_id);
+  if (mergedInto !== undefined) next.merged_into_order_id = mergedInto;
+
+  const splitFrom = coerceNullableNumber(payload.split_from_order_id);
+  if (splitFrom !== undefined) next.split_from_order_id = splitFrom;
+
   if (payload.table_id === null) {
     next.table_id = null;
     next.tables = null;
@@ -109,6 +189,13 @@ function buildOptimisticOrder(
       ? (tables.find((t) => t.id === safeTableId)?.number ?? null)
       : null;
 
+  // Discount metadata defaults to fully-cleared shape — INSERT for a new
+  // order can't reference a prior discount apply (paired CHECK enforces it
+  // server-side). When the dedup fallback fetch lands the authoritative row
+  // the metadata, if any, replaces these defaults atomically via setOrders.
+  const discountAmount = Number(payload.discount_amount ?? 0);
+  const hasDiscount = discountAmount > 0;
+
   return {
     id,
     order_number: String(payload.order_number ?? ""),
@@ -120,8 +207,31 @@ function buildOptimisticOrder(
         : typeof payload.payment_status === "string"
           ? payload.payment_status
           : null,
+    payment_method:
+      typeof payload.payment_method === "string"
+        ? payload.payment_method
+        : null,
+    subtotal: Number(payload.subtotal ?? 0),
+    tax_amount: Number(payload.tax_amount ?? 0),
+    service_charge: Number(payload.service_charge ?? 0),
+    discount_amount: discountAmount,
+    discount_type: hasDiscount && typeof payload.discount_type === "string"
+      ? payload.discount_type
+      : null,
+    discount_value: hasDiscount
+      ? coerceNullableNumber(payload.discount_value) ?? null
+      : null,
+    discount_note: hasDiscount && typeof payload.discount_note === "string"
+      ? payload.discount_note
+      : null,
     total_amount: Number(payload.total_amount ?? 0),
     table_id: safeTableId,
+    customer_count: coerceNullableNumber(payload.customer_count) ?? null,
+    note: typeof payload.note === "string" ? payload.note : null,
+    merged_into_order_id:
+      coerceNullableNumber(payload.merged_into_order_id) ?? null,
+    split_from_order_id:
+      coerceNullableNumber(payload.split_from_order_id) ?? null,
     created_at:
       typeof payload.created_at === "string"
         ? payload.created_at

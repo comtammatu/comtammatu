@@ -26,8 +26,20 @@ export interface SessionOrder {
   order_type: string;
   status: string;
   payment_status: string | null;
+  payment_method: string | null;
+  subtotal: number;
+  tax_amount: number;
+  service_charge: number;
+  discount_amount: number;
+  discount_type: string | null;
+  discount_value: number | null;
+  discount_note: string | null;
   total_amount: number;
   table_id: number | null;
+  customer_count: number | null;
+  note: string | null;
+  merged_into_order_id: number | null;
+  split_from_order_id: number | null;
   created_at: string;
   tables: { number: number } | null;
 }
