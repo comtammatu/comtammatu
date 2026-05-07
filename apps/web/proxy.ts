@@ -6,8 +6,11 @@ import {
   extractClaimsFromAccessToken,
   isAdminRoutePath,
   isBetaPath,
+  isFeedbackPublicPath,
   isPublicAppPath,
+  normalizeHost,
   PERMISSION_KEYS,
+  resolveHostSurface,
   resolveModuleFromPath,
   resolvePostLoginRedirect,
   stripBetaPrefix,
@@ -23,6 +26,11 @@ import { getClientIp } from "@lib/network/client-ip";
 // POS-NETWORK-GATE-GRACE-IS-SECURITY-CEILING ("kill-switch is loud, logged
 // in proxy startup"). Vercel log drain captures this for SIEM ingestion.
 let NETWORK_GATE_OFF_WARNED = false;
+
+// Module-level flag — warn once per warm Edge instance when production runs
+// without NEXT_PUBLIC_FEEDBACK_HOST set. Without it, /r/* shares origin with
+// admin → cookie/SW/CSP boundary collapses. Mirrors POS network gate pattern.
+let FEEDBACK_HOST_UNSET_WARNED = false;
 
 /** Create a redirect that preserves Set-Cookie from updateSession response */
 function redirectWithCookies(
@@ -64,6 +72,60 @@ function redirectToDefaultLanding(
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // Host gate (Auth v2 + feedback isolation) — runs BEFORE auth/public-path
+  // checks so the public feedback host cannot serve admin routes even though
+  // proxy short-circuits `isPublicAppPath`. Single chokepoint; downstream
+  // layouts/pages MUST NOT re-implement this.
+  //
+  // Opt-in via env: when NEXT_PUBLIC_FEEDBACK_HOST is unset, gate is a no-op
+  // and behaviour matches pre-split (single host serves both surfaces). Set
+  // both NEXT_PUBLIC_FEEDBACK_HOST and NEXT_PUBLIC_APP_HOST in production to
+  // enforce origin isolation between /r/* (public) and admin/POS.
+  const feedbackHost = process.env.NEXT_PUBLIC_FEEDBACK_HOST;
+  const appHost = process.env.NEXT_PUBLIC_APP_HOST;
+  const hostHeader = request.headers.get("host");
+  const hostSurface = resolveHostSurface(hostHeader, {
+    feedbackHost,
+    appHost,
+  });
+
+  // Loud warning once per warm Edge instance when production runs without the
+  // feedback host configured. Mirrors POS network gate kill-switch pattern.
+  if (
+    process.env.NODE_ENV === "production"
+    && !feedbackHost
+    && !FEEDBACK_HOST_UNSET_WARNED
+  ) {
+    console.warn(
+      "[host-gate] NEXT_PUBLIC_FEEDBACK_HOST unset in production — feedback /r/* shares origin with admin app. See regressions.md FEEDBACK-HOST-SPLIT-COOKIE-DOMAIN-MUST-BE-HOST-ONLY.",
+    );
+    FEEDBACK_HOST_UNSET_WARNED = true;
+  }
+
+  if (hostSurface === "feedback") {
+    // Feedback host: only `/r/*` is reachable. Everything else (admin, login,
+    // /api/*, /sw.js, /manifest.webmanifest, /favicon-related root) returns
+    // 404 — admin paths must not enumerate on the public origin.
+    if (!isFeedbackPublicPath(pathname)) {
+      return new NextResponse(null, { status: 404 });
+    }
+    // /r/* on feedback host — bypass auth + skip session refresh entirely so
+    // no `sb-*-auth-token` cookie is ever set on the feedback origin.
+    return NextResponse.next();
+  }
+
+  if (hostSurface === "app" && feedbackHost && isFeedbackPublicPath(pathname)) {
+    // App host receiving /r/* (e.g. legacy printed QR or shared link) →
+    // 308 to feedback host so the canonical origin serves the form. 308 keeps
+    // method + body so any future POST to /r/<token> redirects intact.
+    const target = new URL(
+      pathname + request.nextUrl.search,
+      `https://${normalizeHost(feedbackHost) ?? feedbackHost}`,
+    );
+    return NextResponse.redirect(target, 308);
+  }
+
   const surface: AuthSurface = isBetaPath(pathname) ? "beta" : "legacy";
 
   // Public paths — skip auth. Includes `/access-denied` so the page can render
@@ -79,17 +141,14 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Refresh session + get user
-  const { user, response, supabase } = await updateSession(request);
-
-  // Single session read — reused across login bounce + route ACL.
-  // getSession() is a cookie-only read (no network), and extractClaims
-  // decodes the JWT locally. Hoisting eliminates the previous double-call
-  // race where two reads could observe different cookie snapshots and
-  // sporadically produce claims=null → /access-denied bounce.
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  // Read session — cookie decode + auto-refresh via setAll callback when the
+  // access token is past EXPIRY_MARGIN_MS. Single read across login bounce +
+  // route ACL: `session` is the authenticated marker (truthy) AND carries the
+  // access_token used to decode claims locally. Avoid `session.user.*` reads —
+  // @supabase/auth-js wraps it in insecureUserWarningProxy on the server.
+  // Spec: regressions.md PROXY-NEVER-CALL-GETUSER. Banned-user revocation
+  // lives in Server Actions via getAuthContext (apps/web/app/_lib/auth.ts).
+  const { session, response, supabase } = await updateSession(request);
   const claims = extractClaimsFromAccessToken(session?.access_token);
 
   // Login page: special handling.
@@ -98,7 +157,7 @@ export async function proxy(request: NextRequest) {
       return response;
     }
 
-    if (!user) return response; // unauthenticated → show login
+    if (!session) return response; // unauthenticated → show login
     // Authenticated → bounce to role's post-login destination.
     if (claims) {
       const returnTo = request.nextUrl.searchParams.get("returnTo");
@@ -112,7 +171,7 @@ export async function proxy(request: NextRequest) {
   }
 
   // Not authenticated → send to login with returnTo preserved.
-  if (!user) {
+  if (!session) {
     const url = request.nextUrl.clone();
     url.pathname = surface === "beta" ? "/beta/login" : "/login";
     url.search = "";
