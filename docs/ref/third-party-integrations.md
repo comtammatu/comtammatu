@@ -10,17 +10,17 @@
 
 | Nhóm                  | Vendor chọn        | Fallback             | Module        |
 | --------------------- | ------------------ | -------------------- | ------------- |
-| **QR thanh toán**     | VietQR (NAPAS)     | —                    | M4 Payment    |
-| **E-wallet #1**       | MoMo               | —                    | M4 Payment    |
+| **QR thanh toán**     | VietQR (NAPAS)     | —                    | Payment    |
+| **E-wallet #1**       | MoMo               | —                    | Payment    |
 | **E-wallet #2**       | ZaloPay            | —                    | Post-v1.0     |
 | **Card payment**      | VNPay              | —                    | Post-v1.0     |
-| **HĐĐT**              | MISA meInvoice     | ViettelSinvoice      | M6 Finance    |
+| **HĐĐT**              | MISA meInvoice     | ViettelSinvoice      | Finance    |
 | **OTP / Notify**      | Zalo ZNS           | SpeedSMS             | Post-v1.0     |
-| **Email**             | Resend.com         | —                    | M6 Finance    |
+| **Email**             | Resend.com         | —                    | Finance    |
 | **Delivery dispatch** | Ahamove            | —                    | Post-v1.0     |
 | **Delivery platform** | GrabFood           | ShopeeFood (partner) | Post-v1.0     |
-| **BHXH**              | iBHXH / VNPT-BHXH  | Manual portal        | M7 Nhân sự & tiền lương |
-| **eTax / GTGT**       | Manual eTax portal | HTKK desktop         | M7 Nhân sự & tiền lương |
+| **BHXH**              | iBHXH / VNPT-BHXH  | Manual portal        | Nhân sự & tiền lương |
+| **eTax / GTGT**       | Manual eTax portal | HTKK desktop         | Nhân sự & tiền lương |
 
 ---
 
@@ -28,7 +28,7 @@
 
 ### 1.1 VietQR — Chuyển khoản QR ngân hàng
 
-**Lựa chọn**: ✅ **Tích hợp M4 (Payment)**
+**Lựa chọn**: ✅ **Tích hợp Payment**
 
 | Thuộc tính    | Giá trị                                                            |
 | ------------- | ------------------------------------------------------------------ |
@@ -55,7 +55,7 @@
 
 ### 1.2 MoMo — E-wallet #1
 
-**Lựa chọn**: ✅ **Tích hợp M4 (Payment)**
+**Lựa chọn**: ✅ **Tích hợp Payment**
 
 | Thuộc tính       | Giá trị                                         |
 | ---------------- | ----------------------------------------------- |
@@ -132,7 +132,7 @@
 
 ### 2.1 MISA meInvoice — Provider chính
 
-**Lựa chọn**: ✅ **Tích hợp M6 (Finance) — Provider ưu tiên**
+**Lựa chọn**: ✅ **Tích hợp Finance — Provider ưu tiên**
 
 | Thuộc tính      | Giá trị                                                 |
 | --------------- | ------------------------------------------------------- |
@@ -413,9 +413,9 @@ Giả định: 500 order/ngày, 5 chi nhánh, ~15,000 order/tháng
 
 | Module            | Tích hợp                                              |
 | ----------------- | ----------------------------------------------------- |
-| **M4 Payment**    | VietQR + MoMo                                         |
-| **M6 Finance**    | MISA meInvoice + Resend email                         |
-| **M7 Nhân sự & tiền lương** | Xuất data BHXH / thuế TNCN (no API, just export)      |
+| **Payment**    | VietQR + MoMo                                         |
+| **Finance**    | MISA meInvoice + Resend email                         |
+| **Nhân sự & tiền lương** | Xuất data BHXH / thuế TNCN (no API, just export)      |
 | **Post-v1.0**     | Zalo ZNS, SpeedSMS, ZaloPay, VNPay, GrabFood, Ahamove |
 
 ---

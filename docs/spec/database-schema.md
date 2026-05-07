@@ -1,8 +1,8 @@
 # Database Schema Reference
 
-> **⚠️ FROZEN — Sprint 1 / early-M2 era.** Do not trust the rest of this file as current.
+> **⚠️ FROZEN — early-2026.** Do not trust the rest of this file as current.
 >
-> This reference still documents the dropped `staff_role` ENUM, the removed `profiles.role` column, and tagged "future" area_manager scoping that has since shipped (Auth v2). Many domains added since (Auth v2, M5-Ext production, Finance, Print Agent, Notifications, Trust/QC) are missing entirely.
+> This reference still documents the dropped `staff_role` ENUM, the removed `profiles.role` column, and tagged "future" area_manager scoping that has since shipped (Auth). Many domains added since (Auth, Production, Finance, Print Agent, Notifications, Trust/QC) are missing entirely.
 >
 > **Canonical sources for the current schema:**
 > 1. `packages/database/src/types/database.types.ts` (regenerated via `pnpm db:types`)
@@ -112,7 +112,7 @@ owner, super_manager, area_manager, branch_manager, cashier, waiter, chef, offic
 | chef           | Yes             | Own branch  | Route: `/br/[branchId]/kds`                       |
 | office         | No              | HQ-wide     | Route: `/employee`                                |
 
-### system_settings (Sprint 1 S2)
+### system_settings
 
 Tenant-scoped key/value configuration.
 
@@ -168,7 +168,7 @@ Tenant-scoped key/value configuration.
 
 ### admin_update_profile(target_id, role, branch_id, is_active, full_name, phone)
 
-> Note: Old 4-param overload (from v0.1.1) dropped in pre-M2 cleanup migration. Only the 6-param version exists.
+> Note: Old 4-param overload (from v0.1.1) dropped in earlier cleanup migration. Only the 6-param version exists.
 
 Actor scope restrictions:
 
@@ -185,7 +185,7 @@ Additional checks:
 - `super_manager` cannot modify/deactivate `owner`
 - Operational roles (`cashier`, `waiter`, `chef`, `branch_manager`) require `branch_id`
 - `branch_id` must belong to same tenant (cross-tenant check)
-- `p_full_name` and `p_phone` use COALESCE — pass NULL to keep existing value (Sprint 1 S3)
+- `p_full_name` and `p_phone` use COALESCE — pass NULL to keep existing value
 
 ## RLS Policies (v0.1.1)
 
@@ -237,7 +237,7 @@ Additional checks:
 
 Admin invite creates auth user via Supabase Admin API with `raw_app_meta_data` containing `tenant_id`, `branch_id`, `role`. No public signup endpoint.
 
-## Menu Tables (Sprint 1 S4)
+## Menu Tables
 
 ### menu_categories
 
@@ -325,7 +325,7 @@ Junction table: which side items can pair with which main items.
 | idx_menu_item_available_sides_side   | menu_item_available_sides(side_item_id) | Side item lookup |
 | idx_menu_item_available_sides_tenant | menu_item_available_sides(tenant_id)    | RLS filter       |
 
-## Tables & Zones (Sprint 1 S5)
+## Tables & Zones
 
 ### branch_zones
 
@@ -367,7 +367,7 @@ Junction table: which side items can pair with which main items.
 | idx_tables_branch       | tables(branch_id)       | Branch lookup |
 | idx_tables_zone         | tables(zone_id)         | Zone lookup   |
 
-## Order Tables (M2 S1)
+## Order Tables
 
 ### orders
 
@@ -472,7 +472,7 @@ new → confirmed → preparing → ready → served → completed
 | idx_order_status_history_tenant | order_status_history(tenant_id) | RLS filter                    |
 | idx_order_status_history_order  | order_status_history(order_id)  | History for a given order     |
 
-## POS Terminals & Sessions (M2 S2)
+## POS Terminals & Sessions
 
 ### pos_terminals
 
@@ -524,7 +524,7 @@ This enforces at the database level that a terminal can have at most one open se
 
 > Note: `DELETE` is not granted on `pos_sessions`. Sessions are permanent business records. Close a session by updating `status = 'closed'` and setting `closed_at`, `closed_by`, and cash reconciliation fields.
 
-### orders (updated M2 S2)
+### orders (updated)
 
 The `orders` table receives one new nullable column that links a POS transaction to the session in which it was created:
 
@@ -559,7 +559,7 @@ This allows per-session revenue reporting and reconciliation: all orders taken d
 | idx_pos_sessions_one_open | pos_sessions(terminal_id) WHERE status = 'open' | Partial unique — one open session per terminal |
 | idx_orders_pos_session    | orders(pos_session_id)                          | Orders within a session (reconciliation)       |
 
-## KDS Tables (M3)
+## KDS Tables
 
 ### kds_stations
 
@@ -655,9 +655,9 @@ pending → preparing → ready → served
 
 > Note: `check_order_ready` has no public GRANT — internal only, called from `bump_kds_ticket`.
 
-> Note: `create_order` RPC was updated in M3 to call `route_order_to_kds` automatically after order creation, and now includes server-side price verification (re-fetches prices from menu tables).
+> Note: `create_order` RPC was updated to call `route_order_to_kds` automatically after order creation, and now includes server-side price verification (re-fetches prices from menu tables).
 
-## Stocktake (M5-Ext Phase 0)
+## Stocktake
 
 ### stocktake_sessions
 
@@ -697,7 +697,7 @@ pending → preparing → ready → served
 | ----------------------------------------- | ------- | ------------------------------------------------------------------------------------ |
 | `complete_stocktake(p_session_id BIGINT)` | void    | Re-snapshots current stock, computes adjustments, inserts count_adjustment movements |
 
-### Additional M5-Ext columns
+### Additional columns
 
 | Table             | Column                | Type          | Notes                                                                                      |
 | ----------------- | --------------------- | ------------- | ------------------------------------------------------------------------------------------ |
@@ -722,14 +722,14 @@ pending → preparing → ready → served
 | production_order_items | quantity           | NUMERIC(15,3) | Produced quantity                                                                            |
 | production_order_items | unit_cost_at_production | NUMERIC(15,2) | Snapshot of unit cost at completion                                                         |
 
-### Additional M5-Ext indexes
+### Additional indexes
 
 | Index                          | Columns                                                              | Purpose            |
 | ------------------------------ | -------------------------------------------------------------------- | ------------------ |
 | idx_grn_items_expiry           | grn_items(expiry_date) WHERE NOT NULL                                | Expiry alert query |
 | idx_supplier_invoices_ap_aging | supplier_invoices(tenant_id, payment_status, due_date) WHERE != paid | AP aging queries   |
 
-### consume_stock_for_order — yield_factor fix (M5-Ext S8)
+### consume_stock_for_order — yield_factor fix
 
 The `consume_stock_for_order` RPC now uses `recipes.yield_factor` when calculating raw ingredient needs:
 
@@ -743,21 +743,21 @@ need_qty = SUM(order_item.quantity * recipe.quantity / recipe.yield_factor)
 
 ---
 
-## Future Tables (by phase)
+## Future Tables (by module)
 
-### M4 — Payment
+### Payment
 
 - payments, payment_webhooks, refunds
 
-### M5 — Stock (SHIPPED)
+### Stock (SHIPPED)
 
 - ingredients, recipes, stock_levels, stock_movements, suppliers, purchase_orders, purchase_order_items, goods_received_notes, grn_items, supplier_invoices, stock_transfers, stock_transfer_items, stocktake_sessions, stocktake_lines, production_recipes, production_orders, production_order_items
 - future split when needed: `inventory_locations` + location-level ledger per `docs/plan/inventory-location-ledger.md`
 
-### M6 — Finance
+### Finance
 
 - tax_invoices, chart_of_accounts, journal_entries, mv_daily_revenue, mv_top_items, mv_food_cost
 
-### M7 — Nhân sự & tiền lương
+### Nhân sự & tiền lương
 
 - employees, shifts, attendance_records, payroll_periods, payroll_entries

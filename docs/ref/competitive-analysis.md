@@ -79,7 +79,7 @@ GIÁ THẤP / ĐƠN GIẢN
 | --------------------------------- | ------------- | ---- | -------- | ----------- | -------- | ----- |
 | Tiền mặt                          | ✅            | ✅   | ✅       | ✅          | ✅       | ✅    |
 | VietQR / chuyển khoản             | ✅            | ✅   | ✅       | ✅          | ✅       | ✅    |
-| MoMo                              | ✅ M4         | ✅   | 🟡       | ✅          | ✅       | ✅    |
+| MoMo                              | ✅         | ✅   | 🟡       | ✅          | ✅       | ✅    |
 | VNPay                             | ❌ Post-v1    | 🟡   | ✅       | 🟡          | ✅       | ✅    |
 | Visa/Mastercard                   | ❌            | 🟡   | ✅       | 🟡          | ✅       | ✅    |
 | Thanh toán chia nhiều phương thức | ❌            | ✅   | ✅       | ✅          | ✅       | ✅    |
@@ -88,12 +88,12 @@ GIÁ THẤP / ĐƠN GIẢN
 
 | Tính năng                          | Cơm Tấm Má Tư | iPOS              | KiotViet         | MISA CukCuk         | Sapo FnB | bePOS |
 | ---------------------------------- | ------------- | ----------------- | ---------------- | ------------------- | -------- | ----- |
-| Xuất HĐĐT đầu ra                   | ✅ M6         | ✅ (iPOS Invoice) | ✅ (KV-EINVOICE) | ✅ (MISA meInvoice) | 🟡       | ⚠️    |
+| Xuất HĐĐT đầu ra                   | ✅         | ✅ (iPOS Invoice) | ✅ (KV-EINVOICE) | ✅ (MISA meInvoice) | 🟡       | ⚠️    |
 | Multi-provider (Viettel/MISA/VNPT) | ✅            | ✅ (tự có)        | ✅ (tự có)       | ✅ (tự có)          | 🟡       | ⚠️    |
-| Hóa đơn đầu vào / Supplier         | ✅ M6         | 🟡                | ❌               | 🟡                  | ❌       | ❌    |
-| 3-way matching (PO/GRN/HĐ)         | ✅ M6         | ❌                | ❌               | ❌                  | ❌       | ❌    |
-| VAT khấu trừ đầu vào               | ✅ M6         | ❌                | ❌               | 🟡                  | ❌       | ❌    |
-| Báo cáo thuế GTGT hàng tháng       | ✅ M6         | 🟡                | 🟡               | ✅                  | ❌       | ❌    |
+| Hóa đơn đầu vào / Supplier         | ✅         | 🟡                | ❌               | 🟡                  | ❌       | ❌    |
+| 3-way matching (PO/GRN/HĐ)         | ✅         | ❌                | ❌               | ❌                  | ❌       | ❌    |
+| VAT khấu trừ đầu vào               | ✅         | ❌                | ❌               | 🟡                  | ❌       | ❌    |
+| Báo cáo thuế GTGT hàng tháng       | ✅         | 🟡                | 🟡               | ✅                  | ❌       | ❌    |
 
 ### 2.5 Kho hàng (Inventory)
 
@@ -104,10 +104,10 @@ GIÁ THẤP / ĐƠN GIẢN
 | Xuất kho tự động theo order    | ✅               | ✅   | ✅       | ✅          | ✅       | 🟡    |
 | Cảnh báo tồn kho min/max       | ✅               | ✅   | ✅       | ✅          | ✅       | 🟡    |
 | Kiểm kê kho                    | ✅               | ✅   | ✅       | ✅          | 🟡       | ❌    |
-| Phiếu nhập kho GRN             | ✅ M5            | 🟡   | ✅       | ✅          | ✅       | ❌    |
-| Purchase Order (PO)            | ✅ M5            | 🟡   | ✅       | 🟡          | 🟡       | ❌    |
+| Phiếu nhập kho GRN             | ✅            | 🟡   | ✅       | ✅          | ✅       | ❌    |
+| Purchase Order (PO)            | ✅            | 🟡   | ✅       | 🟡          | 🟡       | ❌    |
 | FIFO / FEFO                    | 🟡 giá bình quân | ❌   | ❌       | ❌          | ❌       | ❌    |
-| Phân tích Food cost            | ✅ M6            | ✅   | 🟡       | ✅          | 🟡       | ❌    |
+| Phân tích Food cost            | ✅            | ✅   | 🟡       | ✅          | 🟡       | ❌    |
 
 ### 2.6 Loyalty & Khách hàng thân thiết (Post-v1.0)
 
@@ -124,27 +124,27 @@ GIÁ THẤP / ĐƠN GIẢN
 
 | Tính năng                 | Cơm Tấm Má Tư | iPOS             | KiotViet | MISA CukCuk | Sapo FnB | bePOS |
 | ------------------------- | ------------- | ---------------- | -------- | ----------- | -------- | ----- |
-| Quản lý nhân viên / hồ sơ | ✅ M7         | ✅               | ✅       | ✅          | ✅       | 🟡    |
-| Ca làm / lịch trực        | ✅ M7         | ✅               | ✅       | ✅          | ✅       | 🟡    |
-| Chấm công                 | ✅ M7         | ✅ (FaceID/WiFi) | ✅       | ✅          | 🟡       | 🟡    |
-| Tính lương tự động        | ✅ M7         | ✅               | ✅       | ✅          | 🟡       | ❌    |
-| BHXH/BHYT/BHTN            | ✅ M7         | ⚠️               | ❌       | ⚠️          | ❌       | ❌    |
-| Thuế TNCN lũy tiến        | ✅ M7         | ⚠️               | ❌       | ⚠️          | ❌       | ❌    |
-| Hợp đồng lao động         | ✅ M7         | ❌               | ❌       | ❌          | ❌       | ❌    |
-| Quyết toán thuế TNCN      | ✅ M7         | ❌               | ❌       | ❌          | ❌       | ❌    |
+| Quản lý nhân viên / hồ sơ | ✅         | ✅               | ✅       | ✅          | ✅       | 🟡    |
+| Ca làm / lịch trực        | ✅         | ✅               | ✅       | ✅          | ✅       | 🟡    |
+| Chấm công                 | ✅         | ✅ (FaceID/WiFi) | ✅       | ✅          | 🟡       | 🟡    |
+| Tính lương tự động        | ✅         | ✅               | ✅       | ✅          | 🟡       | ❌    |
+| BHXH/BHYT/BHTN            | ✅         | ⚠️               | ❌       | ⚠️          | ❌       | ❌    |
+| Thuế TNCN lũy tiến        | ✅         | ⚠️               | ❌       | ⚠️          | ❌       | ❌    |
+| Hợp đồng lao động         | ✅         | ❌               | ❌       | ❌          | ❌       | ❌    |
+| Quyết toán thuế TNCN      | ✅         | ❌               | ❌       | ❌          | ❌       | ❌    |
 
 ### 2.8 Báo cáo & Analytics
 
 | Tính năng                    | Cơm Tấm Má Tư | iPOS | KiotViet | MISA CukCuk       | Sapo FnB | bePOS |
 | ---------------------------- | ------------- | ---- | -------- | ----------------- | -------- | ----- |
-| Dashboard doanh thu realtime | ✅ M6         | ✅   | ✅       | ✅                | ✅       | ✅    |
+| Dashboard doanh thu realtime | ✅         | ✅   | ✅       | ✅                | ✅       | ✅    |
 | Báo cáo theo chi nhánh       | ✅            | ✅   | ✅       | ✅                | ✅       | ✅    |
-| Phân tích menu / top món     | ✅ M6         | ✅   | ✅       | ✅                | ✅       | 🟡    |
-| Food cost analysis           | ✅ M6         | ✅   | 🟡       | ✅                | 🟡       | ❌    |
-| Báo cáo tài chính (VAS)      | ✅ M6         | ❌   | ❌       | ✅ (MISA kế toán) | ❌       | ❌    |
-| Báo cáo lương & thuế TNCN    | ✅ M7         | ⚠️   | ❌       | ⚠️                | ❌       | ❌    |
-| Báo cáo thuế GTGT            | ✅ M6         | 🟡   | 🟡       | ✅                | ❌       | ❌    |
-| Materialized Views / OLAP    | ✅ M6         | ❌   | ❌       | ❌                | ❌       | ❌    |
+| Phân tích menu / top món     | ✅         | ✅   | ✅       | ✅                | ✅       | 🟡    |
+| Food cost analysis           | ✅         | ✅   | 🟡       | ✅                | 🟡       | ❌    |
+| Báo cáo tài chính (VAS)      | ✅         | ❌   | ❌       | ✅ (MISA kế toán) | ❌       | ❌    |
+| Báo cáo lương & thuế TNCN    | ✅         | ⚠️   | ❌       | ⚠️                | ❌       | ❌    |
+| Báo cáo thuế GTGT            | ✅         | 🟡   | 🟡       | ✅                | ❌       | ❌    |
+| Materialized Views / OLAP    | ✅         | ❌   | ❌       | ❌                | ❌       | ❌    |
 
 ### 2.9 Multi-Branch & Vận hành chuỗi
 
@@ -166,7 +166,7 @@ GIÁ THẤP / ĐƠN GIẢN
 | Custom-built cho 1 tenant         | ✅ (lợi thế)  | ❌   | ❌       | ❌          | ❌       | ❌    |
 | Không vendor lock-in              | ✅            | ❌   | ❌       | ❌          | ❌       | ❌    |
 | Offline mode                      | ❌            | 🟡   | ✅       | 🟡          | 🟡       | ✅    |
-| In hóa đơn (printer)              | ✅ M2+M3      | ✅   | ✅       | ✅          | ✅       | ✅    |
+| In hóa đơn (printer)              | ✅      | ✅   | ✅       | ✅          | ✅       | ✅    |
 
 ---
 
@@ -227,7 +227,7 @@ Các phần mềm SaaS dùng logic phân quyền ở application layer. Hệ th�
 | Chưa kết nối GrabFood / ShopeeFood | 🟠 Trung bình                | Post-v1.0 (nếu có)          |
 | QR Self-order chưa live            | 🟡 Thấp                      | Post-v1.0                   |
 | Chưa có app mobile native          | 🟡 Thấp                      | PWA đủ dùng trước mắt       |
-| Chưa có tách bill                  | 🟡 Thấp                      | M2 hoặc backlog             |
+| Chưa có tách bill                  | 🟡 Thấp                      | backlog             |
 | Chưa có marketing automation       | 🟢 Thấp                      | Post-v1.0                   |
 
 ---
