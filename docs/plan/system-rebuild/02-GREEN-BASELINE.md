@@ -107,8 +107,39 @@ Do not copy these patterns from blue into green:
 3. Add seed data for tenant/branch/positions/permissions.
 4. Implement auth/session and claim helpers.
 5. Implement POS/KDS/payment vertical slice.
-6. Implement Inventory V2 ledger and transfers.
+6. Implement Inventory ledger and transfers.
 7. Add Finance/HR/Employee foundations.
 8. Add realtime/outbox.
 9. Add storage/evidence.
 10. Run full migration rehearsal before production cutover.
+
+## Squash Strategy
+
+(Adopted 2026-05-07 from matu-superapp ADR-0001. Folded as section here per ADR reconciliation A2 — no standalone ADR needed since this is core baseline policy.)
+
+The first baseline migration must apply from an empty Supabase project but proven domain semantics must not be lost. Three options were considered:
+
+- **Option A** — Replay every historical migration into the new repo. Imports history noise + accumulated mistakes; rejected.
+- **Option B** — Write one deliberate baseline snapshot and future deltas. **Selected.**
+- **Option C** — Rebuild schema domain by domain while re-specifying every critical RPC. Used as targeted review pass for high-risk domains (Auth, Finance, Inventory) within Option B framework.
+
+The first baseline migration must:
+
+- Apply from an empty database (`supabase db reset` or equivalent local reset succeeds).
+- Include P0 tables, RLS policies, RPCs, indexes, grants, and seed data.
+- Preserve named regression semantics in `tasks/regressions.md`.
+- Generate database types through `pnpm db:types`.
+- Have SQL tests for RLS/RPC critical paths before UI expansion.
+
+Acceptance gates:
+
+- Seed creates demo tenant, legal profile, branches/sites, roles, permissions, menu, inventory, and test users.
+- SQL tests cover auth/RLS negative cases, payment slot reuse, refund preconditions, stock ledger writes, HĐĐT state transitions, and period close guard.
+- Generated types include every table/RPC called by app code.
+- Data classification template exists before cutover planning (per `03-DATA-MIGRATION-POLICY.md`).
+
+Consequences:
+
+- W1 should be planned as 2-3 weeks, not a one-week task.
+- Every domain RPC must have a named owner and test expectation.
+- Future migrations start after the accepted baseline; do not keep rewriting baseline once runtime work begins unless the owner explicitly reopens W1.

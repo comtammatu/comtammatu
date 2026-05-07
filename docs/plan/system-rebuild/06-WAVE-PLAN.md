@@ -805,7 +805,7 @@ Wave plan feeds the consolidated sign-off table at `PROGRAM-READINESS.md §6`. N
 - **Master:** `PROGRAM-READINESS.md` §4 (module index), §6 (sign-off), §7 (wave summary), §9 (Go/No-Go gate)
 - **Module catalog:** `05-MODULE-CATALOG.md` (per-module deliverables + sign-off blockers B22–B53)
 - **Strategy:** `00-DEBATE-SYNTHESIS.md`, `01-BRAND-SOFTWARE-PROGRAM.md`, `02-GREEN-BASELINE.md`, `03-DATA-MIGRATION-POLICY.md`, `04-CUTOVER-QA-RUNBOOK.md`
-- **ADRs:** `adr/0001-auth-migration.md`, `adr/0002-database-provider.md`, `adr/0003-cutover-rollback.md`, `adr/0004-position-code-normalization.md`, `adr/0005-tenants-owner-user-id.md` (deferred)
+- **ADRs:** `docs/plan/adr/0001-auth-migration.md`, `docs/plan/adr/0002-database-provider.md`, `docs/plan/adr/0003-cutover-rollback.md`, `docs/plan/adr/0004-position-code-normalization.md`, `docs/plan/adr/0005-owner-identity-dual-source.md` (deferred). Plus W1 ADR set adopted from matu-superapp 2026-05-07: `docs/plan/adr/0006-frontline-flutter-client.md`, `docs/plan/adr/0007-branch-hub-architecture.md`, `docs/plan/adr/0008-handheld-failover-mode.md`, `docs/plan/adr/0009-background-jobs-runtime.md`, `docs/plan/adr/0010-flutter-implementation-choices.md`, `docs/plan/adr/0011-mfa-and-recovery.md`, `docs/plan/adr/0012-tenant-configuration-separation.md`, `docs/plan/adr/0013-rate-limit-fallback-policy.md`, `docs/plan/adr/0014-realtime-channel-lifecycle.md`. Index: `docs/plan/adr/README.md`.
 - **Existing canonical surfaces:** `docs/modules/{auth,database,web-app,ui,security,infrastructure}.md`
 - **Operational:** `tasks/{regressions,lessons,todo}.md`
 

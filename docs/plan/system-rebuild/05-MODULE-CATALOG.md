@@ -909,7 +909,7 @@ Per `02-GREEN-BASELINE.md` "Do Not Port" + `competitive-analysis.md` Post-v1.0 l
 - **Master:** `PROGRAM-READINESS.md` §4 (module index), §6 (sign-off table), §9 (Go/No-Go gate)
 - **Strategy:** `00-DEBATE-SYNTHESIS.md`, `01-BRAND-SOFTWARE-PROGRAM.md`, `02-GREEN-BASELINE.md`, `03-DATA-MIGRATION-POLICY.md`, `04-CUTOVER-QA-RUNBOOK.md`
 - **Wave plan:** `06-WAVE-PLAN.md` (W0–W6 detailed; references this catalog per-wave)
-- **ADRs:** `adr/0001-auth-migration.md`, `adr/0002-database-provider.md`, `adr/0003-cutover-rollback.md`, `adr/0004-position-code-normalization.md`, `adr/0005-tenants-owner-user-id.md` (deferred)
+- **ADRs:** `docs/plan/adr/0001-auth-migration.md`, `docs/plan/adr/0002-database-provider.md`, `docs/plan/adr/0003-cutover-rollback.md`, `docs/plan/adr/0004-position-code-normalization.md`, `docs/plan/adr/0005-owner-identity-dual-source.md` (deferred). Plus W1 ADR set adopted from matu-superapp 2026-05-07: `docs/plan/adr/0006-frontline-flutter-client.md`, `docs/plan/adr/0007-branch-hub-architecture.md`, `docs/plan/adr/0008-handheld-failover-mode.md`, `docs/plan/adr/0009-background-jobs-runtime.md`, `docs/plan/adr/0010-flutter-implementation-choices.md`, `docs/plan/adr/0011-mfa-and-recovery.md`, `docs/plan/adr/0012-tenant-configuration-separation.md`, `docs/plan/adr/0013-rate-limit-fallback-policy.md`, `docs/plan/adr/0014-realtime-channel-lifecycle.md`. Index: `docs/plan/adr/README.md`.
 - **Existing canonical surfaces:** `docs/modules/{auth,database,web-app,ui,security,infrastructure}.md`
 - **Permission catalog:** `packages/shared/src/auth/permissions.ts` (94 keys); route ACL: `packages/shared/src/auth/module-acl.ts`
 - **Schema reference:** `docs/modules/database.md` (canonical); `docs/spec/database-schema.md` (FROZEN at early-2026)
