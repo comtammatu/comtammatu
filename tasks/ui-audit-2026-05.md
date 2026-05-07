@@ -31,14 +31,21 @@
 | Hand-rolled Empty `<Empty className="border bg-card` | `grep -rln 'Empty className="border bg-card' apps/web/app/**/*.tsx` | 6 |
 | `PageHero` callers (legacy) | `grep -rln 'PageHero\|page-hero' apps/web/app/**/*.tsx` | 16 |
 
-## Frozen surfaces (do NOT touch in any wave)
+## Frozen surfaces
 
-1. `apps/web/app/orders/refund-actions.ts` + `apps/web/app/orders/refunds-client.tsx` — M4 P0-1 RPC chưa wire
-2. `apps/web/app/finance/audit-trail/*` — leak risk
-3. `apps/web/app/admin/settings/payments/*` — credentials leak
-4. `apps/web/app/finance/invoice-list.tsx` cancel flow — HĐĐT compliance
-5. `apps/web/app/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx` — pendingDetailReopenRef + click-snapshot
-6. `apps/web/app/br/[branchId]/kds/order-card.tsx` + `apps/web/app/br/[branchId]/kds/_hooks/use-kds-realtime.ts` — memo + token-refresh
+Status updated 2026-05-07 sau khi rebuild xong + post-rebuild verification per surface.
+
+### Still FROZEN (do NOT touch)
+
+1. **`apps/web/app/orders/refund-actions.ts` + `refunds-client.tsx`** — M4 P0-1 RPC `reverse_payment_and_post` shipped 2026-04-30 nhưng TS edit chưa wire. Touch UI rebuild = mask money-loss gap (UI looks correct, data path silently broken). Unblock: TS edit refund-actions.ts gọi RPC + verify e2e.
+2. ~~`apps/web/app/finance/audit-trail/page.tsx`~~ → **chrome migrated 2026-05-07 (commit a7e9ef2)**. Page.tsx now uses AppPage + AppPageHeader. Hard guard verified: zero `.select(`/`audit_logs`/`fetchAuditLogs` diff lines. `audit-trail-client.tsx` data fetch + `finance/actions.ts:fetchAuditLogs` helper untouched (rule AUDIT-LOG-SELECT-EXPLICIT-COLUMNS still hardened). **Continue freezing the data layer** — UI chrome at this surface is now compliant.
+3. **`apps/web/app/finance/invoice-list.tsx` cancel flow** — HĐĐT NĐ70/2025 compliance. Rules HDDT-CANCEL-REASON-MIN-20 + HDDT-FORM-PAYLOAD-FREEZE-AT-CLICK. Refactor risk: schema downgrade `min(20)` → `min(10)`, lose live char counter, break click-snapshot freeze. Unblock: M6 P0 (reconcile cron, replace flow, 3-way matching) + compliance review.
+4. **`apps/web/app/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx`** — densest concentration of contract rules in repo: POS-DETAIL-REOPEN-AFTER-CUSTOMIZER, HDDT-FORM-PAYLOAD-FREEZE-AT-CLICK, POS-CONFIRM-CASH-GATED-BY-POS-CONFIRM-PAYMENT, PWA-OFFLINE-GATE-CASH-ONLY, POS-HDDT-CONDITIONAL-ON-MST, POS-MOBILE-BUTTON-TOUCH-TARGET, NO-CLAMP-ON-RECEIPT-LEGAL-FIELDS. Plus M4 P0-3 stock_consumed_status check + M4 P0-4 server-recompute total_amount still pending. Unblock: M4 P0 close + manual QA pass.
+5. **`apps/web/app/br/[branchId]/kds/order-card.tsx` + `_hooks/use-kds-realtime.ts`** — Realtime correctness + peak-hour perf. Rules KDS-ORDERCARD-MEMO-PROPS, KDS-TRANSFER-TABLE-SYNC, REALTIME-CHANNEL-RESUBSCRIBE-ON-TOKEN-REFRESH, POS-RESUME-MUST-REFETCH. No P0 pending but no integration test infra — refactor without safety net = peak-hour reconcile sup, chef bưng nhầm bàn, dead realtime post 1h. Unblock: setup vitest/playwright + KDS perf test + token-refresh test + transfer realtime test.
+
+### REMOVED from freeze list (verified low-risk)
+
+- ~~`apps/web/app/admin/settings/payments/*`~~ — verified 2026-05-07 step 2: form persists ONLY non-secret fields (`PAYMENT_ENABLE_*` flags + bank account info publicly printed on QR codes) into `system_settings` table. Real secrets (`MOMO_SECRET_KEY`, `VIETQR_API_KEY`) live in env vars (`process.env.*`), only checked for existence — never persisted. ZERO `logAudit` call site. ZERO `provider_configs` table usage anywhere in codebase. Rule AUDIT-NEVER-LOG-CREDENTIALS does NOT apply here. Surface already uses AppSection + SettingsPageShell + RHF + Zod 4 + Sonner + Spinner. Original Critic freeze rationale was based on theoretical worst-case credential storage that does not match actual implementation. NO migration needed; this surface is already compliant.
 
 ## Wave plan
 
