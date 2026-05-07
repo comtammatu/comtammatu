@@ -38,7 +38,9 @@ import {
   remainingDailyQuota,
   type MenuCategory,
   type MenuItem,
+  type MenuItemDailyLimit,
 } from "./pos-menu-types";
+import { useDailyLimit } from "./_providers/pos-desktop-provider";
 
 interface PosMenuGridProps {
   categories: MenuCategory[];
@@ -64,14 +66,17 @@ const MenuItemButton = memo(function MenuItemButton({
   sparseMenu,
   onItemTap,
 }: MenuItemButtonProps) {
-  const blocked = isItemBlockedByDailyLimit(item);
-  const remaining = remainingDailyQuota(item);
+  // Per-item subscription qua external store — chỉ card này re-render
+  // khi sold_today/is_disabled/limit_quantity của ID này đổi (Fix#4 B1).
+  const dailyLimit: MenuItemDailyLimit | null = useDailyLimit(item.id);
+  const blocked = isItemBlockedByDailyLimit(dailyLimit);
+  const remaining = remainingDailyQuota(dailyLimit);
   const handleClick = useCallback(() => {
     if (blocked) return;
     onItemTap(item);
   }, [blocked, item, onItemTap]);
 
-  const limitBadgeLabel = item.daily_limit?.is_disabled
+  const limitBadgeLabel = dailyLimit?.is_disabled
     ? messages.pos.menu.disabled
     : blocked
       ? messages.pos.menu.soldOut
@@ -79,7 +84,7 @@ const MenuItemButton = memo(function MenuItemButton({
         ? messages.pos.menu.remaining(remaining)
         : null;
   const limitBadgeVariant: "destructive" | "warning" | undefined =
-    item.daily_limit?.is_disabled || blocked
+    dailyLimit?.is_disabled || blocked
       ? "destructive"
       : remaining !== null && remaining <= 5
         ? "warning"

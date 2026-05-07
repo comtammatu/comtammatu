@@ -49,16 +49,20 @@ export interface MenuItem {
 }
 
 /** UI helper: how many portions may still be added to the cart. */
-export function remainingDailyQuota(item: MenuItem): number | null {
-  if (!item.daily_limit) return null;
-  if (item.daily_limit.limit_quantity == null) return null;
-  return Math.max(0, item.daily_limit.limit_quantity - item.daily_limit.sold_today);
+export function remainingDailyQuota(
+  limit: MenuItemDailyLimit | null,
+): number | null {
+  if (!limit) return null;
+  if (limit.limit_quantity == null) return null;
+  return Math.max(0, limit.limit_quantity - limit.sold_today);
 }
 
-export function isItemBlockedByDailyLimit(item: MenuItem): boolean {
-  if (!item.daily_limit) return false;
-  if (item.daily_limit.is_disabled) return true;
-  const remaining = remainingDailyQuota(item);
+export function isItemBlockedByDailyLimit(
+  limit: MenuItemDailyLimit | null,
+): boolean {
+  if (!limit) return false;
+  if (limit.is_disabled) return true;
+  const remaining = remainingDailyQuota(limit);
   return remaining !== null && remaining <= 0;
 }
 

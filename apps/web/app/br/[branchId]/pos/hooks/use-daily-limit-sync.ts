@@ -3,12 +3,17 @@
 import { useEffect, useRef } from "react";
 import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
 import type { MenuItemDailyLimit } from "../pos-menu-types";
-
-export type DailyLimitsMap = Map<number, MenuItemDailyLimit>;
+import type { DailyLimitStore } from "../_providers/daily-limit-store";
 
 export interface UseDailyLimitSyncArgs {
   branchId: number;
-  setLimits: React.Dispatch<React.SetStateAction<DailyLimitsMap>>;
+  /**
+   * External store owned by the provider. Realtime handlers mutate via
+   * `store.set(itemId, value | null)`; the store decides whether to notify
+   * subscribers based on per-slice equality, so a no-op event (e.g. trigger
+   * fires but `sold_today` unchanged) skips re-render.
+   */
+  store: DailyLimitStore;
   /**
    * Fire-and-forget refetch via `fetchDailyLimitsForPos`. MUST be deduped by
    * the caller — fired on SUBSCRIBED reconnect (catchup events missed during
@@ -107,18 +112,18 @@ function projectLimit(row: LimitRow): {
  */
 export function useDailyLimitSync({
   branchId,
-  setLimits,
+  store,
   refreshLimits,
   skipFirstSubscribedRefresh = false,
 }: UseDailyLimitSyncArgs): void {
-  const setLimitsRef = useRef(setLimits);
+  const storeRef = useRef(store);
   const refreshLimitsRef = useRef(refreshLimits);
   const initialSubscribeSeenRef = useRef(false);
 
   useEffect(() => {
-    setLimitsRef.current = setLimits;
+    storeRef.current = store;
     refreshLimitsRef.current = refreshLimits;
-  }, [setLimits, refreshLimits]);
+  }, [store, refreshLimits]);
 
   useRealtimeChannel(
     (supabase) => {
@@ -154,12 +159,7 @@ export function useDailyLimitSync({
                 refreshLimitsRef.current();
                 return;
               }
-              setLimitsRef.current((prev) => {
-                if (!prev.has(itemId)) return prev;
-                const next = new Map(prev);
-                next.delete(itemId);
-                return next;
-              });
+              storeRef.current.set(itemId, null);
               return;
             }
 
@@ -176,11 +176,7 @@ export function useDailyLimitSync({
               refreshLimitsRef.current();
               return;
             }
-            setLimitsRef.current((prev) => {
-              const map = new Map(prev);
-              map.set(projected.menu_item_id, projected.limit);
-              return map;
-            });
+            storeRef.current.set(projected.menu_item_id, projected.limit);
           },
         )
         .subscribe((status) => {

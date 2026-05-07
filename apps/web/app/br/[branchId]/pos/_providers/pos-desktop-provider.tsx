@@ -8,6 +8,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
 import type { ActiveSession, BranchTable } from "../page";
@@ -19,12 +20,16 @@ import {
 } from "../actions";
 import { CartStore } from "./cart-store";
 import { useOrderSync } from "../hooks/use-order-sync";
+import { useDailyLimitSync } from "../hooks/use-daily-limit-sync";
 import {
-  useDailyLimitSync,
-  type DailyLimitsMap,
-} from "../hooks/use-daily-limit-sync";
+  createDailyLimitStore,
+  type DailyLimitStore,
+} from "./daily-limit-store";
+import type { MenuItemDailyLimit } from "../pos-menu-types";
 import { makeDeduper } from "../_utils/make-deduper";
 import type { OrderType } from "../types";
+
+export type DailyLimitsMap = ReadonlyMap<number, MenuItemDailyLimit>;
 
 /* ─── Session context (stable) ─── */
 
@@ -86,13 +91,13 @@ const OperationalDispatchContext = createContext<OperationalDispatch | null>(
 );
 
 /**
- * Live daily-limit slice keyed by `menu_item_id`. Seeded from RSC's
- * `fetchMenuForPos` and patched in real time via `useDailyLimitSync` so
- * `sold_today` / `is_disabled` flips render across all open POS tabs on
- * the same branch within ~1s. Items NOT in the map have no daily limit
- * configured (semantically `daily_limit: null` per `pos-menu-types.ts`).
+ * External store cho daily-limit slice (seeded từ RSC `fetchMenuForPos`,
+ * patch realtime qua `useDailyLimitSync`). `useDailyLimit(itemId)` subscribe
+ * theo từng id qua `useSyncExternalStore` — chỉ MenuItemButton của món có
+ * limit đổi mới re-render (vs context propagation invalidate cả 50-200 card
+ * trên mỗi event realtime — Architect option b).
  */
-const DailyLimitsContext = createContext<DailyLimitsMap | null>(null);
+const DailyLimitStoreContext = createContext<DailyLimitStore | null>(null);
 
 // Monotonic counter that bumps every time an order flips into a terminal
 // status (paid / completed / cancelled). The "Đã xử lý" sheet's pagination
@@ -135,13 +140,25 @@ export function usePosArchivedInvalidationToken(): number {
   return useContext(ArchivedInvalidationContext);
 }
 
-export function usePosDailyLimits(): DailyLimitsMap {
-  const ctx = useContext(DailyLimitsContext);
+function usePosDailyLimitStore(): DailyLimitStore {
+  const ctx = useContext(DailyLimitStoreContext);
   if (!ctx)
     throw new Error(
-      "usePosDailyLimits must be used inside PosDesktopProvider",
+      "useDailyLimit must be used inside PosDesktopProvider",
     );
   return ctx;
+}
+
+/**
+ * Per-item daily-limit subscription. Re-renders the consumer ONLY when this
+ * specific `menu_item_id`'s slice changes (sold_today / is_disabled / limit_
+ * quantity). Backed by external store + `useSyncExternalStore` — bypasses
+ * React context's "all consumers re-render on any value change" semantics.
+ */
+export function useDailyLimit(itemId: number): MenuItemDailyLimit | null {
+  const store = usePosDailyLimitStore();
+  const getSnapshot = useCallback(() => store.get(itemId), [store, itemId]);
+  return useSyncExternalStore(store.subscribe, getSnapshot, getSnapshot);
 }
 
 /* ─── Provider ─── */
@@ -183,8 +200,15 @@ export function PosDesktopProvider({
 }: PosDesktopProviderProps) {
   const [orders, setOrders] = useState<SessionOrder[]>(initialOrders);
   const [tables, setTables] = useState<BranchTable[]>(initialTables);
-  const [dailyLimits, setDailyLimits] =
-    useState<DailyLimitsMap>(initialDailyLimits);
+  // External store (not React state) — see daily-limit-store.ts. Lazy
+  // init mirrors `cartStoreRef` below; same instance for the lifetime of
+  // the provider, so `useSyncExternalStore` consumers' subscribe identity
+  // is stable.
+  const dailyLimitStoreRef = useRef<DailyLimitStore | null>(null);
+  if (dailyLimitStoreRef.current === null) {
+    dailyLimitStoreRef.current = createDailyLimitStore(initialDailyLimits);
+  }
+  const dailyLimitStore = dailyLimitStoreRef.current;
   const [archivedToken, setArchivedToken] = useState(0);
   const bumpArchivedToken = useCallback(() => {
     setArchivedToken((t) => t + 1);
@@ -217,12 +241,11 @@ export function PosDesktopProvider({
 
   // Re-seed limits when the RSC snapshot rotates (router.refresh after a
   // manager toggles is_disabled, or after the page rerenders post-shift-
-  // open). Mirrors `setTables(initialTables)` above. useState's initial-
-  // value-only semantics would otherwise leave the live slice stale on
-  // RSC reseed.
+  // open). `setAll` skips notify when nothing changed (Object.is per slice)
+  // so a no-op reseed doesn't churn subscribers.
   useEffect(() => {
-    setDailyLimits(initialDailyLimits);
-  }, [initialDailyLimits]);
+    dailyLimitStore.setAll(initialDailyLimits);
+  }, [initialDailyLimits, dailyLimitStore]);
 
   const loadOrders = useCallback(async () => {
     const result = await fetchActiveOrders(branchId);
@@ -234,21 +257,21 @@ export function PosDesktopProvider({
   const loadDailyLimits = useCallback(async () => {
     const result = await fetchDailyLimitsForPos(branchId);
     if (!result.success || !Array.isArray(result.data)) return;
-    const map: DailyLimitsMap = new Map();
+    const next = new Map<number, MenuItemDailyLimit>();
     for (const row of result.data as Array<{
       menu_item_id: number;
       limit_quantity: number | null;
       is_disabled: boolean;
       sold_today: number;
     }>) {
-      map.set(row.menu_item_id, {
+      next.set(row.menu_item_id, {
         limit_quantity: row.limit_quantity,
         is_disabled: row.is_disabled,
         sold_today: row.sold_today,
       });
     }
-    setDailyLimits(map);
-  }, [branchId]);
+    dailyLimitStore.setAll(next);
+  }, [branchId, dailyLimitStore]);
 
   const refreshAll = useCallback(async () => {
     const [ordersResult, tablesResult] = await Promise.all([
@@ -302,7 +325,7 @@ export function PosDesktopProvider({
   // events missed during disconnect.
   useDailyLimitSync({
     branchId,
-    setLimits: setDailyLimits,
+    store: dailyLimitStore,
     refreshLimits: refreshDailyLimitsDeduped,
     skipFirstSubscribedRefresh: true,
   });
@@ -324,11 +347,11 @@ export function PosDesktopProvider({
         <OperationalDispatchContext.Provider value={dispatchValue}>
           <OrdersContext.Provider value={orders}>
             <TablesContext.Provider value={tables}>
-              <DailyLimitsContext.Provider value={dailyLimits}>
+              <DailyLimitStoreContext.Provider value={dailyLimitStore}>
                 <ArchivedInvalidationContext.Provider value={archivedToken}>
                   {children}
                 </ArchivedInvalidationContext.Provider>
-              </DailyLimitsContext.Provider>
+              </DailyLimitStoreContext.Provider>
             </TablesContext.Provider>
           </OrdersContext.Provider>
         </OperationalDispatchContext.Provider>
