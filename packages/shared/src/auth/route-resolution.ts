@@ -64,6 +64,9 @@ export function resolveModuleFromPath(pathname: string): ModuleKey | null {
   if (resolvedPathname.startsWith("/admin/crm")) return "crm";
   if (resolvedPathname.startsWith("/admin/reports")) return "reports";
   if (resolvedPathname.startsWith("/admin/settings")) return "settings";
+  // /admin/inventory/* RETIRED: pages removed; module ACL has empty allowedRoles.
+  // Mapping kept so URL space resolves to access-denied via standard ACL flow
+  // instead of falling through to admin-route landing redirect. See module-acl.ts.
   if (resolvedPathname.startsWith("/admin/inventory")) return "inventory_admin";
   if (resolvedPathname.startsWith("/admin/accounting")) return "accounting";
   if (resolvedPathname.startsWith("/admin/feedback")) return "feedback";

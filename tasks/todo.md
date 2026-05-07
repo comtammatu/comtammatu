@@ -18,11 +18,8 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 - [x] Confirm admin web fallback: Next.js on Vercel is acceptable if approved separately.
 - [x] Add canonical stack lock: `/Users/luongthebinh/Downloads/matu-pros/STACK_LOCK.md`.
 - [x] Debate Redis/Bun: no Redis in bootstrap; Node LTS + pnpm is default tooling; Bun is out of bootstrap.
-- [ ] Owner decision: base clean commit vs include current dirty local UI edits in the fork baseline.
 - [x] Owner decision: fork preparation workspace name/location is `/Users/luongthebinh/Downloads/matu-pros`.
-- [ ] Owner decision: when to initialize `matu-pros` as an actual git fork/repository.
-- [ ] Owner decision: greenfield v2 pilot vs migrated-data v2 pilot.
-- [ ] Run required 4-agent debate before the first implementation slice in the fork.
+- [x] **Fork strategy abandoned (2026-05-06)** — owner decision: tiếp tục phát triển trên source code cũ (`comtammatu`). Fork init, greenfield/migrated-data pilot decision, và 4-agent debate trong fork đều dropped.
 
 ## Known issues
 
@@ -123,6 +120,10 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 - [ ] Refunds table + flow
 - [ ] M5-Ext S8 — yield factor + AP aging + consumption variance (chưa cần ở 30-50 SKU)
 - [ ] Finish 10 RPCs khỏi `auth_role()` (batches α4b/α4c)
+- [ ] **H3b function update — has_permission() dual-source flip** (defer until 2nd silent-demote incident). H3a NOT NULL invariant đủ ngăn position_id NULL. Column `tenants.owner_user_id` đã ship via `20260601500000` làm data foundation; function update chỉ flip nếu real incident occurs. Per ADR 0005 minimum-regret synthesis.
+- [ ] **transfer_ownership(p_new_user_id UUID) RPC + UI** — blocked on business design. Need decisions: instant transfer vs 2-phase (proposed→accepted), `representative` legal-name sync semantics, audit-log shape, RPC permission gate (only current owner? + ops escape hatch?). Manual SQL UPDATE acceptable cho pilot. Reference ADR 0005.
+- [ ] **L6: docs/plan/adr/0006-finance-phase-migration-chain.md** — 5 finance migrations form implicit chain (`20260506000000` cashflow + COA, `20260507000000` journal_entry period guard, `20260508000000` B03_DN cashflow indirect, `20260509000000` VAT per-line, `20260510000000` M4 refund foundation). Add ADR documenting prerequisite ordering + rollback dependencies. Audit found in 2026-05-07 wave; non-blocking but valuable cho new engineers.
+- [ ] **Dead RPC drop wave 2** (post-pilot) — Tier A pilot (`20260601700000`) dropped 3 RPCs (backfill_permissions_from_role, _auth_v2_is_tenant_wide_role, seed_posting_rules). Next wave needs `pg_stat_user_functions` telemetry from real pilot traffic. Tier B (reporting/cron-style), Tier C (lifecycle helpers), Tier D (NEVER drop — ops/auth) — see regression rule RPC-DROP-MUST-SCAN-6-CHANNELS for methodology.
 
 ## Post-v1.0 (Tier 2)
 

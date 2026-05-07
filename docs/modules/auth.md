@@ -43,6 +43,25 @@ owner                          ← governance + tenant-wide oversight, including
 
 Legacy role strings (`owner`, `cashier`, …) still exist as `STAFF_ROLES` TS constants and are emitted in JWT `user_role` for backward compat. They are **derived** from `positions.legacy_role_code` — the `staff_role` enum + `profiles.role` column were dropped in M5 (2026-04-23). To add a new legacy role value, update `STAFF_ROLES` + `positions.legacy_role_code` mapping in the seed. To add a new HR position, insert into `positions` with the proper `legacy_role_code` bridge.
 
+## RLS Gate Choice — `has_permission()` vs `auth_role()`
+
+Two parallel ACL mechanisms exist; pick the right one:
+
+- **`has_permission(branch_id, key)`** — queries `staff_permissions` live. Revoke is **immediate**. Use for destructive UPDATE/DELETE policies and any gate that must honor instant grant changes.
+- **`auth_role()`** — reads JWT `user_role` claim (cached up to ~1h until token refresh). Use ONLY for: (a) scope/side guards inside RPC bodies (e.g. `branch_manager` forbidden from inter-site ship), (b) "HQ sees all branches" SELECT pattern (`branch_id = auth_branch_id() OR auth_role() IN HQ_ROLES`), (c) named ABAC helpers (`is_inventory_production_operator()`), (d) module-ACL fast-path on non-destructive read-mostly tables (e.g. `branch_menu_item_daily_limits` — see regression rule `BMIDL-RLS-INTENTIONAL-ROLE-FASTPATH`).
+
+**Refactor history:**
+- 2026-05-07 H2a — `refunds_update` policy migrated from `auth_role() IN ('owner','super_manager')` → `has_permission(branch_id,'orders:refund_approve')` (`supabase/migrations/20260601200000_h2a_refunds_update_perm_gate.sql`). Closed 1h stale-revoke window for refund approve/reject which is reachable via direct UPDATE in `apps/web/app/orders/refund-actions.ts:251`.
+- Backlog H2b — `hr_payroll` policies (`20260416040000:31,38,42,123,130,134`) follow same pattern; deferred pending business decision on payroll-specific permission keys.
+
+## Invariants (post H3a, 2026-05-07)
+
+- **`profiles.position_id` is NOT NULL** + FK `ON DELETE RESTRICT`. Every active or inactive profile MUST point to a seeded position in its tenant. Enforced by migration `20260601100000_auth_v3_h3a_position_id_required.sql`.
+  - `handle_new_user` trigger raises `position_not_resolved` (SQLSTATE P0001) if `raw_app_meta_data->>'role'` does not map to a seeded position — signup fails loudly instead of inserting a broken profile (which would silently demote the new user to `'office'` via the JWT hook's `COALESCE(po.legacy_role_code, 'office')`).
+  - `admin_update_profile` raises the same exception if a manager passes a role that does not resolve to a position for the tenant.
+  - Deleting a position with active profiles raises `foreign_key_violation` (SQLSTATE 23503). Admins must reassign profiles before deleting.
+- **Owner identity** is currently HR-position-based (`positions.code='owner'`). `tenants.representative` is a free-text legal-document name (TEXT, not UUID), NOT a user identity oracle. A future `tenants.owner_user_id UUID` column + ADR is tracked as **H3b** (deferred) for defense-in-depth.
+
 ## Auth v2 — Position vs Permission
 
 | Concept        | Storage                                                                          | Purpose                                                                                                                                                       |
@@ -141,12 +160,16 @@ The resolver `resolvePostLoginRedirect(claims, returnTo, { surface?: "legacy" | 
 
 ## Failure Modes
 
-| Failure                     | Signal                                          | Recovery                                                                        |
-| --------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------- |
-| JWT hook returns no claims  | User lands on login repeatedly                  | Check `custom_access_token_hook` is SECURITY DEFINER, check profiles row exists |
-| RLS blocks silently         | `{ data: null, error: null }` — no error thrown | Check GRANT + RLS policy for the table                                          |
-| Role not in MODULE_ACL      | `canAccess()` returns false, user redirected    | Add role to MODULE_ACL for the module                                           |
-| Stale JWT after role change | Old role persists until token refresh           | Call `supabase.auth.refreshSession()` or wait for proxy `updateSession()`       |
+| Failure                          | Signal                                                                                                  | Recovery                                                                                                                                          |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| JWT hook returns no claims       | Generic login error + `console.error("auth.login.claims_missing", { user_id })` (post-2026-05-07 fix) | Check server logs for `user_id`. Verify `custom_access_token_hook` is SECURITY DEFINER + profile row exists + position_id resolves                |
+| `getSession()` returns no session | Generic login error + `console.error("auth.login.no_session_after_signin")` + signOut                  | Cookie write failed mid-request. Inspect proxy `Set-Cookie` flow + browser cookie state                                                            |
+| Upstash rate-limit unreachable    | `console.error("auth.login.rate_limit_failopen", { ip, error })` — login still proceeds (fail-open)     | Check Vercel log drain. Verify Upstash health (`UPSTASH_REDIS_REST_URL`). Persistent `security_events` table tracking is follow-up wave            |
+| RLS blocks silently              | `{ data: null, error: null }` — no error thrown                                                         | Check GRANT + RLS policy for the table                                                                                                            |
+| Role not in MODULE_ACL           | `canAccess()` returns false, user redirected                                                            | Add role to MODULE_ACL for the module                                                                                                             |
+| Stale JWT after role change      | Old role persists until token refresh                                                                   | Call `supabase.auth.refreshSession()` or wait for proxy `updateSession()`                                                                         |
+
+> **Login error consolidation (2026-05-07):** All post-validation failure modes (wrong creds, no session, no claims) return the same generic Vietnamese copy `"Email hoặc mật khẩu không đúng"` to prevent credential-validity enumeration. Distinguishing context lives only in structured server logs. See regression rule `LOGIN-MESSAGE-MUST-BE-GENERIC` and `apps/web/app/(auth)/login/actions.ts`.
 
 ## Blocked-State Reasons
 
