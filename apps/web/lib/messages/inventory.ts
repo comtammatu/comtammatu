@@ -334,6 +334,10 @@ export const inventory = {
       sendPo: "Gửi PO cho NCC",
       createGrnStep: "Tạo GRN từ PO này",
       createGrnDisabledHint: "Chỉ tạo GRN khi PO đã gửi NCC.",
+      overviewLinesTitle: "Dòng đặt mua",
+      overviewLinesPreviewHint: (count: number) =>
+        `Top ${count} theo giá trị`,
+      viewAllLines: (count: number) => `Xem tất cả ${count} dòng →`,
     },
   },
   stock: {
@@ -384,6 +388,9 @@ export const inventory = {
       searchDescription: "Thử từ khóa hoặc bộ lọc khác.",
       noDataDescription:
         "Dữ liệu tồn kho sẽ xuất hiện khi có nguyên liệu và giao dịch phát sinh.",
+      firstLoadTitle: "Chưa có dữ liệu nhập kho",
+      firstLoadHint:
+        "Nguyên liệu đã có trong danh mục nhưng chưa có phiếu nhập (GRN) nào. Bắt đầu bằng đơn đặt hàng đầu tiên.",
     },
     table: {
       stock: "Tồn",

@@ -448,6 +448,11 @@ export function PODetailClient({
               />
             </div>
           </AppSection>
+
+          <PoOverviewLinesPreview
+            lines={lines}
+            onViewAll={() => router.replace("?tab=lines", { scroll: false })}
+          />
               </div>
             </TabsContent>
 
@@ -905,5 +910,82 @@ export function PODetailClient({
         }
       />
     </AppPage>
+  );
+}
+
+const PO_PREVIEW_LIMIT = 10;
+
+function PoOverviewLinesPreview({
+  lines,
+  onViewAll,
+}: {
+  lines: EditablePoLine[];
+  onViewAll: () => void;
+}) {
+  if (lines.length === 0) return null;
+
+  const sorted = [...lines].sort((a, b) => b.total - a.total);
+  const preview = sorted.slice(0, PO_PREVIEW_LIMIT);
+  const hasMore = sorted.length > PO_PREVIEW_LIMIT;
+
+  return (
+    <AppSection
+      title={poDetailCopy.overviewLinesTitle}
+      headerHint={
+        hasMore
+          ? poDetailCopy.overviewLinesPreviewHint(PO_PREVIEW_LIMIT)
+          : undefined
+      }
+      contentClassName="p-0"
+    >
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>{FORM_VI.name}</TableHead>
+            <TableHead className="text-right">{FORM_VI.quantity}</TableHead>
+            <TableHead className="text-right">{FORM_VI.unitPrice}</TableHead>
+            <TableHead className="text-right">{FORM_VI.amount}</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {preview.map((line) => (
+            <TableRow key={line.lineId}>
+              <TableCell>
+                <div className="font-medium">{line.name}</div>
+                {line.sku ? (
+                  <div className="font-mono text-xs text-muted-foreground">
+                    {line.sku}
+                  </div>
+                ) : null}
+              </TableCell>
+              <TableCell className="text-right font-mono tabular-nums">
+                {line.qty} {line.unit}
+              </TableCell>
+              <TableCell className="text-right font-mono tabular-nums">
+                {line.price != null
+                  ? inventoryCommon.currencyCompact(formatVND(line.price))
+                  : inventoryCommon.noValue}
+              </TableCell>
+              <TableCell className="text-right font-mono tabular-nums font-semibold">
+                {inventoryCommon.currencyCompact(formatVND(line.total))}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      {hasMore ? (
+        <div className="border-t px-4 py-3">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onViewAll}
+            className="text-primary"
+          >
+            {poDetailCopy.viewAllLines(sorted.length)}
+          </Button>
+        </div>
+      ) : null}
+    </AppSection>
   );
 }

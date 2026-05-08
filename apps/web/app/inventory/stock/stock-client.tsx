@@ -62,6 +62,7 @@ import {
 } from "../_components/inventory-page-layout";
 import { StatusBadge } from "../_components/status-badge";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { InteractiveCard } from "../_components/interactive-card";
 import { FormattedNumberInput } from "../_components/formatted-number-input";
 import { formatDateTime, formatQty, formatVND } from "../_lib/format";
@@ -572,6 +573,24 @@ export function StockClient({
     sortMode,
   ]);
 
+  const filtersActive =
+    searchQuery.trim() !== "" ||
+    activeCategory !== "all" ||
+    stockFilter !== "all" ||
+    riskFilter !== "all";
+
+  // Pristine first-load: ingredients exist in catalog but no GRN has ever
+  // happened for this branch. Suppress the 87/87 "Hết hàng" alarm storm
+  // (real signal is "no data yet", not "stock-out emergency").
+  const isFirstLoadEmpty =
+    !filtersActive &&
+    ingredients.length > 0 &&
+    ingredients.every(
+      (item) =>
+        item.qty === 0 &&
+        (!item.lastCount || item.lastCount === inventoryCommon.noValue),
+    );
+
   const selected =
     filtered.find((ingredient) => ingredient.id === selectedId) ??
     filtered[0] ??
@@ -771,12 +790,40 @@ export function StockClient({
             </SelectContent>
           </Select>
 
-          <Badge variant="outline" className="ml-auto">
-            {filtered.length}/{ingredients.length}
-          </Badge>
+          {!isFirstLoadEmpty ? (
+            <Badge variant="outline" className="ml-auto">
+              {filtered.length}/{ingredients.length}
+            </Badge>
+          ) : null}
         </InventoryFilterBar>
 
-        {isMobile ? (
+        {isFirstLoadEmpty ? (
+          <Card className="bg-muted/20">
+            <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
+              <div className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                <IconShoppingCart className="size-6" />
+              </div>
+              <div className="space-y-1">
+                <p className="font-heading text-base font-semibold">
+                  {stockCopy.empty.firstLoadTitle}
+                </p>
+                <p className="max-w-md text-sm text-muted-foreground">
+                  {stockCopy.empty.firstLoadHint}
+                </p>
+              </div>
+              {permissions.canCreatePurchaseOrder ? (
+                <Button asChild size="sm">
+                  <Link
+                    href={branchHref(branchId, "/inventory/purchase-orders/new")}
+                  >
+                    <IconShoppingCart className="size-4" />
+                    {stockCopy.actions.purchaseSuggestion}
+                  </Link>
+                </Button>
+              ) : null}
+            </CardContent>
+          </Card>
+        ) : isMobile ? (
           <div className="flex flex-col gap-2">
             {filtered.length === 0 ? (
               <Empty className="py-8">
