@@ -244,13 +244,17 @@ function SummaryMetric({
   label,
   value,
   tone = "default",
+  onClick,
+  active,
 }: {
   label: string;
   value: string;
   tone?: "default" | "warning" | "muted";
+  onClick?: () => void;
+  active?: boolean;
 }) {
-  return (
-    <div className="flex min-w-fit items-center gap-2 px-3 py-2">
+  const content = (
+    <>
       <span className="text-xs text-muted-foreground">{label}</span>
       <span
         className={cn(
@@ -261,6 +265,28 @@ function SummaryMetric({
       >
         {value}
       </span>
+    </>
+  );
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className={cn(
+          "flex min-w-fit items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-muted/40",
+          active && "bg-primary/10",
+        )}
+        aria-pressed={active}
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex min-w-fit items-center gap-2 px-3 py-2">
+      {content}
     </div>
   );
 }
@@ -712,6 +738,14 @@ export function StockClient({
             label={stockCopy.metrics.underThreshold}
             value={String(summary.underThresholdCount)}
             tone={summary.underThresholdCount > 0 ? "warning" : "muted"}
+            onClick={
+              summary.underThresholdCount > 0
+                ? () => {
+                    setStockFilter(stockFilter === "low" ? "all" : "low");
+                  }
+                : undefined
+            }
+            active={stockFilter === "low"}
           />
           <SummaryMetric
             label={stockCopy.metrics.nearExpiry}
@@ -976,9 +1010,6 @@ export function StockClient({
                       <TableHead className="min-w-24 text-right">
                         {stockCopy.table.stock}
                       </TableHead>
-                      <TableHead className="min-w-24 text-right">
-                        {stockCopy.table.available}
-                      </TableHead>
                       <TableHead className="min-w-40 text-right">
                         {stockCopy.table.warning}
                       </TableHead>
@@ -993,7 +1024,7 @@ export function StockClient({
                   <TableBody>
                     {filtered.length === 0 ? (
                       <TableEmptyStateRow
-                        colSpan={7}
+                        colSpan={6}
                         title={
                           searchQuery.trim()
                             ? stockCopy.empty.search
@@ -1061,9 +1092,6 @@ export function StockClient({
                                 "font-semibold text-destructive",
                             )}
                           >
-                            {formatQty(item.qty)} {item.unit}
-                          </TableCell>
-                          <TableCell className="text-right font-mono">
                             {formatQty(item.qty)} {item.unit}
                           </TableCell>
                           <TableCell className="text-right">

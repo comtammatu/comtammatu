@@ -72,6 +72,19 @@ function formatDate(value: string) {
   });
 }
 
+/** Vietnamese relative-time hint (e.g. "3 ngày trước", "Hôm nay") for tooltips. */
+function formatRelative(value: string): string {
+  const ms = Date.now() - new Date(value).getTime();
+  const days = Math.floor(ms / 86400000);
+  if (days === 0) return "Hôm nay";
+  if (days === 1) return "Hôm qua";
+  if (days < 0) return `${Math.abs(days)} ngày tới`;
+  if (days < 30) return `${days} ngày trước`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months} tháng trước`;
+  return `${Math.floor(months / 12)} năm trước`;
+}
+
 export function PurchaseOrdersClient({
   initial,
   suppliers,
@@ -254,7 +267,10 @@ export function PurchaseOrdersClient({
                           {row.suppliers?.name ?? "Chưa gắn nhà cung cấp"}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          Ngày đặt: {formatDate(row.ordered_at)}
+                          Ngày đặt:{" "}
+                          <span title={formatRelative(row.ordered_at)}>
+                            {formatDate(row.ordered_at)}
+                          </span>
                         </p>
                         {row.notes ? (
                           <p className="truncate text-xs text-muted-foreground">
@@ -311,7 +327,9 @@ export function PurchaseOrdersClient({
                         <StatusBadge status={row.status} size="sm" />
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {formatDate(row.ordered_at)}
+                        <span title={formatRelative(row.ordered_at)}>
+                          {formatDate(row.ordered_at)}
+                        </span>
                       </TableCell>
                       <TableCell>
                         <p
