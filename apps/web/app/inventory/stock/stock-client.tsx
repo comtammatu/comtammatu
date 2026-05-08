@@ -653,7 +653,9 @@ export function StockClient({
             />
           ) : null}
 
-          <InputGroup className={cn("min-w-56 flex-1", isMobile && "h-12")}>
+          <InputGroup
+            className={cn("min-w-56 flex-1", isMobile ? "h-12" : "h-10")}
+          >
             <InputGroupAddon>
               <IconSearch />
             </InputGroupAddon>
@@ -663,6 +665,16 @@ export function StockClient({
               placeholder={stockCopy.filters.searchPlaceholder}
               inputMode="search"
             />
+            {searchQuery.trim() ? (
+              <InputGroupAddon align="inline-end">
+                <span
+                  className="font-mono text-xs tabular-nums text-muted-foreground"
+                  aria-live="polite"
+                >
+                  {filtered.length}/{ingredients.length}
+                </span>
+              </InputGroupAddon>
+            ) : null}
           </InputGroup>
         </div>
 
