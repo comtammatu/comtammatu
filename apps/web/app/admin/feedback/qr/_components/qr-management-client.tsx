@@ -103,12 +103,16 @@ export function QrManagementClient({
     control,
     handleSubmit,
     reset,
-    formState: { isValid },
+    watch,
   } = useForm<CreateQrInput>({
     resolver: zodResolver(createQrCodeSchema),
     defaultValues: { branch_id: undefined as unknown as number, table_id: null },
-    mode: "onChange",
   });
+  // Watch branch_id directly — react-hook-form's `isValid` defaults to true
+  // until the first validation runs, which means the submit button stays
+  // enabled at mount even though the form has no branch_id selected. Reading
+  // the field value directly is a reliable gate that updates on every change.
+  const branchId = watch("branch_id");
 
   function handleCreate(data: CreateQrInput) {
     setCreateError(null);
@@ -185,7 +189,7 @@ export function QrManagementClient({
             />
           </div>
           <div className="flex items-end">
-            <Button type="submit" disabled={isPending || !isValid}>
+            <Button type="submit" disabled={isPending || !branchId}>
               {isPending ? "Đang tạo..." : "Tạo QR"}
             </Button>
           </div>
