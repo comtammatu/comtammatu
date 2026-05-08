@@ -296,7 +296,9 @@ export const inventory = {
         draft: "Nháp",
         sent: "Đã gửi",
         waitingInspection: "Chờ kiểm nhận",
+        waitingInspectionHint: "Đang chờ NCC giao",
         hasGrn: "Đã có GRN",
+        partialReceivedHint: "Đã nhận một phần",
       },
       itemCatalogTitle: "Danh mục đặt mua",
       itemCatalogDescription: (count: number) =>

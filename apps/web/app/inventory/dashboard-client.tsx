@@ -474,7 +474,14 @@ export function DashboardClient(props: DashboardProps) {
                           </CardDescription>
                         </div>
                       </div>
-                      <span className="font-heading shrink-0 font-mono text-2xl font-bold tabular-nums text-foreground">
+                      <span
+                        className={cn(
+                          "font-heading shrink-0 font-mono text-2xl font-bold tabular-nums",
+                          flow.metric === "0"
+                            ? "text-muted-foreground"
+                            : "text-primary",
+                        )}
+                      >
                         {flow.metric}
                       </span>
                     </div>

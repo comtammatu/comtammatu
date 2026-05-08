@@ -412,7 +412,7 @@ export function PODetailClient({
               <CardContent>
                 <Badge variant="secondary">{poDetailCopy.goodsTotal}</Badge>
                 <p className="mt-3 text-xl font-semibold">
-                  {formatVND(totalAmount)} {poDetailCopy.currencyVnd}
+                  {messages.inventory.common.currency(formatVND(totalAmount))}
                 </p>
               </CardContent>
             </Card>
@@ -420,10 +420,7 @@ export function PODetailClient({
               <CardContent>
                 <Badge variant="secondary">{FORM_VI.totalAmount}</Badge>
                 <p className="mt-3 text-2xl font-semibold text-primary">
-                  {formatVND(grandTotal)}{" "}
-                  <span className="text-xs font-normal">
-                    {poDetailCopy.currencyVnd}
-                  </span>
+                  {messages.inventory.common.currency(formatVND(grandTotal))}
                 </p>
               </CardContent>
             </Card>
@@ -442,8 +439,20 @@ export function PODetailClient({
                   {
                     label: poDetailCopy.steps.waitingInspection,
                     active: po.status === "sent",
+                    date:
+                      po.status === "sent"
+                        ? poDetailCopy.steps.waitingInspectionHint
+                        : undefined,
                   },
-                  { label: poDetailCopy.steps.hasGrn },
+                  {
+                    label: poDetailCopy.steps.hasGrn,
+                    completed: po.status === "received",
+                    active: po.status === "partially_received",
+                    date:
+                      po.status === "partially_received"
+                        ? poDetailCopy.steps.partialReceivedHint
+                        : undefined,
+                  },
                 ]}
               />
             </div>
