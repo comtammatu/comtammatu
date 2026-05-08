@@ -103,9 +103,11 @@ export function QrManagementClient({
     control,
     handleSubmit,
     reset,
+    formState: { isValid },
   } = useForm<CreateQrInput>({
     resolver: zodResolver(createQrCodeSchema),
     defaultValues: { branch_id: undefined as unknown as number, table_id: null },
+    mode: "onChange",
   });
 
   function handleCreate(data: CreateQrInput) {
@@ -183,7 +185,7 @@ export function QrManagementClient({
             />
           </div>
           <div className="flex items-end">
-            <Button type="submit" disabled={isPending}>
+            <Button type="submit" disabled={isPending || !isValid}>
               {isPending ? "Đang tạo..." : "Tạo QR"}
             </Button>
           </div>
