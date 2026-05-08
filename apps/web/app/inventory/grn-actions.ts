@@ -328,6 +328,30 @@ export const loadActiveGrnDraft = withAction(
   },
 );
 
+/* ─── listMyGrnDrafts (Sprint 6 #3) ─── */
+
+export async function listMyGrnDrafts(): Promise<ActionResult> {
+  const ctx = await getAuthContextWithPermission(
+    ROLES,
+    PERMISSION_KEYS.PROCUREMENT_GRN_CREATE,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+  const { supabase, claims, user } = ctx;
+  const { data, error } = await supabase
+    .from("goods_received_notes")
+    .select(
+      "id, supplier_id, branch_id, grn_number, updated_at, suppliers ( id, name ), grn_items ( id )",
+    )
+    .eq("tenant_id", claims.tenant_id)
+    .eq("created_by", user.id)
+    .eq("status", "draft")
+    .order("updated_at", { ascending: false });
+  if (error) {
+    return { success: false, error: "Không thể tải danh sách phiếu nháp." };
+  }
+  return { success: true, data: data ?? [] };
+}
+
 /* ─── discardGrnDraft (Sprint 6 #3) ─── */
 
 const discardDraftSchema = z.object({

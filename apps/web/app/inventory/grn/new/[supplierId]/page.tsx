@@ -6,6 +6,8 @@ import {
   PROCUREMENT_ROLES,
 } from "@comtammatu/shared/auth";
 import { fetchProcurementBranches } from "../../../_lib/procurement-branches";
+import { fetchGrnDetail, loadActiveGrnDraft } from "../../../grn-actions";
+import type { GrnDraftLine } from "../../../_lib/mobile-draft";
 import { GrnCreateClient } from "./grn-create-client";
 
 type Ingredient = {
@@ -73,12 +75,50 @@ export default async function GrnCreatePage({
     }),
   );
 
+  // Sprint 6 #3: pre-fetch active draft (server-side state, no localStorage).
+  let existingDraft: {
+    id: number;
+    lines: Array<GrnDraftLine & { lineId: number }>;
+  } | null = null;
+  const draftRes = await loadActiveGrnDraft({ supplierId });
+  const draftRow = (draftRes.success ? draftRes.data : null) as
+    | { id: number }
+    | null;
+  if (draftRow?.id) {
+    const detailRes = await fetchGrnDetail(draftRow.id);
+    if (detailRes.success && detailRes.data) {
+      const detail = detailRes.data as {
+        grn: { id: number };
+        lines: Array<{
+          id: number;
+          ingredient_id: number;
+          received_quantity: number | string;
+          unit: string;
+          unit_cost: number | string;
+          ingredients: { name: string } | null;
+        }>;
+      };
+      existingDraft = {
+        id: detail.grn.id,
+        lines: detail.lines.map((l) => ({
+          lineId: l.id,
+          ingredientId: l.ingredient_id,
+          ingredientName: l.ingredients?.name ?? "",
+          unit: l.unit,
+          quantity: Number(l.received_quantity ?? 0),
+          unitCost: Number(l.unit_cost ?? 0),
+        })),
+      };
+    }
+  }
+
   return (
     <GrnCreateClient
       userKey={`u${claims.user_role}-${claims.tenant_id}`}
       supplier={{ id: supplierRes.data.id, name: supplierRes.data.name }}
       branchId={defaultBranchId}
       ingredients={ingredients}
+      existingDraft={existingDraft}
     />
   );
 }

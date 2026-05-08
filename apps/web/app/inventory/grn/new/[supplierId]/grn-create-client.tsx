@@ -29,16 +29,17 @@ import { MobileEmptyState } from "../../../_components/mobile/mobile-empty-state
 import { TouchButton } from "../../../_components/mobile/touch-button";
 import { NumberPadSheet } from "../../../_components/mobile/number-pad-sheet";
 import {
-  createEmptyDraft,
   draftTotal,
-  loadDraft,
-  removeDraft,
-  saveDraft,
   type GrnDraft,
   type GrnDraftLine,
 } from "../../../_lib/mobile-draft";
 import { formatVND } from "../../../_lib/format";
-import { createGrnDraft, upsertGrnLine } from "../../../grn-actions";
+import {
+  createGrnDraft,
+  deleteGrnLine,
+  discardGrnDraft,
+  upsertGrnLine,
+} from "../../../grn-actions";
 
 import { ACTIONS_VI, FORM_VI, STATES_VI } from "@comtammatu/shared/messages";
 type Ingredient = {
@@ -50,11 +51,14 @@ type Ingredient = {
   category: string | null;
 };
 
+type ServerDraftLine = GrnDraftLine & { lineId: number };
+
 type Props = {
   userKey: string;
   supplier: { id: number; name: string };
   branchId: number | null;
   ingredients: Ingredient[];
+  existingDraft: { id: number; lines: ServerDraftLine[] } | null;
 };
 
 const DEFAULT_VARIANCE_WARNING = 0.2;
@@ -68,48 +72,57 @@ type EditState = {
 };
 
 export function GrnCreateClient({
-  userKey,
   supplier,
   branchId,
   ingredients,
+  existingDraft,
 }: Props) {
   const router = useRouter();
-  const [draft, setDraft] = React.useState<GrnDraft | null>(null);
+  // Sprint 6 #3: server-side draft is the source of truth. React state mirrors
+  // server state for UI rendering; lazy-create on first saveLine when no
+  // draft exists yet.
+  const [draft, setDraft] = React.useState<GrnDraft>(() => ({
+    draftId: existingDraft ? `srv-${existingDraft.id}` : `pending-${supplier.id}`,
+    supplierId: supplier.id,
+    supplierName: supplier.name,
+    branchId,
+    lines: existingDraft?.lines ?? [],
+    updatedAt: new Date().toISOString(),
+  }));
+  const [serverGrnId, setServerGrnId] = React.useState<number | null>(
+    existingDraft?.id ?? null,
+  );
   const [query, setQuery] = React.useState("");
   const [edit, setEdit] = React.useState<EditState | null>(null);
   const [numpad, setNumpad] = React.useState<"qty" | "cost" | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
 
-  React.useEffect(() => {
-    const storageKey = `active-grn:${userKey}:${supplier.id}`;
-    let activeDraft: GrnDraft | null = null;
-    try {
-      const existingId = window.localStorage.getItem(storageKey);
-      if (existingId) {
-        const loaded = loadDraft(userKey, existingId);
-        if (loaded && loaded.supplierId === supplier.id) {
-          activeDraft = loaded;
-        }
-      }
-    } catch {
-      /* ignore */
+  // Lazy-create the server-side draft on first interaction, returning grnId.
+  // Idempotent via partial UNIQUE index uq_grn_active_draft_per_user_supplier;
+  // race-friendly fallback in createGrnDraft refetches the existing draft.
+  async function ensureServerDraft(): Promise<number | null> {
+    if (serverGrnId !== null) return serverGrnId;
+    if (!branchId) {
+      setSubmitError("Chưa có kho nhận hàng cho phiếu nhập.");
+      return null;
     }
-    if (!activeDraft) {
-      activeDraft = createEmptyDraft(supplier.id, supplier.name, branchId);
-      saveDraft(userKey, activeDraft);
+    const created = await createGrnDraft({
+      supplierId: supplier.id,
+      branchId,
+    });
+    if (!created.success) {
+      setSubmitError(created.error ?? "Không thể tạo phiếu nháp.");
+      return null;
     }
-    try {
-      window.localStorage.setItem(storageKey, activeDraft.draftId);
-    } catch {
-      /* ignore */
-    }
-    setDraft(activeDraft);
-  }, [userKey, supplier.id, supplier.name, branchId]);
+    const id = (created.data as { id: number } | undefined)?.id ?? null;
+    if (id !== null) setServerGrnId(id);
+    return id;
+  }
 
   const addedMap = React.useMemo(() => {
     const map = new Map<number, GrnDraftLine>();
-    draft?.lines.forEach((line) => map.set(line.ingredientId, line));
+    draft.lines.forEach((line) => map.set(line.ingredientId, line));
     return map;
   }, [draft]);
 
@@ -121,11 +134,12 @@ export function GrnCreateClient({
     );
   }, [query, ingredients]);
 
-  function updateDraftLines(nextLines: GrnDraftLine[]) {
-    if (!draft) return;
-    const next: GrnDraft = { ...draft, lines: nextLines };
-    saveDraft(userKey, next);
-    setDraft(next);
+  function applyLines(nextLines: GrnDraftLine[]) {
+    setDraft((current) => ({
+      ...current,
+      lines: nextLines,
+      updatedAt: new Date().toISOString(),
+    }));
   }
 
   function openEdit(ingredient: Ingredient) {
@@ -144,51 +158,89 @@ export function GrnCreateClient({
     setNumpad(null);
   }
 
-  function saveLine() {
-    if (!edit || !draft) return;
+  async function saveLine() {
+    if (!edit) return;
     if (edit.quantity <= 0 || edit.unitCost < 0) return;
-    const nextLine: GrnDraftLine = {
-      ingredientId: edit.ingredient.id,
-      ingredientName: edit.ingredient.name,
-      unit: edit.ingredient.unit,
-      quantity: edit.quantity,
-      unitCost: edit.unitCost,
-      note: edit.note.trim() ? edit.note.trim() : undefined,
-    };
-    const idx = draft.lines.findIndex(
-      (l) => l.ingredientId === edit.ingredient.id,
-    );
-    const nextLines =
-      idx >= 0
-        ? draft.lines.map((l, i) => (i === idx ? nextLine : l))
-        : [...draft.lines, nextLine];
-    updateDraftLines(nextLines);
-    closeEdit();
-  }
-
-  function removeLine(ingredientId: number) {
-    if (!draft) return;
-    updateDraftLines(
-      draft.lines.filter((l) => l.ingredientId !== ingredientId),
-    );
-  }
-
-  function discardDraft() {
-    if (!draft) return;
-    if (!window.confirm("Xóa phiếu nháp này? Các dòng đã nhập sẽ mất.")) return;
-    removeDraft(userKey, draft.draftId);
+    setSubmitError(null);
     try {
-      window.localStorage.removeItem(
-        `active-grn:${userKey}:${supplier.id}`,
+      const grnId = await ensureServerDraft();
+      if (grnId === null) return;
+      const lineRes = await upsertGrnLine({
+        grnId,
+        ingredientId: edit.ingredient.id,
+        receivedQuantity: edit.quantity,
+        unit: edit.ingredient.unit,
+        unitCost: edit.unitCost,
+        qualityStatus: "accepted",
+      });
+      if (!lineRes.success) {
+        setSubmitError(lineRes.error ?? "Không lưu được dòng.");
+        return;
+      }
+      const lineId = (lineRes.data as { id: number } | undefined)?.id ?? 0;
+      const nextLine: GrnDraftLine & { lineId?: number } = {
+        ingredientId: edit.ingredient.id,
+        ingredientName: edit.ingredient.name,
+        unit: edit.ingredient.unit,
+        quantity: edit.quantity,
+        unitCost: edit.unitCost,
+        note: edit.note.trim() ? edit.note.trim() : undefined,
+      };
+      if (lineId) (nextLine as ServerDraftLine).lineId = lineId;
+      const idx = draft.lines.findIndex(
+        (l) => l.ingredientId === edit.ingredient.id,
       );
-    } catch {
-      /* ignore */
+      applyLines(
+        idx >= 0
+          ? draft.lines.map((l, i) =>
+              i === idx ? { ...l, ...nextLine } : l,
+            )
+          : [...draft.lines, nextLine as ServerDraftLine],
+      );
+      closeEdit();
+    } catch (err) {
+      setSubmitError(
+        err instanceof Error && err.message
+          ? err.message
+          : "Không thể lưu dòng.",
+      );
+    }
+  }
+
+  async function removeLine(ingredientId: number) {
+    const target = draft.lines.find(
+      (l) => l.ingredientId === ingredientId,
+    ) as ServerDraftLine | undefined;
+    if (target?.lineId && serverGrnId !== null) {
+      const res = await deleteGrnLine({
+        grnId: serverGrnId,
+        lineId: target.lineId,
+      });
+      if (!res.success) {
+        setSubmitError(res.error ?? "Không xóa được dòng.");
+        return;
+      }
+    }
+    applyLines(draft.lines.filter((l) => l.ingredientId !== ingredientId));
+  }
+
+  async function discardDraft() {
+    if (!window.confirm("Xóa phiếu nháp này? Các dòng đã nhập sẽ mất.")) return;
+    if (serverGrnId !== null) {
+      const res = await discardGrnDraft({ grnId: serverGrnId });
+      if (!res.success) {
+        setSubmitError(res.error ?? "Không thể hủy phiếu nháp.");
+        return;
+      }
     }
     router.push("/inventory/grn/new");
   }
 
   async function submit() {
-    if (!draft || draft.lines.length === 0) return;
+    if (draft.lines.length === 0) {
+      setSubmitError("Phiếu chưa có dòng nào.");
+      return;
+    }
     if (!branchId) {
       setSubmitError("Chưa có kho nhận hàng cho phiếu nhập.");
       return;
@@ -196,43 +248,31 @@ export function GrnCreateClient({
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const createRes = await createGrnDraft({
-        supplierId: supplier.id,
-        branchId,
-      });
-      if (!createRes.success) {
-        setSubmitError(createRes.error ?? "Không thể tạo phiếu nhập.");
-        return;
-      }
-      const grn = createRes.data as { id: number } | undefined;
-      if (!grn?.id) {
-        setSubmitError("Không thể tạo phiếu nhập.");
-        return;
-      }
+      // Server-side draft already has all lines (lazy-created on first save +
+      // each line upsert is server-of-truth). Just navigate to the review surface.
+      // Edge case: if user adds line then network drops before saveLine
+      // completes, the line might not be on server. Defensive idempotent
+      // upsert below catches that gap.
+      const grnId = await ensureServerDraft();
+      if (grnId === null) return;
       for (const line of draft.lines) {
-        const lineRes = await upsertGrnLine({
-          grnId: grn.id,
+        const res = await upsertGrnLine({
+          grnId,
           ingredientId: line.ingredientId,
           receivedQuantity: line.quantity,
           unit: line.unit,
           unitCost: line.unitCost,
           qualityStatus: "accepted",
         });
-        if (!lineRes.success) {
+        if (!res.success) {
           setSubmitError(
-            lineRes.error ??
-              `Không lưu được dòng ${line.ingredientName}. Phiếu đã lưu nháp.`,
+            res.error ??
+              `Không đồng bộ được dòng ${line.ingredientName}. Phiếu giữ trạng thái nháp.`,
           );
           return;
         }
       }
-      removeDraft(userKey, draft.draftId);
-      try {
-        window.localStorage.removeItem(`active-grn:${userKey}:${supplier.id}`);
-      } catch {
-        /* ignore */
-      }
-      router.push(`/inventory/grn/${grn.id}?review=1`);
+      router.push(`/inventory/grn/${grnId}?review=1`);
       router.refresh();
     } catch (err) {
       setSubmitError(
@@ -243,19 +283,6 @@ export function GrnCreateClient({
     } finally {
       setSubmitting(false);
     }
-  }
-
-  if (!draft) {
-    return (
-      <MobilePage>
-        <MobileSectionHeader
-          backHref="/inventory/grn/new"
-          backLabel="Đổi nhà cung cấp"
-          eyebrow={supplier.name}
-          title="Đang chuẩn bị..."
-        />
-      </MobilePage>
-    );
   }
 
   const total = draftTotal(draft);
