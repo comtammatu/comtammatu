@@ -240,10 +240,10 @@ test("isPublicAppPath PWA manifests bypass auth proxy", () => {
 });
 
 test("normalizeHost strips port + lowercases", () => {
-  assert.equal(normalizeHost("Feedback.Matu.VN"), "feedback.matu.vn");
-  assert.equal(normalizeHost("feedback.matu.vn:443"), "feedback.matu.vn");
+  assert.equal(normalizeHost("Feedback.ComTamMatu.COM"), "feedback.comtammatu.com");
+  assert.equal(normalizeHost("feedback.comtammatu.com:443"), "feedback.comtammatu.com");
   assert.equal(normalizeHost("localhost:3000"), "localhost");
-  assert.equal(normalizeHost("  app.matu.vn  "), "app.matu.vn");
+  assert.equal(normalizeHost("  app.comtammatu.com  "), "app.comtammatu.com");
   assert.equal(normalizeHost(""), null);
   assert.equal(normalizeHost(null), null);
   assert.equal(normalizeHost(undefined), null);
@@ -251,20 +251,20 @@ test("normalizeHost strips port + lowercases", () => {
 
 test("resolveHostSurface → matches configured hosts case-insensitive, port-agnostic", () => {
   const cfg = {
-    feedbackHost: "feedback.matu.vn",
-    appHost: "app.matu.vn",
+    feedbackHost: "feedback.comtammatu.com",
+    appHost: "app.comtammatu.com",
   };
-  assert.equal(resolveHostSurface("feedback.matu.vn", cfg), "feedback");
-  assert.equal(resolveHostSurface("FEEDBACK.MATU.VN", cfg), "feedback");
-  assert.equal(resolveHostSurface("feedback.matu.vn:443", cfg), "feedback");
-  assert.equal(resolveHostSurface("app.matu.vn", cfg), "app");
-  assert.equal(resolveHostSurface("app.matu.vn:443", cfg), "app");
+  assert.equal(resolveHostSurface("feedback.comtammatu.com", cfg), "feedback");
+  assert.equal(resolveHostSurface("FEEDBACK.COMTAMMATU.COM", cfg), "feedback");
+  assert.equal(resolveHostSurface("feedback.comtammatu.com:443", cfg), "feedback");
+  assert.equal(resolveHostSurface("app.comtammatu.com", cfg), "app");
+  assert.equal(resolveHostSurface("app.comtammatu.com:443", cfg), "app");
 });
 
 test("resolveHostSurface → unknown host falls back to 'unknown' (Vercel preview, IP, missing)", () => {
   const cfg = {
-    feedbackHost: "feedback.matu.vn",
-    appHost: "app.matu.vn",
+    feedbackHost: "feedback.comtammatu.com",
+    appHost: "app.comtammatu.com",
   };
   assert.equal(
     resolveHostSurface("comtammatu-pr-42.vercel.app", cfg),
@@ -280,11 +280,11 @@ test("resolveHostSurface → no env configured → all hosts fall through to 'un
   // single-host deploy. resolveHostSurface MUST NOT default any host into a
   // surface when config is empty (would expose admin or feedback wrongly).
   assert.equal(
-    resolveHostSurface("feedback.matu.vn", { feedbackHost: null, appHost: null }),
+    resolveHostSurface("feedback.comtammatu.com", { feedbackHost: null, appHost: null }),
     "unknown",
   );
   assert.equal(
-    resolveHostSurface("app.matu.vn", {
+    resolveHostSurface("app.comtammatu.com", {
       feedbackHost: undefined,
       appHost: undefined,
     }),
