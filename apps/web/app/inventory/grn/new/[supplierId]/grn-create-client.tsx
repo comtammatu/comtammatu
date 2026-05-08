@@ -20,6 +20,8 @@ import {
   SheetTitle,
 } from "@comtammatu/ui/components/sheet";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
+import { MoneyVndInput, QuantityInput } from "@/components/form";
 import { matchesSearch } from "@lib/search";
 import { MobilePage } from "../../../_components/mobile/mobile-page";
 import { MobileSectionHeader } from "../../../_components/mobile/mobile-section-header";
@@ -489,6 +491,7 @@ function LineEditSheet({
   onOpenNumpad,
 }: LineEditSheetProps) {
   const open = edit != null;
+  const isMobile = useIsMobile();
   const referenceCost = edit?.ingredient.unit_cost
     ? Number(edit.ingredient.unit_cost)
     : null;
@@ -530,36 +533,76 @@ function LineEditSheet({
 
             <div className="flex flex-col gap-3 p-4">
               <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => onOpenNumpad("qty")}
-                  className="flex flex-col items-start gap-1 rounded-lg border bg-card px-3 py-3 text-left transition active:scale-[0.99]"
-                >
-                  <span className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
-                    {FORM_VI.quantity}
-                  </span>
-                  <span className="text-2xl font-semibold tabular-nums">
-                    {edit.quantity}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {edit.ingredient.unit}
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onOpenNumpad("cost")}
-                  className="flex flex-col items-start gap-1 rounded-lg border bg-card px-3 py-3 text-left transition active:scale-[0.99]"
-                >
-                  <span className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
-                    {FORM_VI.unitPrice}
-                  </span>
-                  <span className="text-2xl font-semibold tabular-nums">
-                    {formatVND(edit.unitCost)}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    đ / {edit.ingredient.unit}
-                  </span>
-                </button>
+                {isMobile ? (
+                  <button
+                    type="button"
+                    onClick={() => onOpenNumpad("qty")}
+                    className="flex flex-col items-start gap-1 rounded-lg border bg-card px-3 py-3 text-left transition active:scale-[0.99]"
+                  >
+                    <span className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
+                      {FORM_VI.quantity}
+                    </span>
+                    <span className="text-2xl font-semibold tabular-nums">
+                      {edit.quantity}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {edit.ingredient.unit}
+                    </span>
+                  </button>
+                ) : (
+                  <label className="flex cursor-text flex-col items-start gap-1 rounded-lg border bg-card px-3 py-3 text-left transition focus-within:ring-2 focus-within:ring-ring/30">
+                    <span className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
+                      {FORM_VI.quantity}
+                    </span>
+                    <QuantityInput
+                      value={String(edit.quantity)}
+                      onValueChange={(v) =>
+                        onPatch({ quantity: Number(v) || 0 })
+                      }
+                      maxFractionDigits={3}
+                      autoFocus
+                      onFocus={(e) => e.currentTarget.select()}
+                      className="h-auto border-0 bg-transparent p-0 text-2xl font-semibold tabular-nums shadow-none ring-0 focus-visible:border-0 focus-visible:ring-0"
+                    />
+                    <span className="text-xs text-muted-foreground">
+                      {edit.ingredient.unit}
+                    </span>
+                  </label>
+                )}
+                {isMobile ? (
+                  <button
+                    type="button"
+                    onClick={() => onOpenNumpad("cost")}
+                    className="flex flex-col items-start gap-1 rounded-lg border bg-card px-3 py-3 text-left transition active:scale-[0.99]"
+                  >
+                    <span className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
+                      {FORM_VI.unitPrice}
+                    </span>
+                    <span className="text-2xl font-semibold tabular-nums">
+                      {formatVND(edit.unitCost)}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      đ / {edit.ingredient.unit}
+                    </span>
+                  </button>
+                ) : (
+                  <label className="flex cursor-text flex-col items-start gap-1 rounded-lg border bg-card px-3 py-3 text-left transition focus-within:ring-2 focus-within:ring-ring/30">
+                    <span className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
+                      {FORM_VI.unitPrice}
+                    </span>
+                    <MoneyVndInput
+                      value={String(edit.unitCost)}
+                      onValueChange={(v) =>
+                        onPatch({ unitCost: Number(v) || 0 })
+                      }
+                      onFocus={(e) => e.currentTarget.select()}
+                      className="h-auto border-0 bg-transparent p-0 text-2xl font-semibold tabular-nums shadow-none ring-0 focus-visible:border-0 focus-visible:ring-0"
+                    />
+                    <span className="text-xs text-muted-foreground">
+                      đ / {edit.ingredient.unit}
+                    </span>
+                  </label>
+                )}
               </div>
 
               <div className="rounded-lg bg-muted/50 px-3 py-2.5">
