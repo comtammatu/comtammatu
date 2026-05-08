@@ -2,6 +2,39 @@
 
 All notable changes to this project will be documented in this file.
 
+## [feedback-v1.0.0] - 2026-05-08
+
+### Added — QR feedback module (Slice 1 + 2 + 3, feature-tagged release)
+
+First public release of the customer-feedback module. Customers scan QR → submit rating + comment + optional phone + ≤3 photos → owner gets Telegram alerts (rating ≤3 by default) + AI-enriched inbox + daily AI report.
+
+- **Customer-facing route** `/r/[token]` (public, unauthenticated, rate-limited 5/token + 20/IP per 30min, honeypot, Origin check)
+- **Admin routes** `/admin/feedback` (inbox), `/qr` (owner-only QR generator), `/settings` (Telegram + AI), `/reports` (daily AI reports)
+- **13 migrations** (`supabase/migrations/20260511*_feedback_*` and `*_telegram_*` and `*_bulk_mark_suspect_*`) — tables, RLS, RPCs, retention, photo storage, circuit breaker
+- **6 permission keys**: `feedback:view`, `:view_phone`, `:view_report`, `:manage_qr`, `:manage_telegram`, `:manage_settings` (+ `:moderate` from Slice 3)
+- **AI Tier 1** — per-feedback enrichment (25-category taxonomy, severity, sentiment, Vietnamese summary)
+- **AI Tier 2** — daily report cron (02:00) with markdown output
+- **Photo upload** — client compress + private Storage bucket + 5MB limit + mime allowlist + signed URLs (TTL 10min) + freshness window (5min anti-IDOR) + double-upload guard
+- **Retention cron** (03:00) — comment 24m delete, phone NULL after 6m, IP hash NULL after 3m, photos with rows
+- **Bot defense** — 14-char token (~83 bits entropy via `crypto.getRandomValues`), honeypot, rate limit, IP hash (SHA-256 + rotating salt), Origin check
+- **PHI safety** — `feedbacks_with_masked_phone` view with `security_invoker=true`, raw phone never logged, IP hash exposed only as `has_ip_hash` boolean
+
+### Required env vars
+`TELEGRAM_BOT_TOKEN`, `CRON_SECRET`, `ALLOWED_ORIGINS_FEEDBACK`, `IP_HASH_SALT`, `NEXT_PUBLIC_APP_URL`, `ANTHROPIC_API_KEY`
+
+### Known issues (16 total — see `docs/releases/feedback-v1.0.0.md` and `tasks/todo.md`)
+2 HIGH (origin-check bypass when env empty, missing security headers), 4 MEDIUM (photo IDOR, Vercel fire-and-forget, photo RLS branch gap, thank-you bypass), 6 LOW, 4 INFO. QA report: `.gstack/qa-reports/qa-report-feedback-module-2026-05-07.md` (health score 63.5/100, architect-verified).
+
+### Pending owner steps post-release
+1. Verify 13 migrations applied to production (per CLAUDE.md production migration policy: file → PR → merge → owner manual apply)
+2. Set 6 env vars in Vercel (above)
+3. Smoke test 1 QR end-to-end — scan, submit ≤3★, verify Telegram alert arrives within 90s
+4. Address ISSUE-001 + ISSUE-012 + ISSUE-013 (top-3 follow-ups, ~45 min total)
+
+Full release notes: `docs/releases/feedback-v1.0.0.md`
+
+---
+
 ## [Unreleased] — m4-payments-fix slice 2 (deep RPCs, 2026-04-30)
 
 ### Added
