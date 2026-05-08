@@ -756,6 +756,8 @@ export const inventory = {
     searchPlaceholder: "Tìm mã phiên hoặc tên chi nhánh...",
     noSessionsMatched: "Không tìm thấy phiên nào",
     noSessions: "Chưa có phiên kiểm kê nào",
+    noSessionsHint:
+      "Mở phiên kiểm kê để bắt đầu đếm tồn kho thực tế và đối soát với hệ thống.",
     sessionCode: "Mã phiên",
     startedAt: "Ngày bắt đầu",
     detailsAria: "Chi tiết",

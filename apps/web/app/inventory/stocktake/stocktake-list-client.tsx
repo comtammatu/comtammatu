@@ -216,9 +216,11 @@ export function StocktakeListClient({
             />
           </InputGroup>
 
-          <Badge variant="outline" className="rounded-full">
-            {filtered.length}/{rows.length}
-          </Badge>
+          {rows.length > 0 ? (
+            <Badge variant="outline" className="rounded-full">
+              {filtered.length}/{rows.length}
+            </Badge>
+          ) : null}
         </AppToolbar>
 
         {/* Content */}
@@ -231,6 +233,11 @@ export function StocktakeListClient({
                   search || statusFilter !== "all"
                     ? messages.inventory.stocktake.noSessionsMatched
                     : messages.inventory.stocktake.noSessions
+                }
+                description={
+                  search || statusFilter !== "all"
+                    ? undefined
+                    : messages.inventory.stocktake.noSessionsHint
                 }
               />
             ) : (
@@ -289,6 +296,11 @@ export function StocktakeListClient({
                         search || statusFilter !== "all"
                           ? messages.inventory.stocktake.noSessionsMatched
                           : messages.inventory.stocktake.noSessions
+                      }
+                      description={
+                        search || statusFilter !== "all"
+                          ? undefined
+                          : messages.inventory.stocktake.noSessionsHint
                       }
                     />
                   ) : null}
