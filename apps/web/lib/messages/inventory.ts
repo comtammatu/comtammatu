@@ -97,6 +97,16 @@ export const inventory = {
     lineCount: (count: number) => `${count} dòng`,
     reviewRatio: (review: number, total: number) => `${review} / ${total} dòng`,
     inspectionItemsTitle: "Danh sách mặt hàng kiểm nhận",
+    overviewLinesTitle: "Dòng nhập kho",
+    overviewLinesPreviewHint: (count: number) =>
+      `Top ${count} theo giá trị nhập`,
+    viewAllLines: (count: number) => `Xem tất cả ${count} dòng →`,
+    overviewLinesEmpty: "Phiếu chưa có dòng nào.",
+    lineHeaderName: "Nguyên liệu",
+    lineHeaderQty: "SL nhận",
+    lineHeaderCost: "Đơn giá",
+    lineHeaderTotal: "Thành tiền",
+    lineHeaderStatus: "Trạng thái",
     draftToleranceHint: (
       shortagePct: number,
       warnPct: number,

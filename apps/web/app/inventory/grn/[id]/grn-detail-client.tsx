@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import type { FormEvent, TransitionStartFunction } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -17,6 +17,14 @@ import {
 } from "@comtammatu/ui/components/dialog";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@comtammatu/ui/components/table";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { PhotoUploadInput } from "../../_components/photo-upload-input";
 import {
@@ -416,6 +424,8 @@ export function GRNDetailClient({
               </span>
             </SummaryCard>
           </div>
+
+          <OverviewLinesPreview lines={lines} />
               </div>
             </TabsContent>
 
@@ -1020,6 +1030,129 @@ function SummaryCard({
         <div className="mt-3 text-lg font-semibold">{children}</div>
       </CardContent>
     </Card>
+  );
+}
+
+const PREVIEW_LIMIT = 10;
+
+function OverviewLinesPreview({ lines }: { lines: GRNDetailItem[] }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const sorted = useMemo(() => {
+    return [...lines]
+      .map((line) => {
+        const acceptedQty = Math.max(0, line.actual - line.rejected);
+        return {
+          line,
+          acceptedQty,
+          lineTotal: Number((acceptedQty * line.cost).toFixed(2)),
+        };
+      })
+      .sort((a, b) => b.lineTotal - a.lineTotal);
+  }, [lines]);
+
+  const preview = sorted.slice(0, PREVIEW_LIMIT);
+  const hasMore = sorted.length > PREVIEW_LIMIT;
+
+  function goToLinesTab() {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", "lines");
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }
+
+  if (lines.length === 0) {
+    return (
+      <AppSection title={grnCopy.overviewLinesTitle}>
+        <p className="text-sm text-muted-foreground">
+          {grnCopy.overviewLinesEmpty}
+        </p>
+      </AppSection>
+    );
+  }
+
+  return (
+    <AppSection
+      title={grnCopy.overviewLinesTitle}
+      headerHint={
+        hasMore ? grnCopy.overviewLinesPreviewHint(PREVIEW_LIMIT) : undefined
+      }
+      contentClassName="p-0"
+    >
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>{grnCopy.lineHeaderName}</TableHead>
+            <TableHead className="text-right">
+              {grnCopy.lineHeaderQty}
+            </TableHead>
+            <TableHead className="text-right">
+              {grnCopy.lineHeaderCost}
+            </TableHead>
+            <TableHead className="text-right">
+              {grnCopy.lineHeaderTotal}
+            </TableHead>
+            <TableHead className="w-24 text-right">
+              {grnCopy.lineHeaderStatus}
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {preview.map(({ line, acceptedQty, lineTotal }) => {
+            const variance = deriveVariance(line.cost, line.poUnitPrice);
+            const reviewFlagged =
+              line.requiresReview ||
+              (variance != null && Math.abs(variance) > 10);
+            const isRejected = line.qualityStatus === "rejected";
+            const statusVariant: "destructive" | "warning" | "success" =
+              isRejected ? "destructive" : reviewFlagged ? "warning" : "success";
+            const statusLabel = isRejected
+              ? grnCopy.rejectedLines
+              : reviewFlagged
+                ? grnCopy.priceReviewNeeded
+                : grnCopy.acceptedLines;
+            return (
+              <TableRow key={line.lineId}>
+                <TableCell>
+                  <div className="font-medium">{line.name}</div>
+                  {line.sku ? (
+                    <div className="font-mono text-xs text-muted-foreground">
+                      {line.sku}
+                    </div>
+                  ) : null}
+                </TableCell>
+                <TableCell className="text-right font-mono tabular-nums">
+                  {acceptedQty} {line.unit}
+                </TableCell>
+                <TableCell className="text-right font-mono tabular-nums">
+                  {inventoryCommon.currency(formatVND(line.cost))}
+                </TableCell>
+                <TableCell className="text-right font-mono tabular-nums font-semibold">
+                  {inventoryCommon.currency(formatVND(lineTotal))}
+                </TableCell>
+                <TableCell className="text-right">
+                  <Badge variant={statusVariant}>{statusLabel}</Badge>
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+      {hasMore ? (
+        <div className="border-t px-4 py-3">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={goToLinesTab}
+            className="text-primary"
+          >
+            {grnCopy.viewAllLines(sorted.length)}
+          </Button>
+        </div>
+      ) : null}
+    </AppSection>
   );
 }
 
