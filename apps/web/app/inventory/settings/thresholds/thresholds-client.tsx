@@ -222,7 +222,7 @@ export function ThresholdsClient({ rows }: { rows: ThresholdRow[] }) {
                   allSelected ? true : someSelected ? "indeterminate" : false
                 }
                 onCheckedChange={(v) => toggleAll(v === true)}
-                aria-label="Chọn tất cả"
+                aria-label={copy.selectAllAria}
               />
             </TableHead>
             <TableHead>{copy.cols.ingredient}</TableHead>
@@ -307,7 +307,7 @@ export function ThresholdsClient({ rows }: { rows: ThresholdRow[] }) {
       <div className="sticky bottom-0 flex items-center justify-between border-t bg-card/95 px-4 py-3 backdrop-blur">
         <span className="text-xs text-muted-foreground">
           {dirtyCount > 0
-            ? `${dirtyCount} dòng đã chỉnh${errorCount > 0 ? `, ${errorCount} dòng lỗi` : ""}`
+            ? copy.dirtySummary(dirtyCount, errorCount)
             : copy.save.nothing}
         </span>
         <Button

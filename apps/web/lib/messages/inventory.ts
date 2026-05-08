@@ -515,6 +515,11 @@ export const inventory = {
         reorder: "Điểm đặt lại",
         max: "Tồn tối đa",
       },
+      selectAllAria: "Chọn tất cả",
+      dirtySummary: (dirty: number, errors: number) =>
+        errors > 0
+          ? `${dirty} dòng đã chỉnh, ${errors} dòng lỗi`
+          : `${dirty} dòng đã chỉnh`,
       bulk: {
         applyTo: (count: number) => `Áp dụng cho ${count} dòng`,
         dialogTitle: "Áp dụng ngưỡng cho dòng đã chọn",
