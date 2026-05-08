@@ -416,9 +416,9 @@ type InvoiceResult = {
 
 | Provider          | Status   | API base URL                                           | Đăng ký template            |
 | ----------------- | -------- | ------------------------------------------------------ | --------------------------- |
-| MISA meInvoice    | Shipped  | prod `https://api.meinvoice.vn/api/v1`                 | Qua MISA portal             |
+| MISA meInvoice    | Hoàn thành | prod `https://api.meinvoice.vn/api/v1`                 | Qua MISA portal             |
 |                   |          | sandbox `https://testapi.meinvoice.vn/api/v1`          |                             |
-| Viettel Sinvoice  | Shipped  | `https://api-vinvoice.viettel.vn` (cùng test+prod)     | Qua Viettel BU              |
+| Viettel Sinvoice  | Hoàn thành | `https://api-vinvoice.viettel.vn` (cùng test+prod)     | Qua Viettel BU              |
 | VNPT-Invoice      | Future   | `https://einvoice.vnpt.vn/`                            | (chưa triển khai)           |
 
 ### 5.3 MISA meInvoice

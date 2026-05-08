@@ -409,13 +409,13 @@ Nav entry: thêm vào `/admin/finance` sidebar (existing finance shell).
 
 | PR | Status | Scope | Migration files / paths thực tế |
 |---|---|---|---|
-| **PR-1** | ✅ Shipped | Schema + junction + queue table | `supabase/migrations/20260508053555_hddt_summary_schema.sql` |
-| **PR-2** | ✅ Shipped | RPCs + SYSTEM_CRON_UUID seed | `supabase/migrations/20260508055046_hddt_summary_rpcs.sql` + `20260508055230_hddt_aggregate_rpc_fixes.sql` (bucket + advisory lock fixes) |
-| **PR-3** | ✅ Shipped | Refactor `createTaxInvoice` sang state machine; D4 `not_required` deprecated. Lưu ý: cờ `HDDT_STATE_MACHINE_ENABLED` KHÔNG được implement — state machine bật mặc định không có toggle. | `apps/web/app/finance/actions.ts:58-446` |
-| **PR-4** | ✅ Shipped | Cron route + server actions + shared executor | `apps/web/app/api/cron/hddt-daily-summary/route.ts`, `apps/web/app/finance/summary-invoice-actions.ts`, `apps/web/lib/hddt-daily-summary.ts` |
-| **PR-5** | ✅ Shipped | Admin UI `/finance/summary` (gate qua action permission, không qua module-acl entry) | `apps/web/app/finance/summary/page.tsx` |
-| **PR-6** | ✅ Shipped | Cron entry trong `vercel.json` (`5 19 * * *` UTC = 02:05 ICT). Flip `HDDT_DAILY_SUMMARY_ENABLED=true` per env. | `apps/web/vercel.json` |
-| **PR-7** | ✅ Shipped | 16 regression rules trong `tasks/regressions.md` (12 rules dự kiến + 4 rules legacy retained: `HDDT-PAYMENT-FIRST-FAILSOFT-ORPHAN`, `HDDT-FORM-PAYLOAD-FREEZE-AT-CLICK`, `POS-HDDT-CONDITIONAL-ON-MST`, `HDDT-CANCEL-REASON-MIN-20`) | `tasks/regressions.md` |
+| **PR-1** | ✅ Hoàn thành | Schema + junction + queue table | `supabase/migrations/20260508053555_hddt_summary_schema.sql` |
+| **PR-2** | ✅ Hoàn thành | RPCs + SYSTEM_CRON_UUID seed | `supabase/migrations/20260508055046_hddt_summary_rpcs.sql` + `20260508055230_hddt_aggregate_rpc_fixes.sql` (bucket + advisory lock fixes) |
+| **PR-3** | ✅ Hoàn thành | Refactor `createTaxInvoice` sang state machine; D4 `not_required` deprecated. Lưu ý: cờ `HDDT_STATE_MACHINE_ENABLED` KHÔNG được implement — state machine bật mặc định không có toggle. | `apps/web/app/finance/actions.ts:58-446` |
+| **PR-4** | ✅ Hoàn thành | Cron route + server actions + shared executor | `apps/web/app/api/cron/hddt-daily-summary/route.ts`, `apps/web/app/finance/summary-invoice-actions.ts`, `apps/web/lib/hddt-daily-summary.ts` |
+| **PR-5** | ✅ Hoàn thành | Admin UI `/finance/summary` (gate qua action permission, không qua module-acl entry) | `apps/web/app/finance/summary/page.tsx` |
+| **PR-6** | ✅ Hoàn thành | Cron entry trong `vercel.json` (`5 19 * * *` UTC = 02:05 ICT). Flip `HDDT_DAILY_SUMMARY_ENABLED=true` per env. | `apps/web/vercel.json` |
+| **PR-7** | ✅ Hoàn thành | 16 regression rules trong `tasks/regressions.md` (12 rules dự kiến + 4 rules legacy retained: `HDDT-PAYMENT-FIRST-FAILSOFT-ORPHAN`, `HDDT-FORM-PAYLOAD-FREEZE-AT-CLICK`, `POS-HDDT-CONDITIONAL-ON-MST`, `HDDT-CANCEL-REASON-MIN-20`) | `tasks/regressions.md` |
 
 **Actual delivery:** ~7 ngày dev (2026-05-01 → 2026-05-08). Pilot 7 ngày bắt đầu sau khi owner apply provider creds prod + template đăng ký với CQT (xem cutover runbook).
 
