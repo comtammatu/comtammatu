@@ -33,6 +33,7 @@ import {
 import { getEmployeeContext } from "./_lib/employee-context";
 import {
   formatDateVN,
+  formatTimeShort,
   formatTimeVN,
   getTodayVN,
 } from "./_lib/vn-business-date";
@@ -261,7 +262,7 @@ export default async function EmployeePage() {
       : formatDateVN(nextShift.date)
     : null;
   const nextShiftDescription = nextShift
-    ? `${nextShiftDateLabel} · ${nextShift.startTime} - ${nextShift.endTime}`
+    ? `${nextShiftDateLabel} · ${formatTimeShort(nextShift.startTime)} - ${formatTimeShort(nextShift.endTime)}`
     : copy.noNextShift;
 
   return (
