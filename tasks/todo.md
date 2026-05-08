@@ -109,21 +109,33 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 - [ ] `consume_stock_for_order` phải resolve `default_consumption`; nếu thiếu thì fail hard/setup gate, không fallback silent
 - [x] Retire `stock_issue(issue_type='kitchen_use')` — runtime CHECK đã chặn; docs active phải trỏ sang intra-branch transfer
 
-## Sprint 6 — Inventory UX follow-up (deferred from inventory-ux-sprint1)
+## Sprint 6 — Inventory UX follow-up
 
-> Sprint 5 shipped #1 dead-code cleanup, #2 atomic `create_grn_from_po` RPC, #4 `formatVND` shadow consolidation. **#3 deferred** — see analysis below.
+> Sprint 5 shipped #1 dead-code, #2 atomic `create_grn_from_po` RPC, #4 `formatVND` shadow consolidation. Sprint 6 shipped F-017 PO display ID + Fix #3 stage A foundation.
 
-- [ ] **#3: GRN form server-side draft auto-save** — replace `mobile-draft.ts` localStorage cache with server-side `goods_received_notes` `status='draft'` lifecycle (already exists). Per architect spec:
-  - Add server actions `findActiveGrnDraft({ supplierId })`, `listMyGrnDrafts()`, `discardGrnDraft({ grnId })`
-  - Lazy-create draft GRN on first line save in `grn-create-client.tsx`; route subsequent line saves to `upsertGrnLine` directly (server is truth)
-  - Rewrite `drafts/page-client.tsx` to consume server data
-  - Add legacy-import shim for one release (read existing localStorage drafts, POST to `importLegacyDrafts`, then `localStorage.clear`)
-  - Add `pg_cron` daily cleanup of drafts `updated_at < now() - interval '14 days'`
-  - **Not strictly a CLAUDE.md hard-rule violation** (rule is about routing scope, not form data). Still good practice for offline + corruption resilience.
+### ✅ Shipped in Sprint 6
 
-- [ ] **F-017: PO display ID** — needs DB sequence migration `po_display_seq` per-tenant. UUID hash leaking to UI.
-- [ ] **F-018: Supplier "Khác"** — needs business decision: rename, add NCC catalog, or hide UI surface?
-- [ ] **F-009: Stock list master-detail as drawer** — invasive; current side-panel UX is acceptable.
+- **F-017 PO display ID** (commit `b0888c96`): `next_po_display_id(tenant_id)` RPC + `display_id` column + backfill `PO-LEGACY-XXXXXX` + display layer. Year scoped to `Asia/Ho_Chi_Minh`. New PO writes get `PO-YYYY-####` zero-padded.
+- **Fix #3 Stage A** (commit `3658b15c`): partial UNIQUE index `uq_grn_active_draft_per_user_supplier` + `loadActiveGrnDraft` + `discardGrnDraft` server actions + `createGrnDraft` UNIQUE_VIOLATION fallback. Foundation for server-side draft lifecycle.
+
+### 🚧 Sprint 6 Stage B + C (next session — client refactor)
+
+- [ ] **#3 Stage B: Client refactor `grn-create-client.tsx`**:
+  - Remove `loadDraft`/`saveDraft`/`removeDraft` calls + direct `window.localStorage.{getItem,setItem,removeItem}` calls (lines 84-108, 124-128, 176-188, 198-234)
+  - RSC pre-fetch via `loadActiveGrnDraft({ supplierId })` in `/grn/new/[supplierId]/page.tsx`; pass `existingDraft` prop
+  - Lazy-create server draft on first `saveLine`; route subsequent `saveLine` calls to `upsertGrnLine` directly (debounce 600ms, 1 retry)
+  - On `discardDraft`: call new `discardGrnDraft({ grnId })`
+  - Submit becomes navigation only (no bulk upload — lines already on server)
+- [ ] **#3 Stage C: Drafts page + cleanup**:
+  - Rewrite `drafts/page.tsx` (RSC) + `page-client.tsx` to consume `goods_received_notes status='draft'` query (filtered by `tenant_id` + `created_by = auth.uid()`)
+  - Delete `apps/web/app/inventory/_lib/mobile-draft.ts` (or keep type-only if shared)
+  - Fix `startGrnFromPo` URL-flash redirect → toast pattern (regression rule `UI-TOAST-VIA-SONNER-NEVER-URL-FLASH`)
+  - Optional: legacy-import shim for in-flight localStorage drafts on first load post-deploy; `pg_cron` cleanup job for stale drafts (14d retention)
+
+### ⏸️ Blocked / deferred
+
+- [ ] **F-018: Supplier "Khác"** — BLOCKED-PRODUCT. 0 occurrences in code (data-level only). Need product input on (a) require formal NCC, (b) "Mua ngoài" + inline note, or (c) accept generic "Khác" as catch-all.
+- [ ] **F-009: Stock master-detail as drawer** — invasive refactor; current side-panel acceptable.
 
 ## Doc maintenance reminders
 
