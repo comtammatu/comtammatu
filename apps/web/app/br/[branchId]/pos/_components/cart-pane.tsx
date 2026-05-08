@@ -255,27 +255,13 @@ function CartPaneComponent({
       </div>
 
       {cart.items.length === 0 ? (
-        <>
-          <div className="min-h-0 flex-1" aria-hidden="true" />
-
-          <div className="shrink-0 border-t border-border/60 bg-background px-4 py-4">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Tổng tạm tính
-              </p>
-              <p className="text-2xl font-bold text-primary tabular-nums">
-                {formatVND(0)}
-              </p>
-            </div>
-            <Button
-              className="w-full"
-              size="touch-lg"
-              disabled
-            >
-              Đặt món (0)
-            </Button>
-          </div>
-        </>
+        <div className="flex min-h-0 flex-1 items-center justify-center px-6 text-center">
+          <p className="max-w-[16rem] text-sm leading-6 text-muted-foreground">
+            {cart.orderType === "takeaway" || selectedTableNumber != null
+              ? "Chạm món trên thực đơn để thêm vào đơn."
+              : "Chạm bàn bên trái hoặc chọn 'Mang về' để bắt đầu."}
+          </p>
+        </div>
       ) : (
         <>
           <ScrollArea className="min-h-0 flex-1">
