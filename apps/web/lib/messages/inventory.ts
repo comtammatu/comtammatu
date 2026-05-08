@@ -291,7 +291,6 @@ export const inventory = {
       meta: (supplier: string, date: string, sentAt: string) =>
         `${supplier} • ${date} • Gửi NCC ${sentAt} • Bước mở đầu của hub procurement`,
       goodsTotal: "Tổng tiền hàng",
-      currencyVnd: "VNĐ",
       steps: {
         draft: "Nháp",
         sent: "Đã gửi",
