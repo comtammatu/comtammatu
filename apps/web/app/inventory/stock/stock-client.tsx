@@ -848,7 +848,11 @@ export function StockClient({
                         {stockCopy.table.wac}
                       </p>
                       <p className="tabular-nums">
-                        {inventoryCommon.currencyCompact(formatVND(item.cost))}
+                        {item.cost > 0
+                          ? inventoryCommon.currencyCompact(
+                              formatVND(item.cost),
+                            )
+                          : inventoryCommon.noValue}
                       </p>
                     </div>
                     <div className="text-right">
@@ -1026,12 +1030,16 @@ export function StockClient({
                             </div>
                           </TableCell>
                           <TableCell className="text-right font-mono">
-                            {formatVND(item.cost)}
+                            {item.cost > 0
+                              ? formatVND(item.cost)
+                              : inventoryCommon.noValue}
                           </TableCell>
                           <TableCell className="text-right font-mono font-semibold">
-                            {inventoryCommon.currencyCompact(
-                              formatVND(stockValue(item)),
-                            )}
+                            {stockValue(item) > 0
+                              ? inventoryCommon.currencyCompact(
+                                  formatVND(stockValue(item)),
+                                )
+                              : inventoryCommon.noValue}
                           </TableCell>
                         </TableRow>
                       );
