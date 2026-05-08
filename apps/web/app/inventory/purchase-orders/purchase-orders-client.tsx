@@ -47,6 +47,7 @@ import { FORM_VI } from "@comtammatu/shared/messages";
 export interface PurchaseOrderRow {
   id: number;
   po_number: string;
+  display_id: string | null;
   status: string;
   ordered_at: string;
   notes: string | null;
@@ -129,7 +130,10 @@ export function PurchaseOrdersClient({
         return true;
       }
 
-      return matchesSearch([row.po_number, row.suppliers?.name, row.notes], query);
+      return matchesSearch(
+        [row.display_id, row.po_number, row.suppliers?.name, row.notes],
+        query,
+      );
     });
   }, [rows, search, statusFilter, supplierFilter]);
 
@@ -261,7 +265,7 @@ export function PurchaseOrdersClient({
                     >
                       <div className="min-w-0 flex-1 space-y-1">
                         <p className="font-mono text-sm font-semibold">
-                          {row.po_number}
+                          {row.display_id ?? row.po_number}
                         </p>
                         <p className="truncate text-xs text-muted-foreground">
                           {row.suppliers?.name ?? "Chưa gắn nhà cung cấp"}
@@ -318,7 +322,7 @@ export function PurchaseOrdersClient({
                   {filteredRows.map((row) => (
                     <TableRow key={row.id}>
                       <TableCell className="font-mono font-medium">
-                        {row.po_number}
+                        {row.display_id ?? row.po_number}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {row.suppliers?.name ?? "Chưa gắn nhà cung cấp"}

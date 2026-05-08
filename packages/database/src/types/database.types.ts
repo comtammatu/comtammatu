@@ -4709,6 +4709,7 @@ export type Database = {
           branch_id: number
           created_at: string
           created_by: string
+          display_id: string | null
           id: number
           notes: string | null
           ordered_at: string
@@ -4722,6 +4723,7 @@ export type Database = {
           branch_id: number
           created_at?: string
           created_by: string
+          display_id?: string | null
           id?: never
           notes?: string | null
           ordered_at?: string
@@ -4735,6 +4737,7 @@ export type Database = {
           branch_id?: number
           created_at?: string
           created_by?: string
+          display_id?: string | null
           id?: never
           notes?: string | null
           ordered_at?: string
@@ -7397,6 +7400,35 @@ export type Database = {
           },
         ]
       }
+      tenant_po_counters: {
+        Row: {
+          next_seq: number
+          tenant_id: number
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          next_seq?: number
+          tenant_id: number
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          next_seq?: number
+          tenant_id?: number
+          updated_at?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_po_counters_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenants: {
         Row: {
           created_at: string | null
@@ -8949,6 +8981,7 @@ export type Database = {
         Args: { p_entry_date: string; p_tenant_id: number }
         Returns: string
       }
+      next_po_display_id: { Args: { p_tenant_id: number }; Returns: string }
       override_grn_hardblock: {
         Args: {
           p_evidence_url: string
@@ -9205,6 +9238,7 @@ export type Database = {
         }[]
       }
       toggle_category_active: { Args: { p_id: number }; Returns: boolean }
+      toggle_ingredient_active: { Args: { p_id: number }; Returns: boolean }
       toggle_item_active: { Args: { p_id: number }; Returns: boolean }
       toggle_profile_active: { Args: { p_target_id: string }; Returns: boolean }
       transfer_order_table: {

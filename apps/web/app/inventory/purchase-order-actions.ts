@@ -38,7 +38,7 @@ export async function fetchPurchaseOrders(
   let query = supabase
     .from("purchase_orders")
     .select(
-      "id, po_number, status, ordered_at, notes, supplier_id, branch_id, created_by, suppliers ( id, name ), purchase_order_items ( line_total )",
+      "id, po_number, display_id, status, ordered_at, notes, supplier_id, branch_id, created_by, suppliers ( id, name ), purchase_order_items ( line_total )",
     )
     .eq("tenant_id", claims.tenant_id)
     .order("ordered_at", { ascending: false });
@@ -81,7 +81,19 @@ export const createPurchaseOrder = withAction(
       };
     }
 
-    const poNumber = `PO-${randomUUID().slice(0, 8)}`;
+    // F-017: allocate per-tenant per-year sequential display ID via atomic RPC.
+    const { data: nextDisplay, error: seqErr } = await supabase.rpc(
+      "next_po_display_id",
+      { p_tenant_id: claims.tenant_id },
+    );
+    if (seqErr || !nextDisplay) {
+      return { success: false, error: "Không thể cấp số PO." };
+    }
+    const displayId = String(nextDisplay);
+    // Keep po_number == display_id (legacy column for back-compat references
+    // in audit_logs/exports/HĐĐT).
+    const poNumber = displayId;
+
     const { data: row, error } = await supabase
       .from("purchase_orders")
       .insert({
@@ -89,11 +101,12 @@ export const createPurchaseOrder = withAction(
         branch_id: targetBranchId,
         supplier_id: data.supplierId,
         po_number: poNumber,
+        display_id: displayId,
         status: "draft",
         notes: data.notes ?? null,
         created_by: user.id,
       })
-      .select("id")
+      .select("id, display_id")
       .single();
     if (error) {
       return { success: false, error: "Không thể tạo đơn đặt hàng." };
