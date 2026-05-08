@@ -16,6 +16,12 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@comtammatu/ui/components/tooltip";
+import {
   Table,
   TableBody,
   TableCell,
@@ -344,6 +350,45 @@ export function PODetailClient({
             <IconArrowLeft className="size-4" />{" "}
             {tRoute("/inventory/purchase-orders", "heading")}
           </Link>
+        }
+        actions={
+          canSendPo ? (
+            <Button
+              type="button"
+              size="lg"
+              disabled={isPending}
+              onClick={handleSendPo}
+            >
+              <IconCircleCheck className="size-4" />
+              {poDetailCopy.sendPo}
+            </Button>
+          ) : canCreateGrn ? (
+            <Button
+              type="button"
+              size="lg"
+              disabled={isPending}
+              onClick={handleCreateGrn}
+            >
+              <IconCircleCheck className="size-4" />
+              {poDetailCopy.createGrnStep}
+            </Button>
+          ) : po.status !== "cancelled" ? (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span tabIndex={0}>
+                    <Button type="button" size="lg" disabled>
+                      <IconCircleCheck className="size-4" />
+                      {poDetailCopy.createGrnStep}
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {poDetailCopy.createGrnDisabledHint}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ) : null
         }
         tabs={
           <AppPageTabs

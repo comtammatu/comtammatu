@@ -319,7 +319,8 @@ export const inventory = {
         "Chưa có thêm thông tin nhà cung cấp trong đơn mua này.",
       cancelPo: "Hủy PO",
       sendPo: "Gửi PO cho NCC",
-      createGrnStep: "Sang bước tạo GRN",
+      createGrnStep: "Tạo GRN từ PO này",
+      createGrnDisabledHint: "Chỉ tạo GRN khi PO đã gửi NCC.",
     },
   },
   stock: {
