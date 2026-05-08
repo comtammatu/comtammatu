@@ -979,7 +979,7 @@ export async function fetchProductionOrders(): Promise<
       supabase
         .from("production_recipes")
         .select(
-          "finished_good_id, ingredient_id, quantity, yield_factor, ingredients ( purchase_to_measure_factor, unit_cost )",
+          "finished_good_id, ingredient_id, quantity, yield_factor, ingredients:ingredients!production_recipes_ingredient_id_fkey ( purchase_to_measure_factor, unit_cost )",
         )
         .in("finished_good_id", fgIds)
         .eq("tenant_id", claims.tenant_id),
