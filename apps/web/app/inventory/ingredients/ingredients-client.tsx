@@ -1,10 +1,23 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Pencil as IconPencil, Search as IconSearch } from "lucide-react";
+import { useMemo, useState, useTransition } from "react";
+import {
+  Ellipsis as IconDots,
+  Eye as IconEye,
+  EyeOff as IconEyeOff,
+  Pencil as IconPencil,
+  Search as IconSearch,
+} from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@comtammatu/ui/components/dropdown-menu";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
   InputGroup,
@@ -35,7 +48,7 @@ import { StatusBadge } from "../_components/status-badge";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import { formatVND } from "../_lib/format";
 import { CATEGORY_TONE_CLASS } from "../_lib/constants";
-import { fetchIngredients } from "../actions";
+import { fetchIngredients, toggleIngredientActive } from "../actions";
 import { IngredientDialog } from "./ingredient-dialog";
 import type { IngredientRow } from "../_lib/types";
 import { IngredientImportExportMenu } from "./import-export-menu";
@@ -46,6 +59,11 @@ const preservationOptions = [
   { value: "refrigerated", label: "Mát" },
   { value: "frozen", label: "Đông lạnh" },
   { value: "ambient", label: "Khô" },
+];
+
+const activeOptions = [
+  { value: "active", label: "Đang dùng" },
+  { value: "all", label: "Hiện cả đã ẩn" },
 ];
 
 function storageLabel(type: string | null): string {
@@ -68,9 +86,11 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [category, setCategory] = useState("all");
   const [preservation, setPreservation] = useState("all");
+  const [activeFilter, setActiveFilter] = useState<"active" | "all">("active");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingIngredient, setEditingIngredient] =
     useState<IngredientRow | null>(null);
+  const [isPending, startTransition] = useTransition();
 
   const categoryOptions = useMemo(() => {
     const unique = [...new Set(rows.map((r) => r.category).filter(Boolean))];
@@ -82,6 +102,9 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
 
   const filtered = useMemo(() => {
     let result = rows;
+    if (activeFilter === "active") {
+      result = result.filter((item) => item.is_active);
+    }
     if (category !== "all") {
       result = result.filter((item) => item.category === category);
     }
@@ -96,7 +119,7 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
       );
     }
     return result;
-  }, [rows, category, preservation, searchQuery]);
+  }, [rows, activeFilter, category, preservation, searchQuery]);
 
   async function reload() {
     try {
@@ -119,6 +142,24 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
   function openEdit(row: IngredientRow) {
     setEditingIngredient(row);
     setDialogOpen(true);
+  }
+
+  function handleToggleActive(item: IngredientRow) {
+    startTransition(async () => {
+      const result = await toggleIngredientActive({ id: item.id });
+      if (!result.success) {
+        toast.error(result.error ?? "Không thể đổi trạng thái nguyên liệu.");
+        return;
+      }
+      setRows((prev) =>
+        prev.map((r) =>
+          r.id === item.id ? { ...r, is_active: !r.is_active } : r,
+        ),
+      );
+      toast.success(
+        item.is_active ? `Đã ẩn "${item.name}".` : `Đã hiện lại "${item.name}".`,
+      );
+    });
   }
 
   const filterBar = (
@@ -154,6 +195,22 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
           </SelectTrigger>
           <SelectContent>
             {preservationOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={activeFilter}
+          onValueChange={(value) => setActiveFilter(value as "active" | "all")}
+        >
+          <SelectTrigger className="w-40">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {activeOptions.map((option) => (
               <SelectItem key={option.value} value={option.value}>
                 {option.label}
               </SelectItem>
@@ -233,17 +290,38 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
                           </span>
                         ) : null}
                       </div>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => openEdit(item)}
-                        aria-label={`Sửa ${item.name}`}
-                        className="min-h-10"
-                      >
-                        <IconPencil className="size-4" />
-                        <span className="ml-1">{ACTIONS_VI.edit}</span>
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleToggleActive(item)}
+                          aria-label={
+                            item.is_active
+                              ? `Ẩn ${item.name}`
+                              : `Hiện lại ${item.name}`
+                          }
+                          className="min-h-10"
+                          disabled={isPending}
+                        >
+                          {item.is_active ? (
+                            <IconEyeOff className="size-4" />
+                          ) : (
+                            <IconEye className="size-4" />
+                          )}
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => openEdit(item)}
+                          aria-label={`Sửa ${item.name}`}
+                          className="min-h-10"
+                        >
+                          <IconPencil className="size-4" />
+                          <span className="ml-1">{ACTIONS_VI.edit}</span>
+                        </Button>
+                      </div>
                     </div>
                   </InteractiveCard>
                 );
@@ -367,15 +445,41 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
                           />
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => openEdit(item)}
-                            aria-label={`Sửa ${item.name}`}
-                          >
-                            <IconPencil className="size-4" />
-                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="ghost"
+                                aria-label={`Tác vụ cho ${item.name}`}
+                                disabled={isPending}
+                              >
+                                <IconDots className="size-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => openEdit(item)}>
+                                <IconPencil className="mr-2 size-4" />
+                                {ACTIONS_VI.edit}
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => handleToggleActive(item)}
+                              >
+                                {item.is_active ? (
+                                  <>
+                                    <IconEyeOff className="mr-2 size-4" />
+                                    Ẩn nguyên liệu
+                                  </>
+                                ) : (
+                                  <>
+                                    <IconEye className="mr-2 size-4" />
+                                    Hiện lại
+                                  </>
+                                )}
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </TableCell>
                       </TableRow>
                     );
