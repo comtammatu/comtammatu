@@ -44,6 +44,12 @@ export interface MultiSelectComboboxProps {
   confirmLabel: (count: number) => string;
   searchPlaceholder?: string;
   emptyMessage?: string;
+  /** Hint shown next to options that are already applied in the parent form. */
+  alreadyAppliedHint?: string;
+  /** Footer hint when no items are pending. */
+  pickHint?: string;
+  /** Footer hint when N items are pending — receives count. */
+  pendingHint?: (count: number) => string;
   disabled?: boolean;
   triggerClassName?: string;
 }
@@ -63,6 +69,9 @@ export function MultiSelectCombobox({
   confirmLabel,
   searchPlaceholder = "Tìm...",
   emptyMessage = "Không tìm thấy.",
+  alreadyAppliedHint = "Đã có",
+  pickHint = "Tích để chọn",
+  pendingHint = (n: number) => `${n} đang chọn`,
   disabled,
   triggerClassName,
 }: MultiSelectComboboxProps) {
@@ -163,7 +172,7 @@ export function MultiSelectCombobox({
                     </div>
                     {isAlready ? (
                       <span className="ml-2 text-xs text-muted-foreground">
-                        Đã có
+                        {alreadyAppliedHint}
                       </span>
                     ) : null}
                   </CommandItem>
@@ -173,7 +182,7 @@ export function MultiSelectCombobox({
           </CommandList>
           <div className="flex items-center justify-between border-t px-2 py-2">
             <span className="text-xs text-muted-foreground">
-              {pending.size > 0 ? `${pending.size} đang chọn` : "Tích để chọn"}
+              {pending.size > 0 ? pendingHint(pending.size) : pickHint}
             </span>
             <Button
               type="button"
