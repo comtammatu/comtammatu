@@ -30,11 +30,14 @@ Set trong Vercel project settings (Settings → Environment Variables → Produc
 
 ```env
 COMPANY_TAX_CODE=0100109106-899        # MST seller (= account login MST)
-HDDT_STATE_MACHINE_ENABLED=true        # default true; set false để rollback
-HDDT_DAILY_SUMMARY_ENABLED=true        # default false; flip true khi sẵn sàng
+HDDT_DAILY_SUMMARY_ENABLED=true        # default false; flip true khi sẵn sàng (kill-switch cho cron + manual)
 INVOICE_PROVIDER=misa                  # hoặc "viettel"
 CRON_SECRET=<32+ char random>          # Bearer cho /api/cron/* — đã có sẵn theo feedback cron
 ```
+
+> ⚠️ **`HDDT_STATE_MACHINE_ENABLED` không tồn tại trong code.** Plan ban đầu dự kiến có toggle nhưng thực tế ship state machine direct (xem `apps/web/app/finance/actions.ts:58-446`). Nếu cần rollback B2B refactor (PR-3) — revert commit + redeploy. Chỉ `HDDT_DAILY_SUMMARY_ENABLED` còn vai trò kill-switch cho B2C batch path.
+
+> **Provider switch logic:** `apps/web/lib/invoice-provider-init.ts:22-55` đọc `INVOICE_PROVIDER` env tại boot, register đúng 1 singleton (MISA hoặc Sinvoice). Đổi env → cần redeploy hoặc edge function reload.
 
 ### Provider = `misa`
 
@@ -150,6 +153,8 @@ Vào `/finance/summary` (cần permission `settings:tenant`):
 2. Click "Chạy tổng hợp"
 3. Expect toast "Đã bỏ qua: HĐ tổng hợp đã tồn tại" (UNIQUE chặn duplicate)
 
+> **ACL note:** Route `/finance/summary` KHÔNG có entry trong `packages/shared/src/auth/module-acl.ts:89-93` (module `finance` chỉ list path `/finance` cho roles `owner`/`super_manager`). Cashier/branch_manager có thể thấy nav nhưng action `runDailySummaryForBranch` (`apps/web/app/finance/summary-invoice-actions.ts`) sẽ reject vì gate `settings:tenant` ở action level. Nếu cần hard-block tại route level → thêm entry `/finance/summary` vào `module-acl.ts` (defer đến formal admin panel restructure).
+
 Hoặc cancel HĐ tổng hợp đã issued rồi retry:
 ```sql
 SELECT public.transition_tax_invoice_state_as_system(
@@ -173,14 +178,28 @@ Sau khi sandbox smoke 1-3 ngày green:
 
 ## Rollback
 
-Nếu cron fail liên tục hoặc Sinvoice/MISA reject 100%:
+### Tier 1 — Disable B2C batch (nhẹ nhất)
+
+Cron fail liên tục hoặc provider reject 100% trên path B2C summary:
 
 ```env
-HDDT_DAILY_SUMMARY_ENABLED=false      # cron sẽ return { skipped: "feature_flag_off" }
-HDDT_STATE_MACHINE_ENABLED=false      # B2B path fallback về legacy direct-insert
+HDDT_DAILY_SUMMARY_ENABLED=false      # cron + manual đều return { skipped: "feature_flag_off" }
 ```
 
-Redeploy hoặc trigger Vercel re-run (env reload). Existing data đã insert vẫn còn — không phá data.
+Redeploy hoặc Vercel env reload. B2B realtime path KHÔNG ảnh hưởng. Existing summary HĐ đã insert vẫn còn — không phá data.
+
+### Tier 2 — Đổi provider
+
+Nếu MISA fail nhưng Sinvoice OK (hoặc ngược lại):
+
+```env
+INVOICE_PROVIDER=viettel    # hoặc "misa"
+# + set creds tương ứng (xem §Environment variables)
+```
+
+### Tier 3 — Revert B2B refactor (nặng nhất)
+
+`HDDT_STATE_MACHINE_ENABLED` không tồn tại — phải revert commit PR-3 (`apps/web/app/finance/actions.ts:58-446`) + redeploy. Pre-PR-3 logic insert direct `status='issued'` không qua state machine. Cẩn thận: data đã insert qua state machine có `tax_invoice_events` rows — revert code không làm sạch events table, sẽ orphan.
 
 Nếu cần rollback DB: cancel các HĐ tổng hợp issued sai qua `cancelTaxInvoice` action hoặc `transition_tax_invoice_state_as_system(.., 'cancelled', ..)`. Junction rows preserve theo regression rule HDDT-SUMMARY-CANCEL-PRESERVES-JUNCTION.
 
@@ -217,16 +236,31 @@ Nếu queue row có `last_error` chứa các code dưới, tham chiếu cách x�
 
 ## Reference
 
-- `docs/plan/hddt-hybrid-misa.md` — full plan + decisions D1-D7
-- `docs/ref/einvoice-tax.md` — pháp lý + nghĩa vụ thuế
-- `apps/web/lib/hddt-daily-summary.ts` — shared executeSummaryRun helper
+- `docs/plan/hddt-hybrid-misa.md` — full plan + decisions D1-D7 (đã shipped)
+- `docs/ref/einvoice-tax.md` — pháp lý + nghĩa vụ thuế (canonical reference, post-pilot)
+- `apps/web/lib/hddt-daily-summary.ts:67+` — shared `executeSummaryRun(deps)` helper
 - `apps/web/app/api/cron/hddt-daily-summary/route.ts` — cron handler
-- `apps/web/app/finance/summary-invoice-actions.ts` — admin server actions
-- `apps/web/app/finance/summary/` — admin UI page
-- `packages/shared/src/providers/impl/viettel-sinvoice.ts` — Sinvoice impl
-- `packages/shared/src/providers/impl/misa.ts` — MISA impl
+- `apps/web/app/finance/summary-invoice-actions.ts:45+` — admin server actions
+- `apps/web/app/finance/summary/page.tsx` — admin UI page
+- `apps/web/lib/invoice-provider-init.ts:22-55` — provider singleton init
+- `packages/shared/src/providers/invoice.ts:48-93` — `InvoiceProvider` interface + `InvoiceResult`
+- `packages/shared/src/providers/impl/viettel-sinvoice.ts:115-426` — Sinvoice impl + `buildSinvoiceTransactionUuid`
+- `packages/shared/src/providers/impl/misa.ts:47-234` — MISA impl
+- `packages/shared/src/auth/module-acl.ts:89-93` — `finance` module ACL (note `/finance/summary` gate ở action level)
+- `tasks/regressions.md` — 16 named rules `HDDT-*` + `POS-HDDT-*`
+
+### Migration files đã apply
+
+```
+20260425035346_tax_invoice_state_machine.sql
+20260502000000_pos_hddt_not_required_d4.sql      ← deprecated bởi D2 (xem plan)
+20260508053555_hddt_summary_schema.sql           ← PR-1
+20260508055046_hddt_summary_rpcs.sql             ← PR-2
+20260508055230_hddt_aggregate_rpc_fixes.sql      ← PR-2 hot-fix (bucket + advisory lock)
+20260527020000_finance_dashboard_summary_rpc.sql ← dashboard /finance counters
+```
 
 ---
 
-> **Last updated**: 2026-05-08 (PR-6)
-> **Next**: PR-7 — add 12 regression rules vào `tasks/regressions.md`
+> **Last updated**: 2026-05-08 (post-PR-7 update)
+> **Next**: Owner action items — đăng ký template với CQT, mở account provider prod, set env Vercel production, run sandbox smoke 1-3 ngày, flip `HDDT_DAILY_SUMMARY_ENABLED=true`, monitor 7-day pilot gate metrics.

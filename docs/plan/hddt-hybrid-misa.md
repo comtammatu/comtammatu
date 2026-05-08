@@ -1,9 +1,9 @@
 # HĐĐT Hybrid via MISA meInvoice — Plan
 
-> **Status:** Approved 2026-05-08 (4-agent debate + owner sign-off D1–D7).
+> **Status:** ✅ **SHIPPED 2026-05-08** — PR-1 → PR-7 merged. Cutover gated trên owner action items (xem `docs/runbooks/hddt-hybrid-cutover.md`).
 > **Owner:** ngocnghia128@gmail.com
-> **Pre-req:** Owner đăng ký template "HĐ tổng hợp B2C" với CQT qua MISA portal (D7, leadtime 3-7 ngày, song song với coding).
-> **Carryover blocker:** MISA real API credentials still pending owner contract.
+> **Pre-req:** Owner đăng ký template "HĐ tổng hợp B2C" với CQT qua MISA / Sinvoice portal (D7, leadtime 3-7 ngày, song song với coding).
+> **Carryover blocker (resolved):** Bổ sung provider Viettel Sinvoice bên cạnh MISA (`packages/shared/src/providers/impl/viettel-sinvoice.ts:115-426`) — không còn phụ thuộc 1 vendor. Owner chốt provider thực tế khi mở account prod.
 
 ## Goal
 
@@ -405,19 +405,27 @@ Nav entry: thêm vào `/admin/finance` sidebar (existing finance shell).
 11. `HDDT-SUMMARY-AUDIT-WHO-TRIGGERED` — every summary HĐ insert writes `audit_logs` với `actor_id` (cron = SYSTEM_CRON_UUID, manual = user.id)
 12. `HDDT-VERCEL-CRON-TIMEOUT-FANOUT-SAFE` — flag if >5 branches per tenant; queue table + worker pattern when scale
 
-## Migration plan — 7 PRs
+## Migration plan — 7 PRs (✅ all shipped)
 
-| PR | Scope | LOC est. | Independently shippable? | Behavior change? |
-|---|---|---|---|---|
-| **PR-1** | Migration 1 (schema + junction + queue table). `pnpm db:types` regen. Fix ~6 readers of `tax_invoices.order_id` for nullability. | ~250 | Yes | No |
-| **PR-2** | Migration 2 (RPCs: `_compute_vat_breakdown` helper, `transition_tax_invoice_state_as_system`, `aggregate_daily_b2c_invoice`) + pg-tap tests. SYSTEM_CRON_UUID seed. | ~400 | Yes | No |
-| **PR-3** | Refactor `createTaxInvoice` sang state machine. DROP D4 `not_required` insert. Naming alignment `provider_ref → provider_invoice_id`. Behind flag `HDDT_STATE_MACHINE_ENABLED=true` default. | ~200 | Yes | Yes (B2B path improved) |
-| **PR-4** | Cron route `/api/cron/hddt-daily-summary` + server action `runDailySummaryForBranch` + `listSummaryRunQueue`. Behind flag `HDDT_DAILY_SUMMARY_ENABLED=false` default. | ~350 | Yes | No (flag off) |
-| **PR-5** | Admin UI `/admin/finance/summary` (page + form + table + nav). Trigger button disabled when flag off. | ~300 | Yes | No (flag off) |
-| **PR-6** | Cutover: flip `HDDT_DAILY_SUMMARY_ENABLED=true` + add cron entry to `vercel.json`. Owner runs sandbox smoke. | ~10 | Yes | Yes (production batch active) |
-| **PR-7** | Add 12 regression rules to `tasks/regressions.md` (split across PR-1 to PR-6 description ideally; consolidated PR-7 if missed). | ~150 | Yes | No |
+| PR | Status | Scope | Migration files / paths thực tế |
+|---|---|---|---|
+| **PR-1** | ✅ Shipped | Schema + junction + queue table | `supabase/migrations/20260508053555_hddt_summary_schema.sql` |
+| **PR-2** | ✅ Shipped | RPCs + SYSTEM_CRON_UUID seed | `supabase/migrations/20260508055046_hddt_summary_rpcs.sql` + `20260508055230_hddt_aggregate_rpc_fixes.sql` (bucket + advisory lock fixes) |
+| **PR-3** | ✅ Shipped | Refactor `createTaxInvoice` sang state machine; D4 `not_required` deprecated. Lưu ý: cờ `HDDT_STATE_MACHINE_ENABLED` KHÔNG được implement — state machine bật mặc định không có toggle. | `apps/web/app/finance/actions.ts:58-446` |
+| **PR-4** | ✅ Shipped | Cron route + server actions + shared executor | `apps/web/app/api/cron/hddt-daily-summary/route.ts`, `apps/web/app/finance/summary-invoice-actions.ts`, `apps/web/lib/hddt-daily-summary.ts` |
+| **PR-5** | ✅ Shipped | Admin UI `/finance/summary` (gate qua action permission, không qua module-acl entry) | `apps/web/app/finance/summary/page.tsx` |
+| **PR-6** | ✅ Shipped | Cron entry trong `vercel.json` (`5 19 * * *` UTC = 02:05 ICT). Flip `HDDT_DAILY_SUMMARY_ENABLED=true` per env. | `apps/web/vercel.json` |
+| **PR-7** | ✅ Shipped | 16 regression rules trong `tasks/regressions.md` (12 rules dự kiến + 4 rules legacy retained: `HDDT-PAYMENT-FIRST-FAILSOFT-ORPHAN`, `HDDT-FORM-PAYLOAD-FREEZE-AT-CLICK`, `POS-HDDT-CONDITIONAL-ON-MST`, `HDDT-CANCEL-REASON-MIN-20`) | `tasks/regressions.md` |
 
-**Estimated total:** ~7-9 ngày dev + 7 ngày pilot, gated MISA creds + template registration (D7 owner action).
+**Actual delivery:** ~7 ngày dev (2026-05-01 → 2026-05-08). Pilot 7 ngày bắt đầu sau khi owner apply provider creds prod + template đăng ký với CQT (xem cutover runbook).
+
+### Drift từ plan ban đầu
+
+- **Migration filename**: PR-1 ban đầu plan 1 migration; thực tế tách thành 2 (`hddt_summary_schema` + `hddt_summary_rpcs`) và phải hot-fix lần 3 (`hddt_aggregate_rpc_fixes`) vì `orders.paid_at` không tồn tại (bucket source thật là `payments.paid_at`) và `pg_advisory_xact_lock` 2-arg overload không match int signature.
+- **Provider:** Bổ sung Viettel Sinvoice (`packages/shared/src/providers/impl/viettel-sinvoice.ts`) bên cạnh MISA — switch qua env `INVOICE_PROVIDER=misa|viettel`.
+- **`HDDT_STATE_MACHINE_ENABLED` flag:** plan dự kiến có toggle, thực tế ship state machine direct (flag không tồn tại trong code). Nếu cần rollback B2B refactor: revert PR-3 commit. Chỉ flag `HDDT_DAILY_SUMMARY_ENABLED` còn giữ vai trò kill-switch cho cron.
+- **Path drift:** Plan dự kiến `/admin/finance/summary`; thực tế ship `/finance/summary` (cùng route shell với `/finance` dashboard). Code references trong plan body (PR-5 row, Acceptance #4, Server actions section) đề cập `/admin/finance/summary` đã outdated — path canonical là `/finance/summary`.
+- **Module ACL:** `/finance/summary` không có entry riêng trong `packages/shared/src/auth/module-acl.ts:89-93` (chỉ có `/finance` cho roles `owner`/`super_manager`). Permission gate `settings:tenant` ở action layer (`runDailySummaryForBranch`).
 
 ## Acceptance criteria
 
@@ -475,5 +483,5 @@ Files to touch / read before each PR:
 
 ---
 
-> **Last updated:** 2026-05-08
-> **Next action:** PR-1 — schema migration. Pending owner go-ahead.
+> **Last updated:** 2026-05-08 (post-ship update)
+> **Next action:** Cutover runbook execution → owner action items (template đăng ký với CQT, provider creds prod, 7-day pilot). Tham khảo `docs/runbooks/hddt-hybrid-cutover.md`.
