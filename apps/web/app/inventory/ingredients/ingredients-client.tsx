@@ -284,7 +284,7 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
                     <div className="flex items-center justify-between gap-2 px-4 pb-3 pt-1">
                       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                         <span>{storageLabel(item.storage_type)}</span>
-                        {item.unit_cost ? (
+                        {item.unit_cost != null ? (
                           <span className="font-mono">
                             {formatVND(item.unit_cost)}đ
                           </span>
@@ -422,7 +422,7 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
                         </TableCell>
                         <TableCell>{storageLabel(item.storage_type)}</TableCell>
                         <TableCell className="font-mono">
-                          {item.unit_cost
+                          {item.unit_cost != null
                             ? `${formatVND(item.unit_cost)}đ`
                             : "—"}
                         </TableCell>
