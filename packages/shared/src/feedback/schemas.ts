@@ -64,10 +64,15 @@ export type SubmitFeedbackParsed = z.output<typeof submitFeedbackSchema>;
 /**
  * QR code creation — label is auto-generated server-side (buildQrLabel).
  * table_id null = general QR for whole branch.
+ *
+ * Uses z.coerce.number() because shadcn SelectField (<select> under the hood)
+ * always stores values as strings. Without coerce, react-hook-form's
+ * zodResolver fails with "Invalid input: expected number, received string"
+ * the moment user picks a branch.
  */
 export const createQrCodeSchema = z.object({
-  branch_id: z.number().int().positive(),
-  table_id: z.number().int().positive().nullable().default(null),
+  branch_id: z.coerce.number().int().positive(),
+  table_id: z.coerce.number().int().positive().nullable().default(null),
 });
 
 export const updateQrCodeLabelSchema = z.object({
@@ -87,7 +92,7 @@ export const rotateQrCodeSchema = z.object({
 /** Telegram destination CRUD */
 export const createTelegramDestinationSchema = z.object({
   /** null = HQ-level destination (receives from all branches) */
-  branch_id: z.number().int().positive().nullable().default(null),
+  branch_id: z.coerce.number().int().positive().nullable().default(null),
   chat_id: z.string().min(1).max(TELEGRAM_CHAT_ID_MAX_LENGTH),
   label: z.string().min(1).max(TELEGRAM_DEST_LABEL_MAX_LENGTH),
 });
@@ -105,12 +110,12 @@ export const tokenParamSchema = z.string().refine(isValidFeedbackToken, {
 /** AI category set — Slice 2 uses this for auto-tagging */
 export const aiCategoriesSchema = z.array(z.enum(FEEDBACK_CATEGORIES)).max(5);
 
-/** Feedback AI / push settings upsert */
+/** Feedback AI / push settings upsert (form-driven — coerce string→number) */
 export const updateFeedbackSettingsSchema = z.object({
-  ai_monthly_budget_usd: z.number().min(0).max(9999.99),
+  ai_monthly_budget_usd: z.coerce.number().min(0).max(9999.99),
   push_mode: z.enum(["threshold", "all", "none"]),
-  threshold_rating: z.number().int().min(1).max(5),
-  daily_report_hour_local: z.number().int().min(0).max(23),
+  threshold_rating: z.coerce.number().int().min(1).max(5),
+  daily_report_hour_local: z.coerce.number().int().min(0).max(23),
 });
 
 export type UpdateFeedbackSettingsInput = z.infer<
