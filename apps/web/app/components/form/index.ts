@@ -38,5 +38,10 @@ export { ComboboxField } from "./combobox-field";
 export type { ComboboxFieldOption, ComboboxFieldProps } from "./combobox-field";
 export { Combobox } from "./combobox";
 export type { ComboboxProps } from "./combobox";
+export { MultiSelectCombobox } from "./multi-select-combobox";
+export type {
+  MultiSelectComboboxOption,
+  MultiSelectComboboxProps,
+} from "./multi-select-combobox";
 export { FormDialog, valuesToFormData } from "./form-dialog";
 export type { FormDialogProps } from "./form-dialog";

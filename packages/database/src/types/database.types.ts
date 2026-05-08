@@ -4709,6 +4709,7 @@ export type Database = {
           branch_id: number
           created_at: string
           created_by: string
+          display_id: string | null
           id: number
           notes: string | null
           ordered_at: string
@@ -4722,6 +4723,7 @@ export type Database = {
           branch_id: number
           created_at?: string
           created_by: string
+          display_id?: string | null
           id?: never
           notes?: string | null
           ordered_at?: string
@@ -4735,6 +4737,7 @@ export type Database = {
           branch_id?: number
           created_at?: string
           created_by?: string
+          display_id?: string | null
           id?: never
           notes?: string | null
           ordered_at?: string
@@ -6190,6 +6193,90 @@ export type Database = {
           },
         ]
       }
+      summary_run_queue: {
+        Row: {
+          attempt_count: number
+          branch_id: number
+          created_at: string
+          finished_at: string | null
+          id: number
+          last_error: string | null
+          started_at: string | null
+          status: string
+          summary_date: string
+          tax_invoice_id: number | null
+          tenant_id: number
+          trigger_source: string
+          triggered_by: string | null
+        }
+        Insert: {
+          attempt_count?: number
+          branch_id: number
+          created_at?: string
+          finished_at?: string | null
+          id?: never
+          last_error?: string | null
+          started_at?: string | null
+          status?: string
+          summary_date: string
+          tax_invoice_id?: number | null
+          tenant_id: number
+          trigger_source: string
+          triggered_by?: string | null
+        }
+        Update: {
+          attempt_count?: number
+          branch_id?: number
+          created_at?: string
+          finished_at?: string | null
+          id?: never
+          last_error?: string | null
+          started_at?: string | null
+          status?: string
+          summary_date?: string
+          tax_invoice_id?: number | null
+          tenant_id?: number
+          trigger_source?: string
+          triggered_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "summary_run_queue_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "summary_run_queue_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "summary_run_queue_tax_invoice_id_fkey"
+            columns: ["tax_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "tax_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "summary_run_queue_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "summary_run_queue_triggered_by_fkey"
+            columns: ["triggered_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supplier_credit_notes: {
         Row: {
           amount: number
@@ -7003,6 +7090,75 @@ export type Database = {
           },
         ]
       }
+      tax_invoice_orders: {
+        Row: {
+          branch_id: number
+          created_at: string
+          line_subtotal: number
+          line_vat_amount: number
+          order_id: number
+          tax_invoice_id: number
+          tenant_id: number
+          vat_rate: number
+        }
+        Insert: {
+          branch_id: number
+          created_at?: string
+          line_subtotal: number
+          line_vat_amount: number
+          order_id: number
+          tax_invoice_id: number
+          tenant_id: number
+          vat_rate: number
+        }
+        Update: {
+          branch_id?: number
+          created_at?: string
+          line_subtotal?: number
+          line_vat_amount?: number
+          order_id?: number
+          tax_invoice_id?: number
+          tenant_id?: number
+          vat_rate?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tax_invoice_orders_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tax_invoice_orders_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "tax_invoice_orders_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tax_invoice_orders_tax_invoice_id_fkey"
+            columns: ["tax_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "tax_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tax_invoice_orders_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tax_invoices: {
         Row: {
           branch_id: number
@@ -7010,12 +7166,16 @@ export type Database = {
           buyer_name: string | null
           buyer_tax_code: string | null
           cancelled_at: string | null
+          cqt_code: string | null
           created_at: string
-          created_by: string
+          created_by: string | null
           id: number
+          invoice_kind: string
           invoice_number: string | null
+          invoice_series: string | null
           issued_at: string | null
-          order_id: number
+          order_id: number | null
+          pdf_url: string | null
           provider: string
           provider_data: Json | null
           provider_ref: string | null
@@ -7023,11 +7183,14 @@ export type Database = {
           signing_started_at: string | null
           status: string
           subtotal: number
+          summary_date: string | null
+          summary_orders_count: number | null
           tenant_id: number
           total_amount: number
           updated_at: string
           vat_amount: number
           vat_rate: number
+          xml_url: string | null
         }
         Insert: {
           branch_id: number
@@ -7035,12 +7198,16 @@ export type Database = {
           buyer_name?: string | null
           buyer_tax_code?: string | null
           cancelled_at?: string | null
+          cqt_code?: string | null
           created_at?: string
-          created_by: string
+          created_by?: string | null
           id?: never
+          invoice_kind?: string
           invoice_number?: string | null
+          invoice_series?: string | null
           issued_at?: string | null
-          order_id: number
+          order_id?: number | null
+          pdf_url?: string | null
           provider?: string
           provider_data?: Json | null
           provider_ref?: string | null
@@ -7048,11 +7215,14 @@ export type Database = {
           signing_started_at?: string | null
           status?: string
           subtotal: number
+          summary_date?: string | null
+          summary_orders_count?: number | null
           tenant_id: number
           total_amount: number
           updated_at?: string
           vat_amount: number
           vat_rate?: number
+          xml_url?: string | null
         }
         Update: {
           branch_id?: number
@@ -7060,12 +7230,16 @@ export type Database = {
           buyer_name?: string | null
           buyer_tax_code?: string | null
           cancelled_at?: string | null
+          cqt_code?: string | null
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           id?: never
+          invoice_kind?: string
           invoice_number?: string | null
+          invoice_series?: string | null
           issued_at?: string | null
-          order_id?: number
+          order_id?: number | null
+          pdf_url?: string | null
           provider?: string
           provider_data?: Json | null
           provider_ref?: string | null
@@ -7073,11 +7247,14 @@ export type Database = {
           signing_started_at?: string | null
           status?: string
           subtotal?: number
+          summary_date?: string | null
+          summary_orders_count?: number | null
           tenant_id?: number
           total_amount?: number
           updated_at?: string
           vat_amount?: number
           vat_rate?: number
+          xml_url?: string | null
         }
         Relationships: [
           {
@@ -7219,6 +7396,35 @@ export type Database = {
             columns: ["feedback_id"]
             isOneToOne: true
             referencedRelation: "feedbacks_with_masked_phone"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_po_counters: {
+        Row: {
+          next_seq: number
+          tenant_id: number
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          next_seq?: number
+          tenant_id: number
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          next_seq?: number
+          tenant_id?: number
+          updated_at?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_po_counters_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -7904,6 +8110,15 @@ export type Database = {
           sample_n: number
         }[]
       }
+      _compute_vat_breakdown: {
+        Args: { p_order_ids: number[] }
+        Returns: {
+          line_gross: number
+          line_subtotal: number
+          line_vat: number
+          vat_rate: number
+        }[]
+      }
       acquire_zone_lock: {
         Args: {
           p_session_id: number
@@ -7922,6 +8137,10 @@ export type Database = {
           p_target_id: string
         }
         Returns: undefined
+      }
+      aggregate_daily_b2c_invoice: {
+        Args: { p_actor?: string; p_branch_id: number; p_summary_date: string }
+        Returns: Json
       }
       amend_grn_line: {
         Args: {
@@ -8146,6 +8365,7 @@ export type Database = {
         Returns: Json
       }
       count_unread_notifications: { Args: never; Returns: number }
+      create_grn_from_po: { Args: { p_po_id: number }; Returns: Json }
       create_manual_journal_entry: {
         Args: {
           p_branch_id?: number
@@ -8761,6 +8981,7 @@ export type Database = {
         Args: { p_entry_date: string; p_tenant_id: number }
         Returns: string
       }
+      next_po_display_id: { Args: { p_tenant_id: number }; Returns: string }
       override_grn_hardblock: {
         Args: {
           p_evidence_url: string
@@ -9017,6 +9238,7 @@ export type Database = {
         }[]
       }
       toggle_category_active: { Args: { p_id: number }; Returns: boolean }
+      toggle_ingredient_active: { Args: { p_id: number }; Returns: boolean }
       toggle_item_active: { Args: { p_id: number }; Returns: boolean }
       toggle_profile_active: { Args: { p_target_id: string }; Returns: boolean }
       transfer_order_table: {
@@ -9057,7 +9279,25 @@ export type Database = {
         }
         Returns: Json
       }
+      transition_tax_invoice_state_as_system: {
+        Args: {
+          p_actor?: string
+          p_note?: string
+          p_payload?: Json
+          p_tax_invoice_id: number
+          p_to_status: string
+        }
+        Returns: Json
+      }
       try_auto_approve_grn: { Args: { p_grn_id: number }; Returns: Json }
+      update_ingredient_thresholds_bulk: {
+        Args: { p_payload: Json }
+        Returns: Json
+      }
+      update_my_dependents_count: {
+        Args: { p_count: number }
+        Returns: undefined
+      }
       update_my_profile: {
         Args: { p_avatar_url?: string; p_full_name?: string; p_phone?: string }
         Returns: undefined

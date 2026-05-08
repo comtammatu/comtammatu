@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import {
   Check as IconCheck,
   CalendarDays as IconCalendarEvent,
@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { Checkbox } from "@comtammatu/ui/components/checkbox";
 import {
   Empty,
   EmptyDescription,
@@ -33,6 +34,12 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@comtammatu/ui/components/tabs";
 import {
   Dialog,
   DialogContent,
@@ -82,7 +89,9 @@ const STATUS_LABELS = {
 
 function formatShortDate(dateStr: string): string {
   const d = new Date(dateStr + "T00:00:00");
-  return `${d.getDate().toString().padStart(2, "0")}/${(d.getMonth() + 1).toString().padStart(2, "0")}/${d.getFullYear()}`;
+  return `${d.getDate().toString().padStart(2, "0")}/${(d.getMonth() + 1)
+    .toString()
+    .padStart(2, "0")}/${d.getFullYear()}`;
 }
 
 export function ShiftRequestsTable({ branches }: ShiftRequestsTableProps) {
@@ -91,7 +100,7 @@ export function ShiftRequestsTable({ branches }: ShiftRequestsTableProps) {
     branches[0]?.id ?? null,
   );
   const [isPending, startTransition] = useTransition();
-
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [rejectTarget, setRejectTarget] = useState<ShiftRequestRow | null>(
     null,
   );
@@ -102,6 +111,7 @@ export function ShiftRequestsTable({ branches }: ShiftRequestsTableProps) {
       const result = await fetchPendingShiftRequests({ branchId });
       if (result.success) {
         setRequests((result.data as ShiftRequestRow[]) ?? []);
+        setSelectedIds(new Set());
       } else {
         toast.error(result.error ?? "Lỗi tải danh sách đăng ký ca");
       }
@@ -111,6 +121,37 @@ export function ShiftRequestsTable({ branches }: ShiftRequestsTableProps) {
   useEffect(() => {
     if (selectedBranchId !== null) load(selectedBranchId);
   }, [selectedBranchId, load]);
+
+  const pendingRows = useMemo(
+    () => requests.filter((r) => r.status === "pending"),
+    [requests],
+  );
+  const historyRows = useMemo(
+    () => requests.filter((r) => r.status !== "pending"),
+    [requests],
+  );
+
+  const allSelected =
+    pendingRows.length > 0 && pendingRows.every((r) => selectedIds.has(r.id));
+  const someSelected =
+    pendingRows.some((r) => selectedIds.has(r.id)) && !allSelected;
+
+  function toggleSelect(id: number, checked: boolean) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll(checked: boolean) {
+    if (checked) {
+      setSelectedIds(new Set(pendingRows.map((r) => r.id)));
+    } else {
+      setSelectedIds(new Set());
+    }
+  }
 
   function handleApprove(request: ShiftRequestRow) {
     startTransition(async () => {
@@ -125,6 +166,39 @@ export function ShiftRequestsTable({ branches }: ShiftRequestsTableProps) {
           r.id === request.id ? { ...r, status: "approved" } : r,
         ),
       );
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(request.id);
+        return next;
+      });
+    });
+  }
+
+  function handleBulkApprove() {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    startTransition(async () => {
+      const results = await Promise.all(
+        ids.map((id) =>
+          approveShiftRequest({ requestId: id }).then((r) => ({ id, ...r })),
+        ),
+      );
+      const okIds = results.filter((r) => r.success).map((r) => r.id);
+      const failed = results.filter((r) => !r.success);
+      if (okIds.length > 0) {
+        toast.success(`Đã duyệt ${okIds.length} đăng ký`);
+        setRequests((prev) =>
+          prev.map((r) =>
+            okIds.includes(r.id) ? { ...r, status: "approved" } : r,
+          ),
+        );
+      }
+      if (failed.length > 0) {
+        toast.error(
+          `${failed.length} đăng ký không duyệt được: ${failed[0]?.error ?? "lỗi không xác định"}`,
+        );
+      }
+      setSelectedIds(new Set());
     });
   }
 
@@ -156,8 +230,6 @@ export function ShiftRequestsTable({ branches }: ShiftRequestsTableProps) {
     });
   }
 
-  const pendingCount = requests.filter((r) => r.status === "pending").length;
-
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
@@ -178,74 +250,125 @@ export function ShiftRequestsTable({ branches }: ShiftRequestsTableProps) {
         </Select>
 
         <span className="text-sm text-muted-foreground">
-          {pendingCount} đăng ký chờ duyệt · tổng {requests.length}
+          {pendingRows.length} chờ duyệt · tổng {requests.length}
         </span>
 
         {isPending && <Spinner />}
       </div>
 
-      {requests.length === 0 && !isPending ? (
-        <Empty>
-          <EmptyMedia variant="icon">
-            <IconCalendarEvent />
-          </EmptyMedia>
-          <EmptyHeader>
-            <EmptyTitle>Chưa có đăng ký ca</EmptyTitle>
-            <EmptyDescription>
-              Nhân viên chưa gửi nguyện vọng ca làm cho chi nhánh này.
-            </EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      ) : (
-        <div className="overflow-x-auto rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Ngày</TableHead>
-                <TableHead>Ca</TableHead>
-                <TableHead>Nhân viên</TableHead>
-                <TableHead>Ghi chú</TableHead>
-                <TableHead>Trạng thái</TableHead>
-                <TableHead className="w-32 text-right">Hành động</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {requests.map((req) => {
-                const statusInfo = STATUS_LABELS[req.status];
-                const isPendingRow = req.status === "pending";
-                return (
-                  <TableRow key={req.id}>
-                    <TableCell>{formatShortDate(req.date)}</TableCell>
-                    <TableCell>
-                      <div className="font-medium">
-                        {req.shifts?.name ?? "—"}
-                      </div>
-                      {req.shifts ? (
-                        <div className="text-xs text-muted-foreground">
-                          {req.shifts.start_time} - {req.shifts.end_time}
+      <Tabs defaultValue="pending">
+        <TabsList>
+          <TabsTrigger value="pending">
+            Chờ duyệt ({pendingRows.length})
+          </TabsTrigger>
+          <TabsTrigger value="history">
+            Lịch sử ({historyRows.length})
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="pending" className="mt-4 space-y-3">
+          {selectedIds.size > 0 ? (
+            <div className="flex items-center justify-between gap-3 rounded-md border bg-card p-2">
+              <span className="text-sm">
+                Đã chọn <strong>{selectedIds.size}</strong> đăng ký
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setSelectedIds(new Set())}
+                  disabled={isPending}
+                >
+                  Bỏ chọn
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleBulkApprove}
+                  disabled={isPending}
+                >
+                  {isPending ? <Spinner className="mr-2" /> : (
+                    <IconCheck className="mr-1 size-4" />
+                  )}
+                  Duyệt {selectedIds.size} đăng ký
+                </Button>
+              </div>
+            </div>
+          ) : null}
+
+          {pendingRows.length === 0 && !isPending ? (
+            <Empty>
+              <EmptyMedia variant="icon">
+                <IconCalendarEvent />
+              </EmptyMedia>
+              <EmptyHeader>
+                <EmptyTitle>Không có đăng ký chờ duyệt</EmptyTitle>
+                <EmptyDescription>
+                  Tất cả đăng ký đã được xử lý cho chi nhánh này.
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          ) : (
+            <div className="overflow-x-auto rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-10">
+                      <Checkbox
+                        checked={
+                          allSelected
+                            ? true
+                            : someSelected
+                              ? "indeterminate"
+                              : false
+                        }
+                        onCheckedChange={(v) => toggleSelectAll(v === true)}
+                        aria-label="Chọn tất cả"
+                        disabled={pendingRows.length === 0 || isPending}
+                      />
+                    </TableHead>
+                    <TableHead>Ngày</TableHead>
+                    <TableHead>Ca</TableHead>
+                    <TableHead>Nhân viên</TableHead>
+                    <TableHead>Ghi chú</TableHead>
+                    <TableHead className="w-32 text-right">Hành động</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pendingRows.map((req) => (
+                    <TableRow key={req.id}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedIds.has(req.id)}
+                          onCheckedChange={(v) =>
+                            toggleSelect(req.id, v === true)
+                          }
+                          aria-label={`Chọn đăng ký ${req.id}`}
+                          disabled={isPending}
+                        />
+                      </TableCell>
+                      <TableCell>{formatShortDate(req.date)}</TableCell>
+                      <TableCell>
+                        <div className="font-medium">
+                          {req.shifts?.name ?? "—"}
                         </div>
-                      ) : null}
-                    </TableCell>
-                    <TableCell>
-                      {req.employees?.profiles?.full_name ??
-                        req.employees?.employee_code ??
-                        "—"}
-                    </TableCell>
-                    <TableCell className="max-w-xs truncate text-sm text-muted-foreground">
-                      {req.note ?? "—"}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={statusInfo.variant}>
-                        {statusInfo.label}
-                      </Badge>
-                      {req.status === "rejected" && req.rejected_reason ? (
-                        <div className="mt-1 text-xs text-muted-foreground">
-                          {req.rejected_reason}
-                        </div>
-                      ) : null}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {isPendingRow ? (
+                        {req.shifts ? (
+                          <div className="text-xs text-muted-foreground">
+                            {req.shifts.start_time.slice(0, 5)} -{" "}
+                            {req.shifts.end_time.slice(0, 5)}
+                          </div>
+                        ) : null}
+                      </TableCell>
+                      <TableCell>
+                        {req.employees?.profiles?.full_name ??
+                          req.employees?.employee_code ??
+                          "—"}
+                      </TableCell>
+                      <TableCell className="max-w-xs truncate text-sm text-muted-foreground">
+                        {req.note ?? "—"}
+                      </TableCell>
+                      <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
                           <Button
                             type="button"
@@ -271,15 +394,84 @@ export function ShiftRequestsTable({ branches }: ShiftRequestsTableProps) {
                             <IconX className="size-4" />
                           </Button>
                         </div>
-                      ) : null}
-                    </TableCell>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="history" className="mt-4">
+          {historyRows.length === 0 && !isPending ? (
+            <Empty>
+              <EmptyMedia variant="icon">
+                <IconCalendarEvent />
+              </EmptyMedia>
+              <EmptyHeader>
+                <EmptyTitle>Chưa có lịch sử</EmptyTitle>
+                <EmptyDescription>
+                  Đăng ký đã duyệt, từ chối, hoặc đã huỷ sẽ hiện ở đây.
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          ) : (
+            <div className="overflow-x-auto rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Ngày</TableHead>
+                    <TableHead>Ca</TableHead>
+                    <TableHead>Nhân viên</TableHead>
+                    <TableHead>Ghi chú</TableHead>
+                    <TableHead>Trạng thái</TableHead>
                   </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </div>
-      )}
+                </TableHeader>
+                <TableBody>
+                  {historyRows.map((req) => {
+                    const statusInfo = STATUS_LABELS[req.status];
+                    return (
+                      <TableRow key={req.id}>
+                        <TableCell>{formatShortDate(req.date)}</TableCell>
+                        <TableCell>
+                          <div className="font-medium">
+                            {req.shifts?.name ?? "—"}
+                          </div>
+                          {req.shifts ? (
+                            <div className="text-xs text-muted-foreground">
+                              {req.shifts.start_time.slice(0, 5)} -{" "}
+                              {req.shifts.end_time.slice(0, 5)}
+                            </div>
+                          ) : null}
+                        </TableCell>
+                        <TableCell>
+                          {req.employees?.profiles?.full_name ??
+                            req.employees?.employee_code ??
+                            "—"}
+                        </TableCell>
+                        <TableCell className="max-w-xs truncate text-sm text-muted-foreground">
+                          {req.note ?? "—"}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={statusInfo.variant}>
+                            {statusInfo.label}
+                          </Badge>
+                          {req.status === "rejected" && req.rejected_reason ? (
+                            <div className="mt-1 text-xs text-muted-foreground">
+                              {req.rejected_reason}
+                            </div>
+                          ) : null}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
 
       <Dialog
         open={rejectTarget !== null}
@@ -302,9 +494,7 @@ export function ShiftRequestsTable({ branches }: ShiftRequestsTableProps) {
               </strong>{" "}
               cho ca <strong>{rejectTarget?.shifts?.name ?? ""}</strong> ngày{" "}
               <strong>
-                {rejectTarget?.date
-                  ? formatShortDate(rejectTarget.date)
-                  : ""}
+                {rejectTarget?.date ? formatShortDate(rejectTarget.date) : ""}
               </strong>
               .
             </p>

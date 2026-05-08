@@ -47,6 +47,7 @@ import { FORM_VI } from "@comtammatu/shared/messages";
 export interface PurchaseOrderRow {
   id: number;
   po_number: string;
+  display_id: string | null;
   status: string;
   ordered_at: string;
   notes: string | null;
@@ -70,6 +71,19 @@ function formatDate(value: string) {
     month: "2-digit",
     year: "numeric",
   });
+}
+
+/** Vietnamese relative-time hint (e.g. "3 ngày trước", "Hôm nay") for tooltips. */
+function formatRelative(value: string): string {
+  const ms = Date.now() - new Date(value).getTime();
+  const days = Math.floor(ms / 86400000);
+  if (days === 0) return "Hôm nay";
+  if (days === 1) return "Hôm qua";
+  if (days < 0) return `${Math.abs(days)} ngày tới`;
+  if (days < 30) return `${days} ngày trước`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months} tháng trước`;
+  return `${Math.floor(months / 12)} năm trước`;
 }
 
 export function PurchaseOrdersClient({
@@ -116,7 +130,10 @@ export function PurchaseOrdersClient({
         return true;
       }
 
-      return matchesSearch([row.po_number, row.suppliers?.name, row.notes], query);
+      return matchesSearch(
+        [row.display_id, row.po_number, row.suppliers?.name, row.notes],
+        query,
+      );
     });
   }, [rows, search, statusFilter, supplierFilter]);
 
@@ -248,13 +265,16 @@ export function PurchaseOrdersClient({
                     >
                       <div className="min-w-0 flex-1 space-y-1">
                         <p className="font-mono text-sm font-semibold">
-                          {row.po_number}
+                          {row.display_id ?? row.po_number}
                         </p>
                         <p className="truncate text-xs text-muted-foreground">
                           {row.suppliers?.name ?? "Chưa gắn nhà cung cấp"}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          Ngày đặt: {formatDate(row.ordered_at)}
+                          Ngày đặt:{" "}
+                          <span title={formatRelative(row.ordered_at)}>
+                            {formatDate(row.ordered_at)}
+                          </span>
                         </p>
                         {row.notes ? (
                           <p className="truncate text-xs text-muted-foreground">
@@ -302,7 +322,7 @@ export function PurchaseOrdersClient({
                   {filteredRows.map((row) => (
                     <TableRow key={row.id}>
                       <TableCell className="font-mono font-medium">
-                        {row.po_number}
+                        {row.display_id ?? row.po_number}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {row.suppliers?.name ?? "Chưa gắn nhà cung cấp"}
@@ -311,7 +331,9 @@ export function PurchaseOrdersClient({
                         <StatusBadge status={row.status} size="sm" />
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {formatDate(row.ordered_at)}
+                        <span title={formatRelative(row.ordered_at)}>
+                          {formatDate(row.ordered_at)}
+                        </span>
                       </TableCell>
                       <TableCell>
                         <p

@@ -1,16 +1,24 @@
-import { LogOut as IconLogout, User as IconUser } from "lucide-react";
+import {
+  LogOut as IconLogout,
+  Receipt as IconReceipt,
+  ShieldCheck as IconShieldCheck,
+  User as IconUser,
+} from "lucide-react";
 import { ROLE_LABEL_VI } from "@comtammatu/shared/auth";
 import { ACTIONS_VI, BRANCH_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import {
+  EmployeeActionItem,
+  EmployeeActionList,
   EmployeeDetailList,
   EmployeePage,
   EmployeePanel,
 } from "../components/employee-page";
 import { getEmployeeContext } from "../_lib/employee-context";
 import { formatDateVN } from "../_lib/vn-business-date";
+import { DependentsForm } from "./dependents-form";
 
 const copy = messages.employee.profile;
 
@@ -23,7 +31,7 @@ export default async function ProfilePage() {
   const { data: employee } = ctx
     ? await ctx.supabase
         .from("employees")
-        .select("employee_code, start_date")
+        .select("employee_code, start_date, dependents_count")
         .eq("id", ctx.employeeId)
         .eq("tenant_id", claims.tenant_id)
         .maybeSingle()
@@ -67,6 +75,28 @@ export default async function ProfilePage() {
             },
           ]}
         />
+      </EmployeePanel>
+
+      {ctx ? (
+        <EmployeePanel
+          icon={IconReceipt}
+          title="Thuế TNCN"
+          description="Số người phụ thuộc dùng tính giảm trừ gia cảnh khi tính lương."
+        >
+          <DependentsForm initialCount={employee?.dependents_count ?? 0} />
+        </EmployeePanel>
+      ) : null}
+
+      <EmployeePanel title="Tự phục vụ" size="sm">
+        <EmployeeActionList>
+          <EmployeeActionItem
+            href="/employee/permissions"
+            icon={IconShieldCheck}
+            title="Quyền hạn của tôi"
+            description="Xem chức vụ và quyền truy cập đang có hiệu lực"
+            size="sm"
+          />
+        </EmployeeActionList>
       </EmployeePanel>
 
       <form action="/api/auth/signout" method="post">

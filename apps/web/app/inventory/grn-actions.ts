@@ -272,9 +272,120 @@ export const createGrnDraft = withAction(
       .select("id")
       .single();
     if (error) {
+      // UNIQUE_VIOLATION on the partial index uq_grn_active_draft_per_user_supplier
+      // (Sprint 6 #3): a draft already exists for this user+supplier. Race-friendly
+      // fallback: return the existing draft so the caller can attach lines to it.
+      if (error.code === "23505") {
+        const { data: existing } = await supabase
+          .from("goods_received_notes")
+          .select("id")
+          .eq("tenant_id", claims.tenant_id)
+          .eq("created_by", user.id)
+          .eq("supplier_id", data.supplierId)
+          .eq("status", "draft")
+          .order("updated_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (existing?.id) {
+          return { success: true, data: { id: existing.id } };
+        }
+      }
       return { success: false, error: "Không thể tạo phiếu nhập." };
     }
     return { success: true, data: row };
+  },
+);
+
+/* ─── loadActiveGrnDraft (Sprint 6 #3) ─── */
+
+const loadActiveDraftSchema = z.object({
+  supplierId: z.coerce.number().int().positive(),
+});
+
+export const loadActiveGrnDraft = withAction(
+  {
+    roles: ROLES,
+    schema: loadActiveDraftSchema,
+    permission: PERMISSION_KEYS.PROCUREMENT_GRN_CREATE,
+  },
+  async (data, { supabase, claims, user }) => {
+    // Partial UNIQUE index uq_grn_active_draft_per_user_supplier guarantees
+    // at most one row matches; maybeSingle is the safe shape.
+    const { data: row, error } = await supabase
+      .from("goods_received_notes")
+      .select("id, branch_id, po_id, supplier_id, grn_number, notes, updated_at")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("created_by", user.id)
+      .eq("supplier_id", data.supplierId)
+      .eq("status", "draft")
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) {
+      return { success: false, error: "Không thể tải phiếu nhập đang nháp." };
+    }
+    return { success: true, data: row ?? null };
+  },
+);
+
+/* ─── listMyGrnDrafts (Sprint 6 #3) ─── */
+
+export async function listMyGrnDrafts(): Promise<ActionResult> {
+  const ctx = await getAuthContextWithPermission(
+    ROLES,
+    PERMISSION_KEYS.PROCUREMENT_GRN_CREATE,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+  const { supabase, claims, user } = ctx;
+  const { data, error } = await supabase
+    .from("goods_received_notes")
+    .select(
+      "id, supplier_id, branch_id, grn_number, updated_at, suppliers ( id, name ), grn_items ( id )",
+    )
+    .eq("tenant_id", claims.tenant_id)
+    .eq("created_by", user.id)
+    .eq("status", "draft")
+    .order("updated_at", { ascending: false });
+  if (error) {
+    return { success: false, error: "Không thể tải danh sách phiếu nháp." };
+  }
+  return { success: true, data: data ?? [] };
+}
+
+/* ─── discardGrnDraft (Sprint 6 #3) ─── */
+
+const discardDraftSchema = z.object({
+  grnId: z.coerce.number().int().positive(),
+});
+
+export const discardGrnDraft = withAction(
+  {
+    roles: ROLES,
+    schema: discardDraftSchema,
+    permission: PERMISSION_KEYS.PROCUREMENT_GRN_CREATE,
+  },
+  async (data, { supabase, claims, user }) => {
+    // Soft-cancel keeps audit trail; immutable confirmed GRNs are unaffected.
+    const { data: row, error } = await supabase
+      .from("goods_received_notes")
+      .update({ status: "cancelled" })
+      .eq("id", data.grnId)
+      .eq("tenant_id", claims.tenant_id)
+      .eq("created_by", user.id)
+      .eq("status", "draft")
+      .select("id")
+      .maybeSingle();
+    if (error) {
+      return { success: false, error: "Không thể hủy phiếu nháp." };
+    }
+    if (!row) {
+      // RLS or status guard; surface clearly instead of silent success.
+      return {
+        success: false,
+        error: "Phiếu nháp không tồn tại hoặc đã được xử lý.",
+      };
+    }
+    return { success: true, data: { id: row.id } };
   },
 );
 
@@ -607,7 +718,22 @@ export async function fetchGrnsForPo(poId: number): Promise<ActionResult> {
   return { success: true, data: data ?? [] };
 }
 
-/* ─── createGrnFromPo ─── */
+/* ─── createGrnFromPo ───
+ * Sprint 5 #2: collapsed to a single atomic Postgres RPC call.
+ * The RPC `create_grn_from_po` (migration 20260508072423) validates PO
+ * status, branch eligibility, supplier active, computes remaining qty,
+ * locks the PO row FOR UPDATE to serialize concurrent callers, and
+ * inserts header + items in one transaction. Any RAISE rolls back
+ * atomically — no orphan headers possible.
+ */
+
+const PG_ERR_TO_VI: Record<string, string> = {
+  insufficient_privilege: "Bạn không có quyền tạo phiếu nhập từ PO này.",
+  no_data_found: "PO không tồn tại hoặc đã nhận đủ hàng.",
+  check_violation:
+    "PO không đủ điều kiện (trạng thái, kho nhận, hoặc NCC không hợp lệ).",
+  invalid_parameter_value: "Tham số đầu vào không hợp lệ.",
+};
 
 export async function createGrnFromPo(poId: number): Promise<ActionResult> {
   const id = z.coerce.number().int().positive().safeParse(poId);
@@ -617,138 +743,31 @@ export async function createGrnFromPo(poId: number): Promise<ActionResult> {
     PERMISSION_KEYS.PROCUREMENT_GRN_CREATE,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
-  const { supabase, claims, user } = ctx;
+  const { supabase } = ctx;
 
-  const { data: po, error: poErr } = await supabase
-    .from("purchase_orders")
-    .select("id, supplier_id, status, branch_id")
-    .eq("id", id.data)
-    .eq("tenant_id", claims.tenant_id)
-    .single();
-  if (poErr || !po) return { success: false, error: "Không tìm thấy PO." };
-  if (!["sent", "partially_received"].includes(po.status)) {
-    return {
-      success: false,
-      error: "Chỉ tạo GRN từ PO đã gửi hoặc nhận một phần.",
-    };
-  }
-
-  const targetBranchId: number | null = po.branch_id;
-  if (!targetBranchId)
-    return { success: false, error: "PO chưa có kho nhận hàng." };
-
-  if (!canAccessProcurementBranch(claims, targetBranchId)) {
-    return {
-      success: false,
-      error: "Bạn chỉ được nhận hàng cho kho của mình.",
-    };
-  }
-
-  const branches = await fetchProcurementBranches(supabase, claims.tenant_id);
-  if (!branches.some((branch) => branch.id === targetBranchId)) {
-    return {
-      success: false,
-      error: "PO không thuộc Kho Tổng hoặc Bếp Trung Tâm.",
-    };
-  }
-
-  const { data: poLines, error: linesErr } = await supabase
-    .from("purchase_order_items")
-    .select("ingredient_id, quantity, unit, unit_price_est")
-    .eq("po_id", po.id)
-    .eq("tenant_id", claims.tenant_id);
-  if (linesErr) {
-    return { success: false, error: "Không thể đọc dòng PO." };
-  }
-  if (!poLines || poLines.length === 0) {
-    return {
-      success: false,
-      error: "PO không có dòng nào để chuyển sang phiếu nhập.",
-    };
-  }
-
-  const { data: receivedRows, error: receivedErr } = await supabase
-    .from("grn_items")
-    .select(
-      "ingredient_id, received_quantity, goods_received_notes!inner ( po_id, status )",
-    )
-    .eq("tenant_id", claims.tenant_id)
-    .eq("goods_received_notes.po_id", po.id)
-    .eq("goods_received_notes.status", "confirmed");
-  if (receivedErr) {
-    return { success: false, error: "Không thể đọc lịch sử nhận hàng." };
-  }
-
-  const receivedByIngredient = new Map<number, number>();
-  for (const row of receivedRows ?? []) {
-    const prev = receivedByIngredient.get(row.ingredient_id) ?? 0;
-    receivedByIngredient.set(
-      row.ingredient_id,
-      prev + Number(row.received_quantity ?? 0),
-    );
-  }
-
-  const remainingLines = poLines
-    .map((line) => {
-      const orderedQty = Number(line.quantity);
-      const receivedQty = receivedByIngredient.get(line.ingredient_id) ?? 0;
-      const remaining = Number((orderedQty - receivedQty).toFixed(3));
-      return { line, orderedQty, remaining };
-    })
-    .filter((entry) => entry.remaining > 0);
-
-  if (remainingLines.length === 0) {
-    return { success: false, error: "PO đã nhận đủ hàng." };
-  }
-
-  const grnNumber = `GRN-${randomUUID().slice(0, 8)}`;
-  const { data: grn, error } = await supabase
-    .from("goods_received_notes")
-    .insert({
-      tenant_id: claims.tenant_id,
-      branch_id: targetBranchId,
-      supplier_id: po.supplier_id,
-      po_id: po.id,
-      grn_number: grnNumber,
-      status: "draft",
-      created_by: user.id,
-    })
-    .select("id")
-    .single();
-  if (error || !grn)
-    return { success: false, error: "Không thể tạo phiếu nhập." };
-
-  const grnItems = remainingLines.map(({ line, orderedQty, remaining }) => {
-    const unitCost = Number(line.unit_price_est ?? 0);
-    return {
-      tenant_id: claims.tenant_id,
-      grn_id: grn.id,
-      ingredient_id: line.ingredient_id,
-      po_quantity: orderedQty,
-      po_unit_price: unitCost,
-      received_quantity: remaining,
-      unit: line.unit,
-      unit_cost: unitCost,
-      total_cost: Number((remaining * unitCost).toFixed(2)),
-      quality_status: "accepted" as const,
-    };
+  const { data, error } = await supabase.rpc("create_grn_from_po", {
+    p_po_id: id.data,
   });
 
-  const { error: itemsErr } = await supabase.from("grn_items").insert(grnItems);
-  if (itemsErr) {
-    // Best-effort rollback to avoid leaving an empty GRN behind.
-    await supabase
-      .from("goods_received_notes")
-      .delete()
-      .eq("id", grn.id)
-      .eq("tenant_id", claims.tenant_id);
+  if (error) {
     return {
       success: false,
-      error: "Không thể sao chép dòng từ PO sang phiếu nhập.",
+      error: PG_ERR_TO_VI[error.code ?? ""] ?? "Không thể tạo phiếu nhập.",
     };
   }
 
-  return { success: true, data: grn };
+  const parsed = z
+    .object({
+      grn_id: z.coerce.number().int().positive(),
+      grn_number: z.string(),
+      lines: z.coerce.number().int().min(0),
+    })
+    .safeParse(data);
+  if (!parsed.success) {
+    return { success: false, error: "Phản hồi không hợp lệ từ máy chủ." };
+  }
+
+  return { success: true, data: { id: parsed.data.grn_id } };
 }
 
 /* ─── startGrnFromPo (mobile form-action wrapper) ─── */

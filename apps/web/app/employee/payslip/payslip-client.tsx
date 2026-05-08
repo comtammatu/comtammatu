@@ -1,5 +1,7 @@
 "use client";
 
+import { Printer as IconPrinter } from "lucide-react";
+import { Button } from "@comtammatu/ui/components/button";
 import {
   Empty,
   EmptyDescription,
@@ -32,6 +34,17 @@ export function PayslipClient({ entries }: { entries: PayslipEntry[] }) {
 
   return (
     <div className="flex flex-col gap-3">
+      <div className="flex justify-end print:hidden">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => window.print()}
+        >
+          <IconPrinter data-icon="inline-start" />
+          In / Lưu PDF
+        </Button>
+      </div>
       {entries.map((entry) => {
         const period = entry.payroll_periods;
         const status = period?.status ?? "paid";

@@ -11,7 +11,10 @@ interface Tab {
   allowedRoles?: readonly StaffRole[];
 }
 
-const TABS: Tab[] = [{ href: "/inventory/settings/expiry" }];
+const TABS: Tab[] = [
+  { href: "/inventory/settings/expiry" },
+  { href: "/inventory/settings/thresholds" },
+];
 
 export function SettingsSectionNav({ role }: { role: StaffRole }) {
   const pathname = usePathname();

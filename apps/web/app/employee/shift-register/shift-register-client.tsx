@@ -252,7 +252,7 @@ export function ShiftRegisterClient({
                     <ItemDescription>
                       {formatFullDate(req.date)}
                       {req.shifts
-                        ? ` · ${req.shifts.start_time} - ${req.shifts.end_time}`
+                        ? ` · ${req.shifts.start_time.slice(0, 5)} - ${req.shifts.end_time.slice(0, 5)}`
                         : null}
                       {req.note ? ` · ${req.note}` : null}
                       {req.status === "rejected" && req.rejected_reason
@@ -350,7 +350,7 @@ export function ShiftRegisterClient({
                 <SelectContent>
                   {shifts.map((s) => (
                     <SelectItem key={s.id} value={s.id.toString()}>
-                      {s.name} · {s.start_time} - {s.end_time}
+                      {s.name} · {s.start_time.slice(0, 5)} - {s.end_time.slice(0, 5)}
                     </SelectItem>
                   ))}
                 </SelectContent>

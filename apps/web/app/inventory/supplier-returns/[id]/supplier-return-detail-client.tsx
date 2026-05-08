@@ -32,14 +32,13 @@ const RESOLUTION_LABELS: Record<string, string> = {
   cash_refund: "Hoàn tiền",
 };
 
-const formatVND = (v: number | null | undefined) =>
+import { formatVND as formatVndNumber } from "../../_lib/format";
+import { messages as inventoryMessages } from "@lib/messages";
+
+const formatReturnValue = (v: number | null | undefined) =>
   v == null
-    ? "—"
-    : new Intl.NumberFormat("vi-VN", {
-        style: "currency",
-        currency: "VND",
-        maximumFractionDigits: 0,
-      }).format(v);
+    ? inventoryMessages.inventory.common.noValue
+    : inventoryMessages.inventory.common.currency(formatVndNumber(v));
 
 interface DetailHeader {
   id: number;
@@ -135,10 +134,10 @@ export function SupplierReturnDetailClient({ header, lines }: Props) {
                     </span>
                   </TableCell>
                   <TableCell className="text-right font-mono">
-                    {formatVND(l.unit_cost)}
+                    {formatReturnValue(l.unit_cost)}
                   </TableCell>
                   <TableCell className="text-right font-mono">
-                    {formatVND(l.line_total)}
+                    {formatReturnValue(l.line_total)}
                   </TableCell>
                 </TableRow>
               ))
@@ -151,7 +150,7 @@ export function SupplierReturnDetailClient({ header, lines }: Props) {
                   Tổng
                 </TableCell>
                 <TableCell className="text-right font-mono font-bold">
-                  {formatVND(totalValue)}
+                  {formatReturnValue(totalValue)}
                 </TableCell>
               </TableRow>
             </TableFooter>

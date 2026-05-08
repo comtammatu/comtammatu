@@ -87,6 +87,10 @@ const VI_DICTIONARY: InventoryDictionary = {
       short: "Hạn dùng",
       long: "Hạn sử dụng",
     },
+    "/inventory/settings/thresholds": {
+      short: "Ngưỡng tồn",
+      long: "Ngưỡng tồn kho",
+    },
   },
 
   // ------------------------------------------------------------------

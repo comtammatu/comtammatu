@@ -31,3 +31,5 @@ export {
 } from "./impl/vietqr";
 export { MoMoProvider, createMoMoProviderFromEnv } from "./impl/momo";
 export { MisaProvider } from "./impl/misa";
+export { ViettelSinvoiceProvider } from "./impl/viettel-sinvoice";
+export type { ViettelSinvoiceConfig } from "./impl/viettel-sinvoice";

@@ -28,14 +28,13 @@ const STATUS_VARIANTS: Record<
   cancelled: "destructive",
 };
 
-const formatVND = (v: number | null) =>
+import { formatVND as formatVndNumber } from "../_lib/format";
+import { messages as inventoryMessages } from "@lib/messages";
+
+const formatReturnValue = (v: number | null) =>
   v == null
-    ? "—"
-    : new Intl.NumberFormat("vi-VN", {
-        style: "currency",
-        currency: "VND",
-        maximumFractionDigits: 0,
-      }).format(v);
+    ? inventoryMessages.inventory.common.noValue
+    : inventoryMessages.inventory.common.currency(formatVndNumber(v));
 
 export function SupplierReturnsClient({
   initialReturns,
@@ -67,7 +66,7 @@ export function SupplierReturnsClient({
                 </Badge>
               </TableCell>
               <TableCell className="text-right font-mono">
-                {formatVND(r.total_value)}
+                {formatReturnValue(r.total_value)}
               </TableCell>
               <TableCell>
                 <Button variant="ghost" size="sm" asChild>

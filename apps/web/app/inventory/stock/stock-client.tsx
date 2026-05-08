@@ -62,6 +62,7 @@ import {
 } from "../_components/inventory-page-layout";
 import { StatusBadge } from "../_components/status-badge";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { InteractiveCard } from "../_components/interactive-card";
 import { FormattedNumberInput } from "../_components/formatted-number-input";
 import { formatDateTime, formatQty, formatVND } from "../_lib/format";
@@ -243,13 +244,17 @@ function SummaryMetric({
   label,
   value,
   tone = "default",
+  onClick,
+  active,
 }: {
   label: string;
   value: string;
   tone?: "default" | "warning" | "muted";
+  onClick?: () => void;
+  active?: boolean;
 }) {
-  return (
-    <div className="flex min-w-fit items-center gap-2 px-3 py-2">
+  const content = (
+    <>
       <span className="text-xs text-muted-foreground">{label}</span>
       <span
         className={cn(
@@ -260,6 +265,28 @@ function SummaryMetric({
       >
         {value}
       </span>
+    </>
+  );
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className={cn(
+          "flex min-w-fit items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-muted/40",
+          active && "bg-primary/10",
+        )}
+        aria-pressed={active}
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex min-w-fit items-center gap-2 px-3 py-2">
+      {content}
     </div>
   );
 }
@@ -572,6 +599,24 @@ export function StockClient({
     sortMode,
   ]);
 
+  const filtersActive =
+    searchQuery.trim() !== "" ||
+    activeCategory !== "all" ||
+    stockFilter !== "all" ||
+    riskFilter !== "all";
+
+  // Pristine first-load: ingredients exist in catalog but no GRN has ever
+  // happened for this branch. Suppress the 87/87 "Hết hàng" alarm storm
+  // (real signal is "no data yet", not "stock-out emergency").
+  const isFirstLoadEmpty =
+    !filtersActive &&
+    ingredients.length > 0 &&
+    ingredients.every(
+      (item) =>
+        item.qty === 0 &&
+        (!item.lastCount || item.lastCount === inventoryCommon.noValue),
+    );
+
   const selected =
     filtered.find((ingredient) => ingredient.id === selectedId) ??
     filtered[0] ??
@@ -653,7 +698,9 @@ export function StockClient({
             />
           ) : null}
 
-          <InputGroup className={cn("min-w-56 flex-1", isMobile && "h-12")}>
+          <InputGroup
+            className={cn("min-w-56 flex-1", isMobile ? "h-12" : "h-10")}
+          >
             <InputGroupAddon>
               <IconSearch />
             </InputGroupAddon>
@@ -663,6 +710,16 @@ export function StockClient({
               placeholder={stockCopy.filters.searchPlaceholder}
               inputMode="search"
             />
+            {searchQuery.trim() ? (
+              <InputGroupAddon align="inline-end">
+                <span
+                  className="font-mono text-xs tabular-nums text-muted-foreground"
+                  aria-live="polite"
+                >
+                  {filtered.length}/{ingredients.length}
+                </span>
+              </InputGroupAddon>
+            ) : null}
           </InputGroup>
         </div>
 
@@ -681,6 +738,14 @@ export function StockClient({
             label={stockCopy.metrics.underThreshold}
             value={String(summary.underThresholdCount)}
             tone={summary.underThresholdCount > 0 ? "warning" : "muted"}
+            onClick={
+              summary.underThresholdCount > 0
+                ? () => {
+                    setStockFilter(stockFilter === "low" ? "all" : "low");
+                  }
+                : undefined
+            }
+            active={stockFilter === "low"}
           />
           <SummaryMetric
             label={stockCopy.metrics.nearExpiry}
@@ -759,12 +824,40 @@ export function StockClient({
             </SelectContent>
           </Select>
 
-          <Badge variant="outline" className="ml-auto">
-            {filtered.length}/{ingredients.length}
-          </Badge>
+          {!isFirstLoadEmpty ? (
+            <Badge variant="outline" className="ml-auto">
+              {filtered.length}/{ingredients.length}
+            </Badge>
+          ) : null}
         </InventoryFilterBar>
 
-        {isMobile ? (
+        {isFirstLoadEmpty ? (
+          <Card className="bg-muted/20">
+            <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
+              <div className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                <IconShoppingCart className="size-6" />
+              </div>
+              <div className="space-y-1">
+                <p className="font-heading text-base font-semibold">
+                  {stockCopy.empty.firstLoadTitle}
+                </p>
+                <p className="max-w-md text-sm text-muted-foreground">
+                  {stockCopy.empty.firstLoadHint}
+                </p>
+              </div>
+              {permissions.canCreatePurchaseOrder ? (
+                <Button asChild size="sm">
+                  <Link
+                    href={branchHref(branchId, "/inventory/purchase-orders/new")}
+                  >
+                    <IconShoppingCart className="size-4" />
+                    {stockCopy.actions.purchaseSuggestion}
+                  </Link>
+                </Button>
+              ) : null}
+            </CardContent>
+          </Card>
+        ) : isMobile ? (
           <div className="flex flex-col gap-2">
             {filtered.length === 0 ? (
               <Empty className="py-8">
@@ -836,7 +929,11 @@ export function StockClient({
                         {stockCopy.table.wac}
                       </p>
                       <p className="tabular-nums">
-                        {inventoryCommon.currencyCompact(formatVND(item.cost))}
+                        {item.cost > 0
+                          ? inventoryCommon.currencyCompact(
+                              formatVND(item.cost),
+                            )
+                          : inventoryCommon.noValue}
                       </p>
                     </div>
                     <div className="text-right">
@@ -913,9 +1010,6 @@ export function StockClient({
                       <TableHead className="min-w-24 text-right">
                         {stockCopy.table.stock}
                       </TableHead>
-                      <TableHead className="min-w-24 text-right">
-                        {stockCopy.table.available}
-                      </TableHead>
                       <TableHead className="min-w-40 text-right">
                         {stockCopy.table.warning}
                       </TableHead>
@@ -930,7 +1024,7 @@ export function StockClient({
                   <TableBody>
                     {filtered.length === 0 ? (
                       <TableEmptyStateRow
-                        colSpan={7}
+                        colSpan={6}
                         title={
                           searchQuery.trim()
                             ? stockCopy.empty.search
@@ -1000,9 +1094,6 @@ export function StockClient({
                           >
                             {formatQty(item.qty)} {item.unit}
                           </TableCell>
-                          <TableCell className="text-right font-mono">
-                            {formatQty(item.qty)} {item.unit}
-                          </TableCell>
                           <TableCell className="text-right">
                             <div className="flex flex-wrap justify-end gap-2">
                               <StatusBadge status={item.status} size="sm" />
@@ -1014,12 +1105,16 @@ export function StockClient({
                             </div>
                           </TableCell>
                           <TableCell className="text-right font-mono">
-                            {formatVND(item.cost)}
+                            {item.cost > 0
+                              ? formatVND(item.cost)
+                              : inventoryCommon.noValue}
                           </TableCell>
                           <TableCell className="text-right font-mono font-semibold">
-                            {inventoryCommon.currencyCompact(
-                              formatVND(stockValue(item)),
-                            )}
+                            {stockValue(item) > 0
+                              ? inventoryCommon.currencyCompact(
+                                  formatVND(stockValue(item)),
+                                )
+                              : inventoryCommon.noValue}
                           </TableCell>
                         </TableRow>
                       );

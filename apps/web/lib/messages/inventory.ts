@@ -30,6 +30,9 @@ export const inventory = {
     transferTrackingTitle: "Theo dõi điều chuyển",
     activeTransfers: (count: number) => `${count} phiếu đang xử lý`,
     noActiveTransfers: "Không có điều chuyển đang xử lý",
+    headerTagline: "3 luồng vận hành: tồn · nhập · điều phối.",
+    allClearTitle: "Mọi thứ đang ổn",
+    allClearHint: "Không có việc gấp, cảnh báo, điều chuyển hay kiểm kê đang chờ.",
     stocktakeProgress: "Tiến độ kiểm kê",
     activeStocktakes: (count: number) => `${count} phiên đang thực hiện`,
     noActiveStocktakes: "Không có phiên kiểm kê đang thực hiện",
@@ -97,6 +100,16 @@ export const inventory = {
     lineCount: (count: number) => `${count} dòng`,
     reviewRatio: (review: number, total: number) => `${review} / ${total} dòng`,
     inspectionItemsTitle: "Danh sách mặt hàng kiểm nhận",
+    overviewLinesTitle: "Dòng nhập kho",
+    overviewLinesPreviewHint: (count: number) =>
+      `Top ${count} theo giá trị nhập`,
+    viewAllLines: (count: number) => `Xem tất cả ${count} dòng →`,
+    overviewLinesEmpty: "Phiếu chưa có dòng nào.",
+    lineHeaderName: "Nguyên liệu",
+    lineHeaderQty: "SL nhận",
+    lineHeaderCost: "Đơn giá",
+    lineHeaderTotal: "Thành tiền",
+    lineHeaderStatus: "Trạng thái",
     draftToleranceHint: (
       shortagePct: number,
       warnPct: number,
@@ -278,12 +291,13 @@ export const inventory = {
       meta: (supplier: string, date: string, sentAt: string) =>
         `${supplier} • ${date} • Gửi NCC ${sentAt} • Bước mở đầu của hub procurement`,
       goodsTotal: "Tổng tiền hàng",
-      currencyVnd: "VNĐ",
       steps: {
         draft: "Nháp",
         sent: "Đã gửi",
         waitingInspection: "Chờ kiểm nhận",
+        waitingInspectionHint: "Đang chờ NCC giao",
         hasGrn: "Đã có GRN",
+        partialReceivedHint: "Đã nhận một phần",
       },
       itemCatalogTitle: "Danh mục đặt mua",
       itemCatalogDescription: (count: number) =>
@@ -319,7 +333,12 @@ export const inventory = {
         "Chưa có thêm thông tin nhà cung cấp trong đơn mua này.",
       cancelPo: "Hủy PO",
       sendPo: "Gửi PO cho NCC",
-      createGrnStep: "Sang bước tạo GRN",
+      createGrnStep: "Tạo GRN từ PO này",
+      createGrnDisabledHint: "Chỉ tạo GRN khi PO đã gửi NCC.",
+      overviewLinesTitle: "Dòng đặt mua",
+      overviewLinesPreviewHint: (count: number) =>
+        `Top ${count} theo giá trị`,
+      viewAllLines: (count: number) => `Xem tất cả ${count} dòng →`,
     },
   },
   stock: {
@@ -370,6 +389,9 @@ export const inventory = {
       searchDescription: "Thử từ khóa hoặc bộ lọc khác.",
       noDataDescription:
         "Dữ liệu tồn kho sẽ xuất hiện khi có nguyên liệu và giao dịch phát sinh.",
+      firstLoadTitle: "Chưa có dữ liệu nhập kho",
+      firstLoadHint:
+        "Nguyên liệu đã có trong danh mục nhưng chưa có phiếu nhập (GRN) nào. Bắt đầu bằng đơn đặt hàng đầu tiên.",
     },
     table: {
       stock: "Tồn",
@@ -490,6 +512,45 @@ export const inventory = {
     description:
       "Khu vực này chỉ giữ các cấu hình hành vi hoặc policy của Inventory. Dữ liệu master data đã được dồn về nhóm `Quản lý` để tránh trùng cửa vào.",
     policyLayer: "Policy layer",
+    thresholds: {
+      title: "Ngưỡng tồn kho",
+      eyebrow: "Inventory thresholds",
+      description:
+        "Đặt ngưỡng tồn tối thiểu, điểm đặt lại và tồn tối đa cho từng nguyên liệu. Cảnh báo và đề xuất mua dùng chung ngưỡng này.",
+      hint: "Quy tắc: Tồn tối thiểu ≤ Điểm đặt lại ≤ Tồn tối đa. Để trống Điểm đặt lại = không cảnh báo reorder.",
+      cols: {
+        ingredient: "Nguyên liệu",
+        sku: "SKU",
+        unit: "Đơn vị",
+        min: "Tồn tối thiểu",
+        reorder: "Điểm đặt lại",
+        max: "Tồn tối đa",
+      },
+      selectAllAria: "Chọn tất cả",
+      dirtySummary: (dirty: number, errors: number) =>
+        errors > 0
+          ? `${dirty} dòng đã chỉnh, ${errors} dòng lỗi`
+          : `${dirty} dòng đã chỉnh`,
+      bulk: {
+        applyTo: (count: number) => `Áp dụng cho ${count} dòng`,
+        dialogTitle: "Áp dụng ngưỡng cho dòng đã chọn",
+        dialogHint:
+          "Chỉ những ô bạn nhập sẽ ghi đè. Để trống = giữ nguyên giá trị hiện có.",
+        applyAction: "Áp dụng",
+        cancel: "Hủy",
+        empty: "Chọn ít nhất 1 dòng để áp dụng hàng loạt.",
+      },
+      save: {
+        action: (count: number) =>
+          count > 0 ? `Lưu thay đổi (${count})` : "Lưu thay đổi",
+        success: (count: number) =>
+          `Đã cập nhật ngưỡng cho ${count} nguyên liệu.`,
+        nothing: "Không có thay đổi để lưu.",
+        failed: "Không thể cập nhật ngưỡng.",
+      },
+      empty: "Chưa có nguyên liệu nào trong danh mục.",
+      forbidden: "Bạn không có quyền chỉnh sửa ngưỡng tồn kho.",
+    },
   },
   transfer: {
     created: "Tạo chuyển kho {code} thành công",
@@ -703,6 +764,8 @@ export const inventory = {
     searchPlaceholder: "Tìm mã phiên hoặc tên chi nhánh...",
     noSessionsMatched: "Không tìm thấy phiên nào",
     noSessions: "Chưa có phiên kiểm kê nào",
+    noSessionsHint:
+      "Mở phiên kiểm kê để bắt đầu đếm tồn kho thực tế và đối soát với hệ thống.",
     sessionCode: "Mã phiên",
     startedAt: "Ngày bắt đầu",
     detailsAria: "Chi tiết",

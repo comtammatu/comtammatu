@@ -1,4 +1,5 @@
 import { ShieldCheck as IconShieldCheck } from "lucide-react";
+import { ROLE_LABEL_VI } from "@comtammatu/shared/auth";
 import { Badge } from "@comtammatu/ui/components/badge";
 import {
   Empty,
@@ -15,14 +16,35 @@ import {
 } from "../components/employee-page";
 
 export default async function PermissionsPage() {
-  const { claims } = await loadAuthState();
+  const { supabase, claims } = await loadAuthState();
 
-  const branchPerms = await fetchCurrentUserPermissions(claims.branch_id);
-  const tenantPerms = branchPerms.filter((p) => p.branchId === null);
-  const scopedPerms = branchPerms.filter((p) => p.branchId !== null);
+  const [branchPermsRes, positionsRes, permKeysRes] = await Promise.all([
+    fetchCurrentUserPermissions(claims.branch_id),
+    supabase
+      .from("positions")
+      .select("code, label_vi")
+      .eq("tenant_id", claims.tenant_id),
+    supabase
+      .from("permission_keys")
+      .select("key, description"),
+  ]);
+
+  const positionLabel = new Map(
+    (positionsRes.data ?? []).map((p) => [p.code, p.label_vi]),
+  );
+  const permissionLabel = new Map(
+    (permKeysRes.data ?? []).map((k) => [k.key, k.description]),
+  );
+
+  const tenantPerms = branchPermsRes.filter((p) => p.branchId === null);
+  const scopedPerms = branchPermsRes.filter((p) => p.branchId !== null);
 
   const position = claims.position ?? null;
   const legacyRole = claims.user_role;
+  const positionDisplay = position
+    ? (positionLabel.get(position) ?? position)
+    : "Chưa gắn";
+  const roleDisplay = ROLE_LABEL_VI[legacyRole] ?? legacyRole;
 
   return (
     <EmployeePage
@@ -38,13 +60,13 @@ export default async function PermissionsPage() {
         <EmployeeDetailList
           rows={[
             {
-              label: "Mã chức vụ",
-              value: position ?? "Chưa gắn",
+              label: "Chức vụ",
+              value: positionDisplay,
               muted: !position,
             },
             {
               label: "Vai trò tương thích",
-              value: legacyRole,
+              value: roleDisplay,
             },
           ]}
         />
@@ -54,14 +76,20 @@ export default async function PermissionsPage() {
         title={`Quyền cấp tenant (${tenantPerms.length})`}
         emptyTitle="Không có quyền cấp tenant"
         emptyDescription="Tài khoản này không có grant cấp tenant."
-        permissions={tenantPerms.map((permission) => permission.permissionKey)}
+        permissions={tenantPerms.map((p) => ({
+          key: p.permissionKey,
+          label: permissionLabel.get(p.permissionKey) ?? p.permissionKey,
+        }))}
       />
 
       <PermissionCard
         title={`Quyền theo chi nhánh (${scopedPerms.length})`}
         emptyTitle="Không có quyền theo chi nhánh"
         emptyDescription="Không có grant cho chi nhánh hiện tại."
-        permissions={scopedPerms.map((permission) => permission.permissionKey)}
+        permissions={scopedPerms.map((p) => ({
+          key: p.permissionKey,
+          label: permissionLabel.get(p.permissionKey) ?? p.permissionKey,
+        }))}
       />
     </EmployeePage>
   );
@@ -76,7 +104,7 @@ function PermissionCard({
   title: string;
   emptyTitle: string;
   emptyDescription: string;
-  permissions: string[];
+  permissions: { key: string; label: string }[];
 }) {
   return (
     <EmployeePanel title={title}>
@@ -89,9 +117,9 @@ function PermissionCard({
         </Empty>
       ) : (
         <div className="flex flex-wrap gap-1.5">
-          {permissions.map((permission) => (
-            <Badge key={permission} variant="secondary">
-              {permission}
+          {permissions.map((p) => (
+            <Badge key={p.key} variant="secondary" title={p.key}>
+              {p.label}
             </Badge>
           ))}
         </div>

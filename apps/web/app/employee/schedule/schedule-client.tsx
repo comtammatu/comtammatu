@@ -202,7 +202,8 @@ function ScheduleWeekList({
                   <div>
                     <p className="text-sm font-medium">{shift.shift_name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {shift.start_time} {"\u2013"} {shift.end_time}
+                      {shift.start_time.slice(0, 5)} {"\u2013"}{" "}
+                      {shift.end_time.slice(0, 5)}
                     </p>
                   </div>
                 ) : (

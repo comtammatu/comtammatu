@@ -52,7 +52,7 @@ export function BottomNav() {
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 px-2 pt-2 chrome-safe-pb backdrop-blur sm:px-4 lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 px-2 pt-2 chrome-safe-pb backdrop-blur sm:px-4 lg:hidden print:hidden"
       aria-label={copy.ariaLabel}
     >
       <div className="no-scrollbar mx-auto flex max-w-4xl items-stretch gap-1 overflow-x-auto">

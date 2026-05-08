@@ -58,6 +58,7 @@ import { TableEmptyStateRow } from "../../_components/table-empty-state-row";
 import { DocumentStockCorrectionDialog } from "../../_components/document-stock-correction-dialog";
 import { tRoute, tTerm } from "../../_lib/dictionary";
 import { formatDateTime, formatQty, formatVND } from "../../_lib/format";
+import { messages } from "@lib/messages";
 import {
   getInventoryStatusBadgeVariant,
   getInventoryStatusLabel,
@@ -536,10 +537,9 @@ export function IssueDetailClient({
                     <span className="text-sm font-bold">TỔNG CỘNG</span>
                     <div className="text-right">
                       <span className="block text-2xl font-black leading-none text-primary">
-                        {formatVND(totalAmount)}
-                      </span>
-                      <span className="text-xs font-semibold text-muted-foreground">
-                        VNĐ
+                        {messages.inventory.common.currency(
+                          formatVND(totalAmount),
+                        )}
                       </span>
                     </div>
                   </div>

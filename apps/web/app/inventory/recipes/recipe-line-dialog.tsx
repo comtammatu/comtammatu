@@ -16,7 +16,7 @@ import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
-import { Combobox } from "@/components/form";
+import { Combobox, MultiSelectCombobox } from "@/components/form";
 import {
   Dialog,
   DialogContent,
@@ -291,10 +291,38 @@ export function RecipeLineDialog({
     defaultValues: initialValues,
   });
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, replace } = useFieldArray({
     control: form.control,
     name: "lines",
   });
+
+  const watchedLines = form.watch("lines");
+  const alreadySelectedIngredientIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const line of watchedLines ?? []) {
+      if (line?.ingredient_id) ids.add(line.ingredient_id);
+    }
+    return ids;
+  }, [watchedLines]);
+
+  function handleBulkAddIngredients(ingredientIds: string[]) {
+    const newRows: RecipeLineRow[] = ingredientIds.map((id) => {
+      const ing = ingredientMap.get(Number(id));
+      return {
+        ingredient_id: id,
+        quantity: "",
+        unit: ing?.unit ?? "",
+        yield_factor: "1",
+        note: "",
+      };
+    });
+    // Drop any leftover empty rows (e.g. the seed EMPTY_ROW) so bulk-add
+    // doesn't leave a half-filled placeholder above the new rows.
+    const kept = (form.getValues("lines") ?? []).filter(
+      (row) => row.ingredient_id !== "",
+    );
+    replace([...kept, ...newRows]);
+  }
 
   useEffect(() => {
     if (open) {
@@ -423,19 +451,37 @@ export function RecipeLineDialog({
           </div>
 
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <Label className="text-sm font-medium">
                 Danh sách nguyên liệu *
               </Label>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => append(EMPTY_ROW)}
-              >
-                <IconPlus className="size-4" />
-                Thêm nguyên liệu
-              </Button>
+              <div className="flex items-center gap-2">
+                <MultiSelectCombobox
+                  options={ingredients.map((ing) => ({
+                    value: String(ing.id),
+                    label: ing.name,
+                    hint: ing.unit,
+                    alreadySelected: alreadySelectedIngredientIds.has(
+                      String(ing.id),
+                    ),
+                  }))}
+                  onConfirm={handleBulkAddIngredients}
+                  triggerLabel="Chọn nhiều nguyên liệu"
+                  confirmLabel={(n) =>
+                    n > 0 ? `Thêm ${n} nguyên liệu` : "Thêm nguyên liệu"
+                  }
+                  searchPlaceholder="Tìm theo tên..."
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => append(EMPTY_ROW)}
+                >
+                  <IconPlus className="size-4" />
+                  Thêm 1 dòng
+                </Button>
+              </div>
             </div>
 
             <div className="overflow-hidden rounded-md border">

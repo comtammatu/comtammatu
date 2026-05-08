@@ -28,7 +28,8 @@ import {
   EmployeePanel,
 } from "../components/employee-page";
 import { getEmployeeContext } from "../_lib/employee-context";
-import { formatDateVN, formatTimeVN } from "../_lib/vn-business-date";
+import { formatDateVN, formatTimeVN, getTodayVN } from "../_lib/vn-business-date";
+import { MonthPicker } from "./month-picker";
 
 const STATUS_LABELS: Record<string, string> = {
   present: "Có mặt",
@@ -44,14 +45,21 @@ const STATUS_VARIANTS: Record<string, BadgeProps["variant"]> = {
   half_day: "info",
 };
 
-export default async function EmployeeAttendancePage() {
+export default async function EmployeeAttendancePage(props: {
+  searchParams: Promise<{ month?: string }>;
+}) {
   const ctx = await getEmployeeContext();
+  const { month: monthParam } = await props.searchParams;
+  const todayVN = getTodayVN();
+  const currentMonth = todayVN.slice(0, 7);
+  const month = isValidMonth(monthParam) ? monthParam : currentMonth;
+  const monthLabel = formatMonthLabel(month);
 
   if (!ctx) {
     return (
       <EmployeePage
         title="Ngày công"
-        description="Lịch sử vào ca, ra ca trong 30 ngày gần nhất."
+        description="Lịch sử vào ca, ra ca theo tháng."
       >
         <Empty>
           <EmptyHeader>
@@ -68,16 +76,18 @@ export default async function EmployeeAttendancePage() {
 
   const { supabase, claims, employeeId } = ctx;
 
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .split("T")[0];
+  const monthStart = `${month}-01`;
+  const monthEnd = nextMonthStart(month);
 
   const { data: records } = await supabase
     .from("attendance_records")
-    .select("id, date, check_in, check_out, status, note, shifts ( name )")
+    .select(
+      "id, date, check_in, check_out, status, note, shifts ( name, start_time, end_time )",
+    )
     .eq("employee_id", employeeId)
     .eq("tenant_id", claims.tenant_id)
-    .gte("date", thirtyDaysAgo)
+    .gte("date", monthStart)
+    .lt("date", monthEnd)
     .order("date", { ascending: false });
 
   const attendance = (records ?? []) as unknown as AttendanceRow[];
@@ -87,12 +97,18 @@ export default async function EmployeeAttendancePage() {
   const absent = attendance.filter((r) => r.status === "absent").length;
   const halfDay = attendance.filter((r) => r.status === "half_day").length;
 
+  const computed = attendance.map((r) => computeRowMetrics(r));
+  const totalWorkedMin = computed.reduce((s, c) => s + c.workedMin, 0);
+  const totalOtMin = computed.reduce((s, c) => s + c.otMin, 0);
+  const totalLateMin = computed.reduce((s, c) => s + c.lateMin, 0);
+
   return (
     <EmployeePage
       title="Ngày công"
-      description="Lịch sử vào ca, ra ca trong 30 ngày gần nhất."
-      badge={{ children: "30 ngày", variant: "outline" }}
+      description="Lịch sử vào ca, ra ca theo tháng."
+      badge={{ children: monthLabel, variant: "outline" }}
     >
+      <MonthPicker selectedMonth={month} currentMonth={currentMonth} />
       <EmployeePanel title="Tổng quan">
         <EmployeeDetailList
           columns={3}
@@ -100,6 +116,26 @@ export default async function EmployeeAttendancePage() {
             { label: "Có mặt", value: present },
             { label: "Vắng", value: absent },
             { label: "Nửa ngày", value: halfDay },
+          ]}
+        />
+        <EmployeeDetailList
+          columns={3}
+          rows={[
+            {
+              label: "Tổng giờ làm",
+              value: formatHours(totalWorkedMin),
+              muted: totalWorkedMin === 0,
+            },
+            {
+              label: "Tăng ca (OT)",
+              value: formatHours(totalOtMin),
+              muted: totalOtMin === 0,
+            },
+            {
+              label: "Đi trễ",
+              value: formatMinutes(totalLateMin),
+              muted: totalLateMin === 0,
+            },
           ]}
         />
       </EmployeePanel>
@@ -216,5 +252,79 @@ interface AttendanceRow {
   check_out: string | null;
   status: string;
   note: string | null;
-  shifts: { name: string } | null;
+  shifts: {
+    name: string;
+    start_time: string;
+    end_time: string;
+  } | null;
+}
+
+interface RowMetrics {
+  workedMin: number;
+  otMin: number;
+  lateMin: number;
+}
+
+function computeRowMetrics(r: AttendanceRow): RowMetrics {
+  if (!r.check_in || !r.check_out) {
+    return { workedMin: 0, otMin: 0, lateMin: 0 };
+  }
+  const workedMin = Math.max(
+    0,
+    Math.round(
+      (new Date(r.check_out).getTime() - new Date(r.check_in).getTime()) /
+        60_000,
+    ),
+  );
+  let otMin = 0;
+  let lateMin = 0;
+  if (r.shifts) {
+    const scheduled = parseTimeMin(r.shifts.end_time) - parseTimeMin(r.shifts.start_time);
+    const scheduledMin = scheduled < 0 ? scheduled + 24 * 60 : scheduled;
+    otMin = Math.max(0, workedMin - scheduledMin);
+    const checkInVN = new Date(r.check_in).toLocaleTimeString("vi-VN", {
+      hour12: false,
+      timeZone: "Asia/Ho_Chi_Minh",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    lateMin = Math.max(
+      0,
+      parseTimeMin(checkInVN) - parseTimeMin(r.shifts.start_time),
+    );
+  }
+  return { workedMin, otMin, lateMin };
+}
+
+function parseTimeMin(t: string): number {
+  const [h = "0", m = "0"] = t.split(":");
+  return Number(h) * 60 + Number(m);
+}
+
+function formatHours(min: number): string {
+  if (min === 0) return "0h";
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return m === 0 ? `${h}h` : `${h}h${m.toString().padStart(2, "0")}`;
+}
+
+function formatMinutes(min: number): string {
+  if (min === 0) return "0 phút";
+  if (min < 60) return `${min} phút`;
+  return formatHours(min);
+}
+
+function isValidMonth(s: string | undefined): s is string {
+  return typeof s === "string" && /^\d{4}-(0[1-9]|1[0-2])$/.test(s);
+}
+
+function nextMonthStart(month: string): string {
+  const [y, m] = month.split("-").map(Number) as [number, number];
+  const date = new Date(Date.UTC(y, m, 1));
+  return date.toISOString().slice(0, 10);
+}
+
+function formatMonthLabel(month: string): string {
+  const [y, m] = month.split("-");
+  return `Tháng ${m}/${y}`;
 }

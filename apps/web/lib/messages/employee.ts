@@ -57,9 +57,9 @@ export const employee = {
     operationToolsDescription:
       "Lối tắt vận hành chỉ hiện khi tài khoản và chi nhánh cho phép.",
     posTitle: "POS",
-    posDescription: "Bán hàng tại chi nhánh.",
+    posDescription: "Bán hàng",
     kdsTitle: "KDS",
-    kdsDescription: "Theo dõi hàng bếp.",
+    kdsDescription: "Hàng bếp",
     managementTitle: "Quản lý được phép",
     managementDescription: "Các module phụ theo vai trò hiện tại.",
     ordersTitle: "Đơn hàng",

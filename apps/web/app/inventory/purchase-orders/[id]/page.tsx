@@ -30,6 +30,7 @@ export default async function PODetailPage({
   const d = res.data as {
     po: {
       po_number: string;
+      display_id: string | null;
       status: string;
       ordered_at: string;
       updated_at: string;
@@ -80,7 +81,7 @@ export default async function PODetailPage({
 
   const po: PODetail = {
     id: Number(id),
-    code: d.po.po_number ?? "",
+    code: d.po.display_id ?? d.po.po_number ?? "",
     status: d.po.status ?? "draft",
     supplier: supplier?.name ?? "—",
     date: d.po.ordered_at ? formatDate(d.po.ordered_at) : "—",
