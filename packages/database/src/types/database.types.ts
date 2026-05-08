@@ -9058,6 +9058,10 @@ export type Database = {
         Returns: Json
       }
       try_auto_approve_grn: { Args: { p_grn_id: number }; Returns: Json }
+      update_my_dependents_count: {
+        Args: { p_count: number }
+        Returns: undefined
+      }
       update_my_profile: {
         Args: { p_avatar_url?: string; p_full_name?: string; p_phone?: string }
         Returns: undefined
