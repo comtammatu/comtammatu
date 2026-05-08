@@ -2,9 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
-## [feedback-v1.0.0] - 2026-05-08
+## [1.2.0.0] - 2026-05-08
 
-### Added — QR feedback module (Slice 1 + 2 + 3, feature-tagged release)
+### Added — QR feedback module (Slice 1 + 2 + 3, headline feature)
 
 First public release of the customer-feedback module. Customers scan QR → submit rating + comment + optional phone + ≤3 photos → owner gets Telegram alerts (rating ≤3 by default) + AI-enriched inbox + daily AI report.
 
@@ -22,7 +22,7 @@ First public release of the customer-feedback module. Customers scan QR → subm
 ### Required env vars
 `TELEGRAM_BOT_TOKEN`, `CRON_SECRET`, `ALLOWED_ORIGINS_FEEDBACK`, `IP_HASH_SALT`, `NEXT_PUBLIC_APP_URL`, `ANTHROPIC_API_KEY`
 
-### Known issues (16 total — see `docs/releases/feedback-v1.0.0.md` and `tasks/todo.md`)
+### Known issues (16 total — see `docs/releases/1.2.0.0.md` and `tasks/todo.md`)
 2 HIGH (origin-check bypass when env empty, missing security headers), 4 MEDIUM (photo IDOR, Vercel fire-and-forget, photo RLS branch gap, thank-you bypass), 6 LOW, 4 INFO. QA report: `.gstack/qa-reports/qa-report-feedback-module-2026-05-07.md` (health score 63.5/100, architect-verified).
 
 ### Pending owner steps post-release
@@ -31,7 +31,7 @@ First public release of the customer-feedback module. Customers scan QR → subm
 3. Smoke test 1 QR end-to-end — scan, submit ≤3★, verify Telegram alert arrives within 90s
 4. Address ISSUE-001 + ISSUE-012 + ISSUE-013 (top-3 follow-ups, ~45 min total)
 
-Full release notes: `docs/releases/feedback-v1.0.0.md`
+Full release notes: `docs/releases/1.2.0.0.md`. Other shipped work on `main` since `1.1.0.0` (security waves H1–H4 + M1–M7, HR shift-requests, KDS focus mode, perf passes, print-agent LAN-only) listed inline in that file.
 
 ---
 
