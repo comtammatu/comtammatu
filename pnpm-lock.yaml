@@ -210,6 +210,8 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
 
+  packages/design-tokens: {}
+
   packages/security:
     dependencies:
       '@upstash/ratelimit':
