@@ -21,7 +21,9 @@
     "bones:build": "pnpm --filter @comtammatu/web bones:build",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
     "db:types": "node scripts/gen-types.mjs",
-    "clean:web": "node scripts/clean-web.mjs"
+    "clean:web": "node scripts/clean-web.mjs",
+    "tokens:build": "node scripts/build-design-tokens.mjs",
+    "tokens:check": "node scripts/build-design-tokens.mjs --check"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
