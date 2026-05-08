@@ -23,6 +23,34 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 
 ## Known issues
 
+### Feedback module — from /qa pass 2026-05-07 (production read-only)
+**Report:** `.gstack/qa-reports/qa-report-feedback-module-2026-05-07.md` (health score 63.5/100, 14 findings)
+
+**HIGH (do these first):**
+- [ ] **ISSUE-001** — Verify `ALLOWED_ORIGINS_FEEDBACK` env in production, fail-closed if empty (`apps/web/app/r/[token]/actions.ts:37-43`)
+- [ ] **ISSUE-012** — Add 5 missing security headers via `next.config.ts headers()`: CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy. Set `poweredByHeader: false` for ISSUE-014.
+
+**MEDIUM:**
+- [ ] **ISSUE-002** — Photo upload IDOR: mint per-submission upload token in `submit_feedback` RPC, consume in `uploadFeedbackPhotos` (`apps/web/app/r/[token]/actions-photos.ts`)
+- [ ] **ISSUE-003** — Replace fire-and-forget `fetch()` for telegram-flush + AI enrichment with `after()` from `next/server` (Next.js 15+). Or move to existing crons.
+- [ ] **ISSUE-004** — Tighten photo storage RLS to gate by branch (encode branch_id in path or JOIN to feedbacks for has_permission check)
+- [ ] **ISSUE-013** — `/r/[token]/thank-you` should `notFound()` for invalid/unknown tokens (phishing vector — bogus thank-you renders branded "Cảm ơn bạn đã góp ý!")
+
+**LOW / INFO (nice to have):**
+- [ ] **ISSUE-005** — Cascade photo storage objects in `feedback_retention_cleanup()` to prevent forever-orphans
+- [ ] **ISSUE-006** — Defense-in-depth: re-check `feedback:view` permission in `getFeedbackPhotoUrls`
+- [ ] **ISSUE-007** — Log honeypot hits at INFO level + `bot_attempts` counter
+- [ ] **ISSUE-008** — Sanitize-then-length-check on client OR server returns specific error when sanitization-driven
+- [ ] **ISSUE-009** — Add `?only_suspect=true` URL param for spam triage workflow
+- [ ] **ISSUE-010** — Add `(tenant_id, created_at DESC)` index for tenant-wide inbox queries
+- [ ] **ISSUE-011** — Order snapshot heuristic broken for shared tables (data quality)
+- [ ] **ISSUE-014** — Disable `X-Powered-By: Next.js` header (one-line: `poweredByHeader: false`)
+- [ ] **ISSUE-015** — Document layered CSRF defense in `actions.ts` + add startup assertion that `ALLOWED_ORIGINS_FEEDBACK` is set in production (architect-flagged)
+- [ ] **ISSUE-016** — Replace `actions-photos.ts:119` `update photo_paths = X` with conditional `UPDATE ... WHERE photo_paths = '{}' RETURNING id` to close TOCTOU race (architect-flagged)
+
+**Fix strategy:** all on a feature branch `fix/qa-feedback-2026-05-07` + PR for owner review. Each commit is atomic with regression test in `packages/shared/src/feedback/__tests__/` or `apps/web/__tests__/`.
+
+### Other
 - [ ] P3: Login rate limit fail-open khi Upstash unreachable — documented design decision, cần observability
 - [ ] 10 SECURITY DEFINER RPCs còn gọi `auth_role()` (legacy compat, không chặn ship — migrate dần qua batches α4b/α4c): `admin_update_profile`, `bump_kds_ticket`, `can_access_branch`, `close_fiscal_period`, `create_supplier_payment`, `gl_reconciliation`, `post_payroll_journal`, `recall_kds_ticket`, `set_branch_kind`, `toggle_profile_active`
 
