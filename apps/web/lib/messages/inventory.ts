@@ -501,6 +501,40 @@ export const inventory = {
     description:
       "Khu vực này chỉ giữ các cấu hình hành vi hoặc policy của Inventory. Dữ liệu master data đã được dồn về nhóm `Quản lý` để tránh trùng cửa vào.",
     policyLayer: "Policy layer",
+    thresholds: {
+      title: "Ngưỡng tồn kho",
+      eyebrow: "Inventory thresholds",
+      description:
+        "Đặt ngưỡng tồn tối thiểu, điểm đặt lại và tồn tối đa cho từng nguyên liệu. Cảnh báo và đề xuất mua dùng chung ngưỡng này.",
+      hint: "Quy tắc: Tồn tối thiểu ≤ Điểm đặt lại ≤ Tồn tối đa. Để trống Điểm đặt lại = không cảnh báo reorder.",
+      cols: {
+        ingredient: "Nguyên liệu",
+        sku: "SKU",
+        unit: "Đơn vị",
+        min: "Tồn tối thiểu",
+        reorder: "Điểm đặt lại",
+        max: "Tồn tối đa",
+      },
+      bulk: {
+        applyTo: (count: number) => `Áp dụng cho ${count} dòng`,
+        dialogTitle: "Áp dụng ngưỡng cho dòng đã chọn",
+        dialogHint:
+          "Chỉ những ô bạn nhập sẽ ghi đè. Để trống = giữ nguyên giá trị hiện có.",
+        applyAction: "Áp dụng",
+        cancel: "Hủy",
+        empty: "Chọn ít nhất 1 dòng để áp dụng hàng loạt.",
+      },
+      save: {
+        action: (count: number) =>
+          count > 0 ? `Lưu thay đổi (${count})` : "Lưu thay đổi",
+        success: (count: number) =>
+          `Đã cập nhật ngưỡng cho ${count} nguyên liệu.`,
+        nothing: "Không có thay đổi để lưu.",
+        failed: "Không thể cập nhật ngưỡng.",
+      },
+      empty: "Chưa có nguyên liệu nào trong danh mục.",
+      forbidden: "Bạn không có quyền chỉnh sửa ngưỡng tồn kho.",
+    },
   },
   transfer: {
     created: "Tạo chuyển kho {code} thành công",
