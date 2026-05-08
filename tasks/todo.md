@@ -67,11 +67,14 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 
 > Compliance audit `docs/ref/einvoice-tax.md` ↔ implementation. Pilot OK với cashier issue path; các gap dưới chặn scale + production-grade NĐ70/2025.
 
-- [ ] **P0: HĐĐT reconcile cron (orphan `signing`)** — `tax_invoices.signing_started_at` đã set bởi `transition_tax_invoice_state`; cần job poll `provider.getStatus()` cho invoices `status='signing' AND signing_started_at < now()-10min`, resolve về `issued`/`draft`. MISA timeout mid-publish hiện để HĐ kẹt mãi, không biết CQT đã cấp mã chưa. Cần owner D về cron infra (Vercel cron / Supabase pg_cron / Edge Function).
-- [ ] **P0: HĐĐT replace flow (TT 78)** — schema (`replaced_by_id`) + RPC matrix (`issued → replaced`) sẵn sàng, nhưng không có UI/action `replaceTaxInvoice(oldId, newPayload, biên_bản)`. Issued HĐ sai thông tin khách → owner hiện chỉ cancel được (mất doanh thu trên báo cáo) — non-compliant TT 78.
-- [ ] **P1: HĐĐT provider config qua `system_settings` (encrypted)** — `apps/web/lib/invoice-provider-init.ts` đọc `process.env.MISA_API_KEY`/`COMPANY_TAX_CODE`; spec yêu cầu encrypted DB row + thêm `einvoice_template_code` + `einvoice_series`. MISA hiện auto-pick series → mismatch risk khi đăng ký >1 mẫu HĐ. Block trước khi owner đổi provider hoặc đăng ký multi-template.
-- [ ] **P1: HĐĐT PDF/XML persist + download UI** — cột `tax_invoices.pdf_url`/`xml_url` rỗng; `MisaProvider.createInvoice` không return URL sau `publish`; `invoice-list.tsx` không có nút tải. Khách yêu cầu HĐ qua email/in lại không phục vụ được. Cần extend `MisaProvider` + UI button.
-- [ ] **P2: 3-way matching UI cho `supplier_invoices`** — bảng + columns (`matching_status`, `is_vat_deductible`, `declared_period`) đã có nhưng không có UI workflow PO ↔ GRN ↔ Supplier Invoice. Kế toán phải đối chiếu tay → không export được Tờ khai 01/GTGT đúng.
+> **2026-05-08 update:** Owner approved Hybrid MISA plan via 4-agent debate (D1-D7). Most M6 HĐĐT gaps now subsumed by `docs/plan/hddt-hybrid-misa.md` (7-PR migration). Items below reflect post-plan state.
+
+- [ ] **PLAN ACTIVE: HĐĐT Hybrid MISA (B2B realtime + B2C daily batch)** — see `docs/plan/hddt-hybrid-misa.md`. 7 PRs queued: schema → RPCs → B2B refactor → cron → admin UI → cutover → regression rules. **Owner action: D7 register HĐ tổng hợp template với CQT qua MISA portal (3-7 day leadtime, parallel với coding).**
+- [ ] **P0: HĐĐT reconcile cron (orphan `signing`)** — DEFERRED to post-pilot per Hybrid MISA plan. Manual recovery via admin retry button covers pilot volume.
+- [ ] **P0: HĐĐT replace flow (TT 78)** — DEFERRED post-pilot per plan. Pilot cancel + manual MISA portal đủ.
+- [ ] **P1: HĐĐT provider config qua `system_settings` (encrypted)** — DEFERRED post-pilot. Env-only acceptable cho single-tenant CTCP.
+- [ ] **P1: HĐĐT PDF/XML persist + download UI** — DEFERRED post-pilot. Link MISA portal đủ.
+- [ ] **P2: 3-way matching UI cho `supplier_invoices`** — bảng + columns (`matching_status`, `is_vat_deductible`, `declared_period`) đã có nhưng không có UI workflow PO ↔ GRN ↔ Supplier Invoice. Kế toán phải đối chiếu tay → không export được Tờ khai 01/GTGT đúng. Independent of Hybrid MISA plan.
 
 ### M7 Payroll
 - [ ] **`payroll_entries_select` RLS** — add `EXISTS(payroll_periods WHERE status='paid')` to self branch.
@@ -105,6 +108,22 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 - [ ] Implement intra-branch transfer một bước cho `Kho CN -> Bếp CN` (`Cấp bếp`) bằng RPC atomic riêng
 - [ ] `consume_stock_for_order` phải resolve `default_consumption`; nếu thiếu thì fail hard/setup gate, không fallback silent
 - [x] Retire `stock_issue(issue_type='kitchen_use')` — runtime CHECK đã chặn; docs active phải trỏ sang intra-branch transfer
+
+## Sprint 6 — Inventory UX follow-up (deferred from inventory-ux-sprint1)
+
+> Sprint 5 shipped #1 dead-code cleanup, #2 atomic `create_grn_from_po` RPC, #4 `formatVND` shadow consolidation. **#3 deferred** — see analysis below.
+
+- [ ] **#3: GRN form server-side draft auto-save** — replace `mobile-draft.ts` localStorage cache with server-side `goods_received_notes` `status='draft'` lifecycle (already exists). Per architect spec:
+  - Add server actions `findActiveGrnDraft({ supplierId })`, `listMyGrnDrafts()`, `discardGrnDraft({ grnId })`
+  - Lazy-create draft GRN on first line save in `grn-create-client.tsx`; route subsequent line saves to `upsertGrnLine` directly (server is truth)
+  - Rewrite `drafts/page-client.tsx` to consume server data
+  - Add legacy-import shim for one release (read existing localStorage drafts, POST to `importLegacyDrafts`, then `localStorage.clear`)
+  - Add `pg_cron` daily cleanup of drafts `updated_at < now() - interval '14 days'`
+  - **Not strictly a CLAUDE.md hard-rule violation** (rule is about routing scope, not form data). Still good practice for offline + corruption resilience.
+
+- [ ] **F-017: PO display ID** — needs DB sequence migration `po_display_seq` per-tenant. UUID hash leaking to UI.
+- [ ] **F-018: Supplier "Khác"** — needs business decision: rename, add NCC catalog, or hide UI surface?
+- [ ] **F-009: Stock list master-detail as drawer** — invasive; current side-panel UX is acceptable.
 
 ## Doc maintenance reminders
 
