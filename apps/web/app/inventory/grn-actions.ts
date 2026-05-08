@@ -272,9 +272,96 @@ export const createGrnDraft = withAction(
       .select("id")
       .single();
     if (error) {
+      // UNIQUE_VIOLATION on the partial index uq_grn_active_draft_per_user_supplier
+      // (Sprint 6 #3): a draft already exists for this user+supplier. Race-friendly
+      // fallback: return the existing draft so the caller can attach lines to it.
+      if (error.code === "23505") {
+        const { data: existing } = await supabase
+          .from("goods_received_notes")
+          .select("id")
+          .eq("tenant_id", claims.tenant_id)
+          .eq("created_by", user.id)
+          .eq("supplier_id", data.supplierId)
+          .eq("status", "draft")
+          .order("updated_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (existing?.id) {
+          return { success: true, data: { id: existing.id } };
+        }
+      }
       return { success: false, error: "Không thể tạo phiếu nhập." };
     }
     return { success: true, data: row };
+  },
+);
+
+/* ─── loadActiveGrnDraft (Sprint 6 #3) ─── */
+
+const loadActiveDraftSchema = z.object({
+  supplierId: z.coerce.number().int().positive(),
+});
+
+export const loadActiveGrnDraft = withAction(
+  {
+    roles: ROLES,
+    schema: loadActiveDraftSchema,
+    permission: PERMISSION_KEYS.PROCUREMENT_GRN_CREATE,
+  },
+  async (data, { supabase, claims, user }) => {
+    // Partial UNIQUE index uq_grn_active_draft_per_user_supplier guarantees
+    // at most one row matches; maybeSingle is the safe shape.
+    const { data: row, error } = await supabase
+      .from("goods_received_notes")
+      .select("id, branch_id, po_id, supplier_id, grn_number, notes, updated_at")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("created_by", user.id)
+      .eq("supplier_id", data.supplierId)
+      .eq("status", "draft")
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) {
+      return { success: false, error: "Không thể tải phiếu nhập đang nháp." };
+    }
+    return { success: true, data: row ?? null };
+  },
+);
+
+/* ─── discardGrnDraft (Sprint 6 #3) ─── */
+
+const discardDraftSchema = z.object({
+  grnId: z.coerce.number().int().positive(),
+});
+
+export const discardGrnDraft = withAction(
+  {
+    roles: ROLES,
+    schema: discardDraftSchema,
+    permission: PERMISSION_KEYS.PROCUREMENT_GRN_CREATE,
+  },
+  async (data, { supabase, claims, user }) => {
+    // Soft-cancel keeps audit trail; immutable confirmed GRNs are unaffected.
+    const { data: row, error } = await supabase
+      .from("goods_received_notes")
+      .update({ status: "cancelled" })
+      .eq("id", data.grnId)
+      .eq("tenant_id", claims.tenant_id)
+      .eq("created_by", user.id)
+      .eq("status", "draft")
+      .select("id")
+      .maybeSingle();
+    if (error) {
+      return { success: false, error: "Không thể hủy phiếu nháp." };
+    }
+    if (!row) {
+      // RLS or status guard; surface clearly instead of silent success.
+      return {
+        success: false,
+        error: "Phiếu nháp không tồn tại hoặc đã được xử lý.",
+      };
+    }
+    return { success: true, data: { id: row.id } };
   },
 );
 
