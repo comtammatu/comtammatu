@@ -966,6 +966,53 @@ export async function fetchRecipes(): Promise<ActionResult> {
   return { success: true, data: data ?? [] };
 }
 
+// WAC = giá trung bình thực tế (avg_unit_cost) ở stock_levels của bếp trung tâm.
+// Một CK thường có 1 row/nguyên liệu; nếu hệ thống có 2 CK thì lấy mean across rows.
+export async function fetchCentralKitchenWacMap(): Promise<
+  ActionResult<Record<string, number>>
+> {
+  const ctx = await getAuthContextWithPermission(
+    ROLES,
+    PERMISSION_KEYS.MENU_READ,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+  const { supabase, claims } = ctx;
+
+  const { data, error } = await supabase
+    .from("stock_levels")
+    .select(
+      "ingredient_id, avg_unit_cost, branches!inner ( branch_kind )",
+    )
+    .eq("tenant_id", claims.tenant_id)
+    .eq("branches.branch_kind", "central_kitchen")
+    .not("avg_unit_cost", "is", null);
+
+  if (error) {
+    console.error("fetchCentralKitchenWacMap", error);
+    return { success: false, error: "Không thể tải WAC bếp trung tâm." };
+  }
+
+  type WacRow = {
+    ingredient_id: number;
+    avg_unit_cost: number | string | null;
+  };
+  const accum = new Map<number, { sum: number; count: number }>();
+  for (const row of (data ?? []) as WacRow[]) {
+    const id = Number(row.ingredient_id);
+    const wac = Number(row.avg_unit_cost ?? 0);
+    const entry = accum.get(id) ?? { sum: 0, count: 0 };
+    entry.sum += wac;
+    entry.count += 1;
+    accum.set(id, entry);
+  }
+
+  const map: Record<string, number> = {};
+  for (const [id, e] of accum) {
+    map[String(id)] = e.sum / e.count;
+  }
+  return { success: true, data: map };
+}
+
 export const upsertRecipeLines = withAction(
   {
     roles: ROLES,

@@ -1,4 +1,8 @@
-import { fetchRecipes, fetchMenuItemsForRecipes } from "../procurement-actions";
+import {
+  fetchRecipes,
+  fetchMenuItemsForRecipes,
+  fetchCentralKitchenWacMap,
+} from "../procurement-actions";
 import { fetchIngredients } from "../actions";
 import { formatDate } from "../_lib/format";
 import { RecipesClient } from "./recipes-client";
@@ -27,24 +31,31 @@ type MenuItemRow = {
 };
 
 export default async function RecipesPage() {
-  const [recipesRes, menuItemsRes, ingredientsRes] = await Promise.all([
+  const [recipesRes, menuItemsRes, ingredientsRes, wacRes] = await Promise.all([
     fetchRecipes(),
     fetchMenuItemsForRecipes(),
     fetchIngredients(),
+    fetchCentralKitchenWacMap(),
   ]);
 
   const dbRows = recipesRes.success
     ? (recipesRes.data as MenuItemRow[])
     : [];
+  const wacMap = (wacRes.success ? wacRes.data : {}) as Record<string, number>;
 
   const recipes: RecipeRow[] = dbRows
     .filter((row) => (row.recipes ?? []).length > 0)
     .map((row) => {
       const items: RecipeItem[] = (row.recipes ?? []).map((line) => {
         const qty = Number(line.quantity ?? 0);
-        const unitCost = Number(line.ingredients?.unit_cost ?? 0);
+        const ingredientId =
+          line.ingredients?.id ?? line.ingredient_id ?? 0;
+        // WAC (giá nhập trung bình tại CK) ưu tiên hơn unit_cost (giá tham chiếu thủ công).
+        const wac = wacMap[String(ingredientId)];
+        const unitCost =
+          wac != null ? wac : Number(line.ingredients?.unit_cost ?? 0);
         return {
-          ingredientId: line.ingredients?.id ?? line.ingredient_id ?? 0,
+          ingredientId,
           ingredientName: line.ingredients?.name ?? "—",
           qty,
           unit:

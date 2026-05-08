@@ -49,6 +49,7 @@ export {
   fetchSupplierInvoices,
   recomputeInvoiceMatching,
   fetchRecipes,
+  fetchCentralKitchenWacMap,
   upsertRecipeLines,
   exportRecipes,
   importRecipes,
