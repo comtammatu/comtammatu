@@ -1,0 +1,61 @@
+name: CodeQL
+
+# GitHub-native SAST. Runs on every push to main, every PR, and weekly to catch
+# advisories that surface after a release ships. Languages: javascript-typescript
+# (covers the Next.js + monorepo TS code; the Supabase SQL is migration-only and
+# not in CodeQL's scope today). Pinned to commit SHAs to match the convention in
+# .github/workflows/ci.yml — Dependabot (.github/dependabot.yml, github-actions
+# ecosystem) will surface bumps once a month.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Weekly Monday 03:00 UTC (10:00 ICT) — outside business hours, before the
+    # Dependabot scan window so we have a clean baseline for the week.
+    - cron: "0 3 * * 1"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  # Default to read-only; analyze step needs security-events: write to publish
+  # findings to the Security tab.
+  contents: read
+  actions: read
+  security-events: write
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ["javascript-typescript"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@7fd177fa680c9881b53cdab4d346d32574c9f7f4 # v3
+        with:
+          languages: ${{ matrix.language }}
+          # security-extended adds rules beyond the default suite (e.g. ReDoS,
+          # weak cryptography). Worth the extra runtime for a security-sensitive
+          # multi-tenant-ish app handling PII (feedback names + photos).
+          queries: security-extended
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@7fd177fa680c9881b53cdab4d346d32574c9f7f4 # v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@7fd177fa680c9881b53cdab4d346d32574c9f7f4 # v3
+        with:
+          category: "/language:${{ matrix.language }}"

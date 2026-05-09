@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0.5] - 2026-05-09
+
+### Repo metadata — CodeQL SAST + CONTRIBUTING.md
+
+GitHub-native static analysis security testing (CodeQL on every push, PR, and weekly schedule with the `security-extended` query suite) plus a contributor guide aligning external contributors with `CLAUDE.md` quality gates and the 4-agent debate workflow. No source-code change. Long-form notes: `docs/releases/1.2.0.5.md`.
+
+### Added
+- **`.github/workflows/codeql.yml`** — CodeQL Action v3 pinned to commit SHA `7fd177fa…` (matches `ci.yml` action-pinning convention). Languages: `javascript-typescript`. `security-events: write` permission scoped to this workflow only. Triggers: push to `main`, pull_request to `main`, weekly cron `0 3 * * 1` UTC. Concurrency group cancels stale runs.
+- **`.github/CONTRIBUTING.md`** — Vietnamese + English contributor guide. References `CLAUDE.md` as canonical, lists mandatory gates (`pnpm typecheck && pnpm lint && pnpm build`), documents the 4-agent debate workflow, points security disclosures at `SECURITY.md` (no public-issue rule), explicit no-`Co-Authored-By: Claude` trailer rule.
+
+### Owner action required
+None for this release. The CodeQL workflow runs automatically on the next push to `main` (this release commit triggers the first run). The "Security" tab populates with findings (if any) within ~10 minutes of the first scan completing. The carry-over `1.2.0.1` + `1.2.0.2` alias-promotion blocker is unchanged.
+
 ## [1.2.0.4] - 2026-05-09
 
 ### Repo metadata — `.github/SECURITY.md` + Dependabot
