@@ -2,6 +2,44 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0.1] - 2026-05-09
+
+### Security & reliability patch on top of 1.2.0.0 (QR feedback module hardening)
+
+Three Ralph cycles, 18 atomic commits, all CI green, architect-APPROVED. Closes 9 of the 16 known issues from the 2026-05-07 `/qa` pass plus 3 architect follow-ups. Long-form notes: `docs/releases/1.2.0.1.md`.
+
+### Added
+- **CSP + 4 OWASP headers + HSTS preload** in `apps/web/next.config.ts` headers() for `/:path*` (`610123c8`, `9f9f424d`). `poweredByHeader: false`.
+- **`?only_suspect=true`** triage filter on `/admin/feedback` (`ee71d005` — ISSUE-009).
+
+### Fixed
+- **`ALLOWED_ORIGINS_FEEDBACK` fail-closed** in production when env is empty (`8e713af8` — ISSUE-001).
+- **`/r/[token]/thank-you` 404s** for invalid/inactive tokens (`939be3d9` — ISSUE-013, phishing-vector close).
+- **`after()` from `next/server`** replaces fire-and-forget `void fetch()` for telegram-flush + AI enrich; serverless tear-down no longer cancels the work mid-flight (`79a30bb7` — ISSUE-003). `console.warn` on rejection added (`2dbae2c5` — architect follow-up #3).
+- **TOCTOU race** on `feedbacks.photo_paths` closed via conditional `WHERE photo_paths IS NULL OR '{}'` + `.select("id")` race-loser detection (`003224c0` — ISSUE-016).
+- **Distinct error message** for sanitize-stripped vs typed-too-few comments (`fec49ecd` — ISSUE-008).
+- **Honeypot logging** at INFO level (`79a30bb7` — ISSUE-007).
+
+### Security
+- **3-layer CSRF defense** doc + warn-once log when allowlist is unset in production (`79a30bb7` — ISSUE-015).
+- **`x-powered-by: Next.js`** disclosure removed (`610123c8` — ISSUE-014).
+
+### Tests (143 → 147)
+- **Regression test** for sanitize-stripped vs typed-too-few error messages (`815c904f`).
+- **3 source-text regression tests** in `packages/shared/src/feedback/__tests__/regressions.test.ts` locking the cycle 1 guards (`fc832e25`).
+- **Tightened thank-you guard regex** (`4543fab1` — architect follow-up #2).
+- **Source-text regression test** for next.config.ts security headers + HSTS preload (`60543ab8`).
+
+### Docs
+- **4 named regression rules** added to `tasks/regressions.md`: SECURITY-HEADERS-IN-NEXT-CONFIG, FEEDBACK-THANK-YOU-MUST-NOTFOUND-INVALID, FEEDBACK-AFTER-NOT-FIRE-AND-FORGET, FEEDBACK-PHOTO-PATHS-CONDITIONAL-UPDATE (`042c908d`, extended in `4c148803`).
+- **Deslop pass** on the cycle's changed files (`f0ab5191`).
+- `tasks/todo.md` updated to mark ISSUE-001/003/007/008/009/012/013/014/015/016 shipped (`c61db730`, `35aca5f8`).
+
+### Owner action required (the 18 commits are NOT user-visible until these land)
+1. **Promote any commit ≥ `610123c8` to the `app.comtammatu.com` Vercel alias** via the Vercel dashboard. Until promoted, the alias still serves `dpl_4VMrXTgUSjybiTyEoj5QnKmnv6gN` (pre-1.2.0.0) and none of these fixes ship to users.
+2. **Confirm 6 prod env vars on Vercel**: `TELEGRAM_BOT_TOKEN`, `CRON_SECRET`, `ALLOWED_ORIGINS_FEEDBACK` (now fail-closed), `IP_HASH_SALT`, `NEXT_PUBLIC_APP_URL`, `ANTHROPIC_API_KEY`. Empty `ALLOWED_ORIGINS_FEEDBACK` will return 403 on every public-feedback submit in production.
+3. **Audit HTTP-only subdomains** of `*.comtammatu.com` BEFORE submitting to the Chrome/Firefox HSTS preload list — `includeSubDomains; preload` is hard to undo.
+
 ## [1.2.0.0] - 2026-05-08
 
 ### Added — QR feedback module (Slice 1 + 2 + 3, headline feature)
