@@ -32,21 +32,21 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 
 **MEDIUM:**
 - [ ] **ISSUE-002** — Photo upload IDOR: mint per-submission upload token in `submit_feedback` RPC, consume in `uploadFeedbackPhotos` (`apps/web/app/r/[token]/actions-photos.ts`)
-- [ ] **ISSUE-003** — Replace fire-and-forget `fetch()` for telegram-flush + AI enrichment with `after()` from `next/server` (Next.js 15+). Or move to existing crons.
+- [x] **ISSUE-003** — Replaced with `after()` from `next/server` in submitFeedback (durable post-response). Shipped 2026-05-09 (79a30bb7).
 - [ ] **ISSUE-004** — Tighten photo storage RLS to gate by branch (encode branch_id in path or JOIN to feedbacks for has_permission check)
 - [x] **ISSUE-013** — `/r/[token]/thank-you` now calls `notFound()` for invalid/unknown tokens. Shipped 2026-05-09 (939be3d9).
 
 **LOW / INFO (nice to have):**
 - [ ] **ISSUE-005** — Cascade photo storage objects in `feedback_retention_cleanup()` to prevent forever-orphans
 - [ ] **ISSUE-006** — Defense-in-depth: re-check `feedback:view` permission in `getFeedbackPhotoUrls`
-- [ ] **ISSUE-007** — Log honeypot hits at INFO level + `bot_attempts` counter
-- [ ] **ISSUE-008** — Sanitize-then-length-check on client OR server returns specific error when sanitization-driven
-- [ ] **ISSUE-009** — Add `?only_suspect=true` URL param for spam triage workflow
+- [x] **ISSUE-007** — `console.info()` on honeypot trip with first 8 chars of token. Shipped 2026-05-09 (79a30bb7).
+- [x] **ISSUE-008** — Server schema raw `.min/.max` before sanitize, distinct refine message after. Shipped 2026-05-09 (fec49ecd).
+- [x] **ISSUE-009** — `?only_suspect=true` URL param on admin feedback inbox. Shipped 2026-05-09 (ee71d005).
 - [ ] **ISSUE-010** — Add `(tenant_id, created_at DESC)` index for tenant-wide inbox queries
 - [ ] **ISSUE-011** — Order snapshot heuristic broken for shared tables (data quality)
 - [x] **ISSUE-014** — `poweredByHeader: false` set in `apps/web/next.config.ts`. Shipped 2026-05-09 (610123c8).
-- [ ] **ISSUE-015** — Document layered CSRF defense in `actions.ts` + add startup assertion that `ALLOWED_ORIGINS_FEEDBACK` is set in production (architect-flagged)
-- [ ] **ISSUE-016** — Replace `actions-photos.ts:119` `update photo_paths = X` with conditional `UPDATE ... WHERE photo_paths = '{}' RETURNING id` to close TOCTOU race (architect-flagged)
+- [x] **ISSUE-015** — 3-layer CSRF defense doc inline in `actions.ts`; warn-once log when ALLOWED_ORIGINS_FEEDBACK is unset in production. Shipped 2026-05-09 (79a30bb7).
+- [x] **ISSUE-016** — Conditional `UPDATE ... WHERE photo_paths IS NULL OR '{}'` + `.select()` to detect race losers. Shipped 2026-05-09 (003224c0).
 
 **Fix strategy:** all on a feature branch `fix/qa-feedback-2026-05-07` + PR for owner review. Each commit is atomic with regression test in `packages/shared/src/feedback/__tests__/` or `apps/web/__tests__/`.
 
