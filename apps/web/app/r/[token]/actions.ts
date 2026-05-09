@@ -134,7 +134,12 @@ export async function submitFeedback(
         await fetch(`${appUrl}/api/cron/telegram-flush`, {
           method: "POST",
           headers: { Authorization: `Bearer ${cronSecret}` },
-        }).catch(() => {});
+        }).catch((err: unknown) => {
+          console.warn(
+            "[submitFeedback.after] telegram-flush failed: %s",
+            err instanceof Error ? err.message : String(err),
+          );
+        });
       }
       if (feedbackId) {
         await fetch(`${appUrl}/api/ai/enrich-feedback`, {
@@ -144,7 +149,12 @@ export async function submitFeedback(
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ feedback_id: feedbackId as number }),
-        }).catch(() => {});
+        }).catch((err: unknown) => {
+          console.warn(
+            "[submitFeedback.after] ai-enrich failed: %s",
+            err instanceof Error ? err.message : String(err),
+          );
+        });
       }
     });
   }
