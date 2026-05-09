@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0.2] - 2026-05-09
+
+### Web-standard hardening — robots.txt + security.txt
+
+Two thin static-asset additions. No behavior change for end users; both target external crawlers and security researchers. Long-form notes: `docs/releases/1.2.0.2.md`.
+
+### Added
+- **`apps/web/app/robots.ts`** — Next.js MetadataRoute generator. `User-agent: *` disallow for `/r/`, `/admin/`, `/api/`, `/login`, `/access-denied`, `/employee/`, `/br/`, `/notifications`, `/orders`, `/menu`, `/inventory/`, `/payment/`. Keeps crawlers out of `/r/<token>` deep links (tokens rotate; indexed URLs go dead).
+- **`apps/web/public/.well-known/security.txt`** (RFC 9116) — vulnerability-disclosure contact, valid through 2027-05-09. `Contact: mailto:comtammatu@gmail.com`, `Preferred-Languages: vi, en`.
+
+### Owner action required
+Same alias-promotion blocker as 1.2.0.1: the new files are NOT served by `app.comtammatu.com` until the Vercel alias is promoted to a build ≥ this commit.
+
 ## [1.2.0.1] - 2026-05-09
 
 ### Security & reliability patch on top of 1.2.0.0 (QR feedback module hardening)
