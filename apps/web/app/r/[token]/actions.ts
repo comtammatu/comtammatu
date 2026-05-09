@@ -36,11 +36,15 @@ export async function submitFeedback(
     return { success: true, data: { feedback_id: 0 } };
   }
 
-  // 3. Origin check
+  // 3. Origin check — fail-closed in production if env unset (compliance gate)
   const headersList = await headers();
   const origin = headersList.get("origin") ?? "";
   const allowedOrigins = getAllowedOriginsFeedback();
-  if (allowedOrigins.length > 0 && !allowedOrigins.includes(origin)) {
+  if (allowedOrigins.length === 0) {
+    if (process.env.NODE_ENV === "production") {
+      return { success: false, error: "Forbidden", errorCode: "forbidden" };
+    }
+  } else if (!allowedOrigins.includes(origin)) {
     return { success: false, error: "Forbidden", errorCode: "forbidden" };
   }
 
