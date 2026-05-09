@@ -8,6 +8,7 @@ interface FeedbackPageProps {
   searchParams: Promise<{
     rating_max?: string;
     include_suspect?: string;
+    only_suspect?: string;
     page?: string;
   }>;
 }
@@ -36,7 +37,13 @@ export default async function FeedbackPage({
     }
   }
 
-  if (params.include_suspect !== "true") {
+  // Three modes for is_suspect:
+  //   ?only_suspect=true     → suspect-only triage workflow
+  //   ?include_suspect=true  → all rows (legitimate + suspect)
+  //   (default)              → legitimate-only inbox
+  if (params.only_suspect === "true") {
+    query = query.eq("is_suspect", true);
+  } else if (params.include_suspect !== "true") {
     query = query.eq("is_suspect", false);
   }
 
