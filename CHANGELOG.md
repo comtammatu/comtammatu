@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0.3] - 2026-05-09
+
+### Repo metadata — CODEOWNERS + PR / issue templates
+
+Four new files under `.github/` aligning the repo with standard GitHub conventions. No source-code change. Long-form notes: `docs/releases/1.2.0.3.md`.
+
+### Added
+- **`.github/CODEOWNERS`** — `* @comtammatu` (single-tenant CTCP fallback). Path-specific overrides go above this rule when the team grows.
+- **`.github/pull_request_template.md`** — checklist mirroring CLAUDE.md gates: typecheck/lint/build/tests, regression rule maintenance, no `Co-Authored-By: Claude` trailer, owner-action callout.
+- **`.github/ISSUE_TEMPLATE/bug_report.md`** — repro / expected / actual / environment / severity, with maintainer-side triage section.
+- **`.github/ISSUE_TEMPLATE/feature_request.md`** — problem / proposal / acceptance criteria / risk surface / explicit out-of-scope.
+
+### Owner action required
+None for this release. The `.github/` files take effect on the next PR / issue immediately on merge — no Vercel promotion needed because the artifacts are GitHub-side, not deployed to `app.comtammatu.com`. The carry-over `1.2.0.1` + `1.2.0.2` alias-promotion blocker is unchanged.
+
 ## [1.2.0.2] - 2026-05-09
 
 ### Web-standard hardening — robots.txt + security.txt
