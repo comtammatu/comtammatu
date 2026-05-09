@@ -41,6 +41,35 @@ test("submitFeedbackSchema accepts comment >= 10 chars after stripping HTML", ()
   assert.equal(r.success, true);
 });
 
+test("submitFeedbackSchema typed-too-few error is distinct from sanitize-stripped-too-few error", () => {
+  // Typed-too-few: raw "abc" (3 chars) — should hit the .min() guard with the
+  // "tối thiểu N ký tự" message before .transform(sanitizeComment) runs.
+  const tooFew = parse({ rating: 4, comment: "abc" });
+  assert.equal(tooFew.success, false);
+  if (!tooFew.success) {
+    const msg = tooFew.error.issues[0]?.message ?? "";
+    assert.ok(
+      msg.includes("tối thiểu"),
+      `expected typed-too-few message to mention "tối thiểu", got: ${msg}`,
+    );
+  }
+
+  // Sanitize-stripped-too-few: raw is long enough but reduces to <10 after
+  // sanitization (`<script>` shells with no inner text get stripped clean).
+  const stripped = parse({
+    rating: 4,
+    comment: "<script></script><script></script>",
+  });
+  assert.equal(stripped.success, false);
+  if (!stripped.success) {
+    const msg = stripped.error.issues[0]?.message ?? "";
+    assert.ok(
+      msg.includes("không hợp lệ") || msg.includes("văn bản thuần"),
+      `expected sanitize-stripped message to mention "không hợp lệ"/"văn bản thuần", got: ${msg}`,
+    );
+  }
+});
+
 test("submitFeedbackSchema normalizes invalid phone 'abc' to null (not rejected)", () => {
   // normalizePhone("abc") returns null → schema accepts null → success
   const r = parse({ rating: 4, comment: VALID_COMMENT, phone: "abc" });
