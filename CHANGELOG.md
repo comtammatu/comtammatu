@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0.4] - 2026-05-09
+
+### Repo metadata — `.github/SECURITY.md` + Dependabot
+
+Two new files under `.github/`: a GitHub-native Security policy (so the repo surfaces a "Security" tab pointing at our existing RFC 9116 `security.txt`) and a Dependabot configuration for monthly bundled dependency audits across pnpm + GitHub Actions. No source-code change. Long-form notes: `docs/releases/1.2.0.4.md`.
+
+### Added
+- **`.github/SECURITY.md`** — Vietnamese + English security policy. Reporting flow, response SLOs (5 business days for ack, 7-90 days fix depending on severity), Supported Versions table (1.2.x supported), in-scope / out-of-scope listing, safe-harbor clause, links to existing `apps/web/public/.well-known/security.txt`.
+- **`.github/dependabot.yml`** — `version: 2`. Two ecosystems: `npm` (root pnpm workspace, monthly Monday 08:00 ICT, max 5 PRs, grouped into `production-dependencies` + `dev-dependencies`, semver-major bumps ignored) and `github-actions` (monthly, max 3 PRs). Both auto-assign `comtammatu` and label PRs `dependencies`.
+
+### Owner action required
+None for this release. GitHub picks up `.github/SECURITY.md` and `.github/dependabot.yml` on the next default-branch read — no Vercel promotion needed (artifacts are GitHub-side, not deployed to `app.comtammatu.com`). The carry-over `1.2.0.1` + `1.2.0.2` alias-promotion blocker remains.
+
 ## [1.2.0.3] - 2026-05-09
 
 ### Repo metadata — CODEOWNERS + PR / issue templates
