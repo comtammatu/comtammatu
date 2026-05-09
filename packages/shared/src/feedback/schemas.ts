@@ -44,11 +44,18 @@ export type SubmitFeedbackInput = z.infer<typeof submitFeedbackClientSchema>;
 export const submitFeedbackSchema = z.object({
   website: z.string().max(0, "honeypot").optional().default(""),
   rating: z.number().int().min(RATING_MIN).max(RATING_MAX),
+  // Length-check the raw input first so the user-typed-too-few error stays
+  // distinct from the sanitization-stripped-too-much error after `transform`.
+  // Without the raw check, both surface as the generic "phải từ MIN đến MAX"
+  // and the user can't tell which knob to turn.
   comment: z
     .string()
+    .min(COMMENT_MIN_LENGTH, `Phản ánh tối thiểu ${COMMENT_MIN_LENGTH} ký tự`)
+    .max(COMMENT_MAX_LENGTH, `Phản ánh tối đa ${COMMENT_MAX_LENGTH} ký tự`)
     .transform(sanitizeComment)
     .refine(isCommentLengthValid, {
-      message: `Phản ánh phải từ ${COMMENT_MIN_LENGTH} đến ${COMMENT_MAX_LENGTH} ký tự`,
+      message:
+        "Phản ánh chứa nội dung không hợp lệ. Vui lòng viết bằng văn bản thuần.",
     }),
   phone: z
     .string()
