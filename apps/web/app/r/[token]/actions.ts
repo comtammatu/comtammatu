@@ -27,7 +27,6 @@ export async function submitFeedback(
   input: SubmitFeedbackInput,
   meta: { token: string },
 ): Promise<ActionResult<{ feedback_id: number }>> {
-  // 1. Validate input
   const parsed = submitFeedbackSchema.safeParse(input);
   if (!parsed.success) {
     return {
@@ -37,7 +36,7 @@ export async function submitFeedback(
     };
   }
 
-  // 2. Honeypot check — return fake success, do NOT insert
+  // Honeypot check — return fake success, do NOT insert
   if (parsed.data.website !== "") {
     console.info(
       "[submitFeedback] honeypot tripped token=%s",
@@ -46,7 +45,7 @@ export async function submitFeedback(
     return { success: true, data: { feedback_id: 0 } };
   }
 
-  // 3. Origin check — layered CSRF defense.
+  // Origin check — layered CSRF defense.
   //   Layer 1 (here): server-side allowlist via ALLOWED_ORIGINS_FEEDBACK env.
   //   Layer 2: Server Actions ship a fresh CSRF token on every request that
   //            Next.js validates before the action body runs.
@@ -70,7 +69,6 @@ export async function submitFeedback(
     return { success: false, error: "Forbidden", errorCode: "forbidden" };
   }
 
-  // 4. Hash IP
   const xForwardedFor = headersList.get("x-forwarded-for") ?? "";
   const rawIp = xForwardedFor.split(",")[0]?.trim() ?? "unknown";
   const salt = getIpHashSalt();
@@ -81,7 +79,6 @@ export async function submitFeedback(
     // Non-fatal — proceed without ip_hash
   }
 
-  // 5. Rate limit
   const [tokenLimit, ipLimit] = await Promise.all([
     feedbackTokenRateLimit.limit(meta.token),
     feedbackIpRateLimit.limit(ipHash ?? rawIp),
@@ -94,11 +91,9 @@ export async function submitFeedback(
     };
   }
 
-  // 6. User agent (truncated)
   const userAgentShort =
     (headersList.get("user-agent") ?? "").slice(0, 200) || null;
 
-  // 7. Submit via RPC
   const supabase = createServiceClient();
   const { data: feedbackId, error } = await supabase.rpc("submit_feedback", {
     p_token: meta.token,
@@ -127,9 +122,9 @@ export async function submitFeedback(
     };
   }
 
-  // 8 + 9. Post-response side effects via after() — guarantees execution after
-  // the response has been sent. Fire-and-forget `void fetch()` was vulnerable
-  // to the serverless runtime tearing down before the request completed.
+  // Post-response side effects via after() — guarantees execution after the
+  // response has been sent. Fire-and-forget `void fetch()` was vulnerable to
+  // the serverless runtime tearing down before the request completed.
   const appUrl = getAppUrl();
   const cronSecret = getCronSecret();
 

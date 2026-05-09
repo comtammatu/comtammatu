@@ -12,17 +12,10 @@ const ALLOWED_TYPES = new Set([
   "image/heic",
 ]);
 
-/**
- * Upload up to MAX_PHOTOS photos for a given feedback_id.
- * Path convention: <tenant_id>/<feedback_id>/<random>.<ext>
- *
- * Runs after submit_feedback RPC returns feedback_id.
- *
- * SECURITY: requires token + feedbackId. We verify the feedback was created
- * via this token's QR code AND was recent (≤ FRESH_WINDOW_MS) so an attacker
- * can't grab a feedback_id from somewhere else and stuff photos onto it.
- * tenant_id is derived from the feedback row, never trusted from client.
- */
+// SECURITY: requires token + feedbackId. We verify the feedback was created
+// via this token's QR code AND was recent (≤ FRESH_WINDOW_MS) so an attacker
+// can't grab a feedback_id from somewhere else and stuff photos onto it.
+// tenant_id is derived from the feedback row, never trusted from client.
 const FRESH_WINDOW_MS = 5 * 60 * 1000; // 5 minutes — generous for slow uploads
 
 export async function uploadFeedbackPhotos(
@@ -55,7 +48,6 @@ export async function uploadFeedbackPhotos(
 
   const supabase = createServiceClient();
 
-  // Resolve QR by token + verify feedback was created via this QR + recently
   const { data: qr } = await supabase
     .from("feedback_qr_codes")
     .select("id")
