@@ -3,8 +3,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-// Workspace-root-relative path so the test runs the same locally and in CI
-// (cwd at test time is `packages/shared/`).
+// Workspace-root-relative path. `import.meta.dirname` is file-absolute, so
+// these tests work regardless of the runner's cwd. From
+// `packages/shared/src/feedback/__tests__/` to repo root is 5 levels up.
 const repoRoot = resolve(import.meta.dirname, "../../../../..");
 const read = (p: string) => readFileSync(resolve(repoRoot, p), "utf8");
 
@@ -42,12 +43,28 @@ test("/r/[token]/thank-you/page.tsx 404s for invalid or inactive tokens", () => 
     src.includes("isValidFeedbackToken(token)"),
     "expected isValidFeedbackToken(token) guard at top of thank-you page",
   );
+  // Tightened: both .eq() filters must appear AND be chained on the same
+  // builder (no whitespace-greedy gap that could swallow an unrelated query).
+  // Match `.from("feedback_qr_codes")` followed by an unbroken chain of
+  // dot-prefixed builder calls — no semicolon, no `await`, no other `.from(`
+  // — that contains both .eq("token", token) and .eq("is_active", true).
+  const builderChain =
+    /\.from\("feedback_qr_codes"\)(?:\s*\.\w+\([^;]*?\))*?\s*;/.exec(src);
   assert.ok(
-    /from\("feedback_qr_codes"\)[\s\S]*\.eq\("token", token\)[\s\S]*\.eq\("is_active", true\)/.test(
-      src,
-    ),
-    "expected feedback_qr_codes lookup by token + is_active=true in thank-you page",
+    builderChain !== null,
+    "expected an unbroken supabase builder chain off feedback_qr_codes",
   );
+  if (builderChain) {
+    const chain = builderChain[0];
+    assert.ok(
+      chain.includes('.eq("token", token)'),
+      "expected .eq('token', token) chained on feedback_qr_codes select",
+    );
+    assert.ok(
+      chain.includes('.eq("is_active", true)'),
+      "expected .eq('is_active', true) chained on feedback_qr_codes select",
+    );
+  }
   // Two notFound() calls (one for invalid-shape token, one for missing/inactive QR).
   const notFoundCalls = src.match(/notFound\(\)/g) ?? [];
   assert.ok(
