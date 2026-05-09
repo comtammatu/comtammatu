@@ -115,15 +115,25 @@ export async function uploadFeedbackPhotos(
     return { success: false, error: "Không thể tải ảnh lên. Vui lòng thử lại." };
   }
 
-  // Update feedbacks.photo_paths with the collected storage paths
-  const { error: updateError } = await supabase
+  // Update feedbacks.photo_paths with the collected storage paths.
+  // Conditional WHERE on photo_paths IS NULL OR '{}' closes the TOCTOU race
+  // where two concurrent uploads for the same feedback_id both pass the
+  // earlier emptiness check and then race to overwrite each other.
+  const { data: updated, error: updateError } = await supabase
     .from("feedbacks")
     .update({ photo_paths: paths })
-    .eq("id", feedbackId);
+    .eq("id", feedbackId)
+    .or("photo_paths.is.null,photo_paths.eq.{}")
+    .select("id");
 
   if (updateError) {
     console.error("[uploadFeedbackPhotos] update error", updateError.code);
     // Non-fatal — photos are uploaded, just not linked
+  } else if (!updated || updated.length === 0) {
+    console.warn(
+      "[uploadFeedbackPhotos] race-lost feedbackId=%d — paths orphaned",
+      feedbackId,
+    );
   }
 
   return { success: true, data: { paths } };
