@@ -16,6 +16,12 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@comtammatu/ui/components/tooltip";
+import {
   Table,
   TableBody,
   TableCell,
@@ -345,6 +351,45 @@ export function PODetailClient({
             {tRoute("/inventory/purchase-orders", "heading")}
           </Link>
         }
+        actions={
+          canSendPo ? (
+            <Button
+              type="button"
+              size="lg"
+              disabled={isPending}
+              onClick={handleSendPo}
+            >
+              <IconCircleCheck className="size-4" />
+              {poDetailCopy.sendPo}
+            </Button>
+          ) : canCreateGrn ? (
+            <Button
+              type="button"
+              size="lg"
+              disabled={isPending}
+              onClick={handleCreateGrn}
+            >
+              <IconCircleCheck className="size-4" />
+              {poDetailCopy.createGrnStep}
+            </Button>
+          ) : po.status !== "cancelled" ? (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span tabIndex={0}>
+                    <Button type="button" size="lg" disabled>
+                      <IconCircleCheck className="size-4" />
+                      {poDetailCopy.createGrnStep}
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {poDetailCopy.createGrnDisabledHint}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ) : null
+        }
         tabs={
           <AppPageTabs
             items={[
@@ -367,7 +412,7 @@ export function PODetailClient({
               <CardContent>
                 <Badge variant="secondary">{poDetailCopy.goodsTotal}</Badge>
                 <p className="mt-3 text-xl font-semibold">
-                  {formatVND(totalAmount)} {poDetailCopy.currencyVnd}
+                  {messages.inventory.common.currency(formatVND(totalAmount))}
                 </p>
               </CardContent>
             </Card>
@@ -375,10 +420,7 @@ export function PODetailClient({
               <CardContent>
                 <Badge variant="secondary">{FORM_VI.totalAmount}</Badge>
                 <p className="mt-3 text-2xl font-semibold text-primary">
-                  {formatVND(grandTotal)}{" "}
-                  <span className="text-xs font-normal">
-                    {poDetailCopy.currencyVnd}
-                  </span>
+                  {messages.inventory.common.currency(formatVND(grandTotal))}
                 </p>
               </CardContent>
             </Card>
@@ -397,12 +439,29 @@ export function PODetailClient({
                   {
                     label: poDetailCopy.steps.waitingInspection,
                     active: po.status === "sent",
+                    date:
+                      po.status === "sent"
+                        ? poDetailCopy.steps.waitingInspectionHint
+                        : undefined,
                   },
-                  { label: poDetailCopy.steps.hasGrn },
+                  {
+                    label: poDetailCopy.steps.hasGrn,
+                    completed: po.status === "received",
+                    active: po.status === "partially_received",
+                    date:
+                      po.status === "partially_received"
+                        ? poDetailCopy.steps.partialReceivedHint
+                        : undefined,
+                  },
                 ]}
               />
             </div>
           </AppSection>
+
+          <PoOverviewLinesPreview
+            lines={lines}
+            onViewAll={() => router.replace("?tab=lines", { scroll: false })}
+          />
               </div>
             </TabsContent>
 
@@ -860,5 +919,82 @@ export function PODetailClient({
         }
       />
     </AppPage>
+  );
+}
+
+const PO_PREVIEW_LIMIT = 10;
+
+function PoOverviewLinesPreview({
+  lines,
+  onViewAll,
+}: {
+  lines: EditablePoLine[];
+  onViewAll: () => void;
+}) {
+  if (lines.length === 0) return null;
+
+  const sorted = [...lines].sort((a, b) => b.total - a.total);
+  const preview = sorted.slice(0, PO_PREVIEW_LIMIT);
+  const hasMore = sorted.length > PO_PREVIEW_LIMIT;
+
+  return (
+    <AppSection
+      title={poDetailCopy.overviewLinesTitle}
+      headerHint={
+        hasMore
+          ? poDetailCopy.overviewLinesPreviewHint(PO_PREVIEW_LIMIT)
+          : undefined
+      }
+      contentClassName="p-0"
+    >
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>{FORM_VI.name}</TableHead>
+            <TableHead className="text-right">{FORM_VI.quantity}</TableHead>
+            <TableHead className="text-right">{FORM_VI.unitPrice}</TableHead>
+            <TableHead className="text-right">{FORM_VI.amount}</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {preview.map((line) => (
+            <TableRow key={line.lineId}>
+              <TableCell>
+                <div className="font-medium">{line.name}</div>
+                {line.sku ? (
+                  <div className="font-mono text-xs text-muted-foreground">
+                    {line.sku}
+                  </div>
+                ) : null}
+              </TableCell>
+              <TableCell className="text-right font-mono tabular-nums">
+                {line.qty} {line.unit}
+              </TableCell>
+              <TableCell className="text-right font-mono tabular-nums">
+                {line.price != null
+                  ? inventoryCommon.currencyCompact(formatVND(line.price))
+                  : inventoryCommon.noValue}
+              </TableCell>
+              <TableCell className="text-right font-mono tabular-nums font-semibold">
+                {inventoryCommon.currencyCompact(formatVND(line.total))}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      {hasMore ? (
+        <div className="border-t px-4 py-3">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onViewAll}
+            className="text-primary"
+          >
+            {poDetailCopy.viewAllLines(sorted.length)}
+          </Button>
+        </div>
+      ) : null}
+    </AppSection>
   );
 }

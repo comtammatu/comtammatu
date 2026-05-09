@@ -963,6 +963,96 @@ export async function fetchProductionOrders(): Promise<
     };
   });
 
+  // Draft orders chưa qua RPC nên unit_cost_at_production còn null. Tính tạm
+  // bằng BOM × WAC tại CK (mirror logic confirm_production_order RPC) để UI
+  // hiện được tổng chi phí ước tính trước khi xác nhận.
+  const draftFgIds = new Set<number>();
+  for (const order of rows) {
+    if (order.status === "draft") {
+      for (const item of order.items) draftFgIds.add(item.finished_good_id);
+    }
+  }
+
+  if (draftFgIds.size > 0) {
+    const fgIds = Array.from(draftFgIds);
+    const [bomRes, wacRes] = await Promise.all([
+      supabase
+        .from("production_recipes")
+        .select(
+          "finished_good_id, ingredient_id, quantity, yield_factor, ingredients:ingredients!production_recipes_ingredient_id_fkey ( purchase_to_measure_factor, unit_cost )",
+        )
+        .in("finished_good_id", fgIds)
+        .eq("tenant_id", claims.tenant_id),
+      supabase
+        .from("stock_levels")
+        .select(
+          "ingredient_id, avg_unit_cost, branches!inner ( branch_kind )",
+        )
+        .eq("tenant_id", claims.tenant_id)
+        .eq("branches.branch_kind", "central_kitchen")
+        .not("avg_unit_cost", "is", null),
+    ]);
+
+    const wacMap = new Map<number, number>();
+    if (wacRes.data) {
+      const acc = new Map<number, { sum: number; count: number }>();
+      for (const w of wacRes.data as Array<{
+        ingredient_id: number;
+        avg_unit_cost: number | string | null;
+      }>) {
+        const id = Number(w.ingredient_id);
+        const cost = Number(w.avg_unit_cost ?? 0);
+        const e = acc.get(id) ?? { sum: 0, count: 0 };
+        e.sum += cost;
+        e.count += 1;
+        acc.set(id, e);
+      }
+      for (const [id, e] of acc) wacMap.set(id, e.sum / e.count);
+    }
+
+    type BomRow = {
+      finished_good_id: number;
+      ingredient_id: number;
+      quantity: number | string | null;
+      yield_factor: number | string | null;
+      ingredients: {
+        purchase_to_measure_factor: number | string | null;
+        unit_cost: number | string | null;
+      } | null;
+    };
+    const costPerFg = new Map<number, number>();
+    for (const bom of (bomRes.data ?? []) as BomRow[]) {
+      const fgId = Number(bom.finished_good_id);
+      const rawId = Number(bom.ingredient_id);
+      const qty = Number(bom.quantity ?? 0);
+      const yf = Number(bom.yield_factor ?? 1) || 1;
+      const conv = Number(bom.ingredients?.purchase_to_measure_factor ?? 1) || 1;
+      const wac = wacMap.get(rawId);
+      const refCost =
+        bom.ingredients?.unit_cost != null
+          ? Number(bom.ingredients.unit_cost)
+          : 0;
+      const rawUnitCost = wac != null ? wac : refCost;
+      const rawNeedPurchase = qty / yf / conv;
+      costPerFg.set(
+        fgId,
+        (costPerFg.get(fgId) ?? 0) + rawNeedPurchase * rawUnitCost,
+      );
+    }
+
+    for (const order of rows) {
+      if (order.status !== "draft") continue;
+      let total = 0;
+      for (const item of order.items) {
+        if (item.unit_cost_at_production == null) {
+          item.unit_cost_at_production = costPerFg.get(item.finished_good_id) ?? 0;
+        }
+        total += item.quantity * (item.unit_cost_at_production ?? 0);
+      }
+      order.total_cost = total;
+    }
+  }
+
   return { success: true, data: rows };
 }
 

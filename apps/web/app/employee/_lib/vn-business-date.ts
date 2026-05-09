@@ -50,3 +50,12 @@ export function formatDateVN(dateStr: string): string {
   const year = d.getFullYear();
   return `${day}/${month}/${year}`;
 }
+
+/**
+ * Trim a Postgres `time` value (HH:mm:ss) down to display format (HH:mm).
+ * Pass-through for already-trimmed values; safe on null-ish inputs.
+ */
+export function formatTimeShort(time: string | null | undefined): string {
+  if (!time) return "—";
+  return time.slice(0, 5);
+}

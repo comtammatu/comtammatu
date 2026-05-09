@@ -7,9 +7,16 @@ import {
   EmptyTitle,
 } from "@comtammatu/ui/components/empty";
 import { EmployeePage } from "../components/employee-page";
+import { YearPicker } from "./year-picker";
+import { getTodayVN } from "../_lib/vn-business-date";
 
-export default async function PayslipPage() {
+export default async function PayslipPage(props: {
+  searchParams: Promise<{ year?: string }>;
+}) {
   const ctx = await getEmployeeContext();
+  const { year: yearParam } = await props.searchParams;
+  const currentYear = Number(getTodayVN().slice(0, 4));
+  const year = isValidYear(yearParam) ? Number(yearParam) : currentYear;
 
   if (!ctx) {
     return (
@@ -46,6 +53,7 @@ export default async function PayslipPage() {
     .eq("employee_id", employeeId)
     .eq("tenant_id", claims.tenant_id)
     .eq("payroll_periods.status", "paid")
+    .eq("payroll_periods.period_year", year)
     .order("created_at", { ascending: false })
     .limit(12);
 
@@ -53,10 +61,18 @@ export default async function PayslipPage() {
     <EmployeePage
       title="Phiếu lương"
       description="Chỉ hiển thị các kỳ lương đã phát hành cho nhân viên."
+      badge={{ children: `Năm ${year}`, variant: "outline" }}
     >
+      <YearPicker selectedYear={year} currentYear={currentYear} />
       <PayslipClient entries={(entries ?? []) as unknown as PayslipEntry[]} />
     </EmployeePage>
   );
+}
+
+function isValidYear(s: string | undefined): boolean {
+  if (typeof s !== "string") return false;
+  const n = Number(s);
+  return Number.isInteger(n) && n >= 2020 && n <= 2100;
 }
 
 export interface PayslipEntry {

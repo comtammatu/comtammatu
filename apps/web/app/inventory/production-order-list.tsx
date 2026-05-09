@@ -243,6 +243,11 @@ export function ProductionOrderList({
                   <ItemFooter>
                     <span className="font-mono text-sm font-semibold tabular-nums">
                       {formatCost(order.total_cost)}
+                      {order.status === "draft" ? (
+                        <span className="ml-1 text-xs font-normal text-muted-foreground">
+                          (tạm tính)
+                        </span>
+                      ) : null}
                     </span>
                     <ItemActions>{renderOrderActions(order)}</ItemActions>
                   </ItemFooter>
@@ -309,6 +314,11 @@ export function ProductionOrderList({
                   </TableCell>
                   <TableCell className="font-mono tabular-nums">
                     {formatCost(order.total_cost)}
+                    {order.status === "draft" ? (
+                      <span className="ml-1 text-xs font-normal text-muted-foreground">
+                        (tạm tính)
+                      </span>
+                    ) : null}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center justify-end gap-2">

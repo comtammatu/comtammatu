@@ -2,6 +2,20 @@ export function formatVND(n: number): string {
   return n.toLocaleString("vi-VN");
 }
 
+/**
+ * Compact VND display that returns the placeholder dash for null/0 values.
+ * Use on read-only cells where a sea of "0đ" is alarm-fatigue noise; the
+ * dash makes "no data yet" visually distinct from "actually zero" without
+ * regressing alignment (still uses tabular-nums in the wrapper).
+ */
+export function formatVndCompactOrDash(
+  n: number | null | undefined,
+  dash = "—",
+): string {
+  if (n == null || n === 0) return dash;
+  return `${formatVND(n)}đ`;
+}
+
 export function parseOptionalNumber(
   value: string | undefined,
 ): number | undefined {

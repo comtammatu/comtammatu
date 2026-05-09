@@ -227,6 +227,32 @@ export async function updateIngredient(
   return { success: true };
 }
 
+/* ─── toggleIngredientActive ─── */
+
+const toggleIngredientIdSchema = z.object({
+  id: z.coerce.number().int().positive({ error: "ID không hợp lệ" }),
+});
+
+export const toggleIngredientActive = withAction(
+  {
+    roles: INVENTORY_CATALOG_ROLES,
+    schema: toggleIngredientIdSchema,
+    anyPermission: CATALOG_MANAGE_PERMISSIONS,
+  },
+  async (data, { supabase }) => {
+    const { error } = await supabase.rpc("toggle_ingredient_active", {
+      p_id: data.id,
+    });
+    if (error) {
+      if (error.message?.includes("not_found")) {
+        return { success: false, error: "Nguyên liệu không tồn tại." };
+      }
+      return { success: false, error: "Không thể đổi trạng thái nguyên liệu." };
+    }
+    return { success: true };
+  },
+);
+
 /* ─── fetchStockLevels ─── */
 
 export async function fetchStockLevels(

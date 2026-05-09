@@ -6,12 +6,10 @@ import { PosSidebarContent, PosSidebarTabs } from "../pos-sidebar-panel";
 import { AppendDraftPane } from "./append-draft-pane";
 import { CartPane } from "./cart-pane";
 import { OrderListPane } from "./order-list-pane";
-import type { ActiveSession } from "../page";
 
 type SidebarContentProps = ComponentProps<typeof PosSidebarContent>;
 
 interface SidebarHeaderInputs {
-  session: ActiveSession;
   canCloseShift: boolean;
   onShowCloseSession: () => void;
 }
@@ -24,7 +22,6 @@ export interface TabbedSidebarProps extends SidebarHeaderInputs {
 
 /** Tablet-class layout (md through xl-1): tabs-based sidebar. */
 function TabbedSidebarComponent({
-  session,
   canCloseShift,
   onShowCloseSession,
   showOrders,
@@ -34,7 +31,6 @@ function TabbedSidebarComponent({
   return (
     <div className="hidden w-96 shrink-0 flex-col border-l border-border/60 bg-background md:flex xl:hidden">
       <PosSessionHeader
-        session={session}
         canCloseShift={canCloseShift}
         onShowCloseSession={onShowCloseSession}
       />
@@ -57,7 +53,6 @@ export interface SplitSidebarProps extends SidebarHeaderInputs {
 
 /** Wide-desktop layout (xl+): cart + order-list side by side. */
 function SplitSidebarComponent({
-  session,
   canCloseShift,
   onShowCloseSession,
   sidebarContentProps,
@@ -78,7 +73,6 @@ function SplitSidebarComponent({
   return (
     <div className="hidden shrink-0 flex-col border-l border-border/60 bg-background xl:flex">
       <PosSessionHeader
-        session={session}
         canCloseShift={canCloseShift}
         onShowCloseSession={onShowCloseSession}
       />

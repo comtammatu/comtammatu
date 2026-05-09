@@ -430,7 +430,7 @@ export function DashboardClient(props: DashboardProps) {
       <AppPageHeader
         eyebrow={`Kho hàng · ${siteKindLabel}`}
         title={siteName}
-        description="Tổng quan vận hành kho theo 3 luồng: kiểm soát tồn, nhập–nhận hàng, điều phối–sản xuất."
+        description={messages.inventory.dashboard.headerTagline}
         meta={
           <span className="inline-flex items-center gap-2">
             <span className="text-muted-foreground">Giá trị tồn kho:</span>
@@ -452,14 +452,11 @@ export function DashboardClient(props: DashboardProps) {
                 <Card
                   key={flow.key}
                   className={cn(
-                    "relative overflow-hidden border-l-4",
-                    flow.tone === "destructive" &&
-                      "border-l-destructive bg-destructive/5",
-                    flow.tone === "warning" &&
-                      "border-l-warning bg-warning/10",
-                    flow.tone === "info" && "border-l-info bg-info/10",
-                    flow.tone === "success" && "border-l-success bg-success/10",
-                    flow.tone === "default" && "border-l-primary/60",
+                    "relative overflow-hidden",
+                    flow.tone === "destructive" && "bg-destructive/5",
+                    flow.tone === "warning" && "bg-warning/10",
+                    flow.tone === "info" && "bg-info/10",
+                    flow.tone === "success" && "bg-success/10",
                   )}
                 >
                   <CardHeader className="gap-3 pb-3">
@@ -477,7 +474,14 @@ export function DashboardClient(props: DashboardProps) {
                           </CardDescription>
                         </div>
                       </div>
-                      <span className="font-heading shrink-0 font-mono text-2xl font-bold tabular-nums text-foreground">
+                      <span
+                        className={cn(
+                          "font-heading shrink-0 font-mono text-2xl font-bold tabular-nums",
+                          flow.metric === "0"
+                            ? "text-muted-foreground"
+                            : "text-primary",
+                        )}
+                      >
                         {flow.metric}
                       </span>
                     </div>
@@ -522,19 +526,18 @@ export function DashboardClient(props: DashboardProps) {
           </div>
         </section>
 
-        {/* KPI cards */}
+        {/* KPI cards — Giá trị tồn kho lives in header meta to avoid duplication. */}
         <div
           className={cn(
             "grid gap-3",
-            isMobile ? "grid-cols-2" : "sm:grid-cols-2 lg:grid-cols-4",
+            isMobile
+              ? "grid-cols-2"
+              : showProcurement
+                ? "sm:grid-cols-2 lg:grid-cols-4"
+                : "sm:grid-cols-3",
           )}
         >
           {[
-            {
-              label: "Giá trị tồn kho",
-              value: `${formatVND(totalStockValue)}đ`,
-              tone: "default" as const,
-            },
             {
               label: "PO đang chờ",
               value: String(pendingPO),
@@ -593,6 +596,29 @@ export function DashboardClient(props: DashboardProps) {
           ))}
         </div>
 
+        {/* All-clear hero replaces the four panels when nothing pending. */}
+        {tasks.length === 0 &&
+        reorderAlerts.length === 0 &&
+        expiryAlerts.length === 0 &&
+        activeTransferList.length === 0 &&
+        activeStocktakeList.length === 0 ? (
+          <Card className="bg-success/5">
+            <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
+              <div className="flex size-12 items-center justify-center rounded-full bg-success/15 text-success">
+                <IconSquareCheck className="size-6" />
+              </div>
+              <div className="space-y-1">
+                <p className="font-heading text-base font-semibold">
+                  {messages.inventory.dashboard.allClearTitle}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {messages.inventory.dashboard.allClearHint}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
         {/* Tasks + Alerts */}
         <div
           className={cn(
@@ -874,6 +900,8 @@ export function DashboardClient(props: DashboardProps) {
             </CardContent>
           </Card>
         </div>
+        </>
+        )}
     </AppPage>
   );
 }

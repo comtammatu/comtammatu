@@ -25,19 +25,15 @@ import {
   PowerOff as IconPowerOff,
   Sun as IconSun,
 } from "lucide-react";
-import { EmployeePortalBackControl } from "../employee-portal-back-control";
-import { PosThemeToggle } from "./pos-theme-toggle";
-import type { ActiveSession } from "./page";
 
 interface PosSessionHeaderProps {
-  session: ActiveSession;
   /** Ẩn nút "Chốt ca" cho role không có `pos:close_shift` (waiter). */
   canCloseShift: boolean;
   onShowCloseSession: () => void;
   /**
    * Mobile: thay tên POS terminal bằng context cụ thể (vd. "Bàn 5", "Mang về",
-   * "Thêm món #TC-...") để cashier biết đang thao tác trên đơn nào. Khi không
-   * có context (chưa chọn bàn / mới mở POS) header rơi về tên terminal.
+   * "Thêm món #TC-...") để cashier biết đang thao tác trên đơn nào. Desktop
+   * sidebar không cần — context đã hiện trong cart/order-list pane.
    */
   contextLabel?: string;
   /**
@@ -49,7 +45,6 @@ interface PosSessionHeaderProps {
 }
 
 function PosSessionHeaderComponent({
-  session,
   canCloseShift,
   onShowCloseSession,
   contextLabel,
@@ -58,13 +53,6 @@ function PosSessionHeaderComponent({
   return (
     <div className="border-b border-border/60 px-2 py-2 md:px-3 md:py-1.5">
       <div className="flex w-full items-center justify-between gap-2">
-        {/* Desktop sidebar: back link inline. Mobile: "Thoát" gom vào overflow
-            menu, còn nút back-to-table-gate (onBack) render bên dưới cạnh
-            contextLabel. */}
-        <div className="hidden md:block">
-          <EmployeePortalBackControl />
-        </div>
-
         {onBack ? (
           <Button
             type="button"
@@ -84,47 +72,23 @@ function PosSessionHeaderComponent({
             <span className="font-heading min-w-0 truncate text-base font-bold text-foreground md:text-sm md:font-semibold">
               {contextLabel}
             </span>
-          ) : (
-            <span className="flex min-w-0 items-center gap-1.5 font-medium text-foreground md:text-sm">
-              <IconDeviceDesktop className="size-4 shrink-0 text-primary" />
-              <span className="truncate">
-                {session.pos_terminals?.name ?? "POS"}
-              </span>
-            </span>
-          )}
-        </div>
-
-        {/* Mobile: 1 nút overflow ⋮ — Thoát/Theme/Chốt ca chỉ hiện khi user bấm.
-            Tránh che chỗ + tránh bấm nhầm "Chốt ca" giữa phiên đặt món / thanh toán. */}
-        <div className="md:hidden">
-          <PosMobileMoreMenu
-            canCloseShift={canCloseShift}
-            onShowCloseSession={onShowCloseSession}
-          />
-        </div>
-
-        {/* Desktop sidebar: giữ inline cluster theme + chốt ca cho cashier
-            đứng máy desktop dùng nhanh. Width sidebar (≥384px) thừa chỗ. */}
-        <div className="hidden shrink-0 items-center gap-1 md:flex">
-          <PosThemeToggle />
-          {canCloseShift ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-9 min-h-9 shrink-0 px-3 text-sm font-semibold text-muted-foreground hover:text-destructive"
-              onClick={onShowCloseSession}
-              aria-label={messages.pos.sessionHeader.closeShiftAria}
-            >
-              {messages.pos.sessionHeader.closeShift}
-            </Button>
           ) : null}
         </div>
+
+        {/* Single overflow ⋮ menu cho cả mobile + desktop sidebar.
+            Thoát / Giao diện / Chốt ca gom hết để header gọn — tránh che
+            chỗ + tránh bấm nhầm "Chốt ca" giữa phiên thanh toán. F10 hotkey
+            vẫn mở Chốt ca nhanh trên desktop. */}
+        <PosMoreMenu
+          canCloseShift={canCloseShift}
+          onShowCloseSession={onShowCloseSession}
+        />
       </div>
     </div>
   );
 }
 
-function PosMobileMoreMenu({
+function PosMoreMenu({
   canCloseShift,
   onShowCloseSession,
 }: {

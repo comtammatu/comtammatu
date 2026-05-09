@@ -95,11 +95,14 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 
 > Compliance audit `docs/ref/einvoice-tax.md` ↔ implementation. Pilot OK với cashier issue path; các gap dưới chặn scale + production-grade NĐ70/2025.
 
-- [ ] **P0: HĐĐT reconcile cron (orphan `signing`)** — `tax_invoices.signing_started_at` đã set bởi `transition_tax_invoice_state`; cần job poll `provider.getStatus()` cho invoices `status='signing' AND signing_started_at < now()-10min`, resolve về `issued`/`draft`. MISA timeout mid-publish hiện để HĐ kẹt mãi, không biết CQT đã cấp mã chưa. Cần owner D về cron infra (Vercel cron / Supabase pg_cron / Edge Function).
-- [ ] **P0: HĐĐT replace flow (TT 78)** — schema (`replaced_by_id`) + RPC matrix (`issued → replaced`) sẵn sàng, nhưng không có UI/action `replaceTaxInvoice(oldId, newPayload, biên_bản)`. Issued HĐ sai thông tin khách → owner hiện chỉ cancel được (mất doanh thu trên báo cáo) — non-compliant TT 78.
-- [ ] **P1: HĐĐT provider config qua `system_settings` (encrypted)** — `apps/web/lib/invoice-provider-init.ts` đọc `process.env.MISA_API_KEY`/`COMPANY_TAX_CODE`; spec yêu cầu encrypted DB row + thêm `einvoice_template_code` + `einvoice_series`. MISA hiện auto-pick series → mismatch risk khi đăng ký >1 mẫu HĐ. Block trước khi owner đổi provider hoặc đăng ký multi-template.
-- [ ] **P1: HĐĐT PDF/XML persist + download UI** — cột `tax_invoices.pdf_url`/`xml_url` rỗng; `MisaProvider.createInvoice` không return URL sau `publish`; `invoice-list.tsx` không có nút tải. Khách yêu cầu HĐ qua email/in lại không phục vụ được. Cần extend `MisaProvider` + UI button.
-- [ ] **P2: 3-way matching UI cho `supplier_invoices`** — bảng + columns (`matching_status`, `is_vat_deductible`, `declared_period`) đã có nhưng không có UI workflow PO ↔ GRN ↔ Supplier Invoice. Kế toán phải đối chiếu tay → không export được Tờ khai 01/GTGT đúng.
+> **2026-05-08 update:** Owner approved Hybrid MISA plan via 4-agent debate (D1-D7). Most M6 HĐĐT gaps now subsumed by `docs/plan/hddt-hybrid-misa.md` (7-PR migration). Items below reflect post-plan state.
+
+- [ ] **PLAN ACTIVE: HĐĐT Hybrid MISA (B2B realtime + B2C daily batch)** — see `docs/plan/hddt-hybrid-misa.md`. 7 PRs queued: schema → RPCs → B2B refactor → cron → admin UI → cutover → regression rules. **Owner action: D7 register HĐ tổng hợp template với CQT qua MISA portal (3-7 day leadtime, parallel với coding).**
+- [ ] **P0: HĐĐT reconcile cron (orphan `signing`)** — DEFERRED to post-pilot per Hybrid MISA plan. Manual recovery via admin retry button covers pilot volume.
+- [ ] **P0: HĐĐT replace flow (TT 78)** — DEFERRED post-pilot per plan. Pilot cancel + manual MISA portal đủ.
+- [ ] **P1: HĐĐT provider config qua `system_settings` (encrypted)** — DEFERRED post-pilot. Env-only acceptable cho single-tenant CTCP.
+- [ ] **P1: HĐĐT PDF/XML persist + download UI** — DEFERRED post-pilot. Link MISA portal đủ.
+- [ ] **P2: 3-way matching UI cho `supplier_invoices`** — bảng + columns (`matching_status`, `is_vat_deductible`, `declared_period`) đã có nhưng không có UI workflow PO ↔ GRN ↔ Supplier Invoice. Kế toán phải đối chiếu tay → không export được Tờ khai 01/GTGT đúng. Independent of Hybrid MISA plan.
 
 ### M7 Payroll
 - [ ] **`payroll_entries_select` RLS** — add `EXISTS(payroll_periods WHERE status='paid')` to self branch.
@@ -133,6 +136,34 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 - [ ] Implement intra-branch transfer một bước cho `Kho CN -> Bếp CN` (`Cấp bếp`) bằng RPC atomic riêng
 - [ ] `consume_stock_for_order` phải resolve `default_consumption`; nếu thiếu thì fail hard/setup gate, không fallback silent
 - [x] Retire `stock_issue(issue_type='kitchen_use')` — runtime CHECK đã chặn; docs active phải trỏ sang intra-branch transfer
+
+## Sprint 6 — Inventory UX follow-up
+
+> Sprint 5 shipped #1 dead-code, #2 atomic `create_grn_from_po` RPC, #4 `formatVND` shadow consolidation. Sprint 6 shipped F-017 PO display ID + Fix #3 stage A foundation.
+
+### ✅ Shipped in Sprint 6
+
+- **F-017 PO display ID** (commit `b0888c96`): `next_po_display_id(tenant_id)` RPC + `display_id` column + backfill `PO-LEGACY-XXXXXX` + display layer. Year scoped to `Asia/Ho_Chi_Minh`. New PO writes get `PO-YYYY-####` zero-padded.
+- **Fix #3 Stage A** (commit `3658b15c`): partial UNIQUE index `uq_grn_active_draft_per_user_supplier` + `loadActiveGrnDraft` + `discardGrnDraft` server actions + `createGrnDraft` UNIQUE_VIOLATION fallback. Foundation for server-side draft lifecycle.
+
+### 🚧 Sprint 6 Stage B + C (next session — client refactor)
+
+- [ ] **#3 Stage B: Client refactor `grn-create-client.tsx`**:
+  - Remove `loadDraft`/`saveDraft`/`removeDraft` calls + direct `window.localStorage.{getItem,setItem,removeItem}` calls (lines 84-108, 124-128, 176-188, 198-234)
+  - RSC pre-fetch via `loadActiveGrnDraft({ supplierId })` in `/grn/new/[supplierId]/page.tsx`; pass `existingDraft` prop
+  - Lazy-create server draft on first `saveLine`; route subsequent `saveLine` calls to `upsertGrnLine` directly (debounce 600ms, 1 retry)
+  - On `discardDraft`: call new `discardGrnDraft({ grnId })`
+  - Submit becomes navigation only (no bulk upload — lines already on server)
+- [ ] **#3 Stage C: Drafts page + cleanup**:
+  - Rewrite `drafts/page.tsx` (RSC) + `page-client.tsx` to consume `goods_received_notes status='draft'` query (filtered by `tenant_id` + `created_by = auth.uid()`)
+  - Delete `apps/web/app/inventory/_lib/mobile-draft.ts` (or keep type-only if shared)
+  - Fix `startGrnFromPo` URL-flash redirect → toast pattern (regression rule `UI-TOAST-VIA-SONNER-NEVER-URL-FLASH`)
+  - Optional: legacy-import shim for in-flight localStorage drafts on first load post-deploy; `pg_cron` cleanup job for stale drafts (14d retention)
+
+### ⏸️ Blocked / deferred
+
+- [ ] **F-018: Supplier "Khác"** — BLOCKED-PRODUCT. 0 occurrences in code (data-level only). Need product input on (a) require formal NCC, (b) "Mua ngoài" + inline note, or (c) accept generic "Khác" as catch-all.
+- [ ] **F-009: Stock master-detail as drawer** — invasive refactor; current side-panel acceptable.
 
 ## Doc maintenance reminders
 

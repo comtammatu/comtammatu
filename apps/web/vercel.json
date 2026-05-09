@@ -5,6 +5,10 @@
       "schedule": "0 19 * * *"
     },
     {
+      "path": "/api/cron/hddt-daily-summary",
+      "schedule": "5 19 * * *"
+    },
+    {
       "path": "/api/cron/feedback-retention",
       "schedule": "0 20 * * *"
     }

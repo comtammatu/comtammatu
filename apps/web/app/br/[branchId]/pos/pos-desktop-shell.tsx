@@ -1400,7 +1400,6 @@ function PosDesktopInner({
   const sidebars = isMobile ? null : (
     <>
       <TabbedSidebar
-        session={session}
         canCloseShift={canCloseShift}
         onShowCloseSession={openCloseSession}
         showOrders={showOrders}
@@ -1408,7 +1407,6 @@ function PosDesktopInner({
         sidebarContentProps={sidebarContentProps}
       />
       <SplitSidebar
-        session={session}
         canCloseShift={canCloseShift}
         onShowCloseSession={openCloseSession}
         sidebarContentProps={sidebarContentProps}
@@ -1420,7 +1418,6 @@ function PosDesktopInner({
     <>
       <div className="md:hidden">
         <PosSessionHeader
-          session={session}
           canCloseShift={canCloseShift}
           onShowCloseSession={openCloseSession}
           contextLabel={mobileHeaderContextLabel}

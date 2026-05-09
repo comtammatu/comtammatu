@@ -1,6 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
-import { Inter, JetBrains_Mono, Montserrat } from "next/font/google";
+import {
+  Be_Vietnam_Pro,
+  Inter,
+  JetBrains_Mono,
+  Montserrat,
+} from "next/font/google";
 import { ConfirmDialogProvider } from "@comtammatu/ui/components/confirm-dialog";
 import { ThemeProvider } from "@comtammatu/ui/components/theme-provider";
 import { ThemeScript } from "@comtammatu/ui/components/theme-script";
@@ -28,6 +33,17 @@ const fontHeading = Montserrat({
 const fontMono = JetBrains_Mono({
   subsets: ["latin", "latin-ext"],
   variable: "--font-mono",
+  display: "swap",
+});
+
+// matu-superapp baseline (Inventory redesign pilot 2026-05-08): Be Vietnam Pro
+// for body + headings on pilot pages. Live in parallel with Inter/Montserrat
+// (radix-lyra) so non-pilot routes stay unchanged. New code applies the
+// `font-matu-body` Tailwind class — see packages/ui/src/styles/matu-tokens.css.
+const fontMatuBody = Be_Vietnam_Pro({
+  subsets: ["latin", "latin-ext", "vietnamese"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-matu-body",
   display: "swap",
 });
 
@@ -68,6 +84,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         fontSans.variable,
         fontHeading.variable,
         fontMono.variable,
+        fontMatuBody.variable,
         "font-sans",
       )}
       suppressHydrationWarning
