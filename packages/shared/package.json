@@ -24,8 +24,8 @@
     "test": "tsx --test src/auth/__tests__/*.test.ts src/providers/__tests__/*.test.ts src/utils/__tests__/*.test.ts src/feedback/__tests__/*.test.ts src/telegram/__tests__/*.test.ts src/ai/__tests__/*.test.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.54.0",
-    "zod": "^4.3.6"
+    "@anthropic-ai/sdk": "^0.95.1",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "^25.5.0",
