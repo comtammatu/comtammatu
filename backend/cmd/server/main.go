@@ -56,12 +56,13 @@ func main() {
 
 	// Public routes — no auth required
 	r.Get("/health", healthhandler.Handler())
-	r.Mount("/auth", authhandler.New().Routes())
+	r.Post("/auth/login", authhandler.New().Login)
 
 	// Authenticated API routes — Authenticate middleware validates Supabase JWT
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.Authenticate(cfg.JWTSecret))
 
+		r.Get("/auth/me", authhandler.New().Me)
 		r.Mount("/menu", menuhandler.New(pool).Routes())
 		r.Mount("/admin/staff", staffhandler.New(pool).Routes())
 		r.Mount("/admin/settings", settingshandler.New(pool).Routes())

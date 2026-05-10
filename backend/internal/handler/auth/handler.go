@@ -3,6 +3,7 @@ package auth
 import (
 	"encoding/json"
 	"net/http"
+	"net/mail"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
@@ -18,11 +19,11 @@ func New() *Handler {
 }
 
 // Routes returns a chi.Router wired with all auth endpoints.
-// The caller is responsible for applying Authenticate middleware to protected routes.
+// /login is public; /me must be placed behind Authenticate middleware by the caller (see main.go).
 func (h *Handler) Routes() chi.Router {
 	r := chi.NewRouter()
-	r.Post("/login", h.login)
-	r.Get("/me", h.me)
+	r.Post("/login", h.Login)
+	r.Get("/me", h.Me)
 	return r
 }
 
@@ -36,8 +37,8 @@ func writeError(w http.ResponseWriter, status int, msg string) {
 	writeJSON(w, status, map[string]string{"error": msg})
 }
 
-// login handles POST /auth/login.
-func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
+// Login handles POST /auth/login.
+func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "email and password are required")
@@ -48,7 +49,7 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "email and password are required")
 		return
 	}
-	if !strings.Contains(req.Email, "@") {
+	if _, err := mail.ParseAddress(req.Email); err != nil {
 		writeError(w, http.StatusBadRequest, "email and password are required")
 		return
 	}
@@ -56,8 +57,8 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 	writeError(w, http.StatusNotImplemented, "not implemented — Supabase signInWithPassword to be wired")
 }
 
-// me handles GET /auth/me.
-func (h *Handler) me(w http.ResponseWriter, r *http.Request) {
+// Me handles GET /auth/me.
+func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 	claims := middleware.ClaimsFrom(r.Context())
 	if claims == nil {
 		writeError(w, http.StatusUnauthorized, "unauthorized")

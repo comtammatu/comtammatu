@@ -3,6 +3,7 @@ package staff
 import (
 	"encoding/json"
 	"net/http"
+	"net/mail"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
@@ -66,7 +67,7 @@ func (h *Handler) createStaff(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusUnprocessableEntity, "full_name is required")
 		return
 	}
-	if !strings.Contains(req.Email, "@") {
+	if _, err := mail.ParseAddress(req.Email); err != nil {
 		writeError(w, http.StatusUnprocessableEntity, "email is invalid")
 		return
 	}
