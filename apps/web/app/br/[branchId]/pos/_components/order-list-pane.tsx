@@ -45,7 +45,7 @@ function OrderListPaneComponent({
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
-      <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-border/60 px-3">
+      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border/60 px-3 py-2">
         <div className="flex min-w-0 items-center gap-2">
           <p className="text-base font-semibold">Hóa đơn</p>
           <Badge
@@ -92,7 +92,8 @@ function OrderListPaneComponent({
         <Button
           type="button"
           variant="ghost"
-          className="h-12 shrink-0 justify-between rounded-none border-t border-border/60 px-4 text-sm font-semibold text-muted-foreground hover:text-foreground"
+          size="touch"
+          className="shrink-0 justify-between rounded-none border-t border-border/60 px-4 text-sm font-semibold text-muted-foreground hover:text-foreground"
           data-testid="pos-archived-sheet-trigger"
           onClick={onOpenArchivedSheet}
         >

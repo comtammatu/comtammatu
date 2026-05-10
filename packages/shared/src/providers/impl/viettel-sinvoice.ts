@@ -368,6 +368,9 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
   }
 
   async getStatus(providerRef: string): Promise<InvoiceStatus> {
+    // Public S-invoice docs point to InvoiceWS/searchInvoiceByTransactionUuid
+    // for reconciliation by our transactionUuid. Keep this endpoint behind the
+    // provider boundary until Viettel BU confirms the contract for this account.
     try {
       const res = await this.authedFetch(
         `/InvoiceAPI/InvoiceUtilsWS/getInvoiceById`,
@@ -402,6 +405,9 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
   }
 
   async cancelInvoice(providerRef: string, reason: string): Promise<void> {
+    // Public S-invoice docs describe cancelTransactionInvoice with invoiceNo
+    // and issue date form params. This transactionUuid variant must be
+    // confirmed in sandbox before native cancel is treated as production-ready.
     const res = await this.authedFetch(
       `/InvoiceAPI/InvoiceWS/cancelTransactionInvoice/${this.taxCode}`,
       {

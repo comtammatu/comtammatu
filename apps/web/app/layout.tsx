@@ -1,11 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
-import {
-  Be_Vietnam_Pro,
-  Inter,
-  JetBrains_Mono,
-  Montserrat,
-} from "next/font/google";
+import { Be_Vietnam_Pro, JetBrains_Mono } from "next/font/google";
 import { ConfirmDialogProvider } from "@comtammatu/ui/components/confirm-dialog";
 import { ThemeProvider } from "@comtammatu/ui/components/theme-provider";
 import { ThemeScript } from "@comtammatu/ui/components/theme-script";
@@ -18,32 +13,18 @@ import "@comtammatu/ui/globals.css";
 import { cn } from "@/lib/utils";
 import { messages } from "@lib/messages";
 
-const fontSans = Inter({
-  subsets: ["latin", "latin-ext", "vietnamese"],
-  variable: "--font-sans",
-  display: "swap",
-});
-
-const fontHeading = Montserrat({
-  subsets: ["latin", "latin-ext", "vietnamese"],
-  variable: "--font-matu-heading",
-  display: "swap",
-});
-
 const fontMono = JetBrains_Mono({
   subsets: ["latin", "latin-ext"],
   variable: "--font-mono",
   display: "swap",
 });
 
-// matu-superapp baseline (Inventory redesign pilot 2026-05-08): Be Vietnam Pro
-// for body + headings on pilot pages. Live in parallel with Inter/Montserrat
-// (radix-lyra) so non-pilot routes stay unchanged. New code applies the
-// `font-matu-body` Tailwind class — see packages/ui/src/styles/matu-tokens.css.
+// matu-superapp baseline, promoted app-wide 2026-05-09: Be Vietnam Pro is
+// the shared operational UI face for body text and headings.
 const fontMatuBody = Be_Vietnam_Pro({
   subsets: ["latin", "latin-ext", "vietnamese"],
   weight: ["400", "500", "600", "700"],
-  variable: "--font-matu-body",
+  variable: "--font-matu-runtime",
   display: "swap",
 });
 
@@ -58,7 +39,11 @@ export const metadata: Metadata = {
       { url: "/icons/favicon-16x16.png", sizes: "16x16", type: "image/png" },
     ],
     apple: [
-      { url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+      {
+        url: "/icons/apple-touch-icon.png",
+        sizes: "180x180",
+        type: "image/png",
+      },
     ],
   },
   appleWebApp: {
@@ -69,10 +54,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#fff6ee" },
-    { media: "(prefers-color-scheme: dark)", color: "#0d1b2a" },
-  ],
+  themeColor: "#FFF6ED",
   viewportFit: "cover",
 };
 
@@ -80,17 +62,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
       lang="vi"
-      className={cn(
-        fontSans.variable,
-        fontHeading.variable,
-        fontMono.variable,
-        fontMatuBody.variable,
-        "font-sans",
-      )}
+      className={cn(fontMono.variable, fontMatuBody.variable, "font-sans")}
       suppressHydrationWarning
     >
       <body className="min-h-screen bg-background font-sans text-foreground antialiased">
-        <ThemeScript defaultTheme="system" />
+        <ThemeScript defaultTheme="light" />
         <a
           href="#main-content"
           className="sr-only z-50 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
@@ -99,8 +75,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         </a>
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
-          enableSystem
+          defaultTheme="light"
+          enableSystem={false}
           disableTransitionOnChange
         >
           <BoneyardRegistry />

@@ -2,7 +2,6 @@
 
 import { AppToolbar } from "@/components/surface";
 import { Badge } from "@comtammatu/ui/components/badge";
-import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import {
   ToggleGroup,
   ToggleGroupItem,
@@ -26,9 +25,9 @@ export function StationToggleBar({
   onChange,
 }: StationToggleBarProps) {
   return (
-    <div className="border-b px-3 py-2 md:px-4">
-      <AppToolbar className="min-w-0 p-2">
-        <ScrollArea className="min-w-0 flex-1">
+    <div className="border-b px-2 py-1.5 md:px-4 md:py-2">
+      <AppToolbar className="w-full min-w-0 overflow-hidden p-1.5 md:p-2">
+        <div className="w-full min-w-0 overflow-x-auto">
           <ToggleGroup
             type="single"
             value={activeStationId === null ? "all" : String(activeStationId)}
@@ -37,17 +36,19 @@ export function StationToggleBar({
               onChange(value === "all" ? null : value);
             }}
             variant="outline"
-            className="h-auto justify-start gap-2"
+            size="touch"
+            spacing="md"
+            className="h-auto w-max min-w-full justify-start pr-2"
           >
             <ToggleGroupItem
               value="all"
-              className="min-h-10 shrink-0 gap-2 px-3 text-sm font-semibold"
+              className="shrink-0 gap-2 font-semibold"
               aria-label={messages.pos.kds.allStationsAria}
             >
               {messages.pos.kds.allStations}
               <Badge
                 variant="secondary"
-                className="rounded-full px-2 py-0.5 text-xs font-semibold"
+                className="text-xs font-semibold"
               >
                 {totalActiveCount}
               </Badge>
@@ -56,20 +57,20 @@ export function StationToggleBar({
               <ToggleGroupItem
                 key={station.id}
                 value={String(station.id)}
-                className="min-h-10 shrink-0 gap-2 px-3 text-sm font-semibold"
+                className="shrink-0 gap-2 font-semibold"
                 aria-label={messages.pos.kds.stationAria(station.name)}
               >
                 {station.name}
                 <Badge
                   variant="secondary"
-                  className="rounded-full px-2 py-0.5 text-xs font-semibold"
+                  className="text-xs font-semibold"
                 >
                   {stationCounts.get(station.id) ?? 0}
                 </Badge>
               </ToggleGroupItem>
             ))}
           </ToggleGroup>
-        </ScrollArea>
+        </div>
       </AppToolbar>
     </div>
   );

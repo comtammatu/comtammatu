@@ -16,6 +16,7 @@ export interface KdsTicket {
   status: string;
   bumped_at: string | null;
   created_at: string;
+  updated_at: string;
 }
 
 /** Kitchen send batch for queue numbering. */
@@ -92,6 +93,8 @@ export interface KdsBoardProps {
   canMarkReady: boolean;
   /** Whether current user has `kds:recall` (controls recall button). */
   canRecall: boolean;
+  /** Stable timestamp serialized by the server to avoid KDS timer hydration drift. */
+  initialNow: number;
   initialTickets: KdsTicket[];
   initialOrders: KdsOrderInfo[];
   initialOrderItems: KdsOrderItem[];
@@ -99,7 +102,12 @@ export interface KdsBoardProps {
 }
 
 /** URL query: status filter */
-export type TicketStatusFilter = "all" | "active" | "pending" | "preparing" | "ready";
+export type TicketStatusFilter =
+  | "all"
+  | "active"
+  | "pending"
+  | "preparing"
+  | "ready";
 
 /** URL query: order type filter */
 export type OrderTypeFilter = "all" | "dine_in" | "takeaway";

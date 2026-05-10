@@ -217,9 +217,13 @@ export function ReconciliationClient({
 
   return (
     <Tabs defaultValue="period" className="space-y-4">
-      <TabsList className="h-auto w-full justify-start gap-2 overflow-x-auto p-2">
-        <TabsTrigger value="period">{reconciliationCopy.tabs.period}</TabsTrigger>
-        <TabsTrigger value="by-day">{reconciliationCopy.tabs.byDay}</TabsTrigger>
+      <TabsList variant="toolbar">
+        <TabsTrigger value="period">
+          {reconciliationCopy.tabs.period}
+        </TabsTrigger>
+        <TabsTrigger value="by-day">
+          {reconciliationCopy.tabs.byDay}
+        </TabsTrigger>
         <TabsTrigger value="desync">
           {reconciliationCopy.tabs.desync(desync.length)}
         </TabsTrigger>
@@ -326,22 +330,22 @@ export function ReconciliationClient({
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/50 hover:bg-muted/50">
-                      <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                      <TableHead variant="eyebrow">
                         {reconciliationCopy.table.group}
                       </TableHead>
-                      <TableHead className="text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                      <TableHead variant="eyebrow" className="text-right">
                         {reconciliationCopy.table.subledger}
                       </TableHead>
-                      <TableHead className="text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                      <TableHead variant="eyebrow" className="text-right">
                         {reconciliationCopy.table.gl}
                       </TableHead>
-                      <TableHead className="text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                      <TableHead variant="eyebrow" className="text-right">
                         {reconciliationCopy.table.difference}
                       </TableHead>
-                      <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                      <TableHead variant="eyebrow">
                         {FORM_VI.status}
                       </TableHead>
-                      <TableHead className="text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                      <TableHead variant="eyebrow" className="text-right">
                         {reconciliationCopy.table.drilldown}
                       </TableHead>
                     </TableRow>
@@ -443,7 +447,7 @@ export function ReconciliationClient({
         open={drilldown.open}
         onOpenChange={(open) => setDrilldown((prev) => ({ ...prev, open }))}
       >
-        <SheetContent side="right" className="w-full sm:max-w-2xl">
+        <SheetContent side="right" size="2xl">
           <SheetHeader>
             <SheetTitle>
               {reconciliationCopy.drilldown.title(
@@ -473,19 +477,19 @@ export function ReconciliationClient({
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/50 hover:bg-muted/50">
-                    <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    <TableHead variant="eyebrow">
                       {reconciliationCopy.table.reference}
                     </TableHead>
-                    <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    <TableHead variant="eyebrow">
                       {FORM_VI.date}
                     </TableHead>
-                    <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    <TableHead variant="eyebrow">
                       {BRANCH_VI.long}
                     </TableHead>
-                    <TableHead className="text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    <TableHead variant="eyebrow" className="text-right">
                       {reconciliationCopy.table.amount}
                     </TableHead>
-                    <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    <TableHead variant="eyebrow">
                       {reconciliationCopy.table.description}
                     </TableHead>
                   </TableRow>
@@ -751,7 +755,9 @@ function ByDayTable({
                         : "text-right tabular-nums font-medium text-destructive"
                     }
                   >
-                    {matched ? reconciliationCopy.byDay.zero : formatVND(r.diff)}
+                    {matched
+                      ? reconciliationCopy.byDay.zero
+                      : formatVND(r.diff)}
                   </TableCell>
                   <TableCell>
                     {matched ? (
@@ -829,28 +835,28 @@ function DesyncTable({
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50 hover:bg-muted/50">
-              <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <TableHead variant="eyebrow">
                 {reconciliationCopy.desync.payment}
               </TableHead>
-              <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <TableHead variant="eyebrow">
                 {reconciliationCopy.desync.order}
               </TableHead>
-              <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <TableHead variant="eyebrow">
                 {BRANCH_VI.long}
               </TableHead>
-              <TableHead className="text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <TableHead variant="eyebrow" className="text-right">
                 {reconciliationCopy.table.amount}
               </TableHead>
-              <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <TableHead variant="eyebrow">
                 {reconciliationCopy.desync.method}
               </TableHead>
-              <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <TableHead variant="eyebrow">
                 {reconciliationCopy.desync.orderStatus}
               </TableHead>
-              <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <TableHead variant="eyebrow">
                 {reconciliationCopy.desync.paidAt}
               </TableHead>
-              <TableHead className="text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <TableHead variant="eyebrow" className="text-right">
                 {reconciliationCopy.desync.ageDiff}
               </TableHead>
             </TableRow>

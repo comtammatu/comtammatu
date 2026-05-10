@@ -21,6 +21,25 @@ const buttonGroupVariants = cva(
   }
 )
 
+const buttonGroupTextVariants = cva(
+  "flex items-center gap-2 rounded-md border bg-muted font-medium [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4",
+  {
+    variants: {
+      size: {
+        xs: "h-7 px-2 text-xs [&_svg:not([class*='size-'])]:size-3",
+        sm: "h-8 px-2 text-xs [&_svg:not([class*='size-'])]:size-3.5",
+        default: "h-10 px-2.5 text-sm",
+        lg: "h-11 px-3 text-sm",
+        touch: "min-h-11 px-3 text-sm",
+        "touch-lg": "min-h-14 px-4 text-base font-semibold [&_svg:not([class*='size-'])]:size-5",
+      },
+    },
+    defaultVariants: {
+      size: "default",
+    },
+  }
+)
+
 function ButtonGroup({
   className,
   orientation,
@@ -40,18 +59,17 @@ function ButtonGroup({
 function ButtonGroupText({
   className,
   asChild = false,
+  size = "default",
   ...props
 }: React.ComponentProps<"div"> & {
   asChild?: boolean
-}) {
+} & VariantProps<typeof buttonGroupTextVariants>) {
   const Comp = asChild ? Slot.Root : "div"
 
   return (
     <Comp
-      className={cn(
-        "flex items-center gap-2 rounded-md border bg-muted px-2.5 text-xs/relaxed font-medium [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4",
-        className
-      )}
+      data-size={size}
+      className={cn(buttonGroupTextVariants({ size, className }))}
       {...props}
     />
   )
@@ -80,4 +98,5 @@ export {
   ButtonGroupSeparator,
   ButtonGroupText,
   buttonGroupVariants,
+  buttonGroupTextVariants,
 }

@@ -10,10 +10,11 @@ import { Button } from "@comtammatu/ui/components/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@comtammatu/ui/components/dropdown-menu";
-import { useTheme } from "@comtammatu/ui/components/theme-provider";
+import { useTheme, type Theme } from "@comtammatu/ui/components/theme-provider";
 
 export function PosThemeToggle() {
   const { theme, resolvedTheme, setTheme } = useTheme();
@@ -41,28 +42,24 @@ export function PosThemeToggle() {
           <span className="sr-only">Chọn giao diện POS</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem
-          onClick={() => setTheme("light")}
-          data-active={current === "light"}
+      <DropdownMenuContent align="end" density="touch">
+        <DropdownMenuRadioGroup
+          value={current ?? "system"}
+          onValueChange={(value) => setTheme(value as Theme)}
         >
-          <IconSun />
-          Sáng
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={() => setTheme("dark")}
-          data-active={current === "dark"}
-        >
-          <IconMoon />
-          Tối
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={() => setTheme("system")}
-          data-active={current === "system"}
-        >
-          <IconDeviceDesktop />
-          Hệ thống
-        </DropdownMenuItem>
+          <DropdownMenuRadioItem value="light">
+            <IconSun />
+            Sáng
+          </DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="dark">
+            <IconMoon />
+            Tối
+          </DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="system">
+            <IconDeviceDesktop />
+            Hệ thống
+          </DropdownMenuRadioItem>
+        </DropdownMenuRadioGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   );

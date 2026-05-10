@@ -367,7 +367,7 @@ W3 — depends on W2 (branch_kind config). Inventory schema baseline + persona A
 - **Journal entries:** double-entry bookkeeping; posting rules engine (`posting_rules` table)
 - **Fiscal periods:** open/close/reopen state machine; `accounting:period_reopen` perm-gated
 - **Period close guardrails:** `close_fiscal_period` RPC validates balance, journal continuity, draft entries blocking
-- **Tax invoices (HĐĐT):** state machine `(draft → issued → archived)`; provider abstraction (MISA meInvoice primary, Viettel/VNPT fallback per `system_settings.einvoice_provider`); evidence retention via Storage
+- **Tax invoices (HĐĐT):** state machine `(draft → issued → archived)`; provider abstraction (Viettel S-invoice canonical, MISA legacy/optional only when explicitly configured, VNPT future); evidence retention via Storage
 - **VAS report lines:** monthly VAT GTGT export data (đầu ra + đầu vào khấu trừ)
 - **Audit trail:** finance audit logs (cross-cuts §14 audit cross-cutting concern)
 - **Food cost analysis:** Inventory data + GL — variance, COGS%, top-cost items
@@ -412,13 +412,13 @@ W3 — depends on W2 (branch_kind config). Inventory schema baseline + persona A
 
 - **Depends on:** Auth (W1), Admin (W2), Inventory (W3 — food cost, supplier_invoices for AP)
 - **Depended-by:** Orders/POS (W5 — revenue posting), HR (W4 — payroll journal), Reporting (W6 — financial statements)
-- **External:** MISA meInvoice API, Viettel sinvoice (fallback), VNPT (fallback); MoMo provider for refund webhook
+- **External:** Viettel S-invoice API, MISA meInvoice (legacy/optional explicit config only), VNPT (future); MoMo provider for refund webhook
 
 ### 7.5 Sign-off blockers
 
 - **B17** AP/supplier invoice scope KEEP — APPROVED
 - **B19** In-place freeze of finance-redesign 2-week sprint — APPROVED 2026-05-07; capabilities ported (8 KPI cards, filter bar, 4 chart types, reconciliation tolerance) → re-build trên green W4
-- **B31 (module-specific)** — HĐĐT provider seed for green: MISA primary credentials + Viettel fallback config. Owner to provide.
+- **B31 (module-specific)** — HĐĐT provider seed for green: Viettel S-invoice credentials; MISA config only if owner explicitly keeps the legacy provider available. Owner to provide.
 - **B32 (module-specific)** — Posting rules table seed for green: revenue, refund, payroll, AP, food cost events. Pilot uses hardcoded VAS (5111/1111/1121); post-pilot move to data-driven.
 - **B33 (module-specific)** — Reconciliation tolerance threshold (default 1,000 VND? per archived finance-redesign).
 - **B34 (module-specific)** — Period close window: monthly close on day-X of next month; currently no policy.
@@ -798,7 +798,7 @@ W5 — receipt printing must be live for POS cutover. Real printer smoke test (p
 
 - **Depends on:** ALL prior waves (W1–W5)
 - **Depended-by:** none (terminal module)
-- **External:** Zalo ZNS (Post-v1.0), SpeedSMS, Resend, MISA meInvoice for tax exports
+- **External:** Zalo ZNS (Post-v1.0), SpeedSMS, Resend, Viettel S-invoice for tax exports
 
 ### 13.5 Sign-off blockers
 
@@ -859,13 +859,13 @@ These are infrastructure surfaces consumed by multiple modules. Not standalone m
 - Tokens, typography (Inter / Montserrat / JetBrains Mono), logo, icons, spacing
 - App shells: AdminShell, InventoryShell, EmployeeShell, FinanceShell, HRShell, POSShell, KDSShell
 - Constraint: NO per-route theme files; NO parallel theme layer (per CLAUDE.md UI rule)
-- Primitives: shadcn preset `b1GN1lxvE` (per `docs/spec/design-system.md`)
+- Primitives: shadcn preset `b6G3vbGue` / `radix-lyra` (per `docs/spec/design-system.md`)
 
 ### 14.6 Webhook + External API Gateway
 
 - Inbound webhooks: MoMo (`/api/webhooks/momo`); HMAC-validated
 - Idempotency: `webhook_events(provider, request_id) UNIQUE`
-- Outbound: MISA meInvoice REST, VietQR API polling, Viettel/VNPT fallback (Finance §7)
+- Outbound: Viettel S-invoice REST, VietQR API polling, MISA legacy explicit option / VNPT future option (Finance §7)
 - Resend.com (Post-v1.0), Zalo ZNS (Post-v1.0), SpeedSMS (Post-v1.0)
 
 ---

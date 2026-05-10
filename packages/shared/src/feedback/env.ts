@@ -1,11 +1,8 @@
 /**
- * Feedback module env-var resolvers with hardcoded fallbacks.
+ * Feedback module env-var resolvers with development fallbacks.
  *
- * MVP deploy without platform env vars set yet. Each resolver returns the
- * platform env value if present, else falls back to the committed value.
- *
- * ROTATION: when ready, set the env var on the deploy platform AND replace
- * the fallback string here, then redeploy.
+ * Public feedback POSTs are cross-origin sensitive. Production must configure
+ * ALLOWED_ORIGINS_FEEDBACK explicitly; otherwise the submit action fails closed.
  */
 
 const FALLBACK_TELEGRAM_BOT_TOKEN =
@@ -17,6 +14,20 @@ const FALLBACK_IP_HASH_SALT =
 const FALLBACK_APP_URL = "https://comtammatu-web-comtammatu.vercel.app";
 const FALLBACK_ALLOWED_ORIGINS_FEEDBACK =
   "https://comtammatu-web-comtammatu.vercel.app";
+
+function parseCsv(raw: string | undefined): string[] {
+  return (raw ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+export function isProductionRuntime(): boolean {
+  return (
+    process.env["NODE_ENV"] === "production"
+    || process.env["VERCEL_ENV"] === "production"
+  );
+}
 
 export function getTelegramBotToken(): string {
   return process.env["TELEGRAM_BOT_TOKEN"] || FALLBACK_TELEGRAM_BOT_TOKEN;
@@ -35,10 +46,14 @@ export function getAppUrl(): string {
 }
 
 export function getAllowedOriginsFeedback(): string[] {
-  const raw =
-    process.env["ALLOWED_ORIGINS_FEEDBACK"] || FALLBACK_ALLOWED_ORIGINS_FEEDBACK;
-  return raw
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
+  const configured = parseCsv(process.env["ALLOWED_ORIGINS_FEEDBACK"]);
+  if (configured.length > 0) {
+    return configured;
+  }
+
+  if (isProductionRuntime()) {
+    return [];
+  }
+
+  return parseCsv(FALLBACK_ALLOWED_ORIGINS_FEEDBACK);
 }

@@ -22,13 +22,40 @@ const RAW_TAILWIND_PALETTE_REGEX =
 const RAW_TAILWIND_PALETTE_MESSAGE =
   "Raw Tailwind palette class detected. Use semantic tokens instead (bg-success/10, text-tier-elite, border-destructive). Defined in packages/ui/src/styles/globals.css Zone B. See tasks/regressions.md NO-RAW-TAILWIND-PALETTE-IN-APP.";
 
+// Enforces NO-ARBITRARY-DIMENSIONS (tasks/regressions.md, 2026-04-09): app code
+// MUST NOT use arbitrary Tailwind values like `w-[200px]`, `h-[3rem]`,
+// `text-[10px]`, `min-h-[44px]`. Use design tokens or extend @theme in
+// packages/ui/src/styles/globals.css.
+const ARBITRARY_TW_VALUE_REGEX =
+  "(^|\\s)(w|h|min-h|min-w|max-h|max-w|size|text|gap|p|px|py|pt|pr|pb|pl|m|mx|my|mt|mr|mb|ml|leading|tracking|space-x|space-y|top|bottom|left|right|inset|z|rounded|border|ring|opacity|order|grid-cols|grid-rows|col-span|row-span)-\\[[^\\]]+\\]";
+
+const ARBITRARY_TW_VALUE_MESSAGE =
+  "Arbitrary Tailwind value detected. Use design tokens or extend @theme in packages/ui/src/styles/globals.css. See tasks/regressions.md NO-ARBITRARY-DIMENSIONS.";
+
+// Enforces UI-HEADING-SCALE-LOCKED (tasks/regressions.md, 2026-05-07):
+// app surfaces MUST NOT use text-4xl/5xl/6xl, font-black, or font-extrabold.
+// font-bold reserved for receipt totals + print-mode header. Default heading
+// weight is font-semibold. See docs/spec/design-system.md Rhythm Contract B.
+const FORBIDDEN_TYPOGRAPHY_REGEX =
+  "(^|\\s)(text-(4xl|5xl|6xl)|font-(black|extrabold))\\b";
+
+const FORBIDDEN_TYPOGRAPHY_MESSAGE =
+  "Forbidden typography class. text-4xl/5xl/6xl + font-black/extrabold are not allowed in app surfaces. Use AppPageHeader for page H1, CardTitle for sections, font-semibold default. See docs/spec/design-system.md Rhythm Contract B + tasks/regressions.md UI-HEADING-SCALE-LOCKED.";
+
+// Enforces UI-RADIUS-4-TOKEN-ONLY (tasks/regressions.md, 2026-05-07):
+// app code only allows rounded-md / rounded-lg / rounded-full / rounded-none.
+// rounded-sm/xl/2xl/3xl/4xl are forbidden in apps/web/app/**.
+const FORBIDDEN_RADIUS_REGEX = "(^|\\s)rounded-(sm|xl|2xl|3xl|4xl)\\b";
+
+const FORBIDDEN_RADIUS_MESSAGE =
+  "Forbidden radius class. App code allows only rounded-md, rounded-lg, rounded-full, rounded-none. See docs/spec/design-system.md Rhythm Contract E + tasks/regressions.md UI-RADIUS-4-TOKEN-ONLY.";
+
 // Match any Vietnamese diacritic (Latin-1 Supplement + Latin Extended-A/B
 // VN-specific + Latin Extended Additional). Catches "Hủy"/"Đã"/"Đơn"/"Bàn"
 // etc. but not plain ASCII identifiers. Heuristic for "is this string
 // Vietnamese?" — false positives possible for European accented Latin but
 // rare in this single-locale codebase.
-const VI_DIACRITIC_REGEX =
-  /[À-ÿĂ-ăĐ-đƠ-ưẠ-ỹ]/;
+const VI_DIACRITIC_REGEX = /[À-ÿĂ-ăĐ-đƠ-ưẠ-ỹ]/;
 const VI_TARGET_ATTRS = /^(title|placeholder|aria-label|alt)$/;
 
 const I18N_BASELINE_PATH = `${__dirname}/eslint-i18n-baseline.json`;
@@ -88,8 +115,7 @@ const i18nPlugin = {
           },
           JSXAttribute(node) {
             const name = node.name?.name;
-            if (typeof name !== "string" || !VI_TARGET_ATTRS.test(name))
-              return;
+            if (typeof name !== "string" || !VI_TARGET_ATTRS.test(name)) return;
             const value = node.value;
             if (
               value?.type === "Literal" &&
@@ -130,6 +156,58 @@ export default tseslint.config(
         {
           selector: `TemplateElement[value.raw=/${RAW_TAILWIND_PALETTE_REGEX}/]`,
           message: RAW_TAILWIND_PALETTE_MESSAGE,
+        },
+      ],
+    },
+  },
+  // Design-system rhythm rules — scoped to app route code only.
+  // Carve-outs (per docs/spec/design-system.md): marketing/auth surfaces are
+  // allowed text-4xl/5xl + ornamental radius; kitchen-sink is a primitive
+  // showcase; matu-surface is the compatibility adapter for generated
+  // matu-* token utilities.
+  {
+    files: ["app/**/*.{ts,tsx}"],
+    ignores: [
+      "app/(auth)/**",
+      "app/access-denied/**",
+      "app/payment/momo/return/**",
+      "app/admin/kitchen-sink/**",
+      "app/components/matu-surface.tsx",
+    ],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: `Literal[value=/${RAW_TAILWIND_PALETTE_REGEX}/]`,
+          message: RAW_TAILWIND_PALETTE_MESSAGE,
+        },
+        {
+          selector: `TemplateElement[value.raw=/${RAW_TAILWIND_PALETTE_REGEX}/]`,
+          message: RAW_TAILWIND_PALETTE_MESSAGE,
+        },
+        {
+          selector: `Literal[value=/${ARBITRARY_TW_VALUE_REGEX}/]`,
+          message: ARBITRARY_TW_VALUE_MESSAGE,
+        },
+        {
+          selector: `TemplateElement[value.raw=/${ARBITRARY_TW_VALUE_REGEX}/]`,
+          message: ARBITRARY_TW_VALUE_MESSAGE,
+        },
+        {
+          selector: `Literal[value=/${FORBIDDEN_TYPOGRAPHY_REGEX}/]`,
+          message: FORBIDDEN_TYPOGRAPHY_MESSAGE,
+        },
+        {
+          selector: `TemplateElement[value.raw=/${FORBIDDEN_TYPOGRAPHY_REGEX}/]`,
+          message: FORBIDDEN_TYPOGRAPHY_MESSAGE,
+        },
+        {
+          selector: `Literal[value=/${FORBIDDEN_RADIUS_REGEX}/]`,
+          message: FORBIDDEN_RADIUS_MESSAGE,
+        },
+        {
+          selector: `TemplateElement[value.raw=/${FORBIDDEN_RADIUS_REGEX}/]`,
+          message: FORBIDDEN_RADIUS_MESSAGE,
         },
       ],
     },

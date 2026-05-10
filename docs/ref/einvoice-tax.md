@@ -2,7 +2,7 @@
 
 > Áp dụng: Cơm Tấm Má Tư CTCP — mô hình F&B multi-branch
 > Khung pháp lý: NĐ 123/2020, NĐ 70/2025, TT 78/2021, Luật Thuế GTGT 2024, NQ 142/2024
-> Last updated: 2026-05-08 (post-pilot hybrid MISA + Sinvoice shipped)
+> Last updated: 2026-05-09 (provider clarified: Viettel S-invoice is canonical; MISA is legacy/optional)
 
 ---
 
@@ -57,7 +57,7 @@ Khách yêu cầu HĐ + cung cấp MST
   → Cashier nhập thông tin tại POS bill flow
   → createTaxInvoice action: insert tax_invoice (status='draft', invoice_kind='per_order')
   → RPC transition_tax_invoice_state(id, 'signing') — set signing_started_at
-  → Provider API call (MISA hoặc Sinvoice)
+  → Provider API call (Viettel S-invoice mặc định; MISA chỉ khi env explicit)
   → RPC transition_tax_invoice_state(id, 'issued', { invoice_number, cqt_code, provider_data })
   → Trả PDF/QR cho khách
 ```
@@ -79,6 +79,7 @@ Cron 02:05 ICT mỗi ngày (HOẶC admin manual trigger /finance/summary)
           ↳ INSERT tax_invoice (kind='daily_summary', order_id=NULL, status='draft')
           ↳ INSERT tax_invoice_orders junction rows (1 per order)
           ↳ Return { tax_invoice_id, line_items_for_misa, vat_breakdown }
+             (legacy field name; payload is provider-neutral)
       → RPC transition_tax_invoice_state_as_system(id, 'signing')
       → Provider.createInvoice(line_items, buyerName='Khách hàng không lấy hóa đơn')
       → RPC transition_tax_invoice_state_as_system(id, 'issued'|'submitted')
@@ -188,7 +189,7 @@ CREATE TABLE tax_invoice_events (
   from_status     TEXT,
   to_status       TEXT NOT NULL,
   actor_id        UUID REFERENCES profiles(id),    -- NULL cho cron system actor
-  payload         JSONB,                            -- state-specific (cancel_reason, MISA receipt, ...)
+  payload         JSONB,                            -- state-specific (cancel_reason, provider receipt, ...)
   note            TEXT,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -196,7 +197,7 @@ CREATE TABLE tax_invoice_events (
 
 - RLS: `finance:view` permission required
 - INSERT only via `transition_tax_invoice_state` / `_as_system` RPC (no DML grants to authenticated)
-- `tax_invoices.provider_data` accumulates per-state via JSONB merge (`||`) — cancel KHÔNG ghi đè MISA payload gốc; full history ở `tax_invoice_events`
+- `tax_invoices.provider_data` accumulates per-state via JSONB merge (`||`) — cancel KHÔNG ghi đè provider payload gốc; full history ở `tax_invoice_events`
 
 ### 3.4 Database — bảng `tax_invoices`
 
@@ -286,7 +287,7 @@ CREATE TABLE tax_invoice_orders (
 -- RLS: SELECT cần finance:view; INSERT/DELETE chỉ qua SECURITY DEFINER RPC
 ```
 
-> Cancel summary HĐ KHÔNG xóa junction rows — preserve audit. Underlying orders KHÔNG auto re-eligible cho batch mới (regression rule `HDDT-SUMMARY-CANCEL-PRESERVES-JUNCTION`).
+> Cancel summary HĐ KHÔNG xóa junction rows — preserve audit. Underlying orders become re-eligible for a later batch only because eligibility ignores inactive summaries (`cancelled` / `replaced`) while keeping the historical junction rows queryable (regression rule `HDDT-SUMMARY-CANCEL-PRESERVES-JUNCTION`).
 
 ### 3.6 Queue table — `summary_run_queue`
 
@@ -335,7 +336,7 @@ SECURITY DEFINER
 Sau khi cron đã gộp 1 order vào HĐ tổng hợp, nếu khách quay lại yêu cầu HĐ B2B:
 
 - `createTaxInvoice` reject với message: "Đơn này đã trong HĐ tổng hợp ngày X — Liên hệ kế toán để lập HĐ điều chỉnh"
-- Pilot: kế toán xử lý qua MISA portal (manual HĐ điều chỉnh giảm + HĐ B2B mới)
+- Pilot: kế toán xử lý qua Viettel S-invoice portal (manual HĐ điều chỉnh giảm + HĐ B2B mới)
 - Defer P1: tự động hóa flow refund-after-batch → HĐ điều chỉnh
 
 Regression rule `HDDT-LATE-B2B-REQUEST-AFTER-BATCH-BLOCKED`.
@@ -393,7 +394,9 @@ CREATE TABLE supplier_invoices (
 
 ## 5. Provider HĐĐT
 
-Hệ thống abstract qua interface `InvoiceProvider` (`packages/shared/src/providers/invoice.ts:48-93`). Provider được chọn qua env `INVOICE_PROVIDER` (default `misa`); init logic ở `apps/web/lib/invoice-provider-init.ts:22-55`.
+Hệ thống abstract qua interface `InvoiceProvider` (`packages/shared/src/providers/invoice.ts:48-93`). Provider được chọn qua env `INVOICE_PROVIDER` (default `viettel`); init logic ở `apps/web/lib/invoice-provider-init.ts:22-55`.
+
+**Provider canonical:** Cơm Tấm Má Tư sử dụng **Viettel S-invoice / Sinvoice** cho production HĐĐT. MISA meInvoice được giữ như provider legacy/optional để không phá abstraction, nhưng không phải mặc định vận hành.
 
 ### 5.1 Interface `InvoiceProvider`
 
@@ -416,31 +419,12 @@ type InvoiceResult = {
 
 | Provider          | Status   | API base URL                                           | Đăng ký template            |
 | ----------------- | -------- | ------------------------------------------------------ | --------------------------- |
-| MISA meInvoice    | Hoàn thành | prod `https://api.meinvoice.vn/api/v1`                 | Qua MISA portal             |
+| Viettel S-invoice | Canonical | `https://api-vinvoice.viettel.vn` (cùng test+prod)     | Qua Viettel BU / S-invoice portal |
+| MISA meInvoice    | Legacy/optional | prod `https://api.meinvoice.vn/api/v1`           | Chỉ khi owner đổi provider  |
 |                   |          | sandbox `https://testapi.meinvoice.vn/api/v1`          |                             |
-| Viettel Sinvoice  | Hoàn thành | `https://api-vinvoice.viettel.vn` (cùng test+prod)     | Qua Viettel BU              |
 | VNPT-Invoice      | Future   | `https://einvoice.vnpt.vn/`                            | (chưa triển khai)           |
 
-### 5.3 MISA meInvoice
-
-Implementation: `packages/shared/src/providers/impl/misa.ts:47-234`.
-
-```env
-INVOICE_PROVIDER=misa
-MISA_API_KEY=<API key từ MISA portal>
-MISA_API_BASE_URL=https://api.meinvoice.vn/api/v1   # default prod, override nếu cần
-MISA_SANDBOX=false                                  # 'true' → testapi.meinvoice.vn
-COMPANY_TAX_CODE=<MST seller>
-```
-
-Headers gọi API: `X-API-KEY`, `X-TAX-CODE`, `X-APP-ID`. Status codes MISA → internal:
-- `0` → `draft`
-- `1` → `signing`
-- `2` → `submitted`
-- `3` → `issued`
-- `4` → `failed`
-
-### 5.4 Viettel Sinvoice
+### 5.3 Viettel S-invoice / Sinvoice
 
 Implementation: `packages/shared/src/providers/impl/viettel-sinvoice.ts:115-426`.
 
@@ -455,10 +439,13 @@ SINVOICE_SANDBOX=false                               # informational; URL không
 COMPANY_TAX_CODE=<MST = SINVOICE_USERNAME prefix>
 ```
 
-Auth flow:
-1. `POST /auth/login` (BasicAuth) → trả Bearer token
-2. `POST /services/einvoiceapplication/api/InvoiceUtilsWS/createInvoice` (Bearer) → tạo HĐ
-3. `POST /services/einvoiceapplication/api/InvoiceUtilsWS/getInvoiceFile` → lấy PDF/XML
+Technical WebServices guide: `docs/ref/sinvoice-webservices.md`.
+
+Current code path:
+1. `POST /auth/login` (BasicAuth in current provider) → lấy access token
+2. `POST /services/einvoiceapplication/api/InvoiceAPI/InvoiceWS/createInvoice/{supplierTaxCode}` → tạo/gửi HĐ
+3. Reconcile by `transactionUuid` — **must confirm BU endpoint** before production-grade cron. Public docs point to `InvoiceAPI/InvoiceWS/searchInvoiceByTransactionUuid`; current code still calls `InvoiceAPI/InvoiceUtilsWS/getInvoiceById`.
+4. PDF/XML download is not implemented yet. Public docs mention `InvoiceAPI/InvoiceUtilsWS/getInvoiceFilePortal` and `InvoiceAPI/InvoiceWS/createExchangeInvoiceFile`.
 
 **transactionUuid format**: hàm `buildSinvoiceTransactionUuid(invoiceId)` (viettel-sinvoice.ts) tạo 32-char deterministic key dạng `HDDT<...>` để idempotent retry. Persist `provider_ref` BEFORE call để tránh duplicate khi retry.
 
@@ -479,6 +466,27 @@ Auth flow:
 | `503` Service Unavailable         | Sinvoice maintenance         | Đợi BU thông báo                    |
 | `TRANSACTION_IS_BEING_PROCESSED`  | UUID đang xử lý              | Đợi 1 phút                          |
 | `INVALID_TRANSACTION_UUID`        | UUID format sai              | Bug code → fix `buildSinvoiceTransactionUuid` |
+
+### 5.4 MISA meInvoice (legacy/optional)
+
+Implementation: `packages/shared/src/providers/impl/misa.ts:47-234`.
+
+```env
+INVOICE_PROVIDER=misa
+MISA_API_KEY=<API key từ MISA portal>
+MISA_API_BASE_URL=https://api.meinvoice.vn/api/v1   # default prod, override nếu cần
+MISA_SANDBOX=false                                  # 'true' → testapi.meinvoice.vn
+COMPANY_TAX_CODE=<MST seller>
+```
+
+Chỉ dùng khi owner explicit chọn MISA và set `INVOICE_PROVIDER=misa`; production mặc định của dự án là Viettel S-invoice.
+
+Headers gọi API: `X-API-KEY`, `X-TAX-CODE`, `X-APP-ID`. Status codes MISA → internal:
+- `0` → `draft`
+- `1` → `signing`
+- `2` → `submitted`
+- `3` → `issued`
+- `4` → `failed`
 
 ### 5.5 Provider init logic
 
@@ -606,10 +614,10 @@ Hardcoded `'00000000-0000-0000-0000-000000000001'`. Seed qua migration vào `pro
 | HĐ đã issued nhưng cần sửa      | Sai thông tin người mua           | Hủy + biên bản + lập HĐ thay thế (`replaced`)               |
 | Provider trả lỗi duplicate      | Gọi API 2 lần                     | Kiểm tra `provider_ref` trước khi gọi lại                   |
 | Cron orphan `signing` qua đêm   | Provider ack chưa đến             | Reconcile cron (defer P1) hoặc manual transition `signing → draft` |
-| Late B2B sau batch              | Khách quay lại xin HĐ MST         | Kế toán lập HĐ điều chỉnh giảm trên MISA portal + HĐ B2B mới |
+| Late B2B sau batch              | Khách quay lại xin HĐ MST         | Kế toán lập HĐ điều chỉnh giảm trên Viettel S-invoice portal + HĐ B2B mới |
 | Cross-month cancel              | Hủy HĐ kỳ trước sau khi đã kê khai | Soft warning UI; defer hard-block đến period-close infra    |
 
-Các Sinvoice-specific error codes: xem §5.4 và `docs/runbooks/hddt-hybrid-cutover.md` §"Common Sinvoice errors".
+Các Sinvoice-specific endpoint, auth, file/cancel gaps: xem `docs/ref/sinvoice-webservices.md` và `docs/runbooks/hddt-hybrid-cutover.md` §"Common Sinvoice errors".
 
 ---
 
@@ -679,13 +687,15 @@ Các Sinvoice-specific error codes: xem §5.4 và `docs/runbooks/hddt-hybrid-cut
 - `HDDT-SERVICE-ROLE-RPC-GATED-ON-CLAIM`
 - `HDDT-SUMMARY-AUDIT-WHO-TRIGGERED`
 - `HDDT-VERCEL-CRON-TIMEOUT-FANOUT-SAFE`
+- `HDDT-PROVIDER-CANONICAL-SINVOICE-NOT-MISA`
 
 ---
 
 ## 12. Tài liệu liên quan
 
-- `docs/plan/hddt-hybrid-misa.md` — plan + decisions D1–D7 (đã shipped)
+- `docs/plan/hddt-hybrid-sinvoice.md` — hybrid S-invoice plan + decisions D1–D7 (đã shipped)
 - `docs/runbooks/hddt-hybrid-cutover.md` — runbook cutover prod, rollback, pilot metrics
+- `docs/ref/sinvoice-webservices.md` — Viettel S-invoice WebServices, endpoint map, BU-confirmation checklist
 - `docs/ref/inventory.md` — 3-way matching GRN / PO / Supplier Invoice
 - `docs/spec/database-schema.md` — Schema đầy đủ
 - `apps/web/app/finance/actions.ts:58-446` — `createTaxInvoice` + `cancelTaxInvoice`
@@ -693,6 +703,6 @@ Các Sinvoice-specific error codes: xem §5.4 và `docs/runbooks/hddt-hybrid-cut
 - `apps/web/lib/hddt-daily-summary.ts` — Shared `executeSummaryRun`
 - `apps/web/lib/invoice-provider-init.ts:22-55` — Provider env injection
 - `packages/shared/src/providers/invoice.ts:48-93` — Interface
-- `packages/shared/src/providers/impl/misa.ts:47-234` — MISA impl
-- `packages/shared/src/providers/impl/viettel-sinvoice.ts:115-426` — Sinvoice impl
+- `packages/shared/src/providers/impl/viettel-sinvoice.ts:115-426` — canonical S-invoice impl
+- `packages/shared/src/providers/impl/misa.ts:47-234` — legacy/optional MISA impl
 - `tasks/regressions.md` — Named failure rules `HDDT-*`

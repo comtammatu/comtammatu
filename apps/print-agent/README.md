@@ -1,11 +1,11 @@
 # @comtammatu/print-agent
 
 Thermal print agent for Cơm Tấm Má Tư. Subscribes to Supabase Realtime for `print_jobs`,
-renders ESC/POS, dispatches to LAN (TCP:9100) thermal printers.
+renders ESC/POS, dispatches to LAN (TCP:9100) or OS-bound Bluetooth serial thermal printers.
 
 **1 agent per branch** serves all 3 printers at that branch (receipt / kitchen_1 / kitchen_2).
 
-LAN-only. No native deps. Runs on Windows, Termux (Android), Raspberry Pi, any ARM/x64
+LAN + Bluetooth. No native deps. Runs on Windows, Termux (Android), Raspberry Pi, any ARM/x64
 Linux with Node 24.
 
 ## Architecture
@@ -24,8 +24,9 @@ Browser POS ─ Server Action ─▶ Postgres RPC ─▶ print_jobs row
 
 - Node.js 24+
 - Supabase service role key (agent runs as service principal, not a user)
-- All branch printers must be network-connected with `printers.connection_type='lan'`
-  and `lan_host` filled. Non-LAN printer rows fail dispatch with a clear error.
+- Branch printers use `printers.connection_type='lan'` with `lan_host` as IP/hostname,
+  or `connection_type='bluetooth'` with `lan_host` as the paired serial endpoint
+  (`COM5`, `/dev/rfcomm0`, `/dev/tty.*`).
 
 ## Development
 
@@ -89,6 +90,9 @@ Uninstall:
 | `PRINT_MODE` | no | `text` (default) emits ESC/POS text commands using the printer's CP1258 firmware font. `bitmap` rasterizes Vietnamese via Roboto Mono TTF and emits raster image commands — use this on PDIT PD805KL / clones whose firmware has no usable CP1258 font. |
 | `PRINT_CODEPAGE_ID` | no | Text-mode only. ESC/POS register index for CP1258. Default `38` (Epson). Xprinter often `30`. |
 | `PRINT_ASCII` | no | Text-mode only. `1` to strip Vietnamese diacritics if no codepage works. |
+| `PRINT_BT_TARGETS` | no | JSON endpoint overrides for Bluetooth printers by printer id or role, e.g. `{"12":"COM5","kitchen_1":"/dev/rfcomm0"}`. Overrides `printers.lan_host`. |
+| `PRINT_BT_TARGET_<id>` | no | Per-printer Bluetooth endpoint override, e.g. `PRINT_BT_TARGET_12=COM5`. |
+| `PRINT_BT_TARGET_<ROLE>` | no | Per-role Bluetooth endpoint override: `PRINT_BT_TARGET_RECEIPT`, `PRINT_BT_TARGET_KITCHEN_1`, `PRINT_BT_TARGET_KITCHEN_2`. |
 | `WEB_BASE_URL` | no | Web app base URL for branch-presence registration. |
 | `PRINT_AGENT_PRESENCE_TOKEN` | no | Shared bearer token for `/api/branch-presence`. |
 
@@ -146,6 +150,20 @@ above (preferred), or strip diacritics:
 echo "PRINT_ASCII=1" >> .env          # readable but ugly
 ```
 
+## Bluetooth mode
+
+Bluetooth support intentionally avoids native Node bindings. Pair the printer in
+the host OS first, bind it as a serial endpoint, then set the printer row to
+`connection_type='bluetooth'` and put the endpoint in `lan_host`:
+
+- Windows: paired SPP port such as `COM5`
+- Raspberry Pi/Linux: `/dev/rfcomm0`
+- macOS: `/dev/tty.<printer>`
+
+The agent writes raw ESC/POS bytes to that endpoint. If a branch needs local
+machine-specific endpoint names, keep the system row stable and override with
+`PRINT_BT_TARGETS` or `PRINT_BT_TARGET_<ROLE>`.
+
 ## Runtime loops
 
 - **Realtime INSERT** on `print_jobs` (filter: `branch_id=eq.<BRANCH>`)
@@ -180,9 +198,10 @@ Same flow on Raspberry Pi / any ARM Linux.
 
 ## Troubleshooting
 
-- **"printer N: only connection_type='lan' is supported"** — a non-LAN printer row
-  was created. Update `printers.connection_type='lan'` and fill `lan_host`, or
-  deactivate the row.
+- **"unsupported connection_type"** — use `printers.connection_type='lan'` or
+  `'bluetooth'`, or deactivate the row.
+- **"missing bluetooth target"** — fill the Bluetooth endpoint in `lan_host` or
+  provide a `PRINT_BT_TARGETS` / `PRINT_BT_TARGET_<ROLE>` override.
 - **"printer N not in cache / inactive"** — flip `printers.is_active=true` then wait
   up to 5 min, or restart the service.
 - **"printer host:port timed out"** — verify the printer is on the same LAN as the

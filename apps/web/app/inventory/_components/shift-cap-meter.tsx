@@ -1,7 +1,10 @@
 "use client";
 
 import { cn } from "@comtammatu/ui";
-import { Progress, type ProgressTone } from "@comtammatu/ui/components/progress";
+import {
+  Progress,
+  type ProgressTone,
+} from "@comtammatu/ui/components/progress";
 import { formatVND } from "@comtammatu/shared/format";
 
 interface ShiftCapMeterProps {
@@ -69,7 +72,7 @@ export function ShiftCapMeter({
     >
       <div className="flex items-center justify-between gap-2">
         <div className="font-medium">
-          Shift cap người dùng
+          Hạn mức ca của người dùng
           {shiftLabel ? (
             <span className="ml-1 text-muted-foreground">({shiftLabel})</span>
           ) : null}
@@ -79,15 +82,14 @@ export function ShiftCapMeter({
           <span className="ml-1 text-muted-foreground">{pctDisplay}%</span>
         </div>
       </div>
-      <Progress value={pctDisplay} tone={tone} className="h-1.5 rounded-full" />
+      <Progress value={pctDisplay} tone={tone} size="sm" />
       {willExceed ? (
         <p className="text-destructive">
-          ⚠ Phiếu này sẽ trigger tier 2 → QLV phải duyệt
+          ⚠ Phiếu này sẽ chuyển bậc 2 → QLV phải duyệt
         </p>
       ) : pct >= 0.7 ? (
         <p className="text-warning-foreground">
-          Gần cap — thêm{" "}
-          {formatVND(shiftCap - projected)} nữa sẽ cần duyệt
+          Gần hạn mức — thêm {formatVND(shiftCap - projected)} nữa sẽ cần duyệt
         </p>
       ) : null}
     </div>

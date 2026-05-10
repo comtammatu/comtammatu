@@ -31,6 +31,7 @@ export {
   fetchPosTerminals,
   fetchActiveSession,
   fetchPosPermissionFlags,
+  fetchExpectedOpeningCash,
   openPosSession,
   closePosSession,
 } from "./session-actions";

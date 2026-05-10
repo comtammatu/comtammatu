@@ -92,19 +92,19 @@ export function AntiSplitRollingMeter({
       data-slot="anti-split-meter"
       data-will-trigger={willTriggerPhoto}
     >
-      <span className="font-medium">Rolling 15min</span>
+      <span className="font-medium">Cộng dồn 15 phút</span>
       {ingredientName ? ` (${ingredientName})` : ""}: {formatVND(status.rollingSum)}
       {typeof pendingDelta === "number" && pendingDelta > 0 ? (
         <>
           {" + "}
-          <span className="font-medium">{formatVND(pendingDelta)} pending</span>
+          <span className="font-medium">{formatVND(pendingDelta)} chờ ghi</span>
           {" = "}
           <span className="font-semibold">{formatVND(projected)}</span>
         </>
       ) : null}
       {willTriggerPhoto ? (
         <span className="ml-1">
-          → trigger tier 1 (ảnh bắt buộc, ≥{formatVND(status.tierOneThreshold)})
+          → chuyển bậc 1 (ảnh bắt buộc, ≥{formatVND(status.tierOneThreshold)})
         </span>
       ) : null}
       {status.lineCount > 1 ? (

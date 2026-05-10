@@ -19,11 +19,7 @@ export default async function SupplierReturnsPage({
 
   return (
     <AppPage>
-      <AppPageHeader
-        eyebrow="Kho hàng"
-        title="Phiếu trả hàng NCC"
-        description="Quản lý các phiếu trả hàng nhà cung cấp."
-      />
+      <AppPageHeader density="compact" title="Phiếu trả hàng NCC" />
       {returns.length === 0 ? (
         <AppEmptyState mode="no-data" title="Chưa có phiếu trả hàng" />
       ) : (

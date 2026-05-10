@@ -1,6 +1,7 @@
 export type SiteKind = "central_warehouse" | "central_kitchen" | "branch";
 
 export type ModuleLabelKey =
+  | "portal"
   | "dashboard"
   | "menu"
   | "inventory"
@@ -27,6 +28,7 @@ type SiteLike = {
 };
 
 export const MODULE_LABELS_VI: Record<ModuleLabelKey, string> = {
+  portal: "Điểm làm việc",
   dashboard: "Tổng quan",
   menu: "Thực đơn",
   inventory: "Kho hàng",
@@ -241,35 +243,35 @@ export const HARDBLOCK_REASON_LABELS_VI = {
 
 /** GRN auto-approve 8 conditions (Q4a spec) */
 export const AUTO_APPROVE_CONDITION_LABELS_VI = {
-  c1_has_po: "Có đơn hàng (PO)",
+  c1_has_po: "Có đơn đặt hàng",
   c2_variance_ok: "Lệch giá ≤ 30%",
-  c3_line_totals_diff: "Tổng & dòng khớp (±3% / 10% qty / 15% price)",
+  c3_line_totals_diff: "Tổng & dòng khớp (±3% / 10% SL / 15% giá)",
   c4_no_quality_issue: "Không lỗi chất lượng",
   c5_value_cap: "Tổng ≤ 10 triệu",
-  c6_supplier_history: "NCC đã có ≥ 3 GRN/90 ngày",
-  c7_no_manual_review: "Không thuộc cold-chain",
+  c6_supplier_history: "NCC đã có ≥ 3 phiếu nhập / 90 ngày",
+  c7_no_manual_review: "Không thuộc hàng bảo quản lạnh",
   c8_trust_score_ok: "Điểm tin cậy ≥ 70",
 } as const;
 
 /** Failed reason codes from grn_is_auto_approvable */
 export const AUTO_APPROVE_FAIL_REASON_VI = {
-  no_po: "Thiếu PO",
+  no_po: "Thiếu đơn đặt hàng",
   variance_tier_gt1: "Lệch giá vượt ngưỡng",
   line_totals_diff: "Tổng/dòng lệch quá",
   quality_issue: "Có dòng lỗi chất lượng",
-  value_cap: "Vượt cap giá trị",
+  value_cap: "Vượt giới hạn giá trị",
   supplier_history_lt3: "NCC chưa đủ lịch sử",
-  ingredient_manual_review: "Có cold-chain SKU",
+  ingredient_manual_review: "Có nguyên liệu cần bảo quản lạnh",
   trust_score_lt70: "Điểm tin cậy chưa đủ",
 } as const;
 
 /** Error messages for inventory forms */
 export const INVENTORY_ERROR_LABELS_VI = {
-  photo_required: "Cần ảnh chứng minh (waste tier ≥ 1)",
+  photo_required: "Cần ảnh chứng minh (hao hụt bậc ≥ 1)",
   note_too_short: "Ghi chú tối thiểu ký tự",
   rate_limit_exceeded: "Đã vượt giới hạn thử lại — vui lòng đợi",
-  shift_cap_exceeded: "Vượt hạn mức waste ca này",
-  branch_daily_cap_exceeded: "Vượt cap waste ngày của chi nhánh",
+  shift_cap_exceeded: "Vượt hạn mức hao hụt ca này",
+  branch_daily_cap_exceeded: "Vượt giới hạn hao hụt ngày của chi nhánh",
   self_approval_forbidden: "Không thể tự duyệt phiếu của mình",
   period_hard_closed: "Kỳ kế toán đã khóa cứng",
   zone_lock_held_by_other: "Vùng đang được người khác đếm",

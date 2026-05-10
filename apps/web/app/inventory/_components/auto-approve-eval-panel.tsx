@@ -47,8 +47,8 @@ export function AutoApproveEvalPanel({
         <div className="flex items-center justify-between gap-2">
           <h4 className="font-heading text-sm font-semibold">
             {evaluation.approved
-              ? "Sẽ auto-approve khi submit"
-              : "Chưa đủ điều kiện auto-approve"}
+              ? "Sẽ tự duyệt khi gửi"
+              : "Chưa đủ điều kiện tự duyệt"}
           </h4>
           <div className="flex gap-2">
             {evaluation.inWindow ? (
@@ -56,13 +56,13 @@ export function AutoApproveEvalPanel({
                 variant="outline"
                 className="bg-info/15 text-info border-info/40"
               >
-                Trong Express window
-                {evaluation.inExtendedWindow ? " (extended)" : ""}
+                Trong cửa sổ tự duyệt nhanh
+                {evaluation.inExtendedWindow ? " (mở rộng)" : ""}
               </Badge>
             ) : null}
             {typeof evaluation.trustScore === "number" ? (
               <Badge variant="secondary">
-                Trust: {evaluation.trustScore.toFixed(0)}
+                Điểm tin cậy: {evaluation.trustScore.toFixed(0)}
               </Badge>
             ) : null}
           </div>
@@ -91,7 +91,7 @@ export function AutoApproveEvalPanel({
                 </span>
                 {isSoft ? (
                   <Badge variant="outline" className="text-xs">
-                    soft
+                    phụ
                   </Badge>
                 ) : null}
               </li>
@@ -101,7 +101,7 @@ export function AutoApproveEvalPanel({
 
         {evaluation.failedReasons.length > 0 ? (
           <div className="rounded-md bg-muted/50 p-2 text-xs">
-            <span className="font-medium">Lý do chưa pass: </span>
+            <span className="font-medium">Lý do chưa đạt: </span>
             {evaluation.failedReasons
               .map((r) => mapReason(r))
               .join(", ")}
@@ -111,9 +111,10 @@ export function AutoApproveEvalPanel({
         {evaluation.totalGrnValue !== null &&
         evaluation.totalPoValue !== null ? (
           <div className="text-xs text-muted-foreground">
-            GRN: {Math.round(evaluation.totalGrnValue).toLocaleString("vi-VN")}₫ •
-            PO: {Math.round(evaluation.totalPoValue).toLocaleString("vi-VN")}₫ •
-            NCC 90d: {evaluation.supplierGrnCount90d} GRN
+            Phiếu nhập:{" "}
+            {Math.round(evaluation.totalGrnValue).toLocaleString("vi-VN")}₫ • Đơn
+            đặt: {Math.round(evaluation.totalPoValue).toLocaleString("vi-VN")}₫
+            • NCC 90 ngày: {evaluation.supplierGrnCount90d} phiếu
           </div>
         ) : null}
       </CardContent>

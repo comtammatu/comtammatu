@@ -2,7 +2,7 @@
 
 ## Current State
 
-The design system is locked to the current shadcn preset and Ma Tu Concept 01 tokens. It is not a separate custom theme layer.
+The design system is locked to the current shadcn preset and the app-wide matu-superapp baseline. Generated `matu-*` tokens and `font-matu-body` are available for token-level implementation and visual QA, while route code should prefer semantic token classes and canonical surface adapters. This is governed by the main design-system contract, not a separate custom theme layer.
 
 Runtime authority:
 
@@ -17,8 +17,10 @@ Runtime authority:
 
 - Use shadcn/Radix primitives from `packages/ui/src/components/*`.
 - Use `apps/web/app/components/surface.tsx` for app-level page/header/section/toolbar/empty/link-card patterns.
+- Use `apps/web/app/components/surface.tsx` for route surfaces; `matu-surface.tsx` is compatibility/showcase only.
 - Use form helpers from `apps/web/app/components/form/*`.
 - Use semantic tokens, not raw palette classes for status meaning.
+- Prefer semantic classes; use generated `matu-*` token classes only for token QA or approved token-level implementation.
 - Do not add arbitrary Tailwind dimensions.
 - Do not add route-specific themes or `theme.css`.
 - Do not fake primitives with raw `div`/`span`/`p`.
@@ -37,9 +39,10 @@ The Super App/Merchant Platform rebuild should produce one coherent product feel
 
 Read:
 
-- `docs/plan/super-app-merchant-platform-rebuild.md`
-- `docs/plan/ui-ux-rebuild.md`
-- `docs/plan/ui-ux-page-contracts.md`
+- `docs/spec/design-system.md`
+- `docs/modules/ui.md`
+- `docs/agent/rules/ui.md`
+- `docs/plan/inventory-redesign-2026-05-08/shotgun-hom-nay.md` when touching the Inventory pilot
 
 ## What To Do Next
 

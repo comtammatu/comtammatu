@@ -101,7 +101,7 @@ export function BlindCountingGrid({
         </Badge>
         {blindMode ? (
           <Badge variant="outline" className="border-warning/40 bg-warning/15 text-warning-foreground">
-            Blind mode
+            Đếm mù
           </Badge>
         ) : null}
       </div>
@@ -189,7 +189,7 @@ function CountRow({
         <div className="inline-flex items-center gap-1">
           {line.isFinal ? (
             <Badge variant="outline" className="gap-1 border-success/40 text-success">
-              <IconCheck className="size-3.5" /> Final
+              <IconCheck className="size-3.5" /> Hoàn tất
             </Badge>
           ) : line.needsRecount ? (
             <Badge

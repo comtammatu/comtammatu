@@ -6,7 +6,7 @@
 
 - Surface: all authenticated web surfaces plus operational POS/KDS surfaces.
 - Primary user job: know whether the current action succeeded, failed, needs retry, or created follow-up work.
-- Route family: `/admin/*`, `/br/[branchId]/pos`, `/br/[branchId]/kds`, `/employee`, `/inventory/*`, `/notifications`.
+- Route family: `/portal`, `/admin/*`, `/br/[branchId]/pos`, `/br/[branchId]/kds`, `/employee`, `/inventory/*`, `/notifications`.
 - Change type: behavior and UX contract. Runtime code should follow this contract before adding new notification producers.
 - Primitives: `Sonner`, `Button`, `Popover`, `Card`, `ScrollArea`, `Badge`, `Empty`, `Item`, `Tooltip`, and route shells from the active shadcn preset.
 

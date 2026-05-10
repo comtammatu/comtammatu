@@ -2,21 +2,23 @@
 
 ## Overview
 
-Turborepo monorepo deployed to Vercel. Supabase for database + auth. Upstash Redis for rate limiting. GitHub Actions for CI.
+Turborepo monorepo with the web app deployed to Vercel and the print agent shipped as an out-of-band Node service. Supabase provides database + auth. Upstash Redis backs rate limiting. GitHub Actions covers CI.
 
 ## Monorepo Structure
 
 ```
 comtammatu/
 ├── apps/
-│   └── web/                # Next.js 16.2 — the only deployable app
+│   ├── web/                # Next.js 16.2 — primary Vercel app
+│   └── print-agent/        # Out-of-band Node service for branch printers / presence
 ├── packages/
 │   ├── database/           # Supabase clients + generated types
 │   ├── shared/             # Auth types, ACL, utilities
 │   ├── ui/                 # shadcn/ui component library
-│   └── security/           # Rate limiting
+│   ├── security/           # Rate limiting
+│   └── design-tokens/      # Generated matu-* pilot tokens
 ├── supabase/
-│   └── migrations/         # SQL migrations (applied via CI after PR merge)
+│   └── migrations/         # SQL migrations (prod applied manually by owner after PR merge)
 ├── turbo.json              # Task pipeline
 ├── pnpm-workspace.yaml     # Workspace definition
 └── tsconfig.base.json      # Shared TS config
@@ -33,7 +35,7 @@ typecheck: no deps           → parallel
 dev:    cache: false         → persistent
 ```
 
-Build order: `packages/*` (parallel) → `apps/web` (depends on packages).
+Build order: `packages/*` (parallel) → app builds that depend on them (`apps/web`, plus `apps/print-agent` when its filter is included).
 
 ## Runtime Requirements
 
@@ -52,6 +54,9 @@ Build order: `packages/*` (parallel) → `apps/web` (depends on packages).
 ```
 NEXT_PUBLIC_SUPABASE_URL          # Supabase project URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY     # Supabase anonymous key (public)
+NEXT_PUBLIC_APP_HOST              # Canonical app/admin host in production
+NEXT_PUBLIC_FEEDBACK_HOST         # Canonical public feedback host in production
+ALLOWED_ORIGINS_FEEDBACK          # Allowed Origin list for /r/* submissions
 UPSTASH_REDIS_REST_URL            # Rate limiting
 UPSTASH_REDIS_REST_TOKEN          # Rate limiting
 ```
@@ -73,7 +78,7 @@ pnpm install
 # 2. Link Supabase project
 supabase link --project-ref YOUR_PROJECT_ID
 
-# 3. Generate types (migrations applied via CI after PR merge)
+# 3. Generate types (after migrations are applied to the type source schema)
 pnpm db:types
 
 # 4. Start dev server
@@ -85,7 +90,7 @@ Full setup guide: `docs/ref/setup.md`
 ## Deployment
 
 - **Vercel:** Auto-deploy from main branch. Environment variables set in Vercel dashboard.
-- **Supabase:** Migrations applied manually by owner (`supabase db push`) after PR merge.
+- **Supabase:** Dev/test migrations may be applied for verification after confirming the target is not production. Production migrations are applied manually by owner after PR merge.
 - **GitHub Actions:** CI pipeline (typecheck + build + lint). Secrets documented in commit `1223952`.
 
 ## TypeScript Configuration
@@ -111,5 +116,6 @@ pnpm format       # Prettier format
 Written by codebase-oracle (manual) | 2026-04-02
 Data: Direct source reading
 Audience: new engineer, devops | Confidence: 90%
+Updated: monorepo app/package map + feedback host env sync (2026-05-09)
 Unknowns: 1 (GitHub Actions workflow details not verified)
 -->

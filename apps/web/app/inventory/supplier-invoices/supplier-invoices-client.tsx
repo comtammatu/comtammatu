@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { TriangleAlert as IconAlertTriangle, CircleCheck as IconCircleCheck, Search as IconSearch } from "lucide-react";
+import {
+  TriangleAlert as IconAlertTriangle,
+  CircleCheck as IconCircleCheck,
+  Search as IconSearch,
+} from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -59,7 +63,6 @@ import {
   fetchSupplierInvoices,
   recomputeInvoiceMatching,
 } from "../procurement-actions";
-
 
 import { formatVND } from "../_lib/format";
 import {
@@ -315,7 +318,7 @@ export function SupplierInvoicesClient({
     const resolvedSupplierId =
       selectedGrn?.supplierId ?? Number(supplierId || 0);
     if (!resolvedSupplierId) {
-      toast.error("Chọn nhà cung cấp hoặc GRN liên kết.");
+      toast.error("Chọn nhà cung cấp hoặc phiếu nhập liên kết.");
       return;
     }
     if (!invoiceNumber.trim()) {
@@ -378,128 +381,129 @@ export function SupplierInvoicesClient({
         }
       />
 
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)]">
-          {/* Collapsed to single AppToolbar */}
-          <AppToolbar
-            search={
-              <InputGroup className="h-10 flex-1">
-                <InputGroupAddon>
-                  <IconSearch />
-                </InputGroupAddon>
-                <InputGroupInput
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder={copy.searchPlaceholder}
-                />
-              </InputGroup>
-            }
-            filters={
-              <>
-                <Combobox
-                  value={supplierFilter}
-                  onValueChange={setSupplierFilter}
-                  options={[
-                    { value: ALL_FILTER_VALUE, label: copy.allSuppliers },
-                    ...supplierOptions,
-                  ]}
-                  placeholder={copy.supplierPlaceholder}
-                  searchPlaceholder={copy.supplierSearchPlaceholder}
-                  aria-label={copy.supplierFilterAria}
-                  triggerClassName="h-10 w-48"
-                />
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)]">
+        {/* Collapsed to single AppToolbar */}
+        <AppToolbar
+          search={
+            <InputGroup className="flex-1">
+              <InputGroupInput
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder={copy.searchPlaceholder}
+              />
+              <InputGroupAddon>
+                <IconSearch />
+              </InputGroupAddon>
+            </InputGroup>
+          }
+          filters={
+            <>
+              <Combobox
+                value={supplierFilter}
+                onValueChange={setSupplierFilter}
+                options={[
+                  { value: ALL_FILTER_VALUE, label: copy.allSuppliers },
+                  ...supplierOptions,
+                ]}
+                placeholder={copy.supplierPlaceholder}
+                searchPlaceholder={copy.supplierSearchPlaceholder}
+                aria-label={copy.supplierFilterAria}
+                triggerClassName="h-10 w-48"
+              />
 
-                <Select
-                  value={matchStatusFilter}
-                  onValueChange={setMatchStatusFilter}
-                >
-                  <SelectTrigger className="w-48">
-                    <SelectValue placeholder={copy.matchingPlaceholder} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={ALL_FILTER_VALUE}>
-                      {copy.allMatching}
+              <Select
+                value={matchStatusFilter}
+                onValueChange={setMatchStatusFilter}
+              >
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder={copy.matchingPlaceholder} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL_FILTER_VALUE}>
+                    {copy.allMatching}
+                  </SelectItem>
+                  {MATCH_STATUS_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
                     </SelectItem>
-                    {MATCH_STATUS_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  ))}
+                </SelectContent>
+              </Select>
 
-                <Select
-                  value={paymentStatusFilter}
-                  onValueChange={setPaymentStatusFilter}
-                >
-                  <SelectTrigger className="w-48">
-                    <SelectValue placeholder={copy.paymentPlaceholder} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={ALL_FILTER_VALUE}>
-                      {copy.allPayments}
+              <Select
+                value={paymentStatusFilter}
+                onValueChange={setPaymentStatusFilter}
+              >
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder={copy.paymentPlaceholder} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL_FILTER_VALUE}>
+                    {copy.allPayments}
+                  </SelectItem>
+                  {PAYMENT_STATUS_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
                     </SelectItem>
-                    {PAYMENT_STATUS_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </>
-            }
-          />
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          }
+        />
 
-          {/* Table */}
-          <Card>
-            <CardContent className="p-0">
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={showOnlyOverdue ? "default" : "outline"}
-                  onClick={() => setShowOnlyOverdue((current) => !current)}
-                  aria-pressed={showOnlyOverdue}
-                >
-                  <IconAlertTriangle className="size-4" />
-                  {copy.overdueOnly}
-                </Button>
-                <Badge variant="outline" className="rounded-full">
-                  {copy.invoiceCount(filteredInvoices.length, rows.length)}
-                </Badge>
-              </div>
+        {/* Table */}
+        <Card>
+          <CardContent className="p-0">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <Button
+                type="button"
+                size="sm"
+                variant={showOnlyOverdue ? "default" : "outline"}
+                onClick={() => setShowOnlyOverdue((current) => !current)}
+                aria-pressed={showOnlyOverdue}
+              >
+                <IconAlertTriangle className="size-4" />
+                {copy.overdueOnly}
+              </Button>
+              <Badge variant="outline" className="rounded-full">
+                {copy.invoiceCount(filteredInvoices.length, rows.length)}
+              </Badge>
+            </div>
 
-              {isMobile ? (
-                <div className="space-y-3">
-                  {filteredInvoices.length === 0 ? (
-                    <Card>
-                      <CardContent className="py-10 text-center">
-                        <p className="text-base font-semibold">
-                          {showEmptyResults
-                            ? copy.emptyMatchedTitle
-                            : copy.emptyInitialTitle}
-                        </p>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          {showEmptyResults
-                            ? copy.emptyMatchedDescription
-                            : copy.emptyInitialDescription}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  ) : null}
+            {isMobile ? (
+              <div className="space-y-3">
+                {filteredInvoices.length === 0 ? (
+                  <Card>
+                    <CardContent className="py-10 text-center">
+                      <p className="text-base font-semibold">
+                        {showEmptyResults
+                          ? copy.emptyMatchedTitle
+                          : copy.emptyInitialTitle}
+                      </p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {showEmptyResults
+                          ? copy.emptyMatchedDescription
+                          : copy.emptyInitialDescription}
+                      </p>
+                    </CardContent>
+                  </Card>
+                ) : null}
 
-                  {filteredInvoices.map((invoice) => {
-                    const outstandingAmount = getOutstandingAmount(invoice);
-                    const overdue = isInvoiceOverdue(invoice);
-                    const isActive = selectedInvoice?.id === invoice.id;
+                {filteredInvoices.map((invoice) => {
+                  const outstandingAmount = getOutstandingAmount(invoice);
+                  const overdue = isInvoiceOverdue(invoice);
+                  const isActive = selectedInvoice?.id === invoice.id;
 
-                    return (
-                      <Card
-                        key={invoice.id}
-                        className={cn(
-                          "bg-muted/30 transition",
-                          isActive && "ring-primary/40 shadow-md",
-                        )}
-                      ><CardContent>
+                  return (
+                    <Card
+                      key={invoice.id}
+                      className={cn(
+                        "bg-muted/30 transition",
+                        isActive && "ring-primary/40 shadow-md",
+                      )}
+                    >
+                      <CardContent>
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0 space-y-1">
                             <p className="font-mono text-base font-semibold">
@@ -570,193 +574,191 @@ export function SupplierInvoicesClient({
                         >
                           {isActive ? copy.analyzing : copy.viewAnalysis}
                         </Button>
-                      </CardContent></Card>
-                    );
-                  })}
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="min-w-40">
-                        {copy.invoiceNumber}
-                      </TableHead>
-                      <TableHead className="min-w-52">
-                        {copy.supplier}
-                      </TableHead>
-                      <TableHead className="min-w-44">
-                        {copy.dateDue}
-                      </TableHead>
-                      <TableHead className="min-w-36">
-                        {copy.matchingPlaceholder}
-                      </TableHead>
-                      <TableHead className="min-w-36">
-                        {copy.paymentPlaceholder}
-                      </TableHead>
-                      <TableHead className="min-w-32 text-right">
-                        {copy.remaining}
-                      </TableHead>
-                      <TableHead className="w-28 text-right">
-                        {FORM_VI.action}
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredInvoices.length === 0 ? (
-                      <TableEmptyStateRow
-                        colSpan={7}
-                        title={
-                          showEmptyResults
-                            ? copy.emptyMatchedTitle
-                            : copy.emptyInitialTitle
-                        }
-                        description={
-                          showEmptyResults
-                            ? copy.emptyMatchedDescription
-                            : copy.emptyInitialDescription
-                        }
-                      />
-                    ) : null}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="min-w-40">
+                      {copy.invoiceNumber}
+                    </TableHead>
+                    <TableHead className="min-w-52">{copy.supplier}</TableHead>
+                    <TableHead className="min-w-44">{copy.dateDue}</TableHead>
+                    <TableHead className="min-w-36">
+                      {copy.matchingPlaceholder}
+                    </TableHead>
+                    <TableHead className="min-w-36">
+                      {copy.paymentPlaceholder}
+                    </TableHead>
+                    <TableHead className="min-w-32 text-right">
+                      {copy.remaining}
+                    </TableHead>
+                    <TableHead className="w-28 text-right">
+                      {FORM_VI.action}
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredInvoices.length === 0 ? (
+                    <TableEmptyStateRow
+                      colSpan={7}
+                      title={
+                        showEmptyResults
+                          ? copy.emptyMatchedTitle
+                          : copy.emptyInitialTitle
+                      }
+                      description={
+                        showEmptyResults
+                          ? copy.emptyMatchedDescription
+                          : copy.emptyInitialDescription
+                      }
+                    />
+                  ) : null}
 
-                    {filteredInvoices.map((invoice) => {
-                      const outstandingAmount = getOutstandingAmount(invoice);
-                      const overdue = isInvoiceOverdue(invoice);
-                      const isActive = selectedInvoice?.id === invoice.id;
+                  {filteredInvoices.map((invoice) => {
+                    const outstandingAmount = getOutstandingAmount(invoice);
+                    const overdue = isInvoiceOverdue(invoice);
+                    const isActive = selectedInvoice?.id === invoice.id;
 
-                      return (
-                        <TableRow
-                          key={invoice.id}
-                          className={cn(isActive && "bg-primary/5")}
-                        >
-                          <TableCell>
-                            <div className="space-y-1">
-                              <p className="font-mono font-semibold text-foreground">
-                                {invoice.code}
+                    return (
+                      <TableRow
+                        key={invoice.id}
+                        className={cn(isActive && "bg-primary/5")}
+                      >
+                        <TableCell>
+                          <div className="space-y-1">
+                            <p className="font-mono font-semibold text-foreground">
+                              {invoice.code}
+                            </p>
+                            {invoice.grnCode ? (
+                              <p className="text-xs text-muted-foreground">
+                                Phiếu nhập: {invoice.grnCode}
                               </p>
-                              {invoice.grnCode ? (
-                                <p className="text-xs text-muted-foreground">
-                                  GRN: {invoice.grnCode}
-                                </p>
-                              ) : null}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {invoice.supplierName}
-                          </TableCell>
-                          <TableCell>
-                            <div className="space-y-1 text-sm">
-                              <p>{formatDate(invoice.invoiceDate)}</p>
-                              <p
-                                className={cn(
-                                  "text-muted-foreground",
-                                  overdue && "font-medium text-destructive",
-                                )}
-                              >
-                                {copy.duePrefix(formatDate(invoice.dueDate))}
-                              </p>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={getInventoryStatusBadgeVariant(
-                                invoice.matchStatus,
+                            ) : null}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {invoice.supplierName}
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1 text-sm">
+                            <p>{formatDate(invoice.invoiceDate)}</p>
+                            <p
+                              className={cn(
+                                "text-muted-foreground",
+                                overdue && "font-medium text-destructive",
                               )}
                             >
-                              {getInventoryStatusLabel(invoice.matchStatus)}
+                              {copy.duePrefix(formatDate(invoice.dueDate))}
+                            </p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={getInventoryStatusBadgeVariant(
+                              invoice.matchStatus,
+                            )}
+                          >
+                            {getInventoryStatusLabel(invoice.matchStatus)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-2">
+                            <Badge
+                              variant={getInventoryStatusBadgeVariant(
+                                invoice.paymentStatus,
+                              )}
+                            >
+                              {getInventoryStatusLabel(invoice.paymentStatus)}
                             </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex flex-wrap gap-2">
+                            {overdue ? (
                               <Badge
                                 variant={getInventoryStatusBadgeVariant(
-                                  invoice.paymentStatus,
+                                  "overdue",
                                 )}
                               >
-                                {getInventoryStatusLabel(invoice.paymentStatus)}
+                                {getInventoryStatusLabel("overdue")}
                               </Badge>
-                              {overdue ? (
-                                <Badge
-                                  variant={getInventoryStatusBadgeVariant(
-                                    "overdue",
-                                  )}
-                                >
-                                  {getInventoryStatusLabel("overdue")}
-                                </Badge>
-                              ) : null}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right font-mono font-semibold">
-                            {messages.inventory.common.currencyCompact(
-                              formatVND(outstandingAmount),
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant={isActive ? "default" : "outline"}
-                              onClick={() => setSelectedInvoiceId(invoice.id)}
-                            >
-                              {isActive ? copy.analyzingShort : copy.analysis}
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
+                            ) : null}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right font-mono font-semibold">
+                          {messages.inventory.common.currencyCompact(
+                            formatVND(outstandingAmount),
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={isActive ? "default" : "outline"}
+                            onClick={() => setSelectedInvoiceId(invoice.id)}
+                          >
+                            {isActive ? copy.analyzingShort : copy.analysis}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
 
-          <Card>
-              <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <CardTitle>
-                {selectedInvoice?.code ?? copy.noInvoiceSelected}
-              </CardTitle>
-              {selectedInvoice ? (
-                <div className="flex flex-wrap justify-end gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={handleRecomputeMatching}
-                    disabled={isPending}
-                  >
-                    {copy.recomputeMatching}
-                  </Button>
-                  <Badge
-                    variant={getInventoryStatusBadgeVariant(
-                      selectedInvoice.matchStatus,
-                    )}
-                  >
-                    {getInventoryStatusLabel(selectedInvoice.matchStatus)}
-                  </Badge>
-                  <Badge
-                    variant={getInventoryStatusBadgeVariant(
-                      selectedInvoice.paymentStatus,
-                    )}
-                  >
-                    {getInventoryStatusLabel(selectedInvoice.paymentStatus)}
-                  </Badge>
-                </div>
-              ) : null}
-            </CardHeader>
-            <CardContent>
-              {selectedInvoice ? (
-                <div className="space-y-5">
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <Card className="bg-muted/30"><CardContent>
-                      <Badge variant="secondary">
-                        {copy.totalInvoice}
-                      </Badge>
+        <Card>
+          <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <CardTitle>
+              {selectedInvoice?.code ?? copy.noInvoiceSelected}
+            </CardTitle>
+            {selectedInvoice ? (
+              <div className="flex flex-wrap justify-end gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={handleRecomputeMatching}
+                  disabled={isPending}
+                >
+                  {copy.recomputeMatching}
+                </Button>
+                <Badge
+                  variant={getInventoryStatusBadgeVariant(
+                    selectedInvoice.matchStatus,
+                  )}
+                >
+                  {getInventoryStatusLabel(selectedInvoice.matchStatus)}
+                </Badge>
+                <Badge
+                  variant={getInventoryStatusBadgeVariant(
+                    selectedInvoice.paymentStatus,
+                  )}
+                >
+                  {getInventoryStatusLabel(selectedInvoice.paymentStatus)}
+                </Badge>
+              </div>
+            ) : null}
+          </CardHeader>
+          <CardContent>
+            {selectedInvoice ? (
+              <div className="space-y-5">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Card className="bg-muted/30">
+                    <CardContent>
+                      <Badge variant="secondary">{copy.totalInvoice}</Badge>
                       <p className="mt-2 font-mono text-xl font-semibold">
                         {messages.inventory.common.currencyCompact(
                           formatVND(selectedInvoice.amount),
                         )}
                       </p>
-                    </CardContent></Card>
-                    <Card className="bg-muted/30"><CardContent>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-muted/30">
+                    <CardContent>
                       <Badge variant="secondary">
                         {copy.outstandingPayable}
                       </Badge>
@@ -765,19 +767,23 @@ export function SupplierInvoicesClient({
                           formatVND(getOutstandingAmount(selectedInvoice)),
                         )}
                       </p>
-                    </CardContent></Card>
-                  </div>
+                    </CardContent>
+                  </Card>
+                </div>
 
-                  <div className="space-y-3">
-                    <Card className="bg-muted/30 py-0"><CardContent className="flex items-center justify-between gap-3 px-4 py-3">
+                <div className="space-y-3">
+                  <Card className="bg-muted/30 py-0">
+                    <CardContent className="flex items-center justify-between gap-3 px-4 py-3">
                       <span className="text-sm text-muted-foreground">
                         {copy.invoiceDate}
                       </span>
                       <span className="text-sm font-medium">
                         {formatDate(selectedInvoice.invoiceDate)}
                       </span>
-                    </CardContent></Card>
-                    <Card className="bg-muted/30 py-0"><CardContent className="flex items-center justify-between gap-3 px-4 py-3">
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-muted/30 py-0">
+                    <CardContent className="flex items-center justify-between gap-3 px-4 py-3">
                       <span className="text-sm text-muted-foreground">
                         {copy.dueDate}
                       </span>
@@ -790,8 +796,10 @@ export function SupplierInvoicesClient({
                       >
                         {formatDate(selectedInvoice.dueDate)}
                       </span>
-                    </CardContent></Card>
-                    <Card className="bg-muted/30 py-0"><CardContent className="flex items-center justify-between gap-3 px-4 py-3">
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-muted/30 py-0">
+                    <CardContent className="flex items-center justify-between gap-3 px-4 py-3">
                       <span className="text-sm text-muted-foreground">
                         {copy.paidAmount}
                       </span>
@@ -800,63 +808,66 @@ export function SupplierInvoicesClient({
                           formatVND(selectedInvoice.paidAmount),
                         )}
                       </span>
-                    </CardContent></Card>
-                    <Card className="bg-muted/30 py-0"><CardContent className="flex items-center justify-between gap-3 px-4 py-3">
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-muted/30 py-0">
+                    <CardContent className="flex items-center justify-between gap-3 px-4 py-3">
                       <span className="text-sm text-muted-foreground">
                         {copy.linkedGrn}
                       </span>
                       <span className="text-sm font-medium">
                         {selectedInvoice.grnCode ?? copy.notLinked}
                       </span>
-                    </CardContent></Card>
-                  </div>
-
-                  {selectedInvoice.variance !== null &&
-                  selectedInvoice.variance > 0 ? (
-                    <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
-                      <div className="flex items-start gap-3">
-                        <IconAlertTriangle className="mt-0.5 size-4 text-destructive" />
-                        <div className="space-y-1">
-                          <p className="text-sm font-semibold text-destructive">
-                            {copy.varianceTitle(selectedInvoice.variance)}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {copy.varianceDescription}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="rounded-lg border border-success/30 bg-success/5 p-4">
-                      <div className="flex items-start gap-3">
-                        <IconCircleCheck className="mt-0.5 size-4 text-success" />
-                        <div className="space-y-1">
-                          <p className="text-sm font-semibold text-success">
-                            {copy.safeTitle}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {copy.safeDescription}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                    </CardContent>
+                  </Card>
                 </div>
-              ) : (
-                <Empty className="py-8">
-                  <EmptyHeader>
-                    <EmptyTitle className="text-sm font-semibold">
-                      {copy.noAnalysisTitle}
-                    </EmptyTitle>
-                    <EmptyDescription className="text-xs leading-5">
-                      {copy.noAnalysisDescription}
-                    </EmptyDescription>
-                  </EmptyHeader>
-                </Empty>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+
+                {selectedInvoice.variance !== null &&
+                selectedInvoice.variance > 0 ? (
+                  <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+                    <div className="flex items-start gap-3">
+                      <IconAlertTriangle className="mt-0.5 size-4 text-destructive" />
+                      <div className="space-y-1">
+                        <p className="text-sm font-semibold text-destructive">
+                          {copy.varianceTitle(selectedInvoice.variance)}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {copy.varianceDescription}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-success/30 bg-success/5 p-4">
+                    <div className="flex items-start gap-3">
+                      <IconCircleCheck className="mt-0.5 size-4 text-success" />
+                      <div className="space-y-1">
+                        <p className="text-sm font-semibold text-success">
+                          {copy.safeTitle}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {copy.safeDescription}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Empty className="py-8">
+                <EmptyHeader>
+                  <EmptyTitle className="text-sm font-semibold">
+                    {copy.noAnalysisTitle}
+                  </EmptyTitle>
+                  <EmptyDescription className="text-xs leading-5">
+                    {copy.noAnalysisDescription}
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent>
@@ -953,13 +964,19 @@ export function SupplierInvoicesClient({
               <div className="flex items-center justify-between gap-3">
                 <span className="text-muted-foreground">{copy.vat}</span>
                 <span className="font-mono">
-                  {messages.inventory.common.currencyCompact(formatVND(vatAmount))}
+                  {messages.inventory.common.currencyCompact(
+                    formatVND(vatAmount),
+                  )}
                 </span>
               </div>
               <div className="mt-2 flex items-center justify-between gap-3">
-                <span className="text-muted-foreground">{FORM_VI.totalAmount}</span>
+                <span className="text-muted-foreground">
+                  {FORM_VI.totalAmount}
+                </span>
                 <span className="font-mono font-semibold">
-                  {messages.inventory.common.currencyCompact(formatVND(totalAmount))}
+                  {messages.inventory.common.currencyCompact(
+                    formatVND(totalAmount),
+                  )}
                 </span>
               </div>
             </div>

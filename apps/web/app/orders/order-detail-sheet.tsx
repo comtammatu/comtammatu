@@ -25,7 +25,12 @@ import {
 
 import { BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
 
-type ItemStatusBadge = "warning" | "info" | "success" | "destructive" | "outline";
+type ItemStatusBadge =
+  | "warning"
+  | "info"
+  | "success"
+  | "destructive"
+  | "outline";
 
 const ITEM_STATUS_META: Record<
   string,
@@ -227,7 +232,7 @@ export function OrderDetailSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+      <SheetContent size="lg" scroll="auto">
         <SheetHeader className="mb-6">
           <SheetTitle className="font-mono text-base">
             #{order.order_number}
@@ -543,10 +548,7 @@ export function OrderDetailSheet({
             {!auditPending && !auditError && audit && audit.length > 0 && (
               <ol className="space-y-2">
                 {audit.map((entry) => (
-                  <li
-                    key={entry.id}
-                    className="rounded-md border p-3 text-sm"
-                  >
+                  <li key={entry.id} className="rounded-md border p-3 text-sm">
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
                       <span className="font-medium">{entry.label}</span>
                       <span className="font-mono text-xs text-muted-foreground">
@@ -559,7 +561,10 @@ export function OrderDetailSheet({
                       </span>
                     </div>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Bởi <span className="font-medium text-foreground">{entry.by_name}</span>
+                      Bởi{" "}
+                      <span className="font-medium text-foreground">
+                        {entry.by_name}
+                      </span>
                     </p>
                     {entry.reason && (
                       <p className="mt-1 text-sm">

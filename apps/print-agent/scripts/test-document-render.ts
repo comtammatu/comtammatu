@@ -133,6 +133,96 @@ const documentKitchen: PrintPayload = {
   },
 };
 
+const modularDocumentKitchen: PrintPayload = {
+  ...baseKitchen,
+  template_version: "0:2",
+  document: {
+    schema_version: 1,
+    template_id: 0,
+    template_version: 2,
+    paper_width_mm: 80,
+    blocks: [
+      { type: "kitchenHeader", payload: baseKitchen },
+      { type: "kitchenMeta", payload: baseKitchen },
+      { type: "kitchenItems", payload: baseKitchen },
+      { type: "kitchenNote", payload: baseKitchen },
+    ],
+  },
+};
+
+const baseTaxInvoice = {
+  kind: "tax_invoice",
+  branch_name: "Chi nhánh Quận 1",
+  branch_address: "123 Nguyễn Huệ, P. Bến Nghé, Q.1",
+  branch_phone: "028.1234.5678",
+  branch_tax_code: "0123456789",
+  invoice_number: "1C26TAA-00000123",
+  invoice_series: "1C26TAA",
+  cqt_code: "CQT-ABC-123",
+  provider: "Viettel SInvoice",
+  provider_ref: "SINVOICE-123",
+  invoice_kind: "per_order",
+  order_number: "ORD-2026-001",
+  buyer_name: "Công ty TNHH Khách Hàng",
+  buyer_tax_code: "0312345678",
+  buyer_address: "45 Pasteur, Q.1, TP.HCM",
+  items: baseReceipt.items,
+  subtotal: 101851.85,
+  vat_rate: 8,
+  vat_amount: 8148.15,
+  total_amount: 110000,
+  issued_at: "2026-05-05T14:32:00",
+  printed_at: "2026-05-05T14:33:00",
+  lookup_url: "https://sinvoice.viettel.vn/tracuu/abc",
+} satisfies PrintPayload;
+
+const documentTaxInvoice: PrintPayload = {
+  ...baseTaxInvoice,
+  template_version: "0:1",
+  document: {
+    schema_version: 1,
+    template_id: 0,
+    template_version: 1,
+    paper_width_mm: 80,
+    font_profile: "thermal_vietnamese",
+    blocks: [
+      {
+        type: "brandHeader",
+        eyebrow: "TIỆM CƠM TẤM",
+        name: "MÁ TƯ",
+        tagline: "Thịt tươi 100%",
+      },
+      {
+        type: "branchInfo",
+        branch_name: baseTaxInvoice.branch_name,
+        branch_address: baseTaxInvoice.branch_address,
+        branch_phone: baseTaxInvoice.branch_phone,
+        branch_tax_code: baseTaxInvoice.branch_tax_code,
+      },
+      { type: "divider", char: "=" },
+      {
+        type: "text",
+        text: "THÔNG TIN HĐĐT",
+        align: "center",
+        bold: true,
+        double: true,
+      },
+      { type: "divider", char: "=" },
+      { type: "taxInvoiceMeta", payload: baseTaxInvoice },
+      { type: "taxInvoiceBuyer", payload: baseTaxInvoice },
+      { type: "itemsTable", items: baseTaxInvoice.items },
+      {
+        type: "totals",
+        subtotal: baseTaxInvoice.subtotal,
+        tax_amount: baseTaxInvoice.vat_amount,
+        total_amount: baseTaxInvoice.total_amount,
+      },
+      { type: "taxInvoiceLookup", payload: baseTaxInvoice },
+      { type: "footer", lines: ["HĐĐT gốc lưu trên hệ thống/nhà cung cấp."] },
+    ],
+  },
+};
+
 function assertBytes(label: string, bytes: Uint8Array) {
   if (bytes.length < 100) {
     throw new Error(`${label} output too small: ${bytes.length} bytes`);
@@ -149,6 +239,21 @@ async function main() {
   assertBytes("document text kitchen", renderPayload(documentKitchen));
   assertBytes("legacy bitmap kitchen", await renderPayloadBitmap(baseKitchen));
   assertBytes("document bitmap kitchen", await renderPayloadBitmap(documentKitchen));
+  assertBytes("modular text kitchen", renderPayload(modularDocumentKitchen));
+  assertBytes(
+    "modular bitmap kitchen",
+    await renderPayloadBitmap(modularDocumentKitchen),
+  );
+  assertBytes("legacy text tax invoice", renderPayload(baseTaxInvoice));
+  assertBytes("document text tax invoice", renderPayload(documentTaxInvoice));
+  assertBytes(
+    "legacy bitmap tax invoice",
+    await renderPayloadBitmap(baseTaxInvoice),
+  );
+  assertBytes(
+    "document bitmap tax invoice",
+    await renderPayloadBitmap(documentTaxInvoice),
+  );
 }
 
 main().catch((error) => {

@@ -544,7 +544,7 @@ File [apps/web/app/inventory/_lib/labels.ts](../../apps/web/app/inventory/_lib/l
 - HĐLĐ, BHXH: [labor-contracts.md](labor-contracts.md)
 - Kiến trúc hệ thống: [../spec/architecture.md](../spec/architecture.md)
 - Schema và enum: [../spec/database-schema.md](../spec/database-schema.md)
-- POS order lifecycle (payment-close override): [../plan/m2-order-lifecycle.md](../plan/m2-order-lifecycle.md)
+- POS order lifecycle (payment-close override, archived plan): [../archive/plan/m2-order-lifecycle.md](../archive/plan/m2-order-lifecycle.md)
 - Inventory UI labels: [../../apps/web/app/inventory/_lib/dictionary.ts](../../apps/web/app/inventory/_lib/dictionary.ts)
 - Module / site / nav labels chung: [../../packages/shared/src/labels/vi.ts](../../packages/shared/src/labels/vi.ts)
 - Regression rules: [../../tasks/regressions.md](../../tasks/regressions.md)

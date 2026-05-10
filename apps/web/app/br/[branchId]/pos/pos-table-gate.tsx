@@ -54,9 +54,10 @@ const TableButton = memo(function TableButton({
     <Button
       type="button"
       variant={isSelected ? "default" : "outline"}
+      size="touch"
       aria-label={messages.pos.tableGate.tableAria(table.number, statusLabel)}
       className={cn(
-        "h-32 w-full min-w-0 flex-col items-stretch justify-start gap-2 p-2.5 text-left whitespace-normal hover:shadow-md sm:h-36 sm:gap-3 sm:p-3 lg:h-40 lg:p-4 xl:h-44",
+        "aspect-square w-full min-w-0 flex-col items-stretch justify-start gap-1.5 p-2 text-left whitespace-normal hover:shadow-md sm:gap-2 sm:p-2.5 lg:gap-3 lg:p-3",
         isSelected
           ? "shadow-md"
           : isAvailable
@@ -68,7 +69,7 @@ const TableButton = memo(function TableButton({
       onClick={handleClick}
     >
       <div className="flex w-full min-w-0 items-center justify-between gap-1.5">
-        <p className="shrink-0 text-xs font-semibold uppercase tracking-wide opacity-60 sm:text-sm">
+        <p className="shrink-0 text-xs font-semibold uppercase tracking-wide opacity-60">
           {TABLE_VI.long}
         </p>
         <Badge
@@ -92,18 +93,15 @@ const TableButton = memo(function TableButton({
       </div>
 
       <div className="mt-auto flex w-full min-w-0 items-end justify-between gap-2">
-        <p className="text-3xl font-black leading-none tabular-nums sm:text-4xl lg:text-5xl xl:text-6xl">
+        <p className="font-mono text-2xl font-semibold leading-none tabular-nums sm:text-3xl">
           {table.number}
         </p>
         <div className="flex shrink-0 flex-col items-end gap-1">
-          <p className="text-sm font-semibold tabular-nums opacity-80 sm:text-base lg:text-lg">
+          <p className="text-xs font-semibold tabular-nums opacity-80 sm:text-sm">
             {messages.pos.tableGate.capacity(table.capacity)}
           </p>
           {orderCount >= 2 && (
-            <Badge
-              variant="secondary"
-              className="w-fit text-xs font-semibold"
-            >
+            <Badge variant="secondary" className="w-fit text-xs font-semibold">
               {messages.pos.tableGate.multiBill(orderCount)}
             </Badge>
           )}
@@ -152,10 +150,10 @@ function PosTableGateComponent({
           className="flex-1"
         />
       ) : (
-        <ScrollArea className="min-h-0 flex-1 overflow-hidden">
-          <div className="flex w-full flex-col gap-4 px-2 pb-28 pt-2 md:px-4 md:py-4 lg:px-5">
+        <ScrollArea className="min-h-0 flex-1">
+          <div className="flex w-full flex-col gap-3 px-2 pb-28 pt-2 md:gap-4 md:px-4 md:py-4 lg:px-5">
             {tableGroups.map(({ zoneName, zoneTables, availableCount }) => (
-              <section key={zoneName} className="flex flex-col gap-4">
+              <section key={zoneName} className="flex flex-col gap-3 md:gap-4">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex min-w-0 items-center gap-2">
                     <IconMapPin className="size-5 shrink-0 text-primary" />
@@ -173,7 +171,7 @@ function PosTableGateComponent({
                   </Badge>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4 2xl:grid-cols-5">
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-3 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-6">
                   {zoneTables.map((table) => (
                     <TableButton
                       key={table.id}

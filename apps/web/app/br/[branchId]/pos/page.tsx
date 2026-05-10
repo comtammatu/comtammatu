@@ -9,6 +9,7 @@ import {
   fetchActiveSession,
   fetchPosTerminals,
   fetchPosPermissionFlags,
+  fetchExpectedOpeningCash,
 } from "./actions";
 import {
   fetchPaymentMethodsForPos,
@@ -88,7 +89,10 @@ export default async function PosPage({
       );
     }
 
-    const terminalsResult = await fetchPosTerminals(branchIdNum);
+    const [terminalsResult, expectedOpeningResult] = await Promise.all([
+      fetchPosTerminals(branchIdNum),
+      fetchExpectedOpeningCash(branchIdNum),
+    ]);
 
     if (!terminalsResult.success) {
       return (
@@ -107,6 +111,29 @@ export default async function PosPage({
       );
     }
 
+    if (!expectedOpeningResult.success) {
+      return (
+        <PosStatusShell
+          icon={<IconDeviceDesktop />}
+          title="Không thể đọc tồn quỹ ca trước"
+          description={
+            expectedOpeningResult.error ??
+            "Chưa lấy được số tồn cuối ca trước. Vui lòng thử lại."
+          }
+          badge={{
+            label: "Lỗi tải tồn quỹ",
+            icon: <IconAlertTriangle className="size-3.5" />,
+            variant: "warning",
+          }}
+        />
+      );
+    }
+
+    const expectedOpening = expectedOpeningResult.data as {
+      expected: number;
+      prev_session_id: number | null;
+    };
+
     return (
       <SessionGate
         branchId={branchIdNum}
@@ -118,6 +145,8 @@ export default async function PosPage({
             has_open_session: boolean;
           }[]
         }
+        expectedOpeningCash={expectedOpening.expected}
+        hasPriorSession={expectedOpening.prev_session_id !== null}
       />
     );
   }

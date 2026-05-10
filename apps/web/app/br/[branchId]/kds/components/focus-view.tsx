@@ -18,7 +18,11 @@ import {
 } from "lucide-react";
 import { useBoardTick } from "../hooks/use-board-tick";
 import { getAgeStyle, getCardLeftAccent } from "../lib/age-style";
-import { getOrderTypeLabel, getStatusLabel, getStatusVariant } from "../lib/status-config";
+import {
+  getOrderTypeLabel,
+  getStatusLabel,
+  getStatusVariant,
+} from "../lib/status-config";
 import { AgeBadge } from "./age-badge";
 import { CancelledOverlay } from "./cancelled-overlay";
 import { TicketRowMeta } from "./ticket-row-meta";
@@ -38,7 +42,9 @@ const ADVANCE_DELAY_MS = 1500;
 
 function isOrderAllReady(order: KdsOrder): boolean {
   if (order.tickets.length === 0) return false;
-  return order.tickets.every((t) => t.status === "ready" || t.status === "cancelled");
+  return order.tickets.every(
+    (t) => t.status === "ready" || t.status === "cancelled",
+  );
 }
 
 function findNextActiveIndex(orders: KdsOrder[], from: number): number {
@@ -134,7 +140,9 @@ export function FocusView({
       <ScrollArea className="min-h-0 flex-1">
         <div className="flex min-h-80 items-center justify-center p-6 md:min-h-96">
           <AppEmptyState
-            title={hasGroupedOrders ? "Không có đơn phù hợp bộ lọc" : "Bếp đang rảnh"}
+            title={
+              hasGroupedOrders ? "Không có đơn phù hợp bộ lọc" : "Bếp đang rảnh"
+            }
             description={
               hasGroupedOrders
                 ? "Thay đổi bộ lọc để xem thêm đơn."
@@ -206,6 +214,11 @@ function FocusOrderPanel({
     return map;
   }, [order.tickets]);
 
+  const itemIds = useMemo(
+    () => new Set(order.items.map((item) => item.id)),
+    [order.items],
+  );
+
   const overallStatus = useMemo(() => {
     const statuses = order.tickets.map((t) => t.status);
     if (statuses.length > 0 && statuses.every((s) => s === "cancelled")) {
@@ -227,11 +240,8 @@ function FocusOrderPanel({
   const heroBg = isComplete ? "bg-success/10" : ageStyle.bg || "bg-card";
 
   const orphanTickets = useMemo(
-    () =>
-      order.tickets.filter(
-        (t) => !order.items.some((i) => i.id === t.order_item_id),
-      ),
-    [order.items, order.tickets],
+    () => order.tickets.filter((t) => !itemIds.has(t.order_item_id)),
+    [itemIds, order.tickets],
   );
 
   const pendingTickets = useMemo(
@@ -260,7 +270,7 @@ function FocusOrderPanel({
         <Button
           type="button"
           variant="outline"
-          size="sm"
+          size="lg"
           className="gap-1.5"
           onClick={onPrev}
           disabled={total <= 1}
@@ -280,7 +290,7 @@ function FocusOrderPanel({
         <Button
           type="button"
           variant="outline"
-          size="sm"
+          size="lg"
           className="gap-1.5"
           onClick={onNext}
           disabled={total <= 1}
@@ -292,11 +302,11 @@ function FocusOrderPanel({
       </div>
 
       <ScrollArea className="min-h-0 flex-1">
-        <div className="mx-auto w-full max-w-3xl p-3 md:p-4">
+        <div className="mx-auto w-full max-w-3xl p-2 md:p-4">
           <Card
             data-testid={`kds-focus-card-${order.groupKey}`}
             className={cn(
-              "gap-0 overflow-hidden border-l-4 py-0 shadow-sm",
+              "gap-0 overflow-hidden border-l-4 py-0",
               getCardLeftAccent(overallStatus, elapsedMinutes),
             )}
           >
@@ -304,12 +314,12 @@ function FocusOrderPanel({
                 destructive ≥10ph, success when complete). */}
             <div
               className={cn(
-                "flex items-start justify-between gap-3 border-b px-4 py-4 transition-colors md:px-5 md:py-5",
+                "flex items-start justify-between gap-3 border-b px-3 py-3 transition-colors md:px-5 md:py-5",
                 heroBg,
               )}
             >
               <div className="flex min-w-0 flex-col gap-2">
-                <span className="font-mono text-2xl font-semibold leading-none tabular-nums md:text-3xl">
+                <span className="font-mono text-2xl font-semibold leading-none tabular-nums">
                   {order.kitchenTicketNumber}
                 </span>
                 <div className="flex flex-wrap items-center gap-1.5">
@@ -367,9 +377,11 @@ function FocusOrderPanel({
                   ? pendingTicketIds.has(ticket.id)
                   : false;
                 const canBumpByStatus =
-                  !isCancelled && (status === "pending" || status === "preparing");
+                  !isCancelled &&
+                  (status === "pending" || status === "preparing");
                 const canRecallByStatus =
-                  !isCancelled && (status === "preparing" || status === "ready");
+                  !isCancelled &&
+                  (status === "preparing" || status === "ready");
                 const allowBump = canBumpByStatus && canMarkReady;
                 const allowRecall = canRecallByStatus && canRecall;
 
@@ -378,7 +390,7 @@ function FocusOrderPanel({
                     key={item.id}
                     data-testid={`kds-focus-item-${String(item.id)}`}
                     className={cn(
-                      "relative flex flex-col gap-3 px-4 py-4 md:px-5 md:py-5",
+                      "relative flex flex-col gap-3 px-3 py-3 md:px-5 md:py-5",
                       status === "ready" && "opacity-60",
                       isCancelled && "opacity-100",
                     )}
@@ -390,7 +402,7 @@ function FocusOrderPanel({
                           <span className="font-mono text-2xl font-semibold leading-tight text-warning tabular-nums">
                             {item.quantity}×
                           </span>
-                          <span className="break-words text-2xl font-bold leading-tight">
+                          <span className="break-words text-2xl font-semibold leading-tight">
                             {item.item_name}
                           </span>
                         </div>
@@ -407,7 +419,7 @@ function FocusOrderPanel({
                       </div>
                       <Badge
                         variant={getStatusVariant(status)}
-                        className="px-3 py-1 text-sm font-bold"
+                        className="px-3 py-1 text-sm font-semibold"
                       >
                         {getStatusLabel(status)}
                       </Badge>
@@ -428,7 +440,10 @@ function FocusOrderPanel({
                             {isMutating ? (
                               <Spinner data-icon="inline-start" />
                             ) : (
-                              <IconRotate data-icon="inline-start" aria-hidden />
+                              <IconRotate
+                                data-icon="inline-start"
+                                aria-hidden
+                              />
                             )}
                             Thu hồi
                           </Button>
@@ -436,7 +451,9 @@ function FocusOrderPanel({
                         {allowBump && (
                           <Button
                             type="button"
-                            variant={status === "preparing" ? "default" : "secondary"}
+                            variant={
+                              status === "preparing" ? "default" : "secondary"
+                            }
                             size="touch-lg"
                             className="flex-[2] gap-2"
                             disabled={isMutating}
@@ -453,7 +470,9 @@ function FocusOrderPanel({
                                 aria-hidden
                               />
                             )}
-                            {status === "preparing" ? "Đánh dấu xong" : "Bắt đầu chế biến"}
+                            {status === "preparing"
+                              ? "Đánh dấu xong"
+                              : "Bắt đầu chế biến"}
                           </Button>
                         )}
                       </div>
@@ -467,16 +486,18 @@ function FocusOrderPanel({
                 const isCancelled = status === "cancelled";
                 const isMutating = pendingTicketIds.has(ticket.id);
                 const canBumpByStatus =
-                  !isCancelled && (status === "pending" || status === "preparing");
+                  !isCancelled &&
+                  (status === "pending" || status === "preparing");
                 const canRecallByStatus =
-                  !isCancelled && (status === "preparing" || status === "ready");
+                  !isCancelled &&
+                  (status === "preparing" || status === "ready");
                 const allowBump = canBumpByStatus && canMarkReady;
                 const allowRecall = canRecallByStatus && canRecall;
 
                 return (
                   <div
                     key={ticket.id}
-                    className="flex flex-col gap-3 px-4 py-4 md:px-5 md:py-5"
+                    className="flex flex-col gap-3 px-3 py-3 md:px-5 md:py-5"
                   >
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-base text-muted-foreground">
@@ -484,7 +505,7 @@ function FocusOrderPanel({
                       </span>
                       <Badge
                         variant={getStatusVariant(status)}
-                        className="px-3 py-1 text-sm font-bold"
+                        className="px-3 py-1 text-sm font-semibold"
                       >
                         {getStatusLabel(status)}
                       </Badge>
@@ -504,7 +525,10 @@ function FocusOrderPanel({
                             {isMutating ? (
                               <Spinner data-icon="inline-start" />
                             ) : (
-                              <IconRotate data-icon="inline-start" aria-hidden />
+                              <IconRotate
+                                data-icon="inline-start"
+                                aria-hidden
+                              />
                             )}
                             Thu hồi
                           </Button>
@@ -512,7 +536,9 @@ function FocusOrderPanel({
                         {allowBump && (
                           <Button
                             type="button"
-                            variant={status === "preparing" ? "default" : "secondary"}
+                            variant={
+                              status === "preparing" ? "default" : "secondary"
+                            }
                             size="touch-lg"
                             className="flex-[2] gap-2"
                             disabled={isMutating}
@@ -528,7 +554,9 @@ function FocusOrderPanel({
                                 aria-hidden
                               />
                             )}
-                            {status === "preparing" ? "Đánh dấu xong" : "Bắt đầu chế biến"}
+                            {status === "preparing"
+                              ? "Đánh dấu xong"
+                              : "Bắt đầu chế biến"}
                           </Button>
                         )}
                       </div>

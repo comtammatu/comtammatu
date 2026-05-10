@@ -236,7 +236,7 @@ async function loadSourceDocument(
 }
 
 function correctionLabel(documentType: InventoryCorrectionDocumentType) {
-  if (documentType === "grn") return "GRN";
+  if (documentType === "grn") return "Phiếu nhập";
   if (documentType === "issue") return "Phiếu xuất";
   if (documentType === "transfer") return "Điều chuyển";
   return "Sản xuất";

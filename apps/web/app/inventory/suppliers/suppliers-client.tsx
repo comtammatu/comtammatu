@@ -1,7 +1,12 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Pencil as IconPencil, Plus as IconPlus, Search as IconSearch, Trash as IconTrash } from "lucide-react";
+import {
+  Pencil as IconPencil,
+  Plus as IconPlus,
+  Search as IconSearch,
+  Trash as IconTrash,
+} from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
@@ -99,9 +104,7 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
   const filtered = useMemo(() => {
     const q = search.trim();
     if (!q) return rows;
-    return rows.filter((s) =>
-      matchesSearch([s.name, s.tax_code, s.phone], q),
-    );
+    return rows.filter((s) => matchesSearch([s.name, s.tax_code, s.phone], q));
   }, [rows, search]);
 
   const deleteTarget = rows.find((r) => r.id === deleteConfirmId);
@@ -149,10 +152,10 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
         />
         {/* IconSearch */}
         <InventoryFilterBar>
-          <InputGroup className={cn("flex-1", isMobile && "h-12 basis-full")}>
-            <InputGroupAddon>
-              <IconSearch />
-            </InputGroupAddon>
+          <InputGroup
+            size={isMobile ? "touch" : "default"}
+            className={cn("flex-1", isMobile && "basis-full")}
+          >
             <InputGroupInput
               type="text"
               placeholder="Tìm tên, mã số thuế, điện thoại..."
@@ -160,6 +163,9 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
               onChange={(e) => setSearch(e.target.value)}
               inputMode="search"
             />
+            <InputGroupAddon>
+              <IconSearch />
+            </InputGroupAddon>
           </InputGroup>
           <Badge variant="outline" className="rounded-full">
             {filtered.length}/{rows.length}
@@ -246,7 +252,9 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
                     <TableHead>Điện thoại</TableHead>
                     <TableHead>Địa chỉ</TableHead>
                     <TableHead>{FORM_VI.status}</TableHead>
-                    <TableHead className="w-24 text-right">{FORM_VI.action}</TableHead>
+                    <TableHead className="w-24 text-right">
+                      {FORM_VI.action}
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -344,7 +352,9 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isPending}>{ACTIONS_VI.cancel}</AlertDialogCancel>
+            <AlertDialogCancel disabled={isPending}>
+              {ACTIONS_VI.cancel}
+            </AlertDialogCancel>
             <AlertDialogAction
               disabled={isPending}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"

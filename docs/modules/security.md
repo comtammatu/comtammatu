@@ -2,7 +2,7 @@
 
 ## Overview
 
-Rate limiting via Upstash Redis. Protects API routes and auth endpoints from abuse. Two pre-configured limiters with different thresholds.
+Security controls are split across a few focused modules. `packages/security/` owns Upstash Redis rate limiting; `apps/web/proxy.ts` owns auth/ACL, POS/KDS network gate, and feedback-host isolation; feedback actions own origin/CSRF checks.
 
 **Owner:** `packages/security/`
 
@@ -10,8 +10,10 @@ Rate limiting via Upstash Redis. Protects API routes and auth endpoints from abu
 
 | File                | Purpose                |
 | ------------------- | ---------------------- |
-| `src/rate-limit.ts` | Rate limiter instances |
-| `src/index.ts`      | Barrel export          |
+| `packages/security/src/rate-limit.ts` | Rate limiter instances |
+| `packages/security/src/index.ts`      | Barrel export          |
+| `apps/web/proxy.ts`                   | Auth/ACL, POS network gate, feedback host gate |
+| `apps/web/app/r/[token]/actions.ts`   | Public feedback origin and payload checks |
 
 ## Rate Limiters
 
@@ -51,10 +53,12 @@ if (!success) {
 
 - **Upstash over local Redis:** Serverless-compatible. No persistent connection needed. Works on Vercel Edge.
 - **Separate login limiter:** Brute-force protection with stricter limits (5/15min vs 60/min).
+- **Proxy as perimeter:** route ACL, branch-scope checks, feedback host split, and POS/KDS network gate stay in one request gateway rather than being reimplemented per page.
 
 <!-- ORACLE-META
 Written by codebase-oracle (manual) | 2026-04-02
 Data: Direct source reading
 Audience: new engineer | Confidence: 95%
+Updated: rate-limit module plus proxy/feedback security boundary sync (2026-05-09)
 Unknowns: 0
 -->

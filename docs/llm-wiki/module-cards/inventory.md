@@ -2,7 +2,7 @@
 
 ## Current State
 
-Inventory is the canonical stock/procurement/production workspace at `/inventory/*`. It is no longer an admin sub-module. `/admin/inventory/*` files remain on disk but are retired by `inventory_admin.allowedRoles = []`.
+Inventory is the canonical stock/procurement/production workspace at `/inventory/*`. It is no longer an admin sub-module. `/admin/inventory/*` is a retired URL namespace; pages have been removed, and the resolver still maps it to `inventory_admin.allowedRoles = []` so old URLs do not become unclassified admin routes.
 
 Current branch model uses:
 

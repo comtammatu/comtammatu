@@ -14,6 +14,7 @@ import {
   isFeedbackPublicPath,
   isPublicAppPath,
   normalizeHost,
+  resolveModuleFromPath,
   resolveHostSurface,
 } from "../route-resolution";
 
@@ -30,24 +31,9 @@ function makeClaims(
   };
 }
 
-test("getDefaultRedirect → owner and super_manager land on /admin/dashboard", () => {
-  for (const role of ["owner", "super_manager"] as const) {
-    assert.equal(getDefaultRedirect(makeClaims(role)), "/admin/dashboard");
-  }
-});
-
-test("getDefaultRedirect → all other roles land on /employee", () => {
-  for (const role of [
-    "area_manager",
-    "branch_manager",
-    "warehouse_manager",
-    "production_manager",
-    "cashier",
-    "waiter",
-    "chef",
-    "office",
-  ] as const) {
-    assert.equal(getDefaultRedirect(makeClaims(role)), "/employee");
+test("getDefaultRedirect → legacy surface lands every role on /portal", () => {
+  for (const role of STAFF_ROLES) {
+    assert.equal(getDefaultRedirect(makeClaims(role)), "/portal");
   }
 });
 
@@ -67,14 +53,14 @@ test("getBetaDefaultRedirect → owner and super_manager keep beta admin, others
 test("resolvePostLoginRedirect → null returnTo → default", () => {
   assert.equal(
     resolvePostLoginRedirect(makeClaims("owner"), null),
-    "/admin/dashboard",
+    "/portal",
   );
 });
 
 test("resolvePostLoginRedirect → empty returnTo → default", () => {
   assert.equal(
     resolvePostLoginRedirect(makeClaims("cashier", 3), ""),
-    "/employee",
+    "/portal",
   );
 });
 
@@ -89,21 +75,21 @@ test("resolvePostLoginRedirect → valid returnTo for accessible module → keep
 test("resolvePostLoginRedirect → returnTo to disallowed module → fallback", () => {
   assert.equal(
     resolvePostLoginRedirect(makeClaims("cashier", 3), "/admin/dashboard"),
-    "/employee",
+    "/portal",
   );
 });
 
 test("resolvePostLoginRedirect → retired admin inventory returnTo is not preserved", () => {
   assert.equal(
     resolvePostLoginRedirect(makeClaims("owner"), "/admin/inventory"),
-    "/admin/dashboard",
+    "/portal",
   );
   assert.equal(
     resolvePostLoginRedirect(
       makeClaims("super_manager"),
       "/admin/inventory/trust?branchId=1",
     ),
-    "/admin/dashboard",
+    "/portal",
   );
 });
 
@@ -116,15 +102,15 @@ test("resolvePostLoginRedirect → former admin roles cannot keep admin returnTo
   ] as const) {
     assert.equal(
       resolvePostLoginRedirect(makeClaims(role, 3), "/admin/dashboard"),
-      "/employee",
+      "/portal",
     );
     assert.equal(
       resolvePostLoginRedirect(makeClaims(role, 3), "/admin"),
-      "/employee",
+      "/portal",
     );
     assert.equal(
       resolvePostLoginRedirect(makeClaims(role, 3), "/admin/unknown"),
-      "/employee",
+      "/portal",
     );
   }
 });
@@ -139,14 +125,14 @@ test("resolvePostLoginRedirect → cashier accessing own-branch POS → allowed"
 test("resolvePostLoginRedirect → cashier on wrong branch → fallback", () => {
   assert.equal(
     resolvePostLoginRedirect(makeClaims("cashier", 3), "/br/7/pos"),
-    "/employee",
+    "/portal",
   );
 });
 
 test("resolvePostLoginRedirect → cashier with null branch_id visiting POS → fallback", () => {
   assert.equal(
     resolvePostLoginRedirect(makeClaims("cashier", null), "/br/3/pos"),
-    "/employee",
+    "/portal",
   );
 });
 
@@ -163,32 +149,32 @@ test("resolvePostLoginRedirect → preserves query + hash", () => {
 test("resolvePostLoginRedirect → returnTo = /login is ignored", () => {
   assert.equal(
     resolvePostLoginRedirect(makeClaims("owner"), "/login"),
-    "/admin/dashboard",
+    "/portal",
   );
 });
 
 test("resolvePostLoginRedirect → external URL is rejected", () => {
   assert.equal(
     resolvePostLoginRedirect(makeClaims("owner"), "//evil.com"),
-    "/admin/dashboard",
+    "/portal",
   );
   assert.equal(
     resolvePostLoginRedirect(makeClaims("owner"), "http://evil"),
-    "/admin/dashboard",
+    "/portal",
   );
 });
 
 test("resolvePostLoginRedirect → office role cannot access hr", () => {
   assert.equal(
     resolvePostLoginRedirect(makeClaims("office"), "/hr"),
-    "/employee",
+    "/portal",
   );
 });
 
 test("resolvePostLoginRedirect → office role cannot access inventory", () => {
   assert.equal(
     resolvePostLoginRedirect(makeClaims("office"), "/inventory"),
-    "/employee",
+    "/portal",
   );
 });
 
@@ -200,6 +186,18 @@ test("resolvePostLoginRedirect → warehouse_manager accessing inventory supplie
     ),
     "/inventory/suppliers",
   );
+});
+
+test("resolveModuleFromPath → procurement aliases stay behind procurement gate", () => {
+  for (const path of [
+    "/inventory/drafts",
+    "/inventory/m/drafts",
+    "/inventory/m/grn",
+    "/inventory/supplier-returns",
+    "/inventory/supplier-returns/new",
+  ]) {
+    assert.equal(resolveModuleFromPath(path), "inventory_procurement");
+  }
 });
 
 test("resolvePostLoginRedirect → owner can access hr with query", () => {
@@ -219,7 +217,7 @@ test("resolvePostLoginRedirect → chef accessing own KDS → allowed", () => {
 test("resolvePostLoginRedirect → chef on wrong KDS branch → fallback", () => {
   assert.equal(
     resolvePostLoginRedirect(makeClaims("chef", 5), "/br/7/kds"),
-    "/employee",
+    "/portal",
   );
 });
 
@@ -314,7 +312,7 @@ test("resolvePostLoginRedirect → branch settings follows branch scope", () => 
       makeClaims("branch_manager", 3),
       "/br/7/settings",
     ),
-    "/employee",
+    "/portal",
   );
   assert.equal(
     resolvePostLoginRedirect(makeClaims("owner"), "/br/7/settings"),
@@ -367,6 +365,17 @@ test("canAccess → employee portal is available to every staff role", () => {
   for (const role of STAFF_ROLES) {
     assert.equal(canAccess(role, "employee"), true);
   }
+});
+
+test("canAccess → work portal is available to every staff role", () => {
+  for (const role of STAFF_ROLES) {
+    assert.equal(canAccess(role, "portal"), true);
+  }
+});
+
+test("resolveModuleFromPath → work portal maps to portal module", () => {
+  assert.equal(resolveModuleFromPath("/portal"), "portal");
+  assert.equal(resolveModuleFromPath("/portal/"), "portal");
 });
 
 test("resolveDiscoveredApps → settings entries are discoverable from employee portal", () => {

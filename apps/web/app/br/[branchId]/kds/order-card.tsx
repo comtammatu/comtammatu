@@ -4,15 +4,11 @@ import { memo, useMemo } from "react";
 import { cn } from "@comtammatu/ui";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { useBoardTick } from "./hooks/use-board-tick";
-import {
-  getAgeStyle,
-  getCardBorder,
-  getCardLeftAccent,
-} from "./lib/age-style";
+import { getAgeStyle, getCardBorder, getCardLeftAccent } from "./lib/age-style";
 import { OrderCardHeader } from "./components/order-card-header";
 import { TicketRow } from "./components/ticket-row";
 import { BatchActions } from "./components/batch-actions";
-import type { KdsOrder, KdsTicket } from "./types";
+import type { KdsOrder, KdsOrderItem, KdsTicket } from "./types";
 
 function getKitchenCompleteAtMs(tickets: KdsTicket[]): number | null {
   if (tickets.length === 0) return null;
@@ -70,6 +66,11 @@ function OrderCardComponent({
     return map;
   }, [order.tickets]);
 
+  const itemIds = useMemo(
+    () => new Set(order.items.map((item) => item.id)),
+    [order.items],
+  );
+
   const overallStatus = useMemo(() => {
     const statuses = order.tickets.map((t) => t.status);
     if (statuses.length > 0 && statuses.every((s) => s === "cancelled")) {
@@ -94,18 +95,15 @@ function OrderCardComponent({
   );
 
   const orphanTickets = useMemo(
-    () =>
-      order.tickets.filter(
-        (t) => !order.items.some((i) => i.id === t.order_item_id),
-      ),
-    [order.items, order.tickets],
+    () => order.tickets.filter((t) => !itemIds.has(t.order_item_id)),
+    [itemIds, order.tickets],
   );
 
   return (
     <Card
       data-testid={`kds-order-card-${order.groupKey}`}
       className={cn(
-        "gap-0 py-0 border-l-2 transition-shadow hover:shadow-md",
+        "gap-0 border-l-2 py-0 transition-shadow hover:shadow-md",
         borderClass,
         getCardLeftAccent(overallStatus, elapsed),
         className,
@@ -211,30 +209,82 @@ function arePropsEqual(prev: OrderCardProps, next: OrderCardProps): boolean {
       ta.id !== tb.id ||
       ta.status !== tb.status ||
       ta.bumped_at !== tb.bumped_at ||
+      ta.updated_at !== tb.updated_at ||
       ta.kitchen_send_batch_id !== tb.kitchen_send_batch_id
     ) {
       return false;
     }
   }
 
-  if (a.items.length !== b.items.length) return false;
-  for (let i = 0; i < a.items.length; i++) {
-    const ia = a.items[i]!;
-    const ib = b.items[i]!;
-    if (
-      ia.id !== ib.id ||
-      ia.status !== ib.status ||
-      ia.quantity !== ib.quantity
-    ) {
-      return false;
-    }
-  }
+  if (!areOrderItemsEqual(a.items, b.items)) return false;
 
   return arePendingSetsEqualForOrder(
     prev.pendingTicketIds,
     next.pendingTicketIds,
     a.tickets,
   );
+}
+
+function areOrderItemsEqual(a: KdsOrderItem[], b: KdsOrderItem[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    const ia = a[i]!;
+    const ib = b[i]!;
+    if (
+      ia.id !== ib.id ||
+      ia.status !== ib.status ||
+      ia.quantity !== ib.quantity ||
+      ia.item_name !== ib.item_name ||
+      ia.variant_name !== ib.variant_name ||
+      ia.note !== ib.note ||
+      !areModifiersEqual(ia.modifiers, ib.modifiers) ||
+      !areSidesEqual(ia.sides, ib.sides)
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function areModifiersEqual(
+  a: KdsOrderItem["modifiers"],
+  b: KdsOrderItem["modifiers"],
+): boolean {
+  if (a === b) return true;
+  if (!a || !b || a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    const ma = a[i]!;
+    const mb = b[i]!;
+    if (
+      ma.modifier_id !== mb.modifier_id ||
+      ma.name !== mb.name ||
+      ma.price !== mb.price
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function areSidesEqual(
+  a: KdsOrderItem["sides"],
+  b: KdsOrderItem["sides"],
+): boolean {
+  if (a === b) return true;
+  if (!a || !b || a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    const sa = a[i]!;
+    const sb = b[i]!;
+    if (
+      sa.side_item_id !== sb.side_item_id ||
+      sa.name !== sb.name ||
+      sa.price !== sb.price ||
+      sa.is_default !== sb.is_default
+    ) {
+      return false;
+    }
+  }
+  return true;
 }
 
 function arePendingSetsEqualForOrder(

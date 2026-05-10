@@ -25,13 +25,12 @@ export interface PosMobileActionBarProps {
 }
 
 const ACTION_BAR_CLASS =
-  "fixed inset-x-3 bottom-0 z-40 flex gap-2 rounded-lg bg-card/95 p-2 shadow-2xl ring-1 ring-border backdrop-blur pos-safe-bottom md:hidden";
+  "fixed inset-x-0 bottom-0 z-40 flex gap-2 border-t border-border/60 bg-background p-2 pos-safe-bottom md:hidden";
 
-const ACTION_PRIMARY_BUTTON_CLASS =
-  "min-h-14 min-w-14 flex-1 text-sm font-bold shadow-lg sm:text-base";
+const ACTION_PRIMARY_BUTTON_CLASS = "flex-1 text-sm font-semibold sm:text-base";
 
 const ACTION_SECONDARY_BUTTON_CLASS =
-  "min-h-14 min-w-14 flex-1 border border-border bg-secondary text-sm font-bold text-secondary-foreground shadow-lg sm:text-base";
+  "flex-1 text-sm font-semibold sm:text-base";
 
 function PosMobileActionBarComponent({
   isMobile,
@@ -51,6 +50,7 @@ function PosMobileActionBarComponent({
       <div className={ACTION_BAR_CLASS}>
         <Button
           type="button"
+          size="touch-lg"
           className={ACTION_PRIMARY_BUTTON_CLASS}
           onClick={onOpenAppendDrawer}
           aria-label={messages.pos.mobileActionBar.openAppendAria}
@@ -74,6 +74,7 @@ function PosMobileActionBarComponent({
         <Button
           type="button"
           variant="secondary"
+          size="touch-lg"
           className={ACTION_SECONDARY_BUTTON_CLASS}
           onClick={onOpenOrdersDrawer}
         >
@@ -91,6 +92,7 @@ function PosMobileActionBarComponent({
     <div className={ACTION_BAR_CLASS}>
       <Button
         type="button"
+        size="touch-lg"
         className={ACTION_PRIMARY_BUTTON_CLASS}
         onClick={onOpenCartDrawer}
         aria-label={messages.pos.mobileActionBar.openNewCartAria}

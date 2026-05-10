@@ -4,7 +4,11 @@ import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import { Check as IconCheck, ChevronRight as IconChevronRight, RotateCcw as IconRotate } from "lucide-react";
+import {
+  Check as IconCheck,
+  ChevronRight as IconChevronRight,
+  RotateCcw as IconRotate,
+} from "lucide-react";
 import { getStatusLabel, getStatusVariant } from "../lib/status-config";
 import { CancelledOverlay } from "./cancelled-overlay";
 import { TicketRowMeta } from "./ticket-row-meta";
@@ -49,7 +53,7 @@ export function TicketRow(props: TicketRowProps) {
       <div
         data-testid={`kds-order-item-${String(item.id)}`}
         className={cn(
-          "relative flex min-h-14 items-start gap-2 px-3 py-3 md:min-h-16 md:gap-3 md:px-4",
+          "relative flex flex-col gap-2 px-3 py-3 sm:flex-row sm:items-start sm:gap-3 md:px-4",
           status === "ready" && "opacity-50",
           isCancelled && "opacity-100",
         )}
@@ -77,10 +81,10 @@ export function TicketRow(props: TicketRowProps) {
           />
         </div>
 
-        <div className="flex shrink-0 items-center gap-1 self-start pt-0.5">
+        <div className="flex w-full shrink-0 items-center justify-between gap-2 self-stretch sm:w-auto sm:justify-end sm:self-start sm:pt-0.5">
           <Badge
             variant={getStatusVariant(status)}
-            className="px-2 py-1 text-xs font-bold"
+            className="px-2 py-1 text-xs font-semibold"
           >
             {getStatusLabel(status)}
           </Badge>
@@ -110,16 +114,16 @@ export function TicketRow(props: TicketRowProps) {
   const canRecall = canRecallByStatus && props.canRecall;
 
   return (
-    <div className="flex min-h-14 items-start gap-2 px-3 py-2.5 md:min-h-16 md:gap-3 md:px-4 md:py-3">
+    <div className="flex flex-col gap-2 px-3 py-2.5 sm:flex-row sm:items-start sm:gap-3 md:px-4 md:py-3">
       <div className="min-w-0 flex-1">
         <span className="text-base text-muted-foreground">
           Món #{String(ticket.order_item_id)}
         </span>
       </div>
-      <div className="flex shrink-0 items-center gap-1 self-start pt-0.5">
+      <div className="flex w-full shrink-0 items-center justify-between gap-2 self-stretch sm:w-auto sm:justify-end sm:self-start sm:pt-0.5">
         <Badge
           variant={getStatusVariant(status)}
-          className="px-2 py-1 text-xs font-bold"
+          className="px-2 py-1 text-xs font-semibold"
         >
           {getStatusLabel(status)}
         </Badge>
@@ -164,8 +168,8 @@ function TicketRowActions({
         <Button
           data-testid={`kds-recall-${String(ticket.id)}`}
           variant="outline"
-          size="icon"
-          className="size-11 rounded-md text-muted-foreground md:size-14"
+          size="touch"
+          className="w-12 p-0 text-muted-foreground"
           aria-label="Thu hồi món"
           disabled={isMutating}
           onClick={() => void onRecall(ticket.id)}
@@ -177,8 +181,8 @@ function TicketRowActions({
         <Button
           data-testid={`kds-bump-${String(ticket.id)}`}
           variant={status === "preparing" ? "default" : "secondary"}
-          size="icon"
-          className="size-11 rounded-md md:size-14"
+          size="touch"
+          className="w-12 p-0"
           aria-label="Chuyển trạng thái món"
           disabled={isMutating}
           onClick={() => void onBump(ticket.id)}

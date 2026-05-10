@@ -2,19 +2,22 @@
 
 ## Current State
 
-The web app is a Next.js 16.2 App Router project with 114 `page.tsx` routes under `apps/web/app`.
+The web app is a Next.js 16.2 App Router project with App Router routes under `apps/web/app`.
 
-The current architecture remains path-based, single-domain:
+The current architecture is path-based, with an optional feedback-host split:
 
 ```text
 Browser -> proxy.ts -> App Router -> Server Actions/RSC -> Supabase
 ```
+
+When `NEXT_PUBLIC_FEEDBACK_HOST` and `NEXT_PUBLIC_APP_HOST` are set, proxy host-gates `/r/*` onto the feedback origin and blocks admin/POS paths there. Without those env vars, local/preview behavior falls back to the pre-split single host.
 
 ## Top-Level Surfaces
 
 - `/login`: auth.
 - `/access-denied`: public blocked-state explanation.
 - `/`: redirects to role default.
+- `/portal`: universal post-login work destination.
 - `/admin/*`: tenant foundation, staff, settings, reports, feedback, compatibility redirects.
 - `/employee/*`: employee self-service.
 - `/br/[branchId]/pos`: POS.
@@ -35,6 +38,7 @@ Browser -> proxy.ts -> App Router -> Server Actions/RSC -> Supabase
 Do not add `/merchant/*` for the Super App/Merchant Platform rebuild. Use existing route owners:
 
 - Payment collection: `/br/[branchId]/pos`.
+- Post-login work discovery: `/portal`.
 - Payment provider setup: `/admin/settings/payments`.
 - Reconciliation and finance reporting: `/finance/*`.
 - Employee self-service: `/employee/*`.
@@ -46,7 +50,7 @@ Do not add `/merchant/*` for the Super App/Merchant Platform rebuild. Use existi
 
 Retired or compatibility areas:
 
-- `/admin/inventory/*` exists on disk but is blocked by `inventory_admin.allowedRoles = []`.
+- `/admin/inventory/*` is a retired URL namespace; pages have been removed, and the resolver still maps it to `inventory_admin.allowedRoles = []`.
 - `/admin/finance/[[...slug]]` is compatibility redirect behavior into Finance.
 - Deep domain workflows should stay in dedicated workspaces.
 
@@ -70,8 +74,8 @@ Use tabs/query/sheets/dialogs for sub-views, short forms, and contextual details
 
 For IA work:
 
-1. Read `docs/plan/super-app-merchant-platform-rebuild.md`.
+1. Read `docs/agent/rules/references.md` and `docs/modules/web-app.md`.
 2. Decide route owner before touching UI.
 3. Check route resolver and module ACL.
 4. Keep `/employee` narrow and task-led.
-5. Avoid app-launcher duplication across admin and employee surfaces.
+5. Put universal app discovery in `/portal`, not admin or employee surfaces.

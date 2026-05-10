@@ -69,7 +69,10 @@ export const createPurchaseOrder = withAction(
 
     // Branch-scoped roles must match their assigned procurement branch.
     if (!canAccessProcurementBranch(claims, targetBranchId)) {
-      return { success: false, error: "Bạn chỉ được tạo PO cho kho của mình." };
+      return {
+        success: false,
+        error: "Bạn chỉ được tạo đơn đặt hàng cho kho của mình.",
+      };
     }
 
     const branches = await fetchProcurementBranches(supabase, claims.tenant_id);
@@ -86,7 +89,7 @@ export const createPurchaseOrder = withAction(
       { p_tenant_id: claims.tenant_id },
     );
     if (seqErr || !nextDisplay) {
-      return { success: false, error: "Không thể cấp số PO." };
+      return { success: false, error: "Không thể cấp mã đơn đặt hàng." };
     }
     const displayId = String(nextDisplay);
     // Keep po_number == display_id (legacy column for back-compat references
@@ -170,7 +173,7 @@ export const upsertPurchaseOrderLine = withAction(
       .eq("tenant_id", claims.tenant_id)
       .single();
     if (pe || !po) {
-      return { success: false, error: "Không tìm thấy PO." };
+      return { success: false, error: "Không tìm thấy đơn đặt hàng." };
     }
     // Owner force-edit: allow on draft/sent/partially_received/received.
     // Non-owner: still restricted to draft (existing behavior).
@@ -178,19 +181,19 @@ export const upsertPurchaseOrderLine = withAction(
     if (!isOwner && po.status !== "draft") {
       return {
         success: false,
-        error: "Chỉ chỉnh sửa dòng khi PO đang ở trạng thái nháp.",
+        error: "Chỉ chỉnh sửa dòng khi đơn đang ở trạng thái nháp.",
       };
     }
     if (po.status === "cancelled") {
       return {
         success: false,
-        error: "Không thể sửa PO đã hủy.",
+        error: "Không thể sửa đơn đã hủy.",
       };
     }
     if (!canAccessProcurementBranch(claims, po.branch_id)) {
       return {
         success: false,
-        error: "Bạn chỉ được chỉnh sửa PO của kho mình.",
+        error: "Bạn chỉ được chỉnh sửa đơn của kho mình.",
       };
     }
 
@@ -214,7 +217,7 @@ export const upsertPurchaseOrderLine = withAction(
       .select("id")
       .single();
     if (error || !row) {
-      return { success: false, error: "Không thể lưu dòng PO." };
+      return { success: false, error: "Không thể lưu dòng đơn đặt hàng." };
     }
     return { success: true, data: row };
   },
@@ -241,25 +244,25 @@ export const deletePurchaseOrderLine = withAction(
       .eq("tenant_id", claims.tenant_id)
       .single();
     if (pe || !po) {
-      return { success: false, error: "Không tìm thấy PO." };
+      return { success: false, error: "Không tìm thấy đơn đặt hàng." };
     }
     const isOwner = claims.user_role === "owner";
     if (!isOwner && po.status !== "draft") {
       return {
         success: false,
-        error: "Chỉ xóa dòng khi PO đang ở trạng thái nháp.",
+        error: "Chỉ xóa dòng khi đơn đang ở trạng thái nháp.",
       };
     }
     if (po.status === "cancelled") {
       return {
         success: false,
-        error: "Không thể sửa PO đã hủy.",
+        error: "Không thể sửa đơn đã hủy.",
       };
     }
     if (!canAccessProcurementBranch(claims, po.branch_id)) {
       return {
         success: false,
-        error: "Bạn chỉ được chỉnh sửa PO của kho mình.",
+        error: "Bạn chỉ được chỉnh sửa đơn của kho mình.",
       };
     }
 
@@ -307,15 +310,15 @@ export async function updatePurchaseOrderStatus(
     .eq("id", parsed.data.poId)
     .eq("tenant_id", claims.tenant_id)
     .single();
-  if (pe || !po) return { success: false, error: "Không tìm thấy PO." };
+  if (pe || !po) return { success: false, error: "Không tìm thấy đơn đặt hàng." };
   if (!canAccessProcurementBranch(claims, po.branch_id)) {
-    return { success: false, error: "Bạn chỉ được cập nhật PO của kho mình." };
+    return { success: false, error: "Bạn chỉ được cập nhật đơn của kho mình." };
   }
 
   if (parsed.data.status === "sent" && po.status !== "draft") {
     return {
       success: false,
-      error: "Chỉ gửi PO khi PO đang ở trạng thái nháp.",
+      error: "Chỉ gửi đơn khi đơn đang ở trạng thái nháp.",
     };
   }
 
@@ -326,7 +329,7 @@ export async function updatePurchaseOrderStatus(
   ) {
     return {
       success: false,
-      error: "Chỉ hủy PO nháp hoặc PO đã gửi nhưng chưa nhận hàng.",
+      error: "Chỉ hủy đơn nháp hoặc đơn đã gửi nhưng chưa nhận hàng.",
     };
   }
 
@@ -345,7 +348,7 @@ export async function updatePurchaseOrderStatus(
       return {
         success: false,
         error:
-          "PO đã có phiếu nhận hàng nên không thể hủy trực tiếp. Hãy xử lý bằng điều chỉnh/đối soát GRN.",
+          "Đơn đã có phiếu nhận hàng nên không thể hủy trực tiếp. Hãy xử lý bằng điều chỉnh/đối soát phiếu nhập.",
       };
     }
   }

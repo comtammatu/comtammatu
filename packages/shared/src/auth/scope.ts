@@ -103,16 +103,10 @@ export function getScope(claims: JwtClaims): ScopeIds {
   };
 }
 
-/** Determine the default redirect path for a role after login */
+/** Determine the default redirect path after login on the legacy surface. */
 export function getDefaultRedirect(claims: JwtClaims): string {
-  const { user_role } = claims;
-
-  if (ADMIN_ROLES.includes(user_role)) {
-    return "/admin/dashboard";
-  }
-
-  // All non-admin staff land on the employee workspace.
-  return "/employee";
+  void claims;
+  return "/portal";
 }
 
 export function toBetaPath(pathname: string): string {

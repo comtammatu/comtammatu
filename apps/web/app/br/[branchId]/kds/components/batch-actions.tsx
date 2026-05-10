@@ -3,7 +3,11 @@
 import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import { Check as IconCheck, ChevronRight as IconChevronRight, Utensils as IconToolsKitchen } from "lucide-react";
+import {
+  Check as IconCheck,
+  ChevronRight as IconChevronRight,
+  Utensils as IconToolsKitchen,
+} from "lucide-react";
 import { CardFooter } from "@comtammatu/ui/components/card";
 import type { KdsTicket } from "../types";
 
@@ -36,8 +40,9 @@ export function BatchActions({
           <Button
             type="button"
             variant="secondary"
+            size="touch-lg"
             className={cn(
-              "min-h-12 rounded-md text-sm font-bold md:min-h-14 md:text-base",
+              "text-sm font-semibold md:text-base",
               preparingTickets.length === 0 && "sm:col-span-2",
             )}
             disabled={pendingBatchBusy}
@@ -58,8 +63,9 @@ export function BatchActions({
           <Button
             type="button"
             variant="default"
+            size="touch-lg"
             className={cn(
-              "min-h-12 rounded-md text-sm font-bold md:min-h-14 md:text-base",
+              "text-sm font-semibold md:text-base",
               pendingTickets.length === 0 && "sm:col-span-2",
             )}
             disabled={preparingBatchBusy}

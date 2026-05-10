@@ -7,6 +7,7 @@ import { getModuleLabelVi } from "../labels";
  */
 
 export type ModuleKey =
+  | "portal"
   | "dashboard"
   | "menu"
   | "inventory"
@@ -35,6 +36,11 @@ interface ModuleAcl {
 }
 
 export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
+  portal: {
+    path: "/portal",
+    allowedRoles: STAFF_ROLES,
+    label: getModuleLabelVi("portal"),
+  },
   dashboard: {
     path: "/admin/dashboard",
     allowedRoles: ["owner", "super_manager"],

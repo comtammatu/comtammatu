@@ -1,8 +1,8 @@
 # Rebuild Program — Brand Refresh + ComtamMatu Green
 
-> Status: PROPOSED  
-> Created: 2026-05-05  
-> Source: 4-agent debate for whole-system rebuild after Ma Tu brand refresh  
+> Status: PROPOSED
+> Created: 2026-05-05
+> Source: 4-perspective debate for whole-system rebuild after Ma Tu brand refresh
 > Scope: rebuild `comtammatu` onto a new Supabase project/database with the refreshed brand and clean full-system baseline.
 
 ## Decision

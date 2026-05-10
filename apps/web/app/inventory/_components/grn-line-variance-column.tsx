@@ -75,7 +75,7 @@ export function GrnLineVarianceColumn({
           tenantId={tenantId}
           variancePct={line.baselineVariancePct ?? null}
           onSuccess={onOverrideSuccess}
-          triggerLabel="Override"
+          triggerLabel="Duyệt vượt"
         />
       ) : null}
     </div>

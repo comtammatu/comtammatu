@@ -25,8 +25,8 @@ export function IngredientSearchDialog({
   const active = ingredients.filter((i) => i.is_active);
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
-      <CommandInput placeholder="Tìm theo tên, SKU, danh mục…" />
-      <CommandList className="max-h-96">
+      <CommandInput placeholder="Tìm theo tên, mã hàng, danh mục…" />
+      <CommandList maxHeight="xl">
         <CommandEmpty>Không tìm thấy nguyên liệu.</CommandEmpty>
         <CommandGroup heading={tTerm("ingredientsList")}>
           {active.map((i) => (
@@ -42,7 +42,7 @@ export function IngredientSearchDialog({
                 <span className="font-medium">{i.name}</span>
                 <span className="text-xs text-muted-foreground">
                   Đơn vị: {i.unit}
-                  {i.sku ? ` · SKU: ${i.sku}` : ""}
+                  {i.sku ? ` · Mã: ${i.sku}` : ""}
                   {i.category ? ` · ${i.category}` : ""}
                 </span>
               </span>

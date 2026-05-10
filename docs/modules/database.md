@@ -45,8 +45,8 @@ Defined in `packages/database/package.json`:
 
 Source of truth: generated types from the live schema. Snapshot at the time of writing:
 
-- **102 tables**, **8 views**, **132 RPC/SQL functions** (count via `awk` over `database.types.ts` per `Tables`/`Views`/`Functions` section markers)
-- **278+ migration files** in `supabase/migrations/`
+- **113 tables**, **9 views**, **212 RPC/SQL functions** in generated types
+- **330 migration files** in `supabase/migrations/`
 - **0 enums** — `staff_role` ENUM was dropped (Auth cleanup, 2026-04-23); roles are now strings derived from `positions.legacy_role_code`
 
 ### DB Source-of-Truth Ladder
@@ -130,7 +130,8 @@ Migrations live in `supabase/migrations/` with timestamp-prefixed filenames.
 | Time          | `TIMESTAMPTZ`                                                     |
 | Text          | `TEXT` (never VARCHAR)                                            |
 | Unique        | `UNIQUE(field, tenant_id)` — always composite                     |
-| Apply         | NEVER before PR merge — owner runs `supabase db push` after merge |
+| Apply to dev/test | Agents may apply to approved dev/test Supabase projects only after verifying the target is not production |
+| Apply to prod | NEVER directly by agents — production flow is migration file → PR → merge → owner applies manually |
 | After applied | Run `pnpm db:types` to regenerate types                           |
 
 ## Security Functions (SECURITY DEFINER)
@@ -159,15 +160,15 @@ Migrations live in `supabase/migrations/` with timestamp-prefixed filenames.
 4. Add policies (at minimum: tenant isolation for SELECT)
 5. Add GRANTs: `GRANT SELECT, INSERT, UPDATE, DELETE ON ... TO authenticated`
 6. Add unique constraints composite with tenant_id
-7. Push branch → create PR → merge
-8. Owner runs `supabase db push` after merge
-9. Run `pnpm db:types` (after migration applied)
-10. Verify: `pnpm typecheck && pnpm build`
+7. For dev/test verification only: confirm target project is not production before applying
+8. For production: push branch → create PR → merge → owner applies manually
+9. Run `pnpm db:types` after migration is applied to the schema used for type generation
+10. Verify: `pnpm typecheck && pnpm lint && pnpm build`
 
 <!-- ORACLE-META
 Written by codebase-oracle (manual) | 2026-04-06
 Data: Direct source reading
 Audience: new engineer, feature owner | Confidence: 95%
-Updated: POS tables added (2026-04-06)
+Updated: generated type counts + migration apply policy sync (2026-05-09)
 Unknowns: 0
 -->

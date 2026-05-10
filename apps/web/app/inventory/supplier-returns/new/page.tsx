@@ -11,7 +11,7 @@ export default function NewSupplierReturnPage() {
       <AppEmptyState
         mode="no-data"
         title="Tính năng đang phát triển"
-        description="Tạo phiếu trả hàng từ GRN được thực hiện trực tiếp trong màn hình chi tiết GRN."
+        description="Tạo phiếu trả hàng từ phiếu nhập được thực hiện trực tiếp trong màn hình chi tiết phiếu nhập."
       />
     </AppPage>
   );

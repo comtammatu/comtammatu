@@ -482,7 +482,7 @@
           <div class="kv"><span class="k">Hosting</span><span class="v">Vercel + Supabase Cloud + Upstash Redis</span></div>
           <div class="kv"><span class="k">Team</span><span class="v">1 dev full-time</span></div>
           <div class="kv"><span class="k">Ops maturity</span><span class="v" style="color:var(--warn)">Chưa staging · chưa monitoring · chưa E2E · chưa backup chủ quyền</span></div>
-          <div class="kv"><span class="k">P0 blockers pilot</span><span class="v">VietQR · Momo · MISA HĐĐT credentials</span></div>
+          <div class="kv"><span class="k">P0 blockers pilot</span><span class="v">VietQR · Momo · Viettel S-invoice HĐĐT credentials</span></div>
           <div class="kv"><span class="k">Decisions đã có</span><span class="v">D008 local-first là Phase 2 · D009 path-based routing</span></div>
         </div>
         <div class="callout danger">
@@ -629,7 +629,7 @@
               <td><span class="score s3">RLS có, nhưng role mapping chưa có runbook</span></td>
             </tr>
             <tr>
-              <td class="metric">MISA HĐĐT gửi sai</td>
+              <td class="metric">Viettel S-invoice HĐĐT gửi sai</td>
               <td><span class="score s3">TB</span></td>
               <td>Phạt thuế · pháp lý</td>
               <td><span class="score s2">P3 blocker · credential chưa wire</span></td>
@@ -875,7 +875,7 @@
         <div class="principle">
           <div class="name">Grove · Paranoid scanning</div>
           <div class="quote">"Only the paranoid survive" — nhưng paranoid về <em>right things</em>. Rủi ro thật ≠ rủi ro loud nhất.</div>
-          <div class="apply">Apply: 5 risks top (internet outage, Supabase downtime, staff credential leak, MISA fail, payment bug) > Vercel hack.</div>
+          <div class="apply">Apply: 5 risks top (internet outage, Supabase downtime, staff credential leak, S-invoice fail, payment bug) > Vercel hack.</div>
         </div>
         <div class="principle">
           <div class="name">Munger · Invert, always invert</div>
@@ -905,7 +905,7 @@
             <ul>
               <li><b>P1</b> · Wire VietQR real bank API + polling UI</li>
               <li><b>P2</b> · Wire Momo real API + atomic <code>complete_payment</code> RPC</li>
-              <li><b>P3</b> · Wire MISA HĐĐT real API (pháp lý)</li>
+              <li><b>P3</b> · Wire Viettel S-invoice HĐĐT real API (pháp lý)</li>
               <li><b>P4</b> · VietQR Supabase realtime listener trong payment panel</li>
               <li><b>P5</b> · Momo webhook atomic <code>complete_payment_and_consume_stock</code></li>
             </ul>

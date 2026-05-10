@@ -63,38 +63,38 @@ function tierOf(score: number) {
   if (score >= 85) {
     return {
       key: "elite" as const,
-      label: "Elite",
+      label: "Đỉnh cao",
       tone: "border-tier-elite/40 bg-tier-elite/10 text-tier-elite",
       Icon: IconShieldCheck,
       tooltip:
-        "≥ 85 — cao nhất. Bất kỳ incident nào cũng kéo xuống 85 theo §Q4b.",
+        "≥ 85 — cao nhất. Bất kỳ sự cố nào cũng kéo xuống 85 theo §Q4b.",
     };
   }
   if (score >= 70) {
     return {
       key: "trusted" as const,
-      label: "Trusted",
+      label: "Đã tin cậy",
       tone: "border-success/40 bg-success/10 text-success",
       Icon: IconShieldHalf,
       tooltip:
-        "≥ 70 — đủ điều kiện auto-approve GRN (cổng c8). Bảo toàn khi không có incident.",
+        "≥ 70 — đủ điều kiện tự duyệt phiếu nhập (cổng c8). Bảo toàn khi không có sự cố.",
     };
   }
   if (score >= 50) {
     return {
       key: "bootstrap" as const,
-      label: "Bootstrap",
+      label: "Đang đánh giá",
       tone: "border-info/40 bg-info/10 text-info",
       Icon: IconShield,
       tooltip:
-        "Warmup 50-69 — cần ≥ 20 GRN sạch trong 60 ngày để lên Trusted.",
+        "Khởi động 50–69 — cần ≥ 20 phiếu nhập sạch trong 60 ngày để lên Đã tin cậy.",
     };
   }
   return {
     key: "at_risk" as const,
-    label: "At risk",
+    label: "Có rủi ro",
     tone: "border-destructive/40 bg-destructive/10 text-destructive",
     Icon: IconShieldX,
-    tooltip: "< 50 — có incident gần đây, cần cân nhắc trước khi approve.",
+    tooltip: "< 50 — có sự cố gần đây, cần cân nhắc trước khi duyệt.",
   };
 }

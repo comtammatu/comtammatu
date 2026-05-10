@@ -40,7 +40,7 @@ Lock the design system before any feature work. Tokens, typography, logo, icons,
 | Typography setup | Frontend | Inter + Montserrat + JetBrains Mono via `apps/web/app/layout.tsx` |
 | Logo + icon set | Brand | Ma Tu Concept 01 (B8); SVG + favicon variants |
 | Spacing + radius + shadow scale | Brand | Token-driven; no arbitrary `w-[200px]` / `text-[10px]` |
-| shadcn preset `b1GN1lxvE` applied | Frontend | Per `docs/spec/design-system.md` |
+| shadcn preset `b6G3vbGue` / `radix-lyra` applied | Frontend | Per `docs/spec/design-system.md` |
 | App shells (6 surfaces) | Frontend | AdminShell, InventoryShell, FinanceShell, HRShell, EmployeeShell, plus inline POS/KDS shells in `/br/[branchId]/{pos,kds}/layout.tsx` |
 | Login shell | Frontend | Strongest brand expression per `01-BRAND-SOFTWARE-PROGRAM.md` |
 | Primitive review | QA + Designer | Confirm: no fake primitives (div/span/p posing as primitives), no fork primitive, no `app-*` per-surface theme |
@@ -376,9 +376,9 @@ Reconciliation tolerance threshold per B33 (default proposal: 1,000 VND).
 
 #### 6.2.5 HĐĐT integration
 
-- MISA meInvoice REST integration (primary)
-- Viettel sinvoice (fallback per `system_settings.einvoice_provider`)
-- VNPT (fallback option)
+- Viettel S-invoice REST integration (primary)
+- MISA meInvoice (legacy/optional only when explicitly configured; not an implicit production fallback)
+- VNPT (future option; not default fallback)
 - HĐĐT issue rehearsal: draft → CQT → mã → PDF stored in Storage
 - Webhook + IPN handling for status updates
 
@@ -386,7 +386,7 @@ Reconciliation tolerance threshold per B33 (default proposal: 1,000 VND).
 
 - W3 done (Inventory data live for food cost + AP)
 - B19 (in-place freeze of finance-redesign + m4-payments-fix) APPROVED ✓
-- B31 (HĐĐT provider seed: MISA + Viettel/VNPT credentials) — owner provides
+- B31 (HĐĐT provider seed: Viettel S-invoice credentials; legacy MISA/VNPT only if explicitly approved) — owner provides
 - B32 (Posting rules seed: revenue/refund/payroll/AP/food cost) — owner confirms
 - B33 (Reconciliation tolerance: 1,000 VND default) — owner confirms
 - B34 (Period close window: monthly close on day-X) — owner confirms
@@ -400,8 +400,8 @@ Reconciliation tolerance threshold per B33 (default proposal: 1,000 VND).
 
 - Period close E2E green: open → entries posted → recompute → close → reopen with `accounting:period_reopen`
 - Payroll calculate + approve E2E green: 1 monthly cycle for 1 employee with all components (gross + BHXH + PIT + net)
-- HĐĐT issue rehearsal pass: 1 invoice via MISA sandbox (draft → issued → archived with PDF in Storage)
-- HĐĐT fallback test: switch `einvoice_provider` to Viettel → re-issue test invoice
+- HĐĐT issue rehearsal pass: 1 invoice via Viettel S-invoice sandbox/test account (draft → issued → archived with PDF in Storage)
+- HĐĐT legacy-provider smoke test: switch `einvoice_provider` to MISA only if owner explicitly keeps legacy credentials available → re-issue test invoice
 - Refund + GL reversal E2E green: order paid → refund created → `reverse_payment_and_post` atomic (GL reversed + stock restored + payment+order status flip + audit)
 - AP payment E2E green: supplier_invoice → `create_supplier_payment` → GL post
 - Reconciliation: discrepancy under tolerance threshold passes; over fails (manual reconciliation flow)
@@ -426,7 +426,7 @@ Reconciliation tolerance threshold per B33 (default proposal: 1,000 VND).
 | HĐĐT provider abstraction leaks vendor specifics | Medium | Per archived `provider resolver` ADR (D011 v2 — preserved as reference); LocalMisaProvider ↔ ViettelProvider clean interface |
 | Refund flow regression (M4 P0 hole) | High | Re-implement per green principle; tenant binding + server recompute + idempotency table apply |
 | BHXH/PIT rate change mid-period | Medium | Rates in `system_settings` (config-driven); audit log on change |
-| MISA sandbox availability for rehearsal | Medium | Have Viettel as fallback rehearsal target |
+| Viettel S-invoice sandbox/test availability for rehearsal | Medium | Escalate with Viettel BU; use MISA only as an explicit owner-approved legacy-provider smoke path if credentials exist |
 
 ---
 
@@ -746,7 +746,7 @@ Per `04-CUTOVER-QA-RUNBOOK.md` §Production Cutover.
 7. Apply final delta migration to green
 8. Copy final storage delta
 9. Switch production env vars to green
-10. Rotate or confirm secrets (MISA / MoMo / VietQR / Upstash)
+10. Rotate or confirm secrets (Viettel S-invoice / MoMo / VietQR / Upstash)
 11. Deploy app config
 12. Force cache / PWA refresh
 13. Run smoke suite immediately
@@ -778,7 +778,7 @@ Augments `PROGRAM-READINESS.md §8`:
 | Schema baseline drift between waves | High | All migrations apply from empty test (per `04-CUTOVER-QA-RUNBOOK.md`) | W1, W3, W4 |
 | Cross-wave RPC contract drift (Finance ↔ HR ↔ Inventory) | High | Contract review at W3→W4 and W4→W5 transitions | W3, W4 |
 | Realtime publication overload | Medium | Branch-scoped subscriptions + client filtering | W5 |
-| HĐĐT provider outage | Medium | MISA primary + Viettel fallback + system_settings flip | W4 |
+| HĐĐT provider outage | Medium | Viettel S-invoice primary; manual recovery or explicit owner-approved legacy MISA switch only if credentials exist | W4 |
 | Print agent connectivity failure | Medium | Per B48 + per-branch deployment + queue retry | W5 |
 | Test data drift between rehearsals | Medium | Snapshot blue → seeded test fixtures versioned | W1+ |
 | Brand drift across modules | Medium | Lint rule + final brand pass W6 | W0–W6 |

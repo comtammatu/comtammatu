@@ -16,7 +16,6 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
-import { cn } from "@comtammatu/ui";
 import type { DataTableFilter } from "./data-table";
 
 interface DataTableToolbarProps {
@@ -54,10 +53,10 @@ export function DataTableToolbar({
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center">
         {searchable ? (
-          <InputGroup className={cn("max-w-sm", isMobile && "h-12")}>
-            <InputGroupAddon>
-              <IconSearch />
-            </InputGroupAddon>
+          <InputGroup
+            size={isMobile ? "touch" : "default"}
+            className="max-w-sm"
+          >
             <InputGroupInput
               type="search"
               placeholder={searchPlaceholder}
@@ -65,6 +64,9 @@ export function DataTableToolbar({
               onChange={(e) => onSearchChange?.(e.target.value)}
               inputMode="search"
             />
+            <InputGroupAddon>
+              <IconSearch />
+            </InputGroupAddon>
           </InputGroup>
         ) : null}
 

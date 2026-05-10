@@ -126,7 +126,7 @@ export default async function ReportsPage() {
                 lương.
               </p>
           </div>
-          <Badge variant="secondary" className="rounded-full px-3 py-1.5">
+          <Badge variant="secondary" size="lg">
             Điều hành
           </Badge>
         </CardHeader>
@@ -153,7 +153,7 @@ export default async function ReportsPage() {
                 công việc.
               </p>
             </div>
-            <Badge variant="info" className="rounded-full px-3 py-1.5">
+            <Badge variant="info" size="lg">
               Chi tiết
             </Badge>
           </CardHeader>

@@ -59,7 +59,7 @@
 | 8 | `decisions.md` + `adr/` | Architecture decisions + ADRs |
 
 **Reference (kept as record, không phải canonical):**
-- `system-rebuild/00-DEBATE-SYNTHESIS.md` — record of 4-agent debate output, frozen
+- `system-rebuild/00-DEBATE-SYNTHESIS.md` — record of 4-perspective debate output, frozen
 - `system-rebuild/audit/` — data audit results (per run)
 - `tasks/regressions.md`, `tasks/lessons.md`, `tasks/todo.md` — operational state
 

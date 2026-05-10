@@ -58,7 +58,8 @@ export function ExtendWindowButton({
   const [note, setNote] = useState("");
   const [isSubmitting, startSubmit] = useTransition();
 
-  const outOfCredits = typeof remainingCredits === "number" && remainingCredits <= 0;
+  const outOfCredits =
+    typeof remainingCredits === "number" && remainingCredits <= 0;
   const noteOk = note.length >= NOTE_MIN;
   const canSubmit = noteOk && !isSubmitting;
 
@@ -108,7 +109,7 @@ export function ExtendWindowButton({
           ) : null}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-md">
+      <DialogContent size="md">
         <DialogHeader>
           <DialogTitle>Extend Express window</DialogTitle>
           <DialogDescription>

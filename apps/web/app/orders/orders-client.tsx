@@ -288,7 +288,7 @@ export function OrdersClient({
           {displayOrders.length} đơn hàng
         </p>
         {hasFilters && (
-          <Badge variant="info" className="rounded-full px-3 py-1.5">
+          <Badge variant="info" size="lg">
             Bộ lọc đang áp dụng
           </Badge>
         )}
@@ -385,7 +385,7 @@ export function OrdersClient({
             ))}
           </div>
 
-          <div className="hidden overflow-hidden rounded-3xl border border-border/70 md:block">
+          <div className="hidden overflow-hidden rounded-lg border border-border/70 md:block">
             <Table>
               <TableHeader>
                 <TableRow>

@@ -39,7 +39,7 @@ export function OverrideCodeInput({
   onVerified,
   disabled,
   label = "Mã xác nhận QLV",
-  helper = "QLV nhập mã override để duyệt lệch giá 30–100%.",
+  helper = "QLV nhập mã duyệt vượt để xác nhận lệch giá 30–100%.",
   className,
 }: OverrideCodeInputProps) {
   const [code, setCode] = useState("");
@@ -86,7 +86,7 @@ export function OverrideCodeInput({
         return;
       }
       setVerified(true);
-      toast.success("Đã xác nhận mã override");
+      toast.success("Đã xác nhận mã duyệt vượt");
       onVerified();
     });
   }
@@ -121,7 +121,7 @@ export function OverrideCodeInput({
         )}
       >
         {locked
-          ? `Chờ ${countdown}s trước khi thử lại (vượt rate-limit 3/phút)`
+          ? `Chờ ${countdown}s trước khi thử lại (vượt giới hạn 3 lần/phút)`
           : helper}
       </p>
     </form>

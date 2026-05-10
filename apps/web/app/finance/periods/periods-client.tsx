@@ -167,7 +167,9 @@ export function PeriodsClient({ periods: initial }: Props) {
     <>
       <AppToolbar className="justify-between">
         <div className="space-y-1">
-          <p className="text-sm font-medium">{messages.finance.periods.title}</p>
+          <p className="text-sm font-medium">
+            {messages.finance.periods.title}
+          </p>
           <p className="text-xs text-muted-foreground">
             {messages.finance.periods.description}
           </p>
@@ -198,11 +200,11 @@ export function PeriodsClient({ periods: initial }: Props) {
             </TableHeader>
             <TableBody>
               {periods.length === 0 ? (
-                  <TableEmptyStateRow
-                    colSpan={5}
-                    title={messages.finance.periods.emptyTitle}
-                    description={messages.finance.periods.emptyDescription}
-                  />
+                <TableEmptyStateRow
+                  colSpan={5}
+                  title={messages.finance.periods.emptyTitle}
+                  description={messages.finance.periods.emptyDescription}
+                />
               ) : (
                 periods.map((p) => (
                   <TableRow key={p.id}>
@@ -268,7 +270,10 @@ export function PeriodsClient({ periods: initial }: Props) {
             <DialogDescription>
               {messages.finance.periods.closeDialogDescription(
                 closeTarget
-                  ? formatPeriod(closeTarget.period_month, closeTarget.period_year)
+                  ? formatPeriod(
+                      closeTarget.period_month,
+                      closeTarget.period_year,
+                    )
                   : "",
               )}
             </DialogDescription>
@@ -295,7 +300,7 @@ export function PeriodsClient({ periods: initial }: Props) {
           setReconData(null);
         }}
       >
-        <DialogContent className="sm:max-w-xl">
+        <DialogContent size="xl">
           <DialogHeader>
             <DialogTitle>
               {messages.finance.periods.reconTitle(

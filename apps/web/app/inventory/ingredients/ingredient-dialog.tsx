@@ -232,8 +232,8 @@ function IngredientFormContent({
             <TextField
               control={form.control}
               name="sku"
-              label="Mã SKU"
-              placeholder="SKU-001"
+              label="Mã hàng"
+              placeholder="VD: NL-001"
             />
           </div>
 
@@ -313,7 +313,7 @@ function IngredientFormContent({
           )}
         </FieldGroup>
 
-        <DialogFooter className="pt-6">
+        <DialogFooter spacing="form">
           <Button
             type="button"
             variant="outline"
@@ -340,10 +340,7 @@ export function IngredientDialog({
 }: IngredientDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="sm:max-w-lg"
-        key={ingredient?.id ?? "new-ingredient"}
-      >
+      <DialogContent size="lg" key={ingredient?.id ?? "new-ingredient"}>
         <IngredientFormContent
           open={open}
           ingredient={ingredient}

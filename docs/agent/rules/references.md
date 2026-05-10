@@ -15,14 +15,17 @@ Use this file to find the source-of-truth docs for onboarding, implementation pl
 
 ## Planning And Specs
 
-- Roadmap + phases: `docs/plan/roadmap.md`
-- UI/UX rebuild plan: `docs/plan/ui-ux-rebuild.md`
-- UI/UX page contracts: `docs/plan/ui-ux-page-contracts.md`
-- M2-Ext POS order lifecycle: `docs/plan/m2-order-lifecycle.md`
+- Active work tracker: `tasks/todo.md`
+- System rebuild program: `docs/plan/system-rebuild/README.md`
+- System rebuild wave plan: `docs/plan/system-rebuild/06-WAVE-PLAN.md`
+- System rebuild readiness: `docs/plan/system-rebuild/PROGRAM-READINESS.md`
+- HĐĐT hybrid Viettel S-invoice plan: `docs/plan/hddt-hybrid-sinvoice.md`
+- Inventory redesign pilot: `docs/plan/inventory-redesign-2026-05-08/shotgun-hom-nay.md`
 - Architecture decisions: `docs/plan/decisions.md`
 - System architecture: `docs/spec/architecture.md`
 - Database schema: `docs/spec/database-schema.md`
 - Design system contract: `docs/spec/design-system.md`
+- Archived legacy plans: `docs/archive/plan/`
 
 ## Business Domain
 

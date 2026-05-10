@@ -39,6 +39,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -58,8 +59,15 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
+import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { Combobox, NumberField, TextField } from "@/components/form";
+import {
+  Combobox,
+  MultiSelectCombobox,
+  NumberField,
+  TextField,
+} from "@/components/form";
+import { parseInventoryBulkLines } from "./_lib/bulk-line-parser";
 import {
   deleteProductionRecipeGroup,
   deleteProductionRecipe,
@@ -98,8 +106,8 @@ const recipeLineItemSchema = z.object({
   unit: z.string().trim().min(1, { error: "Đơn vị không được trống" }),
   yield_factor: z
     .string()
-    .min(1, { error: "Nhập yield" })
-    .refine((v) => Number(v) > 0, { error: "Yield phải > 0" }),
+    .min(1, { error: "Nhập hệ số sản lượng" })
+    .refine((v) => Number(v) > 0, { error: "Hệ số sản lượng phải > 0" }),
   note: z.string().optional(),
 });
 
@@ -110,7 +118,7 @@ const recipeFormSchema = z
       .min(1, { error: "Vui lòng chọn thành phẩm" })
       .refine((v) => Number(v) > 0, { error: "Thành phẩm không hợp lệ" }),
     lines: z.array(recipeLineItemSchema).min(1, {
-      error: "Cần ít nhất một nguyên liệu trong BOM.",
+      error: "Cần ít nhất một nguyên liệu trong công thức.",
     }),
   })
   .superRefine((value, ctx) => {
@@ -121,7 +129,7 @@ const recipeFormSchema = z
         ctx.addIssue({
           code: "custom",
           path: ["lines", index, "ingredient_id"],
-          message: "Nguyên liệu bị trùng trong BOM.",
+          message: "Nguyên liệu bị trùng trong công thức.",
         });
       }
       seen.add(line.ingredient_id);
@@ -153,6 +161,28 @@ function recipeToLineFormValue(
   };
 }
 
+function parsePastedRecipeLines(
+  rawText: string,
+  rawIngredientsOptions: RawIngredientOption[],
+) {
+  const result = parseInventoryBulkLines({
+    text: rawText,
+    items: rawIngredientsOptions,
+    getUnit: (ingredient) => ingredient.unit,
+  });
+
+  return {
+    parsed: result.parsed.map(({ item, quantity, note }) => ({
+      ingredient_id: String(item.id),
+      quantity,
+      unit: item.unit,
+      yield_factor: "1",
+      note,
+    })),
+    issues: result.issues,
+  };
+}
+
 function toRecipeFormValues(
   group: ProductionRecipeGroup | null,
   defaultFinishedGoodId?: string,
@@ -169,8 +199,22 @@ function toRecipeFormValues(
 
   return {
     finished_good_id: defaultFinishedGoodId ?? "",
-    lines: [emptyRecipeLine()],
+    lines: [],
   };
+}
+
+function getNextRecipeFinishedGoodId(
+  finishedGoods: FinishedGoodOption[],
+  recipeGroups: ProductionRecipeGroup[],
+) {
+  const configuredIds = new Set(
+    recipeGroups.map((group) => group.finishedGoodId),
+  );
+  const missingRecipeGood = finishedGoods.find(
+    (good) => !configuredIds.has(good.id),
+  );
+
+  return missingRecipeGood?.id ?? finishedGoods[0]?.id;
 }
 
 function RecipeIngredientField({
@@ -235,6 +279,106 @@ function RecipeIngredientField({
   );
 }
 
+function RecipeLineEditor({
+  form,
+  index,
+  line,
+  ingredientOptions,
+  rawIngredientsOptions,
+  selectedIngredientIds,
+  onRemove,
+}: {
+  form: UseFormReturn<RecipeFormValues, unknown, RecipeFormValues>;
+  index: number;
+  line: RecipeLineItemFormValues;
+  ingredientOptions: Array<{ value: string; label: string }>;
+  rawIngredientsOptions: RawIngredientOption[];
+  selectedIngredientIds: Set<string>;
+  onRemove: () => void;
+}) {
+  const ingredient = rawIngredientsOptions.find(
+    (item) => item.id === Number(line.ingredient_id),
+  );
+  const lineError = form.formState.errors.lines?.[index];
+
+  return (
+    <div className="rounded-md border border-border bg-card p-3">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex min-w-0 flex-col gap-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="secondary">Dòng {index + 1}</Badge>
+            {ingredient ? (
+              <Badge variant="outline">{ingredient.unit}</Badge>
+            ) : null}
+          </div>
+          <div className="min-h-5 truncate font-medium">
+            {ingredient?.name ?? "Chưa chọn nguyên liệu"}
+          </div>
+        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={onRemove}
+          aria-label={`Xóa dòng nguyên liệu ${index + 1}`}
+          title="Xóa dòng nguyên liệu"
+        >
+          <IconTrash />
+        </Button>
+      </div>
+
+      <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-12">
+        <div className="xl:col-span-4">
+          <RecipeIngredientField
+            form={form}
+            index={index}
+            ingredientOptions={ingredientOptions}
+            rawIngredientsOptions={rawIngredientsOptions}
+            selectedIngredientIds={selectedIngredientIds}
+          />
+        </div>
+        <div className="xl:col-span-2">
+          <NumberField
+            control={form.control}
+            name={`lines.${index}.quantity` as const}
+            label="Số lượng"
+            maxFractionDigits={3}
+            required
+          />
+        </div>
+        <div className="xl:col-span-2">
+          <Field data-invalid={!!lineError?.unit}>
+            <FieldLabel>Đơn vị</FieldLabel>
+            <div className="flex h-7 items-center rounded-md border border-input bg-muted/40 px-2 text-sm text-muted-foreground">
+              {line.unit || "Tự động"}
+            </div>
+            {lineError?.unit?.message ? (
+              <FieldError>{lineError.unit.message}</FieldError>
+            ) : null}
+          </Field>
+        </div>
+        <div className="xl:col-span-2">
+          <NumberField
+            control={form.control}
+            name={`lines.${index}.yield_factor` as const}
+            label="Hệ số sản lượng"
+            maxFractionDigits={3}
+            required
+          />
+        </div>
+        <div className="md:col-span-2 xl:col-span-2">
+          <TextField
+            control={form.control}
+            name={`lines.${index}.note` as const}
+            label="Ghi chú"
+            placeholder="Hao hụt..."
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Main recipe panel ─── */
 
 interface ProductionRecipePanelProps {
@@ -277,6 +421,8 @@ export function ProductionRecipePanel({
     useState(false);
   const [recipeDialogOpen, setRecipeDialogOpen] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [bulkText, setBulkText] = useState("");
+  const [bulkIssues, setBulkIssues] = useState<string[]>([]);
   const [editingRecipeGroup, setEditingRecipeGroup] =
     useState<ProductionRecipeGroup | null>(null);
   const [recipeGroupToDelete, setRecipeGroupToDelete] =
@@ -348,13 +494,25 @@ export function ProductionRecipePanel({
     value: String(good.id),
     label: good.name,
   }));
+  const nextRecipeFinishedGoodId = getNextRecipeFinishedGoodId(
+    finishedGoodsOptions,
+    groupedRecipes,
+  );
 
   const ingredientOptions = rawIngredientsOptions.map((item) => ({
     value: String(item.id),
     label: item.name,
   }));
+  const rawIngredientById = useMemo(() => {
+    const map = new Map<string, RawIngredientOption>();
+    rawIngredientsOptions.forEach((ingredient) => {
+      map.set(String(ingredient.id), ingredient);
+    });
+    return map;
+  }, [rawIngredientsOptions]);
 
   const watchedLines = form.watch("lines") ?? [];
+  const watchedFinishedGoodId = form.watch("finished_good_id");
   const selectedIngredientIds = useMemo(
     () =>
       new Set(
@@ -365,6 +523,14 @@ export function ProductionRecipePanel({
     [watchedLines],
   );
   const finishedGoodLocked = pendingFinishedGoodId != null;
+  const selectedRecipeGroup = useMemo(
+    () =>
+      groupedRecipes.find(
+        (group) => group.finishedGoodId === Number(watchedFinishedGoodId),
+      ) ?? null,
+    [groupedRecipes, watchedFinishedGoodId],
+  );
+  const isUpdatingExistingRecipe = selectedRecipeGroup != null;
 
   useEffect(() => {
     if (!recipeDialogOpen) return;
@@ -373,7 +539,9 @@ export function ProductionRecipePanel({
       pendingFinishedGoodId ??
       (editingRecipeGroup
         ? String(editingRecipeGroup.finishedGoodId)
-        : defaultFinishedGoodId);
+        : nextRecipeFinishedGoodId != null
+          ? String(nextRecipeFinishedGoodId)
+          : defaultFinishedGoodId);
     const initialGroup =
       editingRecipeGroup ??
       groupedRecipes.find(
@@ -383,11 +551,14 @@ export function ProductionRecipePanel({
 
     form.reset(toRecipeFormValues(initialGroup, initialFinishedGoodId));
     setServerError(null);
+    setBulkText("");
+    setBulkIssues([]);
   }, [
     recipeDialogOpen,
     editingRecipeGroup,
     pendingFinishedGoodId,
     defaultFinishedGoodId,
+    nextRecipeFinishedGoodId,
     groupedRecipes,
     form,
   ]);
@@ -398,10 +569,77 @@ export function ProductionRecipePanel({
         (item) => item.finishedGoodId === Number(finishedGoodId),
       ) ?? null;
     replaceRecipeLines(
-      group?.lines.length
-        ? group.lines.map(recipeToLineFormValue)
-        : [emptyRecipeLine()],
+      group?.lines.length ? group.lines.map(recipeToLineFormValue) : [],
     );
+  }
+
+  function handleBulkAddIngredients(ingredientIds: string[]) {
+    const keptLines = (form.getValues("lines") ?? []).filter(
+      (line) => line.ingredient_id,
+    );
+    const seenIds = new Set(keptLines.map((line) => line.ingredient_id));
+    const nextLines = [...keptLines];
+
+    ingredientIds.forEach((ingredientId) => {
+      if (seenIds.has(ingredientId)) return;
+      const ingredient = rawIngredientById.get(ingredientId);
+      if (!ingredient) return;
+      nextLines.push({
+        ingredient_id: ingredientId,
+        quantity: "1",
+        unit: ingredient.unit,
+        yield_factor: "1",
+        note: "",
+      });
+      seenIds.add(ingredientId);
+    });
+
+    replaceRecipeLines(nextLines.length > 0 ? nextLines : [emptyRecipeLine()]);
+    setBulkIssues([]);
+  }
+
+  function handleApplyPastedLines() {
+    const { parsed, issues } = parsePastedRecipeLines(
+      bulkText,
+      rawIngredientsOptions,
+    );
+
+    if (parsed.length === 0) {
+      setBulkIssues(issues.length > 0 ? issues : ["Không có dòng hợp lệ"]);
+      return;
+    }
+
+    const nextLines = (form.getValues("lines") ?? []).filter(
+      (line) => line.ingredient_id,
+    );
+    const indexByIngredientId = new Map<string, number>();
+    nextLines.forEach((line, index) => {
+      indexByIngredientId.set(line.ingredient_id, index);
+    });
+
+    parsed.forEach((line) => {
+      const existingIndex = indexByIngredientId.get(line.ingredient_id);
+      if (existingIndex == null) {
+        indexByIngredientId.set(line.ingredient_id, nextLines.length);
+        nextLines.push(line);
+        return;
+      }
+
+      const existingLine = nextLines[existingIndex];
+      if (!existingLine) return;
+      nextLines[existingIndex] = {
+        ...existingLine,
+        quantity: line.quantity,
+        unit: line.unit,
+        yield_factor: existingLine.yield_factor || "1",
+        note: line.note || existingLine.note,
+      };
+    });
+
+    replaceRecipeLines(nextLines);
+    setBulkText("");
+    setBulkIssues(issues);
+    toast.success(`Đã nhập nhanh ${parsed.length} dòng nguyên liệu`);
   }
 
   function openRecipeDialog(finishedGoodId?: number) {
@@ -436,7 +674,7 @@ export function ProductionRecipePanel({
     });
     form.setValue("finished_good_id", String(good.id));
     setPendingFinishedGoodId(String(good.id));
-    replaceRecipeLines([emptyRecipeLine()]);
+    replaceRecipeLines([]);
     router.refresh();
   }
 
@@ -479,10 +717,10 @@ export function ProductionRecipePanel({
         })),
       });
       if (!result.success) {
-        setServerError(result.error ?? "Không thể lưu BOM sản xuất");
+        setServerError(result.error ?? "Không thể lưu công thức sản xuất");
         return;
       }
-      toast.success(`Đã lưu ${values.lines.length} nguyên liệu trong BOM`);
+      toast.success(`Đã lưu ${values.lines.length} nguyên liệu trong công thức`);
       setRecipeDialogOpen(false);
       setEditingRecipeGroup(null);
       setPendingFinishedGoodId(undefined);
@@ -532,7 +770,7 @@ export function ProductionRecipePanel({
             Công thức sản xuất
           </CardTitle>
           {canManageRecipes ? (
-            <CardAction className="col-span-full row-auto flex flex-wrap justify-start gap-2 sm:col-start-2 sm:row-span-2 sm:row-start-1 sm:justify-self-end">
+            <CardAction className="col-span-full col-start-1 row-span-1 row-start-2 flex flex-wrap justify-start gap-2 sm:col-start-2 sm:row-span-2 sm:row-start-1 sm:justify-self-end">
               <ProductionRecipeImportExportMenu
                 onImported={() => router.refresh()}
               />
@@ -542,14 +780,14 @@ export function ProductionRecipePanel({
                 onClick={() => openRecipeDialog()}
               >
                 <IconPlus data-icon="inline-start" />
-                Nhập BOM
+                Nhập công thức
               </Button>
             </CardAction>
           ) : null}
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
           <Badge variant={badgeVariantFromTone("neutral")}>
-            {groupedRecipes.length} thành phẩm có BOM
+            {groupedRecipes.length} thành phẩm có công thức
           </Badge>
           <Badge variant={badgeVariantFromTone("neutral")}>
             {recipes.length} dòng nguyên liệu
@@ -561,20 +799,29 @@ export function ProductionRecipePanel({
         open={recipeDialogOpen}
         onOpenChange={handleRecipeDialogOpenChange}
       >
-        <DialogContent className="sm:max-w-5xl">
+        <DialogContent size="5xl">
           <DialogHeader>
             <DialogTitle>
-              {finishedGoodLocked ? "Cập nhật BOM" : "Nhập BOM sản xuất"}
+              {finishedGoodLocked || isUpdatingExistingRecipe
+                ? "Cập nhật công thức"
+                : "Nhập công thức sản xuất"}
             </DialogTitle>
+            <DialogDescription>
+              {isUpdatingExistingRecipe
+                ? "Thành phẩm này đã có công thức; danh sách lưu sẽ thay thế nội dung hiện tại."
+                : "Ưu tiên thành phẩm chưa có công thức. Dán danh sách để thêm nhiều nguyên liệu một lượt."}
+            </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={form.handleSubmit(onValid)} noValidate>
-            <FieldGroup>
-              <p className="text-sm text-muted-foreground">
-                Chọn thành phẩm một lần, thêm nhiều nguyên liệu rồi lưu BOM.
-              </p>
-
-              <div className="grid gap-4 md:grid-cols-2">
+          <form
+            onSubmit={form.handleSubmit(onValid)}
+            noValidate
+            className="flex flex-col gap-4"
+          >
+            <FieldGroup
+              className={recipeLineFields.length > 0 ? "sm:pb-24" : undefined}
+            >
+              <div className="grid gap-3 md:grid-cols-2">
                 <div className="flex flex-col gap-2">
                   <Controller
                     control={form.control}
@@ -606,9 +853,9 @@ export function ProductionRecipePanel({
                   {!finishedGoodLocked && canManageCatalog ? (
                     <Button
                       type="button"
-                      variant="link"
+                      variant="ghost"
                       size="sm"
-                      className="h-auto justify-start p-0 font-medium"
+                      className="justify-start"
                       onClick={() => setQuickFinishedGoodDialogOpen(true)}
                     >
                       <IconPlus data-icon="inline-start" />
@@ -623,37 +870,104 @@ export function ProductionRecipePanel({
                     </p>
                   ) : null}
                 </div>
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex flex-col gap-1">
-                      <span className="text-sm font-medium">Dòng BOM</span>
-                      <span className="text-xs text-muted-foreground">
-                        {recipeLineFields.length} nguyên liệu
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap items-center justify-end gap-2">
-                      {canManageCatalog ? (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setQuickRawIngredientDialogOpen(true)}
-                        >
-                          <IconPlus data-icon="inline-start" />
-                          Tạo nguyên liệu
-                        </Button>
+                <div className="rounded-md border border-border bg-card p-3">
+                  <Field>
+                    <FieldLabel htmlFor="production-bom-paste">
+                      Dán danh sách nguyên liệu
+                    </FieldLabel>
+                    <Textarea
+                      id="production-bom-paste"
+                      value={bulkText}
+                      onChange={(event) => setBulkText(event.target.value)}
+                      placeholder={"Thịt ba chỉ 2 kg\nNước mắm 0,5 lít"}
+                    />
+                  </Field>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="lg"
+                    className="mt-3 w-full"
+                    onClick={handleApplyPastedLines}
+                    disabled={!bulkText.trim()}
+                  >
+                    Áp dụng danh sách
+                  </Button>
+                  {bulkIssues.length > 0 ? (
+                    <div className="mt-3 rounded-md border border-warning/30 bg-warning/10 p-3 text-xs text-warning">
+                      <div className="font-medium">
+                        {bulkIssues.length} dòng cần kiểm tra
+                      </div>
+                      <ul className="mt-1 flex list-disc flex-col gap-1 pl-4">
+                        {bulkIssues.slice(0, 4).map((issue) => (
+                          <li key={issue}>{issue}</li>
+                        ))}
+                      </ul>
+                      {bulkIssues.length > 4 ? (
+                        <div className="mt-1">
+                          Còn {bulkIssues.length - 4} dòng khác.
+                        </div>
                       ) : null}
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => appendRecipeLine(emptyRecipeLine())}
-                      >
-                        <IconPlus data-icon="inline-start" />
-                        Thêm dòng
-                      </Button>
                     </div>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="rounded-md border border-border bg-muted/20 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-sm font-medium">Thêm nhanh</span>
+                    <span className="text-xs text-muted-foreground">
+                      {selectedIngredientIds.size} nguyên liệu đã chọn
+                    </span>
                   </div>
+                  <Badge variant="secondary">
+                    {rawIngredientsOptions.length} có thể chọn
+                  </Badge>
+                </div>
+
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  <MultiSelectCombobox
+                    options={rawIngredientsOptions.map((ingredient) => ({
+                      value: String(ingredient.id),
+                      label: ingredient.name,
+                      hint: ingredient.unit,
+                      alreadySelected: selectedIngredientIds.has(
+                        String(ingredient.id),
+                      ),
+                    }))}
+                    onConfirm={handleBulkAddIngredients}
+                    triggerLabel="Chọn nhiều nguyên liệu"
+                    confirmLabel={(count) =>
+                      count > 0
+                        ? `Thêm ${count} nguyên liệu`
+                        : "Thêm nguyên liệu"
+                    }
+                    searchPlaceholder="Tìm nguyên liệu..."
+                    triggerClassName="w-full"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="lg"
+                    onClick={() => appendRecipeLine(emptyRecipeLine())}
+                  >
+                    <IconPlus data-icon="inline-start" />
+                    Thêm dòng trống
+                  </Button>
+                </div>
+
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {canManageCatalog ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setQuickRawIngredientDialogOpen(true)}
+                    >
+                      <IconPlus data-icon="inline-start" />
+                      Tạo nguyên liệu
+                    </Button>
+                  ) : null}
                   {!canManageCatalog && rawIngredientsOptions.length === 0 ? (
                     <p className="text-xs text-muted-foreground">
                       Chưa có nguyên liệu đầu vào trong danh mục.
@@ -662,70 +976,36 @@ export function ProductionRecipePanel({
                 </div>
               </div>
 
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex flex-col gap-1">
+                  <span className="text-sm font-medium">Dòng nguyên liệu</span>
+                  <span className="text-xs text-muted-foreground">
+                    {recipeLineFields.length} nguyên liệu trong lần lưu này
+                  </span>
+                </div>
+                <Badge variant="outline">Công thức</Badge>
+              </div>
+
               <div className="flex flex-col gap-3">
-                {recipeLineFields.map((lineField, index) => (
-                  <div
-                    key={lineField.id}
-                    className="grid gap-3 rounded-md border border-border p-3 md:grid-cols-2 xl:grid-cols-12"
-                  >
-                    <div className="xl:col-span-3">
-                      <RecipeIngredientField
-                        form={form}
-                        index={index}
-                        ingredientOptions={ingredientOptions}
-                        rawIngredientsOptions={rawIngredientsOptions}
-                        selectedIngredientIds={selectedIngredientIds}
-                      />
-                    </div>
-                    <div className="xl:col-span-2">
-                      <NumberField
-                        control={form.control}
-                        name={`lines.${index}.quantity` as const}
-                        label="Số lượng"
-                        maxFractionDigits={3}
-                        required
-                      />
-                    </div>
-                    <div className="xl:col-span-2">
-                      <TextField
-                        control={form.control}
-                        name={`lines.${index}.unit` as const}
-                        label="Đơn vị"
-                        required
-                      />
-                    </div>
-                    <div className="xl:col-span-2">
-                      <NumberField
-                        control={form.control}
-                        name={`lines.${index}.yield_factor` as const}
-                        label="Yield"
-                        maxFractionDigits={3}
-                        required
-                      />
-                    </div>
-                    <div className="xl:col-span-2">
-                      <TextField
-                        control={form.control}
-                        name={`lines.${index}.note` as const}
-                        label="Ghi chú"
-                        placeholder="Hao hụt..."
-                      />
-                    </div>
-                    <div className="flex items-end justify-end xl:col-span-1">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeRecipeLine(index)}
-                        disabled={recipeLineFields.length <= 1}
-                        aria-label={`Xóa dòng BOM ${index + 1}`}
-                        title="Xóa dòng BOM"
-                      >
-                        <IconTrash />
-                      </Button>
-                    </div>
+                {recipeLineFields.length === 0 ? (
+                  <div className="rounded-md border border-dashed border-border bg-muted/20 p-3 text-sm text-muted-foreground">
+                    Dán danh sách, chọn nhiều nguyên liệu hoặc thêm dòng trống
+                    để bắt đầu công thức.
                   </div>
-                ))}
+                ) : (
+                  recipeLineFields.map((lineField, index) => (
+                    <RecipeLineEditor
+                      key={lineField.id}
+                      form={form}
+                      index={index}
+                      line={watchedLines[index] ?? emptyRecipeLine()}
+                      ingredientOptions={ingredientOptions}
+                      rawIngredientsOptions={rawIngredientsOptions}
+                      selectedIngredientIds={selectedIngredientIds}
+                      onRemove={() => removeRecipeLine(index)}
+                    />
+                  ))
+                )}
               </div>
 
               {serverError && (
@@ -735,20 +1015,29 @@ export function ProductionRecipePanel({
               )}
             </FieldGroup>
 
-            <DialogFooter className="pt-6">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => handleRecipeDialogOpenChange(false)}
-                disabled={isPending}
-              >
-                {ACTIONS_VI.cancel}
-              </Button>
-              <Button type="submit" disabled={isPending}>
-                {isPending && <Spinner data-icon="inline-start" />}
-                Lưu BOM
-              </Button>
-            </DialogFooter>
+            {recipeLineFields.length > 0 ? (
+              <DialogFooter className="flex-col border-t bg-popover pt-3 sm:sticky sm:bottom-0 sm:flex-row">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => handleRecipeDialogOpenChange(false)}
+                  disabled={isPending}
+                  size="touch"
+                  className="w-full sm:w-auto"
+                >
+                  {ACTIONS_VI.cancel}
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isPending}
+                  size="touch"
+                  className="w-full sm:w-auto"
+                >
+                  {isPending && <Spinner data-icon="inline-start" />}
+                  Lưu công thức ({recipeLineFields.length})
+                </Button>
+              </DialogFooter>
+            ) : null}
           </form>
         </DialogContent>
       </Dialog>
@@ -771,21 +1060,23 @@ export function ProductionRecipePanel({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Xóa toàn bộ BOM?</AlertDialogTitle>
+            <AlertDialogTitle>Xóa toàn bộ công thức?</AlertDialogTitle>
             <AlertDialogDescription>
               {recipeGroupToDelete
-                ? `Thao tác này sẽ xóa toàn bộ ${recipeGroupToDelete.lines.length} dòng BOM của "${recipeGroupToDelete.finishedGoodName}".`
-                : "Thao tác này sẽ xóa toàn bộ BOM của thành phẩm đã chọn."}
+                ? `Thao tác này sẽ xóa toàn bộ ${recipeGroupToDelete.lines.length} dòng nguyên liệu của "${recipeGroupToDelete.finishedGoodName}".`
+                : "Thao tác này sẽ xóa toàn bộ công thức của thành phẩm đã chọn."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isPending}>{ACTIONS_VI.cancel}</AlertDialogCancel>
+            <AlertDialogCancel disabled={isPending}>
+              {ACTIONS_VI.cancel}
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleRecipeGroupDelete}
               disabled={isPending}
             >
               {isPending && <Spinner data-icon="inline-start" />}
-              Xóa toàn bộ BOM
+              Xóa toàn bộ công thức
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -794,7 +1085,7 @@ export function ProductionRecipePanel({
       {groupedRecipes.length === 0 ? (
         <AppEmptyState
           mode="no-data"
-          title="Chưa có BOM nào"
+          title="Chưa có công thức nào"
           description="Hãy thêm ít nhất một dòng nguyên liệu để bắt đầu cấu hình công thức cho thành phẩm."
           icon={<IconClipboardList className="size-5" />}
         />
@@ -810,7 +1101,7 @@ export function ProductionRecipePanel({
                   </Badge>
                 </CardTitle>
                 {canManageRecipes ? (
-                  <CardAction className="col-span-full row-auto flex flex-wrap justify-start gap-2 sm:col-start-2 sm:row-span-2 sm:row-start-1 sm:justify-self-end">
+                  <CardAction className="col-span-full col-start-1 row-span-1 row-start-2 flex flex-wrap justify-start gap-2 sm:col-start-2 sm:row-span-2 sm:row-start-1 sm:justify-self-end">
                     <Button
                       type="button"
                       variant="outline"
@@ -818,7 +1109,7 @@ export function ProductionRecipePanel({
                       onClick={() => openRecipeDialog(group.finishedGoodId)}
                     >
                       <IconPencil data-icon="inline-start" />
-                      Cập nhật BOM
+                      Cập nhật công thức
                     </Button>
                     <Button
                       type="button"
@@ -827,19 +1118,75 @@ export function ProductionRecipePanel({
                       onClick={() => setRecipeGroupToDelete(group)}
                     >
                       <IconTrash data-icon="inline-start" />
-                      Xóa toàn bộ BOM
+                      Xóa toàn bộ công thức
                     </Button>
                   </CardAction>
                 ) : null}
               </CardHeader>
 
-              <CardContent className="p-0">
+              <CardContent className="flex flex-col gap-2 md:hidden">
+                {group.lines.map((recipe) => (
+                  <div
+                    key={recipe.id}
+                    className="rounded-md border border-border p-3"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="truncate font-medium">
+                          {recipe.ingredient_name}
+                        </div>
+                        <div className="mt-1 text-xs text-muted-foreground">
+                          {recipe.note ?? "Không có ghi chú"}
+                        </div>
+                      </div>
+                      <div className="shrink-0 text-right font-mono">
+                        {recipe.quantity} {recipe.unit}
+                      </div>
+                    </div>
+                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="outline">{recipe.unit}</Badge>
+                        <Badge variant="secondary">
+                          Hệ số {recipe.yield_factor}
+                        </Badge>
+                      </div>
+                      {canManageRecipes ? (
+                        <div className="flex items-center gap-1">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditClick(recipe)}
+                            aria-label={`Cập nhật công thức ${recipe.finished_good_name}`}
+                            title="Cập nhật công thức"
+                          >
+                            <IconPencil data-icon="inline-start" />
+                            Sửa
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() => handleRecipeDelete(recipe.id)}
+                            aria-label={`Xóa nguyên liệu ${recipe.ingredient_name}`}
+                            title="Xóa nguyên liệu"
+                          >
+                            <IconTrash />
+                          </Button>
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+
+              <CardContent className="hidden md:block">
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>{PRODUCT_VI.rawIngredient}</TableHead>
                       <TableHead>{FORM_VI.quantity}</TableHead>
-                      <TableHead>Yield</TableHead>
+                      <TableHead>Hệ số sản lượng</TableHead>
                       <TableHead>{FORM_VI.notes}</TableHead>
                       {canManageRecipes ? <TableHead className="w-24" /> : null}
                     </TableRow>
@@ -870,8 +1217,8 @@ export function ProductionRecipePanel({
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => handleEditClick(recipe)}
-                                aria-label={`Cập nhật BOM ${recipe.finished_good_name}`}
-                                title="Cập nhật BOM"
+                                aria-label={`Cập nhật công thức ${recipe.finished_good_name}`}
+                                title="Cập nhật công thức"
                               >
                                 <IconPencil />
                               </Button>
@@ -880,8 +1227,8 @@ export function ProductionRecipePanel({
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => handleRecipeDelete(recipe.id)}
-                                aria-label={`Xóa dòng BOM ${recipe.ingredient_name}`}
-                                title="Xóa dòng BOM"
+                                aria-label={`Xóa nguyên liệu ${recipe.ingredient_name}`}
+                                title="Xóa nguyên liệu"
                               >
                                 <IconTrash />
                               </Button>

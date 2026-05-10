@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
-import { ArrowRight as IconArrowRight, ChevronDown as IconChevronDown } from "lucide-react";
+import {
+  ArrowRight as IconArrowRight,
+  ChevronDown as IconChevronDown,
+} from "lucide-react";
 import { cn } from "@comtammatu/ui";
 import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
 import {
@@ -67,9 +70,9 @@ export function AppPage({
   return (
     <div
       className={cn(
-        "min-h-0 flex-1",
+        "min-h-0 flex-1 bg-background text-foreground",
         scroll ? "no-scrollbar overflow-auto" : "overflow-visible",
-        padded && (isCompact ? "p-3" : "p-4"),
+        padded && (isCompact ? "p-4 md:p-5" : "p-4 md:p-6 2xl:p-8"),
         mobile && "pb-28",
         className,
       )}
@@ -77,7 +80,7 @@ export function AppPage({
       <div
         className={cn(
           "mx-auto flex w-full flex-col",
-          isCompact ? "gap-3" : "gap-4",
+          isCompact ? "gap-4" : "gap-6",
           mobile ? "max-w-2xl" : PAGE_WIDTH_CLASSNAME[width],
           contentClassName,
         )}
@@ -103,6 +106,16 @@ export type AppPageHeaderProps = {
   breadcrumb?: ReactNode;
   tabs?: ReactNode;
   meta?: ReactNode;
+  /**
+   * `default` keeps the original 4-zone layout (eyebrow, title, description,
+   * actions) with comfortable gaps. `compact` tightens vertical rhythm for
+   * data-dense routes — gaps shrink, actions align to title baseline,
+   * description renders as a single tight line. Compact mode does NOT change
+   * heading typography (still `text-xl sm:text-2xl` per Rhythm Contract B).
+   * Callers must drop eyebrow content that is already conveyed by the sidebar
+   * or breadcrumb.
+   */
+  density?: "default" | "compact";
 };
 
 export function AppPageHeader({
@@ -117,34 +130,61 @@ export function AppPageHeader({
   breadcrumb,
   tabs,
   meta,
+  density = "default",
 }: AppPageHeaderProps) {
   const Heading = headingLevel;
+  const isCompact = density === "compact";
 
   return (
-    <header className={cn("flex flex-col gap-2", className)}>
-      {breadcrumb ? <div>{breadcrumb}</div> : null}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <header
+      data-density={density}
+      className={cn("flex flex-col", isCompact ? "gap-1" : "gap-2", className)}
+    >
+      {!isCompact && breadcrumb ? <div>{breadcrumb}</div> : null}
+      <div
+        className={cn(
+          "flex flex-col sm:flex-row sm:justify-between",
+          isCompact ? "gap-2 sm:items-center" : "gap-3 sm:items-start",
+        )}
+      >
         <div className="min-w-0 space-y-1">
           {eyebrow ? (
-            <div className="text-xs font-medium text-muted-foreground">
+            <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               {eyebrow}
             </div>
           ) : null}
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
+            {isCompact && breadcrumb ? (
+              <>
+                <span className="shrink-0">{breadcrumb}</span>
+                <Separator
+                  orientation="vertical"
+                  aria-hidden
+                  className="hidden h-6 sm:block"
+                />
+              </>
+            ) : null}
             <Heading
               className={cn(
-                "font-heading min-w-0 text-xl font-semibold tracking-tight sm:text-2xl",
+                "font-heading min-w-0 text-xl font-semibold tracking-normal sm:text-2xl",
                 titleClassName,
               )}
             >
               {title}
             </Heading>
             {badge ? (
-              <Badge variant={badge.variant ?? "secondary"}>{badge.children}</Badge>
+              <Badge variant={badge.variant ?? "secondary"}>
+                {badge.children}
+              </Badge>
             ) : null}
           </div>
           {description ? (
-            <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
+            <p
+              className={cn(
+                "max-w-3xl text-muted-foreground",
+                isCompact ? "text-xs leading-5" : "text-sm leading-6",
+              )}
+            >
               {description}
             </p>
           ) : null}
@@ -208,6 +248,12 @@ export type AppSectionProps = {
   size?: "default" | "sm";
   tone?: AppSectionTone;
   collapsible?: boolean;
+  /**
+   * Initial open state when `collapsible`. Defaults to `true`. Use `false` to
+   * collapse a section by default (e.g. an empty suggestions panel where
+   * showing the empty state would add noise).
+   */
+  defaultOpen?: boolean;
   footer?: ReactNode;
 };
 
@@ -225,10 +271,19 @@ export function AppSection({
   size = "default",
   tone = "default",
   collapsible = false,
+  defaultOpen = true,
   footer,
 }: AppSectionProps) {
-  const [open, setOpen] = useState(true);
-  const hasHeader = Boolean(title || description || headerHint || icon || badge || action || collapsible);
+  const [open, setOpen] = useState(defaultOpen);
+  const hasHeader = Boolean(
+    title ||
+    description ||
+    headerHint ||
+    icon ||
+    badge ||
+    action ||
+    collapsible,
+  );
   const chevronAction = collapsible ? (
     <button
       type="button"
@@ -238,7 +293,10 @@ export function AppSection({
       aria-label={open ? "Thu gọn" : "Mở rộng"}
     >
       <IconChevronDown
-        className={cn("size-4 transition-transform", open ? "rotate-0" : "-rotate-90")}
+        className={cn(
+          "size-4 transition-transform",
+          open ? "rotate-0" : "-rotate-90",
+        )}
       />
     </button>
   ) : null;
@@ -328,12 +386,17 @@ export function AppToolbar({
   actions,
   reset,
 }: AppToolbarProps) {
-  const hasSlots = search != null || filters != null || bulk != null || actions != null || reset != null;
+  const hasSlots =
+    search != null ||
+    filters != null ||
+    bulk != null ||
+    actions != null ||
+    reset != null;
 
   return (
-    <Card size="sm" className="py-0">
+    <Card size="sm" className="py-0 shadow-none">
       <CardContent
-        className={cn("flex flex-wrap items-center gap-3 p-3", className)}
+        className={cn("flex flex-wrap items-center gap-2 p-3", className)}
       >
         {hasSlots ? (
           <>
@@ -352,7 +415,9 @@ export function AppToolbar({
             {actions ? (
               <>
                 <Separator orientation="vertical" className="h-6" />
-                <div className="flex flex-wrap items-center gap-2">{actions}</div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {actions}
+                </div>
               </>
             ) : null}
             {reset ? (
@@ -487,7 +552,9 @@ export function AppLinkCard({
             {metric.value}
           </span>
           {metric.label ? (
-            <span className="text-xs text-muted-foreground">{metric.label}</span>
+            <span className="text-xs text-muted-foreground">
+              {metric.label}
+            </span>
           ) : null}
         </div>
       ) : null}
@@ -518,7 +585,9 @@ export function AppLinkCard({
             </p>
           ) : null}
           {disabled && disabledReason ? (
-            <p className="mt-1 text-xs text-muted-foreground">{disabledReason}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {disabledReason}
+            </p>
           ) : null}
         </div>
       </div>
@@ -534,8 +603,8 @@ export function AppLinkCard({
   return (
     <Card
       className={cn(
-        "h-full transition-[box-shadow,border-color]",
-        disabled ? "cursor-not-allowed opacity-60" : "hover:shadow-sm",
+        "h-full transition-colors",
+        disabled ? "cursor-not-allowed opacity-60" : "hover:border-primary/30",
       )}
     >
       <CardContent className="h-full p-0">

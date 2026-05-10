@@ -488,11 +488,13 @@ function PosDesktopInner({
   const pickerOrders = useMemo(
     () =>
       pickerTableId !== null
-        ? orders.filter(
-            (o) =>
-              o.table_id === pickerTableId &&
-              ACTIVE_POS_STATUSES.includes(o.status),
-          ).sort(compareOrdersByNextAction)
+        ? orders
+            .filter(
+              (o) =>
+                o.table_id === pickerTableId &&
+                ACTIVE_POS_STATUSES.includes(o.status),
+            )
+            .sort(compareOrdersByNextAction)
         : [],
     [pickerTableId, orders],
   );
@@ -676,17 +678,14 @@ function PosDesktopInner({
     [focusOrderWorkflow],
   );
 
-  const handlePayOrderFromPicker = useCallback(
-    (orderId: number) => {
-      setPickerTableId(null);
-      setCartDrawerOpen(false);
-      setPostSubmitPaymentOrderId(null);
-      setBillInitialOrder(null);
-      setBillIntent("payment");
-      setBillOrderId(orderId);
-    },
-    [],
-  );
+  const handlePayOrderFromPicker = useCallback((orderId: number) => {
+    setPickerTableId(null);
+    setCartDrawerOpen(false);
+    setPostSubmitPaymentOrderId(null);
+    setBillInitialOrder(null);
+    setBillIntent("payment");
+    setBillOrderId(orderId);
+  }, []);
 
   const handleAppendOrderFromPicker = useCallback(
     (orderId: number, orderNumber: string) => {
@@ -1281,7 +1280,10 @@ function PosDesktopInner({
     <ToggleGroup
       type="single"
       value={cartOrderType}
-      className="grid h-10 w-full grid-cols-2 overflow-hidden !rounded-none bg-muted/60"
+      variant="segmented"
+      size="touch"
+      shape="flush"
+      className="grid w-full grid-cols-2"
       aria-label={messages.pos.desktop.serviceModeAria}
       onValueChange={(value) => {
         if (value === "dine_in" || value === "takeaway") {
@@ -1291,14 +1293,14 @@ function PosDesktopInner({
     >
       <ToggleGroupItem
         value="dine_in"
-        className="h-full min-w-0 justify-center !rounded-none border-r border-border px-0 text-sm font-semibold text-muted-foreground hover:bg-background/70 hover:text-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm"
+        className="min-w-0 justify-center border-r border-border"
         disabled={cartItemCount > 0 && cartOrderType !== "dine_in"}
       >
         {messages.pos.desktop.dineIn}
       </ToggleGroupItem>
       <ToggleGroupItem
         value="takeaway"
-        className="h-full min-w-0 justify-center !rounded-none px-0 text-sm font-semibold text-muted-foreground hover:bg-background/70 hover:text-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm"
+        className="min-w-0 justify-center"
         disabled={cartItemCount > 0 && cartOrderType !== "takeaway"}
       >
         {messages.pos.desktop.takeaway}
@@ -1310,9 +1312,9 @@ function PosDesktopInner({
     appendTarget != null ? (
       <div
         role="status"
-        className="flex items-center justify-between gap-2 border-b border-warning/20 bg-warning/10 px-4 py-3"
+        className="flex items-center justify-between gap-2 border-b border-warning/20 bg-warning/10 px-3 py-2 md:px-4 md:py-3"
       >
-        <p className="min-w-0 text-base leading-6 text-foreground">
+        <p className="min-w-0 text-sm leading-6 text-foreground md:text-base">
           <span className="font-semibold">
             {messages.pos.desktop.appendBannerTitle(appendTarget.orderNumber)}
           </span>
@@ -1326,8 +1328,8 @@ function PosDesktopInner({
         <Button
           type="button"
           variant="ghost"
-          size="sm"
-          className="h-9 min-h-11 min-w-11 shrink-0 gap-1 px-3 text-sm text-foreground hover:bg-warning/25"
+          size="lg"
+          className="shrink-0 gap-1 text-sm text-foreground hover:bg-warning/25"
           onClick={cancelAppendWorkflow}
         >
           <IconX data-icon="inline-start" />
@@ -1372,8 +1374,9 @@ function PosDesktopInner({
       shouldScaleBackground={false}
     >
       <DrawerContent
-        showHandle
-        className="h-dvh max-h-dvh p-0 data-[vaul-drawer-direction=bottom]:top-0 data-[vaul-drawer-direction=bottom]:mt-0 data-[vaul-drawer-direction=bottom]:max-h-dvh before:inset-0 before:rounded-none before:border-0 before:bg-background sm:h-5/6 sm:p-2 sm:before:inset-2 sm:before:rounded-xl sm:before:border sm:before:bg-popover"
+        showHandle={false}
+        height="desktopScreen"
+        surface="responsive"
       >
         <DrawerTitle className="sr-only">
           {appendTarget != null
@@ -1494,9 +1497,7 @@ function PosDesktopInner({
         }
         appendOrderLabel={appendTarget?.orderNumber ?? null}
         initialCartItem={
-          editingSentItem?.seedCartItem ??
-          editingCartItem ??
-          editingAppendItem
+          editingSentItem?.seedCartItem ?? editingCartItem ?? editingAppendItem
         }
       />
 

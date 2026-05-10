@@ -24,6 +24,7 @@ Tài liệu tham chiếu dài hạn cho repo này.
 ## Các tài liệu khác
 
 - [einvoice-tax.md](einvoice-tax.md)
+- [sinvoice-webservices.md](sinvoice-webservices.md): technical WebServices guide cho Viettel S-invoice HĐĐT
 - [labor-contracts.md](labor-contracts.md)
 - [payroll-pit.md](payroll-pit.md)
 - [third-party-integrations.md](third-party-integrations.md)

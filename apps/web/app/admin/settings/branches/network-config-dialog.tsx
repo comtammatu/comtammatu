@@ -129,7 +129,7 @@ export function NetworkConfigDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent size="2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <IconShield className="size-5" />
@@ -283,11 +283,7 @@ export function NetworkConfigDialog({
               </h3>
               <ItemGroup data-size="xs">
                 {revokedRows.slice(0, 5).map((row) => (
-                  <Item
-                    key={row.id}
-                    variant="muted"
-                    size="xs"
-                  >
+                  <Item key={row.id} variant="muted" size="xs">
                     <ItemContent className="flex-row items-center gap-2">
                       <span className="font-mono">{row.ip_address}</span>
                       <span className="text-muted-foreground">•</span>

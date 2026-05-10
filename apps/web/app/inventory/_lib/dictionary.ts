@@ -22,13 +22,13 @@ const VI_DICTIONARY: InventoryDictionary = {
   navigation: {
     home: { long: "Tổng quan" },
     stock: { long: "Tồn kho" },
-    receiving: { short: "Nhập HQ", long: "Nhập hàng HQ" },
+    receiving: { short: "Nhập & đối soát", long: "Nhập hàng & đối soát" },
     purchaseOrders: { short: "Đơn đặt hàng", long: "Đơn đặt hàng NCC" },
     grn: { short: "Phiếu nhập", long: "Phiếu nhập kho" },
     supplierInvoices: { long: "Hóa đơn NCC" },
     transfers: { short: "Điều chuyển", long: "Điều chuyển nội bộ" },
     stocktake: { long: "Kiểm kê" },
-    issues: { short: "Xuất kho", long: "Xuất kho nội bộ" },
+    issues: { short: "Hao hụt", long: "Hao hụt/điều chỉnh" },
     expiry: { short: "Hạn dùng", long: "Hạn sử dụng" },
     reports: { long: "Báo cáo" },
     production: { long: "Bếp trung tâm" },
@@ -44,7 +44,10 @@ const VI_DICTIONARY: InventoryDictionary = {
   routes: {
     "/inventory": { long: "Tổng quan" },
     "/inventory/stock": { long: "Tồn kho" },
-    "/inventory/receiving": { short: "Nhập HQ", long: "Nhập hàng HQ" },
+    "/inventory/receiving": {
+      short: "Nhập & đối soát",
+      long: "Nhập hàng & đối soát",
+    },
     "/inventory/receiving/po": {
       short: "Đơn đặt hàng",
       long: "Danh sách đơn đặt hàng NCC",
@@ -67,7 +70,10 @@ const VI_DICTIONARY: InventoryDictionary = {
       short: "Cài đặt QC",
       long: "Cài đặt QC nhập kho",
     },
-    "/inventory/issues": { short: "Xuất kho", long: "Xuất kho nội bộ" },
+    "/inventory/issues": {
+      short: "Hao hụt",
+      long: "Hao hụt/điều chỉnh",
+    },
     "/inventory/transfers": {
       short: "Điều chuyển",
       long: "Điều chuyển nội bộ",
@@ -99,6 +105,8 @@ const VI_DICTIONARY: InventoryDictionary = {
   status: {
     draft: { long: "Nháp" },
     confirmed: { short: "Xác nhận", long: "Đã xác nhận" },
+    confirmed_ship: { short: "Đã xuất", long: "Đã xác nhận xuất kho" },
+    confirmed_receive: { short: "Kiểm nhận", long: "Đang kiểm nhận" },
     sent: { long: "Đã gửi" },
     partially_received: { short: "Nhận một phần", long: "Đã nhận một phần" },
     in_transit: { short: "Đang giao", long: "Đang vận chuyển" },

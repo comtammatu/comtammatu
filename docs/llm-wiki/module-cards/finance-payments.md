@@ -32,7 +32,7 @@ Finance routes include:
 
 - Cash payments work.
 - VietQR/Momo real wiring depends on merchant credentials and payment hardening.
-- MISA HĐĐT real provider wiring depends on provider credentials and compliance work.
+- Viettel S-invoice HĐĐT real provider wiring depends on provider credentials and compliance work.
 - VAS/Finance exists but still has post-pilot hardening gaps.
 
 ## High-Risk Rules
@@ -53,4 +53,4 @@ For payment/finance work:
 1. Check `tasks/regressions.md` first.
 2. Keep POS, Finance, and Admin Settings ownership separate.
 3. Use RPCs for atomic payment/refund/GL/stock side effects.
-4. Verify Momo/VietQR/MISA flows against tenant binding, idempotency, and safe error copy.
+4. Verify Momo/VietQR/Viettel S-invoice flows against tenant binding, idempotency, and safe error copy.

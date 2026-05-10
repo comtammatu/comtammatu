@@ -56,10 +56,11 @@ const productionLineRowSchema = z.object({
 });
 
 const productionOrderSchema = z.object({
-  branch_id: z
+  branch_id: z.string().min(1, { error: "Vui lòng chọn bếp trung tâm" }),
+  production_number: z
     .string()
-    .min(1, { error: "Vui lòng chọn bếp trung tâm" }),
-  production_number: z.string().trim().min(1, { error: "Số lệnh không được trống" }),
+    .trim()
+    .min(1, { error: "Số lệnh không được trống" }),
   notes: z.string().optional(),
   lines: z
     .array(productionLineRowSchema)
@@ -213,7 +214,11 @@ export function ProductionOrderForm({
     [defaultBranchId, finishedGoodsOptions],
   );
 
-  const form = useForm<ProductionOrderFormValues, unknown, ProductionOrderFormValues>({
+  const form = useForm<
+    ProductionOrderFormValues,
+    unknown,
+    ProductionOrderFormValues
+  >({
     resolver: zodResolver(productionOrderSchema),
     defaultValues: initialValues,
   });
@@ -300,12 +305,16 @@ export function ProductionOrderForm({
           Tạo lệnh sản xuất
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-3xl">
+      <DialogContent size="3xl">
         <DialogHeader>
           <DialogTitle>Tạo lệnh sản xuất</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={form.handleSubmit(onValid)} noValidate className="space-y-4">
+        <form
+          onSubmit={form.handleSubmit(onValid)}
+          noValidate
+          className="space-y-4"
+        >
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="productionNumber">Số lệnh</Label>

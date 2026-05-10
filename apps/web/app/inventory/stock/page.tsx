@@ -62,6 +62,7 @@ export default async function StockPage({
     canWriteoff,
     canCreatePurchaseOrder,
     canAdjustException,
+    canStartProduction,
   ] = await Promise.all([
     fetchIngredients(),
     supabase
@@ -110,6 +111,10 @@ export default async function StockPage({
     currentUserHasPermission(branchId, PERMISSION_KEYS.INVENTORY_WRITEOFF),
     currentUserHasPermission(branchId, PERMISSION_KEYS.PROCUREMENT_PO_CREATE),
     currentUserHasPermission(branchId, PERMISSION_KEYS.INVENTORY_WRITE),
+    currentUserHasPermission(
+      branchId,
+      PERMISSION_KEYS.INVENTORY_PRODUCTION_CREATE,
+    ),
   ]);
 
   const dbIngredients = ingredientsRes.success
@@ -247,6 +252,7 @@ export default async function StockPage({
     canWriteoff,
     canCreatePurchaseOrder,
     canAdjustException,
+    canStartProduction,
   };
   const movementHistory: StockMovementHistory[] = (
     movementHistoryRes.data ?? []

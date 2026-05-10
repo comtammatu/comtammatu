@@ -1,8 +1,14 @@
 "use client";
 
-import { ChevronLeft as IconChevronLeft, ChevronRight as IconChevronRight } from "lucide-react";
-import { Button } from "@comtammatu/ui/components/button";
 import { cn } from "@comtammatu/ui";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNextButton,
+  PaginationPreviousButton,
+  PaginationStatus,
+} from "@comtammatu/ui/components/pagination";
 
 interface DataTablePaginationProps {
   pageSize: number;
@@ -35,29 +41,29 @@ export function DataTablePagination({
       <p className="text-sm text-muted-foreground">
         {start}–{end} / {totalItems}
       </p>
-      <div className="flex items-center gap-1">
-        <Button
-          variant="outline"
-          size="icon-sm"
-          onClick={() => onPageChange(currentPage - 1)}
-          disabled={currentPage <= 1}
-          aria-label="Trang trước"
-        >
-          <IconChevronLeft className="size-4" />
-        </Button>
-        <span className="px-2 text-sm font-medium tabular-nums">
-          {currentPage}/{totalPages}
-        </span>
-        <Button
-          variant="outline"
-          size="icon-sm"
-          onClick={() => onPageChange(currentPage + 1)}
-          disabled={currentPage >= totalPages}
-          aria-label="Trang sau"
-        >
-          <IconChevronRight className="size-4" />
-        </Button>
-      </div>
+      <Pagination className="mx-0 w-auto justify-end">
+        <PaginationContent>
+          <PaginationItem>
+            <PaginationPreviousButton
+              onClick={() => onPageChange(currentPage - 1)}
+              disabled={currentPage <= 1}
+              aria-label="Trang trước"
+            />
+          </PaginationItem>
+          <PaginationItem>
+            <PaginationStatus>
+              {currentPage}/{totalPages}
+            </PaginationStatus>
+          </PaginationItem>
+          <PaginationItem>
+            <PaginationNextButton
+              onClick={() => onPageChange(currentPage + 1)}
+              disabled={currentPage >= totalPages}
+              aria-label="Trang sau"
+            />
+          </PaginationItem>
+        </PaginationContent>
+      </Pagination>
     </div>
   );
 }

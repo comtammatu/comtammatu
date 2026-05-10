@@ -2,7 +2,15 @@
 
 import { useState, useTransition } from "react";
 import Image from "next/image";
-import { Ellipsis as IconDots, Pencil as IconPencil, ToggleLeft as IconToggleLeft, ToggleRight as IconToggleRight, SlidersHorizontal as IconSettings2, Utensils as IconToolsKitchen, Image as IconImage } from "lucide-react";
+import {
+  Ellipsis as IconDots,
+  Pencil as IconPencil,
+  ToggleLeft as IconToggleLeft,
+  ToggleRight as IconToggleRight,
+  SlidersHorizontal as IconSettings2,
+  Utensils as IconToolsKitchen,
+  Image as IconImage,
+} from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
 import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -71,7 +79,9 @@ export function ItemTable({ items, categories, tenantId }: ItemTableProps) {
             <TableRow>
               <TableHead className="w-16">Ảnh</TableHead>
               <TableHead>Tên món</TableHead>
-              <TableHead className="hidden sm:table-cell">{FORM_VI.category}</TableHead>
+              <TableHead className="hidden sm:table-cell">
+                {FORM_VI.category}
+              </TableHead>
               <TableHead className="hidden md:table-cell text-right">
                 {FORM_VI.price}
               </TableHead>
@@ -152,11 +162,11 @@ export function ItemTable({ items, categories, tenantId }: ItemTableProps) {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => setEditItem(item)}>
-                        <IconPencil className="mr-2 size-4" />
+                        <IconPencil />
                         Chỉnh sửa
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setDetailItem(item)}>
-                        <IconSettings2 className="mr-2 size-4" />
+                        <IconSettings2 />
                         Biến thể & Tùy chọn
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
@@ -165,12 +175,12 @@ export function ItemTable({ items, categories, tenantId }: ItemTableProps) {
                       >
                         {item.is_active ? (
                           <>
-                            <IconToggleLeft className="mr-2 size-4" />
+                            <IconToggleLeft />
                             Vô hiệu hóa
                           </>
                         ) : (
                           <>
-                            <IconToggleRight className="mr-2 size-4" />
+                            <IconToggleRight />
                             Kích hoạt
                           </>
                         )}

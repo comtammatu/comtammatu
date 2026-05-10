@@ -9,7 +9,12 @@ export function MobilePage({
   className?: string;
 }) {
   return (
-    <AppPage width="narrow" className="py-5" contentClassName={className}>
+    <AppPage
+      width="narrow"
+      density="compact"
+      mobile
+      contentClassName={className}
+    >
       {children}
     </AppPage>
   );

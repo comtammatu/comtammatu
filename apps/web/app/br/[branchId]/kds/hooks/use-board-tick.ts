@@ -11,12 +11,16 @@ import {
 
 const TICK_INTERVAL_MS = 15_000;
 
-const TickContext = createContext<number>(Date.now());
+const TickContext = createContext<number>(0);
 
-export function TickProvider({ children }: PropsWithChildren) {
-  const [now, setNow] = useState(() => Date.now());
+export function TickProvider({
+  children,
+  initialNow,
+}: PropsWithChildren<{ initialNow: number }>) {
+  const [now, setNow] = useState(initialNow);
 
   useEffect(() => {
+    setNow(Date.now());
     const id = window.setInterval(() => {
       setNow(Date.now());
     }, TICK_INTERVAL_MS);

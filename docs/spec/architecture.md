@@ -18,8 +18,8 @@ Tenant (L0, single row: Cơm Tấm Má Tư CTCP)
 │  │ /admin/* │ │/inventory│ │ /finance │ │ /hr      │ │/notifs.  │        │
 │  └──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘        │
 │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐        │
-│  │ Orders   │ │ POS      │ │ KDS      │ │ Br Settings/Menu Limits        │
-│  │ /orders  │ │ /br/*/pos│ │ /br/*/kds│ │ /br/[id]/{settings,menu-limits}│
+│  │ Portal   │ │ Orders   │ │ POS      │ │ KDS      │ │Br Settings/Menu   │
+│  │ /portal  │ │ /orders  │ │ /br/*/pos│ │ /br/*/kds│ │/br/[id]/{...}     │
 │  └──────────┘ └──────────┘ └──────────┘ └──────────┘ ┌──────────┐        │
 │                                                       │Employee  │        │
 │                                                       │/employee │        │
@@ -49,7 +49,7 @@ Tenant (L0, single row: Cơm Tấm Má Tư CTCP)
 ```
 Login → signInWithPassword() → custom_access_token_hook (SECURITY DEFINER)
   → JWT minted with { tenant_id, branch_id, user_role, position }
-  → proxy.ts reads claims (from access_token, not user.app_metadata) → route to role's default page
+  → proxy.ts reads claims (from access_token, not user.app_metadata) → route to /portal or safe returnTo
 
 Every DB query/mutation → RLS → has_permission(branch_id, key) on staff_permissions
 ```
@@ -60,12 +60,11 @@ Every DB query/mutation → RLS → has_permission(branch_id, key) on staff_perm
 
 Defined in `getDefaultRedirect(claims)` (`packages/shared/src/auth/scope.ts`).
 
-| Role                                                                                                                  | Route              |
-| --------------------------------------------------------------------------------------------------------------------- | ------------------ |
-| `ADMIN_ROLES` = owner, super_manager                                                                                  | `/admin/dashboard` |
-| All others (area_manager, branch_manager, warehouse_manager, production_manager, cashier, waiter, chef, office) | `/employee`        |
+| Role | Route |
+| --- | --- |
+| All staff roles | `/portal` |
 
-POS/KDS are not anyone's default landing — operators reach `/br/[branchId]/pos` or `/kds` via the employee shell or a direct link.
+Valid `returnTo` wins when the target is safe, module-accessible, and branch-scoped correctly. POS/KDS are not hard-coded as fallback destinations; operators reach `/br/[branchId]/pos` or `/kds` from `/portal` or a valid direct link.
 
 ## RLS Pattern
 
@@ -96,14 +95,15 @@ USING (branch_id = auth_branch_id()
 | proxy.ts / Edge      | `@comtammatu/database/supabase/middleware` | No Node.js deps               |
 | "use client"         | `@comtammatu/database/supabase/client`     | No server deps (next/headers) |
 
-## Routing (path-based, single domain)
+## Routing (path-based, optional feedback host split)
 
-> Decision: D009 — path-based, không sub-domain. Sub-domain là Post-v1.0.
+> Decision: core app routing remains path-based. Public feedback may run on a separate host when `NEXT_PUBLIC_FEEDBACK_HOST` and `NEXT_PUBLIC_APP_HOST` are configured; local/preview deployments may fall back to single-host behavior.
 
 Top-level surfaces (see `module-acl.ts` for canonical role lists):
 
 | Surface             | Route                          | Allowed roles (summary)                                              |
 | ------------------- | ------------------------------ | -------------------------------------------------------------------- |
+| Work portal         | `/portal`                      | all staff                                                            |
 | Admin               | `/admin/*`                     | owner, super_manager (+ area/branch_manager on settings sub-routes)  |
 | Inventory           | `/inventory/*`                 | owner, super_manager, area_manager, branch_manager, warehouse_manager, production_manager |
 | Finance             | `/finance/*`                   | owner, super_manager                                                 |
@@ -117,6 +117,7 @@ Top-level surfaces (see `module-acl.ts` for canonical role lists):
 | Employee            | `/employee/*`                  | all staff                                                            |
 | Access denied       | `/access-denied`               | public (rendered with reason copy from `blocked-state.ts`)           |
 | Payment return      | `/payment/momo/return`         | public (Momo redirect target)                                        |
+| Public feedback     | `/r/[token]/*`                 | public; feedback host only when host split is configured             |
 
 ## Infrastructure Strategy
 

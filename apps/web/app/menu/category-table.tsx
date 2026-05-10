@@ -126,7 +126,7 @@ export function CategoryTable({ categories }: CategoryTableProps) {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => setEditCategory(cat)}>
-                        <IconPencil className="mr-2 size-4" />
+                        <IconPencil />
                         Chỉnh sửa
                       </DropdownMenuItem>
                       <DropdownMenuItem
@@ -134,12 +134,12 @@ export function CategoryTable({ categories }: CategoryTableProps) {
                       >
                         {cat.is_active ? (
                           <>
-                            <IconToggleLeft className="mr-2 size-4" />
+                            <IconToggleLeft />
                             Vô hiệu hóa
                           </>
                         ) : (
                           <>
-                            <IconToggleRight className="mr-2 size-4" />
+                            <IconToggleRight />
                             Kích hoạt
                           </>
                         )}

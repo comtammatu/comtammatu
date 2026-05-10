@@ -3684,6 +3684,8 @@ export type Database = {
           opened_at: string
           opened_by: string
           opening_cash: number
+          opening_cash_carryover_delta: number | null
+          opening_cash_carryover_note: string | null
           status: string
           tenant_id: number
           terminal_id: number | null
@@ -3704,6 +3706,8 @@ export type Database = {
           opened_at?: string
           opened_by: string
           opening_cash?: number
+          opening_cash_carryover_delta?: number | null
+          opening_cash_carryover_note?: string | null
           status?: string
           tenant_id: number
           terminal_id?: number | null
@@ -3724,6 +3728,8 @@ export type Database = {
           opened_at?: string
           opened_by?: string
           opening_cash?: number
+          opening_cash_carryover_delta?: number | null
+          opening_cash_carryover_note?: string | null
           status?: string
           tenant_id?: number
           terminal_id?: number | null
@@ -8119,6 +8125,10 @@ export type Database = {
           vat_rate: number
         }[]
       }
+      activate_print_template_version: {
+        Args: { p_template_id: number }
+        Returns: boolean
+      }
       acquire_zone_lock: {
         Args: {
           p_session_id: number
@@ -8903,6 +8913,22 @@ export type Database = {
         Returns: number
       }
       grn_is_auto_approvable: { Args: { p_grn_id: number }; Returns: Json }
+      has_all_permissions_any: {
+        Args: { p_keys: string[] }
+        Returns: boolean
+      }
+      has_all_permissions_for_branch: {
+        Args: { p_branch_id: number | null; p_keys: string[] }
+        Returns: boolean
+      }
+      has_any_permissions_any: {
+        Args: { p_keys: string[] }
+        Returns: boolean
+      }
+      has_any_permissions_for_branch: {
+        Args: { p_branch_id: number | null; p_keys: string[] }
+        Returns: boolean
+      }
       has_permission: {
         Args: { p_branch_id: number; p_key: string }
         Returns: boolean
@@ -9124,6 +9150,18 @@ export type Database = {
         Args: { p_item_id: number; p_variants: Json }
         Returns: undefined
       }
+      save_print_template_version: {
+        Args: {
+          p_activate?: boolean
+          p_content?: Json
+          p_font_profile?: string
+          p_kind: string
+          p_name?: string
+          p_paper_width_mm?: number
+          p_scope_branch_id?: number | null
+        }
+        Returns: number
+      }
       save_station_categories: {
         Args: { p_category_ids: number[]; p_station_id: number }
         Returns: undefined
@@ -9311,6 +9349,7 @@ export type Database = {
           p_branch_id?: number
           p_category_ids?: number[]
           p_code_page?: string
+          p_connection_type?: string
           p_is_active?: boolean
           p_lan_host?: string
           p_lan_port?: number

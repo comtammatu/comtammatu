@@ -158,7 +158,7 @@ URL: `/br/{branchId}/pos` (qua bàn occupied → đơn cũ)
 
 ### Tham chiếu thiết kế
 
-- Order lifecycle: [docs/plan/m2-order-lifecycle.md](../../../plan/m2-order-lifecycle.md)
+- Order lifecycle: [docs/archive/plan/m2-order-lifecycle.md](../../../archive/plan/m2-order-lifecycle.md)
 
 ---
 

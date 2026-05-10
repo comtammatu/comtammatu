@@ -60,6 +60,12 @@ interface PageHeaderConfig {
   headerExtras?: ReactNode;
   /** Renders BELOW the existing header on screens < md, full-width sticky band. */
   mobileTopBar?: ReactNode;
+  /**
+   * When true, the visible page-title text in the top bar is hidden (h1 stays
+   * for a11y). Use when pages always render their own `AppPageHeader` so the
+   * top-bar title would be a duplicate.
+   */
+  omitTitle?: boolean;
 }
 
 export interface AppShellProps {
@@ -107,7 +113,7 @@ export function AppShell({
   return (
     <SidebarProvider>
       <Sidebar variant="inset" collapsible={collapsible}>
-        <SidebarHeader className="gap-3 p-4">
+        <SidebarHeader className="gap-2 p-3 group-data-[collapsible=icon]:p-2">
           {showBackLink ? (
             <Link
               href="/admin/dashboard"
@@ -117,12 +123,12 @@ export function AppShell({
               {copy.admin}
             </Link>
           ) : null}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 group-data-[collapsible=icon]:gap-0">
             <div
               className={
                 logoVariant
-                  ? "flex size-10 shrink-0 items-center justify-center rounded-md border bg-sidebar-accent p-1"
-                  : "flex size-10 shrink-0 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground"
+                  ? "flex size-10 shrink-0 items-center justify-center rounded-md border bg-sidebar-accent p-1 group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-0.5"
+                  : "flex size-10 shrink-0 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground group-data-[collapsible=icon]:size-8"
               }
             >
               {logoVariant ? (
@@ -136,10 +142,10 @@ export function AppShell({
               )}
             </div>
             <div className="min-w-0 flex-1 space-y-0.5 group-data-[collapsible=icon]:hidden">
-              <p className="text-xs font-semibold uppercase tracking-wide text-sidebar-foreground/60">
+              <p className="truncate text-xs font-semibold uppercase tracking-wide text-sidebar-foreground/60">
                 {brand.subLabel}
               </p>
-              <p className="font-heading text-lg font-semibold leading-none">
+              <p className="truncate font-heading text-base font-semibold leading-tight">
                 {brand.mainLabel}
               </p>
             </div>
@@ -161,7 +167,6 @@ export function AppShell({
                       <SidebarMenuButton
                         asChild
                         isActive={active}
-                        size="lg"
                         tooltip={item.label}
                         className="rounded-md"
                       >
@@ -232,9 +237,11 @@ export function AppShell({
                 ) : pageHeader.crumbLabel ? (
                   <Badge variant="outline">{pageHeader.crumbLabel}</Badge>
                 ) : null}
-                <span className="truncate text-sm font-medium">
-                  {pageTitle}
-                </span>
+                {pageHeader.omitTitle ? null : (
+                  <span className="truncate text-sm font-medium">
+                    {pageTitle}
+                  </span>
+                )}
                 <h1 className="font-heading sr-only">{pageTitle}</h1>
               </div>
               {pageHeader.headerExtras ? (
@@ -255,6 +262,7 @@ export function AppShell({
             </p>
           ) : null}
           {pageHeader.mobileTopBar ? (
+            // eslint-disable-next-line no-restricted-syntax -- ds-allow: w-[calc(100%+2rem)] cancels the parent -mx-4 inset to bleed sticky bar full-width on mobile; not expressible with token classes
             <div className="sticky top-0 z-10 -mx-4 mt-3 w-[calc(100%+2rem)] border-t bg-background px-4 py-2 md:hidden">
               {pageHeader.mobileTopBar}
             </div>

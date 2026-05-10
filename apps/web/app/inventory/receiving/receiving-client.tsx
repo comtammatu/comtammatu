@@ -1,7 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight as IconArrowRight, ClipboardCheck as IconClipboardCheck, FileText as IconFileText, ShoppingCart as IconShoppingCart, Bolt as IconBolt } from "lucide-react";
+import {
+  ClipboardCheck as IconClipboardCheck,
+  FileText as IconFileText,
+  ShoppingCart as IconShoppingCart,
+  Bolt as IconBolt,
+} from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
@@ -19,14 +24,18 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
-import { cn } from "@comtammatu/ui";
 import { AppPage, AppPageHeader } from "@/components/surface";
 import { InteractiveCard } from "../_components/interactive-card";
+import {
+  InventoryWorkflowMap,
+  type InventoryWorkflowStep,
+} from "../_components/inventory-workflow";
 import { StatusBadge } from "../_components/status-badge";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import { tNav, tRoute } from "../_lib/dictionary";
 import { formatVND } from "../_lib/format";
 import type { RecentActivityItem } from "../procurement-actions";
+import { messages } from "@lib/messages";
 
 import { FORM_VI } from "@comtammatu/shared/messages";
 function activityHref(item: RecentActivityItem): string {
@@ -66,7 +75,7 @@ const WORKFLOW_STEPS = [
     icon: IconShoppingCart,
     labelKey: "purchaseOrders" as const,
     href: "/inventory/purchase-orders",
-    cta: "Quản lý PO",
+    cta: "Quản lý đơn đặt hàng",
     description: "Tạo và theo dõi đơn đặt hàng trước khi nhận thực tế.",
     toneClassName: "text-primary",
     badgeClassName: "bg-primary/10 text-primary",
@@ -76,7 +85,7 @@ const WORKFLOW_STEPS = [
     icon: IconClipboardCheck,
     labelKey: "grn" as const,
     href: "/inventory/grn",
-    cta: "Mở GRN",
+    cta: "Mở phiếu nhập",
     description: "Xác nhận số lượng nhận, batch và chi phí đầu vào.",
     toneClassName: "text-success",
     badgeClassName: "bg-success/10 text-success",
@@ -87,7 +96,7 @@ const WORKFLOW_STEPS = [
     labelKey: "supplierInvoices" as const,
     href: "/inventory/supplier-invoices",
     cta: "Đối soát hóa đơn",
-    description: "Khóa công nợ với quy trình 3-way matching.",
+    description: "Khóa công nợ với quy trình đối chiếu 3 bên (đơn–phiếu–hóa đơn).",
     toneClassName: "text-info",
     badgeClassName: "bg-info/10 text-info",
   },
@@ -100,17 +109,52 @@ export function ReceivingClient({
   recentActivity,
 }: ReceivingProps) {
   const isMobile = useIsMobile();
+  const copy = messages.inventory.receiving;
 
   const countsByKey = {
     po: poCount,
     grn: grnCount,
     invoice: invoiceCount,
   } satisfies Record<(typeof WORKFLOW_STEPS)[number]["key"], number>;
+  const workflowSteps: InventoryWorkflowStep[] = WORKFLOW_STEPS.map(
+    (step, index) => {
+      const count = countsByKey[step.key];
+      return {
+        key: step.key,
+        title: tNav(step.labelKey, "heading"),
+        description: step.description,
+        href: step.href,
+        icon: step.icon,
+        metric: String(count),
+        metricLabel: "đang mở",
+        statusLabel: `Bước ${index + 1} · ${count} việc đang mở`,
+        tone:
+          step.key === "po"
+            ? count > 0
+              ? "primary"
+              : "default"
+            : step.key === "grn"
+              ? count > 0
+                ? "success"
+                : "default"
+              : count > 0
+                ? "info"
+                : "default",
+        actions: [
+          {
+            label: step.cta,
+            href: step.href,
+            primary: index === 0,
+          },
+        ],
+      };
+    },
+  );
 
   return (
     <AppPage width={isMobile ? "narrow" : "wide"}>
       <AppPageHeader
-        eyebrow="Kho hàng"
+        density="compact"
         title={tRoute("/inventory/receiving", "heading")}
         actions={
           <>
@@ -120,182 +164,120 @@ export function ReceivingClient({
             <Button asChild>
               <Link href="/inventory/purchase-orders/new">
                 <IconBolt className="size-4" />
-                Tạo PO nhanh
+                {copy.quickPo}
               </Link>
             </Button>
           </>
         }
       />
-        {/* Pipeline cards */}
-        <div className="grid gap-4 xl:grid-cols-3">
-          {WORKFLOW_STEPS.map((step, index) => {
-            const Icon = step.icon;
-            const label = tNav(step.labelKey, "heading");
+      <InventoryWorkflowMap steps={workflowSteps} />
 
-            return isMobile ? (
-              <InteractiveCard
-                key={step.key}
-                asChild
-                minHeight="mobile"
-                padding="default"
-              >
-                <Link href={step.href} className="block">
-                  <div
-                    className={cn(
-                      "inline-flex size-10 shrink-0 items-center justify-center rounded-full",
-                      step.badgeClassName,
-                    )}
-                  >
-                    <Icon className="size-5" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold">{label}</p>
-                    <p className="text-xs text-muted-foreground">
-                      Bước {index + 1} &middot; {countsByKey[step.key]} đang mở
-                    </p>
-                  </div>
-                  <IconArrowRight className="size-4 shrink-0 text-muted-foreground" />
-                </Link>
-              </InteractiveCard>
-            ) : (
-              <Card key={step.key}>
-                <CardContent>
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={cn(
-                        "inline-flex size-10 items-center justify-center rounded-full",
-                        step.badgeClassName,
-                      )}
-                    >
-                      <Icon className="size-5" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold">{label}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Bước {index + 1} &middot; {countsByKey[step.key]} đang
-                        mở
-                      </p>
-                    </div>
-                  </div>
-                  <Button
-                    asChild
-                    variant="outline"
-                    size="sm"
-                    className="mt-3 w-full justify-between"
-                  >
-                    <Link href={step.href}>
-                      {step.cta}
-                      <IconArrowRight className="size-4" />
-                    </Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-
-        {/* Recent activity */}
-        <Card>
-          <CardContent className="p-0">
-            {isMobile ? (
-              <div className="divide-y">
-                <div className="px-4 py-3">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Hoạt động gần đây
-                  </p>
-                </div>
-                {recentActivity.length === 0 ? (
-                  <Empty className="py-8">
-                    <EmptyHeader>
-                      <EmptyTitle className="text-sm font-semibold">
-                        Chưa có hoạt động nào
-                      </EmptyTitle>
-                      <EmptyDescription className="text-xs leading-5">
-                        PO, GRN và hóa đơn mới sẽ xuất hiện tại đây khi phát sinh.
-                      </EmptyDescription>
-                    </EmptyHeader>
-                  </Empty>
-                ) : (
-                  recentActivity.map((item) => (
-                    <InteractiveCard
-                      key={`${item.type}-${item.id}`}
-                      asChild
-                      minHeight="tap"
-                      padding="default"
-                    >
-                      <Link href={activityHref(item)} className="block">
-                        <div className="min-w-0 flex-1 space-y-1">
-                          <p className="font-mono text-sm font-semibold">
-                            {item.code}
-                          </p>
-                          <p className="truncate text-xs text-muted-foreground">
-                            {item.supplier}
-                          </p>
-                        </div>
-                        <div className="flex shrink-0 flex-col items-end gap-1">
-                          <StatusBadge status={item.status} size="sm" />
-                          <span className="text-xs text-muted-foreground">
-                            {formatActivityDate(item.date)}
-                          </span>
-                          {item.total != null ? (
-                            <span className="font-mono text-xs font-semibold">
-                              {formatVND(item.total)}₫
-                            </span>
-                          ) : null}
-                        </div>
-                      </Link>
-                    </InteractiveCard>
-                  ))
-                )}
+      {/* Recent activity */}
+      <Card>
+        <CardContent className="p-0">
+          {isMobile ? (
+            <div className="divide-y">
+              <div className="px-4 py-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  {copy.activityTitle}
+                </p>
               </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="min-w-36">Mã phiếu</TableHead>
-                    <TableHead className="min-w-44">Nhà cung cấp</TableHead>
-                    <TableHead className="min-w-32">Thời gian</TableHead>
-                    <TableHead className="min-w-32">{FORM_VI.status}</TableHead>
-                    <TableHead className="min-w-28 text-right">
-                      {FORM_VI.totalAmount}
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {recentActivity.length === 0 ? (
-                    <TableEmptyStateRow
-                      colSpan={5}
-                      title="Chưa có hoạt động nào"
-                      description="PO, GRN và hóa đơn mới sẽ xuất hiện tại đây khi phát sinh."
-                    />
-                  ) : null}
-                  {recentActivity.map((item) => (
-                    <TableRow key={`${item.type}-${item.id}`}>
-                      <TableCell className="font-mono font-medium">
-                        <Link
-                          href={activityHref(item)}
-                          className="text-primary transition hover:underline"
-                        >
+              {recentActivity.length === 0 ? (
+                <Empty className="py-8">
+                  <EmptyHeader>
+                    <EmptyTitle className="text-sm font-semibold">
+                      {copy.emptyActivityTitle}
+                    </EmptyTitle>
+                    <EmptyDescription className="text-xs leading-5">
+                      {copy.emptyActivityDescription}
+                    </EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
+              ) : (
+                recentActivity.map((item) => (
+                  <InteractiveCard
+                    key={`${item.type}-${item.id}`}
+                    asChild
+                    minHeight="tap"
+                    padding="default"
+                  >
+                    <Link href={activityHref(item)} className="block">
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <p className="font-mono text-sm font-semibold">
                           {item.code}
-                        </Link>
-                      </TableCell>
-                      <TableCell>{item.supplier}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {formatActivityDate(item.date)}
-                      </TableCell>
-                      <TableCell>
+                        </p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {item.supplier}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 flex-col items-end gap-1">
                         <StatusBadge status={item.status} size="sm" />
-                      </TableCell>
-                      <TableCell className="text-right font-mono font-semibold">
-                        {item.total != null ? `${formatVND(item.total)}₫` : "—"}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
+                        <span className="text-xs text-muted-foreground">
+                          {formatActivityDate(item.date)}
+                        </span>
+                        {item.total != null ? (
+                          <span className="font-mono text-xs font-semibold">
+                            {formatVND(item.total)}₫
+                          </span>
+                        ) : null}
+                      </div>
+                    </Link>
+                  </InteractiveCard>
+                ))
+              )}
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="min-w-36">
+                    {copy.table.documentCode}
+                  </TableHead>
+                  <TableHead className="min-w-44">
+                    {copy.table.supplier}
+                  </TableHead>
+                  <TableHead className="min-w-32">{copy.table.time}</TableHead>
+                  <TableHead className="min-w-32">{FORM_VI.status}</TableHead>
+                  <TableHead className="min-w-28 text-right">
+                    {FORM_VI.totalAmount}
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {recentActivity.length === 0 ? (
+                  <TableEmptyStateRow
+                    colSpan={5}
+                    title={copy.emptyActivityTitle}
+                    description={copy.emptyActivityDescription}
+                  />
+                ) : null}
+                {recentActivity.map((item) => (
+                  <TableRow key={`${item.type}-${item.id}`}>
+                    <TableCell className="font-mono font-medium">
+                      <Link
+                        href={activityHref(item)}
+                        className="text-primary transition hover:underline"
+                      >
+                        {item.code}
+                      </Link>
+                    </TableCell>
+                    <TableCell>{item.supplier}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {formatActivityDate(item.date)}
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge status={item.status} size="sm" />
+                    </TableCell>
+                    <TableCell className="text-right font-mono font-semibold">
+                      {item.total != null ? `${formatVND(item.total)}₫` : "—"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
     </AppPage>
   );
 }

@@ -2,7 +2,12 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight as IconArrowRight, Plus as IconPlus, Search as IconSearch, Truck as IconTruck } from "lucide-react";
+import {
+  ArrowRight as IconArrowRight,
+  Plus as IconPlus,
+  Search as IconSearch,
+  Truck as IconTruck,
+} from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
@@ -41,13 +46,16 @@ export function TransfersClient({ transfers }: { transfers: TransferRow[] }) {
   const [statusFilter, setStatusFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const statusCounts = useMemo(() => ({
-    all: transfers.length,
-    draft: transfers.filter((t) => t.status === "draft").length,
-    in_transit: transfers.filter((t) => t.status === "in_transit").length,
-    confirmed: transfers.filter((t) => t.status === "confirmed").length,
-    received: transfers.filter((t) => t.status === "received").length,
-  }), [transfers]);
+  const statusCounts = useMemo(
+    () => ({
+      all: transfers.length,
+      draft: transfers.filter((t) => t.status === "draft").length,
+      in_transit: transfers.filter((t) => t.status === "in_transit").length,
+      confirmed: transfers.filter((t) => t.status === "confirmed").length,
+      received: transfers.filter((t) => t.status === "received").length,
+    }),
+    [transfers],
+  );
 
   const filteredTransfers = useMemo(() => {
     const q = searchQuery.trim();
@@ -97,16 +105,16 @@ export function TransfersClient({ transfers }: { transfers: TransferRow[] }) {
       </div>
 
       {/* Search */}
-      <InputGroup className="h-10">
-        <InputGroupAddon>
-          <IconSearch />
-        </InputGroupAddon>
+      <InputGroup>
         <InputGroupInput
           type="search"
           placeholder="Tìm theo số phiếu, kho xuất/nhận..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
+        <InputGroupAddon>
+          <IconSearch />
+        </InputGroupAddon>
       </InputGroup>
 
       {/* Table */}

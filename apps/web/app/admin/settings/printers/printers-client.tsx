@@ -31,6 +31,7 @@ export type PrintType =
   | "receipt"
   | "provisional_bill"
   | "shift_close_report"
+  | "tax_invoice"
   | "kitchen_ticket"
   | "cancel_ticket";
 
@@ -39,6 +40,7 @@ export type Printer = {
   branch_id: number;
   role: string;
   name: string;
+  connection_type: PrinterConnectionType | string;
   lan_host: string | null;
   lan_port: number | null;
   paper_width_mm: number;
@@ -64,6 +66,7 @@ export type Agent = {
 };
 
 type PrinterRole = "receipt" | "kitchen_1" | "kitchen_2";
+type PrinterConnectionType = "lan" | "bluetooth";
 
 const ROLE_LABEL: Record<PrinterRole, string> = {
   receipt: "Máy in thu ngân",
@@ -77,6 +80,7 @@ const PRINT_TYPE_ORDER: readonly PrintType[] = [
   "receipt",
   "provisional_bill",
   "shift_close_report",
+  "tax_invoice",
   "kitchen_ticket",
   "cancel_ticket",
 ];
@@ -85,6 +89,7 @@ const PRINT_TYPE_LABEL: Record<PrintType, string> = {
   receipt: "Hóa đơn thanh toán",
   provisional_bill: "Phiếu tạm tính",
   shift_close_report: "Phiếu chốt ca",
+  tax_invoice: "Thông tin HĐĐT",
   kitchen_ticket: "Phiếu bếp",
   cancel_ticket: "Phiếu hủy / giảm món",
 };
@@ -99,13 +104,17 @@ const PRINTER_COPY = {
   samplePrinterPlaceholder: "Ví dụ: Xprinter XP-T80A",
   lanPortHelp:
     "Mặc định port 9100 (ESC/POS raw). Chỉ đổi khi máy in yêu cầu port khác.",
+  bluetoothEndpointHelp:
+    "Máy Bluetooth phải được ghép đôi sẵn trên máy chạy agent. Nhập COM5, /dev/rfcomm0 hoặc /dev/tty.*.",
   paperWidthLabel: "Khổ giấy",
+  transportLabel: "Kết nối",
+  endpointLabel: "Địa chỉ / cổng in",
   printTypesLabel: "Loại phiếu in trên máy này",
   categoriesLabel: "Danh mục món in trên máy này",
 } as const;
 
 const DEFAULT_PRINT_TYPES: Record<PrinterRole, readonly PrintType[]> = {
-  receipt: ["receipt", "provisional_bill", "shift_close_report"],
+  receipt: ["receipt", "provisional_bill", "shift_close_report", "tax_invoice"],
   kitchen_1: ["kitchen_ticket", "cancel_ticket"],
   kitchen_2: ["kitchen_ticket", "cancel_ticket"],
 };
@@ -185,8 +194,14 @@ export function PrintersClient(props: {
                       {printer ? (
                         <div className="space-y-1 text-sm text-muted-foreground">
                           <p>
-                            {printer.name} · {printer.lan_host}
-                            {printer.lan_port && printer.lan_port !== 9100
+                            {printer.name} ·{" "}
+                            {printer.connection_type === "bluetooth"
+                              ? "Bluetooth"
+                              : "LAN"}{" "}
+                            · {printer.lan_host}
+                            {printer.connection_type !== "bluetooth" &&
+                            printer.lan_port &&
+                            printer.lan_port !== 9100
                               ? `:${printer.lan_port}`
                               : ""}{" "}
                             · {printer.paper_width_mm}mm · {printer.code_page}
@@ -280,10 +295,13 @@ function PrinterForm({
   const initialRole = (initial?.role ??
     preset?.role ??
     "receipt") as PrinterRole;
+  const initialConnectionType: PrinterConnectionType =
+    initial?.connection_type === "bluetooth" ? "bluetooth" : "lan";
   const [form, setForm] = useState({
     branch_id: initial?.branch_id ?? preset?.branch_id ?? 0,
     role: initialRole,
     name: initial?.name ?? "",
+    connection_type: initialConnectionType,
     lan_host: initial?.lan_host ?? "",
     lan_port: initial?.lan_port ?? 9100,
     paper_width_mm: (initial?.paper_width_mm ?? 80) as 58 | 80,
@@ -337,6 +355,7 @@ function PrinterForm({
         role: form.role,
         name: form.name,
         lan_host: form.lan_host,
+        connection_type: form.connection_type,
         lan_port: form.lan_port || null,
         paper_width_mm: form.paper_width_mm,
         code_page: form.code_page,
@@ -438,17 +457,43 @@ function PrinterForm({
               placeholder={PRINTER_COPY.samplePrinterPlaceholder}
             />
           </div>
+          <div className="space-y-2">
+            <Label>{PRINTER_COPY.transportLabel}</Label>
+            <Select
+              value={form.connection_type}
+              onValueChange={(value) =>
+                setForm({
+                  ...form,
+                  connection_type: value as PrinterConnectionType,
+                })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="lan">LAN</SelectItem>
+                <SelectItem value="bluetooth">Bluetooth</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <div className="space-y-2 md:col-span-2">
-            <Label>LAN host / IP</Label>
+            <Label>{PRINTER_COPY.endpointLabel}</Label>
             <Input
               value={form.lan_host}
               onChange={(event) =>
                 setForm({ ...form, lan_host: event.target.value })
               }
-              placeholder="192.168.1.50"
+              placeholder={
+                form.connection_type === "bluetooth"
+                  ? "COM5 hoặc /dev/rfcomm0"
+                  : "192.168.1.50"
+              }
             />
             <p className="text-xs text-muted-foreground">
-              {PRINTER_COPY.lanPortHelp}
+              {form.connection_type === "bluetooth"
+                ? PRINTER_COPY.bluetoothEndpointHelp
+                : PRINTER_COPY.lanPortHelp}
             </p>
           </div>
 

@@ -1,11 +1,10 @@
 /**
- * matu-surface.tsx — App Surface Adapters for Inventory redesign pilot.
+ * matu-surface.tsx — compatibility surface adapters for token QA.
  *
  * Mirrors matu-superapp/apps/backoffice_web/app/components/surface.tsx.
- * Lives in parallel with the existing surface adapters in
- * `apps/web/app/components/surface.tsx`; pilot pages (Hôm nay / Tồn kho /
- * GRN form) import from here. Other inventory routes keep using the legacy
- * `AppPage / AppPageHeader / AppSection` until migrated.
+ * New route work should use the canonical adapters in
+ * `apps/web/app/components/surface.tsx`; this file remains for kitchen-sink
+ * and explicit generated-token QA.
  *
  * Design contract: see docs/spec/design-system.md and
  * `~/Downloads/matu-superapp/DESIGN.md`. Tokens namespaced `matu-*`
@@ -57,7 +56,7 @@ export function PageSurface({
   return (
     <main
       className={cn(
-        "mx-auto flex w-full max-w-[1280px] flex-col gap-6 p-4 font-matu-body bg-matu-background text-matu-foreground md:p-6",
+        "mx-auto flex w-full max-w-7xl flex-col gap-6 p-4 font-matu-body bg-matu-background text-matu-foreground md:p-6",
         className,
       )}
     >
@@ -183,7 +182,9 @@ export function ToolbarRow({ filters, actions, className }: ToolbarRowProps) {
       )}
     >
       <div className="flex flex-wrap items-center gap-2">{filters}</div>
-      {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
+      {actions ? (
+        <div className="flex items-center gap-2">{actions}</div>
+      ) : null}
     </div>
   );
 }
@@ -230,7 +231,7 @@ export function EmptyState({
           {icon}
         </div>
       ) : null}
-      <div className="max-w-[480px] space-y-1">
+      <div className="max-w-md space-y-1">
         <p className="text-base font-semibold text-matu-foreground">{title}</p>
         {description ? (
           <p className="text-sm text-matu-muted-foreground">{description}</p>

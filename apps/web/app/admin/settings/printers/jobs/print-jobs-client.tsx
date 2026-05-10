@@ -2,7 +2,12 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ACTIONS_VI, BRANCH_VI, FORM_VI, STATES_VI } from "@comtammatu/shared/messages";
+import {
+  ACTIONS_VI,
+  BRANCH_VI,
+  FORM_VI,
+  STATES_VI,
+} from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -22,7 +27,10 @@ import {
 } from "@comtammatu/ui/components/table";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { TableEmptyStateRow } from "@/components/table-empty-state-row";
-import { RefreshCw as IconRefresh, RotateCcw as IconRotate } from "lucide-react";
+import {
+  RefreshCw as IconRefresh,
+  RotateCcw as IconRotate,
+} from "lucide-react";
 import { retryJobFromMonitor } from "./actions";
 
 export type JobRow = {
@@ -78,6 +86,8 @@ const JOB_TYPE_LABEL: Record<string, string> = {
   kitchen_ticket: "Phiếu bếp",
   receipt: "Hóa đơn",
   provisional_bill: "Phiếu tạm tính",
+  tax_invoice: "Thông tin HĐĐT",
+  shift_close_report: "Phiếu chốt ca",
   reprint: "In lại",
   cancel_ticket: "Phiếu hủy",
 };
@@ -135,7 +145,7 @@ export function PrintJobsClient({
             value={filterBranch != null ? String(filterBranch) : "all"}
             onValueChange={(v) => updateParam("branch", v === "all" ? null : v)}
           >
-            <SelectTrigger className="h-9 w-44">
+            <SelectTrigger className="w-44">
               <SelectValue placeholder={BRANCH_VI.selectAll} />
             </SelectTrigger>
             <SelectContent>
@@ -152,7 +162,7 @@ export function PrintJobsClient({
           value={filterStatus ?? "all"}
           onValueChange={(v) => updateParam("status", v === "all" ? null : v)}
         >
-          <SelectTrigger className="h-9 w-36">
+          <SelectTrigger className="w-36">
             <SelectValue placeholder="Trạng thái" />
           </SelectTrigger>
           <SelectContent>
@@ -168,7 +178,7 @@ export function PrintJobsClient({
           value={filterJobType ?? "all"}
           onValueChange={(v) => updateParam("job_type", v === "all" ? null : v)}
         >
-          <SelectTrigger className="h-9 w-36">
+          <SelectTrigger className="w-36">
             <SelectValue placeholder="Loại phiếu" />
           </SelectTrigger>
           <SelectContent>

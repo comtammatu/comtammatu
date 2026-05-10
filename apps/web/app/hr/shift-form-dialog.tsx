@@ -102,7 +102,7 @@ export function ShiftFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent size="md">
         <DialogHeader>
           <DialogTitle>Thêm ca làm việc</DialogTitle>
         </DialogHeader>
@@ -152,7 +152,7 @@ export function ShiftFormDialog({
             )}
           </FieldGroup>
 
-          <DialogFooter className="pt-6">
+          <DialogFooter spacing="form">
             <Button
               type="button"
               variant="outline"

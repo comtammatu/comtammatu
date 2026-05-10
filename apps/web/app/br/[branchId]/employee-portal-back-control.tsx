@@ -1,30 +1,33 @@
 "use client";
 
+import type { ComponentProps } from "react";
 import Link from "next/link";
 import { LogIn as IconDoorEnter } from "lucide-react";
 import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
 
-/** Compact back link to the employee portal. */
+/** Compact back link to the work portal. */
 export function EmployeePortalBackControl({
   className,
+  size = "lg",
 }: {
   className?: string;
+  size?: ComponentProps<typeof Button>["size"];
 }) {
   return (
     <Button
       variant="ghost"
-      size="sm"
+      size={size}
       className={cn(
-        "h-9 min-h-9 shrink-0 gap-1.5 px-2.5 text-sm text-muted-foreground",
+        "shrink-0 gap-1.5 text-sm text-muted-foreground",
         className,
       )}
       asChild
     >
       <Link
-        href="/employee"
-        title="Quay lại Cổng nhân viên"
-        aria-label="Quay lại Cổng nhân viên"
+        href="/portal"
+        title="Quay lại Điểm làm việc"
+        aria-label="Quay lại Điểm làm việc"
       >
         <IconDoorEnter className="size-4 shrink-0" />
         <span>Thoát</span>

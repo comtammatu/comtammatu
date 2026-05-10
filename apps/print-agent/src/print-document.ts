@@ -115,6 +115,21 @@ export type PrintDocumentPaymentQrBlock = {
   qr?: PrintDocumentQrData | null;
 };
 
+export type PrintDocumentKitchenBlock = {
+  type: "kitchenHeader" | "kitchenMeta" | "kitchenItems" | "kitchenNote";
+  payload?: unknown;
+};
+
+export type PrintDocumentTaxInvoiceBlock = {
+  type: "taxInvoice";
+  payload?: unknown;
+};
+
+export type PrintDocumentTaxInvoiceMetaBlock = {
+  type: "taxInvoiceMeta" | "taxInvoiceBuyer" | "taxInvoiceLookup";
+  payload?: unknown;
+};
+
 export type PrintDocumentFooterBlock = {
   type: "footer";
   lines?: string[];
@@ -139,6 +154,9 @@ export type PrintDocumentBlock =
   | PrintDocumentCashChangeBlock
   | PrintDocumentNoteBlock
   | PrintDocumentPaymentQrBlock
+  | PrintDocumentKitchenBlock
+  | PrintDocumentTaxInvoiceBlock
+  | PrintDocumentTaxInvoiceMetaBlock
   | PrintDocumentFooterBlock
   | PrintDocumentLegacyBlock;
 

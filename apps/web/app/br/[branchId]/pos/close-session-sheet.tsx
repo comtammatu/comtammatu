@@ -24,6 +24,7 @@ import {
   ArrowLeft as IconArrowLeft,
   ArrowRight as IconArrowRight,
   CircleCheck as IconCircleCheck,
+  TriangleAlert as IconAlertTriangle,
 } from "lucide-react";
 import { closePosSession } from "./actions";
 import {
@@ -33,6 +34,13 @@ import {
 } from "./_components/close-session/denomination-input";
 
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
+import { messages as appMessages } from "@lib/messages";
+
+// Ngưỡng cảnh báo nhập số tiền lớn bất thường — chặn typo "thừa số 0"
+// (lịch sử có ca closing 250.000.000đ vs expected 275.000đ). 50 triệu
+// là ngưỡng an toàn cho một ca cơm tấm; vượt → bắt cashier confirm
+// trước khi đẩy lên server.
+const TYPO_GUARD_VND = 50_000_000;
 interface CloseSummary {
   opening_cash: number;
   closing_cash: number;
@@ -76,15 +84,18 @@ export function CloseSessionSheet({
   const [counts, setCounts] = useState<DenominationCounts>({});
   const [note, setNote] = useState("");
   const [summary, setSummary] = useState<CloseSummary | null>(null);
+  const [typoConfirmed, setTypoConfirmed] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const totalCounted = sumDenominations(counts);
+  const needsTypoConfirm = totalCounted >= TYPO_GUARD_VND;
 
   const reset = useCallback(() => {
     setStep("count");
     setCounts({});
     setNote("");
     setSummary(null);
+    setTypoConfirmed(false);
   }, []);
 
   const handleSubmit = useCallback(() => {
@@ -95,7 +106,9 @@ export function CloseSessionSheet({
         note.trim() || undefined,
       );
       if (result.success && result.data) {
-        const payload = result.data as CloseSummary & { print_warning?: string };
+        const payload = result.data as CloseSummary & {
+          print_warning?: string;
+        };
         setSummary(payload);
         setStep("reconcile");
         // D8: variance breach giờ chỉ là cảnh báo. Server đã insert
@@ -147,16 +160,13 @@ export function CloseSessionSheet({
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
-      <SheetContent
-        side="right"
-        className="flex w-full flex-col p-0 data-[side=right]:w-full sm:max-w-lg"
-      >
+      <SheetContent side="right" size="lg">
         <SheetHeader className="border-b px-3 pt-5 pb-3 text-left sm:px-5">
           <SheetTitle>
             Đóng ca · {step === "count" ? "Đếm tiền mặt" : "Đối soát"}
           </SheetTitle>
           <div className="mt-2">
-            <Progress value={step === "count" ? 50 : 100} className="h-2" />
+            <Progress value={step === "count" ? 50 : 100} size="default" />
           </div>
         </SheetHeader>
 
@@ -166,7 +176,10 @@ export function CloseSessionSheet({
               <div className="flex flex-col gap-4">
                 <DenominationInput
                   counts={counts}
-                  onCountsChange={setCounts}
+                  onCountsChange={(next) => {
+                    setCounts(next);
+                    setTypoConfirmed(false);
+                  }}
                   disabled={isPending}
                 />
                 <div className="flex flex-col gap-2">
@@ -185,10 +198,33 @@ export function CloseSessionSheet({
                     className="resize-none text-base"
                   />
                   <p className="text-sm text-muted-foreground">
-                    Nếu lệch quỹ vượt ngưỡng, hệ thống sẽ tự động gửi
-                    cảnh báo cho quản lý. Ca vẫn đóng bình thường.
+                    Nếu lệch quỹ vượt ngưỡng, hệ thống sẽ tự động gửi cảnh báo
+                    cho quản lý. Ca vẫn đóng bình thường.
                   </p>
                 </div>
+                {needsTypoConfirm && (
+                  <Alert className="border-warning/20 bg-warning/10 text-warning">
+                    <IconAlertTriangle />
+                    <AlertDescription className="flex flex-col gap-2 text-current">
+                      <span>
+                        {appMessages.pos.sessionGate.typoConfirmBody(
+                          formatVND(totalCounted),
+                        )}
+                      </span>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={typoConfirmed ? "outline" : "secondary"}
+                          onClick={() => setTypoConfirmed(true)}
+                          disabled={typoConfirmed}
+                        >
+                          {appMessages.pos.sessionGate.typoConfirmContinue}
+                        </Button>
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+                )}
               </div>
             )}
 
@@ -300,7 +336,7 @@ export function CloseSessionSheet({
                 <Button
                   type="button"
                   className="min-h-11 flex-1"
-                  disabled={isPending}
+                  disabled={isPending || (needsTypoConfirm && !typoConfirmed)}
                   onClick={handleSubmit}
                 >
                   {isPending ? (

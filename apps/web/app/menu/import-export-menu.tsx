@@ -1,7 +1,12 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { CircleAlert as IconAlertCircle, Download as IconDownload, Sheet as IconFileSpreadsheet, Upload as IconUpload } from "lucide-react";
+import {
+  CircleAlert as IconAlertCircle,
+  Download as IconDownload,
+  Sheet as IconFileSpreadsheet,
+  Upload as IconUpload,
+} from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
@@ -75,22 +80,22 @@ export function MenuImportExportMenu() {
             Import / Export
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuContent align="end" width="action">
           <DropdownMenuItem onClick={() => setImportDialogOpen(true)}>
-            <IconUpload className="mr-2 size-4" />
+            <IconUpload />
             Import từ file
           </DropdownMenuItem>
           <DropdownMenuItem onClick={handleTemplate}>
-            <IconFileSpreadsheet className="mr-2 size-4" />
+            <IconFileSpreadsheet />
             Tải template (.xlsx)
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => handleExport("xlsx")}>
-            <IconDownload className="mr-2 size-4" />
+            <IconDownload />
             Export .xlsx (đầy đủ)
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => handleExport("csv")}>
-            <IconDownload className="mr-2 size-4" />
+            <IconDownload />
             Export .csv (món ăn)
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -165,7 +170,7 @@ function MenuImportDialog({
         onOpenChange(v);
       }}
     >
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent size="lg">
         <DialogHeader>
           <DialogTitle>Import Menu từ file</DialogTitle>
           <DialogDescription>
@@ -176,10 +181,7 @@ function MenuImportDialog({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <label
-              htmlFor="menu-import-file"
-              className="text-sm font-medium"
-            >
+            <label htmlFor="menu-import-file" className="text-sm font-medium">
               Chọn file (.xlsx, .csv)
             </label>
             <input
@@ -196,7 +198,9 @@ function MenuImportDialog({
               className="block w-full rounded-md border border-input bg-background px-3 py-2 text-sm file:mr-3 file:rounded-sm file:border-0 file:bg-muted file:px-3 file:py-1.5 file:text-sm file:font-medium hover:file:bg-muted/70"
             />
             {fileName ? (
-              <p className="text-xs text-muted-foreground">Đã chọn: {fileName}</p>
+              <p className="text-xs text-muted-foreground">
+                Đã chọn: {fileName}
+              </p>
             ) : null}
           </div>
 

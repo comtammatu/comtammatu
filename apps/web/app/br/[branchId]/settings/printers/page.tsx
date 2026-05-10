@@ -41,7 +41,7 @@ export default async function BranchPrintersPage({
     supabase
       .from("printers")
       .select(
-        "id, branch_id, role, name, lan_host, lan_port, paper_width_mm, code_page, is_active",
+        "id, branch_id, role, name, connection_type, lan_host, lan_port, paper_width_mm, code_page, is_active",
       )
       .eq("branch_id", branchId)
       .order("role"),

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type CSSProperties } from "react";
-import { Check as IconCheck, ChevronDown as IconChevronDown } from "lucide-react";
+import { ChevronDown as IconChevronDown } from "lucide-react";
 import { cn } from "@comtammatu/ui";
 import { matchesSearch } from "@lib/search";
 import { Button } from "@comtammatu/ui/components/button";
@@ -34,6 +34,7 @@ interface SearchableSelectProps {
   className?: string;
   style?: CSSProperties;
   variant?: "default" | "ghost" | "pill";
+  size?: "sm" | "default" | "touch" | "touch-lg";
 }
 
 export function SearchableSelect({
@@ -46,6 +47,7 @@ export function SearchableSelect({
   className,
   style,
   variant = "default",
+  size = "default",
 }: SearchableSelectProps) {
   const [open, setOpen] = useState(false);
   const selected = options.find((option) => option.value === value);
@@ -58,6 +60,7 @@ export function SearchableSelect({
           role="combobox"
           aria-expanded={open}
           variant={variant === "ghost" ? "ghost" : "outline"}
+          size={size}
           className={cn("justify-between", className)}
           style={style}
         >
@@ -72,14 +75,7 @@ export function SearchableSelect({
           />
         </Button>
       </PopoverTrigger>
-      <PopoverContent
-        className="p-0"
-        align="start"
-        style={{
-          width: "var(--radix-popover-trigger-width)",
-          minWidth: 220,
-        }}
-      >
+      <PopoverContent align="start" width="trigger" padding="none">
         <Command
           className="bg-transparent"
           filter={(optionValue, search) => {
@@ -88,29 +84,21 @@ export function SearchableSelect({
             return matchesSearch([option.label], search) ? 1 : 0;
           }}
         >
-          <CommandInput
-            placeholder={searchPlaceholder}
-            className="h-10 bg-transparent text-sm focus:ring-0"
-          />
-          <CommandList className="max-h-60">
-            <CommandEmpty className="py-4 text-center text-sm text-muted-foreground">
-              {emptyText}
-            </CommandEmpty>
-            <CommandGroup className="p-1">
+          <CommandInput placeholder={searchPlaceholder} />
+          <CommandList maxHeight="sm">
+            <CommandEmpty>{emptyText}</CommandEmpty>
+            <CommandGroup>
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
                   value={option.value}
+                  checked={value === option.value}
                   onSelect={(nextValue) => {
                     onValueChange(nextValue);
                     setOpen(false);
                   }}
-                  className="cursor-pointer rounded-lg px-3 py-2 text-sm text-foreground"
                 >
                   <span className="flex-1">{option.label}</span>
-                  {value === option.value ? (
-                    <IconCheck className="size-4 shrink-0 text-primary" />
-                  ) : null}
                 </CommandItem>
               ))}
             </CommandGroup>

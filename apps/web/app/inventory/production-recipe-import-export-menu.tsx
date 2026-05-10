@@ -2,7 +2,12 @@
 
 import { useRef, useState, useTransition } from "react";
 import type { FormEvent } from "react";
-import { CircleAlert as IconAlertCircle, Download as IconDownload, Sheet as IconFileSpreadsheet, Upload as IconUpload } from "lucide-react";
+import {
+  CircleAlert as IconAlertCircle,
+  Download as IconDownload,
+  Sheet as IconFileSpreadsheet,
+  Upload as IconUpload,
+} from "lucide-react";
 import {
   Alert,
   AlertDescription,
@@ -65,7 +70,7 @@ export function ProductionRecipeImportExportMenu({
       } else {
         downloadXlsx(res.data.base64, res.data.filename);
       }
-      toast.success("Đã xuất file BOM sản xuất");
+      toast.success("Đã xuất file công thức sản xuất");
     });
   }
 
@@ -90,14 +95,14 @@ export function ProductionRecipeImportExportMenu({
             ) : (
               <IconFileSpreadsheet data-icon="inline-start" />
             )}
-            Import / Export BOM
+            Nhập / Xuất công thức
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuContent align="end" width="action">
           <DropdownMenuGroup>
             <DropdownMenuItem onClick={() => setImportOpen(true)}>
               <IconUpload data-icon="inline-start" />
-              Import từ file
+              Nhập từ file
             </DropdownMenuItem>
             <DropdownMenuItem onClick={handleTemplate}>
               <IconFileSpreadsheet data-icon="inline-start" />
@@ -108,11 +113,11 @@ export function ProductionRecipeImportExportMenu({
           <DropdownMenuGroup>
             <DropdownMenuItem onClick={() => handleExport("xlsx")}>
               <IconDownload data-icon="inline-start" />
-              Export .xlsx
+              Xuất .xlsx
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleExport("csv")}>
               <IconDownload data-icon="inline-start" />
-              Export .csv
+              Xuất .csv
             </DropdownMenuItem>
           </DropdownMenuGroup>
         </DropdownMenuContent>
@@ -178,7 +183,7 @@ function ProductionRecipeImportDialog({
 
       setSummary(res.data.summary);
       toast.success(
-        `Đã import ${res.data.summary.recipes} BOM / ${res.data.summary.lines} dòng`,
+        `Đã nhập ${res.data.summary.recipes} công thức / ${res.data.summary.lines} dòng`,
       );
       onImported?.();
     });
@@ -192,12 +197,12 @@ function ProductionRecipeImportDialog({
         onOpenChange(v);
       }}
     >
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent size="lg">
         <DialogHeader>
-          <DialogTitle>Import BOM sản xuất từ file</DialogTitle>
+          <DialogTitle>Nhập công thức sản xuất từ file</DialogTitle>
           <DialogDescription>
             Hỗ trợ .xlsx và .csv. Mỗi thành phẩm xuất hiện trong file sẽ được
-            thay thế toàn bộ dòng nguyên liệu trong BOM.
+            thay thế toàn bộ dòng nguyên liệu trong công thức.
           </DialogDescription>
         </DialogHeader>
 
@@ -259,8 +264,8 @@ function ProductionRecipeImportDialog({
             <Alert>
               <AlertTitle>Kết quả</AlertTitle>
               <AlertDescription>
-                Đã cập nhật {summary.recipes} BOM sản xuất / {summary.lines}{" "}
-                dòng nguyên liệu.
+                Đã cập nhật {summary.recipes} công thức sản xuất /{" "}
+                {summary.lines} dòng nguyên liệu.
               </AlertDescription>
             </Alert>
           ) : null}

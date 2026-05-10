@@ -45,7 +45,7 @@ export async function startStocktake(
 ): Promise<ActionResult<StocktakeStartResult>> {
   const parsed = startStocktakeSchema.safeParse(input);
   if (!parsed.success) {
-    return { success: false, error: parsed.error.issues[0]?.message ?? "Input không hợp lệ" };
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Dữ liệu nhập không hợp lệ" };
   }
 
   const ctx = await getAuthContextWithPermission(
@@ -178,7 +178,7 @@ export async function submitCountRound(
 ): Promise<ActionResult<{ appliedCount: number; conflictCount: number; roundNo: number }>> {
   const parsed = submitCountSchema.safeParse(input);
   if (!parsed.success) {
-    return { success: false, error: parsed.error.issues[0]?.message ?? "Input không hợp lệ" };
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Dữ liệu nhập không hợp lệ" };
   }
 
   const ctx = await getAuthContextWithPermission(
@@ -232,7 +232,7 @@ export async function saveStocktakeDraft(
 ): Promise<ActionResult<{ lastSavedAt: string }>> {
   const parsed = saveDraftSchema.safeParse(input);
   if (!parsed.success) {
-    return { success: false, error: parsed.error.issues[0]?.message ?? "Input không hợp lệ" };
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Dữ liệu nhập không hợp lệ" };
   }
 
   const ctx = await getAuthContextWithPermission(
@@ -367,14 +367,14 @@ export async function closeRecountRound(
 ): Promise<ActionResult<CloseRecountResult>> {
   const parsed = closeRecountSchema.safeParse(input);
   if (!parsed.success) {
-    return { success: false, error: parsed.error.issues[0]?.message ?? "Input không hợp lệ" };
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Dữ liệu nhập không hợp lệ" };
   }
 
   const ctx = await getAuthContextWithPermission(
     STAFF_ROLES,
     PERMISSION_KEYS.INVENTORY_STOCKTAKE_RECOUNT,
   );
-  if (!ctx) return { success: false, error: "Không có quyền đóng round" };
+  if (!ctx) return { success: false, error: "Không có quyền đóng vòng đếm" };
   const { supabase } = ctx;
 
   const { data, error } = await supabase.rpc("close_recount_round", {
@@ -382,7 +382,7 @@ export async function closeRecountRound(
     p_round_no: parsed.data.roundNo,
   });
   if (error) {
-    if (error.code === "42501") return { success: false, error: "Không có quyền đóng round" };
+    if (error.code === "42501") return { success: false, error: "Không có quyền đóng vòng đếm" };
     return { success: false, error: "Không đóng được vòng đếm." };
   }
 
@@ -421,7 +421,7 @@ export async function escalateRound4(
 ): Promise<ActionResult<{ sessionId: number; ingredientId: number; finalQty: number }>> {
   const parsed = escalateRound4Schema.safeParse(input);
   if (!parsed.success) {
-    return { success: false, error: parsed.error.issues[0]?.message ?? "Input không hợp lệ" };
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Dữ liệu nhập không hợp lệ" };
   }
 
   const ctx = await getAuthContextWithPermission(
@@ -602,7 +602,7 @@ export async function resolveStocktakeConflict(
 ): Promise<ActionResult<{ conflictId: number; resolution: string; finalQty: number | null }>> {
   const parsed = resolveConflictSchema.safeParse(input);
   if (!parsed.success) {
-    return { success: false, error: parsed.error.issues[0]?.message ?? "Input không hợp lệ" };
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Dữ liệu nhập không hợp lệ" };
   }
   if (parsed.data.resolution === "manual_value" && parsed.data.manualQty === undefined) {
     return { success: false, error: "Phải nhập số lượng thủ công" };

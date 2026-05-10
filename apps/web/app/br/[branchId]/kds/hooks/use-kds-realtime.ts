@@ -12,6 +12,10 @@ import type {
 
 const POLL_INTERVAL_MS = 12_000;
 const POLL_STALE_MS = 12_000;
+const KDS_TICKET_SELECT =
+  "id, station_id, order_id, order_item_id, kitchen_send_batch_id, status, bumped_at, created_at, updated_at";
+const KDS_ORDER_ITEM_SELECT =
+  "id, order_id, item_name, variant_name, quantity, unit_price, status, note, modifiers, sides";
 
 function buildOrderItemMap(items: KdsOrderItem[]): Map<number, KdsOrderItem[]> {
   const map = new Map<number, KdsOrderItem[]>();
@@ -61,9 +65,13 @@ export function useKdsRealtime({
   const supabaseRef = useRef(createClient());
   const ordersRef = useRef(orders);
   const kitchenBatchesRef = useRef(kitchenBatches);
+  const orderInfoFetchesRef = useRef<Set<number>>(new Set());
+  const orderItemFetchesRef = useRef<Set<number>>(new Set());
+  const kitchenBatchFetchesRef = useRef<Set<number>>(new Set());
   const lastSnapshotSyncRef = useRef(Date.now());
-  const refreshBoardSnapshotRef =
-    useRef<() => Promise<void>>(() => Promise.resolve());
+  const refreshBoardSnapshotRef = useRef<() => Promise<void>>(() =>
+    Promise.resolve(),
+  );
   const initialSubscribeSeenRef = useRef(false);
 
   useEffect(() => {
@@ -74,58 +82,108 @@ export function useKdsRealtime({
     kitchenBatchesRef.current = kitchenBatches;
   }, [kitchenBatches]);
 
-  const fetchOrderInfo = useCallback(async (orderId: number) => {
-    const supabase = supabaseRef.current;
+  const fetchOrderItems = useCallback(async (orderId: number) => {
+    if (orderItemFetchesRef.current.has(orderId)) return;
+    orderItemFetchesRef.current.add(orderId);
 
-    const [orderRes, itemsRes] = await Promise.all([
-      supabase
-        .from("orders")
-        .select(
-          "id, order_number, order_type, table_id, created_at, tables(number)",
-        )
-        .eq("id", orderId)
-        .single(),
-      supabase
+    try {
+      const supabase = supabaseRef.current;
+      const { data } = await supabase
         .from("order_items")
-        .select(
-          "id, order_id, item_name, variant_name, quantity, unit_price, status, note, modifiers, sides",
-        )
-        .eq("order_id", orderId),
-    ]);
+        .select(KDS_ORDER_ITEM_SELECT)
+        .eq("order_id", orderId);
 
-    if (orderRes.data) {
-      setOrders((prev) => {
-        const next = new Map(prev);
-        next.set(orderId, orderRes.data as unknown as KdsOrderInfo);
-        return next;
-      });
-    }
+      if (!data) return;
 
-    if (itemsRes.data) {
       setOrderItems((prev) => {
         const next = new Map(prev);
-        next.set(orderId, itemsRes.data as unknown as KdsOrderItem[]);
+        next.set(orderId, data as unknown as KdsOrderItem[]);
         return next;
       });
+    } finally {
+      orderItemFetchesRef.current.delete(orderId);
+    }
+  }, []);
+
+  const fetchOrderInfo = useCallback(async (orderId: number) => {
+    if (orderInfoFetchesRef.current.has(orderId)) return;
+    orderInfoFetchesRef.current.add(orderId);
+
+    try {
+      const supabase = supabaseRef.current;
+
+      const [orderRes, itemsRes] = await Promise.all([
+        supabase
+          .from("orders")
+          .select(
+            "id, order_number, order_type, table_id, created_at, tables(number)",
+          )
+          .eq("id", orderId)
+          .single(),
+        supabase
+          .from("order_items")
+          .select(KDS_ORDER_ITEM_SELECT)
+          .eq("order_id", orderId),
+      ]);
+
+      if (orderRes.data) {
+        setOrders((prev) => {
+          const next = new Map(prev);
+          next.set(orderId, orderRes.data as unknown as KdsOrderInfo);
+          return next;
+        });
+      }
+
+      if (itemsRes.data) {
+        setOrderItems((prev) => {
+          const next = new Map(prev);
+          next.set(orderId, itemsRes.data as unknown as KdsOrderItem[]);
+          return next;
+        });
+      }
+    } finally {
+      orderInfoFetchesRef.current.delete(orderId);
     }
   }, []);
 
   const fetchKitchenBatchInfo = useCallback(async (batchId: number) => {
-    const supabase = supabaseRef.current;
-    const { data } = await supabase
-      .from("kitchen_send_batches")
-      .select("id, order_id, kitchen_ticket_number, send_seq, kind, created_at")
-      .eq("id", batchId)
-      .single();
+    if (kitchenBatchFetchesRef.current.has(batchId)) return;
+    kitchenBatchFetchesRef.current.add(batchId);
 
-    if (!data) return;
+    try {
+      const supabase = supabaseRef.current;
+      const { data } = await supabase
+        .from("kitchen_send_batches")
+        .select(
+          "id, order_id, kitchen_ticket_number, send_seq, kind, created_at",
+        )
+        .eq("id", batchId)
+        .single();
 
-    setKitchenBatches((prev) => {
-      const next = new Map(prev);
-      next.set(batchId, data as unknown as KdsKitchenSendBatch);
-      return next;
-    });
+      if (!data) return;
+
+      setKitchenBatches((prev) => {
+        const next = new Map(prev);
+        next.set(batchId, data as unknown as KdsKitchenSendBatch);
+        return next;
+      });
+    } finally {
+      kitchenBatchFetchesRef.current.delete(batchId);
+    }
   }, []);
+
+  const shouldRefreshOrderItems = useCallback(
+    (previous: KdsTicket | undefined, next: KdsTicket) => {
+      if (!previous) return false;
+      return (
+        previous.updated_at !== next.updated_at &&
+        previous.status === next.status &&
+        previous.bumped_at === next.bumped_at &&
+        previous.kitchen_send_batch_id === next.kitchen_send_batch_id
+      );
+    },
+    [],
+  );
 
   const syncOrderItemStatusFromTicket = useCallback((ticket: KdsTicket) => {
     setOrderItems((prev) => {
@@ -154,9 +212,7 @@ export function useKdsRealtime({
 
     const { data: freshTickets, error: ticketsError } = await supabase
       .from("kds_tickets")
-      .select(
-        "id, station_id, order_id, order_item_id, kitchen_send_batch_id, status, bumped_at, created_at",
-      )
+      .select(KDS_TICKET_SELECT)
       .eq("branch_id", branchId)
       .in("status", ["pending", "preparing", "ready"])
       .order("created_at");
@@ -191,9 +247,7 @@ export function useKdsRealtime({
         .in("id", orderIds),
       supabase
         .from("order_items")
-        .select(
-          "id, order_id, item_name, variant_name, quantity, unit_price, status, note, modifiers, sides",
-        )
+        .select(KDS_ORDER_ITEM_SELECT)
         .in("order_id", orderIds),
       batchIds.length > 0
         ? supabase
@@ -234,13 +288,25 @@ export function useKdsRealtime({
   }, [refreshBoardSnapshot]);
 
   const fetchOrderInfoRef = useRef(fetchOrderInfo);
+  const fetchOrderItemsRef = useRef(fetchOrderItems);
   const fetchKitchenBatchInfoRef = useRef(fetchKitchenBatchInfo);
-  const syncOrderItemStatusFromTicketRef = useRef(syncOrderItemStatusFromTicket);
+  const syncOrderItemStatusFromTicketRef = useRef(
+    syncOrderItemStatusFromTicket,
+  );
+  const shouldRefreshOrderItemsRef = useRef(shouldRefreshOrderItems);
   useEffect(() => {
     fetchOrderInfoRef.current = fetchOrderInfo;
+    fetchOrderItemsRef.current = fetchOrderItems;
     fetchKitchenBatchInfoRef.current = fetchKitchenBatchInfo;
     syncOrderItemStatusFromTicketRef.current = syncOrderItemStatusFromTicket;
-  }, [fetchOrderInfo, fetchKitchenBatchInfo, syncOrderItemStatusFromTicket]);
+    shouldRefreshOrderItemsRef.current = shouldRefreshOrderItems;
+  }, [
+    fetchOrderInfo,
+    fetchOrderItems,
+    fetchKitchenBatchInfo,
+    syncOrderItemStatusFromTicket,
+    shouldRefreshOrderItems,
+  ]);
 
   useRealtimeChannel(
     (supabase) =>
@@ -266,24 +332,26 @@ export function useKdsRealtime({
                 void fetchOrderInfoRef.current(orderId);
               }
               const batchId = newTicket.kitchen_send_batch_id;
-              if (
-                batchId !== null &&
-                !kitchenBatchesRef.current.has(batchId)
-              ) {
+              if (batchId !== null && !kitchenBatchesRef.current.has(batchId)) {
                 void fetchKitchenBatchInfoRef.current(batchId);
               }
             } else if (payload.eventType === "UPDATE") {
               const updated = payload.new as KdsTicket;
+              let previousTicket: KdsTicket | undefined;
               setTickets((prev) =>
-                prev.map((t) => (t.id === updated.id ? updated : t)),
+                prev.map((t) => {
+                  if (t.id !== updated.id) return t;
+                  previousTicket = t;
+                  return updated;
+                }),
               );
               syncOrderItemStatusFromTicketRef.current(updated);
               lastSnapshotSyncRef.current = Date.now();
+              if (shouldRefreshOrderItemsRef.current(previousTicket, updated)) {
+                void fetchOrderItemsRef.current(updated.order_id);
+              }
               const batchId = updated.kitchen_send_batch_id;
-              if (
-                batchId !== null &&
-                !kitchenBatchesRef.current.has(batchId)
-              ) {
+              if (batchId !== null && !kitchenBatchesRef.current.has(batchId)) {
                 void fetchKitchenBatchInfoRef.current(batchId);
               }
             } else if (payload.eventType === "DELETE") {
@@ -308,8 +376,14 @@ export function useKdsRealtime({
             filter: `branch_id=eq.${String(branchId)}`,
           },
           (payload) => {
-            const oldRow = payload.old as { id?: number; table_id?: number | null };
-            const newRow = payload.new as { id?: number; table_id?: number | null };
+            const oldRow = payload.old as {
+              id?: number;
+              table_id?: number | null;
+            };
+            const newRow = payload.new as {
+              id?: number;
+              table_id?: number | null;
+            };
             const orderId = newRow.id;
             if (orderId === undefined) return;
             if (!ordersRef.current.has(orderId)) return;

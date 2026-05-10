@@ -40,7 +40,13 @@ export async function submitFeedback(
   const headersList = await headers();
   const origin = headersList.get("origin") ?? "";
   const allowedOrigins = getAllowedOriginsFeedback();
-  if (allowedOrigins.length > 0 && !allowedOrigins.includes(origin)) {
+  if (allowedOrigins.length === 0) {
+    console.error(
+      "[submitFeedback] ALLOWED_ORIGINS_FEEDBACK is required in production.",
+    );
+    return { success: false, error: "Forbidden", errorCode: "forbidden" };
+  }
+  if (!origin || !allowedOrigins.includes(origin)) {
     return { success: false, error: "Forbidden", errorCode: "forbidden" };
   }
 

@@ -91,10 +91,7 @@ export function ServiceChargeSheet({
 
   return (
     <Sheet open={open} onOpenChange={(nextOpen) => !nextOpen && handleClose()}>
-      <SheetContent
-        side="right"
-        className="flex flex-col data-[side=right]:w-full data-[side=right]:sm:max-w-md"
-      >
+      <SheetContent side="right" size="md">
         <SheetHeader className="border-b border-border/60 px-3 py-2.5 text-left sm:px-4">
           <SheetTitle>Phụ phí</SheetTitle>
         </SheetHeader>

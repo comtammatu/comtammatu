@@ -83,7 +83,7 @@ export function QcSettingsClient({ initial }: { initial: Initial }) {
       <div className="mx-auto max-w-3xl space-y-6">
           <Alert>
             <AlertDescription>
-              Cấu hình ngưỡng kiểm soát chất lượng cho phiếu nhập (GRN). Các
+              Cấu hình ngưỡng kiểm soát chất lượng cho phiếu nhập kho. Các
               ngưỡng này áp dụng toàn tenant. Webhook nhận thông báo khi có
               cảnh báo realtime.
             </AlertDescription>

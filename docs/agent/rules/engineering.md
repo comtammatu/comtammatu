@@ -35,6 +35,8 @@ pnpm db:types     # Regenerate Supabase types after migration is applied to the 
 Browser → proxy.ts (auth + ACL) → App Router → Supabase (PostgREST + Auth)
 ```
 
+Production may split public feedback onto `NEXT_PUBLIC_FEEDBACK_HOST`; proxy host-gates `/r/*` before auth and blocks admin/POS paths on the feedback origin.
+
 Next.js 16.2 | React 19.2 | TypeScript 6.0 | Tailwind 4.2 | Zod 4 | Turborepo 2.9 | Node >= 24
 
 ## Import Boundaries
@@ -49,7 +51,8 @@ Next.js 16.2 | React 19.2 | TypeScript 6.0 | Tailwind 4.2 | Zod 4 | Turborepo 2.
 /admin/*              → Tenant-level management (manager+ roles)
 /br/[branchId]/pos    → POS (cashier/waiter)
 /br/[branchId]/kds    → KDS (chef)
-/employee             → Employee portal (all staff)
+/portal               → Universal post-login work destination (all staff)
+/employee             → Employee self-service (all staff)
 /login                → Auth
 ```
 
@@ -88,4 +91,3 @@ context-graph serve --port 3333
 ```
 
 Use `rg` or `rg --files` for normal text and file searches when available.
-

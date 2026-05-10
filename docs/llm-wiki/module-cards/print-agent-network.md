@@ -3,9 +3,9 @@
 ## Current State
 
 The print agent is a separate Node package at `apps/print-agent`. It bridges
-cloud print jobs to LAN (TCP:9100) thermal printers. LAN-only — no USB
-transport, no native bindings. Runs on Windows, Termux (Android), Raspberry Pi,
-or any ARM/x64 Linux with Node 24.
+cloud print jobs to LAN (TCP:9100) or OS-bound Bluetooth serial thermal
+printers. No USB transport, no native bindings. Runs on Windows, Termux
+(Android), Raspberry Pi, or any ARM/x64 Linux with Node 24.
 
 ## Core Files
 
@@ -42,6 +42,6 @@ From current task tracking:
 
 For print/network work:
 
-1. All branch printers must have `printers.connection_type='lan'` and `lan_host` set — DB constraint enforces.
+1. Branch printers use `printers.connection_type='lan'` with IP/hostname in `lan_host`, or `connection_type='bluetooth'` with a paired serial endpoint in `lan_host` (`COM5`, `/dev/rfcomm0`, `/dev/tty.*`) — DB constraint enforces an endpoint.
 2. Treat network gate as an operational safety layer, not authorization.
 3. Verify POS/KDS dev bypass and production behavior separately.

@@ -9,6 +9,7 @@ import { inventory } from "./inventory"
 import { notifications } from "./notifications"
 import { payment } from "./payment"
 import { pos } from "./pos"
+import { portal } from "./portal"
 import { settings } from "./settings"
 
 export const messages = {
@@ -21,6 +22,7 @@ export const messages = {
   notifications,
   payment,
   pos,
+  portal,
   settings,
 } as const
 

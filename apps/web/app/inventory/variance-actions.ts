@@ -124,7 +124,7 @@ export async function evaluateAutoApprove(
   });
 
   if (error || !data) {
-    return { success: false, error: "Không đánh giá được auto-approve." };
+    return { success: false, error: "Không đánh giá được tự duyệt." };
   }
 
   // RPC returns JSONB — parsed natively by supabase-js.
@@ -237,14 +237,15 @@ export async function submitHardblockOverride(
 ): Promise<ActionResult<{ overrideId: number }>> {
   const parsed = hardblockOverrideSchema.safeParse(input);
   if (!parsed.success) {
-    return { success: false, error: parsed.error.issues[0]?.message ?? "Input không hợp lệ" };
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Dữ liệu nhập không hợp lệ" };
   }
 
   const ctx = await getAuthContextWithPermission(
     STAFF_ROLES,
     PERMISSION_KEYS.INVENTORY_GRN_HARDBLOCK_OVERRIDE,
   );
-  if (!ctx) return { success: false, error: "Không có quyền override hardblock" };
+  if (!ctx)
+    return { success: false, error: "Không có quyền duyệt vượt khóa cứng" };
   const { supabase } = ctx;
 
   const { data, error } = await supabase.rpc("override_grn_hardblock", {
@@ -256,12 +257,15 @@ export async function submitHardblockOverride(
 
   if (error) {
     if (error.code === "54000") {
-      return { success: false, error: "Đã override 2/2 tuần này — liên hệ Admin" };
+      return {
+        success: false,
+        error: "Đã duyệt vượt 2/2 lần tuần này — liên hệ Quản trị viên",
+      };
     }
     if (error.code === "42501") {
-      return { success: false, error: "Không có quyền override" };
+      return { success: false, error: "Không có quyền duyệt vượt" };
     }
-    return { success: false, error: "Không override được — thử lại sau" };
+    return { success: false, error: "Không duyệt vượt được — thử lại sau" };
   }
 
   revalidatePath("/inventory/grn");
@@ -287,14 +291,15 @@ export async function extendExpressWindow(
 ): Promise<ActionResult<{ extendedUntil: string }>> {
   const parsed = extendWindowSchema.safeParse(input);
   if (!parsed.success) {
-    return { success: false, error: parsed.error.issues[0]?.message ?? "Input không hợp lệ" };
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Dữ liệu nhập không hợp lệ" };
   }
 
   const ctx = await getAuthContextWithPermission(
     STAFF_ROLES,
     PERMISSION_KEYS.INVENTORY_GRN_EXPRESS_EXTEND,
   );
-  if (!ctx) return { success: false, error: "Không có quyền extend window" };
+  if (!ctx)
+    return { success: false, error: "Không có quyền mở rộng cửa sổ" };
   const { supabase } = ctx;
 
   const { data, error } = await supabase.rpc("extend_express_window", {
@@ -305,9 +310,9 @@ export async function extendExpressWindow(
 
   if (error) {
     if (error.code === "54000") {
-      return { success: false, error: "Đã extend 3/3 lần tuần này" };
+      return { success: false, error: "Đã mở rộng 3/3 lần tuần này" };
     }
-    return { success: false, error: "Không extend được window" };
+    return { success: false, error: "Không mở rộng được cửa sổ" };
   }
 
   revalidatePath("/inventory/grn");

@@ -2,15 +2,24 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { TriangleAlert as IconAlertTriangle, CircleCheck as IconCircleCheck, ChevronRight as IconChevronRight, Pencil as IconPencil, Search as IconSearch, Trash as IconTrash } from "lucide-react";
+import {
+  TriangleAlert as IconAlertTriangle,
+  CircleCheck as IconCircleCheck,
+  ChevronRight as IconChevronRight,
+  Pencil as IconPencil,
+  Search as IconSearch,
+  Trash as IconTrash,
+} from "lucide-react";
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import { Card } from "@comtammatu/ui/components/card";
+import { Badge } from "@comtammatu/ui/components/badge";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { Button } from "@comtammatu/ui/components/button";
+import { toast } from "@comtammatu/ui/components/sonner";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import {
   Sheet,
@@ -21,8 +30,13 @@ import {
 } from "@comtammatu/ui/components/sheet";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
-import { MoneyVndInput, QuantityInput } from "@/components/form";
+import {
+  MoneyVndInput,
+  MultiSelectCombobox,
+  QuantityInput,
+} from "@/components/form";
 import { matchesSearch } from "@lib/search";
+import { messages } from "@lib/messages";
 import { MobilePage } from "../../../_components/mobile/mobile-page";
 import { MobileSectionHeader } from "../../../_components/mobile/mobile-section-header";
 import { MobileEmptyState } from "../../../_components/mobile/mobile-empty-state";
@@ -33,6 +47,7 @@ import {
   type GrnDraft,
   type GrnDraftLine,
 } from "../../../_lib/mobile-draft";
+import { parseInventoryBulkLines } from "../../../_lib/bulk-line-parser";
 import { formatVND } from "../../../_lib/format";
 import {
   createGrnDraft,
@@ -82,7 +97,9 @@ export function GrnCreateClient({
   // server state for UI rendering; lazy-create on first saveLine when no
   // draft exists yet.
   const [draft, setDraft] = React.useState<GrnDraft>(() => ({
-    draftId: existingDraft ? `srv-${existingDraft.id}` : `pending-${supplier.id}`,
+    draftId: existingDraft
+      ? `srv-${existingDraft.id}`
+      : `pending-${supplier.id}`,
     supplierId: supplier.id,
     supplierName: supplier.name,
     branchId,
@@ -92,17 +109,21 @@ export function GrnCreateClient({
   const [serverGrnId, setServerGrnId] = React.useState<number | null>(
     existingDraft?.id ?? null,
   );
+  const serverGrnIdRef = React.useRef<number | null>(existingDraft?.id ?? null);
   const [query, setQuery] = React.useState("");
   const [edit, setEdit] = React.useState<EditState | null>(null);
   const [numpad, setNumpad] = React.useState<"qty" | "cost" | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
+  const [bulkSaving, setBulkSaving] = React.useState(false);
+  const [bulkText, setBulkText] = React.useState("");
+  const [bulkIssues, setBulkIssues] = React.useState<string[]>([]);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
 
   // Lazy-create the server-side draft on first interaction, returning grnId.
   // Idempotent via partial UNIQUE index uq_grn_active_draft_per_user_supplier;
   // race-friendly fallback in createGrnDraft refetches the existing draft.
   async function ensureServerDraft(): Promise<number | null> {
-    if (serverGrnId !== null) return serverGrnId;
+    if (serverGrnIdRef.current !== null) return serverGrnIdRef.current;
     if (!branchId) {
       setSubmitError("Chưa có kho nhận hàng cho phiếu nhập.");
       return null;
@@ -116,7 +137,10 @@ export function GrnCreateClient({
       return null;
     }
     const id = (created.data as { id: number } | undefined)?.id ?? null;
-    if (id !== null) setServerGrnId(id);
+    if (id !== null) {
+      serverGrnIdRef.current = id;
+      setServerGrnId(id);
+    }
     return id;
   }
 
@@ -142,6 +166,26 @@ export function GrnCreateClient({
     }));
   }
 
+  function mergeLine(nextLine: ServerDraftLine) {
+    setDraft((current) => {
+      const idx = current.lines.findIndex(
+        (line) => line.ingredientId === nextLine.ingredientId,
+      );
+      const nextLines =
+        idx >= 0
+          ? current.lines.map((line, index) =>
+              index === idx ? { ...line, ...nextLine } : line,
+            )
+          : [...current.lines, nextLine];
+
+      return {
+        ...current,
+        lines: nextLines,
+        updatedAt: new Date().toISOString(),
+      };
+    });
+  }
+
   function openEdit(ingredient: Ingredient) {
     const existing = addedMap.get(ingredient.id);
     setEdit({
@@ -158,46 +202,58 @@ export function GrnCreateClient({
     setNumpad(null);
   }
 
+  async function upsertDraftLine({
+    ingredient,
+    quantity,
+    unitCost,
+    note,
+  }: {
+    ingredient: Ingredient;
+    quantity: number;
+    unitCost: number;
+    note?: string;
+  }) {
+    if (quantity <= 0 || unitCost < 0) return false;
+    setSubmitError(null);
+    const grnId = await ensureServerDraft();
+    if (grnId === null) return false;
+
+    const lineRes = await upsertGrnLine({
+      grnId,
+      ingredientId: ingredient.id,
+      receivedQuantity: quantity,
+      unit: ingredient.unit,
+      unitCost,
+      qualityStatus: "accepted",
+    });
+    if (!lineRes.success) {
+      setSubmitError(lineRes.error ?? "Không lưu được dòng.");
+      return false;
+    }
+
+    const lineId = (lineRes.data as { id: number } | undefined)?.id ?? 0;
+    mergeLine({
+      lineId,
+      ingredientId: ingredient.id,
+      ingredientName: ingredient.name,
+      unit: ingredient.unit,
+      quantity,
+      unitCost,
+      note: note?.trim() ? note.trim() : undefined,
+    });
+    return true;
+  }
+
   async function saveLine() {
     if (!edit) return;
-    if (edit.quantity <= 0 || edit.unitCost < 0) return;
-    setSubmitError(null);
     try {
-      const grnId = await ensureServerDraft();
-      if (grnId === null) return;
-      const lineRes = await upsertGrnLine({
-        grnId,
-        ingredientId: edit.ingredient.id,
-        receivedQuantity: edit.quantity,
-        unit: edit.ingredient.unit,
-        unitCost: edit.unitCost,
-        qualityStatus: "accepted",
-      });
-      if (!lineRes.success) {
-        setSubmitError(lineRes.error ?? "Không lưu được dòng.");
-        return;
-      }
-      const lineId = (lineRes.data as { id: number } | undefined)?.id ?? 0;
-      const nextLine: GrnDraftLine & { lineId?: number } = {
-        ingredientId: edit.ingredient.id,
-        ingredientName: edit.ingredient.name,
-        unit: edit.ingredient.unit,
+      const ok = await upsertDraftLine({
+        ingredient: edit.ingredient,
         quantity: edit.quantity,
         unitCost: edit.unitCost,
-        note: edit.note.trim() ? edit.note.trim() : undefined,
-      };
-      if (lineId) (nextLine as ServerDraftLine).lineId = lineId;
-      const idx = draft.lines.findIndex(
-        (l) => l.ingredientId === edit.ingredient.id,
-      );
-      applyLines(
-        idx >= 0
-          ? draft.lines.map((l, i) =>
-              i === idx ? { ...l, ...nextLine } : l,
-            )
-          : [...draft.lines, nextLine as ServerDraftLine],
-      );
-      closeEdit();
+        note: edit.note,
+      });
+      if (ok) closeEdit();
     } catch (err) {
       setSubmitError(
         err instanceof Error && err.message
@@ -207,10 +263,74 @@ export function GrnCreateClient({
     }
   }
 
+  async function bulkAddIngredients(ingredientIds: string[]) {
+    setBulkSaving(true);
+    setBulkIssues([]);
+    let saved = 0;
+    try {
+      for (const ingredientId of ingredientIds) {
+        if (addedMap.has(Number(ingredientId))) continue;
+        const ingredient = ingredients.find(
+          (item) => String(item.id) === ingredientId,
+        );
+        if (!ingredient) continue;
+        const ok = await upsertDraftLine({
+          ingredient,
+          quantity: 1,
+          unitCost: Number(ingredient.unit_cost ?? 0),
+        });
+        if (ok) saved += 1;
+      }
+      if (saved === 0) {
+        toast.info("Các nguyên liệu đã có trong phiếu");
+      } else {
+        toast.success(`Đã thêm ${saved} mặt hàng`);
+      }
+    } finally {
+      setBulkSaving(false);
+    }
+  }
+
+  async function applyBulkText() {
+    const result = parseInventoryBulkLines({
+      text: bulkText,
+      items: ingredients,
+      getUnit: (ingredient) => ingredient.unit,
+    });
+
+    if (result.parsed.length === 0) {
+      setBulkIssues(
+        result.issues.length > 0 ? result.issues : ["Không có dòng hợp lệ"],
+      );
+      return;
+    }
+
+    setBulkSaving(true);
+    let saved = 0;
+    try {
+      for (const { item, quantity, note } of result.parsed) {
+        const ok = await upsertDraftLine({
+          ingredient: item,
+          quantity: Number(quantity),
+          unitCost: Number(item.unit_cost ?? 0),
+          note,
+        });
+        if (ok) saved += 1;
+      }
+      if (saved > 0) {
+        toast.success(`Đã nhập nhanh ${saved} dòng phiếu nhập`);
+        setBulkText("");
+      }
+      setBulkIssues(result.issues);
+    } finally {
+      setBulkSaving(false);
+    }
+  }
+
   async function removeLine(ingredientId: number) {
-    const target = draft.lines.find(
-      (l) => l.ingredientId === ingredientId,
-    ) as ServerDraftLine | undefined;
+    const target = draft.lines.find((l) => l.ingredientId === ingredientId) as
+      | ServerDraftLine
+      | undefined;
     if (target?.lineId && serverGrnId !== null) {
       const res = await deleteGrnLine({
         grnId: serverGrnId,
@@ -288,6 +408,7 @@ export function GrnCreateClient({
   const total = draftTotal(draft);
   const lineCount = draft.lines.length;
   const canSubmit = lineCount > 0 && !submitting;
+  const bulkCopy = messages.inventory.common.bulk;
 
   return (
     <MobilePage>
@@ -330,8 +451,8 @@ export function GrnCreateClient({
                     {line.ingredientName}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {line.quantity} {line.unit} ·{" "}
-                    {formatVND(line.unitCost)} đ/{line.unit} ·{" "}
+                    {line.quantity} {line.unit} · {formatVND(line.unitCost)} đ/
+                    {line.unit} ·{" "}
                     <span className="font-medium text-foreground">
                       {formatVND(line.quantity * line.unitCost)} đ
                     </span>
@@ -369,18 +490,84 @@ export function GrnCreateClient({
         </Card>
       ) : null}
 
-      <InputGroup className="h-12 rounded-lg">
-        <InputGroupAddon>
-          <IconSearch />
-        </InputGroupAddon>
+      <Card size="sm">
+        <CardContent className="flex flex-col gap-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex flex-col gap-1">
+              <span className="text-sm font-semibold">
+                {messages.inventory.grn.quickAddTitle}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {messages.inventory.grn.quickAddDescription}
+              </span>
+            </div>
+            <Badge variant="secondary">
+              {bulkCopy.selectedRows(lineCount)}
+            </Badge>
+          </div>
+          <MultiSelectCombobox
+            options={ingredients.map((ingredient) => ({
+              value: String(ingredient.id),
+              label: ingredient.name,
+              hint: ingredient.unit,
+              alreadySelected: addedMap.has(ingredient.id),
+              keywords: [ingredient.sku ?? "", ingredient.category ?? ""],
+            }))}
+            onConfirm={bulkAddIngredients}
+            triggerLabel={bulkCopy.chooseManyItems}
+            confirmLabel={bulkCopy.addItems}
+            searchPlaceholder={bulkCopy.searchItemsByNameOrSku}
+            disabled={bulkSaving}
+            triggerClassName="w-full"
+          />
+          <Textarea
+            value={bulkText}
+            onChange={(event) => setBulkText(event.target.value)}
+            placeholder={bulkCopy.pastePlaceholder}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="touch"
+            onClick={applyBulkText}
+            disabled={!bulkText.trim() || bulkSaving}
+          >
+            {bulkSaving ? (
+              <>
+                <Spinner className="size-4" />
+                {STATES_VI.saving}
+              </>
+            ) : (
+              bulkCopy.applyList
+            )}
+          </Button>
+          {bulkIssues.length > 0 ? (
+            <div className="rounded-md border border-warning/30 bg-warning/10 p-3 text-xs text-warning">
+              <div className="font-medium">
+                {bulkCopy.rowsNeedReview(bulkIssues.length)}
+              </div>
+              <ul className="mt-1 flex list-disc flex-col gap-1 pl-4">
+                {bulkIssues.slice(0, 4).map((issue) => (
+                  <li key={issue}>{issue}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      <InputGroup size="touch">
         <InputGroupInput
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Tìm theo tên hoặc mã SKU"
+          placeholder="Tìm theo tên hoặc mã hàng"
           className="text-base"
           inputMode="search"
         />
+        <InputGroupAddon>
+          <IconSearch />
+        </InputGroupAddon>
       </InputGroup>
 
       <div className="flex flex-col gap-2">
@@ -540,7 +727,8 @@ function LineEditSheet({
     >
       <SheetContent
         side="bottom"
-        className="h-auto max-h-dvh-95 gap-0 bg-background p-0 text-foreground"
+        height="viewport-95"
+        surface="background"
         showCloseButton={false}
       >
         {edit ? (
@@ -634,7 +822,9 @@ function LineEditSheet({
 
               <div className="rounded-lg bg-muted/50 px-3 py-2.5">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">{FORM_VI.amount}</span>
+                  <span className="text-muted-foreground">
+                    {FORM_VI.amount}
+                  </span>
                   <span className="text-base font-semibold">
                     {formatVND(lineTotal)} đ
                   </span>

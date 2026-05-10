@@ -135,7 +135,7 @@ export function DiscountSheet({
 
   return (
     <Sheet open={open} onOpenChange={(o) => !o && handleClose()}>
-      <SheetContent side="right" className="flex flex-col data-[side=right]:w-full data-[side=right]:sm:max-w-md">
+      <SheetContent side="right" size="md">
         <SheetHeader className="border-b border-border/60 px-3 py-2.5 text-left sm:px-4">
           <SheetTitle>Chiết khấu</SheetTitle>
         </SheetHeader>
@@ -190,8 +190,8 @@ export function DiscountSheet({
                 rows={2}
               />
               <FieldDescription>
-                Tối thiểu 3 ký tự. ({noteTrimLen}/3) — dùng cho cả "Áp
-                dụng" và "Bỏ chiết khấu" (lưu vào nhật ký kiểm toán).
+                Tối thiểu 3 ký tự. ({noteTrimLen}/3) — dùng cho cả "Áp dụng" và
+                "Bỏ chiết khấu" (lưu vào nhật ký kiểm toán).
               </FieldDescription>
             </Field>
           </FieldGroup>
@@ -209,7 +209,10 @@ export function DiscountSheet({
             )}
             <div className="flex justify-between text-muted-foreground">
               <span>
-                Giảm{type === "pct" && numericValue > 0 ? ` (${numericValue}%)` : ""}
+                Giảm
+                {type === "pct" && numericValue > 0
+                  ? ` (${numericValue}%)`
+                  : ""}
               </span>
               <span className="tabular-nums">
                 {previewDiscountAmount > 0

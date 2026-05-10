@@ -144,7 +144,7 @@ export function SplitOrderSheet({
 
   return (
     <Sheet open={open} onOpenChange={(o) => !o && handleClose()}>
-      <SheetContent side="right" className="flex flex-col data-[side=right]:w-full data-[side=right]:sm:max-w-md">
+      <SheetContent side="right" size="md">
         <SheetHeader className="border-b border-border/60 px-3 py-2.5 text-left sm:px-4">
           <SheetTitle>
             Tách hóa đơn{headerSubtitle ? ` · ${headerSubtitle}` : ""}
@@ -239,7 +239,8 @@ export function SplitOrderSheet({
           )}
           {noActiveItems && (
             <p className="text-xs text-destructive">
-              Đơn không còn món nào để tách (có thể đã được hủy). Vui lòng đóng và tải lại.
+              Đơn không còn món nào để tách (có thể đã được hủy). Vui lòng đóng
+              và tải lại.
             </p>
           )}
           <div className="flex gap-2">

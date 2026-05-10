@@ -127,7 +127,7 @@ function QuickCreateDialog<TCreated>({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent size="lg">
         <DialogHeader>
           <DialogTitle>{config.title}</DialogTitle>
         </DialogHeader>
@@ -175,7 +175,7 @@ function QuickCreateDialog<TCreated>({
             )}
           </FieldGroup>
 
-          <DialogFooter className="pt-6">
+          <DialogFooter spacing="form">
             <Button
               type="button"
               variant="outline"
@@ -198,7 +198,7 @@ function QuickCreateDialog<TCreated>({
 const FINISHED_GOOD_CONFIG: QuickCreateDialogConfig = {
   title: "Thêm thành phẩm mới",
   intro:
-    "Danh sách trong BOM sản xuất lấy từ danh mục nguyên liệu có loại Thành phẩm. Tạo mới ở đây để dùng ngay cho công thức.",
+    "Danh sách trong công thức sản xuất lấy từ danh mục nguyên liệu có loại Thành phẩm. Tạo mới ở đây để dùng ngay cho công thức.",
   nameLabel: "Tên thành phẩm",
   namePlaceholder: "VD: Sườn nướng sơ chế",
   unitLabel: "Đơn vị",
@@ -216,7 +216,7 @@ const FINISHED_GOOD_CONFIG: QuickCreateDialogConfig = {
 const RAW_INGREDIENT_CONFIG: QuickCreateDialogConfig = {
   title: "Thêm nguyên liệu mới",
   intro:
-    "Tạo nhanh nguyên liệu đầu vào để hòan thiện BOM và chuẩn bị cho lệnh sản xuất.",
+    "Tạo nhanh nguyên liệu đầu vào để hòan thiện công thức và chuẩn bị cho lệnh sản xuất.",
   nameLabel: "Tên nguyên liệu",
   namePlaceholder: "VD: Nước mắm pha",
   unitLabel: "Đơn vị",

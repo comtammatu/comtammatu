@@ -16,11 +16,7 @@ import {
 import { FieldGroup } from "@comtammatu/ui/components/field";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
-import {
-  NumberField,
-  SelectField,
-  TextareaField,
-} from "@/components/form";
+import { NumberField, SelectField, TextareaField } from "@/components/form";
 import { adjustStock } from "../actions";
 import { ACTIONS_VI, ERRORS_VI } from "@comtammatu/shared/messages";
 
@@ -117,7 +113,7 @@ export function AdjustStockDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm" key={`adjust-${ingredientId}`}>
+      <DialogContent size="sm" key={`adjust-${ingredientId}`}>
         <DialogHeader>
           <DialogTitle>Điều chỉnh tồn kho</DialogTitle>
           <DialogDescription>
@@ -162,7 +158,7 @@ export function AdjustStockDialog({
             )}
           </FieldGroup>
 
-          <DialogFooter className="pt-6">
+          <DialogFooter spacing="form">
             <Button
               type="button"
               variant="outline"

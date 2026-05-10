@@ -96,7 +96,10 @@ export async function createWasteEntry(
 
   if (error) {
     if (error.code === "42501") {
-      return { success: false, error: "Không có quyền hoặc thiếu ảnh tier 1" };
+      return {
+        success: false,
+        error: "Không có quyền hoặc thiếu ảnh bậc 1",
+      };
     }
     if (error.code === "22023") {
       return {

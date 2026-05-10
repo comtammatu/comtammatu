@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import type { Control, FieldPath, FieldValues } from "react-hook-form";
 import { useController } from "react-hook-form";
-import { Check as IconCheck, ChevronsUpDown as IconSelector } from "lucide-react";
+import { ChevronsUpDown as IconSelector } from "lucide-react";
 import { cn } from "@comtammatu/ui";
 import { matchesSearch } from "@lib/search";
 import { Button } from "@comtammatu/ui/components/button";
@@ -47,6 +47,7 @@ export interface ComboboxFieldProps<TFieldValues extends FieldValues> {
   searchPlaceholder?: string;
   emptyMessage?: string;
   disabled?: boolean;
+  size?: "sm" | "default" | "touch" | "touch-lg";
   className?: string;
   id?: string;
   required?: boolean;
@@ -62,6 +63,7 @@ export function ComboboxField<TFieldValues extends FieldValues>({
   searchPlaceholder = "Tìm...",
   emptyMessage = "Không tìm thấy.",
   disabled,
+  size = "default",
   className,
   id,
   required,
@@ -69,6 +71,10 @@ export function ComboboxField<TFieldValues extends FieldValues>({
   const { field, fieldState } = useController({ control, name });
   const fieldId = id ?? `field-${String(name)}`;
   const hasError = !!fieldState.error;
+  const descriptionId = description ? `${fieldId}-description` : undefined;
+  const errorId = fieldState.error ? `${fieldId}-error` : undefined;
+  const describedBy =
+    [descriptionId, errorId].filter(Boolean).join(" ") || undefined;
   const [open, setOpen] = useState(false);
 
   const selected = useMemo(
@@ -77,7 +83,7 @@ export function ComboboxField<TFieldValues extends FieldValues>({
   );
 
   return (
-    <Field data-invalid={hasError}>
+    <Field data-invalid={hasError || undefined}>
       <FieldLabel htmlFor={fieldId}>
         {label}
         {required ? " *" : null}
@@ -90,12 +96,15 @@ export function ComboboxField<TFieldValues extends FieldValues>({
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            aria-invalid={hasError}
+            aria-describedby={describedBy}
+            aria-invalid={hasError || undefined}
+            aria-required={required || undefined}
             disabled={disabled}
+            size={size}
             onBlur={field.onBlur}
             ref={field.ref}
             className={cn(
-              "h-10 w-full justify-between font-normal",
+              "w-full justify-between font-normal",
               !selected && "text-muted-foreground",
               className,
             )}
@@ -106,13 +115,12 @@ export function ComboboxField<TFieldValues extends FieldValues>({
             <IconSelector className="ml-2 size-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent
-          className="w-(--radix-popover-trigger-width) p-0"
-          align="start"
-        >
+        <PopoverContent align="start" width="trigger" padding="none">
           <Command
             filter={(value, search, keywords) => {
-              return matchesSearch([value, ...(keywords ?? [])], search) ? 1 : 0;
+              return matchesSearch([value, ...(keywords ?? [])], search)
+                ? 1
+                : 0;
             }}
           >
             <CommandInput placeholder={searchPlaceholder} />
@@ -125,6 +133,7 @@ export function ComboboxField<TFieldValues extends FieldValues>({
                     value={opt.label}
                     keywords={opt.keywords}
                     disabled={opt.disabled}
+                    checked={field.value === opt.value}
                     onSelect={() => {
                       field.onChange(opt.value);
                       setOpen(false);
@@ -138,14 +147,6 @@ export function ComboboxField<TFieldValues extends FieldValues>({
                         </span>
                       ) : null}
                     </div>
-                    <IconCheck
-                      className={cn(
-                        "ml-2 size-4 shrink-0",
-                        field.value === opt.value
-                          ? "opacity-100"
-                          : "opacity-0",
-                      )}
-                    />
                   </CommandItem>
                 ))}
               </CommandGroup>
@@ -153,8 +154,12 @@ export function ComboboxField<TFieldValues extends FieldValues>({
           </Command>
         </PopoverContent>
       </Popover>
-      {description ? <FieldDescription>{description}</FieldDescription> : null}
-      {fieldState.error ? <FieldError errors={[fieldState.error]} /> : null}
+      {description ? (
+        <FieldDescription id={descriptionId}>{description}</FieldDescription>
+      ) : null}
+      {fieldState.error ? (
+        <FieldError id={errorId} errors={[fieldState.error]} />
+      ) : null}
     </Field>
   );
 }

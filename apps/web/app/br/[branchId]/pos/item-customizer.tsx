@@ -261,8 +261,8 @@ export function ItemCustomizer({
     <Sheet open={item !== null} onOpenChange={resetAndSetItem}>
       <SheetContent
         side="bottom"
+        height="screen"
         showCloseButton={false}
-        className="h-dvh max-h-dvh p-0"
       >
         {item && (
           <div className="flex h-full flex-col">
@@ -349,6 +349,7 @@ export function ItemCustomizer({
                         >
                           <label>
                             <Checkbox
+                              size="touch"
                               checked={selectedModifierIds.has(m.id)}
                               onCheckedChange={() => toggleModifier(m.id)}
                             />
@@ -393,6 +394,7 @@ export function ItemCustomizer({
                           >
                             <Checkbox
                               id={`side-${String(s.id)}`}
+                              size="touch"
                               className="mt-1.5"
                               checked={isSelected}
                               onCheckedChange={() => toggleSide(s.side_item.id)}

@@ -214,8 +214,8 @@ URL: `/br/{branchId}/pos` → bàn occupied → đơn
 
 ### Tham chiếu thiết kế
 
-- Order lifecycle: [docs/plan/m2-order-lifecycle.md](../../../plan/m2-order-lifecycle.md)
-- Multi-order pattern: [docs/plan/ui-ux-page-contracts.md](../../../plan/ui-ux-page-contracts.md)
+- Order lifecycle: [docs/archive/plan/m2-order-lifecycle.md](../../../archive/plan/m2-order-lifecycle.md)
+- Multi-order pattern: [docs/archive/plan/ui-ux-page-contracts.md](../../../archive/plan/ui-ux-page-contracts.md)
 
 ---
 

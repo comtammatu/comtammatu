@@ -2,7 +2,7 @@
 
 ## Tổng quan
 
-Ứng dụng Next.js 16.2 dùng App Router. 107 page.tsx routes phục vụ các bề mặt: Admin (`/admin/*`), Inventory (`/inventory/*`), Finance (`/finance/*`), HR (`/hr/*`), Orders (`/orders`), Notifications (`/notifications`), POS (`/br/[branchId]/pos`), KDS (`/br/[branchId]/kds`), Branch settings (`/br/[branchId]/settings/*`), Branch menu limits (`/br/[branchId]/menu-limits`), Employee portal (`/employee/*`), plus public surfaces `/login`, `/access-denied`, `/payment/momo/return`. Khung quản trị + Thực đơn + POS + KDS đã hoàn thành; Kho hàng hiện là bề mặt vận hành live cho HQ, bếp trung tâm, và chi nhánh.
+Ứng dụng Next.js 16.2 dùng App Router. Các route phục vụ các bề mặt: Work portal (`/portal`), Admin (`/admin/*`), Inventory (`/inventory/*`), Finance (`/finance/*`), HR (`/hr/*`), Orders (`/orders`), Notifications (`/notifications`), POS (`/br/[branchId]/pos`), KDS (`/br/[branchId]/kds`), Branch settings (`/br/[branchId]/settings/*`), Branch menu limits (`/br/[branchId]/menu-limits`), Employee self-service (`/employee/*`), public feedback (`/r/[token]/*`), plus public surfaces `/login`, `/access-denied`, `/payment/momo/return`. Khung quản trị + Thực đơn + POS + KDS đã hoàn thành; Kho hàng hiện là bề mặt vận hành live cho HQ, bếp trung tâm, và chi nhánh.
 
 **Phạm vi sở hữu:** `apps/web/`
 
@@ -10,7 +10,7 @@
 
 ```
 apps/web/app/
-├── layout.tsx              # Root: HTML, fonts (Inter/Montserrat/JetBrains Mono), metadata
+├── layout.tsx              # Root: HTML, fonts (Be Vietnam Pro + JetBrains Mono), metadata
 ├── page.tsx                # / → redirect to role default
 ├── globals.css             # Tailwind 4.2 base styles
 │
@@ -20,6 +20,7 @@ apps/web/app/
 │   └── actions.ts          # Server action: login()
 │
 ├── access-denied/          # Public — renders blocked-state copy from packages/shared/src/auth/blocked-state.ts
+├── portal/                 # Universal post-login work destination for all staff roles
 ├── orders/                 # Cross-branch orders surface (owner/super_manager/area_manager/branch_manager/cashier)
 ├── notifications/          # In-app notification inbox (all staff)
 │
@@ -31,11 +32,7 @@ apps/web/app/
 │   ├── menu/               # Menu master data domain (reachable via domain map, not primary Admin nav)
 │   ├── accounting/
 │   │   └── periods/        # Period close/reopen (owner/super_manager; ACCOUNTING_PERIOD_REOPEN gated)
-│   ├── inventory/          # RETIRED — module ACL has empty allowed_roles; pages exist but unreachable
-│   │   ├── cold-chain/     # Compliance / cold-chain events
-│   │   ├── express-windows/ # Express GRN time windows
-│   │   ├── feature-flags/  # Inventory feature flags
-│   │   └── trust/          # Trust leaderboard
+│   ├── inventory/          # RETIRED URL namespace — pages removed; resolver maps to empty inventory_admin ACL
 │   ├── staff/              # Staff CRUD with role hierarchy auth, excludes owner/super_manager
 │   │   ├── audit/          # Permission audit log viewer
 │   │   └── [id]/permissions/ # Per-user grant/revoke + template apply
@@ -43,6 +40,7 @@ apps/web/app/
 │   │   └── payroll/        # Payroll periods list + [periodId] detail
 │   ├── crm/                # Placeholder / deferred
 │   ├── finance/            # Compatibility redirect → /finance/*
+│   ├── feedback/           # Customer feedback inbox, QR, reports, settings
 │   ├── reports/            # CEO/HQ reports hub
 │   │   ├── revenue/        # Revenue reports
 │   │   ├── inventory-value/ # Inventory valuation reports
@@ -78,14 +76,16 @@ apps/web/app/
 │       ├── printers/
 │       └── tables/
 │
-├── employee/               # Employee portal (all roles)
+├── employee/               # Employee self-service (all roles)
 │   ├── layout.tsx          # Employee shell with auth guard
 │   ├── page.tsx            # Employee dashboard
 │   ├── profile/            # Personal profile
 │   ├── clock/              # Clock in/out
 │   ├── attendance/         # Attendance history
 │   ├── schedule/           # Work schedule
-│   └── payslip/            # Payslip viewer
+│   ├── payslip/            # Payslip viewer
+│   ├── permissions/        # Support/debug view for own grants
+│   └── shift-register/     # Self-service shift registration
 │
 ├── inventory/              # Inventory operations cockpit (HQ / central_kitchen / branch)
 │   ├── layout.tsx          # Inventory shell with site context + role-aware nav
@@ -125,6 +125,8 @@ apps/web/app/
 ├── finance/                # Finance workspace + HĐĐT / VAS reporting
 │   ├── layout.tsx          # Finance shell with auth guard
 │   ├── page.tsx            # Revenue + invoice overview
+│   ├── invoices/           # HĐĐT invoice list
+│   ├── summary/            # B2C daily summary HĐ runs
 │   ├── revenue/            # Revenue rollups + [date] drilldown
 │   ├── reconciliation/     # POS/subledger ↔ GL reconciliation
 │   ├── chart-of-accounts/  # Chart of accounts management
@@ -135,10 +137,12 @@ apps/web/app/
 │   ├── audit-trail/        # Finance audit log
 │   └── statements/         # Financial statements
 │
-├── employee/               # Employee portal — see Employee section below
+├── portal/                 # Work portal — universal post-login destination
+├── employee/               # Employee self-service — see Employee section below
 ├── inventory/              # Inventory cockpit — see Inventory section below
 ├── hr/                     # HR workspace — payroll/[periodId]
 ├── payment/momo/return/    # Public Momo redirect target after gateway flow
+├── r/[token]/              # Public QR feedback form + thank-you
 │
 └── api/
     ├── health/route.ts            # GET health check
@@ -167,7 +171,7 @@ Nhóm điều hướng được lọc qua `canAccess(role, moduleKey)` — phân
 
 ### Server action đăng nhập (`apps/web/app/(auth)/login/actions.ts`)
 
-Server action with rate limiting (`loginRateLimit` from `@comtammatu/security`). Validates with Zod, calls `signInWithPassword()`, extracts claims, redirects to role default via `getDefaultRedirect()`.
+Server action with rate limiting (`loginRateLimit` from `@comtammatu/security`). Validates with Zod, calls `signInWithPassword()`, extracts claims, redirects through `resolvePostLoginRedirect()` so safe `returnTo` wins and the legacy fallback is `/portal`.
 
 ## Inventory workspace hiện tại
 
@@ -246,8 +250,8 @@ Browser request
 - **Proxy as single auth gate:** All auth enforcement happens in `proxy.ts` before any route code runs. Layout-level checks are defense-in-depth, not primary.
 - **RSC by default:** Pages are React Server Components. Only interactive elements (forms, dropdowns) use "use client".
 - **Admin is now narrower by design:** it keeps foundation controls and executive reporting, while deep domain workflows should live in dedicated workspaces.
-- **Inventory is a standalone surface:** `/inventory` is the canonical Inventory operations domain. `/admin/inventory/*` page files (cold-chain, express-windows, feature-flags, trust) still exist on disk but are RETIRED — the `inventory_admin` module has empty `allowedRoles`, so no role passes the proxy ACL check.
-- **Employee portal is live:** profile, clock, attendance, schedule, payslip pages shipped. HR workspace has payroll management.
+- **Inventory is a standalone surface:** `/inventory` is the canonical Inventory operations domain. `/admin/inventory/*` is a retired URL namespace — page files have been removed, and `resolveModuleFromPath()` still maps that prefix to `inventory_admin` with empty `allowedRoles`, so no role passes the proxy ACL check.
+- **Work portal is live:** `/portal` is the universal post-login destination, while `/employee` stays focused on profile, clock, attendance, schedule, and payslip self-service. HR workspace has payroll management.
 - **Finance & reports expanded:** chart-of-accounts, journal, food-cost, statements, revenue, inventory-value, stock-movement all live.
 - **Inventory settings are narrower now:** `/inventory/settings` chỉ giữ policy/config như expiry; catalog pages canonical sống ở `/inventory/ingredients`, `/inventory/suppliers`, `/inventory/recipes`, còn route settings cũ giữ redirect tương thích.
 - **CRM remains Post-v1.0.**
@@ -256,6 +260,6 @@ Browser request
 Written by codebase-oracle (manual) | 2026-04-06
 Data: Direct source reading
 Audience: new engineer, feature owner | Confidence: 95%
-Updated: Inventory IA/task queue sync + route tree refresh (2026-04-16)
+Updated: route tree + feedback host/doc drift sync (2026-05-09)
 Unknowns: 0
 -->

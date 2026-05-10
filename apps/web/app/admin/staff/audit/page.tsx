@@ -115,25 +115,25 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50 hover:bg-muted/50">
-                  <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  <TableHead variant="eyebrow">
                     {copy.time}
                   </TableHead>
-                  <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  <TableHead variant="eyebrow">
                     {copy.action}
                   </TableHead>
-                  <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  <TableHead variant="eyebrow">
                     {copy.actor}
                   </TableHead>
-                  <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  <TableHead variant="eyebrow">
                     {copy.target}
                   </TableHead>
-                  <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  <TableHead variant="eyebrow">
                     Permission
                   </TableHead>
-                  <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  <TableHead variant="eyebrow">
                     {BRANCH_VI.long}
                   </TableHead>
-                  <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  <TableHead variant="eyebrow">
                     {copy.expires}
                   </TableHead>
                 </TableRow>

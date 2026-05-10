@@ -52,6 +52,8 @@ Instruction memory and learning memory stay separate:
 Browser → proxy.ts (auth + ACL) → App Router → Supabase (PostgREST + Auth)
 ```
 
+Production may split public feedback onto `NEXT_PUBLIC_FEEDBACK_HOST`; proxy host-gates `/r/*` before auth and blocks admin/POS paths on the feedback origin.
+
 Next.js 16.2 | React 19.2 | TypeScript 6.0 | Tailwind 4.2 | Zod 4 | Turborepo 2.9 | Node >= 24
 
 ## Commands
@@ -66,9 +68,9 @@ pnpm db:types     # Regenerate Supabase types after migration is applied to the 
 
 ## Workflow Summary
 
-Every feature, bug fix, and refactor must follow the 4-agent debate protocol in `docs/agent/rules/workflow.md` before implementation.
+Every feature, bug fix, and refactor must follow the 4-perspective debate protocol in `docs/agent/rules/workflow.md` before implementation. Use actual subagents only when the current tool environment supports and permits delegation; otherwise run the same PM/BA/Senior Dev/QA checkpoint in-thread.
 
-Skip the 4-agent debate only for:
+Skip the 4-perspective debate only for:
 
 - Typo fixes under 3 changed lines
 - Documentation-only changes

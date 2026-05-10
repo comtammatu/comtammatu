@@ -29,9 +29,9 @@
 | Tables | ≥1 dine-in zone, ≥6 tables |
 | Test users | `cashier_a`, `waiter_b`, `bm_c`, `owner_d` with correct `staff_permissions` |
 | Period | NOT soft-closed |
-| VietQR / MoMo / MISA | **mock mode** (env flag) — real banking out |
+| VietQR / MoMo / Viettel S-invoice | **mock mode** (env flag) — real banking out |
 | Payment test harness | VietQR/MoMo tests MUST exercise action/webhook path. Direct DB update fallback is invalid. |
-| Skip on dev DB | real MISA push, SMS receipt, printer hardware |
+| Skip on dev DB | real Viettel S-invoice push, SMS receipt, printer hardware |
 
 ---
 
@@ -115,7 +115,7 @@
 - 🔍 SQL: `SELECT count(*) FROM payments WHERE order_id=? AND status<>'failed'` must be ≤1.
 
 **05.05 [Layer A] HĐĐT failure must NOT void payment**
-- *Cashier* · order 200k, MISA mocked to throw 500 · fill MST + buyerName → "Đã thanh toán" cash → **edit buyerName while in-flight** → wait for invoice fail.
+- *Cashier* · order 200k, provider mocked to throw 500 · fill MST + buyerName → "Đã thanh toán" cash → **edit buyerName while in-flight** → wait for invoice fail.
 - ✅ `payments.status=completed` (NOT rolled back); `orders.status=completed`; `tax_invoices.status=failed`. **Submitted MST payload = snapshot at click, not post-edit.** Toast "Đã thu tiền — HĐĐT chưa xuất được, lưu nháp Finance xử lý".
 - 📜 Catches: `HDDT-PAYMENT-FIRST-FAILSOFT-ORPHAN`, `HDDT-FORM-PAYLOAD-FREEZE-AT-CLICK`.
 
@@ -212,7 +212,7 @@ Full context in `tasks/owner-decisions-pos-pass-1.md`. TL;DR:
 1. **D1** Close-shift with active orders — **Allow + carry forward**. `expected_cash` filters `payment_status='paid'` only; unpaid orders live across sessions.
 2. **D2** Comp meal (total=0) — **No additional gate**; discount note ≥3 chars suffices.
 3. **D3** Variance threshold — `max(50.000đ, 0.5% × expected_cash)` → BM PIN + note ≥10 chars.
-4. **D4** HĐĐT for total=0 — **Conditional on MST**; no MST → skip MISA + `tax_invoices.status='not_required'`.
+4. **D4** HĐĐT for total=0 — **Conditional on MST**; no MST → skip provider + `tax_invoices.status='not_required'`.
 5. **D5** Failed-print log — **Reuse `print_jobs.status='failed'`** + 7-day query window; "In lại" links via `original_job_id`.
 
 ## Confirmed by code (no longer open)

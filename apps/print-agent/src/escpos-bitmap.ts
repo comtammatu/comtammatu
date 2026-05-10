@@ -21,6 +21,7 @@ import type {
   ProvisionalBillPayload,
   ReceiptPayload,
   ShiftCloseReportPayload,
+  TaxInvoicePayload,
   ModifierLine,
   SideLine,
 } from "./escpos.js";
@@ -175,18 +176,27 @@ const KITCHEN_DETAIL_WIDTH_DOUBLE = 20;
  * cells (matches " SL | " column width). */
 const KITCHEN_DETAIL_INDENT = "    |   ";
 
-function renderKitchenTicketBitmap(p: KitchenPayload): Uint8Array {
-  const parts: Uint8Array[] = [init(), lineSpacingZero()];
+function kitchenDestination(p: KitchenPayload): string {
+  return p.order_type === "dine_in"
+    ? p.table_number
+      ? `BÀN ${p.table_number}`
+      : "TẠI CHỖ"
+    : "MANG VỀ";
+}
 
-  // Banner
-  const dest =
-    p.order_type === "dine_in"
-      ? p.table_number
-        ? `BÀN ${p.table_number}`
-        : "TẠI CHỖ"
-      : "MANG VỀ";
-  const ticketNumber = p.kitchen_ticket_number ?? p.order_number;
-  const sourceOrderNumber = p.source_order_number ?? p.order_number;
+function kitchenTicketNumbers(
+  p: KitchenPayload,
+): { ticketNumber: string; sourceOrderNumber: string } {
+  return {
+    ticketNumber: p.kitchen_ticket_number ?? p.order_number,
+    sourceOrderNumber: p.source_order_number ?? p.order_number,
+  };
+}
+
+function renderKitchenHeaderParts(p: KitchenPayload): Uint8Array[] {
+  const parts: Uint8Array[] = [];
+  const { ticketNumber } = kitchenTicketNumbers(p);
+  const dest = kitchenDestination(p);
   const banner = `${dest} · ${ticketNumber}`;
   parts.push(line(banner, { bold: true, double: true, align: "center" }));
 
@@ -199,9 +209,12 @@ function renderKitchenTicketBitmap(p: KitchenPayload): Uint8Array {
     parts.push(line(`IN LẠI LẦN #${p.reprint_seq}`, { bold: true, double: true, align: "center" }));
   }
   parts.push(divider("="));
+  return parts;
+}
 
-  // Meta rows. Bỏ "HĐ:" khi trùng "Phiếu:" (legacy data hoặc fallback) để
-  // khỏi in 2 dòng số giống nhau.
+function renderKitchenMetaParts(p: KitchenPayload): Uint8Array[] {
+  const parts: Uint8Array[] = [];
+  const { ticketNumber, sourceOrderNumber } = kitchenTicketNumbers(p);
   const meta = splitDateTime(p.printed_at);
   parts.push(line(
     padRight(`Phiếu: ${ticketNumber}`, 24) +
@@ -217,13 +230,15 @@ function renderKitchenTicketBitmap(p: KitchenPayload): Uint8Array {
   if (p.cashier_name) {
     parts.push(line(`Người order: ${p.cashier_name}`));
   }
+  return parts;
+}
 
-  // Table header
-  parts.push(line(KITCHEN_BORDER));
-  parts.push(line(" SL | MÓN", { bold: true }));
-  parts.push(line(KITCHEN_BORDER));
-
-  // Items
+function renderKitchenItemsParts(p: KitchenPayload): Uint8Array[] {
+  const parts: Uint8Array[] = [
+    line(KITCHEN_BORDER),
+    line(" SL | MÓN", { bold: true }),
+    line(KITCHEN_BORDER),
+  ];
   p.items.forEach((it, idx) => {
     if (idx > 0) parts.push(line(KITCHEN_BORDER));
     const qtyField = padRight(`x${it.quantity}`, 3);
@@ -272,8 +287,11 @@ function renderKitchenTicketBitmap(p: KitchenPayload): Uint8Array {
     }
   });
   parts.push(line(KITCHEN_BORDER));
+  return parts;
+}
 
-  // Order-level note
+function renderKitchenNoteParts(p: KitchenPayload): Uint8Array[] {
+  const parts: Uint8Array[] = [];
   if (p.note) {
     parts.push(divider("="));
     parts.push(line("GHI CHÚ", { bold: true, double: true, align: "center" }));
@@ -282,7 +300,15 @@ function renderKitchenTicketBitmap(p: KitchenPayload): Uint8Array {
     }
     parts.push(divider("="));
   }
+  return parts;
+}
 
+function renderKitchenTicketBitmap(p: KitchenPayload): Uint8Array {
+  const parts: Uint8Array[] = [init(), lineSpacingZero()];
+  parts.push(...renderKitchenHeaderParts(p));
+  parts.push(...renderKitchenMetaParts(p));
+  parts.push(...renderKitchenItemsParts(p));
+  parts.push(...renderKitchenNoteParts(p));
   parts.push(lineSpacingDefault(), feed(6), cutPartial());
   return concat(parts);
 }
@@ -651,6 +677,10 @@ function isKitchenPayload(value: unknown): value is KitchenPayload {
   return isRecord(value) && value.kind === "kitchen_ticket" && Array.isArray(value.items);
 }
 
+function isTaxInvoicePayload(value: unknown): value is TaxInvoicePayload {
+  return isRecord(value) && value.kind === "tax_invoice";
+}
+
 function isCancelTicketPayload(value: unknown): value is CancelTicketPayload {
   return isRecord(value) && value.kind === "cancel_ticket" && Array.isArray(value.items);
 }
@@ -663,12 +693,59 @@ function isShiftCloseReportPayload(
     Array.isArray(value.payment_breakdown);
 }
 
+function renderDocumentKitchenBlock(
+  block: Extract<
+    PrintDocumentBlock,
+    { type: "kitchenHeader" | "kitchenMeta" | "kitchenItems" | "kitchenNote" }
+  >,
+): Uint8Array[] {
+  if (!isKitchenPayload(block.payload)) return [];
+  switch (block.type) {
+    case "kitchenHeader":
+      return renderKitchenHeaderParts(block.payload);
+    case "kitchenMeta":
+      return renderKitchenMetaParts(block.payload);
+    case "kitchenItems":
+      return renderKitchenItemsParts(block.payload);
+    case "kitchenNote":
+      return renderKitchenNoteParts(block.payload);
+  }
+}
+
+function renderDocumentTaxInvoiceBlock(
+  block: Extract<
+    PrintDocumentBlock,
+    {
+      type:
+        | "taxInvoice"
+        | "taxInvoiceMeta"
+        | "taxInvoiceBuyer"
+        | "taxInvoiceLookup";
+    }
+  >,
+): Uint8Array[] {
+  if (!isTaxInvoicePayload(block.payload)) return [];
+  switch (block.type) {
+    case "taxInvoice":
+      return [renderTaxInvoiceBitmap(block.payload)];
+    case "taxInvoiceMeta":
+      return renderTaxInvoiceMetaParts(block.payload);
+    case "taxInvoiceBuyer":
+      return renderTaxInvoiceBuyerParts(block.payload);
+    case "taxInvoiceLookup":
+      return renderTaxInvoiceLookupParts(block.payload);
+  }
+}
+
 function renderSingleLegacyDocumentBlock(document: PrintDocument): Uint8Array | null {
   if (document.blocks.length !== 1) return null;
   const block = document.blocks[0];
   if (!block) return null;
   if (block.type === "kitchenTicket" && isKitchenPayload(block.payload)) {
     return renderKitchenTicketBitmap(block.payload);
+  }
+  if (block.type === "taxInvoice" && isTaxInvoicePayload(block.payload)) {
+    return renderTaxInvoiceBitmap(block.payload);
   }
   if (block.type === "cancelTicket" && isCancelTicketPayload(block.payload)) {
     return renderCancelTicketBitmap(block.payload);
@@ -731,6 +808,18 @@ function renderPrintDocumentBitmap(document: PrintDocument): Uint8Array {
         break;
       case "paymentQr":
         parts.push(...renderDocumentPaymentQr(block));
+        break;
+      case "kitchenHeader":
+      case "kitchenMeta":
+      case "kitchenItems":
+      case "kitchenNote":
+        parts.push(...renderDocumentKitchenBlock(block));
+        break;
+      case "taxInvoice":
+      case "taxInvoiceMeta":
+      case "taxInvoiceBuyer":
+      case "taxInvoiceLookup":
+        parts.push(...renderDocumentTaxInvoiceBlock(block));
         break;
       case "footer":
         parts.push(...renderDocumentFooter(block));
@@ -807,6 +896,106 @@ function renderReceiptBitmap(p: ReceiptPayload): Uint8Array {
   if (p.note) parts.push(line(`Ghi chú: ${p.note}`));
 
   parts.push(...renderFooter());
+  parts.push(lineSpacingDefault(), feed(6), cutPartial());
+  return concat(parts);
+}
+
+// ─── Tax invoice info (HĐĐT) ─────────────────────────────────────────────
+
+function taxInvoiceBillBase(p: TaxInvoicePayload): BillBase {
+  return {
+    branch_name: p.branch_name,
+    branch_address: p.branch_address,
+    branch_phone: p.branch_phone,
+    branch_tax_code: p.branch_tax_code,
+    order_number: p.order_number ?? "",
+    order_type: "takeaway",
+    items: p.items ?? [],
+    subtotal: p.subtotal ?? 0,
+    tax_amount: p.vat_amount ?? p.tax_amount ?? 0,
+    total_amount: p.total_amount ?? 0,
+    printed_at: p.printed_at,
+  };
+}
+
+function taxInvoiceTitle(p: TaxInvoicePayload): string {
+  return p.invoice_kind === "daily_summary"
+    ? "THÔNG TIN HĐĐT TỔNG HỢP"
+    : "THÔNG TIN HĐĐT";
+}
+
+function renderTaxInvoiceMetaParts(p: TaxInvoicePayload): Uint8Array[] {
+  const issued = splitDateTime(p.issued_at ?? undefined);
+  const parts: Uint8Array[] = [];
+  if (p.invoice_number) parts.push(line(pair48("Số HĐ:", p.invoice_number)));
+  if (p.invoice_series) parts.push(line(pair48("Ký hiệu:", p.invoice_series)));
+  if (p.cqt_code) parts.push(line(`Mã CQT: ${p.cqt_code}`));
+  if (p.order_number) parts.push(line(pair48("Đơn hàng:", p.order_number)));
+  if (p.summary_date) {
+    parts.push(line(pair48("Ngày tổng hợp:", p.summary_date)));
+  }
+  if ((p.summary_orders_count ?? 0) > 0) {
+    parts.push(line(pair48("Số đơn gộp:", `${p.summary_orders_count} đơn`)));
+  }
+  if (issued.time || issued.date) {
+    parts.push(line(pair48("Phát hành:", `${issued.time} ${issued.date}`.trim())));
+  }
+  if (p.provider) parts.push(line(pair48("Nhà cung cấp:", p.provider)));
+  return parts;
+}
+
+function renderTaxInvoiceBuyerParts(p: TaxInvoicePayload): Uint8Array[] {
+  const rows: Uint8Array[] = [];
+  if (p.buyer_name) rows.push(line(pair48("Người mua:", p.buyer_name)));
+  if (p.buyer_tax_code) rows.push(line(pair48("MST:", p.buyer_tax_code)));
+  if (p.buyer_address) {
+    rows.push(line("Địa chỉ:"));
+    for (const chunk of wrapText(p.buyer_address, CHARS_PER_LINE_NORMAL - 2)) {
+      rows.push(line(`  ${chunk}`));
+    }
+  }
+  if (rows.length === 0) return [];
+  return [divider("-"), ...rows];
+}
+
+function renderTaxInvoiceLookupParts(p: TaxInvoicePayload): Uint8Array[] {
+  const lookup = p.lookup_url ?? p.pdf_url ?? p.xml_url ?? null;
+  const parts: Uint8Array[] = [divider("-")];
+  if (lookup) {
+    parts.push(lineSpacingDefault(), bl());
+    parts.push(line("TRA CỨU HĐĐT", { bold: true, align: "center" }));
+    parts.push(lineSpacingDefault());
+    parts.push(buf([ESC, 0x61, 0x01]));
+    parts.push(qrBlock(lookup, 6));
+    parts.push(buf([ESC, 0x61, 0x00]));
+    parts.push(lineSpacingZero());
+    for (const chunk of wrapText(lookup, CHARS_PER_LINE_NORMAL)) {
+      parts.push(line(chunk, { align: "center" }));
+    }
+  }
+  if (p.provider_ref) parts.push(line(pair48("Mã NCC:", p.provider_ref)));
+  if (p.pdf_url && p.pdf_url !== lookup) parts.push(line("PDF: có"));
+  if (p.xml_url && p.xml_url !== lookup) parts.push(line("XML: có"));
+  return parts;
+}
+
+function renderTaxInvoiceBitmap(p: TaxInvoicePayload): Uint8Array {
+  const parts: Uint8Array[] = [init(), lineSpacingZero()];
+  parts.push(...renderBillHeader(taxInvoiceBillBase(p)));
+  parts.push(divider("="));
+  parts.push(line(taxInvoiceTitle(p), { bold: true, double: true, align: "center" }));
+  parts.push(divider("="));
+  parts.push(...renderTaxInvoiceMetaParts(p));
+  parts.push(...renderTaxInvoiceBuyerParts(p));
+  if ((p.items ?? []).length > 0) {
+    parts.push(...renderItemsTable(taxInvoiceBillBase(p)));
+  }
+  parts.push(...renderTotals(taxInvoiceBillBase(p)));
+  parts.push(...renderTaxInvoiceLookupParts(p));
+  const printed = splitDateTime(p.printed_at);
+  parts.push(bl());
+  parts.push(line(`In lúc: ${printed.time} ${printed.date}`.trim(), { align: "center" }));
+  parts.push(line("HĐĐT gốc lưu trên hệ thống/nhà cung cấp.", { align: "center" }));
   parts.push(lineSpacingDefault(), feed(6), cutPartial());
   return concat(parts);
 }
@@ -1062,6 +1251,8 @@ export async function renderPayloadBitmap(payload: PrintPayload): Promise<Uint8A
       return renderProvisionalBillBitmap(payload);
     case "receipt":
       return renderReceiptBitmap(payload);
+    case "tax_invoice":
+      return renderTaxInvoiceBitmap(payload);
     case "cancel_ticket":
       return renderCancelTicketBitmap(payload);
     case "shift_close_report":

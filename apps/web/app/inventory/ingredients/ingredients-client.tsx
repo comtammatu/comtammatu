@@ -157,7 +157,9 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
         ),
       );
       toast.success(
-        item.is_active ? `Đã ẩn "${item.name}".` : `Đã hiện lại "${item.name}".`,
+        item.is_active
+          ? `Đã ẩn "${item.name}".`
+          : `Đã hiện lại "${item.name}".`,
       );
     });
   }
@@ -165,15 +167,15 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
   const filterBar = (
     <Card className="py-0">
       <CardContent className="flex flex-wrap items-center gap-3 p-3">
-        <InputGroup className="h-10 flex-1">
-          <InputGroupAddon>
-            <IconSearch />
-          </InputGroupAddon>
+        <InputGroup className="flex-1">
           <InputGroupInput
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
-            placeholder="Tìm theo tên hoặc SKU"
+            placeholder="Tìm theo tên hoặc mã hàng"
           />
+          <InputGroupAddon>
+            <IconSearch />
+          </InputGroupAddon>
         </InputGroup>
 
         <Select value={category} onValueChange={setCategory}>
@@ -245,89 +247,97 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
           {filtered.length === 0 ? (
             <AppEmptyState
               mode={searchQuery.trim() ? "no-results" : "no-data"}
-              title={searchQuery.trim() ? "Không tìm thấy nguyên liệu phù hợp" : "Chưa có nguyên liệu"}
-              description={searchQuery.trim() ? "Thử bộ lọc hoặc từ khóa khác." : 'Nhấn "Tạo nguyên liệu" để bắt đầu danh mục.'}
+              title={
+                searchQuery.trim()
+                  ? "Không tìm thấy nguyên liệu phù hợp"
+                  : "Chưa có nguyên liệu"
+              }
+              description={
+                searchQuery.trim()
+                  ? "Thử bộ lọc hoặc từ khóa khác."
+                  : 'Nhấn "Tạo nguyên liệu" để bắt đầu danh mục.'
+              }
             />
           ) : null}
 
-            <div className="space-y-2">
-              {filtered.map((item) => {
-                const categoryTone =
-                  CATEGORY_TONE_CLASS[item.category ?? ""] ??
-                  "bg-muted text-muted-foreground";
+          <div className="space-y-2">
+            {filtered.map((item) => {
+              const categoryTone =
+                CATEGORY_TONE_CLASS[item.category ?? ""] ??
+                "bg-muted text-muted-foreground";
 
-                return (
-                  <InteractiveCard
-                    key={item.id}
-                    minHeight="tap"
-                    className="flex-col items-stretch gap-0 p-0"
-                  >
-                    <div className="flex items-start justify-between gap-3 px-4 pt-3 pb-1">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="truncate font-semibold">{item.name}</p>
-                          {item.category ? (
-                            <Badge className={cn("text-xs", categoryTone)}>
-                              {item.category}
-                            </Badge>
-                          ) : null}
-                          <StatusBadge
-                            status={item.is_active ? "active" : "suspended"}
-                            size="sm"
-                          />
-                        </div>
-                        <p className="mt-0.5 text-xs text-muted-foreground">
-                          {item.sku ?? "—"} &middot; {conversionLabel(item)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between gap-2 px-4 pb-3 pt-1">
-                      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                        <span>{storageLabel(item.storage_type)}</span>
-                        {item.unit_cost != null ? (
-                          <span className="font-mono">
-                            {formatVND(item.unit_cost)}đ
-                          </span>
+              return (
+                <InteractiveCard
+                  key={item.id}
+                  minHeight="tap"
+                  className="flex-col items-stretch gap-0 p-0"
+                >
+                  <div className="flex items-start justify-between gap-3 px-4 pt-3 pb-1">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="truncate font-semibold">{item.name}</p>
+                        {item.category ? (
+                          <Badge className={cn("text-xs", categoryTone)}>
+                            {item.category}
+                          </Badge>
                         ) : null}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          type="button"
+                        <StatusBadge
+                          status={item.is_active ? "active" : "suspended"}
                           size="sm"
-                          variant="ghost"
-                          onClick={() => handleToggleActive(item)}
-                          aria-label={
-                            item.is_active
-                              ? `Ẩn ${item.name}`
-                              : `Hiện lại ${item.name}`
-                          }
-                          className="min-h-10"
-                          disabled={isPending}
-                        >
-                          {item.is_active ? (
-                            <IconEyeOff className="size-4" />
-                          ) : (
-                            <IconEye className="size-4" />
-                          )}
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => openEdit(item)}
-                          aria-label={`Sửa ${item.name}`}
-                          className="min-h-10"
-                        >
-                          <IconPencil className="size-4" />
-                          <span className="ml-1">{ACTIONS_VI.edit}</span>
-                        </Button>
+                        />
                       </div>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {item.sku ?? "—"} &middot; {conversionLabel(item)}
+                      </p>
                     </div>
-                  </InteractiveCard>
-                );
-              })}
-            </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-2 px-4 pb-3 pt-1">
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                      <span>{storageLabel(item.storage_type)}</span>
+                      {item.unit_cost != null ? (
+                        <span className="font-mono">
+                          {formatVND(item.unit_cost)}đ
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleToggleActive(item)}
+                        aria-label={
+                          item.is_active
+                            ? `Ẩn ${item.name}`
+                            : `Hiện lại ${item.name}`
+                        }
+                        className="min-h-10"
+                        disabled={isPending}
+                      >
+                        {item.is_active ? (
+                          <IconEyeOff className="size-4" />
+                        ) : (
+                          <IconEye className="size-4" />
+                        )}
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => openEdit(item)}
+                        aria-label={`Sửa ${item.name}`}
+                        className="min-h-10"
+                      >
+                        <IconPencil className="size-4" />
+                        <span className="ml-1">{ACTIONS_VI.edit}</span>
+                      </Button>
+                    </div>
+                  </div>
+                </InteractiveCard>
+              );
+            })}
           </div>
+        </div>
 
         <IngredientDialog
           open={dialogOpen}
@@ -352,142 +362,144 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
           </div>
         }
       />
-          {filterBar}
+      {filterBar}
 
-          <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="min-w-52">{PRODUCT_VI.rawIngredient}</TableHead>
-                    <TableHead className="min-w-28">SKU</TableHead>
-                    <TableHead className="min-w-40">{FORM_VI.unit}</TableHead>
-                    <TableHead className="min-w-36">Bảo quản</TableHead>
-                    <TableHead className="min-w-32">Giá tham chiếu</TableHead>
-                    <TableHead className="min-w-44">Ngưỡng tồn</TableHead>
-                    <TableHead className="min-w-28">{FORM_VI.status}</TableHead>
-                    <TableHead className="w-24 text-right">{FORM_VI.action}</TableHead>
+      <Card>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="min-w-52">
+                  {PRODUCT_VI.rawIngredient}
+                </TableHead>
+                <TableHead className="min-w-28">Mã hàng</TableHead>
+                <TableHead className="min-w-40">{FORM_VI.unit}</TableHead>
+                <TableHead className="min-w-36">Bảo quản</TableHead>
+                <TableHead className="min-w-32">Giá tham chiếu</TableHead>
+                <TableHead className="min-w-44">Ngưỡng tồn</TableHead>
+                <TableHead className="min-w-28">{FORM_VI.status}</TableHead>
+                <TableHead className="w-24 text-right">
+                  {FORM_VI.action}
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.length === 0 ? (
+                <TableEmptyStateRow
+                  colSpan={8}
+                  title={
+                    searchQuery.trim()
+                      ? "Không tìm thấy nguyên liệu phù hợp"
+                      : "Chưa có nguyên liệu"
+                  }
+                  description={
+                    searchQuery.trim()
+                      ? "Thử bộ lọc hoặc từ khóa khác."
+                      : 'Nhấn "Tạo nguyên liệu" để bắt đầu danh mục.'
+                  }
+                />
+              ) : null}
+
+              {filtered.map((item) => {
+                const categoryTone =
+                  CATEGORY_TONE_CLASS[item.category ?? ""] ??
+                  "bg-muted text-muted-foreground";
+                const isActive = item.is_active;
+
+                return (
+                  <TableRow key={item.id}>
+                    <TableCell>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold">{item.name}</p>
+                          {item.category ? (
+                            <Badge className={categoryTone}>
+                              {item.category}
+                            </Badge>
+                          ) : null}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-mono text-sm text-muted-foreground">
+                      {item.sku || "—"}
+                    </TableCell>
+                    <TableCell>
+                      <div className="space-y-1 text-sm">
+                        <p>Nhập: {item.purchase_unit}</p>
+                        <p className="text-muted-foreground">
+                          Tính: {item.measure_unit}
+                        </p>
+                        <p className="text-muted-foreground">
+                          {conversionLabel(item)}
+                        </p>
+                      </div>
+                    </TableCell>
+                    <TableCell>{storageLabel(item.storage_type)}</TableCell>
+                    <TableCell className="font-mono">
+                      {item.unit_cost != null
+                        ? `${formatVND(item.unit_cost)}đ`
+                        : "—"}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-2">
+                        <Badge variant="destructive">
+                          Min {item.min_stock_level ?? 0}
+                        </Badge>
+                        <Badge variant="secondary">
+                          Max {item.max_stock_level ?? 0}
+                        </Badge>
+                        <Badge variant="success">
+                          Re {item.reorder_point ?? 0}
+                        </Badge>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge status={isActive ? "active" : "suspended"} />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            aria-label={`Tác vụ cho ${item.name}`}
+                            disabled={isPending}
+                          >
+                            <IconDots className="size-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => openEdit(item)}>
+                            <IconPencil />
+                            {ACTIONS_VI.edit}
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => handleToggleActive(item)}
+                          >
+                            {item.is_active ? (
+                              <>
+                                <IconEyeOff />
+                                Ẩn nguyên liệu
+                              </>
+                            ) : (
+                              <>
+                                <IconEye />
+                                Hiện lại
+                              </>
+                            )}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filtered.length === 0 ? (
-                    <TableEmptyStateRow
-                      colSpan={8}
-                      title={
-                        searchQuery.trim()
-                          ? "Không tìm thấy nguyên liệu phù hợp"
-                          : "Chưa có nguyên liệu"
-                      }
-                      description={
-                        searchQuery.trim()
-                          ? "Thử bộ lọc hoặc từ khóa khác."
-                          : 'Nhấn "Tạo nguyên liệu" để bắt đầu danh mục.'
-                      }
-                    />
-                  ) : null}
-
-                  {filtered.map((item) => {
-                    const categoryTone =
-                      CATEGORY_TONE_CLASS[item.category ?? ""] ??
-                      "bg-muted text-muted-foreground";
-                    const isActive = item.is_active;
-
-                    return (
-                      <TableRow key={item.id}>
-                        <TableCell>
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <p className="font-semibold">{item.name}</p>
-                              {item.category ? (
-                                <Badge className={categoryTone}>
-                                  {item.category}
-                                </Badge>
-                              ) : null}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="font-mono text-sm text-muted-foreground">
-                          {item.sku || "—"}
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-1 text-sm">
-                            <p>Nhập: {item.purchase_unit}</p>
-                            <p className="text-muted-foreground">
-                              Tính: {item.measure_unit}
-                            </p>
-                            <p className="text-muted-foreground">
-                              {conversionLabel(item)}
-                            </p>
-                          </div>
-                        </TableCell>
-                        <TableCell>{storageLabel(item.storage_type)}</TableCell>
-                        <TableCell className="font-mono">
-                          {item.unit_cost != null
-                            ? `${formatVND(item.unit_cost)}đ`
-                            : "—"}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-wrap gap-2">
-                            <Badge variant="destructive">
-                              Min {item.min_stock_level ?? 0}
-                            </Badge>
-                            <Badge variant="secondary">
-                              Max {item.max_stock_level ?? 0}
-                            </Badge>
-                            <Badge variant="success">
-                              Re {item.reorder_point ?? 0}
-                            </Badge>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <StatusBadge
-                            status={isActive ? "active" : "suspended"}
-                          />
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                type="button"
-                                size="icon"
-                                variant="ghost"
-                                aria-label={`Tác vụ cho ${item.name}`}
-                                disabled={isPending}
-                              >
-                                <IconDots className="size-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => openEdit(item)}>
-                                <IconPencil className="mr-2 size-4" />
-                                {ACTIONS_VI.edit}
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => handleToggleActive(item)}
-                              >
-                                {item.is_active ? (
-                                  <>
-                                    <IconEyeOff className="mr-2 size-4" />
-                                    Ẩn nguyên liệu
-                                  </>
-                                ) : (
-                                  <>
-                                    <IconEye className="mr-2 size-4" />
-                                    Hiện lại
-                                  </>
-                                )}
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
       <IngredientDialog
         open={dialogOpen}

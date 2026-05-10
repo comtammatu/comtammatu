@@ -101,9 +101,17 @@ export function BusinessDateField<TFieldValues extends FieldValues>({
   const hasError = !!fieldState.error;
   const rawValue = typeof field.value === "string" ? field.value : "";
   const selectedDate = businessDateToDate(rawValue);
+  const descriptionId = description ? `${fieldId}-description` : undefined;
+  const timezoneId = timezoneLabel ? `${fieldId}-timezone` : undefined;
+  const errorId = fieldState.error ? `${fieldId}-error` : undefined;
+  const describedBy =
+    [descriptionId, timezoneId, errorId].filter(Boolean).join(" ") || undefined;
 
   return (
-    <Field data-disabled={disabled} data-invalid={hasError}>
+    <Field
+      data-disabled={disabled || undefined}
+      data-invalid={hasError || undefined}
+    >
       <FieldLabel htmlFor={fieldId}>
         {label}
         {required ? " *" : null}
@@ -114,10 +122,14 @@ export function BusinessDateField<TFieldValues extends FieldValues>({
             id={fieldId}
             type="button"
             variant="outline"
-            aria-invalid={hasError}
+            aria-describedby={describedBy}
+            aria-invalid={hasError || undefined}
+            aria-required={required || undefined}
             disabled={disabled}
+            onBlur={field.onBlur}
+            ref={field.ref}
             className={cn(
-              "h-10 justify-start text-left font-normal",
+              "justify-start text-left font-normal",
               !rawValue && "text-muted-foreground",
               className,
             )}
@@ -126,7 +138,7 @@ export function BusinessDateField<TFieldValues extends FieldValues>({
             {rawValue ? formatBusinessDate(rawValue) : placeholder}
           </Button>
         </PopoverTrigger>
-        <PopoverContent align="start" className="w-auto p-0">
+        <PopoverContent align="start" width="auto" padding="none">
           <Calendar
             mode="single"
             selected={selectedDate}
@@ -138,13 +150,17 @@ export function BusinessDateField<TFieldValues extends FieldValues>({
           />
         </PopoverContent>
       </Popover>
-      {description ? <FieldDescription>{description}</FieldDescription> : null}
+      {description ? (
+        <FieldDescription id={descriptionId}>{description}</FieldDescription>
+      ) : null}
       {timezoneLabel ? (
-        <FieldDescription>
+        <FieldDescription id={timezoneId}>
           {BRANCH_TIMEZONE_LABEL}: {timezoneLabel}
         </FieldDescription>
       ) : null}
-      {fieldState.error ? <FieldError errors={[fieldState.error]} /> : null}
+      {fieldState.error ? (
+        <FieldError id={errorId} errors={[fieldState.error]} />
+      ) : null}
     </Field>
   );
 }

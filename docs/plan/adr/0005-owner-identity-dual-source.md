@@ -2,7 +2,7 @@
 
 **Status:** Accepted (2026-05-07)
 **Context:** H3b deferred work from H3a security audit
-**Decision drivers:** 4-agent debate (planner + analyst + architect + critic)
+**Decision drivers:** 4-perspective debate (planner + analyst + architect + critic)
 
 ## Context
 

@@ -30,7 +30,10 @@ export interface SupplierRow {
 }
 
 const supplierSchema = z.object({
-  name: z.string().trim().min(1, { error: "Tên nhà cung cấp không được trống" }),
+  name: z
+    .string()
+    .trim()
+    .min(1, { error: "Tên nhà cung cấp không được trống" }),
   tax_code: z
     .string()
     .trim()
@@ -127,10 +130,7 @@ export function SupplierDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="sm:max-w-md"
-        key={supplier?.id ?? "new-supplier"}
-      >
+      <DialogContent size="md" key={supplier?.id ?? "new-supplier"}>
         <DialogHeader>
           <DialogTitle>
             {isEdit ? "Sửa nhà cung cấp" : "Thêm nhà cung cấp"}
@@ -167,7 +167,7 @@ export function SupplierDialog({
             )}
           </FieldGroup>
 
-          <DialogFooter className="pt-6">
+          <DialogFooter spacing="form">
             <Button
               type="button"
               variant="outline"

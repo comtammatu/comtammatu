@@ -76,10 +76,10 @@ export function PeriodCloseCard({
         month: period.month,
       });
       if (!res.success) {
-        toast.error(res.error ?? "Không soft close được");
+        toast.error(res.error ?? "Không đóng mềm được");
         return;
       }
-      toast.success(`Đã soft close ${monthLabel}`);
+      toast.success(`Đã đóng mềm ${monthLabel}`);
       onChanged?.();
     });
   }
@@ -91,10 +91,10 @@ export function PeriodCloseCard({
         month: period.month,
       });
       if (!res.success) {
-        toast.error(res.error ?? "Không hard close được");
+        toast.error(res.error ?? "Không đóng cứng được");
         return;
       }
-      toast.success(`Đã hard close ${monthLabel}`);
+      toast.success(`Đã đóng cứng ${monthLabel}`);
       onChanged?.();
     });
   }
@@ -106,10 +106,10 @@ export function PeriodCloseCard({
         month: period.month,
       });
       if (!res.success) {
-        toast.error(res.error ?? "Không reopen được");
+        toast.error(res.error ?? "Không mở lại được");
         return;
       }
-      toast.success(`Đã reopen ${monthLabel}`);
+      toast.success(`Đã mở lại ${monthLabel}`);
       onChanged?.();
     });
   }
@@ -135,17 +135,17 @@ export function PeriodCloseCard({
               {isHardClosed ? (
                 <Badge className="bg-destructive/15 text-destructive border-destructive/40 border">
                   <IconShieldLock className="mr-1 size-3" />
-                  Hard closed
+                  Đã đóng cứng
                 </Badge>
               ) : isSoftClosed ? (
                 <Badge className="bg-warning/15 text-warning-foreground border-warning/40 border">
                   <IconLock className="mr-1 size-3" />
-                  Soft closed
+                  Đã đóng mềm
                 </Badge>
               ) : (
                 <Badge variant="outline">
                   <IconLockOpen className="mr-1 size-3" />
-                  Open
+                  Đang mở
                 </Badge>
               )}
             </CardTitle>
@@ -167,14 +167,14 @@ export function PeriodCloseCard({
               disabled={isBusy}
             >
               {isBusy ? <Spinner /> : <IconLock className="size-4" />}
-              Soft close
+              Đóng mềm
             </Button>
           ) : null}
           {!isHardClosed ? (
             <ConfirmDestructiveButton
-              phrase="CLOSE"
-              label="Hard close"
-              description={`Hard close ${monthLabel} sẽ chặn mọi ghi lùi ngày. Admin cần reopen nếu phát hiện sai sót sau.`}
+              phrase="DONG"
+              label="Đóng cứng"
+              description={`Đóng cứng ${monthLabel} sẽ chặn mọi ghi lùi ngày. Quản trị viên cần mở lại nếu phát hiện sai sót sau.`}
               onConfirm={handleHardClose}
               disabled={isBusy}
               icon={<IconShieldLock className="size-4" />}
@@ -184,9 +184,9 @@ export function PeriodCloseCard({
           ) : null}
           {isHardClosed ? (
             <ConfirmDestructiveButton
-              phrase="REOPEN"
-              label="Reopen kỳ"
-              description={`Reopen ${monthLabel} gỡ cả hard + soft close. Tất cả audit trail vẫn còn. Chỉ làm khi có lý do kế toán rõ ràng.`}
+              phrase="MO LAI"
+              label="Mở lại kỳ"
+              description={`Mở lại ${monthLabel} gỡ cả đóng cứng + đóng mềm. Toàn bộ nhật ký vẫn được lưu. Chỉ làm khi có lý do kế toán rõ ràng.`}
               onConfirm={handleReopen}
               disabled={isBusy}
               icon={<IconLockOpen className="size-4" />}

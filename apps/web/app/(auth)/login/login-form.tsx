@@ -87,10 +87,7 @@ export function LoginForm({ returnTo }: LoginFormProps) {
       <FieldGroup>
         <Field data-invalid={emailInvalid || undefined}>
           <FieldLabel htmlFor="email">Email</FieldLabel>
-          <InputGroup className="h-10">
-            <InputGroupAddon>
-              <IconMail aria-hidden="true" />
-            </InputGroupAddon>
+          <InputGroup>
             <InputGroupInput
               id="email"
               name="email"
@@ -110,6 +107,9 @@ export function LoginForm({ returnTo }: LoginFormProps) {
                     : undefined
               }
             />
+            <InputGroupAddon>
+              <IconMail aria-hidden="true" />
+            </InputGroupAddon>
           </InputGroup>
           {emailError ? (
             <FieldError id={EMAIL_ERROR_ID}>{emailError}</FieldError>
@@ -118,10 +118,7 @@ export function LoginForm({ returnTo }: LoginFormProps) {
 
         <Field data-invalid={passwordInvalid || undefined}>
           <FieldLabel htmlFor="password">Mật khẩu</FieldLabel>
-          <InputGroup className="h-10">
-            <InputGroupAddon>
-              <IconLockKeyhole aria-hidden="true" />
-            </InputGroupAddon>
+          <InputGroup>
             <InputGroupInput
               id="password"
               name="password"
@@ -139,6 +136,9 @@ export function LoginForm({ returnTo }: LoginFormProps) {
                     : undefined
               }
             />
+            <InputGroupAddon>
+              <IconLockKeyhole aria-hidden="true" />
+            </InputGroupAddon>
           </InputGroup>
           {passwordError ? (
             <FieldError id={PASSWORD_ERROR_ID}>{passwordError}</FieldError>

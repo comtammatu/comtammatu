@@ -72,7 +72,7 @@ export function ProductionHubClient({
       <AppPageHeader
         eyebrow="Kho hàng"
         title="Bếp trung tâm"
-        description="Lệnh sản xuất và BOM thành phẩm"
+        description="Lệnh sản xuất và công thức thành phẩm"
         actions={
           <ProductionOrderForm
             centralKitchenBranches={centralKitchenBranches}

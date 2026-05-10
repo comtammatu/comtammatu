@@ -29,35 +29,35 @@ const MODE_META: Record<StocktakeMode, ModeMeta> = {
     defaultBlind: false,
     unaudited: true,
     description:
-      "Quick count cuối ca. Không có reviewer — variance được ghi log nhưng không block.",
+      "Đếm nhanh cuối ca. Không có người duyệt — chênh lệch được ghi nhận nhưng không chặn.",
   },
   weekly: {
     key: "weekly",
     defaultBlind: false,
     unaudited: false,
     description:
-      "Đếm theo nhóm ABC — A mỗi tuần, B/C xoay vòng. Reviewer + QLV duyệt.",
+      "Đếm theo nhóm ABC — A mỗi tuần, B/C xoay vòng. Người duyệt + QLV xác nhận.",
   },
   monthly: {
     key: "monthly",
     defaultBlind: true,
     unaudited: false,
     description:
-      "Full inventory, blind mode. Không hiển thị tồn hệ thống — counter nhập mù.",
+      "Kiểm toàn bộ kho, đếm mù. Không hiển thị tồn hệ thống — người đếm nhập mù.",
   },
   quarterly: {
     key: "quarterly",
     defaultBlind: true,
     unaudited: false,
     description:
-      "Peer-cross: nhân sự CN khác đếm. Blind + double-check mọi nhóm.",
+      "Đếm chéo: nhân sự chi nhánh khác đếm. Đếm mù + đối chiếu kép mọi nhóm.",
   },
   spot: {
     key: "spot",
     defaultBlind: true,
     unaudited: false,
     description:
-      "QLV đột xuất. Có thể chỉ vài SKU. Blind default nhưng QLV override.",
+      "QLV đột xuất. Có thể chỉ vài mã hàng. Mặc định đếm mù; QLV có thể bật đối chiếu.",
   },
 };
 

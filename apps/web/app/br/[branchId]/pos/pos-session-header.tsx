@@ -8,13 +8,15 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@comtammatu/ui/components/dropdown-menu";
-import { useTheme } from "@comtammatu/ui/components/theme-provider";
+import { useTheme, type Theme } from "@comtammatu/ui/components/theme-provider";
 import { BrandMark } from "@/components/brand";
 import {
   ArrowLeft as IconArrowLeft,
@@ -57,8 +59,8 @@ function PosSessionHeaderComponent({
           <Button
             type="button"
             variant="ghost"
-            size="icon"
-            className="size-11 shrink-0 md:hidden"
+            size="touch"
+            className="w-12 shrink-0 p-0 md:hidden"
             onClick={onBack}
             aria-label={messages.pos.sessionHeader.backAria}
           >
@@ -69,7 +71,7 @@ function PosSessionHeaderComponent({
         <div className="flex min-w-0 flex-1 items-center justify-start gap-1.5 md:justify-center">
           <BrandMark decorative size="xs" className="shrink-0" />
           {contextLabel ? (
-            <span className="font-heading min-w-0 truncate text-base font-bold text-foreground md:text-sm md:font-semibold">
+            <span className="font-heading min-w-0 truncate text-base font-semibold text-foreground md:text-sm">
               {contextLabel}
             </span>
           ) : null}
@@ -110,14 +112,14 @@ function PosMoreMenu({
         <Button
           type="button"
           variant="ghost"
-          size="icon"
-          className="size-10 shrink-0"
+          size="touch"
+          className="w-12 shrink-0 p-0"
           aria-label={messages.pos.sessionHeader.moreMenuAria}
         >
           <IconMoreVertical />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent align="end" density="touch" width="action">
         <DropdownMenuItem asChild>
           <Link href="/employee">
             <IconDoorEnter />
@@ -130,28 +132,24 @@ function PosMoreMenu({
             {isDark ? <IconMoon /> : <IconSun />}
             {messages.pos.sessionHeader.appearance}
           </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent>
-            <DropdownMenuItem
-              onClick={() => setTheme("light")}
-              data-active={current === "light"}
+          <DropdownMenuSubContent width="action">
+            <DropdownMenuRadioGroup
+              value={current ?? "system"}
+              onValueChange={(value) => setTheme(value as Theme)}
             >
-              <IconSun />
-              {messages.pos.sessionHeader.light}
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => setTheme("dark")}
-              data-active={current === "dark"}
-            >
-              <IconMoon />
-              {messages.pos.sessionHeader.dark}
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => setTheme("system")}
-              data-active={current === "system"}
-            >
-              <IconDeviceDesktop />
-              {messages.pos.sessionHeader.system}
-            </DropdownMenuItem>
+              <DropdownMenuRadioItem value="light">
+                <IconSun />
+                {messages.pos.sessionHeader.light}
+              </DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="dark">
+                <IconMoon />
+                {messages.pos.sessionHeader.dark}
+              </DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="system">
+                <IconDeviceDesktop />
+                {messages.pos.sessionHeader.system}
+              </DropdownMenuRadioItem>
+            </DropdownMenuRadioGroup>
           </DropdownMenuSubContent>
         </DropdownMenuSub>
 
@@ -160,7 +158,7 @@ function PosMoreMenu({
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={onShowCloseSession}
-              className="text-destructive focus:text-destructive"
+              variant="destructive"
             >
               <IconPowerOff />
               {messages.pos.sessionHeader.closeShift}

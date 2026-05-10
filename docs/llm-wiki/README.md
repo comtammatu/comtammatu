@@ -1,7 +1,7 @@
 # LLM Wiki — Cơm Tấm Má Tư
 
-> Updated: 2026-05-06  
-> Purpose: fast orientation for LLM agents before planning or implementation.  
+> Updated: 2026-05-09
+> Purpose: fast orientation for LLM agents before planning or implementation.
 > Rule: runtime and generated types win over older hand-written docs.
 
 ## Current Product Direction
@@ -12,10 +12,16 @@ Cơm Tấm Má Tư is an in-place restaurant operating platform rebuild, not a f
 - **Merchant Platform**: management and operating platform concept across existing workspaces, not a new `/merchant/*` route tree.
 - **Cổng nhân viên**: employee self-service and role-gated handoff into operational workspaces.
 
-Read the active rebuild contract first when a task touches navigation, route ownership, or workspace boundaries:
+Read the active route/workspace contracts first when a task touches navigation, route ownership, or workspace boundaries:
 
-- `docs/plan/super-app-merchant-platform-rebuild.md`
-- `docs/plan/merchant-platform-ia-contract.md`
+- `AGENTS.md`
+- `docs/agent/rules/references.md`
+- `docs/modules/web-app.md`
+- `docs/modules/ui.md`
+- `docs/plan/system-rebuild/01-BRAND-SOFTWARE-PROGRAM.md`
+- `docs/plan/system-rebuild/05-MODULE-CATALOG.md`
+
+Older Super App / Merchant Platform planning docs live in `docs/archive/plan/` and are context, not active contract.
 
 ## Runtime Snapshot
 
@@ -23,11 +29,11 @@ Read the active rebuild contract first when a task touches navigation, route own
 | --- | --- |
 | Stack | Next.js 16.2, React 19.2, TypeScript 6.0, Tailwind 4.2, Zod 4, Turborepo 2.9, Node >= 24 |
 | Package manager | `pnpm@10.33.0` |
-| Web routes | 114 `page.tsx` routes under `apps/web/app` |
-| DB shape | `public`: 109 tables, 9 views, 198 functions in generated types |
-| Migrations | 299 SQL files in `supabase/migrations` |
+| Web routes | App Router routes under `apps/web/app` |
+| DB shape | `public`: 113 tables, 9 views, 212 functions in generated types |
+| Migrations | 330 SQL files in `supabase/migrations` |
 | Auth model | Auth v2: positions + permission grants; legacy `user_role` remains for route ACL |
-| Primary architecture | `Browser -> proxy.ts -> App Router -> Supabase PostgREST/Auth/RLS` |
+| Primary architecture | `Browser -> proxy.ts -> App Router -> Supabase PostgREST/Auth/RLS`; optional feedback host split for `/r/*` |
 | Verification for implementation | `pnpm typecheck && pnpm lint && pnpm build` |
 
 ## Source-Of-Truth Order
@@ -44,7 +50,7 @@ When sources disagree, use this order:
 Known stale signals:
 
 - Some older docs still describe `HQ -> Bếp trung tâm -> Chi nhánh`; current branch model uses `central_warehouse`, `central_kitchen`, and branch sites.
-- Older docs may say 107 routes or 102 tables. Current audit found 114 routes and 109 public tables.
+- Older docs may say 107 or 114 routes, or 102/109 tables. Current audit found 109 routes and 113 public tables.
 - `docs/llm-wiki/` did not exist before this update even though `docs/ref/inventory-erp-gap-matrix.md` referenced `docs/llm-wiki/module-cards/inventory.md`.
 
 ## Must-Read Before Work
@@ -69,14 +75,13 @@ When touching UI/route surfaces/copy:
 - `docs/spec/design-system.md`
 - `docs/modules/ui.md`
 - `docs/ref/glossary.md`
-- `docs/plan/ui-ux-page-contracts.md`
 
 When touching Super App/Merchant Platform IA:
 
-- `docs/plan/super-app-merchant-platform-rebuild.md`
-- `docs/plan/merchant-platform-ia-contract.md`
-- `docs/plan/ui-ux-rebuild.md`
-- `docs/plan/ui-ux-page-contracts.md`
+- `docs/modules/web-app.md`
+- `docs/llm-wiki/module-cards/web-app-routes.md`
+- `docs/plan/system-rebuild/01-BRAND-SOFTWARE-PROGRAM.md`
+- `docs/plan/system-rebuild/05-MODULE-CATALOG.md`
 
 ## Workspace Map
 
@@ -110,6 +115,7 @@ Do not:
 
 - Create `/merchant/*` for MVP.
 - Put management workflows in `/employee`.
+- Put universal post-login discovery anywhere except `/portal`.
 - Duplicate payment operations outside POS/Finance/Admin settings.
 - Revive `/admin/inventory/*`; Inventory lives at `/inventory/*`.
 
@@ -130,7 +136,7 @@ Do not:
 Use `tasks/todo.md` as the active work tracker, but do not overwrite user-local edits. As of the latest read:
 
 - Fork strategy is abandoned; continue in `comtammatu`.
-- External credentials still block VietQR/Momo/MISA production wiring.
+- External credentials still block VietQR/Momo/Viettel S-invoice production wiring.
 - M4 payment hardening remains active: Momo tenant binding, stock-consumption result checks, server recompute totals, atomic webhook flow.
 - Finance gaps remain around period-close guards and HĐĐT compliance workflows.
 - Payroll/HR still has RLS, null branch manager, clock-code, and salary-audit gaps.
@@ -138,7 +144,7 @@ Use `tasks/todo.md` as the active work tracker, but do not overwrite user-local 
 
 ## Agent Workflow Notes
 
-- Feature, bug, and refactor work requires the 4-agent debate protocol.
+- Feature, bug, and refactor work requires the 4-perspective debate protocol.
 - Documentation-only changes may skip debate, but still verify diffs.
 - Never revert unrelated dirty worktree changes.
 - Use `rg`/`rg --files`; read `.context-graph/NAV.md` before broad code search when present.

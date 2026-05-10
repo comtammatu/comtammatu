@@ -14,17 +14,17 @@ Mô hình vận hành pilot: **Trụ sở chính (HQ) → Kho Tổng → Bếp T
 | M3  | KDS                  | Realtime queue, bump/complete, station config, partial-cancel ticket       | SHIPPED     |
 | M4  | Payment              | Cash + VietQR (auto-create on bill open). Momo blocked on creds            | PARTIAL     |
 | M5  | Stock                | Ingredients, recipes, PO/GRN/3-way, stocktake, transfers, central kitchen  | SHIPPED     |
-| M6  | Finance              | Dashboard, COA/Journal, BCTC TT200, reconciliation. HĐĐT MISA blocked      | PARTIAL     |
+| M6  | Finance              | Dashboard, COA/Journal, BCTC TT200, reconciliation. HĐĐT Viettel blocked   | PARTIAL     |
 | M7  | Nhân sự & tiền lương | Employees, contracts, attendance, payslip. BHXH/PIT calc deferred          | PARTIAL     |
 
-Roadmap đầy đủ + version history: [`docs/plan/roadmap.md`](docs/plan/roadmap.md).
+Active work: [`tasks/todo.md`](tasks/todo.md). Historical roadmap + version history: [`docs/archive/plan/roadmap.md`](docs/archive/plan/roadmap.md). Whole-system rebuild plan: [`docs/plan/system-rebuild/`](docs/plan/system-rebuild/).
 
 ## Tech Stack
 
 - **Runtime:** Node.js ≥ 24
 - **Framework:** Next.js 16.2 (App Router, Turbopack dev, Webpack production build)
 - **Language:** TypeScript 6.0 (strict + `noUncheckedIndexedAccess`)
-- **UI:** React 19.2 · Tailwind CSS 4.2 · shadcn/ui (preset `b1GN1lxvE`) · Radix
+- **UI:** React 19.2 · Tailwind CSS 4.2 · shadcn/ui (preset `b6G3vbGue` / `radix-lyra`) · Radix
 - **Validation:** Zod 4
 - **Database:** Supabase (PostgREST + Auth + RLS), JWT custom claims hook
 - **Monorepo:** Turborepo 2.9 + pnpm 10.33
@@ -63,6 +63,7 @@ scripts/            # SQL seeds, lint helpers
 | Path                          | Audience                | Surface                                       |
 | ----------------------------- | ----------------------- | --------------------------------------------- |
 | `/login`                      | Public                  | Authentication                                |
+| `/portal`                     | All staff               | Universal post-login work destination         |
 | `/admin/*`                    | Manager+                | Dashboard, settings, staff, reports, CRM      |
 | `/menu`                       | Manager+                | Menu CRUD                                     |
 | `/inventory/*`                | Inventory roles         | Canonical inventory hub (PO, GRN, stocktake…) |
@@ -71,6 +72,7 @@ scripts/            # SQL seeds, lint helpers
 | `/orders`                     | Manager+                | Cross-branch order browser                    |
 | `/notifications`              | All staff               | Notification center                           |
 | `/employee/*`                 | All staff               | Self-service: clock, schedule, payslip        |
+| `/r/[token]/*`                | Public QR customer      | Feedback form; optional feedback-only host    |
 | `/br/[branchId]/pos`          | Cashier / waiter        | Point of Sale (PWA installable)               |
 | `/br/[branchId]/kds`          | Chef                    | Kitchen Display                               |
 | `/br/[branchId]/settings/*`   | Branch manager+         | Per-branch POS, tables, printers              |
@@ -113,9 +115,10 @@ pnpm --filter @comtammatu/web guides:capture     # Capture POS flow screenshots
 
 | Doc                                                            | Purpose                                          |
 | -------------------------------------------------------------- | ------------------------------------------------ |
-| [`CLAUDE.md`](CLAUDE.md)                                       | Coding constraints + 4-agent workflow (mandatory)|
+| [`CLAUDE.md`](CLAUDE.md)                                       | Compatibility note; agent source of truth lives in AGENTS.md |
 | [`docs/CODEBASE_MAP.md`](docs/CODEBASE_MAP.md)                 | Codebase map + hub files + module index          |
-| [`docs/plan/roadmap.md`](docs/plan/roadmap.md)                 | Roadmap + module sessions + version history      |
+| [`tasks/todo.md`](tasks/todo.md)                               | Active work queue + current blockers             |
+| [`docs/archive/plan/roadmap.md`](docs/archive/plan/roadmap.md) | Historical roadmap + module sessions             |
 | [`docs/plan/decisions.md`](docs/plan/decisions.md)             | Architecture decisions log                       |
 | [`docs/spec/architecture.md`](docs/spec/architecture.md)       | System architecture                              |
 | [`docs/spec/database-schema.md`](docs/spec/database-schema.md) | Database schema reference                        |

@@ -1,7 +1,11 @@
 "use client";
 
 import { cn } from "@comtammatu/ui";
-import { TriangleAlert as IconAlertTriangle, NotebookText as IconNote, Plus as IconPlus } from "lucide-react";
+import {
+  TriangleAlert as IconAlertTriangle,
+  NotebookText as IconNote,
+  Plus as IconPlus,
+} from "lucide-react";
 import { classifyModifier } from "../lib/modifier-format";
 import type { OrderItemModifier, OrderItemSide } from "../types";
 
@@ -45,7 +49,7 @@ export function TicketRowMeta({ note, modifiers, sides }: TicketRowMetaProps) {
       )}
 
       {hasNote && (
-        <div className="mt-0.5 flex items-start gap-1.5 rounded-sm bg-warning/15 px-2 py-1 text-warning-foreground">
+        <div className="mt-0.5 flex items-start gap-1.5 rounded-md bg-warning/15 px-2 py-1 text-warning-foreground">
           <IconNote
             aria-hidden
             className="mt-0.5 size-4 shrink-0 text-warning"
@@ -80,7 +84,5 @@ function ModifierChip({ label }: { label: string }) {
     );
   }
 
-  return (
-    <span className={cn("text-muted-foreground")}>{label}</span>
-  );
+  return <span className={cn("text-muted-foreground")}>{label}</span>;
 }

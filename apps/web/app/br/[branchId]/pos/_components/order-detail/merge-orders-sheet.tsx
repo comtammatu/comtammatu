@@ -99,7 +99,7 @@ export function MergeOrdersSheet({
   const selectedSibling =
     selectedId === ""
       ? null
-      : (siblings ?? []).find((s) => String(s.id) === selectedId) ?? null;
+      : ((siblings ?? []).find((s) => String(s.id) === selectedId) ?? null);
 
   const selectedHasPct =
     selectedSibling != null &&
@@ -107,8 +107,7 @@ export function MergeOrdersSheet({
     selectedSibling.discount_type === "pct";
 
   const blockedByPct = sourceHasPctDiscount || selectedHasPct;
-  const canSubmit =
-    selectedSibling != null && !blockedByPct && !isPending;
+  const canSubmit = selectedSibling != null && !blockedByPct && !isPending;
 
   const handleClose = () => {
     if (isPending) return;
@@ -129,7 +128,7 @@ export function MergeOrdersSheet({
 
   return (
     <Sheet open={open} onOpenChange={(o) => !o && handleClose()}>
-      <SheetContent side="right" className="flex flex-col data-[side=right]:w-full data-[side=right]:sm:max-w-md">
+      <SheetContent side="right" size="md">
         <SheetHeader className="border-b border-border/60 px-3 py-2.5 text-left sm:px-4">
           <SheetTitle>
             Gộp hóa đơn{headerSubtitle ? ` · ${headerSubtitle}` : ""}
@@ -140,8 +139,8 @@ export function MergeOrdersSheet({
           <div className="flex flex-col gap-2 px-3 py-3 sm:px-4">
             {sourceHasPctDiscount && (
               <p className="rounded-md border border-destructive/40 bg-destructive/10 p-2 text-xs text-destructive">
-                Đơn hiện tại đang giảm theo %. Vui lòng bỏ chiết khấu trước
-                khi gộp (% không cộng dồn được).
+                Đơn hiện tại đang giảm theo %. Vui lòng bỏ chiết khấu trước khi
+                gộp (% không cộng dồn được).
               </p>
             )}
 
@@ -174,8 +173,13 @@ export function MergeOrdersSheet({
             )}
 
             {siblings && siblings.length > 0 && (
-              <RadioGroup value={selectedId} onValueChange={setSelectedId}>
-                <ul className="flex flex-col gap-2">
+              <RadioGroup
+                value={selectedId}
+                onValueChange={setSelectedId}
+                density="touch"
+                asChild
+              >
+                <ul className="list-none">
                   {siblings.map((s) => {
                     const optionId = `merge-target-${s.id}`;
                     const hasPct = s.has_discount && s.discount_type === "pct";

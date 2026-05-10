@@ -128,7 +128,7 @@ export function PostingRulesClient({ rules: initial, accounts }: Props) {
                         }
                         disabled={isPending}
                       >
-                        <SelectTrigger className="h-8 text-xs">
+                        <SelectTrigger size="sm">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -148,7 +148,7 @@ export function PostingRulesClient({ rules: initial, accounts }: Props) {
                         }
                         disabled={isPending}
                       >
-                        <SelectTrigger className="h-8 text-xs">
+                        <SelectTrigger size="sm">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>

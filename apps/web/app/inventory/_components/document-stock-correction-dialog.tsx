@@ -160,7 +160,7 @@ export function DocumentStockCorrectionDialog({
           {buttonLabel}
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent size="lg">
         <DialogHeader>
           <DialogTitle>Điều chỉnh tồn — {documentCode}</DialogTitle>
         </DialogHeader>

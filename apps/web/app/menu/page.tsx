@@ -1,4 +1,5 @@
 import { Card, CardContent } from "@comtammatu/ui/components/card";
+import { Badge } from "@comtammatu/ui/components/badge";
 import {
   TabsContent,
   TabsList,
@@ -60,18 +61,18 @@ export default async function MenuPage() {
       <Card>
         <CardContent className="p-5 sm:p-6">
           <UrlTabs defaultValue="items">
-            <TabsList className="h-11 rounded-lg bg-muted/60">
-              <TabsTrigger value="items" className="px-5">
+            <TabsList size="touch">
+              <TabsTrigger value="items">
                 Món ăn
-                <span className="ml-1.5 rounded-full bg-muted px-1.5 py-0.5 text-xs font-medium tabular-nums">
+                <Badge variant="secondary" size="sm" className="ml-1.5 tabular-nums">
                   {items.length}
-                </span>
+                </Badge>
               </TabsTrigger>
-              <TabsTrigger value="categories" className="px-5">
+              <TabsTrigger value="categories">
                 {FORM_VI.category}
-                <span className="ml-1.5 rounded-full bg-muted px-1.5 py-0.5 text-xs font-medium tabular-nums">
+                <Badge variant="secondary" size="sm" className="ml-1.5 tabular-nums">
                   {categories.length}
-                </span>
+                </Badge>
               </TabsTrigger>
             </TabsList>
 

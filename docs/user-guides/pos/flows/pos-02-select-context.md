@@ -129,8 +129,8 @@ URL: `/br/{branchId}/pos` (sau khi ca đã mở, mặc định landing trên mà
 
 ### Tham chiếu thiết kế
 
-- Order lifecycle: [docs/plan/m2-order-lifecycle.md](../../../plan/m2-order-lifecycle.md)
-- UI page contracts: [docs/plan/ui-ux-page-contracts.md](../../../plan/ui-ux-page-contracts.md)
+- Order lifecycle: [docs/archive/plan/m2-order-lifecycle.md](../../../archive/plan/m2-order-lifecycle.md)
+- UI page contracts: [docs/archive/plan/ui-ux-page-contracts.md](../../../archive/plan/ui-ux-page-contracts.md)
 
 ---
 

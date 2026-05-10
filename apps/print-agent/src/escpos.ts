@@ -283,6 +283,38 @@ export type ReceiptPayload = BillBase & {
   cash_change?: number | null;
 };
 
+export type TaxInvoicePayload = {
+  kind: "tax_invoice";
+  branch_name?: string;
+  branch_address?: string;
+  branch_phone?: string;
+  branch_tax_code?: string | null;
+  invoice_number?: string | null;
+  invoice_series?: string | null;
+  cqt_code?: string | null;
+  provider?: string | null;
+  provider_ref?: string | null;
+  status?: string | null;
+  invoice_kind?: "per_order" | "daily_summary" | string | null;
+  summary_date?: string | null;
+  summary_orders_count?: number | null;
+  order_number?: string | null;
+  buyer_name?: string | null;
+  buyer_tax_code?: string | null;
+  buyer_address?: string | null;
+  items?: BillBase["items"];
+  subtotal?: number | null;
+  vat_rate?: number | null;
+  vat_amount?: number | null;
+  tax_amount?: number | null;
+  total_amount?: number | null;
+  issued_at?: string | null;
+  printed_at: string;
+  lookup_url?: string | null;
+  pdf_url?: string | null;
+  xml_url?: string | null;
+};
+
 /** Printed when a waiter/cashier voids an item that was already sent to
  * kitchen. Backend fills payload from the void RPC path; renderer draws
  * an inverse-video HỦY MÓN banner so chef spots it across the room. */
@@ -353,6 +385,7 @@ export type PrintPayload =
   | WithPrintDocument<KitchenPayload>
   | WithPrintDocument<ProvisionalBillPayload>
   | WithPrintDocument<ReceiptPayload>
+  | WithPrintDocument<TaxInvoicePayload>
   | WithPrintDocument<CancelTicketPayload>
   | WithPrintDocument<ShiftCloseReportPayload>;
 
@@ -467,19 +500,24 @@ const kitchenImportantDetailRows = (
   );
 };
 
-export function renderKitchenTicket(p: KitchenPayload): Uint8Array {
-  const parts: Uint8Array[] = [init()];
+const kitchenDestination = (p: KitchenPayload): string =>
+  p.order_type === "dine_in"
+    ? p.table_number
+      ? `BÀN ${p.table_number}`
+      : "TẠI CHỖ"
+    : "MANG VỀ";
 
-  // --- Banner: BÀN N · ORD-xxx (double-size bold, centered) ---
-  parts.push(alignCenter(), sizeDouble(), boldOn());
-  const dest =
-    p.order_type === "dine_in"
-      ? p.table_number
-        ? `BÀN ${p.table_number}`
-        : "TẠI CHỖ"
-      : "MANG VỀ";
-  const ticketNumber = p.kitchen_ticket_number ?? p.order_number;
-  const sourceOrderNumber = p.source_order_number ?? p.order_number;
+const kitchenTicketNumbers = (
+  p: KitchenPayload,
+): { ticketNumber: string; sourceOrderNumber: string } => ({
+  ticketNumber: p.kitchen_ticket_number ?? p.order_number,
+  sourceOrderNumber: p.source_order_number ?? p.order_number,
+});
+
+const renderKitchenHeaderParts = (p: KitchenPayload): Uint8Array[] => {
+  const parts: Uint8Array[] = [alignCenter(), sizeDouble(), boldOn()];
+  const dest = kitchenDestination(p);
+  const { ticketNumber } = kitchenTicketNumbers(p);
   parts.push(line(`${dest} · ${ticketNumber}`));
   parts.push(sizeNormal(), boldOff());
 
@@ -497,10 +535,12 @@ export function renderKitchenTicket(p: KitchenPayload): Uint8Array {
     parts.push(sizeNormal(), boldOff());
   }
   parts.push(divider("="));
+  return parts;
+};
 
-  // --- Meta row (order, send seq, slot, time) ---
-  // Khi kitchen_ticket_number trùng order_number (legacy data hoặc fallback),
-  // bỏ dòng "HĐ:" để khỏi in 2 dòng số giống nhau (lãng phí giấy + bếp đọc trùng).
+const renderKitchenMetaParts = (p: KitchenPayload): Uint8Array[] => {
+  const parts: Uint8Array[] = [];
+  const { ticketNumber, sourceOrderNumber } = kitchenTicketNumbers(p);
   const meta = splitDateTime(p.printed_at);
   parts.push(alignLeft());
   parts.push(
@@ -521,15 +561,17 @@ export function renderKitchenTicket(p: KitchenPayload): Uint8Array {
   if (p.cashier_name) {
     parts.push(line(`Người order: ${p.cashier_name}`));
   }
+  return parts;
+};
 
-  // --- Table header ---
-  parts.push(line(KITCHEN_BORDER));
-  parts.push(boldOn());
-  parts.push(line(` SL | MÓN`));
-  parts.push(boldOff());
-  parts.push(line(KITCHEN_BORDER));
-
-  // --- Items ---
+const renderKitchenItemsParts = (p: KitchenPayload): Uint8Array[] => {
+  const parts: Uint8Array[] = [
+    line(KITCHEN_BORDER),
+    boldOn(),
+    line(" SL | MÓN"),
+    boldOff(),
+    line(KITCHEN_BORDER),
+  ];
   p.items.forEach((it, idx) => {
     if (idx > 0) parts.push(line(KITCHEN_BORDER));
     parts.push(...kitchenItemRow(it.quantity, it.item_name));
@@ -563,8 +605,11 @@ export function renderKitchenTicket(p: KitchenPayload): Uint8Array {
     }
   });
   parts.push(line(KITCHEN_BORDER));
+  return parts;
+};
 
-  // --- Order-level note (big, centered) ---
+const renderKitchenNoteParts = (p: KitchenPayload): Uint8Array[] => {
+  const parts: Uint8Array[] = [];
   if (p.note) {
     parts.push(divider("="));
     parts.push(alignCenter(), sizeDouble(), boldOn());
@@ -575,7 +620,15 @@ export function renderKitchenTicket(p: KitchenPayload): Uint8Array {
     parts.push(sizeNormal(), boldOff(), alignLeft());
     parts.push(divider("="));
   }
+  return parts;
+};
 
+export function renderKitchenTicket(p: KitchenPayload): Uint8Array {
+  const parts: Uint8Array[] = [init()];
+  parts.push(...renderKitchenHeaderParts(p));
+  parts.push(...renderKitchenMetaParts(p));
+  parts.push(...renderKitchenItemsParts(p));
+  parts.push(...renderKitchenNoteParts(p));
   parts.push(feed(6), cutPartial());
   return concat(parts);
 }
@@ -616,18 +669,39 @@ const renderBillMeta = (p: BillBase): Uint8Array[] => {
   return parts;
 };
 
-/** Shared items table — mỗi modifier / side priced in dòng riêng với
- * Thành tiền cột phải; price 0/undefined → cột phải để trống. Parent line
- * hiển thị base (đã trừ modifier_sum + sides_sum) × qty. */
+const RECEIPT_COL_NO = 2;
+const RECEIPT_COL_NAME = 22;
+const RECEIPT_COL_QTY = 2;
+const RECEIPT_COL_AMT = 13;
+
+const RECEIPT_TABLE_BORDER =
+  "-".repeat(RECEIPT_COL_NO + 1) +
+  "+" + "-".repeat(RECEIPT_COL_NAME + 2) +
+  "+" + "-".repeat(RECEIPT_COL_QTY + 2) +
+  "+" + "-".repeat(RECEIPT_COL_AMT + 1);
+
+const receiptRow = (
+  no: string,
+  name: string,
+  qty: string,
+  amt: string,
+): string =>
+  `${padLeft(no, RECEIPT_COL_NO)} | ${padRight(name, RECEIPT_COL_NAME)} | ${padLeft(qty, RECEIPT_COL_QTY)} | ${padLeft(amt, RECEIPT_COL_AMT)}`;
+
+/** Shared bill/receipt item table — text mode mirrors bitmap mode so cashiers
+ * see one stable layout across firmware-font and rasterized printers. */
 const renderBillItemsTable = (p: BillBase): Uint8Array[] => {
   const parts: Uint8Array[] = [];
-  parts.push(divider("-"));
+  parts.push(line(RECEIPT_TABLE_BORDER));
+  parts.push(boldOn());
+  parts.push(line(receiptRow("#", "Món", "SL", "Thành tiền")));
+  parts.push(boldOff());
+  parts.push(line(RECEIPT_TABLE_BORDER));
 
   p.items.forEach((it, idx) => {
-    if (idx > 0) parts.push(divider("-"));
-    const fullName = it.variant_name
-      ? `${it.item_name} (${it.variant_name})`
-      : it.item_name;
+    if (idx > 0) parts.push(line(RECEIPT_TABLE_BORDER));
+    const stt = String(idx + 1);
+    const qty = String(it.quantity);
     const modifierSum = (it.modifiers ?? []).reduce(
       (sum, m) => sum + (m.price ?? 0),
       0,
@@ -637,18 +711,22 @@ const renderBillItemsTable = (p: BillBase): Uint8Array[] => {
       0,
     );
     const baseUnit = it.unit_price - modifierSum - sidesSum;
-    const baseTotal = baseUnit * it.quantity;
-    const totalStr = fmtMoney(baseTotal);
-    const nameAvail = Math.max(16, LINE_WIDTH - totalStr.length - 1);
-    const nameChunks = wrapText(fullName, nameAvail);
-    // Line 1: name (left) + base total (right)
-    parts.push(pair(nameChunks[0] ?? "", totalStr));
-    // Continuation name chunks if name wrapped
-    for (let i = 1; i < nameChunks.length; i++) {
-      parts.push(line(nameChunks[i] ?? ""));
+    const baseTotal = fmtMoney(baseUnit * it.quantity);
+    const nameChunks = wrapText(it.item_name, RECEIPT_COL_NAME);
+    nameChunks.forEach((chunk, i) => {
+      parts.push(line(receiptRow(
+        i === 0 ? stt : "",
+        chunk,
+        i === 0 ? qty : "",
+        i === 0 ? baseTotal : "",
+      )));
+    });
+    if (it.variant_name) {
+      const variantChunks = wrapText(`(${it.variant_name})`, RECEIPT_COL_NAME - 2);
+      for (const chunk of variantChunks) {
+        parts.push(line(receiptRow("", `  ${chunk}`, "", "")));
+      }
     }
-    // Line 2: qty × base unit
-    parts.push(line(`  x${it.quantity} × ${fmtMoney(baseUnit)}`));
     if (it.modifiers && it.modifiers.length > 0) {
       for (const m of it.modifiers) {
         if (!m.name) continue;
@@ -656,8 +734,15 @@ const renderBillItemsTable = (p: BillBase): Uint8Array[] => {
           (m.price ?? 0) > 0
             ? fmtMoney((m.price ?? 0) * it.quantity)
             : "";
-        const label = `  + ${m.name}`;
-        parts.push(modAmt ? pair(label, modAmt) : line(label));
+        const modChunks = wrapText(`+ ${m.name}`, RECEIPT_COL_NAME);
+        modChunks.forEach((chunk, i) => {
+          parts.push(line(receiptRow(
+            "",
+            chunk,
+            i === 0 ? qty : "",
+            i === 0 ? modAmt : "",
+          )));
+        });
       }
     }
     if (it.sides && it.sides.length > 0) {
@@ -669,14 +754,25 @@ const renderBillItemsTable = (p: BillBase): Uint8Array[] => {
           (s.price ?? 0) > 0 && totalSideQty > 0
             ? fmtMoney((s.price ?? 0) * totalSideQty)
             : "";
-        const label = `  - ${sideName}${totalSideQty ? ` x${totalSideQty}` : ""}`;
-        parts.push(sideAmt ? pair(label, sideAmt) : line(label));
+        const sideChunks = wrapText(`- ${sideName}`, RECEIPT_COL_NAME);
+        sideChunks.forEach((chunk, i) => {
+          parts.push(line(receiptRow(
+            "",
+            chunk,
+            i === 0 && totalSideQty ? String(totalSideQty) : "",
+            i === 0 ? sideAmt : "",
+          )));
+        });
       }
     }
-    if (it.note) parts.push(line(`  * ${it.note}`));
+    if (it.note) {
+      for (const chunk of wrapText(`* ${it.note}`, RECEIPT_COL_NAME)) {
+        parts.push(line(receiptRow("", chunk, "", "")));
+      }
+    }
   });
 
-  parts.push(divider("-"));
+  parts.push(line(RECEIPT_TABLE_BORDER));
   return parts;
 };
 
@@ -920,6 +1016,9 @@ const renderDocumentFooter = (
 const isKitchenPayload = (value: unknown): value is KitchenPayload =>
   isRecord(value) && value.kind === "kitchen_ticket" && Array.isArray(value.items);
 
+const isTaxInvoicePayload = (value: unknown): value is TaxInvoicePayload =>
+  isRecord(value) && value.kind === "tax_invoice";
+
 const isCancelTicketPayload = (value: unknown): value is CancelTicketPayload =>
   isRecord(value) && value.kind === "cancel_ticket" && Array.isArray(value.items);
 
@@ -930,6 +1029,50 @@ const isShiftCloseReportPayload = (
   value.kind === "shift_close_report" &&
   Array.isArray(value.payment_breakdown);
 
+const renderDocumentKitchenBlock = (
+  block: Extract<
+    PrintDocumentBlock,
+    { type: "kitchenHeader" | "kitchenMeta" | "kitchenItems" | "kitchenNote" }
+  >,
+): Uint8Array[] => {
+  if (!isKitchenPayload(block.payload)) return [];
+  switch (block.type) {
+    case "kitchenHeader":
+      return renderKitchenHeaderParts(block.payload);
+    case "kitchenMeta":
+      return renderKitchenMetaParts(block.payload);
+    case "kitchenItems":
+      return renderKitchenItemsParts(block.payload);
+    case "kitchenNote":
+      return renderKitchenNoteParts(block.payload);
+  }
+};
+
+const renderDocumentTaxInvoiceBlock = (
+  block: Extract<
+    PrintDocumentBlock,
+    {
+      type:
+        | "taxInvoice"
+        | "taxInvoiceMeta"
+        | "taxInvoiceBuyer"
+        | "taxInvoiceLookup";
+    }
+  >,
+): Uint8Array[] => {
+  if (!isTaxInvoicePayload(block.payload)) return [];
+  switch (block.type) {
+    case "taxInvoice":
+      return [renderTaxInvoice(block.payload)];
+    case "taxInvoiceMeta":
+      return renderTaxInvoiceMetaParts(block.payload);
+    case "taxInvoiceBuyer":
+      return renderTaxInvoiceBuyerParts(block.payload);
+    case "taxInvoiceLookup":
+      return renderTaxInvoiceLookupParts(block.payload);
+  }
+};
+
 const renderSingleLegacyDocumentBlock = (
   document: PrintDocument,
 ): Uint8Array | null => {
@@ -938,6 +1081,9 @@ const renderSingleLegacyDocumentBlock = (
   if (!block) return null;
   if (block.type === "kitchenTicket" && isKitchenPayload(block.payload)) {
     return renderKitchenTicket(block.payload);
+  }
+  if (block.type === "taxInvoice" && isTaxInvoicePayload(block.payload)) {
+    return renderTaxInvoice(block.payload);
   }
   if (block.type === "cancelTicket" && isCancelTicketPayload(block.payload)) {
     return renderCancelTicket(block.payload);
@@ -1000,6 +1146,18 @@ const renderPrintDocument = (document: PrintDocument): Uint8Array => {
         break;
       case "paymentQr":
         parts.push(...renderDocumentPaymentQr(block));
+        break;
+      case "kitchenHeader":
+      case "kitchenMeta":
+      case "kitchenItems":
+      case "kitchenNote":
+        parts.push(...renderDocumentKitchenBlock(block));
+        break;
+      case "taxInvoice":
+      case "taxInvoiceMeta":
+      case "taxInvoiceBuyer":
+      case "taxInvoiceLookup":
+        parts.push(...renderDocumentTaxInvoiceBlock(block));
         break;
       case "footer":
         parts.push(...renderDocumentFooter(block));
@@ -1078,6 +1236,101 @@ export function renderReceipt(p: ReceiptPayload): Uint8Array {
   }
 
   parts.push(...renderFooter());
+  return concat(parts);
+}
+
+// ─── Tax invoice info (HĐĐT) ─────────────────────────────────────────────
+
+const taxInvoiceBillBase = (p: TaxInvoicePayload): BillBase => ({
+  branch_name: p.branch_name,
+  branch_address: p.branch_address,
+  branch_phone: p.branch_phone,
+  branch_tax_code: p.branch_tax_code,
+  order_number: p.order_number ?? "",
+  order_type: "takeaway",
+  items: p.items ?? [],
+  subtotal: p.subtotal ?? 0,
+  tax_amount: p.vat_amount ?? p.tax_amount ?? 0,
+  total_amount: p.total_amount ?? 0,
+  printed_at: p.printed_at,
+});
+
+const taxInvoiceTitle = (p: TaxInvoicePayload): string =>
+  p.invoice_kind === "daily_summary"
+    ? "THÔNG TIN HĐĐT TỔNG HỢP"
+    : "THÔNG TIN HĐĐT";
+
+const renderTaxInvoiceMetaParts = (p: TaxInvoicePayload): Uint8Array[] => {
+  const issued = splitDateTime(p.issued_at ?? undefined);
+  const parts: Uint8Array[] = [];
+  if (p.invoice_number) parts.push(pair("Số HĐ:", p.invoice_number));
+  if (p.invoice_series) parts.push(pair("Ký hiệu:", p.invoice_series));
+  if (p.cqt_code) parts.push(line(`Mã CQT: ${p.cqt_code}`));
+  if (p.order_number) parts.push(pair("Đơn hàng:", p.order_number));
+  if (p.summary_date) parts.push(pair("Ngày tổng hợp:", p.summary_date));
+  if ((p.summary_orders_count ?? 0) > 0) {
+    parts.push(pair("Số đơn gộp:", `${p.summary_orders_count} đơn`));
+  }
+  if (issued.time || issued.date) {
+    parts.push(pair("Phát hành:", `${issued.time} ${issued.date}`.trim()));
+  }
+  if (p.provider) parts.push(pair("Nhà cung cấp:", p.provider));
+  return parts;
+};
+
+const renderTaxInvoiceBuyerParts = (p: TaxInvoicePayload): Uint8Array[] => {
+  const rows: Uint8Array[] = [];
+  if (p.buyer_name) rows.push(pair("Người mua:", p.buyer_name));
+  if (p.buyer_tax_code) rows.push(pair("MST:", p.buyer_tax_code));
+  if (p.buyer_address) {
+    rows.push(line("Địa chỉ:"));
+    for (const chunk of wrapText(p.buyer_address, LINE_WIDTH - 2)) {
+      rows.push(line(`  ${chunk}`));
+    }
+  }
+  if (rows.length === 0) return [];
+  return [divider("-"), ...rows];
+};
+
+const renderTaxInvoiceLookupParts = (p: TaxInvoicePayload): Uint8Array[] => {
+  const lookup = p.lookup_url ?? p.pdf_url ?? p.xml_url ?? null;
+  const parts: Uint8Array[] = [divider("-")];
+  if (lookup) {
+    parts.push(alignCenter(), boldOn());
+    parts.push(line("TRA CỨU HĐĐT"));
+    parts.push(boldOff());
+    parts.push(qrBlock(lookup, 6));
+    for (const chunk of wrapText(lookup, LINE_WIDTH)) {
+      parts.push(line(chunk));
+    }
+    parts.push(alignLeft());
+  }
+  if (p.provider_ref) parts.push(pair("Mã NCC:", p.provider_ref));
+  if (p.pdf_url && p.pdf_url !== lookup) parts.push(line("PDF: có"));
+  if (p.xml_url && p.xml_url !== lookup) parts.push(line("XML: có"));
+  return parts;
+};
+
+export function renderTaxInvoice(p: TaxInvoicePayload): Uint8Array {
+  const parts: Uint8Array[] = [init()];
+  parts.push(...renderBillHeader(taxInvoiceBillBase(p)));
+  parts.push(divider("="));
+  parts.push(alignCenter(), sizeDouble(), boldOn());
+  parts.push(line(taxInvoiceTitle(p)));
+  parts.push(sizeNormal(), boldOff(), alignLeft());
+  parts.push(divider("="));
+  parts.push(...renderTaxInvoiceMetaParts(p));
+  parts.push(...renderTaxInvoiceBuyerParts(p));
+  if ((p.items ?? []).length > 0) {
+    parts.push(...renderBillItemsTable(taxInvoiceBillBase(p)));
+  }
+  parts.push(...renderBillTotals(taxInvoiceBillBase(p)));
+  parts.push(...renderTaxInvoiceLookupParts(p));
+  const printed = splitDateTime(p.printed_at);
+  parts.push(newline(), alignCenter());
+  parts.push(line(`In lúc: ${printed.time} ${printed.date}`.trim()));
+  parts.push(line("HĐĐT gốc lưu trên hệ thống/nhà cung cấp."));
+  parts.push(alignLeft(), feed(6), cutPartial());
   return concat(parts);
 }
 
@@ -1332,6 +1585,8 @@ export function renderPayload(payload: PrintPayload): Uint8Array {
       return renderProvisionalBill(payload);
     case "receipt":
       return renderReceipt(payload);
+    case "tax_invoice":
+      return renderTaxInvoice(payload);
     case "cancel_ticket":
       return renderCancelTicket(payload);
     case "shift_close_report":

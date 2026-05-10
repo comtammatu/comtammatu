@@ -13,6 +13,7 @@
     "./menu": "./src/menu/category-labels.ts",
     "./messages": "./src/messages/index.ts",
     "./providers": "./src/providers/index.ts",
+    "./vietqr": "./src/vietqr/index.ts",
     "./payroll": "./src/payroll/calculate.ts",
     "./feedback": "./src/feedback/index.ts",
     "./telegram": "./src/telegram/index.ts",

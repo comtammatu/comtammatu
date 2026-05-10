@@ -156,8 +156,8 @@ function CartPaneComponent({
                   <Button
                     type="button"
                     variant="outline"
-                    size="sm"
-                    className="min-h-11 min-w-11 px-3 text-sm text-muted-foreground"
+                    size="lg"
+                    className="text-sm text-muted-foreground"
                     onClick={() => {
                       if (onReturnToTables) {
                         onReturnToTables();
@@ -174,8 +174,8 @@ function CartPaneComponent({
                 <Button
                   type="button"
                   variant="ghost"
-                  size="sm"
-                  className="min-h-11 min-w-11 shrink-0 px-3 text-sm text-muted-foreground"
+                  size="lg"
+                  className="shrink-0 text-sm text-muted-foreground"
                   onClick={() => setClearConfirmOpen(true)}
                 >
                   <IconTrash data-icon="inline-start" />
@@ -214,8 +214,10 @@ function CartPaneComponent({
           <ToggleGroup
             type="single"
             value={cart.orderType}
-            size="lg"
-            className="grid h-14 w-full grid-cols-2 overflow-hidden rounded-none bg-muted/60"
+            variant="segmented"
+            size="touch-lg"
+            shape="flush"
+            className="grid w-full grid-cols-2"
             aria-label="Chọn hình thức phục vụ"
             onValueChange={(value) => {
               if (
@@ -228,7 +230,7 @@ function CartPaneComponent({
           >
             <ToggleGroupItem
               value="dine_in"
-              className="h-full min-w-0 justify-center gap-2 !rounded-none border-r border-border px-0 text-base font-semibold text-muted-foreground hover:bg-background/70 hover:text-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm"
+              className="min-w-0 justify-center border-r border-border"
               aria-keyshortcuts="D"
               disabled={modeLocked && cart.orderType !== "dine_in"}
             >
@@ -240,7 +242,7 @@ function CartPaneComponent({
             </ToggleGroupItem>
             <ToggleGroupItem
               value="takeaway"
-              className="h-full min-w-0 justify-center gap-2 !rounded-none px-0 text-base font-semibold text-muted-foreground hover:bg-background/70 hover:text-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm"
+              className="min-w-0 justify-center"
               aria-keyshortcuts="T"
               disabled={modeLocked && cart.orderType !== "takeaway"}
             >
@@ -256,7 +258,7 @@ function CartPaneComponent({
 
       {cart.items.length === 0 ? (
         <div className="flex min-h-0 flex-1 items-center justify-center px-6 text-center">
-          <p className="max-w-[16rem] text-sm leading-6 text-muted-foreground">
+          <p className="max-w-xs text-sm leading-6 text-muted-foreground">
             {cart.orderType === "takeaway" || selectedTableNumber != null
               ? "Chạm món trên thực đơn để thêm vào đơn."
               : "Chạm bàn bên trái hoặc chọn 'Mang về' để bắt đầu."}
@@ -297,9 +299,7 @@ function CartPaneComponent({
                     </Button>
                     <Item
                       variant="outline"
-                      className={cn(
-                        "relative h-20 touch-pan-y rounded-none bg-card p-0 text-left shadow-sm transition-colors duration-150 ease-out hover:shadow-md",
-                      )}
+                      className="relative h-20 touch-pan-y rounded-none bg-card p-0 text-left shadow-sm transition-colors duration-150 ease-out hover:shadow-md"
                     >
                       <Button
                         type="button"
@@ -333,8 +333,8 @@ function CartPaneComponent({
                     </Item>
                     <Button
                       variant="ghost"
-                      size="icon"
-                      className="absolute right-2 top-1/2 hidden min-h-11 min-w-11 size-9 -translate-y-1/2 text-muted-foreground hover:text-destructive sm:inline-flex"
+                      size="icon-lg"
+                      className="absolute right-2 top-1/2 hidden -translate-y-1/2 text-muted-foreground hover:text-destructive sm:inline-flex"
                       aria-label={`Xóa ${displayName} khỏi giỏ đơn mới`}
                       onClick={() => cart.removeItem(item.key)}
                     >
@@ -373,12 +373,12 @@ function CartPaneComponent({
             </div>
 
             <Card size="sm" className="mt-2 sm:mt-3">
-              <CardContent className="relative flex flex-col gap-2 p-2.5 sm:gap-3 sm:p-4">
+              <CardContent className="relative flex flex-col gap-2 sm:gap-3">
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                     Tổng tạm tính
                   </p>
-                  <p className="ml-auto text-xl font-bold text-primary tabular-nums sm:text-2xl">
+                  <p className="ml-auto text-xl font-semibold text-primary tabular-nums sm:text-2xl">
                     {formatVND(cart.total)}
                   </p>
                 </div>
@@ -386,8 +386,8 @@ function CartPaneComponent({
                 <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
                   <AlertDialogTrigger asChild>
                     <Button
-                      className="h-12 min-h-12 min-w-12 w-full text-base font-bold tracking-wide shadow-md sm:h-14 sm:min-h-14"
-                      size="lg"
+                      className="w-full text-base font-semibold tracking-wide shadow-md"
+                      size="touch-lg"
                       disabled={!canSubmit || isSubmitting}
                       aria-keyshortcuts="Meta+Enter Control+Enter"
                     >

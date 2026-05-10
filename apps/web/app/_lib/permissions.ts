@@ -100,27 +100,33 @@ export const currentUserHasPermissionAny = cache(async function currentUserHasPe
 
 /**
  * Returns true if the user has ANY of the given permission keys (tenant-wide
- * or branch-scoped). Fires all RPCs in parallel — single network RTT — and
- * ORs the results. Each individual RPC still runs the `_auth_v2_is_owner`
- * server-side short-circuit.
+ * or branch-scoped). Uses one batch RPC instead of N permission RPCs; if the
+ * migration has not reached an environment yet, falls back to the old single-
+ * key fan-out so deploy order does not deny all multi-key gates.
  *
- * Empty `keys` returns `false` (matches sequential semantics). Errors in
- * underlying RPCs map to `false` per `currentUserHasPermissionAny`, so the
- * `Promise.all` never rejects. Intended for small key arrays (≤5); larger
- * fan-out should consider a batch RPC `has_any_permissions(keys[])` once
- * pool pressure is observed.
+ * Empty `keys` returns `false` (matches sequential semantics).
  *
  * NOT wrapped in React `cache()` — array argument identity changes per
- * render, so memoization would never hit. Dedup happens inside the
- * single-key helper instead.
- *
- * Spec: regressions.md MULTI-KEY-PERMISSION-PARALLEL.
+ * render, so memoization would never hit.
  */
 export async function currentUserHasAnyPermissionAny(
   keys: readonly (PermissionKey | string)[],
 ): Promise<boolean> {
+  const permissionKeys = [...new Set(keys.filter((key) => key.length > 0))];
+  if (permissionKeys.length === 0) return false;
+  if (permissionKeys.length === 1) {
+    const key = permissionKeys[0];
+    return key ? currentUserHasPermissionAny(key) : false;
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("has_any_permissions_any", {
+    p_keys: permissionKeys,
+  });
+  if (!error) return data === true;
+
   const results = await Promise.all(
-    keys.map((key) => currentUserHasPermissionAny(key)),
+    permissionKeys.map((key) => currentUserHasPermissionAny(key)),
   );
   return results.some(Boolean);
 }

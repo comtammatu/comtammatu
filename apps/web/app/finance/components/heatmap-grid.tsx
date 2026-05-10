@@ -97,6 +97,7 @@ export function HeatmapGrid({
             x={labelGutter + h * cellPitch + cellSize / 2}
             y={10}
             textAnchor="middle"
+            // eslint-disable-next-line no-restricted-syntax -- ds-allow: SVG axis labels (heatmap dow/hour ticks) per Rhythm Contract B "text-3xs reserved for SVG axis labels"
             className="fill-muted-foreground text-[10px]"
           >
             {String(h).padStart(2, "0")}h
@@ -110,7 +111,8 @@ export function HeatmapGrid({
               x={labelGutter - 6}
               y={headerHeight + dow * cellPitch + cellSize - 3}
               textAnchor="end"
-              className="fill-muted-foreground text-[10px]"
+              // eslint-disable-next-line no-restricted-syntax -- ds-allow: SVG axis labels (heatmap dow/hour ticks) per Rhythm Contract B "text-3xs reserved for SVG axis labels"
+            className="fill-muted-foreground text-[10px]"
             >
               {label}
             </text>

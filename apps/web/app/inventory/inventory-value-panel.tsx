@@ -265,10 +265,10 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                        <TableHead variant="eyebrow">
                           {TABLE_VI.area}
                         </TableHead>
-                        <TableHead className="text-right text-xs font-semibold uppercase tracking-wider">
+                        <TableHead variant="eyebrow" className="text-right">
                           {messages.inventory.value.inventoryValue}
                         </TableHead>
                       </TableRow>
@@ -350,10 +350,10 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                        <TableHead variant="eyebrow">
                           {BRANCH_VI.long}
                         </TableHead>
-                        <TableHead className="text-right text-xs font-semibold uppercase tracking-wider">
+                        <TableHead variant="eyebrow" className="text-right">
                           {messages.inventory.value.inventoryValue}
                         </TableHead>
                       </TableRow>

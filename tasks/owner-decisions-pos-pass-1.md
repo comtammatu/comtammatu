@@ -11,7 +11,7 @@
 | D1 | Close shift while active orders exist | **Allow + carry forward** (đơn unpaid live qua ca sau); `expected_cash` filter `payment_status='paid'` |
 | D2 | Comp meal (total=0) — note + approval gate | **No additional gate** (discount note ≥3 chars là đủ) |
 | D3 | Variance threshold for close-shift approval | **Combo `max(50.000đ, 0.5% × expected_cash)`** → BM approval + note ≥10 chars |
-| D4 | HĐĐT for total=0 (comp meal) | **Conditional on MST** — MST nhập → gửi MISA; không nhập → skip + flag `tax_invoice_status='not_required'` |
+| D4 | HĐĐT for total=0 (comp meal) | **Conditional on MST** — MST nhập → gửi provider HĐĐT; không nhập → skip + flag `tax_invoice_status='not_required'` |
 | D5 | Failed-print log: retry via `print_jobs` vs new table | **Reuse `print_jobs.status='failed'`** + query last 7d; "In lại" enqueue job mới với `original_job_id` link |
 
 **Pass 1 status:** all blockers resolved. `09.01` automation unblocked. Engineering follow-up tasks listed at bottom.
@@ -66,16 +66,16 @@
 
 ## D4 — HĐĐT cho hóa đơn total=0 (comp meal)
 
-**Context:** `createTaxInvoice` precondition là `payment_status='paid'`. Sau khi fix `05.03`, comp meal pay 0đ vẫn `payment_status=paid`. Có nên gọi MISA xuất HĐĐT cho hóa đơn 0đ?
+**Context:** `createTaxInvoice` precondition là `payment_status='paid'`. Sau khi fix `05.03`, comp meal pay 0đ vẫn `payment_status=paid`. Có nên gọi provider HĐĐT xuất hóa đơn cho hóa đơn 0đ?
 
 **Options:**
-1. **Gửi MISA bình thường** — luật thuế VN: invoice 0đ vẫn legitimate; consistent với non-comp orders. Nhưng tốn MISA quota cho hóa đơn không ai cần.
-2. **Skip** — flag `tax_invoice_status='not_required'`, save quota, không gửi MISA cho `total=0`.
+1. **Gửi provider bình thường** — luật thuế VN: invoice 0đ vẫn legitimate; consistent với non-comp orders. Nhưng tốn provider quota cho hóa đơn không ai cần.
+2. **Skip** — flag `tax_invoice_status='not_required'`, save quota, không gửi provider cho `total=0`.
 3. **Conditional on MST** — nếu khách nhập MST trong invoice form → gửi (khách thực sự cần); không nhập MST → skip.
 
 **Recommend:** Option 3. Khách comp meal hiếm cần HĐĐT; MST nhập = signal khách thực sự cần; matches existing UX (form HĐĐT đã optional).
 
-**Nếu không quyết:** scenario `05.05` cross-flow với `05.03` chưa rõ expected behavior; invoice action có thể fail kỳ lạ với amount=0 nếu MISA sandbox reject.
+**Nếu không quyết:** scenario `05.05` cross-flow với `05.03` chưa rõ expected behavior; invoice action có thể fail kỳ lạ với amount=0 nếu provider sandbox reject.
 
 ---
 
@@ -101,7 +101,7 @@
 
 - [x] **D3 — Option 3:** Variance threshold = `max(50.000đ, 0.5% × expected_cash)`. Khi `|cash_difference|` vượt threshold → "Chốt ca" yêu cầu BM PIN + note ≥10 chars trước khi commit. Dưới threshold → close bình thường, variance vẫn được record.
 
-- [x] **D4 — Option 3:** HĐĐT chỉ gửi MISA khi khách nhập MST trong invoice form. Không nhập MST → skip MISA call + set `tax_invoices.status='not_required'`. Áp dụng cho mọi total bao gồm total=0 (comp meal). Logic này nằm ở action layer (`createTaxInvoice` / orchestrator `confirmCashPaymentWithInvoice`), không phải RPC.
+- [x] **D4 — Option 3:** HĐĐT chỉ gửi provider khi khách nhập MST trong invoice form. Không nhập MST → skip provider call + set `tax_invoices.status='not_required'`. Áp dụng cho mọi total bao gồm total=0 (comp meal). Logic này nằm ở action layer (`createTaxInvoice` / orchestrator `confirmCashPaymentWithInvoice`), không phải RPC.
 
 - [x] **D5 — Option 1:** Failed-print recovery dùng `print_jobs.status='failed'` thẳng. Admin UI query `WHERE status='failed' AND created_at > now() - interval '7 days'`. "In lại" enqueue job mới với column `original_job_id` link về fail row. Không tạo table `print_failures` riêng. Re-evaluate khi volume failed > 100/day.
 

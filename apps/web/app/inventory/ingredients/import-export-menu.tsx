@@ -1,7 +1,12 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { CircleAlert as IconAlertCircle, Download as IconDownload, Sheet as IconFileSpreadsheet, Upload as IconUpload } from "lucide-react";
+import {
+  CircleAlert as IconAlertCircle,
+  Download as IconDownload,
+  Sheet as IconFileSpreadsheet,
+  Upload as IconUpload,
+} from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
@@ -79,22 +84,22 @@ export function IngredientImportExportMenu({
             Import / Export
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuContent align="end" width="action">
           <DropdownMenuItem onClick={() => setImportOpen(true)}>
-            <IconUpload className="mr-2 size-4" />
+            <IconUpload />
             Import từ file
           </DropdownMenuItem>
           <DropdownMenuItem onClick={handleTemplate}>
-            <IconFileSpreadsheet className="mr-2 size-4" />
+            <IconFileSpreadsheet />
             Tải template (.xlsx)
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => handleExport("xlsx")}>
-            <IconDownload className="mr-2 size-4" />
+            <IconDownload />
             Export .xlsx
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => handleExport("csv")}>
-            <IconDownload className="mr-2 size-4" />
+            <IconDownload />
             Export .csv
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -174,21 +179,18 @@ function IngredientImportDialog({
         onOpenChange(v);
       }}
     >
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent size="lg">
         <DialogHeader>
           <DialogTitle>Import nguyên liệu từ file</DialogTitle>
           <DialogDescription>
-            Hỗ trợ .xlsx và .csv. Dòng trùng <strong>tên nguyên liệu</strong>{" "}
-            sẽ được cập nhật.
+            Hỗ trợ .xlsx và .csv. Dòng trùng <strong>tên nguyên liệu</strong> sẽ
+            được cập nhật.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <label
-              htmlFor="ing-import-file"
-              className="text-sm font-medium"
-            >
+            <label htmlFor="ing-import-file" className="text-sm font-medium">
               Chọn file (.xlsx, .csv)
             </label>
             <input

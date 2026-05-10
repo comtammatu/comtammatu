@@ -51,9 +51,13 @@ export function SelectField<TFieldValues extends FieldValues>({
   const { field, fieldState } = useController({ control, name });
   const fieldId = id ?? `field-${String(name)}`;
   const hasError = !!fieldState.error;
+  const descriptionId = description ? `${fieldId}-description` : undefined;
+  const errorId = fieldState.error ? `${fieldId}-error` : undefined;
+  const describedBy =
+    [descriptionId, errorId].filter(Boolean).join(" ") || undefined;
 
   return (
-    <Field data-invalid={hasError}>
+    <Field data-invalid={hasError || undefined}>
       <FieldLabel htmlFor={fieldId}>
         {label}
         {required ? " *" : null}
@@ -65,8 +69,10 @@ export function SelectField<TFieldValues extends FieldValues>({
       >
         <SelectTrigger
           id={fieldId}
-          className={cn("!h-10 w-full", className)}
-          aria-invalid={hasError}
+          className={cn("w-full", className)}
+          aria-describedby={describedBy}
+          aria-invalid={hasError || undefined}
+          aria-required={required || undefined}
           onBlur={field.onBlur}
           ref={field.ref}
         >
@@ -84,8 +90,12 @@ export function SelectField<TFieldValues extends FieldValues>({
           ))}
         </SelectContent>
       </Select>
-      {description ? <FieldDescription>{description}</FieldDescription> : null}
-      {fieldState.error ? <FieldError errors={[fieldState.error]} /> : null}
+      {description ? (
+        <FieldDescription id={descriptionId}>{description}</FieldDescription>
+      ) : null}
+      {fieldState.error ? (
+        <FieldError id={errorId} errors={[fieldState.error]} />
+      ) : null}
     </Field>
   );
 }

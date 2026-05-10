@@ -22,6 +22,13 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
 import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNextButton,
+  PaginationPreviousButton,
+} from "@comtammatu/ui/components/pagination";
+import {
   Drawer,
   DrawerContent,
   DrawerHeader,
@@ -114,9 +121,7 @@ const dataColumns = [
   }),
   columnHelper.accessor("branch_name", {
     header: "Chi nhánh",
-    cell: (info) => (
-      <span className="text-sm">{info.getValue() ?? "—"}</span>
-    ),
+    cell: (info) => <span className="text-sm">{info.getValue() ?? "—"}</span>,
     size: 120,
   }),
   columnHelper.accessor("qr_label", {
@@ -134,7 +139,10 @@ const dataColumns = [
       const sev = info.getValue();
       if (!sev) return null;
       return (
-        <Badge variant={SEVERITY_VARIANT[sev] ?? "secondary"} className="text-xs">
+        <Badge
+          variant={SEVERITY_VARIANT[sev] ?? "secondary"}
+          className="text-xs"
+        >
           {SEVERITY_LABEL[sev] ?? sev}
         </Badge>
       );
@@ -187,7 +195,8 @@ function FeedbackDetailDrawer({
       <DrawerContent>
         <DrawerHeader className="flex items-center justify-between">
           <DrawerTitle>
-            {RATING_EMOJI[feedback.rating] ?? feedback.rating} Phản hồi #{feedback.id}
+            {RATING_EMOJI[feedback.rating] ?? feedback.rating} Phản hồi #
+            {feedback.id}
           </DrawerTitle>
           <DrawerClose asChild>
             <Button variant="ghost" size="sm">
@@ -230,7 +239,9 @@ function FeedbackDetailDrawer({
               <p className="text-sm font-medium">Phân tích AI</p>
               <div className="flex flex-wrap gap-2">
                 <Badge
-                  variant={SEVERITY_VARIANT[feedback.ai_severity] ?? "secondary"}
+                  variant={
+                    SEVERITY_VARIANT[feedback.ai_severity] ?? "secondary"
+                  }
                 >
                   {SEVERITY_LABEL[feedback.ai_severity] ?? feedback.ai_severity}
                 </Badge>
@@ -386,7 +397,13 @@ export function FeedbackInboxTable({ feedbacks }: FeedbackInboxTableProps) {
                 {/* Checkbox header */}
                 <TableHead style={{ width: 40 }}>
                   <Checkbox
-                    checked={allPageChecked ? true : somePageChecked ? "indeterminate" : false}
+                    checked={
+                      allPageChecked
+                        ? true
+                        : somePageChecked
+                          ? "indeterminate"
+                          : false
+                    }
                     onCheckedChange={toggleAll}
                     aria-label="Chọn tất cả trang hiện tại"
                   />
@@ -438,24 +455,26 @@ export function FeedbackInboxTable({ feedbacks }: FeedbackInboxTableProps) {
             Trang {table.getState().pagination.pageIndex + 1} /{" "}
             {table.getPageCount()}
           </p>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-            >
-              Trước
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-            >
-              Sau
-            </Button>
-          </div>
+          <Pagination className="mx-0 w-auto justify-end">
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPreviousButton
+                  text="Trước"
+                  aria-label="Trang trước"
+                  onClick={() => table.previousPage()}
+                  disabled={!table.getCanPreviousPage()}
+                />
+              </PaginationItem>
+              <PaginationItem>
+                <PaginationNextButton
+                  text="Sau"
+                  aria-label="Trang sau"
+                  onClick={() => table.nextPage()}
+                  disabled={!table.getCanNextPage()}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
         </div>
       ) : null}
 

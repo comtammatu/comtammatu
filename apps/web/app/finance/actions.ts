@@ -52,8 +52,8 @@ const createInvoiceSchema = z
 
 /**
  * Create a draft tax invoice for an order.
- * In production, this would call MISA meInvoice API to sign and submit.
- * For MVP, we create the draft and mark it as issued (mock MISA integration).
+ * In production, this calls the configured HĐĐT provider. The canonical
+ * provider for Cơm Tấm Má Tư is Viettel S-invoice.
  */
 export async function createTaxInvoice(
   input: z.infer<typeof createInvoiceSchema>,
@@ -185,9 +185,9 @@ export async function createTaxInvoice(
     vatAmount = orderTotal - subtotal;
   }
 
-  // D4 short-circuit (owner 2026-04-26): no MST → skip MISA call, insert
+  // D4 short-circuit (owner 2026-04-26): no MST → skip provider call, insert
   // an audit row with status='not_required'. Khách comp meal / khách lẻ
-  // không yêu cầu HĐĐT thì không tốn MISA quota; nếu sau này khách quay
+  // không yêu cầu HĐĐT thì không tốn provider quota; nếu sau này khách quay
   // lại nhập MST, createTaxInvoice gọi lần nữa sẽ insert hóa đơn thật
   // (uq_tax_invoices_active_per_order loại trừ not_required).
   const buyerTaxCodeTrimmed = parsed.data.buyerTaxCode?.trim() ?? "";
@@ -235,7 +235,8 @@ export async function createTaxInvoice(
     return { success: true, data: skipInvoice };
   }
 
-  // Use provider interface — swap MISA/ViettelSinvoice without changing this code
+  // Use provider interface — defaulting to Viettel S-invoice, with explicit
+  // opt-in support for legacy MISA without changing this code.
   ensureInvoiceProviderRegistered();
   const invoiceProvider = getInvoiceProvider();
 
@@ -245,7 +246,7 @@ export async function createTaxInvoice(
   let providerData: Record<string, unknown> | undefined;
 
   // activeItems already computed above for VAT aggregation; the empty-
-  // items check still applies here (HĐĐT to MISA cannot have zero lines).
+  // items check still applies here (provider HĐĐT cannot have zero lines).
   if (activeItems.length === 0) {
     return {
       success: false,
@@ -391,7 +392,7 @@ export async function cancelTaxInvoice(
   // DB transition runs FIRST so that the app's source of truth flips
   // atomically to 'cancelled'. Provider cancel runs after — if it fails,
   // we surface a soft warning and rely on Finance to retry the provider
-  // call asynchronously (DB is already cancelled, no asymmetric "MISA
+  // call asynchronously (DB is already cancelled, no asymmetric "provider
   // cancelled but DB issued" state).
   const { error: rpcErr } = await supabase.rpc("transition_tax_invoice_state", {
     p_tax_invoice_id: parsed.data.invoiceId,

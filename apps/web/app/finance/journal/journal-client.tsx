@@ -262,7 +262,7 @@ export function JournalClient({ entries: initial, accounts }: Props) {
       </Card>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent size="2xl">
           <DialogHeader>
             <DialogTitle>{messages.finance.journal.createEntry}</DialogTitle>
           </DialogHeader>
@@ -356,7 +356,7 @@ export function JournalClient({ entries: initial, accounts }: Props) {
                               updateLine(i, "accountId", v)
                             }
                           >
-                            <SelectTrigger className="h-8">
+                            <SelectTrigger size="sm">
                               <SelectValue
                                 placeholder={
                                   messages.finance.journal.accountPlaceholder

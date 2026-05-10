@@ -29,6 +29,8 @@ export function resolveInventoryColorValue(
 const STATUS_BADGE_VARIANTS: Record<string, BadgeProps["variant"]> = {
   draft: "secondary",
   confirmed: "success",
+  confirmed_ship: "success",
+  confirmed_receive: "warning",
   sent: "info",
   partially_received: "warning",
   in_transit: "info",

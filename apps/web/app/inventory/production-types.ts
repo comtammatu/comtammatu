@@ -103,7 +103,7 @@ export function getProductionReadinessSummary({
         : readinessState === "missing-raw-material"
           ? "Chưa có nguyên liệu nào được gắn `item_kind = raw_material`, nên chưa thể lập công thức."
           : readinessState === "missing-recipe"
-            ? "Chưa có BOM sản xuất nào được cấu hình, nên chưa thể xác nhận lệnh."
+            ? "Chưa có công thức sản xuất nào được cấu hình, nên chưa thể xác nhận lệnh."
             : null;
 
   return {

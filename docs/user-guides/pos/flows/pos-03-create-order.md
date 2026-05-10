@@ -164,7 +164,7 @@ URL: `/br/{branchId}/pos` (sau khi chọn bàn hoặc tab Mang về)
 
 ### Tham chiếu thiết kế
 
-- Order lifecycle: [docs/plan/m2-order-lifecycle.md](../../../plan/m2-order-lifecycle.md)
+- Order lifecycle: [docs/archive/plan/m2-order-lifecycle.md](../../../archive/plan/m2-order-lifecycle.md)
 - KDS routing: [docs/modules/pos-kds.md](../../../modules/pos-kds/) (nếu có)
 
 ---

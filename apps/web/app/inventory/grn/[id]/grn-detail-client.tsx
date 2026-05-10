@@ -45,8 +45,13 @@ import {
 } from "lucide-react";
 import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { notify } from "@comtammatu/ui/lib/notify";
-import { Combobox } from "@/components/form";
-import { AppDetailFooter, AppPage, AppPageHeader, AppSection } from "@/components/surface";
+import { Combobox, MultiSelectCombobox } from "@/components/form";
+import {
+  AppDetailFooter,
+  AppPage,
+  AppPageHeader,
+  AppSection,
+} from "@/components/surface";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { AuditHistoryList } from "../../_components/audit-history-list";
 import type { AuditLogRow } from "@/admin/_lib/audit";
@@ -54,11 +59,7 @@ import { DocumentStockCorrectionDialog } from "../../_components/document-stock-
 import { FormattedNumberInput } from "../../_components/formatted-number-input";
 import { formatVND } from "../../_lib/format";
 import { confirmGrn } from "../../procurement-actions";
-import {
-  amendGrnLine,
-  deleteGrnLine,
-  upsertGrnLine,
-} from "../../grn-actions";
+import { amendGrnLine, deleteGrnLine, upsertGrnLine } from "../../grn-actions";
 import { tRoute } from "../../_lib/dictionary";
 import { m, messages } from "@lib/messages";
 import {
@@ -66,6 +67,7 @@ import {
   getInventoryStatusLabel,
 } from "../../_lib/ui";
 import type { IngredientRow } from "../../page";
+import { parseInventoryBulkLines } from "../../_lib/bulk-line-parser";
 
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 
@@ -125,6 +127,13 @@ export type GRNDetail = {
 };
 
 type EditableLine = GRNDetailItem & { dirty: boolean };
+
+type BulkGrnLineDraft = {
+  ingredient: IngredientRow;
+  quantity: number;
+  unit: string;
+  unitCost: number;
+};
 
 function deriveVariance(
   unitCost: number,
@@ -280,7 +289,6 @@ export function GRNDetailClient({
       if (existingIndex < 0) return [...prev, line];
       return prev.map((item, index) => (index === existingIndex ? line : item));
     });
-    router.refresh();
   }
 
   function validateBeforeConfirm(): string | null {
@@ -370,7 +378,10 @@ export function GRNDetailClient({
         eyebrow="Kho hàng"
         title={grn.code}
         description={`${grn.supplier} • ${grn.date}`}
-        badge={{ children: getInventoryStatusLabel(grn.status), variant: getInventoryStatusBadgeVariant(grn.status) }}
+        badge={{
+          children: getInventoryStatusLabel(grn.status),
+          variant: getInventoryStatusBadgeVariant(grn.status),
+        }}
         breadcrumb={
           <Link
             href={isMobile ? "/inventory/grn/new" : "/inventory/grn"}
@@ -390,187 +401,200 @@ export function GRNDetailClient({
           >
             <TabsContent value="overview" className="mt-4">
               <div className="space-y-6">
-          {isReview && isDraft ? (
-            <Alert>
-              <IconInfoCircle className="size-4" />
-              <AlertDescription>{grnCopy.draftSavedReviewHint}</AlertDescription>
-            </Alert>
-          ) : null}
+                {isReview && isDraft ? (
+                  <Alert>
+                    <IconInfoCircle className="size-4" />
+                    <AlertDescription>
+                      {grnCopy.draftSavedReviewHint}
+                    </AlertDescription>
+                  </Alert>
+                ) : null}
 
-          <div className="grid gap-3 md:grid-cols-4">
-            <SummaryCard label={grnCopy.linkedPo}>
-              {grn.poCode && grn.poId ? (
-                <Link
-                  href={`/inventory/purchase-orders/${grn.poId}`}
-                  className="text-primary hover:underline"
-                >
-                  {grn.poCode}
-                </Link>
-              ) : (
-                <span className="text-muted-foreground">
-                  {inventoryCommon.noValue}
-                </span>
-              )}
-            </SummaryCard>
-            <SummaryCard label={grnCopy.supplier}>{grn.supplier}</SummaryCard>
-            <SummaryCard label={grnCopy.totalReceivedValue}>
-              <span className="text-primary">
-                {inventoryCommon.currency(formatVND(stats.total))}
-              </span>
-            </SummaryCard>
-            <SummaryCard label={grnCopy.priceReviewNeeded}>
-              <span className={stats.reviewLines > 0 ? "text-destructive" : ""}>
-                {grnCopy.reviewRatio(stats.reviewLines, lines.length)}
-              </span>
-            </SummaryCard>
-          </div>
+                <div className="grid gap-3 md:grid-cols-4">
+                  <SummaryCard label={grnCopy.linkedPo}>
+                    {grn.poCode && grn.poId ? (
+                      <Link
+                        href={`/inventory/purchase-orders/${grn.poId}`}
+                        className="text-primary hover:underline"
+                      >
+                        {grn.poCode}
+                      </Link>
+                    ) : (
+                      <span className="text-muted-foreground">
+                        {inventoryCommon.noValue}
+                      </span>
+                    )}
+                  </SummaryCard>
+                  <SummaryCard label={grnCopy.supplier}>
+                    {grn.supplier}
+                  </SummaryCard>
+                  <SummaryCard label={grnCopy.totalReceivedValue}>
+                    <span className="text-primary">
+                      {inventoryCommon.currency(formatVND(stats.total))}
+                    </span>
+                  </SummaryCard>
+                  <SummaryCard label={grnCopy.priceReviewNeeded}>
+                    <span
+                      className={
+                        stats.reviewLines > 0 ? "text-destructive" : ""
+                      }
+                    >
+                      {grnCopy.reviewRatio(stats.reviewLines, lines.length)}
+                    </span>
+                  </SummaryCard>
+                </div>
 
-          <OverviewLinesPreview lines={lines} />
+                <OverviewLinesPreview lines={lines} />
               </div>
             </TabsContent>
 
             <TabsContent value="lines" className="mt-4">
               <div className="space-y-6">
-          <div className="grid gap-6 lg:grid-cols-3">
-            <div className="lg:col-span-2">
-              <AppSection
-                className="overflow-hidden"
-                title={grnCopy.inspectionItemsTitle}
-                description={
-                  isDraft
-                    ? grnCopy.draftToleranceHint(
-                        qc.qtyShortTolerancePct,
-                        qc.priceVarianceWarnPct,
-                        qc.priceVarianceReviewPct,
-                      )
-                    : grnCopy.finalizedLineCount(lines.length)
-                }
-                action={
-                  isDraft ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setAddDialogOpen(true)}
-                    >
-                      <IconPlus className="size-4" />
-                      {grnCopy.addLine}
-                    </Button>
-                  ) : null
-                }
-                contentClassName="space-y-4"
-              >
-                {lines.map((line, idx) => (
-                  <LineRow
-                    key={line.lineId}
-                    tenantId={grn.tenantId}
-                    grnId={grn.id}
-                    line={line}
-                    idx={idx}
-                    isDraft={isDraft}
-                    qc={qc}
-                    showAmendAffordance={showAmendAffordance}
-                    onChange={(p) => patch(idx, p)}
-                    onDelete={() => void handleDeleteLine(line)}
-                    onAmend={() => setAmendingLine(line)}
-                  />
-                ))}
-              </AppSection>
-            </div>
-
-            <div className="space-y-4">
-              <AppSection
-                size="sm"
-                title={grnCopy.qcSummary}
-                contentClassName="space-y-3 text-sm"
-              >
-                <Row
-                  label={grnCopy.acceptedLines}
-                  value={`${stats.acceptedLines}/${lines.length}`}
-                  tone="success"
-                />
-                <Row
-                  label={grnCopy.rejectedLines}
-                  value={String(stats.rejectedLines)}
-                  tone={stats.rejectedLines > 0 ? "warning" : "default"}
-                />
-                <Row
-                  label={grnCopy.priceReviewNeeded}
-                  value={String(stats.reviewLines)}
-                  tone={stats.reviewLines > 0 ? "warning" : "default"}
-                />
-              </AppSection>
-
-              <Card className="border-primary/20 bg-primary/5">
-                <CardContent className="space-y-3 pt-6">
-                  <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                    {grnCopy.totalStockValue}
-                  </p>
-                  <p className="text-2xl font-black tabular-nums text-primary">
-                    {inventoryCommon.currency(formatVND(stats.total))}
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-
-          <AppDetailFooter
-            leading={
-              <>
-                {!isDraft ? (
-                  <Button asChild variant="ghost">
-                    <Link
-                      href={
-                        isMobile
-                          ? "/inventory/grn/new"
-                          : grn.poId
-                            ? `/inventory/purchase-orders/${grn.poId}`
-                            : "/inventory/grn"
+                <div className="grid gap-6 lg:grid-cols-3">
+                  <div className="lg:col-span-2">
+                    <AppSection
+                      className="overflow-hidden"
+                      title={grnCopy.inspectionItemsTitle}
+                      description={
+                        isDraft
+                          ? grnCopy.draftToleranceHint(
+                              qc.qtyShortTolerancePct,
+                              qc.priceVarianceWarnPct,
+                              qc.priceVarianceReviewPct,
+                            )
+                          : grnCopy.finalizedLineCount(lines.length)
                       }
+                      action={
+                        isDraft ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setAddDialogOpen(true)}
+                          >
+                            <IconPlus className="size-4" />
+                            {grnCopy.addLine}
+                          </Button>
+                        ) : null
+                      }
+                      contentClassName="space-y-4"
                     >
-                      <IconArrowLeft className="size-5" />
-                      {grnCopy.back}
-                    </Link>
-                  </Button>
-                ) : null}
-                {!isDraft && canAdjustStock && lines.length > 0 ? (
-                  <DocumentStockCorrectionDialog
-                    documentType="grn"
-                    documentId={grn.id}
-                    documentCode={grn.code}
-                    branchOptions={[{ id: grn.branchId, name: grnCopy.receivingWarehouse }]}
-                    itemOptions={lines.map((line) => ({
-                      ingredientId: line.ingredientId,
-                      name: line.name,
-                      unit: line.unit,
-                    }))}
-                  />
-                ) : null}
-              </>
-            }
-            trailing={
-              isDraft ? (
-                <>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleSave}
-                    disabled={isSaving || dirtyLines.length === 0}
-                  >
-                    <IconDeviceFloppy className="size-5" />
-                    {grnCopy.saveChanges(dirtyLines.length)}
-                  </Button>
-                  <Button
-                    type="button"
-                    disabled={isConfirming || dirtyLines.length > 0}
-                    onClick={handleConfirmGrn}
-                  >
-                    <IconCircleCheck className="size-5" />
-                    {grnCopy.confirmGrnAction}
-                  </Button>
-                </>
-              ) : null
-            }
-          />
+                      {lines.map((line, idx) => (
+                        <LineRow
+                          key={line.lineId}
+                          tenantId={grn.tenantId}
+                          grnId={grn.id}
+                          line={line}
+                          idx={idx}
+                          isDraft={isDraft}
+                          qc={qc}
+                          showAmendAffordance={showAmendAffordance}
+                          onChange={(p) => patch(idx, p)}
+                          onDelete={() => void handleDeleteLine(line)}
+                          onAmend={() => setAmendingLine(line)}
+                        />
+                      ))}
+                    </AppSection>
+                  </div>
+
+                  <div className="space-y-4">
+                    <AppSection
+                      size="sm"
+                      title={grnCopy.qcSummary}
+                      contentClassName="space-y-3 text-sm"
+                    >
+                      <Row
+                        label={grnCopy.acceptedLines}
+                        value={`${stats.acceptedLines}/${lines.length}`}
+                        tone="success"
+                      />
+                      <Row
+                        label={grnCopy.rejectedLines}
+                        value={String(stats.rejectedLines)}
+                        tone={stats.rejectedLines > 0 ? "warning" : "default"}
+                      />
+                      <Row
+                        label={grnCopy.priceReviewNeeded}
+                        value={String(stats.reviewLines)}
+                        tone={stats.reviewLines > 0 ? "warning" : "default"}
+                      />
+                    </AppSection>
+
+                    <Card className="border-primary/20 bg-primary/5">
+                      <CardContent className="space-y-3 pt-6">
+                        <p className="text-xs uppercase tracking-wider text-muted-foreground">
+                          {grnCopy.totalStockValue}
+                        </p>
+                        <p className="text-2xl font-bold tabular-nums text-primary">
+                          {inventoryCommon.currency(formatVND(stats.total))}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </div>
+
+                <AppDetailFooter
+                  leading={
+                    <>
+                      {!isDraft ? (
+                        <Button asChild variant="ghost">
+                          <Link
+                            href={
+                              isMobile
+                                ? "/inventory/grn/new"
+                                : grn.poId
+                                  ? `/inventory/purchase-orders/${grn.poId}`
+                                  : "/inventory/grn"
+                            }
+                          >
+                            <IconArrowLeft className="size-5" />
+                            {grnCopy.back}
+                          </Link>
+                        </Button>
+                      ) : null}
+                      {!isDraft && canAdjustStock && lines.length > 0 ? (
+                        <DocumentStockCorrectionDialog
+                          documentType="grn"
+                          documentId={grn.id}
+                          documentCode={grn.code}
+                          branchOptions={[
+                            {
+                              id: grn.branchId,
+                              name: grnCopy.receivingWarehouse,
+                            },
+                          ]}
+                          itemOptions={lines.map((line) => ({
+                            ingredientId: line.ingredientId,
+                            name: line.name,
+                            unit: line.unit,
+                          }))}
+                        />
+                      ) : null}
+                    </>
+                  }
+                  trailing={
+                    isDraft ? (
+                      <>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handleSave}
+                          disabled={isSaving || dirtyLines.length === 0}
+                        >
+                          <IconDeviceFloppy className="size-5" />
+                          {grnCopy.saveChanges(dirtyLines.length)}
+                        </Button>
+                        <Button
+                          type="button"
+                          disabled={isConfirming || dirtyLines.length > 0}
+                          onClick={handleConfirmGrn}
+                        >
+                          <IconCircleCheck className="size-5" />
+                          {grnCopy.confirmGrnAction}
+                        </Button>
+                      </>
+                    ) : null
+                  }
+                />
               </div>
             </TabsContent>
 
@@ -587,6 +611,8 @@ export function GRNDetailClient({
         isPending={isSaving}
         onOpenChange={setAddDialogOpen}
         onSaved={upsertLocalLine}
+        existingIngredientIds={lines.map((line) => line.ingredientId)}
+        onRefresh={() => router.refresh()}
         startTransition={startSave}
       />
       <AmendOwnerDialog
@@ -720,9 +746,7 @@ function AmendOwnerDialog({
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="amend-qty">
-                  {grnCopy.amend.quantityLabel}
-                </Label>
+                <Label htmlFor="amend-qty">{grnCopy.amend.quantityLabel}</Label>
                 <FormattedNumberInput
                   id="amend-qty"
                   value={quantity}
@@ -784,6 +808,8 @@ function AddGrnLineDialog({
   isPending,
   onOpenChange,
   onSaved,
+  existingIngredientIds,
+  onRefresh,
   startTransition,
 }: {
   grn: GRNDetail;
@@ -792,6 +818,8 @@ function AddGrnLineDialog({
   isPending: boolean;
   onOpenChange: (open: boolean) => void;
   onSaved: (line: EditableLine) => void;
+  existingIngredientIds: readonly number[];
+  onRefresh: () => void;
   startTransition: TransitionStartFunction;
 }) {
   const [ingredientId, setIngredientId] = useState("");
@@ -800,6 +828,17 @@ function AddGrnLineDialog({
   const [unitCost, setUnitCost] = useState("");
   const [batchNumber, setBatchNumber] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
+  const [bulkPasteText, setBulkPasteText] = useState("");
+  const [bulkIssues, setBulkIssues] = useState<string[]>([]);
+
+  const activeIngredients = useMemo(
+    () => ingredients.filter((ingredient) => ingredient.is_active),
+    [ingredients],
+  );
+  const existingIngredientSet = useMemo(
+    () => new Set(existingIngredientIds),
+    [existingIngredientIds],
+  );
 
   function resetForm() {
     setIngredientId("");
@@ -808,6 +847,8 @@ function AddGrnLineDialog({
     setUnitCost("");
     setBatchNumber("");
     setExpiryDate("");
+    setBulkPasteText("");
+    setBulkIssues([]);
   }
 
   function handleIngredientChange(value: string) {
@@ -817,6 +858,147 @@ function AddGrnLineDialog({
     setUnitCost(
       ingredient?.unit_cost != null ? String(Number(ingredient.unit_cost)) : "",
     );
+  }
+
+  function getIngredientUnit(item: IngredientRow) {
+    return item.purchase_unit || item.unit || "";
+  }
+
+  function getIngredientCost(item: IngredientRow) {
+    return item.unit_cost != null ? Number(item.unit_cost) : 0;
+  }
+
+  function toBulkGrnLineDraft(
+    ingredient: IngredientRow,
+    quantityValue = 1,
+  ): BulkGrnLineDraft {
+    return {
+      ingredient,
+      quantity: quantityValue,
+      unit: getIngredientUnit(ingredient),
+      unitCost: getIngredientCost(ingredient),
+    };
+  }
+
+  function toEditableLine(
+    lineId: number,
+    draft: BulkGrnLineDraft,
+  ): EditableLine {
+    return {
+      lineId,
+      ingredientId: draft.ingredient.id,
+      name: draft.ingredient.name,
+      sku: draft.ingredient.sku ?? "",
+      poQuantity: null,
+      poUnitPrice: null,
+      required: draft.quantity,
+      actual: draft.quantity,
+      accepted: draft.quantity,
+      rejected: 0,
+      rejectionReason: "",
+      rejectedPhotoUrl: "",
+      priceOverrideNote: "",
+      priceOverridePhotoUrl: "",
+      priceVariancePct: null,
+      requiresReview: false,
+      shortDeliveryAction: null,
+      unit: draft.unit,
+      cost: draft.unitCost,
+      lot: "",
+      expiry: "",
+      expiryDisplay: inventoryCommon.noValue,
+      temp: null,
+      qualityStatus: "accepted",
+      status: "pass",
+      dirty: false,
+    };
+  }
+
+  function handleBulkAddIngredients(ingredientIds: string[]) {
+    setBulkIssues([]);
+    const drafts = ingredientIds
+      .map((id) => activeIngredients.find((item) => item.id === Number(id)))
+      .filter((ingredient): ingredient is IngredientRow => Boolean(ingredient))
+      .filter((ingredient) => !existingIngredientSet.has(ingredient.id))
+      .map((ingredient) => toBulkGrnLineDraft(ingredient));
+
+    handleSaveBulkLines(drafts);
+  }
+
+  function handleBulkPaste() {
+    const result = parseInventoryBulkLines({
+      text: bulkPasteText,
+      items: activeIngredients,
+      getUnit: getIngredientUnit,
+    });
+    const skippedExisting = result.parsed.filter(({ item }) =>
+      existingIngredientSet.has(item.id),
+    );
+    const draftsByIngredient = new Map<number, BulkGrnLineDraft>();
+    for (const { item, quantity } of result.parsed) {
+      if (existingIngredientSet.has(item.id)) continue;
+      draftsByIngredient.set(
+        item.id,
+        toBulkGrnLineDraft(item, Number(quantity)),
+      );
+    }
+
+    setBulkIssues([
+      ...result.issues,
+      ...skippedExisting.map(({ item }) =>
+        grnCopy.addDialog.alreadyExists(item.name),
+      ),
+    ]);
+
+    const drafts = [...draftsByIngredient.values()];
+    if (drafts.length === 0) {
+      notify.error(messages.inventory.common.bulk.noValidRows);
+      return;
+    }
+
+    handleSaveBulkLines(drafts);
+  }
+
+  function handleSaveBulkLines(drafts: BulkGrnLineDraft[]) {
+    if (drafts.length === 0) return;
+
+    startTransition(async () => {
+      let okCount = 0;
+      for (const draft of drafts) {
+        if (draft.quantity < 0 || !draft.unit.trim()) continue;
+        const res = await upsertGrnLine({
+          grnId: grn.id,
+          ingredientId: draft.ingredient.id,
+          receivedQuantity: draft.quantity,
+          unit: draft.unit.trim(),
+          unitCost: draft.unitCost,
+          qualityStatus: "accepted",
+          rejectedQuantity: 0,
+          rejectionReason: null,
+          rejectedPhotoUrl: null,
+          priceOverrideNote: null,
+          priceOverridePhotoUrl: null,
+          shortDeliveryAction: null,
+          batchNumber: null,
+          expiryDate: null,
+        });
+        if (!res.success || !res.data) {
+          notify.error(res.error ?? grnCopy.saveLineFailed);
+          continue;
+        }
+
+        const row = res.data as { id: number };
+        onSaved(toEditableLine(row.id, draft));
+        okCount++;
+      }
+
+      if (okCount > 0) {
+        notify.success(messages.inventory.common.bulk.importedRows(okCount));
+        onRefresh();
+        onOpenChange(false);
+        resetForm();
+      }
+    });
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -897,6 +1079,7 @@ function AddGrnLineDialog({
         dirty: false,
       });
       notify.success(grnCopy.addDialog.success);
+      onRefresh();
       onOpenChange(false);
       resetForm();
     });
@@ -910,11 +1093,71 @@ function AddGrnLineDialog({
         if (!open) resetForm();
       }}
     >
-      <DialogContent>
+      <DialogContent size="2xl">
         <DialogHeader>
           <DialogTitle>{grnCopy.addDialog.title}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
+            <div className="space-y-1">
+              <p className="text-sm font-semibold">{grnCopy.quickAddTitle}</p>
+              <p className="text-xs text-muted-foreground">
+                {grnCopy.quickAddDescription}
+              </p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <MultiSelectCombobox
+                options={activeIngredients.map((ingredient) => ({
+                  value: String(ingredient.id),
+                  label: ingredient.name,
+                  hint: getIngredientUnit(ingredient),
+                  alreadySelected: existingIngredientSet.has(ingredient.id),
+                  keywords: [ingredient.sku ?? "", ingredient.category ?? ""],
+                }))}
+                onConfirm={handleBulkAddIngredients}
+                triggerLabel={
+                  messages.inventory.common.bulk.chooseManyIngredients
+                }
+                confirmLabel={messages.inventory.common.bulk.addIngredients}
+                searchPlaceholder={
+                  messages.inventory.common.bulk.searchItemsByNameOrSku
+                }
+                triggerClassName="w-full border-dashed"
+                disabled={isPending}
+              />
+              <div className="space-y-2">
+                <Textarea
+                  value={bulkPasteText}
+                  onChange={(event) => setBulkPasteText(event.target.value)}
+                  rows={3}
+                  placeholder={messages.inventory.common.bulk.pastePlaceholder}
+                  disabled={isPending}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleBulkPaste}
+                  disabled={isPending || !bulkPasteText.trim()}
+                >
+                  {messages.inventory.common.bulk.applyList}
+                </Button>
+              </div>
+            </div>
+            {bulkIssues.length > 0 ? (
+              <div className="space-y-1 text-xs text-warning-foreground">
+                <p>
+                  {messages.inventory.common.bulk.rowsNeedReview(
+                    bulkIssues.length,
+                  )}
+                </p>
+                {bulkIssues.slice(0, 3).map((issue) => (
+                  <p key={issue}>{issue}</p>
+                ))}
+              </div>
+            ) : null}
+          </div>
+
           <div className="flex flex-col gap-1.5">
             <Label>{grnCopy.addDialog.ingredientLabel}</Label>
             <Combobox
@@ -1106,7 +1349,11 @@ function OverviewLinesPreview({ lines }: { lines: GRNDetailItem[] }) {
               (variance != null && Math.abs(variance) > 10);
             const isRejected = line.qualityStatus === "rejected";
             const statusVariant: "destructive" | "warning" | "success" =
-              isRejected ? "destructive" : reviewFlagged ? "warning" : "success";
+              isRejected
+                ? "destructive"
+                : reviewFlagged
+                  ? "warning"
+                  : "success";
             const statusLabel = isRejected
               ? grnCopy.rejectedLines
               : reviewFlagged
@@ -1226,72 +1473,72 @@ function LineRow({
     return (
       <Card className="bg-muted/30">
         <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="font-bold">{line.name}</p>
-            <p className="text-xs text-muted-foreground">
-              {grnCopy.line.orderedDeliveredAccepted(
-                line.required,
-                line.actual,
-                line.actual - line.rejected,
-                line.rejected,
-                line.unit,
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="font-bold">{line.name}</p>
+              <p className="text-xs text-muted-foreground">
+                {grnCopy.line.orderedDeliveredAccepted(
+                  line.required,
+                  line.actual,
+                  line.actual - line.rejected,
+                  line.rejected,
+                  line.unit,
+                )}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {showAmendAffordance ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={onAmend}
+                >
+                  {grnCopy.amend.action}
+                </Button>
+              ) : null}
+              {line.qualityStatus === "rejected" || line.rejected > 0 ? (
+                <IconAlertTriangle className="size-5 text-warning" />
+              ) : (
+                <IconCircleCheck className="size-5 text-success" />
               )}
+            </div>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-2 text-xs md:grid-cols-4">
+            <Stat label={grnCopy.line.importPrice}>
+              {inventoryCommon.currency(formatVND(line.cost))}
+            </Stat>
+            <Stat label={grnCopy.line.poPrice}>
+              {line.poUnitPrice != null
+                ? inventoryCommon.currency(formatVND(line.poUnitPrice))
+                : inventoryCommon.noValue}
+            </Stat>
+            <Stat label={grnCopy.line.priceVariance}>
+              <span className={varianceTone}>{variancesLabel}</span>
+            </Stat>
+            <Stat label={grnCopy.line.expiry}>{line.expiryDisplay}</Stat>
+          </div>
+          {line.rejectionReason ? (
+            <p className="mt-2 text-xs text-muted-foreground">
+              <span className="font-semibold">
+                {grnCopy.line.rejectionReason}
+              </span>{" "}
+              {line.rejectionReason}
             </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {showAmendAffordance ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={onAmend}
-              >
-                {grnCopy.amend.action}
-              </Button>
-            ) : null}
-            {line.qualityStatus === "rejected" || line.rejected > 0 ? (
-              <IconAlertTriangle className="size-5 text-warning" />
-            ) : (
-              <IconCircleCheck className="size-5 text-success" />
-            )}
-          </div>
-        </div>
-        <div className="mt-3 grid grid-cols-2 gap-2 text-xs md:grid-cols-4">
-          <Stat label={grnCopy.line.importPrice}>
-            {inventoryCommon.currency(formatVND(line.cost))}
-          </Stat>
-          <Stat label={grnCopy.line.poPrice}>
-            {line.poUnitPrice != null
-              ? inventoryCommon.currency(formatVND(line.poUnitPrice))
-              : inventoryCommon.noValue}
-          </Stat>
-          <Stat label={grnCopy.line.priceVariance}>
-            <span className={varianceTone}>{variancesLabel}</span>
-          </Stat>
-          <Stat label={grnCopy.line.expiry}>{line.expiryDisplay}</Stat>
-        </div>
-        {line.rejectionReason ? (
-          <p className="mt-2 text-xs text-muted-foreground">
-            <span className="font-semibold">
-              {grnCopy.line.rejectionReason}
-            </span>{" "}
-            {line.rejectionReason}
-          </p>
-        ) : null}
-        {line.priceOverrideNote ? (
-          <p className="mt-1 text-xs text-muted-foreground">
-            <span className="font-semibold">
-              {grnCopy.line.priceOverrideReason}
-            </span>{" "}
-            {line.priceOverrideNote}
-          </p>
-        ) : null}
-        {line.requiresReview ? (
-          <Badge variant="destructive" className="mt-2">
-            {grnCopy.line.reviewNeeded}
-          </Badge>
-        ) : null}
+          ) : null}
+          {line.priceOverrideNote ? (
+            <p className="mt-1 text-xs text-muted-foreground">
+              <span className="font-semibold">
+                {grnCopy.line.priceOverrideReason}
+              </span>{" "}
+              {line.priceOverrideNote}
+            </p>
+          ) : null}
+          {line.requiresReview ? (
+            <Badge variant="destructive" className="mt-2">
+              {grnCopy.line.reviewNeeded}
+            </Badge>
+          ) : null}
         </CardContent>
       </Card>
     );
@@ -1301,189 +1548,199 @@ function LineRow({
   return (
     <Card>
       <CardContent className="space-y-3 p-4">
-      <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
-        <div>
-          <p className="font-bold">{line.name}</p>
-          <p className="text-xs text-muted-foreground">
-            {grnCopy.line.orderedPoPrice(
-              line.poQuantity ?? inventoryCommon.noValue,
-              line.unit,
-            )}{" "}
-            {line.poUnitPrice != null
-              ? inventoryCommon.currency(formatVND(line.poUnitPrice))
-              : inventoryCommon.noValue}
-          </p>
+        <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="font-bold">{line.name}</p>
+            <p className="text-xs text-muted-foreground">
+              {grnCopy.line.orderedPoPrice(
+                line.poQuantity ?? inventoryCommon.noValue,
+                line.unit,
+              )}{" "}
+              {line.poUnitPrice != null
+                ? inventoryCommon.currency(formatVND(line.poUnitPrice))
+                : inventoryCommon.noValue}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={`text-sm ${varianceTone}`}>
+              {grnCopy.line.priceVariance}: {variancesLabel}
+            </span>
+            {line.dirty ? (
+              <Badge variant="outline" className="text-xs">
+                {grnCopy.line.unsaved}
+              </Badge>
+            ) : null}
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={onDelete}
+              className="text-muted-foreground hover:text-destructive"
+              aria-label={grnCopy.line.deleteLineAria}
+            >
+              <IconTrash className="size-4" />
+            </Button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className={`text-sm ${varianceTone}`}>
-            {grnCopy.line.priceVariance}: {variancesLabel}
-          </span>
-          {line.dirty ? (
-            <Badge variant="outline" className="text-xs">
-              {grnCopy.line.unsaved}
-            </Badge>
-          ) : null}
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={onDelete}
-            className="text-muted-foreground hover:text-destructive"
-            aria-label={grnCopy.line.deleteLineAria}
-          >
-            <IconTrash className="size-4" />
-          </Button>
-        </div>
-      </div>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Field id={`actual-${idx}`} label={grnCopy.line.actualLabel(line.unit)}>
-          <FormattedNumberInput
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <Field
             id={`actual-${idx}`}
-            maxFractionDigits={3}
-            value={String(line.actual)}
-            onValueChange={(value) => onChange({ actual: Number(value || 0) })}
-          />
-        </Field>
-        <Field
-          id={`rejected-${idx}`}
-          label={grnCopy.line.rejectedLabel(line.unit)}
-        >
-          <FormattedNumberInput
-            id={`rejected-${idx}`}
-            maxFractionDigits={3}
-            value={String(line.rejected)}
-            onValueChange={(value) =>
-              onChange({
-                rejected: Number(value || 0),
-                qualityStatus:
-                  Number(value || 0) > 0 && line.actual === 0
-                    ? "rejected"
-                    : Number(value || 0) > 0
-                      ? "partial"
-                      : "accepted",
-              })
-            }
-          />
-        </Field>
-        <Field id={`cost-${idx}`} label={grnCopy.line.unitCostCurrency}>
-          <FormattedNumberInput
-            id={`cost-${idx}`}
-            maxFractionDigits={0}
-            value={String(line.cost)}
-            onValueChange={(value) => onChange({ cost: Number(value || 0) })}
-          />
-        </Field>
-        <Field id={`expiry-${idx}`} label={grnCopy.line.expiry}>
-          <Input
-            id={`expiry-${idx}`}
-            type="date"
-            value={line.expiry || ""}
-            onChange={(e) => onChange({ expiry: e.target.value })}
-          />
-        </Field>
-      </div>
-
-      {line.rejected > 0 || line.qualityStatus === "rejected" ? (
-        <div className="grid gap-3 md:grid-cols-2">
-          <Field id={`reason-${idx}`} label={grnCopy.line.rejectReasonRequired}>
-            <Textarea
-              id={`reason-${idx}`}
-              rows={2}
-              value={line.rejectionReason}
-              placeholder={grnCopy.line.rejectReasonPlaceholder}
-              onChange={(e) => onChange({ rejectionReason: e.target.value })}
+            label={grnCopy.line.actualLabel(line.unit)}
+          >
+            <FormattedNumberInput
+              id={`actual-${idx}`}
+              maxFractionDigits={3}
+              value={String(line.actual)}
+              onValueChange={(value) =>
+                onChange({ actual: Number(value || 0) })
+              }
             />
           </Field>
           <Field
-            id={`reject-photo-${idx}`}
-            label={grnCopy.line.proofPhotoLabel(qc.rejectRequiresPhoto)}
+            id={`rejected-${idx}`}
+            label={grnCopy.line.rejectedLabel(line.unit)}
           >
-            <PhotoUploadInput
-              tenantId={tenantId}
-              folder={`grn/${grnId}/rejected/${line.lineId}`}
-              value={line.rejectedPhotoUrl || null}
-              onChange={(url) => onChange({ rejectedPhotoUrl: url ?? "" })}
+            <FormattedNumberInput
+              id={`rejected-${idx}`}
+              maxFractionDigits={3}
+              value={String(line.rejected)}
+              onValueChange={(value) =>
+                onChange({
+                  rejected: Number(value || 0),
+                  qualityStatus:
+                    Number(value || 0) > 0 && line.actual === 0
+                      ? "rejected"
+                      : Number(value || 0) > 0
+                        ? "partial"
+                        : "accepted",
+                })
+              }
+            />
+          </Field>
+          <Field id={`cost-${idx}`} label={grnCopy.line.unitCostCurrency}>
+            <FormattedNumberInput
+              id={`cost-${idx}`}
+              maxFractionDigits={0}
+              value={String(line.cost)}
+              onValueChange={(value) => onChange({ cost: Number(value || 0) })}
+            />
+          </Field>
+          <Field id={`expiry-${idx}`} label={grnCopy.line.expiry}>
+            <Input
+              id={`expiry-${idx}`}
+              type="date"
+              value={line.expiry || ""}
+              onChange={(e) => onChange({ expiry: e.target.value })}
             />
           </Field>
         </div>
-      ) : null}
 
-      {variance != null && Math.abs(variance) > qc.priceVarianceWarnPct ? (
-        <div className="grid gap-3 md:grid-cols-2">
-          <Field
-            id={`override-${idx}`}
-            label={grnCopy.line.priceOverrideRequired}
-          >
-            <Textarea
-              id={`override-${idx}`}
-              rows={2}
-              value={line.priceOverrideNote}
-              placeholder={
-                Math.abs(variance) > qc.priceVarianceReviewPct
-                  ? grnCopy.line.reviewVariancePlaceholder(
-                      variance,
-                      qc.priceVarianceReviewPct,
-                    )
-                  : grnCopy.line.warnVariancePlaceholder(
-                      variance,
-                      qc.priceVarianceWarnPct,
-                    )
-              }
-              onChange={(e) => onChange({ priceOverrideNote: e.target.value })}
-            />
-          </Field>
-          {Math.abs(variance) > qc.priceVarianceReviewPct ? (
+        {line.rejected > 0 || line.qualityStatus === "rejected" ? (
+          <div className="grid gap-3 md:grid-cols-2">
             <Field
-              id={`override-photo-${idx}`}
-              label={grnCopy.line.supplierInvoicePhoto}
+              id={`reason-${idx}`}
+              label={grnCopy.line.rejectReasonRequired}
+            >
+              <Textarea
+                id={`reason-${idx}`}
+                rows={2}
+                value={line.rejectionReason}
+                placeholder={grnCopy.line.rejectReasonPlaceholder}
+                onChange={(e) => onChange({ rejectionReason: e.target.value })}
+              />
+            </Field>
+            <Field
+              id={`reject-photo-${idx}`}
+              label={grnCopy.line.proofPhotoLabel(qc.rejectRequiresPhoto)}
             >
               <PhotoUploadInput
                 tenantId={tenantId}
-                folder={`grn/${grnId}/price-override/${line.lineId}`}
-                value={line.priceOverridePhotoUrl || null}
-                onChange={(url) =>
-                  onChange({ priceOverridePhotoUrl: url ?? "" })
+                folder={`grn/${grnId}/rejected/${line.lineId}`}
+                value={line.rejectedPhotoUrl || null}
+                onChange={(url) => onChange({ rejectedPhotoUrl: url ?? "" })}
+              />
+            </Field>
+          </div>
+        ) : null}
+
+        {variance != null && Math.abs(variance) > qc.priceVarianceWarnPct ? (
+          <div className="grid gap-3 md:grid-cols-2">
+            <Field
+              id={`override-${idx}`}
+              label={grnCopy.line.priceOverrideRequired}
+            >
+              <Textarea
+                id={`override-${idx}`}
+                rows={2}
+                value={line.priceOverrideNote}
+                placeholder={
+                  Math.abs(variance) > qc.priceVarianceReviewPct
+                    ? grnCopy.line.reviewVariancePlaceholder(
+                        variance,
+                        qc.priceVarianceReviewPct,
+                      )
+                    : grnCopy.line.warnVariancePlaceholder(
+                        variance,
+                        qc.priceVarianceWarnPct,
+                      )
+                }
+                onChange={(e) =>
+                  onChange({ priceOverrideNote: e.target.value })
                 }
               />
             </Field>
-          ) : null}
-        </div>
-      ) : null}
+            {Math.abs(variance) > qc.priceVarianceReviewPct ? (
+              <Field
+                id={`override-photo-${idx}`}
+                label={grnCopy.line.supplierInvoicePhoto}
+              >
+                <PhotoUploadInput
+                  tenantId={tenantId}
+                  folder={`grn/${grnId}/price-override/${line.lineId}`}
+                  value={line.priceOverridePhotoUrl || null}
+                  onChange={(url) =>
+                    onChange({ priceOverridePhotoUrl: url ?? "" })
+                  }
+                />
+              </Field>
+            ) : null}
+          </div>
+        ) : null}
 
-      {shortDeliveryRequired ? (
-        <Field id={`short-${idx}`} label={grnCopy.line.shortageAction}>
-          <Select
-            value={line.shortDeliveryAction ?? ""}
-            onValueChange={(v) =>
-              onChange({
-                shortDeliveryAction: v as EditableLine["shortDeliveryAction"],
-              })
-            }
-          >
-            <SelectTrigger id={`short-${idx}`}>
-              <SelectValue placeholder={grnCopy.line.shortagePlaceholder} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="accept_and_close">
-                {grnCopy.line.acceptAndClose}
-              </SelectItem>
-              <SelectItem value="wait_backorder">
-                {grnCopy.line.waitBackorder}
-              </SelectItem>
-            </SelectContent>
-          </Select>
+        {shortDeliveryRequired ? (
+          <Field id={`short-${idx}`} label={grnCopy.line.shortageAction}>
+            <Select
+              value={line.shortDeliveryAction ?? ""}
+              onValueChange={(v) =>
+                onChange({
+                  shortDeliveryAction: v as EditableLine["shortDeliveryAction"],
+                })
+              }
+            >
+              <SelectTrigger id={`short-${idx}`}>
+                <SelectValue placeholder={grnCopy.line.shortagePlaceholder} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="accept_and_close">
+                  {grnCopy.line.acceptAndClose}
+                </SelectItem>
+                <SelectItem value="wait_backorder">
+                  {grnCopy.line.waitBackorder}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
+        ) : null}
+
+        <Field id={`lot-${idx}`} label={grnCopy.line.lot}>
+          <Input
+            id={`lot-${idx}`}
+            value={line.lot}
+            placeholder={inventoryCommon.noValue}
+            onChange={(e) => onChange({ lot: e.target.value })}
+          />
         </Field>
-      ) : null}
-
-      <Field id={`lot-${idx}`} label={grnCopy.line.lot}>
-        <Input
-          id={`lot-${idx}`}
-          value={line.lot}
-          placeholder={inventoryCommon.noValue}
-          onChange={(e) => onChange({ lot: e.target.value })}
-        />
-      </Field>
       </CardContent>
     </Card>
   );

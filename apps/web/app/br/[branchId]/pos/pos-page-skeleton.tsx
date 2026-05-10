@@ -23,7 +23,7 @@ function PosPageSkeletonFallback() {
             <Skeleton className="h-10 flex-1" />
             <Skeleton className="h-10 flex-1" />
           </div>
-          <div className="grid flex-1 auto-rows-min grid-cols-2 gap-3 overflow-hidden sm:grid-cols-3 lg:grid-cols-4">
+          <div className="grid flex-1 auto-rows-min grid-cols-3 gap-2 overflow-hidden sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
             {Array.from({ length: 12 }).map((_, index) => (
               <Card key={index} size="sm">
                 <CardContent className="flex flex-col gap-2">
@@ -35,7 +35,7 @@ function PosPageSkeletonFallback() {
             ))}
           </div>
         </div>
-        <div className="hidden min-h-0 w-96 border-l border-border/60 p-3 md:flex md:flex-col">
+        <div className="hidden min-h-0 w-80 border-l border-border/60 p-3 md:flex md:flex-col">
           <Skeleton className="h-6 w-32" />
           <div className="mt-4 flex flex-col gap-3">
             {Array.from({ length: 4 }).map((_, index) => (
@@ -77,7 +77,7 @@ function PosPageSkeletonFixture() {
               Danh muc
             </div>
           </div>
-          <div className="grid flex-1 auto-rows-min grid-cols-2 gap-3 overflow-hidden sm:grid-cols-3 lg:grid-cols-4">
+          <div className="grid flex-1 auto-rows-min grid-cols-3 gap-2 overflow-hidden sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
             {Array.from({ length: 12 }).map((_, index) => (
               <Card key={index} size="sm">
                 <CardContent className="flex flex-col gap-2">
@@ -89,7 +89,7 @@ function PosPageSkeletonFixture() {
             ))}
           </div>
         </div>
-        <div className="hidden min-h-0 w-96 border-l border-border/60 p-3 md:flex md:flex-col">
+        <div className="hidden min-h-0 w-80 border-l border-border/60 p-3 md:flex md:flex-col">
           <p className="text-base font-semibold">Gio hang</p>
           <div className="mt-4 flex flex-col gap-3">
             {Array.from({ length: 4 }).map((_, index) => (

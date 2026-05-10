@@ -262,7 +262,7 @@ function mapReturnRpcError(raw: string | undefined): string {
   if (!raw) return "Không thể xử lý phiếu trả hàng NCC.";
   if (raw.includes("forbidden")) return "Không có quyền thực hiện thao tác này.";
   if (raw.includes("no_rejected_lines"))
-    return "GRN không có dòng nào bị từ chối — không thể tạo phiếu trả.";
+    return "Phiếu nhập không có dòng nào bị từ chối — không thể tạo phiếu trả.";
   if (raw.includes("return_not_draft"))
     return "Phiếu trả hàng đã được xác nhận trước đó.";
   if (raw.includes("insufficient_stock_for_return"))

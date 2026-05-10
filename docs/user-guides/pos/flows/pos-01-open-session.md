@@ -132,8 +132,8 @@ Ví dụ: `/br/1/pos`
 ### Tham chiếu thiết kế
 
 - Per-branch session migration: commit `0ccb059 feat(pos): per-branch session model + realtime sync (D7)`
-- Order lifecycle: [docs/plan/m2-order-lifecycle.md](../../../plan/m2-order-lifecycle.md)
-- UI page contracts: [docs/plan/ui-ux-page-contracts.md](../../../plan/ui-ux-page-contracts.md)
+- Order lifecycle: [docs/archive/plan/m2-order-lifecycle.md](../../../archive/plan/m2-order-lifecycle.md)
+- UI page contracts: [docs/archive/plan/ui-ux-page-contracts.md](../../../archive/plan/ui-ux-page-contracts.md)
 - Design system: [docs/spec/design-system.md](../../../spec/design-system.md)
 
 ---

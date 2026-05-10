@@ -92,7 +92,7 @@ export function MobileDraftsClient({ drafts }: { drafts: ServerDraftRow[] }) {
                       Cập nhật lúc {formatUpdatedAt(draft.updatedAt)}
                     </p>
                   </div>
-                  <Badge variant="outline" className="rounded-full px-3 py-1">
+                  <Badge variant="outline" size="lg">
                     {draft.lineCount} dòng
                   </Badge>
                 </div>

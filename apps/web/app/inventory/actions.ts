@@ -988,7 +988,7 @@ function buildIngredientSheets(
       name: "Nguyen lieu",
       columns: [
         { header: "Tên nguyên liệu", key: "name", width: 32 },
-        { header: "SKU", key: "sku", width: 14 },
+        { header: "Mã hàng", key: "sku", width: 14 },
         { header: "Đơn vị nhập", key: "purchase_unit", width: 14 },
         { header: "Đơn vị tính", key: "measure_unit", width: 14 },
         {
@@ -1251,7 +1251,7 @@ export async function importIngredients(
 
     const parsedRow = importIngredientRowSchema.safeParse({
       name: raw["Tên nguyên liệu"] ?? raw["name"],
-      sku: (raw["SKU"] ?? raw["sku"] ?? "").trim() || undefined,
+      sku: (raw["Mã hàng"] ?? raw["SKU"] ?? raw["sku"] ?? "").trim() || undefined,
       purchase_unit: raw["Đơn vị nhập"] ?? raw["purchase_unit"],
       measure_unit: raw["Đơn vị tính"] ?? raw["measure_unit"],
       purchase_to_measure_factor:
@@ -1332,8 +1332,8 @@ export async function importIngredients(
     if (dupIdx != null) {
       issues.push({
         row: rowNumber,
-        field: "SKU",
-        message: `SKU "${row.sku}" trùng với dòng ${dupIdx} trong file.`,
+        field: "Mã hàng",
+        message: `Mã hàng "${row.sku}" trùng với dòng ${dupIdx} trong file.`,
       });
       return;
     }
@@ -1342,8 +1342,8 @@ export async function importIngredients(
     if (existingName && existingName !== row.name) {
       issues.push({
         row: rowNumber,
-        field: "SKU",
-        message: `SKU "${row.sku}" đã thuộc về nguyên liệu "${existingName}". Đổi SKU hoặc dùng đúng tên.`,
+        field: "Mã hàng",
+        message: `Mã hàng "${row.sku}" đã thuộc về nguyên liệu "${existingName}". Đổi mã hàng hoặc dùng đúng tên.`,
       });
     }
   });
@@ -1351,7 +1351,7 @@ export async function importIngredients(
   if (issues.length > 0) {
     return {
       success: false,
-      error: `Có ${issues.length} dòng SKU trùng. Vui lòng sửa và thử lại.`,
+      error: `Có ${issues.length} dòng mã hàng trùng. Vui lòng sửa và thử lại.`,
       issues,
     };
   }
@@ -1365,7 +1365,7 @@ export async function importIngredients(
       return {
         success: false,
         error:
-          "Trùng dữ liệu với nguyên liệu đang có. Vui lòng kiểm tra tên và SKU.",
+          "Trùng dữ liệu với nguyên liệu đang có. Vui lòng kiểm tra tên và mã hàng.",
       };
     }
     if (error.code === "PGRST204" || error.code === "42703") {

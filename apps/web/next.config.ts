@@ -1,7 +1,27 @@
 import type { NextConfig } from "next";
 import { resolve } from "node:path";
 
+const isDev = process.env.NODE_ENV !== "production";
+const contentSecurityPolicy = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "object-src 'none'",
+  "frame-ancestors 'none'",
+  "form-action 'self'",
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https://*.supabase.co",
+  "font-src 'self' data:",
+  [
+    "connect-src 'self'",
+    "https://*.supabase.co",
+    "wss://*.supabase.co",
+    ...(isDev ? ["http://localhost:*", "ws://localhost:*"] : []),
+  ].join(" "),
+].join("; ");
+
 const nextConfig: NextConfig = {
+  poweredByHeader: false,
   transpilePackages: [
     "@comtammatu/shared",
     "@comtammatu/database",
@@ -43,6 +63,36 @@ const nextConfig: NextConfig = {
     // Per-icon tree-shaking for lucide-react. Without this, importing
     // any lucide icon pulls the full barrel into route bundles.
     optimizePackageImports: ["lucide-react"],
+  },
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          {
+            key: "Content-Security-Policy",
+            value: contentSecurityPolicy,
+          },
+          {
+            key: "X-Frame-Options",
+            value: "DENY",
+          },
+          {
+            key: "X-Content-Type-Options",
+            value: "nosniff",
+          },
+          {
+            key: "Referrer-Policy",
+            value: "strict-origin-when-cross-origin",
+          },
+          {
+            key: "Permissions-Policy",
+            value:
+              "camera=(), microphone=(), geolocation=(), payment=(), usb=(), bluetooth=()",
+          },
+        ],
+      },
+    ];
   },
 };
 

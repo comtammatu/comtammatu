@@ -25,7 +25,11 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { Trash as IconTrash } from "lucide-react";
 import { cn } from "@comtammatu/ui";
 import { SearchableSelect } from "@/inventory/_components/searchable-select";
-import { WasteReasonDropdown, isAlwaysTier2Reason, isRiskyReason } from "@/inventory/_components/waste-reason-dropdown";
+import {
+  WasteReasonDropdown,
+  isAlwaysTier2Reason,
+  isRiskyReason,
+} from "@/inventory/_components/waste-reason-dropdown";
 import { WasteTierBadge } from "@/inventory/_components/waste-tier-badge";
 import { WastePhotoUpload } from "@/inventory/_components/waste-photo-upload";
 import { ShiftCapMeter } from "@/inventory/_components/shift-cap-meter";
@@ -33,9 +37,11 @@ import { BranchDailyCapBanner } from "@/inventory/_components/branch-daily-cap-b
 import { AntiSplitRollingMeter } from "@/inventory/_components/anti-split-rolling-meter";
 import { createWasteEntry } from "@/inventory/waste-actions";
 import { formatVND } from "@comtammatu/shared/format";
-import { FormattedNumberInput } from "@/components/form";
+import { WASTE_REASON_LABELS_VI } from "@comtammatu/shared/labels";
+import { FormattedNumberInput, MultiSelectCombobox } from "@/components/form";
 import { messages } from "@lib/messages";
 import { AppPage, AppPageHeader } from "@/components/surface";
+import { parseInventoryBulkLines } from "../../_lib/bulk-line-parser";
 
 /* ─── Context shape from server component ─── */
 
@@ -73,8 +79,7 @@ function previewTier(line: {
   branchCap: number;
 }): { tier: 0 | 1 | 2; photoRequired: boolean; approvalRequired: boolean } {
   const photoRequired =
-    line.value >= TIER_1_VALUE ||
-    isRiskyReason(line.reasonCode);
+    line.value >= TIER_1_VALUE || isRiskyReason(line.reasonCode);
   const approvalRequired =
     line.value >= TIER_2_VALUE ||
     isAlwaysTier2Reason(line.reasonCode) ||
@@ -97,7 +102,9 @@ type LineState = {
   photoUrls: string[];
 };
 
-function newLine(): LineState {
+type WasteReason = keyof typeof WASTE_REASON_LABELS_VI;
+
+function newLine(patch: Partial<LineState> = {}): LineState {
   return {
     uid: Math.random().toString(36).slice(2, 10),
     ingredientId: null,
@@ -107,7 +114,19 @@ function newLine(): LineState {
     reasonCode: "",
     note: "",
     photoUrls: [],
+    ...patch,
   };
+}
+
+function isBlankWasteLine(line: LineState) {
+  return (
+    line.ingredientId === null &&
+    !line.quantity &&
+    !line.unitCost &&
+    !line.reasonCode &&
+    !line.note &&
+    line.photoUrls.length === 0
+  );
 }
 
 export function WasteCreateClient({ context }: { context: WasteFormContext }) {
@@ -117,6 +136,9 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
   );
   const [formNotes, setFormNotes] = useState("");
   const [lines, setLines] = useState<LineState[]>(() => [newLine()]);
+  const [bulkPasteText, setBulkPasteText] = useState("");
+  const [bulkIssues, setBulkIssues] = useState<string[]>([]);
+  const [bulkReasonCode, setBulkReasonCode] = useState<WasteReason | "">("");
   const [isSubmitting, startSubmit] = useTransition();
 
   const ingredientOptions = useMemo(
@@ -150,11 +172,111 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
   }
 
   function removeLine(uid: string) {
-    setLines((prev) => (prev.length <= 1 ? prev : prev.filter((l) => l.uid !== uid)));
+    setLines((prev) =>
+      prev.length <= 1 ? prev : prev.filter((l) => l.uid !== uid),
+    );
   }
 
   function addLine() {
     setLines((prev) => [...prev, newLine()]);
+  }
+
+  function appendBulkLines(nextLines: LineState[]) {
+    if (nextLines.length === 0) return;
+    setLines((prev) => [
+      ...prev.filter((line) => !isBlankWasteLine(line)),
+      ...nextLines,
+    ]);
+  }
+
+  function toWasteLine(
+    ingredient: WasteFormContext["ingredients"][number],
+    quantity = "",
+    note = "",
+  ): LineState {
+    return newLine({
+      ingredientId: ingredient.id,
+      unit: ingredient.unit,
+      unitCost:
+        ingredient.unitCost !== null && ingredient.unitCost !== undefined
+          ? String(ingredient.unitCost)
+          : "",
+      quantity,
+      reasonCode: bulkReasonCode,
+      note,
+    });
+  }
+
+  function handleBulkAddIngredients(ingredientIds: string[]) {
+    setBulkIssues([]);
+    const existing = new Set(
+      lines
+        .map((line) => line.ingredientId)
+        .filter((id): id is number => id !== null),
+    );
+    const nextLines = ingredientIds
+      .map((id) => ingredientById.get(Number(id)))
+      .filter(
+        (ingredient): ingredient is WasteFormContext["ingredients"][number] =>
+          Boolean(ingredient),
+      )
+      .filter((ingredient) => !existing.has(ingredient.id))
+      .map((ingredient) => toWasteLine(ingredient));
+
+    appendBulkLines(nextLines);
+    if (nextLines.length > 0) {
+      toast.success(
+        messages.inventory.common.bulk.importedRows(nextLines.length),
+      );
+    }
+  }
+
+  function handleBulkPaste() {
+    const existing = new Set(
+      lines
+        .map((line) => line.ingredientId)
+        .filter((id): id is number => id !== null),
+    );
+    const result = parseInventoryBulkLines({
+      text: bulkPasteText,
+      items: context.ingredients,
+      getUnit: (item) => item.unit,
+    });
+    const skippedExisting = result.parsed.filter(({ item }) =>
+      existing.has(item.id),
+    );
+    const nextByIngredient = new Map<number, LineState>();
+    for (const { item, quantity, note } of result.parsed) {
+      if (existing.has(item.id)) continue;
+      nextByIngredient.set(item.id, toWasteLine(item, quantity, note));
+    }
+
+    setBulkIssues([
+      ...result.issues,
+      ...skippedExisting.map(({ item }) =>
+        messages.inventory.waste.alreadyInSlip(item.name),
+      ),
+    ]);
+
+    const nextLines = [...nextByIngredient.values()];
+    if (nextLines.length === 0) {
+      toast.error(messages.inventory.common.bulk.noValidRows);
+      return;
+    }
+    appendBulkLines(nextLines);
+    setBulkPasteText("");
+    toast.success(
+      messages.inventory.common.bulk.importedRows(nextLines.length),
+    );
+  }
+
+  function applyBulkReasonToEmptyLines() {
+    if (!bulkReasonCode) return;
+    setLines((prev) =>
+      prev.map((line) =>
+        line.reasonCode ? line : { ...line, reasonCode: bulkReasonCode },
+      ),
+    );
   }
 
   function handleIngredientChange(uid: string, value: string) {
@@ -277,14 +399,18 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
         </CardHeader>
         <CardContent className="space-y-3">
           <div>
-            <Label htmlFor="waste-loc">{messages.inventory.waste.location}</Label>
+            <Label htmlFor="waste-loc">
+              {messages.inventory.waste.location}
+            </Label>
             <Select
               value={locationId !== null ? String(locationId) : ""}
               onValueChange={(v) => setLocationId(Number(v))}
               disabled={isSubmitting}
             >
               <SelectTrigger id="waste-loc">
-                <SelectValue placeholder={messages.inventory.waste.chooseLocation} />
+                <SelectValue
+                  placeholder={messages.inventory.waste.chooseLocation}
+                />
               </SelectTrigger>
               <SelectContent>
                 {context.locations.map((l) => (
@@ -306,6 +432,98 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
               disabled={isSubmitting}
               rows={2}
             />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">
+            {messages.inventory.waste.quickAddTitle}
+          </CardTitle>
+          <CardDescription>
+            {messages.inventory.waste.quickAddDescription}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="space-y-2">
+              <MultiSelectCombobox
+                options={context.ingredients.map((ingredient) => ({
+                  value: String(ingredient.id),
+                  label: ingredient.name,
+                  hint: ingredient.unit,
+                  alreadySelected: lines.some(
+                    (line) => line.ingredientId === ingredient.id,
+                  ),
+                }))}
+                onConfirm={handleBulkAddIngredients}
+                triggerLabel={
+                  messages.inventory.common.bulk.chooseManyIngredients
+                }
+                confirmLabel={messages.inventory.common.bulk.addIngredients}
+                searchPlaceholder={
+                  messages.inventory.common.bulk.searchIngredients
+                }
+                triggerClassName="w-full border-dashed"
+                disabled={isSubmitting}
+              />
+              <p className="text-xs text-muted-foreground">
+                {messages.inventory.waste.quickAddHint}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label>{messages.inventory.waste.bulkReasonLabel}</Label>
+              <WasteReasonDropdown
+                value={bulkReasonCode}
+                onChange={(value) => setBulkReasonCode(value)}
+                disabled={isSubmitting}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={isSubmitting || !bulkReasonCode}
+                onClick={applyBulkReasonToEmptyLines}
+              >
+                {messages.inventory.waste.applyReasonToEmpty}
+              </Button>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Textarea
+              value={bulkPasteText}
+              onChange={(event) => setBulkPasteText(event.target.value)}
+              rows={3}
+              placeholder={messages.inventory.common.bulk.pastePlaceholder}
+              disabled={isSubmitting}
+            />
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs text-muted-foreground">
+                {messages.inventory.waste.bulkPasteHint}
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={isSubmitting || !bulkPasteText.trim()}
+                onClick={handleBulkPaste}
+              >
+                {messages.inventory.common.bulk.applyList}
+              </Button>
+            </div>
+            {bulkIssues.length > 0 ? (
+              <div className="space-y-1 text-xs text-warning-foreground">
+                <p>
+                  {messages.inventory.common.bulk.rowsNeedReview(
+                    bulkIssues.length,
+                  )}
+                </p>
+                {bulkIssues.slice(0, 3).map((issue) => (
+                  <p key={issue}>{issue}</p>
+                ))}
+              </div>
+            ) : null}
           </div>
         </CardContent>
       </Card>
@@ -358,7 +576,9 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
                     <SearchableSelect
                       options={ingredientOptions}
                       value={
-                        line.ingredientId !== null ? String(line.ingredientId) : ""
+                        line.ingredientId !== null
+                          ? String(line.ingredientId)
+                          : ""
                       }
                       onValueChange={(v) => handleIngredientChange(line.uid, v)}
                       placeholder={messages.inventory.waste.chooseIngredient}
@@ -378,7 +598,9 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <Label htmlFor={`qty-${line.uid}`}>{FORM_VI.quantity}</Label>
+                      <Label htmlFor={`qty-${line.uid}`}>
+                        {FORM_VI.quantity}
+                      </Label>
                       <FormattedNumberInput
                         id={`qty-${line.uid}`}
                         maxFractionDigits={3}
@@ -411,13 +633,13 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
                   </div>
 
                   <div>
-                    <Label htmlFor={`reason-${line.uid}`}>{FORM_VI.reason}</Label>
+                    <Label htmlFor={`reason-${line.uid}`}>
+                      {FORM_VI.reason}
+                    </Label>
                     <WasteReasonDropdown
                       id={`reason-${line.uid}`}
                       value={line.reasonCode as never}
-                      onChange={(v) =>
-                        updateLine(line.uid, { reasonCode: v })
-                      }
+                      onChange={(v) => updateLine(line.uid, { reasonCode: v })}
                       disabled={isSubmitting}
                     />
                   </div>
@@ -448,7 +670,9 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
                     <Textarea
                       id={`note-${line.uid}`}
                       value={line.note}
-                      onChange={(e) => updateLine(line.uid, { note: e.target.value })}
+                      onChange={(e) =>
+                        updateLine(line.uid, { note: e.target.value })
+                      }
                       disabled={isSubmitting}
                       rows={2}
                     />

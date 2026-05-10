@@ -112,7 +112,7 @@ export function EmployeeFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent size="lg">
         <DialogHeader>
           <DialogTitle>Thêm hồ sơ nhân viên</DialogTitle>
         </DialogHeader>
@@ -197,7 +197,7 @@ export function EmployeeFormDialog({
             )}
           </FieldGroup>
 
-          <DialogFooter className="pt-6">
+          <DialogFooter spacing="form">
             <Button
               type="button"
               variant="outline"

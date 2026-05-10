@@ -98,10 +98,7 @@ const MenuItemButton = memo(function MenuItemButton({
       aria-disabled={blocked}
       aria-label={`${item.name}, ${formatVND(item.base_price)}`}
       className={cn(
-        // aspect-[4/5] giữ card scale theo width — không lấy min-h cố định
-        // gây quá cao trên mobile. iPhone 390px width → 2-col gap-3 → mỗi
-        // card ~181×226px, vừa scan-rộng nhưng không tốn dọc.
-        "group relative aspect-[4/5] h-auto min-w-0 w-full overflow-hidden p-0 text-left shadow-sm transition-transform hover:shadow-md active:scale-[0.97]",
+        "group relative aspect-square h-auto min-w-0 w-full overflow-hidden p-0 text-left shadow-sm transition-transform hover:shadow-md active:scale-[0.97]",
         sparseMenu && "md:aspect-[3/2]",
         blocked && "opacity-60 grayscale hover:shadow-sm",
       )}
@@ -116,14 +113,14 @@ const MenuItemButton = memo(function MenuItemButton({
             src={item.image_url}
             alt=""
             fill
-            sizes="(min-width: 1536px) 16vw, (min-width: 1280px) 22vw, (min-width: 640px) 33vw, 50vw"
+            sizes="(min-width: 1536px) 14vw, (min-width: 1280px) 18vw, (min-width: 640px) 24vw, 33vw"
             className="object-cover"
             loading="lazy"
             decoding="async"
           />
         ) : (
           <span className="flex h-full w-full items-center justify-center bg-muted/60">
-            <IconUtensils className="size-16 text-muted-foreground/30 md:size-20" />
+            <IconUtensils className="size-8 text-muted-foreground/30" />
           </span>
         )}
       </span>
@@ -134,8 +131,8 @@ const MenuItemButton = memo(function MenuItemButton({
       {/* Giá — góc trên phải, badge primary nổi với shadow. */}
       <span
         className={cn(
-          "absolute right-2 top-2 z-10 inline-flex items-center rounded-md bg-primary px-2 py-1 text-sm font-bold tabular-nums text-primary-foreground shadow-md md:right-3 md:top-3 md:text-base",
-          sparseMenu && "md:text-lg",
+          "absolute right-1.5 top-1.5 z-10 inline-flex items-center rounded-md bg-primary px-1.5 py-0.5 text-xs font-semibold tabular-nums text-primary-foreground shadow-md md:right-2 md:top-2 md:px-2 md:py-1 md:text-sm",
+          sparseMenu && "md:text-base",
         )}
       >
         {formatVND(item.base_price)}
@@ -145,7 +142,7 @@ const MenuItemButton = memo(function MenuItemButton({
       {limitBadgeLabel ? (
         <Badge
           variant={limitBadgeVariant}
-          className="absolute left-2 top-2 z-10 text-xs shadow-md md:left-3 md:top-3"
+          className="absolute left-1.5 top-1.5 z-10 text-xs shadow-md md:left-2 md:top-2"
         >
           {limitBadgeLabel}
         </Badge>
@@ -154,8 +151,8 @@ const MenuItemButton = memo(function MenuItemButton({
       {/* Tên món — overlay đáy ảnh, text trắng + drop-shadow chống lệch nền. */}
       <span
         className={cn(
-          "pos-text-overlay absolute inset-x-3 bottom-3 z-10 line-clamp-2 text-base font-bold leading-snug text-white md:inset-x-4 md:bottom-4 md:text-lg",
-          sparseMenu && "md:text-2xl",
+          "pos-text-overlay absolute inset-x-2 bottom-2 z-10 line-clamp-2 text-sm font-semibold leading-snug text-white md:inset-x-3 md:bottom-3 md:text-base",
+          sparseMenu && "md:text-xl",
         )}
       >
         {item.name}
@@ -172,10 +169,10 @@ const MenuItemGrid = memo(function MenuItemGrid({
   return (
     <div
       className={cn(
-        "grid grid-cols-2 gap-3",
+        "grid grid-cols-3 gap-2",
         sparseMenu
           ? "md:grid-cols-1"
-          : "sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4",
+          : "sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6",
       )}
     >
       {items.map((item) => (
@@ -297,10 +294,7 @@ function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
   }
 
   const searchInput = (
-    <InputGroup className="h-11 w-full md:max-w-md xl:w-64 xl:max-w-none xl:flex-none 2xl:w-72">
-      <InputGroupAddon>
-        <IconSearch />
-      </InputGroupAddon>
+    <InputGroup className="w-full md:max-w-md xl:w-64 xl:max-w-none xl:flex-none 2xl:w-72">
       <InputGroupInput
         id="pos-menu-search"
         value={query}
@@ -309,6 +303,9 @@ function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
         placeholder={messages.pos.menu.searchPlaceholder}
         aria-label={messages.pos.menu.searchAria}
       />
+      <InputGroupAddon>
+        <IconSearch />
+      </InputGroupAddon>
       {query.trim() !== "" && (
         <InputGroupAddon align="inline-end">
           <InputGroupButton
@@ -323,14 +320,6 @@ function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
     </InputGroup>
   );
 
-  // Tabs unified mobile + desktop: bỏ TabsList muted container, mỗi tab là 1
-  // chip standalone bg-muted/50 — active flip sang primary để nổi rõ. Badge
-  // số lượng (chỉ sm+) tự đảo màu khi tab active để không lẫn vào primary bg.
-  // QUAN TRỌNG: shadcn TabsTrigger default có `flex-1` (auto-stretch chia
-  // đều TabsList width) — phải dùng `!flex-none` để không bị ép kích thước,
-  // chip giữ width theo content và scroll ngang khi tràn.
-  const tabPillClassName =
-    "group/tab !flex-none h-11 gap-1.5 bg-muted/50 px-3 py-0 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm md:gap-2 md:px-4";
   const tabBadgeClassName =
     "hidden shrink-0 text-xs sm:inline-flex group-data-[state=active]/tab:border-primary-foreground/30 group-data-[state=active]/tab:bg-primary-foreground/15 group-data-[state=active]/tab:text-primary-foreground";
   const unifiedTabs = (
@@ -340,10 +329,12 @@ function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
       className="min-w-0 flex-1 gap-0 overflow-x-auto overflow-y-hidden xl:flex-1"
     >
       <TabsList
+        variant="pills"
+        size="touch"
         aria-label={messages.pos.menu.categoriesAria}
-        className="!h-auto w-max min-w-full !justify-start gap-1.5 !bg-transparent !p-0 md:gap-2"
+        className="w-max min-w-full"
       >
-        <TabsTrigger value={ALL_MENU_VALUE} className={tabPillClassName}>
+        <TabsTrigger value={ALL_MENU_VALUE}>
           {messages.pos.menu.all}
           <Badge variant="outline" className={tabBadgeClassName}>
             {allMenuItemCount}
@@ -353,7 +344,6 @@ function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
           <TabsTrigger
             key={category.id}
             value={String(category.id)}
-            className={tabPillClassName}
           >
             {category.name}
             <Badge variant="outline" className={tabBadgeClassName}>
@@ -369,7 +359,7 @@ function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
     <div className="flex min-h-0 flex-1 overflow-hidden bg-background">
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <div className="border-b border-border/60 bg-background px-2 py-2 md:px-5 md:py-4 lg:px-6">
-          {/* Mobile: 1 row — search-pill (size-11 rounded-full bg-muted/50) +
+          {/* Mobile: 1 row — search button + category pills.
               tab pills cùng style. Tap search → input + nút Hủy thay chỗ tabs. */}
           <div className="flex items-center gap-1.5 md:hidden">
             {isSearchActive ? (
@@ -378,8 +368,8 @@ function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
                 <Button
                   type="button"
                   variant="ghost"
-                  size="sm"
-                  className="h-11 shrink-0 px-3 text-sm font-semibold"
+                  size="touch"
+                  className="shrink-0 text-sm font-semibold"
                   onClick={cancelSearch}
                 >
                   {messages.pos.menu.cancel}
@@ -390,7 +380,8 @@ function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
                 <Button
                   type="button"
                   variant="ghost"
-                  className="h-11 shrink-0 bg-muted/50 px-3 text-muted-foreground hover:bg-muted"
+                  size="touch"
+                  className="shrink-0 bg-muted/50 text-muted-foreground hover:bg-muted"
                   aria-label={messages.pos.menu.searchAria}
                   onClick={openSearch}
                 >
@@ -408,16 +399,16 @@ function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
           </div>
         </div>
 
-        <ScrollArea className="min-h-0 flex-1 overflow-hidden">
+        <ScrollArea className="min-h-0 flex-1">
           {visibleItems.length > 0 && isAllMenuActive ? (
-            <div className="flex flex-col gap-5 px-2 pb-28 pt-2 md:gap-6 md:px-3 md:py-3 lg:px-4">
+            <div className="flex flex-col gap-3 px-2 pb-28 pt-2 md:gap-4 md:px-3 md:py-3 lg:px-4">
               {visibleCategories.map((category) => (
                 <section
                   key={category.id}
-                  className="flex min-w-0 flex-col gap-3"
+                  className="flex min-w-0 flex-col gap-2 md:gap-3"
                 >
-                  <div className="sticky top-0 z-10 -mx-2 flex min-w-0 items-center justify-between gap-3 bg-background/95 px-2 py-2 backdrop-blur md:static md:mx-0 md:bg-transparent md:px-0 md:py-0 md:backdrop-blur-none">
-                    <h2 className="font-heading truncate text-base font-bold text-foreground md:text-base md:font-semibold">
+                  <div className="sticky top-0 z-10 -mx-2 flex min-w-0 items-center justify-between gap-3 bg-background/95 px-2 py-1.5 backdrop-blur md:static md:mx-0 md:bg-transparent md:px-0 md:py-0 md:backdrop-blur-none">
+                    <h2 className="font-heading truncate text-base font-semibold text-foreground">
                       {category.name}
                     </h2>
                     <Badge variant="outline" className="shrink-0 text-sm">

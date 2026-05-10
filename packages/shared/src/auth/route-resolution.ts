@@ -17,8 +17,10 @@ export const INVENTORY_PROCUREMENT_PREFIXES = [
   "/inventory/purchase-orders",
   "/inventory/grn",
   "/inventory/supplier-invoices",
+  "/inventory/supplier-returns",
   "/inventory/recipes",
   "/inventory/receiving",
+  "/inventory/drafts",
   "/inventory/m/drafts",
   "/inventory/m/grn",
 ] as const;
@@ -83,6 +85,9 @@ export function isFeedbackPublicPath(pathname: string): boolean {
 export function resolveModuleFromPath(pathname: string): ModuleKey | null {
   const resolvedPathname = stripBetaPrefix(pathname);
 
+  if (resolvedPathname === "/portal" || resolvedPathname.startsWith("/portal/")) {
+    return "portal";
+  }
   if (resolvedPathname === "/admin" || resolvedPathname === "/admin/") {
     return "dashboard";
   }

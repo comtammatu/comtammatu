@@ -1,7 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Ellipsis as IconDots, Pencil as IconPencil, Trash as IconTrash, MapPin as IconMapPin } from "lucide-react";
+import {
+  Ellipsis as IconDots,
+  Pencil as IconPencil,
+  Trash as IconTrash,
+  MapPin as IconMapPin,
+} from "lucide-react";
 import { ACTIONS_VI, STATES_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -101,15 +106,15 @@ export function ZoneTable({ zones }: ZoneTableProps) {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => setEditZone(zone)}>
-                        <IconPencil className="mr-2 size-4" />
+                        <IconPencil />
                         {ACTIONS_VI.edit}
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
-                        className="text-destructive"
+                        variant="destructive"
                         onClick={() => setDeleteId(zone.id)}
                       >
-                        <IconTrash className="mr-2 size-4" />
+                        <IconTrash />
                         {ACTIONS_VI.delete}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -143,7 +148,9 @@ export function ZoneTable({ zones }: ZoneTableProps) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isPending}>{ACTIONS_VI.cancel}</AlertDialogCancel>
+            <AlertDialogCancel disabled={isPending}>
+              {ACTIONS_VI.cancel}
+            </AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={isPending}

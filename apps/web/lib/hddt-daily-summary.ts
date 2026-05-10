@@ -46,6 +46,7 @@ interface AggregateResult {
   vat_amount?: number;
   total_amount?: number;
   header_vat_rate?: number;
+  // Legacy RPC field name from the early MISA plan; payload is provider-neutral.
   line_items_for_misa?: BatchLineItem[];
 }
 
@@ -132,7 +133,7 @@ export async function executeSummaryRun(
       return { outcome: "failed", taxInvoiceId: invoiceId, error: msg };
     }
 
-    // Call MISA / provider
+    // Call configured provider (Viettel S-invoice is canonical for production).
     const providerResult = await provider.createInvoice({
       orderId: invoiceId,
       orderNumber: `SUMMARY-${branchId}-${summaryDate}`,

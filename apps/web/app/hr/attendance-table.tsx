@@ -20,7 +20,12 @@ import {
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import { BRANCH_VI, ERRORS_VI, FORM_VI, STAFF_VI } from "@comtammatu/shared/messages";
+import {
+  BRANCH_VI,
+  ERRORS_VI,
+  FORM_VI,
+  STAFF_VI,
+} from "@comtammatu/shared/messages";
 import {
   fetchAttendance,
   fetchAttendanceSummary,
@@ -328,7 +333,7 @@ function DetailView({
                   onValueChange={(v) => onStatusChange(record.id, v)}
                   disabled={isPending}
                 >
-                  <SelectTrigger className="h-7 w-28">
+                  <SelectTrigger size="xs" className="w-28">
                     <Badge
                       variant={STATUS_COLORS[record.status] ?? "secondary"}
                     >

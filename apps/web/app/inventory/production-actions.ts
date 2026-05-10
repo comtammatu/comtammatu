@@ -82,7 +82,7 @@ const productionRecipeLinesSchema = z
   .object({
     finishedGoodId: z.coerce.number().int().positive(),
     lines: z.array(productionRecipeLineUpsertSchema).min(1, {
-      error: "Cần ít nhất một nguyên liệu trong BOM.",
+      error: "Cần ít nhất một nguyên liệu trong công thức.",
     }),
   })
   .superRefine((value, ctx) => {
@@ -92,7 +92,7 @@ const productionRecipeLinesSchema = z
         ctx.addIssue({
           code: "custom",
           path: ["lines", index, "ingredientId"],
-          message: "Nguyên liệu bị trùng trong BOM.",
+          message: "Nguyên liệu bị trùng trong công thức.",
         });
       }
       seen.add(line.ingredientId);
@@ -422,7 +422,7 @@ function buildProductionRecipeSheets(
 ): SheetDef[] {
   return [
     {
-      name: "BOM san xuat",
+      name: "Cong thuc san xuat",
       columns: [
         { header: "Mã thành phẩm", key: "finished_good_id", width: 14 },
         { header: "Thành phẩm", key: "finished_good_name", width: 32 },
@@ -460,7 +460,7 @@ export async function exportProductionRecipes(
   if (!recipesRes.success) {
     return {
       success: false,
-      error: recipesRes.error ?? "Không thể tải BOM sản xuất.",
+      error: recipesRes.error ?? "Không thể tải công thức sản xuất.",
     };
   }
 
@@ -612,7 +612,7 @@ export async function importProductionRecipes(
       maxRowsPerSheet: MAX_ROWS_PER_SHEET,
     });
   } catch {
-    return { success: false, error: "Không đọc được file BOM sản xuất." };
+    return { success: false, error: "Không đọc được file công thức sản xuất." };
   }
 
   const sheet = parsed.sheets[0];
@@ -750,7 +750,7 @@ export async function importProductionRecipes(
       issues.push({
         row: rowNumber,
         field: "Nguyên liệu",
-        message: "Nguyên liệu bị trùng trong cùng một BOM sản xuất.",
+        message: "Nguyên liệu bị trùng trong cùng một công thức sản xuất.",
       });
       return;
     }
@@ -844,7 +844,7 @@ export async function importProductionRecipes(
     if (rpcError) {
       return {
         success: false,
-        error: `Không thể import BOM sản xuất "${group.finishedGoodName}".`,
+        error: `Không thể nhập công thức sản xuất "${group.finishedGoodName}".`,
       };
     }
   }
@@ -1214,13 +1214,19 @@ export const upsertProductionRecipeLines = withAction(
         error.code === PG_ERR.UNIQUE_VIOLATION ||
         message.includes("duplicate_ingredient")
       ) {
-        return { success: false, error: "Nguyên liệu bị trùng trong BOM." };
+        return {
+          success: false,
+          error: "Nguyên liệu bị trùng trong công thức.",
+        };
       }
       if (error.code === PG_ERR.INSUFFICIENT_PRIVILEGE) {
-        return { success: false, error: "Không có quyền lưu BOM sản xuất." };
+        return {
+          success: false,
+          error: "Không có quyền lưu công thức sản xuất.",
+        };
       }
       if (error.code === PG_ERR.INVALID_TEXT_REPRESENTATION) {
-        return { success: false, error: "Dữ liệu BOM chưa hợp lệ." };
+        return { success: false, error: "Dữ liệu công thức chưa hợp lệ." };
       }
       if (message.includes("finished_good_not_found")) {
         return { success: false, error: "Thành phẩm không còn hợp lệ." };
@@ -1228,7 +1234,7 @@ export const upsertProductionRecipeLines = withAction(
       if (message.includes("ingredient_not_found")) {
         return { success: false, error: "Có nguyên liệu không còn hợp lệ." };
       }
-      return { success: false, error: "Không thể lưu BOM sản xuất." };
+      return { success: false, error: "Không thể lưu công thức sản xuất." };
     }
 
     revalidatePath("/inventory/production");

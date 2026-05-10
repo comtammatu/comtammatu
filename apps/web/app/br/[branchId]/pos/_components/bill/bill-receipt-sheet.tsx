@@ -13,6 +13,7 @@ import type { ComponentType } from "react";
 import { formatVND } from "@comtammatu/shared/format";
 import { PAYMENT_METHOD_LABELS_VI } from "@comtammatu/shared/labels";
 import type { PaymentMethod } from "@comtammatu/shared/providers";
+import { buildVietQrEmvco } from "@comtammatu/shared/vietqr";
 import {
   Alert,
   AlertDescription,
@@ -223,11 +224,11 @@ function PaymentLoadingFixture() {
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-2">
-        <Button type="button" variant="default" className="h-20 flex-col gap-2">
+        <Button type="button" variant="default" size="choice">
           <IconCash data-icon="inline-start" />
           {PAYMENT_LOADING_TEXT.cash}
         </Button>
-        <Button type="button" variant="outline" className="h-20 flex-col gap-2">
+        <Button type="button" variant="outline" size="choice">
           <IconQrcode data-icon="inline-start" />
           {PAYMENT_LOADING_TEXT.qr}
         </Button>
@@ -246,10 +247,11 @@ function PaymentLoadingFixture() {
             <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">
               {PAYMENT_LOADING_TEXT.received}
             </span>
+            {/* Numeric input echo role — Rhythm Contract B: text-3xl + tabular-nums for cashier readout. h-12 is the touch-tier height (matches Button size="touch" min-h). */}
             <Input
               readOnly
               value="165000"
-              className="h-12 pl-28 pr-3 text-right text-lg font-semibold tabular-nums"
+              className="h-12 pl-28 pr-3 text-right text-3xl font-semibold tabular-nums"
             />
           </div>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -327,7 +329,11 @@ const RECEIPT_LOADING_ORDER: OrderData = {
   cash_received: null,
   cash_change: null,
   tables: { number: 2 },
-  branches: { name: "Chi nhánh Đất Đỏ", address: "Ấp Phước Sơn, Xã Đất Đỏ", phone: null },
+  branches: {
+    name: "Chi nhánh Đất Đỏ",
+    address: "Ấp Phước Sơn, Xã Đất Đỏ",
+    phone: null,
+  },
   order_items: [
     {
       id: 0,
@@ -369,9 +375,7 @@ function RemotePaymentDetails({
           <dt className="text-muted-foreground">
             {REMOTE_PAYMENT_COPY.momoWalletLabel}
           </dt>
-          <dd className="font-medium">
-            {REMOTE_PAYMENT_COPY.momoWalletValue}
-          </dd>
+          <dd className="font-medium">{REMOTE_PAYMENT_COPY.momoWalletValue}</dd>
           <dt className="text-muted-foreground">
             {REMOTE_PAYMENT_COPY.momoOrderLabel}
           </dt>
@@ -405,7 +409,8 @@ function RemotePaymentDetails({
         {REMOTE_PAYMENT_COPY.descriptionLabel}
       </dt>
       <dd className="font-mono">
-        {pendingExtras?.qr_info?.description ?? `DH ${order?.order_number ?? ""}`}
+        {pendingExtras?.qr_info?.description ??
+          `DH ${order?.order_number ?? ""}`}
       </dd>
     </dl>
   );
@@ -495,9 +500,9 @@ export function BillReceipt({
           ? "Khách chưa thanh toán đủ tổng đơn"
           : selectedMethod === "momo"
             ? "MoMo tự xác nhận qua IPN sau khi khách thanh toán"
-          : selectedMethod === "vietqr"
-            ? "VietQR chưa cấu hình — liên hệ quản lý"
-          : null;
+            : selectedMethod === "vietqr"
+              ? "VietQR chưa cấu hình — liên hệ quản lý"
+              : null;
 
   const cashSuggestions = useMemo(
     () => buildCashSuggestions(totalAmount),
@@ -658,29 +663,32 @@ export function BillReceipt({
       }
 
       if (method === "vietqr") {
-        // QR generated entirely client-side — no DB row created until cashier
-        // taps "Đã thanh toán". Offline guard not needed for display; confirm
-        // button is gated by isOnline via canConfirmPaid.
+        // QR generated entirely client-side from EMVCo/NAPAS payload: no
+        // external image service and no DB row until cashier confirms.
         if (!vietQrConfig) {
           setPaymentCreateError("VietQR chưa cấu hình — liên hệ quản lý.");
           return;
         }
         const amount = Math.round(Number(order.total_amount));
         const description = `DH ${order.order_number}`;
-        const qrUrl = new URL(
-          `https://img.vietqr.io/image/${encodeURIComponent(vietQrConfig.bankCode)}-${encodeURIComponent(vietQrConfig.accountNo)}-compact.png`,
-        );
-        qrUrl.searchParams.set("amount", String(amount));
-        qrUrl.searchParams.set("addInfo", description);
-        if (vietQrConfig.accountName) {
-          qrUrl.searchParams.set("accountName", vietQrConfig.accountName);
+        const qrData = buildVietQrEmvco({
+          bankCode: vietQrConfig.bankCode,
+          accountNo: vietQrConfig.accountNo,
+          accountName: vietQrConfig.accountName,
+          amount,
+          description,
+        });
+        if (!qrData) {
+          setPaymentCreateError("Không tạo được dữ liệu VietQR.");
+          return;
         }
         setPendingExtras({
-          qr_data: qrUrl.toString(),
+          qr_data: qrData,
           qr_info: {
             account_no: vietQrConfig.accountNo,
             account_name: vietQrConfig.accountName || undefined,
             bank_code: vietQrConfig.bankCode,
+            amount: String(amount),
             description,
           },
         });
@@ -760,9 +768,7 @@ export function BillReceipt({
             qr_info: result.data.qr_info,
           });
           if (!result.data.qr_data && !result.data.redirect_url) {
-            setPaymentCreateError(
-              REMOTE_PAYMENT_COPY.qrUnavailableDescription,
-            );
+            setPaymentCreateError(REMOTE_PAYMENT_COPY.qrUnavailableDescription);
           }
         } else if (!result.success) {
           setPaymentCreateError(
@@ -897,8 +903,7 @@ export function BillReceipt({
       }
       if (result.data?.print.failed) {
         toast.warning("Chưa in được hóa đơn", {
-          description:
-            result.data.print.error ?? "Mở đơn để in lại.",
+          description: result.data.print.error ?? "Mở đơn để in lại.",
         });
       }
       await onOrderUpdated?.();
@@ -955,7 +960,9 @@ export function BillReceipt({
         autoQrTriggeredRef.current = null;
         hydratedPaymentOrderRef.current = null;
         setOrder((cur) =>
-          cur ? { ...cur, payment_status: "unpaid", payment_method: null } : cur,
+          cur
+            ? { ...cur, payment_status: "unpaid", payment_method: null }
+            : cur,
         );
         toast.success(messages.pos.payment.cancelQrSuccess);
         await onOrderUpdated?.();
@@ -1003,7 +1010,7 @@ export function BillReceipt({
 
   return (
     <Dialog open={orderId !== null} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent size="lg">
         <DialogHeader>
           <DialogTitle>{dialogTitle}</DialogTitle>
           <DialogDescription className="sr-only">
@@ -1091,7 +1098,7 @@ export function BillReceipt({
                       variant={
                         selectedMethod === method ? "default" : "outline"
                       }
-                      className="h-20 flex-col gap-2"
+                      size="choice"
                       onClick={() => handleSelectMethod(method)}
                       disabled={actionPending || methodPending}
                     >
@@ -1131,6 +1138,7 @@ export function BillReceipt({
                       <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">
                         {messages.pos.payment.cashReceived}
                       </span>
+                      {/* Numeric input echo role — Rhythm Contract B: text-3xl + tabular-nums for cashier readout. h-12 is the touch-tier height (matches Button size="touch" min-h). */}
                       <FormattedNumberInput
                         id="cash-received"
                         data-testid="bill-cash-received"
@@ -1139,7 +1147,7 @@ export function BillReceipt({
                         onValueChange={setCashInput}
                         onFocus={(event) => event.currentTarget.select()}
                         disabled={actionPending}
-                        className="h-12 pl-28 pr-3 text-right text-lg font-semibold tabular-nums"
+                        className="h-12 pl-28 pr-3 text-right text-3xl font-semibold tabular-nums"
                       />
                     </div>
 
@@ -1212,7 +1220,12 @@ export function BillReceipt({
                               METHOD_META[selectedMethod]?.label ??
                               REMOTE_PAYMENT_COPY.qrAltFallback
                             }`}
-                            preferImage={selectedMethod === "vietqr"}
+                            centerLogoAlt="Logo Com Tam Ma Tu"
+                            centerLogoSrc={
+                              selectedMethod === "vietqr"
+                                ? "/brand/logo-matu-seal.png"
+                                : undefined
+                            }
                           />
                         ) : (
                           <PaymentQrPlaceholder Icon={MethodIcon} />
@@ -1231,7 +1244,9 @@ export function BillReceipt({
                                 type="button"
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleSelectMethod(selectedMethod)}
+                                onClick={() =>
+                                  handleSelectMethod(selectedMethod)
+                                }
                                 disabled={actionPending || methodPending}
                               >
                                 <IconQrcode data-icon="inline-start" />

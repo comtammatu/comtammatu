@@ -1,10 +1,10 @@
 # Current Tasks
 
-> Active work only. Shipped history → `docs/plan/roadmap.md`. Updated: 2026-04-26.
+> Active work only. Shipped/history context → `docs/plan/system-rebuild/` and `docs/archive/plan/roadmap.md`. Updated: 2026-05-09.
 
 ## Module status (snapshot)
 
-M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1–M9 — **all SHIPPED**. External integrations (VietQR/Momo/MISA HĐĐT real APIs) blocked on credentials. Detail trong `docs/plan/roadmap.md`.
+M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1–M9 — **all SHIPPED**. External integrations (VietQR/Momo/Viettel S-invoice HĐĐT real APIs) blocked on credentials. Historical roadmap context lives under `docs/plan/system-rebuild/` and `docs/archive/plan/`.
 
 ## Strategic fork prep
 
@@ -19,7 +19,7 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 - [x] Add canonical stack lock: `/Users/luongthebinh/Downloads/matu-pros/STACK_LOCK.md`.
 - [x] Debate Redis/Bun: no Redis in bootstrap; Node LTS + pnpm is default tooling; Bun is out of bootstrap.
 - [x] Owner decision: fork preparation workspace name/location is `/Users/luongthebinh/Downloads/matu-pros`.
-- [x] **Fork strategy abandoned (2026-05-06)** — owner decision: tiếp tục phát triển trên source code cũ (`comtammatu`). Fork init, greenfield/migrated-data pilot decision, và 4-agent debate trong fork đều dropped.
+- [x] **Fork strategy abandoned (2026-05-06)** — owner decision: tiếp tục phát triển trên source code cũ (`comtammatu`). Fork init, greenfield/migrated-data pilot decision, và 4-perspective debate trong fork đều dropped.
 
 ## Known issues
 
@@ -27,8 +27,8 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 **Report:** `.gstack/qa-reports/qa-report-feedback-module-2026-05-07.md` (health score 63.5/100, 14 findings)
 
 **HIGH (do these first):**
-- [ ] **ISSUE-001** — Verify `ALLOWED_ORIGINS_FEEDBACK` env in production, fail-closed if empty (`apps/web/app/r/[token]/actions.ts:37-43`)
-- [ ] **ISSUE-012** — Add 5 missing security headers via `next.config.ts headers()`: CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy. Set `poweredByHeader: false` for ISSUE-014.
+- [ ] **ISSUE-001** — Verify `ALLOWED_ORIGINS_FEEDBACK` env in production. Code now fails closed if empty (`packages/shared/src/feedback/env.ts`, `apps/web/app/r/[token]/actions.ts`); owner still needs production env verification.
+- [x] **ISSUE-012** — Add 5 missing security headers via `next.config.ts headers()`: CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy. Set `poweredByHeader: false` for ISSUE-014. Fixed 2026-05-09.
 
 **MEDIUM:**
 - [ ] **ISSUE-002** — Photo upload IDOR: mint per-submission upload token in `submit_feedback` RPC, consume in `uploadFeedbackPhotos` (`apps/web/app/r/[token]/actions-photos.ts`)
@@ -44,7 +44,7 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 - [ ] **ISSUE-009** — Add `?only_suspect=true` URL param for spam triage workflow
 - [ ] **ISSUE-010** — Add `(tenant_id, created_at DESC)` index for tenant-wide inbox queries
 - [ ] **ISSUE-011** — Order snapshot heuristic broken for shared tables (data quality)
-- [ ] **ISSUE-014** — Disable `X-Powered-By: Next.js` header (one-line: `poweredByHeader: false`)
+- [x] **ISSUE-014** — Disable `X-Powered-By: Next.js` header (one-line: `poweredByHeader: false`). Fixed 2026-05-09.
 - [ ] **ISSUE-015** — Document layered CSRF defense in `actions.ts` + add startup assertion that `ALLOWED_ORIGINS_FEEDBACK` is set in production (architect-flagged)
 - [ ] **ISSUE-016** — Replace `actions-photos.ts:119` `update photo_paths = X` with conditional `UPDATE ... WHERE photo_paths = '{}' RETURNING id` to close TOCTOU race (architect-flagged)
 
@@ -52,7 +52,7 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 
 ### Other
 - [ ] P3: Login rate limit fail-open khi Upstash unreachable — documented design decision, cần observability
-- [ ] 10 SECURITY DEFINER RPCs còn gọi `auth_role()` (legacy compat, không chặn ship — migrate dần qua batches α4b/α4c): `admin_update_profile`, `bump_kds_ticket`, `can_access_branch`, `close_fiscal_period`, `create_supplier_payment`, `gl_reconciliation`, `post_payroll_journal`, `recall_kds_ticket`, `set_branch_kind`, `toggle_profile_active`
+- [ ] Legacy `auth_role()` RPC cleanup — batch α4b migration drafted in `supabase/migrations/20260601800000_auth_v2_legacy_rpc_live_role_cutover.sql`: live-role cutover for `admin_update_profile`, `toggle_profile_active`, `can_access_branch`; branch-scoped permission cutover for `bump_kds_ticket` / `recall_kds_ticket`. After owner applies to dev/test, run DB audit to confirm remaining active functions vs historical migration references.
 
 ## Active branches (in flight, on origin)
 
@@ -72,7 +72,7 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 - [ ] Ops reconciliation query trước Momo go-live — payment/order desync surfacing trong /admin/finance
 - [ ] Momo webhook atomic `complete_payment_and_consume_stock` RPC (khi M4 wired)
 
-## P0 from security review 2026-04-27 (block pilot — need 4-agent debate)
+## P0 from security review 2026-04-27 (block pilot — need 4-perspective debate)
 
 > Full findings under each agent in session log. Quick wins applied above; these need design.
 
@@ -95,14 +95,17 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 
 > Compliance audit `docs/ref/einvoice-tax.md` ↔ implementation. Pilot OK với cashier issue path; các gap dưới chặn scale + production-grade NĐ70/2025.
 
-> **2026-05-08 update:** Owner approved Hybrid MISA plan via 4-agent debate (D1-D7). Most M6 HĐĐT gaps now subsumed by `docs/plan/hddt-hybrid-misa.md` (7-PR migration). Items below reflect post-plan state.
+> **2026-05-08 update:** Owner approved Hybrid HĐĐT plan via 4-perspective debate (D1-D7). Most M6 HĐĐT gaps now subsumed by `docs/plan/hddt-hybrid-sinvoice.md` (7-PR migration). Items below reflect post-plan state.
+>
+> **2026-05-09 provider correction:** Cơm Tấm Má Tư uses **Viettel S-invoice / Sinvoice** for HĐĐT. MISA meInvoice is legacy/optional only and must not be treated as the production provider.
 
-- [ ] **PLAN ACTIVE: HĐĐT Hybrid MISA (B2B realtime + B2C daily batch)** — see `docs/plan/hddt-hybrid-misa.md`. 7 PRs queued: schema → RPCs → B2B refactor → cron → admin UI → cutover → regression rules. **Owner action: D7 register HĐ tổng hợp template với CQT qua MISA portal (3-7 day leadtime, parallel với coding).**
-- [ ] **P0: HĐĐT reconcile cron (orphan `signing`)** — DEFERRED to post-pilot per Hybrid MISA plan. Manual recovery via admin retry button covers pilot volume.
-- [ ] **P0: HĐĐT replace flow (TT 78)** — DEFERRED post-pilot per plan. Pilot cancel + manual MISA portal đủ.
+- [ ] **PLAN ACTIVE: HĐĐT Hybrid Viettel S-invoice (B2B realtime + B2C daily batch)** — see `docs/plan/hddt-hybrid-sinvoice.md`. 7 PRs queued: schema → RPCs → B2B refactor → cron → admin UI → cutover → regression rules. **Owner action: D7 register HĐ tổng hợp template với CQT qua Viettel S-invoice portal / Viettel BU (3-7 day leadtime, parallel với coding).**
+- [ ] **P0: Pin Viettel S-invoice WebService contract before prod** — get latest BU doc/version and confirm auth header, base URL, IP whitelist, create/status/cancel/file endpoints, timeout/rate-limit. Public docs point to `createInvoice/{supplierTaxCode}`, `searchInvoiceByTransactionUuid`, `getInvoiceFilePortal`, `createExchangeInvoiceFile`, `cancelTransactionInvoice`; current provider has gaps noted in `docs/ref/sinvoice-webservices.md`.
+- [ ] **P0: HĐĐT reconcile cron (orphan `signing`)** — DEFERRED to post-pilot per Hybrid S-invoice plan. Manual recovery via admin retry button covers pilot volume.
+- [ ] **P0: HĐĐT replace flow (TT 78)** — DEFERRED post-pilot per plan. Pilot cancel + manual Viettel S-invoice portal đủ.
 - [ ] **P1: HĐĐT provider config qua `system_settings` (encrypted)** — DEFERRED post-pilot. Env-only acceptable cho single-tenant CTCP.
-- [ ] **P1: HĐĐT PDF/XML persist + download UI** — DEFERRED post-pilot. Link MISA portal đủ.
-- [ ] **P2: 3-way matching UI cho `supplier_invoices`** — bảng + columns (`matching_status`, `is_vat_deductible`, `declared_period`) đã có nhưng không có UI workflow PO ↔ GRN ↔ Supplier Invoice. Kế toán phải đối chiếu tay → không export được Tờ khai 01/GTGT đúng. Independent of Hybrid MISA plan.
+- [ ] **P1: HĐĐT PDF/XML persist + download UI** — DEFERRED post-pilot. Link Viettel S-invoice portal đủ.
+- [ ] **P2: 3-way matching UI cho `supplier_invoices`** — bảng + columns (`matching_status`, `is_vat_deductible`, `declared_period`) đã có nhưng không có UI workflow PO ↔ GRN ↔ Supplier Invoice. Kế toán phải đối chiếu tay → không export được Tờ khai 01/GTGT đúng. Independent of Hybrid S-invoice plan.
 
 ### M7 Payroll
 - [ ] **`payroll_entries_select` RLS** — add `EXISTS(payroll_periods WHERE status='paid')` to self branch.
@@ -122,7 +125,7 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 
 - [ ] P0: Wire VietQR real bank API (merchant credentials)
 - [ ] P0: Wire Momo real API (merchant credentials)
-- [ ] P0: Wire MISA HĐĐT real API call (MISA credentials — pháp lý NĐ70/2025)
+- [ ] P0: Wire Viettel S-invoice HĐĐT real API call (Sinvoice credentials — pháp lý NĐ70/2025)
 - [ ] P1: Momo webhook atomic RPC
 
 ## Branch Kitchen site split (Phase 2)

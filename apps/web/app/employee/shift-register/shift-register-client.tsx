@@ -179,9 +179,7 @@ export function ShiftRegisterClient({
       }
       toast.success("Đã huỷ đăng ký");
       setRequests((prev) =>
-        prev.map((r) =>
-          r.id === req.id ? { ...r, status: "cancelled" } : r,
-        ),
+        prev.map((r) => (r.id === req.id ? { ...r, status: "cancelled" } : r)),
       );
     });
   }
@@ -288,7 +286,7 @@ export function ShiftRegisterClient({
           if (!o) resetForm();
         }}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent size="md">
           <DialogHeader>
             <DialogTitle>Đăng ký ca làm</DialogTitle>
           </DialogHeader>
@@ -350,7 +348,8 @@ export function ShiftRegisterClient({
                 <SelectContent>
                   {shifts.map((s) => (
                     <SelectItem key={s.id} value={s.id.toString()}>
-                      {s.name} · {s.start_time.slice(0, 5)} - {s.end_time.slice(0, 5)}
+                      {s.name} · {s.start_time.slice(0, 5)} -{" "}
+                      {s.end_time.slice(0, 5)}
                     </SelectItem>
                   ))}
                 </SelectContent>

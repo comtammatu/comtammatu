@@ -1,7 +1,12 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Package as IconPackage, Pencil as IconPencil, Plus as IconPlus, Search as IconSearch } from "lucide-react";
+import {
+  Package as IconPackage,
+  Pencil as IconPencil,
+  Plus as IconPlus,
+  Search as IconSearch,
+} from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
 import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -117,15 +122,15 @@ export function IngredientTable({
           </p>
         </CardHeader>
         <CardContent className="px-4 sm:px-5">
-          <InputGroup className="mb-4 h-10">
-            <InputGroupAddon>
-              <IconSearch />
-            </InputGroupAddon>
+          <InputGroup className="mb-4">
             <InputGroupInput
-              placeholder="Tìm tên, SKU, danh mục…"
+              placeholder="Tìm tên, mã hàng, danh mục…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
+            <InputGroupAddon>
+              <IconSearch />
+            </InputGroupAddon>
             <InputGroupAddon align="inline-end">
               <InputGroupText>
                 {filtered.length} / {ingredients.length}
@@ -199,7 +204,7 @@ export function IngredientTable({
               <TableHeader>
                 <TableRow>
                   <TableHead>{FORM_VI.name}</TableHead>
-                  <TableHead>SKU</TableHead>
+                  <TableHead>Mã hàng</TableHead>
                   <TableHead>{FORM_VI.unit}</TableHead>
                   <TableHead className="text-right">Giá nhập</TableHead>
                   <TableHead>{FORM_VI.category}</TableHead>

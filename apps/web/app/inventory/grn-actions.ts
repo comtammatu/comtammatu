@@ -728,10 +728,11 @@ export async function fetchGrnsForPo(poId: number): Promise<ActionResult> {
  */
 
 const PG_ERR_TO_VI: Record<string, string> = {
-  insufficient_privilege: "Bạn không có quyền tạo phiếu nhập từ PO này.",
-  no_data_found: "PO không tồn tại hoặc đã nhận đủ hàng.",
+  insufficient_privilege:
+    "Bạn không có quyền tạo phiếu nhập từ đơn đặt hàng này.",
+  no_data_found: "Đơn đặt hàng không tồn tại hoặc đã nhận đủ hàng.",
   check_violation:
-    "PO không đủ điều kiện (trạng thái, kho nhận, hoặc NCC không hợp lệ).",
+    "Đơn đặt hàng không đủ điều kiện (trạng thái, kho nhận, hoặc NCC không hợp lệ).",
   invalid_parameter_value: "Tham số đầu vào không hợp lệ.",
 };
 
@@ -777,7 +778,7 @@ export async function startGrnFromPo(formData: FormData): Promise<void> {
   const res = await createGrnFromPo(Number(poIdRaw));
   if (!res.success) {
     redirect(
-      `/inventory/grn/new?error=${encodeURIComponent(res.error ?? "Không thể tạo phiếu nhập từ PO.")}`,
+      `/inventory/grn/new?error=${encodeURIComponent(res.error ?? "Không thể tạo phiếu nhập từ đơn đặt hàng.")}`,
     );
   }
   const grn = res.data as { id: number };
@@ -989,7 +990,10 @@ export async function fetchCentralKitchenWacMap(): Promise<
 
   if (error) {
     console.error("fetchCentralKitchenWacMap", error);
-    return { success: false, error: "Không thể tải WAC bếp trung tâm." };
+    return {
+      success: false,
+      error: "Không thể tải đơn giá bình quân của bếp trung tâm.",
+    };
   }
 
   type WacRow = {

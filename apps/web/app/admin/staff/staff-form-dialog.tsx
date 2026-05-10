@@ -128,7 +128,11 @@ export function StaffFormDialog({
         phone: values.phone,
         role: values.role,
       };
-      if (!isTenantLevel && values.branch_id && values.branch_id !== NO_BRANCH) {
+      if (
+        !isTenantLevel &&
+        values.branch_id &&
+        values.branch_id !== NO_BRANCH
+      ) {
         payload.branch_id = values.branch_id;
       }
       if (!isEdit) {
@@ -153,7 +157,7 @@ export function StaffFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent size="md">
         <DialogHeader>
           <DialogTitle>
             {isEdit ? "Chỉnh sửa nhân viên" : "Thêm nhân viên mới"}
@@ -229,7 +233,7 @@ export function StaffFormDialog({
             )}
           </FieldGroup>
 
-          <DialogFooter className="pt-6">
+          <DialogFooter spacing="form">
             <Button
               type="button"
               variant="outline"

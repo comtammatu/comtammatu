@@ -5,7 +5,7 @@ fallback procedure when a printer or agent fails mid-service.
 
 ## Scope
 
-- **System**: `@comtammatu/print-agent` (Node 24 + Supabase Realtime, LAN-only)
+- **System**: `@comtammatu/print-agent` (Node 24 + Supabase Realtime, LAN + Bluetooth)
 - **Topology**: 1 agent process per branch, 3 printers per branch
   (`receipt`, `kitchen_1`, `kitchen_2`)
 - **Target**: 1 pilot branch for 2 weeks, then fleet-wide rollout
@@ -19,8 +19,12 @@ Complete all items before opening the branch for the day.
 - [ ] Branch exists and is active
 - [ ] `/admin/settings/printers` — 3 printer rows (`receipt` / `kitchen_1` / `kitchen_2`),
       all `is_active = true`
-- [ ] `lan_host` + `lan_port` (default 9100) filled for every printer; reachable
-      from the POS PC subnet (`nc <host> 9100` to verify)
+- [ ] For LAN printers: `connection_type='lan'`, `lan_host` + `lan_port`
+      (default 9100) filled and reachable from the POS PC subnet
+      (`nc <host> 9100` to verify)
+- [ ] For Bluetooth printers: `connection_type='bluetooth'`, printer paired in
+      the OS, and `lan_host` filled with the bound endpoint (`COM5`,
+      `/dev/rfcomm0`, `/dev/tty.*`)
 - [ ] `/admin/settings/printers` — each branch kitchen printer has the right
       print types (`kitchen_ticket`, `cancel_ticket`) and menu categories assigned.
       Categories not assigned to a branch printer are not included in kitchen tickets.
@@ -39,7 +43,7 @@ Complete all items before opening the branch for the day.
   AGENT_TENANT_ID=<numeric>
   AGENT_BRANCH_ID=<numeric>
   AGENT_ID=pos-<branch-slug>
-  AGENT_VERSION=0.3.0
+  AGENT_VERSION=0.4.0
   ```
   > **Note**: bump `AGENT_VERSION` mỗi release (sync với `package.json`).
   > SQL view `v_print_agent_fleet` dùng version này để xác định fleet status.

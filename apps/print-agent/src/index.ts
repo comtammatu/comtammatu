@@ -2,13 +2,14 @@ import "dotenv/config";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { renderPayload, type PrintPayload } from "./escpos.js";
 import { renderPayloadBitmap } from "./escpos-bitmap.js";
+import { sendRawBluetooth } from "./bluetooth.js";
 import { sendRawLAN } from "./lan.js";
 
 type PrinterRow = {
   id: number;
   branch_id: number;
   role: "receipt" | "kitchen_1" | "kitchen_2";
-  connection_type: string;
+  connection_type: "lan" | "bluetooth" | string;
   lan_host: string | null;
   lan_port: number | null;
   paper_width_mm: number;
@@ -26,7 +27,8 @@ type PrintJobRow = {
     | "reprint"
     | "cancel_ticket"
     | "provisional_bill"
-    | "shift_close_report";
+    | "shift_close_report"
+    | "tax_invoice";
   payload: PrintPayload;
   status:
     | "pending"
@@ -51,14 +53,37 @@ const parsePrintMode = (raw: string | undefined): PrintMode => {
   throw new Error(`Invalid PRINT_MODE=${raw} (expected 'text' or 'bitmap')`);
 };
 
+const parseBluetoothTargetMap = (
+  raw: string | undefined,
+): Record<string, string> => {
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new Error("expected JSON object");
+    }
+    const out: Record<string, string> = {};
+    for (const [key, value] of Object.entries(parsed)) {
+      if (typeof value === "string" && value.trim()) {
+        out[key] = value.trim();
+      }
+    }
+    return out;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new Error(`Invalid PRINT_BT_TARGETS JSON: ${msg}`);
+  }
+};
+
 const config = {
   supabaseUrl: requireEnv("SUPABASE_URL"),
   serviceKey: requireEnv("SUPABASE_SERVICE_ROLE_KEY"),
   branchId: Number(requireEnv("AGENT_BRANCH_ID")),
   tenantId: Number(requireEnv("AGENT_TENANT_ID")),
   agentId: process.env.AGENT_ID ?? `agent-${process.pid}`,
-  version: process.env.AGENT_VERSION ?? "0.3.0",
+  version: process.env.AGENT_VERSION ?? "0.4.0",
   printMode: parsePrintMode(process.env.PRINT_MODE),
+  bluetoothTargets: parseBluetoothTargetMap(process.env.PRINT_BT_TARGETS),
   // Network gate: agent registers its NAT egress IP every 5 min via the
   // web app's /api/branch-presence endpoint. Web app then enforces "POS/KDS
   // only from devices on this branch's wifi" in proxy.ts.
@@ -86,13 +111,13 @@ async function loadPrinters(supabase: SupabaseClient): Promise<void> {
     `[agent] loaded ${printerCache.size} printers for branch ${config.branchId}`,
   );
 
-  const nonLan = [...printerCache.values()].filter(
-    (p) => p.connection_type !== "lan",
+  const unsupported = [...printerCache.values()].filter(
+    (p) => p.connection_type !== "lan" && p.connection_type !== "bluetooth",
   );
-  if (nonLan.length > 0) {
+  if (unsupported.length > 0) {
     console.warn(
-      `[agent] WARN ${nonLan.length} non-LAN printer(s) active for branch ${config.branchId}; ` +
-        `their jobs will fail — flip printers.connection_type='lan' or deactivate.`,
+      `[agent] WARN ${unsupported.length} unsupported printer(s) active for branch ${config.branchId}; ` +
+        `their jobs will fail — use printers.connection_type='lan'/'bluetooth' or deactivate.`,
     );
   }
 }
@@ -188,18 +213,31 @@ async function completeJob(
   if (error) console.error(`[agent] complete ${jobId} failed:`, error.message);
 }
 
+function resolveBluetoothTarget(printer: PrinterRow): string | null {
+  const roleKey = printer.role.toUpperCase();
+  return (
+    config.bluetoothTargets[String(printer.id)] ??
+    config.bluetoothTargets[printer.role] ??
+    config.bluetoothTargets[roleKey] ??
+    process.env[`PRINT_BT_TARGET_${printer.id}`] ??
+    process.env[`PRINT_BT_TARGET_${roleKey}`] ??
+    printer.lan_host ??
+    null
+  );
+}
+
 async function dispatch(job: PrintJobRow): Promise<void> {
   const printer = printerCache.get(job.printer_id);
   if (!printer) {
     throw new Error(`printer ${job.printer_id} not in cache / inactive`);
   }
-  if (printer.connection_type !== "lan") {
+  if (
+    printer.connection_type !== "lan" &&
+    printer.connection_type !== "bluetooth"
+  ) {
     throw new Error(
-      `printer ${printer.id}: only connection_type='lan' is supported (got '${printer.connection_type}')`,
+      `printer ${printer.id}: unsupported connection_type='${printer.connection_type}'`,
     );
-  }
-  if (!printer.lan_host) {
-    throw new Error(`printer ${printer.id} missing lan_host`);
   }
 
   const bytes =
@@ -207,6 +245,20 @@ async function dispatch(job: PrintJobRow): Promise<void> {
       ? await renderPayloadBitmap(job.payload)
       : renderPayload(job.payload);
 
+  if (printer.connection_type === "bluetooth") {
+    const target = resolveBluetoothTarget(printer);
+    if (!target) {
+      throw new Error(
+        `printer ${printer.id} missing bluetooth target (set lan_host/device path or PRINT_BT_TARGETS)`,
+      );
+    }
+    await sendRawBluetooth(target, bytes);
+    return;
+  }
+
+  if (!printer.lan_host) {
+    throw new Error(`printer ${printer.id} missing lan_host`);
+  }
   await sendRawLAN(printer.lan_host, printer.lan_port ?? 9100, bytes);
 }
 

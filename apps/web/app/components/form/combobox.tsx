@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Check as IconCheck, ChevronsUpDown as IconSelector } from "lucide-react";
+import { ChevronsUpDown as IconSelector } from "lucide-react";
 import { cn } from "@comtammatu/ui";
 import { matchesSearch } from "@lib/search";
 import { Button } from "@comtammatu/ui/components/button";
@@ -28,6 +28,7 @@ export interface ComboboxProps {
   searchPlaceholder?: string;
   emptyMessage?: string;
   disabled?: boolean;
+  size?: "sm" | "default" | "touch" | "touch-lg";
   className?: string;
   triggerClassName?: string;
   id?: string;
@@ -45,6 +46,7 @@ export function Combobox({
   searchPlaceholder = "Tìm...",
   emptyMessage = "Không tìm thấy.",
   disabled,
+  size = "default",
   className,
   triggerClassName,
   id,
@@ -70,8 +72,9 @@ export function Combobox({
           aria-invalid={ariaInvalid}
           aria-label={ariaLabel}
           disabled={disabled}
+          size={size}
           className={cn(
-            "h-10 w-full justify-between font-normal",
+            "w-full justify-between font-normal",
             !selected && "text-muted-foreground",
             triggerClassName ?? className,
           )}
@@ -82,10 +85,7 @@ export function Combobox({
           <IconSelector className="ml-2 size-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent
-        className="w-(--radix-popover-trigger-width) p-0"
-        align="start"
-      >
+      <PopoverContent align="start" width="trigger" padding="none">
         <Command
           filter={(v, search, keywords) => {
             return matchesSearch([v, ...(keywords ?? [])], search) ? 1 : 0;
@@ -101,6 +101,7 @@ export function Combobox({
                   value={opt.label}
                   keywords={opt.keywords}
                   disabled={opt.disabled}
+                  checked={value === opt.value}
                   onSelect={() => {
                     onValueChange(opt.value);
                     setOpen(false);
@@ -114,12 +115,6 @@ export function Combobox({
                       </span>
                     ) : null}
                   </div>
-                  <IconCheck
-                    className={cn(
-                      "ml-2 size-4 shrink-0",
-                      value === opt.value ? "opacity-100" : "opacity-0",
-                    )}
-                  />
                 </CommandItem>
               ))}
             </CommandGroup>

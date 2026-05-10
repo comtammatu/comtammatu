@@ -51,10 +51,13 @@ export function MultiOrderTablePicker({
 }: MultiOrderTablePickerProps) {
   return (
     <Drawer open={open} onOpenChange={(o) => !o && onClose()}>
-      <DrawerContent className="mx-auto max-w-md sm:max-w-lg">
+      <DrawerContent size="lg" className="mx-auto">
         <DrawerHeader>
           <DrawerTitle>
-            {messages.pos.multiOrderTablePicker.title(tableNumber, orders.length)}
+            {messages.pos.multiOrderTablePicker.title(
+              tableNumber,
+              orders.length,
+            )}
           </DrawerTitle>
           <DrawerDescription className="sr-only">
             {messages.pos.multiOrderTablePicker.description}

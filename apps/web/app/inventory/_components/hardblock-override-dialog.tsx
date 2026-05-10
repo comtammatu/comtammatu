@@ -68,7 +68,7 @@ export function HardblockOverrideDialog({
   tenantId,
   variancePct,
   onSuccess,
-  triggerLabel = "Yêu cầu override",
+  triggerLabel = "Yêu cầu duyệt vượt",
   disabled,
   className,
 }: HardblockOverrideDialogProps) {
@@ -103,10 +103,10 @@ export function HardblockOverrideDialog({
         note,
       });
       if (!res.success) {
-        toast.error(res.error ?? "Không override được");
+        toast.error(res.error ?? "Không duyệt vượt được");
         return;
       }
-      toast.success("Đã ghi nhận override — dòng được mở khóa");
+      toast.success("Đã ghi nhận duyệt vượt — dòng được mở khóa");
       onSuccess?.();
       handleClose(false);
     });
@@ -126,15 +126,15 @@ export function HardblockOverrideDialog({
           {triggerLabel}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-lg">
+      <DialogContent size="lg">
         <DialogHeader>
-          <DialogTitle>Override hardblock (tier 3)</DialogTitle>
+          <DialogTitle>Duyệt vượt khóa cứng (bậc 3)</DialogTitle>
           <DialogDescription>
             Lệch giá
             {typeof variancePct === "number"
               ? ` ${variancePct > 0 ? "+" : ""}${variancePct.toFixed(1)}%`
               : " ≥100%"}
-            . Rate-limit 2/tuần · pause baseline 30 ngày.
+            . Giới hạn 2 lần/tuần · tạm dừng đường nền 30 ngày.
           </DialogDescription>
         </DialogHeader>
 
@@ -166,12 +166,13 @@ export function HardblockOverrideDialog({
                 <SelectValue placeholder="Chọn lý do" />
               </SelectTrigger>
               <SelectContent>
-                {(Object.keys(HARDBLOCK_REASON_LABELS_VI) as HardblockReason[])
-                  .map((key) => (
-                    <SelectItem key={key} value={key}>
-                      {HARDBLOCK_REASON_LABELS_VI[key]}
-                    </SelectItem>
-                  ))}
+                {(
+                  Object.keys(HARDBLOCK_REASON_LABELS_VI) as HardblockReason[]
+                ).map((key) => (
+                  <SelectItem key={key} value={key}>
+                    {HARDBLOCK_REASON_LABELS_VI[key]}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -196,7 +197,7 @@ export function HardblockOverrideDialog({
               onChange={(e) => setNote(e.target.value)}
               disabled={isSubmitting}
               rows={4}
-              placeholder="Mô tả cụ thể lý do override: nguồn cung, giá thị trường tham khảo, tác động lên cost món, v.v."
+              placeholder="Mô tả cụ thể lý do duyệt vượt: nguồn cung, giá thị trường tham khảo, ảnh hưởng giá vốn món, v.v."
             />
           </div>
         </div>
@@ -214,7 +215,7 @@ export function HardblockOverrideDialog({
             onClick={handleSubmit}
             disabled={!canSubmit || isSubmitting}
           >
-            {isSubmitting ? <Spinner /> : "Xác nhận override"}
+            {isSubmitting ? <Spinner /> : "Xác nhận duyệt vượt"}
           </Button>
         </DialogFooter>
       </DialogContent>

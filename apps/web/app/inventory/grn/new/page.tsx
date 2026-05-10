@@ -154,10 +154,10 @@ export default async function GrnNewSupplierPage({
     <MobilePage>
       <MobileSectionHeader
         backHref="/inventory/grn"
-        backLabel="Danh sách GRN"
+        backLabel="Danh sách phiếu nhập"
         eyebrow="Nhập hàng"
         title="Chọn nguồn nhập"
-        description="Nhận hàng theo đơn đặt hàng (PO) đã gửi hoặc nhập ad-hoc."
+        description="Nhận hàng theo đơn đặt hàng đã gửi hoặc nhập trực tiếp."
       />
 
       {error ? (
@@ -171,7 +171,7 @@ export default async function GrnNewSupplierPage({
         <section className="flex flex-col gap-2">
           <div className="flex items-center justify-between px-1">
             <p className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
-              Từ PO chờ nhận
+              Từ đơn đặt hàng chờ nhận
             </p>
             <Badge variant="secondary" className="h-5 px-2 text-3xs">
               {openPos.length}

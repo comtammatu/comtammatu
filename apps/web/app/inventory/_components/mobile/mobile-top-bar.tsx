@@ -14,7 +14,7 @@ export function MobileTopBar({ siteName }: MobileTopBarProps) {
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-2 border-b border-border bg-background/95 px-3 backdrop-blur">
       <Link
-        href="/inventory/m"
+        href="/inventory"
         className="flex items-center gap-2 font-semibold"
         aria-label={messages.inventory.shell.mobileHomeAria}
       >

@@ -28,6 +28,10 @@ export const pos = {
     allStations: "Tất cả",
     allStationsAria: "Tất cả trạm",
     stationAria: (name: string) => `Trạm ${name}`,
+    pendingCount: (count: number) => `${count} món cần nhận`,
+    pendingCountCompact: (count: number) => `${count} món`,
+    emptyPending: "Không có món chờ",
+    emptyPendingCompact: "Trống",
   },
   appendDraft: {
     title: "Món thêm",
@@ -147,12 +151,24 @@ export const pos = {
     noTerminalDescription:
       "Liên hệ quản lý để thiết lập máy POS trước khi mở ca.",
     openingCashLabel: "Tiền đầu ca (VND)",
-    openingCashDescription:
-      "Ghi số tiền mặt đầu ca để đối soát khi đóng ca.",
+    openingCashDescription: "Ghi số tiền mặt đầu ca để đối soát khi đóng ca.",
     opening: "Đang mở ca...",
     open: "Mở ca POS",
     openSuccess: "Mở ca thành công",
     openFailed: "Không thể mở ca",
+    carryoverHint: (amount: string) =>
+      `Tồn két cuối ca trước: ${amount}. Đếm lại nếu khác.`,
+    carryoverNoPrior: "Lần đầu mở ca — két nên là 0đ.",
+    overrideReasonLabel: "Lý do điều chỉnh tồn quỹ",
+    overrideReasonPlaceholder:
+      "Ví dụ: rút tiền nộp ngân hàng, đếm lại phát hiện thiếu, đổi tờ rách...",
+    overrideReasonRequired:
+      "Tiền đầu ca khác tồn ca trước — bắt buộc nhập lý do.",
+    typoConfirmTitle: "Xác nhận số tiền lớn",
+    typoConfirmBody: (amount: string) =>
+      `Bạn nhập ${amount}. Số này lớn bất thường so với một ca bình thường — kiểm tra lại có gõ thừa số 0 không?`,
+    typoConfirmContinue: "Đã đếm đúng, tiếp tục",
+    typoConfirmCancel: "Đếm lại",
   },
   orderHistory: {
     dineIn: (tableNumber: number | string) => `Bàn ${tableNumber}`,
@@ -182,10 +198,10 @@ export const pos = {
     serviceModeAria: "Chọn hình thức phục vụ",
     dineIn: "Tại bàn",
     takeaway: "Mang về",
-    appendBannerTitle: (orderNumber: string) => `Thêm món vào đơn #${orderNumber}`,
+    appendBannerTitle: (orderNumber: string) =>
+      `Thêm món vào đơn #${orderNumber}`,
     appendPending: (quantity: number) => `${quantity} món đang chờ gửi.`,
-    appendInstruction:
-      "Chọn món trên menu, chưa gửi bếp cho tới khi xác nhận.",
+    appendInstruction: "Chọn món trên menu, chưa gửi bếp cho tới khi xác nhận.",
     mobileHeaderAppend: (orderNumber: string) => `Thêm món #${orderNumber}`,
     mobileHeaderTable: (tableNumber: number | string) => `Bàn ${tableNumber}`,
   },
@@ -208,4 +224,4 @@ export const pos = {
     updateSent: "Cập nhật món đã gửi",
     addToCart: "Thêm vào giỏ",
   },
-} as const
+} as const;

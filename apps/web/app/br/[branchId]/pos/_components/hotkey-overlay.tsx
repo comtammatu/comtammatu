@@ -58,7 +58,7 @@ interface HotkeyOverlayProps {
 export function HotkeyOverlay({ open, onOpenChange }: HotkeyOverlayProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="max-h-dvh p-0">
+      <SheetContent side="bottom" height="viewport">
         <div className="flex max-h-dvh flex-col overflow-hidden">
           <SheetHeader className="border-b px-5 pt-5 pb-3 text-left">
             <SheetTitle>Phím tắt</SheetTitle>

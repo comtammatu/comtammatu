@@ -1,7 +1,13 @@
 "use client";
 
 import { useState, useTransition, useCallback } from "react";
-import { ChevronLeft as IconChevronLeft, ChevronRight as IconChevronRight, CalendarDays as IconCalendarEvent, Plus as IconPlus, X as IconX } from "lucide-react";
+import {
+  ChevronLeft as IconChevronLeft,
+  ChevronRight as IconChevronRight,
+  CalendarDays as IconCalendarEvent,
+  Plus as IconPlus,
+  X as IconX,
+} from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
@@ -383,7 +389,7 @@ export function ShiftAssignmentsTable({
 
       {/* Add Assignment Dialog */}
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent size="md">
           <DialogHeader>
             <DialogTitle>Phân ca nhân viên</DialogTitle>
           </DialogHeader>
@@ -470,7 +476,9 @@ export function ShiftAssignmentsTable({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isPending}>{ACTIONS_VI.cancel}</AlertDialogCancel>
+            <AlertDialogCancel disabled={isPending}>
+              {ACTIONS_VI.cancel}
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteAssignment}
               disabled={isPending}

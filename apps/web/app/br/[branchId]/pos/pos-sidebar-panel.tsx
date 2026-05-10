@@ -37,11 +37,12 @@ function PosSidebarTabsComponent({
       >
         <TabsList
           aria-label="POS sidebar"
-          className="grid h-11 w-full grid-cols-2"
+          size="touch"
+          className="grid w-full grid-cols-2"
         >
           <TabsTrigger
             value="new-order"
-            className="h-full min-w-0 gap-2 px-2 py-0 text-base font-semibold"
+            className="min-w-0 gap-2 text-base font-semibold"
           >
             <span className="truncate">Giỏ đơn mới</span>
             {cartQuantity > 0 && (
@@ -53,7 +54,7 @@ function PosSidebarTabsComponent({
           <TabsTrigger
             value="active-orders"
             data-testid="pos-active-orders-tab"
-            className="h-full min-w-0 gap-2 px-2 py-0 text-base font-semibold"
+            className="min-w-0 gap-2 text-base font-semibold"
           >
             <span className="truncate">Đơn trong ca</span>
           </TabsTrigger>

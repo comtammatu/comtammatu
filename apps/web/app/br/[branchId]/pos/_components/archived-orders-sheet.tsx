@@ -140,17 +140,18 @@ export function ArchivedOrdersSheet({
             if (value === "session" || value === "today") setScope(value);
           }}
           variant="outline"
-          className="grid h-10 w-full grid-cols-2 gap-0"
+          size="default"
+          className="grid w-full grid-cols-2 gap-0"
         >
           <ToggleGroupItem
             value="session"
-            className="h-full justify-center text-sm font-semibold"
+            className="justify-center font-semibold"
           >
             {messages.pos.archivedOrders.currentSession}
           </ToggleGroupItem>
           <ToggleGroupItem
             value="today"
-            className="h-full justify-center text-sm font-semibold"
+            className="justify-center font-semibold"
           >
             {messages.pos.archivedOrders.branchToday}
           </ToggleGroupItem>
@@ -233,7 +234,8 @@ export function ArchivedOrdersSheet({
       <Drawer open={open} onOpenChange={onOpenChange}>
         <DrawerContent
           showHandle
-          className="h-dvh max-h-dvh p-0 data-[vaul-drawer-direction=bottom]:top-0 data-[vaul-drawer-direction=bottom]:mt-0 data-[vaul-drawer-direction=bottom]:max-h-dvh before:inset-0 before:rounded-none before:border-0 before:bg-background"
+          height="screen"
+          surface="background"
         >
           <DrawerTitle className="sr-only">
             {messages.pos.archivedOrders.sheetTitle}
@@ -251,7 +253,7 @@ export function ArchivedOrdersSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="flex flex-col p-0 data-[side=right]:w-full data-[side=right]:sm:max-w-md"
+        size="md"
       >
         <SheetHeader className="border-b px-5 pt-5 pb-3 text-left">
           <SheetTitle className="flex items-center gap-2">

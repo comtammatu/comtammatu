@@ -7,6 +7,8 @@ interface InventoryPageContentProps {
   contentClassName?: string;
   scroll?: boolean;
   width?: "wide" | "narrow";
+  density?: "comfortable" | "compact";
+  mobile?: boolean;
 }
 
 export function InventoryPageContent({
@@ -15,6 +17,8 @@ export function InventoryPageContent({
   contentClassName,
   scroll = true,
   width = "wide",
+  density = "comfortable",
+  mobile = false,
 }: InventoryPageContentProps) {
   return (
     <AppPage
@@ -22,6 +26,8 @@ export function InventoryPageContent({
       contentClassName={contentClassName}
       scroll={scroll}
       width={width}
+      density={density}
+      mobile={mobile}
     >
       {children}
     </AppPage>

@@ -13,6 +13,7 @@ import {
   type PaymentProvider,
   type PaymentResult,
 } from "@comtammatu/shared/providers";
+import { buildVietQrEmvco } from "@comtammatu/shared/vietqr";
 import { SYSTEM_SETTING_KEYS } from "@comtammatu/shared/settings";
 import { ensurePaymentProvidersRegistered } from "../../../../lib/payment-providers-init";
 import { getAuthContextWithPermission } from "../../_lib/auth";
@@ -198,23 +199,25 @@ function strValue(
   return typeof value === "string" && value.trim() ? value : undefined;
 }
 
-function buildVietQrImageUrlFromProviderData(
+function buildVietQrPayloadFromProviderData(
   providerData: Record<string, unknown> | undefined,
 ): string | undefined {
   const bankCode = strValue(providerData, "bankCode");
   const accountNo = strValue(providerData, "accountNo");
-  if (!bankCode || !accountNo) return undefined;
-
-  const url = new URL(
-    `https://img.vietqr.io/image/${encodeURIComponent(bankCode)}-${encodeURIComponent(accountNo)}-compact.png`,
-  );
   const amount = strValue(providerData, "amount");
   const description = strValue(providerData, "description");
   const accountName = strValue(providerData, "accountName");
-  if (amount) url.searchParams.set("amount", amount);
-  if (description) url.searchParams.set("addInfo", description);
-  if (accountName) url.searchParams.set("accountName", accountName);
-  return url.toString();
+  if (!bankCode || !accountNo || !amount) return undefined;
+
+  return (
+    buildVietQrEmvco({
+      bankCode,
+      accountNo,
+      amount: Number(amount),
+      description,
+      accountName,
+    }) ?? undefined
+  );
 }
 
 function pickRemoteQrData(
@@ -231,7 +234,7 @@ function pickRemoteQrData(
     return (
       strValue(providerData, "qrData") ??
       strValue(providerData, "qrUrl") ??
-      buildVietQrImageUrlFromProviderData(providerData)
+      buildVietQrPayloadFromProviderData(providerData)
     );
   }
 

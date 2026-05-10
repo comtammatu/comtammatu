@@ -30,6 +30,8 @@ const JOB_TYPES = [
   "kitchen_ticket",
   "receipt",
   "provisional_bill",
+  "tax_invoice",
+  "shift_close_report",
   "reprint",
   "cancel_ticket",
 ] as const;

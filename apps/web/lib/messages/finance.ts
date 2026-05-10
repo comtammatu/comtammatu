@@ -489,7 +489,7 @@ export const finance = {
     },
     foodCost: {
       label: "Giá vốn món",
-      description: "Theo dõi WAC, food cost và biên lãi món bán.",
+      description: "Theo dõi đơn giá bình quân, giá vốn món và biên lãi món bán.",
     },
     periods: {
       label: "Kỳ kế toán",

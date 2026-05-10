@@ -103,7 +103,7 @@ export function StocktakeCountClient({
         counts: payload,
       });
       if (!res.success || !res.data) {
-        toast.error(res.error ?? "Không submit được round");
+        toast.error(res.error ?? "Không gửi được vòng đếm");
         return;
       }
       toast.success(
@@ -118,7 +118,7 @@ export function StocktakeCountClient({
       <AppPageHeader
         eyebrow="Kiểm kê"
         title={`Đếm kiểm kê #${sessionId}`}
-        description={`CN #${branchId} · Round R${currentRound}`}
+        description={`CN #${branchId} · Vòng R${currentRound}`}
       />
       <div className="flex flex-wrap items-center gap-3">
           <StocktakeDraftSaverBadge

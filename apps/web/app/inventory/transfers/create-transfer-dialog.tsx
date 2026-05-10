@@ -7,6 +7,7 @@ import {
   TriangleAlert as IconTriangleAlert,
 } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Dialog,
@@ -34,7 +35,9 @@ import {
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { NoteCallout } from "@comtammatu/ui/components/note-callout";
+import { MultiSelectCombobox } from "@/components/form";
 import { FormattedNumberInput } from "../_components/formatted-number-input";
+import { parseInventoryBulkLines } from "../_lib/bulk-line-parser";
 import { formatBranchSiteLabel } from "../_lib/branch-site-labels";
 import { createStockTransfer } from "../transfer-actions";
 import type { IngredientRow } from "../page";
@@ -68,6 +71,16 @@ type DraftLine = {
 
 function getWarehouseUnit(ingredient: IngredientRow) {
   return ingredient.purchase_unit || ingredient.unit;
+}
+
+function toDraftLine(ingredient: IngredientRow, quantity = ""): DraftLine {
+  return {
+    key: `${ingredient.id}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    ingredientId: ingredient.id,
+    name: ingredient.name,
+    quantity,
+    unit: getWarehouseUnit(ingredient),
+  };
 }
 
 export function CreateTransferDialog({
@@ -128,6 +141,8 @@ export function CreateTransferDialog({
   const [intraToLocationId, setIntraToLocationId] = useState("");
   const [draftLines, setDraftLines] = useState<DraftLine[]>([]);
   const [pickerIngredientId, setPickerIngredientId] = useState("");
+  const [bulkText, setBulkText] = useState("");
+  const [bulkIssues, setBulkIssues] = useState<string[]>([]);
   const [isPending, startTransition] = useTransition();
   const tabCount =
     (canCreateInbound ? 1 : 0) +
@@ -139,6 +154,7 @@ export function CreateTransferDialog({
       : tabCount === 2
         ? "grid-cols-2"
         : "grid-cols-3";
+  const bulkCopy = messages.inventory.common.bulk;
 
   const isUserHq = currentBranchKind === "central_warehouse";
   const isUserOperational = currentBranchKind === "branch";
@@ -161,6 +177,10 @@ export function CreateTransferDialog({
   const activeIngredients = useMemo(
     () => ingredients.filter((i) => i.is_active),
     [ingredients],
+  );
+  const draftIngredientIds = useMemo(
+    () => new Set(draftLines.map((line) => line.ingredientId)),
+    [draftLines],
   );
   const internalSourceLocations = useMemo(
     () => locations.filter((item) => item.location_kind === "warehouse"),
@@ -238,6 +258,8 @@ export function CreateTransferDialog({
     setIntraToLocationId("");
     setDraftLines([]);
     setPickerIngredientId("");
+    setBulkText("");
+    setBulkIssues([]);
   }
 
   function addIngredientLine() {
@@ -251,17 +273,77 @@ export function CreateTransferDialog({
       toast.error("Nguyên liệu đã có trong danh sách");
       return;
     }
-    setDraftLines((prev) => [
-      ...prev,
-      {
-        key: `${ing.id}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-        ingredientId: ing.id,
-        name: ing.name,
-        quantity: "",
-        unit: getWarehouseUnit(ing),
-      },
-    ]);
+    setDraftLines((prev) => [...prev, toDraftLine(ing)]);
     setPickerIngredientId("");
+  }
+
+  function addIngredientLines(ingredientIds: string[]) {
+    setDraftLines((prev) => {
+      const seen = new Set(prev.map((line) => line.ingredientId));
+      const nextLines = ingredientIds
+        .map((id) => ingredients.find((item) => String(item.id) === id))
+        .filter((item): item is IngredientRow => Boolean(item))
+        .filter((item) => {
+          if (seen.has(item.id)) return false;
+          seen.add(item.id);
+          return true;
+        })
+        .map((item) => toDraftLine(item));
+
+      if (nextLines.length === 0) {
+        toast.info("Các nguyên liệu đã có trong phiếu");
+        return prev;
+      }
+
+      toast.success(`Đã thêm ${nextLines.length} nguyên liệu`);
+      return [...prev, ...nextLines];
+    });
+    setBulkIssues([]);
+  }
+
+  function applyBulkText() {
+    const result = parseInventoryBulkLines({
+      text: bulkText,
+      items: activeIngredients,
+      getUnit: getWarehouseUnit,
+    });
+
+    if (result.parsed.length === 0) {
+      setBulkIssues(
+        result.issues.length > 0 ? result.issues : ["Không có dòng hợp lệ"],
+      );
+      return;
+    }
+
+    setDraftLines((prev) => {
+      const indexByIngredient = new Map<number, number>();
+      prev.forEach((line, index) => {
+        indexByIngredient.set(line.ingredientId, index);
+      });
+      const next = [...prev];
+
+      result.parsed.forEach(({ item, quantity }) => {
+        const existingIndex = indexByIngredient.get(item.id);
+        if (existingIndex == null) {
+          indexByIngredient.set(item.id, next.length);
+          next.push(toDraftLine(item, quantity));
+          return;
+        }
+
+        const existing = next[existingIndex];
+        if (!existing) return;
+        next[existingIndex] = {
+          ...existing,
+          quantity,
+          unit: getWarehouseUnit(item),
+        };
+      });
+
+      return next;
+    });
+    toast.success(`Đã nhập nhanh ${result.parsed.length} dòng`);
+    setBulkText("");
+    setBulkIssues(result.issues);
   }
 
   function removeLine(key: string) {
@@ -423,7 +505,7 @@ export function CreateTransferDialog({
         if (!o) resetForm();
       }}
     >
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent size="lg">
         <DialogHeader>
           <DialogTitle>
             {isBranchManager
@@ -639,14 +721,73 @@ export function CreateTransferDialog({
 
           {/* Step 2: Ingredients — inline picker */}
           <div className="space-y-2">
-            <Label>{messages.inventory.transfer.ingredientsQtyRequired}</Label>
+            <div className="flex items-center justify-between gap-2">
+              <Label>
+                {messages.inventory.transfer.ingredientsQtyRequired}
+              </Label>
+              <Badge variant="secondary">
+                {bulkCopy.selectedRows(draftLines.length)}
+              </Badge>
+            </div>
+
+            <div className="rounded-md border border-border bg-muted/20 p-3">
+              <div className="grid gap-2 sm:grid-cols-2">
+                <MultiSelectCombobox
+                  options={activeIngredients.map((ingredient) => ({
+                    value: String(ingredient.id),
+                    label: ingredient.name,
+                    hint: getWarehouseUnit(ingredient),
+                    alreadySelected: draftIngredientIds.has(ingredient.id),
+                    keywords: [ingredient.sku ?? "", ingredient.category ?? ""],
+                  }))}
+                  onConfirm={addIngredientLines}
+                  triggerLabel={bulkCopy.chooseManyIngredients}
+                  confirmLabel={bulkCopy.addIngredients}
+                  searchPlaceholder={bulkCopy.searchIngredients}
+                  triggerClassName="w-full"
+                />
+                <Textarea
+                  value={bulkText}
+                  onChange={(event) => setBulkText(event.target.value)}
+                  placeholder={bulkCopy.pastePlaceholder}
+                  className="min-h-16"
+                />
+              </div>
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <span className="text-xs text-muted-foreground">
+                  {bulkCopy.unitFromCatalog}
+                </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={applyBulkText}
+                  disabled={!bulkText.trim()}
+                >
+                  {bulkCopy.applyList}
+                </Button>
+              </div>
+              {bulkIssues.length > 0 ? (
+                <div className="mt-3 rounded-md border border-warning/30 bg-warning/10 p-3 text-xs text-warning">
+                  <div className="font-medium">
+                    {bulkCopy.rowsNeedReview(bulkIssues.length)}
+                  </div>
+                  <ul className="mt-1 flex list-disc flex-col gap-1 pl-4">
+                    {bulkIssues.slice(0, 4).map((issue) => (
+                      <li key={issue}>{issue}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+            </div>
+
             <div className="flex items-end gap-2">
               <div className="min-w-0 flex-1">
                 <Select
                   value={pickerIngredientId}
                   onValueChange={setPickerIngredientId}
                 >
-                  <SelectTrigger className="h-9">
+                  <SelectTrigger>
                     <SelectValue
                       placeholder={messages.inventory.transfer.chooseIngredient}
                     />

@@ -71,6 +71,7 @@ export function KdsBoard({
   fallbackStationIds,
   canMarkReady,
   canRecall,
+  initialNow,
   initialTickets,
   initialOrders,
   initialOrderItems,
@@ -83,14 +84,13 @@ export function KdsBoard({
     kitchenBatches,
     setTickets,
     refreshBoardSnapshot,
-  } =
-    useKdsRealtime({
-      branchId,
-      initialTickets,
-      initialOrders,
-      initialOrderItems,
-      initialKitchenBatches,
-    });
+  } = useKdsRealtime({
+    branchId,
+    initialTickets,
+    initialOrders,
+    initialOrderItems,
+    initialKitchenBatches,
+  });
 
   const filters = useKdsFilters(stations);
   const { mode, setMode } = useKdsViewMode();
@@ -250,7 +250,7 @@ export function KdsBoard({
   /* ── Render ── */
 
   return (
-    <TickProvider>
+    <TickProvider initialNow={initialNow}>
       <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col">
         <BoardHeader
           branchId={branchId}
@@ -259,10 +259,7 @@ export function KdsBoard({
           onModeChange={setMode}
         />
 
-        <UnassignedBanner
-          count={unassignedCount}
-          onFilter={filterUnassigned}
-        />
+        <UnassignedBanner count={unassignedCount} onFilter={filterUnassigned} />
 
         <StationToggleBar
           stations={stations}

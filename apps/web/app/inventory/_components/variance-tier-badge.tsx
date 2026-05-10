@@ -52,7 +52,7 @@ export function VarianceTierBadge({
         data-slot="variance-tier-badge"
         data-source="paused"
       >
-        {compact ? "Pause" : `Baseline tạm dừng`}
+        {compact ? "Tạm dừng" : `Đường nền tạm dừng`}
       </Badge>
     );
   }

@@ -20,7 +20,7 @@ export interface TabbedSidebarProps extends SidebarHeaderInputs {
   sidebarContentProps: SidebarContentProps;
 }
 
-/** Tablet-class layout (md through xl-1): tabs-based sidebar. */
+/** Tablet and laptop layout (md through 2xl-1): tabs-based sidebar. */
 function TabbedSidebarComponent({
   canCloseShift,
   onShowCloseSession,
@@ -29,7 +29,7 @@ function TabbedSidebarComponent({
   sidebarContentProps,
 }: TabbedSidebarProps) {
   return (
-    <div className="hidden w-96 shrink-0 flex-col border-l border-border/60 bg-background md:flex xl:hidden">
+    <div className="hidden w-80 shrink-0 flex-col border-l border-border/60 bg-background md:flex 2xl:hidden">
       <PosSessionHeader
         canCloseShift={canCloseShift}
         onShowCloseSession={onShowCloseSession}
@@ -51,7 +51,7 @@ export interface SplitSidebarProps extends SidebarHeaderInputs {
   sidebarContentProps: SidebarContentProps;
 }
 
-/** Wide-desktop layout (xl+): cart + order-list side by side. */
+/** Wide-desktop layout (2xl+): cart + order-list side by side. */
 function SplitSidebarComponent({
   canCloseShift,
   onShowCloseSession,
@@ -71,13 +71,13 @@ function SplitSidebarComponent({
   } = sidebarContentProps;
 
   return (
-    <div className="hidden shrink-0 flex-col border-l border-border/60 bg-background xl:flex">
+    <div className="hidden shrink-0 flex-col border-l border-border/60 bg-background 2xl:flex">
       <PosSessionHeader
         canCloseShift={canCloseShift}
         onShowCloseSession={onShowCloseSession}
       />
       <div className="flex min-h-0 flex-1">
-        <div className="flex w-96 shrink-0 flex-col">
+        <div className="flex w-80 shrink-0 flex-col">
           {appendDraft.target != null ? (
             <AppendDraftPane
               orderNumber={appendDraft.target.orderNumber}
@@ -99,7 +99,7 @@ function SplitSidebarComponent({
             />
           )}
         </div>
-        <div className="flex w-80 shrink-0 flex-col border-l border-border/60 2xl:w-96">
+        <div className="flex w-72 shrink-0 flex-col border-l border-border/60 2xl:w-80">
           <OrderListPane
             onViewBill={onViewBill}
             onViewDetail={onViewDetail}

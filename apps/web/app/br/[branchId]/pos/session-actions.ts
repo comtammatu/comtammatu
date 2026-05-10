@@ -1,9 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { unstable_cache } from "next/cache";
 import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
-import { createServiceClient } from "@comtammatu/database";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContext, getAuthContextWithPermission } from "../../_lib/auth";
 
@@ -17,57 +15,15 @@ const branchIdSchema = z.coerce
 /* ─── fetchTablesForBranch ─── */
 
 /**
- * Cached tables-for-branch. The list is mostly static (admin adds/removes
- * tables rarely); table.status flips on order open/close are pushed via
- * realtime (`useOrderSync` `tables` channel) → cached snapshot is fine for
- * the cold load + post-Server-Action revalidate path.
- *
- * Tag: `tables` — admin tables-settings save calls `revalidateTag('tables')`
- * to force a re-fetch on next request. 5-minute TTL safety net.
- *
- * Service-role bypasses RLS but explicit branch+tenant filter inside; outer
- * Server Action validates caller's branch membership BEFORE invoking.
- *
- * Cache key auto-derived from (tenantId, branchId) args.
- */
-const getCachedTablesForBranch = unstable_cache(
-  async (tenantId: number, branchId: number) => {
-    const sb = createServiceClient();
-    const { data, error } = await sb
-      .from("tables")
-      .select(
-        `
-        id,
-        number,
-        capacity,
-        status,
-        zone_id,
-        branch_zones (
-          id,
-          name
-        )
-      `,
-      )
-      .eq("branch_id", branchId)
-      .eq("tenant_id", tenantId)
-      .neq("status", "maintenance")
-      .order("number", { ascending: true });
-
-    if (error) {
-      throw new Error(`fetchTables: ${error.message}`);
-    }
-    return data ?? [];
-  },
-  ["tables-for-branch"],
-  {
-    revalidate: 300,
-    tags: ["tables"],
-  },
-);
-
-/**
  * Fetch active tables for a branch (excludes maintenance tables).
- * Used for table selection when order_type = dine_in.
+ *
+ * Read fresh on every call: `tables.status` flips via DB triggers (create_order,
+ * trg_release_table_on_order_status, transfer_order_table) which are invisible
+ * to Next.js cache invalidation. Caching this snapshot caused cross-device
+ * desync — when realtime UPDATE missed (mobile WS drop, subscribe race), the
+ * stale-poll / visibility-refresh safety net in useOrderSync hit a 5-minute
+ * cached snapshot and held the wrong status until expiry. Direct DB read keeps
+ * the safety net authoritative.
  */
 export async function fetchTablesForBranch(
   branchId: number,
@@ -83,27 +39,40 @@ export async function fetchTablesForBranch(
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
-  const { claims } = ctx;
+  const { supabase, claims } = ctx;
 
-  // Verify branch_id matches JWT claim
   if (claims.branch_id !== parsedBranchId.data) {
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }
 
-  let tables: Awaited<ReturnType<typeof getCachedTablesForBranch>>;
-  try {
-    tables = await getCachedTablesForBranch(
-      claims.tenant_id,
-      parsedBranchId.data,
-    );
-  } catch {
+  const { data, error } = await supabase
+    .from("tables")
+    .select(
+      `
+        id,
+        number,
+        capacity,
+        status,
+        zone_id,
+        branch_zones (
+          id,
+          name
+        )
+      `,
+    )
+    .eq("branch_id", parsedBranchId.data)
+    .eq("tenant_id", claims.tenant_id)
+    .neq("status", "maintenance")
+    .order("number", { ascending: true });
+
+  if (error) {
     return {
       success: false,
       error: "Không thể tải danh sách bàn. Vui lòng thử lại.",
     };
   }
 
-  return { success: true, data: tables };
+  return { success: true, data: data ?? [] };
 }
 
 /* ─── fetchPosTerminals ─── */
@@ -317,6 +286,60 @@ export async function fetchPosPermissionFlags(branchId: number): Promise<{
   };
 }
 
+/* ─── fetchExpectedOpeningCash ─── */
+
+/**
+ * Trả tiền tồn kỳ vọng = closing_cash của ca đóng gần nhất cùng branch.
+ * 0 nếu chưa có ca nào đóng (lần đầu mở).
+ *
+ * Carry-over enforcement (rule POS-OPEN-SHIFT-CARRY-OVER-ENFORCED, 2026-05-09):
+ * khắc phục bug 70/249 transition lệch két do `opening_cash` nhập tự do →
+ * tiền vật lý carry-over biến mất khỏi sổ. UI seed input bằng giá trị này;
+ * server enforce qua openPosSession (delta != 0 phải có override reason).
+ */
+export async function fetchExpectedOpeningCash(
+  branchId: number,
+): Promise<ActionResult<{ expected: number; prev_session_id: number | null }>> {
+  const parsedBranchId = branchIdSchema.safeParse(branchId);
+  if (!parsedBranchId.success) {
+    return { success: false, error: "Branch ID không hợp lệ" };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    POS_ROLES,
+    PERMISSION_KEYS.POS_OPEN_CASHBOX,
+    parsedBranchId.data,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { supabase, claims } = ctx;
+  if (claims.branch_id !== parsedBranchId.data) {
+    return { success: false, error: "Không có quyền truy cập chi nhánh này" };
+  }
+
+  const { data, error } = await supabase
+    .from("pos_sessions")
+    .select("id, closing_cash")
+    .eq("branch_id", parsedBranchId.data)
+    .eq("tenant_id", claims.tenant_id)
+    .eq("status", "closed")
+    .order("closed_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    return { success: false, error: "Không thể tải tồn quỹ ca trước." };
+  }
+
+  return {
+    success: true,
+    data: {
+      expected: Number(data?.closing_cash ?? 0),
+      prev_session_id: data?.id ?? null,
+    },
+  };
+}
+
 /* ─── openPosSession ─── */
 
 const openSessionSchema = z.object({
@@ -328,6 +351,9 @@ const openSessionSchema = z.object({
     .positive({ error: "Terminal ID không hợp lệ" })
     .optional(),
   openingCash: z.coerce.number().min(0, { error: "Tiền mở ca không hợp lệ" }),
+  // Lý do override khi openingCash khác closing_cash của ca trước. Server
+  // tự fetch prev close → nếu lệch mà thiếu reason thì reject.
+  overrideReason: z.string().trim().max(200).optional(),
 });
 
 // Skip withAction: positional (branchId, openingCash, terminalId?) args
@@ -335,13 +361,18 @@ export async function openPosSession(
   branchId: number,
   openingCash: number,
   terminalId?: number,
+  overrideReason?: string,
 ): Promise<ActionResult<{ session_id: number }>> {
   const parsedBranchId = branchIdSchema.safeParse(branchId);
   if (!parsedBranchId.success) {
     return { success: false, error: "Branch ID không hợp lệ" };
   }
 
-  const parsedInput = openSessionSchema.safeParse({ terminalId, openingCash });
+  const parsedInput = openSessionSchema.safeParse({
+    terminalId,
+    openingCash,
+    overrideReason,
+  });
   if (!parsedInput.success) {
     return {
       success: false,
@@ -368,6 +399,36 @@ export async function openPosSession(
   // second getUser() HTTP roundtrip. Saves ~150ms on shift-open perceived
   // latency (peer to the auth Promise.all in _lib/auth.ts).
 
+  // Carry-over enforcement: opening_cash phải khớp closing_cash ca đóng gần
+  // nhất cùng branch. Lệch → bắt buộc có overrideReason để ghi audit.
+  const { data: prevSession, error: prevError } = await supabase
+    .from("pos_sessions")
+    .select("id, closing_cash")
+    .eq("branch_id", parsedBranchId.data)
+    .eq("tenant_id", claims.tenant_id)
+    .eq("status", "closed")
+    .order("closed_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (prevError) {
+    return {
+      success: false,
+      error: "Không thể đọc tồn quỹ ca trước. Vui lòng thử lại.",
+    };
+  }
+
+  const expectedOpening = Number(prevSession?.closing_cash ?? 0);
+  const delta = parsedInput.data.openingCash - expectedOpening;
+  const reason = parsedInput.data.overrideReason?.trim();
+
+  if (delta !== 0 && (!reason || reason.length < 3)) {
+    return {
+      success: false,
+      error: `Tiền đầu ca lệch ${delta.toLocaleString("vi-VN")}đ so với tồn cuối ca trước (${expectedOpening.toLocaleString("vi-VN")}đ). Vui lòng nhập lý do (≥ 3 ký tự).`,
+    };
+  }
+
   const { data, error } = await supabase
     .from("pos_sessions")
     .insert({
@@ -377,6 +438,8 @@ export async function openPosSession(
       terminal_id: parsedInput.data.terminalId ?? null,
       opened_by: user.id,
       opening_cash: parsedInput.data.openingCash,
+      opening_cash_carryover_delta: delta !== 0 ? delta : null,
+      opening_cash_carryover_note: delta !== 0 ? reason : null,
     })
     .select("id")
     .single();

@@ -56,12 +56,12 @@ export function BranchDailyCapBanner({
       <IconAlertTriangle className="size-4" />
       <AlertDescription>
         <strong className="block">
-          Branch hôm nay: {formatVND(projected)} / {formatVND(branchCap)}{" "}
+          Chi nhánh hôm nay: {formatVND(projected)} / {formatVND(branchCap)}{" "}
           ({Math.round(pct * 100)}%)
         </strong>
         {willExceed
-          ? "Đã vượt cap branch — mọi waste mới sẽ tự chuyển tier 2 (cần QLV duyệt). Cân nhắc báo QL trước khi submit."
-          : "Gần chạm cap branch — các phiếu waste tiếp theo có thể tự chuyển tier 2."}
+          ? "Đã vượt giới hạn ngày của chi nhánh — mọi phiếu hao hụt mới sẽ tự chuyển bậc 2 (cần QLV duyệt). Cân nhắc báo QL trước khi gửi."
+          : "Gần chạm giới hạn ngày của chi nhánh — các phiếu hao hụt tiếp theo có thể tự chuyển bậc 2."}
       </AlertDescription>
     </Alert>
   );

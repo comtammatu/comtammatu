@@ -48,6 +48,7 @@ const RevenueChartsBlock = dynamic(
     ssr: false,
     loading: () => (
       <>
+        {/* eslint-disable-next-line no-restricted-syntax -- ds-allow: chart skeleton height matches the recharts ResponsiveContainer height inside the dynamic client; standard h-* tokens overshoot */}
         <div className="h-[180px] w-full animate-pulse rounded-md bg-muted/40" />
         <div className="grid gap-4 lg:grid-cols-2">
           <div className="aspect-square max-h-72 w-full animate-pulse rounded-md bg-muted/40" />

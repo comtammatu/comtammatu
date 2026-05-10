@@ -21,6 +21,12 @@ export type {
   InvoiceLineItem,
 } from "./invoice";
 export { setInvoiceProvider, getInvoiceProvider } from "./invoice";
+export {
+  CANONICAL_INVOICE_PROVIDER,
+  LEGACY_INVOICE_PROVIDER,
+  normalizeInvoiceProviderChoice,
+} from "./invoice-provider-policy";
+export type { InvoiceProviderChoice } from "./invoice-provider-policy";
 
 // Implementations
 export { CashProvider } from "./impl/cash";

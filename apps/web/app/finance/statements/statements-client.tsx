@@ -147,7 +147,7 @@ export function StatementsClient() {
 
   return (
     <Tabs defaultValue="b01" className="space-y-4">
-      <TabsList className="h-auto w-full justify-start gap-2 overflow-x-auto p-2">
+      <TabsList variant="toolbar">
         <TabsTrigger value="b01">{financeCopy.statements.tabs.b01}</TabsTrigger>
         <TabsTrigger value="b02">{financeCopy.statements.tabs.b02}</TabsTrigger>
         <TabsTrigger value="b03">{financeCopy.statements.tabs.b03}</TabsTrigger>
@@ -448,13 +448,13 @@ function Tt200Report<TMeta extends object>({
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50 hover:bg-muted/50">
-              <TableHead className="w-24 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <TableHead variant="eyebrow" className="w-24">
                 {financeCopy.statements.table.code}
               </TableHead>
-              <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <TableHead variant="eyebrow">
                 {financeCopy.statements.table.line}
               </TableHead>
-              <TableHead className="w-44 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <TableHead variant="eyebrow" className="w-44 text-right">
                 {financeCopy.statements.table.amount}
               </TableHead>
             </TableRow>

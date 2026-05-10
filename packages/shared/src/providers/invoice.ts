@@ -1,14 +1,14 @@
 /**
  * Invoice Provider Interface (HĐĐT)
  *
- * Tương tự Go interface — mỗi HĐĐT provider (MISA, ViettelSinvoice...)
+ * Tương tự Go interface — mỗi HĐĐT provider (Viettel S-invoice, MISA...)
  * implement interface này. Server action gọi qua interface,
  * swap provider không cần đổi business logic.
  *
  * ```
  * InvoiceProvider (interface)
- *   ├── MisaProvider
- *   └── (fallback) ViettelSinvoiceProvider
+ *   ├── ViettelSinvoiceProvider (current production target)
+ *   └── MisaProvider (legacy/optional)
  * ```
  */
 

@@ -247,7 +247,10 @@ export function ItemDetailDialog({
     startTransition(async () => {
       const result = await saveSides({
         mainItemId: item.id,
-        sideItemIds: sides.map((s) => ({ id: s.side_item_id, is_default: s.is_default })),
+        sideItemIds: sides.map((s) => ({
+          id: s.side_item_id,
+          is_default: s.is_default,
+        })),
       });
       if (result.success) {
         toast.success("Đã lưu món ăn kèm");
@@ -261,7 +264,7 @@ export function ItemDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent size="lg">
         <DialogHeader>
           <DialogTitle>{item.name} — Chi tiết</DialogTitle>
         </DialogHeader>
@@ -348,9 +351,7 @@ export function ItemDetailDialog({
                   onClick={handleSaveVariants}
                   disabled={isPending}
                 >
-                  {isPending && (
-                    <Spinner className="mr-1 size-3" />
-                  )}
+                  {isPending && <Spinner className="mr-1 size-3" />}
                   Lưu biến thể
                 </Button>
               </div>
@@ -415,9 +416,7 @@ export function ItemDetailDialog({
                   onClick={handleSaveModifiers}
                   disabled={isPending}
                 >
-                  {isPending && (
-                    <Spinner className="mr-1 size-3" />
-                  )}
+                  {isPending && <Spinner className="mr-1 size-3" />}
                   Lưu tùy chọn
                 </Button>
               </div>
@@ -473,9 +472,7 @@ export function ItemDetailDialog({
                   onClick={handleSaveSides}
                   disabled={isPending}
                 >
-                  {isPending && (
-                    <Spinner className="mr-1 size-3" />
-                  )}
+                  {isPending && <Spinner className="mr-1 size-3" />}
                   Lưu món kèm
                 </Button>
               </div>

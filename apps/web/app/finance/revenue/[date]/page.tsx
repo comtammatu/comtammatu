@@ -130,9 +130,10 @@ export default async function RevenueDrillPage({
 
   if (branchId == null) {
     const branchesRes = await fetchAccessibleBranches();
-    const branches = (
-      branchesRes.success ? (branchesRes.data ?? []) : []
-    ) as { id: number; name: string }[];
+    const branches = (branchesRes.success ? (branchesRes.data ?? []) : []) as {
+      id: number;
+      name: string;
+    }[];
     return (
       <div className="space-y-4">
         <Button asChild variant="ghost" size="sm">
@@ -153,7 +154,11 @@ export default async function RevenueDrillPage({
             <ul className="grid gap-2 sm:grid-cols-2">
               {branches.map((b) => (
                 <li key={b.id}>
-                  <Button asChild variant="outline" className="w-full justify-start">
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="w-full justify-start"
+                  >
                     <Link href={`/finance/revenue/${date}?branch=${b.id}`}>
                       {b.name}
                     </Link>
@@ -177,9 +182,10 @@ export default async function RevenueDrillPage({
     fetchOrdersForDay(branchId, date),
   ]);
 
-  const branches = (
-    branchesRes.success ? (branchesRes.data ?? []) : []
-  ) as { id: number; name: string }[];
+  const branches = (branchesRes.success ? (branchesRes.data ?? []) : []) as {
+    id: number;
+    name: string;
+  }[];
   const branchName =
     branches.find((b) => b.id === branchId)?.name ?? `Chi nhánh ${branchId}`;
   const orders = (
@@ -188,10 +194,7 @@ export default async function RevenueDrillPage({
 
   const hours = summarizeByHour(orders);
   const totalOrders = orders.length;
-  const totalRevenue = orders.reduce(
-    (s, o) => s + Number(o.total_amount),
-    0,
-  );
+  const totalRevenue = orders.reduce((s, o) => s + Number(o.total_amount), 0);
   const totalDiscount = orders.reduce(
     (s, o) => s + Number(o.discount_amount),
     0,
@@ -219,7 +222,11 @@ export default async function RevenueDrillPage({
         items={[
           { value: "tong-quan", label: "Tổng quan" },
           { value: "theo-gio", label: "Theo giờ", count: hours.length },
-          { value: "danh-sach-don", label: "Danh sách đơn", count: totalOrders },
+          {
+            value: "danh-sach-don",
+            label: "Danh sách đơn",
+            count: totalOrders,
+          },
         ]}
         defaultValue="tong-quan"
         paramKey="tab"
@@ -281,7 +288,7 @@ export default async function RevenueDrillPage({
                           </span>
                         </span>
                       </div>
-                      <Progress value={pct} className="h-1.5 rounded-full" />
+                      <Progress value={pct} size="sm" />
                     </div>
                   );
                 })
@@ -297,8 +304,8 @@ export default async function RevenueDrillPage({
                 Danh sách đơn ({totalOrders.toLocaleString("vi-VN")})
               </CardTitle>
               <p className="text-sm text-muted-foreground">
-                Sắp xếp theo thời gian thanh toán. HĐĐT &quot;Không yêu cầu&quot;
-                = khách lẻ không nhập MST.
+                Sắp xếp theo thời gian thanh toán. HĐĐT &quot;Không yêu
+                cầu&quot; = khách lẻ không nhập MST.
               </p>
             </CardHeader>
             <CardContent>
@@ -336,7 +343,7 @@ export default async function RevenueDrillPage({
                           ? "Không yêu cầu"
                           : o.invoice_status === "issued"
                             ? `Đã phát hành${o.invoice_number ? ` · ${o.invoice_number}` : ""}`
-                            : o.invoice_status ?? "—";
+                            : (o.invoice_status ?? "—");
                       const invoiceVariant =
                         o.invoice_status &&
                         INVOICE_STATUS_VARIANT[o.invoice_status]

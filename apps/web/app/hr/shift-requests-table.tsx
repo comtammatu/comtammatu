@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+} from "react";
 import {
   Check as IconCheck,
   CalendarDays as IconCalendarEvent,
@@ -288,7 +294,9 @@ export function ShiftRequestsTable({ branches }: ShiftRequestsTableProps) {
                   onClick={handleBulkApprove}
                   disabled={isPending}
                 >
-                  {isPending ? <Spinner className="mr-2" /> : (
+                  {isPending ? (
+                    <Spinner className="mr-2" />
+                  ) : (
                     <IconCheck className="mr-1 size-4" />
                   )}
                   Duyệt {selectedIds.size} đăng ký
@@ -482,7 +490,7 @@ export function ShiftRequestsTable({ branches }: ShiftRequestsTableProps) {
           }
         }}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent size="md">
           <DialogHeader>
             <DialogTitle>Từ chối đăng ký ca?</DialogTitle>
           </DialogHeader>

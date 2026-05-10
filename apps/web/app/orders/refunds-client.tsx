@@ -160,10 +160,10 @@ export function RefundsClient({
               {refunds.length} yêu cầu hòan tiền trong danh sách hiện tại.
             </p>
             <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="warning" className="rounded-full px-3 py-1.5">
+              <Badge variant="warning" size="lg">
                 {pendingCount} chờ duyệt
               </Badge>
-              <Badge variant="success" className="rounded-full px-3 py-1.5">
+              <Badge variant="success" size="lg">
                 {approvedCount} đã duyệt
               </Badge>
             </div>
@@ -305,7 +305,7 @@ export function RefundsClient({
             ))}
           </div>
 
-          <div className="hidden overflow-hidden rounded-3xl md:block">
+          <div className="hidden overflow-hidden rounded-lg md:block">
             <Table>
               <TableHeader>
                 <TableRow>

@@ -97,7 +97,7 @@ export function ProductionStats({
       description: "Không ghi tồn kho",
     },
     {
-      label: "BOM thành phẩm",
+      label: "Công thức thành phẩm",
       value: recipeFinishedGoodCount,
       description: `${recipeLineCount} dòng nguyên liệu`,
     },
@@ -111,16 +111,16 @@ export function ProductionStats({
   const recoveryMessage =
     readinessState === "missing-finished-good"
       ? canManageCatalog
-        ? "Tạo ít nhất một thành phẩm để mở BOM sản xuất, rồi quay lại lập lệnh."
-        : "Cần đội quản trị danh mục tạo ít nhất một thành phẩm trước khi bếp trung tâm lập BOM và lệnh sản xuất."
+        ? "Tạo ít nhất một thành phẩm để mở công thức sản xuất, rồi quay lại lập lệnh."
+        : "Cần đội quản trị danh mục tạo ít nhất một thành phẩm trước khi bếp trung tâm lập công thức và lệnh sản xuất."
       : readinessState === "missing-raw-material"
         ? canManageCatalog
-          ? "Tạo nguyên liệu đầu vào để hòan thiện BOM trước khi xác nhận sản xuất."
-          : "Cần đội quản trị danh mục bổ sung nguyên liệu đầu vào trước khi hòan thiện BOM sản xuất."
+          ? "Tạo nguyên liệu đầu vào để hòan thiện công thức trước khi xác nhận sản xuất."
+          : "Cần đội quản trị danh mục bổ sung nguyên liệu đầu vào trước khi hòan thiện công thức sản xuất."
         : readinessState === "missing-recipe"
           ? canManageRecipes
-            ? "Cấu hình ít nhất một BOM sản xuất trước khi xác nhận lệnh."
-            : "Cần đội quản trị cấu hình BOM sản xuất trước khi bếp trung tâm chạy mẻ này."
+            ? "Cấu hình ít nhất một công thức sản xuất trước khi xác nhận lệnh."
+            : "Cần đội quản trị cấu hình công thức sản xuất trước khi bếp trung tâm chạy mẻ này."
           : null;
 
   function handleFinishedGoodCreated(_good: FinishedGoodOption) {
@@ -174,7 +174,7 @@ export function ProductionStats({
             <div className="flex min-w-0 flex-col gap-1">
               <p className="text-sm font-medium">{activeCentralKitchenCopy}</p>
               <p className="text-xs text-muted-foreground">
-                Quy trình chuẩn: nhận nguyên liệu, chốt BOM, xác nhận lệnh để
+                Quy trình chuẩn: nhận nguyên liệu, chốt công thức, xác nhận lệnh để
                 trừ nguyên liệu và nhập thành phẩm.
               </p>
             </div>
@@ -218,7 +218,7 @@ export function ProductionStats({
               ) : null}
               {readinessState === "missing-recipe" && canManageRecipes ? (
                 <Button type="button" size="sm" variant="outline" asChild>
-                  <Link href="#production-recipes">Mở BOM sản xuất</Link>
+                  <Link href="#production-recipes">Mở công thức sản xuất</Link>
                 </Button>
               ) : readinessState !== "missing-recipe" && canManageCatalog ? (
                 <Button type="button" size="sm" variant="outline" asChild>

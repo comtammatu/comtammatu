@@ -15,7 +15,6 @@ type FormContext<TValues extends FieldValues> = UseFormReturn<
   unknown,
   TValues
 >;
-import { cn } from "@comtammatu/ui";
 import {
   Dialog,
   DialogContent,
@@ -96,7 +95,8 @@ export function FormDialog<TValues extends FieldValues>({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className={cn("sm:max-w-lg", contentClassName)}
+        size="lg"
+        className={contentClassName}
         key={entityKey ?? "new"}
       >
         <DialogHeader>
@@ -116,7 +116,7 @@ export function FormDialog<TValues extends FieldValues>({
             )}
           </FieldGroup>
 
-          <DialogFooter className="pt-6">
+          <DialogFooter spacing="form">
             <Button
               type="button"
               variant="outline"

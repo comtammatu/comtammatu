@@ -271,7 +271,7 @@ export function IssueDetailClient({
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {[
               {
-                label: "Nghiep vu",
+                label: "Nghiệp vụ",
                 value: surface.label,
               },
               {
@@ -407,7 +407,7 @@ export function IssueDetailClient({
                             </div>
                             <div>
                               <p className="text-muted-foreground">
-                                Đơn giá (WAC)
+                                Đơn giá bình quân
                               </p>
                               <p className="font-semibold">
                                 {formatVND(Number(line.unit_cost ?? 0))}
@@ -434,21 +434,22 @@ export function IssueDetailClient({
                   </div>
 
                   <div className="hidden md:block">
-                    <Table>
+                    <Table density="spacious">
                       <TableHeader>
                         <TableRow className="bg-muted/40">
                           {[
                             { label: tTerm("ingredient"), align: "" },
                             { label: "Số lượng", align: "text-right" },
                             { label: "Đơn vị", align: "" },
-                            { label: "Đơn giá (WAC)", align: "text-right" },
+                            { label: "Đơn giá bình quân", align: "text-right" },
                             { label: "Thành tiền", align: "text-right" },
                             { label: tTerm("issueReason"), align: "" },
                             { label: "", align: "text-center" },
                           ].map((header) => (
                             <TableHead
                               key={header.label || "delete"}
-                              className={`px-6 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wider ${header.align}`}
+                              variant="eyebrow"
+                              className={header.align}
                             >
                               {header.label}
                             </TableHead>
@@ -465,7 +466,7 @@ export function IssueDetailClient({
                         )}
                         {lines.map((line) => (
                           <TableRow key={line.id} className="transition-colors">
-                            <TableCell className="px-6 py-4">
+                            <TableCell>
                               <div className="flex flex-col">
                                 <span className="font-bold">
                                   {line.ingredients?.name ??
@@ -476,24 +477,24 @@ export function IssueDetailClient({
                                 </span>
                               </div>
                             </TableCell>
-                            <TableCell className="px-6 py-4 text-right font-semibold">
+                            <TableCell className="text-right font-semibold">
                               {formatQty(Number(line.quantity ?? 0))}
                             </TableCell>
-                            <TableCell className="px-6 py-4">
+                            <TableCell>
                               <span className="rounded bg-muted px-2 py-1 text-xs font-medium">
                                 {line.unit ?? line.ingredients?.unit ?? ""}
                               </span>
                             </TableCell>
-                            <TableCell className="px-6 py-4 text-right font-medium">
+                            <TableCell className="text-right font-medium">
                               {formatVND(Number(line.unit_cost ?? 0))}
                             </TableCell>
-                            <TableCell className="px-6 py-4 text-right font-bold">
+                            <TableCell className="text-right font-bold">
                               {formatVND(Number(line.total_cost ?? 0))}
                             </TableCell>
-                            <TableCell className="px-6 py-4 text-sm text-muted-foreground">
+                            <TableCell className="text-muted-foreground">
                               {line.reason ?? "—"}
                             </TableCell>
-                            <TableCell className="px-6 py-4 text-center">
+                            <TableCell className="text-center">
                               {isDraft ? (
                                 <Button
                                   type="button"
@@ -536,7 +537,7 @@ export function IssueDetailClient({
                   <div className="flex items-end justify-between border-t border-border pt-3">
                     <span className="text-sm font-bold">TỔNG CỘNG</span>
                     <div className="text-right">
-                      <span className="block text-2xl font-black leading-none text-primary">
+                      <span className="block text-2xl font-bold leading-none tabular-nums text-primary">
                         {messages.inventory.common.currency(
                           formatVND(totalAmount),
                         )}
@@ -787,7 +788,7 @@ function AddIssueLineDialog({
                   keywords: [ingredient.sku ?? "", ingredient.category ?? ""],
                 }))}
               placeholder="Chọn nguyên liệu"
-              searchPlaceholder="Tìm tên, SKU, danh mục..."
+              searchPlaceholder="Tìm tên, mã hàng, danh mục..."
             />
           </div>
 
@@ -816,7 +817,7 @@ function AddIssueLineDialog({
           </div>
 
           <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
-            Đơn giá (WAC) tự áp dụng từ tồn kho tại thời điểm xác nhận phiếu.
+            Đơn giá bình quân tự áp dụng từ tồn kho tại thời điểm xác nhận phiếu.
           </div>
 
           <div className="space-y-1.5">

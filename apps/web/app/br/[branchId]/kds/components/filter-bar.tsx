@@ -51,11 +51,11 @@ export function FilterBar({
   onClearAll,
 }: FilterBarProps) {
   return (
-    <div className="border-b px-3 py-2 md:px-4">
-      <div className="flex min-w-0 flex-wrap items-center gap-2">
-        <div className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
+    <div className="border-b px-2 py-1.5 md:px-4 md:py-2">
+      <div className="flex min-w-0 items-center gap-2 overflow-x-auto">
+        <div className="hidden min-w-0 items-center gap-1.5 text-muted-foreground sm:flex">
           <IconFilter className="size-4 shrink-0" aria-hidden />
-          <span className="hidden text-sm font-medium sm:inline">{ACTIONS_VI.filter}</span>
+          <span className="text-sm font-medium">{ACTIONS_VI.filter}</span>
         </div>
 
         <Select
@@ -63,7 +63,8 @@ export function FilterBar({
           onValueChange={(v) => onStatusChange(v as TicketStatusFilter)}
         >
           <SelectTrigger
-            className="h-10 min-h-10 w-auto min-w-28 shrink-0 rounded-lg text-sm md:min-w-36"
+            size="touch"
+            className="w-auto min-w-28 shrink-0 text-sm md:min-w-36"
             aria-label="Lọc theo trạng thái món"
           >
             <SelectValue placeholder="Trạng thái" />
@@ -88,7 +89,8 @@ export function FilterBar({
           onValueChange={(v) => onOrderTypeChange(v as OrderTypeFilter)}
         >
           <SelectTrigger
-            className="h-10 min-h-10 w-auto min-w-24 shrink-0 rounded-lg text-sm md:min-w-32"
+            size="touch"
+            className="w-auto min-w-24 shrink-0 text-sm md:min-w-32"
             aria-label="Lọc theo loại đơn"
           >
             <SelectValue placeholder="Loại đơn" />
@@ -112,7 +114,7 @@ export function FilterBar({
           <Button
             type="button"
             variant="ghost"
-            size="sm"
+            size="touch"
             className="shrink-0"
             onClick={onClearAll}
           >
@@ -122,7 +124,7 @@ export function FilterBar({
         )}
 
         {displayCount > 0 && (
-          <span className="ml-auto text-sm font-semibold tabular-nums text-muted-foreground">
+          <span className="ml-auto shrink-0 text-sm font-semibold tabular-nums text-muted-foreground">
             {displayCount} đơn
           </span>
         )}

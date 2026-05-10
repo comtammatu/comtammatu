@@ -2,13 +2,13 @@
 
 Use this file for task workflow, debate protocol, skip conditions, verification, and completion gates.
 
-## Team Workflow — 4-Agent Debate Protocol
+## Team Workflow — 4-Perspective Debate Protocol
 
-Every feature, bug fix, and refactor MUST go through all 4 agents before implementation. No exceptions except the skip conditions below.
+Every feature, bug fix, and refactor MUST go through all 4 perspectives before implementation. No exceptions except the skip conditions below. Use real subagents only when the current tooling supports it and the user has authorized delegation; otherwise run the same 4-perspective checkpoint in-thread and keep the synthesis concise.
 
 ## Team Roles
 
-| Role | Agent Type | Responsibility |
+| Role | Perspective / Agent Type | Responsibility |
 | --- | --- | --- |
 | PM | `oh-my-Codex:planner` | Scope, priority, acceptance criteria, timeline. Asks "should we build this?" and "what's the MVP?" |
 | BA | `oh-my-Codex:analyst` | Requirements analysis, business logic validation, edge cases, data flow. Asks "what are the rules?" and "what can go wrong?" |
@@ -17,7 +17,7 @@ Every feature, bug fix, and refactor MUST go through all 4 agents before impleme
 
 ## Phase 1: Debate
 
-Spawn all 4 agents in parallel with the task description. Each agent reviews from their perspective and returns:
+Collect all 4 perspectives with the task description. If subagents are available and authorized, run them in parallel. Otherwise, write a compact in-thread pass for each perspective:
 
 - PM: scope decision, acceptance criteria, priority assessment.
 - BA: business rules, edge cases, data flow analysis, requirement gaps.
@@ -34,7 +34,7 @@ Include this context in agent prompts:
 
 ## Phase 2: Synthesis
 
-After all 4 agents respond:
+After all 4 perspectives respond:
 
 1. List all agreements.
 2. List all conflicts and resolve each explicitly.
@@ -49,17 +49,16 @@ Execute the unified plan. Senior Dev implements, following the agreed architectu
 Before marking implementation work complete:
 
 1. `pnpm typecheck && pnpm lint && pnpm build` MUST pass.
-2. QA/QC agent reviews the diff for correctness.
-3. BA agent verifies business rules are met.
-4. PM agent confirms acceptance criteria are satisfied.
+2. QA/QC perspective reviews the diff for correctness.
+3. BA perspective verifies business rules are met.
+4. PM perspective confirms acceptance criteria are satisfied.
 
 ## Skip Conditions
 
-The ONLY time to skip the 4-agent debate:
+The ONLY time to skip the 4-perspective debate:
 
 - Typo fixes under 3 changed lines.
 - Documentation-only changes.
 - Dependency version bumps.
 
 For skipped tasks, still verify the changed files and explain why the debate was skipped.
-

@@ -22,13 +22,13 @@ export function PosStatusShell({
   return (
     <AppEmptyState
       align="start"
-      className="gap-5 p-6 sm:p-8"
+      className="gap-4 p-4 sm:p-6"
       description={description}
       descriptionClassName="max-w-2xl text-base leading-7"
       icon={icon}
-      iconClassName="size-14 border border-border/70 bg-background/80 text-primary shadow-sm"
+      iconClassName="size-12 border border-border/70 bg-background/80 text-primary shadow-sm"
       title={title}
-      titleClassName="text-3xl font-semibold tracking-tight"
+      titleClassName="text-xl font-semibold tracking-tight sm:text-2xl"
     >
       <Badge variant={badge.variant ?? "info"}>
         {badge.icon}

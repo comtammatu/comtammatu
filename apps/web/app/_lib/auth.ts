@@ -79,6 +79,79 @@ const hasPermissionGrant = cache(async function hasPermissionGrant(
   return !error && data === true;
 });
 
+function normalizePermissionKeys(
+  permissions: readonly PermissionLike[],
+): string[] {
+  return [...new Set(permissions.filter((p) => p.length > 0))];
+}
+
+async function hasAnyPermissionGrant(
+  ctx: AuthContext,
+  permissions: readonly PermissionLike[],
+  branchId?: number | null,
+): Promise<boolean> {
+  const keys = normalizePermissionKeys(permissions);
+  if (keys.length === 0) return false;
+  if (keys.length === 1) {
+    const key = keys[0];
+    return key ? hasPermissionGrant(ctx, key, branchId) : false;
+  }
+
+  if (branchId == null) {
+    const { data, error } = await ctx.supabase.rpc(
+      "has_any_permissions_any",
+      { p_keys: keys },
+    );
+    if (!error) return data === true;
+  } else {
+    const { data, error } = await ctx.supabase.rpc(
+      "has_any_permissions_for_branch",
+      { p_branch_id: branchId, p_keys: keys },
+    );
+    if (!error) return data === true;
+  }
+
+  // Deployment-safe fallback: if code reaches an environment before the
+  // migration is applied, preserve the old semantics instead of denying all
+  // multi-key gates.
+  const grants = await Promise.all(
+    keys.map((p) => hasPermissionGrant(ctx, p, branchId)),
+  );
+  return grants.some(Boolean);
+}
+
+async function hasAllPermissionGrants(
+  ctx: AuthContext,
+  permissions: readonly PermissionLike[],
+  branchId?: number | null,
+): Promise<boolean> {
+  const keys = normalizePermissionKeys(permissions);
+  if (keys.length === 0) return true;
+  if (keys.length === 1) {
+    const key = keys[0];
+    return key ? hasPermissionGrant(ctx, key, branchId) : true;
+  }
+
+  if (branchId == null) {
+    const { data, error } = await ctx.supabase.rpc(
+      "has_all_permissions_any",
+      { p_keys: keys },
+    );
+    if (!error) return data === true;
+  } else {
+    const { data, error } = await ctx.supabase.rpc(
+      "has_all_permissions_for_branch",
+      { p_branch_id: branchId, p_keys: keys },
+    );
+    if (!error) return data === true;
+  }
+
+  const grants = await Promise.all(
+    keys.map((p) => hasPermissionGrant(ctx, p, branchId)),
+  );
+  return grants.every(Boolean);
+}
+
 // Cheap permission probe for callers that already have an `AuthContext`
 // (i.e. resolved `getUser()` + `getSession()` once). Use this for UI hints
 // like `canManageOrders` so the action does NOT pay a second `getUser()`
@@ -111,10 +184,9 @@ export async function getAuthContextWithPermission(
 
 /**
  * OR-semantics: returns ctx if user has ANY of the listed permissions on the
- * branch (or tenant-wide if branchId null). Probes fire in parallel — single
- * RTT — instead of the prior `for…await` waterfall. `hasPermissionGrant` is
- * already cache()-wrapped so duplicate `(ctx, key, branch)` tuples across
- * sibling helpers in one render dedupe to a single RPC.
+ * branch (or any branch if branchId null). Multi-key checks use one batch RPC
+ * instead of N permission RPCs. The single-key path stays cache()-wrapped so
+ * duplicate `(ctx, key, branch)` tuples across sibling helpers dedupe.
  */
 export async function getAuthContextWithAnyPermission(
   allowedRoles: readonly StaffRole[],
@@ -124,17 +196,14 @@ export async function getAuthContextWithAnyPermission(
   const ctx = await getAuthContext(allowedRoles);
   if (!ctx) return null;
 
-  const grants = await Promise.all(
-    permissions.map((p) => hasPermissionGrant(ctx, p, branchId)),
-  );
-  return grants.some(Boolean) ? ctx : null;
+  const allowed = await hasAnyPermissionGrant(ctx, permissions, branchId);
+  return allowed ? ctx : null;
 }
 
 /**
- * AND-semantics: returns ctx only if user has EVERY listed permission. Same
- * parallel fan-out as the OR sibling above but ORs collapse with `.every()`
- * instead of `.some()`. Distinct from `getAuthContextWithAnyPermission` —
- * do NOT copy `.some(Boolean)` here or the AND gate silently weakens.
+ * AND-semantics: returns ctx only if user has EVERY listed permission. Uses
+ * the batch ALL RPC for multi-key probes. Distinct from
+ * `getAuthContextWithAnyPermission` — do NOT collapse this with OR semantics.
  */
 export async function getAuthContextWithPermissions(
   allowedRoles: readonly StaffRole[],
@@ -144,10 +213,8 @@ export async function getAuthContextWithPermissions(
   const ctx = await getAuthContext(allowedRoles);
   if (!ctx) return null;
 
-  const grants = await Promise.all(
-    permissions.map((p) => hasPermissionGrant(ctx, p, branchId)),
-  );
-  return grants.every(Boolean) ? ctx : null;
+  const allowed = await hasAllPermissionGrants(ctx, permissions, branchId);
+  return allowed ? ctx : null;
 }
 
 type LoadedAuthState = {

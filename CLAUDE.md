@@ -1,5 +1,7 @@
 # Cơm Tấm Má Tư — Restaurant Management System
 
+Compatibility entrypoint for Claude-style agents. `AGENTS.md` and `docs/agent/rules/*` are the source of truth; keep this file as a short mirror, not a separate policy layer.
+
 Single-tenant multi-branch (CTCP). Hierarchy: `Tenant (L0) → Branch (L1)`. Stack: Next.js 16.2 · React 19.2 · TS 6.0 (strict, `noUncheckedIndexedAccess`) · Tailwind 4.2 · Zod 4 · Turborepo 2.9 · Node ≥24 · Supabase (PostgREST + Auth).
 
 > "Minimum code that solves the problem. Touch only what you must."
@@ -18,11 +20,11 @@ Single-tenant multi-branch (CTCP). Hierarchy: `Tenant (L0) → Branch (L1)`. Sta
 - NEVER store scope in localStorage/Context — URL params only (e.g. `?branchId=`)
 - Migrations: dev/test qua `supabase db push` được phép; production = file → PR → merge → owner apply manually. Sau apply → `pnpm db:types`
 - ACL single source: route-level `packages/shared/src/auth/module-acl.ts`; row-level `staff_permissions` + `has_permission(branch, key)` SQL helper; key catalog `packages/shared/src/auth/permissions.ts`
-- UI MUST đi theo shadcn preset `b1GN1lxvE` (`docs/spec/design-system.md` + `docs/modules/ui.md`). Compose từ `packages/ui/src/components/*` + `@/components/form`. NEVER fake primitives bằng `div`/`span`/`p`, NEVER fork primitive, NEVER theme layer / `app-*` / per-surface `theme.css`. NEVER raw Tailwind palette ngoài `packages/ui/src/styles/*.css` — dùng semantic tokens (`bg-success`, `text-warning`, `border-destructive`, `--tier-*`); NEVER arbitrary dimensions (`w-[200px]`, `text-[10px]`). Trước UI rebuild đọc design-system.md → ui.md → `tasks/regressions.md` và state surface + user job + primitives + regression risks
+- UI MUST đi theo shadcn preset `b6G3vbGue` / `radix-lyra` plus matu-superapp baseline (`docs/spec/design-system.md` + `docs/modules/ui.md`). Compose từ `packages/ui/src/components/*` + `@/components/form`; app-level surfaces dùng `apps/web/app/components/surface.tsx`. Generated `matu-*` tokens + `font-matu-body` are app-wide token/QA utilities, but route code should prefer semantic classes and canonical adapters. NEVER fake primitives bằng `div`/`span`/`p`, NEVER fork primitive, NEVER ad-hoc route theme layer / `app-*` / per-surface `theme.css`. NEVER raw Tailwind palette ngoài `packages/ui/src/styles/*.css`; NEVER arbitrary dimensions (`w-[200px]`, `text-[10px]`). Trước UI rebuild đọc design-system.md → ui.md → `tasks/regressions.md` và state surface + user job + primitives + regression risks
 
 ## Architecture
 
-`Browser → proxy.ts (auth + ACL) → App Router → Supabase`. Proxy file: `apps/web/proxy.ts` exports `proxy(request: NextRequest)`. JWT claims: `{ tenant_id, branch_id|null, user_role }`. Routes: `/admin/*` (manager+), `/br/[branchId]/{pos,kds}`, `/employee`, `/login`. DB types: money `NUMERIC(15,2)`, time `TIMESTAMPTZ`, PK `BIGINT GENERATED ALWAYS AS IDENTITY`, text `TEXT`.
+`Browser → proxy.ts (auth + ACL) → App Router → Supabase`. Production may split public feedback onto `NEXT_PUBLIC_FEEDBACK_HOST`; proxy host-gates `/r/*` before auth. Proxy file: `apps/web/proxy.ts` exports `proxy(request: NextRequest)`. JWT claims: `{ tenant_id, branch_id|null, user_role }`. Routes: `/admin/*` (manager+), `/br/[branchId]/{pos,kds}`, `/employee`, `/login`, `/r/[token]/*`. DB types: money `NUMERIC(15,2)`, time `TIMESTAMPTZ`, PK `BIGINT GENERATED ALWAYS AS IDENTITY`, text `TEXT`.
 
 ## Things That Will Bite You
 
@@ -38,18 +40,18 @@ Single-tenant multi-branch (CTCP). Hierarchy: `Tenant (L0) → Branch (L1)`. Sta
 - **Code navigation:** `.context-graph/NAV.md` (931 nodes, 296 files với file:line) — đọc trước khi grep
 - **Meta:** `tasks/regressions.md` (named failure rules), `tasks/lessons.md`, `tasks/todo.md`
 
-## Team Workflow — 4-Agent Debate (mandatory)
+## Team Workflow — 4-Perspective Debate (mandatory)
 
-Every task (feature/bug/refactor) MUST qua 4 agents trước khi code. Skip CHỈ cho: typo <3 LOC, docs-only, dep bump.
+Every task (feature/bug/refactor) MUST qua PM/BA/Sr.Dev/QA perspectives trước khi code. Dùng subagents khi tooling hỗ trợ và được phép; nếu không, chạy checkpoint ngắn in-thread. Skip CHỈ cho: typo <3 LOC, docs-only, dep bump.
 
-| Role     | Agent                        | Asks                                          |
-| -------- | ---------------------------- | --------------------------------------------- |
-| PM       | `oh-my-claudecode:planner`   | scope, MVP, acceptance criteria               |
-| BA       | `oh-my-claudecode:analyst`   | business rules, edge cases, data flow         |
-| Sr. Dev  | `oh-my-claudecode:architect` | architecture, plan, risks, affected files    |
-| QA/QC    | `oh-my-claudecode:critic`    | test plan, regression risks, quality gates    |
+| Role    | Agent                   | Asks                                       |
+| ------- | ----------------------- | ------------------------------------------ |
+| PM      | `oh-my-Codex:planner`   | scope, MVP, acceptance criteria            |
+| BA      | `oh-my-Codex:analyst`   | business rules, edge cases, data flow      |
+| Sr. Dev | `oh-my-Codex:architect` | architecture, plan, risks, affected files  |
+| QA/QC   | `oh-my-Codex:critic`    | test plan, regression risks, quality gates |
 
-Flow: spawn 4 song song với task + `CLAUDE.md` + `tasks/regressions.md` → synthesize agreements/conflicts → unified contract → Sr. Dev implement → verify với QA + BA + PM + green build. Full protocol: wiki `team-agent-workflow-4-agent-debate.md`.
+Flow: collect 4 perspectives với task + `AGENTS.md` + `tasks/regressions.md` → synthesize agreements/conflicts → unified contract → Sr. Dev implement → verify với QA + BA + PM + green build. Full protocol: `docs/agent/rules/workflow.md`.
 
 ## gstack
 

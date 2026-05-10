@@ -3,7 +3,8 @@
  *
  * Auth: Bearer CRON_SECRET (timing-safe compare).
  * Flag: HDDT_DAILY_SUMMARY_ENABLED=true to run; default off (PR-4 ship-disabled,
- *       flip in PR-6 cutover after MISA template registration completes).
+ *       flip in PR-6 cutover after Viettel S-invoice template registration
+ *       completes).
  * Schedule (PR-6): 0 19 * * * UTC = 02:00 ICT next-day, paired with
  *                  feedback-daily-report. summary_date = yesterday in VN.
  *

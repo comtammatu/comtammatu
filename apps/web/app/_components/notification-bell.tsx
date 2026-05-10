@@ -50,7 +50,8 @@ export function NotificationBell({ tenantId }: Props) {
       <PopoverContent
         align="end"
         sideOffset={8}
-        className="w-90 p-0 sm:w-100"
+        width="notification"
+        padding="none"
       >
         <NotificationList
           items={items}

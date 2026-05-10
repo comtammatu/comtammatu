@@ -1,24 +1,21 @@
 "use client";
 
 import { useMemo, type ReactNode } from "react";
+import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import {
   ChartBar as IconChartBar,
-  ClipboardList as IconClipboardList,
-  Factory as IconBuildingFactory,
   FileText as IconFileText,
   Hourglass as IconHourglass,
-  LayoutDashboard as IconLayoutDashboard,
   Package as IconPackage,
   Receipt as IconReceipt,
-  Settings as IconSettings,
-  ShoppingCart as IconShoppingCart,
-  Truck as IconTruck,
+  Repeat2 as IconRepeat,
   Users as IconUsers,
   Utensils as IconToolsKitchen,
   Warehouse as IconWarehouse,
 } from "lucide-react";
 import { type StaffRole } from "@comtammatu/shared/auth";
+import { Button } from "@comtammatu/ui/components/button";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { AppShell } from "@/components/app-shell";
 import type { ShellNavGroup } from "@/lib/shell-primitives";
@@ -35,9 +32,7 @@ interface InventoryShellProps {
   siteName: string;
   siteKind: string;
   showProcurement: boolean;
-  showProduction: boolean;
   showCatalogManagement: boolean;
-  showSettings: boolean;
   allowedBranches: InventoryBranchOption[];
   defaultBranchId: number | null;
 }
@@ -52,16 +47,12 @@ function isStocktakeSessionPath(pathname: string | null): boolean {
 function buildInventoryGroups({
   userRole,
   showProcurement,
-  showProduction,
   showCatalogManagement,
-  showSettings,
   siteKind,
 }: {
   userRole: StaffRole;
   showProcurement: boolean;
-  showProduction: boolean;
   showCatalogManagement: boolean;
-  showSettings: boolean;
   siteKind: string;
 }): ShellNavGroup[] {
   const isBranchSite = siteKind === "branch";
@@ -70,23 +61,11 @@ function buildInventoryGroups({
   const showBackOffice =
     !isBranchManager &&
     !isOversight &&
-    (showSettings || showProcurement || showCatalogManagement);
-  const groups: ShellNavGroup[] = [
-    {
-      title: "Điểm vào",
-      items: [
-        {
-          href: "/inventory",
-          label: "Hôm nay",
-          icon: IconLayoutDashboard,
-          exact: true,
-        },
-      ],
-    },
-  ];
+    (showProcurement || showCatalogManagement);
+  const groups: ShellNavGroup[] = [];
 
   groups.push({
-    title: "1 · Kiểm soát tồn",
+    title: "Vận hành",
     items: [
       {
         href: "/inventory/stock",
@@ -94,19 +73,9 @@ function buildInventoryGroups({
         icon: IconPackage,
       },
       {
-        href: "/inventory/stocktake",
-        label: tNav("stocktake", "navigation"),
-        icon: IconClipboardList,
-      },
-      {
         href: "/inventory/expiry",
         label: tNav("expiry", "navigation"),
         icon: IconHourglass,
-      },
-      {
-        href: "/inventory/issues",
-        label: "Hao hụt/điều chỉnh",
-        icon: IconFileText,
       },
       {
         href: "/inventory/reports",
@@ -118,64 +87,26 @@ function buildInventoryGroups({
 
   if (showProcurement) {
     groups.push({
-      title: "2 · Nhập/Nhận/Đối soát",
+      title: "Sổ sách NCC",
       items: [
         {
-          href: "/inventory/purchase-orders",
-          label: tNav("purchaseOrders", "navigation"),
-          icon: IconShoppingCart,
+          href: "/inventory/receiving",
+          label: tNav("receiving", "navigation"),
+          icon: IconReceipt,
         },
         {
-          href: "/inventory/grn",
-          label: tNav("grn", "navigation"),
-          icon: IconReceipt,
+          href: "/inventory/supplier-returns",
+          label: "Trả NCC",
+          icon: IconRepeat,
         },
       ],
     });
   }
 
-  groups.push({
-    title: "3 · Điều phối/Sản xuất",
-    items: [
-      {
-        href: "/inventory/transfers",
-        label: isBranchSite ? "Nhận hàng & cấp bếp" : "Điều chuyển",
-        icon: IconTruck,
-      },
-      ...(showProduction
-        ? [
-            {
-              href: "/inventory/production",
-              label: "Lệnh sản xuất",
-              icon: IconBuildingFactory,
-            },
-          ]
-        : []),
-    ],
-  });
-
   if (showBackOffice) {
     groups.push({
-      title: "Danh mục",
+      title: "Thiết lập",
       items: [
-        ...(showSettings
-          ? [
-              {
-                href: "/inventory/settings",
-                label: tNav("settings", "navigation"),
-                icon: IconSettings,
-              },
-            ]
-          : []),
-        ...(showProcurement
-          ? [
-              {
-                href: "/inventory/suppliers",
-                label: tNav("suppliers", "navigation"),
-                icon: IconUsers,
-              },
-            ]
-          : []),
         ...(showCatalogManagement
           ? [
               {
@@ -187,6 +118,11 @@ function buildInventoryGroups({
           : []),
         ...(showProcurement
           ? [
+              {
+                href: "/inventory/suppliers",
+                label: tNav("suppliers", "navigation"),
+                icon: IconUsers,
+              },
               {
                 href: "/inventory/recipes",
                 label: tNav("recipes", "navigation"),
@@ -211,9 +147,7 @@ export function InventoryShell({
   siteName,
   siteKind,
   showProcurement,
-  showProduction,
   showCatalogManagement,
-  showSettings,
   allowedBranches,
   defaultBranchId,
 }: InventoryShellProps) {
@@ -248,17 +182,13 @@ export function InventoryShell({
       buildInventoryGroups({
         userRole,
         showProcurement,
-        showProduction,
         showCatalogManagement,
-        showSettings,
         siteKind: effectiveSiteKind,
       }),
     [
       effectiveSiteKind,
       showCatalogManagement,
       showProcurement,
-      showProduction,
-      showSettings,
       userRole,
     ],
   );
@@ -280,15 +210,21 @@ export function InventoryShell({
       role={userRole}
       brand={{
         icon: IconWarehouse,
-        subLabel: messages.inventory.shell.moduleName,
-        mainLabel: messages.inventory.shell.brandName,
+        subLabel: messages.inventory.shell.brandName,
+        mainLabel: messages.inventory.shell.moduleName,
         logoVariant: "seal",
-        showBackLink: true,
+        showBackLink: false,
       }}
       navGroups={groups}
-      defaultPageTitle={messages.inventory.shell.brandName}
+      defaultPageTitle={messages.inventory.shell.moduleName}
       pageHeader={{
         headerExtras: branchFilter,
+        omitTitle: true,
+        actions: (
+          <Button asChild variant="outline" size="sm">
+            <Link href="/admin/dashboard">{messages.common.admin}</Link>
+          </Button>
+        ),
         mobileTopBar: isMobile ? (
           <MobileTopBar siteName={effectiveSiteName} />
         ) : branchFilter,

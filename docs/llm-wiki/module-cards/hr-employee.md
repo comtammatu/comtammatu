@@ -5,6 +5,7 @@
 Employee self-service and HR management are separate surfaces.
 
 - Employee self-service: `/employee/*`
+- Work discovery: `/portal`
 - HR management: `/hr/*`
 - Staff/admin permissions: `/admin/staff/*`
 
@@ -14,7 +15,7 @@ The Super App rebuild keeps `/employee` narrow and task-led.
 
 Employee routes:
 
-- `/employee`: today page, clock state, next shift, self-service links, secondary handoff.
+- `/employee`: today page, clock state, next shift, self-service links.
 - `/employee/clock`: clock in/out.
 - `/employee/schedule`: own shift schedule.
 - `/employee/attendance`: own attendance history.

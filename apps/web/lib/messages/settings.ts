@@ -21,8 +21,12 @@ export const settings = {
     printersDescription:
       "Cấu hình máy in theo từng chi nhánh: loại phiếu và danh mục món in trên từng máy.",
     printMonitor: "Giám sát in",
+    printTemplates: "Mẫu in",
     printJobsTitle: "Giám sát in",
     printJobsDescription: "Trạng thái hàng đợi in và máy in đang kết nối",
+    printTemplatesTitle: "Mẫu in",
+    printTemplatesDescription:
+      "Chỉnh bố cục phiếu bếp, phiếu tạm tính, hóa đơn thanh toán và thông tin HĐĐT mà không cần redeploy print-agent.",
     tablesTitle: "Bàn & Khu vực",
     tablesDescription: "Quản lý khu vực và bàn ăn theo chi nhánh",
   },

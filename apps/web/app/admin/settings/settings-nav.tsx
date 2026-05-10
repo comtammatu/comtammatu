@@ -56,6 +56,11 @@ const TABS: Tab[] = [
     label: "Trạm bếp",
     allowedRoles: BRANCH_FLOOR_SETTINGS_ROLES,
   },
+  {
+    href: "/admin/settings/printers",
+    label: "Máy in",
+    allowedRoles: BRANCH_FLOOR_SETTINGS_ROLES,
+  },
 ];
 
 export function SettingsNav({ role }: { role: StaffRole }) {

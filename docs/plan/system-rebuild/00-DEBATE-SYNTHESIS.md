@@ -1,7 +1,7 @@
 # 00 — Debate Synthesis
 
-> Source: 4-agent debate, 2026-05-05  
-> Topic: whole-system rebuild after brand identity refresh  
+> Source: 4-perspective debate, 2026-05-05
+> Topic: whole-system rebuild after brand identity refresh
 > Outcome: approve full-system blue/green rebuild inside `comtammatu`.
 
 ## Final Verdict

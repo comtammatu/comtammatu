@@ -2,7 +2,7 @@
   "name": "@comtammatu/design-tokens",
   "version": "0.0.0",
   "private": true,
-  "description": "Single source of truth for Cơm Tấm Má Tư design tokens. tokens.json is consumed by scripts/build-design-tokens.mjs to generate web (matu-tokens.css). Mirrors matu-superapp brand baseline. Adopted 2026-05-08 for Inventory redesign pilot.",
+  "description": "Single source of truth for Cơm Tấm Má Tư design tokens. tokens.json is consumed by scripts/build-design-tokens.mjs to generate web (matu-tokens.css). Mirrors the app-wide matu-superapp brand baseline.",
   "type": "module",
   "main": "./tokens.json",
   "files": [

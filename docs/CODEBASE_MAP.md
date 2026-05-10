@@ -8,8 +8,8 @@
 ## Trạng thái
 
 - **Phiên bản hiện tại:** v1.0.0 — Auth, Admin, Master Data, Inventory, Orders, POS, KDS, Print SHIPPED. Payments, Finance/HR, Notifications/Reporting PARTIAL (blocked on external credentials).
-- **Mốc tiếp theo:** Pilot Launch v1.0.0 cho mô hình vận hành `HQ -> Bếp trung tâm -> Chi nhánh` — cần wire VietQR/Momo/MISA credentials trước pilot
-- **Tech stack:** Next.js 16.2 | React 19.2 | TypeScript 6.0 | Tailwind 4.2 | Zod 4 | Supabase | Turborepo 2.9
+- **Mốc tiếp theo:** Pilot Launch v1.0.0 cho mô hình vận hành `central_warehouse -> central_kitchen -> branch` — cần wire VietQR/Momo/Viettel S-invoice credentials trước pilot
+- **Tech stack:** Next.js 16.2 | React 19.2 | TypeScript 6.0 | Tailwind 4.2 | Zod 4 | Supabase | Turborepo 2.9 | Node >= 24
 
 ## Chỉ mục phân hệ
 
@@ -100,10 +100,10 @@ sequenceDiagram
     S->>H: custom_access_token_hook()
     H->>S: JWT + {tenant_id, branch_id, user_role}
     S->>A: Session + JWT
-    A->>B: Redirect to role default
-    B->>P: GET /admin/dashboard
-    P->>P: extractClaims → canAccess("dashboard")
-    P->>B: Dashboard page
+    A->>B: Redirect to /portal or safe returnTo
+    B->>P: GET /portal
+    P->>P: extractClaims → canAccess("portal")
+    P->>B: Work portal
 ```
 
 ## Hub Files (High Blast Radius)
@@ -123,20 +123,20 @@ sequenceDiagram
 | #   | Unknown                                                     | Verification Step         | Impact                   |
 | --- | ----------------------------------------------------------- | ------------------------- | ------------------------ |
 | 1   | area_manager has tenant-wide access (no area scoping table) | Deferred — see roadmap H3 | May need migration later |
-| 2   | E2E test coverage limited to 5 Playwright specs (kds-queue, daily-limit-realtime, payment-cash, edit-pending-pricing, +1) — no unit/component test suite | Expand spec coverage or adopt vitest as Payments + Finance wrap up | Refactor regressions possible on uncovered surfaces |
+| 2   | E2E test coverage exists but remains selective: 9 Playwright specs across POS/KDS/payment/inventory/visual; no broad unit/component suite | Expand spec coverage or adopt vitest as Payments + Finance wrap up | Refactor regressions possible on uncovered surfaces |
 
 ## Priority Recommendations
 
-1. **v1.0.0 Pilot Launch:** Auth, Admin, Master Data, Inventory, Orders, POS, KDS, Print shipped. Payments, Finance/HR, Notifications/Reporting partial (blocked on credentials). Focus on wiring real payment/invoice APIs, QA, security review, and validating the `HQ -> Bếp trung tâm -> Chi nhánh` operating path.
+1. **v1.0.0 Pilot Launch:** Auth, Admin, Master Data, Inventory, Orders, POS, KDS, Print shipped. Payments, Finance/HR, Notifications/Reporting partial (blocked on credentials). Focus on wiring real payment/invoice APIs, QA, security review, and validating the `central_warehouse -> central_kitchen -> branch` operating path.
 2. **Watch hub files:** Any change to `module-acl.ts` or `types.ts` requires proxy + layout + nav verification.
 3. **RLS pattern:** Every new table must follow the tenant-scoped RLS pattern with explicit GRANTs. See [database.md](modules/database.md).
 
 Inventory route ownership note:
 - `/inventory` is the canonical Inventory surface.
-- `/admin/inventory/*` page files (`cold-chain`, `express-windows`, `feature-flags`, `trust`) still exist on disk but are RETIRED — the `inventory_admin` module ACL in `module-acl.ts` has `allowedRoles: []`, so no role passes the proxy gate. Treat the URL space as unsupported; do not wire new admin features there.
+- `/admin/inventory/*` is a retired URL namespace. The page files have been removed, but `route-resolution.ts` still maps the prefix to the `inventory_admin` module whose ACL has `allowedRoles: []`, so no role passes the proxy gate. Treat the URL space as unsupported; do not wire new admin features there.
 
 <!-- ORACLE-META
-Updated: 2026-05-07 (status sync: Payments + Finance/HR + Notifications/Reporting PARTIAL)
+Updated: 2026-05-09 (route/schema/doc drift sync)
 Data: Direct source reading
 Audience: new engineer, feature owner | Confidence: 95%
 Unknowns: 2 items pending verification

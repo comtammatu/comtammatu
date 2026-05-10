@@ -162,7 +162,7 @@ const ORDER_DETAIL_SKELETON_ITEMS: OrderItemRowData[] = [
 function OrderDetailLoadingFixture() {
   return (
     <>
-      <ScrollArea className="min-h-0 w-full min-w-0 max-w-full flex-1 overflow-hidden">
+      <ScrollArea className="min-h-0 w-full min-w-0 max-w-full flex-1">
         <ul
           className="flex w-full min-w-0 max-w-full flex-col gap-2 overflow-hidden px-3 py-2 sm:px-4"
           aria-label={ORDER_DETAIL_LOADING_TEXT.aria}
@@ -177,10 +177,20 @@ function OrderDetailLoadingFixture() {
           {ORDER_DETAIL_LOADING_TEXT.payment} · {formatVND(165000)}
         </Button>
         <div className="flex gap-2">
-          <Button type="button" variant="outline" size="touch" className="flex-1">
+          <Button
+            type="button"
+            variant="outline"
+            size="touch"
+            className="flex-1"
+          >
             {ORDER_DETAIL_LOADING_TEXT.append}
           </Button>
-          <Button type="button" variant="secondary" size="touch" className="flex-1">
+          <Button
+            type="button"
+            variant="secondary"
+            size="touch"
+            className="flex-1"
+          >
             {ORDER_DETAIL_LOADING_TEXT.served}
           </Button>
           <Button
@@ -201,7 +211,7 @@ function OrderDetailLoadingFixture() {
 function OrderDetailSheetSkeletonFallback() {
   return (
     <>
-      <ScrollArea className="min-h-0 w-full min-w-0 max-w-full flex-1 overflow-hidden">
+      <ScrollArea className="min-h-0 w-full min-w-0 max-w-full flex-1">
         <ul
           className="flex w-full min-w-0 max-w-full flex-col gap-2 overflow-hidden px-3 py-2 sm:px-4"
           aria-label={ORDER_DETAIL_LOADING_TEXT.aria}
@@ -493,7 +503,9 @@ export function OrderDetailSheet({
                   return;
                 }
                 if (mergedInto) {
-                  notify.warning("Đơn đã được gộp sang đơn khác — đóng chi tiết.");
+                  notify.warning(
+                    "Đơn đã được gộp sang đơn khác — đóng chi tiết.",
+                  );
                   onCloseRef.current();
                   return;
                 }
@@ -872,7 +884,9 @@ export function OrderDetailSheet({
         idempotencyKey,
       });
       if (r.success) {
-        notify.success("Đã gộp đơn. Vui lòng in lại tạm tính của đơn nhận nếu cần.");
+        notify.success(
+          "Đã gộp đơn. Vui lòng in lại tạm tính của đơn nhận nếu cần.",
+        );
         setShowMerge(false);
         await onOrderUpdated?.();
         // Source order is now cancelled — close the sheet so cashier focuses
@@ -936,9 +950,7 @@ export function OrderDetailSheet({
     data?.order_type === "dine_in" &&
     activeUnitCount >= 2;
   const tableSiblingCount =
-    data?.table_id != null
-      ? (orderCountByTable?.get(data.table_id) ?? 0)
-      : 0;
+    data?.table_id != null ? (orderCountByTable?.get(data.table_id) ?? 0) : 0;
   const canShowMerge =
     canMutateUnpaidOrder &&
     data?.order_type === "dine_in" &&
@@ -979,8 +991,9 @@ export function OrderDetailSheet({
       <Sheet open={orderId !== null} onOpenChange={handleOpenChange}>
         <SheetContent
           side="right"
+          size="md"
+          scroll="hidden"
           showCloseButton={false}
-          className="flex flex-col overflow-hidden data-[side=right]:w-full data-[side=right]:max-w-full data-[side=right]:sm:max-w-md"
         >
           <SheetHeader className="border-b border-border/60 px-3 py-2.5 text-left sm:px-4">
             <div className="flex items-center justify-between gap-3">
@@ -1022,7 +1035,7 @@ export function OrderDetailSheet({
               fallback={<OrderDetailSheetSkeletonFallback />}
               snapshotConfig={{ excludeSelectors: ["svg"] }}
             >
-              <ScrollArea className="min-h-0 w-full min-w-0 max-w-full flex-1 overflow-hidden">
+              <ScrollArea className="min-h-0 w-full min-w-0 max-w-full flex-1">
                 <ul
                   className="flex w-full min-w-0 max-w-full flex-col gap-2 overflow-hidden px-3 py-2 sm:px-4"
                   aria-label="Đang tải danh sách món"
@@ -1074,10 +1087,13 @@ export function OrderDetailSheet({
             <>
               {data.profiles?.full_name && (
                 <p className="px-3 pt-2 text-xs text-muted-foreground sm:px-4">
-                  Người order: <span className="font-medium text-foreground">{data.profiles.full_name}</span>
+                  Người order:{" "}
+                  <span className="font-medium text-foreground">
+                    {data.profiles.full_name}
+                  </span>
                 </p>
               )}
-              <ScrollArea className="min-h-0 w-full min-w-0 max-w-full flex-1 overflow-hidden">
+              <ScrollArea className="min-h-0 w-full min-w-0 max-w-full flex-1">
                 <ul
                   className="flex w-full min-w-0 max-w-full flex-col gap-2 overflow-hidden px-3 py-2 sm:px-4"
                   aria-label="Danh sách món"
@@ -1175,7 +1191,11 @@ export function OrderDetailSheet({
                               )}
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-56">
+                        <DropdownMenuContent
+                          align="end"
+                          density="touch"
+                          width="action"
+                        >
                           <DropdownMenuGroup>
                             {canShowBillInMenu && (
                               <DropdownMenuItem

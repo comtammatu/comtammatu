@@ -5,6 +5,34 @@ import { Drawer as DrawerPrimitive } from "vaul";
 
 import { cn } from "../lib/utils";
 
+const drawerContentSizeClasses = {
+  sm: "data-[vaul-drawer-direction=left]:sm:max-w-sm data-[vaul-drawer-direction=right]:sm:max-w-sm",
+  md: "data-[vaul-drawer-direction=left]:sm:max-w-md data-[vaul-drawer-direction=right]:sm:max-w-md",
+  lg: "max-w-md data-[vaul-drawer-direction=left]:sm:max-w-lg data-[vaul-drawer-direction=right]:sm:max-w-lg sm:max-w-lg",
+  full: "",
+} as const;
+
+const drawerContentHeightClasses = {
+  auto: "data-[vaul-drawer-direction=bottom]:mt-24 data-[vaul-drawer-direction=bottom]:max-h-[80vh] data-[vaul-drawer-direction=top]:mb-24 data-[vaul-drawer-direction=top]:max-h-[80vh]",
+  screen:
+    "h-dvh max-h-dvh data-[vaul-drawer-direction=bottom]:top-0 data-[vaul-drawer-direction=bottom]:mt-0 data-[vaul-drawer-direction=bottom]:max-h-dvh",
+  desktopScreen:
+    "h-dvh max-h-dvh data-[vaul-drawer-direction=bottom]:top-0 data-[vaul-drawer-direction=bottom]:mt-0 data-[vaul-drawer-direction=bottom]:max-h-dvh sm:h-5/6",
+} as const;
+
+const drawerContentSurfaceClasses = {
+  popover:
+    "p-2 before:inset-2 before:rounded-xl before:border before:border-border before:bg-popover",
+  background:
+    "before:inset-0 before:rounded-none before:border-0 before:bg-background",
+  responsive:
+    "before:inset-0 before:rounded-none before:border-0 before:bg-background sm:p-2 sm:before:inset-2 sm:before:rounded-lg sm:before:border sm:before:bg-popover",
+} as const;
+
+type DrawerContentSize = keyof typeof drawerContentSizeClasses;
+type DrawerContentHeight = keyof typeof drawerContentHeightClasses;
+type DrawerContentSurface = keyof typeof drawerContentSurfaceClasses;
+
 function Drawer({
   ...props
 }: React.ComponentProps<typeof DrawerPrimitive.Root>) {
@@ -48,9 +76,15 @@ function DrawerOverlay({
 function DrawerContent({
   className,
   children,
+  size = "sm",
+  height = "auto",
+  surface = "popover",
   showHandle = true,
   ...props
 }: React.ComponentProps<typeof DrawerPrimitive.Content> & {
+  size?: DrawerContentSize;
+  height?: DrawerContentHeight;
+  surface?: DrawerContentSurface;
   showHandle?: boolean;
 }) {
   return (
@@ -59,7 +93,10 @@ function DrawerContent({
       <DrawerPrimitive.Content
         data-slot="drawer-content"
         className={cn(
-          "group/drawer-content fixed z-50 flex h-auto flex-col bg-transparent p-2 text-xs/relaxed text-popover-foreground before:absolute before:inset-2 before:-z-10 before:rounded-xl before:border before:border-border before:bg-popover data-[vaul-drawer-direction=bottom]:inset-x-0 data-[vaul-drawer-direction=bottom]:bottom-0 data-[vaul-drawer-direction=bottom]:mt-24 data-[vaul-drawer-direction=bottom]:max-h-[80vh] data-[vaul-drawer-direction=left]:inset-y-0 data-[vaul-drawer-direction=left]:left-0 data-[vaul-drawer-direction=left]:w-3/4 data-[vaul-drawer-direction=right]:inset-y-0 data-[vaul-drawer-direction=right]:right-0 data-[vaul-drawer-direction=right]:w-3/4 data-[vaul-drawer-direction=top]:inset-x-0 data-[vaul-drawer-direction=top]:top-0 data-[vaul-drawer-direction=top]:mb-24 data-[vaul-drawer-direction=top]:max-h-[80vh] data-[vaul-drawer-direction=left]:sm:max-w-sm data-[vaul-drawer-direction=right]:sm:max-w-sm",
+          "group/drawer-content fixed z-50 flex h-auto flex-col bg-transparent p-0 text-xs/relaxed text-popover-foreground before:absolute before:-z-10 data-[vaul-drawer-direction=bottom]:inset-x-0 data-[vaul-drawer-direction=bottom]:bottom-0 data-[vaul-drawer-direction=left]:inset-y-0 data-[vaul-drawer-direction=left]:left-0 data-[vaul-drawer-direction=left]:w-3/4 data-[vaul-drawer-direction=right]:inset-y-0 data-[vaul-drawer-direction=right]:right-0 data-[vaul-drawer-direction=right]:w-3/4 data-[vaul-drawer-direction=top]:inset-x-0 data-[vaul-drawer-direction=top]:top-0",
+          drawerContentSizeClasses[size],
+          drawerContentHeightClasses[height],
+          drawerContentSurfaceClasses[surface],
           className,
         )}
         {...props}

@@ -11,6 +11,7 @@ const PRINT_TYPES = [
   "receipt",
   "provisional_bill",
   "shift_close_report",
+  "tax_invoice",
   "kitchen_ticket",
   "cancel_ticket",
 ] as const;
@@ -19,7 +20,11 @@ const printerSchema = z.object({
   branch_id: z.coerce.number().int().positive(),
   role: z.enum(["receipt", "kitchen_1", "kitchen_2"]),
   name: z.string().trim().min(1, { error: "Nhập tên máy in" }),
-  lan_host: z.string().trim().min(1, { error: "Nhập LAN host" }),
+  connection_type: z.enum(["lan", "bluetooth"]).default("lan"),
+  lan_host: z
+    .string()
+    .trim()
+    .min(1, { error: "Nhập địa chỉ LAN hoặc cổng Bluetooth" }),
   lan_port: z.coerce.number().int().min(1).max(65535).nullable().optional(),
   paper_width_mm: z.union([z.literal(58), z.literal(80)]).default(80),
   code_page: z.string().trim().default("CP1258"),
@@ -66,6 +71,7 @@ export async function upsertPrinter(
     p_branch_id: parsed.data.branch_id,
     p_role: parsed.data.role,
     p_name: parsed.data.name,
+    p_connection_type: parsed.data.connection_type,
     p_lan_host: parsed.data.lan_host,
     p_lan_port: parsed.data.lan_port ?? 9100,
     p_paper_width_mm: parsed.data.paper_width_mm,

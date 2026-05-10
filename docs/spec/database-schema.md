@@ -110,7 +110,7 @@ owner, super_manager, area_manager, branch_manager, cashier, waiter, chef, offic
 | cashier        | Yes             | Own branch  | Route: `/br/[branchId]/pos`                       |
 | waiter         | Yes             | Own branch  | Route: `/br/[branchId]/pos`                       |
 | chef           | Yes             | Own branch  | Route: `/br/[branchId]/kds`                       |
-| office         | No              | HQ-wide     | Route: `/employee`                                |
+| office         | No              | HQ-wide     | Route: `/portal`                                  |
 
 ### system_settings
 
