@@ -50,6 +50,11 @@ func (h *Handler) Routes() chi.Router {
 	r.With(read).Get("/items/{id}/modifiers", h.listModifiers)
 	r.With(write).Post("/items/{id}/modifiers", h.createModifier)
 
+	r.With(write).Delete("/categories/{id}", h.deleteCategory)
+
+	r.With(read).Get("/items/{id}/daily-limit", h.getDailyLimit)
+	r.With(write).Put("/items/{id}/daily-limit", h.updateDailyLimit)
+
 	return r
 }
 
@@ -563,4 +568,76 @@ func (h *Handler) createModifier(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httputil.WriteJSON(w, http.StatusCreated, m)
+}
+
+func (h *Handler) deleteCategory(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.ClaimsFrom(r.Context())
+	if claims == nil {
+		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	id, err := parseID(r)
+	if err != nil {
+		httputil.WriteError(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	const q = `UPDATE public.menu_categories SET is_active = false, updated_at = now()
+		WHERE id = $1 AND tenant_id = $2`
+	if _, err := h.pool.Exec(r.Context(), q, id, claims.TenantID); err != nil {
+		httputil.WriteError(w, http.StatusInternalServerError, "failed to delete category")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) getDailyLimit(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.ClaimsFrom(r.Context())
+	if claims == nil {
+		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	id, err := parseID(r)
+	if err != nil {
+		httputil.WriteError(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	// TODO: add daily_limit column to menu_items — returning 0 as placeholder
+	var exists bool
+	err = h.pool.QueryRow(r.Context(),
+		`SELECT EXISTS(SELECT 1 FROM public.menu_items WHERE id = $1 AND tenant_id = $2)`,
+		id, claims.TenantID).Scan(&exists)
+	if err != nil || !exists {
+		httputil.WriteError(w, http.StatusNotFound, "item not found")
+		return
+	}
+	httputil.WriteJSON(w, http.StatusOK, map[string]any{"item_id": id, "daily_limit": nil})
+}
+
+func (h *Handler) updateDailyLimit(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.ClaimsFrom(r.Context())
+	if claims == nil {
+		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	id, err := parseID(r)
+	if err != nil {
+		httputil.WriteError(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	var req struct {
+		DailyLimit *int32 `json:"daily_limit"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httputil.WriteError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	// TODO: add daily_limit column to menu_items — update is a no-op placeholder
+	_, err = h.pool.Exec(r.Context(),
+		`UPDATE public.menu_items SET updated_at = now() WHERE id = $1 AND tenant_id = $2`,
+		id, claims.TenantID)
+	if err != nil {
+		httputil.WriteError(w, http.StatusInternalServerError, "failed to update daily limit")
+		return
+	}
+	httputil.WriteJSON(w, http.StatusOK, map[string]any{"item_id": id, "daily_limit": req.DailyLimit})
 }

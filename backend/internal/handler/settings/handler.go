@@ -52,7 +52,33 @@ func (h *Handler) Routes() chi.Router {
 	r.With(branch).Get("/areas/{id}", h.getArea)
 	r.With(branch).Put("/areas/{id}", h.updateArea)
 
+	r.With(branch).Get("/tables", h.listTables)
+	r.With(branch).Post("/tables", h.createTable)
+	r.With(branch).Put("/tables/{id}", h.updateTable)
+	r.With(branch).Delete("/tables/{id}", h.deleteTable)
+
+	r.With(branch).Get("/branches/{id}/pos-config", h.getBranchPOSConfig)
+
 	return r
+}
+
+func (h *Handler) getBranchPOSConfig(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.ClaimsFrom(r.Context())
+	if claims == nil {
+		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	id, err := parseID(r)
+	if err != nil {
+		httputil.WriteError(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	// Return basic branch config as POS config placeholder
+	httputil.WriteJSON(w, http.StatusOK, map[string]any{
+		"branch_id": id,
+		"tenant_id": claims.TenantID,
+		"note":      "POS config not yet implemented — returns branch defaults",
+	})
 }
 
 func parseID(r *http.Request) (int64, error) {
