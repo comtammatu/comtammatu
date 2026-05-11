@@ -6,8 +6,6 @@ on:
     paths:
       - "backend/**"
       - ".github/workflows/go-ci.yml"
-    tags:
-      - "v*"
   pull_request:
     branches: [main]
     paths:
@@ -70,28 +68,3 @@ jobs:
         with:
           working-directory: backend
           version: latest
-
-  migrate:
-    name: Migrate Supabase Users
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    # Only run on release tags (e.g. v1.2.3)
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: [build-and-test]
-
-    steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-
-      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
-        with:
-          go-version-file: backend/go.mod
-          cache-dependency-path: backend/go.sum
-
-      - name: Run Supabase user migration
-        env:
-          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: |
-          chmod +x scripts/migrate-supabase-users.sh
-          scripts/migrate-supabase-users.sh
