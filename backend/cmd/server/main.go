@@ -21,6 +21,7 @@ import (
 	healthhandler "github.com/personal/comtammatu/backend/internal/handler/health"
 	kdshandler "github.com/personal/comtammatu/backend/internal/handler/kds"
 	menuhandler "github.com/personal/comtammatu/backend/internal/handler/menu"
+	ordershandler "github.com/personal/comtammatu/backend/internal/handler/orders"
 	notifhandler "github.com/personal/comtammatu/backend/internal/handler/notifications"
 	settingshandler "github.com/personal/comtammatu/backend/internal/handler/settings"
 	staffhandler "github.com/personal/comtammatu/backend/internal/handler/staff"
@@ -77,6 +78,9 @@ func main() {
 		r.Mount("/menu", menuhandler.New(pool, eval).Routes())
 		r.Mount("/admin/staff", staffhandler.New(pool, eval).Routes())
 		r.Mount("/admin/settings", settingshandler.New(pool, eval).Routes())
+		ordersH := ordershandler.New(pool)
+		r.Mount("/br/{branchId}/orders", ordersH.Routes())
+		r.Post("/br/{branchId}/shifts/close", ordersH.CloseShift)
 		r.Mount("/br/{branchId}/kds", kdshandler.New(pool).Routes())
 		r.Mount("/notifications", notifhandler.New(pool).Routes())
 	})

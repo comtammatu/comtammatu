@@ -53,6 +53,7 @@ func ParseToken(tokenStr, secret string) (*Claims, error) {
 
 	return &Claims{
 		UserID:   sc.UserID,
+		UserUUID: sc.Subject,
 		TenantID: sc.TenantID,
 		BranchID: sc.BranchID,
 		AreaID:   sc.AreaID,
