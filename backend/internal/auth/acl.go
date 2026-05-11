@@ -4,26 +4,26 @@ package auth
 type ModuleKey string
 
 const (
-	ModuleDashboard          ModuleKey = "dashboard"
-	ModuleMenu               ModuleKey = "menu"
-	ModuleInventory          ModuleKey = "inventory"
-	ModuleInventoryProcure   ModuleKey = "inventory_procurement"
-	ModuleInventoryAdmin     ModuleKey = "inventory_admin" // retired surface — empty allowedRoles
-	ModuleOrders             ModuleKey = "orders"
-	ModuleStaff              ModuleKey = "staff"
-	ModuleHR                 ModuleKey = "hr"
-	ModuleCRM                ModuleKey = "crm"
-	ModuleFinance            ModuleKey = "finance"
-	ModuleAccounting         ModuleKey = "accounting"
-	ModuleReports            ModuleKey = "reports"
-	ModuleSettings           ModuleKey = "settings"
-	ModulePOS                ModuleKey = "pos"
-	ModuleKDS                ModuleKey = "kds"
-	ModuleBranchSettings     ModuleKey = "branch_settings"
-	ModuleBranchMenuLimits   ModuleKey = "branch_menu_limits"
-	ModuleEmployee           ModuleKey = "employee"
-	ModuleNotifications      ModuleKey = "notifications"
-	ModuleFeedback           ModuleKey = "feedback"
+	ModuleDashboard        ModuleKey = "dashboard"
+	ModuleMenu             ModuleKey = "menu"
+	ModuleInventory        ModuleKey = "inventory"
+	ModuleInventoryProcure ModuleKey = "inventory_procurement"
+	ModuleInventoryAdmin   ModuleKey = "inventory_admin" // retired surface — empty allowedRoles
+	ModuleOrders           ModuleKey = "orders"
+	ModuleStaff            ModuleKey = "staff"
+	ModuleHR               ModuleKey = "hr"
+	ModuleCRM              ModuleKey = "crm"
+	ModuleFinance          ModuleKey = "finance"
+	ModuleAccounting       ModuleKey = "accounting"
+	ModuleReports          ModuleKey = "reports"
+	ModuleSettings         ModuleKey = "settings"
+	ModulePOS              ModuleKey = "pos"
+	ModuleKDS              ModuleKey = "kds"
+	ModuleBranchSettings   ModuleKey = "branch_settings"
+	ModuleBranchMenuLimits ModuleKey = "branch_menu_limits"
+	ModuleEmployee         ModuleKey = "employee"
+	ModuleNotifications    ModuleKey = "notifications"
+	ModuleFeedback         ModuleKey = "feedback"
 )
 
 type moduleACL struct {

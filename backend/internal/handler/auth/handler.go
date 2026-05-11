@@ -6,21 +6,29 @@ import (
 	"net/mail"
 	"strings"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/personal/comtammatu/backend/internal/httputil"
 	"github.com/personal/comtammatu/backend/internal/middleware"
 )
 
 // Handler handles authentication-related HTTP endpoints.
-type Handler struct{}
+type Handler struct {
+	pool *pgxpool.Pool
+}
 
 // New returns a new Handler.
-func New() *Handler {
-	return &Handler{}
+func New(pool *pgxpool.Pool) *Handler {
+	return &Handler{pool: pool}
 }
 
 // Login handles POST /auth/login.
 // Mounted as a public route in main.go — no Authenticate middleware applied.
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
+	if h.pool != nil {
+		h.loginWithPool(w, r)
+		return
+	}
+	// stub: pool not wired yet — validate inputs and return 501
 	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		httputil.WriteError(w, http.StatusBadRequest, "email and password are required")
@@ -34,7 +42,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteError(w, http.StatusBadRequest, "email and password are required")
 		return
 	}
-	httputil.WriteError(w, http.StatusNotImplemented, "not implemented — Supabase signInWithPassword to be wired")
+	httputil.NotImplemented(w)
 }
 
 // Me handles GET /auth/me.

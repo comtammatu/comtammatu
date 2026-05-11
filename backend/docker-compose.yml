@@ -1,0 +1,43 @@
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: comtammatu-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "54320:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: comtammatu-api
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      PORT: "8080"
+      ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:3001"
+      DATABASE_URL: "postgresql://postgres:postgres@db:5432/postgres"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      # distroless has no shell tools — disable Docker healthcheck,
+      # liveness is verified externally via GET /health
+      disable: true
+
+volumes:
+  db-data:

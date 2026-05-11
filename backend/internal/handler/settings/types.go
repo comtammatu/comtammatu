@@ -35,5 +35,6 @@ type Area struct {
 
 // CreateAreaRequest is the body for POST /areas.
 type CreateAreaRequest struct {
-	Name string `json:"name"`
+	BranchID int64  `json:"branch_id"`
+	Name     string `json:"name"`
 }

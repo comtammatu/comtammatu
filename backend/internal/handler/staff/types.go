@@ -2,7 +2,7 @@ package staff
 
 // StaffMember represents a tenant staff member.
 type StaffMember struct {
-	ID         string `json:"id"`          // uuid from auth.users
+	ID         string `json:"id"` // uuid from auth.users
 	TenantID   int64  `json:"tenant_id"`
 	FullName   string `json:"full_name"`
 	Email      string `json:"email"`

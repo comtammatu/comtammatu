@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/personal/comtammatu/backend/internal/auth"
+	"github.com/personal/comtammatu/backend/internal/httputil"
 )
 
 type contextKey string
@@ -22,7 +23,7 @@ func Authenticate(jwtSecret string) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			token := extractBearer(r)
 			if token == "" {
-				http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+				httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
 				return
 			}
 
@@ -33,12 +34,30 @@ func Authenticate(jwtSecret string) func(http.Handler) http.Handler {
 				if strings.Contains(err.Error(), "custom claims") {
 					status = http.StatusForbidden
 				}
-				http.Error(w, `{"error":"unauthorized"}`, status)
+				httputil.WriteError(w, status, "unauthorized")
 				return
 			}
 
 			ctx := context.WithValue(r.Context(), claimsKey, claims)
 			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+}
+
+// RequireModule enforces coarse route ACL after Authenticate has attached claims.
+func RequireModule(module auth.ModuleKey) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			claims := ClaimsFrom(r.Context())
+			if claims == nil {
+				httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
+				return
+			}
+			if !auth.CanAccess(claims.UserRole, module) {
+				httputil.WriteError(w, http.StatusForbidden, "forbidden")
+				return
+			}
+			next.ServeHTTP(w, r)
 		})
 	}
 }

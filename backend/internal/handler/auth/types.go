@@ -8,8 +8,8 @@ type LoginRequest struct {
 
 // MeResponse is the JSON body returned by GET /auth/me.
 type MeResponse struct {
-	TenantID int64   `json:"tenant_id"`
-	BranchID *int64  `json:"branch_id"`
-	UserRole string  `json:"user_role"`
-	Position string  `json:"position"`
+	TenantID int64  `json:"tenant_id"`
+	BranchID *int64 `json:"branch_id"`
+	UserRole string `json:"user_role"`
+	Position string `json:"position"`
 }

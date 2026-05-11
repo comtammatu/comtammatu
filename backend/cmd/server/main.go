@@ -15,6 +15,7 @@ import (
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 
 	"github.com/personal/comtammatu/backend/config"
+	"github.com/personal/comtammatu/backend/internal/auth"
 	"github.com/personal/comtammatu/backend/internal/db"
 	authhandler "github.com/personal/comtammatu/backend/internal/handler/auth"
 	healthhandler "github.com/personal/comtammatu/backend/internal/handler/health"
@@ -37,13 +38,18 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	pool, err := db.Connect(ctx, cfg.DatabaseURL)
+	dsn := os.Getenv("DATABASE_URL")
+	if cfg.AppEnv != "development" {
+		if docker := os.Getenv("DATABASE_URL_DOCKER"); docker != "" {
+			dsn = docker
+		}
+	}
+	pool, err := db.Open(ctx, dsn)
 	if err != nil {
-		slog.Error("database connect failed", "err", err)
+		slog.Error("database connection failed", "err", err)
 		os.Exit(1)
 	}
 	defer pool.Close()
-	slog.Info("database connected")
 
 	r := chi.NewRouter()
 
@@ -56,16 +62,17 @@ func main() {
 
 	// Public routes — no auth required
 	r.Get("/health", healthhandler.Handler())
-	r.Post("/auth/login", authhandler.New().Login)
+	authH := authhandler.New(pool)
+	r.Post("/auth/login", authH.Login)
 
 	// Authenticated API routes — Authenticate middleware validates Supabase JWT
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.Authenticate(cfg.JWTSecret))
 
-		r.Get("/auth/me", authhandler.New().Me)
-		r.Mount("/menu", menuhandler.New(pool).Routes())
-		r.Mount("/admin/staff", staffhandler.New(pool).Routes())
-		r.Mount("/admin/settings", settingshandler.New(pool).Routes())
+		r.Get("/auth/me", authH.Me)
+		r.With(middleware.RequireModule(auth.ModuleMenu)).Mount("/menu", menuhandler.New(pool).Routes())
+		r.With(middleware.RequireModule(auth.ModuleStaff)).Mount("/admin/staff", staffhandler.New(pool).Routes())
+		r.With(middleware.RequireModule(auth.ModuleSettings)).Mount("/admin/settings", settingshandler.New(pool).Routes())
 	})
 
 	srv := &http.Server{
