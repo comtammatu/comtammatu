@@ -19,7 +19,9 @@ import (
 	"github.com/personal/comtammatu/backend/internal/db"
 	authhandler "github.com/personal/comtammatu/backend/internal/handler/auth"
 	healthhandler "github.com/personal/comtammatu/backend/internal/handler/health"
+	kdshandler "github.com/personal/comtammatu/backend/internal/handler/kds"
 	menuhandler "github.com/personal/comtammatu/backend/internal/handler/menu"
+	notifhandler "github.com/personal/comtammatu/backend/internal/handler/notifications"
 	settingshandler "github.com/personal/comtammatu/backend/internal/handler/settings"
 	staffhandler "github.com/personal/comtammatu/backend/internal/handler/staff"
 	"github.com/personal/comtammatu/backend/internal/middleware"
@@ -75,6 +77,8 @@ func main() {
 		r.Mount("/menu", menuhandler.New(pool, eval).Routes())
 		r.Mount("/admin/staff", staffhandler.New(pool, eval).Routes())
 		r.Mount("/admin/settings", settingshandler.New(pool, eval).Routes())
+		r.Mount("/br/{branchId}/kds", kdshandler.New(pool).Routes())
+		r.Mount("/notifications", notifhandler.New(pool).Routes())
 	})
 
 	srv := &http.Server{
