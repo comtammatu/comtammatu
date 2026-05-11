@@ -11,6 +11,7 @@ import (
 // Supabase signs tokens with HS256 using SUPABASE_JWT_SECRET.
 type supabaseClaims struct {
 	jwt.RegisteredClaims
+	UserID   int64     `json:"user_id"`
 	TenantID int64     `json:"tenant_id"`
 	BranchID *int64    `json:"branch_id"`
 	AreaID   *int64    `json:"area_id"`
@@ -51,6 +52,7 @@ func ParseToken(tokenStr, secret string) (*Claims, error) {
 	}
 
 	return &Claims{
+		UserID:   sc.UserID,
 		TenantID: sc.TenantID,
 		BranchID: sc.BranchID,
 		AreaID:   sc.AreaID,

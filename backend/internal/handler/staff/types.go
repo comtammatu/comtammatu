@@ -31,19 +31,22 @@ type UpdateStaffRequest struct {
 	IsActive   *bool   `json:"is_active"`
 }
 
-// StaffPermission represents a single permission grant for a staff member.
-type StaffPermission struct {
-	UserID        string  `json:"user_id"`
-	BranchID      *int64  `json:"branch_id"`
+// UserPermission represents a single ABAC permission row for a staff member.
+type UserPermission struct {
+	ID            int64   `json:"id"`
 	PermissionKey string  `json:"permission_key"`
+	BranchID      *int64  `json:"branch_id,omitempty"`
+	Effect        string  `json:"effect"`
 	ValidFrom     string  `json:"valid_from"`
-	ValidUntil    *string `json:"valid_until"`
+	ValidUntil    *string `json:"valid_until,omitempty"`
+	Reason        string  `json:"reason,omitempty"`
 }
 
 // GrantPermissionRequest is the body for POST /{id}/permissions.
 type GrantPermissionRequest struct {
-	BranchID      *int64  `json:"branch_id"`
 	PermissionKey string  `json:"permission_key"`
-	ValidFrom     string  `json:"valid_from"`
+	BranchID      *int64  `json:"branch_id"`
+	Effect        string  `json:"effect"`
 	ValidUntil    *string `json:"valid_until"`
+	Reason        string  `json:"reason"`
 }

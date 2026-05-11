@@ -17,28 +17,40 @@ import (
 
 // Handler serves settings endpoints for branches and areas under /admin/settings.
 type Handler struct {
-	pool *pgxpool.Pool
+	pool    *pgxpool.Pool
+	checker middleware.PermissionChecker
 }
 
-// New constructs a Handler.
-func New(pool *pgxpool.Pool) *Handler {
-	return &Handler{pool: pool}
+// New constructs a Handler. checker may be nil (skips ABAC — legacy mode).
+func New(pool *pgxpool.Pool, checker middleware.PermissionChecker) *Handler {
+	return &Handler{pool: pool, checker: checker}
+}
+
+// perm returns a RequirePermission middleware when a checker is configured,
+// otherwise a no-op.
+func (h *Handler) perm(key string) func(http.Handler) http.Handler {
+	if h.checker == nil {
+		return func(next http.Handler) http.Handler { return next }
+	}
+	return middleware.RequirePermission(h.checker, key)
 }
 
 // Routes returns a chi.Router with all settings sub-routes registered.
 func (h *Handler) Routes() chi.Router {
 	r := chi.NewRouter()
 
-	r.Get("/branches", h.listBranches)
-	r.Post("/branches", h.createBranch)
-	r.Get("/branches/{id}", h.getBranch)
-	r.Put("/branches/{id}", h.updateBranch)
-	r.Delete("/branches/{id}", h.deactivateBranch)
+	branch := h.perm("settings:branch")
 
-	r.Get("/areas", h.listAreas)
-	r.Post("/areas", h.createArea)
-	r.Get("/areas/{id}", h.getArea)
-	r.Put("/areas/{id}", h.updateArea)
+	r.With(branch).Get("/branches", h.listBranches)
+	r.With(branch).Post("/branches", h.createBranch)
+	r.With(branch).Get("/branches/{id}", h.getBranch)
+	r.With(branch).Put("/branches/{id}", h.updateBranch)
+	r.With(branch).Delete("/branches/{id}", h.deactivateBranch)
+
+	r.With(branch).Get("/areas", h.listAreas)
+	r.With(branch).Post("/areas", h.createArea)
+	r.With(branch).Get("/areas/{id}", h.getArea)
+	r.With(branch).Put("/areas/{id}", h.updateArea)
 
 	return r
 }

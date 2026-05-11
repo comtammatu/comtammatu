@@ -19,26 +19,40 @@ import (
 
 // Handler serves staff management endpoints under /admin/staff.
 type Handler struct {
-	pool *pgxpool.Pool
+	pool    *pgxpool.Pool
+	checker middleware.PermissionChecker
 }
 
-// New constructs a Handler.
-func New(pool *pgxpool.Pool) *Handler {
-	return &Handler{pool: pool}
+// New constructs a Handler. checker may be nil (skips ABAC — legacy mode).
+func New(pool *pgxpool.Pool, checker middleware.PermissionChecker) *Handler {
+	return &Handler{pool: pool, checker: checker}
+}
+
+// perm returns a RequirePermission middleware when a checker is configured,
+// otherwise a no-op.
+func (h *Handler) perm(key string) func(http.Handler) http.Handler {
+	if h.checker == nil {
+		return func(next http.Handler) http.Handler { return next }
+	}
+	return middleware.RequirePermission(h.checker, key)
 }
 
 // Routes returns a chi.Router with all staff sub-routes registered.
 func (h *Handler) Routes() chi.Router {
 	r := chi.NewRouter()
 
-	r.Get("/", h.listStaff)
-	r.Post("/", h.createStaff)
-	r.Get("/{id}", h.getStaff)
-	r.Put("/{id}", h.updateStaff)
-	r.Delete("/{id}", h.deactivateStaff)
-	r.Get("/{id}/permissions", h.listPermissions)
-	r.Post("/{id}/permissions", h.grantPermission)
-	r.Delete("/{id}/permissions/{permKey}", h.revokePermission)
+	view := h.perm("staff:view")
+	manage := h.perm("staff:manage")
+	assign := h.perm("staff:assign_permission")
+
+	r.With(view).Get("/", h.listStaff)
+	r.With(manage).Post("/", h.createStaff)
+	r.With(view).Get("/{id}", h.getStaff)
+	r.With(manage).Put("/{id}", h.updateStaff)
+	r.With(manage).Delete("/{id}", h.deactivateStaff)
+	r.With(assign).Get("/{id}/permissions", h.listPermissions)
+	r.With(assign).Post("/{id}/permissions", h.grantPermission)
+	r.With(assign).Delete("/{id}/permissions/{permKey}", h.revokePermission)
 
 	return r
 }
@@ -254,11 +268,63 @@ func (h *Handler) deactivateStaff(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (h *Handler) listPermissions(w http.ResponseWriter, _ *http.Request) {
-	httputil.WriteError(w, http.StatusNotImplemented, "not implemented")
+func (h *Handler) listPermissions(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.ClaimsFrom(r.Context())
+	if claims == nil {
+		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	id, err := parseID(r)
+	if err != nil {
+		httputil.WriteError(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	const q = `SELECT id, permission_key, branch_id, effect, valid_from, valid_until, reason
+		FROM public.user_permissions
+		WHERE user_id = $1 AND tenant_id = $2
+		ORDER BY permission_key`
+	rows, err := h.pool.Query(r.Context(), q, id, claims.TenantID)
+	if err != nil {
+		httputil.WriteError(w, http.StatusInternalServerError, "failed to fetch permissions")
+		return
+	}
+	defer rows.Close()
+	result := make([]UserPermission, 0)
+	for rows.Next() {
+		var p UserPermission
+		var branchID sql.NullInt64
+		var validUntil sql.NullTime
+		var reason sql.NullString
+		if err := rows.Scan(&p.ID, &p.PermissionKey, &branchID, &p.Effect, &p.ValidFrom, &validUntil, &reason); err != nil {
+			httputil.WriteError(w, http.StatusInternalServerError, "failed to read permission")
+			return
+		}
+		if branchID.Valid {
+			p.BranchID = &branchID.Int64
+		}
+		if validUntil.Valid {
+			t := validUntil.Time.String()
+			p.ValidUntil = &t
+		}
+		if reason.Valid {
+			p.Reason = reason.String
+		}
+		result = append(result, p)
+	}
+	httputil.WriteJSON(w, http.StatusOK, result)
 }
 
 func (h *Handler) grantPermission(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.ClaimsFrom(r.Context())
+	if claims == nil {
+		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	id, err := parseID(r)
+	if err != nil {
+		httputil.WriteError(w, http.StatusBadRequest, "invalid id")
+		return
+	}
 	var req GrantPermissionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		httputil.WriteError(w, http.StatusBadRequest, "invalid request body")
@@ -268,9 +334,72 @@ func (h *Handler) grantPermission(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteError(w, http.StatusUnprocessableEntity, "permission_key is required")
 		return
 	}
-	httputil.WriteError(w, http.StatusNotImplemented, "not implemented")
+	if req.Effect != "allow" && req.Effect != "deny" {
+		httputil.WriteError(w, http.StatusUnprocessableEntity, "effect must be allow or deny")
+		return
+	}
+	const q = `INSERT INTO public.user_permissions
+		(user_id, tenant_id, permission_key, branch_id, effect, granted_by, valid_until, reason)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		RETURNING id, permission_key, branch_id, effect, valid_from, valid_until, reason`
+	var p UserPermission
+	var branchID sql.NullInt64
+	var validUntil sql.NullTime
+	var reason sql.NullString
+	if err := h.pool.QueryRow(r.Context(), q,
+		id, claims.TenantID, req.PermissionKey, req.BranchID, req.Effect,
+		claims.UserID, req.ValidUntil, req.Reason,
+	).Scan(&p.ID, &p.PermissionKey, &branchID, &p.Effect, &p.ValidFrom, &validUntil, &reason); err != nil {
+		httputil.WriteError(w, http.StatusInternalServerError, "failed to grant permission")
+		return
+	}
+	if branchID.Valid {
+		p.BranchID = &branchID.Int64
+	}
+	if validUntil.Valid {
+		t := validUntil.Time.String()
+		p.ValidUntil = &t
+	}
+	if reason.Valid {
+		p.Reason = reason.String
+	}
+	// Invalidate the ABAC cache for the affected user so the new permission takes effect immediately.
+	if inv, ok := h.checker.(interface{ Invalidate(int64) }); ok {
+		inv.Invalidate(id)
+	}
+	httputil.WriteJSON(w, http.StatusCreated, p)
 }
 
-func (h *Handler) revokePermission(w http.ResponseWriter, _ *http.Request) {
-	httputil.WriteError(w, http.StatusNotImplemented, "not implemented")
+func (h *Handler) revokePermission(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.ClaimsFrom(r.Context())
+	if claims == nil {
+		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	id, err := parseID(r)
+	if err != nil {
+		httputil.WriteError(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	permKey := chi.URLParam(r, "permKey")
+	if permKey == "" {
+		httputil.WriteError(w, http.StatusBadRequest, "permKey is required")
+		return
+	}
+	const q = `DELETE FROM public.user_permissions
+		WHERE user_id = $1 AND tenant_id = $2 AND permission_key = $3`
+	tag, err := h.pool.Exec(r.Context(), q, id, claims.TenantID, permKey)
+	if err != nil {
+		httputil.WriteError(w, http.StatusInternalServerError, "failed to revoke permission")
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		httputil.WriteError(w, http.StatusNotFound, "permission not found")
+		return
+	}
+	// Invalidate the ABAC cache so the revocation takes effect immediately.
+	if inv, ok := h.checker.(interface{ Invalidate(int64) }); ok {
+		inv.Invalidate(id)
+	}
+	w.WriteHeader(http.StatusNoContent)
 }

@@ -34,6 +34,7 @@ var TenantLevelRoles = map[StaffRole]bool{
 // Claims mirrors JwtClaims from packages/shared/src/auth/types.ts.
 // These are the custom claims injected by custom_access_token_hook().
 type Claims struct {
+	UserID   int64     `json:"user_id"`
 	TenantID int64     `json:"tenant_id"`
 	BranchID *int64    `json:"branch_id"` // null for tenant-level roles
 	AreaID   *int64    `json:"area_id"`

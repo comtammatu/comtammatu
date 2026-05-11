@@ -99,6 +99,7 @@ func signToken(u *userRow) (string, error) {
 
 	type customClaims struct {
 		jwt.RegisteredClaims
+		UserID   int64  `json:"user_id"`
 		TenantID int64  `json:"tenant_id"`
 		BranchID *int64 `json:"branch_id"`
 		UserRole string `json:"user_role"`
@@ -110,6 +111,7 @@ func signToken(u *userRow) (string, error) {
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
+		UserID:   u.ID,
 		TenantID: u.TenantID,
 		BranchID: u.BranchID,
 		UserRole: u.UserRole,

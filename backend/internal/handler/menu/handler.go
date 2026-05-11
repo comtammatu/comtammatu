@@ -17,36 +17,49 @@ import (
 
 // Handler handles menu-related HTTP endpoints.
 type Handler struct {
-	pool *pgxpool.Pool
+	pool    *pgxpool.Pool
+	checker middleware.PermissionChecker
 }
 
-// New returns a new Handler.
-func New(pool *pgxpool.Pool) *Handler {
-	return &Handler{pool: pool}
+// New returns a new Handler. checker may be nil (skips ABAC — legacy mode).
+func New(pool *pgxpool.Pool, checker middleware.PermissionChecker) *Handler {
+	return &Handler{pool: pool, checker: checker}
 }
 
 // Routes returns a chi.Router wired with all menu endpoints.
 func (h *Handler) Routes() chi.Router {
 	r := chi.NewRouter()
 
-	r.Get("/categories", h.listCategories)
-	r.Post("/categories", h.createCategory)
-	r.Get("/categories/{id}", h.getCategory)
-	r.Put("/categories/{id}", h.updateCategory)
+	read := h.perm("menu:read")
+	write := h.perm("menu:write")
 
-	r.Get("/items", h.listItems)
-	r.Post("/items", h.createItem)
-	r.Get("/items/{id}", h.getItem)
-	r.Put("/items/{id}", h.updateItem)
-	r.Delete("/items/{id}", h.deleteItem)
+	r.With(read).Get("/categories", h.listCategories)
+	r.With(write).Post("/categories", h.createCategory)
+	r.With(read).Get("/categories/{id}", h.getCategory)
+	r.With(write).Put("/categories/{id}", h.updateCategory)
 
-	r.Get("/items/{id}/variants", h.listVariants)
-	r.Post("/items/{id}/variants", h.createVariant)
+	r.With(read).Get("/items", h.listItems)
+	r.With(write).Post("/items", h.createItem)
+	r.With(read).Get("/items/{id}", h.getItem)
+	r.With(write).Put("/items/{id}", h.updateItem)
+	r.With(write).Delete("/items/{id}", h.deleteItem)
 
-	r.Get("/items/{id}/modifiers", h.listModifiers)
-	r.Post("/items/{id}/modifiers", h.createModifier)
+	r.With(read).Get("/items/{id}/variants", h.listVariants)
+	r.With(write).Post("/items/{id}/variants", h.createVariant)
+
+	r.With(read).Get("/items/{id}/modifiers", h.listModifiers)
+	r.With(write).Post("/items/{id}/modifiers", h.createModifier)
 
 	return r
+}
+
+// perm returns a RequirePermission middleware when a checker is configured,
+// otherwise a no-op (preserves backward compatibility in tests).
+func (h *Handler) perm(key string) func(http.Handler) http.Handler {
+	if h.checker == nil {
+		return func(next http.Handler) http.Handler { return next }
+	}
+	return middleware.RequirePermission(h.checker, key)
 }
 
 func parseID(r *http.Request) (int64, error) {

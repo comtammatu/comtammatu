@@ -15,7 +15,7 @@ import (
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 
 	"github.com/personal/comtammatu/backend/config"
-	"github.com/personal/comtammatu/backend/internal/auth"
+	"github.com/personal/comtammatu/backend/internal/abac"
 	"github.com/personal/comtammatu/backend/internal/db"
 	authhandler "github.com/personal/comtammatu/backend/internal/handler/auth"
 	healthhandler "github.com/personal/comtammatu/backend/internal/handler/health"
@@ -65,14 +65,16 @@ func main() {
 	authH := authhandler.New(pool)
 	r.Post("/auth/login", authH.Login)
 
-	// Authenticated API routes — Authenticate middleware validates Supabase JWT
+	eval := abac.New(pool)
+
+	// Authenticated API routes — Authenticate middleware validates JWT
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.Authenticate(cfg.JWTSecret))
 
 		r.Get("/auth/me", authH.Me)
-		r.With(middleware.RequireModule(auth.ModuleMenu)).Mount("/menu", menuhandler.New(pool).Routes())
-		r.With(middleware.RequireModule(auth.ModuleStaff)).Mount("/admin/staff", staffhandler.New(pool).Routes())
-		r.With(middleware.RequireModule(auth.ModuleSettings)).Mount("/admin/settings", settingshandler.New(pool).Routes())
+		r.Mount("/menu", menuhandler.New(pool, eval).Routes())
+		r.Mount("/admin/staff", staffhandler.New(pool, eval).Routes())
+		r.Mount("/admin/settings", settingshandler.New(pool, eval).Routes())
 	})
 
 	srv := &http.Server{
