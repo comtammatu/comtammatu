@@ -468,7 +468,7 @@ func (h *Handler) createVariant(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req struct {
-		Name           string `json:"name"`
+		Name            string `json:"name"`
 		PriceAdjustment string `json:"price_adjustment"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
