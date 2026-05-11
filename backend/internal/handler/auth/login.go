@@ -38,14 +38,23 @@ func (h *Handler) loginWithPool(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteError(w, http.StatusBadRequest, "email and password are required")
 		return
 	}
+	if req.TenantID <= 0 {
+		httputil.WriteError(w, http.StatusBadRequest, "tenant_id is required")
+		return
+	}
 
-	user, err := getUserByEmail(r.Context(), h.pool, req.Email)
+	user, err := getUserByEmail(r.Context(), h.pool, req.Email, req.TenantID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			httputil.WriteError(w, http.StatusUnauthorized, "invalid credentials")
 			return
 		}
 		httputil.WriteError(w, http.StatusInternalServerError, "authentication failed")
+		return
+	}
+
+	if user.PasswordHash == "" {
+		httputil.WriteError(w, http.StatusUnauthorized, "account not activated — set a password first")
 		return
 	}
 
@@ -73,13 +82,12 @@ func (h *Handler) loginWithPool(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func getUserByEmail(ctx context.Context, pool *pgxpool.Pool, email string) (*userRow, error) {
+func getUserByEmail(ctx context.Context, pool *pgxpool.Pool, email string, tenantID int64) (*userRow, error) {
 	const q = `
         SELECT id, tenant_id, branch_id, email, password_hash, full_name, user_role, position, is_active
         FROM public.users
-        WHERE email = $1 AND is_active = true
-        LIMIT 1`
-	row := pool.QueryRow(ctx, q, email)
+        WHERE email = $1 AND tenant_id = $2`
+	row := pool.QueryRow(ctx, q, email, tenantID)
 	var u userRow
 	err := row.Scan(&u.ID, &u.TenantID, &u.BranchID, &u.Email, &u.PasswordHash,
 		&u.FullName, &u.UserRole, &u.Position, &u.IsActive)

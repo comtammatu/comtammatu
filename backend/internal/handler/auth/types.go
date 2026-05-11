@@ -4,6 +4,7 @@ package auth
 type LoginRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
+	TenantID int64  `json:"tenant_id"`
 }
 
 // MeResponse is the JSON body returned by GET /auth/me.

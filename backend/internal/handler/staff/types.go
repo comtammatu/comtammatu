@@ -42,6 +42,11 @@ type UserPermission struct {
 	Reason        string  `json:"reason,omitempty"`
 }
 
+// SetPasswordRequest is the body for POST /{id}/set-password.
+type SetPasswordRequest struct {
+	Password string `json:"password"`
+}
+
 // GrantPermissionRequest is the body for POST /{id}/permissions.
 type GrantPermissionRequest struct {
 	PermissionKey string  `json:"permission_key"`

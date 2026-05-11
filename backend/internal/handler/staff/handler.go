@@ -53,6 +53,7 @@ func (h *Handler) Routes() chi.Router {
 	r.With(assign).Get("/{id}/permissions", h.listPermissions)
 	r.With(assign).Post("/{id}/permissions", h.grantPermission)
 	r.With(assign).Delete("/{id}/permissions/{permKey}", h.revokePermission)
+	r.With(manage).Post("/{id}/set-password", h.setPassword)
 
 	return r
 }
@@ -166,20 +167,25 @@ func (h *Handler) createStaff(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteError(w, http.StatusUnprocessableEntity, "user_role is required")
 		return
 	}
-	tmpHash, err := bcrypt.GenerateFromPassword([]byte("changeme"), bcrypt.DefaultCost)
-	if err != nil {
-		httputil.WriteError(w, http.StatusInternalServerError, "failed to create staff")
-		return
+	// Elevated roles (owner, super_manager) require explicit permission beyond staff:manage.
+	if req.UserRole == "owner" || req.UserRole == "super_manager" {
+		if h.checker != nil {
+			ok, err := h.checker.Can(r.Context(), claims.UserID, claims.TenantID, claims.BranchID, "staff:assign_elevated_role")
+			if err != nil || !ok {
+				httputil.WriteError(w, http.StatusForbidden, "assigning elevated role requires staff:assign_elevated_role permission")
+				return
+			}
+		}
 	}
-	const q = `INSERT INTO public.users (tenant_id, branch_id, email, password_hash, full_name, user_role)
-		VALUES ($1, $2, $3, $4, $5, $6)
+	const q = `INSERT INTO public.users (tenant_id, branch_id, email, password_hash, full_name, user_role, is_active)
+		VALUES ($1, $2, $3, '', $4, $5, false)
 		RETURNING id, tenant_id, full_name, email, user_role, branch_id, is_active, created_at`
 	var s StaffMember
 	var idVal int64
 	var branchID sql.NullInt64
 	var isActive sql.NullBool
 	var createdAt sql.NullTime
-	if err := h.pool.QueryRow(r.Context(), q, claims.TenantID, req.BranchID, req.Email, string(tmpHash), req.FullName, req.UserRole).
+	if err := h.pool.QueryRow(r.Context(), q, claims.TenantID, req.BranchID, req.Email, req.FullName, req.UserRole).
 		Scan(&idVal, &s.TenantID, &s.FullName, &s.Email, &s.UserRole, &branchID, &isActive, &createdAt); err != nil {
 		httputil.WriteError(w, http.StatusInternalServerError, "failed to create staff")
 		return
@@ -212,6 +218,15 @@ func (h *Handler) updateStaff(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		httputil.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
+	}
+	if req.UserRole != nil && (*req.UserRole == "owner" || *req.UserRole == "super_manager") {
+		if h.checker != nil {
+			ok, err := h.checker.Can(r.Context(), claims.UserID, claims.TenantID, claims.BranchID, "staff:assign_elevated_role")
+			if err != nil || !ok {
+				httputil.WriteError(w, http.StatusForbidden, "assigning elevated role requires staff:assign_elevated_role permission")
+				return
+			}
+		}
 	}
 	const q = `UPDATE public.users
 		SET full_name = COALESCE($1, full_name),
@@ -368,6 +383,45 @@ func (h *Handler) grantPermission(w http.ResponseWriter, r *http.Request) {
 		inv.Invalidate(id)
 	}
 	httputil.WriteJSON(w, http.StatusCreated, p)
+}
+
+func (h *Handler) setPassword(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.ClaimsFrom(r.Context())
+	if claims == nil {
+		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	id, err := parseID(r)
+	if err != nil {
+		httputil.WriteError(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	var req SetPasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httputil.WriteError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if len(req.Password) < 8 {
+		httputil.WriteError(w, http.StatusUnprocessableEntity, "password must be at least 8 characters")
+		return
+	}
+	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		httputil.WriteError(w, http.StatusInternalServerError, "failed to set password")
+		return
+	}
+	const q = `UPDATE public.users SET password_hash = $1, is_active = true, updated_at = now()
+		WHERE id = $2 AND tenant_id = $3`
+	tag, err := h.pool.Exec(r.Context(), q, string(hash), id, claims.TenantID)
+	if err != nil {
+		httputil.WriteError(w, http.StatusInternalServerError, "failed to set password")
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		httputil.WriteError(w, http.StatusNotFound, "staff not found")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *Handler) revokePermission(w http.ResponseWriter, r *http.Request) {
