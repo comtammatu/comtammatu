@@ -44,7 +44,12 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	var rows interface {
+	// UserUUID is the auth.users UUID FK in notification_reads.user_id.
+	// auth.uid() is a Supabase PostgREST helper that returns NULL on plain pgxpool connections,
+	// so we bind the UUID explicitly as a query parameter.
+	userUUID := claims.UserUUID
+
+	var pgxRows interface {
 		Next() bool
 		Close()
 		Scan(...any) error
@@ -59,13 +64,13 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 			       n.created_at
 			FROM public.notifications n
 			LEFT JOIN public.notification_reads nr
-			  ON nr.notification_id = n.id AND nr.user_id = auth.uid()
+			  ON nr.notification_id = n.id AND nr.user_id = $3::uuid
 			WHERE n.tenant_id = $1
 			  AND n.id < $2
 			  AND (n.expires_at IS NULL OR n.expires_at > now())
 			ORDER BY n.created_at DESC
 			LIMIT 50`
-		rows, err = h.pool.Query(r.Context(), q, claims.TenantID, cursor)
+		pgxRows, err = h.pool.Query(r.Context(), q, claims.TenantID, cursor, userUUID)
 	} else {
 		const q = `
 			SELECT n.id, n.tenant_id, n.kind, n.severity, n.title, n.body,
@@ -74,26 +79,26 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
 			       n.created_at
 			FROM public.notifications n
 			LEFT JOIN public.notification_reads nr
-			  ON nr.notification_id = n.id AND nr.user_id = auth.uid()
+			  ON nr.notification_id = n.id AND nr.user_id = $2::uuid
 			WHERE n.tenant_id = $1
 			  AND (n.expires_at IS NULL OR n.expires_at > now())
 			ORDER BY n.created_at DESC
 			LIMIT 50`
-		rows, err = h.pool.Query(r.Context(), q, claims.TenantID)
+		pgxRows, err = h.pool.Query(r.Context(), q, claims.TenantID, userUUID)
 	}
 	if err != nil {
 		httputil.WriteError(w, http.StatusInternalServerError, "failed to fetch notifications")
 		return
 	}
-	defer rows.Close()
+	defer pgxRows.Close()
 
 	result := make([]Notification, 0)
-	for rows.Next() {
+	for pgxRows.Next() {
 		var n Notification
 		var body, entityType, actionURL sql.NullString
 		var entityID sql.NullInt64
 		var createdAt sql.NullTime
-		if err := rows.Scan(&n.ID, &n.TenantID, &n.Kind, &n.Severity, &n.Title,
+		if err := pgxRows.Scan(&n.ID, &n.TenantID, &n.Kind, &n.Severity, &n.Title,
 			&body, &entityType, &entityID, &actionURL, &n.IsRead, &createdAt); err != nil {
 			httputil.WriteError(w, http.StatusInternalServerError, "failed to read notification")
 			return
@@ -126,9 +131,19 @@ func (h *Handler) unreadCount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Use the existing RPC which already handles RLS visibility.
+	// Direct query — count_unread_notifications() RPC uses auth.uid() which returns NULL
+	// on plain pgxpool connections (no Supabase PostgREST session). Bind UUID explicitly.
+	const q = `
+		SELECT COUNT(*)
+		FROM public.notifications n
+		WHERE n.tenant_id = $1
+		  AND (n.expires_at IS NULL OR n.expires_at > now())
+		  AND NOT EXISTS (
+		      SELECT 1 FROM public.notification_reads nr
+		      WHERE nr.notification_id = n.id AND nr.user_id = $2::uuid
+		  )`
 	var count int64
-	if err := h.pool.QueryRow(r.Context(), `SELECT public.count_unread_notifications()`).Scan(&count); err != nil {
+	if err := h.pool.QueryRow(r.Context(), q, claims.TenantID, claims.UserUUID).Scan(&count); err != nil {
 		httputil.WriteError(w, http.StatusInternalServerError, "failed to count unread")
 		return
 	}
@@ -160,9 +175,9 @@ func (h *Handler) markRead(w http.ResponseWriter, r *http.Request) {
 	}
 
 	const q = `INSERT INTO public.notification_reads (notification_id, user_id, read_at)
-		VALUES ($1, auth.uid(), now())
+		VALUES ($1, $2::uuid, now())
 		ON CONFLICT (notification_id, user_id) DO NOTHING`
-	if _, err := h.pool.Exec(r.Context(), q, id); err != nil {
+	if _, err := h.pool.Exec(r.Context(), q, id, claims.UserUUID); err != nil {
 		httputil.WriteError(w, http.StatusInternalServerError, "failed to mark read")
 		return
 	}
@@ -177,12 +192,24 @@ func (h *Handler) markAllRead(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Use the existing RPC which handles visibility + conflict safely.
-	var marked int64
-	if err := h.pool.QueryRow(r.Context(), `SELECT public.mark_all_notifications_read()`).Scan(&marked); err != nil {
+	// Direct INSERT — mark_all_notifications_read() RPC uses auth.uid() which returns NULL
+	// on plain pgxpool connections. Bind UUID explicitly to avoid silent no-ops.
+	const q = `
+		INSERT INTO public.notification_reads (notification_id, user_id, read_at)
+		SELECT n.id, $2::uuid, now()
+		FROM public.notifications n
+		WHERE n.tenant_id = $1
+		  AND (n.expires_at IS NULL OR n.expires_at > now())
+		  AND NOT EXISTS (
+		      SELECT 1 FROM public.notification_reads nr
+		      WHERE nr.notification_id = n.id AND nr.user_id = $2::uuid
+		  )
+		ON CONFLICT (notification_id, user_id) DO NOTHING`
+	tag, err := h.pool.Exec(r.Context(), q, claims.TenantID, claims.UserUUID)
+	if err != nil {
 		httputil.WriteError(w, http.StatusInternalServerError, "failed to mark all read")
 		return
 	}
 
-	httputil.WriteJSON(w, http.StatusOK, map[string]any{"marked": marked})
+	httputil.WriteJSON(w, http.StatusOK, map[string]any{"marked": tag.RowsAffected()})
 }
