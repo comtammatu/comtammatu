@@ -352,8 +352,7 @@ func (h *Handler) updateArea(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	const q = `UPDATE public.branch_zones
-		SET name = COALESCE($1, name),
-		    sort_order = COALESCE(NULL, sort_order)
+		SET name = COALESCE($1, name)
 		WHERE id = $2 AND tenant_id = $3
 		RETURNING id, tenant_id, name`
 	var nameArg *string

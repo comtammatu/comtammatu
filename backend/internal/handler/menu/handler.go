@@ -204,11 +204,7 @@ func (h *Handler) updateCategory(w http.ResponseWriter, r *http.Request) {
 		    updated_at = now()
 		WHERE id = $4 AND tenant_id = $5
 		RETURNING id, tenant_id, name, sort_order, is_active, created_at`
-	var nameArg *string
-	if req.Name != nil {
-		nameArg = req.Name
-	}
-	row := h.pool.QueryRow(r.Context(), q, nameArg, req.SortOrder, req.IsActive, id, claims.TenantID)
+	row := h.pool.QueryRow(r.Context(), q, req.Name, req.SortOrder, req.IsActive, id, claims.TenantID)
 	var c MenuCategory
 	var sortOrder sql.NullInt32
 	var createdAt sql.NullTime

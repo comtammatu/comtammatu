@@ -2,12 +2,10 @@ package kds
 
 import (
 	"database/sql"
-	"errors"
 	"net/http"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/personal/comtammatu/backend/internal/httputil"
 	"github.com/personal/comtammatu/backend/internal/middleware"
@@ -129,10 +127,6 @@ func (h *Handler) updateStatus(w http.ResponseWriter, r *http.Request, status st
 		return
 	}
 	if tag.RowsAffected() == 0 {
-		if errors.Is(err, pgx.ErrNoRows) {
-			httputil.WriteError(w, http.StatusNotFound, "ticket not found")
-			return
-		}
 		httputil.WriteError(w, http.StatusNotFound, "ticket not found")
 		return
 	}
