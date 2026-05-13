@@ -12,7 +12,7 @@ import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
 import type { ComponentType } from "react";
 import { formatVND } from "@comtammatu/shared/format";
 import { PAYMENT_METHOD_LABELS_VI } from "@comtammatu/shared/labels";
-import type { PaymentMethod } from "@comtammatu/shared/providers";
+import { buildVietQrEmvco, type PaymentMethod } from "@comtammatu/shared/providers";
 import {
   Alert,
   AlertDescription,
@@ -667,16 +667,21 @@ export function BillReceipt({
         }
         const amount = Math.round(Number(order.total_amount));
         const description = `DH ${order.order_number}`;
-        const qrUrl = new URL(
-          `https://img.vietqr.io/image/${encodeURIComponent(vietQrConfig.bankCode)}-${encodeURIComponent(vietQrConfig.accountNo)}-compact.png`,
-        );
-        qrUrl.searchParams.set("amount", String(amount));
-        qrUrl.searchParams.set("addInfo", description);
-        if (vietQrConfig.accountName) {
-          qrUrl.searchParams.set("accountName", vietQrConfig.accountName);
+        const qrPayload = buildVietQrEmvco({
+          bankCode: vietQrConfig.bankCode,
+          accountNo: vietQrConfig.accountNo,
+          amount,
+          description,
+          accountName: vietQrConfig.accountName,
+        });
+        if (!qrPayload) {
+          setPaymentCreateError(
+            "VietQR cấu hình không hợp lệ — kiểm tra STK và mã ngân hàng.",
+          );
+          return;
         }
         setPendingExtras({
-          qr_data: qrUrl.toString(),
+          qr_data: qrPayload,
           qr_info: {
             account_no: vietQrConfig.accountNo,
             account_name: vietQrConfig.accountName || undefined,
@@ -1212,7 +1217,6 @@ export function BillReceipt({
                               METHOD_META[selectedMethod]?.label ??
                               REMOTE_PAYMENT_COPY.qrAltFallback
                             }`}
-                            preferImage={selectedMethod === "vietqr"}
                           />
                         ) : (
                           <PaymentQrPlaceholder Icon={MethodIcon} />
