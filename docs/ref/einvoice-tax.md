@@ -2,7 +2,7 @@
 
 > Áp dụng: Cơm Tấm Má Tư CTCP — mô hình F&B multi-branch
 > Khung pháp lý: NĐ 123/2020, NĐ 70/2025, TT 78/2021, Luật Thuế GTGT 2024, NQ 142/2024
-> Last updated: 2026-05-08 (post-pilot hybrid MISA + Sinvoice shipped)
+> Last updated: 2026-05-13 (POS per-payment mandatory HĐĐT)
 
 ---
 
@@ -16,16 +16,16 @@ Cơm Tấm Má Tư CTCP là **doanh nghiệp đăng ký nộp thuế GTGT theo p
 
 **NĐ 70/2025**: kể từ 01/07/2025, mọi giao dịch B2C tại doanh nghiệp đã đăng ký HĐĐT phải xuất hóa đơn điện tử. Không được xuất hóa đơn giấy.
 
-### 1.1 Mô hình hybrid (đã ship 2026-05-08)
+### 1.1 Mô hình vận hành
 
-Hệ thống vận hành **2 luồng song song** (đồng nhất với TT 78/2021 §11.4):
+Hệ thống mặc định phát hành **HĐĐT per-order cho mọi payment POS**. Daily summary còn tồn tại cho legacy/backfill hoặc khi chủ trương vận hành chuyển sang template tổng hợp riêng.
 
-| Luồng                   | Khi nào                           | Tần suất                    | Đối tượng pháp lý                      |
-| ----------------------- | --------------------------------- | --------------------------- | -------------------------------------- |
-| **B2B realtime**        | Khách có MST yêu cầu HĐ           | Per-order (ngay tại quầy)   | HĐ điện tử per-order, có MST người mua |
-| **B2C daily summary**   | Khách không yêu cầu HĐ (mặc định) | 1 HĐ tổng hợp/chi nhánh/ngày | HĐ tổng hợp B2C (template riêng đăng ký với CQT) |
+| Luồng                 | Khi nào                            | Tần suất                     | Đối tượng pháp lý                                |
+| --------------------- | ---------------------------------- | ---------------------------- | ------------------------------------------------ |
+| **POS realtime**      | Mọi payment POS                    | Per-order (ngay tại quầy)    | HĐ điện tử per-order; có MST nếu khách cung cấp  |
+| **B2C daily summary** | Legacy/backfill hoặc rollout riêng | 1 HĐ tổng hợp/chi nhánh/ngày | HĐ tổng hợp B2C (template riêng đăng ký với CQT) |
 
-Mỗi order chỉ thuộc **đúng 1** trong 2 luồng (không double-issue). Late B2B request sau cron batch → reject (xem §3.11).
+Mỗi order chỉ thuộc **đúng 1** trong 2 luồng (không double-issue).
 
 ---
 
@@ -50,19 +50,22 @@ Mỗi order chỉ thuộc **đúng 1** trong 2 luồng (không double-issue). La
 
 ### 3.1 Quy trình xuất hóa đơn
 
-#### B2B realtime (per-order)
+#### POS realtime (per-order, bắt buộc)
 
 ```
-Khách yêu cầu HĐ + cung cấp MST
-  → Cashier nhập thông tin tại POS bill flow
-  → createTaxInvoice action: insert tax_invoice (status='draft', invoice_kind='per_order')
-  → RPC transition_tax_invoice_state(id, 'signing') — set signing_started_at
-  → Provider API call (MISA hoặc Sinvoice)
-  → RPC transition_tax_invoice_state(id, 'issued', { invoice_number, cqt_code, provider_data })
-  → Trả PDF/QR cho khách
+Payment thành công tại POS
+  → Nếu khách cung cấp MST: cashier nhập thông tin người mua
+  → Nếu khách không lấy HĐ: POS dùng buyerName='Người mua không lấy hóa đơn',
+     MST trống, buyerNotGetInvoice=true
+  → createTaxInvoice action gọi Provider API (MISA hoặc Sinvoice)
+  → INSERT tax_invoice (kind='per_order', status='signing'|'submitted'|'issued')
+      ↳ provider failure → lưu row status='draft' để Finance xử lý
+      ↳ provider submission → set signing_started_at để reconcile cron pickup
+  → Reconcile cron poll CQT tới khi status='issued'
+  → Archive cron tải PDF/XML sau khi issued
 ```
 
-**Thời hạn**: HĐ B2B phải được cấp mã CQT **trước khi** giao cho khách. Không được giao HĐ chưa có mã.
+**Nghiệp vụ khóa**: khách không lấy hóa đơn vẫn phải phát hành HĐĐT cho giao dịch bán hàng. Form POS chỉ để nhập thêm thông tin người mua/MST, không phải opt-out xuất HĐĐT.
 
 #### B2C daily summary (tổng hợp ngày hôm trước)
 
@@ -80,24 +83,26 @@ Cron 02:05 ICT mỗi ngày (HOẶC admin manual trigger /finance/summary)
           ↳ INSERT tax_invoice_orders junction rows (1 per order)
           ↳ Return { tax_invoice_id, line_items_for_misa, vat_breakdown }
       → RPC transition_tax_invoice_state_as_system(id, 'signing')
-      → Provider.createInvoice(line_items, buyerName='Khách hàng không lấy hóa đơn')
+      → Provider.createInvoice(line_items, buyerName='Người mua không lấy hóa đơn',
+         buyerNotGetInvoice=true)
       → RPC transition_tax_invoice_state_as_system(id, 'issued'|'submitted')
       → UPDATE summary_run_queue { status, finished_at }
 ```
 
-**Pháp lý**: HĐ tổng hợp B2C dựa trên TT 78/2021 §11.4 — yêu cầu **template riêng** đăng ký với CQT (KHÔNG dùng template per-order). Tần suất gộp tối đa 1 ngày (không gộp tuần/tháng cho F&B B2C).
+**Lưu ý vận hành**: khi POS per-order mandatory đang bật, daily summary bình thường sẽ không còn eligible orders vì mỗi payment đã có HĐ per-order. Giữ flow này cho legacy/backfill hoặc khi chủ trương vận hành chuyển sang template tổng hợp riêng.
 
 ### 3.2 Thông tin bắt buộc trên HĐĐT đầu ra
 
 ```
 - Tên, địa chỉ, MST người bán (lấy từ bảng tenants)
 - Tên, địa chỉ, MST người mua
-    + B2B: bắt buộc đầy đủ
-    + B2C summary: ghi "Khách hàng không lấy hóa đơn", MST trống
+    + Khách có MST: bắt buộc tên + MST hợp lệ
+    + Khách không lấy HĐ: ghi "Người mua không lấy hóa đơn", MST trống
+    + B2C summary legacy/backfill: ghi "Người mua không lấy hóa đơn", MST trống
 - Số thứ tự hóa đơn (do CQT cấp / provider cấp)
 - Ngày lập hóa đơn
 - Tên hàng hóa, đơn vị, số lượng, đơn giá
-    + B2B: chi tiết món
+    + Per-order: chi tiết món
     + B2C summary: gộp theo VAT rate, ví dụ "Đồ ăn 8%" + "Đồ uống có cồn 10%"
 - Thành tiền chưa thuế
 - Thuế suất GTGT
@@ -115,21 +120,21 @@ draft → signing → submitted → issued      ← trạng thái hợp lệ
                              ↓
                           replaced          ← thay thế bằng HĐ mới (TT 78)
 
-[B2B-only branch]
-draft → not_required                       ← B2B không có MST (legacy D4, deprecated)
+[Legacy-only]
+draft → not_required                       ← không được tạo mới
 ```
 
-| Trạng thái     | Mô tả                                  | Cho phép hủy?         |
-| -------------- | -------------------------------------- | --------------------- |
-| `draft`        | Chưa ký, chưa gửi                      | Có (xóa luôn qua RPC) |
-| `signing`      | Đang ký số (async)                     | Không                 |
-| `submitted`    | Đã gửi CQT, chờ mã                     | Không                 |
-| `issued`       | Đã có mã CQT (trạng thái cuối hợp lệ)  | Có — biên bản hủy      |
-| `cancelled`    | Đã hủy                                 | Terminal              |
-| `replaced`     | Đã thay thế                            | Terminal              |
-| `not_required` | (Legacy D4) order không có MST         | Terminal              |
+| Trạng thái     | Mô tả                                 | Cho phép hủy?         |
+| -------------- | ------------------------------------- | --------------------- |
+| `draft`        | Chưa ký, chưa gửi                     | Có (xóa luôn qua RPC) |
+| `signing`      | Đang ký số (async)                    | Không                 |
+| `submitted`    | Đã gửi CQT, chờ mã                    | Không                 |
+| `issued`       | Đã có mã CQT (trạng thái cuối hợp lệ) | Có — biên bản hủy     |
+| `cancelled`    | Đã hủy                                | Terminal              |
+| `replaced`     | Đã thay thế                           | Terminal              |
+| `not_required` | (Legacy D4) order không có MST        | Terminal              |
 
-> **D4 deprecation note**: Sau khi B2C daily batch ship (2026-05-08), `not_required` không được insert mới. Logic mới: order không có MST → action return early (không write DB) → batch sẽ pickup ngày hôm sau. Legacy `not_required` rows vẫn tồn tại trong DB phục vụ audit. Xem regression rule `HDDT-D4-NOT-REQUIRED-DEPRECATED-AFTER-BATCH`.
+> **D4 deprecation note**: `not_required` không được insert mới. Logic hiện tại: order không có MST vẫn gọi provider realtime với buyerName mặc định `Người mua không lấy hóa đơn`, MST trống, `buyerNotGetInvoice=true`. Legacy `not_required` rows vẫn tồn tại trong DB phục vụ audit và không chặn phát hành HĐ per-order mới cho cùng order.
 
 #### Allowed transitions (DB enforced)
 
@@ -149,10 +154,10 @@ RPC raise `illegal_transition` (ERRCODE 22023) khi cố gắng nhảy ngoài mat
 
 #### Permission split
 
-| Transition target           | Required permission   |
-| --------------------------- | --------------------- |
-| `cancelled` / `replaced`    | `settings:tenant`     |
-| Tất cả transition khác      | `orders:write`        |
+| Transition target        | Required permission |
+| ------------------------ | ------------------- |
+| `cancelled` / `replaced` | `settings:tenant`   |
+| Tất cả transition khác   | `orders:write`      |
 
 `cancel`/`replace` cần owner/super_manager (kèm biên bản hủy theo TT 78). Issuance flow (`draft → signing → submitted → issued`) cho phép cashier+ thực hiện.
 
@@ -161,7 +166,7 @@ RPC raise `illegal_transition` (ERRCODE 22023) khi cố gắng nhảy ngoài mat
 Có 2 partial UNIQUE indexes:
 
 ```sql
--- B2B per-order: 1 active invoice per order
+-- Per-order: 1 active invoice per order
 CREATE UNIQUE INDEX uq_tax_invoices_active_per_order
   ON tax_invoices (order_id)
   WHERE invoice_kind = 'per_order'
@@ -330,13 +335,13 @@ SECURITY DEFINER
 
 **Hard gate**: function raise `forbidden_service_role_only` (ERRCODE 42501) nếu `request.jwt.claims->>'role' <> 'service_role'`. GRANT EXECUTE chỉ cho `service_role`, REVOKE từ `authenticated`. Xem regression rule `HDDT-SERVICE-ROLE-RPC-GATED-ON-CLAIM`.
 
-### 3.8 Late B2B request sau batch
+### 3.8 Late MST request sau summary legacy
 
-Sau khi cron đã gộp 1 order vào HĐ tổng hợp, nếu khách quay lại yêu cầu HĐ B2B:
+Sau khi cron legacy đã gộp 1 order vào HĐ tổng hợp, nếu khách quay lại yêu cầu HĐ có MST:
 
 - `createTaxInvoice` reject với message: "Đơn này đã trong HĐ tổng hợp ngày X — Liên hệ kế toán để lập HĐ điều chỉnh"
-- Pilot: kế toán xử lý qua MISA portal (manual HĐ điều chỉnh giảm + HĐ B2B mới)
-- Defer P1: tự động hóa flow refund-after-batch → HĐ điều chỉnh
+- Pilot: kế toán xử lý qua portal provider (manual HĐ điều chỉnh giảm + HĐ có MST mới)
+- Defer P1: tự động hóa flow summary-adjustment → HĐ điều chỉnh
 
 Regression rule `HDDT-LATE-B2B-REQUEST-AFTER-BATCH-BLOCKED`.
 
@@ -405,21 +410,21 @@ interface InvoiceProvider {
 }
 
 type InvoiceResult = {
-  status: 'draft' | 'signing' | 'submitted' | 'issued' | 'failed';
-  invoiceNumber: string | null;       // null khi draft/signing
-  providerRef: string;                // unique ID phía provider
+  status: "draft" | "signing" | "submitted" | "issued" | "failed";
+  invoiceNumber: string | null; // null khi draft/signing
+  providerRef: string; // unique ID phía provider
   providerData: Record<string, unknown>;
 };
 ```
 
 ### 5.2 Provider matrix
 
-| Provider          | Status   | API base URL                                           | Đăng ký template            |
-| ----------------- | -------- | ------------------------------------------------------ | --------------------------- |
-| MISA meInvoice    | Hoàn thành | prod `https://api.meinvoice.vn/api/v1`                 | Qua MISA portal             |
-|                   |          | sandbox `https://testapi.meinvoice.vn/api/v1`          |                             |
-| Viettel Sinvoice  | Hoàn thành | `https://api-vinvoice.viettel.vn` (cùng test+prod)     | Qua Viettel BU              |
-| VNPT-Invoice      | Future   | `https://einvoice.vnpt.vn/`                            | (chưa triển khai)           |
+| Provider         | Status     | API base URL                                       | Đăng ký template  |
+| ---------------- | ---------- | -------------------------------------------------- | ----------------- |
+| MISA meInvoice   | Hoàn thành | prod `https://api.meinvoice.vn/api/v1`             | Qua MISA portal   |
+|                  |            | sandbox `https://testapi.meinvoice.vn/api/v1`      |                   |
+| Viettel Sinvoice | Hoàn thành | `https://api-vinvoice.viettel.vn` (cùng test+prod) | Qua Viettel BU    |
+| VNPT-Invoice     | Future     | `https://einvoice.vnpt.vn/`                        | (chưa triển khai) |
 
 ### 5.3 MISA meInvoice
 
@@ -434,6 +439,7 @@ COMPANY_TAX_CODE=<MST seller>
 ```
 
 Headers gọi API: `X-API-KEY`, `X-TAX-CODE`, `X-APP-ID`. Status codes MISA → internal:
+
 - `0` → `draft`
 - `1` → `signing`
 - `2` → `submitted`
@@ -456,6 +462,7 @@ COMPANY_TAX_CODE=<MST = SINVOICE_USERNAME prefix>
 ```
 
 Auth flow:
+
 1. `POST /auth/login` với JSON `{ username, password }` → trả Bearer token
 2. `POST /services/einvoiceapplication/api/InvoiceAPI/InvoiceWS/createInvoice/{supplierTaxCode}` (Bearer) → tạo HĐ
 3. `POST /services/einvoiceapplication/api/InvoiceAPI/InvoiceWS/searchInvoiceByTransactionUuid` với form `{ supplierTaxCode, transactionUuid }` → tra cứu trạng thái
@@ -464,22 +471,23 @@ Auth flow:
 **transactionUuid format**: hàm `buildSinvoiceTransactionUuid(invoiceId)` (viettel-sinvoice.ts) tạo 32-char deterministic key dạng `HDDT<...>` để idempotent retry. Persist `provider_ref` BEFORE call để tránh duplicate khi retry.
 
 **Sinvoice test accounts** (smoke test trước cutover prod, mật khẩu chung `2wsxCDE#`):
+
 - `0100109106-501 / 504 / 505 / 507 / 899` — kiểm tra dữ liệu đầu vào nghiêm ngặt
 - `0100109106-509` — KHÔNG kiểm tra (dùng cho test rộng)
 
 **Common Sinvoice error codes** (per HDSD v1):
 
-| Code                              | Vấn đề                       | Action                              |
-| --------------------------------- | ---------------------------- | ----------------------------------- |
-| `1517` Invoice serial inactive    | Mẫu HĐ chưa kích hoạt         | Active thông báo phát hành với CQT  |
-| `1521` / `47` `INVOICE_NO_DUPLICATED` | Số HĐ trùng              | Retry 1 phút sau (UNIQUE lock OK)   |
-| `1520` Invalid supplier tax code  | MST không khớp               | Check `COMPANY_TAX_CODE` env        |
-| `OUT_OF_INVOICE_NO`               | Hết số HĐ trong dải          | Đăng ký dải mới với CQT             |
-| `INVALID_USER_PASSWORD`           | Sai cred                     | Kiểm tra `SINVOICE_USERNAME/PASSWORD` |
-| `429` Too Many Requests           | Rate limit                   | Cron auto retry next-cycle          |
-| `503` Service Unavailable         | Sinvoice maintenance         | Đợi BU thông báo                    |
-| `TRANSACTION_IS_BEING_PROCESSED`  | UUID đang xử lý              | Đợi 1 phút                          |
-| `INVALID_TRANSACTION_UUID`        | UUID format sai              | Bug code → fix `buildSinvoiceTransactionUuid` |
+| Code                                  | Vấn đề                | Action                                        |
+| ------------------------------------- | --------------------- | --------------------------------------------- |
+| `1517` Invoice serial inactive        | Mẫu HĐ chưa kích hoạt | Active thông báo phát hành với CQT            |
+| `1521` / `47` `INVOICE_NO_DUPLICATED` | Số HĐ trùng           | Retry 1 phút sau (UNIQUE lock OK)             |
+| `1520` Invalid supplier tax code      | MST không khớp        | Check `COMPANY_TAX_CODE` env                  |
+| `OUT_OF_INVOICE_NO`                   | Hết số HĐ trong dải   | Đăng ký dải mới với CQT                       |
+| `INVALID_USER_PASSWORD`               | Sai cred              | Kiểm tra `SINVOICE_USERNAME/PASSWORD`         |
+| `429` Too Many Requests               | Rate limit            | Cron auto retry next-cycle                    |
+| `503` Service Unavailable             | Sinvoice maintenance  | Đợi BU thông báo                              |
+| `TRANSACTION_IS_BEING_PROCESSED`      | UUID đang xử lý       | Đợi 1 phút                                    |
+| `INVALID_TRANSACTION_UUID`            | UUID format sai       | Bug code → fix `buildSinvoiceTransactionUuid` |
 
 ### 5.5 Provider init logic
 
@@ -563,6 +571,7 @@ File: `apps/web/app/api/cron/hddt-daily-summary/route.ts`. Schedule trong `apps/
 `19:05 UTC = 02:05 ICT` ngày hôm sau. Auth: `Authorization: Bearer ${CRON_SECRET}` (timing-safe equal). Feature flag `HDDT_DAILY_SUMMARY_ENABLED=true` mới chạy thật, nếu off → return `{ skipped: 'feature_flag_off' }`.
 
 Response shape:
+
 ```json
 {
   "ok": true,
@@ -600,15 +609,15 @@ Hardcoded `'00000000-0000-0000-0000-000000000001'`. Seed qua migration vào `pro
 
 ## 8. Xử lý lỗi thường gặp
 
-| Lỗi                             | Nguyên nhân                       | Xử lý                                                       |
-| ------------------------------- | --------------------------------- | ----------------------------------------------------------- |
-| CQT từ chối cấp mã              | MST không hợp lệ, sai template    | Kiểm tra `*_TEMPLATE_CODE` env + đăng ký với CQT            |
-| Timeout khi gọi provider        | Mạng chậm                         | Retry 3 lần exponential backoff; provider_ref đã persist nên idempotent |
-| HĐ đã issued nhưng cần sửa      | Sai thông tin người mua           | Hủy + biên bản + lập HĐ thay thế (`replaced`)               |
-| Provider trả lỗi duplicate      | Gọi API 2 lần                     | Kiểm tra `provider_ref` trước khi gọi lại                   |
-| Cron orphan `signing` qua đêm   | Provider ack chưa đến             | Reconcile cron (defer P1) hoặc manual transition `signing → draft` |
-| Late B2B sau batch              | Khách quay lại xin HĐ MST         | Kế toán lập HĐ điều chỉnh giảm trên MISA portal + HĐ B2B mới |
-| Cross-month cancel              | Hủy HĐ kỳ trước sau khi đã kê khai | Soft warning UI; defer hard-block đến period-close infra    |
+| Lỗi                           | Nguyên nhân                        | Xử lý                                                                   |
+| ----------------------------- | ---------------------------------- | ----------------------------------------------------------------------- |
+| CQT từ chối cấp mã            | MST không hợp lệ, sai template     | Kiểm tra `*_TEMPLATE_CODE` env + đăng ký với CQT                        |
+| Timeout khi gọi provider      | Mạng chậm                          | Retry 3 lần exponential backoff; provider_ref đã persist nên idempotent |
+| HĐ đã issued nhưng cần sửa    | Sai thông tin người mua            | Hủy + biên bản + lập HĐ thay thế (`replaced`)                           |
+| Provider trả lỗi duplicate    | Gọi API 2 lần                      | Kiểm tra `provider_ref` trước khi gọi lại                               |
+| Cron orphan `signing` qua đêm | Provider ack chưa đến              | Reconcile cron (defer P1) hoặc manual transition `signing → draft`      |
+| Late MST sau summary legacy   | Khách quay lại xin HĐ MST          | Kế toán lập HĐ điều chỉnh giảm trên provider portal + HĐ có MST mới     |
+| Cross-month cancel            | Hủy HĐ kỳ trước sau khi đã kê khai | Soft warning UI; defer hard-block đến period-close infra                |
 
 Các Sinvoice-specific error codes: xem §5.4 và `docs/runbooks/hddt-hybrid-cutover.md` §"Common Sinvoice errors".
 
@@ -618,45 +627,45 @@ Các Sinvoice-specific error codes: xem §5.4 và `docs/runbooks/hddt-hybrid-cut
 
 ### 9.1 Permission keys (`packages/shared/src/auth/permissions.ts`)
 
-| Key                          | Dùng cho                                              |
-| ---------------------------- | ----------------------------------------------------- |
-| `finance:view`               | Đọc `tax_invoices`, `tax_invoice_events`, `summary_run_queue`, `tax_invoice_orders`, dashboard `/finance` |
-| `orders:write`               | Issuance flow `draft → signing → submitted → issued`  |
-| `settings:tenant`            | `cancelled` / `replaced` transition; manual trigger summary |
-| `tax:close_period_override`  | (Future) bypass period-close hard-block               |
+| Key                         | Dùng cho                                                                                                  |
+| --------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `finance:view`              | Đọc `tax_invoices`, `tax_invoice_events`, `summary_run_queue`, `tax_invoice_orders`, dashboard `/finance` |
+| `orders:write`              | Issuance flow `draft → signing → submitted → issued`                                                      |
+| `settings:tenant`           | `cancelled` / `replaced` transition; manual trigger summary                                               |
+| `tax:close_period_override` | (Future) bypass period-close hard-block                                                                   |
 
 ### 9.2 Module ACL (`packages/shared/src/auth/module-acl.ts:89-93`)
 
-| Module    | Path        | Roles được phép                |
-| --------- | ----------- | ------------------------------ |
-| `finance` | `/finance`  | `owner`, `super_manager`       |
+| Module    | Path       | Roles được phép          |
+| --------- | ---------- | ------------------------ |
+| `finance` | `/finance` | `owner`, `super_manager` |
 
 > **Note**: `/finance/summary` admin trigger UI KHÔNG có entry riêng trong `module-acl.ts` — gate qua permission `settings:tenant` ở action level (`runDailySummaryForBranch`). Cashier/branch_manager sẽ thấy nav nhưng action sẽ reject.
 
 ### 9.3 Role matrix tổng hợp
 
-| Hành động                         | owner | super_manager | area_manager | branch_manager | cashier |
-| --------------------------------- | :---: | :-----------: | :----------: | :------------: | :-----: |
-| Xem danh sách HĐĐT                |   ✓   |       ✓       |      ✓       |       ✓        |    ✓    |
-| Xem dashboard `/finance`          |   ✓   |       ✓       |      −       |       −        |    −    |
-| Xuất HĐĐT B2B realtime            |   ✓   |       ✓       |      ✓       |       ✓        |    ✓    |
-| Hủy / thay thế HĐĐT               |   ✓   |       ✓       |      −       |       −        |    −    |
-| Manual trigger daily summary      |   ✓   |       ✓       |      −       |       −        |    −    |
-| Xem queue `summary_run_queue`     |   ✓   |       ✓       |      −       |       −        |    −    |
-| Config provider (env var)         |   ✓   |       −       |      −       |       −        |    −    |
+| Hành động                     | owner | super_manager | area_manager | branch_manager | cashier |
+| ----------------------------- | :---: | :-----------: | :----------: | :------------: | :-----: |
+| Xem danh sách HĐĐT            |   ✓   |       ✓       |      ✓       |       ✓        |    ✓    |
+| Xem dashboard `/finance`      |   ✓   |       ✓       |      −       |       −        |    −    |
+| Xuất HĐĐT realtime            |   ✓   |       ✓       |      ✓       |       ✓        |    ✓    |
+| Hủy / thay thế HĐĐT           |   ✓   |       ✓       |      −       |       −        |    −    |
+| Manual trigger daily summary  |   ✓   |       ✓       |      −       |       −        |    −    |
+| Xem queue `summary_run_queue` |   ✓   |       ✓       |      −       |       −        |    −    |
+| Config provider (env var)     |   ✓   |       −       |      −       |       −        |    −    |
 
 ---
 
 ## 10. Migration files đã ship (timestamp order)
 
-| Timestamp           | File                                                  | Mô tả                                            |
-| ------------------- | ----------------------------------------------------- | ------------------------------------------------ |
-| `20260425035346`    | `tax_invoice_state_machine.sql`                       | RPC `transition_tax_invoice_state` + matrix + `tax_invoice_events` + `signing_started_at` + `uq_tax_invoices_active_per_order` |
-| `20260502000000`    | `pos_hddt_not_required_d4.sql`                        | Thêm state `not_required` (D4 — nay deprecated)  |
-| `20260508053555`    | `hddt_summary_schema.sql`                             | `tax_invoices` cols + `tax_invoice_orders` junction + `summary_run_queue` + `uq_tax_invoices_active_per_summary` |
-| `20260508055046`    | `hddt_summary_rpcs.sql`                               | `transition_tax_invoice_state_as_system` + `_compute_vat_breakdown` + `aggregate_daily_b2c_invoice` (v1) + trigger `tio_assert_one_active_summary_per_order` |
-| `20260508055230`    | `hddt_aggregate_rpc_fixes.sql`                        | Fix bucket `payments.paid_at` (orders không có column) + `pg_advisory_xact_lock(BIGINT)` 1-arg |
-| `20260527020000`    | `finance_dashboard_summary_rpc.sql`                   | `get_finance_dashboard_summary` cho `/finance` dashboard |
+| Timestamp        | File                                | Mô tả                                                                                                                                                        |
+| ---------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `20260425035346` | `tax_invoice_state_machine.sql`     | RPC `transition_tax_invoice_state` + matrix + `tax_invoice_events` + `signing_started_at` + `uq_tax_invoices_active_per_order`                               |
+| `20260502000000` | `pos_hddt_not_required_d4.sql`      | Thêm state `not_required` (D4 — nay deprecated)                                                                                                              |
+| `20260508053555` | `hddt_summary_schema.sql`           | `tax_invoices` cols + `tax_invoice_orders` junction + `summary_run_queue` + `uq_tax_invoices_active_per_summary`                                             |
+| `20260508055046` | `hddt_summary_rpcs.sql`             | `transition_tax_invoice_state_as_system` + `_compute_vat_breakdown` + `aggregate_daily_b2c_invoice` (v1) + trigger `tio_assert_one_active_summary_per_order` |
+| `20260508055230` | `hddt_aggregate_rpc_fixes.sql`      | Fix bucket `payments.paid_at` (orders không có column) + `pg_advisory_xact_lock(BIGINT)` 1-arg                                                               |
+| `20260527020000` | `finance_dashboard_summary_rpc.sql` | `get_finance_dashboard_summary` cho `/finance` dashboard                                                                                                     |
 
 ---
 

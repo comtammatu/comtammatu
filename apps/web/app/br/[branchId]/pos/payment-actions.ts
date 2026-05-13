@@ -7,6 +7,7 @@ import type { Json } from "@comtammatu/database";
 import { createServiceClient } from "@comtammatu/database";
 import type { ActionResult } from "@comtammatu/shared/types";
 import {
+  BUYER_NOT_GET_INVOICE_NAME,
   getPaymentProvider,
   getRegisteredMethods,
   type PaymentMethod,
@@ -126,7 +127,10 @@ function describeProviderCreateFailure(
   return "Không thể tạo thanh toán.";
 }
 
-function describeProviderException(method: PaymentMethod, err: unknown): string {
+function describeProviderException(
+  method: PaymentMethod,
+  err: unknown,
+): string {
   const message = err instanceof Error ? err.message : "";
   if (method === "momo" && message.includes("NEXT_PUBLIC_APP_URL")) {
     return "Không tạo được QR MoMo vì NEXT_PUBLIC_APP_URL phải là URL HTTPS public để MoMo gọi IPN.";
@@ -537,7 +541,9 @@ export async function createPayment(
     };
   }
 
-  const provider = getPaymentProvider(parsedPayment.data.method as PaymentMethod);
+  const provider = getPaymentProvider(
+    parsedPayment.data.method as PaymentMethod,
+  );
   if (!provider) {
     return {
       success: false,
@@ -966,9 +972,7 @@ export async function fetchDailyReconciliation(
   const dateSchema = z.string().date().optional();
   const parsedDate = dateSchema.safeParse(date);
   const targetDate =
-    parsedDate.success && parsedDate.data
-      ? parsedDate.data
-      : getVNDateString();
+    parsedDate.success && parsedDate.data ? parsedDate.data : getVNDateString();
   const { startIso, endIso } = getVNDayUtcRange(targetDate);
 
   // Fetch orders for the day
@@ -1153,23 +1157,17 @@ export async function confirmCashPayment(
   return { success: true, data: result };
 }
 
-/* ─── Cash payment + optional HĐĐT issuance ─── */
+/* ─── Cash payment + mandatory HĐĐT issuance ─── */
 
 export interface InvoiceOutcome {
-  status:
-    | "issued"
-    | "draft"
-    | "submitted"
-    | "signing"
-    | "failed"
-    | "not_required";
+  status: "issued" | "draft" | "submitted" | "signing" | "failed";
   invoiceId?: number;
   invoiceNumber?: string | null;
   error?: string;
 }
 
 export interface CashPaymentWithInvoiceResult extends CashPaymentResult {
-  invoice: InvoiceOutcome | null;
+  invoice: InvoiceOutcome;
 }
 
 const invoicePayloadSchema = z
@@ -1177,12 +1175,54 @@ const invoicePayloadSchema = z
     buyerName: z.string().trim().max(200).optional(),
     buyerTaxCode: z.string().trim().optional(),
     buyerAddress: z.string().trim().max(500).optional(),
+    buyerNotGetInvoice: z.boolean().optional(),
   })
   .optional()
   .nullable();
 
+function normalizeInvoicePayload(
+  invoice: z.infer<typeof invoicePayloadSchema> | null,
+): z.infer<typeof invoicePayloadSchema> {
+  return (
+    invoice ?? {
+      buyerName: BUYER_NOT_GET_INVOICE_NAME,
+      buyerNotGetInvoice: true,
+    }
+  );
+}
+
+function mapTaxInvoiceOutcome(
+  invoice:
+    | { id: number; invoice_number: string | null; status?: string | null }
+    | undefined,
+): InvoiceOutcome {
+  if (!invoice) {
+    return { status: "failed", error: "Hóa đơn trả về thiếu dữ liệu." };
+  }
+
+  if (
+    invoice.status === "issued" ||
+    invoice.status === "submitted" ||
+    invoice.status === "signing"
+  ) {
+    return {
+      status: invoice.status,
+      invoiceId: invoice.id,
+      invoiceNumber: invoice.invoice_number,
+    };
+  }
+
+  return {
+    status: "failed",
+    invoiceId: invoice.id,
+    invoiceNumber: invoice.invoice_number,
+    error:
+      "HĐĐT chưa được provider chấp nhận; Finance cần kiểm tra và xuất lại.",
+  };
+}
+
 /**
- * Orchestrator: confirm cash payment, then optionally issue HĐĐT.
+ * Orchestrator: confirm cash payment, then always attempt HĐĐT issuance.
  *
  * Failure isolation contract:
  *   - Payment is the commercial close. It commits independently.
@@ -1201,14 +1241,9 @@ export async function confirmCashPaymentWithInvoice(
     return paymentResult as ActionResult<CashPaymentWithInvoiceResult>;
   }
 
-  if (!invoice) {
-    return {
-      success: true,
-      data: { ...paymentResult.data, invoice: null },
-    };
-  }
-
-  const parsed = invoicePayloadSchema.safeParse(invoice);
+  const parsed = invoicePayloadSchema.safeParse(
+    normalizeInvoicePayload(invoice),
+  );
   if (!parsed.success) {
     return {
       success: true,
@@ -1241,20 +1276,14 @@ export async function confirmCashPaymentWithInvoice(
   }
 
   const inv = invoiceResult.data as
-    | { id: number; invoice_number: string | null; status?: string }
+    | { id: number; invoice_number: string | null; status?: string | null }
     | undefined;
 
   return {
     success: true,
     data: {
       ...paymentResult.data,
-      invoice: inv
-        ? {
-            status: (inv.status as InvoiceOutcome["status"]) ?? "issued",
-            invoiceId: inv.id,
-            invoiceNumber: inv.invoice_number,
-          }
-        : { status: "failed", error: "Hóa đơn trả về thiếu dữ liệu." },
+      invoice: mapTaxInvoiceOutcome(inv),
     },
   };
 }
@@ -1511,13 +1540,12 @@ export async function confirmVietQrPayment(
 
 /* ─── confirmVietQrPaymentWithInvoice ─── */
 
-export interface VietQrPaymentWithInvoiceResult
-  extends ConfirmVietQrPaymentResult {
-  invoice: InvoiceOutcome | null;
+export interface VietQrPaymentWithInvoiceResult extends ConfirmVietQrPaymentResult {
+  invoice: InvoiceOutcome;
 }
 
 /**
- * Orchestrator: confirm VietQR payment, then optionally issue HĐĐT.
+ * Orchestrator: confirm VietQR payment, then always attempt HĐĐT issuance.
  * Payment commits independently — HĐĐT failure does NOT roll back payment.
  */
 export async function confirmVietQrPaymentWithInvoice(
@@ -1531,14 +1559,9 @@ export async function confirmVietQrPaymentWithInvoice(
     return paymentResult as ActionResult<VietQrPaymentWithInvoiceResult>;
   }
 
-  if (!invoice) {
-    return {
-      success: true,
-      data: { ...paymentResult.data, invoice: null },
-    };
-  }
-
-  const parsed = invoicePayloadSchema.safeParse(invoice);
+  const parsed = invoicePayloadSchema.safeParse(
+    normalizeInvoicePayload(invoice),
+  );
   if (!parsed.success) {
     return {
       success: true,
@@ -1546,8 +1569,7 @@ export async function confirmVietQrPaymentWithInvoice(
         ...paymentResult.data,
         invoice: {
           status: "failed",
-          error:
-            parsed.error.issues[0]?.message ?? "Dữ liệu HĐĐT không hợp lệ",
+          error: parsed.error.issues[0]?.message ?? "Dữ liệu HĐĐT không hợp lệ",
         },
       },
     };
@@ -1572,20 +1594,14 @@ export async function confirmVietQrPaymentWithInvoice(
   }
 
   const inv = invoiceResult.data as
-    | { id: number; invoice_number: string | null; status?: string }
+    | { id: number; invoice_number: string | null; status?: string | null }
     | undefined;
 
   return {
     success: true,
     data: {
       ...paymentResult.data,
-      invoice: inv
-        ? {
-            status: (inv.status as InvoiceOutcome["status"]) ?? "issued",
-            invoiceId: inv.id,
-            invoiceNumber: inv.invoice_number,
-          }
-        : { status: "failed", error: "Hóa đơn trả về thiếu dữ liệu." },
+      invoice: mapTaxInvoiceOutcome(inv),
     },
   };
 }

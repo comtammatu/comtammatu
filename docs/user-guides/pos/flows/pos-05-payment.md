@@ -5,13 +5,13 @@
 
 ## Tóm tắt
 
-| Trường | Giá trị |
-| --- | --- |
-| **Vai trò** | Thu ngân, Quản lý chi nhánh |
-| **Quyền cần có** | `pos:confirm_payment` (xác nhận tiền mặt). Phục vụ vẫn thấy bill nhưng KHÔNG xác nhận được tiền mặt — chỉ chuyển khoản |
-| **Điều kiện trước** | Đơn ở `confirmed` (chưa thanh toán) |
-| **Kết quả đúng** | `orders.payment_status` = `paid`; bàn chuyển sang `available`; HĐĐT gửi (nếu tick); toast "Đã thanh toán" (kèm trạng thái HĐĐT) |
-| **Thời gian** | ~30 giây |
+| Trường              | Giá trị                                                                                                                         |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| **Vai trò**         | Thu ngân, Quản lý chi nhánh                                                                                                     |
+| **Quyền cần có**    | `pos:confirm_payment` (xác nhận tiền mặt). Phục vụ vẫn thấy bill nhưng KHÔNG xác nhận được tiền mặt — chỉ chuyển khoản          |
+| **Điều kiện trước** | Đơn ở `confirmed` (chưa thanh toán)                                                                                             |
+| **Kết quả đúng**    | `orders.payment_status` = `paid`; bàn chuyển sang `available`; HĐĐT gửi (nếu tick); toast "Đã thanh toán" (kèm trạng thái HĐĐT) |
+| **Thời gian**       | ~30 giây                                                                                                                        |
 
 ## Đường dẫn
 
@@ -52,20 +52,21 @@ URL: `/br/{branchId}/pos` (qua bàn occupied → đơn → "Thanh toán")
 **Bạn thấy:** Ô "Tiền trả khách" cập nhật ngay (= Tổng nhận - Tổng tạm tính).
 
 **Ví dụ:**
+
 - Tổng tạm tính 15.000đ, khách đưa tờ 20.000đ → chạm chip 20.000đ → "Tiền trả khách: 5.000đ" → trả khách 5.000đ.
 - Khách đưa đúng 15.000đ → giữ "Tổng nhận" mặc định → "Tiền trả khách: 0đ".
 
 > 💡 Khách đưa nhỏ hơn tổng (ví dụ thiếu 1.000đ) — vẫn xác nhận được, "Tiền trả khách" sẽ là số âm. Hệ thống cảnh báo nhưng không khóa — manager xử lý sau.
 
-### Bước 3 — HĐĐT (tùy chọn)
+### Bước 3 — Thông tin người mua
 
 ![Bước 3 - Invoice toggle](../mockups/pos-05/pos-05-step-03-invoice-toggle.png)
 
-**Bạn làm:** Hỏi khách "Có cần xuất hóa đơn không ạ?". Nếu cần → chạm checkbox **Xuất hóa đơn điện tử**.
+**Bạn làm:** Hỏi khách có lấy hóa đơn ghi thông tin/MST không. Nếu không lấy → giữ **Người mua không lấy hóa đơn**. Nếu khách cần ghi thông tin → bỏ tick và nhập tên khách / công ty / mã số thuế.
 
-**Bạn thấy (sau khi tick):** Form HĐĐT mở rộng — nhập tên khách / công ty / mã số thuế / email.
+**Bạn thấy (khi bỏ tick):** Form thông tin người mua mở rộng — nhập tên khách / công ty / mã số thuế / email.
 
-> 💡 Khách lẻ không lấy HĐĐT → để mặc định (không tick). Bỏ qua bước này. Vẫn lưu được giao dịch trong báo cáo doanh số.
+> 💡 Dù khách không lấy hóa đơn, hệ thống vẫn phát hành HĐĐT với người mua là "Người mua không lấy hóa đơn".
 
 ### Bước 4 — Xác nhận thanh toán
 
@@ -158,10 +159,10 @@ URL: `/br/{branchId}/pos` (qua bàn occupied → đơn → "Thanh toán")
 
 ### Code path
 
-- **Bill sheet (mobile drawer / desktop side):** [apps/web/app/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx](../../../../apps/web/app/br/%5BbranchId%5D/pos/_components/bill/bill-receipt-sheet.tsx)
-- **Payment picker:** [apps/web/app/br/[branchId]/pos/_components/bill/bill-receipt-payment-picker.tsx](../../../../apps/web/app/br/%5BbranchId%5D/pos/_components/bill/bill-receipt-payment-picker.tsx)
+- **Bill sheet (mobile drawer / desktop side):** [apps/web/app/br/[branchId]/pos/\_components/bill/bill-receipt-sheet.tsx](../../../../apps/web/app/br/%5BbranchId%5D/pos/_components/bill/bill-receipt-sheet.tsx)
+- **Payment picker:** [apps/web/app/br/[branchId]/pos/\_components/bill/bill-receipt-payment-picker.tsx](../../../../apps/web/app/br/%5BbranchId%5D/pos/_components/bill/bill-receipt-payment-picker.tsx)
 - **Cash tendered logic:** trong `bill-receipt-sheet.tsx` (không có dialog riêng — tất cả trong 1 sheet)
-- **Invoice form:** [apps/web/app/br/[branchId]/pos/_components/bill/invoice-form-section.tsx](../../../../apps/web/app/br/%5BbranchId%5D/pos/_components/bill/invoice-form-section.tsx)
+- **Invoice form:** [apps/web/app/br/[branchId]/pos/\_components/bill/invoice-form-section.tsx](../../../../apps/web/app/br/%5BbranchId%5D/pos/_components/bill/invoice-form-section.tsx)
 - **Server actions:** [apps/web/app/br/[branchId]/pos/payment-actions.ts](../../../../apps/web/app/br/%5BbranchId%5D/pos/payment-actions.ts)
 - **Print actions:** [apps/web/app/br/[branchId]/pos/print-actions.ts](../../../../apps/web/app/br/%5BbranchId%5D/pos/print-actions.ts)
 
@@ -193,10 +194,10 @@ URL: `/br/{branchId}/pos` (qua bàn occupied → đơn → "Thanh toán")
 
 ## Metadata mockup
 
-| Trường | Giá trị |
-| --- | --- |
-| Viewport | 390×844 (iPhone mặc định) |
-| Capture script | [apps/web/e2e/guides/pos-05-payment.guide.ts](../../../../apps/web/e2e/guides/pos-05-payment.guide.ts) |
-| Lệnh refresh | `pnpm --filter @comtammatu/web guides:capture --grep="POS-05"` |
-| Cập nhật mockup gần nhất | 2026-04-27 |
-| Người maintain | _TBD_ |
+| Trường                   | Giá trị                                                                                                |
+| ------------------------ | ------------------------------------------------------------------------------------------------------ |
+| Viewport                 | 390×844 (iPhone mặc định)                                                                              |
+| Capture script           | [apps/web/e2e/guides/pos-05-payment.guide.ts](../../../../apps/web/e2e/guides/pos-05-payment.guide.ts) |
+| Lệnh refresh             | `pnpm --filter @comtammatu/web guides:capture --grep="POS-05"`                                         |
+| Cập nhật mockup gần nhất | 2026-04-27                                                                                             |
+| Người maintain           | _TBD_                                                                                                  |

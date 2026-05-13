@@ -1,13 +1,14 @@
 import { unzipSync } from "fflate";
-import type {
-  InvoiceArchive,
-  InvoiceArtifact,
-  InvoiceDownloadRequest,
-  InvoiceLineItem,
-  InvoiceProvider,
-  InvoiceRequest,
-  InvoiceResult,
-  InvoiceStatus,
+import {
+  BUYER_NOT_GET_INVOICE_NAME,
+  type InvoiceArchive,
+  type InvoiceArtifact,
+  type InvoiceDownloadRequest,
+  type InvoiceLineItem,
+  type InvoiceProvider,
+  type InvoiceRequest,
+  type InvoiceResult,
+  type InvoiceStatus,
 } from "../invoice";
 
 /**
@@ -269,7 +270,9 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
       | SinvoiceEnvelope<SinvoiceLoginResult>
       | SinvoiceLoginResult;
     const result =
-      "result" in data && data.result ? data.result : (data as SinvoiceLoginResult);
+      "result" in data && data.result
+        ? data.result
+        : (data as SinvoiceLoginResult);
     const token = result?.access_token;
     if (!token) {
       throw new Error("sinvoice_login_no_token");
@@ -375,13 +378,19 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
         `Thay thế hóa đơn số ${r.originalInvoiceNumber}`;
     }
 
+    const buyerNotGetInvoice = request.buyerNotGetInvoice === true;
+    const buyerName =
+      request.buyerName ??
+      (buyerNotGetInvoice ? BUYER_NOT_GET_INVOICE_NAME : "");
+
     const body = {
       generalInvoiceInfo,
       buyerInfo: {
-        buyerName: request.buyerName ?? "Khách lẻ",
-        buyerLegalName: request.buyerName ?? "",
+        buyerName,
+        buyerLegalName: buyerNotGetInvoice ? "" : buyerName,
         buyerTaxCode: request.buyerTaxCode ?? "",
         buyerAddressLine: request.buyerAddress ?? "",
+        buyerNotGetInvoice: buyerNotGetInvoice ? "1" : "0",
       },
       sellerInfo: {
         sellerLegalName: request.sellerName,
@@ -482,8 +491,9 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
           body,
         },
       );
-      const envelope =
-        (await res.json()) as SinvoiceEnvelope<SinvoiceStatusSearchResult[]>;
+      const envelope = (await res.json()) as SinvoiceEnvelope<
+        SinvoiceStatusSearchResult[]
+      >;
       if (!res.ok || envelope.errorCode) {
         const description =
           typeof envelope.description === "string"

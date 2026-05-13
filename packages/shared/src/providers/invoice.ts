@@ -20,6 +20,8 @@ export interface InvoiceLineItem {
   amount: number;
 }
 
+export const BUYER_NOT_GET_INVOICE_NAME = "Người mua không lấy hóa đơn";
+
 /**
  * Replacement context per TT78/2021 §7 (Path C). When present in
  * InvoiceRequest, provider MUST send the call as `adjustmentType=3`
@@ -61,6 +63,7 @@ export interface InvoiceRequest {
   buyerName?: string;
   buyerTaxCode?: string;
   buyerAddress?: string;
+  buyerNotGetInvoice?: boolean;
 
   /** Line items */
   items: InvoiceLineItem[];

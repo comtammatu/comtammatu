@@ -12,6 +12,7 @@ import {
   FieldLabel,
 } from "@comtammatu/ui/components/field";
 import { Input } from "@comtammatu/ui/components/input";
+import { BUYER_NOT_GET_INVOICE_NAME } from "@comtammatu/shared/providers";
 
 const ADVISORY_THRESHOLD_VND = 200_000;
 const MST_REGEX = /^\d{10}(-\d{3})?$/;
@@ -34,6 +35,7 @@ export interface InvoiceFormPayload {
   buyerName: string;
   buyerTaxCode?: string;
   buyerAddress?: string;
+  buyerNotGetInvoice?: boolean;
 }
 
 export function isInvoiceFormValid(state: InvoiceFormState): boolean {
@@ -47,13 +49,16 @@ export function isInvoiceFormValid(state: InvoiceFormState): boolean {
 
 export function buildInvoicePayload(
   state: InvoiceFormState,
-): InvoiceFormPayload | null {
-  if (!state.enabled) return null;
-  const name = state.buyerName.trim();
-  const mst = state.buyerTaxCode.trim();
-  const addr = state.buyerAddress.trim();
+): InvoiceFormPayload {
+  const name = state.enabled ? state.buyerName.trim() : "";
+  const mst = state.enabled ? state.buyerTaxCode.trim() : "";
+  const addr = state.enabled ? state.buyerAddress.trim() : "";
+  const hasBuyerDetails = name.length > 0 || mst.length > 0 || addr.length > 0;
+  const buyerNotGetInvoice = !state.enabled || !hasBuyerDetails;
+
   return {
-    buyerName: name || "Khách lẻ",
+    buyerName: name || BUYER_NOT_GET_INVOICE_NAME,
+    ...(buyerNotGetInvoice ? { buyerNotGetInvoice: true } : {}),
     ...(mst ? { buyerTaxCode: mst } : {}),
     ...(addr ? { buyerAddress: addr } : {}),
   };
@@ -78,6 +83,7 @@ export function InvoiceFormSection({
   const addrId = useId();
 
   const showAdvisory = !state.enabled && totalAmount >= ADVISORY_THRESHOLD_VND;
+  const buyerNotGetInvoice = !state.enabled;
 
   const mstTrim = state.buyerTaxCode.trim();
   const mstInvalid = mstTrim.length > 0 && !MST_REGEX.test(mstTrim);
@@ -90,10 +96,17 @@ export function InvoiceFormSection({
         <Field orientation="horizontal">
           <Checkbox
             id={checkboxId}
-            checked={state.enabled}
+            checked={buyerNotGetInvoice}
             disabled={disabled}
             onCheckedChange={(checked) =>
-              onChange({ ...state, enabled: checked === true })
+              checked === true
+                ? onChange({
+                    enabled: false,
+                    buyerName: "",
+                    buyerTaxCode: "",
+                    buyerAddress: "",
+                  })
+                : onChange({ ...state, enabled: true })
             }
           />
           <FieldLabel
@@ -101,15 +114,14 @@ export function InvoiceFormSection({
             className="flex flex-1 items-center gap-2 text-sm font-medium"
           >
             <IconReceipt />
-            Xuất hóa đơn điện tử
+            Người mua không lấy hóa đơn
           </FieldLabel>
         </Field>
 
         {showAdvisory ? (
           <Alert>
             <AlertDescription>
-              Đơn ≥ {ADVISORY_THRESHOLD_VND.toLocaleString("vi-VN")}đ — hỏi
-              khách có cần hóa đơn không?
+              HĐĐT vẫn phát hành với tên "{BUYER_NOT_GET_INVOICE_NAME}".
             </AlertDescription>
           </Alert>
         ) : null}
@@ -133,7 +145,7 @@ export function InvoiceFormSection({
                 onChange={(e) =>
                   onChange({ ...state, buyerName: e.target.value })
                 }
-                placeholder="Khách lẻ"
+                placeholder="Tên khách / công ty"
                 aria-invalid={nameMissing || undefined}
               />
             </Field>

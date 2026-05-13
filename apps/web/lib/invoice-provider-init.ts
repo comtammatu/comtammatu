@@ -8,7 +8,7 @@ let registered = false;
 
 /**
  * Provider switch via env `INVOICE_PROVIDER`:
- *   - "viettel" (default) — Viettel Sinvoice (BasicAuth → Bearer)
+ *   - "viettel" (default) — Viettel Sinvoice (login JSON → Bearer)
  *   - "misa"              — MISA meInvoice (X-API-KEY)
  *
  * Default = "viettel" (owner decision 2026-05-13). One singleton per boot.
