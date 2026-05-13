@@ -822,6 +822,7 @@ export type Database = {
         Row: {
           address: string | null
           branch_kind: string
+          code: string | null
           created_at: string | null
           id: number
           is_active: boolean | null
@@ -836,6 +837,7 @@ export type Database = {
         Insert: {
           address?: string | null
           branch_kind?: string
+          code?: string | null
           created_at?: string | null
           id?: never
           is_active?: boolean | null
@@ -850,6 +852,7 @@ export type Database = {
         Update: {
           address?: string | null
           branch_kind?: string
+          code?: string | null
           created_at?: string | null
           id?: never
           is_active?: boolean | null
@@ -8959,6 +8962,7 @@ export type Database = {
         Args: { p_branch_id: number; p_date: string }
         Returns: {
           branch_id: number
+          branch_name: string
           customer_count: number
           discount_amount: number
           invoice_number: string
@@ -9695,3 +9699,4 @@ export const Constants = {
     },
   },
 } as const
+
