@@ -51,11 +51,31 @@ var (
 	accountNameRe = regexp.MustCompile(`^.{0,64}$`)
 )
 
+// paymentSettingsAllowedRoles gates GET/PUT /admin/settings/payments.
+// Payment credentials (especially the MoMo secret_key) are tenant-wide secrets;
+// branch_manager and below have no business reading or rotating them. Mirrors
+// the old BE's SETTINGS_TENANT permission gate (apps/web/app/admin/settings/payments/actions.ts).
+var paymentSettingsAllowedRoles = map[string]bool{
+	"owner":         true,
+	"super_manager": true,
+}
+
+func gatePaymentSettings(w http.ResponseWriter, role string) bool {
+	if !paymentSettingsAllowedRoles[role] {
+		httputil.WriteError(w, http.StatusForbidden, "payment settings require owner or super_manager role")
+		return false
+	}
+	return true
+}
+
 // GetPayments handles GET /admin/settings/payments.
 func (h *Handler) GetPayments(w http.ResponseWriter, r *http.Request) {
 	claims := middleware.ClaimsFrom(r.Context())
 	if claims == nil {
 		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	if !gatePaymentSettings(w, string(claims.UserRole)) {
 		return
 	}
 	cfg, err := paymentconfig.Load(r.Context(), h.pool, claims.TenantID)
@@ -92,6 +112,9 @@ func (h *Handler) PutPayments(w http.ResponseWriter, r *http.Request) {
 	claims := middleware.ClaimsFrom(r.Context())
 	if claims == nil {
 		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	if !gatePaymentSettings(w, string(claims.UserRole)) {
 		return
 	}
 	var req PaymentSettingsRequest

@@ -1,7 +1,9 @@
 package momo
 
 import (
+	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -50,10 +52,32 @@ func buildRawSignatureCreate(in rawSignatureCreateInputs) string {
 //
 // Reference: packages/shared/src/providers/impl/momo.ts:229-243.
 func buildRawSignatureWebhook(accessKey string, payload map[string]any) string {
+	// fmt.Sprint formats float64(1.7e12) as "1.7e+12" — that path would silently
+	// corrupt every real MoMo signature because the JSON decoder hands us
+	// numbers as float64 by default. Coerce numerics to a stable canonical
+	// string instead (whole numbers → decimal integer, decimals → minimal
+	// non-scientific form, json.Number → raw string).
 	field := func(k string) string {
 		v, ok := payload[k]
 		if !ok || v == nil {
 			return ""
+		}
+		switch t := v.(type) {
+		case string:
+			return t
+		case float64:
+			if t == float64(int64(t)) {
+				return strconv.FormatInt(int64(t), 10)
+			}
+			return strconv.FormatFloat(t, 'f', -1, 64)
+		case json.Number:
+			return string(t)
+		case int:
+			return strconv.Itoa(t)
+		case int64:
+			return strconv.FormatInt(t, 10)
+		case bool:
+			return strconv.FormatBool(t)
 		}
 		return fmt.Sprint(v)
 	}

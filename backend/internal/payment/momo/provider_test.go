@@ -61,6 +61,33 @@ func TestBuildRawSignatureWebhook_MissingFieldsBecomeEmpty(t *testing.T) {
 	}
 }
 
+// Regression guard for the float64 → "1.7e+12" trap. json.Unmarshal into
+// map[string]any decodes JSON numbers as float64; fmt.Sprint then emits
+// scientific notation for large whole numbers, breaking signature match
+// against MoMo's own integer-formatted input. Caught by review of 8d754e3c.
+func TestBuildRawSignatureWebhook_LargeIntegerFromJSON(t *testing.T) {
+	rawJSON := []byte(`{
+		"amount": 50000, "extraData": "", "message": "OK",
+		"orderId": "MOMO-1-x", "orderInfo": "", "orderType": "momo_wallet",
+		"partnerCode": "PC", "payType": "qr", "requestId": "RQ",
+		"responseTime": 1700000000000, "resultCode": 0, "transId": 99887766
+	}`)
+	var payload map[string]any
+	if err := json.Unmarshal(rawJSON, &payload); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	got := buildRawSignatureWebhook("AK", payload)
+	if strings.Contains(got, "e+") || strings.Contains(got, "E+") {
+		t.Fatalf("raw signature must not contain scientific notation: %s", got)
+	}
+	if !strings.Contains(got, "responseTime=1700000000000") {
+		t.Fatalf("expected responseTime to be decimal-formatted, got: %s", got)
+	}
+	if !strings.Contains(got, "transId=99887766") {
+		t.Fatalf("expected transId to be decimal-formatted, got: %s", got)
+	}
+}
+
 func TestVerifyWebhook_ValidSignatureExtractsOrderID(t *testing.T) {
 	p := New(Config{AccessKey: "AK", SecretKey: "secret"})
 

@@ -73,20 +73,33 @@ func (h *Handler) MoMo(w http.ResponseWriter, r *http.Request) {
 	verification := provider.VerifyWebhook(payload, signature)
 
 	// Always insert the event row first — this is the idempotency anchor.
-	// signature_valid=false rows stay for forensic review without ever
-	// triggering complete_payment_and_consume_stock.
-	claimed, err := h.claimEvent(r.Context(), tenantID, requestID, verification.Valid, body)
+	// For signature_valid=false rows store an empty payload to deny
+	// attackers cheap webhook_events table bloat (LimitReader caps each
+	// request at 1MB but nothing stops a botnet posting 100k garbage events).
+	storedPayload := body
+	if !verification.Valid {
+		storedPayload = []byte(`{}`)
+	}
+	claimed, err := h.claimEvent(r.Context(), tenantID, requestID, verification.Valid, storedPayload)
 	if err != nil {
 		slog.Error("momo webhook: claim event", "tenant_id", tenantID, "request_id", requestID, "err", err)
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
-	if !claimed.fresh {
-		// Replay: a previous run already finalised this event. MoMo retries
-		// until 2xx so the 204 stops the retry loop.
+	if !claimed.fresh && claimed.priorStatus != "received" {
+		// Replay: a previous run finalised this event (processed/failed/ignored).
+		// MoMo retries until 2xx so 204 stops the retry loop.
 		slog.Info("momo webhook: replay ignored", "tenant_id", tenantID, "request_id", requestID, "prior_status", claimed.priorStatus)
 		w.WriteHeader(http.StatusNoContent)
 		return
+	}
+	// fresh==false AND prior_status=="received" means a previous handler crashed
+	// between INSERT and markEvent. complete_payment_and_consume_stock is
+	// idempotent (returns already_completed on a finished payment) so we can
+	// safely re-drive the processing path. Without this branch, orphaned rows
+	// would deadlock the payment forever.
+	if !claimed.fresh {
+		slog.Warn("momo webhook: re-driving orphaned received event", "tenant_id", tenantID, "request_id", requestID)
 	}
 
 	if !verification.Valid {

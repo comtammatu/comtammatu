@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"regexp"
 	"strconv"
 
 	"github.com/jackc/pgx/v5"
@@ -15,6 +16,13 @@ import (
 	paymentconfig "github.com/personal/comtammatu/backend/internal/payment/config"
 	"github.com/personal/comtammatu/backend/internal/payment/momo"
 )
+
+// momoAmountRe enforces whole-VND amounts ("50000" or "50000.00") only.
+// MoMo's /create endpoint integer-rounds amounts, so a request like "50000.50"
+// would be sent as 50000 → the local payment row stores 50000.50 → the IPN's
+// exact-match guard would fail with amount_mismatch and the customer's money
+// would be effectively lost. Reject up front rather than silently truncate.
+var momoAmountRe = regexp.MustCompile(`^\d{1,13}(\.0{1,2})?$`)
 
 // confirmMoMoPayment is the method=momo branch of confirmPayment. It:
 //  1. Loads tenant MoMo credentials from system_settings.
@@ -58,6 +66,10 @@ func (h *Handler) confirmMoMoPayment(w http.ResponseWriter, r *http.Request, bra
 		return
 	}
 
+	if !momoAmountRe.MatchString(req.Amount) {
+		httputil.WriteError(w, http.StatusUnprocessableEntity, "momo amount must be a whole VND value (no fractional cents)")
+		return
+	}
 	amountInt, err := strconv.ParseInt(stripDecimal(req.Amount), 10, 64)
 	if err != nil || amountInt <= 0 {
 		httputil.WriteError(w, http.StatusUnprocessableEntity, "amount must be a positive integer (VND)")
@@ -118,16 +130,27 @@ func (h *Handler) confirmMoMoPayment(w http.ResponseWriter, r *http.Request, bra
 	}
 
 	// Pull payment_id out of the RPC result so we can persist provider_data.
+	// A failure here is unrecoverable — the QR was issued but we can't store
+	// the providerRef/momoOrderId needed for the IPN match — so surface as 500
+	// rather than silently swallowing into a split-brain pending row.
 	var rpc struct {
 		PaymentID int64 `json:"payment_id"`
 	}
-	_ = json.Unmarshal(rpcResult, &rpc)
-	if rpc.PaymentID > 0 {
-		providerDataJSON, _ := json.Marshal(result.ProviderData)
-		_, _ = h.pool.Exec(r.Context(),
-			`UPDATE public.payments SET provider_data = $1::jsonb WHERE id = $2 AND status = 'pending'`,
-			string(providerDataJSON), rpc.PaymentID,
-		)
+	if err := json.Unmarshal(rpcResult, &rpc); err != nil || rpc.PaymentID == 0 {
+		httputil.WriteError(w, http.StatusInternalServerError, "create_payment did not return a payment_id")
+		return
+	}
+	providerDataJSON, err := json.Marshal(result.ProviderData)
+	if err != nil {
+		httputil.WriteError(w, http.StatusInternalServerError, "failed to encode provider_data")
+		return
+	}
+	if _, err := h.pool.Exec(r.Context(),
+		`UPDATE public.payments SET provider_data = $1::jsonb WHERE id = $2 AND status = 'pending'`,
+		string(providerDataJSON), rpc.PaymentID,
+	); err != nil {
+		httputil.WriteError(w, http.StatusInternalServerError, "failed to persist momo provider_data")
+		return
 	}
 
 	httputil.WriteJSON(w, http.StatusOK, map[string]any{
