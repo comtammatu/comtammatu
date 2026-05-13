@@ -17,6 +17,7 @@ import {
 import { SYSTEM_SETTING_KEYS } from "@comtammatu/shared/settings";
 import { ensurePaymentProvidersRegistered } from "../../../../lib/payment-providers-init";
 import { getAuthContextWithPermission } from "../../_lib/auth";
+import { goFetch } from "@/_lib/go-api";
 import { createTaxInvoice } from "../../../finance/actions";
 import { getVNDateString, getVNDayUtcRange } from "@/_lib/format-datetime";
 
@@ -1458,25 +1459,31 @@ export async function confirmVietQrPayment(
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { success: false, error: "Phiên đăng nhập hết hạn" };
+  // Route through Go BE — owns the SQLSTATE → HTTP mapping for amount_mismatch
+  // (22023/P0001 → 422) and branch scope mismatch (42501 → 403). The Supabase
+  // session access_token authenticates against the same SUPABASE_JWT_SECRET.
+  const { data: sessionRes } = await supabase.auth.getSession();
+  const session = sessionRes.session;
+  if (!session) return { success: false, error: "Phiên đăng nhập hết hạn" };
 
-  const { data, error: rpcError } = await supabase.rpc(
-    "confirm_vietqr_payment",
+  // Go endpoint expects amount as a decimal string matching NUMERIC(15,2);
+  // toFixed(2) avoids JS scientific-notation drift for very large values.
+  const goResult = await goFetch<{
+    payment_id: number;
+    idempotent: boolean;
+    print: { job_id?: number; failed: boolean; error?: string };
+  }>(
+    `/br/${parsedBranch.data}/orders/${parsedOrderId.data}/payment/vietqr/confirm`,
+    session,
     {
-      p_tenant_id: claims.tenant_id,
-      p_branch_id: parsedBranch.data,
-      p_order_id: parsedOrderId.data,
-      p_amount: parsedAmount.data,
-      p_created_by: user.id,
+      method: "POST",
+      body: { amount: parsedAmount.data.toFixed(2) },
     },
   );
 
-  if (rpcError) {
-    const msg = rpcError.message ?? "";
-    if (msg.includes("order_not_found")) {
+  if (!goResult.ok) {
+    const msg = goResult.error.message;
+    if (msg.includes("order_not_found") || goResult.error.status === 404) {
       return { success: false, error: "Đơn hàng không tồn tại." };
     }
     if (msg.includes("amount_mismatch")) {
@@ -1487,6 +1494,7 @@ export async function confirmVietQrPayment(
       };
     }
     if (
+      goResult.error.status === 403 ||
       msg.includes("permission denied") ||
       msg.includes("pos:confirm_payment")
     ) {
@@ -1494,19 +1502,14 @@ export async function confirmVietQrPayment(
     }
     const mappedError = mapPaymentRpcError(msg);
     if (mappedError) {
-      console.error("[confirmVietQrPayment] rpc failed:", msg);
+      console.error("[confirmVietQrPayment] go BE failed:", msg);
       return { success: false, error: mappedError };
     }
-    console.error("[confirmVietQrPayment] [unmapped] rpc error:", msg);
+    console.error("[confirmVietQrPayment] [unmapped] go BE error:", msg);
     return { success: false, error: "Không thể xác nhận thanh toán VietQR." };
   }
 
-  const result = data as {
-    payment_id: number;
-    idempotent: boolean;
-    print: { job_id?: number; failed: boolean; error?: string };
-  } | null;
-
+  const result = goResult.data;
   if (!result) {
     return { success: false, error: "Không thể xác nhận thanh toán." };
   }
