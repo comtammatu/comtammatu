@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -58,8 +59,22 @@ func (h *Handler) Routes() chi.Router {
 	r.With(branch).Delete("/tables/{id}", h.deleteTable)
 
 	r.With(branch).Get("/branches/{id}/pos-config", h.getBranchPOSConfig)
+	r.With(branch).Put("/branches/{id}/pos-config", h.updateBranchPOSConfig)
 
 	return r
+}
+
+// posShiftTimeRe enforces HH:MM 24-hour format (00:00–23:59).
+var posShiftTimeRe = regexp.MustCompile(`^([01]\d|2[0-3]):[0-5]\d$`)
+
+// posCashFloatRe accepts non-negative decimal numbers up to 2 fractional digits,
+// matching the NUMERIC(15,2) shape used everywhere else in the system.
+var posCashFloatRe = regexp.MustCompile(`^\d{1,13}(\.\d{1,2})?$`)
+
+// POSConfig is the JSON shape stored in branches.pos_config.
+type POSConfig struct {
+	ShiftStartTime   string `json:"shift_start_time"`
+	CashFloatDefault string `json:"cash_float_default"`
 }
 
 func (h *Handler) getBranchPOSConfig(w http.ResponseWriter, r *http.Request) {
@@ -73,12 +88,65 @@ func (h *Handler) getBranchPOSConfig(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteError(w, http.StatusBadRequest, "invalid id")
 		return
 	}
-	// Return basic branch config as POS config placeholder
-	httputil.WriteJSON(w, http.StatusOK, map[string]any{
-		"branch_id": id,
-		"tenant_id": claims.TenantID,
-		"note":      "POS config not yet implemented — returns branch defaults",
-	})
+	const q = `SELECT pos_config FROM public.branches WHERE id = $1 AND tenant_id = $2`
+	var raw []byte
+	if err := h.pool.QueryRow(r.Context(), q, id, claims.TenantID).Scan(&raw); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			httputil.WriteError(w, http.StatusNotFound, "branch not found")
+			return
+		}
+		httputil.WriteError(w, http.StatusInternalServerError, "failed to fetch pos config")
+		return
+	}
+	httputil.WriteJSON(w, http.StatusOK, json.RawMessage(raw))
+}
+
+func (h *Handler) updateBranchPOSConfig(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.ClaimsFrom(r.Context())
+	if claims == nil {
+		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	id, err := parseID(r)
+	if err != nil {
+		httputil.WriteError(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+
+	var req POSConfig
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httputil.WriteError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if !posShiftTimeRe.MatchString(req.ShiftStartTime) {
+		httputil.WriteError(w, http.StatusUnprocessableEntity, "shift_start_time must be HH:MM (24h)")
+		return
+	}
+	if !posCashFloatRe.MatchString(req.CashFloatDefault) {
+		httputil.WriteError(w, http.StatusUnprocessableEntity, "cash_float_default must be a non-negative decimal string (max 2 fractional digits)")
+		return
+	}
+
+	payload, err := json.Marshal(req)
+	if err != nil {
+		httputil.WriteError(w, http.StatusInternalServerError, "failed to encode pos config")
+		return
+	}
+
+	const q = `UPDATE public.branches
+		SET pos_config = $1::jsonb, updated_at = now()
+		WHERE id = $2 AND tenant_id = $3
+		RETURNING pos_config`
+	var raw []byte
+	if err := h.pool.QueryRow(r.Context(), q, string(payload), id, claims.TenantID).Scan(&raw); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			httputil.WriteError(w, http.StatusNotFound, "branch not found")
+			return
+		}
+		httputil.WriteError(w, http.StatusInternalServerError, "failed to update pos config")
+		return
+	}
+	httputil.WriteJSON(w, http.StatusOK, json.RawMessage(raw))
 }
 
 func parseID(r *http.Request) (int64, error) {

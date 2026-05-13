@@ -24,6 +24,7 @@ type MenuItem struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	BasePrice   string `json:"base_price"` // NUMERIC(15,2) → string to avoid float precision loss
+	ImageURL    string `json:"image_url"`  // empty string when NULL
 	IsActive    bool   `json:"is_active"`
 	CreatedAt   string `json:"created_at"`
 }
@@ -34,6 +35,7 @@ type CreateMenuItemRequest struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	BasePrice   string `json:"base_price"`
+	ImageURL    string `json:"image_url"`
 }
 
 // UpdateMenuItemRequest is the JSON body for PUT /items/{id}.
@@ -42,7 +44,27 @@ type UpdateMenuItemRequest struct {
 	Name        *string `json:"name"`
 	Description *string `json:"description"`
 	BasePrice   *string `json:"base_price"`
+	ImageURL    *string `json:"image_url"`
 	IsActive    *bool   `json:"is_active"`
+}
+
+// DailyLimitRow mirrors a row from public.branch_menu_item_daily_limits, the
+// per-branch / per-date table that the POS reads to disable sold-out items.
+type DailyLimitRow struct {
+	BranchID      int64  `json:"branch_id"`
+	MenuItemID    int64  `json:"menu_item_id"`
+	LimitDate     string `json:"limit_date"`
+	LimitQuantity *int32 `json:"limit_quantity"`
+	IsDisabled    bool   `json:"is_disabled"`
+	SoldToday     int32  `json:"sold_today"`
+}
+
+// SetDailyLimitRequest is the JSON body for PUT /items/{id}/daily-limit.
+// limit_quantity may be omitted/null to clear the quantity cap while keeping
+// the row (so is_disabled stays effective).
+type SetDailyLimitRequest struct {
+	LimitQuantity *int32 `json:"limit_quantity"`
+	IsDisabled    bool   `json:"is_disabled"`
 }
 
 // MenuItemVariant represents a variant row for a menu item.

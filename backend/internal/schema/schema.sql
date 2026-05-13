@@ -29,6 +29,7 @@ CREATE TABLE public.branches (
   phone TEXT,
   is_active BOOLEAN DEFAULT true,
   is_headquarters BOOLEAN DEFAULT false,
+  pos_config JSONB NOT NULL DEFAULT '{"shift_start_time": "07:00", "cash_float_default": "0.00"}'::jsonb,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
