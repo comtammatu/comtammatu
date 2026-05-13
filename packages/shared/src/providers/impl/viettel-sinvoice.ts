@@ -179,8 +179,16 @@ export interface SinvoiceLineMath {
   totalGross: number;
 }
 
+type SinvoicePricingMode = "vat_deductible_net" | "direct_sales_gross";
+
 /**
  * Compute Sinvoice itemInfo + reconciled sums.
+ *
+ * TT78 template `1/...` (HĐ GTGT) wants net unit prices + VAT in
+ * `taxAmount`; TT78 template `2/...` (HĐ bán hàng, direct method) displays
+ * the sale price itself, with no VAT split on the PDF. For template `2/...`,
+ * never divide menu prices by `(1 + vatRate)` — Cơm Tấm Má Tư menu prices are
+ * already VAT-inclusive and must appear on the invoice as sold.
  *
  * Rounding order matters for Sinvoice strict validators:
  *   - 43: |qty × unitPrice − itemTotalAmountWithoutTax| < 1  (STRICT)
@@ -198,6 +206,7 @@ export function buildSinvoiceItemInfo(
   items: InvoiceLineItem[],
   vatRate: number,
   callerPassesGross: boolean,
+  pricingMode: SinvoicePricingMode = "vat_deductible_net",
 ): SinvoiceLineMath {
   const itemInfo: SinvoiceItemInfo[] = items.map((item, index) => {
     const lineGross = callerPassesGross
@@ -205,6 +214,37 @@ export function buildSinvoiceItemInfo(
       : item.amount * (1 + vatRate / 100);
 
     const qty = item.quantity;
+    if (pricingMode === "direct_sales_gross") {
+      const grossUnitPrice =
+        qty > 0
+          ? Math.round(
+              callerPassesGross && item.unitPrice > 0
+                ? item.unitPrice
+                : lineGross / qty,
+            )
+          : 0;
+      const lineAmount = grossUnitPrice * qty;
+
+      return {
+        lineNumber: index + 1,
+        selection: 1,
+        itemCode: "",
+        itemName: item.name,
+        unitName: item.unit || "Phần",
+        unitPrice: grossUnitPrice,
+        quantity: qty,
+        itemTotalAmountWithoutTax: lineAmount,
+        itemTotalAmountAfterDiscount: lineAmount,
+        itemTotalAmountWithTax: lineAmount,
+        discount: 0,
+        itemDiscount: 0,
+        itemNote: null,
+        isIncreaseItem: null,
+        taxPercentage: -2,
+        taxAmount: 0,
+      };
+    }
+
     const grossUnitPrice = qty > 0 ? lineGross / qty : 0;
     const netUnitPrice = Math.round(grossUnitPrice / (1 + vatRate / 100));
     const lineNet = netUnitPrice * qty;
@@ -377,13 +417,21 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
   async createInvoice(request: InvoiceRequest): Promise<InvoiceResult> {
     const transactionUuid = buildSinvoiceTransactionUuid(request.orderId);
     const callerPassesGross = this.detectGrossInput(request);
+    const invoiceType = deriveInvoiceTypeFromTemplate(this.templateCode);
+    const pricingMode: SinvoicePricingMode =
+      invoiceType === "2" ? "direct_sales_gross" : "vat_deductible_net";
 
     const { itemInfo, sumLineNet, sumLineTax, totalGross } =
-      buildSinvoiceItemInfo(request.items, request.vatRate, callerPassesGross);
+      buildSinvoiceItemInfo(
+        request.items,
+        request.vatRate,
+        callerPassesGross,
+        pricingMode,
+      );
 
     const isReplacement = !!request.replacement;
     const generalInvoiceInfo: Record<string, unknown> = {
-      invoiceType: deriveInvoiceTypeFromTemplate(this.templateCode),
+      invoiceType,
       templateCode: this.templateCode,
       invoiceSeries: this.invoiceSeries,
       currencyCode: "VND",
@@ -442,7 +490,8 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
       },
       taxBreakdowns: [
         {
-          taxPercentage: request.vatRate,
+          taxPercentage:
+            pricingMode === "direct_sales_gross" ? -2 : request.vatRate,
           taxableAmount: sumLineNet,
           taxAmount: sumLineTax,
         },

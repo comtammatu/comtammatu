@@ -91,6 +91,68 @@ test("validators pass for typical single-item B2B sale (qty=1, gross=109k, VAT 8
   assert.equal(line.itemTotalAmountWithoutTax, 100_926);
 });
 
+test("template 2 direct-sales mode keeps VAT-inclusive menu prices", () => {
+  const result = buildSinvoiceItemInfo(
+    [
+      item("Sườn Cốt Lết", 1, 47_000),
+      item("Sườn Cốt Lết", 1, 47_000),
+      item("Sườn Cốt Lết", 2, 80_000),
+      item("Cơm Thêm", 1, 5_000),
+    ],
+    8,
+    true,
+    "direct_sales_gross",
+  );
+
+  assert.equal(result.sumLineNet, 179_000);
+  assert.equal(result.sumLineTax, 0);
+  assert.equal(result.totalGross, 179_000);
+  assert.deepEqual(
+    result.itemInfo.map((line) => ({
+      unitPrice: line.unitPrice,
+      quantity: line.quantity,
+      amount: line.itemTotalAmountWithoutTax,
+      amountWithTax: line.itemTotalAmountWithTax,
+      taxPercentage: line.taxPercentage,
+      taxAmount: line.taxAmount,
+    })),
+    [
+      {
+        unitPrice: 47_000,
+        quantity: 1,
+        amount: 47_000,
+        amountWithTax: 47_000,
+        taxPercentage: -2,
+        taxAmount: 0,
+      },
+      {
+        unitPrice: 47_000,
+        quantity: 1,
+        amount: 47_000,
+        amountWithTax: 47_000,
+        taxPercentage: -2,
+        taxAmount: 0,
+      },
+      {
+        unitPrice: 40_000,
+        quantity: 2,
+        amount: 80_000,
+        amountWithTax: 80_000,
+        taxPercentage: -2,
+        taxAmount: 0,
+      },
+      {
+        unitPrice: 5_000,
+        quantity: 1,
+        amount: 5_000,
+        amountWithTax: 5_000,
+        taxPercentage: -2,
+        taxAmount: 0,
+      },
+    ],
+  );
+});
+
 test("validators pass for awkward qty divisions across multiple items", () => {
   const result = buildSinvoiceItemInfo(
     [
@@ -322,11 +384,14 @@ test("createInvoice: sends buyerNotGetInvoice flag for no-buyer-info sales", asy
       sellerInfo?: unknown;
       itemInfo?: Array<{
         selection?: number;
+        unitPrice?: number;
         itemTotalAmountWithoutTax?: number;
         itemTotalAmountAfterDiscount?: number;
         itemTotalAmountWithTax?: number;
         discount?: number;
         itemDiscount?: number;
+        taxPercentage?: number;
+        taxAmount?: number;
       }>;
       summarizeInfo?: {
         totalAmountAfterDiscount?: number;
@@ -348,13 +413,17 @@ test("createInvoice: sends buyerNotGetInvoice flag for no-buyer-info sales", asy
     const [line] = body.itemInfo ?? [];
     assert.ok(line);
     assert.equal(line.selection, 1);
-    assert.equal(line.itemTotalAmountAfterDiscount, 92_593);
+    assert.equal(line.unitPrice, 100_000);
+    assert.equal(line.itemTotalAmountWithoutTax, 100_000);
+    assert.equal(line.itemTotalAmountAfterDiscount, 100_000);
     assert.equal(line.itemTotalAmountWithTax, 100_000);
+    assert.equal(line.taxPercentage, -2);
+    assert.equal(line.taxAmount, 0);
     assert.equal(line.discount, 0);
     assert.equal(line.itemDiscount, 0);
-    assert.equal(body.summarizeInfo?.totalAmountAfterDiscount, 92_593);
-    assert.equal(body.summarizeInfo?.totalAmountWithoutTax, 92_593);
-    assert.equal(body.summarizeInfo?.totalTaxAmount, 7_407);
+    assert.equal(body.summarizeInfo?.totalAmountAfterDiscount, 100_000);
+    assert.equal(body.summarizeInfo?.totalAmountWithoutTax, 100_000);
+    assert.equal(body.summarizeInfo?.totalTaxAmount, 0);
     assert.equal(body.summarizeInfo?.totalAmountWithTax, 100_000);
   } finally {
     globalThis.fetch = originalFetch;

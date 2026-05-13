@@ -104,9 +104,13 @@ Cron 02:05 ICT mỗi ngày (HOẶC admin manual trigger /finance/summary)
 - Tên hàng hóa, đơn vị, số lượng, đơn giá
     + Per-order: chi tiết món
     + B2C summary: gộp theo VAT rate, ví dụ "Đồ ăn 8%" + "Đồ uống có cồn 10%"
-- Thành tiền chưa thuế
-- Thuế suất GTGT
-- Tiền thuế GTGT
+- Thành tiền:
+    + Mẫu `1/...` (HĐ GTGT): đơn giá/thành tiền chưa thuế + dòng VAT tách riêng
+    + Mẫu `2/...` (HĐ bán hàng từ MTT/direct method): đơn giá/thành tiền là giá bán
+      trực tiếp đã gồm VAT theo menu; không chia ngược cho Viettel vì PDF không có
+      cột VAT và sẽ làm lệch tổng do làm tròn từng dòng
+- Thuế suất/tiền thuế GTGT: hiển thị riêng chỉ với mẫu HĐ GTGT; mẫu `2/...`
+  vẫn lưu `vat_rate/vat_amount` nội bộ để báo cáo nhưng gửi provider theo giá gross
 - Tổng tiền thanh toán
 - Chữ ký số của người bán
 ```
