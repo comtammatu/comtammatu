@@ -45,6 +45,7 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 import { CloseSessionSheet } from "../../pos/close-session-sheet";
+import type { CartModifier, CartSide } from "../../pos/types";
 import type { PosSessionReport } from "./report-actions";
 import { messages } from "@lib/messages";
 
@@ -85,6 +86,9 @@ export interface PosSessionOrderItem {
   quantity: number;
   unit_price: number;
   subtotal: number;
+  modifiers: CartModifier[];
+  sides: CartSide[];
+  note: string | null;
   status: string;
 }
 
@@ -788,6 +792,28 @@ function DetailFact({
   );
 }
 
+function AddOnLine({
+  label,
+  name,
+  amount,
+}: {
+  label: string;
+  name: string;
+  amount: number;
+}) {
+  return (
+    <div className="flex gap-2 text-xs text-muted-foreground">
+      <span className="shrink-0">{label}</span>
+      <span className="min-w-0 flex-1">{name}</span>
+      {amount > 0 ? (
+        <span className="shrink-0 font-mono tabular-nums">
+          +{formatVND(amount)}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
 function OrderDetailSheet({
   order,
   open,
@@ -897,46 +923,98 @@ function OrderDetailSheet({
                   {PRODUCT_VI.posItem}
                 </h4>
                 <div className="mt-2 divide-y rounded-lg border">
-                  {order.order_items.map((item) => (
-                    <div key={item.id} className="flex gap-3 px-3 py-2">
-                      <span className="w-10 shrink-0 font-medium tabular-nums">
-                        {messages.settings.posSessions.quantityPrefix(
-                          item.quantity,
-                        )}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="text-sm font-medium">
-                          {item.item_name}
-                          {item.variant_name ? (
-                            <span className="text-muted-foreground">
-                              {" "}
-                              ({item.variant_name})
-                            </span>
-                          ) : null}
-                        </div>
-                        <div className="text-xs text-muted-foreground tabular-nums">
-                          {messages.settings.posSessions.linePrice(
-                            formatVND(item.unit_price),
+                  {order.order_items.map((item) => {
+                    const hasAddOns =
+                      item.modifiers.length > 0 || item.sides.length > 0;
+                    const modifierUnit = item.modifiers.reduce(
+                      (sum, modifier) => sum + modifier.price,
+                      0,
+                    );
+                    const sideUnit = item.sides.reduce(
+                      (sum, side) => sum + side.price * side.quantity,
+                      0,
+                    );
+                    const baseUnit = Math.max(
+                      0,
+                      item.unit_price - modifierUnit - sideUnit,
+                    );
+
+                    return (
+                      <div key={item.id} className="flex gap-3 px-3 py-2">
+                        <span className="w-10 shrink-0 font-medium tabular-nums">
+                          {messages.settings.posSessions.quantityPrefix(
                             item.quantity,
                           )}
-                          {item.status === "cancelled" ? (
-                            <span className="ml-2 text-destructive">
-                              {messages.settings.posSessions.cancelledItem}
-                            </span>
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm font-medium">
+                            {item.item_name}
+                            {item.variant_name ? (
+                              <span className="text-muted-foreground">
+                                {" "}
+                                ({item.variant_name})
+                              </span>
+                            ) : null}
+                          </div>
+                          <div className="text-xs text-muted-foreground tabular-nums">
+                            {messages.settings.posSessions.linePrice(
+                              formatVND(hasAddOns ? baseUnit : item.unit_price),
+                              item.quantity,
+                            )}
+                            {item.status === "cancelled" ? (
+                              <span className="ml-2 text-destructive">
+                                {messages.settings.posSessions.cancelledItem}
+                              </span>
+                            ) : null}
+                          </div>
+                          {hasAddOns ? (
+                            <div className="mt-1 space-y-1">
+                              {item.modifiers.map((modifier) => (
+                                <AddOnLine
+                                  key={`modifier-${String(modifier.modifier_id)}`}
+                                  label={messages.settings.posSessions.modifier}
+                                  name={modifier.name}
+                                  amount={modifier.price * item.quantity}
+                                />
+                              ))}
+                              {item.sides.map((side) => {
+                                const totalQuantity =
+                                  side.quantity * item.quantity;
+                                const name =
+                                  totalQuantity > 1
+                                    ? `${side.name} ×${String(totalQuantity)}`
+                                    : side.name;
+
+                                return (
+                                  <AddOnLine
+                                    key={`side-${String(side.side_item_id)}`}
+                                    label={messages.settings.posSessions.side}
+                                    name={name}
+                                    amount={side.price * totalQuantity}
+                                  />
+                                );
+                              })}
+                            </div>
+                          ) : null}
+                          {item.note ? (
+                            <div className="mt-1 text-xs italic text-muted-foreground">
+                              {messages.settings.posSessions.itemNote}:{" "}
+                              {item.note}
+                            </div>
                           ) : null}
                         </div>
+                        <span
+                          className={cn(
+                            "text-sm font-medium tabular-nums",
+                            item.status === "cancelled" &&
+                              "text-muted-foreground line-through",
+                          )}
+                        >
+                          {formatVND(item.subtotal)}
+                        </span>
                       </div>
-                      <span
-                        className={cn(
-                          "text-sm font-medium tabular-nums",
-                          item.status === "cancelled" &&
-                            "text-muted-foreground line-through",
-                        )}
-                      >
-                        {formatVND(item.subtotal)}
-                      </span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 

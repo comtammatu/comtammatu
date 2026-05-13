@@ -196,7 +196,9 @@ export const settings = {
     sessionNote: "Ghi chú ca",
     mainItem: "Món chính",
     sideCombo: "Side/Combo",
+    side: "Kèm",
     modifier: "Topping",
+    itemNote: "Ghi chú món",
     reportTitle: "Báo cáo chi tiết ca",
     reportDescription:
       "Tổng kết món bán ra, danh mục, giá trị bill và giờ cao điểm. Tất cả tính trên đơn đã thanh toán, đã trừ đơn hủy.",

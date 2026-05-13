@@ -132,6 +132,9 @@ export default async function BranchPosSessionsPage({
           quantity,
           unit_price,
           subtotal,
+          modifiers,
+          sides,
+          note,
           status
         )
       `,
@@ -154,6 +157,8 @@ export default async function BranchPosSessionsPage({
         quantity: Number(item.quantity),
         unit_price: Number(item.unit_price),
         subtotal: Number(item.subtotal),
+        modifiers: Array.isArray(item.modifiers) ? item.modifiers : [],
+        sides: Array.isArray(item.sides) ? item.sides : [],
       })),
     }));
 
