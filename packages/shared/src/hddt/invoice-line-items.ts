@@ -114,10 +114,33 @@ function buildOptionLine(
   };
 }
 
+function aggregateDuplicateLines(
+  lines: readonly InvoiceLineItem[],
+): InvoiceLineItem[] {
+  const byKey = new Map<string, InvoiceLineItem>();
+
+  for (const line of lines) {
+    const key = JSON.stringify([line.name, line.unit, line.unitPrice]);
+    const existing = byKey.get(key);
+    if (!existing) {
+      byKey.set(key, { ...line });
+      continue;
+    }
+
+    const quantity = existing.quantity + line.quantity;
+    existing.quantity = quantity;
+    existing.amount = roundMoney(existing.unitPrice * quantity);
+  }
+
+  return Array.from(byKey.values());
+}
+
 /**
  * POS persists order_items.unit_price as base price plus priced modifiers and
  * sides. HĐĐT line items must reverse that aggregation so the provider PDF/XML
  * shows the sold components: main dish price first, then each paid topping/side.
+ * Duplicate legal lines are merged by name/unit/unit price so the invoice keeps
+ * one row per sold component with an aggregated quantity.
  */
 export function buildInvoiceLineItemsFromOrderItems(
   orderItems: readonly OrderItemForInvoiceLines[],
@@ -168,5 +191,5 @@ export function buildInvoiceLineItemsFromOrderItems(
     }
   }
 
-  return lines;
+  return aggregateDuplicateLines(lines);
 }

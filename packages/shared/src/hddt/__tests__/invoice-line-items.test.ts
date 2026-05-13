@@ -39,6 +39,65 @@ test("expands paid modifiers into separate HĐĐT lines", () => {
   );
 });
 
+test("aggregates duplicate component lines by quantity", () => {
+  const lines = buildInvoiceLineItemsFromOrderItems([
+    {
+      item_name: "Sườn Cây",
+      variant_name: null,
+      quantity: 1,
+      unit_price: 64_000,
+      subtotal: 64_000,
+      modifiers: [
+        { modifier_id: 1, name: "Bì", price: 7_000 },
+        { modifier_id: 2, name: "Chả", price: 7_000 },
+        { modifier_id: 3, name: "Trứng", price: 5_000 },
+      ],
+      sides: [],
+    },
+    {
+      item_name: "Sườn Cốt Lết",
+      variant_name: null,
+      quantity: 1,
+      unit_price: 49_000,
+      subtotal: 49_000,
+      modifiers: [
+        { modifier_id: 1, name: "Bì", price: 7_000 },
+        { modifier_id: 2, name: "Chả", price: 7_000 },
+      ],
+      sides: [],
+    },
+    {
+      item_name: "Sườn Cây",
+      variant_name: null,
+      quantity: 1,
+      unit_price: 50_000,
+      subtotal: 50_000,
+      modifiers: [{ modifier_id: 3, name: "Trứng", price: 5_000 }],
+      sides: [],
+    },
+  ]);
+
+  assert.deepEqual(
+    lines.map((line) => ({
+      name: line.name,
+      quantity: line.quantity,
+      unitPrice: line.unitPrice,
+      amount: line.amount,
+    })),
+    [
+      { name: "Sườn Cây", quantity: 2, unitPrice: 45_000, amount: 90_000 },
+      { name: "Bì", quantity: 2, unitPrice: 7_000, amount: 14_000 },
+      { name: "Chả", quantity: 2, unitPrice: 7_000, amount: 14_000 },
+      { name: "Trứng", quantity: 2, unitPrice: 5_000, amount: 10_000 },
+      { name: "Sườn Cốt Lết", quantity: 1, unitPrice: 35_000, amount: 35_000 },
+    ],
+  );
+  assert.equal(
+    lines.reduce((sum, line) => sum + line.amount, 0),
+    163_000,
+  );
+});
+
 test("expands side quantities per parent order quantity", () => {
   const lines = buildInvoiceLineItemsFromOrderItems([
     {
