@@ -393,7 +393,7 @@ CREATE TABLE supplier_invoices (
 
 ## 5. Provider HĐĐT
 
-Hệ thống abstract qua interface `InvoiceProvider` (`packages/shared/src/providers/invoice.ts:48-93`). Provider được chọn qua env `INVOICE_PROVIDER` (default `misa`); init logic ở `apps/web/lib/invoice-provider-init.ts:22-55`.
+Hệ thống abstract qua interface `InvoiceProvider` (`packages/shared/src/providers/invoice.ts:48-93`). Provider được chọn qua env `INVOICE_PROVIDER` (default `viettel` từ 2026-05-13, owner decision: Viettel primary); init logic ở `apps/web/lib/invoice-provider-init.ts:22-55`.
 
 ### 5.1 Interface `InvoiceProvider`
 
@@ -448,8 +448,8 @@ Implementation: `packages/shared/src/providers/impl/viettel-sinvoice.ts:115-426`
 INVOICE_PROVIDER=viettel
 SINVOICE_USERNAME=<account_mst, vd "0100109106-899">
 SINVOICE_PASSWORD=<api_password>
-SINVOICE_TEMPLATE_CODE=<đăng ký với CQT, vd "1/001">
-SINVOICE_INVOICE_SERIES=<đăng ký với CQT, vd "C25TLL">
+SINVOICE_TEMPLATE_CODE=<đăng ký với CQT, vd "2/001" cho HĐ bán hàng từ MTT, "1/001" cho HĐ GTGT>
+SINVOICE_INVOICE_SERIES=<đăng ký với CQT, vd "C26MAA">
 SINVOICE_BASE_URL=https://api-vinvoice.viettel.vn   # default
 SINVOICE_SANDBOX=false                               # informational; URL không đổi
 COMPANY_TAX_CODE=<MST = SINVOICE_USERNAME prefix>

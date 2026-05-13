@@ -1,4 +1,6 @@
 import type {
+  InvoiceArchive,
+  InvoiceDownloadRequest,
   InvoiceProvider,
   InvoiceRequest,
   InvoiceResult,
@@ -230,5 +232,19 @@ export class MisaProvider implements InvoiceProvider {
         data.ErrorMessage ?? `Failed to cancel invoice: ${res.status}`,
       );
     }
+  }
+
+  /**
+   * MISA download not wired for Path D pilot — Viettel is the primary
+   * provider as of 2026-05-13. Returns `error` so the archive helper
+   * treats this as "unknown, surface to ops" rather than retrying.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async downloadInvoice(_req: InvoiceDownloadRequest): Promise<InvoiceArchive> {
+    return {
+      pdf: null,
+      xml: null,
+      error: "misa_download_not_implemented",
+    };
   }
 }

@@ -8,9 +8,10 @@ let registered = false;
 
 /**
  * Provider switch via env `INVOICE_PROVIDER`:
- *   - "misa"    (default) — MISA meInvoice (X-API-KEY)
- *   - "viettel"           — Viettel Sinvoice (BasicAuth → Bearer)
+ *   - "viettel" (default) — Viettel Sinvoice (BasicAuth → Bearer)
+ *   - "misa"              — MISA meInvoice (X-API-KEY)
  *
+ * Default = "viettel" (owner decision 2026-05-13). One singleton per boot.
  * If creds for the chosen provider are missing, registration is a no-op
  * (provider stays null) — server actions + cron route detect this and
  * surface clear errors instead of silently calling a mock.
@@ -19,7 +20,7 @@ export function ensureInvoiceProviderRegistered(): void {
   if (registered) return;
   registered = true;
 
-  const choice = (process.env["INVOICE_PROVIDER"] ?? "misa").toLowerCase();
+  const choice = (process.env["INVOICE_PROVIDER"] ?? "viettel").toLowerCase();
   const taxCode = process.env["COMPANY_TAX_CODE"];
   if (!taxCode) return;
 

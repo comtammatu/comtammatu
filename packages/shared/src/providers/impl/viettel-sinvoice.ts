@@ -1,4 +1,9 @@
+import { unzipSync } from "fflate";
 import type {
+  InvoiceArchive,
+  InvoiceArtifact,
+  InvoiceDownloadRequest,
+  InvoiceLineItem,
   InvoiceProvider,
   InvoiceRequest,
   InvoiceResult,
@@ -40,10 +45,15 @@ import type {
  * Env vars:
  *   - SINVOICE_USERNAME, SINVOICE_PASSWORD
  *   - COMPANY_TAX_CODE (also used by MISA)
- *   - SINVOICE_TEMPLATE_CODE   (e.g. "1/001")
- *   - SINVOICE_INVOICE_SERIES  (e.g. "C25TLL")
+ *   - SINVOICE_TEMPLATE_CODE   (TT78 form, e.g. "2/001" for HĐ bán hàng từ MTT)
+ *   - SINVOICE_INVOICE_SERIES  (registered with CQT, e.g. "C26MAA")
  *   - SINVOICE_BASE_URL        (override host; same URL for prod + test)
  *   - SINVOICE_SANDBOX=true    (informational — server distinguishes via creds)
+ *
+ * Template ↔ invoiceType mapping (TT78, derived at runtime):
+ *   - "1/..." → invoiceType "1" (HĐ GTGT / VAT-deductible)
+ *   - "2/..." → invoiceType "2" (HĐ bán hàng từ MTT — F&B default)
+ *   - 3/4/5/6 also supported per TT78 (see deriveInvoiceTypeFromTemplate)
  */
 
 const DEFAULT_BASE_URL = "https://api-vinvoice.viettel.vn";
@@ -110,6 +120,107 @@ export function buildSinvoiceTransactionUuid(invoiceId: number): string {
     return `${prefix}${idStr.slice(-(TX_UUID_LENGTH - prefix.length))}`;
   }
   return `${prefix}${"0".repeat(fillerLen)}${idStr}`;
+}
+
+/**
+ * Derive TT78 `invoiceType` from `templateCode`.
+ *
+ * Per Viettel HDSD line 580-598 + example bodies (HDSD §III.2, line
+ * 869+ all show `invoiceType: "1"` paired with `templateCode: "1/001"`):
+ *   - Template `1/...` → invoiceType `"1"` (HĐ GTGT)
+ *   - Template `2/...` → invoiceType `"2"` (HĐ bán hàng — F&B/MTT)
+ *   - Template `3/...` → invoiceType `"3"` ...
+ *
+ * Legacy TT32 templates like `01GTKT0/001` map to `"01GTKT"` form;
+ * we do NOT support those (project uses TT78 exclusively since 2026).
+ *
+ * Throws if templateCode shape is unrecognised so misconfigured env
+ * surfaces loudly at boot rather than producing rejected invoices.
+ */
+export function deriveInvoiceTypeFromTemplate(templateCode: string): string {
+  const match = templateCode.match(/^([1-6])\//);
+  if (!match || !match[1]) {
+    throw new Error(
+      `Invalid SINVOICE_TEMPLATE_CODE format: "${templateCode}". ` +
+        `Expected TT78 form like "1/001" or "2/001".`,
+    );
+  }
+  return match[1];
+}
+
+export interface SinvoiceItemInfo {
+  lineNumber: number;
+  itemCode: string;
+  itemName: string;
+  unitName: string;
+  unitPrice: number;
+  quantity: number;
+  itemTotalAmountWithoutTax: number;
+  itemDiscount: number;
+  taxPercentage: number;
+  taxAmount: number;
+}
+
+export interface SinvoiceLineMath {
+  itemInfo: SinvoiceItemInfo[];
+  sumLineNet: number;
+  sumLineTax: number;
+  totalGross: number;
+}
+
+/**
+ * Compute Sinvoice itemInfo + reconciled sums.
+ *
+ * Rounding order matters for Sinvoice strict validators:
+ *   - 43: |qty × unitPrice − itemTotalAmountWithoutTax| < 1  (STRICT)
+ *   - 44: |(itemTotalAmountWithoutTax − itemDiscount) × taxPercentage/100 − taxAmount| < 1
+ *   - 87: |sumOfTotalLineAmountWithoutTax − Σ(itemInfo.itemTotalAmountWithoutTax)| < 1
+ *   - 49: |totalTaxAmount − Σ(itemInfo.taxAmount)| < 1
+ *
+ * Derive netUnitPrice first (rounded), then lineNet = qty × netUnitPrice
+ * (always exact integer). Independently rounding lineNet and netUnitPrice
+ * — as the previous impl did — can drift by up to qty/2 and break validator
+ * 43 in cases like qty=7, lineGross=100, vatRate=8 (lineNet=93,
+ * netUnitPrice=13, qty×unitPrice=91, diff=2 ≥ 1 → reject).
+ */
+export function buildSinvoiceItemInfo(
+  items: InvoiceLineItem[],
+  vatRate: number,
+  callerPassesGross: boolean,
+): SinvoiceLineMath {
+  const itemInfo: SinvoiceItemInfo[] = items.map((item, index) => {
+    const lineGross = callerPassesGross
+      ? item.amount
+      : item.amount * (1 + vatRate / 100);
+
+    const qty = item.quantity;
+    const grossUnitPrice = qty > 0 ? lineGross / qty : 0;
+    const netUnitPrice = Math.round(grossUnitPrice / (1 + vatRate / 100));
+    const lineNet = netUnitPrice * qty;
+    const lineTax = Math.round((lineNet * vatRate) / 100);
+
+    return {
+      lineNumber: index + 1,
+      itemCode: "",
+      itemName: item.name,
+      unitName: item.unit || "Phần",
+      unitPrice: netUnitPrice,
+      quantity: qty,
+      itemTotalAmountWithoutTax: lineNet,
+      itemDiscount: 0,
+      taxPercentage: vatRate,
+      taxAmount: lineTax,
+    };
+  });
+
+  const sumLineNet = itemInfo.reduce(
+    (s, l) => s + l.itemTotalAmountWithoutTax,
+    0,
+  );
+  const sumLineTax = itemInfo.reduce((s, l) => s + l.taxAmount, 0);
+  const totalGross = sumLineNet + sumLineTax;
+
+  return { itemInfo, sumLineNet, sumLineTax, totalGross };
 }
 
 export class ViettelSinvoiceProvider implements InvoiceProvider {
@@ -228,54 +339,43 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
     const transactionUuid = buildSinvoiceTransactionUuid(request.orderId);
     const callerPassesGross = this.detectGrossInput(request);
 
-    // Per-line NET conversion (Sinvoice strict validators 43/44/87/49).
-    // For mixed-rate B2B, header vatRate is used per-line — accepts ≤1₫
-    // rounding tolerance; out-of-tolerance triggers Sinvoice rejection.
-    const itemInfo = request.items.map((item, index) => {
-      const lineGross = callerPassesGross
-        ? item.amount
-        : item.amount * (1 + request.vatRate / 100);
-      const lineNet = Math.round(lineGross / (1 + request.vatRate / 100));
-      const netUnitPrice =
-        item.quantity > 0 ? Math.round(lineNet / item.quantity) : 0;
-      const lineTax = Math.round(lineGross) - lineNet;
-      return {
-        lineNumber: index + 1,
-        itemCode: "",
-        itemName: item.name,
-        unitName: item.unit || "Phần",
-        unitPrice: netUnitPrice,
-        quantity: item.quantity,
-        itemTotalAmountWithoutTax: lineNet,
-        itemDiscount: 0,
-        taxPercentage: request.vatRate,
-        taxAmount: lineTax,
-      };
-    });
+    const { itemInfo, sumLineNet, sumLineTax, totalGross } =
+      buildSinvoiceItemInfo(request.items, request.vatRate, callerPassesGross);
 
-    // Reconcile totals — use server-recomputed sums so Σ matches per-line
-    // exactly (Sinvoice errors 49/87 are within ±1₫ tolerance only).
-    const sumLineNet = itemInfo.reduce(
-      (s, l) => s + l.itemTotalAmountWithoutTax,
-      0,
-    );
-    const sumLineTax = itemInfo.reduce((s, l) => s + l.taxAmount, 0);
-    const totalGross = sumLineNet + sumLineTax;
+    const isReplacement = !!request.replacement;
+    const generalInvoiceInfo: Record<string, unknown> = {
+      invoiceType: deriveInvoiceTypeFromTemplate(this.templateCode),
+      templateCode: this.templateCode,
+      invoiceSeries: this.invoiceSeries,
+      currencyCode: "VND",
+      transactionUuid,
+      adjustmentType: isReplacement ? "3" : "1",
+      paymentStatus: true,
+      paymentType: 3,
+      paymentTypeName: "TM/CK",
+      cusGetInvoiceRight: true,
+      userName: this.username,
+    };
+
+    if (request.replacement) {
+      const r = request.replacement;
+      generalInvoiceInfo["originalInvoiceId"] = r.originalInvoiceNumber;
+      generalInvoiceInfo["originalInvoiceIssueDate"] = Date.parse(
+        r.originalIssuedAt,
+      );
+      generalInvoiceInfo["originalInvoiceType"] = r.originalInvoiceType;
+      generalInvoiceInfo["originalTemplateCode"] = r.originalTemplateCode;
+      generalInvoiceInfo["adjustedNote"] = r.reason;
+      generalInvoiceInfo["additionalReferenceDesc"] = r.agreementRef;
+      generalInvoiceInfo["additionalReferenceDate"] = Date.parse(
+        r.agreementDate,
+      );
+      generalInvoiceInfo["invoiceNote"] =
+        `Thay thế hóa đơn số ${r.originalInvoiceNumber}`;
+    }
 
     const body = {
-      generalInvoiceInfo: {
-        invoiceType: "01GTKT",
-        templateCode: this.templateCode,
-        invoiceSeries: this.invoiceSeries,
-        currencyCode: "VND",
-        transactionUuid,
-        adjustmentType: "1",
-        paymentStatus: true,
-        paymentType: 3,
-        paymentTypeName: "TM/CK",
-        cusGetInvoiceRight: true,
-        userName: this.username,
-      },
+      generalInvoiceInfo,
       buyerInfo: {
         buyerName: request.buyerName ?? "Khách lẻ",
         buyerLegalName: request.buyerName ?? "",
@@ -382,7 +482,15 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
       const envelope =
         (await res.json()) as SinvoiceEnvelope<SinvoiceStatusResult>;
       if (!res.ok || envelope.errorCode) {
-        return { status: "draft", invoiceNumber: null };
+        const description =
+          typeof envelope.description === "string"
+            ? envelope.description
+            : `sinvoice_getstatus_${res.status}`;
+        return {
+          status: "draft",
+          invoiceNumber: null,
+          error: `${envelope.errorCode ?? res.status}:${description}`,
+        };
       }
       const r = envelope.result;
       // Sinvoice invoiceStatus: 0=Pending, 1=Signed, 5=Cancelled, 6=Replaced
@@ -392,12 +500,26 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
         5: "cancelled",
         6: "replaced",
       };
+      const code = r?.invoiceStatus;
+      const mapped = code !== undefined ? map[code] : undefined;
+      if (mapped === undefined) {
+        return {
+          status: "draft",
+          invoiceNumber: r?.invoiceNo ?? null,
+          error: `unknown_invoice_status_code:${code ?? "missing"}`,
+        };
+      }
       return {
-        status: map[r?.invoiceStatus ?? 0] ?? "draft",
+        status: mapped,
         invoiceNumber: r?.invoiceNo ?? null,
+        error: null,
       };
-    } catch {
-      return { status: "draft", invoiceNumber: null };
+    } catch (e) {
+      return {
+        status: "draft",
+        invoiceNumber: null,
+        error: e instanceof Error ? e.message : "sinvoice_getstatus_exception",
+      };
     }
   }
 
@@ -421,6 +543,178 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
           ? envelope.description
           : `sinvoice_cancel_${res.status}`,
       );
+    }
+  }
+
+  /**
+   * Download signed PDF + XML for an issued invoice.
+   *
+   * Endpoint (per HDSD §III.7): POST /InvoiceAPI/InvoiceUtilsWS/getInvoiceRepresentationFile
+   * Body: { supplierTaxCode, invoiceNo, templateCode, transactionUuid?, fileType: "ZIP" }
+   * Response: JSON envelope { errorCode, description, fileName, fileToBytes }
+   *   - fileToBytes: base64 of a ZIP archive
+   *   - ZIP contents: .xml, .xsl, .pdf, logo/watermark/qrcode images
+   *
+   * Per Viettel HDSD §III.7 timing note: "request lấy file hóa đơn nên
+   * được thực hiện sau từ 2-5 giây sau khi phát hành hóa đơn." Cron
+   * 15-min cadence covers this comfortably.
+   *
+   * Per Viettel HDSD §III.7 state note: "Hệ thống chỉ lấy lên những
+   * hóa đơn có trạng thái khả dụng (state = 1)" — only fully-signed
+   * invoices are downloadable. Caller filters status='issued'.
+   *
+   * NEVER re-encodes bytes — extracts .pdf and .xml entries verbatim
+   * from the ZIP. Caller hashes pre-Storage upload to verify signature
+   * integrity.
+   */
+  async downloadInvoice(
+    request: InvoiceDownloadRequest,
+  ): Promise<InvoiceArchive> {
+    if (!request.invoiceNumber) {
+      return {
+        pdf: null,
+        xml: null,
+        error: "missing_invoice_number",
+      };
+    }
+
+    try {
+      const res = await this.authedFetch(
+        `/InvoiceAPI/InvoiceUtilsWS/getInvoiceRepresentationFile`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            supplierTaxCode: this.taxCode,
+            invoiceNo: request.invoiceNumber,
+            templateCode: this.templateCode,
+            transactionUuid: request.providerRef,
+            fileType: "ZIP",
+          }),
+        },
+      );
+
+      const envelope = (await res.json()) as SinvoiceEnvelope<{
+        fileName?: string;
+        fileToBytes?: string;
+      }>;
+
+      if (!res.ok || envelope.errorCode) {
+        return {
+          pdf: null,
+          xml: null,
+          error: `${envelope.errorCode ?? res.status}:${envelope.description ?? "download_failed"}`,
+          providerData: { invoiceNo: request.invoiceNumber },
+        };
+      }
+
+      const base64 = envelope.result?.fileToBytes;
+      if (!base64 || typeof base64 !== "string") {
+        return {
+          pdf: null,
+          xml: null,
+          error: "empty_filetobytes",
+        };
+      }
+
+      const zipBuffer = Buffer.from(base64, "base64");
+      // Magic byte check for ZIP: PK\x03\x04 = 0x50 0x4B 0x03 0x04
+      if (
+        zipBuffer.length < 4 ||
+        zipBuffer[0] !== 0x50 ||
+        zipBuffer[1] !== 0x4b ||
+        zipBuffer[2] !== 0x03 ||
+        zipBuffer[3] !== 0x04
+      ) {
+        return {
+          pdf: null,
+          xml: null,
+          error: `bad_zip_magic:size=${zipBuffer.length}`,
+        };
+      }
+
+      let entries: Record<string, Uint8Array>;
+      try {
+        entries = unzipSync(new Uint8Array(zipBuffer));
+      } catch (e) {
+        return {
+          pdf: null,
+          xml: null,
+          error: `unzip_failed:${e instanceof Error ? e.message : "unknown"}`,
+        };
+      }
+
+      // Find first .pdf and .xml entries (case-insensitive). ZIP may
+      // contain xsl/qrcode/logo — ignore those.
+      let pdfEntry: { name: string; bytes: Uint8Array } | null = null;
+      let xmlEntry: { name: string; bytes: Uint8Array } | null = null;
+      for (const [name, bytes] of Object.entries(entries)) {
+        const lower = name.toLowerCase();
+        if (!pdfEntry && lower.endsWith(".pdf")) {
+          pdfEntry = { name, bytes };
+        } else if (!xmlEntry && lower.endsWith(".xml")) {
+          xmlEntry = { name, bytes };
+        }
+      }
+
+      if (!pdfEntry || !xmlEntry) {
+        return {
+          pdf: null,
+          xml: null,
+          error: `missing_entry:pdf=${!!pdfEntry},xml=${!!xmlEntry}`,
+          providerData: { zipEntries: Object.keys(entries) },
+        };
+      }
+
+      // Magic byte sanity: PDF must start with "%PDF" and XML with "<?xml" or "<".
+      const pdfStart = String.fromCharCode(
+        pdfEntry.bytes[0] ?? 0,
+        pdfEntry.bytes[1] ?? 0,
+        pdfEntry.bytes[2] ?? 0,
+        pdfEntry.bytes[3] ?? 0,
+      );
+      if (pdfStart !== "%PDF") {
+        return {
+          pdf: null,
+          xml: null,
+          error: `bad_pdf_magic:got=${pdfStart}`,
+        };
+      }
+      const xmlHead = Buffer.from(xmlEntry.bytes.slice(0, 5)).toString("utf8");
+      if (!xmlHead.startsWith("<?xml") && !xmlHead.startsWith("<")) {
+        return {
+          pdf: null,
+          xml: null,
+          error: `bad_xml_magic:got=${xmlHead}`,
+        };
+      }
+
+      const pdf: InvoiceArtifact = {
+        bytes: pdfEntry.bytes,
+        contentType: "application/pdf",
+        filename: pdfEntry.name,
+      };
+      const xml: InvoiceArtifact = {
+        bytes: xmlEntry.bytes,
+        contentType: "application/xml",
+        filename: xmlEntry.name,
+      };
+
+      return {
+        pdf,
+        xml,
+        error: null,
+        providerData: {
+          zipFileName: envelope.result?.fileName ?? null,
+          pdfFileName: pdfEntry.name,
+          xmlFileName: xmlEntry.name,
+        },
+      };
+    } catch (e) {
+      return {
+        pdf: null,
+        xml: null,
+        error: e instanceof Error ? e.message : "sinvoice_download_exception",
+      };
     }
   }
 }
