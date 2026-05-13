@@ -141,6 +141,14 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // /api/cron/* are Vercel-cron entrypoints. Each handler enforces its own
+  // Bearer CRON_SECRET (timing-safe). Skipping session auth here is what
+  // keeps `vercel-cron/1.0` requests (no cookies) from being 307'd to /login
+  // before they reach the handler's token check.
+  if (pathname.startsWith("/api/cron/")) {
+    return NextResponse.next();
+  }
+
   // Read session — cookie decode + auto-refresh via setAll callback when the
   // access token is past EXPIRY_MARGIN_MS. Single read across login bounce +
   // route ACL: `session` is the authenticated marker (truthy) AND carries the
