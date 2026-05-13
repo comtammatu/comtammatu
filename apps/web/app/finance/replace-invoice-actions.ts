@@ -34,6 +34,7 @@ import {
   SYSTEM_SETTING_KEYS,
   SYSTEM_SETTING_DEFAULTS,
 } from "@comtammatu/shared/settings";
+import { buildInvoiceLineItemsFromOrderItems } from "@comtammatu/shared/hddt";
 import { ensureInvoiceProviderRegistered } from "@lib/invoice-provider-init";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { canAccessBranch } from "@/admin/_lib/branch-scope";
@@ -97,7 +98,7 @@ export async function replaceTaxInvoice(
       id, tenant_id, branch_id, order_id, status, invoice_kind,
       invoice_number, issued_at, provider_ref,
       orders!inner ( id, total_amount,
-        order_items ( item_name, variant_name, quantity, unit_price, subtotal, status, vat_rate )
+        order_items ( item_name, variant_name, quantity, unit_price, subtotal, modifiers, sides, status, vat_rate )
       )
     `,
     )
@@ -264,15 +265,7 @@ export async function replaceTaxInvoice(
   }
 
   // STEP C — Call provider with replacement context.
-  const invoiceItems = activeItems.map((item) => ({
-    name: item.variant_name
-      ? `${item.item_name} - ${item.variant_name}`
-      : item.item_name,
-    unit: "Phần",
-    quantity: item.quantity,
-    unitPrice: Number(item.unit_price),
-    amount: Number(item.subtotal),
-  }));
+  const invoiceItems = buildInvoiceLineItemsFromOrderItems(activeItems);
 
   // For TT78 originalTemplateCode: strip series, keep digit (e.g. "2/001" → "2").
   const originalTemplateCode =

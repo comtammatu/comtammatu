@@ -78,3 +78,19 @@ test("createTaxInvoice does not create new not_required/skipped rows", () => {
     "POS toast needs persisted invoice status, especially provider failures",
   );
 });
+
+test("per-order HĐĐT payload expands POS modifiers and sides", () => {
+  const createSrc = read("apps/web/app/finance/actions.ts");
+  const replaceSrc = read("apps/web/app/finance/replace-invoice-actions.ts");
+
+  for (const src of [createSrc, replaceSrc]) {
+    assert.ok(
+      src.includes("order_items") && src.includes("modifiers, sides"),
+      "HĐĐT order fetch must include modifier/side snapshots",
+    );
+    assert.ok(
+      src.includes("buildInvoiceLineItemsFromOrderItems(activeItems)"),
+      "provider item payload must split main item, paid modifiers, and sides",
+    );
+  }
+});

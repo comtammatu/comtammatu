@@ -12,6 +12,7 @@ import {
   SYSTEM_SETTING_KEYS,
   SYSTEM_SETTING_DEFAULTS,
 } from "@comtammatu/shared/settings";
+import { buildInvoiceLineItemsFromOrderItems } from "@comtammatu/shared/hddt";
 import { ensureInvoiceProviderRegistered } from "@lib/invoice-provider-init";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { canAccessBranch } from "@/admin/_lib/branch-scope";
@@ -85,7 +86,7 @@ export async function createTaxInvoice(
   const { data: order, error: orderErr } = await supabase
     .from("orders")
     .select(
-      "id, branch_id, subtotal, tax_amount, total_amount, payment_status, order_items(id, item_name, variant_name, quantity, unit_price, subtotal, status, vat_rate)",
+      "id, branch_id, subtotal, tax_amount, total_amount, payment_status, order_items(id, item_name, variant_name, quantity, unit_price, subtotal, modifiers, sides, status, vat_rate)",
     )
     .eq("id", parsed.data.orderId)
     .eq("tenant_id", claims.tenant_id)
@@ -223,15 +224,7 @@ export async function createTaxInvoice(
     };
   }
 
-  const invoiceItems = activeItems.map((item) => ({
-    name: item.variant_name
-      ? `${item.item_name} - ${item.variant_name}`
-      : item.item_name,
-    unit: "Phần",
-    quantity: item.quantity,
-    unitPrice: Number(item.unit_price),
-    amount: Number(item.subtotal),
-  }));
+  const invoiceItems = buildInvoiceLineItemsFromOrderItems(activeItems);
 
   if (invoiceProvider) {
     const result = await invoiceProvider.createInvoice({

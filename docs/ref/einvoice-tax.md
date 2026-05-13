@@ -103,6 +103,10 @@ Cron 02:05 ICT mỗi ngày (HOẶC admin manual trigger /finance/summary)
 - Ngày lập hóa đơn
 - Tên hàng hóa, đơn vị, số lượng, đơn giá
     + Per-order: chi tiết món
+      * Món POS có topping/món kèm tính tiền phải tách thành từng dòng HĐĐT:
+        dòng món chính dùng giá nền, sau đó mỗi topping/món kèm là một dòng
+        riêng. Ví dụ Cơm sườn cốt lết kèm Bì/Chả/Trứng: 35.000 + 7.000 +
+        7.000 + 5.000, không gộp thành một dòng 54.000.
     + B2C summary: gộp theo VAT rate, ví dụ "Đồ ăn 8%" + "Đồ uống có cồn 10%"
 - Thành tiền:
     + Mẫu `1/...` (HĐ GTGT): đơn giá/thành tiền chưa thuế + dòng VAT tách riêng
