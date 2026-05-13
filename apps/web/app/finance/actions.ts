@@ -494,7 +494,7 @@ export async function fetchTaxInvoices(
 
   const ctx = await getAuthContextWithPermission(
     FINANCE_ROLES,
-    PERMISSION_KEYS.SETTINGS_TENANT,
+    PERMISSION_KEYS.FINANCE_VIEW,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
