@@ -31,7 +31,7 @@ Set trong Vercel project settings (Settings → Environment Variables → Produc
 ```env
 COMPANY_TAX_CODE=0100109106-899        # MST seller (= account login MST)
 HDDT_DAILY_SUMMARY_ENABLED=true        # default false; flip true khi sẵn sàng (kill-switch cho cron + manual)
-INVOICE_PROVIDER=misa                  # hoặc "viettel"
+INVOICE_PROVIDER=viettel               # default từ 2026-05-13 (Viettel primary); set "misa" để dùng MISA
 CRON_SECRET=<32+ char random>          # Bearer cho /api/cron/* — đã có sẵn theo feedback cron
 ```
 
@@ -54,8 +54,8 @@ MISA_API_BASE_URL=https://api.meinvoice.vn/api/v1   # prod (default)
 INVOICE_PROVIDER=viettel
 SINVOICE_USERNAME=<account_mst>        # vd: 0100109106-899
 SINVOICE_PASSWORD=<api_password>
-SINVOICE_TEMPLATE_CODE=1/001           # đăng ký với CQT
-SINVOICE_INVOICE_SERIES=C25TLL         # đăng ký với CQT
+SINVOICE_TEMPLATE_CODE=2/001           # đăng ký với CQT (2/001 = HĐ bán hàng từ MTT cho F&B; 1/001 nếu cần HĐ GTGT B2B)
+SINVOICE_INVOICE_SERIES=C26MAA         # đăng ký với CQT (Viettel cấp khi tạo account)
 SINVOICE_BASE_URL=https://api-vinvoice.viettel.vn  # default; cùng URL test+prod
 # SINVOICE_SANDBOX=true                # informational; URL không đổi
 ```
@@ -262,5 +262,313 @@ Nếu queue row có `last_error` chứa các code dưới, tham chiếu cách x�
 
 ---
 
-> **Last updated**: 2026-05-08 (post-PR-7 update)
-> **Next**: Owner action items — đăng ký template với CQT, mở account provider prod, set env Vercel production, run sandbox smoke 1-3 ngày, flip `HDDT_DAILY_SUMMARY_ENABLED=true`, monitor 7-day pilot gate metrics.
+## Reconcile cron (Path B, audit 2026-05-13)
+
+Separate cron route giải quyết hóa đơn kẹt `signing` hoặc `submitted` — Viettel S-Invoice trả `invoiceNo` sync nhưng CQT code đến async; reconcile poll `getStatus` để chuyển `submitted → issued` khi CQT cấp số, hoặc `signing → cancelled` khi quá hạn 24h.
+
+### Env vars (thêm)
+
+```env
+HDDT_RECONCILE_ENABLED=true        # default false; kill-switch riêng cho cron + manual force-resync
+```
+
+### Vercel cron schedule
+
+```json
+{
+  "crons": [
+    { "path": "/api/cron/hddt-reconcile", "schedule": "*/5 * * * *" }
+  ]
+}
+```
+
+Schedule 5 phút/lần. Vercel Pro 300s function timeout đủ cho ≤ 5 chi nhánh × 25 rows × ~2s `getStatus` = 250s (per `RECONCILE_CRON_BUDGET_MS = 240_000` budget timer trong helper).
+
+### Smoke test sequence
+
+```bash
+# 1. Seed: tạo HĐ B2B với MST, để Sinvoice trả 'submitted' (chờ CQT)
+#    (đã có flow này sẵn qua POS bill flow)
+
+# 2. Trigger cron manually
+curl -X POST https://<preview>.vercel.app/api/cron/hddt-reconcile \
+  -H "Authorization: Bearer $CRON_SECRET"
+
+# 3. Expected response shape
+# {
+#   "ok": true,
+#   "elapsed_ms": 1234,
+#   "totals": {
+#     "branches_processed": 3,
+#     "candidates": 5,
+#     "transitioned": 4,
+#     "no_change": 1,
+#     "race_lost": 0,
+#     "provider_error": 0,
+#     "unknown_status": 0,
+#     "giveup_24h": 0,
+#     "budget_exceeded": false
+#   },
+#   "branches": [{ "branchId": 1, ... }, ...]
+# }
+```
+
+### Verify via SQL
+
+```sql
+-- Audit trail per attempt
+SELECT id, tax_invoice_id, before_status, after_status, outcome, provider_returned,
+       attempt_age_seconds, error, created_at
+FROM reconcile_run_log
+WHERE created_at > now() - interval '15 min'
+ORDER BY created_at DESC;
+
+-- Stuck rows that reconcile is targeting
+SELECT id, branch_id, status, invoice_kind, signing_started_at,
+       extract(epoch from now() - signing_started_at) AS age_seconds
+FROM tax_invoices
+WHERE status IN ('signing','submitted')
+  AND provider_ref IS NOT NULL
+  AND signing_started_at < now() - interval '60 seconds'
+ORDER BY signing_started_at ASC;
+```
+
+### Manual force-resync (per-invoice)
+
+UI: `/finance/invoices` → row có status `Đang ký` hoặc `Chờ CQT` → nút "Đồng bộ lại". Server action `forceResyncTaxInvoice(invoiceId)` gate trên `settings:tenant` (owner/super_manager only) — siết hơn `finance:view` vì có thể trigger state transition.
+
+### Rollback ladder
+
+| Tier | Trigger | Action |
+|---|---|---|
+| Tier 0 | Cron mass-fail trên provider_error | `HDDT_RECONCILE_ENABLED=false` → redeploy; B2B realtime + B2C summary KHÔNG ảnh hưởng |
+| Tier 1 | Bug ở mapping `pickReconcileDecision` | Revert commit của `packages/shared/src/hddt/reconcile-state.ts` (pure function) → redeploy |
+| Tier 2 | Reconcile transition sai gây hỏng state | `transition_tax_invoice_state_as_system(.., 'draft', ..)` bằng tay; events table giữ audit |
+
+### Pilot launch gate — bổ sung metrics cho reconcile
+
+| Metric | Target | SQL |
+|---|---|---|
+| % reconcile outcomes là `transitioned` | ≥ 70% trong 7 ngày | `SELECT 100.0 * COUNT(*) FILTER (WHERE outcome='transitioned') / COUNT(*) FROM reconcile_run_log WHERE trigger_source='cron' AND created_at > now()-interval '7 days';` |
+| Reconcile `provider_error` rate | ≤ 10% | `SELECT 100.0 * COUNT(*) FILTER (WHERE outcome='provider_error') / COUNT(*) FROM reconcile_run_log WHERE created_at > now()-interval '7 days';` |
+| `giveup_24h` count | < 5 / tuần | `SELECT count(*) FROM reconcile_run_log WHERE outcome='giveup_24h' AND created_at > now()-interval '7 days';` |
+| `race_lost` count | < 3 / tuần (lành tính — cashier race) | same shape |
+| Stuck > 24h chưa được pick up | 0 rows | `SELECT count(*) FROM tax_invoices WHERE status IN ('signing','submitted') AND signing_started_at < now()-interval '24 hours' AND provider_ref IS NOT NULL;` |
+
+`giveup_24h` > 5 / tuần → có thể là Sinvoice xuống cấp hoặc creds sai; halt + investigate trước khi tiếp tục.
+
+---
+
+## PDF/XML archive cron (Path D, audit 2026-05-13)
+
+Yêu cầu pháp lý: TT78/2021 §10 + NĐ70/2025 yêu cầu lưu trữ HĐĐT (PDF đã ký + XML) trong 10 năm để phục vụ thanh tra thuế. Hệ thống cron tải về từ Viettel `getInvoiceRepresentationFile`, verify magic byte + SHA-256, upload vào Supabase Storage `hddt-archive` (private bucket), lưu storage path + hash vào `tax_invoices`.
+
+### Env vars (thêm)
+
+```env
+HDDT_ARCHIVE_ENABLED=true        # default false; kill-switch riêng cho cron + manual force-archive + backfill
+```
+
+### Vercel cron schedule
+
+```json
+{
+  "crons": [
+    { "path": "/api/cron/hddt-archive", "schedule": "*/15 * * * *" }
+  ]
+}
+```
+
+Schedule 15 phút/lần. Viettel HDSD §III.7 lưu ý "request lấy file hóa đơn nên được thực hiện sau từ 2-5 giây sau khi phát hành" — 15 min thừa thoải mái, không race với realtime call.
+
+### Smoke test sequence
+
+```bash
+# 1. Seed: cần ít nhất 1 invoice với status='issued' (qua Path B reconcile từ
+#    submitted → issued, hoặc B2B realtime path nếu provider trả issued sync).
+
+# 2. Trigger archive cron manually
+curl -X POST https://<preview>.vercel.app/api/cron/hddt-archive \
+  -H "Authorization: Bearer $CRON_SECRET"
+
+# 3. Expected response shape
+# {
+#   "ok": true,
+#   "elapsed_ms": 2345,
+#   "totals": {
+#     "branches_processed": 3,
+#     "candidates": 5,
+#     "archived": 4,
+#     "provider_error": 0,
+#     "storage_error": 0,
+#     "invalid_payload": 0,
+#     "hash_mismatch": 0,
+#     "giveup": 0,
+#     "no_change": 1,
+#     "budget_exceeded": false
+#   },
+#   "branches": [{ "branchId": 1, ... }, ...]
+# }
+```
+
+### Verify via SQL + Storage
+
+```sql
+-- Audit per-attempt
+SELECT id, tax_invoice_id, outcome, attempt_number, pdf_bytes, xml_bytes,
+       pdf_sha256, xml_sha256, error, created_at
+FROM archive_run_log
+WHERE created_at > now() - interval '30 min'
+ORDER BY created_at DESC;
+
+-- Rows ready for archive (cron candidate set)
+SELECT id, branch_id, invoice_number, archive_attempts, issued_at
+FROM tax_invoices
+WHERE status = 'issued'
+  AND pdf_url IS NULL
+  AND archive_attempts < 5
+ORDER BY issued_at ASC
+LIMIT 25;
+
+-- Successfully archived
+SELECT id, pdf_url, xml_url, pdf_sha256, xml_sha256, archived_at
+FROM tax_invoices
+WHERE archived_at IS NOT NULL
+ORDER BY archived_at DESC
+LIMIT 10;
+```
+
+```bash
+# Verify Storage object exists (psql từ admin)
+SELECT name, metadata->>'size' AS size_bytes,
+       metadata->>'mimetype' AS mime
+FROM storage.objects
+WHERE bucket_id = 'hddt-archive'
+ORDER BY created_at DESC
+LIMIT 10;
+```
+
+### Manual force-archive (per-invoice)
+
+UI: `/finance/invoices` → row có `Đã lưu trữ` badge xuất hiện sau khi archive xong; row chưa archived hiển thị `Đồng bộ lại` từ Path B. Server action `forceArchiveTaxInvoice(invoiceId)` gate trên `settings:tenant`.
+
+### Backfill cho rows pre-shipping
+
+Owner action sau cutover archive: gọi `backfillArchiveByDateRange(branchId?, startDate, endDate)`:
+- Quét tối đa 500 rows/lần với budget 60s
+- Gate `settings:tenant` (owner/super_manager)
+- Outcome counters trả về để theo dõi
+- Idempotent: rows đã `archived_at` được skip tự động qua candidate filter
+
+Example: backfill 1 tuần đầu pilot trên tenant pilot
+```sql
+-- Đếm trước
+SELECT count(*) FROM tax_invoices
+WHERE status='issued' AND pdf_url IS NULL
+  AND issued_at BETWEEN '2026-05-08' AND '2026-05-13';
+```
+
+Sau đó gọi backfill từ admin UI (action `backfillArchiveByDateRange` chạy qua provider thật → khi quota OK chia nhỏ batch sau).
+
+### Rollback ladder
+
+| Tier | Trigger | Action |
+|---|---|---|
+| Tier 0 | Cron mass-fail trên provider_error / storage_error | `HDDT_ARCHIVE_ENABLED=false` → redeploy; reconcile + daily-summary + B2B realtime KHÔNG ảnh hưởng (archive độc lập) |
+| Tier 1 | Sai logic SHA-256 hoặc magic byte | Revert commit của `packages/shared/src/hddt/archive-state.ts` → redeploy |
+| Tier 2 | Bucket bị set public sai trong migration | Update RLS: `UPDATE storage.buckets SET public=false WHERE id='hddt-archive'`; xoá `getPublicUrl` calls nếu có |
+| Tier 3 | Hash mismatch hàng loạt = data tampering | KHÔNG xoá file Storage; alert owner; isolated investigation từ `archive_run_log.outcome='hash_mismatch'` |
+
+### Pilot launch gate — bổ sung metrics cho archive
+
+| Metric | Target | SQL |
+|---|---|---|
+| % archive cron outcomes là `archived` | ≥ 90% trong 7 ngày | `SELECT 100.0 * COUNT(*) FILTER (WHERE outcome='archived') / COUNT(*) FROM archive_run_log WHERE trigger_source='cron' AND created_at > now()-interval '7 days';` |
+| Provider_error rate | ≤ 5% | tương tự với `outcome='provider_error'` |
+| Storage_error rate | 0 | `SELECT count(*) FROM archive_run_log WHERE outcome='storage_error' AND created_at > now()-interval '7 days';` |
+| Invalid_payload count | 0 (= magic byte hoặc size sai) | `SELECT count(*) FROM archive_run_log WHERE outcome='invalid_payload';` |
+| Hash_mismatch count | 0 (= corruption alert nếu > 0) | `SELECT count(*) FROM archive_run_log WHERE outcome='hash_mismatch';` |
+| Giveup count | < 3 / tuần | `SELECT count(*) FROM archive_run_log WHERE outcome='giveup';` |
+| Issued rows chưa archive sau 1h | 0 | `SELECT count(*) FROM tax_invoices WHERE status='issued' AND pdf_url IS NULL AND issued_at < now()-interval '1 hour';` |
+| Storage volume tăng đều mỗi tuần | ~10 MB / 5 branches / tuần (pilot) | `SELECT count(*), sum((metadata->>'size')::bigint) FROM storage.objects WHERE bucket_id='hddt-archive';` |
+
+`hash_mismatch` > 0 → halt + ops investigation NGAY (suspect corruption hoặc Viettel re-issued same number with different bytes).
+
+---
+
+## Replace flow (Path C, audit 2026-05-13)
+
+Yêu cầu pháp lý: TT78/2021 §7 + NĐ70/2025 — thay thế hóa đơn khi có sai sót (sai MST, tên người mua, địa chỉ). Provider gọi cùng `createInvoice` endpoint với `adjustmentType=3` + original refs.
+
+### Workflow
+
+1. Owner/super_manager mở `/finance/invoices`, row có `status='issued'` hiển thị nút "Thay thế"
+2. Modal nhập: Lý do (≥20 chars), Văn bản thỏa thuận, Ngày văn bản, Tên/MST/Địa chỉ người mua đã sửa
+3. Server action `replaceTaxInvoice`:
+   - Gọi RPC `replace_tax_invoice` (atomic): OLD `issued→replaced`, INSERT NEW draft, link `replaced_by/replaced_for`, audit events
+   - Transition NEW: `draft → signing`
+   - Gọi Viettel với `adjustmentType=3` + original refs
+   - Transition NEW: `signing → issued|submitted|draft`
+4. UI hiển thị HĐ thay thế mới với số HĐ mới (Viettel cấp incremental, vd C26MAA00000124)
+
+### MVP constraints
+
+- B2B per_order only (B2C summary replace deferred to v2 — junction copy logic chưa rõ)
+- REPLACE only (adjustmentType=3); ADJUST (5) deferred
+- Permission `settings:tenant` (owner/super_manager)
+- Chain depth ≤ 3 (replace-of-replace-of-replace OK, sâu hơn reject)
+
+### Smoke test
+
+```sql
+-- Pre-flight: pick an issued B2B invoice
+SELECT id, invoice_number, status, buyer_tax_code, total_amount
+FROM tax_invoices
+WHERE status='issued' AND invoice_kind='per_order' AND replaced_by IS NULL
+ORDER BY issued_at DESC LIMIT 5;
+```
+
+UI: click "Thay thế" → nhập form → "Tạo HĐ thay thế". Expected: 1 toast success với new invoice number; row cũ flip thành "Đã thay thế"; row mới xuất hiện trên list với buyer info đã sửa.
+
+```sql
+-- Post-flight verify
+SELECT
+  o.id AS old_id, o.status AS old_status, o.invoice_number AS old_num, o.replaced_by,
+  n.id AS new_id, n.status AS new_status, n.invoice_number AS new_num, n.replaced_for
+FROM tax_invoices o
+JOIN tax_invoices n ON n.id = o.replaced_by
+WHERE o.id = <old_id>;
+-- Expected: old.status='replaced', old.replaced_by=new.id, new.replaced_for=old.id
+-- new.status='issued' or 'submitted'
+
+-- Audit events
+SELECT tax_invoice_id, from_status, to_status, note, actor_id, created_at
+FROM tax_invoice_events
+WHERE tax_invoice_id IN (<old_id>, <new_id>)
+ORDER BY created_at;
+-- Expected: 2 rows on old (issued→replaced); 2+ rows on new (NULL→draft, draft→signing, signing→...)
+```
+
+### Rollback
+
+| Tier | Trigger | Action |
+|---|---|---|
+| Tier 0 | Replace mass-fail từ Viettel | Owner ngừng dùng nút "Thay thế"; B2B realtime + B2C summary + reconcile + archive KHÔNG ảnh hưởng |
+| Tier 1 | Bug ở `replace_tax_invoice` RPC | Revert migration `20260513180000`; existing replaced pairs unaffected |
+| Tier 2 | Wrong replacement issued, cần undo | KHÔNG có flow auto-undo. Manual: gọi `cancelTaxInvoice(new_id, reason)` để hủy NEW; OLD vẫn ở `replaced`. Nếu cần phục hồi OLD, cần thay thế chuỗi: replace(NEW) với buyer info của OLD — tạo C nối B nối A |
+
+### Pilot metrics
+
+| Metric | Target | SQL |
+|---|---|---|
+| Replace volume | < 5 / tháng | `SELECT count(*) FROM tax_invoice_events WHERE to_status='replaced' AND created_at > now()-interval '30 days';` |
+| Replace success rate (NEW issued thành công) | ≥ 95% | tỷ lệ NEW status='issued'/'submitted' sau replace |
+| Chain depth distribution | mostly 1-2; alert ≥ 3 | `SELECT count(*) FROM tax_invoices WHERE replaced_for IS NOT NULL GROUP BY (SELECT count(*) FROM ...)` (manual query) |
+| Replacement archived trong 1 ngày | 100% | join tax_invoices.archived_at vs issued_at |
+
+`replace_failed` rate > 5% → halt + investigation (Viettel có thể reject vì biên bản format sai hoặc bị limit số HĐ trong series).
+
+---
+
+> **Last updated**: 2026-05-13 (Path C replace flow added; archive scope expanded to include replaced + cancelled)
+> **Next**: Owner action items — đăng ký template với CQT, mở account provider prod, set env Vercel production (cả 3 flag `HDDT_{DAILY_SUMMARY,RECONCILE,ARCHIVE}_ENABLED=true`), run sandbox smoke 1-3 ngày, monitor 7-day pilot gate metrics. Replace flow không có flag riêng — gated qua permission `settings:tenant` ở action layer; owner chỉ trigger khi thực sự cần (rare ops).

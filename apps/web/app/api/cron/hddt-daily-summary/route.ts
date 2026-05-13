@@ -4,8 +4,8 @@
  * Auth: Bearer CRON_SECRET (timing-safe compare).
  * Flag: HDDT_DAILY_SUMMARY_ENABLED=true to run; default off (PR-4 ship-disabled,
  *       flip in PR-6 cutover after MISA template registration completes).
- * Schedule (PR-6): 0 19 * * * UTC = 02:00 ICT next-day, paired with
- *                  feedback-daily-report. summary_date = yesterday in VN.
+ * Schedule (PR-6): 5 19 * * * UTC = 02:05 ICT next-day. summary_date =
+ *                  yesterday in VN.
  *
  * Per branch (skip-and-continue, 1 transaction per branch):
  *   1. INSERT summary_run_queue { trigger_source:'cron', status:'running' }.
@@ -160,3 +160,5 @@ export async function POST(request: Request) {
     ...counters,
   });
 }
+
+export const GET = POST;

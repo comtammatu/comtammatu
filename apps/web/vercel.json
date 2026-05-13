@@ -1,4 +1,10 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "git": {
+    "deploymentEnabled": true
+  },
+  "regions": ["sin1"],
   "crons": [
     {
       "path": "/api/cron/feedback-daily-report",
@@ -7,6 +13,14 @@
     {
       "path": "/api/cron/hddt-daily-summary",
       "schedule": "5 19 * * *"
+    },
+    {
+      "path": "/api/cron/hddt-reconcile",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/hddt-archive",
+      "schedule": "*/15 * * * *"
     },
     {
       "path": "/api/cron/feedback-retention",

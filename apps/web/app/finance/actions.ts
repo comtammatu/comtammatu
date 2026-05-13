@@ -506,7 +506,7 @@ export async function fetchTaxInvoices(
       `
       id, invoice_number, status, buyer_name, buyer_tax_code,
       subtotal, vat_rate, vat_amount, total_amount,
-      issued_at, cancelled_at, created_at,
+      issued_at, cancelled_at, archived_at, created_at,
       orders ( order_number )
     `,
     )

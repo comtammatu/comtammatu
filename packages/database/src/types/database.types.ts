@@ -49,6 +49,86 @@ export type Database = {
           },
         ]
       }
+      archive_run_log: {
+        Row: {
+          attempt_number: number
+          branch_id: number
+          created_at: string
+          error: string | null
+          id: number
+          outcome: string
+          pdf_bytes: number | null
+          pdf_sha256: string | null
+          tax_invoice_id: number
+          tenant_id: number
+          trigger_source: string
+          triggered_by: string | null
+          xml_bytes: number | null
+          xml_sha256: string | null
+        }
+        Insert: {
+          attempt_number: number
+          branch_id: number
+          created_at?: string
+          error?: string | null
+          id?: never
+          outcome: string
+          pdf_bytes?: number | null
+          pdf_sha256?: string | null
+          tax_invoice_id: number
+          tenant_id: number
+          trigger_source: string
+          triggered_by?: string | null
+          xml_bytes?: number | null
+          xml_sha256?: string | null
+        }
+        Update: {
+          attempt_number?: number
+          branch_id?: number
+          created_at?: string
+          error?: string | null
+          id?: never
+          outcome?: string
+          pdf_bytes?: number | null
+          pdf_sha256?: string | null
+          tax_invoice_id?: number
+          tenant_id?: number
+          trigger_source?: string
+          triggered_by?: string | null
+          xml_bytes?: number | null
+          xml_sha256?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "archive_run_log_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "archive_run_log_tax_invoice_id_fkey"
+            columns: ["tax_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "tax_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "archive_run_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "archive_run_log_triggered_by_fkey"
+            columns: ["triggered_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       area_branches: {
         Row: {
           area_id: number
@@ -4843,6 +4923,83 @@ export type Database = {
           },
         ]
       }
+      reconcile_run_log: {
+        Row: {
+          after_status: string | null
+          attempt_age_seconds: number
+          before_status: string
+          branch_id: number
+          created_at: string
+          error: string | null
+          id: number
+          outcome: string
+          provider_returned: string | null
+          tax_invoice_id: number
+          tenant_id: number
+          trigger_source: string
+          triggered_by: string | null
+        }
+        Insert: {
+          after_status?: string | null
+          attempt_age_seconds: number
+          before_status: string
+          branch_id: number
+          created_at?: string
+          error?: string | null
+          id?: never
+          outcome: string
+          provider_returned?: string | null
+          tax_invoice_id: number
+          tenant_id: number
+          trigger_source: string
+          triggered_by?: string | null
+        }
+        Update: {
+          after_status?: string | null
+          attempt_age_seconds?: number
+          before_status?: string
+          branch_id?: number
+          created_at?: string
+          error?: string | null
+          id?: never
+          outcome?: string
+          provider_returned?: string | null
+          tax_invoice_id?: number
+          tenant_id?: number
+          trigger_source?: string
+          triggered_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reconcile_run_log_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconcile_run_log_tax_invoice_id_fkey"
+            columns: ["tax_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "tax_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconcile_run_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconcile_run_log_triggered_by_fkey"
+            columns: ["triggered_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       refunds: {
         Row: {
           amount: number
@@ -7161,6 +7318,9 @@ export type Database = {
       }
       tax_invoices: {
         Row: {
+          archive_attempts: number
+          archive_last_error: string | null
+          archived_at: string | null
           branch_id: number
           buyer_address: string | null
           buyer_name: string | null
@@ -7175,11 +7335,13 @@ export type Database = {
           invoice_series: string | null
           issued_at: string | null
           order_id: number | null
+          pdf_sha256: string | null
           pdf_url: string | null
           provider: string
           provider_data: Json | null
           provider_ref: string | null
           replaced_by: number | null
+          replaced_for: number | null
           signing_started_at: string | null
           status: string
           subtotal: number
@@ -7190,9 +7352,13 @@ export type Database = {
           updated_at: string
           vat_amount: number
           vat_rate: number
+          xml_sha256: string | null
           xml_url: string | null
         }
         Insert: {
+          archive_attempts?: number
+          archive_last_error?: string | null
+          archived_at?: string | null
           branch_id: number
           buyer_address?: string | null
           buyer_name?: string | null
@@ -7207,11 +7373,13 @@ export type Database = {
           invoice_series?: string | null
           issued_at?: string | null
           order_id?: number | null
+          pdf_sha256?: string | null
           pdf_url?: string | null
           provider?: string
           provider_data?: Json | null
           provider_ref?: string | null
           replaced_by?: number | null
+          replaced_for?: number | null
           signing_started_at?: string | null
           status?: string
           subtotal: number
@@ -7222,9 +7390,13 @@ export type Database = {
           updated_at?: string
           vat_amount: number
           vat_rate?: number
+          xml_sha256?: string | null
           xml_url?: string | null
         }
         Update: {
+          archive_attempts?: number
+          archive_last_error?: string | null
+          archived_at?: string | null
           branch_id?: number
           buyer_address?: string | null
           buyer_name?: string | null
@@ -7239,11 +7411,13 @@ export type Database = {
           invoice_series?: string | null
           issued_at?: string | null
           order_id?: number | null
+          pdf_sha256?: string | null
           pdf_url?: string | null
           provider?: string
           provider_data?: Json | null
           provider_ref?: string | null
           replaced_by?: number | null
+          replaced_for?: number | null
           signing_started_at?: string | null
           status?: string
           subtotal?: number
@@ -7254,6 +7428,7 @@ export type Database = {
           updated_at?: string
           vat_amount?: number
           vat_rate?: number
+          xml_sha256?: string | null
           xml_url?: string | null
         }
         Relationships: [
@@ -9047,6 +9222,23 @@ export type Database = {
       reopen_period: {
         Args: { p_month: number; p_tenant_id: number; p_year: number }
         Returns: undefined
+      }
+      replace_tax_invoice: {
+        Args: {
+          p_agreement_date: string
+          p_agreement_ref: string
+          p_buyer_address: string
+          p_buyer_name: string
+          p_buyer_tax_code: string
+          p_old_id: number
+          p_provider: string
+          p_reason: string
+          p_subtotal: number
+          p_total_amount: number
+          p_vat_amount: number
+          p_vat_rate: number
+        }
+        Returns: number
       }
       resolve_branch_printer_for_type: {
         Args: { p_branch_id: number; p_print_type: string; p_tenant_id: number }
