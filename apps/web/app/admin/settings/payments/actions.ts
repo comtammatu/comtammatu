@@ -6,6 +6,7 @@ import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { SYSTEM_SETTING_KEYS } from "@comtammatu/shared/settings";
 import { getAuthContextWithPermission } from "@/_lib/auth";
+import { goFetch } from "@/_lib/go-api";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 
 const SETTINGS_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
@@ -68,23 +69,42 @@ export async function updatePaymentSettings(
     PERMISSION_KEYS.SETTINGS_TENANT,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
-  const { supabase, claims } = ctx;
 
-  const entries = Object.entries(parsed.data) as [string, string][];
-  for (const [key, value] of entries) {
-    const { error } = await supabase
-      .from("system_settings")
-      .upsert(
-        { tenant_id: claims.tenant_id, key, value },
-        { onConflict: "key,tenant_id" },
-      );
+  // Resolve the live session so its access_token can be forwarded to Go.
+  // ctx came from getAuthContext but only exposes claims; ask the Supabase
+  // client for the session again — getSession() is a cookie read so this is
+  // cheap (no extra HTTP roundtrip).
+  const { data: sessionRes } = await ctx.supabase.auth.getSession();
+  const session = sessionRes.session;
+  if (!session) return { success: false, error: "Phiên đăng nhập đã hết hạn" };
 
-    if (error) {
-      return {
-        success: false,
-        error: "Không thể lưu cài đặt. Vui lòng thử lại.",
-      };
-    }
+  // Route the write through the Go BE — owns validation (regex shape checks +
+  // role gate) and the atomic system_settings upsert. We keep the Next.js
+  // Zod schema as a first-pass guard so the form surfaces field errors
+  // locally without a round-trip, but Go is the security boundary.
+  const result = await goFetch("/admin/settings/payments", session, {
+    method: "PUT",
+    body: {
+      enable_vietqr:
+        parsed.data[SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_VIETQR] === "true",
+      enable_momo:
+        parsed.data[SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_MOMO] === "true",
+      vietqr_bank_code:
+        parsed.data[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_BANK_CODE],
+      vietqr_account_no:
+        parsed.data[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NO],
+      vietqr_account_name:
+        parsed.data[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NAME],
+    },
+  });
+  if (!result.ok) {
+    return {
+      success: false,
+      error:
+        result.error.status === 422
+          ? result.error.message
+          : "Không thể lưu cài đặt. Vui lòng thử lại.",
+    };
   }
 
   revalidateSurfacePath("/admin/settings/payments");
