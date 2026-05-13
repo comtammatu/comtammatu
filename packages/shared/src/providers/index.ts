@@ -20,7 +20,11 @@ export type {
   InvoiceStatus,
   InvoiceLineItem,
 } from "./invoice";
-export { setInvoiceProvider, getInvoiceProvider } from "./invoice";
+export {
+  BUYER_NOT_GET_INVOICE_NAME,
+  setInvoiceProvider,
+  getInvoiceProvider,
+} from "./invoice";
 
 // Implementations
 export { CashProvider } from "./impl/cash";

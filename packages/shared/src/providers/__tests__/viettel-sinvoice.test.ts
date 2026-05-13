@@ -8,11 +8,7 @@ import {
   ViettelSinvoiceProvider,
 } from "../impl/viettel-sinvoice";
 
-const item = (
-  name: string,
-  qty: number,
-  amount: number,
-): InvoiceLineItem => ({
+const item = (name: string, qty: number, amount: number): InvoiceLineItem => ({
   name,
   unit: "Phần",
   quantity: qty,
@@ -254,6 +250,85 @@ test("createInvoice: login request uses JSON credentials body", async () => {
   }
 });
 
+test("createInvoice: sends buyerNotGetInvoice flag for no-buyer-info sales", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{
+    input: Parameters<typeof fetch>[0];
+    init: NonNullable<Parameters<typeof fetch>[1]>;
+  }> = [];
+
+  globalThis.fetch = (async (input, init) => {
+    const requestInit = init ?? {};
+    calls.push({ input, init: requestInit });
+
+    if (String(input).endsWith("/auth/login")) {
+      return new Response(
+        JSON.stringify({ access_token: "test-token", expires_in: 3600 }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    return new Response(
+      JSON.stringify({
+        result: {
+          invoiceNo: "SBOX-2",
+          supplierTaxCode: "0100109106-509",
+        },
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  }) as typeof fetch;
+
+  try {
+    const provider = new ViettelSinvoiceProvider({
+      username: "0100109106-509",
+      password: "test-password",
+      taxCode: "0100109106-509",
+      templateCode: "2/001",
+      invoiceSeries: "C22TYY",
+      baseUrl: "https://example.test",
+    });
+
+    const result = await provider.createInvoice({
+      orderId: 2,
+      orderNumber: "SBOX-2",
+      sellerName: "Com Tam Ma Tu",
+      sellerTaxCode: "0100109106-509",
+      sellerAddress: "Sandbox",
+      buyerName: "Người mua không lấy hóa đơn",
+      buyerNotGetInvoice: true,
+      items: [item("Com tam sandbox", 1, 100_000)],
+      subtotal: 92_593,
+      vatRate: 8,
+      vatAmount: 7_407,
+      totalAmount: 100_000,
+    });
+
+    assert.equal(result.status, "submitted");
+
+    const createCall = calls.find((call) =>
+      String(call.input).includes("/InvoiceAPI/InvoiceWS/createInvoice/"),
+    );
+    assert.ok(createCall, "expected createInvoice endpoint to be called");
+
+    const body = JSON.parse(String(createCall.init.body)) as {
+      buyerInfo: {
+        buyerName?: string;
+        buyerLegalName?: string;
+        buyerTaxCode?: string;
+        buyerNotGetInvoice?: string;
+      };
+    };
+
+    assert.equal(body.buyerInfo.buyerName, "Người mua không lấy hóa đơn");
+    assert.equal(body.buyerInfo.buyerLegalName, "");
+    assert.equal(body.buyerInfo.buyerTaxCode, "");
+    assert.equal(body.buyerInfo.buyerNotGetInvoice, "1");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("getStatus: searches by transactionUuid with form body", async () => {
   const originalFetch = globalThis.fetch;
   const calls: Array<{
@@ -299,9 +374,7 @@ test("getStatus: searches by transactionUuid with form body", async () => {
       baseUrl: "https://example.test",
     });
 
-    const status = await provider.getStatus(
-      "HDDT0000000000000000000000000001",
-    );
+    const status = await provider.getStatus("HDDT0000000000000000000000000001");
 
     assert.deepEqual(status, {
       status: "issued",

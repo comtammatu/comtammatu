@@ -4,7 +4,10 @@ import { z } from "zod";
 import { randomUUID as _randomUUID } from "crypto";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { getInvoiceProvider } from "@comtammatu/shared/providers";
+import {
+  BUYER_NOT_GET_INVOICE_NAME,
+  getInvoiceProvider,
+} from "@comtammatu/shared/providers";
 import {
   SYSTEM_SETTING_KEYS,
   SYSTEM_SETTING_DEFAULTS,
@@ -44,6 +47,7 @@ const createInvoiceSchema = z
       .regex(MST_REGEX, { error: "MST phải có dạng 10 số hoặc 10-3 số" })
       .optional(),
     buyerAddress: z.string().trim().max(500).optional(),
+    buyerNotGetInvoice: z.boolean().optional(),
   })
   .refine((v) => !v.buyerTaxCode || (v.buyerName && v.buyerName.length > 0), {
     error: "Có MST thì phải nhập tên người mua",
@@ -106,9 +110,9 @@ export async function createTaxInvoice(
     };
   }
 
-  // Check no existing active invoice for this order. `not_required` is
-  // terminal-opt-out per D4 (2026-04-26) — it does NOT count as active so
-  // a future real invoice issuance for the same order is allowed.
+  // Check no existing active invoice for this order. Legacy `not_required`
+  // rows do NOT count as active so we can issue the legally required HĐĐT
+  // for orders that were paid before the mandatory-per-payment correction.
   const { data: existing } = await supabase
     .from("tax_invoices")
     .select("id")
@@ -170,7 +174,7 @@ export async function createTaxInvoice(
     vatRate = predRate;
   } else {
     // Edge: no active items or zero subtotal. Fall back to system_settings
-    // VAT rate so the not_required audit row has a sensible header rate.
+    // VAT rate so the draft/failure row has a sensible header rate.
     const { data: vatSetting } = await supabase
       .from("system_settings")
       .select("value")
@@ -185,55 +189,12 @@ export async function createTaxInvoice(
     vatAmount = orderTotal - subtotal;
   }
 
-  // D4 short-circuit (owner 2026-04-26): no MST → skip MISA call, insert
-  // an audit row with status='not_required'. Khách comp meal / khách lẻ
-  // không yêu cầu HĐĐT thì không tốn MISA quota; nếu sau này khách quay
-  // lại nhập MST, createTaxInvoice gọi lần nữa sẽ insert hóa đơn thật
-  // (uq_tax_invoices_active_per_order loại trừ not_required).
-  const buyerTaxCodeTrimmed = parsed.data.buyerTaxCode?.trim() ?? "";
-  const hasMst = buyerTaxCodeTrimmed.length > 0;
-
-  if (!hasMst) {
-    const { data: skipInvoice, error: skipErr } = await supabase
-      .from("tax_invoices")
-      .insert({
-        tenant_id: claims.tenant_id,
-        branch_id: order.branch_id,
-        order_id: parsed.data.orderId,
-        invoice_number: null,
-        status: "not_required",
-        buyer_name: parsed.data.buyerName ?? null,
-        buyer_tax_code: null,
-        buyer_address: parsed.data.buyerAddress ?? null,
-        subtotal: Math.round(subtotal * 100) / 100,
-        vat_rate: vatRate,
-        vat_amount: Math.round(vatAmount * 100) / 100,
-        total_amount: Number(order.total_amount),
-        provider: "skipped",
-        provider_ref: null,
-        provider_data: null,
-        issued_at: null,
-        created_by: user.id,
-      })
-      .select("id, invoice_number, status")
-      .single();
-
-    if (skipErr) {
-      if (skipErr.code === "23505") {
-        return { success: false, error: "Đơn hàng đã có hóa đơn." };
-      }
-      return { success: false, error: "Không thể ghi trạng thái HĐĐT." };
-    }
-
-    await logAudit(supabase, {
-      action: "create",
-      entityType: "tax_invoice",
-      entityId: skipInvoice?.id ?? null,
-      newData: { status: "not_required", reason: "no_mst" },
-    });
-
-    return { success: true, data: skipInvoice };
-  }
+  const buyerTaxCode = parsed.data.buyerTaxCode?.trim() || undefined;
+  const buyerAddress = parsed.data.buyerAddress?.trim() || undefined;
+  const buyerNotGetInvoice =
+    parsed.data.buyerNotGetInvoice === true ||
+    (!buyerTaxCode && !parsed.data.buyerName?.trim());
+  const buyerName = parsed.data.buyerName?.trim() || BUYER_NOT_GET_INVOICE_NAME;
 
   // Use provider interface — swap MISA/ViettelSinvoice without changing this code
   ensureInvoiceProviderRegistered();
@@ -268,11 +229,12 @@ export async function createTaxInvoice(
       orderId: parsed.data.orderId,
       orderNumber: `ORD-${parsed.data.orderId}`,
       sellerName: "Cơm Tấm Má Tư CTCP",
-      sellerTaxCode: process.env.COMPANY_TAX_CODE ?? "",
+      sellerTaxCode: process.env["COMPANY_TAX_CODE"] ?? "",
       sellerAddress: "",
-      buyerName: parsed.data.buyerName,
-      buyerTaxCode: parsed.data.buyerTaxCode,
-      buyerAddress: parsed.data.buyerAddress,
+      buyerName,
+      buyerTaxCode,
+      buyerAddress,
+      buyerNotGetInvoice,
       items: invoiceItems,
       subtotal: Math.round(subtotal * 100) / 100,
       vatRate,
@@ -291,6 +253,12 @@ export async function createTaxInvoice(
     providerData = undefined;
   }
 
+  const stateTimestamp = new Date().toISOString();
+  const hasProviderSubmission =
+    invoiceStatus === "signing" ||
+    invoiceStatus === "submitted" ||
+    invoiceStatus === "issued";
+
   const { data: invoice, error: insertErr } = await supabase
     .from("tax_invoices")
     .insert({
@@ -299,9 +267,9 @@ export async function createTaxInvoice(
       order_id: parsed.data.orderId,
       invoice_number: invoiceNumber,
       status: invoiceStatus,
-      buyer_name: parsed.data.buyerName ?? null,
-      buyer_tax_code: parsed.data.buyerTaxCode ?? null,
-      buyer_address: parsed.data.buyerAddress ?? null,
+      buyer_name: buyerName,
+      buyer_tax_code: buyerTaxCode ?? null,
+      buyer_address: buyerAddress ?? null,
       subtotal: Math.round(subtotal * 100) / 100,
       vat_rate: vatRate,
       vat_amount: Math.round(vatAmount * 100) / 100,
@@ -311,10 +279,11 @@ export async function createTaxInvoice(
       provider_data: providerData
         ? JSON.parse(JSON.stringify(providerData))
         : null,
-      issued_at: invoiceStatus === "issued" ? new Date().toISOString() : null,
+      signing_started_at: hasProviderSubmission ? stateTimestamp : null,
+      issued_at: invoiceStatus === "issued" ? stateTimestamp : null,
       created_by: user.id,
     })
-    .select("id, invoice_number")
+    .select("id, invoice_number, status")
     .single();
 
   if (insertErr) {
@@ -881,7 +850,10 @@ export async function fetchRevenueByHour(
   });
 
   if (error) {
-    return { success: false, error: "Không thể tải dữ liệu doanh thu theo giờ." };
+    return {
+      success: false,
+      error: "Không thể tải dữ liệu doanh thu theo giờ.",
+    };
   }
 
   return { success: true, data: data ?? [] };

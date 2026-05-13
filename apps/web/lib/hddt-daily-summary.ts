@@ -25,7 +25,10 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@comtammatu/database";
-import type { InvoiceProvider } from "@comtammatu/shared/providers";
+import {
+  BUYER_NOT_GET_INVOICE_NAME,
+  type InvoiceProvider,
+} from "@comtammatu/shared/providers";
 
 interface BatchLineItem {
   name: string;
@@ -139,7 +142,8 @@ export async function executeSummaryRun(
       sellerName: "Cơm Tấm Má Tư CTCP",
       sellerTaxCode: process.env["COMPANY_TAX_CODE"] ?? "",
       sellerAddress: "",
-      buyerName: "Khách hàng không lấy hóa đơn",
+      buyerName: BUYER_NOT_GET_INVOICE_NAME,
+      buyerNotGetInvoice: true,
       buyerTaxCode: undefined,
       buyerAddress: undefined,
       items: lineItems.map((li) => ({

@@ -1,10 +1,11 @@
-import type {
-  InvoiceArchive,
-  InvoiceDownloadRequest,
-  InvoiceProvider,
-  InvoiceRequest,
-  InvoiceResult,
-  InvoiceStatus,
+import {
+  BUYER_NOT_GET_INVOICE_NAME,
+  type InvoiceArchive,
+  type InvoiceDownloadRequest,
+  type InvoiceProvider,
+  type InvoiceRequest,
+  type InvoiceResult,
+  type InvoiceStatus,
 } from "../invoice";
 
 /**
@@ -59,8 +60,8 @@ export class MisaProvider implements InvoiceProvider {
     this.taxCode = config.taxCode;
     this.appId = config.appId ?? "";
     this.baseUrl =
-      config.baseUrl
-      ?? ((config.sandbox ?? process.env.MISA_SANDBOX === "true")
+      config.baseUrl ??
+      ((config.sandbox ?? process.env.MISA_SANDBOX === "true")
         ? SANDBOX_BASE
         : PRODUCTION_BASE);
   }
@@ -88,7 +89,9 @@ export class MisaProvider implements InvoiceProvider {
 
     const body = {
       InvoiceTypeID: 1, // Hóa đơn GTGT
-      BuyerName: request.buyerName || "Khách lẻ",
+      BuyerName:
+        request.buyerName ||
+        (request.buyerNotGetInvoice ? BUYER_NOT_GET_INVOICE_NAME : ""),
       BuyerTaxCode: request.buyerTaxCode || "",
       BuyerAddress: request.buyerAddress || "",
       PaymentMethodName: "TM/CK", // Tiền mặt / Chuyển khoản

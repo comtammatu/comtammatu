@@ -12,7 +12,10 @@ import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
 import type { ComponentType } from "react";
 import { formatVND } from "@comtammatu/shared/format";
 import { PAYMENT_METHOD_LABELS_VI } from "@comtammatu/shared/labels";
-import { buildVietQrEmvco, type PaymentMethod } from "@comtammatu/shared/providers";
+import {
+  buildVietQrEmvco,
+  type PaymentMethod,
+} from "@comtammatu/shared/providers";
 import {
   Alert,
   AlertDescription,
@@ -327,7 +330,11 @@ const RECEIPT_LOADING_ORDER: OrderData = {
   cash_received: null,
   cash_change: null,
   tables: { number: 2 },
-  branches: { name: "Chi nhánh Đất Đỏ", address: "Ấp Phước Sơn, Xã Đất Đỏ", phone: null },
+  branches: {
+    name: "Chi nhánh Đất Đỏ",
+    address: "Ấp Phước Sơn, Xã Đất Đỏ",
+    phone: null,
+  },
   order_items: [
     {
       id: 0,
@@ -369,9 +376,7 @@ function RemotePaymentDetails({
           <dt className="text-muted-foreground">
             {REMOTE_PAYMENT_COPY.momoWalletLabel}
           </dt>
-          <dd className="font-medium">
-            {REMOTE_PAYMENT_COPY.momoWalletValue}
-          </dd>
+          <dd className="font-medium">{REMOTE_PAYMENT_COPY.momoWalletValue}</dd>
           <dt className="text-muted-foreground">
             {REMOTE_PAYMENT_COPY.momoOrderLabel}
           </dt>
@@ -405,7 +410,8 @@ function RemotePaymentDetails({
         {REMOTE_PAYMENT_COPY.descriptionLabel}
       </dt>
       <dd className="font-mono">
-        {pendingExtras?.qr_info?.description ?? `DH ${order?.order_number ?? ""}`}
+        {pendingExtras?.qr_info?.description ??
+          `DH ${order?.order_number ?? ""}`}
       </dd>
     </dl>
   );
@@ -501,9 +507,9 @@ export function BillReceipt({
           ? "Khách chưa thanh toán đủ tổng đơn"
           : selectedMethod === "momo"
             ? "MoMo tự xác nhận qua IPN sau khi khách thanh toán"
-          : selectedMethod === "vietqr"
-            ? "VietQR chưa cấu hình — liên hệ quản lý"
-          : null;
+            : selectedMethod === "vietqr"
+              ? "VietQR chưa cấu hình — liên hệ quản lý"
+              : null;
 
   const cashSuggestions = useMemo(
     () => buildCashSuggestions(totalAmount),
@@ -777,9 +783,7 @@ export function BillReceipt({
             qr_info: result.data.qr_info,
           });
           if (!result.data.qr_data && !result.data.redirect_url) {
-            setPaymentCreateError(
-              REMOTE_PAYMENT_COPY.qrUnavailableDescription,
-            );
+            setPaymentCreateError(REMOTE_PAYMENT_COPY.qrUnavailableDescription);
           }
         } else if (!result.success) {
           setPaymentCreateError(
@@ -867,10 +871,6 @@ export function BillReceipt({
           toast.warning("Đã thu tiền — HĐĐT chưa xuất được", {
             description: inv.error ?? "Lưu nháp; Finance sẽ xuất lại sau.",
           });
-        } else if (inv.status === "not_required") {
-          toast.success("Đã thanh toán — không xuất HĐĐT", {
-            description: `Khách không nhập MST · Tiền trả khách: ${formatVND(change)}`,
-          });
         } else {
           toast.success("Đã thanh toán & xuất HĐĐT", {
             description: `Số HĐ: ${inv.invoiceNumber ?? `#${inv.invoiceId}`} · Tiền trả khách: ${formatVND(change)}`,
@@ -914,8 +914,7 @@ export function BillReceipt({
       }
       if (result.data?.print.failed) {
         toast.warning("Chưa in được hóa đơn", {
-          description:
-            result.data.print.error ?? "Mở đơn để in lại.",
+          description: result.data.print.error ?? "Mở đơn để in lại.",
         });
       }
       await onOrderUpdated?.();
@@ -972,7 +971,9 @@ export function BillReceipt({
         autoQrTriggeredRef.current = null;
         hydratedPaymentOrderRef.current = null;
         setOrder((cur) =>
-          cur ? { ...cur, payment_status: "unpaid", payment_method: null } : cur,
+          cur
+            ? { ...cur, payment_status: "unpaid", payment_method: null }
+            : cur,
         );
         toast.success(messages.pos.payment.cancelQrSuccess);
         await onOrderUpdated?.();
@@ -1247,7 +1248,9 @@ export function BillReceipt({
                                 type="button"
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleSelectMethod(selectedMethod)}
+                                onClick={() =>
+                                  handleSelectMethod(selectedMethod)
+                                }
                                 disabled={actionPending || methodPending}
                               >
                                 <IconQrcode data-icon="inline-start" />
