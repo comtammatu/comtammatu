@@ -465,6 +465,12 @@ export function BillReceipt({
   // auto-trigger fires once per dialog open even when render deps churn.
   const autoQrTriggeredRef = useRef<number | null>(null);
   const hydratedPaymentOrderRef = useRef<number | null>(null);
+  // Tracks orderId we've already defaulted selectedMethod for. Without this,
+  // any dep churn (router.refresh from realtime / visibilitychange / phone
+  // rotate flipping useIsMobile → RSC re-render → new initialPaymentMethods
+  // array ref) re-runs the bill-open effect and clobbers the cashier's
+  // VietQR pick back to cash. Reset on orderId=null in the close branch.
+  const methodDefaultedOrderRef = useRef<number | null>(null);
 
   const totalAmount = Number(order?.total_amount ?? 0);
   const cashReceived = Number(cashInput) || 0;
@@ -517,15 +523,21 @@ export function BillReceipt({
       setPendingOfflineMethod(null);
       autoQrTriggeredRef.current = null;
       hydratedPaymentOrderRef.current = null;
+      methodDefaultedOrderRef.current = null;
       return;
     }
 
     // Methods are tenant-stable (props-derived) — re-default selectedMethod
     // immediately on bill open so cashier sees a sensible pick before any
-    // fetch starts. No-op when methods is empty (renders error UI).
-    setSelectedMethod(
-      methods.includes("cash") ? "cash" : (methods[0] ?? "vietqr"),
-    );
+    // fetch starts. Gate with methodDefaultedOrderRef so dep churn (e.g.
+    // RSC re-render handing back a new initialPaymentMethods array ref on
+    // phone rotate / visibilitychange) doesn't clobber the cashier's pick.
+    if (methodDefaultedOrderRef.current !== orderId) {
+      methodDefaultedOrderRef.current = orderId;
+      setSelectedMethod(
+        methods.includes("cash") ? "cash" : (methods[0] ?? "vietqr"),
+      );
+    }
 
     const seededOrder =
       initialOrder != null && initialOrder.id === orderId ? initialOrder : null;
