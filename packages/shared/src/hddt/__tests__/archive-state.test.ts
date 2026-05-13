@@ -187,6 +187,6 @@ test("sha256Hex: returns 64 hex chars (256 bits)", async () => {
 });
 
 test("ARCHIVE_BUCKET constant matches migration", () => {
-  // Tied to migration 20260513160000_hddt_archive_schema.sql
+  // Tied to migration 20260517010000_hddt_archive_schema.sql
   assert.equal(ARCHIVE_BUCKET, "hddt-archive");
 });

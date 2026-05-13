@@ -107,6 +107,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "archive_run_log_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id"]
+          },
+          {
             foreignKeyName: "archive_run_log_tax_invoice_id_fkey"
             columns: ["tax_invoice_id"]
             isOneToOne: false
@@ -4978,6 +4985,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "reconcile_run_log_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id"]
+          },
+          {
             foreignKeyName: "reconcile_run_log_tax_invoice_id_fkey"
             columns: ["tax_invoice_id"]
             isOneToOne: false
@@ -7463,6 +7477,13 @@ export type Database = {
           {
             foreignKeyName: "tax_invoices_replaced_by_fkey"
             columns: ["replaced_by"]
+            isOneToOne: false
+            referencedRelation: "tax_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tax_invoices_replaced_for_fkey"
+            columns: ["replaced_for"]
             isOneToOne: false
             referencedRelation: "tax_invoices"
             referencedColumns: ["id"]

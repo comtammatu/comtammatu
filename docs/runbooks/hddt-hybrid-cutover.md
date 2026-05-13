@@ -554,7 +554,7 @@ ORDER BY created_at;
 | Tier | Trigger | Action |
 |---|---|---|
 | Tier 0 | Replace mass-fail từ Viettel | Owner ngừng dùng nút "Thay thế"; B2B realtime + B2C summary + reconcile + archive KHÔNG ảnh hưởng |
-| Tier 1 | Bug ở `replace_tax_invoice` RPC | Revert migration `20260513180000`; existing replaced pairs unaffected |
+| Tier 1 | Bug ở `replace_tax_invoice` RPC | Revert migration `20260517020000`; existing replaced pairs unaffected |
 | Tier 2 | Wrong replacement issued, cần undo | KHÔNG có flow auto-undo. Manual: gọi `cancelTaxInvoice(new_id, reason)` để hủy NEW; OLD vẫn ở `replaced`. Nếu cần phục hồi OLD, cần thay thế chuỗi: replace(NEW) với buyer info của OLD — tạo C nối B nối A |
 
 ### Pilot metrics

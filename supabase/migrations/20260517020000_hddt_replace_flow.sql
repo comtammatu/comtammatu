@@ -231,7 +231,7 @@ COMMENT ON FUNCTION public.replace_tax_invoice IS
 
 -- ─── 3. Expand archive partial index to cover replaced/cancelled ───
 -- Legal retention TT78 §10 requires PDF/XML for replaced + cancelled
--- invoices too. Original index (migration 20260513160000) only covered
+-- invoices too. Original index (migration 20260517010000) only covered
 -- status='issued' — expand here so archive cron query stays index-served.
 
 DROP INDEX IF EXISTS public.idx_tax_invoices_archive_pending;
