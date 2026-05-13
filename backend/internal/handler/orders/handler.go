@@ -355,18 +355,27 @@ func (h *Handler) confirmPayment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Use create_payment RPC for atomic payment insert + order status update
+	switch req.Method {
+	case "cash":
+		h.confirmCashPayment(w, r, branchID, orderID, req)
+	case "momo":
+		h.confirmMoMoPayment(w, r, branchID, orderID, req)
+	case "vietqr":
+		// VietQR has its own cashier-confirm endpoint because the payment row
+		// is only created at confirm time (no pending row, no provider call).
+		httputil.WriteError(w, http.StatusUnprocessableEntity, "vietqr uses POST /payment/vietqr/confirm")
+	default:
+		httputil.WriteError(w, http.StatusUnprocessableEntity, "unsupported payment method")
+	}
+}
+
+func (h *Handler) confirmCashPayment(w http.ResponseWriter, r *http.Request, branchID, orderID int64, req PaymentRequest) {
+	claims := middleware.ClaimsFrom(r.Context())
 	const q = `SELECT public.create_payment($1, $2, $3, $4, $5::NUMERIC(15,2), $6::UUID)`
 	var resultJSON []byte
-	err = h.pool.QueryRow(r.Context(), q,
-		claims.TenantID,
-		branchID,
-		orderID,
-		req.Method,
-		req.Amount,
-		claims.UserUUID,
-	).Scan(&resultJSON)
-	if err != nil {
+	if err := h.pool.QueryRow(r.Context(), q,
+		claims.TenantID, branchID, orderID, req.Method, req.Amount, claims.UserUUID,
+	).Scan(&resultJSON); err != nil {
 		httputil.WriteError(w, http.StatusInternalServerError, "failed to process payment")
 		return
 	}

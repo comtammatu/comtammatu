@@ -23,8 +23,10 @@ import (
 	menuhandler "github.com/personal/comtammatu/backend/internal/handler/menu"
 	notifhandler "github.com/personal/comtammatu/backend/internal/handler/notifications"
 	ordershandler "github.com/personal/comtammatu/backend/internal/handler/orders"
+	paymentshandler "github.com/personal/comtammatu/backend/internal/handler/payments"
 	settingshandler "github.com/personal/comtammatu/backend/internal/handler/settings"
 	staffhandler "github.com/personal/comtammatu/backend/internal/handler/staff"
+	webhookshandler "github.com/personal/comtammatu/backend/internal/handler/webhooks"
 	"github.com/personal/comtammatu/backend/internal/middleware"
 )
 
@@ -63,10 +65,14 @@ func main() {
 	r.Use(middleware.CORS(cfg.AllowedOrigins))
 	r.Use(chimiddleware.Recoverer) // catch panics, return 500
 
-	// Public routes — no auth required
+	// Public routes — no auth required.
+	// MoMo IPN webhook is public because the provider can't authenticate to us;
+	// the HMAC signature on the body is the proof of authenticity.
 	r.Get("/health", healthhandler.Handler())
 	authH := authhandler.New(pool)
 	r.Post("/auth/login", authH.Login)
+	webhooksH := webhookshandler.New(pool)
+	r.Post("/webhooks/momo", webhooksH.MoMo)
 
 	eval := abac.New(pool)
 
@@ -77,12 +83,23 @@ func main() {
 		r.Get("/auth/me", authH.Me)
 		r.Mount("/menu", menuhandler.New(pool, eval).Routes())
 		r.Mount("/admin/staff", staffhandler.New(pool, eval).Routes())
-		r.Mount("/admin/settings", settingshandler.New(pool, eval).Routes())
+		settingsH := settingshandler.New(pool, eval)
+		r.Mount("/admin/settings", settingsH.Routes())
+		// Payment-settings live under /admin/settings/payments. Mounted
+		// separately from the settings.Routes() group because they gate on
+		// the tenant-level permission rather than the branch-level one.
+		r.Get("/admin/settings/payments", settingsH.GetPayments)
+		r.Put("/admin/settings/payments", settingsH.PutPayments)
+
 		ordersH := ordershandler.New(pool)
 		r.Mount("/br/{branchId}/orders", ordersH.Routes())
 		r.Post("/br/{branchId}/shifts/close", ordersH.CloseShift)
 		r.Mount("/br/{branchId}/kds", kdshandler.New(pool).Routes())
 		r.Mount("/notifications", notifhandler.New(pool).Routes())
+
+		paymentsH := paymentshandler.New(pool)
+		r.Mount("/br/{branchId}/payments", paymentsH.Routes())
+		r.Post("/br/{branchId}/orders/{id}/payment/vietqr/confirm", paymentsH.ConfirmVietQR)
 	})
 
 	srv := &http.Server{

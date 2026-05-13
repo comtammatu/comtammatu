@@ -1,0 +1,146 @@
+// Package payments serves the per-branch VietQR config + cashier-confirm
+// endpoints that the POS calls when the customer pays by bank transfer.
+// Admin payment-settings CRUD lives in handler/settings/payments_admin.go.
+package payments
+
+import (
+	"encoding/json"
+	"errors"
+	"net/http"
+	"regexp"
+	"strconv"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/personal/comtammatu/backend/internal/httputil"
+	"github.com/personal/comtammatu/backend/internal/middleware"
+	paymentconfig "github.com/personal/comtammatu/backend/internal/payment/config"
+)
+
+// Handler serves /br/{branchId}/payments/* and /br/{branchId}/orders/{id}/payment/vietqr/* routes.
+type Handler struct {
+	pool *pgxpool.Pool
+}
+
+// New constructs a Handler.
+func New(pool *pgxpool.Pool) *Handler { return &Handler{pool: pool} }
+
+// Routes mounts the per-branch payment routes under /br/{branchId}/payments.
+// The order-scoped VietQR confirm endpoint is mounted separately in main.go
+// so it can share the {branchId}/orders/{id} URL shape.
+func (h *Handler) Routes() chi.Router {
+	r := chi.NewRouter()
+	r.Get("/vietqr-config", h.getVietQRConfig)
+	return r
+}
+
+func (h *Handler) getVietQRConfig(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.ClaimsFrom(r.Context())
+	if claims == nil {
+		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	if _, err := branchFromContext(r, claims.TenantID, h.pool); err != nil {
+		httputil.WriteError(w, http.StatusNotFound, "branch not found")
+		return
+	}
+
+	cfg, err := paymentconfig.Load(r.Context(), h.pool, claims.TenantID)
+	if err != nil {
+		httputil.WriteError(w, http.StatusInternalServerError, "failed to load payment config")
+		return
+	}
+	if !cfg.EnableVietQR {
+		// Graceful fallback — same shape, but with enabled=false so the POS
+		// can hide the VietQR button without a separate 404 branch.
+		httputil.WriteJSON(w, http.StatusOK, map[string]any{
+			"enabled":      false,
+			"bank_code":    "",
+			"account_no":   "",
+			"account_name": "",
+		})
+		return
+	}
+	httputil.WriteJSON(w, http.StatusOK, map[string]any{
+		"enabled":      true,
+		"bank_code":    cfg.VietQR.BankCode,
+		"account_no":   cfg.VietQR.AccountNo,
+		"account_name": cfg.VietQR.AccountName,
+	})
+}
+
+// amountPattern matches NUMERIC(15,2) shape — up to 13 integer digits, up to
+// 2 fractional digits, no leading sign. Mirrors the validation in
+// settings/handler.go for pos_config.cash_float_default.
+var amountPattern = regexp.MustCompile(`^\d{1,13}(\.\d{1,2})?$`)
+
+// ConfirmVietQR handles POST /br/{branchId}/orders/{id}/payment/vietqr/confirm.
+// Mounted standalone in main.go because the URL spans both payment + order
+// scopes. The atomic side effects (insert payment, mark order paid, post GL,
+// finalise paid order, enqueue receipt) all live inside the SQL RPC — we
+// just bridge HTTP → RPC and surface the JSONB result verbatim.
+func (h *Handler) ConfirmVietQR(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.ClaimsFrom(r.Context())
+	if claims == nil {
+		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	branchID, err := branchFromContext(r, claims.TenantID, h.pool)
+	if err != nil {
+		httputil.WriteError(w, http.StatusNotFound, "branch not found")
+		return
+	}
+	orderID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		httputil.WriteError(w, http.StatusBadRequest, "invalid order id")
+		return
+	}
+
+	var req struct {
+		Amount string `json:"amount"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httputil.WriteError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if !amountPattern.MatchString(req.Amount) {
+		httputil.WriteError(w, http.StatusUnprocessableEntity, "amount must be a non-negative decimal string with at most 2 fractional digits")
+		return
+	}
+
+	const q = `SELECT public.confirm_vietqr_payment($1, $2, $3, $4::NUMERIC(15,2), $5::UUID)`
+	var resultJSON []byte
+	if err := h.pool.QueryRow(r.Context(), q,
+		claims.TenantID, branchID, orderID, req.Amount, claims.UserUUID,
+	).Scan(&resultJSON); err != nil {
+		// confirm_vietqr_payment raises distinct error codes for "order not
+		// found", "amount mismatch", "branch scope mismatch" — surface a
+		// generic 500 here; the smoke test asserts those exact paths via
+		// SQL fixtures so we don't need to enumerate them in HTTP-shape.
+		httputil.WriteError(w, http.StatusInternalServerError, "failed to confirm vietqr payment")
+		return
+	}
+	httputil.WriteJSON(w, http.StatusOK, json.RawMessage(resultJSON))
+}
+
+// branchFromContext validates that the {branchId} URL param exists and belongs
+// to the caller's tenant. Returns the parsed branchID on success.
+func branchFromContext(r *http.Request, tenantID int64, pool *pgxpool.Pool) (int64, error) {
+	branchID, err := strconv.ParseInt(chi.URLParam(r, "branchId"), 10, 64)
+	if err != nil {
+		return 0, errors.New("invalid branch id")
+	}
+	var exists bool
+	if err := pool.QueryRow(r.Context(),
+		`SELECT EXISTS(SELECT 1 FROM public.branches WHERE id = $1 AND tenant_id = $2)`,
+		branchID, tenantID,
+	).Scan(&exists); err != nil {
+		return 0, err
+	}
+	if !exists {
+		return 0, pgx.ErrNoRows
+	}
+	return branchID, nil
+}
