@@ -456,9 +456,10 @@ COMPANY_TAX_CODE=<MST = SINVOICE_USERNAME prefix>
 ```
 
 Auth flow:
-1. `POST /auth/login` (BasicAuth) → trả Bearer token
-2. `POST /services/einvoiceapplication/api/InvoiceUtilsWS/createInvoice` (Bearer) → tạo HĐ
-3. `POST /services/einvoiceapplication/api/InvoiceUtilsWS/getInvoiceFile` → lấy PDF/XML
+1. `POST /auth/login` với JSON `{ username, password }` → trả Bearer token
+2. `POST /services/einvoiceapplication/api/InvoiceAPI/InvoiceWS/createInvoice/{supplierTaxCode}` (Bearer) → tạo HĐ
+3. `POST /services/einvoiceapplication/api/InvoiceAPI/InvoiceWS/searchInvoiceByTransactionUuid` với form `{ supplierTaxCode, transactionUuid }` → tra cứu trạng thái
+4. `POST /services/einvoiceapplication/api/InvoiceAPI/InvoiceUtilsWS/getInvoiceRepresentationFile` → lấy PDF/XML
 
 **transactionUuid format**: hàm `buildSinvoiceTransactionUuid(invoiceId)` (viettel-sinvoice.ts) tạo 32-char deterministic key dạng `HDDT<...>` để idempotent retry. Persist `provider_ref` BEFORE call để tránh duplicate khi retry.
 

@@ -23,9 +23,9 @@ import type {
  *   - 0100109106-501/504/505/507/899  — kiểm tra dữ liệu đầu vào (server tính lại)
  *   - 0100109106-509                  — KHÔNG kiểm tra (server nhận như input)
  *
- * Auth methods (HDSD §II):
- *   - BasicAuth per-request (password sent each call)
- *   - Bearer accessToken via /auth/login (this impl uses Bearer with token cache)
+ * Auth methods (HDSD §II + Postman §5.5):
+ *   - POST /auth/login with JSON { username, password }.
+ *   - Bearer accessToken from login for subsequent API calls.
  *
  * Strict validators we must satisfy (per error doc v1):
  *   - 43: |qty × unitPrice − itemTotalAmountWithoutTax| < 1
@@ -100,10 +100,12 @@ interface SinvoiceCreateResult {
   supplierTaxCode?: string;
 }
 
-interface SinvoiceStatusResult {
+interface SinvoiceStatusSearchResult {
   invoiceNo?: string;
-  paymentStatus?: number;
-  invoiceStatus?: number;
+  status?: string | null;
+  exchangeStatus?: string | null;
+  exchangeDes?: string | null;
+  codeOfTax?: string | null;
 }
 
 /**
@@ -246,17 +248,16 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
   }
 
   private async login(): Promise<string> {
-    const basic = Buffer.from(
-      `${this.username}:${this.password}`,
-      "utf-8",
-    ).toString("base64");
-
     const res = await fetch(`${this.baseUrl}${LOGIN_PATH}`, {
       method: "POST",
       headers: {
-        Authorization: `Basic ${basic}`,
         Accept: "application/json",
+        "Content-Type": "application/json",
       },
+      body: JSON.stringify({
+        username: this.username,
+        password: this.password,
+      }),
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
 
@@ -303,10 +304,10 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
       fetch(`${this.baseUrl}${API_PREFIX}${apiPath}`, {
         ...init,
         headers: {
-          ...init.headers,
-          Authorization: `Bearer ${auth}`,
           Accept: "application/json",
           "Content-Type": "application/json",
+          ...init.headers,
+          Authorization: `Bearer ${auth}`,
         },
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
@@ -469,18 +470,20 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
 
   async getStatus(providerRef: string): Promise<InvoiceStatus> {
     try {
+      const body = new URLSearchParams({
+        supplierTaxCode: this.taxCode,
+        transactionUuid: providerRef,
+      });
       const res = await this.authedFetch(
-        `/InvoiceAPI/InvoiceUtilsWS/getInvoiceById`,
+        `/InvoiceAPI/InvoiceWS/searchInvoiceByTransactionUuid`,
         {
           method: "POST",
-          body: JSON.stringify({
-            supplierTaxCode: this.taxCode,
-            transactionUuid: providerRef,
-          }),
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body,
         },
       );
       const envelope =
-        (await res.json()) as SinvoiceEnvelope<SinvoiceStatusResult>;
+        (await res.json()) as SinvoiceEnvelope<SinvoiceStatusSearchResult[]>;
       if (!res.ok || envelope.errorCode) {
         const description =
           typeof envelope.description === "string"
@@ -492,27 +495,55 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
           error: `${envelope.errorCode ?? res.status}:${description}`,
         };
       }
-      const r = envelope.result;
-      // Sinvoice invoiceStatus: 0=Pending, 1=Signed, 5=Cancelled, 6=Replaced
-      const map: Record<number, InvoiceStatus["status"]> = {
-        0: "submitted",
-        1: "issued",
-        5: "cancelled",
-        6: "replaced",
-      };
-      const code = r?.invoiceStatus;
-      const mapped = code !== undefined ? map[code] : undefined;
-      if (mapped === undefined) {
+      const r = Array.isArray(envelope.result) ? envelope.result[0] : null;
+      if (!r) {
         return {
           status: "draft",
-          invoiceNumber: r?.invoiceNo ?? null,
-          error: `unknown_invoice_status_code:${code ?? "missing"}`,
+          invoiceNumber: null,
+          error: "invoice_not_found",
         };
       }
+
+      const exchangeStatus = (r.exchangeStatus ?? "").toUpperCase();
+      const textualStatus = `${r.status ?? ""} ${exchangeStatus}`.toLowerCase();
+      const invoiceNumber = r.invoiceNo ?? null;
+
+      if (
+        textualStatus.includes("cancel") ||
+        textualStatus.includes("hủy") ||
+        textualStatus.includes("huy")
+      ) {
+        return { status: "cancelled", invoiceNumber, error: null };
+      }
+      if (
+        textualStatus.includes("replace") ||
+        textualStatus.includes("thay thế") ||
+        textualStatus.includes("thay the")
+      ) {
+        return { status: "replaced", invoiceNumber, error: null };
+      }
+      if (exchangeStatus.includes("DIS_APPROVED")) {
+        return {
+          status: "submitted",
+          invoiceNumber,
+          error: `cqt_rejected:${r.exchangeDes ?? exchangeStatus}`,
+        };
+      }
+      if (
+        r.codeOfTax ||
+        (exchangeStatus.includes("APPROVED") &&
+          !exchangeStatus.includes("DIS_APPROVED"))
+      ) {
+        return { status: "issued", invoiceNumber, error: null };
+      }
+      if (invoiceNumber) {
+        return { status: "submitted", invoiceNumber, error: null };
+      }
+
       return {
-        status: mapped,
-        invoiceNumber: r?.invoiceNo ?? null,
-        error: null,
+        status: "draft",
+        invoiceNumber,
+        error: `unknown_exchange_status:${exchangeStatus || "missing"}`,
       };
     } catch (e) {
       return {

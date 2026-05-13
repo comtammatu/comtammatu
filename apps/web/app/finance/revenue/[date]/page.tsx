@@ -26,6 +26,7 @@ import {
 import { formatVND } from "@comtammatu/shared/format";
 import { AppPage, AppPageHeader } from "@/components/surface";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
+import { formatVNTime } from "@/_lib/format-datetime";
 import { fetchAccessibleBranches, fetchOrdersForDay } from "../../actions";
 
 interface OrderRow {
@@ -330,9 +331,6 @@ export default async function RevenueDrillPage({
                   </TableHeader>
                   <TableBody>
                     {orders.map((o) => {
-                      const paid = new Date(o.paid_at);
-                      const hh = String(paid.getHours()).padStart(2, "0");
-                      const mm = String(paid.getMinutes()).padStart(2, "0");
                       const invoiceLabel =
                         o.invoice_status === "not_required"
                           ? "Không yêu cầu"
@@ -347,7 +345,7 @@ export default async function RevenueDrillPage({
                       return (
                         <TableRow key={o.order_id}>
                           <TableCell className="tabular-nums">
-                            {hh}:{mm}
+                            {formatVNTime(o.paid_at)}
                           </TableCell>
                           <TableCell className="font-mono text-xs">
                             {o.order_number}

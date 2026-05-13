@@ -5,6 +5,7 @@ import {
   buildSinvoiceItemInfo,
   buildSinvoiceTransactionUuid,
   deriveInvoiceTypeFromTemplate,
+  ViettelSinvoiceProvider,
 } from "../impl/viettel-sinvoice";
 
 const item = (
@@ -177,6 +178,156 @@ test("buildSinvoiceTransactionUuid: handles huge ids by truncating", () => {
   const uuid = buildSinvoiceTransactionUuid(huge);
   assert.equal(uuid.length, 32);
   assert.ok(uuid.startsWith("HDDT"));
+});
+
+test("createInvoice: login request uses JSON credentials body", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{
+    input: Parameters<typeof fetch>[0];
+    init: NonNullable<Parameters<typeof fetch>[1]>;
+  }> = [];
+
+  globalThis.fetch = (async (input, init) => {
+    const requestInit = init ?? {};
+    calls.push({ input, init: requestInit });
+
+    if (String(input).endsWith("/auth/login")) {
+      return new Response(
+        JSON.stringify({ access_token: "test-token", expires_in: 3600 }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    return new Response(
+      JSON.stringify({
+        result: {
+          invoiceNo: "SBOX-1",
+          supplierTaxCode: "0100109106-509",
+        },
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  }) as typeof fetch;
+
+  try {
+    const provider = new ViettelSinvoiceProvider({
+      username: "0100109106-509",
+      password: "test-password",
+      taxCode: "0100109106-509",
+      templateCode: "2/001",
+      invoiceSeries: "C22TYY",
+      baseUrl: "https://example.test",
+    });
+
+    const result = await provider.createInvoice({
+      orderId: 1,
+      orderNumber: "SBOX-1",
+      sellerName: "Com Tam Ma Tu",
+      sellerTaxCode: "0100109106-509",
+      sellerAddress: "Sandbox",
+      buyerName: "Khach le sandbox",
+      items: [item("Com tam sandbox", 1, 100_000)],
+      subtotal: 92_593,
+      vatRate: 8,
+      vatAmount: 7_407,
+      totalAmount: 100_000,
+    });
+
+    assert.equal(result.status, "submitted");
+
+    const loginCall = calls.find((call) =>
+      String(call.input).endsWith("/auth/login"),
+    );
+    assert.ok(loginCall, "expected /auth/login to be called");
+    const headers = new Headers(loginCall.init.headers);
+    assert.equal(headers.get("Content-Type"), "application/json");
+    assert.equal(headers.has("Authorization"), false);
+    assert.equal(
+      loginCall.init.body,
+      JSON.stringify({
+        username: "0100109106-509",
+        password: "test-password",
+      }),
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("getStatus: searches by transactionUuid with form body", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{
+    input: Parameters<typeof fetch>[0];
+    init: NonNullable<Parameters<typeof fetch>[1]>;
+  }> = [];
+
+  globalThis.fetch = (async (input, init) => {
+    const requestInit = init ?? {};
+    calls.push({ input, init: requestInit });
+
+    if (String(input).endsWith("/auth/login")) {
+      return new Response(
+        JSON.stringify({ access_token: "test-token", expires_in: 3600 }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    return new Response(
+      JSON.stringify({
+        errorCode: null,
+        description: null,
+        transactionUuid: "HDDT0000000000000000000000000001",
+        result: [
+          {
+            invoiceNo: "C26TYY308",
+            exchangeStatus: "INVOICE_HAS_CODE_APPROVED",
+            codeOfTax: "ABC123",
+          },
+        ],
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  }) as typeof fetch;
+
+  try {
+    const provider = new ViettelSinvoiceProvider({
+      username: "0100109106-509",
+      password: "test-password",
+      taxCode: "0100109106-509",
+      templateCode: "2/001",
+      invoiceSeries: "C22TYY",
+      baseUrl: "https://example.test",
+    });
+
+    const status = await provider.getStatus(
+      "HDDT0000000000000000000000000001",
+    );
+
+    assert.deepEqual(status, {
+      status: "issued",
+      invoiceNumber: "C26TYY308",
+      error: null,
+    });
+
+    const statusCall = calls.find((call) =>
+      String(call.input).endsWith(
+        "/InvoiceAPI/InvoiceWS/searchInvoiceByTransactionUuid",
+      ),
+    );
+    assert.ok(statusCall, "expected searchInvoiceByTransactionUuid call");
+    const headers = new Headers(statusCall.init.headers);
+    assert.equal(
+      headers.get("Content-Type"),
+      "application/x-www-form-urlencoded",
+    );
+    assert.ok(statusCall.init.body instanceof URLSearchParams);
+    assert.equal(
+      statusCall.init.body.toString(),
+      "supplierTaxCode=0100109106-509&transactionUuid=HDDT0000000000000000000000000001",
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test("deriveInvoiceTypeFromTemplate: TT78 '1/001' → '1' (HĐ GTGT)", () => {

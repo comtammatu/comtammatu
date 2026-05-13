@@ -1061,6 +1061,7 @@ function countItems(order: PosSessionOrder): number {
 function formatDateTime(value: string | null): string {
   if (!value) return "-";
   return new Intl.DateTimeFormat("vi-VN", {
+    timeZone: "Asia/Ho_Chi_Minh",
     day: "2-digit",
     month: "2-digit",
     hour: "2-digit",
@@ -1070,6 +1071,7 @@ function formatDateTime(value: string | null): string {
 
 function formatTime(value: string): string {
   return new Intl.DateTimeFormat("vi-VN", {
+    timeZone: "Asia/Ho_Chi_Minh",
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(value));

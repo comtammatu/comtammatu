@@ -54,6 +54,7 @@ import {
 import { formatVND } from "@comtammatu/shared/format";
 import { fetchReconciliationByDay } from "../actions";
 import { messages } from "@lib/messages";
+import { formatVNDateTime } from "@/_lib/format-datetime";
 import {
   fetchReconciliation,
   fetchReconciliationDrilldown,
@@ -497,7 +498,7 @@ export function ReconciliationClient({
                         {row.ref_label}
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
-                        {new Date(row.ref_date).toLocaleString("vi-VN")}
+                        {formatVNDateTime(row.ref_date)}
                       </TableCell>
                       <TableCell className="text-sm">
                         {branchName(row.branch_id)}
@@ -888,7 +889,7 @@ function DesyncTable({
                 </TableCell>
                 <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
                   {r.payment_paid_at
-                    ? new Date(r.payment_paid_at).toLocaleString("vi-VN")
+                    ? formatVNDateTime(r.payment_paid_at)
                     : messages.finance.common.noValue}
                 </TableCell>
                 <TableCell className="text-right text-xs text-muted-foreground">

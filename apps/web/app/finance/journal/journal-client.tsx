@@ -32,6 +32,7 @@ import { Plus as IconPlus, Trash as IconTrash } from "lucide-react";
 import { ACTIONS_VI, ERRORS_VI, FORM_VI } from "@comtammatu/shared/messages";
 import { FormattedNumberInput } from "@/components/form";
 import { messages } from "@lib/messages";
+import { getVNDateString } from "@/_lib/format-datetime";
 import { createJournalEntry, postJournalEntry } from "../journal-actions";
 import type { JournalEntryRow, AccountOption } from "./page";
 
@@ -64,7 +65,7 @@ export function JournalClient({ entries: initial, accounts }: Props) {
     refType: ReferenceType;
     refId: string;
   }>({
-    entryDate: new Date().toISOString().slice(0, 10),
+    entryDate: getVNDateString(),
     description: "",
     refType: "manual",
     refId: "",
@@ -136,7 +137,7 @@ export function JournalClient({ entries: initial, accounts }: Props) {
       setEntries((prev) => [newEntry, ...prev]);
       setOpen(false);
       setForm({
-        entryDate: new Date().toISOString().slice(0, 10),
+        entryDate: getVNDateString(),
         description: "",
         refType: "manual",
         refId: "",

@@ -34,6 +34,7 @@ import {
 import { AppToolbar } from "@/components/surface";
 import { TableEmptyStateRow } from "@/components/table-empty-state-row";
 import { messages } from "@lib/messages";
+import { formatVNDate, getVNMonthYear } from "@/_lib/format-datetime";
 import {
   openFiscalPeriod,
   closeFiscalPeriod,
@@ -76,11 +77,11 @@ export function PeriodsClient({ periods: initial }: Props) {
 
   function handleOpenCurrent() {
     setError(null);
-    const now = new Date();
+    const now = getVNMonthYear();
     startTransition(async () => {
       const res = await openFiscalPeriod({
-        year: now.getFullYear(),
-        month: now.getMonth() + 1,
+        year: now.year,
+        month: now.month,
       });
       if (!res.success) {
         setError(res.error ?? ERRORS_VI.unknown);
@@ -215,9 +216,7 @@ export function PeriodsClient({ periods: initial }: Props) {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {p.closed_at
-                        ? new Date(p.closed_at).toLocaleDateString("vi-VN")
-                        : "—"}
+                      {formatVNDate(p.closed_at)}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground max-w-xs truncate">
                       {p.notes ?? "—"}

@@ -20,6 +20,10 @@ import { AppSection } from "@/components/surface";
 import { TableEmptyStateRow } from "@/components/table-empty-state-row";
 import { BusinessDateField, SelectField } from "@/components/form";
 import {
+  formatVNDateTime,
+  getYesterdayVNDateString,
+} from "@/_lib/format-datetime";
+import {
   listSummaryRunQueue,
   runDailySummaryForBranch,
 } from "../summary-invoice-actions";
@@ -49,25 +53,8 @@ const TRIGGER_LABEL: Record<SummaryQueueRow["trigger_source"], string> = {
   manual: "Thủ công",
 };
 
-function getYesterdayInVietnam(): string {
-  const VN_OFFSET_MS = 7 * 60 * 60 * 1000;
-  const nowVn = new Date(Date.now() + VN_OFFSET_MS);
-  const yesterday = new Date(nowVn.getTime() - 24 * 60 * 60 * 1000);
-  const y = yesterday.getUTCFullYear();
-  const m = String(yesterday.getUTCMonth() + 1).padStart(2, "0");
-  const d = String(yesterday.getUTCDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
-
 function formatDateTime(iso: string | null): string {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleString("vi-VN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return formatVNDateTime(iso);
 }
 
 const formSchema = z.object({
@@ -109,7 +96,7 @@ export function SummaryClient({ initialBranches, initialQueue }: Props) {
     resolver: zodResolver(formSchema),
     defaultValues: {
       branchId: initialBranches[0] ? String(initialBranches[0].id) : "",
-      summaryDate: getYesterdayInVietnam(),
+      summaryDate: getYesterdayVNDateString(),
     },
   });
 

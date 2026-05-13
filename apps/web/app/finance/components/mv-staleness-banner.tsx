@@ -7,6 +7,7 @@ import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { cn } from "@comtammatu/ui/lib/utils";
 import { messages } from "@lib/messages";
+import { formatVNTime } from "@/_lib/format-datetime";
 import { refreshMaterializedViews } from "../actions";
 
 const stalenessCopy = messages.finance.staleness;
@@ -36,10 +37,7 @@ function diffMinutes(iso: string): number {
 }
 
 function formatTimestamp(iso: string): string {
-  const d = new Date(iso);
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mm = String(d.getMinutes()).padStart(2, "0");
-  return `${hh}:${mm}`;
+  return formatVNTime(iso);
 }
 
 export function MvStalenessBanner({

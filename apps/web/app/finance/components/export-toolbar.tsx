@@ -5,6 +5,7 @@ import { Copy, Download } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { cn } from "@comtammatu/ui/lib/utils";
 import { messages } from "@lib/messages";
+import { formatVNDateTime } from "@/_lib/format-datetime";
 
 const exportCopy = messages.finance.exportToolbar;
 
@@ -71,7 +72,7 @@ function buildCsv(
     lines.push(escape(exportCopy.headerExtra(signature.extra.join(" · "))));
   }
   lines.push(
-    escape(exportCopy.headerExportedAt(new Date().toLocaleString("vi-VN"))),
+    escape(exportCopy.headerExportedAt(formatVNDateTime(new Date()))),
   );
   lines.push("");
 

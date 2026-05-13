@@ -17,6 +17,7 @@ import { SYSTEM_SETTING_KEYS } from "@comtammatu/shared/settings";
 import { ensurePaymentProvidersRegistered } from "../../../../lib/payment-providers-init";
 import { getAuthContextWithPermission } from "../../_lib/auth";
 import { createTaxInvoice } from "../../../finance/actions";
+import { getVNDateString, getVNDayUtcRange } from "@/_lib/format-datetime";
 
 type PosSupabase = NonNullable<
   Awaited<ReturnType<typeof getAuthContextWithPermission>>
@@ -967,12 +968,8 @@ export async function fetchDailyReconciliation(
   const targetDate =
     parsedDate.success && parsedDate.data
       ? parsedDate.data
-      : new Date().toISOString().split("T")[0]!;
-
-  // Next day for exclusive upper bound (avoids sub-millisecond boundary bug)
-  const nextDay = new Date(targetDate + "T00:00:00");
-  nextDay.setDate(nextDay.getDate() + 1);
-  const nextDayStr = nextDay.toISOString().split("T")[0]!;
+      : getVNDateString();
+  const { startIso, endIso } = getVNDayUtcRange(targetDate);
 
   // Fetch orders for the day
   const { data: orders, error: ordersErr } = await supabase
@@ -980,8 +977,8 @@ export async function fetchDailyReconciliation(
     .select("id, total_amount, status, payment_status, payment_method")
     .eq("branch_id", parsedBranch.data)
     .eq("tenant_id", claims.tenant_id)
-    .gte("created_at", `${targetDate}T00:00:00`)
-    .lt("created_at", `${nextDayStr}T00:00:00`);
+    .gte("created_at", startIso)
+    .lt("created_at", endIso);
 
   if (ordersErr) {
     return { success: false, error: "Không thể tải dữ liệu đối soát." };
@@ -993,8 +990,8 @@ export async function fetchDailyReconciliation(
     .select("id, method, amount, status")
     .eq("branch_id", parsedBranch.data)
     .eq("tenant_id", claims.tenant_id)
-    .gte("created_at", `${targetDate}T00:00:00`)
-    .lt("created_at", `${nextDayStr}T00:00:00`);
+    .gte("created_at", startIso)
+    .lt("created_at", endIso);
 
   if (paymentsErr) {
     return { success: false, error: "Không thể tải dữ liệu thanh toán." };

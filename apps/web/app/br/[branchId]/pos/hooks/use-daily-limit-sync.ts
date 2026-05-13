@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
+import { getVNDateString } from "@/_lib/format-datetime";
 import type { MenuItemDailyLimit } from "../pos-menu-types";
 import type { DailyLimitStore } from "../_providers/daily-limit-store";
 
@@ -38,15 +39,7 @@ export interface UseDailyLimitSyncArgs {
  * mutating today's local map with stale data.
  */
 function todayHCM(): string {
-  const now = new Date();
-  // Asia/Ho_Chi_Minh = UTC+7, no DST. Convert via UTC offset to avoid
-  // host-locale skew (browsers in other timezones still see the right date).
-  const utcMs = now.getTime() + now.getTimezoneOffset() * 60_000;
-  const hcm = new Date(utcMs + 7 * 60 * 60_000);
-  const y = hcm.getFullYear();
-  const m = String(hcm.getMonth() + 1).padStart(2, "0");
-  const d = String(hcm.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
+  return getVNDateString();
 }
 
 interface LimitRow {

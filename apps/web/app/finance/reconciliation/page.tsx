@@ -3,6 +3,10 @@ import { ArrowLeft as IconArrowLeft } from "lucide-react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { Button } from "@comtammatu/ui/components/button";
 import { AppPage, AppPageHeader } from "@/components/surface";
+import {
+  getVNDateString,
+  getVNMonthStartDateString,
+} from "@/_lib/format-datetime";
 import { ReconciliationClient } from "./reconciliation-client";
 
 interface Props {
@@ -38,12 +42,9 @@ export default async function ReconciliationPage({ searchParams }: Props) {
     name: b.name,
   }));
 
-  // Default range: current month-to-date
-  const now = new Date();
-  const defaultStart = `${now.getFullYear()}-${String(
-    now.getMonth() + 1,
-  ).padStart(2, "0")}-01`;
-  const defaultEnd = now.toISOString().slice(0, 10);
+  // Default range: current Vietnam-local month-to-date.
+  const defaultStart = getVNMonthStartDateString();
+  const defaultEnd = getVNDateString();
 
   return (
     <AppPage>

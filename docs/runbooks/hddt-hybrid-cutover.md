@@ -38,6 +38,7 @@ CRON_SECRET=<32+ char random>          # Bearer cho /api/cron/* — đã có s�
 > ⚠️ **`HDDT_STATE_MACHINE_ENABLED` không tồn tại trong code.** Plan ban đầu dự kiến có toggle nhưng thực tế ship state machine direct (xem `apps/web/app/finance/actions.ts:58-446`). Nếu cần rollback B2B refactor (PR-3) — revert commit + redeploy. Chỉ `HDDT_DAILY_SUMMARY_ENABLED` còn vai trò kill-switch cho B2C batch path.
 
 > **Provider switch logic:** `apps/web/lib/invoice-provider-init.ts:22-55` đọc `INVOICE_PROVIDER` env tại boot, register đúng 1 singleton (MISA hoặc Sinvoice). Đổi env → cần redeploy hoặc edge function reload.
+> Sinvoice auth dùng `POST /auth/login` với JSON `{ username, password }`, sau đó dùng Bearer token cho các request API. Tra cứu trạng thái dùng `InvoiceWS/searchInvoiceByTransactionUuid` với form body `{ supplierTaxCode, transactionUuid }`.
 
 ### Provider = `misa`
 

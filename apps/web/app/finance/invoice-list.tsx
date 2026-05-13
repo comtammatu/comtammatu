@@ -46,7 +46,7 @@ import { getArchiveDownloadUrl } from "./archive-actions";
 import { replaceTaxInvoice } from "./replace-invoice-actions";
 import type { InvoiceRow } from "./_lib/finance-types";
 import { TableEmptyStateRow } from "@/admin/components/table-empty-state-row";
-import { formatVNDateTime } from "@/_lib/format-datetime";
+import { formatVNDateTime, getVNDateString } from "@/_lib/format-datetime";
 
 import { FORM_VI, ORDER_VI } from "@comtammatu/shared/messages";
 const STATUS_LABEL: Record<string, string> = {
@@ -92,7 +92,7 @@ const REPLACE_AGREEMENT_MAX = 225;
 const MST_REGEX = /^\d{10}(-\d{3})?$/;
 
 function todayISODate(): string {
-  return new Date().toISOString().slice(0, 10);
+  return getVNDateString();
 }
 
 export function InvoiceList({ initialInvoices }: InvoiceListProps) {

@@ -50,6 +50,7 @@ import {
 
 import { FORM_VI } from "@comtammatu/shared/messages";
 import { messages } from "@lib/messages";
+import { getVNDateString } from "@/_lib/format-datetime";
 
 const financeCopy = messages.finance;
 
@@ -77,7 +78,7 @@ function reportLineIndentClass(level: number): string {
 export function StatementsClient() {
   const [isPending, startTransition] = useTransition();
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getVNDateString();
   const monthStart = `${today.slice(0, 7)}-01`;
   const monthOnly = today.slice(0, 7);
 

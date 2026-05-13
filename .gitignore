@@ -67,6 +67,7 @@ yarn-debug.log*
 yarn-error.log*
 codex-*.log
 codex-*.err.log
+.codex/
 
 # local screenshots (manual QA)
 pos-after*.png
