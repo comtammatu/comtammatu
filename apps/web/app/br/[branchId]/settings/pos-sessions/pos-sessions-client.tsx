@@ -32,6 +32,7 @@ import { Separator } from "@comtammatu/ui/components/separator";
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetHeader,
   SheetTitle,
 } from "@comtammatu/ui/components/sheet";
@@ -766,6 +767,27 @@ function SectionLabel({ children }: { children: ReactNode }) {
   );
 }
 
+function DetailFact({
+  label,
+  value,
+  mono,
+}: {
+  label: string;
+  value: ReactNode;
+  mono?: boolean;
+}) {
+  return (
+    <Item variant="muted" size="xs" className="items-start">
+      <ItemContent>
+        <ItemTitle className="text-xs text-muted-foreground">{label}</ItemTitle>
+        <div className={cn("font-medium", mono && "font-mono tabular-nums")}>
+          {value}
+        </div>
+      </ItemContent>
+    </Item>
+  );
+}
+
 function OrderDetailSheet({
   order,
   open,
@@ -782,27 +804,67 @@ function OrderDetailSheet({
         className="flex w-full flex-col p-0 data-[side=right]:w-full sm:max-w-lg"
       >
         <SheetHeader className="border-b px-4 pt-5 pb-3 text-left">
-          <SheetTitle>
-            {messages.settings.posSessions.orderSheetTitle(
-              order?.order_number ?? "",
-            )}
-            {order
-              ? messages.settings.posSessions.orderSheetMeta(
-                  order.order_type === "dine_in"
-                    ? messages.settings.posSessions.tableContext(
-                        order.tables?.number ?? "-",
-                        0,
-                      )
-                    : messages.settings.posSessions.takeaway,
-                  formatDateTime(order.created_at),
-                )
-              : ""}
-          </SheetTitle>
+          <div className="space-y-1 pr-8">
+            <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              {messages.settings.posSessions.orderSheetEyebrow}
+            </div>
+            <SheetTitle className="text-base font-semibold">
+              {messages.settings.posSessions.orderSheetTitle(
+                order?.order_number ?? "",
+              )}
+            </SheetTitle>
+            {order ? (
+              <SheetDescription>
+                {order.order_type === "dine_in"
+                  ? messages.settings.posSessions.tableContext(
+                      order.tables?.number ?? "-",
+                      0,
+                    )
+                  : messages.settings.posSessions.takeaway}
+                {" · "}
+                {formatDateTime(order.created_at)}
+              </SheetDescription>
+            ) : null}
+          </div>
         </SheetHeader>
 
         <ScrollArea className="min-h-0 flex-1">
           {order ? (
             <div className="space-y-4 px-4 py-4">
+              <div className="grid gap-2 sm:grid-cols-2">
+                <DetailFact
+                  label={messages.settings.posSessions.orderNumber}
+                  value={order.order_number}
+                  mono
+                />
+                <DetailFact
+                  label={messages.settings.posSessions.orderContext}
+                  value={
+                    order.order_type === "dine_in"
+                      ? messages.settings.posSessions.tableContext(
+                          order.tables?.number ?? "-",
+                          0,
+                        )
+                      : messages.settings.posSessions.takeaway
+                  }
+                />
+                <DetailFact
+                  label={messages.settings.posSessions.orderCreatedAt}
+                  value={formatDateTime(order.created_at)}
+                  mono
+                />
+                <DetailFact
+                  label={messages.settings.posSessions.customerCountLabel}
+                  value={
+                    order.customer_count > 0
+                      ? messages.settings.posSessions.customerCount(
+                          order.customer_count,
+                        )
+                      : messages.settings.posSessions.noValue
+                  }
+                />
+              </div>
+
               <div className="flex flex-wrap gap-2">
                 <Badge
                   variant={
@@ -813,6 +875,7 @@ function OrderDetailSheet({
                         : "outline"
                   }
                 >
+                  {messages.settings.posSessions.orderStatus}:{" "}
                   {ORDER_STATUS_LABEL[order.status] ?? order.status}
                 </Badge>
                 <Badge
@@ -820,19 +883,13 @@ function OrderDetailSheet({
                     order.payment_status === "paid" ? "secondary" : "outline"
                   }
                 >
+                  {messages.settings.posSessions.payment}:{" "}
                   {order.payment_status === "paid"
                     ? messages.settings.posSessions.paidWithMethod(
                         paymentMethodLabel(order.payment_method),
                       )
                     : messages.settings.posSessions.unpaid}
                 </Badge>
-                {order.customer_count > 0 ? (
-                  <Badge variant="outline">
-                    {messages.settings.posSessions.customerCount(
-                      order.customer_count,
-                    )}
-                  </Badge>
-                ) : null}
               </div>
 
               <div>
