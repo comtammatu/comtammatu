@@ -85,6 +85,8 @@ interface TokenCache {
 
 interface SinvoiceEnvelope<TResult> {
   errorCode?: string | number | null;
+  message?: string | null;
+  error?: string | null;
   description?: string | null;
   result?: TResult | null;
 }
@@ -153,13 +155,19 @@ export function deriveInvoiceTypeFromTemplate(templateCode: string): string {
 
 export interface SinvoiceItemInfo {
   lineNumber: number;
+  selection: 1;
   itemCode: string;
   itemName: string;
   unitName: string;
   unitPrice: number;
   quantity: number;
   itemTotalAmountWithoutTax: number;
+  itemTotalAmountAfterDiscount: number;
+  itemTotalAmountWithTax: number;
+  discount: number;
   itemDiscount: number;
+  itemNote: null;
+  isIncreaseItem: null;
   taxPercentage: number;
   taxAmount: number;
 }
@@ -204,13 +212,19 @@ export function buildSinvoiceItemInfo(
 
     return {
       lineNumber: index + 1,
+      selection: 1,
       itemCode: "",
       itemName: item.name,
       unitName: item.unit || "Phần",
       unitPrice: netUnitPrice,
       quantity: qty,
       itemTotalAmountWithoutTax: lineNet,
+      itemTotalAmountAfterDiscount: lineNet,
+      itemTotalAmountWithTax: lineNet + lineTax,
+      discount: 0,
       itemDiscount: 0,
+      itemNote: null,
+      isIncreaseItem: null,
       taxPercentage: vatRate,
       taxAmount: lineTax,
     };
@@ -325,6 +339,27 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
     return res;
   }
 
+  private async readEnvelope<TResult>(
+    res: Response,
+  ): Promise<SinvoiceEnvelope<TResult>> {
+    const text = await res.text();
+    if (!text.trim()) return {};
+    try {
+      return JSON.parse(text) as SinvoiceEnvelope<TResult>;
+    } catch {
+      return { description: text };
+    }
+  }
+
+  private describeError(
+    envelope: SinvoiceEnvelope<unknown>,
+    fallback: string,
+  ): string {
+    return (
+      envelope.description ?? envelope.message ?? envelope.error ?? fallback
+    );
+  }
+
   /**
    * Detect whether caller's per-item amounts are GROSS (incl VAT) or NET.
    * B2B realtime path passes order_items.subtotal which is stored gross.
@@ -355,8 +390,6 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
       transactionUuid,
       adjustmentType: isReplacement ? "3" : "1",
       paymentStatus: true,
-      paymentType: 3,
-      paymentTypeName: "TM/CK",
       cusGetInvoiceRight: true,
       userName: this.username,
     };
@@ -387,24 +420,25 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
       generalInvoiceInfo,
       buyerInfo: {
         buyerName,
-        buyerLegalName: buyerNotGetInvoice ? "" : buyerName,
-        buyerTaxCode: request.buyerTaxCode ?? "",
-        buyerAddressLine: request.buyerAddress ?? "",
+        buyerLegalName: buyerNotGetInvoice ? null : buyerName || null,
+        buyerTaxCode: request.buyerTaxCode ?? null,
+        buyerAddressLine: request.buyerAddress ?? null,
+        buyerPhoneNumber: null,
+        buyerEmail: null,
+        buyerIdNo: null,
+        buyerIdType: null,
         buyerNotGetInvoice: buyerNotGetInvoice ? "1" : "0",
       },
-      sellerInfo: {
-        sellerLegalName: request.sellerName,
-        sellerTaxCode: request.sellerTaxCode || this.taxCode,
-        sellerAddressLine: request.sellerAddress ?? "",
-      },
-      payments: [{ paymentMethodName: "TM/CK" }],
+      payments: [{ paymentMethod: "3", paymentMethodName: "TM/CK" }],
       itemInfo,
       summarizeInfo: {
         sumOfTotalLineAmountWithoutTax: sumLineNet,
+        totalAmountAfterDiscount: sumLineNet,
         totalAmountWithoutTax: sumLineNet,
         totalTaxAmount: sumLineTax,
         totalAmountWithTax: totalGross,
         discountAmount: 0,
+        totalAmountWithTaxInWords: null,
       },
       taxBreakdowns: [
         {
@@ -421,8 +455,7 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
         { method: "POST", body: JSON.stringify(body) },
       );
 
-      const envelope =
-        (await res.json()) as SinvoiceEnvelope<SinvoiceCreateResult>;
+      const envelope = await this.readEnvelope<SinvoiceCreateResult>(res);
 
       if (!res.ok || envelope.errorCode) {
         return {
@@ -430,9 +463,11 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
           invoiceNumber: null,
           providerRef: transactionUuid,
           providerData: {
+            httpStatus: res.status,
             errorCode: envelope.errorCode ?? res.status,
-            description: envelope.description ?? "create_invoice_failed",
+            description: this.describeError(envelope, "create_invoice_failed"),
             transactionUuid,
+            response: JSON.parse(JSON.stringify(envelope)),
           },
         };
       }

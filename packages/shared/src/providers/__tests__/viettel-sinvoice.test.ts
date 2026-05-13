@@ -314,16 +314,106 @@ test("createInvoice: sends buyerNotGetInvoice flag for no-buyer-info sales", asy
     const body = JSON.parse(String(createCall.init.body)) as {
       buyerInfo: {
         buyerName?: string;
-        buyerLegalName?: string;
-        buyerTaxCode?: string;
+        buyerLegalName?: string | null;
+        buyerTaxCode?: string | null;
         buyerNotGetInvoice?: string;
+      };
+      payments?: Array<{ paymentMethod?: string; paymentMethodName?: string }>;
+      sellerInfo?: unknown;
+      itemInfo?: Array<{
+        selection?: number;
+        itemTotalAmountWithoutTax?: number;
+        itemTotalAmountAfterDiscount?: number;
+        itemTotalAmountWithTax?: number;
+        discount?: number;
+        itemDiscount?: number;
+      }>;
+      summarizeInfo?: {
+        totalAmountAfterDiscount?: number;
+        totalAmountWithoutTax?: number;
+        totalTaxAmount?: number;
+        totalAmountWithTax?: number;
       };
     };
 
     assert.equal(body.buyerInfo.buyerName, "Người mua không lấy hóa đơn");
-    assert.equal(body.buyerInfo.buyerLegalName, "");
-    assert.equal(body.buyerInfo.buyerTaxCode, "");
+    assert.equal(body.buyerInfo.buyerLegalName, null);
+    assert.equal(body.buyerInfo.buyerTaxCode, null);
     assert.equal(body.buyerInfo.buyerNotGetInvoice, "1");
+    assert.deepEqual(body.payments, [
+      { paymentMethod: "3", paymentMethodName: "TM/CK" },
+    ]);
+    assert.equal(body.sellerInfo, undefined);
+
+    const [line] = body.itemInfo ?? [];
+    assert.ok(line);
+    assert.equal(line.selection, 1);
+    assert.equal(line.itemTotalAmountAfterDiscount, 92_593);
+    assert.equal(line.itemTotalAmountWithTax, 100_000);
+    assert.equal(line.discount, 0);
+    assert.equal(line.itemDiscount, 0);
+    assert.equal(body.summarizeInfo?.totalAmountAfterDiscount, 92_593);
+    assert.equal(body.summarizeInfo?.totalAmountWithoutTax, 92_593);
+    assert.equal(body.summarizeInfo?.totalTaxAmount, 7_407);
+    assert.equal(body.summarizeInfo?.totalAmountWithTax, 100_000);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("createInvoice: preserves Viettel 400 message for operator follow-up", async () => {
+  const originalFetch = globalThis.fetch;
+
+  globalThis.fetch = (async (input) => {
+    if (String(input).endsWith("/auth/login")) {
+      return new Response(
+        JSON.stringify({ access_token: "test-token", expires_in: 3600 }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    return new Response(
+      JSON.stringify({
+        message: "Mẫu hóa đơn hoặc ký hiệu hóa đơn không tồn tại",
+      }),
+      { status: 400, headers: { "Content-Type": "application/json" } },
+    );
+  }) as typeof fetch;
+
+  try {
+    const provider = new ViettelSinvoiceProvider({
+      username: "0100109106-509",
+      password: "test-password",
+      taxCode: "0100109106-509",
+      templateCode: "2/001",
+      invoiceSeries: "C22TYY",
+      baseUrl: "https://example.test",
+    });
+
+    const result = await provider.createInvoice({
+      orderId: 3,
+      orderNumber: "SBOX-3",
+      sellerName: "Com Tam Ma Tu",
+      sellerTaxCode: "0100109106-509",
+      sellerAddress: "Sandbox",
+      buyerName: "Người mua không lấy hóa đơn",
+      buyerNotGetInvoice: true,
+      items: [item("Com tam sandbox", 1, 100_000)],
+      subtotal: 92_593,
+      vatRate: 8,
+      vatAmount: 7_407,
+      totalAmount: 100_000,
+    });
+
+    assert.equal(result.status, "failed");
+    assert.equal(result.providerData?.["httpStatus"], 400);
+    assert.equal(
+      result.providerData?.["description"],
+      "Mẫu hóa đơn hoặc ký hiệu hóa đơn không tồn tại",
+    );
+    assert.deepEqual(result.providerData?.["response"], {
+      message: "Mẫu hóa đơn hoặc ký hiệu hóa đơn không tồn tại",
+    });
   } finally {
     globalThis.fetch = originalFetch;
   }
