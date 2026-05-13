@@ -213,10 +213,15 @@ type claimedEvent struct {
 // can decide whether to retry processing — for MoMo we always 204 either way,
 // so this is purely diagnostic.
 func (h *Handler) claimEvent(ctx context.Context, tenantID int64, requestID string, signatureValid bool, payload []byte) (claimedEvent, error) {
+	// ON CONFLICT target matches migration 20260603000000 — UNIQUE is now
+	// (tenant_id, provider, request_id) instead of (provider, request_id).
+	// The constraint is named explicitly so Postgres binds the conflict to
+	// the right unique constraint even if a future migration adds another
+	// partial index over the same columns.
 	const ins = `INSERT INTO public.webhook_events
 		(tenant_id, provider, request_id, signature_valid, payload, processing_status)
 		VALUES ($1, 'momo', $2, $3, $4::jsonb, 'received')
-		ON CONFLICT (provider, request_id) DO NOTHING
+		ON CONFLICT ON CONSTRAINT webhook_events_tenant_provider_request_id_key DO NOTHING
 		RETURNING id`
 	var id int64
 	err := h.pool.QueryRow(ctx, ins, tenantID, requestID, signatureValid, string(payload)).Scan(&id)
@@ -226,11 +231,13 @@ func (h *Handler) claimEvent(ctx context.Context, tenantID int64, requestID stri
 	if !errors.Is(err, pgx.ErrNoRows) {
 		return claimedEvent{}, err
 	}
-	// Conflict — read existing row to surface prior outcome.
+	// Conflict — read existing row to surface prior outcome. Scoped to the
+	// same tenant_id used by the INSERT so a poisoned cross-tenant row
+	// (legacy data from before this migration applied) can't influence us.
 	var prior string
 	if qErr := h.pool.QueryRow(ctx,
-		`SELECT processing_status FROM public.webhook_events WHERE provider = 'momo' AND request_id = $1`,
-		requestID,
+		`SELECT processing_status FROM public.webhook_events WHERE tenant_id = $1 AND provider = 'momo' AND request_id = $2`,
+		tenantID, requestID,
 	).Scan(&prior); qErr != nil {
 		return claimedEvent{fresh: false}, nil
 	}

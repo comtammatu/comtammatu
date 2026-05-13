@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/hmac"
+	cryptorand "crypto/rand"
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/base64"
@@ -319,9 +320,14 @@ func (p *Provider) VerifyWebhook(payload map[string]any, signature string) Webho
 }
 
 // shortUUID returns 8 lowercase-hex characters for orderId disambiguation.
-// crypto/rand is overkill for collision avoidance at this scale; the partner
-// code + millisecond timestamp already makes the orderId hard to guess.
+// Uses crypto/rand because time-based IDs collide under fast retry storms
+// (e.g. a cashier button-mash). Falls back to a nano-timestamp on the
+// vanishingly-rare crypto/rand error so we never block a payment on RNG.
 func shortUUID() string {
+	var b [4]byte
+	if _, err := cryptorand.Read(b[:]); err == nil {
+		return hex.EncodeToString(b[:])
+	}
 	return fmt.Sprintf("%08x", time.Now().UnixNano()&0xffffffff)
 }
 

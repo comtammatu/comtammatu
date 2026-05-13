@@ -49,6 +49,11 @@ var (
 	bankCodeRe    = regexp.MustCompile(`^[A-Za-z0-9]{1,32}$`)
 	accountNoRe   = regexp.MustCompile(`^[A-Za-z0-9]{1,32}$`)
 	accountNameRe = regexp.MustCompile(`^.{0,64}$`)
+	// MoMo secret_key + access_key are 32-character base64-safe blobs;
+	// allow 16-64 to cover sandbox keys and any reasonable rotation. Rejects
+	// admin paste errors (full PEM blobs, multi-MB junk) before they hit the
+	// signing path where the failure mode would be opaque.
+	momoKeyRe = regexp.MustCompile(`^[A-Za-z0-9+/=_-]{16,64}$`)
 )
 
 // paymentSettingsAllowedRoles gates GET/PUT /admin/settings/payments.
@@ -180,6 +185,15 @@ func validatePaymentRequest(req *PaymentSettingsRequest) string {
 	}
 	if req.VietQRAccountName != nil && !accountNameRe.MatchString(*req.VietQRAccountName) {
 		return "vietqr_account_name must be at most 64 characters"
+	}
+	if req.MoMoSecretKey != nil && *req.MoMoSecretKey != "" && !momoKeyRe.MatchString(*req.MoMoSecretKey) {
+		return "momo_secret_key must be 16-64 base64-safe characters"
+	}
+	if req.MoMoAccessKey != nil && *req.MoMoAccessKey != "" && !momoKeyRe.MatchString(*req.MoMoAccessKey) {
+		return "momo_access_key must be 16-64 base64-safe characters"
+	}
+	if req.MoMoPartnerCode != nil && *req.MoMoPartnerCode != "" && !momoKeyRe.MatchString(*req.MoMoPartnerCode) {
+		return "momo_partner_code must be 16-64 base64-safe characters"
 	}
 	return ""
 }

@@ -40,12 +40,10 @@ func (h *Handler) confirmMoMoPayment(w http.ResponseWriter, r *http.Request, bra
 		httputil.WriteError(w, http.StatusInternalServerError, "failed to load payment config")
 		return
 	}
-	if !cfg.EnableMoMo {
-		httputil.WriteError(w, http.StatusUnprocessableEntity, "momo is not enabled for this tenant")
-		return
-	}
-	if cfg.MoMo.PartnerCode == "" || cfg.MoMo.AccessKey == "" || cfg.MoMo.SecretKey == "" {
-		httputil.WriteError(w, http.StatusUnprocessableEntity, "momo credentials are not configured")
+	// Use a single generic message for both "not enabled" and "missing
+	// credentials" to avoid leaking which tenants have MoMo configured.
+	if !cfg.EnableMoMo || cfg.MoMo.PartnerCode == "" || cfg.MoMo.AccessKey == "" || cfg.MoMo.SecretKey == "" {
+		httputil.WriteError(w, http.StatusUnprocessableEntity, "payment method unavailable")
 		return
 	}
 

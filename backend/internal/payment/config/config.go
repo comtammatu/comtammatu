@@ -6,12 +6,10 @@ package config
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"strings"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -84,29 +82,53 @@ func Load(ctx context.Context, pool *pgxpool.Pool, tenantID int64) (Payment, err
 		return Payment{}, fmt.Errorf("payment/config: rows: %w", err)
 	}
 
-	get := func(key, envFallback string) string {
+	// Provider-scoped fallback gating: env vars are only consulted when the
+	// matching PAYMENT_ENABLE_* row exists AND is "true" in system_settings.
+	// Reason: in multi-tenant deployments a shared MOMO_SECRET_KEY env var
+	// would otherwise let an attacker forge webhooks against any tenant who
+	// hadn't yet configured MoMo through the admin UI. Forcing an explicit
+	// opt-in row makes the env value a per-tenant default, not a free lunch.
+	momoEnabledRow := values[keyEnableMoMo] != "" && parseBool(values[keyEnableMoMo])
+	vietqrEnabledRow := values[keyEnableVietQR] != "" && parseBool(values[keyEnableVietQR])
+
+	getDB := func(key string) string {
 		if v, ok := values[key]; ok && v != "" {
 			return v
 		}
-		if envFallback != "" {
+		return ""
+	}
+	getMoMo := func(key, envFallback string) string {
+		if v := getDB(key); v != "" {
+			return v
+		}
+		if momoEnabledRow && envFallback != "" {
+			return os.Getenv(envFallback)
+		}
+		return ""
+	}
+	getVietQR := func(key, envFallback string) string {
+		if v := getDB(key); v != "" {
+			return v
+		}
+		if vietqrEnabledRow && envFallback != "" {
 			return os.Getenv(envFallback)
 		}
 		return ""
 	}
 
 	pc := Payment{
-		EnableMoMo:   parseBool(get(keyEnableMoMo, "")),
-		EnableVietQR: parseBool(get(keyEnableVietQR, "")),
+		EnableMoMo:   momoEnabledRow,
+		EnableVietQR: vietqrEnabledRow,
 		MoMo: MoMo{
-			PartnerCode: get(keyMoMoPartnerCode, "MOMO_PARTNER_CODE"),
-			AccessKey:   get(keyMoMoAccessKey, "MOMO_ACCESS_KEY"),
-			SecretKey:   get(keyMoMoSecretKey, "MOMO_SECRET_KEY"),
-			Sandbox:     parseBool(get(keyMoMoSandbox, "MOMO_SANDBOX")),
+			PartnerCode: getMoMo(keyMoMoPartnerCode, "MOMO_PARTNER_CODE"),
+			AccessKey:   getMoMo(keyMoMoAccessKey, "MOMO_ACCESS_KEY"),
+			SecretKey:   getMoMo(keyMoMoSecretKey, "MOMO_SECRET_KEY"),
+			Sandbox:     parseBool(getMoMo(keyMoMoSandbox, "MOMO_SANDBOX")),
 		},
 		VietQR: VietQR{
-			BankCode:    strings.ToUpper(get(keyVietQRBankCode, "VIETQR_BANK_ID")),
-			AccountNo:   get(keyVietQRAccountNo, "VIETQR_ACCOUNT_NO"),
-			AccountName: get(keyVietQRAccountName, "VIETQR_ACCOUNT_NAME"),
+			BankCode:    strings.ToUpper(getVietQR(keyVietQRBankCode, "VIETQR_BANK_ID")),
+			AccountNo:   getVietQR(keyVietQRAccountNo, "VIETQR_ACCOUNT_NO"),
+			AccountName: getVietQR(keyVietQRAccountName, "VIETQR_ACCOUNT_NAME"),
 		},
 	}
 	return pc, nil
@@ -133,18 +155,13 @@ func Upsert(ctx context.Context, pool *pgxpool.Pool, tenantID int64, key, value 
 // /admin/settings/payments to avoid leaking the secret while still telling
 // the UI whether one is configured.
 func LookupSecretKeyIsSet(ctx context.Context, pool *pgxpool.Pool, tenantID int64) (bool, error) {
-	var v string
-	err := pool.QueryRow(ctx,
-		`SELECT value FROM public.system_settings WHERE tenant_id = $1 AND key = $2`,
-		tenantID, keyMoMoSecretKey,
-	).Scan(&v)
-	if err == nil {
-		return v != "", nil
+	cfg, err := Load(ctx, pool, tenantID)
+	if err != nil {
+		return false, err
 	}
-	if errors.Is(err, pgx.ErrNoRows) {
-		return os.Getenv("MOMO_SECRET_KEY") != "", nil
-	}
-	return false, fmt.Errorf("payment/config: lookup secret_key_set: %w", err)
+	// Use Load's gating logic so env fallback only counts when the tenant has
+	// explicitly opted into MoMo via the system_settings sentinel.
+	return cfg.MoMo.SecretKey != "", nil
 }
 
 // Keys returns the canonical PAYMENT_* key list (read-only). Exported so the

@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/personal/comtammatu/backend/internal/httputil"
@@ -115,10 +116,24 @@ func (h *Handler) ConfirmVietQR(w http.ResponseWriter, r *http.Request) {
 	if err := h.pool.QueryRow(r.Context(), q,
 		claims.TenantID, branchID, orderID, req.Amount, claims.UserUUID,
 	).Scan(&resultJSON); err != nil {
-		// confirm_vietqr_payment raises distinct error codes for "order not
-		// found", "amount mismatch", "branch scope mismatch" — surface a
-		// generic 500 here; the smoke test asserts those exact paths via
-		// SQL fixtures so we don't need to enumerate them in HTTP-shape.
+		// confirm_vietqr_payment raises distinct SQLSTATE codes for "order
+		// not found", "amount mismatch", "branch scope mismatch". Map the
+		// well-known codes to HTTP so the cashier UI can show an actionable
+		// message instead of a generic 500.
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			switch pgErr.Code {
+			case "P0002": // no_data_found — order not found
+				httputil.WriteError(w, http.StatusNotFound, pgErr.Message)
+				return
+			case "42501": // insufficient_privilege — branch scope mismatch
+				httputil.WriteError(w, http.StatusForbidden, pgErr.Message)
+				return
+			case "22023", "P0001": // invalid_parameter_value or generic raise — amount mismatch etc.
+				httputil.WriteError(w, http.StatusUnprocessableEntity, pgErr.Message)
+				return
+			}
+		}
 		httputil.WriteError(w, http.StatusInternalServerError, "failed to confirm vietqr payment")
 		return
 	}
