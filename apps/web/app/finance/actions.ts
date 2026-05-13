@@ -113,15 +113,24 @@ export async function createTaxInvoice(
   // Check no existing active invoice for this order. Legacy `not_required`
   // rows do NOT count as active so we can issue the legally required HĐĐT
   // for orders that were paid before the mandatory-per-payment correction.
+  //
+  // A provider-rejected attempt is persisted as status='draft' with no
+  // invoice_number. It must be retryable after config/payload fixes; reuse the
+  // same row so the active-per-order unique slot remains stable.
   const { data: existing } = await supabase
     .from("tax_invoices")
-    .select("id")
+    .select("id, status, invoice_number")
     .eq("order_id", parsed.data.orderId)
     .eq("tenant_id", claims.tenant_id)
     .not("status", "in", '("cancelled","replaced","not_required")')
     .maybeSingle();
 
-  if (existing) {
+  const retryDraftInvoiceId =
+    existing?.status === "draft" && !existing.invoice_number
+      ? existing.id
+      : null;
+
+  if (existing && !retryDraftInvoiceId) {
     return { success: false, error: "Đơn hàng đã có hóa đơn." };
   }
 
@@ -259,30 +268,39 @@ export async function createTaxInvoice(
     invoiceStatus === "submitted" ||
     invoiceStatus === "issued";
 
-  const { data: invoice, error: insertErr } = await supabase
-    .from("tax_invoices")
-    .insert({
-      tenant_id: claims.tenant_id,
-      branch_id: order.branch_id,
-      order_id: parsed.data.orderId,
-      invoice_number: invoiceNumber,
-      status: invoiceStatus,
-      buyer_name: buyerName,
-      buyer_tax_code: buyerTaxCode ?? null,
-      buyer_address: buyerAddress ?? null,
-      subtotal: Math.round(subtotal * 100) / 100,
-      vat_rate: vatRate,
-      vat_amount: Math.round(vatAmount * 100) / 100,
-      total_amount: Number(order.total_amount),
-      provider: invoiceProvider?.name ?? "mock",
-      provider_ref: providerRef,
-      provider_data: providerData
-        ? JSON.parse(JSON.stringify(providerData))
-        : null,
-      signing_started_at: hasProviderSubmission ? stateTimestamp : null,
-      issued_at: invoiceStatus === "issued" ? stateTimestamp : null,
-      created_by: user.id,
-    })
+  const invoiceWrite = {
+    tenant_id: claims.tenant_id,
+    branch_id: order.branch_id,
+    order_id: parsed.data.orderId,
+    invoice_number: invoiceNumber,
+    status: invoiceStatus,
+    buyer_name: buyerName,
+    buyer_tax_code: buyerTaxCode ?? null,
+    buyer_address: buyerAddress ?? null,
+    subtotal: Math.round(subtotal * 100) / 100,
+    vat_rate: vatRate,
+    vat_amount: Math.round(vatAmount * 100) / 100,
+    total_amount: Number(order.total_amount),
+    provider: invoiceProvider?.name ?? "mock",
+    provider_ref: providerRef,
+    provider_data: providerData ? JSON.parse(JSON.stringify(providerData)) : null,
+    signing_started_at: hasProviderSubmission ? stateTimestamp : null,
+    issued_at: invoiceStatus === "issued" ? stateTimestamp : null,
+  };
+
+  const invoiceMutation = retryDraftInvoiceId
+    ? supabase
+        .from("tax_invoices")
+        .update(invoiceWrite)
+        .eq("id", retryDraftInvoiceId)
+        .eq("tenant_id", claims.tenant_id)
+        .eq("status", "draft")
+    : supabase.from("tax_invoices").insert({
+        ...invoiceWrite,
+        created_by: user.id,
+      });
+
+  const { data: invoice, error: insertErr } = await invoiceMutation
     .select("id, invoice_number, status")
     .single();
 

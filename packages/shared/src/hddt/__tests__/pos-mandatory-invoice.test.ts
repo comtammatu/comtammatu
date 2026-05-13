@@ -70,6 +70,10 @@ test("createTaxInvoice does not create new not_required/skipped rows", () => {
     "provider-submitted invoices must be reconcile-eligible",
   );
   assert.ok(
+    src.includes("retryDraftInvoiceId"),
+    "provider-rejected draft rows must be retryable after payload/config fixes",
+  );
+  assert.ok(
     src.includes('.select("id, invoice_number, status")'),
     "POS toast needs persisted invoice status, especially provider failures",
   );
