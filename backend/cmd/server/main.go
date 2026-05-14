@@ -25,10 +25,12 @@ import (
 	notifhandler "github.com/personal/comtammatu/backend/internal/handler/notifications"
 	ordershandler "github.com/personal/comtammatu/backend/internal/handler/orders"
 	paymentshandler "github.com/personal/comtammatu/backend/internal/handler/payments"
+	realtimehandler "github.com/personal/comtammatu/backend/internal/handler/realtime"
 	settingshandler "github.com/personal/comtammatu/backend/internal/handler/settings"
 	staffhandler "github.com/personal/comtammatu/backend/internal/handler/staff"
 	webhookshandler "github.com/personal/comtammatu/backend/internal/handler/webhooks"
 	"github.com/personal/comtammatu/backend/internal/middleware"
+	"github.com/personal/comtammatu/backend/internal/realtime"
 )
 
 func main() {
@@ -57,6 +59,9 @@ func main() {
 	}
 	defer pool.Close()
 
+	hub := realtime.NewHub()
+	go realtime.Listen(ctx, dsn, hub)
+
 	r := chi.NewRouter()
 
 	// Global middleware stack (order matters)
@@ -83,6 +88,10 @@ func main() {
 
 		// /auth/me — any authenticated user; no module gate.
 		r.Get("/auth/me", authH.Me)
+
+		// WebSocket realtime feed — authenticated via ?token= query param
+		// (browsers cannot set Authorization header on WS upgrade).
+		r.Get("/ws", realtimehandler.Handler(hub, cfg.JWTSecret))
 
 		// Module-gated route groups. RequireModule enforces the coarse
 		// role→module ACL (mirrors apps/web/proxy.ts + module-acl.ts).
