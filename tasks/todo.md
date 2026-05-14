@@ -6,6 +6,40 @@
 
 M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1–M9 — **all SHIPPED**. External integrations (VietQR/Momo/MISA HĐĐT real APIs) blocked on credentials. Detail trong `docs/plan/roadmap.md`.
 
+## Go BE migration audit — deferrals (from /qa+/ralph cycle 2026-05-14)
+
+> Full report: `.omc/migration-debate-2026-05-14.md`. Coupling audit: `.omc/supabase-coupling-audit.md`.
+> Fixed this cycle: BUG-01/02/03, G-N1, G-N2, G-F2 (commits c6117eac, b4f54aff, a4ce4d1b, d64339a1, +G-F2).
+
+### CRITICAL — needs owner decision (blocks real progress)
+- [ ] **Identity model unreconciled** — `orders/payments/order_status_history.*_by` FK to `public.profiles` (0 rows seeded); Go `public.users` uuids are NOT in `profiles`; `cancel_order` + ~131 RPCs resolve identity via `profiles`. Go-native order/payment/void flows hit FK violations / no-profile-row. Decide: (A) `profiles` stays identity table, (B) repoint all FKs + rewrite RPCs to `public.users`, (C) bridge-sync `profiles`. Tied to DB-exit plan §3.A. **Until decided, the Go BE payment/order RPC paths are not end-to-end functional for Go-native users.**
+
+### Deferred gaps (tracked, not blocking)
+- [ ] **G-F1** — `voidOrder` is a bare UPDATE, skips `order_status_history` audit trail. Cannot route through `cancel_order` RPC until the identity-model decision above is made (the RPC is broken for Go users).
+- [ ] **Realtime Hub wiring** — `backend/internal/realtime/hub.go` exists but is unmounted: no WS endpoint, no LISTEN loop. Phase 0.5 continuation, multi-day. Inventory found **11 realtime tables**, not the 4 the DB-exit plan budgeted.
+- [ ] **Rate limiting** — no rate limiting in the Go middleware stack. Needs infra decision (no Upstash in Go).
+- [ ] **ABAC 5-min cache TTL** — revoked permissions stay live up to 5 min vs immediate in old BE. Design tradeoff — owner call.
+- [ ] **`/auth/login` production-readiness** — issues a non-Supabase JWT, "test only" per the Go doc. Tied to identity-model decision / DB-exit §3.A.
+- [ ] **Settings sub-modules not migrated** — KDS-station settings, printer settings, network-config, attendance settings have no Go handler.
+- [ ] **Menu combo "available sides"** — `menu_item_available_sides` management not migrated.
+- [ ] **FE rewire incomplete** — ~74 `supabase.rpc()`/`.from()` call-sites still in `apps/web` even for "migrated" modules (deferred US-508 etc.). See `.omc/supabase-coupling-audit.md`.
+
+### Unmigrated modules (~21,000 LOC, multi-month — previously "out of scope")
+- [ ] Inventory (~10,500 LOC, 17 action files) — zero Go code
+- [ ] Finance/GL (~3,100 LOC, 8 files) — zero Go code
+- [ ] Print-agent daemon (~3,400 LOC) — zero Go code; uses `SUPABASE_SERVICE_ROLE_KEY`, not in DB-exit plan
+- [ ] HR/Payroll (~1,450 LOC, 6 files) — zero Go code
+- [ ] Employee self-service (~650 LOC) — zero Go code
+- [ ] Feedback/CRM + 4 Vercel cron jobs (~700 LOC) — zero Go code
+- [ ] HĐĐT e-invoice (~400 LOC) — zero Go code
+- [ ] POS discounts/refunds/service-charge (~1,300 LOC) — zero Go code
+
+### DB-exit plan gaps found by the coupling audit (`.omc/supabase-coupling-audit.md`)
+- [ ] §3.B realtime list is 4 tables; actual is 11 (add orders/payments/print_jobs/notifications/printer_agents/tables/order_status_history/pos_sessions)
+- [ ] `apps/print-agent/` not mentioned anywhere in the DB-exit plan
+- [ ] 2 storage buckets undiscovered by the plan: `inventory-attachments`, `grn-evidence`
+- [ ] `SUPABASE_JWT_SECRET` → `JWT_SECRET` rename not called out in Phase 1
+
 ## Strategic fork prep
 
 - [x] Draft fork-based platform preparation plan: `docs/plan/platform-fork-2026.md`.
