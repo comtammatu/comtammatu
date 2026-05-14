@@ -163,8 +163,8 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 
 **Cross-cutting gaps before /qa parity:**
 - [ ] **Go BE handler tests** — currently zero tests on menu/staff/settings/orders/kds/notifications/payments handlers (only ABAC + middleware + momo provider covered). Each rewire should add at least one round-trip test per endpoint.
-- [ ] **Realtime substitution** — Supabase Realtime subscriptions (kds_tickets, kitchen_send_batches, daily_limits, pos_sessions) currently bypass Go BE. Decision needed: keep on Supabase or build a Go-side fan-out.
-- [ ] **Storage / file uploads** — feedback photos, menu item images. No Go BE storage handler. Either keep on Supabase Storage or port to S3 via Go.
+- [ ] **Realtime substitution — DECIDED 2026-05-14: Go-native LISTEN/NOTIFY over WebSockets.** Owner ruled out the `supabase/realtime` container (full Supabase exit). This is now Phase 0.5 of `docs/plan/db-migration-supabase-to-postgres.md` and the **cutover critical path** (~2-4 weeks): DB `pg_notify` triggers on the 4 tables (kds_tickets, kitchen_send_batches, branch_menu_item_daily_limits, pos_sessions) → Go `LISTEN` + fan-out hub → JWT-gated `GET /realtime` WebSocket → FE POS PWA + KDS subscription clients swapped off `supabase.channel(...)`. FE keeps reconnect-refetch gap-recovery (NOTIFY is fire-and-forget).
+- [ ] **Storage / file uploads — DECIDED 2026-05-14: Cloudflare R2.** Owner picked R2 (full Supabase exit, no Supabase Storage service). Need a Go BE storage handler issuing presigned R2 URLs for upload/download — replaces `supabase.storage.from(...)` at the 2 call sites (feedback photo upload, menu item image upload). Object bodies migrate via `rclone copy`; `storage.objects` pointers rewritten. See `docs/plan/db-migration-supabase-to-postgres.md` §3.C.
 - [ ] **POS network gate (D9)** — proxy-layer IP allowlist is in Next.js Edge runtime. If Go BE serves POS writes directly, the IP gate must move (or the proxy stays as a gatekeeper in front of Go).
 - [ ] **CSP / security headers** — currently set in `next.config.ts`. Stays Next.js-side regardless of BE migration.
 
