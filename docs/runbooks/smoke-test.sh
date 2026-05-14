@@ -67,10 +67,45 @@ if [[ -n "${TOKEN:-}" ]]; then
   STATUS=$(run_auth GET /auth/me)
   check "GET /auth/me" "$STATUS" "200"
 
-  # 4. Menu categories
+  # 4. Menu categories — list + write parity (US-510: FE rewired to Go BE)
   echo "--- /menu/categories ---"
   STATUS=$(run_auth GET /menu/categories)
   check "GET /menu/categories" "$STATUS" "200"
+
+  # Create + update + toggle round-trip. Name is timestamped so reruns don't
+  # collide with the partial UNIQUE(name, tenant_id) constraint.
+  SMOKE_CAT_NAME="smoke-$(date +%s)"
+  CAT_BODY=$(curl -sf -X POST "$BASE/menu/categories" \
+    -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN" \
+    -d "{\"name\":\"$SMOKE_CAT_NAME\",\"type\":\"main_dish\",\"sort_order\":99}")
+  CAT_ID=$(echo "$CAT_BODY" | jq -r '.id // empty')
+  CAT_TYPE=$(echo "$CAT_BODY" | jq -r '.type // empty')
+  if [[ -n "$CAT_ID" && "$CAT_TYPE" == "main_dish" ]]; then
+    echo "  PASS  POST /menu/categories (id=$CAT_ID type=$CAT_TYPE)"
+    ((PASS++)) || true
+  else
+    echo "  FAIL  POST /menu/categories (body=$CAT_BODY)"
+    ((FAIL++)) || true
+  fi
+
+  if [[ -n "${CAT_ID:-}" ]]; then
+    STATUS=$(curl -sf -o /dev/null -w "%{http_code}" -X PUT \
+      -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN" \
+      -d '{"type":"drink"}' "$BASE/menu/categories/$CAT_ID")
+    check "PUT /menu/categories/$CAT_ID (type=drink)" "$STATUS" "200"
+
+    STATUS=$(curl -sf -o /dev/null -w "%{http_code}" -X PATCH \
+      -H "Authorization: Bearer $TOKEN" \
+      "$BASE/menu/categories/$CAT_ID/toggle-active")
+    check "PATCH /menu/categories/$CAT_ID/toggle-active" "$STATUS" "200"
+
+    # Duplicate-name guard — second create with same name MUST surface 409.
+    DUP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+      -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN" \
+      -d "{\"name\":\"$SMOKE_CAT_NAME\",\"type\":\"main_dish\"}" \
+      "$BASE/menu/categories")
+    check "POST /menu/categories duplicate -> 409" "$DUP_STATUS" "409"
+  fi
 
   # 5. Staff list
   echo "--- /admin/staff ---"

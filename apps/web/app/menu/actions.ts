@@ -7,6 +7,7 @@ import { getAuthContextWithPermission } from "@/_lib/auth";
 import { updateTag } from "next/cache";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 import { withAction, withFormAction } from "@/_lib/with-action";
+import { goFetch } from "@/_lib/go-api";
 import {
   buildCsv,
   buildXlsx,
@@ -23,11 +24,29 @@ const MENU_MANAGER_ROLES = MODULE_ACL.menu.allowedRoles;
 
 const CATEGORY_TYPES = ["main_dish", "side_dish", "drink", "dessert"] as const;
 
+// mapDbError still used by the import/export paths that remain on Supabase
+// (saveVariants, saveModifiers, saveSides, importMenu). The CRUD writes for
+// categories + items moved to Go BE and use mapGoError instead.
 function mapDbError(code: string | undefined): string {
   if (code === "23505") return "Tên đã tồn tại";
   if (code === "23503") return "Dữ liệu tham chiếu không hợp lệ";
   return "Không thể thực hiện. Vui lòng thử lại.";
 }
+
+// mapGoError translates structured error keys returned by the Go BE menu
+// handler into Vietnamese UI strings. Keep the keys in sync with
+// backend/internal/handler/menu/handler.go (duplicate_name on 23505,
+// invalid_type on category type allowlist, category not found / item not
+// found on pgx.ErrNoRows).
+function mapGoError(message: string): string {
+  if (message === "duplicate_name") return "Tên đã tồn tại";
+  if (message === "invalid_type") return "Loại danh mục không hợp lệ";
+  if (message === "category not found") return "Danh mục không tồn tại";
+  if (message === "item not found") return "Món ăn không tồn tại";
+  return "Không thể thực hiện. Vui lòng thử lại.";
+}
+
+const SESSION_EXPIRED_ERROR = "Phiên đăng nhập đã hết hạn";
 
 /* ─── Category Schemas ─── */
 
@@ -139,16 +158,23 @@ export const createCategory = withFormAction(
       sort_order: fd.get("sort_order") || 0,
     }),
   },
-  async (data, { supabase, claims }) => {
-    const { error } = await supabase.from("menu_categories").insert({
-      tenant_id: claims.tenant_id,
-      name: data.name,
-      type: data.type,
-      sort_order: data.sort_order,
-    });
+  async (data, { supabase }) => {
+    // Go BE is the security boundary; Zod is the first-pass guard so
+    // field-level form errors render without a server round-trip.
+    const { data: sessionRes } = await supabase.auth.getSession();
+    const session = sessionRes.session;
+    if (!session) return { success: false, error: SESSION_EXPIRED_ERROR };
 
-    if (error) {
-      return { success: false, error: mapDbError(error.code) };
+    const result = await goFetch("/menu/categories", session, {
+      method: "POST",
+      body: {
+        name: data.name,
+        type: data.type,
+        sort_order: data.sort_order,
+      },
+    });
+    if (!result.ok) {
+      return { success: false, error: mapGoError(result.error.message) };
     }
 
     revalidateSurfacePath("/menu");
@@ -169,19 +195,21 @@ export const updateCategory = withFormAction(
       sort_order: fd.get("sort_order") || 0,
     }),
   },
-  async (data, { supabase, claims }) => {
-    const { error } = await supabase
-      .from("menu_categories")
-      .update({
+  async (data, { supabase }) => {
+    const { data: sessionRes } = await supabase.auth.getSession();
+    const session = sessionRes.session;
+    if (!session) return { success: false, error: SESSION_EXPIRED_ERROR };
+
+    const result = await goFetch(`/menu/categories/${data.id}`, session, {
+      method: "PUT",
+      body: {
         name: data.name,
         type: data.type,
         sort_order: data.sort_order,
-      })
-      .eq("id", data.id)
-      .eq("tenant_id", claims.tenant_id);
-
-    if (error) {
-      return { success: false, error: mapDbError(error.code) };
+      },
+    });
+    if (!result.ok) {
+      return { success: false, error: mapGoError(result.error.message) };
     }
 
     revalidateSurfacePath("/menu");
@@ -198,15 +226,18 @@ export const toggleCategoryActive = withAction(
     permission: PERMISSION_KEYS.MENU_WRITE,
   },
   async (data, { supabase }) => {
-    const { error } = await supabase.rpc("toggle_category_active", {
-      p_id: data.id,
-    });
+    const { data: sessionRes } = await supabase.auth.getSession();
+    const session = sessionRes.session;
+    if (!session) return { success: false, error: SESSION_EXPIRED_ERROR };
 
-    if (error) {
-      if (error.message?.includes("not_found")) {
-        return { success: false, error: "Danh mục không tồn tại" };
-      }
-      return { success: false, error: mapDbError(error.code) };
+    // Atomic flip via Go BE replaces the legacy toggle_category_active RPC.
+    const result = await goFetch(
+      `/menu/categories/${data.id}/toggle-active`,
+      session,
+      { method: "PATCH" },
+    );
+    if (!result.ok) {
+      return { success: false, error: mapGoError(result.error.message) };
     }
 
     revalidateSurfacePath("/menu");
@@ -230,18 +261,27 @@ export const createItem = withFormAction(
       image_url: fd.get("image_url") ?? "",
     }),
   },
-  async (data, { supabase, claims }) => {
-    const { error } = await supabase.from("menu_items").insert({
-      tenant_id: claims.tenant_id,
-      category_id: data.category_id,
-      name: data.name,
-      base_price: data.base_price,
-      description: data.description || null,
-      image_url: data.image_url || null,
-    });
+  async (data, { supabase }) => {
+    const { data: sessionRes } = await supabase.auth.getSession();
+    const session = sessionRes.session;
+    if (!session) return { success: false, error: SESSION_EXPIRED_ERROR };
 
-    if (error) {
-      return { success: false, error: mapDbError(error.code) };
+    // Go BE expects base_price as a string so NUMERIC(15,2) precision survives
+    // the JSON hop. menu_items NULL semantics for empty desc/image_url are
+    // preserved by sending empty string — Go BE upserts NULL when the value
+    // is empty (matches the old supabase.from(...).insert behaviour).
+    const result = await goFetch("/menu/items", session, {
+      method: "POST",
+      body: {
+        category_id: data.category_id,
+        name: data.name,
+        base_price: String(data.base_price),
+        description: data.description ?? "",
+        image_url: data.image_url ?? "",
+      },
+    });
+    if (!result.ok) {
+      return { success: false, error: mapGoError(result.error.message) };
     }
 
     revalidateSurfacePath("/menu");
@@ -264,21 +304,23 @@ export const updateItem = withFormAction(
       image_url: fd.get("image_url") ?? "",
     }),
   },
-  async (data, { supabase, claims }) => {
-    const { error } = await supabase
-      .from("menu_items")
-      .update({
+  async (data, { supabase }) => {
+    const { data: sessionRes } = await supabase.auth.getSession();
+    const session = sessionRes.session;
+    if (!session) return { success: false, error: SESSION_EXPIRED_ERROR };
+
+    const result = await goFetch(`/menu/items/${data.id}`, session, {
+      method: "PUT",
+      body: {
         name: data.name,
         category_id: data.category_id,
-        base_price: data.base_price,
-        description: data.description || null,
-        image_url: data.image_url || null,
-      })
-      .eq("id", data.id)
-      .eq("tenant_id", claims.tenant_id);
-
-    if (error) {
-      return { success: false, error: mapDbError(error.code) };
+        base_price: String(data.base_price),
+        description: data.description ?? "",
+        image_url: data.image_url ?? "",
+      },
+    });
+    if (!result.ok) {
+      return { success: false, error: mapGoError(result.error.message) };
     }
 
     revalidateSurfacePath("/menu");
@@ -295,15 +337,17 @@ export const toggleItemActive = withAction(
     permission: PERMISSION_KEYS.MENU_WRITE,
   },
   async (data, { supabase }) => {
-    const { error } = await supabase.rpc("toggle_item_active", {
-      p_id: data.id,
-    });
+    const { data: sessionRes } = await supabase.auth.getSession();
+    const session = sessionRes.session;
+    if (!session) return { success: false, error: SESSION_EXPIRED_ERROR };
 
-    if (error) {
-      if (error.message?.includes("not_found")) {
-        return { success: false, error: "Món ăn không tồn tại" };
-      }
-      return { success: false, error: mapDbError(error.code) };
+    const result = await goFetch(
+      `/menu/items/${data.id}/toggle-active`,
+      session,
+      { method: "PATCH" },
+    );
+    if (!result.ok) {
+      return { success: false, error: mapGoError(result.error.message) };
     }
 
     revalidateSurfacePath("/menu");

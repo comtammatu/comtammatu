@@ -5,6 +5,7 @@ type MenuCategory struct {
 	ID        int64  `json:"id"`
 	TenantID  int64  `json:"tenant_id"`
 	Name      string `json:"name"`
+	Type      string `json:"type"`
 	SortOrder int    `json:"sort_order"`
 	IsActive  bool   `json:"is_active"`
 	CreatedAt string `json:"created_at"`
@@ -13,7 +14,17 @@ type MenuCategory struct {
 // CreateMenuCategoryRequest is the JSON body for POST /categories.
 type CreateMenuCategoryRequest struct {
 	Name      string `json:"name"`
+	Type      string `json:"type"`
 	SortOrder int    `json:"sort_order"`
+}
+
+// UpdateMenuCategoryRequest is the JSON body for PUT /categories/{id}.
+// All fields are optional (pointer = omitted means no change).
+type UpdateMenuCategoryRequest struct {
+	Name      *string `json:"name"`
+	Type      *string `json:"type"`
+	SortOrder *int    `json:"sort_order"`
+	IsActive  *bool   `json:"is_active"`
 }
 
 // MenuItem represents an item row from the database.
@@ -42,6 +53,7 @@ type CreateMenuItemRequest struct {
 // All fields are optional (pointer = omitted means no change).
 type UpdateMenuItemRequest struct {
 	Name        *string `json:"name"`
+	CategoryID  *int64  `json:"category_id"`
 	Description *string `json:"description"`
 	BasePrice   *string `json:"base_price"`
 	ImageURL    *string `json:"image_url"`

@@ -118,6 +118,50 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 - [ ] **RLS uses `auth_role()` not `has_permission()`** — suspended owners retain network-trust writes.
 - [ ] **Soft-revoke race** — agent's next heartbeat `revoked_at: null` undoes admin revoke.
 
+## Go BE migration backlog (US-5xx)
+
+> Multi-session migration of Next.js Server Actions → Go BE via `goFetch`. Pattern locked by US-508/509 (payments) and US-510 (menu CRUD). Each slice = one action-file group + 4-agent debate + smoke-test additions. Full reference: `docs/spec/business-logic-be-{cu-nodejs,moi-golang}.md`.
+
+**Shipped:**
+- [x] **US-508 / US-509** — payment-settings + VietQR cashier-confirm rewired to Go BE.
+- [x] **US-510** — menu admin CRUD (createCategory, updateCategory, toggleCategoryActive, createItem, updateItem, toggleItemActive). Go BE additions: `type` field on `menu_categories`, `category_id` on update-item, atomic `PATCH .../toggle-active` endpoints, 23505 → 409 `duplicate_name`. Smoke-test extended.
+
+**Next slices (FE already has a Go BE handler — pure rewire):**
+- [ ] **US-511 — admin/staff CRUD** (`apps/web/app/admin/staff/actions.ts` 291 LOC + `admin/staff/[id]/permissions/actions.ts`). Go BE `internal/handler/staff/` already supports user list/get/create/update/deactivate + permission grants. Watch: role-elevation gate (owner/super_manager via `staff:assign_elevated_role`), bcrypt set-password endpoint.
+- [ ] **US-512 — admin/settings/{branches,areas,tables}** (3 action files, ~660 LOC total). Go BE `internal/handler/settings/` covers all three. Lowest risk, no money, no POS. Good warm-up slice.
+- [ ] **US-513 — admin/settings/kds + printers + jobs** (~ 4 action files). `kds_stations` admin CRUD has no Go BE handler yet — needs new endpoints. Printers + print jobs untouched (depends on Print Agent migration decision).
+- [ ] **US-514 — notifications writes** (`_actions/notifications.ts`). Go BE notifications handler covers list/unread-count/mark-read/mark-all-read.
+- [ ] **US-515 — POS order-actions** (`br/[branchId]/pos/order-actions.ts` 1972 LOC). HIGH risk — financial state. Likely 2-3 sub-slices (create / append items / serve / void). Needs careful 4-agent debate per sub-slice. Go BE has the endpoints but FE composes them across many flows.
+
+**Go BE gaps that block specific FE actions (need new endpoints first):**
+- [ ] **Bulk variant/modifier/sides replace** — Go BE only has single-create. Build atomic `PUT /menu/items/{id}/{variants,modifiers,sides}` that delete-missing + upsert-present. Blocker for `saveVariants`/`saveModifiers`/`saveSides` rewire.
+- [ ] **Discount + service-charge endpoints** for POS order flow.
+- [ ] **Shift open / report endpoints** (Go BE has `POST /shifts/close`; need `open` + report fetch).
+- [ ] **POS menu cache / structure reads** — POS uses `unstable_cache` over Supabase; Go BE port would need GET `/br/{branchId}/pos/menu-structure` aggregate endpoint or stay on Supabase (read paths convention per `go-api.ts:8`).
+
+**Whole modules with NO Go BE handler yet (multi-week each):**
+- [ ] **Inventory** — 15 action files (stocktake, GRN, transfers, suppliers, waste, variance, production, thresholds, dashboards). Schema in `supabase/migrations/20260406310000_stock.sql`. Critical RPC: `consume_stock_for_order` (atomic stock decrement on payment).
+- [ ] **Finance / GL** — 5 action files (accounting, chart-of-accounts, journal, statement, reconciliation). Posting rules, period guards, double-entry validation. Touches money — needs careful debate.
+- [ ] **HĐĐT (e-invoice)** — `hddt-daily-summary` cron + MISA/Viettel provider clients. Per `docs/plan/hddt-hybrid-misa.md`, hybrid B2B realtime + B2C daily batch. Out-of-scope until Hybrid MISA plan lands.
+- [ ] **HR / Payroll** — employee + payroll actions, attendance, shift bidding, PIT calculation. Low priority per current roadmap.
+- [ ] **Feedback (customer QR)** — anonymous `submit_feedback` RPC + retention/daily-report crons + Telegram outbox. Public surface, GDPR-sensitive.
+- [ ] **Print Agent** — separate Node daemon. Migration is operational (re-deploy), not just code. May stay on Node indefinitely.
+- [ ] **Cron jobs** — `hddt-daily-summary`, `feedback-daily-report`, `feedback-retention`, `telegram-flush`. Need a Go-side scheduler decision (in-process vs external trigger).
+- [ ] **Reports / Dashboard aggregates** — materialised views in Supabase; Go would query the same MVs. Likely pure read-path port.
+
+**Cross-cutting gaps before /qa parity:**
+- [ ] **Go BE handler tests** — currently zero tests on menu/staff/settings/orders/kds/notifications/payments handlers (only ABAC + middleware + momo provider covered). Each rewire should add at least one round-trip test per endpoint.
+- [ ] **Realtime substitution** — Supabase Realtime subscriptions (kds_tickets, kitchen_send_batches, daily_limits, pos_sessions) currently bypass Go BE. Decision needed: keep on Supabase or build a Go-side fan-out.
+- [ ] **Storage / file uploads** — feedback photos, menu item images. No Go BE storage handler. Either keep on Supabase Storage or port to S3 via Go.
+- [ ] **POS network gate (D9)** — proxy-layer IP allowlist is in Next.js Edge runtime. If Go BE serves POS writes directly, the IP gate must move (or the proxy stays as a gatekeeper in front of Go).
+- [ ] **CSP / security headers** — currently set in `next.config.ts`. Stays Next.js-side regardless of BE migration.
+
+**Risk principles for the next slices:**
+- One slice = one action-file group. No multi-file diffs.
+- 4-agent debate (PM/BA/Architect/Critic) before code on anything touching money, RLS, or auth.
+- Smoke-test additions for every new Go BE endpoint exercised by /qa.
+- Vietnamese UX strings stay FE-side; Go BE returns locale-neutral error keys (pattern set by US-510 `mapGoError`).
+
 ## Pilot-critical (blocked on external credentials)
 
 - [ ] P0: Wire VietQR real bank API (merchant credentials)
