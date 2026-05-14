@@ -23,18 +23,30 @@ import (
 
 // Handler serves /br/{branchId}/payments/* and /br/{branchId}/orders/{id}/payment/vietqr/* routes.
 type Handler struct {
-	pool *pgxpool.Pool
+	pool    *pgxpool.Pool
+	checker middleware.PermissionChecker
 }
 
-// New constructs a Handler.
-func New(pool *pgxpool.Pool) *Handler { return &Handler{pool: pool} }
+// New constructs a Handler. checker may be nil (skips ABAC — legacy mode).
+func New(pool *pgxpool.Pool, checker middleware.PermissionChecker) *Handler {
+	return &Handler{pool: pool, checker: checker}
+}
+
+// perm returns a RequirePermission middleware when a checker is configured,
+// or a pass-through middleware when checker is nil.
+func (h *Handler) perm(key string) func(http.Handler) http.Handler {
+	if h.checker == nil {
+		return func(next http.Handler) http.Handler { return next }
+	}
+	return middleware.RequirePermission(h.checker, key)
+}
 
 // Routes mounts the per-branch payment routes under /br/{branchId}/payments.
 // The order-scoped VietQR confirm endpoint is mounted separately in main.go
 // so it can share the {branchId}/orders/{id} URL shape.
 func (h *Handler) Routes() chi.Router {
 	r := chi.NewRouter()
-	r.Get("/vietqr-config", h.getVietQRConfig)
+	r.With(h.perm("pos:use")).Get("/vietqr-config", h.getVietQRConfig)
 	return r
 }
 

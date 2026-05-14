@@ -12,10 +12,17 @@ import (
 )
 
 // Handler serves notification endpoints.
-type Handler struct{ pool *pgxpool.Pool }
+// Notifications are "all roles" per ModuleNotifications ACL — no fine-grained
+// permission key exists in the catalog. Routes are gated by RequireModule only.
+type Handler struct {
+	pool    *pgxpool.Pool
+	checker middleware.PermissionChecker //nolint:unused // reserved for future notification keys
+}
 
-// New constructs a Handler.
-func New(pool *pgxpool.Pool) *Handler { return &Handler{pool: pool} }
+// New constructs a Handler. checker may be nil (skips ABAC — legacy mode).
+func New(pool *pgxpool.Pool, checker middleware.PermissionChecker) *Handler {
+	return &Handler{pool: pool, checker: checker}
+}
 
 // Routes returns a chi.Router with notification sub-routes.
 func (h *Handler) Routes() chi.Router {

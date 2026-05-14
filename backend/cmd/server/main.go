@@ -104,20 +104,22 @@ func main() {
 		r.With(middleware.RequireModule(auth.ModuleSettings)).
 			Put("/admin/settings/payments", settingsH.PutPayments)
 
-		ordersH := ordershandler.New(pool)
+		ordersH := ordershandler.New(pool, eval)
 		r.With(middleware.RequireModule(auth.ModulePOS), middleware.RequireBranchScope).
 			Mount("/br/{branchId}/orders", ordersH.Routes())
-		r.With(middleware.RequireModule(auth.ModulePOS), middleware.RequireBranchScope).
+		r.With(middleware.RequireModule(auth.ModulePOS), middleware.RequireBranchScope,
+			middleware.RequirePermission(eval, "pos:close_shift")).
 			Post("/br/{branchId}/shifts/close", ordersH.CloseShift)
 		r.With(middleware.RequireModule(auth.ModuleKDS), middleware.RequireBranchScope).
-			Mount("/br/{branchId}/kds", kdshandler.New(pool).Routes())
+			Mount("/br/{branchId}/kds", kdshandler.New(pool, eval).Routes())
 		r.With(middleware.RequireModule(auth.ModuleNotifications)).
-			Mount("/notifications", notifhandler.New(pool).Routes())
+			Mount("/notifications", notifhandler.New(pool, eval).Routes())
 
-		paymentsH := paymentshandler.New(pool)
+		paymentsH := paymentshandler.New(pool, eval)
 		r.With(middleware.RequireModule(auth.ModulePOS), middleware.RequireBranchScope).
 			Mount("/br/{branchId}/payments", paymentsH.Routes())
-		r.With(middleware.RequireModule(auth.ModulePOS), middleware.RequireBranchScope).
+		r.With(middleware.RequireModule(auth.ModulePOS), middleware.RequireBranchScope,
+			middleware.RequirePermission(eval, "pos:confirm_payment")).
 			Post("/br/{branchId}/orders/{id}/payment/vietqr/confirm", paymentsH.ConfirmVietQR)
 	})
 

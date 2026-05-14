@@ -17,25 +17,35 @@ import (
 
 // Handler handles order-related HTTP endpoints.
 type Handler struct {
-	pool *pgxpool.Pool
+	pool    *pgxpool.Pool
+	checker middleware.PermissionChecker
 }
 
-// New returns a new Handler.
-func New(pool *pgxpool.Pool) *Handler {
-	return &Handler{pool: pool}
+// New returns a new Handler. checker may be nil (skips ABAC — legacy mode).
+func New(pool *pgxpool.Pool, checker middleware.PermissionChecker) *Handler {
+	return &Handler{pool: pool, checker: checker}
+}
+
+// perm returns a RequirePermission middleware when a checker is configured,
+// or a pass-through middleware when checker is nil.
+func (h *Handler) perm(key string) func(http.Handler) http.Handler {
+	if h.checker == nil {
+		return func(next http.Handler) http.Handler { return next }
+	}
+	return middleware.RequirePermission(h.checker, key)
 }
 
 // Routes returns a chi.Router wired with all order endpoints.
 // Mount at /br/{branchId}/orders.
 func (h *Handler) Routes() chi.Router {
 	r := chi.NewRouter()
-	r.Get("/", h.listOrders)
-	r.Post("/", h.createOrder)
-	r.Get("/{id}", h.getOrder)
-	r.Delete("/{id}", h.voidOrder)
-	r.Post("/{id}/items", h.appendItems)
-	r.Patch("/{id}/items/{itemId}/serve", h.serveItem)
-	r.Post("/{id}/payment", h.confirmPayment)
+	r.With(h.perm("orders:read")).Get("/", h.listOrders)
+	r.With(h.perm("pos:use")).Post("/", h.createOrder)
+	r.With(h.perm("orders:read")).Get("/{id}", h.getOrder)
+	r.With(h.perm("pos:void_order")).Delete("/{id}", h.voidOrder)
+	r.With(h.perm("pos:use")).Post("/{id}/items", h.appendItems)
+	r.With(h.perm("pos:use")).Patch("/{id}/items/{itemId}/serve", h.serveItem)
+	r.With(h.perm("pos:confirm_payment")).Post("/{id}/payment", h.confirmPayment)
 	return r
 }
 

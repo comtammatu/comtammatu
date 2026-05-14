@@ -12,17 +12,31 @@ import (
 )
 
 // Handler serves KDS endpoints.
-type Handler struct{ pool *pgxpool.Pool }
+type Handler struct {
+	pool    *pgxpool.Pool
+	checker middleware.PermissionChecker
+}
 
-// New constructs a Handler.
-func New(pool *pgxpool.Pool) *Handler { return &Handler{pool: pool} }
+// New constructs a Handler. checker may be nil (skips ABAC — legacy mode).
+func New(pool *pgxpool.Pool, checker middleware.PermissionChecker) *Handler {
+	return &Handler{pool: pool, checker: checker}
+}
+
+// perm returns a RequirePermission middleware when a checker is configured,
+// or a pass-through middleware when checker is nil.
+func (h *Handler) perm(key string) func(http.Handler) http.Handler {
+	if h.checker == nil {
+		return func(next http.Handler) http.Handler { return next }
+	}
+	return middleware.RequirePermission(h.checker, key)
+}
 
 // Routes returns a chi.Router with KDS sub-routes.
 func (h *Handler) Routes() chi.Router {
 	r := chi.NewRouter()
-	r.Get("/tickets", h.listTickets)
-	r.Patch("/tickets/{id}/ready", h.markReady)
-	r.Patch("/tickets/{id}/recall", h.recall)
+	r.With(h.perm("kds:use")).Get("/tickets", h.listTickets)
+	r.With(h.perm("kds:mark_ready")).Patch("/tickets/{id}/ready", h.markReady)
+	r.With(h.perm("kds:recall")).Patch("/tickets/{id}/recall", h.recall)
 	return r
 }
 
