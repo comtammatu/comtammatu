@@ -99,6 +99,10 @@ CREATE TABLE public.users (
   position TEXT,
   is_active BOOLEAN DEFAULT true,
   uuid UUID NOT NULL DEFAULT gen_random_uuid(),
+  -- FK refs to areas/positions omitted: this stub only defines tables sqlc needs.
+  avatar_url TEXT,
+  area_id BIGINT,
+  position_id BIGINT,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
