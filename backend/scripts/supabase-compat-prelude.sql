@@ -41,19 +41,20 @@ CREATE TABLE IF NOT EXISTS auth.users (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- auth.uid() — returns NULL in plain Postgres (no session)
+-- auth.uid() — reads the JWT sub from the session variable set by Go's
+-- WithAuthContext helper (mirrors how real Supabase PostgREST sets it).
 CREATE OR REPLACE FUNCTION auth.uid()
 RETURNS UUID
 LANGUAGE sql STABLE
-AS $$ SELECT NULL::UUID $$;
+AS $$ SELECT nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
 
--- auth.role() — returns NULL
+-- auth.role() — reads the JWT role from the session variable.
 CREATE OR REPLACE FUNCTION auth.role()
 RETURNS TEXT
 LANGUAGE sql STABLE
-AS $$ SELECT NULL::TEXT $$;
+AS $$ SELECT nullif(current_setting('request.jwt.claim.role', true), '') $$;
 
--- auth.jwt() — returns empty JSONB
+-- auth.jwt() — returns empty JSONB (not needed for RPC auth, kept for compat)
 CREATE OR REPLACE FUNCTION auth.jwt()
 RETURNS JSONB
 LANGUAGE sql STABLE

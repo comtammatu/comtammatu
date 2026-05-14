@@ -11,6 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/personal/comtammatu/backend/internal/db"
 	"github.com/personal/comtammatu/backend/internal/httputil"
 	"github.com/personal/comtammatu/backend/internal/middleware"
 	paymentconfig "github.com/personal/comtammatu/backend/internal/payment/config"
@@ -117,12 +118,15 @@ func (h *Handler) confirmMoMoPayment(w http.ResponseWriter, r *http.Request, bra
 	// create_payment 8-arg form (provider_ref + initial status). The order
 	// transitions to payment_status='pending' (not 'paid') so the cashier
 	// keeps the order on the active list until MoMo's IPN confirms.
+	// Run inside WithAuthContext so auth.uid() resolves to the caller's UUID.
 	const insertQ = `SELECT public.create_payment($1, $2, $3, $4, $5::NUMERIC(15,2), $6::UUID, $7, $8)`
 	var rpcResult []byte
-	if err := h.pool.QueryRow(r.Context(), insertQ,
-		claims.TenantID, branchID, orderID, "momo", req.Amount, claims.UserUUID,
-		result.ProviderRef, string(result.Status),
-	).Scan(&rpcResult); err != nil {
+	if err := db.WithAuthContext(r.Context(), h.pool, claims.UserUUID, string(claims.UserRole), func(tx pgx.Tx) error {
+		return tx.QueryRow(r.Context(), insertQ,
+			claims.TenantID, branchID, orderID, "momo", req.Amount, claims.UserUUID,
+			result.ProviderRef, string(result.Status),
+		).Scan(&rpcResult)
+	}); err != nil {
 		httputil.WriteError(w, http.StatusInternalServerError, "failed to record momo payment")
 		return
 	}

@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/personal/comtammatu/backend/internal/db"
 	"github.com/personal/comtammatu/backend/internal/httputil"
 	"github.com/personal/comtammatu/backend/internal/middleware"
 )
@@ -171,20 +172,23 @@ func (h *Handler) createOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Use create_order RPC for atomic order + items + status history + table status
+	// Use create_order RPC for atomic order + items + status history + table status.
+	// Run inside WithAuthContext so auth.uid() resolves to the caller's UUID.
 	const q = `SELECT public.create_order($1, $2, $3::UUID, $4::JSONB, $5, $6, $7, $8, $9)`
 	var resultJSON []byte
-	err = h.pool.QueryRow(r.Context(), q,
-		claims.TenantID,
-		branchID,
-		claims.UserUUID, // profiles.id is UUID = auth.users.id = JWT sub
-		string(itemsJSON),
-		req.OrderType,
-		req.TableID,
-		req.PosSessionID,
-		req.CustomerCount,
-		req.Note,
-	).Scan(&resultJSON)
+	err = db.WithAuthContext(r.Context(), h.pool, claims.UserUUID, string(claims.UserRole), func(tx pgx.Tx) error {
+		return tx.QueryRow(r.Context(), q,
+			claims.TenantID,
+			branchID,
+			claims.UserUUID,
+			string(itemsJSON),
+			req.OrderType,
+			req.TableID,
+			req.PosSessionID,
+			req.CustomerCount,
+			req.Note,
+		).Scan(&resultJSON)
+	})
 	if err != nil {
 		httputil.WriteError(w, http.StatusInternalServerError, "failed to create order")
 		return
@@ -373,9 +377,11 @@ func (h *Handler) confirmCashPayment(w http.ResponseWriter, r *http.Request, bra
 	claims := middleware.ClaimsFrom(r.Context())
 	const q = `SELECT public.create_payment($1, $2, $3, $4, $5::NUMERIC(15,2), $6::UUID)`
 	var resultJSON []byte
-	if err := h.pool.QueryRow(r.Context(), q,
-		claims.TenantID, branchID, orderID, req.Method, req.Amount, claims.UserUUID,
-	).Scan(&resultJSON); err != nil {
+	if err := db.WithAuthContext(r.Context(), h.pool, claims.UserUUID, string(claims.UserRole), func(tx pgx.Tx) error {
+		return tx.QueryRow(r.Context(), q,
+			claims.TenantID, branchID, orderID, req.Method, req.Amount, claims.UserUUID,
+		).Scan(&resultJSON)
+	}); err != nil {
 		httputil.WriteError(w, http.StatusInternalServerError, "failed to process payment")
 		return
 	}
