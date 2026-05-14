@@ -121,14 +121,25 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 ## Go BE migration backlog (US-5xx)
 
 > Multi-session migration of Next.js Server Actions → Go BE via `goFetch`. Pattern locked by US-508/509 (payments) and US-510 (menu CRUD). Each slice = one action-file group + 4-agent debate + smoke-test additions. Full reference: `docs/spec/business-logic-be-{cu-nodejs,moi-golang}.md`.
+>
+> **Sibling effort (DB infra):** `docs/plan/db-migration-supabase-to-postgres.md` — phased Supabase → self-hosted Postgres cutover (Auth/Realtime/Storage decisions, 7-day burn-in). Decoupled from this backlog by default (GoTrue stays self-hosted).
 
 **Shipped:**
 - [x] **US-508 / US-509** — payment-settings + VietQR cashier-confirm rewired to Go BE.
 - [x] **US-510** — menu admin CRUD (createCategory, updateCategory, toggleCategoryActive, createItem, updateItem, toggleItemActive). Go BE additions: `type` field on `menu_categories`, `category_id` on update-item, atomic `PATCH .../toggle-active` endpoints, 23505 → 409 `duplicate_name`. Smoke-test extended.
 
 **Next slices (FE already has a Go BE handler — pure rewire):**
-- [ ] **US-511 — admin/staff CRUD** (`apps/web/app/admin/staff/actions.ts` 291 LOC + `admin/staff/[id]/permissions/actions.ts`). Go BE `internal/handler/staff/` already supports user list/get/create/update/deactivate + permission grants. Watch: role-elevation gate (owner/super_manager via `staff:assign_elevated_role`), bcrypt set-password endpoint.
-- [ ] **US-512 — admin/settings/{branches,areas,tables}** (3 action files, ~660 LOC total). Go BE `internal/handler/settings/` covers all three. Lowest risk, no money, no POS. Good warm-up slice.
+- [ ] **US-511 — admin/staff CRUD** — NOT a pure rewire. Gap audit 2026-05-14:
+  - FE uses **UUID** staff IDs (`z.string().uuid()`); Go BE handler routes use **BIGINT** `users.id`. Need UUID-keyed routes or a UUID↔BIGINT lookup helper.
+  - FE `createStaff` calls **`serviceClient.auth.admin.createUser`** (Supabase Auth admin API) — Go BE only INSERTs into `public.users` with empty `password_hash`. Either keep auth user creation on supabase-js (split FE write path) or build a Go-side Supabase Auth admin client.
+  - FE `updateStaff` calls **`admin_update_profile` RPC** which enforces: hierarchy ceiling, `cannot modify owner/super_manager` peer guard, `cannot reassign to other branch` branch_manager guard, operational-role → `branch_kind != central_warehouse` check. Go BE only has elevated-role gate. Port the rest before rewire.
+  - FE `toggleStaffActive` calls **`toggle_profile_active` RPC** with its own guards; Go BE deactivate is unconditional soft-delete.
+  - FE permissions action file uses **`apply_template_to_user` RPC** (template-based bulk grant); Go BE has no equivalent endpoint.
+- [ ] **US-512 — admin/settings/{branches,areas,tables}** — NOT a pure rewire. Gap audit 2026-05-14:
+  - **`branches`:** Go BE Create/UpdateBranchRequest is **missing `branch_kind`** (FE writes `branch | central_kitchen | central_warehouse`). Add field + DB column verification. Also add toggle-active flip (current Go BE only soft-deletes).
+  - **`areas`:** Go BE `/areas` actually queries `public.branch_zones` (zones inside a branch). FE `areas/actions.ts` operates on `public.areas` + `public.area_branches` (tenant-level M:N grouping). Two different tables. Need to **build new `/areas` and `/areas/{id}/branches` endpoints** for the M:N model, and either rename the existing Go BE handler to `/zones` or absorb its responsibility into the tables slice.
+  - **`tables`:** Go BE `tables.go` is a **placeholder** — writes to `public.branch_zones` and returns Capacity=0 (`// TODO: use public.branch_tables when available`). Real FE table CRUD writes to `public.tables` with `(branch_id, zone_id, number, capacity, status)`. Need full rewrite of `tables.go` against the real `tables` schema before any FE rewire.
+  - **`tables` zones:** FE creates/updates/deletes rows in `public.branch_zones` via `createZone`/`updateZone`/`deleteZone` actions. No Go BE endpoint exists for that surface today (the existing `/areas` Go BE endpoint partially matches but lacks branch scope + sort_order + delete).
 - [ ] **US-513 — admin/settings/kds + printers + jobs** (~ 4 action files). `kds_stations` admin CRUD has no Go BE handler yet — needs new endpoints. Printers + print jobs untouched (depends on Print Agent migration decision).
 - [ ] **US-514 — notifications writes** (`_actions/notifications.ts`). Go BE notifications handler covers list/unread-count/mark-read/mark-all-read.
 - [ ] **US-515 — POS order-actions** (`br/[branchId]/pos/order-actions.ts` 1972 LOC). HIGH risk — financial state. Likely 2-3 sub-slices (create / append items / serve / void). Needs careful 4-agent debate per sub-slice. Go BE has the endpoints but FE composes them across many flows.
