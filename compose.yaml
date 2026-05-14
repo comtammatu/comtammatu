@@ -1,0 +1,24 @@
+services:
+  backend-test:
+    image: golang:1.25-bookworm
+    working_dir: /src/backend
+    volumes:
+      - .:/src
+      - go-build-cache:/root/.cache/go-build
+      - go-mod-cache:/go/pkg/mod
+    command: sh -c "go mod tidy && test -z \"$$(gofmt -l .)\" && go vet ./... && go test -race -count=1 ./..."
+
+  backend:
+    build:
+      context: ./backend
+    environment:
+      APP_ENV: production
+      PORT: "8080"
+      SUPABASE_JWT_SECRET: docker-compose-test-secret
+      ALLOWED_ORIGINS: http://localhost:3000
+    ports:
+      - "18080:8080"
+
+volumes:
+  go-build-cache:
+  go-mod-cache:
