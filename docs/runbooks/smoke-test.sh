@@ -107,6 +107,17 @@ if [[ -n "${TOKEN:-}" ]]; then
     check "POST /menu/categories duplicate -> 409" "$DUP_STATUS" "409"
   fi
 
+  # Bulk variant/modifier replace on a bogus item id MUST 404 (regression
+  # guard for the ownership pre-check in replaceVariants/Modifiers).
+  STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X PUT \
+    -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN" \
+    -d '{"variants":[]}' "$BASE/menu/items/9999999999/variants")
+  check "PUT /menu/items/9999999999/variants -> 404" "$STATUS" "404"
+  STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X PUT \
+    -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN" \
+    -d '{"modifiers":[]}' "$BASE/menu/items/9999999999/modifiers")
+  check "PUT /menu/items/9999999999/modifiers -> 404" "$STATUS" "404"
+
   # 5. Staff list
   echo "--- /admin/staff ---"
   STATUS=$(run_auth GET /admin/staff)

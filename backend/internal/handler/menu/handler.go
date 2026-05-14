@@ -71,9 +71,14 @@ func (h *Handler) Routes() chi.Router {
 
 	r.With(read).Get("/items/{id}/variants", h.listVariants)
 	r.With(write).Post("/items/{id}/variants", h.createVariant)
+	// Atomic delete-and-replace inside one transaction. Mirrors the legacy
+	// save_item_variants RPC so saveVariants in
+	// apps/web/app/menu/actions.ts can drop the supabase.rpc call.
+	r.With(write).Put("/items/{id}/variants", h.replaceVariants)
 
 	r.With(read).Get("/items/{id}/modifiers", h.listModifiers)
 	r.With(write).Post("/items/{id}/modifiers", h.createModifier)
+	r.With(write).Put("/items/{id}/modifiers", h.replaceModifiers)
 
 	r.With(write).Delete("/categories/{id}", h.deleteCategory)
 
@@ -643,6 +648,156 @@ func (h *Handler) createModifier(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httputil.WriteJSON(w, http.StatusCreated, m)
+}
+
+// replaceVariants atomically swaps the variant set for a menu item.
+// Mirrors the legacy save_item_variants RPC: DELETE all existing rows,
+// INSERT the new set, wrapped in one transaction so failure rolls back
+// to the previous state instead of leaving the item with an empty list.
+func (h *Handler) replaceVariants(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.ClaimsFrom(r.Context())
+	if claims == nil {
+		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	itemID, err := parseID(r)
+	if err != nil {
+		httputil.WriteError(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	var req struct {
+		Variants []struct {
+			Name            string  `json:"name"`
+			PriceAdjustment float64 `json:"price_adjustment"`
+			SortOrder       *int    `json:"sort_order"`
+		} `json:"variants"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httputil.WriteError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	for _, v := range req.Variants {
+		if strings.TrimSpace(v.Name) == "" {
+			httputil.WriteError(w, http.StatusUnprocessableEntity, "variant name is required")
+			return
+		}
+	}
+	// Ownership pre-check: every replace must verify the item is in caller's
+	// tenant before mutating. menu_item_variants UNIQUE(item_id) lets the FK
+	// guard but doesn't surface a clean 404 path.
+	var ok bool
+	if err := h.pool.QueryRow(r.Context(),
+		`SELECT EXISTS(SELECT 1 FROM public.menu_items WHERE id = $1 AND tenant_id = $2)`,
+		itemID, claims.TenantID).Scan(&ok); err != nil || !ok {
+		httputil.WriteError(w, http.StatusNotFound, "item not found")
+		return
+	}
+
+	tx, err := h.pool.Begin(r.Context())
+	if err != nil {
+		httputil.WriteError(w, http.StatusInternalServerError, "failed to begin tx")
+		return
+	}
+	defer tx.Rollback(r.Context())
+
+	if _, err := tx.Exec(r.Context(),
+		`DELETE FROM public.menu_item_variants WHERE item_id = $1 AND tenant_id = $2`,
+		itemID, claims.TenantID); err != nil {
+		httputil.WriteError(w, http.StatusInternalServerError, "failed to clear variants")
+		return
+	}
+	for i, v := range req.Variants {
+		sortOrder := i
+		if v.SortOrder != nil {
+			sortOrder = *v.SortOrder
+		}
+		if _, err := tx.Exec(r.Context(),
+			`INSERT INTO public.menu_item_variants (tenant_id, item_id, name, price_adjustment, sort_order)
+				VALUES ($1, $2, $3, $4, $5)`,
+			claims.TenantID, itemID, v.Name, v.PriceAdjustment, sortOrder); err != nil {
+			httputil.WriteError(w, http.StatusInternalServerError, "failed to insert variant")
+			return
+		}
+	}
+	if err := tx.Commit(r.Context()); err != nil {
+		httputil.WriteError(w, http.StatusInternalServerError, "failed to commit")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// replaceModifiers — sibling of replaceVariants, against menu_item_modifiers.
+func (h *Handler) replaceModifiers(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.ClaimsFrom(r.Context())
+	if claims == nil {
+		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	itemID, err := parseID(r)
+	if err != nil {
+		httputil.WriteError(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	var req struct {
+		Modifiers []struct {
+			Name      string  `json:"name"`
+			Price     float64 `json:"price"`
+			SortOrder *int    `json:"sort_order"`
+		} `json:"modifiers"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httputil.WriteError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	for _, m := range req.Modifiers {
+		if strings.TrimSpace(m.Name) == "" {
+			httputil.WriteError(w, http.StatusUnprocessableEntity, "modifier name is required")
+			return
+		}
+		if m.Price < 0 {
+			httputil.WriteError(w, http.StatusUnprocessableEntity, "modifier price must be >= 0")
+			return
+		}
+	}
+	var ok bool
+	if err := h.pool.QueryRow(r.Context(),
+		`SELECT EXISTS(SELECT 1 FROM public.menu_items WHERE id = $1 AND tenant_id = $2)`,
+		itemID, claims.TenantID).Scan(&ok); err != nil || !ok {
+		httputil.WriteError(w, http.StatusNotFound, "item not found")
+		return
+	}
+
+	tx, err := h.pool.Begin(r.Context())
+	if err != nil {
+		httputil.WriteError(w, http.StatusInternalServerError, "failed to begin tx")
+		return
+	}
+	defer tx.Rollback(r.Context())
+
+	if _, err := tx.Exec(r.Context(),
+		`DELETE FROM public.menu_item_modifiers WHERE item_id = $1 AND tenant_id = $2`,
+		itemID, claims.TenantID); err != nil {
+		httputil.WriteError(w, http.StatusInternalServerError, "failed to clear modifiers")
+		return
+	}
+	for i, m := range req.Modifiers {
+		sortOrder := i
+		if m.SortOrder != nil {
+			sortOrder = *m.SortOrder
+		}
+		if _, err := tx.Exec(r.Context(),
+			`INSERT INTO public.menu_item_modifiers (tenant_id, item_id, name, price, sort_order)
+				VALUES ($1, $2, $3, $4, $5)`,
+			claims.TenantID, itemID, m.Name, m.Price, sortOrder); err != nil {
+			httputil.WriteError(w, http.StatusInternalServerError, "failed to insert modifier")
+			return
+		}
+	}
+	if err := tx.Commit(r.Context()); err != nil {
+		httputil.WriteError(w, http.StatusInternalServerError, "failed to commit")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *Handler) deleteCategory(w http.ResponseWriter, r *http.Request) {

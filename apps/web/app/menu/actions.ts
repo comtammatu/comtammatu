@@ -366,20 +366,28 @@ export const saveVariants = withAction(
     permission: PERMISSION_KEYS.MENU_WRITE,
   },
   async (data, { supabase }) => {
-    const { error } = await supabase.rpc("save_item_variants", {
-      p_item_id: data.itemId,
-      p_variants: data.variants.map((v, idx) => ({
-        name: v.name,
-        price_adjustment: v.price_adjustment,
-        sort_order: v.sort_order ?? idx,
-      })),
-    });
+    const { data: sessionRes } = await supabase.auth.getSession();
+    const session = sessionRes.session;
+    if (!session) return { success: false, error: SESSION_EXPIRED_ERROR };
 
-    if (error) {
-      if (error.message === "item not found") {
-        return { success: false, error: "Món ăn không tồn tại" };
-      }
-      return { success: false, error: mapDbError(error.code) };
+    // Atomic delete-and-replace inside one Go-side transaction. 404 surfaces
+    // when the item id is bogus or cross-tenant.
+    const result = await goFetch(
+      `/menu/items/${data.itemId}/variants`,
+      session,
+      {
+        method: "PUT",
+        body: {
+          variants: data.variants.map((v, idx) => ({
+            name: v.name,
+            price_adjustment: v.price_adjustment,
+            sort_order: v.sort_order ?? idx,
+          })),
+        },
+      },
+    );
+    if (!result.ok) {
+      return { success: false, error: mapGoError(result.error.message) };
     }
 
     revalidateSurfacePath("/menu");
@@ -398,20 +406,26 @@ export const saveModifiers = withAction(
     permission: PERMISSION_KEYS.MENU_WRITE,
   },
   async (data, { supabase }) => {
-    const { error } = await supabase.rpc("save_item_modifiers", {
-      p_item_id: data.itemId,
-      p_modifiers: data.modifiers.map((m, idx) => ({
-        name: m.name,
-        price: m.price,
-        sort_order: m.sort_order ?? idx,
-      })),
-    });
+    const { data: sessionRes } = await supabase.auth.getSession();
+    const session = sessionRes.session;
+    if (!session) return { success: false, error: SESSION_EXPIRED_ERROR };
 
-    if (error) {
-      if (error.message === "item not found") {
-        return { success: false, error: "Món ăn không tồn tại" };
-      }
-      return { success: false, error: mapDbError(error.code) };
+    const result = await goFetch(
+      `/menu/items/${data.itemId}/modifiers`,
+      session,
+      {
+        method: "PUT",
+        body: {
+          modifiers: data.modifiers.map((m, idx) => ({
+            name: m.name,
+            price: m.price,
+            sort_order: m.sort_order ?? idx,
+          })),
+        },
+      },
+    );
+    if (!result.ok) {
+      return { success: false, error: mapGoError(result.error.message) };
     }
 
     revalidateSurfacePath("/menu");

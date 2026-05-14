@@ -146,7 +146,7 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 - [ ] **US-515 — POS order-actions** (`br/[branchId]/pos/order-actions.ts` 1972 LOC). HIGH risk — financial state. Likely 2-3 sub-slices (create / append items / serve / void). Needs careful 4-agent debate per sub-slice. Go BE has the endpoints but FE composes them across many flows.
 
 **Go BE gaps that block specific FE actions (need new endpoints first):**
-- [ ] **Bulk variant/modifier/sides replace** — Go BE only has single-create. Build atomic `PUT /menu/items/{id}/{variants,modifiers,sides}` that delete-missing + upsert-present. Blocker for `saveVariants`/`saveModifiers`/`saveSides` rewire.
+- [x] **Bulk variants + modifiers replace** (2026-05-14) — `PUT /menu/items/{id}/variants` and `/menu/items/{id}/modifiers` ship as atomic delete-and-replace inside one tx (rollback on any insert failure). FE `saveVariants` + `saveModifiers` rewired to goFetch. **Sides deferred** — schema (`menu_item_sides` with main_item_id / side_item_id / is_default) needs validation before porting.
 - [ ] **Discount + service-charge endpoints** for POS order flow.
 - [ ] **Shift open / report endpoints** (Go BE has `POST /shifts/close`; need `open` + report fetch).
 - [ ] **POS menu cache / structure reads** — POS uses `unstable_cache` over Supabase; Go BE port would need GET `/br/{branchId}/pos/menu-structure` aggregate endpoint or stay on Supabase (read paths convention per `go-api.ts:8`).
