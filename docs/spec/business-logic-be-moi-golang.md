@@ -655,7 +655,7 @@ CRUD under `settings:branch`. Tables live under branches.
 | GET    | /br/{branchId}/orders | List (limit 100, DESC by created_at) |
 | POST   | /br/{branchId}/orders | Create order |
 | GET    | /br/{branchId}/orders/{id} | Get |
-| DELETE | /br/{branchId}/orders/{id} | Void (status = 'void') |
+| DELETE | /br/{branchId}/orders/{id} | Void (sets status = 'cancelled') |
 | POST   | /br/{branchId}/orders/{id}/items | Append items (batch insert) |
 | PATCH  | /br/{branchId}/orders/{id}/items/{itemId}/serve | Mark item served |
 | POST   | /br/{branchId}/orders/{id}/payment | Confirm payment (cash/momo/vietqr branch) |
@@ -672,9 +672,13 @@ CRUD under `settings:branch`. Tables live under branches.
   "table_id": 1,
   "order_type": "dine_in",
   "customer_count": 2,
-  "note": "extra napkins"
+  "note": "extra napkins",
+  "pos_session_id": 7,
+  "items": [{ "menu_item_id": 1, "quantity": 2, "unit_price": "50000.00" }]
 }
 ```
+
+`items` is required (validated: non-empty). `pos_session_id` is optional. **File:** `internal/handler/orders/types.go:40-41`, `handler.go:156-165`
 
 **Returns:** Order ID, order_number (auto-incremented per branch)
 
@@ -730,10 +734,10 @@ Three branches based on `method`:
 - Calls MoMo `/create` endpoint with HMAC-SHA256 signature
 - Inserts pending payment row
 - Persists raw MoMo response in `provider_data` column
-- Returns qrCodeUrl + redirect + deeplink for POS to render
+- Returns `{ payment_id, status, provider_ref, qr_data, qr_info }` for POS to render the QR (`qr_data` is the `qrCodeUrl` from MoMo; `qr_info` is the full raw MoMo response). **File:** `internal/handler/orders/payment_momo.go:154-160`
 
 **3. VietQR:**
-Returns `{ redirect_url: "..." }` pointing to `/br/{branchId}/orders/{id}/payment/vietqr/confirm`
+Calling `POST /payment` with `method=vietqr` returns **422** with message `"vietqr uses POST /payment/vietqr/confirm"`. The cashier must call the confirm endpoint directly — there is no intermediate redirect_url step. **File:** `internal/handler/orders/handler.go:363-366`
 
 #### Confirm VietQR Payment
 

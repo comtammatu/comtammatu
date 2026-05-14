@@ -119,7 +119,7 @@ Start here if you're new:
 
 **Status in Go BE:**
 
-- PARTIAL — Auth server (user/profile/staff API) migrated to `backend/pkg/auth`. Proxy & JWT hook remain in Next.js. Permission keys catalog synced from Postgres `permission_keys` table in both systems.
+- PARTIAL — Auth server (user/profile/staff API) migrated to `backend/internal/auth/` and `backend/internal/handler/auth/`. Proxy & JWT hook remain in Next.js. Permission keys catalog synced from Postgres `permission_keys` table in both systems.
 
 ---
 
@@ -722,7 +722,7 @@ Start here if you're new:
 
 **Status in Go BE:**
 
-- PARTIAL — Notification endpoints likely migrated to Go. Realtime subscriptions remain in Supabase.
+- MIGRATED — Notification endpoints (list, unread-count, mark-read, read-all) confirmed in Go backend (`backend/internal/handler/notifications/`), mounted in `cmd/server/main.go`. Realtime subscriptions remain in Supabase.
 
 ---
 
