@@ -33,12 +33,7 @@ func (h *Handler) listTickets(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	branchIDStr := r.URL.Query().Get("branchId")
-	if branchIDStr == "" {
-		httputil.WriteError(w, http.StatusBadRequest, "branchId query param required")
-		return
-	}
-	branchID, err := strconv.ParseInt(branchIDStr, 10, 64)
+	branchID, err := strconv.ParseInt(chi.URLParam(r, "branchId"), 10, 64)
 	if err != nil {
 		httputil.WriteError(w, http.StatusBadRequest, "invalid branchId")
 		return
@@ -106,12 +101,7 @@ func (h *Handler) updateStatus(w http.ResponseWriter, r *http.Request, status st
 		return
 	}
 
-	branchIDStr := r.URL.Query().Get("branchId")
-	if branchIDStr == "" {
-		httputil.WriteError(w, http.StatusBadRequest, "branchId query param required")
-		return
-	}
-	branchID, err := strconv.ParseInt(branchIDStr, 10, 64)
+	branchID, err := strconv.ParseInt(chi.URLParam(r, "branchId"), 10, 64)
 	if err != nil {
 		httputil.WriteError(w, http.StatusBadRequest, "invalid branchId")
 		return
