@@ -26,6 +26,7 @@ type userRow struct {
 	UserRole     string
 	Position     *string
 	IsActive     bool
+	UUID         string
 }
 
 func (h *Handler) loginWithPool(w http.ResponseWriter, r *http.Request) {
@@ -84,13 +85,13 @@ func (h *Handler) loginWithPool(w http.ResponseWriter, r *http.Request) {
 
 func getUserByEmail(ctx context.Context, pool *pgxpool.Pool, email string, tenantID int64) (*userRow, error) {
 	const q = `
-        SELECT id, tenant_id, branch_id, email, password_hash, full_name, user_role, position, is_active
+        SELECT id, tenant_id, branch_id, email, password_hash, full_name, user_role, position, is_active, uuid
         FROM public.users
         WHERE email = $1 AND tenant_id = $2`
 	row := pool.QueryRow(ctx, q, email, tenantID)
 	var u userRow
 	err := row.Scan(&u.ID, &u.TenantID, &u.BranchID, &u.Email, &u.PasswordHash,
-		&u.FullName, &u.UserRole, &u.Position, &u.IsActive)
+		&u.FullName, &u.UserRole, &u.Position, &u.IsActive, &u.UUID)
 	return &u, err
 }
 
@@ -116,6 +117,7 @@ func signToken(u *userRow) (string, error) {
 
 	claims := customClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   u.UUID,
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},

@@ -98,6 +98,7 @@ CREATE TABLE public.users (
   user_role public.staff_role NOT NULL DEFAULT 'waiter',
   position TEXT,
   is_active BOOLEAN DEFAULT true,
+  uuid UUID NOT NULL DEFAULT gen_random_uuid(),
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
