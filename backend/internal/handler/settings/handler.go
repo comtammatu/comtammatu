@@ -11,10 +11,18 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/personal/comtammatu/backend/internal/httputil"
 	"github.com/personal/comtammatu/backend/internal/middleware"
 )
+
+// isUniqueViolation reports whether err is a Postgres unique_violation (23505).
+// Matches the menu handler's mapping: 23505 → 409 duplicate_name.
+func isUniqueViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "23505"
+}
 
 // Handler serves settings endpoints for branches and areas under /admin/settings.
 type Handler struct {
@@ -47,6 +55,9 @@ func (h *Handler) Routes() chi.Router {
 	r.With(branch).Get("/branches/{id}", h.getBranch)
 	r.With(branch).Put("/branches/{id}", h.updateBranch)
 	r.With(branch).Delete("/branches/{id}", h.deactivateBranch)
+	// Atomic is_active flip — replaces the legacy select-then-update pattern
+	// in apps/web/app/admin/settings/branches/actions.ts toggleBranchActive.
+	r.With(branch).Patch("/branches/{id}/toggle-active", h.toggleBranchActive)
 
 	r.With(branch).Get("/areas", h.listAreas)
 	r.With(branch).Post("/areas", h.createArea)
@@ -157,15 +168,18 @@ func scanBranch(row interface {
 	Scan(...any) error
 }) (Branch, error) {
 	var b Branch
-	var address, phone sql.NullString
+	var address, phone, branchKind sql.NullString
 	var isActive sql.NullBool
 	var createdAt sql.NullTime
-	err := row.Scan(&b.ID, &b.TenantID, &b.Name, &address, &phone, &isActive, &createdAt)
+	err := row.Scan(&b.ID, &b.TenantID, &b.Name, &address, &phone, &branchKind, &isActive, &createdAt)
 	if address.Valid {
 		b.Address = address.String
 	}
 	if phone.Valid {
 		b.Phone = phone.String
+	}
+	if branchKind.Valid {
+		b.BranchKind = branchKind.String
 	}
 	if isActive.Valid {
 		b.IsActive = isActive.Bool
@@ -182,7 +196,7 @@ func (h *Handler) listBranches(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
-	const q = `SELECT id, tenant_id, name, address, phone, is_active, created_at
+	const q = `SELECT id, tenant_id, name, address, phone, branch_kind, is_active, created_at
 		FROM public.branches
 		WHERE tenant_id = $1
 		ORDER BY (branch_kind != 'branch') DESC, name`
@@ -215,7 +229,7 @@ func (h *Handler) getBranch(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteError(w, http.StatusBadRequest, "invalid id")
 		return
 	}
-	const q = `SELECT id, tenant_id, name, address, phone, is_active, created_at
+	const q = `SELECT id, tenant_id, name, address, phone, branch_kind, is_active, created_at
 		FROM public.branches
 		WHERE id = $1 AND tenant_id = $2`
 	b, err := scanBranch(h.pool.QueryRow(r.Context(), q, id, claims.TenantID))
@@ -245,6 +259,13 @@ func (h *Handler) createBranch(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteError(w, http.StatusUnprocessableEntity, "name is required")
 		return
 	}
+	if req.BranchKind == "" {
+		req.BranchKind = "branch"
+	}
+	if !branchKinds[req.BranchKind] {
+		httputil.WriteError(w, http.StatusBadRequest, "invalid_branch_kind")
+		return
+	}
 	var address, phone *string
 	if req.Address != "" {
 		address = &req.Address
@@ -252,11 +273,15 @@ func (h *Handler) createBranch(w http.ResponseWriter, r *http.Request) {
 	if req.Phone != "" {
 		phone = &req.Phone
 	}
-	const q = `INSERT INTO public.branches (tenant_id, name, address, phone)
-		VALUES ($1, $2, $3, $4)
-		RETURNING id, tenant_id, name, address, phone, is_active, created_at`
-	b, err := scanBranch(h.pool.QueryRow(r.Context(), q, claims.TenantID, req.Name, address, phone))
+	const q = `INSERT INTO public.branches (tenant_id, name, address, phone, branch_kind)
+		VALUES ($1, $2, $3, $4, $5)
+		RETURNING id, tenant_id, name, address, phone, branch_kind, is_active, created_at`
+	b, err := scanBranch(h.pool.QueryRow(r.Context(), q, claims.TenantID, req.Name, address, phone, req.BranchKind))
 	if err != nil {
+		if isUniqueViolation(err) {
+			httputil.WriteError(w, http.StatusConflict, "duplicate_name")
+			return
+		}
 		httputil.WriteError(w, http.StatusInternalServerError, "failed to create branch")
 		return
 	}
@@ -279,21 +304,61 @@ func (h *Handler) updateBranch(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
+	if req.BranchKind != nil && !branchKinds[*req.BranchKind] {
+		httputil.WriteError(w, http.StatusBadRequest, "invalid_branch_kind")
+		return
+	}
 	const q = `UPDATE public.branches
 		SET name = COALESCE($1, name),
 		    address = COALESCE($2, address),
 		    phone = COALESCE($3, phone),
-		    is_active = COALESCE($4, is_active),
+		    branch_kind = COALESCE($4, branch_kind),
+		    is_active = COALESCE($5, is_active),
 		    updated_at = now()
-		WHERE id = $5 AND tenant_id = $6
-		RETURNING id, tenant_id, name, address, phone, is_active, created_at`
-	b, err := scanBranch(h.pool.QueryRow(r.Context(), q, req.Name, req.Address, req.Phone, req.IsActive, id, claims.TenantID))
+		WHERE id = $6 AND tenant_id = $7
+		RETURNING id, tenant_id, name, address, phone, branch_kind, is_active, created_at`
+	b, err := scanBranch(h.pool.QueryRow(r.Context(), q, req.Name, req.Address, req.Phone, req.BranchKind, req.IsActive, id, claims.TenantID))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			httputil.WriteError(w, http.StatusNotFound, "branch not found")
 			return
 		}
+		if isUniqueViolation(err) {
+			httputil.WriteError(w, http.StatusConflict, "duplicate_name")
+			return
+		}
 		httputil.WriteError(w, http.StatusInternalServerError, "failed to update branch")
+		return
+	}
+	httputil.WriteJSON(w, http.StatusOK, b)
+}
+
+// toggleBranchActive flips is_active atomically — sibling of the menu module's
+// toggle-active pattern. Replaces the legacy select-then-update in
+// apps/web/app/admin/settings/branches/actions.ts toggleBranchActive (which had
+// a TOCTOU window between read + flip).
+func (h *Handler) toggleBranchActive(w http.ResponseWriter, r *http.Request) {
+	claims := middleware.ClaimsFrom(r.Context())
+	if claims == nil {
+		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	id, err := parseID(r)
+	if err != nil {
+		httputil.WriteError(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	const q = `UPDATE public.branches
+		SET is_active = NOT is_active, updated_at = now()
+		WHERE id = $1 AND tenant_id = $2
+		RETURNING id, tenant_id, name, address, phone, branch_kind, is_active, created_at`
+	b, err := scanBranch(h.pool.QueryRow(r.Context(), q, id, claims.TenantID))
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			httputil.WriteError(w, http.StatusNotFound, "branch not found")
+			return
+		}
+		httputil.WriteError(w, http.StatusInternalServerError, "failed to toggle branch")
 		return
 	}
 	httputil.WriteJSON(w, http.StatusOK, b)

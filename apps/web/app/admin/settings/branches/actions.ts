@@ -4,6 +4,19 @@ import { z } from "zod";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 import { withAction, withFormAction } from "@/_lib/with-action";
+import { goFetch } from "@/_lib/go-api";
+
+// Go BE owns the branches CRUD writes (US-512 branches sub-slice). Locale-
+// neutral error keys from the Go BE map to existing Vietnamese strings here;
+// keep these in sync with backend/internal/handler/settings/handler.go.
+function mapGoBranchError(message: string): string {
+  if (message === "duplicate_name") return "Tên điểm vận hành đã tồn tại";
+  if (message === "invalid_branch_kind") return "Loại điểm vận hành không hợp lệ";
+  if (message === "branch not found") return "Điểm vận hành không tồn tại";
+  return "Không thể thực hiện. Vui lòng thử lại.";
+}
+
+const SESSION_EXPIRED_ERROR = "Phiên đăng nhập đã hết hạn";
 
 const SETTINGS_ROLES: StaffRole[] = ["owner", "super_manager"];
 
@@ -42,30 +55,22 @@ export const createBranch = withFormAction(
       branchKind: fd.get("branchKind"),
     }),
   },
-  async (data, { supabase, claims }) => {
-    const { error } = await supabase.from("branches").insert({
-      tenant_id: claims.tenant_id,
-      name: data.name,
-      address: data.address || null,
-      phone: data.phone || null,
-      branch_kind: data.branchKind,
-    });
+  async (data, { supabase }) => {
+    const { data: sessionRes } = await supabase.auth.getSession();
+    const session = sessionRes.session;
+    if (!session) return { success: false, error: SESSION_EXPIRED_ERROR };
 
-    if (error) {
-      if (error.code === "23505") {
-        return { success: false, error: "Tên điểm vận hành đã tồn tại" };
-      }
-      if (error.code === "42703") {
-        return {
-          success: false,
-          error:
-            "Cần áp dụng migration điểm vận hành trước khi tạo hoặc sửa loại điểm vận hành.",
-        };
-      }
-      return {
-        success: false,
-        error: "Không thể tạo điểm vận hành. Vui lòng thử lại.",
-      };
+    const result = await goFetch("/admin/settings/branches", session, {
+      method: "POST",
+      body: {
+        name: data.name,
+        address: data.address,
+        phone: data.phone,
+        branch_kind: data.branchKind,
+      },
+    });
+    if (!result.ok) {
+      return { success: false, error: mapGoBranchError(result.error.message) };
     }
 
     revalidateSurfacePath("/admin/settings/branches");
@@ -85,30 +90,22 @@ export const updateBranch = withFormAction(
       branchKind: fd.get("branchKind"),
     }),
   },
-  async (data, { supabase, claims }) => {
-    const { error } = await supabase
-      .from("branches")
-      .update({
-        name: data.name,
-        address: data.address || null,
-        phone: data.phone || null,
-        branch_kind: data.branchKind,
-      })
-      .eq("id", data.id)
-      .eq("tenant_id", claims.tenant_id);
+  async (data, { supabase }) => {
+    const { data: sessionRes } = await supabase.auth.getSession();
+    const session = sessionRes.session;
+    if (!session) return { success: false, error: SESSION_EXPIRED_ERROR };
 
-    if (error) {
-      if (error.code === "23505") {
-        return { success: false, error: "Tên điểm vận hành đã tồn tại" };
-      }
-      if (error.code === "42703") {
-        return {
-          success: false,
-          error:
-            "Cần áp dụng migration điểm vận hành trước khi tạo hoặc sửa loại điểm vận hành.",
-        };
-      }
-      return { success: false, error: "Không thể cập nhật. Vui lòng thử lại." };
+    const result = await goFetch(`/admin/settings/branches/${data.id}`, session, {
+      method: "PUT",
+      body: {
+        name: data.name,
+        address: data.address,
+        phone: data.phone,
+        branch_kind: data.branchKind,
+      },
+    });
+    if (!result.ok) {
+      return { success: false, error: mapGoBranchError(result.error.message) };
     }
 
     revalidateSurfacePath("/admin/settings/branches");
@@ -122,26 +119,20 @@ export const toggleBranchActive = withAction(
     schema: toggleIdSchema,
     permission: PERMISSION_KEYS.SETTINGS_TENANT,
   },
-  async (data, { supabase, claims }) => {
-    const { data: branch } = await supabase
-      .from("branches")
-      .select("is_active")
-      .eq("id", data.id)
-      .eq("tenant_id", claims.tenant_id)
-      .single();
+  async (data, { supabase }) => {
+    const { data: sessionRes } = await supabase.auth.getSession();
+    const session = sessionRes.session;
+    if (!session) return { success: false, error: SESSION_EXPIRED_ERROR };
 
-    if (!branch) {
-      return { success: false, error: "Điểm vận hành không tồn tại" };
-    }
-
-    const { error } = await supabase
-      .from("branches")
-      .update({ is_active: !(branch.is_active ?? true) })
-      .eq("id", data.id)
-      .eq("tenant_id", claims.tenant_id);
-
-    if (error) {
-      return { success: false, error: "Không thể cập nhật. Vui lòng thử lại." };
+    // Atomic flip via Go BE replaces the legacy select-then-update TOCTOU
+    // pattern (two round trips that could disagree under concurrent edits).
+    const result = await goFetch(
+      `/admin/settings/branches/${data.id}/toggle-active`,
+      session,
+      { method: "PATCH" },
+    );
+    if (!result.ok) {
+      return { success: false, error: mapGoBranchError(result.error.message) };
     }
 
     revalidateSurfacePath("/admin/settings/branches");

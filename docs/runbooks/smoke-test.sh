@@ -117,6 +117,41 @@ if [[ -n "${TOKEN:-}" ]]; then
   STATUS=$(run_auth GET /admin/settings/branches)
   check "GET /admin/settings/branches" "$STATUS" "200"
 
+  # US-512 branches sub-slice — create + update + toggle round-trip via Go BE.
+  SMOKE_BR_NAME="smoke-br-$(date +%s)"
+  BR_BODY=$(curl -sf -X POST "$BASE/admin/settings/branches" \
+    -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN" \
+    -d "{\"name\":\"$SMOKE_BR_NAME\",\"branch_kind\":\"branch\"}")
+  BR_ID=$(echo "$BR_BODY" | jq -r '.id // empty')
+  BR_KIND=$(echo "$BR_BODY" | jq -r '.branch_kind // empty')
+  if [[ -n "$BR_ID" && "$BR_KIND" == "branch" ]]; then
+    echo "  PASS  POST /admin/settings/branches (id=$BR_ID kind=$BR_KIND)"
+    ((PASS++)) || true
+  else
+    echo "  FAIL  POST /admin/settings/branches (body=$BR_BODY)"
+    ((FAIL++)) || true
+  fi
+
+  if [[ -n "${BR_ID:-}" ]]; then
+    STATUS=$(curl -sf -o /dev/null -w "%{http_code}" -X PUT \
+      -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN" \
+      -d '{"branch_kind":"central_kitchen"}' \
+      "$BASE/admin/settings/branches/$BR_ID")
+    check "PUT /admin/settings/branches/$BR_ID (branch_kind)" "$STATUS" "200"
+
+    STATUS=$(curl -sf -o /dev/null -w "%{http_code}" -X PATCH \
+      -H "Authorization: Bearer $TOKEN" \
+      "$BASE/admin/settings/branches/$BR_ID/toggle-active")
+    check "PATCH /admin/settings/branches/$BR_ID/toggle-active" "$STATUS" "200"
+
+    # Invalid branch_kind MUST 400 — regression guard for the allowlist.
+    BAD_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X PUT \
+      -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN" \
+      -d '{"branch_kind":"galactic_hub"}' \
+      "$BASE/admin/settings/branches/$BR_ID")
+    check "PUT branches invalid_branch_kind -> 400" "$BAD_STATUS" "400"
+  fi
+
   # 7. Tables list
   echo "--- /admin/settings/tables ---"
   STATUS=$(run_auth GET /admin/settings/tables)
