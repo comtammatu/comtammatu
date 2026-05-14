@@ -16,6 +16,7 @@ import (
 
 	"github.com/personal/comtammatu/backend/config"
 	"github.com/personal/comtammatu/backend/internal/abac"
+	"github.com/personal/comtammatu/backend/internal/auth"
 	"github.com/personal/comtammatu/backend/internal/db"
 	authhandler "github.com/personal/comtammatu/backend/internal/handler/auth"
 	healthhandler "github.com/personal/comtammatu/backend/internal/handler/health"
@@ -80,26 +81,44 @@ func main() {
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.Authenticate(cfg.JWTSecret))
 
+		// /auth/me — any authenticated user; no module gate.
 		r.Get("/auth/me", authH.Me)
-		r.Mount("/menu", menuhandler.New(pool, eval).Routes())
-		r.Mount("/admin/staff", staffhandler.New(pool, eval).Routes())
+
+		// Module-gated route groups. RequireModule enforces the coarse
+		// role→module ACL (mirrors apps/web/proxy.ts + module-acl.ts).
+		// Branch-scoped routes additionally enforce RequireBranchScope so a
+		// branch-scoped caller cannot reach another branch in the tenant.
+		r.With(middleware.RequireModule(auth.ModuleMenu)).
+			Mount("/menu", menuhandler.New(pool, eval).Routes())
+		r.With(middleware.RequireModule(auth.ModuleStaff)).
+			Mount("/admin/staff", staffhandler.New(pool, eval).Routes())
+
 		settingsH := settingshandler.New(pool, eval)
-		r.Mount("/admin/settings", settingsH.Routes())
+		r.With(middleware.RequireModule(auth.ModuleSettings)).
+			Mount("/admin/settings", settingsH.Routes())
 		// Payment-settings live under /admin/settings/payments. Mounted
-		// separately from the settings.Routes() group because they gate on
-		// the tenant-level permission rather than the branch-level one.
-		r.Get("/admin/settings/payments", settingsH.GetPayments)
-		r.Put("/admin/settings/payments", settingsH.PutPayments)
+		// separately from the settings.Routes() group because the handler
+		// gates on the tenant-level permission rather than the branch-level one.
+		r.With(middleware.RequireModule(auth.ModuleSettings)).
+			Get("/admin/settings/payments", settingsH.GetPayments)
+		r.With(middleware.RequireModule(auth.ModuleSettings)).
+			Put("/admin/settings/payments", settingsH.PutPayments)
 
 		ordersH := ordershandler.New(pool)
-		r.Mount("/br/{branchId}/orders", ordersH.Routes())
-		r.Post("/br/{branchId}/shifts/close", ordersH.CloseShift)
-		r.Mount("/br/{branchId}/kds", kdshandler.New(pool).Routes())
-		r.Mount("/notifications", notifhandler.New(pool).Routes())
+		r.With(middleware.RequireModule(auth.ModulePOS), middleware.RequireBranchScope).
+			Mount("/br/{branchId}/orders", ordersH.Routes())
+		r.With(middleware.RequireModule(auth.ModulePOS), middleware.RequireBranchScope).
+			Post("/br/{branchId}/shifts/close", ordersH.CloseShift)
+		r.With(middleware.RequireModule(auth.ModuleKDS), middleware.RequireBranchScope).
+			Mount("/br/{branchId}/kds", kdshandler.New(pool).Routes())
+		r.With(middleware.RequireModule(auth.ModuleNotifications)).
+			Mount("/notifications", notifhandler.New(pool).Routes())
 
 		paymentsH := paymentshandler.New(pool)
-		r.Mount("/br/{branchId}/payments", paymentsH.Routes())
-		r.Post("/br/{branchId}/orders/{id}/payment/vietqr/confirm", paymentsH.ConfirmVietQR)
+		r.With(middleware.RequireModule(auth.ModulePOS), middleware.RequireBranchScope).
+			Mount("/br/{branchId}/payments", paymentsH.Routes())
+		r.With(middleware.RequireModule(auth.ModulePOS), middleware.RequireBranchScope).
+			Post("/br/{branchId}/orders/{id}/payment/vietqr/confirm", paymentsH.ConfirmVietQR)
 	})
 
 	srv := &http.Server{
