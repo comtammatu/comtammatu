@@ -3,6 +3,12 @@
 import { z } from "zod";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { loadAuthState } from "@/_lib/auth";
+import { goFetch } from "@/_lib/go-api";
+
+// Notifications writes are owned by the Go BE (US-514). Read paths (listNotifications,
+// getUnreadCount) stay on Supabase for now per the goFetch convention at
+// apps/web/app/_lib/go-api.ts:5-8.
+const NOTIF_GENERIC_ERROR = "Không thể đánh dấu đã đọc";
 
 export interface NotificationItem {
   id: number;
@@ -122,13 +128,21 @@ export async function markNotificationRead(
   if (!parsed.success) {
     return { success: false, error: "Dữ liệu không hợp lệ" };
   }
-  const { supabase, session } = await loadAuthState();
-  const { error } = await supabase
-    .from("notification_reads")
-    .insert({ notification_id: parsed.data.id, user_id: session.user.id });
-  // 23505 = unique_violation → already read, treat as success
-  if (error && error.code !== "23505") {
-    return { success: false, error: "Không thể đánh dấu đã đọc" };
+  const { session } = await loadAuthState();
+  // Go BE handler is idempotent (ON CONFLICT DO NOTHING) and binds UserUUID
+  // explicitly from JWT claims — see internal/handler/notifications/handler.go:177.
+  // 404 means the notification doesn't belong to this tenant; surface as a
+  // user-visible error rather than silent success.
+  const result = await goFetch(
+    `/notifications/${parsed.data.id}/read`,
+    session,
+    { method: "PATCH" },
+  );
+  if (!result.ok) {
+    if (result.error.status === 404) {
+      return { success: false, error: "Thông báo không tồn tại" };
+    }
+    return { success: false, error: NOTIF_GENERIC_ERROR };
   }
   return { success: true };
 }
@@ -137,10 +151,16 @@ export async function markNotificationRead(
 export async function markAllNotificationsRead(): Promise<
   ActionResult<{ count: number }>
 > {
-  const { supabase } = await loadAuthState();
-  const { data, error } = await supabase.rpc("mark_all_notifications_read");
-  if (error) {
+  const { session } = await loadAuthState();
+  // Go BE replaces the mark_all_notifications_read RPC (which used auth.uid()
+  // and returned NULL on plain pgxpool). Response shape: {"marked": N}.
+  const result = await goFetch<{ marked: number }>(
+    "/notifications/read-all",
+    session,
+    { method: "PATCH" },
+  );
+  if (!result.ok) {
     return { success: false, error: "Không thể đánh dấu tất cả" };
   }
-  return { success: true, data: { count: Number(data ?? 0) } };
+  return { success: true, data: { count: Number(result.data.marked ?? 0) } };
 }

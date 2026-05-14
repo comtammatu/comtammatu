@@ -139,6 +139,17 @@ if [[ -n "${TOKEN:-}" ]]; then
 
   STATUS=$(run_auth GET /notifications/unread-count)
   check "GET /notifications/unread-count" "$STATUS" "200"
+
+  # US-514 — notification writes. read-all is idempotent so it's safe to run
+  # repeatedly; mark-one with an obviously-bogus id MUST 404 (not 500).
+  STATUS=$(curl -sf -o /dev/null -w "%{http_code}" -X PATCH \
+    -H "Authorization: Bearer $TOKEN" "$BASE/notifications/read-all")
+  check "PATCH /notifications/read-all" "$STATUS" "200"
+
+  STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X PATCH \
+    -H "Authorization: Bearer $TOKEN" \
+    "$BASE/notifications/9999999999/read")
+  check "PATCH /notifications/9999999999/read -> 404" "$STATUS" "404"
 else
   echo "  SKIP  authenticated endpoint checks (no token)"
 fi
