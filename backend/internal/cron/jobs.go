@@ -21,11 +21,28 @@ func FeedbackDailyReport(pool *pgxpool.Pool) func(context.Context) {
 
 // FeedbackRetention runs at 20:00 UTC (03:00 ICT) daily.
 // Source: apps/web/app/api/cron/feedback-retention/route.ts
+//
+// Calls SECURITY DEFINER RPC public.feedback_retention_cleanup() which prunes
+// phone/ip/row/outbox rows past the retention window. The function returns
+// jsonb counters which we surface in the log line.
+//
+// Photo-object pruning from object storage is deferred to Phase E (R2 client
+// is not yet wired). The TS route does this with supabase.storage which has
+// no Go equivalent here yet.
 func FeedbackRetention(pool *pgxpool.Pool) func(context.Context) {
 	return func(ctx context.Context) {
 		slog.Info("cron: running FeedbackRetention")
-		// TODO: port logic from apps/web/app/api/cron/feedback-retention/route.ts — deferred to a follow-up
-		_ = pool
+		var counters []byte
+		if err := pool.QueryRow(ctx,
+			`SELECT public.feedback_retention_cleanup()::text`,
+		).Scan(&counters); err != nil {
+			slog.Error("cron: FeedbackRetention: rpc failed", "err", err)
+			return
+		}
+		slog.Info("cron: FeedbackRetention: done",
+			"counters", string(counters),
+			"photos_deferred", true,
+		)
 	}
 }
 
