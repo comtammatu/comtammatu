@@ -3,6 +3,7 @@ package finance
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
@@ -45,13 +46,15 @@ func (h *Handler) listChartOfAccounts(w http.ResponseWriter, r *http.Request) {
 	out := make([]accountRow, 0)
 	for rows.Next() {
 		var a accountRow
+		var createdAt time.Time
 		if err := rows.Scan(
 			&a.ID, &a.AccountCode, &a.AccountName, &a.AccountType,
-			&a.ParentID, &a.Level, &a.IsActive, &a.CreatedAt,
+			&a.ParentID, &a.Level, &a.IsActive, &createdAt,
 		); err != nil {
 			httputil.WriteError(w, http.StatusInternalServerError, "failed to read account")
 			return
 		}
+		a.CreatedAt = createdAt.Format(time.RFC3339)
 		out = append(out, a)
 	}
 	httputil.WriteJSON(w, http.StatusOK, map[string]any{"data": out})

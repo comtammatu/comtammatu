@@ -1,10 +1,12 @@
 package finance
 
 import (
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
@@ -233,15 +235,30 @@ func (h *Handler) listInvoices(w http.ResponseWriter, r *http.Request) {
 	out := make([]invoiceRow, 0)
 	for rows.Next() {
 		var inv invoiceRow
+		var issuedAt, cancelledAt, archivedAt sql.NullTime
+		var createdAt time.Time
 		if err := rows.Scan(
 			&inv.ID, &inv.InvoiceNumber, &inv.Status, &inv.BuyerName, &inv.BuyerTaxCode,
 			&inv.Subtotal, &inv.VatRate, &inv.VatAmount, &inv.TotalAmount,
-			&inv.IssuedAt, &inv.CancelledAt, &inv.ArchivedAt, &inv.CreatedAt,
+			&issuedAt, &cancelledAt, &archivedAt, &createdAt,
 			&inv.OrderNumber,
 		); err != nil {
 			httputil.WriteError(w, http.StatusInternalServerError, "failed to read invoice")
 			return
 		}
+		if issuedAt.Valid {
+			s := issuedAt.Time.Format(time.RFC3339)
+			inv.IssuedAt = &s
+		}
+		if cancelledAt.Valid {
+			s := cancelledAt.Time.Format(time.RFC3339)
+			inv.CancelledAt = &s
+		}
+		if archivedAt.Valid {
+			s := archivedAt.Time.Format(time.RFC3339)
+			inv.ArchivedAt = &s
+		}
+		inv.CreatedAt = createdAt.Format(time.RFC3339)
 		out = append(out, inv)
 	}
 	httputil.WriteJSON(w, http.StatusOK, map[string]any{"data": out})
@@ -285,12 +302,14 @@ func (h *Handler) listInvoiceEvents(w http.ResponseWriter, r *http.Request) {
 	out := make([]eventRow, 0)
 	for rows.Next() {
 		var ev eventRow
+		var createdAt time.Time
 		if err := rows.Scan(
-			&ev.ID, &ev.FromStatus, &ev.ToStatus, &ev.Payload, &ev.Note, &ev.ActorID, &ev.CreatedAt,
+			&ev.ID, &ev.FromStatus, &ev.ToStatus, &ev.Payload, &ev.Note, &ev.ActorID, &createdAt,
 		); err != nil {
 			httputil.WriteError(w, http.StatusInternalServerError, "failed to read event")
 			return
 		}
+		ev.CreatedAt = createdAt.Format(time.RFC3339)
 		out = append(out, ev)
 	}
 	httputil.WriteJSON(w, http.StatusOK, map[string]any{"data": out})
@@ -389,10 +408,12 @@ func (h *Handler) getAuditLogs(w http.ResponseWriter, r *http.Request) {
 	out := make([]logRow, 0)
 	for rows.Next() {
 		var l logRow
-		if err := rows.Scan(&l.ID, &l.Action, &l.EntityType, &l.EntityID, &l.UserID, &l.CreatedAt); err != nil {
+		var createdAt time.Time
+		if err := rows.Scan(&l.ID, &l.Action, &l.EntityType, &l.EntityID, &l.UserID, &createdAt); err != nil {
 			httputil.WriteError(w, http.StatusInternalServerError, "failed to read audit log")
 			return
 		}
+		l.CreatedAt = createdAt.Format(time.RFC3339)
 		out = append(out, l)
 	}
 	httputil.WriteJSON(w, http.StatusOK, map[string]any{"data": out})

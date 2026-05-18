@@ -3,6 +3,8 @@ package finance
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/personal/comtammatu/backend/internal/httputil"
@@ -127,24 +129,24 @@ func (h *Handler) updatePostingRule(w http.ResponseWriter, r *http.Request) {
 	argIdx := 1
 
 	if body.DebitAccountCode != nil {
-		setClauses = append(setClauses, "debit_account_code = $"+itoa(argIdx))
+		setClauses = append(setClauses, "debit_account_code = $"+strconv.Itoa(argIdx))
 		args = append(args, *body.DebitAccountCode)
 		argIdx++
 	}
 	if body.CreditAccountCode != nil {
-		setClauses = append(setClauses, "credit_account_code = $"+itoa(argIdx))
+		setClauses = append(setClauses, "credit_account_code = $"+strconv.Itoa(argIdx))
 		args = append(args, *body.CreditAccountCode)
 		argIdx++
 	}
 	if body.IsActive != nil {
-		setClauses = append(setClauses, "is_active = $"+itoa(argIdx))
+		setClauses = append(setClauses, "is_active = $"+strconv.Itoa(argIdx))
 		args = append(args, *body.IsActive)
 		argIdx++
 	}
 
 	args = append(args, ruleID, claims.TenantID)
-	query := "UPDATE public.posting_rules SET " + joinComma(setClauses) +
-		" WHERE id = $" + itoa(argIdx) + " AND tenant_id = $" + itoa(argIdx+1) +
+	query := "UPDATE public.posting_rules SET " + strings.Join(setClauses, ", ") +
+		" WHERE id = $" + strconv.Itoa(argIdx) + " AND tenant_id = $" + strconv.Itoa(argIdx+1) +
 		" RETURNING id"
 
 	var returnedID int64
@@ -155,21 +157,4 @@ func (h *Handler) updatePostingRule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
-}
-
-// itoa converts int to string without importing strconv in every call site.
-func itoa(n int) string {
-	return string(rune('0' + n%10)) // Only works for n < 10 — fine for our arg count.
-}
-
-// joinComma joins string slices with ", " separator.
-func joinComma(parts []string) string {
-	out := ""
-	for i, p := range parts {
-		if i > 0 {
-			out += ", "
-		}
-		out += p
-	}
-	return out
 }

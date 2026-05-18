@@ -1,9 +1,11 @@
 package finance
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/personal/comtammatu/backend/internal/db"
@@ -45,13 +47,20 @@ func (h *Handler) listFiscalPeriods(w http.ResponseWriter, r *http.Request) {
 	out := make([]periodRow, 0)
 	for rows.Next() {
 		var p periodRow
+		var closedAt sql.NullTime
+		var createdAt time.Time
 		if err := rows.Scan(
 			&p.ID, &p.PeriodMonth, &p.PeriodYear, &p.Status,
-			&p.ClosedBy, &p.ClosedAt, &p.Notes, &p.CreatedAt,
+			&p.ClosedBy, &closedAt, &p.Notes, &createdAt,
 		); err != nil {
 			httputil.WriteError(w, http.StatusInternalServerError, "failed to read period")
 			return
 		}
+		if closedAt.Valid {
+			s := closedAt.Time.Format(time.RFC3339)
+			p.ClosedAt = &s
+		}
+		p.CreatedAt = createdAt.Format(time.RFC3339)
 		out = append(out, p)
 	}
 	httputil.WriteJSON(w, http.StatusOK, map[string]any{"data": out})

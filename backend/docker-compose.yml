@@ -24,7 +24,9 @@ services:
     container_name: comtammatu-api
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      # Host 8080 is taken on dev machines (fb-manage). Map to 18080
+      # externally; the container still listens on 8080 internally.
+      - "18080:8080"
     env_file:
       - .env
     environment:

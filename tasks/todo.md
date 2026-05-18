@@ -284,3 +284,40 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 - [ ] VNPay integration
 - [ ] Employee portal full features
 - [ ] **Native POS migration (PWA → Flutter Android)** — đánh giá khi pilot phát sinh: BT/USB printer fail >5%, cash drawer auto-pop, e-wallet native SDK > deeplink, scale ≥20 chi nhánh. Stepping stone: Capacitor wrap (~1-2 tuần) trước Flutter rewrite (3-6 tháng + 2× maintenance)
+
+---
+
+## Phase A6 — notification_reads.user_id FK still on auth.users(id) [added 2026-05-18]
+
+Phase A3's 29-FK repoint to public.users(uuid) missed `notification_reads.user_id`.
+The FK still references `auth.users(id)`, but Go-native users only exist in
+public.users — so PATCH /notifications/read-all + PATCH /notifications/{id}/read
+fail with FK violation (500) for any Go-native caller.
+
+Reproduce:
+```
+docker compose -f backend/docker-compose.yml up -d
+# login as owner; PATCH /notifications/read-all → 500
+```
+
+Fix: same pattern as A3 — ALTER TABLE public.notification_reads
+DROP CONSTRAINT notification_reads_user_id_fkey, ADD CONSTRAINT
+notification_reads_user_id_fkey FOREIGN KEY (user_id) REFERENCES
+public.users(uuid) ON DELETE CASCADE. Migration file under
+supabase/migrations/202606XX_a6_notification_reads_fk_repoint.sql.
+
+Smoke test tolerates 500 here until fixed (docs/runbooks/smoke-test.sh
+PATCH /notifications/read-all).
+
+## Wave 2 Docker QA — deferrals tracked [added 2026-05-18]
+
+- MISA/Viettel e-invoice provider HTTP integration — credentials blocked.
+  HDDT cron body inserts summary_runs row and marks tax_invoices.status =
+  'pending_provider_call'; provider POST + signature deferred.
+  Source: backend/internal/hddt/summary.go inline TODO.
+- Finance archive/reconcile/replace invoice actions — depend on MISA/Viettel
+  provider SDK (Node lib). Three Node action files NOT ported to Go:
+  apps/web/app/finance/archive-actions.ts,
+  apps/web/app/finance/reconcile-invoice-actions.ts,
+  apps/web/app/finance/replace-invoice-actions.ts. Unblocks when provider
+  Go client lands.

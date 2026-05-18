@@ -2,10 +2,10 @@ package finance
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
-
-	"errors"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
@@ -72,13 +72,16 @@ func (h *Handler) listJournals(w http.ResponseWriter, r *http.Request) {
 	out := make([]journalRow, 0)
 	for rows.Next() {
 		var j journalRow
+		var entryDate, createdAt time.Time
 		if err := rows.Scan(
-			&j.ID, &j.EntryNumber, &j.EntryDate, &j.Description,
-			&j.ReferenceType, &j.ReferenceID, &j.Status, &j.CreatedAt,
+			&j.ID, &j.EntryNumber, &entryDate, &j.Description,
+			&j.ReferenceType, &j.ReferenceID, &j.Status, &createdAt,
 		); err != nil {
 			httputil.WriteError(w, http.StatusInternalServerError, "failed to read journal")
 			return
 		}
+		j.EntryDate = entryDate.Format("2006-01-02")
+		j.CreatedAt = createdAt.Format(time.RFC3339)
 		out = append(out, j)
 	}
 	httputil.WriteJSON(w, http.StatusOK, map[string]any{"data": out})

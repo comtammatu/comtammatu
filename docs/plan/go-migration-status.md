@@ -37,8 +37,8 @@ HĐĐT e-invoice (~400). All currently zero Go code.
 |------|--------|
 | Execution plan (`docs/plan/go-migration-phase-B-module-ports.md`) | DONE — commit `8fa1a6f3` (3 waves, ~24d; print-agent stays Node) |
 | Wave 1 — Employee + HR/Payroll + Feedback/CRM (parallelizable) | DONE — Employee (`b5159be2`, 8 routes), HR (`cb31ecf1`, 26 active + 3 deferred routes), Feedback (`7f781634`, 17 routes) ported. Go-native cron scheduler scaffold landed (`ff2e30b7`, `internal/cron/`, robfig/cron/v3 with pg_advisory_lock guard; 4 stub jobs registered). Three follow-ups: (1) port `packages/shared/src/payroll/calculate.ts` to Go (unblocks the 3 deferred 501 payroll-compute endpoints in `/hr/payroll`), (2) R2 storage client (unblocks /r/{token}/photos), (3) wire TELEGRAM_BOT_TOKEN through config (unblocks Telegram test endpoint). |
-| Wave 2 — Finance/GL + HĐĐT | NOT STARTED — gated on Wave 1 |
-| Wave 3 — Inventory (104 endpoints, split 3 ways) + print-agent's 5 Go endpoints | NOT STARTED — gated on Wave 2 |
+| Wave 2 — Finance/GL + HĐĐT | DONE — Finance (~1500 LOC, 37 routes across handler/finance/{handler,util,revenue,reports,chart_of_accounts,journals,periods,posting_rules,summary_invoices}.go; ~19 auth.uid() RPCs wrapped in WithAuthContext) + HDDT (3 admin routes + real cron body backed by `backend/internal/hddt/RunDailySummaryForBranch`). MISA/Viettel provider HTTP call remains deferred (credentials blocked — tracked in tasks/todo.md). Single commit covering both because main.go mount file is shared; smoke-test.sh extended in a follow-up commit. |
+| Wave 3 — Inventory (104 endpoints, split 3 ways) + print-agent's 5 Go endpoints | NOT STARTED — XL effort (10-14 dev-days). Plan splits across 3 parallel agents (procurement / stocktake / remaining). Phase B plan §"Inventory" lists 13 sub-files. Recommended dedicated session. |
 
 ## Phase C — Go-native realtime
 
@@ -52,22 +52,26 @@ WebSocket endpoint. Wire into `main.go`.
 
 ## Phase D — Frontend rewire off Supabase
 
-Replace ~74 `supabase.rpc()` / `.from()` / `.channel()` call-sites in `apps/web`
-with Go API calls (`goFetch`) + the new WS realtime client. Includes the
-deferred US-508 POS `payment-actions.ts` rewire.
+Replace ~64 remaining `supabase.rpc()` / `.from()` / `.channel()` call-sites
+in `apps/web` (down from ~74 baseline after Wave 1+2 rewired some) with Go API
+calls (`goFetch`) + the new WS realtime client. Includes the deferred US-508
+POS `payment-actions.ts` rewire.
 
 | Step | Status |
 |------|--------|
-| All sub-steps | NOT STARTED — gated on Phases A, B, C |
+| All sub-steps | NOT STARTED — needs dedicated session. ~5-7 dev-days. Inventory (~25 sites), Finance dashboard (~15), HR pages (~10), Feedback admin (~8), remaining surface (~6). Mechanical port once Wave 3 is done. |
 
 ## Phase E — DB cutover, drop Supabase platform
 
-Auth issuance (GoTrue self-hosted or Go-native), storage → Cloudflare R2,
-pg_cron jobs, drop PostgREST + Supabase containers. Final cutover.
+Auth issuance, storage → Cloudflare R2, pg_cron jobs, drop PostgREST +
+Supabase containers. Final cutover.
 
 | Step | Status |
 |------|--------|
-| All sub-steps | NOT STARTED — gated on Phases A–D |
+| Auth issuance decision | DECIDED — **Go-native HS256 JWT** (vs self-hosted GoTrue). Reuses existing `public.users.password_hash` (bcrypt) + `cfg.JWTSecret`. No extra container. Path: replace Supabase `signInWithPassword` + `getSession` in `apps/web` with a thin Go BE `/auth/login` + cookie session. The Go BE already issues JWTs (see `backend/internal/handler/auth/login.go`); FE just needs to consume them in place of Supabase tokens. |
+| Storage (R2) | NOT STARTED — needs S3-compatible client in `backend/internal/storage/`. Unblocks `/r/{token}/photos` + inventory attachments + GRN evidence. ~2 dev-days. |
+| pg_cron → Go cron bodies | PARTIAL — scheduler scaffold + 4 stubs registered (`ff2e30b7`); 1 body filled (HDDTDailySummary, Wave 2). 3 stubs remaining: feedback_daily_report, feedback_retention, telegram_flush. ~2 dev-days. |
+| Drop PostgREST + Supabase containers | NOT STARTED — gated on all above + Phase D. |
 
 ---
 

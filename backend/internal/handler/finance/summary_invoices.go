@@ -1,8 +1,10 @@
 package finance
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/personal/comtammatu/backend/internal/db"
@@ -58,14 +60,25 @@ func (h *Handler) listSummaryRunQueue(w http.ResponseWriter, r *http.Request) {
 	out := make([]queueRow, 0)
 	for rows.Next() {
 		var q queueRow
+		var startedAt, finishedAt sql.NullTime
+		var createdAt time.Time
 		if err := rows.Scan(
 			&q.ID, &q.BranchID, &q.SummaryDate, &q.Status, &q.TriggerSource,
 			&q.TriggeredBy, &q.AttemptCount, &q.LastError, &q.TaxInvoiceID,
-			&q.StartedAt, &q.FinishedAt, &q.CreatedAt,
+			&startedAt, &finishedAt, &createdAt,
 		); err != nil {
 			httputil.WriteError(w, http.StatusInternalServerError, "failed to read queue row")
 			return
 		}
+		if startedAt.Valid {
+			s := startedAt.Time.Format(time.RFC3339)
+			q.StartedAt = &s
+		}
+		if finishedAt.Valid {
+			s := finishedAt.Time.Format(time.RFC3339)
+			q.FinishedAt = &s
+		}
+		q.CreatedAt = createdAt.Format(time.RFC3339)
 		out = append(out, q)
 	}
 	httputil.WriteJSON(w, http.StatusOK, map[string]any{"data": out})
