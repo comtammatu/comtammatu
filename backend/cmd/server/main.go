@@ -19,6 +19,7 @@ import (
 	"github.com/personal/comtammatu/backend/internal/auth"
 	"github.com/personal/comtammatu/backend/internal/db"
 	authhandler "github.com/personal/comtammatu/backend/internal/handler/auth"
+	employeehandler "github.com/personal/comtammatu/backend/internal/handler/employee"
 	healthhandler "github.com/personal/comtammatu/backend/internal/handler/health"
 	kdshandler "github.com/personal/comtammatu/backend/internal/handler/kds"
 	menuhandler "github.com/personal/comtammatu/backend/internal/handler/menu"
@@ -123,6 +124,8 @@ func main() {
 			Mount("/br/{branchId}/kds", kdshandler.New(pool, eval).Routes())
 		r.With(middleware.RequireModule(auth.ModuleNotifications)).
 			Mount("/notifications", notifhandler.New(pool, eval).Routes())
+		r.With(middleware.RequireModule(auth.ModuleEmployee)).
+			Mount("/employee", employeehandler.New(pool, eval).Routes())
 
 		paymentsH := paymentshandler.New(pool, eval)
 		r.With(middleware.RequireModule(auth.ModulePOS), middleware.RequireBranchScope).
