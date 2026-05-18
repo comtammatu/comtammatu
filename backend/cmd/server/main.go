@@ -26,6 +26,7 @@ import (
 	hddthandler "github.com/personal/comtammatu/backend/internal/handler/hddt"
 	healthhandler "github.com/personal/comtammatu/backend/internal/handler/health"
 	hrhandler "github.com/personal/comtammatu/backend/internal/handler/hr"
+	inventoryhandler "github.com/personal/comtammatu/backend/internal/handler/inventory"
 	kdshandler "github.com/personal/comtammatu/backend/internal/handler/kds"
 	menuhandler "github.com/personal/comtammatu/backend/internal/handler/menu"
 	notifhandler "github.com/personal/comtammatu/backend/internal/handler/notifications"
@@ -159,6 +160,8 @@ func main() {
 			Mount("/admin/hddt", hddthandler.New(pool, eval).Routes())
 		r.With(middleware.RequireModule(auth.ModuleFinance)).
 			Mount("/finance", financehandler.New(pool, eval).Routes())
+		r.With(middleware.RequireModule(auth.ModuleInventory)).
+			Mount("/inventory", inventoryhandler.New(pool, eval).Routes())
 
 		paymentsH := paymentshandler.New(pool, eval)
 		r.With(middleware.RequireModule(auth.ModulePOS), middleware.RequireBranchScope).
