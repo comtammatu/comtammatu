@@ -6,6 +6,8 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5"
+	"github.com/personal/comtammatu/backend/internal/db"
 	"github.com/personal/comtammatu/backend/internal/httputil"
 	"github.com/personal/comtammatu/backend/internal/middleware"
 )
@@ -39,15 +41,17 @@ func (h *Handler) CloseShift(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// close_pos_session RPC handles: lock, cash reconciliation, status update
+	// close_pos_session uses auth.uid() internally — must run inside WithAuthContext.
 	const q = `SELECT public.close_pos_session($1, $2::NUMERIC(15,2), $3)`
 	var resultJSON []byte
-	err = h.pool.QueryRow(r.Context(), q,
-		req.SessionID,
-		req.ClosingCash,
-		req.Note,
-	).Scan(&resultJSON)
-	if err != nil {
+	rpcErr := db.WithAuthContext(r.Context(), h.pool, claims.UserUUID, string(claims.UserRole), func(tx pgx.Tx) error {
+		return tx.QueryRow(r.Context(), q,
+			req.SessionID,
+			req.ClosingCash,
+			req.Note,
+		).Scan(&resultJSON)
+	})
+	if rpcErr != nil {
 		httputil.WriteError(w, http.StatusInternalServerError, "failed to close shift")
 		return
 	}

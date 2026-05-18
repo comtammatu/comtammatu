@@ -20,7 +20,7 @@ FKs pointed at Supabase `profiles`, which Go users were not in).
 | A1 — inventory: 29 FKs → `profiles`, 91 RPC files, 182 `auth.uid()` files | DONE | this session |
 | A2 — extend `public.users` to a column-superset of `profiles` | DONE | commit `d9f6bd73` |
 | A3 — repoint 29 FKs → `public.users(uuid)`; `profiles` becomes a VIEW; 4 writer fns bridged with INSTEAD OF triggers | DONE | commit `47b2ffe8` |
-| A4 — audit Go RPC call-sites use `db.WithAuthContext` (not just the payment paths) | IN PROGRESS | agent `ac0bea0b` |
+| A4 — audit Go RPC call-sites use `db.WithAuthContext` (not just the payment paths) | DONE | all 5 `SELECT public.<rpc>` handler call-sites wrap in WithAuthContext (`orders/handler.go:189`, `orders/handler.go:390`, `orders/payment_momo.go:124`, `orders/shifts.go:47`, `payments/handler.go:130`). Webhook `complete_payment_and_consume_stock` takes explicit `p_actor_id UUID` — no `auth.uid()` use. Notifications handler inlines tenant-scoped SQL with explicit `claims.UserUUID`. |
 | A5 — verify order/payment/void work end-to-end for a Go-native user locally | IN PROGRESS | agent `ac0bea0b` |
 
 **Prod-apply-time owner review (flagged by A3):** backfill `user_role` derivation
