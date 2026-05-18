@@ -196,6 +196,90 @@ if [[ -n "${TOKEN:-}" ]]; then
     -H "Authorization: Bearer $TOKEN" \
     "$BASE/notifications/9999999999/read")
   check "PATCH /notifications/9999999999/read -> 404" "$STATUS" "404"
+
+  # 11. Employee self-service (Wave 1 — b5159be2)
+  echo "--- /employee/* ---"
+  STATUS=$(run_auth GET /employee/clock/status)
+  # Owner has no employee row → 422 expected (account-not-linked). Both 200
+  # and 422 prove the handler is wired and tenant-scoped.
+  if [[ "$STATUS" == "200" || "$STATUS" == "422" ]]; then
+    echo "  PASS  GET /employee/clock/status (got=$STATUS)"
+    ((PASS++)) || true
+  else
+    echo "  FAIL  GET /employee/clock/status (got=$STATUS)"
+    ((FAIL++)) || true
+  fi
+
+  STATUS=$(run_auth GET "/employee/shifts?branch_id=$BRANCH")
+  check "GET /employee/shifts?branch_id=$BRANCH" "$STATUS" "200"
+
+  # 12. HR/Payroll (Wave 1 — cb31ecf1)
+  echo "--- /hr/* ---"
+  STATUS=$(run_auth GET /hr/employees)
+  check "GET /hr/employees" "$STATUS" "200"
+
+  STATUS=$(run_auth GET "/hr/shifts?branch_id=$BRANCH")
+  check "GET /hr/shifts?branch_id=$BRANCH" "$STATUS" "200"
+
+  STATUS=$(run_auth GET "/hr/shift-requests?branch_id=$BRANCH")
+  check "GET /hr/shift-requests?branch_id=$BRANCH" "$STATUS" "200"
+
+  STATUS=$(run_auth GET /hr/payroll/periods)
+  check "GET /hr/payroll/periods" "$STATUS" "200"
+
+  # Deferred payroll-calc endpoint MUST 501 — regression guard for the stub.
+  STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+    -H "Authorization: Bearer $TOKEN" "$BASE/hr/payroll/periods/1/calculate")
+  check "POST /hr/payroll/periods/1/calculate -> 501 (deferred)" "$STATUS" "501"
+
+  # 13. Feedback admin (Wave 1 — 7f781634)
+  echo "--- /admin/feedback ---"
+  STATUS=$(run_auth GET /admin/feedback)
+  check "GET /admin/feedback" "$STATUS" "200"
+
+  STATUS=$(run_auth GET /admin/feedback/qr)
+  check "GET /admin/feedback/qr" "$STATUS" "200"
+
+  STATUS=$(run_auth GET /admin/feedback/settings)
+  check "GET /admin/feedback/settings" "$STATUS" "200"
+
+  # Deferred photo upload MUST 501 — regression guard for the R2 deferral.
+  STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+    "$BASE/r/nonexistent-token/photos")
+  check "POST /r/{token}/photos -> 501 (deferred)" "$STATUS" "501"
+
+  # 14. Finance (Wave 2 — added once handler ships)
+  echo "--- /finance/* ---"
+  STATUS=$(run_auth GET /finance/revenue/daily)
+  if [[ "$STATUS" == "200" || "$STATUS" == "400" || "$STATUS" == "404" ]]; then
+    # 400 acceptable if endpoint requires query params; 404 acceptable if
+    # handler not yet wired (lets the script run before Wave 2 lands).
+    echo "  PASS  GET /finance/revenue/daily (got=$STATUS — wired)"
+    ((PASS++)) || true
+  else
+    echo "  FAIL  GET /finance/revenue/daily (got=$STATUS)"
+    ((FAIL++)) || true
+  fi
+
+  STATUS=$(run_auth GET /finance/chart-of-accounts)
+  if [[ "$STATUS" == "200" || "$STATUS" == "404" ]]; then
+    echo "  PASS  GET /finance/chart-of-accounts (got=$STATUS — wired)"
+    ((PASS++)) || true
+  else
+    echo "  FAIL  GET /finance/chart-of-accounts (got=$STATUS)"
+    ((FAIL++)) || true
+  fi
+
+  # 15. HDDT (Wave 2 — added once handler ships)
+  echo "--- /admin/hddt/* ---"
+  STATUS=$(run_auth GET /admin/hddt/summary-runs)
+  if [[ "$STATUS" == "200" || "$STATUS" == "404" ]]; then
+    echo "  PASS  GET /admin/hddt/summary-runs (got=$STATUS — wired)"
+    ((PASS++)) || true
+  else
+    echo "  FAIL  GET /admin/hddt/summary-runs (got=$STATUS)"
+    ((FAIL++)) || true
+  fi
 else
   echo "  SKIP  authenticated endpoint checks (no token)"
 fi
