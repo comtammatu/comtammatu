@@ -21,6 +21,7 @@ import (
 	"github.com/personal/comtammatu/backend/internal/db"
 	authhandler "github.com/personal/comtammatu/backend/internal/handler/auth"
 	employeehandler "github.com/personal/comtammatu/backend/internal/handler/employee"
+	feedbackhandler "github.com/personal/comtammatu/backend/internal/handler/feedback"
 	healthhandler "github.com/personal/comtammatu/backend/internal/handler/health"
 	hrhandler "github.com/personal/comtammatu/backend/internal/handler/hr"
 	kdshandler "github.com/personal/comtammatu/backend/internal/handler/kds"
@@ -99,6 +100,12 @@ func main() {
 
 	eval := abac.New(pool)
 
+	// Feedback handler is constructed up here so PublicRoutes() can be mounted
+	// outside the Authenticate group (token-gated public submission) while
+	// AdminRoutes() mounts inside the group below.
+	feedbackH := feedbackhandler.New(pool, eval)
+	r.Mount("/", feedbackH.PublicRoutes())
+
 	// Authenticated API routes — Authenticate middleware validates JWT
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.Authenticate(cfg.JWTSecret))
@@ -144,6 +151,8 @@ func main() {
 			Mount("/employee", employeehandler.New(pool, eval).Routes())
 		r.With(middleware.RequireModule(auth.ModuleHR)).
 			Mount("/hr", hrhandler.New(pool, eval).Routes())
+		r.With(middleware.RequireModule(auth.ModuleFeedback)).
+			Mount("/admin/feedback", feedbackH.AdminRoutes())
 
 		paymentsH := paymentshandler.New(pool, eval)
 		r.With(middleware.RequireModule(auth.ModulePOS), middleware.RequireBranchScope).
