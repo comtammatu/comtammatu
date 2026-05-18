@@ -36,7 +36,7 @@ HĐĐT e-invoice (~400). All currently zero Go code.
 | Step | Status |
 |------|--------|
 | Execution plan (`docs/plan/go-migration-phase-B-module-ports.md`) | DONE — commit `8fa1a6f3` (3 waves, ~24d; print-agent stays Node) |
-| Wave 1 — Employee (DONE), HR/Payroll, Feedback/CRM (parallelizable) | IN PROGRESS — Employee module ported (`backend/internal/handler/employee/`, 8 routes mounted at `/employee`). HR + Feedback pending. |
+| Wave 1 — Employee + HR/Payroll + Feedback/CRM (parallelizable) | DONE — Employee (`b5159be2`, 8 routes), HR (`cb31ecf1`, 26 active + 3 deferred routes), Feedback (`7f781634`, 17 routes) ported. Go-native cron scheduler scaffold landed (`ff2e30b7`, `internal/cron/`, robfig/cron/v3 with pg_advisory_lock guard; 4 stub jobs registered). Three follow-ups: (1) port `packages/shared/src/payroll/calculate.ts` to Go (unblocks the 3 deferred 501 payroll-compute endpoints in `/hr/payroll`), (2) R2 storage client (unblocks /r/{token}/photos), (3) wire TELEGRAM_BOT_TOKEN through config (unblocks Telegram test endpoint). |
 | Wave 2 — Finance/GL + HĐĐT | NOT STARTED — gated on Wave 1 |
 | Wave 3 — Inventory (104 endpoints, split 3 ways) + print-agent's 5 Go endpoints | NOT STARTED — gated on Wave 2 |
 
