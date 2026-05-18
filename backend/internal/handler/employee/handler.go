@@ -107,9 +107,9 @@ func haversineMeters(lat1, lng1, lat2, lng2 float64) float64 {
 // lookupEmployeeID resolves the caller's employees.id (active row in this
 // tenant) from their JWT sub. Returns (0, false, nil) when no active employee
 // row exists — handlers should reply 422 (account not linked).
-func (h *Handler) lookupEmployeeID(ctx *http.Request, tenantID int64, userUUID string) (int64, bool, error) {
+func (h *Handler) lookupEmployeeID(r *http.Request, tenantID int64, userUUID string) (int64, bool, error) {
 	var empID int64
-	err := h.pool.QueryRow(ctx.Context(),
+	err := h.pool.QueryRow(r.Context(),
 		`SELECT id FROM public.employees
 		 WHERE profile_id = $1::uuid AND tenant_id = $2 AND is_active = true
 		 LIMIT 1`,
