@@ -22,6 +22,8 @@ import (
 	authhandler "github.com/personal/comtammatu/backend/internal/handler/auth"
 	employeehandler "github.com/personal/comtammatu/backend/internal/handler/employee"
 	feedbackhandler "github.com/personal/comtammatu/backend/internal/handler/feedback"
+	financehandler "github.com/personal/comtammatu/backend/internal/handler/finance"
+	hddthandler "github.com/personal/comtammatu/backend/internal/handler/hddt"
 	healthhandler "github.com/personal/comtammatu/backend/internal/handler/health"
 	hrhandler "github.com/personal/comtammatu/backend/internal/handler/hr"
 	kdshandler "github.com/personal/comtammatu/backend/internal/handler/kds"
@@ -153,6 +155,10 @@ func main() {
 			Mount("/hr", hrhandler.New(pool, eval).Routes())
 		r.With(middleware.RequireModule(auth.ModuleFeedback)).
 			Mount("/admin/feedback", feedbackH.AdminRoutes())
+		r.With(middleware.RequireModule(auth.ModuleFinance)).
+			Mount("/admin/hddt", hddthandler.New(pool, eval).Routes())
+		r.With(middleware.RequireModule(auth.ModuleFinance)).
+			Mount("/finance", financehandler.New(pool, eval).Routes())
 
 		paymentsH := paymentshandler.New(pool, eval)
 		r.With(middleware.RequireModule(auth.ModulePOS), middleware.RequireBranchScope).
