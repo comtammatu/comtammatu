@@ -17,6 +17,7 @@ import (
 	"github.com/personal/comtammatu/backend/config"
 	"github.com/personal/comtammatu/backend/internal/abac"
 	"github.com/personal/comtammatu/backend/internal/auth"
+	cronpkg "github.com/personal/comtammatu/backend/internal/cron"
 	"github.com/personal/comtammatu/backend/internal/db"
 	authhandler "github.com/personal/comtammatu/backend/internal/handler/auth"
 	employeehandler "github.com/personal/comtammatu/backend/internal/handler/employee"
@@ -62,6 +63,20 @@ func main() {
 
 	hub := realtime.NewHub()
 	go realtime.Listen(ctx, dsn, hub)
+
+	scheduler := cronpkg.New(pool)
+	scheduler.Register("feedback_daily_report", "0 19 * * *", cronpkg.FeedbackDailyReport(pool))
+	scheduler.Register("feedback_retention", "0 20 * * *", cronpkg.FeedbackRetention(pool))
+	scheduler.Register("telegram_flush", "*/5 * * * *", cronpkg.TelegramFlush(pool))
+	scheduler.Register("hddt_daily_summary", "0 19 * * *", cronpkg.HDDTDailySummary(pool))
+	scheduler.Start()
+	defer func() {
+		shutCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := scheduler.Stop(shutCtx); err != nil {
+			slog.Warn("scheduler stop", "err", err)
+		}
+	}()
 
 	r := chi.NewRouter()
 
