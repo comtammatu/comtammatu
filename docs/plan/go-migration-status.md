@@ -1,7 +1,7 @@
 # Go + Postgres Migration — Status Tracker
 
 **Goal:** complete migration to Golang + Postgres, off Node.js + Supabase.
-**Started:** 2026-05-14. **Status:** in progress — Phase A core done, B/C in flight.
+**Started:** 2026-05-14. **Status:** in progress — Phase A core done, Phase B complete (all 3 waves), Phase C done; Phase D + E remain.
 
 This is a multi-phase program of work (estimated multi-week/multi-month). It is
 NOT completable in a single session. This file tracks the arc so progress
@@ -38,7 +38,7 @@ HĐĐT e-invoice (~400). All currently zero Go code.
 | Execution plan (`docs/plan/go-migration-phase-B-module-ports.md`) | DONE — commit `8fa1a6f3` (3 waves, ~24d; print-agent stays Node) |
 | Wave 1 — Employee + HR/Payroll + Feedback/CRM (parallelizable) | DONE — Employee (`b5159be2`, 8 routes), HR (`cb31ecf1`, 26 active + 3 deferred routes), Feedback (`7f781634`, 17 routes) ported. Go-native cron scheduler scaffold landed (`ff2e30b7`, `internal/cron/`, robfig/cron/v3 with pg_advisory_lock guard; 4 stub jobs registered). Three follow-ups: (1) port `packages/shared/src/payroll/calculate.ts` to Go (unblocks the 3 deferred 501 payroll-compute endpoints in `/hr/payroll`), (2) R2 storage client (unblocks /r/{token}/photos), (3) wire TELEGRAM_BOT_TOKEN through config (unblocks Telegram test endpoint). |
 | Wave 2 — Finance/GL + HĐĐT | DONE — Finance (~1500 LOC, 37 routes across handler/finance/{handler,util,revenue,reports,chart_of_accounts,journals,periods,posting_rules,summary_invoices}.go; ~19 auth.uid() RPCs wrapped in WithAuthContext) + HDDT (3 admin routes + real cron body backed by `backend/internal/hddt/RunDailySummaryForBranch`). MISA/Viettel provider HTTP call remains deferred (credentials blocked — tracked in tasks/todo.md). Single commit covering both because main.go mount file is shared; smoke-test.sh extended in a follow-up commit. |
-| Wave 3 — Inventory (104 endpoints, split 3 ways) + print-agent's 5 Go endpoints | NOT STARTED — XL effort (10-14 dev-days). Plan splits across 3 parallel agents (procurement / stocktake / remaining). Phase B plan §"Inventory" lists 13 sub-files. Recommended dedicated session. |
+| Wave 3 — Inventory (104 endpoints, split 3 ways) + print-agent's 5 Go endpoints | DONE — Inventory ported in commit `3bacc386` (17 sub-files / 5360 LOC under `backend/internal/handler/inventory/`; ~115 routes mounted at `/inventory` behind `RequireModule(ModuleInventory)` / `ModuleInventoryProcure`). Sub-domains: procurement (grn/purchase_order/supplier/supplier_return), stocktake (stocktake/variance/transfer incl. zone-lock RPCs), remaining (ingredients/recipes/dashboard/production/waste/issue/report/settings). RPCs using `auth.uid()` wrapped in `db.WithAuthContext`. Storage stubs (`/inventory/attachments`, `/inventory/grn-evidence`) return 501 — R2 deferred per Phase E plan. Dockerized smoke: **45 passed, 0 failed** (`docs/runbooks/db-migration/wave3-docker-smoke.log`). Print-agent's 5 Go endpoints remain deferred (separate daemon, not in this scope). |
 
 ## Phase C — Go-native realtime
 

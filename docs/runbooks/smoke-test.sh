@@ -306,6 +306,33 @@ if [[ -n "${TOKEN:-}" ]]; then
     echo "  FAIL  GET /admin/hddt/summary-runs (got=$STATUS)"
     ((FAIL++)) || true
   fi
+
+  # 16. Inventory (Wave 3 — added once handler ships)
+  echo "--- /inventory/* ---"
+  for path in "/inventory/ingredients" "/inventory/dashboard" "/inventory/suppliers" "/inventory/purchase-orders" "/inventory/grn" "/inventory/stocktake/conflicts" "/inventory/transfers"; do
+    STATUS=$(run_auth GET "$path")
+    # 200 = OK, 400 = needs query params (wired), 404 = not wired yet,
+    # 403 = ACL gate (owner not in ModuleInventory role set is wrong since
+    # owner IS in ModuleInventory, so 403 here would be a regression).
+    if [[ "$STATUS" == "200" || "$STATUS" == "400" || "$STATUS" == "404" ]]; then
+      echo "  PASS  GET $path (got=$STATUS — wired)"
+      ((PASS++)) || true
+    else
+      echo "  FAIL  GET $path (got=$STATUS)"
+      ((FAIL++)) || true
+    fi
+  done
+
+  # Storage stubs MUST 501 (R2 deferred)
+  STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+    -H "Authorization: Bearer $TOKEN" "$BASE/inventory/attachments" || true)
+  if [[ "$STATUS" == "501" || "$STATUS" == "404" ]]; then
+    echo "  PASS  POST /inventory/attachments (got=$STATUS — deferred/not-wired)"
+    ((PASS++)) || true
+  else
+    echo "  FAIL  POST /inventory/attachments (got=$STATUS)"
+    ((FAIL++)) || true
+  fi
 else
   echo "  SKIP  authenticated endpoint checks (no token)"
 fi

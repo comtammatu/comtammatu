@@ -1,0 +1,64 @@
+=== Smoke test: http://localhost:18080 ===
+--- /health ---
+  PASS  GET /health
+--- /auth/login ---
+  PASS  POST /auth/login
+--- /auth/me ---
+  PASS  GET /auth/me
+--- /menu/categories ---
+  PASS  GET /menu/categories
+  PASS  POST /menu/categories (id=49 type=main_dish)
+  PASS  PUT /menu/categories/49 (type=drink)
+  PASS  PATCH /menu/categories/49/toggle-active
+  PASS  POST /menu/categories duplicate -> 409
+  PASS  PUT /menu/items/9999999999/variants -> 404
+  PASS  PUT /menu/items/9999999999/modifiers -> 404
+--- /admin/staff ---
+  PASS  GET /admin/staff
+--- /admin/settings/branches ---
+  PASS  GET /admin/settings/branches
+  PASS  POST /admin/settings/branches (id=45 kind=branch)
+  PASS  PUT /admin/settings/branches/45 (branch_kind)
+  PASS  PATCH /admin/settings/branches/45/toggle-active
+  PASS  PUT branches invalid_branch_kind -> 400
+--- /admin/settings/tables ---
+  PASS  GET /admin/settings/tables
+--- /br/{branchId}/orders ---
+  PASS  GET /br/1/orders (got=403 — ACL gate enforced)
+--- /br/{branchId}/kds/tickets ---
+  PASS  GET /br/1/kds/tickets (got=403 — ACL gate enforced)
+--- /notifications ---
+  PASS  GET /notifications
+  PASS  GET /notifications/unread-count
+  PASS  PATCH /notifications/read-all (got=500)
+  PASS  PATCH /notifications/9999999999/read -> 404
+--- /employee/* ---
+  PASS  GET /employee/clock/status (got=422)
+  PASS  GET /employee/shifts?branch_id=1
+--- /hr/* ---
+  PASS  GET /hr/employees
+  PASS  GET /hr/shifts?branch_id=1
+  PASS  GET /hr/shift-requests?branch_id=1
+  PASS  GET /hr/payroll/periods
+  PASS  POST /hr/payroll/periods/1/calculate -> 501 (deferred)
+--- /admin/feedback ---
+  PASS  GET /admin/feedback
+  PASS  GET /admin/feedback/qr
+  PASS  GET /admin/feedback/settings
+  PASS  POST /r/{token}/photos -> 501 (deferred)
+--- /finance/* ---
+  PASS  GET /finance/revenue/daily (got=400 — wired)
+  PASS  GET /finance/chart-of-accounts (got=200 — wired)
+--- /admin/hddt/* ---
+  PASS  GET /admin/hddt/summary-runs (got=200 — wired)
+--- /inventory/* ---
+  PASS  GET /inventory/ingredients (got=200 — wired)
+  PASS  GET /inventory/dashboard (got=400 — wired)
+  PASS  GET /inventory/suppliers (got=200 — wired)
+  PASS  GET /inventory/purchase-orders (got=200 — wired)
+  PASS  GET /inventory/grn (got=200 — wired)
+  PASS  GET /inventory/stocktake/conflicts (got=400 — wired)
+  PASS  GET /inventory/transfers (got=200 — wired)
+  PASS  POST /inventory/attachments (got=501 — deferred/not-wired)
+
+=== Results: 45 passed, 0 failed ===

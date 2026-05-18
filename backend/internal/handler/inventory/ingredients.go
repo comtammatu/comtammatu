@@ -53,16 +53,16 @@ func (h *Handler) listIngredients(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var raw json.RawMessage
-	rpcErr := db.WithAuthContext(r.Context(), h.pool, claims.UserUUID, string(claims.UserRole), func(tx pgx.Tx) error {
-		return tx.QueryRow(r.Context(),
-			`SELECT json_agg(i ORDER BY i.name) FROM ingredients i
-			 WHERE i.tenant_id = current_setting('request.jwt.claims', true)::json->>'tenant_id'
-			 LIMIT $1`,
-			limit,
-		).Scan(&raw)
-	})
-	if rpcErr != nil {
-		status, msg := mapRPCError(rpcErr, "Không thể tải danh sách nguyên liệu.")
+	err := h.pool.QueryRow(r.Context(),
+		`SELECT json_agg(i ORDER BY i.name)
+		   FROM (SELECT * FROM public.ingredients
+		          WHERE tenant_id = $1
+		          ORDER BY name
+		          LIMIT $2) i`,
+		claims.TenantID, limit,
+	).Scan(&raw)
+	if err != nil {
+		status, msg := mapRPCError(err, "Không thể tải danh sách nguyên liệu.")
 		httputil.WriteError(w, status, msg)
 		return
 	}

@@ -31,13 +31,40 @@ func (h *Handler) listStockTransfers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	branchQ := r.URL.Query().Get("branch_id")
+	var branchFilter *int64
+	if branchQ != "" {
+		if n, ok := requirePathInt(w, branchQ); ok {
+			branchFilter = &n
+		} else {
+			return
+		}
+	}
+
 	var raw json.RawMessage
 	err := h.pool.QueryRow(r.Context(),
-		`SELECT public.stock_transfer_list($1, $2)`, claims.TenantID, claims.BranchID,
+		`WITH t AS (
+		   SELECT st.id, st.transfer_number, st.status, st.notes, st.vehicle_info,
+		          st.shipped_at, st.received_at, st.receive_started_at,
+		          st.from_branch_id, st.to_branch_id,
+		          st.from_location_id, st.to_location_id, st.created_at,
+		          fb.name AS from_branch_name, tb.name AS to_branch_name
+		     FROM public.stock_transfers st
+		     LEFT JOIN public.branches fb ON fb.id = st.from_branch_id
+		     LEFT JOIN public.branches tb ON tb.id = st.to_branch_id
+		    WHERE st.tenant_id = $1
+		      AND ($2::bigint IS NULL OR st.from_branch_id = $2 OR st.to_branch_id = $2)
+		    ORDER BY st.created_at DESC
+		 )
+		 SELECT COALESCE(json_agg(t), '[]'::json) FROM t`,
+		claims.TenantID, branchFilter,
 	).Scan(&raw)
 	if err != nil {
 		httputil.WriteError(w, http.StatusInternalServerError, "Không thể tải phiếu chuyển.")
 		return
+	}
+	if raw == nil {
+		raw = json.RawMessage("[]")
 	}
 	httputil.WriteJSON(w, http.StatusOK, json.RawMessage(raw))
 }
@@ -363,12 +390,17 @@ func (h *Handler) listBranchesForTransfer(w http.ResponseWriter, r *http.Request
 	}
 
 	var raw json.RawMessage
-	err := h.pool.QueryRow(r.Context(),
-		`SELECT public.stock_transfer_list_branches()`,
-	).Scan(&raw)
-	if err != nil {
+	rpcErr := db.WithAuthContext(r.Context(), h.pool, claims.UserUUID, string(claims.UserRole), func(tx pgx.Tx) error {
+		return tx.QueryRow(r.Context(),
+			`SELECT public.stock_transfer_list_branches()`,
+		).Scan(&raw)
+	})
+	if rpcErr != nil {
 		httputil.WriteError(w, http.StatusInternalServerError, "Không thể tải danh sách kho.")
 		return
+	}
+	if raw == nil {
+		raw = json.RawMessage("[]")
 	}
 	httputil.WriteJSON(w, http.StatusOK, json.RawMessage(raw))
 }
