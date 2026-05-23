@@ -23,6 +23,10 @@
       "schedule": "*/15 * * * *"
     },
     {
+      "path": "/api/cron/kds-maintenance",
+      "schedule": "0 5,11,17,23 * * *"
+    },
+    {
       "path": "/api/cron/feedback-retention",
       "schedule": "0 20 * * *"
     }

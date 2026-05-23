@@ -1,21 +1,25 @@
 # LLM Wiki — Cơm Tấm Má Tư
 
-> Updated: 2026-05-06  
-> Purpose: fast orientation for LLM agents before planning or implementation.  
+> Updated: 2026-05-23
+> Purpose: fast orientation for LLM agents before planning or implementation.
 > Rule: runtime and generated types win over older hand-written docs.
 
 ## Current Product Direction
 
-Cơm Tấm Má Tư is an in-place restaurant operating platform rebuild, not a fork. The current strategic direction is:
+Cơm Tấm Má Tư is continuing in-place on the `comtammatu` repo for pilot hardening. The greenfield rebuild pack under `docs/archive/plan/system-rebuild/` is suspended/historical reference as of 2026-05-23; do not apply its in-place freeze or cutover steps unless the owner explicitly reactivates it.
+
+The current product direction remains:
 
 - **Super App**: one coherent operating system for restaurant work.
 - **Merchant Platform**: management and operating platform concept across existing workspaces, not a new `/merchant/*` route tree.
 - **Cổng nhân viên**: employee self-service and role-gated handoff into operational workspaces.
 
-Read the active rebuild contract first when a task touches navigation, route ownership, or workspace boundaries:
+When a task touches navigation, route ownership, or workspace boundaries, start from runtime route/ACL code and active module docs:
 
-- `docs/plan/super-app-merchant-platform-rebuild.md`
-- `docs/plan/merchant-platform-ia-contract.md`
+- `packages/shared/src/auth/route-resolution.ts`
+- `packages/shared/src/auth/module-acl.ts`
+- `docs/modules/web-app.md`
+- `docs/spec/architecture.md`
 
 ## Runtime Snapshot
 
@@ -23,9 +27,9 @@ Read the active rebuild contract first when a task touches navigation, route own
 | --- | --- |
 | Stack | Next.js 16.2, React 19.2, TypeScript 6.0, Tailwind 4.2, Zod 4, Turborepo 2.9, Node >= 24 |
 | Package manager | `pnpm@10.33.0` |
-| Web routes | 114 `page.tsx` routes under `apps/web/app` |
-| DB shape | `public`: 109 tables, 9 views, 198 functions in generated types |
-| Migrations | 299 SQL files in `supabase/migrations` |
+| Web routes | 109 `page.tsx` routes under `apps/web/app` |
+| DB shape | `public`: 115 tables, 9 views, 214 functions in generated types |
+| Migrations | 337 SQL files in `supabase/migrations` |
 | Auth model | Auth v2: positions + permission grants; legacy `user_role` remains for route ACL |
 | Primary architecture | `Browser -> proxy.ts -> App Router -> Supabase PostgREST/Auth/RLS` |
 | Verification for implementation | `pnpm typecheck && pnpm lint && pnpm build` |
@@ -37,15 +41,18 @@ When sources disagree, use this order:
 1. Runtime code and generated DB types.
 2. `AGENTS.md` and `docs/agent/rules/*`.
 3. `tasks/regressions.md`.
-4. Current planning docs in `docs/plan/*`, especially the Super App rebuild doc.
-5. Module docs in `docs/modules/*`.
-6. Older archived plans and stale diagrams.
+4. Active work tracker `tasks/todo.md` and current technical map `docs/CODEBASE_MAP.md`.
+5. Current module/spec docs in `docs/modules/*` and `docs/spec/*`.
+6. Suspended greenfield docs in `docs/archive/plan/system-rebuild/*`, older archived plans, and stale diagrams.
 
 Known stale signals:
 
 - Some older docs still describe `HQ -> Bếp trung tâm -> Chi nhánh`; current branch model uses `central_warehouse`, `central_kitchen`, and branch sites.
-- Older docs may say 107 routes or 102 tables. Current audit found 114 routes and 109 public tables.
-- `docs/llm-wiki/` did not exist before this update even though `docs/ref/inventory-erp-gap-matrix.md` referenced `docs/llm-wiki/module-cards/inventory.md`.
+- Older docs may say 107 or 114 routes, or 102/109 public tables. Current audit found 109 routes, 115 public tables, and 214 public functions.
+- `docs/llm-wiki/` did not exist before this update even though archived `docs/archive/ref/inventory-erp-gap-matrix.md` referenced `docs/llm-wiki/module-cards/inventory.md`.
+- Older HĐĐT docs may mention MISA/meInvoice or `INVOICE_PROVIDER`; current runtime uses Viettel S-invoice only.
+- `docs/archive/plan/system-rebuild/*` may still describe greenfield cutover and in-place freeze; current active work is in-place pilot hardening.
+- Archived plans under `docs/archive/plan/` are historical references unless a current doc explicitly promotes them.
 
 ## Must-Read Before Work
 
@@ -69,14 +76,14 @@ When touching UI/route surfaces/copy:
 - `docs/spec/design-system.md`
 - `docs/modules/ui.md`
 - `docs/ref/glossary.md`
-- `docs/plan/ui-ux-page-contracts.md`
 
 When touching Super App/Merchant Platform IA:
 
-- `docs/plan/super-app-merchant-platform-rebuild.md`
-- `docs/plan/merchant-platform-ia-contract.md`
-- `docs/plan/ui-ux-rebuild.md`
-- `docs/plan/ui-ux-page-contracts.md`
+- `docs/spec/design-system.md`
+- `docs/modules/web-app.md`
+- `docs/modules/ui.md`
+- `packages/shared/src/auth/route-resolution.ts`
+- `packages/shared/src/auth/module-acl.ts`
 
 ## Workspace Map
 
@@ -130,7 +137,7 @@ Do not:
 Use `tasks/todo.md` as the active work tracker, but do not overwrite user-local edits. As of the latest read:
 
 - Fork strategy is abandoned; continue in `comtammatu`.
-- External credentials still block VietQR/Momo/MISA production wiring.
+- External credentials still block VietQR/Momo production wiring; HĐĐT uses Viettel S-invoice.
 - M4 payment hardening remains active: Momo tenant binding, stock-consumption result checks, server recompute totals, atomic webhook flow.
 - Finance gaps remain around period-close guards and HĐĐT compliance workflows.
 - Payroll/HR still has RLS, null branch manager, clock-code, and salary-audit gaps.

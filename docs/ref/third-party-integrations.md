@@ -1,6 +1,6 @@
 # Third-Party Integrations — Hệ Sinh Thái Bên Ngoài
 
-> Cập nhật: 2026-04-01
+> Cập nhật: 2026-05-23
 > Mục đích: Vendor selection + integration guide cho toàn bộ hệ thống
 > Nguyên tắc: "Hệ thống chỉ chuẩn bị data — filing/payment thực tế qua vendor"
 
@@ -14,7 +14,7 @@
 | **E-wallet #1**       | MoMo               | —                    | Payment    |
 | **E-wallet #2**       | ZaloPay            | —                    | Post-v1.0     |
 | **Card payment**      | VNPay              | —                    | Post-v1.0     |
-| **HĐĐT**              | MISA meInvoice     | ViettelSinvoice      | Finance    |
+| **HĐĐT**              | Viettel S-invoice  | —                    | Finance    |
 | **OTP / Notify**      | Zalo ZNS           | SpeedSMS             | Post-v1.0     |
 | **Email**             | Resend.com         | —                    | Finance    |
 | **Delivery dispatch** | Ahamove            | —                    | Post-v1.0     |
@@ -130,67 +130,41 @@
 
 ## 2. Hóa Đơn Điện Tử (HĐĐT)
 
-### 2.1 MISA meInvoice — Provider chính
+### 2.1 Viettel S-invoice — Provider duy nhất
 
-**Lựa chọn**: ✅ **Tích hợp Finance — Provider ưu tiên**
-
-| Thuộc tính      | Giá trị                                                 |
-| --------------- | ------------------------------------------------------- |
-| API             | REST — `doc.meinvoice.vn/api`                           |
-| Auth            | OAuth 2.0 Bearer Token                                  |
-| Sandbox         | ✅ `testapi.meinvoice.vn`                               |
-| Phí/hóa đơn     | **300 VND/HĐ** (công khai, rõ ràng nhất)                |
-| Phí setup       | 500,000 VND (miễn nếu dùng MISA accounting)             |
-| Lưu trữ         | 10 năm miễn phí                                         |
-| Onboarding      | 3–5 ngày làm việc                                       |
-| Response format | `{ "Success": bool, "Data": any, "ErrorCode": string }` |
-
-**Lý do chọn MISA meInvoice**:
-
-- Giá/HĐ rõ ràng và rẻ nhất (300 VND vs "liên hệ" của ViettelSinvoice)
-- Tài liệu REST API đầy đủ online, có sandbox thực sự
-- Được tích hợp bởi hầu hết SaaS F&B VN: CukCuk, Sapo, KiotViet, iPOS → cộng đồng dev lớn
-- OAuth 2.0 (modern auth) vs Base64 username/password của Viettel
-
-**Headers mẫu**:
-
-```http
-Authorization: Bearer <access_token>
-Content-Type: application/json
-CompanyTaxCode: <MST_cua_tenant>
-```
-
-**Luồng tích hợp**:
-
-```
-1. POST /api/auth/token → lấy access_token
-2. POST /api/invoices → tạo draft invoice
-3. POST /api/invoices/{id}/issue → gửi CQT lấy mã
-4. GET /api/invoices/{id} → poll trạng thái
-5. GET /api/invoices/{id}/pdf → lấy file PDF
-```
-
----
-
-### 2.2 ViettelSinvoice — Fallback
-
-**Lựa chọn**: 🔄 **Fallback / Tùy chọn tenant**
+**Lựa chọn**: ✅ **Tích hợp Finance — đang hoạt động**
 
 | Thuộc tính     | Giá trị                                      |
 | -------------- | -------------------------------------------- |
-| API            | REST — `sinvoice.viettel.vn:8443/InvoiceAPI` |
-| Auth           | Base64(username:password) + IP Whitelist     |
-| Sandbox        | ✅ `demo-sinvoice.viettel.vn:8443`           |
-| Phí/HĐ         | Không công bố — liên hệ                      |
+| API            | REST — `api-vinvoice.viettel.vn`             |
+| Auth           | `POST /auth/login` + Bearer token            |
+| Sandbox/test   | Dùng account test Sinvoice                   |
+| Phí/HĐ         | Theo hợp đồng Viettel                        |
 | Infrastructure | Tier 3, HSM, hàng triệu HĐ/ngày              |
 | Onboarding     | 5–7 ngày làm việc                            |
 
-**Lý do là fallback**: Tài liệu tốt nhưng auth cũ (Base64 + IP whitelist phức tạp hơn OAuth), phí không minh bạch. Tuy nhiên Viettel infrastructure rất ổn định — dùng nếu MISA có downtime hoặc tenant yêu cầu.
+**Lý do chọn Viettel S-invoice**:
 
-**Config trong `system_settings`**:
+- Provider pháp lý đang có và đang vận hành thực tế cho Cơm Tấm Má Tư.
+- Runtime chỉ register `ViettelSinvoiceProvider`; không còn MISA/meInvoice implementation hay provider switch.
+- Một bộ `SINVOICE_*` env đơn giản hơn cho single-tenant CTCP.
 
-```
-einvoice_provider = 'misa' | 'viettel' | 'vnpt'
+**Auth flow**:
+
+1. `POST /auth/login` với JSON `{ username, password }`
+2. Dùng Bearer token gọi `InvoiceWS/createInvoice/{supplierTaxCode}`
+3. Reconcile dùng `InvoiceWS/searchInvoiceByTransactionUuid`
+
+**Config runtime**:
+
+```env
+COMPANY_TAX_CODE=<MST seller>
+SINVOICE_USERNAME=<account_mst>
+SINVOICE_PASSWORD=<api_password>
+SINVOICE_TEMPLATE_CODE=<template đăng ký CQT>
+SINVOICE_INVOICE_SERIES=<series Viettel cấp>
+SINVOICE_BASE_URL=https://api-vinvoice.viettel.vn
+SINVOICE_SANDBOX=false
 ```
 
 Xem chi tiết schema trong `docs/ref/einvoice-tax.md`.
@@ -397,13 +371,13 @@ Giả định: 500 order/ngày, 5 chi nhánh, ~15,000 order/tháng
 
 | Service                            | Volume      | Đơn giá    | Chi phí/tháng             |
 | ---------------------------------- | ----------- | ---------- | ------------------------- |
-| MISA meInvoice                     | 15,000 HĐ   | 300 VND    | **4,500,000 VND**         |
+| Viettel S-invoice                  | 15,000 HĐ   | Theo HĐ    | Theo hợp đồng Viettel     |
 | Zalo ZNS (order confirm + loyalty) | 20,000 tin  | 300 VND    | **6,000,000 VND**         |
 | SpeedSMS (OTP fallback ~10%)       | 2,000 tin   | 400 VND    | **800,000 VND**           |
 | Resend email                       | 5,000 email | Free tier  | **0 VND**                 |
 | VietQR (qua ngân hàng)             | 15,000 txn  | ~1,600 VND | **24,000,000 VND**        |
 | MoMo                               | Variable    | **0%**     | **0 VND**                 |
-| **Tổng**                           |             |            | **~35,300,000 VND/tháng** |
+| **Tổng**                           |             |            | **Phụ thuộc hợp đồng Viettel + VietQR** |
 
 > ⚠️ Phí VietQR là lớn nhất — cần negotiate với ngân hàng đối tác để có gói merchant tốt hơn. Nhiều ngân hàng có gói 0 VND/giao dịch cho SME khi đạt volume.
 
@@ -414,7 +388,7 @@ Giả định: 500 order/ngày, 5 chi nhánh, ~15,000 order/tháng
 | Module            | Tích hợp                                              |
 | ----------------- | ----------------------------------------------------- |
 | **Payment**    | VietQR + MoMo                                         |
-| **Finance**    | MISA meInvoice + Resend email                         |
+| **Finance**    | Viettel S-invoice + Resend email                      |
 | **Nhân sự & tiền lương** | Xuất data BHXH / thuế TNCN (no API, just export)      |
 | **Post-v1.0**     | Zalo ZNS, SpeedSMS, ZaloPay, VNPay, GrabFood, Ahamove |
 
@@ -438,12 +412,13 @@ MOMO_SANDBOX=true        # true=test-payment.momo.vn, false/unset=production
 MOMO_REDIRECT_URL=       # Optional trang khách sau thanh toán; không trỏ về POS
 
 # HĐĐT
-EINVOICE_PROVIDER=misa   # misa | viettel | vnpt
-MISA_EINVOICE_USERNAME=
-MISA_EINVOICE_PASSWORD=
-MISA_EINVOICE_TAX_CODE=
-MISA_EINVOICE_TEMPLATE=
-MISA_EINVOICE_SERIES=
+COMPANY_TAX_CODE=
+SINVOICE_USERNAME=
+SINVOICE_PASSWORD=
+SINVOICE_TEMPLATE_CODE=
+SINVOICE_INVOICE_SERIES=
+SINVOICE_BASE_URL=https://api-vinvoice.viettel.vn
+SINVOICE_SANDBOX=false
 
 # Notifications
 ZALO_OA_ACCESS_TOKEN=

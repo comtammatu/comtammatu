@@ -3,7 +3,13 @@
 import { useState, useTransition, useMemo } from "react";
 import { ShoppingBag as IconShoppingBag } from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
-import { BRANCH_VI, FORM_VI, STAFF_VI, STATES_VI } from "@comtammatu/shared/messages";
+import { formatVNDateTime } from "@comtammatu/shared/time";
+import {
+  BRANCH_VI,
+  FORM_VI,
+  STAFF_VI,
+  STATES_VI,
+} from "@comtammatu/shared/messages";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -194,92 +200,92 @@ export function OrdersClient({
       {/* ─── Filter bar ─── */}
       <Card>
         <CardContent className="flex flex-wrap items-center gap-2 p-3">
-        <div className="flex w-full flex-col gap-1.5 sm:w-44 sm:flex-none">
-          <Label htmlFor="date-from" className="text-xs">
-            {FORM_VI.fromDate}
-          </Label>
-          <Input
-            id="date-from"
-            type="date"
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            className="w-full sm:w-36"
-          />
-        </div>
-
-        <div className="flex w-full flex-col gap-1.5 sm:w-44 sm:flex-none">
-          <Label htmlFor="date-to" className="text-xs">
-            {FORM_VI.toDate}
-          </Label>
-          <Input
-            id="date-to"
-            type="date"
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            className="w-full sm:w-36"
-          />
-        </div>
-
-        <div className="flex w-full flex-col gap-1.5 sm:w-44 sm:flex-none">
-          <Label htmlFor="status-filter" className="text-xs">
-            {FORM_VI.status}
-          </Label>
-          <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger id="status-filter" className="w-full sm:w-40">
-              <SelectValue placeholder="Tất cả" />
-            </SelectTrigger>
-            <SelectContent>
-              {ORDER_STATUSES.map((s) => (
-                <SelectItem key={s.value} value={s.value}>
-                  {s.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {showBranchFilter && branches.length > 0 && (
-          <div className="flex w-full flex-col gap-1.5 sm:w-48 sm:flex-none">
-            <Label htmlFor="branch-filter" className="text-xs">
-              {BRANCH_VI.long}
+          <div className="flex w-full flex-col gap-1.5 sm:w-44 sm:flex-none">
+            <Label htmlFor="date-from" className="text-xs">
+              {FORM_VI.fromDate}
             </Label>
-            <Select value={branchId} onValueChange={setBranchId}>
-              <SelectTrigger id="branch-filter" className="w-full sm:w-44">
-                <SelectValue placeholder={BRANCH_VI.selectAll} />
+            <Input
+              id="date-from"
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="w-full sm:w-36"
+            />
+          </div>
+
+          <div className="flex w-full flex-col gap-1.5 sm:w-44 sm:flex-none">
+            <Label htmlFor="date-to" className="text-xs">
+              {FORM_VI.toDate}
+            </Label>
+            <Input
+              id="date-to"
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="w-full sm:w-36"
+            />
+          </div>
+
+          <div className="flex w-full flex-col gap-1.5 sm:w-44 sm:flex-none">
+            <Label htmlFor="status-filter" className="text-xs">
+              {FORM_VI.status}
+            </Label>
+            <Select value={status} onValueChange={setStatus}>
+              <SelectTrigger id="status-filter" className="w-full sm:w-40">
+                <SelectValue placeholder="Tất cả" />
               </SelectTrigger>
               <SelectContent>
-                {branches.map((b) => (
-                  <SelectItem key={b.id} value={String(b.id)}>
-                    {b.name}
+                {ORDER_STATUSES.map((s) => (
+                  <SelectItem key={s.value} value={s.value}>
+                    {s.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-        )}
 
-        <div className="flex w-full items-end gap-2 sm:w-auto">
-          <Button
-            onClick={handleFilter}
-            disabled={isPending}
-            size="sm"
-            className="flex-1 sm:flex-none"
-          >
-            {isPending && <Spinner className="mr-1.5 size-3.5" />}
-            Lọc
-          </Button>
-          {hasFilters && (
+          {showBranchFilter && branches.length > 0 && (
+            <div className="flex w-full flex-col gap-1.5 sm:w-48 sm:flex-none">
+              <Label htmlFor="branch-filter" className="text-xs">
+                {BRANCH_VI.long}
+              </Label>
+              <Select value={branchId} onValueChange={setBranchId}>
+                <SelectTrigger id="branch-filter" className="w-full sm:w-44">
+                  <SelectValue placeholder={BRANCH_VI.selectAll} />
+                </SelectTrigger>
+                <SelectContent>
+                  {branches.map((b) => (
+                    <SelectItem key={b.id} value={String(b.id)}>
+                      {b.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          <div className="flex w-full items-end gap-2 sm:w-auto">
             <Button
-              onClick={handleReset}
+              onClick={handleFilter}
               disabled={isPending}
-              variant="outline"
               size="sm"
               className="flex-1 sm:flex-none"
             >
-              Xóa bộ lọc
+              {isPending && <Spinner className="mr-1.5 size-3.5" />}
+              Lọc
             </Button>
-          )}
-        </div>
+            {hasFilters && (
+              <Button
+                onClick={handleReset}
+                disabled={isPending}
+                variant="outline"
+                size="sm"
+                className="flex-1 sm:flex-none"
+              >
+                Xóa bộ lọc
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -356,7 +362,9 @@ export function OrdersClient({
                     <p className="mt-1 font-medium">{order.created_by_name}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-muted-foreground">{FORM_VI.totalAmount}</p>
+                    <p className="text-muted-foreground">
+                      {FORM_VI.totalAmount}
+                    </p>
                     <p className="mt-1 font-mono font-medium">
                       {formatVND(order.total_amount)}
                     </p>
@@ -364,13 +372,7 @@ export function OrdersClient({
                 </div>
                 <div className="mt-4 flex items-center justify-between gap-3">
                   <p className="text-xs text-muted-foreground">
-                    {new Date(order.created_at).toLocaleString("vi-VN", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      year: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+                    {formatVNDateTime(order.created_at)}
                   </p>
                   {order.payment_method ? (
                     <Badge variant="outline" className="text-xs">
@@ -399,7 +401,9 @@ export function OrdersClient({
                   <TableHead className="hidden lg:table-cell">
                     Thời gian
                   </TableHead>
-                  <TableHead className="text-right">{FORM_VI.totalAmount}</TableHead>
+                  <TableHead className="text-right">
+                    {FORM_VI.totalAmount}
+                  </TableHead>
                   <TableHead className="hidden sm:table-cell">
                     Thanh toán
                   </TableHead>
@@ -440,13 +444,7 @@ export function OrdersClient({
                       {order.created_by_name}
                     </TableCell>
                     <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
-                      {new Date(order.created_at).toLocaleString("vi-VN", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      {formatVNDateTime(order.created_at)}
                     </TableCell>
                     <TableCell className="text-right font-mono font-medium">
                       {formatVND(order.total_amount)}

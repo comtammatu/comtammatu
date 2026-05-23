@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
+import { getVNDateString } from "@comtammatu/shared/time";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { updateTag } from "next/cache";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
@@ -666,7 +667,7 @@ export async function exportMenu(
     });
 
   const sheets = buildMenuSheets(categories, items, variants, modifiers, sides);
-  const stamp = new Date().toISOString().slice(0, 10);
+  const stamp = getVNDateString();
 
   if (format === "csv") {
     const csv = buildCsv(sheets[1]!);

@@ -24,6 +24,7 @@ import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { getInvoiceProvider } from "@comtammatu/shared/providers";
+import { getVNDateStringDaysAgo } from "@comtammatu/shared/time";
 import { ensureInvoiceProviderRegistered } from "@lib/invoice-provider-init";
 import { executeSummaryRun } from "@lib/hddt-daily-summary";
 import { getAuthContextWithPermission } from "@/_lib/auth";
@@ -163,10 +164,7 @@ export async function listSummaryRunQueue(
 
   const { supabase, claims } = ctx;
 
-  const cutoffDate = new Date(
-    Date.now() - parsed.data.daysBack * 24 * 60 * 60 * 1000,
-  );
-  const cutoffStr = cutoffDate.toISOString().slice(0, 10);
+  const cutoffStr = getVNDateStringDaysAgo(parsed.data.daysBack);
 
   let query = supabase
     .from("summary_run_queue")

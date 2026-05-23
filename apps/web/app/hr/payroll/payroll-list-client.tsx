@@ -18,6 +18,7 @@ import { Plus as IconPlus } from "lucide-react";
 import { createPayrollPeriod, fetchPayrollPeriods } from "../payroll-actions";
 import type { PayrollPeriodRow } from "./page";
 import { ERRORS_VI, FORM_VI } from "@comtammatu/shared/messages";
+import { formatVNDate, getVNMonthYear } from "@comtammatu/shared/time";
 
 const STATUS_LABELS: Record<string, string> = {
   draft: "Nháp",
@@ -45,11 +46,11 @@ export function PayrollListClient({
   const [isPending, startTransition] = useTransition();
 
   function handleCreate() {
-    const now = new Date();
+    const now = getVNMonthYear();
     startTransition(async () => {
       const result = await createPayrollPeriod({
-        month: now.getMonth() + 1,
-        year: now.getFullYear(),
+        month: now.month,
+        year: now.year,
       });
       if (result.success) {
         toast.success("Đã tạo kỳ lương");
@@ -112,14 +113,10 @@ export function PayrollListClient({
                   </Badge>
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
-                  {p.approved_at
-                    ? new Date(p.approved_at).toLocaleDateString("vi-VN")
-                    : "—"}
+                  {p.approved_at ? formatVNDate(p.approved_at) : "—"}
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
-                  {p.paid_at
-                    ? new Date(p.paid_at).toLocaleDateString("vi-VN")
-                    : "—"}
+                  {p.paid_at ? formatVNDate(p.paid_at) : "—"}
                 </TableCell>
                 <TableCell>
                   <Button variant="ghost" size="sm" asChild>

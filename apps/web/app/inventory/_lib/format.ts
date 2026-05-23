@@ -1,3 +1,5 @@
+import { formatVNDate, formatVNDateTime } from "@comtammatu/shared/time";
+
 export function formatVND(n: number): string {
   return n.toLocaleString("vi-VN");
 }
@@ -34,13 +36,9 @@ export function formatQty(n: number): string {
 }
 
 export function formatDate(iso: string): string {
-  const d = new Date(iso);
-  return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+  return formatVNDate(iso);
 }
 
 export function formatDateTime(iso: string): string {
-  const d = new Date(iso);
-  const date = formatDate(iso);
-  const time = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-  return `${date} ${time}`;
+  return formatVNDateTime(iso);
 }

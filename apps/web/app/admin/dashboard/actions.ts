@@ -1,6 +1,11 @@
 "use server";
 
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
+import {
+  addVNDateDays,
+  getVNDateString,
+  getVNDayUtcRange,
+} from "@comtammatu/shared/time";
 import { getAuthContextWithPermission } from "../_lib/auth";
 
 const DASHBOARD_ROLES: readonly StaffRole[] = [
@@ -39,48 +44,45 @@ export async function fetchDashboardStats(): Promise<DashboardStats> {
     recentOrders: [],
   };
 
-  const ctx = await getAuthContextWithPermission(DASHBOARD_ROLES, PERMISSION_KEYS.DASHBOARD_VIEW);
+  const ctx = await getAuthContextWithPermission(
+    DASHBOARD_ROLES,
+    PERMISSION_KEYS.DASHBOARD_VIEW,
+  );
   if (!ctx) return fallback;
 
   const { supabase, claims } = ctx;
 
-  // Compute date strings in local time (Vietnam UTC+7)
-  const now = new Date();
-  // Use ISO date strings — Supabase TIMESTAMPTZ comparisons work with date strings
-  const todayStart = new Date(now);
-  todayStart.setHours(0, 0, 0, 0);
-  const tomorrowStart = new Date(todayStart);
-  tomorrowStart.setDate(tomorrowStart.getDate() + 1);
-  const yesterdayStart = new Date(todayStart);
-  yesterdayStart.setDate(yesterdayStart.getDate() - 1);
-
-  const todayIso = todayStart.toISOString();
-  const tomorrowIso = tomorrowStart.toISOString();
-  const yesterdayIso = yesterdayStart.toISOString();
+  const todayDate = getVNDateString();
+  const yesterdayDate = addVNDateDays(todayDate, -1);
+  const todayRange = getVNDayUtcRange(todayDate);
+  const yesterdayRange = getVNDayUtcRange(yesterdayDate);
 
   // Scope to branch for branch_manager
   const branchFilter = claims.branch_id !== null ? claims.branch_id : undefined;
 
-  // Build base query for today paid orders
   let todayQuery = supabase
-    .from("orders")
-    .select("total_amount")
+    .from("payments")
+    .select("amount, order_id, orders!inner(status)")
     .eq("tenant_id", claims.tenant_id)
-    .eq("payment_status", "paid")
-    .gte("created_at", todayIso)
-    .lt("created_at", tomorrowIso);
+    .eq("status", "completed")
+    .not("paid_at", "is", null)
+    .neq("orders.status", "cancelled")
+    .gte("paid_at", todayRange.startIso)
+    .lt("paid_at", todayRange.endIso);
 
   if (branchFilter !== undefined) {
     todayQuery = todayQuery.eq("branch_id", branchFilter);
   }
 
   let yesterdayQuery = supabase
-    .from("orders")
-    .select("total_amount")
+    .from("payments")
+    .select("amount, order_id, orders!inner(status)")
     .eq("tenant_id", claims.tenant_id)
-    .eq("payment_status", "paid")
-    .gte("created_at", yesterdayIso)
-    .lt("created_at", todayIso);
+    .eq("status", "completed")
+    .not("paid_at", "is", null)
+    .neq("orders.status", "cancelled")
+    .gte("paid_at", yesterdayRange.startIso)
+    .lt("paid_at", yesterdayRange.endIso);
 
   if (branchFilter !== undefined) {
     yesterdayQuery = yesterdayQuery.eq("branch_id", branchFilter);
@@ -110,14 +112,11 @@ export async function fetchDashboardStats(): Promise<DashboardStats> {
   const yesterdayRows = yesterdayResult.data ?? [];
   const recentRows = recentResult.data ?? [];
 
-  const todayRevenue = todayRows.reduce(
-    (sum, r) => sum + Number(r.total_amount),
-    0,
-  );
+  const todayRevenue = todayRows.reduce((sum, r) => sum + Number(r.amount), 0);
   const todayOrders = todayRows.length;
 
   const yesterdayRevenue = yesterdayRows.reduce(
-    (sum, r) => sum + Number(r.total_amount),
+    (sum, r) => sum + Number(r.amount),
     0,
   );
   const yesterdayOrders = yesterdayRows.length;

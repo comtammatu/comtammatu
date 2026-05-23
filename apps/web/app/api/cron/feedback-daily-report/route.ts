@@ -28,30 +28,13 @@ import {
   sendTelegramMessage,
   redactTelegramToken,
 } from "@comtammatu/shared/telegram";
+import {
+  getVNDayUtcRange,
+  getYesterdayVNDateString,
+} from "@comtammatu/shared/time";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-// Vietnam timezone offset is UTC+7
-const VN_OFFSET_MS = 7 * 60 * 60 * 1000;
-
-function getYesterdayInVietnam(): string {
-  const nowUtc = Date.now();
-  const nowVn = new Date(nowUtc + VN_OFFSET_MS);
-  const yesterday = new Date(nowVn.getTime() - 24 * 60 * 60 * 1000);
-  const y = yesterday.getUTCFullYear();
-  const m = String(yesterday.getUTCMonth() + 1).padStart(2, "0");
-  const d = String(yesterday.getUTCDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
-
-function toVnDateStart(dateStr: string): string {
-  return new Date(`${dateStr}T00:00:00+07:00`).toISOString();
-}
-
-function toVnDateEnd(dateStr: string): string {
-  return new Date(`${dateStr}T23:59:59.999+07:00`).toISOString();
-}
 
 function timingSafeEquals(a: string, b: string): boolean {
   const MAX = 256;
@@ -64,13 +47,19 @@ function timingSafeEquals(a: string, b: string): boolean {
 }
 
 function unauthorized() {
-  return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+  return NextResponse.json(
+    { ok: false, error: "unauthorized" },
+    { status: 401 },
+  );
 }
 
 export async function POST(request: Request) {
   const expected = getCronSecret();
   if (!expected) {
-    return NextResponse.json({ ok: false, error: "not configured" }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, error: "not configured" },
+      { status: 500 },
+    );
   }
 
   const authHeader = request.headers.get("authorization");
@@ -84,9 +73,8 @@ export async function POST(request: Request) {
   const botToken = getTelegramBotToken();
   const supabase = createServiceClient();
 
-  const reportDate = getYesterdayInVietnam();
-  const dateStart = toVnDateStart(reportDate);
-  const dateEnd = toVnDateEnd(reportDate);
+  const reportDate = getYesterdayVNDateString();
+  const { startIso: dateStart, endIso: dateEnd } = getVNDayUtcRange(reportDate);
 
   const counters = {
     tenants_processed: 0,
@@ -98,9 +86,7 @@ export async function POST(request: Request) {
   };
 
   // Get all tenants (no is_active column — tenants table uses soft delete via RLS)
-  const { data: tenants } = await supabase
-    .from("tenants")
-    .select("id");
+  const { data: tenants } = await supabase.from("tenants").select("id");
 
   if (!tenants || tenants.length === 0) {
     return NextResponse.json({ ok: true, ...counters });
@@ -111,7 +97,10 @@ export async function POST(request: Request) {
     const tenantId = tenant.id;
 
     // Gate: skip entire tenant if monthly AI budget exhausted
-    const budgetCheck = await checkMonthlyBudget({ supabase, tenant_id: tenantId });
+    const budgetCheck = await checkMonthlyBudget({
+      supabase,
+      tenant_id: tenantId,
+    });
     if (!budgetCheck.ok) {
       console.warn(
         "[cron/feedback-daily-report] over_budget tenant=%d spent=%.4f budget=%.2f — skipping",
@@ -131,7 +120,10 @@ export async function POST(request: Request) {
       .eq("is_active", true);
 
     // Build list: each branch + null (tenant rollup)
-    const scopes: Array<{ branch_id: number | null; branch_name: string | null }> = [
+    const scopes: Array<{
+      branch_id: number | null;
+      branch_name: string | null;
+    }> = [
       ...(branches ?? []).map((b) => ({
         branch_id: b.id as number,
         branch_name: b.name as string,
@@ -162,12 +154,10 @@ export async function POST(request: Request) {
         // SELECT feedbacks for the scope + date range
         let query = supabase
           .from("feedbacks")
-          .select(
-            "rating, comment, ai_categories, ai_severity, created_at",
-          )
+          .select("rating, comment, ai_categories, ai_severity, created_at")
           .eq("tenant_id", tenantId)
           .gte("created_at", dateStart)
-          .lte("created_at", dateEnd);
+          .lt("created_at", dateEnd);
 
         if (scope.branch_id !== null) {
           query = query.eq("branch_id", scope.branch_id);

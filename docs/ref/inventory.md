@@ -425,6 +425,6 @@ Chi tiết enforcement: RLS + `packages/shared/src/auth/module-acl.ts`.
 - [inventory-sop.md](inventory-sop.md) — SOP vận hành pilot cho topology `HQ / Bếp trung tâm / Kho chi nhánh / Bếp chi nhánh`
 - [inventory-role-handoff.md](inventory-role-handoff.md) — bản handoff 1 trang cho training vận hành
 - [inventory-rbac-matrix.md](inventory-rbac-matrix.md) — ma trận quyền Inventory theo boundary hiện tại
-- [inventory-erp-gap-matrix.md](inventory-erp-gap-matrix.md) — mapping giữa bộ ERP docs và repo này
+- [../archive/ref/inventory-erp-gap-matrix.md](../archive/ref/inventory-erp-gap-matrix.md) — historical ERP mapping; không phải source of truth hiện tại
 - [../archive/plan/sprint-3.md](../archive/plan/sprint-3.md) — gợi ý route admin
-- [../plan/backlog.md](../plan/backlog.md) — waste, kiểm kê nâng cao (nếu tách bảng)
+- [../archive/plan/backlog.md](../archive/plan/backlog.md) — waste, kiểm kê nâng cao (nếu tách bảng)

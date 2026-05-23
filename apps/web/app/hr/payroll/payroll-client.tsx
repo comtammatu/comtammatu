@@ -22,6 +22,7 @@ import {
 } from "../payroll-actions";
 import type { PayrollPeriodRow } from "./page";
 import { ACTIONS_VI, ERRORS_VI, FORM_VI } from "@comtammatu/shared/messages";
+import { getVNMonthString } from "@comtammatu/shared/time";
 
 interface Props {
   periods: PayrollPeriodRow[];
@@ -62,8 +63,7 @@ export function PayrollClient({ periods: initialPeriods }: Props) {
   const [isPending, startTransition] = useTransition();
   const [activeId, setActiveId] = useState<number | null>(null);
 
-  // Generate current month YYYY-MM for default
-  const currentMonth = new Date().toISOString().slice(0, 7);
+  const currentMonth = getVNMonthString();
 
   function handleCreate() {
     setError(null);

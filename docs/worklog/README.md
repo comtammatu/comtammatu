@@ -13,9 +13,15 @@ Nơi lưu các artefact theo dõi tiến độ và adoption.
 - [inventory/inventory-ux-contract.md](inventory/inventory-ux-contract.md): contract UX đã chốt cho pilot hiện tại
 - [inventory/inventory-pilot-contract-v2.md](inventory/inventory-pilot-contract-v2.md): handoff contract + prompt cho Inventory pilot 4 điểm
 
+## Maintenance
+
+- [task-regression-cleanup-2026-05-23.md](task-regression-cleanup-2026-05-23.md): first pass cleanup for top-level `tasks/` and `tasks/regressions.md`
+
 ## Quy tắc
 
 - Ghi ngắn, cập nhật được, và bám đúng trạng thái thực tế
 - Khi một lát feature thay đổi materially, cập nhật worklog tương ứng
 - Với Inventory, thay đổi UX/IA hoặc workflow wiring phải cập nhật cả adoption matrix và artefact review/contract liên quan
 - Nếu một quyết định đã ổn định dài hạn, chuyển nó về `docs/ref/`
+- Audit đã bị thay thế hoặc không còn active thì chuyển về `docs/archive/worklog/`
+- Task/report snapshot đã đóng thì chuyển về `docs/archive/worklog/tasks/`

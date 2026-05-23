@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { getVNDateString } from "@comtammatu/shared/time";
 import {
   getAuthContextWithAnyPermission,
   getAuthContextWithPermission,
@@ -475,7 +476,7 @@ export async function exportProductionRecipes(
       return a.ingredient_name.localeCompare(b.ingredient_name, "vi");
     });
   const sheets = buildProductionRecipeSheets(rows);
-  const stamp = new Date().toISOString().slice(0, 10);
+  const stamp = getVNDateString();
   const safeFormat = format === "csv" ? "csv" : "xlsx";
 
   if (safeFormat === "csv") {
@@ -985,9 +986,7 @@ export async function fetchProductionOrders(): Promise<
         .eq("tenant_id", claims.tenant_id),
       supabase
         .from("stock_levels")
-        .select(
-          "ingredient_id, avg_unit_cost, branches!inner ( branch_kind )",
-        )
+        .select("ingredient_id, avg_unit_cost, branches!inner ( branch_kind )")
         .eq("tenant_id", claims.tenant_id)
         .eq("branches.branch_kind", "central_kitchen")
         .not("avg_unit_cost", "is", null),
@@ -1026,7 +1025,8 @@ export async function fetchProductionOrders(): Promise<
       const rawId = Number(bom.ingredient_id);
       const qty = Number(bom.quantity ?? 0);
       const yf = Number(bom.yield_factor ?? 1) || 1;
-      const conv = Number(bom.ingredients?.purchase_to_measure_factor ?? 1) || 1;
+      const conv =
+        Number(bom.ingredients?.purchase_to_measure_factor ?? 1) || 1;
       const wac = wacMap.get(rawId);
       const refCost =
         bom.ingredients?.unit_cost != null
@@ -1045,7 +1045,8 @@ export async function fetchProductionOrders(): Promise<
       let total = 0;
       for (const item of order.items) {
         if (item.unit_cost_at_production == null) {
-          item.unit_cost_at_production = costPerFg.get(item.finished_good_id) ?? 0;
+          item.unit_cost_at_production =
+            costPerFg.get(item.finished_good_id) ?? 0;
         }
         total += item.quantity * (item.unit_cost_at_production ?? 0);
       }

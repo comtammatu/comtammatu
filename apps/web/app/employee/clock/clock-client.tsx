@@ -35,6 +35,7 @@ import {
 } from "@comtammatu/ui/components/select";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { ACTIONS_VI, BRANCH_VI } from "@comtammatu/shared/messages";
+import { formatVNTime } from "@comtammatu/shared/time";
 import { EmployeeDetailList, EmployeePanel } from "../components/employee-page";
 import { clockIn, clockOut } from "./actions";
 
@@ -114,11 +115,7 @@ function haversineMeters(
 }
 
 function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString("vi-VN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "Asia/Ho_Chi_Minh",
-  });
+  return formatVNTime(iso);
 }
 
 function ErrorAlert({ message }: { message: string }) {

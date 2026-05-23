@@ -4,6 +4,11 @@ import {
   fetchFoodCost,
   fetchStockMovementReport,
 } from "../report-actions";
+import {
+  getVNDateString,
+  getVNMonthSequenceBack,
+  getVNMonthStartDateString,
+} from "@comtammatu/shared/time";
 import { ReportsClient } from "./reports-client";
 import type { ApAgingItem, VarianceItem } from "./reports-client";
 import type { InventorySemanticColor } from "../_lib/ui";
@@ -13,14 +18,6 @@ type MovementSummaryItem = {
   values: { value: number; color: InventorySemanticColor }[];
 };
 
-function startOfMonth(date: Date) {
-  return new Date(date.getFullYear(), date.getMonth(), 1);
-}
-
-function formatMonthKey(date: Date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-}
-
 function buildFoodCostTrend(
   rows: Array<{
     period_start: string;
@@ -29,10 +26,9 @@ function buildFoodCostTrend(
   }>,
   months = 12,
 ) {
-  const today = new Date();
-  const windowStart = startOfMonth(
-    new Date(today.getFullYear(), today.getMonth() - (months - 1), 1),
-  );
+  const monthKeys = getVNMonthSequenceBack(months)
+    .reverse()
+    .map(({ date }) => date.slice(0, 7));
   const buckets = new Map<string, { revenue: number; foodCost: number }>();
 
   for (const row of rows) {
@@ -44,16 +40,13 @@ function buildFoodCostTrend(
   }
 
   const trend: number[] = [];
-  const cursor = new Date(windowStart);
-  while (cursor <= today) {
-    const key = formatMonthKey(cursor);
+  for (const key of monthKeys) {
     const bucket = buckets.get(key);
     const ratio =
       bucket && bucket.revenue > 0
         ? (bucket.foodCost / bucket.revenue) * 100
         : 0;
     trend.push(Number(ratio.toFixed(1)));
-    cursor.setMonth(cursor.getMonth() + 1);
   }
 
   return trend;
@@ -68,13 +61,9 @@ function calculateTrendDeltaPct(trend: number[]) {
 }
 
 export default async function ReportsPage() {
-  const today = new Date();
-  const startDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-01`;
-  const endDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-  const trendStart = startOfMonth(
-    new Date(today.getFullYear(), today.getMonth() - 11, 1),
-  );
-  const trendStartDate = `${trendStart.getFullYear()}-${String(trendStart.getMonth() + 1).padStart(2, "0")}-01`;
+  const startDate = getVNMonthStartDateString();
+  const endDate = getVNDateString();
+  const trendStartDate = getVNMonthSequenceBack(12).at(-1)?.date ?? startDate;
 
   const [apRes, varRes, movementRes, foodCostRes] = await Promise.all([
     fetchApAging(),

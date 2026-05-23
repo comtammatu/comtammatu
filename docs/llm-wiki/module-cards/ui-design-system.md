@@ -37,9 +37,10 @@ The Super App/Merchant Platform rebuild should produce one coherent product feel
 
 Read:
 
-- `docs/plan/super-app-merchant-platform-rebuild.md`
-- `docs/plan/ui-ux-rebuild.md`
-- `docs/plan/ui-ux-page-contracts.md`
+- `docs/spec/design-system.md`
+- `docs/modules/ui.md`
+- `docs/modules/web-app.md` for route ownership context
+- `tasks/todo.md` for active delivery scope
 
 ## What To Do Next
 

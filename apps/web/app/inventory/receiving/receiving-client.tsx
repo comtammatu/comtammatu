@@ -1,7 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight as IconArrowRight, ClipboardCheck as IconClipboardCheck, FileText as IconFileText, ShoppingCart as IconShoppingCart, Bolt as IconBolt } from "lucide-react";
+import {
+  ArrowRight as IconArrowRight,
+  ClipboardCheck as IconClipboardCheck,
+  FileText as IconFileText,
+  ShoppingCart as IconShoppingCart,
+  Bolt as IconBolt,
+} from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
@@ -18,6 +24,12 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
+import {
+  diffVNDateDays,
+  formatVNDate,
+  formatVNTime,
+  getVNDateString,
+} from "@comtammatu/shared/time";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui";
 import { AppPage, AppPageHeader } from "@/components/surface";
@@ -37,20 +49,11 @@ function activityHref(item: RecentActivityItem): string {
 
 function formatActivityDate(iso: string): string {
   if (!iso) return "—";
-  const date = new Date(iso);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffDays = Math.floor(diffMs / 86_400_000);
-  const hhmm = date.toLocaleTimeString("vi-VN", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const diffDays = diffVNDateDays(getVNDateString(iso), getVNDateString());
+  const hhmm = formatVNTime(iso);
   if (diffDays === 0) return `Hôm nay, ${hhmm}`;
   if (diffDays === 1) return `Hôm qua, ${hhmm}`;
-  return (
-    date.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" }) +
-    `, ${hhmm}`
-  );
+  return `${formatVNDate(iso)}, ${hhmm}`;
 }
 
 export type ReceivingProps = {
@@ -126,176 +129,175 @@ export function ReceivingClient({
           </>
         }
       />
-        {/* Pipeline cards */}
-        <div className="grid gap-4 xl:grid-cols-3">
-          {WORKFLOW_STEPS.map((step, index) => {
-            const Icon = step.icon;
-            const label = tNav(step.labelKey, "heading");
+      {/* Pipeline cards */}
+      <div className="grid gap-4 xl:grid-cols-3">
+        {WORKFLOW_STEPS.map((step, index) => {
+          const Icon = step.icon;
+          const label = tNav(step.labelKey, "heading");
 
-            return isMobile ? (
-              <InteractiveCard
-                key={step.key}
-                asChild
-                minHeight="mobile"
-                padding="default"
-              >
-                <Link href={step.href} className="block">
+          return isMobile ? (
+            <InteractiveCard
+              key={step.key}
+              asChild
+              minHeight="mobile"
+              padding="default"
+            >
+              <Link href={step.href} className="block">
+                <div
+                  className={cn(
+                    "inline-flex size-10 shrink-0 items-center justify-center rounded-full",
+                    step.badgeClassName,
+                  )}
+                >
+                  <Icon className="size-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold">{label}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Bước {index + 1} &middot; {countsByKey[step.key]} đang mở
+                  </p>
+                </div>
+                <IconArrowRight className="size-4 shrink-0 text-muted-foreground" />
+              </Link>
+            </InteractiveCard>
+          ) : (
+            <Card key={step.key}>
+              <CardContent>
+                <div className="flex items-center gap-3">
                   <div
                     className={cn(
-                      "inline-flex size-10 shrink-0 items-center justify-center rounded-full",
+                      "inline-flex size-10 items-center justify-center rounded-full",
                       step.badgeClassName,
                     )}
                   >
                     <Icon className="size-5" />
                   </div>
-                  <div className="min-w-0 flex-1">
+                  <div className="flex-1">
                     <p className="text-sm font-semibold">{label}</p>
                     <p className="text-xs text-muted-foreground">
                       Bước {index + 1} &middot; {countsByKey[step.key]} đang mở
                     </p>
                   </div>
-                  <IconArrowRight className="size-4 shrink-0 text-muted-foreground" />
-                </Link>
-              </InteractiveCard>
-            ) : (
-              <Card key={step.key}>
-                <CardContent>
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={cn(
-                        "inline-flex size-10 items-center justify-center rounded-full",
-                        step.badgeClassName,
-                      )}
-                    >
-                      <Icon className="size-5" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold">{label}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Bước {index + 1} &middot; {countsByKey[step.key]} đang
-                        mở
-                      </p>
-                    </div>
-                  </div>
-                  <Button
-                    asChild
-                    variant="outline"
-                    size="sm"
-                    className="mt-3 w-full justify-between"
-                  >
-                    <Link href={step.href}>
-                      {step.cta}
-                      <IconArrowRight className="size-4" />
-                    </Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-
-        {/* Recent activity */}
-        <Card>
-          <CardContent className="p-0">
-            {isMobile ? (
-              <div className="divide-y">
-                <div className="px-4 py-3">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Hoạt động gần đây
-                  </p>
                 </div>
-                {recentActivity.length === 0 ? (
-                  <Empty className="py-8">
-                    <EmptyHeader>
-                      <EmptyTitle className="text-sm font-semibold">
-                        Chưa có hoạt động nào
-                      </EmptyTitle>
-                      <EmptyDescription className="text-xs leading-5">
-                        PO, GRN và hóa đơn mới sẽ xuất hiện tại đây khi phát sinh.
-                      </EmptyDescription>
-                    </EmptyHeader>
-                  </Empty>
-                ) : (
-                  recentActivity.map((item) => (
-                    <InteractiveCard
-                      key={`${item.type}-${item.id}`}
-                      asChild
-                      minHeight="tap"
-                      padding="default"
-                    >
-                      <Link href={activityHref(item)} className="block">
-                        <div className="min-w-0 flex-1 space-y-1">
-                          <p className="font-mono text-sm font-semibold">
-                            {item.code}
-                          </p>
-                          <p className="truncate text-xs text-muted-foreground">
-                            {item.supplier}
-                          </p>
-                        </div>
-                        <div className="flex shrink-0 flex-col items-end gap-1">
-                          <StatusBadge status={item.status} size="sm" />
-                          <span className="text-xs text-muted-foreground">
-                            {formatActivityDate(item.date)}
-                          </span>
-                          {item.total != null ? (
-                            <span className="font-mono text-xs font-semibold">
-                              {formatVND(item.total)}₫
-                            </span>
-                          ) : null}
-                        </div>
-                      </Link>
-                    </InteractiveCard>
-                  ))
-                )}
+                <Button
+                  asChild
+                  variant="outline"
+                  size="sm"
+                  className="mt-3 w-full justify-between"
+                >
+                  <Link href={step.href}>
+                    {step.cta}
+                    <IconArrowRight className="size-4" />
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      {/* Recent activity */}
+      <Card>
+        <CardContent className="p-0">
+          {isMobile ? (
+            <div className="divide-y">
+              <div className="px-4 py-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Hoạt động gần đây
+                </p>
               </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="min-w-36">Mã phiếu</TableHead>
-                    <TableHead className="min-w-44">Nhà cung cấp</TableHead>
-                    <TableHead className="min-w-32">Thời gian</TableHead>
-                    <TableHead className="min-w-32">{FORM_VI.status}</TableHead>
-                    <TableHead className="min-w-28 text-right">
-                      {FORM_VI.totalAmount}
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {recentActivity.length === 0 ? (
-                    <TableEmptyStateRow
-                      colSpan={5}
-                      title="Chưa có hoạt động nào"
-                      description="PO, GRN và hóa đơn mới sẽ xuất hiện tại đây khi phát sinh."
-                    />
-                  ) : null}
-                  {recentActivity.map((item) => (
-                    <TableRow key={`${item.type}-${item.id}`}>
-                      <TableCell className="font-mono font-medium">
-                        <Link
-                          href={activityHref(item)}
-                          className="text-primary transition hover:underline"
-                        >
+              {recentActivity.length === 0 ? (
+                <Empty className="py-8">
+                  <EmptyHeader>
+                    <EmptyTitle className="text-sm font-semibold">
+                      Chưa có hoạt động nào
+                    </EmptyTitle>
+                    <EmptyDescription className="text-xs leading-5">
+                      PO, GRN và hóa đơn mới sẽ xuất hiện tại đây khi phát sinh.
+                    </EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
+              ) : (
+                recentActivity.map((item) => (
+                  <InteractiveCard
+                    key={`${item.type}-${item.id}`}
+                    asChild
+                    minHeight="tap"
+                    padding="default"
+                  >
+                    <Link href={activityHref(item)} className="block">
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <p className="font-mono text-sm font-semibold">
                           {item.code}
-                        </Link>
-                      </TableCell>
-                      <TableCell>{item.supplier}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {formatActivityDate(item.date)}
-                      </TableCell>
-                      <TableCell>
+                        </p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {item.supplier}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 flex-col items-end gap-1">
                         <StatusBadge status={item.status} size="sm" />
-                      </TableCell>
-                      <TableCell className="text-right font-mono font-semibold">
-                        {item.total != null ? `${formatVND(item.total)}₫` : "—"}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
+                        <span className="text-xs text-muted-foreground">
+                          {formatActivityDate(item.date)}
+                        </span>
+                        {item.total != null ? (
+                          <span className="font-mono text-xs font-semibold">
+                            {formatVND(item.total)}₫
+                          </span>
+                        ) : null}
+                      </div>
+                    </Link>
+                  </InteractiveCard>
+                ))
+              )}
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="min-w-36">Mã phiếu</TableHead>
+                  <TableHead className="min-w-44">Nhà cung cấp</TableHead>
+                  <TableHead className="min-w-32">Thời gian</TableHead>
+                  <TableHead className="min-w-32">{FORM_VI.status}</TableHead>
+                  <TableHead className="min-w-28 text-right">
+                    {FORM_VI.totalAmount}
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {recentActivity.length === 0 ? (
+                  <TableEmptyStateRow
+                    colSpan={5}
+                    title="Chưa có hoạt động nào"
+                    description="PO, GRN và hóa đơn mới sẽ xuất hiện tại đây khi phát sinh."
+                  />
+                ) : null}
+                {recentActivity.map((item) => (
+                  <TableRow key={`${item.type}-${item.id}`}>
+                    <TableCell className="font-mono font-medium">
+                      <Link
+                        href={activityHref(item)}
+                        className="text-primary transition hover:underline"
+                      >
+                        {item.code}
+                      </Link>
+                    </TableCell>
+                    <TableCell>{item.supplier}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {formatActivityDate(item.date)}
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge status={item.status} size="sm" />
+                    </TableCell>
+                    <TableCell className="text-right font-mono font-semibold">
+                      {item.total != null ? `${formatVND(item.total)}₫` : "—"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
     </AppPage>
   );
 }

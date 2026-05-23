@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { formatVNTime } from "@comtammatu/shared/time";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Dialog,
@@ -58,7 +59,8 @@ export function ExtendWindowButton({
   const [note, setNote] = useState("");
   const [isSubmitting, startSubmit] = useTransition();
 
-  const outOfCredits = typeof remainingCredits === "number" && remainingCredits <= 0;
+  const outOfCredits =
+    typeof remainingCredits === "number" && remainingCredits <= 0;
   const noteOk = note.length >= NOTE_MIN;
   const canSubmit = noteOk && !isSubmitting;
 
@@ -79,7 +81,9 @@ export function ExtendWindowButton({
         return;
       }
       toast.success(
-        `Đã extend +${minutes} phút • kết thúc: ${res.data?.extendedUntil ? new Date(res.data.extendedUntil).toLocaleTimeString("vi-VN") : "?"}`,
+        `Đã extend +${minutes} phút • kết thúc: ${
+          res.data?.extendedUntil ? formatVNTime(res.data.extendedUntil) : "?"
+        }`,
       );
       if (res.data?.extendedUntil) {
         onSuccess?.(res.data.extendedUntil);

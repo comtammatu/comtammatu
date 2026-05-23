@@ -51,7 +51,7 @@ Lint nhẹ: nếu copy/docs mới xuất hiện `hoá|thoả|hoà|loá|toả|xo�
 Chỉ giữ English trong một trong các nhóm sau:
 
 - acronym hoặc thuật ngữ chuyên ngành đã chốt: `POS`, `KDS`, `HQ`, `ERP`, `PO`, `GRN`, `WAC`, `PIT`
-- tên công nghệ, framework, hoặc vendor: `Supabase`, `Next.js`, `React`, `Tailwind`, `TypeScript`, `MoMo`, `VietQR`, `MISA`
+- tên công nghệ, framework, hoặc vendor: `Supabase`, `Next.js`, `React`, `Tailwind`, `TypeScript`, `MoMo`, `VietQR`, `Viettel S-invoice`
 - proper noun, code identifier, route, schema, enum, RPC, payload field, HTTP verb, env var
 - đoạn glossary hoặc lần định nghĩa đầu cần khóa nghĩa theo mẫu `Tiếng Việt (English)`
 
@@ -238,7 +238,7 @@ Canonical rule (áp dụng 2026-04-24): payment confirmation → `orders.status=
 | `cqt_code` | mã CQT | Mã xác thực HĐĐT sau khi `issued` |
 | `invoice_series` | ký hiệu hóa đơn | Ví dụ `1C25TLL` |
 | `invoice_number` | số hóa đơn | Do provider / CQT cấp |
-| `einvoice provider` | nhà cung cấp HĐĐT | `viettel`, `misa`, `vnpt` |
+| `einvoice provider` | nhà cung cấp HĐĐT | runtime hiện tại: `viettel` |
 | `declared_period` | kỳ kê khai | Format `YYYY-MM` |
 | `is_vat_deductible` | khấu trừ GTGT | Boolean; cần 3-way match + hóa đơn hợp lệ + thanh toán ngân hàng nếu ≥ 20 triệu |
 | `matching_status` | trạng thái đối soát 3 chứng từ | `pending` → `matched` / `discrepancy` → `approved` |
@@ -544,7 +544,7 @@ File [apps/web/app/inventory/_lib/labels.ts](../../apps/web/app/inventory/_lib/l
 - HĐLĐ, BHXH: [labor-contracts.md](labor-contracts.md)
 - Kiến trúc hệ thống: [../spec/architecture.md](../spec/architecture.md)
 - Schema và enum: [../spec/database-schema.md](../spec/database-schema.md)
-- POS order lifecycle (payment-close override): [../plan/m2-order-lifecycle.md](../plan/m2-order-lifecycle.md)
+- POS order lifecycle (payment-close override): [../archive/plan/m2-order-lifecycle.md](../archive/plan/m2-order-lifecycle.md)
 - Inventory UI labels: [../../apps/web/app/inventory/_lib/dictionary.ts](../../apps/web/app/inventory/_lib/dictionary.ts)
 - Module / site / nav labels chung: [../../packages/shared/src/labels/vi.ts](../../packages/shared/src/labels/vi.ts)
 - Regression rules: [../../tasks/regressions.md](../../tasks/regressions.md)

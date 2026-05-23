@@ -15,14 +15,17 @@ Use this file to find the source-of-truth docs for onboarding, implementation pl
 
 ## Planning And Specs
 
-- Roadmap + phases: `docs/plan/roadmap.md`
-- UI/UX rebuild plan: `docs/plan/ui-ux-rebuild.md`
-- UI/UX page contracts: `docs/plan/ui-ux-page-contracts.md`
-- M2-Ext POS order lifecycle: `docs/plan/m2-order-lifecycle.md`
+- Active work tracker: `tasks/todo.md`
+- Current technical status: `docs/CODEBASE_MAP.md`
 - Architecture decisions: `docs/plan/decisions.md`
+- Active ADRs: `docs/plan/adr/`
+- Archived greenfield ADRs: `docs/archive/plan/adr/`
 - System architecture: `docs/spec/architecture.md`
 - Database schema: `docs/spec/database-schema.md`
 - Design system contract: `docs/spec/design-system.md`
+- Suspended greenfield rebuild reference: `docs/archive/plan/system-rebuild/`
+- Historical plans only: `docs/archive/plan/`
+- Historical refs/worklogs only: `docs/archive/ref/`, `docs/archive/worklog/`
 
 ## Business Domain
 
@@ -35,7 +38,6 @@ Use this file to find the source-of-truth docs for onboarding, implementation pl
 - Inventory SOP: `docs/ref/inventory-sop.md`
 - Inventory training handoff: `docs/ref/inventory-role-handoff.md`
 - Inventory RBAC matrix: `docs/ref/inventory-rbac-matrix.md`
-- Inventory ERP gap matrix: `docs/ref/inventory-erp-gap-matrix.md`
 - Thuế TNCN & Lương: `docs/ref/payroll-pit.md`
 
 ## Meta-Learning
@@ -43,6 +45,7 @@ Use this file to find the source-of-truth docs for onboarding, implementation pl
 - Regression rules: `tasks/regressions.md`
 - Lessons learned: `tasks/lessons.md`
 - Current tasks: `tasks/todo.md`
+- Historical task worklogs: `docs/archive/worklog/tasks/`
 - Runbook index: `docs/runbooks/README.md`
 - Worklog index: `docs/worklog/README.md`
 

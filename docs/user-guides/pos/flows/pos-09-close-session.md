@@ -173,7 +173,7 @@ Sau khi chốt → màn `/employee` → tap "Bán hàng POS" → mở ca mới (
 
 ### Tham chiếu thiết kế
 
-- Order lifecycle: [docs/plan/m2-order-lifecycle.md](../../../plan/m2-order-lifecycle.md)
+- Order lifecycle: [docs/archive/plan/m2-order-lifecycle.md](../../../archive/plan/m2-order-lifecycle.md)
 - POS-01 (mở ca, đối ngược): [pos-01-open-session.md](pos-01-open-session.md)
 
 ---

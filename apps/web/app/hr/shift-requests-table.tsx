@@ -1,11 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+} from "react";
 import {
   Check as IconCheck,
   CalendarDays as IconCalendarEvent,
   X as IconX,
 } from "lucide-react";
+import { formatVNBusinessDate } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
@@ -88,10 +95,7 @@ const STATUS_LABELS = {
 };
 
 function formatShortDate(dateStr: string): string {
-  const d = new Date(dateStr + "T00:00:00");
-  return `${d.getDate().toString().padStart(2, "0")}/${(d.getMonth() + 1)
-    .toString()
-    .padStart(2, "0")}/${d.getFullYear()}`;
+  return formatVNBusinessDate(dateStr);
 }
 
 export function ShiftRequestsTable({ branches }: ShiftRequestsTableProps) {
@@ -288,7 +292,9 @@ export function ShiftRequestsTable({ branches }: ShiftRequestsTableProps) {
                   onClick={handleBulkApprove}
                   disabled={isPending}
                 >
-                  {isPending ? <Spinner className="mr-2" /> : (
+                  {isPending ? (
+                    <Spinner className="mr-2" />
+                  ) : (
                     <IconCheck className="mr-1 size-4" />
                   )}
                   Duyệt {selectedIds.size} đăng ký

@@ -2,8 +2,8 @@
  * Daily B2C summary HĐĐT cron worker.
  *
  * Auth: Bearer CRON_SECRET (timing-safe compare).
- * Flag: HDDT_DAILY_SUMMARY_ENABLED=true to run; default off (PR-4 ship-disabled,
- *       flip in PR-6 cutover after MISA template registration completes).
+ * Flag: HDDT_DAILY_SUMMARY_ENABLED=true to run; default off until Viettel
+ *       S-invoice template registration is ready for daily summary.
  * Schedule (PR-6): 5 19 * * * UTC = 02:05 ICT next-day. summary_date =
  *                  yesterday in VN.
  *
@@ -22,22 +22,12 @@ import { NextResponse } from "next/server";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { getCronSecret } from "@comtammatu/shared/feedback";
 import { getInvoiceProvider } from "@comtammatu/shared/providers";
+import { getYesterdayVNDateString } from "@comtammatu/shared/time";
 import { ensureInvoiceProviderRegistered } from "@lib/invoice-provider-init";
 import { executeSummaryRun } from "@lib/hddt-daily-summary";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-const VN_OFFSET_MS = 7 * 60 * 60 * 1000;
-
-function getYesterdayInVietnam(): string {
-  const nowVn = new Date(Date.now() + VN_OFFSET_MS);
-  const yesterday = new Date(nowVn.getTime() - 24 * 60 * 60 * 1000);
-  const y = yesterday.getUTCFullYear();
-  const m = String(yesterday.getUTCMonth() + 1).padStart(2, "0");
-  const d = String(yesterday.getUTCDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
 
 function timingSafeEquals(a: string, b: string): boolean {
   const MAX = 256;
@@ -82,7 +72,7 @@ export async function POST(request: Request) {
   }
 
   const supabase = createServiceClient();
-  const summaryDate = getYesterdayInVietnam();
+  const summaryDate = getYesterdayVNDateString();
 
   const counters = {
     branches_processed: 0,

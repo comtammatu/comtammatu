@@ -30,6 +30,13 @@ import {
 import { AppBoneyardSkeleton } from "../../_components/boneyard-skeleton";
 import { EmployeePanel } from "../components/employee-page";
 import { fetchMySchedule, type ScheduleShift } from "./actions";
+import {
+  addVNDateDays,
+  formatVNBusinessDate,
+  getVNDateString,
+  getVNWeekStartDateString,
+  parseISODateParts,
+} from "@comtammatu/shared/time";
 
 const TEXT = {
   currentWeek: "Tu\u1ea7n n\u00e0y",
@@ -54,42 +61,22 @@ const DAY_NAMES = [
 ] as const;
 
 function formatDate(dateStr: string): string {
-  const d = new Date(dateStr + "T00:00:00");
-  const day = d.getDate().toString().padStart(2, "0");
-  const month = (d.getMonth() + 1).toString().padStart(2, "0");
-  const year = d.getFullYear();
-  return `${day}/${month}/${year}`;
+  return formatVNBusinessDate(dateStr);
 }
 
 function getDayName(dateStr: string): string {
-  const d = new Date(dateStr + "T00:00:00");
-  return DAY_NAMES[d.getDay()] ?? "";
-}
-
-function getMonday(date: Date): Date {
-  const d = new Date(date);
-  const day = d.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  d.setDate(d.getDate() + diff);
-  return d;
-}
-
-function toDateStr(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+  const parts = parseISODateParts(dateStr);
+  if (!parts) return "";
+  const day = new Date(
+    Date.UTC(parts.year, parts.month - 1, parts.day, 5, 0, 0),
+  ).getUTCDay();
+  return DAY_NAMES[day] ?? "";
 }
 
 function generateWeekDates(mondayStr: string): string[] {
-  const monday = new Date(mondayStr + "T00:00:00");
-  const dates: string[] = [];
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(monday);
-    d.setDate(d.getDate() + i);
-    dates.push(toDateStr(d));
-  }
-  return dates;
+  return Array.from({ length: 7 }, (_, index) =>
+    addVNDateDays(mondayStr, index),
+  );
 }
 
 const SCHEDULE_SKELETON_FIXTURE_DATES = generateWeekDates("2026-01-05");
@@ -227,8 +214,8 @@ export function ScheduleClient({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  const todayStr = toDateStr(new Date());
-  const currentMonday = toDateStr(getMonday(new Date()));
+  const todayStr = getVNDateString();
+  const currentMonday = getVNWeekStartDateString();
   const isCurrentWeek = weekStart === currentMonday;
   const weekDates = generateWeekDates(weekStart);
 
@@ -247,15 +234,11 @@ export function ScheduleClient({
   }
 
   function goToPrevWeek() {
-    const monday = new Date(weekStart + "T00:00:00");
-    monday.setDate(monday.getDate() - 7);
-    loadWeek(toDateStr(monday));
+    loadWeek(addVNDateDays(weekStart, -7));
   }
 
   function goToNextWeek() {
-    const monday = new Date(weekStart + "T00:00:00");
-    monday.setDate(monday.getDate() + 7);
-    loadWeek(toDateStr(monday));
+    loadWeek(addVNDateDays(weekStart, 7));
   }
 
   function goToCurrentWeek() {

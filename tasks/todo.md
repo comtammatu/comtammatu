@@ -1,14 +1,15 @@
 # Current Tasks
 
-> Active work only. Shipped history → `docs/plan/roadmap.md`. Updated: 2026-04-26.
+> Active work tracker for the in-place `comtammatu` pilot/hardening track. The greenfield rebuild pack under `docs/archive/plan/system-rebuild/` is suspended/historical reference as of 2026-05-23; do not treat its in-place freeze or cutover steps as active unless owner reactivates it.
+> Historical shipped roadmap snapshot → `docs/archive/plan/roadmap.md`. Updated: 2026-05-23.
 
 ## Module status (snapshot)
 
-M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1–M9 — **all SHIPPED**. External integrations (VietQR/Momo/MISA HĐĐT real APIs) blocked on credentials. Detail trong `docs/plan/roadmap.md`.
+M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1–M9 — **all SHIPPED**. External integrations VietQR/Momo remain credential-gated; HĐĐT is active through Viettel S-invoice only. Historical detail trong `docs/archive/plan/roadmap.md`.
 
-## Strategic fork prep
+## Historical context — strategic fork prep
 
-- [x] Draft fork-based platform preparation plan: `docs/plan/platform-fork-2026.md`.
+- [x] Draft fork-based platform preparation plan: `docs/archive/plan/platform-fork-2026.md` (historical).
 - [x] Create local preparation folder: `/Users/luongthebinh/Downloads/matu-pros`.
 - [x] Draft Cloudflare-first minimal stack decisions: `/Users/luongthebinh/Downloads/matu-pros/STACK_DECISIONS.md`.
 - [x] Draft stack research matrix: `/Users/luongthebinh/Downloads/matu-pros/STACK_RESEARCH.md`.
@@ -57,7 +58,7 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 ## Active branches (in flight, on origin)
 
 - `m4-payments-fix` (75e8250, 2026-04-29) — foundation slice of m4-payments-fix.md: 2 migrations + with-action.ts requireBranchScope + redactCredentials utility + 7 new regression rules. AWAITING `supabase db push` + `pnpm db:types`. Next slice wires reverse_payment_and_post RPC, recompute_total, and TS callers.
-- `d011-v2` (f051e8e, 2026-04-29) — D011 v2 no-wait pieces: provider resolver + LocalMisaProvider + ADR + runbook. Sequenced AFTER m4 lands. Spike branch `d011-spike` preserved as v1 reference (never to merge).
+- `d011-v2` (f051e8e, 2026-04-29) — superseded/dropped for current runtime: HĐĐT no longer needs LocalMisaProvider/provider resolver because Viettel S-invoice is the only active provider. Spike branch `d011-spike` remains historical reference only.
 
 ## Pre-deploy fixes
 
@@ -76,7 +77,7 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 
 > Full findings under each agent in session log. Quick wins applied above; these need design.
 
-### M4 Payments — see `docs/plan/m4-payments-fix.md` (drafted 2026-04-28); foundation slice on `m4-payments-fix` branch (2026-04-29)
+### M4 Payments — historical plan: `docs/archive/plan/m4-payments-fix.md` (drafted 2026-04-28); foundation slice on `m4-payments-fix` branch (2026-04-29)
 - [x] **`approveRefund` doesn't actually refund** — RPC `reverse_payment_and_post` shipped 2026-04-30 (`20260510020000_m4_reverse_payment_and_post_rpc.sql`). Atomic: GL reversal + stock restore + payment+order status flip + audit. Hardcoded VAS accounts (5111/1111/1121) for pilot; post-pilot move to posting_rules-driven if needed. **WAITING:** owner apply + TS edit to refund-actions.ts to call the RPC.
 - [x] **Refund `payment.status='completed'` precondition** — RPC `create_refund` shipped 2026-04-30 (`20260510030000_m4_create_refund_rpc.sql`). Rejects anything but completed; enforces cumulative refund cap. **WAITING:** owner apply + TS edit to refund-actions.ts to swap direct INSERT for the RPC. **Refund auth `area_manager` scope hole** still applies at the action layer (RPC delegates role/area scope to TS wrapper) — fix in TS edit slice.
 - [ ] **MoMo webhook tenant binding hole** — `provider_ref=orderId AND method='momo'` with no `tenant_id`. Leaked secret + collision = cross-tenant payment forgery. Need partnerCode + tenant verify before RPC. **WAITING:** TS edit to momo webhook after types regenerate.
@@ -95,14 +96,14 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 
 > Compliance audit `docs/ref/einvoice-tax.md` ↔ implementation. Pilot OK với cashier issue path; các gap dưới chặn scale + production-grade NĐ70/2025.
 
-> **2026-05-08 update:** Owner approved Hybrid MISA plan via 4-agent debate (D1-D7). Most M6 HĐĐT gaps now subsumed by `docs/plan/hddt-hybrid-misa.md` (7-PR migration). Items below reflect post-plan state.
+> **2026-05-23 update:** HĐĐT is active through Viettel S-invoice only. `docs/archive/plan/hddt-hybrid-misa.md` remains historical plan context; runtime/provider docs must point to Viettel S-invoice.
 
-- [ ] **PLAN ACTIVE: HĐĐT Hybrid MISA (B2B realtime + B2C daily batch)** — see `docs/plan/hddt-hybrid-misa.md`. 7 PRs queued: schema → RPCs → B2B refactor → cron → admin UI → cutover → regression rules. **Owner action: D7 register HĐ tổng hợp template với CQT qua MISA portal (3-7 day leadtime, parallel với coding).**
-- [ ] **P0: HĐĐT reconcile cron (orphan `signing`)** — DEFERRED to post-pilot per Hybrid MISA plan. Manual recovery via admin retry button covers pilot volume.
-- [ ] **P0: HĐĐT replace flow (TT 78)** — DEFERRED post-pilot per plan. Pilot cancel + manual MISA portal đủ.
+- [x] **Provider active: Viettel S-invoice only** — MISA runtime provider removed; no `INVOICE_PROVIDER` switch. HĐĐT env source is `SINVOICE_*` + `COMPANY_TAX_CODE`.
+- [ ] **P0: HĐĐT reconcile cron (orphan `signing`)** — DEFERRED to post-pilot. Manual recovery via admin retry button covers pilot volume.
+- [ ] **P0: HĐĐT replace flow (TT 78)** — DEFERRED post-pilot. Pilot cancel + manual Viettel S-invoice portal đủ.
 - [ ] **P1: HĐĐT provider config qua `system_settings` (encrypted)** — DEFERRED post-pilot. Env-only acceptable cho single-tenant CTCP.
-- [ ] **P1: HĐĐT PDF/XML persist + download UI** — DEFERRED post-pilot. Link MISA portal đủ.
-- [ ] **P2: 3-way matching UI cho `supplier_invoices`** — bảng + columns (`matching_status`, `is_vat_deductible`, `declared_period`) đã có nhưng không có UI workflow PO ↔ GRN ↔ Supplier Invoice. Kế toán phải đối chiếu tay → không export được Tờ khai 01/GTGT đúng. Independent of Hybrid MISA plan.
+- [ ] **P1: HĐĐT PDF/XML persist + download UI** — DEFERRED post-pilot. Link Viettel S-invoice portal đủ.
+- [ ] **P2: 3-way matching UI cho `supplier_invoices`** — bảng + columns (`matching_status`, `is_vat_deductible`, `declared_period`) đã có nhưng không có UI workflow PO ↔ GRN ↔ Supplier Invoice. Kế toán phải đối chiếu tay → không export được Tờ khai 01/GTGT đúng. Independent of HĐĐT provider cleanup.
 
 ### M7 Payroll
 - [ ] **`payroll_entries_select` RLS** — add `EXISTS(payroll_periods WHERE status='paid')` to self branch.
@@ -122,12 +123,12 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 
 - [ ] P0: Wire VietQR real bank API (merchant credentials)
 - [ ] P0: Wire Momo real API (merchant credentials)
-- [ ] P0: Wire MISA HĐĐT real API call (MISA credentials — pháp lý NĐ70/2025)
+- [x] HĐĐT real API active via Viettel S-invoice (không dùng MISA)
 - [ ] P1: Momo webhook atomic RPC
 
 ## Branch Kitchen site split (Phase 2)
 
-> Decision 2026-04-23 — tách tồn Kho CN / Bếp CN qua `inventory_locations`. See `docs/plan/inventory-location-ledger-phase2.md`.
+> Decision 2026-04-23 — tách tồn Kho CN / Bếp CN qua `inventory_locations`. Historical plan: `docs/archive/plan/inventory-location-ledger-phase2.md`.
 
 - [x] Migration `20260417040000_inventory_locations_phase1.sql` + compat columns APPLIED
 - [ ] Phase 2 dual-write + cutover
@@ -168,14 +169,14 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 ## Doc maintenance reminders
 
 - Khi Inventory behavior thay đổi → update `docs/ref/inventory.md` + `inventory-sop.md` + `docs/modules/web-app.md` + `docs/worklog/inventory/adoption-matrix.md` cùng PR
-- Khi triển khai phase tách tồn thật → update `docs/plan/inventory-location-ledger.md`
+- Khi triển khai phase tách tồn thật → update active Inventory docs and keep historical `docs/archive/plan/inventory-location-ledger.md` only as context
 
 ## Deferred to post-pilot
 
 - [ ] Automated E2E POS→payment→stock (P2, trước scale 3+ chi nhánh)
 - [ ] Staging env / Vercel Preview (P2, trước external users)
 - [ ] M7 BHXH/PIT calc wiring (Excel cho pilot <5 nhân viên)
-- [ ] M6 VAS journal entries hoàn chỉnh (CSV → MISA AMIS cho pilot)
+- [ ] M6 VAS journal entries hoàn chỉnh (CSV kế toán cho pilot)
 - [ ] Refunds table + flow
 - [ ] M5-Ext S8 — yield factor + AP aging + consumption variance (chưa cần ở 30-50 SKU)
 - [ ] Finish 10 RPCs khỏi `auth_role()` (batches α4b/α4c)

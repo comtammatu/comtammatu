@@ -1,4 +1,5 @@
 import type { CategoryType } from "@comtammatu/shared";
+import { formatVNTime } from "@comtammatu/shared/time";
 
 /* ─── Menu data types (derived from fetchMenuForPos action) ─── */
 
@@ -84,11 +85,7 @@ export const MENU_ZONE_ORDER: CategoryType[] = [
 /* ─── Helpers ─── */
 
 export function formatTime(dateStr: string): string {
-  return new Date(dateStr).toLocaleTimeString("vi-VN", {
-    timeZone: "Asia/Ho_Chi_Minh",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return formatVNTime(dateStr);
 }
 
 export type PosFlowStepState = "done" | "current" | "todo";

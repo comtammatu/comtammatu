@@ -2,7 +2,13 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ACTIONS_VI, BRANCH_VI, FORM_VI, STATES_VI } from "@comtammatu/shared/messages";
+import {
+  ACTIONS_VI,
+  BRANCH_VI,
+  FORM_VI,
+  STATES_VI,
+} from "@comtammatu/shared/messages";
+import { formatVNDateTime } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -22,7 +28,10 @@ import {
 } from "@comtammatu/ui/components/table";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { TableEmptyStateRow } from "@/components/table-empty-state-row";
-import { RefreshCw as IconRefresh, RotateCcw as IconRotate } from "lucide-react";
+import {
+  RefreshCw as IconRefresh,
+  RotateCcw as IconRotate,
+} from "lucide-react";
 import { retryJobFromMonitor } from "./actions";
 
 export type JobRow = {
@@ -84,13 +93,7 @@ const JOB_TYPE_LABEL: Record<string, string> = {
 
 function formatTime(iso: string | null): string {
   if (!iso) return "—";
-  const d = new Date(iso);
-  return d.toLocaleString("vi-VN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    day: "2-digit",
-    month: "2-digit",
-  });
+  return formatVNDateTime(iso);
 }
 
 export function PrintJobsClient({

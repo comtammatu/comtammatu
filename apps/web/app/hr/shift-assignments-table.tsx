@@ -1,7 +1,13 @@
 "use client";
 
 import { useState, useTransition, useCallback } from "react";
-import { ChevronLeft as IconChevronLeft, ChevronRight as IconChevronRight, CalendarDays as IconCalendarEvent, Plus as IconPlus, X as IconX } from "lucide-react";
+import {
+  ChevronLeft as IconChevronLeft,
+  ChevronRight as IconChevronRight,
+  CalendarDays as IconCalendarEvent,
+  Plus as IconPlus,
+  X as IconX,
+} from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
@@ -47,6 +53,13 @@ import {
 import { fetchShifts } from "./actions";
 import type { BranchOption, ShiftRow } from "./page";
 import { ACTIONS_VI, BRANCH_VI, ERRORS_VI } from "@comtammatu/shared/messages";
+import {
+  addVNDateDays,
+  formatVNShortBusinessDate,
+  getVNDateString,
+  getVNWeekStartDateString,
+  parseISODateParts,
+} from "@comtammatu/shared/time";
 
 /* ─── Types ─── */
 
@@ -79,28 +92,25 @@ interface BranchEmployee {
 const DAY_LABELS = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
 
 function getMonday(date: Date): Date {
-  const d = new Date(date);
-  const day = d.getDay();
-  // getDay(): 0=Sun, 1=Mon ... 6=Sat
-  const diff = day === 0 ? -6 : 1 - day;
-  d.setDate(d.getDate() + diff);
-  d.setHours(0, 0, 0, 0);
-  return d;
+  return dateFromVNDateString(getVNWeekStartDateString(date));
 }
 
 function formatDate(date: Date): string {
-  return date.toISOString().split("T")[0]!;
+  return getVNDateString(date);
 }
 
 function addDays(date: Date, days: number): Date {
-  const d = new Date(date);
-  d.setDate(d.getDate() + days);
-  return d;
+  return dateFromVNDateString(addVNDateDays(formatDate(date), days));
 }
 
 function formatShortDate(dateStr: string): string {
-  const d = new Date(dateStr + "T00:00:00");
-  return `${d.getDate()}/${d.getMonth() + 1}`;
+  return formatVNShortBusinessDate(dateStr);
+}
+
+function dateFromVNDateString(dateStr: string): Date {
+  const parts = parseISODateParts(dateStr);
+  if (!parts) return new Date();
+  return new Date(Date.UTC(parts.year, parts.month - 1, parts.day, 5, 0, 0));
 }
 
 /* ─── Component ─── */
@@ -470,7 +480,9 @@ export function ShiftAssignmentsTable({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isPending}>{ACTIONS_VI.cancel}</AlertDialogCancel>
+            <AlertDialogCancel disabled={isPending}>
+              {ACTIONS_VI.cancel}
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteAssignment}
               disabled={isPending}

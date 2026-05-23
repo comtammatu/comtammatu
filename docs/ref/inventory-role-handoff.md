@@ -128,4 +128,4 @@ Trong hệ thống hiện tại, phần AP/reporting có thể đi qua `super_ma
 - Chi tiết nghiệp vụ: [inventory.md](inventory.md)
 - Ma trận quyền: [inventory-rbac-matrix.md](inventory-rbac-matrix.md)
 - SOP đầy đủ: [inventory-sop.md](inventory-sop.md)
-- Roadmap và phạm vi: [../plan/roadmap.md](../plan/roadmap.md)
+- Roadmap và phạm vi: [../archive/plan/roadmap.md](../archive/plan/roadmap.md)

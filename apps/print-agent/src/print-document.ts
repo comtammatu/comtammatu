@@ -7,6 +7,7 @@ export type PrintDocumentTextBlock = {
   bold?: boolean;
   double?: boolean;
   inverse?: boolean;
+  strikethrough?: boolean;
 };
 
 export type PrintDocumentRowBlock = {
@@ -15,6 +16,7 @@ export type PrintDocumentRowBlock = {
   right?: string;
   bold?: boolean;
   double?: boolean;
+  strikethrough?: boolean;
 };
 
 export type PrintDocumentDividerBlock = {

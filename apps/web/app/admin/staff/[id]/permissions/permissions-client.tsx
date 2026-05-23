@@ -1,7 +1,12 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Plus as IconPlus, Trash as IconTrash, Layers as IconStack } from "lucide-react";
+import {
+  Plus as IconPlus,
+  Trash as IconTrash,
+  Layers as IconStack,
+} from "lucide-react";
+import { formatVNDate, formatVNDateTime } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -151,7 +156,9 @@ export function PermissionsClient({
       if (!res.success) {
         toast.error(res.error ?? "Thất bại");
       } else {
-        toast.success(`Đã áp dụng template (${res.data?.rows_inserted ?? 0} quyền mới)`);
+        toast.success(
+          `Đã áp dụng template (${res.data?.rows_inserted ?? 0} quyền mới)`,
+        );
         setTemplateId("");
         setTemplateValidUntil("");
       }
@@ -223,7 +230,8 @@ export function PermissionsClient({
               />
             </label>
             <p className="self-end text-xs text-muted-foreground">
-              Để trống = vĩnh viễn. Dùng cho luân chuyển tạm hoặc uỷ quyền có hạn.
+              Để trống = vĩnh viễn. Dùng cho luân chuyển tạm hoặc uỷ quyền có
+              hạn.
             </p>
           </div>
           <Button
@@ -278,7 +286,8 @@ export function PermissionsClient({
             />
           </label>
           <p className="text-xs text-muted-foreground">
-            Template cộng dồn với quyền hiện có — chỉ thêm, không xóa. Nếu đặt hạn, tất cả quyền mới cùng hạn.
+            Template cộng dồn với quyền hiện có — chỉ thêm, không xóa. Nếu đặt
+            hạn, tất cả quyền mới cùng hạn.
           </p>
           <Button
             onClick={handleApplyTemplate}
@@ -334,7 +343,8 @@ export function PermissionsClient({
       {currentGrants.length === 0 && (
         <Card>
           <CardContent className="p-6 text-center text-sm text-muted-foreground">
-            {targetFullName} chưa có quyền nào. Gán đơn lẻ hoặc áp dụng template ở trên.
+            {targetFullName} chưa có quyền nào. Gán đơn lẻ hoặc áp dụng template
+            ở trên.
           </CardContent>
         </Card>
       )}
@@ -366,8 +376,8 @@ function GrantList({
               expired
                 ? "border-destructive/40 bg-destructive/10"
                 : expiringSoon
-                ? "border-warning/40 bg-warning/10"
-                : "border-border/60 bg-muted/30"
+                  ? "border-warning/40 bg-warning/10"
+                  : "border-border/60 bg-muted/30"
             }`}
           >
             <Badge variant="secondary" className="font-mono text-xs">
@@ -379,13 +389,12 @@ function GrantList({
                   expired
                     ? "text-destructive"
                     : expiringSoon
-                    ? "text-warning"
-                    : "text-muted-foreground"
+                      ? "text-warning"
+                      : "text-muted-foreground"
                 }`}
-                title={new Date(g.validUntil).toLocaleString("vi-VN")}
+                title={formatVNDateTime(g.validUntil)}
               >
-                {expired ? "hết hạn" : "đến"}{" "}
-                {new Date(g.validUntil).toLocaleDateString("vi-VN")}
+                {expired ? "hết hạn" : "đến"} {formatVNDate(g.validUntil)}
               </span>
             )}
             <Button

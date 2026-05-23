@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { PERMISSION_KEYS, STAFF_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
+import { getVNDateString, getVNDayUtcRange } from "@comtammatu/shared/time";
 import { getAuthContextWithPermission } from "./_lib/auth";
 
 /* ─── Waste entry (S11) ─── */
@@ -160,10 +161,7 @@ export async function approveWaste(
   });
 
   if (error) {
-    if (
-      error.code === "42501" &&
-      error.message?.includes("self-approval")
-    ) {
+    if (error.code === "42501" && error.message?.includes("self-approval")) {
       return {
         success: false,
         error: "Không thể tự duyệt phiếu của mình (4-eye principle)",
@@ -242,14 +240,13 @@ export async function getWasteCapStatus(
     .maybeSingle();
 
   // Branch today's total waste across all users
-  const since = new Date();
-  since.setHours(0, 0, 0, 0);
+  const since = getVNDayUtcRange(getVNDateString()).startIso;
   const { data: branchRows } = await supabase
     .from("stock_issues")
     .select("id")
     .eq("branch_id", branchId)
     .eq("issue_type", "writeoff")
-    .gte("issued_at", since.toISOString());
+    .gte("issued_at", since);
 
   const branchIds = (branchRows ?? []).map((r) => r.id);
   let branchToday = 0;

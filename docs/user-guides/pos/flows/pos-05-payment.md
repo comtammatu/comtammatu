@@ -186,7 +186,7 @@ URL: `/br/{branchId}/pos` (qua bàn occupied → đơn → "Thanh toán")
 
 ### Tham chiếu thiết kế
 
-- Order lifecycle: [docs/plan/m2-order-lifecycle.md](../../../plan/m2-order-lifecycle.md)
+- Order lifecycle: [docs/archive/plan/m2-order-lifecycle.md](../../../archive/plan/m2-order-lifecycle.md)
 - HĐĐT: [docs/ref/einvoice-tax.md](../../../ref/einvoice-tax.md)
 - Regression rules: [tasks/regressions.md](../../../../tasks/regressions.md)
 

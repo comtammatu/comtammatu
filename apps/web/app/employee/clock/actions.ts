@@ -10,6 +10,7 @@ import {
   type StaffRole,
 } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
+import { getVNDateString } from "@comtammatu/shared/time";
 import { getAuthContextWithPermission } from "../../admin/_lib/auth";
 
 /* ─── Constants ─── */
@@ -22,11 +23,8 @@ const CONFIG_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
 
 /* ─── Helpers ─── */
 
-/** Get today's date string in Asia/Ho_Chi_Minh timezone (YYYY-MM-DD) */
 function getTodayVN(): string {
-  return new Date().toLocaleDateString("sv-SE", {
-    timeZone: "Asia/Ho_Chi_Minh",
-  });
+  return getVNDateString();
 }
 
 /** Compute HMAC-SHA256 daily code: first 6 hex chars of HMAC(secret, YYYY-MM-DD) */
@@ -352,7 +350,10 @@ export async function generateDailyCode(
     return { success: false, error: "ID chi nhánh không hợp lệ" };
   }
 
-  const ctx = await getAuthContextWithPermission(CONFIG_ROLES, PERMISSION_KEYS.SETTINGS_BRANCH);
+  const ctx = await getAuthContextWithPermission(
+    CONFIG_ROLES,
+    PERMISSION_KEYS.SETTINGS_BRANCH,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { claims } = ctx;

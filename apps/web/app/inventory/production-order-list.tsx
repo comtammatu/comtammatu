@@ -63,6 +63,7 @@ import type {
 } from "./production-types";
 
 import { ACTIONS_VI, FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
+import { formatVNDateTime } from "@comtammatu/shared/time";
 interface ProductionOrderListProps {
   orders: ProductionOrderRow[];
   canConfirmProduction: boolean;
@@ -70,12 +71,7 @@ interface ProductionOrderListProps {
 }
 
 function formatOrderDate(value: string) {
-  return new Date(value).toLocaleString("vi-VN", {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return formatVNDateTime(value);
 }
 
 function formatCost(value: number) {
@@ -184,158 +180,159 @@ export function ProductionOrderList({
 
   return (
     <>
-    <Card>
-      <CardHeader className="border-b">
-        <CardTitle className="flex items-center gap-2">
-          <IconClipboardList />
-          Lệnh sản xuất
-        </CardTitle>
-        <CardAction>
-          <Badge variant={draftCount > 0 ? "warning" : "secondary"}>
-            {draftCount} lệnh nháp
-          </Badge>
-        </CardAction>
-      </CardHeader>
+      <Card>
+        <CardHeader className="border-b">
+          <CardTitle className="flex items-center gap-2">
+            <IconClipboardList />
+            Lệnh sản xuất
+          </CardTitle>
+          <CardAction>
+            <Badge variant={draftCount > 0 ? "warning" : "secondary"}>
+              {draftCount} lệnh nháp
+            </Badge>
+          </CardAction>
+        </CardHeader>
 
-      {isMobile ? (
-        <CardContent className="flex flex-col gap-3">
-          {orders.length === 0 ? (
-            <AppEmptyState
-              mode="no-data"
-              title="Chưa có lệnh sản xuất nào"
-              description="Tạo lệnh mới khi bếp trung tâm đã có BOM và nguyên liệu sẵn sàng."
-              icon={<IconClipboardList className="size-5" />}
-            />
-          ) : (
-            <ItemGroup>
-              {orders.map((order) => (
-                <Item
-                  key={order.id}
-                  variant="outline"
-                  className={cn(isPending && "opacity-70")}
-                >
-                  <ItemHeader>
-                    <ItemTitle>{order.production_number}</ItemTitle>
-                    <Badge
-                      variant={badgeVariantFromTone(
-                        orderStatusTone(order.status),
-                      )}
-                    >
-                      {orderStatusLabel(order.status)}
-                    </Badge>
-                  </ItemHeader>
-                  <ItemContent className="basis-full">
-                    <ItemDescription>
-                      {order.branch_name} · {formatOrderDate(order.created_at)}
-                    </ItemDescription>
-                    <div className="flex flex-wrap gap-1.5">
-                      {order.items.map((item) => (
-                        <Badge
-                          key={item.id}
-                          variant={badgeVariantFromTone("neutral")}
-                        >
-                          {item.finished_good_name} x {item.quantity}{" "}
-                          {item.unit}
-                        </Badge>
-                      ))}
-                    </div>
-                  </ItemContent>
-                  <ItemFooter>
-                    <span className="font-mono text-sm font-semibold tabular-nums">
+        {isMobile ? (
+          <CardContent className="flex flex-col gap-3">
+            {orders.length === 0 ? (
+              <AppEmptyState
+                mode="no-data"
+                title="Chưa có lệnh sản xuất nào"
+                description="Tạo lệnh mới khi bếp trung tâm đã có BOM và nguyên liệu sẵn sàng."
+                icon={<IconClipboardList className="size-5" />}
+              />
+            ) : (
+              <ItemGroup>
+                {orders.map((order) => (
+                  <Item
+                    key={order.id}
+                    variant="outline"
+                    className={cn(isPending && "opacity-70")}
+                  >
+                    <ItemHeader>
+                      <ItemTitle>{order.production_number}</ItemTitle>
+                      <Badge
+                        variant={badgeVariantFromTone(
+                          orderStatusTone(order.status),
+                        )}
+                      >
+                        {orderStatusLabel(order.status)}
+                      </Badge>
+                    </ItemHeader>
+                    <ItemContent className="basis-full">
+                      <ItemDescription>
+                        {order.branch_name} ·{" "}
+                        {formatOrderDate(order.created_at)}
+                      </ItemDescription>
+                      <div className="flex flex-wrap gap-1.5">
+                        {order.items.map((item) => (
+                          <Badge
+                            key={item.id}
+                            variant={badgeVariantFromTone("neutral")}
+                          >
+                            {item.finished_good_name} x {item.quantity}{" "}
+                            {item.unit}
+                          </Badge>
+                        ))}
+                      </div>
+                    </ItemContent>
+                    <ItemFooter>
+                      <span className="font-mono text-sm font-semibold tabular-nums">
+                        {formatCost(order.total_cost)}
+                        {order.status === "draft" ? (
+                          <span className="ml-1 text-xs font-normal text-muted-foreground">
+                            (tạm tính)
+                          </span>
+                        ) : null}
+                      </span>
+                      <ItemActions>{renderOrderActions(order)}</ItemActions>
+                    </ItemFooter>
+                  </Item>
+                ))}
+              </ItemGroup>
+            )}
+          </CardContent>
+        ) : (
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Số lệnh</TableHead>
+                  <TableHead>Bếp trung tâm</TableHead>
+                  <TableHead>{PRODUCT_VI.finishedGood}</TableHead>
+                  <TableHead>{FORM_VI.status}</TableHead>
+                  <TableHead>Tổng chi phí</TableHead>
+                  <TableHead className="w-40" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {orders.length === 0 ? (
+                  <TableEmptyStateRow
+                    colSpan={6}
+                    title="Chưa có lệnh sản xuất nào"
+                    description="Tạo lệnh mới khi BOM và nguyên liệu đã sẵn sàng cho bếp trung tâm."
+                    icon={<IconClipboardList />}
+                  />
+                ) : null}
+                {orders.map((order) => (
+                  <TableRow
+                    key={order.id}
+                    className={cn(isPending ? "opacity-70" : "")}
+                  >
+                    <TableCell className="font-medium">
+                      <div>{order.production_number}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {formatOrderDate(order.created_at)}
+                      </div>
+                    </TableCell>
+                    <TableCell>{order.branch_name}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1.5">
+                        {order.items.map((item) => (
+                          <Badge
+                            key={item.id}
+                            variant={badgeVariantFromTone("neutral")}
+                          >
+                            {item.finished_good_name} x {item.quantity}{" "}
+                            {item.unit}
+                          </Badge>
+                        ))}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={badgeVariantFromTone(
+                          orderStatusTone(order.status),
+                        )}
+                      >
+                        {orderStatusLabel(order.status)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="font-mono tabular-nums">
                       {formatCost(order.total_cost)}
                       {order.status === "draft" ? (
                         <span className="ml-1 text-xs font-normal text-muted-foreground">
                           (tạm tính)
                         </span>
                       ) : null}
-                    </span>
-                    <ItemActions>{renderOrderActions(order)}</ItemActions>
-                  </ItemFooter>
-                </Item>
-              ))}
-            </ItemGroup>
-          )}
-        </CardContent>
-      ) : (
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Số lệnh</TableHead>
-                <TableHead>Bếp trung tâm</TableHead>
-                <TableHead>{PRODUCT_VI.finishedGood}</TableHead>
-                <TableHead>{FORM_VI.status}</TableHead>
-                <TableHead>Tổng chi phí</TableHead>
-                <TableHead className="w-40" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {orders.length === 0 ? (
-                <TableEmptyStateRow
-                  colSpan={6}
-                  title="Chưa có lệnh sản xuất nào"
-                  description="Tạo lệnh mới khi BOM và nguyên liệu đã sẵn sàng cho bếp trung tâm."
-                  icon={<IconClipboardList />}
-                />
-              ) : null}
-              {orders.map((order) => (
-                <TableRow
-                  key={order.id}
-                  className={cn(isPending ? "opacity-70" : "")}
-                >
-                  <TableCell className="font-medium">
-                    <div>{order.production_number}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {formatOrderDate(order.created_at)}
-                    </div>
-                  </TableCell>
-                  <TableCell>{order.branch_name}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1.5">
-                      {order.items.map((item) => (
-                        <Badge
-                          key={item.id}
-                          variant={badgeVariantFromTone("neutral")}
-                        >
-                          {item.finished_good_name} x {item.quantity}{" "}
-                          {item.unit}
-                        </Badge>
-                      ))}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={badgeVariantFromTone(
-                        orderStatusTone(order.status),
-                      )}
-                    >
-                      {orderStatusLabel(order.status)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="font-mono tabular-nums">
-                    {formatCost(order.total_cost)}
-                    {order.status === "draft" ? (
-                      <span className="ml-1 text-xs font-normal text-muted-foreground">
-                        (tạm tính)
-                      </span>
-                    ) : null}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center justify-end gap-2">
-                      {renderOrderActions(order)}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      )}
-    </Card>
-    <ProductionShortageDialog
-      info={shortageInfo}
-      onClose={() => setShortageInfo(null)}
-    />
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center justify-end gap-2">
+                        {renderOrderActions(order)}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        )}
+      </Card>
+      <ProductionShortageDialog
+        info={shortageInfo}
+        onClose={() => setShortageInfo(null)}
+      />
     </>
   );
 }

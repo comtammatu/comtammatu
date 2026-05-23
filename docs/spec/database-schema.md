@@ -752,7 +752,7 @@ need_qty = SUM(order_item.quantity * recipe.quantity / recipe.yield_factor)
 ### Stock (SHIPPED)
 
 - ingredients, recipes, stock_levels, stock_movements, suppliers, purchase_orders, purchase_order_items, goods_received_notes, grn_items, supplier_invoices, stock_transfers, stock_transfer_items, stocktake_sessions, stocktake_lines, production_recipes, production_orders, production_order_items
-- future split when needed: `inventory_locations` + location-level ledger per `docs/plan/inventory-location-ledger.md`
+- future split when needed: `inventory_locations` + location-level ledger per `docs/archive/plan/inventory-location-ledger.md`
 
 ### Finance
 

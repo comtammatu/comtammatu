@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft as IconArrowLeft } from "lucide-react";
 import { createClient } from "@comtammatu/database/supabase/server";
+import { formatVNDateTime } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -11,7 +12,12 @@ import {
   ItemGroup,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
-import { AppPage, AppPageHeader, AppSection, AppEmptyState } from "@/components/surface";
+import {
+  AppPage,
+  AppPageHeader,
+  AppSection,
+  AppEmptyState,
+} from "@/components/surface";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { PermissionsClient } from "./permissions-client";
 
@@ -59,7 +65,9 @@ export default async function StaffPermissionsPage({ params }: Props) {
       .order("name"),
     supabase
       .from("staff_permissions")
-      .select("id, branch_id, permission_key, source_template, granted_at, valid_until")
+      .select(
+        "id, branch_id, permission_key, source_template, granted_at, valid_until",
+      )
       .eq("user_id", id)
       .order("permission_key"),
     profile.position_id
@@ -71,7 +79,9 @@ export default async function StaffPermissionsPage({ params }: Props) {
       : Promise.resolve({ data: null }),
     supabase
       .from("permission_audit_log")
-      .select("id, action, permission_key, branch_id, at, actor_user_id, source_template_id")
+      .select(
+        "id, action, permission_key, branch_id, at, actor_user_id, source_template_id",
+      )
       .eq("target_user_id", id)
       .order("at", { ascending: false })
       .limit(50),
@@ -137,32 +147,50 @@ export default async function StaffPermissionsPage({ params }: Props) {
               <AppSection title="Thông tin nhân viên">
                 <dl className="grid gap-3 sm:grid-cols-2">
                   <div>
-                    <dt className="text-xs font-medium text-muted-foreground">Họ tên</dt>
+                    <dt className="text-xs font-medium text-muted-foreground">
+                      Họ tên
+                    </dt>
                     <dd className="mt-0.5 text-sm">{profile.full_name}</dd>
                   </div>
                   <div>
-                    <dt className="text-xs font-medium text-muted-foreground">Số điện thoại</dt>
-                    <dd className="mt-0.5 font-mono text-sm">{profile.phone ?? "—"}</dd>
+                    <dt className="text-xs font-medium text-muted-foreground">
+                      Số điện thoại
+                    </dt>
+                    <dd className="mt-0.5 font-mono text-sm">
+                      {profile.phone ?? "—"}
+                    </dd>
                   </div>
                   <div>
-                    <dt className="text-xs font-medium text-muted-foreground">Chức vụ</dt>
+                    <dt className="text-xs font-medium text-muted-foreground">
+                      Chức vụ
+                    </dt>
                     <dd className="mt-0.5 text-sm">{positionLabel}</dd>
                   </div>
                   <div>
-                    <dt className="text-xs font-medium text-muted-foreground">Chi nhánh mặc định</dt>
+                    <dt className="text-xs font-medium text-muted-foreground">
+                      Chi nhánh mặc định
+                    </dt>
                     <dd className="mt-0.5 text-sm">{defaultBranchName}</dd>
                   </div>
                   <div>
-                    <dt className="text-xs font-medium text-muted-foreground">Legacy role</dt>
+                    <dt className="text-xs font-medium text-muted-foreground">
+                      Legacy role
+                    </dt>
                     <dd className="mt-0.5 font-mono text-sm">
                       {profile.positions?.legacy_role_code ?? "—"}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-xs font-medium text-muted-foreground">Trạng thái</dt>
+                    <dt className="text-xs font-medium text-muted-foreground">
+                      Trạng thái
+                    </dt>
                     <dd className="mt-0.5">
-                      <Badge variant={profile.is_active ? "success" : "secondary"}>
-                        {profile.is_active ? "Đang hoạt động" : "Ngưng hoạt động"}
+                      <Badge
+                        variant={profile.is_active ? "success" : "secondary"}
+                      >
+                        {profile.is_active
+                          ? "Đang hoạt động"
+                          : "Ngưng hoạt động"}
                       </Badge>
                     </dd>
                   </div>
@@ -203,9 +231,15 @@ export default async function StaffPermissionsPage({ params }: Props) {
             </TabsContent>
 
             <TabsContent value="history" className="mt-4">
-              <AppSection title={`Lịch sử thay đổi (${auditList.length} mục gần nhất)`}>
+              <AppSection
+                title={`Lịch sử thay đổi (${auditList.length} mục gần nhất)`}
+              >
                 {auditList.length === 0 ? (
-                  <AppEmptyState mode="no-data" description="Chưa có thay đổi quyền hạn." compact />
+                  <AppEmptyState
+                    mode="no-data"
+                    description="Chưa có thay đổi quyền hạn."
+                    compact
+                  />
                 ) : (
                   <ItemGroup>
                     {auditList.map((a) => (
@@ -236,7 +270,8 @@ export default async function StaffPermissionsPage({ params }: Props) {
                             <span className="ml-2 text-xs font-normal text-muted-foreground">
                               {a.branch_id === null
                                 ? "tenant-wide"
-                                : (branchNameById.get(a.branch_id) ?? `branch #${a.branch_id}`)}
+                                : (branchNameById.get(a.branch_id) ??
+                                  `branch #${a.branch_id}`)}
                             </span>
                           </ItemTitle>
                           <p className="text-xs text-muted-foreground">
@@ -247,7 +282,7 @@ export default async function StaffPermissionsPage({ params }: Props) {
                         </ItemContent>
                         <ItemActions>
                           <span className="text-xs text-muted-foreground">
-                            {new Date(a.at).toLocaleString("vi-VN")}
+                            {formatVNDateTime(a.at)}
                           </span>
                         </ItemActions>
                       </Item>

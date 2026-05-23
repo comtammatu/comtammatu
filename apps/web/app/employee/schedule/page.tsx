@@ -8,7 +8,10 @@ import {
   EmptyTitle,
 } from "@comtammatu/ui/components/empty";
 import { EmployeePage } from "../components/employee-page";
-import { getMondayOfWeek, toDateStr } from "../_lib/vn-business-date";
+import {
+  getVNWeekEndDateString,
+  getVNWeekStartDateString,
+} from "@comtammatu/shared/time";
 
 export default async function SchedulePage() {
   const ctx = await getEmployeeContext();
@@ -33,11 +36,8 @@ export default async function SchedulePage() {
 
   const { supabase, claims, employeeId } = ctx;
 
-  // Fetch current week's schedule
-  const weekStart = toDateStr(getMondayOfWeek(new Date()));
-  const weekEnd = new Date(weekStart + "T00:00:00");
-  weekEnd.setDate(weekEnd.getDate() + 6);
-  const weekEndStr = toDateStr(weekEnd);
+  const weekStart = getVNWeekStartDateString();
+  const weekEndStr = getVNWeekEndDateString(weekStart);
 
   const { data } = await supabase
     .from("shift_assignments")

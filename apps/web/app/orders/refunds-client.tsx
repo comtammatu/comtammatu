@@ -1,8 +1,13 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { RotateCcw as IconRotate, CircleCheck as IconCircleCheck, CircleX as IconCircleX } from "lucide-react";
+import {
+  RotateCcw as IconRotate,
+  CircleCheck as IconCircleCheck,
+  CircleX as IconCircleX,
+} from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
+import { formatVNDateTime } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
@@ -214,92 +219,88 @@ export function RefundsClient({
             {refunds.map((refund) => (
               <Card key={refund.id}>
                 <CardContent className="p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-mono text-sm font-medium">
-                      {refund.order_number}
-                    </p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {refund.branch_name}
-                    </p>
-                  </div>
-                  <Badge
-                    variant={
-                      refundStatusTone(refund.status) === "warning"
-                        ? "warning"
-                        : refundStatusTone(refund.status) === "success"
-                          ? "success"
-                          : refundStatusTone(refund.status) === "danger"
-                            ? "destructive"
-                            : "secondary"
-                    }
-                  >
-                    {REFUND_STATUS_LABELS[refund.status] ?? refund.status}
-                  </Badge>
-                </div>
-                <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <p className="text-muted-foreground">Số tiền</p>
-                    <p className="mt-1 font-mono font-medium">
-                      {formatVND(refund.amount)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Người tạo</p>
-                    <p className="mt-1 font-medium">{refund.created_by_name}</p>
-                  </div>
-                  <div className="col-span-2">
-                    <p className="text-muted-foreground">{FORM_VI.reason}</p>
-                    <p className="mt-1">{refund.reason}</p>
-                  </div>
-                </div>
-                <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                  <p className="text-xs text-muted-foreground">
-                    {new Date(refund.created_at).toLocaleString("vi-VN", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      year: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
-                  {canApprove && refund.status === "pending" ? (
-                    <div className="flex w-full gap-2 sm:w-auto">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="flex-1 border-success/20 text-success hover:bg-success/10 hover:text-success sm:flex-none"
-                        disabled={isPending && actioningId === refund.id}
-                        onClick={() => handleApprove(refund.id, true)}
-                      >
-                        {isPending && actioningId === refund.id ? (
-                          <Spinner className="size-3.5" />
-                        ) : (
-                          <IconCircleCheck className="size-3.5" />
-                        )}
-                        <span className="ml-1">Duyệt</span>
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="flex-1 border-destructive/20 text-destructive hover:bg-destructive/10 hover:text-destructive sm:flex-none"
-                        disabled={isPending && actioningId === refund.id}
-                        onClick={() => handleApprove(refund.id, false)}
-                      >
-                        {isPending && actioningId === refund.id ? (
-                          <Spinner className="size-3.5" />
-                        ) : (
-                          <IconCircleX className="size-3.5" />
-                        )}
-                        <span className="ml-1">Từ chối</span>
-                      </Button>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-mono text-sm font-medium">
+                        {refund.order_number}
+                      </p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {refund.branch_name}
+                      </p>
                     </div>
-                  ) : (
-                    <span className="text-xs text-muted-foreground">
-                      {refund.approved_by_name ?? "—"}
-                    </span>
-                  )}
-                </div>
+                    <Badge
+                      variant={
+                        refundStatusTone(refund.status) === "warning"
+                          ? "warning"
+                          : refundStatusTone(refund.status) === "success"
+                            ? "success"
+                            : refundStatusTone(refund.status) === "danger"
+                              ? "destructive"
+                              : "secondary"
+                      }
+                    >
+                      {REFUND_STATUS_LABELS[refund.status] ?? refund.status}
+                    </Badge>
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">Số tiền</p>
+                      <p className="mt-1 font-mono font-medium">
+                        {formatVND(refund.amount)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Người tạo</p>
+                      <p className="mt-1 font-medium">
+                        {refund.created_by_name}
+                      </p>
+                    </div>
+                    <div className="col-span-2">
+                      <p className="text-muted-foreground">{FORM_VI.reason}</p>
+                      <p className="mt-1">{refund.reason}</p>
+                    </div>
+                  </div>
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-xs text-muted-foreground">
+                      {formatVNDateTime(refund.created_at)}
+                    </p>
+                    {canApprove && refund.status === "pending" ? (
+                      <div className="flex w-full gap-2 sm:w-auto">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1 border-success/20 text-success hover:bg-success/10 hover:text-success sm:flex-none"
+                          disabled={isPending && actioningId === refund.id}
+                          onClick={() => handleApprove(refund.id, true)}
+                        >
+                          {isPending && actioningId === refund.id ? (
+                            <Spinner className="size-3.5" />
+                          ) : (
+                            <IconCircleCheck className="size-3.5" />
+                          )}
+                          <span className="ml-1">Duyệt</span>
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1 border-destructive/20 text-destructive hover:bg-destructive/10 hover:text-destructive sm:flex-none"
+                          disabled={isPending && actioningId === refund.id}
+                          onClick={() => handleApprove(refund.id, false)}
+                        >
+                          {isPending && actioningId === refund.id ? (
+                            <Spinner className="size-3.5" />
+                          ) : (
+                            <IconCircleX className="size-3.5" />
+                          )}
+                          <span className="ml-1">Từ chối</span>
+                        </Button>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">
+                        {refund.approved_by_name ?? "—"}
+                      </span>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             ))}
@@ -314,7 +315,9 @@ export function RefundsClient({
                     {BRANCH_VI.long}
                   </TableHead>
                   <TableHead className="text-right">Số tiền</TableHead>
-                  <TableHead className="hidden md:table-cell">{FORM_VI.reason}</TableHead>
+                  <TableHead className="hidden md:table-cell">
+                    {FORM_VI.reason}
+                  </TableHead>
                   <TableHead className="hidden lg:table-cell">
                     Người tạo
                   </TableHead>
@@ -359,13 +362,7 @@ export function RefundsClient({
                       {refund.created_by_name}
                     </TableCell>
                     <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
-                      {new Date(refund.created_at).toLocaleString("vi-VN", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      {formatVNDateTime(refund.created_at)}
                     </TableCell>
                     <TableCell>
                       <Badge

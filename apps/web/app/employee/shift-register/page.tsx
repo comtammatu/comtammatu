@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { addVNDateDays, getVNDateString } from "@comtammatu/shared/time";
 import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
 import { getEmployeeContext } from "../_lib/employee-context";
 import { ShiftRegisterClient } from "./shift-register-client";
@@ -27,12 +28,8 @@ export default async function EmployeeShiftRegisterPage() {
     ? allBranches.filter((b) => b.id === branchId)
     : allBranches;
 
-  const todayIso = new Date().toISOString().split("T")[0]!;
-  const horizonIso = (() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 21);
-    return d.toISOString().split("T")[0]!;
-  })();
+  const todayIso = getVNDateString();
+  const horizonIso = addVNDateDays(todayIso, 21);
 
   // Read own existing requests in the [today, +21d] horizon.
   const { data: requestsData } = await supabase

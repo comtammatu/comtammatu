@@ -47,6 +47,7 @@ import {
   type PrintDocumentPaymentQrBlock,
   type PrintDocumentTotalsBlock,
 } from "./print-document.js";
+import { sideTotalQuantity } from "./quantity.js";
 
 // ─── ESC/POS primitives reused from native command set ──────────────────
 
@@ -86,7 +87,13 @@ const qrStoreData = (s: string): Uint8Array => {
 };
 const qrPrint = () => buf([GS, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x51, 0x30]);
 const qrBlock = (data: string, dotSize = 6): Uint8Array =>
-  concat([qrSetModel(), qrSetSize(dotSize), qrSetErrorCorrection(), qrStoreData(data), qrPrint()]);
+  concat([
+    qrSetModel(),
+    qrSetSize(dotSize),
+    qrSetErrorCorrection(),
+    qrStoreData(data),
+    qrPrint(),
+  ]);
 
 // ─── Layout helpers ──────────────────────────────────────────────────────
 
@@ -97,9 +104,11 @@ type LineOpts = {
   inverse?: boolean;
   strikethrough?: boolean;
 };
-const line = (s: string, opts?: LineOpts): Uint8Array => renderLineRaster(s, opts);
+const line = (s: string, opts?: LineOpts): Uint8Array =>
+  renderLineRaster(s, opts);
 const bl = (h?: number): Uint8Array => blankLine(h);
-const divider = (ch = "-"): Uint8Array => line(ch.repeat(CHARS_PER_LINE_NORMAL));
+const divider = (ch = "-"): Uint8Array =>
+  line(ch.repeat(CHARS_PER_LINE_NORMAL));
 
 const pair = (label: string, value: string, width: number): string => {
   const combined = label.length + value.length;
@@ -115,10 +124,14 @@ const padLeft = (s: string, w: number): string =>
   s.length >= w ? s.slice(-w) : " ".repeat(w - s.length) + s;
 
 const fmtVND = (n: number | null | undefined): string =>
-  new Intl.NumberFormat("vi-VN").format(Math.round(typeof n === "number" ? n : 0));
+  new Intl.NumberFormat("vi-VN").format(
+    Math.round(typeof n === "number" ? n : 0),
+  );
 const fmtMoney = (n: number | null | undefined): string => fmtVND(n) + "đ";
 
-const splitDateTime = (iso: string | undefined): { date: string; time: string } => {
+const splitDateTime = (
+  iso: string | undefined,
+): { date: string; time: string } => {
   if (!iso) return { date: "", time: "" };
   const [d, t] = iso.split("T");
   if (!d) return { date: "", time: "" };
@@ -165,7 +178,8 @@ const wrapText = (s: string, width: number): string[] => {
 
 // ─── Kitchen ticket ──────────────────────────────────────────────────────
 
-const KITCHEN_BORDER = "-".repeat(4) + "+" + "-".repeat(CHARS_PER_LINE_NORMAL - 5);
+const KITCHEN_BORDER =
+  "-".repeat(4) + "+" + "-".repeat(CHARS_PER_LINE_NORMAL - 5);
 /** Max chars for item name at double-size. Prefix " xN | " is now ALSO double-
  * size (chef requested bigger qty), so prefix consumes 6 chars × 24 dots = 144
  * dots. Remaining 432 dots / 24 = 18 chars at double for the item name. */
@@ -196,24 +210,34 @@ function renderKitchenTicketBitmap(p: KitchenPayload): Uint8Array {
 
   if ((p.reprint_seq ?? 0) >= 2) {
     parts.push(divider("="));
-    parts.push(line(`IN LẠI LẦN #${p.reprint_seq}`, { bold: true, double: true, align: "center" }));
+    parts.push(
+      line(`IN LẠI LẦN #${p.reprint_seq}`, {
+        bold: true,
+        double: true,
+        align: "center",
+      }),
+    );
   }
   parts.push(divider("="));
 
   // Meta rows. Bỏ "HĐ:" khi trùng "Phiếu:" (legacy data hoặc fallback) để
   // khỏi in 2 dòng số giống nhau.
   const meta = splitDateTime(p.printed_at);
-  parts.push(line(
-    padRight(`Phiếu: ${ticketNumber}`, 24) +
-    padRight(`Lần gửi: ${p.send_seq}`, 24),
-  ));
+  parts.push(
+    line(
+      padRight(`Phiếu: ${ticketNumber}`, 24) +
+        padRight(`Lần gửi: ${p.send_seq}`, 24),
+    ),
+  );
   if (sourceOrderNumber !== ticketNumber) {
     parts.push(line(padRight(`HĐ: ${sourceOrderNumber}`, 24)));
   }
-  parts.push(line(
-    padRight(`Bếp: ${p.slot}`, 24) +
-    padRight(`Giờ: ${meta.time || p.printed_at}`, 24),
-  ));
+  parts.push(
+    line(
+      padRight(`Bếp: ${p.slot}`, 24) +
+        padRight(`Giờ: ${meta.time || p.printed_at}`, 24),
+    ),
+  );
   if (p.cashier_name) {
     parts.push(line(`Người order: ${p.cashier_name}`));
   }
@@ -239,7 +263,8 @@ function renderKitchenTicketBitmap(p: KitchenPayload): Uint8Array {
       parts.push(renderMixedRow(segs));
     });
 
-    if (it.variant_name) parts.push(line(`${KITCHEN_DETAIL_INDENT}(${it.variant_name})`));
+    if (it.variant_name)
+      parts.push(line(`${KITCHEN_DETAIL_INDENT}(${it.variant_name})`));
     if (it.modifiers && it.modifiers.length > 0) {
       for (const m of it.modifiers) {
         if (m.name) parts.push(line(`${KITCHEN_DETAIL_INDENT}+ ${m.name}`));
@@ -251,23 +276,30 @@ function renderKitchenTicketBitmap(p: KitchenPayload): Uint8Array {
       for (const s of it.sides) {
         const sideName = s.name ?? s.side_item_name;
         if (sideName) {
-          const totalSideQty = s.quantity ? s.quantity * it.quantity : 0;
+          const totalSideQty = sideTotalQuantity(s.quantity, it.quantity);
           const text = `- ${sideName}${totalSideQty ? ` x${totalSideQty}` : ""}`;
           for (const chunk of wrapText(text, KITCHEN_DETAIL_WIDTH_DOUBLE)) {
-            parts.push(renderMixedRow([
-              { text: KITCHEN_DETAIL_INDENT },
-              { text: chunk, bold: true, double: true },
-            ]));
+            parts.push(
+              renderMixedRow([
+                { text: KITCHEN_DETAIL_INDENT },
+                { text: chunk, bold: true, double: true },
+              ]),
+            );
           }
         }
       }
     }
     if (it.note) {
-      for (const chunk of wrapText(`* ${it.note}`, KITCHEN_DETAIL_WIDTH_DOUBLE)) {
-        parts.push(renderMixedRow([
-          { text: KITCHEN_DETAIL_INDENT },
-          { text: chunk, bold: true, double: true },
-        ]));
+      for (const chunk of wrapText(
+        `* ${it.note}`,
+        KITCHEN_DETAIL_WIDTH_DOUBLE,
+      )) {
+        parts.push(
+          renderMixedRow([
+            { text: KITCHEN_DETAIL_INDENT },
+            { text: chunk, bold: true, double: true },
+          ]),
+        );
       }
     }
   });
@@ -294,8 +326,10 @@ function renderBillHeader(p: BillBase): Uint8Array[] {
   parts.push(...renderBrandLockupHeader());
   if (p.branch_name) parts.push(line(p.branch_name, { align: "center" }));
   if (p.branch_address) parts.push(line(p.branch_address, { align: "center" }));
-  if (p.branch_phone) parts.push(line(`ĐT: ${p.branch_phone}`, { align: "center" }));
-  if (p.branch_tax_code) parts.push(line(`MST: ${p.branch_tax_code}`, { align: "center" }));
+  if (p.branch_phone)
+    parts.push(line(`ĐT: ${p.branch_phone}`, { align: "center" }));
+  if (p.branch_tax_code)
+    parts.push(line(`MST: ${p.branch_tax_code}`, { align: "center" }));
   return parts;
 }
 
@@ -304,7 +338,9 @@ function renderBillMeta(p: BillBase): Uint8Array[] {
   const created = splitDateTime(p.created_at);
   const orderKind =
     p.order_type === "dine_in"
-      ? p.table_number ? `Bàn ${p.table_number}` : "Tại bàn"
+      ? p.table_number
+        ? `Bàn ${p.table_number}`
+        : "Tại bàn"
       : "Mang về";
   parts.push(line(pair48("Đơn hàng:", p.order_number)));
   parts.push(line(pair48("Ngày:", `${created.time} ${created.date}`.trim())));
@@ -313,7 +349,8 @@ function renderBillMeta(p: BillBase): Uint8Array[] {
     parts.push(line(pair48("Số khách:", String(p.customer_count))));
   }
   if (p.cashier_name) parts.push(line(pair48("Thu ngân:", p.cashier_name)));
-  if (p.split_from_order_number) parts.push(line(pair48("Tách từ đơn:", `#${p.split_from_order_number}`)));
+  if (p.split_from_order_number)
+    parts.push(line(pair48("Tách từ đơn:", `#${p.split_from_order_number}`)));
   return parts;
 }
 
@@ -326,11 +363,19 @@ const RECEIPT_COL_AMT = 13;
 
 const RECEIPT_TABLE_BORDER =
   "-".repeat(RECEIPT_COL_NO + 1) +
-  "+" + "-".repeat(RECEIPT_COL_NAME + 2) +
-  "+" + "-".repeat(RECEIPT_COL_QTY + 2) +
-  "+" + "-".repeat(RECEIPT_COL_AMT + 1);
+  "+" +
+  "-".repeat(RECEIPT_COL_NAME + 2) +
+  "+" +
+  "-".repeat(RECEIPT_COL_QTY + 2) +
+  "+" +
+  "-".repeat(RECEIPT_COL_AMT + 1);
 
-const receiptRow = (no: string, name: string, qty: string, amt: string): string =>
+const receiptRow = (
+  no: string,
+  name: string,
+  qty: string,
+  amt: string,
+): string =>
   `${padLeft(no, RECEIPT_COL_NO)} | ${padRight(name, RECEIPT_COL_NAME)} | ${padLeft(qty, RECEIPT_COL_QTY)} | ${padLeft(amt, RECEIPT_COL_AMT)}`;
 
 /** 4-column table: STT | Món | SL | Thành tiền. Mỗi modifier/side priced
@@ -367,16 +412,23 @@ function renderItemsTable(p: BillBase): Uint8Array[] {
 
     const nameChunks = wrapText(it.item_name, RECEIPT_COL_NAME);
     nameChunks.forEach((chunk, i) => {
-      parts.push(line(receiptRow(
-        i === 0 ? stt : "",
-        chunk,
-        i === 0 ? qty : "",
-        i === 0 ? baseAmount : "",
-      )));
+      parts.push(
+        line(
+          receiptRow(
+            i === 0 ? stt : "",
+            chunk,
+            i === 0 ? qty : "",
+            i === 0 ? baseAmount : "",
+          ),
+        ),
+      );
     });
 
     if (it.variant_name) {
-      const variantChunks = wrapText(`(${it.variant_name})`, RECEIPT_COL_NAME - 2);
+      const variantChunks = wrapText(
+        `(${it.variant_name})`,
+        RECEIPT_COL_NAME - 2,
+      );
       for (const chunk of variantChunks) {
         parts.push(line(receiptRow("", `  ${chunk}`, "", "")));
       }
@@ -385,17 +437,15 @@ function renderItemsTable(p: BillBase): Uint8Array[] {
     if (it.modifiers && it.modifiers.length > 0) {
       for (const m of it.modifiers) {
         if (!m.name) continue;
-        const modAmt = (m.price ?? 0) > 0
-          ? fmtMoney((m.price ?? 0) * it.quantity)
-          : "";
+        const modAmt =
+          (m.price ?? 0) > 0 ? fmtMoney((m.price ?? 0) * it.quantity) : "";
         const modChunks = wrapText(`+ ${m.name}`, RECEIPT_COL_NAME);
         modChunks.forEach((chunk, i) => {
-          parts.push(line(receiptRow(
-            "",
-            chunk,
-            i === 0 ? qty : "",
-            i === 0 ? modAmt : "",
-          )));
+          parts.push(
+            line(
+              receiptRow("", chunk, i === 0 ? qty : "", i === 0 ? modAmt : ""),
+            ),
+          );
         });
       }
     }
@@ -404,7 +454,7 @@ function renderItemsTable(p: BillBase): Uint8Array[] {
       for (const s of it.sides) {
         const sideName = s.name ?? s.side_item_name;
         if (!sideName) continue;
-        const totalSideQty = (s.quantity ?? 0) * it.quantity;
+        const totalSideQty = sideTotalQuantity(s.quantity, it.quantity);
         const sideQtyStr = totalSideQty ? String(totalSideQty) : "";
         // Cột "Thành tiền" để trống nếu side miễn phí (price 0/undefined),
         // theo yêu cầu chủ quán: "không có giá mới để trống".
@@ -414,12 +464,16 @@ function renderItemsTable(p: BillBase): Uint8Array[] {
             : "";
         const sideChunks = wrapText(`- ${sideName}`, RECEIPT_COL_NAME);
         sideChunks.forEach((chunk, i) => {
-          parts.push(line(receiptRow(
-            "",
-            chunk,
-            i === 0 ? sideQtyStr : "",
-            i === 0 ? sideAmt : "",
-          )));
+          parts.push(
+            line(
+              receiptRow(
+                "",
+                chunk,
+                i === 0 ? sideQtyStr : "",
+                i === 0 ? sideAmt : "",
+              ),
+            ),
+          );
         });
       }
     }
@@ -432,8 +486,10 @@ function renderItemsTable(p: BillBase): Uint8Array[] {
 function renderTotals(p: BillBase): Uint8Array[] {
   const parts: Uint8Array[] = [];
   parts.push(line(pair48("Tạm tính", fmtMoney(p.subtotal))));
-  if ((p.tax_amount ?? 0) > 0) parts.push(line(pair48("Thuế VAT", fmtMoney(p.tax_amount))));
-  if ((p.service_charge ?? 0) > 0) parts.push(line(pair48("Phụ phí", fmtMoney(p.service_charge))));
+  if ((p.tax_amount ?? 0) > 0)
+    parts.push(line(pair48("Thuế VAT", fmtMoney(p.tax_amount))));
+  if ((p.service_charge ?? 0) > 0)
+    parts.push(line(pair48("Phụ phí", fmtMoney(p.service_charge))));
   if ((p.discount_amount ?? 0) > 0) {
     const discountLabel =
       p.discount_type === "pct" && p.discount_value != null
@@ -443,16 +499,18 @@ function renderTotals(p: BillBase): Uint8Array[] {
     if (p.discount_note) parts.push(line(`  Lý do: ${p.discount_note}`));
   }
   parts.push(divider("="));
-  parts.push(line(pair24("TỔNG CỘNG", fmtMoney(p.total_amount)), { bold: true, double: true }));
+  parts.push(
+    line(pair24("TỔNG CỘNG", fmtMoney(p.total_amount)), {
+      bold: true,
+      double: true,
+    }),
+  );
   parts.push(divider("="));
   return parts;
 }
 
 function renderFooter(): Uint8Array[] {
-  return [
-    bl(),
-    line(BRAND_LOCKUP_TAGLINE, { align: "center" }),
-  ];
+  return [bl(), line(BRAND_LOCKUP_TAGLINE, { align: "center" })];
 }
 
 function renderDocumentText(
@@ -467,6 +525,7 @@ function renderDocumentText(
       bold: block.bold,
       double: block.double,
       inverse: block.inverse,
+      strikethrough: block.strikethrough,
     }),
   );
 }
@@ -477,10 +536,14 @@ function renderDocumentRow(
   const left = clampText(block.left);
   const right = clampText(block.right);
   if (!left && !right) return [];
-  const text = block.double
-    ? pair24(left, right)
-    : pair48(left, right);
-  return [line(text, { bold: block.bold, double: block.double })];
+  const text = block.double ? pair24(left, right) : pair48(left, right);
+  return [
+    line(text, {
+      bold: block.bold,
+      double: block.double,
+      strikethrough: block.strikethrough,
+    }),
+  ];
 }
 
 function renderDocumentBrandHeader(
@@ -595,7 +658,12 @@ function renderDocumentCashChange(
 ): Uint8Array[] {
   if (block.cash_received == null && block.cash_change == null) return [];
   return [
-    line(pair48("Tiền nhận", fmtMoney(block.cash_received ?? block.total_amount ?? 0))),
+    line(
+      pair48(
+        "Tiền nhận",
+        fmtMoney(block.cash_received ?? block.total_amount ?? 0),
+      ),
+    ),
     line(pair48("Tiền trả khách", fmtMoney(block.cash_change ?? 0))),
     divider("-"),
   ];
@@ -616,23 +684,31 @@ function renderDocumentPaymentQr(
   const content = clampQrContent(q?.content);
   if (!q || !content) return [];
   const parts: Uint8Array[] = [lineSpacingDefault(), bl()];
-  parts.push(line(clampText(block.heading) || "QUÉT QR THANH TOÁN", {
-    bold: true,
-    align: "center",
-  }));
+  parts.push(
+    line(clampText(block.heading) || "QUÉT QR THANH TOÁN", {
+      bold: true,
+      align: "center",
+    }),
+  );
   parts.push(lineSpacingDefault());
   parts.push(buf([ESC, 0x61, 0x01]));
   parts.push(qrBlock(content, 6));
   parts.push(buf([ESC, 0x61, 0x00]));
   parts.push(lineSpacingZero());
-  if (q.header_label) parts.push(line(clampText(q.header_label), { align: "center" }));
-  if (q.account_no) parts.push(line(`STK: ${clampText(q.account_no)}`, { align: "center" }));
+  if (q.header_label)
+    parts.push(line(clampText(q.header_label), { align: "center" }));
+  if (q.account_no)
+    parts.push(line(`STK: ${clampText(q.account_no)}`, { align: "center" }));
   if (q.account_name) {
-    parts.push(line(clampText(q.account_name).toUpperCase(), { align: "center" }));
+    parts.push(
+      line(clampText(q.account_name).toUpperCase(), { align: "center" }),
+    );
   }
   parts.push(line(`Số tiền: ${fmtMoney(q.amount)}`, { align: "center" }));
   if (q.description) {
-    parts.push(line(`Nội dung: ${clampText(q.description)}`, { align: "center" }));
+    parts.push(
+      line(`Nội dung: ${clampText(q.description)}`, { align: "center" }),
+    );
   }
   parts.push(divider("-"));
   return parts;
@@ -641,29 +717,45 @@ function renderDocumentPaymentQr(
 function renderDocumentFooter(
   block: Extract<PrintDocumentBlock, { type: "footer" }>,
 ): Uint8Array[] {
-  const lines = Array.isArray(block.lines) && block.lines.length > 0
-    ? block.lines.map(clampText).filter(Boolean)
-    : [BRAND_LOCKUP_TAGLINE];
-  return [bl(), ...lines.map((footerLine) => line(footerLine, { align: "center" }))];
+  const lines =
+    Array.isArray(block.lines) && block.lines.length > 0
+      ? block.lines.map(clampText).filter(Boolean)
+      : [BRAND_LOCKUP_TAGLINE];
+  return [
+    bl(),
+    ...lines.map((footerLine) => line(footerLine, { align: "center" })),
+  ];
 }
 
 function isKitchenPayload(value: unknown): value is KitchenPayload {
-  return isRecord(value) && value.kind === "kitchen_ticket" && Array.isArray(value.items);
+  return (
+    isRecord(value) &&
+    value.kind === "kitchen_ticket" &&
+    Array.isArray(value.items)
+  );
 }
 
 function isCancelTicketPayload(value: unknown): value is CancelTicketPayload {
-  return isRecord(value) && value.kind === "cancel_ticket" && Array.isArray(value.items);
+  return (
+    isRecord(value) &&
+    value.kind === "cancel_ticket" &&
+    Array.isArray(value.items)
+  );
 }
 
 function isShiftCloseReportPayload(
   value: unknown,
 ): value is ShiftCloseReportPayload {
-  return isRecord(value) &&
+  return (
+    isRecord(value) &&
     value.kind === "shift_close_report" &&
-    Array.isArray(value.payment_breakdown);
+    Array.isArray(value.payment_breakdown)
+  );
 }
 
-function renderSingleLegacyDocumentBlock(document: PrintDocument): Uint8Array | null {
+function renderSingleLegacyDocumentBlock(
+  document: PrintDocument,
+): Uint8Array | null {
   if (document.blocks.length !== 1) return null;
   const block = document.blocks[0];
   if (!block) return null;
@@ -751,7 +843,9 @@ function renderProvisionalBillBitmap(p: ProvisionalBillPayload): Uint8Array {
   const parts: Uint8Array[] = [init(), lineSpacingZero()];
   parts.push(...renderBillHeader(p));
   parts.push(divider("="));
-  parts.push(line("PHIẾU TẠM TÍNH", { bold: true, double: true, align: "center" }));
+  parts.push(
+    line("PHIẾU TẠM TÍNH", { bold: true, double: true, align: "center" }),
+  );
   parts.push(divider("="));
   parts.push(...renderBillMeta(p));
   parts.push(...renderItemsTable(p));
@@ -770,8 +864,10 @@ function renderProvisionalBillBitmap(p: ProvisionalBillPayload): Uint8Array {
     parts.push(buf([ESC, 0x61, 0x00])); // back to left
     parts.push(lineSpacingZero());
     parts.push(line(q.header_label, { align: "center" }));
-    if (q.account_no) parts.push(line(`STK: ${q.account_no}`, { align: "center" }));
-    if (q.account_name) parts.push(line(q.account_name.toUpperCase(), { align: "center" }));
+    if (q.account_no)
+      parts.push(line(`STK: ${q.account_no}`, { align: "center" }));
+    if (q.account_name)
+      parts.push(line(q.account_name.toUpperCase(), { align: "center" }));
     parts.push(line(`Số tiền: ${fmtMoney(q.amount)}`, { align: "center" }));
     parts.push(line(`Nội dung: ${q.description}`, { align: "center" }));
     parts.push(divider("-"));
@@ -788,7 +884,9 @@ function renderReceiptBitmap(p: ReceiptPayload): Uint8Array {
   const parts: Uint8Array[] = [init(), lineSpacingZero()];
   parts.push(...renderBillHeader(p));
   parts.push(divider("="));
-  parts.push(line("HÓA ĐƠN THANH TOÁN", { bold: true, double: true, align: "center" }));
+  parts.push(
+    line("HÓA ĐƠN THANH TOÁN", { bold: true, double: true, align: "center" }),
+  );
   parts.push(divider("="));
   parts.push(...renderBillMeta(p));
   if (p.payment_method) {
@@ -799,7 +897,9 @@ function renderReceiptBitmap(p: ReceiptPayload): Uint8Array {
   parts.push(...renderTotals(p));
 
   if (p.cash_received != null || p.cash_change != null) {
-    parts.push(line(pair48("Tiền nhận", fmtMoney(p.cash_received ?? p.total_amount))));
+    parts.push(
+      line(pair48("Tiền nhận", fmtMoney(p.cash_received ?? p.total_amount))),
+    );
     parts.push(line(pair48("Tiền trả khách", fmtMoney(p.cash_change ?? 0))));
     parts.push(divider("-"));
   }
@@ -818,12 +918,14 @@ function renderCancelTicketBitmap(p: CancelTicketPayload): Uint8Array {
 
   // HỦY MÓN banner — inverse video for instant kitchen attention
   parts.push(divider("="));
-  parts.push(line("HỦY MÓN", {
-    bold: true,
-    double: true,
-    align: "center",
-    inverse: true,
-  }));
+  parts.push(
+    line("HỦY MÓN", {
+      bold: true,
+      double: true,
+      align: "center",
+      inverse: true,
+    }),
+  );
   parts.push(divider("="));
 
   // Table + order banner (same style as kitchen ticket)
@@ -839,10 +941,12 @@ function renderCancelTicketBitmap(p: CancelTicketPayload): Uint8Array {
 
   // Meta
   const meta = splitDateTime(p.printed_at);
-  parts.push(line(
-    padRight(`Bếp: ${p.slot}`, 24) +
-    padRight(`Giờ: ${meta.time || p.printed_at}`, 24),
-  ));
+  parts.push(
+    line(
+      padRight(`Bếp: ${p.slot}`, 24) +
+        padRight(`Giờ: ${meta.time || p.printed_at}`, 24),
+    ),
+  );
   if (p.voided_by) {
     parts.push(line(`Người hủy: ${p.voided_by}`));
   }
@@ -867,22 +971,34 @@ function renderCancelTicketBitmap(p: CancelTicketPayload): Uint8Array {
       parts.push(renderMixedRow(segs));
     });
 
-    if (it.variant_name) parts.push(line(`${KITCHEN_DETAIL_INDENT}(${it.variant_name})`, { strikethrough: true }));
+    if (it.variant_name)
+      parts.push(
+        line(`${KITCHEN_DETAIL_INDENT}(${it.variant_name})`, {
+          strikethrough: true,
+        }),
+      );
     if (it.modifiers && it.modifiers.length > 0) {
       for (const m of it.modifiers) {
-        if (m.name) parts.push(line(`${KITCHEN_DETAIL_INDENT}+ ${m.name}`, { strikethrough: true }));
+        if (m.name)
+          parts.push(
+            line(`${KITCHEN_DETAIL_INDENT}+ ${m.name}`, {
+              strikethrough: true,
+            }),
+          );
       }
     }
     if (it.sides && it.sides.length > 0) {
       for (const s of it.sides) {
         const sideName = s.name ?? s.side_item_name;
         if (sideName) {
-          const totalSideQty = s.quantity ? s.quantity * it.quantity : 0;
+          const totalSideQty = sideTotalQuantity(s.quantity, it.quantity);
           const text = `- ${sideName}${totalSideQty ? ` x${totalSideQty}` : ""}`;
-          parts.push(renderMixedRow([
-            { text: KITCHEN_DETAIL_INDENT },
-            { text, bold: true, double: true, strikethrough: true },
-          ]));
+          parts.push(
+            renderMixedRow([
+              { text: KITCHEN_DETAIL_INDENT },
+              { text, bold: true, double: true, strikethrough: true },
+            ]),
+          );
         }
       }
     }
@@ -891,11 +1007,16 @@ function renderCancelTicketBitmap(p: CancelTicketPayload): Uint8Array {
     // "không nấu nữa" áp dụng cho cả note đính kèm). Wrap, không cắt — xem
     // regressions.md NO-CLAMP-ON-KITCHEN-NOTES.
     if (it.note) {
-      for (const chunk of wrapText(`* ${it.note}`, KITCHEN_DETAIL_WIDTH_DOUBLE)) {
-        parts.push(renderMixedRow([
-          { text: KITCHEN_DETAIL_INDENT },
-          { text: chunk, bold: true, double: true, strikethrough: true },
-        ]));
+      for (const chunk of wrapText(
+        `* ${it.note}`,
+        KITCHEN_DETAIL_WIDTH_DOUBLE,
+      )) {
+        parts.push(
+          renderMixedRow([
+            { text: KITCHEN_DETAIL_INDENT },
+            { text: chunk, bold: true, double: true, strikethrough: true },
+          ]),
+        );
       }
     }
   });
@@ -952,12 +1073,16 @@ function renderShiftCloseReportBitmap(p: ShiftCloseReportPayload): Uint8Array {
   parts.push(...renderBrandLockupHeader());
   if (p.branch_name) parts.push(line(p.branch_name, { align: "center" }));
   if (p.branch_address) parts.push(line(p.branch_address, { align: "center" }));
-  if (p.branch_phone) parts.push(line(`ĐT: ${p.branch_phone}`, { align: "center" }));
-  if (p.branch_tax_code) parts.push(line(`MST: ${p.branch_tax_code}`, { align: "center" }));
+  if (p.branch_phone)
+    parts.push(line(`ĐT: ${p.branch_phone}`, { align: "center" }));
+  if (p.branch_tax_code)
+    parts.push(line(`MST: ${p.branch_tax_code}`, { align: "center" }));
   parts.push(divider("="));
 
   // Title
-  parts.push(line("PHIẾU CHỐT CA", { bold: true, double: true, align: "center" }));
+  parts.push(
+    line("PHIẾU CHỐT CA", { bold: true, double: true, align: "center" }),
+  );
   parts.push(line(`Mã ca: #${p.session_id}`, { align: "center" }));
   parts.push(divider("="));
 
@@ -979,10 +1104,15 @@ function renderShiftCloseReportBitmap(p: ShiftCloseReportPayload): Uint8Array {
   parts.push(line(pair48("+ Thu trong ca", fmtMoney(cashCollected))));
   parts.push(line(pair48("= Két dự kiến", fmtMoney(p.expected_cash))));
   parts.push(line(pair48("Két thực đếm", fmtMoney(p.closing_cash))));
-  parts.push(line(
-    pair48(`Chênh lệch (${diffSign(p.cash_difference)})`, fmtMoney(p.cash_difference)),
-    { bold: true },
-  ));
+  parts.push(
+    line(
+      pair48(
+        `Chênh lệch (${diffSign(p.cash_difference)})`,
+        fmtMoney(p.cash_difference),
+      ),
+      { bold: true },
+    ),
+  );
 
   // Payment breakdown
   if (p.payment_breakdown.length > 0) {
@@ -991,7 +1121,9 @@ function renderShiftCloseReportBitmap(p: ShiftCloseReportPayload): Uint8Array {
     parts.push(divider("-"));
     for (const row of p.payment_breakdown) {
       const label = PAYMENT_METHOD_LABEL_FULL[row.method] ?? row.method;
-      parts.push(line(pair48(`${label} (${row.count} đơn)`, fmtMoney(row.amount))));
+      parts.push(
+        line(pair48(`${label} (${row.count} đơn)`, fmtMoney(row.amount))),
+      );
     }
   }
 
@@ -999,16 +1131,20 @@ function renderShiftCloseReportBitmap(p: ShiftCloseReportPayload): Uint8Array {
   parts.push(divider("="));
   parts.push(line(pair48("Đơn đã thanh toán", `${p.paid_order_count} đơn`)));
   if (p.unpaid_order_count > 0) {
-    parts.push(line(pair48("Đơn chuyển ca sau", `${p.unpaid_order_count} đơn`)));
+    parts.push(
+      line(pair48("Đơn chuyển ca sau", `${p.unpaid_order_count} đơn`)),
+    );
   }
   if (p.cancelled_order_count > 0) {
     parts.push(line(pair48("Đơn đã hủy", `${p.cancelled_order_count} đơn`)));
   }
   parts.push(divider("="));
-  parts.push(line(
-    pair24("TỔNG DOANH THU", fmtMoney(p.total_revenue)),
-    { bold: true, double: true },
-  ));
+  parts.push(
+    line(pair24("TỔNG DOANH THU", fmtMoney(p.total_revenue)), {
+      bold: true,
+      double: true,
+    }),
+  );
   parts.push(divider("="));
 
   // Notes
@@ -1036,7 +1172,9 @@ function renderShiftCloseReportBitmap(p: ShiftCloseReportPayload): Uint8Array {
   // Footer
   const printed = splitDateTime(p.printed_at);
   parts.push(bl());
-  parts.push(line(`In lúc: ${printed.time} ${printed.date}`.trim(), { align: "center" }));
+  parts.push(
+    line(`In lúc: ${printed.time} ${printed.date}`.trim(), { align: "center" }),
+  );
   parts.push(line(BRAND_LOCKUP_TAGLINE, { align: "center" }));
   parts.push(lineSpacingDefault(), feed(6), cutPartial());
   return concat(parts);
@@ -1048,7 +1186,9 @@ function renderShiftCloseReportBitmap(p: ShiftCloseReportPayload): Uint8Array {
  * Render any payload to ESC/POS bytes using bitmap mode. Ensures fonts
  * are loaded on first call (cached thereafter).
  */
-export async function renderPayloadBitmap(payload: PrintPayload): Promise<Uint8Array> {
+export async function renderPayloadBitmap(
+  payload: PrintPayload,
+): Promise<Uint8Array> {
   await ensureFontsLoaded();
   const document = getPrintDocument(payload);
   if (document) {

@@ -20,6 +20,7 @@ import {
   parseFinanceParams,
   resolveFinanceRange,
 } from "../_lib/finance-params";
+import { diffVNDateDays } from "@comtammatu/shared/time";
 import type {
   FinanceDashboardHealth,
   FiscalPeriodRow,
@@ -133,9 +134,7 @@ const FOOD_COST_EXCEPTION_THRESHOLD = 60;
 const HOURLY_MAX_DAYS = 90;
 
 function diffDays(start: string, end: string): number {
-  const s = new Date(`${start}T00:00:00Z`).getTime();
-  const e = new Date(`${end}T00:00:00Z`).getTime();
-  return Math.max(0, Math.round((e - s) / (24 * 60 * 60 * 1000)) + 1);
+  return Math.max(0, diffVNDateDays(start, end) + 1);
 }
 
 export default async function RevenueReportPage({
@@ -147,7 +146,8 @@ export default async function RevenueReportPage({
   const params = parseFinanceParams(sp);
   const resolved = resolveFinanceRange(params);
 
-  const hourlyEnabled = diffDays(resolved.start, resolved.end) <= HOURLY_MAX_DAYS;
+  const hourlyEnabled =
+    diffDays(resolved.start, resolved.end) <= HOURLY_MAX_DAYS;
 
   // Single Promise.all — branches + 12 data RPCs run concurrently. Previous
   // code awaited branches first then started the data fetch, paying one
@@ -168,10 +168,19 @@ export default async function RevenueReportPage({
     invoicesRes,
   ] = await Promise.all([
     fetchAccessibleBranches(),
-    fetchRevenueRollup(params.branch, resolved.start, resolved.end, params.gran),
+    fetchRevenueRollup(
+      params.branch,
+      resolved.start,
+      resolved.end,
+      params.gran,
+    ),
     fetchRevenueKpis(params.branch, resolved.start, resolved.end),
     resolved.compare
-      ? fetchRevenueKpis(params.branch, resolved.compare.start, resolved.compare.end)
+      ? fetchRevenueKpis(
+          params.branch,
+          resolved.compare.start,
+          resolved.compare.end,
+        )
       : Promise.resolve({ success: true as const, data: null }),
     fetchReconciliation({
       branchId: params.branch,
@@ -296,12 +305,10 @@ export default async function RevenueReportPage({
     : [];
   const foodCostExceptions = foodCostRows
     .filter(
-      (row) =>
-        Number(row.food_cost_pct ?? 0) >= FOOD_COST_EXCEPTION_THRESHOLD,
+      (row) => Number(row.food_cost_pct ?? 0) >= FOOD_COST_EXCEPTION_THRESHOLD,
     )
     .sort(
-      (a, b) =>
-        Number(b.food_cost_pct ?? 0) - Number(a.food_cost_pct ?? 0),
+      (a, b) => Number(b.food_cost_pct ?? 0) - Number(a.food_cost_pct ?? 0),
     );
   const topFoodCostException = foodCostExceptions[0] ?? null;
 
@@ -321,7 +328,7 @@ export default async function RevenueReportPage({
   };
 
   const invoiceAttentionCount = invoicesRes.success
-    ? (invoicesRes.data as { status: string }[] | null ?? []).filter((i) =>
+    ? ((invoicesRes.data as { status: string }[] | null) ?? []).filter((i) =>
         ["draft", "signing", "submitted"].includes(i.status),
       ).length
     : 0;

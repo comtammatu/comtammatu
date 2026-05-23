@@ -5,6 +5,7 @@ import { createClient } from "@comtammatu/database/supabase/server";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
+import { getVNDayUtcRange } from "@comtammatu/shared/time";
 
 /* ─── Allowed roles ─── */
 
@@ -141,7 +142,10 @@ export async function fetchOrders(
     return { success: false, error: "Bộ lọc không hợp lệ" };
   }
 
-  const ctx = await getAuthContextWithPermission(ALLOWED_ROLES, PERMISSION_KEYS.ORDERS_READ);
+  const ctx = await getAuthContextWithPermission(
+    ALLOWED_ROLES,
+    PERMISSION_KEYS.ORDERS_READ,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { claims } = ctx;
@@ -187,12 +191,14 @@ export async function fetchOrders(
   }
 
   if (parsed.data.dateFrom) {
-    query = query.gte("created_at", parsed.data.dateFrom);
+    query = query.gte(
+      "created_at",
+      getVNDayUtcRange(parsed.data.dateFrom).startIso,
+    );
   }
 
   if (parsed.data.dateTo) {
-    // Include the full day by going to end of day
-    query = query.lte("created_at", parsed.data.dateTo + "T23:59:59.999Z");
+    query = query.lt("created_at", getVNDayUtcRange(parsed.data.dateTo).endIso);
   }
 
   const { data, error } = await query;
@@ -442,8 +448,7 @@ export async function fetchOrderAuditLog(
     return {
       id: row.id,
       at: row.created_at,
-      by_name:
-        (row.profiles as { full_name: string } | null)?.full_name ?? "—",
+      by_name: (row.profiles as { full_name: string } | null)?.full_name ?? "—",
       from_status: row.from_status,
       to_status: row.to_status,
       action: parsedNote.action,

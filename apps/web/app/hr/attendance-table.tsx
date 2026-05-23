@@ -20,7 +20,17 @@ import {
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import { BRANCH_VI, ERRORS_VI, FORM_VI, STAFF_VI } from "@comtammatu/shared/messages";
+import {
+  BRANCH_VI,
+  ERRORS_VI,
+  FORM_VI,
+  STAFF_VI,
+} from "@comtammatu/shared/messages";
+import {
+  getVNMonthSequenceBack,
+  getVNMonthString,
+  formatVNTime,
+} from "@comtammatu/shared/time";
 import {
   fetchAttendance,
   fetchAttendanceSummary,
@@ -83,8 +93,7 @@ export function AttendanceTable({ branches }: AttendanceTableProps) {
     branches[0]?.id ?? 0,
   );
   const [selectedMonth, setSelectedMonth] = useState(() => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    return getVNMonthString();
   });
   const [view, setView] = useState<"detail" | "summary">("summary");
   const [isPending, startTransition] = useTransition();
@@ -131,14 +140,9 @@ export function AttendanceTable({ branches }: AttendanceTableProps) {
   }
 
   // Generate month options (last 6 months)
-  const monthOptions: string[] = [];
-  for (let i = 0; i < 6; i++) {
-    const d = new Date();
-    d.setMonth(d.getMonth() - i);
-    monthOptions.push(
-      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
-    );
-  }
+  const monthOptions = getVNMonthSequenceBack(6).map(({ date }) =>
+    date.slice(0, 7),
+  );
 
   return (
     <div className="space-y-4">
@@ -307,20 +311,10 @@ function DetailView({
                 {record.shifts?.name ?? "—"}
               </TableCell>
               <TableCell className="font-mono text-sm">
-                {record.check_in
-                  ? new Date(record.check_in).toLocaleTimeString("vi-VN", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })
-                  : "—"}
+                {record.check_in ? formatVNTime(record.check_in) : "—"}
               </TableCell>
               <TableCell className="font-mono text-sm">
-                {record.check_out
-                  ? new Date(record.check_out).toLocaleTimeString("vi-VN", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })
-                  : "—"}
+                {record.check_out ? formatVNTime(record.check_out) : "—"}
               </TableCell>
               <TableCell>
                 <Select

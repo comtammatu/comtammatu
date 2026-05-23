@@ -4,10 +4,10 @@
 
 Generated DB types show the current app-facing schema:
 
-- 109 public tables.
+- 115 public tables.
 - 9 public views.
-- 198 public functions.
-- 299 migration files.
+- 214 public functions.
+- 337 migration files.
 
 Use generated types and applied DB state over old hand-written schema docs.
 

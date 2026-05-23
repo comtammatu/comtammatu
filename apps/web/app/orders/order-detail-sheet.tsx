@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState, useTransition } from "react";
 import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
 import { cn } from "@comtammatu/ui";
 import { formatVND } from "@comtammatu/shared/format";
+import { formatVNDateTime } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import {
   Sheet,
@@ -25,7 +26,12 @@ import {
 
 import { BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
 
-type ItemStatusBadge = "warning" | "info" | "success" | "destructive" | "outline";
+type ItemStatusBadge =
+  | "warning"
+  | "info"
+  | "success"
+  | "destructive"
+  | "outline";
 
 const ITEM_STATUS_META: Record<
   string,
@@ -263,15 +269,7 @@ export function OrderDetailSheet({
             <span>{order.created_by_name}</span>
 
             <span className="text-muted-foreground">Thời gian</span>
-            <span>
-              {new Date(order.created_at).toLocaleString("vi-VN", {
-                day: "2-digit",
-                month: "2-digit",
-                year: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </span>
+            <span>{formatVNDateTime(order.created_at)}</span>
 
             <span className="text-muted-foreground">Loại đơn</span>
             <span className="capitalize">{order.order_type}</span>
@@ -543,23 +541,18 @@ export function OrderDetailSheet({
             {!auditPending && !auditError && audit && audit.length > 0 && (
               <ol className="space-y-2">
                 {audit.map((entry) => (
-                  <li
-                    key={entry.id}
-                    className="rounded-md border p-3 text-sm"
-                  >
+                  <li key={entry.id} className="rounded-md border p-3 text-sm">
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
                       <span className="font-medium">{entry.label}</span>
                       <span className="font-mono text-xs text-muted-foreground">
-                        {new Date(entry.at).toLocaleString("vi-VN", {
-                          day: "2-digit",
-                          month: "2-digit",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
+                        {formatVNDateTime(entry.at)}
                       </span>
                     </div>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Bởi <span className="font-medium text-foreground">{entry.by_name}</span>
+                      Bởi{" "}
+                      <span className="font-medium text-foreground">
+                        {entry.by_name}
+                      </span>
                     </p>
                     {entry.reason && (
                       <p className="mt-1 text-sm">

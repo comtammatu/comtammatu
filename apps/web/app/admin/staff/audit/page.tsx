@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { ArrowLeft as IconArrowLeft } from "lucide-react";
 import { createClient } from "@comtammatu/database/supabase/server";
+import {
+  formatVNDate,
+  formatVNDateTime,
+  getVNDayUtcRange,
+} from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -47,14 +52,17 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
     .order("at", { ascending: false })
     .limit(200);
 
-  if (params.action && ["grant", "revoke", "apply_template"].includes(params.action)) {
+  if (
+    params.action &&
+    ["grant", "revoke", "apply_template"].includes(params.action)
+  ) {
     query = query.eq("action", params.action);
   }
   if (params.target) {
     query = query.eq("target_user_id", params.target);
   }
   if (params.since) {
-    query = query.gte("at", `${params.since}T00:00:00Z`);
+    query = query.gte("at", getVNDayUtcRange(params.since).startIso);
   }
 
   // Audit log + branches list have no dependency on each other; profile
@@ -68,13 +76,14 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
 
   // Look up actor + target names (bulk)
   const userIds = Array.from(
-    new Set(auditRows.flatMap((r) => [r.actor_user_id, r.target_user_id].filter(Boolean) as string[])),
+    new Set(
+      auditRows.flatMap(
+        (r) => [r.actor_user_id, r.target_user_id].filter(Boolean) as string[],
+      ),
+    ),
   );
   const { data: profiles } = userIds.length
-    ? await supabase
-        .from("profiles")
-        .select("id, full_name")
-        .in("id", userIds)
+    ? await supabase.from("profiles").select("id, full_name").in("id", userIds)
     : { data: [] as { id: string; full_name: string }[] };
 
   const nameByUserId = new Map<string, string>(
@@ -142,7 +151,9 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
                 {auditRows.map((r) => {
                   const meta = (r.metadata ?? {}) as Record<string, unknown>;
                   const validUntil =
-                    typeof meta.valid_until === "string" ? meta.valid_until : null;
+                    typeof meta.valid_until === "string"
+                      ? meta.valid_until
+                      : null;
                   const actionVariant: "default" | "outline" | "destructive" =
                     r.action === "revoke"
                       ? "destructive"
@@ -152,7 +163,7 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
                   return (
                     <TableRow key={r.id}>
                       <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
-                        {new Date(r.at).toLocaleString("vi-VN")}
+                        {formatVNDateTime(r.at)}
                       </TableCell>
                       <TableCell>
                         <Badge variant={actionVariant}>{r.action}</Badge>
@@ -188,9 +199,7 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
                             `#${r.branch_id}`)}
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
-                        {validUntil
-                          ? new Date(validUntil).toLocaleDateString("vi-VN")
-                          : copy.forever}
+                        {validUntil ? formatVNDate(validUntil) : copy.forever}
                       </TableCell>
                     </TableRow>
                   );

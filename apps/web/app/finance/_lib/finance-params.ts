@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { VN_TIME_ZONE } from "@comtammatu/shared/time";
 
 // ─── URL param schema — single source of truth ──────────────────
 //
@@ -150,11 +151,9 @@ export function serializeFinanceParams(p: FinanceParams): URLSearchParams {
 // Same TZ-shifting trick used by /finance/page.tsx:38: format the date
 // in VN locale, parse back the parts. No date-fns-tz dependency added.
 
-const VN_TZ = "Asia/Ho_Chi_Minh";
-
 function vnDateParts(date: Date): { y: number; m: number; d: number } {
   const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: VN_TZ,
+    timeZone: VN_TIME_ZONE,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -175,9 +174,7 @@ function fmtVN(parts: { y: number; m: number; d: number }): string {
 // rollover bugs when adding/subtracting days near midnight.
 function vnNoon(parts: { y: number; m: number; d: number }): Date {
   // Noon VN = 05:00 UTC — safe distance from any DST or rollover edge.
-  return new Date(
-    Date.UTC(parts.y, parts.m - 1, parts.d, 5, 0, 0),
-  );
+  return new Date(Date.UTC(parts.y, parts.m - 1, parts.d, 5, 0, 0));
 }
 
 function addDays(parts: { y: number; m: number; d: number }, n: number) {
@@ -244,9 +241,7 @@ export function getPresetRange(
     case "custom": {
       const start = custom?.from ?? fmtVN(firstOfMonth(today));
       const end = custom?.to ?? todayStr;
-      return start <= end
-        ? { start, end }
-        : { start: end, end: start };
+      return start <= end ? { start, end } : { start: end, end: start };
     }
   }
 }
@@ -310,10 +305,7 @@ function parseIsoToParts(
 
 // Shift month preserving DOM with end-of-month clamp (e.g. Mar 31 −1m
 // → Feb 28/29). Standard MoM compare semantics.
-function shiftMonth(
-  parts: { y: number; m: number; d: number },
-  delta: number,
-) {
+function shiftMonth(parts: { y: number; m: number; d: number }, delta: number) {
   const targetMonth0 = parts.m - 1 + delta;
   const targetY = parts.y + Math.floor(targetMonth0 / 12);
   let targetM = (targetMonth0 % 12) + 1;

@@ -43,6 +43,11 @@ import {
 } from "@comtammatu/ui/components/dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { ACTIONS_VI, BRANCH_VI } from "@comtammatu/shared/messages";
+import {
+  addVNDateDays,
+  formatVNBusinessDate,
+  getVNDateString,
+} from "@comtammatu/shared/time";
 import { EmployeePanel } from "../components/employee-page";
 import {
   cancelShiftRequest,
@@ -77,8 +82,7 @@ const STATUS_LABELS = {
 };
 
 function formatFullDate(dateStr: string): string {
-  const d = new Date(dateStr + "T00:00:00");
-  return `${d.getDate().toString().padStart(2, "0")}/${(d.getMonth() + 1).toString().padStart(2, "0")}/${d.getFullYear()}`;
+  return formatVNBusinessDate(dateStr);
 }
 
 export function ShiftRegisterClient({
@@ -97,12 +101,8 @@ export function ShiftRegisterClient({
   const [date, setDate] = useState<string>("");
   const [note, setNote] = useState("");
 
-  const todayIso = new Date().toISOString().split("T")[0]!;
-  const maxDateIso = (() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 21);
-    return d.toISOString().split("T")[0]!;
-  })();
+  const todayIso = getVNDateString();
+  const maxDateIso = addVNDateDays(todayIso, 21);
 
   // Load shifts when branch changes
   useEffect(() => {
@@ -179,9 +179,7 @@ export function ShiftRegisterClient({
       }
       toast.success("Đã huỷ đăng ký");
       setRequests((prev) =>
-        prev.map((r) =>
-          r.id === req.id ? { ...r, status: "cancelled" } : r,
-        ),
+        prev.map((r) => (r.id === req.id ? { ...r, status: "cancelled" } : r)),
       );
     });
   }
@@ -350,7 +348,8 @@ export function ShiftRegisterClient({
                 <SelectContent>
                   {shifts.map((s) => (
                     <SelectItem key={s.id} value={s.id.toString()}>
-                      {s.name} · {s.start_time.slice(0, 5)} - {s.end_time.slice(0, 5)}
+                      {s.name} · {s.start_time.slice(0, 5)} -{" "}
+                      {s.end_time.slice(0, 5)}
                     </SelectItem>
                   ))}
                 </SelectContent>

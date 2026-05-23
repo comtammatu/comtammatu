@@ -3,6 +3,11 @@
 import { z } from "zod";
 import type { ActionResult } from "@comtammatu/shared/types";
 import {
+  addVNDateDays,
+  diffVNDateDays,
+  getVNDateString,
+} from "@comtammatu/shared/time";
+import {
   INVENTORY_CATALOG_ROLES,
   INVENTORY_OPS_ROLES,
   PERMISSION_KEYS,
@@ -807,10 +812,7 @@ export async function fetchExpiryAlerts(
     )
     .eq("goods_received_notes.status", "confirmed")
     .not("expiry_date", "is", null)
-    .lte(
-      "expiry_date",
-      new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-    )
+    .lte("expiry_date", addVNDateDays(getVNDateString(), 7))
     .eq("tenant_id", claims.tenant_id)
     .order("expiry_date", { ascending: true });
 
@@ -826,8 +828,7 @@ export async function fetchExpiryAlerts(
     return { success: false, error: "Không thể tải cảnh báo hạn sử dụng." };
   }
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const today = getVNDateString();
 
   const alerts = (data ?? [])
     .filter((item) => {
@@ -836,11 +837,7 @@ export async function fetchExpiryAlerts(
       return ing != null && ing.id > 0;
     })
     .map((item) => {
-      const expiryDate = new Date(item.expiry_date as string);
-      expiryDate.setHours(0, 0, 0, 0);
-      const daysRemaining = Math.ceil(
-        (expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
-      );
+      const daysRemaining = diffVNDateDays(today, item.expiry_date as string);
 
       const grn = item.goods_received_notes as unknown as {
         grn_number: string;
@@ -1075,7 +1072,7 @@ export async function exportIngredients(
   }));
 
   const sheets = buildIngredientSheets(rows);
-  const stamp = new Date().toISOString().slice(0, 10);
+  const stamp = getVNDateString();
 
   if (format === "csv") {
     const csv = buildCsv(sheets[0]!);

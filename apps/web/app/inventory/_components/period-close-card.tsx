@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { formatVNDateTime } from "@comtammatu/shared/time";
 import {
   Card,
   CardContent,
@@ -26,7 +27,11 @@ import {
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
-import { Lock as IconLock, LockOpen as IconLockOpen, ShieldCheck as IconShieldLock } from "lucide-react";
+import {
+  Lock as IconLock,
+  LockOpen as IconLockOpen,
+  ShieldCheck as IconShieldLock,
+} from "lucide-react";
 import {
   closePeriodSoft,
   closePeriodHard,
@@ -245,7 +250,8 @@ function ConfirmDestructiveButton({
         {strict ? (
           <div className="space-y-2">
             <Label htmlFor="confirm-phrase" className="text-xs">
-              Gõ <span className="font-mono font-semibold">{phrase}</span> để xác nhận
+              Gõ <span className="font-mono font-semibold">{phrase}</span> để
+              xác nhận
             </Label>
             <Input
               id="confirm-phrase"
@@ -275,9 +281,5 @@ function ConfirmDestructiveButton({
 }
 
 function fmt(iso: string): string {
-  try {
-    return new Date(iso).toLocaleString("vi-VN");
-  } catch {
-    return iso;
-  }
+  return formatVNDateTime(iso, iso);
 }

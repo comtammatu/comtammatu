@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { BRANCH_VI, FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
+import { addVNDateDays, getVNDateString } from "@comtammatu/shared/time";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
@@ -45,12 +46,10 @@ interface StockMovementClientProps {
 }
 
 function defaultDateRange() {
-  const end = new Date();
-  const start = new Date();
-  start.setDate(start.getDate() - 7);
+  const endDate = getVNDateString();
   return {
-    startDate: start.toISOString().slice(0, 10),
-    endDate: end.toISOString().slice(0, 10),
+    startDate: addVNDateDays(endDate, -7),
+    endDate,
   };
 }
 
@@ -95,11 +94,9 @@ export function StockMovementClient({
   }
 
   function setPreset(days: number) {
-    const end = new Date();
-    const start = new Date();
-    start.setDate(start.getDate() - days);
-    setStartDate(start.toISOString().slice(0, 10));
-    setEndDate(end.toISOString().slice(0, 10));
+    const endDate = getVNDateString();
+    setStartDate(addVNDateDays(endDate, -days));
+    setEndDate(endDate);
   }
 
   return (
@@ -131,7 +128,9 @@ export function StockMovementClient({
             <Label>{BRANCH_VI.long}</Label>
             <Select value={branchId} onValueChange={setBranchId}>
               <SelectTrigger className="w-full sm:w-44">
-                <SelectValue placeholder={stockMovementCopy.allBranchesPlaceholder} />
+                <SelectValue
+                  placeholder={stockMovementCopy.allBranchesPlaceholder}
+                />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{BRANCH_VI.selectAll}</SelectItem>

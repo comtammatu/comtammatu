@@ -2,7 +2,7 @@
 
 ## Current State
 
-The web app is a Next.js 16.2 App Router project with 114 `page.tsx` routes under `apps/web/app`.
+The web app is a Next.js 16.2 App Router project with 109 `page.tsx` routes under `apps/web/app`.
 
 The current architecture remains path-based, single-domain:
 
@@ -46,7 +46,7 @@ Do not add `/merchant/*` for the Super App/Merchant Platform rebuild. Use existi
 
 Retired or compatibility areas:
 
-- `/admin/inventory/*` exists on disk but is blocked by `inventory_admin.allowedRoles = []`.
+- `/admin/inventory/*` is a retired URL space mapped to `inventory_admin.allowedRoles = []`; page files have been removed.
 - `/admin/finance/[[...slug]]` is compatibility redirect behavior into Finance.
 - Deep domain workflows should stay in dedicated workspaces.
 
@@ -70,7 +70,7 @@ Use tabs/query/sheets/dialogs for sub-views, short forms, and contextual details
 
 For IA work:
 
-1. Read `docs/plan/super-app-merchant-platform-rebuild.md`.
+1. Read `docs/modules/web-app.md`, `docs/spec/architecture.md`, and `tasks/todo.md`.
 2. Decide route owner before touching UI.
 3. Check route resolver and module ACL.
 4. Keep `/employee` narrow and task-led.

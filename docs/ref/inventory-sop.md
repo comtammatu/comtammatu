@@ -218,4 +218,4 @@ Những thứ dưới đây không nằm trong SOP pilot hiện tại:
 - [inventory-role-handoff.md](inventory-role-handoff.md)
 - [../runbooks/inventory/pre-release-qa.md](../runbooks/inventory/pre-release-qa.md)
 - [einvoice-tax.md](einvoice-tax.md)
-- [../plan/roadmap.md](../plan/roadmap.md)
+- [../archive/plan/roadmap.md](../archive/plan/roadmap.md)

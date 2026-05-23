@@ -4,6 +4,7 @@ import { z } from "zod";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { calculatePayrollEntry } from "@comtammatu/shared/payroll";
+import { getVNMonthEndDateString } from "@comtammatu/shared/time";
 import { getAuthContextWithPermission } from "../admin/_lib/auth";
 import { withAction } from "@/_lib/with-action";
 import { logAudit } from "../admin/_lib/audit";
@@ -13,7 +14,10 @@ const PAYROLL_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
 /* ─── Fetch Payroll Periods ─── */
 
 export async function fetchPayrollPeriods(): Promise<ActionResult> {
-  const ctx = await getAuthContextWithPermission(PAYROLL_ROLES, PERMISSION_KEYS.FINANCE_PAYROLL_CALCULATE);
+  const ctx = await getAuthContextWithPermission(
+    PAYROLL_ROLES,
+    PERMISSION_KEYS.FINANCE_PAYROLL_CALCULATE,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -96,16 +100,16 @@ export const calculatePayroll = withAction(
 
     const year = period.period_year;
     const month = period.period_month;
-    const daysInMonth = new Date(year, month, 0).getDate();
+    const endDate = getVNMonthEndDateString(year, month);
+    const daysInMonth = Number(endDate.slice(-2));
 
     let standardDays = 0;
     for (let d = 1; d <= daysInMonth; d++) {
-      const day = new Date(year, month - 1, d).getDay();
+      const day = new Date(Date.UTC(year, month - 1, d, 5, 0, 0)).getUTCDay();
       if (day !== 0 && day !== 6) standardDays++;
     }
 
     const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
-    const endDate = `${year}-${String(month).padStart(2, "0")}-${daysInMonth}`;
 
     // Load employees who had any contract overlapping the period.
     // Do NOT filter by is_active — terminated-within-period employees still
@@ -280,7 +284,8 @@ export const calculatePayroll = withAction(
     if (statusErr) {
       return {
         success: false,
-        error: "Đã lưu bảng lương nhưng không thể cập nhật trạng thái kỳ lương.",
+        error:
+          "Đã lưu bảng lương nhưng không thể cập nhật trạng thái kỳ lương.",
       };
     }
 

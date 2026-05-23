@@ -1,6 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { TriangleAlert as IconAlertTriangle, ChevronRight as IconChevronRight, FileClock as IconFileTime, Phone as IconPhone, Receipt as IconReceipt, Users as IconUsers } from "lucide-react";
+import {
+  TriangleAlert as IconAlertTriangle,
+  ChevronRight as IconChevronRight,
+  FileClock as IconFileTime,
+  Phone as IconPhone,
+  Receipt as IconReceipt,
+  Users as IconUsers,
+} from "lucide-react";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { createClient } from "@comtammatu/database/supabase/server";
@@ -9,6 +16,11 @@ import {
   extractClaimsFromAccessToken,
   PROCUREMENT_ROLES,
 } from "@comtammatu/shared/auth";
+import {
+  diffVNDateDays,
+  formatVNDate,
+  getVNDateString,
+} from "@comtammatu/shared/time";
 import { MobilePage } from "../../_components/mobile/mobile-page";
 import { MobileSectionHeader } from "../../_components/mobile/mobile-section-header";
 import { InteractiveCard } from "../../_components/mobile/interactive-card";
@@ -61,17 +73,11 @@ async function loadSuppliers(): Promise<SupplierRow[]> {
     received_date: string | null;
   }>;
 
-  const recentMap = new Map<
-    number,
-    { count: number; last: string | null }
-  >();
+  const recentMap = new Map<number, { count: number; last: string | null }>();
   for (const grn of grns) {
     const entry = recentMap.get(grn.supplier_id) ?? { count: 0, last: null };
     entry.count += 1;
-    if (
-      grn.received_date &&
-      (!entry.last || grn.received_date > entry.last)
-    ) {
+    if (grn.received_date && (!entry.last || grn.received_date > entry.last)) {
       entry.last = grn.received_date;
     }
     recentMap.set(grn.supplier_id, entry);
@@ -96,29 +102,21 @@ async function loadSuppliers(): Promise<SupplierRow[]> {
 
 function formatLastGrn(iso: string | null): string | null {
   if (!iso) return null;
-  const date = new Date(iso);
-  const now = new Date();
-  const days = Math.floor(
-    (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24),
-  );
+  const days = diffVNDateDays(getVNDateString(iso), getVNDateString());
   if (days <= 0) return "Hôm nay";
   if (days === 1) return "Hôm qua";
   if (days < 7) return `${days} ngày trước`;
   if (days < 30) return `${Math.floor(days / 7)} tuần trước`;
-  return date.toLocaleDateString("vi-VN");
+  return formatVNDate(iso);
 }
 
 function formatOrderedAt(iso: string | null): string {
   if (!iso) return "—";
-  const date = new Date(iso);
-  const now = new Date();
-  const days = Math.floor(
-    (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24),
-  );
+  const days = diffVNDateDays(getVNDateString(iso), getVNDateString());
   if (days <= 0) return "Hôm nay";
   if (days === 1) return "Hôm qua";
   if (days < 7) return `${days} ngày trước`;
-  return date.toLocaleDateString("vi-VN");
+  return formatVNDate(iso);
 }
 
 export default async function GrnNewSupplierPage({
@@ -178,11 +176,7 @@ export default async function GrnNewSupplierPage({
             </Badge>
           </div>
           {openPos.map((po) => (
-            <form
-              key={po.id}
-              action={startGrnFromPo}
-              className="contents"
-            >
+            <form key={po.id} action={startGrnFromPo} className="contents">
               <input type="hidden" name="poId" value={po.id} />
               <InteractiveCard
                 asChild

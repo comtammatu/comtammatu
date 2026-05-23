@@ -8,6 +8,11 @@ import {
   PERMISSION_KEYS,
   PROCUREMENT_ROLES,
 } from "@comtammatu/shared/auth";
+import {
+  diffVNDateDays,
+  getVNDateString,
+  getVNDayUtcRange,
+} from "@comtammatu/shared/time";
 import { getAuthContext, getAuthContextWithPermission } from "./_lib/auth";
 import { getBranchSiteDisplayName } from "./_lib/branch-site-labels";
 
@@ -115,6 +120,8 @@ export async function fetchStockMovementReport(
 
   const { supabase, claims } = ctx;
   const { startDate, endDate, branchId } = parsed.data;
+  const startRange = getVNDayUtcRange(startDate);
+  const endRange = getVNDayUtcRange(endDate);
 
   // Effective branch filter for branch_manager
   const effectiveBranchId =
@@ -158,8 +165,8 @@ export async function fetchStockMovementReport(
     .from("stock_movements")
     .select("ingredient_id, type, quantity_change")
     .eq("tenant_id", claims.tenant_id)
-    .gte("created_at", `${startDate}T00:00:00`)
-    .lte("created_at", `${endDate}T23:59:59`);
+    .gte("created_at", startRange.startIso)
+    .lt("created_at", endRange.endIso);
   if (effectiveBranchId) {
     movQuery = movQuery.eq("branch_id", effectiveBranchId);
   }
@@ -174,7 +181,7 @@ export async function fetchStockMovementReport(
     .from("stock_movements")
     .select("ingredient_id, quantity_change")
     .eq("tenant_id", claims.tenant_id)
-    .gt("created_at", `${endDate}T23:59:59`);
+    .gte("created_at", endRange.endIso);
   if (effectiveBranchId) {
     afterQuery = afterQuery.eq("branch_id", effectiveBranchId);
   }
@@ -292,6 +299,8 @@ export async function fetchBranchMovementSummary(
 
   const { supabase, claims } = ctx;
   const { startDate, endDate } = parsed.data;
+  const startRange = getVNDayUtcRange(startDate);
+  const endRange = getVNDayUtcRange(endDate);
 
   // Get branches
   const { data: branches, error: brErr } = await supabase
@@ -310,8 +319,8 @@ export async function fetchBranchMovementSummary(
     .from("stock_movements")
     .select("branch_id, type, quantity_change")
     .eq("tenant_id", claims.tenant_id)
-    .gte("created_at", `${startDate}T00:00:00`)
-    .lte("created_at", `${endDate}T23:59:59`);
+    .gte("created_at", startRange.startIso)
+    .lt("created_at", endRange.endIso);
 
   // branch_manager can only see their branch
   if (claims.user_role === "branch_manager" && claims.branch_id != null) {
@@ -475,8 +484,7 @@ export async function fetchApAging(): Promise<ActionResult<ApAgingRow[]>> {
   if (error) return { success: false, error: "Không tải được hóa đơn NCC." };
   if (!invoices || invoices.length === 0) return { success: true, data: [] };
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const today = getVNDateString();
 
   const emptyBucket = (): ApAgingBucket => ({
     current: { count: 0, total: 0 },
@@ -520,10 +528,7 @@ export async function fetchApAging(): Promise<ActionResult<ApAgingRow[]>> {
       // No due date — treat as current
       bucket = "current";
     } else {
-      const due = new Date(dueDate);
-      due.setHours(0, 0, 0, 0);
-      const diffMs = today.getTime() - due.getTime();
-      const daysOverdue = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      const daysOverdue = diffVNDateDays(dueDate, today);
       if (daysOverdue <= 0) {
         bucket = "current";
       } else if (daysOverdue <= 30) {
@@ -591,6 +596,8 @@ export async function fetchConsumptionVariance(
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
   const { startDate, endDate, branchId } = parsed.data;
+  const startRange = getVNDayUtcRange(startDate);
+  const endRange = getVNDayUtcRange(endDate);
 
   // Effective branch filter for branch_manager
   const effectiveBranchId =
@@ -606,8 +613,8 @@ export async function fetchConsumptionVariance(
     .select("id")
     .eq("tenant_id", claims.tenant_id)
     .in("status", ["completed", "paid"])
-    .gte("created_at", `${startDate}T00:00:00`)
-    .lte("created_at", `${endDate}T23:59:59`);
+    .gte("created_at", startRange.startIso)
+    .lt("created_at", endRange.endIso);
   if (effectiveBranchId) {
     ordersQuery = ordersQuery.eq("branch_id", effectiveBranchId);
   }
@@ -706,8 +713,8 @@ export async function fetchConsumptionVariance(
     .select("ingredient_id, quantity_change")
     .eq("tenant_id", claims.tenant_id)
     .eq("movement_subtype", "sale_consumption")
-    .gte("created_at", `${startDate}T00:00:00`)
-    .lte("created_at", `${endDate}T23:59:59`);
+    .gte("created_at", startRange.startIso)
+    .lt("created_at", endRange.endIso);
   if (effectiveBranchId) {
     movQuery = movQuery.eq("branch_id", effectiveBranchId);
   }

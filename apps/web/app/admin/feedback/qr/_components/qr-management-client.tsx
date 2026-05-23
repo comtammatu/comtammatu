@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { Copy, RotateCcw, MoreHorizontal, Pencil } from "lucide-react";
 import { createQrCodeSchema } from "@comtammatu/shared/feedback";
+import { formatVNDate } from "@comtammatu/shared/time";
 import type { z } from "zod";
 import { Button } from "@comtammatu/ui/components/button";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -99,14 +100,12 @@ export function QrManagementClient({
     label: b.name,
   }));
 
-  const {
-    control,
-    handleSubmit,
-    reset,
-    watch,
-  } = useForm<CreateQrInput>({
+  const { control, handleSubmit, reset, watch } = useForm<CreateQrInput>({
     resolver: zodResolver(createQrCodeSchema),
-    defaultValues: { branch_id: undefined as unknown as number, table_id: null },
+    defaultValues: {
+      branch_id: undefined as unknown as number,
+      table_id: null,
+    },
   });
   // Watch branch_id directly — react-hook-form's `isValid` defaults to true
   // until the first validation runs, which means the submit button stays
@@ -215,7 +214,10 @@ export function QrManagementClient({
           <TableBody>
             {qrCodes.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-sm text-muted-foreground">
+                <TableCell
+                  colSpan={6}
+                  className="text-center text-sm text-muted-foreground"
+                >
                   Chưa có QR nào
                 </TableCell>
               </TableRow>
@@ -233,7 +235,7 @@ export function QrManagementClient({
                     </Badge>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {new Date(qr.created_at).toLocaleDateString("vi-VN")}
+                    {formatVNDate(qr.created_at)}
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>
@@ -296,7 +298,8 @@ export function QrManagementClient({
           <DialogHeader>
             <DialogTitle>Xoay token QR</DialogTitle>
             <DialogDescription>
-              Tất cả QR đã in với token cũ sẽ ngừng hoạt động ngay lập tức. Bạn có chắc muốn tiếp tục?
+              Tất cả QR đã in với token cũ sẽ ngừng hoạt động ngay lập tức. Bạn
+              có chắc muốn tiếp tục?
             </DialogDescription>
           </DialogHeader>
           {actionError ? (
@@ -336,7 +339,10 @@ export function QrManagementClient({
             </Alert>
           ) : null}
           <div className="py-2">
-            <label htmlFor="rename-label" className="mb-1 block text-sm font-medium">
+            <label
+              htmlFor="rename-label"
+              className="mb-1 block text-sm font-medium"
+            >
               Nhãn mới
             </label>
             <input
@@ -351,7 +357,10 @@ export function QrManagementClient({
             <Button variant="outline" onClick={() => setRenameTarget(null)}>
               Huỷ
             </Button>
-            <Button onClick={handleRenameConfirm} disabled={isPending || !renameLabel.trim()}>
+            <Button
+              onClick={handleRenameConfirm}
+              disabled={isPending || !renameLabel.trim()}
+            >
               {isPending ? "Đang lưu..." : "Lưu"}
             </Button>
           </DialogFooter>

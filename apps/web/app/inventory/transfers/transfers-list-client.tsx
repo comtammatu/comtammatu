@@ -14,6 +14,7 @@ import {
   Send as IconSend,
 } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
+import { formatVNDate } from "@comtammatu/shared/time";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { AppEmptyState } from "@/components/surface";
@@ -381,109 +382,105 @@ export function TransfersListClient({
         }
       />
       <AppToolbar>
-          <div className="flex flex-1 flex-wrap items-end gap-3">
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder={copy.list.allStatuses} />
-              </SelectTrigger>
-              <SelectContent>
-                {STATUS_FILTER_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <InputGroup className="h-10 flex-1">
-              <InputGroupAddon>
-                <IconSearch />
-              </InputGroupAddon>
-              <InputGroupInput
-                type="search"
-                placeholder={copy.list.searchPlaceholder}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-              <InputGroupAddon align="inline-end">
-                <InputGroupText>
-                  {searchFiltered.length} / {rows.length}
-                </InputGroupText>
-              </InputGroupAddon>
-            </InputGroup>
-          </div>
-        </AppToolbar>
+        <div className="flex flex-1 flex-wrap items-end gap-3">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder={copy.list.allStatuses} />
+            </SelectTrigger>
+            <SelectContent>
+              {STATUS_FILTER_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <InputGroup className="h-10 flex-1">
+            <InputGroupAddon>
+              <IconSearch />
+            </InputGroupAddon>
+            <InputGroupInput
+              type="search"
+              placeholder={copy.list.searchPlaceholder}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <InputGroupAddon align="inline-end">
+              <InputGroupText>
+                {searchFiltered.length} / {rows.length}
+              </InputGroupText>
+            </InputGroupAddon>
+          </InputGroup>
+        </div>
+      </AppToolbar>
 
-        {/* Table */}
-        <Card>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{copy.list.transferNumber}</TableHead>
-                  <TableHead>{copy.list.route}</TableHead>
-                  <TableHead>{FORM_VI.status}</TableHead>
-                  <TableHead>{copy.list.createdAt}</TableHead>
-                  <TableHead>{copy.list.shippedReceivedAt}</TableHead>
-                  <TableHead className="w-10" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {searchFiltered.length === 0 && (
-                  <TableEmptyStateRow
-                    colSpan={6}
-                    title={
-                      search || statusFilter !== "all"
-                        ? copy.list.noTransfersFound
-                        : copy.list.emptyTransfers
-                    }
-                  />
-                )}
-                {searchFiltered.map((r) => {
-                  const dateDisplay = r.shipped_at
-                    ? `Xuất: ${new Date(r.shipped_at).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" })}`
-                    : r.received_at
-                      ? `Nhận: ${new Date(r.received_at).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" })}`
-                      : "—";
+      {/* Table */}
+      <Card>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{copy.list.transferNumber}</TableHead>
+                <TableHead>{copy.list.route}</TableHead>
+                <TableHead>{FORM_VI.status}</TableHead>
+                <TableHead>{copy.list.createdAt}</TableHead>
+                <TableHead>{copy.list.shippedReceivedAt}</TableHead>
+                <TableHead className="w-10" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {searchFiltered.length === 0 && (
+                <TableEmptyStateRow
+                  colSpan={6}
+                  title={
+                    search || statusFilter !== "all"
+                      ? copy.list.noTransfersFound
+                      : copy.list.emptyTransfers
+                  }
+                />
+              )}
+              {searchFiltered.map((r) => {
+                const dateDisplay = r.shipped_at
+                  ? `Xuất: ${formatVNDate(r.shipped_at)}`
+                  : r.received_at
+                    ? `Nhận: ${formatVNDate(r.received_at)}`
+                    : "—";
 
-                  return (
-                    <TableRow key={r.id}>
-                      <TableCell className="font-medium">
-                        {r.transfer_number}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1.5 text-sm">
-                          <span>{r.from_branch_name}</span>
-                          <IconArrowRight className="size-3 text-muted-foreground" />
-                          <span>{r.to_branch_name}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <StatusBadge status={r.status} size="sm" />
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {new Date(r.created_at).toLocaleDateString("vi-VN", {
-                          day: "2-digit",
-                          month: "2-digit",
-                          year: "numeric",
-                        })}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {dateDisplay}
-                      </TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="icon-sm" asChild>
-                          <Link href={detailHref(r.id)}>
-                            <IconArrowRight className="size-4" />
-                          </Link>
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                return (
+                  <TableRow key={r.id}>
+                    <TableCell className="font-medium">
+                      {r.transfer_number}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1.5 text-sm">
+                        <span>{r.from_branch_name}</span>
+                        <IconArrowRight className="size-3 text-muted-foreground" />
+                        <span>{r.to_branch_name}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge status={r.status} size="sm" />
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {formatVNDate(r.created_at)}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {dateDisplay}
+                    </TableCell>
+                    <TableCell>
+                      <Button variant="ghost" size="icon-sm" asChild>
+                        <Link href={detailHref(r.id)}>
+                          <IconArrowRight className="size-4" />
+                        </Link>
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
       <CreateTransferDialog
         open={open}
         onOpenChange={setOpen}
@@ -537,14 +534,7 @@ function MobileTransferCard({
           </p>
           {(row.shipped_at || row.created_at) && (
             <p className="mt-0.5 text-xs text-muted-foreground">
-              {new Date(row.shipped_at ?? row.created_at).toLocaleDateString(
-                "vi-VN",
-                {
-                  day: "2-digit",
-                  month: "2-digit",
-                  year: "numeric",
-                },
-              )}
+              {formatVNDate(row.shipped_at ?? row.created_at)}
             </p>
           )}
         </div>

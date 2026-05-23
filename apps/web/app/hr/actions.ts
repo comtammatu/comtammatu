@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
+import { getVNMonthEndDateString } from "@comtammatu/shared/time";
 import { getAuthContextWithPermission } from "../admin/_lib/auth";
 import { withAction } from "@/_lib/with-action";
 import { canAccessBranch } from "../admin/_lib/branch-scope";
@@ -30,7 +31,10 @@ const employeeSchema = z.object({
 });
 
 export async function fetchEmployees(): Promise<ActionResult> {
-  const ctx = await getAuthContextWithPermission(HR_ROLES, PERMISSION_KEYS.HR_MANAGE_EMPLOYEE);
+  const ctx = await getAuthContextWithPermission(
+    HR_ROLES,
+    PERMISSION_KEYS.HR_MANAGE_EMPLOYEE,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -180,7 +184,7 @@ export const fetchAttendance = withAction(
 
     const startDate = `${data.month}-01`;
     const [year, mon] = data.month.split("-").map(Number);
-    const endDate = new Date(year!, mon!, 0).toISOString().split("T")[0];
+    const endDate = getVNMonthEndDateString(year!, mon!);
 
     const { data: result, error } = await supabase
       .from("attendance_records")
@@ -299,7 +303,7 @@ export const fetchAttendanceSummary = withAction(
 
     const startDate = `${data.month}-01`;
     const [year, mon] = data.month.split("-").map(Number);
-    const endDate = new Date(year!, mon!, 0).toISOString().split("T")[0];
+    const endDate = getVNMonthEndDateString(year!, mon!);
 
     const { data: result, error } = await supabase
       .from("attendance_records")

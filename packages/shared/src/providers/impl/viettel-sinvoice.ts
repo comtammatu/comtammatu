@@ -45,7 +45,7 @@ import {
  *
  * Env vars:
  *   - SINVOICE_USERNAME, SINVOICE_PASSWORD
- *   - COMPANY_TAX_CODE (also used by MISA)
+ *   - COMPANY_TAX_CODE
  *   - SINVOICE_TEMPLATE_CODE   (TT78 form, e.g. "2/001" for HĐ bán hàng từ MTT)
  *   - SINVOICE_INVOICE_SERIES  (registered with CQT, e.g. "C26MAA")
  *   - SINVOICE_BASE_URL        (override host; same URL for prod + test)

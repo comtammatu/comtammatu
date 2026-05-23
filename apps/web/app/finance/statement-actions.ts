@@ -2,6 +2,10 @@
 
 import { z } from "zod";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
+import {
+  getVNDayUtcRange,
+  getVNMonthEndDateString,
+} from "@comtammatu/shared/time";
 import { withAction } from "@/_lib/with-action";
 
 const STATEMENT_ROLES: readonly StaffRole[] = [
@@ -50,7 +54,11 @@ const vatSummarySchema = z.object({
 /* ─── Balance Sheet — Bảng Cân Đối Kế Toán ─── */
 
 export const generateBalanceSheet = withAction(
-  { roles: STATEMENT_ROLES, schema: balanceSheetSchema, permission: PERMISSION_KEYS.FINANCE_VIEW },
+  {
+    roles: STATEMENT_ROLES,
+    schema: balanceSheetSchema,
+    permission: PERMISSION_KEYS.FINANCE_VIEW,
+  },
   async (data, { supabase, claims }) => {
     const { data: postedEntries } = await supabase
       .from("journal_entries")
@@ -158,7 +166,11 @@ export const generateBalanceSheet = withAction(
 /* ─── Income Statement — Kết Quả Kinh Doanh ─── */
 
 export const generateIncomeStatement = withAction(
-  { roles: STATEMENT_ROLES, schema: incomeStatementSchema, permission: PERMISSION_KEYS.FINANCE_VIEW },
+  {
+    roles: STATEMENT_ROLES,
+    schema: incomeStatementSchema,
+    permission: PERMISSION_KEYS.FINANCE_VIEW,
+  },
   async (data, { supabase, claims }) => {
     const { data: entries } = await supabase
       .from("journal_entries")
@@ -262,19 +274,25 @@ export const generateIncomeStatement = withAction(
 /* ─── VAT Summary — Tổng hợp thuế GTGT ─── */
 
 export const generateVatSummary = withAction(
-  { roles: STATEMENT_ROLES, schema: vatSummarySchema, permission: PERMISSION_KEYS.FINANCE_VIEW },
+  {
+    roles: STATEMENT_ROLES,
+    schema: vatSummarySchema,
+    permission: PERMISSION_KEYS.FINANCE_VIEW,
+  },
   async (data, { supabase, claims }) => {
     const [year, month] = data.period.split("-").map(Number);
     const startDate = `${data.period}-01`;
-    const endDate = new Date(year!, month!, 0).toISOString().split("T")[0];
+    const endDate = getVNMonthEndDateString(year!, month!);
+    const startRange = getVNDayUtcRange(startDate);
+    const endRange = getVNDayUtcRange(endDate);
 
     const { data: vatOut } = await supabase
       .from("tax_invoices")
       .select("vat_amount, subtotal, total_amount")
       .eq("tenant_id", claims.tenant_id)
       .eq("status", "issued")
-      .gte("issued_at", startDate)
-      .lte("issued_at", `${endDate}T23:59:59`);
+      .gte("issued_at", startRange.startIso)
+      .lt("issued_at", endRange.endIso);
 
     const totalVatOut = (vatOut ?? []).reduce(
       (s, r) => s + Number(r.vat_amount),
@@ -291,7 +309,7 @@ export const generateVatSummary = withAction(
       .eq("tenant_id", claims.tenant_id)
       .eq("matching_status", "matched")
       .gte("invoice_date", startDate)
-      .lte("invoice_date", `${endDate}T23:59:59`);
+      .lte("invoice_date", endDate);
 
     const totalVatIn = (vatIn ?? []).reduce(
       (s, r) => s + Number(r.vat_amount),
@@ -435,7 +453,10 @@ export const generateB03DN = withAction(
       if (error.code === "22023") {
         return { success: false, error: "Khoảng ngày không hợp lệ." };
       }
-      return { success: false, error: "Không thể tạo Báo cáo lưu chuyển tiền tệ." };
+      return {
+        success: false,
+        error: "Không thể tạo Báo cáo lưu chuyển tiền tệ.",
+      };
     }
 
     const env = result as unknown as {
@@ -462,7 +483,9 @@ export const generateB03DN = withAction(
           consistency_check: {
             opening_cash: Number(env.consistency_check.opening_cash),
             closing_cash: Number(env.consistency_check.closing_cash),
-            closing_minus_opening: Number(env.consistency_check.closing_minus_opening),
+            closing_minus_opening: Number(
+              env.consistency_check.closing_minus_opening,
+            ),
             net_cashflow: Number(env.consistency_check.net_cashflow),
             difference: Number(env.consistency_check.difference),
             consistent: env.consistency_check.consistent,

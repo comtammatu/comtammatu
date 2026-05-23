@@ -7,8 +7,13 @@ import {
   canManageBranchFloorSettings,
   TENANT_LEVEL_ROLES,
 } from "@comtammatu/shared/auth";
+import { getVNDateString, getVNDayUtcRange } from "@comtammatu/shared/time";
 import { loadAuthState } from "@/_lib/auth";
-import { PrintJobsClient, type JobRow, type BranchOption } from "./print-jobs-client";
+import {
+  PrintJobsClient,
+  type JobRow,
+  type BranchOption,
+} from "./print-jobs-client";
 import { SettingsPageShell } from "../../settings-page-shell";
 import { messages } from "@lib/messages";
 
@@ -47,9 +52,7 @@ export default async function PrintJobsPage({
 
   const sp = await searchParams;
   const filterBranch =
-    sp.branch && Number.isFinite(Number(sp.branch))
-      ? Number(sp.branch)
-      : null;
+    sp.branch && Number.isFinite(Number(sp.branch)) ? Number(sp.branch) : null;
   const filterStatus =
     sp.status && (STATUSES as readonly string[]).includes(sp.status)
       ? sp.status
@@ -85,16 +88,10 @@ export default async function PrintJobsPage({
   if (filterStatus) jobsQuery = jobsQuery.eq("status", filterStatus);
   if (filterJobType) jobsQuery = jobsQuery.eq("job_type", filterJobType);
 
-  const printersQuery = supabase
-    .from("printers")
-    .select("id, role, name");
+  const printersQuery = supabase.from("printers").select("id, role, name");
 
   const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const sinceTodayVN = new Date();
-  sinceTodayVN.setUTCHours(17, 0, 0, 0);
-  if (sinceTodayVN > new Date()) {
-    sinceTodayVN.setUTCDate(sinceTodayVN.getUTCDate() - 1);
-  }
+  const sinceTodayVN = getVNDayUtcRange(getVNDateString()).startIso;
 
   let pendingQuery = supabase
     .from("print_jobs")
@@ -109,7 +106,7 @@ export default async function PrintJobsPage({
     .from("print_jobs")
     .select("id", { count: "exact", head: true })
     .eq("status", "printed")
-    .gte("printed_at", sinceTodayVN.toISOString());
+    .gte("printed_at", sinceTodayVN);
   if (effectiveBranch) {
     pendingQuery = pendingQuery.eq("branch_id", effectiveBranch);
     failedQuery = failedQuery.eq("branch_id", effectiveBranch);
@@ -139,10 +136,7 @@ export default async function PrintJobsPage({
     agentsQuery,
   ]);
 
-  const printerMap = new Map<
-    number,
-    { role: string; name: string | null }
-  >();
+  const printerMap = new Map<number, { role: string; name: string | null }>();
   for (const p of (printersRes.data ?? []) as Array<{
     id: number;
     role: string;
@@ -179,7 +173,6 @@ export default async function PrintJobsPage({
         </Button>
       }
     >
-
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatCard
           label={messages.settings.printers.statPending}
@@ -199,7 +192,9 @@ export default async function PrintJobsPage({
         <StatCard
           label={messages.settings.printers.statAgentOnline}
           value={`${onlineCount} / ${agentTotal}`}
-          tone={onlineCount === agentTotal && agentTotal > 0 ? "success" : "warning"}
+          tone={
+            onlineCount === agentTotal && agentTotal > 0 ? "success" : "warning"
+          }
         />
       </div>
 

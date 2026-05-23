@@ -8,7 +8,7 @@
 //   TT 78/2021          — invoice mandatory fields
 //   Luật QLT 2019 Art.30 — Mã số thuế requirement
 //   Luật thuế GTGT       — VAT terminology
-//   MISA/Viettel/VNPT    — e-invoice provider API field names
+//   Viettel S-invoice    — e-invoice provider API field names
 //
 // See docs/ref/einvoice-tax.md and docs/ref/glossary.md §"Kế toán và thuế GTGT".
 

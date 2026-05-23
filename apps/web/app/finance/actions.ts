@@ -57,8 +57,8 @@ const createInvoiceSchema = z
 
 /**
  * Create a draft tax invoice for an order.
- * In production, this would call MISA meInvoice API to sign and submit.
- * For MVP, we create the draft and mark it as issued (mock MISA integration).
+ * Production HĐĐT issuance uses Viettel S-invoice. When provider credentials
+ * are missing, the invoice remains draft for Finance recovery.
  */
 export async function createTaxInvoice(
   input: z.infer<typeof createInvoiceSchema>,
@@ -206,7 +206,7 @@ export async function createTaxInvoice(
     (!buyerTaxCode && !parsed.data.buyerName?.trim());
   const buyerName = parsed.data.buyerName?.trim() || BUYER_NOT_GET_INVOICE_NAME;
 
-  // Use provider interface — swap MISA/ViettelSinvoice without changing this code
+  // Use provider interface — runtime registers Viettel S-invoice only.
   ensureInvoiceProviderRegistered();
   const invoiceProvider = getInvoiceProvider();
 
@@ -216,7 +216,7 @@ export async function createTaxInvoice(
   let providerData: Record<string, unknown> | undefined;
 
   // activeItems already computed above for VAT aggregation; the empty-
-  // items check still applies here (HĐĐT to MISA cannot have zero lines).
+  // items check still applies here (provider payload cannot have zero lines).
   if (activeItems.length === 0) {
     return {
       success: false,
@@ -274,9 +274,11 @@ export async function createTaxInvoice(
     vat_rate: vatRate,
     vat_amount: Math.round(vatAmount * 100) / 100,
     total_amount: Number(order.total_amount),
-    provider: invoiceProvider?.name ?? "mock",
+    provider: invoiceProvider?.name ?? "viettel",
     provider_ref: providerRef,
-    provider_data: providerData ? JSON.parse(JSON.stringify(providerData)) : null,
+    provider_data: providerData
+      ? JSON.parse(JSON.stringify(providerData))
+      : null,
     signing_started_at: hasProviderSubmission ? stateTimestamp : null,
     issued_at: invoiceStatus === "issued" ? stateTimestamp : null,
   };
@@ -371,7 +373,7 @@ export async function cancelTaxInvoice(
   // DB transition runs FIRST so that the app's source of truth flips
   // atomically to 'cancelled'. Provider cancel runs after — if it fails,
   // we surface a soft warning and rely on Finance to retry the provider
-  // call asynchronously (DB is already cancelled, no asymmetric "MISA
+  // call asynchronously (DB is already cancelled, no asymmetric "provider
   // cancelled but DB issued" state).
   const { error: rpcErr } = await supabase.rpc("transition_tax_invoice_state", {
     p_tax_invoice_id: parsed.data.invoiceId,
@@ -394,7 +396,7 @@ export async function cancelTaxInvoice(
   }
 
   let providerCancelWarning: string | null = null;
-  if (invoice.provider_ref && invoice.provider !== "mock") {
+  if (invoice.provider_ref && invoice.provider === "viettel") {
     ensureInvoiceProviderRegistered();
     const invoiceProvider = getInvoiceProvider();
     if (invoiceProvider) {

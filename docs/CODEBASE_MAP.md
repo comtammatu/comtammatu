@@ -3,12 +3,13 @@
 > **Đối tượng:** Kỹ sư mới onboard, người phụ trách feature, người lập kế hoạch sprint
 > **Mục tiêu chính:** (1) Hiểu cấu trúc hệ thống và luồng auth, (2) biết nơi thêm tính năng mới, (3) ước lượng blast radius của thay đổi
 > **Mốc quyết định:** Lập kế hoạch sprint, onboarding, rà soát kiến trúc
-> **Ngoài phạm vi:** Yêu cầu nghiệp vụ (xem `docs/ref/`), chi tiết kế hoạch và đặc tả tính năng (xem `docs/plan/system-rebuild/`)
+> **Ngoài phạm vi:** Yêu cầu nghiệp vụ (xem `docs/ref/`), task tracker chi tiết (xem `tasks/todo.md`)
 
 ## Trạng thái
 
-- **Phiên bản hiện tại:** v1.0.0 — Auth, Admin, Master Data, Inventory, Orders, POS, KDS, Print SHIPPED. Payments, Finance/HR, Notifications/Reporting PARTIAL (blocked on external credentials).
-- **Mốc tiếp theo:** Pilot Launch v1.0.0 cho mô hình vận hành `HQ -> Bếp trung tâm -> Chi nhánh` — cần wire VietQR/Momo/MISA credentials trước pilot
+- **Active delivery track:** tiếp tục phát triển in-place trên repo `comtammatu` cho pilot/hardening. Bộ `docs/archive/plan/system-rebuild/*` là suspended/historical reference từ 2026-05-23, không phải kế hoạch freeze/cutover đang active.
+- **Phiên bản hiện tại:** v1.0.0 — Auth, Admin, Master Data, Inventory, Orders, POS, KDS, Print SHIPPED. HĐĐT active qua Viettel S-invoice; Payments, Finance/HR, Notifications/Reporting vẫn còn phần PARTIAL.
+- **Mốc tiếp theo:** Pilot Launch v1.0.0 cho mô hình vận hành `HQ -> Bếp trung tâm -> Chi nhánh` — cần wire VietQR/Momo credentials trước pilot; HĐĐT dùng Viettel S-invoice.
 - **Tech stack:** Next.js 16.2 | React 19.2 | TypeScript 6.0 | Tailwind 4.2 | Zod 4 | Supabase | Turborepo 2.9
 
 ## Chỉ mục phân hệ

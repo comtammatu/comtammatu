@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { PERMISSION_KEYS, PROCUREMENT_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
+import { addVNDateDays, getVNDateString } from "@comtammatu/shared/time";
 import { withAction } from "@/_lib/with-action";
 import { getAuthContextWithPermission } from "./_lib/auth";
 import { fetchProcurementBranches } from "./_lib/procurement-branches";
@@ -313,7 +314,9 @@ export const loadActiveGrnDraft = withAction(
     // at most one row matches; maybeSingle is the safe shape.
     const { data: row, error } = await supabase
       .from("goods_received_notes")
-      .select("id, branch_id, po_id, supplier_id, grn_number, notes, updated_at")
+      .select(
+        "id, branch_id, po_id, supplier_id, grn_number, notes, updated_at",
+      )
       .eq("tenant_id", claims.tenant_id)
       .eq("created_by", user.id)
       .eq("supplier_id", data.supplierId)
@@ -649,8 +652,7 @@ export const amendGrnLine = withAction(
       if (msg.includes("has_active_supplier_return")) {
         return {
           success: false,
-          error:
-            "Dòng đã có phiếu trả NCC liên kết — không thể sửa trực tiếp.",
+          error: "Dòng đã có phiếu trả NCC liên kết — không thể sửa trực tiếp.",
         };
       }
       if (msg.includes("has_paid_invoice")) {
@@ -818,9 +820,7 @@ export const createSupplierInvoice = withAction(
         .single();
       const termsDays = supplier?.payment_terms_days ?? null;
       if (termsDays && termsDays > 0) {
-        const invoiceDt = new Date(data.invoiceDate);
-        invoiceDt.setDate(invoiceDt.getDate() + termsDays);
-        dueDate = invoiceDt.toISOString().slice(0, 10);
+        dueDate = addVNDateDays(data.invoiceDate, termsDays);
       }
     }
 
@@ -980,9 +980,7 @@ export async function fetchCentralKitchenWacMap(): Promise<
 
   const { data, error } = await supabase
     .from("stock_levels")
-    .select(
-      "ingredient_id, avg_unit_cost, branches!inner ( branch_kind )",
-    )
+    .select("ingredient_id, avg_unit_cost, branches!inner ( branch_kind )")
     .eq("tenant_id", claims.tenant_id)
     .eq("branches.branch_kind", "central_kitchen")
     .not("avg_unit_cost", "is", null);
@@ -1150,7 +1148,7 @@ export async function exportRecipes(
     });
 
   const sheets = buildRecipeSheets(rows);
-  const stamp = new Date().toISOString().slice(0, 10);
+  const stamp = getVNDateString();
   const safeFormat = format === "csv" ? "csv" : "xlsx";
 
   if (safeFormat === "csv") {

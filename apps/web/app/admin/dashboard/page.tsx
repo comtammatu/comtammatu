@@ -1,4 +1,18 @@
-import { ArrowDown as IconArrowDown, ArrowUp as IconArrowUp, Briefcase as IconBriefcase, DollarSign as IconCurrencyDollar, LayoutDashboard as IconLayoutDashboard, Monitor as IconDeviceDesktop, Receipt as IconReceipt, Settings as IconSettings, ShieldCheck as IconShieldCheck, TrendingUp as IconTrendingUp, Utensils as IconToolsKitchen, Wallet as IconWallet, Warehouse as IconBuildingWarehouse } from "lucide-react";
+import {
+  ArrowDown as IconArrowDown,
+  ArrowUp as IconArrowUp,
+  Briefcase as IconBriefcase,
+  DollarSign as IconCurrencyDollar,
+  LayoutDashboard as IconLayoutDashboard,
+  Monitor as IconDeviceDesktop,
+  Receipt as IconReceipt,
+  Settings as IconSettings,
+  ShieldCheck as IconShieldCheck,
+  TrendingUp as IconTrendingUp,
+  Utensils as IconToolsKitchen,
+  Wallet as IconWallet,
+  Warehouse as IconBuildingWarehouse,
+} from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import {
   Card,
@@ -14,8 +28,14 @@ import {
 } from "@comtammatu/ui/components/empty";
 import { canAccess } from "@comtammatu/shared/auth";
 import { formatVND } from "@comtammatu/shared/format";
+import { formatVNTime } from "@comtammatu/shared/time";
 import { loadAuthState } from "@/_lib/auth";
-import { AppPage, AppPageHeader, AppSection, AppLinkCard } from "@/components/surface";
+import {
+  AppPage,
+  AppPageHeader,
+  AppSection,
+  AppLinkCard,
+} from "@/components/surface";
 import { fetchDashboardStats } from "./actions";
 
 interface StatCardProps {
@@ -72,10 +92,7 @@ function computeChange(today: number, yesterday: number): number {
 }
 
 function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString("vi-VN", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return formatVNTime(iso);
 }
 
 export default async function DashboardPage() {
@@ -94,12 +111,48 @@ export default async function DashboardPage() {
   const avgChange = computeChange(stats.avgOrderValue, yesterdayAvg);
 
   const quickLinks = [
-    { title: "Nhân viên", href: "/admin/staff", icon: IconShieldCheck, description: "Quản lý tài khoản và quyền truy cập", moduleKey: "staff" as const },
-    { title: "Thiết lập", href: "/admin/settings", icon: IconSettings, description: "Cấu hình chi nhánh và hệ thống", moduleKey: "settings" as const },
-    { title: "Thực đơn", href: "/menu", icon: IconLayoutDashboard, description: "Quản lý món ăn và thực đơn", moduleKey: "menu" as const },
-    { title: "Điều hành kho", href: "/inventory", icon: IconBuildingWarehouse, description: "Nhập kho, xuất kho và kiểm kê", moduleKey: "inventory" as const },
-    { title: "Tài chính", href: "/finance", icon: IconWallet, description: "Doanh thu, chi phí và hóa đơn", moduleKey: "finance" as const },
-    { title: "Nhân sự & lương", href: "/hr", icon: IconBriefcase, description: "Hồ sơ nhân viên và kỳ lương", moduleKey: "hr" as const },
+    {
+      title: "Nhân viên",
+      href: "/admin/staff",
+      icon: IconShieldCheck,
+      description: "Quản lý tài khoản và quyền truy cập",
+      moduleKey: "staff" as const,
+    },
+    {
+      title: "Thiết lập",
+      href: "/admin/settings",
+      icon: IconSettings,
+      description: "Cấu hình chi nhánh và hệ thống",
+      moduleKey: "settings" as const,
+    },
+    {
+      title: "Thực đơn",
+      href: "/menu",
+      icon: IconLayoutDashboard,
+      description: "Quản lý món ăn và thực đơn",
+      moduleKey: "menu" as const,
+    },
+    {
+      title: "Điều hành kho",
+      href: "/inventory",
+      icon: IconBuildingWarehouse,
+      description: "Nhập kho, xuất kho và kiểm kê",
+      moduleKey: "inventory" as const,
+    },
+    {
+      title: "Tài chính",
+      href: "/finance",
+      icon: IconWallet,
+      description: "Doanh thu, chi phí và hóa đơn",
+      moduleKey: "finance" as const,
+    },
+    {
+      title: "Nhân sự & lương",
+      href: "/hr",
+      icon: IconBriefcase,
+      description: "Hồ sơ nhân viên và kỳ lương",
+      moduleKey: "hr" as const,
+    },
   ].filter((link) => canAccess(claims.user_role, link.moduleKey));
 
   return (
@@ -109,7 +162,10 @@ export default async function DashboardPage() {
         description="Doanh thu và đơn hàng hôm nay so với hôm qua."
       />
 
-      <AppSection title="Hiệu suất hôm nay" contentClassName="grid gap-4 sm:grid-cols-3">
+      <AppSection
+        title="Hiệu suất hôm nay"
+        contentClassName="grid gap-4 sm:grid-cols-3"
+      >
         <StatCard
           title="Doanh thu hôm nay"
           value={formatVND(stats.todayRevenue)}

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { ADMIN_ROLES, PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import { getVNMonthSequenceBack } from "@comtammatu/shared/time";
 import { getAuthContextWithPermission } from "@/inventory/_lib/auth";
 import { PeriodAdminClient, type PeriodRow } from "./period-admin-client";
 
@@ -15,13 +16,7 @@ export default async function PeriodsAdminPage() {
   if (!ctx) redirect("/");
   const { supabase, claims } = ctx;
 
-  // Compute month range: current + previous 12 months
-  const now = new Date();
-  const range: Array<{ year: number; month: number }> = [];
-  for (let i = 0; i < MONTHS_BACK; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    range.push({ year: d.getFullYear(), month: d.getMonth() + 1 });
-  }
+  const range = getVNMonthSequenceBack(MONTHS_BACK);
 
   const { data: rows } = await supabase
     .from("accounting_periods")
@@ -31,7 +26,10 @@ export default async function PeriodsAdminPage() {
     .order("month", { ascending: false });
 
   const key = (y: number, m: number) => `${y}-${m}`;
-  const existing = new Map<string, { soft: string | null; hard: string | null }>();
+  const existing = new Map<
+    string,
+    { soft: string | null; hard: string | null }
+  >();
   for (const r of rows ?? []) {
     existing.set(key(r.year, r.month), {
       soft: r.soft_closed_at,
@@ -51,5 +49,7 @@ export default async function PeriodsAdminPage() {
 
   // Thread permission flag to client — rule UI-PERMISSION-FLAGS-THREADED-NOT-SERVER-ONLY.
   // ctx is non-null here (page redirected above if missing permission), so canCloseOrReopen = true.
-  return <PeriodAdminClient initial={periods} canCloseOrReopen={Boolean(ctx)} />;
+  return (
+    <PeriodAdminClient initial={periods} canCloseOrReopen={Boolean(ctx)} />
+  );
 }

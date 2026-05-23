@@ -24,6 +24,7 @@ import {
   type PrintDocumentPaymentQrBlock,
   type PrintDocumentTotalsBlock,
 } from "./print-document.js";
+import { sideTotalQuantity } from "./quantity.js";
 
 const ESC = 0x1b;
 const GS = 0x1d;
@@ -133,24 +134,28 @@ const VI_TONE_MARKS = new Set([
 ]);
 
 const normalizeVietnameseForCp1258 = (s: string): string =>
-  s.normalize("NFD").replace(
-    /(\P{Mark})(\p{Mark}*)/gu,
-    (_match: string, base: string, marks: string) => {
-      if (!marks) return base;
+  s
+    .normalize("NFD")
+    .replace(
+      /(\P{Mark})(\p{Mark}*)/gu,
+      (_match: string, base: string, marks: string) => {
+        if (!marks) return base;
 
-      const shapeMarks: string[] = [];
-      const toneMarks: string[] = [];
-      for (const mark of Array.from(marks)) {
-        if (VI_TONE_MARKS.has(mark)) {
-          toneMarks.push(mark);
-        } else {
-          shapeMarks.push(mark);
+        const shapeMarks: string[] = [];
+        const toneMarks: string[] = [];
+        for (const mark of Array.from(marks)) {
+          if (VI_TONE_MARKS.has(mark)) {
+            toneMarks.push(mark);
+          } else {
+            shapeMarks.push(mark);
+          }
         }
-      }
 
-      return (base + shapeMarks.join("")).normalize("NFC") + toneMarks.join("");
-    },
-  );
+        return (
+          (base + shapeMarks.join("")).normalize("NFC") + toneMarks.join("")
+        );
+      },
+    );
 
 const encodeText = (s: string): Uint8Array => {
   if (USE_ASCII) {
@@ -160,11 +165,7 @@ const encodeText = (s: string): Uint8Array => {
   // tone marks are combining bytes. Split only tone marks to avoid "?" output.
   const cp1258Text = normalizeVietnameseForCp1258(s);
   const buffer = iconv.encode(cp1258Text, "windows-1258");
-  return new Uint8Array(
-    buffer.buffer,
-    buffer.byteOffset,
-    buffer.byteLength,
-  );
+  return new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
 };
 
 const line = (s: string) => concat([encodeText(s), newline()]);
@@ -188,7 +189,12 @@ const padLeft = (s: string, width: number) =>
 // ─── Types ────────────────────────────────────────────────────────────────
 
 export type ModifierLine = { name?: string; price?: number };
-export type SideLine = { name?: string; side_item_name?: string; price?: number; quantity?: number };
+export type SideLine = {
+  name?: string;
+  side_item_name?: string;
+  price?: number;
+  quantity?: number;
+};
 
 export type KitchenPayload = {
   kind: "kitchen_ticket";
@@ -367,7 +373,9 @@ const fmtVND = (n: number | null | undefined) => {
 const fmtMoney = (n: number | null | undefined) => fmtVND(n) + "đ";
 
 /** Extract `HH:MM` + `DD/MM/YYYY` from `YYYY-MM-DDTHH:MM:SS` (assumed VN local). */
-const splitDateTime = (iso: string | undefined): { date: string; time: string } => {
+const splitDateTime = (
+  iso: string | undefined,
+): { date: string; time: string } => {
   if (!iso) return { date: "", time: "" };
   const [d, t] = iso.split("T");
   if (!d) return { date: "", time: "" };
@@ -548,7 +556,7 @@ export function renderKitchenTicket(p: KitchenPayload): Uint8Array {
         if (sideName) {
           // B4: parity với bitmap-mode — sides ("món ăn kèm") render ở
           // double-bold để bếp đọc rõ across kitchen, theo yêu cầu chủ quán.
-          const totalSideQty = s.quantity ? s.quantity * it.quantity : 0;
+          const totalSideQty = sideTotalQuantity(s.quantity, it.quantity);
           parts.push(
             ...kitchenImportantDetailRows(
               "- ",
@@ -612,7 +620,8 @@ const renderBillMeta = (p: BillBase): Uint8Array[] => {
     parts.push(pair("Số khách:", String(p.customer_count)));
   }
   if (p.cashier_name) parts.push(pair("Thu ngân:", p.cashier_name));
-  if (p.split_from_order_number) parts.push(pair("Tách từ đơn:", `#${p.split_from_order_number}`));
+  if (p.split_from_order_number)
+    parts.push(pair("Tách từ đơn:", `#${p.split_from_order_number}`));
   return parts;
 };
 
@@ -653,9 +662,7 @@ const renderBillItemsTable = (p: BillBase): Uint8Array[] => {
       for (const m of it.modifiers) {
         if (!m.name) continue;
         const modAmt =
-          (m.price ?? 0) > 0
-            ? fmtMoney((m.price ?? 0) * it.quantity)
-            : "";
+          (m.price ?? 0) > 0 ? fmtMoney((m.price ?? 0) * it.quantity) : "";
         const label = `  + ${m.name}`;
         parts.push(modAmt ? pair(label, modAmt) : line(label));
       }
@@ -664,7 +671,7 @@ const renderBillItemsTable = (p: BillBase): Uint8Array[] => {
       for (const s of it.sides) {
         const sideName = s.name ?? s.side_item_name;
         if (!sideName) continue;
-        const totalSideQty = (s.quantity ?? 0) * it.quantity;
+        const totalSideQty = sideTotalQuantity(s.quantity, it.quantity);
         const sideAmt =
           (s.price ?? 0) > 0 && totalSideQty > 0
             ? fmtMoney((s.price ?? 0) * totalSideQty)
@@ -684,8 +691,10 @@ const renderBillItemsTable = (p: BillBase): Uint8Array[] => {
 const renderBillTotals = (p: BillBase): Uint8Array[] => {
   const parts: Uint8Array[] = [];
   parts.push(pair("Tạm tính", fmtMoney(p.subtotal)));
-  if ((p.tax_amount ?? 0) > 0) parts.push(pair("Thuế VAT", fmtMoney(p.tax_amount)));
-  if ((p.service_charge ?? 0) > 0) parts.push(pair("Phụ phí", fmtMoney(p.service_charge)));
+  if ((p.tax_amount ?? 0) > 0)
+    parts.push(pair("Thuế VAT", fmtMoney(p.tax_amount)));
+  if ((p.service_charge ?? 0) > 0)
+    parts.push(pair("Phụ phí", fmtMoney(p.service_charge)));
   if ((p.discount_amount ?? 0) > 0) {
     const discountLabel =
       p.discount_type === "pct" && p.discount_value != null
@@ -726,6 +735,7 @@ const renderDocumentText = (
   if (block.align === "center") parts.push(alignCenter());
   if (block.align === "left") parts.push(alignLeft());
   if (block.inverse) parts.push(inverseOn());
+  if (block.strikethrough) parts.push(underlineOn());
   if (block.double) parts.push(sizeDouble());
   if (block.bold) parts.push(boldOn());
   const width = block.double ? KITCHEN_FULL_WIDTH_DOUBLE : LINE_WIDTH;
@@ -734,6 +744,7 @@ const renderDocumentText = (
   }
   if (block.bold) parts.push(boldOff());
   if (block.double) parts.push(sizeNormal());
+  if (block.strikethrough) parts.push(underlineOff());
   if (block.inverse) parts.push(inverseOff());
   if (block.align && block.align !== "left") parts.push(alignLeft());
   return parts;
@@ -746,12 +757,14 @@ const renderDocumentRow = (
   const right = clampText(block.right);
   if (!left && !right) return [];
   const parts: Uint8Array[] = [];
+  if (block.strikethrough) parts.push(underlineOn());
   if (block.double) parts.push(sizeDouble());
   if (block.bold) parts.push(boldOn());
   const width = block.double ? KITCHEN_FULL_WIDTH_DOUBLE : LINE_WIDTH;
   parts.push(line(pairWithWidth(left, right, width)));
   if (block.bold) parts.push(boldOff());
   if (block.double) parts.push(sizeNormal());
+  if (block.strikethrough) parts.push(underlineOff());
   return parts;
 };
 
@@ -846,9 +859,7 @@ const renderDocumentItemsTable = (
   return renderBillItemsTable(billBaseForDocument({ items }));
 };
 
-const renderDocumentTotals = (
-  block: PrintDocumentTotalsBlock,
-): Uint8Array[] =>
+const renderDocumentTotals = (block: PrintDocumentTotalsBlock): Uint8Array[] =>
   renderBillTotals(
     billBaseForDocument({
       subtotal: numberOrZero(block.subtotal),
@@ -908,9 +919,10 @@ const renderDocumentPaymentQr = (
 const renderDocumentFooter = (
   block: Extract<PrintDocumentBlock, { type: "footer" }>,
 ): Uint8Array[] => {
-  const lines = Array.isArray(block.lines) && block.lines.length > 0
-    ? block.lines.map(clampText).filter(Boolean)
-    : [BRAND_LOCKUP_TAGLINE];
+  const lines =
+    Array.isArray(block.lines) && block.lines.length > 0
+      ? block.lines.map(clampText).filter(Boolean)
+      : [BRAND_LOCKUP_TAGLINE];
   const parts: Uint8Array[] = [newline(), alignCenter()];
   for (const footerLine of lines) parts.push(line(footerLine));
   parts.push(alignLeft());
@@ -918,10 +930,14 @@ const renderDocumentFooter = (
 };
 
 const isKitchenPayload = (value: unknown): value is KitchenPayload =>
-  isRecord(value) && value.kind === "kitchen_ticket" && Array.isArray(value.items);
+  isRecord(value) &&
+  value.kind === "kitchen_ticket" &&
+  Array.isArray(value.items);
 
 const isCancelTicketPayload = (value: unknown): value is CancelTicketPayload =>
-  isRecord(value) && value.kind === "cancel_ticket" && Array.isArray(value.items);
+  isRecord(value) &&
+  value.kind === "cancel_ticket" &&
+  Array.isArray(value.items);
 
 const isShiftCloseReportPayload = (
   value: unknown,
@@ -1147,7 +1163,7 @@ export function renderCancelTicket(p: CancelTicketPayload): Uint8Array {
         if (sideName) {
           // B4 parity: sides ở double-bold giống phiếu bếp gốc + bitmap mode.
           // Bếp xem phiếu hủy mapping 1-1 với phiếu bếp đã in trước đó.
-          const totalSideQty = s.quantity ? s.quantity * it.quantity : 0;
+          const totalSideQty = sideTotalQuantity(s.quantity, it.quantity);
           parts.push(
             ...kitchenImportantDetailRows(
               "- ",
@@ -1245,7 +1261,13 @@ export function renderShiftCloseReport(p: ShiftCloseReportPayload): Uint8Array {
 
   // Cash reconciliation
   parts.push(divider("-"));
-  parts.push(alignCenter(), boldOn(), line("KÉT TIỀN MẶT"), boldOff(), alignLeft());
+  parts.push(
+    alignCenter(),
+    boldOn(),
+    line("KÉT TIỀN MẶT"),
+    boldOff(),
+    alignLeft(),
+  );
   parts.push(divider("-"));
   parts.push(pair("Tiền đầu ca", fmtMoney(p.opening_cash)));
   // Cash collected during shift = expected - opening (derived; not sent
@@ -1255,16 +1277,24 @@ export function renderShiftCloseReport(p: ShiftCloseReportPayload): Uint8Array {
   parts.push(pair("= Két dự kiến", fmtMoney(p.expected_cash)));
   parts.push(pair("Két thực đếm", fmtMoney(p.closing_cash)));
   parts.push(boldOn());
-  parts.push(pair(
-    `Chênh lệch (${diffSign(p.cash_difference)})`,
-    fmtMoney(p.cash_difference),
-  ));
+  parts.push(
+    pair(
+      `Chênh lệch (${diffSign(p.cash_difference)})`,
+      fmtMoney(p.cash_difference),
+    ),
+  );
   parts.push(boldOff());
 
   // Payment breakdown
   if (p.payment_breakdown.length > 0) {
     parts.push(divider("-"));
-    parts.push(alignCenter(), boldOn(), line("PHƯƠNG THỨC THANH TOÁN"), boldOff(), alignLeft());
+    parts.push(
+      alignCenter(),
+      boldOn(),
+      line("PHƯƠNG THỨC THANH TOÁN"),
+      boldOff(),
+      alignLeft(),
+    );
     parts.push(divider("-"));
     for (const row of p.payment_breakdown) {
       const label = PAYMENT_METHOD_LABEL[row.method] ?? row.method;
@@ -1298,7 +1328,13 @@ export function renderShiftCloseReport(p: ShiftCloseReportPayload): Uint8Array {
   // Variance approval block
   if (p.variance_note && p.variance_note.trim()) {
     parts.push(divider("="));
-    parts.push(alignCenter(), boldOn(), line("DUYỆT CHÊNH LỆCH"), boldOff(), alignLeft());
+    parts.push(
+      alignCenter(),
+      boldOn(),
+      line("DUYỆT CHÊNH LỆCH"),
+      boldOff(),
+      alignLeft(),
+    );
     if (p.variance_approver) {
       parts.push(pair("Người duyệt:", p.variance_approver));
     }

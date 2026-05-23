@@ -19,7 +19,6 @@ Tài liệu tham chiếu dài hạn cho repo này.
 - [inventory-sop.md](inventory-sop.md): SOP vận hành pilot
 - [inventory-role-handoff.md](inventory-role-handoff.md): training 1 trang
 - [inventory-rbac-matrix.md](inventory-rbac-matrix.md): ma trận quyền Inventory
-- [inventory-erp-gap-matrix.md](inventory-erp-gap-matrix.md): mapping với bộ ERP tham chiếu
 
 ## Các tài liệu khác
 
@@ -28,3 +27,7 @@ Tài liệu tham chiếu dài hạn cho repo này.
 - [payroll-pit.md](payroll-pit.md)
 - [third-party-integrations.md](third-party-integrations.md)
 - [competitive-analysis.md](competitive-analysis.md)
+
+## Historical References
+
+- [../archive/ref/inventory-erp-gap-matrix.md](../archive/ref/inventory-erp-gap-matrix.md): historical ERP mapping; not a current source of truth.

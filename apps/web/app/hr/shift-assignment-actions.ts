@@ -4,6 +4,7 @@ import { z } from "zod";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import { withAction } from "@/_lib/with-action";
 import { canAccessBranch } from "../admin/_lib/branch-scope";
+import { getVNWeekEndDateString } from "@comtammatu/shared/time";
 
 const SHIFT_ROLES: readonly StaffRole[] = [
   "owner",
@@ -20,16 +21,17 @@ const fetchShiftAssignmentsSchema = z.object({
 });
 
 export const fetchShiftAssignments = withAction(
-  { roles: SHIFT_ROLES, schema: fetchShiftAssignmentsSchema, permission: PERMISSION_KEYS.STAFF_MANAGE },
+  {
+    roles: SHIFT_ROLES,
+    schema: fetchShiftAssignmentsSchema,
+    permission: PERMISSION_KEYS.STAFF_MANAGE,
+  },
   async (data, { supabase, claims }) => {
     if (!(await canAccessBranch(supabase, claims, data.branchId))) {
       return { success: false, error: "Không có quyền truy cập chi nhánh này" };
     }
 
-    const start = new Date(data.weekStartDate);
-    const end = new Date(start);
-    end.setDate(end.getDate() + 6);
-    const weekEndDate = end.toISOString().split("T")[0];
+    const weekEndDate = getVNWeekEndDateString(data.weekStartDate);
 
     const { data: result, error } = await supabase
       .from("shift_assignments")
@@ -46,7 +48,7 @@ export const fetchShiftAssignments = withAction(
       .eq("branch_id", data.branchId)
       .eq("tenant_id", claims.tenant_id)
       .gte("date", data.weekStartDate)
-      .lte("date", weekEndDate!);
+      .lte("date", weekEndDate);
 
     if (error) {
       return { success: false, error: "Không thể tải phân ca." };
@@ -66,7 +68,11 @@ const createAssignmentSchema = z.object({
 });
 
 export const createShiftAssignment = withAction(
-  { roles: SHIFT_ROLES, schema: createAssignmentSchema, permission: PERMISSION_KEYS.STAFF_MANAGE },
+  {
+    roles: SHIFT_ROLES,
+    schema: createAssignmentSchema,
+    permission: PERMISSION_KEYS.STAFF_MANAGE,
+  },
   async (data, { supabase, claims }) => {
     if (!(await canAccessBranch(supabase, claims, data.branchId))) {
       return { success: false, error: "Không có quyền truy cập chi nhánh này" };
@@ -127,7 +133,11 @@ const deleteAssignmentSchema = z.object({
 });
 
 export const deleteShiftAssignment = withAction(
-  { roles: SHIFT_ROLES, schema: deleteAssignmentSchema, permission: PERMISSION_KEYS.STAFF_MANAGE },
+  {
+    roles: SHIFT_ROLES,
+    schema: deleteAssignmentSchema,
+    permission: PERMISSION_KEYS.STAFF_MANAGE,
+  },
   async (data, { supabase, claims }) => {
     const { error } = await supabase
       .from("shift_assignments")
@@ -150,7 +160,11 @@ const fetchEmployeesForBranchSchema = z.object({
 });
 
 export const fetchEmployeesForBranch = withAction(
-  { roles: SHIFT_ROLES, schema: fetchEmployeesForBranchSchema, permission: PERMISSION_KEYS.STAFF_MANAGE },
+  {
+    roles: SHIFT_ROLES,
+    schema: fetchEmployeesForBranchSchema,
+    permission: PERMISSION_KEYS.STAFF_MANAGE,
+  },
   async (data, { supabase, claims }) => {
     if (!(await canAccessBranch(supabase, claims, data.branchId))) {
       return { success: false, error: "Không có quyền truy cập chi nhánh này" };

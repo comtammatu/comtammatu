@@ -1,3 +1,5 @@
+import { getVNDateString, getVNMonthEndDateString } from "../time/vietnam";
+
 /**
  * Versioned Vietnam payroll legal constants.
  *
@@ -120,9 +122,9 @@ export function getLegalVersionFor(
   effectiveDate?: string | Date,
 ): PayrollLegalVersion {
   const targetIso = (() => {
-    if (!effectiveDate) return new Date().toISOString().slice(0, 10);
+    if (!effectiveDate) return getVNDateString();
     if (typeof effectiveDate === "string") return effectiveDate;
-    return effectiveDate.toISOString().slice(0, 10);
+    return getVNDateString(effectiveDate);
   })();
 
   let chosen = PAYROLL_LEGAL_VERSIONS[0];
@@ -148,7 +150,5 @@ export function getLegalVersionForPeriod(
   periodYear: number,
   periodMonth: number,
 ): PayrollLegalVersion {
-  // Last day of the period (handles all months including February)
-  const lastDay = new Date(periodYear, periodMonth, 0);
-  return getLegalVersionFor(lastDay);
+  return getLegalVersionFor(getVNMonthEndDateString(periodYear, periodMonth));
 }

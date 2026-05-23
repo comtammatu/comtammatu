@@ -2,9 +2,18 @@
 
 import { useRouter } from "next/navigation";
 import { cn } from "@comtammatu/ui";
-import { TriangleAlert as IconAlertTriangle, CircleCheck as IconCircleCheck, ClipboardList as IconClipboardList, Info as IconInfoCircle, PackageOpen as IconPackageExport, ShoppingBag as IconShoppingBag, Truck as IconTruck } from "lucide-react";
+import {
+  TriangleAlert as IconAlertTriangle,
+  CircleCheck as IconCircleCheck,
+  ClipboardList as IconClipboardList,
+  Info as IconInfoCircle,
+  PackageOpen as IconPackageExport,
+  ShoppingBag as IconShoppingBag,
+  Truck as IconTruck,
+} from "lucide-react";
 import type { NotificationItem as NotificationItemModel } from "@/_actions/notifications";
 import { messages } from "@lib/messages";
+import { formatVNDate } from "@comtammatu/shared/time";
 
 function iconFor(kind: string) {
   switch (kind) {
@@ -49,7 +58,7 @@ function relativeTime(iso: string) {
   if (hr < 24) return `${hr} ${t.hours}`;
   const day = Math.floor(hr / 24);
   if (day < 30) return `${day} ${t.days}`;
-  return new Date(iso).toLocaleDateString("vi-VN");
+  return formatVNDate(iso);
 }
 
 interface Props {

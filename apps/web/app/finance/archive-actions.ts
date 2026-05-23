@@ -24,11 +24,9 @@ import {
   ARCHIVE_BUCKET,
   ARCHIVE_SIGNED_URL_TTL_SECONDS,
 } from "@comtammatu/shared/hddt";
+import { getVNDayUtcRange } from "@comtammatu/shared/time";
 import { ensureInvoiceProviderRegistered } from "@lib/invoice-provider-init";
-import {
-  archiveSingleInvoice,
-  type ArchiveCandidate,
-} from "@lib/hddt-archive";
+import { archiveSingleInvoice, type ArchiveCandidate } from "@lib/hddt-archive";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { canAccessBranch } from "@/admin/_lib/branch-scope";
 import { logAudit } from "@/admin/_lib/audit";
@@ -123,8 +121,7 @@ const forceSchema = z.object({
 export async function forceArchiveTaxInvoice(
   invoiceId: number,
 ): Promise<ActionResult> {
-  const enabled =
-    (process.env["HDDT_ARCHIVE_ENABLED"] ?? "false") === "true";
+  const enabled = (process.env["HDDT_ARCHIVE_ENABLED"] ?? "false") === "true";
   if (!enabled) {
     return {
       success: false,
@@ -179,11 +176,15 @@ export async function forceArchiveTaxInvoice(
   if (!row.invoice_number || !row.provider_ref || !row.issued_at) {
     return {
       success: false,
-      error: "Hóa đơn thiếu thông tin cần thiết (mã / providerRef / ngày phát hành).",
+      error:
+        "Hóa đơn thiếu thông tin cần thiết (mã / providerRef / ngày phát hành).",
     };
   }
   if (row.provider === "skipped") {
-    return { success: false, error: "Hóa đơn 'không bắt buộc' — không có gì để lưu." };
+    return {
+      success: false,
+      error: "Hóa đơn 'không bắt buộc' — không có gì để lưu.",
+    };
   }
   if (!(await canAccessBranch(authSupabase, claims, row.branch_id))) {
     return { success: false, error: "Không có quyền cho chi nhánh này." };
@@ -241,8 +242,7 @@ export async function backfillArchiveByDateRange(
   startDate: string,
   endDate: string,
 ): Promise<ActionResult> {
-  const enabled =
-    (process.env["HDDT_ARCHIVE_ENABLED"] ?? "false") === "true";
+  const enabled = (process.env["HDDT_ARCHIVE_ENABLED"] ?? "false") === "true";
   if (!enabled) {
     return {
       success: false,
@@ -287,6 +287,9 @@ export async function backfillArchiveByDateRange(
   // Bounded loop — no true queue, just sequential drain. Caller can
   // re-invoke if BACKFILL_MAX_ROWS exhausted. The cron will catch
   // remainders eventually anyway.
+  const startRange = getVNDayUtcRange(parsed.data.startDate);
+  const endRange = getVNDayUtcRange(parsed.data.endDate);
+
   let query = supabase
     .from("tax_invoices")
     .select(
@@ -298,8 +301,8 @@ export async function backfillArchiveByDateRange(
     .neq("provider", "skipped")
     .not("invoice_number", "is", null)
     .not("provider_ref", "is", null)
-    .gte("issued_at", parsed.data.startDate)
-    .lte("issued_at", `${parsed.data.endDate}T23:59:59`)
+    .gte("issued_at", startRange.startIso)
+    .lt("issued_at", endRange.endIso)
     .order("issued_at", { ascending: true })
     .limit(BACKFILL_MAX_ROWS);
 

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { formatVNDate } from "@comtammatu/shared/time";
 import {
   ArrowRightToLine as IconArrowBarRight,
   ClipboardList as IconClipboardList,
@@ -230,7 +231,8 @@ function movementReference(movement: StockMovementHistory): string | null {
     return stockCopy.movement.issueRef(movement.issueId);
   if (movement.productionOrderId != null)
     return stockCopy.movement.productionRef(movement.productionOrderId);
-  if (movement.orderId != null) return stockCopy.movement.orderRef(movement.orderId);
+  if (movement.orderId != null)
+    return stockCopy.movement.orderRef(movement.orderId);
   return null;
 }
 
@@ -285,9 +287,7 @@ function SummaryMetric({
   }
 
   return (
-    <div className="flex min-w-fit items-center gap-2 px-3 py-2">
-      {content}
-    </div>
+    <div className="flex min-w-fit items-center gap-2 px-3 py-2">{content}</div>
   );
 }
 
@@ -384,9 +384,7 @@ function QuickStockIssueDialog({
         reason: reason.trim(),
       });
       if (!lineRes.success) {
-        toast.error(
-          lineRes.error ?? stockCopy.quickIssue.addLineFailed,
-        );
+        toast.error(lineRes.error ?? stockCopy.quickIssue.addLineFailed);
         router.push(`/inventory/issues/${issueId}`);
         return;
       }
@@ -640,7 +638,7 @@ export function StockClient({
     0,
   );
   const visibleTotalValue = branchValue ?? filteredValue;
-  const liveLabel = new Date().toLocaleDateString("vi-VN");
+  const liveLabel = formatVNDate(new Date());
 
   return (
     <InventoryPageContent
@@ -660,720 +658,709 @@ export function StockClient({
           </div>
         }
       />
-        <div className="flex flex-wrap items-center gap-2 border bg-card p-2">
-          {permissions.canReceiveGrn ? (
-            <QuickActionButton
-              href={branchHref(branchId, "/inventory/grn")}
-              icon={IconReceipt}
-              label={stockCopy.actions.receiveGrn}
-              primary
-            />
-          ) : null}
-          {permissions.canCreateTransfer ? (
-            <QuickActionButton
-              href={branchHref(branchId, "/inventory/transfers")}
-              icon={IconTruck}
-              label={stockCopy.actions.transfer}
-            />
-          ) : null}
-          {permissions.canCreateStocktake ? (
-            <QuickActionButton
-              href={branchHref(branchId, "/inventory/stocktake")}
-              icon={IconClipboardList}
-              label={stockCopy.actions.stocktake}
-            />
-          ) : null}
-          {permissions.canWriteoff ? (
-            <QuickActionButton
-              href={branchHref(branchId, "/inventory/waste/new")}
-              icon={IconTrash}
-              label={stockCopy.actions.waste}
-            />
-          ) : null}
-          {permissions.canCreatePurchaseOrder ? (
-            <QuickActionButton
-              href={branchHref(branchId, "/inventory/purchase-orders/new")}
-              icon={IconShoppingCart}
-              label={stockCopy.actions.purchaseSuggestion}
-            />
-          ) : null}
+      <div className="flex flex-wrap items-center gap-2 border bg-card p-2">
+        {permissions.canReceiveGrn ? (
+          <QuickActionButton
+            href={branchHref(branchId, "/inventory/grn")}
+            icon={IconReceipt}
+            label={stockCopy.actions.receiveGrn}
+            primary
+          />
+        ) : null}
+        {permissions.canCreateTransfer ? (
+          <QuickActionButton
+            href={branchHref(branchId, "/inventory/transfers")}
+            icon={IconTruck}
+            label={stockCopy.actions.transfer}
+          />
+        ) : null}
+        {permissions.canCreateStocktake ? (
+          <QuickActionButton
+            href={branchHref(branchId, "/inventory/stocktake")}
+            icon={IconClipboardList}
+            label={stockCopy.actions.stocktake}
+          />
+        ) : null}
+        {permissions.canWriteoff ? (
+          <QuickActionButton
+            href={branchHref(branchId, "/inventory/waste/new")}
+            icon={IconTrash}
+            label={stockCopy.actions.waste}
+          />
+        ) : null}
+        {permissions.canCreatePurchaseOrder ? (
+          <QuickActionButton
+            href={branchHref(branchId, "/inventory/purchase-orders/new")}
+            icon={IconShoppingCart}
+            label={stockCopy.actions.purchaseSuggestion}
+          />
+        ) : null}
 
-          <InputGroup
-            className={cn("min-w-56 flex-1", isMobile ? "h-12" : "h-10")}
-          >
-            <InputGroupAddon>
-              <IconSearch />
+        <InputGroup
+          className={cn("min-w-56 flex-1", isMobile ? "h-12" : "h-10")}
+        >
+          <InputGroupAddon>
+            <IconSearch />
+          </InputGroupAddon>
+          <InputGroupInput
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder={stockCopy.filters.searchPlaceholder}
+            inputMode="search"
+          />
+          {searchQuery.trim() ? (
+            <InputGroupAddon align="inline-end">
+              <span
+                className="font-mono text-xs tabular-nums text-muted-foreground"
+                aria-live="polite"
+              >
+                {filtered.length}/{ingredients.length}
+              </span>
             </InputGroupAddon>
-            <InputGroupInput
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder={stockCopy.filters.searchPlaceholder}
-              inputMode="search"
-            />
-            {searchQuery.trim() ? (
-              <InputGroupAddon align="inline-end">
-                <span
-                  className="font-mono text-xs tabular-nums text-muted-foreground"
-                  aria-live="polite"
-                >
-                  {filtered.length}/{ingredients.length}
-                </span>
-              </InputGroupAddon>
-            ) : null}
-          </InputGroup>
-        </div>
-
-        <div className="flex flex-wrap items-center divide-x overflow-hidden border bg-card">
-          <SummaryMetric
-            label={stockCopy.metrics.selectedWarehouse}
-            value={inventoryCommon.currencyCompact(formatVND(visibleTotalValue))}
-          />
-          {totalValue != null ? (
-            <SummaryMetric
-              label={stockCopy.metrics.wholeSystem}
-              value={inventoryCommon.currencyCompact(formatVND(totalValue))}
-            />
           ) : null}
-          <SummaryMetric
-            label={stockCopy.metrics.underThreshold}
-            value={String(summary.underThresholdCount)}
-            tone={summary.underThresholdCount > 0 ? "warning" : "muted"}
-            onClick={
-              summary.underThresholdCount > 0
-                ? () => {
-                    setStockFilter(stockFilter === "low" ? "all" : "low");
-                  }
-                : undefined
-            }
-            active={stockFilter === "low"}
-          />
-          <SummaryMetric
-            label={stockCopy.metrics.nearExpiry}
-            value={String(summary.expiryCount)}
-            tone={summary.expiryCount > 0 ? "warning" : "muted"}
-          />
-          <SummaryMetric
-            label={stockCopy.metrics.pending}
-            value={String(summary.pendingWorkCount)}
-            tone={summary.pendingWorkCount > 0 ? "warning" : "muted"}
-          />
-        </div>
+        </InputGroup>
+      </div>
 
-        <InventoryFilterBar className="gap-2 p-2">
-          <Select value={activeCategory} onValueChange={setActiveCategory}>
-            <SelectTrigger className="min-w-40">
-              <SelectValue placeholder={stockCopy.filters.categoryPlaceholder} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">
-                {stockCopy.filters.allCategories}
+      <div className="flex flex-wrap items-center divide-x overflow-hidden border bg-card">
+        <SummaryMetric
+          label={stockCopy.metrics.selectedWarehouse}
+          value={inventoryCommon.currencyCompact(formatVND(visibleTotalValue))}
+        />
+        {totalValue != null ? (
+          <SummaryMetric
+            label={stockCopy.metrics.wholeSystem}
+            value={inventoryCommon.currencyCompact(formatVND(totalValue))}
+          />
+        ) : null}
+        <SummaryMetric
+          label={stockCopy.metrics.underThreshold}
+          value={String(summary.underThresholdCount)}
+          tone={summary.underThresholdCount > 0 ? "warning" : "muted"}
+          onClick={
+            summary.underThresholdCount > 0
+              ? () => {
+                  setStockFilter(stockFilter === "low" ? "all" : "low");
+                }
+              : undefined
+          }
+          active={stockFilter === "low"}
+        />
+        <SummaryMetric
+          label={stockCopy.metrics.nearExpiry}
+          value={String(summary.expiryCount)}
+          tone={summary.expiryCount > 0 ? "warning" : "muted"}
+        />
+        <SummaryMetric
+          label={stockCopy.metrics.pending}
+          value={String(summary.pendingWorkCount)}
+          tone={summary.pendingWorkCount > 0 ? "warning" : "muted"}
+        />
+      </div>
+
+      <InventoryFilterBar className="gap-2 p-2">
+        <Select value={activeCategory} onValueChange={setActiveCategory}>
+          <SelectTrigger className="min-w-40">
+            <SelectValue placeholder={stockCopy.filters.categoryPlaceholder} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">
+              {stockCopy.filters.allCategories}
+            </SelectItem>
+            {categories.map((cat) => (
+              <SelectItem key={cat} value={cat}>
+                {cat}
               </SelectItem>
-              {categories.map((cat) => (
-                <SelectItem key={cat} value={cat}>
-                  {cat}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            ))}
+          </SelectContent>
+        </Select>
 
-          <Select
-            value={stockFilter}
-            onValueChange={(v) => setStockFilter(v as StockFilter)}
-          >
-            <SelectTrigger className="min-w-36">
-              <SelectValue placeholder={stockCopy.filters.statusPlaceholder} />
-            </SelectTrigger>
-            <SelectContent>
-              {stockFilterOptions.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <Select
+          value={stockFilter}
+          onValueChange={(v) => setStockFilter(v as StockFilter)}
+        >
+          <SelectTrigger className="min-w-36">
+            <SelectValue placeholder={stockCopy.filters.statusPlaceholder} />
+          </SelectTrigger>
+          <SelectContent>
+            {stockFilterOptions.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-          <Select
-            value={riskFilter}
-            onValueChange={(v) => setRiskFilter(v as RiskFilter)}
-          >
-            <SelectTrigger className="min-w-40">
-              <SelectValue placeholder={stockCopy.filters.riskPlaceholder} />
-            </SelectTrigger>
-            <SelectContent>
-              {riskFilterOptions.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <Select
+          value={riskFilter}
+          onValueChange={(v) => setRiskFilter(v as RiskFilter)}
+        >
+          <SelectTrigger className="min-w-40">
+            <SelectValue placeholder={stockCopy.filters.riskPlaceholder} />
+          </SelectTrigger>
+          <SelectContent>
+            {riskFilterOptions.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-          <Select
-            value={sortMode}
-            onValueChange={(v) => setSortMode(v as SortMode)}
-          >
-            <SelectTrigger className="min-w-56">
-              <SelectValue placeholder={stockCopy.filters.sortPlaceholder} />
-            </SelectTrigger>
-            <SelectContent>
-              {sortOptions.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <Select
+          value={sortMode}
+          onValueChange={(v) => setSortMode(v as SortMode)}
+        >
+          <SelectTrigger className="min-w-56">
+            <SelectValue placeholder={stockCopy.filters.sortPlaceholder} />
+          </SelectTrigger>
+          <SelectContent>
+            {sortOptions.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-          {!isFirstLoadEmpty ? (
-            <Badge variant="outline" className="ml-auto">
-              {filtered.length}/{ingredients.length}
-            </Badge>
-          ) : null}
-        </InventoryFilterBar>
+        {!isFirstLoadEmpty ? (
+          <Badge variant="outline" className="ml-auto">
+            {filtered.length}/{ingredients.length}
+          </Badge>
+        ) : null}
+      </InventoryFilterBar>
 
-        {isFirstLoadEmpty ? (
-          <Card className="bg-muted/20">
-            <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
-              <div className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                <IconShoppingCart className="size-6" />
-              </div>
-              <div className="space-y-1">
-                <p className="font-heading text-base font-semibold">
-                  {stockCopy.empty.firstLoadTitle}
-                </p>
-                <p className="max-w-md text-sm text-muted-foreground">
-                  {stockCopy.empty.firstLoadHint}
-                </p>
-              </div>
-              {permissions.canCreatePurchaseOrder ? (
-                <Button asChild size="sm">
-                  <Link
-                    href={branchHref(branchId, "/inventory/purchase-orders/new")}
-                  >
-                    <IconShoppingCart className="size-4" />
-                    {stockCopy.actions.purchaseSuggestion}
-                  </Link>
-                </Button>
-              ) : null}
-            </CardContent>
-          </Card>
-        ) : isMobile ? (
-          <div className="flex flex-col gap-2">
-            {filtered.length === 0 ? (
-              <Empty className="py-8">
-                <EmptyHeader>
-                  <EmptyTitle className="text-sm font-semibold">
-                    {searchQuery.trim()
-                      ? stockCopy.empty.search
-                      : stockCopy.empty.noData}
-                  </EmptyTitle>
-                </EmptyHeader>
-              </Empty>
-            ) : (
-              filtered.map((item) => (
-                <InteractiveCard
-                  key={item.id}
-                  minHeight="mobile"
-                  padding="default"
-                  className="flex-col items-stretch gap-3"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0 flex-1 space-y-1">
-                      <p className="truncate font-semibold">{item.name}</p>
-                      <div className="flex items-center gap-2">
-                        {item.category ? (
-                          <Badge
-                            className={
-                              CATEGORY_TONE_CLASS[item.category] ??
-                              "bg-muted text-muted-foreground"
-                            }
-                          >
-                            {item.category}
-                          </Badge>
-                        ) : null}
-                        <span className="text-xs text-muted-foreground">
-                          {item.sku}
-                        </span>
-                      </div>
-                    </div>
-                    <StatusBadge status={item.status} size="sm" />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div>
-                      <p className="text-xs text-muted-foreground">
-                        {stockCopy.table.availableStock}
-                      </p>
-                      <p
-                        className={cn(
-                          "font-semibold tabular-nums",
-                          (item.status === "low" || item.status === "out") &&
-                            "text-destructive",
-                        )}
-                      >
-                        {formatQty(item.qty)} {item.unit}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs text-muted-foreground">
-                        {FORM_VI.value}
-                      </p>
-                      <p className="font-semibold tabular-nums">
-                        {inventoryCommon.currencyCompact(
-                          formatVND(stockValue(item)),
-                        )}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">
-                        {stockCopy.table.wac}
-                      </p>
-                      <p className="tabular-nums">
-                        {item.cost > 0
-                          ? inventoryCommon.currencyCompact(
-                              formatVND(item.cost),
-                            )
-                          : inventoryCommon.noValue}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs text-muted-foreground">
-                        {stockCopy.table.lastCount}
-                      </p>
-                      <p>{item.lastCount}</p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-4 gap-2 border-t pt-2">
-                    {permissions.canReceiveGrn ? (
-                      <Button asChild size="xs" variant="outline">
-                        <Link href={branchHref(branchId, "/inventory/grn")}>
-                          {stockCopy.actions.receive}
-                        </Link>
-                      </Button>
-                    ) : null}
-                    {permissions.canCreateIssue ? (
-                      <Button
-                        type="button"
-                        size="xs"
-                        variant="outline"
-                        onClick={() =>
-                          setQuickIssueTarget({
-                            ingredient: item,
-                            issueType: "consumption",
-                          })
-                        }
-                      >
-                        {ACTIONS_VI.export}
-                      </Button>
-                    ) : null}
-                    {permissions.canCreateStocktake ? (
-                      <Button asChild size="xs" variant="outline">
-                        <Link
-                          href={branchHref(branchId, "/inventory/stocktake")}
-                        >
-                          {stockCopy.actions.count}
-                        </Link>
-                      </Button>
-                    ) : null}
-                    {permissions.canAdjustException ? (
-                      <Button
-                        type="button"
-                        size="icon-xs"
-                        variant="ghost"
-                        onClick={() => setAdjustTarget(item)}
-                        aria-label={stockCopy.actions.adjustExceptionAria(
-                          item.name,
-                        )}
-                      >
-                        <IconPencil />
-                      </Button>
-                    ) : null}
-                  </div>
-                </InteractiveCard>
-              ))
-            )}
-          </div>
-        ) : (
-          <div className="grid overflow-hidden border bg-card lg:grid-cols-3 xl:grid-cols-4">
-            <div className="min-w-0 lg:col-span-2 xl:col-span-3">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/20 hover:bg-muted/20">
-                      <TableHead className="min-w-56">
-                        {PRODUCT_VI.rawIngredient}
-                      </TableHead>
-                      <TableHead className="min-w-32">
-                        {FORM_VI.category}
-                      </TableHead>
-                      <TableHead className="min-w-24 text-right">
-                        {stockCopy.table.stock}
-                      </TableHead>
-                      <TableHead className="min-w-40 text-right">
-                        {stockCopy.table.warning}
-                      </TableHead>
-                      <TableHead className="min-w-24 text-right">
-                        {stockCopy.table.wac}
-                      </TableHead>
-                      <TableHead className="min-w-28 text-right">
-                        {FORM_VI.value}
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filtered.length === 0 ? (
-                      <TableEmptyStateRow
-                        colSpan={6}
-                        title={
-                          searchQuery.trim()
-                            ? stockCopy.empty.search
-                            : stockCopy.empty.noData
-                        }
-                        description={
-                          searchQuery.trim()
-                            ? stockCopy.empty.searchDescription
-                            : stockCopy.empty.noDataDescription
-                        }
-                      />
-                    ) : null}
-
-                    {filtered.map((item) => {
-                      const active = selected?.id === item.id;
-                      return (
-                        <TableRow
-                          key={item.id}
-                          role="button"
-                          tabIndex={0}
-                          data-state={active ? "selected" : undefined}
-                          className={cn(
-                            "cursor-pointer hover:bg-muted/20 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-                          )}
-                          onClick={() => setSelectedId(item.id)}
-                          onKeyDown={(event) => {
-                            if (event.key === "Enter" || event.key === " ") {
-                              event.preventDefault();
-                              setSelectedId(item.id);
-                            }
-                          }}
-                          aria-label={stockCopy.actions.viewDetailAria(
-                            item.name,
-                          )}
-                        >
-                          <TableCell>
-                            <div className="space-y-1">
-                              <p className="font-semibold">{item.name}</p>
-                              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                                <span className="font-mono">{item.sku}</span>
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            {item.category ? (
-                              <Badge
-                                className={
-                                  CATEGORY_TONE_CLASS[item.category] ??
-                                  "bg-muted text-muted-foreground"
-                                }
-                              >
-                                {item.category}
-                              </Badge>
-                            ) : (
-                              <span className="text-muted-foreground">
-                                {inventoryCommon.noValue}
-                              </span>
-                            )}
-                          </TableCell>
-                          <TableCell
-                            className={cn(
-                              "text-right font-mono",
-                              (item.status === "low" ||
-                                item.status === "out") &&
-                                "font-semibold text-destructive",
-                            )}
-                          >
-                            {formatQty(item.qty)} {item.unit}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex flex-wrap justify-end gap-2">
-                              <StatusBadge status={item.status} size="sm" />
-                              {item.qty <= item.reorder ? (
-                                <Badge variant="warning">
-                                  {stockCopy.filters.reorder}
-                                </Badge>
-                              ) : null}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right font-mono">
-                            {item.cost > 0
-                              ? formatVND(item.cost)
-                              : inventoryCommon.noValue}
-                          </TableCell>
-                          <TableCell className="text-right font-mono font-semibold">
-                            {stockValue(item) > 0
-                              ? inventoryCommon.currencyCompact(
-                                  formatVND(stockValue(item)),
-                                )
-                              : inventoryCommon.noValue}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
+      {isFirstLoadEmpty ? (
+        <Card className="bg-muted/20">
+          <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
+            <div className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
+              <IconShoppingCart className="size-6" />
             </div>
-
-            <aside className="border-t bg-background/70 p-3 lg:border-l lg:border-t-0">
-              {selected ? (
-                <div className="flex h-full flex-col gap-4">
-                  <div className="space-y-2">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <h2 className="font-heading truncate text-base font-semibold">
-                          {selected.name}
-                        </h2>
-                        <p className="text-xs text-muted-foreground">
-                          {selected.sku}
-                          {selected.category ? ` · ${selected.category}` : ""}
-                        </p>
-                      </div>
-                      <StatusBadge status={selected.status} size="sm" />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-                    <div>
-                      <p className="text-xs text-muted-foreground">
-                        {stockCopy.table.currentStock}
-                      </p>
-                      <p className="font-semibold tabular-nums">
-                        {formatQty(selected.qty)} {selected.unit}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">
-                        {stockCopy.table.stockValue}
-                      </p>
-                      <p className="font-semibold tabular-nums">
-                        {inventoryCommon.currencyCompact(
-                          formatVND(stockValue(selected)),
-                        )}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">
-                        {stockCopy.table.wac}
-                      </p>
-                      <p className="tabular-nums">
-                        {inventoryCommon.currencyCompact(
-                          formatVND(selected.cost),
-                        )}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">
-                        {stockCopy.table.lastCount}
-                      </p>
-                      <p>{selected.lastCount}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">
-                        {stockCopy.table.minThreshold}
-                      </p>
-                      <p className="tabular-nums">{formatQty(selected.min)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Reorder</p>
-                      <p className="tabular-nums">
-                        {formatQty(selected.reorder)}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    {permissions.canReceiveGrn ? (
-                      <Button asChild size="sm">
-                        <Link href={branchHref(branchId, "/inventory/grn")}>
-                          <IconReceipt className="size-3.5" />
-                          {stockCopy.actions.receiveGoods}
-                        </Link>
-                      </Button>
-                    ) : null}
-                    {permissions.canCreateIssue ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() =>
-                          setQuickIssueTarget({
-                            ingredient: selected,
-                            issueType: "consumption",
-                          })
-                        }
-                      >
-                        <IconTruck className="size-3.5" />
-                        {stockCopy.actions.issueStock}
-                      </Button>
-                    ) : null}
-                    {permissions.canCreateStocktake ? (
-                      <Button asChild size="sm" variant="outline">
-                        <Link
-                          href={branchHref(branchId, "/inventory/stocktake")}
+            <div className="space-y-1">
+              <p className="font-heading text-base font-semibold">
+                {stockCopy.empty.firstLoadTitle}
+              </p>
+              <p className="max-w-md text-sm text-muted-foreground">
+                {stockCopy.empty.firstLoadHint}
+              </p>
+            </div>
+            {permissions.canCreatePurchaseOrder ? (
+              <Button asChild size="sm">
+                <Link
+                  href={branchHref(branchId, "/inventory/purchase-orders/new")}
+                >
+                  <IconShoppingCart className="size-4" />
+                  {stockCopy.actions.purchaseSuggestion}
+                </Link>
+              </Button>
+            ) : null}
+          </CardContent>
+        </Card>
+      ) : isMobile ? (
+        <div className="flex flex-col gap-2">
+          {filtered.length === 0 ? (
+            <Empty className="py-8">
+              <EmptyHeader>
+                <EmptyTitle className="text-sm font-semibold">
+                  {searchQuery.trim()
+                    ? stockCopy.empty.search
+                    : stockCopy.empty.noData}
+                </EmptyTitle>
+              </EmptyHeader>
+            </Empty>
+          ) : (
+            filtered.map((item) => (
+              <InteractiveCard
+                key={item.id}
+                minHeight="mobile"
+                padding="default"
+                className="flex-col items-stretch gap-3"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <p className="truncate font-semibold">{item.name}</p>
+                    <div className="flex items-center gap-2">
+                      {item.category ? (
+                        <Badge
+                          className={
+                            CATEGORY_TONE_CLASS[item.category] ??
+                            "bg-muted text-muted-foreground"
+                          }
                         >
-                          <IconClipboardList className="size-3.5" />
-                          {stockCopy.actions.stocktake}
-                        </Link>
-                      </Button>
-                    ) : null}
-                    {permissions.canWriteoff ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() =>
-                          setQuickIssueTarget({
-                            ingredient: selected,
-                            issueType: "writeoff",
-                          })
-                        }
-                      >
-                        <IconTrash className="size-3.5" />
-                        {stockCopy.actions.waste}
-                      </Button>
-                    ) : null}
-                    <Button asChild size="sm" variant="ghost">
-                      <Link href={branchHref(branchId, "/inventory/reports")}>
-                        <IconArrowBarRight className="size-3.5" />
-                        {stockCopy.actions.viewStockCard}
+                          {item.category}
+                        </Badge>
+                      ) : null}
+                      <span className="text-xs text-muted-foreground">
+                        {item.sku}
+                      </span>
+                    </div>
+                  </div>
+                  <StatusBadge status={item.status} size="sm" />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <p className="text-xs text-muted-foreground">
+                      {stockCopy.table.availableStock}
+                    </p>
+                    <p
+                      className={cn(
+                        "font-semibold tabular-nums",
+                        (item.status === "low" || item.status === "out") &&
+                          "text-destructive",
+                      )}
+                    >
+                      {formatQty(item.qty)} {item.unit}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-muted-foreground">
+                      {FORM_VI.value}
+                    </p>
+                    <p className="font-semibold tabular-nums">
+                      {inventoryCommon.currencyCompact(
+                        formatVND(stockValue(item)),
+                      )}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">
+                      {stockCopy.table.wac}
+                    </p>
+                    <p className="tabular-nums">
+                      {item.cost > 0
+                        ? inventoryCommon.currencyCompact(formatVND(item.cost))
+                        : inventoryCommon.noValue}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-muted-foreground">
+                      {stockCopy.table.lastCount}
+                    </p>
+                    <p>{item.lastCount}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-4 gap-2 border-t pt-2">
+                  {permissions.canReceiveGrn ? (
+                    <Button asChild size="xs" variant="outline">
+                      <Link href={branchHref(branchId, "/inventory/grn")}>
+                        {stockCopy.actions.receive}
                       </Link>
                     </Button>
-                    {permissions.canAdjustException ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => setAdjustTarget(selected)}
-                      >
-                        <IconPencil className="size-3.5" />
-                        {stockCopy.actions.exception}
-                      </Button>
-                    ) : null}
-                  </div>
-
-                  <div className="space-y-2 border-t pt-3 text-sm">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="font-medium">{stockCopy.table.history}</p>
-                      <Badge variant="outline">
-                        {selectedHistory.length}/5
-                      </Badge>
-                    </div>
-                    {selectedHistory.length === 0 ? (
-                      <p className="text-xs text-muted-foreground">
-                        {stockCopy.table.noRecentHistory}
-                      </p>
-                    ) : (
-                      <div className="space-y-2">
-                        {selectedHistory.map((movement) => {
-                          const reference = movementReference(movement);
-                          const signedQty =
-                            movement.quantityChange > 0
-                              ? `+${formatQty(movement.quantityChange)}`
-                              : formatQty(movement.quantityChange);
-
-                          return (
-                            <div
-                              key={movement.id}
-                              className="space-y-1 border bg-card px-2 py-2"
-                            >
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="min-w-0">
-                                  <p className="truncate text-xs font-medium">
-                                    {movementLabel(movement)}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {formatDateTime(movement.createdAt)}
-                                  </p>
-                                </div>
-                                <Badge
-                                  variant={movementVariant(
-                                    movement.quantityChange,
-                                  )}
-                                  className="shrink-0"
-                                >
-                                  {signedQty} {selected.unit}
-                                </Badge>
-                              </div>
-                              {reference ||
-                              movement.reason ||
-                              movement.unitCost != null ? (
-                                <div className="space-y-0.5 text-xs text-muted-foreground">
-                                  {reference ? <p>{reference}</p> : null}
-                                  {movement.reason ? (
-                                    <p className="break-words">
-                                      {movement.reason}
-                                    </p>
-                                  ) : null}
-                                  {movement.unitCost != null ? (
-                                    <p>
-                                      {stockCopy.table.wacValue(
-                                        formatVND(movement.unitCost),
-                                      )}
-                                    </p>
-                                  ) : null}
-                                </div>
-                              ) : null}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
+                  ) : null}
+                  {permissions.canCreateIssue ? (
+                    <Button
+                      type="button"
+                      size="xs"
+                      variant="outline"
+                      onClick={() =>
+                        setQuickIssueTarget({
+                          ingredient: item,
+                          issueType: "consumption",
+                        })
+                      }
+                    >
+                      {ACTIONS_VI.export}
+                    </Button>
+                  ) : null}
+                  {permissions.canCreateStocktake ? (
+                    <Button asChild size="xs" variant="outline">
+                      <Link href={branchHref(branchId, "/inventory/stocktake")}>
+                        {stockCopy.actions.count}
+                      </Link>
+                    </Button>
+                  ) : null}
+                  {permissions.canAdjustException ? (
+                    <Button
+                      type="button"
+                      size="icon-xs"
+                      variant="ghost"
+                      onClick={() => setAdjustTarget(item)}
+                      aria-label={stockCopy.actions.adjustExceptionAria(
+                        item.name,
+                      )}
+                    >
+                      <IconPencil />
+                    </Button>
+                  ) : null}
                 </div>
-              ) : (
-                <div className="flex h-full items-center justify-center p-8 text-center text-sm text-muted-foreground">
-                  {stockCopy.table.chooseIngredientDetail}
-                </div>
-              )}
-            </aside>
-          </div>
-        )}
-
-        <div className="border bg-card px-3 py-2 text-xs text-muted-foreground">
-          {stockCopy.table.filteredSummary(
-            filtered.length,
-            formatVND(filteredValue),
+              </InteractiveCard>
+            ))
           )}
         </div>
+      ) : (
+        <div className="grid overflow-hidden border bg-card lg:grid-cols-3 xl:grid-cols-4">
+          <div className="min-w-0 lg:col-span-2 xl:col-span-3">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/20 hover:bg-muted/20">
+                    <TableHead className="min-w-56">
+                      {PRODUCT_VI.rawIngredient}
+                    </TableHead>
+                    <TableHead className="min-w-32">
+                      {FORM_VI.category}
+                    </TableHead>
+                    <TableHead className="min-w-24 text-right">
+                      {stockCopy.table.stock}
+                    </TableHead>
+                    <TableHead className="min-w-40 text-right">
+                      {stockCopy.table.warning}
+                    </TableHead>
+                    <TableHead className="min-w-24 text-right">
+                      {stockCopy.table.wac}
+                    </TableHead>
+                    <TableHead className="min-w-28 text-right">
+                      {FORM_VI.value}
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtered.length === 0 ? (
+                    <TableEmptyStateRow
+                      colSpan={6}
+                      title={
+                        searchQuery.trim()
+                          ? stockCopy.empty.search
+                          : stockCopy.empty.noData
+                      }
+                      description={
+                        searchQuery.trim()
+                          ? stockCopy.empty.searchDescription
+                          : stockCopy.empty.noDataDescription
+                      }
+                    />
+                  ) : null}
 
-        {adjustTarget ? (
-          <AdjustStockDialog
-            open={adjustTarget !== null}
-            onOpenChange={(open) => {
-              if (!open) setAdjustTarget(null);
-            }}
-            branchId={branchId}
-            ingredientId={adjustTarget.id}
-            ingredientName={adjustTarget.name}
-            unit={adjustTarget.unit}
-            onAdjusted={() => {
-              setAdjustTarget(null);
-              router.refresh();
-            }}
-          />
-        ) : null}
+                  {filtered.map((item) => {
+                    const active = selected?.id === item.id;
+                    return (
+                      <TableRow
+                        key={item.id}
+                        role="button"
+                        tabIndex={0}
+                        data-state={active ? "selected" : undefined}
+                        className={cn(
+                          "cursor-pointer hover:bg-muted/20 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+                        )}
+                        onClick={() => setSelectedId(item.id)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            setSelectedId(item.id);
+                          }
+                        }}
+                        aria-label={stockCopy.actions.viewDetailAria(item.name)}
+                      >
+                        <TableCell>
+                          <div className="space-y-1">
+                            <p className="font-semibold">{item.name}</p>
+                            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                              <span className="font-mono">{item.sku}</span>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {item.category ? (
+                            <Badge
+                              className={
+                                CATEGORY_TONE_CLASS[item.category] ??
+                                "bg-muted text-muted-foreground"
+                              }
+                            >
+                              {item.category}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground">
+                              {inventoryCommon.noValue}
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell
+                          className={cn(
+                            "text-right font-mono",
+                            (item.status === "low" || item.status === "out") &&
+                              "font-semibold text-destructive",
+                          )}
+                        >
+                          {formatQty(item.qty)} {item.unit}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex flex-wrap justify-end gap-2">
+                            <StatusBadge status={item.status} size="sm" />
+                            {item.qty <= item.reorder ? (
+                              <Badge variant="warning">
+                                {stockCopy.filters.reorder}
+                              </Badge>
+                            ) : null}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right font-mono">
+                          {item.cost > 0
+                            ? formatVND(item.cost)
+                            : inventoryCommon.noValue}
+                        </TableCell>
+                        <TableCell className="text-right font-mono font-semibold">
+                          {stockValue(item) > 0
+                            ? inventoryCommon.currencyCompact(
+                                formatVND(stockValue(item)),
+                              )
+                            : inventoryCommon.noValue}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
 
-        {quickIssueTarget ? (
-          <QuickStockIssueDialog
-            key={`${quickIssueTarget.ingredient.id}-${quickIssueTarget.issueType}`}
-            branchId={branchId}
-            open={quickIssueTarget !== null}
-            target={quickIssueTarget}
-            onOpenChange={(open) => {
-              if (!open) setQuickIssueTarget(null);
-            }}
-          />
-        ) : null}
-      </InventoryPageContent>
+          <aside className="border-t bg-background/70 p-3 lg:border-l lg:border-t-0">
+            {selected ? (
+              <div className="flex h-full flex-col gap-4">
+                <div className="space-y-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h2 className="font-heading truncate text-base font-semibold">
+                        {selected.name}
+                      </h2>
+                      <p className="text-xs text-muted-foreground">
+                        {selected.sku}
+                        {selected.category ? ` · ${selected.category}` : ""}
+                      </p>
+                    </div>
+                    <StatusBadge status={selected.status} size="sm" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                  <div>
+                    <p className="text-xs text-muted-foreground">
+                      {stockCopy.table.currentStock}
+                    </p>
+                    <p className="font-semibold tabular-nums">
+                      {formatQty(selected.qty)} {selected.unit}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">
+                      {stockCopy.table.stockValue}
+                    </p>
+                    <p className="font-semibold tabular-nums">
+                      {inventoryCommon.currencyCompact(
+                        formatVND(stockValue(selected)),
+                      )}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">
+                      {stockCopy.table.wac}
+                    </p>
+                    <p className="tabular-nums">
+                      {inventoryCommon.currencyCompact(
+                        formatVND(selected.cost),
+                      )}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">
+                      {stockCopy.table.lastCount}
+                    </p>
+                    <p>{selected.lastCount}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">
+                      {stockCopy.table.minThreshold}
+                    </p>
+                    <p className="tabular-nums">{formatQty(selected.min)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Reorder</p>
+                    <p className="tabular-nums">
+                      {formatQty(selected.reorder)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  {permissions.canReceiveGrn ? (
+                    <Button asChild size="sm">
+                      <Link href={branchHref(branchId, "/inventory/grn")}>
+                        <IconReceipt className="size-3.5" />
+                        {stockCopy.actions.receiveGoods}
+                      </Link>
+                    </Button>
+                  ) : null}
+                  {permissions.canCreateIssue ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        setQuickIssueTarget({
+                          ingredient: selected,
+                          issueType: "consumption",
+                        })
+                      }
+                    >
+                      <IconTruck className="size-3.5" />
+                      {stockCopy.actions.issueStock}
+                    </Button>
+                  ) : null}
+                  {permissions.canCreateStocktake ? (
+                    <Button asChild size="sm" variant="outline">
+                      <Link href={branchHref(branchId, "/inventory/stocktake")}>
+                        <IconClipboardList className="size-3.5" />
+                        {stockCopy.actions.stocktake}
+                      </Link>
+                    </Button>
+                  ) : null}
+                  {permissions.canWriteoff ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        setQuickIssueTarget({
+                          ingredient: selected,
+                          issueType: "writeoff",
+                        })
+                      }
+                    >
+                      <IconTrash className="size-3.5" />
+                      {stockCopy.actions.waste}
+                    </Button>
+                  ) : null}
+                  <Button asChild size="sm" variant="ghost">
+                    <Link href={branchHref(branchId, "/inventory/reports")}>
+                      <IconArrowBarRight className="size-3.5" />
+                      {stockCopy.actions.viewStockCard}
+                    </Link>
+                  </Button>
+                  {permissions.canAdjustException ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => setAdjustTarget(selected)}
+                    >
+                      <IconPencil className="size-3.5" />
+                      {stockCopy.actions.exception}
+                    </Button>
+                  ) : null}
+                </div>
+
+                <div className="space-y-2 border-t pt-3 text-sm">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-medium">{stockCopy.table.history}</p>
+                    <Badge variant="outline">{selectedHistory.length}/5</Badge>
+                  </div>
+                  {selectedHistory.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">
+                      {stockCopy.table.noRecentHistory}
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {selectedHistory.map((movement) => {
+                        const reference = movementReference(movement);
+                        const signedQty =
+                          movement.quantityChange > 0
+                            ? `+${formatQty(movement.quantityChange)}`
+                            : formatQty(movement.quantityChange);
+
+                        return (
+                          <div
+                            key={movement.id}
+                            className="space-y-1 border bg-card px-2 py-2"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <p className="truncate text-xs font-medium">
+                                  {movementLabel(movement)}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {formatDateTime(movement.createdAt)}
+                                </p>
+                              </div>
+                              <Badge
+                                variant={movementVariant(
+                                  movement.quantityChange,
+                                )}
+                                className="shrink-0"
+                              >
+                                {signedQty} {selected.unit}
+                              </Badge>
+                            </div>
+                            {reference ||
+                            movement.reason ||
+                            movement.unitCost != null ? (
+                              <div className="space-y-0.5 text-xs text-muted-foreground">
+                                {reference ? <p>{reference}</p> : null}
+                                {movement.reason ? (
+                                  <p className="break-words">
+                                    {movement.reason}
+                                  </p>
+                                ) : null}
+                                {movement.unitCost != null ? (
+                                  <p>
+                                    {stockCopy.table.wacValue(
+                                      formatVND(movement.unitCost),
+                                    )}
+                                  </p>
+                                ) : null}
+                              </div>
+                            ) : null}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="flex h-full items-center justify-center p-8 text-center text-sm text-muted-foreground">
+                {stockCopy.table.chooseIngredientDetail}
+              </div>
+            )}
+          </aside>
+        </div>
+      )}
+
+      <div className="border bg-card px-3 py-2 text-xs text-muted-foreground">
+        {stockCopy.table.filteredSummary(
+          filtered.length,
+          formatVND(filteredValue),
+        )}
+      </div>
+
+      {adjustTarget ? (
+        <AdjustStockDialog
+          open={adjustTarget !== null}
+          onOpenChange={(open) => {
+            if (!open) setAdjustTarget(null);
+          }}
+          branchId={branchId}
+          ingredientId={adjustTarget.id}
+          ingredientName={adjustTarget.name}
+          unit={adjustTarget.unit}
+          onAdjusted={() => {
+            setAdjustTarget(null);
+            router.refresh();
+          }}
+        />
+      ) : null}
+
+      {quickIssueTarget ? (
+        <QuickStockIssueDialog
+          key={`${quickIssueTarget.ingredient.id}-${quickIssueTarget.issueType}`}
+          branchId={branchId}
+          open={quickIssueTarget !== null}
+          target={quickIssueTarget}
+          onOpenChange={(open) => {
+            if (!open) setQuickIssueTarget(null);
+          }}
+        />
+      ) : null}
+    </InventoryPageContent>
   );
 }

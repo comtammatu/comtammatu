@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft as IconArrowLeft } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
+import { formatVNLongDate } from "@comtammatu/shared/time";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import { fetchBranchMenuDailyLimits } from "./actions";
@@ -34,13 +35,7 @@ export default async function BranchMenuLimitsPage({
   const result = await fetchBranchMenuDailyLimits(branchId);
   const rows = result.success && result.data ? result.data : [];
 
-  const today = new Date().toLocaleDateString("vi-VN", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    timeZone: "Asia/Ho_Chi_Minh",
-  });
+  const today = formatVNLongDate(new Date());
 
   return (
     <div className="mx-auto max-w-5xl space-y-5 p-4 md:p-6">
@@ -69,9 +64,7 @@ export default async function BranchMenuLimitsPage({
           </span>{" "}
           {messages.settings.branch.menuLimitsIntroAfter}
         </p>
-        <p className="mt-1">
-          {messages.settings.branch.menuLimitsResetNote}
-        </p>
+        <p className="mt-1">{messages.settings.branch.menuLimitsResetNote}</p>
         {!result.success ? (
           <p className="mt-2 text-destructive">
             {result.error ?? messages.settings.branch.menuLimitsLoadFailed}

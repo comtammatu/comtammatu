@@ -1,6 +1,6 @@
-# HĐĐT Hybrid Cutover Runbook
+# HĐĐT Viettel S-invoice Cutover Runbook
 
-> **Reference plan**: `docs/plan/hddt-hybrid-misa.md`
+> **Reference plan**: `docs/archive/plan/hddt-hybrid-misa.md` (historical execution context; provider runtime is now Viettel S-invoice only)
 > **PR sequence**: PR-1 schema → PR-2 RPCs → PR-3 B2B refactor → PR-4 cron + actions → PR-5 admin UI → **PR-6 cutover (this)** → PR-7 regression rules
 > **Owner**: ngocnghia128@gmail.com
 
@@ -8,12 +8,11 @@
 
 Trước khi flip flag, owner phải hoàn thành:
 
-- [ ] **Đăng ký template HĐĐT với CQT qua MISA / Viettel Sinvoice portal**
-  - MISA: `templateCode` + `invoiceSeries` (vd `01GTKT0/001` + `1C25TLL`)
-  - Sinvoice: `templateCode` + `invoiceSeries` đăng ký riêng theo Sinvoice format
+- [ ] **Đăng ký template HĐĐT với CQT qua Viettel S-invoice portal**
+  - Sinvoice: `templateCode` + `invoiceSeries` đăng ký theo Sinvoice format
   - Leadtime: 3-7 ngày làm việc
   - **Pháp lý cần**: 1 template cho B2B realtime + 1 template cho HĐ tổng hợp B2C (TT 78/2021 §11.4)
-- [ ] **Có account Sinvoice / MISA chính thức** với chứng thư số (CKS) phù hợp:
+- [ ] **Có account Sinvoice chính thức** với chứng thư số (CKS) phù hợp:
   - **Server cert**: account dùng cho gọi API tự động (cron + realtime)
   - **USB-Token / Cloud CA**: KHÔNG hỗ trợ trên test account; chốt loại CKS với BU khi mở account prod
 - [ ] **Apply migrations** lên production DB (dev đã apply qua MCP):
@@ -26,33 +25,22 @@ Trước khi flip flag, owner phải hoàn thành:
 
 Set trong Vercel project settings (Settings → Environment Variables → Production).
 
-### Common (cả MISA và Sinvoice)
+### Common
 
 ```env
 COMPANY_TAX_CODE=0100109106-899        # MST seller (= account login MST)
 HDDT_DAILY_SUMMARY_ENABLED=true        # default false; flip true khi sẵn sàng (kill-switch cho cron + manual)
-INVOICE_PROVIDER=viettel               # default từ 2026-05-13 (Viettel primary); set "misa" để dùng MISA
 CRON_SECRET=<32+ char random>          # Bearer cho /api/cron/* — đã có sẵn theo feedback cron
 ```
 
 > ⚠️ **`HDDT_STATE_MACHINE_ENABLED` không tồn tại trong code.** Plan ban đầu dự kiến có toggle nhưng thực tế ship state machine direct (xem `apps/web/app/finance/actions.ts:58-446`). Nếu cần rollback B2B refactor (PR-3) — revert commit + redeploy. Chỉ `HDDT_DAILY_SUMMARY_ENABLED` còn vai trò kill-switch cho B2C batch path.
 
-> **Provider switch logic:** `apps/web/lib/invoice-provider-init.ts:22-55` đọc `INVOICE_PROVIDER` env tại boot, register đúng 1 singleton (MISA hoặc Sinvoice). Đổi env → cần redeploy hoặc edge function reload.
+> **Provider logic:** `apps/web/lib/invoice-provider-init.ts` register đúng 1 singleton Viettel S-invoice. Không còn `INVOICE_PROVIDER` switch.
 > Sinvoice auth dùng `POST /auth/login` với JSON `{ username, password }`, sau đó dùng Bearer token cho các request API. Tra cứu trạng thái dùng `InvoiceWS/searchInvoiceByTransactionUuid` với form body `{ supplierTaxCode, transactionUuid }`.
 
-### Provider = `misa`
+### Viettel S-invoice
 
 ```env
-INVOICE_PROVIDER=misa
-MISA_API_KEY=<API key từ MISA portal>
-MISA_API_BASE_URL=https://api.meinvoice.vn/api/v1   # prod (default)
-# MISA_SANDBOX=true cho testapi.meinvoice.vn
-```
-
-### Provider = `viettel`
-
-```env
-INVOICE_PROVIDER=viettel
 SINVOICE_USERNAME=<account_mst>        # vd: 0100109106-899
 SINVOICE_PASSWORD=<api_password>
 SINVOICE_TEMPLATE_CODE=2/001           # đăng ký với CQT (2/001 = HĐ bán hàng từ MTT cho F&B; 1/001 nếu cần HĐ GTGT B2B)
@@ -78,7 +66,6 @@ Khuyến nghị chạy trên một sandbox VN cuối tuần (Sat sáng) trước
 
 ```bash
 # 1. Set env Vercel preview environment
-INVOICE_PROVIDER=viettel
 SINVOICE_USERNAME=0100109106-509     # account "không kiểm tra" để test rộng
 SINVOICE_PASSWORD=2wsxCDE#
 SINVOICE_TEMPLATE_CODE=<test template>
@@ -170,8 +157,7 @@ Sau đó UI "Chạy tổng hợp" lần 2 → expect HĐ mới issued.
 Sau khi sandbox smoke 1-3 ngày green:
 
 1. Set env Vercel production (Settings → Environment Variables → Production):
-   - `INVOICE_PROVIDER=viettel` (hoặc `misa`)
-   - Provider creds prod (KHÔNG dùng test account)
+   - `SINVOICE_*` provider creds prod (KHÔNG dùng test account)
    - `HDDT_DAILY_SUMMARY_ENABLED=true`
 2. Deploy main branch (cron entry trong `vercel.json` đã sẵn từ PR-6)
 3. Cron sẽ tự chạy 02:05 ICT đêm hôm sau (`schedule: "5 19 * * *"` UTC)
@@ -189,16 +175,7 @@ HDDT_DAILY_SUMMARY_ENABLED=false      # cron + manual đều return { skipped: "
 
 Redeploy hoặc Vercel env reload. B2B realtime path KHÔNG ảnh hưởng. Existing summary HĐ đã insert vẫn còn — không phá data.
 
-### Tier 2 — Đổi provider
-
-Nếu MISA fail nhưng Sinvoice OK (hoặc ngược lại):
-
-```env
-INVOICE_PROVIDER=viettel    # hoặc "misa"
-# + set creds tương ứng (xem §Environment variables)
-```
-
-### Tier 3 — Revert B2B refactor (nặng nhất)
+### Tier 2 — Revert B2B refactor (nặng nhất)
 
 `HDDT_STATE_MACHINE_ENABLED` không tồn tại — phải revert commit PR-3 (`apps/web/app/finance/actions.ts:58-446`) + redeploy. Pre-PR-3 logic insert direct `status='issued'` không qua state machine. Cẩn thận: data đã insert qua state machine có `tax_invoice_events` rows — revert code không làm sạch events table, sẽ orphan.
 
@@ -237,16 +214,15 @@ Nếu queue row có `last_error` chứa các code dưới, tham chiếu cách x�
 
 ## Reference
 
-- `docs/plan/hddt-hybrid-misa.md` — full plan + decisions D1-D7 (đã shipped)
+- `docs/archive/plan/hddt-hybrid-misa.md` — historical plan + decisions D1-D7 (đã shipped; MISA references are no longer runtime guidance)
 - `docs/ref/einvoice-tax.md` — pháp lý + nghĩa vụ thuế (canonical reference, post-pilot)
 - `apps/web/lib/hddt-daily-summary.ts:67+` — shared `executeSummaryRun(deps)` helper
 - `apps/web/app/api/cron/hddt-daily-summary/route.ts` — cron handler
 - `apps/web/app/finance/summary-invoice-actions.ts:45+` — admin server actions
 - `apps/web/app/finance/summary/page.tsx` — admin UI page
-- `apps/web/lib/invoice-provider-init.ts:22-55` — provider singleton init
+- `apps/web/lib/invoice-provider-init.ts` — Viettel S-invoice singleton init
 - `packages/shared/src/providers/invoice.ts:48-93` — `InvoiceProvider` interface + `InvoiceResult`
 - `packages/shared/src/providers/impl/viettel-sinvoice.ts:115-426` — Sinvoice impl + `buildSinvoiceTransactionUuid`
-- `packages/shared/src/providers/impl/misa.ts:47-234` — MISA impl
 - `packages/shared/src/auth/module-acl.ts:89-93` — `finance` module ACL (note `/finance/summary` gate ở action level)
 - `tasks/regressions.md` — 16 named rules `HDDT-*` + `POS-HDDT-*`
 

@@ -20,6 +20,7 @@ import { WasteTierBadge } from "@/inventory/_components/waste-tier-badge";
 import { approveWaste } from "@/inventory/waste-actions";
 import { formatVND } from "@comtammatu/shared/format";
 import { getWasteReasonLabelVi } from "@comtammatu/shared/labels";
+import { formatVNDateTime } from "@comtammatu/shared/time";
 import { AppPage, AppPageHeader } from "@/components/surface";
 import { messages } from "@lib/messages";
 
@@ -110,9 +111,7 @@ function WasteApprovalCard({
 
   function handleDecision(decision: "approved" | "rejected") {
     if (row.isSelfCreated) {
-      toast.error(
-        "Không thể tự duyệt phiếu của mình (4-eye principle)",
-      );
+      toast.error("Không thể tự duyệt phiếu của mình (4-eye principle)");
       return;
     }
     setPending(decision);
@@ -140,9 +139,7 @@ function WasteApprovalCard({
   return (
     <li>
       <Card
-        className={cn(
-          row.isSelfCreated && "border-warning/40 bg-warning/10",
-        )}
+        className={cn(row.isSelfCreated && "border-warning/40 bg-warning/10")}
       >
         <CardHeader>
           <div className="flex items-start justify-between gap-2">
@@ -169,7 +166,7 @@ function WasteApprovalCard({
                   </Badge>
                 ) : null}
                 {" • "}
-                {new Date(row.issuedAt).toLocaleString("vi-VN")}
+                {formatVNDateTime(row.issuedAt)}
               </CardDescription>
             </div>
             <div className="text-right">
@@ -195,7 +192,9 @@ function WasteApprovalCard({
                       {it.ingredientName}{" "}
                       <span className="text-muted-foreground">
                         — {it.quantity} {it.unit}
-                        {it.unitCost !== null ? ` × ${formatVND(it.unitCost)}` : ""}
+                        {it.unitCost !== null
+                          ? ` × ${formatVND(it.unitCost)}`
+                          : ""}
                       </span>
                     </div>
                     <div className="text-xs text-muted-foreground">
@@ -203,7 +202,8 @@ function WasteApprovalCard({
                       {typeof it.qtyRatio === "number" && it.qtyRatio > 0
                         ? copy.qtyRatio(Math.round(it.qtyRatio * 100))
                         : ""}
-                      {typeof it.rolling15MinSum === "number" && it.rolling15MinSum > 0
+                      {typeof it.rolling15MinSum === "number" &&
+                      it.rolling15MinSum > 0
                         ? copy.rolling15m(formatVND(it.rolling15MinSum))
                         : ""}
                     </div>
@@ -257,14 +257,22 @@ function WasteApprovalCard({
               disabled={pending !== null || row.isSelfCreated}
               className="text-destructive"
             >
-              {pending === "rejected" ? <Spinner /> : <IconX className="size-4" />}
+              {pending === "rejected" ? (
+                <Spinner />
+              ) : (
+                <IconX className="size-4" />
+              )}
               {copy.reject}
             </Button>
             <Button
               onClick={() => handleDecision("approved")}
               disabled={pending !== null || row.isSelfCreated}
             >
-              {pending === "approved" ? <Spinner /> : <IconCheck className="size-4" />}
+              {pending === "approved" ? (
+                <Spinner />
+              ) : (
+                <IconCheck className="size-4" />
+              )}
               {copy.approve}
             </Button>
           </div>

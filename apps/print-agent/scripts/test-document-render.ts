@@ -19,7 +19,7 @@ const baseReceipt = {
       unit_price: 55000,
       subtotal: 110000,
       modifiers: [{ name: "Thêm trứng ốp", price: 10000 }],
-      sides: [{ name: "Canh chua", quantity: 1 }],
+      sides: [{ name: "Canh chua", quantity: 1 }, { name: "Side mac dinh" }],
       note: "Không hành",
     },
   ],
@@ -114,7 +114,7 @@ const baseKitchen = {
       variant_name: null,
       quantity: 2,
       modifiers: [{ name: "Thêm trứng ốp" }],
-      sides: [{ name: "Canh chua", quantity: 1 }],
+      sides: [{ name: "Canh chua", quantity: 1 }, { name: "Side mac dinh" }],
       note: "Không hành",
     },
   ],
@@ -133,6 +133,124 @@ const documentKitchen: PrintPayload = {
   },
 };
 
+const primitiveDocumentKitchen: PrintPayload = {
+  ...baseKitchen,
+  template_version: "0:2",
+  document: {
+    schema_version: 1,
+    template_id: 0,
+    template_version: 2,
+    paper_width_mm: 80,
+    blocks: [
+      {
+        type: "text",
+        text: "BÀN 5 · PB-260505-001",
+        align: "center",
+        bold: true,
+        double: true,
+      },
+      { type: "divider", char: "=" },
+      { type: "row", left: "Phiếu: PB-260505-001", right: "Lần gửi: 1" },
+      { type: "row", left: "Bếp: 1", right: "Giờ: 14:31" },
+      {
+        type: "text",
+        text: "----+-------------------------------------------",
+      },
+      { type: "text", text: " SL | MÓN", bold: true },
+      {
+        type: "text",
+        text: "----+-------------------------------------------",
+      },
+      {
+        type: "text",
+        text: " x2 | Cơm tấm sườn bì chả",
+        bold: true,
+        double: true,
+      },
+      { type: "text", text: "    |   + Thêm trứng ốp" },
+      { type: "text", text: "    |   * Không hành", bold: true, double: true },
+      {
+        type: "text",
+        text: "----+-------------------------------------------",
+      },
+    ],
+  },
+};
+
+const baseCancel = {
+  kind: "cancel_ticket",
+  order_number: "ORD-2026-001",
+  order_type: "dine_in",
+  table_number: 5,
+  slot: 1,
+  items: [
+    {
+      item_name: "Cơm tấm sườn bì chả",
+      quantity: 1,
+      modifiers: [{ name: "Thêm trứng ốp" }],
+      sides: [{ name: "Canh chua", quantity: 1 }],
+      note: "Không hành",
+    },
+  ],
+  reason: "Khách đổi món",
+  voided_by: "Nguyễn A",
+  printed_at: "2026-05-05T14:32:00",
+} satisfies PrintPayload;
+
+const primitiveDocumentCancel: PrintPayload = {
+  ...baseCancel,
+  template_version: "0:2",
+  document: {
+    schema_version: 1,
+    template_id: 0,
+    template_version: 2,
+    paper_width_mm: 80,
+    blocks: [
+      { type: "divider", char: "=" },
+      {
+        type: "text",
+        text: "HỦY MÓN",
+        align: "center",
+        bold: true,
+        double: true,
+        inverse: true,
+      },
+      { type: "divider", char: "=" },
+      {
+        type: "text",
+        text: "BÀN 5 · ORD-2026-001",
+        align: "center",
+        bold: true,
+        double: true,
+      },
+      {
+        type: "text",
+        text: "----+-------------------------------------------",
+      },
+      {
+        type: "text",
+        text: " x1 | Cơm tấm sườn bì chả",
+        bold: true,
+        double: true,
+        strikethrough: true,
+      },
+      { type: "text", text: "    |   + Thêm trứng ốp", strikethrough: true },
+      {
+        type: "text",
+        text: "----+-------------------------------------------",
+      },
+      {
+        type: "text",
+        text: "LÝ DO",
+        align: "center",
+        bold: true,
+        double: true,
+      },
+      { type: "text", text: "Khách đổi món", align: "center" },
+    ],
+  },
+};
+
 function assertBytes(label: string, bytes: Uint8Array) {
   if (bytes.length < 100) {
     throw new Error(`${label} output too small: ${bytes.length} bytes`);
@@ -140,15 +258,92 @@ function assertBytes(label: string, bytes: Uint8Array) {
   console.log(`[test-document-render] ${label}: ${bytes.length} bytes`);
 }
 
+function assertTextIncludes(
+  label: string,
+  bytes: Uint8Array,
+  expected: string,
+) {
+  const output = Buffer.from(bytes).toString("latin1");
+  if (!output.includes(expected)) {
+    throw new Error(`${label} missing ${expected}`);
+  }
+}
+
 async function main() {
-  assertBytes("legacy text receipt", renderPayload(baseReceipt));
-  assertBytes("document text receipt", renderPayload(documentReceipt));
+  const legacyTextReceipt = renderPayload(baseReceipt);
+  assertBytes("legacy text receipt", legacyTextReceipt);
+  assertTextIncludes(
+    "legacy text receipt side quantity",
+    legacyTextReceipt,
+    "Canh chua x2",
+  );
+  assertTextIncludes(
+    "legacy text receipt default side quantity",
+    legacyTextReceipt,
+    "Side mac dinh x2",
+  );
+  const documentTextReceipt = renderPayload(documentReceipt);
+  assertBytes("document text receipt", documentTextReceipt);
+  assertTextIncludes(
+    "document text receipt side quantity",
+    documentTextReceipt,
+    "Canh chua x2",
+  );
+  assertTextIncludes(
+    "document text receipt default side quantity",
+    documentTextReceipt,
+    "Side mac dinh x2",
+  );
   assertBytes("legacy bitmap receipt", await renderPayloadBitmap(baseReceipt));
-  assertBytes("document bitmap receipt", await renderPayloadBitmap(documentReceipt));
-  assertBytes("legacy text kitchen", renderPayload(baseKitchen));
-  assertBytes("document text kitchen", renderPayload(documentKitchen));
+  assertBytes(
+    "document bitmap receipt",
+    await renderPayloadBitmap(documentReceipt),
+  );
+  const legacyTextKitchen = renderPayload(baseKitchen);
+  assertBytes("legacy text kitchen", legacyTextKitchen);
+  assertTextIncludes(
+    "legacy text kitchen side quantity",
+    legacyTextKitchen,
+    "Canh chua x2",
+  );
+  assertTextIncludes(
+    "legacy text kitchen default side quantity",
+    legacyTextKitchen,
+    "Side mac dinh x2",
+  );
+  const documentTextKitchen = renderPayload(documentKitchen);
+  assertBytes("document text kitchen", documentTextKitchen);
+  assertTextIncludes(
+    "document text kitchen side quantity",
+    documentTextKitchen,
+    "Canh chua x2",
+  );
+  assertTextIncludes(
+    "document text kitchen default side quantity",
+    documentTextKitchen,
+    "Side mac dinh x2",
+  );
+  assertBytes(
+    "primitive document text kitchen",
+    renderPayload(primitiveDocumentKitchen),
+  );
+  assertBytes(
+    "primitive document text cancel",
+    renderPayload(primitiveDocumentCancel),
+  );
   assertBytes("legacy bitmap kitchen", await renderPayloadBitmap(baseKitchen));
-  assertBytes("document bitmap kitchen", await renderPayloadBitmap(documentKitchen));
+  assertBytes(
+    "document bitmap kitchen",
+    await renderPayloadBitmap(documentKitchen),
+  );
+  assertBytes(
+    "primitive document bitmap kitchen",
+    await renderPayloadBitmap(primitiveDocumentKitchen),
+  );
+  assertBytes(
+    "primitive document bitmap cancel",
+    await renderPayloadBitmap(primitiveDocumentCancel),
+  );
 }
 
 main().catch((error) => {

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { extractClaimsFromAccessToken } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
+import { getVNWeekEndDateString } from "@comtammatu/shared/time";
 
 const weekStartSchema = z
   .string()
@@ -52,11 +53,7 @@ export async function fetchMySchedule(
     return { success: false, error: "Không tìm thấy hồ sơ nhân viên" };
   }
 
-  // Calculate week end (6 days after start)
-  const start = new Date(parsed.data + "T00:00:00");
-  const end = new Date(start);
-  end.setDate(end.getDate() + 6);
-  const weekEndDate = end.toISOString().split("T")[0]!;
+  const weekEndDate = getVNWeekEndDateString(parsed.data);
 
   // Fetch shift assignments for this employee in the week range
   const { data, error } = await supabase

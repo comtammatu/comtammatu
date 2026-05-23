@@ -4,6 +4,7 @@ import { randomBytes, createHmac } from "node:crypto";
 import { z } from "zod";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
+import { getVNDateString } from "@comtammatu/shared/time";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 import { getAuthContextWithPermission } from "../../_lib/auth";
@@ -27,9 +28,7 @@ const updateCoordsSchema = z.object({
 /* ─── Helpers ─── */
 
 function getTodayVN(): string {
-  return new Date().toLocaleDateString("sv-SE", {
-    timeZone: "Asia/Ho_Chi_Minh",
-  });
+  return getVNDateString();
 }
 
 function computeDailyCode(secret: string, dateStr: string): string {

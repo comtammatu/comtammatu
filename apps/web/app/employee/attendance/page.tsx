@@ -28,8 +28,13 @@ import {
   EmployeePanel,
 } from "../components/employee-page";
 import { getEmployeeContext } from "../_lib/employee-context";
-import { formatDateVN, formatTimeVN, getTodayVN } from "../_lib/vn-business-date";
+import {
+  formatDateVN,
+  formatTimeVN,
+  getTodayVN,
+} from "../_lib/vn-business-date";
 import { MonthPicker } from "./month-picker";
+import { shiftVNMonth } from "@comtammatu/shared/time";
 
 const STATUS_LABELS: Record<string, string> = {
   present: "Có mặt",
@@ -279,15 +284,11 @@ function computeRowMetrics(r: AttendanceRow): RowMetrics {
   let otMin = 0;
   let lateMin = 0;
   if (r.shifts) {
-    const scheduled = parseTimeMin(r.shifts.end_time) - parseTimeMin(r.shifts.start_time);
+    const scheduled =
+      parseTimeMin(r.shifts.end_time) - parseTimeMin(r.shifts.start_time);
     const scheduledMin = scheduled < 0 ? scheduled + 24 * 60 : scheduled;
     otMin = Math.max(0, workedMin - scheduledMin);
-    const checkInVN = new Date(r.check_in).toLocaleTimeString("vi-VN", {
-      hour12: false,
-      timeZone: "Asia/Ho_Chi_Minh",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    const checkInVN = formatTimeVN(r.check_in);
     lateMin = Math.max(
       0,
       parseTimeMin(checkInVN) - parseTimeMin(r.shifts.start_time),
@@ -320,8 +321,8 @@ function isValidMonth(s: string | undefined): s is string {
 
 function nextMonthStart(month: string): string {
   const [y, m] = month.split("-").map(Number) as [number, number];
-  const date = new Date(Date.UTC(y, m, 1));
-  return date.toISOString().slice(0, 10);
+  const next = shiftVNMonth(y, m, 1);
+  return `${next.year}-${String(next.month).padStart(2, "0")}-01`;
 }
 
 function formatMonthLabel(month: string): string {

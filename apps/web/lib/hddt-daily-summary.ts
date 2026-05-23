@@ -10,7 +10,7 @@
  *      eligible orders / already exists.
  *   2. RPC transition_tax_invoice_state_as_system(.., 'signing') — sets
  *      signing_started_at for reconcile cron pickup.
- *   3. provider.createInvoice(line_items_for_misa).
+ *   3. provider.createInvoice(line_items_for_provider).
  *   4. Map provider result → next state + RPC transition signing →
  *      issued/submitted/draft. 'signing' result = stay (provider async,
  *      reconcile cron resolves later).
@@ -49,7 +49,7 @@ interface AggregateResult {
   vat_amount?: number;
   total_amount?: number;
   header_vat_rate?: number;
-  line_items_for_misa?: BatchLineItem[];
+  line_items_for_provider?: BatchLineItem[];
 }
 
 export interface SummaryRunDeps {
@@ -112,7 +112,7 @@ export async function executeSummaryRun(
     }
 
     const invoiceId = result.tax_invoice_id;
-    const lineItems = result.line_items_for_misa ?? [];
+    const lineItems = result.line_items_for_provider ?? [];
 
     if (!invoiceId || lineItems.length === 0) {
       const msg = "rpc_returned_invalid_payload";
@@ -135,7 +135,7 @@ export async function executeSummaryRun(
       return { outcome: "failed", taxInvoiceId: invoiceId, error: msg };
     }
 
-    // Call MISA / provider
+    // Call Viettel S-invoice provider
     const providerResult = await provider.createInvoice({
       orderId: invoiceId,
       orderNumber: `SUMMARY-${branchId}-${summaryDate}`,
