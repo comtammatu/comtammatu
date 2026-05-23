@@ -6,6 +6,7 @@ import {
   JetBrains_Mono,
   Montserrat,
 } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import { ConfirmDialogProvider } from "@comtammatu/ui/components/confirm-dialog";
 import { ThemeProvider } from "@comtammatu/ui/components/theme-provider";
 import { ThemeScript } from "@comtammatu/ui/components/theme-script";
@@ -114,6 +115,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <ResponsiveToaster />
           <ConfirmDialogProvider />
         </ThemeProvider>
+        <Analytics />
       </body>
     </html>
   );

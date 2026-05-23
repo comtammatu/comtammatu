@@ -30,6 +30,7 @@
     "@tanstack/react-query": "^5.99.2",
     "@tanstack/react-table": "^8.21.3",
     "@tanstack/react-virtual": "^3.13.24",
+    "@vercel/analytics": "^2.0.1",
     "boneyard-js": "^1.8.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
