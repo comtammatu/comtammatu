@@ -33,7 +33,7 @@ export async function GET(_request: NextRequest, { params }: ManifestParams) {
     scope: `/br/${branchId}/`,
     background_color: "#fff6ee",
     theme_color: "#fff6ee",
-    orientation: "any",
+    orientation: "portrait",
     categories: ["business", "productivity"],
     prefer_related_applications: false,
     icons: [

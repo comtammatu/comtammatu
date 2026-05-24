@@ -5,6 +5,7 @@
   "description": "Hệ thống quản lý nhà hàng Cơm Tấm Má Tư",
   "lang": "vi",
   "display": "standalone",
+  "orientation": "portrait",
   "start_url": "/employee",
   "scope": "/",
   "background_color": "#fff6ee",
