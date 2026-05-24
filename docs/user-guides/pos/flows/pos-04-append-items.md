@@ -140,10 +140,10 @@ URL: `/br/{branchId}/pos` (qua bàn occupied → đơn cũ)
 
 ### Code path
 
-- **Order detail sheet:** [apps/web/app/br/[branchId]/pos/order-detail-sheet.tsx](../../../../apps/web/app/br/%5BbranchId%5D/pos/order-detail-sheet.tsx) — nút "Thêm món" tại line ~842.
-- **Append draft pane:** [apps/web/app/br/[branchId]/pos/_components/append-draft-pane.tsx](../../../../apps/web/app/br/%5BbranchId%5D/pos/_components/append-draft-pane.tsx)
-- **Append hook:** [apps/web/app/br/[branchId]/pos/_hooks/use-pos-append.ts](../../../../apps/web/app/br/%5BbranchId%5D/pos/_hooks/use-pos-append.ts) — state machine của append mode.
-- **Server action:** `appendOrderItems` trong [apps/web/app/br/[branchId]/pos/order-actions.ts](../../../../apps/web/app/br/%5BbranchId%5D/pos/order-actions.ts) — Postgres RPC atomic insert items + KDS tickets.
+- **Order detail sheet:** [apps/web/app/(protected)/br/[branchId]/pos/order-detail-sheet.tsx](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/order-detail-sheet.tsx) — nút "Thêm món" tại line ~842.
+- **Append draft pane:** [apps/web/app/(protected)/br/[branchId]/pos/_components/append-draft-pane.tsx](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/_components/append-draft-pane.tsx)
+- **Append hook:** [apps/web/app/(protected)/br/[branchId]/pos/_hooks/use-pos-append.ts](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/_hooks/use-pos-append.ts) — state machine của append mode.
+- **Server action:** `appendOrderItems` trong [apps/web/app/(protected)/br/[branchId]/pos/order-actions.ts](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/order-actions.ts) — Postgres RPC atomic insert items + KDS tickets.
 
 ### Database
 

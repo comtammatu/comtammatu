@@ -4,22 +4,32 @@
 
 UI cua repo phai di truc tiep tren `shadcn/ui` preset hien hanh. Khong con helper layer hay theme system rieng cua du an.
 
-Source of truth:
+Single source of truth for agent decisions:
 
-1. `apps/web/components.json`
-2. `packages/ui/components.json`
-3. `packages/ui/src/styles/globals.css`
-4. `apps/web/app/layout.tsx`
-5. `docs/spec/design-system.md`
-6. `tasks/regressions.md`
+1. `docs/spec/design-system.md`
+
+Runtime config, primitives, adapters, and regression rules are evidence and
+enforcement for that contract. They do not authorize a second design system:
+
+- `apps/web/components.json`
+- `packages/ui/components.json`
+- `packages/ui/src/styles/globals.css`
+- `apps/web/app/layout.tsx`
+- `packages/ui/src/components/*`
+- `apps/web/app/components/surface.tsx`
+- `tasks/regressions.md`
+
+Runtime files are evidence. If runtime comments, package metadata, generated
+tokens, or archived docs disagree with `docs/spec/design-system.md`, treat that
+as drift and fix the contract/runtime before building new UI.
 
 ## Design System Contract
 
-Doc chot: `docs/spec/design-system.md`.
+Doc chot duy nhat: `docs/spec/design-system.md`.
 
 Tat ca UI/UX rebuild phai di theo contract do truoc khi sua runtime. Design system cua repo la:
 
-- shadcn preset hien hanh (`radix-lyra`, preset `b6G3vbGue`, `neutral`, `lucide`)
+- shadcn preset hien hanh (`radix-lyra`, resolved preset `buFywKm`, `neutral`, `lucide`)
 - Ma Tu Concept 01 brand tokens trong `packages/ui/src/styles/globals.css`
 - Ma Tu Concept 01 typography: Inter body, Montserrat heading, JetBrains Mono operational data
 - primitive source trong `packages/ui/src/components/*`
@@ -31,6 +41,24 @@ Tat ca UI/UX rebuild phai di theo contract do truoc khi sua runtime. Design syst
 
 Khong duoc coi design system la mot layer moi tach rieng khoi shadcn. Neu can pattern moi, update `docs/spec/design-system.md` truoc, roi moi rollout vao code.
 
+### Legacy Pilot Layer Retirement
+
+Cac artifact sau tu Inventory redesign pilot da bi retire khoi runtime app UI,
+khong phai source of truth hien tai:
+
+- removed `packages/design-tokens/tokens.json`
+- removed `packages/ui/src/styles/matu-tokens.css`
+- removed `apps/web/app/components/matu-surface.tsx`
+- removed `apps/web/app/(protected)/admin/kitchen-sink/page.tsx`
+- external `~/Downloads/matu-superapp/DESIGN.md`
+
+Code moi KHONG duoc import `@/components/matu-surface`, KHONG dung
+`font-matu-body`, va KHONG dung `bg-matu-*`, `text-matu-*`, `border-matu-*`,
+`rounded-matu-*`, `--spacing-matu-*`, hoac `--radius-matu-*`. Neu cham vao
+surface cu dang dung cac artifact nay, xem do la regression/migration task ve
+`apps/web/app/components/surface.tsx` + semantic shadcn tokens, khong phai co
+quyen khoi phuc layer pilot.
+
 Read order cho agent khi lam UI:
 
 1. `AGENTS.md`
@@ -41,14 +69,14 @@ Read order cho agent khi lam UI:
 
 ## Reset Contract
 
-Reset hien tai duoc thuc hien bang `shadcn` preset `b6G3vbGue` / `radix-lyra` cho monorepo `apps/web` + `packages/ui`, sau do map token semantic sang Ma Tu Concept 01.
+Reset hien tai duoc thuc hien bang `shadcn` resolved preset `buFywKm` / `radix-lyra` cho monorepo `apps/web` + `packages/ui`, sau do map token semantic sang Ma Tu Concept 01.
 
 Dieu nay co nghia:
 
 - foundation phai theo file do `shadcn` bootstrap sinh ra
 - brand color/typography phai di qua semantic token va font variables chung
 - body/content dung `font-sans` (Inter), heading/title dung `font-heading` (Montserrat), operational data/code/id/price/qty dung `font-mono` (JetBrains Mono)
-- static public artifact nhu `docs/status/index.html` phai mirror cung font stack; khong dung lai Be Vietnam Pro, Geist, hoac font rieng theo surface
+- static public artifact nhu `docs/status/index.html` phai mirror cung font stack; khong dung lai Be Vietnam Pro, Geist, `font-matu-body`, hoac font rieng theo surface
 - page/shell chi duoc compose tu primitives co san
 - logo/brand lockup trong web runtime phai di qua `BrandMark` / `BrandLockup`
 - khong duoc giu `app-*` helper classes
@@ -74,6 +102,11 @@ Primitive source van song tai `packages/ui/src/components/*`, nhung phai tiep tu
 - `spinner` — loading indicator (thay cho `Loader2 + animate-spin`)
 
 Khong fork primitive theo surface.
+
+`CardContent` table/list exceptions phai di qua named primitive props:
+`flush` cho table-edge/list-edge alignment va `scroll` cho horizontal table
+scrolling. Khong dung local `className="p-0"` hoac
+`className="overflow-x-auto"` tren `CardContent` o app code.
 
 ## App Surface Adapters
 
@@ -191,6 +224,7 @@ Khong cho phep:
 
 - helper class kieu `app-*`
 - custom theme layer
+- legacy pilot layer `matu-surface` / `matu-*`
 - wrapper override visual contract cua primitive
 - module tu tao lai page/header/section/toolbar/empty/link-card thay vi delegate ve `apps/web/app/components/surface.tsx`
 - dung `div` / `span` / `p` thuong de gia lap `Card`, `Badge`, `Button`, `Table`, `Tabs`, `Input`, `Select`

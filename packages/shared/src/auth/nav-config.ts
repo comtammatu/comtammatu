@@ -96,4 +96,10 @@ export const BRANCH_OPERATION_ITEMS: BranchOperationNavItemConfig[] = [
     hrefTemplate: "/br/{branchId}/kds",
     label: APP_COPY_VI.branchOperationsKds,
   },
+  {
+    moduleKey: "runner",
+    icon: "MonitorUp",
+    hrefTemplate: "/br/{branchId}/runner",
+    label: APP_COPY_VI.branchOperationsRunner,
+  },
 ];

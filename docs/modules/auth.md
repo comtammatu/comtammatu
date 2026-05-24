@@ -19,13 +19,13 @@ Authentication and authorization for the entire system. Every request passes thr
 | `packages/shared/src/auth/nav-config.ts`                        | Admin sidebar navigation groups filtered by role                                               | UI navigation             |
 | `packages/shared/src/auth/app-discovery.ts`                     | Shared app discovery metadata derived from ACL + nav config                                    | Shell discovery contract  |
 | `packages/shared/src/auth/blocked-state.ts`                     | Canonical blocked-state reasons, user-facing copy, `buildAccessDeniedPath()`                   | Access-state contract     |
-| `apps/web/app/access-denied/page.tsx`                           | Single presentation route for "authenticated but blocked" (renders copy from blocked-state)    | Access-state view         |
+| `apps/web/app/(public)/access-denied/page.tsx`                  | Single presentation route for "authenticated but blocked" (renders copy from blocked-state)    | Access-state view         |
 | `apps/web/app/_lib/auth.ts`                                     | `loadAuthState()` — shared claims reader for layouts/pages; throws if proxy invariant violated | Layout claims helper      |
 | `apps/web/proxy.ts`                                             | Next.js middleware — **single auth gate**: session + claims + module ACL + branch scope        | Request gateway           |
 | `supabase/migrations/*_jwt_custom_claims_hook.sql`              | `custom_access_token_hook()` — injects claims into JWT                                         | DB-level auth             |
 | `supabase/migrations/20260422120000_auth_v2_tables.sql`         | Auth core tables: `permission_keys`, `positions`, `role_templates`, `staff_permissions`     | Auth schema            |
 | `supabase/migrations/20260422120002_auth_v2_has_permission.sql` | `has_permission(branch, key)` / `has_permission_any(key)` SECURITY DEFINER helpers             | Auth RLS helpers       |
-| `apps/web/app/admin/staff/[id]/permissions/`                    | Admin UI for grant/revoke + audit (page + client + actions)                                    | Permission admin UI       |
+| `apps/web/app/(protected)/admin/staff/[id]/permissions/`                    | Admin UI for grant/revoke + audit (page + client + actions)                                    | Permission admin UI       |
 | `apps/web/app/_lib/permissions.ts`                              | Server helpers `fetchCurrentUserPermissions()` + `currentUserHasPermission()`                  | App-side permission reads |
 
 ## Role Hierarchy
@@ -51,7 +51,8 @@ Two parallel ACL mechanisms exist; pick the right one:
 - **`auth_role()`** — reads JWT `user_role` claim (cached up to ~1h until token refresh). Use ONLY for: (a) scope/side guards inside RPC bodies (e.g. `branch_manager` forbidden from inter-site ship), (b) "HQ sees all branches" SELECT pattern (`branch_id = auth_branch_id() OR auth_role() IN HQ_ROLES`), (c) named ABAC helpers (`is_inventory_production_operator()`), (d) module-ACL fast-path on non-destructive read-mostly tables (e.g. `branch_menu_item_daily_limits` — see regression rule `BMIDL-RLS-INTENTIONAL-ROLE-FASTPATH`).
 
 **Refactor history:**
-- 2026-05-07 H2a — `refunds_update` policy migrated from `auth_role() IN ('owner','super_manager')` → `has_permission(branch_id,'orders:refund_approve')` (`supabase/migrations/20260601200000_h2a_refunds_update_perm_gate.sql`). Closed 1h stale-revoke window for refund approve/reject which is reachable via direct UPDATE in `apps/web/app/orders/refund-actions.ts:251`.
+- 2026-05-07 H2a — `refunds_update` policy migrated from `auth_role() IN ('owner','super_manager')` → `has_permission(branch_id,'orders:refund_approve')` (`supabase/migrations/20260601200000_h2a_refunds_update_perm_gate.sql`). Closed 1h stale-revoke window for refund approve/reject which is reachable via direct UPDATE in `apps/web/app/(protected)/orders/refund-actions.ts`.
+- 2026-05-24 α4b — `admin_update_profile` and `toggle_profile_active` now derive actor role/branch/area live from `profiles + positions`; `set_branch_kind` gates on `settings:tenant` (`supabase/migrations/20260601810000_auth_v3_cut_auth_role_rpc_batch.sql`). `can_access_branch()` remains a separate RLS-policy batch because it is a shared branch-scope predicate.
 - Backlog H2b — `hr_payroll` policies (`20260416040000:31,38,42,123,130,134`) follow same pattern; deferred pending business decision on payroll-specific permission keys.
 
 ## Invariants (post H3a, 2026-05-07)
@@ -83,7 +84,7 @@ Owner is protected: RPCs refuse to touch a user whose position code is `owner` (
 
 ## Auth Flow
 
-1. User submits credentials at `/login` (`apps/web/app/(auth)/login/actions.ts`)
+1. User submits credentials at `/login` (`apps/web/app/(public)/(auth)/login/actions.ts`)
 2. Server action calls `supabase.auth.signInWithPassword()`
 3. Supabase fires `custom_access_token_hook()` — SECURITY DEFINER
 4. Hook reads `profiles` + `positions`, injects `{tenant_id, branch_id, user_role, position}` into JWT `app_metadata`. `user_role` derives from `positions.legacy_role_code`; `position` is the HR code.
@@ -115,6 +116,7 @@ Defined in `packages/shared/src/auth/module-acl.ts`. Single source of truth — 
 | settings                                                | ✓     | ✓         | ✓        | ✓          |        |          |         |        |      |        |
 | pos                                                     |       |           |          | ✓          |        |          | ✓       | ✓      |      |        |
 | kds                                                     |       |           |          | ✓          |        |          |         |        | ✓    |        |
+| runner                                                  |       |           |          | ✓          |        |          | ✓       | ✓      | ✓    |        |
 | branch_settings                                         | ✓     | ✓         | ✓        | ✓          |        |          |         |        |      |        |
 | branch_menu_limits                                      | ✓     | ✓         | ✓        | ✓          |        |          | ✓       |        | ✓    |        |
 | employee                                                | ✓     | ✓         | ✓        | ✓          | ✓      | ✓        | ✓       | ✓      | ✓    | ✓      |
@@ -126,7 +128,7 @@ Defined in `packages/shared/src/auth/module-acl.ts`. Single source of truth — 
 
 **Owner (chủ sở hữu):** ngoài các module quản trị / giám sát còn có thể vào `orders` và `inventory` để kiểm tra trực tiếp vận hành tenant-level. Tuy vậy owner không được coi là operator hằng ngày trong inventory docs/UI; các bề mặt Inventory hiện tối ưu cho `super_manager`, `area_manager`, `branch_manager`.
 
-**Inventory sub-route ACL:** `inventory` allows `owner`, `super_manager`, `area_manager`, `branch_manager`, `warehouse_manager`, `production_manager` cho tồn kho, điều chuyển, stocktake, expiry, reports, và branch operations. `inventory_procurement` ở cấp trụ sở/kho: `owner`, `super_manager`, `warehouse_manager`, `production_manager` vào `suppliers`, `purchase-orders`, `grn`, `supplier-invoices`, `recipes`, và `receiving` theo `route-resolution.ts`. `inventory_admin` (`/admin/inventory/*` — `cold-chain`, `express-windows`, `feature-flags`, `trust`) đã RETIRED qua `allowedRoles: []`: page files còn tồn tại nhưng không role nào pass module ACL. `production` không dùng module riêng; Server Actions và DB/RPC/RLS hard-deny `area_manager` và `branch_manager` dù có manual production/menu grant. Operator production là `super_manager` / `production_manager`; `owner` có access kiểm tra/khẩn cấp nhưng không được UX dẫn như operator hằng ngày. `branch_manager` vì vậy chỉ nên thấy nhịp branch ops: nhận inbound transfer, tạo intra-branch transfer `Cấp bếp`, stocktake, adjustment/write-off.
+**Inventory sub-route ACL:** `inventory` allows `owner`, `super_manager`, `area_manager`, `branch_manager`, `warehouse_manager`, `production_manager` cho tồn kho, điều chuyển, stocktake, expiry, reports, và branch operations. `inventory_procurement` ở cấp trụ sở/kho: `owner`, `super_manager`, `warehouse_manager`, `production_manager` vào `suppliers`, `purchase-orders`, `grn`, `supplier-invoices`, `recipes`, và `receiving` theo `route-resolution.ts`. `inventory_admin` (`/admin/inventory/*`) đã RETIRED qua `allowedRoles: []`: page files đã removed, nhưng URL space vẫn map qua module này để proxy chặn bằng ACL chuẩn thay vì xem như admin route chưa phân loại. `production` không dùng module riêng; Server Actions và DB/RPC/RLS hard-deny `area_manager` và `branch_manager` dù có manual production/menu grant. Operator production là `super_manager` / `production_manager`; `owner` có access kiểm tra/khẩn cấp nhưng không được UX dẫn như operator hằng ngày. `branch_manager` vì vậy chỉ nên thấy nhịp branch ops: nhận inbound transfer, tạo intra-branch transfer `Cấp bếp`, stocktake, adjustment/write-off.
 
 **UX boundary quan trọng:** nav có thể hẹp hơn module-level ACL để giảm nhiễu vận hành. Ví dụ `branch_manager` vẫn vào được `/inventory/transfers` để nhận hàng, nhưng UI không nên quảng bá action tạo inter-site transfer như tác vụ mặc định của vai trò này.
 
@@ -144,17 +146,18 @@ Defined in `packages/shared/src/auth/module-acl.ts`. Single source of truth — 
 The `proxy(request)` function evaluates in order:
 
 1. **Public paths bypass auth:** `/api/health`, `/api/webhooks`, `/sw.js`, `/access-denied` (`route-resolution.ts:isPublicAppPath`). The access-denied page is public so a blocked-but-authenticated user can read the copy without re-entering the ACL loop.
-2. **Login page:** authenticated users bounce to `resolvePostLoginRedirect(claims, returnTo, { surface })`; unauthenticated users see the form.
-3. **Unauthenticated → `/login?returnTo=<current-url>`** (surface-aware: beta users go to `/beta/login`).
-4. **Claims extraction:** if `extractClaims()` returns null, proxy redirects to `/access-denied?reason=missing-auth-context&from=<path>`. Proxy **does not** fabricate claims.
-5. **Module ACL:** `resolveModuleFromPath(pathname)` maps URL → `ModuleKey`; `canAccess(role, moduleKey)` gates. Failure → `/access-denied?reason=insufficient-permission&from=<path>`.
-6. **Branch-scope for POS/KDS:** if `claims.branch_id !== urlBranchId` → `/access-denied?reason=branch-scope-mismatch`. If the matched branch is `warehouse`/`central_kitchen` → `/access-denied?reason=warehouse-branch-restricted`. Both checks live in proxy; POS/KDS layouts no longer verify them.
+2. **Legacy canonical redirects:** `/admin/finance/*` redirects to `/finance/*` through `resolveLegacyRouteRedirectPath()` before module ACL. The same helper is used by post-login `returnTo` resolution.
+3. **Login page:** authenticated users bounce to `resolvePostLoginRedirect(claims, returnTo, { surface })`; unauthenticated users see the form.
+4. **Unauthenticated → `/login?returnTo=<current-url>`** (surface-aware: beta users go to `/beta/login`).
+5. **Claims extraction:** if `extractClaims()` returns null, proxy redirects to `/access-denied?reason=missing-auth-context&from=<path>`. Proxy **does not** fabricate claims.
+6. **Module ACL:** `resolveModuleFromPath(pathname)` maps URL → `ModuleKey`; `canAccess(role, moduleKey)` gates. Failure → `/access-denied?reason=insufficient-permission&from=<path>`.
+7. **Branch-scope for POS/KDS/Runner/branch settings/menu limits:** if a branch-scoped URL is not reachable for the user's branch assignment → `/access-denied?reason=branch-scope-mismatch`. POS/KDS/Runner also reject `central_warehouse`/`central_kitchen` branches. These checks live in proxy; downstream layouts do not re-implement them.
 
 The resolver `resolvePostLoginRedirect(claims, returnTo, { surface?: "legacy" | "beta" })` (`packages/shared/src/auth/scope.ts`) is the **single** post-login destination function. Surface controls beta-prefix wrapping; the underlying ACL + branch-scope rules are shared. Unit tests live in `packages/shared/src/auth/__tests__/scope.test.ts` (run `pnpm --filter @comtammatu/shared test`).
 
 ### Invariant
 
-> _After `proxy()` returns, any layout or page downstream can assume: the user is authenticated, claims are valid, the role has module access, and — for `/br/[branchId]/{pos,kds}` — branch scope matches._
+> _After `proxy()` returns, any layout or page downstream can assume: the user is authenticated, claims are valid, the role has module access, and — for branch-scoped `/br/[branchId]/*` surfaces — branch scope matches._
 
 `loadAuthState()` throws if the invariant is violated. This surfaces proxy gaps via `error.tsx` rather than masking them with silent redirects.
 
@@ -169,7 +172,7 @@ The resolver `resolvePostLoginRedirect(claims, returnTo, { surface?: "legacy" | 
 | Role not in MODULE_ACL           | `canAccess()` returns false, user redirected                                                            | Add role to MODULE_ACL for the module                                                                                                             |
 | Stale JWT after role change      | Old role persists until token refresh                                                                   | Call `supabase.auth.refreshSession()` or wait for proxy `updateSession()`                                                                         |
 
-> **Login error consolidation (2026-05-07):** All post-validation failure modes (wrong creds, no session, no claims) return the same generic Vietnamese copy `"Email hoặc mật khẩu không đúng"` to prevent credential-validity enumeration. Distinguishing context lives only in structured server logs. See regression rule `LOGIN-MESSAGE-MUST-BE-GENERIC` and `apps/web/app/(auth)/login/actions.ts`.
+> **Login error consolidation (2026-05-07):** All post-validation failure modes (wrong creds, no session, no claims) return the same generic Vietnamese copy `"Email hoặc mật khẩu không đúng"` to prevent credential-validity enumeration. Distinguishing context lives only in structured server logs. See regression rule `LOGIN-MESSAGE-MUST-BE-GENERIC` and `apps/web/app/(public)/(auth)/login/actions.ts`.
 
 ## Blocked-State Reasons
 
@@ -177,8 +180,8 @@ The resolver `resolvePostLoginRedirect(claims, returnTo, { surface?: "legacy" | 
 
 - `insufficient-permission` — role hiện tại không vào được module/route đó
 - `missing-auth-context` — session có user nhưng không resolve được claims cần thiết để authorize
-- `branch-scope-mismatch` — URL có `branchId` nhưng `claims.branch_id` khác hoặc null (POS/KDS)
-- `warehouse-branch-restricted` — POS/KDS mở trên branch thuộc kind `warehouse` / `central_kitchen`
+- `branch-scope-mismatch` — URL có `branchId` nhưng `claims.branch_id` khác hoặc null (POS/KDS/Runner)
+- `warehouse-branch-restricted` — POS/KDS/Runner mở trên branch thuộc kind `warehouse` / `central_kitchen`
 - `headquarters-branch-restricted` — reserved cho future use (không emit hiện tại)
 
 Nếu reason code bị thiếu hoặc lạ, `/access-denied` fallback về copy generic (`DEFAULT_BLOCKED_STATE_COPY`) thay vì crash.

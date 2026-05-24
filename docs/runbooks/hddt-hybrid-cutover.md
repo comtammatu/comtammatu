@@ -19,7 +19,7 @@ Trước khi flip flag, owner phải hoàn thành:
   - `20260508053555_hddt_summary_schema.sql`
   - `20260508055046_hddt_summary_rpcs.sql`
   - `20260508055230_hddt_aggregate_rpc_fixes.sql`
-  - File → PR → owner apply manually (CLAUDE.md prod migration policy)
+  - File → PR → owner apply manually (`AGENTS.md` prod migration policy)
 
 ## Environment variables
 
@@ -33,7 +33,7 @@ HDDT_DAILY_SUMMARY_ENABLED=true        # default false; flip true khi sẵn sàn
 CRON_SECRET=<32+ char random>          # Bearer cho /api/cron/* — đã có sẵn theo feedback cron
 ```
 
-> ⚠️ **`HDDT_STATE_MACHINE_ENABLED` không tồn tại trong code.** Plan ban đầu dự kiến có toggle nhưng thực tế ship state machine direct (xem `apps/web/app/finance/actions.ts:58-446`). Nếu cần rollback B2B refactor (PR-3) — revert commit + redeploy. Chỉ `HDDT_DAILY_SUMMARY_ENABLED` còn vai trò kill-switch cho B2C batch path.
+> ⚠️ **`HDDT_STATE_MACHINE_ENABLED` không tồn tại trong code.** Plan ban đầu dự kiến có toggle nhưng thực tế ship state machine direct (xem `apps/web/app/(protected)/finance/actions.ts:58-446`). Nếu cần rollback B2B refactor (PR-3) — revert commit + redeploy. Chỉ `HDDT_DAILY_SUMMARY_ENABLED` còn vai trò kill-switch cho B2C batch path.
 
 > **Provider logic:** `apps/web/lib/invoice-provider-init.ts` register đúng 1 singleton Viettel S-invoice. Không còn `INVOICE_PROVIDER` switch.
 > Sinvoice auth dùng `POST /auth/login` với JSON `{ username, password }`, sau đó dùng Bearer token cho các request API. Tra cứu trạng thái dùng `InvoiceWS/searchInvoiceByTransactionUuid` với form body `{ supplierTaxCode, transactionUuid }`.
@@ -141,7 +141,7 @@ Vào `/finance/summary` (cần permission `settings:tenant`):
 2. Click "Chạy tổng hợp"
 3. Expect toast "Đã bỏ qua: HĐ tổng hợp đã tồn tại" (UNIQUE chặn duplicate)
 
-> **ACL note:** Route `/finance/summary` KHÔNG có entry trong `packages/shared/src/auth/module-acl.ts:89-93` (module `finance` chỉ list path `/finance` cho roles `owner`/`super_manager`). Cashier/branch_manager có thể thấy nav nhưng action `runDailySummaryForBranch` (`apps/web/app/finance/summary-invoice-actions.ts`) sẽ reject vì gate `settings:tenant` ở action level. Nếu cần hard-block tại route level → thêm entry `/finance/summary` vào `module-acl.ts` (defer đến formal admin panel restructure).
+> **ACL note:** Route `/finance/summary` KHÔNG có entry trong `packages/shared/src/auth/module-acl.ts:89-93` (module `finance` chỉ list path `/finance` cho roles `owner`/`super_manager`). Cashier/branch_manager có thể thấy nav nhưng action `runDailySummaryForBranch` (`apps/web/app/(protected)/finance/summary-invoice-actions.ts`) sẽ reject vì gate `settings:tenant` ở action level. Nếu cần hard-block tại route level → thêm entry `/finance/summary` vào `module-acl.ts` (defer đến formal admin panel restructure).
 
 Hoặc cancel HĐ tổng hợp đã issued rồi retry:
 ```sql
@@ -177,7 +177,7 @@ Redeploy hoặc Vercel env reload. B2B realtime path KHÔNG ảnh hưởng. Exis
 
 ### Tier 2 — Revert B2B refactor (nặng nhất)
 
-`HDDT_STATE_MACHINE_ENABLED` không tồn tại — phải revert commit PR-3 (`apps/web/app/finance/actions.ts:58-446`) + redeploy. Pre-PR-3 logic insert direct `status='issued'` không qua state machine. Cẩn thận: data đã insert qua state machine có `tax_invoice_events` rows — revert code không làm sạch events table, sẽ orphan.
+`HDDT_STATE_MACHINE_ENABLED` không tồn tại — phải revert commit PR-3 (`apps/web/app/(protected)/finance/actions.ts:58-446`) + redeploy. Pre-PR-3 logic insert direct `status='issued'` không qua state machine. Cẩn thận: data đã insert qua state machine có `tax_invoice_events` rows — revert code không làm sạch events table, sẽ orphan.
 
 Nếu cần rollback DB: cancel các HĐ tổng hợp issued sai qua `cancelTaxInvoice` action hoặc `transition_tax_invoice_state_as_system(.., 'cancelled', ..)`. Junction rows preserve theo regression rule HDDT-SUMMARY-CANCEL-PRESERVES-JUNCTION.
 
@@ -218,8 +218,8 @@ Nếu queue row có `last_error` chứa các code dưới, tham chiếu cách x�
 - `docs/ref/einvoice-tax.md` — pháp lý + nghĩa vụ thuế (canonical reference, post-pilot)
 - `apps/web/lib/hddt-daily-summary.ts:67+` — shared `executeSummaryRun(deps)` helper
 - `apps/web/app/api/cron/hddt-daily-summary/route.ts` — cron handler
-- `apps/web/app/finance/summary-invoice-actions.ts:45+` — admin server actions
-- `apps/web/app/finance/summary/page.tsx` — admin UI page
+- `apps/web/app/(protected)/finance/summary-invoice-actions.ts:45+` — admin server actions
+- `apps/web/app/(protected)/finance/summary/page.tsx` — admin UI page
 - `apps/web/lib/invoice-provider-init.ts` — Viettel S-invoice singleton init
 - `packages/shared/src/providers/invoice.ts:48-93` — `InvoiceProvider` interface + `InvoiceResult`
 - `packages/shared/src/providers/impl/viettel-sinvoice.ts:115-426` — Sinvoice impl + `buildSinvoiceTransactionUuid`

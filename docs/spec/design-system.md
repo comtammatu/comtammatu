@@ -1,6 +1,24 @@
 # Design System - Com Tam Ma Tu Web App
 
-> Version: 14.2.0 | Updated: 2026-05-05 | Status: locked baseline for UI/UX rebuild
+> Version: 14.3.0 | Updated: 2026-05-24 | Status: locked single source for UI agents
+
+## Single Source Decision
+
+This file is the single design-system contract for agents building or reviewing
+UI in this repo. Runtime files prove whether the contract is implemented, but
+they do not authorize a second visual language.
+
+If a runtime file, package description, generated token file, archived plan, or
+external reference disagrees with this file, treat that as drift. Do not copy the
+exception into new UI. Either update this contract first or migrate the runtime
+back to the contract.
+
+This is intentionally **one source of truth**, not a source-of-truth bundle.
+`docs/modules/ui.md`, `docs/agent/rules/ui.md`, `tasks/regressions.md`,
+`components.json`, `globals.css`, primitives, and app adapters are supporting
+evidence or enforcement. They must point back to this contract. If they conflict
+with it, the conflict is a bug to resolve, not permission to choose whichever
+file is convenient.
 
 ## Decision
 
@@ -9,7 +27,7 @@ The design system is the current shadcn preset plus the Ma Tu Concept 01 runtime
 Active runtime:
 
 - `style`: `radix-lyra`
-- `preset`: `b6G3vbGue`
+- resolved preset code: `buFywKm`
 - `baseColor`: `neutral`
 - `cssVariables`: `true`
 - `iconLibrary`: `lucide`
@@ -21,18 +39,33 @@ Active runtime:
 
 Agents must preserve this decision unless the task explicitly asks to change the design system itself.
 
+Legacy Inventory pilot artifacts have been retired from runtime app UI:
+
+- removed `packages/design-tokens/tokens.json`
+- removed `packages/ui/src/styles/matu-tokens.css`
+- removed `apps/web/app/components/matu-surface.tsx`
+- removed `apps/web/app/(protected)/admin/kitchen-sink/page.tsx`
+- external references such as `~/Downloads/matu-superapp/DESIGN.md`
+
+New app UI must not import `matu-surface`, use `font-matu-body`, or use
+`bg-matu-*`, `text-matu-*`, `border-matu-*`, `rounded-matu-*`,
+`--spacing-matu-*`, or `--radius-matu-*`. If the owner explicitly reactivates
+the pilot layer later, the design-system contract must be updated first.
+
 ## Authority Order
 
-When sources disagree, use this order:
+When deciding how to build UI, use this order:
 
-1. Runtime config: `apps/web/components.json`, `packages/ui/components.json`, `packages/ui/src/styles/globals.css`, `apps/web/app/layout.tsx`
-2. Primitive source: `packages/ui/src/components/*`
-3. This contract: `docs/spec/design-system.md`
-4. Implementation guide: `docs/modules/ui.md`
-5. Negative rules: `tasks/regressions.md`
-6. Product copy and terminology: `docs/ref/glossary.md`, `packages/shared/src/labels/vi.ts`, and domain dictionaries
+1. This contract: `docs/spec/design-system.md`
+2. Runtime config that must conform to it: `apps/web/components.json`, `packages/ui/components.json`, `packages/ui/src/styles/globals.css`, `apps/web/app/layout.tsx`
+3. Primitive implementation that must conform to it: `packages/ui/src/components/*`
+4. App adapter implementation that must conform to it: `apps/web/app/components/surface.tsx`
+5. Implementation guide: `docs/modules/ui.md`
+6. Negative rules: `tasks/regressions.md`
+7. Product copy and terminology: `docs/ref/glossary.md`, `packages/shared/src/labels/vi.ts`, and domain dictionaries
 
-Do not invent a local exception when the contract is unclear. Pause and update the contract first.
+Do not invent a local exception when the contract is unclear. Pause and update
+the contract first.
 
 ## Product UX Thesis
 
@@ -56,6 +89,13 @@ Allowed token families:
 - Navigation: `sidebar-*`
 - Radius: preset radius tokens only
 - Typography: runtime font variables from `apps/web/app/layout.tsx` and `packages/ui/src/styles/globals.css`
+
+Forbidden for new app UI:
+
+- `matu-*` Tailwind tokens.
+- `--font-matu-body`, `font-matu-body`, or Be Vietnam Pro.
+- `rounded-matu-*`, `--radius-matu-*`, or `--spacing-matu-*`.
+- External DS token names copied from matu-superapp or archived rebuild plans.
 
 Brand Concept 01 runtime mapping:
 
@@ -91,7 +131,7 @@ Rules:
 - Body text, controls, labels, descriptions, table text, and workflow copy inherit `font-sans`.
 - Use `font-mono` only for tabular operational data, IDs, codes, receipt/order numbers, prices, quantities, timestamps, and audit hashes.
 - Do not add route-specific `font-family`, custom font variables, or extra Google font families.
-- Do not reintroduce `Be Vietnam Pro`, Geist, system-only stacks, or per-surface typography exceptions unless the design-system contract is explicitly changed first.
+- Do not reintroduce `Be Vietnam Pro`, Geist, system-only stacks, `font-matu-body`, or per-surface typography exceptions unless the design-system contract is explicitly changed first.
 - When changing typography runtime, update `apps/web/app/layout.tsx`, `packages/ui/src/styles/globals.css`, this contract, `docs/modules/ui.md`, `docs/agent/rules/ui.md`, `tasks/regressions.md`, and any public static artifact that renders the UI brand such as `docs/status/index.html`.
 
 Rules:
@@ -130,7 +170,7 @@ A module that needs to deviate must update this contract first, not patch a sing
 
 Allowed gap scale in app code: `1`, `1.5`, `2`, `3`, `4`, `6`. Avoid `5`, `7`, `8` for horizontal flow — they break vertical rhythm with the heading scale below.
 
-Page padding MUST come from `AppPage` (not ad-hoc on the page root). Card padding MUST come from `Card` / `Card size="sm"` (not ad-hoc on `<CardContent>`).
+Page padding MUST come from `AppPage` (not ad-hoc on the page root). Card padding MUST come from `Card` / `Card size="sm"` (not ad-hoc on `<CardContent>`). When a card body needs table-edge alignment or horizontal table scrolling, use the named primitive props `CardContent flush` and/or `CardContent scroll` instead of local `p-0` / `overflow-x-auto` overrides.
 
 ### B. Heading Scale (locked per role)
 
@@ -142,8 +182,11 @@ Page padding MUST come from `AppPage` (not ad-hoc on the page root). Card paddin
 | Eyebrow / metadata     | `text-xs font-medium uppercase tracking-wide`          | `AppPageHeader.eyebrow` |
 | Dense eyebrow          | `text-2xs font-medium uppercase tracking-wide`         | KDS chrome, audit row meta |
 | Numeric input echo     | `text-3xl font-semibold tabular-nums`                  | Number pad readout, scale display |
+| Display call number    | `font-mono text-6xl sm:text-7xl lg:text-8xl font-semibold tabular-nums` | Customer-facing runner / queue display only |
 
 `text-4xl`, `text-5xl` are NOT allowed in app surfaces. They live only in marketing/login splash. `text-3xl` is reserved for the numeric-input-echo role above (cashier number pad, scale display) and MUST be paired with `tabular-nums`. `text-3xs` is reserved for SVG axis labels and dense table micro-meta.
+
+Display call numbers are a separate operational display role, not headings. Use them only on customer-facing queue/runner screens where the primary job is reading a stable order number from distance. The displayed value must be stable (`order_number` / `kitchen_ticket_number`), never a volatile render index.
 
 `font-bold` only for receipt totals, page headers in print mode, and emphasis inside body copy. Default heading weight is `font-semibold`. `font-black` is not allowed in the app.
 
@@ -240,6 +283,7 @@ Forbidden wrappers:
 - Page-specific clones of app page/header/section/toolbar/empty-state/link-card adapters.
 - Compatibility shims for a removed design system.
 - Helpers named like legacy `app-*` surface classes.
+- Legacy pilot wrappers such as the removed `matu-surface` adapter.
 
 ## Surface Contracts
 
@@ -312,10 +356,11 @@ Forbidden wrappers:
 Before any UI rebuild task:
 
 1. Read `AGENTS.md`, this file, `docs/modules/ui.md`, `tasks/regressions.md`, and the relevant domain docs.
-2. State the surface, primary user job, affected route family, and primitives to use.
-3. Confirm whether the task is a visual refactor, UX flow change, copy change, or behavior change.
-4. Keep each PR to one route family or one primitive rollout wave.
-5. If the implementation needs a new pattern, update this contract before applying the pattern broadly.
+2. Confirm whether any touched file imports `matu-surface` or uses `matu-*` tokens. This should be zero in runtime app code; if not, the task is a legacy pilot regression unless the owner explicitly says otherwise.
+3. State the surface, primary user job, affected route family, and primitives to use.
+4. Confirm whether the task is a visual refactor, UX flow change, copy change, or behavior change.
+5. Keep each PR to one route family or one primitive rollout wave.
+6. If the implementation needs a new pattern, update this contract before applying the pattern broadly.
 
 Before marking a UI task complete:
 

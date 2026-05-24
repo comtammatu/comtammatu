@@ -1,6 +1,6 @@
 // Canonical Vietnamese domain terms per docs/ref/glossary.md.
 // Use these in any cross-module surface where a domain entity is named.
-// Module-specific copy (apps/web/app/inventory/_lib/dictionary.ts,
+// Module-specific copy (apps/web/app/(protected)/inventory/_lib/dictionary.ts,
 // apps/web/lib/messages/pos.ts, etc.) may extend or specialize these but
 // must not introduce synonyms for the canonical terms.
 

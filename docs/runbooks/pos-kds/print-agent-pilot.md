@@ -26,6 +26,17 @@ Complete all items before opening the branch for the day.
       Categories not assigned to a branch printer are not included in kitchen tickets.
 - [ ] Cashier + chef accounts have `pos:send_kitchen` + `pos:print` permissions
       (auto-provisioned via role template)
+- [ ] Presence token registered for this branch agent through the repo CLI:
+  ```
+  pnpm --filter @comtammatu/print-agent presence:provision -- create \
+    --tenant-id <tenant_id> \
+    --branch-id <branch_id> \
+    --agent-id pos-<branch-slug> \
+    --confirm-project-ref <project-ref>
+  ```
+  The command prints the raw token once for the branch agent `.env`; the web
+  database stores only the SHA-256 hash. Use `rotate`, `revoke`, and `status`
+  from the same command for later changes.
 
 ### Windows PC per branch
 
@@ -40,9 +51,15 @@ Complete all items before opening the branch for the day.
   AGENT_BRANCH_ID=<numeric>
   AGENT_ID=pos-<branch-slug>
   AGENT_VERSION=0.3.0
+  WEB_BASE_URL=https://<app-host>
+  PRINT_AGENT_PRESENCE_TOKEN=<raw per-agent token>
   ```
   > **Note**: bump `AGENT_VERSION` mỗi release (sync với `package.json`).
   > SQL view `v_print_agent_fleet` dùng version này để xác định fleet status.
+  > `PRINT_AGENT_PRESENCE_TOKEN` là token riêng của agent này, không dùng chung
+  > giữa các chi nhánh. Token được tạo/xoay/thu hồi bằng
+  > `pnpm --filter @comtammatu/print-agent presence:provision -- ...`; không
+  > thao tác trực tiếp trên Supabase Dashboard.
 - [ ] Run `apps\print-agent\scripts\install-service.ps1` as Administrator
 - [ ] `Get-Service ComTamMaTu-PrintAgent` → `Running`
 - [ ] `C:\ProgramData\ComTamMaTu\print-agent\logs\agent.out.log` shows

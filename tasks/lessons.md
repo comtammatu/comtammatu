@@ -35,7 +35,7 @@
 
 7. **Domain terminology has a single source of truth**
    - Pattern: Ad-hoc hardcoded Vietnamese copy introduced drift terms (e.g. "Employee Portal" instead of canonical label, "Kiểm kê kho" instead of "Stocktake")
-   - Rule: All domain/UI wording must come from one of three canonical sources: `docs/ref/glossary.md` (business meaning), `packages/shared/src/labels/vi.ts` (shared labels), or `apps/web/app/inventory/_lib/dictionary.ts` (inventory-specific adapters). Never introduce new copy inline.
+   - Rule: All domain/UI wording must come from one of three canonical sources: `docs/ref/glossary.md` (business meaning), `packages/shared/src/labels/vi.ts` (shared labels), or `apps/web/app/(protected)/inventory/_lib/dictionary.ts` (inventory-specific adapters). Never introduce new copy inline.
    - Prevention: When adding or changing copy, update the canonical source first (or in the same PR). Run `pnpm lint:copy` to catch drift. See regression rule TERMINOLOGY-SOURCE-OF-TRUTH.
 
 8. **Do not fake preset UI with raw elements**
@@ -50,13 +50,13 @@
 
 10. **supabase-js typegen vs PostgREST runtime for M:1 FK joins**
     - Pattern: `select("*, parent(...)")` with `child.parent_id → parent.id` (M:1, no UNIQUE on FK column). supabase-js typegen marks the relation `isOneToOne: false` and infers TS type as `Parent[]`. PostgREST runtime returns a single `{ ... } | null` object. Code that follows TS inference (`row.parent?.[0]?.name`) reads `undefined` against the real object payload.
-    - Rule: For M:1 embeds, treat the FK field as `{ ... } | null` (object), matching runtime. Use `row.parent as unknown as { ... } | null` (or pre-typed interface) to bridge supabase-js typegen quirk. Match `apps/web/app/hr/attendance-table.tsx` (`record.shifts?.name`).
+    - Rule: For M:1 embeds, treat the FK field as `{ ... } | null` (object), matching runtime. Use `row.parent as unknown as { ... } | null` (or pre-typed interface) to bridge supabase-js typegen quirk. Match `apps/web/app/(protected)/hr/attendance-table.tsx` (`record.shifts?.name`).
     - Prevention: Whenever you write `?.[0]?` on a select-embed, stop and check direction: if `child.fk → parent.pk` (M:1) it is an object, not an array; reserve `[0]` for reverse 1:M embeds.
 
 11. **`pnpm db:types` MUST run after every supabase migration that adds/changes RPCs or tables**
     - Pattern: Applied a migration creating `fn_generate_b03_dn` RPC, wrote a server action calling `supabase.rpc("fn_generate_b03_dn", ...)`, ran `pnpm typecheck` (passed) + `pnpm lint` (passed) → ran `pnpm build` → FAIL with `Argument of type '"fn_generate_b03_dn"' is not assignable to parameter of type ...154 more...`. The RPC was missing from `database.types.ts`.
     - Rule: After ANY `supabase db push`, regenerate types BEFORE running gates: `supabase db push && pnpm db:types && pnpm typecheck && pnpm lint && pnpm build`. Skipping the regen leaves stale types that may pass turbo-cached typecheck but fail Next.js build's stricter inline TypeScript pass.
-    - Prevention: Treat `db push → db:types` as a single atomic step; never invoke push without regen following. CLAUDE.md already documents this; the lesson is to MENTALLY treat them as one command.
+    - Prevention: Treat `db push → db:types` as a single atomic step; never invoke push without regen following. AGENTS.md already documents this; the lesson is to MENTALLY treat them as one command.
 
 12. **Next.js 16.2 webpack + serwist intermittent cache poisoning**
     - Pattern: After regenerating `database.types.ts` mid-session, `pnpm build` failed with `uncaughtException TypeError: Cannot read properties of undefined (reading 'length') at ignore-listed frames` — error originates in Next.js / serwist internals, not user code. Compile passed; the failure was in the post-compile manifest step. Clearing `.next` + `.turbo` resolved.

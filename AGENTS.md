@@ -19,9 +19,11 @@ Before implementation, read the applicable rule files:
 Instruction memory and learning memory stay separate:
 
 - Shared rules and policies live in `AGENTS.md` and `docs/agent/rules/`.
+- `CLAUDE.md` is a compatibility shim only; do not duplicate rules there.
 - Regression lessons live in `tasks/regressions.md`.
 - Retrospectives and durable learnings live in `tasks/lessons.md`.
 - Current work tracking lives in `tasks/todo.md`.
+- Keep local agent/tool folders out of the repo: `.claude/`, `.codex/`, `.agents/`, `.gstack/`, `.omc/`, MCP tokens, plugin caches, and per-user tool settings.
 
 ## Critical Constraints
 
@@ -37,6 +39,7 @@ Instruction memory and learning memory stay separate:
 - NEVER apply migrations directly to production. Production flow: write migration file → PR → merge → owner applies manually.
 - After SQL migration is applied to the schema used for generated types, run `pnpm db:types`.
 - ACL single source: `packages/shared/src/auth/module-acl.ts`.
+- NEVER create a separate agent-only documentation tree such as `docs/llm-wiki/`; use `AGENTS.md`, `docs/agent/rules/`, `docs/CODEBASE_MAP.md`, module docs, specs, runbooks, tasks, or worklogs according to the content type.
 
 ## UI Authority
 

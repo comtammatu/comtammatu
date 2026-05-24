@@ -43,10 +43,11 @@ Defined in `packages/database/package.json`:
 
 ## Schema — Current Shape
 
-Source of truth: generated types from the live schema. Snapshot at the time of writing:
+Source of truth: generated types from the live schema. Snapshot generated from
+the current checkout on 2026-05-24 with `node scripts/project-snapshot.mjs`:
 
-- **102 tables**, **8 views**, **132 RPC/SQL functions** (count via `awk` over `database.types.ts` per `Tables`/`Views`/`Functions` section markers)
-- **278+ migration files** in `supabase/migrations/`
+- **115 tables**, **9 views**, **237 RPC/SQL functions**
+- **347 migration files** in `supabase/migrations/`
 - **0 enums** — `staff_role` ENUM was dropped (Auth cleanup, 2026-04-23); roles are now strings derived from `positions.legacy_role_code`
 
 ### DB Source-of-Truth Ladder
@@ -58,7 +59,7 @@ When facts disagree, trust the higher tier:
 | 1    | `packages/database/src/types/database.types.ts`     | The shape currently usable from app code (post `pnpm db:types`) |
 | 2    | Applied state of dev/prod DB                        | What RLS, defaults, constraints actually enforce right now      |
 | 3    | `supabase/migrations/*.sql`                         | What changes have been authored — file existence ≠ applied      |
-| 4    | Hand-written docs (this file, `database-schema.md`) | Narrative + design rationale; lags 1-3 by definition            |
+| 4    | Hand-written docs (`docs/modules/*`, `docs/spec/database-schema.md`) | Narrative + design rationale; lags 1-3 by definition            |
 
 ### Migration Status Vocabulary
 
@@ -94,7 +95,7 @@ Tables are organized by domain. For per-table columns/constraints, read the migr
 | Trust / QC    | `branch_trusted_egress_ips`, `branch_override_codes`, `branch_override_attempts`, `inventory_qc_settings`                                                              |
 | Notifications | `notifications`, `branch_feature_flags`                                                                                                                                |
 
-For the per-column / per-policy reference of a specific table, prefer reading the originating migration. The hand-written reference at `docs/spec/database-schema.md` is FROZEN at early-2026 and has not tracked Auth / Production / Finance / Print Agent and other domains shipped since.
+For the per-column / per-policy reference of a specific table, prefer reading the originating migration and generated types. The early-2026 hand-written table list is archived at `docs/archive/ref/database-schema-early-2026.md`; do not use it as current schema authority.
 
 ## RLS Pattern
 

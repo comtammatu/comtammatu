@@ -67,6 +67,20 @@ AS $$
   );
 $$;
 
+CREATE OR REPLACE FUNCTION public.print_template_spacer_block(
+  p_lines INT DEFAULT 1
+)
+RETURNS JSONB
+LANGUAGE sql
+IMMUTABLE
+SET search_path TO 'public'
+AS $$
+  SELECT jsonb_build_object(
+    'type', 'spacer',
+    'lines', GREATEST(1, LEAST(5, COALESCE(p_lines, 1)))
+  );
+$$;
+
 CREATE OR REPLACE FUNCTION public.print_template_money(p_value NUMERIC)
 RETURNS TEXT
 LANGUAGE sql
@@ -513,14 +527,14 @@ DECLARE
 BEGIN
   RETURN jsonb_build_array(
     public.print_template_divider_block('-'),
-    public.print_template_text_block('KÉT TIỀN MẶT', 'center', true),
+    public.print_template_text_block('ĐỐI SOÁT KÉT TIỀN MẶT', 'center', true),
     public.print_template_divider_block('-'),
-    public.print_template_row_block('Tiền đầu ca', public.print_template_money(v_opening)),
-    public.print_template_row_block('+ Thu trong ca', public.print_template_money(v_collected)),
-    public.print_template_row_block('= Két dự kiến', public.print_template_money(v_expected)),
-    public.print_template_row_block('Két thực đếm', public.print_template_money(v_closing)),
+    public.print_template_row_block('Tiền mặt đầu ca', public.print_template_money(v_opening)),
+    public.print_template_row_block('+ Tiền mặt bán hàng', public.print_template_money(v_collected)),
+    public.print_template_row_block('= Tiền mặt phải nộp', public.print_template_money(v_expected)),
+    public.print_template_row_block('Tiền mặt thực đếm', public.print_template_money(v_closing)),
     public.print_template_row_block(
-      'Chênh lệch (' || public.print_template_diff_sign(v_difference) || ')',
+      'Lệch két (' || public.print_template_diff_sign(v_difference) || ')',
       public.print_template_money(v_difference),
       true
     )
@@ -544,7 +558,7 @@ BEGIN
 
   v_out := v_out || jsonb_build_array(
     public.print_template_divider_block('-'),
-    public.print_template_text_block('PHƯƠNG THỨC THANH TOÁN', 'center', true),
+    public.print_template_text_block('CƠ CẤU ĐÃ THU', 'center', true),
     public.print_template_divider_block('-')
   );
 
@@ -571,21 +585,31 @@ SET search_path TO 'public'
 AS $$
 DECLARE
   v_out JSONB := '[]'::jsonb;
+  v_paid NUMERIC := public.print_template_payload_number(p_payload, 'paid_order_count');
   v_unpaid NUMERIC := public.print_template_payload_number(p_payload, 'unpaid_order_count');
   v_cancelled NUMERIC := public.print_template_payload_number(p_payload, 'cancelled_order_count');
+  v_revenue NUMERIC := public.print_template_payload_number(p_payload, 'total_revenue');
 BEGIN
   v_out := v_out || jsonb_build_array(
     public.print_template_divider_block('='),
+    public.print_template_text_block('TỔNG KẾT CA', 'center', true),
+    public.print_template_divider_block('-'),
     public.print_template_row_block(
-      'Đơn đã thanh toán',
-      trim(to_char(public.print_template_payload_number(p_payload, 'paid_order_count'), 'FM999999')) || ' đơn'
+      'TỔNG ĐÃ THU',
+      public.print_template_money(v_revenue),
+      true,
+      true
+    ),
+    public.print_template_row_block(
+      'Đơn đã thu tiền',
+      trim(to_char(v_paid, 'FM999999')) || ' đơn'
     )
   );
 
   IF v_unpaid > 0 THEN
     v_out := v_out || jsonb_build_array(
       public.print_template_row_block(
-        'Đơn chuyển ca sau',
+        'Đơn chưa thu/chuyển ca',
         trim(to_char(v_unpaid, 'FM999999')) || ' đơn'
       )
     );
@@ -600,22 +624,69 @@ BEGIN
     );
   END IF;
 
+  RETURN v_out;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.print_template_shift_item_breakdown_blocks(p_payload JSONB)
+RETURNS JSONB
+LANGUAGE plpgsql
+IMMUTABLE
+SET search_path TO 'public'
+AS $$
+DECLARE
+  v_out JSONB := '[]'::jsonb;
+  v_items JSONB := CASE
+    WHEN jsonb_typeof(p_payload->'item_breakdown') = 'array' THEN p_payload->'item_breakdown'
+    ELSE '[]'::jsonb
+  END;
+  v_row JSONB;
+  v_name TEXT;
+  v_source TEXT;
+  v_prefix TEXT;
+  v_qty NUMERIC;
+  v_total NUMERIC := 0;
+BEGIN
+  IF jsonb_array_length(v_items) = 0 THEN
+    RETURN v_out;
+  END IF;
+
+  SELECT COALESCE(SUM(COALESCE(NULLIF(value->>'qty', '')::numeric, 0)), 0)
+  INTO v_total
+  FROM jsonb_array_elements(v_items);
+
   v_out := v_out || jsonb_build_array(
-    public.print_template_divider_block('='),
-    public.print_template_row_block(
-      'TỔNG DOANH THU',
-      public.print_template_money(public.print_template_payload_number(p_payload, 'total_revenue')),
-      true,
-      true
-    ),
-    public.print_template_divider_block('=')
+    public.print_template_divider_block('-'),
+    public.print_template_text_block('SỐ LƯỢNG BÁN THEO MÓN', 'center', true),
+    public.print_template_row_block('Tổng SL bán', trim(to_char(v_total, 'FM999999'))),
+    public.print_template_divider_block('-')
   );
+
+  FOR v_row IN
+    SELECT value
+    FROM jsonb_array_elements(v_items)
+  LOOP
+    v_name := COALESCE(NULLIF(v_row->>'name', ''), 'Món');
+    v_source := COALESCE(NULLIF(v_row->>'source', ''), 'main');
+    v_prefix := CASE v_source
+      WHEN 'side' THEN '- '
+      WHEN 'modifier' THEN '+ '
+      ELSE ''
+    END;
+    v_qty := COALESCE(NULLIF(v_row->>'qty', '')::numeric, 0);
+
+    v_out := v_out || jsonb_build_array(
+      public.print_template_text_block(
+        'x' || trim(to_char(v_qty, 'FM999999')) || ' ' || v_prefix || v_name
+      )
+    );
+  END LOOP;
 
   RETURN v_out;
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION public.print_template_variance_approval_blocks(p_payload JSONB)
+CREATE OR REPLACE FUNCTION public.print_template_shift_variance_notice_blocks(p_payload JSONB)
 RETURNS JSONB
 LANGUAGE plpgsql
 IMMUTABLE
@@ -623,31 +694,69 @@ SET search_path TO 'public'
 AS $$
 DECLARE
   v_note TEXT := COALESCE(NULLIF(btrim(p_payload->>'variance_note'), ''), '');
+  v_expected NUMERIC := public.print_template_payload_number(p_payload, 'expected_cash');
+  v_difference NUMERIC := public.print_template_payload_number(p_payload, 'cash_difference');
+  v_threshold NUMERIC := GREATEST(50000::NUMERIC, ROUND(v_expected * 0.005, 2));
+  v_breached BOOLEAN := ABS(v_difference) > v_threshold;
   v_out JSONB := '[]'::jsonb;
 BEGIN
-  IF v_note = '' THEN
+  IF NOT v_breached AND v_note = '' THEN
     RETURN v_out;
   END IF;
 
   v_out := v_out || jsonb_build_array(
     public.print_template_divider_block('='),
-    public.print_template_text_block('DUYỆT CHÊNH LỆCH', 'center', true)
+    public.print_template_text_block('LƯU Ý LỆCH KÉT', 'center', true),
+    public.print_template_row_block('Ngưỡng cảnh báo', public.print_template_money(v_threshold))
   );
 
-  IF COALESCE(NULLIF(p_payload->>'variance_approver', ''), '') <> '' THEN
+  IF v_breached THEN
     v_out := v_out || jsonb_build_array(
-      public.print_template_row_block('Người duyệt:', p_payload->>'variance_approver')
+      public.print_template_row_block('Trạng thái', 'Cần quản lý hậu kiểm', true)
     );
   END IF;
 
-  v_out := v_out || jsonb_build_array(
-    public.print_template_text_block('Lý do:'),
-    public.print_template_text_block('  ' || v_note),
-    public.print_template_divider_block('=')
-  );
+  IF COALESCE(NULLIF(p_payload->>'variance_approver', ''), '') <> '' THEN
+    v_out := v_out || jsonb_build_array(
+      public.print_template_row_block('Người ghi nhận', p_payload->>'variance_approver')
+    );
+  END IF;
+
+  IF v_note <> '' THEN
+    v_out := v_out || jsonb_build_array(
+      public.print_template_text_block('Ghi chú lệch két:'),
+      public.print_template_text_block('  ' || v_note)
+    );
+  END IF;
+
+  v_out := v_out || jsonb_build_array(public.print_template_divider_block('='));
 
   RETURN v_out;
 END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.print_template_variance_approval_blocks(p_payload JSONB)
+RETURNS JSONB
+LANGUAGE sql
+IMMUTABLE
+SET search_path TO 'public'
+AS $$
+  SELECT public.print_template_shift_variance_notice_blocks(p_payload);
+$$;
+
+CREATE OR REPLACE FUNCTION public.print_template_shift_signature_blocks()
+RETURNS JSONB
+LANGUAGE sql
+IMMUTABLE
+SET search_path TO 'public'
+AS $$
+  SELECT jsonb_build_array(
+    public.print_template_divider_block('='),
+    public.print_template_text_block('KÝ NHẬN BÀN GIAO', 'center', true),
+    public.print_template_row_block('Thu ngân bàn giao', 'Quản lý nhận'),
+    public.print_template_spacer_block(2),
+    public.print_template_row_block('.................', '.................')
+  );
 $$;
 
 CREATE OR REPLACE FUNCTION public.print_template_default_content(p_kind TEXT)
@@ -734,17 +843,20 @@ BEGIN
           jsonb_build_object('type', 'branchInfo'),
           jsonb_build_object('type', 'divider', 'char', '='),
           jsonb_build_object('type', 'text', 'text', 'PHIẾU CHỐT CA', 'align', 'center', 'bold', true, 'double', true),
+          jsonb_build_object('type', 'text', 'text', 'BIÊN BẢN BÀN GIAO TIỀN & DOANH THU', 'align', 'center', 'bold', true),
           jsonb_build_object('type', 'text', 'text', 'Mã ca: #{{session_id}}', 'align', 'center'),
           jsonb_build_object('type', 'divider', 'char', '='),
           jsonb_build_object('type', 'row', 'left', 'Thu ngân:', 'right', '{{cashier_name}}', 'when_field', 'cashier_name', 'when_not_empty', true),
           jsonb_build_object('type', 'row', 'left', 'Mở ca:', 'right', '{{opened_datetime}}'),
           jsonb_build_object('type', 'row', 'left', 'Đóng ca:', 'right', '{{closed_datetime}}'),
           jsonb_build_object('type', 'row', 'left', 'Thời gian:', 'right', '{{duration}}', 'when_field', 'duration', 'when_not_empty', true),
+          jsonb_build_object('type', 'shiftOrderSummary'),
+          jsonb_build_object('type', 'shiftItemBreakdown'),
           jsonb_build_object('type', 'shiftCashReconciliation'),
           jsonb_build_object('type', 'paymentBreakdown'),
-          jsonb_build_object('type', 'shiftOrderSummary'),
-          jsonb_build_object('type', 'note', 'prefix', 'Ghi chú: '),
-          jsonb_build_object('type', 'varianceApproval'),
+          jsonb_build_object('type', 'note', 'prefix', 'Ghi chú bàn giao: '),
+          jsonb_build_object('type', 'shiftVarianceNotice'),
+          jsonb_build_object('type', 'shiftSignature'),
           jsonb_build_object('type', 'spacer', 'lines', 1),
           jsonb_build_object('type', 'text', 'text', 'In lúc: {{printed_datetime}}', 'align', 'center'),
           jsonb_build_object('type', 'footer', 'lines', jsonb_build_array('Thịt tươi 100%'))
@@ -902,6 +1014,12 @@ BEGIN
         v_out := v_out || public.print_template_payment_breakdown_blocks(p_payload);
       WHEN 'shiftOrderSummary' THEN
         v_out := v_out || public.print_template_shift_summary_blocks(p_payload);
+      WHEN 'shiftItemBreakdown' THEN
+        v_out := v_out || public.print_template_shift_item_breakdown_blocks(p_payload);
+      WHEN 'shiftVarianceNotice' THEN
+        v_out := v_out || public.print_template_shift_variance_notice_blocks(p_payload);
+      WHEN 'shiftSignature' THEN
+        v_out := v_out || public.print_template_shift_signature_blocks();
       WHEN 'varianceApproval' THEN
         v_out := v_out || public.print_template_variance_approval_blocks(p_payload);
       WHEN 'kitchenTicket' THEN
@@ -962,6 +1080,278 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION public.enqueue_shift_close_print(
+  p_session_id BIGINT
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+DECLARE
+  v_uid                 UUID;
+  v_session             RECORD;
+  v_branch              RECORD;
+  v_cashier_name        TEXT;
+  v_approver_name       TEXT;
+  v_branch_tax          TEXT;
+  v_printer_id          BIGINT;
+  v_breakdown           JSONB;
+  v_total_revenue       NUMERIC(15,2);
+  v_item_breakdown      JSONB;
+  v_total_item_quantity INT;
+  v_payload             JSONB;
+  v_idempotency         TEXT;
+  v_job_id              BIGINT;
+  v_now                 TIMESTAMPTZ := now();
+BEGIN
+  v_uid := auth.uid();
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000';
+  END IF;
+
+  SELECT id, tenant_id, branch_id, status, opening_cash, closing_cash,
+         expected_cash, cash_difference, opened_at, closed_at, closed_by,
+         note, variance_approval_note, variance_approver_user_id
+  INTO v_session
+  FROM public.pos_sessions
+  WHERE id = p_session_id;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'session not found' USING ERRCODE = 'P0002';
+  END IF;
+
+  IF v_session.tenant_id IS DISTINCT FROM public.auth_tenant_id() THEN
+    RAISE EXCEPTION 'tenant mismatch' USING ERRCODE = '42501';
+  END IF;
+
+  IF v_session.status <> 'closed' THEN
+    RAISE EXCEPTION 'session not closed yet' USING ERRCODE = '22023';
+  END IF;
+
+  IF NOT public.has_permission_any('pos:close_shift') THEN
+    RAISE EXCEPTION 'permission denied: pos:close_shift' USING ERRCODE = '42501';
+  END IF;
+
+  SELECT * INTO v_branch FROM public.branches WHERE id = v_session.branch_id;
+
+  SELECT full_name INTO v_cashier_name
+  FROM public.profiles WHERE id = v_session.closed_by;
+
+  IF v_session.variance_approver_user_id IS NOT NULL THEN
+    SELECT full_name INTO v_approver_name
+    FROM public.profiles WHERE id = v_session.variance_approver_user_id;
+  END IF;
+
+  SELECT value INTO v_branch_tax
+  FROM public.system_settings
+  WHERE tenant_id = v_session.tenant_id AND key = 'branch_tax_code';
+
+  v_printer_id := public.resolve_branch_printer_for_type(
+    v_session.tenant_id,
+    v_session.branch_id,
+    'shift_close_report'
+  );
+
+  IF v_printer_id IS NULL THEN
+    RETURN jsonb_build_object('skipped', true, 'reason', 'no_printer');
+  END IF;
+
+  SELECT
+    COALESCE(jsonb_agg(jsonb_build_object(
+      'method',  payment_method,
+      'count',   cnt,
+      'amount',  amount
+    ) ORDER BY payment_method), '[]'::jsonb),
+    COALESCE(SUM(amount), 0)
+  INTO v_breakdown, v_total_revenue
+  FROM (
+    SELECT
+      COALESCE(payment_method, 'unknown') AS payment_method,
+      COUNT(*) AS cnt,
+      SUM(total_amount) AS amount
+    FROM public.orders
+    WHERE pos_session_id = p_session_id
+      AND tenant_id = v_session.tenant_id
+      AND payment_status = 'paid'
+      AND status <> 'cancelled'
+    GROUP BY payment_method
+  ) AS grp;
+
+  WITH paid_items AS (
+    SELECT
+      oi.item_name,
+      oi.quantity,
+      oi.unit_price,
+      CASE
+        WHEN jsonb_typeof(oi.modifiers) = 'array' THEN oi.modifiers
+        ELSE '[]'::jsonb
+      END AS modifiers,
+      CASE
+        WHEN jsonb_typeof(oi.sides) = 'array' THEN oi.sides
+        ELSE '[]'::jsonb
+      END AS sides
+    FROM public.order_items oi
+    JOIN public.orders o ON o.id = oi.order_id
+    WHERE o.pos_session_id = p_session_id
+      AND o.tenant_id = v_session.tenant_id
+      AND o.payment_status = 'paid'
+      AND o.status <> 'cancelled'
+      AND oi.status <> 'cancelled'
+  ),
+  item_unit_prices AS (
+    SELECT
+      pi.item_name,
+      pi.quantity,
+      pi.unit_price,
+      pi.modifiers,
+      pi.sides,
+      COALESCE((
+        SELECT SUM(COALESCE(NULLIF(m->>'price', '')::numeric, 0))
+        FROM jsonb_array_elements(pi.modifiers) AS m
+      ), 0) AS modifier_unit_sum,
+      COALESCE((
+        SELECT SUM(
+          COALESCE(NULLIF(s->>'price', '')::numeric, 0)
+          * COALESCE(NULLIF(s->>'quantity', '')::numeric, 1)
+        )
+        FROM jsonb_array_elements(pi.sides) AS s
+      ), 0) AS side_unit_sum
+    FROM paid_items pi
+  ),
+  main_agg AS (
+    SELECT
+      item_name AS name,
+      'main'::TEXT AS source,
+      COALESCE(SUM(COALESCE(quantity, 0)), 0)::INT AS qty,
+      COALESCE(SUM(GREATEST(0, COALESCE(unit_price, 0) - modifier_unit_sum - side_unit_sum) * COALESCE(quantity, 0)), 0) AS revenue,
+      1 AS source_order
+    FROM item_unit_prices
+    GROUP BY item_name
+  ),
+  side_agg AS (
+    SELECT
+      COALESCE(NULLIF(s->>'name', ''), NULLIF(s->>'side_item_name', ''), 'Side')::TEXT AS name,
+      'side'::TEXT AS source,
+      COALESCE(SUM(COALESCE(NULLIF(s->>'quantity', '')::numeric, 1) * COALESCE(pi.quantity, 0)), 0)::INT AS qty,
+      COALESCE(SUM(
+        COALESCE(NULLIF(s->>'price', '')::numeric, 0)
+        * COALESCE(NULLIF(s->>'quantity', '')::numeric, 1)
+        * COALESCE(pi.quantity, 0)
+      ), 0) AS revenue,
+      2 AS source_order
+    FROM item_unit_prices pi
+    CROSS JOIN LATERAL jsonb_array_elements(pi.sides) AS s
+    GROUP BY COALESCE(NULLIF(s->>'name', ''), NULLIF(s->>'side_item_name', ''), 'Side')
+  ),
+  mod_agg AS (
+    SELECT
+      COALESCE(NULLIF(m->>'name', ''), 'Modifier')::TEXT AS name,
+      'modifier'::TEXT AS source,
+      COALESCE(SUM(COALESCE(pi.quantity, 0)), 0)::INT AS qty,
+      COALESCE(SUM(COALESCE(NULLIF(m->>'price', '')::numeric, 0) * COALESCE(pi.quantity, 0)), 0) AS revenue,
+      3 AS source_order
+    FROM item_unit_prices pi
+    CROSS JOIN LATERAL jsonb_array_elements(pi.modifiers) AS m
+    GROUP BY COALESCE(NULLIF(m->>'name', ''), 'Modifier')
+  ),
+  all_items AS (
+    SELECT name, source, qty, revenue, source_order FROM main_agg
+    UNION ALL
+    SELECT name, source, qty, revenue, source_order FROM side_agg
+    UNION ALL
+    SELECT name, source, qty, revenue, source_order FROM mod_agg
+  )
+  SELECT
+    COALESCE(jsonb_agg(
+      jsonb_build_object(
+        'name', name,
+        'source', source,
+        'qty', qty,
+        'revenue', revenue
+      )
+      ORDER BY source_order, qty DESC, name
+    ), '[]'::jsonb),
+    COALESCE(SUM(qty), 0)::INT
+  INTO v_item_breakdown, v_total_item_quantity
+  FROM all_items;
+
+  v_payload := jsonb_build_object(
+    'kind',                  'shift_close_report',
+    'branch_name',           COALESCE(v_branch.name, ''),
+    'branch_address',        COALESCE(v_branch.address, ''),
+    'branch_phone',          COALESCE(v_branch.phone, ''),
+    'branch_tax_code',       COALESCE(v_branch_tax, ''),
+    'session_id',            p_session_id,
+    'cashier_name',          COALESCE(v_cashier_name, ''),
+    'opened_at',             to_char(v_session.opened_at AT TIME ZONE 'Asia/Ho_Chi_Minh',
+                                     'YYYY-MM-DD"T"HH24:MI:SS'),
+    'closed_at',             to_char(v_session.closed_at AT TIME ZONE 'Asia/Ho_Chi_Minh',
+                                     'YYYY-MM-DD"T"HH24:MI:SS'),
+    'opening_cash',          v_session.opening_cash,
+    'closing_cash',          v_session.closing_cash,
+    'expected_cash',         v_session.expected_cash,
+    'cash_difference',       v_session.cash_difference,
+    'note',                  v_session.note,
+    'variance_note',         v_session.variance_approval_note,
+    'variance_approver',     v_approver_name,
+    'paid_order_count',      (
+      SELECT COUNT(*) FROM public.orders
+       WHERE pos_session_id = p_session_id
+         AND tenant_id = v_session.tenant_id
+         AND payment_status = 'paid'
+         AND status <> 'cancelled'
+    ),
+    'unpaid_order_count',    (
+      SELECT COUNT(*) FROM public.orders
+       WHERE pos_session_id = p_session_id
+         AND tenant_id = v_session.tenant_id
+         AND payment_status <> 'paid'
+         AND status <> 'cancelled'
+    ),
+    'cancelled_order_count', (
+      SELECT COUNT(*) FROM public.orders
+       WHERE pos_session_id = p_session_id
+         AND tenant_id = v_session.tenant_id
+         AND status = 'cancelled'
+    ),
+    'payment_breakdown',     v_breakdown,
+    'total_revenue',         v_total_revenue,
+    'total_item_quantity',   COALESCE(v_total_item_quantity, 0),
+    'item_breakdown',        COALESCE(v_item_breakdown, '[]'::jsonb),
+    'printed_at',            to_char(v_now AT TIME ZONE 'Asia/Ho_Chi_Minh',
+                                     'YYYY-MM-DD"T"HH24:MI:SS')
+  );
+
+  v_idempotency := 'session:' || p_session_id::TEXT || ':shift_close';
+
+  INSERT INTO public.print_jobs (
+    tenant_id, branch_id, printer_id, job_type,
+    order_id, payload, idempotency_key, created_by
+  ) VALUES (
+    v_session.tenant_id, v_session.branch_id, v_printer_id, 'shift_close_report',
+    NULL, v_payload, v_idempotency, v_uid
+  )
+  ON CONFLICT (idempotency_key) DO UPDATE SET
+    payload = EXCLUDED.payload,
+    status  = CASE WHEN public.print_jobs.status IN ('failed', 'expired')
+                   THEN 'pending' ELSE public.print_jobs.status END,
+    last_error = NULL,
+    claimed_by_agent = NULL,
+    claimed_at = NULL
+  RETURNING id INTO v_job_id;
+
+  RETURN jsonb_build_object(
+    'session_id', p_session_id,
+    'job_id',     v_job_id,
+    'printer_id', v_printer_id
+  );
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.enqueue_shift_close_print(BIGINT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.enqueue_shift_close_print(BIGINT) TO authenticated;
+
 UPDATE public.print_template_versions
 SET content = public.print_template_default_content(kind),
     updated_at = now()
@@ -978,6 +1368,7 @@ COMMENT ON FUNCTION public.materialize_print_document(TEXT, JSONB, BIGINT, INT, 
 REVOKE ALL ON FUNCTION public.print_template_text_block(TEXT, TEXT, BOOLEAN, BOOLEAN, BOOLEAN, BOOLEAN) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.print_template_row_block(TEXT, TEXT, BOOLEAN, BOOLEAN, BOOLEAN) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.print_template_divider_block(TEXT) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.print_template_spacer_block(INT) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.print_template_money(NUMERIC) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.print_template_payload_number(JSONB, TEXT) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.print_template_hhmm(TEXT) FROM PUBLIC;
@@ -992,7 +1383,10 @@ REVOKE ALL ON FUNCTION public.print_template_kitchen_item_blocks(JSONB, BOOLEAN)
 REVOKE ALL ON FUNCTION public.print_template_shift_cash_blocks(JSONB) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.print_template_payment_breakdown_blocks(JSONB) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.print_template_shift_summary_blocks(JSONB) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.print_template_shift_item_breakdown_blocks(JSONB) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.print_template_shift_variance_notice_blocks(JSONB) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.print_template_variance_approval_blocks(JSONB) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.print_template_shift_signature_blocks() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.print_template_default_content(TEXT) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.print_template_interpolate(TEXT, JSONB) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.materialize_print_document(TEXT, JSONB, BIGINT, INT, INT, TEXT, JSONB) FROM PUBLIC;

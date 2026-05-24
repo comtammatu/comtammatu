@@ -16,6 +16,7 @@ export type ModuleLabelKey =
   | "settings"
   | "pos"
   | "kds"
+  | "runner"
   | "branch_settings"
   | "branch_menu_limits"
   | "employee"
@@ -42,6 +43,7 @@ export const MODULE_LABELS_VI: Record<ModuleLabelKey, string> = {
   settings: "Cài đặt",
   pos: "POS",
   kds: "KDS",
+  runner: "Màn gọi số",
   branch_settings: "Cài đặt chi nhánh",
   branch_menu_limits: "Hạn mức bán hàng ngày",
   employee: "Cổng nhân viên",
@@ -69,6 +71,7 @@ export const APP_COPY_VI = {
   hrWorkspace: "Nhân sự & tiền lương",
   hrWorkspaceSubtitle: "Ca làm và tiền lương",
   branchOperationsKds: "Bếp (KDS)",
+  branchOperationsRunner: "Màn gọi số",
   loading: "Đang tải…",
   refresh: "Làm mới",
   noAreaData: "Không có dữ liệu khu vực",

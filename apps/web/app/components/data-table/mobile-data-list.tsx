@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { InteractiveCard } from "@/inventory/_components/interactive-card";
+import { InteractiveCard } from "./interactive-card";
 import { STATES_VI } from "@comtammatu/shared/messages";
 
 interface MobileDataListProps<T> {

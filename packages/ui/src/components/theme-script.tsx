@@ -1,15 +1,15 @@
 import type { Theme } from "./theme-provider";
 
-type ThemeScriptProps = {
+type ThemeScriptOptions = {
   defaultTheme?: Theme;
   storageKey?: string;
 };
 
-export function ThemeScript({
+export function getThemeScriptHtml({
   defaultTheme = "system",
   storageKey = "theme",
-}: ThemeScriptProps = {}) {
-  const html =
+}: ThemeScriptOptions = {}) {
+  return (
     `(function(){try{` +
     `var d=document.documentElement;` +
     `var s=localStorage.getItem(${JSON.stringify(storageKey)});` +
@@ -18,11 +18,6 @@ export function ThemeScript({
     `d.classList.remove("light","dark");` +
     `d.classList.add(t);` +
     `d.style.colorScheme=t;` +
-    `}catch(e){}})();`;
-  return (
-    <script
-      suppressHydrationWarning
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
+    `}catch(e){}})();`
   );
 }

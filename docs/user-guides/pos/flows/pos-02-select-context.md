@@ -111,10 +111,10 @@ URL: `/br/{branchId}/pos` (sau khi ca đã mở, mặc định landing trên mà
 
 ### Code path
 
-- **Page:** [apps/web/app/br/[branchId]/pos/page.tsx](../../../../apps/web/app/br/%5BbranchId%5D/pos/page.tsx) — orchestrator, default order_type = dine_in nếu có bàn, else takeaway.
-- **Table picker UI:** [apps/web/app/br/[branchId]/pos/pos-table-gate.tsx](../../../../apps/web/app/br/%5BbranchId%5D/pos/pos-table-gate.tsx)
-- **Order_type toggle (cart):** [apps/web/app/br/[branchId]/pos/_components/cart-pane.tsx](../../../../apps/web/app/br/%5BbranchId%5D/pos/_components/cart-pane.tsx) — `ToggleGroup` "Tại bàn" / "Mang về".
-- **Multi-order picker:** [apps/web/app/br/[branchId]/pos/_components/multi-order-table-picker.tsx](../../../../apps/web/app/br/%5BbranchId%5D/pos/_components/multi-order-table-picker.tsx) — Drawer hiện khi tap bàn occupied.
+- **Page:** [apps/web/app/(protected)/br/[branchId]/pos/page.tsx](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/page.tsx) — orchestrator, default order_type = dine_in nếu có bàn, else takeaway.
+- **Table picker UI:** [apps/web/app/(protected)/br/[branchId]/pos/pos-table-gate.tsx](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/pos-table-gate.tsx)
+- **Order_type toggle (cart):** [apps/web/app/(protected)/br/[branchId]/pos/_components/cart-pane.tsx](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/_components/cart-pane.tsx) — `ToggleGroup` "Tại bàn" / "Mang về".
+- **Multi-order picker:** [apps/web/app/(protected)/br/[branchId]/pos/_components/multi-order-table-picker.tsx](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/_components/multi-order-table-picker.tsx) — Drawer hiện khi tap bàn occupied.
 - **Table tap handler:** `handleTableSelect` trong `pos-desktop-shell.tsx` — `available` → set selected, `occupied` → mở picker, khác → toast "chưa sẵn sàng".
 
 ### Database

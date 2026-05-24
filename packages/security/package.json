@@ -12,10 +12,10 @@
   },
   "dependencies": {
     "@upstash/ratelimit": "^2.0.8",
-    "@upstash/redis": "^1.37.0"
+    "@upstash/redis": "^1.38.0"
   },
   "devDependencies": {
-    "@types/node": "^25.5.0",
+    "@types/node": "^24.12.4",
     "typescript": "^6.0.3"
   }
 }

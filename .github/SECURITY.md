@@ -89,7 +89,7 @@ So you don't waste time re-reporting things we already ship:
 - **CSP + headers:** `apps/web/next.config.ts` enforces Content-Security-Policy, Strict-Transport-Security (with `preload`), X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy. See `tasks/regressions.md` rule `SECURITY-HEADERS-IN-NEXT-CONFIG`.
 - **Feedback flow:** Origin check, honeypot, server-side validation (Zod 4), TOCTOU-safe photo update with `.or("photo_paths.is.null,photo_paths.eq.{}")`. See `apps/web/app/r/[token]/actions.ts`.
 - **Auth:** Supabase Auth with JWT custom claims (`tenant_id`, `branch_id`, `user_role`); auth hook is `SECURITY DEFINER`; RLS on every tenant-scoped table.
-- **Server Actions:** All inputs validated with Zod 4 (per `CLAUDE.md` constraints).
+- **Server Actions:** All inputs validated with Zod 4 (per `AGENTS.md` constraints).
 - **Robots + security.txt:** `/robots.txt` disallows scraping `/r/`, `/admin/`. `/.well-known/security.txt` is RFC 9116-compliant with `Expires: 2027-05-09`.
 
 ## Document History

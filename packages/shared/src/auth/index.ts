@@ -95,6 +95,7 @@ export {
   isPublicAppPath,
   normalizeHost,
   resolveHostSurface,
+  resolveLegacyRouteRedirectPath,
   resolveModuleFromPath,
   stripBetaPrefix,
 } from "./route-resolution";

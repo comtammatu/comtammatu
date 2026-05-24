@@ -113,9 +113,9 @@ pnpm --filter @comtammatu/web guides:capture     # Capture POS flow screenshots
 
 | Doc                                                            | Purpose                                          |
 | -------------------------------------------------------------- | ------------------------------------------------ |
-| [`CLAUDE.md`](CLAUDE.md)                                       | Coding constraints + 4-agent workflow (mandatory)|
+| [`AGENTS.md`](AGENTS.md)                                       | Canonical agent entrypoint + rule loading        |
 | [`docs/CODEBASE_MAP.md`](docs/CODEBASE_MAP.md)                 | Codebase map + hub files + module index          |
-| [`docs/plan/roadmap.md`](docs/plan/roadmap.md)                 | Roadmap + module sessions + version history      |
+| [`tasks/todo.md`](tasks/todo.md)                               | Active work tracker                              |
 | [`docs/plan/decisions.md`](docs/plan/decisions.md)             | Architecture decisions log                       |
 | [`docs/spec/architecture.md`](docs/spec/architecture.md)       | System architecture                              |
 | [`docs/spec/database-schema.md`](docs/spec/database-schema.md) | Database schema reference                        |

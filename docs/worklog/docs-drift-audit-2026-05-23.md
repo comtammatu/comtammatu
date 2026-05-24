@@ -4,6 +4,7 @@
 > Workflow: documentation-only audit, so the 4-agent debate is skipped per `docs/agent/rules/workflow.md`.
 > Workspace note: the worktree was already dirty. This audit intentionally adds a new worklog file only and does not rewrite existing modified docs.
 > Cleanup status: same-day cleanup moved historical plans, greenfield rebuild docs, one-off ERP mapping, and superseded task reports into `docs/archive/`; active `docs/plan/` now contains only current decisions and ADRs.
+> 2026-05-24 follow-up: database schema source-of-truth was cleaned up. The stale early-2026 table list moved to `docs/archive/ref/database-schema-early-2026.md`; active `docs/spec/database-schema.md` now points to generated types, applied DB state, migrations, and `docs/modules/database.md`.
 
 ## Executive Summary
 
@@ -86,7 +87,7 @@ Evidence:
 - Runtime route count is 109.
 - `docs/modules/web-app.md` says 107 routes.
 - `docs/llm-wiki/module-cards/web-app-routes.md` says 114 routes.
-- `docs/modules/web-app.md`, `docs/CODEBASE_MAP.md`, and some Inventory docs still say `/admin/inventory/*` page files exist on disk; current `apps/web/app/admin` has no `inventory` subdirectory. `route-resolution.ts` now says the pages were removed and only the retired ACL mapping remains.
+- Before cleanup, `docs/modules/web-app.md`, `docs/CODEBASE_MAP.md`, and some Inventory docs said `/admin/inventory/*` page files existed on disk; current `apps/web/app/(protected)/admin` has no `inventory` subdirectory. `route-resolution.ts` says the pages were removed and only the retired ACL mapping remains.
 - Current Finance has `/finance/summary`, but some route lists omit it.
 - Current Employee has `/employee/permissions` and `/employee/shift-register`, but some route lists omit them.
 
@@ -99,6 +100,7 @@ Fix:
 - Regenerate route inventory from `find apps/web/app -name page.tsx`.
 - Update `docs/modules/web-app.md`, `docs/CODEBASE_MAP.md`, and LLM wiki route card together.
 - Replace "page files exist but unreachable" with "URL space maps to retired `inventory_admin`; page files removed" where accurate.
+- Cleanup started 2026-05-24: `docs/modules/web-app.md`, `docs/CODEBASE_MAP.md`, and `docs/modules/auth.md` now describe `/admin/inventory/*` as a removed page tree with a retained retired ACL mapping.
 
 ### 5. Test coverage statements lag reality
 

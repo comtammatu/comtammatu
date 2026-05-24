@@ -42,7 +42,7 @@ type SharedBrandImageProps = Omit<
 const markSizeClass = {
   xs: "size-6",
   sm: "size-8",
-  md: "size-9",
+  md: "size-8",
   lg: "size-10",
   xl: "size-14",
 } as const;

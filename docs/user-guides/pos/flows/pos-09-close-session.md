@@ -149,10 +149,10 @@ Sau khi chốt → màn `/employee` → tap "Bán hàng POS" → mở ca mới (
 
 ### Code path
 
-- **Header button "Chốt ca":** [apps/web/app/br/[branchId]/pos/pos-session-header.tsx](../../../../apps/web/app/br/%5BbranchId%5D/pos/pos-session-header.tsx) — gated bởi `canCloseShift` (`pos:close_shift`).
-- **Close session sheet:** [apps/web/app/br/[branchId]/pos/close-session-sheet.tsx](../../../../apps/web/app/br/%5BbranchId%5D/pos/close-session-sheet.tsx) — lazy-loaded vì rare action (1-2 lần/ngày).
-- **Denomination input:** [apps/web/app/br/[branchId]/pos/_components/close-session/denomination-input.tsx](../../../../apps/web/app/br/%5BbranchId%5D/pos/_components/close-session/denomination-input.tsx).
-- **Server action:** `closePosSession` trong [apps/web/app/br/[branchId]/pos/session-actions.ts](../../../../apps/web/app/br/%5BbranchId%5D/pos/session-actions.ts) → calls Postgres RPC `close_pos_session`.
+- **Header button "Chốt ca":** [apps/web/app/(protected)/br/[branchId]/pos/pos-session-header.tsx](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/pos-session-header.tsx) — gated bởi `canCloseShift` (`pos:close_shift`).
+- **Close session sheet:** [apps/web/app/(protected)/br/[branchId]/pos/close-session-sheet.tsx](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/close-session-sheet.tsx) — lazy-loaded vì rare action (1-2 lần/ngày).
+- **Denomination input:** [apps/web/app/(protected)/br/[branchId]/pos/_components/close-session/denomination-input.tsx](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/_components/close-session/denomination-input.tsx).
+- **Server action:** `closePosSession` trong [apps/web/app/(protected)/br/[branchId]/pos/session-actions.ts](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/session-actions.ts) → calls Postgres RPC `close_pos_session`.
 
 ### Database
 

@@ -10,33 +10,30 @@
     "dev:web": "turbo dev --filter=@comtammatu/web",
     "dev:print": "turbo dev --filter=@comtammatu/print-agent",
     "build": "turbo build",
-    "lint": "pnpm lint:copy && pnpm lint:v2-imports && turbo lint",
+    "lint": "pnpm lint:copy && pnpm lint:v2-imports && pnpm lint:ui-contract && pnpm lint:client-storage && turbo lint",
+    "lint:client-storage": "node scripts/check-client-storage.mjs",
     "lint:copy": "node scripts/lint-copy.mjs",
     "lint:i18n": "I18N_BASELINE_DISABLE=1 pnpm --filter @comtammatu/web exec eslint .",
     "lint:i18n:baseline": "node scripts/update-i18n-baseline.mjs",
+    "lint:ui-contract": "node scripts/check-ui-contract.mjs",
     "lint:v2-imports": "node scripts/check-v2-imports.mjs",
+    "deps:audit": "node scripts/deps-audit.mjs",
     "typecheck": "turbo typecheck",
     "test": "turbo test",
-    "verify": "pnpm typecheck && pnpm lint && pnpm build && pnpm test",
+    "verify": "pnpm deps:audit && pnpm typecheck && pnpm lint && pnpm build && pnpm test",
+    "realtime:load": "pnpm --filter @comtammatu/web realtime:load",
     "bones:build": "pnpm --filter @comtammatu/web bones:build",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
     "db:types": "node scripts/gen-types.mjs",
-    "clean:web": "node scripts/clean-web.mjs",
-    "tokens:build": "node scripts/build-design-tokens.mjs",
-    "tokens:check": "node scripts/build-design-tokens.mjs --check"
+    "clean:web": "node scripts/clean-web.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "eslint": "^10.1.0",
-    "globals": "^17.4.0",
-    "prettier": "^3.8.1",
-    "turbo": "^2.9.3",
+    "eslint": "^10.4.0",
+    "globals": "^17.6.0",
+    "prettier": "^3.8.3",
+    "turbo": "^2.9.14",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.58.0"
-  },
-  "pnpm": {
-    "overrides": {
-      "zod": "4.3.6"
-    }
+    "typescript-eslint": "^8.59.4"
   }
 }

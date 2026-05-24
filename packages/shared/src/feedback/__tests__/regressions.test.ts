@@ -12,7 +12,7 @@ const read = (p: string) => readFileSync(resolve(repoRoot, p), "utf8");
 // --- FEEDBACK-PHOTO-PATHS-CONDITIONAL-UPDATE -------------------------------
 
 test("actions-photos.ts updates photo_paths with the conditional .or() guard", () => {
-  const src = read("apps/web/app/r/[token]/actions-photos.ts");
+  const src = read("apps/web/app/(public)/r/[token]/actions-photos.ts");
   // The exact PostgREST filter literal that closes the TOCTOU race. If a
   // future refactor replaces this with a different builder shape (e.g. drops
   // the `.or()` and goes back to an unconditional update), this assertion
@@ -38,7 +38,7 @@ test("actions-photos.ts updates photo_paths with the conditional .or() guard", (
 // --- FEEDBACK-THANK-YOU-MUST-NOTFOUND-INVALID ------------------------------
 
 test("/r/[token]/thank-you/page.tsx 404s for invalid or inactive tokens", () => {
-  const src = read("apps/web/app/r/[token]/thank-you/page.tsx");
+  const src = read("apps/web/app/(public)/r/[token]/thank-you/page.tsx");
   assert.ok(
     src.includes("isValidFeedbackToken(token)"),
     "expected isValidFeedbackToken(token) guard at top of thank-you page",
@@ -132,7 +132,7 @@ test("next.config.ts emits all security headers + disables X-Powered-By", () => 
 // --- FEEDBACK-AFTER-NOT-FIRE-AND-FORGET ------------------------------------
 
 test("actions.ts uses after() (not fire-and-forget) for telegram-flush + AI enrich", () => {
-  const src = read("apps/web/app/r/[token]/actions.ts");
+  const src = read("apps/web/app/(public)/r/[token]/actions.ts");
   assert.ok(
     /import\s*\{\s*after\s*\}\s*from\s*"next\/server"/.test(src),
     "expected `import { after } from \"next/server\"`",

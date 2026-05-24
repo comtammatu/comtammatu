@@ -1,14 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
-import {
-  Be_Vietnam_Pro,
-  Inter,
-  JetBrains_Mono,
-  Montserrat,
-} from "next/font/google";
+import { Inter, JetBrains_Mono, Montserrat } from "next/font/google";
+import Script from "next/script";
 import { ConfirmDialogProvider } from "@comtammatu/ui/components/confirm-dialog";
 import { ThemeProvider } from "@comtammatu/ui/components/theme-provider";
-import { ThemeScript } from "@comtammatu/ui/components/theme-script";
+import { getThemeScriptHtml } from "@comtammatu/ui/components/theme-script";
 import { TooltipProvider } from "@comtammatu/ui/components/tooltip";
 import { BoneyardRegistry } from "./_components/boneyard-registry";
 import { NotificationBellFloating } from "./_components/notification-bell-floating";
@@ -33,17 +29,6 @@ const fontHeading = Montserrat({
 const fontMono = JetBrains_Mono({
   subsets: ["latin", "latin-ext"],
   variable: "--font-mono",
-  display: "swap",
-});
-
-// matu-superapp baseline (Inventory redesign pilot 2026-05-08): Be Vietnam Pro
-// for body + headings on pilot pages. Live in parallel with Inter/Montserrat
-// (radix-lyra) so non-pilot routes stay unchanged. New code applies the
-// `font-matu-body` Tailwind class — see packages/ui/src/styles/matu-tokens.css.
-const fontMatuBody = Be_Vietnam_Pro({
-  subsets: ["latin", "latin-ext", "vietnamese"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-matu-body",
   display: "swap",
 });
 
@@ -84,13 +69,18 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         fontSans.variable,
         fontHeading.variable,
         fontMono.variable,
-        fontMatuBody.variable,
         "font-sans",
       )}
       suppressHydrationWarning
     >
       <body className="min-h-screen bg-background font-sans text-foreground antialiased">
-        <ThemeScript defaultTheme="system" />
+        <Script
+          id="theme-bootstrap"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html: getThemeScriptHtml({ defaultTheme: "system" }),
+          }}
+        />
         <a
           href="#main-content"
           className="sr-only z-50 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground focus:not-sr-only focus:fixed focus:left-4 focus:top-4"

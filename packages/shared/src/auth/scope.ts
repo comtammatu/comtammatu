@@ -2,6 +2,7 @@ import { canAccess } from "./module-acl";
 import {
   isAdminRoutePath,
   isBetaPath,
+  resolveLegacyRouteRedirectPath,
   resolveModuleFromPath,
   stripBetaPrefix,
 } from "./route-resolution";
@@ -195,6 +196,10 @@ export function resolvePostLoginRedirect(
   const targetPath =
     surface === "beta" ? toBetaPath(safeReturnTo) : safeReturnTo;
   const targetUrl = new URL(targetPath, "http://localhost");
+  const legacyRedirectPath = resolveLegacyRouteRedirectPath(targetUrl.pathname);
+  if (legacyRedirectPath) {
+    targetUrl.pathname = legacyRedirectPath;
+  }
 
   // Guard against bouncing the user back to the login route itself.
   if (targetUrl.pathname === "/login" || targetUrl.pathname === "/beta/login") {
@@ -218,13 +223,20 @@ export function resolvePostLoginRedirect(
     return fallback;
   }
 
-  if (moduleKey === "pos" || moduleKey === "kds" || moduleKey === "branch_settings") {
+  if (
+    moduleKey === "pos" ||
+    moduleKey === "kds" ||
+    moduleKey === "runner" ||
+    moduleKey === "branch_settings" ||
+    moduleKey === "branch_menu_limits"
+  ) {
     const routePath = stripBetaPrefix(targetUrl.pathname);
     const branchMatch = routePath.match(/^\/br\/(\d+)\//);
     const routeBranchId = branchMatch ? Number(branchMatch[1]) : null;
 
     const allowCrossBranchSettings =
-      moduleKey === "branch_settings" &&
+      (moduleKey === "branch_settings" ||
+        moduleKey === "branch_menu_limits") &&
       (
         claims.user_role === "owner" ||
         claims.user_role === "super_manager" ||

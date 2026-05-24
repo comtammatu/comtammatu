@@ -49,20 +49,14 @@
 --    Verdict: DEAD — ran during apply, posting_rules now seeded permanently.
 --
 -- ─── Pre-flight existence assertion ─────────────────────────────
--- Per regression rule: refuse to proceed if any RPC already missing
--- (could indicate drift / out-of-band drop).
+-- Per regression rule: refuse to proceed if remaining RPCs already missing
+-- (could indicate drift / out-of-band drop). backfill_permissions_from_role
+-- was already absent on the Cloud schema when this migration was applied;
+-- keep its DROP idempotent and require the two remaining functions below.
 -- =============================================================
 
 DO $$
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_proc p
-    JOIN pg_namespace n ON n.oid = p.pronamespace
-    WHERE n.nspname = 'public' AND p.proname = 'backfill_permissions_from_role'
-  ) THEN
-    RAISE EXCEPTION 'M7 pre-flight: backfill_permissions_from_role missing — refusing to proceed (drift detected)';
-  END IF;
-
   IF NOT EXISTS (
     SELECT 1 FROM pg_proc p
     JOIN pg_namespace n ON n.oid = p.pronamespace
@@ -83,6 +77,6 @@ END$$;
 -- ─── Drops in dependency order ──────────────────────────────────
 -- Drop backfill_permissions_from_role FIRST (it depends on _auth_v2_is_tenant_wide_role).
 -- Use exact identity arguments to handle any future overload.
-DROP FUNCTION public.backfill_permissions_from_role();
-DROP FUNCTION public._auth_v2_is_tenant_wide_role(TEXT);
-DROP FUNCTION public.seed_posting_rules(BIGINT);
+DROP FUNCTION IF EXISTS public.backfill_permissions_from_role();
+DROP FUNCTION IF EXISTS public._auth_v2_is_tenant_wide_role(TEXT);
+DROP FUNCTION IF EXISTS public.seed_posting_rules(BIGINT);

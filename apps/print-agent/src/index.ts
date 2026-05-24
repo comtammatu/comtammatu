@@ -1,8 +1,10 @@
-import "dotenv/config";
+import { config as loadEnv } from "dotenv";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { renderPayload, type PrintPayload } from "./escpos.js";
 import { renderPayloadBitmap } from "./escpos-bitmap.js";
 import { sendRawLAN } from "./lan.js";
+
+loadEnv({ path: [".env.local", ".env"], quiet: true });
 
 type PrinterRow = {
   id: number;
@@ -51,20 +53,36 @@ const parsePrintMode = (raw: string | undefined): PrintMode => {
   throw new Error(`Invalid PRINT_MODE=${raw} (expected 'text' or 'bitmap')`);
 };
 
+const webBaseUrl = process.env.WEB_BASE_URL ?? null;
+const presenceToken = process.env.PRINT_AGENT_PRESENCE_TOKEN ?? null;
+const agentId = process.env.AGENT_ID ?? `agent-${process.pid}`;
+
+if (webBaseUrl && !presenceToken) {
+  throw new Error(
+    "Missing env PRINT_AGENT_PRESENCE_TOKEN when WEB_BASE_URL is set",
+  );
+}
+
+if (presenceToken && !process.env.AGENT_ID) {
+  throw new Error(
+    "Missing env AGENT_ID when PRINT_AGENT_PRESENCE_TOKEN is set; presence tokens are bound to a stable agent id",
+  );
+}
+
 const config = {
   supabaseUrl: requireEnv("SUPABASE_URL"),
   serviceKey: requireEnv("SUPABASE_SERVICE_ROLE_KEY"),
   branchId: Number(requireEnv("AGENT_BRANCH_ID")),
   tenantId: Number(requireEnv("AGENT_TENANT_ID")),
-  agentId: process.env.AGENT_ID ?? `agent-${process.pid}`,
+  agentId,
   version: process.env.AGENT_VERSION ?? "0.3.0",
   printMode: parsePrintMode(process.env.PRINT_MODE),
   // Network gate: agent registers its NAT egress IP every 5 min via the
   // web app's /api/branch-presence endpoint. Web app then enforces "POS/KDS
   // only from devices on this branch's wifi" in proxy.ts.
   // Optional — leave WEB_BASE_URL unset to disable presence registration.
-  webBaseUrl: process.env.WEB_BASE_URL ?? null,
-  presenceToken: process.env.PRINT_AGENT_PRESENCE_TOKEN ?? null,
+  webBaseUrl,
+  presenceToken,
 };
 
 const printerCache = new Map<number, PrinterRow>();
@@ -144,10 +162,15 @@ async function registerPresence(): Promise<void> {
     const data = (await resp.json()) as {
       ok?: boolean;
       ip?: string;
+      skipped?: boolean;
       error?: string;
     };
     if (data.ok) {
-      console.log(`[agent] presence registered ip=${data.ip}`);
+      console.log(
+        data.skipped
+          ? `[agent] presence fresh ip=${data.ip}`
+          : `[agent] presence registered ip=${data.ip}`,
+      );
     } else {
       console.error(
         `[agent] presence register rejected: ${data.error ?? "unknown"}`,

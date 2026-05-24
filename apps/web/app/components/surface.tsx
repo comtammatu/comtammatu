@@ -126,7 +126,7 @@ export function AppPageHeader({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 space-y-1">
           {eyebrow ? (
-            <div className="text-xs font-medium text-muted-foreground">
+            <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               {eyebrow}
             </div>
           ) : null}
@@ -257,7 +257,7 @@ export function AppSection({
               {icon ? (
                 <span
                   className={cn(
-                    "inline-flex shrink-0 [&_svg]:size-4",
+                    "inline-flex shrink-0 [&_svg]:size-5",
                     SECTION_TONE_ICON_CLASSNAME[tone],
                     iconClassName,
                   )}

@@ -4,10 +4,11 @@ Use this file to find the source-of-truth docs for onboarding, implementation pl
 
 ## System Overview
 
-- LLM fast-orientation wiki: `docs/llm-wiki/README.md`
+- Agent entrypoint: `AGENTS.md`
 - Codebase map + module index: `docs/CODEBASE_MAP.md`
 - Auth & ACL: `docs/modules/auth.md`
 - Database: `docs/modules/database.md`
+- Finance: `docs/modules/finance.md`
 - Web App: `docs/modules/web-app.md`
 - UI: `docs/modules/ui.md`
 - Security: `docs/modules/security.md`
@@ -21,7 +22,7 @@ Use this file to find the source-of-truth docs for onboarding, implementation pl
 - Active ADRs: `docs/plan/adr/`
 - Archived greenfield ADRs: `docs/archive/plan/adr/`
 - System architecture: `docs/spec/architecture.md`
-- Database schema: `docs/spec/database-schema.md`
+- Database schema source ladder: `docs/spec/database-schema.md`
 - Design system contract: `docs/spec/design-system.md`
 - Suspended greenfield rebuild reference: `docs/archive/plan/system-rebuild/`
 - Historical plans only: `docs/archive/plan/`
@@ -52,6 +53,7 @@ Use this file to find the source-of-truth docs for onboarding, implementation pl
 ## Memory Maintenance Rules
 
 - Put durable policy in `AGENTS.md` or topic files under `docs/agent/rules/`.
+- Do not create separate agent-only docs such as `docs/llm-wiki/`; place durable content in the normal source-of-truth docs above.
 - Put incident-specific failure prevention in `tasks/regressions.md`.
 - Put retrospective explanations in `tasks/lessons.md`.
 - Keep user-local or machine-local notes out of version-controlled shared rule files.

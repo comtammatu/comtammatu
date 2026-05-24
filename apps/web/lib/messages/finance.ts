@@ -9,31 +9,125 @@ export const finance = {
     reportError: "Lỗi tạo báo cáo.",
   },
   shell: {
-    subLabel: "Kế toán",
+    subLabel: "Vận hành",
     mainLabel: "Tài chính",
     defaultPageTitle: "Tài chính",
-    crumbLabel: "Kế toán · Tài chính",
+    crumbLabel: "Vận hành · Tài chính",
     description:
-      "Tập trung sổ sách, báo cáo và HĐĐT trong cùng cấu trúc điều hướng.",
+      "Theo dõi doanh thu, tồn kho, chi vận hành và lợi nhuận gộp.",
     admin: "Quản trị",
-    financialStatements: "Báo cáo tài chính",
   },
   page: {
-    eyebrow: "Kế toán",
-    title: "Tài chính",
+    eyebrow: "Báo cáo vận hành",
+    title: "Tài chính của quán",
     description:
-      "Theo dõi doanh thu live, HĐĐT, đối chiếu và sổ kế toán trong một module.",
+      "Bốn số cần nhìn trước: doanh thu, giá trị tồn kho, chi vận hành và lợi nhuận gộp.",
+  },
+  powerLite: {
+    eyebrow: "Báo cáo vận hành",
+    title: "Sổ tiền của quán",
+    description:
+      "Một màn hình cho chủ quán: tiền đã thu, lời gộp ước tính, tiền đang nằm trong kho và việc cần xử lý.",
+    cashTitle: "1. Kỳ này đã thu bao nhiêu?",
+    cashDescription:
+      "Chỉ theo dõi tiền đã thu và cách tiền đi vào quỹ.",
+    profitTitle: "2. Lời gộp ước tính còn bao nhiêu?",
+    profitDescription:
+      "Lấy doanh thu trước VAT sau giảm giá, trừ giá vốn nguyên liệu đang có.",
+    inventoryCashTitle: "3. Tiền đang nằm trong kho ở đâu?",
+    inventoryCashDescription:
+      "Tổng giá trị tồn kho hiện tại và nguyên liệu đang giữ nhiều vốn nhất.",
+    actionTitle: "4. Việc nào cần xử lý?",
+    actionDescription:
+      "Chỉ hiện ngoại lệ vận hành, không trộn báo cáo kế toán doanh nghiệp vào màn hình chính.",
+    stageTitle: "Mức báo cáo đang dùng",
+    inventoryTitle: "Tiền đang nằm trong kho",
+    inventoryDescription:
+      "Top nguyên liệu giữ nhiều vốn nhất theo tồn kho hiện tại và giá vốn đang có.",
+    topItemsTitle: "Món kéo doanh thu",
+    topItemsDescription:
+      "Món bán tốt trong tháng của kỳ đang xem; dùng để đối chiếu nhanh với biên gộp.",
+    branchTitle: "So sánh chi nhánh",
+    branchDescription:
+      "Chỉ hiện khi bạn có nhiều chi nhánh. Công thức vẫn giống màn hình cơ bản của chủ quán.",
+    grossMarginLine: (margin: string) => `${margin} biên gộp`,
+    stageBranchControl: "Theo dõi nhiều chi nhánh",
+    stageCompanyReporting: "Báo cáo công ty để riêng",
+    exceptionsTitle: "Điểm cần kiểm tra",
+    exceptionsDescription:
+      "Chỉ đưa ra ngoại lệ vận hành: lệch quỹ, thiếu giá vốn, HĐĐT kẹt, công nợ NCC hoặc chi vận hành chưa ghi nhận.",
+    emptyInventoryRanking: "Chưa có tồn kho có giá trị để xếp hạng.",
+    branchFallback: (branchId: number) => `Chi nhánh ${branchId}`,
+    ingredientFallback: "Nguyên liệu chưa đặt tên",
+    portions: (count: string) => `${count} phần`,
+    emptyTopItems: "Chưa có dữ liệu món bán trong kỳ.",
+    labels: {
+      orders: "Số đơn",
+      cash: "Tiền mặt",
+      vietqr: "VietQR",
+      momo: "MoMo",
+      revenueBeforeVat: "Doanh thu trước VAT",
+      ingredientCost: "Giá vốn nguyên liệu",
+      grossMargin: "Biên gộp",
+      operatingExpense: "Chi vận hành",
+      currentInventory: "Tồn kho hiện tại",
+      inventoryQuantity: (quantity: string) => `${quantity} tồn`,
+      branchRevenue: "Doanh thu",
+      branchGrossProfit: "Lời gộp",
+      branchInventory: "Tồn kho",
+      branchCashVariance: "Lệch quỹ",
+    },
+    exceptions: {
+      cashVarianceLabel: "Lệch tiền mặt cuối ca",
+      cashVarianceClosedSessions: (count: string) =>
+        `${count} ca đã đóng trong kỳ`,
+      cashVarianceNoClosedSession: "Chưa có ca đóng trong kỳ",
+      operatingExpenseLabel: "Chi vận hành",
+      operatingExpenseRecorded: "Đã có chi phí vận hành ghi nhận trong kỳ",
+      operatingExpenseMissing:
+        "Chưa ghi nhận chi vận hành; không lấy tiền nhập hàng để đoán thay.",
+      missingCostLabel: "Thiếu giá vốn món",
+      missingCostHint:
+        "Có món bán ra nhưng chưa đủ giá vốn nguyên liệu để tính lời gộp.",
+      highFoodCostHint: (itemName: string, margin: string) =>
+        `${itemName} có tỷ lệ giá vốn ${margin}`,
+      costDataClear: "Không thấy món thiếu giá vốn trong kỳ",
+      invoiceAttentionLabel: "Hóa đơn điện tử cần xử lý",
+      invoiceAttentionHint: "Có hóa đơn còn nháp, đang ký hoặc chưa hoàn tất.",
+      supplierInvoiceLabel: "Hóa đơn nhà cung cấp chưa thanh toán",
+      supplierInvoiceHint: (count: string) => `${count} hóa đơn đang mở`,
+      unnamedMenuItem: "Món chưa đặt tên",
+    },
+  },
+  basic: {
+    dateMeta: (date: string, branch: string) => `${date} · ${branch}`,
+    periodMeta: (start: string, end: string) => `${start} → ${end}`,
+    kpis: {
+      revenue: "Doanh thu",
+      revenueHint: (orders: string, beforeVat: string) =>
+        `${orders} đơn · trước VAT ${beforeVat}`,
+      inventoryValue: "Giá trị tồn kho",
+      inventoryValueHint: "Snapshot tồn kho hiện tại",
+      operatingExpense: "Chi vận hành",
+      operatingExpenseHint: "Chi phí đã ghi nhận, không gồm giá vốn nguyên liệu",
+      grossProfit: "Lợi nhuận gộp",
+      grossProfitHint: (foodCost: string, margin: string) =>
+        `Giá vốn ${foodCost} · biên gộp ${margin}`,
+    },
+    actions: {
+      revenue: "Xem doanh thu",
+      grossProfit: "Xem lợi nhuận gộp",
+    },
   },
   nav: {
     groups: {
-      overview: "Tổng quan",
-      accounting: "Kế toán",
-      reports: "Báo cáo",
-      cycle: "Chu kỳ",
-      audit: "Kiểm toán",
+      basic: "Cơ bản",
     },
     items: {
       finance: "Tài chính",
+      todayMoney: "Tổng quan",
+      inventoryValue: "Tồn kho",
+      grossProfit: "Lợi nhuận gộp",
       revenue: "Doanh thu",
       reconciliation: "Đối chiếu",
       invoices: "Hóa đơn điện tử",
@@ -290,6 +384,7 @@ export const finance = {
   filterBar: {
     branch: "Chi nhánh",
     branchPlaceholder: "Chọn chi nhánh",
+    range: "Khoảng thời gian",
     granularity: "Mức độ",
     granularityDay: "Theo ngày",
     granularityWeek: "Theo tuần",
@@ -406,7 +501,10 @@ export const finance = {
       title: "Năng suất thu ngân",
       description:
         "Top thu ngân theo doanh thu thuần — đối chiếu với bảng lệch quỹ bên dưới.",
+      tooLargeRange:
+        "Khoảng đang xem vượt quá 90 ngày — chọn khoảng nhỏ hơn để xem theo thu ngân.",
       empty: "Chưa có dữ liệu thu ngân.",
+      tooLargeEmpty: "Chọn khoảng ≤ 90 ngày để xem theo thu ngân.",
       colCashier: "Thu ngân",
       colOrders: "Đơn",
       colNetRevenue: "Doanh thu thuần",
@@ -414,7 +512,7 @@ export const finance = {
     },
     topItems: {
       title: "Top món bán chạy",
-      description: "Theo tháng hiện tại — drill xuống từng món sẽ có ở phase 2.",
+      description: "Theo tháng chứa ngày bắt đầu kỳ đang xem.",
       empty: "Chưa có dữ liệu món.",
       colName: "Tên món",
       colQty: "SL",

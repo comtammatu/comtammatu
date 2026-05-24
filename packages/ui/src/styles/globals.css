@@ -1,12 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-/* matu-superapp design system tokens (namespaced `matu-*` to coexist with
- * radix-lyra preset). Generated from `packages/design-tokens/tokens.json` —
- * `pnpm tokens:build` regenerates. New pilot code uses `bg-matu-*`,
- * `text-matu-*`, `border-matu-*`. Adopted 2026-05-08 for Inventory redesign. */
-@import "./matu-tokens.css";
-
 /* ============================================================
  * THEME — packages/ui/src/styles/globals.css
  * Runtime source: shadcn radix-lyra primitives + Ma Tu Concept 01 tokens.
@@ -33,7 +27,6 @@
  * ============================================================ */
 
 @theme inline {
-  --font-matu-body: var(--font-matu-body), system-ui, sans-serif;
   --font-heading: var(--font-matu-heading);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -215,7 +208,7 @@
 
 /* ============================================================
  * ZONE C — APP UTILITIES (variants, font, base)
- * Inlined byte-equivalent of `shadcn/tailwind.css` (shadcn 4.5.0)
+ * Inlined byte-equivalent of `shadcn/tailwind.css` (shadcn 4.8.0)
  * to avoid adding the CLI as a runtime dep just for one CSS file.
  * Re-sync: diff against node_modules/shadcn/dist/tailwind.css when bumping shadcn.
  * ============================================================ */

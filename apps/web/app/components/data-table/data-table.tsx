@@ -11,6 +11,7 @@ import {
 } from "@comtammatu/ui/components/table";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui";
+import { AppEmptyState } from "../surface";
 import { TableEmptyStateRow } from "../table-empty-state-row";
 import { DataTablePagination } from "./data-table-pagination";
 import type { ReactNode } from "react";
@@ -49,7 +50,7 @@ export interface DataTableFilter {
 interface DataTableProps<T> {
   columns: DataTableColumn<T>[];
   data: T[];
- getRowKey: (row: T) => string | number;
+  getRowKey: (row: T) => string | number;
   searchable?: boolean;
   searchPlaceholder?: string;
   filters?: DataTableFilter[];
@@ -98,9 +99,13 @@ export function DataTable<T>({
     return (
       <div className={cn("flex flex-col gap-3", className)}>
         {data.length === 0 ? (
-          <div className="py-8 text-center text-sm text-muted-foreground">
-            {emptyTitle ?? "Chưa có dữ liệu"}
-          </div>
+          <AppEmptyState
+            compact
+            title={emptyTitle}
+            mode={emptyMode ?? "no-data"}
+            description={emptyDescription}
+            icon={emptyIcon}
+          />
         ) : (
           data.map((row) => (
             <div key={getRowKey(row)}>{mobileCardRender(row)}</div>

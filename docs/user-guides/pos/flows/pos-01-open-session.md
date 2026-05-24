@@ -112,9 +112,9 @@ Ví dụ: `/br/1/pos`
 
 ### Code path
 
-- **UI:** [apps/web/app/br/[branchId]/pos/session-gate.tsx](../../../../apps/web/app/br/%5BbranchId%5D/pos/session-gate.tsx)
-- **Server action:** [apps/web/app/br/[branchId]/pos/session-actions.ts](../../../../apps/web/app/br/%5BbranchId%5D/pos/session-actions.ts) — function `openPosSession`
-- **Page-level orchestration:** [apps/web/app/br/[branchId]/pos/page.tsx](../../../../apps/web/app/br/%5BbranchId%5D/pos/page.tsx)
+- **UI:** [apps/web/app/(protected)/br/[branchId]/pos/session-gate.tsx](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/session-gate.tsx)
+- **Server action:** [apps/web/app/(protected)/br/[branchId]/pos/session-actions.ts](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/session-actions.ts) — function `openPosSession`
+- **Page-level orchestration:** [apps/web/app/(protected)/br/[branchId]/pos/page.tsx](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/page.tsx)
 
 ### Database (per-branch model D7)
 

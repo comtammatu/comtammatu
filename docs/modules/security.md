@@ -18,7 +18,7 @@ Rate limiting via Upstash Redis. Protects API routes and auth endpoints from abu
 | Limiter          | Limit       | Window     | Used By                                               |
 | ---------------- | ----------- | ---------- | ----------------------------------------------------- |
 | `rateLimit`      | 60 requests | 1 minute   | General API routes                                    |
-| `loginRateLimit` | 5 attempts  | 15 minutes | Login action (`apps/web/app/(auth)/login/actions.ts`) |
+| `loginRateLimit` | 5 attempts  | 15 minutes | Login action (`apps/web/app/(public)/(auth)/login/actions.ts`) |
 
 Both use Upstash Redis sliding window algorithm.
 

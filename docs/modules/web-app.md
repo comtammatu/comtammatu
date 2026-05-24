@@ -2,11 +2,16 @@
 
 ## Tổng quan
 
-Ứng dụng Next.js 16.2 dùng App Router. 107 page.tsx routes phục vụ các bề mặt: Admin (`/admin/*`), Inventory (`/inventory/*`), Finance (`/finance/*`), HR (`/hr/*`), Orders (`/orders`), Notifications (`/notifications`), POS (`/br/[branchId]/pos`), KDS (`/br/[branchId]/kds`), Branch settings (`/br/[branchId]/settings/*`), Branch menu limits (`/br/[branchId]/menu-limits`), Employee portal (`/employee/*`), plus public surfaces `/login`, `/access-denied`, `/payment/momo/return`. Khung quản trị + Thực đơn + POS + KDS đã hoàn thành; Kho hàng hiện là bề mặt vận hành live cho HQ, bếp trung tâm, và chi nhánh.
+Ứng dụng Next.js 16.2 dùng App Router. Snapshot 2026-05-24 (`node scripts/project-snapshot.mjs`) có 109 `page.tsx` routes và 13 API route handlers. Các bề mặt chính: Admin (`/admin/*`), Inventory (`/inventory/*`), Finance (`/finance/*`), HR (`/hr/*`), Orders (`/orders`), Notifications (`/notifications`), POS (`/br/[branchId]/pos`), KDS (`/br/[branchId]/kds`), Runner (`/br/[branchId]/runner`), Branch settings (`/br/[branchId]/settings/*`), Branch menu limits (`/br/[branchId]/menu-limits`), Employee portal (`/employee/*`), plus public surfaces `/login`, `/access-denied`, `/r/*`, `/payment/momo/return`. Khung quản trị + Thực đơn + POS + KDS đã hoàn thành; Kho hàng hiện là bề mặt vận hành live cho HQ, bếp trung tâm, và chi nhánh.
 
 **Phạm vi sở hữu:** `apps/web/`
 
 ## Cấu trúc route
+
+Route groups `(protected)` and `(public)` are URL-neutral. The tree below is
+organized by runtime surface; the actual current files live under
+`apps/web/app/(protected)/*` for authenticated app surfaces and
+`apps/web/app/(public)/*` for public/auth/return surfaces.
 
 ```
 apps/web/app/
@@ -14,14 +19,31 @@ apps/web/app/
 ├── page.tsx                # / → redirect to role default
 ├── globals.css             # Tailwind 4.2 base styles
 │
-├── (auth)/login/           # Public auth group
-│   ├── page.tsx            # Login page
-│   ├── login-form.tsx      # "use client" form
-│   └── actions.ts          # Server action: login()
+├── (public)/               # URL-neutral route group for unauthenticated / externally-returned surfaces
+│   ├── (auth)/login/       # Public auth group; URL remains /login
+│   │   ├── page.tsx        # Login page
+│   │   ├── login-form.tsx  # "use client" form
+│   │   └── actions.ts      # Server action: login()
+│   ├── access-denied/      # Public — renders blocked-state copy; URL remains /access-denied
+│   ├── r/                  # Public feedback QR surface; URL remains /r/[token]
+│   └── payment/momo/return/ # Public Momo redirect target after gateway flow; URL remains /payment/momo/return
 │
-├── access-denied/          # Public — renders blocked-state copy from packages/shared/src/auth/blocked-state.ts
-├── orders/                 # Cross-branch orders surface (owner/super_manager/area_manager/branch_manager/cashier)
-├── notifications/          # In-app notification inbox (all staff)
+├── (protected)/            # URL-neutral route group for authenticated app surfaces
+│   ├── menu/               # Menu master data; URL remains /menu
+│   ├── notifications/      # In-app notification inbox; URL remains /notifications
+│   ├── orders/             # Cross-branch orders surface; URL remains /orders
+│   ├── hr/                 # HR workspace; URL remains /hr and /hr/payroll/*
+│   ├── finance/            # Finance workspace; URL remains /finance/*
+│   │   ├── revenue/        # Revenue rollups + [date] drilldown
+│   │   ├── reconciliation/ # POS/subledger ↔ GL reconciliation
+│   │   ├── chart-of-accounts/ # Chart of accounts management
+│   │   ├── journal/        # Journal entries
+│   │   ├── posting-rules/  # GL posting rules
+│   │   ├── food-cost/      # Food cost analysis
+│   │   ├── periods/        # Fiscal period management
+│   │   ├── audit-trail/    # Finance audit log
+│   │   └── statements/     # Financial statements
+│   └── employee/           # Employee portal; URL remains /employee/*
 │
 ├── admin/                  # ERP foundation + executive reporting shell
 │   ├── layout.tsx          # AdminLayout (auth guard + sidebar)
@@ -31,18 +53,14 @@ apps/web/app/
 │   ├── menu/               # Menu master data domain (reachable via domain map, not primary Admin nav)
 │   ├── accounting/
 │   │   └── periods/        # Period close/reopen (owner/super_manager; ACCOUNTING_PERIOD_REOPEN gated)
-│   ├── inventory/          # RETIRED — module ACL has empty allowed_roles; pages exist but unreachable
-│   │   ├── cold-chain/     # Compliance / cold-chain events
-│   │   ├── express-windows/ # Express GRN time windows
-│   │   ├── feature-flags/  # Inventory feature flags
-│   │   └── trust/          # Trust leaderboard
+│   ├── inventory/          # REMOVED — URL space maps to retired inventory_admin ACL only
 │   ├── staff/              # Staff CRUD with role hierarchy auth, excludes owner/super_manager
 │   │   ├── audit/          # Permission audit log viewer
 │   │   └── [id]/permissions/ # Per-user grant/revoke + template apply
 │   ├── hr/                 # Admin-side HR reporting entrypoints (deep links continue to /hr workspace)
 │   │   └── payroll/        # Payroll periods list + [periodId] detail
 │   ├── crm/                # Placeholder / deferred
-│   ├── finance/            # Compatibility redirect → /finance/*
+│   ├── finance/            # Compatibility redirect → /finance/* (also canonicalized in proxy + returnTo resolver)
 │   ├── reports/            # CEO/HQ reports hub
 │   │   ├── revenue/        # Revenue reports
 │   │   ├── inventory-value/ # Inventory valuation reports
@@ -70,6 +88,10 @@ apps/web/app/
 │   │   ├── actions.ts      # bump/recall tickets, station CRUD, category mapping
 │   │   ├── kds-board.tsx   # "use client" — realtime ticket board with Supabase subscription
 │   │   └── order-card.tsx  # Individual order card with bump/recall buttons
+│   ├── runner/             # Runner customer call screen (cashier, waiter, chef, branch_manager)
+│   │   ├── layout.tsx      # Auth + ACL + branch validation
+│   │   ├── page.tsx        # Read-only customer-facing queue display
+│   │   └── runner-realtime-refresh.tsx # "use client" — realtime invalidation + poll fallback
 │   ├── menu-limits/        # Daily sales limits per (branch, menu item) — branch_settings co-owners + cashier + chef
 │   └── settings/           # Branch-scoped settings (kds, pos, pos-sessions, printers, tables)
 │       ├── kds/
@@ -77,15 +99,6 @@ apps/web/app/
 │       ├── pos-sessions/
 │       ├── printers/
 │       └── tables/
-│
-├── employee/               # Employee portal (all roles)
-│   ├── layout.tsx          # Employee shell with auth guard
-│   ├── page.tsx            # Employee dashboard
-│   ├── profile/            # Personal profile
-│   ├── clock/              # Clock in/out
-│   ├── attendance/         # Attendance history
-│   ├── schedule/           # Work schedule
-│   └── payslip/            # Payslip viewer
 │
 ├── inventory/              # Inventory operations cockpit (HQ / central_kitchen / branch)
 │   ├── layout.tsx          # Inventory shell with site context + role-aware nav
@@ -117,29 +130,6 @@ apps/web/app/
 │       ├── expiry/         # Expiry alert thresholds
 │       └── qc/             # QC config (rejection codes, photo policy)
 │
-├── hr/                     # HR workspace (manager+)
-│   ├── layout.tsx          # HR shell with auth guard
-│   ├── page.tsx            # HR dashboard
-│   └── payroll/            # Payroll periods list + [periodId] detail
-│
-├── finance/                # Finance workspace + HĐĐT / VAS reporting
-│   ├── layout.tsx          # Finance shell with auth guard
-│   ├── page.tsx            # Revenue + invoice overview
-│   ├── revenue/            # Revenue rollups + [date] drilldown
-│   ├── reconciliation/     # POS/subledger ↔ GL reconciliation
-│   ├── chart-of-accounts/  # Chart of accounts management
-│   ├── journal/            # Journal entries
-│   ├── posting-rules/      # GL posting rules
-│   ├── food-cost/          # Food cost analysis
-│   ├── periods/            # Fiscal period management
-│   ├── audit-trail/        # Finance audit log
-│   └── statements/         # Financial statements
-│
-├── employee/               # Employee portal — see Employee section below
-├── inventory/              # Inventory cockpit — see Inventory section below
-├── hr/                     # HR workspace — payroll/[periodId]
-├── payment/momo/return/    # Public Momo redirect target after gateway flow
-│
 └── api/
     ├── health/route.ts            # GET health check
     ├── auth/signout/route.ts      # POST logout
@@ -150,7 +140,7 @@ apps/web/app/
 
 ## Thành phần chính
 
-### Khung quản trị (`apps/web/app/admin/components/admin-shell.tsx`)
+### Khung quản trị (`apps/web/app/(protected)/admin/components/admin-shell.tsx`)
 
 Layout chính cho toàn bộ route `/admin/*`. Thành phần này render:
 
@@ -161,11 +151,11 @@ Layout chính cho toàn bộ route `/admin/*`. Thành phần này render:
 
 Nhóm điều hướng được lọc qua `canAccess(role, moduleKey)` — phân hệ nào không có quyền sẽ bị ẩn.
 
-### Form đăng nhập (`apps/web/app/(auth)/login/login-form.tsx`)
+### Form đăng nhập (`apps/web/app/(public)/(auth)/login/login-form.tsx`)
 
 "use client" component. Uses React Hook Form + Zod validation. Calls `login()` server action. Displays error toast via Sonner on failure.
 
-### Server action đăng nhập (`apps/web/app/(auth)/login/actions.ts`)
+### Server action đăng nhập (`apps/web/app/(public)/(auth)/login/actions.ts`)
 
 Server action with rate limiting (`loginRateLimit` from `@comtammatu/security`). Validates with Zod, calls `signInWithPassword()`, extracts claims, redirects to role default via `getDefaultRedirect()`.
 
@@ -226,7 +216,7 @@ Browser request
 
 ## Thêm một trang quản trị mới
 
-1. Create `apps/web/app/admin/{module}/page.tsx`
+1. Create `apps/web/app/(protected)/admin/{module}/page.tsx`
 2. Add `ModuleKey` to `packages/shared/src/auth/module-acl.ts` with allowed roles
 3. Add route mapping in `apps/web/proxy.ts` → `resolveModule()`
 4. Add nav item in `packages/shared/src/auth/nav-config.ts`
@@ -246,7 +236,7 @@ Browser request
 - **Proxy as single auth gate:** All auth enforcement happens in `proxy.ts` before any route code runs. Layout-level checks are defense-in-depth, not primary.
 - **RSC by default:** Pages are React Server Components. Only interactive elements (forms, dropdowns) use "use client".
 - **Admin is now narrower by design:** it keeps foundation controls and executive reporting, while deep domain workflows should live in dedicated workspaces.
-- **Inventory is a standalone surface:** `/inventory` is the canonical Inventory operations domain. `/admin/inventory/*` page files (cold-chain, express-windows, feature-flags, trust) still exist on disk but are RETIRED — the `inventory_admin` module has empty `allowedRoles`, so no role passes the proxy ACL check.
+- **Inventory is a standalone surface:** `/inventory` is the canonical Inventory operations domain. `/admin/inventory/*` page files were removed; the URL space still maps to retired `inventory_admin` with empty `allowedRoles`, so no role passes the proxy ACL check.
 - **Employee portal is live:** profile, clock, attendance, schedule, payslip pages shipped. HR workspace has payroll management.
 - **Finance & reports expanded:** chart-of-accounts, journal, food-cost, statements, revenue, inventory-value, stock-movement all live.
 - **Inventory settings are narrower now:** `/inventory/settings` chỉ giữ policy/config như expiry; catalog pages canonical sống ở `/inventory/ingredients`, `/inventory/suppliers`, `/inventory/recipes`, còn route settings cũ giữ redirect tương thích.

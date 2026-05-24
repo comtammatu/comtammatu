@@ -158,6 +158,15 @@ const paymentBreakdownLineSchema = z.object({
   amount: z.number(),
 });
 
+const shiftItemBreakdownLineSchema = z.object({
+  name: z.string(),
+  source: z
+    .union([z.enum(["main", "side", "modifier"]), z.string()])
+    .optional(),
+  qty: z.number().int(),
+  revenue: z.number().optional(),
+});
+
 export const shiftCloseReportPayloadSchema = z.object({
   kind: z.literal("shift_close_report"),
   branch_name: z.string().optional(),
@@ -186,6 +195,10 @@ export const shiftCloseReportPayloadSchema = z.object({
   cancelled_order_count: z.number().int(),
   /** Per-method aggregation: {cash, vietqr, momo, ...}. */
   payment_breakdown: z.array(paymentBreakdownLineSchema),
+  /** Tổng số lượng đã bán, gồm món chính + món kèm + modifier đã decompose. */
+  total_item_quantity: z.number().int().optional(),
+  /** Chi tiết số lượng bán theo từng món trên đơn đã thanh toán. */
+  item_breakdown: z.array(shiftItemBreakdownLineSchema).optional(),
   /** Sum of paid orders.total_amount. */
   total_revenue: z.number(),
   printed_at: z.string(),

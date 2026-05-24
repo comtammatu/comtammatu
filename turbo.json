@@ -16,6 +16,35 @@
         "public/workbox-*.js"
       ]
     },
+    "@comtammatu/web#build": {
+      "dependsOn": ["^build"],
+      "env": [
+        "SUPABASE_SERVICE_ROLE_KEY",
+        "UPSTASH_REDIS_REST_URL",
+        "UPSTASH_REDIS_REST_TOKEN",
+        "POS_NETWORK_GATE",
+        "COMPANY_TAX_CODE",
+        "!INVOICE_PROVIDER",
+        "SINVOICE_USERNAME",
+        "SINVOICE_PASSWORD",
+        "SINVOICE_TEMPLATE_CODE",
+        "SINVOICE_INVOICE_SERIES",
+        "MOMO_PARTNER_CODE",
+        "MOMO_ACCESS_KEY",
+        "MOMO_SECRET_KEY",
+        "HDDT_RECONCILE_ENABLED"
+      ],
+      "outputs": [
+        ".next/**",
+        "!.next/cache/**",
+        "!.next/dev/**",
+        "dist/**",
+        "public/sw.js",
+        "public/sw.js.map",
+        "public/swe-worker-*.js",
+        "public/workbox-*.js"
+      ]
+    },
     "lint": {},
     "typecheck": {},
     "test": {

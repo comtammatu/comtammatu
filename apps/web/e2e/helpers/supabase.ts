@@ -64,8 +64,25 @@ export interface TestKdsTicket {
   orderId: number;
   orderItemId: number;
   orderNumber: string;
+  tenantId: number;
   ticketId: number;
   cleanup: () => Promise<void>;
+}
+
+export interface TestKdsOrderWithTickets {
+  branchId: number;
+  orderId: number;
+  orderNumber: string;
+  paymentStatus: string;
+  tableId: number;
+  ticketIds: number[];
+  cleanup: () => Promise<void>;
+}
+
+interface CreateKdsTestTicketOptions {
+  createdAt?: string;
+  orderNumberPrefix?: string;
+  status?: "pending" | "preparing" | "ready" | "cancelled";
 }
 
 async function listAuthUsers(supabase: ServiceClient) {
@@ -145,7 +162,9 @@ export async function resolveChefCredentials() {
   const users = await listAuthUsers(supabase);
   const { data: chefProfile, error } = await supabase
     .from("profiles")
-    .select("id, tenant_id, branch_id, full_name, positions!inner(legacy_role_code)")
+    .select(
+      "id, tenant_id, branch_id, full_name, positions!inner(legacy_role_code)",
+    )
     .eq("tenant_id", cashier.tenantId)
     .eq("branch_id", cashier.branchId)
     .eq("positions.legacy_role_code", "chef")
@@ -580,7 +599,9 @@ export async function createTestOrder(): Promise<TestOrder> {
   };
 }
 
-export async function createKdsTestTicket(): Promise<TestKdsTicket> {
+export async function createKdsTestTicket(
+  options: CreateKdsTestTicketOptions = {},
+): Promise<TestKdsTicket> {
   const supabase = createServiceClient();
   const context = await resolvePosTestContext();
   const stationId = await ensureKdsStation(
@@ -588,7 +609,8 @@ export async function createKdsTestTicket(): Promise<TestKdsTicket> {
     context.tenantId,
     context.branchId,
   );
-  const orderNumber = `KDS-E2E-${Date.now()}`;
+  const orderNumber = `${options.orderNumberPrefix ?? "KDS-E2E"}-${Date.now()}`;
+  const status = options.status ?? "pending";
 
   const { data: order, error: orderError } = await supabase
     .from("orders")
@@ -608,6 +630,7 @@ export async function createKdsTestTicket(): Promise<TestKdsTicket> {
       note: "E2E KDS fixture",
       created_by: context.cashier.userId,
       pos_session_id: context.posSessionId,
+      ...(options.createdAt ? { created_at: options.createdAt } : {}),
     })
     .select("id")
     .single();
@@ -645,9 +668,13 @@ export async function createKdsTestTicket(): Promise<TestKdsTicket> {
       station_id: stationId,
       order_id: order.id,
       order_item_id: orderItem.id,
-      status: "pending",
+      status,
       bumped_by: null,
-      bumped_at: null,
+      bumped_at:
+        status === "ready" || status === "cancelled"
+          ? (options.createdAt ?? new Date().toISOString())
+          : null,
+      ...(options.createdAt ? { created_at: options.createdAt } : {}),
     })
     .select("id")
     .single();
@@ -687,7 +714,154 @@ export async function createKdsTestTicket(): Promise<TestKdsTicket> {
     orderId: order.id,
     orderItemId: orderItem.id,
     orderNumber,
+    tenantId: context.tenantId,
     ticketId: ticket.id,
+    cleanup,
+  };
+}
+
+export async function createKdsTestOrderWithTickets(
+  statuses: Array<"pending" | "preparing" | "ready" | "cancelled">,
+): Promise<TestKdsOrderWithTickets> {
+  if (statuses.length === 0) {
+    throw new Error(
+      "createKdsTestOrderWithTickets requires at least one ticket",
+    );
+  }
+
+  const supabase = createServiceClient();
+  const context = await resolvePosTestContext();
+  const stationId = await ensureKdsStation(
+    supabase,
+    context.tenantId,
+    context.branchId,
+  );
+  const orderNumber = `KDS-MULTI-${Date.now()}`;
+
+  const { data: order, error: orderError } = await supabase
+    .from("orders")
+    .insert({
+      tenant_id: context.tenantId,
+      branch_id: context.branchId,
+      table_id: context.tableId,
+      order_number: orderNumber,
+      order_type: "dine_in",
+      status: "confirmed",
+      payment_status: "unpaid",
+      subtotal: context.unitPrice * statuses.length,
+      tax_amount: 0,
+      service_charge: 0,
+      discount_amount: 0,
+      total_amount: context.unitPrice * statuses.length,
+      customer_count: 1,
+      note: "E2E KDS multi-ticket fixture",
+      created_by: context.cashier.userId,
+      pos_session_id: context.posSessionId,
+      created_at: new Date(Date.now() + 86_400_000).toISOString(),
+    })
+    .select("id, payment_status")
+    .single();
+
+  if (orderError || !order) {
+    throw new Error(`Failed to create KDS multi order: ${orderError?.message}`);
+  }
+
+  const ticketIds: number[] = [];
+  for (let index = 0; index < statuses.length; index++) {
+    const status = statuses[index]!;
+    const { data: orderItem, error: itemError } = await supabase
+      .from("order_items")
+      .insert({
+        tenant_id: context.tenantId,
+        order_id: order.id,
+        menu_item_id: context.menuItemId,
+        item_name: `${context.menuItemName} ${String(index + 1)}`,
+        quantity: 1,
+        unit_price: context.unitPrice,
+        modifiers: [],
+        sides: [],
+        subtotal: context.unitPrice,
+        status: status === "cancelled" ? "cancelled" : status,
+      })
+      .select("id")
+      .single();
+
+    if (itemError || !orderItem) {
+      throw new Error(
+        `Failed to create KDS multi order item: ${itemError?.message}`,
+      );
+    }
+
+    const { data: ticket, error: ticketError } = await supabase
+      .from("kds_tickets")
+      .insert({
+        tenant_id: context.tenantId,
+        branch_id: context.branchId,
+        station_id: stationId,
+        order_id: order.id,
+        order_item_id: orderItem.id,
+        status,
+        bumped_by: null,
+        bumped_at:
+          status === "ready" || status === "cancelled"
+            ? new Date().toISOString()
+            : null,
+      })
+      .select("id")
+      .single();
+
+    if (ticketError || !ticket) {
+      throw new Error(
+        `Failed to create KDS multi ticket: ${ticketError?.message}`,
+      );
+    }
+
+    ticketIds.push(ticket.id);
+  }
+
+  await supabase
+    .from("tables")
+    .update({ status: "occupied" })
+    .eq("id", context.tableId)
+    .eq("tenant_id", context.tenantId);
+
+  const cleanup = async () => {
+    const sb = createServiceClient();
+
+    await sb
+      .from("kds_tickets")
+      .delete()
+      .eq("order_id", order.id)
+      .eq("tenant_id", context.tenantId);
+    await sb
+      .from("order_status_history")
+      .delete()
+      .eq("order_id", order.id)
+      .eq("tenant_id", context.tenantId);
+    await sb
+      .from("order_items")
+      .delete()
+      .eq("order_id", order.id)
+      .eq("tenant_id", context.tenantId);
+    await sb
+      .from("orders")
+      .delete()
+      .eq("id", order.id)
+      .eq("tenant_id", context.tenantId);
+    await sb
+      .from("tables")
+      .update({ status: "available" })
+      .eq("id", context.tableId)
+      .eq("tenant_id", context.tenantId);
+  };
+
+  return {
+    branchId: context.branchId,
+    orderId: order.id,
+    orderNumber,
+    paymentStatus: order.payment_status,
+    tableId: context.tableId,
+    ticketIds,
     cleanup,
   };
 }
@@ -728,9 +902,7 @@ export async function getOrderStatus(orderId: number): Promise<string | null> {
   return data?.status ?? null;
 }
 
-export async function getTableStatus(
-  tableId: number,
-): Promise<string | null> {
+export async function getTableStatus(tableId: number): Promise<string | null> {
   const supabase = createServiceClient();
   const { data } = await supabase
     .from("tables")
@@ -754,6 +926,20 @@ export async function getKdsTicketStatus(
   return data?.status ?? null;
 }
 
+export async function getKdsTicketStatuses(
+  ticketIds: number[],
+): Promise<Record<number, string>> {
+  const supabase = createServiceClient();
+  const { data } = await supabase
+    .from("kds_tickets")
+    .select("id, status")
+    .in("id", ticketIds);
+
+  return Object.fromEntries(
+    (data ?? []).map((row) => [row.id, row.status] as const),
+  );
+}
+
 /**
  * Force a KDS ticket to `ready` via service role (bypasses bump RPC auth).
  * Used by mixed-status payment test to simulate "chef bumped one item but
@@ -767,7 +953,9 @@ export async function bumpTicketToReady(ticketId: number): Promise<void> {
     .eq("id", ticketId);
 
   if (error) {
-    throw new Error(`Failed to bump ticket ${ticketId} to ready: ${error.message}`);
+    throw new Error(
+      `Failed to bump ticket ${ticketId} to ready: ${error.message}`,
+    );
   }
 }
 
@@ -939,20 +1127,18 @@ export async function setBranchMenuDailyLimit(opts: {
   const supabase = createServiceClient();
   const today = new Date().toISOString().slice(0, 10);
 
-  const { error } = await supabase
-    .from("branch_menu_item_daily_limits")
-    .upsert(
-      {
-        tenant_id: opts.tenantId,
-        branch_id: opts.branchId,
-        menu_item_id: opts.menuItemId,
-        limit_date: today,
-        limit_quantity: opts.limitQuantity,
-        is_disabled: false,
-        sold_today: 0,
-      },
-      { onConflict: "branch_id,menu_item_id,limit_date" },
-    );
+  const { error } = await supabase.from("branch_menu_item_daily_limits").upsert(
+    {
+      tenant_id: opts.tenantId,
+      branch_id: opts.branchId,
+      menu_item_id: opts.menuItemId,
+      limit_date: today,
+      limit_quantity: opts.limitQuantity,
+      is_disabled: false,
+      sold_today: 0,
+    },
+    { onConflict: "branch_id,menu_item_id,limit_date" },
+  );
 
   if (error) {
     throw new Error(`Failed to set daily limit: ${error.message}`);

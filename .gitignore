@@ -76,6 +76,7 @@ pos-after*.png
 .vercel/
 .gstack/
 .omc/
+.understand-anything/
 
 # context-graph (large JSON, regenerate with: context-graph analyze .)
 .context-graph/graph.json

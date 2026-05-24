@@ -60,6 +60,8 @@ export const employee = {
     posDescription: "Bán hàng",
     kdsTitle: "KDS",
     kdsDescription: "Hàng bếp",
+    runnerTitle: "Màn gọi số",
+    runnerDescription: "Gọi khách nhận món",
     managementTitle: "Quản lý được phép",
     managementDescription: "Các module phụ theo vai trò hiện tại.",
     ordersTitle: "Đơn hàng",

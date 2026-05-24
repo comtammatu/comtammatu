@@ -26,7 +26,7 @@
 **Authz path cho mỗi Inventory request:**
 
 1. `proxy.ts` check route-level qua `canAccess(user_role, module)` — fast gate.
-2. Server action (`apps/web/app/inventory/*-actions.ts`) check permission qua `currentUserHasPermission(key)` — domain gate.
+2. Server action (`apps/web/app/(protected)/inventory/*-actions.ts`) check permission qua `currentUserHasPermission(key)` — domain gate.
 3. RLS policy trên table dùng `has_permission(branch_id, key)` — row gate.
 4. RPC body (SECURITY DEFINER) thực thi logic + check role/permission nội bộ.
 

@@ -17,12 +17,12 @@ Tài liệu này dùng để nhìn lại Inventory theo góc độ UX workflow, 
   - [docs/ref/inventory-sop.md](../../ref/inventory-sop.md)
   - [docs/ref/inventory-rbac-matrix.md](../../ref/inventory-rbac-matrix.md)
 - UI structure:
-  - [apps/web/app/inventory/_components/inventory-shell.tsx](../../../apps/web/app/inventory/_components/inventory-shell.tsx)
-  - [apps/web/app/inventory/dashboard-client.tsx](../../../apps/web/app/inventory/dashboard-client.tsx)
-  - [apps/web/app/inventory/receiving/receiving-client.tsx](../../../apps/web/app/inventory/receiving/receiving-client.tsx)
-  - [apps/web/app/inventory/transfers/transfers-list-client.tsx](../../../apps/web/app/inventory/transfers/transfers-list-client.tsx)
-  - [apps/web/app/inventory/issues/issues-client.tsx](../../../apps/web/app/inventory/issues/issues-client.tsx)
-  - [apps/web/app/inventory/settings/settings-section-nav.tsx](../../../apps/web/app/inventory/settings/settings-section-nav.tsx)
+  - [apps/web/app/(protected)/inventory/_components/inventory-shell.tsx](<../../../apps/web/app/(protected)/inventory/_components/inventory-shell.tsx>)
+  - [apps/web/app/(protected)/inventory/dashboard-client.tsx](<../../../apps/web/app/(protected)/inventory/dashboard-client.tsx>)
+  - [apps/web/app/(protected)/inventory/receiving/receiving-client.tsx](<../../../apps/web/app/(protected)/inventory/receiving/receiving-client.tsx>)
+  - [apps/web/app/(protected)/inventory/transfers/transfers-list-client.tsx](<../../../apps/web/app/(protected)/inventory/transfers/transfers-list-client.tsx>)
+  - [apps/web/app/(protected)/inventory/issues/issues-client.tsx](<../../../apps/web/app/(protected)/inventory/issues/issues-client.tsx>)
+  - [apps/web/app/(protected)/inventory/settings/settings-section-nav.tsx](<../../../apps/web/app/(protected)/inventory/settings/settings-section-nav.tsx>)
 
 ## Chẩn đoán nhanh
 

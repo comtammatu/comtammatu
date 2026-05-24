@@ -22,6 +22,7 @@ export type ModuleKey =
   | "settings"
   | "pos"
   | "kds"
+  | "runner"
   | "branch_settings"
   | "branch_menu_limits"
   | "employee"
@@ -116,6 +117,11 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     path: "/br/*/kds",
     allowedRoles: ["chef", "branch_manager"],
     label: getModuleLabelVi("kds"),
+  },
+  runner: {
+    path: "/br/*/runner",
+    allowedRoles: ["cashier", "waiter", "chef", "branch_manager"],
+    label: getModuleLabelVi("runner"),
   },
   branch_settings: {
     path: "/br/*/settings",

@@ -37,7 +37,7 @@ function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card-title"
-      className={cn("font-heading text-sm font-medium", className)}
+      className={cn("font-heading text-base font-semibold", className)}
       {...props}
     />
   )
@@ -66,11 +66,25 @@ function CardAction({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
-function CardContent({ className, ...props }: React.ComponentProps<"div">) {
+type CardContentProps = React.ComponentProps<"div"> & {
+  flush?: boolean
+  scroll?: boolean
+}
+
+function CardContent({
+  className,
+  flush = false,
+  scroll = false,
+  ...props
+}: CardContentProps) {
   return (
     <div
       data-slot="card-content"
-      className={cn("px-4 group-data-[size=sm]/card:px-3", className)}
+      className={cn(
+        flush ? "px-0" : "px-4 group-data-[size=sm]/card:px-3",
+        scroll && "overflow-x-auto",
+        className
+      )}
       {...props}
     />
   )

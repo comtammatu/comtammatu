@@ -15,6 +15,8 @@ import {
   isPublicAppPath,
   normalizeHost,
   resolveHostSurface,
+  resolveLegacyRouteRedirectPath,
+  resolveModuleFromPath,
 } from "../route-resolution";
 
 function makeClaims(
@@ -83,6 +85,16 @@ test("resolvePostLoginRedirect → valid returnTo for accessible module → keep
   assert.equal(
     resolvePostLoginRedirect(makeClaims("super_manager"), "/finance"),
     "/finance",
+  );
+});
+
+test("resolvePostLoginRedirect → legacy admin finance returnTo canonicalizes to finance workspace", () => {
+  assert.equal(
+    resolvePostLoginRedirect(
+      makeClaims("super_manager"),
+      "/admin/finance/revenue?range=today",
+    ),
+    "/finance/revenue?range=today",
   );
 });
 
@@ -216,9 +228,27 @@ test("resolvePostLoginRedirect → chef accessing own KDS → allowed", () => {
   );
 });
 
+test("resolvePostLoginRedirect → branch staff accessing own Runner → allowed", () => {
+  assert.equal(
+    resolvePostLoginRedirect(makeClaims("waiter", 5), "/br/5/runner"),
+    "/br/5/runner",
+  );
+  assert.equal(
+    resolvePostLoginRedirect(makeClaims("chef", 5), "/br/5/runner"),
+    "/br/5/runner",
+  );
+});
+
 test("resolvePostLoginRedirect → chef on wrong KDS branch → fallback", () => {
   assert.equal(
     resolvePostLoginRedirect(makeClaims("chef", 5), "/br/7/kds"),
+    "/employee",
+  );
+});
+
+test("resolvePostLoginRedirect → Runner on wrong branch → fallback", () => {
+  assert.equal(
+    resolvePostLoginRedirect(makeClaims("waiter", 5), "/br/7/runner"),
     "/employee",
   );
 });
@@ -301,6 +331,28 @@ test("isFeedbackPublicPath → only /r/* prefix", () => {
   assert.equal(isFeedbackPublicPath("/"), false);
 });
 
+test("resolveLegacyRouteRedirectPath → admin finance redirects to canonical finance", () => {
+  assert.equal(resolveLegacyRouteRedirectPath("/admin/finance"), "/finance");
+  assert.equal(
+    resolveLegacyRouteRedirectPath("/admin/finance/revenue"),
+    "/finance/revenue",
+  );
+  assert.equal(
+    resolveLegacyRouteRedirectPath("/beta/admin/finance/revenue"),
+    "/beta/finance/revenue",
+  );
+  assert.equal(resolveLegacyRouteRedirectPath("/admin/dashboard"), null);
+});
+
+test("resolveModuleFromPath → branch menu limits and finance workspace map to modules", () => {
+  assert.equal(resolveModuleFromPath("/finance/revenue"), "finance");
+  assert.equal(
+    resolveModuleFromPath("/br/3/menu-limits"),
+    "branch_menu_limits",
+  );
+  assert.equal(resolveModuleFromPath("/br/3/runner"), "runner");
+});
+
 test("resolvePostLoginRedirect → branch settings follows branch scope", () => {
   assert.equal(
     resolvePostLoginRedirect(
@@ -319,6 +371,24 @@ test("resolvePostLoginRedirect → branch settings follows branch scope", () => 
   assert.equal(
     resolvePostLoginRedirect(makeClaims("owner"), "/br/7/settings"),
     "/br/7/settings",
+  );
+});
+
+test("resolvePostLoginRedirect → branch menu limits follows branch scope", () => {
+  assert.equal(
+    resolvePostLoginRedirect(
+      makeClaims("cashier", 3),
+      "/br/3/menu-limits",
+    ),
+    "/br/3/menu-limits",
+  );
+  assert.equal(
+    resolvePostLoginRedirect(makeClaims("cashier", 3), "/br/7/menu-limits"),
+    "/employee",
+  );
+  assert.equal(
+    resolvePostLoginRedirect(makeClaims("owner"), "/br/7/menu-limits"),
+    "/br/7/menu-limits",
   );
 });
 
@@ -431,7 +501,7 @@ test("resolvePostLoginRedirect → beta surface + /beta/login returnTo → beta 
 
 test("resolvePostLoginRedirect → beta surface rejects unknown admin returnTo", () => {
   assert.equal(
-    resolvePostLoginRedirect(makeClaims("owner"), "/admin/finance", {
+    resolvePostLoginRedirect(makeClaims("owner"), "/admin/not-a-route", {
       surface: "beta",
     }),
     "/beta/admin/dashboard",

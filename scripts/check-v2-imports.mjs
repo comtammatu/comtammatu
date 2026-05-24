@@ -43,7 +43,7 @@ const checks = [
   },
   {
     description: "legacy inventory helper imports in shipped routes",
-    rootDir: "apps/web/app/inventory",
+    rootDir: "apps/web/app/(protected)/inventory",
     exclude: [/_components\//],
     contentPattern: /_components\/(section-card|empty-state-panel|action-icon-button)/,
   },

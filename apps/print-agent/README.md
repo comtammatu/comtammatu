@@ -32,9 +32,14 @@ Browser POS ─ Server Action ─▶ Postgres RPC ─▶ print_jobs row
 ```bash
 cp .env.example .env
 # Fill in SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, AGENT_TENANT_ID, AGENT_BRANCH_ID
+# Set AGENT_ID and PRINT_AGENT_PRESENCE_TOKEN if WEB_BASE_URL is enabled.
 pnpm install
 pnpm dev
 ```
+
+The agent also reads `.env.local` if present. When both `.env` and `.env.local`
+exist, `.env.local` wins. For service installs, place deployed values in `.env`
+and do not ship `.env.local`.
 
 ## Build
 
@@ -78,19 +83,42 @@ Uninstall:
 
 ## Environment variables
 
-| Key | Required | Description |
-|-----|----------|-------------|
-| `SUPABASE_URL` | yes | `https://<ref>.supabase.co` |
-| `SUPABASE_SERVICE_ROLE_KEY` | yes | Service role JWT (bypasses RLS) |
-| `AGENT_TENANT_ID` | yes | Numeric tenant id |
-| `AGENT_BRANCH_ID` | yes | Numeric branch id this agent serves |
-| `AGENT_ID` | no | Stable identifier (default: `agent-<pid>`) |
-| `AGENT_VERSION` | no | Reported in heartbeat row |
-| `PRINT_MODE` | no | `text` (default) emits ESC/POS text commands using the printer's CP1258 firmware font. `bitmap` rasterizes Vietnamese via Roboto Mono TTF and emits raster image commands — use this on PDIT PD805KL / clones whose firmware has no usable CP1258 font. |
-| `PRINT_CODEPAGE_ID` | no | Text-mode only. ESC/POS register index for CP1258. Default `38` (Epson). Xprinter often `30`. |
-| `PRINT_ASCII` | no | Text-mode only. `1` to strip Vietnamese diacritics if no codepage works. |
-| `WEB_BASE_URL` | no | Web app base URL for branch-presence registration. |
-| `PRINT_AGENT_PRESENCE_TOKEN` | no | Shared bearer token for `/api/branch-presence`. |
+| Key                          | Required                     | Description                                                                                                                                                                                                                                             |
+| ---------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SUPABASE_URL`               | yes                          | `https://<ref>.supabase.co`                                                                                                                                                                                                                             |
+| `SUPABASE_SERVICE_ROLE_KEY`  | yes                          | Service role JWT (bypasses RLS)                                                                                                                                                                                                                         |
+| `AGENT_TENANT_ID`            | yes                          | Numeric tenant id                                                                                                                                                                                                                                       |
+| `AGENT_BRANCH_ID`            | yes                          | Numeric branch id this agent serves                                                                                                                                                                                                                     |
+| `AGENT_ID`                   | required with presence       | Stable identifier. Required when `PRINT_AGENT_PRESENCE_TOKEN` is set because presence tokens are bound to this value.                                                                                                                                   |
+| `AGENT_VERSION`              | no                           | Reported in heartbeat row                                                                                                                                                                                                                               |
+| `PRINT_MODE`                 | no                           | `text` (default) emits ESC/POS text commands using the printer's CP1258 firmware font. `bitmap` rasterizes Vietnamese via Roboto Mono TTF and emits raster image commands — use this on PDIT PD805KL / clones whose firmware has no usable CP1258 font. |
+| `PRINT_CODEPAGE_ID`          | no                           | Text-mode only. ESC/POS register index for CP1258. Default `38` (Epson). Xprinter often `30`.                                                                                                                                                           |
+| `PRINT_ASCII`                | no                           | Text-mode only. `1` to strip Vietnamese diacritics if no codepage works.                                                                                                                                                                                |
+| `WEB_BASE_URL`               | no                           | Web app base URL for branch-presence registration.                                                                                                                                                                                                      |
+| `PRINT_AGENT_PRESENCE_TOKEN` | required with `WEB_BASE_URL` | Raw per-agent bearer token for `/api/branch-presence`. Store only its SHA-256 hash in `printer_agent_presence_tokens`.                                                                                                                                  |
+
+Provision or rotate the token from the repo CLI:
+
+```bash
+pnpm --filter @comtammatu/print-agent presence:provision -- create \
+  --tenant-id 1 \
+  --branch-id 1 \
+  --agent-id pos-branch-1 \
+  --confirm-project-ref iexwsuaqqenyjiskawoj
+```
+
+The command generates a raw token, stores only its SHA-256 hash for the exact
+`(tenant_id, branch_id, agent_id)` tuple, and prints the `.env` snippet once.
+Use `rotate` to intentionally replace an existing token, `revoke` to disable it,
+and `status` to inspect token/IP state:
+
+```bash
+pnpm --filter @comtammatu/print-agent presence:provision -- status \
+  --tenant-id 1 --branch-id 1 --agent-id pos-branch-1
+```
+
+The old global shared-token mode is retired; one leaked branch token must not
+register another branch.
 
 ## Bitmap mode (recommended for PDIT PD805KL)
 
@@ -108,6 +136,7 @@ instead of text bytes. This bypasses firmware font tables entirely — the
 printer just prints pixels. Native ESC/POS QR commands still work.
 
 Layout constraints in bitmap mode (576-dot canvas, Roboto Mono @ 20px):
+
 - Normal text: max 48 chars/line
 - Double-size banners (BÀN, TỔNG CỘNG, etc.): **max 24 chars/line** —
   content that exceeds this gets clipped off the right edge.

@@ -571,7 +571,7 @@ Response shape:
 
 ### 7.2 Admin manual trigger
 
-UI: `/finance/summary` (`apps/web/app/finance/summary/page.tsx`). Server actions: `apps/web/app/finance/summary-invoice-actions.ts`.
+UI: `/finance/summary` (`apps/web/app/(protected)/finance/summary/page.tsx`). Server actions: `apps/web/app/(protected)/finance/summary-invoice-actions.ts`.
 
 ```typescript
 runDailySummaryForBranch(branchId, summaryDate)
@@ -683,8 +683,8 @@ Các Sinvoice-specific error codes: xem §5.4 và `docs/runbooks/hddt-hybrid-cut
 - `docs/runbooks/hddt-hybrid-cutover.md` — runbook cutover prod, rollback, pilot metrics
 - `docs/ref/inventory.md` — 3-way matching GRN / PO / Supplier Invoice
 - `docs/spec/database-schema.md` — Schema đầy đủ
-- `apps/web/app/finance/actions.ts:58-446` — `createTaxInvoice` + `cancelTaxInvoice`
-- `apps/web/app/finance/summary-invoice-actions.ts` — Manual trigger actions
+- `apps/web/app/(protected)/finance/actions.ts:58-446` — `createTaxInvoice` + `cancelTaxInvoice`
+- `apps/web/app/(protected)/finance/summary-invoice-actions.ts` — Manual trigger actions
 - `apps/web/lib/hddt-daily-summary.ts` — Shared `executeSummaryRun`
 - `apps/web/lib/invoice-provider-init.ts` — Viettel S-invoice env injection
 - `packages/shared/src/providers/invoice.ts:48-93` — Interface

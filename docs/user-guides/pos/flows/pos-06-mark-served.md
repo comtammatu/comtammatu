@@ -103,9 +103,9 @@ URL: `/br/{branchId}/pos` → bàn occupied → đơn
 
 ### Code path
 
-- **Nút "Phục vụ" (order-level):** [apps/web/app/br/[branchId]/pos/order-detail-sheet.tsx](../../../../apps/web/app/br/%5BbranchId%5D/pos/order-detail-sheet.tsx) line ~853.
+- **Nút "Phục vụ" (order-level):** [apps/web/app/(protected)/br/[branchId]/pos/order-detail-sheet.tsx](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/order-detail-sheet.tsx) line ~853.
 - **Swipe per-item "Phục vụ":** cùng file, swipe handler reveals 2-button action row (Phục vụ + Hủy) ~80px wide each.
-- **Server action:** `markOrderItemServed` trong [apps/web/app/br/[branchId]/pos/order-actions.ts](../../../../apps/web/app/br/%5BbranchId%5D/pos/order-actions.ts).
+- **Server action:** `markOrderItemServed` trong [apps/web/app/(protected)/br/[branchId]/pos/order-actions.ts](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/order-actions.ts).
 
 ### Database
 

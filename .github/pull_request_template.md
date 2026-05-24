@@ -28,5 +28,5 @@
 <!-- e.g. "Promote Vercel alias", "Apply migration X", "Confirm env var Y". Leave blank if none. -->
 
 ## Author attestation
-- [ ] No `Co-Authored-By: Claude` (or any AI/assistant) trailer in any commit on this branch — per project policy in CLAUDE.md.
+- [ ] No `Co-Authored-By: Claude` (or any AI/assistant) trailer in any commit on this branch — per project policy in AGENTS.md.
 - [ ] All commits authored as `comtammatu <comtammatu@gmail.com>` (the human is the sole responsible author).

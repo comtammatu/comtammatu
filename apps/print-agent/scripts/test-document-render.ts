@@ -251,6 +251,139 @@ const primitiveDocumentCancel: PrintPayload = {
   },
 };
 
+const baseShiftClose = {
+  kind: "shift_close_report",
+  branch_name: "Chi nhanh Quan 1",
+  branch_address: "123 Nguyen Hue, Quan 1",
+  branch_phone: "028.1234.5678",
+  branch_tax_code: "0123456789",
+  session_id: 42,
+  cashier_name: "Nguyen A",
+  opened_at: "2026-05-05T08:00:00",
+  closed_at: "2026-05-05T16:30:00",
+  opening_cash: 500000,
+  closing_cash: 2110000,
+  expected_cash: 2100000,
+  cash_difference: 10000,
+  note: "Ban giao du tien mat",
+  variance_note: "Lech trong nguong cho phep",
+  variance_approver: "Quan ly B",
+  paid_order_count: 24,
+  unpaid_order_count: 1,
+  cancelled_order_count: 2,
+  payment_breakdown: [
+    { method: "cash", count: 12, amount: 1600000 },
+    { method: "vietqr", count: 12, amount: 900000 },
+  ],
+  total_item_quantity: 42,
+  item_breakdown: [
+    { name: "Com tam suon bi cha", source: "main", qty: 18, revenue: 990000 },
+    { name: "Canh chua", source: "side", qty: 12, revenue: 0 },
+    { name: "Them trung", source: "modifier", qty: 12, revenue: 120000 },
+  ],
+  total_revenue: 2500000,
+  printed_at: "2026-05-05T16:31:00",
+} satisfies PrintPayload;
+
+const primitiveDocumentShiftClose: PrintPayload = {
+  ...baseShiftClose,
+  template_version: "0:2",
+  document: {
+    schema_version: 1,
+    template_id: 0,
+    template_version: 2,
+    paper_width_mm: 80,
+    blocks: [
+      {
+        type: "brandHeader",
+        eyebrow: "TIEM COM TAM",
+        name: "MA TU",
+        tagline: "Thit tuoi 100%",
+      },
+      {
+        type: "branchInfo",
+        branch_name: baseShiftClose.branch_name,
+        branch_address: baseShiftClose.branch_address,
+        branch_phone: baseShiftClose.branch_phone,
+        branch_tax_code: baseShiftClose.branch_tax_code,
+      },
+      { type: "divider", char: "=" },
+      {
+        type: "text",
+        text: "PHIEU CHOT CA",
+        align: "center",
+        bold: true,
+        double: true,
+      },
+      {
+        type: "text",
+        text: "BIEN BAN BAN GIAO TIEN & DOANH THU",
+        align: "center",
+        bold: true,
+      },
+      { type: "text", text: "Ma ca: #42", align: "center" },
+      { type: "divider", char: "=" },
+      { type: "row", left: "Thu ngan:", right: baseShiftClose.cashier_name },
+      { type: "row", left: "Mo ca:", right: "08:00 05/05/2026" },
+      { type: "row", left: "Dong ca:", right: "16:30 05/05/2026" },
+      { type: "row", left: "Thoi gian:", right: "8 gio 30 phut" },
+      { type: "divider", char: "=" },
+      { type: "text", text: "TONG KET CA", align: "center", bold: true },
+      { type: "divider", char: "-" },
+      {
+        type: "row",
+        left: "TONG DA THU",
+        right: "2.500.000d",
+        bold: true,
+        double: true,
+      },
+      { type: "row", left: "Don da thu tien", right: "24 don" },
+      { type: "row", left: "Don chua thu/chuyen ca", right: "1 don" },
+      { type: "row", left: "Don da huy", right: "2 don" },
+      { type: "divider", char: "-" },
+      {
+        type: "text",
+        text: "SO LUONG BAN THEO MON",
+        align: "center",
+        bold: true,
+      },
+      { type: "row", left: "Tong SL ban", right: "42" },
+      { type: "divider", char: "-" },
+      { type: "text", text: "x18 Com tam suon bi cha" },
+      { type: "text", text: "x12 - Canh chua" },
+      { type: "text", text: "x12 + Them trung" },
+      { type: "divider", char: "-" },
+      { type: "text", text: "DOI SOAT KET TIEN MAT", align: "center", bold: true },
+      { type: "divider", char: "-" },
+      { type: "row", left: "Tien mat dau ca", right: "500.000d" },
+      { type: "row", left: "+ Tien mat ban hang", right: "1.600.000d" },
+      { type: "row", left: "= Tien mat phai nop", right: "2.100.000d" },
+      { type: "row", left: "Tien mat thuc dem", right: "2.110.000d" },
+      { type: "row", left: "Lech ket (THUA)", right: "10.000d", bold: true },
+      { type: "divider", char: "-" },
+      { type: "text", text: "CO CAU DA THU", align: "center", bold: true },
+      { type: "divider", char: "-" },
+      { type: "row", left: "Tien mat (12 don)", right: "1.600.000d" },
+      { type: "row", left: "VietQR (12 don)", right: "900.000d" },
+      { type: "note", prefix: "Ghi chu ban giao: ", text: baseShiftClose.note },
+      { type: "divider", char: "=" },
+      { type: "text", text: "LUU Y LECH KET", align: "center", bold: true },
+      { type: "row", left: "Nguong canh bao", right: "50.000d" },
+      { type: "row", left: "Nguoi ghi nhan", right: "Quan ly B" },
+      { type: "text", text: "Ghi chu lech ket:" },
+      { type: "text", text: "  Lech trong nguong cho phep" },
+      { type: "divider", char: "=" },
+      { type: "text", text: "KY NHAN BAN GIAO", align: "center", bold: true },
+      { type: "row", left: "Thu ngan ban giao", right: "Quan ly nhan" },
+      { type: "spacer", lines: 2 },
+      { type: "row", left: ".................", right: "................." },
+      { type: "spacer", lines: 1 },
+      { type: "text", text: "In luc: 16:31 05/05/2026", align: "center" },
+      { type: "footer", lines: ["Thit tuoi 100%"] },
+    ],
+  },
+};
+
 function assertBytes(label: string, bytes: Uint8Array) {
   if (bytes.length < 100) {
     throw new Error(`${label} output too small: ${bytes.length} bytes`);
@@ -343,6 +476,22 @@ async function main() {
   assertBytes(
     "primitive document bitmap cancel",
     await renderPayloadBitmap(primitiveDocumentCancel),
+  );
+  const documentTextShiftClose = renderPayload(primitiveDocumentShiftClose);
+  assertBytes("primitive document text shift close", documentTextShiftClose);
+  assertTextIncludes(
+    "primitive document text shift close item breakdown",
+    documentTextShiftClose,
+    "x18 Com tam suon bi cha",
+  );
+  assertTextIncludes(
+    "primitive document text shift close signature",
+    documentTextShiftClose,
+    "KY NHAN BAN GIAO",
+  );
+  assertBytes(
+    "primitive document bitmap shift close",
+    await renderPayloadBitmap(primitiveDocumentShiftClose),
   );
 }
 

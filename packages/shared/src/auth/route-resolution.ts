@@ -80,6 +80,22 @@ export function isFeedbackPublicPath(pathname: string): boolean {
   return pathname.startsWith("/r/");
 }
 
+export function resolveLegacyRouteRedirectPath(pathname: string): string | null {
+  const betaPath = isBetaPath(pathname);
+  const resolvedPathname = stripBetaPrefix(pathname);
+
+  if (
+    resolvedPathname === "/admin/finance" ||
+    resolvedPathname.startsWith("/admin/finance/")
+  ) {
+    const suffix = resolvedPathname.slice("/admin/finance".length);
+    const target = `/finance${suffix}`;
+    return betaPath ? `${BETA_ROUTE_PREFIX}${target}` : target;
+  }
+
+  return null;
+}
+
 export function resolveModuleFromPath(pathname: string): ModuleKey | null {
   const resolvedPathname = stripBetaPrefix(pathname);
 
@@ -113,6 +129,7 @@ export function resolveModuleFromPath(pathname: string): ModuleKey | null {
   if (/^\/br\/\d+\/menu-limits/.test(resolvedPathname)) return "branch_menu_limits";
   if (/^\/br\/\d+\/pos/.test(resolvedPathname)) return "pos";
   if (/^\/br\/\d+\/kds/.test(resolvedPathname)) return "kds";
+  if (/^\/br\/\d+\/runner/.test(resolvedPathname)) return "runner";
   if (resolvedPathname.startsWith("/employee")) return "employee";
   if (resolvedPathname.startsWith("/notifications")) return "notifications";
 

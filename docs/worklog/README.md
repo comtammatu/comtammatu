@@ -15,6 +15,8 @@ Nơi lưu các artefact theo dõi tiến độ và adoption.
 
 ## Maintenance
 
+- [pilot-hardening-readiness-2026-05-24.md](pilot-hardening-readiness-2026-05-24.md): hardening board for route-group migration, generated snapshots, payment readiness, network gate, live smoke, and migration status
+- [ui-design-system-ssot-audit-2026-05-24.md](ui-design-system-ssot-audit-2026-05-24.md): audit và khóa lại source-of-truth cho Design System, typography, spacing, và legacy `matu-*` layer
 - [task-regression-cleanup-2026-05-23.md](task-regression-cleanup-2026-05-23.md): first pass cleanup for top-level `tasks/` and `tasks/regressions.md`
 
 ## Quy tắc

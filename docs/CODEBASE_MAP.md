@@ -14,14 +14,15 @@
 
 ## Chỉ mục phân hệ
 
-| Module         | Doc                                            | Purpose                                              | Risk Level                  |
-| -------------- | ---------------------------------------------- | ---------------------------------------------------- | --------------------------- |
-| Auth & ACL     | [auth.md](modules/auth.md)                     | JWT claims, role hierarchy, RLS, proxy routing       | **High** — gates all access |
-| Database       | [database.md](modules/database.md)             | Supabase clients, types, migrations, RLS policies    | **High** — data integrity   |
-| Web App        | [web-app.md](modules/web-app.md)               | Next.js routes, layouts, server actions, surface shells | Medium                    |
-| UI             | [ui.md](modules/ui.md)                         | shadcn components, design tokens                     | Low                         |
-| Security       | [security.md](modules/security.md)             | Rate limiting (Upstash Redis)                        | Medium                      |
-| Infrastructure | [infrastructure.md](modules/infrastructure.md) | Monorepo, build, deploy, environment                 | Medium                      |
+| Module         | Doc                                            | Purpose                                                 | Risk Level                  |
+| -------------- | ---------------------------------------------- | ------------------------------------------------------- | --------------------------- |
+| Auth & ACL     | [auth.md](modules/auth.md)                     | JWT claims, role hierarchy, RLS, proxy routing          | **High** — gates all access |
+| Database       | [database.md](modules/database.md)             | Supabase clients, types, migrations, RLS policies       | **High** — data integrity   |
+| Finance        | [finance.md](modules/finance.md)               | Finance Basic boundary, daily money, HĐĐT, payables     | **High** — cash/legal data  |
+| Web App        | [web-app.md](modules/web-app.md)               | Next.js routes, layouts, server actions, surface shells | Medium                      |
+| UI             | [ui.md](modules/ui.md)                         | shadcn components, design tokens                        | Low                         |
+| Security       | [security.md](modules/security.md)             | Rate limiting (Upstash Redis)                           | Medium                      |
+| Infrastructure | [infrastructure.md](modules/infrastructure.md) | Monorepo, build, deploy, environment                    | Medium                      |
 
 ## Documentation Index
 
@@ -40,6 +41,95 @@ Khi cần đi sâu hơn theo loại tài liệu:
 Browser ──► proxy.ts (auth + ACL) ──► Next.js App Router ──► Supabase (PostgREST + Auth)
                                                          ──► Upstash Redis (rate limit)
 ```
+
+### Graph-backed Project Topology
+
+Snapshot từ `.understand-anything/knowledge-graph.json` ngày 2026-05-24:
+
+| Layer               | File-level nodes | Operational role                                                                      |
+| ------------------- | ---------------: | ------------------------------------------------------------------------------------- |
+| Web App             |              594 | Route surfaces, Server Actions, realtime hooks, POS/KDS/Admin/Inventory/Finance/HR UI |
+| Data Platform       |              367 | Supabase migrations, generated types, RLS, RPCs, database clients                     |
+| Docs And Operations |              154 | Source-of-truth docs, runbooks, task tracker, agent rules                             |
+| Shared Domain       |               73 | Business rules, auth helpers, provider contracts, formatting, labels                  |
+| UI System           |               70 | shadcn/Radix primitives, app surface components, design tokens                        |
+| Tooling And Config  |               34 | Turborepo, lint/build/test config, deployment config, scripts                         |
+| Print Agent         |               21 | ESC-POS print daemon, LAN/USB bridge, receipt/QR rendering                            |
+| Auth And Routing    |               19 | `proxy.ts`, route resolution, ACL, branch scope, auth tests                           |
+| Tests               |                9 | Current Playwright route coverage                                                     |
+| Core                |               61 | Repository metadata, E2E helpers, cross-cutting supporting files                      |
+
+Generated checkout snapshot from 2026-05-24 (`node scripts/project-snapshot.mjs`):
+
+| Area | Count |
+| --- | ---: |
+| `apps/web/app/**/page.tsx` routes | 109 |
+| API route handlers | 13 |
+| Generated DB tables / views / functions / enums | 115 / 9 / 237 / 0 |
+| SQL migration files | 347 |
+| Test/spec files under `apps/web/e2e` + `packages/shared/src` | 36 |
+
+The graph shows the repo is not a flat "apps/packages" map. The operational shape is:
+
+```mermaid
+flowchart TB
+    ops["Docs And Operations<br/>README, CODEBASE_MAP, runbooks, tasks"] --> plan["Feature / incident plan"]
+    plan --> control["Control Plane<br/>proxy.ts + route-resolution + module-acl + scope"]
+    control --> web["Execution Plane<br/>apps/web App Router + Server Actions"]
+    web --> domain["Domain Plane<br/>packages/shared contracts"]
+    web --> ui["UI Plane<br/>packages/ui + surface components"]
+    web --> data["Data Plane<br/>packages/database + Supabase RLS/RPC"]
+    web --> print["Branch Edge Plane<br/>apps/print-agent"]
+    web --> rate["Security Edge<br/>packages/security + Upstash"]
+    data --> verify["Verification Plane<br/>Playwright + SQL tests + smoke runbooks"]
+    print --> verify
+    verify --> ops
+```
+
+### Optimized Operating Flow
+
+Use this flow before broad implementation work. It reduces route drift, UI drift, and database drift by forcing each change through its correct authority.
+
+```mermaid
+flowchart LR
+    request["New feature / bug / refactor"] --> classify["Classify surface<br/>public, protected, branch, admin, finance, inventory, POS/KDS"]
+    classify --> docs["Read source docs<br/>module doc + runbook + tasks/regressions"]
+    docs --> auth["Check control plane<br/>proxy.ts, route-resolution.ts, module-acl.ts, scope.ts"]
+    auth --> data{"Touches database?"}
+    data -->|yes| rpc["Design RLS/RPC/migration first<br/>atomic multi-item writes via RPC"]
+    data -->|no| route["Route/server-action boundary"]
+    rpc --> route
+    route --> ui{"Touches UI?"}
+    ui -->|yes| design["Use design-system primitives<br/>docs/spec/design-system.md + shadcn/ui"]
+    ui -->|no| verify
+    design --> verify["Verify narrow path<br/>typecheck/lint/build or docs-only validation"]
+    verify --> update["Update source-of-truth docs/tasks with real state"]
+```
+
+Decision rules:
+
+- Route behavior starts at `apps/web/proxy.ts` and `packages/shared/src/auth/route-resolution.ts`. Do not fix route drift inside pages first.
+- ACL ownership starts at `packages/shared/src/auth/module-acl.ts`. Do not create parallel role maps in route components.
+- Scope belongs in URL params and JWT claims. Do not persist branch/tenant scope in browser storage.
+- Multi-row business writes belong in Supabase RPCs. Server Actions validate input and call the RPC; they do not orchestrate partial writes one query at a time.
+- UI changes stay inside the active design-system contract. New primitives belong in `packages/ui`; page-specific composition belongs in `apps/web/app`.
+- Operational docs are part of the workflow. If runtime behavior changes, update the module doc/runbook/task tracker in the same slice.
+
+### Project Placement Matrix
+
+Use this matrix when adding or moving files. It is the practical replacement for "where should this live?"
+
+| Change type                                  | Primary location                                                    | Must check                                                     | Avoid                                           |
+| -------------------------------------------- | ------------------------------------------------------------------- | -------------------------------------------------------------- | ----------------------------------------------- |
+| New protected route                          | `apps/web/app/(protected)/...`                                      | `proxy.ts`, `route-resolution.ts`, `module-acl.ts`, module doc | Duplicating ACL in layouts/pages                |
+| New Server Action                            | Adjacent `actions.ts` under route family                            | Zod schema, `withAction`/auth helper, RLS/RPC contract         | Returning raw Supabase error messages           |
+| New shared business rule                     | `packages/shared/src/<domain>/...`                                  | Existing package exports and tests                             | Importing app-only code into shared package     |
+| New database mutation spanning multiple rows | `supabase/migrations/*.sql` RPC + typed caller                      | RLS, GRANTs, `pnpm db:types` after apply                       | Multi-query partial writes in Server Actions    |
+| New Supabase client usage                    | `packages/database/src/supabase/*` or server-only barrel            | Import boundary table below                                    | `@comtammatu/database` barrel in `"use client"` |
+| New reusable UI primitive                    | `packages/ui/src/components/*`                                      | `docs/spec/design-system.md`, `scripts/check-ui-contract.mjs`  | Page-local one-off primitive clones             |
+| New route-specific UI composition            | `apps/web/app/**/_components` or route folder                       | shadcn primitives, surface components                          | New visual language outside design system       |
+| New print behavior                           | `apps/print-agent/src/*` plus branch settings route if configurable | Branch-scoped config, no deploy-only layout changes            | Hardcoded receipt/format changes per branch     |
+| New operational rule/runbook                 | `docs/modules/*`, `docs/runbooks/*`, `tasks/*`                      | `docs/agent/rules/references.md`                               | Separate agent-only doc trees                   |
 
 ### Pilot Operating Model
 
@@ -121,10 +211,10 @@ sequenceDiagram
 
 ## Critical Unknowns
 
-| #   | Unknown                                                     | Verification Step         | Impact                   |
-| --- | ----------------------------------------------------------- | ------------------------- | ------------------------ |
-| 1   | area_manager has tenant-wide access (no area scoping table) | Deferred — see roadmap H3 | May need migration later |
-| 2   | E2E test coverage limited to 5 Playwright specs (kds-queue, daily-limit-realtime, payment-cash, edit-pending-pricing, +1) — no unit/component test suite | Expand spec coverage or adopt vitest as Payments + Finance wrap up | Refactor regressions possible on uncovered surfaces |
+| #   | Unknown                                                                                                                                                  | Verification Step                                                  | Impact                                              |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | --------------------------------------------------- |
+| 1   | area_manager has tenant-wide access (no area scoping table)                                                                                              | Deferred — see roadmap H3                                          | May need migration later                            |
+| 2   | Test coverage exists but is still concentrated: current checkout has 36 test/spec files, including 9 Playwright specs, with gaps around full POS→payment→stock→print→HĐĐT smoke and live provider behavior | Expand route smoke + end-to-end pilot runbooks before scale | Refactor regressions possible on uncovered surfaces |
 
 ## Priority Recommendations
 
@@ -133,8 +223,9 @@ sequenceDiagram
 3. **RLS pattern:** Every new table must follow the tenant-scoped RLS pattern with explicit GRANTs. See [database.md](modules/database.md).
 
 Inventory route ownership note:
+
 - `/inventory` is the canonical Inventory surface.
-- `/admin/inventory/*` page files (`cold-chain`, `express-windows`, `feature-flags`, `trust`) still exist on disk but are RETIRED — the `inventory_admin` module ACL in `module-acl.ts` has `allowedRoles: []`, so no role passes the proxy gate. Treat the URL space as unsupported; do not wire new admin features there.
+- `/admin/inventory/*` page files were removed. The URL space remains mapped to the retired `inventory_admin` module in `module-acl.ts` with `allowedRoles: []`, so no role passes the proxy gate. Treat the URL space as unsupported; do not wire new admin features there.
 
 <!-- ORACLE-META
 Updated: 2026-05-07 (status sync: Payments + Finance/HR + Notifications/Reporting PARTIAL)

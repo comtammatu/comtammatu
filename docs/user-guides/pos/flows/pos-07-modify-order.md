@@ -186,13 +186,13 @@ URL: `/br/{branchId}/pos` → bàn occupied → đơn
 
 ### Code path
 
-- **Order detail sheet:** [apps/web/app/br/[branchId]/pos/order-detail-sheet.tsx](../../../../apps/web/app/br/%5BbranchId%5D/pos/order-detail-sheet.tsx) — orchestrator các action.
-- **Cancel dialog:** [apps/web/app/br/[branchId]/pos/_components/order-detail/cancel-order-dialog.tsx](../../../../apps/web/app/br/%5BbranchId%5D/pos/_components/order-detail/cancel-order-dialog.tsx) — `AlertDialog` (không phải Dialog).
+- **Order detail sheet:** [apps/web/app/(protected)/br/[branchId]/pos/order-detail-sheet.tsx](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/order-detail-sheet.tsx) — orchestrator các action.
+- **Cancel dialog:** [apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/cancel-order-dialog.tsx](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/_components/order-detail/cancel-order-dialog.tsx) — `AlertDialog` (không phải Dialog).
 - **Server actions:**
   - `voidOrderItem` — hủy 1 món
   - `cancelOrder` — hủy cả đơn
   - `transferOrderTable` — chuyển bàn
-  - `splitOrder` — tách (trong [discount-actions.ts](../../../../apps/web/app/br/%5BbranchId%5D/pos/discount-actions.ts))
+  - `splitOrder` — tách (trong [discount-actions.ts](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/discount-actions.ts))
   - `mergeOrders` — gộp (cùng file)
 
 ### Database

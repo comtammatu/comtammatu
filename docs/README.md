@@ -13,6 +13,8 @@
 - Onboarding kỹ thuật: [CODEBASE_MAP.md](CODEBASE_MAP.md)
 - Ngôn ngữ chuẩn + thuật ngữ dự án: [ref/glossary.md](ref/glossary.md)
 - Kiến trúc hệ thống: [architecture/README.md](architecture/README.md)
+- Database schema source ladder: [spec/database-schema.md](spec/database-schema.md)
+- Finance active boundary: [modules/finance.md](modules/finance.md)
 - Canonical business/reference docs: [ref/README.md](ref/README.md)
 - Feature/module architecture: `docs/modules/*`, `docs/spec/*`
 - Active planning: `tasks/todo.md`, `docs/plan/adr/*`, `docs/plan/decisions.md`

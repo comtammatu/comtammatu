@@ -322,6 +322,13 @@ export type PaymentBreakdownLine = {
   amount: number;
 };
 
+export type ShiftItemBreakdownLine = {
+  name: string;
+  source?: "main" | "side" | "modifier" | string;
+  qty: number;
+  revenue?: number;
+};
+
 /** PHIẾU CHỐT CA — emitted after close_pos_session via enqueue_shift_close_print. */
 export type ShiftCloseReportPayload = {
   kind: "shift_close_report";
@@ -346,6 +353,8 @@ export type ShiftCloseReportPayload = {
   unpaid_order_count: number;
   cancelled_order_count: number;
   payment_breakdown: PaymentBreakdownLine[];
+  total_item_quantity?: number;
+  item_breakdown?: ShiftItemBreakdownLine[];
   total_revenue: number;
   printed_at: string;
 };

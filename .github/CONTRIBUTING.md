@@ -8,13 +8,13 @@
 
 Read these in order:
 
-1. **[`CLAUDE.md`](../CLAUDE.md)** — the canonical engineering rules (architecture, constraints, things-that-will-bite-you, the 4-agent debate workflow). This file is the source of truth; if anything below conflicts with it, `CLAUDE.md` wins.
+1. **[`AGENTS.md`](../AGENTS.md)** — the canonical engineering rules entrypoint, including rule loading and the 4-agent debate workflow. This file is the source of truth; if anything below conflicts with it, `AGENTS.md` wins.
 2. **[`docs/CODEBASE_MAP.md`](../docs/CODEBASE_MAP.md)** — the routing map that points into `docs/modules/*`, `docs/spec/*`, and `docs/ref/*`.
 3. **[`tasks/regressions.md`](../tasks/regressions.md)** — named failure rules. Every PR should leave this file as-tight-or-tighter than it found it.
 
 ## Quality gates (mandatory before commit)
 
-Per `CLAUDE.md`, every change must pass these three commands locally before push:
+Per `AGENTS.md`, every change must pass these three commands locally before push:
 
 ```bash
 pnpm typecheck
@@ -35,7 +35,7 @@ The full suite is 147 tests today; they're fast (sub-500ms).
 ## Commit conventions
 
 - **Conventional Commits** style: `type(scope): subject` (e.g. `fix(inventory): hint ingredient FK on production_recipes select`).
-- **No `Co-Authored-By: Claude <noreply@anthropic.com>` trailer.** Per the global `CLAUDE.md` rule and the project repo: AI assistance is a tool, the human author from local `git config` takes full responsibility. This applies to ALL AI assistants, ALL commits, no exceptions unless the human explicitly opts in for a specific commit.
+- **No `Co-Authored-By: Claude <noreply@anthropic.com>` trailer.** Per the project `AGENTS.md` rule: AI assistance is a tool, the human author from local `git config` takes full responsibility. This applies to ALL AI assistants, ALL commits, no exceptions unless the human explicitly opts in for a specific commit.
 - Use `git` for push/pull/clone/commit/tag. Reserve `gh` for GitHub-specific actions (PRs, releases, viewing issues).
 - Prefer new commits over amends; new commits over force-push.
 
@@ -43,12 +43,12 @@ The full suite is 147 tests today; they're fast (sub-500ms).
 
 - The default branch is `main`. The owner currently commits directly to `main` for repo-metadata and small bugfixes (consistent with the cycle 1-7 release pattern in `docs/releases/`).
 - For non-trivial changes (>3 LOC source code, schema migrations, security-sensitive paths), open a PR.
-- The PR template lives at [`.github/pull_request_template.md`](pull_request_template.md). Fill out the checklist — it mirrors the CLAUDE.md gates.
+- The PR template lives at [`.github/pull_request_template.md`](pull_request_template.md). Fill out the checklist — it mirrors the `AGENTS.md` gates.
 - A single owner reviews everything today (`.github/CODEOWNERS` routes `* @comtammatu`).
 
 ## The 4-agent debate workflow
 
-For features, bugs, and refactors, `CLAUDE.md` mandates running 4 specialist agents (PM/BA/Sr.Dev/QA) before writing code. This applies to AI-assisted work AND human-led changes — the agents are a discipline, not a crutch.
+For features, bugs, and refactors, `AGENTS.md` mandates running 4 specialist agents (PM/BA/Sr.Dev/QA) before writing code. This applies to AI-assisted work AND human-led changes — the agents are a discipline, not a crutch.
 
 Skip is allowed only for: typo <3 LOC, docs-only, dependency bump.
 
@@ -59,7 +59,7 @@ Skip is allowed only for: typo <3 LOC, docs-only, dependency bump.
 | Sr. Dev  | architecture, plan, risks, affected files  |
 | QA/QC    | test plan, regression risks, quality gates |
 
-Full protocol: wiki `team-agent-workflow-4-agent-debate.md`.
+Full protocol: [`docs/agent/rules/workflow.md`](../docs/agent/rules/workflow.md).
 
 ## Reporting bugs and proposing features
 

@@ -4,7 +4,7 @@
 >
 > Đây là worklog sống. Không dùng file này làm source of truth thay cho runbook hoặc docs nghiệp vụ.
 
-Updated: `2026-04-17`
+Updated: `2026-05-24`
 
 ---
 
@@ -70,11 +70,11 @@ Quy ước:
 
 | ID | Severity | Route | Tóm tắt | Persona / device impact | Decision | Owner |
 | -- | -------- | ----- | ------- | ----------------------- | -------- | ----- |
-| `INV-UIUX-001` | `P1` | `/inventory/transfers` | `branch_manager` thấy CTA `Tạo phiếu` như primary action trên branch transfer list, trái với mental model nhận transfer là action mặc định của chi nhánh | Branch operator trên tablet/desktop rất dễ bị dẫn sang outbound transfer thay vì inbound receive flow | `open` | `inventory/web` |
-| `INV-UIUX-002` | `P1` | `/inventory/issues` | Placeholder `Xuất báo cáo (sắp mở)` đang chiếm chỗ trên màn live branch ops, kể cả tablet/mobile | Branch operator bị nhiễu giữa workflow live và action chưa live, đặc biệt trên màn hình nhỏ | `open` | `inventory/web` |
-| `INV-UIUX-003` | `P2` | `/inventory/issues`, `/inventory/production` | Modal live báo warning `Missing Description or aria-describedby={undefined} for {DialogContent}` khi mở | Ảnh hưởng accessibility và chất lượng UI của dialog tạo phiếu / tạo lệnh | `open` | `inventory/web` |
-| `INV-UIUX-004` | `P2` | `/inventory/stocktake` | CTA chính hiển thị `Mo phien kiem ke`, mất dấu tiếng Việt | Branch operator thấy copy thiếu polish ở một hành động kiểm soát cuối ca quan trọng | `open` | `inventory/web` |
-| `INV-UIUX-005` | `P1` | `/inventory` | Owner dashboard vẫn mang framing operator với quick actions live thay vì framing giám sát | Owner desktop dễ bị hiểu sai đây là workspace thao tác thường nhật, trái docs role handoff | `open` | `inventory/web` |
+| `INV-UIUX-001` | `P1` | `/inventory/transfers` | `branch_manager` thấy CTA `Tạo phiếu` như primary action trên branch transfer list, trái với mental model nhận transfer là action mặc định của chi nhánh | Branch operator trên tablet/desktop rất dễ bị dẫn sang outbound transfer thay vì inbound receive flow | `fixed` | `inventory/web` |
+| `INV-UIUX-002` | `P1` | `/inventory/issues` | Placeholder `Xuất báo cáo (sắp mở)` đang chiếm chỗ trên màn live branch ops, kể cả tablet/mobile | Branch operator bị nhiễu giữa workflow live và action chưa live, đặc biệt trên màn hình nhỏ | `fixed` | `inventory/web` |
+| `INV-UIUX-003` | `P2` | `/inventory/issues`, `/inventory/production` | Modal live báo warning `Missing Description or aria-describedby={undefined} for {DialogContent}` khi mở | Ảnh hưởng accessibility và chất lượng UI của dialog tạo phiếu / tạo lệnh | `fixed` | `inventory/web` |
+| `INV-UIUX-004` | `P2` | `/inventory/stocktake` | CTA chính hiển thị `Mo phien kiem ke`, mất dấu tiếng Việt | Branch operator thấy copy thiếu polish ở một hành động kiểm soát cuối ca quan trọng | `fixed` | `inventory/web` |
+| `INV-UIUX-005` | `P1` | `/inventory` | Owner dashboard vẫn mang framing operator với quick actions live thay vì framing giám sát | Owner desktop dễ bị hiểu sai đây là workspace thao tác thường nhật, trái docs role handoff | `fixed` | `inventory/web` |
 
 Decision rules:
 
@@ -84,9 +84,10 @@ Decision rules:
 
 ---
 
-## 5. Sign-off snapshot
+## 5. Historical sign-off snapshot - 2026-04-17
 
-Chỉ điền khi kết thúc round:
+Snapshot from the first rendered round. Current decisions are superseded by
+section 7.
 
 | Gate | Result | Notes |
 | ---- | ------ | ----- |
@@ -104,8 +105,8 @@ Chỉ điền khi kết thúc round:
 Scope closed in this patch:
 
 - `INV-UIUX-001`: `/inventory/transfers` now labels the branch manager primary CTA as `Cap bep`; the branch manager create dialog only exposes the intra-branch flow.
-- `INV-UIUX-002`: `/inventory/issues` hides the export/report action on branch issue surfaces and adds `DialogDescription` to the live create dialog.
-- `INV-UIUX-005`: owner/area dashboard quick actions now use oversight framing (`Giam sat nhanh`) instead of operator CTAs.
+- `INV-UIUX-002`: `/inventory/issues` hides the export/report action on branch issue surfaces.
+- `INV-UIUX-005`: owner/area dashboard quick actions were intended to use oversight framing, but this claim is superseded by the 2026-05-24 rendered rerun below.
 
 Runtime evidence:
 
@@ -122,13 +123,79 @@ Grep evidence:
 - New RPC gates enforce `inventory:transfer_create`, `inventory:transfer_ship`, and `inventory:transfer_receive`.
 - POS consumption now raises `default_consumption_location_missing` instead of falling back to `default_receive`.
 
-### Final call
+## 7. IF-007 rendered rerun - 2026-05-24
+
+Scope: rerun the stale Inventory UI/UX evidence after the current App Router
+route-group migration and after the legacy `matu-*` layer was removed. This
+round does not mutate Inventory data.
+
+| Field | Value |
+| ----- | ----- |
+| Date | `2026-05-24` |
+| Driver | Playwright Chromium against `http://localhost:3000` |
+| Evidence | `/tmp/comtammatu-inventory-if007-rerun-2026-05-24T02-55-15-448Z/summary.json` plus first run `/tmp/comtammatu-inventory-if007-2026-05-24T02-49-31-258Z/summary.json` |
+| Test data note | `cashier.datdo@comtammatu.vn` and `cashier.phuochai@comtammatu.vn` failed password auth against the connected Supabase project, while owner/super/branch/waiter/chef accounts passed. Negative Inventory ACL was rerun with `waiter.datdo@comtammatu.vn`, another POS-floor role without Inventory grant. |
+
+### Rerun results
+
+| Persona | Device | URL | Result | Evidence | Decision impact |
+| ------- | ------ | --- | ------ | -------- | --------------- |
+| `branch_manager` | `tablet` | `/inventory` | Dashboard renders branch ops: `Nhận`, `Cấp bếp`, `Kiểm kê` present. | `branch-tablet-dashboard.png`, rerun `summary.json` | observed |
+| `branch_manager` | `tablet` | `/inventory/transfers` | Primary transfer language now exposes `Cấp bếp`; old `Tạo phiếu` finding no longer reproduces as the headline issue. | `branch-tablet-transfers.png`, rerun `summary.json` | `INV-UIUX-001=fixed` |
+| `branch_manager` | `tablet` | `/inventory/issues` | Live `Tạo phiếu` remains; placeholder `Xuất báo cáo (sắp mở)` is absent. Opening the dialog still logs missing `DialogContent` description. | `branch-tablet-issues.png`, rerun `summary.json` | `INV-UIUX-002=fixed`, `INV-UIUX-003=open` |
+| `branch_manager` | `tablet` | `/inventory/stocktake` | `Mở phiên kiểm kê` renders with Vietnamese accents; `Mo phien kiem ke` absent. | `branch-tablet-stocktake.png`, rerun `summary.json` | `INV-UIUX-004=fixed` |
+| `branch_manager` | `mobile` | `/inventory` | Mobile dashboard renders `Hôm nay` and `3 luồng vận hành chính`; the earlier `Tổng quan` needle was stale. | `branch-mobile-dashboard.png`, rerun `summary.json` | observed |
+| `owner` | `desktop` | `/inventory` | Owner can enter Inventory but still sees operator CTAs: `Đơn đặt hàng`, `Phiếu nhập`, `Điều chuyển`, `Kiểm kê`. | `owner-desktop-inventory.png`, rerun `summary.json` | `INV-UIUX-005=open` |
+| `super_manager` | `desktop` | `/inventory/receiving` | Receiving landing has `Quản lý PO`, `Mở GRN`, `Đối soát`. | first-run `super-desktop-receiving.png`, first-run `summary.json` | observed |
+| `super_manager` | `desktop` | `/inventory/production` | Create production button is visible but disabled because no BOM is configured; no dialog warning reproduced on this path. | `super-desktop-production.png`, rerun `summary.json` | production half of `INV-UIUX-003` not reproduced |
+| `waiter` | `desktop` | `/inventory` | POS-floor role is blocked at `/access-denied?reason=insufficient-permission&from=%2Finventory`. | `waiter-desktop-inventory-denied.png`, rerun `summary.json` | ACL boundary observed |
+
+### Current decision snapshot
+
+| ID | Decision after rerun | Notes |
+| -- | -------------------- | ----- |
+| `INV-UIUX-001` | `fixed` | Branch transfer route no longer reproduces the old primary-CTA mismatch. |
+| `INV-UIUX-002` | `fixed` | Branch issues route no longer shows the placeholder export/report action. |
+| `INV-UIUX-003` | `fixed` | Superseded by section 8: branch issue dialog no longer emits missing `DialogContent` description warning. Production dialog could not be opened because the product correctly disables create until BOM exists. |
+| `INV-UIUX-004` | `fixed` | Stocktake CTA accent is correct in rendered QA. |
+| `INV-UIUX-005` | `fixed` | Superseded by section 8: owner dashboard now uses oversight framing and hides operator CTAs/nav items. |
+
+### Current final call
 
 - `ready`
-- `not ready`
+- **`not ready`**
 
 Reason:
 
-- Chưa đủ coverage cho sign-off UI/UX Inventory.
-- Có `P1` mở ở branch transfers, branch issues placeholder, và owner dashboard framing.
-- Cần chạy tiếp Wave 2 chi tiết (PO/GRN), Wave 4 downstream `received -> intra-branch Cấp bếp transfer -> POS bridge`, và Wave 5 `area_manager`.
+- IF-007 stale-status cleanup is complete.
+- Follow-up section 8 closes the two remaining rendered defects from this rerun.
+- Test-data drift: cashier seeded passwords are not valid against the connected Supabase project; POS-floor negative ACL was covered by waiter instead.
+- Still not covered in this rerun: area manager, GRN detail, supplier invoice, expiry/report detail, and POS bridge flows.
+
+## 8. IF-007 follow-up fix evidence - 2026-05-24
+
+Scope: close the two remaining rendered defects from section 7 without broad
+Inventory redesign.
+
+| Field | Value |
+| ----- | ----- |
+| Driver | Playwright Chromium against `http://localhost:3000` |
+| Evidence | `/tmp/comtammatu-inventory-owner-a11y-2026-05-24T03-07-25-321Z/summary.json` |
+
+| ID | Result | Evidence |
+| -- | ------ | -------- |
+| `INV-UIUX-005` | `fixed` | Owner `/inventory` renders `Giám sát`, `3 điểm giám sát chính`, `Xem tồn`, `Xem cảnh báo`; forbidden operator text `Đơn đặt hàng`, `Phiếu nhập`, `Điều chuyển`, `Kiểm kê` is absent. Screenshot: `owner-desktop-inventory.png`. |
+| `INV-UIUX-003` | `fixed` | Branch manager opens `/inventory/issues` create dialog; missing `DialogContent` description warnings count is `0`, and placeholder `Xuất báo cáo (sắp mở)` remains absent. Screenshot: `branch-tablet-issues-dialog.png`. |
+| Branch regression | `pass` | Branch dashboard still renders operator wording `Nhận`, `Cấp bếp`, `Kiểm kê`. Screenshot: `branch-tablet-inventory.png`. |
+
+### Follow-up final call
+
+- `ready`
+- **`not ready`**
+
+Reason:
+
+- The five tracked rendered `INV-UIUX-*` defects are now fixed.
+- Full Inventory sign-off is still not ready because this follow-up did not
+  cover area manager, GRN detail, supplier invoice, expiry/report detail, POS
+  bridge flows, or the cashier seed-password drift noted above.

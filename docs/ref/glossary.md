@@ -305,7 +305,7 @@ Quy tắc phụ:
 
 ### Cơ chế thực thi (hiện tại)
 
-File [apps/web/app/inventory/_lib/labels.ts](../../apps/web/app/inventory/_lib/labels.ts) đã hiện thực `LabelContext` (`button`/`tab`/`badge`/`navigation`/`heading`/`table`) với mapping: nav/button/tab/badge → `short`, heading/table → `long`. Khi promote ra shared (L2 roadmap), các module POS/HR/Finance sẽ dùng lại pattern này.
+File [apps/web/app/(protected)/inventory/_lib/labels.ts](<../../apps/web/app/(protected)/inventory/_lib/labels.ts>) đã hiện thực `LabelContext` (`button`/`tab`/`badge`/`navigation`/`heading`/`table`) với mapping: nav/button/tab/badge → `short`, heading/table → `long`. Khi promote ra shared (L2 roadmap), các module POS/HR/Finance sẽ dùng lại pattern này.
 
 ### Bảng variants — Tổ chức và địa điểm
 
@@ -545,7 +545,7 @@ File [apps/web/app/inventory/_lib/labels.ts](../../apps/web/app/inventory/_lib/l
 - Kiến trúc hệ thống: [../spec/architecture.md](../spec/architecture.md)
 - Schema và enum: [../spec/database-schema.md](../spec/database-schema.md)
 - POS order lifecycle (payment-close override): [../archive/plan/m2-order-lifecycle.md](../archive/plan/m2-order-lifecycle.md)
-- Inventory UI labels: [../../apps/web/app/inventory/_lib/dictionary.ts](../../apps/web/app/inventory/_lib/dictionary.ts)
+- Inventory UI labels: [../../apps/web/app/(protected)/inventory/_lib/dictionary.ts](<../../apps/web/app/(protected)/inventory/_lib/dictionary.ts>)
 - Module / site / nav labels chung: [../../packages/shared/src/labels/vi.ts](../../packages/shared/src/labels/vi.ts)
 - Regression rules: [../../tasks/regressions.md](../../tasks/regressions.md)
 

@@ -144,11 +144,11 @@ URL: `/br/{branchId}/pos` (sau khi chọn bàn hoặc tab Mang về)
 
 ### Code path
 
-- **Menu pane:** [apps/web/app/br/[branchId]/pos/_components/menu-pane.tsx](../../../../apps/web/app/br/%5BbranchId%5D/pos/_components/menu-pane.tsx)
-- **Item customizer:** [apps/web/app/br/[branchId]/pos/item-customizer.tsx](../../../../apps/web/app/br/%5BbranchId%5D/pos/item-customizer.tsx) — Drawer khi item có modifier/sides.
-- **Cart pane (drawer mobile):** [apps/web/app/br/[branchId]/pos/_components/cart-pane.tsx](../../../../apps/web/app/br/%5BbranchId%5D/pos/_components/cart-pane.tsx)
-- **Submit handler:** `submitPosOrderWithRetry` trong [apps/web/app/br/[branchId]/pos/_utils/submit-with-retry.ts](../../../../apps/web/app/br/%5BbranchId%5D/pos/_utils/submit-with-retry.ts) — retry với exponential backoff khi mạng yếu.
-- **Server action:** `submitOrder` trong [apps/web/app/br/[branchId]/pos/order-actions.ts](../../../../apps/web/app/br/%5BbranchId%5D/pos/order-actions.ts) — Postgres RPC atomic insert order + items + KDS tickets.
+- **Menu pane:** [apps/web/app/(protected)/br/[branchId]/pos/_components/menu-pane.tsx](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/_components/menu-pane.tsx)
+- **Item customizer:** [apps/web/app/(protected)/br/[branchId]/pos/item-customizer.tsx](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/item-customizer.tsx) — Drawer khi item có modifier/sides.
+- **Cart pane (drawer mobile):** [apps/web/app/(protected)/br/[branchId]/pos/_components/cart-pane.tsx](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/_components/cart-pane.tsx)
+- **Submit handler:** `submitPosOrderWithRetry` trong [apps/web/app/(protected)/br/[branchId]/pos/_utils/submit-with-retry.ts](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/_utils/submit-with-retry.ts) — retry với exponential backoff khi mạng yếu.
+- **Server action:** `submitOrder` trong [apps/web/app/(protected)/br/[branchId]/pos/order-actions.ts](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/order-actions.ts) — Postgres RPC atomic insert order + items + KDS tickets.
 
 ### Database
 
