@@ -25,12 +25,14 @@ test("KDS service columns keep semantic labels without visible title bars", () =
   assert.doesNotMatch(orderGridSource, /<h2[\s\S]*\{column\.title\}/);
   assert.match(
     orderGridSource,
-    /className="min-h-0 flex-1 space-y-1\.5 overflow-y-auto p-1\.5"/,
+    /className="min-h-0 flex-1 space-y-1\.5 overflow-y-auto p-1\.5 xl:space-y-2 xl:p-2"/,
   );
   assert.match(
     orderGridSource,
-    /className="grid min-h-full gap-1\.5 p-1\.5/,
+    /className="grid min-h-full gap-1\.5 p-1\.5 md:grid-cols-3/,
   );
+  assert.doesNotMatch(orderGridSource, /md:grid-cols-2/);
+  assert.doesNotMatch(orderGridSource, /lg:overflow-hidden/);
 });
 
 test("KDS batch completion action moves into the compact card title area", () => {

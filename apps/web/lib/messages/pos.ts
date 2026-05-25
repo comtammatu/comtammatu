@@ -31,6 +31,7 @@ export const pos = {
     unassignedTitle: (count: number) => `${count} món vào trạm mặc định`,
     viewUnassigned: "Xem món",
     openStationConfig: "Gán trạm",
+    orderNote: "Ghi chú đơn",
   },
   appendDraft: {
     title: "Món thêm",

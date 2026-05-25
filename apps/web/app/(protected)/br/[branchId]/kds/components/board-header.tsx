@@ -50,10 +50,10 @@ export function BoardHeader({
   filterControls,
 }: BoardHeaderProps) {
   return (
-    <div className="flex min-w-0 items-center gap-2 overflow-x-auto px-2 py-1 md:px-3">
+    <div className="flex min-w-0 items-center gap-2 overflow-x-auto px-2 py-1.5 md:px-3">
       <div className="flex shrink-0 items-center gap-2">
-        <EmployeePortalBackControl className="h-7 px-1.5 text-xs" />
-        <span className="font-heading text-sm font-semibold text-foreground">
+        <EmployeePortalBackControl className="h-8 px-2 text-sm" />
+        <span className="font-heading text-base font-semibold text-foreground">
           KDS #{branchId}
         </span>
       </div>
@@ -64,7 +64,7 @@ export function BoardHeader({
           role="status"
           aria-live="polite"
           variant={pendingCount > 0 ? "warning" : "outline"}
-          className="rounded-full px-2 py-0.5 text-xs"
+          className="rounded-full px-2.5 py-1 text-sm"
         >
           {pendingCount > 0 ? `${pendingCount} chờ` : "0 chờ"}
         </Badge>

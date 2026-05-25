@@ -9,6 +9,11 @@ import { useKdsRealtime } from "./hooks/use-kds-realtime";
 import { useKdsFilters } from "./hooks/use-kds-filters";
 import { useKdsMutations } from "./hooks/use-kds-mutations";
 import { useKdsViewMode } from "./hooks/use-kds-view-mode";
+import {
+  getKdsOrderItemColumnId,
+  getKdsScopedGroupKey,
+  isKdsAddOnItem,
+} from "./lib/order-columns";
 import { BoardHeader } from "./components/board-header";
 import { StationToggleBar } from "./components/station-toggle-bar";
 import { FilterBar } from "./components/filter-bar";
@@ -36,13 +41,6 @@ function isActiveKitchenTicket(ticket: KdsTicket): boolean {
   return ticket.status === "pending" || ticket.status === "preparing";
 }
 
-function getTicketItemLabel(
-  ticket: KdsTicket,
-  orderItemById: Map<number, KdsOrderItem>,
-): string {
-  return orderItemById.get(ticket.order_item_id)?.item_name ?? "món";
-}
-
 function getTicketOrderLabel(
   ticket: KdsTicket,
   orders: Map<number, { order_number: string }>,
@@ -56,6 +54,12 @@ function getTicketBatchKind(
 ): string | null {
   if (ticket.kitchen_send_batch_id === null) return null;
   return kitchenBatches.get(ticket.kitchen_send_batch_id)?.kind ?? null;
+}
+
+function getTicketBaseGroupKey(ticket: KdsTicket): string {
+  return ticket.kitchen_send_batch_id !== null
+    ? `batch-${String(ticket.kitchen_send_batch_id)}`
+    : String(ticket.order_id);
 }
 
 function getKitchenQueueRank(order: KdsOrder): number {
@@ -199,7 +203,7 @@ export function KdsBoard({
 
   useEffect(() => {
     const onFullscreenChange = () => {
-      setIsFullscreen(document.fullscreenElement === boardRootRef.current);
+      setIsFullscreen(document.fullscreenElement === document.documentElement);
     };
     document.addEventListener("fullscreenchange", onFullscreenChange);
     onFullscreenChange();
@@ -211,12 +215,14 @@ export function KdsBoard({
   const toggleFullscreen = useCallback(() => {
     const root = boardRootRef.current;
     if (!root) return;
-    if (document.fullscreenElement === root) {
+    const fullscreenTarget = document.documentElement;
+    if (document.fullscreenElement === fullscreenTarget) {
       void document.exitFullscreen().catch(() => undefined);
       return;
     }
     if (!document.fullscreenElement) {
-      void root.requestFullscreen().catch(() => undefined);
+      // Keep body-level portals inside fullscreen so overlays remain visible.
+      void fullscreenTarget.requestFullscreen().catch(() => undefined);
     }
   }, []);
 
@@ -258,10 +264,17 @@ export function KdsBoard({
         continue;
       }
       hasNewActiveTicket = true;
-      const itemLabel = getTicketItemLabel(ticket, orderItemById);
+      const item = orderItemById.get(ticket.order_item_id);
+      const itemLabel = item?.item_name ?? "món";
       const orderLabel = getTicketOrderLabel(ticket, orders);
-      const isAppend = getTicketBatchKind(ticket, kitchenBatches) === "append";
-      toast.info(isAppend ? "Món thêm mới" : "Phiếu bếp mới", {
+      const isAppendBatch =
+        getTicketBatchKind(ticket, kitchenBatches) === "append";
+      const title = isKdsAddOnItem(item)
+        ? "Món thêm mới"
+        : isAppendBatch
+          ? "Phiếu gọi thêm mới"
+          : "Phiếu bếp mới";
+      toast.info(title, {
         description: `${itemLabel} - đơn #${orderLabel}`,
       });
     }
@@ -298,10 +311,14 @@ export function KdsBoard({
   const groupedOrders = useMemo<KdsOrder[]>(() => {
     const orderMap = new Map<string, KdsTicket[]>();
     for (const ticket of filteredTickets) {
-      const groupKey =
-        ticket.kitchen_send_batch_id !== null
-          ? `batch-${String(ticket.kitchen_send_batch_id)}`
-          : String(ticket.order_id);
+      const orderInfo = orders.get(ticket.order_id);
+      const item = orderItemById.get(ticket.order_item_id);
+      const columnId = getKdsOrderItemColumnId(
+        item,
+        orderInfo?.order_type ?? "dine_in",
+      );
+      const baseGroupKey = getTicketBaseGroupKey(ticket);
+      const groupKey = getKdsScopedGroupKey(baseGroupKey, columnId);
       const existing = orderMap.get(groupKey) ?? [];
       existing.push(ticket);
       orderMap.set(groupKey, existing);
@@ -338,6 +355,7 @@ export function KdsBoard({
         sendSeq: batch?.send_seq ?? null,
         sendKind: batch?.kind ?? null,
         isPriority,
+        orderNote: orderInfo?.note ?? null,
         tickets: orderTickets,
         items: scopedItems,
       });

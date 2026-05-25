@@ -41,7 +41,7 @@ export function FilterBar({
           onValueChange={(v) => onOrderTypeChange(v as OrderTypeFilter)}
         >
           <SelectTrigger
-            className="w-auto min-w-20 shrink-0 text-xs md:min-w-24"
+            className="w-auto min-w-24 shrink-0 text-sm"
             aria-label="Lọc theo loại đơn"
           >
             <SelectValue placeholder="Loại đơn" />
@@ -75,7 +75,7 @@ export function FilterBar({
         )}
 
         {displayCount > 0 && (
-          <span className="shrink-0 text-xs font-semibold tabular-nums text-muted-foreground">
+          <span className="shrink-0 text-sm font-semibold tabular-nums text-muted-foreground">
             {displayCount} đơn
           </span>
         )}

@@ -22,8 +22,8 @@ import {
   getQuantityStatusClass,
 } from "../lib/item-status-style";
 import {
+  getKdsOrderLabelOverride,
   groupKdsOrdersByColumn,
-  type KdsOrderColumnId,
 } from "../lib/order-columns";
 import {
   getStatusLabel,
@@ -31,6 +31,7 @@ import {
   shouldShowTicketStatusBadge,
 } from "../lib/status-config";
 import { BatchActions } from "./batch-actions";
+import { OrderNote } from "./order-note";
 import { OrderTitleLine } from "./order-title-line";
 import { TicketRowMeta } from "./ticket-row-meta";
 import type { KdsOrder, KdsOrderItem, KdsTicket } from "../types";
@@ -120,34 +121,34 @@ function CompactItemRow({
     <div
       data-testid={`kds-heatmap-item-${String(item.id)}`}
       className={cn(
-        "grid min-w-0 grid-cols-[3rem_minmax(0,1fr)_auto] items-center gap-2 border-t border-border/40 py-1 first:border-t-0 first:pt-0 last:pb-0",
+        "grid min-w-0 grid-cols-[3rem_minmax(0,1fr)] items-start gap-x-1.5 gap-y-1 border-t border-border/40 py-1.5 first:border-t-0 first:pt-0 last:pb-0 xl:grid-cols-[3.5rem_minmax(0,1fr)_auto] xl:items-center xl:gap-2 xl:py-2",
         getItemRowStatusClass(status),
       )}
     >
       <div
         className={cn(
-          "flex h-8 w-12 shrink-0 items-center justify-center rounded-md px-2 ring-1 ring-inset",
+          "flex h-8 w-12 shrink-0 items-center justify-center rounded-md px-1.5 ring-1 ring-inset xl:h-9 xl:w-14 xl:px-2",
           getQuantityStatusClass(status),
         )}
       >
-        <span className="font-mono text-xl font-semibold leading-none tabular-nums">
+        <span className="font-mono text-xl font-semibold leading-none tabular-nums xl:text-2xl">
           {item.quantity}×
         </span>
       </div>
-      <div className="flex min-h-8 min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
-        <span className="min-w-0 break-words text-base font-semibold leading-5">
+      <div className="flex min-h-8 min-w-0 flex-wrap items-center gap-x-1 gap-y-1 xl:min-h-9 xl:gap-x-1.5">
+        <span className="min-w-0 break-words text-base font-semibold leading-5 xl:text-lg xl:leading-6">
           {item.item_name}
         </span>
         {item.is_priority && (
           <Badge
             variant="warning"
-            className="h-5 rounded-md px-1.5 py-0 text-xs leading-none"
+            className="h-5 rounded-md px-1.5 py-0 text-xs font-semibold leading-none xl:h-6 xl:px-2 xl:text-sm"
           >
             {KDS_HEATMAP_LABELS.priority}
           </Badge>
         )}
         {item.variant_name && (
-          <span className="min-w-0 break-words text-xs font-medium leading-4 text-muted-foreground">
+          <span className="min-w-0 break-words text-xs font-medium leading-4 text-muted-foreground xl:text-sm xl:leading-5">
             {item.variant_name}
           </span>
         )}
@@ -158,11 +159,11 @@ function CompactItemRow({
           sides={item.sides}
         />
       </div>
-      <div className="flex shrink-0 items-center justify-end gap-1">
+      <div className="col-span-2 flex min-w-0 flex-wrap items-center justify-end gap-1 xl:col-auto xl:shrink-0 xl:flex-nowrap">
         {shouldShowTicketStatusBadge(status) && (
           <Badge
             variant={getStatusVariant(status)}
-            className="h-5 rounded-md px-2 py-0 text-xs font-semibold leading-none"
+            className="h-5 rounded-md px-2 py-0 text-xs font-semibold leading-none xl:h-6 xl:px-2.5 xl:text-sm"
           >
             {getStatusLabel(status)}
           </Badge>
@@ -259,18 +260,18 @@ function CompactOrphanRow({
   return (
     <div
       className={cn(
-        "grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-t border-border/40 py-1 first:border-t-0 first:pt-0 last:pb-0",
+        "grid min-w-0 grid-cols-[minmax(0,1fr)] items-start gap-1.5 border-t border-border/40 py-1.5 first:border-t-0 first:pt-0 last:pb-0 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center xl:gap-2 xl:py-2",
         getItemRowStatusClass(ticket.status),
       )}
     >
-      <span className="min-w-0 break-words text-sm font-semibold leading-5 text-muted-foreground">
+      <span className="min-w-0 break-words text-base font-semibold leading-6 text-muted-foreground">
         {PRODUCT_VI.posItem} #{String(ticket.order_item_id)}
       </span>
-      <div className="flex shrink-0 items-center justify-end gap-1">
+      <div className="flex min-w-0 flex-wrap items-center justify-end gap-1 xl:shrink-0 xl:flex-nowrap">
         {shouldShowTicketStatusBadge(ticket.status) && (
           <Badge
             variant={getStatusVariant(ticket.status)}
-            className="h-5 rounded-md px-1.5 py-0 text-xs font-semibold leading-none"
+            className="h-5 rounded-md px-2 py-0 text-xs font-semibold leading-none xl:h-6 xl:px-2.5 xl:text-sm"
           >
             {getStatusLabel(ticket.status)}
           </Badge>
@@ -324,7 +325,6 @@ function CompactOrphanRow({
 
 function HeatmapCard({
   order,
-  columnId,
   pendingTicketIds,
   canMarkReady,
   canRecall,
@@ -333,7 +333,6 @@ function HeatmapCard({
   onCompleteTickets,
 }: {
   order: KdsOrder;
-  columnId: KdsOrderColumnId;
   pendingTicketIds: Set<number>;
   canMarkReady: boolean;
   canRecall: boolean;
@@ -348,7 +347,7 @@ function HeatmapCard({
   );
   const status = getOverallStatus(order);
   const ageStyle = getAgeStyle(elapsed, status === "ready");
-  const labelOverride = columnId === "append" ? "Gọi thêm" : undefined;
+  const contextLabel = getKdsOrderLabelOverride(order);
   const ticketByItemId = useMemo(() => {
     const map = new Map<number, KdsTicket>();
     for (const ticket of order.tickets) {
@@ -377,30 +376,38 @@ function HeatmapCard({
     <Card
       data-testid={`kds-heatmap-card-${order.groupKey}`}
       className={cn(
-        "min-w-0 gap-0 overflow-hidden border-l-2 p-2",
+        "min-w-0 gap-0 overflow-hidden border-l-2 p-2 xl:p-3",
         ageStyle.bg,
         getCardLeftAccent(status, elapsed),
       )}
     >
-      <div className="flex min-w-0 flex-wrap items-start justify-between gap-1.5">
-        <div className="min-w-0 flex-1">
+      <div className="flex min-w-0 flex-col gap-1.5 xl:flex-row xl:items-start xl:justify-between xl:gap-2">
+        <div className="min-w-0 xl:flex-1">
           <OrderTitleLine
             kitchenTicketNumber={order.kitchenTicketNumber}
             orderNumber={order.orderNumber}
             orderType={order.orderType}
             tableNumber={order.tableNumber}
-            labelOverride={labelOverride}
+            contextLabel={contextLabel}
             size="compact"
           />
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
             {order.isPriority && (
-              <Badge variant="warning" className="px-2 py-0.5 text-xs">
+              <Badge
+                variant="warning"
+                className="px-2 py-0.5 text-xs xl:px-2.5 xl:py-1 xl:text-sm"
+              >
                 {KDS_HEATMAP_LABELS.priority}
               </Badge>
             )}
           </div>
+          <OrderNote
+            note={order.orderNote}
+            compact
+            className="mt-1.5 max-w-full xl:mt-2"
+          />
         </div>
-        <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
+        <div className="flex w-full flex-wrap items-center justify-start gap-1 xl:w-auto xl:shrink-0 xl:justify-end">
           {canMarkReady && (
             <BatchActions
               layout="title"
@@ -414,20 +421,20 @@ function HeatmapCard({
           {shouldShowTicketStatusBadge(status) && (
             <Badge
               variant={getStatusVariant(status)}
-              className="px-2 py-0.5 text-xs"
+              className="px-2 py-0.5 text-xs xl:px-2.5 xl:py-1 xl:text-sm"
             >
               {getStatusLabel(status)}
             </Badge>
           )}
           <Badge
             variant={getStatusVariant(status)}
-            className="shrink-0 px-2 py-1 text-xs font-semibold"
+            className="shrink-0 px-2 py-0.5 text-xs font-semibold xl:px-2.5 xl:py-1 xl:text-sm"
           >
             {elapsed}p
           </Badge>
         </div>
       </div>
-      <div className="mt-2 min-w-0 rounded-md border border-border/50 bg-card/70 p-1.5">
+      <div className="mt-2 min-w-0 rounded-md border border-border/50 bg-card/70 p-1.5 xl:mt-3 xl:p-2">
         {order.items.map((item) => (
           <CompactItemRow
             key={item.id}
@@ -479,19 +486,19 @@ function OrderColumn({
     <section
       data-testid={`kds-column-${column.id}`}
       className={cn(
-        "flex min-h-64 min-w-0 flex-col overflow-hidden rounded-lg border border-border/70 bg-card/40 md:min-h-0 lg:h-full",
+        "flex min-h-64 min-w-0 flex-col overflow-hidden rounded-lg border border-border/70 bg-card/40 md:min-h-80 xl:h-full xl:min-h-0",
         column.widthClass,
       )}
       aria-label={column.title}
     >
       <div
         data-testid={`kds-column-list-${column.id}`}
-        className="min-h-0 flex-1 space-y-1.5 overflow-y-auto p-1.5"
+        className="min-h-0 flex-1 space-y-1.5 overflow-y-auto p-1.5 xl:space-y-2 xl:p-2"
       >
         {column.orders.length === 0 ? (
           <div
             data-testid={`kds-column-empty-${column.id}`}
-            className="flex min-h-20 items-center justify-center rounded-md border border-dashed border-border/70 bg-muted/30 px-2 py-3 text-center text-sm font-medium text-muted-foreground"
+            className="flex min-h-20 items-center justify-center rounded-md border border-dashed border-border/70 bg-muted/30 px-3 py-4 text-center text-base font-medium text-muted-foreground"
           >
             {column.emptyTitle}
           </div>
@@ -500,7 +507,6 @@ function OrderColumn({
             <HeatmapCard
               key={order.groupKey}
               order={order}
-              columnId={column.id}
               pendingTicketIds={pendingTicketIds}
               canMarkReady={canMarkReady}
               canRecall={canRecall}
@@ -532,7 +538,7 @@ export function OrderGrid({
   );
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto lg:overflow-hidden">
+    <div className="min-h-0 flex-1 overflow-y-auto xl:overflow-hidden">
       {displayOrders.length === 0 ? (
         <div className="flex min-h-80 items-center justify-center p-6 md:min-h-96">
           <AppEmptyState
@@ -550,7 +556,7 @@ export function OrderGrid({
       ) : (
         <div
           data-testid="kds-order-columns"
-          className="grid min-h-full gap-1.5 p-1.5 md:grid-cols-2 lg:h-full lg:min-h-0 lg:grid-cols-10 lg:overflow-hidden"
+          className="grid min-h-full gap-1.5 p-1.5 md:grid-cols-3 xl:h-full xl:min-h-0 xl:grid-cols-10 xl:gap-2 xl:overflow-hidden xl:p-2"
         >
           {columns.map((column) => (
             <OrderColumn

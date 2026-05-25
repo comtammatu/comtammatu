@@ -24,6 +24,7 @@ import {
   getItemRowStatusClass,
   getQuantityStatusClass,
 } from "../lib/item-status-style";
+import { getKdsOrderLabelOverride } from "../lib/order-columns";
 import {
   getStatusLabel,
   getStatusVariant,
@@ -31,6 +32,7 @@ import {
 } from "../lib/status-config";
 import { AgeBadge } from "./age-badge";
 import { CancelledOverlay } from "./cancelled-overlay";
+import { OrderNote } from "./order-note";
 import { OrderTitleLine } from "./order-title-line";
 import { TicketRowMeta } from "./ticket-row-meta";
 import type { KdsOrder, KdsOrderItem, KdsTicket } from "../types";
@@ -307,12 +309,10 @@ function FocusOrderPanel({
     activeTickets.length > 0 &&
     activeTickets.every((ticket) => pendingTicketIds.has(ticket.id));
 
-  const isAppend = order.sendKind === "append";
-
   return (
     <div className="relative flex h-full min-h-0 flex-1 flex-col">
       <ScrollArea className="h-full min-h-0 flex-1">
-        <div className="mx-auto w-full max-w-7xl p-2">
+        <div className="mx-auto w-full max-w-screen-2xl p-2 md:p-3">
           <Card
             data-testid={`kds-focus-card-${order.groupKey}`}
             className={cn(
@@ -324,26 +324,29 @@ function FocusOrderPanel({
                 destructive ≥10ph, success when complete). */}
             <div
               className={cn(
-                "flex items-start justify-between gap-2 border-b px-3 py-2.5 transition-colors md:px-4",
+                "flex items-start justify-between gap-3 border-b px-4 py-3 transition-colors",
                 heroBg,
               )}
             >
-              <div className="flex min-w-0 flex-wrap items-center gap-2">
-                <OrderTitleLine
-                  kitchenTicketNumber={order.kitchenTicketNumber}
-                  orderNumber={order.orderNumber}
-                  orderType={order.orderType}
-                  tableNumber={order.tableNumber}
-                  labelOverride={isAppend ? "Gọi thêm" : undefined}
-                />
-                {order.isPriority && (
-                  <Badge
-                    variant="warning"
-                    className="px-2 py-0.5 text-xs font-semibold"
-                  >
-                    Ưu tiên
-                  </Badge>
-                )}
+              <div className="flex min-w-0 flex-1 flex-col gap-2">
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  <OrderTitleLine
+                    kitchenTicketNumber={order.kitchenTicketNumber}
+                    orderNumber={order.orderNumber}
+                    orderType={order.orderType}
+                    tableNumber={order.tableNumber}
+                    contextLabel={getKdsOrderLabelOverride(order)}
+                  />
+                  {order.isPriority && (
+                    <Badge
+                      variant="warning"
+                      className="px-2.5 py-1 text-sm font-semibold"
+                    >
+                      Ưu tiên
+                    </Badge>
+                  )}
+                </div>
+                <OrderNote note={order.orderNote} className="max-w-full" />
               </div>
               <div className="flex shrink-0 flex-col items-end gap-1.5">
                 {total > 1 && (
@@ -402,7 +405,7 @@ function FocusOrderPanel({
                     key={buildFocusItemKey(item, status)}
                     data-testid={`kds-focus-item-${String(item.id)}`}
                     className={cn(
-                      "relative grid min-w-0 grid-cols-[3.5rem_minmax(0,1fr)_auto] items-center gap-2 bg-card px-3 py-1.5 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95",
+                      "relative grid min-w-0 grid-cols-[3.5rem_minmax(0,1fr)_auto] items-center gap-2 bg-card px-3 py-2 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 md:px-4",
                       getItemRowStatusClass(status),
                       isCancelled && "opacity-100",
                     )}
@@ -417,19 +420,19 @@ function FocusOrderPanel({
                       {item.quantity}×
                     </span>
                     <div className="flex min-h-9 min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
-                      <span className="min-w-0 break-words text-lg font-semibold leading-6">
+                      <span className="min-w-0 break-words text-xl font-semibold leading-7">
                         {item.item_name}
                       </span>
                       {item.is_priority && (
                         <Badge
                           variant="warning"
-                          className="h-6 rounded-md px-2 py-0 text-xs font-semibold leading-none"
+                          className="h-6 rounded-md px-2 py-0 text-sm font-semibold leading-none"
                         >
                           Ưu tiên
                         </Badge>
                       )}
                       {item.variant_name && (
-                        <span className="min-w-0 break-words text-sm font-medium leading-5 text-muted-foreground">
+                        <span className="min-w-0 break-words text-base font-medium leading-6 text-muted-foreground">
                           {item.variant_name}
                         </span>
                       )}
@@ -554,7 +557,7 @@ function FocusOrderPanel({
                       getItemRowStatusClass(status),
                     )}
                   >
-                    <span className="min-w-0 break-words text-sm font-semibold leading-5 text-muted-foreground">
+                    <span className="min-w-0 break-words text-base font-semibold leading-6 text-muted-foreground">
                       {itemLabel}
                     </span>
                     <div className="flex shrink-0 items-center justify-end gap-1">

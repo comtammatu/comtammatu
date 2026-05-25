@@ -12,19 +12,21 @@ interface OrderTitleLineProps {
   orderNumber: string;
   orderType: string;
   tableNumber: number | null;
-  labelOverride?: string;
+  contextLabel?: string;
   size?: "default" | "compact";
   className?: string;
 }
 
 const TITLE_SIZE_CLASSES = {
   default: {
+    context: "text-xs md:text-sm",
     target: "text-2xl",
     sequence: "text-base md:text-lg",
   },
   compact: {
-    target: "text-base",
-    sequence: "text-base",
+    context: "text-xs",
+    target: "text-lg",
+    sequence: "text-sm md:text-base",
   },
 } as const;
 
@@ -40,7 +42,7 @@ export function OrderTitleLine({
   orderNumber,
   orderType,
   tableNumber,
-  labelOverride,
+  contextLabel,
   size = "default",
   className,
 }: OrderTitleLineProps) {
@@ -48,17 +50,30 @@ export function OrderTitleLine({
     kitchenTicketNumber,
     orderNumber,
   );
-  const callTarget = labelOverride ?? getCallTarget(orderType, tableNumber);
+  const callTarget = getCallTarget(orderType, tableNumber);
+  const accessibleLabel = contextLabel
+    ? `${contextLabel} ${callTarget} ${sequenceDisplay}`
+    : `${callTarget} ${sequenceDisplay}`;
   const sizeClass = TITLE_SIZE_CLASSES[size];
 
   return (
     <div
-      aria-label={`${callTarget} ${sequenceDisplay}`}
+      aria-label={accessibleLabel}
       className={cn(
-        "inline-flex min-w-0 max-w-full flex-wrap items-baseline gap-x-2 gap-y-1",
+        "inline-flex min-w-0 max-w-full flex-wrap items-baseline gap-x-1.5 gap-y-0.5",
         className,
       )}
     >
+      {contextLabel && (
+        <span
+          className={cn(
+            "shrink-0 rounded-md bg-muted px-1.5 py-0.5 font-semibold leading-none text-muted-foreground",
+            sizeClass.context,
+          )}
+        >
+          {contextLabel}
+        </span>
+      )}
       <span
         className={cn(
           "shrink-0 font-heading font-semibold leading-tight text-foreground",

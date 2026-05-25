@@ -4,6 +4,7 @@ import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { CardHeader } from "@comtammatu/ui/components/card";
 import { AgeBadge } from "./age-badge";
+import { OrderNote } from "./order-note";
 import { OrderTitleLine } from "./order-title-line";
 
 const KDS_ORDER_TITLE_LABELS = {
@@ -16,9 +17,11 @@ interface OrderCardHeaderProps {
   orderType: string;
   tableNumber: number | null;
   sendKind: string | null;
+  contextLabel?: string;
   elapsedMinutes: number;
   isComplete: boolean;
   isPriority: boolean;
+  orderNote: string | null;
   bgClass: string;
 }
 
@@ -28,13 +31,16 @@ export function OrderCardHeader({
   orderType,
   tableNumber,
   sendKind,
+  contextLabel,
   elapsedMinutes,
   isComplete,
   isPriority,
+  orderNote,
   bgClass,
 }: OrderCardHeaderProps) {
-  const isAppend = sendKind === "append";
-  const hasMeta = isPriority;
+  const resolvedContextLabel =
+    contextLabel ?? (sendKind === "append" ? "Gọi thêm" : undefined);
+  const hasMeta = isPriority || !!orderNote?.trim();
 
   return (
     <CardHeader
@@ -49,7 +55,7 @@ export function OrderCardHeader({
           orderNumber={orderNumber}
           orderType={orderType}
           tableNumber={tableNumber}
-          labelOverride={isAppend ? "Gọi thêm" : undefined}
+          contextLabel={resolvedContextLabel}
         />
         {hasMeta && (
           <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-1.5">
@@ -61,6 +67,7 @@ export function OrderCardHeader({
                 {KDS_ORDER_TITLE_LABELS.priority}
               </Badge>
             )}
+            <OrderNote note={orderNote} compact className="basis-full" />
           </div>
         )}
       </div>

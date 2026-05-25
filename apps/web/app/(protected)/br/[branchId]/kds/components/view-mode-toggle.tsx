@@ -28,14 +28,14 @@ export function ViewModeToggle({ mode, onChange }: ViewModeToggleProps) {
         onChange(v as KdsViewMode);
       }}
       aria-label="Chế độ hiển thị KDS"
-      className="h-7"
+      className="h-8"
     >
       <Tooltip>
         <TooltipTrigger asChild>
           <ToggleGroupItem
             value="focus"
             aria-label="Đang làm — một đơn rõ ràng"
-            className="px-2"
+            className="px-2.5"
           >
             <IconFocus aria-hidden />
           </ToggleGroupItem>
@@ -47,7 +47,7 @@ export function ViewModeToggle({ mode, onChange }: ViewModeToggleProps) {
           <ToggleGroupItem
             value="comprehensive"
             aria-label="Tổng quan — hiển thị nhiều đơn"
-            className="px-2"
+            className="px-2.5"
           >
             <IconLayoutGrid aria-hidden />
           </ToggleGroupItem>

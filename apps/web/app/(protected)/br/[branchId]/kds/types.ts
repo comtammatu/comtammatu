@@ -36,6 +36,7 @@ export interface KdsOrderInfo {
   order_type: string;
   table_id: number | null;
   is_priority: boolean;
+  note: string | null;
   created_at: string;
   tables: { number: number } | null;
 }
@@ -62,6 +63,8 @@ export interface KdsOrderItem {
   order_id: number;
   menu_item_id: number;
   item_name: string;
+  category_name: string | null;
+  category_type: string | null;
   variant_name: string | null;
   quantity: number;
   unit_price: number;
@@ -98,6 +101,7 @@ export interface KdsOrder {
   sendSeq: number | null;
   sendKind: string | null;
   isPriority: boolean;
+  orderNote: string | null;
   tickets: KdsTicket[];
   items: KdsOrderItem[];
 }

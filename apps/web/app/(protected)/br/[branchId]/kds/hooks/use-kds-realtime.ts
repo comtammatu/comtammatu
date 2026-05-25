@@ -25,13 +25,13 @@ import type {
 const POLL_INTERVAL_MS = 12_000;
 const POLL_STALE_MS = 12_000;
 const KDS_ORDER_SELECT_WITH_PRIORITY =
-  "id, order_number, order_type, table_id, is_priority, created_at, tables(number)";
+  "id, order_number, order_type, table_id, is_priority, note, created_at, tables(number)";
 const KDS_ORDER_SELECT_BASE =
-  "id, order_number, order_type, table_id, created_at, tables(number)";
+  "id, order_number, order_type, table_id, note, created_at, tables(number)";
 const KDS_ORDER_ITEM_SELECT_WITH_PRIORITY =
-  "id, order_id, menu_item_id, item_name, variant_name, quantity, unit_price, status, is_priority, note, modifiers, sides";
+  "id, order_id, menu_item_id, item_name, variant_name, quantity, unit_price, status, is_priority, note, modifiers, sides, menu_items(menu_categories(name,type))";
 const KDS_ORDER_ITEM_SELECT_BASE =
-  "id, order_id, menu_item_id, item_name, variant_name, quantity, unit_price, status, note, modifiers, sides";
+  "id, order_id, menu_item_id, item_name, variant_name, quantity, unit_price, status, note, modifiers, sides, menu_items(menu_categories(name,type))";
 const KDS_TICKET_SELECT =
   "id, station_id, order_id, order_item_id, kitchen_send_batch_id, status, bumped_at, created_at, updated_at";
 const KDS_ACTIVE_STATUSES = ["pending", "preparing"];
@@ -70,14 +70,30 @@ function normalizeKdsOrderItems(
 ): KdsOrderItem[] {
   return (
     (rows ?? []) as Array<
-      Omit<KdsOrderItem, "is_priority"> & {
+      Omit<KdsOrderItem, "is_priority" | "category_name" | "category_type"> & {
         is_priority?: boolean | null;
+        menu_items?:
+          | {
+              menu_categories?:
+                | {
+                    name?: string | null;
+                    type?: string | null;
+                  }
+                | null;
+            }
+          | null;
       }
     >
-  ).map((row) => ({
-    ...row,
-    is_priority: row.is_priority === true,
-  }));
+  ).map((row) => {
+    const { menu_items: menuItem, is_priority, ...item } = row;
+    const category = menuItem?.menu_categories ?? null;
+    return {
+      ...item,
+      category_name: category?.name ?? null,
+      category_type: category?.type ?? null,
+      is_priority: is_priority === true,
+    };
+  });
 }
 
 async function fetchKdsOrdersByIds(args: {
@@ -606,16 +622,19 @@ export function useKdsRealtime({
             const oldRow = payload.old as {
               id?: number;
               table_id?: number | null;
+              note?: string | null;
             };
             const newRow = payload.new as {
               id?: number;
               table_id?: number | null;
+              note?: string | null;
             };
             const orderId = newRow.id;
             if (orderId === undefined) return;
             if (!ordersRef.current.has(orderId)) return;
             if (
               oldRow.table_id === newRow.table_id &&
+              oldRow.note === newRow.note &&
               (payload.old as { is_priority?: boolean }).is_priority ===
                 (payload.new as { is_priority?: boolean }).is_priority
             ) {

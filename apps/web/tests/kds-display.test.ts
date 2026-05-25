@@ -1,11 +1,77 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { test } from "node:test";
 import {
   KDS_ORDER_COLUMN_DEFINITIONS,
+  getKdsOrderItemColumnId,
+  getKdsOrderLabelOverride,
+  getKdsScopedGroupKey,
   groupKdsOrdersByColumn,
 } from "../app/(protected)/br/[branchId]/kds/lib/order-columns";
 import { formatKdsTicketSequenceDisplay } from "../app/(protected)/br/[branchId]/kds/lib/status-config";
-import type { KdsOrder } from "../app/(protected)/br/[branchId]/kds/types";
+import type {
+  KdsOrder,
+  KdsOrderItem,
+} from "../app/(protected)/br/[branchId]/kds/types";
+
+const kdsPageSource = readFileSync(
+  join(process.cwd(), "app/(protected)/br/[branchId]/kds/page.tsx"),
+  "utf8",
+);
+
+const kdsRealtimeSource = readFileSync(
+  join(
+    process.cwd(),
+    "app/(protected)/br/[branchId]/kds/hooks/use-kds-realtime.ts",
+  ),
+  "utf8",
+);
+
+const kdsBoardSource = readFileSync(
+  join(process.cwd(), "app/(protected)/br/[branchId]/kds/kds-board.tsx"),
+  "utf8",
+);
+
+const orderGridSource = readFileSync(
+  join(
+    process.cwd(),
+    "app/(protected)/br/[branchId]/kds/components/order-grid.tsx",
+  ),
+  "utf8",
+);
+
+const orderTitleLineSource = readFileSync(
+  join(
+    process.cwd(),
+    "app/(protected)/br/[branchId]/kds/components/order-title-line.tsx",
+  ),
+  "utf8",
+);
+
+const orderCardHeaderSource = readFileSync(
+  join(
+    process.cwd(),
+    "app/(protected)/br/[branchId]/kds/components/order-card-header.tsx",
+  ),
+  "utf8",
+);
+
+const focusViewSource = readFileSync(
+  join(
+    process.cwd(),
+    "app/(protected)/br/[branchId]/kds/components/focus-view.tsx",
+  ),
+  "utf8",
+);
+
+const orderNoteSource = readFileSync(
+  join(
+    process.cwd(),
+    "app/(protected)/br/[branchId]/kds/components/order-note.tsx",
+  ),
+  "utf8",
+);
 
 function makeOrder(
   overrides: Partial<KdsOrder> & Pick<KdsOrder, "groupKey">,
@@ -21,8 +87,28 @@ function makeOrder(
     sendSeq: overrides.sendSeq ?? 1,
     sendKind: overrides.sendKind ?? null,
     isPriority: overrides.isPriority ?? false,
+    orderNote: overrides.orderNote ?? null,
     tickets: overrides.tickets ?? [],
     items: overrides.items ?? [],
+  };
+}
+
+function makeItem(overrides: Partial<KdsOrderItem> = {}): KdsOrderItem {
+  return {
+    id: overrides.id ?? 10,
+    order_id: overrides.order_id ?? 1,
+    menu_item_id: overrides.menu_item_id ?? 100,
+    item_name: overrides.item_name ?? "Cơm sườn",
+    category_name: overrides.category_name ?? "Món chính",
+    category_type: overrides.category_type ?? "main_dish",
+    variant_name: overrides.variant_name ?? null,
+    quantity: overrides.quantity ?? 1,
+    unit_price: overrides.unit_price ?? 35_000,
+    status: overrides.status ?? "pending",
+    is_priority: overrides.is_priority ?? false,
+    note: overrides.note ?? null,
+    modifiers: overrides.modifiers ?? null,
+    sides: overrides.sides ?? null,
   };
 }
 
@@ -45,19 +131,36 @@ test("KDS title display falls back to order sequence", () => {
   );
 });
 
-test("KDS comprehensive board groups orders into service columns", () => {
+test("KDS comprehensive board groups orders into item-category service columns", () => {
   const dineIn = makeOrder({ groupKey: "dine-in", orderType: "dine_in" });
   const takeaway = makeOrder({
     groupKey: "takeaway",
     orderType: "takeaway",
   });
-  const append = makeOrder({
-    groupKey: "append",
+  const appendMainDish = makeOrder({
+    groupKey: "append-main-dish",
     orderType: "dine_in",
     sendKind: "append",
+    items: [makeItem()],
+  });
+  const addOn = makeOrder({
+    groupKey: "add-on",
+    orderType: "takeaway",
+    items: [
+      makeItem({
+        item_name: "Thêm trứng",
+        category_name: "Thêm",
+        category_type: "side_dish",
+      }),
+    ],
   });
 
-  const columns = groupKdsOrdersByColumn([dineIn, takeaway, append]);
+  const columns = groupKdsOrdersByColumn([
+    dineIn,
+    takeaway,
+    appendMainDish,
+    addOn,
+  ]);
 
   assert.deepEqual(
     KDS_ORDER_COLUMN_DEFINITIONS.map((column) => [
@@ -66,9 +169,9 @@ test("KDS comprehensive board groups orders into service columns", () => {
       column.widthClass,
     ]),
     [
-      ["dine_in", "Tại chỗ", "lg:col-span-4"],
-      ["takeaway", "Mang về", "lg:col-span-4"],
-      ["append", "Gọi thêm", "md:col-span-2 lg:col-span-2"],
+      ["dine_in", "Tại chỗ", "xl:col-span-4"],
+      ["takeaway", "Mang về", "xl:col-span-4"],
+      ["add_on", "Món thêm", "xl:col-span-2"],
     ],
   );
   assert.deepEqual(
@@ -77,9 +180,135 @@ test("KDS comprehensive board groups orders into service columns", () => {
       column.orders.map((order) => order.groupKey),
     ]),
     [
-      ["dine_in", ["dine-in"]],
+      ["dine_in", ["dine-in", "append-main-dish"]],
       ["takeaway", ["takeaway"]],
-      ["append", ["append"]],
+      ["add_on", ["add-on"]],
     ],
   );
+});
+
+test("KDS món thêm lane requires category Thêm and type Món phụ", () => {
+  assert.equal(
+    getKdsOrderItemColumnId(
+      makeItem({ category_name: "Thêm", category_type: "side_dish" }),
+      "takeaway",
+    ),
+    "add_on",
+  );
+  assert.equal(
+    getKdsOrderItemColumnId(
+      makeItem({ category_name: "Thêm", category_type: "main_dish" }),
+      "dine_in",
+    ),
+    "dine_in",
+  );
+  assert.equal(
+    getKdsOrderItemColumnId(
+      makeItem({ category_name: "Món phụ", category_type: "side_dish" }),
+      "takeaway",
+    ),
+    "takeaway",
+  );
+});
+
+test("KDS title context keeps table target and ticket code visible", () => {
+  const addOnDineIn = makeOrder({
+    groupKey: "add-on-dine-in",
+    orderType: "dine_in",
+    tableNumber: 12,
+    items: [
+      makeItem({
+        item_name: "Thêm trứng",
+        category_name: "Thêm",
+        category_type: "side_dish",
+      }),
+    ],
+  });
+  const appendMainDish = makeOrder({
+    groupKey: "append-main-dish",
+    orderType: "dine_in",
+    tableNumber: 12,
+    sendKind: "append",
+    items: [makeItem()],
+  });
+
+  assert.equal(getKdsOrderLabelOverride(addOnDineIn), "Món thêm");
+  assert.equal(getKdsOrderLabelOverride(appendMainDish), "Gọi thêm");
+  assert.match(
+    orderTitleLineSource,
+    /const callTarget = getCallTarget\(orderType, tableNumber\);/,
+  );
+  assert.doesNotMatch(orderTitleLineSource, /labelOverride \?\? getCallTarget/);
+  assert.doesNotMatch(orderTitleLineSource, /contextLabel \?\? getCallTarget/);
+  assert.match(orderTitleLineSource, /aria-label=\{accessibleLabel\}/);
+  assert.match(orderTitleLineSource, /\$\{contextLabel\} \$\{callTarget\}/);
+  assert.doesNotMatch(orderTitleLineSource, /title=/);
+  assert.doesNotMatch(orderTitleLineSource, /truncate|line-clamp/);
+  assert.doesNotMatch(orderNoteSource, /truncate|line-clamp|overflow-hidden/);
+  assert.match(orderGridSource, /contextLabel=\{contextLabel\}/);
+  assert.match(orderCardHeaderSource, /contextLabel=\{resolvedContextLabel\}/);
+  assert.match(focusViewSource, /contextLabel=\{getKdsOrderLabelOverride/);
+});
+
+test("KDS mixed kitchen batch can split normal items from món thêm", () => {
+  const baseGroupKey = "batch-42";
+
+  assert.equal(
+    getKdsScopedGroupKey(
+      baseGroupKey,
+      getKdsOrderItemColumnId(
+        makeItem({ category_name: "Món chính", category_type: "main_dish" }),
+        "dine_in",
+      ),
+    ),
+    "batch-42",
+  );
+  assert.equal(
+    getKdsScopedGroupKey(
+      baseGroupKey,
+      getKdsOrderItemColumnId(
+        makeItem({ category_name: "Thêm", category_type: "side_dish" }),
+        "dine_in",
+      ),
+    ),
+    "batch-42:add_on",
+  );
+});
+
+test("KDS keeps order note separate from item note", () => {
+  const order = makeOrder({
+    groupKey: "notes",
+    orderNote: "KH dị ứng hành",
+    items: [makeItem({ note: "ít mỡ" })],
+  });
+
+  assert.equal(order.orderNote, "KH dị ứng hành");
+  assert.equal(order.items[0]?.note, "ít mỡ");
+});
+
+test("KDS selects and renders order notes in board and focus modes", () => {
+  assert.match(kdsPageSource, /order_type, table_id, is_priority, note,/);
+  assert.match(kdsPageSource, /order_type, table_id, note,/);
+  assert.match(kdsPageSource, /menu_items\(menu_categories\(name,type\)\)/);
+  assert.match(kdsRealtimeSource, /order_type, table_id, is_priority, note,/);
+  assert.match(kdsRealtimeSource, /order_type, table_id, note,/);
+  assert.match(
+    kdsRealtimeSource,
+    /menu_items\(menu_categories\(name,type\)\)/,
+  );
+  assert.match(kdsRealtimeSource, /oldRow\.note === newRow\.note/);
+  assert.match(orderGridSource, /<OrderNote[\s\S]*note=\{order\.orderNote\}/);
+  assert.match(focusViewSource, /<OrderNote[\s\S]*note=\{order\.orderNote\}/);
+  assert.match(orderNoteSource, /messages\.pos\.kds\.orderNote/);
+  assert.match(orderNoteSource, /note\?\.trim\(\)/);
+});
+
+test("KDS fullscreen keeps body-level portals inside the fullscreen tree", () => {
+  assert.match(
+    kdsBoardSource,
+    /document\.fullscreenElement === document\.documentElement/,
+  );
+  assert.match(kdsBoardSource, /fullscreenTarget = document\.documentElement/);
+  assert.match(kdsBoardSource, /fullscreenTarget\.requestFullscreen\(\)/);
+  assert.doesNotMatch(kdsBoardSource, /root\.requestFullscreen\(\)/);
 });

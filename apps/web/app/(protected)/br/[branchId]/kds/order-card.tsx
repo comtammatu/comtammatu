@@ -5,6 +5,7 @@ import { cn } from "@comtammatu/ui";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { useBoardTick } from "./hooks/use-board-tick";
 import { getAgeStyle, getCardBorder, getCardLeftAccent } from "./lib/age-style";
+import { getKdsOrderLabelOverride } from "./lib/order-columns";
 import { OrderCardHeader } from "./components/order-card-header";
 import { TicketRow } from "./components/ticket-row";
 import { BatchActions } from "./components/batch-actions";
@@ -119,9 +120,11 @@ function OrderCardComponent({
         orderType={order.orderType}
         tableNumber={order.tableNumber}
         sendKind={order.sendKind}
+        contextLabel={getKdsOrderLabelOverride(order)}
         elapsedMinutes={elapsed}
         isComplete={isComplete}
         isPriority={order.isPriority}
+        orderNote={order.orderNote}
         bgClass={ageStyle.bg}
       />
 
@@ -201,6 +204,7 @@ function arePropsEqual(prev: OrderCardProps, next: OrderCardProps): boolean {
     a.orderNumber !== b.orderNumber ||
     a.tableNumber !== b.tableNumber ||
     a.kitchenTicketNumber !== b.kitchenTicketNumber ||
+    a.orderNote !== b.orderNote ||
     a.sendSeq !== b.sendSeq ||
     a.sendKind !== b.sendKind ||
     a.isPriority !== b.isPriority ||

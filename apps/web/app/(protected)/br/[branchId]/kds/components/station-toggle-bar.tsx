@@ -27,14 +27,14 @@ export function StationToggleBar({
           <Button
             type="button"
             variant={activeStationId === null ? "secondary" : "ghost"}
-            size="sm"
-            className="gap-1.5 px-2 text-xs font-semibold"
+            size="default"
+            className="gap-1.5 px-2.5 text-sm font-semibold"
             aria-label={messages.pos.kds.allStationsAria}
             aria-pressed={activeStationId === null}
             onClick={() => onChange(null)}
           >
             {messages.pos.kds.allStations}
-            <span className="font-mono text-xs font-semibold tabular-nums text-muted-foreground">
+            <span className="font-mono text-sm font-semibold tabular-nums text-muted-foreground">
               {totalActiveCount}
             </span>
           </Button>
@@ -43,14 +43,14 @@ export function StationToggleBar({
               key={station.id}
               type="button"
               variant={activeStationId === station.id ? "secondary" : "ghost"}
-              size="sm"
-              className="gap-1.5 px-2 text-xs font-semibold"
+              size="default"
+              className="gap-1.5 px-2.5 text-sm font-semibold"
               aria-label={messages.pos.kds.stationAria(station.name)}
               aria-pressed={activeStationId === station.id}
               onClick={() => onChange(String(station.id))}
             >
               {station.name}
-              <span className="font-mono text-xs font-semibold tabular-nums text-muted-foreground">
+              <span className="font-mono text-sm font-semibold tabular-nums text-muted-foreground">
                 {stationCounts.get(station.id) ?? 0}
               </span>
             </Button>

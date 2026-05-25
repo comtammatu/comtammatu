@@ -47,7 +47,7 @@ export function TicketRowMeta({
             <Badge
               key={`${s.side_item_id}-${idx}`}
               variant="outline"
-              className="h-6 rounded-md px-2 py-0 text-xs font-semibold leading-none text-foreground"
+              className="h-auto min-h-6 rounded-md px-2 py-0.5 text-sm font-semibold leading-tight text-foreground"
             >
               {formatSideLabel(s)}
             </Badge>
@@ -56,7 +56,7 @@ export function TicketRowMeta({
         {hasNote && (
           <span className="inline-flex min-h-6 min-w-0 max-w-full items-center gap-1.5 rounded-md bg-warning/15 px-2 py-0.5 text-warning-foreground">
             <IconNote aria-hidden className="size-3 shrink-0 text-warning" />
-            <span className="min-w-0 break-words text-xs font-semibold leading-tight">
+            <span className="min-w-0 break-words text-sm font-semibold leading-tight">
               {note}
             </span>
           </span>
@@ -113,7 +113,7 @@ function ModifierChip({
 }) {
   const tone = classifyModifier(label);
   const className = compact
-    ? "h-6 rounded-md px-2 py-0 text-xs font-semibold leading-none"
+    ? "h-auto min-h-6 rounded-md px-2 py-0.5 text-sm font-semibold leading-tight"
     : "h-auto min-h-6 rounded-md px-2.5 py-1 text-sm font-semibold leading-tight";
 
   if (tone === "negation") {

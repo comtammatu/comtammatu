@@ -9,14 +9,14 @@ const SIZE_CLASS: Record<
   { container: string; number: string; label: string }
 > = {
   default: {
-    container: "rounded-full px-2.5 py-1",
-    number: "text-sm",
+    container: "rounded-full px-3 py-1",
+    number: "text-base",
     label: "text-xs",
   },
   lg: {
-    container: "rounded-full px-2.5 py-1",
-    number: "text-base",
-    label: "text-xs",
+    container: "rounded-full px-3 py-1.5",
+    number: "text-lg",
+    label: "text-sm",
   },
 };
 
