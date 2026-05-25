@@ -1,30 +1,43 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { Toaster } from "@comtammatu/ui/components/sonner";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 
+const OPERATIONAL_TOAST_ROUTE_PATTERN = /^\/br\/[^/]+\/(?:pos|kds)(?:\/|$)/;
+const TOAST_CLASS_NAMES = {
+  toast: "cn-toast",
+};
+const COMPACT_TOAST_OFFSET = {
+  top: "calc(env(safe-area-inset-top) + 0.5rem)",
+  left: "0.5rem",
+  right: "0.5rem",
+};
+
+function isOperationalToastRoute(pathname: string | null): boolean {
+  return pathname !== null && OPERATIONAL_TOAST_ROUTE_PATTERN.test(pathname);
+}
+
 /**
- * Toaster với config khác cho mobile vs desktop.
+ * Toaster với config riêng cho thiết bị vận hành.
  *
- * Mobile (<768px):
+ * Mobile toàn app và POS/KDS mọi viewport:
  * - `top-center` — tránh notch / Dynamic Island ở góc, không che FAB ở đáy,
  *   gần thumb-reach để tap action / swipe dismiss.
  * - `closeButton` — user tap ✕ dismiss nhanh, không cần swipe.
- * - `visibleToasts={3}` — tránh xếp chồng tràn viewport hẹp.
- * - `expand={false}` — toast collapse mặc định để khỏi che màn hình.
- * - `mobileOffset` — bám sát mép cho rộng tối đa.
+ * - `visibleToasts={3}` + `expand={false}` — toast stack gọn cho POS/KDS
+ *   trên phone/tablet, không tối ưu theo giả định desktop PC.
+ * - `offset` + `mobileOffset` — tablet không bị rơi về Sonner desktop offset.
  *
- * Desktop (≥768px): giữ `top-right` quen thuộc, `expand` khi hover, 5 toast
- * cùng lúc cho cashier máy bàn theo dõi nhiều job.
- *
- * SSR trả về null trong lần render đầu (useIsMobile chưa biết viewport) →
- * Toaster gắn sau hydration. Toast trigger trước hydration sẽ rơi vào batch
- * Sonner internal queue và hiển thị khi component mount.
+ * Desktop ngoài POS/KDS giữ `top-right`, `expand` khi hover, 5 toast cùng lúc.
  */
 export function ResponsiveToaster() {
+  const pathname = usePathname();
   const isMobile = useIsMobile();
+  const compactOperationalToaster =
+    isMobile || isOperationalToastRoute(pathname);
 
-  if (isMobile) {
+  if (compactOperationalToaster) {
     return (
       <Toaster
         richColors
@@ -32,11 +45,12 @@ export function ResponsiveToaster() {
         visibleToasts={3}
         closeButton
         expand={false}
-        mobileOffset={{ top: 8, left: 8, right: 8 }}
+        gap={8}
+        offset={COMPACT_TOAST_OFFSET}
+        mobileOffset={COMPACT_TOAST_OFFSET}
+        containerAriaLabel="Thông báo thao tác"
         toastOptions={{
-          classNames: {
-            toast: "cn-toast",
-          },
+          classNames: TOAST_CLASS_NAMES,
         }}
       />
     );

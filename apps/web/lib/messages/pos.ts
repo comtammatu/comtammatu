@@ -133,6 +133,7 @@ export const pos = {
     selected: "Đang chọn",
     available: "Trống",
     occupied: "Đang dùng",
+    ready: "Sẵn sàng",
     served: "Đã phục vụ",
     reserved: "Đã đặt",
     tableAria: (tableNumber: string | number, status: string) =>
@@ -151,8 +152,7 @@ export const pos = {
     noTerminalDescription:
       "Liên hệ quản lý để thiết lập máy POS trước khi mở ca.",
     openingCashLabel: "Tiền đầu ca (VND)",
-    openingCashDescription:
-      "Ghi số tiền mặt đầu ca để đối soát khi đóng ca.",
+    openingCashDescription: "Ghi số tiền mặt đầu ca để đối soát khi đóng ca.",
     opening: "Đang mở ca...",
     open: "Mở ca POS",
     openSuccess: "Mở ca thành công",
@@ -186,10 +186,10 @@ export const pos = {
     serviceModeAria: "Chọn hình thức phục vụ",
     dineIn: "Tại bàn",
     takeaway: "Mang về",
-    appendBannerTitle: (orderNumber: string) => `Thêm món vào đơn #${orderNumber}`,
+    appendBannerTitle: (orderNumber: string) =>
+      `Thêm món vào đơn #${orderNumber}`,
     appendPending: (quantity: number) => `${quantity} món đang chờ gửi.`,
-    appendInstruction:
-      "Chọn món trên menu, chưa gửi bếp cho tới khi xác nhận.",
+    appendInstruction: "Chọn món trên menu, chưa gửi bếp cho tới khi xác nhận.",
     mobileHeaderAppend: (orderNumber: string) => `Thêm món #${orderNumber}`,
     mobileHeaderTable: (tableNumber: number | string) => `Bàn ${tableNumber}`,
   },
@@ -212,4 +212,4 @@ export const pos = {
     updateSent: "Cập nhật món đã gửi",
     addToCart: "Thêm vào giỏ",
   },
-} as const
+} as const;

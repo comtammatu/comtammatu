@@ -6,10 +6,7 @@ import { formatVND } from "@comtammatu/shared/format";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Item } from "@comtammatu/ui/components/item";
-import {
-  getPosLineItemDisplayName,
-  getPosLineItemSummary,
-} from "../../types";
+import { getPosLineItemDisplayName, getPosLineItemSummary } from "../../types";
 import type { CartModifier, CartSide } from "../../types";
 import { PosLineItemCompact } from "../pos-line-item-compact";
 
@@ -52,7 +49,7 @@ const ITEM_STATUS_META: Record<
 > = {
   pending: { label: "Chờ", variant: "warning" },
   preparing: { label: "Đang làm", variant: "warning" },
-  ready: { label: "Sẵn sàng", variant: "info" },
+  ready: { label: "Sẵn sàng", variant: "success" },
   served: { label: "Đã phục vụ", variant: "success" },
   cancelled: { label: "Đã hủy", variant: "destructive" },
 };
@@ -63,7 +60,6 @@ function getItemStatusToneClass(status: string): string {
     case "preparing":
       return "border-warning/30 bg-warning/10";
     case "ready":
-      return "border-info/30 bg-info/10";
     case "served":
       return "border-success/30 bg-success/10";
     case "cancelled":
@@ -154,8 +150,10 @@ function getRowChangeToneClass(tone: RowChangeTone): string | false {
 export function OrderItemRow({ row, onTap }: OrderItemRowProps) {
   const cancelled = row.status === "cancelled";
   const displayName = getPosLineItemDisplayName(row);
-  const statusInfo =
-    ITEM_STATUS_META[row.status] ?? { label: row.status, variant: "outline" };
+  const statusInfo = ITEM_STATUS_META[row.status] ?? {
+    label: row.status,
+    variant: "outline",
+  };
   const summary = getPosLineItemSummary(row);
   const changeTone = useOrderItemChangeTone(row);
 

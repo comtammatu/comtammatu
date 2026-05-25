@@ -1,5 +1,10 @@
-export type PosTableOrderVisualState = "active" | "served";
-export type PosTableTileVisualState = "empty" | "active" | "served" | "muted";
+export type PosTableOrderVisualState = "active" | "ready" | "served";
+export type PosTableTileVisualState =
+  | "empty"
+  | "active"
+  | "ready"
+  | "served"
+  | "muted";
 
 type PosTableOrderStateInput = {
   table_id: number | null;
@@ -30,7 +35,20 @@ export function deriveTableOrderVisualStates(
     const tableId = order.table_id;
     if (tableId === null || map.get(tableId) === "active") continue;
 
-    map.set(tableId, order.status === "served" ? "served" : "active");
+    const nextState =
+      order.status === "served"
+        ? "served"
+        : order.status === "ready"
+          ? "ready"
+          : "active";
+
+    if (nextState === "active") {
+      map.set(tableId, "active");
+    } else if (nextState === "ready") {
+      map.set(tableId, "ready");
+    } else if (!map.has(tableId)) {
+      map.set(tableId, "served");
+    }
   }
 
   return map;
@@ -47,6 +65,7 @@ export function getPosTableTileVisualState({
 }): PosTableTileVisualState {
   const hasActiveOrder = orderVisualState != null || orderCount > 0;
   if (tableStatus === "available" && !hasActiveOrder) return "empty";
+  if (orderVisualState === "ready") return "ready";
   if (orderVisualState === "served") return "served";
   if (tableStatus === "occupied" || hasActiveOrder) return "active";
   return "muted";

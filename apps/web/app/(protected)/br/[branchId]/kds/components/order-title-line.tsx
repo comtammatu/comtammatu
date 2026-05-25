@@ -3,7 +3,7 @@
 import { TABLE_VI } from "@comtammatu/shared/messages";
 import { cn } from "@comtammatu/ui";
 import {
-  formatKitchenTicketDisplay,
+  formatKdsTicketSequenceDisplay,
   getOrderTypeLabel,
 } from "../lib/status-config";
 
@@ -12,20 +12,19 @@ interface OrderTitleLineProps {
   orderNumber: string;
   orderType: string;
   tableNumber: number | null;
+  labelOverride?: string;
   size?: "default" | "compact";
   className?: string;
 }
 
 const TITLE_SIZE_CLASSES = {
   default: {
-    ticket: "text-2xl",
-    target: "text-base md:text-lg",
-    invoice: "text-sm",
+    target: "text-2xl",
+    sequence: "text-base md:text-lg",
   },
   compact: {
-    ticket: "text-xl",
-    target: "text-sm",
-    invoice: "text-xs",
+    target: "text-base",
+    sequence: "text-base",
   },
 } as const;
 
@@ -41,31 +40,25 @@ export function OrderTitleLine({
   orderNumber,
   orderType,
   tableNumber,
+  labelOverride,
   size = "default",
   className,
 }: OrderTitleLineProps) {
-  const ticketDisplay = formatKitchenTicketDisplay(kitchenTicketNumber);
-  const callTarget = getCallTarget(orderType, tableNumber).toLocaleUpperCase(
-    "vi-VN",
+  const sequenceDisplay = formatKdsTicketSequenceDisplay(
+    kitchenTicketNumber,
+    orderNumber,
   );
+  const callTarget = labelOverride ?? getCallTarget(orderType, tableNumber);
   const sizeClass = TITLE_SIZE_CLASSES[size];
 
   return (
     <div
-      aria-label={`${kitchenTicketNumber} ${callTarget} ${orderNumber}`}
+      aria-label={`${callTarget} ${sequenceDisplay}`}
       className={cn(
-        "inline-flex min-w-0 max-w-full items-baseline gap-2 overflow-hidden whitespace-nowrap",
+        "inline-flex min-w-0 max-w-full flex-wrap items-baseline gap-x-2 gap-y-1",
         className,
       )}
     >
-      <span
-        className={cn(
-          "shrink-0 font-mono font-semibold leading-none tabular-nums",
-          sizeClass.ticket,
-        )}
-      >
-        {ticketDisplay}
-      </span>
       <span
         className={cn(
           "shrink-0 font-heading font-semibold leading-tight text-foreground",
@@ -76,11 +69,11 @@ export function OrderTitleLine({
       </span>
       <span
         className={cn(
-          "min-w-0 truncate font-mono font-medium leading-tight text-muted-foreground tabular-nums",
-          sizeClass.invoice,
+          "shrink-0 font-mono font-semibold leading-tight text-muted-foreground tabular-nums",
+          sizeClass.sequence,
         )}
       >
-        {orderNumber}
+        {sequenceDisplay}
       </span>
     </div>
   );

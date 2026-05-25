@@ -24,7 +24,6 @@ import {
 } from "@comtammatu/ui/components/toggle-group";
 import {
   LayoutGrid as IconLayoutGrid,
-  Flame as IconFlame,
   Package as IconPackage,
   Trash as IconTrash,
   Utensils as IconToolsKitchen,
@@ -421,7 +420,6 @@ function CartPaneComponent({
                 <div className="grid gap-2 sm:grid-cols-2">
                   <Button
                     type="button"
-                    variant="outline"
                     className="min-w-12 w-full text-base font-bold tracking-wide"
                     size="touch-lg"
                     disabled={!canSubmit || isSubmitting || hasRemovingItems}
@@ -435,7 +433,7 @@ function CartPaneComponent({
                       </>
                     ) : (
                       <>
-                        Gửi phiếu ({totalQuantity})
+                        Gửi bếp ({totalQuantity})
                         <KbdGroup className="ml-2 hidden md:inline-flex">
                           <Kbd>{"⌘"}</Kbd>
                           <Kbd>Enter</Kbd>
@@ -445,7 +443,8 @@ function CartPaneComponent({
                   </Button>
                   <Button
                     type="button"
-                    className="min-w-12 w-full text-base font-bold tracking-wide shadow-md"
+                    variant="outline"
+                    className="min-w-12 w-full text-base font-semibold tracking-wide text-muted-foreground"
                     size="touch-lg"
                     disabled={!canSubmit || isSubmitting || hasRemovingItems}
                     onClick={() => setSubmitIntent("priority")}
@@ -456,10 +455,7 @@ function CartPaneComponent({
                         {STATES_VI.processing}
                       </>
                     ) : (
-                      <>
-                        <IconFlame data-icon="inline-start" />
-                        Gửi ưu tiên
-                      </>
+                      <>Ưu tiên</>
                     )}
                   </Button>
                 </div>
@@ -475,11 +471,15 @@ function CartPaneComponent({
                       <AlertDialogTitle>
                         {submitIntent === "priority"
                           ? cart.orderType === "takeaway"
-                            ? "Gửi ưu tiên đơn mang về?"
-                            : `Gửi ưu tiên cho bàn ${selectedTableNumber ?? ""}?`
+                            ? "Ưu tiên đơn mang về?"
+                            : selectedTableNumber != null
+                              ? `Ưu tiên đơn bàn ${selectedTableNumber}?`
+                              : "Ưu tiên đơn này?"
                           : cart.orderType === "takeaway"
-                            ? "Gửi đơn mang về?"
-                            : `Gửi cho bàn ${selectedTableNumber ?? ""}?`}
+                            ? "Gửi bếp đơn mang về?"
+                            : selectedTableNumber != null
+                              ? `Gửi bếp cho bàn ${selectedTableNumber}?`
+                              : "Gửi bếp?"}
                       </AlertDialogTitle>
                       <AlertDialogDescription>
                         {totalQuantity} món · {formatVND(cart.total)}
@@ -496,8 +496,8 @@ function CartPaneComponent({
                         }
                       >
                         {submitIntent === "priority"
-                          ? "Gửi ưu tiên"
-                          : "Gửi phiếu"}
+                          ? "Xác nhận ưu tiên"
+                          : "Gửi bếp"}
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>

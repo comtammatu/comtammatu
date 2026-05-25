@@ -1,41 +1,74 @@
 import type { ReactNode } from "react";
-import Image from "next/image";
 import {
-  CheckCircle2 as IconCheckCircle,
   CircleAlert as IconAlertCircle,
   Clock3 as IconClock,
   CookingPot as IconCookingPot,
-  Sparkles as IconSparkles,
 } from "lucide-react";
-import { Badge } from "@comtammatu/ui/components/badge";
-import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
-import { cn } from "@comtammatu/ui";
+import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@comtammatu/ui/components/table";
 import {
   buildRunnerQueue,
+  formatRunnerOrderLabel,
   type RunnerQueueItem,
 } from "@comtammatu/shared/runner";
-import { AppPage, AppPageHeader } from "@/components/surface";
+import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
+import { TableEmptyStateRow } from "@/components/table-empty-state-row";
 import { loadAuthState } from "@/_lib/auth";
 import {
-  formatVNTime,
   getVNDateString,
   getVNDayUtcRange,
 } from "@/_lib/format-datetime";
 import { RunnerRealtimeRefresh } from "./runner-realtime-refresh";
 
 const RUNNER_TICKET_LIMIT = 180;
-const RUNNER_SERVED_WINDOW_MINUTES = 10;
-const RUNNER_MASCOT_SRC = "/brand/mascot/be-suon-tuoi-runner.png";
-const RUNNER_RECEIVED_PREFIX = "Nhận đơn";
-const RUNNER_WAIT_PREFIX = "chờ";
-const RUNNER_TRACKING_LABEL = "Theo dõi lượt gọi";
-const RUNNER_CURRENT_LABEL = "Đơn hiện tại";
-const RUNNER_EMPTY_CURRENT_TITLE = "Chưa có đơn bếp đang làm";
-const RUNNER_EMPTY_CURRENT_DESCRIPTION =
-  "Khi KDS có đơn đang chờ hoặc đang chuẩn bị, số bàn hoặc mã mang về sẽ hiện lớn tại đây.";
 const RUNNER_ERROR_MESSAGE =
   "Không tải được màn gọi số. Vui lòng tải lại trang.";
+const RUNNER_COPY = {
+  eyebrow: "Runner",
+  preparing: "Đang làm",
+  waiting: "Chờ",
+  itemShort: "Món",
+  sectionTitle: "Danh sách đơn",
+  orderCount: (count: number) => `${String(count)} đơn`,
+  emptyTitle: "Chưa có đơn Runner",
+  emptyDescription: "KDS chưa có đơn đang làm hoặc đang chờ.",
+  itemUnit: "món",
+  tableHeaders: {
+    sequence: "STT",
+    order: "Đơn",
+    quantity: "Số lượng món",
+    status: "Trạng thái",
+  },
+} as const;
+
+type RunnerTicketSnapshot = Parameters<
+  typeof buildRunnerQueue
+>[0]["tickets"][number] & {
+  order_item_id: number;
+};
+
+type RunnerOrderItemQuantityRow = {
+  id: number;
+  quantity: number | string | null;
+};
+
+type RunnerListStatus = "preparing" | "pending";
+
+type RunnerListRow = {
+  key: string;
+  item: RunnerQueueItem;
+  orderLabel: string;
+  itemQuantity: number;
+  status: RunnerListStatus;
+};
 
 export default async function RunnerPage({
   params,
@@ -46,9 +79,6 @@ export default async function RunnerPage({
   const branchIdNum = Number(branchId);
   const { supabase, claims } = await loadAuthState();
   const { startIso: todayStartIso } = getVNDayUtcRange(getVNDateString());
-  const servedAfterIso = new Date(
-    Date.now() - RUNNER_SERVED_WINDOW_MINUTES * 60 * 1000,
-  ).toISOString();
 
   const { data: branch, error: branchError } = await supabase
     .from("branches")
@@ -64,10 +94,10 @@ export default async function RunnerPage({
   const { data: ticketRows, error: ticketsError } = await supabase
     .from("kds_tickets")
     .select(
-      "id, order_id, kitchen_send_batch_id, status, bumped_at, created_at, updated_at",
+      "id, order_id, order_item_id, kitchen_send_batch_id, status, bumped_at, created_at, updated_at",
     )
     .eq("branch_id", branchIdNum)
-    .in("status", ["pending", "preparing", "ready", "served"])
+    .in("status", ["pending", "preparing"])
     .gte("created_at", todayStartIso)
     .order("created_at", { ascending: true })
     .limit(RUNNER_TICKET_LIMIT);
@@ -76,8 +106,11 @@ export default async function RunnerPage({
     return <RunnerErrorState />;
   }
 
-  const tickets = ticketRows ?? [];
+  const tickets = (ticketRows ?? []) as RunnerTicketSnapshot[];
   const orderIds = [...new Set(tickets.map((ticket) => ticket.order_id))];
+  const orderItemIds = [
+    ...new Set(tickets.map((ticket) => ticket.order_item_id)),
+  ];
   const batchIds = [
     ...new Set(
       tickets
@@ -86,7 +119,7 @@ export default async function RunnerPage({
     ),
   ];
 
-  const [ordersRes, batchesRes] =
+  const [ordersRes, batchesRes, orderItemsRes] =
     orderIds.length > 0
       ? await Promise.all([
           supabase
@@ -104,13 +137,20 @@ export default async function RunnerPage({
                 )
                 .in("id", batchIds)
             : Promise.resolve({ data: [], error: null }),
+          orderItemIds.length > 0
+            ? supabase
+                .from("order_items")
+                .select("id, quantity")
+                .in("id", orderItemIds)
+            : Promise.resolve({ data: [], error: null }),
         ])
       : [
           { data: [], error: null },
           { data: [], error: null },
+          { data: [], error: null },
         ];
 
-  if (ordersRes.error || batchesRes.error) {
+  if (ordersRes.error || batchesRes.error || orderItemsRes.error) {
     return <RunnerErrorState />;
   }
 
@@ -122,123 +162,88 @@ export default async function RunnerPage({
     kitchenBatches: (batchesRes.data ?? []) as Parameters<
       typeof buildRunnerQueue
     >[0]["kitchenBatches"],
-    servedAfterIso,
   });
 
-  const preparingItems = queue
+  const activeItems = queue
     .filter((item) => item.lane === "preparing")
     .sort(compareRunnerItemAsc);
-  const completedItems = queue
-    .filter((item) => item.lane === "served")
-    .sort(compareRunnerItemDesc);
-  const currentItem = preparingItems[0] ?? null;
-  const nextItem = preparingItems[1] ?? null;
-  const previousItem = completedItems[0] ?? null;
-  const nextCount = Math.max(preparingItems.length - 1, 0);
+  const quantityByOrderItemId = new Map(
+    ((orderItemsRes.data ?? []) as RunnerOrderItemQuantityRow[]).map((row) => [
+      row.id,
+      normalizeQuantity(row.quantity),
+    ]),
+  );
+  const orderItemIdByTicketId = new Map(
+    tickets.map((ticket) => [ticket.id, ticket.order_item_id]),
+  );
+  const statusByTicketId = new Map(
+    tickets.map((ticket) => [ticket.id, ticket.status]),
+  );
+  const rows = activeItems.map((item) =>
+    toRunnerListRow({
+      item,
+      orderItemIdByTicketId,
+      quantityByOrderItemId,
+      statusByTicketId,
+    }),
+  );
+  const preparingCount = rows.filter((row) => row.status === "preparing").length;
+  const waitingCount = rows.length - preparingCount;
+  const itemCount = rows.reduce((sum, row) => sum + row.itemQuantity, 0);
 
   return (
     <AppPage
       density="compact"
       width="full"
-      className="flex overflow-hidden bg-gradient-to-br from-background via-secondary to-accent"
-      contentClassName="min-h-0 flex-1 overflow-hidden"
+      scroll
+      className="bg-background"
+      contentClassName="min-h-0 flex-1"
     >
       <RunnerRealtimeRefresh branchId={branchIdNum} />
 
-      <RunnerDisplayBoard
-        branchName={branch.name}
-        previousItem={previousItem}
-        currentItem={currentItem}
-        nextItem={nextItem}
-        currentCount={preparingItems.length}
-        nextCount={nextCount}
-        completedCount={completedItems.length}
-        nowMs={Date.now()}
-      />
-    </AppPage>
-  );
-}
-
-function RunnerDisplayBoard({
-  branchName,
-  previousItem,
-  currentItem,
-  nextItem,
-  currentCount,
-  nextCount,
-  completedCount,
-  nowMs,
-}: {
-  branchName: string;
-  previousItem: RunnerQueueItem | null;
-  currentItem: RunnerQueueItem | null;
-  nextItem: RunnerQueueItem | null;
-  currentCount: number;
-  nextCount: number;
-  completedCount: number;
-  nowMs: number;
-}) {
-  return (
-    <section
-      aria-label={`Màn chạy đơn ${branchName}`}
-      className="flex min-h-0 flex-1 flex-col gap-3 overflow-auto lg:overflow-hidden"
-    >
-      <AppPageHeader
-        eyebrow="Màn gọi món"
-        title={branchName}
-        className="shrink-0"
-        actions={
-          <div className="flex flex-wrap items-center gap-1.5">
-            <RunnerSummaryBadge
-              icon={<IconCookingPot className="size-3" />}
-              label="Bếp đang làm"
-              value={currentCount}
-              variant="default"
-            />
-            <RunnerSummaryBadge
-              icon={<IconClock className="size-3" />}
-              label="Tiếp theo"
-              value={nextCount}
-              variant="info"
-            />
-            <RunnerSummaryBadge
-              icon={<IconCheckCircle className="size-3" />}
-              label="Đã phục vụ"
-              value={completedCount}
-              variant="success"
-            />
-          </div>
-        }
-      />
-
-      <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-12 lg:overflow-hidden">
-        <RunnerStagePanel
-          branchName={branchName}
-          item={currentItem}
-          nowMs={nowMs}
+      <section
+        aria-label={`Runner ${branch.name}`}
+        className="flex min-h-0 flex-1 flex-col gap-3"
+      >
+        <AppPageHeader
+          eyebrow={RUNNER_COPY.eyebrow}
+          title={branch.name}
+          actions={
+            <div className="flex flex-wrap items-center gap-1.5">
+              <RunnerSummaryBadge
+                icon={<IconCookingPot className="size-3" />}
+                label={RUNNER_COPY.preparing}
+                value={preparingCount}
+                variant="default"
+              />
+              <RunnerSummaryBadge
+                icon={<IconClock className="size-3" />}
+                label={RUNNER_COPY.waiting}
+                value={waitingCount}
+                variant="info"
+              />
+              <RunnerSummaryBadge
+                label={RUNNER_COPY.itemShort}
+                value={itemCount}
+                variant="secondary"
+              />
+            </div>
+          }
         />
 
-        <aside
-          aria-label={RUNNER_TRACKING_LABEL}
-          className="grid min-h-0 gap-3 lg:col-span-4 lg:grid-rows-2 lg:overflow-hidden xl:col-span-3"
+        <AppSection
+          title={RUNNER_COPY.sectionTitle}
+          badge={{
+            children: RUNNER_COPY.orderCount(rows.length),
+            variant: rows.length > 0 ? "secondary" : "outline",
+          }}
+          contentClassName="p-0"
+          size="sm"
         >
-          <RunnerSidePanel
-            panelLabel="Đơn tiếp theo"
-            item={nextItem}
-            stateLabel="Trong hàng KDS"
-            emptyLabel="Chưa có lượt tiếp theo"
-            tone="info"
-          />
-          <RunnerSidePanel
-            panelLabel="Đã phục vụ"
-            item={previousItem}
-            stateLabel="Bếp đã hoàn thành"
-            emptyLabel="Chưa có lượt đã phục vụ"
-            tone="success"
-          />
-        </aside>
-      </div>
-    </section>
+          <RunnerOrderTable rows={rows} />
+        </AppSection>
+      </section>
+    </AppPage>
   );
 }
 
@@ -248,284 +253,164 @@ function RunnerSummaryBadge({
   value,
   variant,
 }: {
-  icon: ReactNode;
+  icon?: ReactNode;
   label: string;
   value: number;
-  variant: "default" | "info" | "success";
+  variant: BadgeProps["variant"];
 }) {
   return (
     <Badge variant={variant} className="gap-1 font-mono tabular-nums">
       {icon}
       <span className="font-sans">{label}</span>
-      <span>{value}</span>
+      <span>{formatItemQuantity(value)}</span>
     </Badge>
   );
 }
 
-function RunnerStagePanel({
-  branchName,
-  item,
-  nowMs,
-}: {
-  branchName: string;
-  item: RunnerQueueItem | null;
-  nowMs: number;
-}) {
+function RunnerOrderTable({ rows }: { rows: RunnerListRow[] }) {
   return (
-    <Card
-      aria-label={`Đơn hiện tại ${branchName}`}
-      className="relative min-h-0 border-primary/30 bg-gradient-to-br from-card via-card to-accent/20 shadow-lg ring-2 ring-primary/10 lg:col-span-8 lg:h-full xl:col-span-9"
-    >
-      <div
-        aria-hidden="true"
-        className="absolute inset-x-0 top-0 h-1 bg-primary"
-      />
-      <CardContent className="flex min-h-0 flex-1 flex-col justify-between gap-6">
-        <div className="flex items-start justify-between gap-3">
-          <div className="grid gap-2 text-left">
-            <Badge variant={item ? "default" : "outline"} className="w-fit">
-              {item ? "Bếp đang làm" : "Đang chờ đơn KDS"}
-            </Badge>
-            <p className="font-heading text-base font-semibold text-foreground">
-              {RUNNER_CURRENT_LABEL}
-            </p>
-          </div>
-          <RunnerMascot quiet={!item} />
-        </div>
-
-        {item ? (
-          <div className="grid min-h-0 flex-1 place-items-center gap-6 text-center">
-            <RunnerTargetDisplay item={item} size="stage" />
-          </div>
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead className="w-16 text-center">
+            {RUNNER_COPY.tableHeaders.sequence}
+          </TableHead>
+          <TableHead>{RUNNER_COPY.tableHeaders.order}</TableHead>
+          <TableHead className="w-32 text-right">
+            {RUNNER_COPY.tableHeaders.quantity}
+          </TableHead>
+          <TableHead className="w-32">
+            {RUNNER_COPY.tableHeaders.status}
+          </TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {rows.length === 0 ? (
+          <TableEmptyStateRow
+            colSpan={4}
+            title={RUNNER_COPY.emptyTitle}
+            description={RUNNER_COPY.emptyDescription}
+            paddingClassName="py-10"
+          />
         ) : (
-          <div className="mx-auto grid max-w-md flex-1 place-items-center gap-3 text-center text-muted-foreground">
-            <p className="font-heading text-base font-semibold">
-              {RUNNER_EMPTY_CURRENT_TITLE}
-            </p>
-            <p className="text-sm leading-6">
-              {RUNNER_EMPTY_CURRENT_DESCRIPTION}
-            </p>
-          </div>
-        )}
+          rows.map((row, index) => {
+            const status = getRunnerStatusMeta(row.status);
 
-        {item ? <RunnerStageMeta item={item} nowMs={nowMs} /> : null}
-      </CardContent>
-    </Card>
+            return (
+              <TableRow
+                key={row.key}
+                className={
+                  row.status === "preparing"
+                    ? "bg-primary/5 hover:bg-primary/10"
+                    : undefined
+                }
+              >
+                <TableCell className="text-center font-mono text-base tabular-nums">
+                  {index + 1}
+                </TableCell>
+                <TableCell className="min-w-40 whitespace-normal break-words font-mono text-6xl font-semibold leading-none tabular-nums sm:text-7xl lg:text-8xl">
+                  {row.orderLabel}
+                </TableCell>
+                <TableCell className="text-right font-mono text-base tabular-nums">
+                  {formatItemQuantity(row.itemQuantity)} {RUNNER_COPY.itemUnit}
+                </TableCell>
+                <TableCell>
+                  <Badge variant={status.variant}>{status.label}</Badge>
+                </TableCell>
+              </TableRow>
+            );
+          })
+        )}
+      </TableBody>
+    </Table>
   );
 }
 
-function RunnerStageMeta({
+function toRunnerListRow({
   item,
-  nowMs,
+  orderItemIdByTicketId,
+  quantityByOrderItemId,
+  statusByTicketId,
 }: {
   item: RunnerQueueItem;
-  nowMs: number;
-}) {
-  return (
-    <dl className="grid gap-2 border-t border-border/70 pt-4 text-left sm:grid-cols-3">
-      <RunnerMetaItem
-        icon={<IconClock className="size-3" />}
-        label={RUNNER_RECEIVED_PREFIX}
-        value={formatVNTime(item.orderReceivedAt)}
-      />
-      <RunnerMetaItem
-        icon={<IconCookingPot className="size-3" />}
-        label={RUNNER_WAIT_PREFIX}
-        value={formatWaitDuration(item.orderReceivedAt, nowMs)}
-      />
-      <RunnerMetaItem
-        icon={<IconSparkles className="size-3" />}
-        label="Phiếu tham chiếu"
-        value={item.referenceNumber}
-      />
-    </dl>
-  );
-}
-
-function RunnerMetaItem({
-  icon,
-  label,
-  value,
-}: {
-  icon: ReactNode;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="grid min-w-0 gap-1">
-      <dt className="flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        {icon}
-        {label}
-      </dt>
-      <dd className="truncate font-mono text-sm text-foreground tabular-nums">
-        {value}
-      </dd>
-    </div>
-  );
-}
-
-function RunnerSidePanel({
-  panelLabel,
-  item,
-  stateLabel,
-  emptyLabel,
-  tone,
-}: {
-  panelLabel: "Đã phục vụ" | "Đơn tiếp theo";
-  item: RunnerQueueItem | null;
-  stateLabel: string;
-  emptyLabel: string;
-  tone: "primary" | "info" | "success";
-}) {
-  const badgeVariant: "success" | "info" | "outline" =
-    tone === "success" ? "success" : tone === "info" ? "info" : "outline";
-
-  return (
-    <Card
-      size="sm"
-      aria-label={panelLabel}
-      className="min-h-0 border-border/80 bg-card/90 shadow-sm lg:h-full"
-    >
-      <CardContent className="flex min-h-0 flex-1 flex-col justify-between gap-4">
-        <div className="flex items-start justify-between gap-2">
-          <div className="grid gap-1">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              {panelLabel}
-            </p>
-            <Badge variant={item ? badgeVariant : "outline"} className="w-fit">
-              {item ? stateLabel : "Trống"}
-            </Badge>
-          </div>
-        </div>
-
-        {item ? (
-          <div className="grid min-h-0 flex-1 place-items-center gap-3 text-center">
-            <RunnerTargetDisplay item={item} size="slot" />
-          </div>
-        ) : (
-          <div className="grid flex-1 place-items-center text-center text-muted-foreground">
-            <p className="font-heading text-sm font-semibold">{emptyLabel}</p>
-          </div>
-        )}
-
-        {item ? (
-          <p className="truncate border-t border-border/70 pt-3 font-mono text-sm text-muted-foreground">
-            {item.referenceNumber}
-          </p>
-        ) : null}
-      </CardContent>
-    </Card>
-  );
-}
-
-function RunnerMascot({ quiet = false }: { quiet?: boolean }) {
-  return (
-    <span
-      aria-hidden="true"
-      className={cn(
-        "grid shrink-0 place-items-center rounded-full border border-primary/20 bg-accent/70 shadow-sm",
-        quiet ? "aspect-square w-20 opacity-80" : "aspect-square w-16",
-      )}
-    >
-      <Image
-        src={RUNNER_MASCOT_SRC}
-        alt=""
-        width={192}
-        height={256}
-        className={cn("h-auto object-contain", quiet ? "w-16" : "w-12")}
-        priority={!quiet}
-      />
-    </span>
-  );
-}
-
-function RunnerTargetDisplay({
-  item,
-  size,
-}: {
-  item: RunnerQueueItem;
-  size: "stage" | "slot";
-}) {
-  const target = formatRunnerTarget(item);
-  const isStage = size === "stage";
-  const isSlot = size === "slot";
-  const isLongCode = target.kind === "code" && target.display.length > 12;
-
-  return (
-    <div className="grid min-w-0 gap-3">
-      <p className="font-heading text-base font-semibold uppercase tracking-wide text-primary">
-        {target.label}
-      </p>
-      <p
-        className={cn(
-          "break-words font-mono font-semibold leading-none text-foreground tabular-nums",
-          isStage &&
-            target.kind === "table" &&
-            "text-6xl sm:text-7xl lg:text-8xl",
-          isStage &&
-            target.kind === "code" &&
-            (isLongCode
-              ? "text-2xl sm:text-2xl lg:text-6xl"
-              : "text-6xl sm:text-7xl lg:text-8xl"),
-          isSlot && target.kind === "table" && "text-6xl",
-          isSlot && target.kind === "code" && "text-xl sm:text-2xl",
-        )}
-      >
-        {target.display}
-      </p>
-    </div>
-  );
-}
-
-function formatRunnerTarget(item: RunnerQueueItem): {
-  kind: "table" | "code";
-  label: string;
-  display: string;
-} {
-  if (item.tableNumber !== null) {
-    return {
-      kind: "table",
-      label: "Bàn",
-      display: String(item.tableNumber),
-    };
-  }
-
-  if (item.orderType === "dine_in") {
-    return {
-      kind: "code",
-      label: "Bàn chưa rõ",
-      display: item.callNumber,
-    };
-  }
-
+  orderItemIdByTicketId: Map<number, number>;
+  quantityByOrderItemId: Map<number, number>;
+  statusByTicketId: Map<number, string>;
+}): RunnerListRow {
   return {
-    kind: "code",
-    label: "Mang về",
-    display: item.callNumber,
+    key: item.id,
+    item,
+    orderLabel: formatRunnerOrderLabel(item),
+    itemQuantity: countItemQuantity({
+      item,
+      orderItemIdByTicketId,
+      quantityByOrderItemId,
+    }),
+    status: resolveRunnerListStatus(item, statusByTicketId),
   };
 }
 
-function formatWaitDuration(receivedAt: string, nowMs: number): string {
-  const elapsedMinutes = Math.max(
-    0,
-    Math.floor((nowMs - new Date(receivedAt).getTime()) / 60_000),
-  );
+function countItemQuantity({
+  item,
+  orderItemIdByTicketId,
+  quantityByOrderItemId,
+}: {
+  item: RunnerQueueItem;
+  orderItemIdByTicketId: Map<number, number>;
+  quantityByOrderItemId: Map<number, number>;
+}): number {
+  const seenOrderItemIds = new Set<number>();
+  let total = 0;
 
-  if (elapsedMinutes < 1) return "dưới 1 phút";
-  if (elapsedMinutes < 60) return `${String(elapsedMinutes)} phút`;
+  for (const ticketId of item.ticketIds) {
+    const orderItemId = orderItemIdByTicketId.get(ticketId);
+    if (orderItemId === undefined || seenOrderItemIds.has(orderItemId)) {
+      continue;
+    }
 
-  const hours = Math.floor(elapsedMinutes / 60);
-  const minutes = elapsedMinutes % 60;
-  if (minutes === 0) return `${String(hours)} giờ`;
-  return `${String(hours)} giờ ${String(minutes)} phút`;
+    seenOrderItemIds.add(orderItemId);
+    total += quantityByOrderItemId.get(orderItemId) ?? 0;
+  }
+
+  return total > 0 ? total : item.ticketCount;
+}
+
+function resolveRunnerListStatus(
+  item: RunnerQueueItem,
+  statusByTicketId: Map<number, string>,
+): RunnerListStatus {
+  for (const ticketId of item.ticketIds) {
+    if (statusByTicketId.get(ticketId) === "preparing") return "preparing";
+  }
+
+  return "pending";
+}
+
+function getRunnerStatusMeta(status: RunnerListStatus): {
+  label: "Đang làm" | "Chờ";
+  variant: BadgeProps["variant"];
+} {
+  if (status === "preparing") {
+    return { label: "Đang làm", variant: "default" };
+  }
+
+  return { label: "Chờ", variant: "info" };
+}
+
+function normalizeQuantity(value: number | string | null): number {
+  const quantity = typeof value === "number" ? value : Number(value ?? 0);
+  if (!Number.isFinite(quantity) || quantity <= 0) return 0;
+  return quantity;
+}
+
+function formatItemQuantity(value: number): string {
+  return new Intl.NumberFormat("vi-VN", {
+    maximumFractionDigits: 2,
+  }).format(value);
 }
 
 function compareRunnerItemAsc(a: RunnerQueueItem, b: RunnerQueueItem): number {
   return new Date(a.sortAt).getTime() - new Date(b.sortAt).getTime();
-}
-
-function compareRunnerItemDesc(a: RunnerQueueItem, b: RunnerQueueItem): number {
-  return new Date(b.sortAt).getTime() - new Date(a.sortAt).getTime();
 }
 
 function RunnerErrorState() {

@@ -8,6 +8,13 @@ import {
   makeKeyedRealtimeBatcher,
   makeRealtimeCoalescer,
 } from "@/_utils/realtime-scheduler";
+import {
+  dedupeRowsById,
+  fetchChunkedRows,
+  fetchPagedRows,
+  sortKdsTicketsNewestFirst,
+  uniqueNumbers,
+} from "../lib/query-helpers";
 import type {
   KdsKitchenSendBatch,
   KdsOrderInfo,
@@ -34,6 +41,7 @@ type KdsQueryResult = {
   data: unknown[] | null;
   error: { message?: string } | null;
 };
+type KdsSupabaseClient = ReturnType<typeof createClient>;
 
 function isMissingPriorityColumn(
   error: { message?: string } | null | undefined,
@@ -42,10 +50,16 @@ function isMissingPriorityColumn(
   return message.includes("is_priority") && message.includes("column");
 }
 
-function normalizeKdsOrders(rows: unknown[] | null | undefined): KdsOrderInfo[] {
-  return ((rows ?? []) as Array<Omit<KdsOrderInfo, "is_priority"> & {
-    is_priority?: boolean | null;
-  }>).map((row) => ({
+function normalizeKdsOrders(
+  rows: unknown[] | null | undefined,
+): KdsOrderInfo[] {
+  return (
+    (rows ?? []) as Array<
+      Omit<KdsOrderInfo, "is_priority"> & {
+        is_priority?: boolean | null;
+      }
+    >
+  ).map((row) => ({
     ...row,
     is_priority: row.is_priority === true,
   }));
@@ -54,12 +68,184 @@ function normalizeKdsOrders(rows: unknown[] | null | undefined): KdsOrderInfo[] 
 function normalizeKdsOrderItems(
   rows: unknown[] | null | undefined,
 ): KdsOrderItem[] {
-  return ((rows ?? []) as Array<Omit<KdsOrderItem, "is_priority"> & {
-    is_priority?: boolean | null;
-  }>).map((row) => ({
+  return (
+    (rows ?? []) as Array<
+      Omit<KdsOrderItem, "is_priority"> & {
+        is_priority?: boolean | null;
+      }
+    >
+  ).map((row) => ({
     ...row,
     is_priority: row.is_priority === true,
   }));
+}
+
+async function fetchKdsOrdersByIds(args: {
+  supabase: KdsSupabaseClient;
+  branchId: number;
+  orderIds: number[];
+}): Promise<{ data: KdsOrderInfo[] | null; error: unknown | null }> {
+  const { supabase, branchId, orderIds } = args;
+  const result = await fetchChunkedRows<unknown>(orderIds, async (ids) => {
+    let orderRes: KdsQueryResult = await supabase
+      .from("orders")
+      .select(KDS_ORDER_SELECT_WITH_PRIORITY)
+      .in("id", ids)
+      .eq("branch_id", branchId);
+
+    if (isMissingPriorityColumn(orderRes.error)) {
+      orderRes = await supabase
+        .from("orders")
+        .select(KDS_ORDER_SELECT_BASE)
+        .in("id", ids)
+        .eq("branch_id", branchId);
+    }
+
+    return orderRes;
+  });
+
+  if (result.error) return { data: null, error: result.error };
+  return { data: normalizeKdsOrders(result.data), error: null };
+}
+
+async function fetchKdsOrderItemsByOrderIds(args: {
+  supabase: KdsSupabaseClient;
+  orderIds: number[];
+}): Promise<{ data: KdsOrderItem[] | null; error: unknown | null }> {
+  const { supabase, orderIds } = args;
+  const result = await fetchChunkedRows<unknown>(orderIds, async (ids) => {
+    let itemsRes: KdsQueryResult = await supabase
+      .from("order_items")
+      .select(KDS_ORDER_ITEM_SELECT_WITH_PRIORITY)
+      .in("order_id", ids);
+
+    if (isMissingPriorityColumn(itemsRes.error)) {
+      itemsRes = await supabase
+        .from("order_items")
+        .select(KDS_ORDER_ITEM_SELECT_BASE)
+        .in("order_id", ids);
+    }
+
+    return itemsRes;
+  });
+
+  if (result.error) return { data: null, error: result.error };
+  return { data: normalizeKdsOrderItems(result.data), error: null };
+}
+
+async function fetchKdsOrderItemsByIds(args: {
+  supabase: KdsSupabaseClient;
+  orderItemIds: number[];
+}): Promise<{ data: KdsOrderItem[] | null; error: unknown | null }> {
+  const { supabase, orderItemIds } = args;
+  const result = await fetchChunkedRows<unknown>(orderItemIds, async (ids) => {
+    let itemsRes: KdsQueryResult = await supabase
+      .from("order_items")
+      .select(KDS_ORDER_ITEM_SELECT_WITH_PRIORITY)
+      .in("id", ids);
+
+    if (isMissingPriorityColumn(itemsRes.error)) {
+      itemsRes = await supabase
+        .from("order_items")
+        .select(KDS_ORDER_ITEM_SELECT_BASE)
+        .in("id", ids);
+    }
+
+    return itemsRes;
+  });
+
+  if (result.error) return { data: null, error: result.error };
+  return { data: normalizeKdsOrderItems(result.data), error: null };
+}
+
+async function fetchKdsKitchenBatchesByIds(args: {
+  supabase: KdsSupabaseClient;
+  batchIds: number[];
+}): Promise<{ data: KdsKitchenSendBatch[] | null; error: unknown | null }> {
+  const { supabase, batchIds } = args;
+  return fetchChunkedRows<KdsKitchenSendBatch>(batchIds, async (ids) => {
+    const { data, error } = await supabase
+      .from("kitchen_send_batches")
+      .select("id, order_id, kitchen_ticket_number, send_seq, kind, created_at")
+      .in("id", ids);
+
+    return {
+      data: (data ?? null) as KdsKitchenSendBatch[] | null,
+      error,
+    };
+  });
+}
+
+async function fetchActiveKdsTickets(args: {
+  supabase: KdsSupabaseClient;
+  branchId: number;
+  todayStartIso: string;
+}): Promise<{ data: KdsTicket[] | null; error: unknown | null }> {
+  const { supabase, branchId, todayStartIso } = args;
+  return fetchPagedRows<KdsTicket>(async (from, to) => {
+    const { data, error } = await supabase
+      .from("kds_tickets")
+      .select(KDS_TICKET_SELECT)
+      .eq("branch_id", branchId)
+      .in("status", KDS_ACTIVE_STATUSES)
+      .gte("created_at", todayStartIso)
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .range(from, to);
+
+    return { data: (data ?? null) as KdsTicket[] | null, error };
+  });
+}
+
+async function fetchVisibleTicketsByBatchIds(args: {
+  supabase: KdsSupabaseClient;
+  branchId: number;
+  todayStartIso: string;
+  batchIds: number[];
+}): Promise<{ data: KdsTicket[] | null; error: unknown | null }> {
+  const { supabase, branchId, todayStartIso, batchIds } = args;
+  return fetchChunkedRows<KdsTicket>(batchIds, (ids) =>
+    fetchPagedRows<KdsTicket>(async (from, to) => {
+      const { data, error } = await supabase
+        .from("kds_tickets")
+        .select(KDS_TICKET_SELECT)
+        .eq("branch_id", branchId)
+        .in("status", KDS_VISIBLE_STATUSES)
+        .gte("created_at", todayStartIso)
+        .in("kitchen_send_batch_id", ids)
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .range(from, to);
+
+      return { data: (data ?? null) as KdsTicket[] | null, error };
+    }),
+  );
+}
+
+async function fetchVisibleUngroupedTicketsByOrderIds(args: {
+  supabase: KdsSupabaseClient;
+  branchId: number;
+  todayStartIso: string;
+  orderIds: number[];
+}): Promise<{ data: KdsTicket[] | null; error: unknown | null }> {
+  const { supabase, branchId, todayStartIso, orderIds } = args;
+  return fetchChunkedRows<KdsTicket>(orderIds, (ids) =>
+    fetchPagedRows<KdsTicket>(async (from, to) => {
+      const { data, error } = await supabase
+        .from("kds_tickets")
+        .select(KDS_TICKET_SELECT)
+        .eq("branch_id", branchId)
+        .in("status", KDS_VISIBLE_STATUSES)
+        .gte("created_at", todayStartIso)
+        .is("kitchen_send_batch_id", null)
+        .in("order_id", ids)
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .range(from, to);
+
+      return { data: (data ?? null) as KdsTicket[] | null, error };
+    }),
+  );
 }
 
 function buildOrderItemMap(items: KdsOrderItem[]): Map<number, KdsOrderItem[]> {
@@ -149,47 +335,27 @@ export function useKdsRealtime({
   }, [kitchenBatches]);
 
   const fetchOrderInfoBatch = useCallback(async (orderIds: number[]) => {
-    const ids = [...new Set(orderIds)].filter((id) => Number.isFinite(id));
+    const ids = uniqueNumbers(orderIds);
     if (ids.length === 0) return;
 
     const supabase = supabaseRef.current;
     const targetBranchId = branchIdRef.current;
 
-    let [orderRes, itemsRes]: [KdsQueryResult, KdsQueryResult] =
-      await Promise.all([
-        supabase
-          .from("orders")
-          .select(KDS_ORDER_SELECT_WITH_PRIORITY)
-          .in("id", ids)
-          .eq("branch_id", targetBranchId),
-        supabase
-          .from("order_items")
-          .select(KDS_ORDER_ITEM_SELECT_WITH_PRIORITY)
-          .in("order_id", ids),
-      ]);
-
-    if (isMissingPriorityColumn(orderRes.error)) {
-      orderRes = await supabase
-        .from("orders")
-        .select(KDS_ORDER_SELECT_BASE)
-        .in("id", ids)
-        .eq("branch_id", targetBranchId);
-    }
-
-    if (isMissingPriorityColumn(itemsRes.error)) {
-      itemsRes = await supabase
-        .from("order_items")
-        .select(KDS_ORDER_ITEM_SELECT_BASE)
-        .in("order_id", ids);
-    }
+    const [orderRes, itemsRes] = await Promise.all([
+      fetchKdsOrdersByIds({
+        supabase,
+        branchId: targetBranchId,
+        orderIds: ids,
+      }),
+      fetchKdsOrderItemsByOrderIds({ supabase, orderIds: ids }),
+    ]);
 
     if (branchIdRef.current !== targetBranchId) return;
 
     if (orderRes.data) {
-      const nextOrders = normalizeKdsOrders(orderRes.data);
       setOrders((prev) => {
         const next = new Map(prev);
-        for (const order of nextOrders) {
+        for (const order of orderRes.data ?? []) {
           next.set(order.id, order);
         }
         return next;
@@ -197,9 +363,7 @@ export function useKdsRealtime({
     }
 
     if (itemsRes.data) {
-      const groupedItems = buildOrderItemMap(
-        normalizeKdsOrderItems(itemsRes.data),
-      );
+      const groupedItems = buildOrderItemMap(itemsRes.data);
       setOrderItems((prev) => {
         const next = new Map(prev);
         for (const orderId of ids) {
@@ -262,71 +426,53 @@ export function useKdsRealtime({
     const targetBranchId = branchId;
     const { startIso: todayStartIso } = getVNDayUtcRange(getVNDateString());
 
-    const { data: activeTicketRows, error: ticketsError } = await supabase
-      .from("kds_tickets")
-      .select(KDS_TICKET_SELECT)
-      .eq("branch_id", targetBranchId)
-      .in("status", KDS_ACTIVE_STATUSES)
-      .gte("created_at", todayStartIso)
-      .order("created_at", { ascending: false });
+    const activeTicketsResult = await fetchActiveKdsTickets({
+      supabase,
+      branchId: targetBranchId,
+      todayStartIso,
+    });
 
-    if (ticketsError || !activeTicketRows) return;
+    if (activeTicketsResult.error || !activeTicketsResult.data) return;
     if (branchIdRef.current !== targetBranchId) return;
 
-    const activeTickets = activeTicketRows as KdsTicket[];
+    const activeTickets = activeTicketsResult.data;
     const { batchIds: activeBatchIds, ungroupedOrderIds } =
       getVisibleTicketScopes(activeTickets);
 
-    const visibleTicketChunks: KdsTicket[][] = [];
+    const [batchTicketsResult, ungroupedTicketsResult] = await Promise.all([
+      fetchVisibleTicketsByBatchIds({
+        supabase,
+        branchId: targetBranchId,
+        todayStartIso,
+        batchIds: activeBatchIds,
+      }),
+      fetchVisibleUngroupedTicketsByOrderIds({
+        supabase,
+        branchId: targetBranchId,
+        todayStartIso,
+        orderIds: ungroupedOrderIds,
+      }),
+    ]);
 
-    if (activeBatchIds.length > 0) {
-      const { data, error } = await supabase
-        .from("kds_tickets")
-        .select(KDS_TICKET_SELECT)
-        .eq("branch_id", targetBranchId)
-        .in("status", KDS_VISIBLE_STATUSES)
-        .gte("created_at", todayStartIso)
-        .in("kitchen_send_batch_id", activeBatchIds)
-        .order("created_at", { ascending: false });
+    if (batchTicketsResult.error || ungroupedTicketsResult.error) return;
 
-      if (error || !data) return;
-      visibleTicketChunks.push(data as KdsTicket[]);
-    }
-
-    if (ungroupedOrderIds.length > 0) {
-      const { data, error } = await supabase
-        .from("kds_tickets")
-        .select(KDS_TICKET_SELECT)
-        .eq("branch_id", targetBranchId)
-        .in("status", KDS_VISIBLE_STATUSES)
-        .gte("created_at", todayStartIso)
-        .is("kitchen_send_batch_id", null)
-        .in("order_id", ungroupedOrderIds)
-        .order("created_at", { ascending: false });
-
-      if (error || !data) return;
-      visibleTicketChunks.push(data as KdsTicket[]);
-    }
-
-    const byId = new Map<number, KdsTicket>();
-    for (const ticket of visibleTicketChunks.flat()) {
-      byId.set(ticket.id, ticket);
-    }
-    const nextTickets = [...byId.values()].sort(
-      (a, b) =>
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    const nextTickets = sortKdsTicketsNewestFirst(
+      dedupeRowsById([
+        ...(batchTicketsResult.data ?? []),
+        ...(ungroupedTicketsResult.data ?? []),
+      ]),
     );
-    const orderIds = [...new Set(nextTickets.map((ticket) => ticket.order_id))];
-    const orderItemIds = [
-      ...new Set(nextTickets.map((ticket) => ticket.order_item_id)),
-    ];
-    const batchIds = [
-      ...new Set(
-        nextTickets
-          .map((ticket) => ticket.kitchen_send_batch_id)
-          .filter((id): id is number => id !== null),
-      ),
-    ];
+    const orderIds = uniqueNumbers(
+      nextTickets.map((ticket) => ticket.order_id),
+    );
+    const orderItemIds = uniqueNumbers(
+      nextTickets.map((ticket) => ticket.order_item_id),
+    );
+    const batchIds = uniqueNumbers(
+      nextTickets
+        .map((ticket) => ticket.kitchen_send_batch_id)
+        .filter((id): id is number => id !== null),
+    );
 
     if (orderIds.length === 0) {
       setTickets(nextTickets);
@@ -337,44 +483,15 @@ export function useKdsRealtime({
       return;
     }
 
-    const snapshotResponses: [
-      KdsQueryResult,
-      KdsQueryResult,
-      KdsQueryResult,
-    ] = await Promise.all([
-      supabase
-        .from("orders")
-        .select(KDS_ORDER_SELECT_WITH_PRIORITY)
-        .in("id", orderIds),
-      supabase
-        .from("order_items")
-        .select(KDS_ORDER_ITEM_SELECT_WITH_PRIORITY)
-        .in("id", orderItemIds),
-      batchIds.length > 0
-        ? supabase
-            .from("kitchen_send_batches")
-            .select(
-              "id, order_id, kitchen_ticket_number, send_seq, kind, created_at",
-            )
-            .in("id", batchIds)
-        : Promise.resolve({ data: [], error: null }),
+    const [snapshotOrdersRes, snapshotItemsRes, batchRes] = await Promise.all([
+      fetchKdsOrdersByIds({
+        supabase,
+        branchId: targetBranchId,
+        orderIds,
+      }),
+      fetchKdsOrderItemsByIds({ supabase, orderItemIds }),
+      fetchKdsKitchenBatchesByIds({ supabase, batchIds }),
     ]);
-    let [snapshotOrdersRes, snapshotItemsRes] = snapshotResponses;
-    const batchRes = snapshotResponses[2];
-
-    if (isMissingPriorityColumn(snapshotOrdersRes.error)) {
-      snapshotOrdersRes = await supabase
-        .from("orders")
-        .select(KDS_ORDER_SELECT_BASE)
-        .in("id", orderIds);
-    }
-
-    if (isMissingPriorityColumn(snapshotItemsRes.error)) {
-      snapshotItemsRes = await supabase
-        .from("order_items")
-        .select(KDS_ORDER_ITEM_SELECT_BASE)
-        .in("id", orderItemIds);
-    }
 
     if (
       snapshotOrdersRes.error ||
@@ -394,15 +511,9 @@ export function useKdsRealtime({
         ]),
       ),
     );
-    setOrderItems(
-      buildOrderItemMap(normalizeKdsOrderItems(snapshotItemsRes.data)),
-    );
+    setOrderItems(buildOrderItemMap(snapshotItemsRes.data ?? []));
     setKitchenBatches(
-      new Map(
-        ((batchRes.data ?? []) as unknown as KdsKitchenSendBatch[]).map(
-          (batch) => [batch.id, batch],
-        ),
-      ),
+      new Map((batchRes.data ?? []).map((batch) => [batch.id, batch])),
     );
     lastSnapshotSyncRef.current = Date.now();
   }, [branchId]);

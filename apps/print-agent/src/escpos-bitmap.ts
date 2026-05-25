@@ -129,6 +129,25 @@ const fmtVND = (n: number | null | undefined): string =>
   );
 const fmtMoney = (n: number | null | undefined): string => fmtVND(n) + "đ";
 
+const SHIFT_ITEM_NAME_WIDTH = 27;
+const SHIFT_ITEM_QTY_WIDTH = 5;
+const SHIFT_ITEM_AMOUNT_WIDTH = 16;
+
+const truncateCell = (value: string, width: number): string =>
+  value.length > width ? `${value.slice(0, Math.max(0, width - 1))}.` : value;
+
+const formatShiftItemQuantity = (value: number | null | undefined): string =>
+  new Intl.NumberFormat("vi-VN").format(Math.round(value ?? 0));
+
+const shiftItemTableLine = (
+  name: string,
+  qty: string,
+  amount: string,
+): string =>
+  padRight(truncateCell(name, SHIFT_ITEM_NAME_WIDTH), SHIFT_ITEM_NAME_WIDTH) +
+  padLeft(qty, SHIFT_ITEM_QTY_WIDTH) +
+  padLeft(amount, SHIFT_ITEM_AMOUNT_WIDTH);
+
 const splitDateTime = (
   iso: string | undefined,
 ): { date: string; time: string } => {
@@ -1066,6 +1085,41 @@ function diffSign(n: number): string {
   return n > 0 ? "THỪA" : "THIẾU";
 }
 
+function renderShiftItemBreakdown(
+  p: ShiftCloseReportPayload,
+): Uint8Array[] {
+  const items = p.item_breakdown ?? [];
+  if (items.length === 0) return [];
+
+  const totalQty =
+    p.total_item_quantity ??
+    items.reduce((sum, item) => sum + Math.round(item.qty ?? 0), 0);
+
+  const parts: Uint8Array[] = [
+    divider("-"),
+    line("SỐ LƯỢNG BÁN THEO MÓN", { bold: true, align: "center" }),
+    line(pair48("Tổng SL bán", formatShiftItemQuantity(totalQty))),
+    divider("-"),
+    line(shiftItemTableLine("Món", "SL", "Thành tiền"), { bold: true }),
+    divider("-"),
+  ];
+
+  for (const item of items) {
+    parts.push(
+      line(
+        shiftItemTableLine(
+          item.name || "Món",
+          formatShiftItemQuantity(item.qty),
+          fmtMoney(item.revenue),
+        ),
+      ),
+    );
+  }
+
+  parts.push(divider("-"));
+  return parts;
+}
+
 function renderShiftCloseReportBitmap(p: ShiftCloseReportPayload): Uint8Array {
   const parts: Uint8Array[] = [init(), lineSpacingZero()];
 
@@ -1138,6 +1192,7 @@ function renderShiftCloseReportBitmap(p: ShiftCloseReportPayload): Uint8Array {
   if (p.cancelled_order_count > 0) {
     parts.push(line(pair48("Đơn đã hủy", `${p.cancelled_order_count} đơn`)));
   }
+  parts.push(...renderShiftItemBreakdown(p));
   parts.push(divider("="));
   parts.push(
     line(pair24("TỔNG DOANH THU", fmtMoney(p.total_revenue)), {

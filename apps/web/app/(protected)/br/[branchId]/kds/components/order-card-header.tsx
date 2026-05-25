@@ -7,7 +7,6 @@ import { AgeBadge } from "./age-badge";
 import { OrderTitleLine } from "./order-title-line";
 
 const KDS_ORDER_TITLE_LABELS = {
-  append: "Gọi thêm",
   priority: "Ưu tiên",
 } as const;
 
@@ -35,7 +34,7 @@ export function OrderCardHeader({
   bgClass,
 }: OrderCardHeaderProps) {
   const isAppend = sendKind === "append";
-  const hasMeta = isAppend || isPriority;
+  const hasMeta = isPriority;
 
   return (
     <CardHeader
@@ -50,17 +49,10 @@ export function OrderCardHeader({
           orderNumber={orderNumber}
           orderType={orderType}
           tableNumber={tableNumber}
+          labelOverride={isAppend ? "Gọi thêm" : undefined}
         />
         {hasMeta && (
           <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-1.5">
-            {isAppend && (
-              <Badge
-                variant="destructive"
-                className="px-2.5 py-1 text-sm font-semibold"
-              >
-                {KDS_ORDER_TITLE_LABELS.append}
-              </Badge>
-            )}
             {isPriority && (
               <Badge
                 variant="warning"

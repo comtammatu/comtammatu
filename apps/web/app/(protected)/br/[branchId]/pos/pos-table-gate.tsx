@@ -53,15 +53,19 @@ const TableButton = memo(function TableButton({
     orderCount,
     orderVisualState,
   });
+  const isSuccessTile =
+    tileVisualState === "ready" || tileVisualState === "served";
   const statusLabel = isSelected
     ? messages.pos.tableGate.selected
     : tileVisualState === "empty"
       ? messages.pos.tableGate.available
-      : tileVisualState === "served"
-        ? messages.pos.tableGate.served
-        : tileVisualState === "active"
-          ? messages.pos.tableGate.occupied
-          : messages.pos.tableGate.reserved;
+      : tileVisualState === "ready"
+        ? messages.pos.tableGate.ready
+        : tileVisualState === "served"
+          ? messages.pos.tableGate.served
+          : tileVisualState === "active"
+            ? messages.pos.tableGate.occupied
+            : messages.pos.tableGate.reserved;
 
   return (
     <Button
@@ -74,7 +78,7 @@ const TableButton = memo(function TableButton({
           ? "shadow-md"
           : tileVisualState === "empty"
             ? "bg-card shadow-sm hover:border-primary/25"
-            : tileVisualState === "served"
+            : isSuccessTile
               ? "bg-success/10 text-foreground shadow-sm hover:border-success/35"
               : tileVisualState === "active"
                 ? "bg-warning/10 text-foreground shadow-sm hover:border-warning/35"
@@ -92,7 +96,7 @@ const TableButton = memo(function TableButton({
               ? "outline"
               : tileVisualState === "empty"
                 ? "success"
-                : tileVisualState === "served"
+                : isSuccessTile
                   ? "success"
                   : tileVisualState === "active"
                     ? "warning"
@@ -117,10 +121,7 @@ const TableButton = memo(function TableButton({
             {messages.pos.tableGate.capacity(table.capacity)}
           </p>
           {orderCount >= 2 && (
-            <Badge
-              variant="secondary"
-              className="w-fit text-xs font-semibold"
-            >
+            <Badge variant="secondary" className="w-fit text-xs font-semibold">
               {messages.pos.tableGate.multiBill(orderCount)}
             </Badge>
           )}

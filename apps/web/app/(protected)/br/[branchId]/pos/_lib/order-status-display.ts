@@ -61,9 +61,9 @@ export function getPosOrderStatusInfo(
     case "preparing":
       return { label: formatOrderAge(order.created_at), variant: "default" };
     case "ready":
-      return { label: "Sẵn sàng", variant: "outline" };
+      return { label: "Sẵn sàng", variant: "success" };
     case "served":
-      return { label: "Đã phục vụ", variant: "outline" };
+      return { label: "Đã phục vụ", variant: "success" };
     default:
       return { label: order.status, variant: "outline" };
   }

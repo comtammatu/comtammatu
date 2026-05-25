@@ -62,7 +62,7 @@ type PosLineItemSideInput = PosLineItemOptionInput & {
 };
 
 type PosLineItemDetailsInput = PosLineItemDisplayInput & {
-  /** Số phần ordered. Sides quantity là per-portion → tổng SL hiển thị = side.quantity × item.quantity. */
+  /** Số phần ordered. Sides quantity is per portion; the POS line already shows parent quantity separately. */
   quantity?: number | null;
   modifiers?: readonly PosLineItemOptionInput[] | null;
   sides?: readonly PosLineItemSideInput[] | null;
@@ -76,12 +76,9 @@ function formatPosLineItemPrice(price: number | null | undefined): string {
     : "";
 }
 
-function formatPosLineItemSide(
-  side: PosLineItemSideInput,
-  parentQuantity: number,
-): string {
-  const quantity = (side.quantity ?? 1) * parentQuantity;
-  const quantitySuffix = quantity > 1 ? ` x${String(quantity)}` : "";
+function formatPosLineItemSide(side: PosLineItemSideInput): string {
+  const quantity = side.quantity ?? 1;
+  const quantitySuffix = quantity > 1 ? ` x${String(quantity)}/phần` : "";
   const price = typeof side.price === "number" ? side.price * quantity : null;
 
   return `${side.name}${quantitySuffix}${formatPosLineItemPrice(price)}`;
@@ -110,10 +107,9 @@ export function getPosLineItemOptionLines(
           )
           .join(", ")}`
       : null;
-  const parentQuantity = item.quantity ?? 1;
   const sideLine =
     item.sides && item.sides.length > 0
-      ? `Kèm: ${item.sides.map((side) => formatPosLineItemSide(side, parentQuantity)).join(", ")}`
+      ? `Kèm: ${item.sides.map((side) => formatPosLineItemSide(side)).join(", ")}`
       : null;
   const note = item.note?.trim();
   const noteLine = note ? `Ghi chú: ${note}` : null;
@@ -131,12 +127,9 @@ function formatPosLineItemCompactOption(
   return option.name;
 }
 
-function formatPosLineItemCompactSide(
-  side: PosLineItemSideInput,
-  parentQuantity: number,
-): string {
-  const quantity = (side.quantity ?? 1) * parentQuantity;
-  const quantitySuffix = quantity > 1 ? ` x${String(quantity)}` : "";
+function formatPosLineItemCompactSide(side: PosLineItemSideInput): string {
+  const quantity = side.quantity ?? 1;
+  const quantitySuffix = quantity > 1 ? ` x${String(quantity)}/phần` : "";
 
   return `${side.name}${quantitySuffix}`;
 }
@@ -152,7 +145,6 @@ export interface PosLineItemSummary {
 export function getPosLineItemSummary(
   item: PosLineItemDetailsInput,
 ): PosLineItemSummary {
-  const parentQuantity = item.quantity ?? 1;
   const parts: string[] = [];
   const modifierLabels: string[] = [];
   const sideLabels: string[] = [];
@@ -165,7 +157,7 @@ export function getPosLineItemSummary(
   }
   if (item.sides && item.sides.length > 0) {
     for (const side of item.sides) {
-      const label = formatPosLineItemCompactSide(side, parentQuantity);
+      const label = formatPosLineItemCompactSide(side);
       sideLabels.push(label);
       parts.push(label);
     }

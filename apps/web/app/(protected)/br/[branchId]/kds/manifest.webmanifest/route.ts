@@ -9,5 +9,5 @@ interface ManifestParams {
 
 export async function GET(_request: NextRequest, { params }: ManifestParams) {
   const { branchId: rawBranchId } = await params;
-  return buildOperationalManifestResponse("pos", rawBranchId);
+  return buildOperationalManifestResponse("kds", rawBranchId);
 }

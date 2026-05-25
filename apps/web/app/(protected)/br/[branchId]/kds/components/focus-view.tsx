@@ -334,15 +334,8 @@ function FocusOrderPanel({
                   orderNumber={order.orderNumber}
                   orderType={order.orderType}
                   tableNumber={order.tableNumber}
+                  labelOverride={isAppend ? "Gọi thêm" : undefined}
                 />
-                {isAppend && (
-                  <Badge
-                    variant="destructive"
-                    className="px-2 py-0.5 text-xs font-semibold"
-                  >
-                    Gọi thêm
-                  </Badge>
-                )}
                 {order.isPriority && (
                   <Badge
                     variant="warning"

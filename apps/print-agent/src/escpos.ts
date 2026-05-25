@@ -381,6 +381,25 @@ const fmtVND = (n: number | null | undefined) => {
 /** "45.000đ" — matches POS UI style. */
 const fmtMoney = (n: number | null | undefined) => fmtVND(n) + "đ";
 
+const SHIFT_ITEM_NAME_WIDTH = 27;
+const SHIFT_ITEM_QTY_WIDTH = 5;
+const SHIFT_ITEM_AMOUNT_WIDTH = 16;
+
+const truncateCell = (value: string, width: number): string =>
+  value.length > width ? `${value.slice(0, Math.max(0, width - 1))}.` : value;
+
+const formatShiftItemQuantity = (value: number | null | undefined): string =>
+  new Intl.NumberFormat("vi-VN").format(Math.round(value ?? 0));
+
+const shiftItemTableLine = (
+  name: string,
+  qty: string,
+  amount: string,
+): string =>
+  padRight(truncateCell(name, SHIFT_ITEM_NAME_WIDTH), SHIFT_ITEM_NAME_WIDTH) +
+  padLeft(qty, SHIFT_ITEM_QTY_WIDTH) +
+  padLeft(amount, SHIFT_ITEM_AMOUNT_WIDTH);
+
 /** Extract `HH:MM` + `DD/MM/YYYY` from `YYYY-MM-DDTHH:MM:SS` (assumed VN local). */
 const splitDateTime = (
   iso: string | undefined,
@@ -1240,6 +1259,45 @@ const diffSign = (n: number): string => {
   return n > 0 ? "THỪA" : "THIẾU";
 };
 
+const renderShiftItemBreakdown = (p: ShiftCloseReportPayload): Uint8Array[] => {
+  const items = p.item_breakdown ?? [];
+  if (items.length === 0) return [];
+
+  const totalQty =
+    p.total_item_quantity ??
+    items.reduce((sum, item) => sum + Math.round(item.qty ?? 0), 0);
+
+  const parts: Uint8Array[] = [
+    divider("-"),
+    alignCenter(),
+    boldOn(),
+    line("SỐ LƯỢNG BÁN THEO MÓN"),
+    boldOff(),
+    alignLeft(),
+    pair("Tổng SL bán", formatShiftItemQuantity(totalQty)),
+    divider("-"),
+    boldOn(),
+    line(shiftItemTableLine("Món", "SL", "Thành tiền")),
+    boldOff(),
+    divider("-"),
+  ];
+
+  for (const item of items) {
+    parts.push(
+      line(
+        shiftItemTableLine(
+          item.name || "Món",
+          formatShiftItemQuantity(item.qty),
+          fmtMoney(item.revenue),
+        ),
+      ),
+    );
+  }
+
+  parts.push(divider("-"));
+  return parts;
+};
+
 export function renderShiftCloseReport(p: ShiftCloseReportPayload): Uint8Array {
   const parts: Uint8Array[] = [init()];
 
@@ -1320,6 +1378,7 @@ export function renderShiftCloseReport(p: ShiftCloseReportPayload): Uint8Array {
   if (p.cancelled_order_count > 0) {
     parts.push(pair("Đơn đã hủy", `${p.cancelled_order_count} đơn`));
   }
+  parts.push(...renderShiftItemBreakdown(p));
   parts.push(divider("="));
   parts.push(boldOn(), sizeDouble());
   parts.push(pair("TỔNG DOANH THU", fmtMoney(p.total_revenue)));

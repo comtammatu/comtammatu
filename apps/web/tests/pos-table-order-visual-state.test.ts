@@ -15,17 +15,34 @@ test("deriveTableOrderVisualStates leaves empty tables without a visual state", 
   assert.equal(states.get(1), undefined);
 });
 
-test("deriveTableOrderVisualStates marks active unserved table orders as active", () => {
+test("deriveTableOrderVisualStates marks active unready table orders as active", () => {
   const states = deriveTableOrderVisualStates(
     [
       { table_id: 1, status: "confirmed", payment_status: "unpaid" },
-      { table_id: 2, status: "ready", payment_status: "unpaid" },
+      { table_id: 2, status: "preparing", payment_status: "unpaid" },
     ],
     ACTIVE_STATUSES,
   );
 
   assert.equal(states.get(1), "active");
   assert.equal(states.get(2), "active");
+});
+
+test("deriveTableOrderVisualStates marks a table ready when all active orders are ready or served", () => {
+  const states = deriveTableOrderVisualStates(
+    [
+      { table_id: 1, status: "ready", payment_status: "unpaid" },
+      { table_id: 2, status: "ready", payment_status: "unpaid" },
+      { table_id: 2, status: "served", payment_status: "unpaid" },
+      { table_id: 3, status: "ready", payment_status: "unpaid" },
+      { table_id: 3, status: "preparing", payment_status: "unpaid" },
+    ],
+    ACTIVE_STATUSES,
+  );
+
+  assert.equal(states.get(1), "ready");
+  assert.equal(states.get(2), "ready");
+  assert.equal(states.get(3), "active");
 });
 
 test("deriveTableOrderVisualStates marks a table served only when all active orders are served", () => {
@@ -80,6 +97,14 @@ test("getPosTableTileVisualState maps POS table backgrounds by order state", () 
       orderCount: 0,
     }),
     "active",
+  );
+  assert.equal(
+    getPosTableTileVisualState({
+      tableStatus: "available",
+      orderCount: 1,
+      orderVisualState: "ready",
+    }),
+    "ready",
   );
   assert.equal(
     getPosTableTileVisualState({

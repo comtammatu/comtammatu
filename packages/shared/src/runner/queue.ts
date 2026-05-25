@@ -69,6 +69,23 @@ export interface BuildRunnerQueueInput {
 }
 
 const HIDDEN_ORDER_STATUSES = new Set(["completed", "cancelled"]);
+const ORDER_DATE_SEGMENT_PATTERN = /^\d{6}(?:\d{2})?$/;
+const ORDER_SEQUENCE_SEGMENT_PATTERN = /^\d{1,5}$/;
+
+export function formatRunnerOrderLabel(
+  item: Pick<RunnerQueueItem, "orderNumber" | "orderType" | "tableNumber">,
+): string {
+  if (item.tableNumber !== null) return `Bàn ${String(item.tableNumber)}`;
+
+  if (item.orderType === "takeaway") {
+    const sequence = extractDateBasedOrderSequence(item.orderNumber);
+    return sequence === null
+      ? `Mang về ${item.orderNumber}`
+      : `Mang về #${sequence}`;
+  }
+
+  return `Bàn chưa rõ ${item.orderNumber}`;
+}
 
 export function buildRunnerQueue(
   input: BuildRunnerQueueInput,
@@ -224,6 +241,28 @@ function resolveGroupKey(
   return batch === null
     ? `order-${String(order.id)}`
     : `batch-${String(batch.id)}`;
+}
+
+function extractDateBasedOrderSequence(orderNumber: string): string | null {
+  const parts = orderNumber
+    .trim()
+    .split(/[-_#\s]+/)
+    .filter(Boolean);
+
+  for (let index = 0; index < parts.length - 1; index += 1) {
+    const current = parts[index];
+    const next = parts[index + 1];
+    if (
+      current !== undefined &&
+      next !== undefined &&
+      ORDER_DATE_SEGMENT_PATTERN.test(current) &&
+      ORDER_SEQUENCE_SEGMENT_PATTERN.test(next)
+    ) {
+      return next;
+    }
+  }
+
+  return null;
 }
 
 function mergeReferences(existing: string[], next: string): string[] {

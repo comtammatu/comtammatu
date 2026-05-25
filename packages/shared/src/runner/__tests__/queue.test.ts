@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { buildRunnerQueue, type BuildRunnerQueueInput } from "../queue";
+import {
+  buildRunnerQueue,
+  formatRunnerOrderLabel,
+  type BuildRunnerQueueInput,
+  type RunnerQueueItem,
+} from "../queue";
 
 const base: BuildRunnerQueueInput = {
   tickets: [
@@ -82,6 +87,74 @@ const base: BuildRunnerQueueInput = {
     },
   ],
 };
+
+function makeRunnerItem(overrides: Partial<RunnerQueueItem>): RunnerQueueItem {
+  return {
+    id: "item-1",
+    lane: "preparing",
+    ticketIds: [1],
+    readyTicketIds: [],
+    orderId: 10,
+    orderNumber: "MV-260525-055-PH",
+    orderReceivedAt: "2026-05-25T03:00:00.000Z",
+    callNumber: "MV-260525-055-PH",
+    callPrefix: "Số",
+    referenceNumber: "MV-260525-055-PH",
+    referenceNumbers: ["MV-260525-055-PH"],
+    orderType: "takeaway",
+    targetKey: "order-10",
+    tableNumber: null,
+    ticketCount: 1,
+    sortAt: "2026-05-25T03:00:00.000Z",
+    ...overrides,
+  };
+}
+
+test("formatRunnerOrderLabel shortens date-based takeaway order numbers", () => {
+  const item = makeRunnerItem({
+    orderNumber: "MV-260525-055-PH",
+  });
+
+  assert.equal(formatRunnerOrderLabel(item), "Mang về #055");
+  assert.equal(item.orderNumber, "MV-260525-055-PH");
+});
+
+test("formatRunnerOrderLabel preserves leading zeroes with branch suffixes", () => {
+  assert.equal(
+    formatRunnerOrderLabel(
+      makeRunnerItem({ orderNumber: "MV-20260524-007-CN1" }),
+    ),
+    "Mang về #007",
+  );
+  assert.equal(
+    formatRunnerOrderLabel(makeRunnerItem({ orderNumber: "MV-20260524-014" })),
+    "Mang về #014",
+  );
+});
+
+test("formatRunnerOrderLabel falls back for legacy or malformed takeaway codes", () => {
+  assert.equal(
+    formatRunnerOrderLabel(makeRunnerItem({ orderNumber: "MV-0007" })),
+    "Mang về MV-0007",
+  );
+  assert.equal(
+    formatRunnerOrderLabel(makeRunnerItem({ orderNumber: "MV-ABC-PH" })),
+    "Mang về MV-ABC-PH",
+  );
+});
+
+test("formatRunnerOrderLabel keeps dine-in table labels unchanged", () => {
+  assert.equal(
+    formatRunnerOrderLabel(
+      makeRunnerItem({
+        orderNumber: "TC-260525-055-PH",
+        orderType: "dine_in",
+        tableNumber: 5,
+      }),
+    ),
+    "Bàn 5",
+  );
+});
 
 test("buildRunnerQueue groups completed takeaway tickets by kitchen batch and uses stable fallback number", () => {
   const queue = buildRunnerQueue(base);

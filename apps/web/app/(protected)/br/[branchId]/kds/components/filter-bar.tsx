@@ -14,7 +14,7 @@ import type { FilterOption, OrderTypeFilter } from "../types";
 
 const ORDER_TYPE_OPTIONS: FilterOption<OrderTypeFilter>[] = [
   { value: "all", label: "Tất cả" },
-  { value: "dine_in", label: "Tại bàn" },
+  { value: "dine_in", label: "Tại chỗ" },
   { value: "takeaway", label: "Mang về" },
 ];
 

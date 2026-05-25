@@ -14,10 +14,10 @@ const ALLOWLIST = {
     count: 1,
     reason: "pre-hydration theme preference only",
   },
-  "apps/web/app/(protected)/br/[branchId]/pos/_components/pwa/pos-pwa-toolbar.tsx":
+  "apps/web/app/(protected)/br/[branchId]/_components/operational-pwa/toolbar.tsx":
     {
       count: 2,
-      reason: "POS PWA install hint dismissal only",
+      reason: "operational PWA install hint dismissal only",
     },
 };
 

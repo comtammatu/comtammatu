@@ -349,9 +349,15 @@ const primitiveDocumentShiftClose: PrintPayload = {
       },
       { type: "row", left: "Tong SL ban", right: "42" },
       { type: "divider", char: "-" },
-      { type: "text", text: "x18 Com tam suon bi cha" },
-      { type: "text", text: "x12 - Canh chua" },
-      { type: "text", text: "x12 + Them trung" },
+      {
+        type: "text",
+        text: "Mon                           SL      Thanh tien",
+        bold: true,
+      },
+      { type: "divider", char: "-" },
+      { type: "text", text: "Com tam suon bi cha           18        990.000d" },
+      { type: "text", text: "Canh chua                     12              0d" },
+      { type: "text", text: "Them trung                    12        120.000d" },
       { type: "divider", char: "-" },
       { type: "text", text: "DOI SOAT KET TIEN MAT", align: "center", bold: true },
       { type: "divider", char: "-" },
@@ -477,12 +483,38 @@ async function main() {
     "primitive document bitmap cancel",
     await renderPayloadBitmap(primitiveDocumentCancel),
   );
+  const legacyTextShiftClose = renderPayload(baseShiftClose);
+  assertBytes("legacy text shift close", legacyTextShiftClose);
+  assertTextIncludes(
+    "legacy text shift close main item row",
+    legacyTextShiftClose,
+    "Com tam suon bi cha           18        990.000",
+  );
+  assertTextIncludes(
+    "legacy text shift close side item row",
+    legacyTextShiftClose,
+    "Canh chua                     12              0",
+  );
+  assertBytes(
+    "legacy bitmap shift close",
+    await renderPayloadBitmap(baseShiftClose),
+  );
   const documentTextShiftClose = renderPayload(primitiveDocumentShiftClose);
   assertBytes("primitive document text shift close", documentTextShiftClose);
   assertTextIncludes(
-    "primitive document text shift close item breakdown",
+    "primitive document text shift close item breakdown header",
     documentTextShiftClose,
-    "x18 Com tam suon bi cha",
+    "Mon                           SL      Thanh tien",
+  );
+  assertTextIncludes(
+    "primitive document text shift close main item row",
+    documentTextShiftClose,
+    "Com tam suon bi cha           18        990.000d",
+  );
+  assertTextIncludes(
+    "primitive document text shift close side item row",
+    documentTextShiftClose,
+    "Canh chua                     12              0d",
   );
   assertTextIncludes(
     "primitive document text shift close signature",

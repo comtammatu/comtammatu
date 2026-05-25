@@ -51,8 +51,11 @@ export function MultiOrderTablePicker({
 }: MultiOrderTablePickerProps) {
   return (
     <Drawer open={open} onOpenChange={(o) => !o && onClose()}>
-      <DrawerContent className="mx-auto max-w-md sm:max-w-lg">
-        <DrawerHeader>
+      <DrawerContent
+        className="mx-auto w-full max-w-md overflow-hidden sm:max-w-lg"
+        data-testid="pos-multi-order-picker"
+      >
+        <DrawerHeader className="shrink-0">
           <DrawerTitle>
             {messages.pos.multiOrderTablePicker.title(tableNumber, orders.length)}
           </DrawerTitle>
@@ -61,13 +64,17 @@ export function MultiOrderTablePicker({
           </DrawerDescription>
         </DrawerHeader>
 
-        <ScrollArea className="max-h-72 px-4">
-          <div className="flex flex-col gap-2 pr-2 pb-2">
+        <ScrollArea
+          className="h-64 min-h-0 overflow-hidden px-4 sm:h-72"
+          data-testid="pos-multi-order-list"
+        >
+          <div className="flex flex-col gap-2 pr-2 pb-2" data-vaul-no-drag>
             {orders.map((order) => {
               const statusInfo = getPosOrderStatusInfo(order);
               return (
                 <Item
                   key={order.id}
+                  data-testid={`pos-multi-order-card-${order.id}`}
                   variant="outline"
                   size="sm"
                   className="bg-card"
@@ -130,7 +137,10 @@ export function MultiOrderTablePicker({
           </div>
         </ScrollArea>
 
-        <DrawerFooter className="pos-safe-bottom">
+        <DrawerFooter
+          className="pos-safe-bottom shrink-0"
+          data-testid="pos-multi-order-footer"
+        >
           <Button
             type="button"
             variant="default"

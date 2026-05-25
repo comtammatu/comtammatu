@@ -10,6 +10,7 @@ import {
   getTableStatus,
   resolveChefCredentials,
   setKdsTestOrderPriority,
+  type TestKdsTicket,
 } from "./helpers/supabase";
 
 test.use({ storageState: { cookies: [], origins: [] } });
@@ -57,10 +58,13 @@ test.describe("KDS bump / recall workflow", () => {
       await page.goto(`/br/${String(newer.branchId)}/kds?view=comprehensive`);
       await page.waitForLoadState("networkidle");
       await expect(
-        page.locator('[data-testid^="kds-order-card-"]').first(),
+        page
+          .getByTestId("kds-column-takeaway")
+          .locator('[data-testid^="kds-heatmap-card-"]')
+          .first(),
       ).toHaveAttribute(
         "data-testid",
-        `kds-order-card-${String(older.orderId)}`,
+        `kds-heatmap-card-${String(older.orderId)}`,
       );
     } finally {
       await Promise.all([newer.cleanup(), older.cleanup()]);
@@ -97,11 +101,19 @@ test.describe("KDS bump / recall workflow", () => {
 
       await expect(
         page
-          .getByTestId("kds-current-order-panel")
-          .getByTestId(`kds-order-card-${String(working.orderId)}`),
-      ).toBeVisible({ timeout: 10_000 });
+          .getByTestId("kds-column-takeaway")
+          .locator('[data-testid^="kds-heatmap-card-"]')
+          .first(),
+      ).toHaveAttribute(
+        "data-testid",
+        `kds-heatmap-card-${String(working.orderId)}`,
+        { timeout: 10_000 },
+      );
       await expect(
-        page.locator('[data-testid^="kds-heatmap-card-"]').first(),
+        page
+          .getByTestId("kds-column-takeaway")
+          .locator('[data-testid^="kds-heatmap-card-"]')
+          .nth(1),
       ).toHaveAttribute(
         "data-testid",
         `kds-heatmap-card-${String(priority.orderId)}`,
@@ -140,30 +152,26 @@ test.describe("KDS bump / recall workflow", () => {
 
     try {
       await loginAsChef(page, chef.email, chef.password!);
-      await page.goto(`/br/${String(current.branchId)}/kds?view=comprehensive`);
+      await page.goto(`/br/${String(current.branchId)}/kds`);
       await page.waitForLoadState("networkidle");
 
       await expect(
-        page
-          .getByTestId("kds-current-order-panel")
-          .getByTestId(`kds-order-card-${String(current.orderId)}`),
+        page.getByTestId(`kds-focus-card-${String(current.orderId)}`),
       ).toBeVisible({ timeout: 10_000 });
-      await expect(
-        page.locator('[data-testid^="kds-heatmap-card-"]').first(),
-      ).toHaveAttribute(
-        "data-testid",
-        `kds-heatmap-card-${String(normalNext.orderId)}`,
-      );
 
       await setKdsTestOrderPriority(priorityNext.orderId, true);
 
       await expect(
-        page
-          .getByTestId("kds-current-order-panel")
-          .getByTestId(`kds-order-card-${String(current.orderId)}`),
+        page.getByTestId(`kds-focus-card-${String(current.orderId)}`),
       ).toBeVisible({ timeout: 10_000 });
+
+      await page.goto(`/br/${String(current.branchId)}/kds?view=comprehensive`);
+      await page.waitForLoadState("networkidle");
       await expect(
-        page.locator('[data-testid^="kds-heatmap-card-"]').first(),
+        page
+          .getByTestId("kds-column-takeaway")
+          .locator('[data-testid^="kds-heatmap-card-"]')
+          .first(),
       ).toHaveAttribute(
         "data-testid",
         `kds-heatmap-card-${String(priorityNext.orderId)}`,
@@ -175,6 +183,73 @@ test.describe("KDS bump / recall workflow", () => {
         normalNext.cleanup(),
         current.cleanup(),
       ]);
+    }
+  });
+
+  test("comprehensive view keeps every active backlog order rendered and reachable", async ({
+    page,
+  }) => {
+    const chef = await resolveChefCredentials();
+
+    test.skip(
+      !chef.password,
+      "Missing E2E_CHEF_PASSWORD or fallback cashier password",
+    );
+
+    const baseTime = Date.now() + 432_000_000;
+    const fixtures: TestKdsTicket[] = [];
+
+    try {
+      for (let index = 0; index < 40; index++) {
+        fixtures.push(
+          await createKdsTestTicket({
+            createdAt: new Date(baseTime + index * 60_000).toISOString(),
+            orderNumberPrefix: `KDS-BACKLOG-${String(index + 1).padStart(2, "0")}`,
+            status: "pending",
+          }),
+        );
+      }
+
+      const firstFixture = fixtures[0]!;
+      const lastFixture = fixtures.at(-1)!;
+
+      await loginAsChef(page, chef.email, chef.password!);
+      await page.goto(
+        `/br/${String(firstFixture.branchId)}/kds?view=comprehensive`,
+      );
+      await page.waitForLoadState("networkidle");
+
+      await expect(
+        page
+          .getByTestId("kds-column-takeaway")
+          .locator('[data-testid^="kds-heatmap-card-"]')
+          .first(),
+      ).toHaveAttribute(
+        "data-testid",
+        `kds-heatmap-card-${String(firstFixture.orderId)}`,
+        { timeout: 15_000 },
+      );
+
+      for (const fixture of fixtures) {
+        await expect(
+          page.locator(
+            `[data-testid="kds-order-card-${String(fixture.orderId)}"], [data-testid="kds-heatmap-card-${String(fixture.orderId)}"]`,
+          ),
+        ).toHaveCount(1);
+        await expect(
+          page.locator(
+            `[data-testid="kds-order-item-${String(fixture.orderItemId)}"], [data-testid="kds-heatmap-item-${String(fixture.orderItemId)}"]`,
+          ),
+        ).toHaveCount(1);
+      }
+
+      const lastCard = page.getByTestId(
+        `kds-heatmap-card-${String(lastFixture.orderId)}`,
+      );
+      await lastCard.scrollIntoViewIfNeeded();
+      await expect(lastCard).toBeVisible();
+    } finally {
+      await Promise.all(fixtures.map((fixture) => fixture.cleanup()));
     }
   });
 
@@ -204,10 +279,10 @@ test.describe("KDS bump / recall workflow", () => {
       await page.waitForLoadState("networkidle");
 
       await expect(
-        page.getByTestId(`kds-order-card-${String(pending.orderId)}`),
+        page.getByTestId(`kds-heatmap-card-${String(pending.orderId)}`),
       ).toBeVisible({ timeout: 10_000 });
       await expect(
-        page.getByTestId(`kds-order-card-${String(ready.orderId)}`),
+        page.getByTestId(`kds-heatmap-card-${String(ready.orderId)}`),
       ).toHaveCount(0);
 
       await page.goto(
@@ -216,10 +291,10 @@ test.describe("KDS bump / recall workflow", () => {
       await page.waitForLoadState("networkidle");
 
       await expect(
-        page.getByTestId(`kds-order-card-${String(pending.orderId)}`),
+        page.getByTestId(`kds-heatmap-card-${String(pending.orderId)}`),
       ).toBeVisible({ timeout: 10_000 });
       await expect(
-        page.getByTestId(`kds-order-card-${String(ready.orderId)}`),
+        page.getByTestId(`kds-heatmap-card-${String(ready.orderId)}`),
       ).toHaveCount(0);
     } finally {
       await Promise.all([pending.cleanup(), ready.cleanup()]);
@@ -341,15 +416,16 @@ test.describe("KDS bump / recall workflow", () => {
       await page.waitForLoadState("networkidle");
 
       await expect(
-        page
-          .getByTestId("kds-current-order-panel")
-          .getByTestId(`kds-order-card-${String(blocker.orderId)}`),
+        page.getByTestId(`kds-heatmap-card-${String(blocker.orderId)}`),
       ).toBeVisible({ timeout: 10_000 });
 
       const heatmapCard = page.getByTestId(
         `kds-heatmap-card-${String(fixture.orderId)}`,
       );
       await expect(heatmapCard).toBeVisible({ timeout: 10_000 });
+      await expect(
+        heatmapCard.getByTestId(`kds-complete-order-${String(fixture.orderId)}`),
+      ).toBeVisible();
 
       await heatmapCard
         .getByTestId(`kds-heatmap-complete-ticket-${String(readyTicketId)}`)
@@ -363,7 +439,9 @@ test.describe("KDS bump / recall workflow", () => {
           [activeTicketId]: "pending",
           [readyTicketId]: "ready",
         });
-      await expect.poll(() => getOrderStatus(fixture.orderId)).not.toBe("ready");
+      await expect
+        .poll(() => getOrderStatus(fixture.orderId))
+        .not.toBe("ready");
       await expect
         .poll(() => getOrderPaymentStatus(fixture.orderId))
         .toBe("unpaid");
@@ -437,7 +515,7 @@ test.describe("KDS bump / recall workflow", () => {
       await page.waitForLoadState("networkidle");
 
       await expect(
-        page.getByTestId(`kds-order-item-${String(fixture.orderItemId)}`),
+        page.getByTestId(`kds-heatmap-item-${String(fixture.orderItemId)}`),
       ).toContainText(fixture.itemName, { timeout: 10_000 });
 
       const appended = await addOrderItemToTestOrder({
@@ -447,7 +525,7 @@ test.describe("KDS bump / recall workflow", () => {
       });
 
       await expect(
-        page.getByTestId(`kds-order-item-${String(appended.orderItemId)}`),
+        page.getByTestId(`kds-heatmap-item-${String(appended.orderItemId)}`),
       ).toContainText(`${fixture.itemName} (2)`, { timeout: 10_000 });
       await expect(
         page.getByText(`Món #${String(appended.orderItemId)}`),
