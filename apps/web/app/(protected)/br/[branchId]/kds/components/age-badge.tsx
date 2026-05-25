@@ -9,17 +9,14 @@ const SIZE_CLASS: Record<
   { container: string; number: string; label: string }
 > = {
   default: {
-    container: "min-h-14 w-16 px-2 py-1",
-    number: "text-2xl",
+    container: "rounded-full px-2.5 py-1",
+    number: "text-sm",
     label: "text-xs",
   },
-  // Scale-display tier for KDS focus mode (1 order/screen, arms-length read).
-  // text-3xl + tabular-nums qualifies for the numeric-input-echo carve-out
-  // (UI-HEADING-SCALE-LOCKED) and matches the "scale display" use case.
   lg: {
-    container: "min-h-20 w-24 px-3 py-2",
-    number: "text-3xl",
-    label: "text-sm",
+    container: "rounded-full px-2.5 py-1",
+    number: "text-base",
+    label: "text-xs",
   },
 };
 
@@ -39,7 +36,7 @@ export function AgeBadge({
     <div
       aria-label={`${elapsedMinutes} phút`}
       className={cn(
-        "flex shrink-0 flex-col items-center justify-center border text-center",
+        "flex shrink-0 items-baseline justify-center gap-1 border text-center",
         sizeClass.container,
         isComplete
           ? "border-success/40 bg-success/15 text-success"
@@ -61,7 +58,7 @@ export function AgeBadge({
       <span
         className={cn("font-semibold uppercase opacity-70", sizeClass.label)}
       >
-        phút
+        p
       </span>
     </div>
   );

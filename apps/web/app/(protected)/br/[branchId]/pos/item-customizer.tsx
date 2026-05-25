@@ -484,6 +484,7 @@ export function ItemCustomizer({
                     maxLength={200}
                   />
                 </div>
+
               </div>
             </ScrollArea>
 

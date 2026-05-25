@@ -72,6 +72,7 @@ export interface TestKdsTicket {
 export interface TestKdsOrderWithTickets {
   branchId: number;
   orderId: number;
+  orderItemIds: number[];
   orderNumber: string;
   paymentStatus: string;
   tableId: number;
@@ -81,6 +82,7 @@ export interface TestKdsOrderWithTickets {
 
 interface CreateKdsTestTicketOptions {
   createdAt?: string;
+  isPriority?: boolean;
   orderNumberPrefix?: string;
   status?: "pending" | "preparing" | "ready" | "cancelled";
 }
@@ -628,6 +630,7 @@ export async function createKdsTestTicket(
       total_amount: context.unitPrice,
       customer_count: 1,
       note: "E2E KDS fixture",
+      is_priority: options.isPriority === true,
       created_by: context.cashier.userId,
       pos_session_id: context.posSessionId,
       ...(options.createdAt ? { created_at: options.createdAt } : {}),
@@ -767,6 +770,7 @@ export async function createKdsTestOrderWithTickets(
   }
 
   const ticketIds: number[] = [];
+  const orderItemIds: number[] = [];
   for (let index = 0; index < statuses.length; index++) {
     const status = statuses[index]!;
     const { data: orderItem, error: itemError } = await supabase
@@ -791,6 +795,8 @@ export async function createKdsTestOrderWithTickets(
         `Failed to create KDS multi order item: ${itemError?.message}`,
       );
     }
+
+    orderItemIds.push(orderItem.id);
 
     const { data: ticket, error: ticketError } = await supabase
       .from("kds_tickets")
@@ -858,6 +864,7 @@ export async function createKdsTestOrderWithTickets(
   return {
     branchId: context.branchId,
     orderId: order.id,
+    orderItemIds,
     orderNumber,
     paymentStatus: order.payment_status,
     tableId: context.tableId,
@@ -889,6 +896,21 @@ export async function getOrderPaymentStatus(
     .single();
 
   return data?.payment_status ?? null;
+}
+
+export async function setKdsTestOrderPriority(
+  orderId: number,
+  isPriority: boolean,
+): Promise<void> {
+  const supabase = createServiceClient();
+  const { error } = await supabase
+    .from("orders")
+    .update({ is_priority: isPriority })
+    .eq("id", orderId);
+
+  if (error) {
+    throw new Error(`Failed to update KDS order priority: ${error.message}`);
+  }
 }
 
 export async function getOrderStatus(orderId: number): Promise<string | null> {

@@ -261,7 +261,7 @@ const countBudgets = [
       "CardContent className overrides are composition debt and must not increase.",
     roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
     pattern: /<CardContent\b[^\n]*\bclassName=/g,
-    maxCount: 113,
+    maxCount: 107,
   },
   {
     id: "card-title-classname-baseline",

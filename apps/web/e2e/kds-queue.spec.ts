@@ -9,6 +9,7 @@ import {
   getOrderStatus,
   getTableStatus,
   resolveChefCredentials,
+  setKdsTestOrderPriority,
 } from "./helpers/supabase";
 
 test.use({ storageState: { cookies: [], origins: [] } });
@@ -24,7 +25,7 @@ async function loginAsChef(page: Page, email: string, password: string) {
 }
 
 test.describe("KDS bump / recall workflow", () => {
-  test("newest active kitchen order appears first in focus and grid modes", async ({
+  test("oldest active kitchen order appears first in focus and grid modes", async ({
     page,
   }) => {
     const chef = await resolveChefCredentials();
@@ -50,7 +51,7 @@ test.describe("KDS bump / recall workflow", () => {
       await page.waitForLoadState("networkidle");
 
       await expect(
-        page.getByTestId(`kds-focus-card-${String(newer.orderId)}`),
+        page.getByTestId(`kds-focus-card-${String(older.orderId)}`),
       ).toBeVisible({ timeout: 10_000 });
 
       await page.goto(`/br/${String(newer.branchId)}/kds?view=comprehensive`);
@@ -59,14 +60,173 @@ test.describe("KDS bump / recall workflow", () => {
         page.locator('[data-testid^="kds-order-card-"]').first(),
       ).toHaveAttribute(
         "data-testid",
-        `kds-order-card-${String(newer.orderId)}`,
+        `kds-order-card-${String(older.orderId)}`,
       );
     } finally {
       await Promise.all([newer.cleanup(), older.cleanup()]);
     }
   });
 
-  test("chef can complete every active ticket in the visible kitchen card", async ({
+  test("preparing order stays current before priority pending orders", async ({
+    page,
+  }) => {
+    const chef = await resolveChefCredentials();
+
+    test.skip(
+      !chef.password,
+      "Missing E2E_CHEF_PASSWORD or fallback cashier password",
+    );
+
+    const baseTime = Date.now() + 259_200_000;
+    const working = await createKdsTestTicket({
+      createdAt: new Date(baseTime).toISOString(),
+      orderNumberPrefix: "KDS-WORKING",
+      status: "preparing",
+    });
+    const priority = await createKdsTestTicket({
+      createdAt: new Date(baseTime + 60_000).toISOString(),
+      isPriority: true,
+      orderNumberPrefix: "KDS-PRIORITY",
+      status: "pending",
+    });
+
+    try {
+      await loginAsChef(page, chef.email, chef.password!);
+      await page.goto(`/br/${String(working.branchId)}/kds?view=comprehensive`);
+      await page.waitForLoadState("networkidle");
+
+      await expect(
+        page
+          .getByTestId("kds-current-order-panel")
+          .getByTestId(`kds-order-card-${String(working.orderId)}`),
+      ).toBeVisible({ timeout: 10_000 });
+      await expect(
+        page.locator('[data-testid^="kds-heatmap-card-"]').first(),
+      ).toHaveAttribute(
+        "data-testid",
+        `kds-heatmap-card-${String(priority.orderId)}`,
+      );
+    } finally {
+      await Promise.all([priority.cleanup(), working.cleanup()]);
+    }
+  });
+
+  test("priority pending order becomes next without replacing current pending order", async ({
+    page,
+  }) => {
+    const chef = await resolveChefCredentials();
+
+    test.skip(
+      !chef.password,
+      "Missing E2E_CHEF_PASSWORD or fallback cashier password",
+    );
+
+    const baseTime = Date.now() + 345_600_000;
+    const current = await createKdsTestTicket({
+      createdAt: new Date(baseTime).toISOString(),
+      orderNumberPrefix: "KDS-CURRENT-PENDING",
+      status: "pending",
+    });
+    const normalNext = await createKdsTestTicket({
+      createdAt: new Date(baseTime + 60_000).toISOString(),
+      orderNumberPrefix: "KDS-NORMAL-NEXT",
+      status: "pending",
+    });
+    const priorityNext = await createKdsTestTicket({
+      createdAt: new Date(baseTime + 120_000).toISOString(),
+      orderNumberPrefix: "KDS-PRIORITY-NEXT",
+      status: "pending",
+    });
+
+    try {
+      await loginAsChef(page, chef.email, chef.password!);
+      await page.goto(`/br/${String(current.branchId)}/kds?view=comprehensive`);
+      await page.waitForLoadState("networkidle");
+
+      await expect(
+        page
+          .getByTestId("kds-current-order-panel")
+          .getByTestId(`kds-order-card-${String(current.orderId)}`),
+      ).toBeVisible({ timeout: 10_000 });
+      await expect(
+        page.locator('[data-testid^="kds-heatmap-card-"]').first(),
+      ).toHaveAttribute(
+        "data-testid",
+        `kds-heatmap-card-${String(normalNext.orderId)}`,
+      );
+
+      await setKdsTestOrderPriority(priorityNext.orderId, true);
+
+      await expect(
+        page
+          .getByTestId("kds-current-order-panel")
+          .getByTestId(`kds-order-card-${String(current.orderId)}`),
+      ).toBeVisible({ timeout: 10_000 });
+      await expect(
+        page.locator('[data-testid^="kds-heatmap-card-"]').first(),
+      ).toHaveAttribute(
+        "data-testid",
+        `kds-heatmap-card-${String(priorityNext.orderId)}`,
+        { timeout: 10_000 },
+      );
+    } finally {
+      await Promise.all([
+        priorityNext.cleanup(),
+        normalNext.cleanup(),
+        current.cleanup(),
+      ]);
+    }
+  });
+
+  test("default queue hides ready-only cards even with stale status URLs", async ({
+    page,
+  }) => {
+    const chef = await resolveChefCredentials();
+
+    test.skip(
+      !chef.password,
+      "Missing E2E_CHEF_PASSWORD or fallback cashier password",
+    );
+
+    const pending = await createKdsTestTicket({
+      orderNumberPrefix: "KDS-ACTIVE",
+      status: "pending",
+    });
+    const ready = await createKdsTestTicket({
+      orderNumberPrefix: "KDS-READY",
+      status: "ready",
+    });
+
+    try {
+      await loginAsChef(page, chef.email, chef.password!);
+
+      await page.goto(`/br/${String(pending.branchId)}/kds?view=comprehensive`);
+      await page.waitForLoadState("networkidle");
+
+      await expect(
+        page.getByTestId(`kds-order-card-${String(pending.orderId)}`),
+      ).toBeVisible({ timeout: 10_000 });
+      await expect(
+        page.getByTestId(`kds-order-card-${String(ready.orderId)}`),
+      ).toHaveCount(0);
+
+      await page.goto(
+        `/br/${String(pending.branchId)}/kds?view=comprehensive&status=all`,
+      );
+      await page.waitForLoadState("networkidle");
+
+      await expect(
+        page.getByTestId(`kds-order-card-${String(pending.orderId)}`),
+      ).toBeVisible({ timeout: 10_000 });
+      await expect(
+        page.getByTestId(`kds-order-card-${String(ready.orderId)}`),
+      ).toHaveCount(0);
+    } finally {
+      await Promise.all([pending.cleanup(), ready.cleanup()]);
+    }
+  });
+
+  test("chef complete action completes all active tickets on the card", async ({
     page,
   }) => {
     const chef = await resolveChefCredentials();
@@ -112,7 +272,7 @@ test.describe("KDS bump / recall workflow", () => {
     }
   });
 
-  test("chef can bump a ticket to ready and recall it back", async ({
+  test("chef can complete a pending ticket without accepting it first", async ({
     page,
   }) => {
     const chef = await resolveChefCredentials();
@@ -137,41 +297,87 @@ test.describe("KDS bump / recall workflow", () => {
       );
 
       await expect(orderCard).toBeVisible({ timeout: 10_000 });
-      await expect(itemRow).toContainText("Chờ");
+      await expect(itemRow).toBeVisible();
+      await expect(
+        page.getByTestId(`kds-complete-ticket-${String(fixture.ticketId)}`),
+      ).toBeVisible();
 
-      await page.getByTestId(`kds-bump-${String(fixture.ticketId)}`).click();
-      await expect(itemRow).toContainText("Đang làm");
-      await expect
-        .poll(() => getKdsTicketStatus(fixture.ticketId), {
-          timeout: 10_000,
-        })
-        .toBe("preparing");
-
-      await page.getByTestId(`kds-bump-${String(fixture.ticketId)}`).click();
-      await expect(itemRow).toContainText("Xong");
+      await page
+        .getByTestId(`kds-complete-ticket-${String(fixture.ticketId)}`)
+        .click();
       await expect
         .poll(() => getKdsTicketStatus(fixture.ticketId), {
           timeout: 10_000,
         })
         .toBe("ready");
-
-      await page.getByTestId(`kds-recall-${String(fixture.ticketId)}`).click();
-      await expect(itemRow).toContainText("Đang làm");
-      await expect
-        .poll(() => getKdsTicketStatus(fixture.ticketId), {
-          timeout: 10_000,
-        })
-        .toBe("preparing");
-
-      await page.getByTestId(`kds-recall-${String(fixture.ticketId)}`).click();
-      await expect(itemRow).toContainText("Chờ");
-      await expect
-        .poll(() => getKdsTicketStatus(fixture.ticketId), {
-          timeout: 10_000,
-        })
-        .toBe("pending");
+      await expect(orderCard).toBeHidden({ timeout: 10_000 });
     } finally {
       await fixture.cleanup();
+    }
+  });
+
+  test("chef can complete a later card item while sibling items stay active", async ({
+    page,
+  }) => {
+    const chef = await resolveChefCredentials();
+
+    test.skip(
+      !chef.password,
+      "Missing E2E_CHEF_PASSWORD or fallback cashier password",
+    );
+
+    const blocker = await createKdsTestTicket({
+      orderNumberPrefix: "KDS-CURRENT",
+      status: "preparing",
+    });
+    const fixture = await createKdsTestOrderWithTickets(["pending", "pending"]);
+    const activeTicketId = fixture.ticketIds[0]!;
+    const readyTicketId = fixture.ticketIds[1]!;
+    const readyItemId = fixture.orderItemIds[1]!;
+
+    try {
+      await loginAsChef(page, chef.email, chef.password!);
+      await page.goto(`/br/${String(fixture.branchId)}/kds?view=comprehensive`);
+      await page.waitForLoadState("networkidle");
+
+      await expect(
+        page
+          .getByTestId("kds-current-order-panel")
+          .getByTestId(`kds-order-card-${String(blocker.orderId)}`),
+      ).toBeVisible({ timeout: 10_000 });
+
+      const heatmapCard = page.getByTestId(
+        `kds-heatmap-card-${String(fixture.orderId)}`,
+      );
+      await expect(heatmapCard).toBeVisible({ timeout: 10_000 });
+
+      await heatmapCard
+        .getByTestId(`kds-heatmap-complete-ticket-${String(readyTicketId)}`)
+        .click();
+
+      await expect
+        .poll(() => getKdsTicketStatuses(fixture.ticketIds), {
+          timeout: 10_000,
+        })
+        .toEqual({
+          [activeTicketId]: "pending",
+          [readyTicketId]: "ready",
+        });
+      await expect.poll(() => getOrderStatus(fixture.orderId)).not.toBe("ready");
+      await expect
+        .poll(() => getOrderPaymentStatus(fixture.orderId))
+        .toBe("unpaid");
+      await expect.poll(() => getTableStatus(fixture.tableId)).toBe("occupied");
+
+      await page.reload();
+      await page.waitForLoadState("networkidle");
+
+      await expect(heatmapCard).toBeVisible({ timeout: 10_000 });
+      await expect(
+        page.getByTestId(`kds-heatmap-item-${String(readyItemId)}`),
+      ).toHaveClass(/bg-success\/10/, { timeout: 10_000 });
+    } finally {
+      await Promise.all([fixture.cleanup(), blocker.cleanup()]);
     }
   });
 

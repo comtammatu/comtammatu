@@ -33,6 +33,7 @@ import { OrderDetailSheet } from "./order-detail-sheet";
 import { PosSessionHeader } from "./pos-session-header";
 import { MenuPane } from "./_components/menu-pane";
 import { PosMobileActionBar } from "./_components/pos-mobile-action-bar";
+import type { SubmitOrderOptions } from "./_components/cart-pane";
 import {
   SplitSidebar,
   TabbedSidebar,
@@ -117,6 +118,10 @@ import {
 } from "./_hooks/use-cart";
 import { useActiveTable } from "./_hooks/use-active-table";
 import { useAppendTarget } from "./_hooks/use-append-target";
+import {
+  deriveTableOrderVisualStates,
+  isActiveUnpaidPosOrder,
+} from "./_lib/table-order-visual-state";
 import { makeCartKey, makeNotedCartKey } from "./_utils/cart-key";
 import { messages } from "@lib/messages";
 
@@ -135,6 +140,8 @@ interface PosDesktopShellProps {
    * fires a full refresh as recovery.
    */
   initialOrdersSeeded: boolean;
+  /** Optional deep link from durable notifications: /pos?order=<id>. */
+  initialOpenOrderId?: number;
   /** User hiện tại có `pos:close_shift` không (ẩn nút"Chốt ca" với waiter). */
   canCloseShift: boolean;
   /** `pos:confirm_payment` — gate phương thức"Tiền mặt" trên bill (cashier+). */
@@ -192,6 +199,7 @@ export function PosDesktopShell(props: PosDesktopShellProps) {
         canOverrideVariance={props.canOverrideVariance}
         initialPaymentMethods={props.initialPaymentMethods}
         initialVietQrConfig={props.initialVietQrConfig}
+        initialOpenOrderId={props.initialOpenOrderId}
       />
     </PosDesktopProvider>
   );
@@ -206,6 +214,7 @@ function PosDesktopInner({
   canOverrideVariance,
   initialPaymentMethods,
   initialVietQrConfig,
+  initialOpenOrderId,
 }: {
   categories: MenuCategory[];
   canCloseShift: boolean;
@@ -213,6 +222,7 @@ function PosDesktopInner({
   canOverrideVariance: boolean;
   initialPaymentMethods: readonly PaymentMethod[];
   initialVietQrConfig: VietQrConfig | null;
+  initialOpenOrderId?: number;
 }) {
   const { branchId, session } = usePosSession();
   const orders = usePosOrders();
@@ -465,15 +475,17 @@ function PosDesktopInner({
   const orderCountByTable = useMemo(() => {
     const map = new Map<number, number>();
     for (const order of orders) {
-      if (
-        order.table_id !== null &&
-        ACTIVE_POS_STATUSES.includes(order.status)
-      ) {
-        map.set(order.table_id, (map.get(order.table_id) ?? 0) + 1);
+      if (isActiveUnpaidPosOrder(order, ACTIVE_POS_STATUSES)) {
+        const tableId = order.table_id;
+        if (tableId !== null) map.set(tableId, (map.get(tableId) ?? 0) + 1);
       }
     }
     return map;
   }, [orders]);
+  const tableOrderVisualStateByTable = useMemo(
+    () => deriveTableOrderVisualStates(orders, ACTIVE_POS_STATUSES),
+    [orders],
+  );
 
   // Live derivation for the multi-order table picker. Re-runs whenever
   // `orders` or `tables` updates (realtime, post-mutation, refetch) so the
@@ -488,11 +500,13 @@ function PosDesktopInner({
   const pickerOrders = useMemo(
     () =>
       pickerTableId !== null
-        ? orders.filter(
-            (o) =>
-              o.table_id === pickerTableId &&
-              ACTIVE_POS_STATUSES.includes(o.status),
-          ).sort(compareOrdersByNextAction)
+        ? orders
+            .filter(
+              (o) =>
+                o.table_id === pickerTableId &&
+                isActiveUnpaidPosOrder(o, ACTIVE_POS_STATUSES),
+            )
+            .sort(compareOrdersByNextAction)
         : [],
     [pickerTableId, orders],
   );
@@ -519,6 +533,15 @@ function PosDesktopInner({
     },
     [],
   );
+
+  const initialOpenOrderIdRef = useRef(initialOpenOrderId ?? null);
+  useEffect(() => {
+    const targetOrderId = initialOpenOrderIdRef.current;
+    if (targetOrderId === null) return;
+    initialOpenOrderIdRef.current = null;
+    const order = orders.find((candidate) => candidate.id === targetOrderId);
+    focusOrderWorkflow(targetOrderId, order?.order_number ?? null);
+  }, [focusOrderWorkflow, orders]);
 
   const { performAppend } = usePosAppend({
     branchId,
@@ -623,7 +646,8 @@ function PosDesktopInner({
       // entry point for the new"2nd order on same bàn" flow.
       const activeOrders = orders.filter(
         (o) =>
-          o.table_id === table.id && ACTIVE_POS_STATUSES.includes(o.status),
+          o.table_id === table.id &&
+          isActiveUnpaidPosOrder(o, ACTIVE_POS_STATUSES),
       );
 
       if (activeOrders.length === 0) {
@@ -676,17 +700,14 @@ function PosDesktopInner({
     [focusOrderWorkflow],
   );
 
-  const handlePayOrderFromPicker = useCallback(
-    (orderId: number) => {
-      setPickerTableId(null);
-      setCartDrawerOpen(false);
-      setPostSubmitPaymentOrderId(null);
-      setBillInitialOrder(null);
-      setBillIntent("payment");
-      setBillOrderId(orderId);
-    },
-    [],
-  );
+  const handlePayOrderFromPicker = useCallback((orderId: number) => {
+    setPickerTableId(null);
+    setCartDrawerOpen(false);
+    setPostSubmitPaymentOrderId(null);
+    setBillInitialOrder(null);
+    setBillIntent("payment");
+    setBillOrderId(orderId);
+  }, []);
 
   const handleAppendOrderFromPicker = useCallback(
     (orderId: number, orderNumber: string) => {
@@ -731,86 +752,99 @@ function PosDesktopInner({
     ],
   );
 
-  const handleSubmitOrder = useCallback(() => {
-    if (!canSubmit) return;
+  const handleSubmitOrder = useCallback(
+    (options?: SubmitOrderOptions) => {
+      if (!canSubmit) return;
 
-    startTransition(async () => {
-      const cartSnapshot = cartStore.getSnapshot();
-      const submittedOrderType = cartSnapshot.orderType;
-      const result = await submitPosOrderWithRetry({
-        branchId,
-        sessionId: session.id,
-        cartSnapshot,
-        tableId: selectedTableId,
-      });
-
-      if (result.success && result.data) {
-        const orderId = result.data.order_id;
-        const orderNumber = result.data.order_number;
-        toast.success(`Đặt món thành công — #${orderNumber}`, {
-          action: {
-            label: "Xem hóa đơn",
-            onClick: () => {
-              setBillIntent("payment");
-              setBillOrderId(orderId);
-            },
-          },
+      const isPrioritySubmit = options?.priority === true;
+      startTransition(async () => {
+        const cartSnapshot = cartStore.getSnapshot();
+        const submittedOrderType = cartSnapshot.orderType;
+        const result = await submitPosOrderWithRetry({
+          branchId,
+          sessionId: session.id,
+          cartSnapshot,
+          tableId: selectedTableId,
+          isPriority: isPrioritySubmit,
         });
-        const kitchenWarning = result.meta?.kitchenWarning;
-        if (typeof kitchenWarning === "string") {
-          toast.warning(kitchenWarning);
-        } else if (result.meta?.kitchenSent === true) {
-          toast.success("Đã gửi phiếu bếp", { duration: 2000 });
-        }
 
-        clearCart();
-        if (submittedOrderType === "takeaway") {
-          setPostSubmitPaymentOrderId(orderId);
-          setShowOrders(false);
-          setCartDrawerOpen(false);
-          setOrderDetailId(null);
-          setOrderDetailNumber(null);
-          setOrderDetailSeed(null);
-          setOrderDetailSummary(null);
+        if (result.success && result.data) {
+          const orderId = result.data.order_id;
+          const orderNumber = result.data.order_number;
+          const priorityWarning = result.meta?.priorityWarning;
+          const prioritySet = result.meta?.prioritySet === true;
+          toast.success(
+            `${prioritySet ? "Đặt món ưu tiên" : "Đặt món"} thành công — #${orderNumber}`,
+            {
+              action: {
+                label: "Xem hóa đơn",
+                onClick: () => {
+                  setBillIntent("payment");
+                  setBillOrderId(orderId);
+                },
+              },
+            },
+          );
+          if (typeof priorityWarning === "string") {
+            toast.warning(priorityWarning);
+          }
+          const kitchenWarning = result.meta?.kitchenWarning;
+          if (typeof kitchenWarning === "string") {
+            toast.warning(kitchenWarning);
+          } else if (result.meta?.kitchenSent === true) {
+            toast.success("Đã gửi phiếu bếp", { duration: 2000 });
+          }
+
+          clearCart();
+          if (submittedOrderType === "takeaway") {
+            setPostSubmitPaymentOrderId(orderId);
+            setShowOrders(false);
+            setCartDrawerOpen(false);
+            setOrderDetailId(null);
+            setOrderDetailNumber(null);
+            setOrderDetailSeed(null);
+            setOrderDetailSummary(null);
+            setActiveTable(null);
+            // Reset orderType về home (dine_in nếu có bàn, ngược lại giữ takeaway)
+            // → trang nhảy về "Chọn bàn | Mang về" đối xứng với flow dine_in.
+            setCartOrderType(tables.length > 0 ? "dine_in" : "takeaway");
+            void refreshOperational();
+            return;
+          }
+
+          setPostSubmitPaymentOrderId(null);
+          focusOrderWorkflow(orderId, orderNumber);
           setActiveTable(null);
-          // Reset orderType về home (dine_in nếu có bàn, ngược lại giữ takeaway)
-          // → trang nhảy về "Chọn bàn | Mang về" đối xứng với flow dine_in.
-          setCartOrderType(tables.length > 0 ? "dine_in" : "takeaway");
           void refreshOperational();
-          return;
+        } else {
+          // Stale session prop (RSC snapshot held the old session.id after
+          // a close-then-reopen on another tab). Self-heal: refresh the
+          // route so RSC re-fetches the currently open session, instead
+          // of looping the cashier through "thử lại" forever.
+          if (result.errorCode === POS_ERROR_CODES.SCOPE_SESSION_NOT_OPEN) {
+            toast.error(result.error ?? "Ca POS đã đóng — đang tải lại trang.");
+            router.refresh();
+            return;
+          }
+          toast.error(result.error ?? "Không thể tạo đơn hàng");
         }
-
-        setPostSubmitPaymentOrderId(null);
-        focusOrderWorkflow(orderId, orderNumber);
-        setActiveTable(null);
-        void refreshOperational();
-      } else {
-        // Stale session prop (RSC snapshot held the old session.id after
-        // a close-then-reopen on another tab). Self-heal: refresh the
-        // route so RSC re-fetches the currently open session, instead
-        // of looping the cashier through "thử lại" forever.
-        if (result.errorCode === POS_ERROR_CODES.SCOPE_SESSION_NOT_OPEN) {
-          toast.error(result.error ?? "Ca POS đã đóng — đang tải lại trang.");
-          router.refresh();
-          return;
-        }
-        toast.error(result.error ?? "Không thể tạo đơn hàng");
-      }
-    });
-  }, [
-    canSubmit,
-    branchId,
-    cartStore,
-    clearCart,
-    selectedTableId,
-    setActiveTable,
-    setCartOrderType,
-    session.id,
-    tables,
-    focusOrderWorkflow,
-    refreshOperational,
-    router,
-  ]);
+      });
+    },
+    [
+      canSubmit,
+      branchId,
+      cartStore,
+      clearCart,
+      selectedTableId,
+      setActiveTable,
+      setCartOrderType,
+      session.id,
+      tables,
+      focusOrderWorkflow,
+      refreshOperational,
+      router,
+    ],
+  );
 
   const handleItemTap = useCallback(
     (item: MenuItem) => {
@@ -1445,6 +1479,7 @@ function PosDesktopInner({
               selectedTableId={selectedTableId}
               onTableSelect={handleTableSelect}
               orderCountByTable={orderCountByTable}
+              tableOrderVisualStateByTable={tableOrderVisualStateByTable}
               className="min-h-0 flex-1"
             />
           </div>
@@ -1498,9 +1533,7 @@ function PosDesktopInner({
         }
         appendOrderLabel={appendTarget?.orderNumber ?? null}
         initialCartItem={
-          editingSentItem?.seedCartItem ??
-          editingCartItem ??
-          editingAppendItem
+          editingSentItem?.seedCartItem ?? editingCartItem ?? editingAppendItem
         }
       />
 

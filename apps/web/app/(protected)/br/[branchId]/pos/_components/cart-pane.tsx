@@ -11,7 +11,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@comtammatu/ui/components/alert-dialog";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
@@ -25,6 +24,7 @@ import {
 } from "@comtammatu/ui/components/toggle-group";
 import {
   LayoutGrid as IconLayoutGrid,
+  Flame as IconFlame,
   Package as IconPackage,
   Trash as IconTrash,
   Utensils as IconToolsKitchen,
@@ -49,10 +49,14 @@ const DELETE_REVEAL_WIDTH = 80;
 const SWIPE_ACTIVATION_PX = 8;
 const SWIPE_REVEAL_THRESHOLD_PX = 40;
 
+export type SubmitOrderOptions = {
+  priority?: boolean;
+};
+
 interface CartPaneProps {
   canSubmit: boolean;
   isSubmitting: boolean;
-  onSubmitOrder: () => void;
+  onSubmitOrder: (options?: SubmitOrderOptions) => void;
   onOrderTypeChange: (type: OrderType) => void;
   onCustomizeItem: (item: CartItem) => void;
   onClosePane?: () => void;
@@ -71,14 +75,19 @@ function CartPaneComponent({
   const cart = useCart();
   const activeTable = useActiveTable();
 
-  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [submitIntent, setSubmitIntent] = useState<
+    "normal" | "priority" | null
+  >(null);
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
+  const [removingKeys, setRemovingKeys] = useState<Set<string>>(
+    () => new Set(),
+  );
   const swipe = useSwipeReveal({
     revealWidth: DELETE_REVEAL_WIDTH,
     activationPx: SWIPE_ACTIVATION_PX,
     threshold: SWIPE_REVEAL_THRESHOLD_PX,
   });
-  const cartDialogOpen = confirmOpen || clearConfirmOpen;
+  const cartDialogOpen = submitIntent !== null || clearConfirmOpen;
 
   const selectedTableNumber = activeTable.table?.number;
   const totalQuantity = cart.quantity;
@@ -92,6 +101,7 @@ function CartPaneComponent({
 
   const shouldShowOrderTypeSelector =
     cart.items.length === 0 && selectedTableNumber == null;
+  const hasRemovingItems = removingKeys.size > 0;
 
   useKeyboardShortcut([
     {
@@ -100,7 +110,14 @@ function CartPaneComponent({
       fireInInput: true,
       preventDefault: true,
       handler: () => {
-        if (!cartDialogOpen && canSubmit && !isSubmitting) setConfirmOpen(true);
+        if (
+          !cartDialogOpen &&
+          canSubmit &&
+          !isSubmitting &&
+          !hasRemovingItems
+        ) {
+          setSubmitIntent("normal");
+        }
       },
     },
     {
@@ -118,6 +135,19 @@ function CartPaneComponent({
   ]);
 
   const isMobileDrawer = onClosePane != null;
+
+  function removeItemWithEffect(key: string) {
+    setRemovingKeys((current) => new Set(current).add(key));
+    window.setTimeout(() => {
+      cart.removeItem(key);
+      setRemovingKeys((current) => {
+        const next = new Set(current);
+        next.delete(key);
+        return next;
+      });
+      swipe.setRevealedKey(null);
+    }, 180);
+  }
 
   return (
     <div className="flex h-full flex-1 flex-col overflow-hidden bg-background">
@@ -272,6 +302,7 @@ function CartPaneComponent({
               {cart.items.map((item) => {
                 const subtotal = calcItemSubtotal(item);
                 const isDeleteRevealed = swipe.isRevealed(item.key);
+                const isRemoving = removingKeys.has(item.key);
                 const swipeHandlers = swipe.bindings(item.key);
                 const displayName = getPosLineItemDisplayName(item);
                 const summary = getPosLineItemSummary(item);
@@ -288,26 +319,26 @@ function CartPaneComponent({
                         !isDeleteRevealed && "hidden",
                       )}
                       aria-label={`Xóa ${displayName} khỏi giỏ đơn mới`}
-                      onClick={() => {
-                        cart.removeItem(item.key);
-                        swipe.setRevealedKey(null);
-                      }}
+                      onClick={() => removeItemWithEffect(item.key)}
                     >
                       {ACTIONS_VI.delete}
                     </Button>
                     <Item
                       variant="outline"
                       className={cn(
-                        "relative h-20 touch-pan-y rounded-none bg-card p-0 text-left shadow-sm transition-colors duration-150 ease-out hover:shadow-md",
+                        "relative touch-pan-y rounded-none bg-card p-0 text-left shadow-sm transition-all duration-150 ease-out hover:shadow-md",
+                        isRemoving &&
+                          "bg-destructive/10 opacity-0 motion-safe:scale-95",
                       )}
                     >
                       <Button
                         type="button"
                         variant="ghost"
                         className={cn(
-                          "h-full w-full justify-start py-2 pl-3 text-left whitespace-normal hover:bg-card sm:pl-4",
+                          "h-auto min-h-24 w-full justify-start py-2 pl-2 text-left whitespace-normal hover:bg-card sm:pl-3",
                           itemPaddingClass,
                         )}
+                        disabled={isRemoving}
                         onClick={(event) => {
                           if (swipe.consumeSuppression(item.key)) {
                             event.preventDefault();
@@ -327,7 +358,10 @@ function CartPaneComponent({
                           title={displayName}
                           total={formatVND(subtotal)}
                           options={summary.options}
+                          modifiers={summary.modifiers}
+                          sides={summary.sides}
                           note={summary.note}
+                          isPriority={summary.isPriority}
                         />
                       </Button>
                     </Item>
@@ -336,7 +370,8 @@ function CartPaneComponent({
                       size="touch"
                       className="absolute right-2 top-1/2 hidden min-w-12 -translate-y-1/2 px-0 text-muted-foreground hover:text-destructive sm:inline-flex"
                       aria-label={`Xóa ${displayName} khỏi giỏ đơn mới`}
-                      onClick={() => cart.removeItem(item.key)}
+                      disabled={isRemoving}
+                      onClick={() => removeItemWithEffect(item.key)}
                     >
                       <IconX />
                     </Button>
@@ -383,45 +418,86 @@ function CartPaneComponent({
                   </p>
                 </div>
 
-                <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      className="min-w-12 w-full text-base font-bold tracking-wide shadow-md"
-                      size="touch-lg"
-                      disabled={!canSubmit || isSubmitting}
-                      aria-keyshortcuts="Meta+Enter Control+Enter"
-                    >
-                      {isSubmitting ? (
-                        <>
-                          <Spinner data-icon="inline-start" />
-                          {STATES_VI.processing}
-                        </>
-                      ) : (
-                        <>
-                          Đặt món ({totalQuantity})
-                          <KbdGroup className="ml-2 hidden md:inline-flex">
-                            <Kbd>{"⌘"}</Kbd>
-                            <Kbd>Enter</Kbd>
-                          </KbdGroup>
-                        </>
-                      )}
-                    </Button>
-                  </AlertDialogTrigger>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="min-w-12 w-full text-base font-bold tracking-wide"
+                    size="touch-lg"
+                    disabled={!canSubmit || isSubmitting || hasRemovingItems}
+                    aria-keyshortcuts="Meta+Enter Control+Enter"
+                    onClick={() => setSubmitIntent("normal")}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Spinner data-icon="inline-start" />
+                        {STATES_VI.processing}
+                      </>
+                    ) : (
+                      <>
+                        Gửi phiếu ({totalQuantity})
+                        <KbdGroup className="ml-2 hidden md:inline-flex">
+                          <Kbd>{"⌘"}</Kbd>
+                          <Kbd>Enter</Kbd>
+                        </KbdGroup>
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    className="min-w-12 w-full text-base font-bold tracking-wide shadow-md"
+                    size="touch-lg"
+                    disabled={!canSubmit || isSubmitting || hasRemovingItems}
+                    onClick={() => setSubmitIntent("priority")}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Spinner data-icon="inline-start" />
+                        {STATES_VI.processing}
+                      </>
+                    ) : (
+                      <>
+                        <IconFlame data-icon="inline-start" />
+                        Gửi ưu tiên
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                <AlertDialog
+                  open={submitIntent !== null}
+                  onOpenChange={(open) => {
+                    if (!open) setSubmitIntent(null);
+                  }}
+                >
                   <AlertDialogContent>
                     <AlertDialogHeader>
                       <AlertDialogTitle>
-                        {cart.orderType === "takeaway"
-                          ? "Gửi đơn mang về?"
-                          : `Gửi cho bàn ${selectedTableNumber ?? ""}?`}
+                        {submitIntent === "priority"
+                          ? cart.orderType === "takeaway"
+                            ? "Gửi ưu tiên đơn mang về?"
+                            : `Gửi ưu tiên cho bàn ${selectedTableNumber ?? ""}?`
+                          : cart.orderType === "takeaway"
+                            ? "Gửi đơn mang về?"
+                            : `Gửi cho bàn ${selectedTableNumber ?? ""}?`}
                       </AlertDialogTitle>
                       <AlertDialogDescription>
                         {totalQuantity} món · {formatVND(cart.total)}
+                        {submitIntent === "priority" ? " · Ưu tiên bếp" : ""}
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Sửa lại</AlertDialogCancel>
-                      <AlertDialogAction onClick={onSubmitOrder}>
-                        Gửi đơn
+                      <AlertDialogAction
+                        onClick={() =>
+                          onSubmitOrder({
+                            priority: submitIntent === "priority",
+                          })
+                        }
+                      >
+                        {submitIntent === "priority"
+                          ? "Gửi ưu tiên"
+                          : "Gửi phiếu"}
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>

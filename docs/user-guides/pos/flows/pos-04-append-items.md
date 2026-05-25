@@ -45,7 +45,7 @@ URL: `/br/{branchId}/pos` (qua bàn occupied → đơn cũ)
 **Bạn thấy:** Sheet đóng lại, màn chuyển sang **Append mode** (xem Bước 3).
 
 > ⚠️ Phân biệt:
-> - **Thêm món** = thêm vào đơn HIỆN TẠI (cùng KDS ticket session, cộng dồn tổng tiền).
+> - **Thêm món** = thêm vào đơn HIỆN TẠI (cùng mã TC, cộng dồn tổng tiền).
 > - **Tạo đơn mới trên bàn này** (trong multi-order picker) = đơn ĐỘC LẬP, thanh toán riêng.
 
 ### Bước 3 — Append mode — chọn món thêm
@@ -88,11 +88,11 @@ URL: `/br/{branchId}/pos` (qua bàn occupied → đơn cũ)
 - Toast "Thêm món thành công" (hoặc tương tự).
 - Pane đóng, banner append biến mất.
 - Quay về màn POS chính HOẶC tự mở chi tiết đơn để bạn check tổng mới.
-- Trên KDS (bếp): ticket mới cho mỗi món thêm.
+- Trên KDS (bếp): món thêm nhập vào PB đang mở nếu PB trước chưa hoàn tất; nếu PB trước đã hoàn tất thì hệ thống tạo PB mới cho lần gọi thêm.
 
 ✅ **Xong!** Tổng đơn đã cập nhật. Khách gọi tiếp → lặp lại từ Bước 1. Khách thanh toán → POS-05.
 
-> ⚠️ Mỗi lần "Gửi món thêm" = 1 batch riêng. Bếp thấy ticket riêng → để bếp biết món nào ra trước, món nào ra sau.
+> ⚠️ "Gửi món thêm" không tạo đơn TC mới. PB chỉ tách mới khi PB trước của đơn đó đã hoàn tất; nếu PB trước còn đang làm, món thêm nằm chung trên PB đó để bếp xử lý một lần.
 
 ---
 
@@ -118,9 +118,9 @@ URL: `/br/{branchId}/pos` (qua bàn occupied → đơn cũ)
 
 **Bạn thấy:** Chi tiết đơn không có nút "Thêm món" hoặc nút bị mờ.
 
-**Lý do:** Đơn đã ở status muộn (`served`, `paid`...) → không cho thêm món.
+**Lý do:** Đơn đã thanh toán hoặc đã hủy → không cho thêm món.
 
-**Cách xử lý:** Nếu khách thực sự muốn gọi thêm → tạo đơn MỚI trên cùng bàn (qua multi-order picker — xem [POS-02](pos-02-select-context.md#bàn-đang-dùng--có-đơn-cũ-chưa-chốt)) thay vì append.
+**Cách xử lý:** Nếu khách thực sự muốn gọi thêm sau khi đơn cũ đã chốt → tạo đơn MỚI trên cùng bàn (qua multi-order picker — xem [POS-02](pos-02-select-context.md#bàn-đang-dùng--có-đơn-cũ-chưa-chốt)) thay vì append.
 
 ### Mất mạng giữa chừng
 
@@ -148,7 +148,7 @@ URL: `/br/{branchId}/pos` (qua bàn occupied → đơn cũ)
 ### Database
 
 - Insert vào `order_items` với `order_id` của đơn cũ.
-- KDS tickets mới insert qua `kds_tickets` (route theo station của menu_item).
+- KDS tickets mới insert qua `kds_tickets` (route theo station của menu_item) và gắn vào PB đang mở nếu đơn còn PB `pending`/`preparing`.
 - Trigger update `orders.subtotal` + `orders.total_amount` (atomic recompute từ `order_items` SUM).
 - KHÔNG update `orders.status` — vẫn `confirmed`.
 

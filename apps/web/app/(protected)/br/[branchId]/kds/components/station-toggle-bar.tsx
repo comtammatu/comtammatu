@@ -1,12 +1,7 @@
 "use client";
 
-import { AppToolbar } from "@/components/surface";
-import { Badge } from "@comtammatu/ui/components/badge";
+import { Button } from "@comtammatu/ui/components/button";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
-import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from "@comtammatu/ui/components/toggle-group";
 import { messages } from "@lib/messages";
 import type { KdsStation } from "../types";
 
@@ -26,51 +21,42 @@ export function StationToggleBar({
   onChange,
 }: StationToggleBarProps) {
   return (
-    <div className="border-y px-3 py-1.5 md:px-4">
-      <AppToolbar className="min-w-0 p-1.5">
-        <ScrollArea className="min-w-0 flex-1">
-          <ToggleGroup
-            type="single"
-            value={activeStationId === null ? "all" : String(activeStationId)}
-            onValueChange={(value) => {
-              if (!value) return;
-              onChange(value === "all" ? null : value);
-            }}
-            variant="outline"
-            className="h-auto justify-start gap-1.5"
+    <div className="min-w-0 flex-1">
+      <ScrollArea className="w-full min-w-0 whitespace-nowrap">
+        <div className="flex min-w-max items-center gap-1">
+          <Button
+            type="button"
+            variant={activeStationId === null ? "secondary" : "ghost"}
+            size="sm"
+            className="gap-1.5 px-2 text-xs font-semibold"
+            aria-label={messages.pos.kds.allStationsAria}
+            aria-pressed={activeStationId === null}
+            onClick={() => onChange(null)}
           >
-            <ToggleGroupItem
-              value="all"
-              className="shrink-0 gap-2 px-3 py-2 text-sm font-semibold"
-              aria-label={messages.pos.kds.allStationsAria}
+            {messages.pos.kds.allStations}
+            <span className="font-mono text-xs font-semibold tabular-nums text-muted-foreground">
+              {totalActiveCount}
+            </span>
+          </Button>
+          {stations.map((station) => (
+            <Button
+              key={station.id}
+              type="button"
+              variant={activeStationId === station.id ? "secondary" : "ghost"}
+              size="sm"
+              className="gap-1.5 px-2 text-xs font-semibold"
+              aria-label={messages.pos.kds.stationAria(station.name)}
+              aria-pressed={activeStationId === station.id}
+              onClick={() => onChange(String(station.id))}
             >
-              {messages.pos.kds.allStations}
-              <Badge
-                variant="secondary"
-                className="rounded-full px-2 py-0.5 text-xs font-semibold"
-              >
-                {totalActiveCount}
-              </Badge>
-            </ToggleGroupItem>
-            {stations.map((station) => (
-              <ToggleGroupItem
-                key={station.id}
-                value={String(station.id)}
-                className="shrink-0 gap-2 px-3 py-2 text-sm font-semibold"
-                aria-label={messages.pos.kds.stationAria(station.name)}
-              >
-                {station.name}
-                <Badge
-                  variant="secondary"
-                  className="rounded-full px-2 py-0.5 text-xs font-semibold"
-                >
-                  {stationCounts.get(station.id) ?? 0}
-                </Badge>
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-        </ScrollArea>
-      </AppToolbar>
+              {station.name}
+              <span className="font-mono text-xs font-semibold tabular-nums text-muted-foreground">
+                {stationCounts.get(station.id) ?? 0}
+              </span>
+            </Button>
+          ))}
+        </div>
+      </ScrollArea>
     </div>
   );
 }

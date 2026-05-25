@@ -3,10 +3,17 @@
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@comtammatu/ui/components/tooltip";
+import {
+  Maximize2 as IconMaximize,
+  Minimize2 as IconMinimize,
   Volume2 as IconVolumeOn,
   VolumeX as IconVolumeOff,
 } from "lucide-react";
-import { BrandMark } from "@/components/brand";
+import type { ReactNode } from "react";
 import { EmployeePortalBackControl } from "../../employee-portal-back-control";
 import { KdsMenuLimitsSheet } from "./menu-limits-sheet";
 import { ViewModeToggle } from "./view-mode-toggle";
@@ -18,10 +25,14 @@ interface BoardHeaderProps {
   pendingCount: number;
   mode: KdsViewMode;
   soundEnabled: boolean;
+  isFullscreen: boolean;
   onModeChange: (next: KdsViewMode) => void;
   onSoundToggle: () => void;
+  onFullscreenToggle: () => void;
   menuLimits: KdsMenuLimitRow[];
   onMenuLimitsChange: (rows: KdsMenuLimitRow[]) => void;
+  stationControls: ReactNode;
+  filterControls: ReactNode;
 }
 
 export function BoardHeader({
@@ -29,49 +40,83 @@ export function BoardHeader({
   pendingCount,
   mode,
   soundEnabled,
+  isFullscreen,
   onModeChange,
   onSoundToggle,
+  onFullscreenToggle,
   menuLimits,
   onMenuLimitsChange,
+  stationControls,
+  filterControls,
 }: BoardHeaderProps) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 md:px-4">
-      <div className="flex min-w-0 items-center gap-2">
+    <div className="flex min-w-0 items-center gap-2 overflow-x-auto px-2 py-1 md:px-3">
+      <div className="flex shrink-0 items-center gap-2">
         <EmployeePortalBackControl className="h-7 px-1.5 text-xs" />
-        <BrandMark decorative size="xs" />
-        <span className="font-heading text-xs font-semibold uppercase text-muted-foreground">
+        <span className="font-heading text-sm font-semibold text-foreground">
           KDS #{branchId}
         </span>
       </div>
-      <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
+      <div className="min-w-0 flex-1">{stationControls}</div>
+      <div className="flex shrink-0 items-center justify-end gap-1.5">
+        {filterControls}
         <Badge
           role="status"
           aria-live="polite"
           variant={pendingCount > 0 ? "warning" : "outline"}
-          className="rounded-full px-3 py-1 text-xs"
+          className="rounded-full px-2 py-0.5 text-xs"
         >
-          {pendingCount > 0
-            ? `${pendingCount} món đang chờ`
-            : "Không có món chờ"}
+          {pendingCount > 0 ? `${pendingCount} chờ` : "0 chờ"}
         </Badge>
-        <Button
-          type="button"
-          variant={soundEnabled ? "secondary" : "outline"}
-          size="icon-sm"
-          aria-label={soundEnabled ? "Tắt chuông KDS" : "Bật chuông KDS"}
-          aria-pressed={soundEnabled}
-          onClick={onSoundToggle}
-        >
-          {soundEnabled ? (
-            <IconVolumeOn aria-hidden />
-          ) : (
-            <IconVolumeOff aria-hidden />
-          )}
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant={soundEnabled ? "secondary" : "ghost"}
+              size="icon-sm"
+              aria-label={soundEnabled ? "Tắt chuông KDS" : "Bật chuông KDS"}
+              aria-pressed={soundEnabled}
+              onClick={onSoundToggle}
+            >
+              {soundEnabled ? (
+                <IconVolumeOn aria-hidden />
+              ) : (
+                <IconVolumeOff aria-hidden />
+              )}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            {soundEnabled ? "Tắt chuông" : "Bật chuông"}
+          </TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant={isFullscreen ? "secondary" : "ghost"}
+              size="icon-sm"
+              aria-label={
+                isFullscreen ? "Thoát toàn màn hình" : "Mở toàn màn hình"
+              }
+              aria-pressed={isFullscreen}
+              onClick={onFullscreenToggle}
+            >
+              {isFullscreen ? (
+                <IconMinimize aria-hidden />
+              ) : (
+                <IconMaximize aria-hidden />
+              )}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            {isFullscreen ? "Thoát toàn màn hình" : "Toàn màn hình"}
+          </TooltipContent>
+        </Tooltip>
         <KdsMenuLimitsSheet
           branchId={branchId}
           rows={menuLimits}
           onRowsChange={onMenuLimitsChange}
+          compact
         />
         <ViewModeToggle mode={mode} onChange={onModeChange} />
       </div>

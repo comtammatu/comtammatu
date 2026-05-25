@@ -1,9 +1,7 @@
 import { submitOrder } from "../actions";
 import type { CartSnapshot } from "../_providers/cart-store";
-import {
-  POS_ERROR_CODES,
-  isRetryablePosErrorCode,
-} from "./error-codes";
+import { POS_ERROR_CODES, isRetryablePosErrorCode } from "./error-codes";
+import { buildSubmitOrderCart } from "./submit-payload";
 
 /**
  * Retry schedule for the POS submit round-trip.
@@ -79,6 +77,7 @@ export interface SubmitPosOrderArgs {
   sessionId: number;
   cartSnapshot: CartSnapshot;
   tableId?: number | null;
+  isPriority?: boolean;
 }
 
 type SubmitResult = Awaited<ReturnType<typeof submitOrder>>;
@@ -111,12 +110,7 @@ export async function submitPosOrderWithRetry(
     }
     result = await submitOrder(
       args.branchId,
-      {
-        items: args.cartSnapshot.items,
-        order_type: args.cartSnapshot.orderType,
-        table_id: args.tableId ?? undefined,
-        note: args.cartSnapshot.note.trim() || undefined,
-      },
+      buildSubmitOrderCart(args),
       args.sessionId,
       idempotencyKey,
     );

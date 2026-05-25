@@ -2,7 +2,11 @@
 
 import Link from "next/link";
 import { Button } from "@comtammatu/ui/components/button";
-import { TriangleAlert as IconAlertTriangle, ArrowRight as IconArrowRight } from "lucide-react";
+import { messages } from "@lib/messages";
+import {
+  ArrowRight as IconArrowRight,
+  TriangleAlert as IconAlertTriangle,
+} from "lucide-react";
 
 interface UnassignedBannerProps {
   count: number;
@@ -15,30 +19,19 @@ export function UnassignedBanner({ count, onFilter }: UnassignedBannerProps) {
   return (
     <div
       role="status"
-      className="flex flex-wrap items-center justify-between gap-2 border-b border-warning/40 bg-warning/10 px-3 py-2 md:px-4"
+      className="flex flex-wrap items-center justify-between gap-1.5 border-b border-warning/40 bg-warning/10 px-2 py-1 md:px-3"
     >
-      <div className="flex min-w-0 items-center gap-2 text-sm font-semibold text-warning">
+      <div className="flex min-w-0 items-center gap-1.5 text-xs font-semibold text-warning sm:text-sm">
         <IconAlertTriangle aria-hidden className="size-4 shrink-0" />
-        <span>{count} phiếu bếp chưa phân trạm</span>
+        <span>{messages.pos.kds.unassignedTitle(count)}</span>
       </div>
       <div className="flex shrink-0 items-center gap-1.5">
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={onFilter}
-          className="h-8 text-xs"
-        >
-          Xem
+        <Button type="button" variant="ghost" size="xs" onClick={onFilter}>
+          {messages.pos.kds.viewUnassigned}
         </Button>
-        <Button
-          asChild
-          variant="outline"
-          size="sm"
-          className="h-8 text-xs"
-        >
+        <Button asChild variant="outline" size="xs">
           <Link href="/admin/settings/kds">
-            Mở cấu hình
+            {messages.pos.kds.openStationConfig}
             <IconArrowRight data-icon="inline-end" aria-hidden />
           </Link>
         </Button>

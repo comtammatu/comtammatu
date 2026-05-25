@@ -324,6 +324,7 @@ const RECEIPT_LOADING_ORDER: OrderData = {
   total_amount: 138000,
   customer_count: 2,
   note: null,
+  is_priority: false,
   created_at: "2026-04-26T00:00:00.000Z",
   table_id: 2,
   split_from_order_id: null,

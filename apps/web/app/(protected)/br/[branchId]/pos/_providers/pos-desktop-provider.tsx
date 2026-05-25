@@ -27,6 +27,7 @@ import {
 } from "./daily-limit-store";
 import type { MenuItemDailyLimit } from "../pos-menu-types";
 import { makeRealtimeCoalescer } from "@/_utils/realtime-scheduler";
+import { playAppSignal } from "@lib/audio-signal";
 import type { OrderType } from "../types";
 
 export type DailyLimitsMap = ReadonlyMap<number, MenuItemDailyLimit>;
@@ -44,6 +45,22 @@ export function usePosSession(): SessionContextValue {
   const ctx = useContext(SessionContext);
   if (!ctx)
     throw new Error("usePosSession must be used inside PosDesktopProvider");
+  return ctx;
+}
+
+/* ─── Device-local POS sound setting ─── */
+
+type PosSoundContextValue = {
+  soundEnabled: boolean;
+  toggleSound: () => void;
+};
+
+const PosSoundContext = createContext<PosSoundContextValue | null>(null);
+
+export function usePosSound(): PosSoundContextValue {
+  const ctx = useContext(PosSoundContext);
+  if (!ctx)
+    throw new Error("usePosSound must be used inside PosDesktopProvider");
   return ctx;
 }
 
@@ -143,9 +160,7 @@ export function usePosArchivedInvalidationToken(): number {
 function usePosDailyLimitStore(): DailyLimitStore {
   const ctx = useContext(DailyLimitStoreContext);
   if (!ctx)
-    throw new Error(
-      "useDailyLimit must be used inside PosDesktopProvider",
-    );
+    throw new Error("useDailyLimit must be used inside PosDesktopProvider");
   return ctx;
 }
 
@@ -210,6 +225,7 @@ export function PosDesktopProvider({
   }
   const dailyLimitStore = dailyLimitStoreRef.current;
   const [archivedToken, setArchivedToken] = useState(0);
+  const [soundEnabled, setSoundEnabled] = useState(false);
   const bumpArchivedToken = useCallback(() => {
     setArchivedToken((t) => t + 1);
   }, []);
@@ -222,10 +238,26 @@ export function PosDesktopProvider({
     tablesRef.current = tables;
   }, [tables]);
   const getTables = useCallback(() => tablesRef.current, []);
+  const ordersRef = useRef<SessionOrder[]>(initialOrders);
+  useEffect(() => {
+    ordersRef.current = orders;
+  }, [orders]);
+  const getOrders = useCallback(() => ordersRef.current, []);
 
   const sessionValue = useMemo<SessionContextValue>(
     () => ({ branchId, session }),
     [branchId, session],
+  );
+  const toggleSound = useCallback(() => {
+    setSoundEnabled((current) => {
+      const next = !current;
+      if (next) playAppSignal("pos", true);
+      return next;
+    });
+  }, []);
+  const soundValue = useMemo<PosSoundContextValue>(
+    () => ({ soundEnabled, toggleSound }),
+    [soundEnabled, toggleSound],
   );
 
   // Cart store — stable across renders
@@ -323,9 +355,11 @@ export function PosDesktopProvider({
     setTables,
     setOrders,
     getTables,
+    getOrders,
     refreshOrders: refreshOrdersDeduped,
     refreshAll: refreshAllDeduped,
     onArchivedInvalidate: bumpArchivedToken,
+    soundEnabled,
     skipFirstSubscribedRefresh: initialOrdersSeeded,
   });
 
@@ -352,19 +386,21 @@ export function PosDesktopProvider({
 
   return (
     <SessionContext.Provider value={sessionValue}>
-      <CartStoreContext.Provider value={cartStore}>
-        <OperationalDispatchContext.Provider value={dispatchValue}>
-          <OrdersContext.Provider value={orders}>
-            <TablesContext.Provider value={tables}>
-              <DailyLimitStoreContext.Provider value={dailyLimitStore}>
-                <ArchivedInvalidationContext.Provider value={archivedToken}>
-                  {children}
-                </ArchivedInvalidationContext.Provider>
-              </DailyLimitStoreContext.Provider>
-            </TablesContext.Provider>
-          </OrdersContext.Provider>
-        </OperationalDispatchContext.Provider>
-      </CartStoreContext.Provider>
+      <PosSoundContext.Provider value={soundValue}>
+        <CartStoreContext.Provider value={cartStore}>
+          <OperationalDispatchContext.Provider value={dispatchValue}>
+            <OrdersContext.Provider value={orders}>
+              <TablesContext.Provider value={tables}>
+                <DailyLimitStoreContext.Provider value={dailyLimitStore}>
+                  <ArchivedInvalidationContext.Provider value={archivedToken}>
+                    {children}
+                  </ArchivedInvalidationContext.Provider>
+                </DailyLimitStoreContext.Provider>
+              </TablesContext.Provider>
+            </OrdersContext.Provider>
+          </OperationalDispatchContext.Provider>
+        </CartStoreContext.Provider>
+      </PosSoundContext.Provider>
     </SessionContext.Provider>
   );
 }

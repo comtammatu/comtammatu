@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@comtammatu/ui";
 import { formatVND } from "@comtammatu/shared/format";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -23,6 +24,7 @@ export interface OrderItemRowData {
   modifiers: CartModifier[];
   sides: CartSide[];
   note: string | null;
+  is_priority: boolean;
   /** Optional: only present when SELECT includes them (fetchOrderDetail,
    * fetchActiveOrderForTable). Needed by "Sửa món pending" flow to seed the
    * customizer with current variant + lookup MenuItem. */
@@ -34,6 +36,8 @@ interface OrderItemRowProps {
   row: OrderItemRowData;
   onTap?: (itemId: number) => void;
 }
+
+type RowChangeTone = "content" | "quantity" | "status" | "removed" | null;
 
 type StatusBadgeVariant =
   | "warning"
@@ -69,12 +73,91 @@ function getItemStatusToneClass(status: string): string {
   }
 }
 
+function useOrderItemChangeTone(row: OrderItemRowData): RowChangeTone {
+  const signature = useMemo(
+    () =>
+      JSON.stringify({
+        quantity: row.quantity,
+        itemName: row.item_name,
+        variantName: row.variant_name,
+        unitPrice: row.unit_price,
+        subtotal: row.subtotal,
+        status: row.status,
+        modifiers: row.modifiers,
+        sides: row.sides,
+        note: row.note,
+        isPriority: row.is_priority,
+      }),
+    [
+      row.item_name,
+      row.modifiers,
+      row.note,
+      row.quantity,
+      row.sides,
+      row.status,
+      row.subtotal,
+      row.unit_price,
+      row.variant_name,
+      row.is_priority,
+    ],
+  );
+  const previousRef = useRef<{
+    signature: string;
+    quantity: number;
+    status: string;
+  } | null>(null);
+  const [tone, setTone] = useState<RowChangeTone>(null);
+
+  useEffect(() => {
+    const previous = previousRef.current;
+    previousRef.current = {
+      signature,
+      quantity: row.quantity,
+      status: row.status,
+    };
+
+    if (!previous || previous.signature === signature) return;
+
+    const nextTone: RowChangeTone =
+      row.status === "cancelled"
+        ? "removed"
+        : row.quantity !== previous.quantity
+          ? "quantity"
+          : row.status !== previous.status
+            ? "status"
+            : "content";
+
+    setTone(nextTone);
+    const timeout = window.setTimeout(() => setTone(null), 1600);
+    return () => window.clearTimeout(timeout);
+  }, [row.quantity, row.status, signature]);
+
+  return tone;
+}
+
+function getRowChangeToneClass(tone: RowChangeTone): string | false {
+  if (tone === "quantity") {
+    return "bg-warning/10 ring-2 ring-inset ring-warning/50 motion-safe:animate-pulse";
+  }
+  if (tone === "removed") {
+    return "bg-destructive/10 ring-2 ring-inset ring-destructive/40";
+  }
+  if (tone === "status") {
+    return "bg-success/10 ring-2 ring-inset ring-success/40";
+  }
+  if (tone === "content") {
+    return "bg-info/10 ring-2 ring-inset ring-info/40";
+  }
+  return false;
+}
+
 export function OrderItemRow({ row, onTap }: OrderItemRowProps) {
   const cancelled = row.status === "cancelled";
   const displayName = getPosLineItemDisplayName(row);
   const statusInfo =
     ITEM_STATUS_META[row.status] ?? { label: row.status, variant: "outline" };
   const summary = getPosLineItemSummary(row);
+  const changeTone = useOrderItemChangeTone(row);
 
   return (
     <li className="w-full min-w-0 max-w-full">
@@ -82,15 +165,16 @@ export function OrderItemRow({ row, onTap }: OrderItemRowProps) {
         variant="outline"
         size="sm"
         className={cn(
-          "h-20 w-full min-w-0 max-w-full overflow-hidden rounded-none p-0 shadow-sm transition-colors",
+          "w-full min-w-0 max-w-full rounded-none p-0 shadow-sm transition-colors duration-300",
           getItemStatusToneClass(row.status),
+          getRowChangeToneClass(changeTone),
           cancelled && "border-dashed",
         )}
       >
         <Button
           type="button"
           variant="ghost"
-          className="h-full w-full min-w-0 max-w-full justify-start whitespace-normal rounded-none px-3 py-2 text-left hover:bg-transparent sm:px-4"
+          className="h-auto min-h-24 w-full min-w-0 max-w-full justify-start whitespace-normal rounded-none px-2 py-2 text-left hover:bg-transparent sm:px-3"
           aria-label={`${displayName}, ${statusInfo.label}`}
           onClick={() => onTap?.(row.id)}
         >
@@ -99,7 +183,10 @@ export function OrderItemRow({ row, onTap }: OrderItemRowProps) {
             title={displayName}
             total={formatVND(row.subtotal)}
             options={summary.options}
+            modifiers={summary.modifiers}
+            sides={summary.sides}
             note={summary.note}
+            isPriority={summary.isPriority}
             quantityClassName={cancelled ? "opacity-50" : undefined}
             titleClassName={cancelled ? "line-through opacity-60" : undefined}
             totalClassName={

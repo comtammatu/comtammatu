@@ -35,6 +35,7 @@ export interface KdsOrderInfo {
   order_number: string;
   order_type: string;
   table_id: number | null;
+  is_priority: boolean;
   created_at: string;
   tables: { number: number } | null;
 }
@@ -51,6 +52,7 @@ export interface OrderItemSide {
   side_item_id: number;
   name: string;
   price: number;
+  quantity?: number;
   is_default: boolean;
 }
 
@@ -64,6 +66,7 @@ export interface KdsOrderItem {
   quantity: number;
   unit_price: number;
   status: string;
+  is_priority: boolean;
   note: string | null;
   modifiers: OrderItemModifier[] | null;
   sides: OrderItemSide[] | null;
@@ -94,6 +97,7 @@ export interface KdsOrder {
   createdAt: string;
   sendSeq: number | null;
   sendKind: string | null;
+  isPriority: boolean;
   tickets: KdsTicket[];
   items: KdsOrderItem[];
 }
@@ -116,9 +120,6 @@ export interface KdsBoardProps {
   initialKitchenBatches: KdsKitchenSendBatch[];
   initialMenuLimits: KdsMenuLimitRow[];
 }
-
-/** URL query: status filter */
-export type TicketStatusFilter = "all" | "active" | "pending" | "preparing" | "ready";
 
 /** URL query: order type filter */
 export type OrderTypeFilter = "all" | "dine_in" | "takeaway";

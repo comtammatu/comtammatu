@@ -2,6 +2,8 @@
 
 import { useEffect, useRef } from "react";
 import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
+import { playAppSignal } from "@lib/audio-signal";
+import { toast } from "@comtammatu/ui/components/sonner";
 import type { BranchTable } from "../page";
 import type { SessionOrder } from "../order-history";
 
@@ -18,6 +20,11 @@ export interface UseOrderSyncArgs {
    * insert would render `Bàn —` until the deduped fetch fallback returns.
    */
   getTables: () => BranchTable[];
+  /**
+   * Returns the current active orders snapshot so realtime handlers can
+   * classify state transitions before mutating the provider state.
+   */
+  getOrders: () => SessionOrder[];
   /**
    * Fire-and-forget refresh of the active orders list. MUST already
    * be deduped by the caller — used as a fallback after optimistic
@@ -39,6 +46,8 @@ export interface UseOrderSyncArgs {
    * the active-side state mutation.
    */
   onArchivedInvalidate?: () => void;
+  /** Whether audible POS alerts are enabled on this device/session. */
+  soundEnabled?: boolean;
   /**
    * When true, the FIRST `SUBSCRIBED` callback (initial mount subscription)
    * does not fire a catch-up refresh — orders are already seeded by the
@@ -46,6 +55,114 @@ export interface UseOrderSyncArgs {
    * reconnects) always refresh to catch missed events during disconnect.
    */
   skipFirstSubscribedRefresh?: boolean;
+}
+
+function getOrderContextDescription(order: {
+  order_type?: unknown;
+  tables?: { number: number } | null;
+  table_id?: unknown;
+}): string {
+  if (order.order_type === "dine_in") {
+    const tableNumber = order.tables?.number;
+    if (typeof tableNumber === "number") return `Bàn ${String(tableNumber)}`;
+    if (typeof order.table_id === "number")
+      return `Bàn ${String(order.table_id)}`;
+    return "Tại bàn";
+  }
+  if (order.order_type === "takeaway") return "Mang về";
+  return "Đơn POS";
+}
+
+function getStringField(
+  row: Record<string, unknown>,
+  field: string,
+): string | null {
+  const value = row[field];
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function getNotificationMetaString(
+  meta: unknown,
+  field: string,
+): string | null {
+  if (meta === null || typeof meta !== "object") return null;
+  const value = (meta as Record<string, unknown>)[field];
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function notifyOutOfStock(
+  notification: Record<string, unknown>,
+  soundEnabled: boolean,
+): void {
+  const title = getStringField(notification, "title") ?? "Bếp báo hết món";
+  const itemName =
+    getNotificationMetaString(notification.meta, "item_name") ??
+    getStringField(notification, "body") ??
+    "Cần kiểm tra đơn POS";
+  const actionUrl = getStringField(notification, "action_url");
+
+  if (soundEnabled) playAppSignal("pos");
+  toast.warning(title, {
+    description: itemName,
+    action: actionUrl
+      ? {
+          label: "Mở đơn",
+          onClick: () => {
+            window.location.assign(actionUrl);
+          },
+        }
+      : undefined,
+  });
+}
+
+function notifyOrderTransition(
+  currentOrder: SessionOrder | undefined,
+  next: Record<string, unknown>,
+  soundEnabled: boolean,
+): void {
+  if (!currentOrder) return;
+
+  const orderNumber =
+    getStringField(next, "order_number") ?? currentOrder.order_number;
+  const nextStatus = getStringField(next, "status");
+  const nextPaymentStatus = getStringField(next, "payment_status");
+
+  if (nextPaymentStatus === "paid" && currentOrder.payment_status !== "paid") {
+    if (soundEnabled) playAppSignal("pos");
+    toast.success(`Đã thanh toán #${orderNumber}`, {
+      description: getOrderContextDescription(currentOrder),
+    });
+    return;
+  }
+
+  if (nextStatus === "ready" && currentOrder.status !== "ready") {
+    if (soundEnabled) playAppSignal("pos");
+    toast.success(`Bếp hoàn thành #${orderNumber}`, {
+      description: "Sẵn sàng phục vụ hoặc gọi khách",
+    });
+    return;
+  }
+
+  if (nextStatus === "served" && currentOrder.status !== "served") {
+    toast.info(`Đơn #${orderNumber} đã phục vụ`, {
+      description: getOrderContextDescription(currentOrder),
+    });
+    return;
+  }
+
+  if (nextStatus === "completed" && currentOrder.status !== "completed") {
+    toast.success(`Hoàn thành đơn #${orderNumber}`, {
+      description: getOrderContextDescription(currentOrder),
+    });
+    return;
+  }
+
+  if (nextStatus === "cancelled" && currentOrder.status !== "cancelled") {
+    if (soundEnabled) playAppSignal("pos");
+    toast.warning(`Đơn #${orderNumber} đã hủy`, {
+      description: getOrderContextDescription(currentOrder),
+    });
+  }
 }
 
 // Coerce a NUMERIC payload field to a number, returning null when the value
@@ -97,6 +214,8 @@ function applyOrderUpdate(
   if (typeof payload.order_type === "string")
     next.order_type = payload.order_type;
   if (typeof payload.status === "string") next.status = payload.status;
+  if (typeof payload.is_priority === "boolean")
+    next.is_priority = payload.is_priority;
 
   const paymentStatus = coerceNullableString(payload.payment_status);
   if (paymentStatus !== undefined) next.payment_status = paymentStatus;
@@ -215,19 +334,22 @@ function buildOptimisticOrder(
     tax_amount: Number(payload.tax_amount ?? 0),
     service_charge: Number(payload.service_charge ?? 0),
     discount_amount: discountAmount,
-    discount_type: hasDiscount && typeof payload.discount_type === "string"
-      ? payload.discount_type
-      : null,
+    discount_type:
+      hasDiscount && typeof payload.discount_type === "string"
+        ? payload.discount_type
+        : null,
     discount_value: hasDiscount
-      ? coerceNullableNumber(payload.discount_value) ?? null
+      ? (coerceNullableNumber(payload.discount_value) ?? null)
       : null,
-    discount_note: hasDiscount && typeof payload.discount_note === "string"
-      ? payload.discount_note
-      : null,
+    discount_note:
+      hasDiscount && typeof payload.discount_note === "string"
+        ? payload.discount_note
+        : null,
     total_amount: Number(payload.total_amount ?? 0),
     table_id: safeTableId,
     customer_count: coerceNullableNumber(payload.customer_count) ?? null,
     note: typeof payload.note === "string" ? payload.note : null,
+    is_priority: payload.is_priority === true,
     merged_into_order_id:
       coerceNullableNumber(payload.merged_into_order_id) ?? null,
     split_from_order_id:
@@ -257,9 +379,11 @@ export function useOrderSync({
   setTables,
   setOrders,
   getTables,
+  getOrders,
   refreshOrders,
   refreshAll,
   onArchivedInvalidate,
+  soundEnabled = false,
   skipFirstSubscribedRefresh = false,
 }: UseOrderSyncArgs): void {
   const refreshOrdersRef = useRef(refreshOrders);
@@ -267,7 +391,9 @@ export function useOrderSync({
   const setTablesRef = useRef(setTables);
   const setOrdersRef = useRef(setOrders);
   const getTablesRef = useRef(getTables);
+  const getOrdersRef = useRef(getOrders);
   const onArchivedInvalidateRef = useRef(onArchivedInvalidate);
+  const soundEnabledRef = useRef(soundEnabled);
   const lastSyncRef = useRef<number>(Date.now());
   const initialSubscribeSeenRef = useRef(false);
 
@@ -277,165 +403,202 @@ export function useOrderSync({
     setTablesRef.current = setTables;
     setOrdersRef.current = setOrders;
     getTablesRef.current = getTables;
+    getOrdersRef.current = getOrders;
     onArchivedInvalidateRef.current = onArchivedInvalidate;
+    soundEnabledRef.current = soundEnabled;
   }, [
     refreshOrders,
     refreshAll,
     setTables,
     setOrders,
     getTables,
+    getOrders,
     onArchivedInvalidate,
+    soundEnabled,
   ]);
 
-  useRealtimeChannel((supabase) => {
-    const branchFilter = `branch_id=eq.${String(branchId)}`;
-    return supabase
-      .channel(`pos-branch-${String(branchId)}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "orders",
-          filter: branchFilter,
-        },
-        (payload) => {
-          lastSyncRef.current = Date.now();
-          const eventType = payload.eventType;
+  useRealtimeChannel(
+    (supabase) => {
+      const branchFilter = `branch_id=eq.${String(branchId)}`;
+      return supabase
+        .channel(`pos-branch-${String(branchId)}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "orders",
+            filter: branchFilter,
+          },
+          (payload) => {
+            lastSyncRef.current = Date.now();
+            const eventType = payload.eventType;
 
-          if (eventType === "DELETE") {
-            const old = payload.old as { id?: unknown };
-            const oldId =
-              typeof old.id === "number" ? old.id : Number(old.id);
-            if (!Number.isFinite(oldId)) {
-              // Filter dropped the column (REPLICA IDENTITY safety net) —
-              // fall back to a refetch so the list eventually converges.
-              refreshOrdersRef.current();
-              return;
-            }
-            setOrdersRef.current((prev) =>
-              prev.filter((o) => o.id !== oldId),
-            );
-            return;
-          }
-
-          if (eventType === "UPDATE") {
-            const updated = payload.new as Record<string, unknown> & {
-              id?: unknown;
-            };
-            const newId =
-              typeof updated.id === "number" ? updated.id : Number(updated.id);
-            if (!Number.isFinite(newId)) {
-              refreshOrdersRef.current();
-              return;
-            }
-
-            // Provider holds ACTIVE orders only. A terminal-flip (paid /
-            // completed / cancelled) means the row leaves the active list
-            // and lands in the "Đã xử lý" sheet — remove from active state
-            // and bump the archived invalidation token so an open sheet
-            // can refetch its first page.
-            const newStatus =
-              typeof updated.status === "string" ? updated.status : null;
-            const newPaymentStatus =
-              typeof updated.payment_status === "string"
-                ? updated.payment_status
-                : null;
-            const isTerminal =
-              newPaymentStatus === "paid" ||
-              newStatus === "completed" ||
-              newStatus === "cancelled";
-
-            if (isTerminal) {
-              setOrdersRef.current((prev) =>
-                prev.some((o) => o.id === newId)
-                  ? prev.filter((o) => o.id !== newId)
-                  : prev,
-              );
-              onArchivedInvalidateRef.current?.();
-              return;
-            }
-
-            setOrdersRef.current((prev) => {
-              const idx = prev.findIndex((o) => o.id === newId);
-              if (idx < 0) {
-                // Order not in the current snapshot — could be a fresh row
-                // from another session that the local list hasn't fetched
-                // yet. Defer to a refetch rather than synthesizing one.
+            if (eventType === "DELETE") {
+              const old = payload.old as { id?: unknown };
+              const oldId =
+                typeof old.id === "number" ? old.id : Number(old.id);
+              if (!Number.isFinite(oldId)) {
+                // Filter dropped the column (REPLICA IDENTITY safety net) —
+                // fall back to a refetch so the list eventually converges.
                 refreshOrdersRef.current();
-                return prev;
+                return;
               }
+              setOrdersRef.current((prev) =>
+                prev.filter((o) => o.id !== oldId),
+              );
+              return;
+            }
+
+            if (eventType === "UPDATE") {
+              const updated = payload.new as Record<string, unknown> & {
+                id?: unknown;
+              };
+              const newId =
+                typeof updated.id === "number"
+                  ? updated.id
+                  : Number(updated.id);
+              if (!Number.isFinite(newId)) {
+                refreshOrdersRef.current();
+                return;
+              }
+
+              // Provider holds ACTIVE orders only. A terminal-flip (paid /
+              // completed / cancelled) means the row leaves the active list
+              // and lands in the "Đã xử lý" sheet — remove from active state
+              // and bump the archived invalidation token so an open sheet
+              // can refetch its first page.
+              const newStatus =
+                typeof updated.status === "string" ? updated.status : null;
+              const newPaymentStatus =
+                typeof updated.payment_status === "string"
+                  ? updated.payment_status
+                  : null;
+              const isTerminal =
+                newPaymentStatus === "paid" ||
+                newStatus === "completed" ||
+                newStatus === "cancelled";
+              const currentOrder = getOrdersRef
+                .current()
+                .find((order) => order.id === newId);
+
+              notifyOrderTransition(
+                currentOrder,
+                updated,
+                soundEnabledRef.current,
+              );
+
+              if (isTerminal) {
+                setOrdersRef.current((prev) =>
+                  prev.some((o) => o.id === newId)
+                    ? prev.filter((o) => o.id !== newId)
+                    : prev,
+                );
+                onArchivedInvalidateRef.current?.();
+                return;
+              }
+
+              setOrdersRef.current((prev) => {
+                const idx = prev.findIndex((o) => o.id === newId);
+                if (idx < 0) {
+                  // Order not in the current snapshot — could be a fresh row
+                  // from another session that the local list hasn't fetched
+                  // yet. Defer to a refetch rather than synthesizing one.
+                  refreshOrdersRef.current();
+                  return prev;
+                }
+                const current = prev[idx];
+                if (!current) return prev;
+                const next = prev.slice();
+                next[idx] = applyOrderUpdate(
+                  current,
+                  updated,
+                  getTablesRef.current(),
+                );
+                return next;
+              });
+              return;
+            }
+
+            if (eventType === "INSERT") {
+              const optimistic = buildOptimisticOrder(
+                payload.new as Record<string, unknown>,
+                getTablesRef.current(),
+              );
+              if (optimistic === null) {
+                refreshOrdersRef.current();
+                return;
+              }
+              setOrdersRef.current((prev) => {
+                if (prev.some((o) => o.id === optimistic.id)) return prev;
+                if (soundEnabledRef.current) playAppSignal("pos");
+                return [optimistic, ...prev];
+              });
+              // Deduped refresh as fallback: covers fields fetchSessionOrders
+              // applies that the optimistic mapping cannot (e.g. session filter
+              // when the row is from another terminal). The deduper coalesces
+              // concurrent triggers into ≤2 round-trips.
+              refreshOrdersRef.current();
+              return;
+            }
+          },
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "tables",
+            filter: branchFilter,
+          },
+          (payload) => {
+            lastSyncRef.current = Date.now();
+            const updated = payload.new as Partial<BranchTable> & {
+              id: number;
+            };
+            setTablesRef.current((prev) => {
+              const idx = prev.findIndex((t) => t.id === updated.id);
+              if (idx < 0) return prev;
               const current = prev[idx];
               if (!current) return prev;
               const next = prev.slice();
-              next[idx] = applyOrderUpdate(
-                current,
-                updated,
-                getTablesRef.current(),
-              );
+              next[idx] = { ...current, ...updated };
               return next;
             });
-            return;
-          }
-
-          if (eventType === "INSERT") {
-            const optimistic = buildOptimisticOrder(
-              payload.new as Record<string, unknown>,
-              getTablesRef.current(),
-            );
-            if (optimistic === null) {
-              refreshOrdersRef.current();
+          },
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "notifications",
+            filter: `target_branch_id=eq.${String(branchId)}`,
+          },
+          (payload) => {
+            const notification = payload.new as Record<string, unknown> | null;
+            if (!notification || notification.kind !== "pos.kds_out_of_stock") {
               return;
             }
-            setOrdersRef.current((prev) => {
-              if (prev.some((o) => o.id === optimistic.id)) return prev;
-              return [optimistic, ...prev];
-            });
-            // Deduped refresh as fallback: covers fields fetchSessionOrders
-            // applies that the optimistic mapping cannot (e.g. session filter
-            // when the row is from another terminal). The deduper coalesces
-            // concurrent triggers into ≤2 round-trips.
-            refreshOrdersRef.current();
-            return;
+            notifyOutOfStock(notification, soundEnabledRef.current);
+          },
+        )
+        .subscribe((status) => {
+          if (status !== "SUBSCRIBED") return;
+          // The FIRST SUBSCRIBED is the initial mount subscription. When
+          // the caller has already seeded state (e.g. from RSC prefetch),
+          // skip this one refresh — it would duplicate work. Every
+          // SUBSCRIBED after that is a genuine reconnect and must refresh
+          // to catch events missed during disconnect.
+          if (!initialSubscribeSeenRef.current) {
+            initialSubscribeSeenRef.current = true;
+            if (skipFirstSubscribedRefresh) return;
           }
-        },
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "tables",
-          filter: branchFilter,
-        },
-        (payload) => {
-          lastSyncRef.current = Date.now();
-          const updated = payload.new as Partial<BranchTable> & { id: number };
-          setTablesRef.current((prev) => {
-            const idx = prev.findIndex((t) => t.id === updated.id);
-            if (idx < 0) return prev;
-            const current = prev[idx];
-            if (!current) return prev;
-            const next = prev.slice();
-            next[idx] = { ...current, ...updated };
-            return next;
-          });
-        },
-      )
-      .subscribe((status) => {
-        if (status !== "SUBSCRIBED") return;
-        // The FIRST SUBSCRIBED is the initial mount subscription. When
-        // the caller has already seeded state (e.g. from RSC prefetch),
-        // skip this one refresh — it would duplicate work. Every
-        // SUBSCRIBED after that is a genuine reconnect and must refresh
-        // to catch events missed during disconnect.
-        if (!initialSubscribeSeenRef.current) {
-          initialSubscribeSeenRef.current = true;
-          if (skipFirstSubscribedRefresh) return;
-        }
-        refreshAllRef.current();
-      });
-  }, [branchId]);
+          refreshAllRef.current();
+        });
+    },
+    [branchId],
+  );
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {

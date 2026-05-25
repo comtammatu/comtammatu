@@ -8,7 +8,6 @@ const base: BuildRunnerQueueInput = {
     {
       id: 1,
       order_id: 10,
-      order_item_id: 100,
       kitchen_send_batch_id: 900,
       status: "ready",
       bumped_at: "2026-05-24T03:10:00.000Z",
@@ -18,7 +17,6 @@ const base: BuildRunnerQueueInput = {
     {
       id: 2,
       order_id: 10,
-      order_item_id: 101,
       kitchen_send_batch_id: 900,
       status: "ready",
       bumped_at: "2026-05-24T03:12:00.000Z",
@@ -28,7 +26,6 @@ const base: BuildRunnerQueueInput = {
     {
       id: 3,
       order_id: 11,
-      order_item_id: 102,
       kitchen_send_batch_id: null,
       status: "preparing",
       bumped_at: null,
@@ -38,7 +35,6 @@ const base: BuildRunnerQueueInput = {
     {
       id: 4,
       order_id: 12,
-      order_item_id: 103,
       kitchen_send_batch_id: null,
       status: "served",
       bumped_at: null,
@@ -70,16 +66,10 @@ const base: BuildRunnerQueueInput = {
       order_number: "MV-20260524-009-CN1",
       order_type: "takeaway",
       table_id: null,
-      status: "served",
+      status: "completed",
       created_at: "2026-05-24T03:03:00.000Z",
       tables: null,
     },
-  ],
-  orderItems: [
-    { id: 100, order_id: 10, item_name: "Cơm sườn", quantity: 1, status: "ready" },
-    { id: 101, order_id: 10, item_name: "Canh rong biển", quantity: 2, status: "ready" },
-    { id: 102, order_id: 11, item_name: "Bì chả", quantity: 1, status: "preparing" },
-    { id: 103, order_id: 12, item_name: "Cơm gà", quantity: 1, status: "served" },
   ],
   kitchenBatches: [
     {
@@ -93,22 +83,38 @@ const base: BuildRunnerQueueInput = {
   ],
 };
 
-test("buildRunnerQueue groups ready tickets by kitchen batch and uses stable call number", () => {
+test("buildRunnerQueue groups completed takeaway tickets by kitchen batch and uses stable fallback number", () => {
   const queue = buildRunnerQueue(base);
 
   assert.equal(queue.length, 2);
-  assert.equal(queue[0]?.lane, "calling");
-  assert.equal(queue[0]?.callNumber, "BEP-007");
-  assert.equal(queue[0]?.ticketCount, 2);
-  assert.deepEqual(queue[0]?.itemPreview, ["1x Cơm sườn", "2x Canh rong biển"]);
+  const ready = queue.find(
+    (item) => item.orderNumber === "MV-20260524-007-CN1",
+  );
+
+  assert.equal(ready?.lane, "served");
+  assert.equal(ready?.callNumber, "BEP-007");
+  assert.equal(ready?.callPrefix, "Số");
+  assert.equal(ready?.referenceNumber, "BEP-007");
+  assert.equal(ready?.orderReceivedAt, "2026-05-24T03:00:00.000Z");
+  assert.equal(ready?.ticketCount, 2);
+  assert.deepEqual(ready?.ticketIds, [1, 2]);
+  assert.deepEqual(ready?.readyTicketIds, [1, 2]);
 });
 
-test("buildRunnerQueue keeps preparing orders secondary and hides served tickets/orders", () => {
+test("buildRunnerQueue keeps preparing orders and hides completed orders", () => {
   const queue = buildRunnerQueue(base);
+  const preparing = queue.find(
+    (item) => item.orderNumber === "TC-20260524-008-CN1",
+  );
 
-  assert.equal(queue[1]?.lane, "preparing");
-  assert.equal(queue[1]?.callNumber, "TC-20260524-008-CN1");
-  assert.equal(queue.some((item) => item.orderNumber === "MV-20260524-009-CN1"), false);
+  assert.equal(preparing?.lane, "preparing");
+  assert.equal(preparing?.callNumber, "5");
+  assert.equal(preparing?.callPrefix, "Bàn");
+  assert.equal(preparing?.referenceNumber, "TC-20260524-008-CN1");
+  assert.equal(
+    queue.some((item) => item.orderNumber === "MV-20260524-009-CN1"),
+    false,
+  );
 });
 
 test("buildRunnerQueue falls back to order number and preserves leading zeroes", () => {
@@ -118,7 +124,6 @@ test("buildRunnerQueue falls back to order number and preserves leading zeroes",
       {
         id: 5,
         order_id: 13,
-        order_item_id: 104,
         kitchen_send_batch_id: null,
         status: "ready",
         bumped_at: "2026-05-24T03:08:00.000Z",
@@ -137,11 +142,258 @@ test("buildRunnerQueue falls back to order number and preserves leading zeroes",
         tables: null,
       },
     ],
-    orderItems: [
-      { id: 104, order_id: 13, item_name: "Cơm bì", quantity: 1, status: "ready" },
-    ],
     kitchenBatches: [],
   };
 
   assert.equal(buildRunnerQueue(input)[0]?.callNumber, "MV-0007");
+});
+
+test("buildRunnerQueue uses table number as the dominant dine-in display", () => {
+  const input: BuildRunnerQueueInput = {
+    ...base,
+    tickets: [
+      {
+        id: 6,
+        order_id: 14,
+        kitchen_send_batch_id: null,
+        status: "ready",
+        bumped_at: "2026-05-24T03:20:00.000Z",
+        created_at: "2026-05-24T03:19:00.000Z",
+        updated_at: "2026-05-24T03:20:00.000Z",
+      },
+    ],
+    orders: [
+      {
+        id: 14,
+        order_number: "TC-20260524-010-CN1",
+        order_type: "dine_in",
+        table_id: 9,
+        status: "ready",
+        created_at: "2026-05-24T03:19:00.000Z",
+        tables: { number: 12 },
+      },
+    ],
+    kitchenBatches: [],
+  };
+
+  const [item] = buildRunnerQueue(input);
+
+  assert.equal(item?.callPrefix, "Bàn");
+  assert.equal(item?.callNumber, "12");
+  assert.equal(item?.referenceNumber, "TC-20260524-010-CN1");
+});
+
+test("buildRunnerQueue lets active work win over completed history for the same target", () => {
+  const input: BuildRunnerQueueInput = {
+    ...base,
+    tickets: [
+      {
+        id: 7,
+        order_id: 15,
+        kitchen_send_batch_id: null,
+        status: "ready",
+        bumped_at: "2026-05-24T03:20:00.000Z",
+        created_at: "2026-05-24T03:19:00.000Z",
+        updated_at: "2026-05-24T03:20:00.000Z",
+      },
+      {
+        id: 8,
+        order_id: 16,
+        kitchen_send_batch_id: null,
+        status: "preparing",
+        bumped_at: null,
+        created_at: "2026-05-24T03:21:00.000Z",
+        updated_at: "2026-05-24T03:21:00.000Z",
+      },
+    ],
+    orders: [
+      {
+        id: 15,
+        order_number: "TC-20260524-011-CN1",
+        order_type: "dine_in",
+        table_id: 9,
+        status: "ready",
+        created_at: "2026-05-24T03:19:00.000Z",
+        tables: { number: 12 },
+      },
+      {
+        id: 16,
+        order_number: "TC-20260524-012-CN1",
+        order_type: "dine_in",
+        table_id: 9,
+        status: "preparing",
+        created_at: "2026-05-24T03:21:00.000Z",
+        tables: { number: 12 },
+      },
+    ],
+    kitchenBatches: [],
+  };
+
+  const queue = buildRunnerQueue(input);
+
+  assert.equal(queue.length, 1);
+  assert.equal(queue[0]?.lane, "preparing");
+  assert.equal(queue[0]?.callNumber, "12");
+});
+
+test("buildRunnerQueue keeps recently served targets in the served lane", () => {
+  const input: BuildRunnerQueueInput = {
+    ...base,
+    tickets: [
+      {
+        id: 9,
+        order_id: 17,
+        kitchen_send_batch_id: null,
+        status: "served",
+        bumped_at: "2026-05-24T03:24:00.000Z",
+        created_at: "2026-05-24T03:22:00.000Z",
+        updated_at: "2026-05-24T03:24:00.000Z",
+      },
+      {
+        id: 10,
+        order_id: 18,
+        kitchen_send_batch_id: null,
+        status: "served",
+        bumped_at: "2026-05-24T03:26:00.000Z",
+        created_at: "2026-05-24T03:23:00.000Z",
+        updated_at: "2026-05-24T03:26:00.000Z",
+      },
+    ],
+    orders: [
+      {
+        id: 17,
+        order_number: "TC-20260524-013-CN1",
+        order_type: "dine_in",
+        table_id: 9,
+        status: "served",
+        created_at: "2026-05-24T03:22:00.000Z",
+        tables: { number: 12 },
+      },
+      {
+        id: 18,
+        order_number: "MV-20260524-014-CN1",
+        order_type: "takeaway",
+        table_id: null,
+        status: "served",
+        created_at: "2026-05-24T03:23:00.000Z",
+        tables: null,
+      },
+    ],
+    kitchenBatches: [],
+  };
+
+  const queue = buildRunnerQueue(input);
+
+  assert.equal(queue.length, 2);
+  assert.equal(queue[0]?.lane, "served");
+  assert.equal(queue[0]?.orderNumber, "MV-20260524-014-CN1");
+  assert.deepEqual(queue[0]?.readyTicketIds, []);
+  assert.equal(queue[1]?.callPrefix, "Bàn");
+  assert.equal(queue[1]?.callNumber, "12");
+});
+
+test("buildRunnerQueue ages old served targets out of the served lane", () => {
+  const input: BuildRunnerQueueInput = {
+    ...base,
+    servedAfterIso: "2026-05-24T03:25:00.000Z",
+    tickets: [
+      {
+        id: 11,
+        order_id: 19,
+        kitchen_send_batch_id: null,
+        status: "served",
+        bumped_at: "2026-05-24T03:10:00.000Z",
+        created_at: "2026-05-24T03:00:00.000Z",
+        updated_at: "2026-05-24T03:10:00.000Z",
+      },
+      {
+        id: 12,
+        order_id: 20,
+        kitchen_send_batch_id: null,
+        status: "served",
+        bumped_at: "2026-05-24T03:26:00.000Z",
+        created_at: "2026-05-24T03:20:00.000Z",
+        updated_at: "2026-05-24T03:26:00.000Z",
+      },
+    ],
+    orders: [
+      {
+        id: 19,
+        order_number: "MV-20260524-015-CN1",
+        order_type: "takeaway",
+        table_id: null,
+        status: "served",
+        created_at: "2026-05-24T03:00:00.000Z",
+        tables: null,
+      },
+      {
+        id: 20,
+        order_number: "MV-20260524-016-CN1",
+        order_type: "takeaway",
+        table_id: null,
+        status: "served",
+        created_at: "2026-05-24T03:20:00.000Z",
+        tables: null,
+      },
+    ],
+    kitchenBatches: [],
+  };
+
+  const queue = buildRunnerQueue(input);
+
+  assert.equal(queue.length, 1);
+  assert.equal(queue[0]?.orderNumber, "MV-20260524-016-CN1");
+});
+
+test("buildRunnerQueue lets active work win over recent served history for the same target", () => {
+  const input: BuildRunnerQueueInput = {
+    ...base,
+    tickets: [
+      {
+        id: 13,
+        order_id: 21,
+        kitchen_send_batch_id: null,
+        status: "served",
+        bumped_at: "2026-05-24T03:26:00.000Z",
+        created_at: "2026-05-24T03:20:00.000Z",
+        updated_at: "2026-05-24T03:26:00.000Z",
+      },
+      {
+        id: 14,
+        order_id: 22,
+        kitchen_send_batch_id: null,
+        status: "preparing",
+        bumped_at: null,
+        created_at: "2026-05-24T03:27:00.000Z",
+        updated_at: "2026-05-24T03:27:00.000Z",
+      },
+    ],
+    orders: [
+      {
+        id: 21,
+        order_number: "TC-20260524-017-CN1",
+        order_type: "dine_in",
+        table_id: 9,
+        status: "served",
+        created_at: "2026-05-24T03:20:00.000Z",
+        tables: { number: 12 },
+      },
+      {
+        id: 22,
+        order_number: "TC-20260524-018-CN1",
+        order_type: "dine_in",
+        table_id: 9,
+        status: "preparing",
+        created_at: "2026-05-24T03:27:00.000Z",
+        tables: { number: 12 },
+      },
+    ],
+    kitchenBatches: [],
+  };
+
+  const queue = buildRunnerQueue(input);
+
+  assert.equal(queue.length, 1);
+  assert.equal(queue[0]?.lane, "preparing");
+  assert.equal(queue[0]?.orderNumber, "TC-20260524-018-CN1");
 });

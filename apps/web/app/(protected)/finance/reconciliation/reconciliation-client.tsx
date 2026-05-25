@@ -55,6 +55,7 @@ import { formatVND } from "@comtammatu/shared/format";
 import { fetchReconciliationByDay } from "../actions";
 import { messages } from "@lib/messages";
 import { formatVNDateTime } from "@/_lib/format-datetime";
+import { AppToolbar } from "@/components/surface";
 import {
   fetchReconciliation,
   fetchReconciliationDrilldown,
@@ -219,69 +220,65 @@ export function ReconciliationClient({
   return (
     <Tabs defaultValue="period" className="space-y-4">
       <TabsList className="h-auto w-full justify-start gap-2 overflow-x-auto p-2">
-        <TabsTrigger value="period">{reconciliationCopy.tabs.period}</TabsTrigger>
-        <TabsTrigger value="by-day">{reconciliationCopy.tabs.byDay}</TabsTrigger>
+        <TabsTrigger value="period">
+          {reconciliationCopy.tabs.period}
+        </TabsTrigger>
+        <TabsTrigger value="by-day">
+          {reconciliationCopy.tabs.byDay}
+        </TabsTrigger>
         <TabsTrigger value="desync">
           {reconciliationCopy.tabs.desync(desync.length)}
         </TabsTrigger>
       </TabsList>
 
       <TabsContent value="period" className="mt-0 space-y-4">
-        <Card>
-          <CardContent className="grid gap-3 p-4 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                {BRANCH_VI.long}
-              </label>
-              <Select
-                value={branchId == null ? "all" : String(branchId)}
-                onValueChange={(v) =>
-                  setBranchId(v === "all" ? null : Number(v))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={BRANCH_VI.selectAll} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{BRANCH_VI.selectAll}</SelectItem>
-                  {branches.map((b) => (
-                    <SelectItem key={b.id} value={String(b.id)}>
-                      {b.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                {FORM_VI.fromDate}
-              </label>
-              <Input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                {FORM_VI.toDate}
-              </label>
-              <Input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-              />
-            </div>
-            <Button
-              onClick={handleRun}
-              disabled={isLoading}
-              className="self-end"
+        <AppToolbar className="grid gap-3 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end">
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              {BRANCH_VI.long}
+            </label>
+            <Select
+              value={branchId == null ? "all" : String(branchId)}
+              onValueChange={(v) => setBranchId(v === "all" ? null : Number(v))}
             >
-              {isLoading ? <Spinner /> : null}
-              {reconciliationCopy.actions.run}
-            </Button>
-          </CardContent>
-        </Card>
+              <SelectTrigger>
+                <SelectValue placeholder={BRANCH_VI.selectAll} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{BRANCH_VI.selectAll}</SelectItem>
+                {branches.map((b) => (
+                  <SelectItem key={b.id} value={String(b.id)}>
+                    {b.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              {FORM_VI.fromDate}
+            </label>
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              {FORM_VI.toDate}
+            </label>
+            <Input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
+          </div>
+          <Button onClick={handleRun} disabled={isLoading} className="self-end">
+            {isLoading ? <Spinner /> : null}
+            {reconciliationCopy.actions.run}
+          </Button>
+        </AppToolbar>
 
         {error ? (
           <p className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
@@ -376,58 +373,56 @@ export function ReconciliationClient({
       </TabsContent>
 
       <TabsContent value="by-day" className="mt-0 space-y-4">
-        <Card>
-          <CardContent className="grid gap-3 p-4 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                {BRANCH_VI.acronym}
-              </label>
-              <Select
-                value={branchId == null ? "all" : String(branchId)}
-                onValueChange={(value) =>
-                  setBranchId(value === "all" ? null : Number(value))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{BRANCH_VI.selectAll}</SelectItem>
-                  {branches.map((b) => (
-                    <SelectItem key={b.id} value={String(b.id)}>
-                      {b.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                {FORM_VI.fromDate}
-              </label>
-              <Input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                {FORM_VI.toDate}
-              </label>
-              <Input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-              />
-            </div>
-            <Button onClick={loadByDay} disabled={byDayLoading}>
-              {byDayLoading
-                ? messages.finance.common.loading
-                : reconciliationCopy.actions.runByDay}
-            </Button>
-          </CardContent>
-        </Card>
+        <AppToolbar className="grid gap-3 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end">
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              {BRANCH_VI.acronym}
+            </label>
+            <Select
+              value={branchId == null ? "all" : String(branchId)}
+              onValueChange={(value) =>
+                setBranchId(value === "all" ? null : Number(value))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{BRANCH_VI.selectAll}</SelectItem>
+                {branches.map((b) => (
+                  <SelectItem key={b.id} value={String(b.id)}>
+                    {b.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              {FORM_VI.fromDate}
+            </label>
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              {FORM_VI.toDate}
+            </label>
+            <Input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
+          </div>
+          <Button onClick={loadByDay} disabled={byDayLoading}>
+            {byDayLoading
+              ? messages.finance.common.loading
+              : reconciliationCopy.actions.runByDay}
+          </Button>
+        </AppToolbar>
 
         <ByDayTable
           rows={byDayRows}
@@ -750,7 +745,9 @@ function ByDayTable({
                         : "text-right tabular-nums font-medium text-destructive"
                     }
                   >
-                    {matched ? reconciliationCopy.byDay.zero : formatVND(r.diff)}
+                    {matched
+                      ? reconciliationCopy.byDay.zero
+                      : formatVND(r.diff)}
                   </TableCell>
                   <TableCell>
                     {matched ? (

@@ -42,6 +42,20 @@ async function autoSendKitchen(
   return "Đã đặt món, chưa gửi được phiếu bếp. Vui lòng thử Gửi bếp lại.";
 }
 
+async function markInitialOrderPriority(
+  supabase: SupabaseClient,
+  orderId: number,
+): Promise<string | null> {
+  const { error } = await supabase.rpc("set_pos_order_priority", {
+    p_order_id: orderId,
+    p_is_priority: true,
+  });
+
+  if (!error) return null;
+
+  return `Đã đặt món, nhưng chưa đánh dấu ưu tiên. ${mapPriorityError(error.message, "order")}`;
+}
+
 /* ─── Constants ─── */
 
 const POS_ROLES = MODULE_ACL.pos.allowedRoles;
@@ -65,6 +79,12 @@ const orderIdSchema = z.coerce
   .number()
   .int()
   .positive({ error: "Order ID không hợp lệ" });
+
+const priorityInputSchema = z.object({
+  id: z.coerce.number().int().positive({ error: "Đối tượng không hợp lệ" }),
+  isPriority: z.boolean(),
+  note: z.string().trim().max(120).optional(),
+});
 
 /* ─── submitOrder ─── */
 
@@ -226,7 +246,10 @@ export async function submitOrder(
     // `session.id`. RPC raises P0002 with this exact wording. Surface a
     // typed code so the client can `router.refresh()` to pick up the new
     // session instead of looping the cashier through "thử lại" forever.
-    if (errMsg.includes("pos session does not belong") || errMsg.includes("is not open")) {
+    if (
+      errMsg.includes("pos session does not belong") ||
+      errMsg.includes("is not open")
+    ) {
       return {
         success: false,
         error: "Ca POS đã đóng hoặc đổi máy — đang tải lại trang.",
@@ -286,6 +309,10 @@ export async function submitOrder(
     };
   }
 
+  const priorityWarning =
+    parsedCart.data.is_priority === true
+      ? await markInitialOrderPriority(supabase, result.order_id)
+      : null;
   const kitchenWarning = await autoSendKitchen(supabase, result.order_id);
   const kitchenSent = kitchenWarning === null;
 
@@ -294,6 +321,9 @@ export async function submitOrder(
     data: { order_id: result.order_id, order_number: result.order_number },
     meta: {
       kitchenSent,
+      prioritySet:
+        parsedCart.data.is_priority === true && priorityWarning === null,
+      ...(priorityWarning ? { priorityWarning } : {}),
       ...(kitchenWarning ? { kitchenWarning } : {}),
     },
   };
@@ -319,6 +349,7 @@ const ORDER_LIST_SELECT = `
   discount_type,
   discount_value,
   discount_note,
+  is_priority,
   total_amount,
   table_id,
   customer_count,
@@ -564,6 +595,7 @@ export async function fetchActiveOrderForTable(
       total_amount,
       customer_count,
       note,
+      is_priority,
       created_at,
       table_id,
       split_from_order_id,
@@ -588,6 +620,7 @@ export async function fetchActiveOrderForTable(
         modifiers,
         sides,
         note,
+        is_priority,
         status,
         menu_item_id,
         variant_id
@@ -598,6 +631,7 @@ export async function fetchActiveOrderForTable(
       .eq("tenant_id", claims.tenant_id)
       .eq("table_id", parsed.data.tableId)
       .in("status", ["new", "confirmed", "preparing", "ready", "served"])
+      .neq("payment_status", "paid")
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
@@ -666,6 +700,7 @@ export async function fetchOrderForBill(
       cash_received,
       cash_change,
       note,
+      is_priority,
       created_at,
       table_id,
       split_from_order_id,
@@ -691,6 +726,7 @@ export async function fetchOrderForBill(
         modifiers,
         sides,
         note,
+        is_priority,
         status
       )
     `,
@@ -760,6 +796,7 @@ export async function fetchOrderDetail(orderId: number): Promise<
       total_amount,
       customer_count,
       note,
+      is_priority,
       created_at,
       table_id,
       split_from_order_id,
@@ -784,6 +821,7 @@ export async function fetchOrderDetail(orderId: number): Promise<
         modifiers,
         sides,
         note,
+        is_priority,
         status,
         menu_item_id,
         variant_id
@@ -1081,8 +1119,9 @@ export async function voidOrderItem(
       // RPC returns {skipped: true, reason: 'no_slot'|'no_printer'|...} when
       // the item exists but the cancel ticket cannot be routed (drink with
       // no kitchen slot, kitchen printer offline, feature flag off).
-      const skipReason = (printData as { skipped?: boolean; reason?: string } | null)
-        ?.skipped
+      const skipReason = (
+        printData as { skipped?: boolean; reason?: string } | null
+      )?.skipped
         ? (printData as { reason?: string }).reason
         : undefined;
       if (skipReason === "no_printer") {
@@ -1141,7 +1180,11 @@ export async function reduceOrderItemQuantity(
     printWarning?: string;
   }>
 > {
-  const parsed = reduceItemSchema.safeParse({ orderItemId, newQuantity, reason });
+  const parsed = reduceItemSchema.safeParse({
+    orderItemId,
+    newQuantity,
+    reason,
+  });
   if (!parsed.success) {
     return {
       success: false,
@@ -1194,7 +1237,10 @@ export async function reduceOrderItemQuantity(
         error: "Lý do giảm SL tối thiểu 5 ký tự.",
       };
     }
-    return { success: false, error: "Không thể giảm SL món. Vui lòng thử lại." };
+    return {
+      success: false,
+      error: "Không thể giảm SL món. Vui lòng thử lại.",
+    };
   }
 
   const result = data as unknown as {
@@ -1240,8 +1286,9 @@ export async function reduceOrderItemQuantity(
           "Đã giảm SL. Không in được phiếu báo bếp — kiểm tra máy in bếp.";
       }
     } else {
-      const skipReason = (printData as { skipped?: boolean; reason?: string } | null)
-        ?.skipped
+      const skipReason = (
+        printData as { skipped?: boolean; reason?: string } | null
+      )?.skipped
         ? (printData as { reason?: string }).reason
         : undefined;
       if (skipReason === "no_printer") {
@@ -1383,10 +1430,15 @@ export async function editPendingOrderItem(
     if (msg.includes("forbidden")) {
       return { success: false, error: "Cần quyền hủy đơn POS để sửa món." };
     }
-    if (msg.includes("not editable") || msg.includes("preparing") || msg.includes("ready")) {
+    if (
+      msg.includes("not editable") ||
+      msg.includes("preparing") ||
+      msg.includes("ready")
+    ) {
       return {
         success: false,
-        error: "Chỉ sửa được món khi chưa được làm. Hãy hủy món + thêm món mới.",
+        error:
+          "Chỉ sửa được món khi chưa được làm. Hãy hủy món + thêm món mới.",
       };
     }
     if (msg.includes("order terminal")) {
@@ -1443,15 +1495,14 @@ export async function editPendingOrderItem(
   const quantityChanged = result.old_quantity !== result.new_quantity;
 
   if (wasSentToKitchen && quantityChanged) {
-    const { data: printData, error: printError } = await (
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      supabase as any
-    ).rpc("enqueue_edit_pending_order_item_quantity_print", {
-      p_order_item_id: parsed.data.orderItemId,
-      p_old_quantity: result.old_quantity,
-      p_new_quantity: result.new_quantity,
-      p_reason: "Sua so luong mon",
-    });
+    const { data: printData, error: printError } =
+      await // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (supabase as any).rpc("enqueue_edit_pending_order_item_quantity_print", {
+        p_order_item_id: parsed.data.orderItemId,
+        p_old_quantity: result.old_quantity,
+        p_new_quantity: result.new_quantity,
+        p_reason: "Sua so luong mon",
+      });
 
     if (printError) {
       const msg = String(printError.message ?? "").toLowerCase();
@@ -1459,7 +1510,8 @@ export async function editPendingOrderItem(
         printWarning =
           "Đã cập nhật món. Không có quyền in phiếu báo bếp — báo bếp thủ công.";
       } else if (msg.includes("tenant mismatch")) {
-        printWarning = "Đã cập nhật món. Lỗi quyền tenant khi in phiếu báo bếp.";
+        printWarning =
+          "Đã cập nhật món. Lỗi quyền tenant khi in phiếu báo bếp.";
       } else {
         printWarning =
           "Đã cập nhật món. Không in được phiếu báo bếp — kiểm tra máy in.";
@@ -1500,6 +1552,111 @@ export async function editPendingOrderItem(
       printWarning,
     },
   };
+}
+
+function mapPriorityError(message: string, target: "order" | "item"): string {
+  const msg = message.toLowerCase();
+  if (msg.includes("forbidden")) {
+    return target === "order"
+      ? "Không có quyền ưu tiên đơn."
+      : "Không có quyền ưu tiên món.";
+  }
+  if (
+    msg.includes("terminal") ||
+    msg.includes("paid") ||
+    msg.includes("cancelled") ||
+    msg.includes("completed")
+  ) {
+    return "Đơn đã đóng hoặc thanh toán, không thể ưu tiên.";
+  }
+  if (
+    msg.includes("no active kitchen work") ||
+    msg.includes("not prioritizable")
+  ) {
+    return target === "order"
+      ? "Không còn món đang chờ bếp để ưu tiên."
+      : "Chỉ ưu tiên món đang chờ hoặc đang làm.";
+  }
+  if (msg.includes("not found")) {
+    return target === "order" ? "Không tìm thấy đơn." : "Không tìm thấy món.";
+  }
+  return target === "order"
+    ? "Không thể cập nhật ưu tiên đơn."
+    : "Không thể cập nhật ưu tiên món.";
+}
+
+export async function setOrderPriority(
+  orderId: number,
+  isPriority: boolean,
+  note?: string,
+): Promise<ActionResult> {
+  const parsed = priorityInputSchema.safeParse({
+    id: orderId,
+    isPriority,
+    note,
+  });
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+    };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    POS_ROLES,
+    PERMISSION_KEYS.POS_USE,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền ưu tiên đơn." };
+
+  const trimmedNote = parsed.data.note?.trim();
+  const { error } = await ctx.supabase.rpc("set_pos_order_priority", {
+    p_order_id: parsed.data.id,
+    p_is_priority: parsed.data.isPriority,
+    p_note: trimmedNote && trimmedNote.length > 0 ? trimmedNote : undefined,
+  });
+
+  if (error) {
+    return { success: false, error: mapPriorityError(error.message, "order") };
+  }
+
+  return { success: true };
+}
+
+export async function setOrderItemPriority(
+  orderItemId: number,
+  isPriority: boolean,
+  note?: string,
+): Promise<ActionResult> {
+  const parsed = priorityInputSchema.safeParse({
+    id: orderItemId,
+    isPriority,
+    note,
+  });
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+    };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    POS_ROLES,
+    PERMISSION_KEYS.POS_USE,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền ưu tiên món." };
+
+  const trimmedNote = parsed.data.note?.trim();
+  const { error } = await ctx.supabase.rpc("set_pos_order_item_priority", {
+    p_order_item_id: parsed.data.id,
+    p_is_priority: parsed.data.isPriority,
+    p_note: trimmedNote && trimmedNote.length > 0 ? trimmedNote : undefined,
+  });
+
+  if (error) {
+    return { success: false, error: mapPriorityError(error.message, "item") };
+  }
+
+  return { success: true };
 }
 
 /* ─── cancelOrder ─── */
@@ -1587,7 +1744,8 @@ export async function cancelOrder(
     } else if (has("no_slot")) {
       printWarning = `Đã hủy đơn. ${skipped} món không có khu vực bếp (đồ uống chai?) — báo bar trực tiếp.`;
     } else if (has("feature_disabled")) {
-      printWarning = "Đã hủy đơn. Tính năng in phiếu hủy đang tắt — báo bếp trực tiếp.";
+      printWarning =
+        "Đã hủy đơn. Tính năng in phiếu hủy đang tắt — báo bếp trực tiếp.";
     } else {
       printWarning = `Đã hủy đơn. ${skipped} phiếu hủy không in được — báo bếp/bar trực tiếp.`;
     }
@@ -1608,7 +1766,10 @@ export async function cancelOrder(
 const transferTableSchema = z.object({
   orderId: z.coerce.number().int().positive({ error: "Đơn không hợp lệ" }),
   newTableId: z.coerce.number().int().positive({ error: "Bàn không hợp lệ" }),
-  idempotencyKey: z.string().uuid({ error: "Mã giao dịch không hợp lệ" }).optional(),
+  idempotencyKey: z
+    .string()
+    .uuid({ error: "Mã giao dịch không hợp lệ" })
+    .optional(),
 });
 
 // Skip withAction: positional args + optional idempotencyKey
@@ -1788,9 +1949,7 @@ export async function markOrderItemServed(
 
 /* ─── fetchOrderItemsForReorder ─── */
 
-export async function fetchOrderItemsForReorder(
-  orderId: number,
-): Promise<
+export async function fetchOrderItemsForReorder(orderId: number): Promise<
   ActionResult<{
     items: CartItem[];
     skippedCount: number;

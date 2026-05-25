@@ -16,6 +16,7 @@ import {
 } from "@comtammatu/ui/components/dropdown-menu";
 import { useTheme } from "@comtammatu/ui/components/theme-provider";
 import { BrandMark } from "@/components/brand";
+import { usePosSound } from "./_providers/pos-desktop-provider";
 import {
   ArrowLeft as IconArrowLeft,
   Monitor as IconDeviceDesktop,
@@ -24,6 +25,8 @@ import {
   MoreVertical as IconMoreVertical,
   PowerOff as IconPowerOff,
   Sun as IconSun,
+  Volume2 as IconVolume2,
+  VolumeX as IconVolumeX,
 } from "lucide-react";
 
 interface PosSessionHeaderProps {
@@ -96,6 +99,7 @@ function PosMoreMenu({
   onShowCloseSession: () => void;
 }) {
   const { theme, resolvedTheme, setTheme } = useTheme();
+  const { soundEnabled, toggleSound } = usePosSound();
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     setMounted(true);
@@ -154,6 +158,11 @@ function PosMoreMenu({
             </DropdownMenuItem>
           </DropdownMenuSubContent>
         </DropdownMenuSub>
+
+        <DropdownMenuItem onClick={toggleSound}>
+          {soundEnabled ? <IconVolume2 /> : <IconVolumeX />}
+          {soundEnabled ? "Tắt âm báo POS" : "Bật âm báo POS"}
+        </DropdownMenuItem>
 
         {canCloseShift ? (
           <>

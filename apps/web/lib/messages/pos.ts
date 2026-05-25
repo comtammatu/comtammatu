@@ -28,6 +28,9 @@ export const pos = {
     allStations: "Tất cả",
     allStationsAria: "Tất cả trạm",
     stationAria: (name: string) => `Trạm ${name}`,
+    unassignedTitle: (count: number) => `${count} món vào trạm mặc định`,
+    viewUnassigned: "Xem món",
+    openStationConfig: "Gán trạm",
   },
   appendDraft: {
     title: "Món thêm",
@@ -130,6 +133,7 @@ export const pos = {
     selected: "Đang chọn",
     available: "Trống",
     occupied: "Đang dùng",
+    served: "Đã phục vụ",
     reserved: "Đã đặt",
     tableAria: (tableNumber: string | number, status: string) =>
       `Bàn ${String(tableNumber)} ${status}`,

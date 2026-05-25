@@ -4,7 +4,7 @@ import { memo } from "react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
 import { AppendDraftPane } from "./_components/append-draft-pane";
-import { CartPane } from "./_components/cart-pane";
+import { CartPane, type SubmitOrderOptions } from "./_components/cart-pane";
 import { OrderListPane } from "./_components/order-list-pane";
 import type { BillReceiptIntent } from "./_components/bill/bill-receipt-types";
 import { useCartQuantity } from "./_hooks/use-cart";
@@ -79,7 +79,7 @@ interface PosSidebarContentProps {
     onEditItem: (item: CartItem) => void;
   };
   onClosePane?: () => void;
-  onSubmitOrder: () => void;
+  onSubmitOrder: (options?: SubmitOrderOptions) => void;
   onOrderTypeChange: (type: OrderType) => void;
   onCustomizeItem: (item: CartItem) => void;
   onViewBill: (orderId: number, intent?: BillReceiptIntent) => void;

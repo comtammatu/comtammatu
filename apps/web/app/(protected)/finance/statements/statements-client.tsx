@@ -51,6 +51,7 @@ import {
 import { FORM_VI } from "@comtammatu/shared/messages";
 import { messages } from "@lib/messages";
 import { getVNDateString } from "@/_lib/format-datetime";
+import { AppToolbar } from "@/components/surface";
 
 const financeCopy = messages.finance;
 
@@ -158,25 +159,23 @@ export function StatementsClient() {
       </TabsList>
 
       <TabsContent value="b01" className="mt-0 space-y-4">
-        <Card>
-          <CardContent className="grid gap-3 p-4 sm:grid-cols-[1fr_auto] sm:items-end">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                {FORM_VI.toDate}
-              </Label>
-              <Input
-                type="date"
-                value={b01Date}
-                onChange={(e) => setB01Date(e.target.value)}
-                className="max-w-xs"
-              />
-            </div>
-            <Button onClick={handleB01} disabled={isPending}>
-              {isPending ? <Spinner /> : null}
-              {financeCopy.statements.createBalanceSheet}
-            </Button>
-          </CardContent>
-        </Card>
+        <AppToolbar className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              {FORM_VI.toDate}
+            </Label>
+            <Input
+              type="date"
+              value={b01Date}
+              onChange={(e) => setB01Date(e.target.value)}
+              className="max-w-xs"
+            />
+          </div>
+          <Button onClick={handleB01} disabled={isPending}>
+            {isPending ? <Spinner /> : null}
+            {financeCopy.statements.createBalanceSheet}
+          </Button>
+        </AppToolbar>
 
         {b01Data ? (
           <Tt200Report
@@ -193,34 +192,32 @@ export function StatementsClient() {
       </TabsContent>
 
       <TabsContent value="b02" className="mt-0 space-y-4">
-        <Card>
-          <CardContent className="grid gap-3 p-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                {FORM_VI.fromDate}
-              </Label>
-              <Input
-                type="date"
-                value={b02Start}
-                onChange={(e) => setB02Start(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                {FORM_VI.toDate}
-              </Label>
-              <Input
-                type="date"
-                value={b02End}
-                onChange={(e) => setB02End(e.target.value)}
-              />
-            </div>
-            <Button onClick={handleB02} disabled={isPending}>
-              {isPending ? <Spinner /> : null}
-              {financeCopy.statements.createIncomeStatement}
-            </Button>
-          </CardContent>
-        </Card>
+        <AppToolbar className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              {FORM_VI.fromDate}
+            </Label>
+            <Input
+              type="date"
+              value={b02Start}
+              onChange={(e) => setB02Start(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              {FORM_VI.toDate}
+            </Label>
+            <Input
+              type="date"
+              value={b02End}
+              onChange={(e) => setB02End(e.target.value)}
+            />
+          </div>
+          <Button onClick={handleB02} disabled={isPending}>
+            {isPending ? <Spinner /> : null}
+            {financeCopy.statements.createIncomeStatement}
+          </Button>
+        </AppToolbar>
 
         {b02Data ? (
           <Tt200Report
@@ -237,34 +234,32 @@ export function StatementsClient() {
       </TabsContent>
 
       <TabsContent value="b03" className="mt-0 space-y-4">
-        <Card>
-          <CardContent className="grid gap-3 p-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                {FORM_VI.fromDate}
-              </Label>
-              <Input
-                type="date"
-                value={b03Start}
-                onChange={(e) => setB03Start(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                {FORM_VI.toDate}
-              </Label>
-              <Input
-                type="date"
-                value={b03End}
-                onChange={(e) => setB03End(e.target.value)}
-              />
-            </div>
-            <Button onClick={handleB03} disabled={isPending}>
-              {isPending ? <Spinner /> : null}
-              {financeCopy.statements.createCashflow}
-            </Button>
-          </CardContent>
-        </Card>
+        <AppToolbar className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              {FORM_VI.fromDate}
+            </Label>
+            <Input
+              type="date"
+              value={b03Start}
+              onChange={(e) => setB03Start(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              {FORM_VI.toDate}
+            </Label>
+            <Input
+              type="date"
+              value={b03End}
+              onChange={(e) => setB03End(e.target.value)}
+            />
+          </div>
+          <Button onClick={handleB03} disabled={isPending}>
+            {isPending ? <Spinner /> : null}
+            {financeCopy.statements.createCashflow}
+          </Button>
+        </AppToolbar>
 
         {b03Data ? (
           <>
@@ -284,25 +279,23 @@ export function StatementsClient() {
       </TabsContent>
 
       <TabsContent value="gtgt" className="mt-0 space-y-4">
-        <Card>
-          <CardContent className="grid gap-3 p-4 sm:grid-cols-[1fr_auto] sm:items-end">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                {financeCopy.statements.vatPeriod}
-              </Label>
-              <Input
-                type="month"
-                value={vatPeriod}
-                onChange={(e) => setVatPeriod(e.target.value)}
-                className="max-w-xs"
-              />
-            </div>
-            <Button onClick={handleGtgt} disabled={isPending}>
-              {isPending ? <Spinner /> : null}
-              {financeCopy.statements.createVatReturn}
-            </Button>
-          </CardContent>
-        </Card>
+        <AppToolbar className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              {financeCopy.statements.vatPeriod}
+            </Label>
+            <Input
+              type="month"
+              value={vatPeriod}
+              onChange={(e) => setVatPeriod(e.target.value)}
+              className="max-w-xs"
+            />
+          </div>
+          <Button onClick={handleGtgt} disabled={isPending}>
+            {isPending ? <Spinner /> : null}
+            {financeCopy.statements.createVatReturn}
+          </Button>
+        </AppToolbar>
 
         {vatData ? (
           <Tt200Report

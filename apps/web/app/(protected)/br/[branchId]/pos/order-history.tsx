@@ -39,6 +39,7 @@ export interface SessionOrder {
   table_id: number | null;
   customer_count: number | null;
   note: string | null;
+  is_priority: boolean;
   merged_into_order_id: number | null;
   split_from_order_id: number | null;
   created_at: string;
@@ -70,6 +71,9 @@ export function compareOrdersByNextAction(
   a: SessionOrder,
   b: SessionOrder,
 ): number {
+  const byKitchenPriority = Number(b.is_priority) - Number(a.is_priority);
+  if (byKitchenPriority !== 0) return byKitchenPriority;
+
   const byPriority = getOrderActionPriority(a) - getOrderActionPriority(b);
   if (byPriority !== 0) return byPriority;
 
@@ -215,6 +219,14 @@ function ActiveOrdersListComponent({
                     amountClassName="text-primary"
                     rightMeta={
                       <>
+                        {order.is_priority ? (
+                          <Badge
+                            variant="warning"
+                            className="text-sm font-semibold"
+                          >
+                            Ưu tiên
+                          </Badge>
+                        ) : null}
                         <OrderStatusBadge order={order} />
                         {waitingPayment ? (
                           <Badge

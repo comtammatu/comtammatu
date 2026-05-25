@@ -13,8 +13,7 @@ export const finance = {
     mainLabel: "Tài chính",
     defaultPageTitle: "Tài chính",
     crumbLabel: "Vận hành · Tài chính",
-    description:
-      "Theo dõi doanh thu, tồn kho, chi vận hành và lợi nhuận gộp.",
+    description: "Theo dõi doanh thu, tồn kho, chi vận hành và lợi nhuận gộp.",
     admin: "Quản trị",
   },
   page: {
@@ -27,19 +26,18 @@ export const finance = {
     eyebrow: "Báo cáo vận hành",
     title: "Sổ tiền của quán",
     description:
-      "Một màn hình cho chủ quán: tiền đã thu, lời gộp ước tính, tiền đang nằm trong kho và việc cần xử lý.",
-    cashTitle: "1. Kỳ này đã thu bao nhiêu?",
-    cashDescription:
-      "Chỉ theo dõi tiền đã thu và cách tiền đi vào quỹ.",
-    profitTitle: "2. Lời gộp ước tính còn bao nhiêu?",
+      "Một màn hình cho chủ quán: doanh thu, tồn kho, lãi gộp và chi phí.",
+    cashTitle: "Doanh Thu",
+    cashDescription: "Chỉ theo dõi tiền đã thu và cách tiền đi vào quỹ.",
+    profitTitle: "Lãi Gộp",
     profitDescription:
       "Lấy doanh thu trước VAT sau giảm giá, trừ giá vốn nguyên liệu đang có.",
-    inventoryCashTitle: "3. Tiền đang nằm trong kho ở đâu?",
+    inventoryCashTitle: "Tồn Kho",
     inventoryCashDescription:
       "Tổng giá trị tồn kho hiện tại và nguyên liệu đang giữ nhiều vốn nhất.",
-    actionTitle: "4. Việc nào cần xử lý?",
-    actionDescription:
-      "Chỉ hiện ngoại lệ vận hành, không trộn báo cáo kế toán doanh nghiệp vào màn hình chính.",
+    expenseTitle: "Chi Phí",
+    expenseDescription:
+      "Chi vận hành đã ghi nhận trong kỳ, không gồm giá vốn nguyên liệu.",
     stageTitle: "Mức báo cáo đang dùng",
     inventoryTitle: "Tiền đang nằm trong kho",
     inventoryDescription:
@@ -61,8 +59,14 @@ export const finance = {
     ingredientFallback: "Nguyên liệu chưa đặt tên",
     portions: (count: string) => `${count} phần`,
     emptyTopItems: "Chưa có dữ liệu món bán trong kỳ.",
+    cashBreakdownTitle: "Tiền thu theo phương thức",
+    profitBreakdownTitle: "Công thức lãi gộp",
+    inventoryModelTitle: "Nguyên liệu giữ vốn nhiều nhất",
+    ownerNewsTitle: "Cần kiểm tra",
+    noOwnerNews: "Chưa có điểm cần xử lý.",
     labels: {
       orders: "Số đơn",
+      ordersLine: (count: string) => `${count} đơn đã thanh toán`,
       cash: "Tiền mặt",
       vietqr: "VietQR",
       momo: "MoMo",
@@ -109,7 +113,8 @@ export const finance = {
       inventoryValue: "Giá trị tồn kho",
       inventoryValueHint: "Snapshot tồn kho hiện tại",
       operatingExpense: "Chi vận hành",
-      operatingExpenseHint: "Chi phí đã ghi nhận, không gồm giá vốn nguyên liệu",
+      operatingExpenseHint:
+        "Chi phí đã ghi nhận, không gồm giá vốn nguyên liệu",
       grossProfit: "Lợi nhuận gộp",
       grossProfitHint: (foodCost: string, margin: string) =>
         `Giá vốn ${foodCost} · biên gộp ${margin}`,
@@ -292,10 +297,10 @@ export const finance = {
     },
     byDay: {
       emptyDescription:
-        "Chọn khoảng ngày và bấm \"Đối chiếu theo ngày\" để xem chênh lệch DT POS ↔ Sổ cái cho từng ngày.",
+        'Chọn khoảng ngày và bấm "Đối chiếu theo ngày" để xem chênh lệch DT POS ↔ Sổ cái cho từng ngày.',
       title: "Đối chiếu DT POS ↔ Sổ cái — theo ngày",
       description:
-        "Cột POS bucket theo `paid_at`, cột Sổ cái bucket theo `entry_date`, cùng giờ Việt Nam. Ngày khớp đến ±1 ₫ được đánh dấu \"Khớp\".",
+        'Cột POS bucket theo `paid_at`, cột Sổ cái bucket theo `entry_date`, cùng giờ Việt Nam. Ngày khớp đến ±1 ₫ được đánh dấu "Khớp".',
       date: "Ngày",
       posSubledger: "POS (sổ phụ)",
       glSalesVat: "Sổ cái 511+33311",
@@ -366,8 +371,7 @@ export const finance = {
       reconciliationDiff: "Đối chiếu lệch",
       totalDifferenceHint: (amount: string) => `Tổng lệch ${amount}`,
       cashVariance: "Lệch quỹ",
-      absoluteVarianceHint: (amount: string) =>
-        `Tổng trị tuyệt đối ${amount}`,
+      absoluteVarianceHint: (amount: string) => `Tổng trị tuyệt đối ${amount}`,
       foodCostAlert: "Food cost cảnh báo",
       thresholdHint: (percent: string) => `Ngưỡng ${percent}`,
       webhookFailures: "Webhook lỗi",
@@ -445,8 +449,7 @@ export const finance = {
       aovCoverHint: "Doanh thu thuần / lượt khách",
       discountRate: "Tỷ lệ giảm giá",
       voidRate: "Tỷ lệ hủy",
-      voidHint: (amount: string, count: number) =>
-        `${amount} · ${count} đơn`,
+      voidHint: (amount: string, count: number) => `${amount} · ${count} đơn`,
       totalCollected: "Tổng tiền thực thu",
       totalCollectedHint: (vat: string) => `Đã gồm VAT ${vat}`,
       invoices: "Hóa đơn điện tử",
@@ -479,14 +482,17 @@ export const finance = {
     },
     heatmap: {
       title: "Khung giờ cao điểm",
-      description: "Doanh thu thuần theo ngày trong tuần × giờ. Hover để xem chi tiết.",
-      tooLargeRange: "Khoảng đang xem vượt quá 90 ngày — chọn khoảng nhỏ hơn để xem heatmap.",
+      description:
+        "Doanh thu thuần theo ngày trong tuần × giờ. Hover để xem chi tiết.",
+      tooLargeRange:
+        "Khoảng đang xem vượt quá 90 ngày — chọn khoảng nhỏ hơn để xem heatmap.",
       empty: "Chưa có đơn nào trong khoảng này.",
       tooLargeEmpty: "Chọn khoảng ≤ 90 ngày để xem heatmap.",
     },
     periodTable: {
       title: "Bảng doanh thu theo kỳ",
-      descriptionAll: "Tổng hợp toàn bộ chi nhánh — bấm vào ngày để drill-down.",
+      descriptionAll:
+        "Tổng hợp toàn bộ chi nhánh — bấm vào ngày để drill-down.",
       descriptionSingle: "Bấm vào ngày để xem danh sách đơn trong ngày.",
       empty: "Chưa có dữ liệu trong khoảng này.",
       colPeriod: "Kỳ",
@@ -563,7 +569,8 @@ export const finance = {
   links: {
     revenue: {
       label: "Báo cáo doanh thu",
-      description: "Doanh thu theo kỳ, chi nhánh, phương thức thanh toán và VAT.",
+      description:
+        "Doanh thu theo kỳ, chi nhánh, phương thức thanh toán và VAT.",
     },
     reconciliation: {
       label: "Đối chiếu sổ",
@@ -675,7 +682,8 @@ export const finance = {
     debitCurrency: "Nợ (₫)",
     creditCurrency: "Có (₫)",
     accountPlaceholder: "Chọn tài khoản",
-    imbalance: (amount: string) => `Bút toán mất cân đối: chênh lệch ${amount} ₫`,
+    imbalance: (amount: string) =>
+      `Bút toán mất cân đối: chênh lệch ${amount} ₫`,
     createDraft: "Tạo nháp",
   },
   periods: {
@@ -755,4 +763,4 @@ export const finance = {
     ) =>
       `Cảnh báo: ${codeA} (${amountA}) ≠ ${codeB} (${amountB}); chênh lệch ${diff}. Kiểm tra bút toán trước khi nộp.`,
   },
-} as const
+} as const;

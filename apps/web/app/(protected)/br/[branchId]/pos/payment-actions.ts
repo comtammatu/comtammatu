@@ -1534,8 +1534,11 @@ export async function confirmVietQrPayment(
   }
 
   const result = data as {
+    status?: string;
     payment_id: number;
     idempotent: boolean;
+    error_code?: string;
+    detail?: string;
     print: { job_id?: number; failed: boolean; error?: string };
   } | null;
 
@@ -1543,17 +1546,22 @@ export async function confirmVietQrPayment(
     return { success: false, error: "Không thể xác nhận thanh toán." };
   }
 
-  if (!result.idempotent) {
-    const { error: stockErr } = await consumeStockForOrderCompat(
-      supabase,
-      parsedOrderId.data,
+  if (
+    result.status &&
+    !["completed", "already_completed"].includes(result.status)
+  ) {
+    const mappedError = mapPaymentRpcError(
+      `${result.status}:${result.error_code ?? ""}:${result.detail ?? ""}`,
     );
-    if (stockErr) {
-      console.error(
-        "[confirmVietQrPayment] consume_stock_for_order failed:",
-        stockErr.message,
-      );
-    }
+    console.error("[confirmVietQrPayment] completion blocked:", {
+      status: result.status,
+      error_code: result.error_code,
+      detail: result.detail,
+    });
+    return {
+      success: false,
+      error: mappedError ?? "Không thể xác nhận thanh toán VietQR.",
+    };
   }
 
   return {

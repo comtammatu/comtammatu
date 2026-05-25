@@ -32,6 +32,7 @@ export interface OrderData {
   total_amount: number;
   customer_count: number;
   note: string | null;
+  is_priority: boolean;
   created_at: string;
   table_id: number | null;
   /** Đơn nguồn nếu đơn này được tách ra. NULL nếu tạo trực tiếp. */

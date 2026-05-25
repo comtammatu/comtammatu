@@ -17,6 +17,10 @@ export function getStatusVariant(status: string): StatusVariant {
   );
 }
 
+export function shouldShowTicketStatusBadge(status: string): boolean {
+  return status !== "pending" && status !== "preparing";
+}
+
 export const ORDER_TYPE_CONFIG: Record<string, { label: string }> = {
   dine_in: { label: "Tại bàn" },
   takeaway: { label: "Mang về" },
@@ -24,4 +28,17 @@ export const ORDER_TYPE_CONFIG: Record<string, { label: string }> = {
 
 export function getOrderTypeLabel(orderType: string): string {
   return ORDER_TYPE_CONFIG[orderType]?.label ?? orderType;
+}
+
+export function shouldShowOrderTypeBadge(
+  orderType: string,
+  tableNumber: number | null,
+): boolean {
+  return orderType !== "dine_in" || tableNumber === null;
+}
+
+export function formatKitchenTicketDisplay(ticketNumber: string): string {
+  const trimmed = ticketNumber.trim();
+  const suffix = /(?:^|[-_#])(\d{2,6})$/.exec(trimmed);
+  return suffix ? `#${suffix[1]}` : trimmed;
 }

@@ -176,7 +176,7 @@ export async function fetchOrders(
        payment_status,
        created_at,
        branches(name),
-       profiles(full_name),
+       profiles!orders_created_by_fkey(full_name),
        payments(method, amount, status)`,
     )
     .order("created_at", { ascending: false })

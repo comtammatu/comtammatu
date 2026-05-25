@@ -13,6 +13,7 @@ import { formatVND } from "@comtammatu/shared/format";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { useRealtimeChannel } from "@/_hooks/use-realtime-channel";
 import { makeRealtimeCoalescer } from "@/_utils/realtime-scheduler";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import {
@@ -40,6 +41,7 @@ import {
   CirclePlus as IconCirclePlus,
   Copy as IconCopy,
   Ellipsis as IconDots,
+  Flame as IconFlame,
   Merge as IconMerge,
   Printer as IconPrinter,
   Receipt as IconReceipt,
@@ -57,6 +59,8 @@ import {
   updateOrderStatus,
   markOrderItemServed,
   fetchOrderItemsForReorder,
+  setOrderPriority,
+  setOrderItemPriority,
   applyOrderDiscount,
   clearOrderDiscount,
   setOrderServiceCharge,
@@ -132,6 +136,7 @@ const ORDER_DETAIL_SKELETON_ITEMS: OrderItemRowData[] = [
     modifiers: [],
     sides: [],
     note: "It mo hanh",
+    is_priority: false,
   },
   {
     id: 2,
@@ -144,6 +149,7 @@ const ORDER_DETAIL_SKELETON_ITEMS: OrderItemRowData[] = [
     modifiers: [],
     sides: [],
     note: null,
+    is_priority: false,
   },
   {
     id: 3,
@@ -156,6 +162,7 @@ const ORDER_DETAIL_SKELETON_ITEMS: OrderItemRowData[] = [
     modifiers: [],
     sides: [],
     note: null,
+    is_priority: false,
   },
 ];
 
@@ -668,6 +675,34 @@ export function OrderDetailSheet({
     });
   };
 
+  const handleOrderPriorityToggle = () => {
+    if (data === null) return;
+    const next = data.is_priority !== true;
+    startMutation(async () => {
+      const r = await setOrderPriority(data.id, next);
+      if (r.success) {
+        notify.success(next ? "Đã ưu tiên đơn" : "Đã bỏ ưu tiên đơn");
+        await onOrderUpdated?.();
+        load();
+      } else {
+        notify.error(r.error ?? "Không thể cập nhật ưu tiên đơn.");
+      }
+    });
+  };
+
+  const handleItemPriorityRequest = (itemId: number, next: boolean) => {
+    startMutation(async () => {
+      const r = await setOrderItemPriority(itemId, next);
+      if (r.success) {
+        notify.success(next ? "Đã ưu tiên món" : "Đã bỏ ưu tiên món");
+        setActionsItemId(null);
+        load();
+      } else {
+        notify.error(r.error ?? "Không thể cập nhật ưu tiên món.");
+      }
+    });
+  };
+
   // From the per-item actions sheet → close it and open the existing
   // VoidItemDialog (which collects the lý-do-hủy reason). Sequencing the
   // two prevents stacked focus traps from fighting on mobile.
@@ -934,6 +969,15 @@ export function OrderDetailSheet({
   const canMarkServed =
     data != null &&
     ["new", "confirmed", "preparing", "ready"].includes(data.status);
+  const hasActiveKitchenItems =
+    data?.order_items.some((item) =>
+      ["pending", "preparing"].includes(item.status),
+    ) ?? false;
+  const canPrioritizeOrder =
+    data != null &&
+    hasActiveKitchenItems &&
+    data.payment_status !== "paid" &&
+    !["completed", "cancelled"].includes(data.status);
   // Financial adjustment / split / merge gating — all require an active
   // unpaid order with no pending QR. The server enforces the same conditions;
   // the UI guards just hide entries that would always reject.
@@ -960,6 +1004,7 @@ export function OrderDetailSheet({
   const canShowMoreMenu =
     canShowBillInMenu ||
     canShowReorder ||
+    canPrioritizeOrder ||
     canShowTransfer ||
     canShowCancel ||
     canShowDiscount ||
@@ -1006,6 +1051,15 @@ export function OrderDetailSheet({
                       ? "Đơn"
                       : ""}
                 </span>
+                {(data?.is_priority === true ||
+                  summaryForCurrentOrder?.is_priority === true) && (
+                  <Badge
+                    variant="warning"
+                    className="h-5 shrink-0 px-1.5 py-0 text-xs font-semibold"
+                  >
+                    Ưu tiên
+                  </Badge>
+                )}
               </SheetTitle>
               <Button
                 type="button"
@@ -1216,6 +1270,17 @@ export function OrderDetailSheet({
                                 Chuyển bàn
                               </DropdownMenuItem>
                             )}
+                            {canPrioritizeOrder && (
+                              <DropdownMenuItem
+                                disabled={isMutating}
+                                onClick={() => handleOrderPriorityToggle()}
+                              >
+                                <IconFlame />
+                                {data.is_priority === true
+                                  ? "Bỏ ưu tiên"
+                                  : "Ưu tiên bếp"}
+                              </DropdownMenuItem>
+                            )}
                             {canShowReorder && (
                               <DropdownMenuItem
                                 onClick={() => void handleReorder()}
@@ -1312,6 +1377,7 @@ export function OrderDetailSheet({
         onVoidRequest={handleVoidRequest}
         onReduceRequest={handleReduceRequest}
         onEditRequest={onStartEditSent ? handleEditRequest : undefined}
+        onPriorityRequest={handleItemPriorityRequest}
       />
 
       <VoidItemDialog

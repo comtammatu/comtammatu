@@ -17,17 +17,21 @@ import {
   ChevronLeft as IconChevronLeft,
   ChevronRight as IconChevronRight,
   RotateCcw as IconRotate,
-  Utensils as IconToolsKitchen,
 } from "lucide-react";
 import { useBoardTick } from "../hooks/use-board-tick";
 import { getAgeStyle, getCardLeftAccent } from "../lib/age-style";
 import {
-  getOrderTypeLabel,
+  getItemRowStatusClass,
+  getQuantityStatusClass,
+} from "../lib/item-status-style";
+import {
   getStatusLabel,
   getStatusVariant,
+  shouldShowTicketStatusBadge,
 } from "../lib/status-config";
 import { AgeBadge } from "./age-badge";
 import { CancelledOverlay } from "./cancelled-overlay";
+import { OrderTitleLine } from "./order-title-line";
 import { TicketRowMeta } from "./ticket-row-meta";
 import type { KdsOrder, KdsOrderItem, KdsTicket } from "../types";
 
@@ -37,7 +41,6 @@ interface FocusViewProps {
   pendingTicketIds: Set<number>;
   canMarkReady: boolean;
   canRecall: boolean;
-  onBump: (ticketId: number) => Promise<void>;
   onRecall: (ticketId: number) => Promise<void>;
   onOutOfStock: (ticketId: number) => Promise<void>;
   onCompleteTickets: (ticketIds: number[]) => Promise<void>;
@@ -68,6 +71,7 @@ function buildFocusItemKey(item: KdsOrderItem, status: string): string {
     item.item_name,
     item.variant_name,
     item.note,
+    item.is_priority,
     item.modifiers,
     item.sides,
     status,
@@ -80,7 +84,6 @@ export function FocusView({
   pendingTicketIds,
   canMarkReady,
   canRecall,
-  onBump,
   onRecall,
   onOutOfStock,
   onCompleteTickets,
@@ -184,7 +187,6 @@ export function FocusView({
       canMarkReady={canMarkReady}
       canRecall={canRecall}
       isCelebrating={allReady}
-      onBump={onBump}
       onRecall={onRecall}
       onOutOfStock={onOutOfStock}
       onCompleteTickets={onCompleteTickets}
@@ -202,7 +204,6 @@ interface FocusOrderPanelProps {
   canMarkReady: boolean;
   canRecall: boolean;
   isCelebrating: boolean;
-  onBump: (ticketId: number) => Promise<void>;
   onRecall: (ticketId: number) => Promise<void>;
   onOutOfStock: (ticketId: number) => Promise<void>;
   onCompleteTickets: (ticketIds: number[]) => Promise<void>;
@@ -218,7 +219,6 @@ function FocusOrderPanel({
   canMarkReady,
   canRecall,
   isCelebrating,
-  onBump,
   onRecall,
   onOutOfStock,
   onCompleteTickets,
@@ -295,12 +295,6 @@ function FocusOrderPanel({
     [order.tickets],
   );
 
-  const pendingBatchBusy =
-    pendingTickets.length > 0 &&
-    pendingTickets.every((t) => pendingTicketIds.has(t.id));
-  const preparingBatchBusy =
-    preparingTickets.length > 0 &&
-    preparingTickets.every((t) => pendingTicketIds.has(t.id));
   const activeTickets = useMemo(
     () => [...pendingTickets, ...preparingTickets],
     [pendingTickets, preparingTickets],
@@ -313,49 +307,12 @@ function FocusOrderPanel({
     activeTickets.length > 0 &&
     activeTickets.every((ticket) => pendingTicketIds.has(ticket.id));
 
-  const typeLabel = getOrderTypeLabel(order.orderType);
   const isAppend = order.sendKind === "append";
 
   return (
-    <div className="relative flex min-h-0 flex-1 flex-col">
-      {/* Navigation strip */}
-      <div className="flex items-center justify-between gap-2 border-b bg-muted/30 px-3 py-1.5 md:px-4">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="gap-1.5"
-          onClick={onPrev}
-          disabled={total <= 1}
-          aria-label="Đơn trước"
-        >
-          <IconChevronLeft data-icon="inline-start" aria-hidden />
-          Trước
-        </Button>
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Đơn
-          </span>
-          <span className="font-mono text-base font-semibold tabular-nums">
-            {indexLabel}
-          </span>
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="gap-1.5"
-          onClick={onNext}
-          disabled={total <= 1}
-          aria-label="Đơn kế tiếp"
-        >
-          Kế tiếp
-          <IconChevronRight data-icon="inline-end" aria-hidden />
-        </Button>
-      </div>
-
-      <ScrollArea className="min-h-0 flex-1">
-        <div className="mx-auto w-full max-w-3xl p-3">
+    <div className="relative flex h-full min-h-0 flex-1 flex-col">
+      <ScrollArea className="h-full min-h-0 flex-1">
+        <div className="mx-auto w-full max-w-7xl p-2">
           <Card
             data-testid={`kds-focus-card-${order.groupKey}`}
             className={cn(
@@ -367,64 +324,69 @@ function FocusOrderPanel({
                 destructive ≥10ph, success when complete). */}
             <div
               className={cn(
-                "flex items-start justify-between gap-3 border-b px-4 py-4 transition-colors",
+                "flex items-start justify-between gap-2 border-b px-3 py-2.5 transition-colors md:px-4",
                 heroBg,
               )}
             >
-              <div className="flex min-w-0 flex-col gap-3">
-                <div className="flex min-w-0 flex-wrap items-center gap-2">
-                  <span className="font-mono text-3xl font-semibold leading-none tabular-nums">
-                    {order.kitchenTicketNumber}
-                  </span>
-                  {isAppend && (
-                    <Badge
-                      variant="destructive"
-                      className="px-2.5 py-1 text-sm font-semibold"
-                    >
-                      Gọi thêm
-                    </Badge>
-                  )}
-                </div>
-
-                <div className="flex flex-wrap items-center gap-1.5">
-                  {order.tableNumber !== null && (
-                    <Badge
-                      variant="secondary"
-                      className="px-3 py-1 text-base font-semibold"
-                    >
-                      Bàn {order.tableNumber}
-                    </Badge>
-                  )}
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <OrderTitleLine
+                  kitchenTicketNumber={order.kitchenTicketNumber}
+                  orderNumber={order.orderNumber}
+                  orderType={order.orderType}
+                  tableNumber={order.tableNumber}
+                />
+                {isAppend && (
                   <Badge
-                    variant="outline"
-                    className="px-3 py-1 text-base font-semibold"
+                    variant="destructive"
+                    className="px-2 py-0.5 text-xs font-semibold"
                   >
-                    {typeLabel}
+                    Gọi thêm
                   </Badge>
-                  {order.sendSeq !== null && (
-                    <Badge
-                      variant={isAppend ? "destructive" : "secondary"}
-                      className="px-3 py-1 text-base font-semibold"
-                    >
-                      Lần {order.sendSeq}
-                    </Badge>
-                  )}
+                )}
+                {order.isPriority && (
                   <Badge
-                    variant="outline"
-                    className="px-2 py-0.5 font-mono text-xs font-semibold"
+                    variant="warning"
+                    className="px-2 py-0.5 text-xs font-semibold"
                   >
-                    HĐ {order.orderNumber}
+                    Ưu tiên
                   </Badge>
-                </div>
+                )}
               </div>
-              <AgeBadge
-                elapsedMinutes={elapsedMinutes}
-                isComplete={isComplete}
-                size="lg"
-              />
+              <div className="flex shrink-0 flex-col items-end gap-1.5">
+                {total > 1 && (
+                  <div className="flex items-center gap-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={onPrev}
+                      aria-label="Đơn trước"
+                    >
+                      <IconChevronLeft aria-hidden />
+                    </Button>
+                    <span className="font-mono text-sm font-semibold tabular-nums text-muted-foreground">
+                      {indexLabel}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={onNext}
+                      aria-label="Đơn kế tiếp"
+                    >
+                      <IconChevronRight aria-hidden />
+                    </Button>
+                  </div>
+                )}
+                <AgeBadge
+                  elapsedMinutes={elapsedMinutes}
+                  isComplete={isComplete}
+                  size="lg"
+                />
+              </div>
             </div>
 
-            <CardContent className="flex flex-col divide-y divide-border/60 p-0">
+            <CardContent className="divide-y divide-border/50 p-0">
               {order.items.map((item) => {
                 const ticket = ticketByItemId.get(item.id);
                 const status = ticket?.status ?? "pending";
@@ -432,14 +394,14 @@ function FocusOrderPanel({
                 const isMutating = ticket
                   ? pendingTicketIds.has(ticket.id)
                   : false;
-                const canBumpByStatus =
+                const canCompleteByStatus =
                   !isCancelled &&
                   (status === "pending" || status === "preparing");
                 const canRecallByStatus =
                   !isCancelled &&
                   (status === "preparing" || status === "ready");
-                const allowBump = canBumpByStatus && canMarkReady;
-                const allowOutOfStock = canBumpByStatus && canMarkReady;
+                const allowComplete = canCompleteByStatus && canMarkReady;
+                const allowOutOfStock = canCompleteByStatus && canMarkReady;
                 const allowRecall = canRecallByStatus && canRecall;
 
                 return (
@@ -447,63 +409,190 @@ function FocusOrderPanel({
                     key={buildFocusItemKey(item, status)}
                     data-testid={`kds-focus-item-${String(item.id)}`}
                     className={cn(
-                      "relative flex flex-col gap-3 px-4 py-4 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95",
-                      status === "ready" && "opacity-60",
+                      "relative grid min-w-0 grid-cols-[3.5rem_minmax(0,1fr)_auto] items-center gap-2 bg-card px-3 py-1.5 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95",
+                      getItemRowStatusClass(status),
                       isCancelled && "opacity-100",
                     )}
                   >
                     {isCancelled && <CancelledOverlay />}
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-baseline gap-2">
-                          <span className="font-mono text-2xl font-semibold leading-tight text-warning tabular-nums">
-                            {item.quantity}×
-                          </span>
-                          <span className="break-words text-2xl font-semibold leading-tight">
-                            {item.item_name}
-                          </span>
-                        </div>
-                        {item.variant_name && (
-                          <span className="mt-1 block text-base font-medium text-muted-foreground">
-                            {item.variant_name}
-                          </span>
-                        )}
-                        <TicketRowMeta
-                          note={item.note}
-                          modifiers={item.modifiers}
-                          sides={item.sides}
-                        />
-                      </div>
-                      <Badge
-                        variant={getStatusVariant(status)}
-                        className="px-3 py-1 text-sm font-semibold"
-                      >
-                        {getStatusLabel(status)}
-                      </Badge>
+                    <span
+                      className={cn(
+                        "flex h-9 w-14 items-center justify-center rounded-md px-2 font-mono text-2xl font-semibold leading-none tabular-nums ring-1 ring-inset",
+                        getQuantityStatusClass(status),
+                      )}
+                    >
+                      {item.quantity}×
+                    </span>
+                    <div className="flex min-h-9 min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
+                      <span className="min-w-0 break-words text-lg font-semibold leading-6">
+                        {item.item_name}
+                      </span>
+                      {item.is_priority && (
+                        <Badge
+                          variant="warning"
+                          className="h-6 rounded-md px-2 py-0 text-xs font-semibold leading-none"
+                        >
+                          Ưu tiên
+                        </Badge>
+                      )}
+                      {item.variant_name && (
+                        <span className="min-w-0 break-words text-sm font-medium leading-5 text-muted-foreground">
+                          {item.variant_name}
+                        </span>
+                      )}
+                      <TicketRowMeta
+                        layout="inline"
+                        note={item.note}
+                        modifiers={item.modifiers}
+                        sides={item.sides}
+                      />
                     </div>
 
-                    {ticket &&
-                      (allowBump || allowRecall || allowOutOfStock) && (
-                        <div className="flex flex-wrap gap-2">
+                    <div className="flex shrink-0 items-center justify-end gap-1">
+                      {shouldShowTicketStatusBadge(status) && (
+                        <Badge
+                          variant={getStatusVariant(status)}
+                          className="h-6 rounded-md px-2.5 py-0 text-sm font-semibold leading-none"
+                        >
+                          {getStatusLabel(status)}
+                        </Badge>
+                      )}
+
+                      {ticket &&
+                        (allowComplete || allowRecall || allowOutOfStock) && (
+                          <>
+                            {allowOutOfStock && (
+                              <Button
+                                data-testid={`kds-out-of-stock-${String(ticket.id)}`}
+                                type="button"
+                                variant="destructive"
+                                size="touch"
+                                className="w-12 px-0"
+                                disabled={isMutating}
+                                onClick={() =>
+                                  void handleOutOfStock(
+                                    ticket.id,
+                                    item.item_name,
+                                  )
+                                }
+                                aria-label={`Báo hết món ${item.item_name}`}
+                              >
+                                {isMutating ? (
+                                  <Spinner data-icon="inline-start" />
+                                ) : (
+                                  <IconBan
+                                    data-icon="inline-start"
+                                    aria-hidden
+                                  />
+                                )}
+                              </Button>
+                            )}
+                            {allowRecall && (
+                              <Button
+                                data-testid={`kds-recall-${String(ticket.id)}`}
+                                type="button"
+                                variant="outline"
+                                size="touch"
+                                className="w-12 px-0"
+                                disabled={isMutating}
+                                onClick={() => void onRecall(ticket.id)}
+                                aria-label={`Thu hồi ${item.item_name}`}
+                              >
+                                {isMutating ? (
+                                  <Spinner data-icon="inline-start" />
+                                ) : (
+                                  <IconRotate
+                                    data-icon="inline-start"
+                                    aria-hidden
+                                  />
+                                )}
+                              </Button>
+                            )}
+                            {allowComplete && (
+                              <Button
+                                data-testid={`kds-complete-ticket-${String(ticket.id)}`}
+                                type="button"
+                                variant="default"
+                                size="touch"
+                                className="w-12 px-0"
+                                disabled={isMutating}
+                                onClick={() =>
+                                  void onCompleteTickets([ticket.id])
+                                }
+                                aria-label={`Hoàn tất ${item.item_name}`}
+                              >
+                                {isMutating ? (
+                                  <Spinner data-icon="inline-start" />
+                                ) : (
+                                  <IconCheck
+                                    data-icon="inline-start"
+                                    aria-hidden
+                                  />
+                                )}
+                              </Button>
+                            )}
+                          </>
+                        )}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {orphanTickets.map((ticket) => {
+                const status = ticket.status;
+                const isCancelled = status === "cancelled";
+                const isMutating = pendingTicketIds.has(ticket.id);
+                const canCompleteByStatus =
+                  !isCancelled &&
+                  (status === "pending" || status === "preparing");
+                const canRecallByStatus =
+                  !isCancelled &&
+                  (status === "preparing" || status === "ready");
+                const allowComplete = canCompleteByStatus && canMarkReady;
+                const allowOutOfStock = canCompleteByStatus && canMarkReady;
+                const allowRecall = canRecallByStatus && canRecall;
+                const itemLabel = `Món #${String(ticket.order_item_id)}`;
+
+                return (
+                  <div
+                    key={`${String(ticket.id)}:${status}`}
+                    className={cn(
+                      "grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 bg-card px-3 py-1.5 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95",
+                      getItemRowStatusClass(status),
+                    )}
+                  >
+                    <span className="min-w-0 break-words text-sm font-semibold leading-5 text-muted-foreground">
+                      {itemLabel}
+                    </span>
+                    <div className="flex shrink-0 items-center justify-end gap-1">
+                      {shouldShowTicketStatusBadge(status) && (
+                        <Badge
+                          variant={getStatusVariant(status)}
+                          className="h-5 rounded-md px-2 py-0 text-xs font-semibold leading-none"
+                        >
+                          {getStatusLabel(status)}
+                        </Badge>
+                      )}
+                      {(allowComplete || allowRecall || allowOutOfStock) && (
+                        <>
                           {allowOutOfStock && (
                             <Button
                               data-testid={`kds-out-of-stock-${String(ticket.id)}`}
                               type="button"
                               variant="destructive"
                               size="touch"
-                              className="flex-1 gap-2"
+                              className="w-12 px-0"
                               disabled={isMutating}
                               onClick={() =>
-                                void handleOutOfStock(ticket.id, item.item_name)
+                                void handleOutOfStock(ticket.id, itemLabel)
                               }
-                              aria-label={`Báo hết món ${item.item_name}`}
+                              aria-label="Báo hết món"
                             >
                               {isMutating ? (
                                 <Spinner data-icon="inline-start" />
                               ) : (
                                 <IconBan data-icon="inline-start" aria-hidden />
                               )}
-                              Hết món
                             </Button>
                           )}
                           {allowRecall && (
@@ -512,10 +601,10 @@ function FocusOrderPanel({
                               type="button"
                               variant="outline"
                               size="touch"
-                              className="flex-1 gap-2"
+                              className="w-12 px-0"
                               disabled={isMutating}
                               onClick={() => void onRecall(ticket.id)}
-                              aria-label={`Thu hồi ${item.item_name}`}
+                              aria-label="Thu hồi món"
                             >
                               {isMutating ? (
                                 <Spinner data-icon="inline-start" />
@@ -525,151 +614,34 @@ function FocusOrderPanel({
                                   aria-hidden
                                 />
                               )}
-                              Thu hồi
                             </Button>
                           )}
-                          {allowBump && (
+                          {allowComplete && (
                             <Button
-                              data-testid={`kds-bump-${String(ticket.id)}`}
+                              data-testid={`kds-complete-ticket-${String(ticket.id)}`}
                               type="button"
-                              variant={
-                                status === "preparing" ? "default" : "secondary"
-                              }
-                              size="touch-lg"
-                              className="flex-1 gap-2"
+                              variant="default"
+                              size="touch"
+                              className="w-12 px-0"
                               disabled={isMutating}
-                              onClick={() => void onBump(ticket.id)}
-                              aria-label={`Chuyển trạng thái ${item.item_name}`}
+                              onClick={() =>
+                                void onCompleteTickets([ticket.id])
+                              }
+                              aria-label="Hoàn tất món"
                             >
                               {isMutating ? (
                                 <Spinner data-icon="inline-start" />
-                              ) : status === "preparing" ? (
+                              ) : (
                                 <IconCheck
                                   data-icon="inline-start"
                                   aria-hidden
                                 />
-                              ) : (
-                                <IconChevronRight
-                                  data-icon="inline-start"
-                                  aria-hidden
-                                />
                               )}
-                              {status === "preparing"
-                                ? "Đánh dấu xong"
-                                : "Bắt đầu chế biến"}
                             </Button>
                           )}
-                        </div>
+                        </>
                       )}
-                  </div>
-                );
-              })}
-
-              {orphanTickets.map((ticket) => {
-                const status = ticket.status;
-                const isCancelled = status === "cancelled";
-                const isMutating = pendingTicketIds.has(ticket.id);
-                const canBumpByStatus =
-                  !isCancelled &&
-                  (status === "pending" || status === "preparing");
-                const canRecallByStatus =
-                  !isCancelled &&
-                  (status === "preparing" || status === "ready");
-                const allowBump = canBumpByStatus && canMarkReady;
-                const allowOutOfStock = canBumpByStatus && canMarkReady;
-                const allowRecall = canRecallByStatus && canRecall;
-                const itemLabel = `Món #${String(ticket.order_item_id)}`;
-
-                return (
-                  <div
-                    key={`${String(ticket.id)}:${status}`}
-                    className="flex flex-col gap-3 px-4 py-4 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-base text-muted-foreground">
-                        {itemLabel}
-                      </span>
-                      <Badge
-                        variant={getStatusVariant(status)}
-                        className="px-3 py-1 text-sm font-semibold"
-                      >
-                        {getStatusLabel(status)}
-                      </Badge>
                     </div>
-                    {(allowBump || allowRecall || allowOutOfStock) && (
-                      <div className="flex flex-wrap gap-2">
-                        {allowOutOfStock && (
-                          <Button
-                            data-testid={`kds-out-of-stock-${String(ticket.id)}`}
-                            type="button"
-                            variant="destructive"
-                            size="touch"
-                            className="flex-1 gap-2"
-                            disabled={isMutating}
-                            onClick={() =>
-                              void handleOutOfStock(ticket.id, itemLabel)
-                            }
-                            aria-label="Báo hết món"
-                          >
-                            {isMutating ? (
-                              <Spinner data-icon="inline-start" />
-                            ) : (
-                              <IconBan data-icon="inline-start" aria-hidden />
-                            )}
-                            Hết món
-                          </Button>
-                        )}
-                        {allowRecall && (
-                          <Button
-                            data-testid={`kds-recall-${String(ticket.id)}`}
-                            type="button"
-                            variant="outline"
-                            size="touch"
-                            className="flex-1 gap-2"
-                            disabled={isMutating}
-                            onClick={() => void onRecall(ticket.id)}
-                            aria-label="Thu hồi món"
-                          >
-                            {isMutating ? (
-                              <Spinner data-icon="inline-start" />
-                            ) : (
-                              <IconRotate
-                                data-icon="inline-start"
-                                aria-hidden
-                              />
-                            )}
-                            Thu hồi
-                          </Button>
-                        )}
-                        {allowBump && (
-                          <Button
-                            data-testid={`kds-bump-${String(ticket.id)}`}
-                            type="button"
-                            variant={
-                              status === "preparing" ? "default" : "secondary"
-                            }
-                            size="touch-lg"
-                            className="flex-1 gap-2"
-                            disabled={isMutating}
-                            onClick={() => void onBump(ticket.id)}
-                          >
-                            {isMutating ? (
-                              <Spinner data-icon="inline-start" />
-                            ) : status === "preparing" ? (
-                              <IconCheck data-icon="inline-start" aria-hidden />
-                            ) : (
-                              <IconChevronRight
-                                data-icon="inline-start"
-                                aria-hidden
-                              />
-                            )}
-                            {status === "preparing"
-                              ? "Đánh dấu xong"
-                              : "Bắt đầu chế biến"}
-                          </Button>
-                        )}
-                      </div>
-                    )}
                   </div>
                 );
               })}
@@ -679,75 +651,32 @@ function FocusOrderPanel({
       </ScrollArea>
 
       {/* Sticky batch action bar */}
-      {canMarkReady &&
-        (pendingTickets.length > 0 || preparingTickets.length > 0) && (
-          <div className="border-t bg-card px-3 py-3 md:px-4">
-            <div className="mx-auto grid w-full max-w-3xl grid-cols-1 gap-2 sm:grid-cols-2">
-              <Button
-                data-testid={`kds-focus-complete-order-${order.groupKey}`}
-                type="button"
-                variant="default"
-                size="touch-lg"
-                className="gap-2 sm:col-span-2"
-                disabled={completeBatchBusy}
-                onClick={() => {
-                  void onCompleteTickets(activeTicketIds);
-                }}
-              >
-                {completeBatchBusy ? (
-                  <Spinner data-icon="inline-start" />
-                ) : (
-                  <IconCheckCheck data-icon="inline-start" aria-hidden />
-                )}
-                Hoàn tất phiếu bếp
-              </Button>
-              {pendingTickets.length > 0 && (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="touch-lg"
-                  className={cn(
-                    "gap-2",
-                    preparingTickets.length === 0 && "sm:col-span-2",
-                  )}
-                  disabled={pendingBatchBusy}
-                  onClick={() => {
-                    void Promise.all(pendingTickets.map((t) => onBump(t.id)));
-                  }}
-                >
-                  {pendingBatchBusy ? (
-                    <Spinner data-icon="inline-start" />
-                  ) : (
-                    <IconToolsKitchen data-icon="inline-start" aria-hidden />
-                  )}
-                  Bắt đầu {pendingTickets.length} món chờ
-                </Button>
+      {canMarkReady && activeTickets.length > 0 && (
+        <div className="border-t bg-card px-2 py-2 md:px-3">
+          <div className="mx-auto grid w-full max-w-7xl grid-cols-1 gap-2">
+            <Button
+              data-testid={`kds-focus-complete-order-${order.groupKey}`}
+              type="button"
+              variant="default"
+              size="touch-lg"
+              className="gap-2"
+              disabled={completeBatchBusy}
+              onClick={() => {
+                void onCompleteTickets(activeTicketIds);
+              }}
+            >
+              {completeBatchBusy ? (
+                <Spinner data-icon="inline-start" />
+              ) : (
+                <IconCheckCheck data-icon="inline-start" aria-hidden />
               )}
-              {preparingTickets.length > 0 && (
-                <Button
-                  type="button"
-                  variant="default"
-                  size="touch-lg"
-                  className={cn(
-                    "gap-2",
-                    pendingTickets.length === 0 && "sm:col-span-2",
-                  )}
-                  disabled={preparingBatchBusy}
-                  onClick={() => {
-                    void Promise.all(preparingTickets.map((t) => onBump(t.id)));
-                  }}
-                >
-                  {preparingBatchBusy ? (
-                    <Spinner data-icon="inline-start" />
-                  ) : (
-                    <IconCheck data-icon="inline-start" aria-hidden />
-                  )}
-                  Hoàn thành {preparingTickets.length} món
-                </Button>
-              )}
-            </div>
+              {activeTickets.length > 1
+                ? `Hoàn tất ${activeTickets.length} món`
+                : "Hoàn tất phiếu"}
+            </Button>
           </div>
-        )}
+        </div>
+      )}
 
       {/* Celebration overlay when order is fully ready */}
       {isCelebrating && (

@@ -34,6 +34,7 @@ interface KdsMenuLimitsSheetProps {
   branchId: number;
   rows: KdsMenuLimitRow[];
   onRowsChange: (rows: KdsMenuLimitRow[]) => void;
+  compact?: boolean;
 }
 
 interface RowDraft {
@@ -70,6 +71,7 @@ export function KdsMenuLimitsSheet({
   branchId,
   rows,
   onRowsChange,
+  compact = false,
 }: KdsMenuLimitsSheetProps) {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -208,11 +210,27 @@ export function KdsMenuLimitsSheet({
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button type="button" variant="outline" size="sm" className="gap-1.5">
-          <IconSliders data-icon="inline-start" aria-hidden />
-          Hạn mức
+        <Button
+          type="button"
+          variant={attentionCount > 0 ? "secondary" : "ghost"}
+          size={compact ? "icon-sm" : "sm"}
+          className={cn(compact && "relative", !compact && "gap-1.5")}
+          aria-label="Hạn mức bán hôm nay"
+          title="Hạn mức"
+        >
+          <IconSliders
+            data-icon={compact ? undefined : "inline-start"}
+            aria-hidden
+          />
+          {compact ? null : "Hạn mức"}
           {attentionCount > 0 ? (
-            <Badge variant="warning" className="ml-1 rounded-full px-1.5 py-0">
+            <Badge
+              variant="warning"
+              className={cn(
+                "rounded-full px-1.5 py-0",
+                compact ? "absolute -right-1 -top-1" : "ml-1",
+              )}
+            >
               {attentionCount}
             </Badge>
           ) : null}

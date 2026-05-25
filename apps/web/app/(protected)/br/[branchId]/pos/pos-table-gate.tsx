@@ -12,14 +12,20 @@ import {
   MapPin as IconMapPin,
 } from "lucide-react";
 import type { BranchTable } from "./page";
-
+import {
+  getPosTableTileVisualState,
+  type PosTableOrderVisualState,
+} from "./_lib/table-order-visual-state";
 import { TABLE_VI } from "@comtammatu/shared/messages";
+
 interface PosTableGateProps {
   tables: BranchTable[];
   selectedTableId: number | null;
   onTableSelect: (table: BranchTable) => void;
   /** Map<table_id, count of active orders on that table> for multi-order indicator */
   orderCountByTable?: Map<number, number>;
+  /** Map<table_id, visual state derived from active unpaid orders. */
+  tableOrderVisualStateByTable?: Map<number, PosTableOrderVisualState>;
   className?: string;
 }
 
@@ -27,6 +33,7 @@ interface TableButtonProps {
   table: BranchTable;
   isSelected: boolean;
   orderCount: number;
+  orderVisualState?: PosTableOrderVisualState;
   onTableSelect: (table: BranchTable) => void;
 }
 
@@ -34,21 +41,27 @@ const TableButton = memo(function TableButton({
   table,
   isSelected,
   orderCount,
+  orderVisualState,
   onTableSelect,
 }: TableButtonProps) {
   const handleClick = useCallback(
     () => onTableSelect(table),
     [onTableSelect, table],
   );
-  const isAvailable = table.status === "available";
-  const isOccupied = table.status === "occupied";
+  const tileVisualState = getPosTableTileVisualState({
+    tableStatus: table.status,
+    orderCount,
+    orderVisualState,
+  });
   const statusLabel = isSelected
     ? messages.pos.tableGate.selected
-    : isAvailable
+    : tileVisualState === "empty"
       ? messages.pos.tableGate.available
-      : isOccupied
-        ? messages.pos.tableGate.occupied
-        : messages.pos.tableGate.reserved;
+      : tileVisualState === "served"
+        ? messages.pos.tableGate.served
+        : tileVisualState === "active"
+          ? messages.pos.tableGate.occupied
+          : messages.pos.tableGate.reserved;
 
   return (
     <Button
@@ -59,11 +72,13 @@ const TableButton = memo(function TableButton({
         "h-32 w-full min-w-0 flex-col items-stretch justify-start gap-2 p-2.5 text-left whitespace-normal hover:shadow-md sm:h-36 sm:gap-3 sm:p-3 lg:h-40 lg:p-4 xl:h-44",
         isSelected
           ? "shadow-md"
-          : isAvailable
+          : tileVisualState === "empty"
             ? "bg-card shadow-sm hover:border-primary/25"
-            : isOccupied
-              ? "bg-warning/10 text-foreground shadow-sm hover:border-warning/35"
-              : "bg-muted/55 text-muted-foreground shadow-sm hover:border-border",
+            : tileVisualState === "served"
+              ? "bg-success/10 text-foreground shadow-sm hover:border-success/35"
+              : tileVisualState === "active"
+                ? "bg-warning/10 text-foreground shadow-sm hover:border-warning/35"
+                : "bg-muted/55 text-muted-foreground shadow-sm hover:border-border",
       )}
       onClick={handleClick}
     >
@@ -75,11 +90,13 @@ const TableButton = memo(function TableButton({
           variant={
             isSelected
               ? "outline"
-              : isAvailable
+              : tileVisualState === "empty"
                 ? "success"
-                : isOccupied
-                  ? "warning"
-                  : "secondary"
+                : tileVisualState === "served"
+                  ? "success"
+                  : tileVisualState === "active"
+                    ? "warning"
+                    : "secondary"
           }
           className={cn(
             "min-w-0 truncate text-xs font-semibold",
@@ -118,6 +135,7 @@ function PosTableGateComponent({
   selectedTableId,
   onTableSelect,
   orderCountByTable,
+  tableOrderVisualStateByTable,
   className,
 }: PosTableGateProps) {
   const tableGroups = useMemo(() => {
@@ -180,6 +198,9 @@ function PosTableGateComponent({
                       table={table}
                       isSelected={selectedTableId === table.id}
                       orderCount={orderCountByTable?.get(table.id) ?? 0}
+                      orderVisualState={tableOrderVisualStateByTable?.get(
+                        table.id,
+                      )}
                       onTableSelect={onTableSelect}
                     />
                   ))}

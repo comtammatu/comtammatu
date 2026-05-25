@@ -55,28 +55,20 @@ Snapshot from current checkout:
 
 ## Route-Group Migration Closure
 
-Route moves staged:
+Route migration reconciliation:
 
 | Probe                                       | Count |
 | ------------------------------------------- | ----: |
-| Staged app route moves                      |   470 |
-| Staged `R100` route moves                   |   379 |
-| Staged reviewed changed route moves         |    91 |
-| Staged intentional cleanup/delete set       |    17 |
+| Staged app route moves                      |     0 |
+| Unstaged route counterpart deletes          |     0 |
+| Untracked route files                       |     0 |
+| Changed route counterparts                  |     0 |
+| Deleted files without counterpart           |     0 |
 
-Current remaining route move probe:
-
-| Probe                                        | Count |
-| -------------------------------------------- | ----: |
-| Tracked deleted files                        |    52 |
-| Untracked route files                        |    60 |
-| Deleted files with a route-group counterpart |    52 |
-| Byte-identical counterparts                  |     0 |
-| Counterparts with content changes            |    52 |
-| Deleted files without counterpart            |     0 |
-
-The 17 no-counterpart deletes were reviewed and staged as expected cleanup
-classes:
+The route migration is reconciled into `HEAD` on `codex/continue-ts`.
+`node scripts/audit-route-group-migration.mjs` is clean, `apps/web/app/br` is
+absent, and `apps/web/app/(protected)/br` contains the branch operational
+surfaces. The 17 no-counterpart cleanup classes reviewed during the split were:
 
 - Legacy `docs/llm-wiki/*`.
 - Legacy `matu-surface`.
@@ -84,13 +76,12 @@ classes:
 - Legacy `admin/kitchen-sink`.
 - Replaced Inventory browser-draft helper.
 
-Decision: do not stage the rest of the route-group migration as one blind block
-until the 52 changed counterparts are reviewed. The remaining safe split is:
+Completion gate on 2026-05-24:
 
-1. Review and stage changed counterparts by route family:
-   branch/POS/KDS/settings (`52`).
-2. Run `pnpm typecheck && pnpm lint && pnpm build` before marking route
-   migration complete.
+- `pnpm typecheck`: pass.
+- `pnpm lint`: pass with existing inline-Vietnamese warnings (`1331` warnings,
+  `0` errors).
+- `pnpm build`: pass.
 
 ## Payment Readiness
 

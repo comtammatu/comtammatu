@@ -29,17 +29,24 @@ export default async function PosPage({
   searchParams,
 }: {
   params: Promise<{ branchId: string }>;
-  searchParams: Promise<{ table?: string }>;
+  searchParams: Promise<{ order?: string; table?: string }>;
 }) {
   const { branchId } = await params;
   const sp = await searchParams;
 
   const tableParam = sp.table;
+  const orderParam = sp.order;
   const parsedTable =
     tableParam !== undefined ? Number.parseInt(tableParam, 10) : NaN;
+  const parsedOrder =
+    orderParam !== undefined ? Number.parseInt(orderParam, 10) : NaN;
   const initialTableId =
     Number.isFinite(parsedTable) && parsedTable > 0
       ? Math.trunc(parsedTable)
+      : undefined;
+  const initialOpenOrderId =
+    Number.isFinite(parsedOrder) && parsedOrder > 0
+      ? Math.trunc(parsedOrder)
       : undefined;
 
   const branchIdNum = Number(branchId);
@@ -122,20 +129,16 @@ export default async function PosPage({
     );
   }
 
-  const [
-    menuResult,
-    tablesResult,
-    paymentMethodsResult,
-    vietQrConfigResult,
-  ] = await Promise.all([
-    fetchMenuForPos(branchIdNum),
-    fetchTablesForBranch(branchIdNum),
-    // Tenant-stable settings seeded ở RSC. Admin payment-settings save phải
-    // gọi `revalidatePath('/br/[branchId]/pos', 'page')` + `revalidateTag('payment-config')`
-    // để bust cache.
-    fetchPaymentMethodsForPos(branchIdNum),
-    fetchVietQrConfig(branchIdNum),
-  ]);
+  const [menuResult, tablesResult, paymentMethodsResult, vietQrConfigResult] =
+    await Promise.all([
+      fetchMenuForPos(branchIdNum),
+      fetchTablesForBranch(branchIdNum),
+      // Tenant-stable settings seeded ở RSC. Admin payment-settings save phải
+      // gọi `revalidatePath('/br/[branchId]/pos', 'page')` + `revalidateTag('payment-config')`
+      // để bust cache.
+      fetchPaymentMethodsForPos(branchIdNum),
+      fetchVietQrConfig(branchIdNum),
+    ]);
 
   // Active orders are NOT seeded from RSC — every Server Action triggers a
   // route revalidation that re-runs page.tsx, and `fetchActiveOrders` was a
@@ -191,6 +194,7 @@ export default async function PosPage({
         initialOrderType={initialOrderType}
         initialOrders={initialOrders}
         initialOrdersSeeded={initialOrdersSeeded}
+        initialOpenOrderId={initialOpenOrderId}
         canCloseShift={permFlags.canCloseShift}
         canConfirmCash={permFlags.canConfirmCash}
         canOverrideVariance={permFlags.canOverrideVariance}

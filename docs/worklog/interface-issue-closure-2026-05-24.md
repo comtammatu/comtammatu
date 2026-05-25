@@ -59,7 +59,7 @@ Không được bắt đầu bằng một redesign lớn. Đường đúng là:
 | ID | Priority | Surface | Problem | Evidence | Closure decision |
 | --- | --- | --- | --- | --- | --- |
 | `IF-001` | P0 | Design system | Legacy Inventory pilot layer still present: `matu-surface`, `matu-*`, `font-matu-body`, generated matu tokens, kitchen sink. | Static scan finds 4 files with legacy hits. `docs/worklog/ui-design-system-ssot-audit-2026-05-24.md` already marks this as NO-GO for new UI. | Migrate/remove legacy layer only after route migration settles. Add static guard first. |
-| `IF-002` | P0 | Worktree / routing | Interface work is sitting on a massive App Router route-group migration. | Current audit: `470` staged app route moves and `52` unstaged changed counterparts by route family. | Partially split on 2026-05-24. Continue by reviewing/staging the remaining `branch/POS/KDS/settings` bucket; do not stage it as one blind block. |
+| `IF-002` | P0 | Worktree / routing | Interface work was sitting on a massive App Router route-group migration. | Current audit is clean: no staged route moves, no unstaged route counterparts, and no no-counterpart deletes. Full `pnpm typecheck && pnpm lint && pnpm build` passed. | Closed on 2026-05-24 after route-group migration was reconciled into `HEAD` and full verification passed. |
 | `IF-003` | P1 | Rhythm / typography | App surfaces still violate locked heading scale. | Static scan finds 6 files with `text-4xl`, `text-5xl`, or `font-black`. | Closed on 2026-05-24: all runtime hits removed, heading-scale guard allowlist tightened to zero, and POS/KDS rendered smoke captured. |
 | `IF-004` | P1 | Icon/media sizing | App surfaces still use banned icon-size classes. | Static scan finds 15 files with `size-7/9/11/14/16`; some may be allowed media thumbnails. | Closed on 2026-05-24: `size-7/9/11` app-surface hits removed, oversized icon glyphs reduced, and guard allowlist narrowed to media thumbnails only. |
 | `IF-005` | P1 | Button/touch height | App surfaces still set raw fixed/touch heights instead of Button primitive variants. | Static scan finds 38 files with `h-10/11/12/14/16` or raw `min-h-12/14/16`. | Closed on 2026-05-24: real POS/KDS/Inventory actions moved to primitive touch sizing; guard allowlist narrowed to non-button layout/input/skeleton/brand cases. |
@@ -923,3 +923,42 @@ Verification:
 - Targeted ESLint for staged Inventory/support files: pass with `0` errors and
   existing inline-Vietnamese warnings (`435` warnings).
 - `pnpm --filter @comtammatu/web typecheck`: pass.
+
+## IF-002 Stage I - 2026-05-24
+
+Reconciled the final branch/POS/KDS/settings bucket after `HEAD` advanced to
+`5c65d71d` (`chore: sync cloud migrations and pilot hardening`).
+
+Local 4-role synthesis:
+
+- PM: finish IF-002 by verifying the route-group migration is no longer present
+  as dirty worktree state and that runtime routes still build.
+- BA: branch operational URLs must remain stable (`/br/[branchId]/pos`,
+  `/br/[branchId]/kds`, and branch settings) even though their source files now
+  live under `apps/web/app/(protected)/br`.
+- Senior Dev: confirm legacy `apps/web/app/br` source paths are gone, protected
+  branch paths exist, and stale worklog/todo counts are corrected.
+- QA/QC: route audit must be clean; full repo completion gate must pass before
+  closing IF-002.
+
+Reconciliation evidence:
+
+- `git status --short --branch`: clean on `codex/continue-ts`.
+- `node scripts/audit-route-group-migration.mjs`: `0` staged route moves, `0`
+  unstaged deleted/untracked route counterparts, `0` changed counterparts, and
+  `0` no-counterpart deletes.
+- `apps/web/app/(protected)/br` exists; legacy `apps/web/app/br` is absent.
+- Next build route table still exposes stable URLs such as `/br/[branchId]/pos`,
+  `/br/[branchId]/kds`, `/br/[branchId]/settings/*`, and
+  `/br/[branchId]/runner`.
+
+Verification:
+
+- `pnpm typecheck`: pass.
+- `pnpm lint`: pass with existing inline-Vietnamese warnings (`1331` warnings,
+  `0` errors); copy/import/UI/client-storage guards passed.
+- `pnpm build`: pass; Next generated `86` static pages and Serwist precached
+  `177` URLs.
+
+Decision: `IF-002` is closed. Broad Interface runtime edits can now proceed from
+a clean route tree instead of a dirty route migration split.

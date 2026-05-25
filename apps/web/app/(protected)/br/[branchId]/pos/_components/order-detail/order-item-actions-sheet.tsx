@@ -11,6 +11,7 @@ import {
 } from "@comtammatu/ui/components/sheet";
 import {
   Check as IconCheck,
+  Flame as IconFlame,
   Minus as IconMinus,
   Pencil as IconPencil,
   X as IconX,
@@ -43,6 +44,7 @@ interface OrderItemActionsSheetProps {
    * và parent supply menu lookup. Optional vì caller cũ (employee waiter
    * portal) chưa cần đến. */
   onEditRequest?: (itemId: number) => void;
+  onPriorityRequest?: (itemId: number, next: boolean) => void;
 }
 
 export function OrderItemActionsSheet({
@@ -54,6 +56,7 @@ export function OrderItemActionsSheet({
   onVoidRequest,
   onReduceRequest,
   onEditRequest,
+  onPriorityRequest,
 }: OrderItemActionsSheetProps) {
   const cancelled = item?.status === "cancelled";
   const served = item?.status === "served";
@@ -76,10 +79,20 @@ export function OrderItemActionsSheet({
     item.status === "pending" &&
     item.menu_item_id != null &&
     onEditRequest != null;
+  const canPrioritize =
+    item != null &&
+    onPriorityRequest != null &&
+    ["pending", "preparing"].includes(item.status);
   const displayName = item ? getPosLineItemDisplayName(item) : "";
   const summary = item
     ? getPosLineItemSummary(item)
-    : { options: null, note: null };
+    : {
+        options: null,
+        modifiers: [],
+        sides: [],
+        note: null,
+        isPriority: false,
+      };
   const statusLabel = item
     ? (STATUS_LABELS[item.status] ?? item.status)
     : "";
@@ -109,7 +122,10 @@ export function OrderItemActionsSheet({
               title={displayName}
               total={formatVND(item.subtotal)}
               options={summary.options}
+              modifiers={summary.modifiers}
+              sides={summary.sides}
               note={summary.note}
+              isPriority={summary.isPriority}
               quantityClassName={cancelled ? "opacity-50" : undefined}
               titleClassName={cancelled ? "line-through opacity-60" : undefined}
               totalClassName={
@@ -158,6 +174,23 @@ export function OrderItemActionsSheet({
               Sửa món
             </Button>
           )}
+          {canPrioritize && (
+            <Button
+              type="button"
+              variant="outline"
+              size="touch"
+              className="w-full"
+              disabled={isPending}
+              onClick={() => {
+                if (item && onPriorityRequest) {
+                  onPriorityRequest(item.id, item.is_priority !== true);
+                }
+              }}
+            >
+              <IconFlame data-icon="inline-start" />
+              {item?.is_priority === true ? "Bỏ ưu tiên" : "Ưu tiên bếp"}
+            </Button>
+          )}
           {canReduce && (
             <Button
               type="button"
@@ -188,7 +221,11 @@ export function OrderItemActionsSheet({
               Hủy món
             </Button>
           )}
-          {!canMarkServed && !canVoid && !canReduce && !canEdit && (
+          {!canMarkServed &&
+            !canVoid &&
+            !canReduce &&
+            !canEdit &&
+            !canPrioritize && (
             <p className="py-4 text-center text-sm text-muted-foreground">
               Không có thao tác khả dụng cho món này.
             </p>

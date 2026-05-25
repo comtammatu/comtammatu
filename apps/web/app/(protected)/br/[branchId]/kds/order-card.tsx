@@ -24,7 +24,6 @@ function getKitchenCompleteAtMs(tickets: KdsTicket[]): number | null {
 
 interface OrderCardProps {
   order: KdsOrder;
-  onBump: (ticketId: number) => Promise<void>;
   onRecall: (ticketId: number) => Promise<void>;
   onOutOfStock: (ticketId: number) => Promise<void>;
   onCompleteTickets: (ticketIds: number[]) => Promise<void>;
@@ -36,7 +35,6 @@ interface OrderCardProps {
 
 function OrderCardComponent({
   order,
-  onBump,
   onRecall,
   onOutOfStock,
   onCompleteTickets,
@@ -120,23 +118,23 @@ function OrderCardComponent({
         kitchenTicketNumber={order.kitchenTicketNumber}
         orderType={order.orderType}
         tableNumber={order.tableNumber}
-        sendSeq={order.sendSeq}
         sendKind={order.sendKind}
         elapsedMinutes={elapsed}
         isComplete={isComplete}
+        isPriority={order.isPriority}
         bgClass={ageStyle.bg}
       />
 
-      <CardContent className="flex-1 divide-y divide-border/30 p-0">
+      <CardContent className="divide-y divide-border/30 p-0">
         {order.items.map((item) => (
           <TicketRow
             key={item.id}
             kind="item"
             item={item}
             ticket={ticketByItemId.get(item.id)}
-            onBump={onBump}
             onRecall={onRecall}
             onOutOfStock={onOutOfStock}
+            onCompleteTickets={onCompleteTickets}
             isMutating={
               ticketByItemId.get(item.id)
                 ? pendingTicketIds.has(ticketByItemId.get(item.id)!.id)
@@ -152,9 +150,9 @@ function OrderCardComponent({
             key={ticket.id}
             kind="orphan"
             ticket={ticket}
-            onBump={onBump}
             onRecall={onRecall}
             onOutOfStock={onOutOfStock}
+            onCompleteTickets={onCompleteTickets}
             isMutating={pendingTicketIds.has(ticket.id)}
             canMarkReady={canMarkReady}
             canRecall={canRecall}
@@ -168,7 +166,6 @@ function OrderCardComponent({
           pendingTickets={pendingTickets}
           preparingTickets={preparingTickets}
           pendingTicketIds={pendingTicketIds}
-          onBump={onBump}
           onCompleteTickets={onCompleteTickets}
         />
       )}
@@ -185,7 +182,6 @@ function arePropsEqual(prev: OrderCardProps, next: OrderCardProps): boolean {
   if (prev.canMarkReady !== next.canMarkReady) return false;
   if (prev.canRecall !== next.canRecall) return false;
   if (prev.className !== next.className) return false;
-  if (prev.onBump !== next.onBump) return false;
   if (prev.onRecall !== next.onRecall) return false;
   if (prev.onOutOfStock !== next.onOutOfStock) return false;
   if (prev.onCompleteTickets !== next.onCompleteTickets) return false;
@@ -207,6 +203,7 @@ function arePropsEqual(prev: OrderCardProps, next: OrderCardProps): boolean {
     a.kitchenTicketNumber !== b.kitchenTicketNumber ||
     a.sendSeq !== b.sendSeq ||
     a.sendKind !== b.sendKind ||
+    a.isPriority !== b.isPriority ||
     a.orderType !== b.orderType ||
     a.createdAt !== b.createdAt
   ) {
@@ -236,6 +233,7 @@ function arePropsEqual(prev: OrderCardProps, next: OrderCardProps): boolean {
       ia.id !== ib.id ||
       ia.menu_item_id !== ib.menu_item_id ||
       ia.status !== ib.status ||
+      ia.is_priority !== ib.is_priority ||
       ia.quantity !== ib.quantity ||
       ia.item_name !== ib.item_name ||
       ia.variant_name !== ib.variant_name ||

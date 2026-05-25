@@ -3074,11 +3074,15 @@ export type Database = {
           cancel_reason: string | null
           created_at: string
           id: number
+          is_priority: boolean
           item_name: string
           menu_item_id: number
           modifiers: Json
           note: string | null
           order_id: number
+          priority_marked_at: string | null
+          priority_marked_by: string | null
+          priority_note: string | null
           quantity: number
           request_key: string | null
           sent_to_kitchen_at: string | null
@@ -3096,11 +3100,15 @@ export type Database = {
           cancel_reason?: string | null
           created_at?: string
           id?: never
+          is_priority?: boolean
           item_name: string
           menu_item_id: number
           modifiers?: Json
           note?: string | null
           order_id: number
+          priority_marked_at?: string | null
+          priority_marked_by?: string | null
+          priority_note?: string | null
           quantity: number
           request_key?: string | null
           sent_to_kitchen_at?: string | null
@@ -3118,11 +3126,15 @@ export type Database = {
           cancel_reason?: string | null
           created_at?: string
           id?: never
+          is_priority?: boolean
           item_name?: string
           menu_item_id?: number
           modifiers?: Json
           note?: string | null
           order_id?: number
+          priority_marked_at?: string | null
+          priority_marked_by?: string | null
+          priority_note?: string | null
           quantity?: number
           request_key?: string | null
           sent_to_kitchen_at?: string | null
@@ -3149,6 +3161,13 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_priority_marked_by_fkey"
+            columns: ["priority_marked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -3236,6 +3255,7 @@ export type Database = {
           discount_value: number | null
           id: number
           idempotency_key: string | null
+          is_priority: boolean
           kitchen_send_count: number
           last_transfer_idempotency_key: string | null
           merge_request_key: string | null
@@ -3246,6 +3266,9 @@ export type Database = {
           payment_method: string | null
           payment_status: string | null
           pos_session_id: number | null
+          priority_marked_at: string | null
+          priority_marked_by: string | null
+          priority_note: string | null
           service_charge: number
           split_from_order_id: number | null
           status: string
@@ -3269,6 +3292,7 @@ export type Database = {
           discount_value?: number | null
           id?: never
           idempotency_key?: string | null
+          is_priority?: boolean
           kitchen_send_count?: number
           last_transfer_idempotency_key?: string | null
           merge_request_key?: string | null
@@ -3279,6 +3303,9 @@ export type Database = {
           payment_method?: string | null
           payment_status?: string | null
           pos_session_id?: number | null
+          priority_marked_at?: string | null
+          priority_marked_by?: string | null
+          priority_note?: string | null
           service_charge?: number
           split_from_order_id?: number | null
           status?: string
@@ -3302,6 +3329,7 @@ export type Database = {
           discount_value?: number | null
           id?: never
           idempotency_key?: string | null
+          is_priority?: boolean
           kitchen_send_count?: number
           last_transfer_idempotency_key?: string | null
           merge_request_key?: string | null
@@ -3312,6 +3340,9 @@ export type Database = {
           payment_method?: string | null
           payment_status?: string | null
           pos_session_id?: number | null
+          priority_marked_at?: string | null
+          priority_marked_by?: string | null
+          priority_note?: string | null
           service_charge?: number
           split_from_order_id?: number | null
           status?: string
@@ -3356,6 +3387,13 @@ export type Database = {
             columns: ["pos_session_id"]
             isOneToOne: false
             referencedRelation: "pos_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_priority_marked_by_fkey"
+            columns: ["priority_marked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -9548,6 +9586,18 @@ export type Database = {
       }
       set_order_service_charge: {
         Args: { p_amount: number; p_note: string; p_order_id: number }
+        Returns: Json
+      }
+      set_pos_order_item_priority: {
+        Args: {
+          p_is_priority: boolean
+          p_note?: string
+          p_order_item_id: number
+        }
+        Returns: Json
+      }
+      set_pos_order_priority: {
+        Args: { p_is_priority: boolean; p_note?: string; p_order_id: number }
         Returns: Json
       }
       split_order: {

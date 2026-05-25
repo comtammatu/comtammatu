@@ -36,3 +36,26 @@ test("payment completion migration recomputes amount and does not complete on st
   assert.match(source, /'stock_failed'::TEXT/);
   assert.doesNotMatch(source, /Stock consumption remains fail-soft/i);
 });
+
+test("VietQR confirm uses fail-hard payment completion instead of caller-side stock deduction", () => {
+  const migration = readRepoFile(
+    "supabase/migrations/20260601930000_harden_confirm_vietqr_payment.sql",
+  );
+  const action = readRepoFile(
+    "apps/web/app/(protected)/br/[branchId]/pos/payment-actions.ts",
+  );
+  const vietQrAction = action.slice(
+    action.indexOf("export async function confirmVietQrPayment("),
+    action.indexOf("/* ─── confirmVietQrPaymentWithInvoice"),
+  );
+
+  assert.match(migration, /complete_payment_and_consume_stock/);
+  assert.match(migration, /'stock_failed'/);
+  assert.match(migration, /amount_mismatch_recomputed/);
+  assert.doesNotMatch(
+    migration,
+    /Stock consumption is done by the server action caller/i,
+  );
+  assert.match(vietQrAction, /result\.status/);
+  assert.doesNotMatch(vietQrAction, /consumeStockForOrderCompat/);
+});

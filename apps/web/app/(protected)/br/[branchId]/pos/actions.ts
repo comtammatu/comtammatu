@@ -19,6 +19,8 @@ export {
   voidOrderItem,
   reduceOrderItemQuantity,
   editPendingOrderItem,
+  setOrderPriority,
+  setOrderItemPriority,
   cancelOrder,
   transferOrderTable,
   updateOrderStatus,

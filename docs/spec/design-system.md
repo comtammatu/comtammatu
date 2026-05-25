@@ -182,11 +182,11 @@ Page padding MUST come from `AppPage` (not ad-hoc on the page root). Card paddin
 | Eyebrow / metadata     | `text-xs font-medium uppercase tracking-wide`          | `AppPageHeader.eyebrow` |
 | Dense eyebrow          | `text-2xs font-medium uppercase tracking-wide`         | KDS chrome, audit row meta |
 | Numeric input echo     | `text-3xl font-semibold tabular-nums`                  | Number pad readout, scale display |
-| Display call number    | `font-mono text-6xl sm:text-7xl lg:text-8xl font-semibold tabular-nums` | Customer-facing runner / queue display only |
+| Display call target    | `font-mono text-6xl sm:text-7xl lg:text-8xl font-semibold tabular-nums` | Customer-facing runner / queue display only |
 
 `text-4xl`, `text-5xl` are NOT allowed in app surfaces. They live only in marketing/login splash. `text-3xl` is reserved for the numeric-input-echo role above (cashier number pad, scale display) and MUST be paired with `tabular-nums`. `text-3xs` is reserved for SVG axis labels and dense table micro-meta.
 
-Display call numbers are a separate operational display role, not headings. Use them only on customer-facing queue/runner screens where the primary job is reading a stable order number from distance. The displayed value must be stable (`order_number` / `kitchen_ticket_number`), never a volatile render index.
+Display call targets are a separate operational display role, not headings. Use them only on customer-facing queue/runner screens where the primary job is reading a stable serving target from distance. The displayed value must be stable (`table_number` for dine-in, `order_number` / `kitchen_ticket_number` for fallback), never a volatile render index.
 
 `font-bold` only for receipt totals, page headers in print mode, and emphasis inside body copy. Default heading weight is `font-semibold`. `font-black` is not allowed in the app.
 

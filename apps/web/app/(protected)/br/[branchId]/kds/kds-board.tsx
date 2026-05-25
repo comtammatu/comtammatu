@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useKeyboardShortcut } from "@/_lib/use-keyboard-shortcut";
+import { playAppSignal } from "@lib/audio-signal";
+import { toast } from "@comtammatu/ui/components/sonner";
 import { TickProvider } from "./hooks/use-board-tick";
 import { useKdsRealtime } from "./hooks/use-kds-realtime";
 import { useKdsFilters } from "./hooks/use-kds-filters";
@@ -15,85 +17,66 @@ import { OrderGrid } from "./components/order-grid";
 import { UnassignedBanner } from "./components/unassigned-banner";
 import type {
   KdsBoardProps,
+  KdsKitchenSendBatch,
   KdsMenuLimitRow,
   KdsOrder,
   KdsOrderItem,
   KdsTicket,
-  TicketStatusFilter,
 } from "./types";
-
-/* ─── Audio signal ─── */
-
-let _audioCtx: AudioContext | null = null;
-let _lastSignalAt = 0;
-
-function playKdsSignal(force = false) {
-  const now = Date.now();
-  if (!force && now - _lastSignalAt < 2500) return;
-  _lastSignalAt = now;
-
-  try {
-    if (!_audioCtx) {
-      _audioCtx = new AudioContext();
-    }
-    if (_audioCtx.state === "suspended") {
-      void _audioCtx.resume();
-    }
-    const oscillator = _audioCtx.createOscillator();
-    const gainNode = _audioCtx.createGain();
-    oscillator.connect(gainNode);
-    gainNode.connect(_audioCtx.destination);
-    oscillator.frequency.setValueAtTime(740, _audioCtx.currentTime);
-    oscillator.frequency.setValueAtTime(880, _audioCtx.currentTime + 0.08);
-    oscillator.type = "sine";
-    gainNode.gain.setValueAtTime(0.001, _audioCtx.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(
-      0.18,
-      _audioCtx.currentTime + 0.02,
-    );
-    gainNode.gain.exponentialRampToValueAtTime(
-      0.001,
-      _audioCtx.currentTime + 0.18,
-    );
-    oscillator.start();
-    oscillator.stop(_audioCtx.currentTime + 0.2);
-  } catch {
-    // Audio not available
-  }
-}
 
 /* ─── Helpers ─── */
 
-function orderMatchesTicketStatus(
-  tickets: KdsTicket[],
-  filter: TicketStatusFilter,
-): boolean {
-  if (filter === "all") return true;
-  const statuses = tickets.map((t) => t.status);
-  if (filter === "active") {
-    return statuses.some((s) => s === "pending" || s === "preparing");
-  }
-  if (filter === "pending") return statuses.some((s) => s === "pending");
-  if (filter === "preparing") return statuses.some((s) => s === "preparing");
-  return statuses.some((s) => s === "ready");
-}
-
-function isKitchenWorkActive(order: KdsOrder): boolean {
-  return order.tickets.some(
+function orderHasKitchenWork(tickets: KdsTicket[]): boolean {
+  return tickets.some(
     (ticket) => ticket.status === "pending" || ticket.status === "preparing",
   );
 }
 
-function compareKdsOrdersNewestFirst(a: KdsOrder, b: KdsOrder): number {
-  const activeDelta =
-    Number(isKitchenWorkActive(b)) - Number(isKitchenWorkActive(a));
-  if (activeDelta !== 0) return activeDelta;
+function isActiveKitchenTicket(ticket: KdsTicket): boolean {
+  return ticket.status === "pending" || ticket.status === "preparing";
+}
+
+function getTicketItemLabel(
+  ticket: KdsTicket,
+  orderItemById: Map<number, KdsOrderItem>,
+): string {
+  return orderItemById.get(ticket.order_item_id)?.item_name ?? "món";
+}
+
+function getTicketOrderLabel(
+  ticket: KdsTicket,
+  orders: Map<number, { order_number: string }>,
+): string {
+  return orders.get(ticket.order_id)?.order_number ?? String(ticket.order_id);
+}
+
+function getTicketBatchKind(
+  ticket: KdsTicket,
+  kitchenBatches: Map<number, KdsKitchenSendBatch>,
+): string | null {
+  if (ticket.kitchen_send_batch_id === null) return null;
+  return kitchenBatches.get(ticket.kitchen_send_batch_id)?.kind ?? null;
+}
+
+function getKitchenQueueRank(order: KdsOrder): number {
+  const statuses = order.tickets.map((ticket) => ticket.status);
+  if (statuses.some((status) => status === "preparing")) return 0;
+  if (statuses.some((status) => status === "pending")) {
+    return order.isPriority ? 1 : 2;
+  }
+  if (statuses.some((status) => status === "ready")) return 3;
+  return 4;
+}
+
+function compareKdsOrdersForKitchenQueue(a: KdsOrder, b: KdsOrder): number {
+  const rankDelta = getKitchenQueueRank(a) - getKitchenQueueRank(b);
+  if (rankDelta !== 0) return rankDelta;
 
   const timeDelta =
-    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
   if (timeDelta !== 0) return timeDelta;
 
-  return b.groupKey.localeCompare(a.groupKey);
+  return a.groupKey.localeCompare(b.groupKey);
 }
 
 /* ─── Component ─── */
@@ -130,6 +113,9 @@ export function KdsBoard({
   const { mode, setMode } = useKdsViewMode();
   const [menuLimits, setMenuLimits] = useState(initialMenuLimits);
   const [soundEnabled, setSoundEnabled] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const boardRootRef = useRef<HTMLDivElement | null>(null);
+  const lastMissingItemRefreshRef = useRef<string | null>(null);
 
   useEffect(() => {
     setMenuLimits(initialMenuLimits);
@@ -164,7 +150,6 @@ export function KdsBoard({
   }, []);
 
   const {
-    handleBump,
     handleRecall,
     handleOutOfStock,
     handleCompleteTickets,
@@ -192,6 +177,8 @@ export function KdsBoard({
       ).length,
     [tickets, fallbackStationSet],
   );
+  const showUnassignedBanner =
+    stations.length > 1 && fallbackStationIds.length > 0;
 
   const filterUnassigned = useCallback(() => {
     const firstFallback = fallbackStationIds[0];
@@ -200,37 +187,37 @@ export function KdsBoard({
     }
   }, [fallbackStationIds, filters]);
 
-  /* ── Audio on new tickets ── */
-
-  const prevActiveTicketIdsRef = useRef<Set<number> | null>(null);
-  useEffect(() => {
-    const activeTicketIds = new Set(
-      tickets
-        .filter(
-          (ticket) =>
-            ticket.status === "pending" || ticket.status === "preparing",
-        )
-        .map((ticket) => ticket.id),
-    );
-    const previous = prevActiveTicketIdsRef.current;
-    if (
-      soundEnabled &&
-      previous !== null &&
-      [...activeTicketIds].some((ticketId) => !previous.has(ticketId))
-    ) {
-      playKdsSignal();
-    }
-    prevActiveTicketIdsRef.current = activeTicketIds;
-  }, [soundEnabled, tickets]);
-
   const toggleSound = useCallback(() => {
     setSoundEnabled((current) => {
       const next = !current;
       if (next) {
-        playKdsSignal(true);
+        playAppSignal("kds", true);
       }
       return next;
     });
+  }, []);
+
+  useEffect(() => {
+    const onFullscreenChange = () => {
+      setIsFullscreen(document.fullscreenElement === boardRootRef.current);
+    };
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    onFullscreenChange();
+    return () => {
+      document.removeEventListener("fullscreenchange", onFullscreenChange);
+    };
+  }, []);
+
+  const toggleFullscreen = useCallback(() => {
+    const root = boardRootRef.current;
+    if (!root) return;
+    if (document.fullscreenElement === root) {
+      void document.exitFullscreen().catch(() => undefined);
+      return;
+    }
+    if (!document.fullscreenElement) {
+      void root.requestFullscreen().catch(() => undefined);
+    }
   }, []);
 
   /* ── Derived data ── */
@@ -239,6 +226,74 @@ export function KdsBoard({
     if (filters.activeStationId === null) return tickets;
     return tickets.filter((t) => t.station_id === filters.activeStationId);
   }, [tickets, filters.activeStationId]);
+
+  const orderItemById = useMemo(() => {
+    const orderItemById = new Map<number, KdsOrderItem>();
+    for (const items of orderItems.values()) {
+      for (const item of items) {
+        orderItemById.set(item.id, item);
+      }
+    }
+    return orderItemById;
+  }, [orderItems]);
+
+  /* ── Operational alerts on ticket changes ── */
+
+  const prevTicketsByIdRef = useRef<Map<number, KdsTicket> | null>(null);
+  useEffect(() => {
+    const previous = prevTicketsByIdRef.current;
+    const nextTicketsById = new Map(
+      tickets.map((ticket) => [ticket.id, ticket]),
+    );
+
+    if (previous === null) {
+      prevTicketsByIdRef.current = nextTicketsById;
+      return;
+    }
+
+    let hasNewActiveTicket = false;
+
+    for (const ticket of tickets) {
+      if (previous.has(ticket.id) || !isActiveKitchenTicket(ticket)) {
+        continue;
+      }
+      hasNewActiveTicket = true;
+      const itemLabel = getTicketItemLabel(ticket, orderItemById);
+      const orderLabel = getTicketOrderLabel(ticket, orders);
+      const isAppend = getTicketBatchKind(ticket, kitchenBatches) === "append";
+      toast.info(isAppend ? "Món thêm mới" : "Phiếu bếp mới", {
+        description: `${itemLabel} - đơn #${orderLabel}`,
+      });
+    }
+
+    if (soundEnabled && hasNewActiveTicket) {
+      playAppSignal("kds");
+    }
+
+    prevTicketsByIdRef.current = nextTicketsById;
+  }, [kitchenBatches, orderItemById, orders, soundEnabled, tickets]);
+
+  const missingOrderItemIds = useMemo(
+    () => [
+      ...new Set(
+        filteredTickets
+          .map((ticket) => ticket.order_item_id)
+          .filter((id) => !orderItemById.has(id)),
+      ),
+    ],
+    [filteredTickets, orderItemById],
+  );
+
+  useEffect(() => {
+    if (missingOrderItemIds.length === 0) {
+      lastMissingItemRefreshRef.current = null;
+      return;
+    }
+    const signature = missingOrderItemIds.join(",");
+    if (lastMissingItemRefreshRef.current === signature) return;
+    lastMissingItemRefreshRef.current = signature;
+    void refreshBoardSnapshot();
+  }, [missingOrderItemIds, refreshBoardSnapshot]);
 
   const groupedOrders = useMemo<KdsOrder[]>(() => {
     const orderMap = new Map<string, KdsTicket[]>();
@@ -262,11 +317,12 @@ export function KdsBoard({
         firstTicket.kitchen_send_batch_id !== null
           ? kitchenBatches.get(firstTicket.kitchen_send_batch_id)
           : undefined;
-      const allItems = (orderItems.get(orderId) ?? []) as KdsOrderItem[];
-      const ticketItemIds = new Set(
-        orderTickets.map((ticket) => ticket.order_item_id),
-      );
-      const scopedItems = allItems.filter((item) => ticketItemIds.has(item.id));
+      const scopedItems = orderTickets
+        .map((ticket) => orderItemById.get(ticket.order_item_id))
+        .filter((item): item is KdsOrderItem => item !== undefined);
+      const isPriority =
+        orderInfo?.is_priority === true ||
+        scopedItems.some((item) => item.is_priority === true);
       result.push({
         groupKey,
         orderId,
@@ -281,34 +337,35 @@ export function KdsBoard({
           batch?.created_at ?? orderInfo?.created_at ?? firstTicket.created_at,
         sendSeq: batch?.send_seq ?? null,
         sendKind: batch?.kind ?? null,
+        isPriority,
         tickets: orderTickets,
         items: scopedItems,
       });
     }
 
-    result.sort(compareKdsOrdersNewestFirst);
+    result.sort(compareKdsOrdersForKitchenQueue);
 
     return result;
   }, [
     filteredTickets,
     orders,
-    orderItems,
+    orderItemById,
     kitchenBatches,
     filters.activeStationId,
   ]);
 
+  const activeGroupedOrders = useMemo(
+    () => groupedOrders.filter((order) => orderHasKitchenWork(order.tickets)),
+    [groupedOrders],
+  );
+
   const displayOrders = useMemo(() => {
-    let list = groupedOrders;
+    let list = activeGroupedOrders;
     if (filters.orderTypeFilter !== "all") {
       list = list.filter((o) => o.orderType === filters.orderTypeFilter);
     }
-    if (filters.ticketStatusFilter !== "all") {
-      list = list.filter((o) =>
-        orderMatchesTicketStatus(o.tickets, filters.ticketStatusFilter),
-      );
-    }
     return list;
-  }, [groupedOrders, filters.orderTypeFilter, filters.ticketStatusFilter]);
+  }, [activeGroupedOrders, filters.orderTypeFilter]);
 
   const pendingCount = useMemo(
     () => tickets.filter((t) => t.status === "pending").length,
@@ -349,51 +406,55 @@ export function KdsBoard({
 
   return (
     <TickProvider initialNowMs={initialNowMs}>
-      <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col">
+      <div
+        ref={boardRootRef}
+        className="flex h-dvh min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden bg-background"
+      >
         <div className="sticky top-0 z-30 shrink-0 border-b bg-background/95 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/85">
           <BoardHeader
             branchId={branchId}
             pendingCount={pendingCount}
             mode={mode}
             soundEnabled={soundEnabled}
+            isFullscreen={isFullscreen}
             onModeChange={setMode}
             onSoundToggle={toggleSound}
+            onFullscreenToggle={toggleFullscreen}
             menuLimits={menuLimits}
             onMenuLimitsChange={setMenuLimitRows}
+            stationControls={
+              <StationToggleBar
+                stations={stations}
+                activeStationId={filters.activeStationId}
+                stationCounts={stationCounts}
+                totalActiveCount={totalActiveCount}
+                onChange={filters.setStation}
+              />
+            }
+            filterControls={
+              <FilterBar
+                orderTypeFilter={filters.orderTypeFilter}
+                hasFilters={filters.hasFilters}
+                displayCount={displayOrders.length}
+                onOrderTypeChange={filters.setOrderType}
+                onClearAll={filters.clearAll}
+              />
+            }
           />
 
           <UnassignedBanner
-            count={unassignedCount}
+            count={showUnassignedBanner ? unassignedCount : 0}
             onFilter={filterUnassigned}
-          />
-
-          <StationToggleBar
-            stations={stations}
-            activeStationId={filters.activeStationId}
-            stationCounts={stationCounts}
-            totalActiveCount={totalActiveCount}
-            onChange={filters.setStation}
-          />
-
-          <FilterBar
-            ticketStatusFilter={filters.ticketStatusFilter}
-            orderTypeFilter={filters.orderTypeFilter}
-            hasFilters={filters.hasFilters}
-            displayCount={displayOrders.length}
-            onStatusChange={filters.setStatus}
-            onOrderTypeChange={filters.setOrderType}
-            onClearAll={filters.clearAll}
           />
         </div>
 
         {mode === "focus" ? (
           <FocusView
             orders={displayOrders}
-            hasGroupedOrders={groupedOrders.length > 0}
+            hasGroupedOrders={activeGroupedOrders.length > 0}
             pendingTicketIds={pendingTicketIds}
             canMarkReady={canMarkReady}
             canRecall={canRecall}
-            onBump={handleBump}
             onRecall={handleRecall}
             onOutOfStock={handleOutOfStock}
             onCompleteTickets={handleCompleteTickets}
@@ -401,11 +462,10 @@ export function KdsBoard({
         ) : (
           <OrderGrid
             displayOrders={displayOrders}
-            hasGroupedOrders={groupedOrders.length > 0}
+            hasGroupedOrders={activeGroupedOrders.length > 0}
             pendingTicketIds={pendingTicketIds}
             canMarkReady={canMarkReady}
             canRecall={canRecall}
-            onBump={handleBump}
             onRecall={handleRecall}
             onOutOfStock={handleOutOfStock}
             onCompleteTickets={handleCompleteTickets}

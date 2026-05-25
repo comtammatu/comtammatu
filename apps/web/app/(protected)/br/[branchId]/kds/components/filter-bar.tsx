@@ -9,21 +9,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import { Filter as IconFilter, X as IconX } from "lucide-react";
-import type {
-  FilterOption,
-  OrderTypeFilter,
-  TicketStatusFilter,
-} from "../types";
-
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
-const TICKET_STATUS_OPTIONS: FilterOption<TicketStatusFilter>[] = [
-  { value: "all", label: "Tất cả" },
-  { value: "active", label: "Còn việc" },
-  { value: "pending", label: "Có món chờ" },
-  { value: "preparing", label: "Có món đang làm" },
-  { value: "ready", label: "Có món xong" },
-];
+import { X as IconX } from "lucide-react";
+import type { FilterOption, OrderTypeFilter } from "../types";
 
 const ORDER_TYPE_OPTIONS: FilterOption<OrderTypeFilter>[] = [
   { value: "all", label: "Tất cả" },
@@ -32,65 +19,29 @@ const ORDER_TYPE_OPTIONS: FilterOption<OrderTypeFilter>[] = [
 ];
 
 interface FilterBarProps {
-  ticketStatusFilter: TicketStatusFilter;
   orderTypeFilter: OrderTypeFilter;
   hasFilters: boolean;
   displayCount: number;
-  onStatusChange: (value: TicketStatusFilter) => void;
   onOrderTypeChange: (value: OrderTypeFilter) => void;
   onClearAll: () => void;
 }
 
 export function FilterBar({
-  ticketStatusFilter,
   orderTypeFilter,
   hasFilters,
   displayCount,
-  onStatusChange,
   onOrderTypeChange,
   onClearAll,
 }: FilterBarProps) {
   return (
-    <div className="px-3 py-1.5 md:px-4">
-      <div className="flex min-w-0 flex-wrap items-center gap-2">
-        <div className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
-          <IconFilter className="size-4 shrink-0" aria-hidden />
-          <span className="hidden text-sm font-medium sm:inline">
-            {ACTIONS_VI.filter}
-          </span>
-        </div>
-
-        <Select
-          value={ticketStatusFilter}
-          onValueChange={(v) => onStatusChange(v as TicketStatusFilter)}
-        >
-          <SelectTrigger
-            className="w-auto min-w-28 shrink-0 md:min-w-36"
-            aria-label="Lọc theo trạng thái món"
-          >
-            <SelectValue placeholder="Trạng thái" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              {TICKET_STATUS_OPTIONS.map((opt) => (
-                <SelectItem
-                  key={opt.value}
-                  value={opt.value}
-                  className="text-sm"
-                >
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-
+    <div className="shrink-0">
+      <div className="flex min-w-0 items-center gap-1.5">
         <Select
           value={orderTypeFilter}
           onValueChange={(v) => onOrderTypeChange(v as OrderTypeFilter)}
         >
           <SelectTrigger
-            className="w-auto min-w-24 shrink-0 md:min-w-32"
+            className="w-auto min-w-20 shrink-0 text-xs md:min-w-24"
             aria-label="Lọc theo loại đơn"
           >
             <SelectValue placeholder="Loại đơn" />
@@ -114,17 +65,17 @@ export function FilterBar({
           <Button
             type="button"
             variant="ghost"
-            size="sm"
+            size="icon-sm"
             className="shrink-0"
+            aria-label="Xóa lọc"
             onClick={onClearAll}
           >
-            <IconX data-icon="inline-start" aria-hidden />
-            Xóa lọc
+            <IconX aria-hidden />
           </Button>
         )}
 
         {displayCount > 0 && (
-          <span className="ml-auto text-xs font-semibold tabular-nums text-muted-foreground sm:text-sm">
+          <span className="shrink-0 text-xs font-semibold tabular-nums text-muted-foreground">
             {displayCount} đơn
           </span>
         )}

@@ -9,10 +9,17 @@ import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
   Ban as IconBan,
   Check as IconCheck,
-  ChevronRight as IconChevronRight,
   RotateCcw as IconRotate,
 } from "lucide-react";
-import { getStatusLabel, getStatusVariant } from "../lib/status-config";
+import {
+  getStatusLabel,
+  getStatusVariant,
+  shouldShowTicketStatusBadge,
+} from "../lib/status-config";
+import {
+  getItemRowStatusClass,
+  getQuantityStatusClass,
+} from "../lib/item-status-style";
 import { CancelledOverlay } from "./cancelled-overlay";
 import { TicketRowMeta } from "./ticket-row-meta";
 import type { KdsOrderItem, KdsTicket } from "../types";
@@ -21,9 +28,9 @@ interface TicketRowItemProps {
   kind: "item";
   item: KdsOrderItem;
   ticket: KdsTicket | undefined;
-  onBump: (ticketId: number) => Promise<void>;
   onRecall: (ticketId: number) => Promise<void>;
   onOutOfStock: (ticketId: number) => Promise<void>;
+  onCompleteTickets: (ticketIds: number[]) => Promise<void>;
   isMutating: boolean;
   canMarkReady: boolean;
   canRecall: boolean;
@@ -32,9 +39,9 @@ interface TicketRowItemProps {
 interface TicketRowOrphanProps {
   kind: "orphan";
   ticket: KdsTicket;
-  onBump: (ticketId: number) => Promise<void>;
   onRecall: (ticketId: number) => Promise<void>;
   onOutOfStock: (ticketId: number) => Promise<void>;
+  onCompleteTickets: (ticketIds: number[]) => Promise<void>;
   isMutating: boolean;
   canMarkReady: boolean;
   canRecall: boolean;
@@ -54,21 +61,21 @@ export function TicketRow(props: TicketRowProps) {
 function TicketRowItem({
   item,
   ticket,
-  onBump,
   onRecall,
   onOutOfStock,
+  onCompleteTickets,
   isMutating,
   canMarkReady,
   canRecall,
 }: TicketRowItemProps) {
   const status = ticket?.status ?? "pending";
   const isCancelled = status === "cancelled";
-  const canBumpByStatus =
+  const canCompleteByStatus =
     !isCancelled && (status === "pending" || status === "preparing");
   const canRecallByStatus =
     !isCancelled && (status === "preparing" || status === "ready");
-  const canBump = canBumpByStatus && canMarkReady;
-  const canOutOfStock = canBumpByStatus && canMarkReady;
+  const canComplete = canCompleteByStatus && canMarkReady;
+  const canOutOfStock = canCompleteByStatus && canMarkReady;
   const allowRecall = canRecallByStatus && canRecall;
   const changeTone = useItemChangeTone(item, status);
 
@@ -76,54 +83,67 @@ function TicketRowItem({
     <div
       data-testid={`kds-order-item-${String(item.id)}`}
       className={cn(
-        "relative flex min-h-20 flex-col gap-3 px-3 py-3 transition-colors duration-300 sm:flex-row sm:items-start md:px-4 md:py-4",
+        "relative grid min-w-0 grid-cols-[3.5rem_minmax(0,1fr)_auto] items-center gap-2 px-3 py-1.5 transition-colors duration-300 md:px-4",
+        getItemRowStatusClass(status),
         getChangeToneClass(changeTone),
-        status === "ready" && "opacity-60",
         isCancelled && "opacity-100",
       )}
     >
       {isCancelled && <CancelledOverlay />}
 
-      <div className="flex min-w-0 flex-1 items-start gap-3">
-        <div className="flex min-w-14 shrink-0 justify-center rounded-md bg-warning/10 px-2 py-1 text-warning ring-1 ring-inset ring-warning/30">
-          <span className="font-mono text-2xl font-semibold leading-none tabular-nums md:text-3xl">
-            {item.quantity}×
+      <div
+        className={cn(
+          "flex h-9 w-14 items-center justify-center rounded-md px-2 ring-1 ring-inset",
+          getQuantityStatusClass(status),
+        )}
+      >
+        <span className="font-mono text-2xl font-semibold leading-none tabular-nums">
+          {item.quantity}×
+        </span>
+      </div>
+      <div className="flex min-h-9 min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
+        <span className="min-w-0 break-words text-lg font-semibold leading-6">
+          {item.item_name}
+        </span>
+        {item.is_priority && (
+          <Badge
+            variant="warning"
+            className="h-6 rounded-md px-2 py-0 text-xs font-semibold leading-none"
+          >
+            Ưu tiên
+          </Badge>
+        )}
+        {item.variant_name && (
+          <span className="min-w-0 break-words text-sm font-medium leading-5 text-muted-foreground">
+            {item.variant_name}
           </span>
-        </div>
-        <div className="min-w-0 flex-1">
-          <span className="block min-w-0 break-words text-xl font-semibold leading-tight md:text-2xl">
-            {item.item_name}
-          </span>
-          {item.variant_name && (
-            <span className="mt-1 block break-words text-sm font-medium text-muted-foreground md:text-base">
-              {item.variant_name}
-            </span>
-          )}
-          <TicketRowMeta
-            note={item.note}
-            modifiers={item.modifiers}
-            sides={item.sides}
-          />
-        </div>
+        )}
+        <TicketRowMeta
+          layout="inline"
+          note={item.note}
+          modifiers={item.modifiers}
+          sides={item.sides}
+        />
       </div>
 
-      <div className="flex flex-wrap items-center gap-1 self-start sm:max-w-32 sm:shrink-0 sm:justify-end md:max-w-40">
-        <Badge
-          variant={getStatusVariant(status)}
-          className="px-2 py-1 text-xs font-semibold"
-        >
-          {getStatusLabel(status)}
-        </Badge>
+      <div className="flex shrink-0 items-center justify-end gap-1">
+        {shouldShowTicketStatusBadge(status) && (
+          <Badge
+            variant={getStatusVariant(status)}
+            className="h-6 rounded-md px-2.5 py-0 text-sm font-semibold leading-none"
+          >
+            {getStatusLabel(status)}
+          </Badge>
+        )}
 
         <TicketRowActions
           ticket={ticket ?? null}
           itemName={item.item_name}
-          status={status}
-          canBump={canBump}
+          canComplete={canComplete}
           canRecall={allowRecall}
           canOutOfStock={canOutOfStock}
           isMutating={isMutating}
-          onBump={onBump}
+          onCompleteTickets={onCompleteTickets}
           onRecall={onRecall}
           onOutOfStock={onOutOfStock}
         />
@@ -134,48 +154,54 @@ function TicketRowItem({
 
 function TicketRowOrphan({
   ticket,
-  onBump,
   onRecall,
   onOutOfStock,
+  onCompleteTickets,
   isMutating,
   canMarkReady,
   canRecall,
 }: TicketRowOrphanProps) {
   const status = ticket.status;
   const isCancelled = status === "cancelled";
-  const canBumpByStatus =
+  const canCompleteByStatus =
     !isCancelled && (status === "pending" || status === "preparing");
   const canRecallByStatus =
     !isCancelled && (status === "preparing" || status === "ready");
-  const canBump = canBumpByStatus && canMarkReady;
-  const canOutOfStock = canBumpByStatus && canMarkReady;
+  const canComplete = canCompleteByStatus && canMarkReady;
+  const canOutOfStock = canCompleteByStatus && canMarkReady;
   const allowRecall = canRecallByStatus && canRecall;
   const itemLabel = `Món #${String(ticket.order_item_id)}`;
 
   return (
-    <div className="relative flex min-h-20 flex-col gap-3 px-3 py-3 sm:flex-row sm:items-start md:px-4 md:py-4">
+    <div
+      className={cn(
+        "relative grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-1.5 md:px-4",
+        getItemRowStatusClass(status),
+      )}
+    >
       {isCancelled && <CancelledOverlay />}
-      <div className="min-w-0 flex-1 rounded-md border border-dashed border-border px-3 py-2">
-        <span className="break-words text-base font-semibold text-muted-foreground">
+      <div className="min-h-9 min-w-0 rounded-md border border-dashed border-border px-2 py-1.5">
+        <span className="break-words text-sm font-semibold leading-5 text-muted-foreground">
           {itemLabel}
         </span>
       </div>
-      <div className="flex flex-wrap items-center gap-1 self-start sm:max-w-32 sm:shrink-0 sm:justify-end md:max-w-40">
-        <Badge
-          variant={getStatusVariant(status)}
-          className="px-2 py-1 text-xs font-semibold"
-        >
-          {getStatusLabel(status)}
-        </Badge>
+      <div className="flex shrink-0 items-center justify-end gap-1">
+        {shouldShowTicketStatusBadge(status) && (
+          <Badge
+            variant={getStatusVariant(status)}
+            className="h-6 rounded-md px-2.5 py-0 text-sm font-semibold leading-none"
+          >
+            {getStatusLabel(status)}
+          </Badge>
+        )}
         <TicketRowActions
           ticket={ticket}
           itemName={itemLabel}
-          status={status}
-          canBump={canBump}
+          canComplete={canComplete}
           canRecall={allowRecall}
           canOutOfStock={canOutOfStock}
           isMutating={isMutating}
-          onBump={onBump}
+          onCompleteTickets={onCompleteTickets}
           onRecall={onRecall}
           onOutOfStock={onOutOfStock}
         />
@@ -187,12 +213,11 @@ function TicketRowOrphan({
 interface TicketRowActionsProps {
   ticket: KdsTicket | null;
   itemName: string;
-  status: string;
-  canBump: boolean;
+  canComplete: boolean;
   canRecall: boolean;
   canOutOfStock: boolean;
   isMutating: boolean;
-  onBump: (ticketId: number) => Promise<void>;
+  onCompleteTickets: (ticketIds: number[]) => Promise<void>;
   onRecall: (ticketId: number) => Promise<void>;
   onOutOfStock: (ticketId: number) => Promise<void>;
 }
@@ -200,12 +225,11 @@ interface TicketRowActionsProps {
 function TicketRowActions({
   ticket,
   itemName,
-  status,
-  canBump,
+  canComplete,
   canRecall,
   canOutOfStock,
   isMutating,
-  onBump,
+  onCompleteTickets,
   onRecall,
   onOutOfStock,
 }: TicketRowActionsProps) {
@@ -226,7 +250,7 @@ function TicketRowActions({
   }
 
   return (
-    <div className="flex shrink-0 flex-wrap gap-1">
+    <div className="flex shrink-0 items-center gap-1">
       {canOutOfStock && (
         <Button
           data-testid={`kds-out-of-stock-${String(ticket.id)}`}
@@ -253,23 +277,17 @@ function TicketRowActions({
           {isMutating ? <Spinner /> : <IconRotate aria-hidden />}
         </Button>
       )}
-      {canBump && (
+      {canComplete && (
         <Button
-          data-testid={`kds-bump-${String(ticket.id)}`}
-          variant={status === "preparing" ? "default" : "secondary"}
+          data-testid={`kds-complete-ticket-${String(ticket.id)}`}
+          variant="default"
           size="touch"
           className="w-12 px-0"
-          aria-label="Chuyển trạng thái món"
+          aria-label="Hoàn tất món"
           disabled={isMutating}
-          onClick={() => void onBump(ticket.id)}
+          onClick={() => void onCompleteTickets([ticket.id])}
         >
-          {isMutating ? (
-            <Spinner />
-          ) : status === "preparing" ? (
-            <IconCheck aria-hidden />
-          ) : (
-            <IconChevronRight aria-hidden />
-          )}
+          {isMutating ? <Spinner /> : <IconCheck aria-hidden />}
         </Button>
       )}
     </div>
@@ -285,12 +303,14 @@ function useItemChangeTone(item: KdsOrderItem, status: string): RowChangeTone {
         variantName: item.variant_name,
         unitPrice: item.unit_price,
         note: item.note,
+        isPriority: item.is_priority,
         modifiers: item.modifiers,
         sides: item.sides,
         status,
       }),
     [
       item.item_name,
+      item.is_priority,
       item.modifiers,
       item.note,
       item.quantity,

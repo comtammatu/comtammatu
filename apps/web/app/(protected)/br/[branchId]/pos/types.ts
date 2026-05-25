@@ -42,6 +42,7 @@ export const cartItemSchema = z.object({
   modifiers: z.array(cartModifierSchema),
   sides: z.array(cartSideSchema),
   note: z.string().optional(),
+  is_priority: z.boolean().optional(),
 });
 
 export type CartItem = z.infer<typeof cartItemSchema>;
@@ -66,6 +67,7 @@ type PosLineItemDetailsInput = PosLineItemDisplayInput & {
   modifiers?: readonly PosLineItemOptionInput[] | null;
   sides?: readonly PosLineItemSideInput[] | null;
   note?: string | null;
+  is_priority?: boolean | null;
 };
 
 function formatPosLineItemPrice(price: number | null | undefined): string {
@@ -141,7 +143,10 @@ function formatPosLineItemCompactSide(
 
 export interface PosLineItemSummary {
   options: string | null;
+  modifiers: string[];
+  sides: string[];
   note: string | null;
+  isPriority: boolean;
 }
 
 export function getPosLineItemSummary(
@@ -149,23 +154,30 @@ export function getPosLineItemSummary(
 ): PosLineItemSummary {
   const parentQuantity = item.quantity ?? 1;
   const parts: string[] = [];
+  const modifierLabels: string[] = [];
+  const sideLabels: string[] = [];
   if (item.modifiers && item.modifiers.length > 0) {
     for (const modifier of item.modifiers) {
-      parts.push(formatPosLineItemCompactOption(modifier));
+      const label = formatPosLineItemCompactOption(modifier);
+      modifierLabels.push(label);
+      parts.push(label);
     }
   }
   if (item.sides && item.sides.length > 0) {
     for (const side of item.sides) {
-      parts.push(formatPosLineItemCompactSide(side, parentQuantity));
+      const label = formatPosLineItemCompactSide(side, parentQuantity);
+      sideLabels.push(label);
+      parts.push(label);
     }
   }
   const note = item.note?.trim();
   return {
     options:
-      parts.length > 0
-        ? `+ ${parts.join(COMPACT_OPTION_SEPARATOR)}`
-        : null,
+      parts.length > 0 ? `+ ${parts.join(COMPACT_OPTION_SEPARATOR)}` : null,
+    modifiers: modifierLabels,
+    sides: sideLabels,
     note: note ? note : null,
+    isPriority: item.is_priority === true,
   };
 }
 
@@ -176,6 +188,7 @@ export const cartStateSchema = z.object({
   order_type: z.enum(ORDER_TYPES),
   table_id: z.number().int().positive().optional(),
   note: z.string().max(500).optional(),
+  is_priority: z.boolean().optional(),
 });
 
 export type CartState = z.infer<typeof cartStateSchema>;

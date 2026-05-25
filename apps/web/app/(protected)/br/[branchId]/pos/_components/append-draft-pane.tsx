@@ -1,6 +1,6 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useState } from "react";
 import { AppEmptyState } from "@/components/surface";
 import { formatVND } from "@comtammatu/shared/format";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -51,9 +51,25 @@ function AppendDraftPaneComponent({
   onRemoveItem,
   onEditItem,
 }: AppendDraftPaneProps) {
+  const [removingKeys, setRemovingKeys] = useState<Set<string>>(
+    () => new Set(),
+  );
   const quantity = items.reduce((sum, item) => sum + item.quantity, 0);
   const total = calcCartTotal(items);
-  const canSubmit = items.length > 0 && !isSubmitting;
+
+  function removeItemWithEffect(key: string) {
+    setRemovingKeys((current) => new Set(current).add(key));
+    window.setTimeout(() => {
+      onRemoveItem(key);
+      setRemovingKeys((current) => {
+        const next = new Set(current);
+        next.delete(key);
+        return next;
+      });
+    }, 180);
+  }
+  const hasRemovingItems = removingKeys.size > 0;
+  const canSubmit = items.length > 0 && !isSubmitting && !hasRemovingItems;
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-background">
@@ -101,6 +117,7 @@ function AppendDraftPaneComponent({
               const displayName = getPosLineItemDisplayName(item);
               const summary = getPosLineItemSummary(item);
               const subtotal = calcItemSubtotal(item);
+              const isRemoving = removingKeys.has(item.key);
 
               return (
                 <li key={item.key} className="relative">
@@ -108,17 +125,19 @@ function AppendDraftPaneComponent({
                     variant="outline"
                     size="sm"
                     className={cn(
-                      "h-20 rounded-none bg-card p-0 pr-12 shadow-sm transition-colors hover:shadow-md sm:pr-14",
+                      "rounded-none bg-card p-0 pr-12 shadow-sm transition-all duration-150 hover:shadow-md sm:pr-14",
+                      isRemoving &&
+                        "bg-destructive/10 opacity-0 motion-safe:scale-95",
                     )}
                   >
                     <Button
                       type="button"
                       variant="ghost"
-                      className="h-full w-full justify-start whitespace-normal rounded-none px-3 py-2 text-left hover:bg-transparent sm:px-4"
+                      className="h-auto min-h-24 w-full justify-start whitespace-normal rounded-none px-2 py-2 text-left hover:bg-transparent sm:px-3"
                       aria-label={messages.pos.appendDraft.editItemAria(
                         displayName,
                       )}
-                      disabled={isSubmitting}
+                      disabled={isSubmitting || isRemoving}
                       onClick={() => onEditItem(item)}
                     >
                       <PosLineItemCompact
@@ -126,7 +145,10 @@ function AppendDraftPaneComponent({
                         title={displayName}
                         total={formatVND(subtotal)}
                         options={summary.options}
+                        modifiers={summary.modifiers}
+                        sides={summary.sides}
                         note={summary.note}
+                        isPriority={summary.isPriority}
                       />
                     </Button>
                   </Item>
@@ -138,8 +160,8 @@ function AppendDraftPaneComponent({
                     aria-label={messages.pos.appendDraft.removeItemAria(
                       displayName,
                     )}
-                    disabled={isSubmitting}
-                    onClick={() => onRemoveItem(item.key)}
+                    disabled={isSubmitting || isRemoving}
+                    onClick={() => removeItemWithEffect(item.key)}
                   >
                     <IconTrash />
                   </Button>
