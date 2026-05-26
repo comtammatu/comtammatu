@@ -32,13 +32,13 @@ export function BatchActions({
     activeTickets.every((ticket) => pendingTicketIds.has(ticket.id));
   const fullLabel =
     activeTickets.length > 1
-      ? `Hoàn tất ${activeTickets.length} món`
-      : "Hoàn tất phiếu bếp";
+      ? `Báo sẵn sàng ${activeTickets.length} món`
+      : "Báo phiếu bếp sẵn sàng";
   const visibleLabel =
     layout === "title"
       ? activeTickets.length > 1
-        ? `Xong ${activeTickets.length}`
-        : "Xong"
+        ? `Sẵn sàng ${activeTickets.length}`
+        : "Sẵn sàng"
       : fullLabel;
 
   const action = (

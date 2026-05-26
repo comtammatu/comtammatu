@@ -10,10 +10,20 @@ import { useKdsFilters } from "./hooks/use-kds-filters";
 import { useKdsMutations } from "./hooks/use-kds-mutations";
 import { useKdsViewMode } from "./hooks/use-kds-view-mode";
 import {
+  KdsRowEffectsProvider,
+  useKdsRowEffects,
+} from "./hooks/use-kds-row-effects";
+import {
   getKdsOrderItemColumnId,
   getKdsScopedGroupKey,
-  isKdsAddOnItem,
 } from "./lib/order-columns";
+import {
+  collectReadyKdsNewTicketAlertGroups,
+  getKdsNewTicketAlertGroupKey,
+  getKdsNewTicketToastTitle,
+  pickHigherPriorityKdsSignalTone,
+  type KdsNewTicketSignalTone,
+} from "./lib/sound-alerts";
 import { BoardHeader } from "./components/board-header";
 import { StationToggleBar } from "./components/station-toggle-bar";
 import { FilterBar } from "./components/filter-bar";
@@ -22,7 +32,6 @@ import { OrderGrid } from "./components/order-grid";
 import { UnassignedBanner } from "./components/unassigned-banner";
 import type {
   KdsBoardProps,
-  KdsKitchenSendBatch,
   KdsMenuLimitRow,
   KdsOrder,
   KdsOrderItem,
@@ -42,18 +51,26 @@ function isActiveKitchenTicket(ticket: KdsTicket): boolean {
 }
 
 function getTicketOrderLabel(
-  ticket: KdsTicket,
+  ticket: Pick<KdsTicket, "order_id">,
   orders: Map<number, { order_number: string }>,
 ): string {
   return orders.get(ticket.order_id)?.order_number ?? String(ticket.order_id);
 }
 
-function getTicketBatchKind(
-  ticket: KdsTicket,
-  kitchenBatches: Map<number, KdsKitchenSendBatch>,
-): string | null {
-  if (ticket.kitchen_send_batch_id === null) return null;
-  return kitchenBatches.get(ticket.kitchen_send_batch_id)?.kind ?? null;
+function getTicketAlertDescription(
+  ticket: Pick<KdsTicket, "order_id" | "kitchen_send_batch_id">,
+  orders: Map<number, { order_number: string }>,
+  kitchenBatches: ReadonlyMap<number, { kitchen_ticket_number: string }>,
+): string {
+  const orderLabel = getTicketOrderLabel(ticket, orders);
+  const batch =
+    ticket.kitchen_send_batch_id === null
+      ? null
+      : (kitchenBatches.get(ticket.kitchen_send_batch_id) ?? null);
+  if (batch) {
+    return `Phiếu ${batch.kitchen_ticket_number} - đơn #${orderLabel}`;
+  }
+  return `Đơn #${orderLabel}`;
 }
 
 function getTicketBaseGroupKey(ticket: KdsTicket): string {
@@ -242,48 +259,91 @@ export function KdsBoard({
     }
     return orderItemById;
   }, [orderItems]);
+  const rowEffects = useKdsRowEffects({
+    scopeKey: branchId,
+    tickets,
+    orderItemById,
+  });
 
   /* ── Operational alerts on ticket changes ── */
 
-  const prevTicketsByIdRef = useRef<Map<number, KdsTicket> | null>(null);
+  const knownTicketIdsRef = useRef<Set<number> | null>(null);
+  const pendingAlertTicketIdsRef = useRef<Set<number>>(new Set());
+  const alertedAlertGroupKeysRef = useRef<Set<string>>(new Set());
   useEffect(() => {
-    const previous = prevTicketsByIdRef.current;
-    const nextTicketsById = new Map(
-      tickets.map((ticket) => [ticket.id, ticket]),
-    );
+    const knownTicketIds = knownTicketIdsRef.current;
+    const nextTicketIds = new Set(tickets.map((ticket) => ticket.id));
 
-    if (previous === null) {
-      prevTicketsByIdRef.current = nextTicketsById;
+    if (knownTicketIds === null) {
+      knownTicketIdsRef.current = nextTicketIds;
       return;
     }
 
-    let hasNewActiveTicket = false;
-
+    const pendingAlertTicketIds = pendingAlertTicketIdsRef.current;
+    const alertedAlertGroupKeys = alertedAlertGroupKeysRef.current;
     for (const ticket of tickets) {
-      if (previous.has(ticket.id) || !isActiveKitchenTicket(ticket)) {
+      if (knownTicketIds.has(ticket.id) || !isActiveKitchenTicket(ticket)) {
         continue;
       }
-      hasNewActiveTicket = true;
-      const item = orderItemById.get(ticket.order_item_id);
-      const itemLabel = item?.item_name ?? "món";
-      const orderLabel = getTicketOrderLabel(ticket, orders);
-      const isAppendBatch =
-        getTicketBatchKind(ticket, kitchenBatches) === "append";
-      const title = isKdsAddOnItem(item)
-        ? "Món thêm mới"
-        : isAppendBatch
-          ? "Phiếu gọi thêm mới"
-          : "Phiếu bếp mới";
+      const groupKey = getKdsNewTicketAlertGroupKey(ticket);
+      if (alertedAlertGroupKeys.has(groupKey)) continue;
+      pendingAlertTicketIds.add(ticket.id);
+    }
+
+    let nextSignalTone: KdsNewTicketSignalTone | null = null;
+    const readyAlertGroups = collectReadyKdsNewTicketAlertGroups({
+      tickets,
+      pendingTicketIds: pendingAlertTicketIds,
+      orderItemById,
+      kitchenBatches,
+    });
+
+    for (const alertGroup of readyAlertGroups) {
+      if (alertedAlertGroupKeys.has(alertGroup.groupKey)) continue;
+      nextSignalTone = pickHigherPriorityKdsSignalTone(
+        nextSignalTone,
+        alertGroup.tone,
+      );
+      const title = getKdsNewTicketToastTitle(alertGroup.tone);
       toast.info(title, {
-        description: `${itemLabel} - đơn #${orderLabel}`,
+        description: getTicketAlertDescription(
+          alertGroup.ticket,
+          orders,
+          kitchenBatches,
+        ),
       });
+      alertedAlertGroupKeys.add(alertGroup.groupKey);
+      for (const ticketId of alertGroup.ticketIds) {
+        pendingAlertTicketIds.delete(ticketId);
+      }
     }
 
-    if (soundEnabled && hasNewActiveTicket) {
-      playAppSignal("kds");
+    if (soundEnabled && nextSignalTone !== null) {
+      playAppSignal(nextSignalTone);
     }
 
-    prevTicketsByIdRef.current = nextTicketsById;
+    for (const ticketId of pendingAlertTicketIds) {
+      if (!nextTicketIds.has(ticketId)) {
+        pendingAlertTicketIds.delete(ticketId);
+      }
+    }
+    for (const ticket of tickets) {
+      if (!isActiveKitchenTicket(ticket)) {
+        pendingAlertTicketIds.delete(ticket.id);
+      }
+    }
+    const activeAlertGroupKeys = new Set(
+      tickets
+        .filter(isActiveKitchenTicket)
+        .map((ticket) => getKdsNewTicketAlertGroupKey(ticket)),
+    );
+    for (const groupKey of alertedAlertGroupKeys) {
+      if (!activeAlertGroupKeys.has(groupKey)) {
+        alertedAlertGroupKeys.delete(groupKey);
+      }
+    }
+
+    knownTicketIdsRef.current = nextTicketIds;
   }, [kitchenBatches, orderItemById, orders, soundEnabled, tickets]);
 
   const missingOrderItemIds = useMemo(
@@ -466,29 +526,31 @@ export function KdsBoard({
           />
         </div>
 
-        {mode === "focus" ? (
-          <FocusView
-            orders={displayOrders}
-            hasGroupedOrders={activeGroupedOrders.length > 0}
-            pendingTicketIds={pendingTicketIds}
-            canMarkReady={canMarkReady}
-            canRecall={canRecall}
-            onRecall={handleRecall}
-            onOutOfStock={handleOutOfStock}
-            onCompleteTickets={handleCompleteTickets}
-          />
-        ) : (
-          <OrderGrid
-            displayOrders={displayOrders}
-            hasGroupedOrders={activeGroupedOrders.length > 0}
-            pendingTicketIds={pendingTicketIds}
-            canMarkReady={canMarkReady}
-            canRecall={canRecall}
-            onRecall={handleRecall}
-            onOutOfStock={handleOutOfStock}
-            onCompleteTickets={handleCompleteTickets}
-          />
-        )}
+        <KdsRowEffectsProvider value={rowEffects}>
+          {mode === "focus" ? (
+            <FocusView
+              orders={displayOrders}
+              hasGroupedOrders={activeGroupedOrders.length > 0}
+              pendingTicketIds={pendingTicketIds}
+              canMarkReady={canMarkReady}
+              canRecall={canRecall}
+              onRecall={handleRecall}
+              onOutOfStock={handleOutOfStock}
+              onCompleteTickets={handleCompleteTickets}
+            />
+          ) : (
+            <OrderGrid
+              displayOrders={displayOrders}
+              hasGroupedOrders={activeGroupedOrders.length > 0}
+              pendingTicketIds={pendingTicketIds}
+              canMarkReady={canMarkReady}
+              canRecall={canRecall}
+              onRecall={handleRecall}
+              onOutOfStock={handleOutOfStock}
+              onCompleteTickets={handleCompleteTickets}
+            />
+          )}
+        </KdsRowEffectsProvider>
       </div>
     </TickProvider>
   );

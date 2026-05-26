@@ -16,7 +16,6 @@ interface OrderCardHeaderProps {
   kitchenTicketNumber: string;
   orderType: string;
   tableNumber: number | null;
-  sendKind: string | null;
   contextLabel?: string;
   elapsedMinutes: number;
   isComplete: boolean;
@@ -30,7 +29,6 @@ export function OrderCardHeader({
   kitchenTicketNumber,
   orderType,
   tableNumber,
-  sendKind,
   contextLabel,
   elapsedMinutes,
   isComplete,
@@ -38,8 +36,6 @@ export function OrderCardHeader({
   orderNote,
   bgClass,
 }: OrderCardHeaderProps) {
-  const resolvedContextLabel =
-    contextLabel ?? (sendKind === "append" ? "Gọi thêm" : undefined);
   const hasMeta = isPriority || !!orderNote?.trim();
 
   return (
@@ -55,7 +51,7 @@ export function OrderCardHeader({
           orderNumber={orderNumber}
           orderType={orderType}
           tableNumber={tableNumber}
-          contextLabel={resolvedContextLabel}
+          contextLabel={contextLabel}
         />
         {hasMeta && (
           <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-1.5">

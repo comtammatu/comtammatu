@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -20,6 +19,10 @@ import {
   getItemRowStatusClass,
   getQuantityStatusClass,
 } from "../lib/item-status-style";
+import {
+  getKdsRowEffectClass,
+  useKdsRowEffect,
+} from "../hooks/use-kds-row-effects";
 import { CancelledOverlay } from "./cancelled-overlay";
 import { TicketRowMeta } from "./ticket-row-meta";
 import type { KdsOrderItem, KdsTicket } from "../types";
@@ -48,7 +51,6 @@ interface TicketRowOrphanProps {
 }
 
 type TicketRowProps = TicketRowItemProps | TicketRowOrphanProps;
-type RowChangeTone = "content" | "quantity" | "status" | "removed" | null;
 
 export function TicketRow(props: TicketRowProps) {
   return props.kind === "item" ? (
@@ -77,15 +79,16 @@ function TicketRowItem({
   const canComplete = canCompleteByStatus && canMarkReady;
   const canOutOfStock = canCompleteByStatus && canMarkReady;
   const allowRecall = canRecallByStatus && canRecall;
-  const changeTone = useItemChangeTone(item, status);
+  const rowEffect = useKdsRowEffect(ticket?.id);
 
   return (
     <div
       data-testid={`kds-order-item-${String(item.id)}`}
+      data-kds-effect={rowEffect ?? undefined}
       className={cn(
         "relative grid min-w-0 grid-cols-[3.5rem_minmax(0,1fr)_auto] items-center gap-2 px-3 py-1.5 transition-colors duration-300 md:px-4",
         getItemRowStatusClass(status),
-        getChangeToneClass(changeTone),
+        getKdsRowEffectClass(rowEffect),
         isCancelled && "opacity-100",
       )}
     >
@@ -171,12 +174,15 @@ function TicketRowOrphan({
   const canOutOfStock = canCompleteByStatus && canMarkReady;
   const allowRecall = canRecallByStatus && canRecall;
   const itemLabel = `Món #${String(ticket.order_item_id)}`;
+  const rowEffect = useKdsRowEffect(ticket.id);
 
   return (
     <div
+      data-kds-effect={rowEffect ?? undefined}
       className={cn(
-        "relative grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-1.5 md:px-4",
+        "relative grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-1.5 transition-colors duration-300 md:px-4",
         getItemRowStatusClass(status),
+        getKdsRowEffectClass(rowEffect),
       )}
     >
       {isCancelled && <CancelledOverlay />}
@@ -283,7 +289,7 @@ function TicketRowActions({
           variant="default"
           size="touch"
           className="w-12 px-0"
-          aria-label="Hoàn tất món"
+          aria-label="Báo món sẵn sàng"
           disabled={isMutating}
           onClick={() => void onCompleteTickets([ticket.id])}
         >
@@ -292,76 +298,4 @@ function TicketRowActions({
       )}
     </div>
   );
-}
-
-function useItemChangeTone(item: KdsOrderItem, status: string): RowChangeTone {
-  const signature = useMemo(
-    () =>
-      JSON.stringify({
-        quantity: item.quantity,
-        itemName: item.item_name,
-        variantName: item.variant_name,
-        unitPrice: item.unit_price,
-        note: item.note,
-        isPriority: item.is_priority,
-        modifiers: item.modifiers,
-        sides: item.sides,
-        status,
-      }),
-    [
-      item.item_name,
-      item.is_priority,
-      item.modifiers,
-      item.note,
-      item.quantity,
-      item.sides,
-      item.unit_price,
-      item.variant_name,
-      status,
-    ],
-  );
-  const previousRef = useRef<{
-    signature: string;
-    quantity: number;
-    status: string;
-  } | null>(null);
-  const [tone, setTone] = useState<RowChangeTone>(null);
-
-  useEffect(() => {
-    const previous = previousRef.current;
-    previousRef.current = { signature, quantity: item.quantity, status };
-
-    if (!previous || previous.signature === signature) return;
-
-    const nextTone: RowChangeTone =
-      status === "cancelled"
-        ? "removed"
-        : item.quantity !== previous.quantity
-          ? "quantity"
-          : status !== previous.status
-            ? "status"
-            : "content";
-
-    setTone(nextTone);
-    const timeout = window.setTimeout(() => setTone(null), 1800);
-    return () => window.clearTimeout(timeout);
-  }, [item.quantity, signature, status]);
-
-  return tone;
-}
-
-function getChangeToneClass(tone: RowChangeTone): string | false {
-  if (tone === "quantity") {
-    return "bg-warning/10 ring-2 ring-inset ring-warning/50 motion-safe:animate-pulse";
-  }
-  if (tone === "removed") {
-    return "bg-destructive/10 ring-2 ring-inset ring-destructive/40";
-  }
-  if (tone === "status") {
-    return "bg-success/10 ring-2 ring-inset ring-success/40";
-  }
-  if (tone === "content") {
-    return "bg-info/10 ring-2 ring-inset ring-info/40";
-  }
-  return false;
 }

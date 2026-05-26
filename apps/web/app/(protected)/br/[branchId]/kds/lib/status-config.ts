@@ -1,7 +1,7 @@
 export const STATUS_CONFIG = {
   pending: { label: "Chờ", variant: "warning" as const },
   preparing: { label: "Đang làm", variant: "warning" as const },
-  ready: { label: "Xong", variant: "success" as const },
+  ready: { label: "Sẵn sàng", variant: "success" as const },
   cancelled: { label: "Đã hủy", variant: "destructive" as const },
 } as const;
 
@@ -22,7 +22,7 @@ export function shouldShowTicketStatusBadge(status: string): boolean {
 }
 
 export const ORDER_TYPE_CONFIG: Record<string, { label: string }> = {
-  dine_in: { label: "Tại chỗ" },
+  dine_in: { label: "Tại bàn" },
   takeaway: { label: "Mang về" },
 };
 
@@ -39,8 +39,17 @@ export function shouldShowOrderTypeBadge(
 
 export function formatKitchenTicketDisplay(ticketNumber: string): string {
   const trimmed = ticketNumber.trim();
+  const orderBasedTicket = formatOrderBasedKitchenTicketDisplay(trimmed);
+  if (orderBasedTicket) return orderBasedTicket;
+
   const suffix = extractReadableSequence(trimmed);
   return suffix ? `#${formatReadableSequence(suffix)}` : trimmed;
+}
+
+function formatOrderBasedKitchenTicketDisplay(value: string | null | undefined) {
+  const normalized = (value ?? "").trim().replace(/^#+/, "");
+  if (!/^\d{1,5}(?:-\d{1,3})?$/.test(normalized)) return null;
+  return `#${normalized}`;
 }
 
 function extractReadableSequence(value: string | null | undefined) {
@@ -66,6 +75,11 @@ export function formatKdsTicketSequenceDisplay(
   kitchenTicketNumber: string,
   orderNumber?: string,
 ): string {
+  const orderBasedTicket = formatOrderBasedKitchenTicketDisplay(
+    kitchenTicketNumber,
+  );
+  if (orderBasedTicket) return orderBasedTicket;
+
   const ticketSequence = extractReadableSequence(kitchenTicketNumber);
   const orderSequence = extractReadableSequence(orderNumber);
   const sequence = ticketSequence ?? orderSequence;

@@ -774,10 +774,10 @@ function PosDesktopInner({
           const priorityWarning = result.meta?.priorityWarning;
           const prioritySet = result.meta?.prioritySet === true;
           toast.success(
-            `${prioritySet ? "Đặt món ưu tiên" : "Đặt món"} thành công — #${orderNumber}`,
+            `${prioritySet ? "Đã gửi bếp ưu tiên" : "Đã gửi bếp"} — #${orderNumber}`,
             {
               action: {
-                label: "Xem hóa đơn",
+                label: "Thanh toán",
                 onClick: () => {
                   setBillIntent("payment");
                   setBillOrderId(orderId);
@@ -1415,7 +1415,7 @@ function PosDesktopInner({
       >
         <DrawerTitle className="sr-only">
           {appendTarget != null
-            ? `Món thêm cho đơn #${appendTarget.orderNumber}`
+            ? `Thêm món cho đơn #${appendTarget.orderNumber}`
             : showOrders
               ? "Đơn trong ca"
               : "Giỏ đơn mới"}

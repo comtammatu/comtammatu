@@ -36,7 +36,6 @@ const KDS_VISIBLE_STATUSES = [
   "pending",
   "preparing",
   "ready",
-  "cancelled",
 ] as const;
 
 type KdsSupabase = Awaited<ReturnType<typeof loadAuthState>>["supabase"];

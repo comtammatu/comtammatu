@@ -9,7 +9,10 @@ import {
   getKdsScopedGroupKey,
   groupKdsOrdersByColumn,
 } from "../app/(protected)/br/[branchId]/kds/lib/order-columns";
-import { formatKdsTicketSequenceDisplay } from "../app/(protected)/br/[branchId]/kds/lib/status-config";
+import {
+  formatKdsTicketSequenceDisplay,
+  getStatusLabel,
+} from "../app/(protected)/br/[branchId]/kds/lib/status-config";
 import type {
   KdsOrder,
   KdsOrderItem,
@@ -119,6 +122,14 @@ test("KDS title display uses kitchen ticket sequence instead of long order numbe
   );
   assert.equal(formatKdsTicketSequenceDisplay("PB-260525-057"), "#57");
   assert.equal(formatKdsTicketSequenceDisplay("PB-260525-056"), "#56");
+  assert.equal(
+    formatKdsTicketSequenceDisplay("#105-2", "TC-260525-105-PH"),
+    "#105-2",
+  );
+  assert.equal(
+    formatKdsTicketSequenceDisplay("#087", "TC-260525-087-PH"),
+    "#087",
+  );
 });
 
 test("KDS title display falls back to order sequence", () => {
@@ -129,6 +140,10 @@ test("KDS title display falls back to order sequence", () => {
     ),
     "#25",
   );
+});
+
+test("KDS ready status uses the shared Sẵn sàng wording", () => {
+  assert.equal(getStatusLabel("ready"), "Sẵn sàng");
 });
 
 test("KDS comprehensive board groups orders into item-category service columns", () => {
@@ -169,7 +184,7 @@ test("KDS comprehensive board groups orders into item-category service columns",
       column.widthClass,
     ]),
     [
-      ["dine_in", "Tại chỗ", "xl:col-span-4"],
+      ["dine_in", "Tại bàn", "xl:col-span-4"],
       ["takeaway", "Mang về", "xl:col-span-4"],
       ["add_on", "Món thêm", "xl:col-span-2"],
     ],
@@ -232,7 +247,7 @@ test("KDS title context keeps table target and ticket code visible", () => {
     items: [makeItem()],
   });
 
-  assert.equal(getKdsOrderLabelOverride(addOnDineIn), "Món thêm");
+  assert.equal(getKdsOrderLabelOverride(addOnDineIn), undefined);
   assert.equal(getKdsOrderLabelOverride(appendMainDish), "Gọi thêm");
   assert.match(
     orderTitleLineSource,
@@ -246,7 +261,9 @@ test("KDS title context keeps table target and ticket code visible", () => {
   assert.doesNotMatch(orderTitleLineSource, /truncate|line-clamp/);
   assert.doesNotMatch(orderNoteSource, /truncate|line-clamp|overflow-hidden/);
   assert.match(orderGridSource, /contextLabel=\{contextLabel\}/);
-  assert.match(orderCardHeaderSource, /contextLabel=\{resolvedContextLabel\}/);
+  assert.doesNotMatch(orderCardHeaderSource, /sendKind === "append"/);
+  assert.doesNotMatch(orderCardHeaderSource, /resolvedContextLabel/);
+  assert.match(orderCardHeaderSource, /contextLabel=\{contextLabel\}/);
   assert.match(focusViewSource, /contextLabel=\{getKdsOrderLabelOverride/);
 });
 

@@ -9360,6 +9360,10 @@ export type Database = {
         Args: { p_payload: Json }
         Returns: string
       }
+      print_template_order_header: {
+        Args: { p_payload: Json }
+        Returns: string
+      }
       print_template_payload_number: {
         Args: { p_field: string; p_payload: Json }
         Returns: number

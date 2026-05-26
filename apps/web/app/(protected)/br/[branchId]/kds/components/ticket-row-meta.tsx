@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import {
@@ -8,7 +9,7 @@ import {
   Plus as IconPlus,
 } from "lucide-react";
 import { classifyModifier } from "../lib/modifier-format";
-import { formatSideLabel } from "../lib/side-format";
+import { formatSideLabel, getSideBadgeToneClass } from "../lib/side-format";
 import type { OrderItemModifier, OrderItemSide } from "../types";
 
 interface TicketRowMetaProps {
@@ -47,7 +48,10 @@ export function TicketRowMeta({
             <Badge
               key={`${s.side_item_id}-${idx}`}
               variant="outline"
-              className="h-auto min-h-6 rounded-md px-2 py-0.5 text-sm font-semibold leading-tight text-foreground"
+              className={cn(
+                "h-auto min-h-6 rounded-md px-2 py-0.5 text-sm font-semibold leading-tight text-foreground",
+                getSideBadgeToneClass(s),
+              )}
             >
               {formatSideLabel(s)}
             </Badge>
@@ -81,7 +85,10 @@ export function TicketRowMeta({
             <Badge
               key={`${s.side_item_id}-${idx}`}
               variant="outline"
-              className="h-auto min-h-6 rounded-md px-2.5 py-1 text-sm font-semibold leading-tight text-foreground"
+              className={cn(
+                "h-auto min-h-6 rounded-md px-2.5 py-1 text-sm font-semibold leading-tight text-foreground",
+                getSideBadgeToneClass(s),
+              )}
             >
               {formatSideLabel(s)}
             </Badge>

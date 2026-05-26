@@ -19,6 +19,7 @@ import {
   formatRunnerOrderLabel,
   type RunnerQueueItem,
 } from "@comtammatu/shared/runner";
+import { MODULE_LABELS_VI } from "@comtammatu/shared/labels";
 import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
 import { TableEmptyStateRow } from "@/components/table-empty-state-row";
 import { loadAuthState } from "@/_lib/auth";
@@ -32,19 +33,20 @@ const RUNNER_TICKET_LIMIT = 180;
 const RUNNER_ERROR_MESSAGE =
   "Không tải được màn gọi số. Vui lòng tải lại trang.";
 const RUNNER_COPY = {
-  eyebrow: "Runner",
-  preparing: "Đang làm",
-  waiting: "Chờ",
+  eyebrow: MODULE_LABELS_VI.runner,
+  ready: "Sẵn sàng",
+  served: "Đã phục vụ",
   itemShort: "Món",
-  sectionTitle: "Danh sách đơn",
+  sectionTitle: "Mời nhận món",
   orderCount: (count: number) => `${String(count)} đơn`,
-  emptyTitle: "Chưa có đơn Runner",
-  emptyDescription: "KDS chưa có đơn đang làm hoặc đang chờ.",
+  emptyTitle: "Chưa có món sẵn sàng",
+  emptyDescription:
+    "Khi KDS báo sẵn sàng, số bàn hoặc số mang về sẽ hiện ở đây.",
   itemUnit: "món",
   tableHeaders: {
-    sequence: "STT",
+    sequence: "Thứ tự",
     order: "Đơn",
-    quantity: "Số lượng món",
+    quantity: "Số món",
     status: "Trạng thái",
   },
 } as const;
@@ -60,7 +62,7 @@ type RunnerOrderItemQuantityRow = {
   quantity: number | string | null;
 };
 
-type RunnerListStatus = "preparing" | "pending";
+type RunnerListStatus = "ready" | "served";
 
 type RunnerListRow = {
   key: string;
@@ -97,7 +99,7 @@ export default async function RunnerPage({
       "id, order_id, order_item_id, kitchen_send_batch_id, status, bumped_at, created_at, updated_at",
     )
     .eq("branch_id", branchIdNum)
-    .in("status", ["pending", "preparing"])
+    .in("status", ["ready", "served"])
     .gte("created_at", todayStartIso)
     .order("created_at", { ascending: true })
     .limit(RUNNER_TICKET_LIMIT);
@@ -164,8 +166,8 @@ export default async function RunnerPage({
     >[0]["kitchenBatches"],
   });
 
-  const activeItems = queue
-    .filter((item) => item.lane === "preparing")
+  const callableItems = queue
+    .filter((item) => item.lane === "served")
     .sort(compareRunnerItemAsc);
   const quantityByOrderItemId = new Map(
     ((orderItemsRes.data ?? []) as RunnerOrderItemQuantityRow[]).map((row) => [
@@ -179,7 +181,7 @@ export default async function RunnerPage({
   const statusByTicketId = new Map(
     tickets.map((ticket) => [ticket.id, ticket.status]),
   );
-  const rows = activeItems.map((item) =>
+  const rows = callableItems.map((item) =>
     toRunnerListRow({
       item,
       orderItemIdByTicketId,
@@ -187,8 +189,8 @@ export default async function RunnerPage({
       statusByTicketId,
     }),
   );
-  const preparingCount = rows.filter((row) => row.status === "preparing").length;
-  const waitingCount = rows.length - preparingCount;
+  const readyCount = rows.filter((row) => row.status === "ready").length;
+  const servedCount = rows.length - readyCount;
   const itemCount = rows.reduce((sum, row) => sum + row.itemQuantity, 0);
 
   return (
@@ -202,7 +204,7 @@ export default async function RunnerPage({
       <RunnerRealtimeRefresh branchId={branchIdNum} />
 
       <section
-        aria-label={`Runner ${branch.name}`}
+        aria-label={`${RUNNER_COPY.eyebrow} ${branch.name}`}
         className="flex min-h-0 flex-1 flex-col gap-3"
       >
         <AppPageHeader
@@ -212,15 +214,15 @@ export default async function RunnerPage({
             <div className="flex flex-wrap items-center gap-1.5">
               <RunnerSummaryBadge
                 icon={<IconCookingPot className="size-3" />}
-                label={RUNNER_COPY.preparing}
-                value={preparingCount}
-                variant="default"
+                label={RUNNER_COPY.ready}
+                value={readyCount}
+                variant="success"
               />
               <RunnerSummaryBadge
                 icon={<IconClock className="size-3" />}
-                label={RUNNER_COPY.waiting}
-                value={waitingCount}
-                variant="info"
+                label={RUNNER_COPY.served}
+                value={servedCount}
+                variant="secondary"
               />
               <RunnerSummaryBadge
                 label={RUNNER_COPY.itemShort}
@@ -300,8 +302,8 @@ function RunnerOrderTable({ rows }: { rows: RunnerListRow[] }) {
               <TableRow
                 key={row.key}
                 className={
-                  row.status === "preparing"
-                    ? "bg-primary/5 hover:bg-primary/10"
+                  row.status === "ready"
+                    ? "bg-success/5 hover:bg-success/10"
                     : undefined
                 }
               >
@@ -380,21 +382,21 @@ function resolveRunnerListStatus(
   statusByTicketId: Map<number, string>,
 ): RunnerListStatus {
   for (const ticketId of item.ticketIds) {
-    if (statusByTicketId.get(ticketId) === "preparing") return "preparing";
+    if (statusByTicketId.get(ticketId) === "ready") return "ready";
   }
 
-  return "pending";
+  return "served";
 }
 
 function getRunnerStatusMeta(status: RunnerListStatus): {
-  label: "Đang làm" | "Chờ";
+  label: "Sẵn sàng" | "Đã phục vụ";
   variant: BadgeProps["variant"];
 } {
-  if (status === "preparing") {
-    return { label: "Đang làm", variant: "default" };
+  if (status === "ready") {
+    return { label: "Sẵn sàng", variant: "success" };
   }
 
-  return { label: "Chờ", variant: "info" };
+  return { label: "Đã phục vụ", variant: "secondary" };
 }
 
 function normalizeQuantity(value: number | string | null): number {

@@ -1,5 +1,11 @@
+import assert from "node:assert/strict";
+import iconv from "iconv-lite";
 import { renderPayload, type PrintPayload } from "../src/escpos.js";
 import { renderPayloadBitmap } from "../src/escpos-bitmap.js";
+import {
+  extractOrderSequence,
+  formatOrderHeaderLabel,
+} from "../src/order-display.js";
 
 const baseReceipt = {
   kind: "receipt",
@@ -7,7 +13,7 @@ const baseReceipt = {
   branch_address: "123 Nguyễn Huệ, P. Bến Nghé, Q.1",
   branch_phone: "028.1234.5678",
   branch_tax_code: "0123456789",
-  order_number: "ORD-2026-001",
+  order_number: "TC-260525-087-PH",
   order_type: "dine_in",
   table_number: 5,
   cashier_name: "Nguyễn A",
@@ -66,6 +72,13 @@ const documentReceipt: PrintPayload = {
         bold: true,
         double: true,
       },
+      {
+        type: "text",
+        text: "Bàn 5 #087",
+        align: "center",
+        bold: true,
+        double: true,
+      },
       { type: "divider", char: "=" },
       {
         type: "billMeta",
@@ -98,9 +111,9 @@ const documentReceipt: PrintPayload = {
 
 const baseKitchen = {
   kind: "kitchen_ticket",
-  kitchen_ticket_number: "PB-260505-001",
-  source_order_number: "ORD-2026-001",
-  order_number: "ORD-2026-001",
+  kitchen_ticket_number: "#087",
+  source_order_number: "TC-260525-087-PH",
+  order_number: "TC-260525-087-PH",
   order_type: "dine_in",
   table_number: 5,
   cashier_name: "Nguyễn A",
@@ -144,14 +157,15 @@ const primitiveDocumentKitchen: PrintPayload = {
     blocks: [
       {
         type: "text",
-        text: "BÀN 5 · PB-260505-001",
+        text: "Bàn 5 #087",
         align: "center",
         bold: true,
         double: true,
       },
       { type: "divider", char: "=" },
-      { type: "row", left: "Phiếu: PB-260505-001", right: "Lần gửi: 1" },
-      { type: "row", left: "Bếp: 1", right: "Giờ: 14:31" },
+      { type: "row", left: "Đơn: TC-260525-087-PH", right: "Lần gửi: 1" },
+      { type: "row", left: "Phiếu bếp: #087", right: "Bếp: 1" },
+      { type: "row", left: "Bàn: 5", right: "Giờ: 14:31" },
       {
         type: "text",
         text: "----+-------------------------------------------",
@@ -355,11 +369,25 @@ const primitiveDocumentShiftClose: PrintPayload = {
         bold: true,
       },
       { type: "divider", char: "-" },
-      { type: "text", text: "Com tam suon bi cha           18        990.000d" },
-      { type: "text", text: "Canh chua                     12              0d" },
-      { type: "text", text: "Them trung                    12        120.000d" },
+      {
+        type: "text",
+        text: "Com tam suon bi cha           18        990.000d",
+      },
+      {
+        type: "text",
+        text: "Canh chua                     12              0d",
+      },
+      {
+        type: "text",
+        text: "Them trung                    12        120.000d",
+      },
       { type: "divider", char: "-" },
-      { type: "text", text: "DOI SOAT KET TIEN MAT", align: "center", bold: true },
+      {
+        type: "text",
+        text: "DOI SOAT KET TIEN MAT",
+        align: "center",
+        bold: true,
+      },
       { type: "divider", char: "-" },
       { type: "row", left: "Tien mat dau ca", right: "500.000d" },
       { type: "row", left: "+ Tien mat ban hang", right: "1.600.000d" },
@@ -402,15 +430,111 @@ function assertTextIncludes(
   bytes: Uint8Array,
   expected: string,
 ) {
-  const output = Buffer.from(bytes).toString("latin1");
+  const output = iconv
+    .decode(Buffer.from(bytes), "windows-1258")
+    .normalize("NFC");
   if (!output.includes(expected)) {
     throw new Error(`${label} missing ${expected}`);
   }
 }
 
+function assertTextExcludes(
+  label: string,
+  bytes: Uint8Array,
+  unexpected: string,
+) {
+  const output = iconv
+    .decode(Buffer.from(bytes), "windows-1258")
+    .normalize("NFC");
+  if (output.includes(unexpected)) {
+    throw new Error(`${label} unexpectedly included ${unexpected}`);
+  }
+}
+
+function assertTextOrder(
+  label: string,
+  bytes: Uint8Array,
+  first: string,
+  second: string,
+) {
+  const output = iconv
+    .decode(Buffer.from(bytes), "windows-1258")
+    .normalize("NFC");
+  const firstIndex = output.indexOf(first);
+  const secondIndex = output.indexOf(second);
+  if (firstIndex < 0 || secondIndex < 0 || firstIndex >= secondIndex) {
+    throw new Error(`${label} expected ${first} before ${second}`);
+  }
+}
+
+function assertOrderDisplayHelpers() {
+  assert.equal(extractOrderSequence("TC-260525-087-PH"), "087");
+  assert.equal(extractOrderSequence("#MV-260525-088-PH"), "088");
+  assert.equal(extractOrderSequence("TC-20260525-087-CN1"), "087");
+  assert.equal(
+    formatOrderHeaderLabel({
+      orderNumber: "TC-260525-087-PH",
+      orderType: "dine_in",
+      tableNumber: 3,
+    }),
+    "Bàn 3 #087",
+  );
+  assert.equal(
+    formatOrderHeaderLabel({
+      orderNumber: "#TC-260525-087-PH",
+      orderType: "dine_in",
+      tableNumber: "3",
+    }),
+    "Bàn 3 #087",
+  );
+  assert.equal(
+    formatOrderHeaderLabel({
+      orderNumber: "MV-260525-088-PH",
+      orderType: "takeaway",
+    }),
+    "Mang về #088",
+  );
+  assert.equal(
+    formatOrderHeaderLabel({
+      orderNumber: "ORD-2026-ABC",
+      orderType: "dine_in",
+      tableNumber: 3,
+    }),
+    "Bàn 3 ORD-2026-ABC",
+  );
+  assert.equal(
+    formatOrderHeaderLabel({
+      orderNumber: "TC-260525-087-PH",
+      orderType: "dine_in",
+      tableNumber: null,
+    }),
+    "Tại bàn #087",
+  );
+  assert.equal(
+    formatOrderHeaderLabel({
+      orderNumber: "MV-260525-088-PH",
+      orderType: "dine_in",
+      tableNumber: 3,
+    }),
+    "Bàn 3 #088",
+  );
+}
+
 async function main() {
+  assertOrderDisplayHelpers();
+
   const legacyTextReceipt = renderPayload(baseReceipt);
   assertBytes("legacy text receipt", legacyTextReceipt);
+  assertTextIncludes(
+    "legacy text receipt order header",
+    legacyTextReceipt,
+    "Bàn 5 #087",
+  );
+  assertTextExcludes(
+    "legacy text receipt old dine-in label",
+    legacyTextReceipt,
+    "Tại chỗ #087",
+  );
   assertTextIncludes(
     "legacy text receipt side quantity",
     legacyTextReceipt,
@@ -423,6 +547,11 @@ async function main() {
   );
   const documentTextReceipt = renderPayload(documentReceipt);
   assertBytes("document text receipt", documentTextReceipt);
+  assertTextIncludes(
+    "document text receipt order header",
+    documentTextReceipt,
+    "Bàn 5 #087",
+  );
   assertTextIncludes(
     "document text receipt side quantity",
     documentTextReceipt,
@@ -438,8 +567,50 @@ async function main() {
     "document bitmap receipt",
     await renderPayloadBitmap(documentReceipt),
   );
+  const takeawayReceipt = {
+    ...baseReceipt,
+    order_number: "MV-260525-088-PH",
+    order_type: "takeaway",
+    table_number: null,
+  } satisfies PrintPayload;
+  const takeawayTextReceipt = renderPayload(takeawayReceipt);
+  assertTextIncludes(
+    "takeaway text receipt order header",
+    takeawayTextReceipt,
+    "Mang về #088",
+  );
+  assertBytes(
+    "takeaway bitmap receipt",
+    await renderPayloadBitmap(takeawayReceipt),
+  );
+  const takeawayProvisional = {
+    ...takeawayReceipt,
+    kind: "provisional_bill",
+    payment_qr: null,
+  } satisfies PrintPayload;
+  const takeawayTextProvisional = renderPayload(takeawayProvisional);
+  assertTextIncludes(
+    "takeaway text provisional order header",
+    takeawayTextProvisional,
+    "Mang về #088",
+  );
+  assertBytes(
+    "takeaway bitmap provisional",
+    await renderPayloadBitmap(takeawayProvisional),
+  );
   const legacyTextKitchen = renderPayload(baseKitchen);
   assertBytes("legacy text kitchen", legacyTextKitchen);
+  assertTextIncludes(
+    "legacy text kitchen order header",
+    legacyTextKitchen,
+    "Bàn 5 #087",
+  );
+  assertTextOrder(
+    "legacy text kitchen PB demoted below header",
+    legacyTextKitchen,
+    "Bàn 5 #087",
+    "Phiếu bếp: #087",
+  );
   assertTextIncludes(
     "legacy text kitchen side quantity",
     legacyTextKitchen,
@@ -453,6 +624,11 @@ async function main() {
   const documentTextKitchen = renderPayload(documentKitchen);
   assertBytes("document text kitchen", documentTextKitchen);
   assertTextIncludes(
+    "document text kitchen order header",
+    documentTextKitchen,
+    "Bàn 5 #087",
+  );
+  assertTextIncludes(
     "document text kitchen side quantity",
     documentTextKitchen,
     "Canh chua x2",
@@ -462,6 +638,19 @@ async function main() {
     documentTextKitchen,
     "Side mac dinh x2",
   );
+  const appendKitchen = {
+    ...baseKitchen,
+    kitchen_ticket_number: "#087-2",
+    send_seq: 2,
+    send_kind: "append",
+  } satisfies PrintPayload;
+  const appendTextKitchen = renderPayload(appendKitchen);
+  assertTextIncludes(
+    "append text kitchen order-based PB",
+    appendTextKitchen,
+    "Phiếu bếp: #087-2",
+  );
+  assertTextIncludes("append text kitchen banner", appendTextKitchen, "GỌI THÊM");
   assertBytes(
     "primitive document text kitchen",
     renderPayload(primitiveDocumentKitchen),

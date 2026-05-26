@@ -22,6 +22,10 @@ import {
   getQuantityStatusClass,
 } from "../lib/item-status-style";
 import {
+  getKdsRowEffectClass,
+  useKdsRowEffect,
+} from "../hooks/use-kds-row-effects";
+import {
   getKdsOrderLabelOverride,
   groupKdsOrdersByColumn,
 } from "../lib/order-columns";
@@ -102,6 +106,7 @@ function CompactItemRow({
   const canComplete = canCompleteByStatus && canMarkReady && ticket != null;
   const canOutOfStock = canCompleteByStatus && canMarkReady && ticket != null;
   const allowRecall = canRecallByStatus && canRecall && ticket != null;
+  const rowEffect = useKdsRowEffect(ticket?.id);
 
   async function handleOutOfStock() {
     if (!ticket) return;
@@ -120,9 +125,11 @@ function CompactItemRow({
   return (
     <div
       data-testid={`kds-heatmap-item-${String(item.id)}`}
+      data-kds-effect={rowEffect ?? undefined}
       className={cn(
-        "grid min-w-0 grid-cols-[3rem_minmax(0,1fr)] items-start gap-x-1.5 gap-y-1 border-t border-border/40 py-1.5 first:border-t-0 first:pt-0 last:pb-0 xl:grid-cols-[3.5rem_minmax(0,1fr)_auto] xl:items-center xl:gap-2 xl:py-2",
+        "grid min-w-0 grid-cols-[3rem_minmax(0,1fr)] items-start gap-x-1.5 gap-y-1 border-t border-border/40 py-1.5 transition-colors duration-300 first:border-t-0 first:pt-0 last:pb-0 xl:grid-cols-[3.5rem_minmax(0,1fr)_auto] xl:items-center xl:gap-2 xl:py-2",
         getItemRowStatusClass(status),
+        getKdsRowEffectClass(rowEffect),
       )}
     >
       <div
@@ -205,7 +212,7 @@ function CompactItemRow({
             className="w-12 px-0"
             disabled={isMutating}
             onClick={() => void onCompleteTickets([ticket.id])}
-            aria-label={`Hoàn tất ${item.item_name}`}
+            aria-label={`Báo ${item.item_name} sẵn sàng`}
           >
             {isMutating ? <Spinner /> : <IconCheck aria-hidden />}
           </Button>
@@ -243,6 +250,7 @@ function CompactOrphanRow({
   const canComplete = canCompleteByStatus && canMarkReady;
   const canOutOfStock = canCompleteByStatus && canMarkReady;
   const allowRecall = canRecallByStatus && canRecall;
+  const rowEffect = useKdsRowEffect(ticket.id);
 
   async function handleOutOfStock() {
     const ok = await confirm({
@@ -259,9 +267,11 @@ function CompactOrphanRow({
 
   return (
     <div
+      data-kds-effect={rowEffect ?? undefined}
       className={cn(
-        "grid min-w-0 grid-cols-[minmax(0,1fr)] items-start gap-1.5 border-t border-border/40 py-1.5 first:border-t-0 first:pt-0 last:pb-0 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center xl:gap-2 xl:py-2",
+        "grid min-w-0 grid-cols-[minmax(0,1fr)] items-start gap-1.5 border-t border-border/40 py-1.5 transition-colors duration-300 first:border-t-0 first:pt-0 last:pb-0 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center xl:gap-2 xl:py-2",
         getItemRowStatusClass(ticket.status),
+        getKdsRowEffectClass(rowEffect),
       )}
     >
       <span className="min-w-0 break-words text-base font-semibold leading-6 text-muted-foreground">
@@ -313,7 +323,7 @@ function CompactOrphanRow({
             className="w-12 px-0"
             disabled={isMutating}
             onClick={() => void onCompleteTickets([ticket.id])}
-            aria-label="Hoàn tất món"
+            aria-label="Báo món sẵn sàng"
           >
             {isMutating ? <Spinner /> : <IconCheck aria-hidden />}
           </Button>
@@ -486,19 +496,19 @@ function OrderColumn({
     <section
       data-testid={`kds-column-${column.id}`}
       className={cn(
-        "flex min-h-64 min-w-0 flex-col overflow-hidden rounded-lg border border-border/70 bg-card/40 md:min-h-80 xl:h-full xl:min-h-0",
+        "flex min-h-0 min-w-0 flex-col xl:h-full",
         column.widthClass,
       )}
       aria-label={column.title}
     >
       <div
         data-testid={`kds-column-list-${column.id}`}
-        className="min-h-0 flex-1 space-y-1.5 overflow-y-auto p-1.5 xl:space-y-2 xl:p-2"
+        className="min-h-0 flex-1 space-y-1.5 overflow-y-auto xl:space-y-2"
       >
         {column.orders.length === 0 ? (
           <div
             data-testid={`kds-column-empty-${column.id}`}
-            className="flex min-h-20 items-center justify-center rounded-md border border-dashed border-border/70 bg-muted/30 px-3 py-4 text-center text-base font-medium text-muted-foreground"
+            className="flex items-center justify-center rounded-md border border-dashed border-border/60 bg-muted/20 px-3 py-3 text-center text-base font-medium text-muted-foreground"
           >
             {column.emptyTitle}
           </div>

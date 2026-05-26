@@ -47,6 +47,7 @@ import {
   type PrintDocumentPaymentQrBlock,
   type PrintDocumentTotalsBlock,
 } from "./print-document.js";
+import { formatOrderHeaderLabel } from "./order-display.js";
 import { sideTotalQuantity } from "./quantity.js";
 
 // ─── ESC/POS primitives reused from native command set ──────────────────
@@ -212,16 +213,18 @@ function renderKitchenTicketBitmap(p: KitchenPayload): Uint8Array {
   const parts: Uint8Array[] = [init(), lineSpacingZero()];
 
   // Banner
-  const dest =
-    p.order_type === "dine_in"
-      ? p.table_number
-        ? `BÀN ${p.table_number}`
-        : "TẠI CHỖ"
-      : "MANG VỀ";
-  const ticketNumber = p.kitchen_ticket_number ?? p.order_number;
   const sourceOrderNumber = p.source_order_number ?? p.order_number;
-  const banner = `${dest} · ${ticketNumber}`;
-  parts.push(line(banner, { bold: true, double: true, align: "center" }));
+  const ticketNumber = p.kitchen_ticket_number;
+  parts.push(
+    line(
+      formatOrderHeaderLabel({
+        orderNumber: sourceOrderNumber,
+        orderType: p.order_type,
+        tableNumber: p.table_number,
+      }),
+      { bold: true, double: true, align: "center" },
+    ),
+  );
 
   if (p.send_kind === "append") {
     parts.push(line("GỌI THÊM", { bold: true, double: true, align: "center" }));
@@ -239,24 +242,32 @@ function renderKitchenTicketBitmap(p: KitchenPayload): Uint8Array {
   }
   parts.push(divider("="));
 
-  // Meta rows. Bỏ "HĐ:" khi trùng "Phiếu:" (legacy data hoặc fallback) để
-  // khỏi in 2 dòng số giống nhau.
+  // Meta rows
   const meta = splitDateTime(p.printed_at);
   parts.push(
     line(
-      padRight(`Phiếu: ${ticketNumber}`, 24) +
+      padRight(`Đơn: ${sourceOrderNumber}`, 24) +
         padRight(`Lần gửi: ${p.send_seq}`, 24),
     ),
   );
-  if (sourceOrderNumber !== ticketNumber) {
-    parts.push(line(padRight(`HĐ: ${sourceOrderNumber}`, 24)));
+  if (ticketNumber) {
+    parts.push(
+      line(
+        padRight(`Phiếu bếp: ${ticketNumber}`, 24) +
+          padRight(`Bếp: ${p.slot}`, 24),
+      ),
+    );
+  } else {
+    parts.push(line(padRight(`Bếp: ${p.slot}`, 24)));
   }
-  parts.push(
-    line(
-      padRight(`Bếp: ${p.slot}`, 24) +
-        padRight(`Giờ: ${meta.time || p.printed_at}`, 24),
-    ),
-  );
+  const timeLabel = `Giờ: ${meta.time || p.printed_at}`;
+  if (p.order_type === "dine_in" && p.table_number) {
+    parts.push(
+      line(padRight(`Bàn: ${p.table_number}`, 24) + padRight(timeLabel, 24)),
+    );
+  } else {
+    parts.push(line(padRight(timeLabel, 24)));
+  }
   if (p.cashier_name) {
     parts.push(line(`Người order: ${p.cashier_name}`));
   }
@@ -865,6 +876,16 @@ function renderProvisionalBillBitmap(p: ProvisionalBillPayload): Uint8Array {
   parts.push(
     line("PHIẾU TẠM TÍNH", { bold: true, double: true, align: "center" }),
   );
+  parts.push(
+    line(
+      formatOrderHeaderLabel({
+        orderNumber: p.order_number,
+        orderType: p.order_type,
+        tableNumber: p.table_number,
+      }),
+      { bold: true, double: true, align: "center" },
+    ),
+  );
   parts.push(divider("="));
   parts.push(...renderBillMeta(p));
   parts.push(...renderItemsTable(p));
@@ -905,6 +926,16 @@ function renderReceiptBitmap(p: ReceiptPayload): Uint8Array {
   parts.push(divider("="));
   parts.push(
     line("HÓA ĐƠN THANH TOÁN", { bold: true, double: true, align: "center" }),
+  );
+  parts.push(
+    line(
+      formatOrderHeaderLabel({
+        orderNumber: p.order_number,
+        orderType: p.order_type,
+        tableNumber: p.table_number,
+      }),
+      { bold: true, double: true, align: "center" },
+    ),
   );
   parts.push(divider("="));
   parts.push(...renderBillMeta(p));
@@ -947,15 +978,17 @@ function renderCancelTicketBitmap(p: CancelTicketPayload): Uint8Array {
   );
   parts.push(divider("="));
 
-  // Table + order banner (same style as kitchen ticket)
-  const dest =
-    p.order_type === "dine_in"
-      ? p.table_number
-        ? `BÀN ${p.table_number}`
-        : "TẠI CHỖ"
-      : "MANG VỀ";
-  const banner = `${dest} · ${p.order_number}`;
-  parts.push(line(banner, { bold: true, double: true, align: "center" }));
+  // Order banner (same style as kitchen ticket)
+  parts.push(
+    line(
+      formatOrderHeaderLabel({
+        orderNumber: p.order_number,
+        orderType: p.order_type,
+        tableNumber: p.table_number,
+      }),
+      { bold: true, double: true, align: "center" },
+    ),
+  );
   parts.push(divider("="));
 
   // Meta
@@ -966,6 +999,9 @@ function renderCancelTicketBitmap(p: CancelTicketPayload): Uint8Array {
         padRight(`Giờ: ${meta.time || p.printed_at}`, 24),
     ),
   );
+  if (p.order_type === "dine_in" && p.table_number) {
+    parts.push(line(`Bàn: ${p.table_number}`));
+  }
   if (p.voided_by) {
     parts.push(line(`Người hủy: ${p.voided_by}`));
   }
@@ -1085,9 +1121,7 @@ function diffSign(n: number): string {
   return n > 0 ? "THỪA" : "THIẾU";
 }
 
-function renderShiftItemBreakdown(
-  p: ShiftCloseReportPayload,
-): Uint8Array[] {
+function renderShiftItemBreakdown(p: ShiftCloseReportPayload): Uint8Array[] {
   const items = p.item_breakdown ?? [];
   if (items.length === 0) return [];
 

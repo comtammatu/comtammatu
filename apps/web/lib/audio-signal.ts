@@ -1,11 +1,23 @@
 "use client";
 
-type SignalTone = "kds" | "pos";
+export type SignalTone =
+  | "kds"
+  | "kds-new"
+  | "kds-append"
+  | "kds-add-on"
+  | "pos";
 type AudioContextConstructor = new () => AudioContext;
 type AudioWindow = Window &
   typeof globalThis & {
     webkitAudioContext?: AudioContextConstructor;
   };
+export type SignalPattern = {
+  frequencies: [number, number, number];
+  pulses: number;
+  pulseGapSeconds: number;
+  pulseDurationSeconds: number;
+  oscillatorType: OscillatorType;
+};
 
 let audioCtx: AudioContext | null = null;
 let lastSignalAtByTone: Partial<Record<SignalTone, number>> = {};
@@ -13,33 +25,78 @@ let lastSignalAtByTone: Partial<Record<SignalTone, number>> = {};
 const MIN_SIGNAL_INTERVAL_MS = 2_500;
 const PEAK_GAIN = 0.95;
 const FLOOR_GAIN = 0.001;
-const PULSE_GAP_SECONDS = 0.18;
-const PULSE_DURATION_SECONDS = 0.42;
 
-const SIGNAL_FREQUENCIES: Record<SignalTone, [number, number, number]> = {
-  kds: [740, 880, 988],
-  pos: [660, 880, 1046],
+export const APP_SIGNAL_PATTERNS: Record<SignalTone, SignalPattern> = {
+  kds: {
+    frequencies: [740, 880, 988],
+    pulses: 2,
+    pulseGapSeconds: 0.18,
+    pulseDurationSeconds: 0.42,
+    oscillatorType: "square",
+  },
+  "kds-new": {
+    frequencies: [740, 880, 988],
+    pulses: 2,
+    pulseGapSeconds: 0.18,
+    pulseDurationSeconds: 0.42,
+    oscillatorType: "square",
+  },
+  "kds-append": {
+    frequencies: [587, 740, 587],
+    pulses: 3,
+    pulseGapSeconds: 0.1,
+    pulseDurationSeconds: 0.22,
+    oscillatorType: "square",
+  },
+  "kds-add-on": {
+    frequencies: [1175, 988, 1318],
+    pulses: 2,
+    pulseGapSeconds: 0.08,
+    pulseDurationSeconds: 0.28,
+    oscillatorType: "square",
+  },
+  pos: {
+    frequencies: [660, 880, 1046],
+    pulses: 2,
+    pulseGapSeconds: 0.18,
+    pulseDurationSeconds: 0.42,
+    oscillatorType: "square",
+  },
 };
+
+function getSignalDurationMs(pattern: SignalPattern): number {
+  const totalSeconds =
+    pattern.pulses * pattern.pulseDurationSeconds +
+    Math.max(0, pattern.pulses - 1) * pattern.pulseGapSeconds;
+  return totalSeconds * 1_000;
+}
 
 function schedulePulse(
   context: AudioContext,
   destination: AudioNode,
   startAt: number,
-  frequencies: [number, number, number],
+  pattern: SignalPattern,
 ) {
   const oscillator = context.createOscillator();
   const gainNode = context.createGain();
   oscillator.connect(gainNode);
   gainNode.connect(destination);
 
-  const [startFreq, midFreq, endFreq] = frequencies;
-  const peakAt = startAt + 0.025;
-  const holdUntil = startAt + PULSE_DURATION_SECONDS - 0.1;
-  const endAt = startAt + PULSE_DURATION_SECONDS;
-  oscillator.type = "square";
+  const [startFreq, midFreq, endFreq] = pattern.frequencies;
+  const peakAt = startAt + Math.min(0.025, pattern.pulseDurationSeconds / 4);
+  const holdUntil =
+    startAt + Math.max(0.04, pattern.pulseDurationSeconds - 0.1);
+  const endAt = startAt + pattern.pulseDurationSeconds;
+  oscillator.type = pattern.oscillatorType;
   oscillator.frequency.setValueAtTime(startFreq, startAt);
-  oscillator.frequency.setValueAtTime(midFreq, startAt + 0.1);
-  oscillator.frequency.setValueAtTime(endFreq, startAt + 0.24);
+  oscillator.frequency.setValueAtTime(
+    midFreq,
+    startAt + pattern.pulseDurationSeconds * 0.35,
+  );
+  oscillator.frequency.setValueAtTime(
+    endFreq,
+    startAt + pattern.pulseDurationSeconds * 0.7,
+  );
   gainNode.gain.setValueAtTime(FLOOR_GAIN, startAt);
   gainNode.gain.exponentialRampToValueAtTime(PEAK_GAIN, peakAt);
   gainNode.gain.setValueAtTime(PEAK_GAIN, holdUntil);
@@ -76,17 +133,19 @@ export function playAppSignal(tone: SignalTone, force = false): void {
     compressor.connect(audioCtx.destination);
 
     const startAt = audioCtx.currentTime;
-    const frequencies = SIGNAL_FREQUENCIES[tone];
-    schedulePulse(audioCtx, compressor, startAt, frequencies);
-    schedulePulse(
-      audioCtx,
-      compressor,
-      startAt + PULSE_DURATION_SECONDS + PULSE_GAP_SECONDS,
-      frequencies,
-    );
+    const pattern = APP_SIGNAL_PATTERNS[tone];
+    for (let index = 0; index < pattern.pulses; index += 1) {
+      schedulePulse(
+        audioCtx,
+        compressor,
+        startAt +
+          index * (pattern.pulseDurationSeconds + pattern.pulseGapSeconds),
+        pattern,
+      );
+    }
     window.setTimeout(() => {
       compressor.disconnect();
-    }, (PULSE_DURATION_SECONDS * 2 + PULSE_GAP_SECONDS) * 1_000 + 100);
+    }, getSignalDurationMs(pattern) + 100);
   } catch {
     // Audio not available or blocked by the browser.
   }

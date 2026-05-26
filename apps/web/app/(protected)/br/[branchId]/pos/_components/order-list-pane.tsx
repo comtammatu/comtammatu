@@ -47,11 +47,11 @@ function OrderListPaneComponent({
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
       <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-border/60 px-3">
         <div className="flex min-w-0 items-center gap-2">
-          <p className="text-base font-semibold">Hóa đơn</p>
+          <p className="text-base font-semibold">Đơn trong ca</p>
           <Badge
             variant={activeOrderCount > 0 ? "warning" : "outline"}
             className="h-6 min-w-6 px-1.5 text-sm font-bold tabular-nums"
-            aria-label={`${String(activeOrderCount)} hóa đơn`}
+            aria-label={`${String(activeOrderCount)} đơn trong ca`}
           >
             {activeOrderCount}
           </Badge>
@@ -62,7 +62,7 @@ function OrderListPaneComponent({
             variant="ghost"
             size="icon-lg"
             className="text-muted-foreground"
-            aria-label="Tải lại danh sách hóa đơn"
+            aria-label="Tải lại danh sách đơn trong ca"
             onClick={() => void refreshOrders()}
           >
             <IconRefresh />

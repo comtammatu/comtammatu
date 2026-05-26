@@ -119,7 +119,6 @@ function OrderCardComponent({
         kitchenTicketNumber={order.kitchenTicketNumber}
         orderType={order.orderType}
         tableNumber={order.tableNumber}
-        sendKind={order.sendKind}
         contextLabel={getKdsOrderLabelOverride(order)}
         elapsedMinutes={elapsed}
         isComplete={isComplete}

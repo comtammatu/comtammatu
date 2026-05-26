@@ -19,8 +19,8 @@ export interface KdsOrderColumn extends KdsOrderColumnDefinition {
 export const KDS_ORDER_COLUMN_DEFINITIONS = [
   {
     id: "dine_in",
-    title: "Tại chỗ",
-    emptyTitle: "Chưa có đơn tại chỗ",
+    title: "Tại bàn",
+    emptyTitle: "Chưa có đơn tại bàn",
     widthClass: "xl:col-span-4",
   },
   {
@@ -75,7 +75,7 @@ export function getKdsOrderColumnId(order: KdsOrder): KdsOrderColumnId {
 }
 
 export function getKdsOrderLabelOverride(order: KdsOrder): string | undefined {
-  if (getKdsOrderColumnId(order) === "add_on") return "Món thêm";
+  if (getKdsOrderColumnId(order) === "add_on") return undefined;
   if (order.sendKind === "append") return "Gọi thêm";
   return undefined;
 }

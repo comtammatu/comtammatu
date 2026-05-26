@@ -24,6 +24,10 @@ import {
   getItemRowStatusClass,
   getQuantityStatusClass,
 } from "../lib/item-status-style";
+import {
+  getKdsRowEffectClass,
+  useKdsRowEffectsValue,
+} from "../hooks/use-kds-row-effects";
 import { getKdsOrderLabelOverride } from "../lib/order-columns";
 import {
   getStatusLabel,
@@ -35,7 +39,7 @@ import { CancelledOverlay } from "./cancelled-overlay";
 import { OrderNote } from "./order-note";
 import { OrderTitleLine } from "./order-title-line";
 import { TicketRowMeta } from "./ticket-row-meta";
-import type { KdsOrder, KdsOrderItem, KdsTicket } from "../types";
+import type { KdsOrder, KdsTicket } from "../types";
 
 interface FocusViewProps {
   orders: KdsOrder[];
@@ -64,20 +68,6 @@ function findNextActiveIndex(orders: KdsOrder[], from: number): number {
     if (candidate && !isOrderAllReady(candidate)) return idx;
   }
   return -1;
-}
-
-function buildFocusItemKey(item: KdsOrderItem, status: string): string {
-  return JSON.stringify([
-    item.id,
-    item.quantity,
-    item.item_name,
-    item.variant_name,
-    item.note,
-    item.is_priority,
-    item.modifiers,
-    item.sides,
-    status,
-  ]);
 }
 
 export function FocusView({
@@ -241,6 +231,7 @@ function FocusOrderPanel({
     }
     return map;
   }, [order.tickets]);
+  const rowEffects = useKdsRowEffectsValue();
 
   const overallStatus = useMemo(() => {
     const statuses = order.tickets.map((t) => t.status);
@@ -399,14 +390,17 @@ function FocusOrderPanel({
                 const allowComplete = canCompleteByStatus && canMarkReady;
                 const allowOutOfStock = canCompleteByStatus && canMarkReady;
                 const allowRecall = canRecallByStatus && canRecall;
+                const rowEffect = ticket ? rowEffects.get(ticket.id) : null;
 
                 return (
                   <div
-                    key={buildFocusItemKey(item, status)}
+                    key={ticket?.id ?? item.id}
                     data-testid={`kds-focus-item-${String(item.id)}`}
+                    data-kds-effect={rowEffect ?? undefined}
                     className={cn(
-                      "relative grid min-w-0 grid-cols-[3.5rem_minmax(0,1fr)_auto] items-center gap-2 bg-card px-3 py-2 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 md:px-4",
+                      "relative grid min-w-0 grid-cols-[3.5rem_minmax(0,1fr)_auto] items-center gap-2 bg-card px-3 py-2 transition-colors duration-300 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 md:px-4",
                       getItemRowStatusClass(status),
+                      getKdsRowEffectClass(rowEffect ?? null),
                       isCancelled && "opacity-100",
                     )}
                   >
@@ -515,7 +509,7 @@ function FocusOrderPanel({
                                 onClick={() =>
                                   void onCompleteTickets([ticket.id])
                                 }
-                                aria-label={`Hoàn tất ${item.item_name}`}
+                                aria-label={`Báo ${item.item_name} sẵn sàng`}
                               >
                                 {isMutating ? (
                                   <Spinner data-icon="inline-start" />
@@ -548,13 +542,16 @@ function FocusOrderPanel({
                 const allowOutOfStock = canCompleteByStatus && canMarkReady;
                 const allowRecall = canRecallByStatus && canRecall;
                 const itemLabel = `Món #${String(ticket.order_item_id)}`;
+                const rowEffect = rowEffects.get(ticket.id) ?? null;
 
                 return (
                   <div
-                    key={`${String(ticket.id)}:${status}`}
+                    key={ticket.id}
+                    data-kds-effect={rowEffect ?? undefined}
                     className={cn(
-                      "grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 bg-card px-3 py-1.5 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95",
+                      "grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 bg-card px-3 py-1.5 transition-colors duration-300 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95",
                       getItemRowStatusClass(status),
+                      getKdsRowEffectClass(rowEffect),
                     )}
                   >
                     <span className="min-w-0 break-words text-base font-semibold leading-6 text-muted-foreground">
@@ -623,7 +620,7 @@ function FocusOrderPanel({
                               onClick={() =>
                                 void onCompleteTickets([ticket.id])
                               }
-                              aria-label="Hoàn tất món"
+                              aria-label="Báo món sẵn sàng"
                             >
                               {isMutating ? (
                                 <Spinner data-icon="inline-start" />
@@ -667,8 +664,8 @@ function FocusOrderPanel({
                 <IconCheckCheck data-icon="inline-start" aria-hidden />
               )}
               {activeTickets.length > 1
-                ? `Hoàn tất ${activeTickets.length} món`
-                : "Hoàn tất phiếu"}
+                ? `Báo sẵn sàng ${activeTickets.length} món`
+                : "Báo phiếu sẵn sàng"}
             </Button>
           </div>
         </div>
@@ -684,7 +681,7 @@ function FocusOrderPanel({
           <div className="flex flex-col items-center gap-2 rounded-md bg-success/95 px-6 py-4 text-success-foreground shadow-md">
             <IconCheck className="size-10" aria-hidden />
             <span className="font-heading text-base font-semibold">
-              Đã xong đơn — chuyển đơn kế tiếp
+              Đơn đã sẵn sàng — chuyển đơn kế tiếp
             </span>
           </div>
         </div>

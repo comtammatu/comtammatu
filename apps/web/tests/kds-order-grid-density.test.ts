@@ -25,11 +25,23 @@ test("KDS service columns keep semantic labels without visible title bars", () =
   assert.doesNotMatch(orderGridSource, /<h2[\s\S]*\{column\.title\}/);
   assert.match(
     orderGridSource,
-    /className="min-h-0 flex-1 space-y-1\.5 overflow-y-auto p-1\.5 xl:space-y-2 xl:p-2"/,
+    /className="min-h-0 flex-1 space-y-1\.5 overflow-y-auto xl:space-y-2"/,
+  );
+  assert.match(
+    orderGridSource,
+    /className=\{cn\(\s*"flex min-h-0 min-w-0 flex-col xl:h-full"/,
   );
   assert.match(
     orderGridSource,
     /className="grid min-h-full gap-1\.5 p-1\.5 md:grid-cols-3/,
+  );
+  assert.doesNotMatch(
+    orderGridSource,
+    /rounded-lg border border-border\/70 bg-card\/40/,
+  );
+  assert.match(
+    orderGridSource,
+    /className="flex items-center justify-center rounded-md border border-dashed border-border\/60 bg-muted\/20 px-3 py-3/,
   );
   assert.doesNotMatch(orderGridSource, /md:grid-cols-2/);
   assert.doesNotMatch(orderGridSource, /lg:overflow-hidden/);
@@ -45,7 +57,7 @@ test("KDS batch completion action moves into the compact card title area", () =>
     /size=\{layout === "title" \? "touch" : "touch-lg"\}/,
   );
   assert.match(batchActionsSource, /aria-label=\{fullLabel\}/);
-  assert.match(batchActionsSource, /"Xong"/);
+  assert.match(batchActionsSource, /"Sẵn sàng"/);
 });
 
 test("KDS compact cards preserve item recall and out-of-stock actions", () => {

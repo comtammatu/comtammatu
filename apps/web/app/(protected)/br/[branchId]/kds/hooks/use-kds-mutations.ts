@@ -159,11 +159,7 @@ export function useKdsMutations({
     async (ticketId: number) => {
       if (!beginTicketMutation(ticketId)) return;
 
-      setTickets((prev) =>
-        prev.map((t) =>
-          t.id === ticketId ? { ...t, status: "cancelled" } : t,
-        ),
-      );
+      setTickets((prev) => prev.filter((t) => t.id !== ticketId));
 
       try {
         const ticket = ticketsRef.current.find((t) => t.id === ticketId);

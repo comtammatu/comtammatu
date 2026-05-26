@@ -88,11 +88,11 @@ URL: `/br/{branchId}/pos` (qua bàn occupied → đơn cũ)
 - Toast "Thêm món thành công" (hoặc tương tự).
 - Pane đóng, banner append biến mất.
 - Quay về màn POS chính HOẶC tự mở chi tiết đơn để bạn check tổng mới.
-- Trên KDS (bếp): món thêm nhập vào PB đang mở nếu PB trước chưa hoàn tất; nếu PB trước đã hoàn tất thì hệ thống tạo PB mới cho lần gọi thêm.
+- Trên KDS (bếp): món thêm tạo PB theo cùng số đơn và lần gửi. Ví dụ đơn hiển thị `#105` thì PB đầu là `#105`, lần gửi thêm tiếp theo là `#105-2`, rồi `#105-3`.
 
 ✅ **Xong!** Tổng đơn đã cập nhật. Khách gọi tiếp → lặp lại từ Bước 1. Khách thanh toán → POS-05.
 
-> ⚠️ "Gửi món thêm" không tạo đơn TC mới. PB chỉ tách mới khi PB trước của đơn đó đã hoàn tất; nếu PB trước còn đang làm, món thêm nằm chung trên PB đó để bếp xử lý một lần.
+> ⚠️ "Gửi món thêm" không tạo đơn TC mới. Hệ thống giữ nguyên số đơn/hóa đơn, nhưng PB của từng lần gửi bếp có hậu tố theo lượt để thu ngân và bếp dễ đối chiếu.
 
 ---
 
@@ -148,7 +148,7 @@ URL: `/br/{branchId}/pos` (qua bàn occupied → đơn cũ)
 ### Database
 
 - Insert vào `order_items` với `order_id` của đơn cũ.
-- KDS tickets mới insert qua `kds_tickets` (route theo station của menu_item) và gắn vào PB đang mở nếu đơn còn PB `pending`/`preparing`.
+- KDS tickets mới insert qua `kds_tickets` (route theo station của menu_item) và gắn vào batch gửi bếp mới theo `orders.order_number + send_seq`.
 - Trigger update `orders.subtotal` + `orders.total_amount` (atomic recompute từ `order_items` SUM).
 - KHÔNG update `orders.status` — vẫn `confirmed`.
 

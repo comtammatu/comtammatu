@@ -80,7 +80,7 @@ const base: BuildRunnerQueueInput = {
     {
       id: 900,
       order_id: 10,
-      kitchen_ticket_number: "BEP-007",
+      kitchen_ticket_number: "#007",
       send_seq: 1,
       kind: "initial",
       created_at: "2026-05-24T03:00:00.000Z",
@@ -165,13 +165,56 @@ test("buildRunnerQueue groups completed takeaway tickets by kitchen batch and us
   );
 
   assert.equal(ready?.lane, "served");
-  assert.equal(ready?.callNumber, "BEP-007");
+  assert.equal(ready?.callNumber, "#007");
   assert.equal(ready?.callPrefix, "Số");
-  assert.equal(ready?.referenceNumber, "BEP-007");
+  assert.equal(ready?.referenceNumber, "#007");
   assert.equal(ready?.orderReceivedAt, "2026-05-24T03:00:00.000Z");
   assert.equal(ready?.ticketCount, 2);
   assert.deepEqual(ready?.ticketIds, [1, 2]);
   assert.deepEqual(ready?.readyTicketIds, [1, 2]);
+});
+
+test("buildRunnerQueue preserves order-based append kitchen ticket suffixes", () => {
+  const input: BuildRunnerQueueInput = {
+    ...base,
+    tickets: [
+      {
+        id: 15,
+        order_id: 23,
+        kitchen_send_batch_id: 901,
+        status: "ready",
+        bumped_at: "2026-05-24T03:30:00.000Z",
+        created_at: "2026-05-24T03:29:00.000Z",
+        updated_at: "2026-05-24T03:30:00.000Z",
+      },
+    ],
+    orders: [
+      {
+        id: 23,
+        order_number: "MV-20260524-105-CN1",
+        order_type: "takeaway",
+        table_id: null,
+        status: "ready",
+        created_at: "2026-05-24T03:29:00.000Z",
+        tables: null,
+      },
+    ],
+    kitchenBatches: [
+      {
+        id: 901,
+        order_id: 23,
+        kitchen_ticket_number: "#105-2",
+        send_seq: 2,
+        kind: "append",
+        created_at: "2026-05-24T03:29:00.000Z",
+      },
+    ],
+  };
+
+  const [item] = buildRunnerQueue(input);
+
+  assert.equal(item?.callNumber, "#105-2");
+  assert.equal(item?.referenceNumber, "#105-2");
 });
 
 test("buildRunnerQueue keeps preparing orders and hides completed orders", () => {

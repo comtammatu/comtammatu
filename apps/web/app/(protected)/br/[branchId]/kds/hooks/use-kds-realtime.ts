@@ -35,13 +35,18 @@ const KDS_ORDER_ITEM_SELECT_BASE =
 const KDS_TICKET_SELECT =
   "id, station_id, order_id, order_item_id, kitchen_send_batch_id, status, bumped_at, created_at, updated_at";
 const KDS_ACTIVE_STATUSES = ["pending", "preparing"];
-const KDS_VISIBLE_STATUSES = ["pending", "preparing", "ready", "cancelled"];
+const KDS_VISIBLE_STATUSES = ["pending", "preparing", "ready"];
+const KDS_VISIBLE_STATUS_SET = new Set<string>(KDS_VISIBLE_STATUSES);
 
 type KdsQueryResult = {
   data: unknown[] | null;
   error: { message?: string } | null;
 };
 type KdsSupabaseClient = ReturnType<typeof createClient>;
+
+function isVisibleKdsTicket(ticket: KdsTicket): boolean {
+  return KDS_VISIBLE_STATUS_SET.has(ticket.status);
+}
 
 function isMissingPriorityColumn(
   error: { message?: string } | null | undefined,
@@ -575,6 +580,7 @@ export function useKdsRealtime({
           (payload) => {
             if (payload.eventType === "INSERT") {
               const newTicket = payload.new as KdsTicket;
+              if (!isVisibleKdsTicket(newTicket)) return;
               setTickets((prev) => [...prev, newTicket]);
               syncOrderItemStatusFromTicketRef.current(newTicket);
               lastSnapshotSyncRef.current = Date.now();
@@ -588,7 +594,9 @@ export function useKdsRealtime({
             } else if (payload.eventType === "UPDATE") {
               const updated = payload.new as KdsTicket;
               setTickets((prev) =>
-                prev.map((t) => (t.id === updated.id ? updated : t)),
+                isVisibleKdsTicket(updated)
+                  ? prev.map((t) => (t.id === updated.id ? updated : t))
+                  : prev.filter((t) => t.id !== updated.id),
               );
               syncOrderItemStatusFromTicketRef.current(updated);
               scheduleOrderInfoRefreshRef.current(updated.order_id);

@@ -83,7 +83,7 @@ function mapPaymentRpcError(message: string): string | null {
     normalized.includes("gl_account_not_found") ||
     normalized.includes("fiscal_period_closed")
   ) {
-    return "Thanh toán tạm thời chưa thể hòan tất do cấu hình kế toán chưa sẵn sàng. Vui lòng liên hệ quản lý.";
+    return "Thanh toán tạm thời chưa thể hoàn tất do cấu hình kế toán chưa sẵn sàng. Vui lòng liên hệ quản lý.";
   }
 
   if (normalized.includes("tenant_mismatch")) {
