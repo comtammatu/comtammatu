@@ -30,13 +30,14 @@ const jobIdSchema = z.coerce
 
 type KitchenEnqueueResult = {
   order_id: number;
-  send_seq: number;
+  send_seq: number | null;
   jobs: Array<{
     slot: number;
     printer_id: number;
     job_id: number;
     item_count: number;
   }>;
+  deferred_to?: "kds_completion";
 };
 
 export async function sendToKitchen(
@@ -53,41 +54,38 @@ export async function sendToKitchen(
   );
   if (!ctx) return { success: false, error: "Không có quyền gửi bếp" };
 
-  const { supabase } = ctx;
+  const { supabase, claims } = ctx;
 
-  const { data, error } = await supabase.rpc("enqueue_kitchen_print", {
-    p_order_id: parsed.data,
-  });
+  const { data: order, error } = await supabase
+    .from("orders")
+    .select("id, kitchen_send_count")
+    .eq("id", parsed.data)
+    .eq("tenant_id", claims.tenant_id)
+    .maybeSingle();
 
   if (error) {
-    const msg = String(error.message ?? "").toLowerCase();
-    if (msg.includes("no active") && msg.includes("printer")) {
-      return {
-        success: false,
-        error: "Chi nhánh chưa cấu hình máy in bếp. Liên hệ quản lý.",
-      };
-    }
-    if (msg.includes("permission denied")) {
-      return { success: false, error: "Không có quyền gửi bếp" };
-    }
-    if (msg.includes("tenant mismatch")) {
-      return { success: false, error: "Không có quyền truy cập đơn này" };
-    }
     return {
       success: false,
       error: "Không thể gửi bếp. Vui lòng thử lại.",
     };
   }
 
-  const result = data as unknown as KitchenEnqueueResult | null;
-  if (!result) {
+  if (!order) {
     return {
       success: false,
-      error: "Không thể gửi bếp. Vui lòng thử lại.",
+      error: "Không tìm thấy đơn hàng.",
     };
   }
 
-  return { success: true, data: result };
+  return {
+    success: true,
+    data: {
+      order_id: order.id,
+      send_seq: order.kitchen_send_count,
+      jobs: [],
+      deferred_to: "kds_completion",
+    },
+  };
 }
 
 export async function printReceipt(

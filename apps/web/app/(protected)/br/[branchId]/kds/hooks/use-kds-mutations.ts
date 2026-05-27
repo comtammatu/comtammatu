@@ -27,6 +27,12 @@ export interface KdsMutations {
   pendingTicketIds: Set<number>;
 }
 
+type CompleteKdsTicketsResult = {
+  completed_count?: number;
+  print_warning?: string | null;
+  skipped_ticket_count?: number;
+};
+
 export function useKdsMutations({
   branchId,
   tickets,
@@ -234,7 +240,7 @@ export function useKdsMutations({
         // RPC is introduced by migration 20260601850000; cast until db:types is
         // regenerated from the schema where the migration is applied.
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { error } = await (sb as any).rpc("complete_kds_tickets", {
+        const { data, error } = await (sb as any).rpc("complete_kds_tickets", {
           p_branch_id: branchId,
           p_ticket_ids: activeIds,
         });
@@ -242,6 +248,18 @@ export function useKdsMutations({
         if (error) {
           toast.error("Không thể hoàn tất phiếu bếp. Vui lòng thử lại.");
           await refreshBoardSnapshot();
+          return;
+        }
+
+        const result = (data ?? null) as CompleteKdsTicketsResult | null;
+        const hasPrintWarning =
+          Boolean(result?.print_warning) ||
+          ((result?.completed_count ?? 0) > 0 &&
+            (result?.skipped_ticket_count ?? 0) > 0);
+        if (hasPrintWarning) {
+          toast.warning(
+            "Đã hoàn thành món, nhưng chưa tạo đủ phiếu in bếp. Kiểm tra máy in bếp hoặc báo trực tiếp.",
+          );
         }
       } finally {
         endTicketMutations(activeIds);

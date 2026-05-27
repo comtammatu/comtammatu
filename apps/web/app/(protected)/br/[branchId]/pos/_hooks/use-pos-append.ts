@@ -68,12 +68,6 @@ export function usePosAppend(args: UsePosAppendArgs): UsePosAppendReturn {
         }
 
         toast.success(`Đã thêm món vào đơn #${target.orderNumber}`);
-        const kitchenWarning = result.meta?.kitchenWarning;
-        if (typeof kitchenWarning === "string") {
-          toast.warning(kitchenWarning);
-        } else if (result.meta?.kitchenSent === true) {
-          toast.success("Đã gửi phiếu bếp", { duration: 2000 });
-        }
 
         opts?.onSuccess?.();
         void refreshOperational();

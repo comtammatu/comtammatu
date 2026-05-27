@@ -19,29 +19,6 @@ import {
 import type { CartState, CartItem } from "./types";
 import { POS_ERROR_CODES } from "./_utils/error-codes";
 
-// Best-effort auto kitchen-print after order create/append. Order is the
-// source of truth — never fail the order if printing fails. Returns a
-// human-readable Vietnamese warning string when the user should be told
-// (no printer configured, missing permission, transport error). Returns
-// null when print succeeded or had nothing to send.
-async function autoSendKitchen(
-  supabase: SupabaseClient,
-  orderId: number,
-): Promise<string | null> {
-  const { error } = await supabase.rpc("enqueue_kitchen_print", {
-    p_order_id: orderId,
-  });
-  if (!error) return null;
-  const msg = String(error.message ?? "").toLowerCase();
-  if (msg.includes("no active") && msg.includes("printer")) {
-    return "Đã đặt món, nhưng chi nhánh chưa cấu hình máy in bếp.";
-  }
-  if (msg.includes("permission denied")) {
-    return "Đã đặt món, nhưng tài khoản chưa có quyền gửi bếp.";
-  }
-  return "Đã đặt món, chưa gửi được phiếu bếp. Vui lòng thử Gửi bếp lại.";
-}
-
 async function markInitialOrderPriority(
   supabase: SupabaseClient,
   orderId: number,
@@ -313,18 +290,14 @@ export async function submitOrder(
     parsedCart.data.is_priority === true
       ? await markInitialOrderPriority(supabase, result.order_id)
       : null;
-  const kitchenWarning = await autoSendKitchen(supabase, result.order_id);
-  const kitchenSent = kitchenWarning === null;
 
   return {
     success: true,
     data: { order_id: result.order_id, order_number: result.order_number },
     meta: {
-      kitchenSent,
       prioritySet:
         parsedCart.data.is_priority === true && priorityWarning === null,
       ...(priorityWarning ? { priorityWarning } : {}),
-      ...(kitchenWarning ? { kitchenWarning } : {}),
     },
   };
 }
@@ -996,15 +969,6 @@ export async function appendOrderItems(
     return { success: false, error: "Không thể thêm món. Vui lòng thử lại." };
   }
 
-  // Skip kitchen reprint on idempotent replay — first call already enqueued.
-  const kitchenWarning = result.idempotent
-    ? null
-    : await autoSendKitchen(supabase, result.order_id);
-  // Only claim "đã gửi bếp" when this call actually dispatched. Idempotent
-  // replay short-circuits the print, so we don't know the first call's
-  // outcome here and must not falsely affirm it.
-  const kitchenSent = !result.idempotent && kitchenWarning === null;
-
   return {
     success: true,
     data: {
@@ -1013,10 +977,6 @@ export async function appendOrderItems(
       total_amount: Number(result.total_amount),
       added_count: Number(result.added_count),
       ...(result.idempotent ? { idempotent: true } : {}),
-    },
-    meta: {
-      kitchenSent,
-      ...(kitchenWarning ? { kitchenWarning } : {}),
     },
   };
 }

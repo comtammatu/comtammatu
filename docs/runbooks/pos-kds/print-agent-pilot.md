@@ -24,8 +24,9 @@ Complete all items before opening the branch for the day.
 - [ ] `/admin/settings/printers` — each branch kitchen printer has the right
       print types (`kitchen_ticket`, `cancel_ticket`) and menu categories assigned.
       Categories not assigned to a branch printer are not included in kitchen tickets.
-- [ ] Cashier + chef accounts have `pos:send_kitchen` + `pos:print` permissions
-      (auto-provisioned via role template)
+- [ ] Cashier accounts have `pos:send_kitchen` for POS order dispatch; chef
+      accounts have `kds:mark_ready` for completion-triggered kitchen paper;
+      receipt operators have `pos:print` (auto-provisioned via role template)
 - [ ] Presence token registered for this branch agent through the repo CLI:
   ```
   pnpm --filter @comtammatu/print-agent presence:provision -- create \
@@ -69,13 +70,17 @@ Complete all items before opening the branch for the day.
 ### Smoke test (staff manager on site)
 
 1. Open a test order, add one kitchen-routed item + one non-routed item.
-2. Click **"Gửi bếp"** → one kitchen ticket prints within 3 seconds; toast shows
-   `Đã gửi bếp (lần 1, 1 tem)`.
-3. Close the order → receipt prints.
-4. Power off the kitchen printer. Click **"Gửi bếp"** again on a new order.
-5. Open `/admin/settings/printers/jobs` → the job is in `failed` with a
+2. Click **"Gửi bếp"** → the order appears on KDS; no kitchen paper prints yet.
+3. On KDS, click **Hoàn thành** for one kitchen item → one kitchen ticket prints
+   within 3 seconds and contains only that completed item.
+4. Complete the remaining kitchen item(s) on KDS → the next kitchen ticket
+   contains only the remaining completed item(s).
+5. Close the order → receipt prints.
+6. Power off the kitchen printer. Create a new order, then click **Hoàn thành**
+   on KDS for one routed item.
+7. Open `/admin/settings/printers/jobs` → the job is in `failed` with a
    `connect ECONNREFUSED` or `timed out after 5000ms` message.
-6. Power the printer back on, click **Thử lại** → job transitions to `printed`
+8. Power the printer back on, click **Thử lại** → job transitions to `printed`
    within 3 seconds; `retry_count = 1` in the monitor table.
 
 Document completion: tick this checklist, sign, file with branch opening checklist.
@@ -91,12 +96,14 @@ Document completion: tick this checklist, sign, file with branch opening checkli
 
 | Action at POS                         | System behaviour                                                                              |
 | ------------------------------------- | --------------------------------------------------------------------------------------------- |
-| Add items, click **Gửi bếp**          | `enqueue_kitchen_print` → 1-2 jobs inserted → agent claims → ticket(s) print                  |
+| Add items, click **Gửi bếp**          | Order + KDS tickets are created; kitchen paper waits for KDS completion                       |
+| KDS clicks **Hoàn thành** for item(s) | `complete_kds_tickets` → matching `print_jobs` inserted → agent claims → ticket(s) print     |
 | Click **In hoá đơn** on an open order | `enqueue_receipt_print` → 1 job → receipt prints                                              |
 | Retry a failed job                    | Manager opens monitor → **Thử lại** → job back to `pending` with audited `last_retried_by/at` |
 
-Idempotency: repeated clicks within the same second-bucket produce the same
-`idempotency_key` and are deduped at the DB (no double printing).
+Idempotency: KDS completion print keys include the completed ticket IDs, so a
+retry of the same completion does not double-print, while a later completion of
+remaining active items creates a separate kitchen ticket.
 
 ## 3. Troubleshooting
 
@@ -153,10 +160,13 @@ Should not happen because of `UNIQUE(idempotency_key)`. If it does:
    - Items + quantities + notes
 3. Runner delivers carbon copy to the kitchen; POS order is still saved normally.
 
-### 4.2 POS behaviour during fallback
+### 4.2 POS / KDS behaviour during fallback
 
-- **Keep clicking "Gửi bếp"** — it still enqueues jobs to `print_jobs` (RLS
-  allows insert even when the agent is offline). Jobs queue up in `pending`.
+- **Keep clicking "Gửi bếp"** on POS to create orders and keep KDS accurate.
+  This no longer enqueues kitchen paper.
+- **Keep clicking "Hoàn thành"** on KDS when kitchen work is actually done.
+  These completion actions enqueue the kitchen print jobs; if the agent or
+  printer is offline, jobs queue in `pending`/`failed` for retry.
 - **Keep taking payments** — `enqueue_receipt_print` also queues successfully.
   Hand-write receipts on paper if the customer requests a copy.
 
