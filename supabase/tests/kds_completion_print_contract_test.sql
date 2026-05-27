@@ -15,6 +15,7 @@ DECLARE
   v_complete_def TEXT;
   v_helper_def TEXT;
   v_compat_def TEXT;
+  v_route_def TEXT;
   v_retired_trigger_function REGPROCEDURE;
 BEGIN
   SELECT COUNT(*)
@@ -35,6 +36,8 @@ BEGIN
     INTO v_helper_def;
   SELECT pg_get_functiondef('public.enqueue_kitchen_print(bigint)'::regprocedure)
     INTO v_compat_def;
+  SELECT pg_get_functiondef('public.route_order_to_kds(bigint)'::regprocedure)
+    INTO v_route_def;
   SELECT to_regprocedure('public.auto_enqueue_kitchen_print_from_ticket()')
     INTO v_retired_trigger_function;
 
@@ -69,6 +72,14 @@ BEGIN
      OR v_compat_def NOT ILIKE '%kds_completion%' THEN
     RAISE EXCEPTION
       'TEST FAILED: POS-era enqueue_kitchen_print is not a KDS-completion compatibility wrapper';
+  END IF;
+
+  IF v_route_def NOT ILIKE '%non-kds-dispatch%'
+     OR v_route_def NOT ILIKE '%v_station_id IS NULL AND v_has_printer_route%'
+     OR v_route_def NOT ILIKE '%printer_menu_categories%'
+     OR v_route_def NOT ILIKE '%kds_station_categories%' THEN
+    RAISE EXCEPTION
+      'TEST FAILED: printer-only categories are not dispatched separately from KDS completion';
   END IF;
 
   RAISE NOTICE

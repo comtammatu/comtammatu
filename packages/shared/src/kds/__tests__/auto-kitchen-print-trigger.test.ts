@@ -10,6 +10,8 @@ const migrationPath =
   "supabase/migrations/20260602000000_kds_print_on_completion.sql";
 const cleanupMigrationPath =
   "supabase/migrations/20260602001000_drop_kds_auto_print_trigger_function.sql";
+const nonKdsDispatchMigrationPath =
+  "supabase/migrations/20260602002000_non_kds_dispatch_print_on_pos_send.sql";
 
 test("KDS ticket creation no longer auto-enqueues kitchen print jobs", () => {
   const src = `${read(migrationPath)}\n${read(cleanupMigrationPath)}`;
@@ -106,7 +108,7 @@ test("complete_kds_tickets atomically queues prints for tickets it actually comp
   );
 });
 
-test("POS no longer enqueues kitchen paper on submit or manual send action", () => {
+test("POS actions do not revive broad kitchen paper enqueueing", () => {
   const orderActions = read(
     "apps/web/app/(protected)/br/[branchId]/pos/order-actions.ts",
   );
@@ -117,16 +119,46 @@ test("POS no longer enqueues kitchen paper on submit or manual send action", () 
   assert.doesNotMatch(
     orderActions,
     /enqueue_kitchen_print|autoSendKitchen|kitchenSent|kitchenWarning/,
-    "POS create/append must not enqueue or report paper kitchen prints",
+    "POS create/append must not call the old broad kitchen print RPC",
   );
   assert.doesNotMatch(
     printActions,
     /enqueue_kitchen_print/,
-    "manual POS send action must not enqueue kitchen paper",
+    "manual POS send action must not call the old broad kitchen print RPC",
   );
   assert.match(
     printActions,
     /deferred_to: "kds_completion"/,
     "manual POS send action must preserve compatibility while deferring paper",
+  );
+});
+
+test("printer-only categories print at POS dispatch without entering food KDS", () => {
+  const src = read(nonKdsDispatchMigrationPath);
+
+  assert.match(
+    src,
+    /CREATE OR REPLACE FUNCTION public\.route_order_to_kds/,
+    "migration must override route_order_to_kds for hybrid dispatch",
+  );
+  assert.match(
+    src,
+    /v_station_id IS NULL AND v_has_printer_route[\s\S]*CONTINUE;/,
+    "printer-only categories must be skipped from KDS ticket creation",
+  );
+  assert.match(
+    src,
+    /NOT EXISTS \([\s\S]*FROM public\.kds_station_categories sc[\s\S]*s\.is_active = TRUE[\s\S]*\)[\s\S]*':non-kds-dispatch:printer:'/,
+    "dispatch print must be limited to categories without active KDS station mapping",
+  );
+  assert.match(
+    src,
+    /JOIN public\.printer_menu_categories pmc[\s\S]*JOIN public\.printer_print_types ppt[\s\S]*ppt\.print_type = 'kitchen_ticket'/,
+    "dispatch print must still respect branch printer category routing",
+  );
+  assert.match(
+    src,
+    /UPDATE public\.order_items[\s\S]*SET sent_to_kitchen_at = COALESCE\(sent_to_kitchen_at, now\(\)\)/,
+    "printer-only dispatch must advance the existing print cursor",
   );
 });

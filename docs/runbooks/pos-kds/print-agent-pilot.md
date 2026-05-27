@@ -96,8 +96,8 @@ Document completion: tick this checklist, sign, file with branch opening checkli
 
 | Action at POS                         | System behaviour                                                                              |
 | ------------------------------------- | --------------------------------------------------------------------------------------------- |
-| Add items, click **Gửi bếp**          | Order + KDS tickets are created; kitchen paper waits for KDS completion                       |
-| KDS clicks **Hoàn thành** for item(s) | `complete_kds_tickets` → matching `print_jobs` inserted → agent claims → ticket(s) print     |
+| Add items, click **Gửi bếp**          | Order + KDS tickets are created. Categories not shown on KDS but routed to a kitchen printer, such as drinks, print immediately |
+| KDS clicks **Hoàn thành** for item(s) | KDS-visible items call `complete_kds_tickets` → matching `print_jobs` inserted → agent claims → ticket(s) print |
 | Click **In hoá đơn** on an open order | `enqueue_receipt_print` → 1 job → receipt prints                                              |
 | Retry a failed job                    | Manager opens monitor → **Thử lại** → job back to `pending` with audited `last_retried_by/at` |
 

@@ -77,6 +77,17 @@ export async function sendToKitchen(
     };
   }
 
+  const { error: routeError } = await supabase.rpc("route_order_to_kds", {
+    p_order_id: order.id,
+  });
+
+  if (routeError) {
+    return {
+      success: false,
+      error: "Không thể gửi bếp. Vui lòng thử lại.",
+    };
+  }
+
   return {
     success: true,
     data: {
