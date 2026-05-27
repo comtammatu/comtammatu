@@ -1,7 +1,15 @@
 -- =============================================================================
+-- ⚠️  DEV / STAGING ONLY — DO NOT RUN ON PRODUCTION ⚠️
+-- =============================================================================
 -- Wipe ALL application data in the same Supabase project — keeps schema/RLS.
 --
--- Use: Supabase Dashboard → SQL Editor → Run (postgres / service role).
+-- Use: Supabase Dashboard → SQL Editor → Run (postgres / service role) AGAINST
+-- A DEV OR STAGING PROJECT. Verify project_ref in the dashboard URL first.
+--
+-- Safety gate: the operator MUST first execute the sentinel `SET LOCAL` line
+-- below in the same session; otherwise the TRUNCATE block raises and aborts.
+-- This is a friction step, not a real prod safeguard — confirm the project
+-- before connecting.
 --
 -- What it does
 --   1) TRUNCATE every `public.*` app table (listed below) with RESTART IDENTITY.
@@ -12,12 +20,27 @@
 --   - vault / realtime — not touched
 --
 -- After run: re-seed tenant (e.g. re-run migration seed SQL or insert tenant +
---   branches) and recreate users (e.g. scripts/sql/seed_dev_auth_users.sql).
+--   branches) and recreate users (e.g. scripts/sql/dev/seed_dev_auth_users.sql).
 --
 -- PRODUCTION: backup / export first. Irreversible data loss.
 -- =============================================================================
 
+-- Required confirmation. Run this line FIRST in the same session, then run
+-- the BEGIN/TRUNCATE/COMMIT block below:
+--
+--   SET LOCAL app.allow_destructive_wipe = 'YES_I_KNOW_THIS_DELETES_ALL_DATA';
+
 BEGIN;
+
+DO $$
+BEGIN
+  IF current_setting('app.allow_destructive_wipe', true) IS DISTINCT FROM
+     'YES_I_KNOW_THIS_DELETES_ALL_DATA' THEN
+    RAISE EXCEPTION
+      'Wipe blocked. Set the confirmation flag in the same session first: '
+      'SET LOCAL app.allow_destructive_wipe = ''YES_I_KNOW_THIS_DELETES_ALL_DATA'';';
+  END IF;
+END $$;
 
 SET LOCAL statement_timeout = '10min';
 

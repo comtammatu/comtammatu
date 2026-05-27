@@ -96,7 +96,7 @@ WHERE id = '<user-uuid>';
 
 ### Seed QA Test Accounts (dev / staging)
 
-Preferred CLI: `supabase db query --linked --file supabase/seed.sql`. SQL Editor fallback: run `scripts/sql/seed_dev_auth_users.sql` as role `postgres`. The seed is idempotent and can be rerun.
+Preferred CLI: `supabase db query --linked --file supabase/seed.sql`. SQL Editor fallback: run `scripts/sql/dev/seed_dev_auth_users.sql` as role `postgres`. The seed is idempotent and can be rerun.
 
 Mật khẩu tất cả: `Test1234!`. Bao phủ toàn bộ `STAFF_ROLES`:
 
