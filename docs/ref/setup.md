@@ -60,23 +60,7 @@ Optional (install globally as needed):
 - **Sentry** — error tracking post-deploy
 - **Figma** — design-to-code workflow
 
-### 3b. gstack Skills
-
-```bash
-./scripts/setup-gstack.sh
-```
-
-Installs 31 gstack skills (`/ship`, `/review`, `/qa`, `/cso`, ...). Requires Bun.
-
-### 3c. Claude Swarm (multi-agent coordination)
-
-```bash
-./scripts/setup-swarm.sh
-```
-
-Installs claude-swarm MCP server for multi-agent collaboration. Allows multiple Claude Code sessions to discover each other, form rooms, delegate tasks, and share memory. Keep project agent conventions in `AGENTS.md` and `docs/agent/rules/`; do not add repo-local Claude rules.
-
-### 3d. Verify Claude Code
+### 3b. Verify Claude Code
 
 Open Claude Code in project root and check:
 
@@ -228,9 +212,9 @@ Trong `.github/workflows/ci.yml`, thay placeholder bằng secrets:
 
 ## Quick Reference — What's Gitignored (per-machine setup)
 
-| File                                                             | How to create                         | Purpose                  |
-| ---------------------------------------------------------------- | ------------------------------------- | ------------------------ |
-| `apps/web/.env.local`                                            | `cp .env.example apps/web/.env.local` | Runtime env vars         |
-| `.mcp.json`                                                      | `cp .mcp.json.example .mcp.json`      | Claude Code MCP servers  |
-| `$CLAUDE_CONFIG_DIR/skills/gstack` or the user Claude config dir | `./scripts/setup-gstack.sh`           | 31 gstack skills         |
-| `~/.claude-swarm/`                                               | `./scripts/setup-swarm.sh`            | Multi-agent coordination |
+| File                  | How to create                         | Purpose                 |
+| --------------------- | ------------------------------------- | ----------------------- |
+| `apps/web/.env.local` | `cp .env.example apps/web/.env.local` | Runtime env vars        |
+| `.mcp.json`           | `cp .mcp.json.example .mcp.json`      | Claude Code MCP servers |
+
+Per-user agent tooling (gstack, claude-swarm, codex CLI, etc.) is intentionally NOT bootstrapped from this repo. Install whichever toolset you use from its upstream source into your own `$HOME` and keep its config out of the repo (see `.gitignore`).

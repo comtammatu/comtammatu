@@ -81,3 +81,6 @@ pos-after*.png
 # context-graph (large JSON, regenerate with: context-graph analyze .)
 .context-graph/graph.json
 .vercel
+
+# Supabase live baseline snapshots (local, regenerable via supabase db dump)
+.baseline-artifacts/
