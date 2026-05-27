@@ -2,7 +2,7 @@
 
 ERP vận hành chuỗi nhà hàng cho chuỗi Cơm Tấm Má Tư CTCP. Single-tenant, multi-branch, đa kho. Không phải CRM, không phải ERP đa ngành.
 
-Mô hình vận hành pilot: **Trụ sở chính (HQ) → Kho Tổng → Bếp Trung Tâm → Chi nhánh**.
+Mô hình vận hành production: **Trụ sở chính (HQ) → Kho Tổng → Bếp Trung Tâm → Chi nhánh**.
 
 ## Modules
 
@@ -12,19 +12,19 @@ Mô hình vận hành pilot: **Trụ sở chính (HQ) → Kho Tổng → Bếp T
 | M1  | Menu                 | Categories, items, variants, modifiers, sides                              | SHIPPED     |
 | M2  | POS                  | Cart, table/zone, order lifecycle, bill, PWA installable                   | SHIPPED     |
 | M3  | KDS                  | Realtime queue, bump/complete, station config, partial-cancel ticket       | SHIPPED     |
-| M4  | Payment              | Cash + VietQR (auto-create on bill open). Momo blocked on creds            | PARTIAL     |
+| M4  | Payment              | Cash + VietQR (EMVCo QR, cashier-confirm) + Momo (IPN webhook). All live in production.  | SHIPPED     |
 | M5  | Stock                | Ingredients, recipes, PO/GRN/3-way, stocktake, transfers, central kitchen  | SHIPPED     |
-| M6  | Finance              | Dashboard, COA/Journal, BCTC TT200, reconciliation. HĐĐT MISA blocked      | PARTIAL     |
+| M6  | Finance              | Finance Basic, COA/Journal, BCTC TT200, reconciliation. HĐĐT active qua Viettel S-invoice | PARTIAL     |
 | M7  | Nhân sự & tiền lương | Employees, contracts, attendance, payslip. BHXH/PIT calc deferred          | PARTIAL     |
 
-Roadmap đầy đủ + version history: [`docs/plan/roadmap.md`](docs/plan/roadmap.md).
+Active tracker: [`tasks/todo.md`](tasks/todo.md).
 
 ## Tech Stack
 
 - **Runtime:** Node.js ≥ 24
 - **Framework:** Next.js 16.2 (App Router, Turbopack dev, Webpack production build)
 - **Language:** TypeScript 6.0 (strict + `noUncheckedIndexedAccess`)
-- **UI:** React 19.2 · Tailwind CSS 4.2 · shadcn/ui (preset `b1GN1lxvE`) · Radix
+- **UI:** React 19.2 · Tailwind CSS 4.2 · shadcn/ui (`radix-lyra`, preset `buFywKm`) · Radix
 - **Validation:** Zod 4
 - **Database:** Supabase (PostgREST + Auth + RLS), JWT custom claims hook
 - **Monorepo:** Turborepo 2.9 + pnpm 10.33
@@ -47,7 +47,7 @@ packages/
 supabase/
   migrations/       # SQL migrations (production: file → PR → merge → owner apply)
 docs/
-  plan/             # Roadmap, decisions log, sprint plans, contracts
+  plan/             # Decisions log and active ADRs
   modules/          # Per-module reference (auth, database, web-app, ui, security, infrastructure)
   spec/             # Architecture, database schema, design system
   ref/              # Business domain, inventory SOP, e-invoice, PIT, glossary
@@ -119,7 +119,7 @@ pnpm --filter @comtammatu/web guides:capture     # Capture POS flow screenshots
 | [`docs/plan/decisions.md`](docs/plan/decisions.md)             | Architecture decisions log                       |
 | [`docs/spec/architecture.md`](docs/spec/architecture.md)       | System architecture                              |
 | [`docs/spec/database-schema.md`](docs/spec/database-schema.md) | Database schema reference                        |
-| [`docs/spec/design-system.md`](docs/spec/design-system.md)     | UI design tokens + shadcn preset                 |
+| [`docs/spec/design-system.md`](docs/spec/design-system.md)     | Locked UI design-system contract                 |
 | [`docs/modules/auth.md`](docs/modules/auth.md)                 | Auth v2 — Position ⟂ Permission model            |
 | [`docs/ref/setup.md`](docs/ref/setup.md)                       | Full setup (MCP, Supabase hook, seed accounts)   |
 | [`tasks/regressions.md`](tasks/regressions.md)                 | Named regression rules — read before refactor    |

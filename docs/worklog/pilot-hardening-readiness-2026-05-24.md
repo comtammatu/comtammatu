@@ -1,5 +1,7 @@
 # Pilot Hardening Readiness - 2026-05-24
 
+> **Postscript (status update):** the readiness gaps noted below (VietQR credentials, MoMo idempotency apply, reconciliation tooling, live smoke) have since been closed — VietQR + Momo are wired with production credentials and active in real branches. Treat this worklog as the historical pre-launch snapshot; current status lives in `tasks/todo.md` and `docs/CODEBASE_MAP.md`.
+
 ## Scope
 
 This worklog tracks the hardening queue requested after the architecture and
@@ -36,22 +38,22 @@ Command:
 node scripts/project-snapshot.mjs
 ```
 
-Snapshot from current checkout:
+Snapshot refreshed from current checkout on 2026-05-27:
 
 | Area                              | Count |
 | --------------------------------- | ----: |
-| Worktree status entries           |   817 |
+| Worktree status entries           |   140 |
 | `apps/web/app/**/page.tsx` routes |   109 |
 | API route handlers                |    13 |
-| Total route handlers              |    14 |
-| Generated DB tables               |   115 |
+| Total route handlers              |    15 |
+| Generated DB tables               |   116 |
 | Generated DB views                |     9 |
-| Generated DB functions            |   237 |
+| Generated DB functions            |   241 |
 | Generated DB enums                |     0 |
-| SQL migration files               |   347 |
-| Test/spec files                   |    36 |
+| SQL migration files               |   366 |
+| Test/spec files                   |    40 |
 | Playwright specs                  |     9 |
-| Shared unit test files            |    27 |
+| Shared unit test files            |    31 |
 
 ## Route-Group Migration Closure
 
@@ -68,13 +70,7 @@ Route migration reconciliation:
 The route migration is reconciled into `HEAD` on `codex/continue-ts`.
 `node scripts/audit-route-group-migration.mjs` is clean, `apps/web/app/br` is
 absent, and `apps/web/app/(protected)/br` contains the branch operational
-surfaces. The 17 no-counterpart cleanup classes reviewed during the split were:
-
-- Legacy `docs/llm-wiki/*`.
-- Legacy `matu-surface`.
-- Legacy generated design-token package/files.
-- Legacy `admin/kitchen-sink`.
-- Replaced Inventory browser-draft helper.
+surfaces.
 
 Completion gate on 2026-05-24:
 

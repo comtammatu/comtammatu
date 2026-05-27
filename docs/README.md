@@ -4,22 +4,22 @@
 
 ## Trạng thái hiện tại
 
-- Active delivery track: tiếp tục phát triển in-place trên repo `comtammatu` cho pilot/hardening.
+- Active delivery track: production đang vận hành in-place trên repo `comtammatu`; ongoing work là hardening + feature follow-ups.
 - Active tracker: [tasks/todo.md](../tasks/todo.md)
-- Greenfield rebuild pack under `docs/archive/plan/system-rebuild/` is suspended/historical reference as of 2026-05-23. Do not treat its in-place freeze or cutover steps as active unless owner explicitly reactivates it.
+- Retired docs are not retained in this repo. Current decisions must live in `tasks/todo.md`, `docs/plan/adr/`, `docs/plan/decisions.md`, module docs, specs, runbooks, or canonical references.
 
 ## Đọc theo nhu cầu
 
 - Onboarding kỹ thuật: [CODEBASE_MAP.md](CODEBASE_MAP.md)
 - Ngôn ngữ chuẩn + thuật ngữ dự án: [ref/glossary.md](ref/glossary.md)
 - Kiến trúc hệ thống: [architecture/README.md](architecture/README.md)
+- UI Design System SSOT: [spec/design-system.md](spec/design-system.md)
+- UI implementation guide: [modules/ui.md](modules/ui.md)
 - Database schema source ladder: [spec/database-schema.md](spec/database-schema.md)
 - Finance active boundary: [modules/finance.md](modules/finance.md)
 - Canonical business/reference docs: [ref/README.md](ref/README.md)
 - Feature/module architecture: `docs/modules/*`, `docs/spec/*`
 - Active planning: `tasks/todo.md`, `docs/plan/adr/*`, `docs/plan/decisions.md`
-- Suspended greenfield rebuild reference: `docs/archive/plan/system-rebuild/*`
-- Historical/superseded plans: `docs/archive/plan/*`
 - Readiness checklist và smoke gates: [runbooks/README.md](runbooks/README.md)
 - Continuity / adoption tracking: [worklog/README.md](worklog/README.md)
 
@@ -27,9 +27,6 @@
 
 - Canonical reference: [ref/inventory.md](ref/inventory.md)
 - Sơ đồ tổng quan: [spec/inventory-overview-diagrams.md](spec/inventory-overview-diagrams.md)
-- Thiết kế location ledger historical: [archive/plan/inventory-location-ledger.md](archive/plan/inventory-location-ledger.md)
-- Contract Phase 2 historical: [archive/plan/inventory-location-ledger-phase2.md](archive/plan/inventory-location-ledger-phase2.md)
-- App patch map Phase 2 historical: [archive/plan/inventory-location-ledger-phase2-app-patch.md](archive/plan/inventory-location-ledger-phase2-app-patch.md)
 - SOP: [ref/inventory-sop.md](ref/inventory-sop.md)
 - Training 1 trang: [ref/inventory-role-handoff.md](ref/inventory-role-handoff.md)
 - RBAC matrix: [ref/inventory-rbac-matrix.md](ref/inventory-rbac-matrix.md)
@@ -50,8 +47,7 @@
 - `architecture/`: cross-cutting architecture và các điểm vào/alias sang glossary chuẩn
 - `ref/`: canonical rules, boundary, business semantics, glossary chuẩn
 - `modules/` và `spec/`: technical structure và schema
+- `spec/design-system.md`: single source of truth cho UI design-system; runtime configs, primitives, adapters, and regression rules only enforce it
 - `plan/`: active decisions and ADRs
-- `archive/plan/`: superseded roadmap, sprint, and historical plan snapshots
-- `archive/ref/` and `archive/worklog/`: historical references and superseded audits
 - `runbooks/`: operational verification
 - `worklog/`: evolving progress/adoption artefacts

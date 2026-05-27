@@ -18,14 +18,11 @@ not a second authority:
 - `packages/ui/src/components/*` and `apps/web/app/components/surface.tsx` are
   runtime implementation and adapter evidence, not competing design systems.
 
-Legacy Inventory pilot artifacts are retired from runtime app UI and are not
-source of truth for new UI:
-
-- removed `packages/design-tokens/tokens.json`
-- removed `packages/ui/src/styles/matu-tokens.css`
-- removed `apps/web/app/components/matu-surface.tsx`
-- removed `apps/web/app/(protected)/admin/kitchen-sink/page.tsx`
-- external `~/Downloads/matu-superapp/DESIGN.md`
+The retired Inventory pilot visual layer (`matu-surface`, `matu-*` tokens,
+`font-matu-body`, kitchen-sink route, external design folders) is enforced
+out by `scripts/check-ui-contract.mjs` / `pnpm lint:ui-contract`. Treat any
+new occurrence as a contract violation; do not reintroduce that layer unless
+`docs/spec/design-system.md` is explicitly changed first.
 
 External references:
 

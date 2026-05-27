@@ -7,9 +7,9 @@
 
 ## Trạng thái
 
-- **Active delivery track:** tiếp tục phát triển in-place trên repo `comtammatu` cho pilot/hardening. Bộ `docs/archive/plan/system-rebuild/*` là suspended/historical reference từ 2026-05-23, không phải kế hoạch freeze/cutover đang active.
-- **Phiên bản hiện tại:** v1.0.0 — Auth, Admin, Master Data, Inventory, Orders, POS, KDS, Print SHIPPED. HĐĐT active qua Viettel S-invoice; Payments, Finance/HR, Notifications/Reporting vẫn còn phần PARTIAL.
-- **Mốc tiếp theo:** Pilot Launch v1.0.0 cho mô hình vận hành `HQ -> Bếp trung tâm -> Chi nhánh` — cần wire VietQR/Momo credentials trước pilot; HĐĐT dùng Viettel S-invoice.
+- **Active delivery track:** production đang vận hành in-place trên repo `comtammatu`; ongoing work tập trung vào hardening + bổ sung tính năng theo phản hồi vận hành. Retired rebuild packs are no longer retained in `docs/`; current decisions live in `tasks/todo.md`, `docs/plan/decisions.md`, and active ADRs.
+- **Phiên bản hiện tại:** v1.0.0 — Auth, Admin, Master Data, Inventory, Orders, POS, KDS, Print, Payments (Cash + VietQR + Momo) SHIPPED và đang vận hành thực tế. HĐĐT active qua Viettel S-invoice. Finance/HR/Notifications/Reporting vẫn còn phần PARTIAL (xem `tasks/todo.md`).
+- **Mốc tiếp theo:** tiếp tục hardening trên mô hình `Kho Tổng -> Bếp Trung Tâm -> Chi nhánh` đang chạy production; backlog ưu tiên ở `tasks/todo.md`.
 - **Tech stack:** Next.js 16.2 | React 19.2 | TypeScript 6.0 | Tailwind 4.2 | Zod 4 | Supabase | Turborepo 2.9
 
 ## Chỉ mục phân hệ
@@ -42,34 +42,36 @@ Browser ──► proxy.ts (auth + ACL) ──► Next.js App Router ──► S
                                                          ──► Upstash Redis (rate limit)
 ```
 
-### Graph-backed Project Topology
+### Operating Planes
 
-Snapshot từ `.understand-anything/knowledge-graph.json` ngày 2026-05-24:
+Use this map as an orientation layer. Regenerate numeric counts with
+`node scripts/project-snapshot.mjs`; do not treat local analysis artifacts as
+source-of-truth inputs.
 
-| Layer               | File-level nodes | Operational role                                                                      |
-| ------------------- | ---------------: | ------------------------------------------------------------------------------------- |
-| Web App             |              594 | Route surfaces, Server Actions, realtime hooks, POS/KDS/Admin/Inventory/Finance/HR UI |
-| Data Platform       |              367 | Supabase migrations, generated types, RLS, RPCs, database clients                     |
-| Docs And Operations |              154 | Source-of-truth docs, runbooks, task tracker, agent rules                             |
-| Shared Domain       |               73 | Business rules, auth helpers, provider contracts, formatting, labels                  |
-| UI System           |               70 | shadcn/Radix primitives, app surface components, design tokens                        |
-| Tooling And Config  |               34 | Turborepo, lint/build/test config, deployment config, scripts                         |
-| Print Agent         |               21 | ESC-POS print daemon, LAN/USB bridge, receipt/QR rendering                            |
-| Auth And Routing    |               19 | `proxy.ts`, route resolution, ACL, branch scope, auth tests                           |
-| Tests               |                9 | Current Playwright route coverage                                                     |
-| Core                |               61 | Repository metadata, E2E helpers, cross-cutting supporting files                      |
+| Layer               | Operational role                                                                      |
+| ------------------- | ------------------------------------------------------------------------------------- |
+| Web App             | Route surfaces, Server Actions, realtime hooks, POS/KDS/Admin/Inventory/Finance/HR UI |
+| Data Platform       | Supabase migrations, generated types, RLS, RPCs, database clients                     |
+| Docs And Operations | Source-of-truth docs, runbooks, task tracker, agent rules                             |
+| Shared Domain       | Business rules, auth helpers, provider contracts, formatting, labels                  |
+| UI System           | shadcn/Radix primitives, app surface components, design tokens                        |
+| Tooling And Config  | Turborepo, lint/build/test config, deployment config, scripts                         |
+| Print Agent         | ESC-POS print daemon, LAN bridge, receipt/QR rendering                                |
+| Auth And Routing    | `proxy.ts`, route resolution, ACL, branch scope, auth tests                           |
+| Tests               | Playwright route coverage and shared unit tests                                       |
+| Core                | Repository metadata, E2E helpers, cross-cutting supporting files                      |
 
-Generated checkout snapshot from 2026-05-24 (`node scripts/project-snapshot.mjs`):
+Generated checkout snapshot from 2026-05-27 (`node scripts/project-snapshot.mjs`):
 
 | Area | Count |
 | --- | ---: |
 | `apps/web/app/**/page.tsx` routes | 109 |
 | API route handlers | 13 |
-| Generated DB tables / views / functions / enums | 115 / 9 / 237 / 0 |
-| SQL migration files | 347 |
-| Test/spec files under `apps/web/e2e` + `packages/shared/src` | 36 |
+| Generated DB tables / views / functions / enums | 116 / 9 / 241 / 0 |
+| SQL migration files | 366 |
+| Test/spec files under `apps/web/e2e` + `packages/shared/src` | 40 |
 
-The graph shows the repo is not a flat "apps/packages" map. The operational shape is:
+The repo is not a flat "apps/packages" map. The operational shape is:
 
 ```mermaid
 flowchart TB
@@ -213,12 +215,12 @@ sequenceDiagram
 
 | #   | Unknown                                                                                                                                                  | Verification Step                                                  | Impact                                              |
 | --- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | --------------------------------------------------- |
-| 1   | area_manager has tenant-wide access (no area scoping table)                                                                                              | Deferred — see roadmap H3                                          | May need migration later                            |
-| 2   | Test coverage exists but is still concentrated: current checkout has 36 test/spec files, including 9 Playwright specs, with gaps around full POS→payment→stock→print→HĐĐT smoke and live provider behavior | Expand route smoke + end-to-end pilot runbooks before scale | Refactor regressions possible on uncovered surfaces |
+| 1   | area_manager has tenant-wide access (no area scoping table)                                                                                              | Deferred — tracked as item **H3** in `tasks/todo.md` "Deferred to post-pilot" | May need migration later                            |
+| 2   | Test coverage exists but is still concentrated: current checkout has 40 test/spec files, including 9 Playwright specs, with gaps around full POS→payment→stock→print→HĐĐT smoke and live provider behavior | Expand route smoke + end-to-end pilot runbooks before scale | Refactor regressions possible on uncovered surfaces |
 
 ## Priority Recommendations
 
-1. **v1.0.0 Pilot Launch:** Auth, Admin, Master Data, Inventory, Orders, POS, KDS, Print shipped. Payments, Finance/HR, Notifications/Reporting partial (blocked on credentials). Focus on wiring real payment/invoice APIs, QA, security review, and validating the `HQ -> Bếp trung tâm -> Chi nhánh` operating path.
+1. **v1.0.0 in production:** Auth, Admin, Master Data, Inventory, Orders, POS, KDS, Print, Payments (Cash + VietQR + Momo) shipped và đang vận hành thực tế trên mô hình `HQ -> Kho Tổng -> Bếp Trung Tâm -> Chi nhánh`. Finance/HR/Notifications/Reporting còn phần PARTIAL — ưu tiên hiện tại là hardening (QA, security follow-ups), bổ sung BHXH/PIT, và đóng các P0 còn mở trong `tasks/todo.md`.
 2. **Watch hub files:** Any change to `module-acl.ts` or `types.ts` requires proxy + layout + nav verification.
 3. **RLS pattern:** Every new table must follow the tenant-scoped RLS pattern with explicit GRANTs. See [database.md](modules/database.md).
 
@@ -226,10 +228,3 @@ Inventory route ownership note:
 
 - `/inventory` is the canonical Inventory surface.
 - `/admin/inventory/*` page files were removed. The URL space remains mapped to the retired `inventory_admin` module in `module-acl.ts` with `allowedRoles: []`, so no role passes the proxy gate. Treat the URL space as unsupported; do not wire new admin features there.
-
-<!-- ORACLE-META
-Updated: 2026-05-07 (status sync: Payments + Finance/HR + Notifications/Reporting PARTIAL)
-Data: Direct source reading
-Audience: new engineer, feature owner | Confidence: 95%
-Unknowns: 2 items pending verification
--->
