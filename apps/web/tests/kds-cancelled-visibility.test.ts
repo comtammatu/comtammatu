@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { KDS_VISIBLE_STATUSES } from "../app/(protected)/br/[branchId]/kds/lib/ticket-status";
 
 const kdsPageSource = readFileSync(
   join(process.cwd(), "app/(protected)/br/[branchId]/kds/page.tsx"),
@@ -24,30 +25,22 @@ const kdsMutationsSource = readFileSync(
   "utf8",
 );
 
-function extractVisibleStatuses(source: string): string[] {
-  const match = source.match(
-    /const KDS_VISIBLE_STATUSES = \[([\s\S]*?)\](?: as const)?;/,
-  );
-  assert.ok(match, "KDS_VISIBLE_STATUSES must be declared");
-  return [...match[1]!.matchAll(/"([^"]+)"/g)].map((item) => item[1]!);
-}
-
 test("KDS visible snapshots exclude cancelled tickets", () => {
-  assert.deepEqual(extractVisibleStatuses(kdsPageSource), [
-    "pending",
-    "preparing",
-    "ready",
-  ]);
-  assert.deepEqual(extractVisibleStatuses(kdsRealtimeSource), [
-    "pending",
-    "preparing",
-    "ready",
-  ]);
+  assert.deepEqual(
+    [...KDS_VISIBLE_STATUSES],
+    ["pending", "preparing", "ready"],
+  );
+  assert.match(kdsPageSource, /KDS_VISIBLE_STATUSES/);
+  assert.match(kdsRealtimeSource, /KDS_VISIBLE_STATUSES/);
+  assert.doesNotMatch(kdsPageSource, /"cancelled"/);
 });
 
 test("KDS realtime evicts tickets that become cancelled", () => {
   assert.match(kdsRealtimeSource, /function isVisibleKdsTicket/);
-  assert.match(kdsRealtimeSource, /if \(!isVisibleKdsTicket\(newTicket\)\) return;/);
+  assert.match(
+    kdsRealtimeSource,
+    /if \(!isVisibleKdsTicket\(newTicket\)\) return;/,
+  );
   assert.match(
     kdsRealtimeSource,
     /isVisibleKdsTicket\(updated\)[\s\S]*prev\.filter\(\(t\) => t\.id !== updated\.id\)/,

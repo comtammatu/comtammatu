@@ -22,6 +22,7 @@ Tài liệu tham chiếu dài hạn cho repo này.
 
 ## Các tài liệu khác
 
+- [binh-ma-tu-tiktok/README.md](binh-ma-tu-tiktok/README.md): business/content reference cho kênh TikTok Bình "Má Tư"; không phải runtime, architecture, hay source-of-truth kỹ thuật
 - [einvoice-tax.md](einvoice-tax.md)
 - [labor-contracts.md](labor-contracts.md)
 - [payroll-pit.md](payroll-pit.md)

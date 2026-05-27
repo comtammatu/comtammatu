@@ -73,9 +73,9 @@ const ingredientBaseSchema = z.object({
 });
 
 const ingredientSchema = ingredientBaseSchema.superRefine((data, ctx) => {
-  const legacyUnit = data.unit?.trim();
-  const purchaseUnit = data.purchase_unit?.trim() ?? legacyUnit;
-  const measureUnit = data.measure_unit?.trim() ?? legacyUnit;
+  const baseUnit = data.unit?.trim();
+  const purchaseUnit = data.purchase_unit?.trim() ?? baseUnit;
+  const measureUnit = data.measure_unit?.trim() ?? baseUnit;
 
   if (!purchaseUnit) {
     ctx.addIssue({

@@ -30,19 +30,19 @@ function toPosix(filePath) {
 
 const checks = [
   {
-    description: "legacy admin-patterns imports",
+    description: "retired admin-patterns imports",
     rootDir: "apps/web/app",
     exclude: [/empty-state-panel\.tsx$/, /table-empty-state-row\.tsx$/],
     contentPattern: /@comtammatu\/ui\/components\/admin-patterns/,
   },
   {
-    description: "legacy inventory-patterns imports",
+    description: "retired inventory-patterns imports",
     rootDir: "apps/web/app",
     exclude: [],
     contentPattern: /@comtammatu\/ui\/components\/inventory-patterns/,
   },
   {
-    description: "legacy inventory helper imports in shipped routes",
+    description: "retired inventory helper imports in shipped routes",
     rootDir: "apps/web/app/(protected)/inventory",
     exclude: [/_components\//],
     contentPattern: /_components\/(section-card|empty-state-panel|action-icon-button)/,
@@ -73,9 +73,9 @@ for (const check of checks) {
 
 if (failures.length > 0) {
   console.error(
-    `V2 import check failed: ${failures.join(", ")}. Replace legacy visible wrapper imports before shipping.`,
+    `V2 import check failed: ${failures.join(", ")}. Replace retired visible wrapper imports before shipping.`,
   );
   process.exit(1);
 }
 
-console.log("V2 import check: không phát hiện import legacy bị cấm.");
+console.log("V2 import check: không phát hiện import retired wrapper bị cấm.");

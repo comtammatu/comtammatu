@@ -12,6 +12,7 @@ import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
   Ban as IconBan,
   Check as IconCheck,
+  CircleCheck as IconCircleCheck,
   ChefHat as IconChefHat,
   RotateCcw as IconRotate,
 } from "lucide-react";
@@ -38,7 +39,12 @@ import { BatchActions } from "./batch-actions";
 import { OrderNote } from "./order-note";
 import { OrderTitleLine } from "./order-title-line";
 import { TicketRowMeta } from "./ticket-row-meta";
-import type { KdsOrder, KdsOrderItem, KdsTicket } from "../types";
+import type {
+  KdsOrder,
+  KdsOrderItem,
+  KdsSectionFilter,
+  KdsTicket,
+} from "../types";
 import type { KdsOrderColumn } from "../lib/order-columns";
 
 const KDS_HEATMAP_LABELS = {
@@ -48,6 +54,7 @@ const KDS_HEATMAP_LABELS = {
 interface OrderGridProps {
   displayOrders: KdsOrder[];
   hasGroupedOrders: boolean;
+  sectionFilter: KdsSectionFilter;
   pendingTicketIds: Set<number>;
   canMarkReady: boolean;
   canRecall: boolean;
@@ -535,6 +542,7 @@ function OrderColumn({
 export function OrderGrid({
   displayOrders,
   hasGroupedOrders,
+  sectionFilter,
   pendingTicketIds,
   canMarkReady,
   canRecall,
@@ -553,14 +561,22 @@ export function OrderGrid({
         <div className="flex min-h-80 items-center justify-center p-6 md:min-h-96">
           <AppEmptyState
             title={
-              hasGroupedOrders ? "Không có đơn phù hợp bộ lọc" : "Bếp đang rảnh"
+              hasGroupedOrders
+                ? "Không có đơn phù hợp bộ lọc"
+                : sectionFilter === "done"
+                  ? "Chưa có đơn đã xong hôm nay"
+                  : "Bếp đang rảnh"
             }
             description={
               hasGroupedOrders
                 ? "Thay đổi bộ lọc để xem thêm đơn."
-                : "Chưa có đơn hàng mới."
+                : sectionFilter === "done"
+                  ? "Các phiếu bếp sẵn sàng trong hôm nay sẽ nằm ở đây."
+                  : "Chưa có đơn hàng mới."
             }
-            icon={<IconChefHat />}
+            icon={
+              sectionFilter === "done" ? <IconCircleCheck /> : <IconChefHat />
+            }
           />
         </div>
       ) : (

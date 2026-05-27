@@ -43,10 +43,15 @@ Instruction memory and learning memory stay separate:
 
 ## UI Authority
 
-- NEVER invent or redesign the UI outside the project's established design system.
-- NEVER exceed authority when editing UI; only make UI changes explicitly requested or clearly required by the task.
-- USE `shadcn/ui` components and the project's active preset as the default UI path.
-- BEFORE UI/UX rebuild work, read and follow `docs/spec/design-system.md` as the locked design-system contract.
+- The current UI contract is a frozen legacy runtime contract for maintenance only, not authority for the next UX rebuild.
+- NEVER start UX rebuild implementation on top of the frozen legacy contract, current `AppShell`, or current `surface.tsx` visual rules.
+- BEFORE UI/UX rebuild work, first choose the UX reference with the owner, then update `docs/spec/design-system.md`, `docs/agent/rules/ui.md`, `docs/modules/ui.md`, `tasks/regressions.md`, and `scripts/check-ui-contract.mjs` as one authority reset.
+- NEVER invent or redesign the UI outside the owner-approved design-system contract. During the freeze, no broad rebuild contract is active; only the scoped Khung quản trị rebuild authority in `docs/spec/design-system.md` is active.
+- NEVER exceed authority when editing UI; only make maintenance UI changes explicitly requested or clearly required by the task.
+- For maintenance-only UI work, USE `shadcn/ui` components and the frozen current-runtime preset evidence as the default path.
+- For UX rebuild work, USE `shadcn/ui` components only after the owner-approved authority reset defines the new preset/tokens/components.
+- For maintenance-only UI work, read `docs/spec/design-system.md` as the frozen current-runtime contract.
+- For the current Khung quản trị rebuild slice, use installed shadcn primitives first and do not run `shadcn init --preset b6FS5q9aq` until the owner chooses reinstall, merge, or skip.
 - UI/UX rebuild PRs MUST state the surface, primary user job, route family, change type, and primitives used before implementation.
 
 ## Architecture

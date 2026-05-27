@@ -3,8 +3,12 @@ import type { PermissionKey, StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import {
   getAuthContext,
+  getAuthContextByAnyPermission,
+  getAuthContextByPermission,
+  getAuthContextByTenantPermission,
   getAuthContextWithAnyPermission,
   getAuthContextWithPermission,
+  getAuthContextWithTenantPermission,
 } from "./auth";
 
 /** Context provided to action handlers after auth succeeds. */
@@ -13,15 +17,17 @@ export type ActionContext = NonNullable<
 >;
 
 type PermissionLike = PermissionKey | string;
+type PermissionMode = "role-and-permission" | "permission";
+type PermissionScope = "any" | "tenant";
 
 type BaseActionOptions<TSchema extends z.ZodType> = {
   roles: readonly StaffRole[];
   schema: TSchema;
   permission?: PermissionLike;
   anyPermission?: readonly PermissionLike[];
-  permissionBranchId?: (
-    data: z.infer<TSchema>,
-  ) => number | null | undefined;
+  permissionMode?: PermissionMode;
+  permissionScope?: PermissionScope;
+  permissionBranchId?: (data: z.infer<TSchema>) => number | null | undefined;
 };
 
 type DirectActionOptions<TSchema extends z.ZodType> =
@@ -49,11 +55,19 @@ const BRANCH_SCOPE_UNSET_ERROR = "Tài khoản chưa được gán chi nhánh";
 async function resolveActionContext(
   opts: Pick<
     BaseActionOptions<z.ZodType>,
-    "roles" | "permission" | "anyPermission"
+    | "roles"
+    | "permission"
+    | "anyPermission"
+    | "permissionMode"
+    | "permissionScope"
   >,
   branchId?: number | null,
 ): Promise<ActionContext | null> {
   if (opts.anyPermission) {
+    if (opts.permissionMode === "permission") {
+      return getAuthContextByAnyPermission(opts.anyPermission, branchId);
+    }
+
     return getAuthContextWithAnyPermission(
       opts.roles,
       opts.anyPermission,
@@ -62,6 +76,18 @@ async function resolveActionContext(
   }
 
   if (opts.permission) {
+    if (opts.permissionScope === "tenant") {
+      if (opts.permissionMode === "permission") {
+        return getAuthContextByTenantPermission(opts.permission);
+      }
+
+      return getAuthContextWithTenantPermission(opts.roles, opts.permission);
+    }
+
+    if (opts.permissionMode === "permission") {
+      return getAuthContextByPermission(opts.permission, branchId);
+    }
+
     return getAuthContextWithPermission(opts.roles, opts.permission, branchId);
   }
 
@@ -156,10 +182,7 @@ export function withFormAction<TSchema extends z.ZodType>(
     data: z.infer<TSchema>,
     ctx: ActionContext,
   ) => Promise<ActionResult>,
-): (
-  prev: ActionResult | null,
-  formData: FormData,
-) => Promise<ActionResult> {
+): (prev: ActionResult | null, formData: FormData) => Promise<ActionResult> {
   return async (_prev, formData) => {
     const raw = opts.extract(formData);
     const result = opts.schema.safeParse(raw);

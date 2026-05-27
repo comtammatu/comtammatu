@@ -307,10 +307,8 @@ export function SupplierInvoicesClient({
   }
 
   function handleCreateInvoice() {
-    const resolvedSupplierId =
-      selectedGrn?.supplierId ?? Number(supplierId || 0);
-    if (!resolvedSupplierId) {
-      toast.error("Chọn nhà cung cấp hoặc GRN liên kết.");
+    if (!selectedGrn) {
+      toast.error(copy.chooseGrnFirst);
       return;
     }
     if (!invoiceNumber.trim()) {
@@ -324,8 +322,8 @@ export function SupplierInvoicesClient({
 
     startTransition(async () => {
       const res = await createSupplierInvoice({
-        supplierId: resolvedSupplierId,
-        grnId: selectedGrn?.id ?? null,
+        supplierId: selectedGrn.supplierId,
+        grnId: selectedGrn.id,
         invoiceNumber: invoiceNumber.trim(),
         invoiceDate,
         subtotal: numericSubtotal,
@@ -880,11 +878,13 @@ export function SupplierInvoicesClient({
                     if (grn) {
                       setSupplierId(String(grn.supplierId));
                     }
+                  } else {
+                    setSupplierId("");
                   }
                 }}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder={copy.chooseGrnOptional} />
+                  <SelectValue placeholder={copy.chooseGrnRequired} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">{copy.noLinkedGrn}</SelectItem>
@@ -899,7 +899,11 @@ export function SupplierInvoicesClient({
 
             <div className="grid gap-2">
               <Label>{copy.supplier}</Label>
-              <Select value={supplierId} onValueChange={setSupplierId}>
+              <Select
+                value={supplierId}
+                onValueChange={setSupplierId}
+                disabled={!selectedGrn}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder={copy.chooseSupplier} />
                 </SelectTrigger>

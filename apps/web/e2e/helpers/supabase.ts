@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@comtammatu/database";
+import { resolveStaffRoleFromPositionCode } from "@comtammatu/shared/auth";
 
 type ServiceClient = ReturnType<typeof createServiceClient>;
 
@@ -113,7 +114,7 @@ async function resolveProfileByEmail(
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("id, tenant_id, branch_id, full_name, role")
+    .select("id, tenant_id, branch_id, full_name, positions(code, label_vi)")
     .eq("id", authUser.id)
     .single();
 
@@ -127,13 +128,15 @@ async function resolveProfileByEmail(
     throw new Error(`Test user ${email} does not have a branch assignment`);
   }
 
+  const position = profile.positions as { code: string | null } | null;
+
   return {
     userId: profile.id,
     email,
     tenantId: profile.tenant_id,
     branchId: profile.branch_id,
     fullName: profile.full_name,
-    role: profile.positions?.legacy_role_code ?? "",
+    role: resolveStaffRoleFromPositionCode(position?.code) ?? "",
   };
 }
 
@@ -162,14 +165,30 @@ export async function resolveChefCredentials() {
 
   const cashier = await resolveCashierProfile(supabase);
   const users = await listAuthUsers(supabase);
+
+  const { data: chefPositions, error: positionError } = await supabase
+    .from("positions")
+    .select("id")
+    .eq("tenant_id", cashier.tenantId)
+    .in("code", ["chef", "phu_bep"]);
+
+  if (positionError) {
+    throw new Error(
+      `Failed to resolve kitchen positions: ${positionError.message}`,
+    );
+  }
+
+  const positionIds = (chefPositions ?? []).map((position) => position.id);
+  if (positionIds.length === 0) {
+    throw new Error(`No kitchen position found for tenant ${cashier.tenantId}`);
+  }
+
   const { data: chefProfile, error } = await supabase
     .from("profiles")
-    .select(
-      "id, tenant_id, branch_id, full_name, positions!inner(legacy_role_code)",
-    )
+    .select("id, tenant_id, branch_id, full_name")
     .eq("tenant_id", cashier.tenantId)
     .eq("branch_id", cashier.branchId)
-    .eq("positions.legacy_role_code", "chef")
+    .in("position_id", positionIds)
     .limit(1)
     .maybeSingle();
 
@@ -192,7 +211,7 @@ export async function resolveChefCredentials() {
     tenantId: chefProfile.tenant_id,
     branchId: chefProfile.branch_id ?? cashier.branchId,
     fullName: chefProfile.full_name,
-    role: chefProfile.role,
+    role: "chef",
     password: explicitPassword ?? process.env.E2E_CASHIER_PASSWORD ?? null,
   };
 }

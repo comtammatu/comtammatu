@@ -1,25 +1,30 @@
 # UI Design System SSOT Audit - 2026-05-24
 
+> Superseded on 2026-05-26 for UX rebuild authority: this audit is historical
+> evidence for the frozen current runtime only. It must not be used as the
+> design-system authority for the next UX rebuild.
+
 ## Scope
 
 Audit requested for interface, visual language, typography, spacing, and agent
 source-of-truth drift.
 
 This audit did not redesign the UI or migrate runtime surfaces. It locked the
-authority contract so future UI work has one reference path.
+then-current runtime contract; that contract is now frozen for maintenance and
+is not UX rebuild authority.
 
 ## Verdict
 
-CONDITIONAL GO for new UI work after this patch:
+CONDITIONAL GO for current-runtime maintenance work after this patch:
 
-- Use `docs/spec/design-system.md` as the single Design System contract.
+- Use `docs/spec/design-system.md` as frozen runtime evidence only.
 - Use runtime files only to verify implementation: `apps/web/components.json`,
   `packages/ui/components.json`, `packages/ui/src/styles/globals.css`,
   `apps/web/app/layout.tsx`, and `packages/ui/src/components/*`.
 - Treat `matu-*` and `matu-surface` usage as legacy Inventory pilot migration
   work, not as permission to build another UI layer.
 
-NO-GO for starting new UI from:
+NO-GO for starting rebuild UI from:
 
 - `packages/design-tokens/tokens.json`
 - `packages/ui/src/styles/matu-tokens.css`
@@ -32,7 +37,8 @@ NO-GO for starting new UI from:
 
 1. `docs/spec/design-system.md` already described the intended system, but its
    old authority order put runtime files above the contract. That let agents
-   over-trust leftover runtime comments.
+   over-trust leftover runtime comments. This finding is superseded by the
+   2026-05-26 freeze: no current-runtime file is UX rebuild authority.
 
 2. A parallel Inventory pilot layer still existed: `packages/design-tokens`,
    generated `matu-tokens.css`, `font-matu-body`, `matu-surface`, and
@@ -43,7 +49,7 @@ NO-GO for starting new UI from:
 3. Typography had the clearest collision. Active contract is Inter body,
    Montserrat headings, JetBrains Mono operational data. Runtime still exposes
    a Be Vietnam Pro hook for the legacy pilot surface. That hook is now marked
-   legacy and blocked for new UI.
+   legacy and blocked for current-runtime maintenance.
 
 4. Spacing and radius were also split. Active rhythm allows app spacing/gap and
    radius through the locked rhythm contract and primitives. The legacy pilot
@@ -52,10 +58,10 @@ NO-GO for starting new UI from:
 
 5. Component authority was split by `apps/web/app/components/surface.tsx` versus
    `apps/web/app/components/matu-surface.tsx`. The canonical adapter layer is
-   now explicitly `surface.tsx`; `matu-surface.tsx` is legacy audit/migration
-   material.
+   now explicitly `surface.tsx` for maintenance only; `matu-surface.tsx` is
+   legacy audit/migration material.
 
-## Locked Agent Path
+## Frozen Maintenance Agent Path
 
 Before UI implementation:
 

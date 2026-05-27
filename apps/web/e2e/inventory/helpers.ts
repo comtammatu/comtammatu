@@ -15,6 +15,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@comtammatu/database";
+import { resolveStaffRoleFromPositionCode } from "@comtammatu/shared/auth";
 
 // ─── Service client ───────────────────────────────────────────────────────────
 
@@ -35,13 +36,16 @@ export function createServiceClient() {
 
 // ─── Tenant resolution ────────────────────────────────────────────────────────
 
-export async function resolveTenantId(supabase: ServiceClient): Promise<number> {
+export async function resolveTenantId(
+  supabase: ServiceClient,
+): Promise<number> {
   const { data, error } = await supabase
     .from("branches")
     .select("tenant_id")
     .limit(1)
     .single();
-  if (error || !data) throw new Error(`Cannot resolve tenant_id: ${error?.message}`);
+  if (error || !data)
+    throw new Error(`Cannot resolve tenant_id: ${error?.message}`);
   return data.tenant_id;
 }
 
@@ -92,7 +96,9 @@ export async function ensureBranch(
     .single();
 
   if (error || !inserted) {
-    throw new Error(`Failed to create E2E branch (${kind}${labelSuffix}): ${error?.message}`);
+    throw new Error(
+      `Failed to create E2E branch (${kind}${labelSuffix}): ${error?.message}`,
+    );
   }
 
   return { id: inserted.id, name: inserted.name, kind, tenantId };
@@ -180,7 +186,12 @@ export async function ensureInventoryLocation(
   supabase: ServiceClient,
   tenantId: number,
   branchId: number,
-  locationKind: "receive" | "issue" | "storage" | "warehouse" | "kitchen" = "storage",
+  locationKind:
+    | "receive"
+    | "issue"
+    | "storage"
+    | "warehouse"
+    | "kitchen" = "storage",
 ): Promise<number> {
   const name = `E2E Loc ${branchId} ${locationKind}`;
 
@@ -192,7 +203,9 @@ export async function ensureInventoryLocation(
     .single();
 
   if (branchErr || !branch) {
-    throw new Error(`Failed to resolve branch for E2E location: ${branchErr?.message}`);
+    throw new Error(
+      `Failed to resolve branch for E2E location: ${branchErr?.message}`,
+    );
   }
 
   const desiredLocationKind =
@@ -245,7 +258,9 @@ export async function ensureInventoryLocation(
     .single();
 
   if (error || !inserted) {
-    throw new Error(`Failed to create E2E inventory location: ${error?.message}`);
+    throw new Error(
+      `Failed to create E2E inventory location: ${error?.message}`,
+    );
   }
 
   return inserted.id;
@@ -450,13 +465,15 @@ export async function createTestTransferDraft(
     throw new Error(`Failed to create test transfer: ${tErr?.message}`);
   }
 
-  const { error: lineErr } = await supabase.from("stock_transfer_items").insert({
-    tenant_id: opts.tenantId,
-    transfer_id: transfer.id,
-    ingredient_id: opts.ingredientId,
-    quantity: qty,
-    unit: "kg",
-  });
+  const { error: lineErr } = await supabase
+    .from("stock_transfer_items")
+    .insert({
+      tenant_id: opts.tenantId,
+      transfer_id: transfer.id,
+      ingredient_id: opts.ingredientId,
+      quantity: qty,
+      unit: "kg",
+    });
 
   if (lineErr) {
     throw new Error(`Failed to create test transfer line: ${lineErr.message}`);
@@ -556,31 +573,21 @@ export async function resolveUserByEmail(
 
   const { data: profile, error: pErr } = await supabase
     .from("profiles")
-    .select("id, tenant_id, branch_id, position_id")
+    .select("id, tenant_id, branch_id, positions(code, label_vi)")
     .eq("id", authUser.id)
     .single();
 
   if (pErr || !profile)
     throw new Error(`Profile not found for ${email}: ${pErr?.message}`);
 
-  const { data: position, error: posErr } = profile.position_id
-    ? await supabase
-        .from("positions")
-        .select("legacy_role_code")
-        .eq("id", profile.position_id)
-        .maybeSingle()
-    : { data: null, error: null };
-
-  if (posErr) {
-    throw new Error(`Position not found for ${email}: ${posErr.message}`);
-  }
+  const position = profile.positions as { code: string | null } | null;
 
   return {
     userId: profile.id,
     email,
     tenantId: profile.tenant_id,
     branchId: profile.branch_id,
-    role: position?.legacy_role_code ?? "",
+    role: resolveStaffRoleFromPositionCode(position?.code) ?? "",
   };
 }
 
@@ -601,10 +608,12 @@ export async function resolveInventoryManagerUser(
   const { data: positions, error: posErr } = await supabase
     .from("positions")
     .select("id")
-    .eq("legacy_role_code", "warehouse_manager");
+    .in("code", ["kho_truong", "thu_kho"]);
 
   if (posErr) {
-    throw new Error(`Failed to resolve warehouse_manager positions: ${posErr.message}`);
+    throw new Error(
+      `Failed to resolve warehouse_manager positions: ${posErr.message}`,
+    );
   }
 
   const positionIds = (positions ?? []).map((position) => position.id);

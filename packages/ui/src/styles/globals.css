@@ -3,7 +3,8 @@
 
 /* ============================================================
  * THEME — packages/ui/src/styles/globals.css
- * Runtime source: shadcn radix-lyra primitives + Ma Tu Concept 01 tokens.
+ * Frozen runtime source: shadcn radix-lyra primitives + Ma Tu Concept 01 tokens.
+ * Maintenance evidence only; not UX rebuild authority.
  *
  * Override governance:
  *   1. Change global semantic tokens here only; never add route theme files.

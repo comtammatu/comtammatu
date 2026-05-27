@@ -61,8 +61,7 @@ interface CloseSessionSheetProps {
   sessionId: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** @deprecated D8 (2026-04-27) bỏ variance gate — prop giữ lại để
-   * backward-compat với caller cũ; không còn ảnh hưởng UI. */
+  /** D8 (2026-04-27): variance gate retired; prop no longer affects UI. */
   canOverrideVariance?: boolean;
 }
 

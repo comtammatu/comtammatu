@@ -55,17 +55,13 @@ export function shouldRetrySubmit(
   if (errorCode !== undefined) {
     return isRetryablePosErrorCode(errorCode);
   }
-  // Path 2 (fallback): legacy substring match.
+  // Path 2 (fallback): substring match for callers without structured codes.
   if (error === undefined) return false;
   return !NON_RETRYABLE_ERROR_SUBSTRINGS.some((substring) =>
     error.includes(substring),
   );
 }
 
-/**
- * Legacy alias — kept for any caller that still imports it.
- * New code should use `shouldRetrySubmit(errorCode, error)`.
- */
 export function isNonRetryableSubmitError(error: string): boolean {
   return NON_RETRYABLE_ERROR_SUBSTRINGS.some((substring) =>
     error.includes(substring),

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft as IconArrowLeft } from "lucide-react";
 import { createClient } from "@comtammatu/database/supabase/server";
+import { STAFF_VI } from "@comtammatu/shared/messages";
 import { formatVNDateTime } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -32,9 +33,7 @@ export default async function StaffPermissionsPage({ params }: Props) {
   // Target profile (RLS: viewer must have staff:view or hr:view_employee)
   const { data: profile } = await supabase
     .from("profiles")
-    .select(
-      "id, full_name, phone, branch_id, position_id, is_active, positions(legacy_role_code)",
-    )
+    .select("id, full_name, phone, branch_id, position_id, is_active")
     .eq("id", id)
     .maybeSingle();
 
@@ -174,10 +173,10 @@ export default async function StaffPermissionsPage({ params }: Props) {
                   </div>
                   <div>
                     <dt className="text-xs font-medium text-muted-foreground">
-                      Legacy role
+                      {STAFF_VI.roleCode}
                     </dt>
                     <dd className="mt-0.5 font-mono text-sm">
-                      {profile.positions?.legacy_role_code ?? "—"}
+                      {position?.code ?? "—"}
                     </dd>
                   </div>
                   <div>

@@ -80,7 +80,7 @@ export function isFeedbackPublicPath(pathname: string): boolean {
   return pathname.startsWith("/r/");
 }
 
-export function resolveLegacyRouteRedirectPath(pathname: string): string | null {
+export function resolveRetiredRouteRedirectPath(pathname: string): string | null {
   const betaPath = isBetaPath(pathname);
   const resolvedPathname = stripBetaPrefix(pathname);
 

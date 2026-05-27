@@ -10,7 +10,8 @@
     "dev:web": "turbo dev --filter=@comtammatu/web",
     "dev:print": "turbo dev --filter=@comtammatu/print-agent",
     "build": "turbo build",
-    "lint": "pnpm lint:copy && pnpm lint:v2-imports && pnpm lint:ui-contract && pnpm lint:client-storage && turbo lint",
+    "lint": "pnpm lint:copy && pnpm lint:baseline && pnpm lint:v2-imports && pnpm lint:ui-contract && pnpm lint:client-storage && turbo lint",
+    "lint:baseline": "node scripts/check-baseline-hygiene.mjs",
     "lint:client-storage": "node scripts/check-client-storage.mjs",
     "lint:copy": "node scripts/lint-copy.mjs",
     "lint:i18n": "I18N_BASELINE_DISABLE=1 pnpm --filter @comtammatu/web exec eslint .",
@@ -25,6 +26,9 @@
     "bones:build": "pnpm --filter @comtammatu/web bones:build",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
     "db:types": "node scripts/gen-types.mjs",
+    "db:baseline:extract": "node scripts/supabase-baseline-extract.mjs",
+    "db:baseline:extract:dry-run": "node scripts/supabase-baseline-extract.mjs --dry-run",
+    "db:baseline:local-check": "node scripts/supabase-baseline-local-check.mjs",
     "clean:web": "node scripts/clean-web.mjs"
   },
   "devDependencies": {

@@ -523,26 +523,26 @@ function assertOrderDisplayHelpers() {
 async function main() {
   assertOrderDisplayHelpers();
 
-  const legacyTextReceipt = renderPayload(baseReceipt);
-  assertBytes("legacy text receipt", legacyTextReceipt);
+  const singleBlockTextReceipt = renderPayload(baseReceipt);
+  assertBytes("single-block text receipt", singleBlockTextReceipt);
   assertTextIncludes(
-    "legacy text receipt order header",
-    legacyTextReceipt,
+    "single-block text receipt order header",
+    singleBlockTextReceipt,
     "Bàn 5 #087",
   );
   assertTextExcludes(
-    "legacy text receipt old dine-in label",
-    legacyTextReceipt,
+    "single-block text receipt dine-in label",
+    singleBlockTextReceipt,
     "Tại chỗ #087",
   );
   assertTextIncludes(
-    "legacy text receipt side quantity",
-    legacyTextReceipt,
+    "single-block text receipt side quantity",
+    singleBlockTextReceipt,
     "Canh chua x2",
   );
   assertTextIncludes(
-    "legacy text receipt default side quantity",
-    legacyTextReceipt,
+    "single-block text receipt default side quantity",
+    singleBlockTextReceipt,
     "Side mac dinh x2",
   );
   const documentTextReceipt = renderPayload(documentReceipt);
@@ -562,7 +562,7 @@ async function main() {
     documentTextReceipt,
     "Side mac dinh x2",
   );
-  assertBytes("legacy bitmap receipt", await renderPayloadBitmap(baseReceipt));
+  assertBytes("single-block bitmap receipt", await renderPayloadBitmap(baseReceipt));
   assertBytes(
     "document bitmap receipt",
     await renderPayloadBitmap(documentReceipt),
@@ -598,27 +598,27 @@ async function main() {
     "takeaway bitmap provisional",
     await renderPayloadBitmap(takeawayProvisional),
   );
-  const legacyTextKitchen = renderPayload(baseKitchen);
-  assertBytes("legacy text kitchen", legacyTextKitchen);
+  const singleBlockTextKitchen = renderPayload(baseKitchen);
+  assertBytes("single-block text kitchen", singleBlockTextKitchen);
   assertTextIncludes(
-    "legacy text kitchen order header",
-    legacyTextKitchen,
+    "single-block text kitchen order header",
+    singleBlockTextKitchen,
     "Bàn 5 #087",
   );
   assertTextOrder(
-    "legacy text kitchen PB demoted below header",
-    legacyTextKitchen,
+    "single-block text kitchen PB demoted below header",
+    singleBlockTextKitchen,
     "Bàn 5 #087",
     "Phiếu bếp: #087",
   );
   assertTextIncludes(
-    "legacy text kitchen side quantity",
-    legacyTextKitchen,
+    "single-block text kitchen side quantity",
+    singleBlockTextKitchen,
     "Canh chua x2",
   );
   assertTextIncludes(
-    "legacy text kitchen default side quantity",
-    legacyTextKitchen,
+    "single-block text kitchen default side quantity",
+    singleBlockTextKitchen,
     "Side mac dinh x2",
   );
   const documentTextKitchen = renderPayload(documentKitchen);
@@ -659,7 +659,7 @@ async function main() {
     "primitive document text cancel",
     renderPayload(primitiveDocumentCancel),
   );
-  assertBytes("legacy bitmap kitchen", await renderPayloadBitmap(baseKitchen));
+  assertBytes("single-block bitmap kitchen", await renderPayloadBitmap(baseKitchen));
   assertBytes(
     "document bitmap kitchen",
     await renderPayloadBitmap(documentKitchen),
@@ -672,20 +672,20 @@ async function main() {
     "primitive document bitmap cancel",
     await renderPayloadBitmap(primitiveDocumentCancel),
   );
-  const legacyTextShiftClose = renderPayload(baseShiftClose);
-  assertBytes("legacy text shift close", legacyTextShiftClose);
+  const singleBlockTextShiftClose = renderPayload(baseShiftClose);
+  assertBytes("single-block text shift close", singleBlockTextShiftClose);
   assertTextIncludes(
-    "legacy text shift close main item row",
-    legacyTextShiftClose,
+    "single-block text shift close main item row",
+    singleBlockTextShiftClose,
     "Com tam suon bi cha           18        990.000",
   );
   assertTextIncludes(
-    "legacy text shift close side item row",
-    legacyTextShiftClose,
+    "single-block text shift close side item row",
+    singleBlockTextShiftClose,
     "Canh chua                     12              0",
   );
   assertBytes(
-    "legacy bitmap shift close",
+    "single-block bitmap shift close",
     await renderPayloadBitmap(baseShiftClose),
   );
   const documentTextShiftClose = renderPayload(primitiveDocumentShiftClose);

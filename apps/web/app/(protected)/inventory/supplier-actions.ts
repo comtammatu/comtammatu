@@ -4,7 +4,10 @@ import { z } from "zod";
 import { PERMISSION_KEYS, PROCUREMENT_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { withAction } from "@/_lib/with-action";
-import { getAuthContextWithPermission } from "./_lib/auth";
+import {
+  getAuthContextByPermission,
+  getAuthContextByTenantPermission,
+} from "./_lib/auth";
 import { PG_ERR } from "./_lib/constants";
 
 const ROLES = PROCUREMENT_ROLES;
@@ -23,17 +26,13 @@ const supplierSchema = z.object({
     .string()
     .max(300, { error: "Địa chỉ tối đa 300 ký tự" })
     .optional(),
-  notes: z
-    .string()
-    .max(500, { error: "Ghi chú tối đa 500 ký tự" })
-    .optional(),
+  notes: z.string().max(500, { error: "Ghi chú tối đa 500 ký tự" }).optional(),
   paymentTermsDays: z.coerce.number().int().min(0).optional().nullable(),
   paymentTermsNote: z.string().optional(),
 });
 
 export async function fetchSuppliers(): Promise<ActionResult> {
-  const ctx = await getAuthContextWithPermission(
-    ROLES,
+  const ctx = await getAuthContextByPermission(
     PERMISSION_KEYS.PROCUREMENT_READ,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
@@ -52,6 +51,8 @@ export const createSupplier = withAction(
     roles: ROLES,
     schema: supplierSchema,
     permission: PERMISSION_KEYS.PROCUREMENT_SUPPLIER_MANAGE,
+    permissionMode: "permission",
+    permissionScope: "tenant",
   },
   async (data, { supabase, claims }) => {
     const { paymentTermsDays, paymentTermsNote, ...rest } = data;
@@ -89,8 +90,7 @@ export async function updateSupplier(
       error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
     };
   }
-  const ctx = await getAuthContextWithPermission(
-    ROLES,
+  const ctx = await getAuthContextByTenantPermission(
     PERMISSION_KEYS.PROCUREMENT_SUPPLIER_MANAGE,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
@@ -121,8 +121,7 @@ export async function updateSupplier(
 export async function deleteSupplier(id: number): Promise<ActionResult> {
   const parsedId = z.coerce.number().int().positive().safeParse(id);
   if (!parsedId.success) return { success: false, error: "ID không hợp lệ" };
-  const ctx = await getAuthContextWithPermission(
-    ROLES,
+  const ctx = await getAuthContextByTenantPermission(
     PERMISSION_KEYS.PROCUREMENT_SUPPLIER_MANAGE,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };

@@ -147,36 +147,112 @@ const failures = [];
 
 const textChecks = [
   {
-    id: "design-system-one-source-contract",
+    id: "ux-rebuild-freeze-design-system-contract",
     file: "docs/spec/design-system.md",
     includes: [
-      "This is intentionally **one source of truth**, not a source-of-truth bundle.",
-      "They must point back to this contract.",
-      "the conflict is a bug to resolve",
+      "Status: frozen legacy runtime with scoped Khung quản trị rebuild authority",
+      "Until a new UX reference is chosen with the owner, no broad rebuild",
+      "Agents must not renovate route layouts",
+      "new owner-approved design-system contract",
+      "Current-runtime maintenance UI must not import `matu-surface`",
+      "## Scoped Khung quản trị Rebuild Authority",
+      "Shadcn preset candidate: `b6FS5q9aq`",
+      "owner chooses the switch mode: reinstall, merge,",
+      "## Frozen Runtime UX Thesis",
+      "## Frozen Runtime Token Contract",
+      "## Frozen Runtime Rhythm Contract",
+      "## Frozen Runtime Component Authority",
+      "## Frozen Runtime Surface Contracts",
     ],
   },
   {
-    id: "design-system-one-source-agent-rule",
+    id: "ux-rebuild-freeze-agent-rule",
     file: "docs/agent/rules/ui.md",
     includes: [
-      "There is exactly one UI design-system source of truth:",
+      "The current runtime UI has one frozen maintenance contract:",
+      "That file is not UX rebuild authority.",
+      "For broad UX rebuild work, no design-system source of truth exists yet.",
+      "owner-approved authority reset defines the new preset/tokens/components",
+      "scoped rebuild authority in `docs/spec/design-system.md`",
+      "Do not run `shadcn init --preset b6FS5q9aq` until the owner chooses",
       "`docs/spec/design-system.md`",
-      "Everything else is evidence, implementation, or enforcement for that contract",
     ],
   },
   {
-    id: "design-system-one-source-module-doc",
+    id: "ux-rebuild-freeze-module-doc",
     file: "docs/modules/ui.md",
     includes: [
-      "Single source of truth for agent decisions:",
-      "Runtime config, primitives, adapters, and regression rules are evidence and",
-      "They do not authorize a second design system",
+      "duoc dong bang thanh legacy runtime maintenance contract",
+      "Scoped Khung quản trị",
+      "authority de trung tu UX moi",
+      "khong run `shadcn init --preset b6FS5q9aq`",
+      "authority reset docs + guard da duoc update truoc runtime patch",
     ],
   },
   {
-    id: "design-system-one-source-regression",
+    id: "ux-rebuild-freeze-regression",
     file: "tasks/regressions.md",
-    includes: ["DESIGN-SYSTEM-ONE-SOURCE-ONLY"],
+    includes: [
+      "UX-REBUILD-NOT-ON-FROZEN-LEGACY-AUTHORITY",
+      "ADMIN-SHELL-SCOPED-REBUILD-ONLY",
+      "FROZEN-RUNTIME MAINTENANCE ONLY",
+      "This rule is not UX rebuild authority",
+      "SHADCN PRIMITIVE RULE, NOT VISUAL LEGACY",
+      "This rule is explicitly not UX rebuild authority",
+      "frozen runtime `apps/web` target shadcn preset evidence is `buFywKm`",
+    ],
+  },
+  {
+    id: "ux-rebuild-freeze-agents-entrypoint",
+    file: "AGENTS.md",
+    includes: [
+      "frozen legacy runtime contract for maintenance only",
+      "NEVER start UX rebuild implementation on top of the frozen legacy contract",
+      "BEFORE UI/UX rebuild work, first choose the UX reference with the owner",
+      "owner-approved authority reset defines the new preset/tokens/components",
+      "do not run `shadcn init --preset b6FS5q9aq` until the owner chooses",
+    ],
+  },
+  {
+    id: "ux-rebuild-freeze-reference-map",
+    file: "docs/agent/rules/references.md",
+    includes: [
+      "Current UI maintenance contract:",
+      "frozen runtime evidence, not UX rebuild authority",
+    ],
+  },
+  {
+    id: "ux-rebuild-freeze-codebase-map",
+    file: "docs/CODEBASE_MAP.md",
+    includes: [
+      "UX rebuild: owner-approved authority reset first",
+      "UX rebuild work must not use the frozen contract as visual authority",
+      "New visual language without authority reset",
+    ],
+  },
+  {
+    id: "ux-rebuild-freeze-runtime-css-comment",
+    file: "packages/ui/src/styles/globals.css",
+    includes: [
+      "Frozen runtime source: shadcn radix-lyra primitives + Ma Tu Concept 01 tokens.",
+      "Maintenance evidence only; not UX rebuild authority.",
+    ],
+  },
+  {
+    id: "ux-rebuild-freeze-readme",
+    file: "README.md",
+    includes: [
+      "Current runtime styling is frozen maintenance evidence",
+      "UX rebuild authority must be reset before new layout work",
+    ],
+  },
+  {
+    id: "ux-rebuild-freeze-visual-baseline",
+    file: "apps/web/e2e/visual/theme-baseline.spec.ts",
+    includes: [
+      "Visual baseline — frozen runtime light + dark mode regression guard.",
+      "Maintenance evidence only; not UX rebuild authority.",
+    ],
   },
   {
     id: "card-title-runtime-contract",
@@ -225,22 +301,27 @@ const textChecks = [
     includes: ["`flush` cho table-edge/list-edge alignment", "`scroll` cho horizontal table"],
   },
   {
-    id: "shadcn-resolved-preset-contract",
+    id: "shadcn-frozen-runtime-preset-contract",
     file: "docs/spec/design-system.md",
-    includes: ["resolved preset code: `buFywKm`"],
+    includes: ["resolved `apps/web` target preset evidence: `buFywKm`"],
   },
   {
-    id: "shadcn-resolved-preset-agent-rule",
+    id: "shadcn-frozen-runtime-preset-agent-rule",
     file: "docs/agent/rules/ui.md",
     includes: [
-      "https://ui.shadcn.com/create?preset=buFywKm",
+      "Current `apps/web` runtime preset evidence",
       "pnpm dlx shadcn@latest init --preset buFywKm",
     ],
   },
   {
-    id: "shadcn-resolved-preset-module-doc",
+    id: "shadcn-frozen-runtime-preset-module-doc",
     file: "docs/modules/ui.md",
-    includes: ["resolved preset `buFywKm`"],
+    includes: [
+      "target `apps/web` resolved",
+      "preset evidence `buFywKm`",
+      "Day la frozen runtime evidence, khong phai",
+      "rebuild authority",
+    ],
   },
   {
     id: "data-table-mobile-empty-state-adapter",
@@ -251,6 +332,143 @@ const textChecks = [
     id: "inventory-mobile-interactive-card-delegates",
     file: "apps/web/app/(protected)/inventory/_components/mobile/interactive-card.tsx",
     includes: ['from "@/components/data-table/interactive-card"'],
+  },
+  {
+    id: "admin-shell-scoped-rebuild-runtime",
+    file: "apps/web/app/(protected)/admin/components/admin-shell.tsx",
+    includes: [
+      "MODULE_LABELS_VI",
+      "messages.common.brandName",
+      "mainLabel: APP_COPY_VI.adminSurface",
+      "IconUsers data-icon=\"inline-start\"",
+      "IconChartBar data-icon=\"inline-start\"",
+    ],
+  },
+  {
+    id: "app-shell-shadcn-runtime-composition",
+    file: "apps/web/app/components/app-shell.tsx",
+    includes: [
+      "SidebarGroupContent",
+      "SidebarMenuAction",
+      "SidebarRail",
+      "const mobileHeaderExtras",
+      "const brandHref",
+      "<SidebarRail />",
+      "<Separator className=\"md:hidden\" />",
+      "flex w-full flex-col gap-4",
+    ],
+  },
+];
+
+const forbiddenTextChecks = [
+  {
+    id: "no-locked-single-source-status",
+    file: "docs/spec/design-system.md",
+    forbidden: ["Status: locked single source for UI agents"],
+  },
+  {
+    id: "no-one-source-ui-authority-contract",
+    file: "docs/spec/design-system.md",
+    forbidden: [
+      "This is intentionally **one source of truth**, not a source-of-truth bundle.",
+      "Agents must preserve this decision unless the task explicitly asks to change the design system itself.",
+      "Forbidden for new app UI:",
+      "New app UI must not import `matu-surface`",
+      "## Product UX Thesis",
+      "## Token Contract",
+      "## Rhythm Contract",
+      "## Component Authority",
+      "## Surface Contracts",
+    ],
+  },
+  {
+    id: "no-one-source-ui-authority-agent-rule",
+    file: "docs/agent/rules/ui.md",
+    forbidden: [
+      "There is exactly one UI design-system source of truth:",
+      "BEFORE UI/UX rebuild work, read and follow `docs/spec/design-system.md` as the locked design-system contract.",
+      "USE `shadcn/ui` components and the project's active preset as the default UI path.",
+      "NEVER invent or redesign the UI outside the active design-system contract.",
+      "`DESIGN-SYSTEM-CONTRACT-FIRST`",
+    ],
+  },
+  {
+    id: "no-one-source-ui-authority-module-doc",
+    file: "docs/modules/ui.md",
+    forbidden: [
+      "Single source of truth for agent decisions:",
+      "Tat ca UI/UX rebuild phai di theo contract do truoc khi sua runtime.",
+      "active design-system contract",
+      "shadcn preset hien hanh",
+      "frozen design system la authority",
+    ],
+  },
+  {
+    id: "no-superseded-design-system-regression",
+    file: "tasks/regressions.md",
+    forbidden: [
+      "DESIGN-SYSTEM-ONE-SOURCE-ONLY",
+      "DESIGN-SYSTEM-CONTRACT-FIRST",
+    ],
+  },
+  {
+    id: "no-active-legacy-ui-regression-wording",
+    file: "tasks/regressions.md",
+    forbidden: [
+      "New app UI MUST use primitive variants",
+      "App UI MUST use `docs/spec/design-system.md`",
+      "Repeated app-level page/header/section/toolbar/empty-state/link-card patterns MUST go through `apps/web/app/components/surface.tsx`. Domain wrappers",
+      "active shadcn preset is `b6G3vbGue`",
+      "prior to b1GN1lxvE alignment",
+    ],
+  },
+  {
+    id: "no-active-legacy-codebase-map-wording",
+    file: "docs/CODEBASE_MAP.md",
+    forbidden: [
+      "Use design-system primitives<br/>docs/spec/design-system.md + shadcn/ui",
+      "UI changes stay inside the active design-system contract.",
+      "New visual language outside design system",
+    ],
+  },
+  {
+    id: "no-active-legacy-readme-preset",
+    file: "README.md",
+    forbidden: [
+      "preset `b1GN1lxvE`",
+      "preset `b6G3vbGue`",
+      "preset `buFywKm`",
+    ],
+  },
+  {
+    id: "no-active-legacy-visual-baseline-preset",
+    file: "apps/web/e2e/visual/theme-baseline.spec.ts",
+    forbidden: [
+      "preset b1GN1lxvE",
+      "preset b6G3vbGue",
+      "preset buFywKm",
+    ],
+  },
+  {
+    id: "no-admin-shell-hardcoded-action-copy",
+    file: "apps/web/app/(protected)/admin/components/admin-shell.tsx",
+    forbidden: [
+      'subLabel: "Cơm Tấm Má Tư"',
+      'mainLabel: "Quản trị"',
+      ">Cổng nhân viên</Link>",
+    ],
+  },
+  {
+    id: "no-app-shell-raw-legacy-shell-patterns",
+    file: "apps/web/app/components/app-shell.tsx",
+    forbidden: [
+      "space-y-4",
+      "IconArrowLeft className",
+      "IconLogout className",
+      "border-t px-4 py-2 md:hidden",
+      "sticky top-0 z-10 -mx-4",
+      "inline-flex items-center gap-1.5 text-xs font-medium text-sidebar-foreground/65",
+    ],
   },
 ];
 
@@ -284,6 +502,21 @@ for (const check of textChecks) {
   for (const expected of check.includes) {
     if (!content.includes(expected)) {
       failures.push(`${check.id}: ${check.file} is missing "${expected}"`);
+    }
+  }
+}
+
+for (const check of forbiddenTextChecks) {
+  const filePath = path.join(REPO_ROOT, check.file);
+  if (!fs.existsSync(filePath)) {
+    failures.push(`${check.id}: ${check.file} is missing`);
+    continue;
+  }
+
+  const content = fs.readFileSync(filePath, "utf8");
+  for (const forbidden of check.forbidden) {
+    if (content.includes(forbidden)) {
+      failures.push(`${check.id}: ${check.file} still contains "${forbidden}"`);
     }
   }
 }

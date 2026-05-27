@@ -1,5 +1,8 @@
 export {
   getAuthContext,
+  getAuthContextByAnyPermission,
+  getAuthContextByPermission,
+  getAuthContextByPermissions,
   getAuthContextWithPermission,
   getAuthContextWithAnyPermission,
   probePermission,

@@ -68,6 +68,22 @@ const focusViewSource = readFileSync(
   "utf8",
 );
 
+const filterBarSource = readFileSync(
+  join(
+    process.cwd(),
+    "app/(protected)/br/[branchId]/kds/components/filter-bar.tsx",
+  ),
+  "utf8",
+);
+
+const useKdsFiltersSource = readFileSync(
+  join(
+    process.cwd(),
+    "app/(protected)/br/[branchId]/kds/hooks/use-kds-filters.ts",
+  ),
+  "utf8",
+);
+
 const orderNoteSource = readFileSync(
   join(
     process.cwd(),
@@ -144,6 +160,19 @@ test("KDS title display falls back to order sequence", () => {
 
 test("KDS ready status uses the shared Sẵn sàng wording", () => {
   assert.equal(getStatusLabel("ready"), "Sẵn sàng");
+});
+
+test("KDS done review is URL-backed and separate from live queue mode", () => {
+  assert.match(useKdsFiltersSource, /sectionFilter/);
+  assert.match(useKdsFiltersSource, /searchParams\.get\("section"\)/);
+  assert.match(useKdsFiltersSource, /section: value === null/);
+  assert.match(filterBarSource, /Đang làm/);
+  assert.match(filterBarSource, /Đã xong/);
+  assert.match(kdsBoardSource, /doneGroupedOrders/);
+  assert.match(
+    kdsBoardSource,
+    /showViewModeToggle=\{filters\.sectionFilter === "active"\}/,
+  );
 });
 
 test("KDS comprehensive board groups orders into item-category service columns", () => {
@@ -309,10 +338,7 @@ test("KDS selects and renders order notes in board and focus modes", () => {
   assert.match(kdsPageSource, /menu_items\(menu_categories\(name,type\)\)/);
   assert.match(kdsRealtimeSource, /order_type, table_id, is_priority, note,/);
   assert.match(kdsRealtimeSource, /order_type, table_id, note,/);
-  assert.match(
-    kdsRealtimeSource,
-    /menu_items\(menu_categories\(name,type\)\)/,
-  );
+  assert.match(kdsRealtimeSource, /menu_items\(menu_categories\(name,type\)\)/);
   assert.match(kdsRealtimeSource, /oldRow\.note === newRow\.note/);
   assert.match(orderGridSource, /<OrderNote[\s\S]*note=\{order\.orderNote\}/);
   assert.match(focusViewSource, /<OrderNote[\s\S]*note=\{order\.orderNote\}/);

@@ -33,6 +33,7 @@ interface BoardHeaderProps {
   onMenuLimitsChange: (rows: KdsMenuLimitRow[]) => void;
   stationControls: ReactNode;
   filterControls: ReactNode;
+  showViewModeToggle?: boolean;
 }
 
 export function BoardHeader({
@@ -48,6 +49,7 @@ export function BoardHeader({
   onMenuLimitsChange,
   stationControls,
   filterControls,
+  showViewModeToggle = true,
 }: BoardHeaderProps) {
   return (
     <div className="flex min-w-0 items-center gap-2 overflow-x-auto px-2 py-1.5 md:px-3">
@@ -118,7 +120,9 @@ export function BoardHeader({
           onRowsChange={onMenuLimitsChange}
           compact
         />
-        <ViewModeToggle mode={mode} onChange={onModeChange} />
+        {showViewModeToggle && (
+          <ViewModeToggle mode={mode} onChange={onModeChange} />
+        )}
       </div>
     </div>
   );

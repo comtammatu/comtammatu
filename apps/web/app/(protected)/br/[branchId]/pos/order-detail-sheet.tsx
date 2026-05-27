@@ -244,8 +244,8 @@ function OrderDetailSheetSkeletonFallback() {
 /**
  * Branch ID is required for the discount/split/merge server actions —
  * they all gate on JWT.branch_id matching this URL param. Optional in the
- * type only to preserve back-compat for any caller that hasn't been
- * updated yet; the discount/split/merge buttons are gated on its presence.
+ * type only to preserve the public caller contract while domain files are
+ * being split; the discount/split/merge buttons are gated on its presence.
  */
 export interface OrderDetailSheetProps {
   branchId: number;

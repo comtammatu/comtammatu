@@ -23,7 +23,7 @@ Use this file to find the source-of-truth docs for onboarding, implementation pl
 - Archived greenfield ADRs: `docs/archive/plan/adr/`
 - System architecture: `docs/spec/architecture.md`
 - Database schema source ladder: `docs/spec/database-schema.md`
-- Design system contract: `docs/spec/design-system.md`
+- Current UI maintenance contract: `docs/spec/design-system.md` (frozen runtime evidence, not UX rebuild authority)
 - Suspended greenfield rebuild reference: `docs/archive/plan/system-rebuild/`
 - Historical plans only: `docs/archive/plan/`
 - Historical refs/worklogs only: `docs/archive/ref/`, `docs/archive/worklog/`

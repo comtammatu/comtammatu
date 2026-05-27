@@ -51,7 +51,7 @@ Do not copy:
 
 - Do not return raw Supabase error details to the browser. `comtammatu` forbids this.
 - Do not use public storage URLs for feedback photos. `comtammatu` already uses a private bucket and signed URLs.
-- Do not copy the standalone app styling or mascot-specific UI classes into `comtammatu`; public UI must follow the project design-system contract.
+- Do not copy the standalone app styling or mascot-specific UI classes into `comtammatu`; public UI maintenance must follow the frozen runtime contract, while UX rebuild needs a new owner-approved authority reset first.
 - Do not move `comtammatu` to anon direct inserts. Current RPC-only write path is safer.
 
 ## Learning From `~/matu-platform`

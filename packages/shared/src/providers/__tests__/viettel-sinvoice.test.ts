@@ -580,7 +580,7 @@ test("deriveInvoiceTypeFromTemplate: supports all 6 TT78 kinds", () => {
   }
 });
 
-test("deriveInvoiceTypeFromTemplate: throws on invalid shape (legacy TT32)", () => {
+test("deriveInvoiceTypeFromTemplate: throws on retired TT32 shape", () => {
   assert.throws(
     () => deriveInvoiceTypeFromTemplate("01GTKT0/001"),
     /Invalid SINVOICE_TEMPLATE_CODE/,

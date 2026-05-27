@@ -1,5 +1,5 @@
 /**
- * Barrel re-export — preserves backward compatibility for existing import sites.
+ * Barrel re-export — keeps existing import sites stable during domain split.
  *
  * Prefer importing directly from the domain-specific files:
  * - supplier-actions.ts   — supplier CRUD

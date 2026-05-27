@@ -36,7 +36,11 @@ export const STAFF_VI = {
   long: "Nhân viên",
   shortBadge: "NV",
   role: "Chức vụ",
+  roleCode: "Mã chức vụ",
   position: "Vị trí",
+  selectRole: "Chọn chức vụ",
+  selectAllRoles: "Tất cả chức vụ",
+  unassigned: "Chưa gán",
 } as const;
 export type StaffKey = keyof typeof STAFF_VI;
 

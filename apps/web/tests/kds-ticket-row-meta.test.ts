@@ -18,7 +18,7 @@ test("TicketRowMeta renders side badges with distinct semantic chart tones", () 
         },
         {
           side_item_id: 2,
-          name: "Trứng ốp la",
+          name: "Chả",
           price: 5_000,
           quantity: 2,
           is_default: false,
@@ -28,9 +28,9 @@ test("TicketRowMeta renders side badges with distinct semantic chart tones", () 
   );
 
   assert.match(html, /Canh thêm x1/);
-  assert.match(html, /Trứng ốp la x2/);
-  assert.match(html, /bg-chart-1\/15/);
-  assert.match(html, /border-chart-1\/40/);
-  assert.match(html, /bg-chart-2\/15/);
-  assert.match(html, /border-chart-2\/40/);
+  assert.match(html, /Chả x2/);
+  assert.match(html, /bg-chart-1\/25/);
+  assert.match(html, /border-chart-1\/60/);
+  assert.match(html, /bg-warning\/35/);
+  assert.match(html, /border-warning\/70/);
 });

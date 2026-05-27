@@ -16,6 +16,10 @@ Checklist vận hành và readiness gates.
 
 - [pos-kds/payment-autopost-verify.md](pos-kds/payment-autopost-verify.md): checklist apply migration GL non-fatal + rerun smoke cho POS/KDS
 
+## Supabase
+
+- [supabase-greenfield-baseline.md](supabase-greenfield-baseline.md): export + local rehearsal checklist cho clean baseline Supabase
+
 ## Cách dùng
 
 1. Đọc canonical doc tương ứng trong `docs/ref/`

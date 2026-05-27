@@ -716,9 +716,10 @@ export const inventory = {
     noAnalysisTitle: "Chưa có hóa đơn để phân tích",
     noAnalysisDescription:
       "Chọn một hóa đơn từ danh sách bên trái để xem chi tiết công nợ và trạng thái đối soát.",
-    chooseGrnOptional: "Chọn GRN (tùy chọn)",
-    noLinkedGrn: "Không liên kết GRN",
-    chooseSupplier: "Chọn nhà cung cấp",
+    chooseGrnRequired: "Chọn GRN để xác định kho",
+    noLinkedGrn: "Chưa chọn GRN",
+    chooseSupplier: "Nhà cung cấp theo GRN",
+    chooseGrnFirst: "Chọn GRN liên kết trước khi lưu hóa đơn.",
     subtotalPlaceholder: "0",
     vat: "VAT",
     matchingNotes: "Ghi chú đối soát",

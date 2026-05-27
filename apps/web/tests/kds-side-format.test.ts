@@ -55,6 +55,18 @@ test("getSideBadgeToneClass assigns stable semantic chart colors per side item",
     getSideBadgeToneClass(canhThem),
     getSideBadgeToneClass(trungOpLa),
   );
-  assert.match(getSideBadgeToneClass(canhThem), /bg-chart-1\/15/);
-  assert.match(getSideBadgeToneClass(trungOpLa), /bg-chart-2\/15/);
+  assert.match(getSideBadgeToneClass(canhThem), /bg-chart-1\/25/);
+  assert.match(getSideBadgeToneClass(trungOpLa), /bg-chart-2\/25/);
+});
+
+test("getSideBadgeToneClass uses darker orange warning tone for Chả", () => {
+  assert.match(
+    getSideBadgeToneClass({
+      side_item_id: 9,
+      name: "Chả",
+      price: 7_000,
+      is_default: false,
+    }),
+    /bg-warning\/35/,
+  );
 });

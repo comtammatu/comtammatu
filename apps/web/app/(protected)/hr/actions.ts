@@ -4,7 +4,7 @@ import { z } from "zod";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getVNMonthEndDateString } from "@comtammatu/shared/time";
-import { getAuthContextWithPermission } from "@/_lib/auth";
+import { getAuthContextByAnyPermission } from "@/_lib/auth";
 import { withAction } from "@/_lib/with-action";
 import { canAccessBranch } from "@/_lib/branch-scope";
 
@@ -31,10 +31,10 @@ const employeeSchema = z.object({
 });
 
 export async function fetchEmployees(): Promise<ActionResult> {
-  const ctx = await getAuthContextWithPermission(
-    HR_ROLES,
+  const ctx = await getAuthContextByAnyPermission([
+    PERMISSION_KEYS.HR_VIEW_EMPLOYEE,
     PERMISSION_KEYS.HR_MANAGE_EMPLOYEE,
-  );
+  ]);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -62,7 +62,12 @@ export async function fetchEmployees(): Promise<ActionResult> {
 }
 
 export const createEmployee = withAction(
-  { roles: HR_ROLES, schema: employeeSchema },
+  {
+    roles: HR_ROLES,
+    schema: employeeSchema,
+    permission: PERMISSION_KEYS.HR_MANAGE_EMPLOYEE,
+    permissionMode: "permission",
+  },
   async (data, { supabase, claims }) => {
     const { data: result, error } = await supabase
       .from("employees")

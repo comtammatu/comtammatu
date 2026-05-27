@@ -984,7 +984,7 @@ const isShiftCloseReportPayload = (
   value.kind === "shift_close_report" &&
   Array.isArray(value.payment_breakdown);
 
-const renderSingleLegacyDocumentBlock = (
+const renderSpecializedSingleDocumentBlock = (
   document: PrintDocument,
 ): Uint8Array | null => {
   if (document.blocks.length !== 1) return null;
@@ -1006,8 +1006,8 @@ const renderSingleLegacyDocumentBlock = (
 };
 
 const renderPrintDocument = (document: PrintDocument): Uint8Array => {
-  const legacy = renderSingleLegacyDocumentBlock(document);
-  if (legacy) return legacy;
+  const specialized = renderSpecializedSingleDocumentBlock(document);
+  if (specialized) return specialized;
 
   const parts: Uint8Array[] = [init()];
   for (const block of document.blocks) {

@@ -1,5 +1,9 @@
 # Interface Issue Closure - 2026-05-24
 
+> Superseded on 2026-05-26 for UX rebuild authority: this worklog is historical
+> evidence for current-runtime cleanup only. Do not use its design-system
+> authority/source-of-truth wording as rebuild authority.
+
 ## Scope
 
 Mục tiêu của round này là chốt toàn bộ vấn đề Interface đang mở thành backlog
@@ -14,7 +18,7 @@ Interface ở đây bao gồm:
 - Static regressions về typography, spacing, radius, icon size, button height,
   fake primitives, and unsafe client state.
 
-## Source Of Truth
+## Historical Source-Of-Truth Read Order
 
 Đọc và khóa theo thứ tự:
 
@@ -58,7 +62,7 @@ Không được bắt đầu bằng một redesign lớn. Đường đúng là:
 
 | ID | Priority | Surface | Problem | Evidence | Closure decision |
 | --- | --- | --- | --- | --- | --- |
-| `IF-001` | P0 | Design system | Legacy Inventory pilot layer still present: `matu-surface`, `matu-*`, `font-matu-body`, generated matu tokens, kitchen sink. | Static scan finds 4 files with legacy hits. `docs/worklog/ui-design-system-ssot-audit-2026-05-24.md` already marks this as NO-GO for new UI. | Migrate/remove legacy layer only after route migration settles. Add static guard first. |
+| `IF-001` | P0 | Design system | Legacy Inventory pilot layer still present: `matu-surface`, `matu-*`, `font-matu-body`, generated matu tokens, kitchen sink. | Static scan finds 4 files with legacy hits. `docs/worklog/ui-design-system-ssot-audit-2026-05-24.md` already marks this as NO-GO for starting rebuild UI. | Migrate/remove legacy layer only after route migration settles. Add static guard first. |
 | `IF-002` | P0 | Worktree / routing | Interface work was sitting on a massive App Router route-group migration. | Current audit is clean: no staged route moves, no unstaged route counterparts, and no no-counterpart deletes. Full `pnpm typecheck && pnpm lint && pnpm build` passed. | Closed on 2026-05-24 after route-group migration was reconciled into `HEAD` and full verification passed. |
 | `IF-003` | P1 | Rhythm / typography | App surfaces still violate locked heading scale. | Static scan finds 6 files with `text-4xl`, `text-5xl`, or `font-black`. | Closed on 2026-05-24: all runtime hits removed, heading-scale guard allowlist tightened to zero, and POS/KDS rendered smoke captured. |
 | `IF-004` | P1 | Icon/media sizing | App surfaces still use banned icon-size classes. | Static scan finds 15 files with `size-7/9/11/14/16`; some may be allowed media thumbnails. | Closed on 2026-05-24: `size-7/9/11` app-surface hits removed, oversized icon glyphs reduced, and guard allowlist narrowed to media thumbnails only. |

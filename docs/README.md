@@ -17,11 +17,12 @@
 - Finance active boundary: [modules/finance.md](modules/finance.md)
 - Canonical business/reference docs: [ref/README.md](ref/README.md)
 - Feature/module architecture: `docs/modules/*`, `docs/spec/*`
-- Active planning: `tasks/todo.md`, `docs/plan/adr/*`, `docs/plan/decisions.md`
+- Active planning: [plan/README.md](plan/README.md), `tasks/todo.md`, `docs/plan/adr/*`, `docs/plan/decisions.md`
 - Suspended greenfield rebuild reference: `docs/archive/plan/system-rebuild/*`
 - Historical/superseded plans: `docs/archive/plan/*`
 - Readiness checklist và smoke gates: [runbooks/README.md](runbooks/README.md)
 - Continuity / adoption tracking: [worklog/README.md](worklog/README.md)
+- Non-runtime reference/history artifacts: `docs/ref/binh-ma-tu-tiktok/`, `docs/present/`, `docs/status/`, `docs/releases/`
 
 ## Inventory nhanh
 
@@ -50,8 +51,9 @@
 - `architecture/`: cross-cutting architecture và các điểm vào/alias sang glossary chuẩn
 - `ref/`: canonical rules, boundary, business semantics, glossary chuẩn
 - `modules/` và `spec/`: technical structure và schema
-- `plan/`: active decisions and ADRs
+- `plan/`: active decisions, ADRs, and baseline-prep investigations; not historical roadmap storage
 - `archive/plan/`: superseded roadmap, sprint, and historical plan snapshots
 - `archive/ref/` and `archive/worklog/`: historical references and superseded audits
 - `runbooks/`: operational verification
 - `worklog/`: evolving progress/adoption artefacts
+- `present/`, `status/`, `releases/`: historical or communication artifacts; not runtime authority

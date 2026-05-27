@@ -20,6 +20,10 @@ Use this file before changing Supabase queries, migrations, RLS, auth, ACL, Serv
 ## Migration Policy
 
 - Write the SQL migration file before applying it.
+- Migration filenames MUST use a real 14-digit timestamp prefix in
+  `YYYYMMDDHHMMSS` format. Do not use pseudo-hours, decimal sequence suffixes,
+  or mixed timestamp styles. If a batch must run after the current repo tail,
+  allocate one contiguous valid timestamp block and preserve dependency order.
 - Agents MAY apply migrations directly on approved dev/test Supabase servers for verification.
 - Before applying to dev/test, verify the target project/environment and confirm it is not production.
 - NEVER apply migrations directly to production.
@@ -61,4 +65,3 @@ Use this file before changing Supabase queries, migrations, RLS, auth, ACL, Serv
 - PL/pgSQL `IF record IS NOT NULL` is true only when every column is non-null. Check a guaranteed non-null column or use `FOUND`.
 
 Also read `tasks/regressions.md` before database/auth work.
-

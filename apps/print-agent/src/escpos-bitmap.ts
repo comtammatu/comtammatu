@@ -783,7 +783,7 @@ function isShiftCloseReportPayload(
   );
 }
 
-function renderSingleLegacyDocumentBlock(
+function renderSpecializedSingleDocumentBlock(
   document: PrintDocument,
 ): Uint8Array | null {
   if (document.blocks.length !== 1) return null;
@@ -805,8 +805,8 @@ function renderSingleLegacyDocumentBlock(
 }
 
 function renderPrintDocumentBitmap(document: PrintDocument): Uint8Array {
-  const legacy = renderSingleLegacyDocumentBlock(document);
-  if (legacy) return legacy;
+  const specialized = renderSpecializedSingleDocumentBlock(document);
+  if (specialized) return specialized;
 
   const parts: Uint8Array[] = [init(), lineSpacingZero()];
   for (const block of document.blocks) {

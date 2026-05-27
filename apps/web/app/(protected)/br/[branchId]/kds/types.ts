@@ -128,6 +128,9 @@ export interface KdsBoardProps {
 /** URL query: order type filter */
 export type OrderTypeFilter = "all" | "dine_in" | "takeaway";
 
+/** URL query: KDS board section */
+export type KdsSectionFilter = "active" | "done";
+
 /** Filter option config */
 export interface FilterOption<T extends string> {
   value: T;

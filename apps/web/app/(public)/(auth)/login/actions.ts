@@ -61,7 +61,7 @@ export async function login(
   const rawReturnTo = formData.get("returnTo");
   const returnTo = typeof rawReturnTo === "string" ? rawReturnTo : null;
   const rawSurface = formData.get("surface");
-  const surface = rawSurface === "beta" ? "beta" : "legacy";
+  const surface = rawSurface === "beta" ? "beta" : "app";
 
   // Rate limiting — 10 attempts per 5 min, keyed by IP
   // Bypass in dev via DISABLE_LOGIN_RATE_LIMIT=true

@@ -5,9 +5,32 @@ import { z } from "zod";
 import { PERMISSION_KEYS, SUPPLIER_RETURN_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { withAction } from "@/_lib/with-action";
-import { getAuthContextWithPermission } from "./_lib/auth";
+import {
+  getAuthenticatedActionContext,
+  probePermission,
+  probeTenantPermission,
+} from "./_lib/auth";
 
 const ROLES = SUPPLIER_RETURN_ROLES;
+
+type SupplierReturnActionContext = NonNullable<
+  Awaited<ReturnType<typeof getAuthenticatedActionContext>>
+>;
+
+type SupplierReturnBranchScopeResult =
+  | { success: true; branchId: number | null }
+  | { success: false; error: string };
+
+type SupplierReturnPermissionResult =
+  | {
+      success: true;
+      ctx: SupplierReturnActionContext;
+      supplierReturn: {
+        id: number;
+        branch_id: number;
+      };
+    }
+  | { success: false; error: string };
 
 const RESOLUTIONS = ["replacement", "credit_note", "cash_refund"] as const;
 const REASONS = [
@@ -19,16 +42,91 @@ const REASONS = [
   "other",
 ] as const;
 
+async function resolveSupplierReturnBranchScope(
+  ctx: SupplierReturnActionContext,
+  permission: string,
+  requestedBranchId?: number | null,
+): Promise<SupplierReturnBranchScopeResult> {
+  if (requestedBranchId != null) {
+    const allowed = await probePermission(ctx, permission, requestedBranchId);
+    return allowed
+      ? { success: true, branchId: requestedBranchId }
+      : { success: false, error: "Không có quyền" };
+  }
+
+  if (await probeTenantPermission(ctx, permission)) {
+    return { success: true, branchId: null };
+  }
+
+  const assignedBranchId = ctx.claims.branch_id;
+  if (
+    assignedBranchId != null &&
+    (await probePermission(ctx, permission, assignedBranchId))
+  ) {
+    return { success: true, branchId: assignedBranchId };
+  }
+
+  return { success: false, error: "Không có quyền" };
+}
+
+async function getSupplierReturnReadScope(
+  branchId?: number,
+): Promise<
+  | {
+      success: true;
+      ctx: SupplierReturnActionContext;
+      branchId: number | null;
+    }
+  | { success: false; error: string }
+> {
+  const ctx = await getAuthenticatedActionContext();
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const scope = await resolveSupplierReturnBranchScope(
+    ctx,
+    PERMISSION_KEYS.SUPPLIER_RETURN_READ,
+    branchId,
+  );
+  if (!scope.success) return scope;
+
+  return { success: true, ctx, branchId: scope.branchId };
+}
+
+async function getSupplierReturnPermissionContext(
+  returnId: number,
+  permission: string,
+): Promise<SupplierReturnPermissionResult> {
+  const ctx = await getAuthenticatedActionContext();
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { data: supplierReturn, error } = await ctx.supabase
+    .from("supplier_returns")
+    .select("id, branch_id")
+    .eq("id", returnId)
+    .eq("tenant_id", ctx.claims.tenant_id)
+    .single();
+  if (error || !supplierReturn) {
+    return { success: false, error: "Không tìm thấy phiếu trả hàng." };
+  }
+
+  const allowed = await probePermission(
+    ctx,
+    permission,
+    supplierReturn.branch_id,
+  );
+  if (!allowed) return { success: false, error: "Không có quyền" };
+
+  return { success: true, ctx, supplierReturn };
+}
+
 /* ─── fetchSupplierReturns ─── */
 
 export async function fetchSupplierReturns(
   branchId?: number,
 ): Promise<ActionResult> {
-  const ctx = await getAuthContextWithPermission(
-    ROLES,
-    PERMISSION_KEYS.SUPPLIER_RETURN_READ,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
+  const scoped = await getSupplierReturnReadScope(branchId);
+  if (!scoped.success) return scoped;
+  const { ctx, branchId: effectiveBranchId } = scoped;
   const { supabase, claims } = ctx;
 
   let query = supabase
@@ -39,7 +137,9 @@ export async function fetchSupplierReturns(
     .eq("tenant_id", claims.tenant_id)
     .order("created_at", { ascending: false });
 
-  if (branchId != null) query = query.eq("branch_id", branchId);
+  if (effectiveBranchId != null) {
+    query = query.eq("branch_id", effectiveBranchId);
+  }
 
   const { data, error } = await query;
 
@@ -57,12 +157,12 @@ export async function fetchSupplierReturnDetail(
   const id = z.coerce.number().int().positive().safeParse(returnId);
   if (!id.success) return { success: false, error: "ID không hợp lệ" };
 
-  const ctx = await getAuthContextWithPermission(
-    ROLES,
+  const permission = await getSupplierReturnPermissionContext(
+    id.data,
     PERMISSION_KEYS.SUPPLIER_RETURN_READ,
   );
-  if (!ctx) return { success: false, error: "Không có quyền" };
-  const { supabase, claims } = ctx;
+  if (!permission.success) return permission;
+  const { supabase, claims } = permission.ctx;
 
   const { data: header, error: headerErr } = await supabase
     .from("supplier_returns")
@@ -103,6 +203,7 @@ export const createSupplierReturnFromGrn = withAction(
     roles: ROLES,
     schema: fromGrnSchema,
     permission: PERMISSION_KEYS.SUPPLIER_RETURN_CREATE,
+    permissionMode: "permission",
   },
   async (data, { supabase }) => {
     const { data: result, error } = await supabase.rpc(
@@ -151,6 +252,8 @@ export const createSupplierReturnFromStock = withAction(
     roles: ROLES,
     schema: fromStockSchema,
     permission: PERMISSION_KEYS.SUPPLIER_RETURN_CREATE,
+    permissionMode: "permission",
+    permissionBranchId: (data) => data.branchId,
   },
   async (data, { supabase }) => {
     const { data: result, error } = await supabase.rpc(
@@ -187,12 +290,12 @@ export async function confirmSupplierReturn(
   const id = z.coerce.number().int().positive().safeParse(returnId);
   if (!id.success) return { success: false, error: "ID không hợp lệ" };
 
-  const ctx = await getAuthContextWithPermission(
-    ROLES,
+  const permission = await getSupplierReturnPermissionContext(
+    id.data,
     PERMISSION_KEYS.SUPPLIER_RETURN_CONFIRM,
   );
-  if (!ctx) return { success: false, error: "Không có quyền" };
-  const { supabase } = ctx;
+  if (!permission.success) return permission;
+  const { supabase } = permission.ctx;
 
   const { data, error } = await supabase.rpc("confirm_supplier_return", {
     p_return_id: id.data,
@@ -219,8 +322,15 @@ export const transitionSupplierReturn = withAction(
     roles: ROLES,
     schema: transitionSchema,
     permission: PERMISSION_KEYS.SUPPLIER_RETURN_CONFIRM,
+    permissionMode: "permission",
   },
   async (data, { supabase }) => {
+    const permission = await getSupplierReturnPermissionContext(
+      data.returnId,
+      PERMISSION_KEYS.SUPPLIER_RETURN_CONFIRM,
+    );
+    if (!permission.success) return permission;
+
     const { data: result, error } = await supabase.rpc(
       "transition_supplier_return",
       {

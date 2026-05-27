@@ -1,5 +1,10 @@
 export type { StaffRole, JwtClaims, ScopeIds } from "./types";
 export {
+  POSITION_CODE_TO_STAFF_ROLE,
+  isStaffRole,
+  resolveStaffRoleFromPositionCode,
+} from "./position-roles";
+export {
   STAFF_ROLES,
   ADMIN_ROLES,
   BRANCH_ROLES,
@@ -10,8 +15,13 @@ export {
   canManageBranchFloorSettings,
   ROLE_LABEL_VI,
 } from "./types";
-export type { ModuleKey } from "./module-acl";
-export { MODULE_ACL, canAccess, getAccessibleModules } from "./module-acl";
+export type { ModuleKey, ModulePermissionAccess } from "./module-acl";
+export {
+  MODULE_ACL,
+  canAccess,
+  getAccessibleModules,
+  getModulePermissionAccess,
+} from "./module-acl";
 export type { PermissionKey } from "./permissions";
 export {
   PERMISSION_KEYS,
@@ -95,7 +105,7 @@ export {
   isPublicAppPath,
   normalizeHost,
   resolveHostSurface,
-  resolveLegacyRouteRedirectPath,
+  resolveRetiredRouteRedirectPath,
   resolveModuleFromPath,
   stripBetaPrefix,
 } from "./route-resolution";

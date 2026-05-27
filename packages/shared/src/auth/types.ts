@@ -95,11 +95,9 @@ export interface JwtClaims {
   tenant_id: number;
   branch_id: number | null;
   area_id: number | null;
+  /** Authorization role bucket derived from the canonical HR position code. */
   user_role: StaffRole;
-  /**
-   * HR position code. Dual-emitted alongside `user_role` during transition.
-   * Prefer `position` for new code; `user_role` remains for legacy RLS/policies.
-   */
+  /** Canonical HR position code. */
   position?: string;
 }
 

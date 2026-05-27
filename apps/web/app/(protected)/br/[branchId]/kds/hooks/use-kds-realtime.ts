@@ -15,6 +15,10 @@ import {
   sortKdsTicketsNewestFirst,
   uniqueNumbers,
 } from "../lib/query-helpers";
+import {
+  KDS_VISIBLE_STATUSES,
+  isKdsVisibleTicketStatus,
+} from "../lib/ticket-status";
 import type {
   KdsKitchenSendBatch,
   KdsOrderInfo,
@@ -34,9 +38,6 @@ const KDS_ORDER_ITEM_SELECT_BASE =
   "id, order_id, menu_item_id, item_name, variant_name, quantity, unit_price, status, note, modifiers, sides, menu_items(menu_categories(name,type))";
 const KDS_TICKET_SELECT =
   "id, station_id, order_id, order_item_id, kitchen_send_batch_id, status, bumped_at, created_at, updated_at";
-const KDS_ACTIVE_STATUSES = ["pending", "preparing"];
-const KDS_VISIBLE_STATUSES = ["pending", "preparing", "ready"];
-const KDS_VISIBLE_STATUS_SET = new Set<string>(KDS_VISIBLE_STATUSES);
 
 type KdsQueryResult = {
   data: unknown[] | null;
@@ -45,7 +46,7 @@ type KdsQueryResult = {
 type KdsSupabaseClient = ReturnType<typeof createClient>;
 
 function isVisibleKdsTicket(ticket: KdsTicket): boolean {
-  return KDS_VISIBLE_STATUS_SET.has(ticket.status);
+  return isKdsVisibleTicketStatus(ticket.status);
 }
 
 function isMissingPriorityColumn(
@@ -77,16 +78,12 @@ function normalizeKdsOrderItems(
     (rows ?? []) as Array<
       Omit<KdsOrderItem, "is_priority" | "category_name" | "category_type"> & {
         is_priority?: boolean | null;
-        menu_items?:
-          | {
-              menu_categories?:
-                | {
-                    name?: string | null;
-                    type?: string | null;
-                  }
-                | null;
-            }
-          | null;
+        menu_items?: {
+          menu_categories?: {
+            name?: string | null;
+            type?: string | null;
+          } | null;
+        } | null;
       }
     >
   ).map((row) => {
@@ -197,7 +194,7 @@ async function fetchKdsKitchenBatchesByIds(args: {
   });
 }
 
-async function fetchActiveKdsTickets(args: {
+async function fetchVisibleKdsTickets(args: {
   supabase: KdsSupabaseClient;
   branchId: number;
   todayStartIso: string;
@@ -208,7 +205,7 @@ async function fetchActiveKdsTickets(args: {
       .from("kds_tickets")
       .select(KDS_TICKET_SELECT)
       .eq("branch_id", branchId)
-      .in("status", KDS_ACTIVE_STATUSES)
+      .in("status", [...KDS_VISIBLE_STATUSES])
       .gte("created_at", todayStartIso)
       .order("created_at", { ascending: false })
       .order("id", { ascending: false })
@@ -216,57 +213,6 @@ async function fetchActiveKdsTickets(args: {
 
     return { data: (data ?? null) as KdsTicket[] | null, error };
   });
-}
-
-async function fetchVisibleTicketsByBatchIds(args: {
-  supabase: KdsSupabaseClient;
-  branchId: number;
-  todayStartIso: string;
-  batchIds: number[];
-}): Promise<{ data: KdsTicket[] | null; error: unknown | null }> {
-  const { supabase, branchId, todayStartIso, batchIds } = args;
-  return fetchChunkedRows<KdsTicket>(batchIds, (ids) =>
-    fetchPagedRows<KdsTicket>(async (from, to) => {
-      const { data, error } = await supabase
-        .from("kds_tickets")
-        .select(KDS_TICKET_SELECT)
-        .eq("branch_id", branchId)
-        .in("status", KDS_VISIBLE_STATUSES)
-        .gte("created_at", todayStartIso)
-        .in("kitchen_send_batch_id", ids)
-        .order("created_at", { ascending: false })
-        .order("id", { ascending: false })
-        .range(from, to);
-
-      return { data: (data ?? null) as KdsTicket[] | null, error };
-    }),
-  );
-}
-
-async function fetchVisibleUngroupedTicketsByOrderIds(args: {
-  supabase: KdsSupabaseClient;
-  branchId: number;
-  todayStartIso: string;
-  orderIds: number[];
-}): Promise<{ data: KdsTicket[] | null; error: unknown | null }> {
-  const { supabase, branchId, todayStartIso, orderIds } = args;
-  return fetchChunkedRows<KdsTicket>(orderIds, (ids) =>
-    fetchPagedRows<KdsTicket>(async (from, to) => {
-      const { data, error } = await supabase
-        .from("kds_tickets")
-        .select(KDS_TICKET_SELECT)
-        .eq("branch_id", branchId)
-        .in("status", KDS_VISIBLE_STATUSES)
-        .gte("created_at", todayStartIso)
-        .is("kitchen_send_batch_id", null)
-        .in("order_id", ids)
-        .order("created_at", { ascending: false })
-        .order("id", { ascending: false })
-        .range(from, to);
-
-      return { data: (data ?? null) as KdsTicket[] | null, error };
-    }),
-  );
 }
 
 function buildOrderItemMap(items: KdsOrderItem[]): Map<number, KdsOrderItem[]> {
@@ -277,28 +223,6 @@ function buildOrderItemMap(items: KdsOrderItem[]): Map<number, KdsOrderItem[]> {
     map.set(item.order_id, existing);
   }
   return map;
-}
-
-function getVisibleTicketScopes(activeTickets: KdsTicket[]): {
-  batchIds: number[];
-  ungroupedOrderIds: number[];
-} {
-  return {
-    batchIds: [
-      ...new Set(
-        activeTickets
-          .map((ticket) => ticket.kitchen_send_batch_id)
-          .filter((id): id is number => id !== null),
-      ),
-    ],
-    ungroupedOrderIds: [
-      ...new Set(
-        activeTickets
-          .filter((ticket) => ticket.kitchen_send_batch_id === null)
-          .map((ticket) => ticket.order_id),
-      ),
-    ],
-  };
 }
 
 export interface UseKdsRealtimeArgs {
@@ -447,41 +371,17 @@ export function useKdsRealtime({
     const targetBranchId = branchId;
     const { startIso: todayStartIso } = getVNDayUtcRange(getVNDateString());
 
-    const activeTicketsResult = await fetchActiveKdsTickets({
+    const visibleTicketsResult = await fetchVisibleKdsTickets({
       supabase,
       branchId: targetBranchId,
       todayStartIso,
     });
 
-    if (activeTicketsResult.error || !activeTicketsResult.data) return;
+    if (visibleTicketsResult.error || !visibleTicketsResult.data) return;
     if (branchIdRef.current !== targetBranchId) return;
 
-    const activeTickets = activeTicketsResult.data;
-    const { batchIds: activeBatchIds, ungroupedOrderIds } =
-      getVisibleTicketScopes(activeTickets);
-
-    const [batchTicketsResult, ungroupedTicketsResult] = await Promise.all([
-      fetchVisibleTicketsByBatchIds({
-        supabase,
-        branchId: targetBranchId,
-        todayStartIso,
-        batchIds: activeBatchIds,
-      }),
-      fetchVisibleUngroupedTicketsByOrderIds({
-        supabase,
-        branchId: targetBranchId,
-        todayStartIso,
-        orderIds: ungroupedOrderIds,
-      }),
-    ]);
-
-    if (batchTicketsResult.error || ungroupedTicketsResult.error) return;
-
     const nextTickets = sortKdsTicketsNewestFirst(
-      dedupeRowsById([
-        ...(batchTicketsResult.data ?? []),
-        ...(ungroupedTicketsResult.data ?? []),
-      ]),
+      dedupeRowsById(visibleTicketsResult.data),
     );
     const orderIds = uniqueNumbers(
       nextTickets.map((ticket) => ticket.order_id),

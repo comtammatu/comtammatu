@@ -1,43 +1,80 @@
 # Design System - Com Tam Ma Tu Web App
 
-> Version: 14.3.0 | Updated: 2026-05-24 | Status: locked single source for UI agents
+> Version: 14.5.0 | Updated: 2026-05-26 | Status: frozen legacy runtime with scoped Khung quản trị rebuild authority
 
-## Single Source Decision
+## Freeze Decision
 
-This file is the single design-system contract for agents building or reviewing
-UI in this repo. Runtime files prove whether the contract is implemented, but
-they do not authorize a second visual language.
+This file is now the frozen maintenance contract for the current runtime UI,
+plus the scoped Khung quản trị rebuild authority below. The frozen runtime evidence
+records what the app already uses, but it does not authorize a broad UX rebuild
+and must not be used as the visual source for a new layout direction.
 
-If a runtime file, package description, generated token file, archived plan, or
-external reference disagrees with this file, treat that as drift. Do not copy the
-exception into new UI. Either update this contract first or migrate the runtime
-back to the contract.
+Until a new UX reference is chosen with the owner, no broad rebuild
+design-system contract is active. Agents must not renovate route layouts,
+typography, palette, spacing, or shell IA by extending frozen runtime evidence.
+Doing that would preserve the current legacy visual authority.
 
-This is intentionally **one source of truth**, not a source-of-truth bundle.
-`docs/modules/ui.md`, `docs/agent/rules/ui.md`, `tasks/regressions.md`,
-`components.json`, `globals.css`, primitives, and app adapters are supporting
-evidence or enforcement. They must point back to this contract. If they conflict
-with it, the conflict is a bug to resolve, not permission to choose whichever
-file is convenient.
+Before any broad UX rebuild implementation starts:
 
-## Decision
+1. Select the UX reference/direction with the owner.
+2. Replace or update this document into the new owner-approved design-system contract.
+3. Update `docs/agent/rules/ui.md`, `docs/modules/ui.md`,
+   `tasks/regressions.md`, and `scripts/check-ui-contract.mjs` in the same
+   authority-reset change.
+4. Only then implement runtime layout, component, token, or copy changes.
 
-The design system is the current shadcn preset plus the Ma Tu Concept 01 runtime brand tokens and primitives that already exist in this repo. It is not a separate theme layer, not a new component library, and not a parallel visual language.
+During this freeze, allowed UI work is limited to bug fixes, accessibility
+fixes, security/safety fixes, mechanical shadcn-primitive compliance that does
+not introduce a new visual direction, and the scoped Khung quản trị rebuild below.
 
-Active runtime:
+## Scoped Khung quản trị Rebuild Authority
+
+Approved runtime slice: Khung quản trị and shared management shell chrome.
+
+- Surface: `AppShell` / `AdminShell`.
+- Primary user job: managers move between management modules, understand current
+  route context, and reach high-frequency actions without decorative chrome.
+- Route family: `/admin/*` first; shared management shell changes may affect
+  Inventory, Finance, HR, Menu, and Orders only when they keep the same shell
+  contract.
+- Change type: shell layout and navigation composition, not theme, token,
+  typography, or color-palette replacement.
+- Required primitives: `Sidebar`, `SidebarProvider`, `SidebarInset`,
+  `SidebarRail`, `SidebarHeader`, `SidebarContent`, `SidebarFooter`,
+  `SidebarGroup`, `SidebarGroupContent`, `SidebarMenu`,
+  `SidebarMenuButton`, `SidebarMenuItem`, `Breadcrumb`, `Button`, `Avatar`,
+  `Badge`, and `Separator`.
+- Shadcn preset candidate: `b6FS5q9aq`. Do not run `shadcn init --preset`
+  against this repo until the owner chooses the switch mode: reinstall, merge,
+  or skip. Runtime shell work must compose installed primitives first.
+- Non-goals: no `surface.tsx` redesign, no global preset switch, no route-page
+  rewrite, no new raw primitive layer, and no recreation of legacy `matu-*`
+  visual helpers.
+
+## Frozen Runtime Evidence
+
+The current runtime design system is legacy evidence only: the shadcn preset
+plus the Ma Tu Concept 01 runtime brand tokens and primitives that already exist
+in this repo. It is not the source for the next UX rebuild.
+
+Frozen runtime:
 
 - `style`: `radix-lyra`
-- resolved preset code: `buFywKm`
+- resolved `apps/web` target preset evidence: `buFywKm`
 - `baseColor`: `neutral`
 - `cssVariables`: `true`
 - `iconLibrary`: `lucide`
 - primitive base: Radix/shadcn
+- `packages/ui` owns the shared component source and `globals.css`; its shadcn
+  config must match the style/base/icon/CSS contract above and must not create a
+  second preset authority.
 - brand concept: Ma Tu Concept 01
 - brand assets: `/brand/logo-matu.png`, `/brand/logo-matu-seal.png`, `/brand/logo-matu-vertical.png`
 - web brand primitive: `apps/web/app/components/brand.tsx`
 - web app surface adapters: `apps/web/app/components/surface.tsx`
 
-Agents must preserve this decision unless the task explicitly asks to change the design system itself.
+Agents may preserve this contract only for maintenance of current runtime UI.
+They must not use it to design or implement the UX rebuild.
 
 Legacy Inventory pilot artifacts have been retired from runtime app UI:
 
@@ -47,14 +84,15 @@ Legacy Inventory pilot artifacts have been retired from runtime app UI:
 - removed `apps/web/app/(protected)/admin/kitchen-sink/page.tsx`
 - external references such as `~/Downloads/matu-superapp/DESIGN.md`
 
-New app UI must not import `matu-surface`, use `font-matu-body`, or use
+Current-runtime maintenance UI must not import `matu-surface`, use
+`font-matu-body`, or use
 `bg-matu-*`, `text-matu-*`, `border-matu-*`, `rounded-matu-*`,
 `--spacing-matu-*`, or `--radius-matu-*`. If the owner explicitly reactivates
 the pilot layer later, the design-system contract must be updated first.
 
-## Authority Order
+## Maintenance Authority Order
 
-When deciding how to build UI, use this order:
+For maintenance-only UI work, use this order:
 
 1. This contract: `docs/spec/design-system.md`
 2. Runtime config that must conform to it: `apps/web/components.json`, `packages/ui/components.json`, `packages/ui/src/styles/globals.css`, `apps/web/app/layout.tsx`
@@ -64,10 +102,14 @@ When deciding how to build UI, use this order:
 6. Negative rules: `tasks/regressions.md`
 7. Product copy and terminology: `docs/ref/glossary.md`, `packages/shared/src/labels/vi.ts`, and domain dictionaries
 
-Do not invent a local exception when the contract is unclear. Pause and update
-the contract first.
+For UX rebuild work, this order is intentionally blocked until the owner-approved
+reference and new design-system contract exist. Do not invent a local exception
+or patch runtime layout first.
 
-## Product UX Thesis
+## Frozen Runtime UX Thesis
+
+This section records the current runtime UX thesis for maintenance only. It is
+not the UX thesis for the next rebuild.
 
 Com Tam Ma Tu is an operational restaurant system. The UI should feel calm, fast, touch-safe, and business-specific.
 
@@ -76,9 +118,11 @@ Com Tam Ma Tu is an operational restaurant system. The UI should feel calm, fast
 - Inventory surfaces are workflow-first. The user should see pending tasks, required documents, and exception states before secondary analytics.
 - Employee surfaces are lightweight task portals. Keep them narrow, direct, and consistent with the shared shell.
 
-The visual tone is rice-cream foundation, terracotta primary action, deep navy text, warm rice-yellow accents, restrained borders, semantic status colors, and strong spacing discipline.
+The frozen runtime visual tone is rice-cream foundation, terracotta primary
+action, deep navy text, warm rice-yellow accents, restrained borders, semantic
+status colors, and strong spacing discipline.
 
-## Token Contract
+## Frozen Runtime Token Contract
 
 Allowed token families:
 
@@ -90,14 +134,14 @@ Allowed token families:
 - Radius: preset radius tokens only
 - Typography: runtime font variables from `apps/web/app/layout.tsx` and `packages/ui/src/styles/globals.css`
 
-Forbidden for new app UI:
+Forbidden for current-runtime maintenance:
 
 - `matu-*` Tailwind tokens.
 - `--font-matu-body`, `font-matu-body`, or Be Vietnam Pro.
 - `rounded-matu-*`, `--radius-matu-*`, or `--spacing-matu-*`.
 - External DS token names copied from matu-superapp or archived rebuild plans.
 
-Brand Concept 01 runtime mapping:
+Brand Concept 01 frozen runtime mapping:
 
 - `background`: kem gao foundation.
 - `foreground` / dark mode foundation: xanh dam.
@@ -109,7 +153,7 @@ Brand Concept 01 runtime mapping:
 - Body font: Inter.
 - Mono font: JetBrains Mono for tabular operational data.
 
-## Typography Contract
+## Frozen Runtime Typography Contract
 
 Runtime typography source:
 
@@ -146,13 +190,20 @@ Rules:
 - Do not scale typography with viewport width.
 - Do not change primitive radius, color, focus, or disabled behavior from a page wrapper.
 
-If a new token is truly needed, it must be added to `packages/ui/src/styles/globals.css`, documented here, and checked against `tasks/regressions.md`.
+If a new token is truly needed for current-runtime maintenance, it must be added
+to `packages/ui/src/styles/globals.css`, documented here, and checked against
+`tasks/regressions.md`. If the need comes from the UX rebuild, replace/update
+the authority set first instead of extending this frozen contract.
 
-## Rhythm Contract
+## Frozen Runtime Rhythm Contract
 
-Token Contract locks **what** values exist; Rhythm Contract locks **when** to use which value, so spacing, sizing, and density read consistently across modules instead of being a per-module judgment call.
+The frozen Token Contract records **what** values exist; this frozen Rhythm
+Contract records **when** current runtime uses each value, so maintenance changes
+do not add more drift. It is not the rhythm source for the UX rebuild.
 
-A module that needs to deviate must update this contract first, not patch a single page.
+A module that needs to deviate during maintenance must update this contract
+first, not patch a single page. UX rebuild deviations require an authority reset
+instead.
 
 ### A. Spacing Rhythm
 
@@ -170,7 +221,12 @@ A module that needs to deviate must update this contract first, not patch a sing
 
 Allowed gap scale in app code: `1`, `1.5`, `2`, `3`, `4`, `6`. Avoid `5`, `7`, `8` for horizontal flow — they break vertical rhythm with the heading scale below.
 
-Page padding MUST come from `AppPage` (not ad-hoc on the page root). Card padding MUST come from `Card` / `Card size="sm"` (not ad-hoc on `<CardContent>`). When a card body needs table-edge alignment or horizontal table scrolling, use the named primitive props `CardContent flush` and/or `CardContent scroll` instead of local `p-0` / `overflow-x-auto` overrides.
+For current-runtime maintenance, page padding MUST come from `AppPage` (not
+ad-hoc on the page root). Card padding MUST come from `Card` / `Card size="sm"`
+(not ad-hoc on `<CardContent>`). When a card body needs table-edge alignment or
+horizontal table scrolling, use the named primitive props `CardContent flush`
+and/or `CardContent scroll` instead of local `p-0` / `overflow-x-auto`
+overrides.
 
 ### B. Heading Scale (locked per role)
 
@@ -206,7 +262,8 @@ Display call targets are a separate operational display role, not headings. Use 
 
 ### D. Height Scale (lock to primitive)
 
-`Button` is the single source of truth for button height. Variants:
+For the frozen runtime, `Button` is the single source of truth for button
+height. Variants:
 
 | Variant     | Min height       | When                                                              |
 | ----------- | ---------------- | ----------------------------------------------------------------- |
@@ -242,11 +299,15 @@ If a new touch tier is genuinely needed (e.g. tablet KDS oversized chef glove ta
 
 `AppPage density="compact"` and `Card size="sm"` are the two switches that move a surface from default to dense without rewriting spacing. POS/KDS/Inventory dense list views compose these. Per-module density classes (`*-dense`, `*-tight`) are not allowed.
 
-## Component Authority
+## Frozen Runtime Component Authority
 
-The only shared primitive layer is `packages/ui/src/components/*`.
+For current-runtime maintenance, the only shared primitive layer is
+`packages/ui/src/components/*`.
 
-App-level page, section, toolbar, empty-state, and link-card composition is centralized in `apps/web/app/components/surface.tsx`. These exports are adapters around the shared primitives, not a second primitive library.
+App-level page, section, toolbar, empty-state, and link-card composition is
+centralized in `apps/web/app/components/surface.tsx` for maintenance only. These
+exports are adapters around the shared primitives, not a second primitive
+library and not the shell/layout authority for the UX rebuild.
 
 Default primitive mapping:
 
@@ -269,14 +330,14 @@ Default primitive mapping:
 
 Toast and durable notification behavior is specified in `docs/spec/toast-notification-system.md`.
 
-Allowed app wrappers:
+Allowed app wrappers for maintenance:
 
 - Data adapters that fetch, map, or validate domain data.
 - Layout wrappers that arrange primitives without changing the visual contract and delegate to `apps/web/app/components/surface.tsx` when they represent page, header, section, toolbar, empty-state, or navigation-card patterns.
 - Form wrappers in `apps/web/app/components/form/`.
 - Domain wrappers that remove repetition while still rendering shadcn primitives.
 
-Forbidden wrappers:
+Forbidden wrappers for maintenance:
 
 - Wrappers that restyle a primitive into a new visual system.
 - Page-specific clones of `Button`, `Badge`, `Card`, `Table`, `Tabs`, `Input`, or `Select`.
@@ -285,7 +346,10 @@ Forbidden wrappers:
 - Helpers named like legacy `app-*` surface classes.
 - Legacy pilot wrappers such as the removed `matu-surface` adapter.
 
-## Surface Contracts
+## Frozen Runtime Surface Contracts
+
+These surface contracts describe the current runtime. They must not be copied as
+the UX rebuild IA or layout direction without the owner-approved authority reset.
 
 ### POS
 
@@ -356,11 +420,13 @@ Forbidden wrappers:
 Before any UI rebuild task:
 
 1. Read `AGENTS.md`, this file, `docs/modules/ui.md`, `tasks/regressions.md`, and the relevant domain docs.
-2. Confirm whether any touched file imports `matu-surface` or uses `matu-*` tokens. This should be zero in runtime app code; if not, the task is a legacy pilot regression unless the owner explicitly says otherwise.
-3. State the surface, primary user job, affected route family, and primitives to use.
-4. Confirm whether the task is a visual refactor, UX flow change, copy change, or behavior change.
-5. Keep each PR to one route family or one primitive rollout wave.
-6. If the implementation needs a new pattern, update this contract before applying the pattern broadly.
+2. Confirm this frozen legacy runtime contract is not being used as rebuild authority.
+3. Select the UX reference/direction with the owner.
+4. Update `docs/spec/design-system.md`, `docs/agent/rules/ui.md`, `docs/modules/ui.md`, `tasks/regressions.md`, and `scripts/check-ui-contract.mjs` as one authority reset before runtime layout/code changes.
+5. Confirm whether any touched file imports `matu-surface` or uses `matu-*` tokens. This should be zero in runtime app code; if not, the task is a legacy pilot regression unless the owner explicitly says otherwise.
+6. State the surface, primary user job, affected route family, and primitives to use.
+7. Confirm whether the task is a visual refactor, UX flow change, copy change, or behavior change.
+8. Keep each PR to one route family or one primitive rollout wave.
 
 Before marking a UI task complete:
 

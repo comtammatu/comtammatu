@@ -18,7 +18,7 @@ function appendSearchParams(
   return query ? `${target}?${query}` : target;
 }
 
-export default async function LegacyAdminFinanceRedirect({
+export default async function RetiredAdminFinanceRedirect({
   params,
   searchParams,
 }: {

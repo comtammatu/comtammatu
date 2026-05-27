@@ -24,7 +24,7 @@ import {
   type ResolvedNavGroup as SharedResolvedNavGroup,
   type StaffRole,
 } from "@comtammatu/shared/auth";
-import { APP_COPY_VI } from "@comtammatu/shared/labels";
+import { APP_COPY_VI, MODULE_LABELS_VI } from "@comtammatu/shared/labels";
 import { Button } from "@comtammatu/ui/components/button";
 import { AppShell } from "@/components/app-shell";
 import {
@@ -32,6 +32,7 @@ import {
   formatPathSegment,
   type ShellNavGroup,
 } from "@/lib/shell-primitives";
+import { messages } from "@lib/messages";
 
 const ADMIN_ICON_MAP: Record<string, React.ElementType> = {
   LayoutDashboard: IconLayoutDashboard,
@@ -105,8 +106,8 @@ export function AdminShell({
       role={role}
       brand={{
         icon: IconShieldCheck,
-        subLabel: "Cơm Tấm Má Tư",
-        mainLabel: "Quản trị",
+        subLabel: messages.common.brandName,
+        mainLabel: APP_COPY_VI.adminSurface,
         showBackLink: false,
       }}
       navGroups={navGroups}
@@ -117,11 +118,15 @@ export function AdminShell({
         actions: (
           <>
             <Button asChild variant="outline" size="sm">
-              <Link href="/employee">Cổng nhân viên</Link>
+              <Link href="/employee">
+                <IconUsers data-icon="inline-start" />
+                {MODULE_LABELS_VI.employee}
+              </Link>
             </Button>
             {canAccess(role, "reports") && (
               <Button asChild size="sm">
                 <Link href="/admin/reports">
+                  <IconChartBar data-icon="inline-start" />
                   {APP_COPY_VI.executiveReporting}
                 </Link>
               </Button>

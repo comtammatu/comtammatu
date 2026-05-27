@@ -2,7 +2,14 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Key as IconKey, Ellipsis as IconDots, Pencil as IconPencil, ToggleLeft as IconToggleLeft, ToggleRight as IconToggleRight, Users as IconUsers } from "lucide-react";
+import {
+  Key as IconKey,
+  Ellipsis as IconDots,
+  Pencil as IconPencil,
+  ToggleLeft as IconToggleLeft,
+  ToggleRight as IconToggleRight,
+  Users as IconUsers,
+} from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -28,6 +35,7 @@ import { ROLE_LABELS } from "./role-labels";
 import { TableEmptyStateRow } from "../components/table-empty-state-row";
 
 import { BRANCH_VI, FORM_VI, STAFF_VI } from "@comtammatu/shared/messages";
+import type { StaffRole } from "@comtammatu/shared/auth";
 export interface BranchOption {
   id: number;
   name: string;
@@ -38,7 +46,9 @@ export interface StaffRow {
   id: string;
   full_name: string;
   phone: string | null;
-  role: string;
+  role: StaffRole | "unassigned";
+  positionCode: string | null;
+  positionLabel: string | null;
   branch_id: number | null;
   branch_name: string | null;
   is_active: boolean | null;
@@ -47,6 +57,15 @@ export interface StaffRow {
 interface StaffTableProps {
   staff: StaffRow[];
   branches: BranchOption[];
+}
+
+function getPositionDisplay(member: StaffRow): string {
+  return (
+    member.positionLabel ??
+    (member.role !== "unassigned" ? ROLE_LABELS[member.role] : null) ??
+    member.positionCode ??
+    STAFF_VI.unassigned
+  );
 }
 
 export function StaffTable({ staff, branches }: StaffTableProps) {
@@ -65,10 +84,7 @@ export function StaffTable({ staff, branches }: StaffTableProps) {
   return (
     <>
       {staff.length === 0 ? (
-        <EmptyStatePanel
-          title="Chưa có nhân viên nào"
-          icon={<IconUsers />}
-        />
+        <EmptyStatePanel title="Chưa có nhân viên nào" icon={<IconUsers />} />
       ) : null}
 
       <div className="space-y-3 md:hidden">
@@ -95,10 +111,7 @@ export function StaffTable({ staff, branches }: StaffTableProps) {
             <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
               <div>
                 <p className="text-muted-foreground">{STAFF_VI.role}</p>
-                <p className="mt-1">
-                  {ROLE_LABELS[member.role as keyof typeof ROLE_LABELS] ??
-                    member.role}
-                </p>
+                <p className="mt-1">{getPositionDisplay(member)}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">SĐT</p>
@@ -188,8 +201,7 @@ export function StaffTable({ staff, branches }: StaffTableProps) {
                 </TableCell>
                 <TableCell className="hidden sm:table-cell">
                   <Badge variant="secondary">
-                    {ROLE_LABELS[member.role as keyof typeof ROLE_LABELS] ??
-                      member.role}
+                    {getPositionDisplay(member)}
                   </Badge>
                 </TableCell>
                 <TableCell className="hidden text-muted-foreground md:table-cell">

@@ -147,32 +147,26 @@ Các cụm dưới đây bị xem là drift và phải thay bằng nhãn tiếng
 
 ### Vai trò người dùng
 
-| Code role (`user_role` legacy) | Nhãn tiếng Việt chuẩn | Boundary |
+| Code role (`user_role`) | Nhãn tiếng Việt chuẩn | Boundary |
 | --- | --- | --- |
 | `owner` | chủ sở hữu | Vai trò cao nhất cấp tenant |
 | `super_manager` | quản lý tổng | Vận hành cấp tenant (CW + CK) |
 | `area_manager` | quản lý khu vực | Quản trị nhiều chi nhánh |
 | `branch_manager` | quản lý chi nhánh | Quản trị một chi nhánh vận hành |
-| `warehouse_manager` | quản lý kho tổng | Procurement + kho Trụ sở; blue legacy position codes: `kho_truong`, `thu_kho` |
-| `production_manager` | quản lý sản xuất | Bếp trung tâm; blue legacy position code: `bep_truong` |
+| `warehouse_manager` | quản lý kho tổng | Procurement + kho Trụ sở; canonical positions: `warehouse_head`, `warehouse_keeper` |
+| `production_manager` | quản lý sản xuất | Bếp trung tâm; canonical position: `head_chef` |
 | `cashier` | thu ngân | POS |
 | `waiter` | phục vụ | POS |
 | `chef` | bếp | KDS |
 | `office` | văn phòng | Cổng nhân viên, không gắn site vận hành cụ thể |
 
-`user_role` là **legacy claim** trong JWT, derived từ `positions.legacy_role_code`. Vai trò mới (`warehouse_manager`, `production_manager`) được thêm khi Auth v2 tách Kho và Bếp trung tâm thành workstream riêng.
-
-Blue schema hiện còn một số position code tiếng Việt không dấu như `kho_truong`,
-`thu_kho`, `bep_truong`, `phu_bep`, `quan_ly_CN`, `quan_ly_vung`, `ke_toan`, và
-`ke_toan_truong`. Đây là legacy compatibility surface, không phải naming mẫu cho
-schema mới. Green baseline phải map các code này sang English `lower_snake_case`
-theo ADR-0004.
+`user_role` là route ACL bucket trong JWT, derived từ canonical `positions.code` qua mapping explicit. `positions.code` dùng English `lower_snake_case`; nhãn tiếng Việt nằm ở `label_vi`.
 
 ### Auth v2 — Position ⟂ Permission
 
 | Thuật ngữ | Code identifier | Ý nghĩa |
 | --- | --- | --- |
-| position (chức vụ) | `positions(code, legacy_role_code)` | Nhãn HR của nhân viên. Không gate authz trực tiếp. Code mới dùng English, vd `head_chef`, `warehouse_head`, `warehouse_keeper`. |
+| position (chức vụ) | `positions(code)` | Nhãn HR của nhân viên. Không gate authz trực tiếp. Code dùng English, vd `head_chef`, `warehouse_head`, `warehouse_keeper`. |
 | permission key (khóa quyền) | `permission_keys(key)` | Chuỗi canonical cho hành động, vd `inventory:production_create`. Đơn vị authz nhỏ nhất. |
 | template (bộ quyền mẫu) | `role_templates(position_code, permission_keys[])` | Preset quyền gắn với 1 position; snapshot, không propagate khi edit. |
 | grant (cấp quyền) | `staff_permissions(user_id, branch_id, permission_key)` | Quyền thật của user tại branch cụ thể. `branch_id IS NULL` = tenant-wide. |

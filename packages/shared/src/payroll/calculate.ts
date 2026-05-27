@@ -4,13 +4,9 @@
  * Tính lương + BHXH + thuế TNCN theo luật VN.
  * Ref: docs/ref/payroll-pit.md
  *
- * Constants are versioned via `legal-versions.ts`. Pass `effectiveDate`
- * (Date or ISO string) — or `periodYear` + `periodMonth` — to pick the
- * correct rule set for the payroll period being calculated.
- *
- * The legacy `INSURANCE_CAP`, `PERSONAL_DEDUCTION`, etc. exports below
- * remain for backward compatibility and reflect the LATEST version. New
- * call sites should pass an effectiveDate / period and not rely on these.
+ * Legal constants are versioned via `legal-versions.ts`. Pass
+ * `effectiveDate` (Date or ISO string) — or `periodYear` + `periodMonth` —
+ * to pick the correct rule set for the payroll period being calculated.
  */
 
 import {
@@ -31,32 +27,10 @@ export type { PayrollLegalVersion, PitBracket };
 const LATEST_VERSION =
   PAYROLL_LEGAL_VERSIONS[PAYROLL_LEGAL_VERSIONS.length - 1]!;
 
-/** @deprecated pass effectiveDate to calculatePayrollEntry instead */
-export const INSURANCE_CAP = LATEST_VERSION.insuranceCap;
-/** @deprecated pass effectiveDate to calculatePayrollEntry instead */
-export const PERSONAL_DEDUCTION = LATEST_VERSION.personalDeduction;
-/** @deprecated pass effectiveDate to calculatePayrollEntry instead */
-export const DEPENDENT_DEDUCTION = LATEST_VERSION.dependentDeduction;
-
-/** @deprecated read from PayrollLegalVersion instead */
-export const EMPLOYEE_BHXH_RATE = LATEST_VERSION.employeeBhxhRate;
-/** @deprecated read from PayrollLegalVersion instead */
-export const EMPLOYEE_BHYT_RATE = LATEST_VERSION.employeeBhytRate;
-/** @deprecated read from PayrollLegalVersion instead */
-export const EMPLOYEE_BHTN_RATE = LATEST_VERSION.employeeBhtnRate;
-
-/** @deprecated read from PayrollLegalVersion instead */
-export const EMPLOYER_BHXH_RATE = LATEST_VERSION.employerBhxhRate;
-/** @deprecated read from PayrollLegalVersion instead */
-export const EMPLOYER_BHYT_RATE = LATEST_VERSION.employerBhytRate;
-/** @deprecated read from PayrollLegalVersion instead */
-export const EMPLOYER_BHTN_RATE = LATEST_VERSION.employerBhtnRate;
-
 /**
  * Tính thuế TNCN theo biểu lũy tiến.
  * @param taxableIncome - Thu nhập tính thuế (sau giảm trừ), VND/tháng
- * @param brackets - Biểu thuế áp dụng. Defaults to LATEST_VERSION brackets
- *                   for backward compatibility.
+ * @param brackets - Biểu thuế áp dụng. Defaults to the latest active version.
  */
 export function calculatePIT(
   taxableIncome: number,

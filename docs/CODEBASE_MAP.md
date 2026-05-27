@@ -8,6 +8,7 @@
 ## Trạng thái
 
 - **Active delivery track:** tiếp tục phát triển in-place trên repo `comtammatu` cho pilot/hardening. Bộ `docs/archive/plan/system-rebuild/*` là suspended/historical reference từ 2026-05-23, không phải kế hoạch freeze/cutover đang active.
+- **Upgrade prep track:** dọn dẹp để đóng gói baseline nâng cấp bắt đầu 2026-05-26 tại `docs/plan/new-project-upgrade-baseline.md`. Track này chuẩn bị baseline/decision package, chưa re-activate freeze/cutover.
 - **Phiên bản hiện tại:** v1.0.0 — Auth, Admin, Master Data, Inventory, Orders, POS, KDS, Print SHIPPED. HĐĐT active qua Viettel S-invoice; Payments, Finance/HR, Notifications/Reporting vẫn còn phần PARTIAL.
 - **Mốc tiếp theo:** Pilot Launch v1.0.0 cho mô hình vận hành `HQ -> Bếp trung tâm -> Chi nhánh` — cần wire VietQR/Momo credentials trước pilot; HĐĐT dùng Viettel S-invoice.
 - **Tech stack:** Next.js 16.2 | React 19.2 | TypeScript 6.0 | Tailwind 4.2 | Zod 4 | Supabase | Turborepo 2.9
@@ -59,15 +60,16 @@ Snapshot từ `.understand-anything/knowledge-graph.json` ngày 2026-05-24:
 | Tests               |                9 | Current Playwright route coverage                                                     |
 | Core                |               61 | Repository metadata, E2E helpers, cross-cutting supporting files                      |
 
-Generated checkout snapshot from 2026-05-24 (`node scripts/project-snapshot.mjs`):
+Generated checkout snapshot from 2026-05-26 (`node scripts/project-snapshot.mjs`, commit `b020d1b0`):
 
 | Area | Count |
 | --- | ---: |
 | `apps/web/app/**/page.tsx` routes | 109 |
 | API route handlers | 13 |
-| Generated DB tables / views / functions / enums | 115 / 9 / 237 / 0 |
-| SQL migration files | 347 |
-| Test/spec files under `apps/web/e2e` + `packages/shared/src` | 36 |
+| Total route handlers | 15 |
+| Generated DB tables / views / functions / enums | 116 / 9 / 241 / 0 |
+| SQL migration files | 363 |
+| Test/spec files under `apps/web/e2e` + `packages/shared/src` | 40 |
 
 The graph shows the repo is not a flat "apps/packages" map. The operational shape is:
 
@@ -100,7 +102,7 @@ flowchart LR
     data -->|no| route["Route/server-action boundary"]
     rpc --> route
     route --> ui{"Touches UI?"}
-    ui -->|yes| design["Use design-system primitives<br/>docs/spec/design-system.md + shadcn/ui"]
+    ui -->|yes| design["Maintenance: frozen runtime contract<br/>UX rebuild: owner-approved authority reset first"]
     ui -->|no| verify
     design --> verify["Verify narrow path<br/>typecheck/lint/build or docs-only validation"]
     verify --> update["Update source-of-truth docs/tasks with real state"]
@@ -112,7 +114,7 @@ Decision rules:
 - ACL ownership starts at `packages/shared/src/auth/module-acl.ts`. Do not create parallel role maps in route components.
 - Scope belongs in URL params and JWT claims. Do not persist branch/tenant scope in browser storage.
 - Multi-row business writes belong in Supabase RPCs. Server Actions validate input and call the RPC; they do not orchestrate partial writes one query at a time.
-- UI changes stay inside the active design-system contract. New primitives belong in `packages/ui`; page-specific composition belongs in `apps/web/app`.
+- UI maintenance changes stay inside the active/frozen runtime contract. UX rebuild work must not use the frozen contract as visual authority; choose the owner-approved UX reference and reset `docs/spec/design-system.md`, `docs/agent/rules/ui.md`, `docs/modules/ui.md`, `tasks/regressions.md`, and `scripts/check-ui-contract.mjs` before runtime layout changes.
 - Operational docs are part of the workflow. If runtime behavior changes, update the module doc/runbook/task tracker in the same slice.
 
 ### Project Placement Matrix
@@ -126,8 +128,8 @@ Use this matrix when adding or moving files. It is the practical replacement for
 | New shared business rule                     | `packages/shared/src/<domain>/...`                                  | Existing package exports and tests                             | Importing app-only code into shared package     |
 | New database mutation spanning multiple rows | `supabase/migrations/*.sql` RPC + typed caller                      | RLS, GRANTs, `pnpm db:types` after apply                       | Multi-query partial writes in Server Actions    |
 | New Supabase client usage                    | `packages/database/src/supabase/*` or server-only barrel            | Import boundary table below                                    | `@comtammatu/database` barrel in `"use client"` |
-| New reusable UI primitive                    | `packages/ui/src/components/*`                                      | `docs/spec/design-system.md`, `scripts/check-ui-contract.mjs`  | Page-local one-off primitive clones             |
-| New route-specific UI composition            | `apps/web/app/**/_components` or route folder                       | shadcn primitives, surface components                          | New visual language outside design system       |
+| New reusable UI primitive                    | `packages/ui/src/components/*`                                      | Maintenance: frozen UI contract + `scripts/check-ui-contract.mjs`; rebuild: owner-approved authority reset first | Page-local one-off primitive clones             |
+| New route-specific UI composition            | `apps/web/app/**/_components` or route folder                       | Maintenance: shadcn primitives and frozen surface components; rebuild: new authority contract first | New visual language without authority reset       |
 | New print behavior                           | `apps/print-agent/src/*` plus branch settings route if configurable | Branch-scoped config, no deploy-only layout changes            | Hardcoded receipt/format changes per branch     |
 | New operational rule/runbook                 | `docs/modules/*`, `docs/runbooks/*`, `tasks/*`                      | `docs/agent/rules/references.md`                               | Separate agent-only doc trees                   |
 
@@ -214,7 +216,7 @@ sequenceDiagram
 | #   | Unknown                                                                                                                                                  | Verification Step                                                  | Impact                                              |
 | --- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | --------------------------------------------------- |
 | 1   | area_manager has tenant-wide access (no area scoping table)                                                                                              | Deferred — see roadmap H3                                          | May need migration later                            |
-| 2   | Test coverage exists but is still concentrated: current checkout has 36 test/spec files, including 9 Playwright specs, with gaps around full POS→payment→stock→print→HĐĐT smoke and live provider behavior | Expand route smoke + end-to-end pilot runbooks before scale | Refactor regressions possible on uncovered surfaces |
+| 2   | Test coverage exists but is still concentrated: current checkout has 40 test/spec files, including 9 Playwright specs, with gaps around full POS→payment→stock→print→HĐĐT smoke and live provider behavior | Expand route smoke + end-to-end pilot runbooks before scale | Refactor regressions possible on uncovered surfaces |
 
 ## Priority Recommendations
 

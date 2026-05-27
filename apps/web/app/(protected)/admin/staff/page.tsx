@@ -1,7 +1,9 @@
 import { Suspense } from "react";
 import { createClient } from "@comtammatu/database/supabase/server";
-import { STAFF_ROLES } from "@comtammatu/shared/auth";
-import type { StaffRole } from "@comtammatu/shared/auth";
+import {
+  isStaffRole,
+  resolveStaffRoleFromPositionCode,
+} from "@comtammatu/shared/auth";
 import { AppPage, AppPageHeader, AppToolbar } from "@/components/surface";
 import { StaffTable } from "./staff-table";
 import { StaffFilters } from "./staff-filters";
@@ -27,11 +29,10 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
     .eq("is_active", true)
     .order("name");
 
-  // Build staff query — role is now derived via positions.legacy_role_code.
   let query = supabase
     .from("profiles")
     .select(
-      "id, full_name, phone, branch_id, is_active, positions(legacy_role_code), branches(name)",
+      "id, full_name, phone, branch_id, is_active, positions(code, label_vi), branches(name)",
     )
     .order("full_name");
 
@@ -46,23 +47,28 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
 
   const { data: profiles } = await query;
 
-  type PositionJoin = { legacy_role_code: string | null } | null;
+  type PositionJoin = { code: string | null; label_vi: string | null } | null;
   type BranchJoin = { name: string } | null;
 
-  const allStaff: StaffRow[] = (profiles ?? []).map((p) => ({
-    id: p.id,
-    full_name: p.full_name,
-    phone: p.phone,
-    role: (p.positions as PositionJoin)?.legacy_role_code ?? "unassigned",
-    branch_id: p.branch_id,
-    branch_name: (p.branches as BranchJoin)?.name ?? null,
-    is_active: p.is_active,
-  }));
+  const allStaff: StaffRow[] = (profiles ?? []).map((p) => {
+    const position = p.positions as PositionJoin;
+    return {
+      id: p.id,
+      full_name: p.full_name,
+      phone: p.phone,
+      role: resolveStaffRoleFromPositionCode(position?.code) ?? "unassigned",
+      positionCode: position?.code ?? null,
+      positionLabel: position?.label_vi ?? null,
+      branch_id: p.branch_id,
+      branch_name: (p.branches as BranchJoin)?.name ?? null,
+      is_active: p.is_active,
+    };
+  });
 
   const staff: StaffRow[] = allStaff.filter((s) => {
     if (s.role === "owner" || s.role === "super_manager") return false;
-    if (params.role && (STAFF_ROLES as readonly string[]).includes(params.role)) {
-      return s.role === (params.role as StaffRole);
+    if (isStaffRole(params.role)) {
+      return s.role === params.role;
     }
     return true;
   });

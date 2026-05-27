@@ -7,7 +7,12 @@ import { PERMISSION_KEYS, PROCUREMENT_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { addVNDateDays, getVNDateString } from "@comtammatu/shared/time";
 import { withAction } from "@/_lib/with-action";
-import { getAuthContextWithPermission } from "./_lib/auth";
+import {
+  getAuthContextWithPermission,
+  getAuthenticatedActionContext,
+  probePermission,
+  probeTenantPermission,
+} from "./_lib/auth";
 import { fetchProcurementBranches } from "./_lib/procurement-branches";
 import { dispatchNotificationOutbox } from "./notifications-actions";
 import { PG_ERR } from "./_lib/constants";
@@ -37,6 +42,304 @@ function canAccessProcurementBranch(
   );
 }
 
+type ProcurementActionContext = NonNullable<
+  Awaited<ReturnType<typeof getAuthenticatedActionContext>>
+>;
+
+type ProcurementBranchScopeResult =
+  | { success: true; branchId: number | null }
+  | { success: false; error: string };
+
+type GrnPermissionResult =
+  | {
+      success: true;
+      ctx: ProcurementActionContext;
+      grn: {
+        id: number;
+        status: string;
+        branch_id: number;
+        po_id: number | null;
+      };
+    }
+  | { success: false; error: string };
+
+type PurchaseOrderPermissionResult =
+  | {
+      success: true;
+      ctx: ProcurementActionContext;
+      po: {
+        id: number;
+        status: string;
+        branch_id: number;
+      };
+    }
+  | { success: false; error: string };
+
+type SupplierInvoiceSourceResult =
+  | {
+      success: true;
+      source: {
+        branchId: number;
+        supplierId: number;
+        grnId: number | null;
+        poId: number | null;
+      };
+    }
+  | { success: false; error: string };
+
+type SupplierInvoicePermissionResult =
+  | {
+      success: true;
+      ctx: ProcurementActionContext;
+      invoice: {
+        id: number;
+        branch_id: number;
+        grn_id: number | null;
+        po_id: number | null;
+        supplier_id: number;
+      };
+    }
+  | { success: false; error: string };
+
+async function resolveProcurementBranchScope(
+  ctx: ProcurementActionContext,
+  permission: string,
+  requestedBranchId?: number | null,
+): Promise<ProcurementBranchScopeResult> {
+  if (requestedBranchId != null) {
+    if (!canAccessProcurementBranch(ctx.claims, requestedBranchId)) {
+      return { success: false, error: "Bạn chỉ được truy cập kho của mình." };
+    }
+    const allowed = await probePermission(ctx, permission, requestedBranchId);
+    return allowed
+      ? { success: true, branchId: requestedBranchId }
+      : { success: false, error: "Không có quyền" };
+  }
+
+  if (await probeTenantPermission(ctx, permission)) {
+    return { success: true, branchId: null };
+  }
+
+  const assignedBranchId = ctx.claims.branch_id;
+  if (
+    assignedBranchId != null &&
+    (await probePermission(ctx, permission, assignedBranchId))
+  ) {
+    return { success: true, branchId: assignedBranchId };
+  }
+
+  return { success: false, error: "Không có quyền" };
+}
+
+async function getProcurementReadScope(
+  branchId?: number,
+): Promise<
+  | {
+      success: true;
+      ctx: ProcurementActionContext;
+      branchId: number | null;
+    }
+  | { success: false; error: string }
+> {
+  const ctx = await getAuthenticatedActionContext();
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const scope = await resolveProcurementBranchScope(
+    ctx,
+    PERMISSION_KEYS.PROCUREMENT_READ,
+    branchId,
+  );
+  if (!scope.success) return scope;
+
+  return { success: true, ctx, branchId: scope.branchId };
+}
+
+async function getGrnPermissionContext(
+  grnId: number,
+  permission: string,
+): Promise<GrnPermissionResult> {
+  const ctx = await getAuthenticatedActionContext();
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { data: grn, error } = await ctx.supabase
+    .from("goods_received_notes")
+    .select("id, status, branch_id, po_id")
+    .eq("id", grnId)
+    .eq("tenant_id", ctx.claims.tenant_id)
+    .single();
+  if (error || !grn) {
+    return { success: false, error: "Không tìm thấy phiếu nhập." };
+  }
+
+  const allowed = await probePermission(ctx, permission, grn.branch_id);
+  if (!allowed) return { success: false, error: "Không có quyền" };
+
+  return { success: true, ctx, grn };
+}
+
+async function getPurchaseOrderPermissionContext(
+  poId: number,
+  permission: string,
+): Promise<PurchaseOrderPermissionResult> {
+  const ctx = await getAuthenticatedActionContext();
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { data: po, error } = await ctx.supabase
+    .from("purchase_orders")
+    .select("id, status, branch_id")
+    .eq("id", poId)
+    .eq("tenant_id", ctx.claims.tenant_id)
+    .single();
+  if (error || !po) {
+    return { success: false, error: "Không tìm thấy PO." };
+  }
+
+  const allowed = await probePermission(ctx, permission, po.branch_id);
+  if (!allowed) return { success: false, error: "Không có quyền" };
+
+  return { success: true, ctx, po };
+}
+
+async function assertProcurementBranchPermission(
+  ctx: ProcurementActionContext,
+  permission: string,
+  branchId: number,
+): Promise<{ success: true } | { success: false; error: string }> {
+  if (!canAccessProcurementBranch(ctx.claims, branchId)) {
+    return { success: false, error: "Bạn chỉ được truy cập kho của mình." };
+  }
+
+  const allowed = await probePermission(ctx, permission, branchId);
+  return allowed
+    ? { success: true }
+    : { success: false, error: "Không có quyền" };
+}
+
+async function resolveSupplierInvoiceSource(
+  ctx: ProcurementActionContext,
+  input: {
+    supplierId: number;
+    grnId?: number | null;
+    poId?: number | null;
+  },
+  permission: string,
+): Promise<SupplierInvoiceSourceResult> {
+  const { supabase, claims } = ctx;
+
+  if (input.grnId != null) {
+    const { data: grn, error } = await supabase
+      .from("goods_received_notes")
+      .select("id, branch_id, supplier_id, po_id")
+      .eq("id", input.grnId)
+      .eq("tenant_id", claims.tenant_id)
+      .single();
+    if (error || !grn) {
+      return { success: false, error: "Không tìm thấy GRN liên kết." };
+    }
+    if (grn.supplier_id !== input.supplierId) {
+      return { success: false, error: "Nhà cung cấp không khớp với GRN." };
+    }
+    if (input.poId != null && input.poId !== grn.po_id) {
+      return { success: false, error: "PO không khớp với GRN." };
+    }
+
+    const branchGate = await assertProcurementBranchPermission(
+      ctx,
+      permission,
+      grn.branch_id,
+    );
+    if (!branchGate.success) return branchGate;
+
+    return {
+      success: true,
+      source: {
+        branchId: grn.branch_id,
+        supplierId: grn.supplier_id,
+        grnId: grn.id,
+        poId: input.poId ?? grn.po_id ?? null,
+      },
+    };
+  }
+
+  if (input.poId != null) {
+    const { data: po, error } = await supabase
+      .from("purchase_orders")
+      .select("id, branch_id, supplier_id")
+      .eq("id", input.poId)
+      .eq("tenant_id", claims.tenant_id)
+      .single();
+    if (error || !po) {
+      return { success: false, error: "Không tìm thấy PO liên kết." };
+    }
+    if (po.supplier_id !== input.supplierId) {
+      return { success: false, error: "Nhà cung cấp không khớp với PO." };
+    }
+
+    const branchGate = await assertProcurementBranchPermission(
+      ctx,
+      permission,
+      po.branch_id,
+    );
+    if (!branchGate.success) return branchGate;
+
+    return {
+      success: true,
+      source: {
+        branchId: po.branch_id,
+        supplierId: po.supplier_id,
+        grnId: null,
+        poId: po.id,
+      },
+    };
+  }
+
+  return {
+    success: false,
+    error: "Phải liên kết hóa đơn với GRN hoặc PO để xác định kho.",
+  };
+}
+
+async function getSupplierInvoicePermissionContext(
+  invoiceId: number,
+  permission: string,
+): Promise<SupplierInvoicePermissionResult> {
+  const ctx = await getAuthenticatedActionContext();
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { data: invoice, error } = await ctx.supabase
+    .from("supplier_invoices")
+    .select("id, supplier_id, grn_id, po_id")
+    .eq("id", invoiceId)
+    .eq("tenant_id", ctx.claims.tenant_id)
+    .single();
+  if (error || !invoice) {
+    return { success: false, error: "Không tìm thấy hóa đơn NCC." };
+  }
+
+  const source = await resolveSupplierInvoiceSource(
+    ctx,
+    {
+      supplierId: invoice.supplier_id,
+      grnId: invoice.grn_id,
+      poId: invoice.po_id,
+    },
+    permission,
+  );
+  if (!source.success) return source;
+
+  return {
+    success: true,
+    ctx,
+    invoice: {
+      id: invoice.id,
+      branch_id: source.source.branchId,
+      grn_id: source.source.grnId,
+      po_id: source.source.poId,
+      supplier_id: source.source.supplierId,
+    },
+  };
+}
+
 /* ─── Recent Activity (cross-domain) ─── */
 
 export type RecentActivityItem = {
@@ -52,12 +355,14 @@ export type RecentActivityItem = {
 export async function fetchRecentActivity(
   branchId?: number,
 ): Promise<ActionResult<RecentActivityItem[]>> {
-  const ctx = await getAuthContextWithPermission(
-    ROLES,
-    PERMISSION_KEYS.PROCUREMENT_READ,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
+  const scoped = await getProcurementReadScope(branchId);
+  if (!scoped.success) return scoped;
+  const { ctx, branchId: effectiveBranchId } = scoped;
   const { supabase, claims } = ctx;
+  const invoiceGrnSelect =
+    effectiveBranchId != null
+      ? "goods_received_notes!inner ( id, branch_id )"
+      : "goods_received_notes ( id )";
 
   let poQuery = supabase
     .from("purchase_orders")
@@ -75,19 +380,19 @@ export async function fetchRecentActivity(
     .eq("tenant_id", claims.tenant_id)
     .order("received_date", { ascending: false })
     .limit(5);
-  const invQuery = supabase
+  let invQuery = supabase
     .from("supplier_invoices")
     .select(
-      "id, invoice_number, matching_status, invoice_date, total_amount, suppliers ( name )",
+      `id, invoice_number, matching_status, invoice_date, total_amount, suppliers ( name ), ${invoiceGrnSelect}`,
     )
     .eq("tenant_id", claims.tenant_id)
     .order("invoice_date", { ascending: false })
     .limit(5);
 
-  if (branchId != null) {
-    poQuery = poQuery.eq("branch_id", branchId);
-    grnQuery = grnQuery.eq("branch_id", branchId);
-    // supplier_invoices has no branch_id — left tenant-wide intentionally.
+  if (effectiveBranchId != null) {
+    poQuery = poQuery.eq("branch_id", effectiveBranchId);
+    grnQuery = grnQuery.eq("branch_id", effectiveBranchId);
+    invQuery = invQuery.eq("goods_received_notes.branch_id", effectiveBranchId);
   }
 
   const [poRes, grnRes, invRes] = await Promise.all([
@@ -172,11 +477,9 @@ export async function fetchRecentActivity(
 /* ─── fetchGrns ─── */
 
 export async function fetchGrns(branchId?: number): Promise<ActionResult> {
-  const ctx = await getAuthContextWithPermission(
-    ROLES,
-    PERMISSION_KEYS.PROCUREMENT_READ,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
+  const scoped = await getProcurementReadScope(branchId);
+  if (!scoped.success) return scoped;
+  const { ctx, branchId: effectiveBranchId } = scoped;
   const { supabase, claims } = ctx;
   let query = supabase
     .from("goods_received_notes")
@@ -185,7 +488,9 @@ export async function fetchGrns(branchId?: number): Promise<ActionResult> {
     )
     .eq("tenant_id", claims.tenant_id)
     .order("received_date", { ascending: false });
-  if (branchId != null) query = query.eq("branch_id", branchId);
+  if (effectiveBranchId != null) {
+    query = query.eq("branch_id", effectiveBranchId);
+  }
   const { data, error } = await query;
   if (error) return { success: false, error: "Không thể tải phiếu nhập." };
   return { success: true, data: data ?? [] };
@@ -196,12 +501,19 @@ export async function fetchGrns(branchId?: number): Promise<ActionResult> {
 export async function fetchGrnDetail(grnId: number): Promise<ActionResult> {
   const id = z.coerce.number().int().positive().safeParse(grnId);
   if (!id.success) return { success: false, error: "ID không hợp lệ" };
-  const ctx = await getAuthContextWithPermission(
-    ROLES,
+  const resolved = await getGrnPermissionContext(
+    id.data,
     PERMISSION_KEYS.PROCUREMENT_READ,
   );
-  if (!ctx) return { success: false, error: "Không có quyền" };
+  if (!resolved.success) return resolved;
+  const { ctx, grn: scopedGrn } = resolved;
   const { supabase, claims } = ctx;
+  if (!canAccessProcurementBranch(claims, scopedGrn.branch_id)) {
+    return {
+      success: false,
+      error: "Bạn chỉ được xem phiếu nhập của kho mình.",
+    };
+  }
   const { data: grn, error: e1 } = await supabase
     .from("goods_received_notes")
     .select(
@@ -236,6 +548,8 @@ export const createGrnDraft = withAction(
     roles: ROLES,
     schema: grnCreateSchema,
     permission: PERMISSION_KEYS.PROCUREMENT_GRN_CREATE,
+    permissionMode: "permission",
+    permissionBranchId: (data) => data.branchId,
   },
   async (data, { supabase, claims, user }) => {
     const targetBranchId = data.branchId;
@@ -307,11 +621,19 @@ export const loadActiveGrnDraft = withAction(
     roles: ROLES,
     schema: loadActiveDraftSchema,
     permission: PERMISSION_KEYS.PROCUREMENT_GRN_CREATE,
+    permissionMode: "permission",
   },
-  async (data, { supabase, claims, user }) => {
+  async (data, ctx) => {
+    const { supabase, claims, user } = ctx;
+    const scope = await resolveProcurementBranchScope(
+      ctx,
+      PERMISSION_KEYS.PROCUREMENT_GRN_CREATE,
+    );
+    if (!scope.success) return scope;
+
     // Partial UNIQUE index uq_grn_active_draft_per_user_supplier guarantees
     // at most one row matches; maybeSingle is the safe shape.
-    const { data: row, error } = await supabase
+    let query = supabase
       .from("goods_received_notes")
       .select(
         "id, branch_id, po_id, supplier_id, grn_number, notes, updated_at",
@@ -321,8 +643,12 @@ export const loadActiveGrnDraft = withAction(
       .eq("supplier_id", data.supplierId)
       .eq("status", "draft")
       .order("updated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .limit(1);
+    if (scope.branchId != null) {
+      query = query.eq("branch_id", scope.branchId);
+    }
+
+    const { data: row, error } = await query.maybeSingle();
     if (error) {
       return { success: false, error: "Không thể tải phiếu nhập đang nháp." };
     }
@@ -333,13 +659,15 @@ export const loadActiveGrnDraft = withAction(
 /* ─── listMyGrnDrafts (Sprint 6 #3) ─── */
 
 export async function listMyGrnDrafts(): Promise<ActionResult> {
-  const ctx = await getAuthContextWithPermission(
-    ROLES,
+  const ctx = await getAuthenticatedActionContext();
+  if (!ctx) return { success: false, error: "Không có quyền" };
+  const scope = await resolveProcurementBranchScope(
+    ctx,
     PERMISSION_KEYS.PROCUREMENT_GRN_CREATE,
   );
-  if (!ctx) return { success: false, error: "Không có quyền" };
+  if (!scope.success) return scope;
   const { supabase, claims, user } = ctx;
-  const { data, error } = await supabase
+  let query = supabase
     .from("goods_received_notes")
     .select(
       "id, supplier_id, branch_id, grn_number, updated_at, suppliers ( id, name ), grn_items ( id )",
@@ -348,6 +676,11 @@ export async function listMyGrnDrafts(): Promise<ActionResult> {
     .eq("created_by", user.id)
     .eq("status", "draft")
     .order("updated_at", { ascending: false });
+  if (scope.branchId != null) {
+    query = query.eq("branch_id", scope.branchId);
+  }
+
+  const { data, error } = await query;
   if (error) {
     return { success: false, error: "Không thể tải danh sách phiếu nháp." };
   }
@@ -365,8 +698,21 @@ export const discardGrnDraft = withAction(
     roles: ROLES,
     schema: discardDraftSchema,
     permission: PERMISSION_KEYS.PROCUREMENT_GRN_CREATE,
+    permissionMode: "permission",
   },
   async (data, { supabase, claims, user }) => {
+    const resolved = await getGrnPermissionContext(
+      data.grnId,
+      PERMISSION_KEYS.PROCUREMENT_GRN_CREATE,
+    );
+    if (!resolved.success) return resolved;
+    if (!canAccessProcurementBranch(claims, resolved.grn.branch_id)) {
+      return {
+        success: false,
+        error: "Bạn chỉ được hủy phiếu nháp của kho mình.",
+      };
+    }
+
     // Soft-cancel keeps audit trail; immutable confirmed GRNs are unaffected.
     const { data: row, error } = await supabase
       .from("goods_received_notes")
@@ -430,18 +776,15 @@ export const upsertGrnLine = withAction(
     roles: ROLES,
     schema: grnLineSchema,
     permission: PERMISSION_KEYS.PROCUREMENT_GRN_CREATE,
+    permissionMode: "permission",
   },
   async (data, { supabase, claims }) => {
-    const { data: grn, error: grnError } = await supabase
-      .from("goods_received_notes")
-      .select("id, status, branch_id")
-      .eq("id", data.grnId)
-      .eq("tenant_id", claims.tenant_id)
-      .single();
-
-    if (grnError || !grn) {
-      return { success: false, error: "Không tìm thấy phiếu nhập." };
-    }
+    const resolved = await getGrnPermissionContext(
+      data.grnId,
+      PERMISSION_KEYS.PROCUREMENT_GRN_CREATE,
+    );
+    if (!resolved.success) return resolved;
+    const grn = resolved.grn;
     if (grn.status !== "draft") {
       return {
         success: false,
@@ -513,18 +856,15 @@ export const deleteGrnLine = withAction(
     roles: ROLES,
     schema: deleteGrnLineSchema,
     permission: PERMISSION_KEYS.PROCUREMENT_GRN_CREATE,
+    permissionMode: "permission",
   },
   async (data, { supabase, claims }) => {
-    const { data: grn, error: grnError } = await supabase
-      .from("goods_received_notes")
-      .select("id, status, branch_id")
-      .eq("id", data.grnId)
-      .eq("tenant_id", claims.tenant_id)
-      .single();
-
-    if (grnError || !grn) {
-      return { success: false, error: "Không tìm thấy phiếu nhập." };
-    }
+    const resolved = await getGrnPermissionContext(
+      data.grnId,
+      PERMISSION_KEYS.PROCUREMENT_GRN_CREATE,
+    );
+    if (!resolved.success) return resolved;
+    const grn = resolved.grn;
     if (grn.status !== "draft") {
       return {
         success: false,
@@ -555,12 +895,18 @@ export const deleteGrnLine = withAction(
 export async function confirmGrn(grnId: number): Promise<ActionResult> {
   const id = z.coerce.number().int().positive().safeParse(grnId);
   if (!id.success) return { success: false, error: "ID không hợp lệ" };
-  const ctx = await getAuthContextWithPermission(
-    ROLES,
+  const resolved = await getGrnPermissionContext(
+    id.data,
     PERMISSION_KEYS.PROCUREMENT_GRN_CONFIRM,
   );
-  if (!ctx) return { success: false, error: "Không có quyền" };
-  const { supabase } = ctx;
+  if (!resolved.success) return resolved;
+  const { supabase, claims } = resolved.ctx;
+  if (!canAccessProcurementBranch(claims, resolved.grn.branch_id)) {
+    return {
+      success: false,
+      error: "Bạn chỉ được xác nhận phiếu nhập của kho mình.",
+    };
+  }
 
   const { data, error } = await supabase.rpc("confirm_goods_receipt_note", {
     p_grn_id: id.data,
@@ -624,8 +970,21 @@ export const amendGrnLine = withAction(
     roles: ROLES,
     schema: amendGrnLineSchema,
     permission: PERMISSION_KEYS.PROCUREMENT_GRN_AMEND,
+    permissionMode: "permission",
   },
-  async (data, { supabase }) => {
+  async (data, { supabase, claims }) => {
+    const resolved = await getGrnPermissionContext(
+      data.grnId,
+      PERMISSION_KEYS.PROCUREMENT_GRN_AMEND,
+    );
+    if (!resolved.success) return resolved;
+    if (!canAccessProcurementBranch(claims, resolved.grn.branch_id)) {
+      return {
+        success: false,
+        error: "Bạn chỉ được sửa phiếu nhập của kho mình.",
+      };
+    }
+
     const { data: row, error } = await supabase.rpc("amend_grn_line", {
       p_grn_id: data.grnId,
       p_line_id: data.lineId,
@@ -703,12 +1062,16 @@ export interface LinkedGrnRow {
 export async function fetchGrnsForPo(poId: number): Promise<ActionResult> {
   const id = z.coerce.number().int().positive().safeParse(poId);
   if (!id.success) return { success: false, error: "ID không hợp lệ" };
-  const ctx = await getAuthContextWithPermission(
-    ROLES,
+  const resolved = await getPurchaseOrderPermissionContext(
+    id.data,
     PERMISSION_KEYS.PROCUREMENT_READ,
   );
-  if (!ctx) return { success: false, error: "Không có quyền" };
+  if (!resolved.success) return resolved;
+  const { ctx, po } = resolved;
   const { supabase, claims } = ctx;
+  if (!canAccessProcurementBranch(claims, po.branch_id)) {
+    return { success: false, error: "Bạn chỉ được xem PO của kho mình." };
+  }
   const { data, error } = await supabase
     .from("goods_received_notes")
     .select("id, grn_number, status, received_date")
@@ -739,12 +1102,18 @@ const PG_ERR_TO_VI: Record<string, string> = {
 export async function createGrnFromPo(poId: number): Promise<ActionResult> {
   const id = z.coerce.number().int().positive().safeParse(poId);
   if (!id.success) return { success: false, error: "ID không hợp lệ" };
-  const ctx = await getAuthContextWithPermission(
-    ROLES,
+  const resolved = await getPurchaseOrderPermissionContext(
+    id.data,
     PERMISSION_KEYS.PROCUREMENT_GRN_CREATE,
   );
-  if (!ctx) return { success: false, error: "Không có quyền" };
-  const { supabase } = ctx;
+  if (!resolved.success) return resolved;
+  const { supabase, claims } = resolved.ctx;
+  if (!canAccessProcurementBranch(claims, resolved.po.branch_id)) {
+    return {
+      success: false,
+      error: "Bạn chỉ được tạo phiếu nhập cho PO của kho mình.",
+    };
+  }
 
   const { data, error } = await supabase.rpc("create_grn_from_po", {
     p_po_id: id.data,
@@ -792,15 +1161,29 @@ export const createSupplierInvoice = withAction(
     roles: ROLES,
     schema: invoiceSchema,
     permission: PERMISSION_KEYS.PROCUREMENT_INVOICE_CREATE,
+    permissionMode: "permission",
   },
-  async (data, { supabase, claims, user }) => {
+  async (data, ctx) => {
+    const { supabase, claims, user } = ctx;
+    const resolved = await resolveSupplierInvoiceSource(
+      ctx,
+      {
+        supplierId: data.supplierId,
+        grnId: data.grnId,
+        poId: data.poId,
+      },
+      PERMISSION_KEYS.PROCUREMENT_INVOICE_CREATE,
+    );
+    if (!resolved.success) return resolved;
+    const { source } = resolved;
+
     // Auto-compute due_date from supplier payment_terms_days if not provided
     let dueDate: string | null = data.dueDate ?? null;
     if (!dueDate) {
       const { data: supplier } = await supabase
         .from("suppliers")
         .select("payment_terms_days")
-        .eq("id", data.supplierId)
+        .eq("id", source.supplierId)
         .eq("tenant_id", claims.tenant_id)
         .single();
       const termsDays = supplier?.payment_terms_days ?? null;
@@ -813,9 +1196,9 @@ export const createSupplierInvoice = withAction(
       .from("supplier_invoices")
       .insert({
         tenant_id: claims.tenant_id,
-        supplier_id: data.supplierId,
-        grn_id: data.grnId ?? null,
-        po_id: data.poId ?? null,
+        supplier_id: source.supplierId,
+        grn_id: source.grnId,
+        po_id: source.poId,
         invoice_number: data.invoiceNumber,
         invoice_date: data.invoiceDate,
         subtotal: data.subtotal,
@@ -860,14 +1243,12 @@ export const createSupplierInvoice = withAction(
 export async function fetchSupplierInvoices(
   branchId?: number,
 ): Promise<ActionResult> {
-  const ctx = await getAuthContextWithPermission(
-    ROLES,
-    PERMISSION_KEYS.PROCUREMENT_READ,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
+  const scoped = await getProcurementReadScope(branchId);
+  if (!scoped.success) return scoped;
+  const { ctx, branchId: effectiveBranchId } = scoped;
   const { supabase, claims } = ctx;
   const grnSelect =
-    branchId != null
+    effectiveBranchId != null
       ? "goods_received_notes!inner ( id, grn_number, branch_id )"
       : "goods_received_notes ( id, grn_number )";
   let query = supabase
@@ -877,8 +1258,8 @@ export async function fetchSupplierInvoices(
     )
     .eq("tenant_id", claims.tenant_id)
     .order("invoice_date", { ascending: false });
-  if (branchId != null) {
-    query = query.eq("goods_received_notes.branch_id", branchId);
+  if (effectiveBranchId != null) {
+    query = query.eq("goods_received_notes.branch_id", effectiveBranchId);
   }
   const { data, error } = await query;
   if (error) return { success: false, error: "Không thể tải hóa đơn NCC." };
@@ -890,12 +1271,12 @@ export async function recomputeInvoiceMatching(
 ): Promise<ActionResult> {
   const id = z.coerce.number().int().positive().safeParse(invoiceId);
   if (!id.success) return { success: false, error: "ID không hợp lệ" };
-  const ctx = await getAuthContextWithPermission(
-    ROLES,
+  const resolved = await getSupplierInvoicePermissionContext(
+    id.data,
     PERMISSION_KEYS.PROCUREMENT_INVOICE_MATCH,
   );
-  if (!ctx) return { success: false, error: "Không có quyền" };
-  const { supabase } = ctx;
+  if (!resolved.success) return resolved;
+  const { supabase } = resolved.ctx;
   const { data, error } = await supabase.rpc(
     "recompute_supplier_invoice_matching",
     { p_invoice_id: id.data },

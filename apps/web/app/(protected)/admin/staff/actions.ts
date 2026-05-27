@@ -2,13 +2,13 @@
 
 import { z } from "zod";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
-import { MODULE_ACL, PERMISSION_KEYS, STAFF_ROLES } from "@comtammatu/shared/auth";
+import { PERMISSION_KEYS, STAFF_ROLES } from "@comtammatu/shared/auth";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 import {
-  getAuthContextWithPermission,
-  getAuthContextWithPermissions,
+  getAuthContextByPermission,
+  getAuthContextByPermissions,
 } from "../_lib/auth";
 
 /* ─── Schemas ─── */
@@ -33,9 +33,6 @@ const updateStaffSchema = z.object({
 /* ─── Helpers ─── */
 
 const OPS_ROLES: StaffRole[] = ["cashier", "waiter", "chef", "branch_manager"];
-
-/** Roles allowed to manage staff (aligned with proxy staff module ACL). */
-const MANAGER_ROLES = MODULE_ACL.staff.allowedRoles;
 
 const POSITION_ASSIGN_PERMISSIONS = [
   PERMISSION_KEYS.STAFF_MANAGE,
@@ -125,10 +122,7 @@ export async function createStaff(
     };
   }
 
-  const ctx = await getAuthContextWithPermissions(
-    MANAGER_ROLES,
-    POSITION_ASSIGN_PERMISSIONS,
-  );
+  const ctx = await getAuthContextByPermissions(POSITION_ASSIGN_PERMISSIONS);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { claims, supabase } = ctx;
@@ -232,10 +226,7 @@ export async function updateStaff(
     };
   }
 
-  const ctx = await getAuthContextWithPermissions(
-    MANAGER_ROLES,
-    POSITION_ASSIGN_PERMISSIONS,
-  );
+  const ctx = await getAuthContextByPermissions(POSITION_ASSIGN_PERMISSIONS);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -270,10 +261,7 @@ export async function toggleStaffActive(
   const parsedId = staffIdSchema.safeParse(staffId);
   if (!parsedId.success) return { success: false, error: "ID không hợp lệ" };
 
-  const ctx = await getAuthContextWithPermission(
-    MANAGER_ROLES,
-    PERMISSION_KEYS.STAFF_MANAGE,
-  );
+  const ctx = await getAuthContextByPermission(PERMISSION_KEYS.STAFF_MANAGE);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase } = ctx;

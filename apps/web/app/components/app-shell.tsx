@@ -21,15 +21,19 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
+  SidebarGroupContent,
   SidebarGroupLabel,
   SidebarHeader,
   SidebarInset,
   SidebarMenu,
+  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
+  SidebarRail,
   SidebarTrigger,
 } from "@comtammatu/ui/components/sidebar";
+import { Separator } from "@comtammatu/ui/components/separator";
 import {
   findActiveNavItem,
   formatPathSegment,
@@ -103,166 +107,210 @@ export function AppShell({
   const showBackLink = brand.showBackLink ?? true;
   const triggerClass = collapsible === "icon" ? undefined : "md:hidden";
   const breadcrumbSegments = pageHeader.breadcrumbSegments ?? [];
+  const mobileHeaderExtras = pageHeader.mobileTopBar
+    ? null
+    : pageHeader.headerExtras;
+  const brandHref = navGroups[0]?.items[0]?.href ?? "/admin/dashboard";
 
   return (
     <SidebarProvider>
       <Sidebar variant="inset" collapsible={collapsible}>
-        <SidebarHeader className="gap-3 p-4">
+        <SidebarHeader className="border-b border-sidebar-border p-2">
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild size="lg">
+                <Link href={brandHref}>
+                  <span
+                    aria-hidden="true"
+                    className={
+                      logoVariant
+                        ? "flex size-8 shrink-0 items-center justify-center rounded-md border bg-sidebar-accent p-1"
+                        : "flex size-8 shrink-0 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground"
+                    }
+                  >
+                    {logoVariant ? (
+                      <BrandMark
+                        variant={logoVariant}
+                        alt={brand.logoAlt}
+                        className="size-full"
+                      />
+                    ) : (
+                      <BrandIcon />
+                    )}
+                  </span>
+                  <span className="flex min-w-0 flex-col gap-0.5 group-data-[collapsible=icon]:hidden">
+                    <span className="truncate text-xs font-medium text-sidebar-foreground/65">
+                      {brand.subLabel}
+                    </span>
+                    <span className="truncate font-heading text-sm font-semibold">
+                      {brand.mainLabel}
+                    </span>
+                  </span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
           {showBackLink ? (
-            <Link
-              href="/admin/dashboard"
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-sidebar-foreground/65 hover:text-sidebar-foreground group-data-[collapsible=icon]:hidden"
+            <Button
+              asChild
+              variant="ghost"
+              size="xs"
+              className="justify-start text-sidebar-foreground/70 group-data-[collapsible=icon]:hidden"
             >
-              <IconArrowLeft className="size-3.5" />
-              {copy.admin}
-            </Link>
+              <Link href="/admin/dashboard">
+                <IconArrowLeft data-icon="inline-start" />
+                {copy.admin}
+              </Link>
+            </Button>
           ) : null}
-          <div className="flex items-center gap-3">
-            <div
-              className={
-                logoVariant
-                  ? "flex size-10 shrink-0 items-center justify-center rounded-md border bg-sidebar-accent p-1"
-                  : "flex size-10 shrink-0 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground"
-              }
-            >
-              {logoVariant ? (
-                <BrandMark
-                  variant={logoVariant}
-                  alt={brand.logoAlt}
-                  className="size-full"
-                />
-              ) : (
-                <BrandIcon className="size-5" />
-              )}
-            </div>
-            <div className="min-w-0 flex-1 space-y-0.5 group-data-[collapsible=icon]:hidden">
-              <p className="text-xs font-semibold uppercase tracking-wide text-sidebar-foreground/60">
-                {brand.subLabel}
-              </p>
-              <p className="font-heading text-lg font-semibold leading-none">
-                {brand.mainLabel}
-              </p>
-            </div>
-          </div>
         </SidebarHeader>
 
-        <SidebarContent className="px-2 pb-4">
+        <SidebarContent className="px-2 py-2">
           {navGroups.map((group) => (
-            <SidebarGroup key={group.title} className="px-0 py-1">
-              <SidebarGroupLabel className="px-2 pb-1 text-xs font-medium text-sidebar-foreground/70">
-                {group.title}
-              </SidebarGroupLabel>
-              <SidebarMenu>
-                {group.items.map((item) => {
-                  const active = isNavItemActive(item, pathname);
-                  const Icon = item.icon;
-                  return (
-                    <SidebarMenuItem key={item.href}>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={active}
-                        size="lg"
-                        tooltip={item.label}
-                        className="rounded-md"
-                      >
-                        <Link href={item.href}>
-                          <Icon />
-                          <span>{item.label}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })}
-              </SidebarMenu>
+            <SidebarGroup key={group.title} className="px-0">
+              <SidebarGroupLabel>{group.title}</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {group.items.map((item) => {
+                    const active = isNavItemActive(item, pathname);
+                    const Icon = item.icon;
+                    return (
+                      <SidebarMenuItem key={item.href}>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={active}
+                          size="lg"
+                          tooltip={item.label}
+                        >
+                          <Link href={item.href}>
+                            <Icon />
+                            <span>{item.label}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
             </SidebarGroup>
           ))}
         </SidebarContent>
 
         <SidebarFooter className="p-2">
-          <div className="flex items-center gap-2 px-1 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-1 group-data-[collapsible=icon]:px-0">
-            <Avatar size="sm">
-              <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
-            </Avatar>
-            <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
-              <p className="truncate text-sm font-medium text-sidebar-foreground">
-                {user.name}
-              </p>
-              <p className="truncate text-xs text-sidebar-foreground/65">
-                {ROLE_LABEL_VI[role]}
-              </p>
-            </div>
-            <form action="/api/auth/signout" method="post">
-              <Button
-                type="submit"
-                variant="ghost"
-                size="icon-sm"
-                className="text-sidebar-foreground/75 hover:text-sidebar-foreground"
-                aria-label={copy.signOut}
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                size="lg"
+                className="pointer-events-none"
               >
-                <IconLogout className="size-4" />
-              </Button>
-            </form>
-          </div>
+                <div>
+                  <Avatar size="sm">
+                    <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                  </Avatar>
+                  <span className="flex min-w-0 flex-col gap-0.5">
+                    <span className="truncate text-sm font-medium">
+                      {user.name}
+                    </span>
+                    <span className="truncate text-xs text-sidebar-foreground/65">
+                      {ROLE_LABEL_VI[role]}
+                    </span>
+                  </span>
+                </div>
+              </SidebarMenuButton>
+              <form action="/api/auth/signout" method="post">
+                <SidebarMenuAction asChild>
+                  <Button
+                    type="submit"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={copy.signOut}
+                  >
+                    <IconLogout data-icon="inline-start" />
+                  </Button>
+                </SidebarMenuAction>
+              </form>
+            </SidebarMenuItem>
+          </SidebarMenu>
         </SidebarFooter>
+        <SidebarRail />
       </Sidebar>
 
-      <SidebarInset>
-        <header className="border-b px-4 py-3">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex min-w-0 flex-1 items-center gap-3">
+      <SidebarInset className="min-w-0 overflow-hidden">
+        <header className="sticky top-0 z-20 flex shrink-0 flex-col border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+          <div className="flex items-center gap-3 px-4 py-2 lg:px-6">
+            <div className="flex min-w-0 flex-1 items-center gap-2">
               <SidebarTrigger className={triggerClass} />
-              <div className="flex min-w-0 flex-wrap items-center gap-2">
-                {breadcrumbSegments.length > 0 ? (
-                  <Breadcrumb>
-                    <BreadcrumbList>
-                      {breadcrumbSegments.map((segment, idx) => (
-                        <Fragment key={`${segment}-${String(idx)}`}>
-                          <BreadcrumbItem>
-                            <BreadcrumbPage className="font-normal text-muted-foreground">
-                              {segment}
-                            </BreadcrumbPage>
-                          </BreadcrumbItem>
-                          {idx < breadcrumbSegments.length - 1 && (
-                            <BreadcrumbSeparator />
-                          )}
-                        </Fragment>
-                      ))}
-                    </BreadcrumbList>
-                  </Breadcrumb>
-                ) : pageHeader.crumbLabel ? (
-                  <Badge variant="outline">{pageHeader.crumbLabel}</Badge>
-                ) : null}
-                <span className="truncate text-sm font-medium">
+              <Separator
+                orientation="vertical"
+                className="hidden h-4 md:block"
+              />
+              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  {breadcrumbSegments.length > 0 ? (
+                    <Breadcrumb>
+                      <BreadcrumbList>
+                        {breadcrumbSegments.map((segment, idx) => (
+                          <Fragment key={`${segment}-${String(idx)}`}>
+                            <BreadcrumbItem>
+                              <BreadcrumbPage className="font-normal text-muted-foreground">
+                                {segment}
+                              </BreadcrumbPage>
+                            </BreadcrumbItem>
+                            {idx < breadcrumbSegments.length - 1 && (
+                              <BreadcrumbSeparator />
+                            )}
+                          </Fragment>
+                        ))}
+                      </BreadcrumbList>
+                    </Breadcrumb>
+                  ) : pageHeader.crumbLabel ? (
+                    <Badge variant="outline">{pageHeader.crumbLabel}</Badge>
+                  ) : null}
+                </div>
+                <span className="truncate font-heading text-base font-semibold">
                   {pageTitle}
                 </span>
-                <h1 className="font-heading sr-only">{pageTitle}</h1>
               </div>
               {pageHeader.headerExtras ? (
-                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                <div className="hidden shrink-0 flex-wrap items-center gap-2 md:flex">
                   {pageHeader.headerExtras}
                 </div>
               ) : null}
             </div>
             {pageHeader.actions ? (
-              <div className="flex shrink-0 flex-wrap items-center gap-2">
+              <div className="hidden shrink-0 flex-wrap items-center gap-2 md:flex">
                 {pageHeader.actions}
               </div>
             ) : null}
           </div>
           {pageHeader.description ? (
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="px-4 pb-3 text-sm text-muted-foreground lg:px-6">
               {pageHeader.description}
             </p>
           ) : null}
+          {mobileHeaderExtras || pageHeader.actions ? (
+            <>
+              <Separator className="md:hidden" />
+              <div className="flex flex-wrap items-center gap-2 px-4 py-2 md:hidden">
+                {mobileHeaderExtras}
+                {pageHeader.actions}
+              </div>
+            </>
+          ) : null}
           {pageHeader.mobileTopBar ? (
-            <div className="sticky top-0 z-10 -mx-4 mt-3 w-[calc(100%+2rem)] border-t bg-background px-4 py-2 md:hidden">
-              {pageHeader.mobileTopBar}
-            </div>
+            <>
+              <Separator className="md:hidden" />
+              <div className="px-4 py-2 md:hidden">{pageHeader.mobileTopBar}</div>
+            </>
           ) : null}
         </header>
 
-        <main id="main-content" className="flex-1 p-4">
-          <div className="space-y-4">{children}</div>
+        <main
+          id="main-content"
+          className="flex-1 bg-muted/20 p-3 md:p-4 lg:p-6"
+        >
+          <div className="flex w-full flex-col gap-4">{children}</div>
         </main>
       </SidebarInset>
     </SidebarProvider>

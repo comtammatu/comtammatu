@@ -4,7 +4,12 @@ import { z } from "zod";
 import { PERMISSION_KEYS, PROCUREMENT_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { withAction } from "@/_lib/with-action";
-import { getAuthContextWithPermission } from "./_lib/auth";
+import {
+  getAuthContextByPermission,
+  getAuthenticatedActionContext,
+  probePermission,
+  probeTenantPermission,
+} from "./_lib/auth";
 import { fetchProcurementBranches } from "./_lib/procurement-branches";
 
 const ROLES = PROCUREMENT_ROLES;
@@ -23,16 +28,111 @@ function canAccessProcurementBranch(
   );
 }
 
+type ProcurementActionContext = NonNullable<
+  Awaited<ReturnType<typeof getAuthenticatedActionContext>>
+>;
+
+type ProcurementBranchScopeResult =
+  | { success: true; branchId: number | null }
+  | { success: false; error: string };
+
+type PurchaseOrderPermissionResult =
+  | {
+      success: true;
+      ctx: ProcurementActionContext;
+      po: {
+        id: number;
+        status: string;
+        branch_id: number;
+        supplier_id: number;
+      };
+    }
+  | { success: false; error: string };
+
+async function resolveProcurementBranchScope(
+  ctx: ProcurementActionContext,
+  permission: string,
+  requestedBranchId?: number | null,
+): Promise<ProcurementBranchScopeResult> {
+  if (requestedBranchId != null) {
+    if (!canAccessProcurementBranch(ctx.claims, requestedBranchId)) {
+      return { success: false, error: "Bạn chỉ được truy cập kho của mình." };
+    }
+    const allowed = await probePermission(ctx, permission, requestedBranchId);
+    return allowed
+      ? { success: true, branchId: requestedBranchId }
+      : { success: false, error: "Không có quyền" };
+  }
+
+  if (await probeTenantPermission(ctx, permission)) {
+    return { success: true, branchId: null };
+  }
+
+  const assignedBranchId = ctx.claims.branch_id;
+  if (
+    assignedBranchId != null &&
+    (await probePermission(ctx, permission, assignedBranchId))
+  ) {
+    return { success: true, branchId: assignedBranchId };
+  }
+
+  return { success: false, error: "Không có quyền" };
+}
+
+async function getProcurementReadScope(
+  branchId?: number,
+): Promise<
+  | {
+      success: true;
+      ctx: ProcurementActionContext;
+      branchId: number | null;
+    }
+  | { success: false; error: string }
+> {
+  const ctx = await getAuthenticatedActionContext();
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const scope = await resolveProcurementBranchScope(
+    ctx,
+    PERMISSION_KEYS.PROCUREMENT_READ,
+    branchId,
+  );
+  if (!scope.success) return scope;
+
+  return { success: true, ctx, branchId: scope.branchId };
+}
+
+async function getPurchaseOrderPermissionContext(
+  poId: number,
+  permission: string,
+): Promise<PurchaseOrderPermissionResult> {
+  const ctx = await getAuthenticatedActionContext();
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { data: po, error } = await ctx.supabase
+    .from("purchase_orders")
+    .select("id, status, branch_id, supplier_id")
+    .eq("id", poId)
+    .eq("tenant_id", ctx.claims.tenant_id)
+    .single();
+  if (error || !po) {
+    return { success: false, error: "Không tìm thấy PO." };
+  }
+
+  const allowed = await probePermission(ctx, permission, po.branch_id);
+  if (!allowed) return { success: false, error: "Không có quyền" };
+
+  return { success: true, ctx, po };
+}
+
 /* ─── fetchPurchaseOrders ─── */
 
 export async function fetchPurchaseOrders(
   branchId?: number,
 ): Promise<ActionResult> {
-  const ctx = await getAuthContextWithPermission(
-    ROLES,
-    PERMISSION_KEYS.PROCUREMENT_READ,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
+  const scoped = await getProcurementReadScope(branchId);
+  if (!scoped.success) return scoped;
+  const { ctx, branchId: effectiveBranchId } = scoped;
   const { supabase, claims } = ctx;
   let query = supabase
     .from("purchase_orders")
@@ -41,7 +141,9 @@ export async function fetchPurchaseOrders(
     )
     .eq("tenant_id", claims.tenant_id)
     .order("ordered_at", { ascending: false });
-  if (branchId != null) query = query.eq("branch_id", branchId);
+  if (effectiveBranchId != null) {
+    query = query.eq("branch_id", effectiveBranchId);
+  }
   const { data, error } = await query;
   if (error) return { success: false, error: "Không thể tải đơn đặt hàng." };
   return { success: true, data: data ?? [] };
@@ -63,6 +165,8 @@ export const createPurchaseOrder = withAction(
     roles: ROLES,
     schema: poCreateSchema,
     permission: PERMISSION_KEYS.PROCUREMENT_PO_CREATE,
+    permissionMode: "permission",
+    permissionBranchId: (data) => data.branchId,
   },
   async (data, { supabase, claims, user }) => {
     const targetBranchId = data.branchId;
@@ -89,8 +193,7 @@ export const createPurchaseOrder = withAction(
       return { success: false, error: "Không thể cấp số PO." };
     }
     const displayId = String(nextDisplay);
-    // Keep po_number == display_id (legacy column for back-compat references
-    // in audit_logs/exports/HĐĐT).
+    // Keep po_number == display_id for audit_logs/exports/HĐĐT references.
     const poNumber = displayId;
 
     const { data: row, error } = await supabase
@@ -121,12 +224,16 @@ export async function fetchPurchaseOrderDetail(
 ): Promise<ActionResult> {
   const id = z.coerce.number().int().positive().safeParse(poId);
   if (!id.success) return { success: false, error: "ID không hợp lệ" };
-  const ctx = await getAuthContextWithPermission(
-    ROLES,
+  const resolved = await getPurchaseOrderPermissionContext(
+    id.data,
     PERMISSION_KEYS.PROCUREMENT_READ,
   );
-  if (!ctx) return { success: false, error: "Không có quyền" };
+  if (!resolved.success) return resolved;
+  const { ctx, po: scopedPo } = resolved;
   const { supabase, claims } = ctx;
+  if (!canAccessProcurementBranch(claims, scopedPo.branch_id)) {
+    return { success: false, error: "Bạn chỉ được xem PO của kho mình." };
+  }
   const { data: po, error: e1 } = await supabase
     .from("purchase_orders")
     .select("*, suppliers ( id, name )")
@@ -161,17 +268,15 @@ export const upsertPurchaseOrderLine = withAction(
     roles: ROLES,
     schema: poLineSchema,
     permission: PERMISSION_KEYS.PROCUREMENT_PO_CREATE,
+    permissionMode: "permission",
   },
   async (data, { supabase, claims }) => {
-    const { data: po, error: pe } = await supabase
-      .from("purchase_orders")
-      .select("id, status, branch_id")
-      .eq("id", data.poId)
-      .eq("tenant_id", claims.tenant_id)
-      .single();
-    if (pe || !po) {
-      return { success: false, error: "Không tìm thấy PO." };
-    }
+    const resolved = await getPurchaseOrderPermissionContext(
+      data.poId,
+      PERMISSION_KEYS.PROCUREMENT_PO_CREATE,
+    );
+    if (!resolved.success) return resolved;
+    const po = resolved.po;
     // Owner force-edit: allow on draft/sent/partially_received/received.
     // Non-owner: still restricted to draft (existing behavior).
     const isOwner = claims.user_role === "owner";
@@ -232,17 +337,15 @@ export const deletePurchaseOrderLine = withAction(
     roles: ROLES,
     schema: deletePoLineSchema,
     permission: PERMISSION_KEYS.PROCUREMENT_PO_CREATE,
+    permissionMode: "permission",
   },
   async (data, { supabase, claims }) => {
-    const { data: po, error: pe } = await supabase
-      .from("purchase_orders")
-      .select("id, status, branch_id")
-      .eq("id", data.poId)
-      .eq("tenant_id", claims.tenant_id)
-      .single();
-    if (pe || !po) {
-      return { success: false, error: "Không tìm thấy PO." };
-    }
+    const resolved = await getPurchaseOrderPermissionContext(
+      data.poId,
+      PERMISSION_KEYS.PROCUREMENT_PO_CREATE,
+    );
+    if (!resolved.success) return resolved;
+    const po = resolved.po;
     const isOwner = claims.user_role === "owner";
     if (!isOwner && po.status !== "draft") {
       return {
@@ -295,19 +398,13 @@ export async function updatePurchaseOrderStatus(
       error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
     };
   }
-  const ctx = await getAuthContextWithPermission(
-    ROLES,
+  const resolved = await getPurchaseOrderPermissionContext(
+    parsed.data.poId,
     PERMISSION_KEYS.PROCUREMENT_PO_CREATE,
   );
-  if (!ctx) return { success: false, error: "Không có quyền" };
+  if (!resolved.success) return resolved;
+  const { ctx, po } = resolved;
   const { supabase, claims } = ctx;
-  const { data: po, error: pe } = await supabase
-    .from("purchase_orders")
-    .select("id, status, branch_id")
-    .eq("id", parsed.data.poId)
-    .eq("tenant_id", claims.tenant_id)
-    .single();
-  if (pe || !po) return { success: false, error: "Không tìm thấy PO." };
   if (!canAccessProcurementBranch(claims, po.branch_id)) {
     return { success: false, error: "Bạn chỉ được cập nhật PO của kho mình." };
   }
@@ -385,11 +482,9 @@ export interface OpenPurchaseOrderRow {
 export async function fetchOpenPurchaseOrdersForReceiving(): Promise<
   ActionResult<OpenPurchaseOrderRow[]>
 > {
-  const ctx = await getAuthContextWithPermission(
-    ROLES,
-    PERMISSION_KEYS.PROCUREMENT_READ,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
+  const scoped = await getProcurementReadScope();
+  if (!scoped.success) return scoped;
+  const { ctx, branchId: effectiveBranchId } = scoped;
   const { supabase, claims } = ctx;
 
   let query = supabase
@@ -401,12 +496,8 @@ export async function fetchOpenPurchaseOrdersForReceiving(): Promise<
     .in("status", ["sent", "partially_received"])
     .order("ordered_at", { ascending: false });
 
-  if (
-    (claims.user_role === "warehouse_manager" ||
-      claims.user_role === "production_manager") &&
-    claims.branch_id != null
-  ) {
-    query = query.eq("branch_id", claims.branch_id);
+  if (effectiveBranchId != null) {
+    query = query.eq("branch_id", effectiveBranchId);
   }
 
   const { data, error } = await query;
@@ -471,9 +562,9 @@ export async function fetchPoSuggestions(input: {
   if (!parsed.success) {
     return { success: false, error: "Dữ liệu không hợp lệ" };
   }
-  const ctx = await getAuthContextWithPermission(
-    ROLES,
+  const ctx = await getAuthContextByPermission(
     PERMISSION_KEYS.PROCUREMENT_READ,
+    parsed.data.branchId,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
@@ -613,16 +704,18 @@ export const fetchPriceDeviations = withAction(
     roles: ROLES,
     schema: priceDeviationsSchema,
     permission: PERMISSION_KEYS.PROCUREMENT_READ,
+    permissionMode: "permission",
   },
   async (data, { supabase, claims }) => {
-    // 1. Fetch PO with supplier_id
-    const { data: po, error: e1 } = await supabase
-      .from("purchase_orders")
-      .select("id, supplier_id")
-      .eq("id", data.poId)
-      .eq("tenant_id", claims.tenant_id)
-      .single();
-    if (e1 || !po) return { success: false, error: "Không tìm thấy PO." };
+    const resolved = await getPurchaseOrderPermissionContext(
+      data.poId,
+      PERMISSION_KEYS.PROCUREMENT_READ,
+    );
+    if (!resolved.success) return resolved;
+    const po = resolved.po;
+    if (!canAccessProcurementBranch(claims, po.branch_id)) {
+      return { success: false, error: "Bạn chỉ được xem PO của kho mình." };
+    }
 
     // 2. Fetch PO lines that have a price estimate
     const { data: lines, error: e2 } = await supabase
@@ -701,12 +794,20 @@ export const fetchSinglePriceDeviation = withAction(
     roles: ROLES,
     schema: singleDeviationSchema,
     permission: PERMISSION_KEYS.PROCUREMENT_READ,
+    permissionMode: "permission",
   },
-  async (data, { supabase, claims }) => {
-    const { data: history } = await supabase
+  async (data, ctx) => {
+    const { supabase, claims } = ctx;
+    const scope = await resolveProcurementBranchScope(
+      ctx,
+      PERMISSION_KEYS.PROCUREMENT_READ,
+    );
+    if (!scope.success) return scope;
+
+    let query = supabase
       .from("grn_items")
       .select(
-        "unit_cost, goods_received_notes!inner ( supplier_id, status, received_date )",
+        "unit_cost, goods_received_notes!inner ( supplier_id, status, received_date, branch_id )",
       )
       .eq("ingredient_id", data.ingredientId)
       .eq("tenant_id", claims.tenant_id)
@@ -717,6 +818,12 @@ export const fetchSinglePriceDeviation = withAction(
         ascending: false,
       })
       .limit(3);
+
+    if (scope.branchId != null) {
+      query = query.eq("goods_received_notes.branch_id", scope.branchId);
+    }
+
+    const { data: history } = await query;
 
     if (!history || history.length === 0) return { success: true, data: null };
 
@@ -756,12 +863,20 @@ export const fetchIngredientPriceHistory = withAction(
     roles: ROLES,
     schema: priceHistorySchema,
     permission: PERMISSION_KEYS.PROCUREMENT_READ,
+    permissionMode: "permission",
   },
-  async (data, { supabase, claims }) => {
+  async (data, ctx) => {
+    const { supabase, claims } = ctx;
+    const scope = await resolveProcurementBranchScope(
+      ctx,
+      PERMISSION_KEYS.PROCUREMENT_READ,
+    );
+    if (!scope.success) return scope;
+
     let query = supabase
       .from("grn_items")
       .select(
-        "grn_id, unit_cost, received_quantity, unit, goods_received_notes!inner ( id, grn_number, received_date, status, supplier_id, suppliers ( id, name ) )",
+        "grn_id, unit_cost, received_quantity, unit, goods_received_notes!inner ( id, grn_number, received_date, status, supplier_id, branch_id, suppliers ( id, name ) )",
       )
       .eq("ingredient_id", data.ingredientId)
       .eq("tenant_id", claims.tenant_id)
@@ -774,6 +889,9 @@ export const fetchIngredientPriceHistory = withAction(
 
     if (data.supplierId) {
       query = query.eq("goods_received_notes.supplier_id", data.supplierId);
+    }
+    if (scope.branchId != null) {
+      query = query.eq("goods_received_notes.branch_id", scope.branchId);
     }
 
     const { data: rows, error } = await query;

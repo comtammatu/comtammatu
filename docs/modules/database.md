@@ -44,10 +44,10 @@ Defined in `packages/database/package.json`:
 ## Schema — Current Shape
 
 Source of truth: generated types from the live schema. Snapshot generated from
-the current checkout on 2026-05-24 with `node scripts/project-snapshot.mjs`:
+the current checkout on 2026-05-26 with `node scripts/project-snapshot.mjs`:
 
-- **115 tables**, **9 views**, **237 RPC/SQL functions**
-- **347 migration files** in `supabase/migrations/`
+- **116 tables**, **9 views**, **241 RPC/SQL functions**
+- **363 migration files** in `supabase/migrations/`
 - **0 enums** — `staff_role` ENUM was dropped (Auth cleanup, 2026-04-23); roles are now strings derived from `positions.legacy_role_code`
 
 ### DB Source-of-Truth Ladder

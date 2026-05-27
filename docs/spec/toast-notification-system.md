@@ -24,7 +24,7 @@ Do not collapse these channels. A toast is not an audit trail. An in-app notific
 
 Use these sources in order:
 
-1. Runtime UI contract: `docs/spec/design-system.md`
+1. Current runtime UI maintenance contract: `docs/spec/design-system.md` (frozen evidence, not UX rebuild authority)
 2. Toast primitive: `packages/ui/src/components/sonner.tsx`
 3. Durable feed actions: `apps/web/app/_actions/notifications.ts`
 4. Durable feed UI: `apps/web/app/_components/notification-*`

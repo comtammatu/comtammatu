@@ -4,14 +4,14 @@ import {
   buildAccessDeniedPath,
   canAccess,
   extractClaimsFromAccessToken,
+  getModulePermissionAccess,
   isAdminRoutePath,
   isBetaPath,
   isFeedbackPublicPath,
   isPublicAppPath,
   normalizeHost,
-  PERMISSION_KEYS,
   resolveHostSurface,
-  resolveLegacyRouteRedirectPath,
+  resolveRetiredRouteRedirectPath,
   resolveModuleFromPath,
   resolvePostLoginRedirect,
   stripBetaPrefix,
@@ -71,6 +71,27 @@ function redirectToDefaultLanding(
   return redirectWithCookies(url, sessionResponse);
 }
 
+function resolveRouteBranchId(
+  pathname: string,
+  surface: AuthSurface,
+): number | null {
+  const routePath = surface === "beta" ? stripBetaPrefix(pathname) : pathname;
+  const pathMatch = routePath.match(/^\/br\/(\d+)\//);
+  if (!pathMatch) return null;
+  return Number(pathMatch[1]);
+}
+
+function resolvePermissionResult(
+  results: ReadonlyArray<{ data: boolean | null; error: unknown }>,
+  mode: "any" | "all",
+): boolean {
+  if (mode === "all") {
+    return results.every(({ data, error }) => !error && data === true);
+  }
+
+  return results.some(({ data, error }) => !error && data === true);
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -117,7 +138,7 @@ export async function proxy(request: NextRequest) {
   }
 
   if (hostSurface === "app" && feedbackHost && isFeedbackPublicPath(pathname)) {
-    // App host receiving /r/* (e.g. legacy printed QR or shared link) →
+    // App host receiving /r/* (e.g. already printed QR or shared link) →
     // 308 to feedback host so the canonical origin serves the form. 308 keeps
     // method + body so any future POST to /r/<token> redirects intact.
     const target = new URL(
@@ -127,7 +148,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(target, 308);
   }
 
-  const surface: AuthSurface = isBetaPath(pathname) ? "beta" : "legacy";
+  const surface: AuthSurface = isBetaPath(pathname) ? "beta" : "app";
 
   // Public paths — skip auth. Includes `/access-denied` so the page can render
   // for any authenticated-but-blocked user without re-entering the ACL loop.
@@ -160,10 +181,10 @@ export async function proxy(request: NextRequest) {
   const { session, response, supabase } = await updateSession(request);
   const claims = extractClaimsFromAccessToken(session?.access_token);
 
-  const legacyRedirectPath = resolveLegacyRouteRedirectPath(pathname);
-  if (legacyRedirectPath) {
+  const retiredRedirectPath = resolveRetiredRouteRedirectPath(pathname);
+  if (retiredRedirectPath) {
     const url = request.nextUrl.clone();
-    url.pathname = legacyRedirectPath;
+    url.pathname = retiredRedirectPath;
     return redirectWithCookies(url, response);
   }
 
@@ -211,13 +232,62 @@ export async function proxy(request: NextRequest) {
     return redirectToAccessDenied(request, response, "missing-auth-context");
   }
 
-  // Module ACL: each route resolves to a ModuleKey, and the user's role
-  // must be in that module's allowedRoles. Admin routes that fail ACL
-  // redirect to the role's default landing page; non-admin routes redirect
-  // to /access-denied.
+  // Module ACL: permission gates are enforced first when a route has a PBAC
+  // contract. Role gates remain for discovery-only surfaces and routes that do
+  // not yet have a dedicated permission key.
   const moduleKey: ModuleKey | null = resolveModuleFromPath(pathname);
   if (moduleKey) {
-    if (!canAccess(claims.user_role, moduleKey)) {
+    const permissionAccess = getModulePermissionAccess(moduleKey);
+    const routeBranchId = resolveRouteBranchId(pathname, surface);
+
+    if (permissionAccess) {
+      let hasPermission: boolean;
+
+      if (permissionAccess.scope === "branch") {
+        if (routeBranchId === null) {
+          return redirectToAccessDenied(
+            request,
+            response,
+            "insufficient-permission",
+          );
+        }
+
+        const permissionResults = await Promise.all(
+          permissionAccess.keys.map((key) =>
+            supabase.rpc("has_permission", {
+              p_branch_id: routeBranchId,
+              p_key: key,
+            }),
+          ),
+        );
+        hasPermission = resolvePermissionResult(
+          permissionResults,
+          permissionAccess.mode,
+        );
+      } else {
+        const permissionResults = await Promise.all(
+          permissionAccess.keys.map((key) =>
+            supabase.rpc("has_permission_any", { p_key: key }),
+          ),
+        );
+        hasPermission = resolvePermissionResult(
+          permissionResults,
+          permissionAccess.mode,
+        );
+      }
+
+      if (!hasPermission) {
+        if (isAdminRoutePath(pathname)) {
+          return redirectToDefaultLanding(request, response, claims, surface);
+        }
+
+        return redirectToAccessDenied(
+          request,
+          response,
+          "insufficient-permission",
+        );
+      }
+    } else if (!canAccess(claims.user_role, moduleKey)) {
       if (isAdminRoutePath(pathname)) {
         return redirectToDefaultLanding(request, response, claims, surface);
       }
@@ -227,20 +297,6 @@ export async function proxy(request: NextRequest) {
         response,
         "insufficient-permission",
       );
-    }
-
-    if (moduleKey === "inventory_procurement") {
-      const { data: canReadProcurement, error } = await supabase.rpc(
-        "has_permission_any",
-        { p_key: PERMISSION_KEYS.PROCUREMENT_READ },
-      );
-      if (error || canReadProcurement !== true) {
-        return redirectToAccessDenied(
-          request,
-          response,
-          "insufficient-permission",
-        );
-      }
     }
 
     // Branch-scoped routes (POS/KDS + branch_settings + menu-limits) enforce
@@ -254,11 +310,7 @@ export async function proxy(request: NextRequest) {
       moduleKey === "branch_settings" ||
       moduleKey === "branch_menu_limits"
     ) {
-      const routePath = surface === "beta" ? stripBetaPrefix(pathname) : pathname;
-      const pathMatch = routePath.match(/^\/br\/(\d+)\//);
-      if (pathMatch) {
-        const routeBranchId = Number(pathMatch[1]);
-
+      if (routeBranchId !== null) {
         const crossBranchRoles: readonly string[] = [
           "owner",
           "super_manager",

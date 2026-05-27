@@ -118,8 +118,7 @@ interface PosSessionsClientProps {
   selectedSessionId: number | null;
   orders: PosSessionOrder[];
   report: PosSessionReport | null;
-  /** @deprecated D8 (2026-04-27): variance gate retired. Prop giữ để
-   * backward-compat với CloseSessionSheet, không gate UI nữa. */
+  /** D8 (2026-04-27): variance gate retired; prop no longer gates UI. */
   canOverrideVariance: boolean;
 }
 

@@ -12,6 +12,7 @@ import {
   sortKdsTicketsNewestFirst,
   uniqueNumbers,
 } from "./lib/query-helpers";
+import { KDS_VISIBLE_STATUSES } from "./lib/ticket-status";
 import type {
   KdsStation,
   KdsTicket,
@@ -31,12 +32,6 @@ const KDS_ORDER_ITEM_SELECT_BASE =
   "id, order_id, menu_item_id, item_name, variant_name, quantity, unit_price, status, note, modifiers, sides, menu_items(menu_categories(name,type))";
 const KDS_TICKET_SELECT =
   "id, station_id, order_id, order_item_id, kitchen_send_batch_id, status, bumped_at, created_at, updated_at";
-const KDS_ACTIVE_STATUSES = ["pending", "preparing"] as const;
-const KDS_VISIBLE_STATUSES = [
-  "pending",
-  "preparing",
-  "ready",
-] as const;
 
 type KdsSupabase = Awaited<ReturnType<typeof loadAuthState>>["supabase"];
 
@@ -72,16 +67,12 @@ function normalizeKdsOrderItems(
     (rows ?? []) as Array<
       Omit<KdsOrderItem, "is_priority" | "category_name" | "category_type"> & {
         is_priority?: boolean | null;
-        menu_items?:
-          | {
-              menu_categories?:
-                | {
-                    name?: string | null;
-                    type?: string | null;
-                  }
-                | null;
-            }
-          | null;
+        menu_items?: {
+          menu_categories?: {
+            name?: string | null;
+            type?: string | null;
+          } | null;
+        } | null;
       }
     >
   ).map((row) => {
@@ -180,13 +171,13 @@ async function fetchVisibleKdsTickets(args: {
   todayStartIso: string;
 }): Promise<{ tickets: KdsTicket[]; error: boolean }> {
   const { supabase, branchId, todayStartIso } = args;
-  const activeTicketsResult = await fetchPagedRows<KdsTicket>(
+  const visibleTicketsResult = await fetchPagedRows<KdsTicket>(
     async (from, to) => {
       const { data, error } = await supabase
         .from("kds_tickets")
         .select(KDS_TICKET_SELECT)
         .eq("branch_id", branchId)
-        .in("status", KDS_ACTIVE_STATUSES)
+        .in("status", [...KDS_VISIBLE_STATUSES])
         .gte("created_at", todayStartIso)
         .order("created_at", { ascending: false })
         .order("id", { ascending: false })
@@ -196,75 +187,12 @@ async function fetchVisibleKdsTickets(args: {
     },
   );
 
-  if (activeTicketsResult.error) {
-    return { tickets: [], error: true };
-  }
-
-  const activeTickets = activeTicketsResult.data ?? [];
-  const activeBatchIds = uniqueNumbers(
-    activeTickets
-      .map((ticket) => ticket.kitchen_send_batch_id)
-      .filter((id): id is number => id !== null),
-  );
-  const activeUngroupedOrderIds = uniqueNumbers(
-    activeTickets
-      .filter((ticket) => ticket.kitchen_send_batch_id === null)
-      .map((ticket) => ticket.order_id),
-  );
-
-  const chunks: KdsTicket[][] = [];
-
-  if (activeBatchIds.length > 0) {
-    const batchTicketsResult = await fetchChunkedRows<KdsTicket>(
-      activeBatchIds,
-      (batchIds) =>
-        fetchPagedRows<KdsTicket>(async (from, to) => {
-          const { data, error } = await supabase
-            .from("kds_tickets")
-            .select(KDS_TICKET_SELECT)
-            .eq("branch_id", branchId)
-            .in("status", KDS_VISIBLE_STATUSES)
-            .gte("created_at", todayStartIso)
-            .in("kitchen_send_batch_id", batchIds)
-            .order("created_at", { ascending: false })
-            .order("id", { ascending: false })
-            .range(from, to);
-
-          return { data: (data ?? null) as KdsTicket[] | null, error };
-        }),
-    );
-
-    if (batchTicketsResult.error) return { tickets: [], error: true };
-    chunks.push(batchTicketsResult.data ?? []);
-  }
-
-  if (activeUngroupedOrderIds.length > 0) {
-    const ungroupedTicketsResult = await fetchChunkedRows<KdsTicket>(
-      activeUngroupedOrderIds,
-      (orderIds) =>
-        fetchPagedRows<KdsTicket>(async (from, to) => {
-          const { data, error } = await supabase
-            .from("kds_tickets")
-            .select(KDS_TICKET_SELECT)
-            .eq("branch_id", branchId)
-            .in("status", KDS_VISIBLE_STATUSES)
-            .gte("created_at", todayStartIso)
-            .is("kitchen_send_batch_id", null)
-            .in("order_id", orderIds)
-            .order("created_at", { ascending: false })
-            .order("id", { ascending: false })
-            .range(from, to);
-
-          return { data: (data ?? null) as KdsTicket[] | null, error };
-        }),
-    );
-
-    if (ungroupedTicketsResult.error) return { tickets: [], error: true };
-    chunks.push(ungroupedTicketsResult.data ?? []);
-  }
+  if (visibleTicketsResult.error) return { tickets: [], error: true };
 
   return {
-    tickets: sortKdsTicketsNewestFirst(dedupeRowsById(chunks.flat())),
+    tickets: sortKdsTicketsNewestFirst(
+      dedupeRowsById(visibleTicketsResult.data ?? []),
+    ),
     error: false,
   };
 }

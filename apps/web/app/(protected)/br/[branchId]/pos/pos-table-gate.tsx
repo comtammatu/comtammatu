@@ -15,6 +15,7 @@ import type { BranchTable } from "./page";
 import {
   getPosTableTileVisualState,
   type PosTableOrderVisualState,
+  type PosTableTileVisualState,
 } from "./_lib/table-order-visual-state";
 import { TABLE_VI } from "@comtammatu/shared/messages";
 
@@ -35,6 +36,29 @@ interface TableButtonProps {
   orderCount: number;
   orderVisualState?: PosTableOrderVisualState;
   onTableSelect: (table: BranchTable) => void;
+}
+
+export function getPosTableTileToneClass({
+  isSelected,
+  tileVisualState,
+}: {
+  isSelected: boolean;
+  tileVisualState: PosTableTileVisualState;
+}): string {
+  if (isSelected) return "shadow-md";
+
+  switch (tileVisualState) {
+    case "empty":
+      return "bg-card shadow-sm hover:border-primary/25";
+    case "ready":
+      return "border-success/45 bg-success/25 text-success-foreground shadow-sm hover:border-success/60 hover:bg-success/30";
+    case "served":
+      return "border-success/55 bg-success/35 text-success-foreground shadow-sm hover:border-success/70 hover:bg-success/40";
+    case "active":
+      return "border-warning/55 bg-warning/35 text-warning-foreground shadow-sm hover:border-warning/70 hover:bg-warning/40";
+    case "muted":
+      return "bg-muted/55 text-muted-foreground shadow-sm hover:border-border";
+  }
 }
 
 const TableButton = memo(function TableButton({
@@ -74,17 +98,7 @@ const TableButton = memo(function TableButton({
       aria-label={messages.pos.tableGate.tableAria(table.number, statusLabel)}
       className={cn(
         "h-32 w-full min-w-0 flex-col items-stretch justify-start gap-2 p-2.5 text-left whitespace-normal hover:shadow-md sm:h-36 sm:gap-3 sm:p-3 lg:h-40 lg:p-4 xl:h-44",
-        isSelected
-          ? "shadow-md"
-          : tileVisualState === "empty"
-            ? "bg-card shadow-sm hover:border-primary/25"
-            : tileVisualState === "ready"
-              ? "border-success/35 bg-success/20 text-foreground shadow-sm hover:border-success/50 hover:bg-success/25"
-              : tileVisualState === "served"
-                ? "bg-success/10 text-foreground shadow-sm hover:border-success/35"
-              : tileVisualState === "active"
-                ? "bg-warning/10 text-foreground shadow-sm hover:border-warning/35"
-                : "bg-muted/55 text-muted-foreground shadow-sm hover:border-border",
+        getPosTableTileToneClass({ isSelected, tileVisualState }),
       )}
       onClick={handleClick}
     >

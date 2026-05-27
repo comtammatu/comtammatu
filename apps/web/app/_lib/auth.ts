@@ -1,25 +1,14 @@
 import { cache } from "react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { extractClaimsFromAccessToken } from "@comtammatu/shared/auth";
-import type { JwtClaims, PermissionKey, StaffRole } from "@comtammatu/shared/auth";
+import type {
+  JwtClaims,
+  PermissionKey,
+  StaffRole,
+} from "@comtammatu/shared/auth";
 import type { Session } from "@supabase/supabase-js";
 
-/**
- * Get authenticated user context with role authorization.
- * Returns null if unauthenticated, no claims, or role not in allowedRoles.
- *
- * Canonical copy — module-level `_lib/auth.ts` files re-export from here.
- *
- * Wrapped in React `cache()` so within ONE RSC render, parallel actions
- * sharing the same `allowedRoles` ref (e.g. `MODULE_ACL.pos.allowedRoles`
- * imported from a single module) dedupe to one `getUser()` HTTP roundtrip
- * + one `getSession()` cookie read. POS reload calls 7 actions that all
- * pass `POS_ROLES` — without this cache the page paid 7× ~150-300ms to
- * Supabase Auth. Cache scope is per-request; production safety unchanged.
- */
-export const getAuthContext = cache(async function getAuthContext(
-  allowedRoles: readonly StaffRole[],
-) {
+const getAuthenticatedContext = cache(async function getAuthenticatedContext() {
   const supabase = await createClient();
 
   // Server Actions use getUser() — it validates the JWT against Supabase Auth
@@ -44,14 +33,40 @@ export const getAuthContext = cache(async function getAuthContext(
   const claims = extractClaimsFromAccessToken(session?.access_token);
   if (!claims) return null;
 
-  if (!allowedRoles.includes(claims.user_role)) return null;
-
   return { supabase, claims, user };
 });
 
 type PermissionLike = PermissionKey | string;
 
-type AuthContext = NonNullable<Awaited<ReturnType<typeof getAuthContext>>>;
+type AuthContext = NonNullable<
+  Awaited<ReturnType<typeof getAuthenticatedContext>>
+>;
+
+export async function getAuthenticatedActionContext() {
+  return getAuthenticatedContext();
+}
+
+/**
+ * Get authenticated user context with role authorization.
+ * Returns null if unauthenticated, no claims, or role not in allowedRoles.
+ *
+ * Canonical copy — module-level `_lib/auth.ts` files re-export from here.
+ *
+ * Wrapped in React `cache()` so within ONE RSC render, parallel actions
+ * sharing the same `allowedRoles` ref (e.g. `MODULE_ACL.pos.allowedRoles`
+ * imported from a single module) dedupe after the shared authenticated context
+ * is loaded once. Cache scope is per-request; production safety unchanged.
+ */
+export const getAuthContext = cache(async function getAuthContext(
+  allowedRoles: readonly StaffRole[],
+) {
+  const ctx = await getAuthenticatedContext();
+  if (!ctx) return null;
+
+  if (!allowedRoles.includes(ctx.claims.user_role)) return null;
+
+  return ctx;
+});
 
 /**
  * Cached: identical (ctx, permission, branchId) tuples within one RSC render
@@ -79,6 +94,17 @@ const hasPermissionGrant = cache(async function hasPermissionGrant(
   return !error && data === true;
 });
 
+const hasTenantPermissionGrant = cache(async function hasTenantPermissionGrant(
+  ctx: AuthContext,
+  permission: PermissionLike,
+): Promise<boolean> {
+  const { data, error } = await ctx.supabase.rpc("has_permission", {
+    p_branch_id: null as unknown as number,
+    p_key: permission,
+  });
+  return !error && data === true;
+});
+
 // Cheap permission probe for callers that already have an `AuthContext`
 // (i.e. resolved `getUser()` + `getSession()` once). Use this for UI hints
 // like `canManageOrders` so the action does NOT pay a second `getUser()`
@@ -97,12 +123,51 @@ export async function probePermission(
   return hasPermissionGrant(ctx, permission, branchId);
 }
 
+export async function probeTenantPermission(
+  ctx: AuthContext,
+  permission: PermissionLike,
+): Promise<boolean> {
+  return hasTenantPermissionGrant(ctx, permission);
+}
+
+export async function getAuthContextWithTenantPermission(
+  allowedRoles: readonly StaffRole[],
+  permission: PermissionLike,
+) {
+  const ctx = await getAuthContext(allowedRoles);
+  if (!ctx) return null;
+
+  const allowed = await hasTenantPermissionGrant(ctx, permission);
+  return allowed ? ctx : null;
+}
+
 export async function getAuthContextWithPermission(
   allowedRoles: readonly StaffRole[],
   permission: PermissionLike,
   branchId?: number | null,
 ) {
   const ctx = await getAuthContext(allowedRoles);
+  if (!ctx) return null;
+
+  const allowed = await hasPermissionGrant(ctx, permission, branchId);
+  return allowed ? ctx : null;
+}
+
+export async function getAuthContextByTenantPermission(
+  permission: PermissionLike,
+) {
+  const ctx = await getAuthenticatedContext();
+  if (!ctx) return null;
+
+  const allowed = await hasTenantPermissionGrant(ctx, permission);
+  return allowed ? ctx : null;
+}
+
+export async function getAuthContextByPermission(
+  permission: PermissionLike,
+  branchId?: number | null,
+) {
+  const ctx = await getAuthenticatedContext();
   if (!ctx) return null;
 
   const allowed = await hasPermissionGrant(ctx, permission, branchId);
@@ -130,6 +195,19 @@ export async function getAuthContextWithAnyPermission(
   return grants.some(Boolean) ? ctx : null;
 }
 
+export async function getAuthContextByAnyPermission(
+  permissions: readonly PermissionLike[],
+  branchId?: number | null,
+) {
+  const ctx = await getAuthenticatedContext();
+  if (!ctx) return null;
+
+  const grants = await Promise.all(
+    permissions.map((p) => hasPermissionGrant(ctx, p, branchId)),
+  );
+  return grants.some(Boolean) ? ctx : null;
+}
+
 /**
  * AND-semantics: returns ctx only if user has EVERY listed permission. Same
  * parallel fan-out as the OR sibling above but ORs collapse with `.every()`
@@ -142,6 +220,19 @@ export async function getAuthContextWithPermissions(
   branchId?: number | null,
 ) {
   const ctx = await getAuthContext(allowedRoles);
+  if (!ctx) return null;
+
+  const grants = await Promise.all(
+    permissions.map((p) => hasPermissionGrant(ctx, p, branchId)),
+  );
+  return grants.every(Boolean) ? ctx : null;
+}
+
+export async function getAuthContextByPermissions(
+  permissions: readonly PermissionLike[],
+  branchId?: number | null,
+) {
+  const ctx = await getAuthenticatedContext();
   if (!ctx) return null;
 
   const grants = await Promise.all(

@@ -111,7 +111,7 @@ export async function createTaxInvoice(
     };
   }
 
-  // Check no existing active invoice for this order. Legacy `not_required`
+  // Check no existing active invoice for this order. Retired `not_required`
   // rows do NOT count as active so we can issue the legally required HĐĐT
   // for orders that were paid before the mandatory-per-payment correction.
   //
@@ -137,10 +137,9 @@ export async function createTaxInvoice(
 
   // Per-line VAT aggregation (rule VAT-PER-LINE-NOT-PER-INVOICE).
   // Each order_item carries its own vat_rate snapshot. For uniform-rate
-  // orders this is mathematically equivalent to the legacy
-  // `total / (1 + system_rate)` formula; for mixed-rate orders
-  // (cơm 8% + bia 10%) it produces the correct subtotal/VAT breakdown
-  // that the legacy single-rate division could not.
+  // orders this is mathematically equivalent to dividing by the system rate;
+  // for mixed-rate orders (cơm 8% + bia 10%) it produces the correct
+  // subtotal/VAT breakdown.
   const activeItems = order.order_items.filter(
     (item) => item.status !== "cancelled",
   );

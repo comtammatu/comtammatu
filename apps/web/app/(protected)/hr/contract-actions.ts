@@ -18,6 +18,7 @@ export const fetchContracts = withAction(
     roles: HR_ROLES,
     schema: fetchContractsSchema,
     permission: PERMISSION_KEYS.HR_CONTRACT_CREATE,
+    permissionMode: "permission",
   },
   async (data, { supabase, claims }) => {
     const { data: result, error } = await supabase
@@ -57,6 +58,7 @@ export const createContract = withAction(
     roles: HR_ROLES,
     schema: createContractSchema,
     permission: PERMISSION_KEYS.HR_CONTRACT_CREATE,
+    permissionMode: "permission",
   },
   async (data, { supabase, claims }) => {
     // Count existing contracts to determine sequence
@@ -139,6 +141,7 @@ export const terminateContract = withAction(
     roles: HR_ROLES,
     schema: terminateSchema,
     permission: PERMISSION_KEYS.HR_CONTRACT_CREATE,
+    permissionMode: "permission",
   },
   async (data, { supabase, claims }) => {
     const { data: result, error } = await supabase

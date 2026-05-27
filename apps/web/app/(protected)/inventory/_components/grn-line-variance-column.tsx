@@ -37,8 +37,8 @@ interface GrnLineVarianceColumnProps {
  * designed to drop into an existing GRN line row cell.
  *
  * Renders nothing when `varianceTier` is null/undefined AND
- * `baselineSource` is not 'paused'/'none' (e.g. legacy rows
- * before variance trigger was installed).
+ * `baselineSource` is not 'paused'/'none' (rows created before the variance
+ * trigger was installed).
  */
 export function GrnLineVarianceColumn({
   line,

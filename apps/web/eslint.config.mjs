@@ -59,7 +59,7 @@ function reportInlineVietnamese(context, node) {
 
 // Custom rule: flag inline Vietnamese strings in JSX text nodes and
 // user-facing attributes (title/placeholder/aria-label/alt). Severity is
-// "warn" for new offenders. Legacy offenders are explicitly baselined in
+// "warn" for new offenders. Existing offenders are explicitly baselined in
 // `eslint-i18n-baseline.json`; run with `I18N_BASELINE_DISABLE=1` to see the
 // full Phase 2 sweep list. Escape hatch: `// eslint-disable-next-line` with
 // `vi-allow:` reason for legal-fixed strings (HĐĐT/MST/...) or domain edge cases.

@@ -15,7 +15,7 @@ import {
 } from "@comtammatu/ui/components/dialog";
 import { FieldGroup } from "@comtammatu/ui/components/field";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { ACTIONS_VI, ERRORS_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI, ERRORS_VI, STAFF_VI } from "@comtammatu/shared/messages";
 import { HQ_EXCLUDED_OPERATIONAL_ROLES } from "@comtammatu/shared/auth";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { SelectField, TextField, valuesToFormData } from "@/components/form";
@@ -30,7 +30,7 @@ const staffSchema = z.object({
   password: z.string().optional(),
   full_name: z.string().trim().min(1, { error: "Họ tên không được trống" }),
   phone: z.string().trim().optional(),
-  role: z.string().min(1, { error: "Vui lòng chọn vai trò" }),
+  role: z.string().min(1, { error: "Vui lòng chọn chức vụ" }),
   branch_id: z.string().optional(),
 });
 
@@ -47,7 +47,7 @@ function toFormValues(staff: StaffRow | null | undefined): StaffFormValues {
     password: "",
     full_name: staff?.full_name ?? "",
     phone: staff?.phone ?? "",
-    role: staff?.role ?? "waiter",
+    role: staff?.role !== "unassigned" ? (staff?.role ?? "waiter") : "waiter",
     branch_id: staff?.branch_id != null ? String(staff.branch_id) : NO_BRANCH,
   };
 }
@@ -128,7 +128,11 @@ export function StaffFormDialog({
         phone: values.phone,
         role: values.role,
       };
-      if (!isTenantLevel && values.branch_id && values.branch_id !== NO_BRANCH) {
+      if (
+        !isTenantLevel &&
+        values.branch_id &&
+        values.branch_id !== NO_BRANCH
+      ) {
         payload.branch_id = values.branch_id;
       }
       if (!isEdit) {
@@ -202,9 +206,9 @@ export function StaffFormDialog({
             <SelectField
               control={form.control}
               name="role"
-              label="Vai trò"
+              label={STAFF_VI.role}
               options={ROLE_OPTIONS}
-              placeholder="Chọn vai trò"
+              placeholder={STAFF_VI.selectRole}
               required
             />
 

@@ -26,6 +26,9 @@ pnpm db:types     # Regenerate Supabase types after migration is applied to the 
 - NEVER apply migrations directly to production. Production flow: write migration file → PR → merge → owner applies manually.
 - After SQL migration is applied to the schema used for generated types, run `pnpm db:types`.
 - ACL single source: `packages/shared/src/auth/module-acl.ts`.
+- Baseline hygiene gate: active source must not introduce unclassified
+  legacy/deprecated/dead-code markers. Run `pnpm lint:baseline` for the focused
+  check; `pnpm lint` includes it.
 - NEVER add agent notes, dev commit notes, implementation explanations, or internal commentary to project UI.
 - Put durable explanations, guides, operational notes, and task notes in Markdown docs, guides, or note files inside the source tree.
 
@@ -88,4 +91,3 @@ context-graph serve --port 3333
 ```
 
 Use `rg` or `rg --files` for normal text and file searches when available.
-

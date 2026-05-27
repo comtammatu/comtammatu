@@ -1,10 +1,10 @@
 # Auth & ACL Module
 
-> **Auth (shipped 2026-04-22/23):** Position (HR chức vụ) is separated from Permission (quyền truy cập). Authz runs against a normalized `staff_permissions(user_id, branch_id, permission_key, valid_from, valid_until)` table, gated by RLS via `has_permission(branch_id, key)`. Legacy role strings (`branch_manager`, `cashier`, …) are still emitted in JWT as `user_role` for backward compat — they're derived from `positions.legacy_role_code`. `profiles.role` column + `staff_role` enum **dropped**. See the Auth section below.
+> **Auth (shipped 2026-04-22/23, green baseline reset 2026-06-01):** Position (HR chức vụ) is separated from Permission (quyền truy cập). Authz runs against a normalized `staff_permissions(user_id, branch_id, permission_key, valid_from, valid_until)` table, gated by RLS via `has_permission(branch_id, key)`. The `user_role` JWT bucket remains for route ACL and is derived from canonical English `positions.code`, not from HR labels or removed profile role storage. `profiles.role` column + `staff_role` enum **dropped**. See the Auth section below.
 
 ## Overview
 
-Authentication and authorization for the entire system. Every request passes through this module before reaching any feature code. The auth chain spans four layers: Supabase Auth (identity), JWT custom claims hook (position + legacy-role injection), proxy.ts (route-level ACL enforcement), and RLS with `has_permission()` (row-level, permission-driven).
+Authentication and authorization for the entire system. Every request passes through this module before reaching any feature code. The auth chain spans four layers: Supabase Auth (identity), JWT custom claims hook (position + route ACL bucket injection), proxy.ts (route-level ACL enforcement), and RLS with `has_permission()` (row-level, permission-driven).
 
 **Owner:** `packages/shared/src/auth/` + `apps/web/proxy.ts` + `supabase/migrations/*jwt*` + `supabase/migrations/*auth_v2*`
 
@@ -13,7 +13,7 @@ Authentication and authorization for the entire system. Every request passes thr
 | File                                                            | Purpose                                                                                        | Lines                     |
 | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------- |
 | `packages/shared/src/auth/types.ts`                             | Role enum, JWT claims shape (`user_role` + optional `position`), scope types                   | Core types                |
-| `packages/shared/src/auth/module-acl.ts`                        | Module → allowed roles mapping, `canAccess()`, `getAccessibleModules()`                        | Route-level ACL (legacy)  |
+| `packages/shared/src/auth/module-acl.ts`                        | Module → allowed roles mapping, `canAccess()`, `getAccessibleModules()`                        | Route-level ACL           |
 | `packages/shared/src/auth/permissions.ts`                       | `PERMISSION_KEYS` (87 keys), `hasPermission()`, `hasAny/All` pure fns — **Auth authz**      | Permission catalog        |
 | `packages/shared/src/auth/scope.ts`                             | `extractClaims()` + `decodeJwtAppMetadata()` + `extractClaimsFromAccessToken()`                | JWT claim extraction      |
 | `packages/shared/src/auth/nav-config.ts`                        | Admin sidebar navigation groups filtered by role                                               | UI navigation             |
@@ -41,7 +41,7 @@ owner                          ← governance + tenant-wide oversight, including
 └── office                     ← HQ staff, no branch assignment
 ```
 
-Legacy role strings (`owner`, `cashier`, …) still exist as `STAFF_ROLES` TS constants and are emitted in JWT `user_role` for backward compat. They are **derived** from `positions.legacy_role_code` — the `staff_role` enum + `profiles.role` column were dropped (2026-04-23). To add a new legacy role value, update `STAFF_ROLES` + `positions.legacy_role_code` mapping in the seed. To add a new HR position, insert into `positions` with the proper `legacy_role_code` bridge.
+Route ACL role buckets (`owner`, `cashier`, …) still exist as `STAFF_ROLES` TS constants and are emitted in JWT `user_role`. They are **derived** from canonical English `positions.code` via `private.staff_role_from_position_code()`; the `staff_role` enum + `profiles.role` column were dropped (2026-04-23). To add a new route ACL bucket, update `STAFF_ROLES` + the explicit position-code mapping. To add a new HR position, insert into `positions` with an English `lower_snake_case` code and Vietnamese display in `label_vi`.
 
 ## RLS Gate Choice — `has_permission()` vs `auth_role()`
 
@@ -58,7 +58,7 @@ Two parallel ACL mechanisms exist; pick the right one:
 ## Invariants (post H3a, 2026-05-07)
 
 - **`profiles.position_id` is NOT NULL** + FK `ON DELETE RESTRICT`. Every active or inactive profile MUST point to a seeded position in its tenant. Enforced by migration `20260601100000_auth_v3_h3a_position_id_required.sql`.
-  - `handle_new_user` trigger raises `position_not_resolved` (SQLSTATE P0001) if `raw_app_meta_data->>'role'` does not map to a seeded position — signup fails loudly instead of inserting a broken profile (which would silently demote the new user to `'office'` via the JWT hook's `COALESCE(po.legacy_role_code, 'office')`).
+  - `handle_new_user` trigger raises `position_not_resolved` (SQLSTATE P0001) if `raw_app_meta_data->>'role'` does not map to a seeded canonical position — signup fails loudly instead of inserting a broken profile.
   - `admin_update_profile` raises the same exception if a manager passes a role that does not resolve to a position for the tenant.
   - Deleting a position with active profiles raises `foreign_key_violation` (SQLSTATE 23503). Admins must reassign profiles before deleting.
 - **Owner identity** is currently HR-position-based (`positions.code='owner'`). `tenants.representative` is a free-text legal-document name (TEXT, not UUID), NOT a user identity oracle. A future `tenants.owner_user_id UUID` column + ADR is tracked as **H3b** (deferred) for defense-in-depth.
@@ -67,7 +67,7 @@ Two parallel ACL mechanisms exist; pick the right one:
 
 | Concept        | Storage                                                                          | Purpose                                                                                                                                                       |
 | -------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Position**   | `positions` (per tenant) + `profiles.position_id`                                | HR chức vụ label. Blue still has legacy codes like `kho_truong` / `quan_ly_CN`; green baseline maps these to English codes per ADR-0004. Does not gate authz. |
+| **Position**   | `positions` (per tenant) + `profiles.position_id`                                | HR chức vụ identity. `positions.code` is canonical English `lower_snake_case`; Vietnamese display belongs in `label_vi`. Does not gate authz. |
 | **Permission** | `permission_keys` catalog (global)                                               | Canonical action strings: `inventory:read`, `pos:use`, 87 keys.                                                                                               |
 | **Grant**      | `staff_permissions(user_id, branch_id, permission_key, valid_from, valid_until)` | Source of truth for authz. `branch_id IS NULL` ⇒ tenant-wide. Temporal window.                                                                                |
 | **Template**   | `role_templates(permission_keys[])`                                              | Preset bundle applied when assigning a position (snapshot; edits don't propagate).                                                                            |
@@ -87,7 +87,7 @@ Owner is protected: RPCs refuse to touch a user whose position code is `owner` (
 1. User submits credentials at `/login` (`apps/web/app/(public)/(auth)/login/actions.ts`)
 2. Server action calls `supabase.auth.signInWithPassword()`
 3. Supabase fires `custom_access_token_hook()` — SECURITY DEFINER
-4. Hook reads `profiles` + `positions`, injects `{tenant_id, branch_id, user_role, position}` into JWT `app_metadata`. `user_role` derives from `positions.legacy_role_code`; `position` is the HR code.
+4. Hook reads `profiles` + `positions`, injects `{tenant_id, branch_id, user_role, position}` into JWT `app_metadata`. `user_role` derives from canonical `positions.code`; `position` is the HR code.
 5. JWT returned to client, stored in cookies via `@supabase/ssr`
 6. Every subsequent request:
    - Proxy calls `updateSession()` → `extractClaimsFromAccessToken(session.access_token)` → `canAccess(user_role, module)` (route gate)
@@ -122,9 +122,9 @@ Defined in `packages/shared/src/auth/module-acl.ts`. Single source of truth — 
 | employee                                                | ✓     | ✓         | ✓        | ✓          | ✓      | ✓        | ✓       | ✓      | ✓    | ✓      |
 | notifications                                           | ✓     | ✓         | ✓        | ✓          | ✓      | ✓        | ✓       | ✓      | ✓    | ✓      |
 
-> `wh_mgr` = `warehouse_manager`, `prod_mgr` = `production_manager`. Route-level ACL đọc `user_role` từ JWT, derived từ `positions.legacy_role_code`. Row-level authz vẫn đi qua `has_permission(branch_id, key)` — matrix này chỉ là fast gate.
+> `wh_mgr` = `warehouse_manager`, `prod_mgr` = `production_manager`. Route-level ACL đọc `user_role` từ JWT, derived từ canonical `positions.code`. Row-level authz vẫn đi qua `has_permission(branch_id, key)` — matrix này chỉ là fast gate.
 >
-> Inventory mutating RPC chính đã permission-gated; phần `auth_role()` còn lại là route/side/scope guard hoặc legacy helper. Xem `docs/ref/inventory-rbac-matrix.md` §6.
+> Inventory mutating RPC chính đã permission-gated; phần `auth_role()` còn lại là route/side/scope guard. Xem `docs/ref/inventory-rbac-matrix.md` §6.
 
 **Owner (chủ sở hữu):** ngoài các module quản trị / giám sát còn có thể vào `orders` và `inventory` để kiểm tra trực tiếp vận hành tenant-level. Tuy vậy owner không được coi là operator hằng ngày trong inventory docs/UI; các bề mặt Inventory hiện tối ưu cho `super_manager`, `area_manager`, `branch_manager`.
 
@@ -203,7 +203,7 @@ Single canonical helper cho "send blocked user somewhere they can read what happ
 | Change                       | Affected                                                                                                                                                                              |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Add new permission key       | Migration (INSERT into `permission_keys`) + `packages/shared/src/auth/permissions.ts` constant                                                                                        |
-| Add new position             | Migration (INSERT into `positions` with `legacy_role_code` mapping) + seed script                                                                                                     |
+| Add new position             | Migration (INSERT into `positions` with canonical English `code` + Vietnamese `label_vi`) + seed script                                                                               |
 | Add new role_template        | Migration (INSERT into `role_templates`) or via admin RPC                                                                                                                             |
 | Add new module to route ACL  | module-acl.ts + proxy.ts `resolveModule()` + nav-config.ts                                                                                                                            |
 | Change JWT claims shape      | hook SQL + types.ts + scope.ts + proxy.ts. Always check `record.tenant_id IS NOT NULL` not `record IS NOT NULL` in plpgsql (see `PLPGSQL-RECORD-IS-NOT-NULL` regression).             |

@@ -1,38 +1,46 @@
 import { canAccess } from "./module-acl";
 import {
+  isStaffRole,
+  resolveStaffRoleFromPositionCode,
+} from "./position-roles";
+import {
   isAdminRoutePath,
   isBetaPath,
-  resolveLegacyRouteRedirectPath,
+  resolveRetiredRouteRedirectPath,
   resolveModuleFromPath,
   stripBetaPrefix,
 } from "./route-resolution";
 import type { JwtClaims, ScopeIds, StaffRole } from "./types";
 import { ADMIN_ROLES, BRANCH_ROLES } from "./types";
 
-export type AuthSurface = "legacy" | "beta";
+export type AuthSurface = "app" | "beta";
 
 /** Extract claims from Supabase user app_metadata */
 export function extractClaims(
   appMetadata: Record<string, unknown>,
 ): JwtClaims | null {
   const tenantId = appMetadata.tenant_id;
-  // JWT hook writes "user_role", raw app_metadata has "role"
-  const role = appMetadata.user_role ?? appMetadata.role;
+  const position = appMetadata.position;
+  const positionCode = typeof position === "string" ? position : undefined;
+  const positionRole = resolveStaffRoleFromPositionCode(positionCode);
+  const rawRole = appMetadata.user_role ?? appMetadata.role;
+  const fallbackRole =
+    typeof rawRole === "string" && isStaffRole(rawRole) ? rawRole : null;
+  const role = positionRole ?? fallbackRole;
 
-  if (typeof tenantId !== "number" || typeof role !== "string") {
+  if (typeof tenantId !== "number" || role == null) {
     return null;
   }
 
   const branchId = appMetadata.branch_id;
   const areaId = appMetadata.area_id;
-  const position = appMetadata.position;
 
   return {
     tenant_id: tenantId,
     branch_id: typeof branchId === "number" ? branchId : null,
     area_id: typeof areaId === "number" ? areaId : null,
-    user_role: role as StaffRole,
-    position: typeof position === "string" ? position : undefined,
+    user_role: role,
+    position: positionCode,
   };
 }
 
@@ -177,7 +185,7 @@ function getSurfaceDefaultRedirect(
  *  2. Role's default landing page (`getDefaultRedirect` /
  *     `getBetaDefaultRedirect`).
  *
- * Surface is carried through so beta users stay on `/beta/*` and legacy users
+ * Surface is carried through so beta users stay on `/beta/*` and app users
  * stay on root paths.
  */
 export function resolvePostLoginRedirect(
@@ -185,7 +193,7 @@ export function resolvePostLoginRedirect(
   returnTo: string | null | undefined,
   options?: { surface?: AuthSurface },
 ): string {
-  const surface: AuthSurface = options?.surface ?? "legacy";
+  const surface: AuthSurface = options?.surface ?? "app";
   const fallback = getSurfaceDefaultRedirect(claims, surface);
   const safeReturnTo = getSafeInternalReturnTo(returnTo);
 
@@ -196,9 +204,11 @@ export function resolvePostLoginRedirect(
   const targetPath =
     surface === "beta" ? toBetaPath(safeReturnTo) : safeReturnTo;
   const targetUrl = new URL(targetPath, "http://localhost");
-  const legacyRedirectPath = resolveLegacyRouteRedirectPath(targetUrl.pathname);
-  if (legacyRedirectPath) {
-    targetUrl.pathname = legacyRedirectPath;
+  const retiredRedirectPath = resolveRetiredRouteRedirectPath(
+    targetUrl.pathname,
+  );
+  if (retiredRedirectPath) {
+    targetUrl.pathname = retiredRedirectPath;
   }
 
   // Guard against bouncing the user back to the login route itself.
@@ -235,13 +245,10 @@ export function resolvePostLoginRedirect(
     const routeBranchId = branchMatch ? Number(branchMatch[1]) : null;
 
     const allowCrossBranchSettings =
-      (moduleKey === "branch_settings" ||
-        moduleKey === "branch_menu_limits") &&
-      (
-        claims.user_role === "owner" ||
+      (moduleKey === "branch_settings" || moduleKey === "branch_menu_limits") &&
+      (claims.user_role === "owner" ||
         claims.user_role === "super_manager" ||
-        claims.user_role === "area_manager"
-      );
+        claims.user_role === "area_manager");
 
     if (
       routeBranchId === null ||

@@ -40,11 +40,11 @@ export default async function PermissionsPage() {
   const scopedPerms = branchPermsRes.filter((p) => p.branchId !== null);
 
   const position = claims.position ?? null;
-  const legacyRole = claims.user_role;
+  const roleCode = claims.user_role;
   const positionDisplay = position
     ? (positionLabel.get(position) ?? position)
     : "Chưa gắn";
-  const roleDisplay = ROLE_LABEL_VI[legacyRole] ?? legacyRole;
+  const roleDisplay = ROLE_LABEL_VI[roleCode] ?? roleCode;
 
   return (
     <EmployeePage

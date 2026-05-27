@@ -653,8 +653,7 @@ function PosDesktopInner({
       if (activeOrders.length === 0) {
         // Edge case: tables.status is occupied but no active order surfaces in
         // the current orders list (stale realtime, cross-session race). Fall
-        // back to the legacy single-fetch path so the cashier still sees the
-        // row instead of an empty picker.
+        // back to a single-table fetch so the cashier still sees the row.
         startTransition(async () => {
           const result = await fetchActiveOrderForTable(branchId, table.id);
           if (result.success && result.data) {

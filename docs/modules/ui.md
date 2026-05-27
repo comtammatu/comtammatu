@@ -2,14 +2,20 @@
 
 ## Overview
 
-UI cua repo phai di truc tiep tren `shadcn/ui` preset hien hanh. Khong con helper layer hay theme system rieng cua du an.
+UI runtime hien tai di tren `shadcn/ui` preset dang duoc dong bang, nhung contract do da
+duoc dong bang thanh legacy runtime maintenance contract. Khong duoc dung no lam
+authority de trung tu UX moi.
 
-Single source of truth for agent decisions:
+Frozen maintenance source for current runtime decisions:
 
 1. `docs/spec/design-system.md`
 
-Runtime config, primitives, adapters, and regression rules are evidence and
-enforcement for that contract. They do not authorize a second design system:
+No broad UX rebuild source of truth exists until owner chon UX
+reference/direction va authority set duoc update cung luc. Scoped Khung quản trị
+rebuild authority da duoc mo rieng trong `docs/spec/design-system.md`. Runtime
+config, primitives, adapters, and regression rules are evidence and enforcement
+for the maintenance/Khung quản trị contract. They do not authorize a second design
+system:
 
 - `apps/web/components.json`
 - `packages/ui/components.json`
@@ -20,16 +26,20 @@ enforcement for that contract. They do not authorize a second design system:
 - `tasks/regressions.md`
 
 Runtime files are evidence. If runtime comments, package metadata, generated
-tokens, or archived docs disagree with `docs/spec/design-system.md`, treat that
-as drift and fix the contract/runtime before building new UI.
+tokens, or archived docs disagree with the frozen maintenance contract, treat
+that as drift. For UX rebuild, do not migrate runtime back to the frozen legacy
+contract; replace/update the authority set first.
 
 ## Design System Contract
 
-Doc chot duy nhat: `docs/spec/design-system.md`.
+Doc maintenance hien tai: `docs/spec/design-system.md`.
 
-Tat ca UI/UX rebuild phai di theo contract do truoc khi sua runtime. Design system cua repo la:
+Tat ca UI/UX rebuild phai doi owner-approved UX reference va contract moi truoc
+khi sua runtime, tru Khung quản trị slice da duoc authority reset rieng. Frozen
+runtime design system cua repo hien la:
 
-- shadcn preset hien hanh (`radix-lyra`, resolved preset `buFywKm`, `neutral`, `lucide`)
+- shadcn target `apps/web` preset evidence dang duoc dong bang
+  (`buFywKm`, `radix-lyra`, `neutral`, `lucide`)
 - Ma Tu Concept 01 brand tokens trong `packages/ui/src/styles/globals.css`
 - Ma Tu Concept 01 typography: Inter body, Montserrat heading, JetBrains Mono operational data
 - primitive source trong `packages/ui/src/components/*`
@@ -39,7 +49,20 @@ Tat ca UI/UX rebuild phai di theo contract do truoc khi sua runtime. Design syst
 - glossary/copy source trong `docs/ref/glossary.md` va shared label dictionaries
 - toast/notification contract trong `docs/spec/toast-notification-system.md`
 
-Khong duoc coi design system la mot layer moi tach rieng khoi shadcn. Neu can pattern moi, update `docs/spec/design-system.md` truoc, roi moi rollout vao code.
+Khong duoc coi frozen maintenance contract la authority cho UX moi. Neu can pattern moi
+cho rebuild, update `docs/spec/design-system.md`, `docs/agent/rules/ui.md`,
+`docs/modules/ui.md`, `tasks/regressions.md`, va
+`scripts/check-ui-contract.mjs` truoc, roi moi rollout vao code.
+
+Khung quản trị rebuild hien duoc phe duyet trong pham vi shell chrome:
+
+- surface: `AppShell` / `AdminShell`
+- route family: `/admin/*` first; shared management shell chi duoc thay doi neu
+  giu cung contract cho Inventory/Finance/HR/Menu/Orders
+- primitives: `Sidebar`, `Breadcrumb`, `Button`, `Avatar`, `Badge`,
+  `Separator`, va cac `Sidebar*` composition primitives
+- khong run `shadcn init --preset b6FS5q9aq` cho den khi owner chon reinstall,
+  merge, hoac skip
 
 ### Legacy Pilot Layer Retirement
 
@@ -67,9 +90,14 @@ Read order cho agent khi lam UI:
 4. `tasks/regressions.md`
 5. Domain docs lien quan den route dang sua
 
-## Reset Contract
+## Frozen Runtime Contract
 
-Reset hien tai duoc thuc hien bang `shadcn` resolved preset `buFywKm` / `radix-lyra` cho monorepo `apps/web` + `packages/ui`, sau do map token semantic sang Ma Tu Concept 01.
+Runtime hien tai duoc thuc hien bang `shadcn` target `apps/web` resolved
+preset evidence `buFywKm` / `radix-lyra`. `packages/ui` la noi chua shared
+components va `globals.css`; config cua package nay phai match style/base/icon/CSS
+contract, nhung khong duoc tao preset authority thu hai. Sau do runtime map
+token semantic sang Ma Tu Concept 01. Day la frozen runtime evidence, khong phai
+rebuild authority.
 
 Dieu nay co nghia:
 
@@ -77,7 +105,7 @@ Dieu nay co nghia:
 - brand color/typography phai di qua semantic token va font variables chung
 - body/content dung `font-sans` (Inter), heading/title dung `font-heading` (Montserrat), operational data/code/id/price/qty dung `font-mono` (JetBrains Mono)
 - static public artifact nhu `docs/status/index.html` phai mirror cung font stack; khong dung lai Be Vietnam Pro, Geist, `font-matu-body`, hoac font rieng theo surface
-- page/shell chi duoc compose tu primitives co san
+- maintenance page/shell chi duoc compose tu primitives co san
 - logo/brand lockup trong web runtime phai di qua `BrandMark` / `BrandLockup`
 - khong duoc giu `app-*` helper classes
 - khong duoc giu custom background/theme chrome o root
@@ -110,7 +138,9 @@ scrolling. Khong dung local `className="p-0"` hoac
 
 ## App Surface Adapters
 
-`apps/web/app/components/surface.tsx` la adapter layer duy nhat cho cac pattern lap lai o app level:
+`apps/web/app/components/surface.tsx` la frozen-runtime maintenance adapter
+layer cho cac pattern lap lai o app level hien tai. No khong phai shell/layout
+source cho UX rebuild moi.
 
 - `AppPage` cho content container/width/scroll rhythm.
 - `AppPageHeader` cho page heading, description, badge, action.
@@ -119,7 +149,11 @@ scrolling. Khong dung local `className="p-0"` hoac
 - `AppEmptyState` cho empty/no-result/no-access/error state.
 - `AppLinkCard` cho navigation/action card.
 
-Domain wrappers nhu Inventory/Employee/Admin co the giu API rieng de tranh sua hang loat call site, nhung phai delegate ve cac adapter nay thay vi tu style lai `Card`, `Empty`, hoac page container.
+Domain wrappers nhu Inventory/Employee/Admin co the giu API rieng de tranh sua
+hang loat call site trong maintenance, nhung phai delegate ve cac adapter nay
+thay vi tu style lai `Card`, `Empty`, hoac page container. Neu dang lam UX
+rebuild, phai replace/update authority set truoc khi dung hoac thay the adapter
+layer nay.
 
 ## Keyboard Shortcuts
 
@@ -216,7 +250,7 @@ Sidebar labels phai ngan va scan duoc trong rail co dinh. Ten day du cua luong d
 Cho phep:
 
 - wrapper nho de tap hop du lieu, nav, va structure
-- wrapper domain delegate ve `apps/web/app/components/surface.tsx`
+- wrapper domain delegate ve `apps/web/app/components/surface.tsx` cho maintenance
 - dung `className` de sap xep layout co ban
 - compose truc tiep tu shadcn primitives
 
@@ -226,7 +260,7 @@ Khong cho phep:
 - custom theme layer
 - legacy pilot layer `matu-surface` / `matu-*`
 - wrapper override visual contract cua primitive
-- module tu tao lai page/header/section/toolbar/empty/link-card thay vi delegate ve `apps/web/app/components/surface.tsx`
+- module tu tao lai page/header/section/toolbar/empty/link-card thay vi delegate ve `apps/web/app/components/surface.tsx` trong maintenance
 - dung `div` / `span` / `p` thuong de gia lap `Card`, `Badge`, `Button`, `Table`, `Tabs`, `Input`, `Select`
 - per-surface `theme.css`
 - shell chrome tu che de thay cho stock shadcn structure
@@ -247,6 +281,9 @@ Quy tac review:
 
 Truoc khi rebuild mot surface, agent phai ghi ro trong plan:
 
+- confirmation rang frozen legacy runtime contract khong duoc dung lam visual authority
+- UX reference/direction da duoc owner chon
+- authority reset docs + guard da duoc update truoc runtime patch
 - surface va route family dang sua
 - primary user job cua surface do
 - UI thay doi thuoc nhom visual refactor, UX flow, copy, hay behavior
@@ -255,12 +292,14 @@ Truoc khi rebuild mot surface, agent phai ghi ro trong plan:
 
 Rebuild theo wave nho:
 
-1. Lock design system va rule.
-2. Audit route family.
-3. Chuan hoa shell/layout/state primitives.
-4. Sua flow chinh.
-5. Verify mobile first viewport + desktop density.
-6. Update docs/regressions neu phat sinh rule moi.
+1. Freeze current runtime UI; no layout implementation.
+2. Choose UX reference/direction with owner.
+3. Replace/update design-system authority docs + guard.
+4. Audit route family.
+5. Chuan hoa shell/layout/state primitives.
+6. Sua flow chinh.
+7. Verify mobile first viewport + desktop density.
+8. Update docs/regressions neu phat sinh rule moi.
 
 Khong gom nhieu route family lon vao mot PR neu khong can thiet.
 

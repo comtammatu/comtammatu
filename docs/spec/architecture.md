@@ -54,7 +54,25 @@ Login → signInWithPassword() → custom_access_token_hook (SECURITY DEFINER)
 Every DB query/mutation → RLS → has_permission(branch_id, key) on staff_permissions
 ```
 
-**Auth v2 layer:** `user_role` is derived from `positions.legacy_role_code` and kept for backward compat (route-level `canAccess`). Row-level authz runs against the `staff_permissions` grant table via the `has_permission()` SQL helper (owner bypass, temporal validity window, tenant-wide via NULL branch). See `docs/modules/auth.md` for the full model.
+**Auth v2 layer:** `user_role` is derived from the `positions.legacy_role_code`
+bridge column for route-level `canAccess`. Row-level authz runs against the
+`staff_permissions` grant table via the `has_permission()` SQL helper (owner
+bypass, temporal validity window, tenant-wide via NULL branch). Target baseline
+direction follows the `matu-platform` separation of identity, position,
+permission, and scope: position labels do not grant permissions. See
+`docs/modules/auth.md` for the full model.
+
+## Upgrade Baseline Architecture Blend
+
+The next-project baseline is not a folder copy from either repo. It keeps
+`comtammatu` as the verified runtime source for PWA, `proxy.ts`, Supabase
+RLS/RPC, print-agent, POS/KDS, Finance, and provider integrations. It adopts
+from `matu-platform` the stronger target principles: explicit permission/scope
+resolution, ledger-first inventory, operator job surfaces, provider fail-closed
+contracts, and branch/device identity from registry state.
+
+Paused native/mobile folders and old phone-app assumptions are evidence only.
+They are not architecture, routing, state, or UI authority for this baseline.
 
 ### Role → Default Route
 
@@ -99,7 +117,7 @@ flowchart TB
     app["Execution Plane<br/>apps/web App Router + Server Actions"]
     domain["Domain Plane<br/>packages/shared"]
     data["Data Plane<br/>packages/database + supabase/*"]
-    ui["UI Plane<br/>packages/ui + design-system primitives"]
+    ui["UI Plane<br/>packages/ui + frozen runtime UI contract"]
     edge["Branch Edge Plane<br/>apps/print-agent"]
     verify["Verification Plane<br/>Playwright, SQL tests, runbooks"]
 
@@ -124,7 +142,7 @@ Change ownership:
 | Execution   | Route behavior, Server Actions, realtime UI flows    | `apps/web/app/**`, route-local `actions.ts`, `apps/web/app/_lib/*`                                                                                 |
 | Domain      | Business rules shared across routes/providers        | `packages/shared/src/**`                                                                                                                           |
 | Data        | Schema, RLS, RPCs, generated types, Supabase clients | `supabase/migrations/**`, `packages/database/src/**`                                                                                               |
-| UI          | Reusable primitives and surface rhythm               | `packages/ui/src/components/**`, `apps/web/app/components/surface.tsx`, `docs/spec/design-system.md`                                               |
+| UI          | Reusable primitives and frozen runtime surface rhythm | `packages/ui/src/components/**`, `apps/web/app/components/surface.tsx`, `docs/spec/design-system.md`                                               |
 | Branch Edge | Local print daemon and branch print/QR behavior      | `apps/print-agent/src/**`, branch settings surfaces                                                                                                |
 | Docs/Ops    | Current source-of-truth, runbooks, active work state | `docs/CODEBASE_MAP.md`, `docs/modules/**`, `docs/runbooks/**`, `tasks/**`                                                                          |
 

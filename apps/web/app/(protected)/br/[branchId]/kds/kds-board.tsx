@@ -18,6 +18,11 @@ import {
   getKdsScopedGroupKey,
 } from "./lib/order-columns";
 import {
+  compareKdsDoneOrdersDesc,
+  orderHasKitchenWork,
+  orderIsKitchenDone,
+} from "./lib/ticket-status";
+import {
   collectReadyKdsNewTicketAlertGroups,
   getKdsNewTicketAlertGroupKey,
   getKdsNewTicketToastTitle,
@@ -39,12 +44,6 @@ import type {
 } from "./types";
 
 /* ─── Helpers ─── */
-
-function orderHasKitchenWork(tickets: KdsTicket[]): boolean {
-  return tickets.some(
-    (ticket) => ticket.status === "pending" || ticket.status === "preparing",
-  );
-}
 
 function isActiveKitchenTicket(ticket: KdsTicket): boolean {
   return ticket.status === "pending" || ticket.status === "preparing";
@@ -421,29 +420,45 @@ export function KdsBoard({
       });
     }
 
-    result.sort(compareKdsOrdersForKitchenQueue);
-
     return result;
-  }, [
-    filteredTickets,
-    orders,
-    orderItemById,
-    kitchenBatches,
-    filters.activeStationId,
-  ]);
+  }, [filteredTickets, orders, orderItemById, kitchenBatches]);
 
   const activeGroupedOrders = useMemo(
-    () => groupedOrders.filter((order) => orderHasKitchenWork(order.tickets)),
+    () =>
+      groupedOrders
+        .filter((order) => orderHasKitchenWork(order.tickets))
+        .sort(compareKdsOrdersForKitchenQueue),
+    [groupedOrders],
+  );
+
+  const doneGroupedOrders = useMemo(
+    () =>
+      groupedOrders
+        .filter((order) => orderIsKitchenDone(order.tickets))
+        .sort(compareKdsDoneOrdersDesc),
     [groupedOrders],
   );
 
   const displayOrders = useMemo(() => {
-    let list = activeGroupedOrders;
+    let list =
+      filters.sectionFilter === "done"
+        ? doneGroupedOrders
+        : activeGroupedOrders;
     if (filters.orderTypeFilter !== "all") {
       list = list.filter((o) => o.orderType === filters.orderTypeFilter);
     }
     return list;
-  }, [activeGroupedOrders, filters.orderTypeFilter]);
+  }, [
+    activeGroupedOrders,
+    doneGroupedOrders,
+    filters.orderTypeFilter,
+    filters.sectionFilter,
+  ]);
+
+  const sectionHasGroupedOrders =
+    filters.sectionFilter === "done"
+      ? doneGroupedOrders.length > 0
+      : activeGroupedOrders.length > 0;
 
   const pendingCount = useMemo(
     () => tickets.filter((t) => t.status === "pending").length,
@@ -500,6 +515,7 @@ export function KdsBoard({
             onFullscreenToggle={toggleFullscreen}
             menuLimits={menuLimits}
             onMenuLimitsChange={setMenuLimitRows}
+            showViewModeToggle={filters.sectionFilter === "active"}
             stationControls={
               <StationToggleBar
                 stations={stations}
@@ -511,9 +527,13 @@ export function KdsBoard({
             }
             filterControls={
               <FilterBar
+                sectionFilter={filters.sectionFilter}
                 orderTypeFilter={filters.orderTypeFilter}
                 hasFilters={filters.hasFilters}
                 displayCount={displayOrders.length}
+                activeCount={activeGroupedOrders.length}
+                doneCount={doneGroupedOrders.length}
+                onSectionChange={filters.setSection}
                 onOrderTypeChange={filters.setOrderType}
                 onClearAll={filters.clearAll}
               />
@@ -527,10 +547,10 @@ export function KdsBoard({
         </div>
 
         <KdsRowEffectsProvider value={rowEffects}>
-          {mode === "focus" ? (
+          {filters.sectionFilter === "active" && mode === "focus" ? (
             <FocusView
               orders={displayOrders}
-              hasGroupedOrders={activeGroupedOrders.length > 0}
+              hasGroupedOrders={sectionHasGroupedOrders}
               pendingTicketIds={pendingTicketIds}
               canMarkReady={canMarkReady}
               canRecall={canRecall}
@@ -541,7 +561,8 @@ export function KdsBoard({
           ) : (
             <OrderGrid
               displayOrders={displayOrders}
-              hasGroupedOrders={activeGroupedOrders.length > 0}
+              hasGroupedOrders={sectionHasGroupedOrders}
+              sectionFilter={filters.sectionFilter}
               pendingTicketIds={pendingTicketIds}
               canMarkReady={canMarkReady}
               canRecall={canRecall}

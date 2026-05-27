@@ -5,7 +5,7 @@ a hand-maintained per-column schema dump.
 
 ## Current Snapshot
 
-Generated from the current checkout on 2026-05-24 with:
+Generated from the current checkout on 2026-05-26 with:
 
 ```bash
 node scripts/project-snapshot.mjs
@@ -13,11 +13,11 @@ node scripts/project-snapshot.mjs
 
 | Area | Count |
 | --- | ---: |
-| Public tables in generated types | 115 |
+| Public tables in generated types | 116 |
 | Public views in generated types | 9 |
-| Public RPC/SQL functions in generated types | 237 |
+| Public RPC/SQL functions in generated types | 241 |
 | Public enums in generated types | 0 |
-| SQL migration files | 347 |
+| SQL migration files | 363 |
 
 The archived early-2026 table-by-table reference moved to
 `docs/archive/ref/database-schema-early-2026.md`.

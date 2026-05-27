@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  extractClaims,
   resolvePostLoginRedirect,
   getSafeInternalReturnTo,
   getDefaultRedirect,
@@ -8,14 +9,15 @@ import {
 } from "../scope";
 import { buildAccessDeniedPath } from "../blocked-state";
 import { STAFF_ROLES, type JwtClaims, type StaffRole } from "../types";
-import { canAccess } from "../module-acl";
+import { canAccess, getModulePermissionAccess } from "../module-acl";
+import { PERMISSION_KEYS } from "../permissions";
 import { resolveDiscoveredApps } from "../app-discovery";
 import {
   isFeedbackPublicPath,
   isPublicAppPath,
   normalizeHost,
   resolveHostSurface,
-  resolveLegacyRouteRedirectPath,
+  resolveRetiredRouteRedirectPath,
   resolveModuleFromPath,
 } from "../route-resolution";
 
@@ -31,6 +33,53 @@ function makeClaims(
     user_role: role,
   };
 }
+
+test("extractClaims derives authorization role from position before user_role fallback", () => {
+  assert.deepEqual(
+    extractClaims({
+      tenant_id: 1,
+      branch_id: 2,
+      area_id: 3,
+      position: "warehouse_head",
+      user_role: "cashier",
+    }),
+    {
+      tenant_id: 1,
+      branch_id: 2,
+      area_id: 3,
+      user_role: "warehouse_manager",
+      position: "warehouse_head",
+    },
+  );
+});
+
+test("extractClaims accepts StaffRole fallback only when position is absent", () => {
+  assert.deepEqual(
+    extractClaims({
+      tenant_id: 1,
+      branch_id: null,
+      role: "office",
+    }),
+    {
+      tenant_id: 1,
+      branch_id: null,
+      area_id: null,
+      user_role: "office",
+      position: undefined,
+    },
+  );
+});
+
+test("extractClaims rejects unknown position and non-StaffRole fallback", () => {
+  assert.equal(
+    extractClaims({
+      tenant_id: 1,
+      position: "custom_position",
+      user_role: "custom_role",
+    }),
+    null,
+  );
+});
 
 test("getDefaultRedirect → owner and super_manager land on /admin/dashboard", () => {
   for (const role of ["owner", "super_manager"] as const) {
@@ -88,7 +137,7 @@ test("resolvePostLoginRedirect → valid returnTo for accessible module → keep
   );
 });
 
-test("resolvePostLoginRedirect → legacy admin finance returnTo canonicalizes to finance workspace", () => {
+test("resolvePostLoginRedirect → retired admin finance returnTo canonicalizes to finance workspace", () => {
   assert.equal(
     resolvePostLoginRedirect(
       makeClaims("super_manager"),
@@ -270,8 +319,14 @@ test("isPublicAppPath PWA manifests bypass auth proxy", () => {
 });
 
 test("normalizeHost strips port + lowercases", () => {
-  assert.equal(normalizeHost("Feedback.ComTamMatu.COM"), "feedback.comtammatu.com");
-  assert.equal(normalizeHost("feedback.comtammatu.com:443"), "feedback.comtammatu.com");
+  assert.equal(
+    normalizeHost("Feedback.ComTamMatu.COM"),
+    "feedback.comtammatu.com",
+  );
+  assert.equal(
+    normalizeHost("feedback.comtammatu.com:443"),
+    "feedback.comtammatu.com",
+  );
   assert.equal(normalizeHost("localhost:3000"), "localhost");
   assert.equal(normalizeHost("  app.comtammatu.com  "), "app.comtammatu.com");
   assert.equal(normalizeHost(""), null);
@@ -286,7 +341,10 @@ test("resolveHostSurface → matches configured hosts case-insensitive, port-agn
   };
   assert.equal(resolveHostSurface("feedback.comtammatu.com", cfg), "feedback");
   assert.equal(resolveHostSurface("FEEDBACK.COMTAMMATU.COM", cfg), "feedback");
-  assert.equal(resolveHostSurface("feedback.comtammatu.com:443", cfg), "feedback");
+  assert.equal(
+    resolveHostSurface("feedback.comtammatu.com:443", cfg),
+    "feedback",
+  );
   assert.equal(resolveHostSurface("app.comtammatu.com", cfg), "app");
   assert.equal(resolveHostSurface("app.comtammatu.com:443", cfg), "app");
 });
@@ -310,7 +368,10 @@ test("resolveHostSurface → no env configured → all hosts fall through to 'un
   // single-host deploy. resolveHostSurface MUST NOT default any host into a
   // surface when config is empty (would expose admin or feedback wrongly).
   assert.equal(
-    resolveHostSurface("feedback.comtammatu.com", { feedbackHost: null, appHost: null }),
+    resolveHostSurface("feedback.comtammatu.com", {
+      feedbackHost: null,
+      appHost: null,
+    }),
     "unknown",
   );
   assert.equal(
@@ -331,17 +392,17 @@ test("isFeedbackPublicPath → only /r/* prefix", () => {
   assert.equal(isFeedbackPublicPath("/"), false);
 });
 
-test("resolveLegacyRouteRedirectPath → admin finance redirects to canonical finance", () => {
-  assert.equal(resolveLegacyRouteRedirectPath("/admin/finance"), "/finance");
+test("resolveRetiredRouteRedirectPath → admin finance redirects to canonical finance", () => {
+  assert.equal(resolveRetiredRouteRedirectPath("/admin/finance"), "/finance");
   assert.equal(
-    resolveLegacyRouteRedirectPath("/admin/finance/revenue"),
+    resolveRetiredRouteRedirectPath("/admin/finance/revenue"),
     "/finance/revenue",
   );
   assert.equal(
-    resolveLegacyRouteRedirectPath("/beta/admin/finance/revenue"),
+    resolveRetiredRouteRedirectPath("/beta/admin/finance/revenue"),
     "/beta/finance/revenue",
   );
-  assert.equal(resolveLegacyRouteRedirectPath("/admin/dashboard"), null);
+  assert.equal(resolveRetiredRouteRedirectPath("/admin/dashboard"), null);
 });
 
 test("resolveModuleFromPath → branch menu limits and finance workspace map to modules", () => {
@@ -355,17 +416,11 @@ test("resolveModuleFromPath → branch menu limits and finance workspace map to 
 
 test("resolvePostLoginRedirect → branch settings follows branch scope", () => {
   assert.equal(
-    resolvePostLoginRedirect(
-      makeClaims("branch_manager", 3),
-      "/br/3/settings",
-    ),
+    resolvePostLoginRedirect(makeClaims("branch_manager", 3), "/br/3/settings"),
     "/br/3/settings",
   );
   assert.equal(
-    resolvePostLoginRedirect(
-      makeClaims("branch_manager", 3),
-      "/br/7/settings",
-    ),
+    resolvePostLoginRedirect(makeClaims("branch_manager", 3), "/br/7/settings"),
     "/employee",
   );
   assert.equal(
@@ -376,10 +431,7 @@ test("resolvePostLoginRedirect → branch settings follows branch scope", () => 
 
 test("resolvePostLoginRedirect → branch menu limits follows branch scope", () => {
   assert.equal(
-    resolvePostLoginRedirect(
-      makeClaims("cashier", 3),
-      "/br/3/menu-limits",
-    ),
+    resolvePostLoginRedirect(makeClaims("cashier", 3), "/br/3/menu-limits"),
     "/br/3/menu-limits",
   );
   assert.equal(
@@ -393,12 +445,7 @@ test("resolvePostLoginRedirect → branch menu limits follows branch scope", () 
 });
 
 test("canAccess → only owner and super_manager can access tenant admin modules", () => {
-  const adminModules = [
-    "dashboard",
-    "staff",
-    "crm",
-    "reports",
-  ] as const;
+  const adminModules = ["dashboard", "staff", "crm", "reports"] as const;
   for (const moduleKey of adminModules) {
     assert.equal(canAccess("owner", moduleKey), true);
     assert.equal(canAccess("super_manager", moduleKey), true);
@@ -418,7 +465,12 @@ test("canAccess → only owner and super_manager can access tenant admin modules
 });
 
 test("canAccess → settings includes branch floor setting roles", () => {
-  for (const role of ["owner", "super_manager", "area_manager", "branch_manager"] as const) {
+  for (const role of [
+    "owner",
+    "super_manager",
+    "area_manager",
+    "branch_manager",
+  ] as const) {
     assert.equal(canAccess(role, "settings"), true);
   }
   for (const role of [
@@ -437,6 +489,44 @@ test("canAccess → employee portal is available to every staff role", () => {
   for (const role of STAFF_ROLES) {
     assert.equal(canAccess(role, "employee"), true);
   }
+});
+
+test("getModulePermissionAccess → tenant admin routes expose PBAC gates", () => {
+  assert.deepEqual(getModulePermissionAccess("staff"), {
+    scope: "tenant",
+    mode: "any",
+    keys: [
+      PERMISSION_KEYS.STAFF_VIEW,
+      PERMISSION_KEYS.STAFF_MANAGE,
+      PERMISSION_KEYS.STAFF_ASSIGN_PERMISSION,
+      PERMISSION_KEYS.STAFF_ASSIGN_POSITION,
+    ],
+  });
+  assert.deepEqual(getModulePermissionAccess("inventory_procurement"), {
+    scope: "tenant",
+    mode: "any",
+    keys: [
+      PERMISSION_KEYS.PROCUREMENT_READ,
+      PERMISSION_KEYS.PROCUREMENT_PO_CREATE,
+      PERMISSION_KEYS.PROCUREMENT_GRN_CREATE,
+      PERMISSION_KEYS.PROCUREMENT_SUPPLIER_MANAGE,
+    ],
+  });
+});
+
+test("getModulePermissionAccess → branch runtime routes are branch-scoped", () => {
+  assert.deepEqual(getModulePermissionAccess("pos"), {
+    scope: "branch",
+    mode: "any",
+    keys: [PERMISSION_KEYS.POS_USE],
+  });
+  assert.deepEqual(getModulePermissionAccess("runner"), {
+    scope: "branch",
+    mode: "any",
+    keys: [PERMISSION_KEYS.POS_USE, PERMISSION_KEYS.KDS_USE],
+  });
+  assert.equal(getModulePermissionAccess("branch_menu_limits"), null);
+  assert.equal(getModulePermissionAccess("employee"), null);
 });
 
 test("resolveDiscoveredApps → settings entries are discoverable from employee portal", () => {
@@ -460,13 +550,15 @@ test("resolveDiscoveredApps → settings entries are discoverable from employee 
   assert.ok(
     branchManagerApps.some(
       (app) =>
-        app.moduleKey === "branch_settings" &&
-        app.href === "/br/3/settings",
+        app.moduleKey === "branch_settings" && app.href === "/br/3/settings",
     ),
   );
 
   const cashierApps = resolveDiscoveredApps("cashier", 3);
-  assert.equal(cashierApps.some((app) => app.moduleKey === "settings"), false);
+  assert.equal(
+    cashierApps.some((app) => app.moduleKey === "settings"),
+    false,
+  );
   assert.equal(
     cashierApps.some((app) => app.moduleKey === "branch_settings"),
     false,

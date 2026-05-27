@@ -24,8 +24,8 @@ import {
   useIsStandalone,
 } from "./provider";
 
-// Legacy key kept intentionally: this is only an install-hint preference, not
-// branch/session/workflow scope.
+// Existing key kept intentionally: this is only an install-hint preference,
+// not branch/session/workflow scope.
 const DISMISS_STORAGE_KEY = "pos-pwa-install-dismissed";
 
 type OperationalPwaSurface = "pos" | "kds";

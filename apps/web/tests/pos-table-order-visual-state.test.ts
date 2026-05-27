@@ -5,6 +5,7 @@ import {
   getPosTableTileVisualState,
   isActiveUnpaidPosOrder,
 } from "../app/(protected)/br/[branchId]/pos/_lib/table-order-visual-state";
+import { getPosTableTileToneClass } from "../app/(protected)/br/[branchId]/pos/pos-table-gate";
 
 const ACTIVE_STATUSES = ["new", "confirmed", "preparing", "ready", "served"];
 
@@ -129,4 +130,25 @@ test("getPosTableTileVisualState maps POS table backgrounds by order state", () 
     }),
     "muted",
   );
+});
+
+test("getPosTableTileToneClass keeps active and served POS tables visually stronger", () => {
+  const activeClass = getPosTableTileToneClass({
+    isSelected: false,
+    tileVisualState: "active",
+  });
+  const servedClass = getPosTableTileToneClass({
+    isSelected: false,
+    tileVisualState: "served",
+  });
+  const selectedClass = getPosTableTileToneClass({
+    isSelected: true,
+    tileVisualState: "active",
+  });
+
+  assert.match(activeClass, /bg-warning\/35/);
+  assert.match(activeClass, /border-warning\/55/);
+  assert.match(servedClass, /bg-success\/35/);
+  assert.match(servedClass, /border-success\/55/);
+  assert.equal(selectedClass, "shadow-md");
 });
