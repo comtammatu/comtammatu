@@ -17,6 +17,17 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 - [x] Close network-gate hardening: per-agent/per-branch presence token, `/api/branch-presence` rate limit, and revoked-row heartbeat behavior. Shipped via `printer_agent_presence_tokens` + `register_branch_presence` RPC, applied to dev/type-source Cloud, generated types refreshed, and repo-owned `@comtammatu/print-agent` `presence:provision` CLI added for create/rotate/revoke/status. Branch rollout still must provision one raw token per agent before live smoke.
 - [ ] Run real POS → payment → stock → KDS/print → HĐĐT smoke in approved dev/test or staging with live provider credentials.
 
+## Shell helpers refactor — 2026-05-27
+
+**Report:** `docs/worklog/shell-helpers-refactor-plan-2026-05-27.md` (APPROVED 2026-05-27)
+
+- [ ] **WS-0** — Extend `apps/web/app/_lib/with-action.ts` with `withActionPositional` + `customAuth` + `afterSuccess`; add `_lib/rpc-error-map.ts`. Zero callers migrated.
+- [ ] **WS-1a** — Migrate `voidOrderItem` only (proving slice; exercises 4/4 new helper features).
+- [ ] **WS-1b** — Migrate remaining POS actions (`order-actions.ts` + `payment-actions.ts`). Closes the `POS → payment → stock → KDS/print → HĐĐT` smoke item above.
+- [ ] **WS-2** — Migrate inventory actions (`grn-actions.ts`, `production-actions.ts`, `actions.ts`). Wire `lib/messages/inventory.ts` through `rpc-error-map.ts`.
+- [ ] **WS-3** — Decompose client shells (pos-desktop-shell, grn-detail-client, order-detail-sheet) one PR each. Retire parallel `pos/hooks/` folder.
+- [ ] **WS-4** — Version-naming cleanup: delete dead `S12_DASHBOARD_V2`, rename `S13A_STOCKTAKE_V2` → `INVENTORY_STOCKTAKE_REDESIGNED` (+ DB migration of `branch_feature_flags.flag_key`), fix orphan `waste_v2_not_enabled` URL token.
+
 ## Known issues
 
 ### Interface closure — from 2026-05-24 source-of-truth audit
