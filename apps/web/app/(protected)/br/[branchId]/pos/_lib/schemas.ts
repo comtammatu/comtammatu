@@ -13,7 +13,12 @@
  */
 
 import { z } from "zod";
-import { cartModifierSchema, cartSideSchema } from "../types";
+import {
+  cartItemSchema,
+  cartModifierSchema,
+  cartSideSchema,
+  cartStateSchema,
+} from "../types";
 
 /**
  * Schema for `voidOrderItem(orderItemId, reason)`.
@@ -145,3 +150,53 @@ export const markOrderItemServedSchema = z.object({
 });
 
 export type MarkOrderItemServedInput = z.infer<typeof markOrderItemServedSchema>;
+
+/**
+ * Schema for `submitOrder(branchId, cart, posSessionId?, idempotencyKey?)`.
+ *
+ * Aggregates all 4 positional args into one Zod object. The empty-cart
+ * check (CART_EMPTY) stays inside the handler so we can keep its specific
+ * `POS_ERROR_CODES.CART_EMPTY` code (distinct from the generic
+ * `INPUT_INVALID_CART` validation errorCode set on the helper).
+ *
+ * `posSessionId` is OPTIONAL — takeaway orders without an open shift may
+ * still submit. RPC-side gates enforce the rest.
+ */
+export const submitOrderSchema = z.object({
+  branchId: z.coerce
+    .number()
+    .int()
+    .positive({ error: "Branch ID không hợp lệ" }),
+  cart: cartStateSchema,
+  posSessionId: z.coerce.number().int().positive().optional(),
+  idempotencyKey: z
+    .string()
+    .uuid({ error: "Mã giao dịch không hợp lệ" })
+    .optional(),
+});
+
+export type SubmitOrderInput = z.infer<typeof submitOrderSchema>;
+
+/**
+ * Schema for `appendOrderItems(branchId, orderId, items, idempotencyKey?)`.
+ *
+ * Aggregates all 4 positional args. The `items.min(1)` clause mirrors the
+ * pre-WS-1b inline `appendItemsSchema`; cashier UI also clamps client-side.
+ */
+export const appendOrderItemsSchema = z.object({
+  branchId: z.coerce
+    .number()
+    .int()
+    .positive({ error: "Branch ID không hợp lệ" }),
+  orderId: z.coerce
+    .number()
+    .int()
+    .positive({ error: "Order ID không hợp lệ" }),
+  items: z.array(cartItemSchema).min(1, { error: "Cần ít nhất một món" }),
+  idempotencyKey: z
+    .string()
+    .uuid({ error: "Mã giao dịch không hợp lệ" })
+    .optional(),
+});
+
+export type AppendOrderItemsInput = z.infer<typeof appendOrderItemsSchema>;

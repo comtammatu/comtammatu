@@ -72,6 +72,24 @@ type AuthOptions<TSchema extends z.ZodType> = {
 
 type BaseActionOptions<TSchema extends z.ZodType, TData> = AuthOptions<TSchema> & {
   afterSuccess?: AfterSuccessHook<z.infer<TSchema>, TData>;
+  /**
+   * Stable `errorCode` applied to schema-validation failures. Defaults to
+   * `undefined` (no code) for backward compatibility. Actions that surface
+   * input failures in retry/branch logic (e.g. `submitOrder` using
+   * `POS_ERROR_CODES.INPUT_INVALID_CART`) should opt in. The Zod-derived
+   * Vietnamese message stays on `result.error`.
+   */
+  validationErrorCode?: string;
+  /**
+   * Stable `errorCode` applied when the auth resolver returns `null`
+   * (forbidden). Defaults to `undefined`. Actions that need to distinguish
+   * forbidden from other failures in retry/branch logic should opt in.
+   * Note: the wrapper cannot distinguish "role mismatch" from "permission
+   * missing" or "session expired" — they all collapse to this single code.
+   * Actions needing finer granularity should bring those checks INTO the
+   * handler (which can return its own typed code).
+   */
+  forbiddenErrorCode?: string;
 };
 
 type DirectActionOptions<
@@ -150,14 +168,19 @@ async function resolveActionContext<TSchema extends z.ZodType>(
   return getAuthContext(opts.roles);
 }
 
-function actionFailure<TData = unknown>(error: string): ActionResult<TData> {
-  return { success: false, error };
+function actionFailure<TData = unknown>(
+  error: string,
+  errorCode?: string,
+): ActionResult<TData> {
+  if (errorCode === undefined) return { success: false, error };
+  return { success: false, error, errorCode };
 }
 
 function validationFailure<TData = unknown>(
   message: string | undefined,
+  errorCode?: string,
 ): ActionResult<TData> {
-  return actionFailure<TData>(message ?? DEFAULT_VALIDATION_ERROR);
+  return actionFailure<TData>(message ?? DEFAULT_VALIDATION_ERROR, errorCode);
 }
 
 function lacksRequiredBranchScope(ctx: ActionContext): boolean {
@@ -247,18 +270,24 @@ export function withAction<TSchema extends z.ZodType, TData = unknown>(
   return async (input) => {
     const result = opts.schema.safeParse(input);
     if (!result.success) {
-      return validationFailure<TData>(result.error.issues[0]?.message);
+      return validationFailure<TData>(
+        result.error.issues[0]?.message,
+        opts.validationErrorCode,
+      );
     }
 
     const ctx = await resolveActionContext(opts, result.data);
-    if (!ctx) return actionFailure<TData>(FORBIDDEN_ERROR);
+    if (!ctx) return actionFailure<TData>(FORBIDDEN_ERROR, opts.forbiddenErrorCode);
 
     if (
       opts.requireBranchScope &&
       !opts.customAuth &&
       lacksRequiredBranchScope(ctx)
     ) {
-      return actionFailure<TData>(BRANCH_SCOPE_UNSET_ERROR);
+      return actionFailure<TData>(
+        BRANCH_SCOPE_UNSET_ERROR,
+        opts.forbiddenErrorCode,
+      );
     }
 
     const handlerResult = await handler(result.data, ctx);
@@ -296,18 +325,24 @@ export function withActionPositional<
     const raw = opts.argsToInput(...args);
     const result = opts.schema.safeParse(raw);
     if (!result.success) {
-      return validationFailure<TData>(result.error.issues[0]?.message);
+      return validationFailure<TData>(
+        result.error.issues[0]?.message,
+        opts.validationErrorCode,
+      );
     }
 
     const ctx = await resolveActionContext(opts, result.data);
-    if (!ctx) return actionFailure<TData>(FORBIDDEN_ERROR);
+    if (!ctx) return actionFailure<TData>(FORBIDDEN_ERROR, opts.forbiddenErrorCode);
 
     if (
       opts.requireBranchScope &&
       !opts.customAuth &&
       lacksRequiredBranchScope(ctx)
     ) {
-      return actionFailure<TData>(BRANCH_SCOPE_UNSET_ERROR);
+      return actionFailure<TData>(
+        BRANCH_SCOPE_UNSET_ERROR,
+        opts.forbiddenErrorCode,
+      );
     }
 
     const handlerResult = await handler(result.data, ctx);
@@ -356,11 +391,14 @@ export function withFormAction<TSchema extends z.ZodType, TData = unknown>(
     const raw = opts.extract(formData);
     const result = opts.schema.safeParse(raw);
     if (!result.success) {
-      return validationFailure<TData>(result.error.issues[0]?.message);
+      return validationFailure<TData>(
+        result.error.issues[0]?.message,
+        opts.validationErrorCode,
+      );
     }
 
     const ctx = await resolveActionContext(opts, result.data);
-    if (!ctx) return actionFailure<TData>(FORBIDDEN_ERROR);
+    if (!ctx) return actionFailure<TData>(FORBIDDEN_ERROR, opts.forbiddenErrorCode);
 
     const handlerResult = await handler(result.data, ctx);
     return runAfterSuccess(opts.afterSuccess, result.data, handlerResult, ctx);

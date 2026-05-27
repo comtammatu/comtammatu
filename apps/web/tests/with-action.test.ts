@@ -290,6 +290,77 @@ test("withActionPositional preserves the callable's positional signature", async
   assert.equal(b.success, true);
 });
 
+test("withAction validationErrorCode rides on schema failures", async () => {
+  const action = withAction(
+    {
+      schema: sampleSchema,
+      customAuth: async () => fakeCtx(),
+      validationErrorCode: "test.input_invalid",
+    },
+    async () => ({ success: true }),
+  );
+
+  const result = await action({ orderItemId: 5, reason: "x" });
+  assert.equal(result.success, false);
+  assert.equal(result.errorCode, "test.input_invalid");
+});
+
+test("withAction forbiddenErrorCode rides on customAuth failures", async () => {
+  const action = withAction(
+    {
+      schema: sampleSchema,
+      customAuth: async () => null,
+      forbiddenErrorCode: "test.no_permission",
+    },
+    async () => ({ success: true }),
+  );
+
+  const result = await action({ orderItemId: 1, reason: "valid reason" });
+  assert.equal(result.success, false);
+  assert.equal(result.errorCode, "test.no_permission");
+});
+
+test("withActionPositional validationErrorCode + forbiddenErrorCode", async () => {
+  // Same options propagate through the positional variant.
+  const action = withActionPositional(
+    {
+      argsToInput: (orderItemId: number, reason: string) => ({
+        orderItemId,
+        reason,
+      }),
+      schema: sampleSchema,
+      customAuth: async () => null,
+      forbiddenErrorCode: "test.no_permission",
+      validationErrorCode: "test.input_invalid",
+    },
+    async () => ({ success: true }),
+  );
+
+  // Schema failure → validationErrorCode.
+  const v = await action(1, "x");
+  assert.equal(v.errorCode, "test.input_invalid");
+
+  // Auth failure (with valid schema) → forbiddenErrorCode.
+  const a = await action(1, "valid reason");
+  assert.equal(a.errorCode, "test.no_permission");
+});
+
+test("withAction option codes default to undefined (backward compat)", async () => {
+  // Callers that do not opt in must not see any errorCode surface on
+  // failure — preserves the pre-WS-1b shape (existing 23 tests).
+  const validation = await withAction(
+    { schema: sampleSchema, customAuth: async () => fakeCtx() },
+    async () => ({ success: true }),
+  )({ orderItemId: 1, reason: "x" });
+  assert.equal(validation.errorCode, undefined);
+
+  const forbidden = await withAction(
+    { schema: sampleSchema, customAuth: async () => null },
+    async () => ({ success: true }),
+  )({ orderItemId: 1, reason: "valid reason" });
+  assert.equal(forbidden.errorCode, undefined);
+});
+
 test("withActionPositional propagates afterSuccess warning", async () => {
   // Same merge semantics as withAction — verified separately because the
   // positional variant has its own internal call path.

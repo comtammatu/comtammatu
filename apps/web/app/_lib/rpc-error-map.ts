@@ -35,18 +35,31 @@ import type { ActionResult } from "@comtammatu/shared/types";
 /**
  * Single error → ActionResult rule.
  *
+ * Predicates receive both the lowercased message and the original Postgres
+ * `error.code` (`"42501"`, `"55P03"`, etc.) so mappings can branch on either
+ * vector. Code-based mappings are common for advisory-lock contention
+ * (`55P03`) and stale-grant `insufficient_privilege` (`42501`); message-based
+ * mappings are the default for RPC-raised sentinels like `"forbidden"` or
+ * `"voidable"`. Predicates may ignore either arg — JS narrower-arity allowed.
+ *
  * @example
  *   { match: (m) => m.includes("forbidden"),
  *     errorCode: "pos.void.forbidden",
  *     userMessage: "Cần quyền hủy đơn POS để hủy món." }
+ *
+ * @example
+ *   { match: (msg, code) => code === "55P03",
+ *     errorCode: "db.lock_not_available",
+ *     userMessage: "Đang có giao dịch khác. Vui lòng thử lại sau vài giây." }
  */
 export interface RpcErrorMapping {
   /**
-   * Predicate against the **lowercased** error message (do not lowercase
-   * inside the predicate — `mapRpcError` lowercases once upstream so all
-   * predicates see the same shape).
+   * Predicate against the **lowercased** error message and the original
+   * Postgres `error.code` (e.g. `"42501"`, `"55P03"`). `mapRpcError`
+   * lowercases the message once upstream; `code` is passed through
+   * unchanged. Either arg may be omitted by the predicate.
    */
-  match: (lowerCasedMessage: string) => boolean;
+  match: (lowerCasedMessage: string, code?: string) => boolean;
   /** Stable machine-readable code, e.g. `"pos.void.forbidden"`. */
   errorCode?: string;
   /** Vietnamese user-facing copy. */
@@ -94,9 +107,10 @@ export function mapRpcError<TData = unknown>(
 ): ActionResult<TData> {
   const raw = error.message ?? "";
   const msg = raw.toLowerCase();
+  const code = error.code ?? undefined;
 
   for (const mapping of mappings) {
-    if (mapping.match(msg)) {
+    if (mapping.match(msg, code ?? undefined)) {
       return {
         success: false,
         error: mapping.userMessage,

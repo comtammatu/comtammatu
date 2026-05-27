@@ -20,11 +20,13 @@ import {
 import type { CartState, CartItem } from "./types";
 import { POS_ERROR_CODES } from "./_utils/error-codes";
 import {
+  appendOrderItemsSchema,
   cancelOrderSchema,
   editPendingItemSchema,
   markOrderItemServedSchema,
   priorityInputSchema,
   reduceItemSchema,
+  submitOrderSchema,
   transferTableSchema,
   updateOrderStatusSchema,
   voidItemSchema,
@@ -32,6 +34,8 @@ import {
 import type { EditPendingOrderItemInput } from "./_lib/schemas";
 import { posUseAuth, posVoidAuth } from "./_lib/auth";
 import {
+  appendOrderItemsRpcFallback,
+  appendOrderItemsRpcMappings,
   cancelRpcFallback,
   cancelRpcMappings,
   cancelSkipReasonsToWarning,
@@ -47,6 +51,8 @@ import {
   markServedRpcMappings,
   reduceRpcFallback,
   reduceRpcMappings,
+  submitOrderRpcFallback,
+  submitOrderRpcMappings,
   transferRpcFallback,
   transferRpcMappings,
   updateOrderStatusRpcFallback,
@@ -96,241 +102,130 @@ const orderIdSchema = z.coerce
 /* ─── submitOrder ─── */
 
 /**
- * Submit a new order from the POS cart.
- * Calls the create_order RPC which atomically creates order + items + status history.
+ * Submit a new order from the POS cart. Calls the `create_order` RPC which
+ * atomically creates order + items + status history.
+ *
+ * Migrated to `withActionPositional` in WS-1b batch 3 (2026-05-28). Helper
+ * extensions (`validationErrorCode`, `forbiddenErrorCode`, code-based
+ * `mapRpcError` predicates) landed alongside so submitOrder's stable
+ * errorCode catalogue is preserved. Per-input-field codes
+ * (`INPUT_INVALID_BRANCH` / `INPUT_INVALID_SESSION` /
+ * `INPUT_INVALID_IDEMPOTENCY`) intentionally collapse to
+ * `INPUT_INVALID_CART` at the helper layer — none are members of
+ * `RETRYABLE_POS_ERROR_CODES`, so client retry logic is unaffected. The
+ * Vietnamese message stays specific via the Zod schema's per-field error.
+ *
+ * `SCOPE_BRANCH_MISMATCH` and `CART_EMPTY` codes are kept by checking
+ * inside the handler — those are defence-in-depth + state-level errors
+ * the client surfaces differently from a generic auth failure.
  */
-// Skip withAction: complex multi-positional args + RPC
-export async function submitOrder(
-  branchId: number,
-  cart: CartState,
-  posSessionId?: number,
-  idempotencyKey?: string,
-): Promise<ActionResult<{ order_id: number; order_number: string }>> {
-  const parsedBranchId = branchIdSchema.safeParse(branchId);
-  if (!parsedBranchId.success) {
-    return {
-      success: false,
-      error: "Branch ID không hợp lệ",
-      errorCode: POS_ERROR_CODES.INPUT_INVALID_BRANCH,
-    };
-  }
-
-  const parsedCart = cartStateSchema.safeParse(cart);
-  if (!parsedCart.success) {
-    return {
-      success: false,
-      error: "Dữ liệu giỏ hàng không hợp lệ",
-      errorCode: POS_ERROR_CODES.INPUT_INVALID_CART,
-    };
-  }
-
-  if (parsedCart.data.items.length === 0) {
-    return {
-      success: false,
-      error: "Giỏ hàng trống",
-      errorCode: POS_ERROR_CODES.CART_EMPTY,
-    };
-  }
-
-  // Validate optional posSessionId
-  const posSessionIdSchema = z.coerce.number().int().positive().optional();
-  const parsedSessionId = posSessionIdSchema.safeParse(posSessionId);
-  if (!parsedSessionId.success) {
-    return {
-      success: false,
-      error: "Session ID không hợp lệ",
-      errorCode: POS_ERROR_CODES.INPUT_INVALID_SESSION,
-    };
-  }
-
-  if (idempotencyKey !== undefined) {
-    const parsedKey = z.string().uuid().safeParse(idempotencyKey);
-    if (!parsedKey.success) {
+export const submitOrder = withActionPositional(
+  {
+    argsToInput: (
+      branchId: number,
+      cart: CartState,
+      posSessionId?: number,
+      idempotencyKey?: string,
+    ) => ({ branchId, cart, posSessionId, idempotencyKey }),
+    schema: submitOrderSchema,
+    customAuth: posUseAuth,
+    validationErrorCode: POS_ERROR_CODES.INPUT_INVALID_CART,
+    forbiddenErrorCode: POS_ERROR_CODES.AUTH_NO_PERMISSION,
+  },
+  async (
+    { branchId, cart, posSessionId, idempotencyKey },
+    { supabase, claims, user },
+  ): Promise<ActionResult<{ order_id: number; order_number: string }>> => {
+    // JWT branch_id defence in depth (proxy already routes by branch, but
+    // a manipulated request reaching here gets a distinct errorCode).
+    if (claims.branch_id !== branchId) {
       return {
         success: false,
-        error: "Mã giao dịch không hợp lệ",
-        errorCode: POS_ERROR_CODES.INPUT_INVALID_IDEMPOTENCY,
+        error: "Không có quyền truy cập chi nhánh này",
+        errorCode: POS_ERROR_CODES.SCOPE_BRANCH_MISMATCH,
       };
     }
-  }
 
-  const ctx = await getAuthContextWithPermission(
-    POS_ROLES,
-    PERMISSION_KEYS.POS_USE,
-  );
-  if (!ctx)
-    return {
-      success: false,
-      error: "Không có quyền",
-      errorCode: POS_ERROR_CODES.AUTH_NO_PERMISSION,
-    };
-
-  const { supabase, claims } = ctx;
-
-  // Verify branch_id matches JWT claim
-  if (claims.branch_id !== parsedBranchId.data) {
-    return {
-      success: false,
-      error: "Không có quyền truy cập chi nhánh này",
-      errorCode: POS_ERROR_CODES.SCOPE_BRANCH_MISMATCH,
-    };
-  }
-
-  // Get user ID for created_by
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user)
-    return {
-      success: false,
-      error: "Phiên đăng nhập hết hạn",
-      errorCode: POS_ERROR_CODES.AUTH_SESSION_EXPIRED,
-    };
-
-  // Transform cart items to RPC JSONB format
-  const rpcItems = parsedCart.data.items.map((item) => ({
-    menu_item_id: item.menu_item_id,
-    variant_id: item.variant_id ?? null,
-    item_name: item.item_name,
-    variant_name: item.variant_name ?? null,
-    quantity: item.quantity,
-    unit_price: item.unit_price,
-    modifiers: item.modifiers.map((m) => ({
-      modifier_id: m.modifier_id,
-      name: m.name,
-      price: m.price,
-    })),
-    sides: item.sides.map((s) => ({
-      side_item_id: s.side_item_id,
-      name: s.name,
-      price: s.price,
-      quantity: s.quantity,
-      is_default: s.is_default,
-    })),
-    subtotal: calcItemSubtotal(item),
-    note: item.note ?? null,
-  }));
-
-  const { data, error } = await supabase.rpc("create_order", {
-    p_tenant_id: claims.tenant_id,
-    p_branch_id: parsedBranchId.data,
-    p_created_by: user.id,
-    p_items: rpcItems,
-    p_order_type: parsedCart.data.order_type,
-    p_table_id: parsedCart.data.table_id ?? undefined,
-    p_pos_session_id: parsedSessionId.data ?? undefined,
-    p_note: parsedCart.data.note ?? undefined,
-    p_idempotency_key: idempotencyKey ?? undefined,
-  });
-
-  if (error) {
-    const errCode = String(error.code ?? "");
-    const errMsg = String(error.message ?? "").toLowerCase();
-    // Postgres insufficient_privilege (often stale RPC overload missing GRANT)
-    if (
-      errCode === "42501" ||
-      errMsg.includes("42501") ||
-      errMsg.includes("permission denied")
-    ) {
-      return {
-        success: false,
-        error:
-          "Không có quyền tạo đơn (hệ thống). Vui lòng đăng nhập lại hoặc liên hệ quản lý.",
-        errorCode: POS_ERROR_CODES.DB_PERMISSION_DENIED,
-      };
-    }
-    // Postgres advisory lock not available (another order creation in-flight)
-    // Avoid hanging the POS UI waiting for a long DB lock.
-    if (error.code === "55P03") {
-      return {
-        success: false,
-        error: "Đang có đơn khác được tạo. Vui lòng thử lại sau vài giây.",
-        errorCode: POS_ERROR_CODES.DB_LOCK_NOT_AVAILABLE,
-      };
-    }
-    // Stale `pos_session_id` from RSC props: cashier closed (and re-opened)
-    // the shift on another tab/terminal while this tab still holds the old
-    // `session.id`. RPC raises P0002 with this exact wording. Surface a
-    // typed code so the client can `router.refresh()` to pick up the new
-    // session instead of looping the cashier through "thử lại" forever.
-    if (
-      errMsg.includes("pos session does not belong") ||
-      errMsg.includes("is not open")
-    ) {
-      return {
-        success: false,
-        error: "Ca POS đã đóng hoặc đổi máy — đang tải lại trang.",
-        errorCode: POS_ERROR_CODES.SCOPE_SESSION_NOT_OPEN,
-      };
-    }
-    if (errMsg.includes("daily_limit_item_disabled")) {
-      return {
-        success: false,
-        error: "Có món đã bị tắt trong ngày — bỏ khỏi giỏ trước khi đặt.",
-        errorCode: POS_ERROR_CODES.DAILY_LIMIT_ITEM_DISABLED,
-      };
-    }
-    if (errMsg.includes("daily_limit_exceeded")) {
-      return {
-        success: false,
-        error: "Có món đã hết suất hôm nay — giảm số lượng hoặc đổi món.",
-        errorCode: POS_ERROR_CODES.DAILY_LIMIT_EXCEEDED,
-      };
-    }
-    if (
-      errMsg.includes("stale_side_or_modifier") ||
-      errMsg.includes("stale modifier") ||
-      errMsg.includes("stale side")
-    ) {
-      return {
-        success: false,
-        error:
-          "Tùy chọn món đã thay đổi. Vui lòng mở món và chọn lại trước khi đặt.",
-        errorCode: POS_ERROR_CODES.CART_STALE_MENU_OPTION,
-      };
-    }
-    if (error.message?.includes("empty")) {
+    // Empty-cart guard with a distinct typed code. Zod cartStateSchema does
+    // NOT enforce min(1) on items (the schema is reused for in-progress
+    // edits where the cart can be momentarily empty); this action enforces
+    // it explicitly so submit cannot fire a 0-item RPC.
+    if (cart.items.length === 0) {
       return {
         success: false,
         error: "Giỏ hàng trống",
         errorCode: POS_ERROR_CODES.CART_EMPTY,
       };
     }
+
+    // Transform cart items to RPC JSONB format.
+    const rpcItems = cart.items.map((item) => ({
+      menu_item_id: item.menu_item_id,
+      variant_id: item.variant_id ?? null,
+      item_name: item.item_name,
+      variant_name: item.variant_name ?? null,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      modifiers: item.modifiers.map((m) => ({
+        modifier_id: m.modifier_id,
+        name: m.name,
+        price: m.price,
+      })),
+      sides: item.sides.map((s) => ({
+        side_item_id: s.side_item_id,
+        name: s.name,
+        price: s.price,
+        quantity: s.quantity,
+        is_default: s.is_default,
+      })),
+      subtotal: calcItemSubtotal(item),
+      note: item.note ?? null,
+    }));
+
+    const { data, error } = await supabase.rpc("create_order", {
+      p_tenant_id: claims.tenant_id,
+      p_branch_id: branchId,
+      p_created_by: user.id,
+      p_items: rpcItems,
+      p_order_type: cart.order_type,
+      p_table_id: cart.table_id ?? undefined,
+      p_pos_session_id: posSessionId ?? undefined,
+      p_note: cart.note ?? undefined,
+      p_idempotency_key: idempotencyKey ?? undefined,
+    });
+
+    if (error) {
+      return mapRpcError(error, submitOrderRpcMappings, submitOrderRpcFallback);
+    }
+
+    const result = data as unknown as {
+      order_id: number;
+      order_number: string;
+    } | null;
+
+    if (!result) {
+      return {
+        success: false,
+        error: "Không thể tạo đơn hàng. Vui lòng thử lại.",
+        errorCode: POS_ERROR_CODES.RPC_GENERIC,
+      };
+    }
+
+    const priorityWarning =
+      cart.is_priority === true
+        ? await markInitialOrderPriority(supabase, result.order_id)
+        : null;
+
     return {
-      success: false,
-      error: "Không thể tạo đơn hàng. Vui lòng thử lại.",
-      errorCode: POS_ERROR_CODES.RPC_GENERIC,
+      success: true,
+      data: { order_id: result.order_id, order_number: result.order_number },
+      meta: {
+        prioritySet: cart.is_priority === true && priorityWarning === null,
+        ...(priorityWarning ? { priorityWarning } : {}),
+      },
     };
-  }
-
-  const result = data as unknown as {
-    order_id: number;
-    order_number: string;
-  } | null;
-
-  if (!result) {
-    return {
-      success: false,
-      error: "Không thể tạo đơn hàng. Vui lòng thử lại.",
-      errorCode: POS_ERROR_CODES.RPC_GENERIC,
-    };
-  }
-
-  const priorityWarning =
-    parsedCart.data.is_priority === true
-      ? await markInitialOrderPriority(supabase, result.order_id)
-      : null;
-
-  return {
-    success: true,
-    data: { order_id: result.order_id, order_number: result.order_number },
-    meta: {
-      prioritySet:
-        parsedCart.data.is_priority === true && priorityWarning === null,
-      ...(priorityWarning ? { priorityWarning } : {}),
-    },
-  };
-}
+  },
+);
 
 /* ─── fetchActiveOrders ─── */
 
@@ -869,147 +764,111 @@ export async function fetchOrderDetail(orderId: number): Promise<
 
 /* ─── appendOrderItems ─── */
 
-const appendItemsSchema = z.object({
-  orderId: z.coerce.number().int().positive({ error: "Order ID không hợp lệ" }),
-  items: z.array(cartItemSchema).min(1, { error: "Cần ít nhất một món" }),
-});
+/**
+ * Append more items to an existing pending order. Same pattern as
+ * `submitOrder` but targets `append_order_items` RPC; no priority/print
+ * follow-up needed.
+ *
+ * Migrated to `withActionPositional` in WS-1b batch 3 (2026-05-28).
+ */
+export const appendOrderItems = withActionPositional(
+  {
+    argsToInput: (
+      branchId: number,
+      orderId: number,
+      items: CartItem[],
+      idempotencyKey?: string,
+    ) => ({ branchId, orderId, items, idempotencyKey }),
+    schema: appendOrderItemsSchema,
+    customAuth: posUseAuth,
+    forbiddenErrorCode: POS_ERROR_CODES.AUTH_NO_PERMISSION,
+  },
+  async (
+    { branchId, orderId, items, idempotencyKey },
+    { supabase, claims },
+  ): Promise<
+    ActionResult<{
+      order_id: number;
+      subtotal: number;
+      total_amount: number;
+      added_count: number;
+      idempotent?: boolean;
+    }>
+  > => {
+    if (claims.branch_id !== branchId) {
+      return {
+        success: false,
+        error: "Không có quyền truy cập chi nhánh này",
+        errorCode: POS_ERROR_CODES.SCOPE_BRANCH_MISMATCH,
+      };
+    }
 
-// Skip withAction: positional (branchId, orderId, items, idempotencyKey) args
-export async function appendOrderItems(
-  branchId: number,
-  orderId: number,
-  items: CartItem[],
-  idempotencyKey?: string,
-): Promise<
-  ActionResult<{
-    order_id: number;
-    subtotal: number;
-    total_amount: number;
-    added_count: number;
-    idempotent?: boolean;
-  }>
-> {
-  const parsedBranch = branchIdSchema.safeParse(branchId);
-  if (!parsedBranch.success) {
-    return { success: false, error: "Branch ID không hợp lệ" };
-  }
+    const rpcItems = items.map((item) => ({
+      menu_item_id: item.menu_item_id,
+      variant_id: item.variant_id ?? null,
+      item_name: item.item_name,
+      variant_name: item.variant_name ?? null,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      modifiers: item.modifiers.map((m) => ({
+        modifier_id: m.modifier_id,
+        name: m.name,
+        price: m.price,
+      })),
+      sides: item.sides.map((s) => ({
+        side_item_id: s.side_item_id,
+        name: s.name,
+        price: s.price,
+        quantity: s.quantity,
+        is_default: s.is_default,
+      })),
+      subtotal: calcItemSubtotal(item),
+      note: item.note ?? null,
+    }));
 
-  const parsed = appendItemsSchema.safeParse({ orderId, items });
-  if (!parsed.success) {
+    const { data, error } = await supabase.rpc("append_order_items", {
+      p_order_id: orderId,
+      p_items: rpcItems,
+      p_idempotency_key: idempotencyKey ?? undefined,
+    });
+
+    if (error) {
+      return mapRpcError(
+        error,
+        appendOrderItemsRpcMappings,
+        appendOrderItemsRpcFallback,
+      );
+    }
+
+    const result = data as unknown as {
+      success: boolean;
+      order_id: number;
+      added_count: number;
+      subtotal: number;
+      total_amount: number;
+      idempotent?: boolean;
+    } | null;
+
+    if (!result) {
+      return {
+        success: false,
+        error: "Không thể thêm món. Vui lòng thử lại.",
+        errorCode: POS_ERROR_CODES.RPC_GENERIC,
+      };
+    }
+
     return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+      success: true,
+      data: {
+        order_id: result.order_id,
+        subtotal: Number(result.subtotal),
+        total_amount: Number(result.total_amount),
+        added_count: Number(result.added_count),
+        ...(result.idempotent ? { idempotent: true } : {}),
+      },
     };
-  }
-
-  const ctx = await getAuthContextWithPermission(
-    POS_ROLES,
-    PERMISSION_KEYS.POS_USE,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
-
-  const { supabase, claims } = ctx;
-
-  if (claims.branch_id !== parsedBranch.data) {
-    return { success: false, error: "Không có quyền truy cập chi nhánh này" };
-  }
-
-  const rpcItems = parsed.data.items.map((item) => ({
-    menu_item_id: item.menu_item_id,
-    variant_id: item.variant_id ?? null,
-    item_name: item.item_name,
-    variant_name: item.variant_name ?? null,
-    quantity: item.quantity,
-    unit_price: item.unit_price,
-    modifiers: item.modifiers.map((m) => ({
-      modifier_id: m.modifier_id,
-      name: m.name,
-      price: m.price,
-    })),
-    sides: item.sides.map((s) => ({
-      side_item_id: s.side_item_id,
-      name: s.name,
-      price: s.price,
-      quantity: s.quantity,
-      is_default: s.is_default,
-    })),
-    subtotal: calcItemSubtotal(item),
-    note: item.note ?? null,
-  }));
-
-  const { data, error } = await supabase.rpc("append_order_items", {
-    p_order_id: parsed.data.orderId,
-    p_items: rpcItems,
-    p_idempotency_key: idempotencyKey ?? undefined,
-  });
-
-  if (error) {
-    const msg = String(error.message ?? "").toLowerCase();
-    if (msg.includes("order_not_appendable") || msg.includes("appendable")) {
-      return {
-        success: false,
-        error: "Không thể thêm món vào đơn ở trạng thái này.",
-      };
-    }
-    if (msg.includes("not found") || msg.includes("inactive")) {
-      return {
-        success: false,
-        error: "Món không còn trong thực đơn hoặc đã ngừng bán.",
-      };
-    }
-    if (msg.includes("daily_limit_item_disabled")) {
-      return {
-        success: false,
-        error: "Có món đã bị tắt trong ngày — bỏ khỏi giỏ trước khi đặt.",
-      };
-    }
-    if (msg.includes("daily_limit_exceeded")) {
-      return {
-        success: false,
-        error: "Có món đã hết suất hôm nay — giảm số lượng hoặc đổi món.",
-      };
-    }
-    if (
-      msg.includes("stale_side_or_modifier") ||
-      msg.includes("stale modifier") ||
-      msg.includes("stale side")
-    ) {
-      return {
-        success: false,
-        error:
-          "Tùy chọn món đã thay đổi. Vui lòng mở món và chọn lại trước khi thêm.",
-      };
-    }
-    return {
-      success: false,
-      error: "Không thể thêm món. Vui lòng thử lại.",
-    };
-  }
-
-  const result = data as unknown as {
-    success: boolean;
-    order_id: number;
-    added_count: number;
-    subtotal: number;
-    total_amount: number;
-    idempotent?: boolean;
-  } | null;
-
-  if (!result) {
-    return { success: false, error: "Không thể thêm món. Vui lòng thử lại." };
-  }
-
-  return {
-    success: true,
-    data: {
-      order_id: result.order_id,
-      subtotal: Number(result.subtotal),
-      total_amount: Number(result.total_amount),
-      added_count: Number(result.added_count),
-      ...(result.idempotent ? { idempotent: true } : {}),
-    },
-  };
-}
+  },
+);
 
 /* ─── voidOrderItem ─── */
 

@@ -114,6 +114,65 @@ test("mapRpcError preserves first-match ordering", () => {
   assert.equal(result.errorCode, "test.tenant");
 });
 
+test("mapRpcError passes Postgres error.code to predicates", () => {
+  // Mappings can match on .code instead of (or alongside) .message — used by
+  // submitOrder to detect 55P03 (advisory lock contention) and 42501
+  // (stale RPC grant insufficient_privilege) which arrive with stable codes
+  // even when the message text varies.
+  const mappings: readonly RpcErrorMapping[] = [
+    {
+      match: (_msg, code) => code === "55P03",
+      errorCode: "db.lock",
+      userMessage: "Đang có giao dịch khác.",
+    },
+    {
+      match: (msg, code) => code === "42501" || msg.includes("42501"),
+      errorCode: "db.privilege",
+      userMessage: "Không có quyền (hệ thống).",
+    },
+  ];
+
+  const lock = mapRpcError(
+    { message: "could not obtain lock on relation", code: "55P03" },
+    mappings,
+    fallback,
+  );
+  assert.equal(lock.errorCode, "db.lock");
+
+  const privilege = mapRpcError(
+    { message: "permission denied for table orders", code: "42501" },
+    mappings,
+    fallback,
+  );
+  assert.equal(privilege.errorCode, "db.privilege");
+
+  // Message-based 42501 (some clients carry it in message even with no .code)
+  const privilegeViaMsg = mapRpcError(
+    { message: "ERROR: 42501 — permission denied", code: null },
+    mappings,
+    fallback,
+  );
+  assert.equal(privilegeViaMsg.errorCode, "db.privilege");
+});
+
+test("mapRpcError predicates may ignore the code arg (backward compat)", () => {
+  // Existing 1-arg predicates from WS-1a/batch-1/batch-2 must keep working.
+  const mappings: readonly RpcErrorMapping[] = [
+    {
+      match: (msg) => msg.includes("forbidden"),
+      errorCode: "test.forbidden",
+      userMessage: "Cần quyền.",
+    },
+  ];
+
+  const result = mapRpcError(
+    { message: "RLS forbidden", code: "42501" },
+    mappings,
+    fallback,
+  );
+  assert.equal(result.errorCode, "test.forbidden");
+});
+
 test("includesAny matches when any needle is present", () => {
   const predicate = includesAny("forbidden", "permission denied");
   assert.equal(predicate("rls forbidden on table"), true);

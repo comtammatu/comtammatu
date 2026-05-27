@@ -551,6 +551,126 @@ export const markServedRpcFallback: RpcErrorFallback = {
 };
 
 /* ────────────────────────────────────────────────────────────────────────── */
+/*  submitOrder — main RPC error vocabulary (create_order)                    */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Mappings for `supabase.rpc("create_order", ...)` failures. The RPC raises
+ * a wide catalogue because it cascades into menu validation, daily-limit
+ * gating, side/modifier freshness, and Postgres-level concurrency control.
+ *
+ * Two of these mappings branch on `error.code` (Postgres SQLSTATE) instead
+ * of `.message`:
+ * - `42501` insufficient_privilege — stale RPC overload missing GRANT.
+ *   Caller must re-login or escalate to ops.
+ * - `55P03` lock_not_available — another `create_order` invocation holds
+ *   the advisory lock. Caller can retry shortly.
+ *
+ * Order: code-based checks first (they raise earlier in the lifecycle),
+ * then message-based sentinels grouped by behaviour family.
+ */
+export const submitOrderRpcMappings: readonly RpcErrorMapping[] = [
+  {
+    match: (msg, code) =>
+      code === "42501" || msg.includes("42501") || msg.includes("permission denied"),
+    errorCode: POS_ERROR_CODES.DB_PERMISSION_DENIED,
+    userMessage:
+      "Không có quyền tạo đơn (hệ thống). Vui lòng đăng nhập lại hoặc liên hệ quản lý.",
+  },
+  {
+    match: (_msg, code) => code === "55P03",
+    errorCode: POS_ERROR_CODES.DB_LOCK_NOT_AVAILABLE,
+    userMessage: "Đang có đơn khác được tạo. Vui lòng thử lại sau vài giây.",
+  },
+  {
+    // Stale `pos_session_id` from RSC props: cashier closed (and re-opened)
+    // the shift on another tab/terminal while this tab still holds the old
+    // session.id. RPC raises P0002 with this exact wording. Surface a typed
+    // code so the client can router.refresh() instead of looping forever.
+    match: includesAny("pos session does not belong", "is not open"),
+    errorCode: POS_ERROR_CODES.SCOPE_SESSION_NOT_OPEN,
+    userMessage: "Ca POS đã đóng hoặc đổi máy — đang tải lại trang.",
+  },
+  {
+    match: includesAny("daily_limit_item_disabled"),
+    errorCode: POS_ERROR_CODES.DAILY_LIMIT_ITEM_DISABLED,
+    userMessage: "Có món đã bị tắt trong ngày — bỏ khỏi giỏ trước khi đặt.",
+  },
+  {
+    match: includesAny("daily_limit_exceeded"),
+    errorCode: POS_ERROR_CODES.DAILY_LIMIT_EXCEEDED,
+    userMessage: "Có món đã hết suất hôm nay — giảm số lượng hoặc đổi món.",
+  },
+  {
+    match: includesAny(
+      "stale_side_or_modifier",
+      "stale modifier",
+      "stale side",
+    ),
+    errorCode: POS_ERROR_CODES.CART_STALE_MENU_OPTION,
+    userMessage:
+      "Tùy chọn món đã thay đổi. Vui lòng mở món và chọn lại trước khi đặt.",
+  },
+  {
+    match: includesAny("empty"),
+    errorCode: POS_ERROR_CODES.CART_EMPTY,
+    userMessage: "Giỏ hàng trống",
+  },
+];
+
+export const submitOrderRpcFallback: RpcErrorFallback = {
+  userMessage: "Không thể tạo đơn hàng. Vui lòng thử lại.",
+  errorCode: POS_ERROR_CODES.RPC_GENERIC,
+};
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/*  appendOrderItems — main RPC error vocabulary                              */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Mappings for `supabase.rpc("append_order_items", ...)` failures. Shares
+ * vocabulary with `create_order` for daily-limit and stale-options paths;
+ * adds `order_not_appendable` for orders past the pending state.
+ */
+export const appendOrderItemsRpcMappings: readonly RpcErrorMapping[] = [
+  {
+    match: includesAny("order_not_appendable", "appendable"),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage: "Không thể thêm món vào đơn ở trạng thái này.",
+  },
+  {
+    match: includesAny("not found", "inactive"),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage: "Món không còn trong thực đơn hoặc đã ngừng bán.",
+  },
+  {
+    match: includesAny("daily_limit_item_disabled"),
+    errorCode: POS_ERROR_CODES.DAILY_LIMIT_ITEM_DISABLED,
+    userMessage: "Có món đã bị tắt trong ngày — bỏ khỏi giỏ trước khi đặt.",
+  },
+  {
+    match: includesAny("daily_limit_exceeded"),
+    errorCode: POS_ERROR_CODES.DAILY_LIMIT_EXCEEDED,
+    userMessage: "Có món đã hết suất hôm nay — giảm số lượng hoặc đổi món.",
+  },
+  {
+    match: includesAny(
+      "stale_side_or_modifier",
+      "stale modifier",
+      "stale side",
+    ),
+    errorCode: POS_ERROR_CODES.CART_STALE_MENU_OPTION,
+    userMessage:
+      "Tùy chọn món đã thay đổi. Vui lòng mở món và chọn lại trước khi thêm.",
+  },
+];
+
+export const appendOrderItemsRpcFallback: RpcErrorFallback = {
+  userMessage: "Không thể thêm món. Vui lòng thử lại.",
+  errorCode: POS_ERROR_CODES.RPC_GENERIC,
+};
+
+/* ────────────────────────────────────────────────────────────────────────── */
 /*  Re-exports for convenience inside actions/_components consumers           */
 /* ────────────────────────────────────────────────────────────────────────── */
 
