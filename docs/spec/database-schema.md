@@ -17,7 +17,8 @@ node scripts/project-snapshot.mjs
 | Public views in generated types | 9 |
 | Public RPC/SQL functions in generated types | 241 |
 | Public enums in generated types | 0 |
-| SQL migration files | 363 |
+| Production migration files in `supabase/migrations/` | 363 |
+| Greenfield rehearsal SQL files in `supabase/greenfield/migrations/` | 8 |
 
 The archived early-2026 table-by-table reference moved to
 `docs/archive/ref/database-schema-early-2026.md`.
@@ -30,9 +31,12 @@ When database facts disagree, trust the higher source:
 | --- | --- | --- |
 | 1 | `packages/database/src/types/database.types.ts` | Shape currently usable by app code after `pnpm db:types` |
 | 2 | Applied dev/prod Supabase state | RLS, defaults, constraints, extensions, and real runtime behavior |
-| 3 | `supabase/migrations/*.sql` | Authored schema changes; file existence does not prove applied status |
+| 3 | `supabase/migrations/*.sql` | Production-forward authored schema changes; file existence does not prove applied status |
 | 4 | `docs/modules/database.md` and module docs | Domain grouping, rationale, and implementation guidance |
 | 5 | `docs/archive/**` | Historical context only |
+
+Greenfield rehearsal SQL lives in `supabase/greenfield/migrations/`. It is not
+part of the production migration chain and is guarded by `pnpm lint:db-boundary`.
 
 ## Domain Groups
 

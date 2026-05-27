@@ -48,6 +48,7 @@ the current checkout on 2026-05-26 with `node scripts/project-snapshot.mjs`:
 
 - **116 tables**, **9 views**, **241 RPC/SQL functions**
 - **363 migration files** in `supabase/migrations/`
+- **8 greenfield rehearsal SQL files** in `supabase/greenfield/migrations/`
 - **0 enums** — `staff_role` ENUM was dropped (Auth cleanup, 2026-04-23); roles are now strings derived from `positions.legacy_role_code`
 
 ### DB Source-of-Truth Ladder
@@ -58,8 +59,11 @@ When facts disagree, trust the higher tier:
 | ---- | --------------------------------------------------- | --------------------------------------------------------------- |
 | 1    | `packages/database/src/types/database.types.ts`     | The shape currently usable from app code (post `pnpm db:types`) |
 | 2    | Applied state of dev/prod DB                        | What RLS, defaults, constraints actually enforce right now      |
-| 3    | `supabase/migrations/*.sql`                         | What changes have been authored — file existence ≠ applied      |
+| 3    | `supabase/migrations/*.sql`                         | Production-forward authored changes — file existence ≠ applied  |
 | 4    | Hand-written docs (`docs/modules/*`, `docs/spec/database-schema.md`) | Narrative + design rationale; lags 1-3 by definition            |
+
+Greenfield rehearsal SQL is intentionally separate at
+`supabase/greenfield/migrations/`. It is not production apply status evidence.
 
 ### Migration Status Vocabulary
 
@@ -123,6 +127,9 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON public.{table} TO authenticated;
 ## Migration Conventions
 
 Migrations live in `supabase/migrations/` with timestamp-prefixed filenames.
+Greenfield rehearsal SQL lives in `supabase/greenfield/migrations/` and is
+guarded by `pnpm lint:db-boundary` so it does not drift into the production
+migration chain.
 
 | Convention    | Rule                                                              |
 | ------------- | ----------------------------------------------------------------- |

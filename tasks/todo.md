@@ -35,6 +35,7 @@
 - [x] Audit restored greenfield schema for legacy/dead-code carryover: `docs/plan/greenfield-schema-legacy-audit.md`.
 - [x] Apply greenfield schema hardening for non-role-bridge findings: RPC grant allowlist, `printer_agent_status` security-invoker fix, direct MV API revoke, storage listing tighten, service-only table grant cleanup, internal deny policies, and function `search_path` pinning.
 - [x] Remove active app/E2E direct reads of `positions.legacy_role_code`; staff admin now reads canonical position code/label and baseline hygiene guards the bridge column outside generated DB types.
+- [x] Move greenfield-only hardening and PBAC cleanup SQL out of `supabase/migrations/` into `supabase/greenfield/migrations/`; `pnpm lint:db-boundary` now guards the production migration boundary.
 - [ ] Triage remaining Supabase advisors on greenfield `staging` before any cutover: app-called SECURITY DEFINER RPC exposure, unindexed FKs, and multiple permissive policies.
 - [ ] Decide/refactor the strict-greenfield role bridge: `positions.legacy_role_code`, JWT `user_role`, route ACL, and remaining `auth_role()` RLS/RPC usage.
 - [ ] Run live data audit before any greenfield data cutover: row counts, table sizes, last writes, FK graph, storage object counts/checksums, provider identifier manifest, prod apply proof, and queue-state decisions.

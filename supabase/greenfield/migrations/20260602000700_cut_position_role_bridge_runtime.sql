@@ -1,3 +1,4 @@
+-- GREENFIELD_ONLY: rehearsal SQL for staging jmasiwuqiyedqvyfzhuq; not part of supabase/migrations.
 -- =============================================================
 -- Greenfield PBAC cleanup: derive runtime role buckets from positions.code.
 --

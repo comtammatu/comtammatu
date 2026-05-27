@@ -116,6 +116,34 @@ as a client and applied the public schema in transaction-scoped chunks instead
 of one long transaction, because the pooler dropped the single long-running
 transaction near the grants section.
 
+## Step 5: Greenfield-Only Hardening Bundle
+
+Greenfield rehearsal hardening SQL lives outside the production migration chain:
+
+```text
+supabase/greenfield/migrations/
+```
+
+Apply these files only after the public schema and managed surfaces have been
+restored to an owner-approved empty dev/test greenfield database. Apply them in
+filename order. Do not move these files into `supabase/migrations/`, and do not
+run them as part of the normal production migration flow.
+
+Current bundle:
+
+- `20260602000000_harden_supplier_invoice_source_rls.sql`
+- `20260602000100_harden_procurement_source_rls.sql`
+- `20260602000200_harden_supplier_return_source_rls.sql`
+- `20260602000300_greenfield_schema_hardening.sql`
+- `20260602000400_greenfield_internal_table_policy_and_function_path.sql`
+- `20260602000500_canonical_position_codes.sql`
+- `20260602000600_harden_procurement_catalog_scope.sql`
+- `20260602000700_cut_position_role_bridge_runtime.sql`
+
+If a rehearsal change should become production behavior, author a separate
+production-reviewed migration under `supabase/migrations/` instead of promoting
+the rehearsal file as-is.
+
 ## Acceptance Gate
 
 The package is not accepted until:
@@ -126,5 +154,7 @@ The package is not accepted until:
 - Storage buckets, cron jobs, realtime publication, extension enablement, and
   auth hook behavior are handled as separate install steps and restored to an
   approved empty dev/test database.
+- Greenfield-only hardening SQL remains under `supabase/greenfield/migrations/`;
+  `pnpm lint:db-boundary` must pass.
 - `pnpm db:types` is regenerated from the restored source schema.
 - `pnpm typecheck && pnpm lint && pnpm build` passes after type regeneration.

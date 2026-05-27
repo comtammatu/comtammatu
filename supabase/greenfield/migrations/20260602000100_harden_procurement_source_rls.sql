@@ -1,3 +1,4 @@
+-- GREENFIELD_ONLY: rehearsal SQL for staging jmasiwuqiyedqvyfzhuq; not part of supabase/migrations.
 -- ============================================================================
 -- Procurement source-scoped RLS
 --

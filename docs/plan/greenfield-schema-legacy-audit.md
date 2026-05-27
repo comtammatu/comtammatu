@@ -7,12 +7,27 @@ Target: Supabase `staging` / `jmasiwuqiyedqvyfzhuq`
 Status: read-only audit. No schema or data mutation was applied during this
 check.
 
-Post-audit hardening update: the non-role-bridge schema hardening slice is
-prepared for greenfield `staging` / `jmasiwuqiyedqvyfzhuq`, but was not present
-in remote migration history when checked on 2026-05-27. Pending migration files:
+Post-audit hardening update: the non-role-bridge schema hardening and PBAC
+cleanup slices are packaged as greenfield-only rehearsal SQL for `staging` /
+`jmasiwuqiyedqvyfzhuq`, outside the production migration chain. Bundle path:
 
+```text
+supabase/greenfield/migrations/
+```
+
+Current bundle:
+
+- `20260602000000_harden_supplier_invoice_source_rls.sql`
+- `20260602000100_harden_procurement_source_rls.sql`
+- `20260602000200_harden_supplier_return_source_rls.sql`
 - `20260602000300_greenfield_schema_hardening.sql`
 - `20260602000400_greenfield_internal_table_policy_and_function_path.sql`
+- `20260602000500_canonical_position_codes.sql`
+- `20260602000600_harden_procurement_catalog_scope.sql`
+- `20260602000700_cut_position_role_bridge_runtime.sql`
+
+These files must not be treated as `supabase/migrations/` production-forward
+migrations. `pnpm lint:db-boundary` guards this separation.
 
 Verified effects:
 

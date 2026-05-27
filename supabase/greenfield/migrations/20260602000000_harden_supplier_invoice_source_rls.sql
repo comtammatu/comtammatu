@@ -1,3 +1,4 @@
+-- GREENFIELD_ONLY: rehearsal SQL for staging jmasiwuqiyedqvyfzhuq; not part of supabase/migrations.
 -- ============================================================================
 -- Supplier invoice source-scoped RLS
 --

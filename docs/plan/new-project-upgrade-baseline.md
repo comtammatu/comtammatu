@@ -92,6 +92,11 @@ Generated with `node scripts/project-snapshot.mjs` on 2026-05-26:
   `staging` / `jmasiwuqiyedqvyfzhuq`, extensions, bucket config, public schema,
   storage policies, realtime publication tables, cron jobs, and auth hook grants
   have been restored and verified.
+- Greenfield-only schema hardening and PBAC cleanup SQL now lives in
+  `supabase/greenfield/migrations/`, not in `supabase/migrations/`. The
+  production-forward chain stays reserved for production-reviewed migrations;
+  `pnpm lint:db-boundary` blocks greenfield rehearsal SQL from drifting back
+  into that chain.
 - Supabase Local empty-database replay evidence lives in
   `docs/plan/supabase-local-baseline-replay.md`. It closes
   `local-chain-first` as `NO-GO`: local migration `20260508055046` references
