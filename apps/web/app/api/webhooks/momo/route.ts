@@ -55,7 +55,12 @@ function isMomoIPN(value: unknown): value is MomoIPN {
     "extraData",
     "signature",
   ] as const;
-  const optionalStrings = ["orderInfo", "orderType", "message", "payType"] as const;
+  const optionalStrings = [
+    "orderInfo",
+    "orderType",
+    "message",
+    "payType",
+  ] as const;
   const amount = value.amount;
   const resultCode = value.resultCode;
   const responseTime = value.responseTime;
@@ -181,7 +186,10 @@ async function loadPaymentStockStatus(
     .maybeSingle();
 
   if (error) {
-    console.error("[momo-webhook] failed to read payment stock status", error.code);
+    console.error(
+      "[momo-webhook] failed to read payment stock status",
+      error.code,
+    );
     return null;
   }
 
@@ -282,7 +290,10 @@ export async function POST(request: Request) {
 
   const extra = parseMomoExtraData(payload.extraData);
   if (!extra) {
-    return NextResponse.json({ error: "Invalid webhook scope" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid webhook scope" },
+      { status: 400 },
+    );
   }
 
   const supabase = createServiceClient();
@@ -399,7 +410,10 @@ export async function POST(request: Request) {
         console.error(
           `[momo-webhook] stock consumption failed: payment=${pendingPayment.id} ${detail}`,
         );
-        return NextResponse.json({ error: "processing_failed" }, { status: 500 });
+        return NextResponse.json(
+          { error: "processing_failed" },
+          { status: 500 },
+        );
       }
 
       await markWebhookEvent(supabase, webhookEventId, {

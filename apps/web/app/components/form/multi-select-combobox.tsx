@@ -1,10 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import {
-  Plus as IconPlus,
-  ChevronsUpDown as IconSelector,
-} from "lucide-react";
+import { Plus as IconPlus, ChevronsUpDown as IconSelector } from "lucide-react";
 import { cn } from "@comtammatu/ui";
 import { matchesSearch } from "@lib/search";
 import { Button } from "@comtammatu/ui/components/button";
@@ -85,8 +82,7 @@ export function MultiSelectCombobox({
   }, [open]);
 
   const selectableCount = useMemo(
-    () =>
-      options.filter((o) => !o.alreadySelected && !o.disabled).length,
+    () => options.filter((o) => !o.alreadySelected && !o.disabled).length,
     [options],
   );
 
@@ -124,7 +120,10 @@ export function MultiSelectCombobox({
           <IconSelector className="ml-2 size-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">
+      <PopoverContent
+        className="w-(--radix-popover-trigger-width) p-0"
+        align="start"
+      >
         <Command
           filter={(v, search, keywords) => {
             return matchesSearch([v, ...(keywords ?? [])], search) ? 1 : 0;
@@ -150,7 +149,8 @@ export function MultiSelectCombobox({
                       toggle(opt.value);
                     }}
                     className={cn(
-                      (isAlready || isLocked) && "cursor-not-allowed opacity-60",
+                      (isAlready || isLocked) &&
+                        "cursor-not-allowed opacity-60",
                     )}
                   >
                     <Checkbox

@@ -91,7 +91,9 @@ const base: BuildRunnerQueueInput = {
 function makeRunnerItem(overrides: Partial<RunnerQueueItem>): RunnerQueueItem {
   return {
     id: "item-1",
-    lane: "preparing",
+    lane: "active",
+    status: "pending",
+    isPriority: false,
     ticketIds: [1],
     readyTicketIds: [],
     orderId: 10,
@@ -164,7 +166,8 @@ test("buildRunnerQueue groups completed takeaway tickets by kitchen batch and us
     (item) => item.orderNumber === "MV-20260524-007-CN1",
   );
 
-  assert.equal(ready?.lane, "served");
+  assert.equal(ready?.lane, "ready");
+  assert.equal(ready?.status, "ready");
   assert.equal(ready?.callNumber, "#007");
   assert.equal(ready?.callPrefix, "Số");
   assert.equal(ready?.referenceNumber, "#007");
@@ -223,7 +226,8 @@ test("buildRunnerQueue keeps preparing orders and hides completed orders", () =>
     (item) => item.orderNumber === "TC-20260524-008-CN1",
   );
 
-  assert.equal(preparing?.lane, "preparing");
+  assert.equal(preparing?.lane, "active");
+  assert.equal(preparing?.status, "preparing");
   assert.equal(preparing?.callNumber, "5");
   assert.equal(preparing?.callPrefix, "Bàn");
   assert.equal(preparing?.referenceNumber, "TC-20260524-008-CN1");
@@ -231,6 +235,166 @@ test("buildRunnerQueue keeps preparing orders and hides completed orders", () =>
     queue.some((item) => item.orderNumber === "MV-20260524-009-CN1"),
     false,
   );
+});
+
+test("buildRunnerQueue follows KDS queue rank with item-level priority", () => {
+  const input: BuildRunnerQueueInput = {
+    ...base,
+    tickets: [
+      {
+        id: 30,
+        order_id: 30,
+        order_item_id: 300,
+        kitchen_send_batch_id: null,
+        status: "ready",
+        bumped_at: "2026-05-24T03:03:00.000Z",
+        created_at: "2026-05-24T03:00:00.000Z",
+        updated_at: "2026-05-24T03:03:00.000Z",
+      },
+      {
+        id: 31,
+        order_id: 31,
+        order_item_id: 310,
+        kitchen_send_batch_id: null,
+        status: "pending",
+        bumped_at: null,
+        created_at: "2026-05-24T03:01:00.000Z",
+        updated_at: "2026-05-24T03:01:00.000Z",
+      },
+      {
+        id: 32,
+        order_id: 32,
+        order_item_id: 320,
+        kitchen_send_batch_id: null,
+        status: "pending",
+        bumped_at: null,
+        created_at: "2026-05-24T03:02:00.000Z",
+        updated_at: "2026-05-24T03:02:00.000Z",
+      },
+      {
+        id: 33,
+        order_id: 33,
+        order_item_id: 330,
+        kitchen_send_batch_id: null,
+        status: "preparing",
+        bumped_at: null,
+        created_at: "2026-05-24T03:04:00.000Z",
+        updated_at: "2026-05-24T03:04:00.000Z",
+      },
+    ],
+    orders: [
+      {
+        id: 30,
+        order_number: "MV-20260524-030-CN1",
+        order_type: "takeaway",
+        table_id: null,
+        status: "ready",
+        created_at: "2026-05-24T03:00:00.000Z",
+        tables: null,
+      },
+      {
+        id: 31,
+        order_number: "MV-20260524-031-CN1",
+        order_type: "takeaway",
+        table_id: null,
+        status: "preparing",
+        created_at: "2026-05-24T03:01:00.000Z",
+        tables: null,
+      },
+      {
+        id: 32,
+        order_number: "MV-20260524-032-CN1",
+        order_type: "takeaway",
+        table_id: null,
+        status: "preparing",
+        created_at: "2026-05-24T03:02:00.000Z",
+        tables: null,
+      },
+      {
+        id: 33,
+        order_number: "MV-20260524-033-CN1",
+        order_type: "takeaway",
+        table_id: null,
+        status: "preparing",
+        created_at: "2026-05-24T03:04:00.000Z",
+        tables: null,
+      },
+    ],
+    orderItems: [{ id: 320, order_id: 32, is_priority: true }],
+    kitchenBatches: [],
+  };
+
+  const queue = buildRunnerQueue(input);
+
+  assert.deepEqual(
+    queue.map((item) => item.orderNumber),
+    [
+      "MV-20260524-033-CN1",
+      "MV-20260524-032-CN1",
+      "MV-20260524-031-CN1",
+      "MV-20260524-030-CN1",
+    ],
+  );
+  assert.equal(queue[1]?.isPriority, true);
+  assert.equal(queue[1]?.status, "pending");
+  assert.equal(queue[3]?.lane, "ready");
+});
+
+test("buildRunnerQueue keeps mixed KDS batch statuses in one active row", () => {
+  const input: BuildRunnerQueueInput = {
+    ...base,
+    tickets: [
+      {
+        id: 34,
+        order_id: 34,
+        order_item_id: 340,
+        kitchen_send_batch_id: 934,
+        status: "pending",
+        bumped_at: null,
+        created_at: "2026-05-24T03:05:00.000Z",
+        updated_at: "2026-05-24T03:05:00.000Z",
+      },
+      {
+        id: 35,
+        order_id: 34,
+        order_item_id: 350,
+        kitchen_send_batch_id: 934,
+        status: "ready",
+        bumped_at: "2026-05-24T03:06:00.000Z",
+        created_at: "2026-05-24T03:05:30.000Z",
+        updated_at: "2026-05-24T03:06:00.000Z",
+      },
+    ],
+    orders: [
+      {
+        id: 34,
+        order_number: "MV-20260524-034-CN1",
+        order_type: "takeaway",
+        table_id: null,
+        status: "preparing",
+        created_at: "2026-05-24T03:05:00.000Z",
+        tables: null,
+      },
+    ],
+    kitchenBatches: [
+      {
+        id: 934,
+        order_id: 34,
+        kitchen_ticket_number: "#034",
+        send_seq: 1,
+        kind: "initial",
+        created_at: "2026-05-24T03:05:00.000Z",
+      },
+    ],
+  };
+
+  const queue = buildRunnerQueue(input);
+
+  assert.equal(queue.length, 1);
+  assert.equal(queue[0]?.lane, "active");
+  assert.equal(queue[0]?.status, "pending");
+  assert.equal(queue[0]?.ticketCount, 2);
+  assert.deepEqual(queue[0]?.readyTicketIds, [35]);
 });
 
 test("buildRunnerQueue falls back to order number and preserves leading zeroes", () => {
@@ -348,7 +512,8 @@ test("buildRunnerQueue lets active work win over completed history for the same 
   const queue = buildRunnerQueue(input);
 
   assert.equal(queue.length, 1);
-  assert.equal(queue[0]?.lane, "preparing");
+  assert.equal(queue[0]?.lane, "active");
+  assert.equal(queue[0]?.status, "preparing");
   assert.equal(queue[0]?.callNumber, "12");
 });
 
@@ -510,6 +675,7 @@ test("buildRunnerQueue lets active work win over recent served history for the s
   const queue = buildRunnerQueue(input);
 
   assert.equal(queue.length, 1);
-  assert.equal(queue[0]?.lane, "preparing");
+  assert.equal(queue[0]?.lane, "active");
+  assert.equal(queue[0]?.status, "preparing");
   assert.equal(queue[0]?.orderNumber, "TC-20260524-018-CN1");
 });

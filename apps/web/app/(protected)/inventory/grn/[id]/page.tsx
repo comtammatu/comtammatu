@@ -137,10 +137,7 @@ export default async function GRNDetailPage({
   });
 
   // Tổng giá trị nhập kho = cost × accepted (số thực vào kho sau khi trừ trả NCC)
-  const totalAmount = items.reduce(
-    (sum, i) => sum + i.cost * i.accepted,
-    0,
-  );
+  const totalAmount = items.reduce((sum, i) => sum + i.cost * i.accepted, 0);
 
   const grn: GRNDetail = {
     id: Number(id),

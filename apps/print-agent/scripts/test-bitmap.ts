@@ -120,14 +120,22 @@ async function buildPayload(): Promise<Uint8Array> {
   return concat(parts);
 }
 
-const sendLAN = async (host: string, port: number, payload: Uint8Array): Promise<void> =>
+const sendLAN = async (
+  host: string,
+  port: number,
+  payload: Uint8Array,
+): Promise<void> =>
   new Promise((resolve, reject) => {
     const sock = new net.Socket();
     let settled = false;
     const done = (err?: Error) => {
       if (settled) return;
       settled = true;
-      try { sock.destroy(); } catch { /* ignore */ }
+      try {
+        sock.destroy();
+      } catch {
+        /* ignore */
+      }
       err ? reject(err) : resolve();
     };
     sock.setTimeout(30_000, () => done(new Error(`timeout ${host}:${port}`)));
@@ -147,12 +155,16 @@ async function main() {
     process.exit(1);
   }
   const port = Number(process.env.PRINTER_PORT ?? 9100);
-  console.log(`[test-bitmap] rendering sample (this loads fonts, may take 1-2s)...`);
+  console.log(
+    `[test-bitmap] rendering sample (this loads fonts, may take 1-2s)...`,
+  );
   const payload = await buildPayload();
   console.log(`[test-bitmap] payload size: ${payload.length} bytes`);
   console.log(`[test-bitmap] sending to ${host}:${port}`);
   await sendLAN(host, port, payload);
-  console.log(`[test-bitmap] done. If Vietnamese renders correctly, set PRINT_MODE=bitmap in .env.`);
+  console.log(
+    `[test-bitmap] done. If Vietnamese renders correctly, set PRINT_MODE=bitmap in .env.`,
+  );
 }
 
 main().catch((e) => {

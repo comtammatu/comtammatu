@@ -8,7 +8,7 @@
 -- `{ ingredient_id: { qty, note, savedAt } }`.
 -- Wiped on session finalize (CASCADE from parent session).
 --
--- Spec: docs/plan/inventory-ui-wiring.md S13a
+-- Current docs: docs/ref/inventory.md + docs/ref/inventory-sop.md
 -- =============================================================
 
 CREATE TABLE IF NOT EXISTS public.stocktake_drafts (

@@ -10,7 +10,10 @@ const FINANCE_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
 /* ─── Fetch Posting Rules ─── */
 
 export async function fetchPostingRules(): Promise<ActionResult> {
-  const ctx = await getAuthContextWithPermission(FINANCE_ROLES, PERMISSION_KEYS.SETTINGS_TENANT);
+  const ctx = await getAuthContextWithPermission(
+    FINANCE_ROLES,
+    PERMISSION_KEYS.SETTINGS_TENANT,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -53,7 +56,10 @@ export async function updatePostingRule(
     };
   }
 
-  const ctx = await getAuthContextWithPermission(FINANCE_ROLES, PERMISSION_KEYS.SETTINGS_TENANT);
+  const ctx = await getAuthContextWithPermission(
+    FINANCE_ROLES,
+    PERMISSION_KEYS.SETTINGS_TENANT,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;

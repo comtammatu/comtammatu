@@ -1,1 +1,6 @@
-export { rateLimit, loginRateLimit, feedbackTokenRateLimit, feedbackIpRateLimit } from "./rate-limit";
+export {
+  rateLimit,
+  loginRateLimit,
+  feedbackTokenRateLimit,
+  feedbackIpRateLimit,
+} from "./rate-limit";

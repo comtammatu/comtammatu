@@ -424,7 +424,9 @@ test.describe("KDS bump / recall workflow", () => {
       );
       await expect(heatmapCard).toBeVisible({ timeout: 10_000 });
       await expect(
-        heatmapCard.getByTestId(`kds-complete-order-${String(fixture.orderId)}`),
+        heatmapCard.getByTestId(
+          `kds-complete-order-${String(fixture.orderId)}`,
+        ),
       ).toBeVisible();
 
       await heatmapCard

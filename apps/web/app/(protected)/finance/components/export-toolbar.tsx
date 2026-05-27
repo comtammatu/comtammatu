@@ -71,9 +71,7 @@ function buildCsv(
   if (signature.extra && signature.extra.length > 0) {
     lines.push(escape(exportCopy.headerExtra(signature.extra.join(" · "))));
   }
-  lines.push(
-    escape(exportCopy.headerExportedAt(formatVNDateTime(new Date()))),
-  );
+  lines.push(escape(exportCopy.headerExportedAt(formatVNDateTime(new Date()))));
   lines.push("");
 
   for (const section of sections) {

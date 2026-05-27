@@ -1,8 +1,23 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
-import { Armchair as IconArmchair, ArrowLeft as IconArrowLeft, ChefHat as IconChefHat, Gauge as IconGauge, ListChecks as IconChecklist, Monitor as IconDeviceDesktop, LayoutGrid as IconLayoutGrid, Printer as IconPrinter, ReceiptText as IconReceipt2 } from "lucide-react";
-import { AppLinkCard, AppPage, AppPageHeader, AppSection } from "@/components/surface";
+import {
+  Armchair as IconArmchair,
+  ArrowLeft as IconArrowLeft,
+  ChefHat as IconChefHat,
+  Gauge as IconGauge,
+  ListChecks as IconChecklist,
+  Monitor as IconDeviceDesktop,
+  LayoutGrid as IconLayoutGrid,
+  Printer as IconPrinter,
+  ReceiptText as IconReceipt2,
+} from "lucide-react";
+import {
+  AppLinkCard,
+  AppPage,
+  AppPageHeader,
+  AppSection,
+} from "@/components/surface";
 import { Button } from "@comtammatu/ui/components/button";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
@@ -62,7 +77,8 @@ export default async function BranchSettingsHubPage({
     {
       href: `/br/${branchId}/settings/pos-sessions`,
       title: "Ca POS",
-      description: "Lịch sử ca, bill, doanh thu, số món và đối soát chênh lệch.",
+      description:
+        "Lịch sử ca, bill, doanh thu, số món và đối soát chênh lệch.",
       icon: <IconReceipt2 />,
     },
     {

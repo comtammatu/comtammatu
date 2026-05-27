@@ -114,18 +114,18 @@ Trong hệ thống hiện tại, phần AP/reporting có thể đi qua `super_ma
 
 ## 6. Xử lý nhanh khi có sự cố
 
-| Sự cố | Hành động đúng |
-| ---- | -------------- |
-| NCC giao thiếu | Ghi đúng thực nhận trên `GRN` |
-| Bếp thiếu nguyên liệu | Tạo transfer bổ sung từ HQ |
+| Sự cố                  | Hành động đúng                                                                      |
+| ---------------------- | ----------------------------------------------------------------------------------- |
+| NCC giao thiếu         | Ghi đúng thực nhận trên `GRN`                                                       |
+| Bếp thiếu nguyên liệu  | Tạo transfer bổ sung từ HQ                                                          |
 | Chi nhánh cần hàng gấp | Có thể nhận trực tiếp từ HQ hoặc từ bếp trung tâm tùy loại hàng và vận hành thực tế |
-| Thiếu BOM | Dừng confirm sản xuất, cập nhật BOM trước |
-| Chi nhánh nhận thiếu | Xác nhận theo thực nhận và ghi chú chênh lệch |
-| Lệch tồn cuối ngày | Dùng `stocktake` / `adjustment`, không sửa tay |
+| Thiếu BOM              | Dừng confirm sản xuất, cập nhật BOM trước                                           |
+| Chi nhánh nhận thiếu   | Xác nhận theo thực nhận và ghi chú chênh lệch                                       |
+| Lệch tồn cuối ngày     | Dùng `stocktake` / `adjustment`, không sửa tay                                      |
 
 ## 7. Mở đúng tài liệu khi cần
 
 - Chi tiết nghiệp vụ: [inventory.md](inventory.md)
 - Ma trận quyền: [inventory-rbac-matrix.md](inventory-rbac-matrix.md)
 - SOP đầy đủ: [inventory-sop.md](inventory-sop.md)
-- Roadmap và phạm vi: [../archive/plan/roadmap.md](../archive/plan/roadmap.md)
+- Roadmap và phạm vi hiện tại: [../../tasks/todo.md](../../tasks/todo.md)

@@ -95,7 +95,7 @@ test.describe("POS-05 Thanh toán đơn", () => {
         // Chip set tự generate theo total → không hardcode 20k/30k vì
         // fixture có thể đổi.
         const chip = p
-          .locator('button')
+          .locator("button")
           .filter({ hasText: /^\s*\d+\.\d+đ\s*$/ })
           .nth(1);
         await chip.click().catch(() => {
@@ -133,7 +133,7 @@ test.describe("POS-05 Thanh toán đơn", () => {
           anchorX: 195,
           anchorY: 600,
           placement: "above",
-          text: "Tick \"Xuất hóa đơn điện tử\"\nnếu khách yêu cầu HĐĐT\n(tự gửi sau khi xác nhận)",
+          text: 'Tick "Xuất hóa đơn điện tử"\nnếu khách yêu cầu HĐĐT\n(tự gửi sau khi xác nhận)',
         },
       ],
     });

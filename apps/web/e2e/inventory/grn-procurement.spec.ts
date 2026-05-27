@@ -104,7 +104,9 @@ test.describe("GRN at central_warehouse — happy path (Scenario 1)", () => {
     const supabase = createServiceClient();
     const fx = await buildGrnFixtures();
 
-    const stockBefore = (await getStockLevel(supabase, fx.tenantId, fx.cw1Id, fx.ingredientId)) ?? 0;
+    const stockBefore =
+      (await getStockLevel(supabase, fx.tenantId, fx.cw1Id, fx.ingredientId)) ??
+      0;
 
     const grn = await createTestGrnDraft(supabase, {
       tenantId: fx.tenantId,
@@ -128,23 +130,32 @@ test.describe("GRN at central_warehouse — happy path (Scenario 1)", () => {
         return;
       }
 
-      const confirmBtn = page.getByRole("button", { name: /ch.t nh.p kho|x.c nh.n nh.p|duy.t phi.u/i });
+      const confirmBtn = page.getByRole("button", {
+        name: /ch.t nh.p kho|x.c nh.n nh.p|duy.t phi.u/i,
+      });
       await expect(confirmBtn).toBeVisible({ timeout: 10_000 });
       await confirmBtn.click();
       const confirmDialog = page.getByRole("alertdialog");
       await expect(confirmDialog).toBeVisible({ timeout: 5_000 });
-      await confirmDialog.getByRole("button", { name: /ch.t nh.p kho/i }).click();
+      await confirmDialog
+        .getByRole("button", { name: /ch.t nh.p kho/i })
+        .click();
 
       // Wait for status update
       await expect
-        .poll(
-          () => getGrnStatus(supabase, fx.tenantId, grn.id),
-          { timeout: 20_000, message: "GRN should be confirmed" },
-        )
+        .poll(() => getGrnStatus(supabase, fx.tenantId, grn.id), {
+          timeout: 20_000,
+          message: "GRN should be confirmed",
+        })
         .toBe("confirmed");
 
       // Assert stock_levels updated at CW
-      const stockAfter = await getStockLevel(supabase, fx.tenantId, fx.cw1Id, fx.ingredientId);
+      const stockAfter = await getStockLevel(
+        supabase,
+        fx.tenantId,
+        fx.cw1Id,
+        fx.ingredientId,
+      );
       expect(stockAfter).not.toBeNull();
       expect(stockAfter).toBeCloseTo(stockBefore + 20, 2);
 
@@ -171,7 +182,12 @@ test.describe("GRN at central_warehouse — happy path (Scenario 1)", () => {
     const fx = await buildGrnFixtures();
 
     // Create an operational branch and attempt GRN insertion
-    const opBranch = await ensureBranch(supabase, fx.tenantId, "branch", "grn-test");
+    const opBranch = await ensureBranch(
+      supabase,
+      fx.tenantId,
+      "branch",
+      "grn-test",
+    );
 
     const { error } = await supabase.from("goods_received_notes").insert({
       tenant_id: fx.tenantId,
@@ -185,7 +201,9 @@ test.describe("GRN at central_warehouse — happy path (Scenario 1)", () => {
     // trg_grn_procurement_branch trigger fires ERRCODE 23514
     expect(error).not.toBeNull();
     expect(error!.code).toBe("23514");
-    expect(error!.message).toContain("branch must be central_warehouse or central_kitchen");
+    expect(error!.message).toContain(
+      "branch must be central_warehouse or central_kitchen",
+    );
   });
 });
 
@@ -198,7 +216,9 @@ test.describe("GRN at central_kitchen — new flow (Scenario 2)", () => {
     const supabase = createServiceClient();
     const fx = await buildGrnFixtures();
 
-    const stockBefore = (await getStockLevel(supabase, fx.tenantId, fx.ckId, fx.ingredientId)) ?? 0;
+    const stockBefore =
+      (await getStockLevel(supabase, fx.tenantId, fx.ckId, fx.ingredientId)) ??
+      0;
 
     const grn = await createTestGrnDraft(supabase, {
       tenantId: fx.tenantId,
@@ -221,26 +241,40 @@ test.describe("GRN at central_kitchen — new flow (Scenario 2)", () => {
         return;
       }
 
-      const confirmBtn = page.getByRole("button", { name: /ch.t nh.p kho|x.c nh.n nh.p|duy.t phi.u/i });
+      const confirmBtn = page.getByRole("button", {
+        name: /ch.t nh.p kho|x.c nh.n nh.p|duy.t phi.u/i,
+      });
       await expect(confirmBtn).toBeVisible({ timeout: 10_000 });
       await confirmBtn.click();
       const confirmDialog = page.getByRole("alertdialog");
       await expect(confirmDialog).toBeVisible({ timeout: 5_000 });
-      await confirmDialog.getByRole("button", { name: /ch.t nh.p kho/i }).click();
+      await confirmDialog
+        .getByRole("button", { name: /ch.t nh.p kho/i })
+        .click();
 
       await expect
-        .poll(
-          () => getGrnStatus(supabase, fx.tenantId, grn.id),
-          { timeout: 20_000, message: "GRN at CK should be confirmed" },
-        )
+        .poll(() => getGrnStatus(supabase, fx.tenantId, grn.id), {
+          timeout: 20_000,
+          message: "GRN at CK should be confirmed",
+        })
         .toBe("confirmed");
 
       // Stock update must be at CK, not at CW
-      const stockAtCk = await getStockLevel(supabase, fx.tenantId, fx.ckId, fx.ingredientId);
+      const stockAtCk = await getStockLevel(
+        supabase,
+        fx.tenantId,
+        fx.ckId,
+        fx.ingredientId,
+      );
       expect(stockAtCk).toBeCloseTo(stockBefore + 10, 2);
 
       // CW stock must NOT have changed as a result of this CK GRN
-      const stockAtCw = await getStockLevel(supabase, fx.tenantId, fx.cw1Id, fx.ingredientId);
+      const stockAtCw = await getStockLevel(
+        supabase,
+        fx.tenantId,
+        fx.cw1Id,
+        fx.ingredientId,
+      );
       // We can't assert exact CW value (other tests may affect it) but CK should be > 0
       expect(stockAtCk).toBeGreaterThan(0);
       // CK and CW stock must be independently tracked
@@ -262,7 +296,12 @@ test.describe("GRN at central_kitchen — new flow (Scenario 2)", () => {
     // The simpler approach: call the RPC with a GRN that has an operational branch_id
     // by creating it raw and then calling the RPC.
 
-    const opBranch = await ensureBranch(supabase, fx.tenantId, "branch", "grn-rpc-test");
+    const opBranch = await ensureBranch(
+      supabase,
+      fx.tenantId,
+      "branch",
+      "grn-rpc-test",
+    );
 
     // Service-role bypasses the INSERT trigger for testing purposes by disabling triggers
     // is not feasible in Supabase JS; instead we document that the INSERT trigger already
@@ -340,7 +379,8 @@ test.describe("GRN net semantic — rejected ≤ delivered (Scenario 8)", () => 
     const fx = await buildGrnFixtures();
 
     const stockBefore =
-      (await getStockLevel(supabase, fx.tenantId, fx.cw1Id, fx.ingredientId)) ?? 0;
+      (await getStockLevel(supabase, fx.tenantId, fx.cw1Id, fx.ingredientId)) ??
+      0;
 
     // Seed: delivered=10, rejected=3, expect stock += 7
     const grnNumber = `GRN-E2E-NET-${Date.now()}`;
@@ -386,7 +426,9 @@ test.describe("GRN net semantic — rejected ≤ delivered (Scenario 8)", () => 
       await confirmBtn.click();
       const confirmDialog = page.getByRole("alertdialog");
       await expect(confirmDialog).toBeVisible({ timeout: 5_000 });
-      await confirmDialog.getByRole("button", { name: /ch.t nh.p kho/i }).click();
+      await confirmDialog
+        .getByRole("button", { name: /ch.t nh.p kho/i })
+        .click();
 
       await expect
         .poll(() => getGrnStatus(supabase, fx.tenantId, grn.id), {
@@ -466,7 +508,9 @@ test.describe("RBAC — warehouse_manager cannot create GRN for another CW (Scen
       .locator('[name="branchId"], [data-testid="branch-select"]')
       .first();
 
-    if (!(await branchSelect.isVisible({ timeout: 5_000 }).catch(() => false))) {
+    if (
+      !(await branchSelect.isVisible({ timeout: 5_000 }).catch(() => false))
+    ) {
       // Fall back: call the server action directly via a POST and check error response
       // This can happen when the UI does not expose branch selection for scoped users.
       // In that case the action uses claims.branch_id automatically, so cross-branch
@@ -501,7 +545,9 @@ test.describe("RBAC — warehouse_manager cannot create GRN for another CW (Scen
     await submitBtn.click();
 
     // The server action must return the RBAC error from grn-actions.ts canAccessProcurementBranch
-    const errorMsg = page.getByText("Bạn chỉ được tạo phiếu nhập cho kho của mình.");
+    const errorMsg = page.getByText(
+      "Bạn chỉ được tạo phiếu nhập cho kho của mình.",
+    );
     await expect(errorMsg).toBeVisible({ timeout: 10_000 });
   });
 

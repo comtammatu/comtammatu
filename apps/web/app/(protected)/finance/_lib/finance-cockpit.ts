@@ -11,10 +11,7 @@ import {
   fetchTopItems,
 } from "../actions";
 import { fetchFoodCost } from "../accounting-actions";
-import type {
-  FinanceParams,
-  ResolvedFinanceRange,
-} from "./finance-params";
+import type { FinanceParams, ResolvedFinanceRange } from "./finance-params";
 
 type SupabaseClient = Awaited<ReturnType<typeof loadAuthState>>["supabase"];
 
@@ -306,7 +303,8 @@ async function fetchInventoryCashTiedItems({
           ? toNumber(row.avg_unit_cost)
           : toNumber(ingredient?.unit_cost);
       return {
-        branchName: branchNames.get(row.branch_id) ?? copy.branchFallback(row.branch_id),
+        branchName:
+          branchNames.get(row.branch_id) ?? copy.branchFallback(row.branch_id),
         ingredientName: ingredient?.name ?? copy.ingredientFallback,
         quantity: toNumber(row.current_quantity),
         value: toNumber(row.current_quantity) * unitCost,
@@ -380,7 +378,8 @@ function buildBranchRows({
       branchName: branch.name,
       revenue: 0,
       inventoryValue:
-        inventoryRows.find((row) => row.branchId === branch.id)?.totalValue ?? 0,
+        inventoryRows.find((row) => row.branchId === branch.id)?.totalValue ??
+        0,
       ingredientCost: 0,
       grossProfit: 0,
       grossMargin: 0,
@@ -520,7 +519,11 @@ export async function fetchFinanceCockpit(
     fetchAccessibleBranches(),
     fetchRevenueKpis(params.branch, resolved.start, resolved.end),
     resolved.compare
-      ? fetchRevenueKpis(params.branch, resolved.compare.start, resolved.compare.end)
+      ? fetchRevenueKpis(
+          params.branch,
+          resolved.compare.start,
+          resolved.compare.end,
+        )
       : Promise.resolve({ success: true as const, data: null }),
     fetchRevenueRollup(params.branch, resolved.start, resolved.end, "day"),
     fetchFoodCost({
@@ -611,7 +614,9 @@ export async function fetchFinanceCockpit(
           resolved.start,
           resolved.end,
         );
-        const row = (res.success ? res.data : null) as CashVarianceSummary | null;
+        const row = (
+          res.success ? res.data : null
+        ) as CashVarianceSummary | null;
         return [branch.id, toNumber(row?.abs_variance_total)] as const;
       }),
     );
@@ -645,13 +650,15 @@ export async function fetchFinanceCockpit(
       branchId: params.branch,
       branches,
     }),
-    topItems: (
-      topItemsRes.success ? (topItemsRes.data ?? []) : []
-    ) as TopItemRow[],
+    topItems: (topItemsRes.success
+      ? (topItemsRes.data ?? [])
+      : []) as TopItemRow[],
     exceptions: buildExceptions({
       kpis,
       dashboardSummary: dashboardSummaryRes.success
-        ? (dashboardSummaryRes.data as { invoice_attention_count: number } | null)
+        ? (dashboardSummaryRes.data as {
+            invoice_attention_count: number;
+          } | null)
         : null,
       cashVariance: cashVarianceRes.success
         ? (cashVarianceRes.data as CashVarianceSummary | null)

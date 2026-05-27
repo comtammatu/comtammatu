@@ -73,9 +73,7 @@ export async function getCashierContext(): Promise<CashierContext> {
 }
 
 /** Đóng mọi ca POS đang mở của branch. Dùng để có state "form mở ca trống". */
-export async function closeAllOpenSessions(
-  ctx: CashierContext,
-): Promise<void> {
+export async function closeAllOpenSessions(ctx: CashierContext): Promise<void> {
   const supabase = createServiceClient();
   const { data: openSessions } = await supabase
     .from("pos_sessions")
@@ -331,7 +329,9 @@ export async function ensureSecondOrderSameTable(
     .limit(1)
     .maybeSingle();
   if (!openSession) {
-    throw new Error("ensureSecondOrderSameTable: cần ensureSingleOpenSession()");
+    throw new Error(
+      "ensureSecondOrderSameTable: cần ensureSingleOpenSession()",
+    );
   }
 
   // Đếm đơn active trên bàn

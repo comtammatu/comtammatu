@@ -27,9 +27,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { BrandMark } from "@/components/brand";
 import { FormattedNumberInput } from "@/components/form";
 import { messages } from "@lib/messages";
-import {
-  TriangleAlert as IconAlertTriangle,
-} from "lucide-react";
+import { TriangleAlert as IconAlertTriangle } from "lucide-react";
 import { EmployeePortalBackControl } from "../employee-portal-back-control";
 import { openPosSession } from "./actions";
 

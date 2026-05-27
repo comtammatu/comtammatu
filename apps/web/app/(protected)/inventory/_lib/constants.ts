@@ -20,10 +20,7 @@ export const STORAGE_LABELS: Record<string, string> = {
   frozen: "Đông lạnh",
 };
 
-export const STORAGE_TYPE_BY_LABEL: Record<
-  string,
-  StorageType
-> = {
+export const STORAGE_TYPE_BY_LABEL: Record<string, StorageType> = {
   thường: "ambient",
   thuong: "ambient",
   ambient: "ambient",
@@ -39,10 +36,7 @@ export const STORAGE_TYPE_BY_LABEL: Record<
   frozen: "frozen",
 };
 
-export const ITEM_KIND_VALUES = [
-  "raw_material",
-  "finished_good",
-] as const;
+export const ITEM_KIND_VALUES = ["raw_material", "finished_good"] as const;
 
 export type ItemKind = (typeof ITEM_KIND_VALUES)[number];
 

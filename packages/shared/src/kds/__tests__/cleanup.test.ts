@@ -17,10 +17,7 @@ test("KDS cleanup cutoff is exactly six hours before now", () => {
   const now = new Date("2026-05-23T10:15:30.000Z");
 
   assert.equal(KDS_CLEANUP_RETENTION_HOURS, 6);
-  assert.equal(
-    getKdsCleanupCutoffIso(now),
-    "2026-05-23T04:15:30.000Z",
-  );
+  assert.equal(getKdsCleanupCutoffIso(now), "2026-05-23T04:15:30.000Z");
 });
 
 test("KDS reset date follows Asia/Ho_Chi_Minh midnight", () => {
@@ -35,11 +32,10 @@ test("KDS reset date follows Asia/Ho_Chi_Minh midnight", () => {
 });
 
 test("KDS cleanup only targets active queue statuses", () => {
-  assert.deepEqual([...KDS_ACTIVE_TICKET_STATUSES], [
-    "pending",
-    "preparing",
-    "ready",
-  ]);
+  assert.deepEqual(
+    [...KDS_ACTIVE_TICKET_STATUSES],
+    ["pending", "preparing", "ready"],
+  );
 });
 
 test("KDS maintenance cron is registered for every six hours in ICT", () => {

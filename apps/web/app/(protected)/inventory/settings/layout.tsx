@@ -1,6 +1,9 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
-import { buildAccessDeniedPath, PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import {
+  buildAccessDeniedPath,
+  PERMISSION_KEYS,
+} from "@comtammatu/shared/auth";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { AppPage, AppPageHeader } from "@/components/surface";
 import { loadAuthState } from "@/_lib/auth";
@@ -37,7 +40,10 @@ export default async function InventorySettingsLayout({
         eyebrow={messages.inventory.settings.eyebrow}
         title={messages.inventory.settings.policyTitle}
         description={messages.inventory.settings.description}
-        badge={{ children: messages.inventory.settings.policyLayer, variant: "outline" }}
+        badge={{
+          children: messages.inventory.settings.policyLayer,
+          variant: "outline",
+        }}
       />
       <Card>
         <CardContent className="px-4 py-4 sm:px-5">

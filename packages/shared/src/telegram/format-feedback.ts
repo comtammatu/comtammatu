@@ -33,9 +33,7 @@ export function formatFeedbackTelegramMessage(args: {
 }): string {
   const ratingEmoji = RATING_EMOJI[args.rating] ?? "❓";
   const truncated =
-    args.comment.length > 500
-      ? args.comment.slice(0, 500) + "…"
-      : args.comment;
+    args.comment.length > 500 ? args.comment.slice(0, 500) + "…" : args.comment;
   const lines: string[] = [];
   lines.push(`🔔 *Phản ánh khách* ${ratingEmoji} \\(${args.rating}/5\\)`);
   lines.push(`🏪 ${escapeMarkdownV2(args.branch_name)}`);

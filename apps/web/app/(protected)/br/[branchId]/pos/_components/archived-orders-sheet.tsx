@@ -80,21 +80,14 @@ export function ArchivedOrdersSheet({
     setScope("session");
   }, [open]);
 
-  const {
-    orders,
-    isLoading,
-    isLoadingMore,
-    hasMore,
-    error,
-    reload,
-    loadMore,
-  } = useArchivedOrders({
-    branchId,
-    sessionId,
-    open,
-    scope,
-    query: debouncedQuery,
-  });
+  const { orders, isLoading, isLoadingMore, hasMore, error, reload, loadMore } =
+    useArchivedOrders({
+      branchId,
+      sessionId,
+      open,
+      scope,
+      query: debouncedQuery,
+    });
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {

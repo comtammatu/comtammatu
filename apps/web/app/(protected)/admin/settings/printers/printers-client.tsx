@@ -370,173 +370,171 @@ function PrinterForm({
       title={initial ? "Sửa máy in" : "Thêm máy in"}
       contentClassName="gap-4"
     >
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-2">
-            <Label>{BRANCH_VI.long}</Label>
-            {branches.length > 1 && !initial ? (
-              <Select
-                value={form.branch_id ? String(form.branch_id) : undefined}
-                onValueChange={(value) =>
-                  setForm({ ...form, branch_id: Number(value) })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={BRANCH_VI.select} />
-                </SelectTrigger>
-                <SelectContent>
-                  {branches.map((branch) => (
-                    <SelectItem key={branch.id} value={String(branch.id)}>
-                      {branch.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : (
-              <Input
-                readOnly
-                value={
-                  branches.find((branch) => branch.id === form.branch_id)
-                    ?.name ?? `#${form.branch_id}`
-                }
-                className="bg-muted/40"
-              />
-            )}
-          </div>
-          <div className="space-y-2">
-            <Label>{PRINTER_COPY.slotLabel}</Label>
-            {initial ? (
-              <Input
-                readOnly
-                value={ROLE_LABEL[form.role]}
-                className="bg-muted/40"
-              />
-            ) : (
-              <Select
-                value={form.role}
-                onValueChange={(value) => setRole(value as PrinterRole)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ROLE_ORDER.map((role) => (
-                    <SelectItem key={role} value={role}>
-                      {ROLE_LABEL[role]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
-          <div className="space-y-2">
-            <Label>{FORM_VI.name}</Label>
-            <Input
-              value={form.name}
-              onChange={(event) =>
-                setForm({ ...form, name: event.target.value })
-              }
-              placeholder={PRINTER_COPY.samplePrinterPlaceholder}
-            />
-          </div>
-          <div className="space-y-2 md:col-span-2">
-            <Label>LAN host / IP</Label>
-            <Input
-              value={form.lan_host}
-              onChange={(event) =>
-                setForm({ ...form, lan_host: event.target.value })
-              }
-              placeholder="192.168.1.50"
-            />
-            <p className="text-xs text-muted-foreground">
-              {PRINTER_COPY.lanPortHelp}
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <Label>{PRINTER_COPY.paperWidthLabel}</Label>
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-2">
+          <Label>{BRANCH_VI.long}</Label>
+          {branches.length > 1 && !initial ? (
             <Select
-              value={String(form.paper_width_mm)}
+              value={form.branch_id ? String(form.branch_id) : undefined}
               onValueChange={(value) =>
-                setForm({ ...form, paper_width_mm: Number(value) as 58 | 80 })
+                setForm({ ...form, branch_id: Number(value) })
               }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={BRANCH_VI.select} />
+              </SelectTrigger>
+              <SelectContent>
+                {branches.map((branch) => (
+                  <SelectItem key={branch.id} value={String(branch.id)}>
+                    {branch.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              readOnly
+              value={
+                branches.find((branch) => branch.id === form.branch_id)?.name ??
+                `#${form.branch_id}`
+              }
+              className="bg-muted/40"
+            />
+          )}
+        </div>
+        <div className="space-y-2">
+          <Label>{PRINTER_COPY.slotLabel}</Label>
+          {initial ? (
+            <Input
+              readOnly
+              value={ROLE_LABEL[form.role]}
+              className="bg-muted/40"
+            />
+          ) : (
+            <Select
+              value={form.role}
+              onValueChange={(value) => setRole(value as PrinterRole)}
             >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="58">58mm</SelectItem>
-                <SelectItem value="80">80mm</SelectItem>
+                {ROLE_ORDER.map((role) => (
+                  <SelectItem key={role} value={role}>
+                    {ROLE_LABEL[role]}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Code page</Label>
-            <Input
-              value={form.code_page}
-              onChange={(event) =>
-                setForm({ ...form, code_page: event.target.value })
-              }
-              placeholder="CP1258"
-            />
-          </div>
+          )}
+        </div>
+        <div className="space-y-2">
+          <Label>{FORM_VI.name}</Label>
+          <Input
+            value={form.name}
+            onChange={(event) => setForm({ ...form, name: event.target.value })}
+            placeholder={PRINTER_COPY.samplePrinterPlaceholder}
+          />
+        </div>
+        <div className="space-y-2 md:col-span-2">
+          <Label>LAN host / IP</Label>
+          <Input
+            value={form.lan_host}
+            onChange={(event) =>
+              setForm({ ...form, lan_host: event.target.value })
+            }
+            placeholder="192.168.1.50"
+          />
+          <p className="text-xs text-muted-foreground">
+            {PRINTER_COPY.lanPortHelp}
+          </p>
         </div>
 
         <div className="space-y-2">
-          <Label>{PRINTER_COPY.printTypesLabel}</Label>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {PRINT_TYPE_ORDER.map((type) => (
-              <label
-                key={type}
-                className="flex items-center gap-2 rounded-md border border-border/70 p-2 text-sm"
-              >
-                <Checkbox
-                  checked={form.print_types.includes(type)}
-                  onCheckedChange={(checked) =>
-                    togglePrintType(type, checked === true)
-                  }
-                />
-                <span>{PRINT_TYPE_LABEL[type]}</span>
-              </label>
-            ))}
-          </div>
+          <Label>{PRINTER_COPY.paperWidthLabel}</Label>
+          <Select
+            value={String(form.paper_width_mm)}
+            onValueChange={(value) =>
+              setForm({ ...form, paper_width_mm: Number(value) as 58 | 80 })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="58">58mm</SelectItem>
+              <SelectItem value="80">80mm</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="space-y-2">
-          <Label>{PRINTER_COPY.categoriesLabel}</Label>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {categories.map((category) => (
-              <label
-                key={category.id}
-                className="flex items-center gap-2 rounded-md border border-border/70 p-2 text-sm"
-              >
-                <Checkbox
-                  checked={form.category_ids.includes(category.id)}
-                  onCheckedChange={(checked) =>
-                    toggleCategory(category.id, checked === true)
-                  }
-                />
-                <span>{category.name}</span>
-              </label>
-            ))}
-          </div>
+          <Label>Code page</Label>
+          <Input
+            value={form.code_page}
+            onChange={(event) =>
+              setForm({ ...form, code_page: event.target.value })
+            }
+            placeholder="CP1258"
+          />
         </div>
+      </div>
 
-        {err ? <p className="text-sm text-destructive">{err}</p> : null}
-
-        <div className="flex justify-end gap-2">
-          {initial ? (
-            <Button variant="outline" onClick={remove} disabled={pending}>
-              {ACTIONS_VI.delete}
-            </Button>
-          ) : null}
-          <Button variant="outline" onClick={onClose} disabled={pending}>
-            {ACTIONS_VI.cancel}
-          </Button>
-          <Button onClick={save} disabled={pending}>
-            {pending ? "Đang lưu..." : "Lưu"}
-          </Button>
+      <div className="space-y-2">
+        <Label>{PRINTER_COPY.printTypesLabel}</Label>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {PRINT_TYPE_ORDER.map((type) => (
+            <label
+              key={type}
+              className="flex items-center gap-2 rounded-md border border-border/70 p-2 text-sm"
+            >
+              <Checkbox
+                checked={form.print_types.includes(type)}
+                onCheckedChange={(checked) =>
+                  togglePrintType(type, checked === true)
+                }
+              />
+              <span>{PRINT_TYPE_LABEL[type]}</span>
+            </label>
+          ))}
         </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label>{PRINTER_COPY.categoriesLabel}</Label>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {categories.map((category) => (
+            <label
+              key={category.id}
+              className="flex items-center gap-2 rounded-md border border-border/70 p-2 text-sm"
+            >
+              <Checkbox
+                checked={form.category_ids.includes(category.id)}
+                onCheckedChange={(checked) =>
+                  toggleCategory(category.id, checked === true)
+                }
+              />
+              <span>{category.name}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {err ? <p className="text-sm text-destructive">{err}</p> : null}
+
+      <div className="flex justify-end gap-2">
+        {initial ? (
+          <Button variant="outline" onClick={remove} disabled={pending}>
+            {ACTIONS_VI.delete}
+          </Button>
+        ) : null}
+        <Button variant="outline" onClick={onClose} disabled={pending}>
+          {ACTIONS_VI.cancel}
+        </Button>
+        <Button onClick={save} disabled={pending}>
+          {pending ? "Đang lưu..." : "Lưu"}
+        </Button>
+      </div>
     </AppSection>
   );
 }

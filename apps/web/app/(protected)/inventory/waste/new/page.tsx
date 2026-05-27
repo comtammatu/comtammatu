@@ -8,7 +8,10 @@ import {
 import { resolveRequestedBranchId } from "@/(protected)/inventory/_lib/inventory-scope";
 import { getWasteCapStatus } from "@/(protected)/inventory/waste-actions";
 import { AppPage, AppPageHeader, AppEmptyState } from "@/components/surface";
-import { WasteCreateClient, type WasteFormContext } from "./waste-create-client";
+import {
+  WasteCreateClient,
+  type WasteFormContext,
+} from "./waste-create-client";
 
 export const dynamic = "force-dynamic";
 
@@ -47,7 +50,9 @@ export default async function WasteNewPage({ searchParams }: PageProps) {
     INVENTORY_FEATURE_FLAGS.S11_WASTE_TIER,
   );
   if (!flagEnabled) {
-    redirect(`/inventory/issues?branchId=${branchId}&error=waste_v2_not_enabled`);
+    redirect(
+      `/inventory/issues?branchId=${branchId}&error=waste_v2_not_enabled`,
+    );
   }
 
   // Fetch branch detail + locations at this branch + active ingredients

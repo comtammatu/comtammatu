@@ -1,6 +1,7 @@
 # HĐĐT Viettel S-invoice Cutover Runbook
 
-> **Reference plan**: `docs/archive/plan/hddt-hybrid-misa.md` (historical execution context; provider runtime is now Viettel S-invoice only)
+> Runtime provider is Viettel S-invoice only. Current implementation guidance
+> lives in this runbook, `docs/ref/einvoice-tax.md`, and `tasks/regressions.md`.
 > **PR sequence**: PR-1 schema → PR-2 RPCs → PR-3 B2B refactor → PR-4 cron + actions → PR-5 admin UI → **PR-6 cutover (this)** → PR-7 regression rules
 > **Owner**: ngocnghia128@gmail.com
 
@@ -52,6 +53,7 @@ SINVOICE_BASE_URL=https://api-vinvoice.viettel.vn  # default; cùng URL test+pro
 ### Sinvoice test accounts (HDSD §I)
 
 Cho smoke test trước cutover prod:
+
 ```
 TK: 0100109106-501  /  504  /  505  /  507  /  899  → kiểm tra dữ liệu đầu vào
 TK: 0100109106-509                                    → KHÔNG kiểm tra
@@ -137,6 +139,7 @@ ORDER BY created_at;
 ### Bước 3 — Manual retry test
 
 Vào `/finance/summary` (cần permission `settings:tenant`):
+
 1. Chọn chi nhánh + date
 2. Click "Chạy tổng hợp"
 3. Expect toast "Đã bỏ qua: HĐ tổng hợp đã tồn tại" (UNIQUE chặn duplicate)
@@ -144,12 +147,14 @@ Vào `/finance/summary` (cần permission `settings:tenant`):
 > **ACL note:** Route `/finance/summary` KHÔNG có entry trong `packages/shared/src/auth/module-acl.ts:89-93` (module `finance` chỉ list path `/finance` cho roles `owner`/`super_manager`). Cashier/branch_manager có thể thấy nav nhưng action `runDailySummaryForBranch` (`apps/web/app/(protected)/finance/summary-invoice-actions.ts`) sẽ reject vì gate `settings:tenant` ở action level. Nếu cần hard-block tại route level → thêm entry `/finance/summary` vào `module-acl.ts` (defer đến formal admin panel restructure).
 
 Hoặc cancel HĐ tổng hợp đã issued rồi retry:
+
 ```sql
 SELECT public.transition_tax_invoice_state_as_system(
   <invoice_id>, 'cancelled', NULL, '{"cancel_reason":"smoke test"}'::jsonb,
   'cancel rồi tạo lại để verify retry path'
 );
 ```
+
 Sau đó UI "Chạy tổng hợp" lần 2 → expect HĐ mới issued.
 
 ### Bước 4 — Production cutover
@@ -185,14 +190,14 @@ Nếu cần rollback DB: cancel các HĐ tổng hợp issued sai qua `cancelTaxI
 
 Theo dõi qua `/finance/summary` queue + Supabase logs:
 
-| Metric | Target | SQL |
-|---|---|---|
-| % HĐ tổng hợp issued auto qua cron | ≥ 95% | `SELECT 100.0 * COUNT(*) FILTER (WHERE status='issued') / COUNT(*) FROM summary_run_queue WHERE trigger_source='cron' AND created_at > now()-interval '7 days';` |
-| % manual retry sau cron fail | ≤ 5% | `SELECT 100.0 * COUNT(*) FILTER (WHERE trigger_source='manual') / COUNT(*) FROM summary_run_queue WHERE created_at > now()-interval '7 days';` |
-| Avg cron run time | < 45s cho ≤ 3 chi nhánh | `SELECT avg(extract(epoch from finished_at - started_at)) FROM summary_run_queue WHERE trigger_source='cron' AND status IN ('issued','skipped');` |
-| Orphan `signing` qua đêm | 0 rows | `SELECT count(*) FROM tax_invoices WHERE status='signing' AND signing_started_at < now()-interval '12 hours';` |
-| Cross-day misalignment | 0 rows | `SELECT count(*) FROM tax_invoice_orders tio JOIN tax_invoices ti ON ti.id=tio.tax_invoice_id JOIN payments p ON p.order_id=tio.order_id WHERE ti.invoice_kind='daily_summary' AND p.status='completed' AND (p.paid_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date <> ti.summary_date;` |
-| Double-issued HĐ (B2B + summary cùng order) | 0 rows | `SELECT order_id, count(*) FROM (SELECT order_id FROM tax_invoices WHERE invoice_kind='per_order' AND status IN ('submitted','issued') UNION ALL SELECT order_id FROM tax_invoice_orders tio JOIN tax_invoices ti ON ti.id=tio.tax_invoice_id WHERE ti.status NOT IN ('cancelled','replaced')) sub GROUP BY 1 HAVING count(*) > 1;` |
+| Metric                                      | Target                  | SQL                                                                                                                                                                                                                                                                                                                                 |
+| ------------------------------------------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| % HĐ tổng hợp issued auto qua cron          | ≥ 95%                   | `SELECT 100.0 * COUNT(*) FILTER (WHERE status='issued') / COUNT(*) FROM summary_run_queue WHERE trigger_source='cron' AND created_at > now()-interval '7 days';`                                                                                                                                                                    |
+| % manual retry sau cron fail                | ≤ 5%                    | `SELECT 100.0 * COUNT(*) FILTER (WHERE trigger_source='manual') / COUNT(*) FROM summary_run_queue WHERE created_at > now()-interval '7 days';`                                                                                                                                                                                      |
+| Avg cron run time                           | < 45s cho ≤ 3 chi nhánh | `SELECT avg(extract(epoch from finished_at - started_at)) FROM summary_run_queue WHERE trigger_source='cron' AND status IN ('issued','skipped');`                                                                                                                                                                                   |
+| Orphan `signing` qua đêm                    | 0 rows                  | `SELECT count(*) FROM tax_invoices WHERE status='signing' AND signing_started_at < now()-interval '12 hours';`                                                                                                                                                                                                                      |
+| Cross-day misalignment                      | 0 rows                  | `SELECT count(*) FROM tax_invoice_orders tio JOIN tax_invoices ti ON ti.id=tio.tax_invoice_id JOIN payments p ON p.order_id=tio.order_id WHERE ti.invoice_kind='daily_summary' AND p.status='completed' AND (p.paid_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date <> ti.summary_date;`                                                  |
+| Double-issued HĐ (B2B + summary cùng order) | 0 rows                  | `SELECT order_id, count(*) FROM (SELECT order_id FROM tax_invoices WHERE invoice_kind='per_order' AND status IN ('submitted','issued') UNION ALL SELECT order_id FROM tax_invoice_orders tio JOIN tax_invoices ti ON ti.id=tio.tax_invoice_id WHERE ti.status NOT IN ('cancelled','replaced')) sub GROUP BY 1 HAVING count(*) > 1;` |
 
 3-day red trên bất kỳ metric → halt cron (`HDDT_DAILY_SUMMARY_ENABLED=false`), switch admin-manual-only, log issue + investigate.
 
@@ -200,21 +205,20 @@ Theo dõi qua `/finance/summary` queue + Supabase logs:
 
 Nếu queue row có `last_error` chứa các code dưới, tham chiếu cách xử lý:
 
-| Code | Vấn đề | Action |
-|---|---|---|
-| `1517` Invoice serial inactive | Mẫu HĐ chưa kích hoạt | Kiểm tra thông báo phát hành đã đăng ký + active chưa |
-| `1521`/`47` `INVOICE_NO_DUPLICATED` | Số HĐ trùng | Hệ thống lock UNIQUE — bình thường, retry sau 1 phút |
-| `1520` Invalid supplier tax code | MST không khớp | Check `COMPANY_TAX_CODE` env có khớp account login |
-| `OUT_OF_INVOICE_NO` | Hết số HĐ trong dải | Đăng ký dải mới với CQT (vd thêm `AB/21E` cạnh `AA/21E`) |
-| `INVALID_USER_PASSWORD` / `USERNAME_NOT_FOUND` | Sai cred | Kiểm tra `SINVOICE_USERNAME` / `SINVOICE_PASSWORD` |
-| `429` Too Many Requests | Rate limit | Cron retry next-cycle automatic |
-| `503` Service Unavailable | Sinvoice maintenance | Đợi BU thông báo bảo trì xong |
-| `TRANSACTION_IS_BEING_PROCESSED` | UUID đang xử lý | Thường gặp khi retry quá nhanh — đợi 1 phút |
-| `INVALID_TRANSACTION_UUID` / `LENGTH_TRANSACTION_UUID` | UUID format sai | Code lỗi — báo dev fix `buildSinvoiceTransactionUuid` |
+| Code                                                   | Vấn đề                | Action                                                   |
+| ------------------------------------------------------ | --------------------- | -------------------------------------------------------- |
+| `1517` Invoice serial inactive                         | Mẫu HĐ chưa kích hoạt | Kiểm tra thông báo phát hành đã đăng ký + active chưa    |
+| `1521`/`47` `INVOICE_NO_DUPLICATED`                    | Số HĐ trùng           | Hệ thống lock UNIQUE — bình thường, retry sau 1 phút     |
+| `1520` Invalid supplier tax code                       | MST không khớp        | Check `COMPANY_TAX_CODE` env có khớp account login       |
+| `OUT_OF_INVOICE_NO`                                    | Hết số HĐ trong dải   | Đăng ký dải mới với CQT (vd thêm `AB/21E` cạnh `AA/21E`) |
+| `INVALID_USER_PASSWORD` / `USERNAME_NOT_FOUND`         | Sai cred              | Kiểm tra `SINVOICE_USERNAME` / `SINVOICE_PASSWORD`       |
+| `429` Too Many Requests                                | Rate limit            | Cron retry next-cycle automatic                          |
+| `503` Service Unavailable                              | Sinvoice maintenance  | Đợi BU thông báo bảo trì xong                            |
+| `TRANSACTION_IS_BEING_PROCESSED`                       | UUID đang xử lý       | Thường gặp khi retry quá nhanh — đợi 1 phút              |
+| `INVALID_TRANSACTION_UUID` / `LENGTH_TRANSACTION_UUID` | UUID format sai       | Code lỗi — báo dev fix `buildSinvoiceTransactionUuid`    |
 
 ## Reference
 
-- `docs/archive/plan/hddt-hybrid-misa.md` — historical plan + decisions D1-D7 (đã shipped; MISA references are no longer runtime guidance)
 - `docs/ref/einvoice-tax.md` — pháp lý + nghĩa vụ thuế (canonical reference, post-pilot)
 - `apps/web/lib/hddt-daily-summary.ts:67+` — shared `executeSummaryRun(deps)` helper
 - `apps/web/app/api/cron/hddt-daily-summary/route.ts` — cron handler
@@ -230,7 +234,7 @@ Nếu queue row có `last_error` chứa các code dưới, tham chiếu cách x�
 
 ```
 20260425035346_tax_invoice_state_machine.sql
-20260502000000_pos_hddt_not_required_d4.sql      ← deprecated bởi D2 (xem plan)
+20260502000000_pos_hddt_not_required_d4.sql      ← retired bởi D2 state model
 20260508053555_hddt_summary_schema.sql           ← PR-1
 20260508055046_hddt_summary_rpcs.sql             ← PR-2
 20260508055230_hddt_aggregate_rpc_fixes.sql      ← PR-2 hot-fix (bucket + advisory lock)
@@ -253,9 +257,7 @@ HDDT_RECONCILE_ENABLED=true        # default false; kill-switch riêng cho cron 
 
 ```json
 {
-  "crons": [
-    { "path": "/api/cron/hddt-reconcile", "schedule": "*/5 * * * *" }
-  ]
+  "crons": [{ "path": "/api/cron/hddt-reconcile", "schedule": "*/5 * * * *" }]
 }
 ```
 
@@ -316,21 +318,21 @@ UI: `/finance/invoices` → row có status `Đang ký` hoặc `Chờ CQT` → n�
 
 ### Rollback ladder
 
-| Tier | Trigger | Action |
-|---|---|---|
-| Tier 0 | Cron mass-fail trên provider_error | `HDDT_RECONCILE_ENABLED=false` → redeploy; B2B realtime + B2C summary KHÔNG ảnh hưởng |
-| Tier 1 | Bug ở mapping `pickReconcileDecision` | Revert commit của `packages/shared/src/hddt/reconcile-state.ts` (pure function) → redeploy |
+| Tier   | Trigger                                 | Action                                                                                     |
+| ------ | --------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Tier 0 | Cron mass-fail trên provider_error      | `HDDT_RECONCILE_ENABLED=false` → redeploy; B2B realtime + B2C summary KHÔNG ảnh hưởng      |
+| Tier 1 | Bug ở mapping `pickReconcileDecision`   | Revert commit của `packages/shared/src/hddt/reconcile-state.ts` (pure function) → redeploy |
 | Tier 2 | Reconcile transition sai gây hỏng state | `transition_tax_invoice_state_as_system(.., 'draft', ..)` bằng tay; events table giữ audit |
 
 ### Pilot launch gate — bổ sung metrics cho reconcile
 
-| Metric | Target | SQL |
-|---|---|---|
-| % reconcile outcomes là `transitioned` | ≥ 70% trong 7 ngày | `SELECT 100.0 * COUNT(*) FILTER (WHERE outcome='transitioned') / COUNT(*) FROM reconcile_run_log WHERE trigger_source='cron' AND created_at > now()-interval '7 days';` |
-| Reconcile `provider_error` rate | ≤ 10% | `SELECT 100.0 * COUNT(*) FILTER (WHERE outcome='provider_error') / COUNT(*) FROM reconcile_run_log WHERE created_at > now()-interval '7 days';` |
-| `giveup_24h` count | < 5 / tuần | `SELECT count(*) FROM reconcile_run_log WHERE outcome='giveup_24h' AND created_at > now()-interval '7 days';` |
-| `race_lost` count | < 3 / tuần (lành tính — cashier race) | same shape |
-| Stuck > 24h chưa được pick up | 0 rows | `SELECT count(*) FROM tax_invoices WHERE status IN ('signing','submitted') AND signing_started_at < now()-interval '24 hours' AND provider_ref IS NOT NULL;` |
+| Metric                                 | Target                                | SQL                                                                                                                                                                     |
+| -------------------------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| % reconcile outcomes là `transitioned` | ≥ 70% trong 7 ngày                    | `SELECT 100.0 * COUNT(*) FILTER (WHERE outcome='transitioned') / COUNT(*) FROM reconcile_run_log WHERE trigger_source='cron' AND created_at > now()-interval '7 days';` |
+| Reconcile `provider_error` rate        | ≤ 10%                                 | `SELECT 100.0 * COUNT(*) FILTER (WHERE outcome='provider_error') / COUNT(*) FROM reconcile_run_log WHERE created_at > now()-interval '7 days';`                         |
+| `giveup_24h` count                     | < 5 / tuần                            | `SELECT count(*) FROM reconcile_run_log WHERE outcome='giveup_24h' AND created_at > now()-interval '7 days';`                                                           |
+| `race_lost` count                      | < 3 / tuần (lành tính — cashier race) | same shape                                                                                                                                                              |
+| Stuck > 24h chưa được pick up          | 0 rows                                | `SELECT count(*) FROM tax_invoices WHERE status IN ('signing','submitted') AND signing_started_at < now()-interval '24 hours' AND provider_ref IS NOT NULL;`            |
 
 `giveup_24h` > 5 / tuần → có thể là Sinvoice xuống cấp hoặc creds sai; halt + investigate trước khi tiếp tục.
 
@@ -350,9 +352,7 @@ HDDT_ARCHIVE_ENABLED=true        # default false; kill-switch riêng cho cron + 
 
 ```json
 {
-  "crons": [
-    { "path": "/api/cron/hddt-archive", "schedule": "*/15 * * * *" }
-  ]
+  "crons": [{ "path": "/api/cron/hddt-archive", "schedule": "*/15 * * * *" }]
 }
 ```
 
@@ -432,12 +432,14 @@ UI: `/finance/invoices` → row có `Đã lưu trữ` badge xuất hiện sau kh
 ### Backfill cho rows pre-shipping
 
 Owner action sau cutover archive: gọi `backfillArchiveByDateRange(branchId?, startDate, endDate)`:
+
 - Quét tối đa 500 rows/lần với budget 60s
 - Gate `settings:tenant` (owner/super_manager)
 - Outcome counters trả về để theo dõi
 - Idempotent: rows đã `archived_at` được skip tự động qua candidate filter
 
 Example: backfill 1 tuần đầu pilot trên tenant pilot
+
 ```sql
 -- Đếm trước
 SELECT count(*) FROM tax_invoices
@@ -449,25 +451,25 @@ Sau đó gọi backfill từ admin UI (action `backfillArchiveByDateRange` chạ
 
 ### Rollback ladder
 
-| Tier | Trigger | Action |
-|---|---|---|
+| Tier   | Trigger                                            | Action                                                                                                              |
+| ------ | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | Tier 0 | Cron mass-fail trên provider_error / storage_error | `HDDT_ARCHIVE_ENABLED=false` → redeploy; reconcile + daily-summary + B2B realtime KHÔNG ảnh hưởng (archive độc lập) |
-| Tier 1 | Sai logic SHA-256 hoặc magic byte | Revert commit của `packages/shared/src/hddt/archive-state.ts` → redeploy |
-| Tier 2 | Bucket bị set public sai trong migration | Update RLS: `UPDATE storage.buckets SET public=false WHERE id='hddt-archive'`; xoá `getPublicUrl` calls nếu có |
-| Tier 3 | Hash mismatch hàng loạt = data tampering | KHÔNG xoá file Storage; alert owner; isolated investigation từ `archive_run_log.outcome='hash_mismatch'` |
+| Tier 1 | Sai logic SHA-256 hoặc magic byte                  | Revert commit của `packages/shared/src/hddt/archive-state.ts` → redeploy                                            |
+| Tier 2 | Bucket bị set public sai trong migration           | Update RLS: `UPDATE storage.buckets SET public=false WHERE id='hddt-archive'`; xoá `getPublicUrl` calls nếu có      |
+| Tier 3 | Hash mismatch hàng loạt = data tampering           | KHÔNG xoá file Storage; alert owner; isolated investigation từ `archive_run_log.outcome='hash_mismatch'`            |
 
 ### Pilot launch gate — bổ sung metrics cho archive
 
-| Metric | Target | SQL |
-|---|---|---|
-| % archive cron outcomes là `archived` | ≥ 90% trong 7 ngày | `SELECT 100.0 * COUNT(*) FILTER (WHERE outcome='archived') / COUNT(*) FROM archive_run_log WHERE trigger_source='cron' AND created_at > now()-interval '7 days';` |
-| Provider_error rate | ≤ 5% | tương tự với `outcome='provider_error'` |
-| Storage_error rate | 0 | `SELECT count(*) FROM archive_run_log WHERE outcome='storage_error' AND created_at > now()-interval '7 days';` |
-| Invalid_payload count | 0 (= magic byte hoặc size sai) | `SELECT count(*) FROM archive_run_log WHERE outcome='invalid_payload';` |
-| Hash_mismatch count | 0 (= corruption alert nếu > 0) | `SELECT count(*) FROM archive_run_log WHERE outcome='hash_mismatch';` |
-| Giveup count | < 3 / tuần | `SELECT count(*) FROM archive_run_log WHERE outcome='giveup';` |
-| Issued rows chưa archive sau 1h | 0 | `SELECT count(*) FROM tax_invoices WHERE status='issued' AND pdf_url IS NULL AND issued_at < now()-interval '1 hour';` |
-| Storage volume tăng đều mỗi tuần | ~10 MB / 5 branches / tuần (pilot) | `SELECT count(*), sum((metadata->>'size')::bigint) FROM storage.objects WHERE bucket_id='hddt-archive';` |
+| Metric                                | Target                             | SQL                                                                                                                                                               |
+| ------------------------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| % archive cron outcomes là `archived` | ≥ 90% trong 7 ngày                 | `SELECT 100.0 * COUNT(*) FILTER (WHERE outcome='archived') / COUNT(*) FROM archive_run_log WHERE trigger_source='cron' AND created_at > now()-interval '7 days';` |
+| Provider_error rate                   | ≤ 5%                               | tương tự với `outcome='provider_error'`                                                                                                                           |
+| Storage_error rate                    | 0                                  | `SELECT count(*) FROM archive_run_log WHERE outcome='storage_error' AND created_at > now()-interval '7 days';`                                                    |
+| Invalid_payload count                 | 0 (= magic byte hoặc size sai)     | `SELECT count(*) FROM archive_run_log WHERE outcome='invalid_payload';`                                                                                           |
+| Hash_mismatch count                   | 0 (= corruption alert nếu > 0)     | `SELECT count(*) FROM archive_run_log WHERE outcome='hash_mismatch';`                                                                                             |
+| Giveup count                          | < 3 / tuần                         | `SELECT count(*) FROM archive_run_log WHERE outcome='giveup';`                                                                                                    |
+| Issued rows chưa archive sau 1h       | 0                                  | `SELECT count(*) FROM tax_invoices WHERE status='issued' AND pdf_url IS NULL AND issued_at < now()-interval '1 hour';`                                            |
+| Storage volume tăng đều mỗi tuần      | ~10 MB / 5 branches / tuần (pilot) | `SELECT count(*), sum((metadata->>'size')::bigint) FROM storage.objects WHERE bucket_id='hddt-archive';`                                                          |
 
 `hash_mismatch` > 0 → halt + ops investigation NGAY (suspect corruption hoặc Viettel re-issued same number with different bytes).
 
@@ -528,20 +530,20 @@ ORDER BY created_at;
 
 ### Rollback
 
-| Tier | Trigger | Action |
-|---|---|---|
-| Tier 0 | Replace mass-fail từ Viettel | Owner ngừng dùng nút "Thay thế"; B2B realtime + B2C summary + reconcile + archive KHÔNG ảnh hưởng |
-| Tier 1 | Bug ở `replace_tax_invoice` RPC | Revert migration `20260517020000`; existing replaced pairs unaffected |
+| Tier   | Trigger                            | Action                                                                                                                                                                                                      |
+| ------ | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tier 0 | Replace mass-fail từ Viettel       | Owner ngừng dùng nút "Thay thế"; B2B realtime + B2C summary + reconcile + archive KHÔNG ảnh hưởng                                                                                                           |
+| Tier 1 | Bug ở `replace_tax_invoice` RPC    | Revert migration `20260517020000`; existing replaced pairs unaffected                                                                                                                                       |
 | Tier 2 | Wrong replacement issued, cần undo | KHÔNG có flow auto-undo. Manual: gọi `cancelTaxInvoice(new_id, reason)` để hủy NEW; OLD vẫn ở `replaced`. Nếu cần phục hồi OLD, cần thay thế chuỗi: replace(NEW) với buyer info của OLD — tạo C nối B nối A |
 
 ### Pilot metrics
 
-| Metric | Target | SQL |
-|---|---|---|
-| Replace volume | < 5 / tháng | `SELECT count(*) FROM tax_invoice_events WHERE to_status='replaced' AND created_at > now()-interval '30 days';` |
-| Replace success rate (NEW issued thành công) | ≥ 95% | tỷ lệ NEW status='issued'/'submitted' sau replace |
-| Chain depth distribution | mostly 1-2; alert ≥ 3 | `SELECT count(*) FROM tax_invoices WHERE replaced_for IS NOT NULL GROUP BY (SELECT count(*) FROM ...)` (manual query) |
-| Replacement archived trong 1 ngày | 100% | join tax_invoices.archived_at vs issued_at |
+| Metric                                       | Target                | SQL                                                                                                                   |
+| -------------------------------------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Replace volume                               | < 5 / tháng           | `SELECT count(*) FROM tax_invoice_events WHERE to_status='replaced' AND created_at > now()-interval '30 days';`       |
+| Replace success rate (NEW issued thành công) | ≥ 95%                 | tỷ lệ NEW status='issued'/'submitted' sau replace                                                                     |
+| Chain depth distribution                     | mostly 1-2; alert ≥ 3 | `SELECT count(*) FROM tax_invoices WHERE replaced_for IS NOT NULL GROUP BY (SELECT count(*) FROM ...)` (manual query) |
+| Replacement archived trong 1 ngày            | 100%                  | join tax_invoices.archived_at vs issued_at                                                                            |
 
 `replace_failed` rate > 5% → halt + investigation (Viettel có thể reject vì biên bản format sai hoặc bị limit số HĐ trong series).
 

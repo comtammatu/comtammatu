@@ -5,14 +5,14 @@
 
 ## Tóm tắt
 
-| Trường | Giá trị |
-| --- | --- |
-| **Vai trò** | Phục vụ, Thu ngân |
-| **Quyền cần có** | `pos:use` |
-| **Điều kiện trước** | Đơn ở `confirmed` (món đã gửi bếp) |
-| **Kết quả đúng** | `order_items.status` của các món chuyển sang `served`; toast "Đã đánh dấu phục vụ" |
+| Trường                | Giá trị                                                                            |
+| --------------------- | ---------------------------------------------------------------------------------- |
+| **Vai trò**           | Phục vụ, Thu ngân                                                                  |
+| **Quyền cần có**      | `pos:use`                                                                          |
+| **Điều kiện trước**   | Đơn ở `confirmed` (món đã gửi bếp)                                                 |
+| **Kết quả đúng**      | `order_items.status` của các món chuyển sang `served`; toast "Đã đánh dấu phục vụ" |
 | **Điều KHÔNG xảy ra** | Đơn KHÔNG chuyển sang `paid`; bàn KHÔNG về `available`; vẫn cần POS-05 để thu tiền |
-| **Thời gian** | ~5 giây |
+| **Thời gian**         | ~5 giây                                                                            |
 
 ## Khi nào dùng
 
@@ -103,9 +103,9 @@ URL: `/br/{branchId}/pos` → bàn occupied → đơn
 
 ### Code path
 
-- **Nút "Phục vụ" (order-level):** [apps/web/app/(protected)/br/[branchId]/pos/order-detail-sheet.tsx](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/order-detail-sheet.tsx) line ~853.
+- **Nút "Phục vụ" (order-level):** [apps/web/app/(protected)/br/[branchId]/pos/order-detail-sheet.tsx](<../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/order-detail-sheet.tsx>) line ~853.
 - **Swipe per-item "Phục vụ":** cùng file, swipe handler reveals 2-button action row (Phục vụ + Hủy) ~80px wide each.
-- **Server action:** `markOrderItemServed` trong [apps/web/app/(protected)/br/[branchId]/pos/order-actions.ts](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/order-actions.ts).
+- **Server action:** `markOrderItemServed` trong [apps/web/app/(protected)/br/[branchId]/pos/order-actions.ts](<../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/order-actions.ts>).
 
 ### Database
 
@@ -127,16 +127,16 @@ URL: `/br/{branchId}/pos` → bàn occupied → đơn
 
 ### Tham chiếu thiết kế
 
-- Order lifecycle: [docs/archive/plan/m2-order-lifecycle.md](../../../archive/plan/m2-order-lifecycle.md)
+- Current POS scope: [tasks/todo.md](../../../../tasks/todo.md)
 
 ---
 
 ## Metadata mockup
 
-| Trường | Giá trị |
-| --- | --- |
-| Viewport | 390×844 (iPhone mặc định) |
-| Capture script | [apps/web/e2e/guides/pos-06-mark-served.guide.ts](../../../../apps/web/e2e/guides/pos-06-mark-served.guide.ts) |
-| Lệnh refresh | `pnpm --filter @comtammatu/web guides:capture --grep="POS-06"` |
-| Cập nhật mockup gần nhất | 2026-04-27 |
-| Người maintain | _TBD_ |
+| Trường                   | Giá trị                                                                                                        |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------- |
+| Viewport                 | 390×844 (iPhone mặc định)                                                                                      |
+| Capture script           | [apps/web/e2e/guides/pos-06-mark-served.guide.ts](../../../../apps/web/e2e/guides/pos-06-mark-served.guide.ts) |
+| Lệnh refresh             | `pnpm --filter @comtammatu/web guides:capture --grep="POS-06"`                                                 |
+| Cập nhật mockup gần nhất | 2026-04-27                                                                                                     |
+| Người maintain           | _TBD_                                                                                                          |

@@ -88,39 +88,38 @@ export async function fetchStockIssues(opts?: {
 export const createStockIssueDraft = withAction(
   { roles: ROLES, schema: issueCreateSchema },
   async (d, { supabase, claims, user }) => {
+    // branch_manager can only create for their own branch
+    if (claims.branch_id && claims.branch_id !== d.branchId) {
+      return {
+        success: false,
+        error: "Không có quyền tạo phiếu xuất cho chi nhánh này.",
+      };
+    }
 
-  // branch_manager can only create for their own branch
-  if (claims.branch_id && claims.branch_id !== d.branchId) {
-    return {
-      success: false,
-      error: "Không có quyền tạo phiếu xuất cho chi nhánh này.",
-    };
-  }
+    const issueNumber = `PXK-${randomUUID().slice(0, 8)}`;
+    const sourceLocationId = await resolveDefaultInventoryLocation(
+      supabase,
+      claims.tenant_id,
+      d.branchId,
+      "issue",
+    );
 
-  const issueNumber = `PXK-${randomUUID().slice(0, 8)}`;
-  const sourceLocationId = await resolveDefaultInventoryLocation(
-    supabase,
-    claims.tenant_id,
-    d.branchId,
-    "issue",
-  );
-
-  // kitchen_use retired 2026-04-25 — use intra-branch stock_transfer instead.
-  // target_location_id is always NULL for single-site issues.
-  const { data, error } = await supabase
-    .from("stock_issues")
-    .insert({
-      tenant_id: claims.tenant_id,
-      branch_id: d.branchId,
-      issue_number: issueNumber,
-      issue_type: d.issueType,
-      notes: d.notes ?? null,
-      created_by: user.id,
-      source_location_id: sourceLocationId,
-      target_location_id: null,
-    })
-    .select("id, source_location_id, target_location_id")
-    .single();
+    // kitchen_use retired 2026-04-25 — use intra-branch stock_transfer instead.
+    // target_location_id is always NULL for single-site issues.
+    const { data, error } = await supabase
+      .from("stock_issues")
+      .insert({
+        tenant_id: claims.tenant_id,
+        branch_id: d.branchId,
+        issue_number: issueNumber,
+        issue_type: d.issueType,
+        notes: d.notes ?? null,
+        created_by: user.id,
+        source_location_id: sourceLocationId,
+        target_location_id: null,
+      })
+      .select("id, source_location_id, target_location_id")
+      .single();
 
     // RLS returns { data: null, error: null } on blocked writes
     if (error || !data) {
@@ -172,13 +171,11 @@ export async function fetchStockIssueDetail(
     return { success: false, error: "Không tìm thấy phiếu xuất." };
   }
 
-  const branch = issueRes.data.branches as
-    | {
-        id: number;
-        name: string;
-        branch_kind?: string | null;
-      }
-    | null;
+  const branch = issueRes.data.branches as {
+    id: number;
+    name: string;
+    branch_kind?: string | null;
+  } | null;
   const issue = {
     ...issueRes.data,
     branches: branch

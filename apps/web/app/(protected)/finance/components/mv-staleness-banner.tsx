@@ -54,10 +54,7 @@ export function MvStalenessBanner({
   const messageWhen = lastRefreshAt
     ? minutes === 0
       ? stalenessCopy.fresh(formatTimestamp(lastRefreshAt))
-      : stalenessCopy.minutesAgo(
-          minutes ?? 0,
-          formatTimestamp(lastRefreshAt),
-        )
+      : stalenessCopy.minutesAgo(minutes ?? 0, formatTimestamp(lastRefreshAt))
     : stalenessCopy.unknown;
 
   function handleRefresh() {

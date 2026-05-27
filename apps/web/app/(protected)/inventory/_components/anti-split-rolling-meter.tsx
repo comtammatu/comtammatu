@@ -84,16 +84,13 @@ export function AntiSplitRollingMeter({
 
   return (
     <div
-      className={cn(
-        "rounded-md border px-2 py-1 text-xs",
-        tone,
-        className,
-      )}
+      className={cn("rounded-md border px-2 py-1 text-xs", tone, className)}
       data-slot="anti-split-meter"
       data-will-trigger={willTriggerPhoto}
     >
       <span className="font-medium">Rolling 15min</span>
-      {ingredientName ? ` (${ingredientName})` : ""}: {formatVND(status.rollingSum)}
+      {ingredientName ? ` (${ingredientName})` : ""}:{" "}
+      {formatVND(status.rollingSum)}
       {typeof pendingDelta === "number" && pendingDelta > 0 ? (
         <>
           {" + "}

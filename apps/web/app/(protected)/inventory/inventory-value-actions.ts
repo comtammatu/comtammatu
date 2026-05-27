@@ -39,7 +39,10 @@ type IngredientCost = { unit_cost: number | null } | null;
 export async function fetchInventoryValueSystem(
   branchId?: number,
 ): Promise<ActionResult<{ totalValue: number }>> {
-  const ctx = await getAuthContextWithPermission(SYSTEM_ROLES, PERMISSION_KEYS.INVENTORY_READ);
+  const ctx = await getAuthContextWithPermission(
+    SYSTEM_ROLES,
+    PERMISSION_KEYS.INVENTORY_READ,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -87,7 +90,10 @@ export interface AreaValueRow {
 export async function fetchInventoryValueByArea(): Promise<
   ActionResult<{ rows: AreaValueRow[] }>
 > {
-  const ctx = await getAuthContextWithPermission(AREA_ROLES, PERMISSION_KEYS.INVENTORY_READ);
+  const ctx = await getAuthContextWithPermission(
+    AREA_ROLES,
+    PERMISSION_KEYS.INVENTORY_READ,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -207,7 +213,10 @@ export interface BranchValueRow {
 export async function fetchInventoryValueByBranch(): Promise<
   ActionResult<{ rows: BranchValueRow[] }>
 > {
-  const ctx = await getAuthContextWithPermission(BRANCH_ROLES, PERMISSION_KEYS.INVENTORY_READ);
+  const ctx = await getAuthContextWithPermission(
+    BRANCH_ROLES,
+    PERMISSION_KEYS.INVENTORY_READ,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;

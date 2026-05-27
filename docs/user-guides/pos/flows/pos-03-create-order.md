@@ -5,13 +5,13 @@
 
 ## Tóm tắt
 
-| Trường | Giá trị |
-| --- | --- |
-| **Vai trò** | Phục vụ, Thu ngân |
-| **Quyền cần có** | `pos:use` |
-| **Điều kiện trước** | Đã chọn bối cảnh bán hàng (Tại bàn N hoặc Mang về) — xem [POS-02](pos-02-select-context.md) |
-| **Kết quả đúng** | Đơn `confirmed` được tạo trong DB; KDS có ticket; bàn chuyển sang `Đang dùng` (nếu dine_in); cashier về danh sách bàn / màn POS chính |
-| **Thời gian** | ~30 giây |
+| Trường              | Giá trị                                                                                                                               |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| **Vai trò**         | Phục vụ, Thu ngân                                                                                                                     |
+| **Quyền cần có**    | `pos:use`                                                                                                                             |
+| **Điều kiện trước** | Đã chọn bối cảnh bán hàng (Tại bàn N hoặc Mang về) — xem [POS-02](pos-02-select-context.md)                                           |
+| **Kết quả đúng**    | Đơn `confirmed` được tạo trong DB; KDS có ticket; bàn chuyển sang `Đang dùng` (nếu dine_in); cashier về danh sách bàn / màn POS chính |
+| **Thời gian**       | ~30 giây                                                                                                                              |
 
 ## Đường dẫn
 
@@ -144,11 +144,11 @@ URL: `/br/{branchId}/pos` (sau khi chọn bàn hoặc tab Mang về)
 
 ### Code path
 
-- **Menu pane:** [apps/web/app/(protected)/br/[branchId]/pos/_components/menu-pane.tsx](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/_components/menu-pane.tsx)
-- **Item customizer:** [apps/web/app/(protected)/br/[branchId]/pos/item-customizer.tsx](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/item-customizer.tsx) — Drawer khi item có modifier/sides.
-- **Cart pane (drawer mobile):** [apps/web/app/(protected)/br/[branchId]/pos/_components/cart-pane.tsx](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/_components/cart-pane.tsx)
-- **Submit handler:** `submitPosOrderWithRetry` trong [apps/web/app/(protected)/br/[branchId]/pos/_utils/submit-with-retry.ts](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/_utils/submit-with-retry.ts) — retry với exponential backoff khi mạng yếu.
-- **Server action:** `submitOrder` trong [apps/web/app/(protected)/br/[branchId]/pos/order-actions.ts](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/order-actions.ts) — Postgres RPC atomic insert order + items + KDS tickets.
+- **Menu pane:** [apps/web/app/(protected)/br/[branchId]/pos/\_components/menu-pane.tsx](<../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/_components/menu-pane.tsx>)
+- **Item customizer:** [apps/web/app/(protected)/br/[branchId]/pos/item-customizer.tsx](<../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/item-customizer.tsx>) — Drawer khi item có modifier/sides.
+- **Cart pane (drawer mobile):** [apps/web/app/(protected)/br/[branchId]/pos/\_components/cart-pane.tsx](<../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/_components/cart-pane.tsx>)
+- **Submit handler:** `submitPosOrderWithRetry` trong [apps/web/app/(protected)/br/[branchId]/pos/\_utils/submit-with-retry.ts](<../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/_utils/submit-with-retry.ts>) — retry với exponential backoff khi mạng yếu.
+- **Server action:** `submitOrder` trong [apps/web/app/(protected)/br/[branchId]/pos/order-actions.ts](<../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/order-actions.ts>) — Postgres RPC atomic insert order + items + KDS tickets.
 
 ### Database
 
@@ -164,17 +164,17 @@ URL: `/br/{branchId}/pos` (sau khi chọn bàn hoặc tab Mang về)
 
 ### Tham chiếu thiết kế
 
-- Order lifecycle: [docs/archive/plan/m2-order-lifecycle.md](../../../archive/plan/m2-order-lifecycle.md)
-- KDS routing: runtime route theo `kds_stations`; dedicated `docs/modules/pos-kds.md` chưa có.
+- Current POS scope: [tasks/todo.md](../../../../tasks/todo.md)
+- KDS routing: runtime route theo `kds_stations`; xem route/runtime contract trong [docs/modules/web-app.md](../../../modules/web-app.md).
 
 ---
 
 ## Metadata mockup
 
-| Trường | Giá trị |
-| --- | --- |
-| Viewport | 390×844 (iPhone mặc định) |
-| Capture script | [apps/web/e2e/guides/pos-03-create-order.guide.ts](../../../../apps/web/e2e/guides/pos-03-create-order.guide.ts) |
-| Lệnh refresh | `pnpm --filter @comtammatu/web guides:capture --grep="POS-03"` |
-| Cập nhật mockup gần nhất | 2026-04-27 |
-| Người maintain | _TBD_ |
+| Trường                   | Giá trị                                                                                                          |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| Viewport                 | 390×844 (iPhone mặc định)                                                                                        |
+| Capture script           | [apps/web/e2e/guides/pos-03-create-order.guide.ts](../../../../apps/web/e2e/guides/pos-03-create-order.guide.ts) |
+| Lệnh refresh             | `pnpm --filter @comtammatu/web guides:capture --grep="POS-03"`                                                   |
+| Cập nhật mockup gần nhất | 2026-04-27                                                                                                       |
+| Người maintain           | _TBD_                                                                                                            |

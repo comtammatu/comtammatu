@@ -3,10 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  RotateCcw as IconReset,
-  Save as IconSave,
-} from "lucide-react";
+import { RotateCcw as IconReset, Save as IconSave } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
@@ -44,8 +41,11 @@ function buildDraft(row: MenuLimitRow): RowDraft {
 }
 
 function isDirty(row: MenuLimitRow, draft: RowDraft): boolean {
-  const persisted = row.limit_quantity == null ? "" : String(row.limit_quantity);
-  return draft.qtyText.trim() !== persisted || draft.isDisabled !== row.is_disabled;
+  const persisted =
+    row.limit_quantity == null ? "" : String(row.limit_quantity);
+  return (
+    draft.qtyText.trim() !== persisted || draft.isDisabled !== row.is_disabled
+  );
 }
 
 function isConfigured(row: MenuLimitRow): boolean {
@@ -180,24 +180,17 @@ export function MenuLimitsTable({ branchId, rows }: Props) {
                 const exhausted =
                   row.limit_quantity != null &&
                   row.sold_today >= row.limit_quantity;
-                const rowPending =
-                  isPending && pendingId === row.menu_item_id;
+                const rowPending = isPending && pendingId === row.menu_item_id;
                 return (
                   <TableRow key={row.menu_item_id}>
                     <TableCell>
                       <div className="font-medium">{row.item_name}</div>
                       {row.is_disabled ? (
-                        <Badge
-                          variant="destructive"
-                          className="mt-1 text-xs"
-                        >
+                        <Badge variant="destructive" className="mt-1 text-xs">
                           Đang tắt
                         </Badge>
                       ) : exhausted ? (
-                        <Badge
-                          variant="warning"
-                          className="mt-1 text-xs"
-                        >
+                        <Badge variant="warning" className="mt-1 text-xs">
                           Hết suất hôm nay
                         </Badge>
                       ) : null}

@@ -9,7 +9,9 @@ import { PHONE_REGEX } from "./constants";
  *
  * Returns null if input is empty/invalid (caller decides whether NULL is OK).
  */
-export function normalizePhone(input: string | null | undefined): string | null {
+export function normalizePhone(
+  input: string | null | undefined,
+): string | null {
   if (!input) return null;
   // Strip spaces, dashes, dots to handle formatted numbers
   const trimmed = input.trim().replace(/[\s\-.]/g, "");

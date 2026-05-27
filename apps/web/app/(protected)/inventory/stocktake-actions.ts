@@ -45,7 +45,10 @@ export async function startStocktake(
 ): Promise<ActionResult<StocktakeStartResult>> {
   const parsed = startStocktakeSchema.safeParse(input);
   if (!parsed.success) {
-    return { success: false, error: parsed.error.issues[0]?.message ?? "Input không hợp lệ" };
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Input không hợp lệ",
+    };
   }
 
   const ctx = await getAuthContextWithPermission(
@@ -175,10 +178,15 @@ const submitCountSchema = z.object({
 
 export async function submitCountRound(
   input: z.infer<typeof submitCountSchema>,
-): Promise<ActionResult<{ appliedCount: number; conflictCount: number; roundNo: number }>> {
+): Promise<
+  ActionResult<{ appliedCount: number; conflictCount: number; roundNo: number }>
+> {
   const parsed = submitCountSchema.safeParse(input);
   if (!parsed.success) {
-    return { success: false, error: parsed.error.issues[0]?.message ?? "Input không hợp lệ" };
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Input không hợp lệ",
+    };
   }
 
   const ctx = await getAuthContextWithPermission(
@@ -232,7 +240,10 @@ export async function saveStocktakeDraft(
 ): Promise<ActionResult<{ lastSavedAt: string }>> {
   const parsed = saveDraftSchema.safeParse(input);
   if (!parsed.success) {
-    return { success: false, error: parsed.error.issues[0]?.message ?? "Input không hợp lệ" };
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Input không hợp lệ",
+    };
   }
 
   const ctx = await getAuthContextWithPermission(
@@ -243,22 +254,20 @@ export async function saveStocktakeDraft(
   const { supabase, user } = ctx;
 
   const now = new Date().toISOString();
-  const { error } = await supabase
-    .from("stocktake_drafts")
-    .upsert(
-      {
-        session_id: parsed.data.sessionId,
-        // Generated types narrow draft_counts to Json; Record<string, unknown>
-        // is functionally equivalent but not assignable. JSON.parse/stringify
-        // round-trip keeps the runtime value identical and satisfies the type.
-        draft_counts: JSON.parse(
-          JSON.stringify(parsed.data.draftCounts),
-        ) as Record<string, never>,
-        last_saved_at: now,
-        saved_by: user.id,
-      },
-      { onConflict: "session_id" },
-    );
+  const { error } = await supabase.from("stocktake_drafts").upsert(
+    {
+      session_id: parsed.data.sessionId,
+      // Generated types narrow draft_counts to Json; Record<string, unknown>
+      // is functionally equivalent but not assignable. JSON.parse/stringify
+      // round-trip keeps the runtime value identical and satisfies the type.
+      draft_counts: JSON.parse(
+        JSON.stringify(parsed.data.draftCounts),
+      ) as Record<string, never>,
+      last_saved_at: now,
+      saved_by: user.id,
+    },
+    { onConflict: "session_id" },
+  );
 
   if (error) {
     return { success: false, error: "Không lưu draft được" };
@@ -273,7 +282,9 @@ export async function acquireZoneLock(
   sessionId: number,
   zoneId: string,
   ttlSeconds = 1800,
-): Promise<ActionResult<{ acquired: boolean; lockedBy: string; expiresAt: string }>> {
+): Promise<
+  ActionResult<{ acquired: boolean; lockedBy: string; expiresAt: string }>
+> {
   const ctx = await getAuthContextWithPermission(
     STAFF_ROLES,
     PERMISSION_KEYS.INVENTORY_STOCKTAKE_CREATE,
@@ -367,7 +378,10 @@ export async function closeRecountRound(
 ): Promise<ActionResult<CloseRecountResult>> {
   const parsed = closeRecountSchema.safeParse(input);
   if (!parsed.success) {
-    return { success: false, error: parsed.error.issues[0]?.message ?? "Input không hợp lệ" };
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Input không hợp lệ",
+    };
   }
 
   const ctx = await getAuthContextWithPermission(
@@ -382,7 +396,8 @@ export async function closeRecountRound(
     p_round_no: parsed.data.roundNo,
   });
   if (error) {
-    if (error.code === "42501") return { success: false, error: "Không có quyền đóng round" };
+    if (error.code === "42501")
+      return { success: false, error: "Không có quyền đóng round" };
     return { success: false, error: "Không đóng được vòng đếm." };
   }
 
@@ -418,10 +433,15 @@ const escalateRound4Schema = z.object({
  */
 export async function escalateRound4(
   input: z.infer<typeof escalateRound4Schema>,
-): Promise<ActionResult<{ sessionId: number; ingredientId: number; finalQty: number }>> {
+): Promise<
+  ActionResult<{ sessionId: number; ingredientId: number; finalQty: number }>
+> {
   const parsed = escalateRound4Schema.safeParse(input);
   if (!parsed.success) {
-    return { success: false, error: parsed.error.issues[0]?.message ?? "Input không hợp lệ" };
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Input không hợp lệ",
+    };
   }
 
   const ctx = await getAuthContextWithPermission(
@@ -438,7 +458,8 @@ export async function escalateRound4(
     p_note: parsed.data.note,
   });
   if (error) {
-    if (error.code === "42501") return { success: false, error: "Không có quyền escalate" };
+    if (error.code === "42501")
+      return { success: false, error: "Không có quyền escalate" };
     if (error.code === "22023") {
       return {
         success: false,
@@ -483,11 +504,13 @@ export async function finalizeStocktake(
     p_session_id: sessionId,
   });
   if (error) {
-    if (error.code === "42501") return { success: false, error: "Không có quyền finalize" };
+    if (error.code === "42501")
+      return { success: false, error: "Không có quyền finalize" };
     if (error.code === "22023") {
       return {
         success: false,
-        error: "Chưa thể hòan tất: còn dòng chưa final hoặc còn xung đột cần xử lý.",
+        error:
+          "Chưa thể hòan tất: còn dòng chưa final hoặc còn xung đột cần xử lý.",
       };
     }
     return { success: false, error: "Không hòan tất được kiểm kê." };
@@ -512,7 +535,11 @@ export type StocktakeConflictRow = {
   ingredientId: number;
   ingredientName: string;
   roundNo: number;
-  conflictType: "is_final_overwrite" | "concurrent_round_submit" | "clock_tamper" | "unknown";
+  conflictType:
+    | "is_final_overwrite"
+    | "concurrent_round_submit"
+    | "clock_tamper"
+    | "unknown";
   clientPayload: Record<string, unknown>;
   serverPayload: Record<string, unknown> | null;
   submittedBy: string | null;
@@ -569,13 +596,18 @@ export async function listStocktakeConflicts(
       ingredientId: Number(raw.ingredient_id ?? 0),
       ingredientName: String(ing.name ?? ""),
       roundNo: Number(raw.round_no ?? 0),
-      conflictType: (raw.conflict_type ?? "unknown") as StocktakeConflictRow["conflictType"],
+      conflictType: (raw.conflict_type ??
+        "unknown") as StocktakeConflictRow["conflictType"],
       clientPayload: (raw.client_payload ?? {}) as Record<string, unknown>,
-      serverPayload: (raw.server_payload ?? null) as Record<string, unknown> | null,
+      serverPayload: (raw.server_payload ?? null) as Record<
+        string,
+        unknown
+      > | null,
       submittedBy: (raw.submitted_by ?? null) as string | null,
       submittedAt: String(raw.submitted_at ?? ""),
       resolvedAt: (raw.resolved_at ?? null) as string | null,
-      resolution: (raw.resolution ?? null) as StocktakeConflictRow["resolution"],
+      resolution: (raw.resolution ??
+        null) as StocktakeConflictRow["resolution"],
       resolutionQty:
         raw.resolution_qty === null || raw.resolution_qty === undefined
           ? null
@@ -599,12 +631,24 @@ const resolveConflictSchema = z.object({
  */
 export async function resolveStocktakeConflict(
   input: z.infer<typeof resolveConflictSchema>,
-): Promise<ActionResult<{ conflictId: number; resolution: string; finalQty: number | null }>> {
+): Promise<
+  ActionResult<{
+    conflictId: number;
+    resolution: string;
+    finalQty: number | null;
+  }>
+> {
   const parsed = resolveConflictSchema.safeParse(input);
   if (!parsed.success) {
-    return { success: false, error: parsed.error.issues[0]?.message ?? "Input không hợp lệ" };
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Input không hợp lệ",
+    };
   }
-  if (parsed.data.resolution === "manual_value" && parsed.data.manualQty === undefined) {
+  if (
+    parsed.data.resolution === "manual_value" &&
+    parsed.data.manualQty === undefined
+  ) {
     return { success: false, error: "Phải nhập số lượng thủ công" };
   }
 
@@ -622,7 +666,8 @@ export async function resolveStocktakeConflict(
     p_note: parsed.data.note ?? undefined,
   });
   if (error) {
-    if (error.code === "42501") return { success: false, error: "Không có quyền resolve" };
+    if (error.code === "42501")
+      return { success: false, error: "Không có quyền resolve" };
     if (error.code === "22023") {
       return {
         success: false,

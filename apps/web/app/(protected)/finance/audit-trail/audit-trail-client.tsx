@@ -4,7 +4,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@comtammatu/ui/components/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
 import { Label } from "@comtammatu/ui/components/label";
 import {
   Select,
@@ -106,7 +111,9 @@ export function AuditTrailClient({
       usp.set("entity_type", nextEntityType);
     }
     startTransition(() => {
-      router.replace(`/finance/audit-trail?${usp.toString()}`, { scroll: false });
+      router.replace(`/finance/audit-trail?${usp.toString()}`, {
+        scroll: false,
+      });
     });
   }
 
@@ -114,7 +121,9 @@ export function AuditTrailClient({
     const usp = new URLSearchParams(searchParams);
     usp.set("limit", String(nextLimit));
     startTransition(() => {
-      router.replace(`/finance/audit-trail?${usp.toString()}`, { scroll: false });
+      router.replace(`/finance/audit-trail?${usp.toString()}`, {
+        scroll: false,
+      });
     });
   }
 
@@ -198,7 +207,10 @@ export function AuditTrailClient({
             <TableBody>
               {rows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="py-12 text-center text-muted-foreground">
+                  <TableCell
+                    colSpan={5}
+                    className="py-12 text-center text-muted-foreground"
+                  >
                     Không có sự kiện phù hợp với bộ lọc hiện tại.
                   </TableCell>
                 </TableRow>

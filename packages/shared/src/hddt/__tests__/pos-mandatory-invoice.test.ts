@@ -30,7 +30,9 @@ test("POS invoice form defaults to buyer-not-get-invoice instead of opting out",
 });
 
 test("payment confirm actions always attempt HĐĐT after successful payment", () => {
-  const src = read("apps/web/app/(protected)/br/[branchId]/pos/payment-actions.ts");
+  const src = read(
+    "apps/web/app/(protected)/br/[branchId]/pos/payment-actions.ts",
+  );
 
   assert.ok(
     src.includes("always attempt HĐĐT issuance"),
@@ -81,7 +83,9 @@ test("createTaxInvoice does not create new not_required/skipped rows", () => {
 
 test("per-order HĐĐT payload expands POS modifiers and sides", () => {
   const createSrc = read("apps/web/app/(protected)/finance/actions.ts");
-  const replaceSrc = read("apps/web/app/(protected)/finance/replace-invoice-actions.ts");
+  const replaceSrc = read(
+    "apps/web/app/(protected)/finance/replace-invoice-actions.ts",
+  );
 
   for (const src of [createSrc, replaceSrc]) {
     assert.ok(

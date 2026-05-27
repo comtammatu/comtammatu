@@ -1,7 +1,15 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Building as IconBuilding, Clock as IconClock, Ellipsis as IconDots, Pencil as IconPencil, Shield as IconShield, ToggleLeft as IconToggleLeft, ToggleRight as IconToggleRight } from "lucide-react";
+import {
+  Building as IconBuilding,
+  Clock as IconClock,
+  Ellipsis as IconDots,
+  Pencil as IconPencil,
+  Shield as IconShield,
+  ToggleLeft as IconToggleLeft,
+  ToggleRight as IconToggleRight,
+} from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -71,7 +79,9 @@ export function BranchTable({ branches }: BranchTableProps) {
           <TableHeader>
             <TableRow>
               <TableHead>Điểm vận hành</TableHead>
-              <TableHead className="hidden sm:table-cell">{FORM_VI.type}</TableHead>
+              <TableHead className="hidden sm:table-cell">
+                {FORM_VI.type}
+              </TableHead>
               <TableHead className="hidden sm:table-cell">Địa chỉ</TableHead>
               <TableHead className="hidden md:table-cell">Điện thoại</TableHead>
               <TableHead>{FORM_VI.status}</TableHead>

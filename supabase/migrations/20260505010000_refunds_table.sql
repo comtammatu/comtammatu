@@ -2,7 +2,7 @@
 -- refunds — payment refund request ledger
 --
 -- Referenced by apps/web/app/orders/refund-actions.ts. The DDL was drafted
--- in docs/archive/plan/sprint-3.md but never migrated. The action file ships
+-- in an earlier planning note but never migrated. The action file ships
 -- with `// @ts-nocheck` to mask the missing table — every refund silently
 -- fails at runtime with a generic "Không thể tạo yêu cầu hòan tiền".
 --

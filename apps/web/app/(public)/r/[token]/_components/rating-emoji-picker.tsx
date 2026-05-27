@@ -3,11 +3,7 @@
 import type { Control, FieldPath, FieldValues } from "react-hook-form";
 import { useController } from "react-hook-form";
 import { cn } from "@comtammatu/ui";
-import {
-  Field,
-  FieldError,
-  FieldLabel,
-} from "@comtammatu/ui/components/field";
+import { Field, FieldError, FieldLabel } from "@comtammatu/ui/components/field";
 
 const RATING_OPTIONS = [
   { value: 1, emoji: "😡", label: "Rất tệ" },

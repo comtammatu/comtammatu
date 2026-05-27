@@ -1,9 +1,6 @@
 "use client";
 
-import {
-  Card,
-  CardContent,
-} from "@comtammatu/ui/components/card";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
   Table,
   TableBody,
@@ -65,9 +62,7 @@ export function FoodCostClient({
     0,
   );
   const avgMarginPct =
-    totalRevenue > 0
-      ? ((totalRevenue - totalCost) / totalRevenue) * 100
-      : null;
+    totalRevenue > 0 ? ((totalRevenue - totalCost) / totalRevenue) * 100 : null;
   const avgMarginTone =
     avgMarginPct == null
       ? "neutral"

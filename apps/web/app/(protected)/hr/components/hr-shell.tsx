@@ -1,10 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import {
-  Briefcase as IconBriefcase,
-  Wallet as IconWallet,
-} from "lucide-react";
+import { Briefcase as IconBriefcase, Wallet as IconWallet } from "lucide-react";
 import type { ReactNode } from "react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";

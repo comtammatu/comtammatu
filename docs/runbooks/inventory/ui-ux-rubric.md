@@ -28,11 +28,11 @@ Boundary:
 
 ## 2. Severity chuẩn
 
-| Severity | Khi nào dùng | Ví dụ |
-| -------- | ------------ | ----- |
-| `P0` | Chặn tác vụ hằng ngày, gây thao tác sai nghiệp vụ, hoặc khiến user không thể hoàn tất flow chính | Không thấy CTA nhận hàng ở chi nhánh, confirm sai vai trò, mất action chính trên mobile |
-| `P1` | User vẫn làm được nhưng rất dễ hiểu sai, bỏ sót bước, hoặc đi chậm đáng kể | Sau `received` không có gợi ý sang `Cấp bếp`, toast/state không đủ rõ, placeholder copy gây hiểu nhầm là đã live |
-| `P2` | Lệch visual, responsive, a11y, hoặc discoverability nhưng chưa phá workflow | Hover-only action trên desktop, badge màu khó hiểu, spacing làm table khó quét |
+| Severity | Khi nào dùng                                                                                     | Ví dụ                                                                                                            |
+| -------- | ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| `P0`     | Chặn tác vụ hằng ngày, gây thao tác sai nghiệp vụ, hoặc khiến user không thể hoàn tất flow chính | Không thấy CTA nhận hàng ở chi nhánh, confirm sai vai trò, mất action chính trên mobile                          |
+| `P1`     | User vẫn làm được nhưng rất dễ hiểu sai, bỏ sót bước, hoặc đi chậm đáng kể                       | Sau `received` không có gợi ý sang `Cấp bếp`, toast/state không đủ rõ, placeholder copy gây hiểu nhầm là đã live |
+| `P2`     | Lệch visual, responsive, a11y, hoặc discoverability nhưng chưa phá workflow                      | Hover-only action trên desktop, badge màu khó hiểu, spacing làm table khó quét                                   |
 
 Nếu một issue chạm cả chức năng và UX, ưu tiên severity cao hơn.
 
@@ -42,12 +42,12 @@ Nếu một issue chạm cả chức năng và UX, ưu tiên severity cao hơn.
 
 Mỗi trục chấm theo thang `0-3`:
 
-| Điểm | Ý nghĩa |
-| ---- | ------- |
-| `0` | Fail rõ ràng, cản flow hoặc gây hiểu sai nặng |
-| `1` | Làm được nhưng ma sát cao, cần training hoặc đoán nhiều |
-| `2` | Dùng được, còn điểm rối nhỏ hoặc thiếu phản hồi |
-| `3` | Rõ, nhất quán, dễ thao tác, hợp vai trò và thiết bị |
+| Điểm | Ý nghĩa                                                 |
+| ---- | ------------------------------------------------------- |
+| `0`  | Fail rõ ràng, cản flow hoặc gây hiểu sai nặng           |
+| `1`  | Làm được nhưng ma sát cao, cần training hoặc đoán nhiều |
+| `2`  | Dùng được, còn điểm rối nhỏ hoặc thiếu phản hồi         |
+| `3`  | Rõ, nhất quán, dễ thao tác, hợp vai trò và thiết bị     |
 
 Màn chỉ được coi là pass khi:
 
@@ -209,14 +209,14 @@ Evidence cần chụp:
 
 ## 5. Cách dùng rubric trong từng wave
 
-| Wave | Trục cần ưu tiên |
-| ---- | ---------------- |
-| Wave 1 — IA/nav | `Action discoverability`, `Workflow clarity` |
-| Wave 2 — HQ journey | `Workflow clarity`, `State feedback`, `Error prevention` |
-| Wave 3 — Central kitchen | `Workflow clarity`, `Error prevention`, `Responsive ergonomics` |
-| Wave 4 — Branch journey | cả 6 trục, đặc biệt `Responsive ergonomics` |
-| Wave 5 — Oversight | `Workflow clarity`, `Action discoverability` |
-| Wave 6 — Placeholder sweep | `Workflow clarity`, `Error prevention` |
+| Wave                       | Trục cần ưu tiên                                                |
+| -------------------------- | --------------------------------------------------------------- |
+| Wave 1 — IA/nav            | `Action discoverability`, `Workflow clarity`                    |
+| Wave 2 — HQ journey        | `Workflow clarity`, `State feedback`, `Error prevention`        |
+| Wave 3 — Central kitchen   | `Workflow clarity`, `Error prevention`, `Responsive ergonomics` |
+| Wave 4 — Branch journey    | cả 6 trục, đặc biệt `Responsive ergonomics`                     |
+| Wave 5 — Oversight         | `Workflow clarity`, `Action discoverability`                    |
+| Wave 6 — Placeholder sweep | `Workflow clarity`, `Error prevention`                          |
 
 ---
 
@@ -226,4 +226,3 @@ Evidence cần chụp:
 - UX đúng nhưng action chính bị mất trên thiết bị mục tiêu: `fail`.
 - Placeholder rõ ràng, không hứa quá mức, không chặn flow live: có thể `accepted`.
 - Placeholder giống action thật hoặc làm user kỳ vọng sai: tối thiểu `P1`.
-

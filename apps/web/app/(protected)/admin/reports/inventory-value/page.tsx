@@ -6,11 +6,16 @@ import { InventoryValuePanel } from "@/components/inventory-value-panel";
 
 export default async function InventoryValueReportPage() {
   const { claims } = await loadAuthState();
-  const inventoryValueVisibility = getInventoryValueVisibility(claims.user_role);
+  const inventoryValueVisibility = getInventoryValueVisibility(
+    claims.user_role,
+  );
 
   return (
     <AppPage>
-      <AppPageHeader eyebrow={APP_COPY_VI.executiveReporting} title="Giá trị tồn kho" />
+      <AppPageHeader
+        eyebrow={APP_COPY_VI.executiveReporting}
+        title="Giá trị tồn kho"
+      />
       <InventoryValuePanel visibility={inventoryValueVisibility} />
     </AppPage>
   );

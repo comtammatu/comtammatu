@@ -1,5 +1,15 @@
 import Link from "next/link";
-import { ArrowLeftRight as IconArrowLeftRight, Book as IconBook, Briefcase as IconBriefcase, ClipboardList as IconClipboardList, Package as IconPackage, Receipt as IconReceipt, ShieldCheck as IconShieldCheck, TrendingUp as IconTrendingUp, Wallet as IconWallet } from "lucide-react";
+import {
+  ArrowLeftRight as IconArrowLeftRight,
+  Book as IconBook,
+  Briefcase as IconBriefcase,
+  ClipboardList as IconClipboardList,
+  Package as IconPackage,
+  Receipt as IconReceipt,
+  ShieldCheck as IconShieldCheck,
+  TrendingUp as IconTrendingUp,
+  Wallet as IconWallet,
+} from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -120,11 +130,10 @@ export default async function ReportsPage() {
       <Card>
         <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1">
-              <CardTitle>Báo cáo tổng hợp</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Các chỉ số quan trọng cho doanh thu, tồn kho, tài chính và
-                lương.
-              </p>
+            <CardTitle>Báo cáo tổng hợp</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Các chỉ số quan trọng cho doanh thu, tồn kho, tài chính và lương.
+            </p>
           </div>
           <Badge variant="secondary" className="rounded-full px-3 py-1.5">
             Điều hành

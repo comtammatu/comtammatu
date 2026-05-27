@@ -19,9 +19,7 @@ type BaseActionOptions<TSchema extends z.ZodType> = {
   schema: TSchema;
   permission?: PermissionLike;
   anyPermission?: readonly PermissionLike[];
-  permissionBranchId?: (
-    data: z.infer<TSchema>,
-  ) => number | null | undefined;
+  permissionBranchId?: (data: z.infer<TSchema>) => number | null | undefined;
 };
 
 type DirectActionOptions<TSchema extends z.ZodType> =
@@ -29,7 +27,8 @@ type DirectActionOptions<TSchema extends z.ZodType> =
     /**
      * When true and the authenticated role is `branch_manager` or `cashier`
      * with `claims.branch_id == null`, reject with `branch_scope_unset`
-     * instead of allowing tenant-wide writes. Per m4-payments-fix P1-E:
+     * instead of allowing tenant-wide writes. Per the branch-scope hardening
+     * contract:
      * a branch-restricted role with no branch grant must NOT widen to
      * tenant scope. Apply to refund, payment, and any branch-scoped
      * mutating action.
@@ -156,10 +155,7 @@ export function withFormAction<TSchema extends z.ZodType>(
     data: z.infer<TSchema>,
     ctx: ActionContext,
   ) => Promise<ActionResult>,
-): (
-  prev: ActionResult | null,
-  formData: FormData,
-) => Promise<ActionResult> {
+): (prev: ActionResult | null, formData: FormData) => Promise<ActionResult> {
   return async (_prev, formData) => {
     const raw = opts.extract(formData);
     const result = opts.schema.safeParse(raw);

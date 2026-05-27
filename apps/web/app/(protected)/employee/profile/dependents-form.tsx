@@ -18,8 +18,7 @@ export function DependentsForm({ initialCount }: DependentsFormProps) {
   const [isPending, startTransition] = useTransition();
 
   const numeric = Number(count);
-  const isValid =
-    Number.isInteger(numeric) && numeric >= 0 && numeric <= 20;
+  const isValid = Number.isInteger(numeric) && numeric >= 0 && numeric <= 20;
   const isDirty = numeric !== initialCount;
 
   function handleSubmit() {

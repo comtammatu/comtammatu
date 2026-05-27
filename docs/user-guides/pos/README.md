@@ -10,12 +10,12 @@ Hướng dẫn cho **thu ngân**, **phục vụ**, và **quản lý chi nhánh**
 
 ## Cấu trúc tài liệu
 
-| File | Nội dung |
-| --- | --- |
-| [flow-index.md](flow-index.md) | Danh sách toàn bộ flow đã có guide |
-| `flows/pos-XX-*.md` | Hướng dẫn từng flow (mỗi file là một flow độc lập) |
-| `mockups/pos-XX/*.png` | Ảnh chụp iPhone của từng bước |
-| [MAINTENANCE.md](MAINTENANCE.md) | Cách refresh ảnh khi UI POS đổi |
+| File                             | Nội dung                                           |
+| -------------------------------- | -------------------------------------------------- |
+| [flow-index.md](flow-index.md)   | Danh sách toàn bộ flow đã có guide                 |
+| `flows/pos-XX-*.md`              | Hướng dẫn từng flow (mỗi file là một flow độc lập) |
+| `mockups/pos-XX/*.png`           | Ảnh chụp iPhone của từng bước                      |
+| [MAINTENANCE.md](MAINTENANCE.md) | Cách refresh ảnh khi UI POS đổi                    |
 
 ## Đọc theo vai trò
 

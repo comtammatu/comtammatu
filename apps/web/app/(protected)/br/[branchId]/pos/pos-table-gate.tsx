@@ -82,9 +82,9 @@ const TableButton = memo(function TableButton({
               ? "border-success/35 bg-success/20 text-foreground shadow-sm hover:border-success/50 hover:bg-success/25"
               : tileVisualState === "served"
                 ? "bg-success/10 text-foreground shadow-sm hover:border-success/35"
-              : tileVisualState === "active"
-                ? "bg-warning/10 text-foreground shadow-sm hover:border-warning/35"
-                : "bg-muted/55 text-muted-foreground shadow-sm hover:border-border",
+                : tileVisualState === "active"
+                  ? "bg-warning/10 text-foreground shadow-sm hover:border-warning/35"
+                  : "bg-muted/55 text-muted-foreground shadow-sm hover:border-border",
       )}
       onClick={handleClick}
     >

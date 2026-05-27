@@ -10,8 +10,7 @@ export const admin = {
       detailTab: (count: number) => `Chi tiết (${count})`,
       branchTab: (count: number) => `Theo chi nhánh (${count})`,
       emptyTitle: "Không có dữ liệu",
-      detailEmptyDescription:
-        "Không có biến động tồn kho trong kỳ đã chọn.",
+      detailEmptyDescription: "Không có biến động tồn kho trong kỳ đã chọn.",
       branchEmptyDescription:
         "Không có biến động tồn kho theo chi nhánh trong kỳ đã chọn.",
       unit: "ĐV",
@@ -43,4 +42,4 @@ export const admin = {
     tenantWide: "tenant-wide",
     forever: "vĩnh viễn",
   },
-} as const
+} as const;

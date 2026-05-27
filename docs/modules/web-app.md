@@ -2,7 +2,7 @@
 
 ## Tổng quan
 
-Ứng dụng Next.js 16.2 dùng App Router. Snapshot 2026-05-24 (`node scripts/project-snapshot.mjs`) có 109 `page.tsx` routes và 13 API route handlers. Các bề mặt chính: Admin (`/admin/*`), Inventory (`/inventory/*`), Finance (`/finance/*`), HR (`/hr/*`), Orders (`/orders`), Notifications (`/notifications`), POS (`/br/[branchId]/pos`), KDS (`/br/[branchId]/kds`), Runner (`/br/[branchId]/runner`), Branch settings (`/br/[branchId]/settings/*`), Branch menu limits (`/br/[branchId]/menu-limits`), Employee portal (`/employee/*`), plus public surfaces `/login`, `/access-denied`, `/r/*`, `/payment/momo/return`. Khung quản trị + Thực đơn + POS + KDS đã hoàn thành; Kho hàng hiện là bề mặt vận hành live cho HQ, bếp trung tâm, và chi nhánh.
+Ứng dụng Next.js 16.2 dùng App Router. Snapshot 2026-05-27 (`node scripts/project-snapshot.mjs`) có 109 `page.tsx` routes và 13 API route handlers. Các bề mặt chính: Admin (`/admin/*`), Inventory (`/inventory/*`), Finance (`/finance/*`), HR (`/hr/*`), Orders (`/orders`), Notifications (`/notifications`), POS (`/br/[branchId]/pos`), KDS (`/br/[branchId]/kds`), Runner (`/br/[branchId]/runner`), Branch settings (`/br/[branchId]/settings/*`), Branch menu limits (`/br/[branchId]/menu-limits`), Employee portal (`/employee/*`), plus public surfaces `/login`, `/access-denied`, `/r/*`, `/payment/momo/return`. Khung quản trị + Thực đơn + POS + KDS đã hoàn thành; Kho hàng hiện là bề mặt vận hành live cho Kho Tổng, Bếp Trung Tâm, và chi nhánh.
 
 **Phạm vi sở hữu:** `apps/web/`
 
@@ -241,11 +241,3 @@ Browser request
 - **Finance & reports expanded:** chart-of-accounts, journal, food-cost, statements, revenue, inventory-value, stock-movement all live.
 - **Inventory settings are narrower now:** `/inventory/settings` chỉ giữ policy/config như expiry; catalog pages canonical sống ở `/inventory/ingredients`, `/inventory/suppliers`, `/inventory/recipes`, còn route settings cũ giữ redirect tương thích.
 - **CRM remains Post-v1.0.**
-
-<!-- ORACLE-META
-Written by codebase-oracle (manual) | 2026-04-06
-Data: Direct source reading
-Audience: new engineer, feature owner | Confidence: 95%
-Updated: Inventory IA/task queue sync + route tree refresh (2026-04-16)
-Unknowns: 0
--->

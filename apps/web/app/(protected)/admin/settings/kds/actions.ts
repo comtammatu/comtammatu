@@ -11,7 +11,11 @@ import type { TablesUpdate } from "@comtammatu/database/types";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
-import { withAction, withFormAction, type ActionContext } from "@/_lib/with-action";
+import {
+  withAction,
+  withFormAction,
+  type ActionContext,
+} from "@/_lib/with-action";
 
 function revalidateKdsSettings(branchId: number) {
   revalidateSurfacePath("/admin/settings/kds");
@@ -69,7 +73,10 @@ const updateStationSchema = z.object({
 });
 
 const saveStationCategoriesSchema = z.object({
-  stationId: z.coerce.number().int().positive({ error: "Station ID không hợp lệ" }),
+  stationId: z.coerce
+    .number()
+    .int()
+    .positive({ error: "Station ID không hợp lệ" }),
   categoryIds: z.array(z.coerce.number().int().positive()),
 });
 
@@ -248,7 +255,11 @@ export const updateStation = withFormAction(
 );
 
 export const saveStationCategories = withAction(
-  { roles: SETTINGS_ROLES, schema: saveStationCategoriesSchema, permission: PERMISSION_KEYS.SETTINGS_BRANCH },
+  {
+    roles: SETTINGS_ROLES,
+    schema: saveStationCategoriesSchema,
+    permission: PERMISSION_KEYS.SETTINGS_BRANCH,
+  },
   async (data, { supabase, claims }) => {
     const { data: station } = await supabase
       .from("kds_stations")

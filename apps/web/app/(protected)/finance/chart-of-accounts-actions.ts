@@ -16,7 +16,10 @@ const COA_WRITE_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
 /* ─── Seed Chart of Accounts (auth-only) ─── */
 
 export async function seedChartOfAccounts(): Promise<ActionResult> {
-  const ctx = await getAuthContextWithPermission(COA_WRITE_ROLES, PERMISSION_KEYS.SETTINGS_TENANT);
+  const ctx = await getAuthContextWithPermission(
+    COA_WRITE_ROLES,
+    PERMISSION_KEYS.SETTINGS_TENANT,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -35,7 +38,10 @@ export async function seedChartOfAccounts(): Promise<ActionResult> {
 /* ─── Fetch Chart of Accounts (auth-only) ─── */
 
 export async function fetchChartOfAccounts(): Promise<ActionResult> {
-  const ctx = await getAuthContextWithPermission(COA_READ_ROLES, PERMISSION_KEYS.FINANCE_VIEW);
+  const ctx = await getAuthContextWithPermission(
+    COA_READ_ROLES,
+    PERMISSION_KEYS.FINANCE_VIEW,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
@@ -78,7 +84,11 @@ const toggleIdSchema = z.object({
 /* ─── Create Account ─── */
 
 export const createAccount = withAction(
-  { roles: COA_WRITE_ROLES, schema: createAccountSchema, permission: PERMISSION_KEYS.SETTINGS_TENANT },
+  {
+    roles: COA_WRITE_ROLES,
+    schema: createAccountSchema,
+    permission: PERMISSION_KEYS.SETTINGS_TENANT,
+  },
   async (data, { supabase, claims }) => {
     const { data: result, error } = await supabase
       .from("chart_of_accounts")
@@ -107,7 +117,11 @@ export const createAccount = withAction(
 /* ─── Update Account ─── */
 
 export const updateAccount = withAction(
-  { roles: COA_WRITE_ROLES, schema: updateAccountSchema, permission: PERMISSION_KEYS.SETTINGS_TENANT },
+  {
+    roles: COA_WRITE_ROLES,
+    schema: updateAccountSchema,
+    permission: PERMISSION_KEYS.SETTINGS_TENANT,
+  },
   async (data, { supabase, claims }) => {
     const { error } = await supabase
       .from("chart_of_accounts")
@@ -131,7 +145,11 @@ export const updateAccount = withAction(
 /* ─── Toggle Account Active ─── */
 
 export const toggleAccountActive = withAction(
-  { roles: COA_WRITE_ROLES, schema: toggleIdSchema, permission: PERMISSION_KEYS.SETTINGS_TENANT },
+  {
+    roles: COA_WRITE_ROLES,
+    schema: toggleIdSchema,
+    permission: PERMISSION_KEYS.SETTINGS_TENANT,
+  },
   async (data, { supabase, claims }) => {
     const { data: account, error: fetchErr } = await supabase
       .from("chart_of_accounts")

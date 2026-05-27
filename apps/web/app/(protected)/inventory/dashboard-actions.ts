@@ -4,7 +4,10 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { PERMISSION_KEYS, STAFF_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { getAuthContextWithPermission, getAuthContextWithAnyPermission } from "./_lib/auth";
+import {
+  getAuthContextWithPermission,
+  getAuthContextWithAnyPermission,
+} from "./_lib/auth";
 
 /* ─── Dashboard summary (S12) ─── */
 
@@ -65,14 +68,11 @@ export type InventoryDashboard = {
 export async function getInventoryDashboard(
   branchId: number,
 ): Promise<ActionResult<InventoryDashboard>> {
-  const ctx = await getAuthContextWithAnyPermission(
-    STAFF_ROLES,
-    [
-      PERMISSION_KEYS.INVENTORY_READ,
-      PERMISSION_KEYS.REPORTS_VIEW_BRANCH,
-      PERMISSION_KEYS.REPORTS_VIEW_TENANT,
-    ],
-  );
+  const ctx = await getAuthContextWithAnyPermission(STAFF_ROLES, [
+    PERMISSION_KEYS.INVENTORY_READ,
+    PERMISSION_KEYS.REPORTS_VIEW_BRANCH,
+    PERMISSION_KEYS.REPORTS_VIEW_TENANT,
+  ]);
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase } = ctx;
 
@@ -98,7 +98,8 @@ export async function getInventoryDashboard(
         locationCount: Number(summary.location_count ?? 0),
         totalQuantity: Number(summary.total_quantity ?? 0),
         totalValueVnd:
-          summary.total_value_vnd === null || summary.total_value_vnd === undefined
+          summary.total_value_vnd === null ||
+          summary.total_value_vnd === undefined
             ? null
             : Number(summary.total_value_vnd),
         alertsCount: Number(summary.alerts_count ?? 0),
@@ -119,7 +120,9 @@ export async function getInventoryDashboard(
       ),
       topAlerts: (Array.isArray(raw.top_alerts) ? raw.top_alerts : []).map(
         (a: Record<string, unknown>) => ({
-          alertType: String(a.alert_type ?? "low_stock") as DashboardAlert["alertType"],
+          alertType: String(
+            a.alert_type ?? "low_stock",
+          ) as DashboardAlert["alertType"],
           severityRank: Number(a.severity_rank ?? 2),
           ingredientId: Number(a.ingredient_id ?? 0),
           ingredientName: String(a.ingredient_name ?? ""),
@@ -161,17 +164,17 @@ export async function getInventoryAlerts(
 ): Promise<ActionResult<DashboardAlert[]>> {
   const parsed = getAlertsSchema.safeParse(input);
   if (!parsed.success) {
-    return { success: false, error: parsed.error.issues[0]?.message ?? "Input không hợp lệ" };
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Input không hợp lệ",
+    };
   }
 
-  const ctx = await getAuthContextWithAnyPermission(
-    STAFF_ROLES,
-    [
-      PERMISSION_KEYS.INVENTORY_READ,
-      PERMISSION_KEYS.REPORTS_VIEW_BRANCH,
-      PERMISSION_KEYS.REPORTS_VIEW_TENANT,
-    ],
-  );
+  const ctx = await getAuthContextWithAnyPermission(STAFF_ROLES, [
+    PERMISSION_KEYS.INVENTORY_READ,
+    PERMISSION_KEYS.REPORTS_VIEW_BRANCH,
+    PERMISSION_KEYS.REPORTS_VIEW_TENANT,
+  ]);
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase } = ctx;
 
@@ -189,7 +192,9 @@ export async function getInventoryAlerts(
   const rows = (data as unknown[]).map((r) => {
     const raw = r as Record<string, unknown>;
     return {
-      alertType: String(raw.alert_type ?? "low_stock") as DashboardAlert["alertType"],
+      alertType: String(
+        raw.alert_type ?? "low_stock",
+      ) as DashboardAlert["alertType"],
       severityRank: Number(raw.severity_rank ?? 2),
       ingredientId: Number(raw.ingredient_id ?? 0),
       ingredientName: String(raw.ingredient_name ?? ""),
@@ -212,15 +217,12 @@ export async function getInventoryAlerts(
 export async function refreshDashboardMv(): Promise<
   ActionResult<{ refreshedAt: string }>
 > {
-  const ctx = await getAuthContextWithAnyPermission(
-    STAFF_ROLES,
-    [
-      PERMISSION_KEYS.REPORTS_VIEW_BRANCH,
-      PERMISSION_KEYS.REPORTS_VIEW_TENANT,
-      PERMISSION_KEYS.SETTINGS_BRANCH,
-      PERMISSION_KEYS.SETTINGS_TENANT,
-    ],
-  );
+  const ctx = await getAuthContextWithAnyPermission(STAFF_ROLES, [
+    PERMISSION_KEYS.REPORTS_VIEW_BRANCH,
+    PERMISSION_KEYS.REPORTS_VIEW_TENANT,
+    PERMISSION_KEYS.SETTINGS_BRANCH,
+    PERMISSION_KEYS.SETTINGS_TENANT,
+  ]);
   if (!ctx) return { success: false, error: "Không có quyền refresh" };
   const { supabase } = ctx;
 
@@ -248,7 +250,10 @@ async function callPeriodRpc(
 ): Promise<ActionResult<void>> {
   const parsed = periodSchema.safeParse(input);
   if (!parsed.success) {
-    return { success: false, error: parsed.error.issues[0]?.message ?? "Input không hợp lệ" };
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Input không hợp lệ",
+    };
   }
 
   const ctx = await getAuthContextWithPermission(
@@ -264,7 +269,10 @@ async function callPeriodRpc(
     p_month: parsed.data.month,
   });
   if (error) {
-    return { success: false, error: `Không ${rpcName.replace(/_/g, " ")} được` };
+    return {
+      success: false,
+      error: `Không ${rpcName.replace(/_/g, " ")} được`,
+    };
   }
   revalidatePath("/admin/accounting/periods");
   return { success: true };

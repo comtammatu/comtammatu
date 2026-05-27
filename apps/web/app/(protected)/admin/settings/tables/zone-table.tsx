@@ -1,7 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Ellipsis as IconDots, Pencil as IconPencil, Trash as IconTrash, MapPin as IconMapPin } from "lucide-react";
+import {
+  Ellipsis as IconDots,
+  Pencil as IconPencil,
+  Trash as IconTrash,
+  MapPin as IconMapPin,
+} from "lucide-react";
 import { ACTIONS_VI, STATES_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -143,7 +148,9 @@ export function ZoneTable({ zones }: ZoneTableProps) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isPending}>{ACTIONS_VI.cancel}</AlertDialogCancel>
+            <AlertDialogCancel disabled={isPending}>
+              {ACTIONS_VI.cancel}
+            </AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={isPending}

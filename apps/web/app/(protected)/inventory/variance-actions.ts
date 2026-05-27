@@ -162,7 +162,8 @@ export async function evaluateAutoApprove(
         c8_trust_score_ok: Boolean(conditions.c8_trust_score_ok),
       },
       failedReasons,
-      evaluatedAt: (raw.evaluated_at as string | undefined) ?? new Date().toISOString(),
+      evaluatedAt:
+        (raw.evaluated_at as string | undefined) ?? new Date().toISOString(),
     },
   };
 }
@@ -197,7 +198,10 @@ export async function verifyOverrideCode(
   if (error) {
     // 54000 = rate-limit exceeded; other codes = generic failure.
     if (error.code === "54000") {
-      return { success: false, error: "Vượt giới hạn 3 lần/phút — đợi và thử lại." };
+      return {
+        success: false,
+        error: "Vượt giới hạn 3 lần/phút — đợi và thử lại.",
+      };
     }
     return { success: false, error: "Mã xác nhận không hợp lệ." };
   }
@@ -237,14 +241,18 @@ export async function submitHardblockOverride(
 ): Promise<ActionResult<{ overrideId: number }>> {
   const parsed = hardblockOverrideSchema.safeParse(input);
   if (!parsed.success) {
-    return { success: false, error: parsed.error.issues[0]?.message ?? "Input không hợp lệ" };
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Input không hợp lệ",
+    };
   }
 
   const ctx = await getAuthContextWithPermission(
     STAFF_ROLES,
     PERMISSION_KEYS.INVENTORY_GRN_HARDBLOCK_OVERRIDE,
   );
-  if (!ctx) return { success: false, error: "Không có quyền override hardblock" };
+  if (!ctx)
+    return { success: false, error: "Không có quyền override hardblock" };
   const { supabase } = ctx;
 
   const { data, error } = await supabase.rpc("override_grn_hardblock", {
@@ -256,7 +264,10 @@ export async function submitHardblockOverride(
 
   if (error) {
     if (error.code === "54000") {
-      return { success: false, error: "Đã override 2/2 tuần này — liên hệ Admin" };
+      return {
+        success: false,
+        error: "Đã override 2/2 tuần này — liên hệ Admin",
+      };
     }
     if (error.code === "42501") {
       return { success: false, error: "Không có quyền override" };
@@ -287,7 +298,10 @@ export async function extendExpressWindow(
 ): Promise<ActionResult<{ extendedUntil: string }>> {
   const parsed = extendWindowSchema.safeParse(input);
   if (!parsed.success) {
-    return { success: false, error: parsed.error.issues[0]?.message ?? "Input không hợp lệ" };
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Input không hợp lệ",
+    };
   }
 
   const ctx = await getAuthContextWithPermission(

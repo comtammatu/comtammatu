@@ -108,137 +108,136 @@ export function PaymentsForm({
         title={messages.settings.payments.sectionTitle}
         contentClassName="gap-6"
       >
-          <div className="space-y-3 rounded-lg border p-4">
-            <Controller
-              control={form.control}
-              name="enable_vietqr"
-              render={({ field }) => (
-                <div className="flex flex-row items-start justify-between gap-4">
-                  <div className="space-y-1">
-                    <Label htmlFor="enable-vietqr" className="text-base">
-                      {messages.settings.payments.vietqrLabel}
-                    </Label>
-                    <p className="text-xs text-muted-foreground">
-                      {messages.settings.payments.vietqrDescriptionPrefix}{" "}
-                      <code className="text-2xs">VIETQR_*</code>{" "}
-                      (
-                      {vietqrEnvConfigured
-                        ? messages.settings.payments.vietqrEnvReady
-                        : messages.settings.payments.vietqrEnvMissing}
-                      ).
-                    </p>
-                  </div>
-                  <Switch
-                    id="enable-vietqr"
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                    className="mt-1"
-                  />
-                </div>
-              )}
-            />
-
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="space-y-1">
-                <Label htmlFor="vietqr-bank-code" className="text-xs">
-                  {messages.settings.payments.bankCode}
-                </Label>
-                <Input
-                  id="vietqr-bank-code"
-                  placeholder="TCB"
-                  autoCapitalize="characters"
-                  {...form.register("vietqr_bank_code")}
-                />
-                {form.formState.errors.vietqr_bank_code && (
-                  <p className="text-xs text-destructive">
-                    {form.formState.errors.vietqr_bank_code.message}
-                  </p>
-                )}
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="vietqr-account-no" className="text-xs">
-                  {messages.settings.payments.accountNo}
-                </Label>
-                <Input
-                  id="vietqr-account-no"
-                  autoCapitalize="characters"
-                  placeholder="19035xxxxxxxx"
-                  {...form.register("vietqr_account_no")}
-                />
-                {form.formState.errors.vietqr_account_no && (
-                  <p className="text-xs text-destructive">
-                    {form.formState.errors.vietqr_account_no.message}
-                  </p>
-                )}
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="vietqr-account-name" className="text-xs">
-                  {messages.settings.payments.accountName}
-                </Label>
-                <Input
-                  id="vietqr-account-name"
-                  placeholder="CONG TY CP COM TAM MA TU"
-                  {...form.register("vietqr_account_name")}
-                />
-                {form.formState.errors.vietqr_account_name && (
-                  <p className="text-xs text-destructive">
-                    {form.formState.errors.vietqr_account_name.message}
-                  </p>
-                )}
-              </div>
-            </div>
-            <p className="text-2xs text-muted-foreground">
-              {messages.settings.payments.bankHelp}
-            </p>
-          </div>
-
+        <div className="space-y-3 rounded-lg border p-4">
           <Controller
             control={form.control}
-            name="enable_momo"
+            name="enable_vietqr"
             render={({ field }) => (
-              <div className="flex flex-row items-start justify-between gap-4 rounded-lg border p-4">
+              <div className="flex flex-row items-start justify-between gap-4">
                 <div className="space-y-1">
-                  <Label htmlFor="enable-momo" className="text-base">
-                    MoMo
+                  <Label htmlFor="enable-vietqr" className="text-base">
+                    {messages.settings.payments.vietqrLabel}
                   </Label>
-                  <p className="text-sm text-muted-foreground">
-                    {messages.settings.payments.momoNeeds}{" "}
-                    <code className="rounded bg-muted px-1 text-xs">
-                      MOMO_PARTNER_CODE
-                    </code>
-                    ,{" "}
-                    <code className="rounded bg-muted px-1 text-xs">
-                      MOMO_ACCESS_KEY
-                    </code>
-                    ,{" "}
-                    <code className="rounded bg-muted px-1 text-xs">
-                      MOMO_SECRET_KEY
-                    </code>
-                    .
-                  </p>
                   <p className="text-xs text-muted-foreground">
-                    {messages.settings.payments.envStatus}{" "}
-                    {momoEnvConfigured ? (
-                      <span className="text-success">
-                        {messages.settings.payments.envConfigured}
-                      </span>
-                    ) : (
-                      <span className="text-warning">
-                        {messages.settings.payments.envMissing}
-                      </span>
-                    )}
+                    {messages.settings.payments.vietqrDescriptionPrefix}{" "}
+                    <code className="text-2xs">VIETQR_*</code> (
+                    {vietqrEnvConfigured
+                      ? messages.settings.payments.vietqrEnvReady
+                      : messages.settings.payments.vietqrEnvMissing}
+                    ).
                   </p>
                 </div>
                 <Switch
-                  id="enable-momo"
+                  id="enable-vietqr"
                   checked={field.value}
                   onCheckedChange={field.onChange}
-                  disabled={!momoEnvConfigured}
                   className="mt-1"
                 />
               </div>
             )}
           />
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="space-y-1">
+              <Label htmlFor="vietqr-bank-code" className="text-xs">
+                {messages.settings.payments.bankCode}
+              </Label>
+              <Input
+                id="vietqr-bank-code"
+                placeholder="TCB"
+                autoCapitalize="characters"
+                {...form.register("vietqr_bank_code")}
+              />
+              {form.formState.errors.vietqr_bank_code && (
+                <p className="text-xs text-destructive">
+                  {form.formState.errors.vietqr_bank_code.message}
+                </p>
+              )}
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="vietqr-account-no" className="text-xs">
+                {messages.settings.payments.accountNo}
+              </Label>
+              <Input
+                id="vietqr-account-no"
+                autoCapitalize="characters"
+                placeholder="19035xxxxxxxx"
+                {...form.register("vietqr_account_no")}
+              />
+              {form.formState.errors.vietqr_account_no && (
+                <p className="text-xs text-destructive">
+                  {form.formState.errors.vietqr_account_no.message}
+                </p>
+              )}
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="vietqr-account-name" className="text-xs">
+                {messages.settings.payments.accountName}
+              </Label>
+              <Input
+                id="vietqr-account-name"
+                placeholder="CONG TY CP COM TAM MA TU"
+                {...form.register("vietqr_account_name")}
+              />
+              {form.formState.errors.vietqr_account_name && (
+                <p className="text-xs text-destructive">
+                  {form.formState.errors.vietqr_account_name.message}
+                </p>
+              )}
+            </div>
+          </div>
+          <p className="text-2xs text-muted-foreground">
+            {messages.settings.payments.bankHelp}
+          </p>
+        </div>
+
+        <Controller
+          control={form.control}
+          name="enable_momo"
+          render={({ field }) => (
+            <div className="flex flex-row items-start justify-between gap-4 rounded-lg border p-4">
+              <div className="space-y-1">
+                <Label htmlFor="enable-momo" className="text-base">
+                  MoMo
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  {messages.settings.payments.momoNeeds}{" "}
+                  <code className="rounded bg-muted px-1 text-xs">
+                    MOMO_PARTNER_CODE
+                  </code>
+                  ,{" "}
+                  <code className="rounded bg-muted px-1 text-xs">
+                    MOMO_ACCESS_KEY
+                  </code>
+                  ,{" "}
+                  <code className="rounded bg-muted px-1 text-xs">
+                    MOMO_SECRET_KEY
+                  </code>
+                  .
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {messages.settings.payments.envStatus}{" "}
+                  {momoEnvConfigured ? (
+                    <span className="text-success">
+                      {messages.settings.payments.envConfigured}
+                    </span>
+                  ) : (
+                    <span className="text-warning">
+                      {messages.settings.payments.envMissing}
+                    </span>
+                  )}
+                </p>
+              </div>
+              <Switch
+                id="enable-momo"
+                checked={field.value}
+                onCheckedChange={field.onChange}
+                disabled={!momoEnvConfigured}
+                className="mt-1"
+              />
+            </div>
+          )}
+        />
       </AppSection>
 
       {serverError && (

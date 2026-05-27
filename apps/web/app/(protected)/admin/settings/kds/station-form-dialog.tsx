@@ -17,20 +17,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@comtammatu/ui/components/dialog";
-import {
-  Field,
-  FieldGroup,
-  FieldLabel,
-} from "@comtammatu/ui/components/field";
+import { Field, FieldGroup, FieldLabel } from "@comtammatu/ui/components/field";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { ACTIONS_VI, ERRORS_VI } from "@comtammatu/shared/messages";
 import { AppEmptyState } from "@/components/surface";
 import { TextField, valuesToFormData } from "@/components/form";
-import {
-  createStation,
-  saveStationCategories,
-  updateStation,
-} from "./actions";
+import { createStation, saveStationCategories, updateStation } from "./actions";
 import type { CategoryOption, StationRow } from "./stations-client";
 
 const stationSchema = z.object({
@@ -38,11 +30,14 @@ const stationSchema = z.object({
   position: z
     .string()
     .trim()
-    .refine((v) => {
-      if (!v) return true;
-      const n = Number(v);
-      return Number.isFinite(n) && n >= 0;
-    }, { error: "Thứ tự phải ≥ 0" }),
+    .refine(
+      (v) => {
+        if (!v) return true;
+        const n = Number(v);
+        return Number.isFinite(n) && n >= 0;
+      },
+      { error: "Thứ tự phải ≥ 0" },
+    ),
   is_active: z.boolean(),
   category_ids: z.array(z.number()),
 });
@@ -200,8 +195,8 @@ export function StationFormDialog({
                   <div className="space-y-2">
                     <Label>Danh mục món ăn</Label>
                     <p className="text-xs text-muted-foreground">
-                      Chọn danh mục để trạm này tiếp nhận. Để trống = nhận tất cả
-                      món (fallback).
+                      Chọn danh mục để trạm này tiếp nhận. Để trống = nhận tất
+                      cả món (fallback).
                     </p>
                     <div className="max-h-48 space-y-2 overflow-y-auto rounded-md border p-3">
                       {categories.map((cat) => (

@@ -12,7 +12,7 @@
 -- grn_last on GRN approve is Q6 S2 scope and intentionally NOT
 -- in this migration.
 --
--- Spec:       docs/plan/inventory-redesign.md §Q3 + §Q6
+-- Current docs: docs/ref/inventory.md + docs/ref/inventory-sop.md
 -- Regression: tasks/regressions.md BASELINE-SAMPLE-MIN,
 --             RLS-NOT-APPLIED-ON-MV
 -- =============================================================

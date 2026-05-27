@@ -5,7 +5,10 @@ export function getAgeStyle(minutes: number, isComplete: boolean) {
   return { text: "text-destructive", bg: "bg-destructive/10" };
 }
 
-export function getCardBorder(overallStatus: string, ageMinutes: number): string {
+export function getCardBorder(
+  overallStatus: string,
+  ageMinutes: number,
+): string {
   if (overallStatus === "cancelled") return "border-destructive/60";
   if (overallStatus === "ready") return "border-success/60";
   if (overallStatus === "preparing") return "border-warning/60";

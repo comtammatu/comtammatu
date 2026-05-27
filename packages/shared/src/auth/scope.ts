@@ -235,13 +235,10 @@ export function resolvePostLoginRedirect(
     const routeBranchId = branchMatch ? Number(branchMatch[1]) : null;
 
     const allowCrossBranchSettings =
-      (moduleKey === "branch_settings" ||
-        moduleKey === "branch_menu_limits") &&
-      (
-        claims.user_role === "owner" ||
+      (moduleKey === "branch_settings" || moduleKey === "branch_menu_limits") &&
+      (claims.user_role === "owner" ||
         claims.user_role === "super_manager" ||
-        claims.user_role === "area_manager"
-      );
+        claims.user_role === "area_manager");
 
     if (
       routeBranchId === null ||

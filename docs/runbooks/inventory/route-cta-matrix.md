@@ -164,7 +164,7 @@ Updated: `2026-04-17`
 
 ## 14. Hygiene và boundary
 
-| Route                   | Section           | Button/CTA                     | Visible for role | Visible on device | Expected behavior                                              | Expected feedback         | Expected downstream effect               | Severity if broken |
-| ----------------------- | ----------------- | ------------------------------ | ---------------- | ----------------- | -------------------------------------------------------------- | ------------------------- | ---------------------------------------- | ------------------ |
-| `/admin/inventory*`     | route boundary    | old inventory URLs             | mọi role         | desktop           | Phải fail như unsupported route, không behave như live surface | Redirect/404/forbidden rõ | Không giữ alias gây nhiễu                | `P0`               |
-| `/inventory/settings/*` | nav/route hygiene | legacy settings catalog routes | roles theo route | desktop           | Không render duplicate entry trong nav chính                   | Nav sạch                  | Giữ contract `Danh mục` là cửa vào chính | `P1`               |
+| Route                   | Section           | Button/CTA                      | Visible for role | Visible on device | Expected behavior                                              | Expected feedback         | Expected downstream effect               | Severity if broken |
+| ----------------------- | ----------------- | ------------------------------- | ---------------- | ----------------- | -------------------------------------------------------------- | ------------------------- | ---------------------------------------- | ------------------ |
+| `/admin/inventory*`     | route boundary    | retired inventory URLs          | mọi role         | desktop           | Phải fail như unsupported route, không behave như live surface | Redirect/404/forbidden rõ | Không giữ alias gây nhiễu                | `P0`               |
+| `/inventory/settings/*` | nav/route hygiene | retired settings catalog routes | roles theo route | desktop           | Không render duplicate entry trong nav chính                   | Nav sạch                  | Giữ contract `Danh mục` là cửa vào chính | `P1`               |

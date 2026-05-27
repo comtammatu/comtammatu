@@ -22,7 +22,7 @@
 --   hard_ok = cond 1,3,4,5,7
 --   soft_ok = cond 2,6
 --
--- Spec: docs/plan/inventory-redesign.md §Q4a + §B2
+-- Current docs: docs/ref/inventory.md + docs/ref/inventory-sop.md
 -- =============================================================
 
 

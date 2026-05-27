@@ -71,13 +71,22 @@ export const approveShiftRequest = withAction(
 
     if (error) {
       if (error.message.includes("cannot approve own request")) {
-        return { success: false, error: "Không thể tự duyệt đăng ký của mình." };
+        return {
+          success: false,
+          error: "Không thể tự duyệt đăng ký của mình.",
+        };
       }
       if (error.message.includes("not pending")) {
-        return { success: false, error: "Đăng ký không còn ở trạng thái chờ duyệt." };
+        return {
+          success: false,
+          error: "Đăng ký không còn ở trạng thái chờ duyệt.",
+        };
       }
       if (error.message.includes("missing permission")) {
-        return { success: false, error: "Không có quyền duyệt cho chi nhánh này." };
+        return {
+          success: false,
+          error: "Không có quyền duyệt cho chi nhánh này.",
+        };
       }
       if (error.message.includes("not found")) {
         return { success: false, error: "Không tìm thấy đăng ký." };
@@ -110,10 +119,16 @@ export const rejectShiftRequest = withAction(
 
     if (error) {
       if (error.message.includes("not pending")) {
-        return { success: false, error: "Đăng ký không còn ở trạng thái chờ duyệt." };
+        return {
+          success: false,
+          error: "Đăng ký không còn ở trạng thái chờ duyệt.",
+        };
       }
       if (error.message.includes("missing permission")) {
-        return { success: false, error: "Không có quyền duyệt cho chi nhánh này." };
+        return {
+          success: false,
+          error: "Không có quyền duyệt cho chi nhánh này.",
+        };
       }
       if (error.message.includes("not found")) {
         return { success: false, error: "Không tìm thấy đăng ký." };

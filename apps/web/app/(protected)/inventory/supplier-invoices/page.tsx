@@ -33,9 +33,9 @@ export default async function SupplierInvoicesPage({
       ((row.goods_received_notes as Record<string, unknown>)
         ?.grn_number as string) ?? null,
     matchStatus:
-      ((row.matching_status as string | undefined) ??
-        (row.match_status as string | undefined) ??
-        "pending"),
+      (row.matching_status as string | undefined) ??
+      (row.match_status as string | undefined) ??
+      "pending",
     paymentStatus: (row.payment_status as string) ?? "unpaid",
     amount: Number(row.total_amount ?? 0),
     paidAmount: Number(row.paid_amount ?? 0),

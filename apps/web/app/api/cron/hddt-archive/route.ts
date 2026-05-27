@@ -43,8 +43,7 @@ function unauthorized() {
 }
 
 export async function POST(request: Request) {
-  const enabled =
-    (process.env["HDDT_ARCHIVE_ENABLED"] ?? "false") === "true";
+  const enabled = (process.env["HDDT_ARCHIVE_ENABLED"] ?? "false") === "true";
   if (!enabled) {
     return NextResponse.json({ ok: true, skipped: "feature_flag_off" });
   }

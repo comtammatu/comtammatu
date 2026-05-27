@@ -16,7 +16,7 @@
 -- Cost fields (stock_value, avg_unit_cost) masked to NULL unless
 -- caller holds reports:view_branch or reports:view_tenant.
 --
--- Spec:       docs/plan/inventory-redesign.md §Q5
+-- Current docs: docs/ref/inventory.md + docs/ref/inventory-sop.md
 -- Regression: tasks/regressions.md RLS-NOT-APPLIED-ON-MV
 -- =============================================================
 

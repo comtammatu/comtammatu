@@ -308,7 +308,9 @@ export function ItemCustomizer({
                 {/* Variants */}
                 {item.menu_item_variants.length > 0 && (
                   <div>
-                    <h3 className="font-heading mb-2 text-base font-semibold">{FORM_VI.type}</h3>
+                    <h3 className="font-heading mb-2 text-base font-semibold">
+                      {FORM_VI.type}
+                    </h3>
                     <div className="flex flex-wrap gap-2">
                       {item.menu_item_variants.map((v) => {
                         const isSelected = selectedVariant?.id === v.id;
@@ -338,7 +340,9 @@ export function ItemCustomizer({
                 {/* Modifiers */}
                 {item.menu_item_modifiers.length > 0 && (
                   <div>
-                    <h3 className="font-heading mb-2 text-base font-semibold">{ACTIONS_VI.add}</h3>
+                    <h3 className="font-heading mb-2 text-base font-semibold">
+                      {ACTIONS_VI.add}
+                    </h3>
                     <div className="flex flex-col gap-2">
                       {item.menu_item_modifiers.map((m) => (
                         <Item
@@ -484,7 +488,6 @@ export function ItemCustomizer({
                     maxLength={200}
                   />
                 </div>
-
               </div>
             </ScrollArea>
 
@@ -492,7 +495,9 @@ export function ItemCustomizer({
             <Separator />
             <div className="flex items-center justify-between gap-3 p-4">
               <div>
-                <p className="text-sm text-muted-foreground">{FORM_VI.subtotal}</p>
+                <p className="text-sm text-muted-foreground">
+                  {FORM_VI.subtotal}
+                </p>
                 <p className="text-xl font-bold text-primary tabular-nums">
                   {formatVND(totalPrice)}
                 </p>
@@ -523,11 +528,7 @@ export function ItemCustomizer({
                   +
                 </Button>
               </div>
-              <Button
-                size="touch"
-                className="min-w-32"
-                onClick={handleConfirm}
-              >
+              <Button size="touch" className="min-w-32" onClick={handleConfirm}>
                 {mode === "append"
                   ? messages.pos.customizer.addToOrder
                   : mode === "edit"

@@ -6,7 +6,11 @@ import { AppEmptyState, AppSection, AppToolbar } from "@/components/surface";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
 import { Badge } from "@comtammatu/ui/components/badge";
-import { Plus as IconPlus, X as IconX, MapPin as IconMapPin } from "lucide-react";
+import {
+  Plus as IconPlus,
+  X as IconX,
+  MapPin as IconMapPin,
+} from "lucide-react";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { messages } from "@lib/messages";
 import {
@@ -165,7 +169,9 @@ export function AreasManager({ areas, branches }: AreasManagerProps) {
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue
-                        placeholder={messages.settings.areas.addBranchPlaceholder}
+                        placeholder={
+                          messages.settings.areas.addBranchPlaceholder
+                        }
                       />
                     </SelectTrigger>
                     <SelectContent>

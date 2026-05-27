@@ -5,19 +5,19 @@
 
 ## Tóm tắt
 
-| Trường | Giá trị |
-| --- | --- |
-| **Vai trò** | Tất cả |
-| **Quyền cần có** | — (chỉ là cách nhận biết, không phải tính năng) |
-| **Mục đích** | Phân biệt các trạng thái lỗi, biết khi nào cần báo kỹ thuật |
+| Trường           | Giá trị                                                     |
+| ---------------- | ----------------------------------------------------------- |
+| **Vai trò**      | Tất cả                                                      |
+| **Quyền cần có** | — (chỉ là cách nhận biết, không phải tính năng)             |
+| **Mục đích**     | Phân biệt các trạng thái lỗi, biết khi nào cần báo kỹ thuật |
 
 ## Các loại ngoại lệ
 
-| Loại | Triệu chứng | Mức độ | Ai xử lý |
-| --- | --- | --- | --- |
-| **Mất mạng** | Banner đỏ "Mất kết nối" trên đầu | Cao — chặn tạo đơn / thu tiền | Cashier kiểm tra wifi → kỹ thuật |
-| **Máy in offline** | Badge "Máy in: offline" trên header | Trung — vẫn bán được, không in giấy | Báo kỹ thuật / quản lý |
-| **HĐĐT lỗi** | Toast vàng "Đã thu tiền — HĐĐT chưa xuất được" sau thanh toán | Thấp — tiền vẫn vào, HĐĐT retry sau | Cashier ghi chú, quản lý theo dõi |
+| Loại               | Triệu chứng                                                   | Mức độ                              | Ai xử lý                          |
+| ------------------ | ------------------------------------------------------------- | ----------------------------------- | --------------------------------- |
+| **Mất mạng**       | Banner đỏ "Mất kết nối" trên đầu                              | Cao — chặn tạo đơn / thu tiền       | Cashier kiểm tra wifi → kỹ thuật  |
+| **Máy in offline** | Badge "Máy in: offline" trên header                           | Trung — vẫn bán được, không in giấy | Báo kỹ thuật / quản lý            |
+| **HĐĐT lỗi**       | Toast vàng "Đã thu tiền — HĐĐT chưa xuất được" sau thanh toán | Thấp — tiền vẫn vào, HĐĐT retry sau | Cashier ghi chú, quản lý theo dõi |
 
 ## Các tình huống
 
@@ -146,10 +146,10 @@ Sau khi cashier chạm "Đã thanh toán" (POS-05), toast hiện trong **1 trong
 
 ### Code path
 
-- **Online status provider:** [apps/web/app/(protected)/br/[branchId]/pos/_components/pwa/online-status-provider.tsx](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/_components/pwa/online-status-provider.tsx) — listen `online`/`offline` events trên `navigator`.
-- **PWA toolbar (offline banner):** [apps/web/app/(protected)/br/[branchId]/pos/_components/pwa/pos-pwa-toolbar.tsx](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/_components/pwa/pos-pwa-toolbar.tsx).
-- **Printer status badge:** [apps/web/app/(protected)/br/[branchId]/pos/printer-status-badge.tsx](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/printer-status-badge.tsx) — Realtime subscribe `printer_agents` table, badge re-render khi status đổi.
-- **HĐĐT toast logic:** trong [apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/_components/bill/bill-receipt-sheet.tsx) ~line 545-560.
+- **Online status provider:** [apps/web/app/(protected)/br/[branchId]/pos/\_components/pwa/online-status-provider.tsx](<../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/_components/pwa/online-status-provider.tsx>) — listen `online`/`offline` events trên `navigator`.
+- **PWA toolbar (offline banner):** [apps/web/app/(protected)/br/[branchId]/pos/\_components/pwa/pos-pwa-toolbar.tsx](<../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/_components/pwa/pos-pwa-toolbar.tsx>).
+- **Printer status badge:** [apps/web/app/(protected)/br/[branchId]/pos/printer-status-badge.tsx](<../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/printer-status-badge.tsx>) — Realtime subscribe `printer_agents` table, badge re-render khi status đổi.
+- **HĐĐT toast logic:** trong [apps/web/app/(protected)/br/[branchId]/pos/\_components/bill/bill-receipt-sheet.tsx](<../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/_components/bill/bill-receipt-sheet.tsx>) ~line 545-560.
 
 ### Regression rules quan trọng
 
@@ -160,22 +160,22 @@ Sau khi cashier chạm "Đã thanh toán" (POS-05), toast hiện trong **1 trong
 ### Service Worker / PWA
 
 - App PWA dùng `serwist` để cache chunks → production offline mode KHÔNG bị "Failed to load chunk" như dev.
-- Submit retry: [apps/web/app/(protected)/br/[branchId]/pos/_utils/submit-with-retry.ts](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/_utils/submit-with-retry.ts) — exponential backoff 3 lần, 1s/2s/4s.
+- Submit retry: [apps/web/app/(protected)/br/[branchId]/pos/\_utils/submit-with-retry.ts](<../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/_utils/submit-with-retry.ts>) — exponential backoff 3 lần, 1s/2s/4s.
 
 ### Tham chiếu thiết kế
 
 - Regression rules: [tasks/regressions.md](../../../../tasks/regressions.md)
 - HĐĐT: [docs/ref/einvoice-tax.md](../../../ref/einvoice-tax.md)
-- Print agent: [docs/modules/infrastructure.md](../../../modules/) (nếu có)
+- Print agent: [docs/modules/infrastructure.md](../../../modules/infrastructure.md)
 
 ---
 
 ## Metadata mockup
 
-| Trường | Giá trị |
-| --- | --- |
-| Viewport | 390×844 (iPhone mặc định) |
-| Capture script | [apps/web/e2e/guides/pos-08-exceptions.guide.ts](../../../../apps/web/e2e/guides/pos-08-exceptions.guide.ts) |
-| Lệnh refresh | `pnpm --filter @comtammatu/web guides:capture --grep="POS-08"` |
-| Cập nhật mockup gần nhất | 2026-04-27 |
-| Người maintain | _TBD_ |
+| Trường                   | Giá trị                                                                                                      |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| Viewport                 | 390×844 (iPhone mặc định)                                                                                    |
+| Capture script           | [apps/web/e2e/guides/pos-08-exceptions.guide.ts](../../../../apps/web/e2e/guides/pos-08-exceptions.guide.ts) |
+| Lệnh refresh             | `pnpm --filter @comtammatu/web guides:capture --grep="POS-08"`                                               |
+| Cập nhật mockup gần nhất | 2026-04-27                                                                                                   |
+| Người maintain           | _TBD_                                                                                                        |

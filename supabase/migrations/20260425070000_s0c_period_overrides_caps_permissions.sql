@@ -8,7 +8,7 @@
 --   (C) branch_daily_waste_cap snapshot + nightly compute cron
 --   (D) Insert 14 permission keys + wire into system role templates
 --
--- Spec:       docs/plan/inventory-redesign.md §Q3 §B4 §B5 §B8 §3
+-- Current docs: docs/ref/inventory.md + docs/ref/inventory-sop.md
 -- Regression: tasks/regressions.md PERIOD-CLOSE-SOFT-HARD
 -- =============================================================
 

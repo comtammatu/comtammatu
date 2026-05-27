@@ -49,7 +49,7 @@ export interface DataTableFilter {
 interface DataTableProps<T> {
   columns: DataTableColumn<T>[];
   data: T[];
- getRowKey: (row: T) => string | number;
+  getRowKey: (row: T) => string | number;
   searchable?: boolean;
   searchPlaceholder?: string;
   filters?: DataTableFilter[];

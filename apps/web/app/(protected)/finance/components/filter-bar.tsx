@@ -2,10 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Card,
-  CardContent,
-} from "@comtammatu/ui/components/card";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
   Select,
   SelectContent,
@@ -115,10 +112,11 @@ export function FilterBar({
   // Local draft for custom date range — only pushed on Apply click. All
   // other controls push immediately on change.
   const presetRange = useMemo(
-    () => getPresetRange(params.range, new Date(), {
-      from: params.from,
-      to: params.to,
-    }),
+    () =>
+      getPresetRange(params.range, new Date(), {
+        from: params.from,
+        to: params.to,
+      }),
     [params.range, params.from, params.to],
   );
   const [draftFrom, setDraftFrom] = useState(presetRange.start);
@@ -330,7 +328,8 @@ export function FilterBar({
                 onClick={handleApplyCustom}
                 disabled={
                   isPending ||
-                  (draftFrom === presetRange.start && draftTo === presetRange.end)
+                  (draftFrom === presetRange.start &&
+                    draftTo === presetRange.end)
                 }
               >
                 {filterCopy.apply}

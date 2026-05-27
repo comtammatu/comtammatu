@@ -15,7 +15,7 @@
 -- this in a follow-up TS edit after migrations apply and `pnpm db:types`
 -- regenerates. The schema is staged here so the route refactor compiles.
 --
--- Refs: docs/plan/m4-payments-fix.md §3 + WEBHOOK-MUST-IDEMPOTENT rule.
+-- Refs: tasks/regressions.md WEBHOOK-MUST-IDEMPOTENT.
 -- =============================================================
 
 CREATE TABLE public.webhook_events (

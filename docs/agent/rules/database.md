@@ -61,4 +61,3 @@ Use this file before changing Supabase queries, migrations, RLS, auth, ACL, Serv
 - PL/pgSQL `IF record IS NOT NULL` is true only when every column is non-null. Check a guaranteed non-null column or use `FOUND`.
 
 Also read `tasks/regressions.md` before database/auth work.
-

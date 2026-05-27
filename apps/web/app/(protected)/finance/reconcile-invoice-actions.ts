@@ -37,8 +37,7 @@ const inputSchema = z.object({
 export async function forceResyncTaxInvoice(
   invoiceId: number,
 ): Promise<ActionResult> {
-  const enabled =
-    (process.env["HDDT_RECONCILE_ENABLED"] ?? "false") === "true";
+  const enabled = (process.env["HDDT_RECONCILE_ENABLED"] ?? "false") === "true";
   if (!enabled) {
     return {
       success: false,

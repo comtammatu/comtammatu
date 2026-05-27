@@ -13,10 +13,7 @@ export interface ShellNavGroup {
   items: ShellNavItem[];
 }
 
-export function isNavItemActive(
-  item: ShellNavItem,
-  pathname: string,
-): boolean {
+export function isNavItemActive(item: ShellNavItem, pathname: string): boolean {
   if (pathname === item.href) return true;
   if (item.exact) {
     return item.matchPrefixes?.some((p) => pathname.startsWith(p)) ?? false;
@@ -38,9 +35,7 @@ export function findActiveNavItem(
 }
 
 export function formatPathSegment(segment: string): string {
-  return segment
-    .replace(/-/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+  return segment.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 export function getInitials(name: string): string {

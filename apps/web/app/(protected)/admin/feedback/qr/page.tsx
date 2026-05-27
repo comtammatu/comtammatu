@@ -3,7 +3,10 @@ import { createClient } from "@comtammatu/database/supabase/server";
 import { loadAuthState } from "@/_lib/auth";
 import { AppPage, AppPageHeader } from "@/components/surface";
 import { QrManagementClient } from "./_components/qr-management-client";
-import type { QrCodeRow, BranchOption } from "./_components/qr-management-client";
+import type {
+  QrCodeRow,
+  BranchOption,
+} from "./_components/qr-management-client";
 
 export default async function QrPage() {
   const { claims } = await loadAuthState();
@@ -30,9 +33,7 @@ export default async function QrPage() {
       .order("name"),
   ]);
 
-  const branchNameById = new Map(
-    (branches ?? []).map((b) => [b.id, b.name]),
-  );
+  const branchNameById = new Map((branches ?? []).map((b) => [b.id, b.name]));
 
   const qrCodes: QrCodeRow[] = (rawQrCodes ?? []).map((qr) => ({
     id: qr.id,

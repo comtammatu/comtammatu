@@ -1,5 +1,8 @@
 import { redirect } from "next/navigation";
-import { SUPPLIER_RETURN_ROLES, PERMISSION_KEYS } from "@comtammatu/shared/auth";
+import {
+  SUPPLIER_RETURN_ROLES,
+  PERMISSION_KEYS,
+} from "@comtammatu/shared/auth";
 import { getAuthContextWithPermission } from "../../_lib/auth";
 import { fetchQcSettingsForForm } from "../../notifications-actions";
 import { QcSettingsClient } from "./qc-settings-client";

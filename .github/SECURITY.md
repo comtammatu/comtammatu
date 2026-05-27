@@ -21,18 +21,18 @@ This document is the human-readable companion to the machine-readable RFC 9116 d
 
 **What to expect:**
 
-| Stage | SLO |
-|------|-----|
-| Initial acknowledgement | 5 business days |
-| Triage + severity assessment | 10 business days |
-| Fix or mitigation deployed | depends on severity (see below) |
+| Stage                        | SLO                             |
+| ---------------------------- | ------------------------------- |
+| Initial acknowledgement      | 5 business days                 |
+| Triage + severity assessment | 10 business days                |
+| Fix or mitigation deployed   | depends on severity (see below) |
 
-| Severity | Target time-to-fix |
-|----------|--------------------|
-| Critical (RCE, auth bypass, data exfiltration) | 7 days |
-| High (privilege escalation, account takeover) | 14 days |
-| Medium (XSS in low-privilege context, stored CSRF) | 30 days |
-| Low (information disclosure, minor misconfig) | 90 days |
+| Severity                                           | Target time-to-fix |
+| -------------------------------------------------- | ------------------ |
+| Critical (RCE, auth bypass, data exfiltration)     | 7 days             |
+| High (privilege escalation, account takeover)      | 14 days            |
+| Medium (XSS in low-privilege context, stored CSRF) | 30 days            |
+| Low (information disclosure, minor misconfig)      | 90 days            |
 
 We support coordinated disclosure. Please give us a reasonable window before publishing details.
 
@@ -40,11 +40,11 @@ We support coordinated disclosure. Please give us a reasonable window before pub
 
 The Cơm Tấm Má Tư app is a single-tenant deployment. Only the production line (currently `1.2.x`) receives security fixes. The most recent tagged release is the active line.
 
-| Version | Supported | Notes |
-|---------|-----------|-------|
-| 1.2.x | yes | Current production line. Patches land on `main` and ship as `1.2.0.N+1`. |
-| 1.1.x | no | Superseded by 1.2.0.0 (QR feedback module headline release). |
-| < 1.1 | no | Legacy. Out of support. |
+| Version | Supported | Notes                                                                    |
+| ------- | --------- | ------------------------------------------------------------------------ |
+| 1.2.x   | yes       | Current production line. Patches land on `main` and ship as `1.2.0.N+1`. |
+| 1.1.x   | no        | Superseded by 1.2.0.0 (QR feedback module headline release).             |
+| < 1.1   | no        | Legacy. Out of support.                                                  |
 
 If you find an issue in an unsupported version that also affects the supported line, we treat it as a 1.2.x bug.
 

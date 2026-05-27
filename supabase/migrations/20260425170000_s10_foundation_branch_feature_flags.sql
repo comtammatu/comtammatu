@@ -14,7 +14,7 @@
 --   inv_s13b_stocktake_recount
 --   inv_s14_auto_approve
 --
--- Spec:       docs/plan/inventory-ui-wiring.md §Tranche 0 F0.1
+-- Current docs: docs/ref/inventory.md + docs/modules/web-app.md
 -- Regression: tasks/regressions.md (feature flag discipline)
 -- =============================================================
 

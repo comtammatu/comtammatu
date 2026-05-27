@@ -81,7 +81,7 @@ test.describe("POS-06 Đánh dấu đã phục vụ", () => {
       id: "step-02-tap-serve",
       flowId: FLOW,
       module: MODULE,
-      step: { number: 2, total: TOTAL, title: "Chạm \"Phục vụ\"" },
+      step: { number: 2, total: TOTAL, title: 'Chạm "Phục vụ"' },
       setup: async (p) => {
         await gotoOrderDetail(p, ctx.branchId);
       },
@@ -119,9 +119,7 @@ test.describe("POS-06 Đánh dấu đã phục vụ", () => {
       setup: async (p) => {
         await gotoOrderDetail(p, ctx.branchId);
         // Tap "Phục vụ" để đổi trạng thái
-        const serveBtn = p
-          .getByRole("button", { name: /^Phục vụ$/i })
-          .first();
+        const serveBtn = p.getByRole("button", { name: /^Phục vụ$/i }).first();
         await serveBtn.click();
         // Đợi state update — nút có thể đổi label hoặc món có badge mới
         await p.waitForTimeout(800);

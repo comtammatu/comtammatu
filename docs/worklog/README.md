@@ -17,8 +17,6 @@ Nơi lưu các artefact theo dõi tiến độ và adoption.
 
 - [feedback-reference-learning-2026-05-25.md](feedback-reference-learning-2026-05-25.md): learned from `~/matu-feedback` and `~/matu-platform`; recommends a review-conversion gate and Feedback-owned Google review config while preserving `comtammatu` security model
 - [pilot-hardening-readiness-2026-05-24.md](pilot-hardening-readiness-2026-05-24.md): hardening board for route-group migration, generated snapshots, payment readiness, network gate, live smoke, and migration status
-- [ui-design-system-ssot-audit-2026-05-24.md](ui-design-system-ssot-audit-2026-05-24.md): audit và khóa lại source-of-truth cho Design System, typography, spacing, và legacy `matu-*` layer
-- [task-regression-cleanup-2026-05-23.md](task-regression-cleanup-2026-05-23.md): first pass cleanup for top-level `tasks/` and `tasks/regressions.md`
 
 ## Quy tắc
 
@@ -26,5 +24,4 @@ Nơi lưu các artefact theo dõi tiến độ và adoption.
 - Khi một lát feature thay đổi materially, cập nhật worklog tương ứng
 - Với Inventory, thay đổi UX/IA hoặc workflow wiring phải cập nhật cả adoption matrix và artefact review/contract liên quan
 - Nếu một quyết định đã ổn định dài hạn, chuyển nó về `docs/ref/`
-- Audit đã bị thay thế hoặc không còn active thì chuyển về `docs/archive/worklog/`
-- Task/report snapshot đã đóng thì chuyển về `docs/archive/worklog/tasks/`
+- Audit đã bị thay thế hoặc không còn active thì xóa khỏi docs sau khi durable rules đã được promote vào `tasks/regressions.md`, `tasks/lessons.md`, hoặc canonical docs.

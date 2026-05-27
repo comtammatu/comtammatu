@@ -70,7 +70,7 @@ Mỗi `.guide.ts` là một Playwright spec — được khai báo trong project
 
 ## Đổi viewport (ví dụ sang iPad/Android)
 
-Sửa `VIEWPORT` trong [apps/web/e2e/guides/_lib/paths.ts](../../../apps/web/e2e/guides/_lib/paths.ts), rồi:
+Sửa `VIEWPORT` trong [apps/web/e2e/guides/\_lib/paths.ts](../../../apps/web/e2e/guides/_lib/paths.ts), rồi:
 
 ```bash
 pnpm --filter @comtammatu/web guides:capture

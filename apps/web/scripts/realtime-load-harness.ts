@@ -190,7 +190,11 @@ function parseArgs(argv: string[]): HarnessArgs {
         args.settleMs = parseNumberFlag(flag, nextValue);
         break;
       case "surface":
-        if (nextValue !== "pos" && nextValue !== "kds" && nextValue !== "mixed") {
+        if (
+          nextValue !== "pos" &&
+          nextValue !== "kds" &&
+          nextValue !== "mixed"
+        ) {
           throw new Error(`Invalid surface: ${nextValue ?? ""}`);
         }
         args.surface = nextValue;
@@ -306,7 +310,9 @@ async function runSynthetic(args: HarnessArgs): Promise<void> {
   const snapshot = getRealtimeMetricsSnapshot();
 
   if (args.json) {
-    console.log(JSON.stringify({ args, elapsedMs, metrics: snapshot }, null, 2));
+    console.log(
+      JSON.stringify({ args, elapsedMs, metrics: snapshot }, null, 2),
+    );
     return;
   }
 
@@ -329,7 +335,9 @@ function createServiceClient() {
   });
 }
 
-async function resolveBranchId(explicitBranchId: number | null): Promise<number> {
+async function resolveBranchId(
+  explicitBranchId: number | null,
+): Promise<number> {
   if (explicitBranchId !== null) return explicitBranchId;
   const envBranchId = Number(process.env.REALTIME_LOAD_BRANCH_ID ?? "0");
   if (Number.isFinite(envBranchId) && envBranchId > 0) return envBranchId;
@@ -403,7 +411,11 @@ async function subscribeClient(opts: {
   await new Promise<void>((resolve, reject) => {
     const timeout = setTimeout(() => {
       opts.counters.subscribeErrors += 1;
-      reject(new Error(`Realtime subscribe timed out for client ${opts.clientIndex}`));
+      reject(
+        new Error(
+          `Realtime subscribe timed out for client ${opts.clientIndex}`,
+        ),
+      );
     }, 10_000);
 
     channel.subscribe((status, error) => {

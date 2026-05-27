@@ -320,7 +320,10 @@ export async function clearOrderDiscount(
   } | null;
 
   if (!result) {
-    return { success: false, error: "Không thể bỏ chiết khấu. Vui lòng thử lại." };
+    return {
+      success: false,
+      error: "Không thể bỏ chiết khấu. Vui lòng thử lại.",
+    };
   }
 
   // Fire-and-forget audit. Cashier xoá chiết khấu = tác động tài chính
@@ -364,7 +367,10 @@ const splitInputSchema = z.object({
   items: z
     .array(
       z.object({
-        itemId: z.coerce.number().int().positive({ error: "Item ID không hợp lệ" }),
+        itemId: z.coerce
+          .number()
+          .int()
+          .positive({ error: "Item ID không hợp lệ" }),
         quantity: z.coerce
           .number()
           .int()
@@ -617,9 +623,11 @@ export interface SiblingOrderRow {
   discount_type: "pct" | "vnd" | null;
 }
 
-export async function fetchSiblingOrdersForTable(
-  input: { branchId: number; tableId: number; excludeOrderId: number },
-): Promise<ActionResult<SiblingOrderRow[]>> {
+export async function fetchSiblingOrdersForTable(input: {
+  branchId: number;
+  tableId: number;
+  excludeOrderId: number;
+}): Promise<ActionResult<SiblingOrderRow[]>> {
   const parsed = siblingOrdersSchema.safeParse(input);
   if (!parsed.success) {
     return {
@@ -672,22 +680,23 @@ export async function fetchSiblingOrdersForTable(
     };
   }
 
-  const rows = (data ?? []).map((o) => {
-    const items = Array.isArray(o.order_items) ? o.order_items : [];
-    const activeItemCount = items.filter(
-      (it) => it.status !== "cancelled",
-    ).length;
-    return {
-      id: o.id,
-      order_number: o.order_number,
-      total_amount: Number(o.total_amount ?? 0),
-      item_count: activeItemCount,
-      has_discount: Number(o.discount_amount ?? 0) > 0,
-      discount_type: (o.discount_type as "pct" | "vnd" | null) ?? null,
-    };
-  })
-  // Filter out orders whose ONLY items are cancelled (would-be empty).
-  .filter((r) => r.item_count > 0);
+  const rows = (data ?? [])
+    .map((o) => {
+      const items = Array.isArray(o.order_items) ? o.order_items : [];
+      const activeItemCount = items.filter(
+        (it) => it.status !== "cancelled",
+      ).length;
+      return {
+        id: o.id,
+        order_number: o.order_number,
+        total_amount: Number(o.total_amount ?? 0),
+        item_count: activeItemCount,
+        has_discount: Number(o.discount_amount ?? 0) > 0,
+        discount_type: (o.discount_type as "pct" | "vnd" | null) ?? null,
+      };
+    })
+    // Filter out orders whose ONLY items are cancelled (would-be empty).
+    .filter((r) => r.item_count > 0);
 
   return { success: true, data: rows };
 }

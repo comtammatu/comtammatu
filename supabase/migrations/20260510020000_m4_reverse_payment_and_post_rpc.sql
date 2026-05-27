@@ -1,8 +1,7 @@
 -- =============================================================
 -- M4 P0-1 — reverse_payment_and_post atomic refund reversal RPC
 --
--- Drafted from `docs/plan/m4-payments-fix.md` §3. Replaces the broken
--- approveRefund flow (status flag flip only) with a single transaction
+-- Replaces the broken approveRefund flow (status flag flip only) with a single transaction
 -- that atomically:
 --   1. Locks the refund + payment + order rows for update.
 --   2. Validates payment.status='completed' and refund.status='pending'.
@@ -21,8 +20,7 @@
 --   - stock_movements.type CHECK extended to include 'refund_restore'
 --   - journal_entries.reference_type CHECK extended to include 'refund'
 --
--- Refs: docs/plan/m4-payments-fix.md (drafted 2026-04-28),
--- tasks/regressions.md REFUND-MUST-REVERSE-ATOMICALLY.
+-- Refs: tasks/regressions.md REFUND-MUST-REVERSE-ATOMICALLY.
 -- =============================================================
 
 -- ─── 1. Extend CHECK constraints (additive, additive only) ───────────────

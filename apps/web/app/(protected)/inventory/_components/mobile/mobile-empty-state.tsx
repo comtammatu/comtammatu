@@ -26,7 +26,9 @@ export function MobileEmptyState({
   className,
 }: MobileEmptyStateProps) {
   return (
-    <Empty className={cn("border border-dashed bg-muted/30 px-4 py-10", className)}>
+    <Empty
+      className={cn("border border-dashed bg-muted/30 px-4 py-10", className)}
+    >
       <EmptyMedia variant="icon" className="size-12 rounded-full bg-background">
         <Icon className="size-6" />
       </EmptyMedia>

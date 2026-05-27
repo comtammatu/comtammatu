@@ -104,9 +104,8 @@ export function InvoiceList({ initialInvoices }: InvoiceListProps) {
   const [replaceTarget, setReplaceTarget] = useState<InvoiceRow | null>(null);
   const [replaceReason, setReplaceReason] = useState("");
   const [replaceAgreementRef, setReplaceAgreementRef] = useState("");
-  const [replaceAgreementDate, setReplaceAgreementDate] = useState(
-    todayISODate(),
-  );
+  const [replaceAgreementDate, setReplaceAgreementDate] =
+    useState(todayISODate());
   const [replaceBuyerName, setReplaceBuyerName] = useState("");
   const [replaceBuyerTaxCode, setReplaceBuyerTaxCode] = useState("");
   const [replaceBuyerAddress, setReplaceBuyerAddress] = useState("");
@@ -120,8 +119,7 @@ export function InvoiceList({ initialInvoices }: InvoiceListProps) {
     trimmedReplaceAgreementRef.length > 0 &&
     trimmedReplaceAgreementRef.length <= REPLACE_AGREEMENT_MAX;
   const replaceMstValid =
-    !replaceBuyerTaxCode.trim() ||
-    MST_REGEX.test(replaceBuyerTaxCode.trim());
+    !replaceBuyerTaxCode.trim() || MST_REGEX.test(replaceBuyerTaxCode.trim());
   const replaceBuyerNameValid =
     !replaceBuyerTaxCode.trim() || replaceBuyerName.trim().length > 0;
   const replaceFormValid =
@@ -532,8 +530,8 @@ export function InvoiceList({ initialInvoices }: InvoiceListProps) {
               <strong>
                 {cancelTarget?.invoice_number ?? `#${cancelTarget?.id}`}
               </strong>
-              ? Hành động này không thể hòan tác. Lý do hủy được lưu vào
-              hồ sơ HĐĐT theo yêu cầu của Nghị định 70/2025.
+              ? Hành động này không thể hòan tác. Lý do hủy được lưu vào hồ sơ
+              HĐĐT theo yêu cầu của Nghị định 70/2025.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="grid gap-2">
@@ -615,9 +613,7 @@ export function InvoiceList({ initialInvoices }: InvoiceListProps) {
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="replace-agreement-date">
-                  Ngày văn bản
-                </Label>
+                <Label htmlFor="replace-agreement-date">Ngày văn bản</Label>
                 <Input
                   id="replace-agreement-date"
                   type="date"

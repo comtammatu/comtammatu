@@ -4,7 +4,13 @@ import { useEffect, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Key as IconKey, MapPin as IconMapPin, Copy as IconCopy, RefreshCw as IconRefresh, LocateFixed as IconCurrentLocation } from "lucide-react";
+import {
+  Key as IconKey,
+  MapPin as IconMapPin,
+  Copy as IconCopy,
+  RefreshCw as IconRefresh,
+  LocateFixed as IconCurrentLocation,
+} from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Item,
@@ -37,18 +43,24 @@ const coordsSchema = z.object({
     .string()
     .trim()
     .min(1, { error: "Vĩ độ không được trống" })
-    .refine((v) => {
-      const n = Number(v);
-      return Number.isFinite(n) && n >= -90 && n <= 90;
-    }, { error: "Vĩ độ phải trong khoảng -90 đến 90" }),
+    .refine(
+      (v) => {
+        const n = Number(v);
+        return Number.isFinite(n) && n >= -90 && n <= 90;
+      },
+      { error: "Vĩ độ phải trong khoảng -90 đến 90" },
+    ),
   longitude: z
     .string()
     .trim()
     .min(1, { error: "Kinh độ không được trống" })
-    .refine((v) => {
-      const n = Number(v);
-      return Number.isFinite(n) && n >= -180 && n <= 180;
-    }, { error: "Kinh độ phải trong khoảng -180 đến 180" }),
+    .refine(
+      (v) => {
+        const n = Number(v);
+        return Number.isFinite(n) && n >= -180 && n <= 180;
+      },
+      { error: "Kinh độ phải trong khoảng -180 đến 180" },
+    ),
 });
 
 type CoordsFormValues = z.infer<typeof coordsSchema>;

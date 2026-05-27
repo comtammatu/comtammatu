@@ -1,14 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { ChartBar as IconChartBar, TrendingUp as IconTrendingUp, ArrowLeftRight as IconArrowLeftRight, Package as IconPackage } from "lucide-react";
+import {
+  ChartBar as IconChartBar,
+  TrendingUp as IconTrendingUp,
+  ArrowLeftRight as IconArrowLeftRight,
+  Package as IconPackage,
+} from "lucide-react";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Card,
-  CardContent,
-} from "@comtammatu/ui/components/card";
+import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
   Empty,
   EmptyDescription,

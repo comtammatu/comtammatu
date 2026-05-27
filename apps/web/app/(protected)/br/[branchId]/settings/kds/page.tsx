@@ -68,8 +68,7 @@ export default async function BranchKdsSettingsPage({
     branch_id: s.branch_id,
     position: s.position,
     is_active: s.is_active,
-    category_ids:
-      s.kds_station_categories?.map((sc) => sc.category_id) ?? [],
+    category_ids: s.kds_station_categories?.map((sc) => sc.category_id) ?? [],
   }));
   const categories = categoriesRes.data as CategoryOption[];
 

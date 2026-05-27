@@ -2,10 +2,7 @@
 
 import { z } from "zod";
 import { Controller } from "react-hook-form";
-import {
-  Field,
-  FieldLabel,
-} from "@comtammatu/ui/components/field";
+import { Field, FieldLabel } from "@comtammatu/ui/components/field";
 import { Switch } from "@comtammatu/ui/components/switch";
 import { FormDialog, TextField, valuesToFormData } from "@/components/form";
 import { createTerminal, updateTerminal } from "./actions";
@@ -20,9 +17,7 @@ const terminalSchema = z.object({
 
 type TerminalFormValues = z.infer<typeof terminalSchema>;
 
-function toFormValues(
-  terminal: TerminalRow | null,
-): TerminalFormValues {
+function toFormValues(terminal: TerminalRow | null): TerminalFormValues {
   return {
     name: terminal?.name ?? "",
     device_id: terminal?.device_id ?? "",

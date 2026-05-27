@@ -1,7 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Ellipsis as IconDots, Pencil as IconPencil, Trash as IconTrash, Utensils as IconToolsKitchen } from "lucide-react";
+import {
+  Ellipsis as IconDots,
+  Pencil as IconPencil,
+  Trash as IconTrash,
+  Utensils as IconToolsKitchen,
+} from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -35,7 +40,12 @@ import type { TableStatus } from "./constants";
 import { TableFormDialog } from "./table-form-dialog";
 import type { ZoneRow } from "./zone-table";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { ACTIONS_VI, FORM_VI, STATES_VI, TABLE_VI } from "@comtammatu/shared/messages";
+import {
+  ACTIONS_VI,
+  FORM_VI,
+  STATES_VI,
+  TABLE_VI,
+} from "@comtammatu/shared/messages";
 import { TableEmptyStateRow } from "../../components/table-empty-state-row";
 
 export interface TableRow {

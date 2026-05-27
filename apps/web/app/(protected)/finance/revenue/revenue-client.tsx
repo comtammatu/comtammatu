@@ -27,10 +27,7 @@ import { Button } from "@comtammatu/ui/components/button";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { formatVND } from "@comtammatu/shared/format";
 import type { FinanceDashboardSummary } from "../actions";
-import type {
-  FinanceDashboardHealth,
-  TopItemRow,
-} from "../_lib/finance-types";
+import type { FinanceDashboardHealth, TopItemRow } from "../_lib/finance-types";
 import type { FinanceParams } from "../_lib/finance-params";
 import {
   buildCompareDelta,
@@ -42,8 +39,7 @@ import {
 // chart code arrives. ssr:false matches the trend-sparkline pattern —
 // Recharts uses ResizeObserver/useState which mismatch hydration.
 const RevenueChartsBlock = dynamic(
-  () =>
-    import("./revenue-charts-internal").then((m) => m.RevenueChartsBlock),
+  () => import("./revenue-charts-internal").then((m) => m.RevenueChartsBlock),
   {
     ssr: false,
     loading: () => (
@@ -57,10 +53,7 @@ const RevenueChartsBlock = dynamic(
     ),
   },
 );
-import {
-  ExportToolbar,
-  type CsvSection,
-} from "../components/export-toolbar";
+import { ExportToolbar, type CsvSection } from "../components/export-toolbar";
 import { FilterBar } from "../components/filter-bar";
 import { HeatmapGrid, type HeatmapCell } from "../components/heatmap-grid";
 import { KpiCard } from "../components/kpi-card";
@@ -183,8 +176,7 @@ function aggregateByBranch(
   for (const r of rows) {
     const existing = map.get(r.branch_id);
     // BA "Doanh thu thuần": gross_sales − discount_amount per branch
-    const rev =
-      (r.subtotal_revenue ?? 0) - (r.discount_amount ?? 0);
+    const rev = (r.subtotal_revenue ?? 0) - (r.discount_amount ?? 0);
     if (existing) {
       existing.revenue += rev;
       existing.orders += r.order_count;
@@ -234,10 +226,7 @@ export function RevenueClient({
   resolvedStart,
   resolvedEnd,
 }: Props) {
-  const periodRows = useMemo(
-    () => aggregateByPeriod(rollupRows),
-    [rollupRows],
-  );
+  const periodRows = useMemo(() => aggregateByPeriod(rollupRows), [rollupRows]);
   const branchRows = useMemo(
     () => aggregateByBranch(rollupRows, branches),
     [rollupRows, branches],
@@ -338,7 +327,7 @@ export function RevenueClient({
     params.branch == null
       ? messages.finance.common.allBranches
       : (branches.find((b) => b.id === params.branch)?.name ??
-          messages.finance.common.branchFallback(params.branch));
+        messages.finance.common.branchFallback(params.branch));
   const granularityLabel =
     params.gran === "day"
       ? filterCopy.granularityDay
@@ -448,9 +437,7 @@ export function RevenueClient({
         <KpiCard
           label={revCopy.kpi.totalCollected}
           value={formatVND(kpis?.net_revenue ?? 0)}
-          hint={revCopy.kpi.totalCollectedHint(
-            formatVND(kpis?.total_tax ?? 0),
-          )}
+          hint={revCopy.kpi.totalCollectedHint(formatVND(kpis?.total_tax ?? 0))}
           delta={delta(
             kpis?.net_revenue ?? 0,
             prev?.net_revenue ?? 0,
@@ -588,13 +575,23 @@ export function RevenueClient({
               <TableHeader>
                 <TableRow>
                   <TableHead>{revCopy.periodTable.colPeriod}</TableHead>
-                  <TableHead className="text-right">{revCopy.periodTable.colOrders}</TableHead>
-                  <TableHead className="text-right">{revCopy.periodTable.colCustomers}</TableHead>
-                  <TableHead className="text-right">{revCopy.periodTable.colNetRevenue}</TableHead>
-                  <TableHead className="text-right">{revCopy.periodTable.colCash}</TableHead>
+                  <TableHead className="text-right">
+                    {revCopy.periodTable.colOrders}
+                  </TableHead>
+                  <TableHead className="text-right">
+                    {revCopy.periodTable.colCustomers}
+                  </TableHead>
+                  <TableHead className="text-right">
+                    {revCopy.periodTable.colNetRevenue}
+                  </TableHead>
+                  <TableHead className="text-right">
+                    {revCopy.periodTable.colCash}
+                  </TableHead>
                   <TableHead className="text-right">VietQR</TableHead>
                   <TableHead className="text-right">MoMo</TableHead>
-                  <TableHead className="text-right">{revCopy.periodTable.colVat}</TableHead>
+                  <TableHead className="text-right">
+                    {revCopy.periodTable.colVat}
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -648,7 +645,9 @@ export function RevenueClient({
               </TableBody>
               <TableFooter>
                 <TableRow className="hover:bg-transparent">
-                  <TableCell className="font-medium">{revCopy.periodTable.total}</TableCell>
+                  <TableCell className="font-medium">
+                    {revCopy.periodTable.total}
+                  </TableCell>
                   <TableCell className="text-right tabular-nums font-medium">
                     {(kpis?.order_count ?? 0).toLocaleString("vi-VN")}
                   </TableCell>
@@ -704,9 +703,15 @@ export function RevenueClient({
                 <TableHeader>
                   <TableRow>
                     <TableHead>{revCopy.cashierTable.colCashier}</TableHead>
-                    <TableHead className="text-right">{revCopy.cashierTable.colOrders}</TableHead>
-                    <TableHead className="text-right">{revCopy.cashierTable.colNetRevenue}</TableHead>
-                    <TableHead className="text-right">{revCopy.cashierTable.colCash}</TableHead>
+                    <TableHead className="text-right">
+                      {revCopy.cashierTable.colOrders}
+                    </TableHead>
+                    <TableHead className="text-right">
+                      {revCopy.cashierTable.colNetRevenue}
+                    </TableHead>
+                    <TableHead className="text-right">
+                      {revCopy.cashierTable.colCash}
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -753,8 +758,12 @@ export function RevenueClient({
                 <TableHeader>
                   <TableRow>
                     <TableHead>{revCopy.topItems.colName}</TableHead>
-                    <TableHead className="text-right">{revCopy.topItems.colQty}</TableHead>
-                    <TableHead className="text-right">{revCopy.topItems.colRevenue}</TableHead>
+                    <TableHead className="text-right">
+                      {revCopy.topItems.colQty}
+                    </TableHead>
+                    <TableHead className="text-right">
+                      {revCopy.topItems.colRevenue}
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -781,14 +790,17 @@ export function RevenueClient({
       <WorkQueueStrip
         summary={
           dashboardSummary
-            ? { ...dashboardSummary, invoice_attention_count: invoiceAttentionCount }
+            ? {
+                ...dashboardSummary,
+                invoice_attention_count: invoiceAttentionCount,
+              }
             : null
         }
         health={dashboardHealth}
         hide={["period", "journals", "foodCost", "webhook"]}
       />
 
-      {(reconcile || cashVariance) ? (
+      {reconcile || cashVariance ? (
         <div className="grid gap-4 lg:grid-cols-2">
           {reconcile ? <ReconcileCard reconcile={reconcile} /> : null}
           {cashVariance ? <CashVarianceCard variance={cashVariance} /> : null}
@@ -808,25 +820,29 @@ function ReconcileCard({ reconcile }: { reconcile: ReconcileSnippet }) {
     <Card>
       <CardHeader className="pb-2">
         <CardTitle>{reconCopy.title}</CardTitle>
-        <p className="text-sm text-muted-foreground">
-          {reconCopy.description}
-        </p>
+        <p className="text-sm text-muted-foreground">{reconCopy.description}</p>
       </CardHeader>
       <CardContent className="grid gap-3 p-4 sm:grid-cols-3">
         <div>
-          <p className="text-xs text-muted-foreground">{reconCopy.posSubledger}</p>
+          <p className="text-xs text-muted-foreground">
+            {reconCopy.posSubledger}
+          </p>
           <p className="text-lg font-semibold tabular-nums">
             {formatVND(reconcile.subledger_total)}
           </p>
         </div>
         <div>
-          <p className="text-xs text-muted-foreground">{reconCopy.generalLedger}</p>
+          <p className="text-xs text-muted-foreground">
+            {reconCopy.generalLedger}
+          </p>
           <p className="text-lg font-semibold tabular-nums">
             {formatVND(reconcile.gl_total)}
           </p>
         </div>
         <div>
-          <p className="text-xs text-muted-foreground">{reconCopy.difference}</p>
+          <p className="text-xs text-muted-foreground">
+            {reconCopy.difference}
+          </p>
           <p
             className={
               matched
@@ -866,13 +882,17 @@ function CashVarianceCard({ variance }: { variance: CashVarianceSummary }) {
       <CardContent className="space-y-3 p-4">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div>
-            <p className="text-xs text-muted-foreground">{cashCopy.closedSessions}</p>
+            <p className="text-xs text-muted-foreground">
+              {cashCopy.closedSessions}
+            </p>
             <p className="text-lg font-semibold tabular-nums">
               {variance.session_count.toLocaleString("vi-VN")}
             </p>
           </div>
           <div>
-            <p className="text-xs text-muted-foreground">{cashCopy.netVariance}</p>
+            <p className="text-xs text-muted-foreground">
+              {cashCopy.netVariance}
+            </p>
             <p
               className={
                 tone === "good"

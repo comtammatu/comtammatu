@@ -15,9 +15,9 @@ Rate limiting via Upstash Redis. Protects API routes and auth endpoints from abu
 
 ## Rate Limiters
 
-| Limiter          | Limit       | Window     | Used By                                               |
-| ---------------- | ----------- | ---------- | ----------------------------------------------------- |
-| `rateLimit`      | 60 requests | 1 minute   | General API routes                                    |
+| Limiter          | Limit       | Window     | Used By                                                        |
+| ---------------- | ----------- | ---------- | -------------------------------------------------------------- |
+| `rateLimit`      | 60 requests | 1 minute   | General API routes                                             |
 | `loginRateLimit` | 5 attempts  | 15 minutes | Login action (`apps/web/app/(public)/(auth)/login/actions.ts`) |
 
 Both use Upstash Redis sliding window algorithm.
@@ -51,10 +51,3 @@ if (!success) {
 
 - **Upstash over local Redis:** Serverless-compatible. No persistent connection needed. Works on Vercel Edge.
 - **Separate login limiter:** Brute-force protection with stricter limits (5/15min vs 60/min).
-
-<!-- ORACLE-META
-Written by codebase-oracle (manual) | 2026-04-02
-Data: Direct source reading
-Audience: new engineer | Confidence: 95%
-Unknowns: 0
--->

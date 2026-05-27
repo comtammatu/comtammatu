@@ -1,6 +1,6 @@
 -- =============================================================
 -- HĐĐT Hybrid via MISA — PR-1 schema foundation
--- Per docs/plan/hddt-hybrid-misa.md (owner-approved 2026-05-08).
+-- Per owner-approved HĐĐT summary design from 2026-05-08.
 --
 -- Adds:
 --   1. tax_invoices.{summary_date, summary_orders_count, invoice_kind,

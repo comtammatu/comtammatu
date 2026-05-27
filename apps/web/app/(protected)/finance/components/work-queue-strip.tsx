@@ -132,7 +132,9 @@ export function WorkQueueStrip({
             label={copy.workQueue.period}
             value={periodStatusLabel(health.currentPeriodStatus)}
             hint={health.currentPeriodLabel}
-            tone={health.currentPeriodStatus === "missing" ? "warning" : "neutral"}
+            tone={
+              health.currentPeriodStatus === "missing" ? "warning" : "neutral"
+            }
           />
         )}
         {visible.includes("invoices") && (
@@ -141,7 +143,9 @@ export function WorkQueueStrip({
             value={formatCount(summary?.invoice_attention_count)}
             hint={copy.workQueue.invoicesAttentionHint}
             tone={
-              (summary?.invoice_attention_count ?? 0) > 0 ? "warning" : "neutral"
+              (summary?.invoice_attention_count ?? 0) > 0
+                ? "warning"
+                : "neutral"
             }
           />
         )}
@@ -162,7 +166,9 @@ export function WorkQueueStrip({
               formatMoney(health.reconciliationDifference),
             )}
             tone={
-              health.reconciliationExceptionCount > 0 ? "destructive" : "neutral"
+              health.reconciliationExceptionCount > 0
+                ? "destructive"
+                : "neutral"
             }
           />
         )}
@@ -202,7 +208,9 @@ export function WorkQueueStrip({
             value={formatCount(summary?.failed_webhook_count)}
             hint={copy.workQueue.webhookFailuresHint}
             tone={
-              (summary?.failed_webhook_count ?? 0) > 0 ? "destructive" : "neutral"
+              (summary?.failed_webhook_count ?? 0) > 0
+                ? "destructive"
+                : "neutral"
             }
           />
         )}

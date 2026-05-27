@@ -13,10 +13,7 @@ type TouchButtonProps = Omit<ButtonProps, "size"> & {
 export const TouchButton = React.forwardRef<
   HTMLButtonElement,
   TouchButtonProps
->(function TouchButton(
-  { className, fullWidth = true, ...props },
-  ref,
-) {
+>(function TouchButton({ className, fullWidth = true, ...props }, ref) {
   return (
     <Button
       ref={ref as unknown as React.Ref<HTMLButtonElement>}

@@ -1,4 +1,8 @@
-import { createAnthropicClient, getFeedbackAiModel, calcLlmCostUsd } from "./anthropic-client";
+import {
+  createAnthropicClient,
+  getFeedbackAiModel,
+  calcLlmCostUsd,
+} from "./anthropic-client";
 import type { AiSeverity } from "./feedback-enrichment";
 import type { FeedbackCategory } from "../feedback/constants";
 
@@ -144,9 +148,7 @@ export async function generateDailyReport(
 
     const textBlock = response.content.find((b) => b.type === "text");
     const report_md =
-      textBlock?.type === "text"
-        ? textBlock.text
-        : "Không thể tạo báo cáo.";
+      textBlock?.type === "text" ? textBlock.text : "Không thể tạo báo cáo.";
 
     return {
       report_md,
@@ -157,7 +159,11 @@ export async function generateDailyReport(
       avg_rating: avgRating,
     };
   } catch (err) {
-    console.error("[generateDailyReport] error date=%s", input.report_date, err);
+    console.error(
+      "[generateDailyReport] error date=%s",
+      input.report_date,
+      err,
+    );
     return {
       report_md: "Lỗi khi tạo báo cáo AI.",
       metrics_json: metrics,

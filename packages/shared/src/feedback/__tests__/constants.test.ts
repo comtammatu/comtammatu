@@ -24,10 +24,7 @@ test("FEEDBACK_CATEGORIES contains expected anchor keys", () => {
 });
 
 test("OUTBOX_BACKOFF_MINUTES is [1,2,4,8,16] — matches OUTBOX_MAX_ATTEMPTS", () => {
-  assert.deepEqual(
-    [...OUTBOX_BACKOFF_MINUTES],
-    [1, 2, 4, 8, 16],
-  );
+  assert.deepEqual([...OUTBOX_BACKOFF_MINUTES], [1, 2, 4, 8, 16]);
   assert.equal(OUTBOX_BACKOFF_MINUTES.length, OUTBOX_MAX_ATTEMPTS);
 });
 

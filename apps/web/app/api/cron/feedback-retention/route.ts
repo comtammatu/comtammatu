@@ -29,14 +29,20 @@ function timingSafeEquals(a: string, b: string): boolean {
 }
 
 function unauthorized() {
-  return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+  return NextResponse.json(
+    { ok: false, error: "unauthorized" },
+    { status: 401 },
+  );
 }
 
 export async function POST(request: Request) {
   const expected = getCronSecret();
   if (!expected) {
     console.error("[cron/feedback-retention] CRON_SECRET not configured");
-    return NextResponse.json({ ok: false, error: "not configured" }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, error: "not configured" },
+      { status: 500 },
+    );
   }
 
   const authHeader = request.headers.get("authorization");
@@ -56,7 +62,10 @@ export async function POST(request: Request) {
 
   if (rpcError) {
     console.error("[cron/feedback-retention] rpc error", rpcError.code);
-    return NextResponse.json({ ok: false, error: "rpc failed" }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, error: "rpc failed" },
+      { status: 500 },
+    );
   }
 
   // 2. Delete old photos from storage per tenant

@@ -4,7 +4,10 @@ import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { RefreshCcw as IconRefresh, PlayCircle as IconPlay } from "lucide-react";
+import {
+  RefreshCcw as IconRefresh,
+  PlayCircle as IconPlay,
+} from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -206,7 +209,7 @@ export function SummaryClient({ initialBranches, initialQueue }: Props) {
             </Button>
           </div>
         }
-        contentClassName="p-0"
+        contentFlush
       >
         <div className="overflow-x-auto">
           <Table>

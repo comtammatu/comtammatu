@@ -8,7 +8,11 @@ import {
 } from "@comtammatu/shared/auth";
 import { updateTag } from "next/cache";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
-import { withAction, withFormAction, type ActionContext } from "@/_lib/with-action";
+import {
+  withAction,
+  withFormAction,
+  type ActionContext,
+} from "@/_lib/with-action";
 import { TABLE_STATUSES } from "./constants";
 
 /* ─── Helpers ─── */
@@ -181,7 +185,11 @@ export const updateZone = withFormAction(
 );
 
 export const deleteZone = withAction(
-  { roles: SETTINGS_ROLES, schema: deleteIdSchema, permission: PERMISSION_KEYS.SETTINGS_BRANCH },
+  {
+    roles: SETTINGS_ROLES,
+    schema: deleteIdSchema,
+    permission: PERMISSION_KEYS.SETTINGS_BRANCH,
+  },
   async (data, { supabase, claims }) => {
     let deleteQuery = supabase
       .from("branch_zones")
@@ -312,7 +320,11 @@ export const updateTable = withFormAction(
 );
 
 export const deleteTable = withAction(
-  { roles: SETTINGS_ROLES, schema: deleteIdSchema, permission: PERMISSION_KEYS.SETTINGS_BRANCH },
+  {
+    roles: SETTINGS_ROLES,
+    schema: deleteIdSchema,
+    permission: PERMISSION_KEYS.SETTINGS_BRANCH,
+  },
   async (data, { supabase, claims }) => {
     let deleteTableQuery = supabase
       .from("tables")

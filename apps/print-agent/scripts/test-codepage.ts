@@ -82,7 +82,12 @@ const buildQuick = (candidates: number[]): Buffer => {
  * Cuts every 64 codepages so the strip breaks into ~20cm sections. */
 const buildExhaustive = (): Buffer => {
   const parts: Buffer[] = [init()];
-  parts.push(boldOn(), encode1258("EXHAUSTIVE SCAN 0-255"), boldOff(), newline());
+  parts.push(
+    boldOn(),
+    encode1258("EXHAUSTIVE SCAN 0-255"),
+    boldOff(),
+    newline(),
+  );
   parts.push(encode1258("Target: Cơm sườn đặc biệt ế ộ"), newline());
   parts.push(encode1258("=".repeat(40)), newline());
 
@@ -107,14 +112,22 @@ const buildExhaustive = (): Buffer => {
   return concat(parts);
 };
 
-const sendLAN = async (host: string, port: number, payload: Buffer): Promise<void> =>
+const sendLAN = async (
+  host: string,
+  port: number,
+  payload: Buffer,
+): Promise<void> =>
   new Promise((resolve, reject) => {
     const sock = new net.Socket();
     let settled = false;
     const done = (err?: Error) => {
       if (settled) return;
       settled = true;
-      try { sock.destroy(); } catch { /* ignore */ }
+      try {
+        sock.destroy();
+      } catch {
+        /* ignore */
+      }
       err ? reject(err) : resolve();
     };
     sock.setTimeout(30_000, () => done(new Error(`timeout ${host}:${port}`)));

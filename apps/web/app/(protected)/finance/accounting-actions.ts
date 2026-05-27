@@ -205,17 +205,14 @@ export async function createJournalEntry(
     description: l.description ?? null,
   }));
 
-  const { data, error } = await supabase.rpc(
-    "create_manual_journal_entry",
-    {
-      p_entry_date: parsed.data.entryDate,
-      p_description: parsed.data.description,
-      p_lines: lines,
-      p_reference_type: parsed.data.refType ?? "manual",
-      p_reference_id: parsed.data.refId ?? undefined,
-      p_branch_id: claims.branch_id ?? undefined,
-    },
-  );
+  const { data, error } = await supabase.rpc("create_manual_journal_entry", {
+    p_entry_date: parsed.data.entryDate,
+    p_description: parsed.data.description,
+    p_lines: lines,
+    p_reference_type: parsed.data.refType ?? "manual",
+    p_reference_id: parsed.data.refId ?? undefined,
+    p_branch_id: claims.branch_id ?? undefined,
+  });
 
   if (error) {
     return { success: false, error: "Không thể tạo bút toán." };

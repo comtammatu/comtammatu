@@ -29,7 +29,9 @@ export default async function FeedbackReportsPage({
 
   let query = supabase
     .from("feedback_daily_reports")
-    .select("id, tenant_id, branch_id, report_date, feedback_count, avg_rating, report_md, metrics_json, llm_model, llm_cost_usd, generated_at")
+    .select(
+      "id, tenant_id, branch_id, report_date, feedback_count, avg_rating, report_md, metrics_json, llm_model, llm_cost_usd, generated_at",
+    )
     .eq("tenant_id", claims.tenant_id)
     .order("report_date", { ascending: false })
     .order("branch_id", { ascending: true })
@@ -60,15 +62,10 @@ export default async function FeedbackReportsPage({
   ];
   const { data: branches } =
     branchIds.length > 0
-      ? await supabase
-          .from("branches")
-          .select("id, name")
-          .in("id", branchIds)
+      ? await supabase.from("branches").select("id, name").in("id", branchIds)
       : { data: [] };
 
-  const branchNameById = new Map(
-    (branches ?? []).map((b) => [b.id, b.name]),
-  );
+  const branchNameById = new Map((branches ?? []).map((b) => [b.id, b.name]));
 
   const reports: DailyReportRow[] = (rawReports ?? []).map((r) => ({
     id: r.id,

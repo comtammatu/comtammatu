@@ -20,7 +20,11 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 import { Badge } from "@comtammatu/ui/components/badge";
-import { ExternalLink as IconExternalLink, Pencil as IconPencil, Plus as IconPlus } from "lucide-react";
+import {
+  ExternalLink as IconExternalLink,
+  Pencil as IconPencil,
+  Plus as IconPlus,
+} from "lucide-react";
 import { TerminalFormDialog } from "./terminal-form-dialog";
 import { messages } from "@lib/messages";
 
@@ -127,7 +131,9 @@ export function TerminalsClient({ branches, terminals }: TerminalsClientProps) {
                     {messages.settings.pos.terminalName}
                   </TableHead>
                   <TableHead>{messages.settings.pos.deviceId}</TableHead>
-                  <TableHead className="w-25 text-center">{FORM_VI.status}</TableHead>
+                  <TableHead className="w-25 text-center">
+                    {FORM_VI.status}
+                  </TableHead>
                   <TableHead className="w-20" />
                 </TableRow>
               </TableHeader>

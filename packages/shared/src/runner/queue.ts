@@ -14,6 +14,7 @@ export type RunnerOrderType = "dine_in" | "takeaway" | string;
 export interface RunnerTicketRow {
   id: number;
   order_id: number;
+  order_item_id?: number;
   kitchen_send_batch_id: number | null;
   status: RunnerTicketStatus | string;
   bumped_at: string | null;
@@ -28,7 +29,14 @@ export interface RunnerOrderRow {
   table_id: number | null;
   status: RunnerOrderStatus;
   created_at: string;
+  is_priority?: boolean | null;
   tables?: { number: number } | null;
+}
+
+export interface RunnerOrderItemRow {
+  id: number;
+  order_id?: number;
+  is_priority?: boolean | null;
 }
 
 export interface RunnerKitchenBatchRow {
@@ -40,11 +48,13 @@ export interface RunnerKitchenBatchRow {
   created_at: string;
 }
 
-export type RunnerQueueLane = "preparing" | "served";
+export type RunnerQueueLane = "active" | "ready" | "served";
 
 export interface RunnerQueueItem {
   id: string;
   lane: RunnerQueueLane;
+  status: RunnerTicketStatus;
+  isPriority: boolean;
   ticketIds: number[];
   readyTicketIds: number[];
   orderId: number;
@@ -65,6 +75,7 @@ export interface BuildRunnerQueueInput {
   tickets: RunnerTicketRow[];
   orders: RunnerOrderRow[];
   kitchenBatches: RunnerKitchenBatchRow[];
+  orderItems?: RunnerOrderItemRow[];
   servedAfterIso?: string;
 }
 
@@ -94,6 +105,11 @@ export function buildRunnerQueue(
   const batchById = new Map(
     input.kitchenBatches.map((batch) => [batch.id, batch]),
   );
+  const priorityOrderItemIds = new Set(
+    (input.orderItems ?? [])
+      .filter((item) => item.is_priority === true)
+      .map((item) => item.id),
+  );
   const groupByKey = new Map<string, RunnerQueueItem>();
 
   for (const ticket of input.tickets) {
@@ -107,7 +123,7 @@ export function buildRunnerQueue(
         ? null
         : (batchById.get(ticket.kitchen_send_batch_id) ?? null);
     const lane = laneForTicketStatus(ticket.status);
-    const sortAt = sortAtForTicket(ticket);
+    const sortAt = sortAtForQueue(order, batch, ticket);
     if (
       lane === "served" &&
       input.servedAfterIso &&
@@ -118,10 +134,21 @@ export function buildRunnerQueue(
 
     const tableNumber = order.tables?.number ?? null;
     const displayTarget = resolveDisplayTarget(order, batch, tableNumber);
-    const groupKey = `${resolveGroupKey(order, batch, tableNumber)}-${ticket.status}`;
+    const groupKey = resolveGroupKey(order, batch, tableNumber);
+    const isTicketPriority =
+      order.is_priority === true ||
+      (ticket.order_item_id !== undefined &&
+        priorityOrderItemIds.has(ticket.order_item_id));
 
     const existing = groupByKey.get(groupKey);
     if (existing) {
+      existing.isPriority = existing.isPriority || isTicketPriority;
+      existing.status = pickRunnerQueueStatus(
+        existing.status,
+        ticket.status,
+        existing.isPriority,
+      );
+      existing.lane = laneForTicketStatus(existing.status);
       existing.ticketCount += 1;
       existing.ticketIds = mergeNumbers(existing.ticketIds, ticket.id);
       if (ticket.status === "ready") {
@@ -142,6 +169,8 @@ export function buildRunnerQueue(
     groupByKey.set(groupKey, {
       id: groupKey,
       lane,
+      status: ticket.status,
+      isPriority: isTicketPriority,
       ticketIds: [ticket.id],
       readyTicketIds: ticket.status === "ready" ? [ticket.id] : [],
       orderId: order.id,
@@ -160,16 +189,16 @@ export function buildRunnerQueue(
   }
 
   const items = Array.from(groupByKey.values());
-  const preparingTargetKeys = new Set(
+  const activeTargetKeys = new Set(
     items
-      .filter((item) => item.lane === "preparing")
+      .filter((item) => item.lane === "active")
       .map((item) => item.targetKey),
   );
 
   return items
     .filter((item) => {
-      if (item.lane === "preparing") return true;
-      return !preparingTargetKeys.has(item.targetKey);
+      if (item.lane === "active") return true;
+      return !activeTargetKeys.has(item.targetKey);
     })
     .sort(compareRunnerQueueItems);
 }
@@ -184,9 +213,9 @@ function isRunnerTicketStatus(status: string): status is RunnerTicketStatus {
 }
 
 function laneForTicketStatus(status: RunnerTicketStatus): RunnerQueueLane {
-  return status === "pending" || status === "preparing"
-    ? "preparing"
-    : "served";
+  if (status === "pending" || status === "preparing") return "active";
+  if (status === "ready") return "ready";
+  return "served";
 }
 
 function sortAtForTicket(ticket: RunnerTicketRow): string {
@@ -194,6 +223,15 @@ function sortAtForTicket(ticket: RunnerTicketRow): string {
     return ticket.bumped_at ?? ticket.updated_at ?? ticket.created_at;
   }
   return ticket.created_at;
+}
+
+function sortAtForQueue(
+  order: RunnerOrderRow,
+  batch: RunnerKitchenBatchRow | null,
+  ticket: RunnerTicketRow,
+): string {
+  if (ticket.status === "served") return sortAtForTicket(ticket);
+  return batch?.created_at ?? order.created_at ?? ticket.created_at;
 }
 
 function minIso(a: string, b: string): string {
@@ -284,18 +322,41 @@ function compareRunnerQueueItems(
   a: RunnerQueueItem,
   b: RunnerQueueItem,
 ): number {
-  const laneDelta = laneRank(a.lane) - laneRank(b.lane);
-  if (laneDelta !== 0) return laneDelta;
+  const rankDelta = runnerQueueRank(a) - runnerQueueRank(b);
+  if (rankDelta !== 0) return rankDelta;
 
   const aTime = new Date(a.sortAt).getTime();
   const bTime = new Date(b.sortAt).getTime();
-  const timeDelta = a.lane === "served" ? bTime - aTime : aTime - bTime;
+  const timeDelta =
+    a.status === "served" && b.status === "served"
+      ? bTime - aTime
+      : aTime - bTime;
   if (timeDelta !== 0) return timeDelta;
 
   return a.callNumber.localeCompare(b.callNumber, "vi", { numeric: true });
 }
 
-function laneRank(lane: RunnerQueueLane): number {
-  if (lane === "preparing") return 0;
-  return 1;
+function pickRunnerQueueStatus(
+  current: RunnerTicketStatus,
+  next: RunnerTicketStatus,
+  isPriority: boolean,
+): RunnerTicketStatus {
+  return runnerQueueStatusRank(current, isPriority) <=
+    runnerQueueStatusRank(next, isPriority)
+    ? current
+    : next;
+}
+
+function runnerQueueRank(item: RunnerQueueItem): number {
+  return runnerQueueStatusRank(item.status, item.isPriority);
+}
+
+function runnerQueueStatusRank(
+  status: RunnerTicketStatus,
+  isPriority: boolean,
+): number {
+  if (status === "preparing") return 0;
+  if (status === "pending") return isPriority ? 1 : 2;
+  if (status === "ready") return 3;
+  return 4;
 }

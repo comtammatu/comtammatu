@@ -20,7 +20,10 @@ export default async function StockMovementReportPage() {
 
   return (
     <AppPage>
-      <AppPageHeader eyebrow={APP_COPY_VI.executiveReporting} title="Biến động tồn kho" />
+      <AppPageHeader
+        eyebrow={APP_COPY_VI.executiveReporting}
+        title="Biến động tồn kho"
+      />
       <StockMovementClient
         branches={activeBranches}
         userBranchId={userBranchId}

@@ -104,7 +104,10 @@ export async function uploadFeedbackPhotos(
   }
 
   if (paths.length === 0 && files.length > 0) {
-    return { success: false, error: "Không thể tải ảnh lên. Vui lòng thử lại." };
+    return {
+      success: false,
+      error: "Không thể tải ảnh lên. Vui lòng thử lại.",
+    };
   }
 
   // Update feedbacks.photo_paths with the collected storage paths.

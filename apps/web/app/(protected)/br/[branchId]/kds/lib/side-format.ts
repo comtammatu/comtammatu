@@ -16,9 +16,7 @@ function positiveQuantity(value: QuantityValue, fallback: number): number {
     : fallback;
 }
 
-export function sidePortionQuantity(
-  sideQuantity: QuantityValue,
-): number {
+export function sidePortionQuantity(sideQuantity: QuantityValue): number {
   return positiveQuantity(sideQuantity, 1);
 }
 

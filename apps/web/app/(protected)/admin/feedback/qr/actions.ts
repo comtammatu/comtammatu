@@ -80,9 +80,7 @@ export async function createQrCode(
   return { success: true, data: { id: created.id, token } };
 }
 
-export async function updateQrCodeLabel(
-  input: unknown,
-): Promise<ActionResult> {
+export async function updateQrCodeLabel(input: unknown): Promise<ActionResult> {
   const ctx = await getAuthContext(OWNER_ONLY);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
@@ -171,7 +169,9 @@ export async function rotateQrCode(
   }
 
   if (!newToken) {
-    console.error("[rotateQrCode] failed to generate unique token after 3 attempts");
+    console.error(
+      "[rotateQrCode] failed to generate unique token after 3 attempts",
+    );
     return { success: false, error: "Không thể xoay token. Vui lòng thử lại." };
   }
 

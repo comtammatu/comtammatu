@@ -42,7 +42,11 @@ export interface OrderData {
   cash_received: number | null;
   cash_change: number | null;
   tables: { number: number } | null;
-  branches: { name: string; address: string | null; phone: string | null } | null;
+  branches: {
+    name: string;
+    address: string | null;
+    phone: string | null;
+  } | null;
   /** profiles.full_name của orders.created_by — người tạo/order đơn.
    * Shape khớp supabase select join `profiles!orders_created_by_fkey(full_name)`.
    * Optional để giữ back-compat với fixture payload (vd RECEIPT_LOADING_ORDER). */

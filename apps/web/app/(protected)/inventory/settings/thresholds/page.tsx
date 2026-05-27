@@ -41,12 +41,9 @@ export default async function InventoryThresholdsPage() {
       sku: row.sku,
       unit: row.unit,
       purchaseUnit: row.purchase_unit,
-      minStock:
-        row.min_stock_level == null ? "" : String(row.min_stock_level),
-      reorderPoint:
-        row.reorder_point == null ? "" : String(row.reorder_point),
-      maxStock:
-        row.max_stock_level == null ? "" : String(row.max_stock_level),
+      minStock: row.min_stock_level == null ? "" : String(row.min_stock_level),
+      reorderPoint: row.reorder_point == null ? "" : String(row.reorder_point),
+      maxStock: row.max_stock_level == null ? "" : String(row.max_stock_level),
     }));
 
   return (

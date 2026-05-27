@@ -66,7 +66,7 @@ Kiểm tra ít nhất các surface sau còn mở được:
 - `/inventory/reports`
 - procurement surfaces đang active trong pilot: `/inventory/receiving`, `/inventory/purchase-orders`, `/inventory/grn`, `/inventory/supplier-invoices`
 - `/inventory/production` nếu flow production bị ảnh hưởng
-- verify old `/admin/inventory*` URLs fail as unsupported routes and no longer behave like a live surface
+- verify retired `/admin/inventory*` URLs fail as unsupported routes and no longer behave like a live surface
 
 ### Gate C — UI/UX scope sanity
 

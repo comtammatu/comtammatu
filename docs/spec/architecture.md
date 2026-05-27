@@ -90,7 +90,7 @@ USING (branch_id = auth_branch_id()
 
 ## Operating Planes
 
-The codebase should be navigated and changed by operating plane, not by folder name alone. The current Understand Anything graph snapshot identifies these active planes:
+The codebase should be navigated and changed by operating plane, not by folder name alone. Use these active planes before planning broad changes:
 
 ```mermaid
 flowchart TB

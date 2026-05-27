@@ -1,6 +1,9 @@
 import type { TenantSupabase } from "./types";
 
-export type InventorySiteKind = "central_warehouse" | "central_kitchen" | "branch";
+export type InventorySiteKind =
+  | "central_warehouse"
+  | "central_kitchen"
+  | "branch";
 
 export type ProcurementBranch = {
   id: number;

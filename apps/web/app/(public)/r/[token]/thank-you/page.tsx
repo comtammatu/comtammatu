@@ -2,7 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { isValidFeedbackToken } from "@comtammatu/shared/feedback";
-import { Card, CardContent, CardHeader, CardTitle } from "@comtammatu/ui/components/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
 import { Button } from "@comtammatu/ui/components/button";
 
 interface ThankYouPageProps {

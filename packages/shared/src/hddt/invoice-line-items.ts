@@ -182,11 +182,7 @@ export function buildInvoiceLineItemsFromOrderItems(
       lines.push(buildOptionLine(side, parentQuantity));
     }
 
-    if (
-      baseUnit === 0 &&
-      modifiers.length === 0 &&
-      sides.length === 0
-    ) {
+    if (baseUnit === 0 && modifiers.length === 0 && sides.length === 0) {
       lines.push(buildAggregateLine(item));
     }
   }

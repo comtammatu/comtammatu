@@ -14,7 +14,7 @@ Authentication and authorization for the entire system. Every request passes thr
 | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------- |
 | `packages/shared/src/auth/types.ts`                             | Role enum, JWT claims shape (`user_role` + optional `position`), scope types                   | Core types                |
 | `packages/shared/src/auth/module-acl.ts`                        | Module → allowed roles mapping, `canAccess()`, `getAccessibleModules()`                        | Route-level ACL (legacy)  |
-| `packages/shared/src/auth/permissions.ts`                       | `PERMISSION_KEYS` (87 keys), `hasPermission()`, `hasAny/All` pure fns — **Auth authz**      | Permission catalog        |
+| `packages/shared/src/auth/permissions.ts`                       | `PERMISSION_KEYS` (87 keys), `hasPermission()`, `hasAny/All` pure fns — **Auth authz**         | Permission catalog        |
 | `packages/shared/src/auth/scope.ts`                             | `extractClaims()` + `decodeJwtAppMetadata()` + `extractClaimsFromAccessToken()`                | JWT claim extraction      |
 | `packages/shared/src/auth/nav-config.ts`                        | Admin sidebar navigation groups filtered by role                                               | UI navigation             |
 | `packages/shared/src/auth/app-discovery.ts`                     | Shared app discovery metadata derived from ACL + nav config                                    | Shell discovery contract  |
@@ -23,9 +23,9 @@ Authentication and authorization for the entire system. Every request passes thr
 | `apps/web/app/_lib/auth.ts`                                     | `loadAuthState()` — shared claims reader for layouts/pages; throws if proxy invariant violated | Layout claims helper      |
 | `apps/web/proxy.ts`                                             | Next.js middleware — **single auth gate**: session + claims + module ACL + branch scope        | Request gateway           |
 | `supabase/migrations/*_jwt_custom_claims_hook.sql`              | `custom_access_token_hook()` — injects claims into JWT                                         | DB-level auth             |
-| `supabase/migrations/20260422120000_auth_v2_tables.sql`         | Auth core tables: `permission_keys`, `positions`, `role_templates`, `staff_permissions`     | Auth schema            |
-| `supabase/migrations/20260422120002_auth_v2_has_permission.sql` | `has_permission(branch, key)` / `has_permission_any(key)` SECURITY DEFINER helpers             | Auth RLS helpers       |
-| `apps/web/app/(protected)/admin/staff/[id]/permissions/`                    | Admin UI for grant/revoke + audit (page + client + actions)                                    | Permission admin UI       |
+| `supabase/migrations/20260422120000_auth_v2_tables.sql`         | Auth core tables: `permission_keys`, `positions`, `role_templates`, `staff_permissions`        | Auth schema               |
+| `supabase/migrations/20260422120002_auth_v2_has_permission.sql` | `has_permission(branch, key)` / `has_permission_any(key)` SECURITY DEFINER helpers             | Auth RLS helpers          |
+| `apps/web/app/(protected)/admin/staff/[id]/permissions/`        | Admin UI for grant/revoke + audit (page + client + actions)                                    | Permission admin UI       |
 | `apps/web/app/_lib/permissions.ts`                              | Server helpers `fetchCurrentUserPermissions()` + `currentUserHasPermission()`                  | App-side permission reads |
 
 ## Role Hierarchy
@@ -51,6 +51,7 @@ Two parallel ACL mechanisms exist; pick the right one:
 - **`auth_role()`** — reads JWT `user_role` claim (cached up to ~1h until token refresh). Use ONLY for: (a) scope/side guards inside RPC bodies (e.g. `branch_manager` forbidden from inter-site ship), (b) "HQ sees all branches" SELECT pattern (`branch_id = auth_branch_id() OR auth_role() IN HQ_ROLES`), (c) named ABAC helpers (`is_inventory_production_operator()`), (d) module-ACL fast-path on non-destructive read-mostly tables (e.g. `branch_menu_item_daily_limits` — see regression rule `BMIDL-RLS-INTENTIONAL-ROLE-FASTPATH`).
 
 **Refactor history:**
+
 - 2026-05-07 H2a — `refunds_update` policy migrated from `auth_role() IN ('owner','super_manager')` → `has_permission(branch_id,'orders:refund_approve')` (`supabase/migrations/20260601200000_h2a_refunds_update_perm_gate.sql`). Closed 1h stale-revoke window for refund approve/reject which is reachable via direct UPDATE in `apps/web/app/(protected)/orders/refund-actions.ts`.
 - 2026-05-24 α4b — `admin_update_profile` and `toggle_profile_active` now derive actor role/branch/area live from `profiles + positions`; `set_branch_kind` gates on `settings:tenant` (`supabase/migrations/20260601810000_auth_v3_cut_auth_role_rpc_batch.sql`). `can_access_branch()` remains a separate RLS-policy batch because it is a shared branch-scope predicate.
 - Backlog H2b — `hr_payroll` policies (`20260416040000:31,38,42,123,130,134`) follow same pattern; deferred pending business decision on payroll-specific permission keys.
@@ -163,14 +164,14 @@ The resolver `resolvePostLoginRedirect(claims, returnTo, { surface?: "legacy" | 
 
 ## Failure Modes
 
-| Failure                          | Signal                                                                                                  | Recovery                                                                                                                                          |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| JWT hook returns no claims       | Generic login error + `console.error("auth.login.claims_missing", { user_id })` (post-2026-05-07 fix) | Check server logs for `user_id`. Verify `custom_access_token_hook` is SECURITY DEFINER + profile row exists + position_id resolves                |
-| `getSession()` returns no session | Generic login error + `console.error("auth.login.no_session_after_signin")` + signOut                  | Cookie write failed mid-request. Inspect proxy `Set-Cookie` flow + browser cookie state                                                            |
-| Upstash rate-limit unreachable    | `console.error("auth.login.rate_limit_failopen", { ip, error })` — login still proceeds (fail-open)     | Check Vercel log drain. Verify Upstash health (`UPSTASH_REDIS_REST_URL`). Persistent `security_events` table tracking is follow-up wave            |
-| RLS blocks silently              | `{ data: null, error: null }` — no error thrown                                                         | Check GRANT + RLS policy for the table                                                                                                            |
-| Role not in MODULE_ACL           | `canAccess()` returns false, user redirected                                                            | Add role to MODULE_ACL for the module                                                                                                             |
-| Stale JWT after role change      | Old role persists until token refresh                                                                   | Call `supabase.auth.refreshSession()` or wait for proxy `updateSession()`                                                                         |
+| Failure                           | Signal                                                                                                | Recovery                                                                                                                                |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| JWT hook returns no claims        | Generic login error + `console.error("auth.login.claims_missing", { user_id })` (post-2026-05-07 fix) | Check server logs for `user_id`. Verify `custom_access_token_hook` is SECURITY DEFINER + profile row exists + position_id resolves      |
+| `getSession()` returns no session | Generic login error + `console.error("auth.login.no_session_after_signin")` + signOut                 | Cookie write failed mid-request. Inspect proxy `Set-Cookie` flow + browser cookie state                                                 |
+| Upstash rate-limit unreachable    | `console.error("auth.login.rate_limit_failopen", { ip, error })` — login still proceeds (fail-open)   | Check Vercel log drain. Verify Upstash health (`UPSTASH_REDIS_REST_URL`). Persistent `security_events` table tracking is follow-up wave |
+| RLS blocks silently               | `{ data: null, error: null }` — no error thrown                                                       | Check GRANT + RLS policy for the table                                                                                                  |
+| Role not in MODULE_ACL            | `canAccess()` returns false, user redirected                                                          | Add role to MODULE_ACL for the module                                                                                                   |
+| Stale JWT after role change       | Old role persists until token refresh                                                                 | Call `supabase.auth.refreshSession()` or wait for proxy `updateSession()`                                                               |
 
 > **Login error consolidation (2026-05-07):** All post-validation failure modes (wrong creds, no session, no claims) return the same generic Vietnamese copy `"Email hoặc mật khẩu không đúng"` to prevent credential-validity enumeration. Distinguishing context lives only in structured server logs. See regression rule `LOGIN-MESSAGE-MUST-BE-GENERIC` and `apps/web/app/(public)/(auth)/login/actions.ts`.
 
@@ -200,14 +201,14 @@ Single canonical helper cho "send blocked user somewhere they can read what happ
 
 ## Blast Radius
 
-| Change                       | Affected                                                                                                                                                                              |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Add new permission key       | Migration (INSERT into `permission_keys`) + `packages/shared/src/auth/permissions.ts` constant                                                                                        |
-| Add new position             | Migration (INSERT into `positions` with `legacy_role_code` mapping) + seed script                                                                                                     |
-| Add new role_template        | Migration (INSERT into `role_templates`) or via admin RPC                                                                                                                             |
-| Add new module to route ACL  | module-acl.ts + proxy.ts `resolveModule()` + nav-config.ts                                                                                                                            |
-| Change JWT claims shape      | hook SQL + types.ts + scope.ts + proxy.ts. Always check `record.tenant_id IS NOT NULL` not `record IS NOT NULL` in plpgsql (see `PLPGSQL-RECORD-IS-NOT-NULL` regression).             |
-| Cut a table's RLS to Auth | DROP old policies + CREATE with `has_permission(branch_id, key)` (branch-scoped) or `has_permission_any(key)` (tenant-scoped). Keep structural gates (`branch_kind` checks) separate. |
+| Change                      | Affected                                                                                                                                                                              |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Add new permission key      | Migration (INSERT into `permission_keys`) + `packages/shared/src/auth/permissions.ts` constant                                                                                        |
+| Add new position            | Migration (INSERT into `positions` with `legacy_role_code` mapping) + seed script                                                                                                     |
+| Add new role_template       | Migration (INSERT into `role_templates`) or via admin RPC                                                                                                                             |
+| Add new module to route ACL | module-acl.ts + proxy.ts `resolveModule()` + nav-config.ts                                                                                                                            |
+| Change JWT claims shape     | hook SQL + types.ts + scope.ts + proxy.ts. Always check `record.tenant_id IS NOT NULL` not `record IS NOT NULL` in plpgsql (see `PLPGSQL-RECORD-IS-NOT-NULL` regression).             |
+| Cut a table's RLS to Auth   | DROP old policies + CREATE with `has_permission(branch_id, key)` (branch-scoped) or `has_permission_any(key)` (tenant-scoped). Keep structural gates (`branch_kind` checks) separate. |
 
 ## Design Rationale
 
@@ -216,11 +217,3 @@ Single canonical helper cho "send blocked user somewhere they can read what happ
 - **Single ACL source:** `module-acl.ts` prevents drift between proxy, nav, and layout guards.
 - **Single gate = proxy:** layouts and pages must not re-check session/claims/ACL. The 2026-04-17 cleanup removed duplicate guards from 8 layouts + 12 pages; those checks now live only in `proxy.ts`. `loadAuthState()` throws (not redirects) if claims are missing — silent redirects previously hid proxy bugs for months.
 - **Invite-only (no self-signup):** Business requirement — staff are added by managers via Admin API with pre-set `tenant_id` + `role`.
-
-<!-- ORACLE-META
-Written by codebase-oracle (manual) | 2026-04-02
-Data: Direct source reading
-Audience: new engineer, feature owner | Confidence: 95%
-Updated: Inventory route boundary + UX/nav sync (2026-04-16)
-Unknowns: 1 (area_manager scoping)
--->

@@ -58,7 +58,9 @@ export function resolveWorkspaceItems(role: StaffRole): ResolvedNavLink[] {
     return [];
   }
 
-  return group.items.map((item) => resolveNavLink(item, item.href ?? undefined));
+  return group.items.map((item) =>
+    resolveNavLink(item, item.href ?? undefined),
+  );
 }
 
 export function resolveBranchOperationItems(
@@ -71,7 +73,9 @@ export function resolveBranchOperationItems(
     return [];
   }
 
-  return group.items.map((item) => resolveNavLink(item, item.href ?? undefined));
+  return group.items.map((item) =>
+    resolveNavLink(item, item.href ?? undefined),
+  );
 }
 
 export function resolveQuickLaunchGroups(
@@ -83,6 +87,9 @@ export function resolveQuickLaunchGroups(
 
   return [
     { title: NAV_GROUP_LABELS_VI.workspaces, items: workspaceItems },
-    { title: NAV_GROUP_LABELS_VI.branchOperations, items: branchOperationItems },
+    {
+      title: NAV_GROUP_LABELS_VI.branchOperations,
+      items: branchOperationItems,
+    },
   ].filter((group) => group.items.length > 0);
 }

@@ -61,25 +61,27 @@ export async function fetchCurrentUserPermissions(
  * are value-keyed by `cache()`, so layout + page asking the same question
  * pay one RPC instead of two. Mirror `auth.ts:hasPermissionGrant` pattern.
  */
-export const currentUserHasPermission = cache(async function currentUserHasPermission(
-  branchId: number | null,
-  key: PermissionKey | string,
-): Promise<boolean> {
-  const supabase = await createClient();
+export const currentUserHasPermission = cache(
+  async function currentUserHasPermission(
+    branchId: number | null,
+    key: PermissionKey | string,
+  ): Promise<boolean> {
+    const supabase = await createClient();
 
-  if (branchId === null) {
-    const { data, error } = await supabase.rpc("has_permission_any", {
+    if (branchId === null) {
+      const { data, error } = await supabase.rpc("has_permission_any", {
+        p_key: key,
+      });
+      return !error && data === true;
+    }
+
+    const { data, error } = await supabase.rpc("has_permission", {
+      p_branch_id: branchId,
       p_key: key,
     });
     return !error && data === true;
-  }
-
-  const { data, error } = await supabase.rpc("has_permission", {
-    p_branch_id: branchId,
-    p_key: key,
-  });
-  return !error && data === true;
-});
+  },
+);
 
 /**
  * Check if current user has a permission in any branch or tenant scope.
@@ -88,15 +90,17 @@ export const currentUserHasPermission = cache(async function currentUserHasPermi
  * Wrapped in React `cache()` so repeated single-key probes in one render
  * dedupe (e.g. inventory layout asks `procurement:read`, page asks again).
  */
-export const currentUserHasPermissionAny = cache(async function currentUserHasPermissionAny(
-  key: PermissionKey | string,
-): Promise<boolean> {
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("has_permission_any", {
-    p_key: key,
-  });
-  return !error && data === true;
-});
+export const currentUserHasPermissionAny = cache(
+  async function currentUserHasPermissionAny(
+    key: PermissionKey | string,
+  ): Promise<boolean> {
+    const supabase = await createClient();
+    const { data, error } = await supabase.rpc("has_permission_any", {
+      p_key: key,
+    });
+    return !error && data === true;
+  },
+);
 
 /**
  * Returns true if the user has ANY of the given permission keys (tenant-wide

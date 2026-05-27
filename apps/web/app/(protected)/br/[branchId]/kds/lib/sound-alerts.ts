@@ -82,9 +82,7 @@ export function getKdsNewTicketAlertGroupKey(
   return `order:${String(ticket.order_id)}`;
 }
 
-function isActiveKdsNewTicketAlert(
-  ticket: Pick<KdsTicket, "status">,
-): boolean {
+function isActiveKdsNewTicketAlert(ticket: Pick<KdsTicket, "status">): boolean {
   return ticket.status === "pending" || ticket.status === "preparing";
 }
 

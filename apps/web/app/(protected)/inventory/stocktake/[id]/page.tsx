@@ -76,7 +76,11 @@ export default async function StocktakeDetailPage({
     );
   }
 
-  const auditLogs = await fetchEntityAuditLogs("stocktake_session", sessionId, 50);
+  const auditLogs = await fetchEntityAuditLogs(
+    "stocktake_session",
+    sessionId,
+    50,
+  );
 
   return (
     <StocktakeDetailClient

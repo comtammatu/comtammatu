@@ -96,8 +96,8 @@ function isPrivateIp(ip: string): boolean {
 function isPrivateIpv4(ip: string): boolean {
   const parts = ip.split(".").map(Number);
   if (
-    parts.length !== 4
-    || parts.some((n) => Number.isNaN(n) || n < 0 || n > 255)
+    parts.length !== 4 ||
+    parts.some((n) => Number.isNaN(n) || n < 0 || n > 255)
   ) {
     return true;
   }

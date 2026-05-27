@@ -76,7 +76,10 @@ export async function markKdsItemOutOfStock(
       return { success: false, error: "Không có quyền báo hết món." };
     }
     if (msg.includes("order_already_paid")) {
-      return { success: false, error: "Đơn đã thanh toán, không thể báo hết món." };
+      return {
+        success: false,
+        error: "Đơn đã thanh toán, không thể báo hết món.",
+      };
     }
     if (msg.includes("order_terminal")) {
       return { success: false, error: "Đơn đã đóng, không thể báo hết món." };
@@ -93,19 +96,17 @@ export async function markKdsItemOutOfStock(
     };
   }
 
-  const row = (data ?? null) as
-    | {
-        ticket_id: number;
-        order_id: number;
-        order_item_id: number;
-        menu_item_id: number;
-        item_name: string;
-        disabled_for_day: boolean;
-        limit_quantity: number | null;
-        is_disabled: boolean;
-        sold_today: number;
-      }
-    | null;
+  const row = (data ?? null) as {
+    ticket_id: number;
+    order_id: number;
+    order_item_id: number;
+    menu_item_id: number;
+    item_name: string;
+    disabled_for_day: boolean;
+    limit_quantity: number | null;
+    is_disabled: boolean;
+    sold_today: number;
+  } | null;
 
   if (!row) {
     return {

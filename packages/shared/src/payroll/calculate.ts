@@ -21,11 +21,7 @@ import {
   type PitBracket,
 } from "./legal-versions";
 
-export {
-  getLegalVersionFor,
-  getLegalVersionForPeriod,
-  PAYROLL_LEGAL_VERSIONS,
-};
+export { getLegalVersionFor, getLegalVersionForPeriod, PAYROLL_LEGAL_VERSIONS };
 export type { PayrollLegalVersion, PitBracket };
 
 const LATEST_VERSION =
@@ -141,10 +137,12 @@ export interface PayrollEntryResult {
 export function calculatePayrollEntry(
   input: PayrollEntryInput,
 ): PayrollEntryResult {
-  const version =
-    input.legalVersion ?? getLegalVersionFor(input.effectiveDate);
+  const version = input.legalVersion ?? getLegalVersionFor(input.effectiveDate);
 
-  const insuranceBase = Math.min(input.insuranceBaseSalary, version.insuranceCap);
+  const insuranceBase = Math.min(
+    input.insuranceBaseSalary,
+    version.insuranceCap,
+  );
 
   // BH NLĐ đóng
   const bhxhEmployee = Math.round(insuranceBase * version.employeeBhxhRate);

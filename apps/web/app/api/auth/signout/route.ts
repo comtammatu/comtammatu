@@ -28,7 +28,9 @@ export async function POST(request: Request) {
       const returnTo = getSafeInternalReturnTo(
         `${refererUrl.pathname}${refererUrl.search}`,
       );
-      const loginPath = isBetaPath(refererUrl.pathname) ? "/beta/login" : "/login";
+      const loginPath = isBetaPath(refererUrl.pathname)
+        ? "/beta/login"
+        : "/login";
 
       if (returnTo && refererUrl.pathname !== loginPath) {
         target = `${loginPath}?returnTo=${encodeURIComponent(returnTo)}`;

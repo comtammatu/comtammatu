@@ -2,7 +2,11 @@
 
 import { z } from "zod";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
-import { MODULE_ACL, PERMISSION_KEYS, STAFF_ROLES } from "@comtammatu/shared/auth";
+import {
+  MODULE_ACL,
+  PERMISSION_KEYS,
+  STAFF_ROLES,
+} from "@comtammatu/shared/auth";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";

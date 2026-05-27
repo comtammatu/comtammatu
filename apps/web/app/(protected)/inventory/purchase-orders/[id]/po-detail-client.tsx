@@ -36,7 +36,12 @@ import { confirm } from "@comtammatu/ui/components/confirm-dialog";
 import { Combobox } from "@/components/form";
 import { messages } from "@lib/messages";
 import { FormattedNumberInput } from "../../_components/formatted-number-input";
-import { AppDetailFooter, AppPage, AppPageHeader, AppSection } from "@/components/surface";
+import {
+  AppDetailFooter,
+  AppPage,
+  AppPageHeader,
+  AppSection,
+} from "@/components/surface";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { AuditHistoryList } from "../../_components/audit-history-list";
 import type { AuditLogRow } from "@/_lib/audit";
@@ -341,7 +346,10 @@ export function PODetailClient({
         eyebrow="Kho hàng"
         title={po.code}
         description={poDetailCopy.meta(po.supplier, po.date, po.sentAt)}
-        badge={{ children: getInventoryStatusLabel(po.status), variant: getInventoryStatusBadgeVariant(po.status) }}
+        badge={{
+          children: getInventoryStatusLabel(po.status),
+          variant: getInventoryStatusBadgeVariant(po.status),
+        }}
         breadcrumb={
           <Link
             href="/inventory/purchase-orders"
@@ -400,517 +408,574 @@ export function PODetailClient({
           >
             <TabsContent value="overview" className="mt-4">
               <div className="space-y-6">
+                <div className="grid gap-3 md:grid-cols-3">
+                  <Card>
+                    <CardContent>
+                      <Badge variant="secondary">
+                        {poCopy.supplierRequired}
+                      </Badge>
+                      <p className="mt-3 text-xl font-semibold">
+                        {po.supplier}
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent>
+                      <Badge variant="secondary">
+                        {poDetailCopy.goodsTotal}
+                      </Badge>
+                      <p className="mt-3 text-xl font-semibold">
+                        {messages.inventory.common.currency(
+                          formatVND(totalAmount),
+                        )}
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent>
+                      <Badge variant="secondary">{FORM_VI.totalAmount}</Badge>
+                      <p className="mt-3 text-2xl font-semibold text-primary">
+                        {messages.inventory.common.currency(
+                          formatVND(grandTotal),
+                        )}
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
 
-          <div className="grid gap-3 md:grid-cols-3">
-            <Card>
-              <CardContent>
-                <Badge variant="secondary">{poCopy.supplierRequired}</Badge>
-                <p className="mt-3 text-xl font-semibold">{po.supplier}</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent>
-                <Badge variant="secondary">{poDetailCopy.goodsTotal}</Badge>
-                <p className="mt-3 text-xl font-semibold">
-                  {messages.inventory.common.currency(formatVND(totalAmount))}
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent>
-                <Badge variant="secondary">{FORM_VI.totalAmount}</Badge>
-                <p className="mt-3 text-2xl font-semibold text-primary">
-                  {messages.inventory.common.currency(formatVND(grandTotal))}
-                </p>
-              </CardContent>
-            </Card>
-          </div>
+                <AppSection contentClassName="py-6">
+                  <div className="flex justify-center">
+                    <TimelineStepper
+                      steps={[
+                        {
+                          label: poDetailCopy.steps.draft,
+                          date: po.date,
+                          completed: true,
+                        },
+                        {
+                          label: poDetailCopy.steps.sent,
+                          date: po.sentAt,
+                          completed: po.status !== "draft",
+                        },
+                        {
+                          label: poDetailCopy.steps.waitingInspection,
+                          active: po.status === "sent",
+                          date:
+                            po.status === "sent"
+                              ? poDetailCopy.steps.waitingInspectionHint
+                              : undefined,
+                        },
+                        {
+                          label: poDetailCopy.steps.hasGrn,
+                          completed: po.status === "received",
+                          active: po.status === "partially_received",
+                          date:
+                            po.status === "partially_received"
+                              ? poDetailCopy.steps.partialReceivedHint
+                              : undefined,
+                        },
+                      ]}
+                    />
+                  </div>
+                </AppSection>
 
-          <AppSection contentClassName="py-6">
-            <div className="flex justify-center">
-              <TimelineStepper
-                steps={[
-                  { label: poDetailCopy.steps.draft, date: po.date, completed: true },
-                  {
-                    label: poDetailCopy.steps.sent,
-                    date: po.sentAt,
-                    completed: po.status !== "draft",
-                  },
-                  {
-                    label: poDetailCopy.steps.waitingInspection,
-                    active: po.status === "sent",
-                    date:
-                      po.status === "sent"
-                        ? poDetailCopy.steps.waitingInspectionHint
-                        : undefined,
-                  },
-                  {
-                    label: poDetailCopy.steps.hasGrn,
-                    completed: po.status === "received",
-                    active: po.status === "partially_received",
-                    date:
-                      po.status === "partially_received"
-                        ? poDetailCopy.steps.partialReceivedHint
-                        : undefined,
-                  },
-                ]}
-              />
-            </div>
-          </AppSection>
-
-          <PoOverviewLinesPreview
-            lines={lines}
-            onViewAll={() => router.replace("?tab=lines", { scroll: false })}
-          />
+                <PoOverviewLinesPreview
+                  lines={lines}
+                  onViewAll={() =>
+                    router.replace("?tab=lines", { scroll: false })
+                  }
+                />
               </div>
             </TabsContent>
 
             <TabsContent value="lines" className="mt-4">
               <div className="space-y-6">
-          <div className="grid gap-6 lg:grid-cols-3">
-            <div className="lg:col-span-2">
-              <AppSection
-                className="overflow-hidden"
-                title={poDetailCopy.itemCatalogTitle}
-                description={poDetailCopy.itemCatalogDescription(lines.length)}
-                contentClassName="p-0"
-              >
-                  <div className="space-y-3 p-6 md:hidden">
-                    {lines.map((item, index) => (
-                      <Card key={item.lineId} className="bg-muted/20">
-                        <CardContent>
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <p className="font-bold">{item.name}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {item.sku}
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <VarianceBadge variance={item.variance} />
+                <div className="grid gap-6 lg:grid-cols-3">
+                  <div className="lg:col-span-2">
+                    <AppSection
+                      className="overflow-hidden"
+                      title={poDetailCopy.itemCatalogTitle}
+                      description={poDetailCopy.itemCatalogDescription(
+                        lines.length,
+                      )}
+                      contentFlush
+                    >
+                      <div className="space-y-3 p-6 md:hidden">
+                        {lines.map((item, index) => (
+                          <Card key={item.lineId} className="bg-muted/20">
+                            <CardContent>
+                              <div className="flex items-start justify-between gap-3">
+                                <div>
+                                  <p className="font-bold">{item.name}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {item.sku}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <VarianceBadge variance={item.variance} />
+                                  {canEditLines ? (
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      disabled={isPending}
+                                      onClick={() =>
+                                        void handleDeleteLine(item)
+                                      }
+                                      className="text-muted-foreground hover:text-destructive"
+                                      aria-label={poDetailCopy.deleteLineAria}
+                                    >
+                                      <IconTrash className="size-4" />
+                                    </Button>
+                                  ) : null}
+                                </div>
+                              </div>
+                              <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                                <div>
+                                  <p className="text-muted-foreground">
+                                    {FORM_VI.quantity}
+                                  </p>
+                                  {canEditLines ? (
+                                    <FormattedNumberInput
+                                      value={String(item.qty)}
+                                      onValueChange={(value) =>
+                                        patchLine(index, {
+                                          qty: Number(value || 0),
+                                        })
+                                      }
+                                      maxFractionDigits={3}
+                                      className="h-9"
+                                    />
+                                  ) : (
+                                    <p className="font-semibold">
+                                      {item.qty} {item.unit}
+                                    </p>
+                                  )}
+                                </div>
+                                <div>
+                                  <p className="text-muted-foreground">
+                                    {FORM_VI.unitPrice}
+                                  </p>
+                                  {canEditLines ? (
+                                    <FormattedNumberInput
+                                      value={
+                                        item.price != null
+                                          ? String(item.price)
+                                          : ""
+                                      }
+                                      onValueChange={(value) =>
+                                        patchLine(index, {
+                                          price: value ? Number(value) : null,
+                                        })
+                                      }
+                                      maxFractionDigits={0}
+                                      className="h-9"
+                                    />
+                                  ) : (
+                                    <p className="font-semibold">
+                                      {item.price != null
+                                        ? inventoryCommon.currencyCompact(
+                                            formatVND(item.price),
+                                          )
+                                        : inventoryCommon.noValue}
+                                    </p>
+                                  )}
+                                </div>
+                                {canEditLines ? (
+                                  <div className="col-span-2">
+                                    <p className="text-muted-foreground">
+                                      {FORM_VI.unit}
+                                    </p>
+                                    <Input
+                                      value={item.unit}
+                                      readOnly
+                                      aria-readonly="true"
+                                      className="h-9"
+                                    />
+                                  </div>
+                                ) : null}
+                                <div className="col-span-2">
+                                  <p className="text-muted-foreground">
+                                    {FORM_VI.amount}
+                                  </p>
+                                  <p className="font-semibold text-primary">
+                                    {inventoryCommon.currencyCompact(
+                                      formatVND(computePoLineTotal(item)),
+                                    )}
+                                  </p>
+                                </div>
+                              </div>
                               {canEditLines ? (
                                 <Button
                                   type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  disabled={isPending}
-                                  onClick={() => void handleDeleteLine(item)}
-                                  className="text-muted-foreground hover:text-destructive"
-                                  aria-label={poDetailCopy.deleteLineAria}
+                                  variant="outline"
+                                  size="sm"
+                                  disabled={isPending || !item.dirty}
+                                  className="mt-4"
+                                  onClick={() => handleSaveLine(index)}
                                 >
-                                  <IconTrash className="size-4" />
+                                  <IconSave className="size-4" />
+                                  {poDetailCopy.saveLine}
                                 </Button>
                               ) : null}
-                            </div>
-                          </div>
-                          <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                            <div>
-                              <p className="text-muted-foreground">{FORM_VI.quantity}</p>
-                              {canEditLines ? (
-                                <FormattedNumberInput
-                                  value={String(item.qty)}
-                                  onValueChange={(value) =>
-                                    patchLine(index, {
-                                      qty: Number(value || 0),
-                                    })
-                                  }
-                                  maxFractionDigits={3}
-                                  className="h-9"
-                                />
-                              ) : (
-                                <p className="font-semibold">
-                                  {item.qty} {item.unit}
-                                </p>
-                              )}
-                            </div>
-                            <div>
-                              <p className="text-muted-foreground">{FORM_VI.unitPrice}</p>
-                              {canEditLines ? (
-                                <FormattedNumberInput
-                                  value={
-                                    item.price != null ? String(item.price) : ""
-                                  }
-                                  onValueChange={(value) =>
-                                    patchLine(index, {
-                                      price: value ? Number(value) : null,
-                                    })
-                                  }
-                                  maxFractionDigits={0}
-                                  className="h-9"
-                                />
-                              ) : (
-                                <p className="font-semibold">
-                                  {item.price != null
-                                    ? inventoryCommon.currencyCompact(
-                                        formatVND(item.price),
-                                      )
-                                    : inventoryCommon.noValue}
-                                </p>
-                              )}
-                            </div>
-                            {canEditLines ? (
-                              <div className="col-span-2">
-                                <p className="text-muted-foreground">{FORM_VI.unit}</p>
-                                <Input
-                                  value={item.unit}
-                                  readOnly
-                                  aria-readonly="true"
-                                  className="h-9"
-                                />
-                              </div>
-                            ) : null}
-                            <div className="col-span-2">
-                              <p className="text-muted-foreground">
-                                {FORM_VI.amount}
-                              </p>
-                              <p className="font-semibold text-primary">
-                                {inventoryCommon.currencyCompact(
-                                  formatVND(computePoLineTotal(item)),
-                                )}
-                              </p>
-                            </div>
-                          </div>
-                          {canEditLines ? (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              disabled={isPending || !item.dirty}
-                              className="mt-4"
-                              onClick={() => handleSaveLine(index)}
-                            >
-                              <IconSave className="size-4" />
-                              {poDetailCopy.saveLine}
-                            </Button>
-                          ) : null}
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-
-                  <div className="hidden md:block">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-muted/40">
-                          {[
-                            { label: poDetailCopy.item, align: "" },
-                            { label: FORM_VI.quantity, align: "text-right" },
-                            { label: FORM_VI.unitPrice, align: "text-right" },
-                            { label: FORM_VI.amount, align: "text-right" },
-                            {
-                              label: poDetailCopy.priceVariance,
-                              align: "text-right",
-                            },
-                            { label: "", align: "text-right" },
-                          ].map((h) => (
-                            <TableHead
-                              key={h.label}
-                              className={`px-6 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wider ${h.align}`}
-                            >
-                              {h.label}
-                            </TableHead>
-                          ))}
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {lines.map((item, index) => (
-                          <TableRow
-                            key={item.lineId}
-                            className="group transition-colors"
-                          >
-                            <TableCell className="px-6 py-4">
-                              <div className="flex flex-col">
-                                <span className="font-bold">{item.name}</span>
-                                <span className="text-xs text-muted-foreground">
-                                  {item.sku}
-                                </span>
-                                {canEditLines ? (
-                                  <Input
-                                    value={item.unit}
-                                    readOnly
-                                    aria-readonly="true"
-                                    className="mt-2 h-8 max-w-24"
-                                    aria-label={FORM_VI.unit}
-                                  />
-                                ) : null}
-                              </div>
-                            </TableCell>
-                            <TableCell className="px-6 py-4 text-right font-mono tabular-nums">
-                              {canEditLines ? (
-                                <FormattedNumberInput
-                                  value={String(item.qty)}
-                                  onValueChange={(value) =>
-                                    patchLine(index, {
-                                      qty: Number(value || 0),
-                                    })
-                                  }
-                                  maxFractionDigits={3}
-                                  className="h-8 text-right"
-                                />
-                              ) : (
-                                item.qty
-                              )}
-                            </TableCell>
-                            <TableCell className="px-6 py-4 text-right font-mono tabular-nums">
-                              {canEditLines ? (
-                                <FormattedNumberInput
-                                  value={
-                                    item.price != null ? String(item.price) : ""
-                                  }
-                                  onValueChange={(value) =>
-                                    patchLine(index, {
-                                      price: value ? Number(value) : null,
-                                    })
-                                  }
-                                  maxFractionDigits={0}
-                                  className="h-8 text-right"
-                                />
-                              ) : item.price != null ? (
-                                inventoryCommon.currencyCompact(
-                                  formatVND(item.price),
-                                )
-                              ) : (
-                                inventoryCommon.noValue
-                              )}
-                            </TableCell>
-                            <TableCell className="px-6 py-4 text-right font-mono tabular-nums font-semibold">
-                              {inventoryCommon.currencyCompact(
-                                formatVND(computePoLineTotal(item)),
-                              )}
-                            </TableCell>
-                            <TableCell className="px-6 py-4 text-right">
-                              <VarianceBadge variance={item.variance} />
-                            </TableCell>
-                            <TableCell className="px-6 py-4 text-right">
-                              {canEditLines ? (
-                                <div className="flex justify-end gap-2">
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="icon"
-                                    disabled={isPending || !item.dirty}
-                                    onClick={() => handleSaveLine(index)}
-                                    aria-label={poDetailCopy.saveLineAria}
-                                  >
-                                    <IconSave className="size-4" />
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    disabled={isPending}
-                                    onClick={() => void handleDeleteLine(item)}
-                                    className="text-muted-foreground hover:text-destructive"
-                                    aria-label={poDetailCopy.deleteLineAria}
-                                  >
-                                    <IconTrash className="size-4" />
-                                  </Button>
-                                </div>
-                              ) : null}
-                            </TableCell>
-                          </TableRow>
+                            </CardContent>
+                          </Card>
                         ))}
-                      </TableBody>
-                      <TableFooter>
-                        <TableRow className="border-border">
-                          <TableCell
-                            colSpan={3}
-                            className="px-6 py-3 text-right text-sm text-muted-foreground"
+                      </div>
+
+                      <div className="hidden md:block">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-muted/40">
+                              {[
+                                { label: poDetailCopy.item, align: "" },
+                                {
+                                  label: FORM_VI.quantity,
+                                  align: "text-right",
+                                },
+                                {
+                                  label: FORM_VI.unitPrice,
+                                  align: "text-right",
+                                },
+                                { label: FORM_VI.amount, align: "text-right" },
+                                {
+                                  label: poDetailCopy.priceVariance,
+                                  align: "text-right",
+                                },
+                                { label: "", align: "text-right" },
+                              ].map((h) => (
+                                <TableHead
+                                  key={h.label}
+                                  className={`px-6 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wider ${h.align}`}
+                                >
+                                  {h.label}
+                                </TableHead>
+                              ))}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {lines.map((item, index) => (
+                              <TableRow
+                                key={item.lineId}
+                                className="group transition-colors"
+                              >
+                                <TableCell className="px-6 py-4">
+                                  <div className="flex flex-col">
+                                    <span className="font-bold">
+                                      {item.name}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {item.sku}
+                                    </span>
+                                    {canEditLines ? (
+                                      <Input
+                                        value={item.unit}
+                                        readOnly
+                                        aria-readonly="true"
+                                        className="mt-2 h-8 max-w-24"
+                                        aria-label={FORM_VI.unit}
+                                      />
+                                    ) : null}
+                                  </div>
+                                </TableCell>
+                                <TableCell className="px-6 py-4 text-right font-mono tabular-nums">
+                                  {canEditLines ? (
+                                    <FormattedNumberInput
+                                      value={String(item.qty)}
+                                      onValueChange={(value) =>
+                                        patchLine(index, {
+                                          qty: Number(value || 0),
+                                        })
+                                      }
+                                      maxFractionDigits={3}
+                                      className="h-8 text-right"
+                                    />
+                                  ) : (
+                                    item.qty
+                                  )}
+                                </TableCell>
+                                <TableCell className="px-6 py-4 text-right font-mono tabular-nums">
+                                  {canEditLines ? (
+                                    <FormattedNumberInput
+                                      value={
+                                        item.price != null
+                                          ? String(item.price)
+                                          : ""
+                                      }
+                                      onValueChange={(value) =>
+                                        patchLine(index, {
+                                          price: value ? Number(value) : null,
+                                        })
+                                      }
+                                      maxFractionDigits={0}
+                                      className="h-8 text-right"
+                                    />
+                                  ) : item.price != null ? (
+                                    inventoryCommon.currencyCompact(
+                                      formatVND(item.price),
+                                    )
+                                  ) : (
+                                    inventoryCommon.noValue
+                                  )}
+                                </TableCell>
+                                <TableCell className="px-6 py-4 text-right font-mono tabular-nums font-semibold">
+                                  {inventoryCommon.currencyCompact(
+                                    formatVND(computePoLineTotal(item)),
+                                  )}
+                                </TableCell>
+                                <TableCell className="px-6 py-4 text-right">
+                                  <VarianceBadge variance={item.variance} />
+                                </TableCell>
+                                <TableCell className="px-6 py-4 text-right">
+                                  {canEditLines ? (
+                                    <div className="flex justify-end gap-2">
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="icon"
+                                        disabled={isPending || !item.dirty}
+                                        onClick={() => handleSaveLine(index)}
+                                        aria-label={poDetailCopy.saveLineAria}
+                                      >
+                                        <IconSave className="size-4" />
+                                      </Button>
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        disabled={isPending}
+                                        onClick={() =>
+                                          void handleDeleteLine(item)
+                                        }
+                                        className="text-muted-foreground hover:text-destructive"
+                                        aria-label={poDetailCopy.deleteLineAria}
+                                      >
+                                        <IconTrash className="size-4" />
+                                      </Button>
+                                    </div>
+                                  ) : null}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                          <TableFooter>
+                            <TableRow className="border-border">
+                              <TableCell
+                                colSpan={3}
+                                className="px-6 py-3 text-right text-sm text-muted-foreground"
+                              >
+                                {poDetailCopy.goodsTotal}
+                              </TableCell>
+                              <TableCell className="px-6 py-3 text-right font-mono tabular-nums font-semibold">
+                                {inventoryCommon.currencyCompact(
+                                  formatVND(totalAmount),
+                                )}
+                              </TableCell>
+                              <TableCell colSpan={2} />
+                            </TableRow>
+                            <TableRow className="border-border">
+                              <TableCell
+                                colSpan={3}
+                                className="px-6 py-3 text-right text-sm text-muted-foreground"
+                              >
+                                {FORM_VI.tax}
+                              </TableCell>
+                              <TableCell className="px-6 py-3 text-right font-mono tabular-nums">
+                                {inventoryCommon.currencyCompact(
+                                  formatVND(taxAmount),
+                                )}
+                              </TableCell>
+                              <TableCell colSpan={2} />
+                            </TableRow>
+                            <TableRow className="border-border">
+                              <TableCell
+                                colSpan={3}
+                                className="px-6 py-3 text-right text-sm font-bold"
+                              >
+                                {FORM_VI.totalAmount}
+                              </TableCell>
+                              <TableCell className="px-6 py-3 text-right font-mono tabular-nums font-bold text-primary">
+                                {inventoryCommon.currencyCompact(
+                                  formatVND(grandTotal),
+                                )}
+                              </TableCell>
+                              <TableCell colSpan={2} />
+                            </TableRow>
+                          </TableFooter>
+                        </Table>
+                      </div>
+
+                      {canEditLines ? (
+                        <form
+                          onSubmit={handleAddLine}
+                          className="grid gap-3 border-t bg-muted/5 p-4 sm:grid-cols-2 lg:grid-cols-5"
+                        >
+                          <Combobox
+                            value={addIngredientId}
+                            onValueChange={handleAddIngredientChange}
+                            options={ingredients
+                              .filter((ingredient) => ingredient.is_active)
+                              .map((ingredient) => ({
+                                value: String(ingredient.id),
+                                label: ingredient.name,
+                                hint:
+                                  ingredient.purchase_unit ?? ingredient.unit,
+                                keywords: [
+                                  ingredient.sku ?? "",
+                                  ingredient.category ?? "",
+                                ],
+                              }))}
+                            placeholder={poCopy.ingredientPlaceholder}
+                            searchPlaceholder={
+                              poCopy.ingredientSearchPlaceholder
+                            }
+                            triggerClassName="h-9 border-dashed"
+                          />
+                          <FormattedNumberInput
+                            value={addQty}
+                            onValueChange={setAddQty}
+                            maxFractionDigits={3}
+                            placeholder={poCopy.quantityShort}
+                            className="h-9"
+                            required
+                          />
+                          <Input
+                            value={addUnit}
+                            readOnly
+                            aria-readonly="true"
+                            placeholder={poCopy.unitShort}
+                            className="h-9"
+                            required
+                          />
+                          <FormattedNumberInput
+                            value={addPrice}
+                            onValueChange={setAddPrice}
+                            maxFractionDigits={0}
+                            placeholder={poCopy.pricePlaceholder}
+                            className="h-9"
+                          />
+                          <Button
+                            type="submit"
+                            disabled={isPending || !addIngredientId}
+                            className="h-9"
                           >
-                            {poDetailCopy.goodsTotal}
-                          </TableCell>
-                          <TableCell className="px-6 py-3 text-right font-mono tabular-nums font-semibold">
-                            {inventoryCommon.currencyCompact(
-                              formatVND(totalAmount),
-                            )}
-                          </TableCell>
-                          <TableCell colSpan={2} />
-                        </TableRow>
-                        <TableRow className="border-border">
-                          <TableCell
-                            colSpan={3}
-                            className="px-6 py-3 text-right text-sm text-muted-foreground"
-                          >
-                            {FORM_VI.tax}
-                          </TableCell>
-                          <TableCell className="px-6 py-3 text-right font-mono tabular-nums">
-                            {inventoryCommon.currencyCompact(
-                              formatVND(taxAmount),
-                            )}
-                          </TableCell>
-                          <TableCell colSpan={2} />
-                        </TableRow>
-                        <TableRow className="border-border">
-                          <TableCell
-                            colSpan={3}
-                            className="px-6 py-3 text-right text-sm font-bold"
-                          >
-                            {FORM_VI.totalAmount}
-                          </TableCell>
-                          <TableCell className="px-6 py-3 text-right font-mono tabular-nums font-bold text-primary">
-                            {inventoryCommon.currencyCompact(
-                              formatVND(grandTotal),
-                            )}
-                          </TableCell>
-                          <TableCell colSpan={2} />
-                        </TableRow>
-                      </TableFooter>
-                    </Table>
+                            <IconPlus className="size-4" />
+                            {ACTIONS_VI.add}
+                          </Button>
+                        </form>
+                      ) : null}
+                    </AppSection>
                   </div>
 
-                  {canEditLines ? (
-                    <form
-                      onSubmit={handleAddLine}
-                      className="grid gap-3 border-t bg-muted/5 p-4 sm:grid-cols-2 lg:grid-cols-5"
+                  <div className="space-y-4">
+                    <AppSection
+                      title={poDetailCopy.summaryTitle}
+                      contentClassName="space-y-3 text-sm"
                     >
-                      <Combobox
-                        value={addIngredientId}
-                        onValueChange={handleAddIngredientChange}
-                        options={ingredients
-                          .filter((ingredient) => ingredient.is_active)
-                          .map((ingredient) => ({
-                            value: String(ingredient.id),
-                            label: ingredient.name,
-                            hint: ingredient.purchase_unit ?? ingredient.unit,
-                            keywords: [
-                              ingredient.sku ?? "",
-                              ingredient.category ?? "",
-                            ],
-                          }))}
-                        placeholder={poCopy.ingredientPlaceholder}
-                        searchPlaceholder={poCopy.ingredientSearchPlaceholder}
-                        triggerClassName="h-9 border-dashed"
-                      />
-                      <FormattedNumberInput
-                        value={addQty}
-                        onValueChange={setAddQty}
-                        maxFractionDigits={3}
-                        placeholder={poCopy.quantityShort}
-                        className="h-9"
-                        required
-                      />
-                      <Input
-                        value={addUnit}
-                        readOnly
-                        aria-readonly="true"
-                        placeholder={poCopy.unitShort}
-                        className="h-9"
-                        required
-                      />
-                      <FormattedNumberInput
-                        value={addPrice}
-                        onValueChange={setAddPrice}
-                        maxFractionDigits={0}
-                        placeholder={poCopy.pricePlaceholder}
-                        className="h-9"
-                      />
-                      <Button
-                        type="submit"
-                        disabled={isPending || !addIngredientId}
-                        className="h-9"
-                      >
-                        <IconPlus className="size-4" />
-                        {ACTIONS_VI.add}
-                      </Button>
-                    </form>
-                  ) : null}
-              </AppSection>
-            </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-muted-foreground">
+                          {poDetailCopy.itemCount}
+                        </span>
+                        <span className="font-semibold">{lines.length}</span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-muted-foreground">
+                          {poDetailCopy.goodsTotal}
+                        </span>
+                        <span className="font-semibold">
+                          {inventoryCommon.currencyCompact(
+                            formatVND(totalAmount),
+                          )}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-muted-foreground">
+                          {FORM_VI.tax}
+                        </span>
+                        <span className="font-semibold">
+                          {inventoryCommon.currencyCompact(
+                            formatVND(taxAmount),
+                          )}
+                        </span>
+                      </div>
+                      <div className="border-t border-border pt-3">
+                        <p className="text-muted-foreground">
+                          {FORM_VI.totalAmount}
+                        </p>
+                        <p className="mt-1 font-mono text-xl font-semibold tabular-nums text-primary">
+                          {inventoryCommon.currencyCompact(
+                            formatVND(grandTotal),
+                          )}
+                        </p>
+                      </div>
+                    </AppSection>
 
-            <div className="space-y-4">
-              <AppSection title={poDetailCopy.summaryTitle} contentClassName="space-y-3 text-sm">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-muted-foreground">
-                    {poDetailCopy.itemCount}
-                  </span>
-                  <span className="font-semibold">{lines.length}</span>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-muted-foreground">
-                    {poDetailCopy.goodsTotal}
-                  </span>
-                  <span className="font-semibold">
-                    {inventoryCommon.currencyCompact(formatVND(totalAmount))}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-muted-foreground">{FORM_VI.tax}</span>
-                  <span className="font-semibold">
-                    {inventoryCommon.currencyCompact(formatVND(taxAmount))}
-                  </span>
-                </div>
-                <div className="border-t border-border pt-3">
-                  <p className="text-muted-foreground">{FORM_VI.totalAmount}</p>
-                  <p className="mt-1 font-mono text-xl font-semibold tabular-nums text-primary">
-                    {inventoryCommon.currencyCompact(formatVND(grandTotal))}
-                  </p>
-                </div>
-              </AppSection>
-
-              <AppSection title={poDetailCopy.supplierInfoTitle}>
-                {supplierInfoAvailable ? (
-                  <div className="space-y-3 text-sm">
-                    <div>
-                      <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                        {poDetailCopy.invoiceAddress}
-                      </p>
-                      <p className="mt-1 break-words font-medium">
-                        {po.supplierInfo.address}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                        {poDetailCopy.contactPerson}
-                      </p>
-                      <p className="mt-1 font-medium">
-                        {po.supplierInfo.contact}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                        {poDetailCopy.paymentTerm}
-                      </p>
-                      <p className="mt-1 font-medium">
-                        {po.supplierInfo.payment}
-                      </p>
-                    </div>
+                    <AppSection title={poDetailCopy.supplierInfoTitle}>
+                      {supplierInfoAvailable ? (
+                        <div className="space-y-3 text-sm">
+                          <div>
+                            <p className="text-xs uppercase tracking-wider text-muted-foreground">
+                              {poDetailCopy.invoiceAddress}
+                            </p>
+                            <p className="mt-1 break-words font-medium">
+                              {po.supplierInfo.address}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs uppercase tracking-wider text-muted-foreground">
+                              {poDetailCopy.contactPerson}
+                            </p>
+                            <p className="mt-1 font-medium">
+                              {po.supplierInfo.contact}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs uppercase tracking-wider text-muted-foreground">
+                              {poDetailCopy.paymentTerm}
+                            </p>
+                            <p className="mt-1 font-medium">
+                              {po.supplierInfo.payment}
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-sm text-muted-foreground">
+                          {poDetailCopy.supplierInfoEmpty}
+                        </div>
+                      )}
+                    </AppSection>
                   </div>
-                ) : (
-                  <div className="text-sm text-muted-foreground">
-                    {poDetailCopy.supplierInfoEmpty}
-                  </div>
-                )}
-              </AppSection>
-            </div>
-          </div>
+                </div>
 
-          <AppDetailFooter
-            leading={
-              <Button
-                type="button"
-                variant="ghost"
-                disabled={isPending || !canCancelPo}
-                size="touch"
-                className="rounded-full px-6 font-bold text-destructive"
-                onClick={handleCancelPo}
-              >
-                <IconCircleX className="size-5" />
-                {poDetailCopy.cancelPo}
-              </Button>
-            }
-            trailing={
-              <Button
-                type="button"
-                disabled={isPending || (!canSendPo && !canCreateGrn)}
-                size="touch"
-                className="rounded-full px-10 font-bold shadow-lg"
-                onClick={canSendPo ? handleSendPo : handleCreateGrn}
-              >
-                <IconCircleCheck className="size-5" />
-                {canSendPo ? poDetailCopy.sendPo : poDetailCopy.createGrnStep}
-              </Button>
-            }
-          />
+                <AppDetailFooter
+                  leading={
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      disabled={isPending || !canCancelPo}
+                      size="touch"
+                      className="rounded-full px-6 font-bold text-destructive"
+                      onClick={handleCancelPo}
+                    >
+                      <IconCircleX className="size-5" />
+                      {poDetailCopy.cancelPo}
+                    </Button>
+                  }
+                  trailing={
+                    <Button
+                      type="button"
+                      disabled={isPending || (!canSendPo && !canCreateGrn)}
+                      size="touch"
+                      className="rounded-full px-10 font-bold shadow-lg"
+                      onClick={canSendPo ? handleSendPo : handleCreateGrn}
+                    >
+                      <IconCircleCheck className="size-5" />
+                      {canSendPo
+                        ? poDetailCopy.sendPo
+                        : poDetailCopy.createGrnStep}
+                    </Button>
+                  }
+                />
               </div>
             </TabsContent>
 
@@ -947,7 +1012,7 @@ function PoOverviewLinesPreview({
           ? poDetailCopy.overviewLinesPreviewHint(PO_PREVIEW_LIMIT)
           : undefined
       }
-      contentClassName="p-0"
+      contentFlush
     >
       <Table>
         <TableHeader>

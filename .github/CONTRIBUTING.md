@@ -52,12 +52,12 @@ For features, bugs, and refactors, `AGENTS.md` mandates running 4 specialist age
 
 Skip is allowed only for: typo <3 LOC, docs-only, dependency bump.
 
-| Role     | Asks                                       |
-|----------|--------------------------------------------|
-| PM       | scope, MVP, acceptance criteria            |
-| BA       | business rules, edge cases, data flow      |
-| Sr. Dev  | architecture, plan, risks, affected files  |
-| QA/QC    | test plan, regression risks, quality gates |
+| Role    | Asks                                       |
+| ------- | ------------------------------------------ |
+| PM      | scope, MVP, acceptance criteria            |
+| BA      | business rules, edge cases, data flow      |
+| Sr. Dev | architecture, plan, risks, affected files  |
+| QA/QC   | test plan, regression risks, quality gates |
 
 Full protocol: [`docs/agent/rules/workflow.md`](../docs/agent/rules/workflow.md).
 

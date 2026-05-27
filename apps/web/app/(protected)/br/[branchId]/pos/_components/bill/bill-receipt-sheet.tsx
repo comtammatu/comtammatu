@@ -286,7 +286,7 @@ function PaymentQrPlaceholder({
 }) {
   return (
     <Card className="mx-auto size-48 bg-muted/40 py-0">
-      <CardContent className="flex h-full items-center justify-center p-0">
+      <CardContent flush className="flex h-full items-center justify-center">
         <Icon className="size-10 text-muted-foreground" />
       </CardContent>
     </Card>

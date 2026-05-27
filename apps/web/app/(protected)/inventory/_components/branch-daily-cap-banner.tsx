@@ -48,7 +48,8 @@ export function BranchDailyCapBanner({
     <Alert
       variant={tone}
       className={cn(
-        !willExceed && "border-warning/40 bg-warning/10 text-warning-foreground",
+        !willExceed &&
+          "border-warning/40 bg-warning/10 text-warning-foreground",
         className,
       )}
       data-slot="branch-daily-cap-banner"
@@ -56,8 +57,8 @@ export function BranchDailyCapBanner({
       <IconAlertTriangle className="size-4" />
       <AlertDescription>
         <strong className="block">
-          Branch hôm nay: {formatVND(projected)} / {formatVND(branchCap)}{" "}
-          ({Math.round(pct * 100)}%)
+          Branch hôm nay: {formatVND(projected)} / {formatVND(branchCap)} (
+          {Math.round(pct * 100)}%)
         </strong>
         {willExceed
           ? "Đã vượt cap branch — mọi waste mới sẽ tự chuyển tier 2 (cần QLV duyệt). Cân nhắc báo QL trước khi submit."

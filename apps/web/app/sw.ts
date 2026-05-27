@@ -1,4 +1,8 @@
-import type { PrecacheEntry, RuntimeCaching, SerwistGlobalConfig } from "serwist";
+import type {
+  PrecacheEntry,
+  RuntimeCaching,
+  SerwistGlobalConfig,
+} from "serwist";
 import {
   CacheFirst,
   NetworkFirst,

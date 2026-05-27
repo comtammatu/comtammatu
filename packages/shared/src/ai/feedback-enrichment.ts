@@ -1,4 +1,8 @@
-import { createAnthropicClient, getFeedbackAiModel, calcLlmCostUsd } from "./anthropic-client";
+import {
+  createAnthropicClient,
+  getFeedbackAiModel,
+  calcLlmCostUsd,
+} from "./anthropic-client";
 import { FEEDBACK_CATEGORIES } from "../feedback/constants";
 import type { FeedbackCategory } from "../feedback/constants";
 
@@ -39,7 +43,12 @@ Phân tích phản hồi và trả về JSON với schema chính xác sau:
 Danh mục hợp lệ: ${FEEDBACK_CATEGORIES.join(", ")}`;
 
 function parseSeverity(raw: unknown): AiSeverity {
-  if (raw === "low" || raw === "medium" || raw === "high" || raw === "critical") {
+  if (
+    raw === "low" ||
+    raw === "medium" ||
+    raw === "high" ||
+    raw === "critical"
+  ) {
     return raw;
   }
   return "medium";
@@ -130,7 +139,11 @@ ${safeComment}
     };
   } catch (err) {
     // Non-fatal — return safe fallback so feedback row is not blocked
-    console.error("[enrichFeedback] error feedback_id=%d", input.feedback_id, err);
+    console.error(
+      "[enrichFeedback] error feedback_id=%d",
+      input.feedback_id,
+      err,
+    );
     return {
       categories: [],
       severity: "low",

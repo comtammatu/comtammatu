@@ -281,8 +281,7 @@ export async function fetchPosPermissionFlags(branchId: number): Promise<{
     canOpenShift: !openRes.error && openRes.data === true,
     canCloseShift: !closeRes.error && closeRes.data === true,
     canConfirmCash: !cashRes.error && cashRes.data === true,
-    canOverrideVariance:
-      !varianceRes.error && varianceRes.data === true,
+    canOverrideVariance: !varianceRes.error && varianceRes.data === true,
   };
 }
 
@@ -486,8 +485,9 @@ export async function closePosSession(
       printWarning = "Đã chốt ca. Không in được phiếu chốt — kiểm tra máy in.";
     }
   } else {
-    const skipReason = (printRes as { skipped?: boolean; reason?: string } | null)
-      ?.skipped
+    const skipReason = (
+      printRes as { skipped?: boolean; reason?: string } | null
+    )?.skipped
       ? (printRes as { reason?: string }).reason
       : undefined;
     if (skipReason === "no_printer") {

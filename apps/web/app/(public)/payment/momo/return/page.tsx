@@ -12,9 +12,7 @@ export default function MomoReturnPage() {
           <h1 className="font-heading text-2xl font-semibold tracking-normal">
             {copy.title}
           </h1>
-          <p className="text-sm text-muted-foreground">
-            {copy.description}
-          </p>
+          <p className="text-sm text-muted-foreground">{copy.description}</p>
         </div>
         <Button asChild variant="outline" size="lg">
           <Link href="/login">{copy.backToSystem}</Link>

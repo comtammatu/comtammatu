@@ -5,13 +5,13 @@
 
 ## Tóm tắt
 
-| Trường | Giá trị |
-| --- | --- |
-| **Vai trò** | Thu ngân, Quản lý chi nhánh |
-| **Quyền cần có** | `pos:close_shift` |
-| **Điều kiện trước** | Đã thanh toán hết các đơn `confirmed` (không còn đơn active) — khuyến nghị, không bắt buộc |
-| **Kết quả đúng** | `pos_sessions.status` = `closed`; `closing_cash` lưu số tiền mặt cuối ca; chênh lệch ghi vào audit; báo cáo end-of-shift sẵn sàng |
-| **Thời gian** | ~3-5 phút (tùy số lượng tiền mặt phải đếm) |
+| Trường              | Giá trị                                                                                                                           |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **Vai trò**         | Thu ngân, Quản lý chi nhánh                                                                                                       |
+| **Quyền cần có**    | `pos:close_shift`                                                                                                                 |
+| **Điều kiện trước** | Đã thanh toán hết các đơn `confirmed` (không còn đơn active) — khuyến nghị, không bắt buộc                                        |
+| **Kết quả đúng**    | `pos_sessions.status` = `closed`; `closing_cash` lưu số tiền mặt cuối ca; chênh lệch ghi vào audit; báo cáo end-of-shift sẵn sàng |
+| **Thời gian**       | ~3-5 phút (tùy số lượng tiền mặt phải đếm)                                                                                        |
 
 ## Khi nào dùng
 
@@ -58,6 +58,7 @@ URL: `/br/{branchId}/pos` (đang trong ca POS)
 4. Nhấn `Enter` để sang dòng tiếp (gõ nhanh hơn).
 
 **Ví dụ:**
+
 - Két có 1 tờ 500k + 3 tờ 100k + 5 tờ 20k → gõ `1` cho 500.000đ, `3` cho 100.000đ, `5` cho 20.000đ.
 - Tổng đếm được: 500.000 + 300.000 + 100.000 = **900.000đ**.
 
@@ -70,6 +71,7 @@ URL: `/br/{branchId}/pos` (đang trong ca POS)
 ![Bước 4 - Confirm](../mockups/pos-09/pos-09-step-04-confirm.png)
 
 > 📌 Ảnh minh họa Bước 1/2. Bước 2/2 (chưa chụp) hiện:
+>
 > - **Tiền đầu ca** (do bạn nhập khi mở ca, POS-01).
 > - **+ Tiền mặt thu trong ca** (tổng các đơn paid bằng tiền mặt).
 > - **= Tiền mặt dự kiến** (theo hệ thống).
@@ -149,10 +151,10 @@ Sau khi chốt → màn `/employee` → tap "Bán hàng POS" → mở ca mới (
 
 ### Code path
 
-- **Header button "Chốt ca":** [apps/web/app/(protected)/br/[branchId]/pos/pos-session-header.tsx](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/pos-session-header.tsx) — gated bởi `canCloseShift` (`pos:close_shift`).
-- **Close session sheet:** [apps/web/app/(protected)/br/[branchId]/pos/close-session-sheet.tsx](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/close-session-sheet.tsx) — lazy-loaded vì rare action (1-2 lần/ngày).
-- **Denomination input:** [apps/web/app/(protected)/br/[branchId]/pos/_components/close-session/denomination-input.tsx](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/_components/close-session/denomination-input.tsx).
-- **Server action:** `closePosSession` trong [apps/web/app/(protected)/br/[branchId]/pos/session-actions.ts](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/session-actions.ts) → calls Postgres RPC `close_pos_session`.
+- **Header button "Chốt ca":** [apps/web/app/(protected)/br/[branchId]/pos/pos-session-header.tsx](<../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/pos-session-header.tsx>) — gated bởi `canCloseShift` (`pos:close_shift`).
+- **Close session sheet:** [apps/web/app/(protected)/br/[branchId]/pos/close-session-sheet.tsx](<../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/close-session-sheet.tsx>) — lazy-loaded vì rare action (1-2 lần/ngày).
+- **Denomination input:** [apps/web/app/(protected)/br/[branchId]/pos/\_components/close-session/denomination-input.tsx](<../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/_components/close-session/denomination-input.tsx>).
+- **Server action:** `closePosSession` trong [apps/web/app/(protected)/br/[branchId]/pos/session-actions.ts](<../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/session-actions.ts>) → calls Postgres RPC `close_pos_session`.
 
 ### Database
 
@@ -173,17 +175,17 @@ Sau khi chốt → màn `/employee` → tap "Bán hàng POS" → mở ca mới (
 
 ### Tham chiếu thiết kế
 
-- Order lifecycle: [docs/archive/plan/m2-order-lifecycle.md](../../../archive/plan/m2-order-lifecycle.md)
+- Current POS scope: [tasks/todo.md](../../../../tasks/todo.md)
 - POS-01 (mở ca, đối ngược): [pos-01-open-session.md](pos-01-open-session.md)
 
 ---
 
 ## Metadata mockup
 
-| Trường | Giá trị |
-| --- | --- |
-| Viewport | 390×844 (iPhone mặc định) |
-| Capture script | [apps/web/e2e/guides/pos-09-close-session.guide.ts](../../../../apps/web/e2e/guides/pos-09-close-session.guide.ts) |
-| Lệnh refresh | `pnpm --filter @comtammatu/web guides:capture --grep="POS-09"` |
-| Cập nhật mockup gần nhất | 2026-04-27 |
-| Người maintain | _TBD_ |
+| Trường                   | Giá trị                                                                                                            |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| Viewport                 | 390×844 (iPhone mặc định)                                                                                          |
+| Capture script           | [apps/web/e2e/guides/pos-09-close-session.guide.ts](../../../../apps/web/e2e/guides/pos-09-close-session.guide.ts) |
+| Lệnh refresh             | `pnpm --filter @comtammatu/web guides:capture --grep="POS-09"`                                                     |
+| Cập nhật mockup gần nhất | 2026-04-27                                                                                                         |
+| Người maintain           | _TBD_                                                                                                              |

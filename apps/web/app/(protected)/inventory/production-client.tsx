@@ -81,32 +81,32 @@ export function ProductionHubClient({
           />
         }
       />
-        <ProductionStats
-          orders={orders}
-          readinessMessage={readinessMessage}
-          readinessState={readinessState}
-          centralKitchenCount={centralKitchenBranches.length}
-          finishedGoodCount={finishedGoods.length}
-          rawMaterialCount={rawMaterialCount}
-          recipeFinishedGoodCount={recipeFinishedGoodCount}
-          recipeLineCount={recipes.length}
-          canManageCatalog={canManageCatalog}
-          canManageRecipes={canManageRecipes}
-        />
+      <ProductionStats
+        orders={orders}
+        readinessMessage={readinessMessage}
+        readinessState={readinessState}
+        centralKitchenCount={centralKitchenBranches.length}
+        finishedGoodCount={finishedGoods.length}
+        rawMaterialCount={rawMaterialCount}
+        recipeFinishedGoodCount={recipeFinishedGoodCount}
+        recipeLineCount={recipes.length}
+        canManageCatalog={canManageCatalog}
+        canManageRecipes={canManageRecipes}
+      />
 
-        <ProductionOrderList
-          orders={orders}
-          canConfirmProduction={canConfirmProduction}
-          canAdjustStock={canAdjustStock}
-        />
+      <ProductionOrderList
+        orders={orders}
+        canConfirmProduction={canConfirmProduction}
+        canAdjustStock={canAdjustStock}
+      />
 
-        <ProductionRecipePanel
-          canManageCatalog={canManageCatalog}
-          canManageRecipes={canManageRecipes}
-          finishedGoods={finishedGoods}
-          ingredients={ingredients}
-          recipes={recipes}
-        />
+      <ProductionRecipePanel
+        canManageCatalog={canManageCatalog}
+        canManageRecipes={canManageRecipes}
+        finishedGoods={finishedGoods}
+        ingredients={ingredients}
+        recipes={recipes}
+      />
     </AppPage>
   );
 }

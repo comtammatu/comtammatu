@@ -47,11 +47,7 @@ export function NotificationBell({ tenantId }: Props) {
           ) : null}
         </Button>
       </PopoverTrigger>
-      <PopoverContent
-        align="end"
-        sideOffset={8}
-        className="w-90 p-0 sm:w-100"
-      >
+      <PopoverContent align="end" sideOffset={8} className="w-90 p-0 sm:w-100">
         <NotificationList
           items={items}
           unreadCount={unreadCount}

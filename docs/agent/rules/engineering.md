@@ -49,7 +49,7 @@ Next.js 16.2 | React 19.2 | TypeScript 6.0 | Tailwind 4.2 | Zod 4 | Turborepo 2.
 /admin/*              → Tenant-level management (manager+ roles)
 /br/[branchId]/pos    → POS (cashier/waiter)
 /br/[branchId]/kds    → KDS (chef)
-/employee             → Employee portal (all staff)
+/employee             → Employee task surface (all staff)
 /login                → Auth
 ```
 
@@ -88,4 +88,3 @@ context-graph serve --port 3333
 ```
 
 Use `rg` or `rg --files` for normal text and file searches when available.
-

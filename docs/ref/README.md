@@ -28,6 +28,8 @@ Tài liệu tham chiếu dài hạn cho repo này.
 - [third-party-integrations.md](third-party-integrations.md)
 - [competitive-analysis.md](competitive-analysis.md)
 
-## Historical References
+## Reference Hygiene
 
-- [../archive/ref/inventory-erp-gap-matrix.md](../archive/ref/inventory-erp-gap-matrix.md): historical ERP mapping; not a current source of truth.
+Retired reference packs are not retained here. Promote current business rules to
+the canonical files above, or remove the retired note instead of linking to a
+retired pack.

@@ -63,13 +63,13 @@ source-of-truth inputs.
 
 Generated checkout snapshot from 2026-05-27 (`node scripts/project-snapshot.mjs`):
 
-| Area | Count |
-| --- | ---: |
-| `apps/web/app/**/page.tsx` routes | 109 |
-| API route handlers | 13 |
-| Generated DB tables / views / functions / enums | 116 / 9 / 241 / 0 |
-| SQL migration files | 366 |
-| Test/spec files under `apps/web/e2e` + `packages/shared/src` | 40 |
+| Area                                                         |             Count |
+| ------------------------------------------------------------ | ----------------: |
+| `apps/web/app/**/page.tsx` routes                            |               109 |
+| API route handlers                                           |                13 |
+| Generated DB tables / views / functions / enums              | 116 / 9 / 241 / 0 |
+| SQL migration files                                          |               366 |
+| Test/spec files under `apps/web/e2e` + `packages/shared/src` |                40 |
 
 The repo is not a flat "apps/packages" map. The operational shape is:
 
@@ -213,10 +213,10 @@ sequenceDiagram
 
 ## Critical Unknowns
 
-| #   | Unknown                                                                                                                                                  | Verification Step                                                  | Impact                                              |
-| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | --------------------------------------------------- |
-| 1   | area_manager has tenant-wide access (no area scoping table)                                                                                              | Deferred — tracked as item **H3** in `tasks/todo.md` "Deferred to post-pilot" | May need migration later                            |
-| 2   | Test coverage exists but is still concentrated: current checkout has 40 test/spec files, including 9 Playwright specs, with gaps around full POS→payment→stock→print→HĐĐT smoke and live provider behavior | Expand route smoke + end-to-end pilot runbooks before scale | Refactor regressions possible on uncovered surfaces |
+| #   | Unknown                                                                                                                                                                                                    | Verification Step                                                             | Impact                                              |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | --------------------------------------------------- |
+| 1   | area_manager has tenant-wide access (no area scoping table)                                                                                                                                                | Deferred — tracked as item **H3** in `tasks/todo.md` "Deferred to post-pilot" | May need migration later                            |
+| 2   | Test coverage exists but is still concentrated: current checkout has 40 test/spec files, including 9 Playwright specs, with gaps around full POS→payment→stock→print→HĐĐT smoke and live provider behavior | Expand route smoke + end-to-end pilot runbooks before scale                   | Refactor regressions possible on uncovered surfaces |
 
 ## Priority Recommendations
 

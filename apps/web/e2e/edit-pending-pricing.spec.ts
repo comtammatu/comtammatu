@@ -118,12 +118,9 @@ test.describe("Edit pending order item — pricing recompute", () => {
   // wiring. When that lands, copy this spec and replace the qty bump with
   // a modifier toggle in the customizer; assert unit_price reflects
   // base + variant + modifier + side per migration 20260518000000.
-  test.fixme(
-    "changing modifiers recomputes unit_price from canonical menu prices",
-    async () => {
-      // Pending menu_item_modifiers fixture — see helpers/supabase.ts TODO.
-    },
-  );
+  test.fixme("changing modifiers recomputes unit_price from canonical menu prices", async () => {
+    // Pending menu_item_modifiers fixture — see helpers/supabase.ts TODO.
+  });
 });
 
 async function resolveOrderItemId(orderId: number): Promise<number> {

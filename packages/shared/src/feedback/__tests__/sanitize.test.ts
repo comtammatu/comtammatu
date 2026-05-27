@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { sanitizeComment, isCommentLengthValid } from "../sanitize";
 
-test('sanitizeComment strips script tags', () => {
+test("sanitizeComment strips script tags", () => {
   assert.equal(sanitizeComment("<script>alert(1)</script>"), "alert(1)");
 });
 

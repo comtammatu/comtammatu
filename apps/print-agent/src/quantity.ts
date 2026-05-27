@@ -14,5 +14,7 @@ export function sideTotalQuantity(
   sideQuantity: QuantityValue,
   parentQuantity: QuantityValue,
 ): number {
-  return positiveQuantity(sideQuantity, 1) * positiveQuantity(parentQuantity, 0);
+  return (
+    positiveQuantity(sideQuantity, 1) * positiveQuantity(parentQuantity, 0)
+  );
 }

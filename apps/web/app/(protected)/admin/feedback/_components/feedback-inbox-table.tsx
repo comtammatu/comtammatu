@@ -114,9 +114,7 @@ const dataColumns = [
   }),
   columnHelper.accessor("branch_name", {
     header: "Chi nhánh",
-    cell: (info) => (
-      <span className="text-sm">{info.getValue() ?? "—"}</span>
-    ),
+    cell: (info) => <span className="text-sm">{info.getValue() ?? "—"}</span>,
     size: 120,
   }),
   columnHelper.accessor("qr_label", {
@@ -134,7 +132,10 @@ const dataColumns = [
       const sev = info.getValue();
       if (!sev) return null;
       return (
-        <Badge variant={SEVERITY_VARIANT[sev] ?? "secondary"} className="text-xs">
+        <Badge
+          variant={SEVERITY_VARIANT[sev] ?? "secondary"}
+          className="text-xs"
+        >
           {SEVERITY_LABEL[sev] ?? sev}
         </Badge>
       );
@@ -187,7 +188,8 @@ function FeedbackDetailDrawer({
       <DrawerContent>
         <DrawerHeader className="flex items-center justify-between">
           <DrawerTitle>
-            {RATING_EMOJI[feedback.rating] ?? feedback.rating} Phản hồi #{feedback.id}
+            {RATING_EMOJI[feedback.rating] ?? feedback.rating} Phản hồi #
+            {feedback.id}
           </DrawerTitle>
           <DrawerClose asChild>
             <Button variant="ghost" size="sm">
@@ -230,7 +232,9 @@ function FeedbackDetailDrawer({
               <p className="text-sm font-medium">Phân tích AI</p>
               <div className="flex flex-wrap gap-2">
                 <Badge
-                  variant={SEVERITY_VARIANT[feedback.ai_severity] ?? "secondary"}
+                  variant={
+                    SEVERITY_VARIANT[feedback.ai_severity] ?? "secondary"
+                  }
                 >
                   {SEVERITY_LABEL[feedback.ai_severity] ?? feedback.ai_severity}
                 </Badge>
@@ -386,7 +390,13 @@ export function FeedbackInboxTable({ feedbacks }: FeedbackInboxTableProps) {
                 {/* Checkbox header */}
                 <TableHead style={{ width: 40 }}>
                   <Checkbox
-                    checked={allPageChecked ? true : somePageChecked ? "indeterminate" : false}
+                    checked={
+                      allPageChecked
+                        ? true
+                        : somePageChecked
+                          ? "indeterminate"
+                          : false
+                    }
                     onCheckedChange={toggleAll}
                     aria-label="Chọn tất cả trang hiện tại"
                   />

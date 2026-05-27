@@ -127,7 +127,7 @@ function OrderCardComponent({
         bgClass={ageStyle.bg}
       />
 
-      <CardContent className="divide-y divide-border/30 p-0">
+      <CardContent flush className="divide-y divide-border/30">
         {order.items.map((item) => (
           <TicketRow
             key={item.id}

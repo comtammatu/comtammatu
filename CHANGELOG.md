@@ -9,10 +9,12 @@ All notable changes to this project will be documented in this file.
 GitHub-native static analysis security testing (CodeQL on every push, PR, and weekly schedule with the `security-extended` query suite) plus a contributor guide aligning external contributors with `CLAUDE.md` quality gates and the 4-agent debate workflow. No source-code change. Long-form notes: `docs/releases/1.2.0.5.md`.
 
 ### Added
+
 - **`.github/workflows/codeql.yml`** — CodeQL Action v3 pinned to commit SHA `7fd177fa…` (matches `ci.yml` action-pinning convention). Languages: `javascript-typescript`. `security-events: write` permission scoped to this workflow only. Triggers: push to `main`, pull_request to `main`, weekly cron `0 3 * * 1` UTC. Concurrency group cancels stale runs.
 - **`.github/CONTRIBUTING.md`** — Vietnamese + English contributor guide. References `CLAUDE.md` as canonical, lists mandatory gates (`pnpm typecheck && pnpm lint && pnpm build`), documents the 4-agent debate workflow, points security disclosures at `SECURITY.md` (no public-issue rule), explicit no-`Co-Authored-By: Claude` trailer rule.
 
 ### Owner action required
+
 None for this release. The CodeQL workflow runs automatically on the next push to `main` (this release commit triggers the first run). The "Security" tab populates with findings (if any) within ~10 minutes of the first scan completing. The carry-over `1.2.0.1` + `1.2.0.2` alias-promotion blocker is unchanged.
 
 ## [1.2.0.4] - 2026-05-09
@@ -22,10 +24,12 @@ None for this release. The CodeQL workflow runs automatically on the next push t
 Two new files under `.github/`: a GitHub-native Security policy (so the repo surfaces a "Security" tab pointing at our existing RFC 9116 `security.txt`) and a Dependabot configuration for monthly bundled dependency audits across pnpm + GitHub Actions. No source-code change. Long-form notes: `docs/releases/1.2.0.4.md`.
 
 ### Added
+
 - **`.github/SECURITY.md`** — Vietnamese + English security policy. Reporting flow, response SLOs (5 business days for ack, 7-90 days fix depending on severity), Supported Versions table (1.2.x supported), in-scope / out-of-scope listing, safe-harbor clause, links to existing `apps/web/public/.well-known/security.txt`.
 - **`.github/dependabot.yml`** — `version: 2`. Two ecosystems: `npm` (root pnpm workspace, monthly Monday 08:00 ICT, max 5 PRs, grouped into `production-dependencies` + `dev-dependencies`, semver-major bumps ignored) and `github-actions` (monthly, max 3 PRs). Both auto-assign `comtammatu` and label PRs `dependencies`.
 
 ### Owner action required
+
 None for this release. GitHub picks up `.github/SECURITY.md` and `.github/dependabot.yml` on the next default-branch read — no Vercel promotion needed (artifacts are GitHub-side, not deployed to `app.comtammatu.com`). The carry-over `1.2.0.1` + `1.2.0.2` alias-promotion blocker remains.
 
 ## [1.2.0.3] - 2026-05-09
@@ -35,12 +39,14 @@ None for this release. GitHub picks up `.github/SECURITY.md` and `.github/depend
 Four new files under `.github/` aligning the repo with standard GitHub conventions. No source-code change. Long-form notes: `docs/releases/1.2.0.3.md`.
 
 ### Added
+
 - **`.github/CODEOWNERS`** — `* @comtammatu` (single-tenant CTCP fallback). Path-specific overrides go above this rule when the team grows.
 - **`.github/pull_request_template.md`** — checklist mirroring CLAUDE.md gates: typecheck/lint/build/tests, regression rule maintenance, no `Co-Authored-By: Claude` trailer, owner-action callout.
 - **`.github/ISSUE_TEMPLATE/bug_report.md`** — repro / expected / actual / environment / severity, with maintainer-side triage section.
 - **`.github/ISSUE_TEMPLATE/feature_request.md`** — problem / proposal / acceptance criteria / risk surface / explicit out-of-scope.
 
 ### Owner action required
+
 None for this release. The `.github/` files take effect on the next PR / issue immediately on merge — no Vercel promotion needed because the artifacts are GitHub-side, not deployed to `app.comtammatu.com`. The carry-over `1.2.0.1` + `1.2.0.2` alias-promotion blocker is unchanged.
 
 ## [1.2.0.2] - 2026-05-09
@@ -50,10 +56,12 @@ None for this release. The `.github/` files take effect on the next PR / issue i
 Two thin static-asset additions. No behavior change for end users; both target external crawlers and security researchers. Long-form notes: `docs/releases/1.2.0.2.md`.
 
 ### Added
+
 - **`apps/web/app/robots.ts`** — Next.js MetadataRoute generator. `User-agent: *` disallow for `/r/`, `/admin/`, `/api/`, `/login`, `/access-denied`, `/employee/`, `/br/`, `/notifications`, `/orders`, `/menu`, `/inventory/`, `/payment/`. Keeps crawlers out of `/r/<token>` deep links (tokens rotate; indexed URLs go dead).
 - **`apps/web/public/.well-known/security.txt`** (RFC 9116) — vulnerability-disclosure contact, valid through 2027-05-09. `Contact: mailto:comtammatu@gmail.com`, `Preferred-Languages: vi, en`.
 
 ### Owner action required
+
 Same alias-promotion blocker as 1.2.0.1: the new files are NOT served by `app.comtammatu.com` until the Vercel alias is promoted to a build ≥ this commit.
 
 ## [1.2.0.1] - 2026-05-09
@@ -63,10 +71,12 @@ Same alias-promotion blocker as 1.2.0.1: the new files are NOT served by `app.co
 Three Ralph cycles, 18 atomic commits, all CI green, architect-APPROVED. Closes 9 of the 16 known issues from the 2026-05-07 `/qa` pass plus 3 architect follow-ups. Long-form notes: `docs/releases/1.2.0.1.md`.
 
 ### Added
+
 - **CSP + 4 OWASP headers + HSTS preload** in `apps/web/next.config.ts` headers() for `/:path*` (`610123c8`, `9f9f424d`). `poweredByHeader: false`.
 - **`?only_suspect=true`** triage filter on `/admin/feedback` (`ee71d005` — ISSUE-009).
 
 ### Fixed
+
 - **`ALLOWED_ORIGINS_FEEDBACK` fail-closed** in production when env is empty (`8e713af8` — ISSUE-001).
 - **`/r/[token]/thank-you` 404s** for invalid/inactive tokens (`939be3d9` — ISSUE-013, phishing-vector close).
 - **`after()` from `next/server`** replaces fire-and-forget `void fetch()` for telegram-flush + AI enrich; serverless tear-down no longer cancels the work mid-flight (`79a30bb7` — ISSUE-003). `console.warn` on rejection added (`2dbae2c5` — architect follow-up #3).
@@ -75,21 +85,25 @@ Three Ralph cycles, 18 atomic commits, all CI green, architect-APPROVED. Closes 
 - **Honeypot logging** at INFO level (`79a30bb7` — ISSUE-007).
 
 ### Security
+
 - **3-layer CSRF defense** doc + warn-once log when allowlist is unset in production (`79a30bb7` — ISSUE-015).
 - **`x-powered-by: Next.js`** disclosure removed (`610123c8` — ISSUE-014).
 
 ### Tests (143 → 147)
+
 - **Regression test** for sanitize-stripped vs typed-too-few error messages (`815c904f`).
 - **3 source-text regression tests** in `packages/shared/src/feedback/__tests__/regressions.test.ts` locking the cycle 1 guards (`fc832e25`).
 - **Tightened thank-you guard regex** (`4543fab1` — architect follow-up #2).
 - **Source-text regression test** for next.config.ts security headers + HSTS preload (`60543ab8`).
 
 ### Docs
+
 - **4 named regression rules** added to `tasks/regressions.md`: SECURITY-HEADERS-IN-NEXT-CONFIG, FEEDBACK-THANK-YOU-MUST-NOTFOUND-INVALID, FEEDBACK-AFTER-NOT-FIRE-AND-FORGET, FEEDBACK-PHOTO-PATHS-CONDITIONAL-UPDATE (`042c908d`, extended in `4c148803`).
 - **Deslop pass** on the cycle's changed files (`f0ab5191`).
 - `tasks/todo.md` updated to mark ISSUE-001/003/007/008/009/012/013/014/015/016 shipped (`c61db730`, `35aca5f8`).
 
 ### Owner action required (the 18 commits are NOT user-visible until these land)
+
 1. **Promote any commit ≥ `610123c8` to the `app.comtammatu.com` Vercel alias** via the Vercel dashboard. Until promoted, the alias still serves `dpl_4VMrXTgUSjybiTyEoj5QnKmnv6gN` (pre-1.2.0.0) and none of these fixes ship to users.
 2. **Confirm 6 prod env vars on Vercel**: `TELEGRAM_BOT_TOKEN`, `CRON_SECRET`, `ALLOWED_ORIGINS_FEEDBACK` (now fail-closed), `IP_HASH_SALT`, `NEXT_PUBLIC_APP_URL`, `ANTHROPIC_API_KEY`. Empty `ALLOWED_ORIGINS_FEEDBACK` will return 403 on every public-feedback submit in production.
 3. **Audit HTTP-only subdomains** of `*.comtammatu.com` BEFORE submitting to the Chrome/Firefox HSTS preload list — `includeSubDomains; preload` is hard to undo.
@@ -112,12 +126,15 @@ First public release of the customer-feedback module. Customers scan QR → subm
 - **PHI safety** — `feedbacks_with_masked_phone` view with `security_invoker=true`, raw phone never logged, IP hash exposed only as `has_ip_hash` boolean
 
 ### Required env vars
+
 `TELEGRAM_BOT_TOKEN`, `CRON_SECRET`, `ALLOWED_ORIGINS_FEEDBACK`, `IP_HASH_SALT`, `NEXT_PUBLIC_APP_URL`, `ANTHROPIC_API_KEY`
 
 ### Known issues (16 total — see `docs/releases/1.2.0.0.md` and `tasks/todo.md`)
+
 2 HIGH (origin-check bypass when env empty, missing security headers), 4 MEDIUM (photo IDOR, Vercel fire-and-forget, photo RLS branch gap, thank-you bypass), 6 LOW, 4 INFO. QA report: `.gstack/qa-reports/qa-report-feedback-module-2026-05-07.md` (health score 63.5/100, architect-verified).
 
 ### Pending owner steps post-release
+
 1. Verify 13 migrations applied to production (per CLAUDE.md production migration policy: file → PR → merge → owner manual apply)
 2. Set 6 env vars in Vercel (above)
 3. Smoke test 1 QR end-to-end — scan, submit ≤3★, verify Telegram alert arrives within 90s
@@ -130,6 +147,7 @@ Full release notes: `docs/releases/1.2.0.0.md`. Other shipped work on `main` sin
 ## [Unreleased] — m4-payments-fix slice 2 (deep RPCs, 2026-04-30)
 
 ### Added
+
 - **`reverse_payment_and_post(p_refund_id)` atomic RPC** — locks refund→payment→order, posts a balanced GL reversal journal (Dr `5111` / Cr `1111` cash or Cr `1121` bank), restores stock when consumption happened, flips `payments.status='refunded'` + `orders.payment_status='refunded'`, stamps `refund.approved_at/by`, writes one `audit_logs` row. Idempotent on already-approved refunds. Gated by `orders:refund_approve`. (Migration `20260510020000`.)
 - **`restore_stock_for_order(p_order_id, p_actor_id)` internal helper** — walks order_items × recipes, INSERTs positive stock_movements with `type='refund_restore'`. REVOKEd from `authenticated`; only callable from SECURITY DEFINER paths. (Migration `20260510020000`.)
 - **`create_refund(p_payment_id, p_amount, p_reason)` RPC** — replaces direct INSERT in `refund-actions.ts`. Validates `payment.status='completed'` (the missing precondition), enforces `sum(pending+approved refunds) ≤ payment.amount`, writes audit row. (Migration `20260510030000`.)
@@ -139,6 +157,7 @@ Full release notes: `docs/releases/1.2.0.0.md`. Other shipped work on `main` sin
 ## [Unreleased] — m4-payments-fix foundation + D011 v2 no-wait pieces (2026-04-29)
 
 ### Added
+
 - **`webhook_events` table** with `UNIQUE (provider, request_id)` for payment-webhook idempotency. RLS allows `finance:view` SELECT; INSERT only via service_role webhook handlers. (Branch `m4-payments-fix`.)
 - **`refunds.approved_at TIMESTAMPTZ`** column populated by the upcoming `reverse_payment_and_post` RPC.
 - **`payments.stock_consumed_status TEXT`** column (nullable until recompute migration adds CHECK) — replaces the boolean `stock_consumed` return signal with a queryable status enum (`ok | out_of_stock | recipe_missing | internal_error`).
@@ -159,6 +178,7 @@ Full release notes: `docs/releases/1.2.0.0.md`. Other shipped work on `main` sin
   - `REFUND-MUST-REVERSE-ATOMICALLY`
 
 ### Pending (next slice — WAITING owner apply migrations + `pnpm db:types`)
+
 - `reverse_payment_and_post(p_refund_id)` atomic RPC + `restore_stock_for_order` helper (m4 P0-1)
 - `create_refund` RPC with `payment.status='completed'` precondition + `area_manager` scope check (m4 P0-5)
 - `payment_recompute_total` migration rewriting `confirm_cash_payment` + `complete_payment_and_consume_stock` to add server-side total recompute and `stock_consumed_status` enum return (m4 P0-3 + P0-4)
@@ -169,6 +189,7 @@ Full release notes: `docs/releases/1.2.0.0.md`. Other shipped work on `main` sin
 ## [1.1.0.0] - 2026-04-15
 
 ### Added
+
 - GL auto-posting engine: every business transaction now creates balanced journal entries automatically
 - `posting_rules` table with 16 VAS-standard rules configurable per tenant
 - `auto_post_journal()` core RPC called from all business-event RPCs
@@ -188,6 +209,7 @@ Full release notes: `docs/releases/1.2.0.0.md`. Other shipped work on `main` sin
 - Implicit subledger FK (`journal_entry_id`) on payments, GRN, invoices, payroll, transfers, production
 
 ### Changed
+
 - `create_payment()` RPC now auto-posts GL journal on cash payment completion
 - `confirm_goods_receipt_note()` RPC now auto-posts GL journal on GRN confirmation
 - `stock_transfer_receive()` RPC now auto-posts GL journal on transfer receive
@@ -196,4 +218,5 @@ Full release notes: `docs/releases/1.2.0.0.md`. Other shipped work on `main` sin
 - `approvePayroll` server action now calls `post_payroll_journal` on approval
 
 ### Removed
+
 - Inventory design mockup files (`inventory/trang_*/`) — implementations live in `apps/web/app/inventory/`

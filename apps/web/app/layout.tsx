@@ -22,7 +22,7 @@ const fontSans = Inter({
 
 const fontHeading = Montserrat({
   subsets: ["latin", "latin-ext", "vietnamese"],
-  variable: "--font-matu-heading",
+  variable: "--font-heading-runtime",
   display: "swap",
 });
 
@@ -43,7 +43,11 @@ export const metadata: Metadata = {
       { url: "/icons/favicon-16x16.png", sizes: "16x16", type: "image/png" },
     ],
     apple: [
-      { url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+      {
+        url: "/icons/apple-touch-icon.png",
+        sizes: "180x180",
+        type: "image/png",
+      },
     ],
   },
   appleWebApp: {

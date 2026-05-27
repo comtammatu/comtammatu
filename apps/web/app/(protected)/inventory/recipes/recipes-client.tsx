@@ -122,72 +122,70 @@ export function RecipesClient({
 
       <div className="space-y-4">
         {recipes.map((recipe) => (
-              <Card key={recipe.id} className="overflow-hidden">
-                <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <CardTitle>{recipe.name}</CardTitle>
-                    {recipe.category && (
-                      <Badge variant="success">{recipe.category}</Badge>
-                    )}
-                    <span className="text-sm text-muted-foreground">
-                      {recipe.items.length} nguyên liệu •{" "}
-                      {formatVND(recipe.estimatedCost)} đ/phần
-                    </span>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => openEdit(recipe)}
-                  >
-                    <IconPencil className="size-4" />
-                    Sửa định mức
-                  </Button>
-                </CardHeader>
-                <CardContent flush>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>{PRODUCT_VI.rawIngredient}</TableHead>
-                        <TableHead>{FORM_VI.quantity}</TableHead>
-                        <TableHead>{FORM_VI.unit}</TableHead>
-                        <TableHead className="text-center">Yield</TableHead>
-                        <TableHead>{FORM_VI.notes}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {recipe.items.map((item) => (
-                        <TableRow key={item.ingredientId}>
-                          <TableCell>
-                            <div className="flex items-center gap-3">
-                              <div className="size-2 rounded-full bg-primary/40" />
-                              <span className="font-semibold">
-                                {item.ingredientName}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="font-mono">
-                            {item.qty}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {item.unit}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <YieldBadge value={item.yieldFactor} />
-                          </TableCell>
-                          <TableCell className="max-w-xs text-xs italic text-muted-foreground">
-                            <span className="line-clamp-2 break-words">
-                              {item.note ?? "—"}
-                            </span>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <Card key={recipe.id} className="overflow-hidden">
+            <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex flex-wrap items-center gap-2">
+                <CardTitle>{recipe.name}</CardTitle>
+                {recipe.category && (
+                  <Badge variant="success">{recipe.category}</Badge>
+                )}
+                <span className="text-sm text-muted-foreground">
+                  {recipe.items.length} nguyên liệu •{" "}
+                  {formatVND(recipe.estimatedCost)} đ/phần
+                </span>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => openEdit(recipe)}
+              >
+                <IconPencil className="size-4" />
+                Sửa định mức
+              </Button>
+            </CardHeader>
+            <CardContent flush>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{PRODUCT_VI.rawIngredient}</TableHead>
+                    <TableHead>{FORM_VI.quantity}</TableHead>
+                    <TableHead>{FORM_VI.unit}</TableHead>
+                    <TableHead className="text-center">Yield</TableHead>
+                    <TableHead>{FORM_VI.notes}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {recipe.items.map((item) => (
+                    <TableRow key={item.ingredientId}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <div className="size-2 rounded-full bg-primary/40" />
+                          <span className="font-semibold">
+                            {item.ingredientName}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-mono">{item.qty}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {item.unit}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <YieldBadge value={item.yieldFactor} />
+                      </TableCell>
+                      <TableCell className="max-w-xs text-xs italic text-muted-foreground">
+                        <span className="line-clamp-2 break-words">
+                          {item.note ?? "—"}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
 
       <RecipeLineDialog
         open={dialogOpen}

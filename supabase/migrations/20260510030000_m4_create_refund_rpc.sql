@@ -18,7 +18,7 @@
 --
 -- Enforces regression rule REFUND-MUST-CHECK-PAYMENT-COMPLETED.
 --
--- Refs: docs/plan/m4-payments-fix.md §3, tasks/regressions.md.
+-- Refs: tasks/regressions.md REFUND-MUST-CHECK-PAYMENT-COMPLETED.
 -- =============================================================
 
 CREATE OR REPLACE FUNCTION public.create_refund(

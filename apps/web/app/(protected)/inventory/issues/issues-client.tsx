@@ -333,115 +333,115 @@ export function IssuesClient({
           </>
         }
       />
-        {filterBar}
+      {filterBar}
 
-        {/* Desktop: Table / Mobile: Cards */}
-        {isMobile ? (
-          <div className="flex flex-col gap-2">
-            {filtered.length === 0 ? (
-              <Empty className="py-8">
-                <EmptyHeader>
-                  <EmptyTitle className="text-sm font-semibold">
-                    {hasActiveFilters
-                      ? "Không tìm thấy phiếu xuất phù hợp"
-                      : "Chưa có phiếu xuất kho nào"}
-                  </EmptyTitle>
-                </EmptyHeader>
-              </Empty>
-            ) : (
-              filtered.map((item) => (
-                <InteractiveCard
-                  key={item.id}
-                  asChild
-                  minHeight="mobile"
-                  padding="default"
-                >
-                  <Link href={`/inventory/issues/${item.id}`} className="block">
-                    <div className="min-w-0 flex-1 space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-sm font-semibold">
-                          {item.code}
-                        </span>
-                        <StatusBadge status={item.status} size="sm" />
-                      </div>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {item.branchName}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {issueTypeLabel(item.type, item.branchKind)} &middot;{" "}
-                        {item.date}
-                      </p>
+      {/* Desktop: Table / Mobile: Cards */}
+      {isMobile ? (
+        <div className="flex flex-col gap-2">
+          {filtered.length === 0 ? (
+            <Empty className="py-8">
+              <EmptyHeader>
+                <EmptyTitle className="text-sm font-semibold">
+                  {hasActiveFilters
+                    ? "Không tìm thấy phiếu xuất phù hợp"
+                    : "Chưa có phiếu xuất kho nào"}
+                </EmptyTitle>
+              </EmptyHeader>
+            </Empty>
+          ) : (
+            filtered.map((item) => (
+              <InteractiveCard
+                key={item.id}
+                asChild
+                minHeight="mobile"
+                padding="default"
+              >
+                <Link href={`/inventory/issues/${item.id}`} className="block">
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-sm font-semibold">
+                        {item.code}
+                      </span>
+                      <StatusBadge status={item.status} size="sm" />
                     </div>
-                    <IconArrowRight className="size-4 shrink-0 text-muted-foreground" />
-                  </Link>
-                </InteractiveCard>
-              ))
-            )}
-          </div>
-        ) : (
-          <Card>
-            <CardContent flush>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Mã phiếu</TableHead>
-                    <TableHead>Loại xuất</TableHead>
-                    <TableHead>{BRANCH_VI.long}</TableHead>
-                    <TableHead>Ngày tạo</TableHead>
-                    <TableHead>{FORM_VI.status}</TableHead>
-                    <TableHead className="w-10" />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filtered.length === 0 && (
-                    <TableEmptyStateRow
-                      colSpan={6}
-                      title={
-                        hasActiveFilters
-                          ? "Không tìm thấy phiếu xuất phù hợp"
-                          : "Chưa có phiếu xuất kho nào"
-                      }
-                      description="Điều chỉnh bộ lọc hoặc tạo phiếu xuất mới để bắt đầu."
-                    />
-                  )}
-                  {filtered.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell>
-                        <Link
-                          href={`/inventory/issues/${item.id}`}
-                          className="text-sm font-semibold text-primary hover:underline"
-                        >
-                          {item.code}
+                    <p className="truncate text-xs text-muted-foreground">
+                      {item.branchName}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {issueTypeLabel(item.type, item.branchKind)} &middot;{" "}
+                      {item.date}
+                    </p>
+                  </div>
+                  <IconArrowRight className="size-4 shrink-0 text-muted-foreground" />
+                </Link>
+              </InteractiveCard>
+            ))
+          )}
+        </div>
+      ) : (
+        <Card>
+          <CardContent flush>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Mã phiếu</TableHead>
+                  <TableHead>Loại xuất</TableHead>
+                  <TableHead>{BRANCH_VI.long}</TableHead>
+                  <TableHead>Ngày tạo</TableHead>
+                  <TableHead>{FORM_VI.status}</TableHead>
+                  <TableHead className="w-10" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.length === 0 && (
+                  <TableEmptyStateRow
+                    colSpan={6}
+                    title={
+                      hasActiveFilters
+                        ? "Không tìm thấy phiếu xuất phù hợp"
+                        : "Chưa có phiếu xuất kho nào"
+                    }
+                    description="Điều chỉnh bộ lọc hoặc tạo phiếu xuất mới để bắt đầu."
+                  />
+                )}
+                {filtered.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell>
+                      <Link
+                        href={`/inventory/issues/${item.id}`}
+                        className="text-sm font-semibold text-primary hover:underline"
+                      >
+                        {item.code}
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm font-medium">
+                        {issueTypeLabel(item.type, item.branchKind)}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {item.branchName}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {item.date}
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge status={item.status} size="sm" />
+                    </TableCell>
+                    <TableCell>
+                      <Button variant="ghost" size="icon-sm" asChild>
+                        <Link href={`/inventory/issues/${item.id}`}>
+                          <IconDotsVertical className="size-4" />
                         </Link>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm font-medium">
-                          {issueTypeLabel(item.type, item.branchKind)}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {item.branchName}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {item.date}
-                      </TableCell>
-                      <TableCell>
-                        <StatusBadge status={item.status} size="sm" />
-                      </TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="icon-sm" asChild>
-                          <Link href={`/inventory/issues/${item.id}`}>
-                            <IconDotsVertical className="size-4" />
-                          </Link>
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        )}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
 
       <Dialog
         open={createOpen}

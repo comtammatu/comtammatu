@@ -20,7 +20,7 @@
 --   [30, 100)% -> tier 2 (note + override code)
 --   [100,inf)% -> tier 3 (hard block)
 --
--- Spec:       docs/plan/inventory-redesign.md §Q3 + §Q6
+-- Current docs: docs/ref/inventory.md + docs/ref/inventory-sop.md
 -- Regression: tasks/regressions.md BASELINE-SAMPLE-MIN
 -- =============================================================
 

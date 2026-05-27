@@ -29,6 +29,7 @@ import {
   getKdsOrderLabelOverride,
   groupKdsOrdersByColumn,
 } from "../lib/order-columns";
+import { getKdsOrderDisplayStatus } from "../lib/order-status";
 import {
   getStatusLabel,
   getStatusVariant,
@@ -54,20 +55,6 @@ interface OrderGridProps {
   onRecall: (ticketId: number) => Promise<void>;
   onOutOfStock: (ticketId: number) => Promise<void>;
   onCompleteTickets: (ticketIds: number[]) => Promise<void>;
-}
-
-function getOverallStatus(order: KdsOrder): string {
-  const statuses = order.tickets.map((ticket) => ticket.status);
-  if (
-    statuses.length > 0 &&
-    statuses.every((status) => status === "cancelled")
-  ) {
-    return "cancelled";
-  }
-  if (statuses.some((status) => status === "preparing")) return "preparing";
-  if (statuses.some((status) => status === "pending")) return "pending";
-  if (statuses.some((status) => status === "ready")) return "ready";
-  return "pending";
 }
 
 function getOrderElapsedMinutes(order: KdsOrder, now: number): number {
@@ -341,6 +328,7 @@ function HeatmapCard({
   onRecall,
   onOutOfStock,
   onCompleteTickets,
+  isCurrent,
 }: {
   order: KdsOrder;
   pendingTicketIds: Set<number>;
@@ -349,15 +337,17 @@ function HeatmapCard({
   onRecall: (ticketId: number) => Promise<void>;
   onOutOfStock: (ticketId: number) => Promise<void>;
   onCompleteTickets: (ticketIds: number[]) => Promise<void>;
+  isCurrent: boolean;
 }) {
   const now = useBoardTick();
   const elapsed = useMemo(
     () => getOrderElapsedMinutes(order, now),
     [now, order],
   );
-  const status = getOverallStatus(order);
+  const status = getKdsOrderDisplayStatus(order, { isCurrent });
   const ageStyle = getAgeStyle(elapsed, status === "ready");
   const contextLabel = getKdsOrderLabelOverride(order);
+  const showOrderStatusBadge = shouldShowTicketStatusBadge(status);
   const ticketByItemId = useMemo(() => {
     const map = new Map<number, KdsTicket>();
     for (const ticket of order.tickets) {
@@ -385,9 +375,12 @@ function HeatmapCard({
   return (
     <Card
       data-testid={`kds-heatmap-card-${order.groupKey}`}
+      data-kds-current={isCurrent ? "true" : undefined}
       className={cn(
         "min-w-0 gap-0 overflow-hidden border-l-2 p-2 xl:p-3",
         ageStyle.bg,
+        isCurrent &&
+          "relative z-10 border-warning bg-warning/25 shadow-xl ring-2 ring-warning/70",
         getCardLeftAccent(status, elapsed),
       )}
     >
@@ -428,7 +421,7 @@ function HeatmapCard({
               onCompleteTickets={onCompleteTickets}
             />
           )}
-          {shouldShowTicketStatusBadge(status) && (
+          {showOrderStatusBadge && (
             <Badge
               variant={getStatusVariant(status)}
               className="px-2 py-0.5 text-xs xl:px-2.5 xl:py-1 xl:text-sm"
@@ -483,6 +476,7 @@ function OrderColumn({
   onRecall,
   onOutOfStock,
   onCompleteTickets,
+  currentGroupKey,
 }: {
   column: KdsOrderColumn;
   pendingTicketIds: Set<number>;
@@ -491,6 +485,7 @@ function OrderColumn({
   onRecall: (ticketId: number) => Promise<void>;
   onOutOfStock: (ticketId: number) => Promise<void>;
   onCompleteTickets: (ticketIds: number[]) => Promise<void>;
+  currentGroupKey: string | null;
 }) {
   return (
     <section
@@ -523,6 +518,7 @@ function OrderColumn({
               onRecall={onRecall}
               onOutOfStock={onOutOfStock}
               onCompleteTickets={onCompleteTickets}
+              isCurrent={order.groupKey === currentGroupKey}
             />
           ))
         )}
@@ -546,6 +542,7 @@ export function OrderGrid({
     () => groupKdsOrdersByColumn(displayOrders),
     [displayOrders],
   );
+  const currentGroupKey = displayOrders[0]?.groupKey ?? null;
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto xl:overflow-hidden">
@@ -578,6 +575,7 @@ export function OrderGrid({
               onRecall={onRecall}
               onOutOfStock={onOutOfStock}
               onCompleteTickets={onCompleteTickets}
+              currentGroupKey={currentGroupKey}
             />
           ))}
         </div>

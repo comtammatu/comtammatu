@@ -14,7 +14,10 @@ export default async function FeedbackLayout({
 
   return (
     <div className="space-y-4">
-      <nav className="flex gap-1 border-b pb-0" aria-label="Feedback navigation">
+      <nav
+        className="flex gap-1 border-b pb-0"
+        aria-label="Feedback navigation"
+      >
         <Link
           href="/admin/feedback"
           className="px-4 py-2 text-sm font-medium hover:text-foreground data-[active]:border-b-2 data-[active]:border-primary data-[active]:text-primary"

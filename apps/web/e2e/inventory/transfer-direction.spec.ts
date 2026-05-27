@@ -95,7 +95,8 @@ async function buildFixtures(): Promise<InventoryFixtures> {
     data: { users },
   } = await supabase.auth.admin.listUsers();
   const adminUser = users[0];
-  if (!adminUser) throw new Error("No auth users found — seed at least one test user");
+  if (!adminUser)
+    throw new Error("No auth users found — seed at least one test user");
 
   return {
     tenantId,
@@ -257,9 +258,7 @@ test.describe("Cấp bếp default_consumption warn-only contract", () => {
         .getByRole("option", { name: /E2E Ingredient transfer/i })
         .first()
         .click();
-      await dialog
-        .getByRole("button", { name: "Thêm nguyên liệu" })
-        .click();
+      await dialog.getByRole("button", { name: "Thêm nguyên liệu" }).click();
       await dialog.getByPlaceholder("SL").fill("1");
 
       await expect(
@@ -293,7 +292,12 @@ test.describe("Transfer direction — CW→CK happy path (Scenario 3)", () => {
     const supabase = createServiceClient();
     const fx = await buildFixtures();
 
-    const stockBefore = await getStockLevel(supabase, fx.tenantId, fx.cw1Id, fx.ingredientId);
+    const stockBefore = await getStockLevel(
+      supabase,
+      fx.tenantId,
+      fx.cw1Id,
+      fx.ingredientId,
+    );
 
     const transfer = await createTestTransferDraft(supabase, {
       tenantId: fx.tenantId,
@@ -308,7 +312,9 @@ test.describe("Transfer direction — CW→CK happy path (Scenario 3)", () => {
 
     try {
       // ── confirm_ship ───────────────────────────────────────────────────────
-      await page.goto(`/inventory/transfers/${transfer.id}?branchId=${fx.cw1Id}`);
+      await page.goto(
+        `/inventory/transfers/${transfer.id}?branchId=${fx.cw1Id}`,
+      );
       await page.waitForLoadState("networkidle");
       if (await isAccessDenied(page)) {
         test.skip(
@@ -319,70 +325,94 @@ test.describe("Transfer direction — CW→CK happy path (Scenario 3)", () => {
       }
 
       // Click "Xác nhận xuất kho" button
-      const confirmShipBtn = page.getByRole("button", { name: /x.c nh.n xu.t/i });
+      const confirmShipBtn = page.getByRole("button", {
+        name: /x.c nh.n xu.t/i,
+      });
       await expect(confirmShipBtn).toBeVisible({ timeout: 10_000 });
       await expect(confirmShipBtn).toBeEnabled({ timeout: 10_000 });
       await confirmShipBtn.click();
 
       // Wait for status to update in DB (RPC is async relative to UI rerender)
       await expect
-        .poll(
-          () => getTransferStatus(supabase, fx.tenantId, transfer.id),
-          { timeout: 15_000, message: "status should become confirmed_ship after confirm_ship" },
-        )
+        .poll(() => getTransferStatus(supabase, fx.tenantId, transfer.id), {
+          timeout: 15_000,
+          message: "status should become confirmed_ship after confirm_ship",
+        })
         .toBe("confirmed_ship");
 
-      await page.goto(`/inventory/transfers/${transfer.id}?branchId=${fx.cw1Id}`);
+      await page.goto(
+        `/inventory/transfers/${transfer.id}?branchId=${fx.cw1Id}`,
+      );
       await page.waitForLoadState("networkidle");
 
       // ── mark_in_transit ────────────────────────────────────────────────────
-      const inTransitBtn = page.getByRole("button", { name: /.ang v.n chuy.n|b.t .au v.n chuy.n/i });
+      const inTransitBtn = page.getByRole("button", {
+        name: /.ang v.n chuy.n|b.t .au v.n chuy.n/i,
+      });
       await expect(inTransitBtn).toBeVisible({ timeout: 8_000 });
       await expect(inTransitBtn).toBeEnabled({ timeout: 10_000 });
       await inTransitBtn.click();
 
       await expect
-        .poll(
-          () => getTransferStatus(supabase, fx.tenantId, transfer.id),
-          { timeout: 15_000, message: "status should become in_transit" },
-        )
+        .poll(() => getTransferStatus(supabase, fx.tenantId, transfer.id), {
+          timeout: 15_000,
+          message: "status should become in_transit",
+        })
         .toBe("in_transit");
 
-      await page.goto(`/inventory/transfers/${transfer.id}?branchId=${fx.ckId}`);
+      await page.goto(
+        `/inventory/transfers/${transfer.id}?branchId=${fx.ckId}`,
+      );
       await page.waitForLoadState("networkidle");
 
       // ── confirm_receive ────────────────────────────────────────────────────
-      const receiveBtn = page.getByRole("button", { name: /x.c nh.n nh.n|ki.m nh.n|b.t .au ki.m nh.n/i });
+      const receiveBtn = page.getByRole("button", {
+        name: /x.c nh.n nh.n|ki.m nh.n|b.t .au ki.m nh.n/i,
+      });
       await expect(receiveBtn).toBeVisible({ timeout: 8_000 });
       await expect(receiveBtn).toBeEnabled({ timeout: 10_000 });
       await receiveBtn.click();
 
       await expect
-        .poll(
-          () => getTransferStatus(supabase, fx.tenantId, transfer.id),
-          { timeout: 15_000, message: "status should become confirmed_receive" },
-        )
+        .poll(() => getTransferStatus(supabase, fx.tenantId, transfer.id), {
+          timeout: 15_000,
+          message: "status should become confirmed_receive",
+        })
         .toBe("confirmed_receive");
 
-      await page.goto(`/inventory/transfers/${transfer.id}?branchId=${fx.ckId}`);
+      await page.goto(
+        `/inventory/transfers/${transfer.id}?branchId=${fx.ckId}`,
+      );
       await page.waitForLoadState("networkidle");
 
       // Confirm receive (complete the receipt)
-      const finishBtn = page.getByRole("button", { name: /ho.n t.t nh.n|x.c nh.n nh.n h.ng|x.c nh.n nh.p/i });
+      const finishBtn = page.getByRole("button", {
+        name: /ho.n t.t nh.n|x.c nh.n nh.n h.ng|x.c nh.n nh.p/i,
+      });
       await expect(finishBtn).toBeVisible({ timeout: 8_000 });
       await expect(finishBtn).toBeEnabled({ timeout: 10_000 });
       await finishBtn.click();
 
       await expect
-        .poll(
-          () => getTransferStatus(supabase, fx.tenantId, transfer.id),
-          { timeout: 20_000, message: "final status should be received" },
-        )
+        .poll(() => getTransferStatus(supabase, fx.tenantId, transfer.id), {
+          timeout: 20_000,
+          message: "final status should be received",
+        })
         .toBe("received");
 
       // ── Assert stock levels moved ──────────────────────────────────────────
-      const stockAfterCw = await getStockLevel(supabase, fx.tenantId, fx.cw1Id, fx.ingredientId);
-      const stockAfterCk = await getStockLevel(supabase, fx.tenantId, fx.ckId, fx.ingredientId);
+      const stockAfterCw = await getStockLevel(
+        supabase,
+        fx.tenantId,
+        fx.cw1Id,
+        fx.ingredientId,
+      );
+      const stockAfterCk = await getStockLevel(
+        supabase,
+        fx.tenantId,
+        fx.ckId,
+        fx.ingredientId,
+      );
 
       const beforeQty = stockBefore ?? 0;
       // CW1 stock should decrease by 5
@@ -407,8 +437,12 @@ test.describe("Transfer direction — CK→CW rejected (Scenario 4)", () => {
     await page.waitForLoadState("networkidle");
 
     // Select from-branch = CK and to-branch = CW
-    const fromSelect = page.locator('[name="fromBranchId"], [data-testid="from-branch-select"]').first();
-    const toSelect = page.locator('[name="toBranchId"], [data-testid="to-branch-select"]').first();
+    const fromSelect = page
+      .locator('[name="fromBranchId"], [data-testid="from-branch-select"]')
+      .first();
+    const toSelect = page
+      .locator('[name="toBranchId"], [data-testid="to-branch-select"]')
+      .first();
 
     // If UI form is not found, fall back to direct service-role insert check
     if (!(await fromSelect.isVisible({ timeout: 5_000 }).catch(() => false))) {
@@ -425,7 +459,9 @@ test.describe("Transfer direction — CK→CW rejected (Scenario 4)", () => {
       // Trigger must reject with a check violation (ERRCODE 23514)
       expect(error).not.toBeNull();
       expect(error!.code).toBe("23514");
-      expect(error!.message).toContain("invalid direction central_kitchen -> central_warehouse");
+      expect(error!.message).toContain(
+        "invalid direction central_kitchen -> central_warehouse",
+      );
       return;
     }
 
@@ -482,13 +518,20 @@ test.describe("Transfer direction — CW→CW rejected (Scenario 5)", () => {
     await page.goto("/inventory/transfers/new");
     await page.waitForLoadState("networkidle");
 
-    const fromSelect = page.locator('[name="fromBranchId"], [data-testid="from-branch-select"]').first();
+    const fromSelect = page
+      .locator('[name="fromBranchId"], [data-testid="from-branch-select"]')
+      .first();
     if (!(await fromSelect.isVisible({ timeout: 5_000 }).catch(() => false))) {
-      test.skip(true, "Transfer creation UI not accessible — covered by direct DB assertion above");
+      test.skip(
+        true,
+        "Transfer creation UI not accessible — covered by direct DB assertion above",
+      );
       return;
     }
 
-    const toSelect = page.locator('[name="toBranchId"], [data-testid="to-branch-select"]').first();
+    const toSelect = page
+      .locator('[name="toBranchId"], [data-testid="to-branch-select"]')
+      .first();
     await fromSelect.selectOption({ value: String(fx.cw1Id) });
     await toSelect.selectOption({ value: String(fx.cw2Id) });
 
@@ -509,7 +552,9 @@ test.describe("stock_issue kitchen_use retired (Scenario 6)", () => {
     const supabase = createServiceClient();
     const fx = await buildFixtures();
 
-    const { data: { users } } = await supabase.auth.admin.listUsers();
+    const {
+      data: { users },
+    } = await supabase.auth.admin.listUsers();
     const adminUser = users[0];
     if (!adminUser) throw new Error("No auth users to use as created_by");
 

@@ -166,12 +166,13 @@ export function HardblockOverrideDialog({
                 <SelectValue placeholder="Chọn lý do" />
               </SelectTrigger>
               <SelectContent>
-                {(Object.keys(HARDBLOCK_REASON_LABELS_VI) as HardblockReason[])
-                  .map((key) => (
-                    <SelectItem key={key} value={key}>
-                      {HARDBLOCK_REASON_LABELS_VI[key]}
-                    </SelectItem>
-                  ))}
+                {(
+                  Object.keys(HARDBLOCK_REASON_LABELS_VI) as HardblockReason[]
+                ).map((key) => (
+                  <SelectItem key={key} value={key}>
+                    {HARDBLOCK_REASON_LABELS_VI[key]}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

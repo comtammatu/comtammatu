@@ -1,5 +1,1 @@
-export {
-  fetchEntityAuditLogs,
-  logAudit,
-  type AuditLogRow,
-} from "@/_lib/audit";
+export { fetchEntityAuditLogs, logAudit, type AuditLogRow } from "@/_lib/audit";

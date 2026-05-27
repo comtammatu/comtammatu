@@ -8,8 +8,8 @@ This file is the single design-system contract for agents building or reviewing
 UI in this repo. Runtime files prove whether the contract is implemented, but
 they do not authorize a second visual language.
 
-If a runtime file, package description, generated token file, archived plan, or
-external reference disagrees with this file, treat that as drift. Do not copy the
+If a runtime file, package description, generated token file, or external
+reference disagrees with this file, treat that as drift. Do not copy the
 exception into new UI. Either update this contract first or migrate the runtime
 back to the contract.
 
@@ -33,7 +33,7 @@ Active runtime:
 - `iconLibrary`: `lucide`
 - primitive base: Radix/shadcn
 - brand concept: Ma Tu Concept 01
-- brand assets: `/brand/logo-matu.png`, `/brand/logo-matu-seal.png`, `/brand/logo-matu-vertical.png`
+- brand assets: `/brand/logo-matu.png`, `/brand/logo-matu-seal.png`, `/brand/logo-matu-vertical.png`, `/brand/mascot/be-suon-tuoi-runner.png`
 - web brand primitive: `apps/web/app/components/brand.tsx`
 - web app surface adapters: `apps/web/app/components/surface.tsx`
 
@@ -45,7 +45,7 @@ Legacy Inventory pilot artifacts have been retired from runtime app UI:
 - removed `packages/ui/src/styles/matu-tokens.css`
 - removed `apps/web/app/components/matu-surface.tsx`
 - removed `apps/web/app/(protected)/admin/kitchen-sink/page.tsx`
-- external references such as `~/Downloads/matu-superapp/DESIGN.md`
+- external design folders
 
 New app UI must not import `matu-surface`, use `font-matu-body`, or use
 `bg-matu-*`, `text-matu-*`, `border-matu-*`, `rounded-matu-*`,
@@ -85,17 +85,40 @@ Allowed token families:
 - Surface: `background`, `foreground`, `card`, `popover`, `muted`, `accent`, `border`, `input`, `ring`
 - Action: `primary`, `secondary`, `destructive`
 - State: `success`, `warning`, `info`, `destructive`
+- Tier: `tier-elite`, `tier-note` for trust/variance/waste tier badges only
 - Data: `chart-1` through `chart-5`
 - Navigation: `sidebar-*`
 - Radius: preset radius tokens only
 - Typography: runtime font variables from `apps/web/app/layout.tsx` and `packages/ui/src/styles/globals.css`
+
+Theme runtime:
+
+- `packages/ui/src/components/theme-script.tsx` applies the initial `light` / `dark`
+  class before hydration.
+- `packages/ui/src/components/theme-provider.tsx` is the only runtime theme
+  state provider. It may persist the user's theme preference under the
+  `theme` storage key; scope, branch, workflow, and auth state must never use
+  browser storage.
+- Route-level theme toggles must call this provider. Do not add a second theme
+  context or a route-local theme storage key.
+
+Approved project utilities:
+
+- `max-h-dvh-95` and `max-h-dvh-80` are bottom-sheet height utilities for
+  mobile dynamic viewport constraints.
+- `pos-text-overlay` is limited to text over POS menu item photos.
+- `pos-safe-top` / `pos-safe-bottom` are limited to POS PWA floating bars.
+- `chrome-safe-pb` / `chrome-safe-bottom` are limited to fixed or sticky app
+  shell chrome affected by mobile safe areas.
+- New utilities require a design-system update first; prefer primitive props
+  or app surface adapters when the pattern is reusable.
 
 Forbidden for new app UI:
 
 - `matu-*` Tailwind tokens.
 - `--font-matu-body`, `font-matu-body`, or Be Vietnam Pro.
 - `rounded-matu-*`, `--radius-matu-*`, or `--spacing-matu-*`.
-- External DS token names copied from matu-superapp or archived rebuild plans.
+- External DS token names copied from outside this repo.
 
 Brand Concept 01 runtime mapping:
 
@@ -127,6 +150,7 @@ Required utility mapping:
 
 Rules:
 
+- `--font-heading-runtime` is an internal `next/font` bridge in `apps/web/app/layout.tsx`; app code consumes only `font-heading` / `--font-heading`.
 - Route/page headings, card titles, dialog titles, sheet titles, section titles, and brand lockup text use `font-heading` unless a shadcn primitive already applies it.
 - Body text, controls, labels, descriptions, table text, and workflow copy inherit `font-sans`.
 - Use `font-mono` only for tabular operational data, IDs, codes, receipt/order numbers, prices, quantities, timestamps, and audit hashes.
@@ -138,6 +162,7 @@ Rules:
 
 - Use semantic Tailwind token classes (`bg-background`, `text-muted-foreground`, `border-border`, `bg-success`, etc.).
 - Use `BrandMark` / `BrandLockup` for web runtime logo rendering; do not reference `/brand/logo-*` directly from route components.
+- Purpose-specific mascot assets may be used as decorative public images in customer-facing empty or splash states; they must not replace core workflow content.
 - Do not hardcode raw palette classes for status meaning (`amber`, `emerald`, `zinc`, etc.) when a semantic token exists.
 - Do not add arbitrary dimensions such as `text-[10px]`, `w-[200px]`, or `h-[3rem]`.
 - Do not add static inline styles for presentation.
@@ -156,17 +181,17 @@ A module that needs to deviate must update this contract first, not patch a sing
 
 ### A. Spacing Rhythm
 
-| Slot                              | Class                          | Notes                                                            |
-| --------------------------------- | ------------------------------ | ---------------------------------------------------------------- |
-| Page outer padding (mobile)       | `p-3`                          | Set by `AppPage` density="compact"                               |
-| Page outer padding (default)      | `p-4`                          | Set by `AppPage` default                                         |
-| Card inner (default)              | `p-4`                          | Set by `Card` primitive                                          |
-| Card inner (size="sm")            | `p-3`                          | Set by `Card data-size=sm`                                       |
-| Toolbar inner                     | `p-3`                          | Set by `AppToolbar`                                              |
-| Section vertical gap              | `gap-4` (default), `gap-3` (compact) | Set by `AppPage`                                           |
-| Within-section element gap        | `gap-2`                        | Default for inline rows / form fields                            |
-| Compact toolbar chip gap          | `gap-1.5`                      | Filter chips, badge clusters                                     |
-| Tight icon-label gap              | `gap-1`                        | Icon + 1–2 word label only                                       |
+| Slot                         | Class                                | Notes                                 |
+| ---------------------------- | ------------------------------------ | ------------------------------------- |
+| Page outer padding (mobile)  | `p-3`                                | Set by `AppPage` density="compact"    |
+| Page outer padding (default) | `p-4`                                | Set by `AppPage` default              |
+| Card inner (default)         | `p-4`                                | Set by `Card` primitive               |
+| Card inner (size="sm")       | `p-3`                                | Set by `Card data-size=sm`            |
+| Toolbar inner                | `p-3`                                | Set by `AppToolbar`                   |
+| Section vertical gap         | `gap-4` (default), `gap-3` (compact) | Set by `AppPage`                      |
+| Within-section element gap   | `gap-2`                              | Default for inline rows / form fields |
+| Compact toolbar chip gap     | `gap-1.5`                            | Filter chips, badge clusters          |
+| Tight icon-label gap         | `gap-1`                              | Icon + 1–2 word label only            |
 
 Allowed gap scale in app code: `1`, `1.5`, `2`, `3`, `4`, `6`. Avoid `5`, `7`, `8` for horizontal flow — they break vertical rhythm with the heading scale below.
 
@@ -174,33 +199,39 @@ Page padding MUST come from `AppPage` (not ad-hoc on the page root). Card paddin
 
 ### B. Heading Scale (locked per role)
 
-| Role                   | Class                                                  | Source                |
-| ---------------------- | ------------------------------------------------------ | --------------------- |
-| Page H1                | `font-heading text-xl sm:text-2xl font-semibold`       | `AppPageHeader`       |
-| Section title          | `font-heading text-base font-semibold`                 | `CardTitle`           |
-| Sub-section / list head| `font-heading text-sm font-semibold`                   | `Item title` slot     |
-| Eyebrow / metadata     | `text-xs font-medium uppercase tracking-wide`          | `AppPageHeader.eyebrow` |
-| Dense eyebrow          | `text-2xs font-medium uppercase tracking-wide`         | KDS chrome, audit row meta |
-| Numeric input echo     | `text-3xl font-semibold tabular-nums`                  | Number pad readout, scale display |
-| Display call target    | `font-mono text-6xl sm:text-7xl lg:text-8xl font-semibold tabular-nums` | Customer-facing runner / queue display only |
+| Role                    | Class                                                                   | Source                                              |
+| ----------------------- | ----------------------------------------------------------------------- | --------------------------------------------------- |
+| Page H1                 | `font-heading text-xl sm:text-2xl font-semibold`                        | `AppPageHeader`                                     |
+| Section title           | `font-heading text-base font-semibold`                                  | `CardTitle`                                         |
+| Sub-section / list head | `font-heading text-sm font-semibold`                                    | `Item title` slot                                   |
+| Eyebrow / metadata      | `text-xs font-medium uppercase tracking-wide`                           | `AppPageHeader.eyebrow`                             |
+| Dense eyebrow           | `text-2xs font-medium uppercase tracking-wide`                          | KDS chrome, audit row meta                          |
+| Numeric input echo      | `text-3xl font-semibold tabular-nums`                                   | Number pad readout, scale display                   |
+| Runner board header     | `text-runner-header font-semibold`                                      | Runner/KDS order board column headers at fixed 44px |
+| Runner board row text   | `text-runner-board font-semibold`                                       | Runner/KDS order board data cells at fixed 52px     |
+| Runner empty secondary  | `text-runner-empty-secondary font-semibold`                             | Runner/KDS empty-state secondary line at fixed 44px |
+| Runner board footer     | `text-runner-footer font-semibold`                                      | Runner/KDS order board footer at fixed 40px         |
+| Display call target     | `font-mono text-6xl sm:text-7xl lg:text-8xl font-semibold tabular-nums` | Customer-facing runner / queue display only         |
 
 `text-4xl`, `text-5xl` are NOT allowed in app surfaces. They live only in marketing/login splash. `text-3xl` is reserved for the numeric-input-echo role above (cashier number pad, scale display) and MUST be paired with `tabular-nums`. `text-3xs` is reserved for SVG axis labels and dense table micro-meta.
 
 Display call targets are a separate operational display role, not headings. Use them only on customer-facing queue/runner screens where the primary job is reading a stable serving target from distance. The displayed value must be stable (`table_number` for dine-in, `order_number` / `kitchen_ticket_number` for fallback), never a volatile render index.
 
+Runner/KDS customer boards must use Tailwind's built-in 12-column grid, not a custom percent grid: Đơn `col-span-5`, Số món `col-span-2`, Trạng thái `col-span-3`, Thời gian đợi `col-span-2`. All four data cells use the same `text-runner-board` 52px row typography. Status cells MUST NOT add a separate `text-*` class on the data-text element; the label inherits row color so `tailwind-merge` cannot drop the shared row typography.
+
 `font-bold` only for receipt totals, page headers in print mode, and emphasis inside body copy. Default heading weight is `font-semibold`. `font-black` is not allowed in the app.
 
 ### C. Icon Size by Role
 
-| Slot                                  | Class       |
-| ------------------------------------- | ----------- |
-| Inline badge / chip glyph             | `size-3`    |
-| Button `size="sm"` glyph              | `size-3.5`  |
-| Default (button, link, input affix)   | `size-4`    |
-| Section / card title glyph            | `size-5`    |
-| Page-header eyebrow glyph             | `size-6`    |
-| Empty-state media                     | `size-8`–`size-12` (via `EmptyMedia variant="icon"`) |
-| Image / document thumbnail            | `size-12`–`size-16` with `object-cover` (img preview, not glyph) |
+| Slot                                | Class                                                            |
+| ----------------------------------- | ---------------------------------------------------------------- |
+| Inline badge / chip glyph           | `size-3`                                                         |
+| Button `size="sm"` glyph            | `size-3.5`                                                       |
+| Default (button, link, input affix) | `size-4`                                                         |
+| Section / card title glyph          | `size-5`                                                         |
+| Page-header eyebrow glyph           | `size-6`                                                         |
+| Empty-state media                   | `size-8`–`size-12` (via `EmptyMedia variant="icon"`)             |
+| Image / document thumbnail          | `size-12`–`size-16` with `object-cover` (img preview, not glyph) |
 
 `size-7`, `size-9`, `size-11` are NOT allowed in app surfaces. `size-14`, `size-16` are NOT allowed outside `EmptyMedia`, brand lockup, splash imagery, or image/document thumbnails (photo upload preview, supplier doc thumbnail, GRN evidence). Inventory/POS hero glyphs MUST compose `EmptyMedia` or render through a primitive, not free-style `size-12` inside a card.
 
@@ -208,18 +239,18 @@ Display call targets are a separate operational display role, not headings. Use 
 
 `Button` is the single source of truth for button height. Variants:
 
-| Variant     | Min height       | When                                                              |
-| ----------- | ---------------- | ----------------------------------------------------------------- |
-| `xs`        | `h-6`            | Inline metadata actions, tag pickers                              |
-| `sm`        | `h-7`            | Compact toolbars, dialog footers                                  |
-| `default`   | `h-8`            | Standard CTA, form submit                                         |
-| `lg`        | `h-9`            | Primary CTA, page-header action                                   |
-| `touch`     | `min-h-12`       | Mobile touch button (POS, KDS, mobile inventory) — meets WCAG 2.5.5 enhanced target size |
-| `touch-lg`  | `min-h-14`       | Hero CTA / mobile action bar primary (POS bottom bar, KDS bump)   |
-| `icon-xs`   | `size-6`         | Icon-only inline                                                  |
-| `icon-sm`   | `size-7`         | Icon-only compact                                                 |
-| `icon`      | `size-8`         | Icon-only default                                                 |
-| `icon-lg`   | `size-9`         | Icon-only large                                                   |
+| Variant    | Min height | When                                                                                     |
+| ---------- | ---------- | ---------------------------------------------------------------------------------------- |
+| `xs`       | `h-6`      | Inline metadata actions, tag pickers                                                     |
+| `sm`       | `h-7`      | Compact toolbars, dialog footers                                                         |
+| `default`  | `h-8`      | Standard CTA, form submit                                                                |
+| `lg`       | `h-9`      | Primary CTA, page-header action                                                          |
+| `touch`    | `min-h-12` | Mobile touch button (POS, KDS, mobile inventory) — meets WCAG 2.5.5 enhanced target size |
+| `touch-lg` | `min-h-14` | Hero CTA / mobile action bar primary (POS bottom bar, KDS bump)                          |
+| `icon-xs`  | `size-6`   | Icon-only inline                                                                         |
+| `icon-sm`  | `size-7`   | Icon-only compact                                                                        |
+| `icon`     | `size-8`   | Icon-only default                                                                        |
+| `icon-lg`  | `size-9`   | Icon-only large                                                                          |
 
 Fixed heights `h-10`, `h-11`, `h-12`, `h-14`, `h-16` MUST NOT be applied to `<button>`, `<Link>`, or `<Button>` acting as a button. Min-heights `min-h-12`, `min-h-14`, `min-h-16` MUST come from the `touch` / `touch-lg` variants — do not override on a different variant via `className`. Touch CTAs use `min-h-` rather than fixed `h-` so wrapped labels grow vertically without clipping.
 
@@ -229,12 +260,12 @@ If a new touch tier is genuinely needed (e.g. tablet KDS oversized chef glove ta
 
 ### E. Radius Scale (4 tokens only)
 
-| Token          | When                                                                |
-| -------------- | ------------------------------------------------------------------- |
-| `rounded-md`   | Default for input, button, badge, chip, small surface card          |
-| `rounded-lg`   | Card, sheet, dialog, drawer outer                                   |
-| `rounded-full` | Avatar, pill badge, circular icon container                         |
-| `rounded-none` | Explicit reset only (table cell internals, edge-bleed media)        |
+| Token          | When                                                         |
+| -------------- | ------------------------------------------------------------ |
+| `rounded-md`   | Default for input, button, badge, chip, small surface card   |
+| `rounded-lg`   | Card, sheet, dialog, drawer outer                            |
+| `rounded-full` | Avatar, pill badge, circular icon container                  |
+| `rounded-none` | Explicit reset only (table cell internals, edge-bleed media) |
 
 `rounded` (no suffix), `rounded-sm`, `rounded-xl`, `rounded-2xl`, `rounded-3xl`, `rounded-4xl` are NOT allowed in app code. The radius primitive token surface (`--radius-sm/md/lg/xl/2xl/3xl/4xl`) exists in `globals.css` for shadcn primitive compatibility — app surfaces consume them indirectly through Card/Sheet/etc., not directly.
 
@@ -348,7 +379,8 @@ Forbidden wrappers:
 - Internal UI copy is Vietnamese by default.
 - Keep established acronyms: `POS`, `KDS`, `HQ`, `GRN`, `WAC`.
 - Do not introduce new synonyms for business states or workflow objects.
-- Before adding labels, check `docs/ref/glossary.md`, `packages/shared/src/labels/vi.ts`, and the relevant domain dictionary.
+- Copy source ladder: business meaning and spelling in `docs/ref/glossary.md`; shared domain labels in `packages/shared/src/labels/vi.ts`; generic actions/states/errors in `@comtammatu/shared/messages` or `apps/web/lib/messages/*`; legal-fixed labels in `packages/shared/src/labels/legal-fixed.ts`; route-specific adapters in the relevant domain dictionary.
+- Before adding labels, update or consume the correct source in that ladder rather than adding ad-hoc inline synonyms.
 - Utility copy beats marketing copy on app surfaces.
 
 ## Rebuild Rules For Agents

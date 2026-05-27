@@ -1,6 +1,6 @@
 -- =============================================================
 -- HĐĐT Hybrid via MISA — PR-2 RPCs + junction trigger
--- Per docs/plan/hddt-hybrid-misa.md (owner-approved 2026-05-08).
+-- Per owner-approved HĐĐT summary design from 2026-05-08.
 --
 -- ⚠ NOTE: aggregate_daily_b2c_invoice in this file has 2 bugs caught
 -- in smoke test, FIXED in 20260508055230_hddt_aggregate_rpc_fixes.sql:

@@ -59,8 +59,7 @@ test("provider submitted (from signing) → no_change (let next tick resolve)", 
 test("provider error → provider_error (retry next tick)", () => {
   const d = pickReconcileDecision("signing", err("network_timeout"), 300);
   assert.equal(d.kind, "provider_error");
-  if (d.kind === "provider_error")
-    assert.equal(d.reason, "network_timeout");
+  if (d.kind === "provider_error") assert.equal(d.reason, "network_timeout");
 });
 
 test("provider draft + young age → unknown_status (no transition)", () => {

@@ -1,7 +1,12 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { CircleAlert as IconAlertCircle, Download as IconDownload, Sheet as IconFileSpreadsheet, Upload as IconUpload } from "lucide-react";
+import {
+  CircleAlert as IconAlertCircle,
+  Download as IconDownload,
+  Sheet as IconFileSpreadsheet,
+  Upload as IconUpload,
+} from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
@@ -178,17 +183,14 @@ function IngredientImportDialog({
         <DialogHeader>
           <DialogTitle>Import nguyên liệu từ file</DialogTitle>
           <DialogDescription>
-            Hỗ trợ .xlsx và .csv. Dòng trùng <strong>tên nguyên liệu</strong>{" "}
-            sẽ được cập nhật.
+            Hỗ trợ .xlsx và .csv. Dòng trùng <strong>tên nguyên liệu</strong> sẽ
+            được cập nhật.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <label
-              htmlFor="ing-import-file"
-              className="text-sm font-medium"
-            >
+            <label htmlFor="ing-import-file" className="text-sm font-medium">
               Chọn file (.xlsx, .csv)
             </label>
             <input

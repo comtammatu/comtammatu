@@ -2,7 +2,12 @@
 
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
-import { ShieldCheck as IconShieldCheck, ShieldHalf as IconShieldHalf, ShieldX as IconShieldX, Shield as IconShield } from "lucide-react";
+import {
+  ShieldCheck as IconShieldCheck,
+  ShieldHalf as IconShieldHalf,
+  ShieldX as IconShieldX,
+  Shield as IconShield,
+} from "lucide-react";
 
 interface TrustScoreBadgeProps {
   score: number;
@@ -86,8 +91,7 @@ function tierOf(score: number) {
       label: "Bootstrap",
       tone: "border-info/40 bg-info/10 text-info",
       Icon: IconShield,
-      tooltip:
-        "Warmup 50-69 — cần ≥ 20 GRN sạch trong 60 ngày để lên Trusted.",
+      tooltip: "Warmup 50-69 — cần ≥ 20 GRN sạch trong 60 ngày để lên Trusted.",
     };
   }
   return {

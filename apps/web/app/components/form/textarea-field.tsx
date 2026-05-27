@@ -14,11 +14,12 @@ import { Textarea } from "@comtammatu/ui/components/textarea";
 
 type TextareaProps = ComponentProps<typeof Textarea>;
 
-export interface TextareaFieldProps<TFieldValues extends FieldValues>
-  extends Omit<
-    TextareaProps,
-    "name" | "value" | "defaultValue" | "onChange" | "onBlur" | "ref" | "id"
-  > {
+export interface TextareaFieldProps<
+  TFieldValues extends FieldValues,
+> extends Omit<
+  TextareaProps,
+  "name" | "value" | "defaultValue" | "onChange" | "onBlur" | "ref" | "id"
+> {
   control: Control<TFieldValues>;
   name: FieldPath<TFieldValues>;
   label: string;

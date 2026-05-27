@@ -92,8 +92,7 @@ export function ChartOfAccountsClient({
       const matchesType =
         typeFilter === "all" || account.account_type === typeFilter;
       const matchesCashflow =
-        cashflowFilter === "all" ||
-        account.cashflow_section === cashflowFilter;
+        cashflowFilter === "all" || account.cashflow_section === cashflowFilter;
       const matchesStatus =
         statusFilter === "all" ||
         (statusFilter === "active" && account.is_active) ||
@@ -180,7 +179,9 @@ export function ChartOfAccountsClient({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">{messages.finance.coa.allTypes}</SelectItem>
+              <SelectItem value="all">
+                {messages.finance.coa.allTypes}
+              </SelectItem>
               {Object.entries(TYPE_LABELS).map(([value, label]) => (
                 <SelectItem key={value} value={value}>
                   {label}
@@ -250,7 +251,9 @@ export function ChartOfAccountsClient({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-32">{messages.finance.coa.code}</TableHead>
+                <TableHead className="w-32">
+                  {messages.finance.coa.code}
+                </TableHead>
                 <TableHead>{messages.finance.coa.accountName}</TableHead>
                 <TableHead className="w-32">{FORM_VI.type}</TableHead>
                 <TableHead className="w-44">

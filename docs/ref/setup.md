@@ -41,13 +41,8 @@ UPSTASH_REDIS_REST_TOKEN=your-token
 
 ### 3a. MCP Servers
 
-Dự án dùng 2 loại MCP config:
-
-**Shared (committed, không cần token):** `.claude/.mcp.json`
-
-- `shadcn-ui` — có sẵn, không cần setup
-
-**Local (gitignored, cần token):** `.mcp.json`
+Repo chỉ giữ template không có token: `.mcp.json.example`. File chạy thật là
+`.mcp.json`, được gitignore và nằm cục bộ trên máy của người vận hành.
 
 ```bash
 cp .mcp.json.example .mcp.json
@@ -79,7 +74,7 @@ Installs 31 gstack skills (`/ship`, `/review`, `/qa`, `/cso`, ...). Requires Bun
 ./scripts/setup-swarm.sh
 ```
 
-Installs claude-swarm MCP server for multi-agent collaboration. Allows multiple Claude Code sessions to discover each other, form rooms, delegate tasks, and share memory. See `.claude/rules/swarm.md` for agent roles and conventions.
+Installs claude-swarm MCP server for multi-agent collaboration. Allows multiple Claude Code sessions to discover each other, form rooms, delegate tasks, and share memory. Keep project agent conventions in `AGENTS.md` and `docs/agent/rules/`; do not add repo-local Claude rules.
 
 ### 3d. Verify Claude Code
 
@@ -121,22 +116,22 @@ Preferred CLI: `supabase db query --linked --file supabase/seed.sql`. SQL Editor
 
 Mật khẩu tất cả: `Test1234!`. Bao phủ toàn bộ `STAFF_ROLES`:
 
-| Email                             | Role                 | Scope                  |
-| --------------------------------- | -------------------- | ---------------------- |
-| `owner@comtammatu.vn`             | `owner`              | Tenant (pin HQ)        |
-| `supermanager@comtammatu.vn`      | `super_manager`      | Tenant (pin HQ, keeper)|
-| `area.vungtau@comtammatu.vn`      | `area_manager`       | Area "Khu vực Vũng Tàu"|
-| `warehouse@comtammatu.vn`         | `warehouse_manager`  | Trụ sở chính (warehouse)|
-| `production@comtammatu.vn`        | `production_manager` | Bếp trung tâm (central kitchen)|
-| `manager.datdo@comtammatu.vn`     | `branch_manager`     | Chi nhánh Đất Đỏ       |
-| `cashier.datdo@comtammatu.vn`     | `cashier`            | Chi nhánh Đất Đỏ       |
-| `waiter.datdo@comtammatu.vn`      | `waiter`             | Chi nhánh Đất Đỏ       |
-| `chef.datdo@comtammatu.vn`        | `chef`               | Chi nhánh Đất Đỏ       |
-| `manager.phuochai@comtammatu.vn`  | `branch_manager`     | Chi nhánh Phước Hải    |
-| `cashier.phuochai@comtammatu.vn`  | `cashier`            | Chi nhánh Phước Hải    |
-| `waiter.phuochai@comtammatu.vn`   | `waiter`             | Chi nhánh Phước Hải    |
-| `chef.phuochai@comtammatu.vn`     | `chef`               | Chi nhánh Phước Hải    |
-| `office@comtammatu.vn`            | `office`             | Tenant (branch NULL)   |
+| Email                            | Role                 | Scope                           |
+| -------------------------------- | -------------------- | ------------------------------- |
+| `owner@comtammatu.vn`            | `owner`              | Tenant (pin HQ)                 |
+| `supermanager@comtammatu.vn`     | `super_manager`      | Tenant (pin HQ, keeper)         |
+| `area.vungtau@comtammatu.vn`     | `area_manager`       | Area "Khu vực Vũng Tàu"         |
+| `warehouse@comtammatu.vn`        | `warehouse_manager`  | Trụ sở chính (warehouse)        |
+| `production@comtammatu.vn`       | `production_manager` | Bếp trung tâm (central kitchen) |
+| `manager.datdo@comtammatu.vn`    | `branch_manager`     | Chi nhánh Đất Đỏ                |
+| `cashier.datdo@comtammatu.vn`    | `cashier`            | Chi nhánh Đất Đỏ                |
+| `waiter.datdo@comtammatu.vn`     | `waiter`             | Chi nhánh Đất Đỏ                |
+| `chef.datdo@comtammatu.vn`       | `chef`               | Chi nhánh Đất Đỏ                |
+| `manager.phuochai@comtammatu.vn` | `branch_manager`     | Chi nhánh Phước Hải             |
+| `cashier.phuochai@comtammatu.vn` | `cashier`            | Chi nhánh Phước Hải             |
+| `waiter.phuochai@comtammatu.vn`  | `waiter`             | Chi nhánh Phước Hải             |
+| `chef.phuochai@comtammatu.vn`    | `chef`               | Chi nhánh Phước Hải             |
+| `office@comtammatu.vn`           | `office`             | Tenant (branch NULL)            |
 
 > **Chỉ chạy trên dev / staging.** Script DELETE các account theo email rồi re-INSERT, CASCADE cả profile + employees.
 
@@ -233,9 +228,9 @@ Trong `.github/workflows/ci.yml`, thay placeholder bằng secrets:
 
 ## Quick Reference — What's Gitignored (per-machine setup)
 
-| File                     | How to create                         | Purpose                  |
-| ------------------------ | ------------------------------------- | ------------------------ |
-| `apps/web/.env.local`    | `cp .env.example apps/web/.env.local` | Runtime env vars         |
-| `.mcp.json`              | `cp .mcp.json.example .mcp.json`      | Claude Code MCP servers  |
-| `.claude/skills/gstack/` | `./scripts/setup-gstack.sh`           | 31 gstack skills         |
-| `~/.claude-swarm/`       | `./scripts/setup-swarm.sh`            | Multi-agent coordination |
+| File                                                             | How to create                         | Purpose                  |
+| ---------------------------------------------------------------- | ------------------------------------- | ------------------------ |
+| `apps/web/.env.local`                                            | `cp .env.example apps/web/.env.local` | Runtime env vars         |
+| `.mcp.json`                                                      | `cp .mcp.json.example .mcp.json`      | Claude Code MCP servers  |
+| `$CLAUDE_CONFIG_DIR/skills/gstack` or the user Claude config dir | `./scripts/setup-gstack.sh`           | 31 gstack skills         |
+| `~/.claude-swarm/`                                               | `./scripts/setup-swarm.sh`            | Multi-agent coordination |

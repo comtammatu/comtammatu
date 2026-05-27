@@ -29,7 +29,10 @@ const presenceBodySchema = z.object({
 });
 
 function unauthorized() {
-  return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+  return NextResponse.json(
+    { ok: false, error: "unauthorized" },
+    { status: 401 },
+  );
 }
 
 function getBearerToken(request: Request): string | null {
@@ -53,14 +56,24 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ ok: false, error: "invalid json" }, { status: 400 });
+    return NextResponse.json(
+      { ok: false, error: "invalid json" },
+      { status: 400 },
+    );
   }
 
   const parsed = presenceBodySchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ ok: false, error: "invalid identity" }, { status: 400 });
+    return NextResponse.json(
+      { ok: false, error: "invalid identity" },
+      { status: 400 },
+    );
   }
-  const { tenant_id: tenantId, branch_id: branchId, agent_id: agentId } = parsed.data;
+  const {
+    tenant_id: tenantId,
+    branch_id: branchId,
+    agent_id: agentId,
+  } = parsed.data;
 
   const ip = getClientIp(request.headers);
   if (!ip) {
@@ -123,7 +136,10 @@ export async function POST(request: Request) {
         { status: 403 },
       );
     case "ip_revoked":
-      return NextResponse.json({ ok: false, error: "ip revoked" }, { status: 403 });
+      return NextResponse.json(
+        { ok: false, error: "ip revoked" },
+        { status: 403 },
+      );
     case "rate_limited":
       return NextResponse.json(
         { ok: false, error: "rate limited" },

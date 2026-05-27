@@ -50,7 +50,8 @@ test.describe("POS-02 Chọn bối cảnh bán hàng", () => {
       annotations: [
         {
           type: "callout",
-          selector: '[role="tab"]:has-text("Mang về"), button:has-text("Mang về")',
+          selector:
+            '[role="tab"]:has-text("Mang về"), button:has-text("Mang về")',
           placement: "below",
           text: "2 chế độ bán:\nTại bàn / Mang về",
         },

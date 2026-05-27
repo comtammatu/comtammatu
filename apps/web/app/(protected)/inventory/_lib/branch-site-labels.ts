@@ -28,7 +28,10 @@ function isWarehouseDisplayAlias(name: string): boolean {
 
 export function getBranchSiteDisplayName(branch: BranchSiteLike): string {
   const siteKind = resolveSiteKind(branch);
-  if (siteKind === "central_warehouse" && isWarehouseDisplayAlias(branch.name)) {
+  if (
+    siteKind === "central_warehouse" &&
+    isWarehouseDisplayAlias(branch.name)
+  ) {
     return getInventorySiteKindLabelVi(siteKind);
   }
   return branch.name;

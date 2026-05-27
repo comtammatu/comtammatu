@@ -43,8 +43,7 @@ export function CompareChip({
   hint,
   className,
 }: CompareChipProps) {
-  const Icon =
-    tone === "good" ? ArrowUp : tone === "bad" ? ArrowDown : Minus;
+  const Icon = tone === "good" ? ArrowUp : tone === "bad" ? ArrowDown : Minus;
   return (
     <span
       className={cn(

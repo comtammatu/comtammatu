@@ -35,7 +35,10 @@ export async function grantPermissionAction(
 ): Promise<ActionResult<{ grant_id: number }>> {
   const parsed = grantSchema.safeParse(input);
   if (!parsed.success) {
-    return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Invalid input",
+    };
   }
   if (parsed.data.branch_id === null) {
     return { success: false, error: "Vui lòng chọn chi nhánh." };
@@ -60,7 +63,10 @@ export async function revokePermissionAction(
 ): Promise<ActionResult<{ rows_removed: number }>> {
   const parsed = revokeSchema.safeParse(input);
   if (!parsed.success) {
-    return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Invalid input",
+    };
   }
   if (parsed.data.branch_id === null) {
     return { success: false, error: "Vui lòng chọn chi nhánh." };
@@ -83,7 +89,10 @@ export async function applyTemplateAction(
 ): Promise<ActionResult<{ rows_inserted: number }>> {
   const parsed = applyTemplateSchema.safeParse(input);
   if (!parsed.success) {
-    return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Invalid input",
+    };
   }
   if (parsed.data.branch_id === null) {
     return { success: false, error: "Vui lòng chọn chi nhánh." };
@@ -103,13 +112,20 @@ export async function applyTemplateAction(
 /* ─── error mapping — never leak raw pg messages ─── */
 
 function mapRpcError(msg: string): string {
-  if (msg.includes("missing staff:assign_permission")) return "Bạn không có quyền gán/thu hồi quyền hạn.";
-  if (msg.includes("cannot_manage_owner_permissions")) return "Không thể thay đổi quyền của chủ sở hữu.";
-  if (msg.includes("target_not_in_tenant")) return "Người dùng không thuộc tenant.";
-  if (msg.includes("branch_not_in_tenant")) return "Chi nhánh không thuộc tenant.";
-  if (msg.includes("unknown_permission_key")) return "Permission key không hợp lệ.";
-  if (msg.includes("template_not_in_tenant")) return "Template không thuộc tenant.";
-  if (msg.includes("invalid_validity_window")) return "Hạn kết thúc phải sau thời điểm bắt đầu.";
+  if (msg.includes("missing staff:assign_permission"))
+    return "Bạn không có quyền gán/thu hồi quyền hạn.";
+  if (msg.includes("cannot_manage_owner_permissions"))
+    return "Không thể thay đổi quyền của chủ sở hữu.";
+  if (msg.includes("target_not_in_tenant"))
+    return "Người dùng không thuộc tenant.";
+  if (msg.includes("branch_not_in_tenant"))
+    return "Chi nhánh không thuộc tenant.";
+  if (msg.includes("unknown_permission_key"))
+    return "Permission key không hợp lệ.";
+  if (msg.includes("template_not_in_tenant"))
+    return "Template không thuộc tenant.";
+  if (msg.includes("invalid_validity_window"))
+    return "Hạn kết thúc phải sau thời điểm bắt đầu.";
   if (msg.includes("not_authenticated")) return "Chưa đăng nhập.";
   return "Lỗi hệ thống. Vui lòng thử lại.";
 }

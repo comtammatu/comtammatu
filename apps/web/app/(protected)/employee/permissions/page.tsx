@@ -24,9 +24,7 @@ export default async function PermissionsPage() {
       .from("positions")
       .select("code, label_vi")
       .eq("tenant_id", claims.tenant_id),
-    supabase
-      .from("permission_keys")
-      .select("key, description"),
+    supabase.from("permission_keys").select("key, description"),
   ]);
 
   const positionLabel = new Map(

@@ -44,13 +44,13 @@ const checks = [
   {
     id: "legacy-matu-pilot-layer",
     description:
-      "Legacy matu-surface / matu-* / font-matu-body usage is retired.",
+      "Legacy matu-surface / matu-* / font-matu-* usage is retired.",
     roots: [
       { dir: "apps/web/app", extensions: [".ts", ".tsx"] },
       { dir: "packages/ui/src/styles", extensions: [".css"] },
     ],
     pattern:
-      /matu-surface|font-matu-body|bg-matu-|text-matu-|border-matu-|rounded-matu|spacing-matu|radius-matu|matu-superapp\/DESIGN/g,
+      /matu-surface|font-matu-|bg-matu-|text-matu-|border-matu-|rounded-matu|spacing-matu|radius-matu|matu-superapp\/DESIGN/g,
     allowlist: {},
   },
   {
@@ -138,12 +138,105 @@ const checks = [
       "Use CardContent flush/scroll instead of local p-0 or overflow-x-auto layout overrides.",
     roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
     pattern:
-      /<CardContent\b[^\n>]*className=["'](?:p-0|overflow-x-auto|overflow-x-auto p-0)["']/g,
+      /<CardContent\b[^>]*className=["'][^"']*\b(?:p-0|overflow-x-auto)\b/g,
     allowlist: {},
+  },
+  {
+    id: "app-section-content-named-layout-props",
+    description:
+      "Use AppSection contentFlush/contentScroll instead of contentClassName p-0 or overflow-x-auto.",
+    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
+    pattern:
+      /<AppSection\b[^>]*contentClassName=["'][^"']*\b(?:p-0|overflow-x-auto)\b/g,
+    allowlist: {},
+  },
+  {
+    id: "app-arbitrary-sizing",
+    description:
+      "Arbitrary app sizing remains baseline debt and must not spread.",
+    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
+    pattern:
+      /className=\{?['"][^'"]*\b(?:w|h|max-w|max-h|min-w|min-h|text)-\[[^\]]+\]/g,
+    allowlist: {
+      "apps/web/app/(protected)/br/[branchId]/pos/_components/cart-pane.tsx": 1,
+      "apps/web/app/(protected)/finance/components/heatmap-grid.tsx": 2,
+      "apps/web/app/(protected)/finance/revenue/revenue-client.tsx": 1,
+      "apps/web/app/components/app-shell.tsx": 1,
+    },
   },
 ];
 
 const failures = [];
+
+if (fs.existsSync(path.join(REPO_ROOT, "docs/archive"))) {
+  failures.push("legacy-docs: docs/archive must not exist");
+}
+
+const legacyDocReferencePattern =
+  /docs\/archive(?:\/|$)|(?:^|[\s('"`])(?:\.{1,2}\/)*archive\//g;
+
+const legacyDocReferenceFiles = [
+  path.join(REPO_ROOT, "AGENTS.md"),
+  path.join(REPO_ROOT, "CLAUDE.md"),
+  path.join(REPO_ROOT, "README.md"),
+  ...walkFiles("docs", [".md", ".mdx"]),
+  ...walkFiles("tasks", [".md", ".mdx"]),
+  ...walkFiles("apps", [".ts", ".tsx"]),
+  ...walkFiles("packages", [".ts", ".tsx", ".css"]),
+  ...walkFiles("scripts", [".js", ".mjs", ".sh"]),
+  ...walkFiles("supabase", [".sql"]),
+].filter((file) => fs.existsSync(file));
+
+for (const file of legacyDocReferenceFiles) {
+  const relativePath = toPosix(file);
+  const content = fs.readFileSync(file, "utf8");
+  const matches = countMatches(content, legacyDocReferencePattern);
+  if (matches > 0) {
+    failures.push(
+      `legacy-doc-references: ${relativePath} has ${matches} archive doc reference(s)`,
+    );
+  }
+}
+
+const docsPathPattern =
+  /docs\/(?:agent|architecture|modules|plan|ref|releases|runbooks|spec|status|user-guides|worklog)\/[A-Za-z0-9_./%#-]+\.md/g;
+
+for (const file of legacyDocReferenceFiles) {
+  const relativePath = toPosix(file);
+  const content = fs.readFileSync(file, "utf8");
+  for (const match of content.matchAll(docsPathPattern)) {
+    const rawDocPath = match[0].split("#")[0];
+    const decodedDocPath = decodeURIComponent(rawDocPath);
+    if (!fs.existsSync(path.join(REPO_ROOT, decodedDocPath))) {
+      failures.push(
+        `dead-doc-reference: ${relativePath} points to missing ${decodedDocPath}`,
+      );
+    }
+  }
+}
+
+const forbiddenTextChecks = [
+  {
+    id: "active-entrypoints-no-stale-ui-provider-terms",
+    files: [
+      "README.md",
+      "docs/README.md",
+      "docs/spec/toast-notification-system.md",
+      "tasks/regressions.md",
+      "apps/web/e2e/visual/theme-baseline.spec.ts",
+    ],
+    pattern:
+      /b1GN1lxvE|b6G3vbGue|HĐĐT MISA blocked|docs\/plan\/roadmap\.md|Tabler icons|--font-matu-heading|Employee portal|Employee Portal/g,
+  },
+  {
+    id: "all-sources-no-dead-legacy-doc-terms",
+    files: legacyDocReferenceFiles
+      .map((file) => toPosix(file))
+      .filter((file) => file !== "scripts/check-ui-contract.mjs"),
+    pattern:
+      /matu-superapp\/DESIGN|docs\/plan\/m4-payments-fix\.md|m4-payments-fix\.md|docs\/modules\/pos-kds\.md|docs\/plan\/adr\/0006-finance-phase-migration-chain\.md|\.understand-anything\/knowledge-graph\.json|ORACLE-META|codebase-oracle/g,
+  },
+];
 
 const textChecks = [
   {
@@ -177,6 +270,26 @@ const textChecks = [
     id: "design-system-one-source-regression",
     file: "tasks/regressions.md",
     includes: ["DESIGN-SYSTEM-ONE-SOURCE-ONLY"],
+  },
+  {
+    id: "design-system-runtime-token-contract",
+    file: "docs/spec/design-system.md",
+    includes: [
+      "Tier: `tier-elite`, `tier-note`",
+      "`packages/ui/src/components/theme-provider.tsx` is the only runtime theme",
+      "`max-h-dvh-95` and `max-h-dvh-80`",
+      "`pos-safe-top` / `pos-safe-bottom`",
+      "`chrome-safe-pb` / `chrome-safe-bottom`",
+    ],
+  },
+  {
+    id: "ui-module-runtime-token-contract",
+    file: "docs/modules/ui.md",
+    includes: [
+      "tier tokens `tier-elite` / `tier-note`",
+      "theme runtime trong `packages/ui/src/components/theme-script.tsx`",
+      "approved app utilities: `max-h-dvh-95`, `max-h-dvh-80`",
+    ],
   },
   {
     id: "card-title-runtime-contract",
@@ -243,6 +356,29 @@ const textChecks = [
     includes: ["resolved preset `buFywKm`"],
   },
   {
+    id: "readme-ui-preset-current",
+    file: "README.md",
+    includes: ["shadcn/ui (`radix-lyra`, preset `buFywKm`)"],
+  },
+  {
+    id: "readme-design-system-contract-pointer",
+    file: "README.md",
+    includes: ["Locked UI design-system contract"],
+  },
+  {
+    id: "docs-index-design-system-contract-pointer",
+    file: "docs/README.md",
+    includes: [
+      "UI Design System SSOT: [spec/design-system.md](spec/design-system.md)",
+      "`spec/design-system.md`: single source of truth cho UI design-system",
+    ],
+  },
+  {
+    id: "theme-baseline-preset-current",
+    file: "apps/web/e2e/visual/theme-baseline.spec.ts",
+    includes: ["shadcn preset buFywKm"],
+  },
+  {
     id: "data-table-mobile-empty-state-adapter",
     file: "apps/web/app/components/data-table/data-table.tsx",
     includes: ["<AppEmptyState", 'mode={emptyMode ?? "no-data"}'],
@@ -284,6 +420,22 @@ for (const check of textChecks) {
   for (const expected of check.includes) {
     if (!content.includes(expected)) {
       failures.push(`${check.id}: ${check.file} is missing "${expected}"`);
+    }
+  }
+}
+
+for (const check of forbiddenTextChecks) {
+  for (const file of check.files) {
+    const filePath = path.join(REPO_ROOT, file);
+    if (!fs.existsSync(filePath)) continue;
+    const content = fs.readFileSync(filePath, "utf8");
+    const matches = [...content.matchAll(check.pattern)];
+    if (matches.length > 0) {
+      failures.push(
+        `${check.id}: ${file} has stale term(s): ${[
+          ...new Set(matches.map((match) => match[0])),
+        ].join(", ")}`,
+      );
     }
   }
 }

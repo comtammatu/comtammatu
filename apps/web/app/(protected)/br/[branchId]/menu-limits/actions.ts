@@ -90,7 +90,14 @@ const setLimitSchema = z.object({
 
 export async function setBranchMenuDailyLimit(
   input: z.input<typeof setLimitSchema>,
-): Promise<ActionResult<{ menu_item_id: number; limit_quantity: number | null; is_disabled: boolean; sold_today: number }>> {
+): Promise<
+  ActionResult<{
+    menu_item_id: number;
+    limit_quantity: number | null;
+    is_disabled: boolean;
+    sold_today: number;
+  }>
+> {
   const parsed = setLimitSchema.safeParse(input);
   if (!parsed.success) {
     return {
@@ -139,14 +146,12 @@ export async function setBranchMenuDailyLimit(
   revalidatePath(`/br/${parsed.data.branchId}/menu-limits`);
   revalidatePath(`/br/${parsed.data.branchId}/pos`);
 
-  const row = (data ?? null) as
-    | {
-        menu_item_id: number;
-        limit_quantity: number | null;
-        is_disabled: boolean;
-        sold_today: number;
-      }
-    | null;
+  const row = (data ?? null) as {
+    menu_item_id: number;
+    limit_quantity: number | null;
+    is_disabled: boolean;
+    sold_today: number;
+  } | null;
   if (!row) {
     return {
       success: false,

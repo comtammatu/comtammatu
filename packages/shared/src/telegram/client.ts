@@ -38,7 +38,8 @@ export async function sendTelegramMessage(args: {
         chat_id: args.chatId,
         text: args.text,
         parse_mode: args.options?.parse_mode ?? "MarkdownV2",
-        disable_web_page_preview: args.options?.disable_web_page_preview ?? true,
+        disable_web_page_preview:
+          args.options?.disable_web_page_preview ?? true,
       }),
     });
   } catch (err) {
@@ -57,15 +58,11 @@ export async function sendTelegramMessage(args: {
       body = null;
     }
     const description =
-      body &&
-      typeof body === "object" &&
-      "description" in body
+      body && typeof body === "object" && "description" in body
         ? String((body as Record<string, unknown>).description ?? "")
         : `http_${res.status}`;
     const retryAfter =
-      body &&
-      typeof body === "object" &&
-      "parameters" in body
+      body && typeof body === "object" && "parameters" in body
         ? (body as { parameters?: { retry_after?: number } }).parameters
             ?.retry_after
         : undefined;

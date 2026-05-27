@@ -139,7 +139,9 @@ export const resolveInventoryBranchScope = cache(
  * malformed values (non-numeric, ≤0). Callers pass result into
  * `resolveInventoryBranchScope` which does the authorization check.
  */
-export function parseBranchIdParam(raw: string | string[] | undefined): number | null {
+export function parseBranchIdParam(
+  raw: string | string[] | undefined,
+): number | null {
   if (raw == null) return null;
   const value = Array.isArray(raw) ? raw[0] : raw;
   if (!value) return null;

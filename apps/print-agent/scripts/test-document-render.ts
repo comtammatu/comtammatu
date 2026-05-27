@@ -650,7 +650,11 @@ async function main() {
     appendTextKitchen,
     "Phiếu bếp: #087-2",
   );
-  assertTextIncludes("append text kitchen banner", appendTextKitchen, "GỌI THÊM");
+  assertTextIncludes(
+    "append text kitchen banner",
+    appendTextKitchen,
+    "GỌI THÊM",
+  );
   assertBytes(
     "primitive document text kitchen",
     renderPayload(primitiveDocumentKitchen),

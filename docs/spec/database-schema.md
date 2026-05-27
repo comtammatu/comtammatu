@@ -5,34 +5,33 @@ a hand-maintained per-column schema dump.
 
 ## Current Snapshot
 
-Generated from the current checkout on 2026-05-24 with:
+Generated from the current checkout on 2026-05-27 with:
 
 ```bash
 node scripts/project-snapshot.mjs
 ```
 
-| Area | Count |
-| --- | ---: |
-| Public tables in generated types | 115 |
-| Public views in generated types | 9 |
-| Public RPC/SQL functions in generated types | 237 |
-| Public enums in generated types | 0 |
-| SQL migration files | 347 |
+| Area                                        | Count |
+| ------------------------------------------- | ----: |
+| Public tables in generated types            |   116 |
+| Public views in generated types             |     9 |
+| Public RPC/SQL functions in generated types |   241 |
+| Public enums in generated types             |     0 |
+| SQL migration files                         |   366 |
 
-The archived early-2026 table-by-table reference moved to
-`docs/archive/ref/database-schema-early-2026.md`.
+The early-2026 hand-written table-by-table reference has been removed. Use the
+source ladder below instead of resurrecting stale schema dumps.
 
 ## Source Ladder
 
 When database facts disagree, trust the higher source:
 
-| Tier | Source | Use For |
-| --- | --- | --- |
-| 1 | `packages/database/src/types/database.types.ts` | Shape currently usable by app code after `pnpm db:types` |
-| 2 | Applied dev/prod Supabase state | RLS, defaults, constraints, extensions, and real runtime behavior |
-| 3 | `supabase/migrations/*.sql` | Authored schema changes; file existence does not prove applied status |
-| 4 | `docs/modules/database.md` and module docs | Domain grouping, rationale, and implementation guidance |
-| 5 | `docs/archive/**` | Historical context only |
+| Tier | Source                                          | Use For                                                               |
+| ---- | ----------------------------------------------- | --------------------------------------------------------------------- |
+| 1    | `packages/database/src/types/database.types.ts` | Shape currently usable by app code after `pnpm db:types`              |
+| 2    | Applied dev/prod Supabase state                 | RLS, defaults, constraints, extensions, and real runtime behavior     |
+| 3    | `supabase/migrations/*.sql`                     | Authored schema changes; file existence does not prove applied status |
+| 4    | `docs/modules/database.md` and module docs      | Domain grouping, rationale, and implementation guidance               |
 
 ## Domain Groups
 

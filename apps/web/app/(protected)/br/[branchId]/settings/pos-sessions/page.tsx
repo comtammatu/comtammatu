@@ -94,7 +94,9 @@ export default async function BranchPosSessionsPage({
       expected_cash:
         session.expected_cash == null ? null : Number(session.expected_cash),
       cash_difference:
-        session.cash_difference == null ? null : Number(session.cash_difference),
+        session.cash_difference == null
+          ? null
+          : Number(session.cash_difference),
     }),
   );
 
@@ -145,22 +147,24 @@ export default async function BranchPosSessionsPage({
       .order("created_at", { ascending: false });
 
     if (orderError) throw new Error("Không thể tải bill của ca POS");
-    orders = ((orderRows ?? []) as unknown as PosSessionOrder[]).map((order) => ({
-      ...order,
-      subtotal: Number(order.subtotal),
-      tax_amount: Number(order.tax_amount),
-      service_charge: Number(order.service_charge),
-      discount_amount: Number(order.discount_amount),
-      total_amount: Number(order.total_amount),
-      order_items: order.order_items.map((item) => ({
-        ...item,
-        quantity: Number(item.quantity),
-        unit_price: Number(item.unit_price),
-        subtotal: Number(item.subtotal),
-        modifiers: Array.isArray(item.modifiers) ? item.modifiers : [],
-        sides: Array.isArray(item.sides) ? item.sides : [],
-      })),
-    }));
+    orders = ((orderRows ?? []) as unknown as PosSessionOrder[]).map(
+      (order) => ({
+        ...order,
+        subtotal: Number(order.subtotal),
+        tax_amount: Number(order.tax_amount),
+        service_charge: Number(order.service_charge),
+        discount_amount: Number(order.discount_amount),
+        total_amount: Number(order.total_amount),
+        order_items: order.order_items.map((item) => ({
+          ...item,
+          quantity: Number(item.quantity),
+          unit_price: Number(item.unit_price),
+          subtotal: Number(item.subtotal),
+          modifiers: Array.isArray(item.modifiers) ? item.modifiers : [],
+          sides: Array.isArray(item.sides) ? item.sides : [],
+        })),
+      }),
+    );
 
     const reportResult = await getPosSessionReport(selectedSessionId);
     if (reportResult.success && reportResult.data) {
@@ -178,7 +182,9 @@ export default async function BranchPosSessionsPage({
           </Link>
         </Button>
         <div className="min-w-0">
-          <h1 className="font-heading text-2xl font-semibold tracking-tight sm:text-3xl">Ca POS</h1>
+          <h1 className="font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
+            Ca POS
+          </h1>
           <p className="mt-1 text-sm text-muted-foreground">{branch.name}</p>
         </div>
       </div>

@@ -31,7 +31,7 @@ test("extractJsonFromText: returns JSON from markdown code block", () => {
 });
 
 test("extractJsonFromText: returns JSON from plain code block", () => {
-  const input = "```\n{\"a\":1}\n```";
+  const input = '```\n{"a":1}\n```';
   assert.equal(extractJsonFromText(input), '{"a":1}');
 });
 

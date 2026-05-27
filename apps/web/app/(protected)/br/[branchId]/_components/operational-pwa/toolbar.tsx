@@ -153,9 +153,7 @@ export function OperationalPwaToolbar({
           <div className="flex min-w-0 flex-1 items-center gap-2 text-xs font-medium text-muted-foreground md:text-sm md:font-semibold md:text-foreground">
             <IconDownload className="size-4 shrink-0" />
             <span className="hidden truncate md:inline">
-              {isIosPwaInstall
-                ? copy.iosInstallHint
-                : copy.browserInstallHint}
+              {isIosPwaInstall ? copy.iosInstallHint : copy.browserInstallHint}
             </span>
             <span className="truncate md:hidden">
               {isIosPwaInstall

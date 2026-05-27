@@ -1,6 +1,6 @@
 export const STATUS_CONFIG = {
   pending: { label: "Chờ", variant: "warning" as const },
-  preparing: { label: "Đang làm", variant: "warning" as const },
+  preparing: { label: "Đang chuẩn bị", variant: "warning" as const },
   ready: { label: "Sẵn sàng", variant: "success" as const },
   cancelled: { label: "Đã hủy", variant: "destructive" as const },
 } as const;
@@ -46,7 +46,9 @@ export function formatKitchenTicketDisplay(ticketNumber: string): string {
   return suffix ? `#${formatReadableSequence(suffix)}` : trimmed;
 }
 
-function formatOrderBasedKitchenTicketDisplay(value: string | null | undefined) {
+function formatOrderBasedKitchenTicketDisplay(
+  value: string | null | undefined,
+) {
   const normalized = (value ?? "").trim().replace(/^#+/, "");
   if (!/^\d{1,5}(?:-\d{1,3})?$/.test(normalized)) return null;
   return `#${normalized}`;
@@ -75,9 +77,8 @@ export function formatKdsTicketSequenceDisplay(
   kitchenTicketNumber: string,
   orderNumber?: string,
 ): string {
-  const orderBasedTicket = formatOrderBasedKitchenTicketDisplay(
-    kitchenTicketNumber,
-  );
+  const orderBasedTicket =
+    formatOrderBasedKitchenTicketDisplay(kitchenTicketNumber);
   if (orderBasedTicket) return orderBasedTicket;
 
   const ticketSequence = extractReadableSequence(kitchenTicketNumber);
@@ -87,4 +88,42 @@ export function formatKdsTicketSequenceDisplay(
   return sequence
     ? `#${formatReadableSequence(sequence)}`
     : formatKitchenTicketDisplay(kitchenTicketNumber ?? orderNumber);
+}
+
+export interface KdsTicketSequenceSortKey {
+  primary: number;
+  secondary: number;
+}
+
+export function getKdsTicketSequenceSortKey(
+  kitchenTicketNumber: string | null | undefined,
+  orderNumber?: string | null,
+): KdsTicketSequenceSortKey | null {
+  const orderBasedTicket =
+    extractOrderBasedSequenceSortKey(kitchenTicketNumber);
+  if (orderBasedTicket) return orderBasedTicket;
+
+  const ticketSequence = extractReadableSequence(kitchenTicketNumber);
+  const orderSequence = extractReadableSequence(orderNumber);
+  const sequence = ticketSequence ?? orderSequence;
+  if (!sequence) return null;
+
+  const primary = Number(sequence);
+  if (!Number.isSafeInteger(primary)) return null;
+  return { primary, secondary: 0 };
+}
+
+function extractOrderBasedSequenceSortKey(
+  value: string | null | undefined,
+): KdsTicketSequenceSortKey | null {
+  const normalized = (value ?? "").trim().replace(/^#+/, "");
+  if (!/^\d{1,5}(?:-\d{1,3})?$/.test(normalized)) return null;
+
+  const [primaryRaw, secondaryRaw] = normalized.split("-");
+  const primary = Number(primaryRaw);
+  const secondary = secondaryRaw === undefined ? 0 : Number(secondaryRaw);
+  if (!Number.isSafeInteger(primary) || !Number.isSafeInteger(secondary)) {
+    return null;
+  }
+  return { primary, secondary };
 }

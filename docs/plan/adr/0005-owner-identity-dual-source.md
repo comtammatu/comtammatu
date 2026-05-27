@@ -24,15 +24,16 @@ Three concepts were conflated in original code:
 2. **DEFER updating `has_permission()` / `_auth_v2_is_owner()` / `has_permission_any()`** to add second OR branch. No functional regression to fix — H3a sufficient.
 3. **Three concepts kept separate** with clear semantics:
 
-| Column | Type | Purpose | Owner-bypass? |
-|--------|------|---------|---------------|
-| `tenants.representative` | TEXT | Legal signatory name (CTCP docs) | ❌ Never |
-| `positions.code='owner'` | (lookup via profiles.position_id) | HR label, JWT user_role source | ✅ Currently |
-| `tenants.owner_user_id` | UUID FK auth.users | Canonical auth identity | ⚠️ Future (deferred) |
+| Column                   | Type                              | Purpose                          | Owner-bypass?        |
+| ------------------------ | --------------------------------- | -------------------------------- | -------------------- |
+| `tenants.representative` | TEXT                              | Legal signatory name (CTCP docs) | ❌ Never             |
+| `positions.code='owner'` | (lookup via profiles.position_id) | HR label, JWT user_role source   | ✅ Currently         |
+| `tenants.owner_user_id`  | UUID FK auth.users                | Canonical auth identity          | ⚠️ Future (deferred) |
 
 ## Why minimum-regret over full dual-source
 
 **Architect Antithesis (steelman against full H3b):**
+
 - H3a enforces `profiles.position_id NOT NULL` + FK RESTRICT + raise on every code path that could null it.
 - Silent-demote vector (the bug class H3b would defend) is **already closed** at source.
 - Adding redundant column + has_permission OR branch creates:
@@ -42,6 +43,7 @@ Three concepts were conflated in original code:
 - "Defense-in-depth" framing assumes failure modes independent. In practice both sources go through same admin paths → failures correlate.
 
 **Synthesis path:**
+
 - Ship column NOW (data foundation for future ownership transfer UI/RPC).
 - DEFER function update — flip in one PR if a real second silent-demote incident occurs.
 - Avoids drift: no two sources of truth in active use yet.
@@ -49,12 +51,14 @@ Three concepts were conflated in original code:
 ## Consequences
 
 **Positive:**
+
 - Data foundation present for future `transfer_ownership(p_new_user_id)` RPC.
 - Backfill verified at migration time (every tenant has identifiable owner).
 - Three-concept model documented; future engineers know which to use.
 - Migration is reversible (column drop only).
 
 **Negative / Trade-offs:**
+
 - Column exists but unused by RLS. Slight schema bloat (1 UUID per tenant — single row in pilot).
 - Future ownership transfer needs explicit RPC (deferred design); for now, manual SQL `UPDATE tenants SET owner_user_id = ...` is the only mutation path.
 - If H3a invariants ever weakened (e.g. NOT NULL constraint dropped), defense-in-depth via this column is NOT in place — deliberate, ADR documents fallback path.
@@ -62,18 +66,22 @@ Three concepts were conflated in original code:
 ## Alternatives Rejected
 
 **A. Full dual-source (original H3b):**
-- Add column + extend has_permission + extend has_permission_any + extend _auth_v2_is_owner.
+
+- Add column + extend has_permission + extend has_permission_any + extend \_auth_v2_is_owner.
 - Rejected: solves a problem H3a already prevents; introduces drift surface.
 
 **B. Single source migration (replace position-based check):**
+
 - Drop `positions.code='owner'` check entirely; rely solely on `tenants.owner_user_id`.
 - Rejected: invasive — breaks `_auth_v2_position_id_from_role` mapping (`20260423020000_auth_v2_m5_bridge.sql:108`), JWT user_role derivation, 17+ SQL sites referencing 'owner' position code.
 
 **C. No-op (defer entire H3b):**
+
 - Don't ship anything until ownership transfer UI is designed.
 - Rejected: data foundation work is independent of UI; better to land schema now.
 
 **D. Multi-owner support (UNIQUE removed):**
+
 - Allow N owners per tenant via no UNIQUE constraint.
 - Rejected: not in scope. Backfill picks 1 deterministic owner; UNIQUE not added because no business rule forbids same user owning multiple tenants. If multi-owner becomes real requirement, separate ADR.
 

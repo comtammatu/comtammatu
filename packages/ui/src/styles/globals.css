@@ -27,7 +27,7 @@
  * ============================================================ */
 
 @theme inline {
-  --font-heading: var(--font-matu-heading);
+  --font-heading: var(--font-heading-runtime);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -229,6 +229,19 @@
   --text-2xs--line-height: 1rem;
   --text-3xs: 0.625rem;
   --text-3xs--line-height: 0.875rem;
+}
+
+/* Override: Runner/KDS customer-facing board rows need a fixed large scan size
+ * without reintroducing forbidden app-surface text-4xl or arbitrary text values. */
+@theme inline {
+  --text-runner-header: 44px;
+  --text-runner-header--line-height: 52px;
+  --text-runner-board: 52px;
+  --text-runner-board--line-height: 60px;
+  --text-runner-empty-secondary: 44px;
+  --text-runner-empty-secondary--line-height: 52px;
+  --text-runner-footer: 40px;
+  --text-runner-footer--line-height: 48px;
 }
 
 @theme inline {

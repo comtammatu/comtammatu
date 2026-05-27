@@ -10,9 +10,7 @@ import {
 
 export function AuditHistoryList({ logs }: { logs: AuditLogRow[] }) {
   if (!logs.length) {
-    return (
-      <AppEmptyState mode="no-data" title="Chưa có lịch sử thao tác" />
-    );
+    return <AppEmptyState mode="no-data" title="Chưa có lịch sử thao tác" />;
   }
   return (
     <ItemGroup>

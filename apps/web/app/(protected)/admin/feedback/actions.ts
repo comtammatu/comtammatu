@@ -37,13 +37,10 @@ export async function bulkMarkSuspect(
 
   const { feedback_ids, is_suspect } = parsed.data;
 
-  const { data, error } = await ctx.supabase.rpc(
-    "bulk_mark_feedback_suspect",
-    {
-      p_feedback_ids: feedback_ids,
-      p_is_suspect: is_suspect,
-    },
-  );
+  const { data, error } = await ctx.supabase.rpc("bulk_mark_feedback_suspect", {
+    p_feedback_ids: feedback_ids,
+    p_is_suspect: is_suspect,
+  });
 
   if (error) {
     console.error("[bulkMarkSuspect] rpc error code=%s", error.code);

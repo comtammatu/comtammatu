@@ -1,12 +1,12 @@
-import * as React from "react"
+import * as React from "react";
 
-import { cn } from '../lib/utils'
-import { Button } from './button'
+import { cn } from "../lib/utils";
+import { Button } from "./button";
 import {
   ChevronLeft as IconChevronLeft,
   ChevronRight as IconChevronRight,
   Ellipsis as IconDots,
-} from "lucide-react"
+} from "lucide-react";
 
 function Pagination({ className, ...props }: React.ComponentProps<"nav">) {
   return (
@@ -17,7 +17,7 @@ function Pagination({ className, ...props }: React.ComponentProps<"nav">) {
       className={cn("mx-auto flex w-full justify-center", className)}
       {...props}
     />
-  )
+  );
 }
 
 function PaginationContent({
@@ -30,17 +30,17 @@ function PaginationContent({
       className={cn("flex items-center gap-0.5", className)}
       {...props}
     />
-  )
+  );
 }
 
 function PaginationItem({ ...props }: React.ComponentProps<"li">) {
-  return <li data-slot="pagination-item" {...props} />
+  return <li data-slot="pagination-item" {...props} />;
 }
 
 type PaginationLinkProps = {
-  isActive?: boolean
+  isActive?: boolean;
 } & Pick<React.ComponentProps<typeof Button>, "size"> &
-  React.ComponentProps<"a">
+  React.ComponentProps<"a">;
 
 function PaginationLink({
   className,
@@ -62,7 +62,7 @@ function PaginationLink({
         {...props}
       />
     </Button>
-  )
+  );
 }
 
 function PaginationPrevious({
@@ -80,7 +80,7 @@ function PaginationPrevious({
       <IconChevronLeft data-icon="inline-start" className="cn-rtl-flip" />
       <span className="hidden sm:block">{text}</span>
     </PaginationLink>
-  )
+  );
 }
 
 function PaginationNext({
@@ -98,7 +98,7 @@ function PaginationNext({
       <span className="hidden sm:block">{text}</span>
       <IconChevronRight data-icon="inline-end" className="cn-rtl-flip" />
     </PaginationLink>
-  )
+  );
 }
 
 function PaginationEllipsis({
@@ -111,15 +111,14 @@ function PaginationEllipsis({
       data-slot="pagination-ellipsis"
       className={cn(
         "flex size-7 items-center justify-center [&_svg:not([class*='size-'])]:size-3.5",
-        className
+        className,
       )}
       {...props}
     >
-      <IconDots
-      />
+      <IconDots />
       <span className="sr-only">More pages</span>
     </span>
-  )
+  );
 }
 
 export {
@@ -130,4 +129,4 @@ export {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
-}
+};

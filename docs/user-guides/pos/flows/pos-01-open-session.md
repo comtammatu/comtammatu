@@ -7,13 +7,13 @@
 
 ## Tóm tắt
 
-| Trường | Giá trị |
-| --- | --- |
-| **Vai trò** | Thu ngân, Quản lý chi nhánh |
-| **Quyền cần có** | `pos:open_cashbox` (mở két) |
-| **Điều kiện trước** | Đã đăng nhập, đã được phân chi nhánh |
-| **Kết quả đúng** | Hệ thống tạo ca POS mới (status `open`); UI chuyển sang màn POS chính (table picker / menu) |
-| **Thời gian** | ~15 giây |
+| Trường              | Giá trị                                                                                     |
+| ------------------- | ------------------------------------------------------------------------------------------- |
+| **Vai trò**         | Thu ngân, Quản lý chi nhánh                                                                 |
+| **Quyền cần có**    | `pos:open_cashbox` (mở két)                                                                 |
+| **Điều kiện trước** | Đã đăng nhập, đã được phân chi nhánh                                                        |
+| **Kết quả đúng**    | Hệ thống tạo ca POS mới (status `open`); UI chuyển sang màn POS chính (table picker / menu) |
+| **Thời gian**       | ~15 giây                                                                                    |
 
 ## Đường dẫn
 
@@ -112,9 +112,9 @@ Ví dụ: `/br/1/pos`
 
 ### Code path
 
-- **UI:** [apps/web/app/(protected)/br/[branchId]/pos/session-gate.tsx](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/session-gate.tsx)
-- **Server action:** [apps/web/app/(protected)/br/[branchId]/pos/session-actions.ts](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/session-actions.ts) — function `openPosSession`
-- **Page-level orchestration:** [apps/web/app/(protected)/br/[branchId]/pos/page.tsx](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/page.tsx)
+- **UI:** [apps/web/app/(protected)/br/[branchId]/pos/session-gate.tsx](<../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/session-gate.tsx>)
+- **Server action:** [apps/web/app/(protected)/br/[branchId]/pos/session-actions.ts](<../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/session-actions.ts>) — function `openPosSession`
+- **Page-level orchestration:** [apps/web/app/(protected)/br/[branchId]/pos/page.tsx](<../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/page.tsx>)
 
 ### Database (per-branch model D7)
 
@@ -132,19 +132,18 @@ Ví dụ: `/br/1/pos`
 ### Tham chiếu thiết kế
 
 - Per-branch session migration: commit `0ccb059 feat(pos): per-branch session model + realtime sync (D7)`
-- Order lifecycle: [docs/archive/plan/m2-order-lifecycle.md](../../../archive/plan/m2-order-lifecycle.md)
-- UI page contracts: [docs/archive/plan/ui-ux-page-contracts.md](../../../archive/plan/ui-ux-page-contracts.md)
+- Current POS scope: [tasks/todo.md](../../../../tasks/todo.md)
 - Design system: [docs/spec/design-system.md](../../../spec/design-system.md)
 
 ---
 
 ## Metadata mockup
 
-| Trường | Giá trị |
-| --- | --- |
-| Viewport | 390×844 (iPhone mặc định) — đổi tại [paths.ts](../../../../apps/web/e2e/guides/_lib/paths.ts) |
-| Capture script | [apps/web/e2e/guides/pos-01-open-session.guide.ts](../../../../apps/web/e2e/guides/pos-01-open-session.guide.ts) |
-| Lệnh refresh | `pnpm --filter @comtammatu/web guides:capture --grep="POS-01"` |
-| Cập nhật mockup gần nhất | 2026-04-27 |
-| Model bám | per-branch (D7) — `0ccb059` |
-| Người maintain | _TBD_ |
+| Trường                   | Giá trị                                                                                                          |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| Viewport                 | 390×844 (iPhone mặc định) — đổi tại [paths.ts](../../../../apps/web/e2e/guides/_lib/paths.ts)                    |
+| Capture script           | [apps/web/e2e/guides/pos-01-open-session.guide.ts](../../../../apps/web/e2e/guides/pos-01-open-session.guide.ts) |
+| Lệnh refresh             | `pnpm --filter @comtammatu/web guides:capture --grep="POS-01"`                                                   |
+| Cập nhật mockup gần nhất | 2026-04-27                                                                                                       |
+| Model bám                | per-branch (D7) — `0ccb059`                                                                                      |
+| Người maintain           | _TBD_                                                                                                            |

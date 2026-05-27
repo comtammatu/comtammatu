@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, type CSSProperties } from "react";
-import { Check as IconCheck, ChevronDown as IconChevronDown } from "lucide-react";
+import {
+  Check as IconCheck,
+  ChevronDown as IconChevronDown,
+} from "lucide-react";
 import { cn } from "@comtammatu/ui";
 import { matchesSearch } from "@lib/search";
 import { Button } from "@comtammatu/ui/components/button";

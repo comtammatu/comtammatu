@@ -26,9 +26,9 @@ test.describe("Cash payment -> POS close", () => {
     const testOrder = await createTestOrder();
 
     try {
-      await expect.poll(() => getTableStatus(testOrder.tableId)).toBe(
-        "occupied",
-      );
+      await expect
+        .poll(() => getTableStatus(testOrder.tableId))
+        .toBe("occupied");
       await expect
         .poll(() => getKdsTicketStatus(testOrder.kdsTicketId))
         .toBe("pending");
@@ -85,9 +85,7 @@ test.describe("Cash payment -> POS close", () => {
         .getByTestId(`pos-order-bill-${String(testOrder.orderId)}`)
         .click();
       const receipt = page.locator("#pos-receipt");
-      await expect(
-        page.getByRole("dialog", { name: "Hóa đơn" }),
-      ).toBeVisible();
+      await expect(page.getByRole("dialog", { name: "Hóa đơn" })).toBeVisible();
       await expect(page.getByRole("dialog")).not.toContainText(
         "Phương thức thanh toán",
       );
@@ -161,7 +159,9 @@ test.describe("Cash payment -> POS close", () => {
 
       // Order now has 2 items × unitPrice (recomputed by helper).
       const total = testOrder.totalAmount * 2;
-      await page.getByTestId("bill-cash-received").fill(String(Math.round(total)));
+      await page
+        .getByTestId("bill-cash-received")
+        .fill(String(Math.round(total)));
       await page.getByTestId("bill-confirm-cash").click();
 
       await expect

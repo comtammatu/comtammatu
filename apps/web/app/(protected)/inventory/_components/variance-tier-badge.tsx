@@ -48,7 +48,10 @@ export function VarianceTierBadge({
     return (
       <Badge
         variant="outline"
-        className={cn("border-muted-foreground/40 text-muted-foreground", className)}
+        className={cn(
+          "border-muted-foreground/40 text-muted-foreground",
+          className,
+        )}
         data-slot="variance-tier-badge"
         data-source="paused"
       >
@@ -61,7 +64,10 @@ export function VarianceTierBadge({
     return (
       <Badge
         variant="outline"
-        className={cn("border-muted-foreground/40 text-muted-foreground", className)}
+        className={cn(
+          "border-muted-foreground/40 text-muted-foreground",
+          className,
+        )}
         data-slot="variance-tier-badge"
         data-source="none"
       >

@@ -10,7 +10,10 @@ export function sanitizeComment(input: string): string {
   // Control-char regex is intentional — eslint flags it but we want exactly this.
   // eslint-disable-next-line no-control-regex
   const controlChars = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g;
-  const stripped = input.replace(/<[^>]*>/g, "").replace(controlChars, "").trim();
+  const stripped = input
+    .replace(/<[^>]*>/g, "")
+    .replace(controlChars, "")
+    .trim();
   return stripped;
 }
 

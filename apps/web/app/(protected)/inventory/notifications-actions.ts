@@ -2,7 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { PERMISSION_KEYS, SUPPLIER_RETURN_ROLES } from "@comtammatu/shared/auth";
+import {
+  PERMISSION_KEYS,
+  SUPPLIER_RETURN_ROLES,
+} from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { withAction } from "@/_lib/with-action";
 import { getAuthContextWithPermission } from "./_lib/auth";
@@ -146,7 +149,9 @@ export async function dispatchNotificationOutbox(): Promise<ActionResult> {
   let failed = 0;
   for (const row of pending) {
     const payload =
-      row.payload && typeof row.payload === "object" && !Array.isArray(row.payload)
+      row.payload &&
+      typeof row.payload === "object" &&
+      !Array.isArray(row.payload)
         ? (row.payload as OutboxPayload)
         : ({} as OutboxPayload);
     const body = formatPayloadForChannel(channel, row.topic, payload);

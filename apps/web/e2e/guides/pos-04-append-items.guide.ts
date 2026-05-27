@@ -104,7 +104,7 @@ test.describe("POS-04 Thêm món vào đơn đang phục vụ", () => {
       id: "step-02-tap-add-items",
       flowId: FLOW,
       module: MODULE,
-      step: { number: 2, total: TOTAL, title: "Chạm \"Thêm món\"" },
+      step: { number: 2, total: TOTAL, title: 'Chạm "Thêm món"' },
       setup: async (p) => {
         await gotoOrderDetail(p, ctx.branchId);
         // Scroll to bottom of sheet to make sure "Thêm món" is visible

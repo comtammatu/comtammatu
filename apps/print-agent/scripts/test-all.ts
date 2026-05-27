@@ -59,40 +59,75 @@ const padRight = (s: string, w: number) =>
 const padLeft = (s: string, w: number) =>
   s.length >= w ? s.slice(-w) : " ".repeat(w - s.length) + s;
 
-const line = (s: string, opts?: { bold?: boolean; double?: boolean; align?: "left" | "center" | "right" }) =>
-  renderLineRaster(s, opts);
+const line = (
+  s: string,
+  opts?: {
+    bold?: boolean;
+    double?: boolean;
+    align?: "left" | "center" | "right";
+  },
+) => renderLineRaster(s, opts);
 const bl = (height?: number) => blankLine(height);
 
 const divider = (ch = "-") => line(ch.repeat(CHARS_PER_LINE_NORMAL));
 
 // Receipt table column spec — total 48 chars including pipes & padding.
-const RECEIPT_TABLE_BORDER = "+" +
-  "-".repeat(18) + "+" +
-  "-".repeat(4) + "+" +
-  "-".repeat(10) + "+" +
-  "-".repeat(11) + "+";
+const RECEIPT_TABLE_BORDER =
+  "+" +
+  "-".repeat(18) +
+  "+" +
+  "-".repeat(4) +
+  "+" +
+  "-".repeat(10) +
+  "+" +
+  "-".repeat(11) +
+  "+";
 
-const receiptRow = (name: string, qty: string, price: string, total: string): string =>
-  "| " + padRight(name, 16) + " " +
-  "| " + padLeft(qty, 2) + " " +
-  "| " + padLeft(price, 8) + " " +
-  "| " + padLeft(total, 9) + " |";
+const receiptRow = (
+  name: string,
+  qty: string,
+  price: string,
+  total: string,
+): string =>
+  "| " +
+  padRight(name, 16) +
+  " " +
+  "| " +
+  padLeft(qty, 2) +
+  " " +
+  "| " +
+  padLeft(price, 8) +
+  " " +
+  "| " +
+  padLeft(total, 9) +
+  " |";
 
 const receiptDetailRow = (text: string): string =>
-  "| " + padRight(text, 16) + " " +
-  "| " + " ".repeat(2) + " " +
-  "| " + " ".repeat(8) + " " +
-  "| " + " ".repeat(9) + " |";
+  "| " +
+  padRight(text, 16) +
+  " " +
+  "| " +
+  " ".repeat(2) +
+  " " +
+  "| " +
+  " ".repeat(8) +
+  " " +
+  "| " +
+  " ".repeat(9) +
+  " |";
 
 // ─── Kitchen ticket ─────────────────────────────────────────────────────
 
-const KITCHEN_BORDER = "-".repeat(4) + "+" + "-".repeat(CHARS_PER_LINE_NORMAL - 5);
+const KITCHEN_BORDER =
+  "-".repeat(4) + "+" + "-".repeat(CHARS_PER_LINE_NORMAL - 5);
 
 function buildKitchenTicket(): Uint8Array {
   const parts: Uint8Array[] = [init(), lineSpacingZero()];
 
   // Header — table/order identification, double-size bold centered
-  parts.push(line("BÀN 5 · ORD-2026-001", { bold: true, double: true, align: "center" }));
+  parts.push(
+    line("BÀN 5 · ORD-2026-001", { bold: true, double: true, align: "center" }),
+  );
   parts.push(divider("="));
 
   // Meta row
@@ -103,20 +138,24 @@ function buildKitchenTicket(): Uint8Array {
   parts.push(line(KITCHEN_BORDER));
 
   // Item 1: prefix normal + name double, same row (mixed)
-  parts.push(renderMixedRow([
-    { text: " x2 | " },
-    { text: "Cơm tấm sườn bì", bold: true, double: true },
-  ]));
+  parts.push(
+    renderMixedRow([
+      { text: " x2 | " },
+      { text: "Cơm tấm sườn bì", bold: true, double: true },
+    ]),
+  );
   parts.push(line("    |   + Thêm trứng ốp"));
   parts.push(line("    |   - Canh chua cá x1"));
   parts.push(line("    |   * Không hành"));
   parts.push(line(KITCHEN_BORDER));
 
   // Item 2
-  parts.push(renderMixedRow([
-    { text: " x1 | " },
-    { text: "Bánh mì thịt nướng", bold: true, double: true },
-  ]));
+  parts.push(
+    renderMixedRow([
+      { text: " x1 | " },
+      { text: "Bánh mì thịt nướng", bold: true, double: true },
+    ]),
+  );
   parts.push(line("    |   * Thêm ớt"));
   parts.push(line(KITCHEN_BORDER));
 
@@ -183,7 +222,9 @@ function buildProvisionalBill(): Uint8Array {
   const parts: Uint8Array[] = [init(), lineSpacingZero()];
   parts.push(...buildHeader());
   parts.push(divider("="));
-  parts.push(line("PHIẾU TẠM TÍNH", { bold: true, double: true, align: "center" }));
+  parts.push(
+    line("PHIẾU TẠM TÍNH", { bold: true, double: true, align: "center" }),
+  );
   parts.push(divider("="));
   parts.push(line(pair48("Đơn hàng:", "ORD-2026-001")));
   parts.push(line(pair48("Ngày:", "14:30 24/04/2026")));
@@ -209,7 +250,9 @@ function buildReceipt(): Uint8Array {
   const parts: Uint8Array[] = [init(), lineSpacingZero()];
   parts.push(...buildHeader());
   parts.push(divider("="));
-  parts.push(line("HÓA ĐƠN THANH TOÁN", { bold: true, double: true, align: "center" }));
+  parts.push(
+    line("HÓA ĐƠN THANH TOÁN", { bold: true, double: true, align: "center" }),
+  );
   parts.push(divider("="));
   parts.push(line(pair48("Đơn hàng:", "ORD-2026-001")));
   parts.push(line(pair48("Ngày:", "14:30 24/04/2026")));
@@ -228,14 +271,22 @@ function buildReceipt(): Uint8Array {
 
 // ─── Dispatch ────────────────────────────────────────────────────────────
 
-const sendLAN = async (host: string, port: number, payload: Uint8Array): Promise<void> =>
+const sendLAN = async (
+  host: string,
+  port: number,
+  payload: Uint8Array,
+): Promise<void> =>
   new Promise((resolve, reject) => {
     const sock = new net.Socket();
     let settled = false;
     const done = (err?: Error) => {
       if (settled) return;
       settled = true;
-      try { sock.destroy(); } catch { /* ignore */ }
+      try {
+        sock.destroy();
+      } catch {
+        /* ignore */
+      }
       err ? reject(err) : resolve();
     };
     sock.setTimeout(30_000, () => done(new Error(`timeout ${host}:${port}`)));
@@ -272,7 +323,9 @@ async function main() {
   }
 
   for (const p of payloads) {
-    console.log(`[test-all] sending ${p.label} (${p.bytes.length} bytes) → ${host}:${port}`);
+    console.log(
+      `[test-all] sending ${p.label} (${p.bytes.length} bytes) → ${host}:${port}`,
+    );
     await sendLAN(host, port, p.bytes);
   }
   console.log(`[test-all] done (${payloads.length} print job(s))`);

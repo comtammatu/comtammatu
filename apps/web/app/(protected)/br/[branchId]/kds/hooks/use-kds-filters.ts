@@ -49,8 +49,7 @@ export function useKdsFilters(stations: KdsStation[]): KdsFilters {
     [searchParams],
   );
 
-  const hasFilters =
-    activeStationId !== null || orderTypeFilter !== "all";
+  const hasFilters = activeStationId !== null || orderTypeFilter !== "all";
 
   const setStation = useCallback(
     (value: string | null) => {

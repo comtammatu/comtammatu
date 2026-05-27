@@ -28,10 +28,7 @@ export function PeriodAdminClient({ initial, canCloseOrReopen }: Props) {
 
   return (
     <AppPage>
-      <AppPageHeader
-        title={copy.title}
-        description={copy.description}
-      />
+      <AppPageHeader title={copy.title} description={copy.description} />
 
       <ul className="space-y-3">
         {initial.map((p) => (

@@ -68,20 +68,23 @@ export function useNotifications({
     }
   }, []);
 
-  const markRead = useCallback(async (id: number) => {
-    setItems((prev) =>
-      prev.map((n) =>
-        n.id === id && !n.read_at
-          ? { ...n, read_at: new Date().toISOString() }
-          : n,
-      ),
-    );
-    setUnreadCount((c) => Math.max(0, c - 1));
-    const r = await markNotificationRead({ id });
-    if (!r.success) {
-      void refresh();
-    }
-  }, [refresh]);
+  const markRead = useCallback(
+    async (id: number) => {
+      setItems((prev) =>
+        prev.map((n) =>
+          n.id === id && !n.read_at
+            ? { ...n, read_at: new Date().toISOString() }
+            : n,
+        ),
+      );
+      setUnreadCount((c) => Math.max(0, c - 1));
+      const r = await markNotificationRead({ id });
+      if (!r.success) {
+        void refresh();
+      }
+    },
+    [refresh],
+  );
 
   const markAll = useCallback(async () => {
     const r = await markAllNotificationsRead();

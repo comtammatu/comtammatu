@@ -26,10 +26,7 @@ const goodXml = (size: number): Uint8Array => {
   return a;
 };
 
-const goodArchive = (
-  pdfSize = 1024,
-  xmlSize = 1024,
-): InvoiceArchive => ({
+const goodArchive = (pdfSize = 1024, xmlSize = 1024): InvoiceArchive => ({
   pdf: {
     bytes: goodPdf(pdfSize),
     contentType: "application/pdf",

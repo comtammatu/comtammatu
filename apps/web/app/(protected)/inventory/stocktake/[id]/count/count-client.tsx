@@ -4,7 +4,12 @@ import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@comtammatu/ui/components/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@comtammatu/ui/components/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { AppPageHeader } from "@/components/surface";
 import { InventoryPageContent } from "../../../_components/inventory-page-layout";
@@ -50,7 +55,11 @@ export function StocktakeCountClient({
   const canCount = status === "in_progress";
   const editable = canCount && lockState === "held";
 
-  const { status: saveStatus, lastSavedAt, flush } = useStocktakeDraftSaver({
+  const {
+    status: saveStatus,
+    lastSavedAt,
+    flush,
+  } = useStocktakeDraftSaver({
     sessionId,
     counts,
     enabled: editable,
@@ -106,9 +115,7 @@ export function StocktakeCountClient({
         toast.error(res.error ?? "Không submit được round");
         return;
       }
-      toast.success(
-        `Đã lưu ${res.data.appliedCount} dòng đếm`,
-      );
+      toast.success(`Đã lưu ${res.data.appliedCount} dòng đếm`);
       router.refresh();
     });
   }
@@ -121,58 +128,58 @@ export function StocktakeCountClient({
         description={`CN #${branchId} · Round R${currentRound}`}
       />
       <div className="flex flex-wrap items-center gap-3">
-          <StocktakeDraftSaverBadge
-            status={saveStatus}
-            lastSavedAt={lastSavedAt}
-          />
-        </div>
+        <StocktakeDraftSaverBadge
+          status={saveStatus}
+          lastSavedAt={lastSavedAt}
+        />
+      </div>
 
-        {canCount ? (
-          <ZoneLockIndicator
-            sessionId={sessionId}
-            zoneId={zoneId}
-            onStateChange={setLockState}
-            onLost={() => {
-              toast.error(messages.inventory.stocktake.zoneLockLost);
-            }}
-          />
-        ) : null}
+      {canCount ? (
+        <ZoneLockIndicator
+          sessionId={sessionId}
+          zoneId={zoneId}
+          onStateChange={setLockState}
+          onLost={() => {
+            toast.error(messages.inventory.stocktake.zoneLockLost);
+          }}
+        />
+      ) : null}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              {currentRound === 1 ? "Danh sách đếm" : `Vòng đếm R${currentRound}`}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <BlindCountingGrid
-              lines={currentRoundLines}
-              counts={counts}
-              onCountChange={onCountChange}
-              blindMode={blindMode}
-              readOnly={!editable}
-              onlyNeedsRecount={currentRound > 1 ? true : undefined}
-            />
-            <BlindCountingGridToolbar
-              onSubmit={submit}
-              submitting={pending}
-              canSubmit={editable && Object.keys(counts).length > 0}
-            >
-              <Button type="button" variant="outline" size="sm" asChild>
-                <Link
-                  href={`/inventory/stocktake/${sessionId}?branchId=${branchId}&view=detail`}
-                >
-                  Chốt kiểm kê
-                </Link>
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            {currentRound === 1 ? "Danh sách đếm" : `Vòng đếm R${currentRound}`}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <BlindCountingGrid
+            lines={currentRoundLines}
+            counts={counts}
+            onCountChange={onCountChange}
+            blindMode={blindMode}
+            readOnly={!editable}
+            onlyNeedsRecount={currentRound > 1 ? true : undefined}
+          />
+          <BlindCountingGridToolbar
+            onSubmit={submit}
+            submitting={pending}
+            canSubmit={editable && Object.keys(counts).length > 0}
+          >
+            <Button type="button" variant="outline" size="sm" asChild>
+              <Link
+                href={`/inventory/stocktake/${sessionId}?branchId=${branchId}&view=detail`}
+              >
+                Chốt kiểm kê
+              </Link>
+            </Button>
+            {!editable ? (
+              <Button variant="outline" size="sm" disabled>
+                {status === "completed" ? "Đã hòan thành" : "Không thể sửa"}
               </Button>
-              {!editable ? (
-                <Button variant="outline" size="sm" disabled>
-                  {status === "completed" ? "Đã hòan thành" : "Không thể sửa"}
-                </Button>
-              ) : null}
-            </BlindCountingGridToolbar>
-          </CardContent>
-        </Card>
+            ) : null}
+          </BlindCountingGridToolbar>
+        </CardContent>
+      </Card>
     </InventoryPageContent>
   );
 }

@@ -51,7 +51,9 @@ export const listTrustedIps = withAction(
     permissionBranchId: (data) => data.branchId,
   },
   async (data, { supabase, claims }) => {
-    if (!(await branchBelongsToTenant(supabase, claims.tenant_id, data.branchId))) {
+    if (
+      !(await branchBelongsToTenant(supabase, claims.tenant_id, data.branchId))
+    ) {
       return { success: false, error: "Chi nhánh không hợp lệ." };
     }
 
@@ -90,7 +92,9 @@ export const trustCurrentIp = withAction(
     permissionBranchId: (data) => data.branchId,
   },
   async (data, { supabase, claims, user }) => {
-    if (!(await branchBelongsToTenant(supabase, claims.tenant_id, data.branchId))) {
+    if (
+      !(await branchBelongsToTenant(supabase, claims.tenant_id, data.branchId))
+    ) {
       return { success: false, error: "Chi nhánh không hợp lệ." };
     }
 
@@ -103,22 +107,20 @@ export const trustCurrentIp = withAction(
       };
     }
 
-    const { error } = await supabase
-      .from("branch_trusted_egress_ips")
-      .upsert(
-        {
-          tenant_id: claims.tenant_id,
-          branch_id: data.branchId,
-          ip_address: ip,
-          registered_via: "manual",
-          registered_by_agent_id: null,
-          registered_by_user: user.id,
-          last_seen_at: new Date().toISOString(),
-          revoked_at: null,
-          revoked_by_user: null,
-        },
-        { onConflict: "tenant_id,branch_id,ip_address" },
-      );
+    const { error } = await supabase.from("branch_trusted_egress_ips").upsert(
+      {
+        tenant_id: claims.tenant_id,
+        branch_id: data.branchId,
+        ip_address: ip,
+        registered_via: "manual",
+        registered_by_agent_id: null,
+        registered_by_user: user.id,
+        last_seen_at: new Date().toISOString(),
+        revoked_at: null,
+        revoked_by_user: null,
+      },
+      { onConflict: "tenant_id,branch_id,ip_address" },
+    );
 
     if (error) {
       return {
@@ -144,7 +146,9 @@ export const revokeTrustedIp = withAction(
     permissionBranchId: (data) => data.branchId,
   },
   async (data, { supabase, claims, user }) => {
-    if (!(await branchBelongsToTenant(supabase, claims.tenant_id, data.branchId))) {
+    if (
+      !(await branchBelongsToTenant(supabase, claims.tenant_id, data.branchId))
+    ) {
       return { success: false, error: "Chi nhánh không hợp lệ." };
     }
 

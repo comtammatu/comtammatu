@@ -35,15 +35,10 @@ export default async function FeedbackSettingsPage() {
   ];
   const { data: branchRows } =
     branchIds.length > 0
-      ? await supabase
-          .from("branches")
-          .select("id, name")
-          .in("id", branchIds)
+      ? await supabase.from("branches").select("id, name").in("id", branchIds)
       : { data: [] };
 
-  const branchNameById = new Map(
-    (branchRows ?? []).map((b) => [b.id, b.name]),
-  );
+  const branchNameById = new Map((branchRows ?? []).map((b) => [b.id, b.name]));
 
   const destinations: TelegramDestRow[] = (rawDests ?? []).map((d) => ({
     id: d.id,

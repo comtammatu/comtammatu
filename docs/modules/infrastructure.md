@@ -16,7 +16,7 @@ comtammatu/
 │   ├── ui/                 # shadcn/ui component library
 │   └── security/           # Rate limiting
 ├── supabase/
-│   └── migrations/         # SQL migrations (applied via CI after PR merge)
+│   └── migrations/         # SQL migrations; owner manually applies prod after merge
 ├── turbo.json              # Task pipeline
 ├── pnpm-workspace.yaml     # Workspace definition
 └── tsconfig.base.json      # Shared TS config
@@ -73,7 +73,7 @@ pnpm install
 # 2. Link Supabase project
 supabase link --project-ref YOUR_PROJECT_ID
 
-# 3. Generate types (migrations applied via CI after PR merge)
+# 3. Generate types after migrations are applied to your dev/test type source
 pnpm db:types
 
 # 4. Start dev server
@@ -106,10 +106,3 @@ pnpm lint         # ESLint across all packages
 pnpm db:types     # Regenerate Supabase types
 pnpm format       # Prettier format
 ```
-
-<!-- ORACLE-META
-Written by codebase-oracle (manual) | 2026-04-02
-Data: Direct source reading
-Audience: new engineer, devops | Confidence: 90%
-Unknowns: 1 (GitHub Actions workflow details not verified)
--->

@@ -32,11 +32,7 @@ const KDS_ORDER_ITEM_SELECT_BASE =
 const KDS_TICKET_SELECT =
   "id, station_id, order_id, order_item_id, kitchen_send_batch_id, status, bumped_at, created_at, updated_at";
 const KDS_ACTIVE_STATUSES = ["pending", "preparing"] as const;
-const KDS_VISIBLE_STATUSES = [
-  "pending",
-  "preparing",
-  "ready",
-] as const;
+const KDS_VISIBLE_STATUSES = ["pending", "preparing", "ready"] as const;
 
 type KdsSupabase = Awaited<ReturnType<typeof loadAuthState>>["supabase"];
 
@@ -72,16 +68,12 @@ function normalizeKdsOrderItems(
     (rows ?? []) as Array<
       Omit<KdsOrderItem, "is_priority" | "category_name" | "category_type"> & {
         is_priority?: boolean | null;
-        menu_items?:
-          | {
-              menu_categories?:
-                | {
-                    name?: string | null;
-                    type?: string | null;
-                  }
-                | null;
-            }
-          | null;
+        menu_items?: {
+          menu_categories?: {
+            name?: string | null;
+            type?: string | null;
+          } | null;
+        } | null;
       }
     >
   ).map((row) => {

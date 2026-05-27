@@ -290,4 +290,4 @@ Nếu ngày nghỉ trùng Thứ 7 hoặc CN → được nghỉ bù ngày làm v
 ## Tài liệu liên quan
 
 - `docs/ref/payroll-pit.md` — Tính lương & thuế TNCN
-- `docs/archive/plan/sprint-6.md` — Sprint Nhân sự & tiền lương
+- `tasks/todo.md` — phạm vi nhân sự và tiền lương hiện tại

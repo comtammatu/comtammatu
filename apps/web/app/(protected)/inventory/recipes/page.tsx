@@ -38,9 +38,7 @@ export default async function RecipesPage() {
     fetchCentralKitchenWacMap(),
   ]);
 
-  const dbRows = recipesRes.success
-    ? (recipesRes.data as MenuItemRow[])
-    : [];
+  const dbRows = recipesRes.success ? (recipesRes.data as MenuItemRow[]) : [];
   const wacMap = (wacRes.success ? wacRes.data : {}) as Record<string, number>;
 
   const recipes: RecipeRow[] = dbRows
@@ -48,8 +46,7 @@ export default async function RecipesPage() {
     .map((row) => {
       const items: RecipeItem[] = (row.recipes ?? []).map((line) => {
         const qty = Number(line.quantity ?? 0);
-        const ingredientId =
-          line.ingredients?.id ?? line.ingredient_id ?? 0;
+        const ingredientId = line.ingredients?.id ?? line.ingredient_id ?? 0;
         // WAC (giá nhập trung bình tại CK) ưu tiên hơn unit_cost (giá tham chiếu thủ công).
         const wac = wacMap[String(ingredientId)];
         const unitCost =

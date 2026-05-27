@@ -53,7 +53,7 @@ test.describe("POS-08 Xử lý ngoại lệ", () => {
           anchorX: 195,
           anchorY: 100,
           placement: "below",
-          text: "Badge \"Máy in: online/offline\"\nhiện ở header POS\n(nếu chưa setup printer agent\n→ không hiện)",
+          text: 'Badge "Máy in: online/offline"\nhiện ở header POS\n(nếu chưa setup printer agent\n→ không hiện)',
         },
       ],
     });
@@ -67,7 +67,7 @@ test.describe("POS-08 Xử lý ngoại lệ", () => {
       id: "step-02-offline-banner",
       flowId: FLOW,
       module: MODULE,
-      step: { number: 2, total: TOTAL, title: "Banner \"Mất kết nối\"" },
+      step: { number: 2, total: TOTAL, title: 'Banner "Mất kết nối"' },
       setup: async (p) => {
         await gotoPosMain(p, ctx.branchId);
         // Mock offline KHÔNG cắt network thật (tránh Next dev chunk
@@ -147,7 +147,7 @@ test.describe("POS-08 Xử lý ngoại lệ", () => {
           anchorX: 195,
           anchorY: 100,
           placement: "below",
-          text: "Bill vẫn xem được\nNHƯNG \"Đã thanh toán\"\nchặn vì offline",
+          text: 'Bill vẫn xem được\nNHƯNG "Đã thanh toán"\nchặn vì offline',
         },
       ],
     });
@@ -178,7 +178,7 @@ test.describe("POS-08 Xử lý ngoại lệ", () => {
           anchorX: 195,
           anchorY: 250,
           placement: "below",
-          text: "3 toast sau \"Đã thanh toán\":\n✓ Đã thanh toán & xuất HĐĐT\n✓ Đã thanh toán — không HĐĐT\n⚠ Đã thu tiền — HĐĐT lỗi",
+          text: '3 toast sau "Đã thanh toán":\n✓ Đã thanh toán & xuất HĐĐT\n✓ Đã thanh toán — không HĐĐT\n⚠ Đã thu tiền — HĐĐT lỗi',
         },
       ],
     });

@@ -48,7 +48,12 @@ export async function checkMonthlyBudget(args: {
   );
 
   if (spent >= budget) {
-    return { ok: false, spent_usd: spent, budget_usd: budget, reason: "over_budget" };
+    return {
+      ok: false,
+      spent_usd: spent,
+      budget_usd: budget,
+      reason: "over_budget",
+    };
   }
   return { ok: true, spent_usd: spent, budget_usd: budget };
 }

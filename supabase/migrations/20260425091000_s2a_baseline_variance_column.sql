@@ -5,7 +5,7 @@
 -- 30-day baseline; overloading the PO column would silently
 -- corrupt GRN matching. Keep the generated column intact.
 --
--- Spec: docs/plan/inventory-redesign.md §Q3
+-- Current docs: docs/ref/inventory.md + docs/ref/inventory-sop.md
 -- =============================================================
 
 ALTER TABLE public.grn_items

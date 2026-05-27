@@ -2,7 +2,15 @@
 
 import { useState, useTransition } from "react";
 import Image from "next/image";
-import { Ellipsis as IconDots, Pencil as IconPencil, ToggleLeft as IconToggleLeft, ToggleRight as IconToggleRight, SlidersHorizontal as IconSettings2, Utensils as IconToolsKitchen, Image as IconImage } from "lucide-react";
+import {
+  Ellipsis as IconDots,
+  Pencil as IconPencil,
+  ToggleLeft as IconToggleLeft,
+  ToggleRight as IconToggleRight,
+  SlidersHorizontal as IconSettings2,
+  Utensils as IconToolsKitchen,
+  Image as IconImage,
+} from "lucide-react";
 import { formatVND } from "@comtammatu/shared/format";
 import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -71,7 +79,9 @@ export function ItemTable({ items, categories, tenantId }: ItemTableProps) {
             <TableRow>
               <TableHead className="w-16">Ảnh</TableHead>
               <TableHead>Tên món</TableHead>
-              <TableHead className="hidden sm:table-cell">{FORM_VI.category}</TableHead>
+              <TableHead className="hidden sm:table-cell">
+                {FORM_VI.category}
+              </TableHead>
               <TableHead className="hidden md:table-cell text-right">
                 {FORM_VI.price}
               </TableHead>

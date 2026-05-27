@@ -77,16 +77,12 @@ function normalizeKdsOrderItems(
     (rows ?? []) as Array<
       Omit<KdsOrderItem, "is_priority" | "category_name" | "category_type"> & {
         is_priority?: boolean | null;
-        menu_items?:
-          | {
-              menu_categories?:
-                | {
-                    name?: string | null;
-                    type?: string | null;
-                  }
-                | null;
-            }
-          | null;
+        menu_items?: {
+          menu_categories?: {
+            name?: string | null;
+            type?: string | null;
+          } | null;
+        } | null;
       }
     >
   ).map((row) => {

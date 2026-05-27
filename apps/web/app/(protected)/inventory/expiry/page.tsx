@@ -6,7 +6,10 @@ import {
   resolveRequestedBranchId,
 } from "@/(protected)/inventory/_lib/inventory-scope";
 import { ExpiryListClient } from "@/(protected)/inventory/expiry/expiry-list-client";
-import type { BranchOption, ExpiryAlertRow } from "@/(protected)/inventory/page";
+import type {
+  BranchOption,
+  ExpiryAlertRow,
+} from "@/(protected)/inventory/page";
 import { getBranchSiteDisplayName } from "@/(protected)/inventory/_lib/branch-site-labels";
 
 export default async function ExpiryPage({

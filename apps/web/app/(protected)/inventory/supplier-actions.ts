@@ -23,10 +23,7 @@ const supplierSchema = z.object({
     .string()
     .max(300, { error: "Địa chỉ tối đa 300 ký tự" })
     .optional(),
-  notes: z
-    .string()
-    .max(500, { error: "Ghi chú tối đa 500 ký tự" })
-    .optional(),
+  notes: z.string().max(500, { error: "Ghi chú tối đa 500 ký tự" }).optional(),
   paymentTermsDays: z.coerce.number().int().min(0).optional().nullable(),
   paymentTermsNote: z.string().optional(),
 });

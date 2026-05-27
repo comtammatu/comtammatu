@@ -14,7 +14,9 @@ export default async function InvoicesPage({
   const { branch } = await searchParams;
   const parsedBranch = branch && branch !== "all" ? Number(branch) : NaN;
   const branchId =
-    Number.isFinite(parsedBranch) && parsedBranch > 0 ? parsedBranch : undefined;
+    Number.isFinite(parsedBranch) && parsedBranch > 0
+      ? parsedBranch
+      : undefined;
 
   const res = await fetchTaxInvoices(branchId);
   const invoices = (res.success ? (res.data ?? []) : []) as InvoiceRow[];

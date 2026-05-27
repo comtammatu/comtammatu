@@ -6,7 +6,10 @@ import { GET as getPosManifest } from "../app/(protected)/br/[branchId]/pos/mani
 
 test("root PWA manifest requests portrait orientation", () => {
   const manifest = JSON.parse(
-    readFileSync(new URL("../public/manifest.webmanifest", import.meta.url), "utf8"),
+    readFileSync(
+      new URL("../public/manifest.webmanifest", import.meta.url),
+      "utf8",
+    ),
   ) as { orientation?: unknown };
 
   assert.equal(manifest.orientation, "portrait");
@@ -56,9 +59,9 @@ test("KDS PWA manifest requests portrait orientation per branch", async () => {
 
 test("POS PWA manifest keeps rejecting invalid branch ids", async () => {
   const response = await getPosManifest(
-    new Request("https://app.test/br/abc/pos/manifest.webmanifest") as Parameters<
-      typeof getPosManifest
-    >[0],
+    new Request(
+      "https://app.test/br/abc/pos/manifest.webmanifest",
+    ) as Parameters<typeof getPosManifest>[0],
     { params: Promise.resolve({ branchId: "abc" }) },
   );
 
@@ -67,9 +70,9 @@ test("POS PWA manifest keeps rejecting invalid branch ids", async () => {
 
 test("KDS PWA manifest keeps rejecting invalid branch ids", async () => {
   const response = await getKdsManifest(
-    new Request("https://app.test/br/abc/kds/manifest.webmanifest") as Parameters<
-      typeof getKdsManifest
-    >[0],
+    new Request(
+      "https://app.test/br/abc/kds/manifest.webmanifest",
+    ) as Parameters<typeof getKdsManifest>[0],
     { params: Promise.resolve({ branchId: "abc" }) },
   );
 

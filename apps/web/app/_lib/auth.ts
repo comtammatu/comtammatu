@@ -1,7 +1,11 @@
 import { cache } from "react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { extractClaimsFromAccessToken } from "@comtammatu/shared/auth";
-import type { JwtClaims, PermissionKey, StaffRole } from "@comtammatu/shared/auth";
+import type {
+  JwtClaims,
+  PermissionKey,
+  StaffRole,
+} from "@comtammatu/shared/auth";
 import type { Session } from "@supabase/supabase-js";
 
 /**

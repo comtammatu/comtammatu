@@ -109,7 +109,9 @@ export async function deleteTelegramDestination(
   return { success: true };
 }
 
-export async function sendTestTelegram(destinationId: number): Promise<ActionResult> {
+export async function sendTestTelegram(
+  destinationId: number,
+): Promise<ActionResult> {
   const ctx = await getAuthContext(OWNER_ONLY);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
@@ -134,7 +136,8 @@ export async function sendTestTelegram(destinationId: number): Promise<ActionRes
     return { success: false, error: "TELEGRAM_BOT_TOKEN chưa được cấu hình." };
   }
 
-  const testText = "✅ *Test message từ Cơm Tấm Má Tư* \\- kết nối thành công\\!";
+  const testText =
+    "✅ *Test message từ Cơm Tấm Má Tư* \\- kết nối thành công\\!";
   const result = await sendTelegramMessage({
     botToken,
     chatId: dest.chat_id,
@@ -143,7 +146,10 @@ export async function sendTestTelegram(destinationId: number): Promise<ActionRes
 
   if (!result.ok) {
     console.error("[sendTestTelegram] failed status=%d", result.status);
-    return { success: false, error: "Gửi tin nhắn test thất bại. Kiểm tra chat_id." };
+    return {
+      success: false,
+      error: "Gửi tin nhắn test thất bại. Kiểm tra chat_id.",
+    };
   }
 
   return { success: true };
@@ -198,15 +204,13 @@ export async function updateFeedbackSettings(
   const { supabase, claims } = ctx;
   const update: UpdateFeedbackSettingsInput = parsed.data;
 
-  const { error } = await supabase
-    .from("feedback_settings")
-    .upsert(
-      {
-        tenant_id: claims.tenant_id,
-        ...update,
-      },
-      { onConflict: "tenant_id" },
-    );
+  const { error } = await supabase.from("feedback_settings").upsert(
+    {
+      tenant_id: claims.tenant_id,
+      ...update,
+    },
+    { onConflict: "tenant_id" },
+  );
 
   if (error) {
     console.error("[updateFeedbackSettings] upsert error", error.code);

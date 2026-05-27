@@ -14,7 +14,11 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 import { matchesSearch } from "@lib/search";
-import { Search as IconSearch, Check as IconCheck, FlagTriangleRight as IconFlag3 } from "lucide-react";
+import {
+  Search as IconSearch,
+  Check as IconCheck,
+  FlagTriangleRight as IconFlag3,
+} from "lucide-react";
 import { TableEmptyStateRow } from "@/components/table-empty-state-row";
 import { FormattedNumberInput } from "./formatted-number-input";
 import { AbcClassChip } from "./abc-class-chip";
@@ -72,7 +76,9 @@ export function BlindCountingGrid({
   }, [lines, query, onlyNeedsRecount]);
 
   const totalEntered = useMemo(
-    () => Object.keys(counts).filter((k) => typeof counts[k]?.qty === "number").length,
+    () =>
+      Object.keys(counts).filter((k) => typeof counts[k]?.qty === "number")
+        .length,
     [counts],
   );
 
@@ -100,7 +106,10 @@ export function BlindCountingGrid({
           Đã nhập: {totalEntered}
         </Badge>
         {blindMode ? (
-          <Badge variant="outline" className="border-warning/40 bg-warning/15 text-warning-foreground">
+          <Badge
+            variant="outline"
+            className="border-warning/40 bg-warning/15 text-warning-foreground"
+          >
             Blind mode
           </Badge>
         ) : null}
@@ -188,7 +197,10 @@ function CountRow({
       <TableCell className="text-right">
         <div className="inline-flex items-center gap-1">
           {line.isFinal ? (
-            <Badge variant="outline" className="gap-1 border-success/40 text-success">
+            <Badge
+              variant="outline"
+              className="gap-1 border-success/40 text-success"
+            >
               <IconCheck className="size-3.5" /> Final
             </Badge>
           ) : line.needsRecount ? (

@@ -19,119 +19,121 @@
 
 ## 5 chu kỳ + 21 commit
 
-| # | Cycle | Commits | Tag | Health | Mô tả |
-|---|-------|---------|-----|--------|-------|
-| 1 | Hardening batch 1 | 12 | — | 15/100 | 9 ISSUE từ `/qa` 2026-05-07 + 4 regression rules + deslop pass |
-| 2 | Architect follow-ups | 3 | — | 8.5/10 | observability `after()` + 3 source-text regression tests + tightened regex |
-| 3 | HSTS hardening | 3 | — | 8/10 | HSTS preload eligibility + 1 source-text test cho next.config.ts |
-| 4 | Release cut 1.2.0.1 | 1 | `1.2.0.1` | 8/10 | VERSION + CHANGELOG + release notes + annotated tag |
-| 5 | Release cut 1.2.0.2 | 2 | `1.2.0.2` | 8.5/10 | robots.txt + security.txt + release notes mới |
+| #   | Cycle                | Commits | Tag       | Health | Mô tả                                                                      |
+| --- | -------------------- | ------- | --------- | ------ | -------------------------------------------------------------------------- |
+| 1   | Hardening batch 1    | 12      | —         | 15/100 | 9 ISSUE từ `/qa` 2026-05-07 + 4 regression rules + deslop pass             |
+| 2   | Architect follow-ups | 3       | —         | 8.5/10 | observability `after()` + 3 source-text regression tests + tightened regex |
+| 3   | HSTS hardening       | 3       | —         | 8/10   | HSTS preload eligibility + 1 source-text test cho next.config.ts           |
+| 4   | Release cut 1.2.0.1  | 1       | `1.2.0.1` | 8/10   | VERSION + CHANGELOG + release notes + annotated tag                        |
+| 5   | Release cut 1.2.0.2  | 2       | `1.2.0.2` | 8.5/10 | robots.txt + security.txt + release notes mới                              |
 
 ### Cycle 1 — Hardening batch (12 commits)
 
-| Commit | Type | ISSUE | Mô tả |
-|--------|------|-------|-------|
-| `610123c8` | feat(security) | 012 + 014 | CSP + 4 OWASP headers + `poweredByHeader: false` |
-| `8e713af8` | fix(feedback) | 001 | `ALLOWED_ORIGINS_FEEDBACK` fail-closed trong production |
-| `939be3d9` | fix(feedback) | 013 | `/r/[token]/thank-you` 404 cho token invalid (chặn phishing) |
-| `c61db730` | chore(docs) | — | Đánh dấu ISSUE-001/012/013/014 shipped trong `tasks/todo.md` |
-| `79a30bb7` | fix(feedback) | 003 + 007 + 015 | `after()` thay `void fetch()` + honeypot log + CSRF doc + warn-once |
-| `003224c0` | fix(feedback) | 016 | TOCTOU race trên `photo_paths` (conditional `WHERE` + `.select()`) |
-| `fec49ecd` | fix(feedback) | 008 | Phân biệt error message: sanitize-stripped vs typed-too-few |
-| `ee71d005` | feat(feedback) | 009 | `?only_suspect=true` triage filter trên admin inbox |
-| `35aca5f8` | chore(docs) | — | Đánh dấu thêm ISSUE-003/007/008/009/015/016 shipped |
-| `815c904f` | test(feedback) | — | Regression test cho ISSUE-008 |
-| `042c908d` | docs(regressions) | — | 4 named regression rules (SECURITY-HEADERS, FEEDBACK-THANK-YOU-MUST-NOTFOUND-INVALID, FEEDBACK-AFTER-NOT-FIRE-AND-FORGET, FEEDBACK-PHOTO-PATHS-CONDITIONAL-UPDATE) |
-| `f0ab5191` | chore(feedback) | — | Mandatory deslop pass: bỏ numbered step comments + WHAT-only narration |
+| Commit     | Type              | ISSUE           | Mô tả                                                                                                                                                              |
+| ---------- | ----------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `610123c8` | feat(security)    | 012 + 014       | CSP + 4 OWASP headers + `poweredByHeader: false`                                                                                                                   |
+| `8e713af8` | fix(feedback)     | 001             | `ALLOWED_ORIGINS_FEEDBACK` fail-closed trong production                                                                                                            |
+| `939be3d9` | fix(feedback)     | 013             | `/r/[token]/thank-you` 404 cho token invalid (chặn phishing)                                                                                                       |
+| `c61db730` | chore(docs)       | —               | Đánh dấu ISSUE-001/012/013/014 shipped trong `tasks/todo.md`                                                                                                       |
+| `79a30bb7` | fix(feedback)     | 003 + 007 + 015 | `after()` thay `void fetch()` + honeypot log + CSRF doc + warn-once                                                                                                |
+| `003224c0` | fix(feedback)     | 016             | TOCTOU race trên `photo_paths` (conditional `WHERE` + `.select()`)                                                                                                 |
+| `fec49ecd` | fix(feedback)     | 008             | Phân biệt error message: sanitize-stripped vs typed-too-few                                                                                                        |
+| `ee71d005` | feat(feedback)    | 009             | `?only_suspect=true` triage filter trên admin inbox                                                                                                                |
+| `35aca5f8` | chore(docs)       | —               | Đánh dấu thêm ISSUE-003/007/008/009/015/016 shipped                                                                                                                |
+| `815c904f` | test(feedback)    | —               | Regression test cho ISSUE-008                                                                                                                                      |
+| `042c908d` | docs(regressions) | —               | 4 named regression rules (SECURITY-HEADERS, FEEDBACK-THANK-YOU-MUST-NOTFOUND-INVALID, FEEDBACK-AFTER-NOT-FIRE-AND-FORGET, FEEDBACK-PHOTO-PATHS-CONDITIONAL-UPDATE) |
+| `f0ab5191` | chore(feedback)   | —               | Mandatory deslop pass: bỏ numbered step comments + WHAT-only narration                                                                                             |
 
 ### Cycle 2 — Architect follow-ups #2 + #3 (3 commits)
 
-| Commit | Mô tả |
-|--------|-------|
-| `2dbae2c5` | `console.warn` trên `after()` catch handlers (telegram-flush + ai-enrich riêng) — observability cho silent failures |
-| `fc832e25` | 3 source-text regression tests trong `packages/shared/src/feedback/__tests__/regressions.test.ts` lock các guard từ cycle 1 |
+| Commit     | Mô tả                                                                                                                          |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `2dbae2c5` | `console.warn` trên `after()` catch handlers (telegram-flush + ai-enrich riêng) — observability cho silent failures            |
+| `fc832e25` | 3 source-text regression tests trong `packages/shared/src/feedback/__tests__/regressions.test.ts` lock các guard từ cycle 1    |
 | `4543fab1` | Tighten regex cho thank-you guard (chuyển từ `[\s\S]*` greedy sang strict builder-chain match) + comment `import.meta.dirname` |
 
 ### Cycle 3 — HSTS preload + next.config test (3 commits)
 
-| Commit | Mô tả |
-|--------|-------|
+| Commit     | Mô tả                                                                                                              |
+| ---------- | ------------------------------------------------------------------------------------------------------------------ |
 | `9f9f424d` | Strict-Transport-Security: `max-age=63072000; includeSubDomains; preload` (đủ điều kiện đăng ký HSTS preload list) |
-| `60543ab8` | Source-text regression test cho 6 security headers + HSTS preload value + locked CSP directives |
-| `4c148803` | Mở rộng SECURITY-HEADERS-IN-NEXT-CONFIG rule trong `tasks/regressions.md` (HSTS + test fragility note) |
+| `60543ab8` | Source-text regression test cho 6 security headers + HSTS preload value + locked CSP directives                    |
+| `4c148803` | Mở rộng SECURITY-HEADERS-IN-NEXT-CONFIG rule trong `tasks/regressions.md` (HSTS + test fragility note)             |
 
 ### Cycle 4 — Release 1.2.0.1 (1 commit + 1 tag)
 
-| Artifact | Detail |
-|----------|--------|
-| `cc8f17be` | Single release commit: `VERSION` 1.1.0.0 → 1.2.0.1, CHANGELOG entry mới, `docs/releases/1.2.0.1.md` (113 dòng) |
-| Tag `1.2.0.1` | Annotated, sha 89b81392, `git rev-parse 1.2.0.1^{}` == `cc8f17be` (HEAD lúc đó) |
+| Artifact      | Detail                                                                                                         |
+| ------------- | -------------------------------------------------------------------------------------------------------------- |
+| `cc8f17be`    | Single release commit: `VERSION` 1.1.0.0 → 1.2.0.1, CHANGELOG entry mới, `docs/releases/1.2.0.1.md` (113 dòng) |
+| Tag `1.2.0.1` | Annotated, sha 89b81392, `git rev-parse 1.2.0.1^{}` == `cc8f17be` (HEAD lúc đó)                                |
 
 ### Cycle 5 — Release 1.2.0.2 (2 commits + 1 tag)
 
-| Artifact | Detail |
-|----------|--------|
-| `4590aec6` | 5 file: `apps/web/app/robots.ts` + `apps/web/public/.well-known/security.txt` (RFC 9116) + VERSION 1.2.0.1 → 1.2.0.2 + CHANGELOG entry + `docs/releases/1.2.0.2.md` |
-| `51a825f5` | Architect follow-up: mở rộng release notes 55 → 72 dòng (Related commits + Known limitations + Follow-ups parked) |
-| Tag `1.2.0.2` | Annotated, sha b369d4fa, dereferences về `4590aec6` |
+| Artifact      | Detail                                                                                                                                                              |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `4590aec6`    | 5 file: `apps/web/app/robots.ts` + `apps/web/public/.well-known/security.txt` (RFC 9116) + VERSION 1.2.0.1 → 1.2.0.2 + CHANGELOG entry + `docs/releases/1.2.0.2.md` |
+| `51a825f5`    | Architect follow-up: mở rộng release notes 55 → 72 dòng (Related commits + Known limitations + Follow-ups parked)                                                   |
+| Tag `1.2.0.2` | Annotated, sha b369d4fa, dereferences về `4590aec6`                                                                                                                 |
 
 ## ISSUEs đã ship vs còn lại
 
 ### Đã ship trong session
 
-| ISSUE | Severity | Cycle | Commit |
-|-------|----------|-------|--------|
-| ISSUE-001 | HIGH | 1 | `8e713af8` |
-| ISSUE-003 | MEDIUM | 1 | `79a30bb7` |
-| ISSUE-007 | LOW | 1 | `79a30bb7` |
-| ISSUE-008 | LOW | 1 | `fec49ecd` + `815c904f` |
-| ISSUE-009 | LOW | 1 | `ee71d005` |
-| ISSUE-012 | HIGH | 1 | `610123c8` |
-| ISSUE-013 | MEDIUM | 1 | `939be3d9` |
-| ISSUE-014 | LOW | 1 | `610123c8` |
-| ISSUE-015 | INFO | 1 | `79a30bb7` |
-| ISSUE-016 | architect-flagged | 1 | `003224c0` |
+| ISSUE     | Severity          | Cycle | Commit                  |
+| --------- | ----------------- | ----- | ----------------------- |
+| ISSUE-001 | HIGH              | 1     | `8e713af8`              |
+| ISSUE-003 | MEDIUM            | 1     | `79a30bb7`              |
+| ISSUE-007 | LOW               | 1     | `79a30bb7`              |
+| ISSUE-008 | LOW               | 1     | `fec49ecd` + `815c904f` |
+| ISSUE-009 | LOW               | 1     | `ee71d005`              |
+| ISSUE-012 | HIGH              | 1     | `610123c8`              |
+| ISSUE-013 | MEDIUM            | 1     | `939be3d9`              |
+| ISSUE-014 | LOW               | 1     | `610123c8`              |
+| ISSUE-015 | INFO              | 1     | `79a30bb7`              |
+| ISSUE-016 | architect-flagged | 1     | `003224c0`              |
 
 ### Deferred (cần DB migration hoặc owner action)
 
-| ISSUE | Lý do defer |
-|-------|-------------|
-| ISSUE-002 | Cần `submit_feedback` RPC change + storage RLS migration |
-| ISSUE-004 | Cần migration cho photo storage RLS gate by branch |
-| ISSUE-005 | Cần migration cho `feedback_retention_cleanup()` cascade |
+| ISSUE     | Lý do defer                                                                    |
+| --------- | ------------------------------------------------------------------------------ |
+| ISSUE-002 | Cần `submit_feedback` RPC change + storage RLS migration                       |
+| ISSUE-004 | Cần migration cho photo storage RLS gate by branch                             |
+| ISSUE-005 | Cần migration cho `feedback_retention_cleanup()` cascade                       |
 | ISSUE-006 | `getFeedbackPhotoUrls` hiện là dead code (no callers) — không có business case |
-| ISSUE-010 | Cần migration cho `(tenant_id, created_at DESC)` index |
-| ISSUE-011 | Order snapshot heuristic — cần knowledge về DB schema |
+| ISSUE-010 | Cần migration cho `(tenant_id, created_at DESC)` index                         |
+| ISSUE-011 | Order snapshot heuristic — cần knowledge về DB schema                          |
 
 ## Quality gates
 
 Mỗi commit đều pass:
+
 - `pnpm typecheck` ✓
 - `pnpm lint` ✓
 - `pnpm --filter web build` ✓
 - `pnpm --filter @comtammatu/shared test` ✓ (130-something → 147 cuối session, +3 tests cycle 2 + 1 cycle 3 + 1 ISSUE-008 regression)
 
 GitHub Actions CI:
+
 - Cycle 1 final SHA `c61db730`: SUCCESS
 - Cycle 1 deslop SHA `f0ab5191`: SUCCESS
 - Cycle 2 final SHA `4543fab1`: SUCCESS
 - Cycle 3 final SHA `4c148803`: SUCCESS
 - Cycle 4 release SHA `cc8f17be`: SUCCESS
 - Cycle 5 release SHA `51a825f5`: SUCCESS
-(Các SHA giữa bị superseded bởi concurrency group — đã verify)
+  (Các SHA giữa bị superseded bởi concurrency group — đã verify)
 
 Vercel deployment state cho mỗi commit: SUCCESS (per `gh api repos/.../deployments`).
 
 ## /qa via tmux + wclaude (5 lần)
 
-| Run | Cycle | SHA | Health | Path |
-|-----|-------|-----|--------|------|
-| 1 | 1 | c61db730 | 15/100 | `.gstack/qa-reports/qa-c61db730-2026-05-09.md` |
-| 2 | 1 (post-deslop) | fec49ecd | 15/100 | `.gstack/qa-reports/qa-fec49ecd-2026-05-09.md` |
-| 3 | 2 | fc832e25 | 8.5/10 | `.gstack/qa-reports/qa-fc832e25-2026-05-09.md` |
-| 4 | 3 | 60543ab8 | 8/10 | `.gstack/qa-reports/qa-60543ab8-2026-05-09.md` |
-| 5 | 4 | 1.2.0.1 | 8/10 | `.gstack/qa-reports/qa-1.2.0.1-2026-05-09.md` |
-| 6 | 5 | 1.2.0.2 | 8.5/10 | `.gstack/qa-reports/qa-1.2.0.2-2026-05-09.md` |
+| Run | Cycle           | SHA      | Health | Receipt                             |
+| --- | --------------- | -------- | ------ | ----------------------------------- |
+| 1   | 1               | c61db730 | 15/100 | local QA receipt, not repo-retained |
+| 2   | 1 (post-deslop) | fec49ecd | 15/100 | local QA receipt, not repo-retained |
+| 3   | 2               | fc832e25 | 8.5/10 | local QA receipt, not repo-retained |
+| 4   | 3               | 60543ab8 | 8/10   | local QA receipt, not repo-retained |
+| 5   | 4               | 1.2.0.1  | 8/10   | local QA receipt, not repo-retained |
+| 6   | 5               | 1.2.0.2  | 8.5/10 | local QA receipt, not repo-retained |
 
 **Tất cả health < 10 đều do CÙNG MỘT lý do**: Vercel alias `app.comtammatu.com` chưa được promote; mã đã land nhưng chưa được serve cho user.
 
@@ -181,6 +183,7 @@ Plus 1 test cho ISSUE-008 (typed-too-few vs sanitize-stripped) trong `schemas.te
 ## Files đã tạo/sửa
 
 ### Code
+
 - `apps/web/next.config.ts` — sửa 2 lần (cycle 1 + 3)
 - `apps/web/app/r/[token]/actions.ts` — sửa 2 lần (cycle 1 + cycle 1 deslop + cycle 2)
 - `apps/web/app/r/[token]/actions-photos.ts` — sửa 1 lần (cycle 1) + deslop
@@ -193,6 +196,7 @@ Plus 1 test cho ISSUE-008 (typed-too-few vs sanitize-stripped) trong `schemas.te
 - `packages/shared/src/feedback/__tests__/regressions.test.ts` — TẠO MỚI cycle 2 + extended cycle 2/3
 
 ### Docs
+
 - `VERSION` — 2 lần (1.1.0.0 → 1.2.0.1 → 1.2.0.2)
 - `CHANGELOG.md` — 2 entries thêm vào ([1.2.0.1] + [1.2.0.2])
 - `docs/releases/1.2.0.1.md` — TẠO MỚI (113 dòng)

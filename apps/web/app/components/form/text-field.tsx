@@ -14,11 +14,10 @@ import { Input } from "@comtammatu/ui/components/input";
 
 type InputProps = ComponentProps<typeof Input>;
 
-export interface TextFieldProps<TFieldValues extends FieldValues>
-  extends Omit<
-    InputProps,
-    "name" | "value" | "defaultValue" | "onChange" | "onBlur" | "ref" | "id"
-  > {
+export interface TextFieldProps<TFieldValues extends FieldValues> extends Omit<
+  InputProps,
+  "name" | "value" | "defaultValue" | "onChange" | "onBlur" | "ref" | "id"
+> {
   control: Control<TFieldValues>;
   name: FieldPath<TFieldValues>;
   label: string;

@@ -16,7 +16,7 @@
 --   (K) RPC escalate_round_4 (QLV/admin manual final)
 --   (L) RPC assign_auditor (soft-enforce monthly audit)
 --
--- Spec:       docs/plan/inventory-redesign.md §Q2 + §B1 + §B9
+-- Current docs: docs/ref/inventory.md + docs/ref/inventory-sop.md
 -- Regression: tasks/regressions.md RLS-NOT-APPLIED-ON-MV
 -- =============================================================
 

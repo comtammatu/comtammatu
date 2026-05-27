@@ -285,7 +285,9 @@ export const INVENTORY_ERROR_LABELS_VI = {
 /** GRN line variance tier label helper */
 export function getVarianceTierLabelVi(tier: number | null): string {
   if (tier === null || tier === undefined) return "Chưa đánh giá";
-  return (VARIANCE_TIER_LABELS_VI as Record<number, string>)[tier] ?? String(tier);
+  return (
+    (VARIANCE_TIER_LABELS_VI as Record<number, string>)[tier] ?? String(tier)
+  );
 }
 
 /** Waste reason code label helper */
@@ -324,7 +326,9 @@ export const PAYMENT_METHOD_LABELS_FULL_VI = {
   unknown: "Khác",
 } as const;
 
-export function getPaymentMethodLabelVi(method: string | null | undefined): string {
+export function getPaymentMethodLabelVi(
+  method: string | null | undefined,
+): string {
   if (!method) return "";
   return (PAYMENT_METHOD_LABELS_VI as Record<string, string>)[method] ?? method;
 }

@@ -53,11 +53,7 @@ async function resizeImage(file: File): Promise<Blob> {
   bitmap.close();
 
   return new Promise<Blob>((resolve) => {
-    canvas.toBlob(
-      (blob) => resolve(blob ?? file),
-      "image/webp",
-      WEBP_QUALITY,
-    );
+    canvas.toBlob((blob) => resolve(blob ?? file), "image/webp", WEBP_QUALITY);
   });
 }
 

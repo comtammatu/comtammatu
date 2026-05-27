@@ -4,7 +4,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { Lock as IconLock, LockOpen as IconLockOpen, TriangleAlert as IconAlertTriangle, RefreshCw as IconRefresh } from "lucide-react";
+import {
+  Lock as IconLock,
+  LockOpen as IconLockOpen,
+  TriangleAlert as IconAlertTriangle,
+  RefreshCw as IconRefresh,
+} from "lucide-react";
 import {
   acquireZoneLock,
   heartbeatZoneLock,
@@ -64,7 +69,10 @@ export function ZoneLockIndicator({
     setState({ kind: "acquiring" });
     const res = await acquireZoneLock(sessionId, zoneId, ttlSeconds);
     if (!res.success) {
-      setState({ kind: "error", message: res.error ?? "Không acquire được lock" });
+      setState({
+        kind: "error",
+        message: res.error ?? "Không acquire được lock",
+      });
       return;
     }
     if (!res.data) {
@@ -172,7 +180,10 @@ export function ZoneLockIndicator({
       <span className="font-medium">Zone: {zoneId}</span>
       {state.kind === "held" ? (
         <>
-          <Badge variant="outline" className="border-success/40 bg-background text-success">
+          <Badge
+            variant="outline"
+            className="border-success/40 bg-background text-success"
+          >
             Bạn đang giữ lock
           </Badge>
           <span className="tabular-nums text-muted-foreground">
@@ -190,7 +201,10 @@ export function ZoneLockIndicator({
         </>
       ) : state.kind === "blocked" ? (
         <>
-          <Badge variant="outline" className="border-tier-note/40 bg-background text-tier-note-foreground">
+          <Badge
+            variant="outline"
+            className="border-tier-note/40 bg-background text-tier-note-foreground"
+          >
             Đã có người giữ
           </Badge>
           <span className="text-muted-foreground">

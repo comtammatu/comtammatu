@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
-import { ArrowRight as IconArrowRight, ChevronDown as IconChevronDown } from "lucide-react";
+import {
+  ArrowRight as IconArrowRight,
+  ChevronDown as IconChevronDown,
+} from "lucide-react";
 import { cn } from "@comtammatu/ui";
 import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
 import {
@@ -140,7 +143,9 @@ export function AppPageHeader({
               {title}
             </Heading>
             {badge ? (
-              <Badge variant={badge.variant ?? "secondary"}>{badge.children}</Badge>
+              <Badge variant={badge.variant ?? "secondary"}>
+                {badge.children}
+              </Badge>
             ) : null}
           </div>
           {description ? (
@@ -200,11 +205,13 @@ export type AppSectionProps = {
   children: ReactNode;
   className?: string;
   /**
-   * Pass-through className to CardContent. Use `"p-0"` for table-edge
-   * alignment when embedding `<Table>` directly. The default content layout
-   * is `flex min-w-0 flex-col gap-3` — overriding via this prop is supported.
+   * Pass-through className to CardContent for layout composition only.
+   * Use `contentFlush` for table-edge/list-edge alignment and
+   * `contentScroll` for horizontal table scrolling.
    */
   contentClassName?: string;
+  contentFlush?: boolean;
+  contentScroll?: boolean;
   size?: "default" | "sm";
   tone?: AppSectionTone;
   collapsible?: boolean;
@@ -222,13 +229,23 @@ export function AppSection({
   children,
   className,
   contentClassName,
+  contentFlush = false,
+  contentScroll = false,
   size = "default",
   tone = "default",
   collapsible = false,
   footer,
 }: AppSectionProps) {
   const [open, setOpen] = useState(true);
-  const hasHeader = Boolean(title || description || headerHint || icon || badge || action || collapsible);
+  const hasHeader = Boolean(
+    title ||
+    description ||
+    headerHint ||
+    icon ||
+    badge ||
+    action ||
+    collapsible,
+  );
   const chevronAction = collapsible ? (
     <button
       type="button"
@@ -238,7 +255,10 @@ export function AppSection({
       aria-label={open ? "Thu gọn" : "Mở rộng"}
     >
       <IconChevronDown
-        className={cn("size-4 transition-transform", open ? "rotate-0" : "-rotate-90")}
+        className={cn(
+          "size-4 transition-transform",
+          open ? "rotate-0" : "-rotate-90",
+        )}
       />
     </button>
   ) : null;
@@ -291,6 +311,8 @@ export function AppSection({
       ) : null}
       {open ? (
         <CardContent
+          flush={contentFlush}
+          scroll={contentScroll}
           className={cn(
             "flex min-w-0 flex-col gap-3",
             !hasHeader && "pt-0",
@@ -328,7 +350,12 @@ export function AppToolbar({
   actions,
   reset,
 }: AppToolbarProps) {
-  const hasSlots = search != null || filters != null || bulk != null || actions != null || reset != null;
+  const hasSlots =
+    search != null ||
+    filters != null ||
+    bulk != null ||
+    actions != null ||
+    reset != null;
 
   return (
     <Card size="sm" className="py-0">
@@ -352,7 +379,9 @@ export function AppToolbar({
             {actions ? (
               <>
                 <Separator orientation="vertical" className="h-6" />
-                <div className="flex flex-wrap items-center gap-2">{actions}</div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {actions}
+                </div>
               </>
             ) : null}
             {reset ? (
@@ -487,7 +516,9 @@ export function AppLinkCard({
             {metric.value}
           </span>
           {metric.label ? (
-            <span className="text-xs text-muted-foreground">{metric.label}</span>
+            <span className="text-xs text-muted-foreground">
+              {metric.label}
+            </span>
           ) : null}
         </div>
       ) : null}
@@ -518,7 +549,9 @@ export function AppLinkCard({
             </p>
           ) : null}
           {disabled && disabledReason ? (
-            <p className="mt-1 text-xs text-muted-foreground">{disabledReason}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {disabledReason}
+            </p>
           ) : null}
         </div>
       </div>
@@ -538,7 +571,7 @@ export function AppLinkCard({
         disabled ? "cursor-not-allowed opacity-60" : "hover:shadow-sm",
       )}
     >
-      <CardContent className="h-full p-0">
+      <CardContent flush className="h-full">
         {disabled ? (
           <div aria-disabled="true" className="h-full">
             {inner}

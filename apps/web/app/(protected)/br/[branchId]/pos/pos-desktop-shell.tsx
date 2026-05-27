@@ -791,7 +791,10 @@ function PosDesktopInner({
 
           clearCart();
           if (submittedOrderType === "takeaway") {
-            setPostSubmitPaymentOrderId(orderId);
+            setPostSubmitPaymentOrderId(null);
+            setBillIntent("payment");
+            setBillInitialOrder(null);
+            setBillOrderId(orderId);
             setShowOrders(false);
             setCartDrawerOpen(false);
             setOrderDetailId(null);

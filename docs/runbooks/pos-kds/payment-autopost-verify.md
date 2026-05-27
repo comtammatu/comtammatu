@@ -29,33 +29,39 @@ Checklist này dùng khi owner chuẩn bị apply migration `20260419220000_gl_p
 ## Verify sau apply
 
 1. Khởi động app local:
+
 ```bash
 pnpm dev
 ```
 
 2. Chạy smoke POS cash:
+
 ```bash
 cd apps/web
 pnpm exec dotenv -e .env.test.local -- playwright test payment-cash.spec.ts --project=chromium
 ```
 
 Kỳ vọng:
+
 - Test `paying a confirmed order completes the order and releases the table without touching KDS` pass
 - Order chuyển `unpaid -> paid`, `orders.status='completed'`
 - Bàn dine-in tự chuyển `available` sau payment-close; không còn bước `trả bàn` riêng
 - KDS ticket chưa xong vẫn giữ trạng thái bếp và tiếp tục hiển thị trên KDS
 
 3. Chạy smoke KDS:
+
 ```bash
 cd apps/web
 pnpm exec dotenv -e .env.test.local -- playwright test kds-queue.spec.ts --project=chromium
 ```
 
 Kỳ vọng:
+
 - Ticket bump `pending -> preparing -> ready`
 - Recall `ready -> preparing -> pending`
 
 4. Chạy verify bắt buộc của repo:
+
 ```bash
 pnpm typecheck
 pnpm lint

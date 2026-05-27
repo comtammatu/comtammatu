@@ -58,7 +58,9 @@ export function PhotoUploadInput({
     const isPdf = file.type === "application/pdf";
     const isImage = file.type.startsWith("image/");
     if (!isImage && !(pdfAllowed && isPdf)) {
-      toast.error(pdfAllowed ? "Chỉ chấp nhận ảnh hoặc PDF." : "Chỉ chấp nhận ảnh.");
+      toast.error(
+        pdfAllowed ? "Chỉ chấp nhận ảnh hoặc PDF." : "Chỉ chấp nhận ảnh.",
+      );
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
@@ -141,7 +143,9 @@ export function PhotoUploadInput({
           <input
             ref={inputRef}
             type="file"
-            accept={acceptTypes === "image" ? "image/*" : "image/*,application/pdf"}
+            accept={
+              acceptTypes === "image" ? "image/*" : "image/*,application/pdf"
+            }
             {...(captureCamera ? { capture: "environment" } : {})}
             className="hidden"
             disabled={disabled || uploading}

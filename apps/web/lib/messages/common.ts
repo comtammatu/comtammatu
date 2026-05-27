@@ -1,4 +1,4 @@
-import { ACTIONS_VI, ERRORS_VI, STATES_VI } from "@comtammatu/shared/messages"
+import { ACTIONS_VI, ERRORS_VI, STATES_VI } from "@comtammatu/shared/messages";
 
 export const common = {
   brandName: "Cơm Tấm Má Tư",
@@ -16,4 +16,4 @@ export const common = {
   sessionExpired: ERRORS_VI.sessionExpired,
   forbidden: ERRORS_VI.forbidden,
   networkError: ERRORS_VI.networkError,
-} as const
+} as const;

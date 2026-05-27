@@ -8,24 +8,25 @@ import {
 
 test("formatSideLabel shows default side quantity per main item portion", () => {
   assert.equal(
-    formatSideLabel(
-      { side_item_id: 10, name: "Canh thêm", price: 0, is_default: false },
-    ),
+    formatSideLabel({
+      side_item_id: 10,
+      name: "Canh thêm",
+      price: 0,
+      is_default: false,
+    }),
     "Canh thêm x1",
   );
 });
 
 test("formatSideLabel shows explicit side quantity per main item portion", () => {
   assert.equal(
-    formatSideLabel(
-      {
-        side_item_id: 11,
-        name: "Trứng ốp la",
-        price: 5_000,
-        quantity: 2,
-        is_default: false,
-      },
-    ),
+    formatSideLabel({
+      side_item_id: 11,
+      name: "Trứng ốp la",
+      price: 5_000,
+      quantity: 2,
+      is_default: false,
+    }),
     "Trứng ốp la x2",
   );
 });
@@ -50,7 +51,10 @@ test("getSideBadgeToneClass assigns stable semantic chart colors per side item",
     is_default: false,
   };
 
-  assert.equal(getSideBadgeToneClass(canhThem), getSideBadgeToneClass(canhThem));
+  assert.equal(
+    getSideBadgeToneClass(canhThem),
+    getSideBadgeToneClass(canhThem),
+  );
   assert.notEqual(
     getSideBadgeToneClass(canhThem),
     getSideBadgeToneClass(trungOpLa),

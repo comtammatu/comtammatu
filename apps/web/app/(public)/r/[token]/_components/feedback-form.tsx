@@ -24,18 +24,18 @@ interface FeedbackFormProps {
   qrLabel: string;
 }
 
-export function FeedbackForm({ token, branchName, qrLabel }: FeedbackFormProps) {
+export function FeedbackForm({
+  token,
+  branchName,
+  qrLabel,
+}: FeedbackFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [rootError, setRootError] = useState<string | null>(null);
   const [files, setFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const {
-    control,
-    handleSubmit,
-    register,
-  } = useForm<SubmitFeedbackInput>({
+  const { control, handleSubmit, register } = useForm<SubmitFeedbackInput>({
     resolver: zodResolver(submitFeedbackClientSchema),
     defaultValues: {
       website: "",
@@ -129,7 +129,9 @@ export function FeedbackForm({ token, branchName, qrLabel }: FeedbackFormProps) 
       <div className="space-y-2">
         <p className="text-sm font-medium">
           Ảnh đính kèm{" "}
-          <span className="text-muted-foreground font-normal">(tuỳ chọn, tối đa 3 ảnh)</span>
+          <span className="text-muted-foreground font-normal">
+            (tuỳ chọn, tối đa 3 ảnh)
+          </span>
         </p>
         <input
           ref={fileInputRef}
@@ -151,7 +153,9 @@ export function FeedbackForm({ token, branchName, qrLabel }: FeedbackFormProps) 
               asChild
               disabled={isPending}
             >
-              <span>Thêm ảnh ({files.length}/{MAX_PHOTOS})</span>
+              <span>
+                Thêm ảnh ({files.length}/{MAX_PHOTOS})
+              </span>
             </Button>
           </label>
         ) : null}

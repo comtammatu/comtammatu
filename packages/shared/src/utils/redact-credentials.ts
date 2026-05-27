@@ -13,7 +13,7 @@
  * the rule surgical — `partnerCode` is NOT treated as a secret because
  * it's the merchant identifier, not the secret key.
  *
- * Refs: docs/plan/m4-payments-fix.md (P0-2 webhook hardening + audit posture).
+ * Ref: tasks/regressions.md AUDIT-NEVER-LOG-CREDENTIALS.
  */
 
 const SECRET_KEYS: ReadonlySet<string> = new Set([

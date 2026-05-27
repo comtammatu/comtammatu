@@ -5,22 +5,22 @@
 
 ## Tóm tắt
 
-| Trường | Giá trị |
-| --- | --- |
-| **Vai trò** | Thu ngân, Quản lý chi nhánh |
-| **Quyền cần có** | `pos:use` cho hủy món / chuyển bàn / tách / gộp; `pos:cancel_order` cho hủy đơn |
-| **Điều kiện trước** | Đơn ở `confirmed` (chưa thanh toán) |
-| **Hệ quả chung** | Mọi thao tác đều **đảo ngược KDS ticket** + recompute tổng + audit vào `order_status_history` |
+| Trường              | Giá trị                                                                                       |
+| ------------------- | --------------------------------------------------------------------------------------------- |
+| **Vai trò**         | Thu ngân, Quản lý chi nhánh                                                                   |
+| **Quyền cần có**    | `pos:use` cho hủy món / chuyển bàn / tách / gộp; `pos:cancel_order` cho hủy đơn               |
+| **Điều kiện trước** | Đơn ở `confirmed` (chưa thanh toán)                                                           |
+| **Hệ quả chung**    | Mọi thao tác đều **đảo ngược KDS ticket** + recompute tổng + audit vào `order_status_history` |
 
 ## 5 thao tác trong POS-07
 
-| Thao tác | Khi nào dùng | Yêu cầu | Kết quả |
-| --- | --- | --- | --- |
-| **Hủy món** | Khách đổi ý / món hết / nhập sai | swipe món sang trái | Món `cancelled`, KDS ticket cancel |
-| **Hủy đơn** | Khách bỏ về / đơn nhập nhầm hoàn toàn | có quyền `pos:cancel_order` | Toàn đơn `cancelled`, bàn về trống |
-| **Chuyển bàn** | Khách dời chỗ ngồi | bàn đích `available` | Đơn bind sang bàn mới, bàn cũ về trống |
-| **Tách hóa đơn** | 1 nhóm khách chia bill | đơn `dine_in` + ≥2 món | Tạo đơn mới cùng bàn, chuyển 1 phần món qua |
-| **Gộp hóa đơn** | 2 đơn cùng bàn → gộp 1 (1 người trả hết) | bàn có ≥2 đơn `dine_in` active | Đơn được chọn nhận hết món, đơn nguồn `cancelled` |
+| Thao tác         | Khi nào dùng                             | Yêu cầu                        | Kết quả                                           |
+| ---------------- | ---------------------------------------- | ------------------------------ | ------------------------------------------------- |
+| **Hủy món**      | Khách đổi ý / món hết / nhập sai         | swipe món sang trái            | Món `cancelled`, KDS ticket cancel                |
+| **Hủy đơn**      | Khách bỏ về / đơn nhập nhầm hoàn toàn    | có quyền `pos:cancel_order`    | Toàn đơn `cancelled`, bàn về trống                |
+| **Chuyển bàn**   | Khách dời chỗ ngồi                       | bàn đích `available`           | Đơn bind sang bàn mới, bàn cũ về trống            |
+| **Tách hóa đơn** | 1 nhóm khách chia bill                   | đơn `dine_in` + ≥2 món         | Tạo đơn mới cùng bàn, chuyển 1 phần món qua       |
+| **Gộp hóa đơn**  | 2 đơn cùng bàn → gộp 1 (1 người trả hết) | bàn có ≥2 đơn `dine_in` active | Đơn được chọn nhận hết món, đơn nguồn `cancelled` |
 
 ## Đường dẫn
 
@@ -186,13 +186,13 @@ URL: `/br/{branchId}/pos` → bàn occupied → đơn
 
 ### Code path
 
-- **Order detail sheet:** [apps/web/app/(protected)/br/[branchId]/pos/order-detail-sheet.tsx](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/order-detail-sheet.tsx) — orchestrator các action.
-- **Cancel dialog:** [apps/web/app/(protected)/br/[branchId]/pos/_components/order-detail/cancel-order-dialog.tsx](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/_components/order-detail/cancel-order-dialog.tsx) — `AlertDialog` (không phải Dialog).
+- **Order detail sheet:** [apps/web/app/(protected)/br/[branchId]/pos/order-detail-sheet.tsx](<../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/order-detail-sheet.tsx>) — orchestrator các action.
+- **Cancel dialog:** [apps/web/app/(protected)/br/[branchId]/pos/\_components/order-detail/cancel-order-dialog.tsx](<../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/_components/order-detail/cancel-order-dialog.tsx>) — `AlertDialog` (không phải Dialog).
 - **Server actions:**
   - `voidOrderItem` — hủy 1 món
   - `cancelOrder` — hủy cả đơn
   - `transferOrderTable` — chuyển bàn
-  - `splitOrder` — tách (trong [discount-actions.ts](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/discount-actions.ts))
+  - `splitOrder` — tách (trong [discount-actions.ts](<../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/discount-actions.ts>))
   - `mergeOrders` — gộp (cùng file)
 
 ### Database
@@ -204,27 +204,26 @@ URL: `/br/{branchId}/pos` → bàn occupied → đơn
 
 ### Permission matrix
 
-| Action | `pos:use` | `pos:cancel_order` |
-| --- | --- | --- |
-| Hủy món (per-item) | ✅ | — |
-| Hủy đơn (toàn bộ) | — | ✅ (chỉ cashier+) |
-| Chuyển bàn | ✅ | — |
-| Tách hoá đơn | ✅ | — |
-| Gộp hoá đơn | ✅ | — |
+| Action             | `pos:use` | `pos:cancel_order` |
+| ------------------ | --------- | ------------------ |
+| Hủy món (per-item) | ✅        | —                  |
+| Hủy đơn (toàn bộ)  | —         | ✅ (chỉ cashier+)  |
+| Chuyển bàn         | ✅        | —                  |
+| Tách hoá đơn       | ✅        | —                  |
+| Gộp hoá đơn        | ✅        | —                  |
 
 ### Tham chiếu thiết kế
 
-- Order lifecycle: [docs/archive/plan/m2-order-lifecycle.md](../../../archive/plan/m2-order-lifecycle.md)
-- Multi-order pattern: [docs/archive/plan/ui-ux-page-contracts.md](../../../archive/plan/ui-ux-page-contracts.md)
+- Current POS scope: [tasks/todo.md](../../../../tasks/todo.md)
 
 ---
 
 ## Metadata mockup
 
-| Trường | Giá trị |
-| --- | --- |
-| Viewport | 390×844 (iPhone mặc định) |
-| Capture script | [apps/web/e2e/guides/pos-07-modify-order.guide.ts](../../../../apps/web/e2e/guides/pos-07-modify-order.guide.ts) |
-| Lệnh refresh | `pnpm --filter @comtammatu/web guides:capture --grep="POS-07"` |
-| Cập nhật mockup gần nhất | 2026-04-27 |
-| Người maintain | _TBD_ |
+| Trường                   | Giá trị                                                                                                          |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| Viewport                 | 390×844 (iPhone mặc định)                                                                                        |
+| Capture script           | [apps/web/e2e/guides/pos-07-modify-order.guide.ts](../../../../apps/web/e2e/guides/pos-07-modify-order.guide.ts) |
+| Lệnh refresh             | `pnpm --filter @comtammatu/web guides:capture --grep="POS-07"`                                                   |
+| Cập nhật mockup gần nhất | 2026-04-27                                                                                                       |
+| Người maintain           | _TBD_                                                                                                            |

@@ -93,7 +93,8 @@ async function fetchArchiveCandidates(
     .order("issued_at", { ascending: true })
     .limit(ARCHIVE_BATCH_LIMIT_PER_BRANCH);
 
-  if (error) throw new Error(`fetch_archive_candidates_failed: ${error.message}`);
+  if (error)
+    throw new Error(`fetch_archive_candidates_failed: ${error.message}`);
   if (!data) return [];
 
   return data
@@ -214,8 +215,7 @@ export async function archiveSingleInvoice(
       taxInvoiceId: candidate.id,
       triggerSource,
       triggeredBy,
-      outcome:
-        nextAttempt >= ARCHIVE_MAX_ATTEMPTS ? "giveup" : outcome,
+      outcome: nextAttempt >= ARCHIVE_MAX_ATTEMPTS ? "giveup" : outcome,
       attemptNumber: nextAttempt,
       pdfBytes: null,
       xmlBytes: null,
@@ -276,8 +276,7 @@ export async function archiveSingleInvoice(
       taxInvoiceId: candidate.id,
       triggerSource,
       triggeredBy,
-      outcome:
-        nextAttempt >= ARCHIVE_MAX_ATTEMPTS ? "giveup" : "storage_error",
+      outcome: nextAttempt >= ARCHIVE_MAX_ATTEMPTS ? "giveup" : "storage_error",
       attemptNumber: nextAttempt,
       pdfBytes: pdf.bytes.length,
       xmlBytes: xml.bytes.length,
@@ -307,8 +306,7 @@ export async function archiveSingleInvoice(
       taxInvoiceId: candidate.id,
       triggerSource,
       triggeredBy,
-      outcome:
-        nextAttempt >= ARCHIVE_MAX_ATTEMPTS ? "giveup" : "storage_error",
+      outcome: nextAttempt >= ARCHIVE_MAX_ATTEMPTS ? "giveup" : "storage_error",
       attemptNumber: nextAttempt,
       pdfBytes: pdf.bytes.length,
       xmlBytes: xml.bytes.length,

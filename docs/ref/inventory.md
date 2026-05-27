@@ -17,17 +17,17 @@ Nếu một ý tưởng mới không rõ nằm ở lớp nào, mặc định coi
 
 ## Trạng thái triển khai (doc ↔ codebase)
 
-| Nội dung | Hoàn thành now | Lean target | Deferred / không làm lúc này |
-| -------- | ----------- | ----------- | ---------------------------- |
-| Nguyên liệu `ingredients` | Có — migration `20260406310000_stock.sql` | Thêm semantics rõ hơn cho hao hụt sơ chế | Không mở item master kiểu ERP nhiều lớp |
-| Tồn kho `stock_levels` | Có — `current_quantity`, `avg_unit_cost` | Giữ WAC nhất quán ở mọi readout quan trọng | Không chuyển sang FIFO engine |
-| Biến động `stock_movements` | Có — `adjustment`, `count_adjustment`, `consumption`, `grn_receipt`, `transfer_*`, `production_*` | Chuẩn hóa reason codes và report semantics | Không mở lot-first ledger / batch accounting |
-| Mô hình site | Có — `central_warehouse`, `branch`, `central_kitchen` | Hỗ trợ linh hoạt `CW -> Bếp trung tâm`, `CW -> Kho chi nhánh`, `Bếp trung tâm -> Kho chi nhánh`, và tiêu hao tại bếp chi nhánh | Không mở tree `company -> region -> branch -> sub-location` |
-| PO / GRN / NCC | Có — bảng + RPC `confirm_grn` | Thêm `price variance` semantics v1 | Không mở PR workflow nhiều bước |
-| Luân chuyển nội bộ | Có — `stock_transfers` + workflow | Củng cố short-receipt / discrepancy semantics | Không mở full logistics module |
-| HĐ NCC + 3-way matching | Có nền dữ liệu — `supplier_invoices` + matching logic | Finance P1/handoff sau khi stock loop ổn định | Không chặn Inventory pilot; không mở payment proposal engine |
-| `recipes` + xuất kho theo order | Có — `recipes` + RPC tiêu hao | Hỗ trợ `yield_factor` | Không mở multi-level BOM |
-| Thành phẩm + production hub | Có — `item_kind`, `production_recipes`, `production_orders`, route production | Giữ production ở mức central-kitchen pilot | Không mở labor / overhead / WIP accounting đầy đủ |
+| Nội dung                        | Hoàn thành now                                                                                    | Lean target                                                                                                                    | Deferred / không làm lúc này                                 |
+| ------------------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------ |
+| Nguyên liệu `ingredients`       | Có — migration `20260406310000_stock.sql`                                                         | Thêm semantics rõ hơn cho hao hụt sơ chế                                                                                       | Không mở item master kiểu ERP nhiều lớp                      |
+| Tồn kho `stock_levels`          | Có — `current_quantity`, `avg_unit_cost`                                                          | Giữ WAC nhất quán ở mọi readout quan trọng                                                                                     | Không chuyển sang FIFO engine                                |
+| Biến động `stock_movements`     | Có — `adjustment`, `count_adjustment`, `consumption`, `grn_receipt`, `transfer_*`, `production_*` | Chuẩn hóa reason codes và report semantics                                                                                     | Không mở lot-first ledger / batch accounting                 |
+| Mô hình site                    | Có — `central_warehouse`, `branch`, `central_kitchen`                                             | Hỗ trợ linh hoạt `CW -> Bếp trung tâm`, `CW -> Kho chi nhánh`, `Bếp trung tâm -> Kho chi nhánh`, và tiêu hao tại bếp chi nhánh | Không mở tree `company -> region -> branch -> sub-location`  |
+| PO / GRN / NCC                  | Có — bảng + RPC `confirm_grn`                                                                     | Thêm `price variance` semantics v1                                                                                             | Không mở PR workflow nhiều bước                              |
+| Luân chuyển nội bộ              | Có — `stock_transfers` + workflow                                                                 | Củng cố short-receipt / discrepancy semantics                                                                                  | Không mở full logistics module                               |
+| HĐ NCC + 3-way matching         | Có nền dữ liệu — `supplier_invoices` + matching logic                                             | Finance P1/handoff sau khi stock loop ổn định                                                                                  | Không chặn Inventory pilot; không mở payment proposal engine |
+| `recipes` + xuất kho theo order | Có — `recipes` + RPC tiêu hao                                                                     | Hỗ trợ `yield_factor`                                                                                                          | Không mở multi-level BOM                                     |
+| Thành phẩm + production hub     | Có — `item_kind`, `production_recipes`, `production_orders`, route production                     | Giữ production ở mức central-kitchen pilot                                                                                     | Không mở labor / overhead / WIP accounting đầy đủ            |
 
 ## Deferred rõ ràng
 
@@ -50,7 +50,7 @@ Những thứ dưới đây **không phải mục tiêu của Inventory v1/pilot
 - **Kho Tổng / CW (`branch_kind = 'central_warehouse'`):** là **điểm nhập** từ nhà cung cấp ngoài (có thể multi-instance). Mọi **PO**, **GRN**, và cập nhật **giá vốn (WAC)** đều gắn với các kho này. Hóa đơn NCC/3-way matching là Finance P1, không phải điều kiện mở pilot tồn kho.
 - **Bếp Trung Tâm / CK (`branch_kind = 'central_kitchen'`):** nhận **nguyên liệu** từ CW, chạy **lệnh sản xuất**, trừ nguyên liệu theo BOM, và nhập **thành phẩm** vào tồn riêng của bếp (có thể multi-instance).
 - **Chi nhánh vận hành (`branch_kind = branch`):** không tạo PO/GRN với NCC trong pilot. Mỗi chi nhánh hiện được vận hành theo hai điểm nội bộ: **Kho chi nhánh** (điểm nhận / giữ tồn) và **Bếp chi nhánh** (điểm tiêu hao cuối cùng cho bán hàng). Hai điểm này cùng nằm trong một site `branch` nhưng được tách bằng `inventory_locations`. Bước **Kho chi nhánh -> Bếp chi nhánh** hiện được chuẩn hóa bằng **intra-branch `stock_transfer`** từ location kho sang location bếp/default consumption.
-- **Phiếu luân chuyển nội bộ giữa site thật:** dùng state machine `draft -> confirmed_ship -> in_transit -> confirmed_receive -> received`. Engine áp dụng cho các hướng hợp lệ trong pilot: **CW → CK**, **CW → Branch**, **CK → Branch**. Riêng bước **Kho chi nhánh -> Bếp chi nhánh** là intra-branch transfer một bước, không dùng state machine vận chuyển 5 bước. Transfer ngược (CK→CW, CW↔CW, CK↔CK, Branch→*) bị reject qua trigger.
+- **Phiếu luân chuyển nội bộ giữa site thật:** dùng state machine `draft -> confirmed_ship -> in_transit -> confirmed_receive -> received`. Engine áp dụng cho các hướng hợp lệ trong pilot: **CW → CK**, **CW → Branch**, **CK → Branch**. Riêng bước **Kho chi nhánh -> Bếp chi nhánh** là intra-branch transfer một bước, không dùng state machine vận chuyển 5 bước. Transfer ngược (CK→CW, CW↔CW, CK↔CK, Branch→\*) bị reject qua trigger.
 
 ```
 NCC → [PO] → [GRN] → Tồn kho Kho Tổng (nguyên liệu)
@@ -89,13 +89,13 @@ location bếp/default consumption. Legacy `stock_issue(issue_type = kitchen_use
 
 ### 1b. Luân chuyển nội bộ (cùng state machine)
 
-| Bước                           | Trạng thái (DB)     | Việc làm                                                                                       |
-| ------------------------------ | ------------------- | ---------------------------------------------------------------------------------------------- |
+| Bước                           | Trạng thái (DB)     | Việc làm                                                                                                                                   |
+| ------------------------------ | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | Tạo phiếu                      | `draft`             | Chọn kho **gửi** / **nhận** (ví dụ `CW -> Bếp trung tâm`, `CW -> Kho chi nhánh`, `Bếp trung tâm -> Kho chi nhánh`), liệt kê mặt hàng và SL |
-| Xác nhận xuất tại kho gửi      | `confirmed_ship`    | Trừ tồn tại `from_branch_id` (`transfer_out`), snapshot WAC vào dòng phiếu                     |
-| Đang vận chuyển                | `in_transit`        | Theo dõi (biển số / ghi chú — tùy pha UI)                                                      |
-| Bắt đầu kiểm nhận tại kho nhận | `confirmed_receive` | Kho nhận mở kiểm đếm (`receive_started_at`); chưa cộng tồn                                     |
-| Xác nhận nhập tại kho nhận     | `received`          | Cộng tồn tại `to_branch_id` (`transfer_in`), ghi nhận SL thực nhận (lệch → điều chỉnh / lý do) |
+| Xác nhận xuất tại kho gửi      | `confirmed_ship`    | Trừ tồn tại `from_branch_id` (`transfer_out`), snapshot WAC vào dòng phiếu                                                                 |
+| Đang vận chuyển                | `in_transit`        | Theo dõi (biển số / ghi chú — tùy pha UI)                                                                                                  |
+| Bắt đầu kiểm nhận tại kho nhận | `confirmed_receive` | Kho nhận mở kiểm đếm (`receive_started_at`); chưa cộng tồn                                                                                 |
+| Xác nhận nhập tại kho nhận     | `received`          | Cộng tồn tại `to_branch_id` (`transfer_in`), ghi nhận SL thực nhận (lệch → điều chỉnh / lý do)                                             |
 
 Trạng thái `cancelled` khi hủy phiếu (theo quyền); không ghi nhận tồn nếu chưa từng `confirmed_ship` (hoặc hoàn tác theo policy nội bộ — ưu tiên tránh xóa bản ghi, dùng workflow hủy).
 
@@ -103,16 +103,16 @@ Trạng thái `cancelled` khi hủy phiếu (theo quyền); không ghi nhận t�
 
 ### Các loại phiếu kho
 
-| Loại phiếu                  | Mô tả                                            | `stock_movements.type` |
-| --------------------------- | ------------------------------------------------ | ---------------------- |
-| **Nhập từ NCC (GRN)**       | Tại Kho Tổng hoặc Bếp Trung Tâm                  | `grn_receipt`          |
-| **Xuất luân chuyển**        | Trừ kho gửi (`from_branch_id`) khi xác nhận xuất | `transfer_out`         |
-| **Nhận luân chuyển**        | Cộng kho nhận (`to_branch_id`) khi hoàn tất nhận | `transfer_in`          |
+| Loại phiếu                  | Mô tả                                                    | `stock_movements.type`   |
+| --------------------------- | -------------------------------------------------------- | ------------------------ |
+| **Nhập từ NCC (GRN)**       | Tại Kho Tổng hoặc Bếp Trung Tâm                          | `grn_receipt`            |
+| **Xuất luân chuyển**        | Trừ kho gửi (`from_branch_id`) khi xác nhận xuất         | `transfer_out`           |
+| **Nhận luân chuyển**        | Cộng kho nhận (`to_branch_id`) khi hoàn tất nhận         | `transfer_in`            |
 | **Tiêu hao sản xuất**       | Trừ nguyên liệu tại bếp trung tâm khi confirm production | `production_consumption` |
-| **Nhập thành phẩm**         | Cộng tồn thành phẩm tại bếp trung tâm           | `production_output`    |
-| **Xuất theo bán**           | Theo recipe khi order `completed`                | `consumption`          |
-| **Điều chỉnh / hỏng / mất** | Thủ công                                         | `adjustment`           |
-| **Kiểm kê**                 | Điều chỉnh sau đếm                               | `count_adjustment`     |
+| **Nhập thành phẩm**         | Cộng tồn thành phẩm tại bếp trung tâm                    | `production_output`      |
+| **Xuất theo bán**           | Theo recipe khi order `completed`                        | `consumption`            |
+| **Điều chỉnh / hỏng / mất** | Thủ công                                                 | `adjustment`             |
+| **Kiểm kê**                 | Điều chỉnh sau đếm                                       | `count_adjustment`       |
 
 Ghi chú: phiếu `stock_issue(issue_type = kitchen_use)` đã retired. **Cấp phát từ kho chi nhánh xuống bếp chi nhánh** phải dùng intra-branch `stock_transfer`; ở mức movement ledger, bước này ghi `transfer_out` tại location kho và `transfer_in` tại location bếp/default consumption trong cùng `branch/site`.
 
@@ -272,11 +272,11 @@ Hệ thống v1 không xây full `price governance engine`, nhưng cần vocabul
 
 Ngưỡng gợi ý cho pilot:
 
-| Mức lệch | Ý nghĩa |
-| -------- | ------- |
-| `<= 2%` | thông tin |
-| `> 2% đến 5%` | cảnh báo |
-| `> 5%` | cần review thủ công |
+| Mức lệch      | Ý nghĩa             |
+| ------------- | ------------------- |
+| `<= 2%`       | thông tin           |
+| `> 2% đến 5%` | cảnh báo            |
+| `> 5%`        | cần review thủ công |
 
 Trong pilot:
 
@@ -425,6 +425,3 @@ Chi tiết enforcement: RLS + `packages/shared/src/auth/module-acl.ts`.
 - [inventory-sop.md](inventory-sop.md) — SOP vận hành pilot cho topology `HQ / Bếp trung tâm / Kho chi nhánh / Bếp chi nhánh`
 - [inventory-role-handoff.md](inventory-role-handoff.md) — bản handoff 1 trang cho training vận hành
 - [inventory-rbac-matrix.md](inventory-rbac-matrix.md) — ma trận quyền Inventory theo boundary hiện tại
-- [../archive/ref/inventory-erp-gap-matrix.md](../archive/ref/inventory-erp-gap-matrix.md) — historical ERP mapping; không phải source of truth hiện tại
-- [../archive/plan/sprint-3.md](../archive/plan/sprint-3.md) — gợi ý route admin
-- [../archive/plan/backlog.md](../archive/plan/backlog.md) — waste, kiểm kê nâng cao (nếu tách bảng)

@@ -81,9 +81,9 @@ export default async function GrnCreatePage({
     lines: Array<GrnDraftLine & { lineId: number }>;
   } | null = null;
   const draftRes = await loadActiveGrnDraft({ supplierId });
-  const draftRow = (draftRes.success ? draftRes.data : null) as
-    | { id: number }
-    | null;
+  const draftRow = (draftRes.success ? draftRes.data : null) as {
+    id: number;
+  } | null;
   if (draftRow?.id) {
     const detailRes = await fetchGrnDetail(draftRow.id);
     if (detailRes.success && detailRes.data) {

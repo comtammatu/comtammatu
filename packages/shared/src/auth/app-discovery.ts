@@ -7,10 +7,7 @@ import {
 } from "./nav-config";
 import { NAV_GROUP_LABELS_VI } from "../labels";
 
-export type AppDiscoverySurface =
-  | "admin"
-  | "workspace"
-  | "branch_operation";
+export type AppDiscoverySurface = "admin" | "workspace" | "branch_operation";
 
 export type AppDiscoveryStatus = "available" | "blocked";
 

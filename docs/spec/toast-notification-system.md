@@ -337,7 +337,7 @@ UI rules:
 - Use list/item primitives, not hand-styled fake cards.
 - Notification row click may mark read, then navigate to `action_url`.
 - If `action_url` is absent, row still marks read but should not imply a next action.
-- Severity icon/color must come from semantic tokens and existing Tabler icons.
+- Severity icon/color must come from semantic tokens and existing Lucide icons.
 - Full feed page should be the reliable source; bell/popover is a shortcut.
 
 ## Surface Placement

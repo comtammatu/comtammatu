@@ -20,13 +20,9 @@ Use this file to find the source-of-truth docs for onboarding, implementation pl
 - Current technical status: `docs/CODEBASE_MAP.md`
 - Architecture decisions: `docs/plan/decisions.md`
 - Active ADRs: `docs/plan/adr/`
-- Archived greenfield ADRs: `docs/archive/plan/adr/`
 - System architecture: `docs/spec/architecture.md`
 - Database schema source ladder: `docs/spec/database-schema.md`
 - Design system contract: `docs/spec/design-system.md`
-- Suspended greenfield rebuild reference: `docs/archive/plan/system-rebuild/`
-- Historical plans only: `docs/archive/plan/`
-- Historical refs/worklogs only: `docs/archive/ref/`, `docs/archive/worklog/`
 
 ## Business Domain
 
@@ -46,7 +42,6 @@ Use this file to find the source-of-truth docs for onboarding, implementation pl
 - Regression rules: `tasks/regressions.md`
 - Lessons learned: `tasks/lessons.md`
 - Current tasks: `tasks/todo.md`
-- Historical task worklogs: `docs/archive/worklog/tasks/`
 - Runbook index: `docs/runbooks/README.md`
 - Worklog index: `docs/worklog/README.md`
 
@@ -58,3 +53,4 @@ Use this file to find the source-of-truth docs for onboarding, implementation pl
 - Put retrospective explanations in `tasks/lessons.md`.
 - Keep user-local or machine-local notes out of version-controlled shared rule files.
 - Keep rules concrete and verifiable. Avoid vague guidance such as "write good code" or "be careful".
+- Do not add an archive tree or keep superseded implementation plans in the repo. When a decision is current, promote it into the source-of-truth doc above; when it is not current, remove it.

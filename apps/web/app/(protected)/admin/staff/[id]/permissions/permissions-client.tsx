@@ -304,9 +304,7 @@ export function PermissionsClient({
       {tenantGrants.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>
-              Quyền tenant-wide ({tenantGrants.length})
-            </CardTitle>
+            <CardTitle>Quyền tenant-wide ({tenantGrants.length})</CardTitle>
           </CardHeader>
           <CardContent>
             <GrantList

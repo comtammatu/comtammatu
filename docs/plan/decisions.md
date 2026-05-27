@@ -7,14 +7,16 @@
 **Decision:** Remove the singleton "HQ / headquarters" branch concept. Replace with multi-instance `central_warehouse` (Kho Tổng / CW) and existing multi-instance `central_kitchen` (Bếp Trung Tâm / CK). Both accept direct supplier GRN.
 
 **Transfer direction matrix** (enforced by DB trigger `enforce_stock_transfer_direction`):
+
 - Allowed: CW→CK, CW→Branch, CK→Branch, intra-branch.
-- Rejected: CK→CW, CW↔CW, CK↔CK, Branch→*.
+- Rejected: CK→CW, CW↔CW, CK↔CK, Branch→\*.
 
 **Superseded stock issue kitchen_use rule:** `stock_issue(issue_type = 'kitchen_use')` used to be valid only at `branch_kind = 'branch'`, but this rule is retired. Current contract: `Kho chi nhánh -> Bếp chi nhánh` uses an intra-branch `stock_transfer` with warehouse/source location and kitchen/default-consumption target location.
 
-**Rationale:** Pilot now plans more than one Kho Tổng and more than one Bếp Trung Tâm. The legacy `is_headquarters` flag assumed a singleton and does not scale.
+**Rationale:** Pilot now plans more than one Kho Tổng and more than one Bếp Trung Tâm. The retired `is_headquarters` flag assumed a singleton and does not scale.
 
 **Migration:** `20260424000000_rename_warehouse_to_central_warehouse_retire_hq.sql`
+
 - Renames `branch_kind='warehouse'` → `'central_warehouse'`
 - Drops `branches.is_headquarters` column
 - Replaces `enforce_po_branch_is_headquarters` trigger → `enforce_po_grn_branch_is_procurement` (accepts CW + CK)
@@ -22,7 +24,7 @@
 - Adds `enforce_stock_transfer_direction` trigger with direction matrix above
 - Superseded later by `20260426100100_retire_kitchen_use_issue_type.sql`: no new `kitchen_use`; use intra-branch transfer for `Cấp bếp`
 
-**Superseded:** prior ADRs (D007 `set_headquarters`) are superseded for the CW/CK flow; other parts untouched.
+**Current contract:** CW/CK flow uses `branch_kind` plus the direction matrix above; there is no live `set_headquarters` decision in this file.
 
 ## D001: Greenfield thay vì refactor (2026-04-01)
 
@@ -80,14 +82,6 @@
 
 **Consequences:** Mỗi setting có RLS riêng, audit trail qua `updated_at`, dễ thêm settings mới mà không thay đổi schema. Trade-off: N queries khi upsert nhiều settings cùng lúc (acceptable cho admin-only operation).
 
-## D007: Atomic RPC cho set_headquarters (2026-04-02) — **SUPERSEDED by D000 (2026-04-24)**
-
-**Context (historical):** `setHeadquarters` cần unset current HQ rồi set new HQ. Hai UPDATE riêng biệt tạo TOCTOU race — concurrent calls có thể để 0 hoặc 2 branches làm HQ.
-
-**Decision (historical):** Postgres RPC `set_headquarters(p_branch_id)` chạy cả hai thao tác trong 1 transaction. Dùng single UPDATE với `SET is_headquarters = (id = p_branch_id)`.
-
-**Superseded:** migration `20260424000000` dropped the `is_headquarters` column and the `set_headquarters` RPC. Multi-instance `central_warehouse` removes the singleton constraint; no atomic swap is needed. Use `set_branch_kind(p_branch_id, p_kind)` to tag a branch as `central_warehouse`.
-
 ## D008: Cloud-first, local-first Phase 2 (2026-04-04)
 
 **Context:** Cân nhắc local-first (mini PC + SQLite per branch) để POS/KDS hoạt động offline. Phân tích cho thấy:
@@ -128,16 +122,12 @@ Helpers ở `apps/web/` (không ở `packages/ui`) vì: bind với RHF + dự á
 
 **Migration status (2026-04-17):** M3 shipped 21/24 dialogs (batches 1-9 + recipe-panel). Skip by design: 2 import-export-menu (1-field file upload), 1 grn-create-client (mobile wizard với localStorage drafts).
 
-## D011: print-agent LAN-only build via runtime flag, not separate package (2026-04-24) — SUPERSEDED 2026-05-07
+## D011: Print-agent LAN-only transport (2026-05-07)
 
-> **Superseded:** USB transport đã bị bỏ hoàn toàn ngày 2026-05-07. Tất cả chi
-> nhánh dùng máy in LAN. `AGENT_TRANSPORT` env flag, `printer_agents.transport`
-> column, `printers.usb_vendor_id/usb_product_id` columns, `apps/print-agent/src/usb.ts`
-> đều đã xoá. Migration: `20260507083322_drop_printer_usb_and_transport.sql`.
-> Decision này giữ lại để ghi nhớ historical context.
+**Context:** Mỗi chi nhánh dùng một máy Android Super App đã link terminal làm gateway vận hành; máy in dùng LAN. USB transport không còn production payoff và làm tăng surface area vận hành.
 
-**Context (lịch sử):** Chi nhánh chỉ có máy POS Android (không PC Windows) không thể chạy `apps/print-agent` vì `usb` native binding. Nhưng vẫn cần 1 process trong LAN để cầu nối jobs đến printer.
+**Decision:** `apps/print-agent` chỉ hỗ trợ LAN printer transport. Không giữ runtime flag chọn transport, không giữ USB capability columns, và không giữ USB native binding.
 
-**Decision (lịch sử):** Thêm env flag `AGENT_TRANSPORT=lan|all` (default `all`) + tách `usb` thành optional dep + capability column trên `printer_agents.transport`.
+**Migration:** `20260507083322_drop_printer_usb_and_transport.sql` xoá `AGENT_TRANSPORT`, `printer_agents.transport`, `printers.usb_vendor_id`, `printers.usb_product_id`, và `apps/print-agent/src/usb.ts`.
 
-**Lý do bỏ:** Sau khi rollout LAN-only sang toàn fleet, USB code path không còn được dùng. Giữ 2 transport tăng surface area (native binding, USB driver setup, capability gating) mà không có production payoff.
+**Consequences:** Branch rollout tập trung vào terminal-linked Android gateway + LAN printer config; không có fallback USB trong runtime hoặc docs active.

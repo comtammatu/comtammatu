@@ -36,7 +36,10 @@ export function isPublicAppPath(pathname: string): boolean {
 }
 
 export function isBetaPath(pathname: string): boolean {
-  return pathname === BETA_ROUTE_PREFIX || pathname.startsWith(`${BETA_ROUTE_PREFIX}/`);
+  return (
+    pathname === BETA_ROUTE_PREFIX ||
+    pathname.startsWith(`${BETA_ROUTE_PREFIX}/`)
+  );
 }
 
 export function stripBetaPrefix(pathname: string): string {
@@ -50,12 +53,16 @@ export function stripBetaPrefix(pathname: string): string {
 
 export function isAdminRoutePath(pathname: string): boolean {
   const resolvedPathname = stripBetaPrefix(pathname);
-  return resolvedPathname === "/admin" || resolvedPathname.startsWith("/admin/");
+  return (
+    resolvedPathname === "/admin" || resolvedPathname.startsWith("/admin/")
+  );
 }
 
 export type HostSurface = "feedback" | "app" | "unknown";
 
-export function normalizeHost(rawHost: string | null | undefined): string | null {
+export function normalizeHost(
+  rawHost: string | null | undefined,
+): string | null {
   if (!rawHost) return null;
   const trimmed = rawHost.trim().toLowerCase();
   if (!trimmed) return null;
@@ -80,7 +87,9 @@ export function isFeedbackPublicPath(pathname: string): boolean {
   return pathname.startsWith("/r/");
 }
 
-export function resolveLegacyRouteRedirectPath(pathname: string): string | null {
+export function resolveLegacyRouteRedirectPath(
+  pathname: string,
+): string | null {
   const betaPath = isBetaPath(pathname);
   const resolvedPathname = stripBetaPrefix(pathname);
 
@@ -115,7 +124,10 @@ export function resolveModuleFromPath(pathname: string): ModuleKey | null {
   if (resolvedPathname.startsWith("/admin/feedback")) return "feedback";
 
   for (const prefix of INVENTORY_PROCUREMENT_PREFIXES) {
-    if (resolvedPathname === prefix || resolvedPathname.startsWith(`${prefix}/`)) {
+    if (
+      resolvedPathname === prefix ||
+      resolvedPathname.startsWith(`${prefix}/`)
+    ) {
       return "inventory_procurement";
     }
   }
@@ -126,7 +138,8 @@ export function resolveModuleFromPath(pathname: string): ModuleKey | null {
   if (resolvedPathname.startsWith("/orders")) return "orders";
   if (resolvedPathname.startsWith("/hr")) return "hr";
   if (/^\/br\/\d+\/settings/.test(resolvedPathname)) return "branch_settings";
-  if (/^\/br\/\d+\/menu-limits/.test(resolvedPathname)) return "branch_menu_limits";
+  if (/^\/br\/\d+\/menu-limits/.test(resolvedPathname))
+    return "branch_menu_limits";
   if (/^\/br\/\d+\/pos/.test(resolvedPathname)) return "pos";
   if (/^\/br\/\d+\/kds/.test(resolvedPathname)) return "kds";
   if (/^\/br\/\d+\/runner/.test(resolvedPathname)) return "runner";

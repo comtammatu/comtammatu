@@ -10,7 +10,11 @@ interface OrderNoteProps {
   className?: string;
 }
 
-export function OrderNote({ note, compact = false, className }: OrderNoteProps) {
+export function OrderNote({
+  note,
+  compact = false,
+  className,
+}: OrderNoteProps) {
   const trimmedNote = note?.trim();
   if (!trimmedNote) return null;
 
@@ -24,10 +28,7 @@ export function OrderNote({ note, compact = false, className }: OrderNoteProps) 
     >
       <IconNote
         aria-hidden
-        className={cn(
-          "shrink-0 text-warning",
-          "mt-0.5 size-4",
-        )}
+        className={cn("shrink-0 text-warning", "mt-0.5 size-4")}
       />
       <div className="min-w-0">
         <div className="text-xs font-semibold uppercase tracking-wide">

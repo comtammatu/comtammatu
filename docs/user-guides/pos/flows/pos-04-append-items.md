@@ -5,13 +5,13 @@
 
 ## Tóm tắt
 
-| Trường | Giá trị |
-| --- | --- |
-| **Vai trò** | Phục vụ, Thu ngân |
-| **Quyền cần có** | `pos:use` |
-| **Điều kiện trước** | Đơn đã ở `confirmed` (chưa thanh toán) — xem [POS-03](pos-03-create-order.md) |
-| **Kết quả đúng** | `order_items` mới insert vào đơn cũ; KDS có ticket cho món thêm; tổng đơn cập nhật |
-| **Thời gian** | ~20 giây |
+| Trường              | Giá trị                                                                            |
+| ------------------- | ---------------------------------------------------------------------------------- |
+| **Vai trò**         | Phục vụ, Thu ngân                                                                  |
+| **Quyền cần có**    | `pos:use`                                                                          |
+| **Điều kiện trước** | Đơn đã ở `confirmed` (chưa thanh toán) — xem [POS-03](pos-03-create-order.md)      |
+| **Kết quả đúng**    | `order_items` mới insert vào đơn cũ; KDS có ticket cho món thêm; tổng đơn cập nhật |
+| **Thời gian**       | ~20 giây                                                                           |
 
 ## Đường dẫn
 
@@ -45,6 +45,7 @@ URL: `/br/{branchId}/pos` (qua bàn occupied → đơn cũ)
 **Bạn thấy:** Sheet đóng lại, màn chuyển sang **Append mode** (xem Bước 3).
 
 > ⚠️ Phân biệt:
+>
 > - **Thêm món** = thêm vào đơn HIỆN TẠI (cùng mã TC, cộng dồn tổng tiền).
 > - **Tạo đơn mới trên bàn này** (trong multi-order picker) = đơn ĐỘC LẬP, thanh toán riêng.
 
@@ -140,10 +141,10 @@ URL: `/br/{branchId}/pos` (qua bàn occupied → đơn cũ)
 
 ### Code path
 
-- **Order detail sheet:** [apps/web/app/(protected)/br/[branchId]/pos/order-detail-sheet.tsx](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/order-detail-sheet.tsx) — nút "Thêm món" tại line ~842.
-- **Append draft pane:** [apps/web/app/(protected)/br/[branchId]/pos/_components/append-draft-pane.tsx](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/_components/append-draft-pane.tsx)
-- **Append hook:** [apps/web/app/(protected)/br/[branchId]/pos/_hooks/use-pos-append.ts](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/_hooks/use-pos-append.ts) — state machine của append mode.
-- **Server action:** `appendOrderItems` trong [apps/web/app/(protected)/br/[branchId]/pos/order-actions.ts](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/order-actions.ts) — Postgres RPC atomic insert items + KDS tickets.
+- **Order detail sheet:** [apps/web/app/(protected)/br/[branchId]/pos/order-detail-sheet.tsx](<../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/order-detail-sheet.tsx>) — nút "Thêm món" tại line ~842.
+- **Append draft pane:** [apps/web/app/(protected)/br/[branchId]/pos/\_components/append-draft-pane.tsx](<../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/_components/append-draft-pane.tsx>)
+- **Append hook:** [apps/web/app/(protected)/br/[branchId]/pos/\_hooks/use-pos-append.ts](<../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/_hooks/use-pos-append.ts>) — state machine của append mode.
+- **Server action:** `appendOrderItems` trong [apps/web/app/(protected)/br/[branchId]/pos/order-actions.ts](<../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/order-actions.ts>) — Postgres RPC atomic insert items + KDS tickets.
 
 ### Database
 
@@ -158,16 +159,16 @@ URL: `/br/{branchId}/pos` (qua bàn occupied → đơn cũ)
 
 ### Tham chiếu thiết kế
 
-- Order lifecycle: [docs/archive/plan/m2-order-lifecycle.md](../../../archive/plan/m2-order-lifecycle.md)
+- Current POS scope: [tasks/todo.md](../../../../tasks/todo.md)
 
 ---
 
 ## Metadata mockup
 
-| Trường | Giá trị |
-| --- | --- |
-| Viewport | 390×844 (iPhone mặc định) |
-| Capture script | [apps/web/e2e/guides/pos-04-append-items.guide.ts](../../../../apps/web/e2e/guides/pos-04-append-items.guide.ts) |
-| Lệnh refresh | `pnpm --filter @comtammatu/web guides:capture --grep="POS-04"` |
-| Cập nhật mockup gần nhất | 2026-04-27 |
-| Người maintain | _TBD_ |
+| Trường                   | Giá trị                                                                                                          |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| Viewport                 | 390×844 (iPhone mặc định)                                                                                        |
+| Capture script           | [apps/web/e2e/guides/pos-04-append-items.guide.ts](../../../../apps/web/e2e/guides/pos-04-append-items.guide.ts) |
+| Lệnh refresh             | `pnpm --filter @comtammatu/web guides:capture --grep="POS-04"`                                                   |
+| Cập nhật mockup gần nhất | 2026-04-27                                                                                                       |
+| Người maintain           | _TBD_                                                                                                            |

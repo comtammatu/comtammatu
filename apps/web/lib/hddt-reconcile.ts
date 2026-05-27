@@ -92,7 +92,9 @@ async function fetchReconcileCandidates(
 
   return data
     .filter(
-      (r): r is typeof r & {
+      (
+        r,
+      ): r is typeof r & {
         provider_ref: string;
         signing_started_at: string;
         status: ReconcilableStatus;
@@ -101,8 +103,7 @@ async function fetchReconcileCandidates(
         (r.status === "signing" || r.status === "submitted") &&
         r.provider_ref != null &&
         r.signing_started_at != null &&
-        (r.invoice_kind === "per_order" ||
-          r.invoice_kind === "daily_summary"),
+        (r.invoice_kind === "per_order" || r.invoice_kind === "daily_summary"),
     )
     .map((r) => ({
       id: r.id,
@@ -158,9 +159,7 @@ async function writeReconcileLog(
  * — adds `race_lost` which only emerges at the RPC boundary (state
  * machine rejected the transition because the row changed under us).
  */
-export type ReconcileOutcomeKind =
-  | ReconcileDecision["kind"]
-  | "race_lost";
+export type ReconcileOutcomeKind = ReconcileDecision["kind"] | "race_lost";
 
 /**
  * Reconcile a single invoice. Catches state-machine race (22023) as
@@ -203,7 +202,10 @@ export async function reconcileSingleInvoice(
     return "no_change";
   }
 
-  if (decision.kind === "provider_error" || decision.kind === "unknown_status") {
+  if (
+    decision.kind === "provider_error" ||
+    decision.kind === "unknown_status"
+  ) {
     await writeReconcileLog(supabase, {
       tenantId: candidate.tenant_id,
       branchId: candidate.branch_id,
@@ -223,8 +225,7 @@ export async function reconcileSingleInvoice(
   // transition | giveup_24h — both call the RPC
   const toStatus =
     decision.kind === "giveup_24h" ? "cancelled" : decision.toStatus;
-  const note =
-    decision.kind === "giveup_24h" ? GIVEUP_NOTE : "reconcile_cron";
+  const note = decision.kind === "giveup_24h" ? GIVEUP_NOTE : "reconcile_cron";
 
   const payload: Record<string, unknown> = {
     reconcile: {

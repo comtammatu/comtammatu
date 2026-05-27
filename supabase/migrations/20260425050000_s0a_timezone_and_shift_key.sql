@@ -9,7 +9,7 @@
 --   * inventory_shift_key(branch_id, at) canonical helper
 --
 -- Regression ref: tasks/regressions.md SHIFT-KEY-CANONICAL
--- Spec:           docs/plan/inventory-redesign.md §Q1 + §B2
+-- Current docs:   docs/ref/inventory.md + docs/ref/inventory-sop.md
 -- =============================================================
 
 -- ---------- branches.timezone ---------------------------------

@@ -70,9 +70,7 @@ export function AiSettingsClient({ settings }: AiSettingsClientProps) {
         <Label htmlFor="push-mode">Chế độ đẩy Telegram</Label>
         <Select
           value={pushMode}
-          onValueChange={(v) =>
-            setPushMode(v as "threshold" | "all" | "none")
-          }
+          onValueChange={(v) => setPushMode(v as "threshold" | "all" | "none")}
         >
           <SelectTrigger id="push-mode">
             <SelectValue />
@@ -121,7 +119,9 @@ export function AiSettingsClient({ settings }: AiSettingsClientProps) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="report-hour">Giờ tạo báo cáo hàng ngày (giờ địa phương)</Label>
+        <Label htmlFor="report-hour">
+          Giờ tạo báo cáo hàng ngày (giờ địa phương)
+        </Label>
         <Input
           id="report-hour"
           type="number"
@@ -133,7 +133,8 @@ export function AiSettingsClient({ settings }: AiSettingsClientProps) {
         <p className="text-xs text-muted-foreground">
           Báo cáo AI được tạo tự động vào giờ này mỗi ngày (0–23).{" "}
           <span className="text-warning">
-            Lưu ý: hiện tại chạy cố định 02:00 ICT. Tuỳ chỉnh giờ sẽ có ở phiên bản sau.
+            Lưu ý: hiện tại chạy cố định 02:00 ICT. Tuỳ chỉnh giờ sẽ có ở phiên
+            bản sau.
           </span>
         </p>
       </div>

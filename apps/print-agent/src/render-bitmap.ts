@@ -84,8 +84,14 @@ let fontsReady: Promise<void> | null = null;
 /** Register + async-load both font faces. Idempotent. */
 export const ensureFontsLoaded = (): Promise<void> => {
   if (fontsReady) return fontsReady;
-  const reg = registerFont(path.join(FONT_DIR, "RobotoMono-Regular.ttf"), FAMILY_REG);
-  const bold = registerFont(path.join(FONT_DIR, "RobotoMono-Bold.ttf"), FAMILY_BOLD);
+  const reg = registerFont(
+    path.join(FONT_DIR, "RobotoMono-Regular.ttf"),
+    FAMILY_REG,
+  );
+  const bold = registerFont(
+    path.join(FONT_DIR, "RobotoMono-Bold.ttf"),
+    FAMILY_BOLD,
+  );
   fontsReady = Promise.all([reg.load(), bold.load()]).then(() => undefined);
   return fontsReady;
 };
@@ -134,9 +140,14 @@ const packPixels = (bitmap: Bitmap): Uint8Array => {
 /** Emit `GS v 0 m xL xH yL yH data[]` for a prepared raster. */
 const wrapRasterCommand = (packed: Uint8Array, height: number): Uint8Array => {
   const header = new Uint8Array([
-    0x1d, 0x76, 0x30, 0x00,
-    BYTES_PER_ROW & 0xff, (BYTES_PER_ROW >> 8) & 0xff,
-    height & 0xff, (height >> 8) & 0xff,
+    0x1d,
+    0x76,
+    0x30,
+    0x00,
+    BYTES_PER_ROW & 0xff,
+    (BYTES_PER_ROW >> 8) & 0xff,
+    height & 0xff,
+    (height >> 8) & 0xff,
   ]);
   const out = new Uint8Array(header.length + packed.length);
   out.set(header, 0);
@@ -151,7 +162,10 @@ const wrapRasterCommand = (packed: Uint8Array, height: number): Uint8Array => {
  *
  * MUST be called after `ensureFontsLoaded()` resolves.
  */
-export const renderLineRaster = (text: string, opts: RenderOpts = {}): Uint8Array => {
+export const renderLineRaster = (
+  text: string,
+  opts: RenderOpts = {},
+): Uint8Array => {
   const fontSize = opts.double ? FONT_SIZE_DOUBLE : FONT_SIZE_NORMAL;
   const lineHeight = opts.double ? LINE_HEIGHT_DOUBLE : LINE_HEIGHT_NORMAL;
   const family = opts.bold ? FAMILY_BOLD : FAMILY_REG;
@@ -177,9 +191,10 @@ export const renderLineRaster = (text: string, opts: RenderOpts = {}): Uint8Arra
   if (opts.align === "center" || opts.align === "right") {
     const metrics = ctx.measureText(text);
     const w = Math.ceil(metrics.width);
-    x = opts.align === "center"
-      ? MARGIN_LEFT + Math.max(0, Math.floor((DRAW_WIDTH - w) / 2))
-      : MARGIN_LEFT + Math.max(0, DRAW_WIDTH - w);
+    x =
+      opts.align === "center"
+        ? MARGIN_LEFT + Math.max(0, Math.floor((DRAW_WIDTH - w) / 2))
+        : MARGIN_LEFT + Math.max(0, DRAW_WIDTH - w);
   }
 
   // Small top padding so ascenders don't clip.
@@ -224,7 +239,9 @@ export type Segment = {
  * but the item name is double-size on the same visual row.
  */
 export const renderMixedRow = (segments: Segment[]): Uint8Array => {
-  const height = segments.some((s) => s.double) ? LINE_HEIGHT_DOUBLE : LINE_HEIGHT_NORMAL;
+  const height = segments.some((s) => s.double)
+    ? LINE_HEIGHT_DOUBLE
+    : LINE_HEIGHT_NORMAL;
   const img = new Bitmap(DOTS_WIDTH, height);
   const ctx = img.getContext("2d");
   ctx.imageSmoothingEnabled = false;
@@ -240,14 +257,18 @@ export const renderMixedRow = (segments: Segment[]): Uint8Array => {
     ctx.font = `${fontSize} ${family}`;
     // Baseline-align smaller segments to the top of the larger ones so
     // they sit on the same visual row (use top offset = height diff).
-    const yOffset = seg.double ? 2 : Math.max(2, height - LINE_HEIGHT_NORMAL + 2);
+    const yOffset = seg.double
+      ? 2
+      : Math.max(2, height - LINE_HEIGHT_NORMAL + 2);
     ctx.fillText(seg.text, x, yOffset);
     const metrics = ctx.measureText(seg.text);
     const segWidth = Math.ceil(metrics.width);
     if (seg.strikethrough) {
       // Strike-through: 2-dot (normal) or 3-dot (double) horizontal line
       // through the vertical middle of THIS segment only.
-      const segLineHeight = seg.double ? LINE_HEIGHT_DOUBLE : LINE_HEIGHT_NORMAL;
+      const segLineHeight = seg.double
+        ? LINE_HEIGHT_DOUBLE
+        : LINE_HEIGHT_NORMAL;
       const midY = yOffset + Math.floor(segLineHeight / 2);
       const strokeH = seg.double ? 3 : 2;
       ctx.fillRect(x, midY, segWidth, strokeH);
@@ -262,7 +283,9 @@ export const renderMixedRow = (segments: Segment[]): Uint8Array => {
 /** Zero printer line-spacing — MUST wrap a raster block to prevent the
  * printer from inserting its default ~30-dot feed between raster lines,
  * which causes vertical gaps and apparent misalignment. */
-export const lineSpacingZero = (): Uint8Array => new Uint8Array([0x1b, 0x33, 0x00]);
+export const lineSpacingZero = (): Uint8Array =>
+  new Uint8Array([0x1b, 0x33, 0x00]);
 
 /** Restore default line spacing (~30 dots) for subsequent text commands. */
-export const lineSpacingDefault = (): Uint8Array => new Uint8Array([0x1b, 0x32]);
+export const lineSpacingDefault = (): Uint8Array =>
+  new Uint8Array([0x1b, 0x32]);

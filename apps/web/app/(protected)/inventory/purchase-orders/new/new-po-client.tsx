@@ -3,7 +3,17 @@
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft as IconArrowLeft, ChevronDown as IconChevronDown, Lightbulb as IconBulb, Package as IconPackage, Plus as IconPlus, CirclePlus as IconCirclePlus, Trash as IconTrash, TrendingDown as IconTrendingDown, TrendingUp as IconTrendingUp } from "lucide-react";
+import {
+  ArrowLeft as IconArrowLeft,
+  ChevronDown as IconChevronDown,
+  Lightbulb as IconBulb,
+  Package as IconPackage,
+  Plus as IconPlus,
+  CirclePlus as IconCirclePlus,
+  Trash as IconTrash,
+  TrendingDown as IconTrendingDown,
+  TrendingUp as IconTrendingUp,
+} from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -54,7 +64,12 @@ import type { SupplierRow } from "../../suppliers/suppliers-client";
 import type { IngredientRow } from "../../page";
 import { messages } from "@lib/messages";
 
-import { ACTIONS_VI, FORM_VI, PRODUCT_VI, STATES_VI } from "@comtammatu/shared/messages";
+import {
+  ACTIONS_VI,
+  FORM_VI,
+  PRODUCT_VI,
+  STATES_VI,
+} from "@comtammatu/shared/messages";
 interface LocalLine {
   ingredientId: number;
   ingredientName: string;
@@ -301,91 +316,88 @@ export function NewPoClient({
         }
       />
       <div className="mx-auto max-w-4xl space-y-5">
+        {/* PO header */}
+        <SupplierSection
+          suppliers={suppliers}
+          supplierId={supplierId}
+          onSupplierChange={setSupplierId}
+          notes={notes}
+          onNotesChange={setNotes}
+        />
 
-          {/* PO header */}
-          <SupplierSection
-            suppliers={suppliers}
-            supplierId={supplierId}
-            onSupplierChange={setSupplierId}
-            notes={notes}
-            onNotesChange={setNotes}
-          />
+        {/* Suggestions panel */}
+        <SuggestionsPanel
+          suggestions={sortedSuggestions}
+          suggestionsOpen={suggestionsOpen}
+          onOpenChange={setSuggestionsOpen}
+          periodDays={periodDays}
+          onPeriodChange={handlePeriodChange}
+          isLoading={isLoadingSuggestions}
+          addableCount={addableCount}
+          lineIngredientIds={lineIngredientIds}
+          onAddSuggestion={addSuggestionToLines}
+          onAddAll={addAllSuggestions}
+          isMobile={isMobile}
+          procurementBranches={procurementBranches}
+          branchId={branchId}
+          onBranchChange={handleBranchChange}
+          canSwitchBranch={canSwitchBranch}
+        />
 
-          {/* Suggestions panel */}
-          <SuggestionsPanel
-            suggestions={sortedSuggestions}
-            suggestionsOpen={suggestionsOpen}
-            onOpenChange={setSuggestionsOpen}
-            periodDays={periodDays}
-            onPeriodChange={handlePeriodChange}
-            isLoading={isLoadingSuggestions}
-            addableCount={addableCount}
-            lineIngredientIds={lineIngredientIds}
-            onAddSuggestion={addSuggestionToLines}
-            onAddAll={addAllSuggestions}
-            isMobile={isMobile}
-            procurementBranches={procurementBranches}
-            branchId={branchId}
-            onBranchChange={handleBranchChange}
-            canSwitchBranch={canSwitchBranch}
-          />
+        {/* Line items */}
+        <LineItemsSection
+          lines={lines}
+          lineDeviations={lineDeviations}
+          ingredients={ingredients}
+          supplierId={supplierId}
+          totalValue={totalValue}
+          hasValue={hasValue}
+          isMobile={isMobile}
+          onRemoveLine={removeLine}
+          onAddLine={(line) => {
+            if (lines.some((l) => l.ingredientId === line.ingredientId)) {
+              toast.error("Nguyên liệu đã có trong danh sách");
+              return;
+            }
+            setLines((prev) => [...prev, line]);
+            if (line.unitPriceEst != null && line.unitPriceEst > 0) {
+              checkPriceDeviation(line.ingredientId, line.unitPriceEst, "line");
+            }
+          }}
+        />
 
-          {/* Line items */}
-          <LineItemsSection
-            lines={lines}
-            lineDeviations={lineDeviations}
-            ingredients={ingredients}
-            supplierId={supplierId}
-            totalValue={totalValue}
-            hasValue={hasValue}
-            isMobile={isMobile}
-            onRemoveLine={removeLine}
-            onAddLine={(line) => {
-              if (lines.some((l) => l.ingredientId === line.ingredientId)) {
-                toast.error("Nguyên liệu đã có trong danh sách");
-                return;
+        {/* Footer */}
+        <div className="flex items-center justify-between pt-1">
+          <Button variant="ghost" asChild>
+            <Link
+              href={
+                branchId ? `${poBasePath}?branchId=${branchId}` : poBasePath
               }
-              setLines((prev) => [...prev, line]);
-              if (line.unitPriceEst != null && line.unitPriceEst > 0) {
-                checkPriceDeviation(
-                  line.ingredientId,
-                  line.unitPriceEst,
-                  "line",
-                );
-              }
-            }}
-          />
-
-          {/* Footer */}
-          <div className="flex items-center justify-between pt-1">
-            <Button variant="ghost" asChild>
-              <Link
-                href={branchId ? `${poBasePath}?branchId=${branchId}` : poBasePath}
-              >
-                {ACTIONS_VI.cancel}
-              </Link>
+            >
+              {ACTIONS_VI.cancel}
+            </Link>
+          </Button>
+          <div className="flex items-center gap-3">
+            {lines.length > 0 && (
+              <span className="text-sm text-muted-foreground">
+                {messages.inventory.po.lineCount(lines.length)}
+                {hasValue
+                  ? messages.inventory.po.totalAmountSuffix(
+                      totalValue.toLocaleString("vi-VN"),
+                    )
+                  : ""}
+              </span>
+            )}
+            <Button
+              onClick={submit}
+              disabled={isPending || !supplierId || lines.length === 0}
+            >
+              {isPending
+                ? messages.inventory.po.creating
+                : messages.inventory.po.createPo}
             </Button>
-            <div className="flex items-center gap-3">
-              {lines.length > 0 && (
-                <span className="text-sm text-muted-foreground">
-                  {messages.inventory.po.lineCount(lines.length)}
-                  {hasValue
-                    ? messages.inventory.po.totalAmountSuffix(
-                        totalValue.toLocaleString("vi-VN"),
-                      )
-                    : ""}
-                </span>
-              )}
-              <Button
-                onClick={submit}
-                disabled={isPending || !supplierId || lines.length === 0}
-              >
-                {isPending
-                  ? messages.inventory.po.creating
-                  : messages.inventory.po.createPo}
-              </Button>
-            </div>
           </div>
+        </div>
       </div>
     </AppPage>
   );
@@ -430,7 +442,9 @@ function SupplierSection({
                 label: s.name,
               }))}
               placeholder={messages.inventory.po.supplierPlaceholder}
-              searchPlaceholder={messages.inventory.po.supplierSearchPlaceholder}
+              searchPlaceholder={
+                messages.inventory.po.supplierSearchPlaceholder
+              }
             />
           </div>
           <div className="space-y-1.5">
@@ -488,8 +502,7 @@ function SuggestionsPanel({
 }) {
   const branchLabel =
     procurementBranches.find((b) => b.id === branchId)?.name ?? "Chưa chọn";
-  const showBranchSwitcher =
-    canSwitchBranch && procurementBranches.length > 1;
+  const showBranchSwitcher = canSwitchBranch && procurementBranches.length > 1;
   return (
     <Card className="rounded-lg border-info/20 bg-info/5">
       <CardContent className="pt-6">
@@ -667,7 +680,9 @@ function SuggestionsPanel({
                   /* Desktop: grid layout */
                   <div className="space-y-1">
                     <div className="grid grid-cols-12 gap-2 px-2 pb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      <span className="col-span-3">{PRODUCT_VI.rawIngredient}</span>
+                      <span className="col-span-3">
+                        {PRODUCT_VI.rawIngredient}
+                      </span>
                       <span className="col-span-2 text-right">
                         {messages.inventory.po.hqStock}
                       </span>
@@ -932,7 +947,9 @@ function LineItemsSection({
                   keywords: [i.sku ?? "", i.category ?? ""],
                 }))}
                 placeholder={messages.inventory.po.ingredientPlaceholder}
-                searchPlaceholder={messages.inventory.po.ingredientSearchPlaceholder}
+                searchPlaceholder={
+                  messages.inventory.po.ingredientSearchPlaceholder
+                }
                 triggerClassName="h-8 border-dashed text-sm"
               />
               <div className="grid grid-cols-3 gap-2">
@@ -1000,7 +1017,7 @@ function LineItemsSection({
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground text-right">
               {FORM_VI.quantity}
             </span>
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground pl-2">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground pl-2">
               {messages.inventory.po.unitShort}
             </span>
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground text-right">
@@ -1104,7 +1121,9 @@ function LineItemsSection({
                   keywords: [i.sku ?? "", i.category ?? ""],
                 }))}
                 placeholder={messages.inventory.po.ingredientPlaceholder}
-                searchPlaceholder={messages.inventory.po.ingredientSearchPlaceholder}
+                searchPlaceholder={
+                  messages.inventory.po.ingredientSearchPlaceholder
+                }
                 triggerClassName="h-8 border-dashed text-sm"
               />
             </div>

@@ -27,7 +27,12 @@ test("expands paid modifiers into separate HĐĐT lines", () => {
       amount: line.amount,
     })),
     [
-      { name: "Cơm sườn cốt lết", quantity: 1, unitPrice: 35_000, amount: 35_000 },
+      {
+        name: "Cơm sườn cốt lết",
+        quantity: 1,
+        unitPrice: 35_000,
+        amount: 35_000,
+      },
       { name: "Bì", quantity: 1, unitPrice: 7_000, amount: 7_000 },
       { name: "Chả", quantity: 1, unitPrice: 7_000, amount: 7_000 },
       { name: "Trứng", quantity: 1, unitPrice: 5_000, amount: 5_000 },
@@ -107,7 +112,9 @@ test("expands side quantities per parent order quantity", () => {
       unit_price: 45_000,
       subtotal: 90_000,
       modifiers: [],
-      sides: [{ side_item_id: 10, name: "Canh thêm", price: 5_000, quantity: 2 }],
+      sides: [
+        { side_item_id: 10, name: "Canh thêm", price: 5_000, quantity: 2 },
+      ],
     },
   ]);
 

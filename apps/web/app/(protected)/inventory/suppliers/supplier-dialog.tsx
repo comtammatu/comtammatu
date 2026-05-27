@@ -30,7 +30,10 @@ export interface SupplierRow {
 }
 
 const supplierSchema = z.object({
-  name: z.string().trim().min(1, { error: "Tên nhà cung cấp không được trống" }),
+  name: z
+    .string()
+    .trim()
+    .min(1, { error: "Tên nhà cung cấp không được trống" }),
   tax_code: z
     .string()
     .trim()

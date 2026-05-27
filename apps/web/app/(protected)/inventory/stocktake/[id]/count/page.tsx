@@ -54,10 +54,8 @@ export default async function StocktakeCountPage({
   if (!linesRes.success || !linesRes.data) notFound();
 
   const currentRound =
-    linesRes.data.reduce(
-      (max, l) => (l.roundNo > max ? l.roundNo : max),
-      1,
-    ) || 1;
+    linesRes.data.reduce((max, l) => (l.roundNo > max ? l.roundNo : max), 1) ||
+    1;
 
   return (
     <StocktakeCountClient

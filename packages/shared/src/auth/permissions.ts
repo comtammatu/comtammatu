@@ -142,7 +142,8 @@ export const PERMISSION_KEYS = {
   PRINTER_MANAGE: "printer:manage",
 } as const;
 
-export type PermissionKey = (typeof PERMISSION_KEYS)[keyof typeof PERMISSION_KEYS];
+export type PermissionKey =
+  (typeof PERMISSION_KEYS)[keyof typeof PERMISSION_KEYS];
 
 /** Total count (static assertion — update when adding keys) */
 export const PERMISSION_KEY_COUNT = 96;

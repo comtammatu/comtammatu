@@ -35,13 +35,16 @@ export function createServiceClient() {
 
 // ─── Tenant resolution ────────────────────────────────────────────────────────
 
-export async function resolveTenantId(supabase: ServiceClient): Promise<number> {
+export async function resolveTenantId(
+  supabase: ServiceClient,
+): Promise<number> {
   const { data, error } = await supabase
     .from("branches")
     .select("tenant_id")
     .limit(1)
     .single();
-  if (error || !data) throw new Error(`Cannot resolve tenant_id: ${error?.message}`);
+  if (error || !data)
+    throw new Error(`Cannot resolve tenant_id: ${error?.message}`);
   return data.tenant_id;
 }
 
@@ -92,7 +95,9 @@ export async function ensureBranch(
     .single();
 
   if (error || !inserted) {
-    throw new Error(`Failed to create E2E branch (${kind}${labelSuffix}): ${error?.message}`);
+    throw new Error(
+      `Failed to create E2E branch (${kind}${labelSuffix}): ${error?.message}`,
+    );
   }
 
   return { id: inserted.id, name: inserted.name, kind, tenantId };
@@ -180,7 +185,12 @@ export async function ensureInventoryLocation(
   supabase: ServiceClient,
   tenantId: number,
   branchId: number,
-  locationKind: "receive" | "issue" | "storage" | "warehouse" | "kitchen" = "storage",
+  locationKind:
+    | "receive"
+    | "issue"
+    | "storage"
+    | "warehouse"
+    | "kitchen" = "storage",
 ): Promise<number> {
   const name = `E2E Loc ${branchId} ${locationKind}`;
 
@@ -192,7 +202,9 @@ export async function ensureInventoryLocation(
     .single();
 
   if (branchErr || !branch) {
-    throw new Error(`Failed to resolve branch for E2E location: ${branchErr?.message}`);
+    throw new Error(
+      `Failed to resolve branch for E2E location: ${branchErr?.message}`,
+    );
   }
 
   const desiredLocationKind =
@@ -245,7 +257,9 @@ export async function ensureInventoryLocation(
     .single();
 
   if (error || !inserted) {
-    throw new Error(`Failed to create E2E inventory location: ${error?.message}`);
+    throw new Error(
+      `Failed to create E2E inventory location: ${error?.message}`,
+    );
   }
 
   return inserted.id;
@@ -450,13 +464,15 @@ export async function createTestTransferDraft(
     throw new Error(`Failed to create test transfer: ${tErr?.message}`);
   }
 
-  const { error: lineErr } = await supabase.from("stock_transfer_items").insert({
-    tenant_id: opts.tenantId,
-    transfer_id: transfer.id,
-    ingredient_id: opts.ingredientId,
-    quantity: qty,
-    unit: "kg",
-  });
+  const { error: lineErr } = await supabase
+    .from("stock_transfer_items")
+    .insert({
+      tenant_id: opts.tenantId,
+      transfer_id: transfer.id,
+      ingredient_id: opts.ingredientId,
+      quantity: qty,
+      unit: "kg",
+    });
 
   if (lineErr) {
     throw new Error(`Failed to create test transfer line: ${lineErr.message}`);
@@ -604,7 +620,9 @@ export async function resolveInventoryManagerUser(
     .eq("legacy_role_code", "warehouse_manager");
 
   if (posErr) {
-    throw new Error(`Failed to resolve warehouse_manager positions: ${posErr.message}`);
+    throw new Error(
+      `Failed to resolve warehouse_manager positions: ${posErr.message}`,
+    );
   }
 
   const positionIds = (positions ?? []).map((position) => position.id);

@@ -21,10 +21,7 @@ interface SparklineChartProps {
 export function SparklineChart({ data, stroke }: SparklineChartProps) {
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <LineChart
-        data={data}
-        margin={{ top: 1, right: 1, bottom: 1, left: 1 }}
-      >
+      <LineChart data={data} margin={{ top: 1, right: 1, bottom: 1, left: 1 }}>
         <Line
           type="monotone"
           dataKey="y"

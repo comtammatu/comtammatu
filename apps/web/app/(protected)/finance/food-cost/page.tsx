@@ -37,9 +37,10 @@ export default async function FoodCostPage({
     }),
   ]);
 
-  const branches = (
-    branchesRes.success ? (branchesRes.data ?? []) : []
-  ) as { id: number; name: string }[];
+  const branches = (branchesRes.success ? (branchesRes.data ?? []) : []) as {
+    id: number;
+    name: string;
+  }[];
   const rows = (foodRes.success ? (foodRes.data ?? []) : []) as FoodCostRow[];
 
   return (

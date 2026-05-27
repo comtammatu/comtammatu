@@ -1,5 +1,5 @@
 -- =========================================================================
--- Employee Portal Unblock — self-read policy on public.employees
+-- Cổng nhân viên unblock — self-read policy on public.employees
 --
 -- Regression fix: after auth_v2 m4c consolidation, employees_select required
 -- 'hr:view_employee' to read ANY row — including the user's OWN row.

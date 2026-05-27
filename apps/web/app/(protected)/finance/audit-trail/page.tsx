@@ -19,7 +19,9 @@ interface PageProps {
   searchParams: Promise<{ entity_type?: string; limit?: string }>;
 }
 
-export default async function FinanceAuditTrailPage({ searchParams }: PageProps) {
+export default async function FinanceAuditTrailPage({
+  searchParams,
+}: PageProps) {
   const params = await searchParams;
   const entityType =
     params.entity_type && params.entity_type !== "all"
@@ -49,9 +51,7 @@ export default async function FinanceAuditTrailPage({ searchParams }: PageProps)
       .select("id, full_name")
       .in("id", userIds);
 
-    userMap = new Map(
-      (profiles ?? []).map((p) => [p.id, p.full_name ?? "—"]),
-    );
+    userMap = new Map((profiles ?? []).map((p) => [p.id, p.full_name ?? "—"]));
   }
 
   const enrichedRows = rows.map((r) => ({

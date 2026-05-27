@@ -59,12 +59,10 @@ export function FinanceShell({ children, user, role }: FinanceShellProps) {
   // mounted; clients no longer need to mount this hook themselves.
   const searchParams = useSearchParams();
   const branchParam = searchParams.get("branch");
-  const parsedBranch = branchParam && branchParam !== "all"
-    ? Number(branchParam)
-    : NaN;
-  const branchId = Number.isFinite(parsedBranch) && parsedBranch > 0
-    ? parsedBranch
-    : null;
+  const parsedBranch =
+    branchParam && branchParam !== "all" ? Number(branchParam) : NaN;
+  const branchId =
+    Number.isFinite(parsedBranch) && parsedBranch > 0 ? parsedBranch : null;
   useFinanceRealtimeRefresh({ branchId });
 
   return (

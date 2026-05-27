@@ -3,7 +3,10 @@
 import { useMemo, useState } from "react";
 import type { Control, FieldPath, FieldValues } from "react-hook-form";
 import { useController } from "react-hook-form";
-import { Check as IconCheck, ChevronsUpDown as IconSelector } from "lucide-react";
+import {
+  Check as IconCheck,
+  ChevronsUpDown as IconSelector,
+} from "lucide-react";
 import { cn } from "@comtammatu/ui";
 import { matchesSearch } from "@lib/search";
 import { Button } from "@comtammatu/ui/components/button";
@@ -112,7 +115,9 @@ export function ComboboxField<TFieldValues extends FieldValues>({
         >
           <Command
             filter={(value, search, keywords) => {
-              return matchesSearch([value, ...(keywords ?? [])], search) ? 1 : 0;
+              return matchesSearch([value, ...(keywords ?? [])], search)
+                ? 1
+                : 0;
             }}
           >
             <CommandInput placeholder={searchPlaceholder} />
@@ -141,9 +146,7 @@ export function ComboboxField<TFieldValues extends FieldValues>({
                     <IconCheck
                       className={cn(
                         "ml-2 size-4 shrink-0",
-                        field.value === opt.value
-                          ? "opacity-100"
-                          : "opacity-0",
+                        field.value === opt.value ? "opacity-100" : "opacity-0",
                       )}
                     />
                   </CommandItem>

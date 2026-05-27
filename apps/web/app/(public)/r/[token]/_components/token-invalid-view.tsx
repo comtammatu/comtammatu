@@ -1,4 +1,9 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@comtammatu/ui/components/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@comtammatu/ui/components/card";
 
 export function TokenInvalidView() {
   return (

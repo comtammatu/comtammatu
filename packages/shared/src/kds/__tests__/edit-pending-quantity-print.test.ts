@@ -64,7 +64,9 @@ test("edit pending quantity migration enqueues kitchen-visible print deltas", ()
 });
 
 test("POS edit action calls quantity print RPC and returns safe warnings", () => {
-  const src = read("apps/web/app/(protected)/br/[branchId]/pos/order-actions.ts");
+  const src = read(
+    "apps/web/app/(protected)/br/[branchId]/pos/order-actions.ts",
+  );
 
   assert.match(
     src,

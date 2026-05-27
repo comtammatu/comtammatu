@@ -24,10 +24,7 @@ import {
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Switch } from "@comtammatu/ui/components/switch";
 import { toast } from "@comtammatu/ui/components/sonner";
-import {
-  clearKdsMenuDailyLimit,
-  setKdsMenuDailyLimit,
-} from "../actions";
+import { clearKdsMenuDailyLimit, setKdsMenuDailyLimit } from "../actions";
 import type { KdsMenuLimitRow } from "../types";
 
 interface KdsMenuLimitsSheetProps {
@@ -50,12 +47,18 @@ function buildDraft(row: KdsMenuLimitRow): RowDraft {
 }
 
 function isConfigured(row: KdsMenuLimitRow): boolean {
-  return row.limit_id !== null || row.limit_quantity !== null || row.is_disabled;
+  return (
+    row.limit_id !== null || row.limit_quantity !== null || row.is_disabled
+  );
 }
 
 function isDirty(row: KdsMenuLimitRow, draft: RowDraft): boolean {
-  const persistedQty = row.limit_quantity == null ? "" : String(row.limit_quantity);
-  return draft.qtyText.trim() !== persistedQty || draft.isDisabled !== row.is_disabled;
+  const persistedQty =
+    row.limit_quantity == null ? "" : String(row.limit_quantity);
+  return (
+    draft.qtyText.trim() !== persistedQty ||
+    draft.isDisabled !== row.is_disabled
+  );
 }
 
 function getRemaining(row: KdsMenuLimitRow): number | null {

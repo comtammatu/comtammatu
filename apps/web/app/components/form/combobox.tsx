@@ -1,7 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Check as IconCheck, ChevronsUpDown as IconSelector } from "lucide-react";
+import {
+  Check as IconCheck,
+  ChevronsUpDown as IconSelector,
+} from "lucide-react";
 import { cn } from "@comtammatu/ui";
 import { matchesSearch } from "@lib/search";
 import { Button } from "@comtammatu/ui/components/button";

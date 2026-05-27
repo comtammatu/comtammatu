@@ -84,7 +84,11 @@ test("submitFeedbackSchema accepts empty phone (defaults to null)", () => {
 });
 
 test("submitFeedbackSchema rejects honeypot non-empty", () => {
-  const r = parse({ rating: 4, comment: VALID_COMMENT, website: "http://bot.com" });
+  const r = parse({
+    rating: 4,
+    comment: VALID_COMMENT,
+    website: "http://bot.com",
+  });
   assert.equal(r.success, false);
 });
 

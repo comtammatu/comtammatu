@@ -11,11 +11,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@comtammatu/ui/components/alert-dialog";
-import {
-  Field,
-  FieldGroup,
-  FieldLabel,
-} from "@comtammatu/ui/components/field";
+import { Field, FieldGroup, FieldLabel } from "@comtammatu/ui/components/field";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { Minus as IconMinus, Plus as IconPlus } from "lucide-react";
 import { QuickReasonChips } from "../quick-reason-chips";

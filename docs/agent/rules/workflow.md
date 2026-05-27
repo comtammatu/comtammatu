@@ -6,11 +6,11 @@ Use this file for task workflow, review depth, skip conditions, verification, an
 
 Pick review depth by the task's blast radius, not by file count. Higher tiers ADD steps; they do not replace lower ones.
 
-| Tier | Triggers | Required review |
-| --- | --- | --- |
-| **T3 — Full debate** | Auth/RLS, money (payments/refunds/invoices/journal), multi-row writes, new RPC with `SECURITY DEFINER`, schema migration touching constraints, production data backfill, anything that can silently corrupt or leak data | **All 4 perspectives below, written out** before implementation. Spawn 4 parallel subagents (one per role) via the Agent tool, OR write a debate transcript in the PR / worklog yourself. |
-| **T2 — Self-review checklist** | New feature, non-trivial bug fix, refactor that changes a public boundary, UI surface change beyond a single component, route-resolution change | **All 4 perspectives below, condensed**. Write 2–4 lines per role in the task notes or PR body before coding. Subagents optional. |
-| **T1 — Skip** | Typo fixes under 3 changed lines, doc-only changes, dependency version bumps with no API change | Verify the diff and state why the debate was skipped in the commit/PR body. |
+| Tier                           | Triggers                                                                                                                                                                                                                 | Required review                                                                                                                                                                           |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **T3 — Full debate**           | Auth/RLS, money (payments/refunds/invoices/journal), multi-row writes, new RPC with `SECURITY DEFINER`, schema migration touching constraints, production data backfill, anything that can silently corrupt or leak data | **All 4 perspectives below, written out** before implementation. Spawn 4 parallel subagents (one per role) via the Agent tool, OR write a debate transcript in the PR / worklog yourself. |
+| **T2 — Self-review checklist** | New feature, non-trivial bug fix, refactor that changes a public boundary, UI surface change beyond a single component, route-resolution change                                                                          | **All 4 perspectives below, condensed**. Write 2–4 lines per role in the task notes or PR body before coding. Subagents optional.                                                         |
+| **T1 — Skip**                  | Typo fixes under 3 changed lines, doc-only changes, dependency version bumps with no API change                                                                                                                          | Verify the diff and state why the debate was skipped in the commit/PR body.                                                                                                               |
 
 When in doubt between tiers, pick the higher one.
 
@@ -18,12 +18,12 @@ When in doubt between tiers, pick the higher one.
 
 These are the four questions every change must answer. T3 spawns one agent per role; T2 answers them inline.
 
-| Role | Owns | Lead questions |
-| --- | --- | --- |
-| **PM** | Scope, priority, acceptance criteria | Should we build this? What is the MVP? What does "done" mean? |
-| **BA** | Requirements, business rules, edge cases, data flow | What are the rules? What can go wrong? What state transitions exist? |
+| Role           | Owns                                                         | Lead questions                                                                       |
+| -------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
+| **PM**         | Scope, priority, acceptance criteria                         | Should we build this? What is the MVP? What does "done" mean?                        |
+| **BA**         | Requirements, business rules, edge cases, data flow          | What are the rules? What can go wrong? What state transitions exist?                 |
 | **Senior Dev** | Architecture, implementation plan, tech debt, affected files | How should we build this? Does it fit the existing system? What is the blast radius? |
-| **QA/QC** | Test strategy, regression risk, quality gates | How do we know it works? What could break? Which existing flows must still pass? |
+| **QA/QC**      | Test strategy, regression risk, quality gates                | How do we know it works? What could break? Which existing flows must still pass?     |
 
 ## Running A T3 Full Debate
 

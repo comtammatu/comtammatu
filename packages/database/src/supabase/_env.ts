@@ -24,7 +24,5 @@ export function getSupabaseAnonKey(): string {
 }
 
 export function getSupabaseServiceRoleKey(): string {
-  return (
-    process.env["SUPABASE_SERVICE_ROLE_KEY"] || FALLBACK_SERVICE_ROLE_KEY
-  );
+  return process.env["SUPABASE_SERVICE_ROLE_KEY"] || FALLBACK_SERVICE_ROLE_KEY;
 }

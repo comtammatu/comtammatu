@@ -44,21 +44,21 @@ Defined in `packages/database/package.json`:
 ## Schema — Current Shape
 
 Source of truth: generated types from the live schema. Snapshot generated from
-the current checkout on 2026-05-24 with `node scripts/project-snapshot.mjs`:
+the current checkout on 2026-05-27 with `node scripts/project-snapshot.mjs`:
 
-- **115 tables**, **9 views**, **237 RPC/SQL functions**
-- **347 migration files** in `supabase/migrations/`
+- **116 tables**, **9 views**, **241 RPC/SQL functions**
+- **366 migration files** in `supabase/migrations/`
 - **0 enums** — `staff_role` ENUM was dropped (Auth cleanup, 2026-04-23); roles are now strings derived from `positions.legacy_role_code`
 
 ### DB Source-of-Truth Ladder
 
 When facts disagree, trust the higher tier:
 
-| Tier | Source                                              | What it tells you                                               |
-| ---- | --------------------------------------------------- | --------------------------------------------------------------- |
-| 1    | `packages/database/src/types/database.types.ts`     | The shape currently usable from app code (post `pnpm db:types`) |
-| 2    | Applied state of dev/prod DB                        | What RLS, defaults, constraints actually enforce right now      |
-| 3    | `supabase/migrations/*.sql`                         | What changes have been authored — file existence ≠ applied      |
+| Tier | Source                                                               | What it tells you                                               |
+| ---- | -------------------------------------------------------------------- | --------------------------------------------------------------- |
+| 1    | `packages/database/src/types/database.types.ts`                      | The shape currently usable from app code (post `pnpm db:types`) |
+| 2    | Applied state of dev/prod DB                                         | What RLS, defaults, constraints actually enforce right now      |
+| 3    | `supabase/migrations/*.sql`                                          | What changes have been authored — file existence ≠ applied      |
 | 4    | Hand-written docs (`docs/modules/*`, `docs/spec/database-schema.md`) | Narrative + design rationale; lags 1-3 by definition            |
 
 ### Migration Status Vocabulary
@@ -80,7 +80,7 @@ Tables are organized by domain. For per-table columns/constraints, read the migr
 
 | Domain        | Representative tables                                                                                                                                                  |
 | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Auth       | `permission_keys`, `positions`, `role_templates`, `staff_permissions`, `permission_audit_log`                                                                          |
+| Auth          | `permission_keys`, `positions`, `role_templates`, `staff_permissions`, `permission_audit_log`                                                                          |
 | Tenant + IA   | `tenants`, `branches`, `profiles`, `areas`, `area_branches`, `system_settings`, `branch_attendance_config`                                                             |
 | Menu          | `menu_categories`, `menu_items`, `menu_item_variants`, `menu_item_modifiers`, `menu_item_available_sides`                                                              |
 | POS           | `pos_terminals`, `pos_sessions`, `branch_zones`, `tables`, `printer_configs`, `branch_menu_item_daily_limits`                                                          |
@@ -95,7 +95,7 @@ Tables are organized by domain. For per-table columns/constraints, read the migr
 | Trust / QC    | `branch_trusted_egress_ips`, `branch_override_codes`, `branch_override_attempts`, `inventory_qc_settings`                                                              |
 | Notifications | `notifications`, `branch_feature_flags`                                                                                                                                |
 
-For the per-column / per-policy reference of a specific table, prefer reading the originating migration and generated types. The early-2026 hand-written table list is archived at `docs/archive/ref/database-schema-early-2026.md`; do not use it as current schema authority.
+For the per-column / per-policy reference of a specific table, prefer reading the originating migration and generated types. Do not recreate hand-written schema dumps; they drift from generated types and applied database state.
 
 ## RLS Pattern
 
@@ -164,11 +164,3 @@ Migrations live in `supabase/migrations/` with timestamp-prefixed filenames.
 8. Owner runs `supabase db push` after merge
 9. Run `pnpm db:types` (after migration applied)
 10. Verify: `pnpm typecheck && pnpm build`
-
-<!-- ORACLE-META
-Written by codebase-oracle (manual) | 2026-04-06
-Data: Direct source reading
-Audience: new engineer, feature owner | Confidence: 95%
-Updated: POS tables added (2026-04-06)
-Unknowns: 0
--->

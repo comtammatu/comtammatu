@@ -94,7 +94,9 @@ export function useRealtimeChannel(
 
     void supabase.auth
       .getSession()
-      .then(({ data }) => subscribeWithToken(data.session?.access_token ?? null));
+      .then(({ data }) =>
+        subscribeWithToken(data.session?.access_token ?? null),
+      );
 
     // REALTIME-CHANNEL-RESUBSCRIBE-ON-TOKEN-REFRESH: when supabase-js
     // rotates the JWT (default ~1h, configurable), the connection-level

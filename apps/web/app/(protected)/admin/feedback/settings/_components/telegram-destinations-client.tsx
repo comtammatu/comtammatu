@@ -129,7 +129,8 @@ export function TelegramDestinationsClient({
           />
         </div>
         <p className="mt-2 text-xs text-muted-foreground">
-          Cách lấy chat_id: thêm @CTMTFeedbackBot vào group, gõ /start, copy chat_id từ message của bot.
+          Cách lấy chat_id: thêm @CTMTFeedbackBot vào group, gõ /start, copy
+          chat_id từ message của bot.
         </p>
         <div className="mt-3">
           <Button type="submit" disabled={isPending}>
@@ -196,9 +197,7 @@ export function TelegramDestinationsClient({
                           Gửi tin nhắn test
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onSelect={() =>
-                            handleToggle(dest.id, dest.is_active)
-                          }
+                          onSelect={() => handleToggle(dest.id, dest.is_active)}
                         >
                           {dest.is_active ? "Vô hiệu hóa" : "Kích hoạt"}
                         </DropdownMenuItem>

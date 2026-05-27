@@ -77,10 +77,7 @@ export function HeatmapGrid({
 
   return (
     <div
-      className={cn(
-        "w-full overflow-x-auto",
-        className,
-      )}
+      className={cn("w-full overflow-x-auto", className)}
       role="img"
       aria-label={ariaLabel}
     >
@@ -140,9 +137,7 @@ export function HeatmapGrid({
                     "stroke-border",
                     step === 0 ? "fill-muted/30" : undefined,
                   )}
-                  style={
-                    step === 0 ? undefined : { fill: FILL_VAR[step] }
-                  }
+                  style={step === 0 ? undefined : { fill: FILL_VAR[step] }}
                   strokeWidth={0.5}
                 >
                   <title>{titleParts.join(" · ")}</title>

@@ -106,7 +106,9 @@ export async function listNotifications(
 /**
  * Count of unread notifications visible to caller. Uses RPC for server-side fold.
  */
-export async function getUnreadCount(): Promise<ActionResult<{ count: number }>> {
+export async function getUnreadCount(): Promise<
+  ActionResult<{ count: number }>
+> {
   const { supabase } = await loadAuthState();
   const { data, error } = await supabase.rpc("count_unread_notifications");
   if (error) return { success: false, error: "Không thể đếm thông báo" };

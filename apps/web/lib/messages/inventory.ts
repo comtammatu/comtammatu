@@ -32,7 +32,8 @@ export const inventory = {
     noActiveTransfers: "Không có điều chuyển đang xử lý",
     headerTagline: "3 luồng vận hành: tồn · nhập · điều phối.",
     allClearTitle: "Mọi thứ đang ổn",
-    allClearHint: "Không có việc gấp, cảnh báo, điều chuyển hay kiểm kê đang chờ.",
+    allClearHint:
+      "Không có việc gấp, cảnh báo, điều chuyển hay kiểm kê đang chờ.",
     stocktakeProgress: "Tiến độ kiểm kê",
     activeStocktakes: (count: number) => `${count} phiên đang thực hiện`,
     noActiveStocktakes: "Không có phiên kiểm kê đang thực hiện",
@@ -176,11 +177,8 @@ export const inventory = {
       success: "Đã lưu dòng GRN.",
     },
     line: {
-      orderedReceived: (
-        required: number,
-        unit: string,
-        actual: number,
-      ) => `${required} ${unit} đặt → ${actual} ${unit} nhận`,
+      orderedReceived: (required: number, unit: string, actual: number) =>
+        `${required} ${unit} đặt → ${actual} ${unit} nhận`,
       rejectedSuffix: (quantity: number, unit: string) =>
         ` • Trả ${quantity} ${unit}`,
       // Hiển thị 4 con số rõ ràng: đặt, đã giao, vào kho thực (giao−trả), trả NCC
@@ -209,7 +207,8 @@ export const inventory = {
       rejectedLabel: (unit: string) => `Trả NCC (${unit})`,
       unitCostCurrency: "Đơn giá (₫)",
       rejectReasonRequired: "Lý do từ chối *",
-      rejectReasonPlaceholder: "VD: Sườn thâm, đóng gói rách, cận date <3 ngày...",
+      rejectReasonPlaceholder:
+        "VD: Sườn thâm, đóng gói rách, cận date <3 ngày...",
       proofPhotoLabel: (required: boolean) =>
         `Ảnh chứng từ${required ? " *" : ""}`,
       priceOverrideRequired: "Lý do giá lệch *",
@@ -336,8 +335,7 @@ export const inventory = {
       createGrnStep: "Tạo GRN từ PO này",
       createGrnDisabledHint: "Chỉ tạo GRN khi PO đã gửi NCC.",
       overviewLinesTitle: "Dòng đặt mua",
-      overviewLinesPreviewHint: (count: number) =>
-        `Top ${count} theo giá trị`,
+      overviewLinesPreviewHint: (count: number) => `Top ${count} theo giá trị`,
       viewAllLines: (count: number) => `Xem tất cả ${count} dòng →`,
     },
   },
@@ -423,7 +421,12 @@ export const inventory = {
       },
       writeoffTitle: "Hao hụt nhanh",
       issueTitle: "Xuất kho nhanh",
-      stockLine: (sku: string, category: string, quantity: string, unit: string) =>
+      stockLine: (
+        sku: string,
+        category: string,
+        quantity: string,
+        unit: string,
+      ) =>
         category
           ? `${sku} · ${category} · Tồn ${quantity} ${unit}`
           : `${sku} · Tồn ${quantity} ${unit}`,

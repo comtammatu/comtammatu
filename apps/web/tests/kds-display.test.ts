@@ -309,10 +309,7 @@ test("KDS selects and renders order notes in board and focus modes", () => {
   assert.match(kdsPageSource, /menu_items\(menu_categories\(name,type\)\)/);
   assert.match(kdsRealtimeSource, /order_type, table_id, is_priority, note,/);
   assert.match(kdsRealtimeSource, /order_type, table_id, note,/);
-  assert.match(
-    kdsRealtimeSource,
-    /menu_items\(menu_categories\(name,type\)\)/,
-  );
+  assert.match(kdsRealtimeSource, /menu_items\(menu_categories\(name,type\)\)/);
   assert.match(kdsRealtimeSource, /oldRow\.note === newRow\.note/);
   assert.match(orderGridSource, /<OrderNote[\s\S]*note=\{order\.orderNote\}/);
   assert.match(focusViewSource, /<OrderNote[\s\S]*note=\{order\.orderNote\}/);

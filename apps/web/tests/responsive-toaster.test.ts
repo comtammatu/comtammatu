@@ -9,7 +9,10 @@ const source = readFileSync(
 );
 
 const compactBranchStart = source.indexOf("if (compactOperationalToaster) {");
-const compactBranchEnd = source.indexOf("  }\n\n  return (", compactBranchStart);
+const compactBranchEnd = source.indexOf(
+  "  }\n\n  return (",
+  compactBranchStart,
+);
 const compactBranch =
   compactBranchStart >= 0 && compactBranchEnd > compactBranchStart
     ? source.slice(compactBranchStart, compactBranchEnd)
@@ -21,10 +24,7 @@ test("POS and KDS routes use the compact operational toaster preset", () => {
       String.raw`const OPERATIONAL_TOAST_ROUTE_PATTERN = /^\/br\/[^/]+\/(?:pos|kds)(?:\/|$)/;`,
     ),
   );
-  assert.match(
-    source,
-    /isMobile \|\| isOperationalToastRoute\(pathname\)/,
-  );
+  assert.match(source, /isMobile \|\| isOperationalToastRoute\(pathname\)/);
   assert.match(compactBranch, /position="top-center"/);
   assert.match(compactBranch, /visibleToasts=\{3\}/);
   assert.match(compactBranch, /closeButton/);

@@ -72,15 +72,10 @@ export default async function FeedbackPage({
   ];
   const { data: branchRows } =
     branchIds.length > 0
-      ? await supabase
-          .from("branches")
-          .select("id, name")
-          .in("id", branchIds)
+      ? await supabase.from("branches").select("id, name").in("id", branchIds)
       : { data: [] };
 
-  const branchNameById = new Map(
-    (branchRows ?? []).map((b) => [b.id, b.name]),
-  );
+  const branchNameById = new Map((branchRows ?? []).map((b) => [b.id, b.name]));
   const qrMap = new Map(
     (qrCodes ?? []).map((qr) => [
       qr.id,
@@ -93,7 +88,9 @@ export default async function FeedbackPage({
 
   const feedbacks: FeedbackRow[] = (rawFeedbacks ?? [])
     .filter(
-      (f): f is typeof f & {
+      (
+        f,
+      ): f is typeof f & {
         id: number;
         rating: number;
         comment: string;

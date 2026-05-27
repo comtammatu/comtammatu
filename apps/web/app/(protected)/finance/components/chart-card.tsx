@@ -62,7 +62,9 @@ export function ChartCard({
             <p className="text-sm text-muted-foreground">{description}</p>
           ) : null}
         </div>
-        {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
+        {actions ? (
+          <div className="flex items-center gap-2">{actions}</div>
+        ) : null}
       </CardHeader>
       <CardContent className="p-4 pt-2 sm:p-6 sm:pt-2">
         {empty ? (

@@ -549,482 +549,478 @@ export function DashboardClient(props: DashboardProps) {
           </span>
         }
       />
-        <section className="flex flex-col gap-3">
-          <h2 className="font-heading text-base font-semibold">
-            {isOversight
-              ? "3 điểm giám sát chính"
-              : messages.inventory.dashboard.mainFlowsTitle}
-          </h2>
-          <div className="grid gap-3 lg:grid-cols-3">
-            {flowCards.map((flow) => {
-              const Icon = flow.icon;
+      <section className="flex flex-col gap-3">
+        <h2 className="font-heading text-base font-semibold">
+          {isOversight
+            ? "3 điểm giám sát chính"
+            : messages.inventory.dashboard.mainFlowsTitle}
+        </h2>
+        <div className="grid gap-3 lg:grid-cols-3">
+          {flowCards.map((flow) => {
+            const Icon = flow.icon;
 
-              return (
-                <Card
-                  key={flow.key}
-                  className={cn(
-                    "relative overflow-hidden",
-                    flow.tone === "destructive" && "bg-destructive/5",
-                    flow.tone === "warning" && "bg-warning/10",
-                    flow.tone === "info" && "bg-info/10",
-                    flow.tone === "success" && "bg-success/10",
-                  )}
-                >
-                  <CardHeader className="gap-3 pb-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex min-w-0 items-start gap-3">
-                        <div className="flex size-8 shrink-0 items-center justify-center rounded-md border bg-background">
-                          <Icon className="size-4" />
-                        </div>
-                        <div className="min-w-0">
-                          <CardTitle className="text-base leading-tight">
-                            {flow.title}
-                          </CardTitle>
-                          <CardDescription className="mt-1 line-clamp-2">
-                            {flow.description}
-                          </CardDescription>
-                        </div>
+            return (
+              <Card
+                key={flow.key}
+                className={cn(
+                  "relative overflow-hidden",
+                  flow.tone === "destructive" && "bg-destructive/5",
+                  flow.tone === "warning" && "bg-warning/10",
+                  flow.tone === "info" && "bg-info/10",
+                  flow.tone === "success" && "bg-success/10",
+                )}
+              >
+                <CardHeader className="gap-3 pb-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-start gap-3">
+                      <div className="flex size-8 shrink-0 items-center justify-center rounded-md border bg-background">
+                        <Icon className="size-4" />
                       </div>
-                      <span
-                        className={cn(
-                          "font-heading shrink-0 font-mono text-2xl font-bold tabular-nums",
-                          flow.metric === "0"
-                            ? "text-muted-foreground"
-                            : "text-primary",
-                        )}
-                      >
-                        {flow.metric}
-                      </span>
+                      <div className="min-w-0">
+                        <CardTitle className="text-base leading-tight">
+                          {flow.title}
+                        </CardTitle>
+                        <CardDescription className="mt-1 line-clamp-2">
+                          {flow.description}
+                        </CardDescription>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between gap-3 rounded-md border bg-background/80 px-3 py-2">
-                      <div>
-                        <p className="text-xs text-muted-foreground">
-                          {flow.metricLabel}
-                        </p>
-                        <p className="text-sm font-medium">
-                          {flow.statusLabel}
-                        </p>
-                      </div>
-                      <Button variant="ghost" size="icon-sm" asChild>
-                        <Link
-                          href={withBranch(flow.href)}
-                          aria-label={flow.title}
-                        >
-                          <IconArrowRight />
+                    <span
+                      className={cn(
+                        "font-heading shrink-0 font-mono text-2xl font-bold tabular-nums",
+                        flow.metric === "0"
+                          ? "text-muted-foreground"
+                          : "text-primary",
+                      )}
+                    >
+                      {flow.metric}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 rounded-md border bg-background/80 px-3 py-2">
+                    <div>
+                      <p className="text-xs text-muted-foreground">
+                        {flow.metricLabel}
+                      </p>
+                      <p className="text-sm font-medium">{flow.statusLabel}</p>
+                    </div>
+                    <Button variant="ghost" size="icon-sm" asChild>
+                      <Link
+                        href={withBranch(flow.href)}
+                        aria-label={flow.title}
+                      >
+                        <IconArrowRight />
+                      </Link>
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-wrap gap-2">
+                    {flow.actions.map((action) => (
+                      <Button
+                        key={`${flow.key}-${action.label}`}
+                        variant={action.primary ? "default" : "outline"}
+                        size="sm"
+                        asChild
+                      >
+                        <Link href={withBranch(action.href)}>
+                          {action.label}
                         </Link>
                       </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex flex-wrap gap-2">
-                      {flow.actions.map((action) => (
-                        <Button
-                          key={`${flow.key}-${action.label}`}
-                          variant={action.primary ? "default" : "outline"}
-                          size="sm"
-                          asChild
-                        >
-                          <Link href={withBranch(action.href)}>
-                            {action.label}
-                          </Link>
-                        </Button>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* KPI cards — Giá trị tồn kho lives in header meta to avoid duplication. */}
-        <div
-          className={cn(
-            "grid gap-3",
-            isMobile
-              ? "grid-cols-2"
-              : showProcurement
-                ? "sm:grid-cols-2 lg:grid-cols-4"
-                : "sm:grid-cols-3",
-          )}
-        >
-          {[
-            {
-              label: isOversight ? "Hồ sơ nhập đang chờ" : "PO đang chờ",
-              value: String(pendingPO),
-              tone: "default" as const,
-            },
-            {
-              label: isOversight
-                ? "Luồng đang xử lý"
-                : "Transfer đang xử lý",
-              value: String(activeTransfers),
-              tone: "default" as const,
-            },
-            {
-              label: "Cảnh báo hết hạn",
-              value: String(expiryAlerts.length),
-              tone:
-                expiryAlerts.length > 0
-                  ? ("warning" as const)
-                  : ("default" as const),
-            },
-            ...(showProcurement
-              ? [
-                  {
-                    label: "GRN cần kiểm tra giá (30d)",
-                    value: String(props.priceReviewCount),
-                    tone:
-                      props.priceReviewCount > 0
-                        ? ("destructive" as const)
-                        : ("default" as const),
-                  },
-                ]
-              : []),
-          ].map((kpi) => (
-            <Card
-              key={kpi.label}
-              className={cn(
-                kpi.tone === "destructive" &&
-                  "border-destructive/40 bg-destructive/5",
-                kpi.tone === "warning" && "border-warning/40 bg-warning/10",
-              )}
-            >
-              <CardContent className="p-4">
-                <p className={cn("text-muted-foreground text-xs")}>
-                  {kpi.label}
-                </p>
-                <p
-                  className={cn(
-                    "font-bold tabular-nums",
-                    isMobile ? "mt-0.5 text-lg" : "mt-1 text-2xl",
-                    kpi.tone === "destructive" && "text-destructive",
-                    kpi.tone === "warning" && "text-warning",
-                  )}
-                >
-                  {kpi.value}
-                </p>
-              </CardContent>
-            </Card>
-          ))}
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
+      </section>
 
-        {/* All-clear hero replaces the four panels when nothing pending. */}
-        {tasks.length === 0 &&
-        reorderAlerts.length === 0 &&
-        expiryAlerts.length === 0 &&
-        activeTransferList.length === 0 &&
-        activeStocktakeList.length === 0 ? (
-          <Card className="bg-success/5">
-            <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
-              <div className="flex size-12 items-center justify-center rounded-full bg-success/15 text-success">
-                <IconSquareCheck className="size-6" />
-              </div>
-              <div className="space-y-1">
-                <p className="font-heading text-base font-semibold">
-                  {messages.inventory.dashboard.allClearTitle}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {isOversight
-                    ? "Không có cảnh báo hoặc luồng đang chờ theo dõi."
-                    : messages.inventory.dashboard.allClearHint}
-                </p>
-              </div>
+      {/* KPI cards — Giá trị tồn kho lives in header meta to avoid duplication. */}
+      <div
+        className={cn(
+          "grid gap-3",
+          isMobile
+            ? "grid-cols-2"
+            : showProcurement
+              ? "sm:grid-cols-2 lg:grid-cols-4"
+              : "sm:grid-cols-3",
+        )}
+      >
+        {[
+          {
+            label: isOversight ? "Hồ sơ nhập đang chờ" : "PO đang chờ",
+            value: String(pendingPO),
+            tone: "default" as const,
+          },
+          {
+            label: isOversight ? "Luồng đang xử lý" : "Transfer đang xử lý",
+            value: String(activeTransfers),
+            tone: "default" as const,
+          },
+          {
+            label: "Cảnh báo hết hạn",
+            value: String(expiryAlerts.length),
+            tone:
+              expiryAlerts.length > 0
+                ? ("warning" as const)
+                : ("default" as const),
+          },
+          ...(showProcurement
+            ? [
+                {
+                  label: "GRN cần kiểm tra giá (30d)",
+                  value: String(props.priceReviewCount),
+                  tone:
+                    props.priceReviewCount > 0
+                      ? ("destructive" as const)
+                      : ("default" as const),
+                },
+              ]
+            : []),
+        ].map((kpi) => (
+          <Card
+            key={kpi.label}
+            className={cn(
+              kpi.tone === "destructive" &&
+                "border-destructive/40 bg-destructive/5",
+              kpi.tone === "warning" && "border-warning/40 bg-warning/10",
+            )}
+          >
+            <CardContent className="p-4">
+              <p className={cn("text-muted-foreground text-xs")}>{kpi.label}</p>
+              <p
+                className={cn(
+                  "font-bold tabular-nums",
+                  isMobile ? "mt-0.5 text-lg" : "mt-1 text-2xl",
+                  kpi.tone === "destructive" && "text-destructive",
+                  kpi.tone === "warning" && "text-warning",
+                )}
+              >
+                {kpi.value}
+              </p>
             </CardContent>
           </Card>
-        ) : (
-          <>
-        {/* Tasks + Alerts */}
-        <div
-          className={cn(
-            "grid gap-4",
-            isMobile ? "grid-cols-1" : "lg:grid-cols-2",
-          )}
-        >
-          {/* Tasks */}
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-sm">
-                    {messages.inventory.dashboard.shiftTasksTitle}
-                  </CardTitle>
-                  <CardDescription className="text-xs">
-                    {messages.inventory.dashboard.pendingTasks(tasks.length)}
-                  </CardDescription>
+        ))}
+      </div>
+
+      {/* All-clear hero replaces the four panels when nothing pending. */}
+      {tasks.length === 0 &&
+      reorderAlerts.length === 0 &&
+      expiryAlerts.length === 0 &&
+      activeTransferList.length === 0 &&
+      activeStocktakeList.length === 0 ? (
+        <Card className="bg-success/5">
+          <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
+            <div className="flex size-12 items-center justify-center rounded-full bg-success/15 text-success">
+              <IconSquareCheck className="size-6" />
+            </div>
+            <div className="space-y-1">
+              <p className="font-heading text-base font-semibold">
+                {messages.inventory.dashboard.allClearTitle}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {isOversight
+                  ? "Không có cảnh báo hoặc luồng đang chờ theo dõi."
+                  : messages.inventory.dashboard.allClearHint}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          {/* Tasks + Alerts */}
+          <div
+            className={cn(
+              "grid gap-4",
+              isMobile ? "grid-cols-1" : "lg:grid-cols-2",
+            )}
+          >
+            {/* Tasks */}
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-sm">
+                      {messages.inventory.dashboard.shiftTasksTitle}
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      {messages.inventory.dashboard.pendingTasks(tasks.length)}
+                    </CardDescription>
+                  </div>
+                  <Badge variant="secondary" className="h-6">
+                    <IconClock className="mr-1 size-3" />
+                    {siteKindLabel}
+                  </Badge>
                 </div>
-                <Badge variant="secondary" className="h-6">
-                  <IconClock className="mr-1 size-3" />
-                  {siteKindLabel}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {tasks.length === 0 ? (
-                <AppEmptyState
-                  compact
-                  icon={<IconSquareCheck />}
-                  title={messages.inventory.dashboard.noUrgentTasks}
-                />
-              ) : (
+              </CardHeader>
+              <CardContent>
+                {tasks.length === 0 ? (
+                  <AppEmptyState
+                    compact
+                    icon={<IconSquareCheck />}
+                    title={messages.inventory.dashboard.noUrgentTasks}
+                  />
+                ) : (
+                  <div className="space-y-2">
+                    {tasks.map((task) => (
+                      <Link
+                        key={task.key}
+                        href={withBranch(task.href)}
+                        className={cn(
+                          "flex items-start gap-3 rounded-lg border p-3 transition-colors hover:bg-accent active:scale-[0.99]",
+                          isMobile && "py-4",
+                        )}
+                      >
+                        <div
+                          className={cn(
+                            "mt-1.5 size-2 shrink-0 rounded-full",
+                            severityDot[task.severity],
+                          )}
+                        />
+                        <div className="min-w-0 flex-1 space-y-1">
+                          <p className="text-sm font-medium leading-tight">
+                            {task.title}
+                          </p>
+                          <p className="line-clamp-2 break-words text-xs text-muted-foreground">
+                            {task.description}
+                          </p>
+                        </div>
+                        <IconArrowRight className="mt-1 size-4 shrink-0 text-muted-foreground" />
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Alerts */}
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-sm">
+                      {messages.inventory.dashboard.priorityAlertsTitle}
+                    </CardTitle>
+                  </div>
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link href={withBranch(paths.expiry)}>
+                      {ACTIONS_VI.viewAll}
+                    </Link>
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
                 <div className="space-y-2">
-                  {tasks.map((task) => (
+                  {reorderAlerts.slice(0, isMobile ? 2 : 3).map((item) => (
                     <Link
-                      key={task.key}
-                      href={withBranch(task.href)}
+                      key={`r-${item.ingredientId}-${item.branchId}`}
+                      href={withBranch(
+                        showProcurement ? paths.purchaseOrders : paths.stock,
+                      )}
                       className={cn(
-                        "flex items-start gap-3 rounded-lg border p-3 transition-colors hover:bg-accent active:scale-[0.99]",
+                        "flex items-start gap-3 rounded-lg border border-destructive/50 bg-destructive/5 p-3 transition-colors hover:bg-accent",
                         isMobile && "py-4",
                       )}
                     >
-                      <div
+                      <IconAlertTriangle className="mt-0.5 size-4 shrink-0 text-destructive" />
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <p className="text-sm font-medium leading-tight">
+                          {item.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {messages.inventory.dashboard.reorderStatus(
+                            item.current,
+                            item.unit,
+                            item.reorder,
+                          )}
+                        </p>
+                      </div>
+                      <Badge variant="destructive" className="shrink-0 text-xs">
+                        {messages.inventory.dashboard.reorder}
+                      </Badge>
+                    </Link>
+                  ))}
+                  {expiryAlerts.slice(0, isMobile ? 2 : 3).map((item) => (
+                    <Link
+                      key={`e-${item.id}`}
+                      href={withBranch(paths.expiry)}
+                      className={cn(
+                        "flex items-start gap-3 rounded-lg border p-3 transition-colors hover:bg-accent",
+                        item.urgency === "critical"
+                          ? "border-destructive/50 bg-destructive/5"
+                          : "border-warning/50 bg-warning/5",
+                        isMobile && "py-4",
+                      )}
+                    >
+                      <IconAlertTriangle
                         className={cn(
-                          "mt-1.5 size-2 shrink-0 rounded-full",
-                          severityDot[task.severity],
+                          "mt-0.5 size-4 shrink-0",
+                          item.urgency === "critical"
+                            ? "text-destructive"
+                            : "text-warning",
                         )}
                       />
                       <div className="min-w-0 flex-1 space-y-1">
                         <p className="text-sm font-medium leading-tight">
-                          {task.title}
+                          {item.ingredientName}
+                          {item.lot ? ` • ${item.lot}` : ""}
                         </p>
-                        <p className="line-clamp-2 break-words text-xs text-muted-foreground">
-                          {task.description}
+                        <p className="text-xs text-muted-foreground">
+                          {item.daysLeft <= 0
+                            ? messages.inventory.dashboard.expiredDays(
+                                item.daysLeft,
+                              )
+                            : messages.inventory.dashboard.remainingDays(
+                                item.daysLeft,
+                              )}
                         </p>
                       </div>
-                      <IconArrowRight className="mt-1 size-4 shrink-0 text-muted-foreground" />
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Alerts */}
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-sm">
-                    {messages.inventory.dashboard.priorityAlertsTitle}
-                  </CardTitle>
-                </div>
-                <Button variant="ghost" size="sm" asChild>
-                  <Link href={withBranch(paths.expiry)}>
-                    {ACTIONS_VI.viewAll}
-                  </Link>
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {reorderAlerts.slice(0, isMobile ? 2 : 3).map((item) => (
-                  <Link
-                    key={`r-${item.ingredientId}-${item.branchId}`}
-                    href={withBranch(
-                      showProcurement ? paths.purchaseOrders : paths.stock,
-                    )}
-                    className={cn(
-                      "flex items-start gap-3 rounded-lg border border-destructive/50 bg-destructive/5 p-3 transition-colors hover:bg-accent",
-                      isMobile && "py-4",
-                    )}
-                  >
-                    <IconAlertTriangle className="mt-0.5 size-4 shrink-0 text-destructive" />
-                    <div className="min-w-0 flex-1 space-y-1">
-                      <p className="text-sm font-medium leading-tight">
-                        {item.name}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {messages.inventory.dashboard.reorderStatus(
-                          item.current,
-                          item.unit,
-                          item.reorder,
-                        )}
-                      </p>
-                    </div>
-                    <Badge variant="destructive" className="shrink-0 text-xs">
-                      {messages.inventory.dashboard.reorder}
-                    </Badge>
-                  </Link>
-                ))}
-                {expiryAlerts.slice(0, isMobile ? 2 : 3).map((item) => (
-                  <Link
-                    key={`e-${item.id}`}
-                    href={withBranch(paths.expiry)}
-                    className={cn(
-                      "flex items-start gap-3 rounded-lg border p-3 transition-colors hover:bg-accent",
-                      item.urgency === "critical"
-                        ? "border-destructive/50 bg-destructive/5"
-                        : "border-warning/50 bg-warning/5",
-                      isMobile && "py-4",
-                    )}
-                  >
-                    <IconAlertTriangle
-                      className={cn(
-                        "mt-0.5 size-4 shrink-0",
-                        item.urgency === "critical"
-                          ? "text-destructive"
-                          : "text-warning",
-                      )}
-                    />
-                    <div className="min-w-0 flex-1 space-y-1">
-                      <p className="text-sm font-medium leading-tight">
-                        {item.ingredientName}
-                        {item.lot ? ` • ${item.lot}` : ""}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
+                      <Badge
+                        variant={
+                          item.urgency === "critical"
+                            ? "destructive"
+                            : "warning"
+                        }
+                        className="shrink-0 text-xs"
+                      >
                         {item.daysLeft <= 0
-                          ? messages.inventory.dashboard.expiredDays(
-                              item.daysLeft,
-                            )
-                          : messages.inventory.dashboard.remainingDays(
-                              item.daysLeft,
-                            )}
-                      </p>
-                    </div>
-                    <Badge
-                      variant={
-                        item.urgency === "critical" ? "destructive" : "warning"
-                      }
-                      className="shrink-0 text-xs"
-                    >
-                      {item.daysLeft <= 0
-                        ? tStatus("expired", "badge")
-                        : tStatus("critical", "badge")}
-                    </Badge>
-                  </Link>
-                ))}
-                {reorderAlerts.length === 0 && expiryAlerts.length === 0 && (
+                          ? tStatus("expired", "badge")
+                          : tStatus("critical", "badge")}
+                      </Badge>
+                    </Link>
+                  ))}
+                  {reorderAlerts.length === 0 && expiryAlerts.length === 0 && (
+                    <p className="py-8 text-center text-sm text-muted-foreground">
+                      {messages.inventory.dashboard.noAlerts}
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Transfer tracking + Stocktake progress */}
+          <div
+            className={cn(
+              "grid gap-4",
+              isMobile ? "grid-cols-1" : "lg:grid-cols-2",
+            )}
+          >
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-sm">
+                      {isOversight
+                        ? "Luồng đang xử lý"
+                        : messages.inventory.dashboard.transferTrackingTitle}
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      {messages.inventory.dashboard.activeTransfers(
+                        activeTransferList.length,
+                      )}
+                    </CardDescription>
+                  </div>
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link href={withBranch(paths.transfers)}>
+                      {ACTIONS_VI.viewAll}
+                    </Link>
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {activeTransferList.length === 0 ? (
                   <p className="py-8 text-center text-sm text-muted-foreground">
-                    {messages.inventory.dashboard.noAlerts}
+                    {messages.inventory.dashboard.noActiveTransfers}
                   </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Transfer tracking + Stocktake progress */}
-        <div
-          className={cn(
-            "grid gap-4",
-            isMobile ? "grid-cols-1" : "lg:grid-cols-2",
-          )}
-        >
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-sm">
-                    {isOversight
-                      ? "Luồng đang xử lý"
-                      : messages.inventory.dashboard.transferTrackingTitle}
-                  </CardTitle>
-                  <CardDescription className="text-xs">
-                    {messages.inventory.dashboard.activeTransfers(
-                      activeTransferList.length,
-                    )}
-                  </CardDescription>
-                </div>
-                <Button variant="ghost" size="sm" asChild>
-                  <Link href={withBranch(paths.transfers)}>
-                    {ACTIONS_VI.viewAll}
-                  </Link>
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {activeTransferList.length === 0 ? (
-                <p className="py-8 text-center text-sm text-muted-foreground">
-                  {messages.inventory.dashboard.noActiveTransfers}
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {activeTransferList.map((t) => (
-                    <Link
-                      key={t.id}
-                      href={withBranch(paths.transferDetail(t.id))}
-                      className={cn(
-                        "block rounded-lg border p-3 transition-colors hover:bg-accent active:scale-[0.99]",
-                        isMobile && "py-4",
-                      )}
-                    >
-                      <div className="mb-2 flex items-center justify-between">
-                        <span className="text-sm font-medium">{t.code}</span>
-                        <StatusBadge status={t.status} />
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span>{t.fromBranch}</span>
-                        <IconArrowRight className="size-3" />
-                        <span>{t.toBranch}</span>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-sm">
-                    {isOversight
-                      ? "Tiến độ đối soát tồn"
-                      : messages.inventory.dashboard.stocktakeProgress}
-                  </CardTitle>
-                  <CardDescription className="text-xs">
-                    {isOversight
-                      ? `${activeStocktakeList.length} phiên đang thực hiện`
-                      : messages.inventory.dashboard.activeStocktakes(
-                          activeStocktakeList.length,
+                ) : (
+                  <div className="space-y-2">
+                    {activeTransferList.map((t) => (
+                      <Link
+                        key={t.id}
+                        href={withBranch(paths.transferDetail(t.id))}
+                        className={cn(
+                          "block rounded-lg border p-3 transition-colors hover:bg-accent active:scale-[0.99]",
+                          isMobile && "py-4",
                         )}
-                  </CardDescription>
-                </div>
-                <Button variant="ghost" size="sm" asChild>
-                  <Link href={withBranch(paths.stocktake)}>
-                    {ACTIONS_VI.viewAll}
-                  </Link>
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {activeStocktakeList.length === 0 ? (
-                <p className="py-8 text-center text-sm text-muted-foreground">
-                  {isOversight
-                    ? "Không có phiên đối soát tồn đang thực hiện"
-                    : messages.inventory.dashboard.noActiveStocktakes}
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {activeStocktakeList.map((s) => (
-                    <Link
-                      key={s.id}
-                      href={withBranch(paths.stocktakeDetail(s.id))}
-                      className={cn(
-                        "block rounded-lg border p-3 transition-colors hover:bg-accent active:scale-[0.99]",
-                        isMobile && "py-4",
-                      )}
-                    >
-                      <div className="mb-2 flex items-center justify-between">
-                        <span className="text-sm font-medium">{s.code}</span>
-                        <Badge variant="secondary" className="text-xs">
-                          {s.progress}%
-                        </Badge>
-                      </div>
-                      <p className="mb-2 text-xs text-muted-foreground">
-                        {s.branchName}
-                      </p>
-                      <Progress value={s.progress} className="h-2" />
+                      >
+                        <div className="mb-2 flex items-center justify-between">
+                          <span className="text-sm font-medium">{t.code}</span>
+                          <StatusBadge status={t.status} />
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span>{t.fromBranch}</span>
+                          <IconArrowRight className="size-3" />
+                          <span>{t.toBranch}</span>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-sm">
+                      {isOversight
+                        ? "Tiến độ đối soát tồn"
+                        : messages.inventory.dashboard.stocktakeProgress}
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      {isOversight
+                        ? `${activeStocktakeList.length} phiên đang thực hiện`
+                        : messages.inventory.dashboard.activeStocktakes(
+                            activeStocktakeList.length,
+                          )}
+                    </CardDescription>
+                  </div>
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link href={withBranch(paths.stocktake)}>
+                      {ACTIONS_VI.viewAll}
                     </Link>
-                  ))}
+                  </Button>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+              </CardHeader>
+              <CardContent>
+                {activeStocktakeList.length === 0 ? (
+                  <p className="py-8 text-center text-sm text-muted-foreground">
+                    {isOversight
+                      ? "Không có phiên đối soát tồn đang thực hiện"
+                      : messages.inventory.dashboard.noActiveStocktakes}
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {activeStocktakeList.map((s) => (
+                      <Link
+                        key={s.id}
+                        href={withBranch(paths.stocktakeDetail(s.id))}
+                        className={cn(
+                          "block rounded-lg border p-3 transition-colors hover:bg-accent active:scale-[0.99]",
+                          isMobile && "py-4",
+                        )}
+                      >
+                        <div className="mb-2 flex items-center justify-between">
+                          <span className="text-sm font-medium">{s.code}</span>
+                          <Badge variant="secondary" className="text-xs">
+                            {s.progress}%
+                          </Badge>
+                        </div>
+                        <p className="mb-2 text-xs text-muted-foreground">
+                          {s.branchName}
+                        </p>
+                        <Progress value={s.progress} className="h-2" />
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </>
-        )}
+      )}
     </AppPage>
   );
 }

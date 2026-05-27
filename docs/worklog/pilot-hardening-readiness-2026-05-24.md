@@ -59,13 +59,13 @@ Snapshot refreshed from current checkout on 2026-05-27:
 
 Route migration reconciliation:
 
-| Probe                                       | Count |
-| ------------------------------------------- | ----: |
-| Staged app route moves                      |     0 |
-| Unstaged route counterpart deletes          |     0 |
-| Untracked route files                       |     0 |
-| Changed route counterparts                  |     0 |
-| Deleted files without counterpart           |     0 |
+| Probe                              | Count |
+| ---------------------------------- | ----: |
+| Staged app route moves             |     0 |
+| Unstaged route counterpart deletes |     0 |
+| Untracked route files              |     0 |
+| Changed route counterparts         |     0 |
+| Deleted files without counterpart  |     0 |
 
 The route migration is reconciled into `HEAD` on `codex/continue-ts`.
 `node scripts/audit-route-group-migration.mjs` is clean, `apps/web/app/br` is

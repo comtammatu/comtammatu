@@ -86,7 +86,8 @@ export async function replaceTaxInvoice(
     FINANCE_ROLES,
     PERMISSION_KEYS.SETTINGS_TENANT,
   );
-  if (!ctx) return { success: false, error: "Không có quyền thay thế hóa đơn." };
+  if (!ctx)
+    return { success: false, error: "Không có quyền thay thế hóa đơn." };
 
   const { supabase, claims } = ctx;
 
@@ -118,13 +119,19 @@ export async function replaceTaxInvoice(
   if (oldInvoice.invoice_kind !== "per_order") {
     return {
       success: false,
-      error: "Chỉ hỗ trợ thay thế HĐ B2B (per_order). HĐ tổng hợp B2C sẽ hỗ trợ ở v2.",
+      error:
+        "Chỉ hỗ trợ thay thế HĐ B2B (per_order). HĐ tổng hợp B2C sẽ hỗ trợ ở v2.",
     };
   }
-  if (!oldInvoice.invoice_number || !oldInvoice.issued_at || !oldInvoice.provider_ref) {
+  if (
+    !oldInvoice.invoice_number ||
+    !oldInvoice.issued_at ||
+    !oldInvoice.provider_ref
+  ) {
     return {
       success: false,
-      error: "Hóa đơn gốc thiếu thông tin (số HĐ / ngày phát hành / providerRef).",
+      error:
+        "Hóa đơn gốc thiếu thông tin (số HĐ / ngày phát hành / providerRef).",
     };
   }
   if (!(await canAccessBranch(supabase, claims, oldInvoice.branch_id))) {
@@ -142,14 +149,14 @@ export async function replaceTaxInvoice(
     (item) => item.status !== "cancelled",
   );
   if (activeItems.length === 0) {
-    return { success: false, error: "Đơn hàng không có món nào để thay thế HĐ." };
+    return {
+      success: false,
+      error: "Đơn hàng không có món nào để thay thế HĐ.",
+    };
   }
 
   const orderTotal = Number(order.total_amount);
-  const itemGrossSum = activeItems.reduce(
-    (s, i) => s + Number(i.subtotal),
-    0,
-  );
+  const itemGrossSum = activeItems.reduce((s, i) => s + Number(i.subtotal), 0);
 
   let subtotal: number;
   let vatAmount: number;
@@ -225,7 +232,10 @@ export async function replaceTaxInvoice(
     const code = rpcErr?.code ?? "";
     const msg = rpcErr?.message ?? "rpc_failed";
     if (msg.includes("only_issued_can_be_replaced")) {
-      return { success: false, error: "Hóa đơn không ở trạng thái 'phát hành'." };
+      return {
+        success: false,
+        error: "Hóa đơn không ở trạng thái 'phát hành'.",
+      };
     }
     if (msg.includes("already_replaced")) {
       return { success: false, error: "Hóa đơn này đã được thay thế." };
@@ -236,7 +246,10 @@ export async function replaceTaxInvoice(
         error: "Chuỗi thay thế quá sâu (tối đa 3 lần). Liên hệ kế toán.",
       };
     }
-    if (msg.includes("agreement_date_in_future") || msg.includes("agreement_date_before")) {
+    if (
+      msg.includes("agreement_date_in_future") ||
+      msg.includes("agreement_date_before")
+    ) {
       return { success: false, error: "Ngày văn bản thỏa thuận không hợp lệ." };
     }
     if (code === "42501") {
@@ -248,11 +261,14 @@ export async function replaceTaxInvoice(
   const newId = Number(newIdRaw);
 
   // STEP B — Transition NEW: draft → signing (user RPC, enforces ACL).
-  const { error: signErr } = await supabase.rpc("transition_tax_invoice_state", {
-    p_tax_invoice_id: newId,
-    p_to_status: "signing",
-    p_payload: { replacement_initiated: true },
-  });
+  const { error: signErr } = await supabase.rpc(
+    "transition_tax_invoice_state",
+    {
+      p_tax_invoice_id: newId,
+      p_to_status: "signing",
+      p_payload: { replacement_initiated: true },
+    },
+  );
   if (signErr) {
     // Leave new in draft; user can retry signing manually. Audit only.
     await logAudit(supabase, {
@@ -330,7 +346,10 @@ export async function replaceTaxInvoice(
       entityId: newId,
       newData: { error: finalErr.message, nextStatus },
     });
-    return { success: false, error: "Không thể cập nhật trạng thái HĐ thay thế." };
+    return {
+      success: false,
+      error: "Không thể cập nhật trạng thái HĐ thay thế.",
+    };
   }
 
   // STEP E — Persist invoice_number + provider_ref on NEW row.

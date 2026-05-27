@@ -55,7 +55,9 @@ export default async function WasteApprovalsPage({ searchParams }: PageProps) {
     new Set((issues ?? []).map((i) => i.branch_id).filter(Boolean)),
   );
   const creatorIds = Array.from(
-    new Set((issues ?? []).map((i) => i.created_by).filter(Boolean) as string[]),
+    new Set(
+      (issues ?? []).map((i) => i.created_by).filter(Boolean) as string[],
+    ),
   );
 
   const [itemsRes, branchesRes, creatorsRes] = await Promise.all([
@@ -82,16 +84,10 @@ export default async function WasteApprovalsPage({ searchParams }: PageProps) {
           .in("issue_id", issueIds)
       : Promise.resolve({ data: [] as never[] }),
     branchIds.length > 0
-      ? supabase
-          .from("branches")
-          .select("id, name")
-          .in("id", branchIds)
+      ? supabase.from("branches").select("id, name").in("id", branchIds)
       : Promise.resolve({ data: [] as never[] }),
     creatorIds.length > 0
-      ? supabase
-          .from("profiles")
-          .select("id, full_name")
-          .in("id", creatorIds)
+      ? supabase.from("profiles").select("id, full_name").in("id", creatorIds)
       : Promise.resolve({ data: [] as never[] }),
   ]);
 
@@ -148,9 +144,7 @@ export default async function WasteApprovalsPage({ searchParams }: PageProps) {
           wasteTier: it.waste_tier,
           qtyRatio: it.qty_ratio !== null ? Number(it.qty_ratio) : null,
           rolling15MinSum:
-            it.rolling_15min_sum !== null
-              ? Number(it.rolling_15min_sum)
-              : null,
+            it.rolling_15min_sum !== null ? Number(it.rolling_15min_sum) : null,
         };
       }),
     };

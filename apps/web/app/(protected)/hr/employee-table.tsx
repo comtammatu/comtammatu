@@ -34,8 +34,12 @@ export function EmployeeTable({ employees }: EmployeeTableProps) {
           <TableRow>
             <TableHead>Họ tên</TableHead>
             <TableHead className="hidden sm:table-cell">Mã NV</TableHead>
-            <TableHead className="hidden md:table-cell">{BRANCH_VI.long}</TableHead>
-            <TableHead className="hidden md:table-cell">{STAFF_VI.role}</TableHead>
+            <TableHead className="hidden md:table-cell">
+              {BRANCH_VI.long}
+            </TableHead>
+            <TableHead className="hidden md:table-cell">
+              {STAFF_VI.role}
+            </TableHead>
             <TableHead className="hidden lg:table-cell">Hợp đồng</TableHead>
             <TableHead className="hidden lg:table-cell">Lương cơ bản</TableHead>
             <TableHead>{FORM_VI.status}</TableHead>
@@ -46,7 +50,9 @@ export function EmployeeTable({ employees }: EmployeeTableProps) {
             <TableEmptyStateRow
               colSpan={7}
               title="Chưa có hồ sơ nhân viên nào"
-              icon={<IconUsers className="mx-auto size-8 text-muted-foreground" />}
+              icon={
+                <IconUsers className="mx-auto size-8 text-muted-foreground" />
+              }
             />
           )}
           {employees.map((emp) => (

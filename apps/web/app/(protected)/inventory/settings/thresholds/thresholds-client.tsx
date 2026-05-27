@@ -91,10 +91,7 @@ export function ThresholdsClient({ rows }: { rows: ThresholdRow[] }) {
   const [bulkOpen, setBulkOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  const dirtyRows = useMemo(
-    () => editable.filter(rowIsDirty),
-    [editable],
-  );
+  const dirtyRows = useMemo(() => editable.filter(rowIsDirty), [editable]);
   const dirtyCount = dirtyRows.length;
   const errorCount = useMemo(
     () => editable.filter((r) => rowError(r) != null).length,
@@ -131,8 +128,7 @@ export function ThresholdsClient({ rows }: { rows: ThresholdRow[] }) {
         return {
           ...r,
           minStock: values.min !== "" ? values.min : r.minStock,
-          reorderPoint:
-            values.reorder !== "" ? values.reorder : r.reorderPoint,
+          reorderPoint: values.reorder !== "" ? values.reorder : r.reorderPoint,
           maxStock: values.max !== "" ? values.max : r.maxStock,
         };
       }),
@@ -194,8 +190,7 @@ export function ThresholdsClient({ rows }: { rows: ThresholdRow[] }) {
     });
   }
 
-  const allSelected =
-    editable.length > 0 && selected.size === editable.length;
+  const allSelected = editable.length > 0 && selected.size === editable.length;
   const someSelected = selected.size > 0 && !allSelected;
 
   return (
@@ -279,9 +274,7 @@ export function ThresholdsClient({ rows }: { rows: ThresholdRow[] }) {
                 <TableCell className="text-right">
                   <QuantityInput
                     value={row.reorderPoint}
-                    onValueChange={(v) =>
-                      patchRow(row.id, "reorderPoint", v)
-                    }
+                    onValueChange={(v) => patchRow(row.id, "reorderPoint", v)}
                     maxFractionDigits={3}
                     placeholder="—"
                     className="h-8 text-right tabular-nums"
@@ -316,7 +309,11 @@ export function ThresholdsClient({ rows }: { rows: ThresholdRow[] }) {
           disabled={isPending || dirtyCount === 0 || errorCount > 0}
           size="lg"
         >
-          {isPending ? <Spinner className="mr-2" /> : <IconSave className="size-4" />}
+          {isPending ? (
+            <Spinner className="mr-2" />
+          ) : (
+            <IconSave className="size-4" />
+          )}
           {copy.save.action(dirtyCount)}
         </Button>
       </div>

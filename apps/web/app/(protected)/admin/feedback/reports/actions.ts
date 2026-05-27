@@ -1,10 +1,7 @@
 "use server";
 
 import { getAuthContext } from "@/_lib/auth";
-import {
-  getAppUrl,
-  getCronSecret,
-} from "@comtammatu/shared/feedback";
+import { getAppUrl, getCronSecret } from "@comtammatu/shared/feedback";
 import type { ActionResult } from "@comtammatu/shared/types";
 
 const OWNER_ONLY: readonly ["owner"] = ["owner"];

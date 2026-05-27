@@ -6,7 +6,6 @@
 #   1. Clones claude-swarm to ~/.claude-swarm (shared across projects)
 #   2. Installs npm dependencies
 #   3. Registers as MCP server in Claude Code (user scope)
-#   4. Adds project-level MCP permissions in .claude/settings.local.json
 #
 # Requirements: Node.js >= 20, npm, Claude Code CLI (`claude`)
 
@@ -80,5 +79,5 @@ echo "  Tasks:           create_task, update_task, list_tasks"
 echo "  Scratchpad:      scratchpad_get, scratchpad_set, scratchpad_list"
 echo ""
 echo "Usage: Open multiple Claude Code sessions and use rooms to coordinate."
-echo "Docs:  .claude/rules/swarm.md (agent roles + conventions)"
+echo "Project conventions: AGENTS.md and docs/agent/rules/"
 echo ""

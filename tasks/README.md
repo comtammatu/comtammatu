@@ -6,5 +6,6 @@ Top-level `tasks/` is intentionally small:
 - `regressions.md` — active named failure rules loaded before implementation.
 - `lessons.md` — durable retrospective lessons after corrections.
 
-Historical QA reports, one-off audits, and dated task packs belong under
-`docs/archive/worklog/tasks/`, not in this directory.
+Do not add historical QA reports, one-off audits, or dated task packs here.
+Promote durable lessons to `lessons.md`, durable failure guards to
+`regressions.md`, and active work to `todo.md`; otherwise remove the note.

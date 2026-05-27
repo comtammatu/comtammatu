@@ -26,7 +26,7 @@ test("actions-photos.ts updates photo_paths with the conditional .or() guard", (
   // unreachable.
   assert.ok(
     src.includes('.select("id")'),
-    "expected .select(\"id\") chained on the photo_paths update",
+    'expected .select("id") chained on the photo_paths update',
   );
   // Race-loser warn log keeps the orphan-paths trail useful for cleanup.
   assert.ok(
@@ -110,9 +110,7 @@ test("next.config.ts emits all security headers + disables X-Powered-By", () => 
     "expected X-Content-Type-Options: nosniff",
   );
   assert.ok(
-    src.includes(
-      'value: "max-age=63072000; includeSubDomains; preload"',
-    ),
+    src.includes('value: "max-age=63072000; includeSubDomains; preload"'),
     "expected HSTS value with includeSubDomains + preload (preload-list eligibility)",
   );
   // CSP must keep the locked-down directives.
@@ -122,10 +120,7 @@ test("next.config.ts emits all security headers + disables X-Powered-By", () => 
     "form-action 'self'",
     "object-src 'none'",
   ]) {
-    assert.ok(
-      src.includes(directive),
-      `expected CSP directive '${directive}'`,
-    );
+    assert.ok(src.includes(directive), `expected CSP directive '${directive}'`);
   }
 });
 
@@ -135,7 +130,7 @@ test("actions.ts uses after() (not fire-and-forget) for telegram-flush + AI enri
   const src = read("apps/web/app/(public)/r/[token]/actions.ts");
   assert.ok(
     /import\s*\{\s*after\s*\}\s*from\s*"next\/server"/.test(src),
-    "expected `import { after } from \"next/server\"`",
+    'expected `import { after } from "next/server"`',
   );
   // Negative match — the old `void fetch(...)` shape MUST NOT come back.
   assert.ok(

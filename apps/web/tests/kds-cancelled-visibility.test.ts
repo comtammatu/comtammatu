@@ -47,7 +47,10 @@ test("KDS visible snapshots exclude cancelled tickets", () => {
 
 test("KDS realtime evicts tickets that become cancelled", () => {
   assert.match(kdsRealtimeSource, /function isVisibleKdsTicket/);
-  assert.match(kdsRealtimeSource, /if \(!isVisibleKdsTicket\(newTicket\)\) return;/);
+  assert.match(
+    kdsRealtimeSource,
+    /if \(!isVisibleKdsTicket\(newTicket\)\) return;/,
+  );
   assert.match(
     kdsRealtimeSource,
     /isVisibleKdsTicket\(updated\)[\s\S]*prev\.filter\(\(t\) => t\.id !== updated\.id\)/,

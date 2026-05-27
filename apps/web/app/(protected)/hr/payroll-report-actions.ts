@@ -13,7 +13,11 @@ const generatePayrollSummarySchema = z.object({
 });
 
 export const generatePayrollSummary = withAction(
-  { roles: REPORT_ROLES, schema: generatePayrollSummarySchema, permission: PERMISSION_KEYS.FINANCE_PAYROLL_CALCULATE },
+  {
+    roles: REPORT_ROLES,
+    schema: generatePayrollSummarySchema,
+    permission: PERMISSION_KEYS.FINANCE_PAYROLL_CALCULATE,
+  },
   async (data, { supabase, claims }) => {
     const { data: periods } = await supabase
       .from("payroll_periods")
@@ -113,7 +117,11 @@ const generateInsuranceSummarySchema = z.object({
 });
 
 export const generateInsuranceSummary = withAction(
-  { roles: REPORT_ROLES, schema: generateInsuranceSummarySchema, permission: PERMISSION_KEYS.FINANCE_PAYROLL_CALCULATE },
+  {
+    roles: REPORT_ROLES,
+    schema: generateInsuranceSummarySchema,
+    permission: PERMISSION_KEYS.FINANCE_PAYROLL_CALCULATE,
+  },
   async (data, { supabase, claims }) => {
     const { data: period } = await supabase
       .from("payroll_periods")

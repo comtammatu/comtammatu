@@ -459,7 +459,7 @@ function CountingPhase({
 }) {
   if (isMobile) {
     return (
-      <AppSection className="overflow-hidden" contentClassName="p-0">
+      <AppSection className="overflow-hidden" contentFlush>
         {lines.length === 0 ? (
           <Empty className="py-8">
             <EmptyHeader>
@@ -523,7 +523,7 @@ function CountingPhase({
   }
 
   return (
-    <AppSection className="overflow-hidden" contentClassName="p-0">
+    <AppSection className="overflow-hidden" contentFlush>
       <div className="-m-4 md:-m-5">
         <Table>
           <TableHeader>
@@ -650,7 +650,7 @@ function ResultsPhase({
       </div>
 
       {isMobile ? (
-        <AppSection className="overflow-hidden" contentClassName="p-0">
+        <AppSection className="overflow-hidden" contentFlush>
           {lines.length === 0 ? (
             <Empty className="py-8">
               <EmptyHeader>
@@ -707,7 +707,7 @@ function ResultsPhase({
           )}
         </AppSection>
       ) : (
-        <AppSection className="overflow-hidden" contentClassName="p-0">
+        <AppSection className="overflow-hidden" contentFlush>
           <div className="-m-4 md:-m-5">
             <Table>
               <TableHeader>

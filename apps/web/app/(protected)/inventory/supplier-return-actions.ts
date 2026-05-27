@@ -2,7 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { PERMISSION_KEYS, SUPPLIER_RETURN_ROLES } from "@comtammatu/shared/auth";
+import {
+  PERMISSION_KEYS,
+  SUPPLIER_RETURN_ROLES,
+} from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { withAction } from "@/_lib/with-action";
 import { getAuthContextWithPermission } from "./_lib/auth";
@@ -241,7 +244,8 @@ export const transitionSupplierReturn = withAction(
 
 function mapTransitionError(raw: string | undefined): string {
   if (!raw) return "Không thể chuyển trạng thái phiếu trả.";
-  if (raw.includes("forbidden")) return "Không có quyền thực hiện thao tác này.";
+  if (raw.includes("forbidden"))
+    return "Không có quyền thực hiện thao tác này.";
   if (raw.includes("cannot_cancel_after_credit"))
     return "Không thể hủy phiếu đã ghi credit / hòan tiền.";
   if (raw.includes("must_be_sent_before_credit"))
@@ -260,7 +264,8 @@ function mapTransitionError(raw: string | undefined): string {
 
 function mapReturnRpcError(raw: string | undefined): string {
   if (!raw) return "Không thể xử lý phiếu trả hàng NCC.";
-  if (raw.includes("forbidden")) return "Không có quyền thực hiện thao tác này.";
+  if (raw.includes("forbidden"))
+    return "Không có quyền thực hiện thao tác này.";
   if (raw.includes("no_rejected_lines"))
     return "GRN không có dòng nào bị từ chối — không thể tạo phiếu trả.";
   if (raw.includes("return_not_draft"))
@@ -271,6 +276,7 @@ function mapReturnRpcError(raw: string | undefined): string {
     return "Lý do hoặc cách xử lý không hợp lệ.";
   if (raw.includes("ingredient_not_found"))
     return "Không tìm thấy nguyên liệu.";
-  if (raw.includes("no_lines")) return "Phải có ít nhất 1 dòng trong phiếu trả.";
+  if (raw.includes("no_lines"))
+    return "Phải có ít nhất 1 dòng trong phiếu trả.";
   return "Không thể xử lý phiếu trả hàng NCC.";
 }

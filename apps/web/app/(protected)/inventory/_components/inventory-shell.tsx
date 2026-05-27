@@ -319,7 +319,9 @@ export function InventoryShell({
         headerExtras: branchFilter,
         mobileTopBar: isMobile ? (
           <MobileTopBar siteName={effectiveSiteName} />
-        ) : branchFilter,
+        ) : (
+          branchFilter
+        ),
       }}
       collapsible="icon"
     >

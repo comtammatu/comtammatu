@@ -69,7 +69,7 @@ test.describe("POS-07 Sửa đơn — chuyển bàn / hủy / tách / gộp", ()
       id: "step-01-more-menu",
       flowId: FLOW,
       module: MODULE,
-      step: { number: 1, total: TOTAL, title: "Mở menu \"Khác…\"" },
+      step: { number: 1, total: TOTAL, title: 'Mở menu "Khác…"' },
       setup: async (p) => {
         await gotoOrderDetail(p, ctx.branchId);
         await openMoreMenu(p);

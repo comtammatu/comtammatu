@@ -12,7 +12,11 @@ export async function sendRawLAN(
     const done = (err?: Error) => {
       if (settled) return;
       settled = true;
-      try { sock.destroy(); } catch { /* ignore */ }
+      try {
+        sock.destroy();
+      } catch {
+        /* ignore */
+      }
       err ? reject(err) : resolve();
     };
     sock.setTimeout(timeoutMs, () =>

@@ -184,10 +184,20 @@ function OrderDetailLoadingFixture() {
           {ORDER_DETAIL_LOADING_TEXT.payment} · {formatVND(165000)}
         </Button>
         <div className="flex gap-2">
-          <Button type="button" variant="outline" size="touch" className="flex-1">
+          <Button
+            type="button"
+            variant="outline"
+            size="touch"
+            className="flex-1"
+          >
             {ORDER_DETAIL_LOADING_TEXT.append}
           </Button>
-          <Button type="button" variant="secondary" size="touch" className="flex-1">
+          <Button
+            type="button"
+            variant="secondary"
+            size="touch"
+            className="flex-1"
+          >
             {ORDER_DETAIL_LOADING_TEXT.served}
           </Button>
           <Button
@@ -510,7 +520,9 @@ export function OrderDetailSheet({
                   return;
                 }
                 if (mergedInto) {
-                  notify.warning("Đơn đã được gộp sang đơn khác — đóng chi tiết.");
+                  notify.warning(
+                    "Đơn đã được gộp sang đơn khác — đóng chi tiết.",
+                  );
                   onCloseRef.current();
                   return;
                 }
@@ -917,7 +929,9 @@ export function OrderDetailSheet({
         idempotencyKey,
       });
       if (r.success) {
-        notify.success("Đã gộp đơn. Vui lòng in lại tạm tính của đơn nhận nếu cần.");
+        notify.success(
+          "Đã gộp đơn. Vui lòng in lại tạm tính của đơn nhận nếu cần.",
+        );
         setShowMerge(false);
         await onOrderUpdated?.();
         // Source order is now cancelled — close the sheet so cashier focuses
@@ -990,9 +1004,7 @@ export function OrderDetailSheet({
     data?.order_type === "dine_in" &&
     activeUnitCount >= 2;
   const tableSiblingCount =
-    data?.table_id != null
-      ? (orderCountByTable?.get(data.table_id) ?? 0)
-      : 0;
+    data?.table_id != null ? (orderCountByTable?.get(data.table_id) ?? 0) : 0;
   const canShowMerge =
     canMutateUnpaidOrder &&
     data?.order_type === "dine_in" &&
@@ -1138,7 +1150,10 @@ export function OrderDetailSheet({
             <>
               {data.profiles?.full_name && (
                 <p className="px-3 pt-2 text-xs text-muted-foreground sm:px-4">
-                  Người order: <span className="font-medium text-foreground">{data.profiles.full_name}</span>
+                  Người order:{" "}
+                  <span className="font-medium text-foreground">
+                    {data.profiles.full_name}
+                  </span>
                 </p>
               )}
               <ScrollArea className="min-h-0 w-full min-w-0 max-w-full flex-1 overflow-hidden">

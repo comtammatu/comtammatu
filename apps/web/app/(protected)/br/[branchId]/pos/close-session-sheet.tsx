@@ -95,7 +95,9 @@ export function CloseSessionSheet({
         note.trim() || undefined,
       );
       if (result.success && result.data) {
-        const payload = result.data as CloseSummary & { print_warning?: string };
+        const payload = result.data as CloseSummary & {
+          print_warning?: string;
+        };
         setSummary(payload);
         setStep("reconcile");
         // D8: variance breach giờ chỉ là cảnh báo. Server đã insert
@@ -185,8 +187,8 @@ export function CloseSessionSheet({
                     className="resize-none text-base"
                   />
                   <p className="text-sm text-muted-foreground">
-                    Nếu lệch quỹ vượt ngưỡng, hệ thống sẽ tự động gửi
-                    cảnh báo cho quản lý. Ca vẫn đóng bình thường.
+                    Nếu lệch quỹ vượt ngưỡng, hệ thống sẽ tự động gửi cảnh báo
+                    cho quản lý. Ca vẫn đóng bình thường.
                   </p>
                 </div>
               </div>

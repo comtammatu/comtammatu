@@ -27,8 +27,9 @@ interface OperationalPwaContextValue {
   clearInstallPrompt: () => void;
 }
 
-const OperationalPwaContext =
-  createContext<OperationalPwaContextValue | null>(null);
+const OperationalPwaContext = createContext<OperationalPwaContextValue | null>(
+  null,
+);
 
 function isIosLikePlatform(): boolean {
   const navigatorWithTouchPoints = navigator as Navigator & {

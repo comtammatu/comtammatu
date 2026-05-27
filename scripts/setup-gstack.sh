@@ -1,10 +1,10 @@
 #!/bin/bash
-# Install gstack skills for this project
+# Install gstack skills for this user
 # Run once after cloning: ./scripts/setup-gstack.sh
 
 set -e
 
-GSTACK_DIR=".claude/skills/gstack"
+GSTACK_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/gstack"
 
 if [ -d "$GSTACK_DIR" ]; then
   echo "gstack already installed. Run /gstack-upgrade to update."

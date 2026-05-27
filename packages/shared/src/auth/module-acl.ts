@@ -48,13 +48,25 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   },
   inventory: {
     path: "/inventory",
-    allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager", "warehouse_manager", "production_manager"],
+    allowedRoles: [
+      "owner",
+      "super_manager",
+      "area_manager",
+      "branch_manager",
+      "warehouse_manager",
+      "production_manager",
+    ],
     label: getModuleLabelVi("inventory"),
   },
   /** NCC, PO, GRN, HĐ NCC, công thức — kho tổng + bếp TT */
   inventory_procurement: {
     path: "/inventory/suppliers",
-    allowedRoles: ["owner", "super_manager", "warehouse_manager", "production_manager"],
+    allowedRoles: [
+      "owner",
+      "super_manager",
+      "warehouse_manager",
+      "production_manager",
+    ],
     label: getModuleLabelVi("inventory_procurement"),
   },
   /**
@@ -69,7 +81,13 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   },
   orders: {
     path: "/orders",
-    allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager", "cashier"],
+    allowedRoles: [
+      "owner",
+      "super_manager",
+      "area_manager",
+      "branch_manager",
+      "cashier",
+    ],
     label: getModuleLabelVi("orders"),
   },
   staff: {

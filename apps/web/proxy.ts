@@ -94,9 +94,9 @@ export async function proxy(request: NextRequest) {
   // Loud warning once per warm Edge instance when production runs without the
   // feedback host configured. Mirrors POS network gate kill-switch pattern.
   if (
-    process.env.NODE_ENV === "production"
-    && !feedbackHost
-    && !FEEDBACK_HOST_UNSET_WARNED
+    process.env.NODE_ENV === "production" &&
+    !feedbackHost &&
+    !FEEDBACK_HOST_UNSET_WARNED
   ) {
     console.warn(
       "[host-gate] NEXT_PUBLIC_FEEDBACK_HOST unset in production — feedback /r/* shares origin with admin app. See regressions.md FEEDBACK-HOST-SPLIT-COOKIE-DOMAIN-MUST-BE-HOST-ONLY.",
@@ -254,7 +254,8 @@ export async function proxy(request: NextRequest) {
       moduleKey === "branch_settings" ||
       moduleKey === "branch_menu_limits"
     ) {
-      const routePath = surface === "beta" ? stripBetaPrefix(pathname) : pathname;
+      const routePath =
+        surface === "beta" ? stripBetaPrefix(pathname) : pathname;
       const pathMatch = routePath.match(/^\/br\/(\d+)\//);
       if (pathMatch) {
         const routeBranchId = Number(pathMatch[1]);
@@ -280,7 +281,11 @@ export async function proxy(request: NextRequest) {
           );
         }
 
-        if (moduleKey === "pos" || moduleKey === "kds" || moduleKey === "runner") {
+        if (
+          moduleKey === "pos" ||
+          moduleKey === "kds" ||
+          moduleKey === "runner"
+        ) {
           const { data: branchRow } = await supabase
             .from("branches")
             .select("id, branch_kind")
@@ -315,18 +320,18 @@ export async function proxy(request: NextRequest) {
           // branch_id is null), so they never reach this point — no explicit
           // bypass needed here.
           const networkGateEnabled =
-            process.env.NODE_ENV === "production"
-            && process.env.POS_NETWORK_GATE !== "off";
+            process.env.NODE_ENV === "production" &&
+            process.env.POS_NETWORK_GATE !== "off";
 
           // Loud kill-switch: emit one warning per warm Edge instance when
           // POS_NETWORK_GATE=off in production. SIEM/log-drain ingests this
           // for alerting. Implements regressions.md
           // POS-NETWORK-GATE-GRACE-IS-SECURITY-CEILING.
           if (
-            !networkGateEnabled
-            && process.env.NODE_ENV === "production"
-            && process.env.POS_NETWORK_GATE === "off"
-            && !NETWORK_GATE_OFF_WARNED
+            !networkGateEnabled &&
+            process.env.NODE_ENV === "production" &&
+            process.env.POS_NETWORK_GATE === "off" &&
+            !NETWORK_GATE_OFF_WARNED
           ) {
             console.warn(
               "[network-gate] disabled via POS_NETWORK_GATE=off — POS/KDS/Runner perimeter open. See regressions.md POS-NETWORK-GATE-GRACE-IS-SECURITY-CEILING.",

@@ -19,7 +19,12 @@ import { TrendSparkline, type TrendPoint } from "./trend-sparkline";
 //   │ ░░░░░░░░░░░░░░░░░░░░░ sparkline  │
 //   └──────────────────────────────────┘
 
-export type KpiTone = "neutral" | "primary" | "success" | "warning" | "destructive";
+export type KpiTone =
+  | "neutral"
+  | "primary"
+  | "success"
+  | "warning"
+  | "destructive";
 
 const VALUE_TONE: Record<KpiTone, string> = {
   neutral: "text-foreground",
@@ -95,15 +100,9 @@ export function KpiCard({
         {value}
       </p>
       {delta ? (
-        <CompareChip
-          label={delta.label}
-          tone={delta.tone}
-          hint={compareHint}
-        />
+        <CompareChip label={delta.label} tone={delta.tone} hint={compareHint} />
       ) : null}
-      {hint ? (
-        <p className="text-xs text-muted-foreground">{hint}</p>
-      ) : null}
+      {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
       {sparkline && sparkline.length > 0 ? (
         <div className="-mx-1 -mb-1 mt-2 h-8">
           <TrendSparkline

@@ -8,7 +8,10 @@ import { getAuthContextWithPermission } from "@/_lib/auth";
 
 const MANAGER_ROLES = ["owner", "super_manager", "branch_manager"] as const;
 
-const jobIdSchema = z.coerce.number().int().positive({ error: "Job ID không hợp lệ" });
+const jobIdSchema = z.coerce
+  .number()
+  .int()
+  .positive({ error: "Job ID không hợp lệ" });
 
 export async function retryJobFromMonitor(
   jobId: number,

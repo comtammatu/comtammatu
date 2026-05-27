@@ -39,8 +39,7 @@ function makeBatch(
   return {
     id: overrides.id ?? 1,
     order_id: overrides.order_id ?? 10,
-    kitchen_ticket_number:
-      overrides.kitchen_ticket_number ?? "PB-260525-001",
+    kitchen_ticket_number: overrides.kitchen_ticket_number ?? "PB-260525-001",
     send_seq: overrides.send_seq ?? (kind === "append" ? 2 : 1),
     kind: overrides.kind ?? kind,
     created_at: overrides.created_at ?? "2026-05-25T01:00:00.000Z",

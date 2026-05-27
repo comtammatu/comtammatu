@@ -19,7 +19,7 @@
 --
 -- Threshold 70 → eligible for auto-approve.
 --
--- Spec: docs/plan/inventory-redesign.md §Q4b + §Q6
+-- Current docs: docs/ref/inventory.md + docs/ref/inventory-sop.md
 -- =============================================================
 
 

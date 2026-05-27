@@ -25,7 +25,11 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { Trash as IconTrash } from "lucide-react";
 import { cn } from "@comtammatu/ui";
 import { SearchableSelect } from "@/(protected)/inventory/_components/searchable-select";
-import { WasteReasonDropdown, isAlwaysTier2Reason, isRiskyReason } from "@/(protected)/inventory/_components/waste-reason-dropdown";
+import {
+  WasteReasonDropdown,
+  isAlwaysTier2Reason,
+  isRiskyReason,
+} from "@/(protected)/inventory/_components/waste-reason-dropdown";
 import { WasteTierBadge } from "@/(protected)/inventory/_components/waste-tier-badge";
 import { WastePhotoUpload } from "@/(protected)/inventory/_components/waste-photo-upload";
 import { ShiftCapMeter } from "@/(protected)/inventory/_components/shift-cap-meter";
@@ -73,8 +77,7 @@ function previewTier(line: {
   branchCap: number;
 }): { tier: 0 | 1 | 2; photoRequired: boolean; approvalRequired: boolean } {
   const photoRequired =
-    line.value >= TIER_1_VALUE ||
-    isRiskyReason(line.reasonCode);
+    line.value >= TIER_1_VALUE || isRiskyReason(line.reasonCode);
   const approvalRequired =
     line.value >= TIER_2_VALUE ||
     isAlwaysTier2Reason(line.reasonCode) ||
@@ -150,7 +153,9 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
   }
 
   function removeLine(uid: string) {
-    setLines((prev) => (prev.length <= 1 ? prev : prev.filter((l) => l.uid !== uid)));
+    setLines((prev) =>
+      prev.length <= 1 ? prev : prev.filter((l) => l.uid !== uid),
+    );
   }
 
   function addLine() {
@@ -268,23 +273,25 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
 
       <Card>
         <CardHeader>
-          <CardTitle>
-            {messages.inventory.waste.generalInfoTitle}
-          </CardTitle>
+          <CardTitle>{messages.inventory.waste.generalInfoTitle}</CardTitle>
           <CardDescription>
             {messages.inventory.waste.generalInfoDescription}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <div>
-            <Label htmlFor="waste-loc">{messages.inventory.waste.location}</Label>
+            <Label htmlFor="waste-loc">
+              {messages.inventory.waste.location}
+            </Label>
             <Select
               value={locationId !== null ? String(locationId) : ""}
               onValueChange={(v) => setLocationId(Number(v))}
               disabled={isSubmitting}
             >
               <SelectTrigger id="waste-loc">
-                <SelectValue placeholder={messages.inventory.waste.chooseLocation} />
+                <SelectValue
+                  placeholder={messages.inventory.waste.chooseLocation}
+                />
               </SelectTrigger>
               <SelectContent>
                 {context.locations.map((l) => (
@@ -358,7 +365,9 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
                     <SearchableSelect
                       options={ingredientOptions}
                       value={
-                        line.ingredientId !== null ? String(line.ingredientId) : ""
+                        line.ingredientId !== null
+                          ? String(line.ingredientId)
+                          : ""
                       }
                       onValueChange={(v) => handleIngredientChange(line.uid, v)}
                       placeholder={messages.inventory.waste.chooseIngredient}
@@ -378,7 +387,9 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <Label htmlFor={`qty-${line.uid}`}>{FORM_VI.quantity}</Label>
+                      <Label htmlFor={`qty-${line.uid}`}>
+                        {FORM_VI.quantity}
+                      </Label>
                       <FormattedNumberInput
                         id={`qty-${line.uid}`}
                         maxFractionDigits={3}
@@ -411,13 +422,13 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
                   </div>
 
                   <div>
-                    <Label htmlFor={`reason-${line.uid}`}>{FORM_VI.reason}</Label>
+                    <Label htmlFor={`reason-${line.uid}`}>
+                      {FORM_VI.reason}
+                    </Label>
                     <WasteReasonDropdown
                       id={`reason-${line.uid}`}
                       value={line.reasonCode as never}
-                      onChange={(v) =>
-                        updateLine(line.uid, { reasonCode: v })
-                      }
+                      onChange={(v) => updateLine(line.uid, { reasonCode: v })}
                       disabled={isSubmitting}
                     />
                   </div>
@@ -448,7 +459,9 @@ export function WasteCreateClient({ context }: { context: WasteFormContext }) {
                     <Textarea
                       id={`note-${line.uid}`}
                       value={line.note}
-                      onChange={(e) => updateLine(line.uid, { note: e.target.value })}
+                      onChange={(e) =>
+                        updateLine(line.uid, { note: e.target.value })
+                      }
                       disabled={isSubmitting}
                       rows={2}
                     />

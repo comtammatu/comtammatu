@@ -128,7 +128,11 @@ export function StaffFormDialog({
         phone: values.phone,
         role: values.role,
       };
-      if (!isTenantLevel && values.branch_id && values.branch_id !== NO_BRANCH) {
+      if (
+        !isTenantLevel &&
+        values.branch_id &&
+        values.branch_id !== NO_BRANCH
+      ) {
         payload.branch_id = values.branch_id;
       }
       if (!isEdit) {

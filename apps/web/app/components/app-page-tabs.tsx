@@ -34,7 +34,11 @@ export function AppPageTabs({
     <UrlTabs paramKey={paramKey} defaultValue={initial} className={className}>
       <TabsList>
         {items.map((item) => (
-          <TabsTrigger key={item.value} value={item.value} disabled={item.disabled}>
+          <TabsTrigger
+            key={item.value}
+            value={item.value}
+            disabled={item.disabled}
+          >
             <span>{item.label}</span>
             {typeof item.count === "number" ? (
               <Badge variant="secondary" className="ml-1.5 font-mono">

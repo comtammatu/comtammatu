@@ -3,20 +3,17 @@ import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "../lib/utils";
 
-const noteCalloutVariants = cva(
-  "flex items-start gap-2 rounded-md px-3 py-2",
-  {
-    variants: {
-      tone: {
-        warning: "bg-warning/15 text-warning-foreground",
-        muted: "border bg-muted/40 text-foreground",
-      },
-    },
-    defaultVariants: {
-      tone: "muted",
+const noteCalloutVariants = cva("flex items-start gap-2 rounded-md px-3 py-2", {
+  variants: {
+    tone: {
+      warning: "bg-warning/15 text-warning-foreground",
+      muted: "border bg-muted/40 text-foreground",
     },
   },
-);
+  defaultVariants: {
+    tone: "muted",
+  },
+});
 
 type NoteCalloutProps = React.ComponentProps<"div"> &
   VariantProps<typeof noteCalloutVariants> & {

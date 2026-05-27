@@ -779,7 +779,9 @@ export function ProductionRecipePanel({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isPending}>{ACTIONS_VI.cancel}</AlertDialogCancel>
+            <AlertDialogCancel disabled={isPending}>
+              {ACTIONS_VI.cancel}
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleRecipeGroupDelete}
               disabled={isPending}

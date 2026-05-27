@@ -27,8 +27,7 @@ export const CANVAS_PADDING = 0;
 /** Kích thước composed canvas (đầu ra cuối cùng). */
 export const CANVAS = {
   width: VIEWPORT.width + BEZEL * 2 + CANVAS_PADDING * 2,
-  height:
-    VIEWPORT.height + BEZEL * 2 + CANVAS_PADDING * 2 + HEADER_HEIGHT,
+  height: VIEWPORT.height + BEZEL * 2 + CANVAS_PADDING * 2 + HEADER_HEIGHT,
 } as const;
 
 const __filename = fileURLToPath(import.meta.url);

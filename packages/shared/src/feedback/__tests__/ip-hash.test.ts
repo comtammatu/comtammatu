@@ -25,5 +25,8 @@ test("hashIp different IP + same salt → different hash", async () => {
 
 test("hashIp throws on empty inputs", async () => {
   await assert.rejects(() => hashIp("", "salt"), /ip_hash_inputs_required/);
-  await assert.rejects(() => hashIp("203.0.113.42", ""), /ip_hash_inputs_required/);
+  await assert.rejects(
+    () => hashIp("203.0.113.42", ""),
+    /ip_hash_inputs_required/,
+  );
 });

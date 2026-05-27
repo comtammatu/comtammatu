@@ -57,7 +57,10 @@ export function MultiOrderTablePicker({
       >
         <DrawerHeader className="shrink-0">
           <DrawerTitle>
-            {messages.pos.multiOrderTablePicker.title(tableNumber, orders.length)}
+            {messages.pos.multiOrderTablePicker.title(
+              tableNumber,
+              orders.length,
+            )}
           </DrawerTitle>
           <DrawerDescription className="sr-only">
             {messages.pos.multiOrderTablePicker.description}

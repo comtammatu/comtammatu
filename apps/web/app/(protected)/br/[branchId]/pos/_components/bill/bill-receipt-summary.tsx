@@ -252,21 +252,25 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
           <span>{messages.pos.receipt.total}</span>
           <span>{formatVND(order.total_amount)}</span>
         </div>
-        {isPaid && order.payment_method === "cash" && order.cash_received != null && (
-          <>
-            <Separator className="my-1" />
-            <div className="flex justify-between">
-              <span>{messages.pos.receipt.cashReceived}</span>
-              <span className="tabular-nums">{formatVND(order.cash_received)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>{messages.pos.receipt.cashChange}</span>
-              <span className="tabular-nums font-medium">
-                {formatVND(order.cash_change ?? 0)}
-              </span>
-            </div>
-          </>
-        )}
+        {isPaid &&
+          order.payment_method === "cash" &&
+          order.cash_received != null && (
+            <>
+              <Separator className="my-1" />
+              <div className="flex justify-between">
+                <span>{messages.pos.receipt.cashReceived}</span>
+                <span className="tabular-nums">
+                  {formatVND(order.cash_received)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>{messages.pos.receipt.cashChange}</span>
+                <span className="tabular-nums font-medium">
+                  {formatVND(order.cash_change ?? 0)}
+                </span>
+              </div>
+            </>
+          )}
       </div>
 
       {order.note && (

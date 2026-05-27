@@ -13,7 +13,7 @@
 --   (H) RPC create_waste_from_order (POS/KDS adapter)
 --   (I) Weekly cron: waste top report
 --
--- Tier semantics (from docs/plan/inventory-redesign.md §Q1 §B4):
+-- Tier semantics (current docs: docs/ref/inventory.md + docs/ref/inventory-sop.md):
 --   tier 0 = no-gate
 --   tier 1 = photo required (value >= 150k, qty_ratio >= 50%,
 --            risky reason, rolling-15min same-user-same-sku >= 150k)

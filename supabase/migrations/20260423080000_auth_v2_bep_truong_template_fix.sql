@@ -6,8 +6,8 @@
 --   * inventory:transfer_create — ship finished goods CK → branch warehouses
 --   * procurement:read         — visibility of PO/GRN for arriving ingredients
 --
--- Context: workflow "Bếp trung tâm → chi nhánh" documented in
--- docs/plan/inventory-branch-kitchen-model.md §8.2 cannot run end-to-end because
+-- Context: workflow "Bếp trung tâm → chi nhánh" in the current Inventory
+-- contract cannot run end-to-end because
 -- the seed template (20260422120001_auth_v2_seed_catalog.sql:178) shipped with
 -- 7 keys and missed the above 3.
 --

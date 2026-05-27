@@ -113,7 +113,10 @@ export async function POST(request: Request) {
 
   if (pickErr) {
     console.error("[cron/telegram-flush] pick failed code=%s", pickErr.code);
-    return NextResponse.json({ ok: false, error: "pick failed" }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, error: "pick failed" },
+      { status: 500 },
+    );
   }
 
   counters.picked = outboxRows?.length ?? 0;
@@ -122,7 +125,9 @@ export async function POST(request: Request) {
     // Load feedback (tenant_id needed for cross-tenant defense filter on destinations)
     const { data: fb } = await supabase
       .from("feedbacks")
-      .select("id, tenant_id, rating, comment, branch_id, qr_code_id, phone, created_at")
+      .select(
+        "id, tenant_id, rating, comment, branch_id, qr_code_id, phone, created_at",
+      )
       .eq("id", row.feedback_id)
       .maybeSingle();
 

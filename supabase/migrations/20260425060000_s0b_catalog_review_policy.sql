@@ -14,7 +14,7 @@
 -- to the sprint that creates each MV (S1 / S4 / S5). Regression
 -- rule RLS-NOT-APPLIED-ON-MV enforces the pattern.
 --
--- Spec: docs/plan/inventory-redesign.md §Q4a + §B3
+-- Current docs: docs/ref/inventory.md + docs/ref/inventory-sop.md
 -- =============================================================
 
 -- ---------- Category-level review policy table ----------------

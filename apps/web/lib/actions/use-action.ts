@@ -1,11 +1,8 @@
-"use client"
+"use client";
 
-import { useCallback, useTransition } from "react"
-import type { ActionResult } from "@comtammatu/shared/types"
-import {
-  handleActionResult,
-  type HandleOptions,
-} from "./handle-action-result"
+import { useCallback, useTransition } from "react";
+import type { ActionResult } from "@comtammatu/shared/types";
+import { handleActionResult, type HandleOptions } from "./handle-action-result";
 
 /**
  * Hook bọc `useTransition` + `handleActionResult` cho Server Actions trả về
@@ -20,17 +17,17 @@ export function useAction<TArgs extends unknown[], TData>(
   action: (...args: TArgs) => Promise<ActionResult<TData>>,
   defaults?: HandleOptions<TData>,
 ) {
-  const [isPending, startTransition] = useTransition()
+  const [isPending, startTransition] = useTransition();
 
   const run = useCallback(
     (args: TArgs, override?: HandleOptions<TData>) => {
       startTransition(async () => {
-        const result = await action(...args)
-        handleActionResult(result, { ...defaults, ...override })
-      })
+        const result = await action(...args);
+        handleActionResult(result, { ...defaults, ...override });
+      });
     },
     [action, defaults],
-  )
+  );
 
-  return { run, isPending }
+  return { run, isPending };
 }

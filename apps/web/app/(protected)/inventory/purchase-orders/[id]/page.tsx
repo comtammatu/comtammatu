@@ -101,5 +101,12 @@ export default async function PODetailPage({
     ? ((ingredientsRes.data ?? []) as IngredientRow[])
     : [];
 
-  return <PODetailClient po={po} ingredients={ingredients} isOwner={isOwner} auditLogs={auditLogs} />;
+  return (
+    <PODetailClient
+      po={po}
+      ingredients={ingredients}
+      isOwner={isOwner}
+      auditLogs={auditLogs}
+    />
+  );
 }

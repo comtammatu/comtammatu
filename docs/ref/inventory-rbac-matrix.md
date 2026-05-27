@@ -188,7 +188,6 @@ Một số RPC vẫn dùng `auth_role()` như guard phụ:
 
 - [inventory.md](inventory.md) — business rules nghiệp vụ
 - [inventory-sop.md](inventory-sop.md) — Standard Operating Procedure
-- [inventory-location-ledger.md](../archive/plan/inventory-location-ledger.md) — pilot contract cho Kho ↔ Bếp model (CW/CK)
 - [auth.md](../modules/auth.md) — Auth v2 architecture
 - [permissions.ts](../../packages/shared/src/auth/permissions.ts) — permission catalog source
 - [module-acl.ts](../../packages/shared/src/auth/module-acl.ts) — route-level ACL source

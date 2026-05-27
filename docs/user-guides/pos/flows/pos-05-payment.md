@@ -159,12 +159,12 @@ URL: `/br/{branchId}/pos` (qua bàn occupied → đơn → "Thanh toán")
 
 ### Code path
 
-- **Bill sheet (mobile drawer / desktop side):** [apps/web/app/(protected)/br/[branchId]/pos/\_components/bill/bill-receipt-sheet.tsx](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/_components/bill/bill-receipt-sheet.tsx)
-- **Payment picker:** [apps/web/app/(protected)/br/[branchId]/pos/\_components/bill/bill-receipt-payment-picker.tsx](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/_components/bill/bill-receipt-payment-picker.tsx)
+- **Bill sheet (mobile drawer / desktop side):** [apps/web/app/(protected)/br/[branchId]/pos/\_components/bill/bill-receipt-sheet.tsx](<../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/_components/bill/bill-receipt-sheet.tsx>)
+- **Payment picker:** [apps/web/app/(protected)/br/[branchId]/pos/\_components/bill/bill-receipt-payment-picker.tsx](<../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/_components/bill/bill-receipt-payment-picker.tsx>)
 - **Cash tendered logic:** trong `bill-receipt-sheet.tsx` (không có dialog riêng — tất cả trong 1 sheet)
-- **Invoice form:** [apps/web/app/(protected)/br/[branchId]/pos/\_components/bill/invoice-form-section.tsx](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/_components/bill/invoice-form-section.tsx)
-- **Server actions:** [apps/web/app/(protected)/br/[branchId]/pos/payment-actions.ts](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/payment-actions.ts)
-- **Print actions:** [apps/web/app/(protected)/br/[branchId]/pos/print-actions.ts](../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/print-actions.ts)
+- **Invoice form:** [apps/web/app/(protected)/br/[branchId]/pos/\_components/bill/invoice-form-section.tsx](<../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/_components/bill/invoice-form-section.tsx>)
+- **Server actions:** [apps/web/app/(protected)/br/[branchId]/pos/payment-actions.ts](<../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/payment-actions.ts>)
+- **Print actions:** [apps/web/app/(protected)/br/[branchId]/pos/print-actions.ts](<../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/print-actions.ts>)
 
 ### Database
 
@@ -186,7 +186,7 @@ URL: `/br/{branchId}/pos` (qua bàn occupied → đơn → "Thanh toán")
 
 ### Tham chiếu thiết kế
 
-- Order lifecycle: [docs/archive/plan/m2-order-lifecycle.md](../../../archive/plan/m2-order-lifecycle.md)
+- Current POS scope: [tasks/todo.md](../../../../tasks/todo.md)
 - HĐĐT: [docs/ref/einvoice-tax.md](../../../ref/einvoice-tax.md)
 - Regression rules: [tasks/regressions.md](../../../../tasks/regressions.md)
 

@@ -41,13 +41,19 @@ function timingSafeEquals(a: string, b: string): boolean {
 }
 
 function unauthorized() {
-  return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+  return NextResponse.json(
+    { ok: false, error: "unauthorized" },
+    { status: 401 },
+  );
 }
 
 export async function POST(request: Request) {
   const expected = getCronSecret();
   if (!expected) {
-    return NextResponse.json({ ok: false, error: "not configured" }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, error: "not configured" },
+      { status: 500 },
+    );
   }
 
   const authHeader = request.headers.get("authorization");
@@ -62,12 +68,18 @@ export async function POST(request: Request) {
   try {
     rawBody = await request.json();
   } catch {
-    return NextResponse.json({ ok: false, error: "invalid json" }, { status: 400 });
+    return NextResponse.json(
+      { ok: false, error: "invalid json" },
+      { status: 400 },
+    );
   }
 
   const parsed = bodySchema.safeParse(rawBody);
   if (!parsed.success) {
-    return NextResponse.json({ ok: false, error: "invalid body" }, { status: 400 });
+    return NextResponse.json(
+      { ok: false, error: "invalid body" },
+      { status: 400 },
+    );
   }
 
   const { feedback_id } = parsed.data;
@@ -83,17 +95,28 @@ export async function POST(request: Request) {
     .maybeSingle();
 
   if (!fb) {
-    return NextResponse.json({ ok: false, error: "feedback_not_found" }, { status: 404 });
+    return NextResponse.json(
+      { ok: false, error: "feedback_not_found" },
+      { status: 404 },
+    );
   }
 
   // Skip if already processed
   if (fb.ai_processed_at !== null) {
-    return NextResponse.json({ ok: true, skipped: true, reason: "already_processed" });
+    return NextResponse.json({
+      ok: true,
+      skipped: true,
+      reason: "already_processed",
+    });
   }
 
   // Load branch name + qr label for context
   const [{ data: branch }, { data: qr }] = await Promise.all([
-    supabase.from("branches").select("name").eq("id", fb.branch_id).maybeSingle(),
+    supabase
+      .from("branches")
+      .select("name")
+      .eq("id", fb.branch_id)
+      .maybeSingle(),
     supabase
       .from("feedback_qr_codes")
       .select("label")

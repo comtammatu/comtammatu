@@ -2,7 +2,14 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Key as IconKey, Ellipsis as IconDots, Pencil as IconPencil, ToggleLeft as IconToggleLeft, ToggleRight as IconToggleRight, Users as IconUsers } from "lucide-react";
+import {
+  Key as IconKey,
+  Ellipsis as IconDots,
+  Pencil as IconPencil,
+  ToggleLeft as IconToggleLeft,
+  ToggleRight as IconToggleRight,
+  Users as IconUsers,
+} from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -65,10 +72,7 @@ export function StaffTable({ staff, branches }: StaffTableProps) {
   return (
     <>
       {staff.length === 0 ? (
-        <EmptyStatePanel
-          title="Chưa có nhân viên nào"
-          icon={<IconUsers />}
-        />
+        <EmptyStatePanel title="Chưa có nhân viên nào" icon={<IconUsers />} />
       ) : null}
 
       <div className="space-y-3 md:hidden">

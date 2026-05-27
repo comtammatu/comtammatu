@@ -18,7 +18,9 @@ const branchSchema = z.object({
   name: z.string().min(1, { error: "Tên điểm vận hành không được để trống" }),
   address: optionalText,
   phone: optionalText,
-  branchKind: z.enum(["branch", "central_kitchen", "central_warehouse"]).default("branch"),
+  branchKind: z
+    .enum(["branch", "central_kitchen", "central_warehouse"])
+    .default("branch"),
 });
 
 const updateBranchSchema = branchSchema.extend({
@@ -148,4 +150,3 @@ export const toggleBranchActive = withAction(
     return { success: true };
   },
 );
-

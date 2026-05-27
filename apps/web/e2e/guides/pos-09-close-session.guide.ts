@@ -20,10 +20,7 @@
 
 import { test, type Page } from "@playwright/test";
 import { captureScenario } from "./_lib/capture";
-import {
-  ensureSingleOpenSession,
-  getCashierContext,
-} from "./_lib/fixtures";
+import { ensureSingleOpenSession, getCashierContext } from "./_lib/fixtures";
 
 const FLOW = "pos-09";
 const MODULE = "pos";
@@ -60,7 +57,7 @@ test.describe("POS-09 Đóng ca POS", () => {
       id: "step-01-tap-close-shift",
       flowId: FLOW,
       module: MODULE,
-      step: { number: 1, total: TOTAL, title: "Chạm \"Chốt ca\" trên header" },
+      step: { number: 1, total: TOTAL, title: 'Chạm "Chốt ca" trên header' },
       setup: async (p) => {
         await gotoPosMain(p, ctx.branchId);
       },
@@ -75,7 +72,7 @@ test.describe("POS-09 Đóng ca POS", () => {
           anchorX: 195,
           anchorY: 100,
           placement: "below",
-          text: "Cuối ca: chạm\n\"Chốt ca\" góc phải header",
+          text: 'Cuối ca: chạm\n"Chốt ca" góc phải header',
         },
       ],
     });

@@ -6,16 +6,16 @@ Mô hình vận hành production: **Trụ sở chính (HQ) → Kho Tổng → B�
 
 ## Modules
 
-| #   | Module               | Scope                                                                      | Status      |
-| --- | -------------------- | -------------------------------------------------------------------------- | ----------- |
-| M0  | Khung quản trị       | ERP cockpit, sidebar, foundation, executive reporting                      | SHIPPED     |
-| M1  | Menu                 | Categories, items, variants, modifiers, sides                              | SHIPPED     |
-| M2  | POS                  | Cart, table/zone, order lifecycle, bill, PWA installable                   | SHIPPED     |
-| M3  | KDS                  | Realtime queue, bump/complete, station config, partial-cancel ticket       | SHIPPED     |
-| M4  | Payment              | Cash + VietQR (EMVCo QR, cashier-confirm) + Momo (IPN webhook). All live in production.  | SHIPPED     |
-| M5  | Stock                | Ingredients, recipes, PO/GRN/3-way, stocktake, transfers, central kitchen  | SHIPPED     |
-| M6  | Finance              | Finance Basic, COA/Journal, BCTC TT200, reconciliation. HĐĐT active qua Viettel S-invoice | PARTIAL     |
-| M7  | Nhân sự & tiền lương | Employees, contracts, attendance, payslip. BHXH/PIT calc deferred          | PARTIAL     |
+| #   | Module               | Scope                                                                                     | Status  |
+| --- | -------------------- | ----------------------------------------------------------------------------------------- | ------- |
+| M0  | Khung quản trị       | ERP cockpit, sidebar, foundation, executive reporting                                     | SHIPPED |
+| M1  | Menu                 | Categories, items, variants, modifiers, sides                                             | SHIPPED |
+| M2  | POS                  | Cart, table/zone, order lifecycle, bill, PWA installable                                  | SHIPPED |
+| M3  | KDS                  | Realtime queue, bump/complete, station config, partial-cancel ticket                      | SHIPPED |
+| M4  | Payment              | Cash + VietQR (EMVCo QR, cashier-confirm) + Momo (IPN webhook). All live in production.   | SHIPPED |
+| M5  | Stock                | Ingredients, recipes, PO/GRN/3-way, stocktake, transfers, central kitchen                 | SHIPPED |
+| M6  | Finance              | Finance Basic, COA/Journal, BCTC TT200, reconciliation. HĐĐT active qua Viettel S-invoice | PARTIAL |
+| M7  | Nhân sự & tiền lương | Employees, contracts, attendance, payslip. BHXH/PIT calc deferred                         | PARTIAL |
 
 Active tracker: [`tasks/todo.md`](tasks/todo.md).
 
@@ -60,20 +60,20 @@ scripts/            # SQL seeds, lint helpers
 
 ## URL Routes
 
-| Path                          | Audience                | Surface                                       |
-| ----------------------------- | ----------------------- | --------------------------------------------- |
-| `/login`                      | Public                  | Authentication                                |
-| `/admin/*`                    | Manager+                | Dashboard, settings, staff, reports, CRM      |
-| `/menu`                       | Manager+                | Menu CRUD                                     |
-| `/inventory/*`                | Inventory roles         | Canonical inventory hub (PO, GRN, stocktake…) |
-| `/finance/*`                  | Finance roles           | COA, journal, statements, food-cost, periods  |
-| `/hr/*`                       | HR/payroll              | Payroll periods, payslips                     |
-| `/orders`                     | Manager+                | Cross-branch order browser                    |
-| `/notifications`              | All staff               | Notification center                           |
-| `/employee/*`                 | All staff               | Self-service: clock, schedule, payslip        |
-| `/br/[branchId]/pos`          | Cashier / waiter        | Point of Sale (PWA installable)               |
-| `/br/[branchId]/kds`          | Chef                    | Kitchen Display                               |
-| `/br/[branchId]/settings/*`   | Branch manager+         | Per-branch POS, tables, printers              |
+| Path                        | Audience         | Surface                                       |
+| --------------------------- | ---------------- | --------------------------------------------- |
+| `/login`                    | Public           | Authentication                                |
+| `/admin/*`                  | Manager+         | Dashboard, settings, staff, reports, CRM      |
+| `/menu`                     | Manager+         | Menu CRUD                                     |
+| `/inventory/*`              | Inventory roles  | Canonical inventory hub (PO, GRN, stocktake…) |
+| `/finance/*`                | Finance roles    | COA, journal, statements, food-cost, periods  |
+| `/hr/*`                     | HR/payroll       | Payroll periods, payslips                     |
+| `/orders`                   | Manager+         | Cross-branch order browser                    |
+| `/notifications`            | All staff        | Notification center                           |
+| `/employee/*`               | All staff        | Self-service: clock, schedule, payslip        |
+| `/br/[branchId]/pos`        | Cashier / waiter | Point of Sale (PWA installable)               |
+| `/br/[branchId]/kds`        | Chef             | Kitchen Display                               |
+| `/br/[branchId]/settings/*` | Branch manager+  | Per-branch POS, tables, printers              |
 
 Auth + ACL được enforce tại [`apps/web/proxy.ts`](apps/web/proxy.ts) qua Auth v2 (Position ⟂ Permission, RLS-first). Route catalog: [`packages/shared/src/auth/module-acl.ts`](packages/shared/src/auth/module-acl.ts).
 
@@ -111,18 +111,18 @@ pnpm --filter @comtammatu/web guides:capture     # Capture POS flow screenshots
 
 ## Documentation
 
-| Doc                                                            | Purpose                                          |
-| -------------------------------------------------------------- | ------------------------------------------------ |
-| [`AGENTS.md`](AGENTS.md)                                       | Canonical agent entrypoint + rule loading        |
-| [`docs/CODEBASE_MAP.md`](docs/CODEBASE_MAP.md)                 | Codebase map + hub files + module index          |
-| [`tasks/todo.md`](tasks/todo.md)                               | Active work tracker                              |
-| [`docs/plan/decisions.md`](docs/plan/decisions.md)             | Architecture decisions log                       |
-| [`docs/spec/architecture.md`](docs/spec/architecture.md)       | System architecture                              |
-| [`docs/spec/database-schema.md`](docs/spec/database-schema.md) | Database schema reference                        |
-| [`docs/spec/design-system.md`](docs/spec/design-system.md)     | Locked UI design-system contract                 |
-| [`docs/modules/auth.md`](docs/modules/auth.md)                 | Auth v2 — Position ⟂ Permission model            |
-| [`docs/ref/setup.md`](docs/ref/setup.md)                       | Full setup (MCP, Supabase hook, seed accounts)   |
-| [`tasks/regressions.md`](tasks/regressions.md)                 | Named regression rules — read before refactor    |
+| Doc                                                            | Purpose                                        |
+| -------------------------------------------------------------- | ---------------------------------------------- |
+| [`AGENTS.md`](AGENTS.md)                                       | Canonical agent entrypoint + rule loading      |
+| [`docs/CODEBASE_MAP.md`](docs/CODEBASE_MAP.md)                 | Codebase map + hub files + module index        |
+| [`tasks/todo.md`](tasks/todo.md)                               | Active work tracker                            |
+| [`docs/plan/decisions.md`](docs/plan/decisions.md)             | Architecture decisions log                     |
+| [`docs/spec/architecture.md`](docs/spec/architecture.md)       | System architecture                            |
+| [`docs/spec/database-schema.md`](docs/spec/database-schema.md) | Database schema reference                      |
+| [`docs/spec/design-system.md`](docs/spec/design-system.md)     | Locked UI design-system contract               |
+| [`docs/modules/auth.md`](docs/modules/auth.md)                 | Auth v2 — Position ⟂ Permission model          |
+| [`docs/ref/setup.md`](docs/ref/setup.md)                       | Full setup (MCP, Supabase hook, seed accounts) |
+| [`tasks/regressions.md`](tasks/regressions.md)                 | Named regression rules — read before refactor  |
 
 ## License
 

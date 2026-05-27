@@ -2,7 +2,14 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { TriangleAlert as IconAlertTriangle, CircleCheck as IconCircleCheck, ChevronRight as IconChevronRight, Pencil as IconPencil, Search as IconSearch, Trash as IconTrash } from "lucide-react";
+import {
+  TriangleAlert as IconAlertTriangle,
+  CircleCheck as IconCircleCheck,
+  ChevronRight as IconChevronRight,
+  Pencil as IconPencil,
+  Search as IconSearch,
+  Trash as IconTrash,
+} from "lucide-react";
 import {
   InputGroup,
   InputGroupAddon,
@@ -81,7 +88,9 @@ export function GrnCreateClient({
   // server state for UI rendering; lazy-create on first saveLine when no
   // draft exists yet.
   const [draft, setDraft] = React.useState<GrnDraft>(() => ({
-    draftId: existingDraft ? `srv-${existingDraft.id}` : `pending-${supplier.id}`,
+    draftId: existingDraft
+      ? `srv-${existingDraft.id}`
+      : `pending-${supplier.id}`,
     supplierId: supplier.id,
     supplierName: supplier.name,
     branchId,
@@ -191,9 +200,7 @@ export function GrnCreateClient({
       );
       applyLines(
         idx >= 0
-          ? draft.lines.map((l, i) =>
-              i === idx ? { ...l, ...nextLine } : l,
-            )
+          ? draft.lines.map((l, i) => (i === idx ? { ...l, ...nextLine } : l))
           : [...draft.lines, nextLine as ServerDraftLine],
       );
       closeEdit();
@@ -207,9 +214,9 @@ export function GrnCreateClient({
   }
 
   async function removeLine(ingredientId: number) {
-    const target = draft.lines.find(
-      (l) => l.ingredientId === ingredientId,
-    ) as ServerDraftLine | undefined;
+    const target = draft.lines.find((l) => l.ingredientId === ingredientId) as
+      | ServerDraftLine
+      | undefined;
     if (target?.lineId && serverGrnId !== null) {
       const res = await deleteGrnLine({
         grnId: serverGrnId,
@@ -310,8 +317,8 @@ export function GrnCreateClient({
                     {line.ingredientName}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {line.quantity} {line.unit} ·{" "}
-                    {formatVND(line.unitCost)} đ/{line.unit} ·{" "}
+                    {line.quantity} {line.unit} · {formatVND(line.unitCost)} đ/
+                    {line.unit} ·{" "}
                     <span className="font-medium text-foreground">
                       {formatVND(line.quantity * line.unitCost)} đ
                     </span>
@@ -614,7 +621,9 @@ function LineEditSheet({
 
               <div className="rounded-lg bg-muted/50 px-3 py-2.5">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">{FORM_VI.amount}</span>
+                  <span className="text-muted-foreground">
+                    {FORM_VI.amount}
+                  </span>
                   <span className="text-base font-semibold">
                     {formatVND(lineTotal)} đ
                   </span>

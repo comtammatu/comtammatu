@@ -16,10 +16,7 @@ import {
   Pencil as IconPencil,
   X as IconX,
 } from "lucide-react";
-import {
-  getPosLineItemDisplayName,
-  getPosLineItemSummary,
-} from "../../types";
+import { getPosLineItemDisplayName, getPosLineItemSummary } from "../../types";
 import { PosLineItemCompact } from "../pos-line-item-compact";
 import type { OrderItemRowData } from "./order-item-row";
 
@@ -93,9 +90,7 @@ export function OrderItemActionsSheet({
         note: null,
         isPriority: false,
       };
-  const statusLabel = item
-    ? (STATUS_LABELS[item.status] ?? item.status)
-    : "";
+  const statusLabel = item ? (STATUS_LABELS[item.status] ?? item.status) : "";
 
   return (
     <Sheet
@@ -133,14 +128,14 @@ export function OrderItemActionsSheet({
                   ? "text-muted-foreground line-through opacity-60"
                   : undefined
               }
-              optionsClassName={cancelled ? "line-through opacity-60" : undefined}
+              optionsClassName={
+                cancelled ? "line-through opacity-60" : undefined
+              }
               noteClassName={cancelled ? "line-through opacity-60" : undefined}
             />
             <p className="mt-1.5 text-xs text-muted-foreground">
               Trạng thái:{" "}
-              <span className="font-medium text-foreground">
-                {statusLabel}
-              </span>
+              <span className="font-medium text-foreground">{statusLabel}</span>
             </p>
           </div>
         )}
@@ -226,10 +221,10 @@ export function OrderItemActionsSheet({
             !canReduce &&
             !canEdit &&
             !canPrioritize && (
-            <p className="py-4 text-center text-sm text-muted-foreground">
-              Không có thao tác khả dụng cho món này.
-            </p>
-          )}
+              <p className="py-4 text-center text-sm text-muted-foreground">
+                Không có thao tác khả dụng cho món này.
+              </p>
+            )}
           <Button
             type="button"
             variant="outline"

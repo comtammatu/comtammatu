@@ -1,16 +1,18 @@
 type OperationalApp = "pos" | "kds";
 
-const APP_LABELS: Record<OperationalApp, { label: string; description: string }> =
-  {
-    pos: {
-      label: "POS",
-      description: "Điểm bán hàng - Cơm Tấm Má Tư",
-    },
-    kds: {
-      label: "KDS",
-      description: "Màn hình bếp - Cơm Tấm Má Tư",
-    },
-  };
+const APP_LABELS: Record<
+  OperationalApp,
+  { label: string; description: string }
+> = {
+  pos: {
+    label: "POS",
+    description: "Điểm bán hàng - Cơm Tấm Má Tư",
+  },
+  kds: {
+    label: "KDS",
+    description: "Màn hình bếp - Cơm Tấm Má Tư",
+  },
+};
 
 export const OPERATIONAL_MANIFEST_REVALIDATE_SECONDS = 3600;
 

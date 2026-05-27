@@ -36,7 +36,8 @@ export function getAppUrl(): string {
 
 export function getAllowedOriginsFeedback(): string[] {
   const raw =
-    process.env["ALLOWED_ORIGINS_FEEDBACK"] || FALLBACK_ALLOWED_ORIGINS_FEEDBACK;
+    process.env["ALLOWED_ORIGINS_FEEDBACK"] ||
+    FALLBACK_ALLOWED_ORIGINS_FEEDBACK;
   return raw
     .split(",")
     .map((s) => s.trim())

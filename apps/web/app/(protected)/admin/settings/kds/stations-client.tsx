@@ -137,7 +137,9 @@ export function StationsClient({
                     {messages.settings.kds.position}
                   </TableHead>
                   <TableHead>{messages.settings.kds.categories}</TableHead>
-                  <TableHead className="w-25 text-center">{FORM_VI.status}</TableHead>
+                  <TableHead className="w-25 text-center">
+                    {FORM_VI.status}
+                  </TableHead>
                   <TableHead className="w-20" />
                 </TableRow>
               </TableHeader>

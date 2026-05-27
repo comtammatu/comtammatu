@@ -15,7 +15,9 @@ export default async function SupplierReturnsPage({
       : undefined;
 
   const result = await fetchSupplierReturns(branchId);
-  const returns = result.success ? ((result.data ?? []) as SupplierReturnRow[]) : [];
+  const returns = result.success
+    ? ((result.data ?? []) as SupplierReturnRow[])
+    : [];
 
   return (
     <AppPage>

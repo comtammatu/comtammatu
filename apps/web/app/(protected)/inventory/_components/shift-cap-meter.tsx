@@ -1,7 +1,10 @@
 "use client";
 
 import { cn } from "@comtammatu/ui";
-import { Progress, type ProgressTone } from "@comtammatu/ui/components/progress";
+import {
+  Progress,
+  type ProgressTone,
+} from "@comtammatu/ui/components/progress";
 import { formatVND } from "@comtammatu/shared/format";
 
 interface ShiftCapMeterProps {
@@ -86,8 +89,7 @@ export function ShiftCapMeter({
         </p>
       ) : pct >= 0.7 ? (
         <p className="text-warning-foreground">
-          Gần cap — thêm{" "}
-          {formatVND(shiftCap - projected)} nữa sẽ cần duyệt
+          Gần cap — thêm {formatVND(shiftCap - projected)} nữa sẽ cần duyệt
         </p>
       ) : null}
     </div>

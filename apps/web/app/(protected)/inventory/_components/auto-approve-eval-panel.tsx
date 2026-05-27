@@ -102,18 +102,16 @@ export function AutoApproveEvalPanel({
         {evaluation.failedReasons.length > 0 ? (
           <div className="rounded-md bg-muted/50 p-2 text-xs">
             <span className="font-medium">Lý do chưa pass: </span>
-            {evaluation.failedReasons
-              .map((r) => mapReason(r))
-              .join(", ")}
+            {evaluation.failedReasons.map((r) => mapReason(r)).join(", ")}
           </div>
         ) : null}
 
         {evaluation.totalGrnValue !== null &&
         evaluation.totalPoValue !== null ? (
           <div className="text-xs text-muted-foreground">
-            GRN: {Math.round(evaluation.totalGrnValue).toLocaleString("vi-VN")}₫ •
-            PO: {Math.round(evaluation.totalPoValue).toLocaleString("vi-VN")}₫ •
-            NCC 90d: {evaluation.supplierGrnCount90d} GRN
+            GRN: {Math.round(evaluation.totalGrnValue).toLocaleString("vi-VN")}₫
+            • PO: {Math.round(evaluation.totalPoValue).toLocaleString("vi-VN")}₫
+            • NCC 90d: {evaluation.supplierGrnCount90d} GRN
           </div>
         ) : null}
       </CardContent>
@@ -122,7 +120,5 @@ export function AutoApproveEvalPanel({
 }
 
 function mapReason(key: string): string {
-  return (
-    (AUTO_APPROVE_FAIL_REASON_VI as Record<string, string>)[key] ?? key
-  );
+  return (AUTO_APPROVE_FAIL_REASON_VI as Record<string, string>)[key] ?? key;
 }

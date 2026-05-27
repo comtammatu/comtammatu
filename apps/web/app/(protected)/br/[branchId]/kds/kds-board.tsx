@@ -17,6 +17,7 @@ import {
   getKdsOrderItemColumnId,
   getKdsScopedGroupKey,
 } from "./lib/order-columns";
+import { getKdsTicketSequenceSortKey } from "./lib/status-config";
 import {
   collectReadyKdsNewTicketAlertGroups,
   getKdsNewTicketAlertGroupKey,
@@ -93,11 +94,34 @@ function compareKdsOrdersForKitchenQueue(a: KdsOrder, b: KdsOrder): number {
   const rankDelta = getKitchenQueueRank(a) - getKitchenQueueRank(b);
   if (rankDelta !== 0) return rankDelta;
 
+  const sequenceDelta = compareKdsOrderTicketSequence(a, b);
+  if (sequenceDelta !== 0) return sequenceDelta;
+
   const timeDelta =
     new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
   if (timeDelta !== 0) return timeDelta;
 
   return a.groupKey.localeCompare(b.groupKey);
+}
+
+function compareKdsOrderTicketSequence(a: KdsOrder, b: KdsOrder): number {
+  const aSequence = getKdsTicketSequenceSortKey(
+    a.kitchenTicketNumber,
+    a.orderNumber,
+  );
+  const bSequence = getKdsTicketSequenceSortKey(
+    b.kitchenTicketNumber,
+    b.orderNumber,
+  );
+
+  if (aSequence && bSequence) {
+    const primaryDelta = aSequence.primary - bSequence.primary;
+    if (primaryDelta !== 0) return primaryDelta;
+    return aSequence.secondary - bSequence.secondary;
+  }
+  if (aSequence) return -1;
+  if (bSequence) return 1;
+  return 0;
 }
 
 /* ─── Component ─── */

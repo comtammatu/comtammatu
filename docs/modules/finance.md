@@ -20,11 +20,11 @@ Do not expand Finance by default into a full enterprise accounting product. The 
 Finance grows by reporting maturity, not by exposing enterprise accounting
 screens to every operator from day one.
 
-| Stage | Key | Default audience | Product intent |
-| --- | --- | --- | --- |
-| 1 | `hkd_basic` | Hộ kinh doanh / one-shop owner | Daily cash, simple gross profit, inventory money, simple expenses, and exceptions only |
-| 2 | `branch_control` | Multi-branch owner / operator | Compare branches using the same formulas as HKD Basic, then drill into outliers |
-| 3 | `company_reporting` | Accountant / company reporting owner | HĐĐT, AP, payroll liability, accountant exports, and advanced accounting reports |
+| Stage | Key                 | Default audience                     | Product intent                                                                         |
+| ----- | ------------------- | ------------------------------------ | -------------------------------------------------------------------------------------- |
+| 1     | `hkd_basic`         | Hộ kinh doanh / one-shop owner       | Daily cash, simple gross profit, inventory money, simple expenses, and exceptions only |
+| 2     | `branch_control`    | Multi-branch owner / operator        | Compare branches using the same formulas as HKD Basic, then drill into outliers        |
+| 3     | `company_reporting` | Accountant / company reporting owner | HĐĐT, AP, payroll liability, accountant exports, and advanced accounting reports       |
 
 The default `/finance` experience must start at `hkd_basic`. It may reveal
 `branch_control` comparison only when the user has more than one accessible
@@ -85,22 +85,22 @@ These capabilities may remain in code and database because they protect legal/ac
 
 Current code has a broad `/finance/*` workspace. The target product contract is:
 
-| Route family | Pilot role | Decision |
-| --- | --- | --- |
-| `/finance` | Four-metric basic landing | Should show revenue, inventory value, operating expense, gross profit |
-| `/finance/revenue` | Revenue analytics | Keep, but do not make it the only money-control entry |
-| `/admin/reports/inventory-value` | Inventory value drilldown | Link from Finance Basic, implemented under reporting/inventory |
-| `/finance/food-cost` | Gross profit / margin signal | Keep as read-only analysis, not GL accounting |
-| `/finance/reconciliation` | Payment/order recovery | Keep as support workflow, not primary Finance nav |
-| `/finance/invoices` | HĐĐT queue | Keep as support workflow |
-| `/finance/summary` | HĐĐT summary trigger | Keep admin-only by action permission |
-| `/finance/chart-of-accounts` | Advanced accounting | Hide from default pilot nav |
-| `/finance/journal` | Advanced accounting | Hide from default pilot nav |
-| `/finance/posting-rules` | Advanced accounting | Hide from default pilot nav |
-| `/finance/periods` | Advanced accounting | Hide from default pilot nav |
-| `/finance/statements` | Advanced accounting | Hide from default pilot nav |
-| `/finance/audit-trail` | Audit/admin support | Keep accessible for owner/super_manager, but not core daily workflow |
-| `/admin/accounting/periods` | Advanced accounting admin | Keep restricted |
+| Route family                     | Pilot role                   | Decision                                                              |
+| -------------------------------- | ---------------------------- | --------------------------------------------------------------------- |
+| `/finance`                       | Four-metric basic landing    | Should show revenue, inventory value, operating expense, gross profit |
+| `/finance/revenue`               | Revenue analytics            | Keep, but do not make it the only money-control entry                 |
+| `/admin/reports/inventory-value` | Inventory value drilldown    | Link from Finance Basic, implemented under reporting/inventory        |
+| `/finance/food-cost`             | Gross profit / margin signal | Keep as read-only analysis, not GL accounting                         |
+| `/finance/reconciliation`        | Payment/order recovery       | Keep as support workflow, not primary Finance nav                     |
+| `/finance/invoices`              | HĐĐT queue                   | Keep as support workflow                                              |
+| `/finance/summary`               | HĐĐT summary trigger         | Keep admin-only by action permission                                  |
+| `/finance/chart-of-accounts`     | Advanced accounting          | Hide from default pilot nav                                           |
+| `/finance/journal`               | Advanced accounting          | Hide from default pilot nav                                           |
+| `/finance/posting-rules`         | Advanced accounting          | Hide from default pilot nav                                           |
+| `/finance/periods`               | Advanced accounting          | Hide from default pilot nav                                           |
+| `/finance/statements`            | Advanced accounting          | Hide from default pilot nav                                           |
+| `/finance/audit-trail`           | Audit/admin support          | Keep accessible for owner/super_manager, but not core daily workflow  |
+| `/admin/accounting/periods`      | Advanced accounting admin    | Keep restricted                                                       |
 
 Do not delete advanced routes without a data-retention and accounting review. First step is navigation and landing simplification.
 
@@ -129,7 +129,7 @@ Do not call the module "done" because journal, statements, or chart of accounts 
 
 ## Current Gaps
 
-- There is no dedicated `docs/modules/finance.md` contract before this file, so prior scope was inferred from routes and archived plans.
+- This file is the active Finance contract. Do not infer current scope from removed historical plans.
 - Chi vận hành has no dedicated simple expense entry workflow yet; the current read model depends on posted operating expense entries.
 - Inventory value exists under reporting/inventory, not as a native Finance route.
 - HĐĐT is active through Viettel S-invoice, but recovery and archival workflows are support workflows, not the Finance Basic landing.

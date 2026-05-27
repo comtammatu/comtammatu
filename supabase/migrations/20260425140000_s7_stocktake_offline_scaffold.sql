@@ -14,7 +14,7 @@
 -- quota estimate, fail-safe email) ship outside this migration
 -- behind feature flag STOCKTAKE_OFFLINE_ENABLED at app layer.
 --
--- Spec: docs/plan/inventory-redesign.md §Q7
+-- Current docs: docs/ref/inventory.md + docs/ref/inventory-sop.md
 -- Regression: tasks/regressions.md OFFLINE-NO-SILENT-CLIENTWINS
 -- =============================================================
 

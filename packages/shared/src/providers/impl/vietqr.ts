@@ -203,8 +203,7 @@ export function buildVietQrEmvco(input: {
   const bin = resolveBankBin(input.bankCode);
   const amount = Math.round(input.amount).toString();
   const description = sanitizeAscii(input.description ?? "", 25);
-  const merchantName =
-    sanitizeAscii(input.accountName ?? "", 25) || "MERCHANT";
+  const merchantName = sanitizeAscii(input.accountName ?? "", 25) || "MERCHANT";
 
   const beneficiary = tlv("00", bin) + tlv("01", input.accountNo);
   const merchantAccountInfo =

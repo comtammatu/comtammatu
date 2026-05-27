@@ -56,12 +56,5 @@ export function ResponsiveToaster() {
     );
   }
 
-  return (
-    <Toaster
-      richColors
-      position="top-right"
-      visibleToasts={5}
-      expand
-    />
-  );
+  return <Toaster richColors position="top-right" visibleToasts={5} expand />;
 }

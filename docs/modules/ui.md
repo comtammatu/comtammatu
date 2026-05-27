@@ -19,9 +19,9 @@ enforcement for that contract. They do not authorize a second design system:
 - `apps/web/app/components/surface.tsx`
 - `tasks/regressions.md`
 
-Runtime files are evidence. If runtime comments, package metadata, generated
-tokens, or archived docs disagree with `docs/spec/design-system.md`, treat that
-as drift and fix the contract/runtime before building new UI.
+Runtime files are evidence. If runtime comments, package metadata, or generated
+tokens disagree with `docs/spec/design-system.md`, treat that as drift and fix
+the contract/runtime before building new UI.
 
 ## Design System Contract
 
@@ -31,13 +31,22 @@ Tat ca UI/UX rebuild phai di theo contract do truoc khi sua runtime. Design syst
 
 - shadcn preset hien hanh (`radix-lyra`, resolved preset `buFywKm`, `neutral`, `lucide`)
 - Ma Tu Concept 01 brand tokens trong `packages/ui/src/styles/globals.css`
+- tier tokens `tier-elite` / `tier-note` chi dung cho trust/variance/waste tier badges
 - Ma Tu Concept 01 typography: Inter body, Montserrat heading, JetBrains Mono operational data
+- Runner/KDS customer board typography uses `text-runner-header` at 44px, `text-runner-board` at 52px for all four data cells, `text-runner-empty-secondary` at 44px, and `text-runner-footer` at 40px from the shared theme tokens. Status labels must use the same `RunnerOrderCell` typography as every other data cell and must not add a separate `text-*` class on the data-text element. Board columns use Tailwind's built-in 12-column grid: Đơn `col-span-5`, Số món `col-span-2`, Trạng thái `col-span-3`, Thời gian đợi `col-span-2`.
+- Runner/KDS customer board empty state may use `/brand/mascot/be-suon-tuoi-runner.png` as a decorative mascot, while preserving the large primary empty-state copy, a smaller secondary line, and footer separation.
 - primitive source trong `packages/ui/src/components/*`
 - brand assets trong `apps/web/public/brand/`
 - runtime brand primitive trong `apps/web/app/components/brand.tsx`
 - app surface adapters trong `apps/web/app/components/surface.tsx`
-- glossary/copy source trong `docs/ref/glossary.md` va shared label dictionaries
+- copy source ladder: `docs/ref/glossary.md` cho nghia/chinh ta, `packages/shared/src/labels/vi.ts` cho domain labels dung chung, `@comtammatu/shared/messages` hoac `apps/web/lib/messages/*` cho action/state/error chung, `packages/shared/src/labels/legal-fixed.ts` cho legal labels, va domain dictionary cho route adapters
 - toast/notification contract trong `docs/spec/toast-notification-system.md`
+- theme runtime trong `packages/ui/src/components/theme-script.tsx` +
+  `packages/ui/src/components/theme-provider.tsx`; chi provider nay duoc luu
+  user theme preference trong `localStorage`
+- approved app utilities: `max-h-dvh-95`, `max-h-dvh-80`,
+  `pos-text-overlay`, `pos-safe-top`, `pos-safe-bottom`, `chrome-safe-pb`,
+  `chrome-safe-bottom`
 
 Khong duoc coi design system la mot layer moi tach rieng khoi shadcn. Neu can pattern moi, update `docs/spec/design-system.md` truoc, roi moi rollout vao code.
 
@@ -50,7 +59,7 @@ khong phai source of truth hien tai:
 - removed `packages/ui/src/styles/matu-tokens.css`
 - removed `apps/web/app/components/matu-surface.tsx`
 - removed `apps/web/app/(protected)/admin/kitchen-sink/page.tsx`
-- external `~/Downloads/matu-superapp/DESIGN.md`
+- external design folders
 
 Code moi KHONG duoc import `@/components/matu-surface`, KHONG dung
 `font-matu-body`, va KHONG dung `bg-matu-*`, `text-matu-*`, `border-matu-*`,
@@ -77,6 +86,7 @@ Dieu nay co nghia:
 - brand color/typography phai di qua semantic token va font variables chung
 - body/content dung `font-sans` (Inter), heading/title dung `font-heading` (Montserrat), operational data/code/id/price/qty dung `font-mono` (JetBrains Mono)
 - static public artifact nhu `docs/status/index.html` phai mirror cung font stack; khong dung lai Be Vietnam Pro, Geist, `font-matu-body`, hoac font rieng theo surface
+- `--font-heading-runtime` chi la bien noi bo cua `next/font`; app UI chi dung `font-heading` / `--font-heading`
 - page/shell chi duoc compose tu primitives co san
 - logo/brand lockup trong web runtime phai di qua `BrandMark` / `BrandLockup`
 - khong duoc giu `app-*` helper classes
@@ -105,8 +115,9 @@ Khong fork primitive theo surface.
 
 `CardContent` table/list exceptions phai di qua named primitive props:
 `flush` cho table-edge/list-edge alignment va `scroll` cho horizontal table
-scrolling. Khong dung local `className="p-0"` hoac
-`className="overflow-x-auto"` tren `CardContent` o app code.
+scrolling. AppSection dung `contentFlush` / `contentScroll` cho cung vai tro.
+Khong dung local `className="p-0"` hoac `className="overflow-x-auto"` tren
+`CardContent` hay `AppSection contentClassName` o app code.
 
 ## App Surface Adapters
 
@@ -224,7 +235,7 @@ Khong cho phep:
 
 - helper class kieu `app-*`
 - custom theme layer
-- legacy pilot layer `matu-surface` / `matu-*`
+- retired pilot layer `matu-surface` / `matu-*`
 - wrapper override visual contract cua primitive
 - module tu tao lai page/header/section/toolbar/empty/link-card thay vi delegate ve `apps/web/app/components/surface.tsx`
 - dung `div` / `span` / `p` thuong de gia lap `Card`, `Badge`, `Button`, `Table`, `Tabs`, `Input`, `Select`

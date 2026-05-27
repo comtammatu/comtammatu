@@ -4,7 +4,12 @@ import { STOCKTAKE_MODE_LABELS_VI } from "@comtammatu/shared/labels";
 import { cn } from "@comtammatu/ui";
 import { Badge } from "@comtammatu/ui/components/badge";
 
-export type StocktakeMode = "daily" | "weekly" | "monthly" | "quarterly" | "spot";
+export type StocktakeMode =
+  | "daily"
+  | "weekly"
+  | "monthly"
+  | "quarterly"
+  | "spot";
 
 interface StocktakeModeSelectorProps {
   value: StocktakeMode;
@@ -61,7 +66,13 @@ const MODE_META: Record<StocktakeMode, ModeMeta> = {
   },
 };
 
-const ORDER: StocktakeMode[] = ["daily", "weekly", "monthly", "quarterly", "spot"];
+const ORDER: StocktakeMode[] = [
+  "daily",
+  "weekly",
+  "monthly",
+  "quarterly",
+  "spot",
+];
 
 /**
  * Radio-card selector for stocktake session mode (S13a).
@@ -127,7 +138,9 @@ export function StocktakeModeSelector({
                 ) : null}
               </div>
             </div>
-            <p className="line-clamp-2 break-words text-xs text-muted-foreground">{meta.description}</p>
+            <p className="line-clamp-2 break-words text-xs text-muted-foreground">
+              {meta.description}
+            </p>
           </label>
         );
       })}

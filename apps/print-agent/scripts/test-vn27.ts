@@ -28,7 +28,8 @@ const concat = (parts: Buffer[]) => Buffer.concat(parts);
 const encode = (enc: Encoding, s: string): Buffer => {
   // For CP1258, combining marks live in 0x80-0x9F → NFD decompose first.
   // For VISCII + TCVN-3, encoders use precomposed chars directly (no NFD).
-  const input = enc === "windows-1258" ? s.normalize("NFD") : s.normalize("NFC");
+  const input =
+    enc === "windows-1258" ? s.normalize("NFD") : s.normalize("NFC");
   return iconv.encode(input, enc);
 };
 
@@ -42,7 +43,12 @@ const cutPartial = () => buf([GS, 0x56, 0x01]);
 
 const buildBytes = (): Buffer => {
   const parts: Buffer[] = [init()];
-  parts.push(boldOn(), iconv.encode("PAGE 27 VIETNAM TEST", "ascii"), boldOff(), newline());
+  parts.push(
+    boldOn(),
+    iconv.encode("PAGE 27 VIETNAM TEST", "ascii"),
+    boldOff(),
+    newline(),
+  );
   parts.push(iconv.encode("Target: Cơm sườn đặc biệt", "ascii"), newline());
   parts.push(iconv.encode("=".repeat(40), "ascii"), newline(), newline());
 
@@ -50,7 +56,12 @@ const buildBytes = (): Buffer => {
   parts.push(selectCodepage(27));
 
   for (const enc of ENCODINGS) {
-    parts.push(boldOn(), iconv.encode(`[${enc}]`, "ascii"), boldOff(), newline());
+    parts.push(
+      boldOn(),
+      iconv.encode(`[${enc}]`, "ascii"),
+      boldOff(),
+      newline(),
+    );
     parts.push(encode(enc, SAMPLE), newline());
     parts.push(encode(enc, SAMPLE2), newline());
     parts.push(iconv.encode("-".repeat(40), "ascii"), newline(), newline());
@@ -60,14 +71,22 @@ const buildBytes = (): Buffer => {
   return concat(parts);
 };
 
-const sendLAN = async (host: string, port: number, payload: Buffer): Promise<void> =>
+const sendLAN = async (
+  host: string,
+  port: number,
+  payload: Buffer,
+): Promise<void> =>
   new Promise((resolve, reject) => {
     const sock = new net.Socket();
     let settled = false;
     const done = (err?: Error) => {
       if (settled) return;
       settled = true;
-      try { sock.destroy(); } catch { /* ignore */ }
+      try {
+        sock.destroy();
+      } catch {
+        /* ignore */
+      }
       err ? reject(err) : resolve();
     };
     sock.setTimeout(15_000, () => done(new Error(`timeout ${host}:${port}`)));
@@ -91,7 +110,9 @@ async function main() {
   console.log(`[test-vn27] sending ${payload.length} bytes to ${host}:${port}`);
   console.log(`[test-vn27] trying codepage 27 with: ${ENCODINGS.join(", ")}`);
   await sendLAN(host, port, payload);
-  console.log(`[test-vn27] done. Read the paper — the [encoding] block that renders correctly is the one to use.`);
+  console.log(
+    `[test-vn27] done. Read the paper — the [encoding] block that renders correctly is the one to use.`,
+  );
 }
 
 main().catch((e) => {

@@ -10,11 +10,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@comtammatu/ui/components/alert-dialog";
-import {
-  Field,
-  FieldGroup,
-  FieldLabel,
-} from "@comtammatu/ui/components/field";
+import { Field, FieldGroup, FieldLabel } from "@comtammatu/ui/components/field";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { QuickReasonChips } from "../quick-reason-chips";
 import { CANCEL_ORDER_PRESETS } from "../quick-reason-presets";

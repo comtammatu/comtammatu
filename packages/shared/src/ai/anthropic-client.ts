@@ -4,16 +4,14 @@ import Anthropic from "@anthropic-ai/sdk";
  * Pricing constants (USD per million tokens).
  * Update when Anthropic changes pricing.
  */
-export const MODEL_PRICING: Record<
-  string,
-  { input: number; output: number }
-> = {
-  "claude-opus-4-5": { input: 15.0, output: 75.0 },
-  "claude-sonnet-4-5": { input: 3.0, output: 15.0 },
-  "claude-opus-4-6": { input: 15.0, output: 75.0 },
-  "claude-sonnet-4-6": { input: 3.0, output: 15.0 },
-  "claude-haiku-4-5": { input: 1.0, output: 5.0 },
-};
+export const MODEL_PRICING: Record<string, { input: number; output: number }> =
+  {
+    "claude-opus-4-5": { input: 15.0, output: 75.0 },
+    "claude-sonnet-4-5": { input: 3.0, output: 15.0 },
+    "claude-opus-4-6": { input: 15.0, output: 75.0 },
+    "claude-sonnet-4-6": { input: 3.0, output: 15.0 },
+    "claude-haiku-4-5": { input: 1.0, output: 5.0 },
+  };
 
 /**
  * The model to use for feedback AI tasks.
@@ -21,10 +19,7 @@ export const MODEL_PRICING: Record<
  * Defaults to claude-sonnet-4-6 (cost-effective for high-volume per-feedback enrichment).
  */
 export function getFeedbackAiModel(): string {
-  return (
-    process.env["FEEDBACK_AI_MODEL"] ??
-    "claude-sonnet-4-6"
-  );
+  return process.env["FEEDBACK_AI_MODEL"] ?? "claude-sonnet-4-6";
 }
 
 /**

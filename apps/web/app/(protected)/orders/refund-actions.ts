@@ -160,14 +160,11 @@ export async function createRefund(input: {
     };
   }
 
-  const { data: rpcData, error: rpcErr } = await supabase.rpc(
-    "create_refund",
-    {
-      p_payment_id: payment.id,
-      p_amount: amount,
-      p_reason: reason,
-    },
-  );
+  const { data: rpcData, error: rpcErr } = await supabase.rpc("create_refund", {
+    p_payment_id: payment.id,
+    p_amount: amount,
+    p_reason: reason,
+  });
 
   if (rpcErr) {
     return { success: false, error: mapRefundRpcError(rpcErr.message ?? "") };
@@ -268,7 +265,10 @@ export async function fetchRefunds(
     return { success: false, error: "Bộ lọc không hợp lệ" };
   }
 
-  const ctx = await getAuthContextWithPermission(FETCH_ROLES, PERMISSION_KEYS.ORDERS_READ);
+  const ctx = await getAuthContextWithPermission(
+    FETCH_ROLES,
+    PERMISSION_KEYS.ORDERS_READ,
+  );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;

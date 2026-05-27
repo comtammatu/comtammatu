@@ -215,8 +215,12 @@ export const printPayloadSchema = z.discriminatedUnion("kind", [
 ]);
 
 export type KitchenTicketPayload = z.infer<typeof kitchenTicketPayloadSchema>;
-export type ProvisionalBillPayload = z.infer<typeof provisionalBillPayloadSchema>;
+export type ProvisionalBillPayload = z.infer<
+  typeof provisionalBillPayloadSchema
+>;
 export type ReceiptPayload = z.infer<typeof receiptPayloadSchema>;
 export type CancelTicketPayload = z.infer<typeof cancelTicketPayloadSchema>;
-export type ShiftCloseReportPayload = z.infer<typeof shiftCloseReportPayloadSchema>;
+export type ShiftCloseReportPayload = z.infer<
+  typeof shiftCloseReportPayloadSchema
+>;
 export type PrintPayload = z.infer<typeof printPayloadSchema>;

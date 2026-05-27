@@ -167,7 +167,8 @@ export const settings = {
     takeaway: "Mang về",
     unpaidShort: "Chưa TT",
     noBills: "Ca này chưa có bill.",
-    openedBy: (name: string, openedAt: string) => `Mở bởi ${name} · ${openedAt}`,
+    openedBy: (name: string, openedAt: string) =>
+      `Mở bởi ${name} · ${openedAt}`,
     closedBy: (name: string, closedAt: string, duration: string) =>
       `Đóng bởi ${name} · ${closedAt} · Kéo dài ${duration}`,
     closeShift: "Chốt ca",
@@ -234,7 +235,8 @@ export const settings = {
     customerCountLabel: "Số khách",
     customerCount: (count: number) => `${count} khách`,
     quantityPrefix: (quantity: number) => `×${quantity}`,
-    linePrice: (unitPrice: string, quantity: number) => `${unitPrice} ×${quantity}`,
+    linePrice: (unitPrice: string, quantity: number) =>
+      `${unitPrice} ×${quantity}`,
     cancelledItem: "(đã hủy)",
     subtotal: "Tạm tính",
     serviceCharge: "Phụ phí",
@@ -242,4 +244,4 @@ export const settings = {
     total: "Tổng",
     billNote: "Ghi chú bill",
   },
-} as const
+} as const;

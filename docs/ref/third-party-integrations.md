@@ -8,17 +8,17 @@
 
 ## Tóm tắt nhanh — Vendors được chọn
 
-| Nhóm                  | Vendor chọn        | Fallback             | Module        |
-| --------------------- | ------------------ | -------------------- | ------------- |
-| **QR thanh toán**     | VietQR (NAPAS)     | —                    | Payment    |
-| **E-wallet #1**       | MoMo               | —                    | Payment    |
-| **E-wallet #2**       | ZaloPay            | —                    | Post-v1.0     |
-| **Card payment**      | VNPay              | —                    | Post-v1.0     |
-| **HĐĐT**              | Viettel S-invoice  | —                    | Finance    |
-| **OTP / Notify**      | Zalo ZNS           | SpeedSMS             | Post-v1.0     |
-| **Email**             | Resend.com         | —                    | Finance    |
-| **Delivery dispatch** | Ahamove            | —                    | Post-v1.0     |
-| **Delivery platform** | GrabFood           | ShopeeFood (partner) | Post-v1.0     |
+| Nhóm                  | Vendor chọn        | Fallback             | Module               |
+| --------------------- | ------------------ | -------------------- | -------------------- |
+| **QR thanh toán**     | VietQR (NAPAS)     | —                    | Payment              |
+| **E-wallet #1**       | MoMo               | —                    | Payment              |
+| **E-wallet #2**       | ZaloPay            | —                    | Post-v1.0            |
+| **Card payment**      | VNPay              | —                    | Post-v1.0            |
+| **HĐĐT**              | Viettel S-invoice  | —                    | Finance              |
+| **OTP / Notify**      | Zalo ZNS           | SpeedSMS             | Post-v1.0            |
+| **Email**             | Resend.com         | —                    | Finance              |
+| **Delivery dispatch** | Ahamove            | —                    | Post-v1.0            |
+| **Delivery platform** | GrabFood           | ShopeeFood (partner) | Post-v1.0            |
 | **BHXH**              | iBHXH / VNPT-BHXH  | Manual portal        | Nhân sự & tiền lương |
 | **eTax / GTGT**       | Manual eTax portal | HTKK desktop         | Nhân sự & tiền lương |
 
@@ -57,16 +57,16 @@
 
 **Lựa chọn**: ✅ **Tích hợp Payment**
 
-| Thuộc tính       | Giá trị                                         |
-| ---------------- | ----------------------------------------------- |
-| Thị phần         | ~69% người dùng VN, 80%+ F&B chấp nhận          |
-| API              | REST — `developers.momo.vn/v3`                  |
-| Sandbox          | ✅ Có — Postman collection đầy đủ               |
-| Phí merchant     | **MIỄN PHÍ** (MoMo không thu phí merchant)      |
-| Settlement       | Realtime                                        |
-| Webhook          | ✅ POST JSON IPN khi giao dịch hoàn tất          |
-| Webhook security | HMAC signature                                  |
-| Fallback         | Nếu timeout → gọi GET order status API          |
+| Thuộc tính       | Giá trị                                    |
+| ---------------- | ------------------------------------------ |
+| Thị phần         | ~69% người dùng VN, 80%+ F&B chấp nhận     |
+| API              | REST — `developers.momo.vn/v3`             |
+| Sandbox          | ✅ Có — Postman collection đầy đủ          |
+| Phí merchant     | **MIỄN PHÍ** (MoMo không thu phí merchant) |
+| Settlement       | Realtime                                   |
+| Webhook          | ✅ POST JSON IPN khi giao dịch hoàn tất    |
+| Webhook security | HMAC signature                             |
+| Fallback         | Nếu timeout → gọi GET order status API     |
 
 **Webhook payload mẫu**:
 
@@ -134,14 +134,14 @@
 
 **Lựa chọn**: ✅ **Tích hợp Finance — đang hoạt động**
 
-| Thuộc tính     | Giá trị                                      |
-| -------------- | -------------------------------------------- |
-| API            | REST — `api-vinvoice.viettel.vn`             |
-| Auth           | `POST /auth/login` + Bearer token            |
-| Sandbox/test   | Dùng account test Sinvoice                   |
-| Phí/HĐ         | Theo hợp đồng Viettel                        |
-| Infrastructure | Tier 3, HSM, hàng triệu HĐ/ngày              |
-| Onboarding     | 5–7 ngày làm việc                            |
+| Thuộc tính     | Giá trị                           |
+| -------------- | --------------------------------- |
+| API            | REST — `api-vinvoice.viettel.vn`  |
+| Auth           | `POST /auth/login` + Bearer token |
+| Sandbox/test   | Dùng account test Sinvoice        |
+| Phí/HĐ         | Theo hợp đồng Viettel             |
+| Infrastructure | Tier 3, HSM, hàng triệu HĐ/ngày   |
+| Onboarding     | 5–7 ngày làm việc                 |
 
 **Lý do chọn Viettel S-invoice**:
 
@@ -369,14 +369,14 @@ Supabase Auth hỗ trợ SMS OTP natively nhưng chỉ qua Twilio/Vonage (quá �
 
 Giả định: 500 order/ngày, 5 chi nhánh, ~15,000 order/tháng
 
-| Service                            | Volume      | Đơn giá    | Chi phí/tháng             |
-| ---------------------------------- | ----------- | ---------- | ------------------------- |
-| Viettel S-invoice                  | 15,000 HĐ   | Theo HĐ    | Theo hợp đồng Viettel     |
-| Zalo ZNS (order confirm + loyalty) | 20,000 tin  | 300 VND    | **6,000,000 VND**         |
-| SpeedSMS (OTP fallback ~10%)       | 2,000 tin   | 400 VND    | **800,000 VND**           |
-| Resend email                       | 5,000 email | Free tier  | **0 VND**                 |
-| VietQR (qua ngân hàng)             | 15,000 txn  | ~1,600 VND | **24,000,000 VND**        |
-| MoMo                               | Variable    | **0%**     | **0 VND**                 |
+| Service                            | Volume      | Đơn giá    | Chi phí/tháng                           |
+| ---------------------------------- | ----------- | ---------- | --------------------------------------- |
+| Viettel S-invoice                  | 15,000 HĐ   | Theo HĐ    | Theo hợp đồng Viettel                   |
+| Zalo ZNS (order confirm + loyalty) | 20,000 tin  | 300 VND    | **6,000,000 VND**                       |
+| SpeedSMS (OTP fallback ~10%)       | 2,000 tin   | 400 VND    | **800,000 VND**                         |
+| Resend email                       | 5,000 email | Free tier  | **0 VND**                               |
+| VietQR (qua ngân hàng)             | 15,000 txn  | ~1,600 VND | **24,000,000 VND**                      |
+| MoMo                               | Variable    | **0%**     | **0 VND**                               |
 | **Tổng**                           |             |            | **Phụ thuộc hợp đồng Viettel + VietQR** |
 
 > ⚠️ Phí VietQR là lớn nhất — cần negotiate với ngân hàng đối tác để có gói merchant tốt hơn. Nhiều ngân hàng có gói 0 VND/giao dịch cho SME khi đạt volume.
@@ -385,12 +385,12 @@ Giả định: 500 order/ngày, 5 chi nhánh, ~15,000 order/tháng
 
 ## 8. Thứ tự tích hợp theo Module
 
-| Module            | Tích hợp                                              |
-| ----------------- | ----------------------------------------------------- |
-| **Payment**    | VietQR + MoMo                                         |
-| **Finance**    | Viettel S-invoice + Resend email                      |
+| Module                   | Tích hợp                                              |
+| ------------------------ | ----------------------------------------------------- |
+| **Payment**              | VietQR + MoMo                                         |
+| **Finance**              | Viettel S-invoice + Resend email                      |
 | **Nhân sự & tiền lương** | Xuất data BHXH / thuế TNCN (no API, just export)      |
-| **Post-v1.0**     | Zalo ZNS, SpeedSMS, ZaloPay, VNPay, GrabFood, Ahamove |
+| **Post-v1.0**            | Zalo ZNS, SpeedSMS, ZaloPay, VNPay, GrabFood, Ahamove |
 
 ---
 

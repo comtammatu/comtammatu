@@ -270,8 +270,14 @@ test("isPublicAppPath PWA manifests bypass auth proxy", () => {
 });
 
 test("normalizeHost strips port + lowercases", () => {
-  assert.equal(normalizeHost("Feedback.ComTamMatu.COM"), "feedback.comtammatu.com");
-  assert.equal(normalizeHost("feedback.comtammatu.com:443"), "feedback.comtammatu.com");
+  assert.equal(
+    normalizeHost("Feedback.ComTamMatu.COM"),
+    "feedback.comtammatu.com",
+  );
+  assert.equal(
+    normalizeHost("feedback.comtammatu.com:443"),
+    "feedback.comtammatu.com",
+  );
   assert.equal(normalizeHost("localhost:3000"), "localhost");
   assert.equal(normalizeHost("  app.comtammatu.com  "), "app.comtammatu.com");
   assert.equal(normalizeHost(""), null);
@@ -286,7 +292,10 @@ test("resolveHostSurface → matches configured hosts case-insensitive, port-agn
   };
   assert.equal(resolveHostSurface("feedback.comtammatu.com", cfg), "feedback");
   assert.equal(resolveHostSurface("FEEDBACK.COMTAMMATU.COM", cfg), "feedback");
-  assert.equal(resolveHostSurface("feedback.comtammatu.com:443", cfg), "feedback");
+  assert.equal(
+    resolveHostSurface("feedback.comtammatu.com:443", cfg),
+    "feedback",
+  );
   assert.equal(resolveHostSurface("app.comtammatu.com", cfg), "app");
   assert.equal(resolveHostSurface("app.comtammatu.com:443", cfg), "app");
 });
@@ -310,7 +319,10 @@ test("resolveHostSurface → no env configured → all hosts fall through to 'un
   // single-host deploy. resolveHostSurface MUST NOT default any host into a
   // surface when config is empty (would expose admin or feedback wrongly).
   assert.equal(
-    resolveHostSurface("feedback.comtammatu.com", { feedbackHost: null, appHost: null }),
+    resolveHostSurface("feedback.comtammatu.com", {
+      feedbackHost: null,
+      appHost: null,
+    }),
     "unknown",
   );
   assert.equal(
@@ -355,17 +367,11 @@ test("resolveModuleFromPath → branch menu limits and finance workspace map to 
 
 test("resolvePostLoginRedirect → branch settings follows branch scope", () => {
   assert.equal(
-    resolvePostLoginRedirect(
-      makeClaims("branch_manager", 3),
-      "/br/3/settings",
-    ),
+    resolvePostLoginRedirect(makeClaims("branch_manager", 3), "/br/3/settings"),
     "/br/3/settings",
   );
   assert.equal(
-    resolvePostLoginRedirect(
-      makeClaims("branch_manager", 3),
-      "/br/7/settings",
-    ),
+    resolvePostLoginRedirect(makeClaims("branch_manager", 3), "/br/7/settings"),
     "/employee",
   );
   assert.equal(
@@ -376,10 +382,7 @@ test("resolvePostLoginRedirect → branch settings follows branch scope", () => 
 
 test("resolvePostLoginRedirect → branch menu limits follows branch scope", () => {
   assert.equal(
-    resolvePostLoginRedirect(
-      makeClaims("cashier", 3),
-      "/br/3/menu-limits",
-    ),
+    resolvePostLoginRedirect(makeClaims("cashier", 3), "/br/3/menu-limits"),
     "/br/3/menu-limits",
   );
   assert.equal(
@@ -393,12 +396,7 @@ test("resolvePostLoginRedirect → branch menu limits follows branch scope", () 
 });
 
 test("canAccess → only owner and super_manager can access tenant admin modules", () => {
-  const adminModules = [
-    "dashboard",
-    "staff",
-    "crm",
-    "reports",
-  ] as const;
+  const adminModules = ["dashboard", "staff", "crm", "reports"] as const;
   for (const moduleKey of adminModules) {
     assert.equal(canAccess("owner", moduleKey), true);
     assert.equal(canAccess("super_manager", moduleKey), true);
@@ -418,7 +416,12 @@ test("canAccess → only owner and super_manager can access tenant admin modules
 });
 
 test("canAccess → settings includes branch floor setting roles", () => {
-  for (const role of ["owner", "super_manager", "area_manager", "branch_manager"] as const) {
+  for (const role of [
+    "owner",
+    "super_manager",
+    "area_manager",
+    "branch_manager",
+  ] as const) {
     assert.equal(canAccess(role, "settings"), true);
   }
   for (const role of [
@@ -460,13 +463,15 @@ test("resolveDiscoveredApps → settings entries are discoverable from employee 
   assert.ok(
     branchManagerApps.some(
       (app) =>
-        app.moduleKey === "branch_settings" &&
-        app.href === "/br/3/settings",
+        app.moduleKey === "branch_settings" && app.href === "/br/3/settings",
     ),
   );
 
   const cashierApps = resolveDiscoveredApps("cashier", 3);
-  assert.equal(cashierApps.some((app) => app.moduleKey === "settings"), false);
+  assert.equal(
+    cashierApps.some((app) => app.moduleKey === "settings"),
+    false,
+  );
   assert.equal(
     cashierApps.some((app) => app.moduleKey === "branch_settings"),
     false,

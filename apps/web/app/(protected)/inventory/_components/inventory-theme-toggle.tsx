@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Monitor as IconDeviceDesktop, Moon as IconMoon, Sun as IconSun } from "lucide-react";
+import {
+  Monitor as IconDeviceDesktop,
+  Moon as IconMoon,
+  Sun as IconSun,
+} from "lucide-react";
 import { useTheme } from "@comtammatu/ui/components/theme-provider";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -32,7 +36,11 @@ export function InventoryThemeToggle() {
           aria-label="Chọn giao diện"
           title="Giao diện"
         >
-          {isDark ? <IconMoon className="size-4" /> : <IconSun className="size-4" />}
+          {isDark ? (
+            <IconMoon className="size-4" />
+          ) : (
+            <IconSun className="size-4" />
+          )}
           <span className="sr-only">Chọn giao diện</span>
         </Button>
       </DropdownMenuTrigger>

@@ -143,9 +143,12 @@ export function playAppSignal(tone: SignalTone, force = false): void {
         pattern,
       );
     }
-    window.setTimeout(() => {
-      compressor.disconnect();
-    }, getSignalDurationMs(pattern) + 100);
+    window.setTimeout(
+      () => {
+        compressor.disconnect();
+      },
+      getSignalDurationMs(pattern) + 100,
+    );
   } catch {
     // Audio not available or blocked by the browser.
   }

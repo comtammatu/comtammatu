@@ -106,9 +106,7 @@ export function buildVietQrPayload(input: {
 
   const beneficiary = tlv("00", bin) + tlv("01", input.accountNo);
   const merchantAccountInfo =
-    tlv("00", "A000000727") +
-    tlv("01", beneficiary) +
-    tlv("02", "QRIBFTTA");
+    tlv("00", "A000000727") + tlv("01", beneficiary) + tlv("02", "QRIBFTTA");
 
   const additionalData = description ? tlv("08", description) : "";
 

@@ -1,7 +1,6 @@
 -- =============================================================
 -- M4 P0-1 / P0-5 foundation — refund reversal storage + permission key
 --
--- Drafted from `docs/plan/m4-payments-fix.md` §3 (Sr. Dev migration plan).
 -- This migration is ADDITIVE only — no RPC body rewrites yet. Subsequent
 -- migrations in this series will add the `reverse_payment_and_post` and
 -- `restore_stock_for_order` RPCs on top of the storage primitives added
@@ -19,8 +18,7 @@
 --   4. Seed `orders:refund_approve` into the `owner` and `super_manager`
 --      role templates. Idempotent via DISTINCT unnest.
 --
--- Refs: docs/plan/m4-payments-fix.md (drafted 2026-04-28), tasks/todo.md
--- "P0 from security review" — first SHIP fix.
+-- Refs: tasks/regressions.md REFUND-MUST-* and STOCK-CONSUME-MUST-CHECK-RESULT.
 -- =============================================================
 
 -- ─── 1. refunds.approved_at column ────────────────────────────────────────

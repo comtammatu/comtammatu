@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight as IconArrowRight, Smartphone as IconDeviceMobile } from "lucide-react";
+import {
+  ArrowRight as IconArrowRight,
+  Smartphone as IconDeviceMobile,
+} from "lucide-react";
 
 export function MobileEntryBanner() {
   return (
@@ -13,7 +16,9 @@ export function MobileEntryBanner() {
         <IconDeviceMobile className="size-5" />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block font-semibold">Giao diện kho tối ưu cho điện thoại</span>
+        <span className="block font-semibold">
+          Giao diện kho tối ưu cho điện thoại
+        </span>
         <span className="block text-xs font-normal text-muted-foreground">
           Nhập hàng, nhận điều chuyển nhanh hơn trên mobile.
         </span>

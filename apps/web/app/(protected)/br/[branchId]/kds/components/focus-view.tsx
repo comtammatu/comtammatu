@@ -34,6 +34,7 @@ import {
   getStatusVariant,
   shouldShowTicketStatusBadge,
 } from "../lib/status-config";
+import { getKdsOrderDisplayStatus } from "../lib/order-status";
 import { AgeBadge } from "./age-badge";
 import { CancelledOverlay } from "./cancelled-overlay";
 import { OrderNote } from "./order-note";
@@ -234,15 +235,7 @@ function FocusOrderPanel({
   const rowEffects = useKdsRowEffectsValue();
 
   const overallStatus = useMemo(() => {
-    const statuses = order.tickets.map((t) => t.status);
-    if (statuses.length > 0 && statuses.every((s) => s === "cancelled")) {
-      return "cancelled";
-    }
-    if (statuses.every((s) => s === "ready" || s === "cancelled")) {
-      return "ready";
-    }
-    if (statuses.some((s) => s === "preparing")) return "preparing";
-    return "pending";
+    return getKdsOrderDisplayStatus(order, { isCurrent: true });
   }, [order.tickets]);
 
   const handleOutOfStock = useCallback(
@@ -269,7 +262,11 @@ function FocusOrderPanel({
   // Hero tint mirrors the grid card header — keeps urgency signaling
   // consistent across modes; success tint when the order is fully done.
   const ageStyle = getAgeStyle(elapsedMinutes, isComplete);
-  const heroBg = isComplete ? "bg-success/10" : ageStyle.bg || "bg-card";
+  const heroBg = isComplete
+    ? "bg-success/10"
+    : overallStatus === "preparing"
+      ? "bg-warning/25"
+      : ageStyle.bg || "bg-card";
 
   const orphanTickets = useMemo(
     () =>
@@ -373,7 +370,7 @@ function FocusOrderPanel({
               </div>
             </div>
 
-            <CardContent className="divide-y divide-border/50 p-0">
+            <CardContent flush className="divide-y divide-border/50">
               {order.items.map((item) => {
                 const ticket = ticketByItemId.get(item.id);
                 const status = ticket?.status ?? "pending";
