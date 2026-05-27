@@ -595,8 +595,14 @@ export function OrderDetailSheet({
             ? messages.pos.item.voidedAutoCancelOrder
             : messages.pos.item.voided,
         );
-        if (r.data?.printWarning) {
-          notify.warning(r.data.printWarning);
+        // Cancel-ticket print warning rides on result.meta.warning (set by
+        // the afterSuccess hook in pos/_lib/messages.ts) per WS-1a. Pre-WS-1a
+        // this lived on `r.data.printWarning`; the move keeps `data` to the
+        // operator-facing result and moves non-fatal side-effect outcomes
+        // to `meta`.
+        const printWarning = r.meta?.warning;
+        if (typeof printWarning === "string") {
+          notify.warning(printWarning);
         }
         setVoidItemId(null);
         setVoidReason("");

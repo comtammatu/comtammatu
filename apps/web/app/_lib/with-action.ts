@@ -35,10 +35,17 @@ export type CustomAuthResolver<TInput> = (
  * — never flips `success` to false. Use for non-fatal downstream RPCs like
  * `enqueue_cancel_ticket_print`: the primary operation is already committed,
  * a print failure must surface as a toast warning, not an error.
+ *
+ * The hook receives the full `ActionResult` (narrowed to `success: true`)
+ * — including `meta`. Handlers that need to pass internal state to their
+ * `afterSuccess` hook (e.g. `wasSentToKitchen` so the hook knows whether
+ * to enqueue a cancel-ticket print) should set it on `meta` and read it
+ * back here. `meta` is typed as `Record<string, unknown>`, so hooks
+ * narrow inline (`typeof result.meta?.wasSentToKitchen === "boolean"`).
  */
 export type AfterSuccessHook<TInput, TData> = (
   input: TInput,
-  result: { success: true; data?: TData },
+  result: ActionResult<TData> & { success: true },
   ctx: ActionContext,
 ) => Promise<{ warning?: string } | void>;
 

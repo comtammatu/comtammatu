@@ -9,6 +9,7 @@ import {
 } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission, probePermission } from "../../_lib/auth";
+import { withActionPositional } from "@/_lib/with-action";
 import {
   cartStateSchema,
   calcItemSubtotal,
@@ -18,6 +19,14 @@ import {
 } from "./types";
 import type { CartState, CartItem } from "./types";
 import { POS_ERROR_CODES } from "./_utils/error-codes";
+import { voidItemSchema } from "./_lib/schemas";
+import { posVoidAuth } from "./_lib/auth";
+import {
+  enqueueCancelTicketPrintHook,
+  mapRpcError,
+  voidRpcMappings,
+  voidRpcFallback,
+} from "./_lib/messages";
 
 async function markInitialOrderPriority(
   supabase: SupabaseClient,
@@ -983,127 +992,66 @@ export async function appendOrderItems(
 
 /* ─── voidOrderItem ─── */
 
-const voidItemSchema = z.object({
-  orderItemId: z.coerce.number().int().positive({ error: "Món không hợp lệ" }),
-  // min(5): single-char "x" reasons defeat the audit trail. 5 is the floor
-  // that still admits short legitimate reasons ("hết", "khách đổi") while
-  // rejecting fat-finger noise. Stocktake escalation uses 20 (see rule
-  // R4-ESCALATE-NOTE-MIN-CHARS); POS void is more frequent so 5 balances
-  // operator friction with audit value.
-  reason: z
-    .string()
-    .trim()
-    .min(5, { error: "Lý do hủy món tối thiểu 5 ký tự" }),
-});
+/**
+ * Void a single pending / kitchen-sent order item with audit reason.
+ *
+ * WS-1a (2026-05-27) proving slice for the extended `withActionPositional`
+ * helper. Migrated from the prior hand-rolled `// Skip withAction:` block.
+ * Exercises 4/4 new helper capabilities in one site:
+ *   1. positional args (orderItemId, reason) preserved via `argsToInput`
+ *   2. composite auth via `customAuth: posVoidAuth`
+ *   3. RPC error vocabulary via `mapRpcError(..., voidRpcMappings, voidRpcFallback)`
+ *   4. non-fatal post-RPC cancel-ticket print via `afterSuccess: enqueueCancelTicketPrintHook`
+ *
+ * Result shape change vs pre-WS-1a:
+ *   - `data.autoCancelledOrder` UNCHANGED
+ *   - `data.printWarning` REMOVED — print warning now lives on
+ *     `result.meta.warning` (set by the afterSuccess hook). The caller
+ *     `order-detail-sheet.tsx` was updated in the same commit.
+ */
+export const voidOrderItem = withActionPositional(
+  {
+    argsToInput: (orderItemId: number, reason: string) => ({
+      orderItemId,
+      reason,
+    }),
+    schema: voidItemSchema,
+    customAuth: posVoidAuth,
+    afterSuccess: enqueueCancelTicketPrintHook,
+  },
+  async (
+    { orderItemId, reason },
+    { supabase },
+  ): Promise<ActionResult<{ autoCancelledOrder: boolean }>> => {
+    const { data, error } = await supabase.rpc("void_order_item", {
+      p_order_item_id: orderItemId,
+      p_reason: reason,
+    });
 
-// Skip withAction: positional (orderItemId, reason) args + POS_VOID_ROLES
-export async function voidOrderItem(
-  orderItemId: number,
-  reason: string,
-): Promise<
-  ActionResult<{
-    autoCancelledOrder: boolean;
-    /** Present when the kitchen cancel-ticket enqueue was attempted but
-     * failed (printer offline / RLS). Void itself always succeeded. UI
-     * surfaces as a toast warning. */
-    printWarning?: string;
-  }>
-> {
-  const parsed = voidItemSchema.safeParse({ orderItemId, reason });
-  if (!parsed.success) {
+    if (error) {
+      return mapRpcError<{ autoCancelledOrder: boolean }>(
+        error,
+        voidRpcMappings,
+        voidRpcFallback,
+      );
+    }
+
+    const rpcResult = data as unknown as {
+      auto_cancelled_order?: boolean;
+      was_sent_to_kitchen?: boolean;
+    } | null;
+
+    // `wasSentToKitchen` rides on `meta` (not `data`) because callers do not
+    // need it — only the `afterSuccess` hook reads it to decide whether the
+    // cancel-ticket print should fire. Keeping internal state out of `data`
+    // preserves the operator-facing API surface.
     return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+      success: true,
+      data: { autoCancelledOrder: rpcResult?.auto_cancelled_order === true },
+      meta: { wasSentToKitchen: rpcResult?.was_sent_to_kitchen === true },
     };
-  }
-
-  const ctx = await getAuthContextWithPermission(
-    POS_VOID_ROLES,
-    PERMISSION_KEYS.POS_VOID_ORDER,
-  );
-  if (!ctx) {
-    return { success: false, error: "Cần quyền hủy đơn POS để hủy món." };
-  }
-
-  const { supabase } = ctx;
-
-  const { data, error } = await supabase.rpc("void_order_item", {
-    p_order_item_id: parsed.data.orderItemId,
-    p_reason: parsed.data.reason,
-  });
-
-  if (error) {
-    const msg = String(error.message ?? "").toLowerCase();
-    if (msg.includes("forbidden")) {
-      return { success: false, error: "Cần quyền hủy đơn POS để hủy món." };
-    }
-    if (msg.includes("voidable") || msg.includes("served")) {
-      return {
-        success: false,
-        error: "Không thể hủy món đã phục vụ hoặc đã hủy.",
-      };
-    }
-    return { success: false, error: "Không thể hủy món. Vui lòng thử lại." };
-  }
-
-  const result = data as unknown as {
-    auto_cancelled_order?: boolean;
-    was_sent_to_kitchen?: boolean;
-  } | null;
-
-  // Fire cancel-ticket print when the kitchen actually saw the item.
-  // Print failure is non-fatal — the void itself is already committed;
-  // the worst case is chef continues cooking for a few seconds until
-  // KDS realtime catches up. Surface as a toast warning, not an error.
-  let printWarning: string | undefined;
-  if (result?.was_sent_to_kitchen) {
-    const { data: printData, error: printError } = await supabase.rpc(
-      "enqueue_cancel_ticket_print",
-      {
-        p_order_item_id: parsed.data.orderItemId,
-        p_reason: parsed.data.reason,
-      },
-    );
-    if (printError) {
-      const msg = String(printError.message ?? "").toLowerCase();
-      if (msg.includes("permission denied")) {
-        printWarning =
-          "Đã hủy món. Không có quyền in phiếu hủy — báo bếp thủ công.";
-      } else if (msg.includes("tenant mismatch")) {
-        printWarning = "Đã hủy món. Lỗi quyền tenant khi in phiếu hủy.";
-      } else {
-        printWarning =
-          "Đã hủy món. Không in được phiếu hủy — kiểm tra máy in bếp.";
-      }
-    } else {
-      // RPC returns {skipped: true, reason: 'no_slot'|'no_printer'|...} when
-      // the item exists but the cancel ticket cannot be routed (drink with
-      // no kitchen slot, kitchen printer offline, feature flag off).
-      const skipReason = (
-        printData as { skipped?: boolean; reason?: string } | null
-      )?.skipped
-        ? (printData as { reason?: string }).reason
-        : undefined;
-      if (skipReason === "no_printer") {
-        printWarning = "Đã hủy món. Máy in bếp offline — báo bếp trực tiếp.";
-      } else if (skipReason === "no_slot") {
-        printWarning =
-          "Đã hủy món. Món không thuộc khu vực bếp (đồ uống chai?) — báo bar trực tiếp.";
-      } else if (skipReason === "feature_disabled") {
-        printWarning =
-          "Đã hủy món. Tính năng in phiếu hủy đang tắt — báo bếp trực tiếp.";
-      }
-    }
-  }
-
-  return {
-    success: true,
-    data: {
-      autoCancelledOrder: result?.auto_cancelled_order === true,
-      printWarning,
-    },
-  };
-}
+  },
+);
 
 /* ─── reduceOrderItemQuantity ─── */
 
