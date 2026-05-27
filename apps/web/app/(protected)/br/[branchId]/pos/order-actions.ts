@@ -19,13 +19,29 @@ import {
 } from "./types";
 import type { CartState, CartItem } from "./types";
 import { POS_ERROR_CODES } from "./_utils/error-codes";
-import { voidItemSchema } from "./_lib/schemas";
+import {
+  cancelOrderSchema,
+  editPendingItemSchema,
+  reduceItemSchema,
+  voidItemSchema,
+} from "./_lib/schemas";
+import type { EditPendingOrderItemInput } from "./_lib/schemas";
 import { posVoidAuth } from "./_lib/auth";
 import {
+  cancelRpcFallback,
+  cancelRpcMappings,
+  cancelSkipReasonsToWarning,
+  editPrintErrorToWarning,
+  editPrintSkipReasonToWarning,
+  editRpcFallback,
+  editRpcMappings,
   enqueueCancelTicketPrintHook,
+  enqueuePartialCancelTicketPrintHook,
   mapRpcError,
-  voidRpcMappings,
+  reduceRpcFallback,
+  reduceRpcMappings,
   voidRpcFallback,
+  voidRpcMappings,
 } from "./_lib/messages";
 
 async function markInitialOrderPriority(
@@ -1055,190 +1071,84 @@ export const voidOrderItem = withActionPositional(
 
 /* ─── reduceOrderItemQuantity ─── */
 
-const reduceItemSchema = z.object({
-  orderItemId: z.coerce.number().int().positive({ error: "Món không hợp lệ" }),
-  // Stepper UI clamps client-side, server enforces 1..(currentQty-1). Coerce
-  // because the dialog state stays a string until submit.
-  newQuantity: z.coerce
-    .number()
-    .int()
-    .min(1, { error: "Số lượng mới tối thiểu 1" }),
-  // Mirror voidItemSchema min(5) so audit trail isn't defeated by "x" reasons
-  // and so cashiers see the same UX rule across void / reduce.
-  reason: z
-    .string()
-    .trim()
-    .min(5, { error: "Lý do giảm SL tối thiểu 5 ký tự" }),
-});
+/**
+ * Reduce a single kitchen-sent order item's quantity with audit reason.
+ *
+ * Migrated to `withActionPositional` in WS-1b (2026-05-27). Same template
+ * as `voidOrderItem`: positional args via `argsToInput`, composite auth
+ * via `posVoidAuth`, RPC error map via `reduceRpcMappings` + fallback,
+ * partial-cancel kitchen ticket via `afterSuccess` hook
+ * (`enqueuePartialCancelTicketPrintHook`).
+ *
+ * Result shape change vs pre-WS-1b:
+ *   - `data.qtyReduced / oldQuantity / newQuantity` UNCHANGED
+ *   - `data.printWarning` REMOVED — print warning now lives on
+ *     `result.meta.warning` (set by the afterSuccess hook). The caller
+ *     `order-detail-sheet.tsx` was updated in the same commit.
+ */
+export const reduceOrderItemQuantity = withActionPositional(
+  {
+    argsToInput: (orderItemId: number, newQuantity: number, reason: string) => ({
+      orderItemId,
+      newQuantity,
+      reason,
+    }),
+    schema: reduceItemSchema,
+    customAuth: posVoidAuth,
+    afterSuccess: enqueuePartialCancelTicketPrintHook,
+  },
+  async (
+    { orderItemId, newQuantity, reason },
+    { supabase },
+  ): Promise<
+    ActionResult<{
+      qtyReduced: number;
+      oldQuantity: number;
+      newQuantity: number;
+    }>
+  > => {
+    const { data, error } = await supabase.rpc("reduce_order_item_quantity", {
+      p_order_item_id: orderItemId,
+      p_new_quantity: newQuantity,
+      p_reason: reason,
+    });
 
-// Skip withAction: positional (orderItemId, newQuantity, reason) args + POS_VOID_ROLES
-export async function reduceOrderItemQuantity(
-  orderItemId: number,
-  newQuantity: number,
-  reason: string,
-): Promise<
-  ActionResult<{
-    qtyReduced: number;
-    oldQuantity: number;
-    newQuantity: number;
-    /** Surfaced when reduce committed but the partial-cancel kitchen ticket
-     * could not enqueue (printer offline / no slot for drinks / RLS / flag
-     * off). UI surfaces as a toast warning so the operator knows to verbally
-     * notify the kitchen — reduce itself is already committed. */
-    printWarning?: string;
-  }>
-> {
-  const parsed = reduceItemSchema.safeParse({
-    orderItemId,
-    newQuantity,
-    reason,
-  });
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
-    };
-  }
-
-  const ctx = await getAuthContextWithPermission(
-    POS_VOID_ROLES,
-    PERMISSION_KEYS.POS_VOID_ORDER,
-  );
-  if (!ctx) {
-    return { success: false, error: "Cần quyền hủy đơn POS để giảm SL món." };
-  }
-
-  const { supabase } = ctx;
-
-  const { data, error } = await supabase.rpc("reduce_order_item_quantity", {
-    p_order_item_id: parsed.data.orderItemId,
-    p_new_quantity: parsed.data.newQuantity,
-    p_reason: parsed.data.reason,
-  });
-
-  if (error) {
-    const msg = String(error.message ?? "").toLowerCase();
-    if (msg.includes("forbidden")) {
-      return { success: false, error: "Cần quyền hủy đơn POS để giảm SL món." };
+    if (error) {
+      return mapRpcError(error, reduceRpcMappings, reduceRpcFallback);
     }
-    if (msg.includes("no reduction needed")) {
+
+    const rpcResult = data as unknown as {
+      order_id: number;
+      order_item_id: number;
+      old_quantity: number;
+      new_quantity: number;
+      qty_reduced: number;
+      was_sent_to_kitchen?: boolean;
+    } | null;
+
+    if (!rpcResult) {
       return {
         success: false,
-        error: "Số lượng mới phải nhỏ hơn số lượng hiện tại.",
+        error: "Không thể giảm SL món. Vui lòng thử lại.",
+        errorCode: POS_ERROR_CODES.RPC_GENERIC,
       };
     }
-    if (msg.includes("not reducible") || msg.includes("served")) {
-      return {
-        success: false,
-        error: "Không thể giảm SL món đã phục vụ hoặc đã hủy.",
-      };
-    }
-    if (msg.includes("order terminal")) {
-      return { success: false, error: "Đơn đã đóng, không thể giảm SL món." };
-    }
-    if (msg.includes("order already paid")) {
-      return { success: false, error: "Đơn đã thanh toán, không thể giảm SL." };
-    }
-    if (msg.includes("reason too short")) {
-      return {
-        success: false,
-        error: "Lý do giảm SL tối thiểu 5 ký tự.",
-      };
-    }
+
+    // `wasSentToKitchen` rides on `meta` — internal signal for the hook,
+    // not part of the caller-facing API.
     return {
-      success: false,
-      error: "Không thể giảm SL món. Vui lòng thử lại.",
-    };
-  }
-
-  const result = data as unknown as {
-    order_id: number;
-    order_item_id: number;
-    old_quantity: number;
-    new_quantity: number;
-    qty_reduced: number;
-    was_sent_to_kitchen?: boolean;
-  } | null;
-
-  if (!result) {
-    return {
-      success: false,
-      error: "Không thể giảm SL món. Vui lòng thử lại.",
-    };
-  }
-
-  // Fire partial-cancel ticket only when the kitchen actually saw the line.
-  // Print failure is non-fatal — the reduce is already committed; worst case
-  // the chef makes the original quantity until KDS realtime catches up.
-  // Surface as a toast warning, never a hard failure.
-  let printWarning: string | undefined;
-  if (result.was_sent_to_kitchen) {
-    const { data: printData, error: printError } = await supabase.rpc(
-      "enqueue_partial_cancel_ticket_print",
-      {
-        p_order_item_id: parsed.data.orderItemId,
-        p_old_quantity: result.old_quantity,
-        p_new_quantity: result.new_quantity,
-        p_reason: parsed.data.reason,
+      success: true,
+      data: {
+        qtyReduced: rpcResult.qty_reduced,
+        oldQuantity: rpcResult.old_quantity,
+        newQuantity: rpcResult.new_quantity,
       },
-    );
-    if (printError) {
-      const msg = String(printError.message ?? "").toLowerCase();
-      if (msg.includes("permission denied")) {
-        printWarning =
-          "Đã giảm SL. Không có quyền in phiếu báo bếp — báo bếp thủ công.";
-      } else if (msg.includes("tenant mismatch")) {
-        printWarning = "Đã giảm SL. Lỗi quyền tenant khi in phiếu báo bếp.";
-      } else {
-        printWarning =
-          "Đã giảm SL. Không in được phiếu báo bếp — kiểm tra máy in bếp.";
-      }
-    } else {
-      const skipReason = (
-        printData as { skipped?: boolean; reason?: string } | null
-      )?.skipped
-        ? (printData as { reason?: string }).reason
-        : undefined;
-      if (skipReason === "no_printer") {
-        printWarning = "Đã giảm SL. Máy in bếp offline — báo bếp trực tiếp.";
-      } else if (skipReason === "no_slot") {
-        printWarning =
-          "Đã giảm SL. Món không thuộc khu vực bếp (đồ uống chai?) — báo bar trực tiếp.";
-      } else if (skipReason === "feature_disabled") {
-        printWarning =
-          "Đã giảm SL. Tính năng in phiếu báo giảm đang tắt — báo bếp trực tiếp.";
-      }
-    }
-  }
-
-  return {
-    success: true,
-    data: {
-      qtyReduced: result.qty_reduced,
-      oldQuantity: result.old_quantity,
-      newQuantity: result.new_quantity,
-      printWarning,
-    },
-  };
-}
+      meta: { wasSentToKitchen: rpcResult.was_sent_to_kitchen === true },
+    };
+  },
+);
 
 /* ─── editPendingOrderItem ─── */
-
-const editPendingItemSchema = z.object({
-  orderItemId: z.coerce.number().int().positive({ error: "Món không hợp lệ" }),
-  // variantId nullable: món có thể không có biến thể.
-  variantId: z.coerce.number().int().positive().nullable(),
-  variantName: z.string().trim().max(100).nullable(),
-  // Server cũng validate >= 0; client clamp để stepper-bound chặt.
-  unitPrice: z.coerce.number().min(0, { error: "Đơn giá không hợp lệ" }),
-  modifiers: z.array(cartModifierSchema),
-  sides: z.array(cartSideSchema),
-  // Mirror cartItem.note: optional, max 200 ký tự (theo item-customizer maxLength).
-  note: z.string().max(200).nullable().optional(),
-  quantity: z.coerce.number().int().min(1).max(99),
-});
-
-export type EditPendingOrderItemInput = z.infer<typeof editPendingItemSchema>;
 
 /**
  * Sửa món đã gửi (variant/topping/sides/note/qty/unit_price) khi
@@ -1253,214 +1163,149 @@ export type EditPendingOrderItemInput = z.infer<typeof editPendingItemSchema>;
  * Nếu số lượng đổi sau khi phiếu bếp đã in, enqueue thêm một phiếu delta:
  * tăng SL dùng kitchen_ticket/GỌI THÊM; giảm SL dùng cancel_ticket. Các edit
  * khác vẫn chỉ bump KDS realtime và nhắc cashier báo bếp thủ công.
+ *
+ * Migrated to `withActionPositional` in WS-1b (2026-05-27).
+ * Result shape vs pre-WS-1b: UNCHANGED. Print logic stays in the handler
+ * (not in an `afterSuccess` hook) because `quantityPrintQueued` is a
+ * data-level outcome the caller branches on — `afterSuccess` only returns
+ * `{ warning? }`, which would lose that signal. The caller
+ * `pos-desktop-shell.tsx` reads all three (`printWarning`,
+ * `quantityPrintQueued`, `wasSentToKitchen`) from `r.data`, so we keep them
+ * there.
  */
-// Skip withAction: positional + complex payload + POS_VOID_ROLES
-export async function editPendingOrderItem(
-  orderItemId: number,
-  input: Omit<EditPendingOrderItemInput, "orderItemId">,
-): Promise<
-  ActionResult<{
-    oldQuantity: number;
-    newQuantity: number;
-    /** True khi phiếu bếp đã in trước lúc sửa — UI nên cảnh báo operator
-     * báo lại với chef vì phiếu giấy stale (KDS screen sẽ tự refetch). */
-    wasSentToKitchen: boolean;
-    /** True khi thay đổi số lượng đã queue phiếu báo bếp/bar. */
-    quantityPrintQueued: boolean;
-    /** Print enqueue failure is non-fatal; cashier must notify kitchen. */
-    printWarning?: string;
-  }>
-> {
-  const parsed = editPendingItemSchema.safeParse({ orderItemId, ...input });
-  if (!parsed.success) {
+export const editPendingOrderItem = withActionPositional(
+  {
+    argsToInput: (
+      orderItemId: number,
+      input: Omit<EditPendingOrderItemInput, "orderItemId">,
+    ) => ({ orderItemId, ...input }),
+    schema: editPendingItemSchema,
+    customAuth: posVoidAuth,
+  },
+  async (
+    parsedData,
+    { supabase },
+  ): Promise<
+    ActionResult<{
+      oldQuantity: number;
+      newQuantity: number;
+      wasSentToKitchen: boolean;
+      quantityPrintQueued: boolean;
+      printWarning?: string;
+    }>
+  > => {
+    const trimmedNote = parsedData.note?.trim();
+    const noteOrNull =
+      typeof trimmedNote === "string" && trimmedNote.length > 0
+        ? trimmedNote
+        : null;
+    const variantNameOrNull =
+      parsedData.variantName != null && parsedData.variantName.length > 0
+        ? parsedData.variantName
+        : null;
+
+    // RPC accepts JSONB — pass plain JS objects, supabase-js serializes.
+    const rpcModifiers = parsedData.modifiers.map((m) => ({
+      modifier_id: m.modifier_id,
+      name: m.name,
+      price: m.price,
+    }));
+    const rpcSides = parsedData.sides.map((s) => ({
+      side_item_id: s.side_item_id,
+      name: s.name,
+      price: s.price,
+      quantity: s.quantity,
+      is_default: s.is_default,
+    }));
+
+    // RPC types not yet regenerated (migration pending owner apply per
+    // CLAUDE.md: dev/test push OK, production file→PR→merge→manual apply →
+    // pnpm db:types). Cast mirrors existing pattern in menu-actions.ts for
+    // get_branch_menu_daily_limits_for_pos. After owner applies + db:types,
+    // remove the cast.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase as any).rpc(
+      "edit_pending_order_item",
+      {
+        p_order_item_id: parsedData.orderItemId,
+        p_variant_id: parsedData.variantId,
+        p_variant_name: variantNameOrNull,
+        p_unit_price: parsedData.unitPrice,
+        p_modifiers: rpcModifiers,
+        p_sides: rpcSides,
+        p_note: noteOrNull,
+        p_quantity: parsedData.quantity,
+      },
+    );
+
+    if (error) {
+      return mapRpcError(error, editRpcMappings, editRpcFallback);
+    }
+
+    const result = data as unknown as {
+      old_quantity: number;
+      new_quantity: number;
+      was_sent_to_kitchen?: boolean;
+    } | null;
+
+    if (!result) {
+      return {
+        success: false,
+        error: "Không thể sửa món. Vui lòng thử lại.",
+        errorCode: POS_ERROR_CODES.RPC_GENERIC,
+      };
+    }
+
+    let printWarning: string | undefined;
+    let quantityPrintQueued = false;
+    const wasSentToKitchen = result.was_sent_to_kitchen === true;
+    const quantityChanged = result.old_quantity !== result.new_quantity;
+
+    if (wasSentToKitchen && quantityChanged) {
+      const { data: printData, error: printError } =
+        await // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (supabase as any).rpc("enqueue_edit_pending_order_item_quantity_print", {
+          p_order_item_id: parsedData.orderItemId,
+          p_old_quantity: result.old_quantity,
+          p_new_quantity: result.new_quantity,
+          p_reason: "Sua so luong mon",
+        });
+
+      if (printError) {
+        printWarning = editPrintErrorToWarning(printError.message);
+      } else {
+        const payload = printData as {
+          skipped?: boolean;
+          reason?: string;
+          job_id?: number | null;
+        } | null;
+        const skipReason = payload?.skipped ? payload.reason : undefined;
+        const skipWarning = editPrintSkipReasonToWarning(skipReason);
+        if (skipWarning) {
+          printWarning = skipWarning;
+        } else if (
+          skipReason === "not_sent" ||
+          skipReason === "no_quantity_change"
+        ) {
+          quantityPrintQueued = false;
+        } else {
+          quantityPrintQueued = typeof payload?.job_id === "number";
+        }
+      }
+    }
+
     return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+      success: true,
+      data: {
+        oldQuantity: result.old_quantity,
+        newQuantity: result.new_quantity,
+        wasSentToKitchen,
+        quantityPrintQueued,
+        printWarning,
+      },
     };
-  }
-
-  const ctx = await getAuthContextWithPermission(
-    POS_VOID_ROLES,
-    PERMISSION_KEYS.POS_VOID_ORDER,
-  );
-  if (!ctx) {
-    return { success: false, error: "Cần quyền hủy đơn POS để sửa món." };
-  }
-
-  const { supabase } = ctx;
-
-  const trimmedNote = parsed.data.note?.trim();
-  const noteOrNull =
-    typeof trimmedNote === "string" && trimmedNote.length > 0
-      ? trimmedNote
-      : null;
-  const variantNameOrNull =
-    parsed.data.variantName != null && parsed.data.variantName.length > 0
-      ? parsed.data.variantName
-      : null;
-
-  // RPC accepts JSONB — pass plain JS objects, supabase-js serializes.
-  const rpcModifiers = parsed.data.modifiers.map((m) => ({
-    modifier_id: m.modifier_id,
-    name: m.name,
-    price: m.price,
-  }));
-  const rpcSides = parsed.data.sides.map((s) => ({
-    side_item_id: s.side_item_id,
-    name: s.name,
-    price: s.price,
-    quantity: s.quantity,
-    is_default: s.is_default,
-  }));
-
-  // RPC types not yet regenerated (migration pending owner apply per
-  // CLAUDE.md: dev/test push OK, production file→PR→merge→manual apply →
-  // pnpm db:types). Cast mirrors existing pattern in menu-actions.ts for
-  // get_branch_menu_daily_limits_for_pos. After owner applies + db:types,
-  // remove the cast.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any).rpc(
-    "edit_pending_order_item",
-    {
-      p_order_item_id: parsed.data.orderItemId,
-      p_variant_id: parsed.data.variantId,
-      p_variant_name: variantNameOrNull,
-      p_unit_price: parsed.data.unitPrice,
-      p_modifiers: rpcModifiers,
-      p_sides: rpcSides,
-      p_note: noteOrNull,
-      p_quantity: parsed.data.quantity,
-    },
-  );
-
-  if (error) {
-    const msg = String(error.message ?? "").toLowerCase();
-    if (msg.includes("forbidden")) {
-      return { success: false, error: "Cần quyền hủy đơn POS để sửa món." };
-    }
-    if (
-      msg.includes("not editable") ||
-      msg.includes("preparing") ||
-      msg.includes("ready")
-    ) {
-      return {
-        success: false,
-        error:
-          "Chỉ sửa được món khi chưa được làm. Hãy hủy món + thêm món mới.",
-      };
-    }
-    if (msg.includes("order terminal")) {
-      return { success: false, error: "Đơn đã đóng, không thể sửa món." };
-    }
-    if (msg.includes("order already paid")) {
-      return { success: false, error: "Đơn đã thanh toán, không thể sửa món." };
-    }
-    if (msg.includes("menu item inactive")) {
-      return {
-        success: false,
-        error: "Món đã ngừng bán — hãy hủy món và chọn món khác.",
-      };
-    }
-    if (msg.includes("variant inactive")) {
-      return {
-        success: false,
-        error: "Biến thể không còn khả dụng — chọn biến thể khác.",
-      };
-    }
-    if (
-      msg.includes("stale_side_or_modifier") ||
-      msg.includes("stale modifier") ||
-      msg.includes("stale side")
-    ) {
-      return {
-        success: false,
-        error:
-          "Tùy chọn món đã thay đổi. Vui lòng mở món và chọn lại trước khi cập nhật.",
-      };
-    }
-    if (msg.includes("feature disabled")) {
-      return {
-        success: false,
-        error: "Tính năng sửa món đang tắt — liên hệ quản lý.",
-      };
-    }
-    return { success: false, error: "Không thể sửa món. Vui lòng thử lại." };
-  }
-
-  const result = data as unknown as {
-    old_quantity: number;
-    new_quantity: number;
-    was_sent_to_kitchen?: boolean;
-  } | null;
-
-  if (!result) {
-    return { success: false, error: "Không thể sửa món. Vui lòng thử lại." };
-  }
-
-  let printWarning: string | undefined;
-  let quantityPrintQueued = false;
-  const wasSentToKitchen = result.was_sent_to_kitchen === true;
-  const quantityChanged = result.old_quantity !== result.new_quantity;
-
-  if (wasSentToKitchen && quantityChanged) {
-    const { data: printData, error: printError } =
-      await // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (supabase as any).rpc("enqueue_edit_pending_order_item_quantity_print", {
-        p_order_item_id: parsed.data.orderItemId,
-        p_old_quantity: result.old_quantity,
-        p_new_quantity: result.new_quantity,
-        p_reason: "Sua so luong mon",
-      });
-
-    if (printError) {
-      const msg = String(printError.message ?? "").toLowerCase();
-      if (msg.includes("permission denied")) {
-        printWarning =
-          "Đã cập nhật món. Không có quyền in phiếu báo bếp — báo bếp thủ công.";
-      } else if (msg.includes("tenant mismatch")) {
-        printWarning =
-          "Đã cập nhật món. Lỗi quyền tenant khi in phiếu báo bếp.";
-      } else {
-        printWarning =
-          "Đã cập nhật món. Không in được phiếu báo bếp — kiểm tra máy in.";
-      }
-    } else {
-      const payload = printData as {
-        skipped?: boolean;
-        reason?: string;
-        job_id?: number | null;
-      } | null;
-      const skipReason = payload?.skipped ? payload.reason : undefined;
-      if (skipReason === "no_printer") {
-        printWarning =
-          "Đã cập nhật món. Máy in bếp offline hoặc chưa nhận loại phiếu này — báo bếp trực tiếp.";
-      } else if (skipReason === "no_slot") {
-        printWarning =
-          "Đã cập nhật món. Món không thuộc khu vực bếp/bar — báo trực tiếp.";
-      } else if (skipReason === "feature_disabled") {
-        printWarning =
-          "Đã cập nhật món. Tính năng in phiếu báo giảm đang tắt — báo bếp trực tiếp.";
-      } else if (skipReason === "not_sent") {
-        quantityPrintQueued = false;
-      } else if (skipReason === "no_quantity_change") {
-        quantityPrintQueued = false;
-      } else {
-        quantityPrintQueued = typeof payload?.job_id === "number";
-      }
-    }
-  }
-
-  return {
-    success: true,
-    data: {
-      oldQuantity: result.old_quantity,
-      newQuantity: result.new_quantity,
-      wasSentToKitchen,
-      quantityPrintQueued,
-      printWarning,
-    },
-  };
-}
+  },
+);
 
 function mapPriorityError(message: string, target: "order" | "item"): string {
   const msg = message.toLowerCase();
@@ -1569,105 +1414,65 @@ export async function setOrderItemPriority(
 
 /* ─── cancelOrder ─── */
 
-const cancelOrderSchema = z.object({
-  orderId: z.coerce.number().int().positive({ error: "Đơn không hợp lệ" }),
-  // min(5): cancelling a whole order destroys revenue + sometimes leaks
-  // food cost. Single-char "x" defeats the audit trail. 5 is the floor —
-  // long enough for short legitimate reasons ("hết", "khách đổi") yet
-  // strong enough to reject fat-finger noise. UI guard MUST mirror this
-  // in the CancelOrderDialog before submit so cashier sees the rule
-  // before the action call rather than getting a delayed server reject.
-  reason: z
-    .string()
-    .trim()
-    .min(5, { error: "Lý do hủy đơn tối thiểu 5 ký tự" }),
-});
+/**
+ * Cancel an entire order with audit reason. The RPC enqueues per-item
+ * cancel tickets INSIDE its transaction; this action does not run a
+ * follow-up print RPC. Per-item skip reasons come back as
+ * `result.skip_reasons[]` and get reduced to a single operator toast by
+ * `cancelSkipReasonsToWarning`.
+ *
+ * Migrated to `withActionPositional` in WS-1b (2026-05-27).
+ * Result shape change vs pre-WS-1b:
+ *   - `data.cancelTickets / cancelSkipped` UNCHANGED
+ *   - `data.printWarning` REMOVED — warning now lives on
+ *     `result.meta.warning`. Caller `order-detail-sheet.tsx` updated in
+ *     the same commit.
+ */
+export const cancelOrder = withActionPositional(
+  {
+    argsToInput: (orderId: number, reason: string) => ({ orderId, reason }),
+    schema: cancelOrderSchema,
+    customAuth: posVoidAuth,
+  },
+  async (
+    { orderId, reason },
+    { supabase },
+  ): Promise<
+    ActionResult<{ cancelTickets: number; cancelSkipped: number }>
+  > => {
+    const { data, error } = await supabase.rpc("cancel_order", {
+      p_order_id: orderId,
+      p_reason: reason,
+    });
 
-// Skip withAction: positional (orderId, reason) args + POS_VOID_ROLES
-export async function cancelOrder(
-  orderId: number,
-  reason: string,
-): Promise<
-  ActionResult<{
-    cancelTickets: number;
-    cancelSkipped: number;
-    /** Surfaced when ≥1 cancelled item could not enqueue a kitchen/bar
-     * ticket (no_slot for drinks, no_printer for offline hardware, etc.).
-     * UI toasts so the operator can verbally notify the affected station. */
-    printWarning?: string;
-  }>
-> {
-  const parsed = cancelOrderSchema.safeParse({ orderId, reason });
-  if (!parsed.success) {
+    if (error) {
+      return mapRpcError(error, cancelRpcMappings, cancelRpcFallback);
+    }
+
+    const rpcResult = data as unknown as {
+      order_id?: number;
+      status?: string;
+      cancel_tickets?: number;
+      cancel_skipped?: number;
+      skip_reasons?: string[];
+    } | null;
+
+    const cancelSkipped = rpcResult?.cancel_skipped ?? 0;
+    const warning = cancelSkipReasonsToWarning(
+      cancelSkipped,
+      rpcResult?.skip_reasons ?? [],
+    );
+
     return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+      success: true,
+      data: {
+        cancelTickets: rpcResult?.cancel_tickets ?? 0,
+        cancelSkipped,
+      },
+      meta: warning ? { warning } : undefined,
     };
-  }
-
-  const ctx = await getAuthContextWithPermission(
-    POS_VOID_ROLES,
-    PERMISSION_KEYS.POS_VOID_ORDER,
-  );
-  if (!ctx) {
-    return { success: false, error: "Cần quyền hủy đơn POS để hủy đơn." };
-  }
-
-  const { supabase } = ctx;
-
-  const { data, error } = await supabase.rpc("cancel_order", {
-    p_order_id: parsed.data.orderId,
-    p_reason: parsed.data.reason,
-  });
-
-  if (error) {
-    const msg = String(error.message ?? "").toLowerCase();
-    if (msg.includes("forbidden")) {
-      return { success: false, error: "Cần quyền hủy đơn POS để hủy đơn." };
-    }
-    if (msg.includes("terminal")) {
-      return {
-        success: false,
-        error: "Đơn đã kết thúc, không thể hủy.",
-      };
-    }
-    return { success: false, error: "Không thể hủy đơn. Vui lòng thử lại." };
-  }
-
-  const result = data as unknown as {
-    order_id?: number;
-    status?: string;
-    cancel_tickets?: number;
-    cancel_skipped?: number;
-    skip_reasons?: string[];
-  } | null;
-
-  const skipped = result?.cancel_skipped ?? 0;
-  let printWarning: string | undefined;
-  if (skipped > 0) {
-    const reasons = result?.skip_reasons ?? [];
-    const has = (k: string) => reasons.some((r) => r.startsWith(k));
-    if (has("no_printer")) {
-      printWarning = `Đã hủy đơn. ${skipped} món bếp/bar không nhận được phiếu báo hủy (máy in offline) — báo trực tiếp.`;
-    } else if (has("no_slot")) {
-      printWarning = `Đã hủy đơn. ${skipped} món không có khu vực bếp (đồ uống chai?) — báo bar trực tiếp.`;
-    } else if (has("feature_disabled")) {
-      printWarning =
-        "Đã hủy đơn. Tính năng in phiếu hủy đang tắt — báo bếp trực tiếp.";
-    } else {
-      printWarning = `Đã hủy đơn. ${skipped} phiếu hủy không in được — báo bếp/bar trực tiếp.`;
-    }
-  }
-
-  return {
-    success: true,
-    data: {
-      cancelTickets: result?.cancel_tickets ?? 0,
-      cancelSkipped: skipped,
-      printWarning,
-    },
-  };
-}
+  },
+);
 
 /* ─── transferOrderTable ─── */
 

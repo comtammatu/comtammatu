@@ -626,8 +626,12 @@ export function OrderDetailSheet({
       const r = await cancelOrder(orderId, reason);
       if (r.success) {
         notify.success(messages.pos.order.voided);
-        if (r.data?.printWarning) {
-          notify.warning(r.data.printWarning);
+        // Per-item cancel-ticket skip warning now lives on r.meta.warning
+        // (set by cancelSkipReasonsToWarning inside the action handler) per
+        // WS-1b. Pre-WS-1b this was r.data.printWarning.
+        const cancelWarning = r.meta?.warning;
+        if (typeof cancelWarning === "string") {
+          notify.warning(cancelWarning);
         }
         setShowCancel(false);
         setCancelReason("");
@@ -776,8 +780,12 @@ export function OrderDetailSheet({
         notify.success(
           `Đã giảm SL: ${target.quantity} → ${r.data?.newQuantity ?? reduceNewQty}`,
         );
-        if (r.data?.printWarning) {
-          notify.warning(r.data.printWarning);
+        // Partial-cancel print warning now lives on r.meta.warning (set by
+        // enqueuePartialCancelTicketPrintHook in pos/_lib/messages.ts) per
+        // WS-1b. Pre-WS-1b this was r.data.printWarning.
+        const reduceWarning = r.meta?.warning;
+        if (typeof reduceWarning === "string") {
+          notify.warning(reduceWarning);
         }
         setReduceItemId(null);
         setReduceReason("");

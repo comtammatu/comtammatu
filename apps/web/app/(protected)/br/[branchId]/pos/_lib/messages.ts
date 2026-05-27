@@ -18,7 +18,7 @@ import {
 } from "@/_lib/rpc-error-map";
 import type { AfterSuccessHook } from "@/_lib/with-action";
 import { POS_ERROR_CODES } from "../_utils/error-codes";
-import type { VoidItemInput } from "./schemas";
+import type { ReduceItemInput, VoidItemInput } from "./schemas";
 
 /* ────────────────────────────────────────────────────────────────────────── */
 /*  voidOrderItem — main RPC error vocabulary                                 */
@@ -148,6 +148,282 @@ export const enqueueCancelTicketPrintHook: AfterSuccessHook<
   }
   return;
 };
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/*  reduceOrderItemQuantity — main RPC error vocabulary                       */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Mappings for `supabase.rpc("reduce_order_item_quantity", ...)` failures.
+ * Order: most-specific first. The RPC raises distinct sentinels for the
+ * various pre-conditions (no reduction needed / not reducible / served /
+ * terminal / already paid / reason too short) which the dialog UX needs to
+ * differentiate.
+ */
+export const reduceRpcMappings: readonly RpcErrorMapping[] = [
+  {
+    match: includesAny("forbidden"),
+    errorCode: POS_ERROR_CODES.AUTH_NO_PERMISSION,
+    userMessage: "Cần quyền hủy đơn POS để giảm SL món.",
+  },
+  {
+    match: includesAny("no reduction needed"),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage: "Số lượng mới phải nhỏ hơn số lượng hiện tại.",
+  },
+  {
+    match: includesAny("not reducible", "served"),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage: "Không thể giảm SL món đã phục vụ hoặc đã hủy.",
+  },
+  {
+    match: includesAny("order terminal"),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage: "Đơn đã đóng, không thể giảm SL món.",
+  },
+  {
+    match: includesAny("order already paid"),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage: "Đơn đã thanh toán, không thể giảm SL.",
+  },
+  {
+    match: includesAny("reason too short"),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage: "Lý do giảm SL tối thiểu 5 ký tự.",
+  },
+];
+
+export const reduceRpcFallback: RpcErrorFallback = {
+  userMessage: "Không thể giảm SL món. Vui lòng thử lại.",
+  errorCode: POS_ERROR_CODES.RPC_GENERIC,
+};
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/*  enqueue_partial_cancel_ticket_print — for reduceOrderItemQuantity         */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+function reducePrintErrorToWarning(message: string | null | undefined): string {
+  const msg = (message ?? "").toLowerCase();
+  if (msg.includes("permission denied")) {
+    return "Đã giảm SL. Không có quyền in phiếu báo bếp — báo bếp thủ công.";
+  }
+  if (msg.includes("tenant mismatch")) {
+    return "Đã giảm SL. Lỗi quyền tenant khi in phiếu báo bếp.";
+  }
+  return "Đã giảm SL. Không in được phiếu báo bếp — kiểm tra máy in bếp.";
+}
+
+function reducePrintSkipReasonToWarning(
+  reason: string | undefined,
+): string | undefined {
+  if (reason === "no_printer") {
+    return "Đã giảm SL. Máy in bếp offline — báo bếp trực tiếp.";
+  }
+  if (reason === "no_slot") {
+    return "Đã giảm SL. Món không thuộc khu vực bếp (đồ uống chai?) — báo bar trực tiếp.";
+  }
+  if (reason === "feature_disabled") {
+    return "Đã giảm SL. Tính năng in phiếu báo giảm đang tắt — báo bếp trực tiếp.";
+  }
+  return undefined;
+}
+
+/**
+ * `afterSuccess` hook for `reduceOrderItemQuantity`. Mirror of
+ * `enqueueCancelTicketPrintHook` but targets `enqueue_partial_cancel_ticket_print`
+ * with the additional `p_old_quantity` / `p_new_quantity` args that the
+ * partial-cancel ticket needs. Reads `result.meta` for the kitchen-sent
+ * flag plus the old/new quantities (handler sets them).
+ */
+export const enqueuePartialCancelTicketPrintHook: AfterSuccessHook<
+  ReduceItemInput,
+  { qtyReduced: number; oldQuantity: number; newQuantity: number }
+> = async (input, result, ctx) => {
+  // `wasSentToKitchen` rides on meta (internal flag — not exposed to
+  // callers). `oldQuantity` / `newQuantity` come from the handler's data
+  // because the caller also wants them in the toast ("đã giảm SL: 3 → 2"),
+  // so duplicating on meta would be noise.
+  const wasSentToKitchen = result.meta?.wasSentToKitchen === true;
+  if (!wasSentToKitchen) return;
+
+  const oldQuantity = result.data?.oldQuantity;
+  const newQuantity = result.data?.newQuantity ?? input.newQuantity;
+  if (typeof oldQuantity !== "number") return;
+
+  const supabase: SupabaseClient = ctx.supabase;
+  const { data: printData, error: printError } = await supabase.rpc(
+    "enqueue_partial_cancel_ticket_print",
+    {
+      p_order_item_id: input.orderItemId,
+      p_old_quantity: oldQuantity,
+      p_new_quantity: newQuantity,
+      p_reason: input.reason,
+    },
+  );
+
+  if (printError) {
+    return { warning: reducePrintErrorToWarning(printError.message) };
+  }
+
+  const payload = printData as
+    | { skipped?: boolean; reason?: string }
+    | null
+    | undefined;
+  if (payload?.skipped) {
+    const warning = reducePrintSkipReasonToWarning(payload.reason);
+    if (warning) return { warning };
+  }
+  return;
+};
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/*  cancelOrder — main RPC + skip-reason warning helper                       */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Mappings for `supabase.rpc("cancel_order", ...)` failures.
+ * Cancel-order is simpler than void/reduce: it raises only `forbidden` and
+ * `terminal`. The downstream per-item cancel-ticket enqueues happen INSIDE
+ * the RPC transaction, so there is no separate print RPC for the action
+ * to follow up with — skip-reason warnings are reduced from
+ * `result.skip_reasons` (see `cancelSkipReasonsToWarning` below).
+ */
+export const cancelRpcMappings: readonly RpcErrorMapping[] = [
+  {
+    match: includesAny("forbidden"),
+    errorCode: POS_ERROR_CODES.AUTH_NO_PERMISSION,
+    userMessage: "Cần quyền hủy đơn POS để hủy đơn.",
+  },
+  {
+    match: includesAny("terminal"),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage: "Đơn đã kết thúc, không thể hủy.",
+  },
+];
+
+export const cancelRpcFallback: RpcErrorFallback = {
+  userMessage: "Không thể hủy đơn. Vui lòng thử lại.",
+  errorCode: POS_ERROR_CODES.RPC_GENERIC,
+};
+
+/**
+ * Reduce the `cancel_order` RPC's `skip_reasons[]` array down to a single
+ * operator-facing toast warning. Skip-reasons are per-item; we surface the
+ * MOST-IMPORTANT class (printer offline > no-slot > feature-off > other).
+ * Mirrors the pre-WS-1b inline `if`-chain in `cancelOrder`.
+ */
+export function cancelSkipReasonsToWarning(
+  skipped: number,
+  reasons: readonly string[],
+): string | undefined {
+  if (skipped <= 0) return undefined;
+  const has = (k: string) => reasons.some((r) => r.startsWith(k));
+  if (has("no_printer")) {
+    return `Đã hủy đơn. ${skipped} món bếp/bar không nhận được phiếu báo hủy (máy in offline) — báo trực tiếp.`;
+  }
+  if (has("no_slot")) {
+    return `Đã hủy đơn. ${skipped} món không có khu vực bếp (đồ uống chai?) — báo bar trực tiếp.`;
+  }
+  if (has("feature_disabled")) {
+    return "Đã hủy đơn. Tính năng in phiếu hủy đang tắt — báo bếp trực tiếp.";
+  }
+  return `Đã hủy đơn. ${skipped} phiếu hủy không in được — báo bếp/bar trực tiếp.`;
+}
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/*  editPendingOrderItem — main RPC + edit-print helpers                      */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Mappings for `supabase.rpc("edit_pending_order_item", ...)` failures. The
+ * RPC raises a wider catalogue of sentinels than void/reduce because the
+ * edit path has many pre-conditions (variant active, menu item active,
+ * stale options, feature flag, order state). Ordered most-specific first.
+ */
+export const editRpcMappings: readonly RpcErrorMapping[] = [
+  {
+    match: includesAny("forbidden"),
+    errorCode: POS_ERROR_CODES.AUTH_NO_PERMISSION,
+    userMessage: "Cần quyền hủy đơn POS để sửa món.",
+  },
+  {
+    match: includesAny("not editable", "preparing", "ready"),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage:
+      "Chỉ sửa được món khi chưa được làm. Hãy hủy món + thêm món mới.",
+  },
+  {
+    match: includesAny("order terminal"),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage: "Đơn đã đóng, không thể sửa món.",
+  },
+  {
+    match: includesAny("order already paid"),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage: "Đơn đã thanh toán, không thể sửa món.",
+  },
+  {
+    match: includesAny("menu item inactive"),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage: "Món đã ngừng bán — hãy hủy món và chọn món khác.",
+  },
+  {
+    match: includesAny("variant inactive"),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage: "Biến thể không còn khả dụng — chọn biến thể khác.",
+  },
+  {
+    match: includesAny("stale_side_or_modifier", "stale modifier", "stale side"),
+    errorCode: POS_ERROR_CODES.CART_STALE_MENU_OPTION,
+    userMessage:
+      "Tùy chọn món đã thay đổi. Vui lòng mở món và chọn lại trước khi cập nhật.",
+  },
+  {
+    match: includesAny("feature disabled"),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage: "Tính năng sửa món đang tắt — liên hệ quản lý.",
+  },
+];
+
+export const editRpcFallback: RpcErrorFallback = {
+  userMessage: "Không thể sửa món. Vui lòng thử lại.",
+  errorCode: POS_ERROR_CODES.RPC_GENERIC,
+};
+
+/**
+ * Map the edit-pending print RPC's `error.message` into the operator-facing
+ * warning string. Kept as a free function (not afterSuccess) because the
+ * caller `editPendingOrderItem` needs to set the `quantityPrintQueued`
+ * data-level flag alongside the warning — afterSuccess only returns
+ * `{ warning? }`. Handler invokes this inline.
+ */
+export function editPrintErrorToWarning(
+  message: string | null | undefined,
+): string {
+  const msg = (message ?? "").toLowerCase();
+  if (msg.includes("permission denied")) {
+    return "Đã cập nhật món. Không có quyền in phiếu báo bếp — báo bếp thủ công.";
+  }
+  if (msg.includes("tenant mismatch")) {
+    return "Đã cập nhật món. Lỗi quyền tenant khi in phiếu báo bếp.";
+  }
+  return "Đã cập nhật món. Không in được phiếu báo bếp — kiểm tra máy in.";
+}
+
+export function editPrintSkipReasonToWarning(
+  reason: string | undefined,
+): string | undefined {
+  if (reason === "no_printer") {
+    return "Đã cập nhật món. Máy in bếp offline hoặc chưa nhận loại phiếu này — báo bếp trực tiếp.";
+  }
+  if (reason === "no_slot") {
+    return "Đã cập nhật món. Món không thuộc khu vực bếp/bar — báo trực tiếp.";
+  }
+  if (reason === "feature_disabled") {
+    return "Đã cập nhật món. Tính năng in phiếu báo giảm đang tắt — báo bếp trực tiếp.";
+  }
+  return undefined;
+}
 
 /* ────────────────────────────────────────────────────────────────────────── */
 /*  Re-exports for convenience inside actions/_components consumers           */
