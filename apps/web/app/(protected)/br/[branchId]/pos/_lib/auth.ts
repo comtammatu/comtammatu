@@ -42,8 +42,9 @@ export const POS_VOID_ROLES: readonly StaffRole[] = MODULE_ACL.pos.allowedRoles;
  * RPC's own server-side gate provides defense-in-depth (per the
  * POS-KDS-RPC-SERVER-SIDE-ROLE-GATE regression note).
  *
- * Used by `voidOrderItem` in WS-1a. WS-1b will reuse for
- * `reduceOrderItemQuantity`, `cancelOrder`, and any future void path.
+ * Used by `voidOrderItem` (WS-1a) and `reduceOrderItemQuantity` /
+ * `cancelOrder` / `editPendingOrderItem` (WS-1b batch 1). WS-1b batch 2+
+ * will reuse for any future void path.
  *
  * Signature: accepts but ignores the schema input. `withActionPositional`
  * passes the parsed input to every `customAuth` callable; resolvers that
@@ -54,4 +55,24 @@ export async function posVoidAuth(): Promise<ActionContext | null> {
     POS_VOID_ROLES,
     PERMISSION_KEYS.POS_VOID_ORDER,
   );
+}
+
+/** POS operators allowed to run day-to-day order lifecycle actions
+ * (priority flags, table transfer, served, cart submit). Same role list
+ * as `POS_VOID_ROLES` today, but kept as a separate named alias so a
+ * future split (e.g. removing chef from non-kitchen lifecycle actions)
+ * can land without re-scoping void.
+ */
+export const POS_USE_ROLES: readonly StaffRole[] = MODULE_ACL.pos.allowedRoles;
+
+/**
+ * `customAuth` resolver for POS lifecycle actions: composite gate
+ * role ∈ POS_USE_ROLES AND grant `pos:use`. Used by
+ * `setOrderPriority` / `setOrderItemPriority` /
+ * `transferOrderTable` / `updateOrderStatus` / `markOrderItemServed`
+ * and any other lifecycle action that does NOT destroy revenue
+ * (those keep `posVoidAuth`).
+ */
+export async function posUseAuth(): Promise<ActionContext | null> {
+  return getAuthContextWithPermission(POS_USE_ROLES, PERMISSION_KEYS.POS_USE);
 }

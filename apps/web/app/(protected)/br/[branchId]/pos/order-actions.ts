@@ -22,11 +22,15 @@ import { POS_ERROR_CODES } from "./_utils/error-codes";
 import {
   cancelOrderSchema,
   editPendingItemSchema,
+  markOrderItemServedSchema,
+  priorityInputSchema,
   reduceItemSchema,
+  transferTableSchema,
+  updateOrderStatusSchema,
   voidItemSchema,
 } from "./_lib/schemas";
 import type { EditPendingOrderItemInput } from "./_lib/schemas";
-import { posVoidAuth } from "./_lib/auth";
+import { posUseAuth, posVoidAuth } from "./_lib/auth";
 import {
   cancelRpcFallback,
   cancelRpcMappings,
@@ -37,9 +41,16 @@ import {
   editRpcMappings,
   enqueueCancelTicketPrintHook,
   enqueuePartialCancelTicketPrintHook,
+  mapPriorityError,
   mapRpcError,
+  markServedRpcFallback,
+  markServedRpcMappings,
   reduceRpcFallback,
   reduceRpcMappings,
+  transferRpcFallback,
+  transferRpcMappings,
+  updateOrderStatusRpcFallback,
+  updateOrderStatusRpcMappings,
   voidRpcFallback,
   voidRpcMappings,
 } from "./_lib/messages";
@@ -81,12 +92,6 @@ const orderIdSchema = z.coerce
   .number()
   .int()
   .positive({ error: "Order ID không hợp lệ" });
-
-const priorityInputSchema = z.object({
-  id: z.coerce.number().int().positive({ error: "Đối tượng không hợp lệ" }),
-  isPriority: z.boolean(),
-  note: z.string().trim().max(120).optional(),
-});
 
 /* ─── submitOrder ─── */
 
@@ -1307,110 +1312,69 @@ export const editPendingOrderItem = withActionPositional(
   },
 );
 
-function mapPriorityError(message: string, target: "order" | "item"): string {
-  const msg = message.toLowerCase();
-  if (msg.includes("forbidden")) {
-    return target === "order"
-      ? "Không có quyền ưu tiên đơn."
-      : "Không có quyền ưu tiên món.";
-  }
-  if (
-    msg.includes("terminal") ||
-    msg.includes("paid") ||
-    msg.includes("cancelled") ||
-    msg.includes("completed")
-  ) {
-    return "Đơn đã đóng hoặc thanh toán, không thể ưu tiên.";
-  }
-  if (
-    msg.includes("no active kitchen work") ||
-    msg.includes("not prioritizable")
-  ) {
-    return target === "order"
-      ? "Không còn món đang chờ bếp để ưu tiên."
-      : "Chỉ ưu tiên món đang chờ hoặc đang làm.";
-  }
-  if (msg.includes("not found")) {
-    return target === "order" ? "Không tìm thấy đơn." : "Không tìm thấy món.";
-  }
-  return target === "order"
-    ? "Không thể cập nhật ưu tiên đơn."
-    : "Không thể cập nhật ưu tiên món.";
-}
+/**
+ * Toggle priority flag on an order. Auth: POS_USE. Migrated to
+ * `withActionPositional` in WS-1b batch 2 (2026-05-27). `mapPriorityError`
+ * lives in `_lib/messages.ts` so the internal `markInitialOrderPriority`
+ * helper at the top of this file can reuse it.
+ */
+export const setOrderPriority = withActionPositional(
+  {
+    argsToInput: (orderId: number, isPriority: boolean, note?: string) => ({
+      id: orderId,
+      isPriority,
+      note,
+    }),
+    schema: priorityInputSchema,
+    customAuth: posUseAuth,
+  },
+  async ({ id, isPriority, note }, { supabase }) => {
+    const trimmedNote = note?.trim();
+    const { error } = await supabase.rpc("set_pos_order_priority", {
+      p_order_id: id,
+      p_is_priority: isPriority,
+      p_note: trimmedNote && trimmedNote.length > 0 ? trimmedNote : undefined,
+    });
+    if (error) {
+      return {
+        success: false,
+        error: mapPriorityError(error.message, "order"),
+      };
+    }
+    return { success: true };
+  },
+);
 
-export async function setOrderPriority(
-  orderId: number,
-  isPriority: boolean,
-  note?: string,
-): Promise<ActionResult> {
-  const parsed = priorityInputSchema.safeParse({
-    id: orderId,
-    isPriority,
-    note,
-  });
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
-    };
-  }
-
-  const ctx = await getAuthContextWithPermission(
-    POS_ROLES,
-    PERMISSION_KEYS.POS_USE,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền ưu tiên đơn." };
-
-  const trimmedNote = parsed.data.note?.trim();
-  const { error } = await ctx.supabase.rpc("set_pos_order_priority", {
-    p_order_id: parsed.data.id,
-    p_is_priority: parsed.data.isPriority,
-    p_note: trimmedNote && trimmedNote.length > 0 ? trimmedNote : undefined,
-  });
-
-  if (error) {
-    return { success: false, error: mapPriorityError(error.message, "order") };
-  }
-
-  return { success: true };
-}
-
-export async function setOrderItemPriority(
-  orderItemId: number,
-  isPriority: boolean,
-  note?: string,
-): Promise<ActionResult> {
-  const parsed = priorityInputSchema.safeParse({
-    id: orderItemId,
-    isPriority,
-    note,
-  });
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
-    };
-  }
-
-  const ctx = await getAuthContextWithPermission(
-    POS_ROLES,
-    PERMISSION_KEYS.POS_USE,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền ưu tiên món." };
-
-  const trimmedNote = parsed.data.note?.trim();
-  const { error } = await ctx.supabase.rpc("set_pos_order_item_priority", {
-    p_order_item_id: parsed.data.id,
-    p_is_priority: parsed.data.isPriority,
-    p_note: trimmedNote && trimmedNote.length > 0 ? trimmedNote : undefined,
-  });
-
-  if (error) {
-    return { success: false, error: mapPriorityError(error.message, "item") };
-  }
-
-  return { success: true };
-}
+/**
+ * Toggle priority flag on a single order item. Auth: POS_USE. Migrated to
+ * `withActionPositional` in WS-1b batch 2 (2026-05-27).
+ */
+export const setOrderItemPriority = withActionPositional(
+  {
+    argsToInput: (orderItemId: number, isPriority: boolean, note?: string) => ({
+      id: orderItemId,
+      isPriority,
+      note,
+    }),
+    schema: priorityInputSchema,
+    customAuth: posUseAuth,
+  },
+  async ({ id, isPriority, note }, { supabase }) => {
+    const trimmedNote = note?.trim();
+    const { error } = await supabase.rpc("set_pos_order_item_priority", {
+      p_order_item_id: id,
+      p_is_priority: isPriority,
+      p_note: trimmedNote && trimmedNote.length > 0 ? trimmedNote : undefined,
+    });
+    if (error) {
+      return {
+        success: false,
+        error: mapPriorityError(error.message, "item"),
+      };
+    }
+    return { success: true };
+  },
+);
 
 /* ─── cancelOrder ─── */
 
@@ -1476,189 +1440,104 @@ export const cancelOrder = withActionPositional(
 
 /* ─── transferOrderTable ─── */
 
-const transferTableSchema = z.object({
-  orderId: z.coerce.number().int().positive({ error: "Đơn không hợp lệ" }),
-  newTableId: z.coerce.number().int().positive({ error: "Bàn không hợp lệ" }),
-  idempotencyKey: z
-    .string()
-    .uuid({ error: "Mã giao dịch không hợp lệ" })
-    .optional(),
-});
+/**
+ * Move an order to a different table. Auth: POS_USE.
+ * `idempotencyKey` is a per-click mint by the cashier UI — the RPC
+ * dedupes on this so the network-flap retry case (server commits but
+ * client times out, cashier taps again) returns the same response
+ * rather than re-shuffling the order.
+ *
+ * Migrated to `withActionPositional` in WS-1b batch 2 (2026-05-27).
+ */
+export const transferOrderTable = withActionPositional(
+  {
+    argsToInput: (
+      orderId: number,
+      newTableId: number,
+      idempotencyKey?: string,
+    ) => ({ orderId, newTableId, idempotencyKey }),
+    schema: transferTableSchema,
+    customAuth: posUseAuth,
+  },
+  async (
+    { orderId, newTableId, idempotencyKey },
+    { supabase },
+  ): Promise<ActionResult<{ idempotent?: boolean }>> => {
+    const { data, error } = await supabase.rpc("transfer_order_table", {
+      p_order_id: orderId,
+      p_new_table_id: newTableId,
+      p_idempotency_key: idempotencyKey,
+    });
 
-// Skip withAction: positional args + optional idempotencyKey
-export async function transferOrderTable(
-  orderId: number,
-  newTableId: number,
-  idempotencyKey?: string,
-): Promise<ActionResult<{ idempotent?: boolean }>> {
-  const parsed = transferTableSchema.safeParse({
-    orderId,
-    newTableId,
-    idempotencyKey,
-  });
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
-    };
-  }
-
-  const ctx = await getAuthContextWithPermission(
-    POS_ROLES,
-    PERMISSION_KEYS.POS_USE,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
-
-  const { supabase } = ctx;
-
-  const { data, error } = await supabase.rpc("transfer_order_table", {
-    p_order_id: parsed.data.orderId,
-    p_new_table_id: parsed.data.newTableId,
-    p_idempotency_key: parsed.data.idempotencyKey,
-  });
-
-  if (error) {
-    const msg = String(error.message ?? "").toLowerCase();
-    if (msg.includes("takeaway")) {
-      return {
-        success: false,
-        error: "Chỉ chuyển bàn cho đơn tại bàn.",
-      };
+    if (error) {
+      return mapRpcError(error, transferRpcMappings, transferRpcFallback);
     }
-    if (msg.includes("not available")) {
-      return {
-        success: false,
-        error: "Bàn đã có khách hoặc không khả dụng.",
-      };
-    }
-    return {
-      success: false,
-      error: "Không thể chuyển bàn. Vui lòng thử lại.",
-    };
-  }
 
-  const result = data as { idempotent?: boolean } | null;
-  return result?.idempotent
-    ? { success: true, data: { idempotent: true } }
-    : { success: true };
-}
+    const result = data as { idempotent?: boolean } | null;
+    return result?.idempotent
+      ? { success: true, data: { idempotent: true } }
+      : { success: true };
+  },
+);
 
 /* ─── updateOrderStatus (POS) ─── */
 
-const updateOrderStatusSchema = z.object({
-  orderId: z.coerce.number().int().positive({ error: "Đơn không hợp lệ" }),
-  newStatus: z.enum(["served"]),
-});
-
-// Skip withAction: positional (orderId, newStatus) args
-export async function updateOrderStatus(
-  orderId: number,
-  newStatus: "served",
-): Promise<ActionResult> {
-  const parsed = updateOrderStatusSchema.safeParse({ orderId, newStatus });
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
-    };
-  }
-
-  const ctx = await getAuthContextWithPermission(
-    POS_ROLES,
-    PERMISSION_KEYS.POS_USE,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
-
-  const { supabase } = ctx;
-
-  const { error } = await supabase.rpc("update_pos_order_status", {
-    p_order_id: parsed.data.orderId,
-    p_new_status: parsed.data.newStatus,
-  });
-
-  if (error) {
-    const msg = String(error.message ?? "").toLowerCase();
-    if (msg.includes("complete requires")) {
-      return {
-        success: false,
-        error: "Đánh dấu phục vụ trước khi hoàn thành.",
-      };
+/**
+ * Transition order to `served`. POS only — KDS/kitchen drives the other
+ * states. Schema enum locks the input to `served` so a buggy caller
+ * cannot drive the order to `paid` or `completed` via this surface.
+ *
+ * Migrated to `withActionPositional` in WS-1b batch 2 (2026-05-27).
+ */
+export const updateOrderStatus = withActionPositional(
+  {
+    argsToInput: (orderId: number, newStatus: "served") => ({
+      orderId,
+      newStatus,
+    }),
+    schema: updateOrderStatusSchema,
+    customAuth: posUseAuth,
+  },
+  async ({ orderId, newStatus }, { supabase }) => {
+    const { error } = await supabase.rpc("update_pos_order_status", {
+      p_order_id: orderId,
+      p_new_status: newStatus,
+    });
+    if (error) {
+      return mapRpcError(
+        error,
+        updateOrderStatusRpcMappings,
+        updateOrderStatusRpcFallback,
+      );
     }
-    if (msg.includes("items not terminal")) {
-      return {
-        success: false,
-        error: "Còn món chưa sẵn sàng hoặc chưa xử lý xong.",
-      };
-    }
-    if (msg.includes("invalid transition")) {
-      return {
-        success: false,
-        error: "Không thể đổi trạng thái đơn lúc này.",
-      };
-    }
-    return {
-      success: false,
-      error: "Không thể cập nhật trạng thái. Vui lòng thử lại.",
-    };
-  }
-
-  return { success: true, data: null };
-}
+    return { success: true, data: null };
+  },
+);
 
 /* ─── markOrderItemServed (POS waiter per-item) ─── */
 
-const markOrderItemServedSchema = z.object({
-  itemId: z.coerce.number().int().positive({ error: "Món không hợp lệ" }),
-});
-
-export async function markOrderItemServed(
-  itemId: number,
-): Promise<ActionResult> {
-  const parsed = markOrderItemServedSchema.safeParse({ itemId });
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
-    };
-  }
-
-  const ctx = await getAuthContextWithPermission(
-    POS_ROLES,
-    PERMISSION_KEYS.POS_USE,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
-
-  const { supabase } = ctx;
-
-  const { error } = await supabase.rpc("mark_order_item_served", {
-    p_item_id: parsed.data.itemId,
-  });
-
-  if (error) {
-    const msg = String(error.message ?? "").toLowerCase();
-    if (msg.includes("invalid item transition")) {
-      return {
-        success: false,
-        error: "Món đã phục vụ hoặc đã hủy.",
-      };
+/**
+ * Waiter confirmation that a single order item reached the table. RPC
+ * enforces the `preparing|ready → served` transition.
+ *
+ * Migrated to `withActionPositional` in WS-1b batch 2 (2026-05-27).
+ */
+export const markOrderItemServed = withActionPositional(
+  {
+    argsToInput: (itemId: number) => ({ itemId }),
+    schema: markOrderItemServedSchema,
+    customAuth: posUseAuth,
+  },
+  async ({ itemId }, { supabase }) => {
+    const { error } = await supabase.rpc("mark_order_item_served", {
+      p_item_id: itemId,
+    });
+    if (error) {
+      return mapRpcError(error, markServedRpcMappings, markServedRpcFallback);
     }
-    if (msg.includes("order terminal")) {
-      return {
-        success: false,
-        error: "Đơn đã đóng, không thể cập nhật món.",
-      };
-    }
-    if (msg.includes("item not found")) {
-      return { success: false, error: "Không tìm thấy món." };
-    }
-    return {
-      success: false,
-      error: "Không thể đánh dấu phục vụ. Vui lòng thử lại.",
-    };
-  }
-
-  return { success: true, data: null };
-}
+    return { success: true, data: null };
+  },
+);
 
 /* ─── fetchOrderItemsForReorder ─── */
 

@@ -90,3 +90,58 @@ export const editPendingItemSchema = z.object({
 });
 
 export type EditPendingOrderItemInput = z.infer<typeof editPendingItemSchema>;
+
+/**
+ * Schema for `setOrderPriority` / `setOrderItemPriority`. Single shared
+ * shape — both actions parse `(id, isPriority, note?)` into the same
+ * three fields; the action distinguishes target via the RPC name and the
+ * `target` arg passed to `mapPriorityError`.
+ */
+export const priorityInputSchema = z.object({
+  id: z.coerce.number().int().positive({ error: "Đối tượng không hợp lệ" }),
+  isPriority: z.boolean(),
+  note: z.string().trim().max(120).optional(),
+});
+
+export type PriorityInput = z.infer<typeof priorityInputSchema>;
+
+/**
+ * Schema for `transferOrderTable(orderId, newTableId, idempotencyKey?)`.
+ * `idempotencyKey` is a per-click mint by the cashier UI — covers the
+ * network-flap retry case where the server commits but the client times
+ * out, cashier taps again, and the second call must dedupe rather than
+ * re-shuffle the order.
+ */
+export const transferTableSchema = z.object({
+  orderId: z.coerce.number().int().positive({ error: "Đơn không hợp lệ" }),
+  newTableId: z.coerce.number().int().positive({ error: "Bàn không hợp lệ" }),
+  idempotencyKey: z
+    .string()
+    .uuid({ error: "Mã giao dịch không hợp lệ" })
+    .optional(),
+});
+
+export type TransferTableInput = z.infer<typeof transferTableSchema>;
+
+/**
+ * Schema for `updateOrderStatus(orderId, newStatus)`. POS only ever
+ * transitions to `served`; other states come from KDS / kitchen flow.
+ * Keeping the enum tight prevents the cashier UI from accidentally
+ * driving the order to `paid` / `completed` via this action.
+ */
+export const updateOrderStatusSchema = z.object({
+  orderId: z.coerce.number().int().positive({ error: "Đơn không hợp lệ" }),
+  newStatus: z.enum(["served"]),
+});
+
+export type UpdateOrderStatusInput = z.infer<typeof updateOrderStatusSchema>;
+
+/**
+ * Schema for `markOrderItemServed(itemId)`. POS waiter per-item serve
+ * confirmation. RPC enforces "preparing|ready → served" transition.
+ */
+export const markOrderItemServedSchema = z.object({
+  itemId: z.coerce.number().int().positive({ error: "Món không hợp lệ" }),
+});
+
+export type MarkOrderItemServedInput = z.infer<typeof markOrderItemServedSchema>;

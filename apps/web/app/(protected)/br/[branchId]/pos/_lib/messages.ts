@@ -426,6 +426,131 @@ export function editPrintSkipReasonToWarning(
 }
 
 /* ────────────────────────────────────────────────────────────────────────── */
+/*  setOrderPriority / setOrderItemPriority — RPC error vocabulary            */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Map `set_pos_order_priority` / `set_pos_order_item_priority` RPC error
+ * messages to operator copy. Returns a plain string — callers wrap it in
+ * `ActionResult` (action handlers) or embed in a warning prefix (the
+ * `markInitialOrderPriority` internal helper inside `order-actions.ts`).
+ *
+ * Both targets share the sentinel catalogue ("forbidden" / "terminal" /
+ * "not prioritizable" / "not found") but differ in copy ("đơn" vs "món"),
+ * so the function takes a `target` discriminator instead of two separate
+ * RpcErrorMapping arrays (which would duplicate the substring tests).
+ */
+export function mapPriorityError(
+  message: string,
+  target: "order" | "item",
+): string {
+  const msg = message.toLowerCase();
+  if (msg.includes("forbidden")) {
+    return target === "order"
+      ? "Không có quyền ưu tiên đơn."
+      : "Không có quyền ưu tiên món.";
+  }
+  if (
+    msg.includes("terminal") ||
+    msg.includes("paid") ||
+    msg.includes("cancelled") ||
+    msg.includes("completed")
+  ) {
+    return "Đơn đã đóng hoặc thanh toán, không thể ưu tiên.";
+  }
+  if (
+    msg.includes("no active kitchen work") ||
+    msg.includes("not prioritizable")
+  ) {
+    return target === "order"
+      ? "Không còn món đang chờ bếp để ưu tiên."
+      : "Chỉ ưu tiên món đang chờ hoặc đang làm.";
+  }
+  if (msg.includes("not found")) {
+    return target === "order" ? "Không tìm thấy đơn." : "Không tìm thấy món.";
+  }
+  return target === "order"
+    ? "Không thể cập nhật ưu tiên đơn."
+    : "Không thể cập nhật ưu tiên món.";
+}
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/*  transferOrderTable — RPC error vocabulary                                 */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+export const transferRpcMappings: readonly RpcErrorMapping[] = [
+  {
+    match: includesAny("takeaway"),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage: "Chỉ chuyển bàn cho đơn tại bàn.",
+  },
+  {
+    match: includesAny("not available"),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage: "Bàn đã có khách hoặc không khả dụng.",
+  },
+];
+
+export const transferRpcFallback: RpcErrorFallback = {
+  userMessage: "Không thể chuyển bàn. Vui lòng thử lại.",
+  errorCode: POS_ERROR_CODES.RPC_GENERIC,
+};
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/*  updateOrderStatus — RPC error vocabulary                                  */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+export const updateOrderStatusRpcMappings: readonly RpcErrorMapping[] = [
+  {
+    match: includesAny("complete requires"),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage: "Đánh dấu phục vụ trước khi hoàn thành.",
+  },
+  {
+    match: includesAny("items not terminal"),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage: "Còn món chưa sẵn sàng hoặc chưa xử lý xong.",
+  },
+  {
+    match: includesAny("invalid transition"),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage: "Không thể đổi trạng thái đơn lúc này.",
+  },
+];
+
+export const updateOrderStatusRpcFallback: RpcErrorFallback = {
+  userMessage: "Không thể cập nhật trạng thái. Vui lòng thử lại.",
+  errorCode: POS_ERROR_CODES.RPC_GENERIC,
+};
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/*  markOrderItemServed — RPC error vocabulary                                */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+export const markServedRpcMappings: readonly RpcErrorMapping[] = [
+  {
+    match: includesAny("invalid item transition"),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage: "Món đã phục vụ hoặc đã hủy.",
+  },
+  {
+    match: includesAny("order terminal"),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage: "Đơn đã đóng, không thể cập nhật món.",
+  },
+  {
+    match: includesAny("item not found"),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage: "Không tìm thấy món.",
+  },
+];
+
+export const markServedRpcFallback: RpcErrorFallback = {
+  userMessage: "Không thể đánh dấu phục vụ. Vui lòng thử lại.",
+  errorCode: POS_ERROR_CODES.RPC_GENERIC,
+};
+
+/* ────────────────────────────────────────────────────────────────────────── */
 /*  Re-exports for convenience inside actions/_components consumers           */
 /* ────────────────────────────────────────────────────────────────────────── */
 
