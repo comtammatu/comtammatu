@@ -1,6 +1,12 @@
 # Pilot Hardening Readiness - 2026-05-24
 
 > **Postscript (status update):** the readiness gaps noted below (VietQR credentials, MoMo idempotency apply, reconciliation tooling, live smoke) have since been closed — VietQR + Momo are wired with production credentials and active in real branches. Treat this worklog as the historical pre-launch snapshot; current status lives in `tasks/todo.md` and `docs/CODEBASE_MAP.md`.
+>
+> **[2026-05-28 POLICY OVERRIDE — không trừ kho]** Owner chốt POS payment flow KHÔNG trừ kho. Áp dụng cho cả action-layer (`createPayment` cash branch + `confirmPayment`) lẫn webhook stock leg (`complete_payment_and_consume_stock` → `consume_stock_for_order_service`). Khi enforcement landed:
+> - Smoke gate step 5 ("Verify stock consumption") becomes moot — bỏ khỏi smoke chain.
+> - Smoke chain rút thành `POS → payment → KDS/print → HĐĐT` (drop `stock` leg).
+> - Migration Status Board entry `complete_payment_and_consume_stock fail-hard/recompute` vẫn matter cho amount-recompute leg (`amount_mismatch_recomputed`), nhưng stock-consumption leg sẽ bị disabled qua migration riêng (chưa lên kế hoạch).
+> - Historical text dưới đây giữ nguyên làm pre-policy record. See memory `project_pos_action_helper_refactor.md` "Owner policy 2026-05-28".
 
 ## Scope
 

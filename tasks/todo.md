@@ -167,7 +167,7 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 - [ ] Seed 1 `inventory_locations` kitchen/warehouse per branch (`is_default_consumption`)
 - [ ] Rút gọn state machine Kho CN → Bếp CN: `draft → confirmed` (cùng roof, không in_transit)
 - [ ] Implement intra-branch transfer một bước cho `Kho CN -> Bếp CN` (`Cấp bếp`) bằng RPC atomic riêng
-- [ ] `consume_stock_for_order` phải resolve `default_consumption`; nếu thiếu thì fail hard/setup gate, không fallback silent
+- [~] OBSOLETE per owner policy 2026-05-28 "không trừ kho": item này (RPC phải resolve `default_consumption` hoặc fail hard) không còn áp dụng vì stock deduction sẽ bị tắt toàn diện ở payment flow (action layer + webhook leg). RPC `consume_stock_for_order` có thể được DROP qua migration riêng khi owner cho phép — đến khi đó, action-layer callsite (`createPayment` line 768 + `confirmPayment` line 956) cần được remove ở slice riêng (separate from refactor). See memory `project_pos_action_helper_refactor.md` "Owner policy 2026-05-28" section.
 - [x] Retire `stock_issue(issue_type='kitchen_use')` — runtime CHECK đã chặn; docs active phải trỏ sang intra-branch transfer
 
 ## Sprint 6 — Inventory UX follow-up
