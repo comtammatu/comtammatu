@@ -15,7 +15,7 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 - [x] Split/stage App Router route-group migration safely. Closed on 2026-05-24: route migration reconciled into `HEAD`, route audit is clean (`0` staged moves / `0` unstaged counterparts), and `pnpm typecheck && pnpm lint && pnpm build` passed.
 - [x] Confirm prod apply status for payment/hardening migrations. Closed by production go-live of VietQR + Momo: `webhook_events`, `complete_payment_and_consume_stock`, `confirm_cash_payment`, and `confirm_vietqr_payment` are applied and exercised by live traffic.
 - [x] Close network-gate hardening: per-agent/per-branch presence token, `/api/branch-presence` rate limit, and revoked-row heartbeat behavior. Shipped via `printer_agent_presence_tokens` + `register_branch_presence` RPC, applied to dev/type-source Cloud, generated types refreshed, and repo-owned `@comtammatu/print-agent` `presence:provision` CLI added for create/rotate/revoke/status. Branch rollout still must provision one raw token per agent before live smoke.
-- [ ] Run real POS → payment → stock → KDS/print → HĐĐT smoke in approved dev/test or staging with live provider credentials.
+- [ ] Run real POS → payment → KDS/print → HĐĐT smoke in approved dev/test or staging with live provider credentials. [2026-05-28] `stock` leg dropped from chain per owner policy "không trừ kho" (see memory `project_pos_action_helper_refactor.md` "Owner policy 2026-05-28" + commit `e4eb93bc`). Action-layer enforcement landed in commit `9ba83205`; webhook stock-leg disable migration still pending owner authorize.
 
 ## Shell helpers refactor — 2026-05-27
 
@@ -23,7 +23,7 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 
 - [ ] **WS-0** — Extend `apps/web/app/_lib/with-action.ts` with `withActionPositional` + `customAuth` + `afterSuccess`; add `_lib/rpc-error-map.ts`. Zero callers migrated.
 - [ ] **WS-1a** — Migrate `voidOrderItem` only (proving slice; exercises 4/4 new helper features).
-- [ ] **WS-1b** — Migrate remaining POS actions (`order-actions.ts` + `payment-actions.ts`). Closes the `POS → payment → stock → KDS/print → HĐĐT` smoke item above.
+- [ ] **WS-1b** — Migrate remaining POS actions (`order-actions.ts` + `payment-actions.ts`). Closes the `POS → payment → KDS/print → HĐĐT` smoke item above. In progress 17/23 (2026-05-28): batches 1–4b + 5a createPayment + reads sub-batch all landed; 1 dead action dropped (fetchDailyReconciliation, commit `9225001d`). Remaining: confirmPayment + confirmVietQrPayment + confirmVietQrPaymentWithInvoice (last 3 callers of local `mapPaymentRpcError`; once migrated, the helper can be dropped) + confirmCashPaymentWithInvoice (orchestrator, minimal extraction win) + 2 order-actions.ts reads with `probePermission` composite auth.
 - [ ] **WS-2** — Migrate inventory actions (`grn-actions.ts`, `production-actions.ts`, `actions.ts`). Wire `lib/messages/inventory.ts` through `rpc-error-map.ts`.
 - [ ] **WS-3** — Decompose client shells (pos-desktop-shell, grn-detail-client, order-detail-sheet) one PR each. Retire parallel `pos/hooks/` folder.
 - [ ] **WS-4** — Version-naming cleanup: delete dead `S12_DASHBOARD_V2`, rename `S13A_STOCKTAKE_V2` → `INVENTORY_STOCKTAKE_REDESIGNED` (+ DB migration of `branch_feature_flags.flag_key`), fix orphan `waste_v2_not_enabled` URL token.
