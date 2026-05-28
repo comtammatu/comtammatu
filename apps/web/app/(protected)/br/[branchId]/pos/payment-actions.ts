@@ -17,8 +17,17 @@ import {
 import { SYSTEM_SETTING_KEYS } from "@comtammatu/shared/settings";
 import { ensurePaymentProvidersRegistered } from "@lib/payment-providers-init";
 import { getAuthContextWithPermission } from "../../_lib/auth";
+import { withActionPositional } from "@/_lib/with-action";
 import { createTaxInvoice } from "@/_actions/finance";
 import { getVNDateString, getVNDayUtcRange } from "@/_lib/format-datetime";
+import { mapRpcError } from "@/_lib/rpc-error-map";
+import { posUseAuth } from "./_lib/auth";
+import { cancelPendingPaymentSchema } from "./_lib/payment-schemas";
+import {
+  cancelPendingPaymentRpcFallback,
+  cancelPendingPaymentRpcMappings,
+} from "./_lib/payment-messages";
+import { POS_ERROR_CODES } from "./_utils/error-codes";
 
 type PosSupabase = NonNullable<
   Awaited<ReturnType<typeof getAuthContextWithPermission>>
@@ -1327,51 +1336,52 @@ export async function confirmCashPaymentWithInvoice(
  * orders.payment_method/payment_status so the order can be split, merged,
  * or start a fresh payment session.
  */
-export async function cancelPendingPayment(
-  branchId: number,
-  paymentId: number,
-): Promise<ActionResult<void>> {
-  const parsedBranch = branchIdSchema.safeParse(branchId);
-  if (!parsedBranch.success) {
-    return { success: false, error: "Branch ID không hợp lệ" };
-  }
-
-  const parsedPayment = z.coerce.number().int().positive().safeParse(paymentId);
-  if (!parsedPayment.success) {
-    return { success: false, error: "Payment ID không hợp lệ" };
-  }
-
-  const ctx = await getAuthContextWithPermission(
-    POS_ROLES,
-    PERMISSION_KEYS.POS_USE,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
-
-  const { supabase, claims } = ctx;
-
-  if (claims.branch_id !== parsedBranch.data) {
-    return { success: false, error: "Không có quyền truy cập chi nhánh này" };
-  }
-
-  const { error } = await supabase.rpc("cancel_pending_payment", {
-    p_payment_id: parsedPayment.data,
-    p_tenant_id: claims.tenant_id,
-    p_branch_id: parsedBranch.data,
-  });
-
-  if (error) {
-    const msg = error.message ?? "";
-    if (msg.includes("payment_not_found")) {
-      return { success: false, error: "Không tìm thấy phiên thanh toán." };
+/**
+ * Migrated to `withActionPositional` in WS-1b batch 4 (2026-05-28) —
+ * proving sub-slice for payment-actions migration. Behavior preserved:
+ * same RPC + same args (paymentId + tenant + branch), same role/permission
+ * gate (POS_USE), same branch-scope defence in depth, same RPC error
+ * mapping. The Vietnamese copy and result shape (`ActionResult<void>`
+ * with `data: undefined`) are byte-identical.
+ */
+export const cancelPendingPayment = withActionPositional(
+  {
+    argsToInput: (branchId: number, paymentId: number) => ({
+      branchId,
+      paymentId,
+    }),
+    schema: cancelPendingPaymentSchema,
+    customAuth: posUseAuth,
+  },
+  async (
+    { branchId, paymentId },
+    { supabase, claims },
+  ): Promise<ActionResult<void>> => {
+    if (claims.branch_id !== branchId) {
+      return {
+        success: false,
+        error: "Không có quyền truy cập chi nhánh này",
+        errorCode: POS_ERROR_CODES.SCOPE_BRANCH_MISMATCH,
+      };
     }
-    if (msg.includes("payment_not_pending")) {
-      return { success: false, error: "Phiên thanh toán đã được xử lý." };
-    }
-    return { success: false, error: "Không thể hủy phiên thanh toán." };
-  }
 
-  return { success: true, data: undefined };
-}
+    const { error } = await supabase.rpc("cancel_pending_payment", {
+      p_payment_id: paymentId,
+      p_tenant_id: claims.tenant_id,
+      p_branch_id: branchId,
+    });
+
+    if (error) {
+      return mapRpcError<void>(
+        error,
+        cancelPendingPaymentRpcMappings,
+        cancelPendingPaymentRpcFallback,
+      );
+    }
+
+    return { success: true, data: undefined };
+  },
+);
 
 /* ─── fetchVietQrConfig ─── */
 
