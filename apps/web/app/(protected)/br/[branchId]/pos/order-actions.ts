@@ -5,18 +5,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   MODULE_ACL,
   PERMISSION_KEYS,
-  type StaffRole,
 } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission, probePermission } from "../../_lib/auth";
 import { withActionPositional } from "@/_lib/with-action";
-import {
-  cartStateSchema,
-  calcItemSubtotal,
-  cartItemSchema,
-  cartModifierSchema,
-  cartSideSchema,
-} from "./types";
+import { calcItemSubtotal } from "./types";
 import type { CartState, CartItem } from "./types";
 import { POS_ERROR_CODES } from "./_utils/error-codes";
 import {
@@ -78,9 +71,6 @@ async function markInitialOrderPriority(
 /* ─── Constants ─── */
 
 const POS_ROLES = MODULE_ACL.pos.allowedRoles;
-
-/** POS operators allowed to void/cancel order flows. */
-const POS_VOID_ROLES: readonly StaffRole[] = POS_ROLES;
 
 /* ─── Input Schemas ─── */
 
