@@ -44,3 +44,30 @@ export const cashConfirmSchema = z.object({
 });
 
 export type CashConfirmInput = z.infer<typeof cashConfirmSchema>;
+
+/**
+ * Schema for `createPayment(branchId, orderId, method, amount)`.
+ *
+ * Aggregates all 4 positional args. `method` enum is `["cash", "momo"]` —
+ * VietQR has its own dedicated confirmation paths (`confirmVietQrPayment`
+ * / `confirmVietQrPaymentWithInvoice`) and does not flow through this
+ * action.
+ *
+ * Field order matches the pre-WS-1b parse order (branchId first, then the
+ * remaining three via `paymentSchema`) so the first-issue message stays
+ * identical when multiple fields fail validation simultaneously.
+ *
+ * `amount.positive()`: server-side amount-vs-`order.total_amount` equality
+ * check lives INSIDE the handler — schema only rejects zero/negative.
+ */
+export const createPaymentSchema = z.object({
+  branchId: z.coerce
+    .number()
+    .int()
+    .positive({ error: "Branch ID không hợp lệ" }),
+  orderId: z.coerce.number().int().positive(),
+  method: z.enum(["cash", "momo"]),
+  amount: z.coerce.number().positive({ error: "Số tiền không hợp lệ" }),
+});
+
+export type CreatePaymentInput = z.infer<typeof createPaymentSchema>;

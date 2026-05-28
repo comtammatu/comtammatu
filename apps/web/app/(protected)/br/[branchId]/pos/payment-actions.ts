@@ -25,12 +25,15 @@ import { posConfirmPaymentAuth, posUseAuth } from "./_lib/auth";
 import {
   cancelPendingPaymentSchema,
   cashConfirmSchema,
+  createPaymentSchema,
 } from "./_lib/payment-schemas";
 import {
   cancelPendingPaymentRpcFallback,
   cancelPendingPaymentRpcMappings,
   confirmCashPaymentRpcFallback,
   confirmCashPaymentRpcMappings,
+  createPaymentRpcFallback,
+  createPaymentRpcMappings,
 } from "./_lib/payment-messages";
 import { POS_ERROR_CODES } from "./_utils/error-codes";
 
@@ -46,12 +49,6 @@ const branchIdSchema = z.coerce
   .number()
   .int()
   .positive({ error: "Branch ID không hợp lệ" });
-
-const paymentSchema = z.object({
-  orderId: z.coerce.number().int().positive(),
-  method: z.enum(["cash", "momo"]),
-  amount: z.coerce.number().positive({ error: "Số tiền không hợp lệ" }),
-});
 
 const orderIdSchema = z.coerce.number().int().positive();
 
@@ -492,282 +489,315 @@ export async function fetchPaymentMethodsForPos(
 /* ─── createPayment ─── */
 
 /**
- * Create a payment record for an order.
- * Cash payments are immediately completed.
- * VietQR/MoMo payments start as pending.
+ * Create a payment record for an order. Cash payments are immediately
+ * completed (status=completed) and trigger stock consumption synchronously;
+ * MoMo / VietQR start as pending and complete via webhook + a separate
+ * `confirmPayment` / `confirmVietQrPayment` call.
+ *
+ * Migrated to `withActionPositional` in WS-1b batch 5a (2026-05-28). Auth
+ * is `posUseAuth` (POS_USE — any POS operator) — looser than
+ * `confirmCashPayment`'s `posConfirmPaymentAuth` (POS_CONFIRM_PAYMENT,
+ * cashier-only cash-drawer gate). Waiters with POS_USE can therefore start
+ * a MoMo / VietQR payment session (no cash drawer involved) but cannot
+ * confirm cash.
+ *
+ * Behavior preserved byte-identical to pre-WS-1b:
+ *   - Same RPC `create_payment` with identical arg shape (p_tenant_id,
+ *     p_branch_id, p_order_id, p_method, p_amount, p_created_by,
+ *     p_provider_ref, p_status).
+ *   - Branch-claim guard (`claims.branch_id !== branchId`) returns
+ *     "Không có quyền truy cập chi nhánh này" — same copy as pre-WS-1b.
+ *   - Inline DB `orders` select returns "Đơn hàng không tồn tại." on miss,
+ *     "Đơn hàng đã thanh toán." when `payment_status === "paid"`. Both
+ *     checks live inside the handler — server-side amount-vs-total equality
+ *     stays inline too ("Số tiền không khớp với tổng đơn hàng.").
+ *   - `getPaymentProvider` + `provider.createPayment` + try/catch wrapping
+ *     `describeProviderException` / `describeProviderCreateFailure`
+ *     untouched. Provider integration is the source of QR/redirect data
+ *     and MUST NOT be rewritten in this slice.
+ *   - 23505 unique-violation retry: stays handler-only because we query
+ *     the `payments` table for an existing pending row and either reuse
+ *     it (idempotent replay — return success with the existing payment_id
+ *     and freshly persisted provider blob) or surface "Đơn hàng đang có
+ *     thanh toán chờ xử lý." Neither outcome fits the `RpcErrorMapping`
+ *     shape so it lives outside the mapping table.
+ *   - `persistPendingProviderData` fires for remote (MoMo) payments AFTER
+ *     RPC success AND inside the 23505-retry branch — preserves the
+ *     pre-WS-1b idempotent-replay semantics where the second
+ *     `createPayment` call overwrites the stored provider blob with the
+ *     fresh QR.
+ *   - Cash `result.status === "completed" && !result.idempotent` triggers
+ *     `consumeStockForOrderCompat` non-fatally (stock failures log but do
+ *     not flip success — payment is already committed atomically).
+ *   - Local `mapPaymentRpcError` call replaced with
+ *     `createPaymentRpcMappings` table (same sentinels + Vietnamese copy,
+ *     ordering preserved so `amount_mismatch_recomputed` shadows
+ *     `amount_mismatch`). Single `[createPayment] rpc failed:` log line
+ *     replaces the pre-WS-1b mapped/[unmapped] split — the differentiation
+ *     was observability only, not user-facing.
+ *
+ * Local `mapPaymentRpcError` (defined above) remains in the file for
+ * `confirmPayment` + VietQR family which still call it — those migrate
+ * in the next sub-batches.
  */
-export async function createPayment(
-  branchId: number,
-  orderId: number,
-  method: "cash" | "momo",
-  amount: number,
-): Promise<ActionResult<CreatePaymentSuccessData>> {
-  const parsedBranch = branchIdSchema.safeParse(branchId);
-  if (!parsedBranch.success) {
-    return { success: false, error: "Branch ID không hợp lệ" };
-  }
+export const createPayment = withActionPositional(
+  {
+    argsToInput: (
+      branchId: number,
+      orderId: number,
+      method: "cash" | "momo",
+      amount: number,
+    ) => ({ branchId, orderId, method, amount }),
+    schema: createPaymentSchema,
+    customAuth: posUseAuth,
+  },
+  async (
+    { branchId, orderId, method, amount },
+    { supabase, claims },
+  ): Promise<ActionResult<CreatePaymentSuccessData>> => {
+    if (claims.branch_id !== branchId) {
+      return { success: false, error: "Không có quyền truy cập chi nhánh này" };
+    }
 
-  const parsedPayment = paymentSchema.safeParse({ orderId, method, amount });
-  if (!parsedPayment.success) {
-    return {
-      success: false,
-      error: parsedPayment.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
-    };
-  }
+    // Verify order exists and belongs to branch.
+    const { data: order, error: orderError } = await supabase
+      .from("orders")
+      .select("id, order_number, total_amount, payment_status")
+      .eq("id", orderId)
+      .eq("branch_id", branchId)
+      .eq("tenant_id", claims.tenant_id)
+      .single();
 
-  const ctx = await getAuthContextWithPermission(
-    POS_ROLES,
-    PERMISSION_KEYS.POS_USE,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
+    if (orderError || !order) {
+      return { success: false, error: "Đơn hàng không tồn tại." };
+    }
 
-  const { supabase, claims } = ctx;
-
-  if (claims.branch_id !== parsedBranch.data) {
-    return { success: false, error: "Không có quyền truy cập chi nhánh này" };
-  }
-
-  // Verify order exists and belongs to branch
-  const { data: order, error: orderError } = await supabase
-    .from("orders")
-    .select("id, order_number, total_amount, payment_status")
-    .eq("id", parsedPayment.data.orderId)
-    .eq("branch_id", parsedBranch.data)
-    .eq("tenant_id", claims.tenant_id)
-    .single();
-
-  if (orderError || !order) {
-    return { success: false, error: "Đơn hàng không tồn tại." };
-  }
-
-  if (order.payment_status === "paid") {
-    return { success: false, error: "Đơn hàng đã thanh toán." };
-  }
-
-  // Server-side amount validation
-  if (parsedPayment.data.amount !== Number(order.total_amount)) {
-    return {
-      success: false,
-      error: "Số tiền không khớp với tổng đơn hàng.",
-    };
-  }
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { success: false, error: "Phiên đăng nhập hết hạn" };
-
-  const allowedMethods = await resolveAllowedPaymentMethods(
-    supabase,
-    claims.tenant_id,
-  );
-  if (!allowedMethods.includes(parsedPayment.data.method as PaymentMethod)) {
-    return {
-      success: false,
-      error: "Phương thức thanh toán không được phép hoặc chưa cấu hình.",
-    };
-  }
-
-  const provider = getPaymentProvider(
-    parsedPayment.data.method as PaymentMethod,
-  );
-  if (!provider) {
-    return {
-      success: false,
-      error: `Phương thức thanh toán '${parsedPayment.data.method}' chưa được cấu hình.`,
-    };
-  }
-
-  // Call provider to get QR/redirect data (if applicable).
-  let providerResult: Awaited<ReturnType<PaymentProvider["createPayment"]>>;
-  try {
-    providerResult = await provider.createPayment({
-      tenantId: claims.tenant_id,
-      orderId: parsedPayment.data.orderId,
-      orderNumber: order.order_number,
-      amount: parsedPayment.data.amount,
-    });
-  } catch (err) {
-    console.error("[createPayment] provider threw:", {
-      method: parsedPayment.data.method,
-      error: err instanceof Error ? err.message : String(err),
-    });
-    return {
-      success: false,
-      error: describeProviderException(
-        parsedPayment.data.method as PaymentMethod,
-        err,
-      ),
-    };
-  }
-
-  const isRemotePayment = parsedPayment.data.method !== "cash";
-  if (isRemotePayment && providerResult.status === "failed") {
-    console.error("[createPayment] provider failed:", {
-      method: parsedPayment.data.method,
-      providerRef: providerResult.providerRef,
-      resultCode: providerResult.providerData?.resultCode,
-    });
-    return {
-      success: false,
-      error: describeProviderCreateFailure(
-        parsedPayment.data.method as PaymentMethod,
-        providerResult.providerData,
-      ),
-    };
-  }
-
-  if (
-    isRemotePayment &&
-    providerResult.status === "pending" &&
-    !providerResult.qrData &&
-    !providerResult.redirectUrl
-  ) {
-    return {
-      success: false,
-      error:
-        parsedPayment.data.method === "momo"
-          ? "MoMo đã tạo phiên thanh toán nhưng không trả về qrCodeUrl."
-          : "Không tạo được dữ liệu QR cho phương thức thanh toán này.",
-    };
-  }
-
-  // Atomic RPC: insert payment + update order in one transaction
-  // Prevents race condition where payment exists but order status is stale
-  const { data, error: rpcError } = await supabase.rpc("create_payment", {
-    p_tenant_id: claims.tenant_id,
-    p_branch_id: parsedBranch.data,
-    p_order_id: parsedPayment.data.orderId,
-    p_method: parsedPayment.data.method,
-    p_amount: parsedPayment.data.amount,
-    p_created_by: user.id,
-    p_provider_ref: providerResult.providerRef ?? undefined,
-    p_status: providerResult.status,
-  });
-
-  if (rpcError) {
-    const msg = rpcError.message ?? "";
-    if (msg.includes("already_paid")) {
+    if (order.payment_status === "paid") {
       return { success: false, error: "Đơn hàng đã thanh toán." };
     }
-    if (msg.includes("amount_mismatch")) {
-      return { success: false, error: "Số tiền không khớp." };
+
+    // Server-side amount validation.
+    if (amount !== Number(order.total_amount)) {
+      return {
+        success: false,
+        error: "Số tiền không khớp với tổng đơn hàng.",
+      };
     }
-    if (rpcError.code === "23505") {
-      const { data: existingPayment, error: existingError } = await supabase
-        .from("payments")
-        .select("id, status, provider_ref, method")
-        .eq("order_id", parsedPayment.data.orderId)
-        .eq("tenant_id", claims.tenant_id)
-        .eq("branch_id", parsedBranch.data)
-        .neq("status", "failed")
-        .maybeSingle();
 
-      if (
-        !existingError &&
-        existingPayment &&
-        existingPayment.status === "pending" &&
-        existingPayment.method === parsedPayment.data.method
-      ) {
-        await persistPendingProviderData(supabase, {
-          paymentId: existingPayment.id,
-          tenantId: claims.tenant_id,
-          branchId: parsedBranch.data,
-          providerResult,
-        });
-        const qrInfo = pickVietQrInfo(providerResult.providerData);
-        const providerRef =
-          providerResult.providerRef ??
-          existingPayment.provider_ref ??
-          undefined;
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { success: false, error: "Phiên đăng nhập hết hạn" };
 
-        return {
-          success: true,
-          data: {
-            payment_id: existingPayment.id,
-            status: existingPayment.status,
-            ...(providerRef ? { provider_ref: providerRef } : {}),
-            ...(providerResult.qrData
-              ? { qr_data: providerResult.qrData }
-              : {}),
-            ...(providerResult.redirectUrl
-              ? { redirect_url: providerResult.redirectUrl }
-              : {}),
-            ...(qrInfo ? { qr_info: qrInfo } : {}),
-          },
-        };
-      }
+    const allowedMethods = await resolveAllowedPaymentMethods(
+      supabase,
+      claims.tenant_id,
+    );
+    if (!allowedMethods.includes(method as PaymentMethod)) {
+      return {
+        success: false,
+        error: "Phương thức thanh toán không được phép hoặc chưa cấu hình.",
+      };
+    }
 
+    const provider = getPaymentProvider(method as PaymentMethod);
+    if (!provider) {
+      return {
+        success: false,
+        error: `Phương thức thanh toán '${method}' chưa được cấu hình.`,
+      };
+    }
+
+    // Call provider to get QR/redirect data (if applicable).
+    let providerResult: Awaited<ReturnType<PaymentProvider["createPayment"]>>;
+    try {
+      providerResult = await provider.createPayment({
+        tenantId: claims.tenant_id,
+        orderId,
+        orderNumber: order.order_number,
+        amount,
+      });
+    } catch (err) {
+      console.error("[createPayment] provider threw:", {
+        method,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      return {
+        success: false,
+        error: describeProviderException(method as PaymentMethod, err),
+      };
+    }
+
+    const isRemotePayment = method !== "cash";
+    if (isRemotePayment && providerResult.status === "failed") {
+      console.error("[createPayment] provider failed:", {
+        method,
+        providerRef: providerResult.providerRef,
+        resultCode: providerResult.providerData?.resultCode,
+      });
+      return {
+        success: false,
+        error: describeProviderCreateFailure(
+          method as PaymentMethod,
+          providerResult.providerData,
+        ),
+      };
+    }
+
+    if (
+      isRemotePayment &&
+      providerResult.status === "pending" &&
+      !providerResult.qrData &&
+      !providerResult.redirectUrl
+    ) {
       return {
         success: false,
         error:
-          "Đơn hàng đang có thanh toán chờ xử lý. Vui lòng tải lại hóa đơn và thử lại.",
+          method === "momo"
+            ? "MoMo đã tạo phiên thanh toán nhưng không trả về qrCodeUrl."
+            : "Không tạo được dữ liệu QR cho phương thức thanh toán này.",
       };
     }
-    const mappedError = mapPaymentRpcError(msg);
-    if (mappedError) {
-      console.error("[createPayment] rpc failed:", msg);
-      return { success: false, error: mappedError };
-    }
-    console.error("[createPayment] [unmapped] rpc error:", msg);
-    return { success: false, error: "Không thể tạo thanh toán." };
-  }
 
-  const result = data as {
-    payment_id: number;
-    status: string;
-    idempotent?: boolean;
-  } | null;
-  if (!result) {
-    return { success: false, error: "Không thể tạo thanh toán." };
-  }
-
-  if (isRemotePayment) {
-    await persistPendingProviderData(supabase, {
-      paymentId: result.payment_id,
-      tenantId: claims.tenant_id,
-      branchId: parsedBranch.data,
-      providerResult,
+    // Atomic RPC: insert payment + update order in one transaction.
+    // Prevents race condition where payment exists but order status is stale.
+    const { data, error: rpcError } = await supabase.rpc("create_payment", {
+      p_tenant_id: claims.tenant_id,
+      p_branch_id: branchId,
+      p_order_id: orderId,
+      p_method: method,
+      p_amount: amount,
+      p_created_by: user.id,
+      p_provider_ref: providerResult.providerRef ?? undefined,
+      p_status: providerResult.status,
     });
-  }
 
-  // For cash payments (status=completed immediately), deduct ingredients from stock.
-  // VietQR/Momo deduct after confirm/webhook completes.
-  // All stock errors are non-fatal for pilot: stock_levels may not be initialized yet,
-  // and insufficient_stock_ingredient errors are expected until stock data is seeded.
-  if (result.status === "completed" && !result.idempotent) {
-    const { error: stockErr } = await consumeStockForOrderCompat(
-      supabase,
-      parsedPayment.data.orderId,
-    );
-    if (stockErr) {
-      // Non-fatal: payment succeeded, stock reconciliation can be done manually.
-      // See tasks/todo.md for payment-order desync recovery query.
+    if (rpcError) {
+      // 23505 unique-violation: another `createPayment` call for the same
+      // order already committed a non-failed payment row. Retry policy
+      // lives here (not in the mapping table) because we need to query
+      // the payments table for an existing pending row and either reuse
+      // it OR surface a typed "đang chờ xử lý" message.
+      if (rpcError.code === "23505") {
+        const { data: existingPayment, error: existingError } = await supabase
+          .from("payments")
+          .select("id, status, provider_ref, method")
+          .eq("order_id", orderId)
+          .eq("tenant_id", claims.tenant_id)
+          .eq("branch_id", branchId)
+          .neq("status", "failed")
+          .maybeSingle();
+
+        if (
+          !existingError &&
+          existingPayment &&
+          existingPayment.status === "pending" &&
+          existingPayment.method === method
+        ) {
+          await persistPendingProviderData(supabase, {
+            paymentId: existingPayment.id,
+            tenantId: claims.tenant_id,
+            branchId,
+            providerResult,
+          });
+          const qrInfo = pickVietQrInfo(providerResult.providerData);
+          const providerRef =
+            providerResult.providerRef ??
+            existingPayment.provider_ref ??
+            undefined;
+
+          return {
+            success: true,
+            data: {
+              payment_id: existingPayment.id,
+              status: existingPayment.status,
+              ...(providerRef ? { provider_ref: providerRef } : {}),
+              ...(providerResult.qrData
+                ? { qr_data: providerResult.qrData }
+                : {}),
+              ...(providerResult.redirectUrl
+                ? { redirect_url: providerResult.redirectUrl }
+                : {}),
+              ...(qrInfo ? { qr_info: qrInfo } : {}),
+            },
+          };
+        }
+
+        return {
+          success: false,
+          error:
+            "Đơn hàng đang có thanh toán chờ xử lý. Vui lòng tải lại hóa đơn và thử lại.",
+        };
+      }
+
       console.error(
-        "[createPayment] consume_stock_for_order failed:",
-        stockErr.message,
+        "[createPayment] rpc failed:",
+        String(rpcError.message ?? ""),
+      );
+      return mapRpcError<CreatePaymentSuccessData>(
+        rpcError,
+        createPaymentRpcMappings,
+        createPaymentRpcFallback,
       );
     }
-  }
 
-  const qrInfo = pickVietQrInfo(providerResult.providerData);
+    const result = data as {
+      payment_id: number;
+      status: string;
+      idempotent?: boolean;
+    } | null;
+    if (!result) {
+      return { success: false, error: "Không thể tạo thanh toán." };
+    }
 
-  return {
-    success: true,
-    data: {
-      payment_id: result.payment_id,
-      status: result.status,
-      ...(providerResult.providerRef
-        ? { provider_ref: providerResult.providerRef }
-        : {}),
-      ...(providerResult.qrData ? { qr_data: providerResult.qrData } : {}),
-      ...(providerResult.redirectUrl
-        ? { redirect_url: providerResult.redirectUrl }
-        : {}),
-      ...(qrInfo ? { qr_info: qrInfo } : {}),
-    },
-  };
-}
+    if (isRemotePayment) {
+      await persistPendingProviderData(supabase, {
+        paymentId: result.payment_id,
+        tenantId: claims.tenant_id,
+        branchId,
+        providerResult,
+      });
+    }
+
+    // For cash payments (status=completed immediately), deduct ingredients
+    // from stock. VietQR/MoMo deduct after confirm/webhook completes.
+    // All stock errors are non-fatal for pilot: stock_levels may not be
+    // initialized yet, and insufficient_stock_ingredient errors are
+    // expected until stock data is seeded.
+    if (result.status === "completed" && !result.idempotent) {
+      const { error: stockErr } = await consumeStockForOrderCompat(
+        supabase,
+        orderId,
+      );
+      if (stockErr) {
+        // Non-fatal: payment succeeded, stock reconciliation can be done
+        // manually. See tasks/todo.md for payment-order desync recovery query.
+        console.error(
+          "[createPayment] consume_stock_for_order failed:",
+          stockErr.message,
+        );
+      }
+    }
+
+    const qrInfo = pickVietQrInfo(providerResult.providerData);
+
+    return {
+      success: true,
+      data: {
+        payment_id: result.payment_id,
+        status: result.status,
+        ...(providerResult.providerRef
+          ? { provider_ref: providerResult.providerRef }
+          : {}),
+        ...(providerResult.qrData ? { qr_data: providerResult.qrData } : {}),
+        ...(providerResult.redirectUrl
+          ? { redirect_url: providerResult.redirectUrl }
+          : {}),
+        ...(qrInfo ? { qr_info: qrInfo } : {}),
+      },
+    };
+  },
+);
 
 export async function fetchPendingRemotePaymentForBill(
   branchId: number,

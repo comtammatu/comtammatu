@@ -190,3 +190,101 @@ export const confirmCashPaymentRpcFallback: RpcErrorFallback = {
   userMessage: "Không thể xác nhận thanh toán. Vui lòng thử lại.",
   errorCode: POS_ERROR_CODES.RPC_GENERIC,
 };
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/*  createPayment — RPC error vocabulary                                      */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Mappings for `supabase.rpc("create_payment", ...)` failures.
+ *
+ * Order (most-specific → most-general):
+ *
+ * 1. `already_paid` — `create_payment`-specific. Different copy from the
+ *    pre-RPC `order.payment_status === "paid"` guard inside the handler
+ *    (both say "Đơn hàng đã thanh toán." — kept identical so cashier sees
+ *    the same toast regardless of which check fired first).
+ * 2. `amount_mismatch_recomputed` BEFORE `amount_mismatch` — substring
+ *    shadow. The longer sentinel ("đơn đã thay đổi so với dữ liệu món…")
+ *    is the shared payment vocabulary; the shorter `amount_mismatch`
+ *    is the `create_payment` RPC's own check ("Số tiền không khớp.").
+ * 3. Shared payment vocabulary — mirrors `mapPaymentRpcMessage` so the
+ *    handler can drop its call to the legacy local helper. Vocabulary
+ *    is inlined (not via the helper) so the mapping table is the single
+ *    source of truth; `mapPaymentRpcMessage` remains exported for VietQR
+ *    + confirmPayment callers that still flow through the local helper
+ *    until their sub-batches migrate.
+ *
+ * `tenant_mismatch` here uses the GENERIC copy ("Không thể xử lý thanh
+ * toán cho chi nhánh này.") — different from `confirmCashPaymentRpcMappings`
+ * which uses the cash-specific "Không có quyền truy cập đơn này". Drift
+ * is INTENTIONAL: pre-WS-1b `createPayment` routed through the local
+ * `mapPaymentRpcError` (generic copy), `confirmCashPayment` used its own
+ * hand-rolled cash-specific copy. Both preserved byte-identical.
+ *
+ * 23505 / `unique_violation` is NOT in the mapping table. The handler
+ * detects it BEFORE calling `mapRpcError` because the retry logic must
+ * query the `payments` table for an existing pending row and either
+ * reuse it or surface a typed "đang chờ xử lý" message — neither outcome
+ * fits the `RpcErrorMapping` shape.
+ */
+export const createPaymentRpcMappings: readonly RpcErrorMapping[] = [
+  {
+    match: includesAny("already_paid"),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage: "Đơn hàng đã thanh toán.",
+  },
+  {
+    match: includesAny("amount_mismatch_recomputed"),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage:
+      "Tổng tiền đơn đã thay đổi so với dữ liệu món. Vui lòng tải lại đơn và kiểm tra trước khi thanh toán.",
+  },
+  {
+    match: includesAny("amount_mismatch"),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage: "Số tiền không khớp.",
+  },
+  {
+    match: includesAny(
+      "default_consumption_location_missing",
+      "consumption_location_missing",
+      "consume_location_missing",
+      "default_consumption",
+    ),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage:
+      "Chi nhánh chưa cấu hình Bếp chi nhánh cho POS. Thiết lập vị trí bếp trước khi thanh toán.",
+  },
+  {
+    match: includesAny(
+      "posting_rule_not_found",
+      "gl_account_not_found",
+      "fiscal_period_closed",
+    ),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage:
+      "Thanh toán tạm thời chưa thể hoàn tất do cấu hình kế toán chưa sẵn sàng. Vui lòng liên hệ quản lý.",
+  },
+  {
+    match: includesAny("tenant_mismatch"),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage: "Không thể xử lý thanh toán cho chi nhánh này.",
+  },
+  {
+    match: includesAny(
+      "stock_consumption_failed",
+      "stock_failed",
+      "out_of_stock",
+      "recipe_missing",
+    ),
+    errorCode: POS_ERROR_CODES.RPC_GENERIC,
+    userMessage:
+      "Chưa thể hoàn tất thanh toán vì tồn kho hoặc định mức món chưa sẵn sàng. Quản lý đã được thông báo.",
+  },
+];
+
+export const createPaymentRpcFallback: RpcErrorFallback = {
+  userMessage: "Không thể tạo thanh toán.",
+  errorCode: POS_ERROR_CODES.RPC_GENERIC,
+};
