@@ -19,7 +19,6 @@ import { ensurePaymentProvidersRegistered } from "@lib/payment-providers-init";
 import { getAuthContextWithPermission } from "../../_lib/auth";
 import { withActionPositional } from "@/_lib/with-action";
 import { createTaxInvoice } from "@/_actions/finance";
-import { getVNDateString, getVNDayUtcRange } from "@/_lib/format-datetime";
 import { mapRpcError } from "@/_lib/rpc-error-map";
 import { posConfirmPaymentAuth, posUseAuth } from "./_lib/auth";
 import {
@@ -979,102 +978,6 @@ export async function confirmPayment(
   }
 
   return { success: true, data: { print: printOutcome } };
-}
-
-/* ─── fetchDailyReconciliation ─── */
-
-/**
- * End-of-day reconciliation: orders vs payments for a branch.
- */
-export async function fetchDailyReconciliation(
-  branchId: number,
-  date?: string,
-): Promise<ActionResult> {
-  const parsedBranch = branchIdSchema.safeParse(branchId);
-  if (!parsedBranch.success) {
-    return { success: false, error: "Branch ID không hợp lệ" };
-  }
-
-  const ctx = await getAuthContextWithPermission(
-    POS_ROLES,
-    PERMISSION_KEYS.POS_USE,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
-
-  const { supabase, claims } = ctx;
-
-  if (claims.branch_id !== parsedBranch.data) {
-    return { success: false, error: "Không có quyền truy cập chi nhánh này" };
-  }
-
-  const dateSchema = z.string().date().optional();
-  const parsedDate = dateSchema.safeParse(date);
-  const targetDate =
-    parsedDate.success && parsedDate.data ? parsedDate.data : getVNDateString();
-  const { startIso, endIso } = getVNDayUtcRange(targetDate);
-
-  // Fetch orders for the day
-  const { data: orders, error: ordersErr } = await supabase
-    .from("orders")
-    .select("id, total_amount, status, payment_status, payment_method")
-    .eq("branch_id", parsedBranch.data)
-    .eq("tenant_id", claims.tenant_id)
-    .gte("created_at", startIso)
-    .lt("created_at", endIso);
-
-  if (ordersErr) {
-    return { success: false, error: "Không thể tải dữ liệu đối soát." };
-  }
-
-  // Fetch payments for the day
-  const { data: payments, error: paymentsErr } = await supabase
-    .from("payments")
-    .select("id, method, amount, status")
-    .eq("branch_id", parsedBranch.data)
-    .eq("tenant_id", claims.tenant_id)
-    .gte("created_at", startIso)
-    .lt("created_at", endIso);
-
-  if (paymentsErr) {
-    return { success: false, error: "Không thể tải dữ liệu thanh toán." };
-  }
-
-  const allOrders = orders ?? [];
-  const allPayments = payments ?? [];
-
-  const completedPayments = allPayments.filter((p) => p.status === "completed");
-
-  const summary = {
-    date: targetDate,
-    total_orders: allOrders.length,
-    completed_orders: allOrders.filter(
-      (o) => o.status === "completed" && o.payment_status === "paid",
-    ).length,
-    cancelled_orders: allOrders.filter((o) => o.status === "cancelled").length,
-    total_revenue: allOrders
-      .filter((o) => o.payment_status === "paid" && o.status !== "cancelled")
-      .reduce((sum, o) => sum + Number(o.total_amount), 0),
-    paid_amount: completedPayments.reduce(
-      (sum, p) => sum + Number(p.amount),
-      0,
-    ),
-    unpaid_orders: allOrders.filter(
-      (o) => o.payment_status !== "paid" && o.status !== "cancelled",
-    ).length,
-    by_method: {
-      cash: completedPayments
-        .filter((p) => p.method === "cash")
-        .reduce((sum, p) => sum + Number(p.amount), 0),
-      vietqr: completedPayments
-        .filter((p) => p.method === "vietqr")
-        .reduce((sum, p) => sum + Number(p.amount), 0),
-      momo: completedPayments
-        .filter((p) => p.method === "momo")
-        .reduce((sum, p) => sum + Number(p.amount), 0),
-    },
-  };
-
-  return { success: true, data: summary };
 }
 
 // ─── Confirm cash payment (atomic mark-paid + enqueue receipt) ───────────
