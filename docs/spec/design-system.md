@@ -199,25 +199,25 @@ Page padding MUST come from `AppPage` (not ad-hoc on the page root). Card paddin
 
 ### B. Heading Scale (locked per role)
 
-| Role                    | Class                                                                   | Source                                              |
-| ----------------------- | ----------------------------------------------------------------------- | --------------------------------------------------- |
-| Page H1                 | `font-heading text-xl sm:text-2xl font-semibold`                        | `AppPageHeader`                                     |
-| Section title           | `font-heading text-base font-semibold`                                  | `CardTitle`                                         |
-| Sub-section / list head | `font-heading text-sm font-semibold`                                    | `Item title` slot                                   |
-| Eyebrow / metadata      | `text-xs font-medium uppercase tracking-wide`                           | `AppPageHeader.eyebrow`                             |
-| Dense eyebrow           | `text-2xs font-medium uppercase tracking-wide`                          | KDS chrome, audit row meta                          |
-| Numeric input echo      | `text-3xl font-semibold tabular-nums`                                   | Number pad readout, scale display                   |
-| Runner board header     | `text-runner-header font-semibold`                                      | Runner/KDS order board column headers at fixed 44px |
-| Runner board row text   | `text-runner-board font-semibold`                                       | Runner/KDS order board data cells at fixed 52px     |
-| Runner empty secondary  | `text-runner-empty-secondary font-semibold`                             | Runner/KDS empty-state secondary line at fixed 44px |
-| Runner board footer     | `text-runner-footer font-semibold`                                      | Runner/KDS order board footer at fixed 40px         |
-| Display call target     | `font-mono text-6xl sm:text-7xl lg:text-8xl font-semibold tabular-nums` | Customer-facing runner / queue display only         |
+| Role                    | Class                                                                   | Source                                                                 |
+| ----------------------- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Page H1                 | `font-heading text-xl sm:text-2xl font-semibold`                        | `AppPageHeader`                                                        |
+| Section title           | `font-heading text-base font-semibold`                                  | `CardTitle`                                                            |
+| Sub-section / list head | `font-heading text-sm font-semibold`                                    | `Item title` slot                                                      |
+| Eyebrow / metadata      | `text-xs font-medium uppercase tracking-wide`                           | `AppPageHeader.eyebrow`                                                |
+| Dense eyebrow           | `text-2xs font-medium uppercase tracking-wide`                          | KDS chrome, audit row meta                                             |
+| Numeric input echo      | `text-3xl font-semibold tabular-nums`                                   | Number pad readout, scale display                                      |
+| Runner board header     | `text-runner-header font-semibold`                                      | Runner/KDS order board column headers, height-responsive display token |
+| Runner board row text   | `text-runner-board font-semibold`                                       | Runner/KDS order board data cells, height-responsive display token     |
+| Runner empty secondary  | `text-runner-empty-secondary font-semibold`                             | Runner/KDS empty-state secondary line, height-responsive display token |
+| Runner board footer     | `text-runner-footer font-semibold`                                      | Runner/KDS order board footer, height-responsive display token         |
+| Display call target     | `font-mono text-6xl sm:text-7xl lg:text-8xl font-semibold tabular-nums` | Customer-facing runner / queue display only                            |
 
 `text-4xl`, `text-5xl` are NOT allowed in app surfaces. They live only in marketing/login splash. `text-3xl` is reserved for the numeric-input-echo role above (cashier number pad, scale display) and MUST be paired with `tabular-nums`. `text-3xs` is reserved for SVG axis labels and dense table micro-meta.
 
 Display call targets are a separate operational display role, not headings. Use them only on customer-facing queue/runner screens where the primary job is reading a stable serving target from distance. The displayed value must be stable (`table_number` for dine-in, `order_number` / `kitchen_ticket_number` for fallback), never a volatile render index.
 
-Runner/KDS customer boards must use Tailwind's built-in 12-column grid, not a custom percent grid: Đơn `col-span-5`, Số món `col-span-2`, Trạng thái `col-span-3`, Thời gian đợi `col-span-2`. All four data cells use the same `text-runner-board` 52px row typography. Status cells MUST NOT add a separate `text-*` class on the data-text element; the label inherits row color so `tailwind-merge` cannot drop the shared row typography.
+Runner/KDS customer boards must use Tailwind's built-in 12-column grid, not a custom percent grid: Đơn `col-span-5`, Số món `col-span-2`, Trạng thái `col-span-3`, Thời gian đợi `col-span-2`. All four data cells use the same `text-runner-board` row typography. Runner display tokens scale with dynamic viewport height (`dvh`) and clamp between compact desktop and 2K/4K displays; they must not scale from viewport width. Status cells MUST NOT add a separate `text-*` class on the data-text element; the label inherits row color so `tailwind-merge` cannot drop the shared row typography.
 
 `font-bold` only for receipt totals, page headers in print mode, and emphasis inside body copy. Default heading weight is `font-semibold`. `font-black` is not allowed in the app.
 

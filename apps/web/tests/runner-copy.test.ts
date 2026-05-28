@@ -188,18 +188,38 @@ test("Runner page follows the KDS order-list vocabulary", () => {
   assert.doesNotMatch(runnerPageSource, /aria-label=\{`Runner/);
 });
 
-test("Runner board uses fixed design-system text and Tailwind grid tokens", () => {
-  assert.match(uiGlobalsSource, /--text-runner-header: 44px;/);
-  assert.match(uiGlobalsSource, /--text-runner-header--line-height: 52px;/);
-  assert.match(uiGlobalsSource, /--text-runner-board: 52px;/);
-  assert.match(uiGlobalsSource, /--text-runner-board--line-height: 60px;/);
-  assert.match(uiGlobalsSource, /--text-runner-empty-secondary: 44px;/);
+test("Runner board uses responsive design-system text and Tailwind grid tokens", () => {
   assert.match(
     uiGlobalsSource,
-    /--text-runner-empty-secondary--line-height: 52px;/,
+    /--text-runner-header: clamp\(1\.625rem, 4dvh, 3\.5rem\);/,
   );
-  assert.match(uiGlobalsSource, /--text-runner-footer: 40px;/);
-  assert.match(uiGlobalsSource, /--text-runner-footer--line-height: 48px;/);
+  assert.match(uiGlobalsSource, /--text-runner-header--line-height: 1\.16;/);
+  assert.match(
+    uiGlobalsSource,
+    /--text-runner-board: clamp\(2\.125rem, 4\.8dvh, 4\.5rem\);/,
+  );
+  assert.match(uiGlobalsSource, /--text-runner-board--line-height: 1\.15;/);
+  assert.match(
+    uiGlobalsSource,
+    /--text-runner-empty-secondary: clamp\(1\.5rem, 3\.8dvh, 3\.5rem\);/,
+  );
+  assert.match(
+    uiGlobalsSource,
+    /--text-runner-empty-secondary--line-height: 1\.16;/,
+  );
+  assert.match(
+    uiGlobalsSource,
+    /--text-runner-footer: clamp\(1\.375rem, 3\.3dvh, 3rem\);/,
+  );
+  assert.match(uiGlobalsSource, /--text-runner-footer--line-height: 1\.16;/);
+  assert.doesNotMatch(
+    uiGlobalsSource,
+    /--text-runner-(?:header|board|empty-secondary|footer): \d+px;/,
+  );
+  assert.doesNotMatch(
+    uiGlobalsSource,
+    /--text-runner-(?:header|board|empty-secondary|footer): [^;]*vw/,
+  );
   assert.doesNotMatch(uiGlobalsSource, /@utility grid-cols-runner-board/);
   assert.doesNotMatch(
     uiGlobalsSource,
