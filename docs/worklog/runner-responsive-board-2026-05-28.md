@@ -13,3 +13,13 @@ QA/QC: Verify the source test that guards Runner copy/tokens, then run repo gate
 ## Follow-Up: Compact Desktop
 
 Owner screenshot at 2026-05-28 18:34 showed a compact desktop viewport still clipping wrapped values like `Mang về #041` and `2 món`. Follow-up tightens the Runner token scale and uses compact `px-4 py-2` spacing below `xl`, while preserving the larger spacing for wide desktop displays.
+
+## Follow-Up: Column Balance
+
+PM: Increase scan room for `Số món` and `Trạng thái`; done means wait-time stays readable with a shorter `Chờ` header.
+
+BA: `Chờ` is a label-only change for wait duration; wait values and ticking behavior remain unchanged.
+
+Senior Dev: Use the existing `grid-cols-12` contract with spans `4/3/4/1`, and give the narrow wait column smaller horizontal padding.
+
+QA/QC: Re-run Runner source tests and render compact/HD/FHD fixtures with `Mang về #041`, `2 món`, and multi-minute wait values.

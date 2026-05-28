@@ -38,10 +38,10 @@ const RUNNER_VISIBLE_STATUSES = ["pending", "preparing", "ready"] as const;
 const RUNNER_VISIBLE_ROW_LIMIT = 4;
 const RUNNER_FEATURED_STATUS = "preparing";
 const RUNNER_COLUMN_SPAN = {
-  order: 5,
-  quantity: 2,
-  status: 3,
-  wait: 2,
+  order: 4,
+  quantity: 3,
+  status: 4,
+  wait: 1,
 } as const;
 const RUNNER_MASCOT = {
   src: "/brand/mascot/be-suon-tuoi-runner.png",
@@ -65,7 +65,7 @@ const RUNNER_COPY = {
     order: "Đơn",
     quantity: "Số món",
     status: "Trạng thái",
-    wait: "Thời gian đợi",
+    wait: "Chờ",
   },
 } as const;
 
@@ -529,7 +529,8 @@ function RunnerColumnHeader({
   return (
     <div
       className={cn(
-        "px-4 py-2 font-heading text-runner-header font-semibold text-foreground xl:px-8 xl:py-4",
+        "py-2 font-heading text-runner-header font-semibold text-foreground xl:py-4",
+        span === RUNNER_COLUMN_SPAN.wait ? "px-2 xl:px-4" : "px-4 xl:px-8",
         getRunnerColumnSpanClass(span),
         align === "right" && "text-right",
       )}
@@ -593,7 +594,8 @@ function RunnerOrderCell({
   return (
     <div
       className={cn(
-        "flex h-full min-w-0 flex-col justify-center px-4 py-2 xl:px-8 xl:py-4",
+        "flex h-full min-w-0 flex-col justify-center py-2 xl:py-4",
+        span === RUNNER_COLUMN_SPAN.wait ? "px-2 xl:px-4" : "px-4 xl:px-8",
         getRunnerColumnSpanClass(span),
         align === "right" && "text-right",
       )}
@@ -611,9 +613,9 @@ function RunnerOrderCell({
 }
 
 function getRunnerColumnSpanClass(span: RunnerColumnSpan): string {
-  if (span === 5) return "col-span-5";
+  if (span === 4) return "col-span-4";
   if (span === 3) return "col-span-3";
-  return "col-span-2";
+  return "col-span-1";
 }
 
 function toRunnerListRow({

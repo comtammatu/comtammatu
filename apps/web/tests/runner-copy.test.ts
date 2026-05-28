@@ -45,7 +45,8 @@ test("Runner page follows the KDS order-list vocabulary", () => {
   assert.match(runnerPageSource, /order: "Đơn"/);
   assert.match(runnerPageSource, /quantity: "Số món"/);
   assert.match(runnerPageSource, /status: "Trạng thái"/);
-  assert.match(runnerPageSource, /wait: "Thời gian đợi"/);
+  assert.match(runnerPageSource, /wait: "Chờ"/);
+  assert.doesNotMatch(runnerPageSource, /wait: "Thời gian đợi"/);
   assert.match(
     runnerPageSource,
     /const RUNNER_ACTIVE_STATUSES = \["pending", "preparing"\] as const;/,
@@ -63,10 +64,10 @@ test("Runner page follows the KDS order-list vocabulary", () => {
   assert.match(runnerPageSource, /grid-rows-4/);
   assert.match(runnerPageSource, /grid-cols-12/);
   assert.match(runnerPageSource, /const RUNNER_COLUMN_SPAN = \{/);
-  assert.match(runnerPageSource, /order: 5/);
-  assert.match(runnerPageSource, /quantity: 2/);
-  assert.match(runnerPageSource, /status: 3/);
-  assert.match(runnerPageSource, /wait: 2/);
+  assert.match(runnerPageSource, /order: 4/);
+  assert.match(runnerPageSource, /quantity: 3/);
+  assert.match(runnerPageSource, /status: 4/);
+  assert.match(runnerPageSource, /wait: 1/);
   assert.match(runnerPageSource, /RunnerColumnHeader/);
   assert.match(runnerPageSource, /items-stretch/);
   assert.match(runnerPageSource, /divide-x divide-border\/70/);
@@ -225,11 +226,10 @@ test("Runner board uses responsive design-system text and Tailwind grid tokens",
     uiGlobalsSource,
     /grid-template-columns: 35% 20% 25% 20%;/,
   );
-  assert.match(
-    runnerPageSource,
-    /text-runner-header font-semibold text-foreground xl:px-8 xl:py-4/,
-  );
-  assert.match(runnerPageSource, /justify-center px-4 py-2 xl:px-8 xl:py-4/);
+  assert.match(runnerPageSource, /span === RUNNER_COLUMN_SPAN\.wait/);
+  assert.match(runnerPageSource, /"px-2 xl:px-4" : "px-4 xl:px-8"/);
+  assert.match(runnerPageSource, /return "col-span-4"/);
+  assert.match(runnerPageSource, /return "col-span-1"/);
   assert.match(
     runnerPageSource,
     /text-runner-footer font-semibold text-foreground xl:gap-x-16 xl:px-8 xl:py-4/,
@@ -239,6 +239,7 @@ test("Runner board uses responsive design-system text and Tailwind grid tokens",
     /px-8 py-4 font-heading text-runner-header/,
   );
   assert.doesNotMatch(runnerPageSource, /justify-center px-8 py-4/);
+  assert.doesNotMatch(runnerPageSource, /col-span-5/);
 });
 
 test("Runner wait-time cell updates every second on the client", () => {
