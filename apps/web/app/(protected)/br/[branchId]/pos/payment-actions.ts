@@ -166,15 +166,6 @@ function truthySetting(v: string | undefined): boolean {
   return v === "true" || v === "1";
 }
 
-async function consumeStockForOrderCompat(
-  supabase: PosSupabase,
-  orderId: number,
-) {
-  return supabase.rpc("consume_stock_for_order", {
-    p_order_id: orderId,
-  });
-}
-
 async function readVietQrSettings(
   supabase: PosSupabase,
   tenantId: number,
@@ -526,9 +517,15 @@ export async function fetchPaymentMethodsForPos(
  *     pre-WS-1b idempotent-replay semantics where the second
  *     `createPayment` call overwrites the stored provider blob with the
  *     fresh QR.
- *   - Cash `result.status === "completed" && !result.idempotent` triggers
- *     `consumeStockForOrderCompat` non-fatally (stock failures log but do
- *     not flip success — payment is already committed atomically).
+ *   - Cash auto-completes (`status === "completed"`) inside the RPC
+ *     atomically. Stock consumption was REMOVED 2026-05-28 per owner
+ *     policy "không trừ kho" — pre-WS-1b code (and the batch 5a
+ *     migration commit `35e885ea`) called `consumeStockForOrderCompat`
+ *     here non-fatally; the call has since been deleted alongside the
+ *     helper. Behavior change is intentional; see
+ *     `tasks/regressions.md` STOCK-CONSUME-MUST-CHECK-RESULT policy
+ *     override note + memory `project_pos_action_helper_refactor.md`
+ *     "Owner policy 2026-05-28" section for rationale.
  *   - Local `mapPaymentRpcError` call replaced with
  *     `createPaymentRpcMappings` table (same sentinels + Vietnamese copy,
  *     ordering preserved so `amount_mismatch_recomputed` shadows
@@ -759,25 +756,12 @@ export const createPayment = withActionPositional(
       });
     }
 
-    // For cash payments (status=completed immediately), deduct ingredients
-    // from stock. VietQR/MoMo deduct after confirm/webhook completes.
-    // All stock errors are non-fatal for pilot: stock_levels may not be
-    // initialized yet, and insufficient_stock_ingredient errors are
-    // expected until stock data is seeded.
-    if (result.status === "completed" && !result.idempotent) {
-      const { error: stockErr } = await consumeStockForOrderCompat(
-        supabase,
-        orderId,
-      );
-      if (stockErr) {
-        // Non-fatal: payment succeeded, stock reconciliation can be done
-        // manually. See tasks/todo.md for payment-order desync recovery query.
-        console.error(
-          "[createPayment] consume_stock_for_order failed:",
-          stockErr.message,
-        );
-      }
-    }
+    // No stock deduction per owner policy 2026-05-28 — see
+    // `tasks/regressions.md` STOCK-CONSUME-MUST-CHECK-RESULT policy
+    // override note + memory `project_pos_action_helper_refactor.md`
+    // "Owner policy 2026-05-28" section. Pre-policy code called
+    // `consumeStockForOrderCompat(supabase, orderId)` here for cash
+    // payments after `result.status === "completed" && !result.idempotent`.
 
     const qrInfo = pickVietQrInfo(providerResult.providerData);
 
@@ -949,20 +933,17 @@ export async function confirmPayment(
     return { success: false, error: "Không thể xác nhận thanh toán." };
   }
 
-  // Deduct ingredients AFTER payment confirmed successfully.
-  // Non-fatal: stock_levels may not be initialized yet.
-  // COGS in GL journal uses stock_movements from create_payment (cash)
-  // or will be 0 for e-wallet (reconciled via period close).
-  const { error: stockErr } = await consumeStockForOrderCompat(
-    supabase,
-    payment.order_id,
-  );
-  if (stockErr) {
-    console.error(
-      "[confirmPayment] consume_stock_for_order failed:",
-      stockErr.message,
-    );
-  }
+  // No stock deduction per owner policy 2026-05-28 — see
+  // `tasks/regressions.md` STOCK-CONSUME-MUST-CHECK-RESULT policy
+  // override note + memory `project_pos_action_helper_refactor.md`
+  // "Owner policy 2026-05-28" section. Pre-policy code called
+  // `consumeStockForOrderCompat(supabase, payment.order_id)` here
+  // non-fatally after the e-wallet confirm RPC succeeded. COGS in GL
+  // journal previously used stock_movements from `create_payment`
+  // cash branch (also removed) or was 0 for e-wallet (period-close
+  // reconciliation). With stock removed, COGS reconciliation moves
+  // entirely to period-close for ALL payment methods until policy
+  // reverts (which would require stock data seeding first).
 
   // Enqueue receipt print. Cash flow does this atomically inside
   // confirm_cash_payment; the e-wallet RPC (confirm_payment_and_post)
