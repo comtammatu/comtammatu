@@ -22,9 +22,11 @@ import { createTaxInvoice } from "@/_actions/finance";
 import { mapRpcError } from "@/_lib/rpc-error-map";
 import { posConfirmPaymentAuth, posUseAuth } from "./_lib/auth";
 import {
+  branchOnlyReadSchema,
   cancelPendingPaymentSchema,
   cashConfirmSchema,
   createPaymentSchema,
+  fetchPendingRemotePaymentSchema,
 } from "./_lib/payment-schemas";
 import {
   cancelPendingPaymentRpcFallback,
@@ -415,66 +417,74 @@ const getCachedPaymentSettings = unstable_cache(
 /**
  * Methods available on POS for this tenant: cash + enabled e-wallets
  * with registered providers (env credentials).
+ *
+ * Migrated to `withActionPositional` in WS-1b reads sub-batch
+ * (2026-05-28). Auth `posUseAuth` (POS_USE). Branch-claim guard stays
+ * inline to preserve "Không có quyền truy cập chi nhánh này" (helper's
+ * null-from-customAuth path collapses to the generic "Không có quyền").
+ *
+ * Behavior preserved:
+ *   - `ensurePaymentProvidersRegistered()` side effect runs after auth.
+ *   - `getCachedPaymentSettings(tenant)` try/catch returns
+ *     "Không thể tải cấu hình thanh toán. Vui lòng thử lại." on throw.
+ *   - Method list build order (cash → vietqr → momo) and gating rules
+ *     (registered provider × system setting × bank/account env presence
+ *     for VietQR) byte-identical.
  */
-export async function fetchPaymentMethodsForPos(
-  branchId: number,
-): Promise<ActionResult<{ methods: PaymentMethod[] }>> {
-  const parsedBranch = branchIdSchema.safeParse(branchId);
-  if (!parsedBranch.success) {
-    return { success: false, error: "Branch ID không hợp lệ" };
-  }
-
-  const ctx = await getAuthContextWithPermission(
-    POS_ROLES,
-    PERMISSION_KEYS.POS_USE,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
-
-  const { claims } = ctx;
-
-  if (claims.branch_id !== parsedBranch.data) {
-    return { success: false, error: "Không có quyền truy cập chi nhánh này" };
-  }
-
-  ensurePaymentProvidersRegistered();
-  let settings: Record<string, string>;
-  try {
-    settings = await getCachedPaymentSettings(claims.tenant_id);
-  } catch {
-    return {
-      success: false,
-      error: "Không thể tải cấu hình thanh toán. Vui lòng thử lại.",
-    };
-  }
-
-  const registered = new Set(getRegisteredMethods());
-  const methods: PaymentMethod[] = [];
-
-  if (registered.has("cash")) {
-    methods.push("cash");
-  }
-  if (truthySetting(settings[SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_VIETQR])) {
-    const bank =
-      settings[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_BANK_CODE] ||
-      process.env["VIETQR_BANK_ID"] ||
-      "";
-    const account =
-      settings[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NO] ||
-      process.env["VIETQR_ACCOUNT_NO"] ||
-      "";
-    if (bank && account) {
-      methods.push("vietqr");
+export const fetchPaymentMethodsForPos = withActionPositional(
+  {
+    argsToInput: (branchId: number) => ({ branchId }),
+    schema: branchOnlyReadSchema,
+    customAuth: posUseAuth,
+  },
+  async (
+    { branchId },
+    { claims },
+  ): Promise<ActionResult<{ methods: PaymentMethod[] }>> => {
+    if (claims.branch_id !== branchId) {
+      return { success: false, error: "Không có quyền truy cập chi nhánh này" };
     }
-  }
-  if (
-    truthySetting(settings[SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_MOMO]) &&
-    registered.has("momo")
-  ) {
-    methods.push("momo");
-  }
 
-  return { success: true, data: { methods } };
-}
+    ensurePaymentProvidersRegistered();
+    let settings: Record<string, string>;
+    try {
+      settings = await getCachedPaymentSettings(claims.tenant_id);
+    } catch {
+      return {
+        success: false,
+        error: "Không thể tải cấu hình thanh toán. Vui lòng thử lại.",
+      };
+    }
+
+    const registered = new Set(getRegisteredMethods());
+    const methods: PaymentMethod[] = [];
+
+    if (registered.has("cash")) {
+      methods.push("cash");
+    }
+    if (truthySetting(settings[SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_VIETQR])) {
+      const bank =
+        settings[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_BANK_CODE] ||
+        process.env["VIETQR_BANK_ID"] ||
+        "";
+      const account =
+        settings[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NO] ||
+        process.env["VIETQR_ACCOUNT_NO"] ||
+        "";
+      if (bank && account) {
+        methods.push("vietqr");
+      }
+    }
+    if (
+      truthySetting(settings[SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_MOMO]) &&
+      registered.has("momo")
+    ) {
+      methods.push("momo");
+    }
+
+    return { success: true, data: { methods } };
+  },
+);
 
 /* ─── createPayment ─── */
 
@@ -782,56 +792,65 @@ export const createPayment = withActionPositional(
   },
 );
 
-export async function fetchPendingRemotePaymentForBill(
-  branchId: number,
-  orderId: number,
-): Promise<ActionResult<PendingRemotePaymentForBillData | null>> {
-  const parsedBranch = branchIdSchema.safeParse(branchId);
-  if (!parsedBranch.success) {
-    return { success: false, error: "Branch ID không hợp lệ" };
-  }
+/**
+ * Read the most recent non-failed payment for an order. Returns `null`
+ * when there's no pending row to resume — caller (bill sheet) uses that
+ * signal to start a fresh QR session vs reuse the existing one.
+ *
+ * Migrated to `withActionPositional` in WS-1b reads sub-batch
+ * (2026-05-28). Auth `posUseAuth` (POS_USE). Branch-claim guard stays
+ * inline for "Không có quyền truy cập chi nhánh này" copy preservation.
+ *
+ * Behavior preserved:
+ *   - Same SELECT shape on `payments` (id, method, status,
+ *     provider_ref, provider_data) with the `neq("status", "failed")`
+ *     filter + `order("id", desc).limit(1).maybeSingle()` chain.
+ *   - DB error returns "Không thể tải phiên thanh toán."
+ *   - Non-pending or missing rows return `{ success: true, data: null }`
+ *     — bill sheet treats either as "no resumable session."
+ */
+export const fetchPendingRemotePaymentForBill = withActionPositional(
+  {
+    argsToInput: (branchId: number, orderId: number) => ({
+      branchId,
+      orderId,
+    }),
+    schema: fetchPendingRemotePaymentSchema,
+    customAuth: posUseAuth,
+  },
+  async (
+    { branchId, orderId },
+    { supabase, claims },
+  ): Promise<ActionResult<PendingRemotePaymentForBillData | null>> => {
+    if (claims.branch_id !== branchId) {
+      return { success: false, error: "Không có quyền truy cập chi nhánh này" };
+    }
 
-  const parsedOrderId = orderIdSchema.safeParse(orderId);
-  if (!parsedOrderId.success) {
-    return { success: false, error: "Order ID không hợp lệ" };
-  }
+    const { data: payment, error } = await supabase
+      .from("payments")
+      .select("id, method, status, provider_ref, provider_data")
+      .eq("order_id", orderId)
+      .eq("tenant_id", claims.tenant_id)
+      .eq("branch_id", branchId)
+      .neq("status", "failed")
+      .order("id", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-  const ctx = await getAuthContextWithPermission(
-    POS_ROLES,
-    PERMISSION_KEYS.POS_USE,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
+    if (error) {
+      return { success: false, error: "Không thể tải phiên thanh toán." };
+    }
 
-  const { supabase, claims } = ctx;
+    if (!payment || payment.status !== "pending") {
+      return { success: true, data: null };
+    }
 
-  if (claims.branch_id !== parsedBranch.data) {
-    return { success: false, error: "Không có quyền truy cập chi nhánh này" };
-  }
-
-  const { data: payment, error } = await supabase
-    .from("payments")
-    .select("id, method, status, provider_ref, provider_data")
-    .eq("order_id", parsedOrderId.data)
-    .eq("tenant_id", claims.tenant_id)
-    .eq("branch_id", parsedBranch.data)
-    .neq("status", "failed")
-    .order("id", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (error) {
-    return { success: false, error: "Không thể tải phiên thanh toán." };
-  }
-
-  if (!payment || payment.status !== "pending") {
-    return { success: true, data: null };
-  }
-
-  return {
-    success: true,
-    data: buildPendingRemotePaymentForBillData(payment),
-  };
-}
+    return {
+      success: true,
+      data: buildPendingRemotePaymentForBillData(payment),
+    };
+  },
+);
 
 function pickVietQrInfo(
   providerData: Record<string, unknown> | undefined,
@@ -1305,61 +1324,56 @@ export interface VietQrConfig {
  * pulls the VietQR rows we need, so a second cache key would just split the
  * cache for no win. Both fetches share the same revalidate window.
  */
-export async function fetchVietQrConfig(
-  branchId: number,
-): Promise<ActionResult<VietQrConfig | null>> {
-  const parsedBranch = branchIdSchema.safeParse(branchId);
-  if (!parsedBranch.success) {
-    return { success: false, error: "Branch ID không hợp lệ" };
-  }
+export const fetchVietQrConfig = withActionPositional(
+  {
+    argsToInput: (branchId: number) => ({ branchId }),
+    schema: branchOnlyReadSchema,
+    customAuth: posUseAuth,
+  },
+  async (
+    { branchId },
+    { claims },
+  ): Promise<ActionResult<VietQrConfig | null>> => {
+    if (claims.branch_id !== branchId) {
+      return { success: false, error: "Không có quyền truy cập chi nhánh này" };
+    }
 
-  const ctx = await getAuthContextWithPermission(
-    POS_ROLES,
-    PERMISSION_KEYS.POS_USE,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
+    let settings: Record<string, string>;
+    try {
+      settings = await getCachedPaymentSettings(claims.tenant_id);
+    } catch {
+      return {
+        success: false,
+        error: "Không thể tải cấu hình VietQR. Vui lòng thử lại.",
+      };
+    }
 
-  const { claims } = ctx;
+    const enabled = truthySetting(
+      settings[SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_VIETQR],
+    );
+    const bankCode =
+      settings[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_BANK_CODE] ||
+      process.env["VIETQR_BANK_ID"] ||
+      "";
+    const accountNo =
+      settings[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NO] ||
+      process.env["VIETQR_ACCOUNT_NO"] ||
+      "";
+    const accountName =
+      settings[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NAME] ||
+      process.env["VIETQR_ACCOUNT_NAME"] ||
+      "";
 
-  if (claims.branch_id !== parsedBranch.data) {
-    return { success: false, error: "Không có quyền truy cập chi nhánh này" };
-  }
+    if (!enabled || !bankCode || !accountNo) {
+      return { success: true, data: null };
+    }
 
-  let settings: Record<string, string>;
-  try {
-    settings = await getCachedPaymentSettings(claims.tenant_id);
-  } catch {
     return {
-      success: false,
-      error: "Không thể tải cấu hình VietQR. Vui lòng thử lại.",
+      success: true,
+      data: { bankCode, accountNo, accountName },
     };
-  }
-
-  const enabled = truthySetting(
-    settings[SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_VIETQR],
-  );
-  const bankCode =
-    settings[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_BANK_CODE] ||
-    process.env["VIETQR_BANK_ID"] ||
-    "";
-  const accountNo =
-    settings[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NO] ||
-    process.env["VIETQR_ACCOUNT_NO"] ||
-    "";
-  const accountName =
-    settings[SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_ACCOUNT_NAME] ||
-    process.env["VIETQR_ACCOUNT_NAME"] ||
-    "";
-
-  if (!enabled || !bankCode || !accountNo) {
-    return { success: true, data: null };
-  }
-
-  return {
-    success: true,
-    data: { bankCode, accountNo, accountName },
-  };
-}
+  },
+);
 
 /* ─── confirmVietQrPayment ─── */
 

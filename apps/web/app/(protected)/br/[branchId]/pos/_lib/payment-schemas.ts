@@ -71,3 +71,47 @@ export const createPaymentSchema = z.object({
 });
 
 export type CreatePaymentInput = z.infer<typeof createPaymentSchema>;
+
+/**
+ * Shared schema for branch-only read actions:
+ *   - `fetchPaymentMethodsForPos(branchId)` — RSC seed for POS bill sheet.
+ *   - `fetchVietQrConfig(branchId)` — RSC seed for QR client-side generation.
+ *
+ * Both reads check `claims.branch_id === input.branchId` inline (different
+ * error copy "Không có quyền truy cập chi nhánh này" — kept inside handler
+ * because `customAuth` returning null collapses to the generic
+ * "Không có quyền" via the helper's FORBIDDEN_ERROR default).
+ */
+export const branchOnlyReadSchema = z.object({
+  branchId: z.coerce
+    .number()
+    .int()
+    .positive({ error: "Branch ID không hợp lệ" }),
+});
+
+export type BranchOnlyReadInput = z.infer<typeof branchOnlyReadSchema>;
+
+/**
+ * Schema for `fetchPendingRemotePaymentForBill(branchId, orderId)`. Reads
+ * the latest non-failed payment row for an order so the bill sheet can
+ * decide whether to resume an in-flight MoMo QR session or start fresh.
+ *
+ * `orderId` carries the explicit "Order ID không hợp lệ" error message
+ * matching the pre-WS-1b hand-rolled `safeParse` fallback string —
+ * field order branchId first so the first-issue message stays identical
+ * when both fields are invalid.
+ */
+export const fetchPendingRemotePaymentSchema = z.object({
+  branchId: z.coerce
+    .number()
+    .int()
+    .positive({ error: "Branch ID không hợp lệ" }),
+  orderId: z.coerce
+    .number()
+    .int()
+    .positive({ error: "Order ID không hợp lệ" }),
+});
+
+export type FetchPendingRemotePaymentInput = z.infer<
+  typeof fetchPendingRemotePaymentSchema
+>;
