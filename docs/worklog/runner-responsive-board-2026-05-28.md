@@ -9,3 +9,7 @@ BA: Keep the four-row board, existing Runner copy, shared status vocabulary, wai
 Senior Dev: Update the design-system token contract first, then runtime theme tokens and source tests. Use shared Tailwind text tokens backed by `clamp(...dvh...)`; do not add page-level arbitrary text classes or viewport-width typography.
 
 QA/QC: Verify the source test that guards Runner copy/tokens, then run repo gates. Render-check representative desktop viewports for clipping, overlap, blank page, and framework overlay risk.
+
+## Follow-Up: Compact Desktop
+
+Owner screenshot at 2026-05-28 18:34 showed a compact desktop viewport still clipping wrapped values like `Mang về #041` and `2 món`. Follow-up tightens the Runner token scale and uses compact `px-4 py-2` spacing below `xl`, while preserving the larger spacing for wide desktop displays.

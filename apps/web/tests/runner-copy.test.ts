@@ -191,27 +191,27 @@ test("Runner page follows the KDS order-list vocabulary", () => {
 test("Runner board uses responsive design-system text and Tailwind grid tokens", () => {
   assert.match(
     uiGlobalsSource,
-    /--text-runner-header: clamp\(1\.625rem, 4dvh, 3\.5rem\);/,
+    /--text-runner-header: clamp\(1\.25rem, 3\.2dvh, 2\.875rem\);/,
   );
-  assert.match(uiGlobalsSource, /--text-runner-header--line-height: 1\.16;/);
+  assert.match(uiGlobalsSource, /--text-runner-header--line-height: 1\.12;/);
   assert.match(
     uiGlobalsSource,
-    /--text-runner-board: clamp\(2\.125rem, 4\.8dvh, 4\.5rem\);/,
+    /--text-runner-board: clamp\(1\.625rem, 3\.8dvh, 3\.75rem\);/,
   );
-  assert.match(uiGlobalsSource, /--text-runner-board--line-height: 1\.15;/);
+  assert.match(uiGlobalsSource, /--text-runner-board--line-height: 1\.12;/);
   assert.match(
     uiGlobalsSource,
-    /--text-runner-empty-secondary: clamp\(1\.5rem, 3\.8dvh, 3\.5rem\);/,
-  );
-  assert.match(
-    uiGlobalsSource,
-    /--text-runner-empty-secondary--line-height: 1\.16;/,
+    /--text-runner-empty-secondary: clamp\(1\.25rem, 3dvh, 2\.75rem\);/,
   );
   assert.match(
     uiGlobalsSource,
-    /--text-runner-footer: clamp\(1\.375rem, 3\.3dvh, 3rem\);/,
+    /--text-runner-empty-secondary--line-height: 1\.12;/,
   );
-  assert.match(uiGlobalsSource, /--text-runner-footer--line-height: 1\.16;/);
+  assert.match(
+    uiGlobalsSource,
+    /--text-runner-footer: clamp\(1\.125rem, 2\.4dvh, 2\.25rem\);/,
+  );
+  assert.match(uiGlobalsSource, /--text-runner-footer--line-height: 1\.12;/);
   assert.doesNotMatch(
     uiGlobalsSource,
     /--text-runner-(?:header|board|empty-secondary|footer): \d+px;/,
@@ -225,6 +225,20 @@ test("Runner board uses responsive design-system text and Tailwind grid tokens",
     uiGlobalsSource,
     /grid-template-columns: 35% 20% 25% 20%;/,
   );
+  assert.match(
+    runnerPageSource,
+    /text-runner-header font-semibold text-foreground xl:px-8 xl:py-4/,
+  );
+  assert.match(runnerPageSource, /justify-center px-4 py-2 xl:px-8 xl:py-4/);
+  assert.match(
+    runnerPageSource,
+    /text-runner-footer font-semibold text-foreground xl:gap-x-16 xl:px-8 xl:py-4/,
+  );
+  assert.doesNotMatch(
+    runnerPageSource,
+    /px-8 py-4 font-heading text-runner-header/,
+  );
+  assert.doesNotMatch(runnerPageSource, /justify-center px-8 py-4/);
 });
 
 test("Runner wait-time cell updates every second on the client", () => {

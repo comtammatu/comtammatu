@@ -510,7 +510,7 @@ function RunnerEmptyMascot() {
 
 function RunnerFooter() {
   return (
-    <footer className="flex shrink-0 flex-wrap items-center justify-center gap-x-16 gap-y-2 border-t border-border bg-muted/70 px-8 py-4 font-heading text-runner-footer font-semibold text-foreground">
+    <footer className="flex shrink-0 flex-wrap items-center justify-center gap-x-6 gap-y-2 border-t border-border bg-muted/70 px-4 py-2 font-heading text-runner-footer font-semibold text-foreground xl:gap-x-16 xl:px-8 xl:py-4">
       <span>{RUNNER_COPY.footer.wifi}</span>
       <span>{RUNNER_COPY.footer.password}</span>
     </footer>
@@ -529,7 +529,7 @@ function RunnerColumnHeader({
   return (
     <div
       className={cn(
-        "px-8 py-4 font-heading text-runner-header font-semibold text-foreground",
+        "px-4 py-2 font-heading text-runner-header font-semibold text-foreground xl:px-8 xl:py-4",
         getRunnerColumnSpanClass(span),
         align === "right" && "text-right",
       )}
@@ -593,7 +593,7 @@ function RunnerOrderCell({
   return (
     <div
       className={cn(
-        "flex h-full min-w-0 flex-col justify-center px-8 py-4",
+        "flex h-full min-w-0 flex-col justify-center px-4 py-2 xl:px-8 xl:py-4",
         getRunnerColumnSpanClass(span),
         align === "right" && "text-right",
       )}
