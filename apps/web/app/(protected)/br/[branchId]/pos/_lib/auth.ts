@@ -76,3 +76,20 @@ export const POS_USE_ROLES: readonly StaffRole[] = MODULE_ACL.pos.allowedRoles;
 export async function posUseAuth(): Promise<ActionContext | null> {
   return getAuthContextWithPermission(POS_USE_ROLES, PERMISSION_KEYS.POS_USE);
 }
+
+/**
+ * `customAuth` resolver for the cash confirm step. POS_CONFIRM_PAYMENT is
+ * a tighter gate than POS_USE — waiters with POS_USE + POS_PRINT can print
+ * provisional bills but MUST NOT touch the cash drawer. Cashier and
+ * branch_manager+ hold POS_CONFIRM_PAYMENT.
+ *
+ * VietQR / MoMo confirm paths keep `posUseAuth` instead (e-wallet flows
+ * are webhook-driven, do not touch the physical cash drawer, and the
+ * cashier merely confirms the remote provider's success).
+ */
+export async function posConfirmPaymentAuth(): Promise<ActionContext | null> {
+  return getAuthContextWithPermission(
+    POS_USE_ROLES,
+    PERMISSION_KEYS.POS_CONFIRM_PAYMENT,
+  );
+}

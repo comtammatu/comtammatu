@@ -29,3 +29,18 @@ export const cancelPendingPaymentSchema = z.object({
 export type CancelPendingPaymentInput = z.infer<
   typeof cancelPendingPaymentSchema
 >;
+
+/**
+ * Schema for `confirmCashPayment(orderId, cashReceived)`. The cashier UI
+ * clamps `cashReceived >= total` client-side, but the server-side RPC is
+ * the authoritative gate (this schema only enforces non-negative; the
+ * `must be >=` sentinel comes from the RPC for under-payment).
+ */
+export const cashConfirmSchema = z.object({
+  orderId: z.coerce.number().int().positive({ error: "Order ID không hợp lệ" }),
+  cashReceived: z.coerce
+    .number()
+    .nonnegative({ error: "Số tiền nhận không được âm" }),
+});
+
+export type CashConfirmInput = z.infer<typeof cashConfirmSchema>;

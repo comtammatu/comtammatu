@@ -21,11 +21,16 @@ import { withActionPositional } from "@/_lib/with-action";
 import { createTaxInvoice } from "@/_actions/finance";
 import { getVNDateString, getVNDayUtcRange } from "@/_lib/format-datetime";
 import { mapRpcError } from "@/_lib/rpc-error-map";
-import { posUseAuth } from "./_lib/auth";
-import { cancelPendingPaymentSchema } from "./_lib/payment-schemas";
+import { posConfirmPaymentAuth, posUseAuth } from "./_lib/auth";
+import {
+  cancelPendingPaymentSchema,
+  cashConfirmSchema,
+} from "./_lib/payment-schemas";
 import {
   cancelPendingPaymentRpcFallback,
   cancelPendingPaymentRpcMappings,
+  confirmCashPaymentRpcFallback,
+  confirmCashPaymentRpcMappings,
 } from "./_lib/payment-messages";
 import { POS_ERROR_CODES } from "./_utils/error-codes";
 
@@ -1063,13 +1068,6 @@ export async function fetchDailyReconciliation(
 
 // ─── Confirm cash payment (atomic mark-paid + enqueue receipt) ───────────
 
-const cashConfirmSchema = z.object({
-  orderId: z.coerce.number().int().positive({ error: "Order ID không hợp lệ" }),
-  cashReceived: z.coerce
-    .number()
-    .nonnegative({ error: "Số tiền nhận không được âm" }),
-});
-
 export interface CashPaymentResult {
   order_id: number;
   payment_id: number;
@@ -1089,114 +1087,108 @@ export interface CashPaymentResult {
  *
  * Blocks under-payment hard (use order discount for employee meals).
  */
-export async function confirmCashPayment(
-  orderId: number,
-  cashReceived: number,
-): Promise<ActionResult<CashPaymentResult>> {
-  const parsed = cashConfirmSchema.safeParse({ orderId, cashReceived });
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Đầu vào không hợp lệ",
-    };
-  }
-
-  // Cash confirm yêu cầu POS_CONFIRM_PAYMENT (cashier/branch_manager+).
-  // Waiter chỉ có POS_USE + POS_PRINT → in bill tạm tính OK, nhưng KHÔNG
-  // được chạm két. VietQR/MoMo giữ POS_USE ở createPayment/confirmPayment
-  // (e-wallet = webhook source of truth, không chạm cash drawer).
-  const ctx = await getAuthContextWithPermission(
-    POS_ROLES,
-    PERMISSION_KEYS.POS_CONFIRM_PAYMENT,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền thanh toán" };
-
-  const { supabase, claims } = ctx;
-
-  if (claims.branch_id === null) {
-    return { success: false, error: "Không xác định được chi nhánh" };
-  }
-
-  const { data, error } = await supabase.rpc("confirm_cash_payment", {
-    p_order_id: parsed.data.orderId,
-    p_cash_received: parsed.data.cashReceived,
-  });
-
-  if (error) {
-    const msg = String(error.message ?? "").toLowerCase();
-    if (
-      msg.includes("must be >=") ||
-      msg.includes("must be >") ||
-      msg.includes("cash_received")
-    ) {
+/**
+ * Migrated to `withActionPositional` in WS-1b batch 4b (2026-05-28).
+ * Cash confirm yêu cầu POS_CONFIRM_PAYMENT (cashier / branch_manager+) —
+ * waiter chỉ có POS_USE + POS_PRINT → in bill tạm tính OK, nhưng KHÔNG
+ * được chạm két. VietQR / MoMo giữ POS_USE ở createPayment /
+ * confirmPayment (e-wallet = webhook source of truth, không chạm cash
+ * drawer).
+ *
+ * Behavior preserved:
+ *   - Same RPC `confirm_cash_payment` (p_order_id + p_cash_received).
+ *   - All 8 error sentinels mapped via `confirmCashPaymentRpcMappings`
+ *     in identical order so cash-specific copy beats the shared
+ *     payment vocabulary (e.g. `tenant mismatch` → "Không có quyền truy
+ *     cập đơn này" not the shared "Không thể xử lý...").
+ *   - Status-based result branching for `stock_failed` and
+ *     `amount_mismatch_recomputed` kept inside the handler (the RPC
+ *     can RETURN those even when the SQL itself does not raise — so
+ *     they cannot be mapped via RpcErrorMapping which only inspects
+ *     `error.message`).
+ *   - `branch_id === null` guard (operator with no branch grant)
+ *     returns "Không xác định được chi nhánh" inside the handler.
+ */
+export const confirmCashPayment = withActionPositional(
+  {
+    argsToInput: (orderId: number, cashReceived: number) => ({
+      orderId,
+      cashReceived,
+    }),
+    schema: cashConfirmSchema,
+    customAuth: posConfirmPaymentAuth,
+  },
+  async (
+    { orderId, cashReceived },
+    { supabase, claims },
+  ): Promise<ActionResult<CashPaymentResult>> => {
+    if (claims.branch_id === null) {
       return {
         success: false,
-        error: "Tiền nhận phải lớn hơn hoặc bằng tổng cần thu.",
+        error: "Không xác định được chi nhánh",
+        errorCode: POS_ERROR_CODES.SCOPE_BRANCH_MISMATCH,
       };
     }
-    if (msg.includes("exceeds sane upper bound")) {
+
+    const { data, error } = await supabase.rpc("confirm_cash_payment", {
+      p_order_id: orderId,
+      p_cash_received: cashReceived,
+    });
+
+    if (error) {
+      console.error(
+        "[confirmCashPayment] rpc failed:",
+        String(error.message ?? ""),
+      );
+      return mapRpcError<CashPaymentResult>(
+        error,
+        confirmCashPaymentRpcMappings,
+        confirmCashPaymentRpcFallback,
+      );
+    }
+
+    const result = data as unknown as {
+      status?: string;
+      order_id: number;
+      payment_id: number;
+      cash_received: number;
+      cash_change: number;
+      print_job_id: number | null;
+      print_warning?: string | null;
+      error_code?: string | null;
+      detail?: string | null;
+    } | null;
+    if (!result) {
       return {
         success: false,
-        error: "Số tiền nhận vượt ngưỡng hợp lệ. Vui lòng kiểm tra lại.",
+        error: "Không thể xác nhận thanh toán.",
+        errorCode: POS_ERROR_CODES.RPC_GENERIC,
       };
     }
-    if (msg.includes("permission denied")) {
-      return { success: false, error: "Không có quyền thanh toán" };
-    }
-    if (msg.includes("tenant mismatch")) {
-      return { success: false, error: "Không có quyền truy cập đơn này" };
-    }
-    const mappedError = mapPaymentRpcError(msg);
-    if (mappedError) {
-      console.error("[confirmCashPayment] rpc failed:", msg);
-      return { success: false, error: mappedError };
-    }
-    if (msg.includes("no active") && msg.includes("printer")) {
+
+    // RPC can RETURN these statuses without raising — status branching has
+    // to live in the handler because `mapRpcError` only sees errors.
+    if (result.status === "stock_failed") {
       return {
         success: false,
-        error: "Chi nhánh chưa cấu hình máy in hóa đơn. Liên hệ quản lý.",
+        error:
+          "Chưa thể hoàn tất thanh toán vì tồn kho hoặc định mức món chưa sẵn sàng. Quản lý đã được thông báo.",
+        errorCode: POS_ERROR_CODES.RPC_GENERIC,
       };
     }
-    console.error("[confirmCashPayment] [unmapped] rpc error:", msg);
-    return {
-      success: false,
-      error: "Không thể xác nhận thanh toán. Vui lòng thử lại.",
-    };
-  }
 
-  const result = data as unknown as {
-    status?: string;
-    order_id: number;
-    payment_id: number;
-    cash_received: number;
-    cash_change: number;
-    print_job_id: number | null;
-    print_warning?: string | null;
-    error_code?: string | null;
-    detail?: string | null;
-  } | null;
-  if (!result) {
-    return { success: false, error: "Không thể xác nhận thanh toán." };
-  }
+    if (result.status === "amount_mismatch_recomputed") {
+      return {
+        success: false,
+        error:
+          "Tổng tiền đơn đã thay đổi so với dữ liệu món. Vui lòng tải lại đơn và kiểm tra trước khi thanh toán.",
+        errorCode: POS_ERROR_CODES.RPC_GENERIC,
+      };
+    }
 
-  if (result.status === "stock_failed") {
-    return {
-      success: false,
-      error:
-        "Chưa thể hoàn tất thanh toán vì tồn kho hoặc định mức món chưa sẵn sàng. Quản lý đã được thông báo.",
-    };
-  }
-
-  if (result.status === "amount_mismatch_recomputed") {
-    return {
-      success: false,
-      error:
-        "Tổng tiền đơn đã thay đổi so với dữ liệu món. Vui lòng tải lại đơn và kiểm tra trước khi thanh toán.",
-    };
-  }
-
-  return { success: true, data: result };
-}
+    return { success: true, data: result };
+  },
+);
 
 /* ─── Cash payment + mandatory HĐĐT issuance ─── */
 
