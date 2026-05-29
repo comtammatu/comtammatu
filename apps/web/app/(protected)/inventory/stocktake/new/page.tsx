@@ -50,7 +50,7 @@ export default async function NewStocktakeSessionPage({
     const flagEnabled = await isFeatureEnabledForBranch(
       supabase,
       gateBranchId,
-      INVENTORY_FEATURE_FLAGS.S13A_STOCKTAKE_V2,
+      INVENTORY_FEATURE_FLAGS.INVENTORY_STOCKTAKE_REDESIGNED,
     );
     if (!flagEnabled) {
       redirect(

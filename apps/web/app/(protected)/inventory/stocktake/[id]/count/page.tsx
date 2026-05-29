@@ -42,7 +42,7 @@ export default async function StocktakeCountPage({
   const flagEnabled = await isFeatureEnabledForBranch(
     supabase,
     sessionBranchId,
-    INVENTORY_FEATURE_FLAGS.S13A_STOCKTAKE_V2,
+    INVENTORY_FEATURE_FLAGS.INVENTORY_STOCKTAKE_REDESIGNED,
   );
   if (!flagEnabled) {
     redirect(
