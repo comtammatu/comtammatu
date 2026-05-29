@@ -10,6 +10,16 @@ apply migrations to production.
 
 ## Safety Rails
 
+- **The extract MUST use a direct privileged connection, NOT `--linked`.** Verified
+  2026-05-30: `supabase db dump --linked` (temp-login role) SILENTLY drops
+  RLS-restricted tables — it omitted 18/118 public tables (`feedbacks`,
+  `webhook_events`, `telegram_*`, `feedback_*`, `kitchen_send_batches`,
+  `printer_agent_presence_tokens`, …) with exit 0 and no warning, even though the
+  invocation already used `--role postgres`. The 2026-05-26 baseline almost
+  certainly had the same gap (those tables predate it). `db:baseline:extract` now
+  builds a direct `--db-url` from `supabase/.temp/pooler-url` + `SUPABASE_PASSWORD_IEXW`
+  (in `.env.local`). ALWAYS count `CREATE TABLE` in the artifact and reconcile it to
+  the live `pg_tables` count before accepting a baseline.
 - Verify the linked project ref is `iexwsuaqqenyjiskawoj` before export.
 - Do not use `supabase db pull` for the baseline package. It is migration
   history dependent and can ask to update remote migration history.

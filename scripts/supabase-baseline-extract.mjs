@@ -96,6 +96,51 @@ function readLinkedProjectRef() {
   return process.env["SUPABASE_PROJECT_ID"]?.trim() ?? "";
 }
 
+function readEnvLocalValue(key) {
+  const envPath = join(process.cwd(), ".env.local");
+  if (!existsSync(envPath)) return "";
+  for (const line of readFileSync(envPath, "utf8").split(/\r?\n/)) {
+    if (line.startsWith(`${key}=`)) {
+      return line
+        .slice(key.length + 1)
+        .trim()
+        .replace(/^["']|["']$/g, "");
+    }
+  }
+  return "";
+}
+
+// Build a DIRECT superuser connection for the dump. The `supabase db dump
+// --linked` temp-login role silently OMITS tables it cannot see — verified
+// 2026-05-30 that it dropped 18/118 public tables (feedbacks, webhook_events,
+// telegram_*, etc.) with exit 0 and no warning, even with --role postgres.
+// A direct postgres connection dumps the full schema. See
+// docs/runbooks/supabase-greenfield-baseline.md.
+function buildBaselineDbUrl(expectedRef) {
+  const explicit =
+    (process.env["SUPABASE_DB_URL"] ?? "").trim() ||
+    readEnvLocalValue("SUPABASE_DB_URL_IEXW");
+  if (explicit) return explicit;
+
+  const poolerPath = join(process.cwd(), "supabase", ".temp", "pooler-url");
+  const password = readEnvLocalValue("SUPABASE_PASSWORD_IEXW");
+  if (!existsSync(poolerPath) || !password) {
+    throw new Error(
+      "Privileged dump requires SUPABASE_DB_URL_IEXW (or SUPABASE_PASSWORD_IEXW in " +
+        ".env.local plus supabase/.temp/pooler-url). The --linked temp-login dump " +
+        "is INCOMPLETE — it drops RLS-restricted tables.",
+    );
+  }
+  const poolerUrl = readFileSync(poolerPath, "utf8").trim();
+  if (!poolerUrl.includes(expectedRef)) {
+    throw new Error(
+      `pooler-url does not target ${expectedRef}; refusing to build baseline connection`,
+    );
+  }
+  const encoded = encodeURIComponent(password);
+  return poolerUrl.replace(/^(postgres(?:ql)?:\/\/[^@/]+)@/, `$1:${encoded}@`);
+}
+
 function runPnpmSupabase(args, timeoutMs) {
   const result = spawnSync("pnpm", ["dlx", "supabase", ...args], {
     cwd: process.cwd(),
@@ -159,13 +204,14 @@ async function main() {
   }
 
   const linkedRef = assertProjectRef(options.projectRef);
+  const dbUrl = buildBaselineDbUrl(options.projectRef);
   const version = getSupabaseVersion();
 
   if (options.dryRun) {
     for (const schema of options.schemas) {
       process.stdout.write(`\n# Dry run for schema: ${schema}\n`);
       const { stdout, stderr } = runPnpmSupabase(
-        ["db", "dump", "--linked", "--schema", schema, "--dry-run", "--yes"],
+        ["db", "dump", "--db-url", dbUrl, "--schema", schema, "--dry-run", "--yes"],
         options.timeoutMs,
       );
       if (stderr) process.stderr.write(`${stderr}\n`);
@@ -184,7 +230,7 @@ async function main() {
     generatedAt: new Date().toISOString(),
     projectRef: linkedRef,
     supabaseCli: version,
-    command: "pnpm dlx supabase db dump --linked --schema <schema>",
+    command: "pnpm dlx supabase db dump --db-url <redacted> --schema <schema>",
     schemas: options.schemas,
     files: [],
   };
@@ -195,7 +241,8 @@ async function main() {
       [
         "db",
         "dump",
-        "--linked",
+        "--db-url",
+        dbUrl,
         "--schema",
         schema,
         "--file",
