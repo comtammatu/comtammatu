@@ -135,6 +135,42 @@ export async function createTaxInvoice(
     return { success: false, error: "Đơn hàng đã có hóa đơn." };
   }
 
+  // Rule HDDT-LATE-B2B-REQUEST-AFTER-BATCH-BLOCKED: an order already folded
+  // into a B2C daily-summary HĐ (TT 78/2021 §11.4) must NOT also receive a
+  // per-order B2B invoice — that double-issues the same revenue. The per-order
+  // check above only scans tax_invoices.order_id; on a summary row order_id is
+  // NULL and the order is linked through the tax_invoice_orders junction, so it
+  // needs its own JOIN. "Active" = the summary invoice is not cancelled/replaced
+  // (a cancelled batch may be re-created, freeing the order again).
+  const { data: summaryLinks } = await supabase
+    .from("tax_invoice_orders")
+    .select("tax_invoices(summary_date, status)")
+    .eq("order_id", parsed.data.orderId)
+    .eq("tenant_id", claims.tenant_id);
+
+  const summaryInvoice = (summaryLinks ?? [])
+    .map(
+      (l) =>
+        l.tax_invoices as unknown as {
+          summary_date: string | null;
+          status: string;
+        } | null,
+    )
+    .find(
+      (inv) => inv != null && !["cancelled", "replaced"].includes(inv.status),
+    );
+
+  if (summaryInvoice) {
+    const d = summaryInvoice.summary_date;
+    const dateLabel = d
+      ? `${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 4)}`
+      : "trước đó";
+    return {
+      success: false,
+      error: `Đơn này đã nằm trong hóa đơn tổng hợp ngày ${dateLabel}. Vui lòng giữ biên nhận hoặc yêu cầu hóa đơn điều chỉnh qua kế toán.`,
+    };
+  }
+
   // Per-line VAT aggregation (rule VAT-PER-LINE-NOT-PER-INVOICE).
   // Each order_item carries its own vat_rate snapshot. For uniform-rate
   // orders this is mathematically equivalent to the legacy
