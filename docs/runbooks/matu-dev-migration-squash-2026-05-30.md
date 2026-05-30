@@ -23,6 +23,19 @@ Replace the 378-file `supabase/migrations/` chain with a single clean, **replaya
 3. **Phase 1 cleanup applied to matu-dev** — migrations `20260602008000` / `009000` / `010000` (payroll RLS, attendance revoke, RLS dedup) are already applied (done 2026-05-30). The baseline must capture this state.
 4. Confirm target ref is `nikkridjukdbqvkvqlmi` (matu-dev) in every command's output before running it.
 
+## Feasibility check — result (2026-05-30)
+
+Ran the prerequisite/feasibility pass (read-only). Outcome:
+
+- ✅ **Complete extract is achievable.** A privileged connection (the Supabase MCP management role) sees all **118** public tables, so a direct-connection dump avoids the `--linked` 18-table silent-drop bug. The extract script already refuses `--linked` and requires a direct URL.
+- ✅ **Replay is structurally sound.** A `pg_dump`-based baseline is ordered by object dependency, so it inherently avoids the hand-written-migration ordering bug (`vat_rate`) that breaks the 378-chain.
+- ✅ **Acceptance manifest captured** (post-Phase-1, see Step 0 below).
+- 🔴 **BLOCKED on two owner-provided prerequisites before Steps 1–2 can run:**
+  1. **matu-dev DB connection string + password.** `.env.local` has only `SUPABASE_PASSWORD_IEXW` (prod) — no matu-dev DB credential. Provide the matu-dev direct/session-pooler connection string + DB password (Supabase dashboard → matu-dev → Database). Wire it as `SUPABASE_DB_URL_MATU_DEV` in `.env.local`. NOTE: `scripts/supabase-baseline-extract.mjs` currently (a) reads `SUPABASE_DB_URL` / `SUPABASE_DB_URL_IEXW` for the explicit URL, and (b) asserts the linked ref (`supabase/.temp/project-ref` = iexws) equals `--project-ref`. To target matu-dev, either relink via a scratch workdir (`pnpm dlx supabase link --project-ref nikkridjukdbqvkvqlmi --workdir /tmp/... `) OR add a `--db-url`/matu-dev target flag that skips the linked-ref assertion when an explicit URL is given (small, safe addition — do it with creds available so it can be tested).
+  2. **Docker running.** `db:baseline:local-check` needs `supabase db start`. Docker was NOT running at check time.
+
+Once both are provided, Steps 1–2 are read-only against matu-dev + a scratch local DB (no rebuild). Step 4 (rebuild) is the only destructive step and stays owner-gated.
+
 ## Step 0 — Pre-flight manifest (acceptance baseline)
 
 Capture the CURRENT matu-dev shape as the reconciliation target (read-only):
@@ -30,13 +43,16 @@ Capture the CURRENT matu-dev shape as the reconciliation target (read-only):
 ```sql
 -- via Supabase MCP execute_sql on nikkridjukdbqvkvqlmi
 select
- (select count(*) from information_schema.tables where table_schema='public' and table_type='BASE TABLE') tables,   -- expect 118
- (select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public') functions,    -- expect 279
- (select count(*) from pg_policy) policies,                                                                          -- expect ~289 (post Phase 1 dedup)
- (select count(*) from pg_indexes where schemaname='public') indexes;                                               -- expect 523
+ (select count(*) from information_schema.tables where table_schema='public' and table_type='BASE TABLE') tables,   -- 118
+ (select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public') functions,    -- 279
+ (select count(*) from pg_policy pol join pg_class c on c.oid=pol.polrelid join pg_namespace n on n.oid=c.relnamespace where n.nspname='public') public_policies,  -- 273
+ (select count(*) from pg_indexes where schemaname='public') indexes;                                               -- 523
 ```
 
-Also snapshot: storage buckets, `cron.job` rows, `supabase_realtime` publication + replica-identity tables, extension list (use the tables in `docs/plan/live-schema-first-baseline-extraction.md` §Live Manifest as the template).
+**Verified acceptance manifest (matu-dev, post-Phase-1, 2026-05-30):**
+118 BASE TABLEs · 3 views · 6 matviews · 279 functions · 273 public policies (289 incl. storage/cron) · 523 indexes · 85 user triggers · 10 cron jobs · 11 realtime-published tables.
+
+Also snapshot the detail of: storage buckets, `cron.job` rows, `supabase_realtime` publication + replica-identity tables, extension list (use the tables in `docs/plan/live-schema-first-baseline-extraction.md` §Live Manifest as the template).
 
 ## Step 1 — Extract public-schema baseline (direct connection)
 
