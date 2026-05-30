@@ -17,6 +17,12 @@ Checklist vận hành và readiness gates.
 - [operations-smoke-gate.md](operations-smoke-gate.md): gate vận hành đầu cuối theo mission `bán đúng -> bếp nhận đúng -> thu tiền đúng -> in/HĐĐT đúng -> kho trừ đúng -> quản lý nhìn đúng`
 - [pos-kds/payment-autopost-verify.md](pos-kds/payment-autopost-verify.md): checklist apply migration GL non-fatal + rerun smoke cho POS/KDS
 
+## Supabase / Schema / Migration
+
+- [matu-dev-migration-squash-2026-05-30.md](matu-dev-migration-squash-2026-05-30.md): consolidate the 378-file migration chain into a replayable baseline, proven by rebuilding matu-dev (PLAN — owner-gated, matu-dev only)
+- [supabase-greenfield-baseline.md](supabase-greenfield-baseline.md): package + verify a clean baseline (toolchain + safety rails) for the greenfield target
+- [greenfield-prod-cutover-2026-05-29.md](greenfield-prod-cutover-2026-05-29.md): owner-executed production migration cutover
+
 ## Cách dùng
 
 1. Đọc canonical doc tương ứng trong `docs/ref/`
