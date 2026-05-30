@@ -246,6 +246,7 @@ export const createInventoryDocumentCorrection = withAction(
   {
     roles: INVENTORY_OPS_ROLES,
     schema: correctionSchema,
+    requireBranchScope: true,
   },
   async (data, { supabase, claims, user }): Promise<ActionResult> => {
     const source = await loadSourceDocument(supabase, claims.tenant_id, data);

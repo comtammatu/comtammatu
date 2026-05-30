@@ -62,6 +62,7 @@ export const approveShiftRequest = withAction(
     roles: APPROVE_ROLES,
     schema: requestIdSchema,
     permission: PERMISSION_KEYS.HR_APPROVE_SHIFT_REQUEST,
+    requireBranchScope: true,
   },
   async (data, { supabase }) => {
     const { data: assignmentId, error } = await supabase.rpc(
@@ -110,6 +111,7 @@ export const rejectShiftRequest = withAction(
     roles: APPROVE_ROLES,
     schema: rejectSchema,
     permission: PERMISSION_KEYS.HR_APPROVE_SHIFT_REQUEST,
+    requireBranchScope: true,
   },
   async (data, { supabase }) => {
     const { error } = await supabase.rpc("reject_shift_request", {

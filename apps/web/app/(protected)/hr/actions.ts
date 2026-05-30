@@ -137,7 +137,7 @@ export const fetchShifts = withAction(
 );
 
 export const createShift = withAction(
-  { roles: SHIFT_ROLES, schema: shiftSchema },
+  { roles: SHIFT_ROLES, schema: shiftSchema, requireBranchScope: true },
   async (data, { supabase, claims }) => {
     if (!(await canAccessBranch(supabase, claims, data.branchId))) {
       return { success: false, error: "Không có quyền truy cập chi nhánh này" };
@@ -223,7 +223,7 @@ const checkInSchema = z.object({
 });
 
 export const checkIn = withAction(
-  { roles: SHIFT_ROLES, schema: checkInSchema },
+  { roles: SHIFT_ROLES, schema: checkInSchema, requireBranchScope: true },
   async (data, { claims }) => {
     if (
       claims.user_role === "branch_manager" &&
@@ -266,7 +266,7 @@ const checkOutSchema = z.object({
 });
 
 export const checkOut = withAction(
-  { roles: SHIFT_ROLES, schema: checkOutSchema },
+  { roles: SHIFT_ROLES, schema: checkOutSchema, requireBranchScope: true },
   async (data, { supabase, claims }) => {
     let query = supabase
       .from("attendance_records")
@@ -384,7 +384,7 @@ const updateAttendanceSchema = z.object({
 });
 
 export const updateAttendanceStatus = withAction(
-  { roles: SHIFT_ROLES, schema: updateAttendanceSchema },
+  { roles: SHIFT_ROLES, schema: updateAttendanceSchema, requireBranchScope: true },
   async (data, { supabase, claims }) => {
     let query = supabase
       .from("attendance_records")
@@ -420,7 +420,7 @@ const bulkCheckInSchema = z.object({
 });
 
 export const bulkCheckIn = withAction(
-  { roles: SHIFT_ROLES, schema: bulkCheckInSchema },
+  { roles: SHIFT_ROLES, schema: bulkCheckInSchema, requireBranchScope: true },
   async (data, { claims }) => {
     if (
       claims.user_role === "branch_manager" &&

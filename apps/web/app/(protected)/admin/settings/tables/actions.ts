@@ -189,6 +189,7 @@ export const deleteZone = withAction(
     roles: SETTINGS_ROLES,
     schema: deleteIdSchema,
     permission: PERMISSION_KEYS.SETTINGS_BRANCH,
+    requireBranchScope: true,
   },
   async (data, { supabase, claims }) => {
     let deleteQuery = supabase
@@ -324,6 +325,7 @@ export const deleteTable = withAction(
     roles: SETTINGS_ROLES,
     schema: deleteIdSchema,
     permission: PERMISSION_KEYS.SETTINGS_BRANCH,
+    requireBranchScope: true,
   },
   async (data, { supabase, claims }) => {
     let deleteTableQuery = supabase

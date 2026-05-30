@@ -308,7 +308,7 @@ const adjustSchema = z.object({
 });
 
 export const adjustStock = withAction(
-  { roles: INVENTORY_OPS_ROLES, schema: adjustSchema },
+  { roles: INVENTORY_OPS_ROLES, schema: adjustSchema, requireBranchScope: true },
   async (data, { supabase, claims, user }) => {
     if (
       claims.user_role === "branch_manager" &&
@@ -621,7 +621,11 @@ export async function fetchStocktakeDetail(
 /* ─── updateStocktakeLine ─── */
 
 export const updateStocktakeLine = withAction(
-  { roles: INVENTORY_OPS_ROLES, schema: stocktakeLineUpdateSchema },
+  {
+    roles: INVENTORY_OPS_ROLES,
+    schema: stocktakeLineUpdateSchema,
+    requireBranchScope: true,
+  },
   async (data, { supabase, claims }) => {
     // Fetch the line to get session_id
     const { data: line, error: lineError } = await supabase
