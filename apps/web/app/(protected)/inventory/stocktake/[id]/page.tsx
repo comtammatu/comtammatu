@@ -61,7 +61,7 @@ export default async function StocktakeDetailPage({
   const requestedBranchId = await resolveRequestedBranchId(sp.branchId);
   const sessionBranchId = stocktakeSession.branch_id;
   const isDetailView =
-    sp.view === "detail" || sp.error === "stocktake_v2_not_enabled";
+    sp.view === "detail" || sp.error === "stocktake_redesigned_not_enabled";
   const detailViewParam = isDetailView ? "&view=detail" : "";
 
   if (requestedBranchId !== sessionBranchId) {

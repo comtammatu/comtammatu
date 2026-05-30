@@ -54,7 +54,7 @@ export default async function NewStocktakeSessionPage({
     );
     if (!flagEnabled) {
       redirect(
-        `/inventory/stocktake?branchId=${gateBranchId}&error=stocktake_v2_not_enabled`,
+        `/inventory/stocktake?branchId=${gateBranchId}&error=stocktake_redesigned_not_enabled`,
       );
     }
   }

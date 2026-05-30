@@ -46,7 +46,7 @@ export default async function StocktakeCountPage({
   );
   if (!flagEnabled) {
     redirect(
-      `/inventory/stocktake/${sessionId}?branchId=${sessionBranchId}&error=stocktake_v2_not_enabled`,
+      `/inventory/stocktake/${sessionId}?branchId=${sessionBranchId}&error=stocktake_redesigned_not_enabled`,
     );
   }
 

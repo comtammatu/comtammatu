@@ -29,12 +29,14 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 
 **Report:** `docs/worklog/shell-helpers-refactor-plan-2026-05-27.md`
 
-- [ ] **WS-0** — Extend `apps/web/app/_lib/with-action.ts` with `withActionPositional` + `customAuth` + `afterSuccess`; add `_lib/rpc-error-map.ts`. Zero callers migrated.
-- [ ] **WS-1a** — Migrate `voidOrderItem` only (proving slice; exercises 4/4 new helper features).
-- [ ] **WS-1b** — Migrate remaining POS actions (`order-actions.ts` + `payment-actions.ts`). In progress 17/23 (2026-05-28). Remaining: confirmPayment + confirmVietQrPayment + confirmVietQrPaymentWithInvoice (last 3 callers of local `mapPaymentRpcError`) + confirmCashPaymentWithInvoice + 2 order-actions.ts reads with `probePermission` composite auth.
-- [ ] **WS-2** — Migrate inventory actions (`grn-actions.ts`, `production-actions.ts`, `actions.ts`). Wire `lib/messages/inventory.ts` through `rpc-error-map.ts`.
-- [ ] **WS-3** — Decompose client shells (pos-desktop-shell, grn-detail-client, order-detail-sheet) one PR each. Retire parallel `pos/hooks/` folder.
-- [ ] **WS-4** — Version-naming cleanup: delete dead `S12_DASHBOARD_V2`, rename `S13A_STOCKTAKE_V2` → `INVENTORY_STOCKTAKE_REDESIGNED` (+ DB migration of `branch_feature_flags.flag_key`), fix orphan `waste_v2_not_enabled` URL token.
+> Verified state 2026-05-31 (todo had drifted from code — re-audited via `Skip withAction` counts + LoC).
+
+- [x] **WS-0** — DONE: `apps/web/app/_lib/with-action.ts` carries `withActionPositional` + `customAuth` + `afterSuccess` + `argsToInput`; `_lib/rpc-error-map.ts` exists (`mapRpcError`/`includesAny`).
+- [x] **WS-1a** — DONE: `voidOrderItem` migrated (it is the documented `withActionPositional` example in `with-action.ts`).
+- [ ] **WS-1b** — POS migration PARTIAL: `payment-actions.ts` fully migrated (0 `Skip withAction`) but still 1577 LoC. Remaining `Skip withAction`: `order-actions.ts` ×3 + `session-actions.ts` ×2 (5). Files still over the ≤800 LoC target (order 1626, payment 1577) — size goal unmet even after skips removed; needs schema extraction to `pos/_lib/schemas.ts`. **T3; full acceptance needs owner-gated dev/test POS smoke.**
+- [ ] **WS-2** — Inventory migration PARTIAL: `grn-actions.ts`/`production-actions.ts`/`actions.ts` have 0 `Skip withAction` but remain 1433–1572 LoC. Remaining `Skip withAction`: `purchase-order-actions.ts` ×2 + `supplier-actions.ts` ×1 (3). Wire `lib/messages/inventory.ts` through `rpc-error-map.ts`.
+- [ ] **WS-3** — NOT started: shells still monolithic — pos-desktop-shell 1680, grn-detail-client 1553, order-detail-sheet 1524 (target ≤400). One PR each. (Parallel `pos/hooks/` already retired under WS-4.)
+- [x] **WS-4** — DONE 2026-05-31: `S12_DASHBOARD_V2` deleted + `S13A_STOCKTAKE_V2`→`INVENTORY_STOCKTAKE_REDESIGNED` (`inv_stocktake_redesigned`) enum + DB key (archived migration `20260602007000`) landed earlier; this slice finished the tail — URL token `stocktake_v2_not_enabled`→`stocktake_redesigned_not_enabled` (4 files) + merged `pos/hooks/`→`pos/_hooks/` (2 files, sole importer `pos-desktop-provider.tsx`). Exit grep clean; POS hook folder count==1; typecheck 6/6 + lint 0-err + build 2/2. Residual (out of scope): `messages.inventory.stocktake.v2` dict key; `kds/hooks/` uses a no-underscore convention (no drift — just differs from POS `_hooks/`).
 
 ## Owner-gated / pre-go-live (NOT via agent; NOT to matu-prod)
 
