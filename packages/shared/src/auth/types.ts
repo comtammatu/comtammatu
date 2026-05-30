@@ -90,6 +90,38 @@ export const ROLE_LABEL_VI: Record<StaffRole, string> = {
   office: "Văn phòng",
 };
 
+/**
+ * Canonical HR position code → StaffRole bucket. TS mirror of the SQL
+ * `private.staff_role_from_position_code()` installed by the greenfield
+ * role-bridge cut. Returns "unassigned" for unknown/missing codes (fail-safe).
+ */
+const POSITION_CODE_TO_STAFF_ROLE: Record<string, StaffRole> = {
+  owner: "owner",
+  super_manager: "super_manager",
+  executive_assistant: "super_manager",
+  area_manager: "area_manager",
+  branch_manager: "branch_manager",
+  chief_accountant: "office",
+  accountant: "office",
+  office: "office",
+  warehouse_head: "warehouse_manager",
+  warehouse_keeper: "warehouse_manager",
+  head_chef: "production_manager",
+  chef: "chef",
+  kitchen_helper: "chef",
+  cashier: "cashier",
+  waiter: "waiter",
+  warehouse_manager: "warehouse_manager",
+  production_manager: "production_manager",
+};
+
+export function staffRoleFromPositionCode(
+  code: string | null | undefined,
+): StaffRole | "unassigned" {
+  if (!code) return "unassigned";
+  return POSITION_CODE_TO_STAFF_ROLE[code] ?? "unassigned";
+}
+
 /** JWT custom claims injected by Supabase auth hook */
 export interface JwtClaims {
   tenant_id: number;
@@ -97,8 +129,8 @@ export interface JwtClaims {
   area_id: number | null;
   user_role: StaffRole;
   /**
-   * HR position code. Dual-emitted alongside `user_role` during transition.
-   * Prefer `position` for new code; `user_role` remains for legacy RLS/policies.
+   * Canonical HR position code (source of truth). `user_role` is derived from
+   * it via the role-bridge mapper (`staffRoleFromPositionCode` / the SQL twin).
    */
   position?: string;
 }

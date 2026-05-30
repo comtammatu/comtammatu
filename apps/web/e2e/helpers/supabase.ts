@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@comtammatu/database";
+import { staffRoleFromPositionCode } from "@comtammatu/shared/auth";
 
 type ServiceClient = ReturnType<typeof createServiceClient>;
 
@@ -113,7 +114,7 @@ async function resolveProfileByEmail(
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("id, tenant_id, branch_id, full_name, role")
+    .select("id, tenant_id, branch_id, full_name, positions(code)")
     .eq("id", authUser.id)
     .single();
 
@@ -133,7 +134,7 @@ async function resolveProfileByEmail(
     tenantId: profile.tenant_id,
     branchId: profile.branch_id,
     fullName: profile.full_name,
-    role: profile.positions?.legacy_role_code ?? "",
+    role: staffRoleFromPositionCode(profile.positions?.code),
   };
 }
 
@@ -165,11 +166,11 @@ export async function resolveChefCredentials() {
   const { data: chefProfile, error } = await supabase
     .from("profiles")
     .select(
-      "id, tenant_id, branch_id, full_name, positions!inner(legacy_role_code)",
+      "id, tenant_id, branch_id, full_name, positions!inner(code)",
     )
     .eq("tenant_id", cashier.tenantId)
     .eq("branch_id", cashier.branchId)
-    .eq("positions.legacy_role_code", "chef")
+    .eq("positions.code", "chef")
     .limit(1)
     .maybeSingle();
 

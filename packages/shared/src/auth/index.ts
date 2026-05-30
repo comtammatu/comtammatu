@@ -9,6 +9,7 @@ export {
   BRANCH_FLOOR_SETTINGS_ROLES,
   canManageBranchFloorSettings,
   ROLE_LABEL_VI,
+  staffRoleFromPositionCode,
 } from "./types";
 export type { ModuleKey } from "./module-acl";
 export { MODULE_ACL, canAccess, getAccessibleModules } from "./module-acl";

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowLeft as IconArrowLeft } from "lucide-react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { formatVNDateTime } from "@comtammatu/shared/time";
+import { staffRoleFromPositionCode } from "@comtammatu/shared/auth";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -33,7 +34,7 @@ export default async function StaffPermissionsPage({ params }: Props) {
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "id, full_name, phone, branch_id, position_id, is_active, positions(legacy_role_code)",
+      "id, full_name, phone, branch_id, position_id, is_active, positions(code)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -174,10 +175,10 @@ export default async function StaffPermissionsPage({ params }: Props) {
                   </div>
                   <div>
                     <dt className="text-xs font-medium text-muted-foreground">
-                      Legacy role
+                      Role
                     </dt>
                     <dd className="mt-0.5 font-mono text-sm">
-                      {profile.positions?.legacy_role_code ?? "—"}
+                      {staffRoleFromPositionCode(profile.positions?.code)}
                     </dd>
                   </div>
                   <div>
