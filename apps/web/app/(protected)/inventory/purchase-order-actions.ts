@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { PERMISSION_KEYS, PROCUREMENT_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { withAction } from "@/_lib/with-action";
+import { withAction, withActionPositional } from "@/_lib/with-action";
 import { getAuthContextWithPermission } from "./_lib/auth";
 import { fetchProcurementBranches } from "./_lib/procurement-branches";
 
@@ -280,91 +280,85 @@ const poStatusSchema = z.object({
   status: z.enum(["sent", "cancelled"]),
 });
 
-// Skip withAction: positional (poId, status) args
-export async function updatePurchaseOrderStatus(
-  poId: number,
-  status: string,
-): Promise<ActionResult> {
-  const parsed = poStatusSchema.safeParse({ poId, status });
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
-    };
-  }
-  const ctx = await getAuthContextWithPermission(
-    ROLES,
-    PERMISSION_KEYS.PROCUREMENT_PO_CREATE,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
-  const { supabase, claims } = ctx;
-  const { data: po, error: pe } = await supabase
-    .from("purchase_orders")
-    .select("id, status, branch_id")
-    .eq("id", parsed.data.poId)
-    .eq("tenant_id", claims.tenant_id)
-    .single();
-  if (pe || !po) return { success: false, error: "Không tìm thấy PO." };
-  if (!canAccessProcurementBranch(claims, po.branch_id)) {
-    return { success: false, error: "Bạn chỉ được cập nhật PO của kho mình." };
-  }
-
-  if (parsed.data.status === "sent" && po.status !== "draft") {
-    return {
-      success: false,
-      error: "Chỉ gửi PO khi PO đang ở trạng thái nháp.",
-    };
-  }
-
-  if (
-    parsed.data.status === "cancelled" &&
-    po.status !== "draft" &&
-    po.status !== "sent"
-  ) {
-    return {
-      success: false,
-      error: "Chỉ hủy PO nháp hoặc PO đã gửi nhưng chưa nhận hàng.",
-    };
-  }
-
-  if (parsed.data.status === "cancelled" && po.status === "sent") {
-    const { count, error: grnError } = await supabase
-      .from("goods_received_notes")
-      .select("id", { count: "exact", head: true })
+export const updatePurchaseOrderStatus = withActionPositional(
+  {
+    argsToInput: (poId: number, status: string) => ({ poId, status }),
+    schema: poStatusSchema,
+    roles: ROLES,
+    permission: PERMISSION_KEYS.PROCUREMENT_PO_CREATE,
+  },
+  async ({ poId, status }, { supabase, claims }): Promise<ActionResult> => {
+    const { data: po, error: pe } = await supabase
+      .from("purchase_orders")
+      .select("id, status, branch_id")
+      .eq("id", poId)
       .eq("tenant_id", claims.tenant_id)
-      .eq("po_id", po.id)
-      .neq("status", "cancelled");
-
-    if (grnError) {
-      return { success: false, error: "Không thể kiểm tra phiếu nhận hàng." };
-    }
-    if ((count ?? 0) > 0) {
+      .single();
+    if (pe || !po) return { success: false, error: "Không tìm thấy PO." };
+    if (!canAccessProcurementBranch(claims, po.branch_id)) {
       return {
         success: false,
-        error:
-          "PO đã có phiếu nhận hàng nên không thể hủy trực tiếp. Hãy xử lý bằng điều chỉnh/đối soát GRN.",
+        error: "Bạn chỉ được cập nhật PO của kho mình.",
       };
     }
-  }
 
-  const { data: updated, error } = await supabase
-    .from("purchase_orders")
-    .update({ status: parsed.data.status })
-    .eq("id", parsed.data.poId)
-    .eq("tenant_id", claims.tenant_id)
-    .eq("status", po.status)
-    .select("id")
-    .maybeSingle();
-  if (error)
-    return { success: false, error: "Không thể cập nhật trạng thái PO." };
-  if (!updated) {
-    return {
-      success: false,
-      error: "Trạng thái PO đã thay đổi. Vui lòng tải lại và thử lại.",
-    };
-  }
-  return { success: true };
-}
+    if (status === "sent" && po.status !== "draft") {
+      return {
+        success: false,
+        error: "Chỉ gửi PO khi PO đang ở trạng thái nháp.",
+      };
+    }
+
+    if (
+      status === "cancelled" &&
+      po.status !== "draft" &&
+      po.status !== "sent"
+    ) {
+      return {
+        success: false,
+        error: "Chỉ hủy PO nháp hoặc PO đã gửi nhưng chưa nhận hàng.",
+      };
+    }
+
+    if (status === "cancelled" && po.status === "sent") {
+      const { count, error: grnError } = await supabase
+        .from("goods_received_notes")
+        .select("id", { count: "exact", head: true })
+        .eq("tenant_id", claims.tenant_id)
+        .eq("po_id", po.id)
+        .neq("status", "cancelled");
+
+      if (grnError) {
+        return { success: false, error: "Không thể kiểm tra phiếu nhận hàng." };
+      }
+      if ((count ?? 0) > 0) {
+        return {
+          success: false,
+          error:
+            "PO đã có phiếu nhận hàng nên không thể hủy trực tiếp. Hãy xử lý bằng điều chỉnh/đối soát GRN.",
+        };
+      }
+    }
+
+    const { data: updated, error } = await supabase
+      .from("purchase_orders")
+      .update({ status })
+      .eq("id", poId)
+      .eq("tenant_id", claims.tenant_id)
+      .eq("status", po.status)
+      .select("id")
+      .maybeSingle();
+    if (error)
+      return { success: false, error: "Không thể cập nhật trạng thái PO." };
+    if (!updated) {
+      return {
+        success: false,
+        error: "Trạng thái PO đã thay đổi. Vui lòng tải lại và thử lại.",
+      };
+    }
+    return { success: true };
+  },
+);
 
 /* ─── fetchOpenPurchaseOrdersForReceiving ─── */
 
@@ -440,8 +434,18 @@ export async function fetchOpenPurchaseOrdersForReceiving(): Promise<
 /* ─── PO Suggestions ─── */
 
 const poSuggestionsSchema = z.object({
-  branchId: z.coerce.number().int().positive(),
-  periodDays: z.union([z.literal(7), z.literal(14), z.literal(30)]).default(7),
+  // Every level carries the same copy so the wrapped helper (which surfaces
+  // `issues[0]?.message`) yields the identical generic "Dữ liệu không hợp lệ"
+  // the pre-helper hand-rolled `safeParse` returned for any field failure.
+  branchId: z.coerce
+    .number({ error: "Dữ liệu không hợp lệ" })
+    .int({ error: "Dữ liệu không hợp lệ" })
+    .positive({ error: "Dữ liệu không hợp lệ" }),
+  periodDays: z
+    .union([z.literal(7), z.literal(14), z.literal(30)], {
+      error: "Dữ liệu không hợp lệ",
+    })
+    .default(7),
 });
 
 export interface PoSuggestionRow {
@@ -457,137 +461,129 @@ export interface PoSuggestionRow {
   below_reorder: boolean;
 }
 
-// Skip withAction: positional input object keeps the public signature stable.
 // branchId is required since PR #24 retired the singleton HQ — callers must
 // pick an explicit procurement branch (CW or CK).
-export async function fetchPoSuggestions(input: {
-  branchId: number;
-  periodDays?: 7 | 14 | 30;
-}): Promise<ActionResult> {
-  const parsed = poSuggestionsSchema.safeParse(input);
-  if (!parsed.success) {
-    return { success: false, error: "Dữ liệu không hợp lệ" };
-  }
-  const ctx = await getAuthContextWithPermission(
-    ROLES,
-    PERMISSION_KEYS.PROCUREMENT_READ,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
-  const { supabase, claims } = ctx;
+export const fetchPoSuggestions = withAction(
+  {
+    roles: ROLES,
+    schema: poSuggestionsSchema,
+    permission: PERMISSION_KEYS.PROCUREMENT_READ,
+  },
+  async (data, { supabase, claims }): Promise<ActionResult> => {
+    const { branchId, periodDays: rawPeriod } = data;
+    const periodDays = rawPeriod;
 
-  const { branchId, periodDays: rawPeriod } = parsed.data;
-  const periodDays = rawPeriod;
+    // Branch-scoped procurement roles must stay within their assigned branch.
+    if (!canAccessProcurementBranch(claims, branchId)) {
+      return {
+        success: false,
+        error: "Bạn chỉ được xem gợi ý cho kho của mình.",
+      };
+    }
 
-  // Branch-scoped procurement roles must stay within their assigned branch.
-  if (!canAccessProcurementBranch(claims, branchId)) {
-    return {
-      success: false,
-      error: "Bạn chỉ được xem gợi ý cho kho của mình.",
-    };
-  }
+    // Validate branchId points to a procurement branch (CW or CK) in this tenant.
+    const procBranches = await fetchProcurementBranches(
+      supabase,
+      claims.tenant_id,
+    );
+    const target = procBranches.find((b) => b.id === branchId);
+    if (!target) {
+      return {
+        success: false,
+        error: "Chi nhánh không hợp lệ (phải là Kho Tổng hoặc Bếp Trung Tâm).",
+      };
+    }
 
-  // Validate branchId points to a procurement branch (CW or CK) in this tenant.
-  const procBranches = await fetchProcurementBranches(
-    supabase,
-    claims.tenant_id,
-  );
-  const target = procBranches.find((b) => b.id === branchId);
-  if (!target) {
-    return {
-      success: false,
-      error: "Chi nhánh không hợp lệ (phải là Kho Tổng hoặc Bếp Trung Tâm).",
-    };
-  }
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - periodDays);
 
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - periodDays);
-
-  // 1. Stock levels at the selected procurement branch for active ingredients with reorder_point.
-  const { data: hqStock, error: e1 } = await supabase
-    .from("stock_levels")
-    .select(
-      `
+    // 1. Stock levels at the selected procurement branch for active ingredients with reorder_point.
+    const { data: hqStock, error: e1 } = await supabase
+      .from("stock_levels")
+      .select(
+        `
       ingredient_id,
       current_quantity,
       ingredients!inner (
         id, name, unit, purchase_unit, reorder_point, max_stock_level, is_active
       )
     `,
-    )
-    .eq("tenant_id", claims.tenant_id)
-    .eq("branch_id", branchId)
-    .eq("ingredients.is_active", true)
-    .not("ingredients.reorder_point", "is", null);
+      )
+      .eq("tenant_id", claims.tenant_id)
+      .eq("branch_id", branchId)
+      .eq("ingredients.is_active", true)
+      .not("ingredients.reorder_point", "is", null);
 
-  if (e1)
-    return { success: false, error: "Không thể tải tồn kho tại kho tổng." };
+    if (e1)
+      return { success: false, error: "Không thể tải tồn kho tại kho tổng." };
 
-  // 2. Consumption aggregated tenant-wide over the period.
-  // Proxy until branches.primary_warehouse_id FK exists (see inventory.md §10).
-  // Multi-CW note: the same consumption pool feeds every CW's suggestion —
-  // treat the avg_daily_consumption as an upper-bound hint, not a strict per-CW demand.
-  const { data: movements, error: e2 } = await supabase
-    .from("stock_movements")
-    .select("ingredient_id, quantity_change")
-    .eq("tenant_id", claims.tenant_id)
-    .eq("type", "consumption")
-    .gte("created_at", cutoff.toISOString());
+    // 2. Consumption aggregated tenant-wide over the period.
+    // Proxy until branches.primary_warehouse_id FK exists (see inventory.md §10).
+    // Multi-CW note: the same consumption pool feeds every CW's suggestion —
+    // treat the avg_daily_consumption as an upper-bound hint, not a strict per-CW demand.
+    const { data: movements, error: e2 } = await supabase
+      .from("stock_movements")
+      .select("ingredient_id, quantity_change")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("type", "consumption")
+      .gte("created_at", cutoff.toISOString());
 
-  if (e2) return { success: false, error: "Không thể tải dữ liệu tiêu thụ." };
+    if (e2) return { success: false, error: "Không thể tải dữ liệu tiêu thụ." };
 
-  // Aggregate consumption per ingredient (quantity_change is negative for consumption)
-  const consumptionMap = new Map<number, number>();
-  for (const m of movements ?? []) {
-    const prev = consumptionMap.get(m.ingredient_id) ?? 0;
-    consumptionMap.set(m.ingredient_id, prev + Math.abs(m.quantity_change));
-  }
+    // Aggregate consumption per ingredient (quantity_change is negative for consumption)
+    const consumptionMap = new Map<number, number>();
+    for (const m of movements ?? []) {
+      const prev = consumptionMap.get(m.ingredient_id) ?? 0;
+      consumptionMap.set(m.ingredient_id, prev + Math.abs(m.quantity_change));
+    }
 
-  // 3. Build suggestion rows
-  const suggestions: PoSuggestionRow[] = [];
+    // 3. Build suggestion rows
+    const suggestions: PoSuggestionRow[] = [];
 
-  for (const sl of hqStock ?? []) {
-    const ing = sl.ingredients as unknown as {
-      id: number;
-      name: string;
-      unit: string;
-      purchase_unit: string | null;
-      reorder_point: number;
-      max_stock_level: number | null;
-    };
-    if (!ing || ing.reorder_point == null) continue;
+    for (const sl of hqStock ?? []) {
+      const ing = sl.ingredients as unknown as {
+        id: number;
+        name: string;
+        unit: string;
+        purchase_unit: string | null;
+        reorder_point: number;
+        max_stock_level: number | null;
+      };
+      if (!ing || ing.reorder_point == null) continue;
 
-    const maxStock = ing.max_stock_level ?? 0;
-    const currentQty = sl.current_quantity;
-    const suggestedQty = Math.max(0, maxStock - currentQty);
-    const totalConsumed = consumptionMap.get(ing.id) ?? 0;
-    const avgDaily = totalConsumed / periodDays;
-    const belowReorder = currentQty <= ing.reorder_point;
+      const maxStock = ing.max_stock_level ?? 0;
+      const currentQty = sl.current_quantity;
+      const suggestedQty = Math.max(0, maxStock - currentQty);
+      const totalConsumed = consumptionMap.get(ing.id) ?? 0;
+      const avgDaily = totalConsumed / periodDays;
+      const belowReorder = currentQty <= ing.reorder_point;
 
-    // Only suggest if below reorder OR has consumption data and space to restock
-    if (!belowReorder && suggestedQty <= 0) continue;
+      // Only suggest if below reorder OR has consumption data and space to restock
+      if (!belowReorder && suggestedQty <= 0) continue;
 
-    suggestions.push({
-      ingredient_id: ing.id,
-      ingredient_name: ing.name,
-      unit: ing.purchase_unit ?? ing.unit,
-      hq_current_qty: currentQty,
-      reorder_point: ing.reorder_point,
-      max_stock_level: maxStock,
-      suggested_qty: suggestedQty,
-      avg_daily_consumption: Math.round(avgDaily * 100) / 100,
-      period_days: periodDays,
-      below_reorder: belowReorder,
+      suggestions.push({
+        ingredient_id: ing.id,
+        ingredient_name: ing.name,
+        unit: ing.purchase_unit ?? ing.unit,
+        hq_current_qty: currentQty,
+        reorder_point: ing.reorder_point,
+        max_stock_level: maxStock,
+        suggested_qty: suggestedQty,
+        avg_daily_consumption: Math.round(avgDaily * 100) / 100,
+        period_days: periodDays,
+        below_reorder: belowReorder,
+      });
+    }
+
+    // Sort: below reorder first, then by consumption rate descending
+    suggestions.sort((a, b) => {
+      if (a.below_reorder !== b.below_reorder) return a.below_reorder ? -1 : 1;
+      return b.avg_daily_consumption - a.avg_daily_consumption;
     });
-  }
 
-  // Sort: below reorder first, then by consumption rate descending
-  suggestions.sort((a, b) => {
-    if (a.below_reorder !== b.below_reorder) return a.below_reorder ? -1 : 1;
-    return b.avg_daily_consumption - a.avg_daily_consumption;
-  });
-
-  return { success: true, data: suggestions };
-}
+    return { success: true, data: suggestions };
+  },
+);
 
 /* ─── Price Intelligence ─── */
 

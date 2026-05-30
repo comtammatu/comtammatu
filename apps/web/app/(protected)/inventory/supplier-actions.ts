@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { PERMISSION_KEYS, PROCUREMENT_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { withAction } from "@/_lib/with-action";
+import { withAction, withActionPositional } from "@/_lib/with-action";
 import { getAuthContextWithPermission } from "./_lib/auth";
 import { PG_ERR } from "./_lib/constants";
 
@@ -72,48 +72,50 @@ export const createSupplier = withAction(
   },
 );
 
-// Skip withAction: updateSupplier has (id, input) positional args
-export async function updateSupplier(
-  id: number,
-  input: z.infer<typeof supplierSchema>,
-): Promise<ActionResult> {
-  const parsedId = z.coerce.number().int().positive().safeParse(id);
-  if (!parsedId.success) return { success: false, error: "ID không hợp lệ" };
-  const parsed = supplierSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
-    };
-  }
-  const ctx = await getAuthContextWithPermission(
-    ROLES,
-    PERMISSION_KEYS.PROCUREMENT_SUPPLIER_MANAGE,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
-  const { supabase, claims } = ctx;
-  const {
-    paymentTermsDays: ptd,
-    paymentTermsNote: ptn,
-    ...updateRest
-  } = parsed.data;
-  const { error } = await supabase
-    .from("suppliers")
-    .update({
-      ...updateRest,
-      payment_terms_days: ptd ?? null,
-      payment_terms_note: ptn ?? null,
-    })
-    .eq("id", parsedId.data)
-    .eq("tenant_id", claims.tenant_id);
-  if (error) {
-    if (error.code === PG_ERR.UNIQUE_VIOLATION) {
-      return { success: false, error: "Tên NCC đã tồn tại." };
+// id-first merged shape: the hand-rolled version validated `id` BEFORE the
+// supplier body and returned the hard-coded "ID không hợp lệ" for ANY id
+// failure — so the id field carries that copy at every level to keep the
+// wrapped helper's `issues[0]?.message` identical.
+const updateSupplierSchema = z.object({
+  id: z.coerce
+    .number({ error: "ID không hợp lệ" })
+    .int({ error: "ID không hợp lệ" })
+    .positive({ error: "ID không hợp lệ" }),
+  ...supplierSchema.shape,
+});
+
+export const updateSupplier = withActionPositional(
+  {
+    argsToInput: (id: number, input: z.infer<typeof supplierSchema>) => ({
+      id,
+      ...input,
+    }),
+    schema: updateSupplierSchema,
+    roles: ROLES,
+    permission: PERMISSION_KEYS.PROCUREMENT_SUPPLIER_MANAGE,
+  },
+  async (
+    { id, paymentTermsDays: ptd, paymentTermsNote: ptn, ...updateRest },
+    { supabase, claims },
+  ): Promise<ActionResult> => {
+    const { error } = await supabase
+      .from("suppliers")
+      .update({
+        ...updateRest,
+        payment_terms_days: ptd ?? null,
+        payment_terms_note: ptn ?? null,
+      })
+      .eq("id", id)
+      .eq("tenant_id", claims.tenant_id);
+    if (error) {
+      if (error.code === PG_ERR.UNIQUE_VIOLATION) {
+        return { success: false, error: "Tên NCC đã tồn tại." };
+      }
+      return { success: false, error: "Không thể cập nhật nhà cung cấp." };
     }
-    return { success: false, error: "Không thể cập nhật nhà cung cấp." };
-  }
-  return { success: true };
-}
+    return { success: true };
+  },
+);
 
 export async function deleteSupplier(id: number): Promise<ActionResult> {
   const parsedId = z.coerce.number().int().positive().safeParse(id);

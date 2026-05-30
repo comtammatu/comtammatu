@@ -5,6 +5,7 @@ import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { createServiceClient } from "@comtammatu/database";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContext, getAuthContextWithPermission } from "../../_lib/auth";
+import { withActionPositional } from "@/_lib/with-action";
 
 const POS_ROLES = MODULE_ACL.pos.allowedRoles;
 const MENU_LIMIT_ROLES = MODULE_ACL.branch_menu_limits.allowedRoles;
@@ -294,7 +295,8 @@ export async function fetchPosPermissionFlags(branchId: number): Promise<{
 
 /* ─── openPosSession ─── */
 
-const openSessionSchema = z.object({
+const openPosSessionSchema = z.object({
+  branchId: branchIdSchema,
   // terminalId optional sau D7 (2026-04-27): chỉ là metadata audit (máy nào
   // physically mở ca). NULL = ca chung của chi nhánh.
   terminalId: z.coerce
@@ -305,79 +307,71 @@ const openSessionSchema = z.object({
   openingCash: z.coerce.number().min(0, { error: "Tiền mở ca không hợp lệ" }),
 });
 
-// Skip withAction: positional (branchId, openingCash, terminalId?) args
-export async function openPosSession(
-  branchId: number,
-  openingCash: number,
-  terminalId?: number,
-): Promise<ActionResult<{ session_id: number }>> {
-  const parsedBranchId = branchIdSchema.safeParse(branchId);
-  if (!parsedBranchId.success) {
-    return { success: false, error: "Branch ID không hợp lệ" };
-  }
+// Mở ca = ghi tiền đầu ca → yêu cầu quyền thao tác két (cashier / branch_manager).
+// Bất đối xứng với close (POS_CLOSE_SHIFT) đã có — đồng bộ để chặn waiter.
+// `forbiddenError` giữ nguyên copy "Không có quyền mở ca" để không đổi UX của
+// money/cashbox path khi chuyển từ block hand-rolled sang helper.
+export const openPosSession = withActionPositional(
+  {
+    argsToInput: (
+      branchId: number,
+      openingCash: number,
+      terminalId?: number,
+    ) => ({ branchId, openingCash, terminalId }),
+    schema: openPosSessionSchema,
+    roles: POS_ROLES,
+    permission: PERMISSION_KEYS.POS_OPEN_CASHBOX,
+    permissionBranchId: (data) => data.branchId,
+    forbiddenError: "Không có quyền mở ca",
+  },
+  async (
+    { branchId, openingCash, terminalId },
+    { supabase, claims, user },
+  ): Promise<ActionResult<{ session_id: number }>> => {
+    if (claims.branch_id !== branchId) {
+      return { success: false, error: "Không có quyền truy cập chi nhánh này" };
+    }
 
-  const parsedInput = openSessionSchema.safeParse({ terminalId, openingCash });
-  if (!parsedInput.success) {
-    return {
-      success: false,
-      error: parsedInput.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
-    };
-  }
+    // ctx.user is the JWT-validated user from getAuthContext — no need for a
+    // second getUser() HTTP roundtrip. Saves ~150ms on shift-open perceived
+    // latency (peer to the auth Promise.all in _lib/auth.ts).
 
-  // Mở ca = ghi tiền đầu ca → yêu cầu quyền thao tác két (cashier / branch_manager).
-  // Bất đối xứng với close (POS_CLOSE_SHIFT) đã có — đồng bộ để chặn waiter.
-  const ctx = await getAuthContextWithPermission(
-    POS_ROLES,
-    PERMISSION_KEYS.POS_OPEN_CASHBOX,
-    parsedBranchId.data,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền mở ca" };
+    const { data, error } = await supabase
+      .from("pos_sessions")
+      .insert({
+        tenant_id: claims.tenant_id,
+        branch_id: branchId,
+        // terminal_id nullable sau D7 — UI mở ca không bắt buộc chọn máy.
+        terminal_id: terminalId ?? null,
+        opened_by: user.id,
+        opening_cash: openingCash,
+      })
+      .select("id")
+      .single();
 
-  const { supabase, claims, user } = ctx;
-
-  if (claims.branch_id !== parsedBranchId.data) {
-    return { success: false, error: "Không có quyền truy cập chi nhánh này" };
-  }
-
-  // ctx.user is the JWT-validated user from getAuthContext — no need for a
-  // second getUser() HTTP roundtrip. Saves ~150ms on shift-open perceived
-  // latency (peer to the auth Promise.all in _lib/auth.ts).
-
-  const { data, error } = await supabase
-    .from("pos_sessions")
-    .insert({
-      tenant_id: claims.tenant_id,
-      branch_id: parsedBranchId.data,
-      // terminal_id nullable sau D7 — UI mở ca không bắt buộc chọn máy.
-      terminal_id: parsedInput.data.terminalId ?? null,
-      opened_by: user.id,
-      opening_cash: parsedInput.data.openingCash,
-    })
-    .select("id")
-    .single();
-
-  if (error) {
-    // Partial unique index violation: branch đã có session đang mở
-    // (per-branch invariant từ migration 20260503000000_pos_session_per_branch).
-    if (error.code === "23505") {
+    if (error) {
+      // Partial unique index violation: branch đã có session đang mở
+      // (per-branch invariant từ migration 20260503000000_pos_session_per_branch).
+      if (error.code === "23505") {
+        return {
+          success: false,
+          error:
+            "Chi nhánh này đã có ca POS đang mở. Tải lại trang để vào ca hiện tại, hoặc đóng ca cũ trước khi mở ca mới.",
+        };
+      }
       return {
         success: false,
-        error:
-          "Chi nhánh này đã có ca POS đang mở. Tải lại trang để vào ca hiện tại, hoặc đóng ca cũ trước khi mở ca mới.",
+        error: "Không thể mở ca. Vui lòng thử lại.",
       };
     }
-    return {
-      success: false,
-      error: "Không thể mở ca. Vui lòng thử lại.",
-    };
-  }
 
-  if (!data) {
-    return { success: false, error: "Không thể mở ca. Vui lòng thử lại." };
-  }
+    if (!data) {
+      return { success: false, error: "Không thể mở ca. Vui lòng thử lại." };
+    }
 
-  return { success: true, data: { session_id: data.id } };
-}
+    return { success: true, data: { session_id: data.id } };
+  },
+);
 
 /* ─── closePosSession ─── */
 
@@ -405,105 +399,96 @@ export interface CloseSessionErrorPayload {
   code: CloseSessionErrorCode;
 }
 
-// Skip withAction: positional (sessionId, closingCash, note?) args
 // On failure, `meta` matches CloseSessionErrorPayload (`Record<string, unknown>`
 // in the base type — narrowed by callers via meta.code).
 //
 // D8 (2026-04-27): variance note retired — RPC no longer requires it. UI
 // no longer renders the variance approval sub-step. Variance breach now
 // emits a notification to managers via trg_notify_pos_shift_variance.
-export async function closePosSession(
-  sessionId: number,
-  closingCash: number,
-  note?: string,
-): Promise<ActionResult> {
-  const parsed = closeSessionSchema.safeParse({
-    sessionId,
-    closingCash,
-    note,
-  });
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
-    };
-  }
+export const closePosSession = withActionPositional(
+  {
+    argsToInput: (sessionId: number, closingCash: number, note?: string) => ({
+      sessionId,
+      closingCash,
+      note,
+    }),
+    schema: closeSessionSchema,
+    roles: POS_ROLES,
+    permission: PERMISSION_KEYS.POS_CLOSE_SHIFT,
+  },
+  async (
+    { sessionId, closingCash, note },
+    { supabase },
+  ): Promise<ActionResult> => {
+    const { data, error } = await supabase.rpc("close_pos_session", {
+      p_session_id: sessionId,
+      p_closing_cash: closingCash,
+      p_note: note ?? undefined,
+    });
 
-  // Hint to permission probe: claims.branch_id (from JWT) lets has_permission
-  // run a branch-scoped lookup instead of has_permission_any across every
-  // branch the user is provisioned for. Modest win for owner/area_manager;
-  // a no-op for branch_manager/cashier (one branch anyway).
-  const ctx = await getAuthContextWithPermission(
-    POS_ROLES,
-    PERMISSION_KEYS.POS_CLOSE_SHIFT,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
+    if (error) {
+      const msg = error.message ?? "";
 
-  const { supabase } = ctx;
+      if (msg.includes("session_not_found")) {
+        return {
+          success: false,
+          error: "Không tìm thấy ca",
+          meta: { code: "session_not_found" },
+        };
+      }
 
-  const { data, error } = await supabase.rpc("close_pos_session", {
-    p_session_id: parsed.data.sessionId,
-    p_closing_cash: parsed.data.closingCash,
-    p_note: parsed.data.note ?? undefined,
-  });
+      if (msg.includes("session_already_closed")) {
+        return {
+          success: false,
+          error: "Ca đã được đóng",
+          meta: { code: "session_already_closed" },
+        };
+      }
 
-  if (error) {
-    const msg = error.message ?? "";
-
-    if (msg.includes("session_not_found")) {
       return {
         success: false,
-        error: "Không tìm thấy ca",
-        meta: { code: "session_not_found" },
+        error: "Không thể đóng ca. Vui lòng thử lại.",
+        meta: { code: "unknown" },
       };
     }
 
-    if (msg.includes("session_already_closed")) {
-      return {
-        success: false,
-        error: "Ca đã được đóng",
-        meta: { code: "session_already_closed" },
-      };
-    }
-
-    return {
-      success: false,
-      error: "Không thể đóng ca. Vui lòng thử lại.",
-      meta: { code: "unknown" },
-    };
-  }
-
-  // Best-effort shift-close print. Failure must NEVER undo the close —
-  // money/audit are already committed in DB. UI surfaces print_warning
-  // as a toast and offers re-print later.
-  const { data: printRes, error: printErr } = await supabase.rpc(
-    "enqueue_shift_close_print",
-    { p_session_id: parsed.data.sessionId },
-  );
-  let printWarning: string | undefined;
-  if (printErr) {
-    const m = String(printErr.message ?? "").toLowerCase();
-    if (m.includes("permission denied")) {
-      printWarning = "Đã chốt ca. Không có quyền in phiếu chốt — báo quản lý.";
-    } else if (m.includes("no active") && m.includes("printer")) {
-      printWarning =
-        "Đã chốt ca. Chi nhánh chưa có máy in hóa đơn — không in được phiếu chốt.";
+    // Best-effort shift-close print. Failure must NEVER undo the close —
+    // money/audit are already committed in DB. UI surfaces print_warning
+    // as a toast and offers re-print later.
+    const { data: printRes, error: printErr } = await supabase.rpc(
+      "enqueue_shift_close_print",
+      { p_session_id: sessionId },
+    );
+    let printWarning: string | undefined;
+    if (printErr) {
+      const m = String(printErr.message ?? "").toLowerCase();
+      if (m.includes("permission denied")) {
+        printWarning =
+          "Đã chốt ca. Không có quyền in phiếu chốt — báo quản lý.";
+      } else if (m.includes("no active") && m.includes("printer")) {
+        printWarning =
+          "Đã chốt ca. Chi nhánh chưa có máy in hóa đơn — không in được phiếu chốt.";
+      } else {
+        printWarning =
+          "Đã chốt ca. Không in được phiếu chốt — kiểm tra máy in.";
+      }
     } else {
-      printWarning = "Đã chốt ca. Không in được phiếu chốt — kiểm tra máy in.";
+      const skipReason = (
+        printRes as { skipped?: boolean; reason?: string } | null
+      )?.skipped
+        ? (printRes as { reason?: string }).reason
+        : undefined;
+      if (skipReason === "no_printer") {
+        printWarning = "Đã chốt ca. Máy in offline — không in được phiếu chốt.";
+      }
     }
-  } else {
-    const skipReason = (
-      printRes as { skipped?: boolean; reason?: string } | null
-    )?.skipped
-      ? (printRes as { reason?: string }).reason
-      : undefined;
-    if (skipReason === "no_printer") {
-      printWarning = "Đã chốt ca. Máy in offline — không in được phiếu chốt.";
-    }
-  }
 
-  return {
-    success: true,
-    data: { ...(data as Record<string, unknown>), print_warning: printWarning },
-  };
-}
+    return {
+      success: true,
+      data: {
+        ...(data as Record<string, unknown>),
+        print_warning: printWarning,
+      },
+    };
+  },
+);

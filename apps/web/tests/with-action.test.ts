@@ -345,6 +345,53 @@ test("withActionPositional validationErrorCode + forbiddenErrorCode", async () =
   assert.equal(a.errorCode, "test.no_permission");
 });
 
+test("withAction forbiddenError overrides the default denial copy", async () => {
+  const action = withAction(
+    {
+      schema: sampleSchema,
+      customAuth: async () => null,
+      forbiddenError: "Không có quyền mở ca",
+    },
+    async () => ({ success: true }),
+  );
+
+  const result = await action({ orderItemId: 1, reason: "valid reason" });
+  assert.equal(result.success, false);
+  assert.equal(result.error, "Không có quyền mở ca");
+});
+
+test("withActionPositional forbiddenError + forbiddenErrorCode together", async () => {
+  // openPosSession pattern (WS-1b tail): custom denial copy AND a stable code.
+  const action = withActionPositional(
+    {
+      argsToInput: (orderItemId: number, reason: string) => ({
+        orderItemId,
+        reason,
+      }),
+      schema: sampleSchema,
+      customAuth: async () => null,
+      forbiddenError: "Không có quyền mở ca",
+      forbiddenErrorCode: "test.no_cashbox",
+    },
+    async () => ({ success: true }),
+  );
+
+  const result = await action(1, "valid reason");
+  assert.equal(result.success, false);
+  assert.equal(result.error, "Không có quyền mở ca");
+  assert.equal(result.errorCode, "test.no_cashbox");
+});
+
+test("forbiddenError unset keeps the default denial copy (backward compat)", async () => {
+  // The ~20 existing callers that never set forbiddenError must still get
+  // the shared FORBIDDEN_ERROR — the WS-1b-tail extension is additive.
+  const result = await withAction(
+    { schema: sampleSchema, customAuth: async () => null },
+    async () => ({ success: true }),
+  )({ orderItemId: 1, reason: "valid reason" });
+  assert.equal(result.error, "Không có quyền");
+});
+
 test("withAction option codes default to undefined (backward compat)", async () => {
   // Callers that do not opt in must not see any errorCode surface on
   // failure — preserves the pre-WS-1b shape (existing 23 tests).

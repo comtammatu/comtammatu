@@ -2,10 +2,7 @@
 
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import {
-  MODULE_ACL,
-  PERMISSION_KEYS,
-} from "@comtammatu/shared/auth";
+import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission, probePermission } from "../../_lib/auth";
 import { withActionPositional } from "@/_lib/with-action";
@@ -258,42 +255,35 @@ const ORDER_LIST_SELECT = `
  * No row cap needed — at any moment ≤ ~30-50 active orders even on a
  * busy day.
  */
-// Skip withAction: positional (branchId) arg + simple query
-export async function fetchActiveOrders(
-  branchId: number,
-): Promise<ActionResult> {
-  const parsedBranchId = branchIdSchema.safeParse(branchId);
-  if (!parsedBranchId.success) {
-    return { success: false, error: "Branch ID không hợp lệ" };
-  }
+const fetchActiveOrdersSchema = z.object({ branchId: branchIdSchema });
 
-  const ctx = await getAuthContextWithPermission(
-    POS_ROLES,
-    PERMISSION_KEYS.POS_USE,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
+export const fetchActiveOrders = withActionPositional(
+  {
+    argsToInput: (branchId: number) => ({ branchId }),
+    schema: fetchActiveOrdersSchema,
+    customAuth: posUseAuth,
+  },
+  async ({ branchId }, { supabase, claims }): Promise<ActionResult> => {
+    if (claims.branch_id !== branchId) {
+      return { success: false, error: "Không có quyền truy cập chi nhánh này" };
+    }
 
-  const { supabase, claims } = ctx;
+    const { data: orders, error } = await supabase
+      .from("orders")
+      .select(ORDER_LIST_SELECT)
+      .eq("branch_id", branchId)
+      .eq("tenant_id", claims.tenant_id)
+      .in("status", ["new", "confirmed", "preparing", "ready", "served"])
+      .neq("payment_status", "paid")
+      .order("created_at", { ascending: false });
 
-  if (claims.branch_id !== parsedBranchId.data) {
-    return { success: false, error: "Không có quyền truy cập chi nhánh này" };
-  }
+    if (error) {
+      return { success: false, error: "Không thể tải danh sách đơn hàng." };
+    }
 
-  const { data: orders, error } = await supabase
-    .from("orders")
-    .select(ORDER_LIST_SELECT)
-    .eq("branch_id", parsedBranchId.data)
-    .eq("tenant_id", claims.tenant_id)
-    .in("status", ["new", "confirmed", "preparing", "ready", "served"])
-    .neq("payment_status", "paid")
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    return { success: false, error: "Không thể tải danh sách đơn hàng." };
-  }
-
-  return { success: true, data: orders ?? [] };
-}
+    return { success: true, data: orders ?? [] };
+  },
+);
 
 /* ─── fetchArchivedOrders ─── */
 
@@ -644,30 +634,29 @@ export async function fetchOrderForBill(
 
 /* ─── fetchOrderDetail — POS sheet (items + status) ─── */
 
-// Skip withAction: complex auth (POS view + POS void permission hint)
-export async function fetchOrderDetail(orderId: number): Promise<
-  ActionResult<{
-    order: Record<string, unknown>;
-    canManageOrders: boolean;
-  }>
-> {
-  const parsedId = orderIdSchema.safeParse(orderId);
-  if (!parsedId.success) {
-    return { success: false, error: "Order ID không hợp lệ" };
-  }
+const fetchOrderDetailSchema = z.object({ orderId: orderIdSchema });
 
-  const ctx = await getAuthContextWithPermission(
-    POS_ROLES,
-    PERMISSION_KEYS.POS_USE,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
+export const fetchOrderDetail = withActionPositional(
+  {
+    argsToInput: (orderId: number) => ({ orderId }),
+    schema: fetchOrderDetailSchema,
+    customAuth: posUseAuth,
+  },
+  async (
+    { orderId },
+    ctx,
+  ): Promise<
+    ActionResult<{
+      order: Record<string, unknown>;
+      canManageOrders: boolean;
+    }>
+  > => {
+    const { supabase, claims } = ctx;
 
-  const { supabase, claims } = ctx;
-
-  let detailQuery = supabase
-    .from("orders")
-    .select(
-      `
+    let detailQuery = supabase
+      .from("orders")
+      .select(
+        `
       id,
       order_number,
       order_type,
@@ -715,42 +704,43 @@ export async function fetchOrderDetail(orderId: number): Promise<
         variant_id
       )
     `,
-    )
-    .eq("id", parsedId.data)
-    .eq("tenant_id", claims.tenant_id);
+      )
+      .eq("id", orderId)
+      .eq("tenant_id", claims.tenant_id);
 
-  // Branch-scoped users can only view their own branch's orders
-  if (claims.branch_id) {
-    detailQuery = detailQuery.eq("branch_id", claims.branch_id);
-  }
-
-  // Parallelize: data SELECT + void-permission probe (UI hint only).
-  // Probe reuses the same supabase client → skips a 2nd getUser() HTTP
-  // round-trip + getSession() cookie parse. Server-side void/cancel RPCs
-  // remain the authoritative gate; hint=false on probe error is fail-safe.
-  const [{ data: order, error }, canManageOrders] = await Promise.all([
-    detailQuery.single(),
-    probePermission(ctx, PERMISSION_KEYS.POS_VOID_ORDER, claims.branch_id),
-  ]);
-
-  if (error) {
-    if (error.code === "PGRST116") {
-      return { success: false, error: "Không tìm thấy đơn hàng" };
+    // Branch-scoped users can only view their own branch's orders
+    if (claims.branch_id) {
+      detailQuery = detailQuery.eq("branch_id", claims.branch_id);
     }
-    return {
-      success: false,
-      error: "Không thể tải đơn hàng. Vui lòng thử lại.",
-    };
-  }
 
-  return {
-    success: true,
-    data: {
-      order: order as unknown as Record<string, unknown>,
-      canManageOrders,
-    },
-  };
-}
+    // Parallelize: data SELECT + void-permission probe (UI hint only).
+    // Probe reuses the same supabase client → skips a 2nd getUser() HTTP
+    // round-trip + getSession() cookie parse. Server-side void/cancel RPCs
+    // remain the authoritative gate; hint=false on probe error is fail-safe.
+    const [{ data: order, error }, canManageOrders] = await Promise.all([
+      detailQuery.single(),
+      probePermission(ctx, PERMISSION_KEYS.POS_VOID_ORDER, claims.branch_id),
+    ]);
+
+    if (error) {
+      if (error.code === "PGRST116") {
+        return { success: false, error: "Không tìm thấy đơn hàng" };
+      }
+      return {
+        success: false,
+        error: "Không thể tải đơn hàng. Vui lòng thử lại.",
+      };
+    }
+
+    return {
+      success: true,
+      data: {
+        order: order as unknown as Record<string, unknown>,
+        canManageOrders,
+      },
+    };
+  },
+);
 
 /* ─── appendOrderItems ─── */
 
@@ -942,7 +932,11 @@ export const voidOrderItem = withActionPositional(
  */
 export const reduceOrderItemQuantity = withActionPositional(
   {
-    argsToInput: (orderItemId: number, newQuantity: number, reason: string) => ({
+    argsToInput: (
+      orderItemId: number,
+      newQuantity: number,
+      reason: string,
+    ) => ({
       orderItemId,
       newQuantity,
       reason,
@@ -1072,22 +1066,19 @@ export const editPendingOrderItem = withActionPositional(
       is_default: s.is_default,
     }));
 
-    const { data, error } = await supabase.rpc(
-      "edit_pending_order_item",
-      {
-        p_order_item_id: parsedData.orderItemId,
-        // variant/note params accept NULL in plpgsql (item without variant / no
-        // note) but typegen types them non-null (no SQL default) — assert to
-        // satisfy the generated Args while keeping the other params checked.
-        p_variant_id: parsedData.variantId as number,
-        p_variant_name: variantNameOrNull as string,
-        p_unit_price: parsedData.unitPrice,
-        p_modifiers: rpcModifiers,
-        p_sides: rpcSides,
-        p_note: noteOrNull as string,
-        p_quantity: parsedData.quantity,
-      },
-    );
+    const { data, error } = await supabase.rpc("edit_pending_order_item", {
+      p_order_item_id: parsedData.orderItemId,
+      // variant/note params accept NULL in plpgsql (item without variant / no
+      // note) but typegen types them non-null (no SQL default) — assert to
+      // satisfy the generated Args while keeping the other params checked.
+      p_variant_id: parsedData.variantId as number,
+      p_variant_name: variantNameOrNull as string,
+      p_unit_price: parsedData.unitPrice,
+      p_modifiers: rpcModifiers,
+      p_sides: rpcSides,
+      p_note: noteOrNull as string,
+      p_quantity: parsedData.quantity,
+    });
 
     if (error) {
       return mapRpcError(error, editRpcMappings, editRpcFallback);
@@ -1113,13 +1104,15 @@ export const editPendingOrderItem = withActionPositional(
     const quantityChanged = result.old_quantity !== result.new_quantity;
 
     if (wasSentToKitchen && quantityChanged) {
-      const { data: printData, error: printError } =
-        await supabase.rpc("enqueue_edit_pending_order_item_quantity_print", {
+      const { data: printData, error: printError } = await supabase.rpc(
+        "enqueue_edit_pending_order_item_quantity_print",
+        {
           p_order_item_id: parsedData.orderItemId,
           p_old_quantity: result.old_quantity,
           p_new_quantity: result.new_quantity,
           p_reason: "Sua so luong mon",
-        });
+        },
+      );
 
       if (printError) {
         printWarning = editPrintErrorToWarning(printError.message);

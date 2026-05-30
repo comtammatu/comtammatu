@@ -70,7 +70,10 @@ type AuthOptions<TSchema extends z.ZodType> = {
   customAuth?: CustomAuthResolver<z.infer<TSchema>>;
 };
 
-type BaseActionOptions<TSchema extends z.ZodType, TData> = AuthOptions<TSchema> & {
+type BaseActionOptions<
+  TSchema extends z.ZodType,
+  TData,
+> = AuthOptions<TSchema> & {
   afterSuccess?: AfterSuccessHook<z.infer<TSchema>, TData>;
   /**
    * Stable `errorCode` applied to schema-validation failures. Defaults to
@@ -90,12 +93,20 @@ type BaseActionOptions<TSchema extends z.ZodType, TData> = AuthOptions<TSchema> 
    * handler (which can return its own typed code).
    */
   forbiddenErrorCode?: string;
+  /**
+   * Custom user-facing message applied when the auth resolver returns `null`
+   * (forbidden). Defaults to the shared `FORBIDDEN_ERROR` ("Không có quyền").
+   * Opt in only when an action needs denial copy more specific than the
+   * generic default — e.g. `openPosSession` → "Không có quyền mở ca". Symmetric
+   * with `forbiddenErrorCode`; leaving it unset is identical to prior behavior.
+   */
+  forbiddenError?: string;
 };
 
-type DirectActionOptions<
-  TSchema extends z.ZodType,
-  TData,
-> = BaseActionOptions<TSchema, TData> & {
+type DirectActionOptions<TSchema extends z.ZodType, TData> = BaseActionOptions<
+  TSchema,
+  TData
+> & {
   /**
    * When true and the authenticated role is `branch_manager` or `cashier`
    * with `claims.branch_id == null`, reject with `branch_scope_unset`
@@ -108,10 +119,10 @@ type DirectActionOptions<
   requireBranchScope?: boolean;
 };
 
-type FormActionOptions<
-  TSchema extends z.ZodType,
-  TData,
-> = BaseActionOptions<TSchema, TData> & {
+type FormActionOptions<TSchema extends z.ZodType, TData> = BaseActionOptions<
+  TSchema,
+  TData
+> & {
   extract: (fd: FormData) => unknown;
 };
 
@@ -277,7 +288,12 @@ export function withAction<TSchema extends z.ZodType, TData = unknown>(
     }
 
     const ctx = await resolveActionContext(opts, result.data);
-    if (!ctx) return actionFailure<TData>(FORBIDDEN_ERROR, opts.forbiddenErrorCode);
+    if (!ctx) {
+      return actionFailure<TData>(
+        opts.forbiddenError ?? FORBIDDEN_ERROR,
+        opts.forbiddenErrorCode,
+      );
+    }
 
     if (
       opts.requireBranchScope &&
@@ -332,7 +348,12 @@ export function withActionPositional<
     }
 
     const ctx = await resolveActionContext(opts, result.data);
-    if (!ctx) return actionFailure<TData>(FORBIDDEN_ERROR, opts.forbiddenErrorCode);
+    if (!ctx) {
+      return actionFailure<TData>(
+        opts.forbiddenError ?? FORBIDDEN_ERROR,
+        opts.forbiddenErrorCode,
+      );
+    }
 
     if (
       opts.requireBranchScope &&
@@ -398,7 +419,12 @@ export function withFormAction<TSchema extends z.ZodType, TData = unknown>(
     }
 
     const ctx = await resolveActionContext(opts, result.data);
-    if (!ctx) return actionFailure<TData>(FORBIDDEN_ERROR, opts.forbiddenErrorCode);
+    if (!ctx) {
+      return actionFailure<TData>(
+        opts.forbiddenError ?? FORBIDDEN_ERROR,
+        opts.forbiddenErrorCode,
+      );
+    }
 
     const handlerResult = await handler(result.data, ctx);
     return runAfterSuccess(opts.afterSuccess, result.data, handlerResult, ctx);
