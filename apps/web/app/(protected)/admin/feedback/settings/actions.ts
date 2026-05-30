@@ -5,13 +5,16 @@ import {
   createTelegramDestinationSchema,
   toggleTelegramDestinationSchema,
   updateFeedbackSettingsSchema,
+  updateFeedbackBranchReviewSettingsSchema,
   getTelegramBotToken,
 } from "@comtammatu/shared/feedback";
 import { sendTelegramMessage } from "@comtammatu/shared/telegram";
 import { getAuthContext } from "@/_lib/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import type {
+  FeedbackBranchReviewSettingRow,
   FeedbackSettingsRow,
+  UpdateFeedbackBranchReviewSettingsInput,
   UpdateFeedbackSettingsInput,
 } from "@comtammatu/shared/feedback";
 
@@ -166,7 +169,7 @@ export async function getFeedbackSettings(): Promise<
   const { data } = await supabase
     .from("feedback_settings")
     .select(
-      "tenant_id, ai_monthly_budget_usd, push_mode, threshold_rating, daily_report_hour_local, updated_at, updated_by",
+      "tenant_id, ai_monthly_budget_usd, google_review_url, push_mode, threshold_rating, daily_report_hour_local, updated_at, updated_by",
     )
     .eq("tenant_id", claims.tenant_id)
     .maybeSingle();
@@ -175,6 +178,7 @@ export async function getFeedbackSettings(): Promise<
     const defaults: FeedbackSettingsRow = {
       tenant_id: claims.tenant_id,
       ai_monthly_budget_usd: 5,
+      google_review_url: null,
       push_mode: "threshold",
       threshold_rating: 3,
       daily_report_hour_local: 8,
@@ -185,6 +189,31 @@ export async function getFeedbackSettings(): Promise<
   }
 
   return { success: true, data: data as FeedbackSettingsRow };
+}
+
+export async function getFeedbackBranchReviewSettings(): Promise<
+  ActionResult<FeedbackBranchReviewSettingRow[]>
+> {
+  const ctx = await getAuthContext(OWNER_ONLY);
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { supabase, claims } = ctx;
+
+  const { data, error } = await supabase
+    .from("feedback_branch_review_settings")
+    .select("tenant_id, branch_id, google_review_url, updated_at, updated_by")
+    .eq("tenant_id", claims.tenant_id)
+    .order("branch_id");
+
+  if (error) {
+    console.error("[getFeedbackBranchReviewSettings] select error", error.code);
+    return { success: false, error: "Không thể tải cài đặt review." };
+  }
+
+  return {
+    success: true,
+    data: (data ?? []) as FeedbackBranchReviewSettingRow[],
+  };
 }
 
 export async function updateFeedbackSettings(
@@ -215,6 +244,71 @@ export async function updateFeedbackSettings(
   if (error) {
     console.error("[updateFeedbackSettings] upsert error", error.code);
     return { success: false, error: "Không thể lưu cài đặt." };
+  }
+
+  return { success: true };
+}
+
+export async function updateFeedbackBranchReviewSettings(
+  input: unknown,
+): Promise<ActionResult> {
+  const ctx = await getAuthContext(OWNER_ONLY);
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const parsed = updateFeedbackBranchReviewSettingsSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+    };
+  }
+
+  const { supabase, claims } = ctx;
+  const update: UpdateFeedbackBranchReviewSettingsInput = parsed.data;
+  const branchIds = [...new Set(update.settings.map((s) => s.branch_id))];
+
+  if (branchIds.length === 0) {
+    return { success: true };
+  }
+
+  const { data: branches, error: branchesError } = await supabase
+    .from("branches")
+    .select("id")
+    .eq("tenant_id", claims.tenant_id)
+    .in("id", branchIds);
+
+  if (branchesError) {
+    console.error(
+      "[updateFeedbackBranchReviewSettings] branch check error",
+      branchesError.code,
+    );
+    return { success: false, error: "Không thể kiểm tra chi nhánh." };
+  }
+
+  const allowedBranchIds = new Set((branches ?? []).map((b) => b.id));
+  if (branchIds.some((id) => !allowedBranchIds.has(id))) {
+    return { success: false, error: "Chi nhánh không hợp lệ." };
+  }
+
+  const now = new Date().toISOString();
+  const { error } = await supabase
+    .from("feedback_branch_review_settings")
+    .upsert(
+      update.settings.map((setting) => ({
+        tenant_id: claims.tenant_id,
+        branch_id: setting.branch_id,
+        google_review_url: setting.google_review_url,
+        updated_at: now,
+      })),
+      { onConflict: "tenant_id,branch_id" },
+    );
+
+  if (error) {
+    console.error(
+      "[updateFeedbackBranchReviewSettings] upsert error",
+      error.code,
+    );
+    return { success: false, error: "Không thể lưu link review chi nhánh." };
   }
 
   return { success: true };

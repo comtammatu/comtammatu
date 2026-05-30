@@ -145,6 +145,7 @@ export async function setBranchMenuDailyLimit(
 
   revalidatePath(`/br/${parsed.data.branchId}/menu-limits`);
   revalidatePath(`/br/${parsed.data.branchId}/pos`);
+  revalidatePath(`/br/${parsed.data.branchId}/kds`);
 
   const row = (data ?? null) as {
     menu_item_id: number;
@@ -206,6 +207,7 @@ export async function clearBranchMenuDailyLimit(
 
   revalidatePath(`/br/${parsed.data.branchId}/menu-limits`);
   revalidatePath(`/br/${parsed.data.branchId}/pos`);
+  revalidatePath(`/br/${parsed.data.branchId}/kds`);
 
   const row = (data ?? { deleted: 0 }) as { deleted: number };
   return { success: true, data: row };

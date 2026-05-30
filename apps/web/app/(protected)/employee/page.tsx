@@ -1,25 +1,17 @@
 import Link from "next/link";
 import {
-  Briefcase as IconBriefcase,
-  Building2 as IconBuilding2,
   CalendarDays as IconCalendarEvent,
   ChefHat as IconChefHat,
   Clock as IconClock,
   CreditCard as IconCreditCard,
   ListChecks as IconListChecks,
-  ListOrdered as IconListOrdered,
   LogIn as IconDoorEnter,
   LogOut as IconLogout,
-  MessageCircle as IconMessageCircle,
   Monitor as IconDeviceDesktop,
   MonitorUp as IconMonitorUp,
-  Package as IconPackage,
-  Settings as IconSettings,
-  ShoppingBag as IconShoppingBag,
   UserCircle as IconUserCircle,
-  UtensilsCrossed as IconUtensilsCrossed,
 } from "lucide-react";
-import { canAccess, type ModuleKey } from "@comtammatu/shared/auth";
+import { canAccess } from "@comtammatu/shared/auth";
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
 import { loadAuthState } from "@/_lib/auth";
@@ -64,82 +56,6 @@ const OPERATION_HANDOFFS = [
     description: copy.runnerDescription,
   },
 ] as const;
-
-const MANAGEMENT_LINKS: ReadonlyArray<{
-  moduleKey: ModuleKey;
-  href: string;
-  icon: typeof IconShoppingBag;
-  title: string;
-  description: string;
-}> = [
-  {
-    moduleKey: "orders",
-    href: "/orders",
-    icon: IconShoppingBag,
-    title: copy.ordersTitle,
-    description: copy.ordersDescription,
-  },
-  {
-    moduleKey: "inventory",
-    href: "/inventory",
-    icon: IconPackage,
-    title: copy.inventoryTitle,
-    description: copy.inventoryDescription,
-  },
-  {
-    moduleKey: "menu",
-    href: "/menu",
-    icon: IconUtensilsCrossed,
-    title: copy.menuTitle,
-    description: copy.menuDescription,
-  },
-  {
-    moduleKey: "settings",
-    href: "/admin/settings",
-    icon: IconSettings,
-    title: copy.settingsTitle,
-    description: copy.settingsDescription,
-  },
-  {
-    moduleKey: "feedback",
-    href: "/admin/feedback",
-    icon: IconMessageCircle,
-    title: copy.feedbackTitle,
-    description: copy.feedbackDescription,
-  },
-  {
-    moduleKey: "hr",
-    href: "/hr",
-    icon: IconBriefcase,
-    title: copy.hrTitle,
-    description: copy.hrDescription,
-  },
-];
-
-const BRANCH_MANAGEMENT_LINKS = (
-  branchId: number,
-): ReadonlyArray<{
-  moduleKey: ModuleKey;
-  href: string;
-  icon: typeof IconShoppingBag;
-  title: string;
-  description: string;
-}> => [
-  {
-    moduleKey: "branch_menu_limits",
-    href: `/br/${branchId}/menu-limits`,
-    icon: IconListOrdered,
-    title: copy.branchMenuLimitsTitle,
-    description: copy.branchMenuLimitsDescription,
-  },
-  {
-    moduleKey: "branch_settings",
-    href: `/br/${branchId}/settings`,
-    icon: IconBuilding2,
-    title: copy.branchSettingsTitle,
-    description: copy.branchSettingsDescription,
-  },
-];
 
 export default async function EmployeePage() {
   const { supabase, claims } = await loadAuthState();
@@ -231,16 +147,6 @@ export default async function EmployeePage() {
         }))
       : [];
 
-  const managementLinks = MANAGEMENT_LINKS.filter((link) =>
-    canAccess(claims.user_role, link.moduleKey),
-  );
-  const branchManagementLinks = branchId
-    ? BRANCH_MANAGEMENT_LINKS(branchId).filter((link) =>
-        canAccess(claims.user_role, link.moduleKey),
-      )
-    : [];
-  const showManagementPanel =
-    managementLinks.length + branchManagementLinks.length > 0;
   const hasEmployeeContext = Boolean(ctx);
 
   const clockTone = !hasEmployeeContext
@@ -272,6 +178,14 @@ export default async function EmployeePage() {
   const nextShiftDescription = nextShift
     ? `${nextShiftDateLabel} · ${formatTimeShort(nextShift.startTime)} - ${formatTimeShort(nextShift.endTime)}`
     : copy.noNextShift;
+  const clockTimeLabel =
+    checkInTime && checkOutTime
+      ? `${formatTimeVN(checkInTime)} - ${formatTimeVN(checkOutTime)}`
+      : checkInTime
+        ? `${copy.checkIn} ${formatTimeVN(checkInTime)}`
+        : checkOutTime
+          ? `${copy.checkOut} ${formatTimeVN(checkOutTime)}`
+          : "—";
 
   return (
     <EmployeePageShell title={copy.title} description={copy.description}>
@@ -285,7 +199,6 @@ export default async function EmployeePage() {
       >
         <EmployeeDetailList
           columns={3}
-          className="grid-cols-3"
           rows={[
             {
               label: copy.branch,
@@ -293,16 +206,27 @@ export default async function EmployeePage() {
               muted: !clockBranchName && !ctx?.branchName,
             },
             {
-              label: copy.checkIn,
-              value: checkInTime ? formatTimeVN(checkInTime) : "—",
+              label: copy.nextShiftTitle,
+              value: nextShift ? (
+                <span className="flex min-w-0 flex-col">
+                  <span className="truncate">{nextShift.shiftName}</span>
+                  <span className="text-xs font-normal text-muted-foreground">
+                    {nextShiftDescription}
+                  </span>
+                </span>
+              ) : (
+                copy.noNextShift
+              ),
+              muted: !nextShift,
             },
             {
-              label: copy.checkOut,
-              value: checkOutTime ? formatTimeVN(checkOutTime) : "—",
+              label: copy.clockTime,
+              value: clockTimeLabel,
+              muted: !checkInTime && !checkOutTime,
             },
           ]}
         />
-        <div className="flex">
+        <div className="flex flex-col gap-2 sm:flex-row">
           {!hasEmployeeContext ? (
             <Button
               asChild
@@ -335,40 +259,21 @@ export default async function EmployeePage() {
               </Link>
             </Button>
           )}
+          {hasEmployeeContext ? (
+            <Button
+              asChild
+              variant="outline"
+              size="touch"
+              className="w-full sm:w-fit"
+            >
+              <Link href="/employee/schedule">
+                <IconCalendarEvent data-icon="inline-start" />
+                {copy.viewSchedule}
+              </Link>
+            </Button>
+          ) : null}
         </div>
-        <EmployeeActionItem
-          href="/employee/schedule"
-          icon={IconCalendarEvent}
-          title={
-            nextShift
-              ? `${copy.nextShiftTitle}: ${nextShift.shiftName}`
-              : copy.nextShiftTitle
-          }
-          description={nextShiftDescription}
-          size="sm"
-        />
       </EmployeePanel>
-
-      {operationHandoffs.length > 0 ? (
-        <EmployeePanel
-          title={copy.operationToolsTitle}
-          description={copy.operationToolsDescription}
-          size="sm"
-        >
-          <EmployeeActionList columns={2}>
-            {operationHandoffs.map((item) => (
-              <EmployeeActionItem
-                key={item.moduleKey}
-                href={item.href}
-                icon={item.icon}
-                title={item.title}
-                description={item.description}
-                size="sm"
-              />
-            ))}
-          </EmployeeActionList>
-        </EmployeePanel>
-      ) : null}
 
       <EmployeePanel title={copy.selfServiceTitle}>
         <EmployeeActionList columns={2}>
@@ -405,24 +310,14 @@ export default async function EmployeePage() {
         </EmployeeActionList>
       </EmployeePanel>
 
-      {showManagementPanel ? (
+      {operationHandoffs.length > 0 ? (
         <EmployeePanel
-          title={copy.managementTitle}
-          description={copy.managementDescription}
+          title={copy.operationToolsTitle}
+          description={copy.operationToolsDescription}
           size="sm"
         >
-          <EmployeeActionList>
-            {managementLinks.map((link) => (
-              <EmployeeActionItem
-                key={link.moduleKey}
-                href={link.href}
-                icon={link.icon}
-                title={link.title}
-                description={link.description}
-                size="sm"
-              />
-            ))}
-            {branchManagementLinks.map((link) => (
+          <EmployeeActionList columns={2}>
+            {operationHandoffs.map((link) => (
               <EmployeeActionItem
                 key={link.moduleKey}
                 href={link.href}

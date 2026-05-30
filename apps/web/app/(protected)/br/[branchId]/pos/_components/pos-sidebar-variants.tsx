@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, type ComponentProps } from "react";
+import type { MenuLimitRow } from "../../menu-limits/actions";
 import { PosSessionHeader } from "../pos-session-header";
 import { PosSidebarContent, PosSidebarTabs } from "../pos-sidebar-panel";
 import { AppendDraftPane } from "./append-draft-pane";
@@ -11,6 +12,8 @@ type SidebarContentProps = ComponentProps<typeof PosSidebarContent>;
 
 interface SidebarHeaderInputs {
   canCloseShift: boolean;
+  canManageMenuLimits: boolean;
+  menuLimitRows: MenuLimitRow[];
   onShowCloseSession: () => void;
 }
 
@@ -23,6 +26,8 @@ export interface TabbedSidebarProps extends SidebarHeaderInputs {
 /** Tablet-class layout (md through xl-1): tabs-based sidebar. */
 function TabbedSidebarComponent({
   canCloseShift,
+  canManageMenuLimits,
+  menuLimitRows,
   onShowCloseSession,
   showOrders,
   onShowOrdersChange,
@@ -32,6 +37,8 @@ function TabbedSidebarComponent({
     <div className="hidden w-96 shrink-0 flex-col border-l border-border/60 bg-background md:flex xl:hidden">
       <PosSessionHeader
         canCloseShift={canCloseShift}
+        canManageMenuLimits={canManageMenuLimits}
+        menuLimitRows={menuLimitRows}
         onShowCloseSession={onShowCloseSession}
       />
       {sidebarContentProps.appendDraft.target == null && (
@@ -54,6 +61,8 @@ export interface SplitSidebarProps extends SidebarHeaderInputs {
 /** Wide-desktop layout (xl+): cart + order-list side by side. */
 function SplitSidebarComponent({
   canCloseShift,
+  canManageMenuLimits,
+  menuLimitRows,
   onShowCloseSession,
   sidebarContentProps,
 }: SplitSidebarProps) {
@@ -74,6 +83,8 @@ function SplitSidebarComponent({
     <div className="hidden shrink-0 flex-col border-l border-border/60 bg-background xl:flex">
       <PosSessionHeader
         canCloseShift={canCloseShift}
+        canManageMenuLimits={canManageMenuLimits}
+        menuLimitRows={menuLimitRows}
         onShowCloseSession={onShowCloseSession}
       />
       <div className="flex min-h-0 flex-1">

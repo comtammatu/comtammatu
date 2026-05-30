@@ -46,8 +46,15 @@ Use this file before changing Supabase queries, migrations, RLS, auth, ACL, Serv
 - JWT claims are expected to include:
 
 ```ts
-{ tenant_id: number, branch_id: number | null, user_role: StaffRole }
+{
+  tenant_id: number,
+  branch_id: number | null,
+  user_role: StaffRole,   // legacy-compat — positions.legacy_role_code
+  position: string        // canonical — positions.code, "unassigned" if no row
+}
 ```
+
+The `position` claim was added in migration `20260423020000_auth_v2_m5_bridge.sql`.
 
 - ACL single source: `packages/shared/src/auth/module-acl.ts`.
 - Do not create a second auth policy layer in UI helpers.

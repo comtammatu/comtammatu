@@ -109,6 +109,44 @@ const documentReceipt: PrintPayload = {
   },
 };
 
+const receiptPaymentQr = {
+  type: "vietqr",
+  content:
+    "00020101021238570010A00000072701270006970422011312345678901230208QRIBFTTA530370454061100005802VN5911COM TAM MA TU6007VIETNAM62100806DH 0876304ABCD",
+  bank_code: "MB",
+  header_label: "MB (BIN 970422)",
+  account_no: "1234567890123",
+  account_name: "COM TAM MA TU",
+  amount: 110000,
+  description: "DH 087",
+};
+
+const receiptWithPaymentQr = {
+  ...baseReceipt,
+  payment_method: "vietqr",
+  payment_qr: receiptPaymentQr,
+} satisfies PrintPayload;
+
+const documentReceiptWithPaymentQr: PrintPayload = {
+  ...receiptWithPaymentQr,
+  template_version: "0:2",
+  document: {
+    schema_version: 1,
+    template_id: 0,
+    template_version: 2,
+    paper_width_mm: 80,
+    font_profile: "thermal_vietnamese",
+    blocks: [
+      {
+        type: "paymentQr",
+        heading: "QUÉT QR THANH TOÁN",
+        qr: receiptPaymentQr,
+      },
+      { type: "footer", lines: ["Thịt tươi 100%"] },
+    ],
+  },
+};
+
 const baseKitchen = {
   kind: "kitchen_ticket",
   kitchen_ticket_number: "#087",
@@ -562,10 +600,40 @@ async function main() {
     documentTextReceipt,
     "Side mac dinh x2",
   );
+  const legacyTextReceiptWithQr = renderPayload(receiptWithPaymentQr);
+  assertTextIncludes(
+    "legacy text receipt payment QR heading",
+    legacyTextReceiptWithQr,
+    "QUÉT QR THANH TOÁN",
+  );
+  assertTextIncludes(
+    "legacy text receipt payment QR account",
+    legacyTextReceiptWithQr,
+    "STK: 1234567890123",
+  );
+  const documentTextReceiptWithQr = renderPayload(documentReceiptWithPaymentQr);
+  assertTextIncludes(
+    "document text receipt payment QR heading",
+    documentTextReceiptWithQr,
+    "QUÉT QR THANH TOÁN",
+  );
+  assertTextIncludes(
+    "document text receipt payment QR account",
+    documentTextReceiptWithQr,
+    "STK: 1234567890123",
+  );
   assertBytes("legacy bitmap receipt", await renderPayloadBitmap(baseReceipt));
+  assertBytes(
+    "legacy bitmap receipt with payment QR",
+    await renderPayloadBitmap(receiptWithPaymentQr),
+  );
   assertBytes(
     "document bitmap receipt",
     await renderPayloadBitmap(documentReceipt),
+  );
+  assertBytes(
+    "document bitmap receipt with payment QR",
+    await renderPayloadBitmap(documentReceiptWithPaymentQr),
   );
   const takeawayReceipt = {
     ...baseReceipt,

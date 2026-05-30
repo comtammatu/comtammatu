@@ -120,12 +120,14 @@ Defined in `packages/shared/src/auth/module-acl.ts`. Single source of truth — 
 | runner                                                  |       |           |          | ✓          |        |          | ✓       | ✓      | ✓    |        |
 | branch_settings                                         | ✓     | ✓         | ✓        | ✓          |        |          |         |        |      |        |
 | branch_menu_limits                                      | ✓     | ✓         | ✓        | ✓          |        |          | ✓       |        | ✓    |        |
-| employee                                                | ✓     | ✓         | ✓        | ✓          | ✓      | ✓        | ✓       | ✓      | ✓    | ✓      |
+| employee                                                |       |           | ✓        | ✓          | ✓      | ✓        | ✓       | ✓      | ✓    | ✓      |
 | notifications                                           | ✓     | ✓         | ✓        | ✓          | ✓      | ✓        | ✓       | ✓      | ✓    | ✓      |
 
 > `wh_mgr` = `warehouse_manager`, `prod_mgr` = `production_manager`. Route-level ACL đọc `user_role` từ JWT, derived từ `positions.legacy_role_code`. Row-level authz vẫn đi qua `has_permission(branch_id, key)` — matrix này chỉ là fast gate.
 >
 > Inventory mutating RPC chính đã permission-gated; phần `auth_role()` còn lại là route/side/scope guard hoặc legacy helper. Xem `docs/ref/inventory-rbac-matrix.md` §6.
+
+**Cổng nhân viên boundary:** `employee` là bề mặt self-service / bàn giao vận hành cho staff không thuộc `ADMIN_ROLES`. `owner` và `super_manager` không vào `/employee/*`; request trực tiếp được đưa về Admin default route.
 
 **Owner (chủ sở hữu):** ngoài các module quản trị / giám sát còn có thể vào `orders` và `inventory` để kiểm tra trực tiếp vận hành tenant-level. Tuy vậy owner không được coi là operator hằng ngày trong inventory docs/UI; các bề mặt Inventory hiện tối ưu cho `super_manager`, `area_manager`, `branch_manager`.
 
@@ -151,7 +153,7 @@ The `proxy(request)` function evaluates in order:
 3. **Login page:** authenticated users bounce to `resolvePostLoginRedirect(claims, returnTo, { surface })`; unauthenticated users see the form.
 4. **Unauthenticated → `/login?returnTo=<current-url>`** (surface-aware: beta users go to `/beta/login`).
 5. **Claims extraction:** if `extractClaims()` returns null, proxy redirects to `/access-denied?reason=missing-auth-context&from=<path>`. Proxy **does not** fabricate claims.
-6. **Module ACL:** `resolveModuleFromPath(pathname)` maps URL → `ModuleKey`; `canAccess(role, moduleKey)` gates. Failure → `/access-denied?reason=insufficient-permission&from=<path>`.
+6. **Module ACL:** `resolveModuleFromPath(pathname)` maps URL → `ModuleKey`; `canAccess(role, moduleKey)` gates. Failure → `/access-denied?reason=insufficient-permission&from=<path>`, except disallowed Admin URLs and admin-level `/employee/*` visits redirect to the role's Admin default route.
 7. **Branch-scope for POS/KDS/Runner/branch settings/menu limits:** if a branch-scoped URL is not reachable for the user's branch assignment → `/access-denied?reason=branch-scope-mismatch`. POS/KDS/Runner also reject `central_warehouse`/`central_kitchen` branches. These checks live in proxy; downstream layouts do not re-implement them.
 
 The resolver `resolvePostLoginRedirect(claims, returnTo, { surface?: "legacy" | "beta" })` (`packages/shared/src/auth/scope.ts`) is the **single** post-login destination function. Surface controls beta-prefix wrapping; the underlying ACL + branch-scope rules are shared. Unit tests live in `packages/shared/src/auth/__tests__/scope.test.ts` (run `pnpm --filter @comtammatu/shared test`).

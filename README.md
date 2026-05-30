@@ -1,6 +1,11 @@
 # Cơm Tấm Má Tư
 
-ERP vận hành chuỗi nhà hàng cho chuỗi Cơm Tấm Má Tư CTCP. Single-tenant, multi-branch, đa kho. Không phải CRM, không phải ERP đa ngành.
+Bộ phần mềm quản lý vận hành và bán hàng cho chuỗi Cơm Tấm Má Tư CTCP.
+Single-tenant, multi-branch, đa kho.
+
+Nhiệm vụ hệ thống: bán đúng, bếp nhận đúng, thu tiền đúng, in/hóa đơn đúng,
+kho trừ đúng, và chủ/quản lý nhìn được tình trạng vận hành thật theo ngày.
+Không phải nền tảng nhiều merchant, không phải CRM độc lập, không phải ERP đa ngành.
 
 Mô hình vận hành production: **Trụ sở chính (HQ) → Kho Tổng → Bếp Trung Tâm → Chi nhánh**.
 
@@ -8,7 +13,7 @@ Mô hình vận hành production: **Trụ sở chính (HQ) → Kho Tổng → B�
 
 | #   | Module               | Scope                                                                                     | Status  |
 | --- | -------------------- | ----------------------------------------------------------------------------------------- | ------- |
-| M0  | Khung quản trị       | ERP cockpit, sidebar, foundation, executive reporting                                     | SHIPPED |
+| M0  | Khung quản trị       | Buồng lái điều hành, sidebar, foundation, báo cáo điều hành                               | SHIPPED |
 | M1  | Menu                 | Categories, items, variants, modifiers, sides                                             | SHIPPED |
 | M2  | POS                  | Cart, table/zone, order lifecycle, bill, PWA installable                                  | SHIPPED |
 | M3  | KDS                  | Realtime queue, bump/complete, station config, partial-cancel ticket                      | SHIPPED |

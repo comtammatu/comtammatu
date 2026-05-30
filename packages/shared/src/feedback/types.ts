@@ -36,9 +36,18 @@ export type DailyReportRow = {
 export type FeedbackSettingsRow = {
   tenant_id: number;
   ai_monthly_budget_usd: number;
+  google_review_url: string | null;
   push_mode: "threshold" | "all" | "none";
   threshold_rating: number;
   daily_report_hour_local: number;
+  updated_at: string;
+  updated_by: number | null;
+};
+
+export type FeedbackBranchReviewSettingRow = {
+  tenant_id: number;
+  branch_id: number;
+  google_review_url: string | null;
   updated_at: string;
   updated_by: number | null;
 };

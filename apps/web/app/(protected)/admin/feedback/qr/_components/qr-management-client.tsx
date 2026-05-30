@@ -4,7 +4,13 @@ import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { Copy, RotateCcw, MoreHorizontal, Pencil } from "lucide-react";
+import {
+  Copy,
+  ExternalLink,
+  RotateCcw,
+  MoreHorizontal,
+  Pencil,
+} from "lucide-react";
 import { createQrCodeSchema } from "@comtammatu/shared/feedback";
 import { formatVNDate } from "@comtammatu/shared/time";
 import type { z } from "zod";
@@ -46,9 +52,11 @@ type CreateQrInput = z.input<typeof createQrCodeSchema>;
 export interface QrCodeRow {
   id: number;
   token: string;
+  public_url: string;
   label: string;
   branch_id: number;
   branch_name: string;
+  review_url_source: "branch" | "tenant" | "missing";
   is_active: boolean;
   created_at: string;
 }
@@ -81,6 +89,58 @@ function TokenCell({ token }: { token: string }) {
       {copied ? "Đã sao chép!" : token}
     </button>
   );
+}
+
+function PublicUrlCell({ url }: { url: string }) {
+  const [copied, setCopied] = useState(false);
+  const pathname = new URL(url).pathname;
+
+  return (
+    <div className="flex items-center gap-1">
+      <span className="max-w-48 truncate font-mono text-xs text-muted-foreground">
+        {pathname}
+      </span>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        title={copied ? "Đã sao chép link QR" : "Sao chép link QR"}
+        onClick={() => {
+          void navigator.clipboard.writeText(url).then(() => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1500);
+          });
+        }}
+      >
+        <Copy className="size-3.5" />
+        <span className="sr-only">
+          {copied ? "Đã sao chép link QR" : "Sao chép link QR"}
+        </span>
+      </Button>
+      <Button asChild variant="ghost" size="icon-sm">
+        <a href={url} target="_blank" rel="noreferrer" title="Mở link QR">
+          <ExternalLink className="size-3.5" />
+          <span className="sr-only">Mở link QR</span>
+        </a>
+      </Button>
+    </div>
+  );
+}
+
+function ReviewSourceBadge({
+  source,
+}: {
+  source: QrCodeRow["review_url_source"];
+}) {
+  if (source === "branch") {
+    return <Badge variant="success">Link chi nhánh</Badge>;
+  }
+
+  if (source === "tenant") {
+    return <Badge variant="info">Link mặc định</Badge>;
+  }
+
+  return <Badge variant="warning">Chưa cấu hình</Badge>;
 }
 
 export function QrManagementClient({
@@ -204,8 +264,10 @@ export function QrManagementClient({
           <TableHeader>
             <TableRow>
               <TableHead>Token</TableHead>
+              <TableHead>Link QR</TableHead>
               <TableHead>Nhãn</TableHead>
               <TableHead>Chi nhánh</TableHead>
+              <TableHead>Review</TableHead>
               <TableHead>Trạng thái</TableHead>
               <TableHead>Tạo lúc</TableHead>
               <TableHead className="w-10" />
@@ -215,7 +277,7 @@ export function QrManagementClient({
             {qrCodes.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={8}
                   className="text-center text-sm text-muted-foreground"
                 >
                   Chưa có QR nào
@@ -227,8 +289,14 @@ export function QrManagementClient({
                   <TableCell>
                     <TokenCell token={qr.token} />
                   </TableCell>
+                  <TableCell>
+                    <PublicUrlCell url={qr.public_url} />
+                  </TableCell>
                   <TableCell className="text-sm">{qr.label}</TableCell>
                   <TableCell className="text-sm">{qr.branch_name}</TableCell>
+                  <TableCell>
+                    <ReviewSourceBadge source={qr.review_url_source} />
+                  </TableCell>
                   <TableCell>
                     <Badge variant={qr.is_active ? "default" : "secondary"}>
                       {qr.is_active ? "Hoạt động" : "Tắt"}

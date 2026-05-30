@@ -1,4 +1,4 @@
-import { STAFF_ROLES, type StaffRole } from "./types";
+import { ADMIN_ROLES, STAFF_ROLES, type StaffRole } from "./types";
 import { getModuleLabelVi } from "../labels";
 
 /**
@@ -34,6 +34,10 @@ interface ModuleAcl {
   allowedRoles: readonly StaffRole[];
   label: string;
 }
+
+const EMPLOYEE_PORTAL_ROLES: readonly StaffRole[] = STAFF_ROLES.filter(
+  (role) => !ADMIN_ROLES.includes(role),
+);
 
 export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   dashboard: {
@@ -165,7 +169,7 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   },
   employee: {
     path: "/employee",
-    allowedRoles: STAFF_ROLES,
+    allowedRoles: EMPLOYEE_PORTAL_ROLES,
     label: getModuleLabelVi("employee"),
   },
   notifications: {

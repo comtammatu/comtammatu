@@ -80,27 +80,34 @@ export default async function ProfilePage() {
       {ctx ? (
         <EmployeePanel
           icon={IconReceipt}
-          title="Thuế TNCN"
-          description="Số người phụ thuộc dùng tính giảm trừ gia cảnh khi tính lương."
+          title={copy.taxTitle}
+          description={copy.taxDescription}
         >
           <DependentsForm initialCount={employee?.dependents_count ?? 0} />
         </EmployeePanel>
       ) : null}
 
-      <EmployeePanel title="Tự phục vụ" size="sm">
-        <EmployeeActionList>
+      <EmployeePanel title={copy.selfServiceTitle} size="sm">
+        <EmployeeActionList columns={2}>
+          <EmployeeActionItem
+            href="/employee/payslip"
+            icon={IconReceipt}
+            title={copy.payslipTitle}
+            description={copy.payslipDescription}
+            size="sm"
+          />
           <EmployeeActionItem
             href="/employee/permissions"
             icon={IconShieldCheck}
-            title="Quyền hạn của tôi"
-            description="Xem chức vụ và quyền truy cập đang có hiệu lực"
+            title={copy.permissionsTitle}
+            description={copy.permissionsDescription}
             size="sm"
           />
         </EmployeeActionList>
       </EmployeePanel>
 
       <form action="/api/auth/signout" method="post">
-        <Button type="submit" variant="outline">
+        <Button type="submit" variant="outline" size="touch">
           <IconLogout data-icon="inline-start" />
           {ACTIONS_VI.signOut}
         </Button>

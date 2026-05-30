@@ -2,11 +2,14 @@
 
 ## Sản phẩm
 
-**ERP vận hành chuỗi nhà hàng** cho chuỗi cơm tấm Cơm Tấm Má Tư CTCP.
+**Bộ phần mềm quản lý vận hành và bán hàng** cho chuỗi cơm tấm Cơm Tấm Má Tư CTCP.
 
 Phạm vi sản phẩm: POS, KDS, thực đơn, nhân sự, kho hàng, thanh toán, kế toán (HĐĐT/VAS), và nhân sự & tiền lương.
-Đây là ERP chuyên biệt cho vận hành chuỗi F&B: gom lớp nền, báo cáo, và các domain vận hành vào một kiến trúc thống nhất.
-Không phải CRM độc lập, không phải ERP đa ngành, không phải phần mềm bán hàng đại trà.
+Nhiệm vụ hệ thống: bán đúng, bếp nhận đúng, thu tiền đúng, in/hóa đơn đúng,
+kho trừ đúng, và chủ/quản lý nhìn được tình trạng vận hành thật theo ngày.
+Đây là hệ thống quản lý vận hành nhà hàng chuyên biệt: gom lớp nền, báo cáo,
+và các domain vận hành vào một kiến trúc thống nhất.
+Không phải nền tảng nhiều merchant, không phải CRM độc lập, không phải ERP đa ngành, không phải phần mềm bán hàng đại trà.
 
 ## Mô hình pháp lý
 

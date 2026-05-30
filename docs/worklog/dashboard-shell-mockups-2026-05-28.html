@@ -1,0 +1,1948 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dashboard Shell — Cơm Tấm Má Tư · Mockups 2026-05-28</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --bg: #fafaf9;
+  --card: #ffffff;
+  --fg: #1c1917;
+  --fg-muted: #78716c;
+  --fg-soft: #a8a29e;
+  --border: #e7e5e4;
+  --border-strong: #d6d3d1;
+  --primary: #c2410c;
+  --primary-soft: #fde6d4;
+  --primary-fg: #ffffff;
+  --accent-yellow: #fde047;
+  --sidebar-bg: #f5f5f4;
+  --sidebar-fg: #1c1917;
+  --sidebar-fg-muted: #78716c;
+  --sidebar-border: #e7e5e4;
+  --sidebar-active-bg: #c2410c;
+  --sidebar-active-fg: #fff7ed;
+  --sidebar-hover-bg: #ede9e6;
+  --sidebar-section-bg: rgba(194,65,12,0.08);
+  --success: #16a34a;
+  --warning: #ea580c;
+  --info: #0284c7;
+  --destructive: #dc2626;
+  --r: 6px;
+  --r-lg: 10px;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.06);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+
+  /* Spacing scale (4-based, no 14/18/28) */
+  --sp-1: 4px;  --sp-1-5: 6px;  --sp-2: 8px;  --sp-2-5: 10px;
+  --sp-3: 12px; --sp-4: 16px;  --sp-5: 20px; --sp-6: 24px;
+  --sp-8: 32px; --sp-10: 40px;
+
+  /* Semantic */
+  --pad-page: var(--sp-6);     /* 24 desktop */
+  --pad-page-mobile: var(--sp-4); /* 16 mobile */
+  --pad-card: var(--sp-4);     /* 16 */
+  --pad-cell-y: var(--sp-3);   /* 12 */
+  --pad-cell-x: var(--sp-4);   /* 16 */
+  --gap-grid: var(--sp-4);     /* 16 between cards */
+  --gap-section: var(--sp-6);  /* 24 between sections */
+  --gap-stack: var(--sp-3);    /* 12 inside card / heading→body */
+  --gap-tight: var(--sp-2);    /* 8 icon→label */
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; font-family: 'Inter', system-ui, sans-serif; color: var(--fg); background: #f0eeeb; -webkit-font-smoothing: antialiased; line-height: 1.45; }
+body { padding: var(--sp-3) var(--sp-3) var(--sp-10); }
+@media (min-width: 768px) { body { padding: var(--sp-6) var(--sp-6) var(--sp-10); } }
+.heading-font { font-family: 'Montserrat', sans-serif; letter-spacing: -0.01em; }
+.mono { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
+
+/* Tab nav */
+.doc-header { max-width: 1440px; margin: 0 auto var(--sp-6); }
+.doc-header h1 { font-family: 'Montserrat', sans-serif; font-size: 22px; font-weight: 700; color: var(--fg); line-height: 1.25; }
+.doc-header p { color: var(--fg-muted); font-size: 14px; margin-top: var(--sp-1); }
+.tab-bar { max-width: 1440px; margin: 0 auto var(--sp-4); display: flex; gap: var(--sp-1); flex-wrap: wrap; background: var(--card); padding: var(--sp-1-5); border: 1px solid var(--border); border-radius: var(--r-lg); }
+.tab-btn { padding: var(--sp-2) var(--sp-3); font-size: 13px; font-weight: 500; border: 0; background: transparent; color: var(--fg-muted); border-radius: var(--r); cursor: pointer; font-family: inherit; transition: all 0.12s; }
+.tab-btn:hover { background: var(--sidebar-hover-bg); color: var(--fg); }
+.tab-btn.active { background: var(--primary); color: var(--primary-fg); }
+
+/* Viewport frames */
+.screens { max-width: 1440px; margin: 0 auto; }
+.screen { display: none; }
+.screen.active { display: block; }
+.viewport { background: var(--card); border-radius: 12px; box-shadow: var(--shadow-md); overflow: hidden; border: 1px solid var(--border); }
+.viewport-bar { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2-5) var(--sp-4); background: #ebe9e6; border-bottom: 1px solid var(--border); font-size: 12px; color: var(--fg-muted); }
+.viewport-bar .dots { display: flex; gap: 6px; }
+.viewport-bar .dot { width: 11px; height: 11px; border-radius: 50%; background: #ccc7c2; }
+.viewport-bar .url { flex: 1; padding: 4px 12px; background: #fafaf9; border: 1px solid var(--border); border-radius: 99px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--fg-muted); }
+.viewport-bar .vp-label { font-weight: 500; }
+.viewport.desktop .frame,
+.viewport.tablet .frame,
+.viewport.mobile .frame {
+  width: 100%;
+  display: flex;
+  position: relative;
+  container-type: inline-size;  /* enable @container queries */
+  container-name: shell;
+}
+.viewport.desktop .frame { height: 760px; }
+.viewport.tablet { max-width: 880px; margin: 0 auto; }
+.viewport.tablet .frame { height: 700px; }
+.viewport.mobile {
+  width: 390px;
+  max-width: 100%;
+  margin: 0 auto;
+}
+.viewport.mobile .frame { height: 760px; }
+
+/* Shell layout — MOBILE-FIRST base
+ * Default = mobile (< 768px container): sidebar hidden, drawer pattern.
+ * @container (min-width: 768px) tablet: sidebar visible icon mode.
+ * @container (min-width: 1024px) desktop: sidebar expanded by default.
+ */
+.shell {
+  display: flex;
+  flex-direction: column;        /* mobile: stack — topbar above, main below */
+  width: 100%; height: 100%;
+  background: var(--bg);
+  position: relative;
+}
+
+.sidebar {
+  position: absolute; top: 0; left: 0; bottom: 0;
+  width: 280px; max-width: 86%;
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--sidebar-border);
+  display: flex; flex-direction: column;
+  z-index: 50;
+  transform: translateX(-100%);
+  transition: transform 0.2s ease;
+  box-shadow: var(--shadow-lg);
+}
+.sidebar.open { transform: translateX(0); }
+.sidebar-backdrop { display: none; position: absolute; inset: 0; background: rgba(28,25,23,0.4); z-index: 40; }
+.sidebar.open ~ .sidebar-backdrop { display: block; }
+/* `.collapsed` is a manual override available only ≥ md (see @container below) */
+.sidebar-header { padding: var(--sp-4); border-bottom: 1px solid var(--sidebar-border); display: flex; flex-direction: column; gap: var(--sp-3); }
+.brand { display: flex; align-items: center; gap: var(--sp-3); }
+.brand-logo { width: 36px; height: 36px; border-radius: 8px; background: var(--primary); display: flex; align-items: center; justify-content: center; color: var(--primary-fg); font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 14px; flex-shrink: 0; }
+.brand-text { min-width: 0; }
+.brand-eyebrow { font-size: 10px; font-weight: 600; color: var(--sidebar-fg-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.brand-name { font-family: 'Montserrat', sans-serif; font-weight: 600; font-size: 15px; color: var(--sidebar-fg); }
+.branch-chip { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); background: var(--card); border: 1px solid var(--sidebar-border); border-radius: var(--r); cursor: pointer; transition: background 0.12s; }
+.branch-chip:hover { background: var(--sidebar-hover-bg); }
+.branch-chip .ico { color: var(--fg-muted); flex-shrink: 0; }
+.branch-chip .body { flex: 1; min-width: 0; }
+.branch-chip .body .lbl { font-size: 10px; color: var(--fg-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; }
+.branch-chip .body .val { font-size: 13px; color: var(--fg); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.branch-chip .caret { color: var(--fg-soft); flex-shrink: 0; }
+
+.sidebar-content { flex: 1; overflow-y: auto; padding: var(--sp-2); }
+.nav-group + .nav-group { margin-top: var(--sp-1); }
+.nav-group-label { padding: var(--sp-4) var(--sp-3) var(--sp-1-5); font-size: 10px; font-weight: 600; color: var(--sidebar-fg-muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.nav-group:first-child > .nav-group-label { padding-top: var(--sp-2); }
+.nav-item { display: flex; align-items: center; gap: var(--sp-2-5); padding: var(--sp-2) var(--sp-3); font-size: 13px; color: var(--sidebar-fg); border-radius: var(--r); cursor: pointer; position: relative; user-select: none; }
+.nav-item:hover { background: var(--sidebar-hover-bg); }
+.nav-item .ico { color: var(--fg-muted); flex-shrink: 0; }
+.nav-item.active { background: var(--sidebar-active-bg); color: var(--sidebar-active-fg); font-weight: 600; }
+.nav-item.active .ico { color: var(--sidebar-active-fg); }
+.nav-item .badge { margin-left: auto; font-size: 10px; font-weight: 600; padding: 2px var(--sp-1-5); border-radius: 99px; background: var(--primary-soft); color: var(--primary); }
+.nav-item.active .badge { background: rgba(255,255,255,0.22); color: var(--primary-fg); }
+.nav-item .caret { margin-left: auto; color: var(--fg-soft); flex-shrink: 0; transition: transform 0.18s; }
+.nav-item.open > .caret { transform: rotate(90deg); }
+.nav-section-bg { background: var(--sidebar-section-bg); }
+.nav-children { padding: var(--sp-1) 0; margin: var(--sp-1) 0 var(--sp-2) 22px; border-left: 1px dashed var(--sidebar-border); display: flex; flex-direction: column; gap: 2px; }
+.nav-child { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-1-5) var(--sp-3); font-size: 12.5px; color: var(--sidebar-fg); border-radius: var(--r); cursor: pointer; }
+.nav-child:hover { background: var(--sidebar-hover-bg); }
+.nav-child .ico { color: var(--fg-soft); flex-shrink: 0; }
+.nav-child.active { background: var(--sidebar-active-bg); color: var(--sidebar-active-fg); font-weight: 600; }
+.nav-child.active .ico { color: var(--sidebar-active-fg); }
+
+.sidebar-footer { padding: var(--sp-3); border-top: 1px solid var(--sidebar-border); display: flex; align-items: center; gap: var(--sp-2-5); }
+.avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg,#c2410c,#ea580c); color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex-shrink: 0; font-family: 'Montserrat', sans-serif; }
+.sidebar-footer .user { flex: 1; min-width: 0; }
+.sidebar-footer .user .nm { font-size: 13px; font-weight: 500; color: var(--sidebar-fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sidebar-footer .user .rl { font-size: 11px; color: var(--sidebar-fg-muted); }
+.icon-btn { width: 28px; height: 28px; border: 0; background: transparent; border-radius: var(--r); color: var(--fg-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.icon-btn:hover { background: var(--sidebar-hover-bg); color: var(--fg); }
+
+/* Sidebar icon mode */
+/* `.sidebar.collapsed` semantics:
+ *   - < md container: class ignored (sidebar is drawer; full labels when open).
+ *   - ≥ md container: identical to base (already icon-mode).
+ *   - ≥ lg container: stays icon-mode while `.sidebar:not(.collapsed)` expands.
+ *   See @container blocks below.
+ */
+
+/* Main area */
+.main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+/* Topbar — mobile-first: compact, hide cmd-btn + branch-chip-top */
+.topbar { height: 52px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: var(--sp-2); padding: 0 var(--sp-3); background: rgba(255,255,255,0.92); backdrop-filter: blur(8px); position: relative; z-index: 5; }
+.topbar .page-title-mobile { display: block; flex: 1; min-width: 0; font-family: 'Montserrat', sans-serif; font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.topbar .cmd-btn { display: none; }                  /* mobile: dùng icon search nhỏ trong .actions */
+.topbar .branch-chip-top { display: none; }          /* mobile: branch picker chuyển vào trong drawer */
+.topbar .sidebar-trigger { width: 32px; height: 32px; border-radius: var(--r); border: 1px solid transparent; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--fg-muted); }
+.topbar .sidebar-trigger:hover { background: var(--sidebar-hover-bg); color: var(--fg); border-color: var(--border); }
+.topbar .cmd-btn { align-items: center; gap: var(--sp-2); padding: var(--sp-1-5) var(--sp-2-5); background: transparent; border: 1px solid var(--border); border-radius: var(--r); color: var(--fg-muted); cursor: pointer; font-family: inherit; font-size: 13px; min-width: 280px; max-width: 420px; flex: 1; }
+.topbar .cmd-btn:hover { border-color: var(--border-strong); background: var(--card); }
+.topbar .cmd-btn .kbd { margin-left: auto; display: flex; gap: 2px; }
+.kbd { display: inline-flex; align-items: center; padding: 2px var(--sp-1-5); min-width: 18px; height: 18px; border: 1px solid var(--border); border-radius: 4px; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--fg-muted); background: var(--card); justify-content: center; }
+.topbar .actions { margin-left: auto; display: flex; align-items: center; gap: var(--sp-2); }
+.topbar .actions .icon-btn { width: 36px; height: 36px; border-radius: var(--r); position: relative; }
+.topbar .actions .icon-btn:hover { background: var(--sidebar-hover-bg); }
+.topbar .actions .notif-dot { position: absolute; top: 6px; right: 6px; width: 16px; height: 16px; background: var(--destructive); color: white; border: 2px solid var(--card); border-radius: 99px; font-size: 9px; font-weight: 700; display: flex; align-items: center; justify-content: center; line-height: 1; }
+.topbar .actions .user-avatar { width: 32px; height: 32px; }
+.topbar .branch-chip-top { align-items: center; gap: var(--sp-1-5); padding: var(--sp-1-5) var(--sp-2-5); background: var(--card); border: 1px solid var(--border); border-radius: var(--r); font-size: 12.5px; cursor: pointer; }
+.topbar .branch-chip-top:hover { border-color: var(--border-strong); }
+.topbar .branch-chip-top .lbl { color: var(--fg-muted); font-weight: 500; }
+.topbar .branch-chip-top .val { color: var(--fg); font-weight: 500; }
+.topbar .actions .icon-btn,
+.topbar .sidebar-trigger {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/* Page area — mobile-first */
+.page { flex: 1; overflow-y: auto; padding: 0; background: var(--bg); }
+.page-header { padding: var(--sp-4); border-bottom: 1px solid var(--border); background: var(--bg); position: sticky; top: 0; z-index: 4; }
+.crumbs { display: flex; align-items: center; gap: var(--sp-1-5); font-size: 11px; color: var(--fg-muted); margin-bottom: var(--sp-1); flex-wrap: wrap; }
+.crumbs a { color: var(--fg-muted); text-decoration: none; cursor: pointer; }
+.crumbs a:hover { color: var(--fg); }
+.crumbs .sep { color: var(--fg-soft); }
+.crumbs .current { color: var(--fg); font-weight: 600; }
+.page-header-row { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-4); flex-wrap: wrap; }
+.page-title { font-family: 'Montserrat', sans-serif; font-size: 16px; font-weight: 600; color: var(--fg); line-height: 1.3; }
+.page-desc { font-size: 13px; color: var(--fg-muted); margin-top: var(--sp-1); max-width: 720px; line-height: 1.5; }
+.page-actions { display: flex; flex-direction: column; width: 100%; gap: var(--sp-2); align-items: stretch; flex-shrink: 0; }
+.btn { display: inline-flex; align-items: center; gap: var(--sp-1-5); padding: var(--sp-1-5) var(--sp-3); border-radius: var(--r); font-size: 13px; font-weight: 500; cursor: pointer; border: 1px solid transparent; font-family: inherit; transition: all 0.12s; line-height: 1.25; }
+.page-actions .btn { justify-content: center; width: 100%; min-height: 44px; }
+.btn-primary { background: var(--primary); color: var(--primary-fg); }
+.btn-primary:hover { background: #a8350a; }
+.btn-outline { background: var(--card); color: var(--fg); border-color: var(--border-strong); }
+.btn-outline:hover { background: var(--sidebar-hover-bg); }
+.btn-ghost { background: transparent; color: var(--fg); }
+.btn-ghost:hover { background: var(--sidebar-hover-bg); }
+.btn-sm { padding: var(--sp-1) var(--sp-2-5); font-size: 12px; }
+.mobile-touch,
+.mobile-touch .btn,
+.mobile-touch .icon-btn,
+.mobile-touch .sidebar-trigger,
+.mobile-touch .branch-chip,
+.mobile-touch .nav-item,
+.mobile-touch .nav-child {
+  min-height: 44px;
+}
+.mobile-touch .icon-btn,
+.mobile-touch .sidebar-trigger {
+  min-width: 44px;
+}
+.mobile-touch .nav-item {
+  padding: var(--sp-3) var(--sp-3);
+}
+.mobile-touch .crumbs {
+  align-items: center;
+  margin-bottom: 0;
+}
+.mobile-touch .crumbs a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+.mobile-touch .page-actions {
+  width: 100%;
+  flex-direction: column;
+}
+.mobile-touch .page-actions .btn {
+  justify-content: center;
+  width: 100%;
+}
+.mobile-touch .page-header-row {
+  gap: var(--sp-3);
+}
+.mobile-stock-list {
+  display: flex;
+  flex-direction: column;
+}
+.mobile-stock-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--sp-3);
+  align-items: center;
+  padding: var(--sp-3) var(--sp-4);
+  border-bottom: 1px solid var(--border);
+}
+.mobile-stock-row:last-child { border-bottom: 0; }
+.mobile-stock-row .item-name {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.mobile-stock-row .item-meta {
+  margin-top: var(--sp-1);
+  color: var(--fg-muted);
+  font-size: 12px;
+}
+.mobile-stock-row .btn {
+  min-width: 78px;
+}
+.mobile-pair {
+  display: flex;
+  gap: var(--sp-8);
+  justify-content: center;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.mobile-shot {
+  width: 390px;
+  max-width: 100%;
+}
+.viewport.tablet .btn-sm,
+.viewport.tablet .cmd-btn,
+.viewport.tablet .branch-chip-top {
+  min-width: 44px;
+  min-height: 44px;
+}
+.viewport.tablet .cmd-btn {
+  flex-basis: 44px;
+  width: 44px;
+}
+
+.page-content { padding: var(--pad-page-mobile); display: flex; flex-direction: column; gap: var(--sp-4); }
+
+/* Cards */
+.card { background: var(--card); border: 1px solid var(--border); border-radius: var(--r-lg); padding: var(--pad-card); }
+.card-row { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-3); }
+.card-title { font-size: 13px; font-weight: 600; color: var(--fg); }
+.card-eyebrow { font-size: 11px; font-weight: 500; color: var(--fg-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--sp-1-5); }
+.card-value { font-family: 'JetBrains Mono', monospace; font-size: 24px; font-weight: 600; color: var(--fg); letter-spacing: -0.01em; line-height: 1.2; }
+.card-delta { font-size: 12px; font-weight: 500; margin-top: var(--sp-1); }
+.card-delta.up { color: var(--success); }
+.card-delta.down { color: var(--destructive); }
+.card-foot { font-size: 11px; color: var(--fg-muted); margin-top: var(--sp-3); }
+
+/* Grids — mobile-first: 1-2 col → upgrade via @container */
+.grid-4 { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--sp-3); }
+.grid-3 { display: grid; grid-template-columns: 1fr; gap: var(--sp-3); }
+.grid-2 { display: grid; grid-template-columns: 1fr; gap: var(--sp-3); }
+.grid-2-eq { display: grid; grid-template-columns: 1fr; gap: var(--sp-3); }
+
+.section-title { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-3); margin-bottom: var(--gap-stack); }
+.section-title h2 { font-family: 'Montserrat', sans-serif; font-size: 16px; font-weight: 600; }
+.section-title .link { font-size: 12px; color: var(--primary); cursor: pointer; font-weight: 500; }
+
+/* Tables */
+.t-card { padding: 0; overflow: hidden; }
+.t-head { padding: var(--sp-3) var(--sp-4); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); flex-wrap: wrap; }
+.t-head h3 { font-size: 14px; font-weight: 600; }
+.t-toolbar { display: flex; gap: var(--sp-2); align-items: center; flex-wrap: wrap; }
+.t-input { padding: var(--sp-1) var(--sp-2-5); border: 1px solid var(--border); border-radius: var(--r); font-size: 12px; background: var(--card); width: 180px; font-family: inherit; height: 28px; }
+.t-select { padding: var(--sp-1) var(--sp-2-5); border: 1px solid var(--border); border-radius: var(--r); font-size: 12px; background: var(--card); font-family: inherit; height: 28px; }
+table.t { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+table.t th, table.t td { padding: var(--pad-cell-y) var(--pad-cell-x); text-align: left; border-bottom: 1px solid var(--border); vertical-align: middle; }
+table.t th { font-weight: 500; color: var(--fg-muted); background: rgba(245,245,244,0.5); font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; padding-top: var(--sp-2-5); padding-bottom: var(--sp-2-5); }
+table.t tbody tr:hover { background: #fafaf9; }
+table.t tbody tr:last-child td { border-bottom: 0; }
+.num { text-align: right; font-family: 'JetBrains Mono', monospace; }
+.t .pill { display: inline-flex; padding: 2px var(--sp-2); border-radius: 99px; font-size: 11px; font-weight: 500; }
+.pill-ok { background: rgba(22,163,74,0.1); color: var(--success); }
+.pill-warn { background: rgba(234,88,12,0.12); color: var(--warning); }
+.pill-info { background: rgba(2,132,199,0.1); color: var(--info); }
+.pill-bad { background: rgba(220,38,38,0.1); color: var(--destructive); }
+.pill-neu { background: var(--sidebar-bg); color: var(--fg-muted); }
+
+/* Alert strip */
+.alert { display: flex; gap: var(--sp-3); padding: var(--sp-3) var(--sp-4); border-radius: var(--r); border: 1px solid; font-size: 13px; align-items: center; }
+.alert-warn { background: rgba(234,88,12,0.05); border-color: rgba(234,88,12,0.25); color: var(--warning); }
+.alert-warn strong { color: var(--fg); }
+
+/* Today list */
+.feed { display: flex; flex-direction: column; gap: 0; }
+.feed-row { display: flex; gap: var(--sp-3); padding: var(--sp-3) 0; border-bottom: 1px dashed var(--border); }
+.feed-row:first-child { padding-top: 0; }
+.feed-row:last-child { border-bottom: 0; padding-bottom: 0; }
+.feed-ico { width: 32px; height: 32px; border-radius: var(--r); background: var(--sidebar-bg); display: flex; align-items: center; justify-content: center; color: var(--fg-muted); flex-shrink: 0; }
+.feed-body { flex: 1; min-width: 0; font-size: 13px; }
+.feed-body .lead { font-weight: 500; line-height: 1.35; }
+.feed-body .meta { font-size: 11px; color: var(--fg-muted); margin-top: var(--sp-1); }
+.feed-time { font-size: 11px; color: var(--fg-soft); font-family: 'JetBrains Mono', monospace; flex-shrink: 0; padding-top: 2px; }
+
+/* Workspace shortcut tiles */
+.tile { display: flex; align-items: flex-start; gap: var(--sp-3); padding: var(--sp-4); background: var(--card); border: 1px solid var(--border); border-radius: var(--r-lg); cursor: pointer; transition: all 0.12s; }
+.tile:hover { border-color: var(--border-strong); box-shadow: var(--shadow-sm); }
+.tile-ico { width: 40px; height: 40px; border-radius: var(--r); background: var(--sidebar-section-bg); color: var(--primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.tile-body { flex: 1; min-width: 0; }
+.tile-body .lead { font-size: 13.5px; font-weight: 600; line-height: 1.35; }
+.tile-body .sub { font-size: 12px; color: var(--fg-muted); margin-top: var(--sp-1); }
+.tile-body .stat { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--fg-muted); margin-top: var(--sp-2); }
+
+/* Command palette overlay */
+.modal-backdrop { position: absolute; inset: 0; background: rgba(28,25,23,0.45); backdrop-filter: blur(2px); display: flex; align-items: flex-start; justify-content: center; padding-top: 96px; z-index: 50; }
+.cmd-modal { width: 600px; max-width: 92%; background: var(--card); border-radius: var(--r-lg); box-shadow: var(--shadow-lg); border: 1px solid var(--border); overflow: hidden; }
+.cmd-search { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3) var(--sp-4); border-bottom: 1px solid var(--border); }
+.cmd-search input { flex: 1; border: 0; outline: 0; background: transparent; font-family: inherit; font-size: 14px; color: var(--fg); }
+.cmd-search input::placeholder { color: var(--fg-soft); }
+.cmd-list { max-height: 420px; overflow-y: auto; padding: var(--sp-2); }
+.cmd-group + .cmd-group { border-top: 1px solid var(--border); margin-top: var(--sp-2); padding-top: var(--sp-2); }
+.cmd-group-label { padding: var(--sp-2) var(--sp-3) var(--sp-1); font-size: 10px; font-weight: 600; color: var(--fg-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.cmd-item { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-2) var(--sp-3); border-radius: var(--r); cursor: pointer; font-size: 13px; }
+.cmd-item:hover, .cmd-item.focused { background: var(--sidebar-hover-bg); }
+.cmd-item.focused { background: var(--sidebar-section-bg); }
+.cmd-item .ico { color: var(--fg-muted); flex-shrink: 0; }
+.cmd-item .shortcut { margin-left: auto; color: var(--fg-soft); font-size: 11px; }
+.cmd-item .label-sub { color: var(--fg-muted); font-size: 11px; margin-left: var(--sp-1); }
+.cmd-foot { padding: var(--sp-2) var(--sp-4); border-top: 1px solid var(--border); font-size: 11px; color: var(--fg-muted); display: flex; gap: var(--sp-4); }
+
+/* Branch switcher popover */
+.popover { position: absolute; background: var(--card); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-lg); padding: var(--sp-2); width: 280px; z-index: 30; display: flex; flex-direction: column; gap: var(--sp-1); }
+.popover-head { padding: var(--sp-1) var(--sp-2-5) var(--sp-1-5); font-size: 11px; color: var(--fg-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+.popover-item { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-2-5); border-radius: var(--r); cursor: pointer; font-size: 13px; }
+.popover-item:hover { background: var(--sidebar-hover-bg); }
+.popover-item.active { background: var(--sidebar-section-bg); color: var(--primary); font-weight: 500; }
+.popover-item .check { margin-left: auto; color: var(--primary); }
+.popover-divider { height: 1px; background: var(--border); margin: var(--sp-1) 0; }
+.popover-item .sub { margin-left: auto; font-size: 11px; color: var(--fg-muted); }
+
+/* ────────────────────────────────────────────────────────────────────
+ * RESPONSIVE — Container queries on .frame (`@container shell`)
+ * Mobile-first: base CSS = mobile. Each breakpoint adds capability.
+ * Breakpoints align with Tailwind defaults so handoff dùng `md:` / `lg:` 1-1.
+ * ──────────────────────────────────────────────────────────────────── */
+
+/* ≥ sm (640px container) — grid expands, more breathing */
+@container shell (min-width: 640px) {
+  .grid-4 { grid-template-columns: repeat(4, 1fr); gap: var(--sp-4); }
+  .grid-3 { grid-template-columns: repeat(3, 1fr); gap: var(--sp-4); }
+  .grid-2-eq { grid-template-columns: 1fr 1fr; gap: var(--sp-4); }
+  .page-content { padding: var(--sp-5); gap: var(--sp-5); }
+  .page-header { padding: var(--sp-5) var(--sp-5) var(--sp-4); }
+  .page-title { font-size: 18px; }
+  .crumbs { font-size: 12px; }
+}
+
+/* ≥ md (768px container) — sidebar visible (icon mode default), topbar shows cmd button */
+@container shell (min-width: 768px) {
+  .shell { flex-direction: row; }
+  .sidebar-backdrop, .sidebar.open ~ .sidebar-backdrop { display: none; }
+  .sidebar {
+    position: static; transform: none; box-shadow: none;
+    width: 64px; max-width: none;
+    transition: width 0.2s ease;
+  }
+  /* Hide labels in icon-mode default */
+  .sidebar .brand-text,
+  .sidebar .branch-chip .body,
+  .sidebar .branch-chip .caret,
+  .sidebar .nav-group-label,
+  .sidebar .nav-item > span:not(.ico),
+  .sidebar .nav-item .badge,
+  .sidebar .nav-item .caret,
+  .sidebar .nav-children,
+  .sidebar .sidebar-footer .user { display: none; }
+  .sidebar .sidebar-header { padding: var(--sp-2); align-items: center; gap: var(--sp-2); }
+  .sidebar .brand { justify-content: center; }
+  .sidebar .branch-chip { min-width: 44px; min-height: 44px; padding: var(--sp-2); justify-content: center; }
+  .sidebar .nav-item { min-width: 44px; min-height: 44px; justify-content: center; padding: var(--sp-2-5) var(--sp-2); }
+  .sidebar .nav-group-label { display: block; height: 1px; padding: 0; margin: var(--sp-2) var(--sp-3); border-top: 1px solid var(--sidebar-border); color: transparent; }
+  .sidebar .sidebar-footer { justify-content: center; padding: var(--sp-2); }
+
+  .topbar { height: 56px; padding: 0 var(--sp-4); gap: var(--sp-3); }
+  .topbar .page-title-mobile { display: none; }
+  /* Cmd button as icon-only at md (no room for label yet) */
+  .topbar .cmd-btn { display: inline-flex; min-width: 0; max-width: none; padding: var(--sp-1-5) var(--sp-2); width: 36px; flex: 0 0 auto; justify-content: center; }
+  .topbar .cmd-btn > span:not(.kbd) { display: none; }
+  .topbar .cmd-btn .kbd { display: none; }
+  .topbar .branch-chip-top { display: inline-flex; }
+  .page-actions { flex-direction: row; width: auto; align-items: center; }
+  .page-actions .btn { width: auto; min-height: 0; }
+}
+
+/* ≥ lg (1024px container) — sidebar expanded by default, cmd palette full label, page padding ≥ 24 */
+@container shell (min-width: 1024px) {
+  .sidebar:not(.collapsed) { width: 264px; }
+  /* Restore labels when expanded */
+  .sidebar:not(.collapsed) .brand-text,
+  .sidebar:not(.collapsed) .branch-chip .body,
+  .sidebar:not(.collapsed) .branch-chip .caret,
+  .sidebar:not(.collapsed) .nav-group-label,
+  .sidebar:not(.collapsed) .nav-item .badge,
+  .sidebar:not(.collapsed) .nav-item .caret,
+  .sidebar:not(.collapsed) .nav-children,
+  .sidebar:not(.collapsed) .sidebar-footer .user { display: flex; }
+  .sidebar:not(.collapsed) .nav-item > span:not(.ico) { display: inline; }
+  .sidebar:not(.collapsed) .sidebar-header { padding: var(--sp-4); align-items: stretch; gap: var(--sp-3); }
+  .sidebar:not(.collapsed) .brand { justify-content: flex-start; }
+  .sidebar:not(.collapsed) .branch-chip { min-width: 0; min-height: 0; padding: var(--sp-2) var(--sp-3); justify-content: flex-start; }
+  .sidebar:not(.collapsed) .nav-item { min-width: 0; min-height: 0; justify-content: flex-start; padding: var(--sp-2) var(--sp-3); }
+  .sidebar:not(.collapsed) .nav-group-label { display: block; height: auto; padding: var(--sp-4) var(--sp-3) var(--sp-1-5); margin: 0; border: 0; color: var(--sidebar-fg-muted); }
+  .sidebar:not(.collapsed) .nav-group:first-child > .nav-group-label { padding-top: var(--sp-2); }
+  .sidebar:not(.collapsed) .sidebar-footer { justify-content: flex-start; padding: var(--sp-3); }
+
+  /* Cmd button regains full search-bar shape */
+  .topbar { padding: 0 var(--sp-4); }
+  .topbar .cmd-btn { min-width: 280px; max-width: 420px; padding: var(--sp-1-5) var(--sp-2-5); width: auto; flex: 1; justify-content: flex-start; }
+  .topbar .cmd-btn > span:not(.kbd) { display: inline; }
+  .topbar .cmd-btn .kbd { display: inline-flex; }
+
+  .page-header { padding: var(--sp-5) var(--sp-6) var(--sp-4); }
+  .page-content { padding: var(--pad-page); gap: var(--gap-section); }
+  .page-title { font-size: 22px; }
+  .crumbs { font-size: 13px; }
+}
+.viewport.tablet .topbar .cmd-btn {
+  flex: 0 0 44px;
+  width: 44px;
+  min-width: 44px;
+}
+
+/* tooltips for collapsed sidebar (only when sidebar is icon-mode) */
+.tip { position: absolute; left: 56px; background: var(--fg); color: white; padding: 4px 10px; border-radius: var(--r); font-size: 12px; opacity: 0; pointer-events: none; transition: opacity 0.12s; white-space: nowrap; z-index: 20; box-shadow: var(--shadow-md); }
+.sidebar .nav-item:hover .tip { opacity: 1; }
+@container shell (min-width: 1024px) {
+  .sidebar:not(.collapsed) .nav-item:hover .tip { opacity: 0; }
+}
+
+/* helper */
+.muted { color: var(--fg-muted); }
+.small { font-size: 12px; }
+.gap-12 { gap: 12px; }
+.flex { display: flex; align-items: center; }
+.between { justify-content: space-between; }
+
+/* Spec block */
+.spec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); margin-top: var(--sp-4); }
+.spec-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--r-lg); padding: var(--sp-5); }
+.spec-card h3 { font-family: 'Montserrat', sans-serif; font-size: 14px; font-weight: 600; margin-bottom: var(--sp-3); }
+.spec-card ul { padding-left: var(--sp-5); font-size: 13px; color: var(--fg); line-height: 1.7; }
+.spec-card ul li + li { margin-top: var(--sp-1); }
+.spec-card code { background: var(--sidebar-bg); padding: 1px var(--sp-1-5); border-radius: 4px; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; }
+
+.legend { max-width: 1440px; margin: var(--sp-8) auto 0; font-size: 12px; color: var(--fg-muted); text-align: center; }
+.legend code { font-family: 'JetBrains Mono', monospace; color: var(--fg); background: var(--card); padding: 2px var(--sp-1-5); border-radius: 4px; border: 1px solid var(--border); }
+
+</style>
+</head>
+<body>
+
+<!-- icon sprite -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+<defs>
+<symbol id="i-dash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></symbol>
+<symbol id="i-cart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></symbol>
+<symbol id="i-utensils" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></symbol>
+<symbol id="i-rocket" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></symbol>
+<symbol id="i-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></symbol>
+<symbol id="i-package" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4l-9-5.19"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></symbol>
+<symbol id="i-clipboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></symbol>
+<symbol id="i-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></symbol>
+<symbol id="i-building" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></symbol>
+<symbol id="i-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></symbol>
+<symbol id="i-chef" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6Z"/><line x1="6" y1="17" x2="18" y2="17"/></symbol>
+<symbol id="i-swap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></symbol>
+<symbol id="i-calc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="16" y1="14" x2="16" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></symbol>
+<symbol id="i-packageopen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.91 11.12a1.84 1.84 0 0 1 1.18.18l1.06-1.83v8a2 2 0 0 1-1 1.73l-7 4a2 2 0 0 1-2 0l-7-4A2 2 0 0 1 5 17.5"/><path d="M5.91 11.12a1.84 1.84 0 0 0-1.18.18l-1.06-1.83"/><path d="M16.5 9.4 7.5 4.21"/><path d="M21 16V7.5a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 7.5V16"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+<symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></symbol>
+<symbol id="i-receipt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 17.5v-11"/></symbol>
+<symbol id="i-booktext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/><path d="M8 7h6"/><path d="M8 11h8"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+<symbol id="i-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></symbol>
+<symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+<symbol id="i-wallet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></symbol>
+<symbol id="i-trending" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></symbol>
+<symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></symbol>
+<symbol id="i-msg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol>
+<symbol id="i-cog" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></symbol>
+<symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></symbol>
+<symbol id="i-store" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/><path d="M22 7v3a2 2 0 0 1-2 2v0a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12v0a2 2 0 0 1-2-2V7"/></symbol>
+<symbol id="i-chevron-r" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></symbol>
+<symbol id="i-chevron-d" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></symbol>
+<symbol id="i-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></symbol>
+<symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></symbol>
+<symbol id="i-logout" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></symbol>
+<symbol id="i-print" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></symbol>
+<symbol id="i-history" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></symbol>
+<symbol id="i-mail" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></symbol>
+</defs>
+</svg>
+
+<header class="doc-header">
+  <h1>Dashboard Shell — Cơm Tấm Má Tư</h1>
+  <p>Mockups thuộc <code>docs/worklog/dashboard-shell-redesign-2026-05-28.md</code>. Click các tab dưới đây để xem từng màn hình.</p>
+</header>
+
+<nav class="tab-bar" role="tablist">
+  <button class="tab-btn active" data-tab="live">★ Live responsive (kéo cạnh trình duyệt)</button>
+  <button class="tab-btn" data-tab="home-desktop">1. Tổng quan (desktop)</button>
+  <button class="tab-btn" data-tab="inventory-collapsed">2. Kho · sidebar gọn</button>
+  <button class="tab-btn" data-tab="finance-journal">3. Tài chính · Sổ nhật ký</button>
+  <button class="tab-btn" data-tab="hr-payroll">4. Nhân sự · Bảng lương</button>
+  <button class="tab-btn" data-tab="po-detail">5. Chi tiết PO (breadcrumb sâu)</button>
+  <button class="tab-btn" data-tab="command-palette">6. Command palette ⌘K</button>
+  <button class="tab-btn" data-tab="branch-switcher">7. Đổi chi nhánh</button>
+  <button class="tab-btn" data-tab="tablet">8. Tablet</button>
+  <button class="tab-btn" data-tab="mobile">9. Mobile · drawer</button>
+  <button class="tab-btn" data-tab="spec">10. Anatomy / Spec</button>
+</nav>
+
+<div class="screens">
+
+<!-- ============== SCREEN 1: HOME DESKTOP ============== -->
+<section class="screen active" id="screen-live">
+  <div style="background: rgba(194,65,12,0.05); border:1px solid rgba(194,65,12,0.2); border-radius: var(--r); padding: var(--sp-3) var(--sp-4); font-size: 13px; color: var(--fg); margin-bottom: var(--sp-4)">
+    <strong>Test responsive thật.</strong> Layout dưới đây không có viewport frame cố định — nó dùng <code style="background:var(--card); padding:2px 6px; border-radius:4px; font-family:'JetBrains Mono',monospace; font-size:12px">@container queries</code> trên <code style="background:var(--card); padding:2px 6px; border-radius:4px; font-family:'JetBrains Mono',monospace; font-size:12px">.frame</code>. <span class="muted">Kéo cạnh phải trình duyệt qua các mốc <strong>640px</strong> → <strong>768px</strong> → <strong>1024px</strong> để thấy: drawer ẩn → sidebar icon mode → sidebar expanded, grid 1→2→4 cột, page padding 16→20→24, command palette icon → full search bar.</span>
+  </div>
+  <div class="viewport" style="max-width: none">
+    <div class="viewport-bar">
+      <div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+      <span class="vp-label">Container: tự co/giãn theo viewport thực · resize để test</span>
+      <span class="url">admin.comtammatu.vn/admin/dashboard</span>
+    </div>
+    <div class="frame" style="height: 680px">
+      <div class="shell">
+        <aside class="sidebar">
+          <div class="sidebar-header">
+            <div class="brand"><div class="brand-logo">M</div><div class="brand-text"><div class="brand-eyebrow">Cơm Tấm Má Tư</div><div class="brand-name">Quản trị</div></div></div>
+            <div class="branch-chip"><svg class="ico" width="16" height="16"><use href="#i-store"/></svg><div class="body"><div class="lbl">Chi nhánh</div><div class="val">Tất cả chi nhánh</div></div><svg class="caret" width="14" height="14"><use href="#i-chevron-d"/></svg></div>
+          </div>
+          <div class="sidebar-content">
+            <div class="nav-group"><div class="nav-group-label">Hôm nay</div>
+              <div class="nav-item active"><svg class="ico" width="16" height="16"><use href="#i-dash"/></svg><span>Tổng quan</span></div>
+            </div>
+            <div class="nav-group"><div class="nav-group-label">Điều hành</div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-cart"/></svg><span>Đơn hàng hôm nay</span><span class="badge">42</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-utensils"/></svg><span>Thực đơn</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-rocket"/></svg><span>Mở vận hành CN</span></div>
+            </div>
+            <div class="nav-group"><div class="nav-group-label">Kho hàng</div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-chart"/></svg><span>Tổng quan kho</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-package"/></svg><span>Tồn kho</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-clipboard"/></svg><span>Nguyên liệu</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-download"/></svg><span>Mua &amp; nhập</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-calc"/></svg><span>Kiểm kê</span></div>
+            </div>
+            <div class="nav-group"><div class="nav-group-label">Tài chính</div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-booktext"/></svg><span>Sổ nhật ký</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-receipt"/></svg><span>Hóa đơn</span></div>
+            </div>
+            <div class="nav-group"><div class="nav-group-label">Nhân sự</div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-users"/></svg><span>Nhân viên</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-wallet"/></svg><span>Bảng lương</span></div>
+            </div>
+          </div>
+          <div class="sidebar-footer"><div class="avatar">BL</div><div class="user"><div class="nm">Lương Bình</div><div class="rl">Chủ chuỗi</div></div></div>
+        </aside>
+        <div class="sidebar-backdrop"></div>
+        <div class="main">
+          <div class="topbar">
+            <button class="sidebar-trigger"><svg width="16" height="16"><use href="#i-menu"/></svg></button>
+            <div class="page-title-mobile">Tổng quan</div>
+            <button class="cmd-btn"><svg width="14" height="14"><use href="#i-search"/></svg><span>Tìm trang, hành động hoặc mã đơn…</span><span class="kbd"><span class="kbd">⌘</span><span class="kbd">K</span></span></button>
+            <div class="actions">
+              <button class="branch-chip-top"><svg width="14" height="14" style="color:var(--fg-muted)"><use href="#i-store"/></svg><span class="lbl">CN:</span><span class="val">Tất cả</span><svg width="12" height="12" style="color:var(--fg-soft)"><use href="#i-chevron-d"/></svg></button>
+              <button class="icon-btn"><svg width="16" height="16"><use href="#i-search"/></svg></button>
+              <button class="icon-btn"><svg width="16" height="16"><use href="#i-bell"/></svg><span class="notif-dot">3</span></button>
+              <div class="avatar user-avatar">BL</div>
+            </div>
+          </div>
+          <div class="page">
+            <div class="page-header">
+              <div class="crumbs"><a>Quản trị</a><span class="sep">/</span><span class="current">Tổng quan hôm nay</span></div>
+              <div class="page-header-row">
+                <div>
+                  <div class="page-title">Hôm nay · 28/05</div>
+                  <p class="page-desc">Snapshot 4 chi nhánh — cập nhật mỗi 60 giây.</p>
+                </div>
+                <div class="page-actions">
+                  <button class="btn btn-outline btn-sm">So sánh</button>
+                  <button class="btn btn-primary btn-sm"><svg width="13" height="13"><use href="#i-trending"/></svg> Báo cáo</button>
+                </div>
+              </div>
+            </div>
+            <div class="page-content">
+              <div class="alert alert-warn">
+                <svg width="16" height="16"><use href="#i-bell"/></svg>
+                <div><strong>3 cảnh báo</strong> · CN Bình Tân hết "Sườn cốt lết" lúc 11:42</div>
+              </div>
+              <div class="grid-4">
+                <div class="card"><div class="card-eyebrow">Doanh thu</div><div class="card-value">12.4M</div><div class="card-delta up">▲ 18%</div><div class="card-foot">4 chi nhánh</div></div>
+                <div class="card"><div class="card-eyebrow">Số đơn</div><div class="card-value">328</div><div class="card-delta up">▲ 9.2%</div><div class="card-foot">TB 37.8k</div></div>
+                <div class="card"><div class="card-eyebrow">Tồn cảnh báo</div><div class="card-value" style="color:var(--warning)">7</div><div class="card-delta down">▲ 3</div><div class="card-foot">3 hết · 4 sắp hết</div></div>
+                <div class="card"><div class="card-eyebrow">Ca làm</div><div class="card-value">42/45</div><div class="card-delta up">93%</div><div class="card-foot">3 ca trễ &gt; 15p</div></div>
+              </div>
+              <div class="grid-2">
+                <div class="card t-card">
+                  <div class="t-head"><h3>Hoạt động theo chi nhánh</h3></div>
+                  <table class="t">
+                    <thead><tr><th>Chi nhánh</th><th class="num">Đơn</th><th class="num">Doanh thu</th><th>Trạng thái</th></tr></thead>
+                    <tbody>
+                      <tr><td><strong>Bình Tân</strong></td><td class="num mono">112</td><td class="num mono">4.21M</td><td><span class="pill pill-warn">3 cảnh báo</span></td></tr>
+                      <tr><td><strong>Q7</strong></td><td class="num mono">98</td><td class="num mono">3.86M</td><td><span class="pill pill-warn">1 cảnh báo</span></td></tr>
+                      <tr><td><strong>Gò Vấp</strong></td><td class="num mono">72</td><td class="num mono">2.74M</td><td><span class="pill pill-ok">OK</span></td></tr>
+                      <tr><td><strong>Tân Phú</strong></td><td class="num mono">46</td><td class="num mono">1.59M</td><td><span class="pill pill-ok">OK</span></td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="card">
+                  <div class="section-title"><h2 style="font-size:14px">Hoạt động gần đây</h2><span class="link">Tất cả →</span></div>
+                  <div class="feed">
+                    <div class="feed-row"><div class="feed-ico"><svg width="14" height="14"><use href="#i-cart"/></svg></div><div class="feed-body"><div class="lead">Đóng ca trưa Bình Tân — 4.21M</div><div class="meta">Nguyễn Văn A</div></div><div class="feed-time">14:02</div></div>
+                    <div class="feed-row"><div class="feed-ico"><svg width="14" height="14"><use href="#i-download"/></svg></div><div class="feed-body"><div class="lead">Nhận PO-2026-0042 — 12.5M</div><div class="meta">Kho TT</div></div><div class="feed-time">11:47</div></div>
+                    <div class="feed-row"><div class="feed-ico"><svg width="14" height="14"><use href="#i-msg"/></svg></div><div class="feed-body"><div class="lead">Phản ánh 1★ — Q7</div><div class="meta">Khách Thanh Hằng</div></div><div class="feed-time">11:32</div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="screen" id="screen-home-desktop">
+  <div class="viewport desktop">
+    <div class="viewport-bar">
+      <div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+      <span class="vp-label">Desktop · 1440 × 900 · sidebar expanded</span>
+      <span class="url">admin.comtammatu.vn/admin/dashboard</span>
+    </div>
+    <div class="frame">
+      <div class="shell">
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+          <div class="sidebar-header">
+            <div class="brand">
+              <div class="brand-logo">M</div>
+              <div class="brand-text">
+                <div class="brand-eyebrow">Cơm Tấm Má Tư</div>
+                <div class="brand-name">Quản trị</div>
+              </div>
+            </div>
+            <div class="branch-chip">
+              <svg class="ico" width="16" height="16"><use href="#i-store"/></svg>
+              <div class="body">
+                <div class="lbl">Chi nhánh</div>
+                <div class="val">Tất cả chi nhánh</div>
+              </div>
+              <svg class="caret" width="14" height="14"><use href="#i-chevron-d"/></svg>
+            </div>
+          </div>
+
+          <div class="sidebar-content">
+            <div class="nav-group">
+              <div class="nav-group-label">Hôm nay</div>
+              <div class="nav-item active">
+                <svg class="ico" width="16" height="16"><use href="#i-dash"/></svg>
+                <span>Tổng quan</span>
+              </div>
+            </div>
+
+            <div class="nav-group">
+              <div class="nav-group-label">Điều hành</div>
+              <div class="nav-item">
+                <svg class="ico" width="16" height="16"><use href="#i-cart"/></svg>
+                <span>Đơn hàng hôm nay</span>
+                <span class="badge">42</span>
+              </div>
+              <div class="nav-item">
+                <svg class="ico" width="16" height="16"><use href="#i-utensils"/></svg>
+                <span>Thực đơn</span>
+              </div>
+              <div class="nav-item">
+                <svg class="ico" width="16" height="16"><use href="#i-rocket"/></svg>
+                <span>Mở vận hành chi nhánh</span>
+                <svg class="caret" width="14" height="14"><use href="#i-chevron-r"/></svg>
+              </div>
+            </div>
+
+            <div class="nav-group">
+              <div class="nav-group-label">Kho hàng</div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-chart"/></svg><span>Tổng quan kho</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-package"/></svg><span>Tồn kho</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-clipboard"/></svg><span>Nguyên liệu</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-book"/></svg><span>Công thức</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-building"/></svg><span>Nhà cung cấp</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-download"/></svg><span>Mua &amp; nhập</span><svg class="caret" width="14" height="14"><use href="#i-chevron-r"/></svg></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-chef"/></svg><span>Sơ chế / sản xuất</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-swap"/></svg><span>Chuyển kho</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-calc"/></svg><span>Kiểm kê</span></div>
+            </div>
+
+            <div class="nav-group">
+              <div class="nav-group-label">Tài chính</div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-booktext"/></svg><span>Sổ nhật ký</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-receipt"/></svg><span>Hóa đơn</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-search"/></svg><span>Đối chiếu</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-calendar"/></svg><span>Kỳ kế toán</span></div>
+            </div>
+
+            <div class="nav-group">
+              <div class="nav-group-label">Nhân sự</div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-users"/></svg><span>Danh sách nhân viên</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-wallet"/></svg><span>Bảng lương</span></div>
+            </div>
+
+            <div class="nav-group">
+              <div class="nav-group-label">Báo cáo &amp; thiết lập</div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-trending"/></svg><span>Báo cáo điều hành</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-shield"/></svg><span>Phân quyền nhân viên</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-msg"/></svg><span>Phản ánh khách</span><span class="badge">3</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-cog"/></svg><span>Cài đặt hệ thống</span></div>
+            </div>
+          </div>
+
+          <div class="sidebar-footer">
+            <div class="avatar">BL</div>
+            <div class="user">
+              <div class="nm">Lương Bình</div>
+              <div class="rl">Chủ chuỗi</div>
+            </div>
+            <button class="icon-btn" title="Đăng xuất"><svg width="14" height="14"><use href="#i-logout"/></svg></button>
+          </div>
+        </aside>
+
+        <!-- MAIN -->
+        <div class="main">
+          <div class="topbar">
+            <button class="sidebar-trigger"><svg width="16" height="16"><use href="#i-menu"/></svg></button>
+            <button class="cmd-btn">
+              <svg width="14" height="14"><use href="#i-search"/></svg>
+              <span>Tìm trang, hành động hoặc mã đơn…</span>
+              <span class="kbd"><span class="kbd">⌘</span><span class="kbd">K</span></span>
+            </button>
+            <div class="actions">
+              <button class="branch-chip-top"><svg width="14" height="14" style="color:var(--fg-muted)"><use href="#i-store"/></svg><span class="lbl">CN:</span><span class="val">Tất cả</span><svg width="12" height="12" style="color:var(--fg-soft)"><use href="#i-chevron-d"/></svg></button>
+              <button class="icon-btn"><svg width="16" height="16"><use href="#i-bell"/></svg><span class="notif-dot">3</span></button>
+              <div class="avatar user-avatar">BL</div>
+            </div>
+          </div>
+
+          <div class="page">
+            <div class="page-header">
+              <div class="crumbs">
+                <a>Quản trị</a><span class="sep">/</span><span class="current">Tổng quan hôm nay</span>
+              </div>
+              <div class="page-header-row">
+                <div>
+                  <div class="page-title">Hôm nay · 28/05/2026</div>
+                  <p class="page-desc">Snapshot 4 chi nhánh — số liệu cập nhật mỗi 60 giây. Nhấn vào bất kỳ thẻ nào để xem chi tiết theo chi nhánh.</p>
+                </div>
+                <div class="page-actions">
+                  <button class="btn btn-outline btn-sm"><svg width="13" height="13"><use href="#i-history"/></svg> So với hôm qua</button>
+                  <button class="btn btn-primary btn-sm"><svg width="13" height="13"><use href="#i-trending"/></svg> Báo cáo điều hành</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="page-content">
+              <div class="alert alert-warn">
+                <svg width="16" height="16"><use href="#i-bell"/></svg>
+                <div><strong>3 cảnh báo:</strong> Chi nhánh Bình Tân hết "Sườn cốt lết" lúc 11:42 · Kiểm kê tuần CN Q7 chưa duyệt · 2 phản ánh khách 1★.</div>
+                <button class="btn btn-ghost btn-sm" style="margin-left:auto">Xem</button>
+              </div>
+
+              <div class="grid-4">
+                <div class="card">
+                  <div class="card-eyebrow">Doanh thu tạm</div>
+                  <div class="card-value">12.4M</div>
+                  <div class="card-delta up">▲ 18% so với 27/05</div>
+                  <div class="card-foot">4 chi nhánh · đến 14:32</div>
+                </div>
+                <div class="card">
+                  <div class="card-eyebrow">Số đơn đã chốt</div>
+                  <div class="card-value">328</div>
+                  <div class="card-delta up">▲ 9.2%</div>
+                  <div class="card-foot">Khách trung bình 37.8k</div>
+                </div>
+                <div class="card">
+                  <div class="card-eyebrow">Tồn kho cảnh báo</div>
+                  <div class="card-value" style="color:var(--warning)">7</div>
+                  <div class="card-delta down">▲ 3 so với hôm qua</div>
+                  <div class="card-foot">3 mã hết, 4 mã sắp hết</div>
+                </div>
+                <div class="card">
+                  <div class="card-eyebrow">Ca làm hôm nay</div>
+                  <div class="card-value">42/45</div>
+                  <div class="card-delta up">93% có mặt</div>
+                  <div class="card-foot">3 ca trễ &gt; 15p</div>
+                </div>
+              </div>
+
+              <div class="grid-2">
+                <div class="card t-card">
+                  <div class="t-head">
+                    <h3>Hoạt động theo chi nhánh — hôm nay</h3>
+                    <div class="t-toolbar"><button class="btn btn-ghost btn-sm">Xem tất cả →</button></div>
+                  </div>
+                  <table class="t">
+                    <thead><tr><th>Chi nhánh</th><th class="num">Đơn</th><th class="num">Doanh thu</th><th class="num">Tồn cảnh báo</th><th>Trạng thái</th></tr></thead>
+                    <tbody>
+                      <tr><td><strong>CN Bình Tân</strong></td><td class="num mono">112</td><td class="num mono">4.21M</td><td class="num mono">3</td><td><span class="pill pill-warn">3 cảnh báo</span></td></tr>
+                      <tr><td><strong>CN Q7</strong></td><td class="num mono">98</td><td class="num mono">3.86M</td><td class="num mono">2</td><td><span class="pill pill-warn">1 cảnh báo</span></td></tr>
+                      <tr><td><strong>CN Gò Vấp</strong></td><td class="num mono">72</td><td class="num mono">2.74M</td><td class="num mono">1</td><td><span class="pill pill-ok">Bình thường</span></td></tr>
+                      <tr><td><strong>CN Tân Phú</strong></td><td class="num mono">46</td><td class="num mono">1.59M</td><td class="num mono">1</td><td><span class="pill pill-ok">Bình thường</span></td></tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div class="card">
+                  <div class="section-title">
+                    <h2 style="font-size:14px">Hoạt động gần đây</h2>
+                    <span class="link">Tất cả →</span>
+                  </div>
+                  <div class="feed">
+                    <div class="feed-row">
+                      <div class="feed-ico"><svg width="14" height="14"><use href="#i-cart"/></svg></div>
+                      <div class="feed-body"><div class="lead">Đóng ca trưa CN Bình Tân — 4.21M</div><div class="meta">Nguyễn Văn A · ca 06–14</div></div>
+                      <div class="feed-time">14:02</div>
+                    </div>
+                    <div class="feed-row">
+                      <div class="feed-ico"><svg width="14" height="14"><use href="#i-download"/></svg></div>
+                      <div class="feed-body"><div class="lead">Nhận PO-2026-0042 — 18 món / 12.5M</div><div class="meta">Kho TT · từ Cty Phú Cường</div></div>
+                      <div class="feed-time">11:47</div>
+                    </div>
+                    <div class="feed-row">
+                      <div class="feed-ico"><svg width="14" height="14"><use href="#i-msg"/></svg></div>
+                      <div class="feed-body"><div class="lead">Phản ánh 1★ — CN Q7 "Cơm hơi nguội"</div><div class="meta">Khách Thanh Hằng · đã chuyển manager</div></div>
+                      <div class="feed-time">11:32</div>
+                    </div>
+                    <div class="feed-row">
+                      <div class="feed-ico"><svg width="14" height="14"><use href="#i-calc"/></svg></div>
+                      <div class="feed-body"><div class="lead">Kiểm kê tuần CN Bình Tân — chênh +0.3%</div><div class="meta">Đã duyệt · không có sai số nghiêm trọng</div></div>
+                      <div class="feed-time">09:14</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div class="section-title">
+                  <h2>Đi tới phân hệ</h2>
+                  <span class="muted small">Nhấn <span class="kbd">⌘</span><span class="kbd">K</span> để mở danh sách đầy đủ</span>
+                </div>
+                <div class="grid-4">
+                  <div class="tile"><div class="tile-ico"><svg width="18" height="18"><use href="#i-package"/></svg></div><div class="tile-body"><div class="lead">Kho hàng</div><div class="sub">Tồn, nhập, kiểm kê</div><div class="stat">7 cảnh báo · 4 PO mở</div></div></div>
+                  <div class="tile"><div class="tile-ico"><svg width="18" height="18"><use href="#i-wallet"/></svg></div><div class="tile-body"><div class="lead">Tài chính</div><div class="sub">Sổ nhật ký, đối chiếu</div><div class="stat">Kỳ T5 chưa đóng</div></div></div>
+                  <div class="tile"><div class="tile-ico"><svg width="18" height="18"><use href="#i-users"/></svg></div><div class="tile-body"><div class="lead">Nhân sự</div><div class="sub">Ca làm, bảng lương</div><div class="stat">42/45 đang làm</div></div></div>
+                  <div class="tile"><div class="tile-ico"><svg width="18" height="18"><use href="#i-trending"/></svg></div><div class="tile-body"><div class="lead">Báo cáo</div><div class="sub">Doanh thu, hiệu suất</div><div class="stat">12 báo cáo</div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============== SCREEN 2: INVENTORY COLLAPSED ============== -->
+<section class="screen" id="screen-inventory-collapsed">
+  <div class="viewport desktop">
+    <div class="viewport-bar">
+      <div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+      <span class="vp-label">Desktop · sidebar icon mode (⌘B đã toggle)</span>
+      <span class="url">admin.comtammatu.vn/inventory/dashboard</span>
+    </div>
+    <div class="frame">
+      <div class="shell">
+        <aside class="sidebar collapsed">
+          <div class="sidebar-header">
+            <div class="brand"><div class="brand-logo">M</div></div>
+            <div class="branch-chip" title="CN Bình Tân"><svg class="ico" width="16" height="16"><use href="#i-store"/></svg></div>
+          </div>
+          <div class="sidebar-content">
+            <div class="nav-group">
+              <div class="nav-group-label">·</div>
+              <div class="nav-item" title="Tổng quan"><svg class="ico" width="16" height="16"><use href="#i-dash"/></svg><span>Tổng quan</span></div>
+            </div>
+            <div class="nav-group">
+              <div class="nav-group-label">·</div>
+              <div class="nav-item" title="Đơn hàng hôm nay"><svg class="ico" width="16" height="16"><use href="#i-cart"/></svg><span>Đơn hàng hôm nay</span><span class="badge">42</span></div>
+              <div class="nav-item" title="Thực đơn"><svg class="ico" width="16" height="16"><use href="#i-utensils"/></svg><span>Thực đơn</span></div>
+              <div class="nav-item" title="Mở vận hành chi nhánh"><svg class="ico" width="16" height="16"><use href="#i-rocket"/></svg><span>Mở vận hành</span></div>
+            </div>
+            <div class="nav-group">
+              <div class="nav-group-label">·</div>
+              <div class="nav-item active" title="Tổng quan kho"><svg class="ico" width="16" height="16"><use href="#i-chart"/></svg><span>Tổng quan kho</span></div>
+              <div class="nav-item" title="Tồn kho"><svg class="ico" width="16" height="16"><use href="#i-package"/></svg><span>Tồn kho</span></div>
+              <div class="nav-item" title="Nguyên liệu"><svg class="ico" width="16" height="16"><use href="#i-clipboard"/></svg><span>Nguyên liệu</span></div>
+              <div class="nav-item" title="Công thức"><svg class="ico" width="16" height="16"><use href="#i-book"/></svg><span>Công thức</span></div>
+              <div class="nav-item" title="Nhà cung cấp"><svg class="ico" width="16" height="16"><use href="#i-building"/></svg><span>Nhà cung cấp</span></div>
+              <div class="nav-item" title="Mua & nhập"><svg class="ico" width="16" height="16"><use href="#i-download"/></svg><span>Mua & nhập</span></div>
+              <div class="nav-item" title="Sơ chế"><svg class="ico" width="16" height="16"><use href="#i-chef"/></svg><span>Sơ chế</span></div>
+              <div class="nav-item" title="Chuyển kho"><svg class="ico" width="16" height="16"><use href="#i-swap"/></svg><span>Chuyển kho</span></div>
+              <div class="nav-item" title="Kiểm kê"><svg class="ico" width="16" height="16"><use href="#i-calc"/></svg><span>Kiểm kê</span></div>
+            </div>
+            <div class="nav-group">
+              <div class="nav-group-label">·</div>
+              <div class="nav-item" title="Sổ nhật ký"><svg class="ico" width="16" height="16"><use href="#i-booktext"/></svg><span>Sổ nhật ký</span></div>
+              <div class="nav-item" title="Hóa đơn"><svg class="ico" width="16" height="16"><use href="#i-receipt"/></svg><span>Hóa đơn</span></div>
+            </div>
+            <div class="nav-group">
+              <div class="nav-group-label">·</div>
+              <div class="nav-item" title="Nhân viên"><svg class="ico" width="16" height="16"><use href="#i-users"/></svg><span>Nhân viên</span></div>
+              <div class="nav-item" title="Bảng lương"><svg class="ico" width="16" height="16"><use href="#i-wallet"/></svg><span>Bảng lương</span></div>
+            </div>
+            <div class="nav-group">
+              <div class="nav-group-label">·</div>
+              <div class="nav-item" title="Báo cáo"><svg class="ico" width="16" height="16"><use href="#i-trending"/></svg><span>Báo cáo</span></div>
+              <div class="nav-item" title="Cài đặt"><svg class="ico" width="16" height="16"><use href="#i-cog"/></svg><span>Cài đặt</span></div>
+            </div>
+          </div>
+          <div class="sidebar-footer">
+            <div class="avatar">BL</div>
+            <div class="user"><div class="nm">Lương Bình</div><div class="rl">Chủ chuỗi</div></div>
+          </div>
+        </aside>
+
+        <div class="main">
+          <div class="topbar">
+            <button class="sidebar-trigger"><svg width="16" height="16"><use href="#i-menu"/></svg></button>
+            <button class="cmd-btn"><svg width="14" height="14"><use href="#i-search"/></svg><span>Tìm trang, hành động hoặc mã đơn…</span><span class="kbd"><span class="kbd">⌘</span><span class="kbd">K</span></span></button>
+            <div class="actions">
+              <button class="branch-chip-top"><svg width="14" height="14" style="color:var(--fg-muted)"><use href="#i-store"/></svg><span class="lbl">CN:</span><span class="val">Bình Tân</span><svg width="12" height="12" style="color:var(--fg-soft)"><use href="#i-chevron-d"/></svg></button>
+              <button class="icon-btn"><svg width="16" height="16"><use href="#i-bell"/></svg><span class="notif-dot">3</span></button>
+              <div class="avatar user-avatar">BL</div>
+            </div>
+          </div>
+
+          <div class="page">
+            <div class="page-header">
+              <div class="crumbs"><a>Quản trị</a><span class="sep">/</span><a>Kho hàng</a><span class="sep">/</span><span class="current">Tổng quan kho</span></div>
+              <div class="page-header-row">
+                <div>
+                  <div class="page-title">Tổng quan kho — CN Bình Tân</div>
+                  <p class="page-desc">Cảnh báo tồn, đơn mua mở, kiểm kê & sản xuất sắp tới — gom vào một chỗ.</p>
+                </div>
+                <div class="page-actions">
+                  <button class="btn btn-outline btn-sm"><svg width="13" height="13"><use href="#i-trending"/></svg> Báo cáo kho</button>
+                  <button class="btn btn-outline btn-sm"><svg width="13" height="13"><use href="#i-cog"/></svg> Cài đặt kho</button>
+                  <button class="btn btn-primary btn-sm"><svg width="13" height="13"><use href="#i-plus"/></svg> Tạo PO</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="page-content">
+              <div class="grid-4">
+                <div class="card"><div class="card-eyebrow">Giá trị tồn</div><div class="card-value">187.4M</div><div class="card-foot">42 mã · cập nhật 14:00</div></div>
+                <div class="card"><div class="card-eyebrow">Mã sắp hết</div><div class="card-value" style="color:var(--warning)">4</div><div class="card-foot">&lt; 1 ngày bán</div></div>
+                <div class="card"><div class="card-eyebrow">PO đang mở</div><div class="card-value">3</div><div class="card-foot">Tổng 28.4M</div></div>
+                <div class="card"><div class="card-eyebrow">Lệch kiểm kê</div><div class="card-value">+0.3%</div><div class="card-foot">Tuần trước — đã duyệt</div></div>
+              </div>
+
+              <div class="grid-2-eq">
+                <div class="card t-card">
+                  <div class="t-head"><h3>Cảnh báo tồn kho</h3><div class="t-toolbar"><select class="t-select"><option>Tất cả nhóm</option></select></div></div>
+                  <table class="t">
+                    <thead><tr><th>Nguyên liệu</th><th class="num">Tồn</th><th class="num">Ngày bán</th><th>Hành động</th></tr></thead>
+                    <tbody>
+                      <tr><td>Sườn cốt lết</td><td class="num mono">2.4 kg</td><td class="num mono" style="color:var(--destructive)">0.4</td><td><button class="btn btn-outline btn-sm">Tạo PO</button></td></tr>
+                      <tr><td>Trứng gà</td><td class="num mono">28 quả</td><td class="num mono" style="color:var(--warning)">0.9</td><td><button class="btn btn-outline btn-sm">Tạo PO</button></td></tr>
+                      <tr><td>Hành lá</td><td class="num mono">0.6 kg</td><td class="num mono" style="color:var(--destructive)">0.3</td><td><button class="btn btn-outline btn-sm">Tạo PO</button></td></tr>
+                      <tr><td>Dưa chua</td><td class="num mono">1.8 kg</td><td class="num mono" style="color:var(--warning)">1.1</td><td><button class="btn btn-outline btn-sm">Tạo PO</button></td></tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div class="card t-card">
+                  <div class="t-head"><h3>Việc tới hạn</h3></div>
+                  <table class="t">
+                    <thead><tr><th>Việc</th><th>Hạn</th><th>Người</th></tr></thead>
+                    <tbody>
+                      <tr><td>Duyệt PO-2026-0042 (NCC Phú Cường)</td><td><span class="pill pill-warn">Còn 4h</span></td><td>Lê C</td></tr>
+                      <tr><td>Nhận GRN từ Kho TT — 18 món</td><td><span class="pill pill-info">15:30</span></td><td>Trần B</td></tr>
+                      <tr><td>Kiểm kê tuần — bếp lạnh</td><td><span class="pill pill-neu">29/05</span></td><td>Bình</td></tr>
+                      <tr><td>Sản xuất sơ chế sườn — 30kg</td><td><span class="pill pill-neu">29/05 06:00</span></td><td>Tổ bếp</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============== SCREEN 3: FINANCE JOURNAL ============== -->
+<section class="screen" id="screen-finance-journal">
+  <div class="viewport desktop">
+    <div class="viewport-bar">
+      <div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+      <span class="vp-label">Desktop · trang dày dữ liệu — sidebar expanded</span>
+      <span class="url">admin.comtammatu.vn/finance/journal?period=2026-05</span>
+    </div>
+    <div class="frame">
+      <div class="shell">
+        <aside class="sidebar">
+          <div class="sidebar-header">
+            <div class="brand"><div class="brand-logo">M</div><div class="brand-text"><div class="brand-eyebrow">Cơm Tấm Má Tư</div><div class="brand-name">Quản trị</div></div></div>
+            <div class="branch-chip"><svg class="ico" width="16" height="16"><use href="#i-store"/></svg><div class="body"><div class="lbl">Chi nhánh</div><div class="val">Tất cả chi nhánh</div></div><svg class="caret" width="14" height="14"><use href="#i-chevron-d"/></svg></div>
+          </div>
+          <div class="sidebar-content">
+            <div class="nav-group"><div class="nav-group-label">Hôm nay</div><div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-dash"/></svg><span>Tổng quan</span></div></div>
+            <div class="nav-group"><div class="nav-group-label">Điều hành</div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-cart"/></svg><span>Đơn hàng hôm nay</span><span class="badge">42</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-utensils"/></svg><span>Thực đơn</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-rocket"/></svg><span>Mở vận hành chi nhánh</span><svg class="caret" width="14" height="14"><use href="#i-chevron-r"/></svg></div>
+            </div>
+            <div class="nav-group"><div class="nav-group-label">Kho hàng</div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-chart"/></svg><span>Tổng quan kho</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-package"/></svg><span>Tồn kho</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-clipboard"/></svg><span>Nguyên liệu</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-book"/></svg><span>Công thức</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-building"/></svg><span>Nhà cung cấp</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-download"/></svg><span>Mua &amp; nhập</span><svg class="caret" width="14" height="14"><use href="#i-chevron-r"/></svg></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-chef"/></svg><span>Sơ chế / sản xuất</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-swap"/></svg><span>Chuyển kho</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-calc"/></svg><span>Kiểm kê</span></div>
+            </div>
+            <div class="nav-group nav-section-bg" style="background:var(--sidebar-section-bg); margin: 4px 0; border-radius:var(--r); padding: 6px 0;">
+              <div class="nav-group-label" style="color:var(--primary)">Tài chính</div>
+              <div class="nav-item active"><svg class="ico" width="16" height="16"><use href="#i-booktext"/></svg><span>Sổ nhật ký</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-receipt"/></svg><span>Hóa đơn</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-search"/></svg><span>Đối chiếu</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-trending"/></svg><span>Báo cáo tài chính</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-calendar"/></svg><span>Kỳ kế toán</span></div>
+            </div>
+            <div class="nav-group"><div class="nav-group-label">Nhân sự</div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-users"/></svg><span>Danh sách nhân viên</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-wallet"/></svg><span>Bảng lương</span></div>
+            </div>
+          </div>
+          <div class="sidebar-footer"><div class="avatar">BL</div><div class="user"><div class="nm">Lương Bình</div><div class="rl">Chủ chuỗi</div></div></div>
+        </aside>
+
+        <div class="main">
+          <div class="topbar">
+            <button class="sidebar-trigger"><svg width="16" height="16"><use href="#i-menu"/></svg></button>
+            <button class="cmd-btn"><svg width="14" height="14"><use href="#i-search"/></svg><span>Tìm trang, hành động hoặc mã đơn…</span><span class="kbd"><span class="kbd">⌘</span><span class="kbd">K</span></span></button>
+            <div class="actions">
+              <button class="branch-chip-top"><svg width="14" height="14" style="color:var(--fg-muted)"><use href="#i-store"/></svg><span class="lbl">CN:</span><span class="val">Tất cả</span><svg width="12" height="12" style="color:var(--fg-soft)"><use href="#i-chevron-d"/></svg></button>
+              <button class="icon-btn"><svg width="16" height="16"><use href="#i-bell"/></svg><span class="notif-dot">3</span></button>
+              <div class="avatar user-avatar">BL</div>
+            </div>
+          </div>
+
+          <div class="page">
+            <div class="page-header">
+              <div class="crumbs"><a>Quản trị</a><span class="sep">/</span><a>Tài chính</a><span class="sep">/</span><span class="current">Sổ nhật ký · Tháng 05/2026</span></div>
+              <div class="page-header-row">
+                <div>
+                  <div class="page-title">Sổ nhật ký</div>
+                  <p class="page-desc">Tất cả bút toán đã ghi trong kỳ — bao gồm cả bút toán hệ thống tự sinh và bút toán tay.</p>
+                </div>
+                <div class="page-actions">
+                  <button class="btn btn-ghost btn-sm" title="Xem lịch sử kiểm toán"><svg width="13" height="13"><use href="#i-history"/></svg></button>
+                  <select class="t-select"><option>Kỳ tháng 05/2026 — Đang mở</option></select>
+                  <button class="btn btn-outline btn-sm"><svg width="13" height="13"><use href="#i-download"/></svg> Xuất Excel</button>
+                  <button class="btn btn-primary btn-sm"><svg width="13" height="13"><use href="#i-plus"/></svg> Bút toán tay</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="page-content">
+              <div class="grid-4">
+                <div class="card"><div class="card-eyebrow">Tổng nợ</div><div class="card-value">1.24B</div></div>
+                <div class="card"><div class="card-eyebrow">Tổng có</div><div class="card-value">1.24B</div></div>
+                <div class="card"><div class="card-eyebrow">Bút toán</div><div class="card-value">812</div></div>
+                <div class="card"><div class="card-eyebrow">Chưa duyệt</div><div class="card-value" style="color:var(--warning)">4</div></div>
+              </div>
+
+              <div class="card t-card">
+                <div class="t-head">
+                  <h3>Bút toán</h3>
+                  <div class="t-toolbar">
+                    <input class="t-input" placeholder="Tìm mã / mô tả…">
+                    <select class="t-select"><option>Tất cả tài khoản</option></select>
+                    <select class="t-select"><option>28/05/2026</option></select>
+                  </div>
+                </div>
+                <table class="t">
+                  <thead><tr><th>Ngày</th><th>Số chứng từ</th><th>Diễn giải</th><th>TK Nợ</th><th>TK Có</th><th class="num">Số tiền</th><th>Trạng thái</th></tr></thead>
+                  <tbody>
+                    <tr><td class="mono">28/05</td><td class="mono">PT-2026-0518</td><td>Thu tiền mặt CN Bình Tân ca trưa</td><td class="mono">1111</td><td class="mono">5111</td><td class="num mono">4.213.500</td><td><span class="pill pill-ok">Đã ghi</span></td></tr>
+                    <tr><td class="mono">28/05</td><td class="mono">PC-2026-0218</td><td>Chi mua sườn cốt lết — Cty Phú Cường</td><td class="mono">1561</td><td class="mono">1111</td><td class="num mono">12.540.000</td><td><span class="pill pill-ok">Đã ghi</span></td></tr>
+                    <tr><td class="mono">28/05</td><td class="mono">VATM-2026-0089</td><td>Bút toán tay — điều chỉnh hao hụt</td><td class="mono">632</td><td class="mono">1561</td><td class="num mono">485.000</td><td><span class="pill pill-warn">Chờ duyệt</span></td></tr>
+                    <tr><td class="mono">28/05</td><td class="mono">PT-2026-0517</td><td>Doanh thu CN Q7 ca sáng</td><td class="mono">1311</td><td class="mono">5111</td><td class="num mono">3.860.000</td><td><span class="pill pill-ok">Đã ghi</span></td></tr>
+                    <tr><td class="mono">28/05</td><td class="mono">CK-2026-0042</td><td>Chuyển khoản trả NCC Gia Long</td><td class="mono">331</td><td class="mono">1121</td><td class="num mono">8.200.000</td><td><span class="pill pill-info">Đã đối chiếu</span></td></tr>
+                    <tr><td class="mono">27/05</td><td class="mono">VATM-2026-0088</td><td>Phân bổ chi phí thuê CN Gò Vấp</td><td class="mono">6422</td><td class="mono">142</td><td class="num mono">2.500.000</td><td><span class="pill pill-warn">Chờ duyệt</span></td></tr>
+                    <tr><td class="mono">27/05</td><td class="mono">PT-2026-0516</td><td>Thu tiền mặt CN Tân Phú</td><td class="mono">1111</td><td class="mono">5111</td><td class="num mono">1.594.000</td><td><span class="pill pill-ok">Đã ghi</span></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============== SCREEN 4: HR PAYROLL ============== -->
+<section class="screen" id="screen-hr-payroll">
+  <div class="viewport desktop">
+    <div class="viewport-bar">
+      <div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+      <span class="vp-label">Desktop · Nhân sự workspace</span>
+      <span class="url">admin.comtammatu.vn/hr/payroll?period=2026-05</span>
+    </div>
+    <div class="frame">
+      <div class="shell">
+        <aside class="sidebar">
+          <div class="sidebar-header">
+            <div class="brand"><div class="brand-logo">M</div><div class="brand-text"><div class="brand-eyebrow">Cơm Tấm Má Tư</div><div class="brand-name">Quản trị</div></div></div>
+            <div class="branch-chip"><svg class="ico" width="16" height="16"><use href="#i-store"/></svg><div class="body"><div class="lbl">Chi nhánh</div><div class="val">Tất cả chi nhánh</div></div><svg class="caret" width="14" height="14"><use href="#i-chevron-d"/></svg></div>
+          </div>
+          <div class="sidebar-content">
+            <div class="nav-group"><div class="nav-group-label">Hôm nay</div><div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-dash"/></svg><span>Tổng quan</span></div></div>
+            <div class="nav-group"><div class="nav-group-label">Điều hành</div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-cart"/></svg><span>Đơn hàng hôm nay</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-utensils"/></svg><span>Thực đơn</span></div>
+            </div>
+            <div class="nav-group"><div class="nav-group-label">Kho hàng</div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-package"/></svg><span>Tồn kho</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-download"/></svg><span>Mua &amp; nhập</span><svg class="caret" width="14" height="14"><use href="#i-chevron-r"/></svg></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-calc"/></svg><span>Kiểm kê</span></div>
+            </div>
+            <div class="nav-group"><div class="nav-group-label">Tài chính</div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-booktext"/></svg><span>Sổ nhật ký</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-receipt"/></svg><span>Hóa đơn</span></div>
+            </div>
+            <div class="nav-group nav-section-bg" style="background:var(--sidebar-section-bg); margin:4px 0; border-radius:var(--r); padding:6px 0">
+              <div class="nav-group-label" style="color:var(--primary)">Nhân sự</div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-users"/></svg><span>Danh sách nhân viên</span></div>
+              <div class="nav-item active"><svg class="ico" width="16" height="16"><use href="#i-wallet"/></svg><span>Bảng lương</span></div>
+            </div>
+            <div class="nav-group"><div class="nav-group-label">Báo cáo &amp; thiết lập</div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-trending"/></svg><span>Báo cáo điều hành</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-cog"/></svg><span>Cài đặt hệ thống</span></div>
+            </div>
+          </div>
+          <div class="sidebar-footer"><div class="avatar">BL</div><div class="user"><div class="nm">Lương Bình</div><div class="rl">Chủ chuỗi</div></div></div>
+        </aside>
+
+        <div class="main">
+          <div class="topbar">
+            <button class="sidebar-trigger"><svg width="16" height="16"><use href="#i-menu"/></svg></button>
+            <button class="cmd-btn"><svg width="14" height="14"><use href="#i-search"/></svg><span>Tìm trang, hành động hoặc mã đơn…</span><span class="kbd"><span class="kbd">⌘</span><span class="kbd">K</span></span></button>
+            <div class="actions">
+              <button class="branch-chip-top"><svg width="14" height="14" style="color:var(--fg-muted)"><use href="#i-store"/></svg><span class="lbl">CN:</span><span class="val">Tất cả</span><svg width="12" height="12" style="color:var(--fg-soft)"><use href="#i-chevron-d"/></svg></button>
+              <button class="icon-btn"><svg width="16" height="16"><use href="#i-bell"/></svg><span class="notif-dot">3</span></button>
+              <div class="avatar user-avatar">BL</div>
+            </div>
+          </div>
+
+          <div class="page">
+            <div class="page-header">
+              <div class="crumbs"><a>Quản trị</a><span class="sep">/</span><a>Nhân sự</a><span class="sep">/</span><span class="current">Bảng lương · Tháng 05/2026</span></div>
+              <div class="page-header-row">
+                <div>
+                  <div class="page-title">Bảng lương — Tháng 05/2026</div>
+                  <p class="page-desc">Bản nháp lương cho 47 nhân viên · tính từ chấm công, lương cơ bản, phụ cấp và khấu trừ.</p>
+                </div>
+                <div class="page-actions">
+                  <button class="btn btn-outline btn-sm"><svg width="13" height="13"><use href="#i-download"/></svg> Xuất Excel</button>
+                  <button class="btn btn-outline btn-sm"><svg width="13" height="13"><use href="#i-print"/></svg> In phiếu lương</button>
+                  <button class="btn btn-primary btn-sm">Chốt &amp; duyệt</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="page-content">
+              <div class="grid-4">
+                <div class="card"><div class="card-eyebrow">Tổng quỹ lương</div><div class="card-value">368.4M</div><div class="card-foot">Bao gồm phụ cấp · trước thuế</div></div>
+                <div class="card"><div class="card-eyebrow">Nhân sự</div><div class="card-value">47</div><div class="card-foot">3 ca ngày · 2 ca đêm</div></div>
+                <div class="card"><div class="card-eyebrow">Giờ làm</div><div class="card-value">9.840h</div><div class="card-foot">Trung bình 209h / người</div></div>
+                <div class="card"><div class="card-eyebrow">Khấu trừ</div><div class="card-value">42.1M</div><div class="card-foot">BHXH + thuế TNCN</div></div>
+              </div>
+
+              <div class="card t-card">
+                <div class="t-head">
+                  <h3>Bảng lương chi tiết</h3>
+                  <div class="t-toolbar">
+                    <input class="t-input" placeholder="Tìm nhân viên…">
+                    <select class="t-select"><option>Tất cả chi nhánh</option></select>
+                    <select class="t-select"><option>Tất cả vai trò</option></select>
+                  </div>
+                </div>
+                <table class="t">
+                  <thead><tr><th>Nhân viên</th><th>Chi nhánh</th><th>Vai trò</th><th class="num">Giờ</th><th class="num">Lương CB</th><th class="num">Phụ cấp</th><th class="num">Khấu trừ</th><th class="num">Thực nhận</th></tr></thead>
+                  <tbody>
+                    <tr><td><strong>Nguyễn Văn A</strong></td><td>Bình Tân</td><td>Trưởng ca</td><td class="num mono">224</td><td class="num mono">9.500.000</td><td class="num mono">1.200.000</td><td class="num mono">820.000</td><td class="num mono"><strong>9.880.000</strong></td></tr>
+                    <tr><td><strong>Trần Thị B</strong></td><td>Bình Tân</td><td>Phục vụ</td><td class="num mono">206</td><td class="num mono">7.200.000</td><td class="num mono">600.000</td><td class="num mono">540.000</td><td class="num mono"><strong>7.260.000</strong></td></tr>
+                    <tr><td><strong>Lê Văn C</strong></td><td>Q7</td><td>Quản lý CN</td><td class="num mono">220</td><td class="num mono">14.000.000</td><td class="num mono">2.000.000</td><td class="num mono">1.450.000</td><td class="num mono"><strong>14.550.000</strong></td></tr>
+                    <tr><td><strong>Phạm Thị D</strong></td><td>Q7</td><td>Bếp chính</td><td class="num mono">212</td><td class="num mono">10.500.000</td><td class="num mono">800.000</td><td class="num mono">920.000</td><td class="num mono"><strong>10.380.000</strong></td></tr>
+                    <tr><td><strong>Hồ Văn E</strong></td><td>Gò Vấp</td><td>Phụ bếp</td><td class="num mono">198</td><td class="num mono">6.800.000</td><td class="num mono">500.000</td><td class="num mono">480.000</td><td class="num mono"><strong>6.820.000</strong></td></tr>
+                    <tr><td><strong>Nguyễn Thị F</strong></td><td>Tân Phú</td><td>Thu ngân</td><td class="num mono">218</td><td class="num mono">7.500.000</td><td class="num mono">800.000</td><td class="num mono">620.000</td><td class="num mono"><strong>7.680.000</strong></td></tr>
+                    <tr><td><strong>Trần Văn G</strong></td><td>Tân Phú</td><td>Phục vụ</td><td class="num mono">196</td><td class="num mono">7.100.000</td><td class="num mono">500.000</td><td class="num mono">480.000</td><td class="num mono"><strong>7.120.000</strong></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============== SCREEN 5: PO DETAIL (DEEP BREADCRUMB) ============== -->
+<section class="screen" id="screen-po-detail">
+  <div class="viewport desktop">
+    <div class="viewport-bar">
+      <div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+      <span class="vp-label">Desktop · route sâu — breadcrumb đầy đủ</span>
+      <span class="url">admin.comtammatu.vn/inventory/purchase-orders/PO-2026-0042</span>
+    </div>
+    <div class="frame">
+      <div class="shell">
+        <aside class="sidebar">
+          <div class="sidebar-header">
+            <div class="brand"><div class="brand-logo">M</div><div class="brand-text"><div class="brand-eyebrow">Cơm Tấm Má Tư</div><div class="brand-name">Quản trị</div></div></div>
+            <div class="branch-chip"><svg class="ico" width="16" height="16"><use href="#i-store"/></svg><div class="body"><div class="lbl">Chi nhánh</div><div class="val">Tất cả chi nhánh</div></div><svg class="caret" width="14" height="14"><use href="#i-chevron-d"/></svg></div>
+          </div>
+          <div class="sidebar-content">
+            <div class="nav-group"><div class="nav-group-label">Hôm nay</div><div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-dash"/></svg><span>Tổng quan</span></div></div>
+            <div class="nav-group"><div class="nav-group-label">Điều hành</div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-cart"/></svg><span>Đơn hàng hôm nay</span><span class="badge">42</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-utensils"/></svg><span>Thực đơn</span></div>
+            </div>
+            <div class="nav-group nav-section-bg" style="background:var(--sidebar-section-bg); margin:4px 0; border-radius:var(--r); padding:6px 0">
+              <div class="nav-group-label" style="color:var(--primary)">Kho hàng</div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-chart"/></svg><span>Tổng quan kho</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-package"/></svg><span>Tồn kho</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-clipboard"/></svg><span>Nguyên liệu</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-book"/></svg><span>Công thức</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-building"/></svg><span>Nhà cung cấp</span></div>
+              <div class="nav-item open" style="background:rgba(194,65,12,0.04)"><svg class="ico" width="16" height="16"><use href="#i-download"/></svg><span>Mua &amp; nhập</span><svg class="caret" width="14" height="14"><use href="#i-chevron-r"/></svg></div>
+              <div class="nav-children">
+                <div class="nav-child active"><svg class="ico" width="13" height="13"><use href="#i-receipt"/></svg><span>Đơn mua (PO)</span></div>
+                <div class="nav-child"><svg class="ico" width="13" height="13"><use href="#i-packageopen"/></svg><span>Phiếu nhập (GRN)</span></div>
+                <div class="nav-child"><svg class="ico" width="13" height="13"><use href="#i-mail"/></svg><span>Hóa đơn nhà cung cấp</span></div>
+                <div class="nav-child"><svg class="ico" width="13" height="13"><use href="#i-x"/></svg><span>Trả nhà cung cấp</span></div>
+              </div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-chef"/></svg><span>Sơ chế / sản xuất</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-swap"/></svg><span>Chuyển kho</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-calc"/></svg><span>Kiểm kê</span></div>
+            </div>
+            <div class="nav-group"><div class="nav-group-label">Tài chính</div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-booktext"/></svg><span>Sổ nhật ký</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-receipt"/></svg><span>Hóa đơn</span></div>
+            </div>
+          </div>
+          <div class="sidebar-footer"><div class="avatar">BL</div><div class="user"><div class="nm">Lương Bình</div><div class="rl">Chủ chuỗi</div></div></div>
+        </aside>
+
+        <div class="main">
+          <div class="topbar">
+            <button class="sidebar-trigger"><svg width="16" height="16"><use href="#i-menu"/></svg></button>
+            <button class="cmd-btn"><svg width="14" height="14"><use href="#i-search"/></svg><span>Tìm trang, hành động hoặc mã đơn…</span><span class="kbd"><span class="kbd">⌘</span><span class="kbd">K</span></span></button>
+            <div class="actions">
+              <button class="branch-chip-top"><svg width="14" height="14" style="color:var(--fg-muted)"><use href="#i-store"/></svg><span class="lbl">CN:</span><span class="val">Tất cả</span><svg width="12" height="12" style="color:var(--fg-soft)"><use href="#i-chevron-d"/></svg></button>
+              <button class="icon-btn"><svg width="16" height="16"><use href="#i-bell"/></svg><span class="notif-dot">3</span></button>
+              <div class="avatar user-avatar">BL</div>
+            </div>
+          </div>
+
+          <div class="page">
+            <div class="page-header">
+              <div class="crumbs">
+                <a>Quản trị</a><span class="sep">/</span>
+                <a>Kho hàng</a><span class="sep">/</span>
+                <a>Mua &amp; nhập</a><span class="sep">/</span>
+                <a>Đơn mua</a><span class="sep">/</span>
+                <span class="current">PO-2026-0042</span>
+              </div>
+              <div class="page-header-row">
+                <div>
+                  <div class="page-title" style="display:flex; gap:12px; align-items:center">PO-2026-0042 <span class="pill pill-warn" style="font-size:12px">Chờ duyệt</span></div>
+                  <p class="page-desc">Đơn mua từ <strong>Cty TNHH Phú Cường</strong> · tạo bởi Lê C ngày 27/05/2026 · hạn nhận 30/05/2026.</p>
+                </div>
+                <div class="page-actions">
+                  <button class="btn btn-ghost btn-sm" title="Lịch sử thay đổi"><svg width="13" height="13"><use href="#i-history"/></svg></button>
+                  <button class="btn btn-ghost btn-sm" title="In"><svg width="13" height="13"><use href="#i-print"/></svg></button>
+                  <button class="btn btn-outline btn-sm">Hủy</button>
+                  <button class="btn btn-outline btn-sm">Lưu nháp</button>
+                  <button class="btn btn-primary btn-sm"><svg width="13" height="13"><use href="#i-check"/></svg> Duyệt PO</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="page-content">
+              <div class="grid-2">
+                <div style="display:flex; flex-direction:column; gap:16px;">
+                  <div class="card t-card">
+                    <div class="t-head"><h3>Danh sách mặt hàng (18 dòng · 12.540.000₫)</h3><div class="t-toolbar"><button class="btn btn-outline btn-sm"><svg width="13" height="13"><use href="#i-plus"/></svg> Thêm dòng</button></div></div>
+                    <table class="t">
+                      <thead><tr><th>Mã NL</th><th>Tên</th><th class="num">SL</th><th>ĐVT</th><th class="num">Đơn giá</th><th class="num">Thành tiền</th><th></th></tr></thead>
+                      <tbody>
+                        <tr><td class="mono">NL-021</td><td>Sườn cốt lết</td><td class="num mono">25.0</td><td>kg</td><td class="num mono">285.000</td><td class="num mono"><strong>7.125.000</strong></td><td><button class="icon-btn"><svg width="13" height="13"><use href="#i-x"/></svg></button></td></tr>
+                        <tr><td class="mono">NL-018</td><td>Trứng gà</td><td class="num mono">200</td><td>quả</td><td class="num mono">4.200</td><td class="num mono"><strong>840.000</strong></td><td><button class="icon-btn"><svg width="13" height="13"><use href="#i-x"/></svg></button></td></tr>
+                        <tr><td class="mono">NL-005</td><td>Gạo Jasmine</td><td class="num mono">100</td><td>kg</td><td class="num mono">24.000</td><td class="num mono"><strong>2.400.000</strong></td><td><button class="icon-btn"><svg width="13" height="13"><use href="#i-x"/></svg></button></td></tr>
+                        <tr><td class="mono">NL-031</td><td>Dưa chua</td><td class="num mono">8</td><td>kg</td><td class="num mono">52.000</td><td class="num mono"><strong>416.000</strong></td><td><button class="icon-btn"><svg width="13" height="13"><use href="#i-x"/></svg></button></td></tr>
+                        <tr><td colspan="7" style="color:var(--fg-muted); text-align:center">… 14 dòng nữa …</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:16px">
+                  <div class="card">
+                    <div class="card-eyebrow">Tổng tiền</div>
+                    <div class="card-value">12.540.000₫</div>
+                    <div style="border-top:1px solid var(--border); margin: var(--sp-3) 0 0; padding-top: var(--sp-3); display:flex; flex-direction:column; gap:var(--sp-2); font-size:12.5px;">
+                      <div class="flex between"><span class="muted">Tạm tính</span><span class="mono">11.400.000</span></div>
+                      <div class="flex between"><span class="muted">VAT 10%</span><span class="mono">1.140.000</span></div>
+                      <div class="flex between" style="font-weight:600; padding-top: var(--sp-2); border-top:1px dashed var(--border)"><span>Tổng</span><span class="mono">12.540.000</span></div>
+                    </div>
+                  </div>
+                  <div class="card">
+                    <div class="card-eyebrow">Nhận hàng dự kiến</div>
+                    <div style="font-size:13px"><strong>30/05/2026</strong> tại Kho Trung Tâm</div>
+                    <div style="margin-top: var(--sp-4); padding-top: var(--sp-4); border-top:1px solid var(--border)">
+                      <div class="card-eyebrow">Tiến trình</div>
+                      <div style="display:flex; flex-direction:column; gap:var(--sp-2); margin-top:var(--sp-2); font-size:12px">
+                        <div class="flex" style="gap:8px"><div style="width:6px; height:6px; background:var(--success); border-radius:50%"></div><span>Tạo nháp · Lê C · 27/05 14:20</span></div>
+                        <div class="flex" style="gap:8px"><div style="width:6px; height:6px; background:var(--success); border-radius:50%"></div><span>Gửi duyệt · Lê C · 27/05 14:42</span></div>
+                        <div class="flex" style="gap:8px"><div style="width:6px; height:6px; background:var(--warning); border-radius:50%"></div><span><strong>Chờ owner duyệt</strong> · 16h 32p</span></div>
+                        <div class="flex" style="gap:8px; color:var(--fg-soft)"><div style="width:6px; height:6px; background:var(--border-strong); border-radius:50%"></div><span>Gửi NCC</span></div>
+                        <div class="flex" style="gap:8px; color:var(--fg-soft)"><div style="width:6px; height:6px; background:var(--border-strong); border-radius:50%"></div><span>Nhận hàng (GRN)</span></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============== SCREEN 6: COMMAND PALETTE ============== -->
+<section class="screen" id="screen-command-palette">
+  <div class="viewport desktop">
+    <div class="viewport-bar">
+      <div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+      <span class="vp-label">Desktop · Command palette mở (⌘K) trên trang Tồn kho</span>
+      <span class="url">admin.comtammatu.vn/inventory/stock</span>
+    </div>
+    <div class="frame" style="position:relative">
+      <div class="shell">
+        <aside class="sidebar">
+          <div class="sidebar-header"><div class="brand"><div class="brand-logo">M</div><div class="brand-text"><div class="brand-eyebrow">Cơm Tấm Má Tư</div><div class="brand-name">Quản trị</div></div></div><div class="branch-chip"><svg class="ico" width="16" height="16"><use href="#i-store"/></svg><div class="body"><div class="lbl">Chi nhánh</div><div class="val">CN Bình Tân</div></div><svg class="caret" width="14" height="14"><use href="#i-chevron-d"/></svg></div></div>
+          <div class="sidebar-content">
+            <div class="nav-group"><div class="nav-group-label">Kho hàng</div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-chart"/></svg><span>Tổng quan kho</span></div>
+              <div class="nav-item active"><svg class="ico" width="16" height="16"><use href="#i-package"/></svg><span>Tồn kho</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-clipboard"/></svg><span>Nguyên liệu</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-book"/></svg><span>Công thức</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-download"/></svg><span>Mua &amp; nhập</span><svg class="caret" width="14" height="14"><use href="#i-chevron-r"/></svg></div>
+            </div>
+          </div>
+        </aside>
+
+        <div class="main">
+          <div class="topbar">
+            <button class="sidebar-trigger"><svg width="16" height="16"><use href="#i-menu"/></svg></button>
+            <button class="cmd-btn" style="border-color:var(--primary); color:var(--fg)"><svg width="14" height="14"><use href="#i-search"/></svg><span style="color:var(--fg-muted)">Tìm trang, hành động hoặc mã đơn…</span><span class="kbd"><span class="kbd">⌘</span><span class="kbd">K</span></span></button>
+            <div class="actions">
+              <button class="branch-chip-top"><svg width="14" height="14" style="color:var(--fg-muted)"><use href="#i-store"/></svg><span class="lbl">CN:</span><span class="val">Bình Tân</span></button>
+              <button class="icon-btn"><svg width="16" height="16"><use href="#i-bell"/></svg><span class="notif-dot">3</span></button>
+              <div class="avatar user-avatar">BL</div>
+            </div>
+          </div>
+          <div class="page">
+            <div class="page-header" style="opacity:0.4">
+              <div class="crumbs"><a>Quản trị</a><span class="sep">/</span><a>Kho hàng</a><span class="sep">/</span><span class="current">Tồn kho</span></div>
+              <div class="page-header-row"><div><div class="page-title">Tồn kho — CN Bình Tân</div></div></div>
+            </div>
+            <div class="page-content" style="opacity:0.4">
+              <div class="grid-4">
+                <div class="card"><div class="card-eyebrow">Mã quản lý</div><div class="card-value">42</div></div>
+                <div class="card"><div class="card-eyebrow">Giá trị tồn</div><div class="card-value">187.4M</div></div>
+                <div class="card"><div class="card-eyebrow">Sắp hết</div><div class="card-value" style="color:var(--warning)">4</div></div>
+                <div class="card"><div class="card-eyebrow">Đã hết</div><div class="card-value" style="color:var(--destructive)">3</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Command palette modal -->
+      <div class="modal-backdrop">
+        <div class="cmd-modal">
+          <div class="cmd-search">
+            <svg width="16" height="16" style="color:var(--fg-muted)"><use href="#i-search"/></svg>
+            <input type="text" placeholder="Tìm trang, hành động hoặc mã đơn…" value="po"/>
+            <span class="kbd">esc</span>
+          </div>
+          <div class="cmd-list">
+            <div class="cmd-group">
+              <div class="cmd-group-label">Trang</div>
+              <div class="cmd-item focused"><svg class="ico" width="14" height="14"><use href="#i-receipt"/></svg><span>Đơn mua (<strong>PO</strong>)</span><span class="label-sub">Kho hàng › Mua &amp; nhập</span></div>
+              <div class="cmd-item"><svg class="ico" width="14" height="14"><use href="#i-packageopen"/></svg><span>Phiếu nhập kho (GRN)</span><span class="label-sub">Kho hàng › Mua &amp; nhập</span></div>
+              <div class="cmd-item"><svg class="ico" width="14" height="14"><use href="#i-mail"/></svg><span>Hóa đơn nhà cung cấp</span><span class="label-sub">Kho hàng › Mua &amp; nhập</span></div>
+              <div class="cmd-item"><svg class="ico" width="14" height="14"><use href="#i-trending"/></svg><span>Báo cáo kho</span><span class="label-sub">Kho hàng</span></div>
+            </div>
+            <div class="cmd-group">
+              <div class="cmd-group-label">Hành động nhanh</div>
+              <div class="cmd-item"><svg class="ico" width="14" height="14"><use href="#i-plus"/></svg><span>Tạo đơn mua <strong>PO</strong> mới</span><span class="shortcut"><svg width="12" height="12"><use href="#i-plus"/></svg></span></div>
+              <div class="cmd-item"><svg class="ico" width="14" height="14"><use href="#i-plus"/></svg><span>Tạo phiếu nhập GRN</span><span class="shortcut"><svg width="12" height="12"><use href="#i-plus"/></svg></span></div>
+              <div class="cmd-item"><svg class="ico" width="14" height="14"><use href="#i-plus"/></svg><span>Tạo phiếu chuyển kho</span><span class="shortcut"><svg width="12" height="12"><use href="#i-plus"/></svg></span></div>
+            </div>
+            <div class="cmd-group">
+              <div class="cmd-group-label">Đơn gần đây (match "po")</div>
+              <div class="cmd-item"><svg class="ico" width="14" height="14"><use href="#i-receipt"/></svg><span><strong>PO</strong>-2026-0042</span><span class="label-sub">Cty Phú Cường · 12.540.000₫ · Chờ duyệt</span></div>
+              <div class="cmd-item"><svg class="ico" width="14" height="14"><use href="#i-receipt"/></svg><span><strong>PO</strong>-2026-0041</span><span class="label-sub">Cty Gia Long · 8.200.000₫ · Đã duyệt</span></div>
+              <div class="cmd-item"><svg class="ico" width="14" height="14"><use href="#i-receipt"/></svg><span><strong>PO</strong>-2026-0040</span><span class="label-sub">Cty Tâm Đức · 5.180.000₫ · Đã nhận</span></div>
+            </div>
+          </div>
+          <div class="cmd-foot">
+            <span><span class="kbd">↑↓</span> di chuyển</span>
+            <span><span class="kbd">↵</span> mở</span>
+            <span><span class="kbd">esc</span> đóng</span>
+            <span style="margin-left:auto">Cmd+K bất cứ đâu</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============== SCREEN 7: BRANCH SWITCHER ============== -->
+<section class="screen" id="screen-branch-switcher">
+  <div class="viewport desktop">
+    <div class="viewport-bar">
+      <div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+      <span class="vp-label">Desktop · Popover đổi chi nhánh trên top bar</span>
+      <span class="url">admin.comtammatu.vn/admin/dashboard</span>
+    </div>
+    <div class="frame" style="position:relative">
+      <div class="shell">
+        <aside class="sidebar">
+          <div class="sidebar-header"><div class="brand"><div class="brand-logo">M</div><div class="brand-text"><div class="brand-eyebrow">Cơm Tấm Má Tư</div><div class="brand-name">Quản trị</div></div></div><div class="branch-chip"><svg class="ico" width="16" height="16"><use href="#i-store"/></svg><div class="body"><div class="lbl">Chi nhánh</div><div class="val">Tất cả chi nhánh</div></div><svg class="caret" width="14" height="14"><use href="#i-chevron-d"/></svg></div></div>
+          <div class="sidebar-content">
+            <div class="nav-group"><div class="nav-group-label">Hôm nay</div><div class="nav-item active"><svg class="ico" width="16" height="16"><use href="#i-dash"/></svg><span>Tổng quan</span></div></div>
+            <div class="nav-group"><div class="nav-group-label">Điều hành</div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-cart"/></svg><span>Đơn hàng hôm nay</span><span class="badge">42</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-utensils"/></svg><span>Thực đơn</span></div>
+            </div>
+          </div>
+        </aside>
+        <div class="main">
+          <div class="topbar">
+            <button class="sidebar-trigger"><svg width="16" height="16"><use href="#i-menu"/></svg></button>
+            <button class="cmd-btn"><svg width="14" height="14"><use href="#i-search"/></svg><span>Tìm trang, hành động hoặc mã đơn…</span><span class="kbd"><span class="kbd">⌘</span><span class="kbd">K</span></span></button>
+            <div class="actions">
+              <button class="branch-chip-top" style="border-color:var(--primary); background:var(--primary-soft)"><svg width="14" height="14" style="color:var(--primary)"><use href="#i-store"/></svg><span class="lbl">CN:</span><span class="val">Tất cả</span><svg width="12" height="12" style="color:var(--primary)"><use href="#i-chevron-d"/></svg></button>
+              <button class="icon-btn"><svg width="16" height="16"><use href="#i-bell"/></svg><span class="notif-dot">3</span></button>
+              <div class="avatar user-avatar">BL</div>
+            </div>
+          </div>
+          <div class="page">
+            <div class="page-header" style="opacity:0.4">
+              <div class="crumbs"><a>Quản trị</a><span class="sep">/</span><span class="current">Tổng quan</span></div>
+              <div class="page-header-row"><div><div class="page-title">Hôm nay · 28/05/2026</div></div></div>
+            </div>
+            <div class="page-content" style="opacity:0.4">
+              <div class="grid-4">
+                <div class="card"><div class="card-eyebrow">Doanh thu</div><div class="card-value">12.4M</div></div>
+                <div class="card"><div class="card-eyebrow">Đơn</div><div class="card-value">328</div></div>
+                <div class="card"><div class="card-eyebrow">Tồn cảnh báo</div><div class="card-value">7</div></div>
+                <div class="card"><div class="card-eyebrow">Ca làm</div><div class="card-value">42/45</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Popover at top right -->
+      <div class="popover" style="top:60px; right:120px">
+        <div class="popover-head">Đổi chi nhánh</div>
+        <input class="t-input" placeholder="Tìm chi nhánh…" style="width:100%; margin-bottom:6px">
+        <div class="popover-item active"><svg width="14" height="14" style="color:var(--primary)"><use href="#i-chart"/></svg><span>Tất cả chi nhánh</span><svg width="14" height="14" class="check"><use href="#i-check"/></svg></div>
+        <div class="popover-divider"></div>
+        <div class="popover-item"><svg width="14" height="14" style="color:var(--fg-muted)"><use href="#i-store"/></svg><span>CN Bình Tân</span><span class="sub">112 đơn</span></div>
+        <div class="popover-item"><svg width="14" height="14" style="color:var(--fg-muted)"><use href="#i-store"/></svg><span>CN Q7</span><span class="sub">98 đơn</span></div>
+        <div class="popover-item"><svg width="14" height="14" style="color:var(--fg-muted)"><use href="#i-store"/></svg><span>CN Gò Vấp</span><span class="sub">72 đơn</span></div>
+        <div class="popover-item"><svg width="14" height="14" style="color:var(--fg-muted)"><use href="#i-store"/></svg><span>CN Tân Phú</span><span class="sub">46 đơn</span></div>
+        <div class="popover-divider"></div>
+        <div class="popover-item" style="color:var(--fg-muted); font-size:12px"><svg width="14" height="14"><use href="#i-cog"/></svg><span>Cài đặt chi nhánh hiện tại</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============== SCREEN 8: TABLET ============== -->
+<section class="screen" id="screen-tablet">
+  <div class="viewport tablet">
+    <div class="viewport-bar">
+      <div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+      <span class="vp-label">Tablet · 820px · sidebar mặc định icon mode</span>
+      <span class="url">admin.comtammatu.vn/inventory/dashboard</span>
+    </div>
+    <div class="frame">
+      <div class="shell">
+        <aside class="sidebar collapsed">
+          <div class="sidebar-header">
+            <div class="brand"><div class="brand-logo">M</div></div>
+            <div class="branch-chip" title="CN Bình Tân"><svg class="ico" width="16" height="16"><use href="#i-store"/></svg></div>
+          </div>
+          <div class="sidebar-content">
+            <div class="nav-group">
+              <div class="nav-group-label">·</div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-dash"/></svg><span>Tổng quan</span></div>
+            </div>
+            <div class="nav-group">
+              <div class="nav-group-label">·</div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-cart"/></svg><span>Đơn hàng</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-utensils"/></svg><span>Thực đơn</span></div>
+            </div>
+            <div class="nav-group">
+              <div class="nav-group-label">·</div>
+              <div class="nav-item active"><svg class="ico" width="16" height="16"><use href="#i-chart"/></svg><span>Tổng quan kho</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-package"/></svg><span>Tồn kho</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-clipboard"/></svg><span>Nguyên liệu</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-download"/></svg><span>Mua nhập</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-calc"/></svg><span>Kiểm kê</span></div>
+            </div>
+            <div class="nav-group">
+              <div class="nav-group-label">·</div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-booktext"/></svg><span>Sổ nhật ký</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-users"/></svg><span>Nhân viên</span></div>
+              <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-trending"/></svg><span>Báo cáo</span></div>
+            </div>
+          </div>
+          <div class="sidebar-footer"><div class="avatar">BL</div></div>
+        </aside>
+        <div class="main">
+          <div class="topbar">
+            <button class="sidebar-trigger"><svg width="16" height="16"><use href="#i-menu"/></svg></button>
+            <button class="cmd-btn"><svg width="14" height="14"><use href="#i-search"/></svg></button>
+            <div class="actions">
+              <button class="branch-chip-top"><svg width="14" height="14"><use href="#i-store"/></svg><span class="val">Bình Tân</span></button>
+              <button class="icon-btn"><svg width="16" height="16"><use href="#i-bell"/></svg><span class="notif-dot">3</span></button>
+              <div class="avatar user-avatar">BL</div>
+            </div>
+          </div>
+          <div class="page">
+            <div class="page-header">
+              <div class="crumbs"><a>Quản trị</a><span class="sep">/</span><a>Kho hàng</a><span class="sep">/</span><span class="current">Tổng quan kho</span></div>
+              <div class="page-header-row">
+                <div><div class="page-title">Tổng quan kho — CN Bình Tân</div><p class="page-desc">Cảnh báo tồn + đơn mua mở + kiểm kê.</p></div>
+                <div class="page-actions">
+                  <button class="btn btn-outline btn-sm">Báo cáo</button>
+                  <button class="btn btn-primary btn-sm"><svg width="13" height="13"><use href="#i-plus"/></svg> Tạo PO</button>
+                </div>
+              </div>
+            </div>
+            <div class="page-content">
+              <div class="grid-4">
+                <div class="card"><div class="card-eyebrow">Giá trị tồn</div><div class="card-value">187.4M</div></div>
+                <div class="card"><div class="card-eyebrow">Mã sắp hết</div><div class="card-value" style="color:var(--warning)">4</div></div>
+                <div class="card"><div class="card-eyebrow">PO mở</div><div class="card-value">3</div></div>
+                <div class="card"><div class="card-eyebrow">Lệch kiểm kê</div><div class="card-value">+0.3%</div></div>
+              </div>
+              <div class="card t-card">
+                <div class="t-head"><h3>Cảnh báo tồn kho</h3></div>
+                <table class="t">
+                  <thead><tr><th>Nguyên liệu</th><th class="num">Tồn</th><th class="num">Ngày bán</th><th></th></tr></thead>
+                  <tbody>
+                    <tr><td>Sườn cốt lết</td><td class="num mono">2.4 kg</td><td class="num mono" style="color:var(--destructive)">0.4</td><td><button class="btn btn-outline btn-sm">PO</button></td></tr>
+                    <tr><td>Trứng gà</td><td class="num mono">28 quả</td><td class="num mono" style="color:var(--warning)">0.9</td><td><button class="btn btn-outline btn-sm">PO</button></td></tr>
+                    <tr><td>Hành lá</td><td class="num mono">0.6 kg</td><td class="num mono" style="color:var(--destructive)">0.3</td><td><button class="btn btn-outline btn-sm">PO</button></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============== SCREEN 9: MOBILE ============== -->
+<section class="screen" id="screen-mobile">
+  <div class="mobile-pair">
+    <div class="mobile-shot">
+      <div style="text-align:center; font-size:12px; color:var(--fg-muted); margin-bottom:8px">Mobile · drawer mở</div>
+      <div class="viewport mobile">
+        <div class="viewport-bar"><div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div></div>
+        <div class="frame">
+          <div class="shell mobile-touch">
+            <aside class="sidebar open">
+              <div class="sidebar-header">
+                <div class="brand"><div class="brand-logo">M</div><div class="brand-text"><div class="brand-eyebrow">Cơm Tấm Má Tư</div><div class="brand-name">Quản trị</div></div></div>
+                <div class="branch-chip"><svg class="ico" width="16" height="16"><use href="#i-store"/></svg><div class="body"><div class="lbl">Chi nhánh</div><div class="val">CN Bình Tân</div></div><svg class="caret" width="14" height="14"><use href="#i-chevron-d"/></svg></div>
+              </div>
+              <div class="sidebar-content">
+                <div class="nav-group">
+                  <div class="nav-group-label">Hôm nay</div>
+                  <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-dash"/></svg><span>Tổng quan</span></div>
+                </div>
+                <div class="nav-group">
+                  <div class="nav-group-label">Điều hành</div>
+                  <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-cart"/></svg><span>Đơn hàng hôm nay</span><span class="badge">42</span></div>
+                  <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-utensils"/></svg><span>Thực đơn</span></div>
+                </div>
+                <div class="nav-group">
+                  <div class="nav-group-label">Kho hàng</div>
+                  <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-chart"/></svg><span>Tổng quan kho</span></div>
+                  <div class="nav-item active"><svg class="ico" width="16" height="16"><use href="#i-package"/></svg><span>Tồn kho</span></div>
+                  <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-clipboard"/></svg><span>Nguyên liệu</span></div>
+                  <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-download"/></svg><span>Mua &amp; nhập</span></div>
+                  <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-calc"/></svg><span>Kiểm kê</span></div>
+                </div>
+                <div class="nav-group">
+                  <div class="nav-group-label">Tài chính</div>
+                  <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-booktext"/></svg><span>Sổ nhật ký</span></div>
+                  <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-receipt"/></svg><span>Hóa đơn</span></div>
+                </div>
+                <div class="nav-group">
+                  <div class="nav-group-label">Nhân sự</div>
+                  <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-users"/></svg><span>Nhân viên</span></div>
+                  <div class="nav-item"><svg class="ico" width="16" height="16"><use href="#i-wallet"/></svg><span>Bảng lương</span></div>
+                </div>
+              </div>
+              <div class="sidebar-footer"><div class="avatar">BL</div><div class="user"><div class="nm">Lương Bình</div><div class="rl">Chủ chuỗi</div></div></div>
+            </aside>
+            <div class="sidebar-backdrop"></div>
+            <div class="main">
+              <div class="topbar">
+                <button class="sidebar-trigger"><svg width="16" height="16"><use href="#i-x"/></svg></button>
+                <div class="page-title-mobile">Tồn kho</div>
+                <button class="icon-btn"><svg width="16" height="16"><use href="#i-search"/></svg></button>
+                <button class="icon-btn"><svg width="16" height="16"><use href="#i-bell"/></svg><span class="notif-dot">3</span></button>
+              </div>
+              <div class="page"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mobile-shot">
+      <div style="text-align:center; font-size:12px; color:var(--fg-muted); margin-bottom:8px">Mobile · trang Tồn kho</div>
+      <div class="viewport mobile">
+        <div class="viewport-bar"><div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div></div>
+        <div class="frame">
+          <div class="shell mobile-touch">
+            <aside class="sidebar"></aside>
+            <div class="main">
+              <div class="topbar">
+                <button class="sidebar-trigger"><svg width="16" height="16"><use href="#i-menu"/></svg></button>
+                <div class="page-title-mobile">Tồn kho</div>
+                <button class="icon-btn"><svg width="16" height="16"><use href="#i-search"/></svg></button>
+                <button class="icon-btn"><svg width="16" height="16"><use href="#i-bell"/></svg><span class="notif-dot">3</span></button>
+              </div>
+              <div class="page">
+                <div class="page-header">
+                  <div class="crumbs"><a>Kho hàng</a><span class="sep">/</span><span class="current">Tồn kho</span></div>
+                  <div class="page-header-row">
+                    <div>
+                      <div class="page-title">CN Bình Tân</div>
+                      <p class="page-desc">Cập nhật 14:00 · 4 mã cần xử lý.</p>
+                    </div>
+                    <div class="page-actions"><button class="btn btn-primary btn-sm"><svg width="13" height="13"><use href="#i-plus"/></svg> Tạo PO</button></div>
+                  </div>
+                </div>
+                <div class="page-content">
+                  <div class="grid-4">
+                    <div class="card"><div class="card-eyebrow">Giá trị tồn</div><div class="card-value">187M</div><div class="card-foot">42 mã</div></div>
+                    <div class="card"><div class="card-eyebrow">Sắp hết</div><div class="card-value" style="color:var(--warning)">4</div><div class="card-foot">cần tạo PO</div></div>
+                  </div>
+                  <div class="card t-card">
+                    <div class="t-head"><h3>Sắp hết hôm nay</h3></div>
+                    <div class="mobile-stock-list">
+                      <div class="mobile-stock-row">
+                        <div><div class="item-name">Sườn cốt lết</div><div class="item-meta mono">2.4 kg · còn 0.4 ngày</div></div>
+                        <button class="btn btn-outline btn-sm">Tạo PO</button>
+                      </div>
+                      <div class="mobile-stock-row">
+                        <div><div class="item-name">Trứng gà</div><div class="item-meta mono">28 quả · còn 0.9 ngày</div></div>
+                        <button class="btn btn-outline btn-sm">Tạo PO</button>
+                      </div>
+                      <div class="mobile-stock-row">
+                        <div><div class="item-name">Hành lá</div><div class="item-meta mono">0.6 kg · còn 0.3 ngày</div></div>
+                        <button class="btn btn-outline btn-sm">Tạo PO</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============== SCREEN 10: SPEC / ANATOMY ============== -->
+<section class="screen" id="screen-spec">
+  <div class="spec-grid">
+    <div class="spec-card" style="grid-column:1/-1">
+      <h3>Spacing scale (4-based, no 14 / 18 / 28)</h3>
+      <div style="display:grid; grid-template-columns:repeat(5,1fr); gap: var(--sp-3); margin-top: var(--sp-3); font-size:12px">
+        <div><div style="background:var(--primary-soft); height:4px; border-radius:2px"></div><div style="margin-top:var(--sp-1); color:var(--fg-muted)"><code>sp-1</code> · 4px</div></div>
+        <div><div style="background:var(--primary-soft); height:6px; border-radius:2px"></div><div style="margin-top:var(--sp-1); color:var(--fg-muted)"><code>sp-1-5</code> · 6px</div></div>
+        <div><div style="background:var(--primary-soft); height:8px; border-radius:2px"></div><div style="margin-top:var(--sp-1); color:var(--fg-muted)"><code>sp-2</code> · 8px</div></div>
+        <div><div style="background:var(--primary-soft); height:10px; border-radius:2px"></div><div style="margin-top:var(--sp-1); color:var(--fg-muted)"><code>sp-2-5</code> · 10px</div></div>
+        <div><div style="background:var(--primary-soft); height:12px; border-radius:2px"></div><div style="margin-top:var(--sp-1); color:var(--fg-muted)"><code>sp-3</code> · 12px</div></div>
+        <div><div style="background:var(--primary); height:16px; border-radius:2px"></div><div style="margin-top:var(--sp-1); color:var(--fg-muted)"><code>sp-4</code> · 16px</div></div>
+        <div><div style="background:var(--primary); height:20px; border-radius:2px"></div><div style="margin-top:var(--sp-1); color:var(--fg-muted)"><code>sp-5</code> · 20px</div></div>
+        <div><div style="background:var(--primary); height:24px; border-radius:2px"></div><div style="margin-top:var(--sp-1); color:var(--fg-muted)"><code>sp-6</code> · 24px</div></div>
+        <div><div style="background:var(--primary); height:32px; border-radius:2px"></div><div style="margin-top:var(--sp-1); color:var(--fg-muted)"><code>sp-8</code> · 32px</div></div>
+        <div><div style="background:var(--primary); height:40px; border-radius:2px"></div><div style="margin-top:var(--sp-1); color:var(--fg-muted)"><code>sp-10</code> · 40px</div></div>
+      </div>
+      <ul style="margin-top: var(--sp-4)">
+        <li><strong>Semantic aliases</strong>: <code>--pad-page</code> 24 · <code>--pad-card</code> 16 · <code>--pad-cell</code> 12 / 16 · <code>--gap-grid</code> 16 · <code>--gap-section</code> 24 · <code>--gap-stack</code> 12 · <code>--gap-tight</code> 8.</li>
+        <li><strong>Tailwind tương đương</strong>: <code>sp-2 → space-2 / p-2 / gap-2</code>, <code>sp-3 → space-3 / p-3 / gap-3</code>, …, <code>sp-6 → p-6 / gap-6</code>. Áp dụng nguyên cho mọi component khi viết runtime — không dùng <code>p-[14px]</code> kiểu arbitrary.</li>
+        <li><strong>Cấm</strong>: <code>14px</code>, <code>18px</code>, <code>22px</code>, <code>28px</code>, <code>30px</code> và mọi giá trị không thuộc scale. Lint rule <code>scripts/check-ui-contract.mjs</code> nên thêm pattern detect <code>style="*: NNpx"</code> với NN không thuộc {4,6,8,10,12,16,20,24,32,40,48,64}.</li>
+      </ul>
+    </div>
+    <div class="spec-card">
+      <h3>Vertical rhythm rules</h3>
+      <ul>
+        <li>Crumb → title: <code>sp-1</code> (4)</li>
+        <li>Title → description: <code>sp-1</code> (4)</li>
+        <li>Page header → content: <code>0</code> (chỉ border-b)</li>
+        <li>Section → section trong page: <code>sp-6</code> (24)</li>
+        <li>Heading → table/grid: <code>sp-3</code> (12)</li>
+        <li>Card eyebrow → value: <code>sp-1-5</code> (6)</li>
+        <li>Card value → delta: <code>sp-1</code> (4)</li>
+        <li>Card body → foot: <code>sp-3</code> (12)</li>
+        <li>Feed row padding y: <code>sp-3</code> (12) — đầu/cuối ra <code>0</code></li>
+      </ul>
+    </div>
+    <div class="spec-card">
+      <h3>Anatomy — Shell layout</h3>
+      <ul>
+        <li><strong>Sidebar (264px / 56px icon mode)</strong>: <code>bg-sidebar</code>, <code>border-r border-border</code></li>
+        <li><strong>Top bar h-14</strong>: sticky, <code>backdrop-blur</code>, <code>border-b</code></li>
+        <li><strong>Page header</strong>: sticky dưới top bar, <code>border-b</code></li>
+        <li><strong>Main scroll area</strong>: <code>overflow-y-auto</code>, <code>p-6</code> desktop / <code>p-4</code> mobile</li>
+        <li><strong>Max content width</strong>: <code>max-w-7xl</code> wide / <code>max-w-3xl</code> form</li>
+      </ul>
+    </div>
+    <div class="spec-card">
+      <h3>Sidebar nav items</h3>
+      <ul>
+        <li>Item idle: <code>text-sidebar-foreground</code>, <code>hover:bg-sidebar-accent</code></li>
+        <li>Item active: <code>bg-sidebar-primary text-sidebar-primary-foreground font-semibold</code></li>
+        <li>Collapsible parent (open + child active): parent normal, child highlight</li>
+        <li>Collapsible parent (collapsed sidebar): parent carries active state</li>
+        <li>Badge: count cảnh báo cạnh icon — <code>bg-primary-soft text-primary</code></li>
+        <li>Icon size <code>16px</code>, padding <code>8px 12px</code></li>
+      </ul>
+    </div>
+    <div class="spec-card">
+      <h3>Top bar</h3>
+      <ul>
+        <li>SidebarTrigger <code>size-8</code> · <code>⌘B</code> toggle</li>
+        <li>Command palette button: outline, min-w 280px, max-w 420px, hiển thị <code>⌘K</code></li>
+        <li>Branch switcher: chip rời, mở Popover</li>
+        <li>Notification bell: icon-btn 36×36, badge top-right <code>destructive</code></li>
+        <li>User avatar: 32×32, mở DropdownMenu</li>
+      </ul>
+    </div>
+    <div class="spec-card">
+      <h3>Page header</h3>
+      <ul>
+        <li>Crumbs dòng 1 (font 13, muted, segment cuối bold + fg)</li>
+        <li>Title <code>font-heading text-xl md:text-2xl</code></li>
+        <li>Description: 1 dòng, <code>text-sm text-muted-foreground</code></li>
+        <li>Actions wrap dưới ở mobile, full-width buttons</li>
+      </ul>
+    </div>
+    <div class="spec-card">
+      <h3>Command palette</h3>
+      <ul>
+        <li>Trigger: <code>⌘K</code> / <code>Ctrl+K</code> · button trên top bar</li>
+        <li>Group order: Pages → Quick Actions → Recent (chỉ khi query)</li>
+        <li>Fuzzy match VI label + EN alias (vd "po", "purchase order")</li>
+        <li>Width 600px, max-h-[420px], scroll body</li>
+        <li>Footer hints: <code>↑↓ ↵ esc</code></li>
+      </ul>
+    </div>
+    <div class="spec-card" style="grid-column:1/-1; background: linear-gradient(180deg, rgba(194,65,12,0.05), var(--card))">
+      <h3>★ Mobile-first responsive — bắt buộc</h3>
+      <p style="font-size:13px; margin-bottom: var(--sp-3); color: var(--fg)">
+        Base CSS = mobile. Mỗi breakpoint chỉ ADD capability, không OVERRIDE. Dùng <code>min-width</code>, KHÔNG bao giờ <code>max-width</code>.
+        Mockup này dùng <code>@container shell (min-width: …)</code> để demo — runtime dùng Tailwind <code>sm:</code> / <code>md:</code> / <code>lg:</code> (cùng breakpoints).
+      </p>
+      <table class="t" style="border-radius: var(--r); overflow: hidden; border: 1px solid var(--border); font-size: 12px">
+        <thead><tr><th>Element</th><th>Base (&lt; sm)</th><th>≥ sm (640)</th><th>≥ md (768)</th><th>≥ lg (1024)</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Shell</strong></td><td>flex-col stack</td><td>—</td><td>flex-row</td><td>—</td></tr>
+          <tr><td><strong>Sidebar</strong></td><td>fixed drawer, translateX(-100%)</td><td>—</td><td>static, w-16 icon mode</td><td>w-64 expanded</td></tr>
+          <tr><td><strong>Topbar</strong></td><td>h-13, page-title-mobile hiện, cmd-btn ẩn</td><td>—</td><td>h-14, cmd-btn icon-only</td><td>cmd-btn full search bar</td></tr>
+          <tr><td><strong>Page padding</strong></td><td>16</td><td>20</td><td>—</td><td>24</td></tr>
+          <tr><td><strong>Grid 4-col</strong></td><td>2 cột</td><td>4 cột</td><td>—</td><td>—</td></tr>
+          <tr><td><strong>Grid 2 (2fr 1fr)</strong></td><td>1 cột</td><td>—</td><td>2fr 1fr</td><td>—</td></tr>
+          <tr><td><strong>Crumbs</strong></td><td>last 2 segment</td><td>last 3</td><td>full chain</td><td>—</td></tr>
+          <tr><td><strong>Branch switcher</strong></td><td>trong drawer</td><td>—</td><td>chip ở top bar</td><td>—</td></tr>
+        </tbody>
+      </table>
+      <ul style="margin-top: var(--sp-4)">
+        <li>★ <strong>Test bắt buộc</strong>: iPhone SE (375), iPhone 14 (393), iPad mini portrait (768), iPad Pro landscape (1194), MacBook Air (1280), 1920. Tất cả phải usable.</li>
+        <li>★ <strong>Cấm</strong>: <code>@media (max-width: …)</code>, <code>max-md:</code>, <code>desktop-first override</code>. Lint rule cần detect.</li>
+        <li>★ <strong>Mobile bottom safe-area</strong>: <code>pb-[max(env(safe-area-inset-bottom),16px)]</code> cho main scroll area.</li>
+        <li>★ <strong>Drawer state KHÔNG persist</strong> — mở thì tự đóng khi điều hướng. Chỉ sidebar collapsed/expanded ở desktop mới lưu cookie.</li>
+      </ul>
+    </div>
+    <div class="spec-card" style="grid-column:1/-1">
+      <h3>A+ gate trước runtime implementation</h3>
+      <ul>
+        <li><strong>Wayfinding</strong>: desktop, tablet, mobile drawer và mobile page đều phải PASS trunk test: đang ở đâu, làm gì, đi đâu tiếp, quay lại đâu.</li>
+        <li><strong>Mobile</strong>: mọi button/icon/nav target tối thiểu <code>44px</code>, actions full-width khi cần, không scroll ngang ở 375 / 393 / 430.</li>
+        <li><strong>Desktop</strong>: sidebar expanded/collapsed không làm mất active state; table-heavy Finance/Kho vẫn scan được trong một viewport làm việc.</li>
+        <li><strong>Runtime readiness</strong>: HTML này chỉ là mockup. Implement phải map về <code>Sidebar</code>, <code>Breadcrumb</code>, <code>Command</code>, <code>Popover</code>, <code>Sheet</code>, <code>DropdownMenu</code>, <code>AppPage</code>/<code>AppSection</code>; không copy raw CSS hoặc inline style vào app.</li>
+        <li><strong>Boundary</strong>: <code>/employee</code>, POS, KDS, Runner vẫn nằm ngoài Dashboard Shell.</li>
+      </ul>
+    </div>
+    <div class="spec-card" style="grid-column:1/-1">
+      <h3>Files cần sửa / thêm</h3>
+      <ul>
+        <li><code>packages/shared/src/auth/nav-config.ts</code> — gộp <code>ADMIN_NAV_GROUPS</code> + <code>DOMAIN_WORKSPACE_ITEMS</code> thành <code>UNIFIED_NAV_GROUPS</code> với 7 groups; thêm <code>children?: NavItemConfig[]</code> cho collapsible; thêm <code>surface: "sidebar" | "command" | "both"</code></li>
+        <li><code>packages/shared/src/auth/nav-resolution.ts</code> — sửa thành <code>resolveUnifiedNav(role, perms, opts)</code>, ẩn group rỗng</li>
+        <li><code>apps/web/app/components/app-shell.tsx</code> — thêm slot <code>branchContext</code>, <code>topBarExtras</code>; render collapsible <code>Collapsible</code> + <code>SidebarMenuSub</code>; breadcrumb full chain; mobile: title-up-to-topbar</li>
+        <li><code>apps/web/app/components/command-palette.tsx</code> — <strong>thêm mới</strong>, mount global trong shell</li>
+        <li><code>apps/web/app/components/branch-switcher.tsx</code> — <strong>thêm mới</strong>, Popover, URL <code>?branch=</code></li>
+        <li><code>apps/web/app/components/notification-bell.tsx</code> — Sheet drawer, 10 mới nhất</li>
+        <li><code>apps/web/app/(protected)/(shell)/layout.tsx</code> — <strong>route group mới</strong>, mount AppShell một lần cho admin/inventory/finance/hr/orders/menu</li>
+        <li>Xóa <code>apps/web/app/(protected)/admin/components/admin-shell.tsx</code> sau khi migration xong; xóa inventory-specific shell wrappers</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<div class="legend">
+  Mockup demo dùng phối màu xấp xỉ <code>radix-lyra</code> + tone <code>terracotta primary / cream surface / deep stone text</code> đã chốt trong <code>docs/spec/design-system.md</code>. Hiển thị HTML thuần — không phải runtime app. Mở trên Chrome/Edge cho tốt nhất.
+</div>
+
+<script>
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const t = btn.dataset.tab;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+    document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === 'screen-' + t));
+    window.scrollTo({top: 0, behavior: 'smooth'});
+  });
+});
+</script>
+
+</body>
+</html>

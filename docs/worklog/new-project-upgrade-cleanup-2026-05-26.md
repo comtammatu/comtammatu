@@ -61,7 +61,7 @@ Current commit: `b020d1b0`.
 | Perspective | Decision                                                                                                                                             |
 | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | PM          | Treat "no retired/dead code in baseline" as an enforceable source gate, not a slogan.                                                                |
-| BA          | Preserve evidence and legal/provider history in docs/archive or audited worklogs, but do not let it define active runtime behavior.                  |
+| BA          | Preserve evidence and legal/provider history in audited worklogs, but do not let it define active runtime behavior.                                  |
 | Senior Dev  | Combine `comtammatu` runtime contracts with `matu-platform` architecture principles only after mapping conflicts. Do not copy either tree wholesale. |
 | QA/QC       | Add a focused `pnpm lint:baseline` gate and run it before the full repo verification gate.                                                           |
 
@@ -77,9 +77,11 @@ Current commit: `b020d1b0`.
 - `scripts/check-baseline-hygiene.mjs`
 - `package.json`
 - `docs/agent/rules/engineering.md`
-- `docs/plan/route-module-acl-inventory.md`
+- Route/module/ACL inventory artifact, later consolidated into active codebase
+  docs.
 - `docs/plan/data-audit-classification.md`
-- `docs/plan/live-migration-drift-reconciliation.md`
+- Live migration drift reconciliation artifact, later consolidated into the
+  live-schema-first baseline extraction doc.
 - `docs/plan/live-schema-first-baseline-extraction.md`
 - `docs/plan/supabase-managed-surfaces-baseline.md`
 - `docs/plan/supabase-local-baseline-replay.md`
@@ -350,7 +352,7 @@ Blockers found by the dry run:
 
 ## Migration Drift Reconciliation
 
-Added `docs/plan/live-migration-drift-reconciliation.md` after read-only
+Added a live migration drift reconciliation artifact after read-only
 comparison between local migration files and live `comtammatu`
 `supabase_migrations.schema_migrations`.
 

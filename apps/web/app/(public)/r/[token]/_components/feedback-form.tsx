@@ -4,10 +4,12 @@ import { useTransition, useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
+import { ArrowLeft, ExternalLink, MessageCircle, Star } from "lucide-react";
 import { submitFeedbackClientSchema } from "@comtammatu/shared/feedback";
 import type { SubmitFeedbackInput } from "@comtammatu/shared/feedback";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Button } from "@comtammatu/ui/components/button";
+import { toast } from "@comtammatu/ui/components/sonner";
 import { TextField } from "@/components/form/text-field";
 import { TextareaField } from "@/components/form/textarea-field";
 import { RatingEmojiPicker } from "./rating-emoji-picker";
@@ -22,15 +24,18 @@ interface FeedbackFormProps {
   token: string;
   branchName: string;
   qrLabel: string;
+  googleReviewUrl: string | null;
 }
 
 export function FeedbackForm({
   token,
   branchName,
   qrLabel,
+  googleReviewUrl,
 }: FeedbackFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [showInternalForm, setShowInternalForm] = useState(false);
   const [rootError, setRootError] = useState<string | null>(null);
   const [files, setFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -79,25 +84,62 @@ export function FeedbackForm({
       }
 
       // Upload photos if any, block redirect until done.
-      // token is passed for ownership validation (anti-IDOR on photo upload).
+      // The RPC returns a one-shot photo upload token for ownership validation.
       const feedbackId = result.data?.feedback_id;
-      if (files.length > 0 && feedbackId) {
+      const photoUploadToken = result.data?.photo_upload_token;
+      if (files.length > 0 && feedbackId && photoUploadToken) {
         const formData = new FormData();
         for (const f of files) {
           formData.append("photos", f);
         }
-        await uploadFeedbackPhotos(formData, feedbackId, token);
+        const uploadResult = await uploadFeedbackPhotos(
+          formData,
+          feedbackId,
+          token,
+          photoUploadToken,
+        );
+        if (!uploadResult.success) {
+          setRootError(
+            uploadResult.error ?? "Không thể tải ảnh lên. Vui lòng thử lại.",
+          );
+          return;
+        }
+      } else if (files.length > 0) {
+        setRootError("Không thể tải ảnh lên. Vui lòng thử lại.");
+        return;
       }
 
       router.push(`/r/${token}/thank-you`);
     });
   }
 
+  if (!showInternalForm) {
+    return (
+      <SentimentGate
+        branchName={branchName}
+        qrLabel={qrLabel}
+        googleReviewUrl={googleReviewUrl}
+        onUnhappy={() => setShowInternalForm(true)}
+      />
+    );
+  }
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
-      <div className="mb-2">
-        <p className="text-sm text-muted-foreground">{branchName}</p>
-        <p className="text-xs text-muted-foreground">{qrLabel}</p>
+      <div className="mb-2 space-y-3">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => setShowInternalForm(false)}
+        >
+          <ArrowLeft className="size-3.5" aria-hidden="true" />
+          Đổi lựa chọn
+        </Button>
+        <div>
+          <p className="text-sm text-muted-foreground">{branchName}</p>
+          <p className="text-xs text-muted-foreground">{qrLabel}</p>
+        </div>
       </div>
 
       {rootError ? (
@@ -198,8 +240,72 @@ export function FeedbackForm({
       />
 
       <Button type="submit" className="w-full" disabled={isPending}>
-        {isPending ? "Đang gửi..." : "Gửi phản ánh"}
+        {isPending ? "Đang gửi..." : "Gửi Quản Lý"}
       </Button>
     </form>
+  );
+}
+
+function SentimentGate({
+  branchName,
+  qrLabel,
+  googleReviewUrl,
+  onUnhappy,
+}: {
+  branchName: string;
+  qrLabel: string;
+  googleReviewUrl: string | null;
+  onUnhappy: () => void;
+}) {
+  function handleMissingReviewUrl() {
+    toast.error("Chưa cấu hình link Google review cho điểm này.");
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-2 text-center">
+        <p className="text-sm text-muted-foreground">{branchName}</p>
+        <h2 className="font-heading text-xl font-semibold">
+          Bạn thấy trải nghiệm hôm nay thế nào?
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Chọn Hài lòng nếu mọi thứ ổn, hoặc Chưa hài lòng để gửi thẳng quản lý.
+        </p>
+        <p className="font-mono text-xs text-muted-foreground">{qrLabel}</p>
+      </div>
+
+      <div className="grid gap-3">
+        {googleReviewUrl ? (
+          <Button asChild size="touch-lg" className="w-full justify-start">
+            <a href={googleReviewUrl}>
+              <Star className="size-5" aria-hidden="true" />
+              <span className="min-w-0 flex-1 text-left">Hài lòng</span>
+              <ExternalLink className="size-4" aria-hidden="true" />
+            </a>
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            size="touch-lg"
+            className="w-full justify-start"
+            onClick={handleMissingReviewUrl}
+          >
+            <Star className="size-5" aria-hidden="true" />
+            <span className="min-w-0 flex-1 text-left">Hài lòng</span>
+          </Button>
+        )}
+
+        <Button
+          type="button"
+          variant="outline"
+          size="touch-lg"
+          className="w-full justify-start whitespace-normal"
+          onClick={onUnhappy}
+        >
+          <MessageCircle className="size-5" aria-hidden="true" />
+          <span className="min-w-0 flex-1 text-left">Chưa hài lòng</span>
+        </Button>
+      </div>
+    </div>
   );
 }

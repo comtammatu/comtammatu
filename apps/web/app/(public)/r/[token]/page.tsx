@@ -21,7 +21,7 @@ export default async function TokenPage({ params }: TokenPageProps) {
   const supabase = createServiceClient();
   const { data: qrCode } = await supabase
     .from("feedback_qr_codes")
-    .select("id, label, branch_id")
+    .select("id, label, branch_id, tenant_id")
     .eq("token", token)
     .eq("is_active", true)
     .maybeSingle();
@@ -30,13 +30,31 @@ export default async function TokenPage({ params }: TokenPageProps) {
     notFound();
   }
 
-  const { data: branch } = await supabase
-    .from("branches")
-    .select("name")
-    .eq("id", qrCode.branch_id)
-    .maybeSingle();
+  const [{ data: branch }, { data: branchReviewSettings }, { data: settings }] =
+    await Promise.all([
+      supabase
+        .from("branches")
+        .select("name")
+        .eq("id", qrCode.branch_id)
+        .maybeSingle(),
+      supabase
+        .from("feedback_branch_review_settings")
+        .select("google_review_url")
+        .eq("tenant_id", qrCode.tenant_id)
+        .eq("branch_id", qrCode.branch_id)
+        .maybeSingle(),
+      supabase
+        .from("feedback_settings")
+        .select("google_review_url")
+        .eq("tenant_id", qrCode.tenant_id)
+        .maybeSingle(),
+    ]);
 
   const branchName = branch?.name ?? "Cơm Tấm Má Tư";
+  const googleReviewUrl =
+    branchReviewSettings?.google_review_url?.trim() ||
+    settings?.google_review_url?.trim() ||
+    null;
 
   return (
     <div className="space-y-6">
@@ -47,6 +65,7 @@ export default async function TokenPage({ params }: TokenPageProps) {
         token={token}
         branchName={branchName}
         qrLabel={qrCode.label}
+        googleReviewUrl={googleReviewUrl}
       />
       <p className="text-center text-xs text-muted-foreground">
         Phản ánh được gửi đến chủ quán

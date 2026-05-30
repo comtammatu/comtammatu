@@ -56,6 +56,8 @@ Chỉ giữ English trong một trong các nhóm sau:
 - đoạn glossary hoặc lần định nghĩa đầu cần khóa nghĩa theo mẫu `Tiếng Việt (English)`
 
 Nếu không thuộc 1 trong 4 nhóm trên thì mặc định phải ưu tiên tiếng Việt.
+`ERP` chỉ dùng khi nói về kiến trúc, bộ tham chiếu, hoặc so sánh phạm vi; entrypoint
+và docs sản phẩm dùng `bộ phần mềm quản lý vận hành và bán hàng`.
 
 ## Denylist drift không được tái đưa vào copy
 
@@ -73,6 +75,7 @@ Các cụm dưới đây bị xem là drift và phải thay bằng nhãn tiếng
 | `Kitchen Display System`       | `KDS` hoặc `màn hình bếp`                              |
 | `HR / Payroll`, `HR & Payroll` | `Nhân sự & tiền lương`                                 |
 | `Restaurant Management System` | `hệ thống quản lý vận hành nhà hàng`                   |
+| `Merchant Platform`            | `bộ phần mềm quản lý vận hành và bán hàng`             |
 | `Báo cáo CEO`                  | `Báo cáo điều hành`                                    |
 
 ## Quy tắc thực thi
@@ -100,6 +103,7 @@ Các cụm dưới đây bị xem là drift và phải thay bằng nhãn tiếng
 
 | Canonical English                        | Nhãn tiếng Việt chuẩn | Ghi chú                                                           |
 | ---------------------------------------- | --------------------- | ----------------------------------------------------------------- |
+| `restaurant operations system`           | bộ phần mềm quản lý vận hành và bán hàng | Nhãn chính của `comtammatu`; dùng cho entrypoint/docs sản phẩm |
 | `admin`                                  | quản trị              | Tenant-level management surface                                   |
 | `content management system (CMS)`        | quản trị nội dung     | Dùng cho banner, promo, landing content, media, SEO metadata      |
 | `customer relationship management (CRM)` | quản lý khách hàng    | Dùng cho hồ sơ khách, lịch sử mua, loyalty, voucher, segmentation |

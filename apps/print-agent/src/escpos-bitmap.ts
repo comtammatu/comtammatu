@@ -956,6 +956,27 @@ function renderReceiptBitmap(p: ReceiptPayload): Uint8Array {
 
   if (p.note) parts.push(line(`Ghi chú: ${p.note}`));
 
+  const q = p.payment_qr;
+  if (q?.content) {
+    parts.push(lineSpacingDefault(), bl());
+    parts.push(line("QUÉT QR THANH TOÁN", { bold: true, align: "center" }));
+    parts.push(lineSpacingDefault());
+    parts.push(buf([ESC, 0x61, 0x01]));
+    parts.push(qrBlock(q.content, 6));
+    parts.push(buf([ESC, 0x61, 0x00]));
+    parts.push(lineSpacingZero());
+    parts.push(line(q.header_label, { align: "center" }));
+    if (q.account_no) {
+      parts.push(line(`STK: ${q.account_no}`, { align: "center" }));
+    }
+    if (q.account_name) {
+      parts.push(line(q.account_name.toUpperCase(), { align: "center" }));
+    }
+    parts.push(line(`Số tiền: ${fmtMoney(q.amount)}`, { align: "center" }));
+    parts.push(line(`Nội dung: ${q.description}`, { align: "center" }));
+    parts.push(divider("-"));
+  }
+
   parts.push(...renderFooter());
   parts.push(lineSpacingDefault(), feed(6), cutPartial());
   return concat(parts);

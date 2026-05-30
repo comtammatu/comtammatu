@@ -53,7 +53,8 @@ export function DependentsForm({ initialCount }: DependentsFormProps) {
       </div>
       <Button
         type="button"
-        size="sm"
+        size="touch"
+        className="w-full sm:w-fit"
         onClick={handleSubmit}
         disabled={!isValid || !isDirty || isPending}
       >

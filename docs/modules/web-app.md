@@ -2,7 +2,7 @@
 
 ## Tổng quan
 
-Ứng dụng Next.js 16.2 dùng App Router. Snapshot 2026-05-27 (`node scripts/project-snapshot.mjs`) có 109 `page.tsx` routes và 13 API route handlers. Các bề mặt chính: Admin (`/admin/*`), Inventory (`/inventory/*`), Finance (`/finance/*`), HR (`/hr/*`), Orders (`/orders`), Notifications (`/notifications`), POS (`/br/[branchId]/pos`), KDS (`/br/[branchId]/kds`), Runner (`/br/[branchId]/runner`), Branch settings (`/br/[branchId]/settings/*`), Branch menu limits (`/br/[branchId]/menu-limits`), Employee portal (`/employee/*`), plus public surfaces `/login`, `/access-denied`, `/r/*`, `/payment/momo/return`. Khung quản trị + Thực đơn + POS + KDS đã hoàn thành; Kho hàng hiện là bề mặt vận hành live cho Kho Tổng, Bếp Trung Tâm, và chi nhánh.
+Ứng dụng Next.js 16.2 dùng App Router. Snapshot 2026-05-27 (`node scripts/project-snapshot.mjs`) có 109 `page.tsx` routes và 13 API route handlers. Các bề mặt chính: Admin (`/admin/*`), Inventory (`/inventory/*`), Finance (`/finance/*`), HR (`/hr/*`), Orders (`/orders`), Notifications (`/notifications`), POS (`/br/[branchId]/pos`), KDS (`/br/[branchId]/kds`), Runner (`/br/[branchId]/runner`), Branch settings (`/br/[branchId]/settings/*`), Branch menu limits (`/br/[branchId]/menu-limits`), Employee portal cho non-admin staff (`/employee/*`), plus public surfaces `/login`, `/access-denied`, `/r/*`, `/payment/momo/return`. Khung quản trị + Thực đơn + POS + KDS đã hoàn thành; Kho hàng hiện là bề mặt vận hành live cho Kho Tổng, Bếp Trung Tâm, và chi nhánh.
 
 **Phạm vi sở hữu:** `apps/web/`
 
@@ -43,13 +43,13 @@ apps/web/app/
 │   │   ├── periods/        # Fiscal period management
 │   │   ├── audit-trail/    # Finance audit log
 │   │   └── statements/     # Financial statements
-│   └── employee/           # Employee portal; URL remains /employee/*
+│   └── employee/           # Non-admin staff portal; URL remains /employee/*
 │
-├── admin/                  # ERP foundation + executive reporting shell
+├── admin/                  # Operations foundation + executive reporting shell
 │   ├── layout.tsx          # AdminLayout (auth guard + sidebar)
 │   ├── components/
 │   │   └── admin-shell.tsx # Sidebar nav, executive shell, role-based filtering
-│   ├── dashboard/          # ERP cockpit landing
+│   ├── dashboard/          # Operations cockpit landing
 │   ├── menu/               # Menu master data domain (reachable via domain map, not primary Admin nav)
 │   ├── accounting/
 │   │   └── periods/        # Period close/reopen (owner/super_manager; ACCOUNTING_PERIOD_REOPEN gated)
@@ -145,7 +145,7 @@ apps/web/app/
 Layout chính cho toàn bộ route `/admin/*`. Thành phần này render:
 
 - Collapsible sidebar with role-filtered navigation (reads `ADMIN_NAV_GROUPS` from `@comtammatu/shared/auth`)
-- Lớp quản trị giữ nền tảng ERP và báo cáo điều hành, không phải menu gom mọi domain
+- Lớp quản trị giữ nền tảng vận hành và báo cáo điều hành, không phải menu gom mọi domain
 - Header with user info and sign-out
 - Responsive: sidebar collapses on mobile
 

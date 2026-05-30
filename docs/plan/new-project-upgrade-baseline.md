@@ -21,8 +21,8 @@ chooses one target:
 | Continue in-place only    | No new baseline; keep hardening current `comtammatu`                                                                      | Still active for pilot |
 
 Do not mix these options inside production code. The cleanup package may read
-historical plans, but it must not apply freeze/cutover instructions from
-`docs/archive/plan/system-rebuild/` unless owner reactivates that program.
+historical plan evidence, but it must not apply retired freeze/cutover
+instructions unless owner reactivates that program.
 
 ## Current Snapshot
 
@@ -62,16 +62,16 @@ Generated with `node scripts/project-snapshot.mjs` on 2026-05-26:
   `packages/shared/src/auth/route-resolution.ts`,
   `packages/shared/src/auth/module-acl.ts`, `scope.ts`, generated DB types, and
   `tasks/regressions.md` as baseline anchors.
-- Route/module/ACL inventory lives in
-  `docs/plan/route-module-acl-inventory.md` and is the current route
-  source-of-truth for greenfield packaging.
+- Route/module/ACL inventory is anchored by `docs/CODEBASE_MAP.md`,
+  `packages/shared/src/auth/route-resolution.ts`, and
+  `packages/shared/src/auth/module-acl.ts`.
 - Data-audit classification lives in
   `docs/plan/data-audit-classification.md`. It is source-only today; live row
   counts, storage manifests, prod apply proof, and provider smoke are still
   blockers before any greenfield data cutover.
-- Live migration drift reconciliation lives in
-  `docs/plan/live-migration-drift-reconciliation.md`. It currently blocks
-  replay-based schema packaging: live has 393 applied migration rows, local has
+- Live migration drift reconciliation is summarized in
+  `docs/plan/live-schema-first-baseline-extraction.md`. It blocked
+  replay-based schema packaging: live had 393 applied migration rows, local had
   363 files / 362 unique versions, and one duplicate local version.
 - Owner chose `live-schema-first` after the drift reconciliation. The extraction
   contract and live manifest live in
@@ -110,7 +110,7 @@ codebases. It must not copy either tree wholesale.
 
 | Source          | Adopt into the baseline                                                                                                                                                                                                                                   | Reject as baseline authority                                                                                                                                  |
 | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `comtammatu`    | Next.js App Router PWA, `proxy.ts` auth perimeter, Supabase RLS/RPC, print-agent path, single-tenant L0/L1 hierarchy, current POS/KDS/Finance/HDDT provider contracts, verified route/module ACL anchors                                                  | Historical cutover plan under `docs/archive/plan/system-rebuild/` unless owner reactivates it; broad UI rebuild on top of current frozen visual contract      |
+| `comtammatu`    | Next.js App Router PWA, `proxy.ts` auth perimeter, Supabase RLS/RPC, print-agent path, single-tenant L0/L1 hierarchy, current POS/KDS/Finance/HDDT provider contracts, verified route/module ACL anchors                                                  | Retired cutover instructions unless owner reactivates that program; broad UI rebuild on top of current frozen visual contract      |
 | `matu-platform` | Permission model separation: identity, position, permission, and scope; operator job-focused surfaces; ledger-first inventory with requisition vs transfer separation; provider fail-closed discipline; branch/device identity as explicit registry state | Paused `apps/mobile-native` as product source; old phone app route/state/UI assumptions; direct copy of experimental folders without proving runtime contract |
 
 ### Architecture Decisions Carried Forward
@@ -147,7 +147,7 @@ upgraded contract.
 | Full live data audit not complete                                   | Dry-run counts exist, but storage object manifests, prod apply proof, provider identifiers, and final queue decisions still need verification | `docs/plan/data-audit-classification.md`               |
 | Linked export must run sequentially                                 | Parallel linked `db dump` attempts can trip Supabase temp-login auth circuit breaker                                                          | `docs/runbooks/supabase-greenfield-baseline.md`        |
 | Local migration chain cannot replay from empty DB                   | Supabase Local fails at `20260508055046_hddt_summary_rpcs.sql` before reaching duplicate-version handling                                     | `docs/plan/supabase-local-baseline-replay.md`          |
-| Migration history drift prevents replay-based install               | Live `comtammatu` has 393 applied migrations; local has 363 files / 362 unique versions; exact-version match is only 308                      | `docs/plan/live-migration-drift-reconciliation.md`     |
+| Migration history drift prevents replay-based install               | Live `comtammatu` has 393 applied migrations; local has 363 files / 362 unique versions; exact-version match is only 308                      | `docs/plan/live-schema-first-baseline-extraction.md`   |
 | Native app remains post-pilot evidence decision                     | No `apps/mobile`; current deployable POS/KDS path is PWA                                                                                      | `tasks/todo.md`                                        |
 
 ## Cleanup Queue

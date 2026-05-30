@@ -1,12 +1,12 @@
 import { test, expect } from "@playwright/test";
 
 /**
- * Visual baseline — light + dark mode regression guard for shadcn preset buFywKm.
+ * Visual baseline — light-mode regression guard for shadcn preset buFywKm.
  *
  * What this catches:
  *   - Theme drift in `packages/ui/src/styles/globals.css` (Zone A, B, or C)
  *   - Hardcoded Tailwind palette colors creeping back into components
- *   - Missing/broken dark-mode variants
+ *   - Runtime drift that re-enables dark mode
  *   - Print stylesheet regressions on `#pos-receipt`
  *
  * Bootstrap baselines on first run:
@@ -50,23 +50,17 @@ test.describe("Theme baseline — light mode", () => {
   }
 });
 
-test.describe("Theme baseline — dark mode", () => {
+test.describe("Theme runtime — dark OS preference remains light", () => {
   test.use({ colorScheme: "dark" });
 
   for (const route of ROUTES) {
-    test(`dark · ${route.name}`, async ({ page }) => {
+    test(`forced light · ${route.name}`, async ({ page }) => {
       await page.goto(route.path);
       await page.waitForLoadState("networkidle");
       await page.waitForTimeout(800);
-      await expect(page).toHaveScreenshot(`${route.name}-dark.png`, {
-        fullPage: true,
-        animations: "disabled",
-        mask: [
-          page.locator("[data-volatile='true']"),
-          page.locator("time"),
-          page.locator("[data-test-volatile]"),
-        ],
-      });
+      await expect(page.locator("html")).toHaveClass(/\blight\b/);
+      await expect(page.locator("html")).not.toHaveClass(/\bdark\b/);
+      await expect(page.locator("html")).toHaveCSS("color-scheme", "light");
     });
   }
 });

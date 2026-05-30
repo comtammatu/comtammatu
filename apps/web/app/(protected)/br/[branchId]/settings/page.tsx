@@ -12,6 +12,8 @@ import {
   Printer as IconPrinter,
   ReceiptText as IconReceipt2,
 } from "lucide-react";
+import { canAccess } from "@comtammatu/shared/auth";
+import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import {
   AppLinkCard,
   AppPage,
@@ -54,6 +56,11 @@ export default async function BranchSettingsHubPage({
   const isHq =
     branch.branch_kind === "central_warehouse" ||
     branch.branch_kind === "central_kitchen";
+  const canEnterEmployeePortal = canAccess(claims.user_role, "employee");
+  const backHref = canEnterEmployeePortal ? "/employee" : "/admin/dashboard";
+  const backLabel = canEnterEmployeePortal
+    ? messages.settings.branch.employeeBack
+    : APP_COPY_VI.adminSurface;
 
   const operationalTiles: Tile[] = [
     {
@@ -119,9 +126,9 @@ export default async function BranchSettingsHubPage({
         description={messages.settings.branch.hubDescription(branch.name, isHq)}
         actions={
           <Button asChild variant="outline" size="sm" className="gap-1">
-            <Link href="/employee">
+            <Link href={backHref}>
               <IconArrowLeft className="size-4" />
-              {messages.settings.branch.employeeBack}
+              {backLabel}
             </Link>
           </Button>
         }

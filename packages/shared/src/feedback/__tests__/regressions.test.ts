@@ -35,6 +35,123 @@ test("actions-photos.ts updates photo_paths with the conditional .or() guard", (
   );
 });
 
+test("feedback photo upload requires one-shot token minted by submit_feedback", () => {
+  const migration = read(
+    "supabase/migrations/20260602003000_feedback_photo_upload_token.sql",
+  );
+  const actionSrc = read("apps/web/app/(public)/r/[token]/actions.ts");
+  const photoActionSrc = read(
+    "apps/web/app/(public)/r/[token]/actions-photos.ts",
+  );
+  const formSrc = read(
+    "apps/web/app/(public)/r/[token]/_components/feedback-form.tsx",
+  );
+
+  for (const expected of [
+    "photo_upload_token_sha256",
+    "photo_upload_expires_at",
+    "photo_upload_consumed_at",
+    "extensions.gen_random_bytes(32)",
+    "extensions.digest(v_photo_upload_token, 'sha256')",
+    "RETURNS JSONB",
+    "jsonb_build_object",
+    "RAISE WARNING '[submit_feedback] dish_names lookup failed",
+  ]) {
+    assert.ok(
+      migration.includes(expected),
+      `expected feedback photo token migration to include ${expected}`,
+    );
+  }
+
+  assert.ok(
+    actionSrc.includes("parseSubmitFeedbackRpcResult") &&
+      actionSrc.includes("photo_upload_token"),
+    "expected submitFeedback action to parse and return the upload token from RPC JSONB",
+  );
+  assert.ok(
+    formSrc.includes("photoUploadToken") &&
+      formSrc.includes("uploadFeedbackPhotos("),
+    "expected public feedback form to pass the upload token into photo upload",
+  );
+  assert.ok(
+    photoActionSrc.includes("createHash(\"sha256\")") &&
+      photoActionSrc.includes("photoUploadToken") &&
+      photoActionSrc.includes('.eq("photo_upload_token_sha256", tokenHash)') &&
+      photoActionSrc.includes('.is("photo_upload_consumed_at", null)') &&
+      photoActionSrc.includes('.gt("photo_upload_expires_at", nowIso)') &&
+      photoActionSrc.includes("photo_upload_consumed_at: nowIso") &&
+      photoActionSrc.includes(".remove(paths)"),
+    "expected uploadFeedbackPhotos to hash, validate, consume, and clean up with the one-shot token",
+  );
+});
+
+test("submit_feedback snapshots orders only when table QR maps to one active unpaid order", () => {
+  const src = read(
+    "supabase/migrations/20260602005000_feedback_order_snapshot_unambiguous.sql",
+  );
+
+  assert.ok(
+    src.includes("v_active_order_count") &&
+      src.includes("WITH active_orders AS"),
+    "expected submit_feedback to count active table orders before snapshotting",
+  );
+  assert.ok(
+    src.includes("COALESCE(o.payment_status, 'unpaid') <> 'paid'"),
+    "expected order snapshot lookup to exclude paid orders",
+  );
+  assert.ok(
+    src.includes(
+      "CASE WHEN COUNT(*) = 1 THEN MAX(id) ELSE NULL::BIGINT END",
+    ) &&
+      src.includes("ELSE NULL::NUMERIC(15,2)"),
+    "expected order id/total snapshots only when active order count is exactly one",
+  );
+  assert.ok(
+    src.includes("ambiguous active order snapshot"),
+    "expected ambiguous multi-order tables to emit an ops warning",
+  );
+  assert.ok(
+    !/ORDER\s+BY\s+created_at\s+DESC\s+NULLS\s+LAST[\s\S]*LIMIT\s+1/i.test(
+      src,
+    ),
+    "must not reintroduce the latest-order-wins snapshot heuristic",
+  );
+  assert.ok(
+    src.includes("photo_upload_token") &&
+      src.includes("dish_names lookup failed"),
+    "expected v4 RPC to preserve one-shot photo token and M5 dish-name warning behavior",
+  );
+});
+
+test("submit_feedback RPC remains service-role-only after replacements", () => {
+  const src = read(
+    "supabase/migrations/20260602005000_feedback_order_snapshot_unambiguous.sql",
+  );
+  const signature =
+    "public.submit_feedback(TEXT, SMALLINT, TEXT, TEXT, TEXT[], TEXT, TEXT)";
+
+  for (const role of ["PUBLIC", "anon", "authenticated"]) {
+    assert.ok(
+      src.includes(`REVOKE ALL ON FUNCTION ${signature} FROM ${role};`),
+      `expected submit_feedback EXECUTE to be revoked from ${role}`,
+    );
+  }
+  assert.ok(
+    src.includes(`GRANT EXECUTE ON FUNCTION ${signature} TO service_role;`),
+    "expected submit_feedback EXECUTE to remain service-role only",
+  );
+  assert.ok(
+    !new RegExp(
+      `GRANT\\s+EXECUTE\\s+ON\\s+FUNCTION\\s+${signature.replace(
+        /[()[\]]/g,
+        "\\$&",
+      )}\\s+TO\\s+(anon|authenticated)`,
+      "i",
+    ).test(src),
+    "must not grant submit_feedback directly to anon/authenticated",
+  );
+});
+
 // --- FEEDBACK-THANK-YOU-MUST-NOTFOUND-INVALID ------------------------------
 
 test("/r/[token]/thank-you/page.tsx 404s for invalid or inactive tokens", () => {
@@ -140,5 +257,197 @@ test("actions.ts uses after() (not fire-and-forget) for telegram-flush + AI enri
   assert.ok(
     !/void fetch\(`?\$\{appUrl\}\/api\/ai\/enrich-feedback/.test(src),
     "void fetch() to /api/ai/enrich-feedback regressed — wrap in after() instead",
+  );
+});
+
+// --- FEEDBACK-REVIEW-CONVERSION-GATE ---------------------------------------
+
+test("/r/[token] starts with sentiment gate and no generic Google fallback", () => {
+  const formSrc = read(
+    "apps/web/app/(public)/r/[token]/_components/feedback-form.tsx",
+  );
+  const pageSrc = read("apps/web/app/(public)/r/[token]/page.tsx");
+
+  assert.ok(
+    formSrc.includes("function SentimentGate"),
+    "expected a public sentiment gate before the internal feedback form",
+  );
+  for (const copy of ["Hài lòng", "Chưa hài lòng", "Gửi Quản Lý"]) {
+    assert.ok(formSrc.includes(copy), `expected public feedback copy: ${copy}`);
+  }
+  assert.ok(
+    pageSrc.includes('.from("feedback_branch_review_settings")') &&
+      pageSrc.includes('.from("feedback_settings")') &&
+      pageSrc.includes('.select("google_review_url")'),
+    "expected /r/[token] to read branch Google review URL plus tenant fallback",
+  );
+  assert.ok(
+    pageSrc.indexOf("branchReviewSettings?.google_review_url?.trim()") <
+      pageSrc.indexOf("settings?.google_review_url?.trim()"),
+    "expected branch review URL to take precedence over tenant default",
+  );
+  assert.ok(
+    !/google\.com\/maps\/search|maps\/search/.test(formSrc),
+    "must not invent a generic Google Maps search fallback",
+  );
+});
+
+test("admin QR management exposes public URL copy/open and review source", () => {
+  const pageSrc = read("apps/web/app/(protected)/admin/feedback/qr/page.tsx");
+  const clientSrc = read(
+    "apps/web/app/(protected)/admin/feedback/qr/_components/qr-management-client.tsx",
+  );
+
+  assert.ok(
+    pageSrc.includes("NEXT_PUBLIC_FEEDBACK_HOST") &&
+      pageSrc.includes("getAppUrl") &&
+      pageSrc.includes("buildFeedbackPublicUrl"),
+    "expected QR page to build public URLs from feedback host with app URL fallback",
+  );
+  assert.ok(
+    pageSrc.includes('.from("feedback_branch_review_settings")') &&
+      pageSrc.includes('.from("feedback_settings")') &&
+      pageSrc.includes("review_url_source"),
+    "expected QR page to compute branch/default/missing review source",
+  );
+  for (const copy of [
+    "Sao chép link QR",
+    "Mở link QR",
+    "Link chi nhánh",
+    "Link mặc định",
+    "Chưa cấu hình",
+  ]) {
+    assert.ok(clientSrc.includes(copy), `expected QR management copy: ${copy}`);
+  }
+});
+
+test("getFeedbackPhotoUrls requires authenticated feedback:view before signing", () => {
+  const src = read("apps/web/app/(public)/r/[token]/actions-photos.ts");
+
+  assert.ok(
+    src.includes("getAuthContext(MODULE_ACL.feedback.allowedRoles)") &&
+      src.includes("ctx.claims.tenant_id !== tenantId"),
+    "expected signed-photo helper to authenticate and bind tenant id to JWT claims",
+  );
+  assert.ok(
+    src.includes('.select("photo_paths, tenant_id, branch_id")'),
+    "expected signed-photo helper to fetch branch_id before permission probe",
+  );
+  assert.ok(
+    src.includes("probePermission(") &&
+      src.includes("PERMISSION_KEYS.FEEDBACK_VIEW") &&
+      src.includes("feedback.branch_id"),
+    "expected signed-photo helper to re-check feedback:view on the feedback branch",
+  );
+  assert.ok(
+    src.includes("expectedPrefix") && src.includes("path.startsWith"),
+    "expected signed-photo helper to sign only paths under the feedback path prefix",
+  );
+});
+
+test("feedback photo storage RLS is branch-tight for direct authenticated reads", () => {
+  const src = read(
+    "supabase/migrations/20260602004000_feedback_photos_branch_rls.sql",
+  );
+
+  assert.ok(
+    src.includes(
+      'DROP POLICY IF EXISTS "feedback_photos_authenticated_select" ON storage.objects',
+    ),
+    "expected migration to replace the old authenticated Storage SELECT policy",
+  );
+  assert.ok(
+    src.includes(
+      'CREATE POLICY "feedback_photos_authenticated_select" ON storage.objects',
+    ),
+    "expected migration to recreate the authenticated Storage SELECT policy",
+  );
+  assert.ok(
+    src.includes("bucket_id = 'feedback-photos'"),
+    "expected policy to stay scoped to the private feedback-photos bucket",
+  );
+  assert.ok(
+    src.includes(
+      "(storage.foldername(name))[1] = (auth.jwt() ->> 'tenant_id')",
+    ),
+    "expected policy to bind object paths to the authenticated tenant",
+  );
+  assert.ok(
+    src.includes("FROM public.feedbacks f") &&
+      src.includes("f.tenant_id::TEXT = (storage.foldername(name))[1]") &&
+      src.includes("f.tenant_id = public.auth_tenant_id()"),
+    "expected policy to map the object path back to a tenant-bound feedback row",
+  );
+  assert.ok(
+    src.includes("public.has_permission(f.branch_id, 'feedback:view')"),
+    "expected policy to require feedback:view on the feedback branch",
+  );
+  assert.ok(
+    /CASE\s+WHEN[\s\S]*\(storage\.foldername\(name\)\)\[2\]\s*~\s*'\^\[0-9\]\{1,18\}\$'[\s\S]*::BIGINT[\s\S]*ELSE NULL::BIGINT[\s\S]*END/.test(
+      src,
+    ),
+    "expected safe numeric feedback id parsing before BIGINT cast",
+  );
+});
+
+test("feedback inbox has tenant-wide created_at index migration", () => {
+  const src = read(
+    "supabase/migrations/20260528051623_feedback_inbox_index_and_photo_permission.sql",
+  );
+
+  assert.ok(
+    src.includes("CREATE INDEX IF NOT EXISTS idx_feedbacks_tenant_created"),
+    "expected feedback tenant-wide inbox index migration",
+  );
+  assert.ok(
+    src.includes("ON public.feedbacks (tenant_id, created_at DESC)"),
+    "expected feedback inbox index on tenant_id plus created_at DESC",
+  );
+});
+
+test("feedback retention queues deleted-row photos and removes them through Storage API", () => {
+  const migration = read(
+    "supabase/migrations/20260528052336_feedback_retention_photo_cleanup_queue.sql",
+  );
+  const indexMigration = read(
+    "supabase/migrations/20260528052937_feedback_photo_cleanup_queue_tenant_index.sql",
+  );
+  const route = read("apps/web/app/api/cron/feedback-retention/route.ts");
+
+  assert.ok(
+    migration.includes("feedback_photo_cleanup_queue"),
+    "expected retention migration to create a photo cleanup queue",
+  );
+  assert.ok(
+    migration.includes("CROSS JOIN LATERAL unnest(f.photo_paths)"),
+    "expected retention RPC to queue each deleted feedback photo path",
+  );
+  assert.ok(
+    migration.includes("photo_paths_queued"),
+    "expected retention RPC to return queued photo count",
+  );
+  assert.ok(
+    indexMigration.includes("idx_feedback_photo_cleanup_queue_tenant") &&
+      indexMigration.includes(
+        "ON public.feedback_photo_cleanup_queue (tenant_id)",
+      ),
+    "expected cleanup queue tenant foreign key to have a covering index",
+  );
+  assert.ok(
+    !/DELETE\s+FROM\s+storage\.objects/i.test(migration),
+    "retention migration must not delete storage.objects directly",
+  );
+  assert.ok(
+    route.includes('.from("feedback_photo_cleanup_queue")'),
+    "expected retention cron to read the photo cleanup queue",
+  );
+  assert.ok(
+    route.includes('.from("feedback-photos")') &&
+      route.includes(".remove(paths)"),
+    "expected retention cron to remove queued photos through Storage API",
+  );
+  assert.ok(
+    route.includes("processed_at"),
+    "expected retention cron to mark queue rows processed after Storage removal",
   );
 });

@@ -1,13 +1,28 @@
-import { redirect } from "next/navigation";
+import Link from "next/link";
+import { CalendarDays as IconCalendarEvent } from "lucide-react";
 import { addVNDateDays, getVNDateString } from "@comtammatu/shared/time";
-import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
+import { Button } from "@comtammatu/ui/components/button";
 import { getEmployeeContext } from "../_lib/employee-context";
+import {
+  EmployeeMissingProfileEmpty,
+  EmployeePage,
+} from "../components/employee-page";
 import { ShiftRegisterClient } from "./shift-register-client";
+import { messages } from "@lib/messages";
+
+const copy = messages.employee.home;
 
 export default async function EmployeeShiftRegisterPage() {
   const ctx = await getEmployeeContext();
   if (!ctx) {
-    redirect("/employee");
+    return (
+      <EmployeePage
+        title={copy.shiftRegisterPageTitle}
+        description={copy.shiftRegisterLongDescription}
+      >
+        <EmployeeMissingProfileEmpty />
+      </EmployeePage>
+    );
   }
 
   const { supabase, claims, employeeId, branchId } = ctx;
@@ -50,20 +65,29 @@ export default async function EmployeeShiftRegisterPage() {
   const initialRequests = (requestsData ?? []) as unknown as InitialRequest[];
 
   return (
-    <AppPage width="narrow">
-      <AppPageHeader
-        eyebrow="Nhân sự"
-        title="Đăng ký ca làm"
-        description="Gửi nguyện vọng ca làm cho 21 ngày tới. Quản lý sẽ duyệt và phân ca."
+    <EmployeePage
+      title={copy.shiftRegisterPageTitle}
+      description={copy.shiftRegisterLongDescription}
+      action={
+        <Button
+          asChild
+          variant="outline"
+          size="touch"
+          className="w-full sm:w-fit"
+        >
+          <Link href="/employee/schedule">
+            <IconCalendarEvent data-icon="inline-start" />
+            {copy.viewSchedule}
+          </Link>
+        </Button>
+      }
+    >
+      <ShiftRegisterClient
+        branches={branches}
+        defaultBranchId={branchId ?? branches[0]?.id ?? null}
+        initialRequests={initialRequests}
       />
-      <AppSection>
-        <ShiftRegisterClient
-          branches={branches}
-          defaultBranchId={branchId ?? branches[0]?.id ?? null}
-          initialRequests={initialRequests}
-        />
-      </AppSection>
-    </AppPage>
+    </EmployeePage>
   );
 }
 

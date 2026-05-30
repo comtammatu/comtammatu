@@ -1,6 +1,6 @@
 # Design System - Com Tam Ma Tu Web App
 
-> Version: 14.3.0 | Updated: 2026-05-24 | Status: locked single source for UI agents
+> Version: 14.4.0 | Updated: 2026-05-28 | Status: locked single source for UI agents
 
 ## Single Source Decision
 
@@ -93,14 +93,15 @@ Allowed token families:
 
 Theme runtime:
 
-- `packages/ui/src/components/theme-script.tsx` applies the initial `light` / `dark`
+- `packages/ui/src/components/theme-script.tsx` applies the initial `light`
   class before hydration.
 - `packages/ui/src/components/theme-provider.tsx` is the only runtime theme
-  state provider. It may persist the user's theme preference under the
-  `theme` storage key; scope, branch, workflow, and auth state must never use
-  browser storage.
-- Route-level theme toggles must call this provider. Do not add a second theme
-  context or a route-local theme storage key.
+  state provider. Runtime theme is fixed to `light`; old `theme=dark` or
+  `theme=system` browser preferences are ignored while light mode is forced.
+  Scope, branch, workflow, and auth state must never use browser storage.
+- Do not add route-level theme toggles, a second theme context, or a route-local
+  theme storage key unless the design-system contract explicitly re-enables
+  dark mode.
 
 Approved project utilities:
 
@@ -332,7 +333,7 @@ Forbidden wrappers:
 - Live kitchen queue is the primary content.
 - Station, status, and order type filters must be compact and immediately reversible.
 - Urgency/status has one visual source of truth per ticket.
-- Use semantic state tokens; dark operational mode must still come from shared tokens.
+- Use semantic state tokens; operational mode colors must still come from shared tokens.
 - Bump/complete actions need large touch targets and clear focus states.
 
 ### Admin

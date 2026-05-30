@@ -56,20 +56,20 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 
 **MEDIUM:**
 
-- [ ] **ISSUE-002** — Photo upload IDOR: mint per-submission upload token in `submit_feedback` RPC, consume in `uploadFeedbackPhotos` (`apps/web/app/(public)/r/[token]/actions-photos.ts`)
+- [x] **ISSUE-002** — Photo upload IDOR: mint per-submission upload token in `submit_feedback` RPC, consume in `uploadFeedbackPhotos` (`apps/web/app/(public)/r/[token]/actions-photos.ts`). Closed 2026-05-28 with one-shot SHA-256 token, expiry, consumed timestamp, and Storage cleanup on update races.
 - [x] **ISSUE-003** — Replaced with `after()` from `next/server` in submitFeedback (durable post-response). Shipped 2026-05-09 (79a30bb7).
-- [ ] **ISSUE-004** — Tighten photo storage RLS to gate by branch (encode branch_id in path or JOIN to feedbacks for has_permission check)
+- [ ] **ISSUE-004** — Tighten photo storage RLS to gate by branch (encode branch_id in path or JOIN to feedbacks for has_permission check). Local migration/regression added 2026-05-28; dev apply is blocked because the current MCP/linked SQL role is not owner of `storage.objects` (`supabase_storage_admin` owns it). Owner-capable apply/verify path is documented in the feedback worklog.
 - [x] **ISSUE-013** — `/r/[token]/thank-you` now calls `notFound()` for invalid/unknown tokens. Shipped 2026-05-09 (939be3d9).
 
 **LOW / INFO (nice to have):**
 
-- [ ] **ISSUE-005** — Cascade photo storage objects in `feedback_retention_cleanup()` to prevent forever-orphans
-- [ ] **ISSUE-006** — Defense-in-depth: re-check `feedback:view` permission in `getFeedbackPhotoUrls`
+- [x] **ISSUE-005** — Cascade photo storage objects in `feedback_retention_cleanup()` to prevent forever-orphans. Closed locally 2026-05-28.
+- [x] **ISSUE-006** — Defense-in-depth: re-check `feedback:view` permission in `getFeedbackPhotoUrls`. Closed locally 2026-05-28.
 - [x] **ISSUE-007** — `console.info()` on honeypot trip with first 8 chars of token. Shipped 2026-05-09 (79a30bb7).
 - [x] **ISSUE-008** — Server schema raw `.min/.max` before sanitize, distinct refine message after. Shipped 2026-05-09 (fec49ecd).
 - [x] **ISSUE-009** — `?only_suspect=true` URL param on admin feedback inbox. Shipped 2026-05-09 (ee71d005).
-- [ ] **ISSUE-010** — Add `(tenant_id, created_at DESC)` index for tenant-wide inbox queries
-- [ ] **ISSUE-011** — Order snapshot heuristic broken for shared tables (data quality)
+- [x] **ISSUE-010** — Add `(tenant_id, created_at DESC)` index for tenant-wide inbox queries. Closed locally 2026-05-28.
+- [x] **ISSUE-011** — Order snapshot heuristic broken for shared tables (data quality). Closed 2026-05-28 by making `submit_feedback` snapshot orders only when a table QR maps to exactly one active unpaid order; multi-order tables now leave order snapshots null and emit an ops warning.
 - [x] **ISSUE-014** — `poweredByHeader: false` set in `apps/web/next.config.ts`. Shipped 2026-05-09 (610123c8).
 - [x] **ISSUE-015** — 3-layer CSRF defense doc inline in `actions.ts`; warn-once log when ALLOWED_ORIGINS_FEEDBACK is unset in production. Shipped 2026-05-09 (79a30bb7).
 - [x] **ISSUE-016** — Conditional `UPDATE ... WHERE photo_paths IS NULL OR '{}'` + `.select()` to detect race losers. Shipped 2026-05-09 (003224c0).
