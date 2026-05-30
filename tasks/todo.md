@@ -223,6 +223,22 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 - [ ] **L6: Finance migration chain ADR** — 5 finance migrations form implicit chain (`20260506000000` cashflow + COA, `20260507000000` journal_entry period guard, `20260508000000` B03_DN cashflow indirect, `20260509000000` VAT per-line, `20260510000000` M4 refund foundation). Add ADR documenting prerequisite ordering + rollback dependencies. Audit found in 2026-05-07 wave; non-blocking but valuable cho new engineers.
 - [ ] **Dead RPC drop wave 2** (post-pilot) — Tier A pilot (`20260601700000`) dropped 3 RPCs (backfill_permissions_from_role, \_auth_v2_is_tenant_wide_role, seed_posting_rules). Next wave needs `pg_stat_user_functions` telemetry from real pilot traffic. Tier B (reporting/cron-style), Tier C (lifecycle helpers), Tier D (NEVER drop — ops/auth) — see regression rule RPC-DROP-MUST-SCAN-6-CHANNELS for methodology.
 
+## Architecture / Schema / Migration optimization (matu-dev) — 2026-05-30
+
+> Owner approved rebuilding matu-dev ("không cần giữ nguyên"). Phased; matu-dev only, owner applies prod.
+
+**Phase 1 — schema cleanup (DONE 2026-05-30):**
+- [x] RLS policy dedup (`20260602010000`): closed `stock_transfer_items` any-tenant-member read+write bypass (SECURITY) + dropped redundant `payroll_periods` (`pp_select`/`pp_manage`) and `attendance_records` (`attendance_employee_self_select`) policies. Rule NO-SUPERSEDED-PERMISSIVE-POLICY.
+- [x] Schema health verified clean on matu-dev: 0 RLS-disabled public tables, 0 SECDEF functions missing search_path, 0 tables without PK, 0 exact-duplicate indexes (greenfield P5 already deduped 2).
+- [ ] Dead RPCs (13 candidates, greenfield P5) — OWNER-GATED T3, NOT dropped: all on money/auth/order paths and the monorepo grep cannot see the Flutter/external clients, so "no caller" is not conclusive. Each needs per-RPC owner sign-off + external-client confirmation.
+- [ ] Unused indexes (~231 flagged on prod) — deferred: prod `stats_reset=NULL` and 77% `idx_scan=0` is implausibly high (recent stats reset), not representative. Re-assess only after ≥1 business cycle incl. month-end (`auto_close_periods`, `weekly_*_report`).
+
+**Phase 2 — migration consolidation / baseline squash — NOT STARTED:**
+- [ ] Per `docs/plan/live-schema-first-baseline-extraction.md` (owner-approved prep): the 378-file `supabase/migrations/` chain can't replay from empty (ordering bug at `20260508055046` — references `order_items.vat_rate` before `20260509000000` creates it). Squash matu-dev's cleaned schema into one baseline via `pnpm db:baseline:extract` → validate replay on empty scratch DB (`db:baseline:local-check`) → rebuild matu-dev → regen types → typecheck/build. Open blockers: POS/payment/stock mutation contract, managed surfaces (auth/storage/realtime/cron must be recreated explicitly — squash omits them), data migration kept separate.
+
+**Phase 3 — architecture docs reconcile — NOT STARTED:**
+- [ ] Sync `docs/spec/database-schema.md` + `docs/CODEBASE_MAP.md` to the consolidated baseline once Phase 2 lands.
+
 ## Post-v1.0 (Tier 2)
 
 - [ ] Local-First Branch (mini PC + SQLite, offline POS/KDS)
