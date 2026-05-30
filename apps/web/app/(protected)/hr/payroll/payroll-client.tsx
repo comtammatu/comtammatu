@@ -1,5 +1,15 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 // @ts-nocheck
+// FIXME(payroll): this client is STALE vs its actions/types. Removing @ts-nocheck
+// surfaces 6 real errors (tracked in tasks/todo.md → "M7 Payroll"):
+//   • L~70 createPayrollPeriod({ periodMonth: <"YYYY-MM" string> }) but
+//     createPeriodSchema expects { month, year } numbers → creating a period
+//     from the UI fails zod validation (latent: payroll is Excel-managed).
+//   • L~157 formatMonth(period_month:number) but formatMonth expects a string.
+//   • L~166-175 reads total_gross/total_si/total_pit/total_net which are absent
+//     from PayrollPeriodRow + the list query → always-empty columns.
+// Needs a dedicated payroll pass (decide: wire per-period totals vs drop the
+// columns) before the suppression can be removed. Deprioritized for the HKD pilot.
 "use client";
 
 import { useState, useTransition } from "react";
