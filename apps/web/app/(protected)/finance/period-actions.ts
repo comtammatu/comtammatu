@@ -29,9 +29,7 @@ export async function fetchFiscalPeriods(): Promise<ActionResult> {
 
   const { supabase, claims } = ctx;
 
-  // fiscal_periods table added in gl_fiscal_periods migration — cast until db:types
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from("fiscal_periods")
     .select(
       "id, period_month, period_year, status, closed_by, closed_at, notes, created_at",
@@ -73,8 +71,7 @@ export async function openFiscalPeriod(
 
   const { supabase, claims } = ctx;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from("fiscal_periods")
     .upsert(
       {
@@ -127,12 +124,11 @@ export async function closeFiscalPeriod(
 
   const { supabase, claims } = ctx;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any).rpc("close_fiscal_period", {
+  const { data, error } = await supabase.rpc("close_fiscal_period", {
     p_tenant_id: claims.tenant_id,
     p_year: parsed.data.year,
     p_month: parsed.data.month,
-    p_notes: parsed.data.notes ?? null,
+    p_notes: parsed.data.notes ?? undefined,
   });
 
   if (error) {
@@ -175,8 +171,7 @@ export async function fetchReconciliation(
 
   const { supabase, claims } = ctx;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any).rpc("gl_reconciliation", {
+  const { data, error } = await supabase.rpc("gl_reconciliation", {
     p_tenant_id: claims.tenant_id,
     p_year: parsed.data.year,
     p_month: parsed.data.month,

@@ -237,10 +237,7 @@ export function useKdsMutations({
 
       try {
         const sb = supabaseRef.current;
-        // RPC is introduced by migration 20260601850000; cast until db:types is
-        // regenerated from the schema where the migration is applied.
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data, error } = await (sb as any).rpc("complete_kds_tickets", {
+        const { data, error } = await sb.rpc("complete_kds_tickets", {
           p_branch_id: branchId,
           p_ticket_ids: activeIds,
         });
