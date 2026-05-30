@@ -135,7 +135,7 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 
 ### M7 Payroll
 
-- [ ] **`payroll_entries_select` RLS** — add `EXISTS(payroll_periods WHERE status='paid')` to self branch.
+- [x] **`payroll_entries_select` RLS** — status='paid' self-read gate. h3c (`20260507181413`) added the gate but LEFT the older permissive `pe_employee_self_select` (any-status self read) in place → Postgres OR'd it away, so employees could still read DRAFT payroll. Migration `20260602008000` drops `pe_employee_self_select` + redundant `pe_select`/`pe_manage`; verified on matu-dev only `payroll_entries_select` (paid-only self) + `payroll_entries_write` remain. Owner applies prod.
 - [x] HR payroll actions permission-gated — `createPayrollPeriod` / `calculatePayroll` / `fetchPayrollEntries` require `finance:payroll_calculate`; approve/paid transitions require `finance:payroll_approve` at the action layer.
 - [ ] `branch_manager` with null `branch_id` widens to tenant-wide writes — guard at action level.
 - [x] Daily HMAC clock-in code reused all-day → HARDENED 2026-05-30 (commit pending) with a GRACEFUL shift-window guard in `clockIn` (rule CLOCK-IN-SHIFT-WINDOW-GRACEFUL): when the employee is rostered today, clock-in is restricted to their shift window ±60m via `isWithinShiftWindow`; when unrostered, falls through to code+GPS so nobody is wrongly blocked. RESIDUAL (by owner choice): unrostered employees still have the all-day-code exposure — stronger per-shift TOTP or a hard shift requirement remain optional follow-ups.
