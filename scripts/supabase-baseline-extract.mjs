@@ -13,6 +13,22 @@ const EXPECTED_PROJECT_REF = "iexwsuaqqenyjiskawoj";
 const DEFAULT_SCHEMAS = ["public"];
 const DEFAULT_TIMEOUT_MS = 300_000;
 
+// Allowlisted dump targets → which .env.local secrets hold their direct creds.
+// The dump ALWAYS uses an explicit --db-url built for the requested ref (never
+// --linked, which silently drops RLS-restricted tables), so the target may
+// differ from the currently-linked project. Only refs listed here are accepted.
+const KNOWN_TARGETS = {
+  iexwsuaqqenyjiskawoj: {
+    passwordEnv: "SUPABASE_PASSWORD_IEXW",
+    explicitUrlEnv: "SUPABASE_DB_URL_IEXW",
+  },
+  nikkridjukdbqvkvqlmi: {
+    // matu-dev (dev sandbox). Owner confirmed 2026-05-30: SUPABASE_PASSWORD = matu-dev.
+    passwordEnv: "SUPABASE_PASSWORD",
+    explicitUrlEnv: "SUPABASE_DB_URL_MATU_DEV",
+  },
+};
+
 function printHelp() {
   process.stdout.write(`Usage:
   pnpm db:baseline:extract:dry-run -- [options]
@@ -117,24 +133,47 @@ function readEnvLocalValue(key) {
 // A direct postgres connection dumps the full schema. See
 // docs/runbooks/supabase-greenfield-baseline.md.
 function buildBaselineDbUrl(expectedRef) {
-  const explicit =
-    (process.env["SUPABASE_DB_URL"] ?? "").trim() ||
-    readEnvLocalValue("SUPABASE_DB_URL_IEXW");
-  if (explicit) return explicit;
-
-  const poolerPath = join(process.cwd(), "supabase", ".temp", "pooler-url");
-  const password = readEnvLocalValue("SUPABASE_PASSWORD_IEXW");
-  if (!existsSync(poolerPath) || !password) {
+  const target = KNOWN_TARGETS[expectedRef];
+  if (!target) {
     throw new Error(
-      "Privileged dump requires SUPABASE_DB_URL_IEXW (or SUPABASE_PASSWORD_IEXW in " +
-        ".env.local plus supabase/.temp/pooler-url). The --linked temp-login dump " +
-        "is INCOMPLETE — it drops RLS-restricted tables.",
+      `Unknown dump target ${expectedRef}; add it to KNOWN_TARGETS with its password env`,
     );
   }
-  const poolerUrl = readFileSync(poolerPath, "utf8").trim();
+
+  // 1. Explicit full URL override (process env, then .env.local). Must target
+  //    the requested ref so a stale override can't dump the wrong project.
+  const explicit =
+    (process.env["SUPABASE_DB_URL"] ?? "").trim() ||
+    readEnvLocalValue(target.explicitUrlEnv);
+  if (explicit) {
+    if (!explicit.includes(expectedRef)) {
+      throw new Error(
+        `${target.explicitUrlEnv} does not target ${expectedRef}; refusing`,
+      );
+    }
+    return explicit;
+  }
+
+  // 2. Build from the shared session-pooler host + this target's password. The
+  //    .temp/pooler-url belongs to the linked project; both known targets are in
+  //    the same region so the pooler host is identical — swap the ref segment.
+  const poolerPath = join(process.cwd(), "supabase", ".temp", "pooler-url");
+  const password = readEnvLocalValue(target.passwordEnv);
+  if (!existsSync(poolerPath) || !password) {
+    throw new Error(
+      `Privileged dump for ${expectedRef} requires ${target.explicitUrlEnv} (or ` +
+        `${target.passwordEnv} in .env.local plus supabase/.temp/pooler-url). The ` +
+        "--linked temp-login dump is INCOMPLETE — it drops RLS-restricted tables.",
+    );
+  }
+  let poolerUrl = readFileSync(poolerPath, "utf8").trim();
+  const linkedRef = readLinkedProjectRef();
+  if (linkedRef && linkedRef !== expectedRef && poolerUrl.includes(linkedRef)) {
+    poolerUrl = poolerUrl.split(linkedRef).join(expectedRef);
+  }
   if (!poolerUrl.includes(expectedRef)) {
     throw new Error(
-      `pooler-url does not target ${expectedRef}; refusing to build baseline connection`,
+      `pooler-url does not target ${expectedRef} after ref-swap; refusing to build baseline connection`,
     );
   }
   const encoded = encodeURIComponent(password);
@@ -178,18 +217,16 @@ function getSupabaseVersion() {
 }
 
 function assertProjectRef(expectedRef) {
-  const linkedRef = readLinkedProjectRef();
-  if (!linkedRef) {
-    throw new Error("Cannot determine linked Supabase project ref");
-  }
-
-  if (linkedRef !== expectedRef) {
+  if (!KNOWN_TARGETS[expectedRef]) {
     throw new Error(
-      `Linked project ref mismatch. Expected ${expectedRef}, found ${linkedRef}`,
+      `Unknown dump target ${expectedRef}; only allowlisted refs may be dumped`,
     );
   }
-
-  return linkedRef;
+  // The dump always builds an explicit --db-url for expectedRef (never the
+  // --linked path), so expectedRef may legitimately differ from the currently
+  // linked project. The allowlist + buildBaselineDbUrl's URL-targets-ref check
+  // are the safety guard.
+  return expectedRef;
 }
 
 function schemaFileName(schema) {
@@ -203,7 +240,7 @@ async function main() {
     return;
   }
 
-  const linkedRef = assertProjectRef(options.projectRef);
+  const targetRef = assertProjectRef(options.projectRef);
   const dbUrl = buildBaselineDbUrl(options.projectRef);
   const version = getSupabaseVersion();
 
@@ -228,7 +265,7 @@ async function main() {
 
   const manifest = {
     generatedAt: new Date().toISOString(),
-    projectRef: linkedRef,
+    projectRef: targetRef,
     supabaseCli: version,
     command: "pnpm dlx supabase db dump --db-url <redacted> --schema <schema>",
     schemas: options.schemas,
