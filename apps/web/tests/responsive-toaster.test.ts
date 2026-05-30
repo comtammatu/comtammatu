@@ -1,40 +1,56 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { test } from "node:test";
+import {
+  COMPACT_TOAST_PRESET,
+  DESKTOP_TOAST_PRESET,
+  isOperationalToastRoute,
+  selectToasterPreset,
+} from "../app/_components/responsive-toaster-presets";
 
-const source = readFileSync(
-  join(process.cwd(), "app/_components/responsive-toaster.tsx"),
-  "utf8",
-);
+test("isOperationalToastRoute matches only POS/KDS branch routes", () => {
+  assert.equal(isOperationalToastRoute("/br/12/pos"), true);
+  assert.equal(isOperationalToastRoute("/br/12/pos/orders"), true);
+  assert.equal(isOperationalToastRoute("/br/7/kds"), true);
+  assert.equal(isOperationalToastRoute("/br/7/kds/"), true);
 
-const compactBranchStart = source.indexOf("if (compactOperationalToaster) {");
-const compactBranchEnd = source.indexOf(
-  "  }\n\n  return (",
-  compactBranchStart,
-);
-const compactBranch =
-  compactBranchStart >= 0 && compactBranchEnd > compactBranchStart
-    ? source.slice(compactBranchStart, compactBranchEnd)
-    : "";
+  assert.equal(isOperationalToastRoute("/admin/finance"), false);
+  assert.equal(isOperationalToastRoute("/br/12/menu"), false);
+  // "possible" starts with "pos" but is not the pos segment boundary.
+  assert.equal(isOperationalToastRoute("/br/12/possible"), false);
+  assert.equal(isOperationalToastRoute(null), false);
+});
 
 test("POS and KDS routes use the compact operational toaster preset", () => {
-  assert.ok(
-    source.includes(
-      String.raw`const OPERATIONAL_TOAST_ROUTE_PATTERN = /^\/br\/[^/]+\/(?:pos|kds)(?:\/|$)/;`,
-    ),
-  );
-  assert.match(source, /isMobile \|\| isOperationalToastRoute\(pathname\)/);
-  assert.match(compactBranch, /position="top-center"/);
-  assert.match(compactBranch, /visibleToasts=\{3\}/);
-  assert.match(compactBranch, /closeButton/);
-  assert.match(compactBranch, /expand=\{false\}/);
-  assert.match(compactBranch, /offset=\{COMPACT_TOAST_OFFSET\}/);
-  assert.match(compactBranch, /mobileOffset=\{COMPACT_TOAST_OFFSET\}/);
+  const preset = selectToasterPreset({
+    isMobile: false,
+    pathname: "/br/3/pos",
+  });
+  assert.equal(preset, COMPACT_TOAST_PRESET);
+  assert.equal(preset.position, "top-center");
+  assert.equal(preset.visibleToasts, 3);
+  assert.equal(preset.closeButton, true);
+  assert.equal(preset.expand, false);
+  assert.ok(preset.offset);
+  assert.ok(preset.mobileOffset);
+});
+
+test("mobile uses the compact operational toaster preset on any route", () => {
+  const preset = selectToasterPreset({
+    isMobile: true,
+    pathname: "/admin/finance",
+  });
+  assert.equal(preset, COMPACT_TOAST_PRESET);
+  assert.equal(preset.position, "top-center");
+  assert.equal(preset.expand, false);
 });
 
 test("non-operational desktop routes keep the desktop toaster preset", () => {
-  assert.match(source, /position="top-right"/);
-  assert.match(source, /visibleToasts=\{5\}/);
-  assert.ok(source.includes("\n      expand\n"));
+  const preset = selectToasterPreset({
+    isMobile: false,
+    pathname: "/admin/finance",
+  });
+  assert.equal(preset, DESKTOP_TOAST_PRESET);
+  assert.equal(preset.position, "top-right");
+  assert.equal(preset.visibleToasts, 5);
+  assert.equal(preset.expand, true);
 });
