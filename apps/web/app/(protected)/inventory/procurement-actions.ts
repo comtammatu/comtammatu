@@ -44,10 +44,12 @@ export {
   confirmGrn,
   fetchGrnsForPo,
   createGrnFromPo,
+} from "./grn-actions";
+export {
   createSupplierInvoice,
   fetchSupplierInvoices,
   recomputeInvoiceMatching,
-} from "./grn-actions";
+} from "./supplier-invoice-actions";
 export {
   fetchRecipes,
   fetchCentralKitchenWacMap,
