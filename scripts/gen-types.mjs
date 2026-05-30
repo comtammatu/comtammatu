@@ -14,10 +14,30 @@
 // - Writes to `packages/database/src/types/database.types.ts`.
 
 import { execFileSync } from "node:child_process";
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 
+function readEnvLocalProjectId() {
+  try {
+    const env = readFileSync(join(process.cwd(), ".env.local"), "utf8");
+    const match = env.match(/^SUPABASE_PROJECT_ID=(.+)$/m);
+    if (match) return match[1].trim().replace(/^["']|["']$/g, "");
+  } catch {
+    // no .env.local — fall through
+  }
+  return "";
+}
+
+// Last-resort fallback ONLY. This is PROD (iexws) which is UNCUT — reaching it
+// means SUPABASE_PROJECT_ID is unset AND .env.local has none, a dev-machine
+// misconfiguration. Pulling types from prod reintroduces dropped columns
+// (e.g. legacy_role_code). Prefer the env var or .env.local (= matu-dev, the
+// greenfield-cut dev source).
 const DEV_PROJECT_ID = "iexwsuaqqenyjiskawoj";
-const projectId = process.env["SUPABASE_PROJECT_ID"] ?? DEV_PROJECT_ID;
+const projectId =
+  process.env["SUPABASE_PROJECT_ID"]?.trim() ||
+  readEnvLocalProjectId() ||
+  DEV_PROJECT_ID;
 const outPath = "packages/database/src/types/database.types.ts";
 
 function runTypegen(command, args) {
