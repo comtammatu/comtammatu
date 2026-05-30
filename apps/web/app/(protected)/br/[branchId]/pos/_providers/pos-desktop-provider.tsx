@@ -19,8 +19,8 @@ import {
   fetchTablesForBranch,
 } from "../actions";
 import { CartStore } from "./cart-store";
-import { useOrderSync } from "../hooks/use-order-sync";
-import { useDailyLimitSync } from "../hooks/use-daily-limit-sync";
+import { useOrderSync } from "../_hooks/use-order-sync";
+import { useDailyLimitSync } from "../_hooks/use-daily-limit-sync";
 import {
   createDailyLimitStore,
   type DailyLimitStore,

@@ -172,7 +172,7 @@ export function StocktakeListClient({
           <div className="flex items-center gap-2">
             <Button type="button" variant="outline" asChild>
               {/* S13a pilot entry. Route is feature-flag gated server-side —
-                  non-pilot branches redirect to list with error=stocktake_v2_not_enabled. */}
+                  non-pilot branches redirect to list with error=stocktake_redesigned_not_enabled. */}
               <Link href={`${routeBase}/new${branchQuery}`}>
                 <IconClipboardCheck className="size-4" />
                 {messages.inventory.stocktake.v2}

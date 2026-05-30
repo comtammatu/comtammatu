@@ -31,6 +31,7 @@ import { ItemCustomizer } from "./item-customizer";
 import { BillReceipt } from "./_components/bill/bill-receipt-sheet";
 import { OrderDetailSheet } from "./order-detail-sheet";
 import { PosSessionHeader } from "./pos-session-header";
+import type { MenuLimitRow } from "../menu-limits/actions";
 import { MenuPane } from "./_components/menu-pane";
 import { PosMobileActionBar } from "./_components/pos-mobile-action-bar";
 import type { SubmitOrderOptions } from "./_components/cart-pane";
@@ -149,6 +150,8 @@ interface PosDesktopShellProps {
   /** `pos:close_shift_variance_override` — cho phép đóng ca khi chênh lệch
    *  vượt ngưỡng (BM+). Cashier không có quyền → block ở UI khi variance gate. */
   canOverrideVariance: boolean;
+  /** `branch_menu_limits` module ACL — cashier/BM can lock dishes from POS. */
+  canManageMenuLimits: boolean;
   /** Tenant payment methods seeded từ RSC — bill render không phải đợi fetch. */
   initialPaymentMethods: readonly PaymentMethod[];
   /** Tenant VietQR config seeded từ RSC; null nếu disable / chưa cấu hình. */
@@ -197,6 +200,7 @@ export function PosDesktopShell(props: PosDesktopShellProps) {
         canCloseShift={props.canCloseShift}
         canConfirmCash={props.canConfirmCash}
         canOverrideVariance={props.canOverrideVariance}
+        canManageMenuLimits={props.canManageMenuLimits}
         initialPaymentMethods={props.initialPaymentMethods}
         initialVietQrConfig={props.initialVietQrConfig}
         initialOpenOrderId={props.initialOpenOrderId}
@@ -212,6 +216,7 @@ function PosDesktopInner({
   canCloseShift,
   canConfirmCash,
   canOverrideVariance,
+  canManageMenuLimits,
   initialPaymentMethods,
   initialVietQrConfig,
   initialOpenOrderId,
@@ -220,6 +225,7 @@ function PosDesktopInner({
   canCloseShift: boolean;
   canConfirmCash: boolean;
   canOverrideVariance: boolean;
+  canManageMenuLimits: boolean;
   initialPaymentMethods: readonly PaymentMethod[];
   initialVietQrConfig: VietQrConfig | null;
   initialOpenOrderId?: number;
@@ -233,6 +239,24 @@ function PosDesktopInner({
   // được MenuItemButton tự subscribe qua `useDailyLimit(item.id)` — chỉ card
   // có limit đổi mới re-render thay vì cả grid (Fix#4 B1, Architect option b).
   const categories: MenuCategory[] = initialCategories;
+  const menuLimitRows = useMemo<MenuLimitRow[]>(
+    () =>
+      categories.flatMap((category) =>
+        category.menu_items.map((item) => ({
+          menu_item_id: item.id,
+          item_name: item.name,
+          category_id: category.id,
+          category_name: category.name,
+          base_price: item.base_price,
+          limit_id: item.daily_limit ? item.id : null,
+          limit_date: null,
+          limit_quantity: item.daily_limit?.limit_quantity ?? null,
+          is_disabled: item.daily_limit?.is_disabled ?? false,
+          sold_today: item.daily_limit?.sold_today ?? 0,
+        })),
+      ),
+    [categories],
+  );
   const cartStore = usePosCartStore();
   const cartOrderType = useCartOrderType();
   const cartItemCount = useCartItemCount();
@@ -1436,6 +1460,8 @@ function PosDesktopInner({
     <>
       <TabbedSidebar
         canCloseShift={canCloseShift}
+        canManageMenuLimits={canManageMenuLimits}
+        menuLimitRows={menuLimitRows}
         onShowCloseSession={openCloseSession}
         showOrders={showOrders}
         onShowOrdersChange={setShowOrders}
@@ -1443,6 +1469,8 @@ function PosDesktopInner({
       />
       <SplitSidebar
         canCloseShift={canCloseShift}
+        canManageMenuLimits={canManageMenuLimits}
+        menuLimitRows={menuLimitRows}
         onShowCloseSession={openCloseSession}
         sidebarContentProps={sidebarContentProps}
       />
@@ -1454,6 +1482,8 @@ function PosDesktopInner({
       <div className="md:hidden">
         <PosSessionHeader
           canCloseShift={canCloseShift}
+          canManageMenuLimits={canManageMenuLimits}
+          menuLimitRows={menuLimitRows}
           onShowCloseSession={openCloseSession}
           contextLabel={mobileHeaderContextLabel}
           onBack={

@@ -30,6 +30,7 @@ import { StationToggleBar } from "./components/station-toggle-bar";
 import { FilterBar } from "./components/filter-bar";
 import { FocusView } from "./components/focus-view";
 import { OrderGrid } from "./components/order-grid";
+import { KdsCompletionHistorySheet } from "./components/completion-history-sheet";
 import { UnassignedBanner } from "./components/unassigned-banner";
 import type {
   KdsBoardProps,
@@ -159,6 +160,7 @@ export function KdsBoard({
   const [menuLimits, setMenuLimits] = useState(initialMenuLimits);
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [completionHistoryOpen, setCompletionHistoryOpen] = useState(false);
   const boardRootRef = useRef<HTMLDivElement | null>(null);
   const lastMissingItemRefreshRef = useRef<string | null>(null);
 
@@ -520,6 +522,7 @@ export function KdsBoard({
             soundEnabled={soundEnabled}
             isFullscreen={isFullscreen}
             onModeChange={setMode}
+            onCompletionHistoryOpen={() => setCompletionHistoryOpen(true)}
             onSoundToggle={toggleSound}
             onFullscreenToggle={toggleFullscreen}
             menuLimits={menuLimits}
@@ -575,6 +578,12 @@ export function KdsBoard({
             />
           )}
         </KdsRowEffectsProvider>
+
+        <KdsCompletionHistorySheet
+          branchId={branchId}
+          open={completionHistoryOpen}
+          onOpenChange={setCompletionHistoryOpen}
+        />
       </div>
     </TickProvider>
   );

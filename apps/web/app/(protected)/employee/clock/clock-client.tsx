@@ -358,7 +358,7 @@ export function ClockClient({
         />
         <div className="flex">
           <Button
-            size="lg"
+            size="touch"
             variant="destructive"
             className="w-full sm:w-fit"
             onClick={handleClockOut}
@@ -500,7 +500,7 @@ export function ClockClient({
       {error ? <ErrorAlert message={error} /> : null}
 
       {state === "idle" ? (
-        <Button size="lg" className="w-full sm:w-fit" onClick={checkGps}>
+        <Button size="touch" className="w-full sm:w-fit" onClick={checkGps}>
           <IconMapPin data-icon="inline-start" />
           Bắt đầu chấm công
         </Button>
@@ -510,7 +510,7 @@ export function ClockClient({
       state === "code_invalid" ||
       state === "error" ? (
         <Button
-          size="lg"
+          size="touch"
           className="w-full sm:w-fit"
           onClick={() => {
             setError(null);
@@ -527,14 +527,14 @@ export function ClockClient({
 
       {state === "gps_passed" ? (
         <div className="grid gap-2 sm:grid-cols-2">
-          <Button size="lg" onClick={startQrScan}>
+          <Button size="touch" onClick={startQrScan}>
             <IconCamera data-icon="inline-start" />
             Quét mã QR
           </Button>
           <Button
             type="button"
             variant="outline"
-            size="lg"
+            size="touch"
             onClick={() => {
               setState("entering_code");
               setManualCode("");

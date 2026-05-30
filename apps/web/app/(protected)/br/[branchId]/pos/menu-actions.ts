@@ -232,8 +232,7 @@ export async function fetchDailyLimitsForPos(
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any).rpc(
+  const { data, error } = await supabase.rpc(
     "get_branch_menu_daily_limits_for_pos",
     { p_branch_id: parsedBranchId.data },
   );

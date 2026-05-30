@@ -1,13 +1,16 @@
+import Link from "next/link";
+import { ListChecks as IconListChecks } from "lucide-react";
 import { getEmployeeContext } from "../_lib/employee-context";
 import { ClockClient } from "./clock-client";
-import { EmployeePage } from "../components/employee-page";
 import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyTitle,
-} from "@comtammatu/ui/components/empty";
+  EmployeeMissingProfileEmpty,
+  EmployeePage,
+} from "../components/employee-page";
+import { Button } from "@comtammatu/ui/components/button";
 import { getTodayVN } from "../_lib/vn-business-date";
+import { messages } from "@lib/messages";
+
+const copy = messages.employee.home;
 
 export default async function ClockPage() {
   const ctx = await getEmployeeContext();
@@ -15,17 +18,10 @@ export default async function ClockPage() {
   if (!ctx) {
     return (
       <EmployeePage
-        title="Chấm công"
-        description="Chấm công vào, ra bằng GPS và mã chi nhánh."
+        title={copy.clockTodayTitle}
+        description={copy.clockLongDescription}
       >
-        <Empty>
-          <EmptyHeader>
-            <EmptyTitle>Chưa có hồ sơ nhân viên</EmptyTitle>
-            <EmptyDescription>
-              Tài khoản chưa được liên kết hồ sơ nhân viên. Liên hệ quản lý.
-            </EmptyDescription>
-          </EmptyHeader>
-        </Empty>
+        <EmployeeMissingProfileEmpty />
       </EmployeePage>
     );
   }
@@ -66,8 +62,21 @@ export default async function ClockPage() {
 
   return (
     <EmployeePage
-      title="Chấm công"
-      description="Chấm công vào, ra bằng GPS và mã chi nhánh."
+      title={copy.clockTodayTitle}
+      description={copy.clockLongDescription}
+      action={
+        <Button
+          asChild
+          variant="outline"
+          size="touch"
+          className="w-full sm:w-fit"
+        >
+          <Link href="/employee/attendance">
+            <IconListChecks data-icon="inline-start" />
+            {copy.attendanceTitle}
+          </Link>
+        </Button>
+      }
     >
       <ClockClient
         initialStatus={{

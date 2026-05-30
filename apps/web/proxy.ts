@@ -4,6 +4,7 @@ import {
   buildAccessDeniedPath,
   canAccess,
   extractClaimsFromAccessToken,
+  isAdminRole,
   isAdminRoutePath,
   isBetaPath,
   isFeedbackPublicPath,
@@ -218,7 +219,10 @@ export async function proxy(request: NextRequest) {
   const moduleKey: ModuleKey | null = resolveModuleFromPath(pathname);
   if (moduleKey) {
     if (!canAccess(claims.user_role, moduleKey)) {
-      if (isAdminRoutePath(pathname)) {
+      if (
+        isAdminRoutePath(pathname) ||
+        (moduleKey === "employee" && isAdminRole(claims.user_role))
+      ) {
         return redirectToDefaultLanding(request, response, claims, surface);
       }
 

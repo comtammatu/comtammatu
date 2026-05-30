@@ -1,6 +1,11 @@
-import { ShieldCheck as IconShieldCheck } from "lucide-react";
+import Link from "next/link";
+import {
+  ShieldCheck as IconShieldCheck,
+  UserCircle as IconUserCircle,
+} from "lucide-react";
 import { ROLE_LABEL_VI } from "@comtammatu/shared/auth";
 import { Badge } from "@comtammatu/ui/components/badge";
+import { Button } from "@comtammatu/ui/components/button";
 import {
   Empty,
   EmptyDescription,
@@ -14,6 +19,9 @@ import {
   EmployeePage,
   EmployeePanel,
 } from "../components/employee-page";
+import { messages } from "@lib/messages";
+
+const copy = messages.employee.permissions;
 
 export default async function PermissionsPage() {
   const { supabase, claims } = await loadAuthState();
@@ -41,29 +49,42 @@ export default async function PermissionsPage() {
   const legacyRole = claims.user_role;
   const positionDisplay = position
     ? (positionLabel.get(position) ?? position)
-    : "Chưa gắn";
+    : copy.notAssigned;
   const roleDisplay = ROLE_LABEL_VI[legacyRole] ?? legacyRole;
 
   return (
     <EmployeePage
-      title="Quyền hạn của tôi"
-      description="Xem chức vụ và các quyền truy cập đang có hiệu lực."
+      title={copy.title}
+      description={copy.description}
+      action={
+        <Button
+          asChild
+          variant="outline"
+          size="touch"
+          className="w-full sm:w-fit"
+        >
+          <Link href="/employee/profile">
+            <IconUserCircle data-icon="inline-start" />
+            {copy.profileAction}
+          </Link>
+        </Button>
+      }
     >
       <EmployeePanel
         icon={IconShieldCheck}
-        title="Thông tin truy cập"
-        description="Chức vụ là nhãn nhân sự; quyền hệ thống được cấp riêng."
+        title={copy.accessInfoTitle}
+        description={copy.accessInfoDescription}
         tone="info"
       >
         <EmployeeDetailList
           rows={[
             {
-              label: "Chức vụ",
+              label: copy.position,
               value: positionDisplay,
               muted: !position,
             },
             {
-              label: "Vai trò tương thích",
+              label: copy.compatibleRole,
               value: roleDisplay,
             },
           ]}
@@ -71,9 +92,9 @@ export default async function PermissionsPage() {
       </EmployeePanel>
 
       <PermissionCard
-        title={`Quyền cấp tenant (${tenantPerms.length})`}
-        emptyTitle="Không có quyền cấp tenant"
-        emptyDescription="Tài khoản này không có grant cấp tenant."
+        title={`${copy.tenantPermsTitle} (${tenantPerms.length})`}
+        emptyTitle={copy.tenantPermsEmptyTitle}
+        emptyDescription={copy.tenantPermsEmptyDescription}
         permissions={tenantPerms.map((p) => ({
           key: p.permissionKey,
           label: permissionLabel.get(p.permissionKey) ?? p.permissionKey,
@@ -81,9 +102,9 @@ export default async function PermissionsPage() {
       />
 
       <PermissionCard
-        title={`Quyền theo chi nhánh (${scopedPerms.length})`}
-        emptyTitle="Không có quyền theo chi nhánh"
-        emptyDescription="Không có grant cho chi nhánh hiện tại."
+        title={`${copy.branchPermsTitle} (${scopedPerms.length})`}
+        emptyTitle={copy.branchPermsEmptyTitle}
+        emptyDescription={copy.branchPermsEmptyDescription}
         permissions={scopedPerms.map((p) => ({
           key: p.permissionKey,
           label: permissionLabel.get(p.permissionKey) ?? p.permissionKey,

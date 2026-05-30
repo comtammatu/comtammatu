@@ -26,6 +26,7 @@ import {
 import { Button } from "@comtammatu/ui/components/button";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { formatVND } from "@comtammatu/shared/format";
+import { AppPage, AppPageHeader } from "@/components/surface";
 import type { FinanceDashboardSummary } from "../actions";
 import type { FinanceDashboardHealth, TopItemRow } from "../_lib/finance-types";
 import type { FinanceParams } from "../_lib/finance-params";
@@ -203,6 +204,21 @@ function bucketsToHeatmap(buckets: HourBucket[]): HeatmapCell[] {
     value: Number(b.net_revenue),
     orderCount: Number(b.order_count),
   }));
+}
+
+function SectionHeading({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="space-y-1">
+      <h2 className="font-heading text-base font-semibold">{title}</h2>
+      <p className="text-sm text-muted-foreground">{description}</p>
+    </div>
+  );
 }
 
 // ─── Component ─────────────────────────────────────────────────
@@ -398,8 +414,29 @@ export function RevenueClient({
 
   // ─── Render ────────────────────────────────────────────────
   return (
-    <div className="space-y-5">
-      {/* Filter bar — single source of truth for URL state */}
+    <AppPage width="wide" density="compact">
+      <AppPageHeader
+        eyebrow={revCopy.page.eyebrow}
+        title={revCopy.page.title}
+        description={revCopy.page.description}
+        meta={revCopy.page.meta(
+          branchLabel,
+          `${resolvedStart} → ${resolvedEnd}`,
+          granularityLabel,
+        )}
+        actions={
+          <ExportToolbar
+            filename={csvFilename}
+            signature={{
+              branchLabel,
+              rangeLabel: `${resolvedStart} → ${resolvedEnd}`,
+              granularityLabel,
+            }}
+            sections={csvSections}
+          />
+        }
+      />
+
       <FilterBar
         params={params}
         branches={branches}
@@ -407,23 +444,13 @@ export function RevenueClient({
         hide={["payment"]}
       />
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <MvStalenessBanner
-          lastRefreshAt={kpis?.refreshed_at ?? null}
-          className="flex-1"
-        />
-        <ExportToolbar
-          filename={csvFilename}
-          signature={{
-            branchLabel,
-            rangeLabel: `${resolvedStart} → ${resolvedEnd}`,
-            granularityLabel,
-          }}
-          sections={csvSections}
-        />
-      </div>
+      <MvStalenessBanner lastRefreshAt={kpis?.refreshed_at ?? null} />
 
-      {/* Core revenue KPIs */}
+      <SectionHeading
+        title={revCopy.sections.keyMetricsTitle}
+        description={revCopy.sections.keyMetricsDescription}
+      />
+
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard
           label={revCopy.kpi.netRevenue}
@@ -514,7 +541,11 @@ export function RevenueClient({
         </p>
       ) : null}
 
-      {/* Charts (trend + payment donut + branch bar) — dynamically loaded */}
+      <SectionHeading
+        title={revCopy.sections.chartTitle}
+        description={revCopy.sections.chartDescription}
+      />
+
       <RevenueChartsBlock
         trendData={trendData}
         resolvedStart={resolvedStart}
@@ -526,7 +557,6 @@ export function RevenueClient({
         branchActive={params.branch != null}
       />
 
-      {/* Heatmap — full width */}
       <Card>
         <CardHeader className="flex flex-row items-start justify-between gap-3 pb-2">
           <div className="space-y-0.5">
@@ -551,7 +581,11 @@ export function RevenueClient({
         </CardContent>
       </Card>
 
-      {/* Period table */}
+      <SectionHeading
+        title={revCopy.sections.tableTitle}
+        description={revCopy.sections.tableDescription}
+      />
+
       <Card>
         <CardHeader className="pb-2">
           <CardTitle>{revCopy.periodTable.title}</CardTitle>
@@ -787,6 +821,11 @@ export function RevenueClient({
         </Card>
       </div>
 
+      <SectionHeading
+        title={revCopy.sections.controlTitle}
+        description={revCopy.sections.controlDescription}
+      />
+
       <WorkQueueStrip
         summary={
           dashboardSummary
@@ -806,7 +845,7 @@ export function RevenueClient({
           {cashVariance ? <CashVarianceCard variance={cashVariance} /> : null}
         </div>
       ) : null}
-    </div>
+    </AppPage>
   );
 }
 

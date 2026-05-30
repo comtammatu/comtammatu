@@ -7,6 +7,7 @@ import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContext, getAuthContextWithPermission } from "../../_lib/auth";
 
 const POS_ROLES = MODULE_ACL.pos.allowedRoles;
+const MENU_LIMIT_ROLES = MODULE_ACL.branch_menu_limits.allowedRoles;
 
 const branchIdSchema = z.coerce
   .number()
@@ -223,7 +224,8 @@ export async function fetchActiveSession(
 /* ─── fetchPosPermissionFlags ─── */
 
 /**
- * Lấy cờ quyền thao tác POS của user trên chi nhánh (1 call, 4 RPC song song).
+ * Lấy cờ quyền thao tác POS của user trên chi nhánh (1 call, 4 RPC song song
+ * + 1 module-ACL flag).
  *
  * - `canOpenShift` (`pos:open_cashbox`): gate render SessionGate ở page-level.
  *   Waiter (chỉ có `pos:use`) không mở ca được → hiện màn "liên hệ thu ngân".
@@ -236,6 +238,8 @@ export async function fetchActiveSession(
  *   ô nhập "Lý do chênh lệch" + cho phép submit khi |diff| > threshold.
  *   Cashier KHÔNG có quyền này → variance vượt ngưỡng → BM phải đăng nhập
  *   để close (decision D3, 2026-04-26).
+ * - `canManageMenuLimits` (`branch_menu_limits` module ACL): gate nút khóa
+ *   món / hạn mức trên POS. Waiter dùng POS nhưng không chỉnh hạn mức.
  *
  * Defense in depth: server-side RPC vẫn reject bất kỳ bypass UI nào.
  */
@@ -244,12 +248,14 @@ export async function fetchPosPermissionFlags(branchId: number): Promise<{
   canCloseShift: boolean;
   canConfirmCash: boolean;
   canOverrideVariance: boolean;
+  canManageMenuLimits: boolean;
 }> {
   const deny = {
     canOpenShift: false,
     canCloseShift: false,
     canConfirmCash: false,
     canOverrideVariance: false,
+    canManageMenuLimits: false,
   };
   const parsedBranchId = branchIdSchema.safeParse(branchId);
   if (!parsedBranchId.success) return deny;
@@ -282,6 +288,7 @@ export async function fetchPosPermissionFlags(branchId: number): Promise<{
     canCloseShift: !closeRes.error && closeRes.data === true,
     canConfirmCash: !cashRes.error && cashRes.data === true,
     canOverrideVariance: !varianceRes.error && varianceRes.data === true,
+    canManageMenuLimits: MENU_LIMIT_ROLES.includes(ctx.claims.user_role),
   };
 }
 

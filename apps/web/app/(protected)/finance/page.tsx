@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 import {
   AlertTriangle as IconAlertTriangle,
+  ArrowUpRight as IconArrowUpRight,
   Boxes as IconBoxes,
   ReceiptText as IconReceiptText,
   TrendingUp as IconTrendingUp,
@@ -14,8 +16,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@comtammatu/ui/components/card";
-import { AppPage, AppPageHeader } from "@/components/surface";
+import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
 import { messages } from "@lib/messages";
+import {
+  buildCompareDelta,
+  CompareChip,
+  type CompareDelta,
+} from "./components/compare-chip";
 import { FilterBar } from "./components/filter-bar";
 import {
   parseFinanceParams,
@@ -84,33 +91,58 @@ function FinanceSummaryCard({
   value,
   helper,
   valueTone = "default",
+  href,
+  delta,
 }: {
   icon: ReactNode;
   title: string;
   value: string;
   helper: string;
   valueTone?: ValueTone;
+  href?: string;
+  delta?: CompareDelta | null;
 }) {
-  return (
-    <Card size="sm" className="min-w-0">
+  const content = (
+    <Card size="sm" className="h-full min-w-0">
       <CardHeader>
-        <div className="flex min-w-0 items-center gap-2">
-          <span className="shrink-0 text-muted-foreground">{icon}</span>
-          <CardTitle>{title}</CardTitle>
+        <div className="flex min-w-0 items-start justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="shrink-0 text-muted-foreground">{icon}</span>
+            <CardTitle className="truncate">{title}</CardTitle>
+          </div>
+          {href ? (
+            <IconArrowUpRight
+              className="size-3.5 shrink-0 text-muted-foreground"
+              aria-hidden
+            />
+          ) : null}
         </div>
       </CardHeader>
       <CardContent className="space-y-2">
         <p
           className={cn(
-            "font-mono text-2xl font-semibold tabular-nums",
+            "truncate font-mono text-2xl font-semibold tabular-nums",
             VALUE_TONE_CLASSNAME[valueTone],
           )}
         >
           {value}
         </p>
+        {delta ? <CompareChip label={delta.label} tone={delta.tone} /> : null}
         <p className="text-xs text-muted-foreground">{helper}</p>
       </CardContent>
     </Card>
+  );
+
+  if (!href) return content;
+
+  return (
+    <Link
+      href={href}
+      className="block h-full rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      aria-label={`${title}: ${value}`}
+    >
+      {content}
+    </Link>
   );
 }
 
@@ -124,15 +156,9 @@ function QuickPanel({
   children: ReactNode;
 }) {
   return (
-    <Card size="sm" className="min-w-0">
-      <CardHeader>
-        <div className="flex min-w-0 items-center gap-2">
-          <span className="shrink-0 text-muted-foreground">{icon}</span>
-          <CardTitle>{title}</CardTitle>
-        </div>
-      </CardHeader>
-      <CardContent>{children}</CardContent>
-    </Card>
+    <AppSection size="sm" title={title} icon={icon} className="min-w-0">
+      {children}
+    </AppSection>
   );
 }
 
@@ -233,7 +259,9 @@ export default async function FinancePage({
   return (
     <AppPage width="wide" density="compact">
       <AppPageHeader
+        eyebrow={powerLiteCopy.eyebrow}
         title={powerLiteCopy.title}
+        description={powerLiteCopy.description}
         meta={financeCopy.basic.periodMeta(resolved.start, resolved.end)}
       />
 
@@ -248,37 +276,59 @@ export default async function FinancePage({
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <FinanceSummaryCard
           icon={<IconWallet className="size-4 text-muted-foreground" />}
-          title={powerLiteCopy.cashTitle}
+          title={financeCopy.basic.kpis.revenue}
           value={formatVND(cockpit.kpis.totalCollected)}
-          helper={powerLiteCopy.labels.ordersLine(
+          helper={financeCopy.basic.kpis.revenueHint(
             formatCount(cockpit.kpis.orderCount),
+            formatVND(cockpit.kpis.netRevenueBeforeVat),
           )}
           valueTone="primary"
+          href="/finance/revenue"
+          delta={
+            cockpit.compareKpis
+              ? buildCompareDelta(
+                  cockpit.kpis.totalCollected,
+                  cockpit.compareKpis.totalCollected,
+                  "higher_better",
+                )
+              : null
+          }
         />
 
         <FinanceSummaryCard
           icon={<IconBoxes className="size-4 text-muted-foreground" />}
-          title={powerLiteCopy.inventoryCashTitle}
+          title={financeCopy.basic.kpis.inventoryValue}
           value={formatVND(cockpit.kpis.inventoryValue)}
           helper={financeCopy.basic.kpis.inventoryValueHint}
+          href="/admin/reports/inventory-value"
+        />
+
+        <FinanceSummaryCard
+          icon={<IconReceiptText className="size-4 text-muted-foreground" />}
+          title={financeCopy.basic.kpis.operatingExpense}
+          value={formatVND(cockpit.kpis.operatingExpense)}
+          helper={financeCopy.basic.kpis.operatingExpenseHint}
         />
 
         <FinanceSummaryCard
           icon={<IconTrendingUp className="size-4 text-muted-foreground" />}
-          title={powerLiteCopy.profitTitle}
+          title={financeCopy.basic.kpis.grossProfit}
           value={formatVND(cockpit.kpis.grossProfit)}
           helper={financeCopy.basic.kpis.grossProfitHint(
             formatVND(cockpit.kpis.ingredientCost),
             formatPercent(cockpit.kpis.grossMargin),
           )}
           valueTone={cockpit.kpis.grossProfit >= 0 ? "success" : "warning"}
-        />
-
-        <FinanceSummaryCard
-          icon={<IconReceiptText className="size-4 text-muted-foreground" />}
-          title={powerLiteCopy.expenseTitle}
-          value={formatVND(cockpit.kpis.operatingExpense)}
-          helper={financeCopy.basic.kpis.operatingExpenseHint}
+          href="/finance/food-cost"
+          delta={
+            cockpit.compareKpis
+              ? buildCompareDelta(
+                  cockpit.kpis.grossProfit,
+                  cockpit.compareKpis.grossProfit,
+                  "higher_better",
+                )
+              : null
+          }
         />
       </div>
 

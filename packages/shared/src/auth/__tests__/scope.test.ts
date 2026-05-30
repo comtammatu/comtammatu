@@ -7,7 +7,12 @@ import {
   getBetaDefaultRedirect,
 } from "../scope";
 import { buildAccessDeniedPath } from "../blocked-state";
-import { STAFF_ROLES, type JwtClaims, type StaffRole } from "../types";
+import {
+  ADMIN_ROLES,
+  STAFF_ROLES,
+  type JwtClaims,
+  type StaffRole,
+} from "../types";
 import { canAccess } from "../module-acl";
 import { resolveDiscoveredApps } from "../app-discovery";
 import {
@@ -103,6 +108,19 @@ test("resolvePostLoginRedirect → returnTo to disallowed module → fallback", 
     resolvePostLoginRedirect(makeClaims("cashier", 3), "/admin/dashboard"),
     "/employee",
   );
+});
+
+test("resolvePostLoginRedirect → admin returnTo to employee portal falls back to Admin", () => {
+  for (const role of ADMIN_ROLES) {
+    assert.equal(
+      resolvePostLoginRedirect(makeClaims(role), "/employee"),
+      "/admin/dashboard",
+    );
+    assert.equal(
+      resolvePostLoginRedirect(makeClaims(role), "/employee/profile"),
+      "/admin/dashboard",
+    );
+  }
 });
 
 test("resolvePostLoginRedirect → retired admin inventory returnTo is not preserved", () => {
@@ -436,13 +454,19 @@ test("canAccess → settings includes branch floor setting roles", () => {
   }
 });
 
-test("canAccess → employee portal is available to every staff role", () => {
-  for (const role of STAFF_ROLES) {
+test("canAccess → employee portal excludes admin-level roles", () => {
+  for (const role of ADMIN_ROLES) {
+    assert.equal(canAccess(role, "employee"), false);
+  }
+
+  for (const role of STAFF_ROLES.filter(
+    (role) => !ADMIN_ROLES.includes(role),
+  )) {
     assert.equal(canAccess(role, "employee"), true);
   }
 });
 
-test("resolveDiscoveredApps → settings entries are discoverable from employee portal", () => {
+test("resolveDiscoveredApps → settings entries are discoverable for authorized roles", () => {
   const ownerApps = resolveDiscoveredApps("owner");
   assert.ok(
     ownerApps.some(

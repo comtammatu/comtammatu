@@ -283,6 +283,8 @@ export type ReceiptPayload = BillBase & {
    * values render via fallback to raw key. Optional for backward-compat with
    * old backend payloads that predate the provisional-bill split. */
   payment_method?: "cash" | "vietqr" | "bank_transfer" | "momo" | string | null;
+  /** QR thanh toán; optional because older receipt payloads predate QR-on-receipt. */
+  payment_qr?: PaymentQR | null;
   /** Tiền khách đưa (cash only); non-cash methods: = total_amount.
    * Optional for backward-compat; omitted rows are skipped. */
   cash_received?: number | null;
@@ -1147,6 +1149,20 @@ export function renderReceipt(p: ReceiptPayload): Uint8Array {
 
   if (p.note) {
     parts.push(line(`Ghi chú: ${p.note}`));
+  }
+
+  const q = p.payment_qr;
+  if (q?.content) {
+    parts.push(newline(), alignCenter(), boldOn());
+    parts.push(line("QUÉT QR THANH TOÁN"));
+    parts.push(boldOff());
+    parts.push(qrBlock(q.content, 6));
+    parts.push(line(q.header_label));
+    if (q.account_no) parts.push(line(`STK: ${q.account_no}`));
+    if (q.account_name) parts.push(line(q.account_name.toUpperCase()));
+    parts.push(line(`Số tiền: ${fmtMoney(q.amount)}`));
+    parts.push(line(`Nội dung: ${q.description}`));
+    parts.push(alignLeft());
   }
 
   parts.push(...renderFooter());

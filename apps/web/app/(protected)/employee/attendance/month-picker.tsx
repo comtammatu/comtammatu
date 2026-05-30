@@ -8,6 +8,9 @@ import {
 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
+import { messages } from "@lib/messages";
+
+const copy = messages.employee.attendance;
 
 interface MonthPickerProps {
   selectedMonth: string;
@@ -24,7 +27,7 @@ function shiftMonth(month: string, delta: number): string {
 
 function formatLabel(month: string): string {
   const [y, m] = month.split("-");
-  return `Tháng ${m}/${y}`;
+  return `${copy.monthLabelPrefix} ${m}/${y}`;
 }
 
 export function MonthPicker({ selectedMonth, currentMonth }: MonthPickerProps) {
@@ -49,8 +52,9 @@ export function MonthPicker({ selectedMonth, currentMonth }: MonthPickerProps) {
       <Button
         type="button"
         variant="outline"
-        size="icon-sm"
-        aria-label="Tháng trước"
+        size="touch"
+        className="w-12 px-0"
+        aria-label={copy.previousMonthAria}
         disabled={isPending}
         onClick={() => go(shiftMonth(selectedMonth, -1))}
       >
@@ -67,19 +71,20 @@ export function MonthPicker({ selectedMonth, currentMonth }: MonthPickerProps) {
             onClick={() => go(currentMonth)}
           >
             {isPending ? <Spinner className="mr-1" /> : null}
-            Tháng này
+            {copy.thisMonth}
           </Button>
         ) : (
           <span className="text-xs text-muted-foreground">
-            {isPending ? "Đang tải…" : "Tháng hiện tại"}
+            {isPending ? copy.loading : copy.currentMonth}
           </span>
         )}
       </div>
       <Button
         type="button"
         variant="outline"
-        size="icon-sm"
-        aria-label="Tháng sau"
+        size="touch"
+        className="w-12 px-0"
+        aria-label={copy.nextMonthAria}
         disabled={isPending || !canGoNext}
         onClick={() => go(next)}
       >

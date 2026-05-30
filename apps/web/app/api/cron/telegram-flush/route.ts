@@ -1,12 +1,19 @@
 /**
  * Telegram outbox flusher — drains feedback alert queue.
  *
- * Auth: shared bearer token via `CRON_SECRET` env. Vercel Cron sends this
- * header automatically. Public callers without the secret get 401 — without
- * this, anyone could trigger flush at will (DoS on Telegram + replay storm).
+ * Auth: shared bearer token via `CRON_SECRET` env. Public callers without
+ * the secret get 401 — without this, anyone could trigger flush at will
+ * (DoS on Telegram + replay storm).
  *
- * Schedule: every 1 minute via vercel.json. P95 delivery ≤ 90s
- * (60s cron tick + 30s send buffer).
+ * Trigger: fire-and-forget từ application code, KHÔNG có Vercel cron schedule:
+ *   - `app/(public)/r/[token]/actions.ts:134` — sau khi submit feedback
+ *   - `app/api/ai/enrich-feedback/route.ts:186` — sau khi AI enrich xong
+ * P95 delivery typically < 5s sau submit (round-trip + Telegram send).
+ *
+ * Legacy schedule note: trước đây từng được lên lịch `* * * * *` (mỗi phút)
+ * trong vercel.json. Hiện đã chuyển sang on-demand fire-and-forget để tránh
+ * burn invocation quota. Endpoint vẫn an toàn để gọi tay khi cần drain
+ * queue thủ công (e.g. recover sau outage).
  *
  * Per-feedback flow:
  *   1. Pick up to BATCH_SIZE outbox rows where status IN ('pending','failed')

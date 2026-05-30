@@ -2,13 +2,27 @@ import type { Theme } from "./theme-provider";
 
 type ThemeScriptOptions = {
   defaultTheme?: Theme;
+  forcedTheme?: "light" | "dark";
   storageKey?: string;
 };
 
 export function getThemeScriptHtml({
   defaultTheme = "system",
+  forcedTheme,
   storageKey = "theme",
 }: ThemeScriptOptions = {}) {
+  if (forcedTheme) {
+    return (
+      `(function(){try{` +
+      `var d=document.documentElement;` +
+      `var t=${JSON.stringify(forcedTheme)};` +
+      `d.classList.remove("light","dark");` +
+      `d.classList.add(t);` +
+      `d.style.colorScheme=t;` +
+      `}catch(e){}})();`
+    );
+  }
+
   return (
     `(function(){try{` +
     `var d=document.documentElement;` +

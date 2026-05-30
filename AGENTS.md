@@ -1,6 +1,10 @@
-# Cơm Tấm Má Tư — Restaurant Management System
+# Cơm Tấm Má Tư — Bộ phần mềm quản lý vận hành và bán hàng
 
-Single-tenant multi-branch system for Cơm Tấm Má Tư CTCP.
+Bộ phần mềm quản lý vận hành và bán hàng cho chuỗi Cơm Tấm Má Tư CTCP.
+Single-tenant, multi-branch.
+
+Nhiệm vụ: bán đúng, bếp nhận đúng, thu tiền đúng, in/hóa đơn đúng, kho trừ đúng,
+và chủ/quản lý nhìn được tình trạng vận hành thật theo ngày.
 
 Hierarchy: `Tenant (L0) → Branch (L1)`.
 

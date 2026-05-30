@@ -70,6 +70,7 @@ export type ThemeProviderProps = {
   children: ReactNode;
   defaultTheme?: Theme;
   enableSystem?: boolean;
+  forcedTheme?: Resolved;
   disableTransitionOnChange?: boolean;
   attribute?: "class";
   storageKey?: string;
@@ -78,6 +79,7 @@ export type ThemeProviderProps = {
 export function ThemeProvider({
   children,
   defaultTheme = "system",
+  forcedTheme,
   disableTransitionOnChange = false,
   storageKey = DEFAULT_STORAGE_KEY,
 }: ThemeProviderProps) {
@@ -92,19 +94,26 @@ export function ThemeProvider({
   const isFirstApply = useRef(true);
 
   useEffect(() => {
+    if (forcedTheme !== undefined) {
+      setThemeState(forcedTheme);
+      return;
+    }
+
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
     const handler = () => setSystemTheme(mq.matches ? "dark" : "light");
     handler();
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);
-  }, []);
+  }, [forcedTheme, storageKey]);
 
+  const activeTheme = forcedTheme ?? theme;
   const resolvedTheme: Resolved | undefined =
-    theme === "system"
+    forcedTheme ??
+    (activeTheme === "system"
       ? systemTheme
-      : theme === "light" || theme === "dark"
-        ? theme
-        : undefined;
+      : activeTheme === "light" || activeTheme === "dark"
+        ? activeTheme
+        : undefined);
 
   useEffect(() => {
     if (resolvedTheme === undefined) return;
@@ -120,6 +129,11 @@ export function ThemeProvider({
   useEffect(() => {
     const handler = (e: StorageEvent) => {
       if (e.key !== storageKey) return;
+      if (forcedTheme !== undefined) {
+        setThemeState(forcedTheme);
+        return;
+      }
+
       const next = e.newValue;
       if (next === "light" || next === "dark" || next === "system") {
         setThemeState(next);
@@ -129,28 +143,29 @@ export function ThemeProvider({
     };
     window.addEventListener("storage", handler);
     return () => window.removeEventListener("storage", handler);
-  }, [defaultTheme, storageKey]);
+  }, [defaultTheme, forcedTheme, storageKey]);
 
   const setTheme = useCallback(
     (next: Theme) => {
-      setThemeState(next);
+      const nextTheme = forcedTheme ?? next;
+      setThemeState(nextTheme);
       try {
-        localStorage.setItem(storageKey, next);
+        localStorage.setItem(storageKey, nextTheme);
       } catch {
         /* localStorage unavailable */
       }
     },
-    [storageKey],
+    [forcedTheme, storageKey],
   );
 
   const value = useMemo<ThemeContextValue>(
     () => ({
-      theme,
+      theme: activeTheme,
       resolvedTheme,
       systemTheme,
       setTheme,
     }),
-    [theme, resolvedTheme, systemTheme, setTheme],
+    [activeTheme, resolvedTheme, systemTheme, setTheme],
   );
 
   return (

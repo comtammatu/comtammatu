@@ -1,4 +1,7 @@
+import Link from "next/link";
+import { Clock as IconClock } from "lucide-react";
 import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
+import { Button } from "@comtammatu/ui/components/button";
 import {
   Empty,
   EmptyDescription,
@@ -24,6 +27,7 @@ import {
 import { FORM_VI } from "@comtammatu/shared/messages";
 import {
   EmployeeDetailList,
+  EmployeeMissingProfileEmpty,
   EmployeePage,
   EmployeePanel,
 } from "../components/employee-page";
@@ -35,6 +39,9 @@ import {
 } from "../_lib/vn-business-date";
 import { MonthPicker } from "./month-picker";
 import { shiftVNMonth } from "@comtammatu/shared/time";
+import { messages } from "@lib/messages";
+
+const copy = messages.employee.home;
 
 const STATUS_LABELS: Record<string, string> = {
   present: "Có mặt",
@@ -63,18 +70,10 @@ export default async function EmployeeAttendancePage(props: {
   if (!ctx) {
     return (
       <EmployeePage
-        title="Ngày công"
-        description="Lịch sử vào ca, ra ca theo tháng."
+        title={copy.attendanceTitle}
+        description={copy.attendanceLongDescription}
       >
-        <Empty>
-          <EmptyHeader>
-            <EmptyTitle>Không tìm thấy hồ sơ nhân viên</EmptyTitle>
-            <EmptyDescription>
-              Không thể truy xuất hồ sơ nhân viên từ tài khoản này. Vui lòng
-              liên hệ quản trị viên.
-            </EmptyDescription>
-          </EmptyHeader>
-        </Empty>
+        <EmployeeMissingProfileEmpty />
       </EmployeePage>
     );
   }
@@ -109,9 +108,17 @@ export default async function EmployeeAttendancePage(props: {
 
   return (
     <EmployeePage
-      title="Ngày công"
-      description="Lịch sử vào ca, ra ca theo tháng."
+      title={copy.attendanceTitle}
+      description={copy.attendanceLongDescription}
       badge={{ children: monthLabel, variant: "outline" }}
+      action={
+        <Button asChild size="touch" className="w-full sm:w-fit">
+          <Link href="/employee/clock">
+            <IconClock data-icon="inline-start" />
+            {copy.clockTodayTitle}
+          </Link>
+        </Button>
+      }
     >
       <MonthPicker selectedMonth={month} currentMonth={currentMonth} />
       <EmployeePanel title="Tổng quan">

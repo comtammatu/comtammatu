@@ -24,7 +24,7 @@ import {
   type ResolvedNavGroup as SharedResolvedNavGroup,
   type StaffRole,
 } from "@comtammatu/shared/auth";
-import { APP_COPY_VI } from "@comtammatu/shared/labels";
+import { APP_COPY_VI, MODULE_LABELS_VI } from "@comtammatu/shared/labels";
 import { Button } from "@comtammatu/ui/components/button";
 import { AppShell } from "@/components/app-shell";
 import {
@@ -116,9 +116,11 @@ export function AdminShell({
         crumbLabel: APP_COPY_VI.adminFoundation,
         actions: (
           <>
-            <Button asChild variant="outline" size="sm">
-              <Link href="/employee">Cổng nhân viên</Link>
-            </Button>
+            {canAccess(role, "employee") && (
+              <Button asChild variant="outline" size="sm">
+                <Link href="/employee">{MODULE_LABELS_VI.employee}</Link>
+              </Button>
+            )}
             {canAccess(role, "reports") && (
               <Button asChild size="sm">
                 <Link href="/admin/reports">

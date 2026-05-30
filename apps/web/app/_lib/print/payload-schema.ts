@@ -38,6 +38,7 @@ const billItemSchema = kitchenItemSchema.extend({
 const paymentQrSchema = z.object({
   type: z.enum(["vietqr", "momo"]),
   content: z.string().min(1),
+  bank_code: z.string().optional(),
   header_label: z.string(),
   account_no: z.string().nullable().optional(),
   account_name: z.string().nullable().optional(),
@@ -115,6 +116,8 @@ export const receiptPayloadSchema = z.object({
   cash_received: z.number().nullable().optional(),
   /** Tiền trả khách = cash_received - total_amount. Null / 0 for non-cash. */
   cash_change: z.number().nullable().optional(),
+  /** Nullable: tenants without VietQR config print receipt w/o QR block. */
+  payment_qr: paymentQrSchema.nullable().optional(),
 });
 
 // ─── Cancel ticket (PHIẾU HỦY MÓN) ───────────────────────────────────────

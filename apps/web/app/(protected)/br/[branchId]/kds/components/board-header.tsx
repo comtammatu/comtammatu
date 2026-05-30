@@ -8,6 +8,7 @@ import {
   TooltipTrigger,
 } from "@comtammatu/ui/components/tooltip";
 import {
+  History as IconHistory,
   Maximize2 as IconMaximize,
   Minimize2 as IconMinimize,
   Volume2 as IconVolumeOn,
@@ -27,6 +28,7 @@ interface BoardHeaderProps {
   soundEnabled: boolean;
   isFullscreen: boolean;
   onModeChange: (next: KdsViewMode) => void;
+  onCompletionHistoryOpen: () => void;
   onSoundToggle: () => void;
   onFullscreenToggle: () => void;
   menuLimits: KdsMenuLimitRow[];
@@ -35,6 +37,10 @@ interface BoardHeaderProps {
   filterControls: ReactNode;
 }
 
+const KDS_HEADER_COPY = {
+  completionHistory: "Lịch sử hoàn thành",
+} as const;
+
 export function BoardHeader({
   branchId,
   pendingCount,
@@ -42,6 +48,7 @@ export function BoardHeader({
   soundEnabled,
   isFullscreen,
   onModeChange,
+  onCompletionHistoryOpen,
   onSoundToggle,
   onFullscreenToggle,
   menuLimits,
@@ -68,6 +75,20 @@ export function BoardHeader({
         >
           {pendingCount > 0 ? `${pendingCount} chờ` : "0 chờ"}
         </Badge>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label={KDS_HEADER_COPY.completionHistory}
+              onClick={onCompletionHistoryOpen}
+            >
+              <IconHistory aria-hidden />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{KDS_HEADER_COPY.completionHistory}</TooltipContent>
+        </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
             <Button

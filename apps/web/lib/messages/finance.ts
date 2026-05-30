@@ -27,15 +27,15 @@ export const finance = {
     title: "Sổ tiền của quán",
     description:
       "Một màn hình cho chủ quán: doanh thu, tồn kho, lãi gộp và chi phí.",
-    cashTitle: "Doanh Thu",
+    cashTitle: "Doanh thu",
     cashDescription: "Chỉ theo dõi tiền đã thu và cách tiền đi vào quỹ.",
-    profitTitle: "Lãi Gộp",
+    profitTitle: "Lợi nhuận gộp",
     profitDescription:
       "Lấy doanh thu trước VAT sau giảm giá, trừ giá vốn nguyên liệu đang có.",
-    inventoryCashTitle: "Tồn Kho",
+    inventoryCashTitle: "Giá trị tồn kho",
     inventoryCashDescription:
       "Tổng giá trị tồn kho hiện tại và nguyên liệu đang giữ nhiều vốn nhất.",
-    expenseTitle: "Chi Phí",
+    expenseTitle: "Chi vận hành",
     expenseDescription:
       "Chi vận hành đã ghi nhận trong kỳ, không gồm giá vốn nguyên liệu.",
     stageTitle: "Mức báo cáo đang dùng",
@@ -438,6 +438,28 @@ export const finance = {
     refreshing: "Đang làm mới…",
   },
   revenue: {
+    page: {
+      eyebrow: "Báo cáo doanh thu",
+      title: "Doanh thu",
+      description:
+        "Theo dõi tiền đã thu, doanh thu trước VAT, số đơn, khách và cơ cấu thanh toán theo kỳ.",
+      meta: (branch: string, range: string, granularity: string) =>
+        `${branch} · ${range} · ${granularity}`,
+    },
+    sections: {
+      keyMetricsTitle: "Chỉ số chính",
+      keyMetricsDescription:
+        "Các số dùng để báo cáo doanh thu kỳ này trước khi đi vào biểu đồ và bảng.",
+      chartTitle: "Diễn biến và cơ cấu",
+      chartDescription:
+        "Xu hướng, phương thức thanh toán, chi nhánh và khung giờ cao điểm.",
+      tableTitle: "Bảng kiểm tra",
+      tableDescription:
+        "Dữ liệu dạng bảng để đối chiếu, drill-down ngày và xuất CSV.",
+      controlTitle: "Điểm cần xử lý",
+      controlDescription:
+        "Các lệch doanh thu, hóa đơn và quỹ tiền mặt cần nhìn sau phần báo cáo.",
+    },
     kpi: {
       netRevenue: "Doanh thu thuần",
       netRevenueHint: "Chưa VAT, đã trừ giảm giá",

@@ -10,7 +10,12 @@ import {
   type StaffRole,
 } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { getVNDateString } from "@comtammatu/shared/time";
+import {
+  getVNDateString,
+  getVNMinutesOfDay,
+  parseClockTimeToMinutes,
+  isWithinShiftWindow,
+} from "@comtammatu/shared/time";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 
 /* ─── Constants ─── */
@@ -20,6 +25,9 @@ const MAX_DISTANCE_METERS = 200;
 
 /** Roles that can manage attendance config / generate codes */
 const CONFIG_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
+
+/** Grace window (minutes) before shift start / after shift end for clock-in */
+const CLOCK_IN_GRACE_MIN = 60;
 
 /* ─── Helpers ─── */
 
@@ -189,8 +197,52 @@ export async function clockIn(input: {
     return { success: false, error: "Mã chấm công không đúng" };
   }
 
-  // 5. INSERT attendance record (lat/lng/method/code_verified pending migration)
-  const { error: insertError } = await supabase
+  // 4.5 Graceful shift-window guard (rule CLOCK-IN-SHIFT-WINDOW-GRACEFUL): the
+  // daily code is static all day, so on its own a leaked code lets anyone clock
+  // in at any hour. When the employee is rostered today, restrict clock-in to
+  // their shift window ± grace; when they have NO assignment today, fall through
+  // to code+GPS as before so unrostered staff are never blocked. Service client
+  // is scoped to this employee's own row and guarantees the check runs.
+  const { data: assignment } = await createServiceClient()
+    .from("shift_assignments")
+    .select("shifts(start_time, end_time)")
+    .eq("employee_id", employee.id)
+    .eq("tenant_id", claims.tenant_id)
+    .eq("date", today)
+    .maybeSingle();
+
+  const shift = (assignment?.shifts ?? null) as unknown as {
+    start_time: string;
+    end_time: string;
+  } | null;
+
+  if (shift) {
+    const startMin = parseClockTimeToMinutes(shift.start_time);
+    const endMin = parseClockTimeToMinutes(shift.end_time);
+    if (
+      startMin != null &&
+      endMin != null &&
+      !isWithinShiftWindow(
+        getVNMinutesOfDay(),
+        startMin,
+        endMin,
+        CLOCK_IN_GRACE_MIN,
+      )
+    ) {
+      return {
+        success: false,
+        error: `Ngoài khung giờ ca của bạn (${shift.start_time.slice(0, 5)}–${shift.end_time.slice(0, 5)}). Chỉ chấm công trong ca làm việc.`,
+      };
+    }
+  }
+
+  // 5. INSERT via the service client. Direct INSERT on attendance_records is
+  // REVOKED from `authenticated` (migration 20260602009000_attendance_writes_
+  // revoke_direct_insert) so an employee cannot POST a fabricated clock-in
+  // straight to the REST API, bypassing the code/GPS/shift checks above. All
+  // attendance inserts must flow through checked server code; the service role
+  // is the only writer. Authorisation for this row was established above.
+  const { error: insertError } = await createServiceClient()
     .from("attendance_records")
     .insert({
       tenant_id: claims.tenant_id,

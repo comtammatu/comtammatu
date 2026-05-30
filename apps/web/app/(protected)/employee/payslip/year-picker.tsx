@@ -8,6 +8,9 @@ import {
 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Spinner } from "@comtammatu/ui/components/spinner";
+import { messages } from "@lib/messages";
+
+const copy = messages.employee.payslip;
 
 interface YearPickerProps {
   selectedYear: number;
@@ -35,15 +38,18 @@ export function YearPicker({ selectedYear, currentYear }: YearPickerProps) {
       <Button
         type="button"
         variant="outline"
-        size="icon-sm"
-        aria-label="Năm trước"
+        size="touch"
+        className="w-12 px-0"
+        aria-label={copy.previousYearAria}
         disabled={isPending}
         onClick={() => go(selectedYear - 1)}
       >
         <IconChevronLeft />
       </Button>
       <div className="flex flex-1 flex-col items-center gap-0.5">
-        <p className="text-sm font-medium">Năm {selectedYear}</p>
+        <p className="text-sm font-medium">
+          {copy.yearBadge} {selectedYear}
+        </p>
         {!isCurrent ? (
           <Button
             type="button"
@@ -53,19 +59,20 @@ export function YearPicker({ selectedYear, currentYear }: YearPickerProps) {
             onClick={() => go(currentYear)}
           >
             {isPending ? <Spinner className="mr-1" /> : null}
-            Năm hiện tại
+            {copy.currentYear}
           </Button>
         ) : (
           <span className="text-xs text-muted-foreground">
-            {isPending ? "Đang tải…" : "Năm hiện tại"}
+            {isPending ? copy.loading : copy.currentYear}
           </span>
         )}
       </div>
       <Button
         type="button"
         variant="outline"
-        size="icon-sm"
-        aria-label="Năm sau"
+        size="touch"
+        className="w-12 px-0"
+        aria-label={copy.nextYearAria}
         disabled={isPending || !canGoNext}
         onClick={() => go(selectedYear + 1)}
       >

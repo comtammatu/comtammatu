@@ -1072,22 +1072,19 @@ export const editPendingOrderItem = withActionPositional(
       is_default: s.is_default,
     }));
 
-    // RPC types not yet regenerated (migration pending owner apply per
-    // CLAUDE.md: dev/test push OK, production file→PR→merge→manual apply →
-    // pnpm db:types). Cast mirrors existing pattern in menu-actions.ts for
-    // get_branch_menu_daily_limits_for_pos. After owner applies + db:types,
-    // remove the cast.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase as any).rpc(
+    const { data, error } = await supabase.rpc(
       "edit_pending_order_item",
       {
         p_order_item_id: parsedData.orderItemId,
-        p_variant_id: parsedData.variantId,
-        p_variant_name: variantNameOrNull,
+        // variant/note params accept NULL in plpgsql (item without variant / no
+        // note) but typegen types them non-null (no SQL default) — assert to
+        // satisfy the generated Args while keeping the other params checked.
+        p_variant_id: parsedData.variantId as number,
+        p_variant_name: variantNameOrNull as string,
         p_unit_price: parsedData.unitPrice,
         p_modifiers: rpcModifiers,
         p_sides: rpcSides,
-        p_note: noteOrNull,
+        p_note: noteOrNull as string,
         p_quantity: parsedData.quantity,
       },
     );
@@ -1117,8 +1114,7 @@ export const editPendingOrderItem = withActionPositional(
 
     if (wasSentToKitchen && quantityChanged) {
       const { data: printData, error: printError } =
-        await // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (supabase as any).rpc("enqueue_edit_pending_order_item_quantity_print", {
+        await supabase.rpc("enqueue_edit_pending_order_item_quantity_print", {
           p_order_item_id: parsedData.orderItemId,
           p_old_quantity: result.old_quantity,
           p_new_quantity: result.new_quantity,

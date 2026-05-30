@@ -1,7 +1,10 @@
 "use server";
 
+import { createHash, randomUUID } from "node:crypto";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
+import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
+import { getAuthContext, probePermission } from "@/_lib/auth";
 
 const MAX_PHOTOS = 3;
 const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
@@ -11,17 +14,27 @@ const ALLOWED_TYPES = new Set([
   "image/webp",
   "image/heic",
 ]);
+const EXT_BY_TYPE = new Map([
+  ["image/jpeg", "jpg"],
+  ["image/png", "png"],
+  ["image/webp", "webp"],
+  ["image/heic", "heic"],
+]);
 
-// SECURITY: requires token + feedbackId. We verify the feedback was created
-// via this token's QR code AND was recent (≤ FRESH_WINDOW_MS) so an attacker
-// can't grab a feedback_id from somewhere else and stuff photos onto it.
-// tenant_id is derived from the feedback row, never trusted from client.
-const FRESH_WINDOW_MS = 5 * 60 * 1000; // 5 minutes — generous for slow uploads
+// SECURITY: requires QR token + feedbackId + one-shot upload token. We verify
+// the feedback was created via this token's QR code, the upload token hash
+// matches, and the row is still fresh. tenant_id is always derived from DB.
+const FRESH_WINDOW_MS = 10 * 60 * 1000;
+
+function sha256Hex(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
+}
 
 export async function uploadFeedbackPhotos(
   formData: FormData,
   feedbackId: number,
   token?: string,
+  photoUploadToken?: string,
 ): Promise<ActionResult<{ paths: string[] }>> {
   const files = formData.getAll("photos") as File[];
 
@@ -37,6 +50,13 @@ export async function uploadFeedbackPhotos(
     return { success: false, error: "Thiếu token" };
   }
 
+  if (
+    !photoUploadToken ||
+    !/^[a-f0-9]{64}$/.test(photoUploadToken)
+  ) {
+    return { success: false, error: "Phiên tải ảnh không hợp lệ" };
+  }
+
   for (const file of files) {
     if (file.size > MAX_BYTES) {
       return { success: false, error: "Mỗi ảnh tối đa 5 MB" };
@@ -47,6 +67,7 @@ export async function uploadFeedbackPhotos(
   }
 
   const supabase = createServiceClient();
+  const tokenHash = sha256Hex(photoUploadToken);
 
   const { data: qr } = await supabase
     .from("feedback_qr_codes")
@@ -60,13 +81,16 @@ export async function uploadFeedbackPhotos(
 
   const { data: feedbackRow } = await supabase
     .from("feedbacks")
-    .select("tenant_id, qr_code_id, photo_paths, created_at")
+    .select(
+      "tenant_id, qr_code_id, photo_paths, created_at, photo_upload_expires_at, photo_upload_consumed_at",
+    )
     .eq("id", feedbackId)
     .eq("qr_code_id", qr.id)
+    .eq("photo_upload_token_sha256", tokenHash)
     .maybeSingle();
 
   if (!feedbackRow) {
-    return { success: false, error: "Không tìm thấy phản ánh" };
+    return { success: false, error: "Phiên tải ảnh không hợp lệ" };
   }
 
   const ageMs = Date.now() - new Date(feedbackRow.created_at).getTime();
@@ -78,12 +102,23 @@ export async function uploadFeedbackPhotos(
     return { success: false, error: "Phản ánh đã có ảnh" };
   }
 
+  if (feedbackRow.photo_upload_consumed_at) {
+    return { success: false, error: "Phiên tải ảnh đã được sử dụng" };
+  }
+
+  if (
+    !feedbackRow.photo_upload_expires_at ||
+    new Date(feedbackRow.photo_upload_expires_at).getTime() <= Date.now()
+  ) {
+    return { success: false, error: "Phiên tải ảnh đã hết hạn" };
+  }
+
   const tenantId = feedbackRow.tenant_id;
   const paths: string[] = [];
 
   for (const file of files) {
-    const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
-    const random = Math.random().toString(36).slice(2, 10);
+    const ext = EXT_BY_TYPE.get(file.type) ?? "jpg";
+    const random = randomUUID().replaceAll("-", "").slice(0, 24);
     const path = `${tenantId}/${feedbackId}/${random}.${ext}`;
 
     const bytes = await file.arrayBuffer();
@@ -114,21 +149,51 @@ export async function uploadFeedbackPhotos(
   // Conditional WHERE on photo_paths IS NULL OR '{}' closes the TOCTOU race
   // where two concurrent uploads for the same feedback_id both pass the
   // earlier emptiness check and then race to overwrite each other.
+  // The upload token is consumed in the same UPDATE so it remains one-shot.
+  const nowIso = new Date().toISOString();
   const { data: updated, error: updateError } = await supabase
     .from("feedbacks")
-    .update({ photo_paths: paths })
+    .update({ photo_paths: paths, photo_upload_consumed_at: nowIso })
     .eq("id", feedbackId)
+    .eq("photo_upload_token_sha256", tokenHash)
+    .is("photo_upload_consumed_at", null)
+    .gt("photo_upload_expires_at", nowIso)
     .or("photo_paths.is.null,photo_paths.eq.{}")
     .select("id");
 
   if (updateError) {
     console.error("[uploadFeedbackPhotos] update error", updateError.code);
-    // Non-fatal — photos are uploaded, just not linked
+    const { error: removeError } = await supabase.storage
+      .from("feedback-photos")
+      .remove(paths);
+    if (removeError) {
+      console.warn(
+        "[uploadFeedbackPhotos] cleanup-after-update-error failed",
+        removeError.message,
+      );
+    }
+    return {
+      success: false,
+      error: "Không thể tải ảnh lên. Vui lòng thử lại.",
+    };
   } else if (!updated || updated.length === 0) {
     console.warn(
-      "[uploadFeedbackPhotos] race-lost feedbackId=%d — paths orphaned",
+      "[uploadFeedbackPhotos] race-lost feedbackId=%d — removing uploaded paths",
       feedbackId,
     );
+    const { error: removeError } = await supabase.storage
+      .from("feedback-photos")
+      .remove(paths);
+    if (removeError) {
+      console.warn(
+        "[uploadFeedbackPhotos] cleanup-after-race-lost failed",
+        removeError.message,
+      );
+    }
+    return {
+      success: false,
+      error: "Không thể tải ảnh lên. Vui lòng thử lại.",
+    };
   }
 
   return { success: true, data: { paths } };
@@ -141,17 +206,40 @@ export async function getFeedbackPhotoUrls(
   feedbackId: number,
   tenantId: number,
 ): Promise<ActionResult<{ urls: string[] }>> {
+  if (
+    !Number.isInteger(feedbackId) ||
+    feedbackId <= 0 ||
+    !Number.isInteger(tenantId) ||
+    tenantId <= 0
+  ) {
+    return { success: false, error: "Dữ liệu không hợp lệ" };
+  }
+
+  const ctx = await getAuthContext(MODULE_ACL.feedback.allowedRoles);
+  if (!ctx || ctx.claims.tenant_id !== tenantId) {
+    return { success: false, error: "Không có quyền xem ảnh." };
+  }
+
   const supabase = createServiceClient();
 
   const { data: feedback } = await supabase
     .from("feedbacks")
-    .select("photo_paths, tenant_id")
+    .select("photo_paths, tenant_id, branch_id")
     .eq("id", feedbackId)
-    .eq("tenant_id", tenantId)
+    .eq("tenant_id", ctx.claims.tenant_id)
     .maybeSingle();
 
   if (!feedback) {
     return { success: false, error: "Không tìm thấy phản ánh" };
+  }
+
+  const canView = await probePermission(
+    ctx,
+    PERMISSION_KEYS.FEEDBACK_VIEW,
+    feedback.branch_id,
+  );
+  if (!canView) {
+    return { success: false, error: "Không có quyền xem ảnh." };
   }
 
   if (!feedback.photo_paths || feedback.photo_paths.length === 0) {
@@ -159,7 +247,16 @@ export async function getFeedbackPhotoUrls(
   }
 
   const urls: string[] = [];
+  const expectedPrefix = `${feedback.tenant_id}/${feedbackId}/`;
   for (const path of feedback.photo_paths) {
+    if (!path.startsWith(expectedPrefix)) {
+      console.warn(
+        "[getFeedbackPhotoUrls] unexpected photo path feedbackId=%d",
+        feedbackId,
+      );
+      continue;
+    }
+
     const { data } = await supabase.storage
       .from("feedback-photos")
       .createSignedUrl(path, 600);

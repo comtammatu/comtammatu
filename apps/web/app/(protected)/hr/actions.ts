@@ -4,6 +4,7 @@ import { z } from "zod";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getVNMonthEndDateString } from "@comtammatu/shared/time";
+import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { withAction } from "@/_lib/with-action";
 import { canAccessBranch } from "@/_lib/branch-scope";
@@ -136,7 +137,7 @@ export const fetchShifts = withAction(
 );
 
 export const createShift = withAction(
-  { roles: SHIFT_ROLES, schema: shiftSchema },
+  { roles: SHIFT_ROLES, schema: shiftSchema, requireBranchScope: true },
   async (data, { supabase, claims }) => {
     if (!(await canAccessBranch(supabase, claims, data.branchId))) {
       return { success: false, error: "Không có quyền truy cập chi nhánh này" };
@@ -222,8 +223,8 @@ const checkInSchema = z.object({
 });
 
 export const checkIn = withAction(
-  { roles: SHIFT_ROLES, schema: checkInSchema },
-  async (data, { supabase, claims }) => {
+  { roles: SHIFT_ROLES, schema: checkInSchema, requireBranchScope: true },
+  async (data, { claims }) => {
     if (
       claims.user_role === "branch_manager" &&
       claims.branch_id !== data.branchId
@@ -231,7 +232,11 @@ export const checkIn = withAction(
       return { success: false, error: "Không có quyền truy cập chi nhánh này" };
     }
 
-    const { data: result, error } = await supabase
+    // Service client: direct INSERT on attendance_records is revoked from
+    // `authenticated` (migration 20260602009000). This action is already gated
+    // by SHIFT_ROLES + the branch-scope check above, so the elevated write is
+    // authorised at the action layer.
+    const { data: result, error } = await createServiceClient()
       .from("attendance_records")
       .upsert(
         {
@@ -261,7 +266,7 @@ const checkOutSchema = z.object({
 });
 
 export const checkOut = withAction(
-  { roles: SHIFT_ROLES, schema: checkOutSchema },
+  { roles: SHIFT_ROLES, schema: checkOutSchema, requireBranchScope: true },
   async (data, { supabase, claims }) => {
     let query = supabase
       .from("attendance_records")
@@ -379,7 +384,7 @@ const updateAttendanceSchema = z.object({
 });
 
 export const updateAttendanceStatus = withAction(
-  { roles: SHIFT_ROLES, schema: updateAttendanceSchema },
+  { roles: SHIFT_ROLES, schema: updateAttendanceSchema, requireBranchScope: true },
   async (data, { supabase, claims }) => {
     let query = supabase
       .from("attendance_records")
@@ -415,8 +420,8 @@ const bulkCheckInSchema = z.object({
 });
 
 export const bulkCheckIn = withAction(
-  { roles: SHIFT_ROLES, schema: bulkCheckInSchema },
-  async (data, { supabase, claims }) => {
+  { roles: SHIFT_ROLES, schema: bulkCheckInSchema, requireBranchScope: true },
+  async (data, { claims }) => {
     if (
       claims.user_role === "branch_manager" &&
       claims.branch_id !== data.branchId
@@ -434,7 +439,9 @@ export const bulkCheckIn = withAction(
       status: "present" as const,
     }));
 
-    const { error } = await supabase
+    // Service client: see checkIn — direct INSERT is revoked from
+    // `authenticated`; this action is gated by SHIFT_ROLES + branch-scope above.
+    const { error } = await createServiceClient()
       .from("attendance_records")
       .upsert(rows, { onConflict: "employee_id,date,tenant_id" });
 

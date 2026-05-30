@@ -106,6 +106,7 @@ export const createSupplierReturnFromGrn = withAction(
     roles: ROLES,
     schema: fromGrnSchema,
     permission: PERMISSION_KEYS.SUPPLIER_RETURN_CREATE,
+    requireBranchScope: true,
   },
   async (data, { supabase }) => {
     const { data: result, error } = await supabase.rpc(
@@ -154,6 +155,7 @@ export const createSupplierReturnFromStock = withAction(
     roles: ROLES,
     schema: fromStockSchema,
     permission: PERMISSION_KEYS.SUPPLIER_RETURN_CREATE,
+    requireBranchScope: true,
   },
   async (data, { supabase }) => {
     const { data: result, error } = await supabase.rpc(
@@ -222,6 +224,7 @@ export const transitionSupplierReturn = withAction(
     roles: ROLES,
     schema: transitionSchema,
     permission: PERMISSION_KEYS.SUPPLIER_RETURN_CONFIRM,
+    requireBranchScope: true,
   },
   async (data, { supabase }) => {
     const { data: result, error } = await supabase.rpc(

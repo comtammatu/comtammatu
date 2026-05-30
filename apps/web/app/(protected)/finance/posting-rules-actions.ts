@@ -18,9 +18,7 @@ export async function fetchPostingRules(): Promise<ActionResult> {
 
   const { supabase, claims } = ctx;
 
-  // posting_rules table added in gl_posting_rules migration — cast until db:types
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from("posting_rules")
     .select(
       "id, rule_code, description, transaction_type, debit_account_code, credit_account_code, is_active",
@@ -64,7 +62,11 @@ export async function updatePostingRule(
 
   const { supabase, claims } = ctx;
 
-  const updatePayload: Record<string, unknown> = {};
+  const updatePayload: {
+    debit_account_code?: string;
+    credit_account_code?: string;
+    is_active?: boolean;
+  } = {};
   if (parsed.data.debitAccountCode !== undefined) {
     updatePayload.debit_account_code = parsed.data.debitAccountCode;
   }
@@ -113,9 +115,7 @@ export async function updatePostingRule(
     }
   }
 
-  // posting_rules table added in gl_posting_rules migration — cast until db:types
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from("posting_rules")
     .update(updatePayload)
     .eq("id", parsed.data.id)

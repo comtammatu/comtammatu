@@ -18,6 +18,54 @@ import {
 } from "@comtammatu/security";
 import type { ActionResult } from "@comtammatu/shared/types";
 
+type SubmitFeedbackRpcResult = {
+  feedback_id: number;
+  photo_upload_token: string;
+  photo_upload_expires_at: string;
+};
+
+function parsePositiveInteger(value: unknown): number | null {
+  if (typeof value === "number" && Number.isSafeInteger(value) && value > 0) {
+    return value;
+  }
+  if (typeof value === "string" && /^\d+$/.test(value)) {
+    const numeric = Number(value);
+    return Number.isSafeInteger(numeric) && numeric > 0 ? numeric : null;
+  }
+  return null;
+}
+
+function parseSubmitFeedbackRpcResult(
+  value: unknown,
+): SubmitFeedbackRpcResult | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  const record = value as Record<string, unknown>;
+  const feedbackId = parsePositiveInteger(record.feedback_id);
+  if (!feedbackId) {
+    return null;
+  }
+
+  if (
+    typeof record.photo_upload_token !== "string" ||
+    !/^[a-f0-9]{64}$/.test(record.photo_upload_token)
+  ) {
+    return null;
+  }
+
+  if (typeof record.photo_upload_expires_at !== "string") {
+    return null;
+  }
+
+  return {
+    feedback_id: feedbackId,
+    photo_upload_token: record.photo_upload_token,
+    photo_upload_expires_at: record.photo_upload_expires_at,
+  };
+}
+
 // One-shot warn on first prod request seen with the allowlist unset; after
 // the first hit we silence to avoid log noise (worker stays warm for the
 // rest of its lifetime).
@@ -26,7 +74,9 @@ let warnedMissingOriginsEnv = false;
 export async function submitFeedback(
   input: SubmitFeedbackInput,
   meta: { token: string },
-): Promise<ActionResult<{ feedback_id: number }>> {
+): Promise<
+  ActionResult<{ feedback_id: number; photo_upload_token: string | null }>
+> {
   const parsed = submitFeedbackSchema.safeParse(input);
   if (!parsed.success) {
     return {
@@ -42,7 +92,7 @@ export async function submitFeedback(
       "[submitFeedback] honeypot tripped token=%s",
       meta.token.slice(0, 8),
     );
-    return { success: true, data: { feedback_id: 0 } };
+    return { success: true, data: { feedback_id: 0, photo_upload_token: null } };
   }
 
   // Origin check — layered CSRF defense.
@@ -95,7 +145,7 @@ export async function submitFeedback(
     (headersList.get("user-agent") ?? "").slice(0, 200) || null;
 
   const supabase = createServiceClient();
-  const { data: feedbackId, error } = await supabase.rpc("submit_feedback", {
+  const { data: rpcData, error } = await supabase.rpc("submit_feedback", {
     p_token: meta.token,
     p_rating: parsed.data.rating,
     p_comment: parsed.data.comment,
@@ -121,6 +171,18 @@ export async function submitFeedback(
       errorCode: "internal",
     };
   }
+
+  const rpcResult = parseSubmitFeedbackRpcResult(rpcData);
+  if (!rpcResult) {
+    console.error("[submitFeedback] unexpected rpc result shape");
+    return {
+      success: false,
+      error: "Có lỗi xảy ra, vui lòng thử lại.",
+      errorCode: "internal",
+    };
+  }
+
+  const feedbackId = rpcResult.feedback_id;
 
   // Post-response side effects via after() — guarantees execution after the
   // response has been sent. Fire-and-forget `void fetch()` was vulnerable to
@@ -148,7 +210,7 @@ export async function submitFeedback(
             Authorization: `Bearer ${cronSecret}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ feedback_id: feedbackId as number }),
+          body: JSON.stringify({ feedback_id: feedbackId }),
         }).catch((err: unknown) => {
           console.warn(
             "[submitFeedback.after] ai-enrich failed: %s",
@@ -159,5 +221,11 @@ export async function submitFeedback(
     });
   }
 
-  return { success: true, data: { feedback_id: feedbackId as number } };
+  return {
+    success: true,
+    data: {
+      feedback_id: feedbackId,
+      photo_upload_token: rpcResult.photo_upload_token,
+    },
+  };
 }

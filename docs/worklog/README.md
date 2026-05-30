@@ -15,6 +15,14 @@ Nơi lưu các artefact theo dõi tiến độ và adoption.
 
 ## Maintenance
 
+- [employee-portal-home-wave1-2026-05-28.md](employee-portal-home-wave1-2026-05-28.md): T2 contract and acceptance criteria for the first `/employee` home UX refresh
+- [employee-portal-schedule-wave2-2026-05-28.md](employee-portal-schedule-wave2-2026-05-28.md): T2 contract for bridging `/employee/schedule` and `/employee/shift-register`
+- [employee-portal-clock-attendance-wave3-2026-05-28.md](employee-portal-clock-attendance-wave3-2026-05-28.md): T2 contract for bridging `/employee/clock` and `/employee/attendance`
+- [employee-portal-self-service-wave4-2026-05-28.md](employee-portal-self-service-wave4-2026-05-28.md): T2 contract for bridging employee profile, payslip, and permissions
+- [employee-portal-missing-profile-wave5-2026-05-28.md](employee-portal-missing-profile-wave5-2026-05-28.md): T2 contract for consistent missing-profile recovery states in employee task routes
+- [employee-portal-picker-ergonomics-wave6-2026-05-28.md](employee-portal-picker-ergonomics-wave6-2026-05-28.md): T2 contract for touch-safe week/month pickers in employee schedule and attendance
+- [employee-portal-ia-reset-wave7-2026-05-28.md](employee-portal-ia-reset-wave7-2026-05-28.md): T2 contract for resetting `/employee` home back to personal tasks plus separated branch tools
+- [admin-employee-portal-acl-2026-05-28.md](admin-employee-portal-acl-2026-05-28.md): T3 contract for keeping admin-level roles on the Admin route instead of `/employee/*`
 - [feedback-reference-learning-2026-05-25.md](feedback-reference-learning-2026-05-25.md): learned from `~/matu-feedback` and `~/matu-platform`; recommends a review-conversion gate and Feedback-owned Google review config while preserving `comtammatu` security model
 - [pilot-hardening-readiness-2026-05-24.md](pilot-hardening-readiness-2026-05-24.md): hardening board for route-group migration, generated snapshots, payment readiness, network gate, live smoke, and migration status
 

@@ -1,9 +1,21 @@
 import Link from "next/link";
 import type { ElementType, ReactNode } from "react";
-import { ChevronRight as IconChevronRight } from "lucide-react";
+import {
+  ChevronRight as IconChevronRight,
+  UserCircle as IconUserCircle,
+} from "lucide-react";
 import { AppPageHeader, AppSection } from "@/components/surface";
 import { cn } from "@comtammatu/ui";
 import type { BadgeProps } from "@comtammatu/ui/components/badge";
+import { Button } from "@comtammatu/ui/components/button";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@comtammatu/ui/components/empty";
 import {
   Item,
   ItemActions,
@@ -13,6 +25,7 @@ import {
   ItemMedia,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
+import { messages } from "@lib/messages";
 
 type EmployeeTone = "default" | "success" | "warning" | "info" | "destructive";
 
@@ -182,7 +195,11 @@ export function EmployeeActionList({
 }: EmployeeActionListProps) {
   return (
     <ItemGroup
-      className={cn("gap-2", columns === 2 && "grid grid-cols-2", className)}
+      className={cn(
+        "gap-2",
+        columns === 2 && "grid grid-cols-1 sm:grid-cols-2",
+        className,
+      )}
     >
       {children}
     </ItemGroup>
@@ -223,5 +240,42 @@ export function EmployeeActionItem({
         </ItemActions>
       </Link>
     </Item>
+  );
+}
+
+interface EmployeeMissingProfileEmptyProps {
+  title?: string;
+  description?: string;
+  actionLabel?: string;
+}
+
+export function EmployeeMissingProfileEmpty({
+  title = messages.employee.profile.missingProfileTitle,
+  description = messages.employee.profile.missingProfileDescription,
+  actionLabel = messages.employee.profile.openProfile,
+}: EmployeeMissingProfileEmptyProps) {
+  return (
+    <Empty>
+      <EmptyMedia variant="icon">
+        <IconUserCircle />
+      </EmptyMedia>
+      <EmptyHeader>
+        <EmptyTitle>{title}</EmptyTitle>
+        <EmptyDescription>{description}</EmptyDescription>
+      </EmptyHeader>
+      <EmptyContent>
+        <Button
+          asChild
+          variant="outline"
+          size="touch"
+          className="w-full sm:w-fit"
+        >
+          <Link href="/employee/profile">
+            <IconUserCircle data-icon="inline-start" />
+            {actionLabel}
+          </Link>
+        </Button>
+      </EmptyContent>
+    </Empty>
   );
 }

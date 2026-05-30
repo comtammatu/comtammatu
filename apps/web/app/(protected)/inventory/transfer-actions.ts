@@ -504,7 +504,7 @@ const transferLineSchema = z.object({
 });
 
 export const upsertTransferLine = withAction(
-  { roles: ROLES, schema: transferLineSchema },
+  { roles: ROLES, schema: transferLineSchema, requireBranchScope: true },
   async (d, { supabase, claims }) => {
     const { data: transfer, error: transferError } = await supabase
       .from("stock_transfers")

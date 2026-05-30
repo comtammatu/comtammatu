@@ -86,7 +86,7 @@ export async function fetchStockIssues(opts?: {
 /* ─── createStockIssueDraft ─── */
 
 export const createStockIssueDraft = withAction(
-  { roles: ROLES, schema: issueCreateSchema },
+  { roles: ROLES, schema: issueCreateSchema, requireBranchScope: true },
   async (d, { supabase, claims, user }) => {
     // branch_manager can only create for their own branch
     if (claims.branch_id && claims.branch_id !== d.branchId) {
@@ -192,7 +192,7 @@ export async function fetchStockIssueDetail(
 /* ─── upsertStockIssueLine ─── */
 
 export const upsertStockIssueLine = withAction(
-  { roles: ROLES, schema: issueLineSchema },
+  { roles: ROLES, schema: issueLineSchema, requireBranchScope: true },
   async (d, { supabase, claims }) => {
     // unit_cost is populated by confirm_stock_issue RPC from WAC at confirm
     // time; DEFAULT 0 applies on this draft-only INSERT.
@@ -218,7 +218,7 @@ export const upsertStockIssueLine = withAction(
 /* ─── deleteStockIssueLine ─── */
 
 export const deleteStockIssueLine = withAction(
-  { roles: ROLES, schema: issueLineDeleteSchema },
+  { roles: ROLES, schema: issueLineDeleteSchema, requireBranchScope: true },
   async (d, { supabase, claims }) => {
     // Verify issue is still draft
     const { data: issue } = await supabase

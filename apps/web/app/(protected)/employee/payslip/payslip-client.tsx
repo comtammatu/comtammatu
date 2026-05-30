@@ -10,6 +10,9 @@ import {
 } from "@comtammatu/ui/components/empty";
 import { EmployeeDetailList, EmployeePanel } from "../components/employee-page";
 import type { PayslipEntry } from "./page";
+import { messages } from "@lib/messages";
+
+const copy = messages.employee.payslip;
 
 const fmt = (n: number) =>
   `${n.toLocaleString("vi-VN", { maximumFractionDigits: 0 })} ₫`;
@@ -23,9 +26,9 @@ export function PayslipClient({ entries }: { entries: PayslipEntry[] }) {
     return (
       <Empty>
         <EmptyHeader>
-          <EmptyTitle>Chưa có phiếu lương</EmptyTitle>
+          <EmptyTitle>{copy.noPayslipTitle}</EmptyTitle>
           <EmptyDescription>
-            Các kỳ lương đã phát hành sẽ hiển thị tại đây.
+            {copy.noPayslipDescription}
           </EmptyDescription>
         </EmptyHeader>
       </Empty>
@@ -38,11 +41,11 @@ export function PayslipClient({ entries }: { entries: PayslipEntry[] }) {
         <Button
           type="button"
           variant="outline"
-          size="sm"
+          size="touch"
           onClick={() => window.print()}
         >
           <IconPrinter data-icon="inline-start" />
-          In / Lưu PDF
+          {copy.print}
         </Button>
       </div>
       {entries.map((entry) => {

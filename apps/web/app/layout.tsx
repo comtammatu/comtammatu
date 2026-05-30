@@ -58,10 +58,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#fff6ee" },
-    { media: "(prefers-color-scheme: dark)", color: "#0d1b2a" },
-  ],
+  themeColor: "#fff6ee",
   viewportFit: "cover",
 };
 
@@ -82,7 +79,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           id="theme-bootstrap"
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
-            __html: getThemeScriptHtml({ defaultTheme: "system" }),
+            __html: getThemeScriptHtml({ forcedTheme: "light" }),
           }}
         />
         <a
@@ -93,8 +90,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         </a>
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
-          enableSystem
+          defaultTheme="light"
+          forcedTheme="light"
           disableTransitionOnChange
         >
           <BoneyardRegistry />

@@ -12,7 +12,51 @@ import {
   getVNWeekEndDateString,
   getVNWeekStartDateString,
   getYesterdayVNDateString,
+  getVNMinutesOfDay,
+  parseClockTimeToMinutes,
+  isWithinShiftWindow,
 } from "../vietnam";
+
+test("VN minutes-of-day reflects the +07:00 wall clock", () => {
+  // 01:30 UTC → 08:30 VN → 510
+  assert.equal(getVNMinutesOfDay("2026-05-22T01:30:00Z"), 510);
+  // 17:00 UTC → 00:00 VN next day → 0 (normalises the "24" hour)
+  assert.equal(getVNMinutesOfDay("2026-05-22T17:00:00Z"), 0);
+});
+
+test("parseClockTimeToMinutes parses HH:MM[:SS] and rejects junk", () => {
+  assert.equal(parseClockTimeToMinutes("08:00"), 480);
+  assert.equal(parseClockTimeToMinutes("18:30:00"), 1110);
+  assert.equal(parseClockTimeToMinutes("00:00"), 0);
+  assert.equal(parseClockTimeToMinutes("24:00"), null);
+  assert.equal(parseClockTimeToMinutes("bad"), null);
+});
+
+test("isWithinShiftWindow handles a same-day shift with grace", () => {
+  const grace = 60; // shift 08:00–17:00
+  assert.equal(isWithinShiftWindow(8 * 60, 480, 1020, grace), true);
+  assert.equal(isWithinShiftWindow(7 * 60, 480, 1020, grace), true);
+  assert.equal(isWithinShiftWindow(6 * 60 + 59, 480, 1020, grace), false);
+  assert.equal(isWithinShiftWindow(18 * 60, 480, 1020, grace), true);
+  assert.equal(isWithinShiftWindow(18 * 60 + 1, 480, 1020, grace), false);
+});
+
+test("isWithinShiftWindow wraps an overnight shift past midnight", () => {
+  const grace = 60; // shift 18:00–02:00
+  assert.equal(isWithinShiftWindow(18 * 60, 1080, 120, grace), true);
+  assert.equal(isWithinShiftWindow(17 * 60, 1080, 120, grace), true);
+  assert.equal(isWithinShiftWindow(0, 1080, 120, grace), true);
+  assert.equal(isWithinShiftWindow(2 * 60 + 30, 1080, 120, grace), true);
+  assert.equal(isWithinShiftWindow(3 * 60 + 1, 1080, 120, grace), false);
+  assert.equal(isWithinShiftWindow(12 * 60, 1080, 120, grace), false);
+});
+
+test("isWithinShiftWindow keeps a near-midnight end reachable via grace wrap", () => {
+  const grace = 60; // shift 23:00–23:30 → grace pushes end to 00:30 next day
+  assert.equal(isWithinShiftWindow(0, 1380, 1410, grace), true);
+  assert.equal(isWithinShiftWindow(10, 1380, 1410, grace), true);
+  assert.equal(isWithinShiftWindow(7 * 60, 1380, 1410, grace), false);
+});
 
 test("VN date string flips at 17:00 UTC", () => {
   assert.equal(getVNDateString("2026-05-22T16:59:59Z"), "2026-05-22");

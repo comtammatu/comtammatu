@@ -1,14 +1,18 @@
+import Link from "next/link";
+import { UserCircle as IconUserCircle } from "lucide-react";
 import { getEmployeeContext } from "../_lib/employee-context";
 import { PayslipClient } from "./payslip-client";
+import { Button } from "@comtammatu/ui/components/button";
 import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyTitle,
-} from "@comtammatu/ui/components/empty";
-import { EmployeePage } from "../components/employee-page";
+  EmployeeMissingProfileEmpty,
+  EmployeePage,
+} from "../components/employee-page";
 import { YearPicker } from "./year-picker";
 import { getTodayVN } from "../_lib/vn-business-date";
+import { messages } from "@lib/messages";
+
+const copy = messages.employee.payslip;
+const profileCopy = messages.employee.profile;
 
 export default async function PayslipPage(props: {
   searchParams: Promise<{ year?: string }>;
@@ -21,17 +25,13 @@ export default async function PayslipPage(props: {
   if (!ctx) {
     return (
       <EmployeePage
-        title="Phiếu lương"
-        description="Chỉ hiển thị các kỳ lương đã phát hành cho nhân viên."
+        title={copy.title}
+        description={copy.description}
       >
-        <Empty>
-          <EmptyHeader>
-            <EmptyTitle>Không tìm thấy hồ sơ nhân viên</EmptyTitle>
-            <EmptyDescription>
-              Liên hệ quản lý để kiểm tra hồ sơ.
-            </EmptyDescription>
-          </EmptyHeader>
-        </Empty>
+        <EmployeeMissingProfileEmpty
+          title={copy.missingProfileTitle}
+          description={copy.missingProfileDescription}
+        />
       </EmployeePage>
     );
   }
@@ -59,9 +59,22 @@ export default async function PayslipPage(props: {
 
   return (
     <EmployeePage
-      title="Phiếu lương"
-      description="Chỉ hiển thị các kỳ lương đã phát hành cho nhân viên."
-      badge={{ children: `Năm ${year}`, variant: "outline" }}
+      title={copy.title}
+      description={copy.description}
+      badge={{ children: `${copy.yearBadge} ${year}`, variant: "outline" }}
+      action={
+        <Button
+          asChild
+          variant="outline"
+          size="touch"
+          className="w-full sm:w-fit"
+        >
+          <Link href="/employee/profile">
+            <IconUserCircle data-icon="inline-start" />
+            {profileCopy.dependentsActionTitle}
+          </Link>
+        </Button>
+      }
     >
       <YearPicker selectedYear={year} currentYear={currentYear} />
       <PayslipClient entries={(entries ?? []) as unknown as PayslipEntry[]} />

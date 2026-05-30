@@ -1,6 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { submitFeedbackSchema } from "../schemas";
+import {
+  submitFeedbackSchema,
+  updateFeedbackBranchReviewSettingsSchema,
+  updateFeedbackSettingsSchema,
+} from "../schemas";
 
 function parse(data: unknown) {
   return submitFeedbackSchema.safeParse(data);
@@ -95,4 +99,58 @@ test("submitFeedbackSchema rejects honeypot non-empty", () => {
 test("submitFeedbackSchema accepts honeypot empty string", () => {
   const r = parse({ rating: 4, comment: VALID_COMMENT, website: "" });
   assert.equal(r.success, true);
+});
+
+function parseSettings(google_review_url: unknown) {
+  return updateFeedbackSettingsSchema.safeParse({
+    ai_monthly_budget_usd: 5,
+    google_review_url,
+    push_mode: "threshold",
+    threshold_rating: 3,
+    daily_report_hour_local: 8,
+  });
+}
+
+test("updateFeedbackSettingsSchema trims blank Google review URL to null", () => {
+  const r = parseSettings("   ");
+  assert.equal(r.success, true);
+  if (r.success) assert.equal(r.data.google_review_url, null);
+});
+
+test("updateFeedbackSettingsSchema accepts HTTPS Google review URL", () => {
+  const r = parseSettings(" https://g.page/r/example/review ");
+  assert.equal(r.success, true);
+  if (r.success) {
+    assert.equal(r.data.google_review_url, "https://g.page/r/example/review");
+  }
+});
+
+test("updateFeedbackSettingsSchema rejects non-HTTPS review URL", () => {
+  const r = parseSettings("http://g.page/r/example/review");
+  assert.equal(r.success, false);
+});
+
+test("updateFeedbackBranchReviewSettingsSchema accepts per-branch HTTPS URLs", () => {
+  const r = updateFeedbackBranchReviewSettingsSchema.safeParse({
+    settings: [
+      { branch_id: "1", google_review_url: " https://g.page/r/branch-1 " },
+      { branch_id: 2, google_review_url: "" },
+    ],
+  });
+
+  assert.equal(r.success, true);
+  if (r.success) {
+    assert.deepEqual(r.data.settings, [
+      { branch_id: 1, google_review_url: "https://g.page/r/branch-1" },
+      { branch_id: 2, google_review_url: null },
+    ]);
+  }
+});
+
+test("updateFeedbackBranchReviewSettingsSchema rejects non-HTTPS branch URL", () => {
+  const r = updateFeedbackBranchReviewSettingsSchema.safeParse({
+    settings: [{ branch_id: 1, google_review_url: "http://g.page/r/branch-1" }],
+  });
+
+  assert.equal(r.success, false);
 });

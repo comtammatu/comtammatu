@@ -117,9 +117,26 @@ export const tokenParamSchema = z.string().refine(isValidFeedbackToken, {
 /** AI category set — Slice 2 uses this for auto-tagging */
 export const aiCategoriesSchema = z.array(z.enum(FEEDBACK_CATEGORIES)).max(5);
 
+const optionalHttpsUrlSchema = z.preprocess(
+  (value) => {
+    if (typeof value !== "string") return value ?? null;
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  },
+  z
+    .string()
+    .max(2048, { error: "URL tối đa 2048 ký tự" })
+    .url({ error: "URL Google review không hợp lệ" })
+    .refine((value) => value.startsWith("https://"), {
+      error: "URL Google review phải bắt đầu bằng https://",
+    })
+    .nullable(),
+);
+
 /** Feedback AI / push settings upsert (form-driven — coerce string→number) */
 export const updateFeedbackSettingsSchema = z.object({
   ai_monthly_budget_usd: z.coerce.number().min(0).max(9999.99),
+  google_review_url: optionalHttpsUrlSchema.optional().default(null),
   push_mode: z.enum(["threshold", "all", "none"]),
   threshold_rating: z.coerce.number().int().min(1).max(5),
   daily_report_hour_local: z.coerce.number().int().min(0).max(23),
@@ -127,6 +144,21 @@ export const updateFeedbackSettingsSchema = z.object({
 
 export type UpdateFeedbackSettingsInput = z.infer<
   typeof updateFeedbackSettingsSchema
+>;
+
+export const updateFeedbackBranchReviewSettingsSchema = z.object({
+  settings: z
+    .array(
+      z.object({
+        branch_id: z.coerce.number().int().positive(),
+        google_review_url: optionalHttpsUrlSchema.optional().default(null),
+      }),
+    )
+    .max(100),
+});
+
+export type UpdateFeedbackBranchReviewSettingsInput = z.infer<
+  typeof updateFeedbackBranchReviewSettingsSchema
 >;
 
 /** Trigger daily report — no body, only owner check */

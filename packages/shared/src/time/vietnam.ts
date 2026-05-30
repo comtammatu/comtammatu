@@ -292,3 +292,63 @@ export function formatVNTime(
     minute: "2-digit",
   });
 }
+
+/** Wall-clock minutes since VN midnight (0–1439) for the given instant. */
+export function getVNMinutesOfDay(
+  value: string | number | Date = new Date(),
+): number {
+  const date = toDate(value);
+  if (!date) return 0;
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: VN_TIME_ZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(date);
+  // hour12:false can emit "24" for midnight in some engines → normalise.
+  const hour = Number(parts.find((p) => p.type === "hour")?.value ?? "0") % 24;
+  const minute = Number(parts.find((p) => p.type === "minute")?.value ?? "0");
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return 0;
+  return hour * 60 + minute;
+}
+
+/** Parse a "HH:MM" / "HH:MM:SS" clock string to minutes since midnight. */
+export function parseClockTimeToMinutes(value: string): number | null {
+  const match = /^(\d{1,2}):(\d{2})/.exec(value);
+  if (!match) return null;
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  if (
+    !Number.isInteger(hour) ||
+    !Number.isInteger(minute) ||
+    hour < 0 ||
+    hour > 23 ||
+    minute < 0 ||
+    minute > 59
+  ) {
+    return null;
+  }
+  return hour * 60 + minute;
+}
+
+/**
+ * Whether `nowMin` (minutes since midnight) falls inside a shift window
+ * [startMin − graceMin, endMin + graceMin]. Overnight shifts (endMin <= startMin,
+ * e.g. 18:00–02:00) are unwrapped past midnight, and `nowMin` is also tested one
+ * day forward so an early-morning clock-in matches an evening-start shift. Grace
+ * only ever widens the window — a rostered employee is never wrongly blocked.
+ */
+export function isWithinShiftWindow(
+  nowMin: number,
+  startMin: number,
+  endMin: number,
+  graceMin: number,
+): boolean {
+  const effectiveEnd = endMin > startMin ? endMin : endMin + 1440;
+  const lo = startMin - graceMin;
+  const hi = effectiveEnd + graceMin;
+  return (
+    (nowMin >= lo && nowMin <= hi) ||
+    (nowMin + 1440 >= lo && nowMin + 1440 <= hi)
+  );
+}

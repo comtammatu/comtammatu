@@ -42,8 +42,8 @@ Tat ca UI/UX rebuild phai di theo contract do truoc khi sua runtime. Design syst
 - copy source ladder: `docs/ref/glossary.md` cho nghia/chinh ta, `packages/shared/src/labels/vi.ts` cho domain labels dung chung, `@comtammatu/shared/messages` hoac `apps/web/lib/messages/*` cho action/state/error chung, `packages/shared/src/labels/legal-fixed.ts` cho legal labels, va domain dictionary cho route adapters
 - toast/notification contract trong `docs/spec/toast-notification-system.md`
 - theme runtime trong `packages/ui/src/components/theme-script.tsx` +
-  `packages/ui/src/components/theme-provider.tsx`; chi provider nay duoc luu
-  user theme preference trong `localStorage`
+  `packages/ui/src/components/theme-provider.tsx`; runtime hien co bi khoa o
+  light mode va bo qua theme preference cu trong `localStorage`
 - approved app utilities: `max-h-dvh-95`, `max-h-dvh-80`,
   `pos-text-overlay`, `pos-safe-top`, `pos-safe-bottom`, `chrome-safe-pb`,
   `chrome-safe-bottom`

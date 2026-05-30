@@ -259,6 +259,7 @@ export const saveStationCategories = withAction(
     roles: SETTINGS_ROLES,
     schema: saveStationCategoriesSchema,
     permission: PERMISSION_KEYS.SETTINGS_BRANCH,
+    requireBranchScope: true,
   },
   async (data, { supabase, claims }) => {
     const { data: station } = await supabase

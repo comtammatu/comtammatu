@@ -37,28 +37,9 @@ import {
   getVNWeekStartDateString,
   parseISODateParts,
 } from "@comtammatu/shared/time";
+import { messages } from "@lib/messages";
 
-const TEXT = {
-  currentWeek: "Tu\u1ea7n n\u00e0y",
-  emptyDescription: "Li\u00ean h\u1ec7 qu\u1ea3n l\u00fd x\u1ebfp ca.",
-  emptyTitle: "Ch\u01b0a c\u00f3 l\u1ecbch ca tu\u1ea7n n\u00e0y",
-  loadError: "Kh\u00f4ng t\u1ea3i \u0111\u01b0\u1ee3c l\u1ecbch ca.",
-  nextWeek: "Tu\u1ea7n sau",
-  prevWeek: "Tu\u1ea7n tr\u01b0\u1edbc",
-  rest: "Ngh\u1ec9",
-  retry: "Th\u1eed l\u1ea1i",
-  today: "H\u00f4m nay",
-} as const;
-
-const DAY_NAMES = [
-  "Ch\u1ee7 Nh\u1eadt",
-  "Th\u1ee9 Hai",
-  "Th\u1ee9 Ba",
-  "Th\u1ee9 T\u01b0",
-  "Th\u1ee9 N\u0103m",
-  "Th\u1ee9 S\u00e1u",
-  "Th\u1ee9 B\u1ea3y",
-] as const;
+const copy = messages.employee.schedule;
 
 function formatDate(dateStr: string): string {
   return formatVNBusinessDate(dateStr);
@@ -70,7 +51,7 @@ function getDayName(dateStr: string): string {
   const day = new Date(
     Date.UTC(parts.year, parts.month - 1, parts.day, 5, 0, 0),
   ).getUTCDay();
-  return DAY_NAMES[day] ?? "";
+  return copy.days[day] ?? "";
 }
 
 function generateWeekDates(mondayStr: string): string[] {
@@ -156,8 +137,8 @@ function ScheduleWeekList({
             <IconCalendarEvent />
           </EmptyMedia>
           <EmptyHeader>
-            <EmptyTitle>{TEXT.emptyTitle}</EmptyTitle>
-            <EmptyDescription>{TEXT.emptyDescription}</EmptyDescription>
+            <EmptyTitle>{copy.emptyTitle}</EmptyTitle>
+            <EmptyDescription>{copy.emptyDescription}</EmptyDescription>
           </EmptyHeader>
         </Empty>
       )}
@@ -179,7 +160,7 @@ function ScheduleWeekList({
               <ItemContent>
                 <ItemTitle className={cn(isToday && "text-primary")}>
                   {getDayName(dateStr)}
-                  {isToday ? <Badge variant="info">{TEXT.today}</Badge> : null}
+                  {isToday ? <Badge variant="info">{copy.today}</Badge> : null}
                 </ItemTitle>
                 <ItemDescription>{formatDate(dateStr)}</ItemDescription>
               </ItemContent>
@@ -194,7 +175,7 @@ function ScheduleWeekList({
                     </p>
                   </div>
                 ) : (
-                  <Badge variant="outline">{TEXT.rest}</Badge>
+                  <Badge variant="outline">{copy.rest}</Badge>
                 )}
               </ItemActions>
             </Item>
@@ -227,7 +208,7 @@ export function ScheduleClient({
       if (result.success) {
         setShifts(result.data ?? []);
       } else {
-        setError(result.error ?? TEXT.loadError);
+        setError(result.error ?? copy.loadError);
         setShifts([]);
       }
     });
@@ -252,14 +233,15 @@ export function ScheduleClient({
 
   return (
     <>
-      <EmployeePanel title="Tuần đang xem">
+      <EmployeePanel title={copy.weekPanelTitle}>
         <div className="flex items-center justify-between gap-2">
           <Button
             variant="outline"
-            size="icon"
+            size="touch"
+            className="w-12 px-0"
             onClick={goToPrevWeek}
             disabled={isPending}
-            aria-label={TEXT.prevWeek}
+            aria-label={copy.prevWeek}
           >
             <IconChevronLeft />
           </Button>
@@ -274,19 +256,20 @@ export function ScheduleClient({
                 onClick={goToCurrentWeek}
                 disabled={isPending}
               >
-                {TEXT.currentWeek}
+                {copy.currentWeek}
               </Button>
             ) : (
-              <Badge variant="info">{TEXT.currentWeek}</Badge>
+              <Badge variant="info">{copy.currentWeek}</Badge>
             )}
           </div>
 
           <Button
             variant="outline"
-            size="icon"
+            size="touch"
+            className="w-12 px-0"
             onClick={goToNextWeek}
             disabled={isPending}
-            aria-label={TEXT.nextWeek}
+            aria-label={copy.nextWeek}
           >
             <IconChevronRight />
           </Button>
@@ -295,26 +278,27 @@ export function ScheduleClient({
 
       {error && (
         <EmployeePanel
-          title={TEXT.loadError}
+          title={copy.loadError}
           description={error}
           tone="destructive"
         >
           <div className="flex">
             <Button
               variant="outline"
-              size="sm"
+              size="touch"
+              className="w-full sm:w-fit"
               onClick={() => loadWeek(weekStart)}
               disabled={isPending}
             >
               <IconRefresh data-icon="inline-start" />
-              {TEXT.retry}
+              {copy.retry}
             </Button>
           </div>
         </EmployeePanel>
       )}
 
       {!error && (
-        <EmployeePanel title="Lịch trong tuần">
+        <EmployeePanel title={copy.weekListTitle}>
           <AppBoneyardSkeleton
             name="employee-schedule-week"
             loading={isPending}

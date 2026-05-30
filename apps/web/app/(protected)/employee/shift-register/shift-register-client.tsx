@@ -209,7 +209,7 @@ export function ShiftRegisterClient({
         <div className="flex">
           <Button
             type="button"
-            size="lg"
+            size="touch"
             className="w-full sm:w-fit"
             onClick={() => setOpen(true)}
             disabled={isPending}

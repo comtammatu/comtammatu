@@ -15,6 +15,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@comtammatu/database";
+import { staffRoleFromPositionCode } from "@comtammatu/shared/auth";
 
 // ─── Service client ───────────────────────────────────────────────────────────
 
@@ -582,7 +583,7 @@ export async function resolveUserByEmail(
   const { data: position, error: posErr } = profile.position_id
     ? await supabase
         .from("positions")
-        .select("legacy_role_code")
+        .select("code")
         .eq("id", profile.position_id)
         .maybeSingle()
     : { data: null, error: null };
@@ -596,7 +597,7 @@ export async function resolveUserByEmail(
     email,
     tenantId: profile.tenant_id,
     branchId: profile.branch_id,
-    role: position?.legacy_role_code ?? "",
+    role: staffRoleFromPositionCode(position?.code),
   };
 }
 
@@ -617,7 +618,7 @@ export async function resolveInventoryManagerUser(
   const { data: positions, error: posErr } = await supabase
     .from("positions")
     .select("id")
-    .eq("legacy_role_code", "warehouse_manager");
+    .eq("code", "warehouse_head");
 
   if (posErr) {
     throw new Error(

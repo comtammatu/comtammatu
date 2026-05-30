@@ -1,17 +1,20 @@
+import Link from "next/link";
+import { Plus as IconPlus } from "lucide-react";
 import { getEmployeeContext } from "../_lib/employee-context";
 import { ScheduleClient } from "./schedule-client";
 import type { ScheduleShift } from "./actions";
+import { Button } from "@comtammatu/ui/components/button";
 import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyTitle,
-} from "@comtammatu/ui/components/empty";
-import { EmployeePage } from "../components/employee-page";
+  EmployeeMissingProfileEmpty,
+  EmployeePage,
+} from "../components/employee-page";
 import {
   getVNWeekEndDateString,
   getVNWeekStartDateString,
 } from "@comtammatu/shared/time";
+import { messages } from "@lib/messages";
+
+const copy = messages.employee.home;
 
 export default async function SchedulePage() {
   const ctx = await getEmployeeContext();
@@ -19,17 +22,10 @@ export default async function SchedulePage() {
   if (!ctx) {
     return (
       <EmployeePage
-        title="Lịch ca"
-        description="Xem ca làm theo tuần và quay nhanh về tuần hiện tại."
+        title={copy.scheduleTitle}
+        description={copy.scheduleLongDescription}
       >
-        <Empty>
-          <EmptyHeader>
-            <EmptyTitle>Chưa có hồ sơ nhân viên</EmptyTitle>
-            <EmptyDescription>
-              Tài khoản chưa được liên kết hồ sơ nhân viên. Liên hệ quản lý.
-            </EmptyDescription>
-          </EmptyHeader>
-        </Empty>
+        <EmployeeMissingProfileEmpty />
       </EmployeePage>
     );
   }
@@ -66,8 +62,16 @@ export default async function SchedulePage() {
 
   return (
     <EmployeePage
-      title="Lịch ca"
-      description="Xem ca làm theo tuần và quay nhanh về tuần hiện tại."
+      title={copy.scheduleTitle}
+      description={copy.scheduleLongDescription}
+      action={
+        <Button asChild size="touch" className="w-full sm:w-fit">
+          <Link href="/employee/shift-register">
+            <IconPlus data-icon="inline-start" />
+            {copy.shiftRegisterTitle}
+          </Link>
+        </Button>
+      }
     >
       <ScheduleClient
         initialShifts={initialShifts}

@@ -72,6 +72,7 @@ export const createShiftAssignment = withAction(
     roles: SHIFT_ROLES,
     schema: createAssignmentSchema,
     permission: PERMISSION_KEYS.STAFF_MANAGE,
+    requireBranchScope: true,
   },
   async (data, { supabase, claims }) => {
     if (!(await canAccessBranch(supabase, claims, data.branchId))) {
@@ -137,6 +138,7 @@ export const deleteShiftAssignment = withAction(
     roles: SHIFT_ROLES,
     schema: deleteAssignmentSchema,
     permission: PERMISSION_KEYS.STAFF_MANAGE,
+    requireBranchScope: true,
   },
   async (data, { supabase, claims }) => {
     const { error } = await supabase
