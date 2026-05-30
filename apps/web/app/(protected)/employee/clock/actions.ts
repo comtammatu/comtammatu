@@ -236,8 +236,13 @@ export async function clockIn(input: {
     }
   }
 
-  // 5. INSERT attendance record (lat/lng/method/code_verified pending migration)
-  const { error: insertError } = await supabase
+  // 5. INSERT via the service client. Direct INSERT on attendance_records is
+  // REVOKED from `authenticated` (migration 20260602009000_attendance_writes_
+  // revoke_direct_insert) so an employee cannot POST a fabricated clock-in
+  // straight to the REST API, bypassing the code/GPS/shift checks above. All
+  // attendance inserts must flow through checked server code; the service role
+  // is the only writer. Authorisation for this row was established above.
+  const { error: insertError } = await createServiceClient()
     .from("attendance_records")
     .insert({
       tenant_id: claims.tenant_id,
