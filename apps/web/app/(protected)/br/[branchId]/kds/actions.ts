@@ -100,10 +100,7 @@ export async function markKdsItemOutOfStock(
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }
 
-  // RPC is introduced by migration 20260601800000; cast until db:types is
-  // regenerated from the schema where the migration is applied.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (ctx.supabase as any).rpc(
+  const { data, error } = await ctx.supabase.rpc(
     "mark_kds_item_out_of_stock",
     {
       p_ticket_id: parsed.data.ticketId,

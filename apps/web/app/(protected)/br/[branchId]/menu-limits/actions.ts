@@ -50,12 +50,12 @@ export async function fetchBranchMenuDailyLimits(
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (ctx.supabase as any).rpc(
+  const { data, error } = await ctx.supabase.rpc(
     "list_branch_menu_daily_limits",
     {
       p_branch_id: parsedBranchId.data,
-      p_limit_date: null,
+      // omit → RPC default (p_limit_date DATE DEFAULT NULL = today/all dates)
+      p_limit_date: undefined,
     },
   );
 
@@ -118,13 +118,14 @@ export async function setBranchMenuDailyLimit(
 
   const limitQty = parsed.data.limitQuantity ?? null;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (ctx.supabase as any).rpc(
+  const { data, error } = await ctx.supabase.rpc(
     "set_branch_menu_daily_limit",
     {
       p_branch_id: parsed.data.branchId,
       p_menu_item_id: parsed.data.menuItemId,
-      p_limit_quantity: limitQty,
+      // null = "no quantity cap"; plpgsql accepts NULL but typegen types the
+      // INT param non-null (no SQL default), so assert here.
+      p_limit_quantity: limitQty as number,
       p_is_disabled: parsed.data.isDisabled,
     },
   );
@@ -189,8 +190,7 @@ export async function clearBranchMenuDailyLimit(
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (ctx.supabase as any).rpc(
+  const { data, error } = await ctx.supabase.rpc(
     "clear_branch_menu_daily_limit",
     {
       p_branch_id: parsed.data.branchId,
