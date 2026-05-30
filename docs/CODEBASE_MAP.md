@@ -61,15 +61,17 @@ source-of-truth inputs.
 | Tests               | Playwright route coverage and shared unit tests                                       |
 | Core                | Repository metadata, E2E helpers, cross-cutting supporting files                      |
 
-Generated checkout snapshot from 2026-05-27 (`node scripts/project-snapshot.mjs`):
+Generated checkout snapshot from 2026-05-30 (`node scripts/project-snapshot.mjs`):
 
 | Area                                                         |             Count |
 | ------------------------------------------------------------ | ----------------: |
 | `apps/web/app/**/page.tsx` routes                            |               109 |
 | API route handlers                                           |                13 |
-| Generated DB tables / views / functions / enums              | 116 / 9 / 241 / 0 |
-| SQL migration files                                          |               366 |
+| Generated DB tables / views / functions / enums              | 118 / 9 / 241 / 0 |
+| Active SQL migrations (baseline-first; +379 archived)        |                 2 |
 | Test/spec files under `apps/web/e2e` + `packages/shared/src` |                40 |
+
+> Migrations are **baseline-first** since 2026-05-30: `supabase/migrations/00000000000000_baseline.sql` (canonical public-schema install) + forward migrations, with the 379-file historical chain under `supabase/migrations/_archive/` and managed surfaces in `supabase/managed-surfaces.install.sql`. See `docs/spec/database-schema.md`.
 
 The repo is not a flat "apps/packages" map. The operational shape is:
 

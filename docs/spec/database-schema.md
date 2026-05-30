@@ -5,7 +5,7 @@ a hand-maintained per-column schema dump.
 
 ## Current Snapshot
 
-Generated from the current checkout on 2026-05-27 with:
+Generated from the current checkout on 2026-05-30 with:
 
 ```bash
 node scripts/project-snapshot.mjs
@@ -13,14 +13,36 @@ node scripts/project-snapshot.mjs
 
 | Area                                        | Count |
 | ------------------------------------------- | ----: |
-| Public tables in generated types            |   116 |
+| Public tables in generated types            |   118 |
 | Public views in generated types             |     9 |
 | Public RPC/SQL functions in generated types |   241 |
 | Public enums in generated types             |     0 |
-| SQL migration files                         |   366 |
+| Active SQL migration files                  |     2 |
+
+Live-schema manifest (matu-dev, verified 2026-05-30): **118 tables · 3 views + 6
+materialized views · 279 `pg_proc` public functions** (generated types list only
+the 241 RPC/SQL-callable) · **273 public RLS policies · 523 indexes · 14
+`storage.objects` policies · 11 realtime-published tables · 10 cron jobs**.
 
 The early-2026 hand-written table-by-table reference has been removed. Use the
 source ladder below instead of resurrecting stale schema dumps.
+
+## Migration layout (baseline-first — 2026-05-30)
+
+The 378-file incremental chain could not replay from an empty DB (ordering bug at
+`20260508055046`), so it was consolidated:
+
+- `supabase/migrations/00000000000000_baseline.sql` — canonical public-schema
+  install; validated to replay on an empty DB (rebuilt matu-dev exactly).
+- `supabase/migrations/<timestamp>_*.sql` after it — forward migrations on the baseline.
+- `supabase/migrations/_archive/` — the 379 historical migrations (retained, NOT applied).
+- `supabase/managed-surfaces.install.sql` — extensions / storage buckets + RLS
+  policies / realtime publication / cron jobs (excluded by `--schema=public`),
+  applied after the baseline on a fresh env (storage-policy section needs
+  `storage.objects` owner).
+- **Option X**: production keeps its applied migration history; the baseline is the
+  fresh/dev install path. Regenerate via `pnpm db:baseline:extract -- --project-ref=<matu-dev>`
+  (Docker-free libpq engine). Runbook: `docs/runbooks/matu-dev-migration-squash-2026-05-30.md`.
 
 ## Source Ladder
 

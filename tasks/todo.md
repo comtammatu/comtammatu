@@ -48,7 +48,7 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 > Owner approved rebuilding matu-dev ("không cần giữ nguyên"). matu-dev only; never matu-prod. Runbook: `docs/runbooks/matu-dev-migration-squash-2026-05-30.md`.
 
 - ✅ **DONE (Phase 1 + 2):** RLS policy dedup (`20260602010000`, closed `stock_transfer_items` any-tenant read+write bypass) + schema-health verified clean; baseline-first consolidation — `supabase/migrations/00000000000000_baseline.sql` (validated: rebuilt matu-dev exactly, replays from empty, `db:types`/typecheck match), 379 files → `_archive/`, option X (prod keeps history); managed-surfaces companion `supabase/managed-surfaces.install.sql` (extensions/buckets/14 storage policies/realtime/cron); Docker-free libpq extract engine (default) + `db:types` matu-dev default. (git `60c81ffd`/`f92cc4d4`/`8f73885f`/`43a3ec4b`.)
-- [ ] **Phase 3** — sync `docs/spec/database-schema.md` + `docs/CODEBASE_MAP.md` to the consolidated baseline.
+- [x] **Phase 3** — DONE 2026-05-30: synced `docs/spec/database-schema.md` (snapshot → 118 tables/2 active migrations + baseline-first migration-layout section + live manifest) and `docs/CODEBASE_MAP.md` (counts 118 + baseline-first note) to the consolidated baseline.
 - [ ] Unused indexes (~231 flagged on prod) — deferred: prod `stats_reset=NULL` + 77% `idx_scan=0` implausible (recent reset), not representative. Re-assess only after ≥1 business cycle incl. month-end.
 - [ ] (cosmetic) Repair matu-dev `schema_migrations` history to baseline-first (schema already rebuilt from baseline).
 
