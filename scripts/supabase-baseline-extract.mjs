@@ -39,6 +39,7 @@ Options:
   --out-dir=<path>          Output directory. Default: .baseline-artifacts/supabase-live-baseline-<timestamp>
   --project-ref=<ref>       Expected linked Supabase project ref. Default: ${EXPECTED_PROJECT_REF}
   --timeout-ms=<number>     Per-schema command timeout. Default: ${DEFAULT_TIMEOUT_MS}
+  --engine=<name>           pg_dump (libpq, Docker-free; default) or cli (supabase CLI, needs Docker)
   --dry-run                 Print the sanitized pg_dump plan without writing SQL files
   --help                    Show this help
 `);
@@ -52,6 +53,7 @@ function parseArgs(argv) {
     projectRef: EXPECTED_PROJECT_REF,
     schemas: DEFAULT_SCHEMAS,
     timeoutMs: DEFAULT_TIMEOUT_MS,
+    engine: "pg_dump",
   };
 
   for (const arg of argv) {
@@ -73,6 +75,8 @@ function parseArgs(argv) {
       options.projectRef = arg.slice("--project-ref=".length);
     } else if (arg.startsWith("--timeout-ms=")) {
       options.timeoutMs = Number(arg.slice("--timeout-ms=".length));
+    } else if (arg.startsWith("--engine=")) {
+      options.engine = arg.slice("--engine=".length).trim();
     } else {
       throw new Error(`Unknown option: ${arg}`);
     }
@@ -80,6 +84,10 @@ function parseArgs(argv) {
 
   if (!Number.isFinite(options.timeoutMs) || options.timeoutMs < 10_000) {
     throw new Error("--timeout-ms must be at least 10000");
+  }
+
+  if (!["pg_dump", "cli"].includes(options.engine)) {
+    throw new Error("--engine must be pg_dump or cli");
   }
 
   if (options.schemas.length === 0) {
@@ -229,6 +237,61 @@ function assertProjectRef(expectedRef) {
   return expectedRef;
 }
 
+function findPgDump() {
+  const explicit = (process.env["PG_DUMP_BIN"] ?? "").trim();
+  if (explicit) return explicit;
+  try {
+    const prefix = execFileSync("brew", ["--prefix", "libpq"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+      timeout: 30_000,
+    }).trim();
+    const candidate = join(prefix, "bin", "pg_dump");
+    if (existsSync(candidate)) return candidate;
+  } catch {
+    // brew not available — fall through to PATH lookup
+  }
+  return "pg_dump";
+}
+
+// Docker-free dump via a direct pg_dump binary (libpq). The Supabase CLI wraps
+// pg_dump in Docker; this path needs neither. Applies the two replay fixups that
+// matter for a fresh Supabase restore: idempotent public-schema creation and
+// neutralised psql `\restrict`/`\unrestrict` meta-lines (pg_dump 18).
+function runPgDumpEngine({ dbUrl, schema, outputPath, dryRun, timeoutMs }) {
+  const bin = findPgDump();
+  if (dryRun) {
+    process.stdout.write(
+      `# pg_dump engine (libpq): ${bin} --schema-only --schema=${schema} --no-owner --dbname <redacted>\n`,
+    );
+    return;
+  }
+  const result = spawnSync(
+    bin,
+    [
+      "--schema-only",
+      `--schema=${schema}`,
+      "--no-owner",
+      "--file",
+      outputPath,
+      "--dbname",
+      dbUrl,
+    ],
+    { cwd: process.cwd(), encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: timeoutMs },
+  );
+  if (result.error) throw result.error;
+  if (result.status !== 0) {
+    const detail = sanitize(
+      [result.stdout, result.stderr].filter(Boolean).join("\n").trim(),
+    );
+    throw new Error(detail || `pg_dump exited with status ${result.status}`);
+  }
+  const fixed = readFileSync(outputPath, "utf8")
+    .replace(/^\\(un)?restrict .*$/gm, (m) => `-- ${m}`)
+    .replace(/^CREATE SCHEMA public;$/gm, "CREATE SCHEMA IF NOT EXISTS public;");
+  writeFileSync(outputPath, fixed);
+}
+
 function schemaFileName(schema) {
   return `${schema.replace(/[^a-zA-Z0-9_]/g, "_")}.schema.sql`;
 }
@@ -246,13 +309,17 @@ async function main() {
 
   if (options.dryRun) {
     for (const schema of options.schemas) {
-      process.stdout.write(`\n# Dry run for schema: ${schema}\n`);
-      const { stdout, stderr } = runPnpmSupabase(
-        ["db", "dump", "--db-url", dbUrl, "--schema", schema, "--dry-run", "--yes"],
-        options.timeoutMs,
-      );
-      if (stderr) process.stderr.write(`${stderr}\n`);
-      process.stdout.write(`${stdout}\n`);
+      process.stdout.write(`\n# Dry run (engine=${options.engine}) for schema: ${schema}\n`);
+      if (options.engine === "pg_dump") {
+        runPgDumpEngine({ dbUrl, schema, dryRun: true });
+      } else {
+        const { stdout, stderr } = runPnpmSupabase(
+          ["db", "dump", "--db-url", dbUrl, "--schema", schema, "--dry-run", "--yes"],
+          options.timeoutMs,
+        );
+        if (stderr) process.stderr.write(`${stderr}\n`);
+        process.stdout.write(`${stdout}\n`);
+      }
     }
     return;
   }
@@ -266,31 +333,44 @@ async function main() {
   const manifest = {
     generatedAt: new Date().toISOString(),
     projectRef: targetRef,
+    engine: options.engine,
     supabaseCli: version,
-    command: "pnpm dlx supabase db dump --db-url <redacted> --schema <schema>",
+    command:
+      options.engine === "pg_dump"
+        ? "pg_dump --schema-only --schema=<schema> --no-owner --dbname <redacted>"
+        : "pnpm dlx supabase db dump --db-url <redacted> --schema <schema>",
     schemas: options.schemas,
     files: [],
   };
 
   for (const schema of options.schemas) {
     const outputPath = join(outDir, schemaFileName(schema));
-    const { stdout, stderr } = runPnpmSupabase(
-      [
-        "db",
-        "dump",
-        "--db-url",
+    if (options.engine === "pg_dump") {
+      runPgDumpEngine({
         dbUrl,
-        "--schema",
         schema,
-        "--file",
         outputPath,
-        "--yes",
-      ],
-      options.timeoutMs,
-    );
-
-    if (stdout.trim()) process.stdout.write(`${stdout.trim()}\n`);
-    if (stderr.trim()) process.stderr.write(`${stderr.trim()}\n`);
+        dryRun: false,
+        timeoutMs: options.timeoutMs,
+      });
+    } else {
+      const { stdout, stderr } = runPnpmSupabase(
+        [
+          "db",
+          "dump",
+          "--db-url",
+          dbUrl,
+          "--schema",
+          schema,
+          "--file",
+          outputPath,
+          "--yes",
+        ],
+        options.timeoutMs,
+      );
+      if (stdout.trim()) process.stdout.write(`${stdout.trim()}\n`);
+      if (stderr.trim()) process.stderr.write(`${stderr.trim()}\n`);
+    }
 
     manifest.files.push({
       schema,
