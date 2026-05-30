@@ -31,9 +31,21 @@ INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_typ
 ON CONFLICT (id) DO NOTHING;
 
 -- ── Section C: storage.objects RLS policies (require storage owner) ──
+-- Branch-tight (ISSUE-004): path tenant match + the feedback row's branch must
+-- pass feedback:view. Path convention: <tenant_id>/<feedback_id>/<filename>.
 DROP POLICY IF EXISTS "feedback_photos_authenticated_select" ON storage.objects;
 CREATE POLICY "feedback_photos_authenticated_select" ON storage.objects FOR SELECT TO authenticated
-  USING ((bucket_id = 'feedback-photos') AND ((storage.foldername(name))[1] = (auth.jwt() ->> 'tenant_id')));
+  USING (
+    bucket_id = 'feedback-photos'
+    AND (storage.foldername(name))[1] = (auth.jwt() ->> 'tenant_id')
+    AND EXISTS (
+      SELECT 1 FROM public.feedbacks f
+      WHERE f.id = CASE WHEN (storage.foldername(name))[2] ~ '^[0-9]{1,18}$' THEN ((storage.foldername(name))[2])::BIGINT ELSE NULL::BIGINT END
+        AND f.tenant_id::TEXT = (storage.foldername(name))[1]
+        AND f.tenant_id = public.auth_tenant_id()
+        AND public.has_permission(f.branch_id, 'feedback:view')
+    )
+  );
 DROP POLICY IF EXISTS "feedback_photos_service_role_all" ON storage.objects;
 CREATE POLICY "feedback_photos_service_role_all" ON storage.objects FOR ALL TO service_role
   USING (bucket_id = 'feedback-photos') WITH CHECK (bucket_id = 'feedback-photos');
