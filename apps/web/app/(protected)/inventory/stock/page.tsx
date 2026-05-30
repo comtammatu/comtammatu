@@ -2,7 +2,8 @@ import { redirect } from "next/navigation";
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { loadAuthState } from "@/_lib/auth";
 import { currentUserHasPermission } from "@/_lib/permissions";
-import { fetchExpiryAlerts, fetchIngredients } from "../actions";
+import { fetchExpiryAlerts } from "../alert-actions";
+import { fetchIngredients } from "../ingredient-actions";
 import {
   resolveInventoryBranchScope,
   resolveRequestedBranchId,

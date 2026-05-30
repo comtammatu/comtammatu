@@ -6,7 +6,7 @@ import {
   type JwtClaims,
   type PermissionKey,
 } from "@comtammatu/shared/auth";
-import { fetchIngredients } from "./actions";
+import { fetchIngredients } from "./ingredient-actions";
 import { CATALOG_MANAGE_PERMISSIONS } from "./_lib/catalog-permissions";
 import {
   canAccessProductionSurface,

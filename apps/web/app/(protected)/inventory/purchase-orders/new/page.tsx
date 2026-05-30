@@ -1,5 +1,5 @@
 import { loadAuthState } from "@/_lib/auth";
-import { fetchIngredients } from "../../actions";
+import { fetchIngredients } from "../../ingredient-actions";
 import { fetchPoSuggestions, fetchSuppliers } from "../../procurement-actions";
 import { fetchProcurementBranches } from "../../_lib/procurement-branches";
 import {

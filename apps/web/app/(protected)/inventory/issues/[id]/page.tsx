@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { currentUserHasPermission } from "@/_lib/permissions";
-import { fetchIngredients } from "../../actions";
+import { fetchIngredients } from "../../ingredient-actions";
 import { fetchStockIssueDetail } from "../../issue-actions";
 import { fetchEntityAuditLogs } from "@/_lib/audit";
 import { IssueDetailClient } from "./issue-detail-client";

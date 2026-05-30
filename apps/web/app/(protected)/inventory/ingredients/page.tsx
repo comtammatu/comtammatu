@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { buildAccessDeniedPath } from "@comtammatu/shared/auth";
 import { currentUserHasAnyPermissionAny } from "@/_lib/permissions";
 import { CATALOG_MANAGE_PERMISSIONS } from "../_lib/catalog-permissions";
-import { fetchIngredients } from "../actions";
+import { fetchIngredients } from "../ingredient-actions";
 import { IngredientsClient } from "./ingredients-client";
 import type { IngredientRow } from "../_lib/types";
 

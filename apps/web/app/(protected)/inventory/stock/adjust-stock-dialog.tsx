@@ -17,7 +17,7 @@ import { FieldGroup } from "@comtammatu/ui/components/field";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { NumberField, SelectField, TextareaField } from "@/components/form";
-import { adjustStock } from "../actions";
+import { adjustStock } from "../stock-actions";
 import { ACTIONS_VI, ERRORS_VI } from "@comtammatu/shared/messages";
 
 const ADJUST_TYPE_OPTIONS = [

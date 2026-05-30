@@ -16,7 +16,7 @@ import { FieldGroup } from "@comtammatu/ui/components/field";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { SelectField, TextField } from "@/components/form";
-import { createIngredient } from "./actions";
+import { createIngredient } from "./ingredient-actions";
 import type {
   FinishedGoodOption,
   RawIngredientOption,

@@ -48,7 +48,7 @@ import { StatusBadge } from "../_components/status-badge";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import { formatVND } from "../_lib/format";
 import { CATEGORY_TONE_CLASS } from "../_lib/constants";
-import { fetchIngredients, toggleIngredientActive } from "../actions";
+import { fetchIngredients, toggleIngredientActive } from "../ingredient-actions";
 import { IngredientDialog } from "./ingredient-dialog";
 import type { IngredientRow } from "../_lib/types";
 import { IngredientImportExportMenu } from "./import-export-menu";

@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { PROCUREMENT_ROLES, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { currentUserHasPermission } from "@/_lib/permissions";
 import { getAuthContextWithPermission } from "../../_lib/auth";
-import { fetchIngredients } from "../../actions";
+import { fetchIngredients } from "../../ingredient-actions";
 import { fetchGrnDetail } from "../../procurement-actions";
 import { fetchQcSettings, type QcSettings } from "../../_lib/qc-settings";
 import { formatDate } from "../../_lib/format";

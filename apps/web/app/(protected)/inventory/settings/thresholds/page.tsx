@@ -3,7 +3,7 @@ import { Card, CardContent } from "@comtammatu/ui/components/card";
 import { AppPageHeader, AppEmptyState } from "@/components/surface";
 import { currentUserHasAnyPermissionAny } from "@/_lib/permissions";
 import { CATALOG_MANAGE_PERMISSIONS } from "../../_lib/catalog-permissions";
-import { fetchIngredients } from "../../actions";
+import { fetchIngredients } from "../../ingredient-actions";
 import { messages } from "@lib/messages";
 import { ThresholdsClient, type ThresholdRow } from "./thresholds-client";
 

@@ -69,7 +69,8 @@ import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { matchesSearch } from "@lib/search";
 import { FormattedNumberInput } from "../_components/formatted-number-input";
 import { AppPage, AppPageHeader, AppToolbar } from "@/components/surface";
-import { adjustStock, fetchExpiryAlerts } from "../actions";
+import { adjustStock } from "../stock-actions";
+import { fetchExpiryAlerts } from "../alert-actions";
 import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import type { BranchOption, ExpiryAlertRow } from "../page";
 

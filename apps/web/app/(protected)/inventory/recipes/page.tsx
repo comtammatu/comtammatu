@@ -3,7 +3,7 @@ import {
   fetchMenuItemsForRecipes,
   fetchCentralKitchenWacMap,
 } from "../procurement-actions";
-import { fetchIngredients } from "../actions";
+import { fetchIngredients } from "../ingredient-actions";
 import { formatDate } from "../_lib/format";
 import { RecipesClient } from "./recipes-client";
 import type { RecipeRow, RecipeItem } from "./recipes-client";

@@ -1,6 +1,6 @@
 import { createClient } from "@comtammatu/database/supabase/server";
 import { extractClaimsFromAccessToken } from "@comtammatu/shared/auth";
-import { fetchExpiryAlerts } from "@/(protected)/inventory/actions";
+import { fetchExpiryAlerts } from "@/(protected)/inventory/alert-actions";
 import {
   resolveInventoryBranchScope,
   resolveRequestedBranchId,

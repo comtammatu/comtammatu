@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { PROCUREMENT_ROLES, PERMISSION_KEYS } from "@comtammatu/shared/auth";
-import { fetchIngredients } from "../../actions";
+import { fetchIngredients } from "../../ingredient-actions";
 import { fetchPurchaseOrderDetail } from "../../procurement-actions";
 import { getAuthContextWithPermission } from "../../_lib/auth";
 import { formatDate, formatDateTime } from "../../_lib/format";

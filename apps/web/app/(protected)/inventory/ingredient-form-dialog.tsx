@@ -22,7 +22,7 @@ import {
   SelectField,
   TextField,
 } from "@/components/form";
-import { createIngredient, updateIngredient } from "./actions";
+import { createIngredient, updateIngredient } from "./ingredient-actions";
 import type { IngredientRow } from "./_lib/types";
 import { STORAGE_OPTIONS, ITEM_KIND_OPTIONS } from "./_lib/constants";
 import { parseOptionalNumber } from "./_lib/format";

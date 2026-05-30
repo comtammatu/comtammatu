@@ -1,0 +1,719 @@
+"use server";
+
+import { z } from "zod";
+import type { ActionResult } from "@comtammatu/shared/types";
+import { getVNDateString } from "@comtammatu/shared/time";
+import {
+  INVENTORY_CATALOG_ROLES,
+  INVENTORY_OPS_ROLES,
+} from "@comtammatu/shared/auth";
+import {
+  getAuthContext,
+  getAuthContextWithAnyPermission,
+} from "./_lib/auth";
+import { withAction } from "@/_lib/with-action";
+import { CATALOG_MANAGE_PERMISSIONS } from "./_lib/catalog-permissions";
+import {
+  STORAGE_TYPE_BY_LABEL,
+  ITEM_KIND_BY_LABEL,
+  STORAGE_LABELS,
+  ITEM_KIND_LABELS,
+  PG_ERR,
+} from "./_lib/constants";
+import {
+  buildCsv,
+  buildXlsx,
+  bufferToBase64,
+  MAX_ROWS_PER_SHEET,
+  parseSpreadsheetFile,
+  stringToBase64,
+  type SheetDef,
+} from "@/_lib/spreadsheet";
+
+/* ─── Ingredient catalog (CRUD + CSV import/export) ─── */
+
+const ingredientBaseSchema = z.object({
+  name: z.string().min(1, { error: "Tên nguyên liệu không được để trống" }),
+  purchase_unit: z
+    .string()
+    .trim()
+    .min(1, { error: "Đơn vị nhập không được để trống" })
+    .optional(),
+  measure_unit: z
+    .string()
+    .trim()
+    .min(1, { error: "Đơn vị tính không được để trống" })
+    .optional(),
+  purchase_to_measure_factor: z.coerce.number().positive().default(1),
+  unit: z
+    .string()
+    .trim()
+    .min(1, { error: "Đơn vị không được để trống" })
+    .optional(),
+  sku: z.string().optional(),
+  unit_cost: z.coerce.number().min(0).optional(),
+  category: z.string().optional(),
+  item_kind: z.enum(["raw_material", "finished_good"]).default("raw_material"),
+  min_stock_level: z.coerce.number().min(0).default(0),
+  max_stock_level: z.coerce.number().min(0).optional(),
+  reorder_point: z.coerce.number().min(0).optional(),
+  storage_type: z
+    .enum(["ambient", "refrigerated", "frozen"])
+    .default("ambient"),
+  shelf_life_days: z.coerce.number().int().positive().optional(),
+});
+
+const ingredientSchema = ingredientBaseSchema.superRefine((data, ctx) => {
+  const legacyUnit = data.unit?.trim();
+  const purchaseUnit = data.purchase_unit?.trim() ?? legacyUnit;
+  const measureUnit = data.measure_unit?.trim() ?? legacyUnit;
+
+  if (!purchaseUnit) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["purchase_unit"],
+      message: "Đơn vị nhập không được để trống",
+    });
+  }
+
+  if (!measureUnit) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["measure_unit"],
+      message: "Đơn vị tính không được để trống",
+    });
+  }
+});
+
+const ingredientUpdateSchema = ingredientBaseSchema.partial();
+
+type IngredientInput = z.infer<typeof ingredientBaseSchema>;
+
+function resolveMeasureUnit(input: Partial<IngredientInput>) {
+  return input.measure_unit?.trim() || input.unit?.trim() || null;
+}
+
+function resolvePurchaseUnit(input: Partial<IngredientInput>) {
+  return input.purchase_unit?.trim() || input.unit?.trim() || null;
+}
+
+/* ─── fetchIngredients (full catalog — SM quản lý danh mục; ops xem theo nghiệp vụ) ─── */
+
+export async function fetchIngredients(limit = 2000): Promise<ActionResult> {
+  const ctx = await getAuthContext(INVENTORY_OPS_ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { supabase, claims } = ctx;
+  const safeLimit = Math.min(Math.max(Math.trunc(limit), 1), 5000);
+
+  const { data, error } = await supabase
+    .from("ingredients")
+    .select("*")
+    .eq("tenant_id", claims.tenant_id)
+    .order("name")
+    .limit(safeLimit);
+
+  if (error) {
+    return { success: false, error: "Không thể tải danh sách nguyên liệu." };
+  }
+
+  return { success: true, data: data ?? [] };
+}
+
+/* ─── createIngredient ─── */
+
+export const createIngredient = withAction(
+  {
+    roles: INVENTORY_CATALOG_ROLES,
+    schema: ingredientSchema,
+    anyPermission: CATALOG_MANAGE_PERMISSIONS,
+  },
+  async (data, { supabase, claims }) => {
+    const measureUnit = resolveMeasureUnit(data);
+    const purchaseUnit = resolvePurchaseUnit(data) ?? measureUnit;
+
+    if (!measureUnit || !purchaseUnit) {
+      return { success: false, error: "Thiếu đơn vị nguyên liệu." };
+    }
+
+    const { data: result, error } = await supabase
+      .from("ingredients")
+      .insert({
+        tenant_id: claims.tenant_id,
+        ...data,
+        purchase_unit: purchaseUnit,
+        measure_unit: measureUnit,
+        unit: measureUnit,
+      })
+      .select("id")
+      .single();
+
+    if (error) {
+      if (error.code === PG_ERR.UNIQUE_VIOLATION) {
+        return { success: false, error: "Nguyên liệu này đã tồn tại." };
+      }
+      return { success: false, error: "Không thể tạo nguyên liệu." };
+    }
+
+    return { success: true, data: result };
+  },
+);
+
+/* ─── updateIngredient ─── */
+
+export async function updateIngredient(
+  id: number,
+  input: Partial<IngredientInput>,
+): Promise<ActionResult> {
+  const idSchema = z.coerce.number().int().positive();
+  const parsedId = idSchema.safeParse(id);
+  if (!parsedId.success) {
+    return { success: false, error: "ID không hợp lệ" };
+  }
+
+  const parsedInput = ingredientUpdateSchema.safeParse(input);
+  if (!parsedInput.success) {
+    return { success: false, error: "Dữ liệu không hợp lệ" };
+  }
+
+  const ctx = await getAuthContextWithAnyPermission(
+    INVENTORY_CATALOG_ROLES,
+    CATALOG_MANAGE_PERMISSIONS,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { supabase, claims } = ctx;
+
+  const normalizedInput: Partial<IngredientInput> = {
+    ...parsedInput.data,
+  };
+  const measureUnit = resolveMeasureUnit(parsedInput.data);
+  const purchaseUnit = resolvePurchaseUnit(parsedInput.data);
+
+  if (measureUnit) {
+    normalizedInput.measure_unit = measureUnit;
+    normalizedInput.unit = measureUnit;
+  } else {
+    delete normalizedInput.measure_unit;
+    delete normalizedInput.unit;
+  }
+
+  if (purchaseUnit) {
+    normalizedInput.purchase_unit = purchaseUnit;
+  } else {
+    delete normalizedInput.purchase_unit;
+  }
+
+  const { error } = await supabase
+    .from("ingredients")
+    .update(normalizedInput)
+    .eq("id", parsedId.data)
+    .eq("tenant_id", claims.tenant_id);
+
+  if (error) {
+    if (error.code === PG_ERR.UNIQUE_VIOLATION) {
+      return {
+        success: false,
+        error: "Tên hoặc mã nguyên liệu đã tồn tại.",
+      };
+    }
+    return { success: false, error: "Không thể cập nhật nguyên liệu." };
+  }
+
+  return { success: true };
+}
+
+/* ─── toggleIngredientActive ─── */
+
+const toggleIngredientIdSchema = z.object({
+  id: z.coerce.number().int().positive({ error: "ID không hợp lệ" }),
+});
+
+export const toggleIngredientActive = withAction(
+  {
+    roles: INVENTORY_CATALOG_ROLES,
+    schema: toggleIngredientIdSchema,
+    anyPermission: CATALOG_MANAGE_PERMISSIONS,
+  },
+  async (data, { supabase }) => {
+    const { error } = await supabase.rpc("toggle_ingredient_active", {
+      p_id: data.id,
+    });
+    if (error) {
+      if (error.message?.includes("not_found")) {
+        return { success: false, error: "Nguyên liệu không tồn tại." };
+      }
+      return { success: false, error: "Không thể đổi trạng thái nguyên liệu." };
+    }
+    return { success: true };
+  },
+);
+
+/* ─── fetchStockLevels ─── */
+
+
+function buildIngredientSheets(
+  rows: {
+    name: string;
+    sku: string | null;
+    purchase_unit: string;
+    measure_unit: string;
+    purchase_to_measure_factor: number;
+    category: string | null;
+    item_kind: string;
+    unit_cost: number | null;
+    min_stock_level: number;
+    max_stock_level: number | null;
+    reorder_point: number | null;
+    storage_type: string;
+    shelf_life_days: number | null;
+    is_active: boolean;
+  }[],
+): SheetDef[] {
+  return [
+    {
+      name: "Nguyen lieu",
+      columns: [
+        { header: "Tên nguyên liệu", key: "name", width: 32 },
+        { header: "SKU", key: "sku", width: 14 },
+        { header: "Đơn vị nhập", key: "purchase_unit", width: 14 },
+        { header: "Đơn vị tính", key: "measure_unit", width: 14 },
+        {
+          header: "Tỉ lệ quy đổi",
+          key: "purchase_to_measure_factor",
+          width: 16,
+        },
+        { header: "Danh mục", key: "category", width: 18 },
+        { header: "Loại hàng", key: "item_kind_label", width: 16 },
+        { header: "Giá nhập (VND)", key: "unit_cost", width: 16 },
+        { header: "Tồn tối thiểu", key: "min_stock_level", width: 14 },
+        { header: "Tồn tối đa", key: "max_stock_level", width: 14 },
+        { header: "Điểm đặt hàng", key: "reorder_point", width: 14 },
+        { header: "Bảo quản", key: "storage_label", width: 14 },
+        { header: "Hạn dùng (ngày)", key: "shelf_life_days", width: 14 },
+        { header: "Hoạt động", key: "is_active", width: 12 },
+      ],
+      rows: rows.map((r) => ({
+        name: r.name,
+        sku: r.sku ?? "",
+        purchase_unit: r.purchase_unit,
+        measure_unit: r.measure_unit,
+        purchase_to_measure_factor: r.purchase_to_measure_factor,
+        category: r.category ?? "",
+        item_kind_label: ITEM_KIND_LABELS[r.item_kind] ?? r.item_kind,
+        unit_cost: r.unit_cost ?? "",
+        min_stock_level: r.min_stock_level,
+        max_stock_level: r.max_stock_level ?? "",
+        reorder_point: r.reorder_point ?? "",
+        storage_label: STORAGE_LABELS[r.storage_type] ?? r.storage_type,
+        shelf_life_days: r.shelf_life_days ?? "",
+        is_active: r.is_active ? "Có" : "Không",
+      })),
+    },
+  ];
+}
+
+type ExportIngredientsResult =
+  | {
+      success: true;
+      data: { filename: string; base64: string; format: "xlsx" | "csv" };
+    }
+  | { success: false; error: string };
+
+export async function exportIngredients(
+  format: "xlsx" | "csv" = "xlsx",
+): Promise<ExportIngredientsResult> {
+  const ctx = await getAuthContextWithAnyPermission(
+    INVENTORY_CATALOG_ROLES,
+    CATALOG_MANAGE_PERMISSIONS,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { supabase, claims } = ctx;
+
+  const { data, error } = await supabase
+    .from("ingredients")
+    .select(
+      "name, sku, purchase_unit, measure_unit, purchase_to_measure_factor, category, item_kind, unit_cost, min_stock_level, max_stock_level, reorder_point, storage_type, shelf_life_days, is_active",
+    )
+    .eq("tenant_id", claims.tenant_id)
+    .order("name");
+
+  if (error) {
+    return { success: false, error: "Không thể tải nguyên liệu." };
+  }
+
+  const rows = (data ?? []).map((r) => ({
+    name: r.name,
+    sku: r.sku,
+    purchase_unit: r.purchase_unit ?? "",
+    measure_unit: r.measure_unit ?? "",
+    purchase_to_measure_factor: Number(r.purchase_to_measure_factor ?? 1),
+    category: r.category,
+    item_kind: r.item_kind ?? "raw_material",
+    unit_cost: r.unit_cost != null ? Number(r.unit_cost) : null,
+    min_stock_level: Number(r.min_stock_level ?? 0),
+    max_stock_level:
+      r.max_stock_level != null ? Number(r.max_stock_level) : null,
+    reorder_point: r.reorder_point != null ? Number(r.reorder_point) : null,
+    storage_type: r.storage_type ?? "ambient",
+    shelf_life_days: r.shelf_life_days,
+    is_active: r.is_active ?? true,
+  }));
+
+  const sheets = buildIngredientSheets(rows);
+  const stamp = getVNDateString();
+
+  if (format === "csv") {
+    const csv = buildCsv(sheets[0]!);
+    return {
+      success: true,
+      data: {
+        filename: `nguyen-lieu-${stamp}.csv`,
+        base64: stringToBase64(csv),
+        format: "csv",
+      },
+    };
+  }
+
+  const buf = await buildXlsx(sheets);
+  return {
+    success: true,
+    data: {
+      filename: `nguyen-lieu-${stamp}.xlsx`,
+      base64: bufferToBase64(buf),
+      format: "xlsx",
+    },
+  };
+}
+
+const importIngredientRowSchema = z.object({
+  name: z.string().trim().min(1, { error: "Thiếu tên" }),
+  sku: z.string().trim().optional(),
+  purchase_unit: z.string().trim().min(1, { error: "Thiếu đơn vị nhập" }),
+  measure_unit: z.string().trim().min(1, { error: "Thiếu đơn vị tính" }),
+  purchase_to_measure_factor: z.coerce
+    .number()
+    .positive({ error: "Tỉ lệ quy đổi phải lớn hơn 0" })
+    .default(1),
+  category: z.string().trim().optional(),
+  item_kind: z.enum(["raw_material", "finished_good"]).default("raw_material"),
+  unit_cost: z.coerce.number().min(0).optional(),
+  min_stock_level: z.coerce.number().min(0).default(0),
+  max_stock_level: z.coerce.number().min(0).optional(),
+  reorder_point: z.coerce.number().min(0).optional(),
+  storage_type: z
+    .enum(["ambient", "refrigerated", "frozen"])
+    .default("ambient"),
+  shelf_life_days: z.coerce.number().int().positive().optional(),
+  is_active: z.boolean().default(true),
+});
+
+function parseBool(raw: string | undefined): boolean {
+  if (!raw) return true;
+  const s = raw.trim().toLowerCase();
+  if (["", "có", "co", "true", "1", "yes", "x"].includes(s)) return true;
+  if (["không", "khong", "false", "0", "no"].includes(s)) return false;
+  return true;
+}
+
+function parseOptionalNumber(raw: string | undefined): number | undefined {
+  if (raw == null) return undefined;
+  const s = raw.toString().trim().replace(/[,\s]/g, "");
+  if (s === "") return undefined;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+export interface ImportIngredientIssue {
+  row: number;
+  field?: string;
+  message: string;
+}
+
+export interface ImportIngredientSummary {
+  inserted: number;
+  updated: number;
+}
+
+type ImportIngredientsResult =
+  | {
+      success: true;
+      data: { summary: ImportIngredientSummary };
+    }
+  | { success: false; error: string; issues?: ImportIngredientIssue[] };
+
+export async function importIngredients(
+  formData: FormData,
+): Promise<ImportIngredientsResult> {
+  const ctx = await getAuthContextWithAnyPermission(
+    INVENTORY_CATALOG_ROLES,
+    CATALOG_MANAGE_PERMISSIONS,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const file = formData.get("file");
+  if (!(file instanceof File)) {
+    return { success: false, error: "Thiếu file để import" };
+  }
+
+  let parsed;
+  try {
+    parsed = await parseSpreadsheetFile(file, {
+      maxRowsPerSheet: MAX_ROWS_PER_SHEET,
+    });
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Không đọc được file",
+    };
+  }
+
+  const sheet = parsed.sheets[0];
+  if (!sheet || sheet.rows.length === 0) {
+    return { success: false, error: "File trống" };
+  }
+
+  const { supabase, claims } = ctx;
+
+  const issues: ImportIngredientIssue[] = [];
+  const toUpsert: {
+    tenant_id: number;
+    name: string;
+    sku: string | null;
+    purchase_unit: string;
+    measure_unit: string;
+    purchase_to_measure_factor: number;
+    unit: string;
+    category: string | null;
+    item_kind: "raw_material" | "finished_good";
+    unit_cost: number | null;
+    min_stock_level: number;
+    max_stock_level: number | null;
+    reorder_point: number | null;
+    storage_type: "ambient" | "refrigerated" | "frozen";
+    shelf_life_days: number | null;
+    is_active: boolean;
+  }[] = [];
+
+  sheet.rows.forEach((raw, idx) => {
+    const rowNumber = idx + 2;
+
+    const storageRaw = raw["Bảo quản"] ?? raw["storage_type"] ?? "ambient";
+    const storageKey = STORAGE_TYPE_BY_LABEL[storageRaw.trim().toLowerCase()];
+    if (!storageKey) {
+      issues.push({
+        row: rowNumber,
+        field: "Bảo quản",
+        message: `Kiểu bảo quản không hợp lệ: "${storageRaw}"`,
+      });
+      return;
+    }
+
+    const kindRaw = raw["Loại hàng"] ?? raw["item_kind"] ?? "raw_material";
+    const kindKey = ITEM_KIND_BY_LABEL[kindRaw.trim().toLowerCase()];
+    if (!kindKey) {
+      issues.push({
+        row: rowNumber,
+        field: "Loại hàng",
+        message: `Loại hàng không hợp lệ: "${kindRaw}"`,
+      });
+      return;
+    }
+
+    const unitCost = parseOptionalNumber(
+      raw["Giá nhập (VND)"] ?? raw["unit_cost"],
+    );
+    const maxStock = parseOptionalNumber(
+      raw["Tồn tối đa"] ?? raw["max_stock_level"],
+    );
+    const reorder = parseOptionalNumber(
+      raw["Điểm đặt hàng"] ?? raw["reorder_point"],
+    );
+    const shelfLife = parseOptionalNumber(
+      raw["Hạn dùng (ngày)"] ?? raw["shelf_life_days"],
+    );
+    const conversionRaw =
+      raw["Tỉ lệ quy đổi"] ?? raw["purchase_to_measure_factor"];
+
+    const parsedRow = importIngredientRowSchema.safeParse({
+      name: raw["Tên nguyên liệu"] ?? raw["name"],
+      sku: (raw["SKU"] ?? raw["sku"] ?? "").trim() || undefined,
+      purchase_unit: raw["Đơn vị nhập"] ?? raw["purchase_unit"],
+      measure_unit: raw["Đơn vị tính"] ?? raw["measure_unit"],
+      purchase_to_measure_factor:
+        conversionRaw && conversionRaw.trim() ? conversionRaw : undefined,
+      category: (raw["Danh mục"] ?? raw["category"] ?? "").trim() || undefined,
+      item_kind: kindKey,
+      unit_cost: unitCost,
+      min_stock_level:
+        parseOptionalNumber(raw["Tồn tối thiểu"] ?? raw["min_stock_level"]) ??
+        0,
+      max_stock_level: maxStock,
+      reorder_point: reorder,
+      storage_type: storageKey,
+      shelf_life_days: shelfLife,
+      is_active: parseBool(raw["Hoạt động"] ?? raw["is_active"]),
+    });
+
+    if (!parsedRow.success) {
+      issues.push({
+        row: rowNumber,
+        field: parsedRow.error.issues[0]?.path.join("."),
+        message: parsedRow.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+      });
+      return;
+    }
+
+    const d = parsedRow.data;
+    toUpsert.push({
+      tenant_id: claims.tenant_id,
+      name: d.name,
+      sku: d.sku ?? null,
+      purchase_unit: d.purchase_unit,
+      measure_unit: d.measure_unit,
+      purchase_to_measure_factor: d.purchase_to_measure_factor,
+      unit: d.measure_unit,
+      category: d.category ?? null,
+      item_kind: d.item_kind,
+      unit_cost: d.unit_cost ?? null,
+      min_stock_level: d.min_stock_level,
+      max_stock_level: d.max_stock_level ?? null,
+      reorder_point: d.reorder_point ?? null,
+      storage_type: d.storage_type,
+      shelf_life_days: d.shelf_life_days ?? null,
+      is_active: d.is_active,
+    });
+  });
+
+  if (issues.length > 0) {
+    return {
+      success: false,
+      error: `Có ${issues.length} dòng lỗi. Vui lòng sửa và thử lại.`,
+      issues,
+    };
+  }
+
+  if (toUpsert.length === 0) {
+    return { success: false, error: "Không có dòng hợp lệ nào để import" };
+  }
+
+  const { data: existing } = await supabase
+    .from("ingredients")
+    .select("name, sku")
+    .eq("tenant_id", claims.tenant_id);
+  const existingNames = new Set((existing ?? []).map((r) => r.name));
+  const skuToExistingName = new Map<string, string>();
+  for (const r of existing ?? []) {
+    if (r.sku) skuToExistingName.set(r.sku, r.name);
+  }
+
+  // Detect row-level SKU conflicts: incoming row's SKU matches an existing
+  // ingredient with a DIFFERENT name (a rename + SKU collision would silently
+  // fail at the DB level otherwise because our upsert matches on name).
+  const seenSkuInBatch = new Map<string, number>();
+  toUpsert.forEach((row, idx) => {
+    const rowNumber = idx + 2;
+    if (!row.sku) return;
+    const dupIdx = seenSkuInBatch.get(row.sku);
+    if (dupIdx != null) {
+      issues.push({
+        row: rowNumber,
+        field: "SKU",
+        message: `SKU "${row.sku}" trùng với dòng ${dupIdx} trong file.`,
+      });
+      return;
+    }
+    seenSkuInBatch.set(row.sku, rowNumber);
+    const existingName = skuToExistingName.get(row.sku);
+    if (existingName && existingName !== row.name) {
+      issues.push({
+        row: rowNumber,
+        field: "SKU",
+        message: `SKU "${row.sku}" đã thuộc về nguyên liệu "${existingName}". Đổi SKU hoặc dùng đúng tên.`,
+      });
+    }
+  });
+
+  if (issues.length > 0) {
+    return {
+      success: false,
+      error: `Có ${issues.length} dòng SKU trùng. Vui lòng sửa và thử lại.`,
+      issues,
+    };
+  }
+
+  const { error } = await supabase
+    .from("ingredients")
+    .upsert(toUpsert, { onConflict: "name,tenant_id" });
+
+  if (error) {
+    if (error.code === PG_ERR.UNIQUE_VIOLATION) {
+      return {
+        success: false,
+        error:
+          "Trùng dữ liệu với nguyên liệu đang có. Vui lòng kiểm tra tên và SKU.",
+      };
+    }
+    if (error.code === "PGRST204" || error.code === "42703") {
+      return {
+        success: false,
+        error:
+          "Database chưa cập nhật schema nguyên liệu. Vui lòng apply migration đơn vị nhập/đơn vị tính/tỉ lệ quy đổi rồi import lại.",
+      };
+    }
+    if (error.code === PG_ERR.INSUFFICIENT_PRIVILEGE) {
+      return {
+        success: false,
+        error:
+          "Tài khoản chưa có quyền ghi danh mục nguyên liệu. Vui lòng cấp quyền inventory:write hoặc đăng nhập lại.",
+      };
+    }
+    return { success: false, error: "Không thể ghi dữ liệu nguyên liệu." };
+  }
+
+  const summary: ImportIngredientSummary = { inserted: 0, updated: 0 };
+  for (const row of toUpsert) {
+    if (existingNames.has(row.name)) summary.updated += 1;
+    else summary.inserted += 1;
+  }
+
+  return { success: true, data: { summary } };
+}
+
+export async function downloadIngredientTemplate(): Promise<ActionResult> {
+  const ctx = await getAuthContextWithAnyPermission(
+    INVENTORY_CATALOG_ROLES,
+    CATALOG_MANAGE_PERMISSIONS,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const sheets = buildIngredientSheets([
+    {
+      name: "Nước mắm chai (ví dụ)",
+      sku: "NM-001",
+      purchase_unit: "chai",
+      measure_unit: "ml",
+      purchase_to_measure_factor: 250,
+      category: "Gia vị",
+      item_kind: "raw_material",
+      unit_cost: 18000,
+      min_stock_level: 1000,
+      max_stock_level: 10000,
+      reorder_point: 2000,
+      storage_type: "ambient",
+      shelf_life_days: 365,
+      is_active: true,
+    },
+  ]);
+
+  const buf = await buildXlsx(sheets);
+  return {
+    success: true,
+    data: {
+      filename: "nguyen-lieu-template.xlsx",
+      base64: bufferToBase64(buf),
+      format: "xlsx" as const,
+    },
+  };
+}

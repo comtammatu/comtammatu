@@ -32,7 +32,7 @@ import {
   importIngredients,
   type ImportIngredientIssue,
   type ImportIngredientSummary,
-} from "../actions";
+} from "../ingredient-actions";
 
 import { ACTIONS_VI } from "@comtammatu/shared/messages";
 export function IngredientImportExportMenu({

@@ -5,11 +5,8 @@ import {
   currentUserHasAnyPermissionAny,
   currentUserHasPermissionAny,
 } from "@/_lib/permissions";
-import {
-  fetchReorderAlerts,
-  fetchExpiryAlerts,
-  fetchStocktakeSessions,
-} from "../actions";
+import { fetchStocktakeSessions } from "../actions";
+import { fetchReorderAlerts, fetchExpiryAlerts } from "../alert-actions";
 import { fetchPurchaseOrders } from "../procurement-actions";
 import { fetchStockTransfers } from "../transfer-actions";
 import { getInventoryDashboard } from "../dashboard-actions";
