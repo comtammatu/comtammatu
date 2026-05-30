@@ -17,17 +17,21 @@ creates it), which is why this baseline exists.
 
 ## Managed surfaces (NOT in the baseline)
 
-`--schema=public` excludes Supabase-managed surfaces. A fresh-from-zero env also
-needs these applied separately — see
-`docs/plan/supabase-managed-surfaces-install-bundle.sql` and
-`docs/runbooks/matu-dev-migration-squash-2026-05-30.md`:
+`--schema=public` excludes Supabase-managed surfaces. Apply
+**`../managed-surfaces.install.sql`** (i.e. `supabase/managed-surfaces.install.sql`)
+AFTER the baseline on a fresh env. It is a privileged install step (NOT an
+auto-applied migration) — generated 2026-05-30 from matu-dev + iexws, idempotent:
 
-- extensions (pgcrypto, pg_cron, hypopg, index_advisor, …)
-- storage buckets + storage policies
-- realtime publication membership (`ALTER PUBLICATION supabase_realtime ADD TABLE …` — 11 tables)
+- extensions (pgcrypto, uuid-ossp, hypopg, index_advisor, pg_cron)
+- storage buckets (5) + storage.objects RLS policies (14) — **the policy section
+  needs `storage.objects` ownership (`supabase_storage_admin`); run it as that
+  role / via the Dashboard if a plain migration role errors with "must be owner"**
+- realtime publication membership (11 tables; `ADD TABLE` — fresh env only)
 - cron jobs (10) via `cron.schedule(...)`
 
-The `config.toml` auth-hook setting stays in the repo.
+The `config.toml` auth-hook setting stays in the repo. (The older
+`docs/plan/supabase-managed-surfaces-install-bundle.sql` was the greenfield-target
+rehearsal version; the file above supersedes it for matu-dev/fresh installs.)
 
 ## Existing environments (option X — 2026-05-30)
 
