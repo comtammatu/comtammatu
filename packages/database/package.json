@@ -17,18 +17,18 @@
     "lint": "eslint src/"
   },
   "dependencies": {
-    "@supabase/ssr": "^0.10.0",
-    "@supabase/supabase-js": "^2.101.1"
+    "@supabase/ssr": "^0.10.3",
+    "@supabase/supabase-js": "^2.106.2"
   },
   "peerDependencies": {
     "next": ">=16"
   },
   "devDependencies": {
     "@types/node": "^25.5.0",
-    "@types/react": "^19.2.14",
+    "@types/react": "^19.2.15",
     "next": "^16.2.2",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
     "typescript": "^6.0.3"
   }
 }
