@@ -30,6 +30,7 @@ const kitchenItemSchema = z.object({
 const billItemSchema = kitchenItemSchema.extend({
   unit_price: z.number(),
   subtotal: z.number(),
+  discount_amount: z.number().nullable().optional(),
 });
 
 /** Pre-built QR block for provisional bill — backend assembles the EMVCo/MoMo
@@ -204,6 +205,8 @@ export const shiftCloseReportPayloadSchema = z.object({
   item_breakdown: z.array(shiftItemBreakdownLineSchema).optional(),
   /** Sum of paid orders.total_amount. */
   total_revenue: z.number(),
+  /** Sum of paid orders.discount_amount + orders.item_discount_amount. */
+  discount_total: z.number().optional(),
   printed_at: z.string(),
 });
 

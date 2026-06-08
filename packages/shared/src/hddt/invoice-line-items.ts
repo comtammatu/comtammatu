@@ -6,8 +6,18 @@ export interface OrderItemForInvoiceLines {
   quantity: number | string | null;
   unit_price: number | string | null;
   subtotal?: number | string | null;
+  discount_amount?: number | string | null;
   modifiers?: unknown;
   sides?: unknown;
+}
+
+export interface BuildInvoiceLineItemsOptions {
+  /**
+   * Order-level discount to allocate into legal invoice lines. This keeps the
+   * POS order-discount model while ensuring HĐĐT/CQT payloads reduce taxable
+   * line totals instead of reporting full menu prices.
+   */
+  orderDiscountAmount?: number | string | null;
 }
 
 type PricedOption = {
@@ -130,9 +140,70 @@ function aggregateDuplicateLines(
     const quantity = existing.quantity + line.quantity;
     existing.quantity = quantity;
     existing.amount = roundMoney(existing.unitPrice * quantity);
+    existing.discountAmount = roundMoney(
+      (existing.discountAmount ?? 0) + (line.discountAmount ?? 0),
+    );
   }
 
   return Array.from(byKey.values());
+}
+
+function withOptionalDiscount(
+  line: InvoiceLineItem,
+  discountAmount: number,
+): InvoiceLineItem {
+  if (discountAmount > 0) return { ...line, discountAmount };
+  const { discountAmount: _discountAmount, ...rest } = line;
+  return rest;
+}
+
+function allocateDiscountAcrossLines(
+  lines: readonly InvoiceLineItem[],
+  rawDiscount: unknown,
+): InvoiceLineItem[] {
+  const discount = Math.max(0, roundMoney(toNumber(rawDiscount)));
+  const totalDiscountableAmount = roundMoney(
+    lines.reduce(
+      (sum, line) =>
+        sum +
+        Math.max(
+          0,
+          roundMoney(line.amount - Math.max(0, line.discountAmount ?? 0)),
+        ),
+      0,
+    ),
+  );
+  if (discount <= 0 || totalDiscountableAmount <= 0) {
+    return lines.map((line) =>
+      withOptionalDiscount(line, roundMoney(line.discountAmount ?? 0)),
+    );
+  }
+
+  let remainingDiscount = Math.min(discount, totalDiscountableAmount);
+  let remainingAmount = totalDiscountableAmount;
+
+  return lines.map((line, index) => {
+    const existingDiscount = Math.max(0, roundMoney(line.discountAmount ?? 0));
+    const lineDiscountableAmount = Math.max(
+      0,
+      roundMoney(line.amount - existingDiscount),
+    );
+    if (lineDiscountableAmount <= 0 || remainingDiscount <= 0 || remainingAmount <= 0) {
+      return withOptionalDiscount(line, existingDiscount);
+    }
+
+    const isLast = index === lines.length - 1;
+    const rawLineDiscount = isLast
+      ? remainingDiscount
+      : roundMoney((remainingDiscount * lineDiscountableAmount) / remainingAmount);
+    const lineDiscount = Math.min(lineDiscountableAmount, rawLineDiscount);
+
+    remainingDiscount = roundMoney(remainingDiscount - lineDiscount);
+    remainingAmount = roundMoney(remainingAmount - lineDiscountableAmount);
+
+    const totalLineDiscount = roundMoney(existingDiscount + lineDiscount);
+    return withOptionalDiscount(line, totalLineDiscount);
+  });
 }
 
 /**
@@ -144,10 +215,12 @@ function aggregateDuplicateLines(
  */
 export function buildInvoiceLineItemsFromOrderItems(
   orderItems: readonly OrderItemForInvoiceLines[],
+  options: BuildInvoiceLineItemsOptions = {},
 ): InvoiceLineItem[] {
   const lines: InvoiceLineItem[] = [];
 
   for (const item of orderItems) {
+    const itemLines: InvoiceLineItem[] = [];
     const parentQuantity = Math.max(0, toNumber(item.quantity));
     if (parentQuantity <= 0) continue;
 
@@ -161,12 +234,17 @@ export function buildInvoiceLineItemsFromOrderItems(
     const baseUnit = roundMoney(unitPrice - optionUnitTotal);
 
     if (baseUnit < 0) {
-      lines.push(buildAggregateLine(item));
+      lines.push(
+        ...allocateDiscountAcrossLines(
+          [buildAggregateLine(item)],
+          item.discount_amount,
+        ),
+      );
       continue;
     }
 
     if (baseUnit > 0) {
-      lines.push({
+      itemLines.push({
         name: formatItemName(item),
         unit: DEFAULT_UNIT,
         quantity: parentQuantity,
@@ -176,16 +254,21 @@ export function buildInvoiceLineItemsFromOrderItems(
     }
 
     for (const modifier of modifiers) {
-      lines.push(buildOptionLine(modifier, parentQuantity));
+      itemLines.push(buildOptionLine(modifier, parentQuantity));
     }
     for (const side of sides) {
-      lines.push(buildOptionLine(side, parentQuantity));
+      itemLines.push(buildOptionLine(side, parentQuantity));
     }
 
     if (baseUnit === 0 && modifiers.length === 0 && sides.length === 0) {
-      lines.push(buildAggregateLine(item));
+      itemLines.push(buildAggregateLine(item));
     }
+
+    lines.push(...allocateDiscountAcrossLines(itemLines, item.discount_amount));
   }
 
-  return aggregateDuplicateLines(lines);
+  return allocateDiscountAcrossLines(
+    aggregateDuplicateLines(lines),
+    options.orderDiscountAmount,
+  );
 }

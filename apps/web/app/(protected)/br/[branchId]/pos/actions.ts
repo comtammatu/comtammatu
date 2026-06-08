@@ -40,6 +40,8 @@ export {
 export {
   applyOrderDiscount,
   clearOrderDiscount,
+  applyOrderItemDiscount,
+  clearOrderItemDiscount,
   splitOrder,
   mergeOrders,
   fetchSiblingOrdersForTable,

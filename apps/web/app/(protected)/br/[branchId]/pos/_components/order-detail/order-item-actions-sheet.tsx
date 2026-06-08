@@ -11,6 +11,7 @@ import {
 } from "@comtammatu/ui/components/sheet";
 import {
   Check as IconCheck,
+  BadgePercent as IconBadgePercent,
   Flame as IconFlame,
   Minus as IconMinus,
   Pencil as IconPencil,
@@ -41,6 +42,7 @@ interface OrderItemActionsSheetProps {
    * và parent supply menu lookup. Optional vì caller cũ (employee waiter
    * portal) chưa cần đến. */
   onEditRequest?: (itemId: number) => void;
+  onDiscountRequest?: (itemId: number) => void;
   onPriorityRequest?: (itemId: number, next: boolean) => void;
 }
 
@@ -53,6 +55,7 @@ export function OrderItemActionsSheet({
   onVoidRequest,
   onReduceRequest,
   onEditRequest,
+  onDiscountRequest,
   onPriorityRequest,
 }: OrderItemActionsSheetProps) {
   const cancelled = item?.status === "cancelled";
@@ -76,6 +79,7 @@ export function OrderItemActionsSheet({
     item.status === "pending" &&
     item.menu_item_id != null &&
     onEditRequest != null;
+  const canDiscount = canManage && actionable && onDiscountRequest != null;
   const canPrioritize =
     item != null &&
     onPriorityRequest != null &&
@@ -186,6 +190,21 @@ export function OrderItemActionsSheet({
               {item?.is_priority === true ? "Bỏ ưu tiên" : "Ưu tiên bếp"}
             </Button>
           )}
+          {canDiscount && (
+            <Button
+              type="button"
+              variant="outline"
+              size="touch"
+              className="w-full"
+              disabled={isPending}
+              onClick={() => {
+                if (item && onDiscountRequest) onDiscountRequest(item.id);
+              }}
+            >
+              <IconBadgePercent data-icon="inline-start" />
+              Chiết khấu món
+            </Button>
+          )}
           {canReduce && (
             <Button
               type="button"
@@ -220,6 +239,7 @@ export function OrderItemActionsSheet({
             !canVoid &&
             !canReduce &&
             !canEdit &&
+            !canDiscount &&
             !canPrioritize && (
               <p className="py-4 text-center text-sm text-muted-foreground">
                 Không có thao tác khả dụng cho món này.

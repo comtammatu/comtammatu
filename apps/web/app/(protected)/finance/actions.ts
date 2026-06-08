@@ -86,7 +86,7 @@ export async function createTaxInvoice(
   const { data: order, error: orderErr } = await supabase
     .from("orders")
     .select(
-      "id, branch_id, subtotal, tax_amount, total_amount, payment_status, order_items(id, item_name, variant_name, quantity, unit_price, subtotal, modifiers, sides, status, vat_rate)",
+      "id, branch_id, subtotal, tax_amount, total_amount, discount_amount, payment_status, order_items(id, item_name, variant_name, quantity, unit_price, subtotal, discount_amount, modifiers, sides, status, vat_rate)",
     )
     .eq("id", parsed.data.orderId)
     .eq("tenant_id", claims.tenant_id)
@@ -260,7 +260,9 @@ export async function createTaxInvoice(
     };
   }
 
-  const invoiceItems = buildInvoiceLineItemsFromOrderItems(activeItems);
+  const invoiceItems = buildInvoiceLineItemsFromOrderItems(activeItems, {
+    orderDiscountAmount: order.discount_amount,
+  });
 
   if (invoiceProvider) {
     const result = await invoiceProvider.createInvoice({

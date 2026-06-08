@@ -3175,6 +3175,10 @@ export type Database = {
         Row: {
           cancel_reason: string | null
           created_at: string
+          discount_amount: number
+          discount_note: string | null
+          discount_type: string | null
+          discount_value: number | null
           id: number
           is_priority: boolean
           item_name: string
@@ -3201,6 +3205,10 @@ export type Database = {
         Insert: {
           cancel_reason?: string | null
           created_at?: string
+          discount_amount?: number
+          discount_note?: string | null
+          discount_type?: string | null
+          discount_value?: number | null
           id?: never
           is_priority?: boolean
           item_name: string
@@ -3227,6 +3235,10 @@ export type Database = {
         Update: {
           cancel_reason?: string | null
           created_at?: string
+          discount_amount?: number
+          discount_note?: string | null
+          discount_type?: string | null
+          discount_value?: number | null
           id?: never
           is_priority?: boolean
           item_name?: string
@@ -3358,6 +3370,7 @@ export type Database = {
           id: number
           idempotency_key: string | null
           is_priority: boolean
+          item_discount_amount: number
           kitchen_send_count: number
           last_transfer_idempotency_key: string | null
           merge_request_key: string | null
@@ -3395,6 +3408,7 @@ export type Database = {
           id?: never
           idempotency_key?: string | null
           is_priority?: boolean
+          item_discount_amount?: number
           kitchen_send_count?: number
           last_transfer_idempotency_key?: string | null
           merge_request_key?: string | null
@@ -3432,6 +3446,7 @@ export type Database = {
           id?: never
           idempotency_key?: string | null
           is_priority?: boolean
+          item_discount_amount?: number
           kitchen_send_count?: number
           last_transfer_idempotency_key?: string | null
           merge_request_key?: string | null
@@ -8563,6 +8578,15 @@ export type Database = {
         }
         Returns: Json
       }
+      apply_order_item_discount: {
+        Args: {
+          p_note: string
+          p_order_item_id: number
+          p_type: string
+          p_value: number
+        }
+        Returns: Json
+      }
       apply_template_to_user: {
         Args: {
           p_branch_id: number
@@ -8650,6 +8674,10 @@ export type Database = {
         Returns: Json
       }
       clear_order_discount: { Args: { p_order_id: number }; Returns: Json }
+      clear_order_item_discount: {
+        Args: { p_note: string; p_order_item_id: number }
+        Returns: Json
+      }
       close_fiscal_period: {
         Args: {
           p_month: number

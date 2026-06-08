@@ -175,6 +175,8 @@ export interface SinvoiceItemInfo {
 export interface SinvoiceLineMath {
   itemInfo: SinvoiceItemInfo[];
   sumLineNet: number;
+  sumLineDiscount: number;
+  sumLineAfterDiscount: number;
   sumLineTax: number;
   totalGross: number;
 }
@@ -212,6 +214,10 @@ export function buildSinvoiceItemInfo(
     const lineGross = callerPassesGross
       ? item.amount
       : item.amount * (1 + vatRate / 100);
+    const rawDiscount = Math.max(0, item.discountAmount ?? 0);
+    const lineGrossDiscount = callerPassesGross
+      ? rawDiscount
+      : rawDiscount * (1 + vatRate / 100);
 
     const qty = item.quantity;
     if (pricingMode === "direct_sales_gross") {
@@ -224,6 +230,11 @@ export function buildSinvoiceItemInfo(
             )
           : 0;
       const lineAmount = grossUnitPrice * qty;
+      const lineDiscount = Math.min(
+        lineAmount,
+        Math.round(lineGrossDiscount),
+      );
+      const lineAfterDiscount = lineAmount - lineDiscount;
 
       return {
         lineNumber: index + 1,
@@ -234,10 +245,10 @@ export function buildSinvoiceItemInfo(
         unitPrice: grossUnitPrice,
         quantity: qty,
         itemTotalAmountWithoutTax: lineAmount,
-        itemTotalAmountAfterDiscount: lineAmount,
-        itemTotalAmountWithTax: lineAmount,
-        discount: 0,
-        itemDiscount: 0,
+        itemTotalAmountAfterDiscount: lineAfterDiscount,
+        itemTotalAmountWithTax: lineAfterDiscount,
+        discount: lineDiscount,
+        itemDiscount: lineDiscount,
         itemNote: null,
         isIncreaseItem: null,
         taxPercentage: -2,
@@ -248,7 +259,12 @@ export function buildSinvoiceItemInfo(
     const grossUnitPrice = qty > 0 ? lineGross / qty : 0;
     const netUnitPrice = Math.round(grossUnitPrice / (1 + vatRate / 100));
     const lineNet = netUnitPrice * qty;
-    const lineTax = Math.round((lineNet * vatRate) / 100);
+    const lineDiscount = Math.min(
+      lineNet,
+      Math.round(lineGrossDiscount / (1 + vatRate / 100)),
+    );
+    const lineAfterDiscount = lineNet - lineDiscount;
+    const lineTax = Math.round((lineAfterDiscount * vatRate) / 100);
 
     return {
       lineNumber: index + 1,
@@ -259,10 +275,10 @@ export function buildSinvoiceItemInfo(
       unitPrice: netUnitPrice,
       quantity: qty,
       itemTotalAmountWithoutTax: lineNet,
-      itemTotalAmountAfterDiscount: lineNet,
-      itemTotalAmountWithTax: lineNet + lineTax,
-      discount: 0,
-      itemDiscount: 0,
+      itemTotalAmountAfterDiscount: lineAfterDiscount,
+      itemTotalAmountWithTax: lineAfterDiscount + lineTax,
+      discount: lineDiscount,
+      itemDiscount: lineDiscount,
       itemNote: null,
       isIncreaseItem: null,
       taxPercentage: vatRate,
@@ -274,10 +290,22 @@ export function buildSinvoiceItemInfo(
     (s, l) => s + l.itemTotalAmountWithoutTax,
     0,
   );
+  const sumLineDiscount = itemInfo.reduce((s, l) => s + l.itemDiscount, 0);
+  const sumLineAfterDiscount = itemInfo.reduce(
+    (s, l) => s + l.itemTotalAmountAfterDiscount,
+    0,
+  );
   const sumLineTax = itemInfo.reduce((s, l) => s + l.taxAmount, 0);
-  const totalGross = sumLineNet + sumLineTax;
+  const totalGross = sumLineAfterDiscount + sumLineTax;
 
-  return { itemInfo, sumLineNet, sumLineTax, totalGross };
+  return {
+    itemInfo,
+    sumLineNet,
+    sumLineDiscount,
+    sumLineAfterDiscount,
+    sumLineTax,
+    totalGross,
+  };
 }
 
 export class ViettelSinvoiceProvider implements InvoiceProvider {
@@ -421,7 +449,14 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
     const pricingMode: SinvoicePricingMode =
       invoiceType === "2" ? "direct_sales_gross" : "vat_deductible_net";
 
-    const { itemInfo, sumLineNet, sumLineTax, totalGross } =
+    const {
+      itemInfo,
+      sumLineNet,
+      sumLineDiscount,
+      sumLineAfterDiscount,
+      sumLineTax,
+      totalGross,
+    } =
       buildSinvoiceItemInfo(
         request.items,
         request.vatRate,
@@ -481,18 +516,18 @@ export class ViettelSinvoiceProvider implements InvoiceProvider {
       itemInfo,
       summarizeInfo: {
         sumOfTotalLineAmountWithoutTax: sumLineNet,
-        totalAmountAfterDiscount: sumLineNet,
-        totalAmountWithoutTax: sumLineNet,
+        totalAmountAfterDiscount: sumLineAfterDiscount,
+        totalAmountWithoutTax: sumLineAfterDiscount,
         totalTaxAmount: sumLineTax,
         totalAmountWithTax: totalGross,
-        discountAmount: 0,
+        discountAmount: sumLineDiscount,
         totalAmountWithTaxInWords: null,
       },
       taxBreakdowns: [
         {
           taxPercentage:
             pricingMode === "direct_sales_gross" ? -2 : request.vatRate,
-          taxableAmount: sumLineNet,
+          taxableAmount: sumLineAfterDiscount,
           taxAmount: sumLineTax,
         },
       ],

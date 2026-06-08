@@ -9,6 +9,7 @@ export interface OrderTotalsSummaryProps {
   subtotal: number;
   serviceCharge: number;
   discountAmount: number;
+  itemDiscountAmount: number;
   discountType: "pct" | "vnd" | null;
   discountValue: number | null;
   discountNote: string | null;
@@ -31,6 +32,7 @@ export function OrderTotalsSummary({
   subtotal,
   serviceCharge,
   discountAmount,
+  itemDiscountAmount,
   discountType,
   discountValue,
   discountNote,
@@ -62,11 +64,18 @@ export function OrderTotalsSummary({
         </div>
       )}
 
+      {itemDiscountAmount > 0 && (
+        <div className={cn(lineClass, "text-success")}>
+          <span>Chiết khấu món</span>
+          <span className="tabular-nums">-{formatVND(itemDiscountAmount)}</span>
+        </div>
+      )}
+
       {discountAmount > 0 && (
         <>
           <div className={cn(lineClass, "text-success")}>
             <span>
-              Chiết khấu
+              Chiết khấu đơn
               {discountType === "pct" && discountValue != null
                 ? ` (${discountValue}%)`
                 : ""}

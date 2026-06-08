@@ -201,6 +201,16 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
                     </div>
                   );
                 })}
+                {item.discount_amount > 0 && (
+                  <div className="flex gap-3 text-muted-foreground">
+                    <div className="min-w-0 flex-1 break-words leading-4">
+                      Chiết khấu món
+                    </div>
+                    <div className="shrink-0 whitespace-nowrap text-right tabular-nums">
+                      -{formatVND(item.discount_amount)}
+                    </div>
+                  </div>
+                )}
                 {note && (
                   <div className="break-words italic leading-4 text-muted-foreground">
                     {messages.pos.receipt.note} {note}
@@ -229,6 +239,12 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
           <div className="flex justify-between">
             <span>{messages.pos.receipt.serviceCharge}</span>
             <span>{formatVND(order.service_charge)}</span>
+          </div>
+        )}
+        {order.item_discount_amount > 0 && (
+          <div className="flex justify-between">
+            <span>Chiết khấu món</span>
+            <span>-{formatVND(order.item_discount_amount)}</span>
           </div>
         )}
         {order.discount_amount > 0 && (

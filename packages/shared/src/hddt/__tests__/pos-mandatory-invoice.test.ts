@@ -93,8 +93,13 @@ test("per-order HĐĐT payload expands POS modifiers and sides", () => {
       "HĐĐT order fetch must include modifier/side snapshots",
     );
     assert.ok(
-      src.includes("buildInvoiceLineItemsFromOrderItems(activeItems)"),
-      "provider item payload must split main item, paid modifiers, and sides",
+      src.includes("subtotal, discount_amount, modifiers"),
+      "HĐĐT order fetch must include per-item discount snapshots",
+    );
+    assert.ok(
+      src.includes("buildInvoiceLineItemsFromOrderItems(activeItems,") &&
+        src.includes("orderDiscountAmount"),
+      "provider item payload must split main item, paid modifiers, sides, and order discount",
     );
   }
 });

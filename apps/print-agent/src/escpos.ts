@@ -255,6 +255,7 @@ export type BillBase = {
     quantity: number;
     unit_price: number;
     subtotal: number;
+    discount_amount?: number | null;
     modifiers?: ModifierLine[] | null;
     sides?: SideLine[] | null;
     note?: string | null;
@@ -720,6 +721,9 @@ const renderBillItemsTable = (p: BillBase): Uint8Array[] => {
         parts.push(sideAmt ? pair(label, sideAmt) : line(label));
       }
     }
+    if ((it.discount_amount ?? 0) > 0) {
+      parts.push(pair("  Chiết khấu món", "-" + fmtMoney(it.discount_amount ?? 0)));
+    }
     if (it.note) parts.push(line(`  * ${it.note}`));
   });
 
@@ -858,6 +862,7 @@ const normalizeReceiptItems = (
     quantity: numberOrZero(item.quantity),
     unit_price: numberOrZero(item.unit_price),
     subtotal: numberOrZero(item.subtotal),
+    discount_amount: numberOrZero(item.discount_amount),
     modifiers: Array.isArray(item.modifiers) ? item.modifiers : null,
     sides: Array.isArray(item.sides) ? item.sides : null,
     note: item.note ? clampText(item.note) : null,

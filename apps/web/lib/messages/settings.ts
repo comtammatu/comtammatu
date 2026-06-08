@@ -204,6 +204,7 @@ export const settings = {
     reportDescription:
       "Tổng kết món bán ra, danh mục, giá trị bill và giờ cao điểm. Tất cả tính trên đơn đã thanh toán, đã trừ đơn hủy.",
     aov: "Giá trị TB / bill (AOV)",
+    discountTotal: "Chiết khấu",
     totalItems: "Tổng món bán",
     voidItems: "Món bị huỷ",
     peakHour: "Giờ cao điểm",

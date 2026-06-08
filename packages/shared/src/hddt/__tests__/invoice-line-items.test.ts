@@ -154,3 +154,81 @@ test("falls back to aggregate line if option prices exceed stored unit price", (
     },
   ]);
 });
+
+test("allocates order discount across legal HĐĐT lines", () => {
+  const lines = buildInvoiceLineItemsFromOrderItems(
+    [
+      {
+        item_name: "Cơm sườn",
+        variant_name: null,
+        quantity: 2,
+        unit_price: 45_000,
+        subtotal: 90_000,
+        modifiers: [{ name: "Trứng", price: 5_000 }],
+        sides: [{ name: "Canh thêm", price: 5_000, quantity: 1 }],
+      },
+      {
+        item_name: "Trà đá",
+        quantity: 1,
+        unit_price: 5_000,
+        subtotal: 5_000,
+        modifiers: [],
+        sides: [],
+      },
+    ],
+    { orderDiscountAmount: 19_000 },
+  );
+
+  assert.deepEqual(
+    lines.map((line) => ({
+      name: line.name,
+      amount: line.amount,
+      discountAmount: line.discountAmount ?? 0,
+    })),
+    [
+      { name: "Cơm sườn", amount: 70_000, discountAmount: 14_000 },
+      { name: "Trứng", amount: 10_000, discountAmount: 2_000 },
+      { name: "Canh thêm", amount: 10_000, discountAmount: 2_000 },
+      { name: "Trà đá", amount: 5_000, discountAmount: 1_000 },
+    ],
+  );
+  assert.equal(
+    lines.reduce((sum, line) => sum + (line.discountAmount ?? 0), 0),
+    19_000,
+  );
+});
+
+test("adds item discount before allocating order discount", () => {
+  const lines = buildInvoiceLineItemsFromOrderItems(
+    [
+      {
+        item_name: "Cơm sườn",
+        variant_name: null,
+        quantity: 2,
+        unit_price: 45_000,
+        subtotal: 90_000,
+        discount_amount: 9_000,
+        modifiers: [{ name: "Trứng", price: 5_000 }],
+        sides: [{ name: "Canh thêm", price: 5_000, quantity: 1 }],
+      },
+    ],
+    { orderDiscountAmount: 9_000 },
+  );
+
+  assert.deepEqual(
+    lines.map((line) => ({
+      name: line.name,
+      amount: line.amount,
+      discountAmount: line.discountAmount ?? 0,
+    })),
+    [
+      { name: "Cơm sườn", amount: 70_000, discountAmount: 14_000 },
+      { name: "Trứng", amount: 10_000, discountAmount: 2_000 },
+      { name: "Canh thêm", amount: 10_000, discountAmount: 2_000 },
+    ],
+  );
+  assert.equal(
+    lines.reduce((sum, line) => sum + (line.discountAmount ?? 0), 0),
+    18_000,
+  );
+});

@@ -507,6 +507,18 @@ function renderItemsTable(p: BillBase): Uint8Array[] {
         });
       }
     }
+    if ((it.discount_amount ?? 0) > 0) {
+      parts.push(
+        line(
+          receiptRow(
+            "",
+            "Chiết khấu món",
+            "",
+            "-" + fmtMoney(it.discount_amount ?? 0),
+          ),
+        ),
+      );
+    }
   });
 
   parts.push(line(RECEIPT_TABLE_BORDER));
@@ -618,6 +630,7 @@ function normalizeReceiptItems(
     quantity: numberOrZero(item.quantity),
     unit_price: numberOrZero(item.unit_price),
     subtotal: numberOrZero(item.subtotal),
+    discount_amount: numberOrZero(item.discount_amount),
     modifiers: Array.isArray(item.modifiers) ? item.modifiers : null,
     sides: Array.isArray(item.sides) ? item.sides : null,
     note: item.note ? clampText(item.note) : null,

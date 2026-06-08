@@ -17,6 +17,10 @@ export interface OrderItemRowData {
   quantity: number;
   unit_price: number;
   subtotal: number;
+  discount_amount: number;
+  discount_type: "pct" | "vnd" | null;
+  discount_value: number | null;
+  discount_note: string | null;
   status: string;
   modifiers: CartModifier[];
   sides: CartSide[];
@@ -92,6 +96,10 @@ function useOrderItemChangeTone(row: OrderItemRowData): RowChangeTone {
       row.sides,
       row.status,
       row.subtotal,
+      row.discount_amount,
+      row.discount_type,
+      row.discount_value,
+      row.discount_note,
       row.unit_price,
       row.variant_name,
       row.is_priority,
@@ -156,6 +164,10 @@ export function OrderItemRow({ row, onTap }: OrderItemRowProps) {
   };
   const summary = getPosLineItemSummary(row);
   const changeTone = useOrderItemChangeTone(row);
+  const displayTotal =
+    row.discount_amount > 0
+      ? Math.max(0, row.subtotal - row.discount_amount)
+      : row.subtotal;
 
   return (
     <li className="w-full min-w-0 max-w-full">
@@ -179,7 +191,7 @@ export function OrderItemRow({ row, onTap }: OrderItemRowProps) {
           <PosLineItemCompact
             quantity={row.quantity}
             title={displayName}
-            total={formatVND(row.subtotal)}
+            total={formatVND(displayTotal)}
             options={summary.options}
             modifiers={summary.modifiers}
             sides={summary.sides}

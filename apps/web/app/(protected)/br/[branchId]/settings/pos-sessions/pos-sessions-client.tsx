@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import {
   Banknote as IconCash,
+  BadgePercent as IconBadgePercent,
   Clock as IconClock,
   Receipt as IconReceipt,
   CookingPot as IconToolsKitchen2,
@@ -594,6 +595,12 @@ function SessionReportCard({ report }: { report: PosSessionReport }) {
           icon={<IconReceipt className="size-4" />}
           label={messages.settings.posSessions.aov}
           value={formatVND(totals.aov)}
+        />
+        <Metric
+          icon={<IconBadgePercent className="size-4" />}
+          label={messages.settings.posSessions.discountTotal}
+          value={formatVND(totals.discount_total)}
+          tone={totals.discount_total > 0 ? "success" : "muted"}
         />
         <Metric
           icon={<IconToolsKitchen2 className="size-4" />}

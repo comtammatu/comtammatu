@@ -49,6 +49,9 @@ function mapDiscountRpcError(message: string): string {
   if (msg.includes("order not found")) {
     return "Không tìm thấy đơn hàng.";
   }
+  if (msg.includes("item not found")) {
+    return "Không tìm thấy món trong đơn.";
+  }
 
   // Discount-specific
   if (msg.includes("discount_invalid_type")) {
@@ -63,14 +66,23 @@ function mapDiscountRpcError(message: string): string {
   if (msg.includes("discount_zero_amount")) {
     return "Giá trị giảm bằng 0 — vui lòng dùng nút Bỏ chiết khấu.";
   }
+  if (msg.includes("discount_payment_pending")) {
+    return "Đơn có thanh toán đang chờ — vui lòng hủy QR trước khi sửa chiết khấu.";
+  }
   if (msg.includes("order already paid")) {
     return "Đơn đã thanh toán, không thể sửa chiết khấu.";
   }
   if (msg.includes("order terminal")) {
     return "Đơn đã hủy hoặc hoàn tất.";
   }
+  if (msg.includes("item terminal")) {
+    return "Món đã hủy, không thể sửa chiết khấu.";
+  }
   // Constraint violation when discount metadata partially set (race / bug)
-  if (msg.includes("orders_discount_metadata_paired")) {
+  if (
+    msg.includes("orders_discount_metadata_paired") ||
+    msg.includes("order_items_discount_metadata_paired")
+  ) {
     return "Dữ liệu chiết khấu không nhất quán. Vui lòng tải lại đơn.";
   }
 
@@ -351,6 +363,196 @@ export async function clearOrderDiscount(
     success: true,
     data: {
       order_id: result.order_id,
+      total_amount: Number(result.total_amount),
+    },
+  };
+}
+
+/* ─── applyOrderItemDiscount ─── */
+
+const orderItemIdSchema = z.coerce
+  .number()
+  .int()
+  .positive({ error: "Order item ID không hợp lệ" });
+
+const applyItemDiscountInputSchema = z.object({
+  orderItemId: orderItemIdSchema,
+  type: z.enum(["pct", "vnd"], {
+    error: "Loại chiết khấu không hợp lệ",
+  }),
+  value: z.coerce
+    .number({ error: "Giá trị giảm không hợp lệ" })
+    .min(0, { error: "Giá trị giảm phải >= 0" }),
+  note: z
+    .string()
+    .trim()
+    .min(3, { error: "Ghi chú giảm giá tối thiểu 3 ký tự" })
+    .max(200, { error: "Ghi chú quá dài (max 200 ký tự)" }),
+});
+
+export async function applyOrderItemDiscount(
+  branchId: number,
+  input: {
+    orderItemId: number;
+    type: "pct" | "vnd";
+    value: number;
+    note: string;
+  },
+): Promise<
+  ActionResult<{
+    order_id: number;
+    order_item_id: number;
+    item_discount_amount: number;
+    total_item_discount: number;
+    order_discount_amount: number;
+    total_amount: number;
+  }>
+> {
+  const parsedBranch = branchIdSchema.safeParse(branchId);
+  if (!parsedBranch.success) {
+    return { success: false, error: "Branch ID không hợp lệ" };
+  }
+
+  const parsed = applyItemDiscountInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+    };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    POS_ROLES,
+    PERMISSION_KEYS.POS_USE,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { supabase, claims } = ctx;
+
+  if (claims.branch_id !== parsedBranch.data) {
+    return { success: false, error: "Không có quyền truy cập chi nhánh này" };
+  }
+
+  const { data, error } = await supabase.rpc("apply_order_item_discount", {
+    p_order_item_id: parsed.data.orderItemId,
+    p_type: parsed.data.type,
+    p_value: parsed.data.value,
+    p_note: parsed.data.note,
+  });
+
+  if (error) {
+    return { success: false, error: mapDiscountRpcError(error.message) };
+  }
+
+  const result = data as unknown as {
+    order_id: number;
+    order_item_id: number;
+    item_discount_amount: number;
+    total_item_discount: number;
+    order_discount_amount: number;
+    total_amount: number;
+  } | null;
+
+  if (!result) {
+    return {
+      success: false,
+      error: "Không thể áp chiết khấu món. Vui lòng thử lại.",
+    };
+  }
+
+  return {
+    success: true,
+    data: {
+      order_id: result.order_id,
+      order_item_id: result.order_item_id,
+      item_discount_amount: Number(result.item_discount_amount),
+      total_item_discount: Number(result.total_item_discount),
+      order_discount_amount: Number(result.order_discount_amount),
+      total_amount: Number(result.total_amount),
+    },
+  };
+}
+
+/* ─── clearOrderItemDiscount ─── */
+
+const clearItemDiscountInputSchema = z.object({
+  orderItemId: orderItemIdSchema,
+  reason: z
+    .string()
+    .trim()
+    .min(3, { error: "Lý do bỏ chiết khấu tối thiểu 3 ký tự" })
+    .max(200, { error: "Lý do quá dài (max 200 ký tự)" }),
+});
+
+export async function clearOrderItemDiscount(
+  branchId: number,
+  orderItemId: number,
+  reason: string,
+): Promise<
+  ActionResult<{
+    order_id: number;
+    order_item_id: number;
+    total_item_discount: number;
+    order_discount_amount: number;
+    total_amount: number;
+  }>
+> {
+  const parsedBranch = branchIdSchema.safeParse(branchId);
+  if (!parsedBranch.success) {
+    return { success: false, error: "Branch ID không hợp lệ" };
+  }
+
+  const parsed = clearItemDiscountInputSchema.safeParse({ orderItemId, reason });
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+    };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    POS_ROLES,
+    PERMISSION_KEYS.POS_USE,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { supabase, claims } = ctx;
+
+  if (claims.branch_id !== parsedBranch.data) {
+    return { success: false, error: "Không có quyền truy cập chi nhánh này" };
+  }
+
+  const { data, error } = await supabase.rpc("clear_order_item_discount", {
+    p_order_item_id: parsed.data.orderItemId,
+    p_note: parsed.data.reason,
+  });
+
+  if (error) {
+    return { success: false, error: mapDiscountRpcError(error.message) };
+  }
+
+  const result = data as unknown as {
+    order_id: number;
+    order_item_id: number;
+    total_item_discount: number;
+    order_discount_amount: number;
+    total_amount: number;
+  } | null;
+
+  if (!result) {
+    return {
+      success: false,
+      error: "Không thể bỏ chiết khấu món. Vui lòng thử lại.",
+    };
+  }
+
+  return {
+    success: true,
+    data: {
+      order_id: result.order_id,
+      order_item_id: result.order_item_id,
+      total_item_discount: Number(result.total_item_discount),
+      order_discount_amount: Number(result.order_discount_amount),
       total_amount: Number(result.total_amount),
     },
   };

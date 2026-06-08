@@ -26,6 +26,7 @@ interface ServiceChargeSheetProps {
   subtotal: number;
   taxAmount: number;
   discountAmount: number;
+  itemDiscountAmount: number;
   currentAmount: number;
   isPending?: boolean;
   onSubmit: (input: { amount: number; note: string }) => void;
@@ -38,6 +39,7 @@ export function ServiceChargeSheet({
   subtotal,
   taxAmount,
   discountAmount,
+  itemDiscountAmount,
   currentAmount,
   isPending = false,
   onSubmit,
@@ -66,7 +68,7 @@ export function ServiceChargeSheet({
 
   const previewTotal = Math.max(
     0,
-    subtotal + taxAmount + numericAmount - discountAmount,
+    subtotal + taxAmount + numericAmount - discountAmount - itemDiscountAmount,
   );
 
   const noteTrimLen = note.trim().length;

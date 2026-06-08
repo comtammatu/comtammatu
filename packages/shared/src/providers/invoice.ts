@@ -17,6 +17,8 @@ export interface InvoiceLineItem {
   quantity: number;
   unitPrice: number;
   amount: number;
+  /** Discount in the same pricing basis as `amount`; allocated per legal line. */
+  discountAmount?: number;
 }
 
 export const BUYER_NOT_GET_INVOICE_NAME = "Người mua không lấy hóa đơn";
