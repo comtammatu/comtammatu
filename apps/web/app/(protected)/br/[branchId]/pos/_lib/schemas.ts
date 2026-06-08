@@ -8,8 +8,7 @@
  * should re-import the same schema instead of duplicating the constant.
  *
  * Originally inlined in `order-actions.ts`. Moved here as part of the
- * WS-1a / WS-1b refactor (see
- * `docs/worklog/shell-helpers-refactor-plan-2026-05-27.md`).
+ * WS-1a / WS-1b refactor.
  */
 
 import { z } from "zod";

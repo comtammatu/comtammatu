@@ -139,7 +139,7 @@ function readEnvLocalValue(key) {
 // 2026-05-30 that it dropped 18/118 public tables (feedbacks, webhook_events,
 // telegram_*, etc.) with exit 0 and no warning, even with --role postgres.
 // A direct postgres connection dumps the full schema. See
-// docs/runbooks/supabase-greenfield-baseline.md.
+// supabase/greenfield/README.md.
 function buildBaselineDbUrl(expectedRef) {
   const target = KNOWN_TARGETS[expectedRef];
   if (!target) {

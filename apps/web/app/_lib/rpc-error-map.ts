@@ -7,8 +7,7 @@
  * `"voidable"`, `"tenant mismatch"`, ...), return a Vietnamese-localized
  * `ActionResult` with a stable `errorCode`. That mapping has been hand-rolled
  * in every action with subtle copy drift — 188 boilerplate signal sites in
- * `pos/order-actions.ts` alone (see
- * `docs/worklog/shell-helpers-refactor-plan-2026-05-27.md` §1.2).
+ * `pos/order-actions.ts` alone.
  *
  * This module holds the **mechanism**. Per-route message vocabularies live in
  * each route's `_lib/messages.ts` (e.g. `pos/_lib/messages.ts`,
