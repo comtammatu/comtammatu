@@ -56,7 +56,12 @@
 - [x] V14 storage: companion C đúng (4 bucket KEEP); **bonus: cả 5 section companion apply sạch qua postgres trên uozwee, idempotent** ✅
   - [ ] **→ V17 (zombie RPC cleanup):** vẫn còn fn dead ref bảng-drop: `close_period_hard/soft`, `period_status_at`, `get_ingredient_abc_class`, `get_food_cost`, `approve_waste`, `confirm_stock_issue`, `create_waste_entry`, `stock_issue_items_*` (GL-period/ABC/food-cost/waste-issue CUT features). HEAD nhiều hơn; P2.5 đã giảm. Drop ở V17/V12/finance-cut.
   - [ ] **→ P3 (app/DB drift):** `finance/actions.ts`/`period-actions.ts`/`inventory/dashboard-actions.ts` còn rpc() fn đã drop (`refresh_finance_views`/`close_fiscal_period`/`reopen_period`) — finance module bị CẮT ở P3.
-- [ ] **V12 cắt DB 58→44–46 — CẦN CHỦ CHỐT 2 đòn-bẩy** (fold 7 dễ → ~51; high-blast inventory để chạm 44–46): (a) `inventory_locations` đa-location? (b) `stock_levels`/`stock_movements` perpetual hay GRN+kiểm-kê đủ ("không trừ kho")? — 46/47 fn dùng → rewrite lớn nếu cắt
+- [x] V12 DB-cut ✅ adversarial CLEAN — **landed 57 bảng** (drop `inventory_locations` → tồn cấp chi nhánh: rewrite 7 live fn + drop 9 dead fn + 2 helper + matview rebuild + collapse keys). **KEEP `stock_levels`/`stock_movements`** (stocktake-variance chống-thất-thoát verify: system50→count42→variance−8→adjust ✓) + branch_feature_flags. Owner-decision: chốt 57 (KHÔNG 44–46) vì mọi candidate còn lại đều load-bearing cho KEEP-feature (kds_station_categories→KDS, order_daily_counters→order#, ...) — fold = vỡ feature. "Function > number" thắng.
+  - 🔴 **HIGH-PRI → V17 (gần, không hoãn): GRN đang VỠ trên baseline thật** — dangling triggers: `trg_grn_procurement_branch` CẤM `branch_kind='branch'` (!); `trg_grn_upsert_grn_last`→`supplier_price_list` (dropped); `trg_grn_items_compute_variance`→`grn_hardblock_overrides` (dropped); `trg_grn_items_requires_review_outbox`. Smoke chỉ pass vì agent disable runtime. **GRN (KEEP) không chạy tới khi drop/rewrite các trigger + zombie fn ref bảng missing.**
+  - note: `stock_movements.movement_subtype` vestigial; receipt-print emits graceful warning (printer_print_types missing) → V17.
+
+> ✅ **P2.5 (DB) HOÀN TẤT (V10–V14 + V12):** lean baseline = **57 bảng**, replay-faithful (realtime+companion), boot end-to-end. Tiếp: **V17 GRN/zombie-trigger cleanup (HIGH — GRN vỡ)** · V9 packages 4→3 · P3 app (regen types + xoá GL/production/payroll + V8-app role collapse).
+> 📌 `Bình/` = content cá nhân TikTok ở repo-root (untracked, owner tạo 2026-06-08) — owner quyết gitignore/move.
 - [ ] V9 packages 4→3 (security→shared) — app/packages, không cần DB
 
 **P3 — Xoá CUT + repoint + types**
