@@ -57,15 +57,22 @@
   - [ ] **→ V17 (zombie RPC cleanup):** vẫn còn fn dead ref bảng-drop: `close_period_hard/soft`, `period_status_at`, `get_ingredient_abc_class`, `get_food_cost`, `approve_waste`, `confirm_stock_issue`, `create_waste_entry`, `stock_issue_items_*` (GL-period/ABC/food-cost/waste-issue CUT features). HEAD nhiều hơn; P2.5 đã giảm. Drop ở V17/V12/finance-cut.
   - [ ] **→ P3 (app/DB drift):** `finance/actions.ts`/`period-actions.ts`/`inventory/dashboard-actions.ts` còn rpc() fn đã drop (`refresh_finance_views`/`close_fiscal_period`/`reopen_period`) — finance module bị CẮT ở P3.
 - [x] V12 DB-cut ✅ adversarial CLEAN — **landed 57 bảng** (drop `inventory_locations` → tồn cấp chi nhánh: rewrite 7 live fn + drop 9 dead fn + 2 helper + matview rebuild + collapse keys). **KEEP `stock_levels`/`stock_movements`** (stocktake-variance chống-thất-thoát verify: system50→count42→variance−8→adjust ✓) + branch_feature_flags. Owner-decision: chốt 57 (KHÔNG 44–46) vì mọi candidate còn lại đều load-bearing cho KEEP-feature (kds_station_categories→KDS, order_daily_counters→order#, ...) — fold = vỡ feature. "Function > number" thắng.
-  - 🔴 **HIGH-PRI → V17 (gần, không hoãn): GRN đang VỠ trên baseline thật** — dangling triggers: `trg_grn_procurement_branch` CẤM `branch_kind='branch'` (!); `trg_grn_upsert_grn_last`→`supplier_price_list` (dropped); `trg_grn_items_compute_variance`→`grn_hardblock_overrides` (dropped); `trg_grn_items_requires_review_outbox`. Smoke chỉ pass vì agent disable runtime. **GRN (KEEP) không chạy tới khi drop/rewrite các trigger + zombie fn ref bảng missing.**
+  - [x] **V17 GRN/zombie cleanup ✅ adversarial CLEAN** — live scan 70 dangling obj; **drop 69 zombie fn (pg_proc 248→179) + 4 GRN dangling trigger** (gỡ cái cấm branch='branch') + 17 orphan comment; **rewrite 8 KEEP fn** (giữ `can_access_supplier_invoice_source` back 4 supplier_invoices RLS + `resolve_branch_printer_for_type`); thêm `kitchen_send_batches` INSERT policy. **GATE: 0 fn/trigger/view ref bảng vắng mặt; GRN smoke chạy KHÔNG disable trigger** ✓.
   - note: `stock_movements.movement_subtype` vestigial; receipt-print emits graceful warning (printer_print_types missing) → V17.
 
 > ✅ **P2.5 (DB) HOÀN TẤT (V10–V14 + V12):** lean baseline = **57 bảng**, replay-faithful (realtime+companion), boot end-to-end. Tiếp: **V17 GRN/zombie-trigger cleanup (HIGH — GRN vỡ)** · V9 packages 4→3 · P3 app (regen types + xoá GL/production/payroll + V8-app role collapse).
 > 📌 `Bình/` = content cá nhân TikTok ở repo-root (untracked, owner tạo 2026-06-08) — owner quyết gitignore/move.
 - [ ] V9 packages 4→3 (security→shared) — app/packages, không cần DB
 
-**P3 — Xoá CUT + repoint + types**
-- [ ] V15 regen types từ uozwee · V16 xoá GL/production/payroll trees + rebuild finance/inventory page · V17 drop ~70 zombie RPC + outbox triggers · V18 employee-scheduling repoint (decision) · V19 drift-linter
+> ✅ **DB PHASE COMPLETE (P2 + P2.5 + V17):** lean baseline **57 bảng / 179 fn**, fully self-consistent (0 fn ref bảng vắng mặt), apply sạch + replay-faithful + boot end-to-end (login→grant→POS→KDS→print→cash→GRN→stocktake-variance). 8 commit. Tiếp = P3 (app).
+
+**P3 — Xoá CUT + repoint app + types** (V17 DB-side DONE ở trên)
+- [ ] V15 regen types từ uozwee (lean 57) → red-typecheck = worklist
+- [ ] V16 xoá GL/production/payroll/transfer/waste trees + rebuild finance/inventory page
+- [ ] V18 employee-scheduling repoint (decision: lean shift table vs manual) — clock files của Codex
+- [ ] V19 drift-linter — **mở rộng: bắt cả app→dropped-RPC** (V17 drop 69 fn; app còn ~30 call site dropped RPC: `create_grn_from_po`/`approve_waste`/`stock_transfer_*`/gl-journal/`enqueue_cancel|edit|partial_cancel_ticket_print`/`upsert_recipe_lines`/`count_unread|mark_all_notifications_read`/`register_branch_presence`/`verify_branch_override_code`... → 42883 runtime nếu gọi; xoá ở V16)
+- [ ] V8-app role collapse (STAFF_ROLES/module-acl/JwtClaims/proxy/~137 file) + dead central inventory logic
+- [ ] V9 packages 4→3 (security→shared)
 
 **P4 — Back-office + money**
 - [ ] V20 cash-book UI · V21 HĐĐT config-guard + bỏ 'CTCP' + reconcile · V22 integration money tests + CI test · V23 UX beat-Excel + scorecard điện thoại · V24 rate-limiter fail-closed + perf/index cleanup
