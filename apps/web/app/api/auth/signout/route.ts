@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { getSafeInternalReturnTo, isBetaPath } from "@comtammatu/shared/auth";
-import { rateLimit } from "@comtammatu/security";
+import { rateLimit } from "@comtammatu/shared/security";
 
 export async function POST(request: Request) {
   // Rate limit by IP before auth. Fail open if Upstash is misconfigured —

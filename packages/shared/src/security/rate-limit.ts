@@ -67,17 +67,3 @@ export const loginRateLimit: Limiter = buildLimiter({
   windowDuration: "5 m",
   prefix: "rl:login",
 });
-
-/** Feedback submit rate limiter per QR token: 5 submissions per 30 minutes */
-export const feedbackTokenRateLimit: Limiter = buildLimiter({
-  windowLimit: 5,
-  windowDuration: "30 m",
-  prefix: "feedback:tok",
-});
-
-/** Feedback submit rate limiter per IP: 20 submissions per 30 minutes */
-export const feedbackIpRateLimit: Limiter = buildLimiter({
-  windowLimit: 20,
-  windowDuration: "30 m",
-  prefix: "feedback:ip",
-});

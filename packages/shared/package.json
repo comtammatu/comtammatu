@@ -18,7 +18,8 @@
     "./kds": "./src/kds/index.ts",
     "./payroll": "./src/payroll/calculate.ts",
     "./cron": "./src/cron/index.ts",
-    "./time": "./src/time/vietnam.ts"
+    "./time": "./src/time/vietnam.ts",
+    "./security": "./src/security/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -26,6 +27,8 @@
     "test": "tsx --test src/__tests__/*.test.ts src/auth/__tests__/*.test.ts src/providers/__tests__/*.test.ts src/utils/__tests__/*.test.ts src/hddt/__tests__/*.test.ts src/kds/__tests__/*.test.ts src/runner/__tests__/*.test.ts src/time/__tests__/*.test.ts"
   },
   "dependencies": {
+    "@upstash/ratelimit": "^2.0.8",
+    "@upstash/redis": "^1.38.0",
     "fflate": "^0.8.3",
     "zod": "4.4.3"
   },

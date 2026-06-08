@@ -8,7 +8,7 @@ import {
   extractClaimsFromAccessToken,
   resolvePostLoginRedirect,
 } from "@comtammatu/shared/auth";
-import { loginRateLimit } from "@comtammatu/security";
+import { loginRateLimit } from "@comtammatu/shared/security";
 
 const loginSchema = z.object({
   email: z.email({ error: "Email không hợp lệ" }),

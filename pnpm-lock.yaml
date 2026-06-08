@@ -60,9 +60,6 @@ importers:
       '@comtammatu/database':
         specifier: workspace:*
         version: link:../../packages/database
-      '@comtammatu/security':
-        specifier: workspace:*
-        version: link:../../packages/security
       '@comtammatu/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -201,7 +198,7 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
 
-  packages/security:
+  packages/shared:
     dependencies:
       '@upstash/ratelimit':
         specifier: ^2.0.8
@@ -209,16 +206,6 @@ importers:
       '@upstash/redis':
         specifier: ^1.38.0
         version: 1.38.0
-    devDependencies:
-      '@types/node':
-        specifier: ^24.12.4
-        version: 24.12.4
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-
-  packages/shared:
-    dependencies:
       fflate:
         specifier: ^0.8.3
         version: 0.8.3
