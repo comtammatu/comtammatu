@@ -36,6 +36,7 @@ import {
 } from "@comtammatu/shared/settings";
 import { buildInvoiceLineItemsFromOrderItems } from "@comtammatu/shared/hddt";
 import { ensureInvoiceProviderRegistered } from "@lib/invoice-provider-init";
+import { getSellerName } from "@lib/hddt-seller";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { canAccessBranch } from "@/_lib/branch-scope";
 import { logAudit } from "@/_lib/audit";
@@ -290,10 +291,11 @@ export async function replaceTaxInvoice(
     process.env["SINVOICE_TEMPLATE_CODE"]?.split("/")[0] ?? "2";
   const originalInvoiceType = originalTemplateCode;
 
+  const sellerName = await getSellerName(supabase, claims.tenant_id);
   const providerResult = await provider.createInvoice({
     orderId: newId, // CRITICAL: NEW row id → fresh transactionUuid
     orderNumber: `REPLACE-${parsed.data.originalId}-${newId}`,
-    sellerName: "Cơm Tấm Má Tư CTCP",
+    sellerName,
     sellerTaxCode: process.env["COMPANY_TAX_CODE"] ?? "",
     sellerAddress: "",
     buyerName: parsed.data.buyerName,

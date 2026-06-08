@@ -14,6 +14,8 @@ import {
 } from "@comtammatu/shared/settings";
 import { buildInvoiceLineItemsFromOrderItems } from "@comtammatu/shared/hddt";
 import { ensureInvoiceProviderRegistered } from "@lib/invoice-provider-init";
+import { getSellerName } from "@lib/hddt-seller";
+import { signalHddtDraftFallback } from "@lib/hddt-config-guard";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { canAccessBranch } from "@/_lib/branch-scope";
 import { logAudit } from "@/_lib/audit";
@@ -253,10 +255,11 @@ export async function createTaxInvoice(
   });
 
   if (invoiceProvider) {
+    const sellerName = await getSellerName(supabase, claims.tenant_id);
     const result = await invoiceProvider.createInvoice({
       orderId: parsed.data.orderId,
       orderNumber: `ORD-${parsed.data.orderId}`,
-      sellerName: "Cơm Tấm Má Tư CTCP",
+      sellerName,
       sellerTaxCode: process.env["COMPANY_TAX_CODE"] ?? "",
       sellerAddress: "",
       buyerName,
@@ -340,6 +343,17 @@ export async function createTaxInvoice(
     entityId: invoice?.id ?? null,
     newData: { invoice_number: invoice?.invoice_number, status: invoiceStatus },
   });
+
+  // HDDT-01 config-guard: no provider configured means this "invoice" is only
+  // an internal draft, NOT a legally issued HĐĐT. Emit a loud signal so a
+  // misconfigured deploy cannot silently accumulate internal-draft invoices.
+  if (!invoiceProvider) {
+    await signalHddtDraftFallback(supabase, {
+      tenantId: claims.tenant_id,
+      branchId: order.branch_id,
+      orderId: parsed.data.orderId,
+    });
+  }
 
   return { success: true, data: invoice };
 }

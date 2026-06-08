@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   check:
-    name: Typecheck + Lint + Build
+    name: Typecheck + Lint + Build + Test
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -40,3 +40,11 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+
+      # Unit + static tests (no database needed). The money INTEGRATION suite
+      # (apps/web/tests/integration/*.integration.test.ts) is NOT run here — it
+      # requires uozwee credentials (SUPABASE_PASSWORD + uozwee URL). To run it
+      # in CI, add those as secrets and invoke
+      # `pnpm --filter @comtammatu/web test:integration` in a dedicated job.
+      - name: Test
+        run: pnpm test

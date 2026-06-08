@@ -29,6 +29,7 @@ import {
   BUYER_NOT_GET_INVOICE_NAME,
   type InvoiceProvider,
 } from "@comtammatu/shared/providers";
+import { getSellerName, getVatRate } from "@lib/hddt-seller";
 
 interface BatchLineItem {
   name: string;
@@ -135,11 +136,26 @@ export async function executeSummaryRun(
       return { outcome: "failed", taxInvoiceId: invoiceId, error: msg };
     }
 
+    // Seller name + fallback VAT rate from system_settings (audit HDDT-03):
+    // never hardcode the legal seller name or a literal VAT rate on a real
+    // HĐĐT. tenant_id is resolved from the branch (service-role client).
+    const { data: branchRow } = await supabase
+      .from("branches")
+      .select("tenant_id")
+      .eq("id", branchId)
+      .maybeSingle();
+    const tenantId = branchRow?.tenant_id ?? null;
+    const sellerName = tenantId
+      ? await getSellerName(supabase, tenantId)
+      : "HỘ KINH DOANH CƠM TẤM MÁ TƯ";
+    // Header rate from the RPC aggregate when present; otherwise settings.
+    const fallbackVatRate = tenantId ? await getVatRate(supabase, tenantId) : 8;
+
     // Call Viettel S-invoice provider
     const providerResult = await provider.createInvoice({
       orderId: invoiceId,
       orderNumber: `SUMMARY-${branchId}-${summaryDate}`,
-      sellerName: "Cơm Tấm Má Tư CTCP",
+      sellerName,
       sellerTaxCode: process.env["COMPANY_TAX_CODE"] ?? "",
       sellerAddress: "",
       buyerName: BUYER_NOT_GET_INVOICE_NAME,
@@ -154,7 +170,7 @@ export async function executeSummaryRun(
         amount: li.amount,
       })),
       subtotal: result.subtotal ?? 0,
-      vatRate: result.header_vat_rate ?? 8,
+      vatRate: result.header_vat_rate ?? fallbackVatRate,
       vatAmount: result.vat_amount ?? 0,
       totalAmount: result.total_amount ?? 0,
     });

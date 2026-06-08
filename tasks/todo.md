@@ -80,7 +80,11 @@
 > ✅ **P3 (APP) HOÀN TẤT (V15/V15.5/V16/V8-app/V19/V9):** app khớp lean DB · typecheck/lint/build/test XANH · 4-vai phẳng · drift-linter chống tái-drift · 3 packages. **Rebuild core (DB+App) XONG.** Tiếp **P4** back-office (cash-book UI · HĐĐT config-guard + bỏ 'CTCP' · money integration tests + CI · scorecard điện-thoại) · P5 docs reframe · P6 ETL (owner-gated).
 
 **P4 — Back-office + money**
-- [ ] V20 cash-book UI · V21 HĐĐT config-guard + bỏ 'CTCP' + reconcile · V22 integration money tests + CI test · V23 UX beat-Excel + scorecard điện thoại · V24 rate-limiter fail-closed + perf/index cleanup
+- [x] **V22 ✅** money integration suite (12 test trên uozwee, rolled-back, **assert SALE→0 stock_movements**) + wire `pnpm test` vào CI (đóng gap "CI không chạy test"); +11 unit test (rate-limit 5, config-guard 6) → 305 unit.
+- [x] **V24 ✅** rate-limiter login **fail-CLOSED** trên prod khi Upstash chưa cấu hình + unit test. (perf: dead MV/refresh đã sạch từ V11/V13.)
+- [x] **V21 ✅** HĐĐT config-guard (`/api/health` 503 + createTaxInvoice draft-fallback signal/notification) + seller-name từ `system_settings` (3 site CTCP fixed) + VAT từ settings. reconcile đã gỡ ở V16 (dead).
+- [ ] **V20 cash-book UI** (cần chủ: UX form thu/chi trong design-system) · **V23 UX beat-Excel + scorecard điện-thoại** (cần chủ đo) — owner-involved, để sau.
+- [ ] **e2e cleanup** (chip V19): `e2e/inventory/*` có thay đổi uncommitted (xoá transfer-direction/issue-label spec + sửa grn-procurement/helpers) — provenance chưa rõ, chưa verify → review + commit riêng.
 
 **P5 — Docs** · [ ] reframe CTCP→HKD + sync `database.md` refs + V24b promote rules→`docs/agent/rules/`
 

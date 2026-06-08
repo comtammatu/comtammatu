@@ -8,6 +8,12 @@ export const SYSTEM_SETTING_KEYS = {
   CURRENCY: "currency",
   STORE_PHONE: "store_phone",
   STORE_EMAIL: "store_email",
+  /**
+   * Legal seller name printed on HĐĐT (e-invoices). Single source of truth for
+   * the "Người bán" line — NEVER hardcode the seller name in invoice code.
+   * Hộ Kinh Doanh, so the default is the HKD legal name (not a CTCP company).
+   */
+  SELLER_NAME: "seller_name",
   /** "true" | "false" — POS shows VietQR when env credentials exist */
   PAYMENT_ENABLE_VIETQR: "payment_enable_vietqr",
   /** "true" | "false" — POS shows MoMo when env credentials exist */
@@ -42,6 +48,7 @@ export const SYSTEM_SETTING_DEFAULTS: Record<SystemSettingKey, string> = {
   [SYSTEM_SETTING_KEYS.CURRENCY]: "VND",
   [SYSTEM_SETTING_KEYS.STORE_PHONE]: "",
   [SYSTEM_SETTING_KEYS.STORE_EMAIL]: "",
+  [SYSTEM_SETTING_KEYS.SELLER_NAME]: "HỘ KINH DOANH CƠM TẤM MÁ TƯ",
   [SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_VIETQR]: "false",
   [SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_MOMO]: "false",
   [SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_BANK_CODE]: "",
@@ -56,6 +63,7 @@ export const SYSTEM_SETTING_LABELS: Record<SystemSettingKey, string> = {
   [SYSTEM_SETTING_KEYS.CURRENCY]: "Đơn vị tiền tệ",
   [SYSTEM_SETTING_KEYS.STORE_PHONE]: "Số điện thoại",
   [SYSTEM_SETTING_KEYS.STORE_EMAIL]: "Email",
+  [SYSTEM_SETTING_KEYS.SELLER_NAME]: "Tên người bán (HĐĐT)",
   [SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_VIETQR]: "Bật VietQR trên POS",
   [SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_MOMO]: "Bật MoMo trên POS",
   [SYSTEM_SETTING_KEYS.PAYMENT_VIETQR_BANK_CODE]: "Ngân hàng (VietQR)",
