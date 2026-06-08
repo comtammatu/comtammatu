@@ -50,7 +50,14 @@
 > ✅ **P2 DB-bootability HOÀN TẤT (V1–V8):** baseline lean apply sạch lên Supabase thật + boot end-to-end (login→grant→POS→KDS→print→cash) + 4-vai phẳng. Đảo ngược audit "không boot được". Tiếp: P2.5 (companion realtime/cron + cắt DB 58→44–46) · V9 packages.
 
 **P2.5 — Baseline tự-chứa + cắt 58→44–46**
-- [ ] V10 realtime membership vào baseline + verify · V11 drop 6 cron-fn hỏng (5 trỏ accounting_periods/ingredient_abc_class/mv_food_cost/mv_refresh_log/stock_issues; **+surprise: `compute_branch_daily_waste_caps`→`branch_daily_waste_cap`**) · V12 cắt DB (fold 7 dễ; high-blast=decision) · V13 FK tiền CASCADE→RESTRICT · V14 storage policies
+- [x] V10 realtime membership → baseline (idempotent, 10 tables, bỏ kitchen_send_batches over-grant + REPLICA IDENTITY default) ✅
+- [x] V11 drop 8 dead fn (6 cron hỏng + close_fiscal_period/reopen_period) + fix companion cron (4 sạch + unschedule 6); start_stocktake bỏ get_ingredient_abc_class ✅
+- [x] V13 FK `tax_invoices.order_id`+`payments.order_id` CASCADE→RESTRICT ✅
+- [x] V14 storage: companion C đúng (4 bucket KEEP); **bonus: cả 5 section companion apply sạch qua postgres trên uozwee, idempotent** ✅
+  - [ ] **→ V17 (zombie RPC cleanup):** vẫn còn fn dead ref bảng-drop: `close_period_hard/soft`, `period_status_at`, `get_ingredient_abc_class`, `get_food_cost`, `approve_waste`, `confirm_stock_issue`, `create_waste_entry`, `stock_issue_items_*` (GL-period/ABC/food-cost/waste-issue CUT features). HEAD nhiều hơn; P2.5 đã giảm. Drop ở V17/V12/finance-cut.
+  - [ ] **→ P3 (app/DB drift):** `finance/actions.ts`/`period-actions.ts`/`inventory/dashboard-actions.ts` còn rpc() fn đã drop (`refresh_finance_views`/`close_fiscal_period`/`reopen_period`) — finance module bị CẮT ở P3.
+- [ ] **V12 cắt DB 58→44–46 — CẦN CHỦ CHỐT 2 đòn-bẩy** (fold 7 dễ → ~51; high-blast inventory để chạm 44–46): (a) `inventory_locations` đa-location? (b) `stock_levels`/`stock_movements` perpetual hay GRN+kiểm-kê đủ ("không trừ kho")? — 46/47 fn dùng → rewrite lớn nếu cắt
+- [ ] V9 packages 4→3 (security→shared) — app/packages, không cần DB
 
 **P3 — Xoá CUT + repoint + types**
 - [ ] V15 regen types từ uozwee · V16 xoá GL/production/payroll trees + rebuild finance/inventory page · V17 drop ~70 zombie RPC + outbox triggers · V18 employee-scheduling repoint (decision) · V19 drift-linter

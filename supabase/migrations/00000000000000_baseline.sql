@@ -2415,46 +2415,6 @@ $$;
 
 
 --
--- Name: auto_close_periods(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.auto_close_periods() RETURNS integer
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-DECLARE v_today DATE; v_day INT; v_prior DATE; v_year INT; v_month INT; v_count INT := 0; v_row RECORD;
-BEGIN
-  v_today := (now() AT TIME ZONE 'Asia/Ho_Chi_Minh')::DATE;
-  v_day := EXTRACT(DAY FROM v_today)::INT;
-  v_prior := (date_trunc('month', v_today) - INTERVAL '1 month')::DATE;
-  v_year := EXTRACT(YEAR FROM v_prior)::INT;
-  v_month := EXTRACT(MONTH FROM v_prior)::INT;
-  IF v_day < 5 THEN RETURN 0; END IF;
-  FOR v_row IN SELECT id FROM public.tenants LOOP
-    INSERT INTO public.accounting_periods (tenant_id, year, month, soft_closed_at)
-    VALUES (v_row.id, v_year, v_month, now())
-    ON CONFLICT (tenant_id, year, month) DO UPDATE
-      SET soft_closed_at = COALESCE(public.accounting_periods.soft_closed_at, EXCLUDED.soft_closed_at);
-    v_count := v_count + 1;
-  END LOOP;
-  IF v_day >= 15 THEN
-    FOR v_row IN SELECT id FROM public.tenants LOOP
-      UPDATE public.accounting_periods SET hard_closed_at = COALESCE(hard_closed_at, now())
-       WHERE tenant_id = v_row.id AND year = v_year AND month = v_month;
-    END LOOP;
-  END IF;
-  RETURN v_count;
-END; $$;
-
-
---
--- Name: FUNCTION auto_close_periods(); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.auto_close_periods() IS 'Daily automation — day 5+ soft close, day 15+ hard close. Idempotent.';
-
-
---
 -- Name: bulk_mark_feedback_suspect(bigint[], boolean); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -3239,56 +3199,6 @@ BEGIN
     'order_id',     p_order_id,
     'total_amount', v_total_amount
   );
-END;
-$$;
-
-
---
--- Name: close_fiscal_period(bigint, integer, integer, text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.close_fiscal_period(p_tenant_id bigint, p_year integer, p_month integer, p_notes text DEFAULT NULL::text) RETURNS jsonb
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-DECLARE
-  v_uid       UUID := auth.uid();
-  v_period    RECORD;
-  v_recon     JSONB;
-  v_has_diff  BOOLEAN := FALSE;
-  v_item      JSONB;
-BEGIN
-  IF v_uid IS NULL THEN RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000'; END IF;
-  IF NOT public.has_permission_any('settings:tenant') THEN
-    RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
-  END IF;
-  IF p_tenant_id <> public.auth_tenant_id() THEN
-    RAISE EXCEPTION 'tenant_mismatch' USING ERRCODE = '42501';
-  END IF;
-
-  SELECT fp.* INTO v_period FROM public.fiscal_periods fp
-  WHERE fp.tenant_id = p_tenant_id AND fp.period_month = p_month AND fp.period_year = p_year
-  FOR UPDATE;
-  IF NOT FOUND THEN RAISE EXCEPTION 'fiscal_period_not_found' USING ERRCODE = 'P0002'; END IF;
-  IF v_period.status = 'closed' THEN RAISE EXCEPTION 'fiscal_period_already_closed' USING ERRCODE = '22023'; END IF;
-
-  UPDATE public.fiscal_periods SET status = 'closing', updated_at = now() WHERE id = v_period.id;
-  PERFORM public.refresh_finance_views();
-  v_recon := public.gl_reconciliation(p_tenant_id, p_year, p_month);
-
-  FOR v_item IN SELECT * FROM jsonb_array_elements(v_recon) LOOP
-    IF ABS((v_item ->> 'difference')::NUMERIC) > 1 THEN v_has_diff := TRUE; END IF;
-  END LOOP;
-
-  UPDATE public.fiscal_periods
-  SET status = 'closed', closed_by = v_uid, closed_at = now(),
-      notes = concat_ws(' ', NULLIF(v_period.notes, ''), NULLIF(p_notes, ''),
-                       CASE WHEN v_has_diff THEN '[CẢNH BÁO: Có chênh lệch đối chiếu]' END),
-      updated_at = now()
-  WHERE id = v_period.id;
-
-  RETURN jsonb_build_object('period_id', v_period.id, 'status', 'closed',
-                            'has_discrepancies', v_has_diff, 'reconciliation', v_recon);
 END;
 $$;
 
@@ -4180,33 +4090,6 @@ $$;
 --
 
 COMMENT ON FUNCTION public.complete_stocktake(p_session_id bigint) IS 'Completes classic stocktake and writes count_adjustment stock movements. SECURITY DEFINER with tenant and inventory:stocktake_complete gate.';
-
-
---
--- Name: compute_branch_daily_waste_caps(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.compute_branch_daily_waste_caps() RETURNS integer
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-DECLARE v_pct CONSTANT NUMERIC := 0.025; v_floor CONSTANT NUMERIC := 500000; v_ceiling CONSTANT NUMERIC := 5000000; v_count INT;
-BEGIN
-  WITH daily AS (
-    SELECT o.branch_id, DATE(o.created_at AT TIME ZONE COALESCE(b.timezone, 'Asia/Ho_Chi_Minh')) AS day,
-           SUM(COALESCE(o.total_amount, 0)) AS daily_total
-    FROM public.orders o JOIN public.branches b ON b.id = o.branch_id
-    WHERE o.status = 'completed' AND o.created_at >= now() - INTERVAL '7 days'
-    GROUP BY o.branch_id, DATE(o.created_at AT TIME ZONE COALESCE(b.timezone, 'Asia/Ho_Chi_Minh'))
-  ), avg_rev AS (SELECT branch_id, AVG(daily_total) AS avg_rev FROM daily GROUP BY branch_id)
-  INSERT INTO public.branch_daily_waste_cap (branch_id, cap_vnd, avg_revenue_7d, computed_at)
-  SELECT b.id, GREATEST(v_floor, LEAST(v_ceiling, v_pct * COALESCE(a.avg_rev, 0))), COALESCE(a.avg_rev, 0), now()
-  FROM public.branches b LEFT JOIN avg_rev a ON a.branch_id = b.id
-  WHERE b.is_active = true
-  ON CONFLICT (branch_id) DO UPDATE SET cap_vnd = EXCLUDED.cap_vnd, avg_revenue_7d = EXCLUDED.avg_revenue_7d, computed_at = EXCLUDED.computed_at;
-  GET DIAGNOSTICS v_count = ROW_COUNT;
-  RETURN v_count;
-END; $$;
 
 
 --
@@ -14065,64 +13948,6 @@ COMMENT ON FUNCTION public.reduce_order_item_quantity(p_order_item_id bigint, p_
 
 
 --
--- Name: refresh_abc_classification(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.refresh_abc_classification() RETURNS integer
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-DECLARE v_count INT;
-BEGIN
-  REFRESH MATERIALIZED VIEW CONCURRENTLY public.mv_inventory_value_ranking;
-  DELETE FROM public.ingredient_abc_class;
-  INSERT INTO public.ingredient_abc_class (tenant_id, branch_id, ingredient_id, class, stock_value, cumulative_share)
-  WITH ranked AS (
-    SELECT r.tenant_id, r.branch_id, r.ingredient_id, r.total_value,
-      SUM(r.total_value) OVER (PARTITION BY r.tenant_id, r.branch_id ORDER BY r.total_value DESC
-        ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS running_sum,
-      SUM(r.total_value) OVER (PARTITION BY r.tenant_id, r.branch_id) AS branch_total
-    FROM public.mv_inventory_value_ranking r WHERE r.total_value > 0
-  )
-  SELECT tenant_id, branch_id, ingredient_id,
-    CASE WHEN running_sum / NULLIF(branch_total, 0) <= 0.80 THEN 'A'
-         WHEN running_sum / NULLIF(branch_total, 0) <= 0.95 THEN 'B'
-         ELSE 'C' END,
-    total_value, COALESCE(running_sum / NULLIF(branch_total, 0), 0)::NUMERIC(5,4)
-  FROM ranked;
-  GET DIAGNOSTICS v_count = ROW_COUNT;
-  RETURN v_count;
-END; $$;
-
-
---
--- Name: refresh_finance_views(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.refresh_finance_views() RETURNS void
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-BEGIN
-  REFRESH MATERIALIZED VIEW CONCURRENTLY public.mv_daily_revenue;
-  INSERT INTO public.mv_refresh_log(view_name, refreshed_at)
-    VALUES ('mv_daily_revenue', now())
-    ON CONFLICT (view_name) DO UPDATE SET refreshed_at = EXCLUDED.refreshed_at;
-
-  REFRESH MATERIALIZED VIEW CONCURRENTLY public.mv_top_items;
-  INSERT INTO public.mv_refresh_log(view_name, refreshed_at)
-    VALUES ('mv_top_items', now())
-    ON CONFLICT (view_name) DO UPDATE SET refreshed_at = EXCLUDED.refreshed_at;
-
-  REFRESH MATERIALIZED VIEW CONCURRENTLY public.mv_food_cost;
-  INSERT INTO public.mv_refresh_log(view_name, refreshed_at)
-    VALUES ('mv_food_cost', now())
-    ON CONFLICT (view_name) DO UPDATE SET refreshed_at = EXCLUDED.refreshed_at;
-END;
-$$;
-
-
---
 -- Name: refresh_inventory_dashboard(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -14346,24 +14171,6 @@ BEGIN
   DELETE FROM public.stocktake_zone_locks WHERE session_id = p_session_id AND zone_id = p_zone_id AND locked_by = v_uid;
   GET DIAGNOSTICS v_count = ROW_COUNT;
   RETURN v_count > 0;
-END; $$;
-
-
---
--- Name: reopen_period(bigint, integer, integer); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.reopen_period(p_tenant_id bigint, p_year integer, p_month integer) RETURNS void
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-DECLARE v_uid UUID := auth.uid();
-BEGIN
-  IF v_uid IS NULL THEN RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000'; END IF;
-  IF p_tenant_id <> public.auth_tenant_id() THEN RAISE EXCEPTION 'cross-tenant reopen forbidden' USING ERRCODE = '42501'; END IF;
-  IF NOT public.has_permission(NULL, 'accounting:period_reopen') THEN RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501'; END IF;
-  UPDATE public.accounting_periods SET soft_closed_at = NULL, hard_closed_at = NULL, closed_by = v_uid
-   WHERE tenant_id = p_tenant_id AND year = p_year AND month = p_month;
 END; $$;
 
 
@@ -16577,7 +16384,7 @@ BEGIN
   RETURNING id INTO v_session;
   INSERT INTO public.stocktake_lines (tenant_id, session_id, ingredient_id, system_quantity, round_no, abc_class)
   SELECT v_tenant, v_session, sl.ingredient_id, COALESCE(sl.current_quantity, 0), 1,
-    public.get_ingredient_abc_class(p_branch_id, sl.ingredient_id)
+    NULL::character(1)  -- V11: ABC classification dropped (refresh_abc_classification + ingredient_abc_class removed); seed abc_class NULL
   FROM public.stock_levels sl JOIN public.ingredients ing ON ing.id = sl.ingredient_id
   WHERE sl.branch_id = p_branch_id AND (p_location_id IS NULL OR sl.location_id = p_location_id) AND ing.is_active = true;
   GET DIAGNOSTICS v_rows = ROW_COUNT;
@@ -19639,75 +19446,6 @@ END;
 $$;
 
 
---
--- Name: weekly_grn_override_report(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.weekly_grn_override_report() RETURNS integer
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-DECLARE v_row RECORD; v_count INT := 0;
-BEGIN
-  FOR v_row IN
-    SELECT ho.tenant_id, ho.branch_id, COUNT(*) AS override_count,
-           COUNT(DISTINCT ho.overridden_by) AS distinct_users,
-           SUM(ho.submitted_price - COALESCE(ho.baseline_avg_30d, 0)) AS total_markup_vnd
-    FROM public.grn_hardblock_overrides ho
-    WHERE ho.overridden_at > now() - INTERVAL '7 days'
-    GROUP BY ho.tenant_id, ho.branch_id HAVING COUNT(*) >= 1
-  LOOP
-    INSERT INTO public.notifications (tenant_id, target_branch_id, target_roles, kind, severity, title, body, meta, dedup_key)
-    VALUES (v_row.tenant_id, v_row.branch_id, ARRAY['owner','manager']::TEXT[],
-            'inventory.grn.weekly_override_report',
-            CASE WHEN v_row.override_count >= 5 THEN 'warning' ELSE 'info' END,
-            'GRN hardblock override — weekly report',
-            format('Branch has %s hardblock overrides by %s user(s) in past 7 days. Total markup: %s VND',
-                   v_row.override_count, v_row.distinct_users, v_row.total_markup_vnd),
-            jsonb_build_object('override_count', v_row.override_count, 'distinct_users', v_row.distinct_users, 'total_markup_vnd', v_row.total_markup_vnd),
-            format('grn_override_report:%s:%s', v_row.branch_id, to_char(now(), 'IYYY-IW')));
-    v_count := v_count + 1;
-  END LOOP;
-  RETURN v_count;
-END; $$;
-
-
---
--- Name: weekly_waste_report(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.weekly_waste_report() RETURNS integer
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-DECLARE v_row RECORD; v_count INT := 0;
-BEGIN
-  FOR v_row IN
-    SELECT si.tenant_id, si.branch_id, COUNT(*) AS waste_count,
-      COUNT(*) FILTER (WHERE si.approval_status = 'pending')  AS pending_count,
-      COUNT(*) FILTER (WHERE si.approval_status = 'approved') AS approved_count,
-      COUNT(*) FILTER (WHERE si.approval_status = 'rejected') AS rejected_count,
-      COALESCE(SUM(sii.total_cost), 0) AS total_value
-    FROM public.stock_issues si JOIN public.stock_issue_items sii ON sii.issue_id = si.id
-    WHERE si.issue_type = 'writeoff' AND si.issued_at > now() - INTERVAL '7 days'
-    GROUP BY si.tenant_id, si.branch_id
-  LOOP
-    INSERT INTO public.notifications (tenant_id, target_branch_id, target_roles, kind, severity, title, body, meta, dedup_key)
-    VALUES (v_row.tenant_id, v_row.branch_id, ARRAY['owner','manager']::TEXT[],
-      'inventory.waste.weekly_report',
-      CASE WHEN v_row.pending_count >= 5 THEN 'warning' ELSE 'info' END,
-      'Báo cáo waste — tuần vừa qua',
-      format('Chi nhánh có %s phiếu waste tuần qua (pending: %s, approved: %s, rejected: %s). Tổng giá trị: %s VND',
-             v_row.waste_count, v_row.pending_count, v_row.approved_count, v_row.rejected_count, v_row.total_value),
-      jsonb_build_object('waste_count', v_row.waste_count, 'pending_count', v_row.pending_count,
-        'approved_count', v_row.approved_count, 'rejected_count', v_row.rejected_count, 'total_value', v_row.total_value),
-      format('waste_report:%s:%s', v_row.branch_id, to_char(now(), 'IYYY-IW')));
-    v_count := v_count + 1;
-  END LOOP;
-  RETURN v_count;
-END; $$;
-
-
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
@@ -20457,7 +20195,10 @@ CREATE TABLE public.kitchen_send_batches (
     CONSTRAINT kitchen_send_batches_ticket_seq_check CHECK ((ticket_seq > 0))
 );
 
-ALTER TABLE ONLY public.kitchen_send_batches REPLICA IDENTITY FULL;
+-- V10: kitchen_send_batches has NO realtime subscriber — dropped from the
+-- supabase_realtime publication (was an over-grant). Its replica identity is
+-- reset to DEFAULT (primary key) since FULL is only needed for realtime/replication.
+ALTER TABLE ONLY public.kitchen_send_batches REPLICA IDENTITY DEFAULT;
 
 
 --
@@ -26413,7 +26154,7 @@ ALTER TABLE ONLY public.payments
 --
 
 ALTER TABLE ONLY public.payments
-    ADD CONSTRAINT payments_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id) ON DELETE CASCADE;
+    ADD CONSTRAINT payments_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id) ON DELETE RESTRICT;
 
 
 --
@@ -27173,7 +26914,7 @@ ALTER TABLE ONLY public.tax_invoices
 --
 
 ALTER TABLE ONLY public.tax_invoices
-    ADD CONSTRAINT tax_invoices_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id) ON DELETE CASCADE;
+    ADD CONSTRAINT tax_invoices_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id) ON DELETE RESTRICT;
 
 
 --
@@ -28739,3 +28480,35 @@ GRANT USAGE ON SCHEMA private TO supabase_auth_admin;
 GRANT EXECUTE ON FUNCTION public.custom_access_token_hook(jsonb) TO supabase_auth_admin;
 
 
+
+--
+-- V10: realtime publication membership (replay-faithful baseline).
+-- The supabase_realtime publication is Supabase-managed; on a Supabase
+-- project it exists, on a bare Postgres replay it may not. Guarded so the
+-- baseline still applies where the publication is absent. kitchen_send_batches
+-- is intentionally EXCLUDED (no realtime subscriber; see REPLICA IDENTITY above).
+--
+
+DO $reltime$
+DECLARE
+  v_tbl text;
+  v_tables text[] := ARRAY[
+    'branch_menu_item_daily_limits', 'kds_tickets', 'notifications',
+    'order_status_history', 'orders', 'payments', 'pos_sessions',
+    'print_jobs', 'printer_agents', 'tables'
+  ];
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
+    RAISE NOTICE 'supabase_realtime publication absent (non-Supabase replay) — skipping realtime membership';
+    RETURN;
+  END IF;
+  FOREACH v_tbl IN ARRAY v_tables LOOP
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_publication_tables
+      WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = v_tbl
+    ) THEN
+      EXECUTE format('ALTER PUBLICATION supabase_realtime ADD TABLE public.%I', v_tbl);
+    END IF;
+  END LOOP;
+END
+$reltime$;

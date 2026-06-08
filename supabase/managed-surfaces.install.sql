@@ -5,7 +5,11 @@
 -- surfaces. Apply THIS after the public baseline to provision a from-zero env.
 --
 -- Generated 2026-05-30 from matu-dev (extensions / storage buckets / realtime /
--- cron) and iexws (storage.objects policy DDL). Idempotent (re-runnable).
+-- cron) and iexws (storage.objects policy DDL). Fully idempotent (re-runnable):
+-- every section guards its writes (ON CONFLICT / IF NOT EXISTS / DO-block checks),
+-- so Section D realtime membership and Section E cron can be re-applied safely.
+-- Realtime membership (Section D) is mirrored into the baseline (V10) as the
+-- replay-faithful source of truth; the 6 broken cron jobs were removed (V11).
 --
 -- PRIVILEGES: the storage.objects policies require ownership of storage.objects
 -- (supabase_storage_admin). A plain migration/management role may NOT create
@@ -69,20 +73,58 @@ CREATE POLICY "menu_images_update" ON storage.objects FOR UPDATE TO authenticate
   USING ((bucket_id = 'menu-images') AND ((storage.foldername(name))[1] = (auth_tenant_id())::text))
   WITH CHECK ((bucket_id = 'menu-images') AND ((storage.foldername(name))[1] = (auth_tenant_id())::text) AND has_permission_any('menu:write'));
 
--- ── Section D: realtime publication membership (fresh env only — ADD errors if already a member) ──
-ALTER PUBLICATION supabase_realtime ADD TABLE
-  public.branch_menu_item_daily_limits, public.kds_tickets, public.kitchen_send_batches,
-  public.notifications, public.order_status_history, public.orders, public.payments,
-  public.pos_sessions, public.print_jobs, public.printer_agents, public.tables;
+-- ── Section D: realtime publication membership ──
+-- NOTE: membership now lives idempotently in the baseline (V10) as the
+-- replay-faithful source of truth. This block stays for envs provisioned from
+-- the companion alone, and is guarded so re-runs are no-ops. kitchen_send_batches
+-- is intentionally EXCLUDED (no realtime subscriber; over-grant removed in V10).
+DO $reltime$
+DECLARE
+  v_tbl text;
+  v_tables text[] := ARRAY[
+    'branch_menu_item_daily_limits', 'kds_tickets', 'notifications',
+    'order_status_history', 'orders', 'payments', 'pos_sessions',
+    'print_jobs', 'printer_agents', 'tables'
+  ];
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
+    RAISE NOTICE 'supabase_realtime publication absent — skipping realtime membership';
+    RETURN;
+  END IF;
+  FOREACH v_tbl IN ARRAY v_tables LOOP
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_publication_tables
+      WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = v_tbl
+    ) THEN
+      EXECUTE format('ALTER PUBLICATION supabase_realtime ADD TABLE public.%I', v_tbl);
+    END IF;
+  END LOOP;
+END
+$reltime$;
 
 -- ── Section E: cron jobs (pg_cron; cron.schedule upserts by jobname) ──
-SELECT cron.schedule('auto_close_periods',                 '0 19 * * *',  'SELECT public.auto_close_periods();');
+-- V11: the 6 jobs whose SQL bodies referenced dropped objects are removed and
+-- their function definitions are gone from the baseline. The unschedule block
+-- below cleans the stale jobs on already-provisioned envs (re-runnable: guarded
+-- so it no-ops when a job is absent). KEPT: the 4 jobs that still resolve.
 SELECT cron.schedule('cleanup-abandoned-payments',         '0 * * * *',   'SELECT public.cleanup_abandoned_payments()');
-SELECT cron.schedule('compute_branch_daily_waste_caps',    '30 17 * * *', 'SELECT public.compute_branch_daily_waste_caps();');
-SELECT cron.schedule('refresh_abc_classification',         '0 19 * * 6',  'SELECT public.refresh_abc_classification();');
 SELECT cron.schedule('refresh_mv_grn_price_baseline',      '5 * * * *',   'REFRESH MATERIALIZED VIEW CONCURRENTLY public.mv_grn_price_baseline;');
 SELECT cron.schedule('refresh_mv_inventory_stock_current', '*/5 * * * *', 'REFRESH MATERIALIZED VIEW CONCURRENTLY public.mv_inventory_stock_current;');
-SELECT cron.schedule('refresh-finance-views-daily',        '15 23 * * *', 'SET LOCAL statement_timeout = ''5min''; SELECT public.refresh_finance_views();');
 SELECT cron.schedule('scan-inventory-alerts-daily',        '0 23 * * *',  'SELECT public.scan_inventory_alerts();');
-SELECT cron.schedule('weekly_grn_override_report',         '0 2 * * 5',   'SELECT public.weekly_grn_override_report();');
-SELECT cron.schedule('weekly_waste_report',                '0 2 * * 1',   'SELECT public.weekly_waste_report();');
+
+-- V11: unschedule the 6 removed jobs (no-op if not present on this env).
+DO $unsched$
+DECLARE
+  v_job text;
+  v_jobs text[] := ARRAY[
+    'auto_close_periods', 'compute_branch_daily_waste_caps', 'refresh_abc_classification',
+    'refresh-finance-views-daily', 'weekly_grn_override_report', 'weekly_waste_report'
+  ];
+BEGIN
+  FOREACH v_job IN ARRAY v_jobs LOOP
+    IF EXISTS (SELECT 1 FROM cron.job WHERE jobname = v_job) THEN
+      PERFORM cron.unschedule(v_job);
+    END IF;
+  END LOOP;
+END
+$unsched$;
