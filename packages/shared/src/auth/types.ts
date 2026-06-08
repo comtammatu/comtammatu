@@ -1,18 +1,16 @@
 /**
  * Staff roles — ordered by privilege level (highest to lowest).
- * Customer role is handled by Flutter app only.
+ *
+ * HKD lean model: collapsed from the legacy 10-role tree to the 4 roles the
+ * DB auth hook actually emits ({owner, manager, staff, chef} — see
+ * `staff_role_from_position_code`). Position codes are still tracked in HR;
+ * each maps to one of these four via `POSITION_CODE_TO_STAFF_ROLE`.
  */
 export const STAFF_ROLES = [
   "owner",
-  "super_manager",
-  "area_manager",
-  "branch_manager",
-  "warehouse_manager",
-  "production_manager",
-  "cashier",
-  "waiter",
+  "manager",
+  "staff",
   "chef",
-  "office",
 ] as const;
 
 export type StaffRole = (typeof STAFF_ROLES)[number];
@@ -20,34 +18,27 @@ export type StaffRole = (typeof STAFF_ROLES)[number];
 /** Roles that can access /admin/ routes */
 export const ADMIN_ROLES: readonly StaffRole[] = [
   "owner",
-  "super_manager",
+  "manager",
 ] as const;
 
 /** Roles that operate at branch level (POS/KDS) */
 export const BRANCH_ROLES: readonly StaffRole[] = [
-  "cashier",
-  "waiter",
+  "staff",
   "chef",
 ] as const;
 
 /** Roles that do not require branch scope */
 export const TENANT_LEVEL_ROLES: readonly StaffRole[] = [
   "owner",
-  "super_manager",
-  "area_manager",
-  "office",
+  "manager",
+  "staff",
 ] as const;
 
 /** Roles that managers can create/edit from the current staff screen */
 export const MANAGEABLE_STAFF_ROLES: readonly StaffRole[] = [
-  "area_manager",
-  "branch_manager",
-  "warehouse_manager",
-  "production_manager",
-  "cashier",
-  "waiter",
+  "manager",
+  "staff",
   "chef",
-  "office",
 ] as const;
 
 /**
@@ -55,10 +46,9 @@ export const MANAGEABLE_STAFF_ROLES: readonly StaffRole[] = [
  * (HQ is office-only: no POS/KDS).
  */
 export const HQ_EXCLUDED_OPERATIONAL_ROLES: readonly StaffRole[] = [
-  "cashier",
-  "waiter",
+  "staff",
   "chef",
-  "branch_manager",
+  "manager",
 ] as const;
 
 /**
@@ -66,9 +56,7 @@ export const HQ_EXCLUDED_OPERATIONAL_ROLES: readonly StaffRole[] = [
  * Owner không gồm — chủ sở hữu xem tổng thể vận hành; chi tiết sàn/bếp do quản lý điều hành.
  */
 export const BRANCH_FLOOR_SETTINGS_ROLES: readonly StaffRole[] = [
-  "super_manager",
-  "area_manager",
-  "branch_manager",
+  "manager",
 ] as const;
 
 /** Settings → Bàn, trạm bếp (owner không tham gia) */
@@ -79,40 +67,39 @@ export function canManageBranchFloorSettings(role: StaffRole): boolean {
 /** Vietnamese display labels for each role */
 export const ROLE_LABEL_VI: Record<StaffRole, string> = {
   owner: "Chủ sở hữu",
-  super_manager: "Quản lý tổng",
-  area_manager: "Quản lý khu vực",
-  branch_manager: "Quản lý chi nhánh",
-  warehouse_manager: "Quản lý kho tổng",
-  production_manager: "Quản lý sản xuất",
-  cashier: "Thu ngân",
-  waiter: "Phục vụ",
+  manager: "Quản lý",
+  staff: "Nhân viên",
   chef: "Bếp",
-  office: "Văn phòng",
 };
 
 /**
  * Canonical HR position code → StaffRole bucket. TS mirror of the SQL
- * `private.staff_role_from_position_code()` installed by the greenfield
- * role-bridge cut. Returns "unassigned" for unknown/missing codes (fail-safe).
+ * `private.staff_role_from_position_code()` (HKD lean 4-role collapse).
+ * Returns "unassigned" for unknown/missing codes (fail-safe).
+ *
+ * Mapping (locked, owner): owner→owner; super_manager, area_manager,
+ * branch_manager→manager; office, cashier, waiter, warehouse_manager,
+ * production_manager→staff (office→staff is anti-escalation); head_chef,
+ * chef→chef.
  */
 const POSITION_CODE_TO_STAFF_ROLE: Record<string, StaffRole> = {
   owner: "owner",
-  super_manager: "super_manager",
-  executive_assistant: "super_manager",
-  area_manager: "area_manager",
-  branch_manager: "branch_manager",
-  chief_accountant: "office",
-  accountant: "office",
-  office: "office",
-  warehouse_head: "warehouse_manager",
-  warehouse_keeper: "warehouse_manager",
-  head_chef: "production_manager",
+  super_manager: "manager",
+  executive_assistant: "manager",
+  area_manager: "manager",
+  branch_manager: "manager",
+  chief_accountant: "staff",
+  accountant: "staff",
+  office: "staff",
+  warehouse_head: "staff",
+  warehouse_keeper: "staff",
+  head_chef: "chef",
   chef: "chef",
   kitchen_helper: "chef",
-  cashier: "cashier",
-  waiter: "waiter",
-  warehouse_manager: "warehouse_manager",
-  production_manager: "production_manager",
+  cashier: "staff",
+  waiter: "staff",
+  warehouse_manager: "staff",
+  production_manager: "staff",
 };
 
 export function staffRoleFromPositionCode(
@@ -126,7 +113,6 @@ export function staffRoleFromPositionCode(
 export interface JwtClaims {
   tenant_id: number;
   branch_id: number | null;
-  area_id: number | null;
   user_role: StaffRole;
   /**
    * Canonical HR position code (source of truth). `user_role` is derived from

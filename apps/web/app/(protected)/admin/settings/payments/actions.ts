@@ -8,7 +8,7 @@ import { SYSTEM_SETTING_KEYS } from "@comtammatu/shared/settings";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 
-const SETTINGS_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
+const SETTINGS_ROLES: readonly StaffRole[] = ["owner", "manager"];
 
 const paymentSettingsSchema = z.object({
   [SYSTEM_SETTING_KEYS.PAYMENT_ENABLE_VIETQR]: z.enum(["true", "false"]),

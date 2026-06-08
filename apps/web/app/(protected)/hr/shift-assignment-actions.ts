@@ -6,12 +6,7 @@ import { withAction } from "@/_lib/with-action";
 import { canAccessBranch } from "@/_lib/branch-scope";
 import { getVNWeekEndDateString } from "@comtammatu/shared/time";
 
-const SHIFT_ROLES: readonly StaffRole[] = [
-  "owner",
-  "super_manager",
-  "area_manager",
-  "branch_manager",
-];
+const SHIFT_ROLES: readonly StaffRole[] = ["owner", "manager"];
 
 /* ─── Fetch Shift Assignments for a week ─── */
 

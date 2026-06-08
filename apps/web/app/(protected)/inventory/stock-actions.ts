@@ -60,7 +60,7 @@ export const adjustStock = withAction(
   { roles: INVENTORY_OPS_ROLES, schema: adjustSchema, requireBranchScope: true },
   async (data, { supabase, claims, user }) => {
     if (
-      claims.user_role === "branch_manager" &&
+      claims.user_role === "manager" &&
       claims.branch_id !== data.branchId
     ) {
       return { success: false, error: "Không có quyền truy cập chi nhánh này" };

@@ -43,9 +43,12 @@ export async function fetchBranchMenuDailyLimits(
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   // Branch-scoped users can only inspect their own branch.
-  const isHqRole = (
-    ["owner", "super_manager", "area_manager"] as const
-  ).includes(ctx.claims.user_role as never);
+  // HKD lean: HQ/tenant-wide = owner, or a manager with no branch grant (former
+  // super_manager/area_manager). A branch-bound manager (former branch_manager)
+  // keeps the own-branch restriction below.
+  const isHqRole =
+    ctx.claims.user_role === "owner" ||
+    (ctx.claims.user_role === "manager" && ctx.claims.branch_id == null);
   if (!isHqRole && ctx.claims.branch_id !== parsedBranchId.data) {
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }
@@ -109,9 +112,12 @@ export async function setBranchMenuDailyLimit(
   const ctx = await getAuthContext(LIMITS_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
-  const isHqRole = (
-    ["owner", "super_manager", "area_manager"] as const
-  ).includes(ctx.claims.user_role as never);
+  // HKD lean: HQ/tenant-wide = owner, or a manager with no branch grant (former
+  // super_manager/area_manager). A branch-bound manager (former branch_manager)
+  // keeps the own-branch restriction below.
+  const isHqRole =
+    ctx.claims.user_role === "owner" ||
+    (ctx.claims.user_role === "manager" && ctx.claims.branch_id == null);
   if (!isHqRole && ctx.claims.branch_id !== parsed.data.branchId) {
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }
@@ -183,9 +189,12 @@ export async function clearBranchMenuDailyLimit(
   const ctx = await getAuthContext(LIMITS_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
-  const isHqRole = (
-    ["owner", "super_manager", "area_manager"] as const
-  ).includes(ctx.claims.user_role as never);
+  // HKD lean: HQ/tenant-wide = owner, or a manager with no branch grant (former
+  // super_manager/area_manager). A branch-bound manager (former branch_manager)
+  // keeps the own-branch restriction below.
+  const isHqRole =
+    ctx.claims.user_role === "owner" ||
+    (ctx.claims.user_role === "manager" && ctx.claims.branch_id == null);
   if (!isHqRole && ctx.claims.branch_id !== parsed.data.branchId) {
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }

@@ -4,7 +4,7 @@ import { z } from "zod";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import { withAction } from "@/_lib/with-action";
 
-const REPORT_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
+const REPORT_ROLES: readonly StaffRole[] = ["owner", "manager"];
 
 /* ─── Annual Payroll Summary (for PIT filing) ─── */
 

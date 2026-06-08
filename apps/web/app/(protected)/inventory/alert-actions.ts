@@ -89,7 +89,7 @@ export async function fetchExpiryAlerts(
     .eq("tenant_id", claims.tenant_id)
     .order("expiry_date", { ascending: true });
 
-  if (claims.user_role === "branch_manager" && claims.branch_id != null) {
+  if (claims.user_role === "manager" && claims.branch_id != null) {
     query = query.eq("goods_received_notes.branch_id", claims.branch_id);
   } else if (branchId) {
     query = query.eq("goods_received_notes.branch_id", branchId);
@@ -177,7 +177,7 @@ export async function fetchReorderAlerts(
     .eq("ingredients.is_active", true)
     .not("ingredients.reorder_point", "is", null);
 
-  if (claims.user_role === "branch_manager" && claims.branch_id != null) {
+  if (claims.user_role === "manager" && claims.branch_id != null) {
     query = query.eq("branch_id", claims.branch_id);
   } else if (branchId) {
     query = query.eq("branch_id", branchId);

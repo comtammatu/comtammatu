@@ -5,7 +5,7 @@ import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 import { withAction, withFormAction } from "@/_lib/with-action";
 
-const SETTINGS_ROLES: StaffRole[] = ["owner", "super_manager"];
+const SETTINGS_ROLES: StaffRole[] = ["owner", "manager"];
 
 /* ─── Schemas ─── */
 

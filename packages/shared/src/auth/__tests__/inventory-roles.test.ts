@@ -2,11 +2,6 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { INVENTORY_CATALOG_ROLES } from "../inventory-roles";
 
-test("ingredient catalog writes use the multi-warehouse catalog roles", () => {
-  assert.deepEqual(INVENTORY_CATALOG_ROLES, [
-    "owner",
-    "super_manager",
-    "warehouse_manager",
-    "production_manager",
-  ]);
+test("ingredient catalog writes use the lean catalog roles", () => {
+  assert.deepEqual(INVENTORY_CATALOG_ROLES, ["owner", "manager", "staff"]);
 });

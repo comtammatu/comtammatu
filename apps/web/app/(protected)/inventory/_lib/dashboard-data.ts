@@ -95,7 +95,7 @@ export async function loadInventoryDashboardData(
   const { supabase, claims } = await loadAuthState();
 
   const isOversightRole =
-    claims.user_role === "owner" || claims.user_role === "area_manager";
+    claims.user_role === "owner" || claims.user_role === "manager";
   const procurementSyncOk =
     !isOversightRole && canAccess(claims.user_role, "inventory_procurement");
 
@@ -112,20 +112,17 @@ export async function loadInventoryDashboardData(
     (b) => b.id === scope.selectedBranchId,
   );
 
+  // HKD lean: HQ/warehouse default applies to owner/manager only. The former
+  // "office" arm collapsed into "staff", which also covers branch staff
+  // (cashier/waiter) — so it is dropped here to avoid defaulting every staff
+  // user to the central-warehouse view (this is a display fallback, not access).
+  const isHqDefaultRole =
+    claims.user_role === "manager" || claims.user_role === "owner";
   const siteName =
-    selectedBranch?.name ??
-    (claims.user_role === "super_manager" ||
-    claims.user_role === "owner" ||
-    claims.user_role === "office"
-      ? "Kho tổng"
-      : "Điểm vận hành");
+    selectedBranch?.name ?? (isHqDefaultRole ? "Kho tổng" : "Điểm vận hành");
   const siteKindRaw =
     selectedBranch?.branch_kind ??
-    (claims.user_role === "super_manager" ||
-    claims.user_role === "owner" ||
-    claims.user_role === "office"
-      ? "central_warehouse"
-      : "branch");
+    (isHqDefaultRole ? "central_warehouse" : "branch");
   const siteKind: DashboardSiteKind =
     siteKindRaw === "central_kitchen"
       ? "central_kitchen"

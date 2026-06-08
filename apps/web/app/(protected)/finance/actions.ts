@@ -18,21 +18,9 @@ import { getAuthContextWithPermission } from "@/_lib/auth";
 import { canAccessBranch } from "@/_lib/branch-scope";
 import { logAudit } from "@/_lib/audit";
 
-const FINANCE_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
-const INVOICE_CREATE_ROLES: readonly StaffRole[] = [
-  "owner",
-  "super_manager",
-  "area_manager",
-  "branch_manager",
-  "cashier",
-  "waiter",
-];
-const REPORT_ROLES: readonly StaffRole[] = [
-  "owner",
-  "super_manager",
-  "area_manager",
-  "branch_manager",
-];
+const FINANCE_ROLES: readonly StaffRole[] = ["owner", "manager"];
+const INVOICE_CREATE_ROLES: readonly StaffRole[] = ["owner", "manager", "staff"];
+const REPORT_ROLES: readonly StaffRole[] = ["owner", "manager"];
 
 /* ─── HĐĐT: Create Invoice ─── */
 
@@ -924,8 +912,13 @@ export async function fetchAccessibleBranches(): Promise<ActionResult> {
 
   const { supabase, claims } = ctx;
 
-  // Tenant-wide roles see all operational branches.
-  if (claims.user_role === "owner" || claims.user_role === "super_manager") {
+  // Tenant-wide roles see all operational branches. HKD lean: a branch-bound
+  // manager (branch_id set; former branch_manager) is NOT tenant-wide and falls
+  // through to the branch-scoped path below.
+  if (
+    claims.user_role === "owner" ||
+    (claims.user_role === "manager" && claims.branch_id == null)
+  ) {
     const { data, error } = await supabase
       .from("branches")
       .select("id, name")

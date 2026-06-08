@@ -8,6 +8,7 @@ import {
   Clock as IconClock,
   Keyboard as IconKeyboard,
   MapPin as IconMapPin,
+  TriangleAlert as IconTriangleAlert,
 } from "lucide-react";
 import {
   Alert,
@@ -51,8 +52,12 @@ interface InitialStatus {
   clockedOut: boolean;
   checkInTime: string | null;
   checkOutTime: string | null;
+  branchId: number | null;
   branchName: string | null;
 }
+
+type ClockMode = "in" | "out";
+type GpsPolicy = "strict" | "advisory";
 
 type ClockState =
   | "idle"
@@ -128,6 +133,16 @@ function ErrorAlert({ message }: { message: string }) {
   );
 }
 
+function NoticeAlert({ message }: { message: string }) {
+  return (
+    <Alert>
+      <IconTriangleAlert />
+      <AlertTitle>GPS chỉ ghi nhận tham khảo</AlertTitle>
+      <AlertDescription>{message}</AlertDescription>
+    </Alert>
+  );
+}
+
 export function ClockClient({
   initialStatus,
   branches,
@@ -136,12 +151,14 @@ export function ClockClient({
   const [state, setState] = useState<ClockState>("idle");
   const [status, setStatus] = useState(initialStatus);
   const [error, setError] = useState<string | null>(null);
+  const [gpsNotice, setGpsNotice] = useState<string | null>(null);
   const [gpsDistance, setGpsDistance] = useState<number | null>(null);
   const [userCoords, setUserCoords] = useState<{
     lat: number;
     lng: number;
   } | null>(null);
   const [manualCode, setManualCode] = useState("");
+  const [mode, setMode] = useState<ClockMode>("in");
   const [selectedBranchId, setSelectedBranchId] = useState<number | null>(
     () => {
       if (
@@ -160,57 +177,123 @@ export function ClockClient({
   const selectedBranch = branches.find(
     (branch) => branch.id === selectedBranchId,
   );
+  const clockOutBranch = branches.find(
+    (branch) => branch.id === status.branchId,
+  );
 
-  const checkGps = useCallback(() => {
-    if (!selectedBranch) {
-      setError("Vui lòng chọn chi nhánh");
-      return;
-    }
-
-    setState("checking_gps");
-    setError(null);
-
-    if (!navigator.geolocation) {
-      setState("gps_failed");
-      setError("Trình duyệt không hỗ trợ GPS");
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        setUserCoords({ lat: latitude, lng: longitude });
-
-        const distance = haversineMeters(
-          latitude,
-          longitude,
-          selectedBranch.lat,
-          selectedBranch.lng,
-        );
-        setGpsDistance(Math.round(distance));
-
-        if (distance <= 200) {
+  const runGpsCheck = useCallback(
+    (
+      branch: Branch | undefined,
+      emptyMessage: string,
+      policy: GpsPolicy = "strict",
+    ) => {
+      if (!branch) {
+        if (policy === "advisory") {
           setState("gps_passed");
+          setUserCoords(null);
+          setGpsDistance(null);
+          setGpsNotice(emptyMessage);
         } else {
           setState("gps_failed");
-          setError(
-            `Bạn đang cách chi nhánh ${Math.round(distance)}m. Phải ở trong 200m.`,
+          setError(emptyMessage);
+        }
+        return;
+      }
+
+      setState("checking_gps");
+      setError(null);
+      setGpsNotice(null);
+
+      if (!navigator.geolocation) {
+        if (policy === "advisory") {
+          setState("gps_passed");
+          setUserCoords(null);
+          setGpsNotice(
+            "Thiết bị không hỗ trợ GPS. Bạn vẫn có thể kết ca bằng mã chi nhánh.",
           );
-        }
-      },
-      (gpsError) => {
-        setState("gps_failed");
-        if (gpsError.code === 1) {
-          setError("Bạn đã từ chối quyền GPS. Vui lòng bật GPS và thử lại.");
-        } else if (gpsError.code === 2) {
-          setError("Không xác định được vị trí. Vui lòng thử lại.");
         } else {
-          setError("GPS quá chậm. Vui lòng thử lại.");
+          setState("gps_failed");
+          setError("Trình duyệt không hỗ trợ GPS");
         }
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setUserCoords({ lat: latitude, lng: longitude });
+
+          const distance = haversineMeters(
+            latitude,
+            longitude,
+            branch.lat,
+            branch.lng,
+          );
+          setGpsDistance(Math.round(distance));
+
+          if (distance <= 200) {
+            setState("gps_passed");
+            setGpsNotice(null);
+          } else if (policy === "advisory") {
+            setState("gps_passed");
+            setGpsNotice(
+              `GPS đang lệch ${Math.round(distance)}m. Hệ thống vẫn cho kết ca bằng mã chi nhánh.`,
+            );
+          } else {
+            setState("gps_failed");
+            setError(
+              `Bạn đang cách chi nhánh ${Math.round(distance)}m. Phải ở trong 200m.`,
+            );
+          }
+        },
+        (gpsError) => {
+          if (policy === "advisory") {
+            setState("gps_passed");
+            setUserCoords(null);
+            setGpsDistance(null);
+            if (gpsError.code === 1) {
+              setGpsNotice(
+                "Bạn chưa cấp quyền GPS. Bạn vẫn có thể kết ca bằng mã chi nhánh.",
+              );
+            } else {
+              setGpsNotice(
+                "Không lấy được GPS. Bạn vẫn có thể kết ca bằng mã chi nhánh.",
+              );
+            }
+          } else if (gpsError.code === 1) {
+            setState("gps_failed");
+            setError("Bạn đã từ chối quyền GPS. Vui lòng bật GPS và thử lại.");
+          } else if (gpsError.code === 2) {
+            setState("gps_failed");
+            setError("Không xác định được vị trí. Vui lòng thử lại.");
+          } else {
+            setState("gps_failed");
+            setError("GPS quá chậm. Vui lòng thử lại.");
+          }
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: policy === "advisory" ? 5000 : 10000,
+          maximumAge: 0,
+        },
+      );
+    },
+    [],
+  );
+
+  const checkGps = useCallback(() => {
+    setMode("in");
+    runGpsCheck(selectedBranch, "Vui lòng chọn chi nhánh");
+  }, [runGpsCheck, selectedBranch]);
+
+  const checkClockOutGps = useCallback(() => {
+    setMode("out");
+    runGpsCheck(
+      clockOutBranch,
+      "Chi nhánh đã chấm công vào chưa có tọa độ GPS. Bạn vẫn có thể kết ca bằng mã chi nhánh.",
+      "advisory",
     );
-  }, [selectedBranch]);
+  }, [clockOutBranch, runGpsCheck]);
 
   const submitClockIn = useCallback(
     (code: string) => {
@@ -228,12 +311,17 @@ export function ClockClient({
         });
 
         if (result.success && result.data) {
-          setState("success");
+          setState("idle");
+          setGpsDistance(null);
+          setUserCoords(null);
+          setManualCode("");
+          setGpsNotice(null);
           setStatus({
             clockedIn: true,
             clockedOut: false,
             checkInTime: result.data.checkInTime,
             checkOutTime: null,
+            branchId: selectedBranchId,
             branchName: selectedBranch?.name ?? null,
           });
           if (navigator.vibrate) navigator.vibrate(200);
@@ -246,36 +334,80 @@ export function ClockClient({
     [selectedBranchId, userCoords, selectedBranch],
   );
 
-  const startQrScan = useCallback(async () => {
-    setState("scanning_code");
-    setError(null);
+  const submitClockOut = useCallback(
+    (code: string) => {
+      setState("verifying");
+      setError(null);
 
-    try {
-      const { Html5Qrcode } = await import("html5-qrcode");
-      const scannerId = "qr-reader";
-      if (!scannerRef.current) return;
+      startTransition(async () => {
+        const result = await clockOut({
+          ...(userCoords
+            ? {
+                lat: userCoords.lat,
+                lng: userCoords.lng,
+              }
+            : {}),
+          code,
+        });
 
-      const scanner = new Html5Qrcode(scannerId);
-      html5QrRef.current = scanner;
+        if (result.success && result.data) {
+          setState("success");
+          setManualCode("");
+          setGpsNotice(null);
+          setStatus((prev) => ({
+            ...prev,
+            clockedIn: false,
+            clockedOut: true,
+            checkOutTime: result.data?.checkOutTime ?? null,
+          }));
+          if (navigator.vibrate) navigator.vibrate(200);
+        } else {
+          setState("code_invalid");
+          setError(result.error ?? "Kết ca thất bại");
+        }
+      });
+    },
+    [userCoords],
+  );
 
-      await scanner.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        (decodedText: string) => {
-          const code = decodedText.trim().slice(0, 6);
-          if (/^[0-9a-f]{6}$/i.test(code)) {
-            void scanner.stop().catch(() => {});
-            html5QrRef.current = null;
-            submitClockIn(code);
-          }
-        },
-        () => {},
-      );
-    } catch {
-      setState("gps_passed");
-      setError("Không thể mở camera. Vui lòng nhập mã thủ công.");
-    }
-  }, [submitClockIn]);
+  const startQrScan = useCallback(
+    async (scanMode: ClockMode = mode) => {
+      setState("scanning_code");
+      setError(null);
+      setGpsNotice(null);
+
+      try {
+        const { Html5Qrcode } = await import("html5-qrcode");
+        const scannerId = "qr-reader";
+        if (!scannerRef.current) return;
+
+        const scanner = new Html5Qrcode(scannerId);
+        html5QrRef.current = scanner;
+
+        await scanner.start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: { width: 250, height: 250 } },
+          (decodedText: string) => {
+            const code = decodedText.trim().slice(0, 6);
+            if (/^[0-9a-f]{6}$/i.test(code)) {
+              void scanner.stop().catch(() => {});
+              html5QrRef.current = null;
+              if (scanMode === "out") {
+                submitClockOut(code);
+              } else {
+                submitClockIn(code);
+              }
+            }
+          },
+          () => {},
+        );
+      } catch {
+        setState("gps_passed");
+        setError("Không thể mở camera. Vui lòng nhập mã thủ công.");
+      }
+    },
+    [mode, submitClockIn, submitClockOut],
+  );
 
   const stopQrScan = useCallback(() => {
     const scanner = html5QrRef.current as { stop: () => Promise<void> } | null;
@@ -286,23 +418,107 @@ export function ClockClient({
     setState("gps_passed");
   }, []);
 
-  const handleClockOut = useCallback(() => {
-    setError(null);
-    startTransition(async () => {
-      const result = await clockOut();
-      if (result.success && result.data) {
-        setStatus((prev) => ({
-          ...prev,
-          clockedIn: false,
-          clockedOut: true,
-          checkOutTime: result.data?.checkOutTime ?? null,
-        }));
-        if (navigator.vibrate) navigator.vibrate(200);
-      } else {
-        setError(result.error ?? "Chấm công ra thất bại");
-      }
-    });
-  }, []);
+  function renderVerificationControls(scanMode: ClockMode) {
+    return (
+      <>
+        {state === "scanning_code" ? (
+          <div className="flex flex-col gap-3">
+            <div
+              ref={scannerRef}
+              id="qr-reader"
+              className="overflow-hidden rounded-lg border"
+            />
+            <Button variant="outline" onClick={stopQrScan} size="sm">
+              Hủy quét
+            </Button>
+          </div>
+        ) : null}
+
+        {state === "entering_code" ? (
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="manual-code">Mã chấm công</Label>
+              <Input
+                id="manual-code"
+                placeholder="abc123"
+                maxLength={6}
+                value={manualCode}
+                onChange={(event) => setManualCode(event.target.value)}
+                className="text-center font-mono text-lg"
+                autoFocus
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setState("gps_passed");
+                  setManualCode("");
+                  setError(null);
+                }}
+              >
+                {ACTIONS_VI.back}
+              </Button>
+              <Button
+                disabled={manualCode.length !== 6 || isPending}
+                onClick={() => {
+                  if (scanMode === "out") {
+                    submitClockOut(manualCode);
+                  } else {
+                    submitClockIn(manualCode);
+                  }
+                }}
+              >
+                {isPending ? <Spinner data-icon="inline-start" /> : null}
+                {ACTIONS_VI.confirm}
+              </Button>
+            </div>
+          </div>
+        ) : null}
+
+        {state === "gps_passed" ? (
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Button size="touch" onClick={() => startQrScan(scanMode)}>
+              <IconCamera data-icon="inline-start" />
+              Quét mã QR
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="touch"
+              onClick={() => {
+                setMode(scanMode);
+                setState("entering_code");
+                setManualCode("");
+                setError(null);
+              }}
+            >
+              <IconKeyboard data-icon="inline-start" />
+              Nhập mã thủ công
+            </Button>
+          </div>
+        ) : null}
+
+        {state === "checking_gps" || state === "verifying" ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Spinner />
+            {state === "checking_gps"
+              ? "Đang kiểm tra GPS..."
+              : "Đang xác minh..."}
+          </div>
+        ) : null}
+
+        {state === "success" ? (
+          <div className="flex items-center gap-2 text-sm text-success">
+            <IconCircleCheck className="size-4" />
+            {scanMode === "out"
+              ? "Kết ca thành công."
+              : "Chấm công thành công."}
+          </div>
+        ) : null}
+      </>
+    );
+  }
 
   if (status.clockedOut) {
     return (
@@ -341,37 +557,62 @@ export function ClockClient({
       <EmployeePanel
         icon={IconClock}
         title="Đang làm việc"
-        description={
-          status.branchName ?? "Chi nhánh đã ghi nhận chấm công vào."
-        }
+        description="Kết ca bằng mã chi nhánh sau khi bàn giao xong."
         tone="info"
         badge={{ children: "Đang mở", variant: "info" }}
       >
         <EmployeeDetailList
           rows={[
             {
+              label: BRANCH_VI.long,
+              value: status.branchName ?? "Chưa ghi nhận",
+              muted: !status.branchName,
+            },
+            {
               label: "Giờ vào",
               value: status.checkInTime ? formatTime(status.checkInTime) : "—",
             },
-            { label: "Giờ ra", value: "—", muted: true },
+            {
+              label: "Khoảng cách GPS",
+              value: gpsDistance == null ? "Chưa kiểm tra" : `${gpsDistance}m`,
+              muted: gpsDistance == null,
+            },
           ]}
         />
-        <div className="flex">
+        {state === "idle" ? (
           <Button
             size="touch"
             variant="destructive"
             className="w-full sm:w-fit"
-            onClick={handleClockOut}
+            onClick={checkClockOutGps}
             disabled={isPending}
           >
-            {isPending ? (
-              <Spinner data-icon="inline-start" />
-            ) : (
-              <IconClock data-icon="inline-start" />
-            )}
-            Chấm công ra
+            <IconClock data-icon="inline-start" />
+            Kết ca
           </Button>
-        </div>
+        ) : null}
+
+        {state === "gps_failed" ||
+        state === "code_invalid" ||
+        state === "error" ? (
+          <Button
+            size="touch"
+            className="w-full sm:w-fit"
+            onClick={() => {
+              setError(null);
+              if (state === "gps_failed") {
+                checkClockOutGps();
+              } else {
+                setState("gps_passed");
+              }
+            }}
+          >
+            {ACTIONS_VI.retry}
+          </Button>
+        ) : null}
+
+        {renderVerificationControls("out")}
+        {gpsNotice ? <NoticeAlert message={gpsNotice} /> : null}
         {error ? <ErrorAlert message={error} /> : null}
       </EmployeePanel>
     );
@@ -414,6 +655,7 @@ export function ClockClient({
               setSelectedBranchId(Number(value));
               setState("idle");
               setGpsDistance(null);
+              setGpsNotice(null);
               setError(null);
             }}
           >
@@ -448,55 +690,6 @@ export function ClockClient({
         ]}
       />
 
-      {state === "scanning_code" ? (
-        <div className="flex flex-col gap-3">
-          <div
-            ref={scannerRef}
-            id="qr-reader"
-            className="overflow-hidden rounded-lg border"
-          />
-          <Button variant="outline" onClick={stopQrScan} size="sm">
-            Hủy quét
-          </Button>
-        </div>
-      ) : null}
-
-      {state === "entering_code" ? (
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="manual-code">Mã chấm công</Label>
-            <Input
-              id="manual-code"
-              placeholder="abc123"
-              maxLength={6}
-              value={manualCode}
-              onChange={(event) => setManualCode(event.target.value)}
-              className="text-center font-mono text-lg"
-              autoFocus
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setState("gps_passed");
-                setManualCode("");
-                setError(null);
-              }}
-            >
-              {ACTIONS_VI.back}
-            </Button>
-            <Button
-              disabled={manualCode.length !== 6 || isPending}
-              onClick={() => submitClockIn(manualCode)}
-            >
-              {isPending ? <Spinner data-icon="inline-start" /> : null}
-              {ACTIONS_VI.confirm}
-            </Button>
-          </div>
-        </div>
-      ) : null}
-
       {error ? <ErrorAlert message={error} /> : null}
 
       {state === "idle" ? (
@@ -525,43 +718,7 @@ export function ClockClient({
         </Button>
       ) : null}
 
-      {state === "gps_passed" ? (
-        <div className="grid gap-2 sm:grid-cols-2">
-          <Button size="touch" onClick={startQrScan}>
-            <IconCamera data-icon="inline-start" />
-            Quét mã QR
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="touch"
-            onClick={() => {
-              setState("entering_code");
-              setManualCode("");
-              setError(null);
-            }}
-          >
-            <IconKeyboard data-icon="inline-start" />
-            Nhập mã thủ công
-          </Button>
-        </div>
-      ) : null}
-
-      {state === "checking_gps" || state === "verifying" ? (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Spinner />
-          {state === "checking_gps"
-            ? "Đang kiểm tra GPS..."
-            : "Đang xác minh..."}
-        </div>
-      ) : null}
-
-      {state === "success" ? (
-        <div className="flex items-center gap-2 text-sm text-success">
-          <IconCircleCheck className="size-4" />
-          Chấm công thành công.
-        </div>
-      ) : null}
+      {renderVerificationControls("in")}
     </EmployeePanel>
   );
 }

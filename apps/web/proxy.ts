@@ -257,11 +257,7 @@ export async function proxy(request: NextRequest) {
       if (pathMatch) {
         const routeBranchId = Number(pathMatch[1]);
 
-        const crossBranchRoles: readonly string[] = [
-          "owner",
-          "super_manager",
-          "area_manager",
-        ];
+        const crossBranchRoles: readonly string[] = ["owner", "manager"];
         const allowCrossBranch =
           (moduleKey === "branch_settings" ||
             moduleKey === "branch_menu_limits") &&

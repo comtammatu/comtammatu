@@ -33,43 +33,33 @@ function makeClaims(
   return {
     tenant_id: tenantId,
     branch_id: branchId,
-    area_id: null,
     user_role: role,
   };
 }
 
-test("getDefaultRedirect → owner and super_manager land on /admin/dashboard", () => {
-  for (const role of ["owner", "super_manager"] as const) {
+test("getDefaultRedirect → owner and manager land on /admin/dashboard", () => {
+  for (const role of ["owner", "manager"] as const) {
     assert.equal(getDefaultRedirect(makeClaims(role)), "/admin/dashboard");
   }
 });
 
 test("getDefaultRedirect → all other roles land on /employee", () => {
-  for (const role of [
-    "area_manager",
-    "branch_manager",
-    "warehouse_manager",
-    "production_manager",
-    "cashier",
-    "waiter",
-    "chef",
-    "office",
-  ] as const) {
+  for (const role of ["staff", "chef"] as const) {
     assert.equal(getDefaultRedirect(makeClaims(role)), "/employee");
   }
 });
 
-test("getBetaDefaultRedirect → owner and super_manager keep beta admin, others use employee portal", () => {
+test("getBetaDefaultRedirect → owner and manager keep beta admin, others use employee portal", () => {
   assert.equal(
     getBetaDefaultRedirect(makeClaims("owner")),
     "/beta/admin/dashboard",
   );
   assert.equal(
-    getBetaDefaultRedirect(makeClaims("super_manager")),
+    getBetaDefaultRedirect(makeClaims("manager")),
     "/beta/admin/dashboard",
   );
-  assert.equal(getBetaDefaultRedirect(makeClaims("area_manager")), "/employee");
-  assert.equal(getBetaDefaultRedirect(makeClaims("cashier")), "/employee");
+  assert.equal(getBetaDefaultRedirect(makeClaims("staff")), "/employee");
+  assert.equal(getBetaDefaultRedirect(makeClaims("chef")), "/employee");
 });
 
 test("resolvePostLoginRedirect → null returnTo → default", () => {
@@ -81,7 +71,7 @@ test("resolvePostLoginRedirect → null returnTo → default", () => {
 
 test("resolvePostLoginRedirect → empty returnTo → default", () => {
   assert.equal(
-    resolvePostLoginRedirect(makeClaims("cashier", 3), ""),
+    resolvePostLoginRedirect(makeClaims("staff", 3), ""),
     "/employee",
   );
 });
@@ -89,7 +79,7 @@ test("resolvePostLoginRedirect → empty returnTo → default", () => {
 test("resolvePostLoginRedirect → valid returnTo for accessible module → keeps it", () => {
   // Finance route is `/finance`, not `/admin/finance` (per module-acl.ts).
   assert.equal(
-    resolvePostLoginRedirect(makeClaims("super_manager"), "/finance"),
+    resolvePostLoginRedirect(makeClaims("manager"), "/finance"),
     "/finance",
   );
 });
@@ -97,7 +87,7 @@ test("resolvePostLoginRedirect → valid returnTo for accessible module → keep
 test("resolvePostLoginRedirect → legacy admin finance returnTo canonicalizes to finance workspace", () => {
   assert.equal(
     resolvePostLoginRedirect(
-      makeClaims("super_manager"),
+      makeClaims("manager"),
       "/admin/finance/revenue?range=today",
     ),
     "/finance/revenue?range=today",
@@ -106,7 +96,7 @@ test("resolvePostLoginRedirect → legacy admin finance returnTo canonicalizes t
 
 test("resolvePostLoginRedirect → returnTo to disallowed module → fallback", () => {
   assert.equal(
-    resolvePostLoginRedirect(makeClaims("cashier", 3), "/admin/dashboard"),
+    resolvePostLoginRedirect(makeClaims("staff", 3), "/admin/dashboard"),
     "/employee",
   );
 });
@@ -131,20 +121,15 @@ test("resolvePostLoginRedirect → retired admin inventory returnTo is not prese
   );
   assert.equal(
     resolvePostLoginRedirect(
-      makeClaims("super_manager"),
+      makeClaims("manager"),
       "/admin/inventory/trust?branchId=1",
     ),
     "/admin/dashboard",
   );
 });
 
-test("resolvePostLoginRedirect → former admin roles cannot keep admin returnTo", () => {
-  for (const role of [
-    "area_manager",
-    "branch_manager",
-    "warehouse_manager",
-    "production_manager",
-  ] as const) {
+test("resolvePostLoginRedirect → non-admin roles cannot keep admin returnTo", () => {
+  for (const role of ["staff", "chef"] as const) {
     assert.equal(
       resolvePostLoginRedirect(makeClaims(role, 3), "/admin/dashboard"),
       "/employee",
@@ -160,23 +145,23 @@ test("resolvePostLoginRedirect → former admin roles cannot keep admin returnTo
   }
 });
 
-test("resolvePostLoginRedirect → cashier accessing own-branch POS → allowed", () => {
+test("resolvePostLoginRedirect → staff accessing own-branch POS → allowed", () => {
   assert.equal(
-    resolvePostLoginRedirect(makeClaims("cashier", 3), "/br/3/pos"),
+    resolvePostLoginRedirect(makeClaims("staff", 3), "/br/3/pos"),
     "/br/3/pos",
   );
 });
 
-test("resolvePostLoginRedirect → cashier on wrong branch → fallback", () => {
+test("resolvePostLoginRedirect → staff on wrong branch → fallback", () => {
   assert.equal(
-    resolvePostLoginRedirect(makeClaims("cashier", 3), "/br/7/pos"),
+    resolvePostLoginRedirect(makeClaims("staff", 3), "/br/7/pos"),
     "/employee",
   );
 });
 
-test("resolvePostLoginRedirect → cashier with null branch_id visiting POS → fallback", () => {
+test("resolvePostLoginRedirect → staff with null branch_id visiting POS → fallback", () => {
   assert.equal(
-    resolvePostLoginRedirect(makeClaims("cashier", null), "/br/3/pos"),
+    resolvePostLoginRedirect(makeClaims("staff", null), "/br/3/pos"),
     "/employee",
   );
 });
@@ -209,26 +194,18 @@ test("resolvePostLoginRedirect → external URL is rejected", () => {
   );
 });
 
-test("resolvePostLoginRedirect → office role cannot access hr", () => {
+test("resolvePostLoginRedirect → staff role cannot access hr", () => {
   assert.equal(
-    resolvePostLoginRedirect(makeClaims("office"), "/hr"),
+    resolvePostLoginRedirect(makeClaims("staff"), "/hr"),
     "/employee",
   );
 });
 
-test("resolvePostLoginRedirect → office role cannot access inventory", () => {
+test("resolvePostLoginRedirect → staff accessing inventory suppliers → allowed", () => {
+  // HKD lean: warehouse/production/office all collapse to `staff`, which retains
+  // the warehouse intent of inventory + procurement access.
   assert.equal(
-    resolvePostLoginRedirect(makeClaims("office"), "/inventory"),
-    "/employee",
-  );
-});
-
-test("resolvePostLoginRedirect → warehouse_manager accessing inventory suppliers → allowed", () => {
-  assert.equal(
-    resolvePostLoginRedirect(
-      makeClaims("warehouse_manager"),
-      "/inventory/suppliers",
-    ),
+    resolvePostLoginRedirect(makeClaims("staff"), "/inventory/suppliers"),
     "/inventory/suppliers",
   );
 });
@@ -249,7 +226,7 @@ test("resolvePostLoginRedirect → chef accessing own KDS → allowed", () => {
 
 test("resolvePostLoginRedirect → branch staff accessing own Runner → allowed", () => {
   assert.equal(
-    resolvePostLoginRedirect(makeClaims("waiter", 5), "/br/5/runner"),
+    resolvePostLoginRedirect(makeClaims("staff", 5), "/br/5/runner"),
     "/br/5/runner",
   );
   assert.equal(
@@ -267,14 +244,14 @@ test("resolvePostLoginRedirect → chef on wrong KDS branch → fallback", () =>
 
 test("resolvePostLoginRedirect → Runner on wrong branch → fallback", () => {
   assert.equal(
-    resolvePostLoginRedirect(makeClaims("waiter", 5), "/br/7/runner"),
+    resolvePostLoginRedirect(makeClaims("staff", 5), "/br/7/runner"),
     "/employee",
   );
 });
 
-test("resolvePostLoginRedirect → branch_manager on own POS → allowed", () => {
+test("resolvePostLoginRedirect → manager on own POS → allowed", () => {
   assert.equal(
-    resolvePostLoginRedirect(makeClaims("branch_manager", 3), "/br/3/pos"),
+    resolvePostLoginRedirect(makeClaims("manager", 3), "/br/3/pos"),
     "/br/3/pos",
   );
 });
@@ -390,13 +367,15 @@ test("resolveModuleFromPath → branch menu limits and finance workspace map to 
 });
 
 test("resolvePostLoginRedirect → branch settings follows branch scope", () => {
+  // HKD lean: manager is a cross-branch settings role (collapsed from
+  // super_manager/area_manager/branch_manager), so it traverses any branch.
   assert.equal(
-    resolvePostLoginRedirect(makeClaims("branch_manager", 3), "/br/3/settings"),
+    resolvePostLoginRedirect(makeClaims("manager", 3), "/br/3/settings"),
     "/br/3/settings",
   );
   assert.equal(
-    resolvePostLoginRedirect(makeClaims("branch_manager", 3), "/br/7/settings"),
-    "/employee",
+    resolvePostLoginRedirect(makeClaims("manager", 3), "/br/7/settings"),
+    "/br/7/settings",
   );
   assert.equal(
     resolvePostLoginRedirect(makeClaims("owner"), "/br/7/settings"),
@@ -406,11 +385,11 @@ test("resolvePostLoginRedirect → branch settings follows branch scope", () => 
 
 test("resolvePostLoginRedirect → branch menu limits follows branch scope", () => {
   assert.equal(
-    resolvePostLoginRedirect(makeClaims("cashier", 3), "/br/3/menu-limits"),
+    resolvePostLoginRedirect(makeClaims("staff", 3), "/br/3/menu-limits"),
     "/br/3/menu-limits",
   );
   assert.equal(
-    resolvePostLoginRedirect(makeClaims("cashier", 3), "/br/7/menu-limits"),
+    resolvePostLoginRedirect(makeClaims("staff", 3), "/br/7/menu-limits"),
     "/employee",
   );
   assert.equal(
@@ -419,43 +398,22 @@ test("resolvePostLoginRedirect → branch menu limits follows branch scope", () 
   );
 });
 
-test("canAccess → only owner and super_manager can access tenant admin modules", () => {
+test("canAccess → only owner and manager can access tenant admin modules", () => {
   const adminModules = ["dashboard", "staff", "reports"] as const;
   for (const moduleKey of adminModules) {
     assert.equal(canAccess("owner", moduleKey), true);
-    assert.equal(canAccess("super_manager", moduleKey), true);
-    for (const role of [
-      "area_manager",
-      "branch_manager",
-      "warehouse_manager",
-      "production_manager",
-      "cashier",
-      "waiter",
-      "chef",
-      "office",
-    ] as const) {
+    assert.equal(canAccess("manager", moduleKey), true);
+    for (const role of ["staff", "chef"] as const) {
       assert.equal(canAccess(role, moduleKey), false);
     }
   }
 });
 
 test("canAccess → settings includes branch floor setting roles", () => {
-  for (const role of [
-    "owner",
-    "super_manager",
-    "area_manager",
-    "branch_manager",
-  ] as const) {
+  for (const role of ["owner", "manager"] as const) {
     assert.equal(canAccess(role, "settings"), true);
   }
-  for (const role of [
-    "warehouse_manager",
-    "production_manager",
-    "cashier",
-    "waiter",
-    "chef",
-    "office",
-  ] as const) {
+  for (const role of ["staff", "chef"] as const) {
     assert.equal(canAccess(role, "settings"), false);
   }
 });
@@ -484,26 +442,26 @@ test("resolveDiscoveredApps → settings entries are discoverable for authorized
     false,
   );
 
-  const branchManagerApps = resolveDiscoveredApps("branch_manager", 3);
+  const managerApps = resolveDiscoveredApps("manager", 3);
   assert.ok(
-    branchManagerApps.some(
+    managerApps.some(
       (app) => app.moduleKey === "settings" && app.href === "/admin/settings",
     ),
   );
   assert.ok(
-    branchManagerApps.some(
+    managerApps.some(
       (app) =>
         app.moduleKey === "branch_settings" && app.href === "/br/3/settings",
     ),
   );
 
-  const cashierApps = resolveDiscoveredApps("cashier", 3);
+  const staffApps = resolveDiscoveredApps("staff", 3);
   assert.equal(
-    cashierApps.some((app) => app.moduleKey === "settings"),
+    staffApps.some((app) => app.moduleKey === "settings"),
     false,
   );
   assert.equal(
-    cashierApps.some((app) => app.moduleKey === "branch_settings"),
+    staffApps.some((app) => app.moduleKey === "branch_settings"),
     false,
   );
 });
@@ -517,7 +475,7 @@ test("canAccess → retired inventory_admin module is unavailable to every role"
 test("resolvePostLoginRedirect → beta surface → admin returnTo becomes /beta/admin/dashboard", () => {
   assert.equal(
     resolvePostLoginRedirect(
-      makeClaims("super_manager"),
+      makeClaims("manager"),
       "/beta/admin/dashboard",
       { surface: "beta" },
     ),
@@ -527,7 +485,7 @@ test("resolvePostLoginRedirect → beta surface → admin returnTo becomes /beta
 
 test("resolvePostLoginRedirect → beta surface + /beta/login returnTo → beta default", () => {
   assert.equal(
-    resolvePostLoginRedirect(makeClaims("super_manager"), "/beta/login", {
+    resolvePostLoginRedirect(makeClaims("manager"), "/beta/login", {
       surface: "beta",
     }),
     "/beta/admin/dashboard",
@@ -545,7 +503,7 @@ test("resolvePostLoginRedirect → beta surface rejects unknown admin returnTo",
 
 test("resolvePostLoginRedirect → beta surface + cross-branch POS → fallback", () => {
   assert.equal(
-    resolvePostLoginRedirect(makeClaims("cashier", 3), "/beta/br/7/pos", {
+    resolvePostLoginRedirect(makeClaims("staff", 3), "/beta/br/7/pos", {
       surface: "beta",
     }),
     "/employee",
@@ -554,7 +512,7 @@ test("resolvePostLoginRedirect → beta surface + cross-branch POS → fallback"
 
 test("resolvePostLoginRedirect → beta surface + own-branch POS → allowed", () => {
   assert.equal(
-    resolvePostLoginRedirect(makeClaims("cashier", 3), "/beta/br/3/pos", {
+    resolvePostLoginRedirect(makeClaims("staff", 3), "/beta/br/3/pos", {
       surface: "beta",
     }),
     "/beta/br/3/pos",

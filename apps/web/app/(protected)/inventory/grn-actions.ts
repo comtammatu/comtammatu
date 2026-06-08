@@ -12,7 +12,10 @@ import { fetchProcurementBranches } from "./_lib/procurement-branches";
 const ROLES = PROCUREMENT_ROLES;
 
 function isBranchScopedProcurementRole(role: string) {
-  return role === "warehouse_manager" || role === "production_manager";
+  // HKD lean: warehouse_manager + production_manager collapsed into "staff",
+  // which is the branch-scoped procurement role (limited to its own branch).
+  // owner/manager remain tenant-wide.
+  return role === "staff";
 }
 
 function canAccessProcurementBranch(

@@ -17,7 +17,7 @@ interface Tab {
 
 const TENANT_STRATEGY_ROLES = [
   "owner",
-  "super_manager",
+  "manager",
 ] as const satisfies readonly StaffRole[];
 
 const TABS: Tab[] = [

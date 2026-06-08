@@ -658,6 +658,7 @@ export async function resolveInventoryManagerUser(
     email: authUser?.email ?? "",
     tenantId: profile.tenant_id,
     branchId: profile.branch_id,
-    role: "warehouse_manager",
+    // HKD lean: warehouse_head position maps to the "staff" role bucket.
+    role: "staff",
   };
 }

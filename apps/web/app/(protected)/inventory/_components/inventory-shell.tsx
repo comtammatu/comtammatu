@@ -56,10 +56,10 @@ function buildInventoryGroups({
   siteKind: string;
 }): ShellNavGroup[] {
   const isBranchSite = siteKind === "branch";
-  const isBranchManager = userRole === "branch_manager";
-  const isOversight = userRole === "owner" || userRole === "area_manager";
+  // HKD lean: branch_manager + area_manager both collapsed into "manager",
+  // which is the oversight role here (gets the "Giám sát" group, not back-office).
+  const isOversight = userRole === "owner" || userRole === "manager";
   const showBackOffice =
-    !isBranchManager &&
     !isOversight &&
     (showSettings || showProcurement || showCatalogManagement);
   const groups: ShellNavGroup[] = [

@@ -8,12 +8,7 @@ import {
 } from "@comtammatu/shared/time";
 import { getAuthContextWithPermission } from "../_lib/auth";
 
-const DASHBOARD_ROLES: readonly StaffRole[] = [
-  "owner",
-  "super_manager",
-  "area_manager",
-  "branch_manager",
-];
+const DASHBOARD_ROLES: readonly StaffRole[] = ["owner", "manager"];
 
 export interface RecentOrder {
   id: number;

@@ -9,7 +9,7 @@ import { getAuthContextWithPermission } from "@/_lib/auth";
 import { withAction } from "@/_lib/with-action";
 import { logAudit } from "@/_lib/audit";
 
-const PAYROLL_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
+const PAYROLL_ROLES: readonly StaffRole[] = ["owner", "manager"];
 
 /* ─── Fetch Payroll Periods ─── */
 

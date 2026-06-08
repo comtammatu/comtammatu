@@ -108,7 +108,7 @@ type DirectActionOptions<TSchema extends z.ZodType, TData> = BaseActionOptions<
   TData
 > & {
   /**
-   * When true and the authenticated role is `branch_manager` or `cashier`
+   * When true and the authenticated role is `manager` or `staff`
    * with `claims.branch_id == null`, reject with `branch_scope_unset`
    * instead of allowing tenant-wide writes. Per the branch-scope hardening
    * contract: a branch-restricted role with no branch grant must NOT widen
@@ -195,9 +195,13 @@ function validationFailure<TData = unknown>(
 }
 
 function lacksRequiredBranchScope(ctx: ActionContext): boolean {
+  // HKD lean: branch_manager + cashier collapsed into manager + staff. A
+  // branch-scoped mutating action (refund/payment) needs a branch grant; a
+  // manager/staff actor without one cannot scope the write, so it is rejected.
+  // owner stays exempt (tenant-wide by design).
   return (
-    (ctx.claims.user_role === "branch_manager" ||
-      ctx.claims.user_role === "cashier") &&
+    (ctx.claims.user_role === "manager" ||
+      ctx.claims.user_role === "staff") &&
     ctx.claims.branch_id == null
   );
 }

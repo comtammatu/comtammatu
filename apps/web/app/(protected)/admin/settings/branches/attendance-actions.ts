@@ -9,7 +9,7 @@ import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { revalidateSurfacePath } from "@/_lib/revalidate-surface";
 import { getAuthContextWithPermission } from "../../_lib/auth";
 
-const CONFIG_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
+const CONFIG_ROLES: readonly StaffRole[] = ["owner", "manager"];
 
 /* ─── Schemas ─── */
 

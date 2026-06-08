@@ -84,6 +84,7 @@ export default async function ClockPage() {
           clockedOut: !!record?.check_out,
           checkInTime: record?.check_in ?? null,
           checkOutTime: record?.check_out ?? null,
+          branchId: record?.branch_id ?? null,
           branchName: branchData?.name ?? null,
         }}
         branches={activeBranches}

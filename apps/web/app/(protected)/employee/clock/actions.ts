@@ -24,7 +24,7 @@ import { getAuthContextWithPermission } from "@/_lib/auth";
 const MAX_DISTANCE_METERS = 200;
 
 /** Roles that can manage attendance config / generate codes */
-const CONFIG_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
+const CONFIG_ROLES: readonly StaffRole[] = ["owner", "manager"];
 
 /** Grace window (minutes) before shift start / after shift end for clock-in */
 const CLOCK_IN_GRACE_MIN = 60;
@@ -77,15 +77,28 @@ async function getEmployeeContext() {
 
 /* ─── Schemas ─── */
 
+const attendanceCodeSchema = z
+  .string()
+  .length(6)
+  .regex(/^[0-9a-f]{6}$/i, { error: "Mã chấm công không hợp lệ" });
+
 const clockInSchema = z.object({
   branchId: z.coerce.number().int().positive(),
   lat: z.coerce.number().min(-90).max(90),
   lng: z.coerce.number().min(-180).max(180),
-  code: z
-    .string()
-    .length(6)
-    .regex(/^[0-9a-f]{6}$/i, { error: "Mã chấm công không hợp lệ" }),
+  code: attendanceCodeSchema,
 });
+
+const clockOutSchema = z
+  .object({
+    lat: z.coerce.number().min(-90).max(90).optional(),
+    lng: z.coerce.number().min(-180).max(180).optional(),
+    code: attendanceCodeSchema,
+  })
+  .refine((value) => (value.lat == null) === (value.lng == null), {
+    message: "Tọa độ GPS không đầy đủ",
+    path: ["lat"],
+  });
 
 /* ─── Actions ─── */
 
@@ -271,13 +284,24 @@ export async function clockIn(input: {
   };
 }
 
-export async function clockOut(): Promise<
-  ActionResult<{ checkOutTime: string }>
-> {
+export async function clockOut(input: {
+  lat?: number;
+  lng?: number;
+  code: string;
+}): Promise<ActionResult<{ checkOutTime: string }>> {
+  const parsed = clockOutSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+    };
+  }
+
   const ctx = await getEmployeeContext();
   if (!ctx) return { success: false, error: "Chưa đăng nhập" };
 
   const { supabase, claims } = ctx;
+  const { code } = parsed.data;
 
   // Find employee
   const { data: employee } = await supabase
@@ -298,7 +322,7 @@ export async function clockOut(): Promise<
   const today = getTodayVN();
   const { data: record } = await supabase
     .from("attendance_records")
-    .select("id")
+    .select("id, branch_id")
     .eq("employee_id", employee.id)
     .eq("tenant_id", claims.tenant_id)
     .eq("date", today)
@@ -312,14 +336,50 @@ export async function clockOut(): Promise<
     };
   }
 
+  const { data: branch } = await supabase
+    .from("branches")
+    .select("id")
+    .eq("id", record.branch_id)
+    .eq("tenant_id", claims.tenant_id)
+    .maybeSingle();
+
+  if (!branch) {
+    return { success: false, error: "Chi nhánh không tồn tại" };
+  }
+
+  // Clock-out is intentionally softer than clock-in: the open attendance row
+  // and branch daily code are hard checks; GPS is collected by the client for
+  // operator feedback, but this schema has no separate check-out GPS columns.
+  const { data: config } = await createServiceClient()
+    .from("branch_attendance_config")
+    .select("attendance_secret")
+    .eq("branch_id", record.branch_id)
+    .eq("tenant_id", claims.tenant_id)
+    .maybeSingle();
+
+  if (!config) {
+    return {
+      success: false,
+      error: "Chi nhánh chưa cài đặt mã chấm công. Liên hệ quản lý.",
+    };
+  }
+
+  const expectedCode = computeDailyCode(config.attendance_secret, today);
+  if (code.toLowerCase() !== expectedCode.toLowerCase()) {
+    return { success: false, error: "Mã chấm công không đúng" };
+  }
+
   const now = new Date().toISOString();
-  const { error: updateError } = await supabase
+  const { data: updated, error: updateError } = await createServiceClient()
     .from("attendance_records")
     .update({ check_out: now })
     .eq("id", record.id)
-    .eq("tenant_id", claims.tenant_id);
+    .eq("tenant_id", claims.tenant_id)
+    .eq("employee_id", employee.id)
+    .is("check_out", null)
+    .select("id");
 
-  if (updateError) {
+  if (updateError || !updated || updated.length === 0) {
     return {
       success: false,
       error: "Không thể chấm công ra. Vui lòng thử lại.",
@@ -337,6 +397,7 @@ export async function getAttendanceStatus(): Promise<
     clockedIn: boolean;
     checkInTime: string | null;
     checkOutTime: string | null;
+    branchId: number | null;
     branchName: string | null;
   }>
 > {
@@ -375,6 +436,7 @@ export async function getAttendanceStatus(): Promise<
         clockedIn: false,
         checkInTime: null,
         checkOutTime: null,
+        branchId: null,
         branchName: null,
       },
     };
@@ -388,6 +450,7 @@ export async function getAttendanceStatus(): Promise<
       clockedIn: !!record.check_in && !record.check_out,
       checkInTime: record.check_in,
       checkOutTime: record.check_out,
+      branchId: record.branch_id,
       branchName: branchData?.name ?? null,
     },
   };

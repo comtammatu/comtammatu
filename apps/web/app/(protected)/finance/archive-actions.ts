@@ -31,13 +31,8 @@ import { getAuthContextWithPermission } from "@/_lib/auth";
 import { canAccessBranch } from "@/_lib/branch-scope";
 import { logAudit } from "@/_lib/audit";
 
-const READ_ROLES: readonly StaffRole[] = [
-  "owner",
-  "super_manager",
-  "area_manager",
-  "branch_manager",
-];
-const WRITE_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
+const READ_ROLES: readonly StaffRole[] = ["owner", "manager"];
+const WRITE_ROLES: readonly StaffRole[] = ["owner", "manager"];
 
 /* ─── getArchiveDownloadUrl ─── */
 

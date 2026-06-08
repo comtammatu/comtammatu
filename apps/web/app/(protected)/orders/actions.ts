@@ -9,13 +9,7 @@ import { getVNDayUtcRange } from "@comtammatu/shared/time";
 
 /* ─── Allowed roles ─── */
 
-const ALLOWED_ROLES: StaffRole[] = [
-  "owner",
-  "super_manager",
-  "area_manager",
-  "branch_manager",
-  "cashier",
-];
+const ALLOWED_ROLES: StaffRole[] = ["owner", "manager", "staff"];
 
 /* ─── Schema ─── */
 
@@ -151,11 +145,14 @@ export async function fetchOrders(
   const { claims } = ctx;
   const supabase = await createClient();
 
-  // branch_manager: auto-filter to their branch
-  const effectiveBranchId =
-    claims.user_role === "branch_manager"
-      ? (claims.branch_id ?? undefined)
-      : parsed.data.branchId;
+  // HKD lean: a branch-bound manager (branch_id set; former branch_manager)
+  // auto-filters to their branch. Tenant-wide manager (branch_id null; former
+  // area_manager/super_manager) keeps the requested filter.
+  const branchLockedManager =
+    claims.user_role === "manager" && claims.branch_id != null;
+  const effectiveBranchId = branchLockedManager
+    ? (claims.branch_id ?? undefined)
+    : parsed.data.branchId;
 
   // Build orders query with joins
   // List view: exclude order_items to keep RSC payload small.
@@ -238,10 +235,11 @@ export async function fetchOrders(
     };
   });
 
-  // Fetch branches list (for filter select — managers see all, branch_manager sees only theirs)
+  // Fetch branches list (for filter select — tenant-wide users see all; a
+  // branch-bound manager sees only theirs).
   let branchesData: { id: number; name: string }[] = [];
 
-  if (claims.user_role !== "branch_manager") {
+  if (!branchLockedManager) {
     const branchesRes = await supabase
       .from("branches")
       .select("id, name")
@@ -398,13 +396,7 @@ function parseAuditNote(
   };
 }
 
-const ORDERS_READ_ROLES: StaffRole[] = [
-  "owner",
-  "super_manager",
-  "area_manager",
-  "branch_manager",
-  "cashier",
-];
+const ORDERS_READ_ROLES: StaffRole[] = ["owner", "manager", "staff"];
 
 export async function fetchOrderAuditLog(
   orderId: number,

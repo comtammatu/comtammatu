@@ -12,11 +12,7 @@ import { getAuthContextWithPermission } from "../../_lib/auth";
 
 const POS_ROLES = MODULE_ACL.pos.allowedRoles;
 
-const MANAGER_ROLES: readonly StaffRole[] = [
-  "owner",
-  "super_manager",
-  "branch_manager",
-];
+const MANAGER_ROLES: readonly StaffRole[] = ["owner", "manager"];
 
 const orderIdSchema = z.coerce
   .number()

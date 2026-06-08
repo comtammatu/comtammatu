@@ -4,12 +4,7 @@ import { z } from "zod";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import { withAction } from "@/_lib/with-action";
 
-const APPROVE_ROLES: readonly StaffRole[] = [
-  "owner",
-  "super_manager",
-  "area_manager",
-  "branch_manager",
-];
+const APPROVE_ROLES: readonly StaffRole[] = ["owner", "manager"];
 
 /* ─── Fetch pending requests for a branch ─── */
 

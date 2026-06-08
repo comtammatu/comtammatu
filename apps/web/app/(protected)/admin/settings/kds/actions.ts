@@ -273,8 +273,11 @@ export const saveStationCategories = withAction(
       return { success: false, error: "Trạm KDS không tồn tại" };
     }
 
+    // HKD lean: a branch-bound manager (branch_id set; former branch_manager)
+    // may only edit stations in their own branch.
     if (
-      claims.user_role === "branch_manager" &&
+      claims.user_role === "manager" &&
+      claims.branch_id != null &&
       station.branch_id !== claims.branch_id
     ) {
       return { success: false, error: "Không có quyền chỉnh sửa trạm này" };

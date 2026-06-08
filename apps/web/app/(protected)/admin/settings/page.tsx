@@ -4,10 +4,9 @@ import { loadAuthState } from "@/_lib/auth";
 export default async function SettingsPage() {
   const { claims } = await loadAuthState();
 
-  if (
-    claims.user_role === "branch_manager" ||
-    claims.user_role === "area_manager"
-  ) {
+  // HKD lean: managers (former branch_manager/area_manager) land on the floor
+  // settings (tables); owner lands on the branches overview.
+  if (claims.user_role === "manager") {
     redirect("/admin/settings/tables");
   }
 

@@ -69,7 +69,7 @@ test("withAction returns forbidden when customAuth returns null", async () => {
 test("withAction passes parsed data and ctx to handler on success", async () => {
   let seenData: unknown = null;
   let seenCtx: ActionContext | null = null;
-  const ctx = fakeCtx({ role: "branch_manager", branch_id: 7 });
+  const ctx = fakeCtx({ role: "manager", branch_id: 7 });
 
   const action = withAction(
     {
@@ -200,14 +200,14 @@ test("withAction afterSuccess preserves existing meta keys", async () => {
 test("withAction requireBranchScope skipped when customAuth is used", async () => {
   // The branch-scope guard belongs to the standard auth path. customAuth
   // resolvers own their own scope checks; the wrapper must NOT second-guess.
-  // Confirm a branch_manager with null branch_id reaches the handler when
+  // Confirm a manager with null branch_id reaches the handler when
   // customAuth supplies it.
   let handlerRan = false;
   const action = withAction(
     {
       schema: sampleSchema,
       customAuth: async () =>
-        fakeCtx({ role: "branch_manager", branch_id: null }),
+        fakeCtx({ role: "manager", branch_id: null }),
       requireBranchScope: true,
     },
     async () => {

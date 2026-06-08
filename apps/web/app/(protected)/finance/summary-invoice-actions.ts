@@ -30,13 +30,8 @@ import { executeSummaryRun } from "@lib/hddt-daily-summary";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { canAccessBranch } from "@/_lib/branch-scope";
 
-const FINANCE_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
-const READ_ROLES: readonly StaffRole[] = [
-  "owner",
-  "super_manager",
-  "area_manager",
-  "branch_manager",
-];
+const FINANCE_ROLES: readonly StaffRole[] = ["owner", "manager"];
+const READ_ROLES: readonly StaffRole[] = ["owner", "manager"];
 
 const runSchema = z.object({
   branchId: z.coerce.number().int().positive(),

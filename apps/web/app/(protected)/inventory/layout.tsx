@@ -29,7 +29,7 @@ export default async function InventoryLayout({
       currentUserHasAnyPermissionAny(INVENTORY_SETTINGS_PERMISSIONS),
     ]);
   const isOversightRole =
-    claims.user_role === "owner" || claims.user_role === "area_manager";
+    claims.user_role === "owner" || claims.user_role === "manager";
   const showProcurement =
     !isOversightRole &&
     canAccess(claims.user_role, "inventory_procurement") &&
@@ -38,20 +38,17 @@ export default async function InventoryLayout({
   const defaultBranch = scope.allowedBranches.find(
     (b) => b.id === scope.selectedBranchId,
   );
+  // HKD lean: HQ/warehouse default applies to owner/manager only (former
+  // "office"/"super_manager" arms). The "office" arm collapsed into "staff",
+  // which also covers branch staff, so it is dropped here to avoid defaulting
+  // every staff user to the central-warehouse label (display fallback only).
+  const isHqDefaultRole =
+    claims.user_role === "manager" || claims.user_role === "owner";
   const siteName =
-    defaultBranch?.name ??
-    (claims.user_role === "super_manager" ||
-    claims.user_role === "owner" ||
-    claims.user_role === "office"
-      ? "Kho tổng"
-      : "Điểm vận hành");
+    defaultBranch?.name ?? (isHqDefaultRole ? "Kho tổng" : "Điểm vận hành");
   const siteKind: string =
     defaultBranch?.branch_kind ??
-    (claims.user_role === "super_manager" ||
-    claims.user_role === "owner" ||
-    claims.user_role === "office"
-      ? "central_warehouse"
-      : "branch");
+    (isHqDefaultRole ? "central_warehouse" : "branch");
 
   return (
     <InventoryShell

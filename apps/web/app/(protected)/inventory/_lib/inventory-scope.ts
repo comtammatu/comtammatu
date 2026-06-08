@@ -15,7 +15,12 @@ export type InventoryBranchScope = {
   defaultBranchId: number | null;
 };
 
-const TENANT_WIDE_ROLES = new Set(["owner", "super_manager", "office"]);
+// HKD lean: tenant-wide inventory scope stays with owner/manager (former
+// owner/super_manager/office). The "office" arm collapsed into "staff", which
+// also covers branch staff (cashier/waiter) — including it would widen
+// tenant-wide branch visibility to every staff user, so it is intentionally
+// excluded here (no-widen).
+const TENANT_WIDE_ROLES = new Set(["owner", "manager"]);
 
 const fetchAllActiveBranches = cache(
   async (
@@ -53,8 +58,8 @@ function pickDefault(
  * selected. URL `?branchId=` wins if allowed; otherwise fall back to the
  * user's home branch, else first central_warehouse, else first allowed.
  *
- * - owner / super_manager / office → every active tenant branch
- * - other roles                    → locked to `claims.branch_id`
+ * - owner / manager → every active tenant branch
+ * - other roles     → locked to `claims.branch_id`
  */
 export const resolveInventoryBranchScope = cache(
   async (

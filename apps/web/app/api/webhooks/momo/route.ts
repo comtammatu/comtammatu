@@ -149,7 +149,7 @@ async function notifyStockConsumptionFailure(
   const { error } = await supabase.from("notifications").insert({
     tenant_id: input.tenantId,
     target_branch_id: input.branchId,
-    target_roles: ["owner", "super_manager", "branch_manager"],
+    target_roles: ["owner", "manager"],
     kind: "pos.payment_stock_failed",
     severity: "critical",
     title: "Thanh toán chưa thể hoàn tất do tồn kho",

@@ -11,23 +11,11 @@ import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 
 /* ─── Allowed roles ─── */
 
-const FETCH_ROLES: StaffRole[] = [
-  "owner",
-  "super_manager",
-  "area_manager",
-  "branch_manager",
-  "cashier",
-];
+const FETCH_ROLES: StaffRole[] = ["owner", "manager", "staff"];
 
-const CREATE_ROLES: StaffRole[] = [
-  "owner",
-  "super_manager",
-  "area_manager",
-  "branch_manager",
-  "cashier",
-];
+const CREATE_ROLES: StaffRole[] = ["owner", "manager", "staff"];
 
-const APPROVE_ROLES: StaffRole[] = ["owner", "super_manager"];
+const APPROVE_ROLES: StaffRole[] = ["owner", "manager"];
 
 /* ─── Schemas ─── */
 
@@ -273,11 +261,14 @@ export async function fetchRefunds(
 
   const { supabase, claims } = ctx;
 
-  // branch_manager and cashier: auto-scoped to their branch
-  const effectiveBranchId =
-    claims.user_role === "branch_manager" || claims.user_role === "cashier"
-      ? (claims.branch_id ?? undefined)
-      : parsed.data.branchId;
+  // HKD lean: branch-bound manager/staff (former branch_manager/cashier with a
+  // branch_id) auto-scope to their branch; tenant-wide actors keep the filter.
+  const branchLocked =
+    (claims.user_role === "manager" || claims.user_role === "staff") &&
+    claims.branch_id != null;
+  const effectiveBranchId = branchLocked
+    ? (claims.branch_id ?? undefined)
+    : parsed.data.branchId;
 
   let query = supabase
     .from("refunds")

@@ -9,13 +9,8 @@ import { getAuthContextWithPermission } from "@/_lib/auth";
 import { withAction } from "@/_lib/with-action";
 import { canAccessBranch } from "@/_lib/branch-scope";
 
-const HR_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
-const SHIFT_ROLES: readonly StaffRole[] = [
-  "owner",
-  "super_manager",
-  "area_manager",
-  "branch_manager",
-];
+const HR_ROLES: readonly StaffRole[] = ["owner", "manager"];
+const SHIFT_ROLES: readonly StaffRole[] = ["owner", "manager"];
 
 /* ─── Employees ─── */
 
@@ -113,9 +108,11 @@ const fetchShiftsSchema = z.object({
 export const fetchShifts = withAction(
   { roles: SHIFT_ROLES, schema: fetchShiftsSchema },
   async (data, { supabase, claims }) => {
-    // Branch scope: branch_manager can only access their own branch
+    // Branch scope: a branch-bound manager (branch_id set; former branch_manager)
+    // can only access their own branch. Tenant-wide manager is unrestricted.
     if (
-      claims.user_role === "branch_manager" &&
+      claims.user_role === "manager" &&
+      claims.branch_id != null &&
       claims.branch_id !== data.branchId
     ) {
       return { success: false, error: "Không có quyền truy cập chi nhánh này" };
@@ -177,7 +174,7 @@ export const fetchAttendance = withAction(
   { roles: SHIFT_ROLES, schema: fetchAttendanceSchema },
   async (data, { supabase, claims }) => {
     if (
-      claims.user_role === "branch_manager" &&
+      claims.user_role === "manager" && claims.branch_id != null &&
       claims.branch_id !== data.branchId
     ) {
       return { success: false, error: "Không có quyền truy cập chi nhánh này" };
@@ -226,7 +223,7 @@ export const checkIn = withAction(
   { roles: SHIFT_ROLES, schema: checkInSchema, requireBranchScope: true },
   async (data, { claims }) => {
     if (
-      claims.user_role === "branch_manager" &&
+      claims.user_role === "manager" && claims.branch_id != null &&
       claims.branch_id !== data.branchId
     ) {
       return { success: false, error: "Không có quyền truy cập chi nhánh này" };
@@ -300,7 +297,7 @@ export const fetchAttendanceSummary = withAction(
   { roles: SHIFT_ROLES, schema: fetchAttendanceSummarySchema },
   async (data, { supabase, claims }) => {
     if (
-      claims.user_role === "branch_manager" &&
+      claims.user_role === "manager" && claims.branch_id != null &&
       claims.branch_id !== data.branchId
     ) {
       return { success: false, error: "Không có quyền truy cập chi nhánh này" };
@@ -423,7 +420,7 @@ export const bulkCheckIn = withAction(
   { roles: SHIFT_ROLES, schema: bulkCheckInSchema, requireBranchScope: true },
   async (data, { claims }) => {
     if (
-      claims.user_role === "branch_manager" &&
+      claims.user_role === "manager" && claims.branch_id != null &&
       claims.branch_id !== data.branchId
     ) {
       return { success: false, error: "Không có quyền truy cập chi nhánh này" };

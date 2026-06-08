@@ -50,7 +50,7 @@ export async function createStocktakeSession(
   }
 
   if (
-    claims.user_role === "branch_manager" &&
+    claims.user_role === "manager" &&
     claims.branch_id !== parsedBranch.data
   ) {
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
@@ -98,7 +98,7 @@ export async function fetchStocktakeSessions(
     .eq("tenant_id", claims.tenant_id)
     .order("created_at", { ascending: false });
 
-  if (claims.user_role === "branch_manager" && claims.branch_id != null) {
+  if (claims.user_role === "manager" && claims.branch_id != null) {
     query = query.eq("branch_id", claims.branch_id);
   } else if (branchId) {
     query = query.eq("branch_id", branchId);
@@ -188,7 +188,7 @@ export async function fetchStocktakeDetail(
   }
 
   if (
-    claims.user_role === "branch_manager" &&
+    claims.user_role === "manager" &&
     claims.branch_id !== session.branch_id
   ) {
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
@@ -249,7 +249,7 @@ export const updateStocktakeLine = withAction(
     }
 
     if (
-      claims.user_role === "branch_manager" &&
+      claims.user_role === "manager" &&
       claims.branch_id !== session.branch_id
     ) {
       return { success: false, error: "Không có quyền truy cập chi nhánh này" };
@@ -360,7 +360,7 @@ export async function cancelStocktake(
   }
 
   if (
-    claims.user_role === "branch_manager" &&
+    claims.user_role === "manager" &&
     claims.branch_id !== session.branch_id
   ) {
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };

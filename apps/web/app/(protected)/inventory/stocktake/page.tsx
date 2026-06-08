@@ -49,7 +49,7 @@ export default async function StocktakePage({
     <StocktakeListClient
       initial={sessions}
       branches={branches}
-      userRole={claims?.user_role ?? "branch_manager"}
+      userRole={claims?.user_role ?? "staff"}
       userBranchId={scope?.selectedBranchId ?? null}
       routeBase="/inventory/stocktake"
     />

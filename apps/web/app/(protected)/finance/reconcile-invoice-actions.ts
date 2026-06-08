@@ -6,7 +6,7 @@
  * Counterpart to /api/cron/hddt-reconcile. Both share
  * apps/web/lib/hddt-reconcile.ts::reconcileSingleInvoice().
  *
- * Permission: settings:tenant (owner/super_manager only — per owner
+ * Permission: settings:tenant (owner/manager only — per owner
  * decision 2026-05-13). Reconcile is sensitive enough that we siết
  * gating to the same level as cancelTaxInvoice.
  *
@@ -28,7 +28,7 @@ import { getAuthContextWithPermission } from "@/_lib/auth";
 import { canAccessBranch } from "@/_lib/branch-scope";
 import { logAudit } from "@/_lib/audit";
 
-const FINANCE_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
+const FINANCE_ROLES: readonly StaffRole[] = ["owner", "manager"];
 
 const inputSchema = z.object({
   invoiceId: z.coerce.number().int().positive(),

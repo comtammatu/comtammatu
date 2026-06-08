@@ -6,7 +6,7 @@ import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 
-const MANAGER_ROLES = ["owner", "super_manager", "branch_manager"] as const;
+const MANAGER_ROLES = ["owner", "manager"] as const;
 const PRINT_TYPES = [
   "receipt",
   "provisional_bill",
@@ -54,9 +54,13 @@ export async function upsertPrinter(
 
   const { supabase, claims } = ctx;
 
+  // HKD lean: a branch-bound manager (branch_id set; former branch_manager) may
+  // only manage printers in their own branch. Tenant-wide manager (branch_id
+  // null; former super_manager) can manage any branch.
   if (
-    claims.user_role === "branch_manager" &&
-    (claims.branch_id == null || parsed.data.branch_id !== claims.branch_id)
+    claims.user_role === "manager" &&
+    claims.branch_id != null &&
+    parsed.data.branch_id !== claims.branch_id
   ) {
     return { success: false, error: "Không có quyền với chi nhánh này" };
   }
@@ -129,8 +133,10 @@ export async function deletePrinter(id: number): Promise<ActionResult> {
   if (!existing) {
     return { success: false, error: "Máy in không tồn tại" };
   }
+  // HKD lean: branch-bound manager (branch_id set) is limited to their branch.
   if (
-    claims.user_role === "branch_manager" &&
+    claims.user_role === "manager" &&
+    claims.branch_id != null &&
     existing.branch_id !== claims.branch_id
   ) {
     return { success: false, error: "Không có quyền với chi nhánh này" };

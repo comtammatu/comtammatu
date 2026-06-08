@@ -36,7 +36,12 @@ const updateStaffSchema = z.object({
 
 /* ─── Helpers ─── */
 
-const OPS_ROLES: StaffRole[] = ["cashier", "waiter", "chef", "branch_manager"];
+// HKD lean: operational floor roles that MUST belong to a branch. The former
+// branch_manager arm collapsed into "manager", but manager can also be a
+// tenant-wide actor (former area_manager/super_manager) that does NOT require a
+// branch, so manager is intentionally excluded here (no-widen on the
+// branch-required constraint). staff + chef are the floor roles.
+const OPS_ROLES: StaffRole[] = ["staff", "chef"];
 
 /** Roles allowed to manage staff (aligned with proxy staff module ACL). */
 const MANAGER_ROLES = MODULE_ACL.staff.allowedRoles;
@@ -46,24 +51,23 @@ const POSITION_ASSIGN_PERMISSIONS = [
   PERMISSION_KEYS.STAFF_ASSIGN_POSITION,
 ] as const;
 
-/** Max role each actor can assign (hierarchy ceiling) */
+/**
+ * Max role each actor can assign (hierarchy ceiling).
+ *
+ * HKD lean 4-role collapse: super_manager/area_manager/branch_manager all map to
+ * "manager". Because those source roles had different ceilings, the collapsed
+ * "manager" takes the MOST RESTRICTIVE ceiling (former branch_manager) so the
+ * collapse never widens assign authority: a manager may create staff/chef only,
+ * not owner or other managers. The DB RPC remains the authoritative check.
+ */
 function canAssignRole(
   actorRole: StaffRole,
   targetRole: StaffRole,
 ): string | null {
   if (actorRole === "owner") return null; // unrestricted
-  if (actorRole === "super_manager") {
-    if (targetRole === "owner") return "Không có quyền tạo chủ sở hữu";
-    return null;
-  }
-  if (actorRole === "area_manager") {
-    if (["owner", "super_manager", "area_manager"].includes(targetRole))
-      return "Không có quyền gán vai trò cao hơn quản lý chi nhánh";
-    return null;
-  }
-  if (actorRole === "branch_manager") {
-    if (!["cashier", "waiter", "chef"].includes(targetRole))
-      return "Bạn chỉ có thể tạo thu ngân/phục vụ/bếp";
+  if (actorRole === "manager") {
+    if (!["staff", "chef"].includes(targetRole))
+      return "Bạn chỉ có thể tạo nhân viên/bếp";
     return null;
   }
   return "Không có quyền quản lý nhân viên";
@@ -143,8 +147,10 @@ export async function createStaff(
     return { success: false, error: roleError };
   }
 
-  // Branch managers can only create staff in their own branch
-  if (claims.user_role === "branch_manager") {
+  // HKD lean: a branch-bound manager (branch_id set; former branch_manager) can
+  // only create staff in their own branch. Tenant-wide manager (branch_id null)
+  // is unrestricted here.
+  if (claims.user_role === "manager" && claims.branch_id != null) {
     if (branch_id !== claims.branch_id) {
       return {
         success: false,

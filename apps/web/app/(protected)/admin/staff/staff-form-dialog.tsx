@@ -47,7 +47,7 @@ function toFormValues(staff: StaffRow | null | undefined): StaffFormValues {
     password: "",
     full_name: staff?.full_name ?? "",
     phone: staff?.phone ?? "",
-    role: staff?.role ?? "waiter",
+    role: staff?.role ?? "staff",
     branch_id: staff?.branch_id != null ? String(staff.branch_id) : NO_BRANCH,
   };
 }
@@ -87,12 +87,10 @@ export function StaffFormDialog({
   );
 
   const branchChoices = useMemo(() => {
-    if (selectedRole === "warehouse_manager") {
-      return branches.filter((b) => b.branch_kind === "central_warehouse");
-    }
-    if (selectedRole === "production_manager") {
-      return branches.filter((b) => b.branch_kind === "central_kitchen");
-    }
+    // HKD lean: the warehouse_manager / production_manager arms collapsed into
+    // "staff" (an HQ-excluded operational role), so the central-warehouse /
+    // central-kitchen special-casing is gone — staff/chef pick operational
+    // branches only.
     if (HQ_EXCLUDED_OPERATIONAL_ROLES.includes(selectedRole as StaffRole)) {
       return branches.filter((b) => {
         const kind = b.branch_kind;

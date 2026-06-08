@@ -90,7 +90,7 @@ export async function markKdsItemOutOfStock(
     };
   }
 
-  const ctx = await getAuthContext(["chef", "branch_manager"]);
+  const ctx = await getAuthContext(["chef", "manager"]);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   if (
@@ -205,7 +205,7 @@ export async function fetchKdsCompletionHistory(
     };
   }
 
-  const ctx = await getAuthContext(["chef", "branch_manager"]);
+  const ctx = await getAuthContext(["chef", "manager"]);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   if (

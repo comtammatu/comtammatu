@@ -3,7 +3,7 @@
 /**
  * HĐĐT Replace flow — Path C (TT78/2021 §7 + NĐ 70/2025).
  *
- * User-path: owner/super_manager corrects buyer info errors on an
+ * User-path: owner/manager corrects buyer info errors on an
  * issued invoice. Server orchestrates:
  *   1. `replace_tax_invoice` RPC (SECURITY DEFINER + permission-gated):
  *      atomic dual transition — flips OLD to 'replaced', inserts NEW
@@ -40,7 +40,7 @@ import { getAuthContextWithPermission } from "@/_lib/auth";
 import { canAccessBranch } from "@/_lib/branch-scope";
 import { logAudit } from "@/_lib/audit";
 
-const FINANCE_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
+const FINANCE_ROLES: readonly StaffRole[] = ["owner", "manager"];
 
 const MST_REGEX = /^\d{10}(-\d{3})?$/;
 

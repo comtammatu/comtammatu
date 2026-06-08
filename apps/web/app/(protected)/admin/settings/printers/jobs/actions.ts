@@ -6,7 +6,7 @@ import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 
-const MANAGER_ROLES = ["owner", "super_manager", "branch_manager"] as const;
+const MANAGER_ROLES = ["owner", "manager"] as const;
 
 const jobIdSchema = z.coerce
   .number()
