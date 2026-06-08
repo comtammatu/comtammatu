@@ -67,8 +67,10 @@
 > ✅ **DB PHASE COMPLETE (P2 + P2.5 + V17):** lean baseline **57 bảng / 179 fn**, fully self-consistent (0 fn ref bảng vắng mặt), apply sạch + replay-faithful + boot end-to-end (login→grant→POS→KDS→print→cash→GRN→stocktake-variance). 8 commit. Tiếp = P3 (app).
 
 **P3 — Xoá CUT + repoint app + types** (V17 DB-side DONE ở trên)
-- [ ] V15 regen types từ uozwee (lean 57) → red-typecheck = worklist
-- [ ] V16 xoá GL/production/payroll/transfer/waste trees + rebuild finance/inventory page
+- [x] V15 regen types worklist captured ✅ — **817 lỗi / 66 file, 100% apps/web** (packages sạch); KEEP-RPC còn nguyên (verified); chỉ 8 RPC thiếu. (types regen tạm revert về stale để DB-commit xanh; V16 regen lại + align app.)
+- [x] **V15.5 re-add KEEP-feature DB ✅ adversarial CLEAN (59 bảng):** item-discount (cols+RPC, fold Codex mig 20260608090000 + FIX role-regression khiến lean cashier bị cấm discount) · lean shift_assignments/shift_requests + submit/cancel/approve/reject RPC + RLS · amend_grn_line lean · notifications.read_at + count/mark-unread (bỏ notification_reads). leave_requests bỏ (clock không dùng). seed +`procurement:grn_amend`.
+  - [ ] **→ V16 follow-up:** `_actions/notifications.ts` còn ref `notification_reads` junction (listNotifications/markNotificationRead) → refactor sang `read_at`; stale test `kds/__tests__/edit-pending-quantity-print.test.ts` → update/remove.
+- [ ] V16 regen types (MCP `mcp__68a5e189…generate_typescript_types` project=uozwee) → xoá GL/production/payroll/transfer/waste/PO/areas/contracts trees + rebuild finance/inventory page + repoint (notifications read_at, momo stock_consumed_status, printer routing simplify, drop register_branch_presence/upsert_printer_with_routes call sites) → typecheck XANH
 - [ ] V18 employee-scheduling repoint (decision: lean shift table vs manual) — clock files của Codex
 - [ ] V19 drift-linter — **mở rộng: bắt cả app→dropped-RPC** (V17 drop 69 fn; app còn ~30 call site dropped RPC: `create_grn_from_po`/`approve_waste`/`stock_transfer_*`/gl-journal/`enqueue_cancel|edit|partial_cancel_ticket_print`/`upsert_recipe_lines`/`count_unread|mark_all_notifications_read`/`register_branch_presence`/`verify_branch_override_code`... → 42883 runtime nếu gọi; xoá ở V16)
 - [ ] V8-app role collapse (STAFF_ROLES/module-acl/JwtClaims/proxy/~137 file) + dead central inventory logic

@@ -28,12 +28,14 @@ function readEnvLocalProjectId() {
   return "";
 }
 
-// Last-resort fallback ONLY. This is PROD (iexws) which is UNCUT — reaching it
-// means SUPABASE_PROJECT_ID is unset AND .env.local has none, a dev-machine
-// misconfiguration. Pulling types from prod reintroduces dropped columns
-// (e.g. legacy_role_code). Prefer the env var or .env.local (= matu-dev, the
-// greenfield-cut dev source).
-const DEV_PROJECT_ID = "iexwsuaqqenyjiskawoj";
+// Last-resort fallback ONLY. This is the lean greenfield DEV DB
+// (uozweehdeyflukijrynf = "matu-greenfield", the 57-table cut schema).
+// Reaching it means SUPABASE_PROJECT_ID is unset AND .env.local has none, a
+// dev-machine misconfiguration. The fallback must NOT point at PROD (iexws,
+// UNCUT) because pulling types from prod reintroduces dropped tables/columns
+// (e.g. legacy_role_code, GL/production/payroll/transfer/waste/PO). Prefer the
+// env var or .env.local; this default targets the greenfield-cut dev source.
+const DEV_PROJECT_ID = "uozweehdeyflukijrynf";
 const projectId =
   process.env["SUPABASE_PROJECT_ID"]?.trim() ||
   readEnvLocalProjectId() ||

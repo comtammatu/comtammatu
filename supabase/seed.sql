@@ -111,6 +111,7 @@ VALUES
   ('procurement:read',              'procurement','Xem nhập hàng',                       'either'),
   ('procurement:grn_create',        'procurement','Tạo phiếu nhập',                      'branch'),
   ('procurement:grn_confirm',       'procurement','Xác nhận phiếu nhập',                 'branch'),
+  ('procurement:grn_amend',         'procurement','Sửa phiếu nhập đã chốt',              'branch'),
   ('procurement:invoice_create',    'procurement','Tạo hóa đơn NCC',                     'either'),
   ('procurement:supplier_manage',   'procurement','Quản lý NCC',                         'tenant'),
   -- orders
