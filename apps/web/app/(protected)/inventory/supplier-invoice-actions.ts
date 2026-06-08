@@ -16,7 +16,10 @@ const invoiceSchema = z.object({
   supplierId: z.coerce.number().int().positive(),
   grnId: z.coerce.number().int().positive().optional().nullable(),
   poId: z.coerce.number().int().positive().optional().nullable(),
-  invoiceNumber: z.string().min(1),
+  // Optional: small suppliers / market buys often issue no invoice number.
+  // Stored as NULL when blank; the (invoice_number, supplier_id, tenant_id)
+  // UNIQUE still dedups numbered invoices (NULLs are distinct in Postgres).
+  invoiceNumber: z.string().trim().max(100).optional(),
   invoiceDate: z.string(),
   subtotal: z.coerce.number().min(0),
   vatRate: z.coerce.number().min(0).default(8),
@@ -55,7 +58,7 @@ export const createSupplierInvoice = withAction(
         supplier_id: data.supplierId,
         grn_id: data.grnId ?? null,
         po_id: data.poId ?? null,
-        invoice_number: data.invoiceNumber,
+        invoice_number: data.invoiceNumber || null,
         invoice_date: data.invoiceDate,
         subtotal: data.subtotal,
         vat_rate: data.vatRate,

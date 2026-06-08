@@ -15717,7 +15717,7 @@ CREATE TABLE public.supplier_invoices (
     supplier_id bigint NOT NULL,
     grn_id bigint,
     po_id bigint,
-    invoice_number text NOT NULL,
+    invoice_number text,
     invoice_date timestamp with time zone NOT NULL,
     subtotal numeric(15,2) NOT NULL,
     vat_rate numeric(5,2) DEFAULT 8.00 NOT NULL,

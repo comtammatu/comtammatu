@@ -3674,7 +3674,7 @@ export type Database = {
           grn_id: number | null
           id: number
           invoice_date: string
-          invoice_number: string
+          invoice_number: string | null
           matching_notes: string | null
           paid_amount: number
           paid_at: string | null
@@ -3695,7 +3695,7 @@ export type Database = {
           grn_id?: number | null
           id?: never
           invoice_date: string
-          invoice_number: string
+          invoice_number?: string | null
           matching_notes?: string | null
           paid_amount?: number
           paid_at?: string | null
@@ -3716,7 +3716,7 @@ export type Database = {
           grn_id?: number | null
           id?: never
           invoice_date?: string
-          invoice_number?: string
+          invoice_number?: string | null
           matching_notes?: string | null
           paid_amount?: number
           paid_at?: string | null

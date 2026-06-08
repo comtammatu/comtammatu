@@ -313,10 +313,6 @@ export function SupplierInvoicesClient({
       toast.error("Chọn nhà cung cấp hoặc GRN liên kết.");
       return;
     }
-    if (!invoiceNumber.trim()) {
-      toast.error("Nhập số hóa đơn.");
-      return;
-    }
     if (numericSubtotal <= 0) {
       toast.error("Nhập giá trị hóa đơn hợp lệ.");
       return;
@@ -326,7 +322,7 @@ export function SupplierInvoicesClient({
       const res = await createSupplierInvoice({
         supplierId: resolvedSupplierId,
         grnId: selectedGrn?.id ?? null,
-        invoiceNumber: invoiceNumber.trim(),
+        invoiceNumber: invoiceNumber.trim() || undefined,
         invoiceDate,
         subtotal: numericSubtotal,
         vatRate: numericVatRate,
@@ -499,7 +495,7 @@ export function SupplierInvoicesClient({
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0 space-y-1">
                             <p className="font-mono text-base font-semibold">
-                              {invoice.code}
+                              {invoice.code || copy.noNumber}
                             </p>
                             <p className="truncate text-sm text-muted-foreground">
                               {invoice.supplierName}
@@ -624,7 +620,7 @@ export function SupplierInvoicesClient({
                         <TableCell>
                           <div className="space-y-1">
                             <p className="font-mono font-semibold text-foreground">
-                              {invoice.code}
+                              {invoice.code || copy.noNumber}
                             </p>
                             {invoice.grnCode ? (
                               <p className="text-xs text-muted-foreground">
@@ -914,7 +910,7 @@ export function SupplierInvoicesClient({
             </div>
 
             <div className="grid gap-2">
-              <Label>{copy.invoiceNumber}</Label>
+              <Label>{copy.invoiceNumberOptional}</Label>
               <Input
                 value={invoiceNumber}
                 onChange={(event) => setInvoiceNumber(event.target.value)}

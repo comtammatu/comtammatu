@@ -112,7 +112,7 @@ export async function fetchRecentActivity(
     ...(invRes.data ?? []).map((inv) => ({
       id: inv.id,
       type: "invoice" as const,
-      code: inv.invoice_number,
+      code: inv.invoice_number ?? "—",
       supplier:
         (inv.suppliers as { name: string } | null)?.name ?? "Không rõ NCC",
       date: inv.invoice_date ?? "",

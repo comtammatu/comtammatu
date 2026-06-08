@@ -699,6 +699,8 @@ export const inventory = {
     analyzing: "Đang xem phân tích",
     viewAnalysis: "Xem phân tích",
     invoiceNumber: "Số hóa đơn",
+    invoiceNumberOptional: "Số hóa đơn (tùy chọn)",
+    noNumber: "(không số)",
     supplier: "Nhà cung cấp",
     dateDue: "Ngày / hạn",
     duePrefix: (date: string) => `Hạn: ${date}`,
