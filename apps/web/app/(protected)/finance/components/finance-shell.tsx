@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
   BarChart3 as IconBarChart3,
+  Coins as IconCoins,
   ReceiptText as IconReceiptText,
   Wallet as IconWallet,
 } from "lucide-react";
@@ -25,6 +26,11 @@ const NAV_GROUPS: ShellNavGroup[] = [
         href: "/finance",
         label: financeCopy.nav.items.todayMoney,
         icon: IconWallet,
+      },
+      {
+        href: "/finance/cash-book",
+        label: financeCopy.nav.items.cashBook,
+        icon: IconCoins,
       },
       {
         href: "/finance/revenue",
