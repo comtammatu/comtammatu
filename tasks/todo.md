@@ -83,9 +83,10 @@
 - [x] **V22 ✅** money integration suite (12 test trên uozwee, rolled-back, **assert SALE→0 stock_movements**) + wire `pnpm test` vào CI (đóng gap "CI không chạy test"); +11 unit test (rate-limit 5, config-guard 6) → 305 unit.
 - [x] **V24 ✅** rate-limiter login **fail-CLOSED** trên prod khi Upstash chưa cấu hình + unit test. (perf: dead MV/refresh đã sạch từ V11/V13.)
 - [x] **V21 ✅** HĐĐT config-guard (`/api/health` 503 + createTaxInvoice draft-fallback signal/notification) + seller-name từ `system_settings` (3 site CTCP fixed) + VAT từ settings. reconcile đã gỡ ở V16 (dead).
-- [ ] **V20 cash-book UI** (cần chủ: UX form thu/chi trong design-system) · **V23 UX beat-Excel + scorecard điện-thoại** (cần chủ đo) — owner-involved, để sau.
+- [x] **V20 cash-book UI ✅** (commit `8e13ee7d`) — `/finance/cash-book` thu/chi + tổng kỳ, append-only trên `cash_entries` (RLS sẵn có, đã có integration test INSERT/SELECT). Gates xanh.
 - [x] **e2e cleanup ✅** (chip V19, commit `95de3066`): dropped cut-feature inventory e2e (transfer-direction/issue-label) + de-referenced dropped tables in grn-procurement/helpers.
-- [ ] **V20 cash-book UI** (cần chủ: UX form thu/chi trong design-system) · **V23 UX beat-Excel + scorecard điện-thoại** (cần chủ đo) — owner-involved, để sau. *(dup of line above — owner-gated)*
+- [~] **V23 scorecard prep ✅ (agent done)** — pre-validate tĩnh 5 luồng (workflow `wf_be075699`): ✅ HĐĐT-khách-không-lấy (0 tap) · ✅ doanh-thu (≤1 tap); ⚠️ order (BORDERLINE 4–8 tap, AlertDialog +1); ❌ **chốt ca (9 ô mệnh giá → ~11–13 tap, target ≤5 KHÔNG đạt)** · ❌ chấm-công (2 tap nếu QR auto-submit, 3–4 nếu nhập tay). **Cần chủ quyết:** chốt-ca single-total vs giữ breakdown; rồi đo điện thoại thật.
+- [ ] **V23 UX beat-Excel** (GRN lump-sum/paste-Zalo · supplier-invoice số HĐ optional · SKU import xlsx · adjust toggle Thêm/Bớt/Đặt) — vài mục cần chủ chốt format/decision (paste-Zalo, supplier "Khác" BLOCKED-PRODUCT).
 
 **P5 — Docs** · [x] **✅ DONE (commit `b257e482`)** — reframe ~31 docs CTCP→HKD lean (4 roles · flat-branch · no-deduct · cash-book · HĐĐT · lean inventory); CTCP/VAS/payroll banner-fenced as historical only; `database-schema.md`→59 tables; `CODEBASE_MAP`→1-app lean; `setup.md` seed→4 roles; promote durable rules (`use server` no-reexport · separation-not-LoC · docs-lean · SSoT) → `docs/agent/rules/` + AGENTS.md mirror; sync `database.md` refs (greenfield dev=uozwee). Excludes owner's `binh-ma-tu-tiktok`.
 
