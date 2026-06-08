@@ -84,9 +84,10 @@
 - [x] **V24 ✅** rate-limiter login **fail-CLOSED** trên prod khi Upstash chưa cấu hình + unit test. (perf: dead MV/refresh đã sạch từ V11/V13.)
 - [x] **V21 ✅** HĐĐT config-guard (`/api/health` 503 + createTaxInvoice draft-fallback signal/notification) + seller-name từ `system_settings` (3 site CTCP fixed) + VAT từ settings. reconcile đã gỡ ở V16 (dead).
 - [ ] **V20 cash-book UI** (cần chủ: UX form thu/chi trong design-system) · **V23 UX beat-Excel + scorecard điện-thoại** (cần chủ đo) — owner-involved, để sau.
-- [ ] **e2e cleanup** (chip V19): `e2e/inventory/*` có thay đổi uncommitted (xoá transfer-direction/issue-label spec + sửa grn-procurement/helpers) — provenance chưa rõ, chưa verify → review + commit riêng.
+- [x] **e2e cleanup ✅** (chip V19, commit `95de3066`): dropped cut-feature inventory e2e (transfer-direction/issue-label) + de-referenced dropped tables in grn-procurement/helpers.
+- [ ] **V20 cash-book UI** (cần chủ: UX form thu/chi trong design-system) · **V23 UX beat-Excel + scorecard điện-thoại** (cần chủ đo) — owner-involved, để sau. *(dup of line above — owner-gated)*
 
-**P5 — Docs** · [ ] reframe CTCP→HKD + sync `database.md` refs + V24b promote rules→`docs/agent/rules/`
+**P5 — Docs** · [x] **✅ DONE (commit `b257e482`)** — reframe ~31 docs CTCP→HKD lean (4 roles · flat-branch · no-deduct · cash-book · HĐĐT · lean inventory); CTCP/VAS/payroll banner-fenced as historical only; `database-schema.md`→59 tables; `CODEBASE_MAP`→1-app lean; `setup.md` seed→4 roles; promote durable rules (`use server` no-reexport · separation-not-LoC · docs-lean · SSoT) → `docs/agent/rules/` + AGENTS.md mirror; sync `database.md` refs (greenfield dev=uozwee). Excludes owner's `binh-ma-tu-tiktok`.
 
 **P6 — Cutover (OWNER-GATED)** · [ ] V25 ETL `migrate-data.sql` + runbook + reconcile fail-loud
 
