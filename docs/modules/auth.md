@@ -126,6 +126,8 @@ Defined in `packages/shared/src/auth/module-acl.ts`. Single source of truth — 
 > `wh_mgr` = `warehouse_manager`, `prod_mgr` = `production_manager`. Route-level ACL đọc `user_role` từ JWT, derived từ `positions.legacy_role_code`. Row-level authz vẫn đi qua `has_permission(branch_id, key)` — matrix này chỉ là fast gate.
 >
 > Inventory mutating RPC chính đã permission-gated; phần `auth_role()` còn lại là route/side/scope guard hoặc legacy helper. Xem `docs/ref/inventory-rbac-matrix.md` §6.
+>
+> Runner direct route (`/br/[branchId]/runner`) is public read-only for the customer display. The ACL row above is still used for authenticated staff discovery/nav and post-login return handling, not as a login requirement for the customer board.
 
 **Cổng nhân viên boundary:** `employee` là bề mặt self-service / bàn giao vận hành cho staff không thuộc `ADMIN_ROLES`. `owner` và `super_manager` không vào `/employee/*`; request trực tiếp được đưa về Admin default route.
 
@@ -148,19 +150,19 @@ Defined in `packages/shared/src/auth/module-acl.ts`. Single source of truth — 
 
 The `proxy(request)` function evaluates in order:
 
-1. **Public paths bypass auth:** `/api/health`, `/api/webhooks`, `/sw.js`, `/access-denied` (`route-resolution.ts:isPublicAppPath`). The access-denied page is public so a blocked-but-authenticated user can read the copy without re-entering the ACL loop.
+1. **Public paths bypass auth:** `/api/health`, `/api/webhooks`, `/sw.js`, `/access-denied`, `/payment/momo/*`, `/r/*`, and `/br/[branchId]/runner` (`route-resolution.ts:isPublicAppPath`). The access-denied page is public so a blocked-but-authenticated user can read the copy without re-entering the ACL loop.
 2. **Legacy canonical redirects:** `/admin/finance/*` redirects to `/finance/*` through `resolveLegacyRouteRedirectPath()` before module ACL. The same helper is used by post-login `returnTo` resolution.
 3. **Login page:** authenticated users bounce to `resolvePostLoginRedirect(claims, returnTo, { surface })`; unauthenticated users see the form.
 4. **Unauthenticated → `/login?returnTo=<current-url>`** (surface-aware: beta users go to `/beta/login`).
 5. **Claims extraction:** if `extractClaims()` returns null, proxy redirects to `/access-denied?reason=missing-auth-context&from=<path>`. Proxy **does not** fabricate claims.
 6. **Module ACL:** `resolveModuleFromPath(pathname)` maps URL → `ModuleKey`; `canAccess(role, moduleKey)` gates. Failure → `/access-denied?reason=insufficient-permission&from=<path>`, except disallowed Admin URLs and admin-level `/employee/*` visits redirect to the role's Admin default route.
-7. **Branch-scope for POS/KDS/Runner/branch settings/menu limits:** if a branch-scoped URL is not reachable for the user's branch assignment → `/access-denied?reason=branch-scope-mismatch`. POS/KDS/Runner also reject `central_warehouse`/`central_kitchen` branches. These checks live in proxy; downstream layouts do not re-implement them.
+7. **Branch-scope for POS/KDS/branch settings/menu limits:** if a branch-scoped authenticated URL is not reachable for the user's branch assignment → `/access-denied?reason=branch-scope-mismatch`. POS/KDS also reject `central_warehouse`/`central_kitchen` branches in proxy. Public Runner rejects non-operational branch kinds in its server component and reads only the minimal queue columns.
 
 The resolver `resolvePostLoginRedirect(claims, returnTo, { surface?: "legacy" | "beta" })` (`packages/shared/src/auth/scope.ts`) is the **single** post-login destination function. Surface controls beta-prefix wrapping; the underlying ACL + branch-scope rules are shared. Unit tests live in `packages/shared/src/auth/__tests__/scope.test.ts` (run `pnpm --filter @comtammatu/shared test`).
 
 ### Invariant
 
-> _After `proxy()` returns, any layout or page downstream can assume: the user is authenticated, claims are valid, the role has module access, and — for branch-scoped `/br/[branchId]/*` surfaces — branch scope matches._
+> _After `proxy()` returns for authenticated app surfaces, any layout or page downstream can assume: the user is authenticated, claims are valid, the role has module access, and — for branch-scoped `/br/[branchId]/*` operator surfaces — branch scope matches._
 
 `loadAuthState()` throws if the invariant is violated. This surfaces proxy gaps via `error.tsx` rather than masking them with silent redirects.
 
@@ -183,8 +185,8 @@ The resolver `resolvePostLoginRedirect(claims, returnTo, { surface?: "legacy" | 
 
 - `insufficient-permission` — role hiện tại không vào được module/route đó
 - `missing-auth-context` — session có user nhưng không resolve được claims cần thiết để authorize
-- `branch-scope-mismatch` — URL có `branchId` nhưng `claims.branch_id` khác hoặc null (POS/KDS/Runner)
-- `warehouse-branch-restricted` — POS/KDS/Runner mở trên branch thuộc kind `warehouse` / `central_kitchen`
+- `branch-scope-mismatch` — URL có `branchId` nhưng `claims.branch_id` khác hoặc null (POS/KDS và các operator branch routes có Auth)
+- `warehouse-branch-restricted` — POS/KDS mở trên branch thuộc kind `warehouse` / `central_kitchen`
 - `headquarters-branch-restricted` — reserved cho future use (không emit hiện tại)
 
 Nếu reason code bị thiếu hoặc lạ, `/access-denied` fallback về copy generic (`DEFAULT_BLOCKED_STATE_COPY`) thay vì crash.

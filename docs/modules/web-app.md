@@ -88,7 +88,7 @@ apps/web/app/
 │   │   ├── actions.ts      # bump/recall tickets, station CRUD, category mapping
 │   │   ├── kds-board.tsx   # "use client" — realtime ticket board with Supabase subscription
 │   │   └── order-card.tsx  # Individual order card with bump/recall buttons
-│   ├── runner/             # Runner customer call screen (cashier, waiter, chef, branch_manager)
+│   ├── runner/             # Public read-only Runner customer call screen
 │   │   ├── layout.tsx      # Auth + ACL + branch validation
 │   │   ├── page.tsx        # Read-only customer-facing queue display
 │   │   └── runner-realtime-refresh.tsx # "use client" — realtime invalidation + poll fallback

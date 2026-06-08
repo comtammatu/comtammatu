@@ -1,20 +1,17 @@
-# Greenfield Supabase Bundle
+# `supabase/greenfield/` — HKD lean DB rebuild tooling
 
-This directory is not the production migration chain.
+DB-side tooling for rebuilding comtammatu's schema lean for a Hộ Kinh Doanh.
+The OUTPUT (canonical lean baseline) lives at
+[`../migrations/00000000000000_baseline.sql`](../migrations/00000000000000_baseline.sql).
 
-Files under `supabase/greenfield/migrations/` are rehearsal SQL for the
-owner-approved greenfield target `staging` / `jmasiwuqiyedqvyfzhuq`. They must
-not be applied through the normal production migration flow and must not be
-moved into `supabase/migrations/` as-is.
+- **`lean-cutover.sql`** — the transform applied on top of the complete prod
+  schema: drops ~61 tables + 16 GL/production/transfer RPCs, drops GL FK columns,
+  adds `cash_entries`. (RPC de-wire lives in `verify/dewire-rpcs.sql`.)
+- **`verify/`** — `build-lean.sh` regenerates + replay-from-empty-verifies the
+  lean baseline from current prod truth; `supa-shim.sql` + `dewire-rpcs.sql` are
+  its inputs. See [`verify/README.md`](verify/README.md).
 
-Use `docs/runbooks/supabase-greenfield-baseline.md` for the application order
-and acceptance gates. If a greenfield rehearsal change should graduate to the
-active production path, author a separate production-reviewed migration under
-`supabase/migrations/`.
-
-Boundary rules:
-
-- `supabase/migrations/` is the production-forward chain.
-- `supabase/greenfield/migrations/` is greenfield rehearsal only.
-- `pnpm lint:db-boundary` fails if greenfield-only SQL appears in the
-  production migration chain.
+Frozen inputs (the old in-place migrations folded into the baseline) live under
+[`../_legacy/`](../_legacy/README.md). The previous "greenfield rehearsal" model
+(per-migration SQL under `greenfield/migrations/`) is retired — the lean baseline
+is now a single replayable artifact.

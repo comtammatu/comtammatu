@@ -19,9 +19,7 @@ Checklist vận hành và readiness gates.
 
 ## Supabase / Schema / Migration
 
-- [matu-dev-migration-squash-2026-05-30.md](matu-dev-migration-squash-2026-05-30.md): consolidate the 378-file migration chain into a replayable baseline, proven by rebuilding matu-dev (PLAN — owner-gated, matu-dev only)
-- [supabase-greenfield-baseline.md](supabase-greenfield-baseline.md): package + verify a clean baseline (toolchain + safety rails) for the greenfield target
-- [greenfield-prod-cutover-2026-05-29.md](greenfield-prod-cutover-2026-05-29.md): owner-executed production migration cutover
+- Lean DB baseline + build/verify tooling: [`supabase/greenfield/`](../../supabase/greenfield/README.md) (`build-lean.sh`). The old migration-squash / greenfield-rehearsal / prod-cutover runbooks were retired with that model.
 
 ## Cách dùng
 

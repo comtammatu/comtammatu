@@ -79,7 +79,7 @@ pos-after*.png
 .understand-anything/
 
 # context-graph (large JSON, regenerate with: context-graph analyze .)
-.context-graph/graph.json
+.context-graph/
 .vercel
 
 # Supabase live baseline snapshots (local, regenerable via supabase db dump)

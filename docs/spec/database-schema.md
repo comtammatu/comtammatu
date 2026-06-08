@@ -27,22 +27,20 @@ the 241 RPC/SQL-callable) · **273 public RLS policies · 523 indexes · 14
 The early-2026 hand-written table-by-table reference has been removed. Use the
 source ladder below instead of resurrecting stale schema dumps.
 
-## Migration layout (baseline-first — 2026-05-30)
+## Migration layout (lean baseline — 2026-06-07)
 
-The 378-file incremental chain could not replay from an empty DB (ordering bug at
-`20260508055046`), so it was consolidated:
+> ⚠️ The schema details below still describe the **in-place 116-table track** (now
+> frozen). The canonical DB going forward is the **HKD lean baseline (58 tables)** —
+> this spec's table-by-table content is pending the CTCP→HKD reframe.
 
-- `supabase/migrations/00000000000000_baseline.sql` — canonical public-schema
-  install; validated to replay on an empty DB (rebuilt matu-dev exactly).
-- `supabase/migrations/<timestamp>_*.sql` after it — forward migrations on the baseline.
-- `supabase/migrations/_archive/` — the 379 historical migrations (retained, NOT applied).
-- `supabase/managed-surfaces.install.sql` — extensions / storage buckets + RLS
-  policies / realtime publication / cron jobs (excluded by `--schema=public`),
-  applied after the baseline on a fresh env (storage-policy section needs
-  `storage.objects` owner).
-- **Option X**: production keeps its applied migration history; the baseline is the
-  fresh/dev install path. Regenerate via `pnpm db:baseline:extract -- --project-ref=<matu-dev>`
-  (Docker-free libpq engine). Runbook: `docs/runbooks/matu-dev-migration-squash-2026-05-30.md`.
+- `supabase/migrations/00000000000000_baseline.sql` — the **lean baseline** (58 tables,
+  self-contained, replay-from-empty verified). Regenerated from current prod truth via
+  `supabase/greenfield/verify/build-lean.sh`.
+- `supabase/managed-surfaces.install.sql` — extensions / storage buckets + RLS / realtime
+  / cron companion, applied after the baseline on a fresh env.
+- `supabase/_legacy/` — the **frozen** pre-lean in-place track (old baseline, the 379
+  historical migrations, rollbacks); production runs it until the Greenfield cutover.
+  See `supabase/_legacy/README.md`.
 
 ## Source Ladder
 
