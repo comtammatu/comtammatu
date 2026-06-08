@@ -59,6 +59,14 @@ The `position` claim was added in migration `20260423020000_auth_v2_m5_bridge.sq
 - ACL single source: `packages/shared/src/auth/module-acl.ts`.
 - Do not create a second auth policy layer in UI helpers.
 
+## Intentional Exceptions (Do Not "Fix")
+
+These are deliberate KEEPs in the lean HKD baseline. Do not relitigate or "correct" them without an owner decision:
+
+- **`tenant_id` retained though single-tenant.** The business is one Hộ Kinh Doanh, but `tenant_id` stays on tenant-scoped tables as the canonical scope key (RLS predicate `tenant_id = auth_tenant_id()`, JWT claim). It is a deliberate scope mechanism, not dead multi-tenant scaffolding.
+- **UNIQUE scope via FK transitivity.** The default rule is `UNIQUE(field, tenant_id)`. Some child tables omit an explicit `tenant_id` in a UNIQUE constraint when the parent FK already guarantees tenant scope transitively (e.g. a line table unique on `(parent_id, ...)` where `parent_id` is itself tenant-scoped). These are intentional exceptions to the composite-unique rule, not bugs.
+- **`BMIDL-RLS-INTENTIONAL-ROLE-FASTPATH`.** `branch_menu_item_daily_limits` gates RLS via `auth_role()` (the JWT role fast-path), **not** `has_permission()`. This is intentional: the table is non-destructive and read-mostly, so the ~1h stale-revoke window of the role fast-path is acceptable. Use `has_permission()` only for destructive/instant-revoke gates (see `docs/modules/auth.md` → "RLS Gate Choice"). Do not migrate BMIDL to `has_permission()`.
+
 ## Known Failure Patterns
 
 - `"use client"` plus `@comtammatu/database` barrel import causes build failures.

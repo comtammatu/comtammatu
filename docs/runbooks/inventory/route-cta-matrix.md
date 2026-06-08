@@ -1,5 +1,9 @@
 # Inventory Route CTA Matrix
 
+> ## ⚠️ LEAN HKD REFRAME (2026-06) — đọc trước
+>
+> Ma trận bên dưới liệt kê cả các route **multi-warehouse cũ đã CUT** (transfers, production, purchase-orders, issues, waste, supplier-returns, m/ mobile, inventory_locations). Mô hình hiện hành là **flat-branch**; chỉ giữ các route: `ingredients`, `suppliers`, `grn` (+ new), `stock`, `stocktake`, `expiry`/alerts, `reports`, `supplier-invoices` (công nợ). Roles: `owner`/`manager`/`staff`/`chef`. Bỏ qua các dòng route đã CUT khi audit.
+
 > Ma trận source of truth cho audit UI/UX theo route, section, và button/CTA.
 >
 > Ghi chú:

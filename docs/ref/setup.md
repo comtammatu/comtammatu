@@ -98,24 +98,17 @@ WHERE id = '<user-uuid>';
 
 Preferred CLI: `supabase db query --linked --file supabase/seed.sql`. SQL Editor fallback: run `scripts/sql/dev/seed_dev_auth_users.sql` as role `postgres`. The seed is idempotent and can be rerun.
 
-Mật khẩu tất cả: `Test1234!`. Bao phủ toàn bộ `STAFF_ROLES`:
+Mật khẩu tất cả: `Test1234!`. Bao phủ **4 vai lean** `STAFF_ROLES` = `owner` / `manager` / `staff` / `chef` (flat-branch HKD — đã bỏ HQ/area/central-warehouse/central-kitchen + các vai super_manager/area_manager/warehouse_manager/production_manager; cashier·waiter → `staff`, branch_manager → `manager`):
 
-| Email                            | Role                 | Scope                           |
-| -------------------------------- | -------------------- | ------------------------------- |
-| `owner@comtammatu.vn`            | `owner`              | Tenant (pin HQ)                 |
-| `supermanager@comtammatu.vn`     | `super_manager`      | Tenant (pin HQ, keeper)         |
-| `area.vungtau@comtammatu.vn`     | `area_manager`       | Area "Khu vực Vũng Tàu"         |
-| `warehouse@comtammatu.vn`        | `warehouse_manager`  | Trụ sở chính (warehouse)        |
-| `production@comtammatu.vn`       | `production_manager` | Bếp trung tâm (central kitchen) |
-| `manager.datdo@comtammatu.vn`    | `branch_manager`     | Chi nhánh Đất Đỏ                |
-| `cashier.datdo@comtammatu.vn`    | `cashier`            | Chi nhánh Đất Đỏ                |
-| `waiter.datdo@comtammatu.vn`     | `waiter`             | Chi nhánh Đất Đỏ                |
-| `chef.datdo@comtammatu.vn`       | `chef`               | Chi nhánh Đất Đỏ                |
-| `manager.phuochai@comtammatu.vn` | `branch_manager`     | Chi nhánh Phước Hải             |
-| `cashier.phuochai@comtammatu.vn` | `cashier`            | Chi nhánh Phước Hải             |
-| `waiter.phuochai@comtammatu.vn`  | `waiter`             | Chi nhánh Phước Hải             |
-| `chef.phuochai@comtammatu.vn`    | `chef`               | Chi nhánh Phước Hải             |
-| `office@comtammatu.vn`           | `office`             | Tenant (branch NULL)            |
+| Email                            | Vai (role) | Scope               |
+| -------------------------------- | ---------- | ------------------- |
+| `owner@comtammatu.vn`            | `owner`    | Tenant              |
+| `manager.datdo@comtammatu.vn`    | `manager`  | Chi nhánh Đất Đỏ    |
+| `staff.datdo@comtammatu.vn`      | `staff`    | Chi nhánh Đất Đỏ    |
+| `chef.datdo@comtammatu.vn`       | `chef`     | Chi nhánh Đất Đỏ    |
+| `manager.phuochai@comtammatu.vn` | `manager`  | Chi nhánh Phước Hải |
+| `staff.phuochai@comtammatu.vn`   | `staff`    | Chi nhánh Phước Hải |
+| `chef.phuochai@comtammatu.vn`    | `chef`     | Chi nhánh Phước Hải |
 
 > **Chỉ chạy trên dev / staging.** Script DELETE các account theo email rồi re-INSERT, CASCADE cả profile + employees.
 

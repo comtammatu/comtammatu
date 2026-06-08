@@ -1,5 +1,9 @@
 # Inventory Operator Journeys
 
+> ## ⚠️ LEAN HKD REFRAME (2026-06) — đọc trước
+>
+> Các journey bên dưới mô tả mô hình **multi-warehouse cũ** (Kho Tổng/Bếp trung tâm/luân chuyển/production/PO), **đã CUT**. Mô hình hiện hành là **flat-branch**: mỗi chi nhánh ngang hàng tự làm **GRN (nhập trực tiếp từ NCC) → cảnh báo tồn → kiểm kê định kỳ → điều chỉnh/xóa sổ**. Không có journey luân chuyển nội bộ, PO, hay production. Roles: `owner`/`manager`/`staff`/`chef`. Chỉ các journey GRN + stocktake + alert còn áp dụng.
+
 > Bộ kịch bản đóng vai trực tiếp nhân viên đang dùng hệ thống mỗi ngày.
 >
 > Dùng kèm:

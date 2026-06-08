@@ -4,14 +4,16 @@
 
 Rate limiting via Upstash Redis. Protects API routes and auth endpoints from abuse. Two pre-configured limiters with different thresholds.
 
-**Owner:** `packages/security/`
+> **V9 merge:** the former `packages/security` package was merged into `@comtammatu/shared`. Import from `@comtammatu/shared/security`; the source lives at `packages/shared/src/security/`. There is no standalone `@comtammatu/security` package anymore.
+
+**Owner:** `packages/shared/src/security/`
 
 ## Components
 
-| File                | Purpose                |
-| ------------------- | ---------------------- |
-| `src/rate-limit.ts` | Rate limiter instances |
-| `src/index.ts`      | Barrel export          |
+| File                                    | Purpose                |
+| --------------------------------------- | ---------------------- |
+| `packages/shared/src/security/rate-limit.ts` | Rate limiter instances |
+| `packages/shared/src/security/index.ts`      | Barrel export (`@comtammatu/shared/security`) |
 
 ## Rate Limiters
 
@@ -32,7 +34,7 @@ UPSTASH_REDIS_REST_TOKEN  # Upstash Redis auth token
 ## Usage Pattern
 
 ```typescript
-import { loginRateLimit } from "@comtammatu/security";
+import { loginRateLimit } from "@comtammatu/shared/security";
 
 const { success } = await loginRateLimit.limit(identifier);
 if (!success) {

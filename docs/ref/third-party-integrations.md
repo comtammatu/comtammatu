@@ -147,7 +147,7 @@
 
 - Provider pháp lý đang có và đang vận hành thực tế cho Cơm Tấm Má Tư.
 - Runtime chỉ register `ViettelSinvoiceProvider`; không còn MISA/meInvoice implementation hay provider switch.
-- Một bộ `SINVOICE_*` env đơn giản hơn cho single-tenant CTCP.
+- Một bộ `SINVOICE_*` env đơn giản hơn cho single-tenant (một Hộ Kinh Doanh).
 
 **Auth flow**:
 

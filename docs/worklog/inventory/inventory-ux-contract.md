@@ -1,5 +1,9 @@
 # Inventory UX Contract
 
+> ## ⚠️ SUPERSEDED — candidate for deletion (owner confirm)
+>
+> This UX/IA contract is scoped to the **multi-warehouse boundary** (HQ / Bếp trung tâm / Kho chi nhánh / Bếp chi nhánh) which was **CUT** in the lean Hộ Kinh Doanh baseline (2026-06). The live model is **flat-branch** (per-branch GRN + stocktake). Its navigation/IA decisions no longer apply. Per the docs-lean retention policy (`docs/worklog/README.md`), this dead worklog artifact is **flagged for owner deletion** rather than auto-deleted.
+
 Updated: 2026-04-16
 
 ## Mục tiêu

@@ -1,8 +1,10 @@
 # Phân hệ Web App
 
+> **Lean HKD note (2026-06):** The live app is the lean Hộ Kinh Doanh build: **flat peer branches** (no Kho Tổng / Bếp Trung Tâm / inter-site transfers), 4 roles (`owner`/`manager`/`staff`/`chef`), and a **lean inventory** surface (ingredients, suppliers, GRN, stock, stocktake, expiry/alerts, reports, supplier-invoices). The Finance accounting routes (chart-of-accounts, journal, posting-rules, periods, statements), HR/payroll workspace, and the heavy inventory routes (transfers, production, purchase-orders, issues, waste, supplier-returns, `m/` mobile) listed below are **retained reference for the pre-lean tree** — they were CUT from the HKD baseline. Rate limiting imports from `@comtammatu/shared/security` (former `@comtammatu/security` merged in V9).
+
 ## Tổng quan
 
-Ứng dụng Next.js 16.2 dùng App Router. Snapshot 2026-05-27 (`node scripts/project-snapshot.mjs`) có 109 `page.tsx` routes và 13 API route handlers. Các bề mặt chính: Admin (`/admin/*`), Inventory (`/inventory/*`), Finance (`/finance/*`), HR (`/hr/*`), Orders (`/orders`), Notifications (`/notifications`), POS (`/br/[branchId]/pos`), KDS (`/br/[branchId]/kds`), Runner (`/br/[branchId]/runner`), Branch settings (`/br/[branchId]/settings/*`), Branch menu limits (`/br/[branchId]/menu-limits`), Employee portal cho non-admin staff (`/employee/*`), plus public surfaces `/login`, `/access-denied`, `/r/*`, `/payment/momo/return`. Khung quản trị + Thực đơn + POS + KDS đã hoàn thành; Kho hàng hiện là bề mặt vận hành live cho Kho Tổng, Bếp Trung Tâm, và chi nhánh.
+Ứng dụng Next.js 16.2 dùng App Router. Snapshot 2026-05-27 (`node scripts/project-snapshot.mjs`) có 109 `page.tsx` routes và 13 API route handlers. Các bề mặt chính: Admin (`/admin/*`), Inventory (`/inventory/*`), Finance (`/finance/*`), HR (`/hr/*`), Orders (`/orders`), Notifications (`/notifications`), POS (`/br/[branchId]/pos`), KDS (`/br/[branchId]/kds`), Runner (`/br/[branchId]/runner`), Branch settings (`/br/[branchId]/settings/*`), Branch menu limits (`/br/[branchId]/menu-limits`), Employee portal cho non-admin staff (`/employee/*`), plus public surfaces `/login`, `/access-denied`, `/r/*`, `/payment/momo/return`. Khung quản trị + Thực đơn + POS + KDS đã hoàn thành; Kho hàng là bề mặt kho-lean (GRN + stocktake) cho **các chi nhánh ngang hàng** (flat-branch — không Kho Tổng / Bếp Trung Tâm / luân chuyển nội bộ).
 
 **Phạm vi sở hữu:** `apps/web/`
 
@@ -100,7 +102,7 @@ apps/web/app/
 │       ├── printers/
 │       └── tables/
 │
-├── inventory/              # Inventory operations cockpit (HQ / central_kitchen / branch)
+├── inventory/              # Inventory-lean cockpit (flat-branch; per-branch GRN + stocktake). Routes below tagged [CUT] are pre-lean reference only.
 │   ├── layout.tsx          # Inventory shell with site context + role-aware nav
 │   ├── page.tsx            # Task-queue-first dashboard by role/site
 │   ├── dashboard/          # Detailed dashboard view (separate from /inventory landing)
@@ -111,7 +113,7 @@ apps/web/app/
 │   ├── supplier-invoices/  # Supplier invoice matching; AP payment is Finance handoff
 │   ├── supplier-returns/   # QC at receiving + post-receipt returns (list + new + [id])
 │   ├── purchase-orders/    # PO list + new + [id] detail
-│   ├── receiving/          # HQ procurement hub (PO/GRN/invoice), not generic receiving
+│   ├── receiving/          # [CUT] was HQ procurement hub (PO/GRN/invoice); lean model uses per-branch GRN directly
 │   ├── grn/                # Goods received notes list + [id] detail, GRN confirm wired
 │   ├── transfers/          # Internal transfers list + [id] detail
 │   ├── production/         # Central kitchen production surface (super_manager/production_manager operator; owner deep-link oversight)
@@ -157,7 +159,7 @@ Nhóm điều hướng được lọc qua `canAccess(role, moduleKey)` — phân
 
 ### Server action đăng nhập (`apps/web/app/(public)/(auth)/login/actions.ts`)
 
-Server action with rate limiting (`loginRateLimit` from `@comtammatu/security`). Validates with Zod, calls `signInWithPassword()`, extracts claims, redirects to role default via `getDefaultRedirect()`.
+Server action with rate limiting (`loginRateLimit` from `@comtammatu/shared/security`). Validates with Zod, calls `signInWithPassword()`, extracts claims, redirects to role default via `getDefaultRedirect()`.
 
 ## Inventory workspace hiện tại
 
@@ -212,7 +214,7 @@ Browser request
 | `page.tsx` (RSC)              | `@comtammatu/database`, `@comtammatu/shared`, `@comtammatu/ui`                 |
 | `layout.tsx` (RSC)            | Same as page.tsx                                                               |
 | `"use client"` components     | `@comtammatu/database/supabase/client`, `@comtammatu/shared`, `@comtammatu/ui` |
-| `actions.ts` (Server Actions) | `@comtammatu/database`, `@comtammatu/shared`, `@comtammatu/security`           |
+| `actions.ts` (Server Actions) | `@comtammatu/database`, `@comtammatu/shared`, `@comtammatu/shared/security`    |
 
 ## Thêm một trang quản trị mới
 

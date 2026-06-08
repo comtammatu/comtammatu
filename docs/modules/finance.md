@@ -1,5 +1,7 @@
 # Finance Module
 
+> **Lean HKD scope (2026-06):** The business is a **Hộ Kinh Doanh** (simplified books under TT 88/2021, no formal BCTC/VAS). The lean baseline keeps only operating-finance surfaces backed by live tables — daily cash (`cash_entries`), revenue from paid orders, supplier debt (`supplier_invoices` / `supplier_payments`), and HĐĐT (Viettel S-invoice). The Accounting Advanced surfaces below (chart of accounts, journal, fiscal periods, B01/B02/B03-DN, VAS report lines, payroll GL) are **retained historical/contract reference** describing the pre-lean CTCP product; they are CUT from the HKD baseline and must not drive current scope. Read the four-metric "Finance Basic / `hkd_basic`" stage as the live target.
+
 ## Verdict
 
 Finance full is **NO-GO for pilot**.
@@ -11,7 +13,7 @@ Finance Basic is **CONDITIONAL GO** only when the first screen answers four owne
 - **Chi vận hành**: kỳ này đã ghi nhận bao nhiêu chi phí vận hành?
 - **Lợi nhuận gộp**: doanh thu sau giảm giá/trước VAT trừ giá vốn món còn bao nhiêu?
 
-Do not expand Finance by default into a full enterprise accounting product. The legal entity is CTCP, but the product surface for pilot must serve restaurant operating finance first.
+Do not expand Finance by default into a full enterprise accounting product. The business is a Hộ Kinh Doanh (simplified TT 88/2021 books, no formal VAS/BCTC), so the product surface must serve restaurant operating finance first.
 
 ## Scope Boundary
 

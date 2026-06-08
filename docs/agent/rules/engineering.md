@@ -29,6 +29,18 @@ pnpm db:types     # Regenerate Supabase types after migration is applied to the 
 - NEVER add agent notes, dev commit notes, implementation explanations, or internal commentary to project UI.
 - Put durable explanations, guides, operational notes, and task notes in Markdown docs, guides, or note files inside the source tree.
 
+## `"use server"` Module Boundary
+
+- A file with the `"use server"` directive may export **only** async functions. It cannot re-export types, constants, or non-async values.
+- Therefore a re-export **barrel** that aggregates Server Actions must **not** itself carry `"use server"`; move all actions out of the barrel into concern-specific `"use server"` files and let the barrel be a plain (non-`"use server"`) module.
+- If a split keeps some actions in the original file, do not turn that file into a re-export barrel — repoint callers at the new files instead.
+- This rule decided the WS-3 action-file split mechanics; violating it produces opaque build/type errors.
+
+## Decomposition Goal — Separation By Concern, Not Line Count
+
+- When splitting a large file, the target is **reducing the per-file pile-up of unrelated functions/features** (one concern per file), NOT hitting a line-count threshold like "< 800 lines".
+- Judge a refactor by whether each resulting file owns a single, nameable concern — not by LoC deltas. Do not report a refactor's success as a line-count number.
+
 ## Architecture
 
 ```text

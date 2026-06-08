@@ -89,15 +89,17 @@ Các cụm dưới đây bị xem là drift và phải thay bằng nhãn tiếng
 
 ### Tổ chức và địa điểm vận hành
 
-| Canonical English   | Nhãn tiếng Việt chuẩn   | Dùng khi nào                                                                        | Tránh dùng                                        |
-| ------------------- | ----------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------- |
-| `tenant`            | tenant / pháp nhân CTCP | Khi nói về legal owner cấp hệ thống, single-tenant row                              | công ty, hệ thống, brand nếu đang nói row dữ liệu |
-| `branch`            | chi nhánh               | Site vận hành cấp L1                                                                | cửa hàng nếu đang nói entity DB                   |
-| `central_warehouse` | kho tổng (`CW`)         | Điểm nhập NCC đa thể hiện (có thể có nhiều Kho Tổng)                                | HQ, headquarters, trụ sở                          |
-| `central kitchen`   | bếp trung tâm           | Site sản xuất thành phẩm                                                            | tổng bếp, bếp tổng                                |
-| `branch warehouse`  | kho chi nhánh           | Điểm nhận / giữ tồn tại chi nhánh                                                   | kho con                                           |
-| `branch kitchen`    | bếp chi nhánh           | Điểm tiêu hao cuối cùng cho bán hàng                                                | bếp cửa hàng nếu đang nói topology chuẩn          |
-| `site`              | site vận hành           | Specs / technical docs khi cần gom `central_warehouse`, `central_kitchen`, `branch` | dùng thay cho `branch` trong UI                   |
+> **Lean HKD (2026-06):** topology hiện hành là **flat-branch** — chỉ còn `tenant` (một Hộ Kinh Doanh) và `branch` (chi nhánh ngang hàng). Các thuật ngữ `central_warehouse` / `central kitchen` / `branch warehouse` / `branch kitchen` / `site` đã **CUT**; giữ trong bảng dưới làm tham chiếu lịch sử cho doc cũ.
+
+| Canonical English   | Nhãn tiếng Việt chuẩn        | Dùng khi nào                                                                        | Tránh dùng                                        |
+| ------------------- | ---------------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------- |
+| `tenant`            | tenant / pháp nhân (HKD)     | Khi nói về legal owner cấp hệ thống, single-tenant row (một Hộ Kinh Doanh)          | công ty, hệ thống, brand nếu đang nói row dữ liệu |
+| `branch`            | chi nhánh                    | Site vận hành cấp L1 (ngang hàng / flat)                                            | cửa hàng nếu đang nói entity DB                   |
+| `central_warehouse` | kho tổng (`CW`) — **[CUT]**  | Lịch sử: điểm nhập NCC multi-warehouse cũ                                           | dùng trong mô hình lean hiện hành                 |
+| `central kitchen`   | bếp trung tâm — **[CUT]**    | Lịch sử: site sản xuất thành phẩm                                                   | dùng trong mô hình lean hiện hành                 |
+| `branch warehouse`  | kho chi nhánh — **[CUT]**    | Lịch sử: location nhận/giữ tồn trong site cũ                                        | dùng trong mô hình lean hiện hành                 |
+| `branch kitchen`    | bếp chi nhánh — **[CUT]**    | Lịch sử: location tiêu hao trong site cũ                                            | dùng trong mô hình lean hiện hành                 |
+| `site`              | site vận hành — **[CUT]**    | Lịch sử: gom CW/CK/branch                                                           | dùng thay cho `branch`                            |
 
 ### Bề mặt sản phẩm
 
@@ -313,14 +315,16 @@ File [apps/web/app/(protected)/inventory/\_lib/labels.ts](<../../apps/web/app/(p
 
 ### Bảng variants — Tổ chức và địa điểm
 
-| Term                | Long           | Short     | Acronym |
-| ------------------- | -------------- | --------- | ------- |
-| `central_warehouse` | Kho Tổng       | —         | `CW`    |
-| `central_kitchen`   | Bếp Trung Tâm  | Bếp TT    | `CK`    |
-| `branch_warehouse`  | Kho chi nhánh  | Kho CN    | —       |
-| `branch_kitchen`    | Bếp chi nhánh  | Bếp CN    | —       |
-| `branch`            | Chi nhánh      | —         | `CN`    |
-| `tenant`            | Pháp nhân CTCP | Pháp nhân | —       |
+> Lean HKD: chỉ `branch` + `tenant` còn dùng; các term multi-warehouse là tham chiếu lịch sử **[CUT]**.
+
+| Term                | Long                    | Short     | Acronym |
+| ------------------- | ----------------------- | --------- | ------- |
+| `central_warehouse` | Kho Tổng **[CUT]**      | —         | `CW`    |
+| `central_kitchen`   | Bếp Trung Tâm **[CUT]** | Bếp TT    | `CK`    |
+| `branch_warehouse`  | Kho chi nhánh **[CUT]** | Kho CN    | —       |
+| `branch_kitchen`    | Bếp chi nhánh **[CUT]** | Bếp CN    | —       |
+| `branch`            | Chi nhánh               | —         | `CN`    |
+| `tenant`            | Pháp nhân (HKD)         | Pháp nhân | —       |
 
 ### Bảng variants — POS / KDS / bán hàng
 

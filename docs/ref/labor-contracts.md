@@ -1,6 +1,10 @@
 # Hợp Đồng Lao Động — Labor Contracts
 
-> Áp dụng: Cơm Tấm Má Tư CTCP
+> ## ⚠️ LEAN HKD — phần lớn ngoài phạm vi sản phẩm hiện tại
+>
+> Lean Hộ Kinh Doanh baseline đã **CUT engine HĐLĐ/tiền lương** (BHXH/PIT/payslip). Với hộ kinh doanh dưới ~5 nhân sự, bảng lương xử lý ngoài hệ thống (Excel). Tài liệu này là **tham chiếu pháp lý lịch sử** từ mô hình CTCP cũ, không phải spec tính năng đang chạy. Hệ thống chỉ giữ chấm công + xếp lịch lean (`attendance_records`, `shift_assignments`).
+
+> Áp dụng: Hộ Kinh Doanh Cơm Tấm Má Tư (tham chiếu pháp lý — feature CUT)
 > Khung pháp lý: Bộ luật Lao động 2019 (BLLĐ), NĐ 145/2020, TT 10/2020
 
 ---

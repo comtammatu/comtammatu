@@ -1,8 +1,12 @@
 # Phân Tích Cạnh Tranh — Phần Mềm Quản Lý F&B Việt Nam
 
+> ## ⚠️ LEAN HKD note (2026-06)
+>
+> Phân tích này (2026-04) định vị lợi thế quanh "tuân thủ pháp lý CTCP đầy đủ" (BHXH/TNCN/VAS/HĐLĐ). Lean Hộ Kinh Doanh baseline đã **CUT** các tính năng đó (payroll engine + VAS/BCTC). Lợi thế hiện tại là **vận hành lean phù hợp hộ kinh doanh** (POS pay-after + giảm giá món, KDS, kho-lean GRN/stocktake, HĐĐT, sổ quỹ, công nợ NCC), không phải tuân thủ kế toán doanh nghiệp. Đọc các "Gap pháp lý CTCP" bên dưới như tham chiếu lịch sử.
+
 > Cập nhật: 2026-04-01
 > Phạm vi: Thị trường phần mềm quản lý nhà hàng / F&B nội địa Việt Nam
-> Mục đích: Xác định lợi thế cạnh tranh và feature gaps của hệ thống Cơm Tấm Má Tư
+> Mục đích: (lịch sử) Xác định lợi thế cạnh tranh và feature gaps của hệ thống Cơm Tấm Má Tư
 
 ---
 

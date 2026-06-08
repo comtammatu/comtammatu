@@ -1,5 +1,7 @@
 # Codebase Map — Cơm Tấm Má Tư
 
+> **Lean HKD baseline (2026-06):** Hộ Kinh Doanh, single-tenant (`tenant_id` kept as scope key), **flat peer branches** (no Kho Tổng / Bếp Trung Tâm / inter-site transfers), 1 app (`apps/web`) + `apps/print-agent`, 3 packages (`database`, `shared`, `ui` — `security` merged into `shared` in V9), **4 roles** (`owner`, `manager`, `staff`, `chef`). DB: **59 tables · 9 views · 213 functions**. CUT vs the pre-lean model: GL/VAS/BCTC, payroll engine, heavy inventory (transfers/issues/waste/production/PO/recipes/QC/ABC), perpetual sale-deduction, feedback/CRM/telegram/AI, area. KEEP (deliberate): item discount, lean scheduling (`shift_assignments`), supplier debt, HĐĐT Viettel. Older multi-site / 10-role passages below are retained reference for how the mechanisms work.
+
 > **Đối tượng:** Kỹ sư mới onboard, người phụ trách feature, người lập kế hoạch sprint
 > **Mục tiêu chính:** (1) Hiểu cấu trúc hệ thống và luồng auth, (2) biết nơi thêm tính năng mới, (3) ước lượng blast radius của thay đổi
 > **Mốc quyết định:** Lập kế hoạch sprint, onboarding, rà soát kiến trúc
@@ -9,7 +11,7 @@
 
 - **Active delivery track:** production đang vận hành in-place trên repo `comtammatu`; ongoing work tập trung vào hardening + bổ sung tính năng theo phản hồi vận hành. Retired rebuild packs are no longer retained in `docs/`; current decisions live in `tasks/todo.md`, `docs/plan/decisions.md`, and active ADRs.
 - **Phiên bản hiện tại:** v1.0.0 — Auth, Admin, Master Data, Inventory, Orders, POS, KDS, Print, Payments (Cash + VietQR + Momo) SHIPPED và đang vận hành thực tế. HĐĐT active qua Viettel S-invoice. Finance/HR/Notifications/Reporting vẫn còn phần PARTIAL (xem `tasks/todo.md`).
-- **Mốc tiếp theo:** tiếp tục hardening trên mô hình `Kho Tổng -> Bếp Trung Tâm -> Chi nhánh` đang chạy production; backlog ưu tiên ở `tasks/todo.md`.
+- **Mốc tiếp theo:** tiếp tục hardening trên mô hình **flat-branch (chi nhánh ngang hàng)** của lean HKD baseline; mỗi chi nhánh tự nhập hàng (GRN) + tự kiểm kê (stocktake), không luân chuyển nội bộ. Backlog ưu tiên ở `tasks/todo.md`.
 - **Tech stack:** Next.js 16.2 | React 19.2 | TypeScript 6.0 | Tailwind 4.2 | Zod 4 | Supabase | Turborepo 2.9
 
 ## Chỉ mục phân hệ
@@ -61,17 +63,15 @@ source-of-truth inputs.
 | Tests               | Playwright route coverage and shared unit tests                                       |
 | Core                | Repository metadata, E2E helpers, cross-cutting supporting files                      |
 
-Generated checkout snapshot from 2026-05-30 (`node scripts/project-snapshot.mjs`):
+Lean HKD baseline snapshot (regenerate exact counts with `node scripts/project-snapshot.mjs`):
 
 | Area                                                         |             Count |
 | ------------------------------------------------------------ | ----------------: |
-| `apps/web/app/**/page.tsx` routes                            |               109 |
 | API route handlers                                           |                13 |
-| Generated DB tables / views / functions / enums              | 118 / 9 / 241 / 0 |
-| Active SQL migrations (baseline-first; +379 archived)        |                 2 |
-| Test/spec files under `apps/web/e2e` + `packages/shared/src` |                40 |
+| DB tables / views / functions / enums (baseline.sql)         | 59 / 9 / 213 / 0  |
+| Active SQL migrations (lean baseline + forward)              |                 2 |
 
-> Migrations are **baseline-first** since 2026-05-30: `supabase/migrations/00000000000000_baseline.sql` (canonical public-schema install) + forward migrations, with the 379-file historical chain under `supabase/migrations/_archive/` and managed surfaces in `supabase/managed-surfaces.install.sql`. See `docs/spec/database-schema.md`.
+> Migrations are **baseline-first**: `supabase/migrations/00000000000000_baseline.sql` (lean HKD public-schema install, 59 tables) + forward migrations, with managed surfaces in `supabase/managed-surfaces.install.sql`. See `docs/spec/database-schema.md`.
 
 The repo is not a flat "apps/packages" map. The operational shape is:
 
@@ -84,7 +84,7 @@ flowchart TB
     web --> ui["UI Plane<br/>packages/ui + surface components"]
     web --> data["Data Plane<br/>packages/database + Supabase RLS/RPC"]
     web --> print["Branch Edge Plane<br/>apps/print-agent"]
-    web --> rate["Security Edge<br/>packages/security + Upstash"]
+    web --> rate["Security Edge<br/>@comtammatu/shared/security + Upstash"]
     data --> verify["Verification Plane<br/>Playwright + SQL tests + smoke runbooks"]
     print --> verify
     verify --> ops
@@ -135,14 +135,15 @@ Use this matrix when adding or moving files. It is the practical replacement for
 | New print behavior                           | `apps/print-agent/src/*` plus branch settings route if configurable | Branch-scoped config, no deploy-only layout changes            | Hardcoded receipt/format changes per branch     |
 | New operational rule/runbook                 | `docs/modules/*`, `docs/runbooks/*`, `tasks/*`                      | `docs/agent/rules/references.md`                               | Separate agent-only doc trees                   |
 
-### Pilot Operating Model
+### Operating Model (lean flat-branch)
+
+Each branch is independent: it receives goods from suppliers directly (GRN), holds its own `stock_levels`, and reconciles by monthly stocktake-variance. There is no central warehouse, no central kitchen, and no inter-branch transfer. Stock is not deducted per sale.
 
 ```mermaid
 flowchart LR
-    supplier["Nhà cung cấp"] --> hq["HQ / Trụ sở"]
-    hq -->|raw transfers| ck["Bếp trung tâm"]
-    ck -->|finished-good transfers| br["Chi nhánh"]
+    supplier["Nhà cung cấp"] -->|"GRN (nhập trực tiếp)"| br["Chi nhánh (flat / ngang hàng)"]
     br --> pos["POS / KDS / completed orders"]
+    br -.->|"monthly"| st["Stocktake variance"]
 ```
 
 ### C4 Context Diagram
@@ -166,15 +167,13 @@ graph TB
 ```mermaid
 graph LR
     web["@comtammatu/web"]
-    shared["@comtammatu/shared"]
+    shared["@comtammatu/shared (incl. security)"]
     db["@comtammatu/database"]
     ui["@comtammatu/ui"]
-    sec["@comtammatu/security"]
 
     web --> shared
     web --> db
     web --> ui
-    web --> sec
     shared -.->|types only| db
 ```
 
@@ -217,12 +216,12 @@ sequenceDiagram
 
 | #   | Unknown                                                                                                                                                                                                    | Verification Step                                                             | Impact                                              |
 | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | --------------------------------------------------- |
-| 1   | area_manager has tenant-wide access (no area scoping table)                                                                                                                                                | Deferred — tracked as item **H3** in `tasks/todo.md` "Deferred to post-pilot" | May need migration later                            |
+| 1   | ~~area_manager has tenant-wide access (no area scoping table)~~ — **RESOLVED:** `area` + `area_manager` fully removed (app + shared + DB) in the lean HKD cut. Roles are now `owner`/`manager`/`staff`/`chef`.                | No longer applicable                                                          | n/a                                                 |
 | 2   | Test coverage exists but is still concentrated: current checkout has 40 test/spec files, including 9 Playwright specs, with gaps around full POS→payment→stock→print→HĐĐT smoke and live provider behavior | Expand route smoke + end-to-end pilot runbooks before scale                   | Refactor regressions possible on uncovered surfaces |
 
 ## Priority Recommendations
 
-1. **v1.0.0 in production:** Auth, Admin, Master Data, Inventory, Orders, POS, KDS, Print, Payments (Cash + VietQR + Momo) shipped và đang vận hành thực tế trên mô hình `HQ -> Kho Tổng -> Bếp Trung Tâm -> Chi nhánh`. Finance/HR/Notifications/Reporting còn phần PARTIAL — ưu tiên hiện tại là hardening (QA, security follow-ups), bổ sung BHXH/PIT, và đóng các P0 còn mở trong `tasks/todo.md`.
+1. **Lean HKD baseline:** Auth, Admin, Master Data, lean Inventory (ingredients/GRN/stocktake), Orders, POS (pay-after + item discount), KDS, Print, Payments (Cash + VietQR + Momo) shipped trên mô hình **flat-branch**. HĐĐT active qua Viettel S-invoice. Ưu tiên hiện tại là hardening (QA, security follow-ups) và đóng các P0 còn mở trong `tasks/todo.md`. (Heavy finance/payroll/inventory đã CUT — xem banner đầu file.)
 2. **Watch hub files:** Any change to `module-acl.ts` or `types.ts` requires proxy + layout + nav verification.
 3. **RLS pattern:** Every new table must follow the tenant-scoped RLS pattern with explicit GRANTs. See [database.md](modules/database.md).
 

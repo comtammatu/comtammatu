@@ -1,8 +1,15 @@
-# SOP Inventory Pilot — HQ / Bếp Trung Tâm / Kho Chi Nhánh / Bếp Chi Nhánh
+# SOP Inventory — Lean Flat-Branch (Hộ Kinh Doanh)
 
-> Áp dụng: Cơm Tấm Má Tư CTCP  
-> Phạm vi: Luồng vận hành pilot cho nguyên liệu và thành phẩm  
-> Mô hình: `Kho Tổng / CW`, `Bếp trung tâm / CK`, `Kho chi nhánh`, `Bếp chi nhánh`
+> ## ⚠️ LEAN HKD REFRAME (2026-06) — đọc trước
+>
+> SOP gốc bên dưới viết cho mô hình multi-warehouse cũ (Kho Tổng / Bếp Trung Tâm / Kho chi nhánh / Bếp chi nhánh + luân chuyển + production). **Mô hình đó đã CUT.**
+>
+> **SOP hiện hành (flat-branch):** mỗi chi nhánh tự thực hiện trọn vòng: **GRN (nhập trực tiếp từ NCC) → cập nhật `stock_levels` → cảnh báo tồn → kiểm kê định kỳ (stocktake-variance) → điều chỉnh/xóa sổ thủ công.** Không có luân chuyển nội bộ, PO, 3-way matching, production order, hay trừ kho theo đơn bán. Roles: `owner`, `manager`, `staff`, `chef`.
+>
+> Phần SOP multi-warehouse bên dưới là tham chiếu lịch sử; chỉ các bước GRN + stocktake + alert còn áp dụng.
+
+> Áp dụng: Hộ Kinh Doanh Cơm Tấm Má Tư  
+> Phạm vi: Luồng vận hành kho-lean (GRN + stocktake) cho nguyên liệu, theo chi nhánh ngang hàng
 
 ---
 

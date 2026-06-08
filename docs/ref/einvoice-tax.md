@@ -1,14 +1,16 @@
 # HĐĐT & Thuế GTGT — Hóa Đơn Điện Tử & Giá Trị Gia Tăng
 
-> Áp dụng: Cơm Tấm Má Tư CTCP — mô hình F&B multi-branch
+> Áp dụng: Hộ Kinh Doanh Cơm Tấm Má Tư — mô hình F&B multi-branch (flat). HĐĐT là một KEEP có chủ đích của lean baseline.
 > Khung pháp lý: NĐ 123/2020, NĐ 70/2025, TT 78/2021, Luật Thuế GTGT 2024, NQ 142/2024
 > Last updated: 2026-05-23 (Viettel S-invoice only)
+>
+> ⚠️ Lưu ý lean HKD: phần phương pháp **khấu trừ GTGT** + khấu trừ VAT đầu vào bên dưới là khung CTCP cũ; với hộ kinh doanh cách kê khai thuế GTGT có thể khác (thường theo phương pháp trực tiếp/khoán). Phần đó cần owner xác nhận lại; phần HĐĐT (NĐ 70/2025) vẫn áp dụng nguyên.
 
 ---
 
 ## 1. Tổng quan nghĩa vụ pháp lý
 
-Cơm Tấm Má Tư CTCP là **doanh nghiệp đăng ký nộp thuế GTGT theo phương pháp khấu trừ**:
+Cơm Tấm Má Tư (Hộ Kinh Doanh) — mô tả dưới đây là khung CTCP cũ (**nộp thuế GTGT theo phương pháp khấu trừ**); với HKD cần owner xác nhận lại phương pháp kê khai:
 
 - Thuế GTGT đầu ra (thu từ khách hàng) → kê khai + nộp cho Cục Thuế
 - Thuế GTGT đầu vào (trả cho nhà cung cấp) → được **khấu trừ** khỏi thuế phải nộp

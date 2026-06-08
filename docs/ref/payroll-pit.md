@@ -1,6 +1,10 @@
 # Thuế TNCN & Lương — Personal Income Tax & Payroll
 
-> Áp dụng: Cơm Tấm Má Tư CTCP
+> ## ⚠️ LEAN HKD — engine lương đã CUT
+>
+> Lean Hộ Kinh Doanh baseline đã **CUT engine tiền lương / TNCN / BHXH** (tính toán + payslip). Với hộ kinh doanh dưới ~5 nhân sự, lương xử lý ngoài hệ thống. Tài liệu này là **tham chiếu pháp lý lịch sử** từ mô hình CTCP cũ, không phải spec tính năng đang chạy. Các bảng `payroll_periods` / `payroll_entries` chỉ giữ ở mức rollup tối thiểu, không phải engine.
+
+> Áp dụng: Hộ Kinh Doanh Cơm Tấm Má Tư (tham chiếu pháp lý — engine CUT)
 > Khung pháp lý: Luật Thuế TNCN 2007 (sửa đổi 2012, 2014), TT 111/2013, TT 92/2015, NĐ 65/2013
 
 ---

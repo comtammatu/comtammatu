@@ -12,7 +12,7 @@ H3b was originally proposed to add `tenants.owner_user_id UUID` column AND exten
 
 Three concepts were conflated in original code:
 
-1. `tenants.representative TEXT` — Legal signatory name on CTCP documents
+1. `tenants.representative TEXT` — Legal signatory name (chủ hộ) on Hộ Kinh Doanh documents
 2. `positions.code='owner'` — HR label (display, JWT user_role derivation)
 3. (none) — Canonical auth identity for RLS owner-bypass
 
@@ -26,7 +26,7 @@ Three concepts were conflated in original code:
 
 | Column                   | Type                              | Purpose                          | Owner-bypass?        |
 | ------------------------ | --------------------------------- | -------------------------------- | -------------------- |
-| `tenants.representative` | TEXT                              | Legal signatory name (CTCP docs) | ❌ Never             |
+| `tenants.representative` | TEXT                              | Legal signatory name (HKD docs)  | ❌ Never             |
 | `positions.code='owner'` | (lookup via profiles.position_id) | HR label, JWT user_role source   | ✅ Currently         |
 | `tenants.owner_user_id`  | UUID FK auth.users                | Canonical auth identity          | ⚠️ Future (deferred) |
 

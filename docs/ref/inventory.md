@@ -1,7 +1,18 @@
 # Kho Hàng — Inventory Management
 
-> Áp dụng: Cơm Tấm Má Tư CTCP — quản lý kho nguyên liệu và thành phẩm F&B  
-> Phạm vi: M5 Stock + M5-Ext — **Kho Tổng (nhập NCC) + Bếp trung tâm sản xuất thành phẩm + luân chuyển nội bộ + GRN + stocktake + báo cáo vận hành**. `supplier_invoice`, 3-way matching, payment status, và AP aging là Finance P1/handoff, không chặn Inventory pilot.
+> ## ⚠️ LEAN HKD REFRAME (2026-06) — đọc trước
+>
+> Tài liệu này được viết cho mô hình **multi-warehouse cũ** (Kho Tổng → Bếp Trung Tâm → Chi nhánh, luân chuyển nội bộ, PO, 3-way matching, production/BOM, recipes trừ kho theo đơn). **Mô hình đó đã bị CUT** trong lean Hộ Kinh Doanh baseline.
+>
+> **Mô hình hiện hành (flat-branch):**
+> - Mỗi **chi nhánh ngang hàng** tự nhập hàng trực tiếp từ NCC bằng **GRN**, giữ tồn riêng (`stock_levels`), và đối soát bằng **kiểm kê định kỳ (stocktake-variance)**.
+> - **KHÔNG** có: Kho Tổng / Bếp Trung Tâm, luân chuyển nội bộ (`stock_transfers`), Purchase Order, 3-way matching, production/BOM (`production_*`), recipes/định mức, trừ kho theo từng đơn bán (perpetual sale-deduction), QC/ABC/waste/issues, `inventory_locations` sub-locations.
+> - **GIỮ:** `ingredients`, `suppliers`, `goods_received_notes`/`grn_items`, `stock_levels`, `stock_movements` (GRN + count_adjustment + manual adjustment), `stocktake_sessions`/`stocktake_lines`. Công nợ NCC qua `supplier_invoices`/`supplier_payments`.
+> - Roles lean: `owner`, `manager`, `staff`, `chef` (vai trò kho cũ như `warehouse_manager`/`production_manager`/`area_manager` đã gỡ).
+>
+> Các mục bên dưới (Kho Tổng/CW, Bếp Trung Tâm/CK, state machine luân chuyển 5 bước, PO/3-way, production order, yield factor, recipe consumption) là **tham chiếu lịch sử**; chỉ phần GRN + stock_levels + stocktake + alert + báo cáo còn áp dụng cho mô hình flat-branch.
+
+> Áp dụng: Hộ Kinh Doanh Cơm Tấm Má Tư — quản lý kho nguyên liệu F&B (lean, flat-branch).
 
 ---
 

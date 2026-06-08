@@ -35,12 +35,12 @@
 - UX workflow review: [worklog/inventory/inventory-ux-workflow-review.md](worklog/inventory/inventory-ux-workflow-review.md)
 - UX contract đã chốt: [worklog/inventory/inventory-ux-contract.md](worklog/inventory/inventory-ux-contract.md)
 
-### Trạng thái Inventory hiện tại
+### Trạng thái Inventory hiện tại (lean HKD — flat-branch)
 
-- Procurement UI đã chốt là `HQ procurement hub`: `Receiving -> PO -> GRN -> supplier invoice`
-- Branch flow hiện đi theo `Nhận transfer -> Cấp bếp -> Stocktake/alerts`, không dùng `Receiving` như generic inbound hub
-- Dashboard `/inventory` đã chuyển sang `task queue first`
-- `Ingredients / Suppliers / Recipes` đã canonical về `Danh mục`; các route cũ trong `Settings` chỉ còn giữ redirect tương thích
+- Mô hình **flat-branch**: mỗi chi nhánh ngang hàng tự nhập hàng trực tiếp từ NCC bằng **GRN**, giữ tồn riêng (`stock_levels`), đối soát bằng **kiểm kê định kỳ (stocktake-variance)**.
+- **Đã CUT** (chỉ còn tham chiếu lịch sử trong các doc inventory): HQ procurement hub, PO, 3-way matching, luân chuyển nội bộ (transfers), Bếp Trung Tâm / production, recipes/định mức + trừ kho theo đơn, QC/ABC/waste/issues, `inventory_locations` sub-locations.
+- **Giữ:** `Ingredients / Suppliers / GRN / Stock / Stocktake / Expiry-alerts / Reports` + công nợ NCC (`supplier_invoices`). Roles: `owner`/`manager`/`staff`/`chef`.
+- ⚠️ Các doc inventory bên dưới có banner "LEAN HKD REFRAME" ở đầu; phần multi-warehouse trong thân là tham chiếu lịch sử.
 
 ## Quy ước
 

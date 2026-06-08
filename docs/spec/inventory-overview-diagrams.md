@@ -1,12 +1,22 @@
 # Inventory Overview Diagrams
 
-> Mục tiêu: cung cấp bộ sơ đồ tổng quát cho toàn bộ Inventory domain.
+> ## ⚠️ LEAN HKD REFRAME (2026-06) — đọc trước
 >
-> Boundary hiện tại:
+> Các sơ đồ bên dưới mô tả mô hình **multi-warehouse cũ** (HQ / Bếp trung tâm / Kho chi nhánh / Bếp chi nhánh + luân chuyển + production), **đã CUT** trong lean Hộ Kinh Doanh baseline.
 >
-> - `HQ` có thể chuyển thẳng về `Kho chi nhánh`.
-> - `Bếp trung tâm` là một node sản xuất/phân phối hợp lệ, không phải hop bắt buộc.
-> - `Kho chi nhánh` và `Bếp chi nhánh` là hai điểm vận hành trong cùng site `branch`, tách bằng `inventory_locations`; cấp bếp dùng intra-branch transfer.
+> **Sơ đồ hiện hành (flat-branch):**
+>
+> ```mermaid
+> flowchart LR
+>     SUP["Nhà cung cấp"] -->|"GRN (nhập trực tiếp)"| BR["Chi nhánh (ngang hàng)"]
+>     BR -->|"tiêu hao bán hàng (không trừ kho theo đơn)"| POS["POS / KDS"]
+>     BR -.->|"định kỳ"| ST["Stocktake variance"]
+>     BR --- DEBT["Công nợ NCC"]
+> ```
+>
+> Không có Kho Tổng / Bếp Trung Tâm / luân chuyển nội bộ / production / `inventory_locations` sub-locations. Các sơ đồ multi-warehouse bên dưới là tham chiếu lịch sử.
+
+> Mục tiêu (lịch sử): bộ sơ đồ tổng quát cho mô hình Inventory multi-warehouse cũ.
 
 ---
 

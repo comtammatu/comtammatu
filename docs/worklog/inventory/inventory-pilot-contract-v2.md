@@ -1,8 +1,12 @@
 # Inventory Pilot Contract V2
 
+> ## ⚠️ SUPERSEDED — candidate for deletion (owner confirm)
+>
+> This contract is built entirely on the **4-point multi-warehouse model** (Kho Tổng / Bếp Trung Tâm / Kho chi nhánh / Bếp chi nhánh) which was **CUT** in the lean Hộ Kinh Doanh baseline (2026-06). The current model is **flat-branch** (per-branch GRN + stocktake, no transfers/production). Nothing here matches the live app. Per the docs-lean retention policy (`docs/worklog/README.md`), this dead worklog artifact is **flagged for owner deletion** rather than auto-deleted. Do not treat it as a current contract.
+
 > Date: `2026-04-27`
-> Status: execution handoff
-> Scope: docs/runtime contract for the ready-to-ship Inventory pilot.
+> Status: SUPERSEDED (multi-warehouse model cut)
+> Scope: docs/runtime contract for the retired multi-warehouse Inventory pilot.
 
 ## Decision
 

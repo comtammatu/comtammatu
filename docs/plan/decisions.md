@@ -4,7 +4,9 @@
 
 ## D000: Inventory: retire HQ, introduce multi-instance Kho Tổng + Bếp Trung Tâm (2026-04-24)
 
-**Decision:** Remove the singleton "HQ / headquarters" branch concept. Replace with multi-instance `central_warehouse` (Kho Tổng / CW) and existing multi-instance `central_kitchen` (Bếp Trung Tâm / CK). Both accept direct supplier GRN.
+> **SUPERSEDED (2026-06) by the lean Hộ Kinh Doanh decision:** the entire multi-warehouse model below — `central_warehouse`, `central_kitchen`, inter-site `stock_transfers`, the direction matrix, production orders, PO/3-way matching, recipe sale-deduction — was **CUT**. The current model is **flat-branch**: each peer branch receives directly from suppliers via GRN, holds its own `stock_levels`, and reconciles by monthly stocktake-variance. There are no central sites and no inter-branch transfers. This entry is retained for history only; do not implement from it. See `docs/ref/inventory.md` (lean reframe banner) and `docs/CODEBASE_MAP.md`.
+
+**Decision (historical):** Remove the singleton "HQ / headquarters" branch concept. Replace with multi-instance `central_warehouse` (Kho Tổng / CW) and existing multi-instance `central_kitchen` (Bếp Trung Tâm / CK). Both accept direct supplier GRN.
 
 **Transfer direction matrix** (enforced by DB trigger `enforce_stock_transfer_direction`):
 

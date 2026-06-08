@@ -43,12 +43,14 @@ Defined in `packages/database/package.json`:
 
 ## Schema — Current Shape
 
-Source of truth: generated types from the live schema. Snapshot generated from
-the current checkout on 2026-05-27 with `node scripts/project-snapshot.mjs`:
+Source of truth: generated types from the live schema. Lean HKD baseline
+(`supabase/migrations/00000000000000_baseline.sql`; regenerate exact counts with
+`node scripts/project-snapshot.mjs`):
 
-- **116 tables**, **9 views**, **241 RPC/SQL functions**
-- **366 migration files** in `supabase/migrations/`
-- **0 enums** — `staff_role` ENUM was dropped (Auth cleanup, 2026-04-23); roles are now strings derived from `positions.legacy_role_code`
+- **59 tables**, **9 views**, **213 functions**
+- **2 active migration files** (lean baseline + forward) in `supabase/migrations/`
+- **0 enums** — `staff_role` ENUM was dropped (Auth cleanup, 2026-04-23); roles are now strings derived from `positions.legacy_role_code` (lean roles: `owner`, `manager`, `staff`, `chef`)
+- `tenant_id` retained on tenant-scoped tables as the deliberate single-tenant scope key (RLS predicate + JWT claim)
 
 ### DB Source-of-Truth Ladder
 
@@ -78,24 +80,23 @@ A migration file dated AFTER today is normal — the file exists, but apply stat
 
 Tables are organized by domain. For per-table columns/constraints, read the migration that created the table or `database.types.ts` directly.
 
-| Domain        | Representative tables                                                                                                                                                  |
-| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Auth          | `permission_keys`, `positions`, `role_templates`, `staff_permissions`, `permission_audit_log`                                                                          |
-| Tenant + IA   | `tenants`, `branches`, `profiles`, `areas`, `area_branches`, `system_settings`, `branch_attendance_config`                                                             |
-| Menu          | `menu_categories`, `menu_items`, `menu_item_variants`, `menu_item_modifiers`, `menu_item_available_sides`                                                              |
-| POS           | `pos_terminals`, `pos_sessions`, `branch_zones`, `tables`, `printer_configs`, `branch_menu_item_daily_limits`                                                          |
-| Orders / KDS  | `orders`, `order_items`, `order_status_history`, `kds_stations`, `kds_station_categories`, `kds_tickets`                                                               |
-| Payments      | `payments`, `payment_webhooks`, `refunds`                                                                                                                              |
-| Inventory     | `ingredients`, `recipes`, `stock_levels`, `stock_movements`, `inventory_locations`, `stocktake_sessions`, `stocktake_lines`, `stock_transfers`, `stock_transfer_items` |
-| Procurement   | `suppliers`, `purchase_orders`, `purchase_order_items`, `goods_received_notes`, `grn_items`, `supplier_invoices`, `supplier_returns`                                   |
-| Production    | `production_recipes`, `production_orders`, `production_order_items` — RLS also gates through `is_inventory_production_operator()`                                      |
-| Finance       | `chart_of_accounts`, `journal_entries`, `journal_entry_lines`, `fiscal_periods`, `tax_invoices`, `vas_report_lines`, `audit_logs`                                      |
-| HR            | `employees`, `employment_contracts`, `shifts`, `shift_assignments`, `attendance_records`, `payroll_periods`, `payroll_entries`                                         |
-| Print agent   | `print_jobs` (claim/complete/expire RPCs), `printer_configs`                                                                                                           |
-| Trust / QC    | `branch_trusted_egress_ips`, `branch_override_codes`, `branch_override_attempts`, `inventory_qc_settings`                                                              |
-| Notifications | `notifications`, `branch_feature_flags`                                                                                                                                |
+| Domain          | Representative tables (lean HKD baseline)                                                                                              |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Auth            | `permission_keys`, `positions`, `staff_permissions` — roles: owner/manager/staff/chef                                                  |
+| Tenant + IA     | `tenants`, `branches` (flat / peer), `profiles`, `system_settings`, `branch_attendance_config`, `branch_feature_flags` — no `area`     |
+| Menu            | `menu_categories`, `menu_items`, `menu_item_variants`, `menu_item_modifiers`, `menu_item_available_sides`                              |
+| POS             | `pos_terminals`, `pos_sessions`, `branch_zones`, `tables`, `printers`, `branch_menu_item_daily_limits`                                 |
+| Orders / KDS    | `orders`, `order_items` (item-level discount columns), `order_status_history`, `kds_stations`, `kds_station_categories`, `kds_tickets`, `kitchen_send_batches` |
+| Payments / HĐĐT | `payments`, `webhook_events`, `refunds`, `tax_invoices`, `tax_invoice_orders`, `tax_invoice_events`                                    |
+| Inventory (lean)| `ingredients`, `stock_levels`, `stock_movements`, `goods_received_notes`, `grn_items`, `stocktake_sessions`, `stocktake_lines` — no transfers / production / recipes / sub-locations / PO / QC / waste |
+| Supplier debt   | `suppliers`, `supplier_invoices`, `supplier_payments`, `cash_entries`                                                                  |
+| Scheduling / HR | `employees`, `shifts`, `shift_assignments`, `shift_requests`, `attendance_records`, `payroll_periods`, `payroll_entries` (rollup only) |
+| Print agent     | `print_jobs` (claim/complete/expire RPCs), `printers`, `printer_agents`                                                                |
+| Plumbing        | `notifications`, `audit_logs`, `archive_run_log`, `reconcile_run_log`, `summary_run_queue`, `order_daily_counters`                     |
 
 For the per-column / per-policy reference of a specific table, prefer reading the originating migration and generated types. Do not recreate hand-written schema dumps; they drift from generated types and applied database state.
+
+> **`BMIDL-RLS-INTENTIONAL-ROLE-FASTPATH`:** `branch_menu_item_daily_limits` gates RLS via the JWT `auth_role()` fast-path, **not** `has_permission()`. This is intentional (non-destructive, read-mostly table; ~1h stale-revoke window acceptable). Do not "fix" it to `has_permission()`. See `docs/agent/rules/database.md` → Intentional Exceptions.
 
 ## RLS Pattern
 
@@ -113,7 +114,7 @@ CREATE POLICY "Tenant isolation" ON public.{table}
 CREATE POLICY "Branch scope" ON public.{table}
   FOR SELECT USING (
     branch_id = auth_branch_id()
-    OR auth_role() IN ('owner', 'super_manager', 'area_manager')
+    OR auth_role() IN ('owner', 'manager')
   );
 
 -- 4. GRANT (mandatory — RLS without GRANT = silent block)

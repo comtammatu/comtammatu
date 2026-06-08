@@ -1,5 +1,7 @@
 # Auth & ACL Module
 
+> **Lean HKD scope (2026-06):** The live app has **4 roles** — `owner`, `manager`, `staff`, `chef`. The 8–10 role tree below (`super_manager`, `area_manager`, `branch_manager`, `warehouse_manager`, `production_manager`, `cashier`, `waiter`, `office`) is **retained historical reference** describing the pre-lean model; `area` / `area_manager` were fully removed (app + shared + DB), and legacy `office` maps to `staff`. The Position ⟂ Permission machinery (JWT claims, `staff_permissions`, `has_permission()`, proxy single-gate) is unchanged and still authoritative. Read role tables below as "how the mechanism works," then apply the 4 lean roles.
+
 > **Auth (shipped 2026-04-22/23):** Position (HR chức vụ) is separated from Permission (quyền truy cập). Authz runs against a normalized `staff_permissions(user_id, branch_id, permission_key, valid_from, valid_until)` table, gated by RLS via `has_permission(branch_id, key)`. Legacy role strings (`branch_manager`, `cashier`, …) are still emitted in JWT as `user_role` for backward compat — they're derived from `positions.legacy_role_code`. `profiles.role` column + `staff_role` enum **dropped**. See the Auth section below.
 
 ## Overview
@@ -94,7 +96,14 @@ Owner is protected: RPCs refuse to touch a user whose position code is `owner` (
    - Proxy calls `updateSession()` → `extractClaimsFromAccessToken(session.access_token)` → `canAccess(user_role, module)` (route gate)
    - RLS on any DB access: `has_permission(branch_id, key)` checks `staff_permissions` (row gate)
 
-**IMPORTANT:** `user.app_metadata` from supabase-js reads the `auth.users` row, which does **not** include hook-injected claims. Always use `extractClaimsFromAccessToken(session.access_token)` when you need `position`. See regression rule `JWT-CLAIMS-NOT-IN-APP-METADATA`.
+### Rule — `JWT-CLAIMS-NOT-IN-APP-METADATA`
+
+`user.app_metadata` from supabase-js reads the `auth.users` row, which does **not** include hook-injected claims (`tenant_id`, `branch_id`, `user_role`, `position`). Those claims exist only inside the **access token** minted by `custom_access_token_hook()`. Therefore:
+
+- Always read claims via `extractClaimsFromAccessToken(session.access_token)` (or `extractClaims()`), **never** from `user.app_metadata`.
+- Reading `user.app_metadata` for `position`/`user_role` yields stale or missing values and is a silent auth bug.
+
+This is a durable, portable rule (also tracked in `tasks/regressions.md`), not a one-off note.
 
 ## ACL Matrix
 

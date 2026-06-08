@@ -1,11 +1,13 @@
 # Architecture — Cơm Tấm Má Tư
 
+> **Lean HKD note (2026-06):** The business is a **Hộ Kinh Doanh** (household business), single-tenant (`tenant_id` kept deliberately as scope key), with **flat, peer branches** — no Kho Tổng / Bếp Trung Tâm / inter-site transfers. Live roles are **4**: `owner`, `manager`, `staff`, `chef`. The 8–10 role lists and multi-site operating model in the tables below are **retained reference** for how the auth/RLS/routing mechanisms work; map them onto the 4 lean roles and flat-branch model when reasoning about current behavior. `area` / `area_manager` were fully removed (app + shared + DB).
+
 ## Hierarchy
 
 ```
-Tenant (L0, single row: Cơm Tấm Má Tư CTCP)
-  └── Branch (L1, multiple: Chi nhánh Q1, Q3, ...)
-        └── Staff (profiles, role-based)
+Tenant (L0, single row: Hộ Kinh Doanh Cơm Tấm Má Tư)
+  └── Branch (L1, multiple peer branches: Chi nhánh Q1, Q3, ...)
+        └── Staff (profiles, role-based: owner / manager / staff / chef)
 ```
 
 ## System Overview
@@ -73,19 +75,20 @@ POS/KDS are not anyone's default landing — operators reach `/br/[branchId]/pos
 -- Tenant-scoped (all tables)
 USING (tenant_id = auth_tenant_id())
 
--- Branch-scoped (with manager override)
+-- Branch-scoped (with owner/manager override)
 USING (branch_id = auth_branch_id()
-  OR auth_role() IN ('owner', 'super_manager', 'area_manager'))
+  OR auth_role() IN ('owner', 'manager'))
 ```
 
 ## Package Dependencies
 
 ```
 @comtammatu/web
-  ├── @comtammatu/shared    (auth types, ACL, scope helpers)
+  ├── @comtammatu/shared    (auth types, ACL, scope helpers, security/rate-limit)
   ├── @comtammatu/database  (Supabase clients)
-  ├── @comtammatu/ui        (shadcn/ui components)
-  └── @comtammatu/security  (Upstash rate limiting)
+  └── @comtammatu/ui        (shadcn/ui components)
+
+# Rate limiting lives at @comtammatu/shared/security (former @comtammatu/security package merged in V9)
 ```
 
 ## Operating Planes

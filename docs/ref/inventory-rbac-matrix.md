@@ -1,5 +1,9 @@
 # Inventory RBAC Matrix — Auth v2
 
+> ## ⚠️ LEAN HKD REFRAME (2026-06) — đọc trước
+>
+> Ma trận bên dưới dùng các role cũ (`super_manager`, `area_manager`, `branch_manager`, `warehouse_manager`, `production_manager`) cho mô hình multi-warehouse **đã CUT**. Lean Hộ Kinh Doanh chỉ còn **4 role**: `owner`, `manager`, `staff`, `chef`. Quyền inventory-lean: `owner`/`manager` vào toàn bộ kho-lean (ingredients, suppliers, GRN, stock, stocktake, alert, reports, công nợ NCC); `staff`/`chef` không có route inventory theo ACL. Cơ chế Position ⟂ Permission (staff_permissions + `has_permission()`) không đổi — chỉ tập role thu hẹp. Bỏ qua các dòng procurement/production/transfer đã CUT.
+
 > Canonical access contract cho Inventory surfaces, viết theo model **Position ⟂ Permission** (Auth v2).
 >
 > Source of truth:

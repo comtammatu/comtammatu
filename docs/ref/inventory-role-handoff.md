@@ -1,7 +1,8 @@
-# Inventory Role Handoff — 1 Trang
+# Inventory Role Handoff — 1 Trang (lean HKD flat-branch)
 
 > Dùng cho training nhanh đội vận hành  
-> Mô hình pilot: `Kho Tổng / CW`, `Bếp trung tâm / CK`, `Kho chi nhánh`, `Bếp chi nhánh`
+> **Mô hình LEAN flat-branch:** mỗi chi nhánh tự nhập NCC bằng `GRN` + kiểm kê (`stocktake`) cuối tháng. **KHÔNG** trừ kho theo bán; **KHÔNG** có Kho Tổng/Bếp Trung Tâm/`stock_transfer`/`production_order`.  
+> ⚠️ Các mục bên dưới về `CW`/`CK`/transfer/production thuộc **mô hình pilot ĐÃ CẮT** — giữ làm tham chiếu lịch sử, KHÔNG còn áp dụng.
 
 ---
 
@@ -15,14 +16,15 @@ Tài liệu này là bản training 1 trang.
 
 ---
 
-## 1. Luồng chuẩn
+## 1. Luồng chuẩn (lean flat-branch)
 
-1. CW/CK nhập nguyên liệu từ nhà cung cấp bằng `PO` và `GRN`.
-2. CW có thể chuyển hàng sang bếp trung tâm hoặc chuyển thẳng về kho chi nhánh bằng `stock_transfer`.
-3. Nếu sản xuất tập trung, bếp trung tâm tạo `production_order` để sản xuất thành phẩm.
-4. Bếp trung tâm có thể chuyển thành phẩm sang kho chi nhánh bằng `stock_transfer`.
-5. Kho chi nhánh cấp phát xuống bếp chi nhánh theo nhu cầu bán.
-6. Cuối ngày các site kiểm kê và xử lý chênh lệch nếu có.
+1. Chi nhánh nhập nguyên liệu từ nhà cung cấp bằng `GRN` (không cần PO formal).
+2. `GRN` cập nhật tồn ở **cấp chi nhánh** (`stock_levels` theo branch) + ghi `stock_movement`.
+3. Bán hàng **KHÔNG trừ kho** (HKD lean — không deduct per sale).
+4. Cuối tháng: kiểm kê (`stocktake`) — đếm thực tế, hệ tính **chênh lệch (variance)** so tồn sổ để chống thất thoát.
+5. Công nợ NCC: `supplier_invoice` + `supplier_payment` (số dư = `total − paid`).
+
+> Mô hình cũ `CW → CK → stock_transfer → production_order → cấp bếp` bên dưới **đã CẮT** (flat-branch). Đọc làm lịch sử.
 
 ## 2. Thủ kho Kho Tổng / CW
 
