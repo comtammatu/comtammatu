@@ -872,22 +872,25 @@ CREATE FUNCTION private.staff_role_from_position_code(p_position_code text) RETU
     AS $$
   SELECT CASE p_position_code
     WHEN 'owner' THEN 'owner'
-    WHEN 'super_manager' THEN 'super_manager'
-    WHEN 'executive_assistant' THEN 'super_manager'
-    WHEN 'area_manager' THEN 'area_manager'
-    WHEN 'branch_manager' THEN 'branch_manager'
-    WHEN 'chief_accountant' THEN 'office'
-    WHEN 'accountant' THEN 'office'
-    WHEN 'office' THEN 'office'
-    WHEN 'warehouse_head' THEN 'warehouse_manager'
-    WHEN 'warehouse_keeper' THEN 'warehouse_manager'
-    WHEN 'head_chef' THEN 'production_manager'
+    -- manager bucket
+    WHEN 'super_manager' THEN 'manager'
+    WHEN 'executive_assistant' THEN 'manager'
+    WHEN 'area_manager' THEN 'manager'
+    WHEN 'branch_manager' THEN 'manager'
+    -- staff bucket
+    WHEN 'chief_accountant' THEN 'staff'
+    WHEN 'accountant' THEN 'staff'
+    WHEN 'office' THEN 'staff'
+    WHEN 'warehouse_head' THEN 'staff'
+    WHEN 'warehouse_keeper' THEN 'staff'
+    WHEN 'warehouse_manager' THEN 'staff'
+    WHEN 'production_manager' THEN 'staff'
+    WHEN 'cashier' THEN 'staff'
+    WHEN 'waiter' THEN 'staff'
+    -- chef bucket
+    WHEN 'head_chef' THEN 'chef'
     WHEN 'chef' THEN 'chef'
     WHEN 'kitchen_helper' THEN 'chef'
-    WHEN 'cashier' THEN 'cashier'
-    WHEN 'waiter' THEN 'waiter'
-    WHEN 'warehouse_manager' THEN 'warehouse_manager'
-    WHEN 'production_manager' THEN 'production_manager'
     ELSE NULL
   END
 $$;
@@ -898,31 +901,6 @@ $$;
 --
 
 COMMENT ON FUNCTION private.staff_role_from_position_code(p_position_code text) IS 'Maps HR position codes to StaffRole buckets used by route ACL.';
-
-
---
--- Name: _auth_v2_check_area_scope(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public._auth_v2_check_area_scope() RETURNS trigger
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'pg_catalog', 'public', 'private', 'extensions', 'auth', 'storage'
-    AS $$
-DECLARE
-  v_code TEXT;
-BEGIN
-  IF NEW.area_id IS NULL THEN
-    RETURN NEW;
-  END IF;
-  SELECT private.staff_role_from_position_code(code) INTO v_code
-  FROM public.positions WHERE id = NEW.position_id;
-  IF v_code IS NULL OR v_code NOT IN ('area_manager','warehouse_manager','production_manager') THEN
-    RAISE EXCEPTION 'area_id only allowed for area_manager / warehouse_manager / production_manager (got %)', COALESCE(v_code, '<null>')
-      USING ERRCODE = '23514';
-  END IF;
-  RETURN NEW;
-END;
-$$;
 
 
 --
@@ -939,7 +917,7 @@ BEGIN
   SELECT private.staff_role_from_position_code(code) INTO v_code
   FROM public.positions WHERE id = NEW.position_id;
 
-  IF v_code IN ('cashier','waiter','chef','branch_manager','warehouse_manager','production_manager')
+  IF v_code IN ('staff','chef')
      AND NEW.branch_id IS NULL THEN
     RAISE EXCEPTION 'branch_required_for_operational_role: position=%', v_code
       USING ERRCODE = '23514';
@@ -989,17 +967,23 @@ CREATE FUNCTION public._auth_v2_role_to_position(p_role text) RETURNS text
     LANGUAGE sql IMMUTABLE SECURITY DEFINER
     SET search_path TO ''
     AS $$
+  -- Maps an incoming role string to a seeded HKD position code. Accepts the
+  -- 4 lean roles plus legacy role names (back-compat for app code that still
+  -- emits pre-collapse roles); all resolve to one of the 4 seed positions.
   SELECT CASE p_role
     WHEN 'owner'              THEN 'owner'
-    WHEN 'super_manager'      THEN 'super_manager'
-    WHEN 'area_manager'       THEN 'area_manager'
+    WHEN 'manager'            THEN 'branch_manager'
+    WHEN 'super_manager'      THEN 'branch_manager'
+    WHEN 'area_manager'       THEN 'branch_manager'
     WHEN 'branch_manager'     THEN 'branch_manager'
-    WHEN 'warehouse_manager'  THEN 'warehouse_head'
-    WHEN 'production_manager' THEN 'head_chef'
+    WHEN 'staff'              THEN 'cashier'
+    WHEN 'office'             THEN 'cashier'
     WHEN 'cashier'            THEN 'cashier'
-    WHEN 'waiter'             THEN 'waiter'
+    WHEN 'waiter'             THEN 'cashier'
+    WHEN 'warehouse_manager'  THEN 'cashier'
+    WHEN 'production_manager' THEN 'cashier'
     WHEN 'chef'               THEN 'chef'
-    WHEN 'office'             THEN 'office'
+    WHEN 'head_chef'          THEN 'chef'
     ELSE NULL
   END
 $$;
@@ -1173,8 +1157,7 @@ BEGIN
   END IF;
 
   IF p_role IS NOT NULL AND p_role NOT IN (
-    'owner','super_manager','area_manager','branch_manager',
-    'warehouse_manager','production_manager','cashier','waiter','chef','office'
+    'owner','manager','staff','chef'
   ) THEN
     RAISE EXCEPTION 'invalid_role: %', p_role USING ERRCODE = '22023';
   END IF;
@@ -1195,7 +1178,7 @@ BEGIN
   v_final_role   := COALESCE(p_role, v_target_role);
   v_final_branch := COALESCE(p_branch_id, v_target.branch_id);
 
-  IF v_final_role IN ('cashier','waiter','chef','branch_manager','warehouse_manager','production_manager')
+  IF v_final_role IN ('staff','chef')
      AND v_final_branch IS NULL THEN
     RAISE EXCEPTION 'branch_required_for_operational_role' USING ERRCODE = 'P0001';
   END IF;
@@ -1209,36 +1192,20 @@ BEGIN
       RAISE EXCEPTION 'branch_not_found_in_tenant' USING ERRCODE = 'P0002';
     END IF;
 
-    IF v_final_role IN ('cashier','waiter','chef','branch_manager')
+    IF v_final_role IN ('staff','chef','manager')
        AND v_branch_kind <> 'branch' THEN
       RAISE EXCEPTION 'operational roles must be assigned to branch site' USING ERRCODE = 'P0001';
     END IF;
-    IF v_final_role = 'warehouse_manager' AND v_branch_kind <> 'central_warehouse' THEN
-      RAISE EXCEPTION 'warehouse_manager must be assigned to central_warehouse branch' USING ERRCODE = 'P0001';
-    END IF;
-    IF v_final_role = 'production_manager' AND v_branch_kind <> 'central_kitchen' THEN
-      RAISE EXCEPTION 'production_manager must be assigned to central_kitchen branch' USING ERRCODE = 'P0001';
-    END IF;
   END IF;
 
+  -- Role-tier hierarchy after the 4-role collapse: owner is unrestricted;
+  -- managers may manage anyone except the owner (entry is already gated by
+  -- staff:manage / staff:assign_position perm-keys, the authoritative check).
   IF v_actor_role_text = 'owner' THEN
     NULL;
-  ELSIF v_actor_role_text = 'super_manager' THEN
+  ELSIF v_actor_role_text = 'manager' THEN
     IF v_target_role = 'owner' OR v_final_role = 'owner' THEN
-      RAISE EXCEPTION 'super_manager cannot modify owner';
-    END IF;
-  ELSIF v_actor_role_text = 'branch_manager' THEN
-    IF v_target.branch_id IS DISTINCT FROM v_actor_branch THEN
-      RAISE EXCEPTION 'branch_manager: target not in your branch';
-    END IF;
-    IF v_target_role = 'branch_manager' THEN
-      RAISE EXCEPTION 'branch_manager cannot modify peer branch_manager';
-    END IF;
-    IF v_final_role NOT IN ('cashier','waiter','chef') THEN
-      RAISE EXCEPTION 'branch_manager can only assign cashier/waiter/chef';
-    END IF;
-    IF v_final_branch IS DISTINCT FROM v_actor_branch THEN
-      RAISE EXCEPTION 'branch_manager cannot reassign to other branch';
+      RAISE EXCEPTION 'manager cannot modify owner';
     END IF;
   ELSE
     RAISE EXCEPTION 'insufficient privileges for profile management';
@@ -1773,7 +1740,7 @@ BEGIN
     RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000';
   END IF;
 
-  SELECT p.tenant_id, p.branch_id, COALESCE(private.staff_role_from_position_code(po.code), 'office')
+  SELECT p.tenant_id, p.branch_id, COALESCE(private.staff_role_from_position_code(po.code), 'staff')
   INTO v_prof_tenant, v_prof_branch, v_prof_role
   FROM public.profiles p
   LEFT JOIN public.positions po ON po.id = p.position_id
@@ -1823,7 +1790,7 @@ BEGIN
     RAISE EXCEPTION 'tenant mismatch' USING ERRCODE = '42501';
   END IF;
 
-  IF v_prof_role IN ('owner', 'super_manager', 'area_manager') THEN
+  IF v_prof_role IN ('owner', 'manager') THEN
     PERFORM 1 FROM public.branches b
     WHERE b.id = v_order.branch_id AND b.tenant_id = v_prof_tenant;
     IF NOT FOUND THEN
@@ -2090,7 +2057,7 @@ BEGIN
     RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000';
   END IF;
 
-  SELECT p.tenant_id, p.branch_id, COALESCE(private.staff_role_from_position_code(po.code), 'office')
+  SELECT p.tenant_id, p.branch_id, COALESCE(private.staff_role_from_position_code(po.code), 'staff')
   INTO v_prof_tenant, v_prof_branch, v_prof_role
   FROM public.profiles p
   LEFT JOIN public.positions po ON po.id = p.position_id
@@ -2103,7 +2070,7 @@ BEGIN
   -- Bất kỳ nhân viên POS nào (cashier/waiter/branch_manager+) đều áp được.
   -- Không gate theo % — owner đã chốt tại 4-agent debate (C1).
   IF v_prof_role IS NULL OR v_prof_role NOT IN
-     ('owner', 'super_manager', 'area_manager', 'branch_manager', 'cashier', 'waiter')
+     ('owner', 'manager', 'staff')
   THEN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
@@ -2141,7 +2108,7 @@ BEGIN
   END IF;
 
   -- Branch scope (SECURITY DEFINER — RLS bypass; manual check required).
-  IF v_prof_role IN ('owner', 'super_manager', 'area_manager') THEN
+  IF v_prof_role IN ('owner', 'manager') THEN
     PERFORM 1 FROM public.branches b
     WHERE b.id = v_order.branch_id AND b.tenant_id = v_prof_tenant;
     IF NOT FOUND THEN
@@ -2230,75 +2197,12 @@ CREATE FUNCTION public.apply_template_to_user(p_target_user uuid, p_branch_id bi
     LANGUAGE plpgsql SECURITY DEFINER
     SET search_path TO ''
     AS $$
-DECLARE
-  v_tenant_id BIGINT;
-  v_target_tenant BIGINT;
-  v_template RECORD;
-  v_perm_key TEXT;
-  v_inserted INTEGER := 0;
-  v_rows INTEGER;
-  v_from TIMESTAMPTZ := COALESCE(p_valid_from, now());
-  v_effective_branch_id BIGINT;
 BEGIN
-  IF auth.uid() IS NULL THEN
-    RAISE EXCEPTION 'not_authenticated' USING ERRCODE = '28000';
-  END IF;
-
-  SELECT tenant_id INTO v_tenant_id FROM public.profiles WHERE id = auth.uid();
-  SELECT tenant_id INTO v_target_tenant FROM public.profiles WHERE id = p_target_user;
-  IF v_target_tenant IS NULL OR v_target_tenant <> v_tenant_id THEN
-    RAISE EXCEPTION 'target_not_in_tenant' USING ERRCODE = '42501';
-  END IF;
-
-  IF p_branch_id IS NOT NULL AND NOT EXISTS (
-    SELECT 1 FROM public.branches WHERE id = p_branch_id AND tenant_id = v_tenant_id
-  ) THEN
-    RAISE EXCEPTION 'branch_not_in_tenant' USING ERRCODE = '42501';
-  END IF;
-
-  IF public._auth_v2_is_owner(p_target_user) THEN
-    RAISE EXCEPTION 'cannot_manage_owner_permissions' USING ERRCODE = '42501';
-  END IF;
-
-  IF p_valid_until IS NOT NULL AND p_valid_until <= v_from THEN
-    RAISE EXCEPTION 'invalid_validity_window' USING ERRCODE = '22023';
-  END IF;
-
-  SELECT id, tenant_id, permission_keys
-    INTO v_template
-    FROM public.role_templates
-   WHERE id = p_template_id;
-
-  IF v_template.id IS NULL OR v_template.tenant_id <> v_tenant_id THEN
-    RAISE EXCEPTION 'template_not_in_tenant' USING ERRCODE = '42501';
-  END IF;
-
-  FOREACH v_perm_key IN ARRAY v_template.permission_keys LOOP
-    v_effective_branch_id := private.staff_permission_effective_branch_id(
-      v_perm_key,
-      p_branch_id
-    );
-
-    IF NOT public.has_permission(v_effective_branch_id, 'staff:assign_permission') THEN
-      RAISE EXCEPTION 'forbidden: missing staff:assign_permission' USING ERRCODE = '42501';
-    END IF;
-
-    INSERT INTO public.staff_permissions (
-      user_id, tenant_id, branch_id, permission_key, source_template, granted_by,
-      valid_from, valid_until
-    ) VALUES (
-      p_target_user, v_tenant_id, v_effective_branch_id, v_perm_key, v_template.id, auth.uid(),
-      v_from, p_valid_until
-    )
-    ON CONFLICT DO NOTHING;
-    GET DIAGNOSTICS v_rows = ROW_COUNT;
-
-    IF v_rows > 0 THEN
-      v_inserted := v_inserted + 1;
-    END IF;
-  END LOOP;
-
-  RETURN v_inserted;
+  -- HKD lean: role_templates removed. Permissions are seeded/granted directly
+  -- (no template presets). Neutralized to a safe no-op so the dropped
+  -- role_templates table cannot be referenced. See V8d.
+  RAISE EXCEPTION 'role_templates_removed: grant permissions directly via grant_staff_permission' USING ERRCODE = '0A000';
+  RETURN 0;
 END;
 $$;
 
@@ -2648,7 +2552,7 @@ CREATE FUNCTION public.can_access_branch(p_branch_id bigint) RETURNS boolean
     SET search_path TO 'pg_catalog', 'public', 'private', 'extensions', 'auth', 'storage'
     AS $$
   SELECT CASE
-    WHEN public.auth_role() IN ('owner', 'super_manager', 'office') THEN true
+    WHEN public.auth_role() IN ('owner', 'manager', 'staff') THEN true
     ELSE p_branch_id = public.auth_branch_id()
   END;
 $$;
@@ -2679,7 +2583,7 @@ BEGIN
     RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000';
   END IF;
 
-  SELECT p.tenant_id, p.branch_id, COALESCE(private.staff_role_from_position_code(po.code), 'office')
+  SELECT p.tenant_id, p.branch_id, COALESCE(private.staff_role_from_position_code(po.code), 'staff')
   INTO v_prof_tenant, v_prof_branch, v_prof_role
   FROM public.profiles p
   LEFT JOIN public.positions po ON po.id = p.position_id
@@ -2689,7 +2593,7 @@ BEGIN
     RAISE EXCEPTION 'profile not found' USING ERRCODE = '28000';
   END IF;
 
-  IF v_prof_role IS NULL OR v_prof_role NOT IN ('branch_manager', 'cashier', 'waiter') THEN
+  IF v_prof_role IS NULL OR v_prof_role NOT IN ('manager', 'staff') THEN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
 
@@ -3217,12 +3121,12 @@ BEGIN
     RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000';
   END IF;
 
-  IF v_role NOT IN ('owner', 'super_manager',
-                    'branch_manager', 'cashier', 'chef') THEN
+  IF v_role NOT IN ('owner', 'manager',
+                    'staff', 'chef') THEN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
 
-  IF v_role IN ('branch_manager', 'cashier', 'chef')
+  IF v_role IN ('manager', 'staff', 'chef')
      AND (v_branch IS NULL OR v_branch <> p_branch_id) THEN
     RAISE EXCEPTION 'branch scope mismatch' USING ERRCODE = '42501';
   END IF;
@@ -3260,7 +3164,7 @@ BEGIN
     RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000';
   END IF;
 
-  SELECT p.tenant_id, p.branch_id, COALESCE(private.staff_role_from_position_code(po.code), 'office')
+  SELECT p.tenant_id, p.branch_id, COALESCE(private.staff_role_from_position_code(po.code), 'staff')
   INTO v_prof_tenant, v_prof_branch, v_prof_role
   FROM public.profiles p
   LEFT JOIN public.positions po ON po.id = p.position_id
@@ -3271,7 +3175,7 @@ BEGIN
   END IF;
 
   IF v_prof_role IS NULL OR v_prof_role NOT IN
-     ('owner', 'super_manager', 'area_manager', 'branch_manager', 'cashier', 'waiter')
+     ('owner', 'manager', 'staff')
   THEN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
@@ -3293,7 +3197,7 @@ BEGIN
     RAISE EXCEPTION 'tenant mismatch' USING ERRCODE = '42501';
   END IF;
 
-  IF v_prof_role IN ('owner', 'super_manager', 'area_manager') THEN
+  IF v_prof_role IN ('owner', 'manager') THEN
     PERFORM 1 FROM public.branches b
     WHERE b.id = v_order.branch_id AND b.tenant_id = v_prof_tenant;
     IF NOT FOUND THEN
@@ -5328,7 +5232,7 @@ CREATE FUNCTION public.count_unread_notifications() RETURNS bigint
     AND (
       n.target_branch_id IS NULL
       OR n.target_branch_id = ctx.branch_id
-      OR ctx.user_role IN ('owner', 'super_manager')
+      OR ctx.user_role IN ('owner', 'manager')
     )
     AND NOT EXISTS (
       SELECT 1
@@ -5547,7 +5451,7 @@ BEGIN
     RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000';
   END IF;
 
-  SELECT p.tenant_id, p.branch_id, COALESCE(private.staff_role_from_position_code(po.code), 'office')
+  SELECT p.tenant_id, p.branch_id, COALESCE(private.staff_role_from_position_code(po.code), 'staff')
     INTO v_prof_tenant, v_prof_branch, v_prof_role
     FROM public.profiles p
     LEFT JOIN public.positions po ON po.id = p.position_id
@@ -5561,7 +5465,7 @@ BEGIN
     RAISE EXCEPTION 'tenant mismatch' USING ERRCODE = '42501';
   END IF;
 
-  IF v_prof_role IN ('owner', 'super_manager', 'area_manager') THEN
+  IF v_prof_role IN ('owner', 'manager') THEN
     SELECT b.code INTO v_branch_code
       FROM public.branches b
      WHERE b.id = p_branch_id AND b.tenant_id = p_tenant_id;
@@ -6131,8 +6035,8 @@ BEGIN
         p_to_location_id;
     END IF;
   ELSE
-    IF v_role = 'branch_manager' THEN
-      RAISE EXCEPTION 'branch_manager_inter_site_create_forbidden' USING ERRCODE = '42501';
+    IF v_role = 'manager' THEN
+      RAISE EXCEPTION 'manager_inter_site_create_forbidden' USING ERRCODE = '42501';
     END IF;
   END IF;
 
@@ -6774,7 +6678,7 @@ BEGIN
     RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000';
   END IF;
 
-  SELECT p.tenant_id, p.branch_id, COALESCE(private.staff_role_from_position_code(po.code), 'office')
+  SELECT p.tenant_id, p.branch_id, COALESCE(private.staff_role_from_position_code(po.code), 'staff')
   INTO v_prof_tenant, v_prof_branch, v_prof_role
   FROM public.profiles p
   LEFT JOIN public.positions po ON po.id = p.position_id
@@ -6784,7 +6688,7 @@ BEGIN
     RAISE EXCEPTION 'profile not found' USING ERRCODE = '28000';
   END IF;
 
-  IF v_prof_role IS NULL OR v_prof_role NOT IN ('branch_manager', 'cashier', 'waiter') THEN
+  IF v_prof_role IS NULL OR v_prof_role NOT IN ('manager', 'staff') THEN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
 
@@ -9346,7 +9250,7 @@ CREATE FUNCTION public.get_branch_menu_daily_limits_for_pos(p_branch_id bigint) 
     AND bl.branch_id = p_branch_id
     AND bl.limit_date = (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Ho_Chi_Minh')::date
     AND (
-      public.auth_role() IN ('owner', 'super_manager')
+      public.auth_role() IN ('owner', 'manager')
       OR public.auth_branch_id() = p_branch_id
     );
 $$;
@@ -11257,7 +11161,7 @@ BEGIN
   -- privilege-escalation vector via raw_app_meta_data role typos).
   IF v_position_id IS NULL THEN
     RAISE EXCEPTION
-      'handle_new_user: position_not_resolved for role=% tenant=% — verify positions seeded for tenant + role string is one of (owner, super_manager, area_manager, branch_manager, warehouse_manager, production_manager, cashier, waiter, chef, office)',
+      'handle_new_user: position_not_resolved for role=% tenant=% — verify positions seeded for tenant + role string is one of (owner, manager, staff, chef)',
       v_role_text, v_tenant_id
       USING ERRCODE = 'P0001';
   END IF;
@@ -11492,7 +11396,7 @@ CREATE FUNCTION public.is_inventory_production_operator() RETURNS boolean
     LANGUAGE sql STABLE SECURITY DEFINER
     SET search_path TO ''
     AS $$
-  SELECT public.auth_role() IN ('owner', 'super_manager', 'production_manager');
+  SELECT public.auth_role() IN ('owner', 'manager', 'staff');
 $$;
 
 
@@ -11524,7 +11428,7 @@ BEGIN
     RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000';
   END IF;
 
-  IF v_role NOT IN ('owner', 'super_manager')
+  IF v_role NOT IN ('owner', 'manager')
      AND (v_branch IS NULL OR v_branch <> p_branch_id) THEN
     RAISE EXCEPTION 'branch scope mismatch' USING ERRCODE = '42501';
   END IF;
@@ -11653,7 +11557,7 @@ BEGIN
       AND (
         n.target_branch_id IS NULL
         OR n.target_branch_id = ctx.branch_id
-        OR ctx.user_role IN ('owner', 'super_manager')
+        OR ctx.user_role IN ('owner', 'manager')
       )
       AND NOT EXISTS (
         SELECT 1
@@ -11859,7 +11763,7 @@ BEGIN
   VALUES (
     v_row.tenant_id,
     v_row.branch_id,
-    ARRAY['cashier', 'waiter', 'branch_manager']::TEXT[],
+    ARRAY['staff', 'manager']::TEXT[],
     'pos.kds_out_of_stock',
     'warning',
     format('Bếp báo hết món #%s', v_row.order_number),
@@ -11932,7 +11836,7 @@ BEGIN
     RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000';
   END IF;
 
-  SELECT p.tenant_id, p.branch_id, COALESCE(private.staff_role_from_position_code(po.code), 'office')
+  SELECT p.tenant_id, p.branch_id, COALESCE(private.staff_role_from_position_code(po.code), 'staff')
   INTO v_prof_tenant, v_prof_branch, v_prof_role
   FROM public.profiles p
   LEFT JOIN public.positions po ON po.id = p.position_id
@@ -11963,7 +11867,7 @@ BEGIN
     RAISE EXCEPTION 'tenant mismatch' USING ERRCODE = '42501';
   END IF;
 
-  IF v_prof_role IN ('owner', 'super_manager', 'area_manager') THEN
+  IF v_prof_role IN ('owner', 'manager') THEN
     NULL;
   ELSIF v_prof_branch IS NOT NULL AND v_item.branch_id <> v_prof_branch THEN
     RAISE EXCEPTION 'branch mismatch' USING ERRCODE = '42501';
@@ -12261,7 +12165,7 @@ BEGIN
     RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000';
   END IF;
 
-  SELECT p.tenant_id, p.branch_id, COALESCE(private.staff_role_from_position_code(po.code), 'office')
+  SELECT p.tenant_id, p.branch_id, COALESCE(private.staff_role_from_position_code(po.code), 'staff')
   INTO v_prof_tenant, v_prof_branch, v_prof_role
   FROM public.profiles p
   LEFT JOIN public.positions po ON po.id = p.position_id
@@ -12272,7 +12176,7 @@ BEGIN
   END IF;
 
   IF v_prof_role IS NULL OR v_prof_role NOT IN
-     ('owner', 'super_manager', 'area_manager', 'branch_manager', 'cashier', 'waiter')
+     ('owner', 'manager', 'staff')
   THEN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
@@ -12346,7 +12250,7 @@ BEGIN
     RAISE EXCEPTION 'merge_different_branch' USING ERRCODE = '22023';
   END IF;
 
-  IF v_prof_role IN ('owner', 'super_manager', 'area_manager') THEN
+  IF v_prof_role IN ('owner', 'manager') THEN
     PERFORM 1 FROM public.branches b
     WHERE b.id = v_source.branch_id AND b.tenant_id = v_prof_tenant;
     IF NOT FOUND THEN
@@ -14022,7 +13926,7 @@ BEGIN
     RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000';
   END IF;
 
-  SELECT p.tenant_id, p.branch_id, COALESCE(private.staff_role_from_position_code(po.code), 'office')
+  SELECT p.tenant_id, p.branch_id, COALESCE(private.staff_role_from_position_code(po.code), 'staff')
   INTO v_prof_tenant, v_prof_branch, v_prof_role
   FROM public.profiles p
   LEFT JOIN public.positions po ON po.id = p.position_id
@@ -14032,7 +13936,7 @@ BEGIN
     RAISE EXCEPTION 'profile not found' USING ERRCODE = '28000';
   END IF;
 
-  IF v_prof_role IS NULL OR v_prof_role NOT IN ('branch_manager', 'cashier', 'waiter') THEN
+  IF v_prof_role IS NULL OR v_prof_role NOT IN ('manager', 'staff') THEN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
 
@@ -15674,7 +15578,7 @@ BEGIN
     SELECT
       sl.tenant_id,
       sl.branch_id,
-      ARRAY['branch_manager', 'super_manager', 'owner']::TEXT[],
+      ARRAY['manager', 'owner']::TEXT[],
       'inventory.stock_low',
       'warning',
       format('Tồn kho thấp: %s', ing.name),
@@ -15717,7 +15621,7 @@ BEGIN
     SELECT
       gi.tenant_id,
       g.branch_id,
-      ARRAY['branch_manager', 'super_manager', 'owner']::TEXT[],
+      ARRAY['manager', 'owner']::TEXT[],
       'inventory.expiry_soon',
       CASE
         WHEN gi.expiry_date <= (now()::date + interval '2 days') THEN 'critical'
@@ -15776,7 +15680,7 @@ COMMENT ON FUNCTION public.scan_inventory_alerts() IS 'Emit inventory.stock_low 
 -- Name: set_branch_kind(bigint, text); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.set_branch_kind(p_branch_id bigint, p_kind text DEFAULT 'central_warehouse'::text) RETURNS void
+CREATE FUNCTION public.set_branch_kind(p_branch_id bigint, p_kind text DEFAULT 'branch'::text) RETURNS void
     LANGUAGE plpgsql SECURITY DEFINER
     SET search_path TO ''
     AS $$
@@ -15802,7 +15706,7 @@ BEGIN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
 
-  IF p_kind NOT IN ('central_warehouse', 'central_kitchen', 'branch') THEN
+  IF p_kind NOT IN ('branch') THEN
     RAISE EXCEPTION 'invalid branch_kind: %', p_kind USING ERRCODE = '22023';
   END IF;
 
@@ -15846,12 +15750,12 @@ BEGIN
     RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000';
   END IF;
 
-  IF v_role NOT IN ('owner', 'super_manager',
-                    'branch_manager', 'cashier', 'chef') THEN
+  IF v_role NOT IN ('owner', 'manager',
+                    'staff', 'chef') THEN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
 
-  IF v_role IN ('branch_manager', 'cashier', 'chef')
+  IF v_role IN ('manager', 'staff', 'chef')
      AND (v_branch IS NULL OR v_branch <> p_branch_id) THEN
     RAISE EXCEPTION 'branch scope mismatch' USING ERRCODE = '42501';
   END IF;
@@ -15922,7 +15826,7 @@ BEGIN
     RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000';
   END IF;
 
-  SELECT p.tenant_id, p.branch_id, COALESCE(private.staff_role_from_position_code(po.code), 'office')
+  SELECT p.tenant_id, p.branch_id, COALESCE(private.staff_role_from_position_code(po.code), 'staff')
   INTO v_prof_tenant, v_prof_branch, v_prof_role
   FROM public.profiles p
   LEFT JOIN public.positions po ON po.id = p.position_id
@@ -15933,7 +15837,7 @@ BEGIN
   END IF;
 
   IF v_prof_role IS NULL OR v_prof_role NOT IN
-     ('owner', 'super_manager', 'area_manager', 'branch_manager', 'cashier', 'waiter')
+     ('owner', 'manager', 'staff')
   THEN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
@@ -15968,7 +15872,7 @@ BEGIN
     RAISE EXCEPTION 'tenant mismatch' USING ERRCODE = '42501';
   END IF;
 
-  IF v_prof_role IN ('owner', 'super_manager', 'area_manager') THEN
+  IF v_prof_role IN ('owner', 'manager') THEN
     PERFORM 1 FROM public.branches b
     WHERE b.id = v_order.branch_id AND b.tenant_id = v_prof_tenant;
     IF NOT FOUND THEN
@@ -16064,7 +15968,7 @@ BEGIN
     RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000';
   END IF;
 
-  SELECT p.tenant_id, p.branch_id, COALESCE(private.staff_role_from_position_code(po.code), 'office')
+  SELECT p.tenant_id, p.branch_id, COALESCE(private.staff_role_from_position_code(po.code), 'staff')
   INTO v_prof_tenant, v_prof_branch, v_prof_role
   FROM public.profiles p
   LEFT JOIN public.positions po ON po.id = p.position_id
@@ -16096,7 +16000,7 @@ BEGIN
     RAISE EXCEPTION 'tenant mismatch' USING ERRCODE = '42501';
   END IF;
 
-  IF v_prof_role IN ('owner', 'super_manager', 'area_manager') THEN
+  IF v_prof_role IN ('owner', 'manager') THEN
     PERFORM 1
     FROM public.branches b
     WHERE b.id = v_order.branch_id AND b.tenant_id = v_prof_tenant;
@@ -16189,7 +16093,7 @@ BEGIN
     RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000';
   END IF;
 
-  SELECT p.tenant_id, p.branch_id, COALESCE(private.staff_role_from_position_code(po.code), 'office')
+  SELECT p.tenant_id, p.branch_id, COALESCE(private.staff_role_from_position_code(po.code), 'staff')
   INTO v_prof_tenant, v_prof_branch, v_prof_role
   FROM public.profiles p
   LEFT JOIN public.positions po ON po.id = p.position_id
@@ -16212,7 +16116,7 @@ BEGIN
     RAISE EXCEPTION 'tenant mismatch' USING ERRCODE = '42501';
   END IF;
 
-  IF v_prof_role IN ('owner', 'super_manager', 'area_manager') THEN
+  IF v_prof_role IN ('owner', 'manager') THEN
     PERFORM 1
     FROM public.branches b
     WHERE b.id = v_order.branch_id AND b.tenant_id = v_prof_tenant;
@@ -16349,7 +16253,7 @@ BEGIN
     RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000';
   END IF;
 
-  SELECT p.tenant_id, p.branch_id, COALESCE(private.staff_role_from_position_code(po.code), 'office')
+  SELECT p.tenant_id, p.branch_id, COALESCE(private.staff_role_from_position_code(po.code), 'staff')
     INTO v_prof_tenant, v_prof_branch, v_prof_role
     FROM public.profiles p
     LEFT JOIN public.positions po ON po.id = p.position_id
@@ -16360,7 +16264,7 @@ BEGIN
   END IF;
 
   IF v_prof_role IS NULL OR v_prof_role NOT IN
-     ('owner', 'super_manager', 'area_manager', 'branch_manager', 'cashier', 'waiter')
+     ('owner', 'manager', 'staff')
   THEN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
@@ -16405,7 +16309,7 @@ BEGIN
     RAISE EXCEPTION 'tenant mismatch' USING ERRCODE = '42501';
   END IF;
 
-  IF v_prof_role IN ('owner', 'super_manager', 'area_manager') THEN
+  IF v_prof_role IN ('owner', 'manager') THEN
     SELECT b.code INTO v_branch_code
       FROM public.branches b
      WHERE b.id = v_source.branch_id AND b.tenant_id = v_prof_tenant;
@@ -16839,7 +16743,7 @@ BEGIN
     RAISE EXCEPTION 'intra_branch_transfer_has_no_receive_step' USING ERRCODE = '22023';
   END IF;
 
-  IF v_role IN ('branch_manager', 'warehouse_manager', 'production_manager')
+  IF v_role IN ('manager', 'staff')
      AND (v_branch_claim IS NULL OR v_branch_claim <> v_tr.to_branch_id) THEN
     RAISE EXCEPTION 'forbidden_transfer_receive' USING ERRCODE = '42501';
   END IF;
@@ -16916,8 +16820,8 @@ BEGIN
     RAISE EXCEPTION 'forbidden_transfer_ship' USING ERRCODE = '42501';
   END IF;
 
-  IF v_role = 'branch_manager' AND NOT v_is_intra THEN
-    RAISE EXCEPTION 'branch_manager_inter_site_ship_forbidden' USING ERRCODE = '42501';
+  IF v_role = 'manager' AND NOT v_is_intra THEN
+    RAISE EXCEPTION 'manager_inter_site_ship_forbidden' USING ERRCODE = '42501';
   END IF;
 
   IF v_tr.from_location_id IS NULL THEN
@@ -17073,10 +16977,8 @@ CREATE FUNCTION public.stock_transfer_list_branches() RETURNS TABLE(id bigint, n
     AND b.is_active = true
     AND public.auth_role() IN (
       'owner',
-      'super_manager',
-      'branch_manager',
-      'warehouse_manager',
-      'production_manager'
+      'manager',
+      'staff'
     )
   ORDER BY b.name;
 $$;
@@ -17115,11 +17017,11 @@ BEGIN
     RAISE EXCEPTION 'intra_branch_transfer_has_no_transit' USING ERRCODE = '22023';
   END IF;
 
-  IF v_role = 'branch_manager' THEN
-    RAISE EXCEPTION 'branch_manager_inter_site_ship_forbidden' USING ERRCODE = '42501';
+  IF v_role = 'manager' THEN
+    RAISE EXCEPTION 'manager_inter_site_ship_forbidden' USING ERRCODE = '42501';
   END IF;
 
-  IF v_role IN ('warehouse_manager', 'production_manager')
+  IF v_role = 'staff'
      AND (v_branch_claim IS NULL OR v_branch_claim <> v_tr.from_branch_id) THEN
     RAISE EXCEPTION 'forbidden_transfer_ship' USING ERRCODE = '42501';
   END IF;
@@ -17434,71 +17336,10 @@ CREATE FUNCTION public.sync_missing_permissions_from_template() RETURNS TABLE(ro
     LANGUAGE plpgsql SECURITY DEFINER
     SET search_path TO ''
     AS $$
-DECLARE
-  v_profile RECORD;
-  v_template RECORD;
-  v_perm_key TEXT;
-  v_branch BIGINT;
-  v_added INTEGER := 0;
-  v_rows INTEGER;
-  v_effective_branch_id BIGINT;
 BEGIN
-  FOR v_profile IN
-    SELECT p.id AS user_id,
-           p.tenant_id,
-           p.branch_id,
-           pos.code AS position_code,
-           private.staff_role_from_position_code(pos.code) AS role
-      FROM public.profiles p
-      JOIN public.positions pos ON pos.id = p.position_id
-     WHERE p.is_active = TRUE
-       AND p.position_id IS NOT NULL
-  LOOP
-    IF v_profile.role IS NULL THEN
-      RAISE EXCEPTION
-        'sync_missing_permissions_from_template: position_role_not_resolved for position=% tenant=%',
-        v_profile.position_code, v_profile.tenant_id
-        USING ERRCODE = 'P0001';
-    END IF;
-
-    SELECT rt.id, rt.permission_keys
-      INTO v_template
-      FROM public.role_templates rt
-     WHERE rt.tenant_id = v_profile.tenant_id
-       AND rt.position_code = v_profile.position_code
-     LIMIT 1;
-
-    IF v_template.permission_keys IS NULL THEN
-      CONTINUE;
-    END IF;
-
-    IF v_profile.role IN ('owner', 'super_manager', 'office') THEN
-      FOREACH v_perm_key IN ARRAY v_template.permission_keys LOOP
-        v_effective_branch_id := private.staff_permission_effective_branch_id(v_perm_key, NULL);
-        INSERT INTO public.staff_permissions (user_id, tenant_id, branch_id, permission_key, source_template)
-        VALUES (v_profile.user_id, v_profile.tenant_id, v_effective_branch_id, v_perm_key, v_template.id)
-        ON CONFLICT DO NOTHING;
-        GET DIAGNOSTICS v_rows = ROW_COUNT;
-        v_added := v_added + v_rows;
-      END LOOP;
-    ELSE
-      v_branch := v_profile.branch_id;
-      IF v_branch IS NULL THEN
-        CONTINUE;
-      END IF;
-
-      FOREACH v_perm_key IN ARRAY v_template.permission_keys LOOP
-        v_effective_branch_id := private.staff_permission_effective_branch_id(v_perm_key, v_branch);
-        INSERT INTO public.staff_permissions (user_id, tenant_id, branch_id, permission_key, source_template)
-        VALUES (v_profile.user_id, v_profile.tenant_id, v_effective_branch_id, v_perm_key, v_template.id)
-        ON CONFLICT DO NOTHING;
-        GET DIAGNOSTICS v_rows = ROW_COUNT;
-        v_added := v_added + v_rows;
-      END LOOP;
-    END IF;
-  END LOOP;
-
-  RETURN QUERY SELECT v_added;
+  -- HKD lean: role_templates removed. No template sync to perform; permissions
+  -- are granted directly. Neutralized to a safe no-op. See V8d.
+  RETURN QUERY SELECT 0;
 END;
 $$;
 
@@ -17694,17 +17535,12 @@ BEGIN
     RAISE EXCEPTION 'cannot_toggle_self';
   END IF;
 
+  -- 4-role collapse: owner unrestricted; managers may toggle anyone except
+  -- the owner (entry gated by staff:manage perm-key, the authoritative check).
   IF v_actor_role = 'owner' THEN
     NULL;
-  ELSIF v_actor_role = 'super_manager' THEN
+  ELSIF v_actor_role = 'manager' THEN
     IF v_target_role = 'owner' THEN
-      RAISE EXCEPTION 'permission_denied';
-    END IF;
-  ELSIF v_actor_role = 'branch_manager' THEN
-    IF v_target_branch IS DISTINCT FROM v_actor_branch THEN
-      RAISE EXCEPTION 'branch_manager: target not in your branch';
-    END IF;
-    IF v_target_role IN ('owner', 'super_manager', 'area_manager', 'branch_manager') THEN
       RAISE EXCEPTION 'permission_denied';
     END IF;
   ELSE
@@ -17751,7 +17587,7 @@ BEGIN
     RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000';
   END IF;
 
-  SELECT p.tenant_id, p.branch_id, COALESCE(private.staff_role_from_position_code(po.code), 'office')
+  SELECT p.tenant_id, p.branch_id, COALESCE(private.staff_role_from_position_code(po.code), 'staff')
   INTO v_prof_tenant, v_prof_branch, v_prof_role
   FROM public.profiles p
   LEFT JOIN public.positions po ON po.id = p.position_id
@@ -17778,7 +17614,7 @@ BEGIN
     RAISE EXCEPTION 'tenant mismatch' USING ERRCODE = '42501';
   END IF;
 
-  IF v_prof_role IN ('owner', 'super_manager', 'area_manager') THEN
+  IF v_prof_role IN ('owner', 'manager') THEN
     NULL;
   ELSIF v_prof_branch IS NOT NULL AND v_order.branch_id <> v_prof_branch THEN
     RAISE EXCEPTION 'branch mismatch' USING ERRCODE = '42501';
@@ -18432,7 +18268,7 @@ BEGIN
     VALUES (
       NEW.tenant_id,
       NEW.branch_id,
-      ARRAY['branch_manager', 'super_manager', 'owner']::TEXT[],
+      ARRAY['manager', 'owner']::TEXT[],
       'workflow.grn_pending',
       'info',
       format('GRN %s đang chờ chốt', NEW.grn_number),
@@ -18465,7 +18301,7 @@ BEGIN
   VALUES (
     NEW.tenant_id,
     NEW.branch_id,
-    ARRAY['cashier', 'waiter', 'branch_manager']::TEXT[],
+    ARRAY['staff', 'manager']::TEXT[],
     'pos.order_new',
     'info',
     format('Đơn mới #%s', NEW.order_number),
@@ -18506,7 +18342,7 @@ BEGIN
     VALUES (
       NEW.tenant_id,
       NEW.branch_id,
-      ARRAY['branch_manager', 'super_manager', 'owner']::TEXT[],
+      ARRAY['manager', 'owner']::TEXT[],
       'workflow.po_sent',
       'info',
       format('PO %s đã gửi NCC', NEW.po_number),
@@ -18575,7 +18411,7 @@ BEGIN
       VALUES (
         NEW.tenant_id,
         NEW.branch_id,
-        ARRAY['branch_manager', 'super_manager', 'owner']::TEXT[],
+        ARRAY['manager', 'owner']::TEXT[],
         'pos.shift_variance',
         v_severity,
         format('Lệch quỹ ca #%s: %s %sđ', NEW.id, v_diff_label, v_diff_amount),
@@ -18638,7 +18474,7 @@ BEGIN
     VALUES (
       NEW.tenant_id,
       NEW.branch_id,
-      ARRAY['branch_manager', 'super_manager', 'owner']::TEXT[],
+      ARRAY['manager', 'owner']::TEXT[],
       'workflow.stocktake_submitted',
       'warning',
       format('Kiểm kê #%s đã nộp', NEW.id),
@@ -18673,7 +18509,7 @@ BEGIN
     VALUES (
       NEW.tenant_id,
       NEW.to_branch_id,
-      ARRAY['branch_manager', 'super_manager', 'owner']::TEXT[],
+      ARRAY['manager', 'owner']::TEXT[],
       'workflow.transfer_in_transit',
       'info',
       format('Chuyển kho %s đang về', NEW.transfer_number),
@@ -19151,7 +18987,7 @@ BEGIN
     RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000';
   END IF;
 
-  SELECT p.tenant_id, p.branch_id, COALESCE(private.staff_role_from_position_code(po.code), 'office')
+  SELECT p.tenant_id, p.branch_id, COALESCE(private.staff_role_from_position_code(po.code), 'staff')
   INTO v_prof_tenant, v_prof_branch, v_prof_role
   FROM public.profiles p
   LEFT JOIN public.positions po ON po.id = p.position_id
@@ -19181,7 +19017,7 @@ BEGIN
     RAISE EXCEPTION 'tenant mismatch' USING ERRCODE = '42501';
   END IF;
 
-  IF v_prof_role IN ('owner', 'super_manager', 'area_manager') THEN
+  IF v_prof_role IN ('owner', 'manager') THEN
     NULL;
   ELSIF v_prof_branch IS NOT NULL AND v_order.branch_id <> v_prof_branch THEN
     RAISE EXCEPTION 'branch mismatch' USING ERRCODE = '42501';
@@ -19681,7 +19517,7 @@ BEGIN
     RAISE EXCEPTION 'unauthenticated' USING ERRCODE = '28000';
   END IF;
 
-  SELECT p.tenant_id, p.branch_id, COALESCE(private.staff_role_from_position_code(po.code), 'office')
+  SELECT p.tenant_id, p.branch_id, COALESCE(private.staff_role_from_position_code(po.code), 'staff')
   INTO v_prof_tenant, v_prof_branch, v_prof_role
   FROM public.profiles p
   LEFT JOIN public.positions po ON po.id = p.position_id
@@ -19691,7 +19527,7 @@ BEGIN
     RAISE EXCEPTION 'profile not found' USING ERRCODE = '28000';
   END IF;
 
-  IF v_prof_role IS NULL OR v_prof_role NOT IN ('branch_manager', 'cashier', 'waiter') THEN
+  IF v_prof_role IS NULL OR v_prof_role NOT IN ('manager', 'staff') THEN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
 
@@ -19822,7 +19658,7 @@ BEGIN
     GROUP BY ho.tenant_id, ho.branch_id HAVING COUNT(*) >= 1
   LOOP
     INSERT INTO public.notifications (tenant_id, target_branch_id, target_roles, kind, severity, title, body, meta, dedup_key)
-    VALUES (v_row.tenant_id, v_row.branch_id, ARRAY['owner','super_manager','quan_ly_vung']::TEXT[],
+    VALUES (v_row.tenant_id, v_row.branch_id, ARRAY['owner','manager']::TEXT[],
             'inventory.grn.weekly_override_report',
             CASE WHEN v_row.override_count >= 5 THEN 'warning' ELSE 'info' END,
             'GRN hardblock override — weekly report',
@@ -19857,7 +19693,7 @@ BEGIN
     GROUP BY si.tenant_id, si.branch_id
   LOOP
     INSERT INTO public.notifications (tenant_id, target_branch_id, target_roles, kind, severity, title, body, meta, dedup_key)
-    VALUES (v_row.tenant_id, v_row.branch_id, ARRAY['owner','super_manager','quan_ly_vung','quan_ly_CN']::TEXT[],
+    VALUES (v_row.tenant_id, v_row.branch_id, ARRAY['owner','manager']::TEXT[],
       'inventory.waste.weekly_report',
       CASE WHEN v_row.pending_count >= 5 THEN 'warning' ELSE 'info' END,
       'Báo cáo waste — tuần vừa qua',
@@ -20161,7 +19997,7 @@ CREATE TABLE public.branches (
     longitude numeric(10,7),
     timezone text DEFAULT 'Asia/Ho_Chi_Minh'::text NOT NULL,
     code text,
-    CONSTRAINT branches_branch_kind_check CHECK ((branch_kind = ANY (ARRAY['central_warehouse'::text, 'central_kitchen'::text, 'branch'::text]))),
+    CONSTRAINT branches_branch_kind_check CHECK ((branch_kind = 'branch'::text)),
     CONSTRAINT branches_code_format_chk CHECK (((branch_kind <> 'branch'::text) OR ((code IS NOT NULL) AND (code ~ '^[A-Z]{2,4}$'::text))))
 );
 
@@ -21589,7 +21425,7 @@ CREATE TABLE public.positions (
 -- Name: TABLE positions; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON TABLE public.positions IS 'HR-only chức vụ. Does NOT grant permissions. Mapping to permissions is done via role_templates preset at grant time.';
+COMMENT ON TABLE public.positions IS 'HR-only chức vụ. Does NOT grant permissions. Permissions are granted directly per user via staff_permissions (no role_templates presets — HKD lean).';
 
 
 --
@@ -27467,14 +27303,14 @@ CREATE POLICY audit_logs_select ON public.audit_logs FOR SELECT TO authenticated
 -- Name: branch_menu_item_daily_limits bmidl_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY bmidl_select ON public.branch_menu_item_daily_limits FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ((public.auth_role() = ANY (ARRAY['owner'::text, 'super_manager'::text, 'area_manager'::text])) OR (public.auth_branch_id() = branch_id))));
+CREATE POLICY bmidl_select ON public.branch_menu_item_daily_limits FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ((public.auth_role() = ANY (ARRAY['owner'::text, 'manager'::text])) OR (public.auth_branch_id() = branch_id))));
 
 
 --
 -- Name: branch_menu_item_daily_limits bmidl_write; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY bmidl_write ON public.branch_menu_item_daily_limits TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ((public.auth_role() = ANY (ARRAY['owner'::text, 'super_manager'::text, 'area_manager'::text])) OR ((public.auth_role() = ANY (ARRAY['branch_manager'::text, 'cashier'::text, 'chef'::text])) AND (public.auth_branch_id() = branch_id))))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND ((public.auth_role() = ANY (ARRAY['owner'::text, 'super_manager'::text, 'area_manager'::text])) OR ((public.auth_role() = ANY (ARRAY['branch_manager'::text, 'cashier'::text, 'chef'::text])) AND (public.auth_branch_id() = branch_id)))));
+CREATE POLICY bmidl_write ON public.branch_menu_item_daily_limits TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ((public.auth_role() = ANY (ARRAY['owner'::text, 'manager'::text])) OR ((public.auth_role() = ANY (ARRAY['manager'::text, 'staff'::text, 'chef'::text])) AND (public.auth_branch_id() = branch_id))))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND ((public.auth_role() = ANY (ARRAY['owner'::text, 'manager'::text])) OR ((public.auth_role() = ANY (ARRAY['manager'::text, 'staff'::text, 'chef'::text])) AND (public.auth_branch_id() = branch_id)))));
 
 
 --
@@ -27848,7 +27684,7 @@ ALTER TABLE public.kitchen_send_batches ENABLE ROW LEVEL SECURITY;
 -- Name: kitchen_send_batches kitchen_send_batches_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY kitchen_send_batches_select ON public.kitchen_send_batches FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ((branch_id = public.auth_branch_id()) OR (public.auth_role() = ANY (ARRAY['owner'::text, 'super_manager'::text, 'area_manager'::text])))));
+CREATE POLICY kitchen_send_batches_select ON public.kitchen_send_batches FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ((branch_id = public.auth_branch_id()) OR (public.auth_role() = ANY (ARRAY['owner'::text, 'manager'::text])))));
 
 
 --
@@ -27996,7 +27832,7 @@ ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 -- Name: notifications notifications_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY notifications_select ON public.notifications FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (public.auth_role() = ANY (target_roles)) AND ((target_branch_id IS NULL) OR (target_branch_id = public.auth_branch_id()) OR (public.auth_role() = ANY (ARRAY['owner'::text, 'super_manager'::text, 'area_manager'::text])))));
+CREATE POLICY notifications_select ON public.notifications FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND (public.auth_role() = ANY (target_roles)) AND ((target_branch_id IS NULL) OR (target_branch_id = public.auth_branch_id()) OR (public.auth_role() = ANY (ARRAY['owner'::text, 'manager'::text])))));
 
 
 --
@@ -28294,7 +28130,7 @@ CREATE POLICY print_jobs_insert ON public.print_jobs FOR INSERT TO authenticated
 -- Name: print_jobs print_jobs_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY print_jobs_select ON public.print_jobs FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ((branch_id = public.auth_branch_id()) OR (public.auth_role() = ANY (ARRAY['owner'::text, 'super_manager'::text, 'area_manager'::text])))));
+CREATE POLICY print_jobs_select ON public.print_jobs FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ((branch_id = public.auth_branch_id()) OR (public.auth_role() = ANY (ARRAY['owner'::text, 'manager'::text])))));
 
 
 --
@@ -28314,7 +28150,7 @@ ALTER TABLE public.printer_agents ENABLE ROW LEVEL SECURITY;
 -- Name: printer_agents printer_agents_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY printer_agents_select ON public.printer_agents FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ((branch_id = public.auth_branch_id()) OR (public.auth_role() = ANY (ARRAY['owner'::text, 'super_manager'::text, 'area_manager'::text])))));
+CREATE POLICY printer_agents_select ON public.printer_agents FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND ((branch_id = public.auth_branch_id()) OR (public.auth_role() = ANY (ARRAY['owner'::text, 'manager'::text])))));
 
 
 --
@@ -28341,14 +28177,14 @@ ALTER TABLE public.printers ENABLE ROW LEVEL SECURITY;
 -- Name: printers printers_delete; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY printers_delete ON public.printers FOR DELETE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('printer:manage'::text) AND ((public.auth_role() = ANY (ARRAY['owner'::text, 'super_manager'::text, 'area_manager'::text])) OR (branch_id = public.auth_branch_id()))));
+CREATE POLICY printers_delete ON public.printers FOR DELETE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('printer:manage'::text) AND ((public.auth_role() = ANY (ARRAY['owner'::text, 'manager'::text])) OR (branch_id = public.auth_branch_id()))));
 
 
 --
 -- Name: printers printers_insert; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY printers_insert ON public.printers FOR INSERT TO authenticated WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('printer:manage'::text) AND ((public.auth_role() = ANY (ARRAY['owner'::text, 'super_manager'::text, 'area_manager'::text])) OR (branch_id = public.auth_branch_id()))));
+CREATE POLICY printers_insert ON public.printers FOR INSERT TO authenticated WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('printer:manage'::text) AND ((public.auth_role() = ANY (ARRAY['owner'::text, 'manager'::text])) OR (branch_id = public.auth_branch_id()))));
 
 
 --
@@ -28362,7 +28198,7 @@ CREATE POLICY printers_select ON public.printers FOR SELECT TO authenticated USI
 -- Name: printers printers_update; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY printers_update ON public.printers FOR UPDATE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('printer:manage'::text) AND ((public.auth_role() = ANY (ARRAY['owner'::text, 'super_manager'::text, 'area_manager'::text])) OR (branch_id = public.auth_branch_id())))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('printer:manage'::text) AND ((public.auth_role() = ANY (ARRAY['owner'::text, 'super_manager'::text, 'area_manager'::text])) OR (branch_id = public.auth_branch_id()))));
+CREATE POLICY printers_update ON public.printers FOR UPDATE TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('printer:manage'::text) AND ((public.auth_role() = ANY (ARRAY['owner'::text, 'manager'::text])) OR (branch_id = public.auth_branch_id())))) WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission_any('printer:manage'::text) AND ((public.auth_role() = ANY (ARRAY['owner'::text, 'manager'::text])) OR (branch_id = public.auth_branch_id()))));
 
 
 --

@@ -42,8 +42,12 @@
 - [x] V6 `cash_entries` RLS policy (select=finance:view, insert=finance:expense_create, tenant+branch scoped) + amount(15,2) ✅ adversarial CLEAN
 - [x] V7 `route_order_to_kds` + `enqueue_kitchen_completion_print_internal` + `complete_kds_tickets` bỏ 3 bảng printer (kitchen seq từ `kitchen_send_batches` MAX+1 + advisory-lock, KHÔNG dùng order_daily_counters; exception un-swallow) ✅ smoke order→1 kds_ticket+2 print_job, 42P01 re-raise
 > **Follow-up (out of V6/V7, đã flag):** (a) `kitchen_send_batches` thiếu INSERT policy (deny-all; che bởi SECURITY DEFINER create_order) → thêm policy `pos:use`; (b) 6 hàm dormant còn ref 3 bảng printer (`enqueue_kitchen_print_internal`, `enqueue_cancel_ticket_print`, `enqueue_edit_pending_order_item_quantity_print`, `enqueue_partial_cancel_ticket_print`, `resolve_branch_printer_for_type`, `upsert_printer_with_routes`) — POS void/edit reprint + printer config; gắn V7-tail/V17.
-- [ ] V8 10→4 roles + flat-branch
+- [x] V8 (DB) roles 10→4 + flat-branch ✅ adversarial CLEAN — `staff_role_from_position_code`→{owner,manager,staff,chef}; **blast-radius 9 policies + 47 functions** stale-role collapsed; `branch_kind` chỉ 'branch'; dropped dead `_auth_v2_check_area_scope`; neutralized `apply_template_to_user`/`sync_missing_permissions_from_template` (role_templates). Carryover V2–V5 đã xử hết.
+  - ⚠️ **Deliberate access change (owner-aware):** super/area/branch_manager → đều `manager`; admin_update_profile/toggle hierarchy = owner|manager (ex-branch_manager có cross-branch staff-mgmt, chặn bởi perm-key `staff:manage`); manager branch-optional, staff/chef branch-required. Hợp HKD flat-branch.
+  - [ ] **V8-app → P3:** STAFF_ROLES type/module-acl/JwtClaims/proxy/~137 file (với regen-types); dead `central_warehouse/kitchen` logic trong `stock_transfer_*` + ~40 inventory fn bodies (unreachable, role-gate đã collapse) → P3/V17.
 - [ ] V9 packages 4→3 (security→shared)
+
+> ✅ **P2 DB-bootability HOÀN TẤT (V1–V8):** baseline lean apply sạch lên Supabase thật + boot end-to-end (login→grant→POS→KDS→print→cash) + 4-vai phẳng. Đảo ngược audit "không boot được". Tiếp: P2.5 (companion realtime/cron + cắt DB 58→44–46) · V9 packages.
 
 **P2.5 — Baseline tự-chứa + cắt 58→44–46**
 - [ ] V10 realtime membership vào baseline + verify · V11 drop 6 cron-fn hỏng (5 trỏ accounting_periods/ingredient_abc_class/mv_food_cost/mv_refresh_log/stock_issues; **+surprise: `compute_branch_daily_waste_caps`→`branch_daily_waste_cap`**) · V12 cắt DB (fold 7 dễ; high-blast=decision) · V13 FK tiền CASCADE→RESTRICT · V14 storage policies
