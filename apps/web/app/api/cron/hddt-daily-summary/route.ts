@@ -20,7 +20,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
-import { getCronSecret } from "@comtammatu/shared/feedback";
+import { getCronSecret } from "@comtammatu/shared/cron";
 import { getInvoiceProvider } from "@comtammatu/shared/providers";
 import { getYesterdayVNDateString } from "@comtammatu/shared/time";
 import { ensureInvoiceProviderRegistered } from "@lib/invoice-provider-init";

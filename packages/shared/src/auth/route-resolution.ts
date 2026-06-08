@@ -118,7 +118,6 @@ export function resolveModuleFromPath(pathname: string): ModuleKey | null {
   }
   if (resolvedPathname.startsWith("/admin/dashboard")) return "dashboard";
   if (resolvedPathname.startsWith("/admin/staff")) return "staff";
-  if (resolvedPathname.startsWith("/admin/crm")) return "crm";
   if (resolvedPathname.startsWith("/admin/reports")) return "reports";
   if (resolvedPathname.startsWith("/admin/settings")) return "settings";
   // /admin/inventory/* RETIRED: pages removed; module ACL has empty allowedRoles.
@@ -126,7 +125,6 @@ export function resolveModuleFromPath(pathname: string): ModuleKey | null {
   // instead of falling through to admin-route landing redirect. See module-acl.ts.
   if (resolvedPathname.startsWith("/admin/inventory")) return "inventory_admin";
   if (resolvedPathname.startsWith("/admin/accounting")) return "accounting";
-  if (resolvedPathname.startsWith("/admin/feedback")) return "feedback";
 
   for (const prefix of INVENTORY_PROCUREMENT_PREFIXES) {
     if (

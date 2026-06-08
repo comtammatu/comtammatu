@@ -9,7 +9,6 @@ export type ModuleLabelKey =
   | "orders"
   | "staff"
   | "hr"
-  | "crm"
   | "finance"
   | "accounting"
   | "reports"
@@ -20,8 +19,7 @@ export type ModuleLabelKey =
   | "branch_settings"
   | "branch_menu_limits"
   | "employee"
-  | "notifications"
-  | "feedback";
+  | "notifications";
 
 type SiteLike = {
   branch_kind?: string | null;
@@ -36,7 +34,6 @@ export const MODULE_LABELS_VI: Record<ModuleLabelKey, string> = {
   orders: "Đơn hàng bán",
   staff: "Nhân viên",
   hr: "Nhân sự & tiền lương",
-  crm: "Khách hàng",
   finance: "Kế toán",
   accounting: "Kỳ kế toán",
   reports: "Báo cáo",
@@ -48,7 +45,6 @@ export const MODULE_LABELS_VI: Record<ModuleLabelKey, string> = {
   branch_menu_limits: "Hạn mức bán hàng ngày",
   employee: "Cổng nhân viên",
   notifications: "Thông báo",
-  feedback: "Phản ánh khách",
 };
 
 export const NAV_GROUP_LABELS_VI = {

@@ -62,11 +62,6 @@ export const ADMIN_NAV_GROUPS: NavGroupConfig[] = [
         icon: "Settings",
         label: APP_COPY_VI.systemSetup,
       },
-      {
-        moduleKey: "feedback",
-        icon: "MessageSquare",
-        label: "Phản ánh khách",
-      },
     ],
   },
 ];

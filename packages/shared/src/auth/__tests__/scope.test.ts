@@ -420,7 +420,7 @@ test("resolvePostLoginRedirect → branch menu limits follows branch scope", () 
 });
 
 test("canAccess → only owner and super_manager can access tenant admin modules", () => {
-  const adminModules = ["dashboard", "staff", "crm", "reports"] as const;
+  const adminModules = ["dashboard", "staff", "reports"] as const;
   for (const moduleKey of adminModules) {
     assert.equal(canAccess("owner", moduleKey), true);
     assert.equal(canAccess("super_manager", moduleKey), true);

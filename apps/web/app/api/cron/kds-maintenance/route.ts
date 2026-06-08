@@ -10,7 +10,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
-import { getCronSecret } from "@comtammatu/shared/feedback";
+import { getCronSecret } from "@comtammatu/shared/cron";
 import {
   getKdsCleanupCutoffIso,
   getKdsResetBeforeLocalDate,

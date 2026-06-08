@@ -15,7 +15,6 @@ export type ModuleKey =
   | "orders"
   | "staff"
   | "hr"
-  | "crm"
   | "finance"
   | "accounting"
   | "reports"
@@ -26,8 +25,7 @@ export type ModuleKey =
   | "branch_settings"
   | "branch_menu_limits"
   | "employee"
-  | "notifications"
-  | "feedback";
+  | "notifications";
 
 interface ModuleAcl {
   path: string;
@@ -104,11 +102,6 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     allowedRoles: ["owner", "super_manager"],
     label: getModuleLabelVi("hr"),
   },
-  crm: {
-    path: "/admin/crm",
-    allowedRoles: ["owner", "super_manager"],
-    label: getModuleLabelVi("crm"),
-  },
   finance: {
     path: "/finance",
     allowedRoles: ["owner", "super_manager"],
@@ -176,11 +169,6 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     path: "/notifications",
     allowedRoles: STAFF_ROLES,
     label: getModuleLabelVi("notifications"),
-  },
-  feedback: {
-    path: "/admin/feedback",
-    allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager"],
-    label: getModuleLabelVi("feedback"),
   },
 };
 

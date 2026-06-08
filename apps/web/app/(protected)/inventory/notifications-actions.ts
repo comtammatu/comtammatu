@@ -55,7 +55,7 @@ const qcSettingsSchema = z.object({
     .union([z.string().url(), z.literal("")])
     .optional()
     .transform((v) => (v && v.length > 0 ? v : null)),
-  alertChannel: z.enum(["generic", "telegram", "discord", "slack"]),
+  alertChannel: z.enum(["generic", "discord", "slack"]),
 });
 
 export const saveQcSettings = withAction(
@@ -208,11 +208,6 @@ function formatPayloadForChannel(
 ): unknown {
   const text = formatTopicText(topic, payload);
 
-  if (channel === "telegram") {
-    // Caller should have set webhook URL to a Telegram bot proxy that accepts
-    // { chat_id, text } or to a simple HTTP-to-bot bridge. Generic shape:
-    return { text, topic, payload };
-  }
   if (channel === "discord") {
     return { content: text };
   }

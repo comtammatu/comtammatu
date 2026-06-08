@@ -72,7 +72,6 @@ const checks = [
     allowlist: {
       "apps/web/app/(protected)/inventory/_components/photo-upload-input.tsx": 2,
       "apps/web/app/(protected)/menu/menu-image-input.tsx": 1,
-      "apps/web/app/(public)/r/[token]/_components/feedback-form.tsx": 1,
     },
   },
   {
@@ -83,7 +82,6 @@ const checks = [
     pattern:
       /className=\{?['"][^'"]*\b(h-(10|11|12|14|16)|min-h-(12|14|16))\b/g,
     allowlist: {
-      "apps/web/app/(protected)/admin/feedback/qr/_components/qr-management-client.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/kds/components/filter-bar.tsx": 2,
       "apps/web/app/(protected)/br/[branchId]/pos/_components/archived-orders-sheet.tsx": 2,
       "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx": 7,

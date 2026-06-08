@@ -48,9 +48,9 @@ export function QcSettingsClient({ initial }: { initial: Initial }) {
     Boolean(initial.reject_requires_photo ?? true),
   );
   const [webhookUrl, setWebhookUrl] = useState(initial.alert_webhook_url ?? "");
-  const [channel, setChannel] = useState<
-    "generic" | "telegram" | "discord" | "slack"
-  >((initial.alert_channel as never) ?? "generic");
+  const [channel, setChannel] = useState<"generic" | "discord" | "slack">(
+    (initial.alert_channel as never) ?? "generic",
+  );
   const [isSaving, start] = useTransition();
 
   function handleSave() {
@@ -163,7 +163,6 @@ export function QcSettingsClient({ initial }: { initial: Initial }) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="generic">Generic JSON POST</SelectItem>
-                  <SelectItem value="telegram">Telegram bot bridge</SelectItem>
                   <SelectItem value="discord">Discord webhook</SelectItem>
                   <SelectItem value="slack">Slack webhook</SelectItem>
                 </SelectContent>

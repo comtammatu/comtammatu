@@ -87,20 +87,6 @@ export const PERMISSION_KEYS = {
   HR_REGISTER_SHIFT: "hr:register_shift",
   HR_APPROVE_SHIFT_REQUEST: "hr:approve_shift_request",
 
-  // crm
-  CRM_READ: "crm:read",
-  CRM_WRITE: "crm:write",
-  CRM_CAMPAIGN_SEND: "crm:campaign_send",
-
-  // feedback (QR phản ánh khách)
-  FEEDBACK_VIEW: "feedback:view",
-  FEEDBACK_VIEW_PHONE: "feedback:view_phone",
-  FEEDBACK_VIEW_REPORT: "feedback:view_report",
-  FEEDBACK_MANAGE_QR: "feedback:manage_qr",
-  FEEDBACK_MANAGE_TELEGRAM: "feedback:manage_telegram",
-  FEEDBACK_MANAGE_SETTINGS: "feedback:manage_settings",
-  FEEDBACK_MODERATE: "feedback:moderate",
-
   // finance
   FINANCE_VIEW: "finance:view",
   FINANCE_EXPENSE_CREATE: "finance:expense_create",

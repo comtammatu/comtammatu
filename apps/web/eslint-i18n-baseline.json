@@ -3,7 +3,7 @@
   "rule": "i18n/no-inline-vietnamese",
   "description": "Baseline for legacy inline Vietnamese JSX copy. New occurrences not listed here still report in pnpm lint.",
   "generatedAt": "2026-05-05",
-  "count": 1121,
+  "count": 1120,
   "entries": [
     "app/(auth)/login/login-form.tsx:50:42",
     "app/(auth)/login/login-form.tsx:65:63",
@@ -12,7 +12,6 @@
     "app/access-denied/page.tsx:68:51",
     "app/access-denied/page.tsx:73:41",
     "app/admin/components/admin-shell.tsx:117:38",
-    "app/admin/crm/page.tsx:11:15",
     "app/admin/dashboard/page.tsx:110:17",
     "app/admin/dashboard/page.tsx:116:17",
     "app/admin/dashboard/page.tsx:122:17",
