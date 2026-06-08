@@ -34,12 +34,14 @@
 **P2 — Cổng boot được (uozwee)**
 > Workbench LIVE 2026-06-08: baseline apply SẠCH lên uozwee qua Node `pg` (no docker) → **58 tables / 258 funcs / 147 policies**. Cơ chế apply = `/tmp/pgapply` (pg client, host `aws-1-ap-southeast-1.pooler.supabase.com`, user `postgres.uozweehdeyflukijrynf`, pw=`SUPABASE_PASSWORD`). Audit CONFIRMED 100% trên DB thật + 3 surprise (xem V3/V11). Loop P2 = sửa baseline.sql/seed/companion → reset uozwee → re-apply (pg) → verify.
 - [x] V1 secrets fail-closed (✅ committed 34525349; owner rotate Telegram+CRON)
-- [ ] V2 auth hook bỏ `profiles.area_id` (CONFIRMED: hook đọc area_id, profiles không có cột)
-- [ ] V3 GRANTs **(VALIDATED — baseline 0 grant; Supabase KHÔNG auto-grant; cả `service_role` cũng bị khoá)**: full block `GRANT USAGE ON SCHEMA public` + `GRANT ALL ON ALL TABLES/SEQUENCES/FUNCTIONS` + `ALTER DEFAULT PRIVILEGES` cho anon/authenticated/service_role; **+ `supabase_auth_admin`: USAGE schema public+private + EXECUTE `custom_access_token_hook`** (surprise: hook hiện KHÔNG callable do thiếu schema-USAGE → GoTrue chết, không chỉ thiếu EXECUTE)
-- [ ] V4 lean seed (4 positions, ~40 perm-keys, system_settings)
-- [ ] V5 permission-grant path bỏ `permission_audit_log`
-- [ ] V6 `cash_entries` RLS policy + grant + amount(15,2)
-- [ ] V7 `route_order_to_kds` + print producer bỏ 3 bảng printer
+- [x] V2 auth hook bỏ `profiles.area_id` (+ admin_update_profile/sync_*/toggle_profile_active) ✅ `03903c7a`
+- [x] V3 GRANTs — full Supabase public block + `supabase_auth_admin` USAGE(public+private)+EXECUTE hook ✅ `03903c7a` (verified: authenticated/service_role grant=true, hook callable, anon vẫn bị RLS chặn)
+- [x] V4 lean seed (1 tenant·2 branch·4 positions·49 permission_keys·7 system_settings·owner profile) ✅ `03903c7a`
+- [x] V5 permission-grant path bỏ `permission_audit_log` (grant/revoke/apply_template) ✅ `03903c7a`
+> **Carryover → V8/cleanup** (out-of-scope V2–V5, đã flag): drop dead `_auth_v2_check_area_scope()` (ref NEW.area_id, không attach trigger); `sync_missing_permissions_from_template`+`apply_template_to_user` còn ref dropped `role_templates` (drop/rewrite — HKD seed quyền trực tiếp); seed positions hiện resolve về bucket cũ (branch_manager/cashier) → cập nhật khi V8 thu role 10→4.
+- [x] V6 `cash_entries` RLS policy (select=finance:view, insert=finance:expense_create, tenant+branch scoped) + amount(15,2) ✅ adversarial CLEAN
+- [x] V7 `route_order_to_kds` + `enqueue_kitchen_completion_print_internal` + `complete_kds_tickets` bỏ 3 bảng printer (kitchen seq từ `kitchen_send_batches` MAX+1 + advisory-lock, KHÔNG dùng order_daily_counters; exception un-swallow) ✅ smoke order→1 kds_ticket+2 print_job, 42P01 re-raise
+> **Follow-up (out of V6/V7, đã flag):** (a) `kitchen_send_batches` thiếu INSERT policy (deny-all; che bởi SECURITY DEFINER create_order) → thêm policy `pos:use`; (b) 6 hàm dormant còn ref 3 bảng printer (`enqueue_kitchen_print_internal`, `enqueue_cancel_ticket_print`, `enqueue_edit_pending_order_item_quantity_print`, `enqueue_partial_cancel_ticket_print`, `resolve_branch_printer_for_type`, `upsert_printer_with_routes`) — POS void/edit reprint + printer config; gắn V7-tail/V17.
 - [ ] V8 10→4 roles + flat-branch
 - [ ] V9 packages 4→3 (security→shared)
 

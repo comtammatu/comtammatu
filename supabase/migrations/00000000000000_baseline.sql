@@ -323,20 +323,11 @@ BEGIN
         ON profile.id = o.created_by
       JOIN public.menu_items mi
         ON mi.id = oi.menu_item_id
-      JOIN public.printer_menu_categories pmc
-        ON pmc.category_id = mi.category_id
-       AND pmc.tenant_id = o.tenant_id
-       AND pmc.branch_id = o.branch_id
       JOIN public.printers p
-        ON p.id = pmc.printer_id
-       AND p.tenant_id = pmc.tenant_id
-       AND p.branch_id = pmc.branch_id
+        ON p.tenant_id = o.tenant_id
+       AND p.branch_id = o.branch_id
        AND p.is_active = TRUE
-      JOIN public.printer_print_types ppt
-        ON ppt.printer_id = p.id
-       AND ppt.tenant_id = p.tenant_id
-       AND ppt.branch_id = p.branch_id
-       AND ppt.print_type = 'kitchen_ticket'
+       AND p.role IN ('kitchen_1', 'kitchen_2')
       LEFT JOIN public.kitchen_send_batches ksb
         ON ksb.id = kt.kitchen_send_batch_id
       WHERE kt.id = ANY(v_ticket_ids)
@@ -3967,7 +3958,9 @@ BEGIN
         v_print_warning := 'kitchen_print_skipped';
       END IF;
     EXCEPTION
-      WHEN OTHERS THEN
+      -- Recoverable: no printer is configured for this branch. The tickets are
+      -- still marked ready; surface a warning so the operator can configure one.
+      WHEN no_data_found OR insufficient_privilege THEN
         v_print_warning := 'kitchen_print_enqueue_failed';
         v_print_result := jsonb_build_object(
           'jobs', '[]'::jsonb,
@@ -3980,6 +3973,15 @@ BEGIN
           v_updated_ticket_ids,
           SQLSTATE,
           SQLERRM;
+      -- Fatal: re-raise so a broken print producer (e.g. missing table 42P01)
+      -- aborts the bump instead of silently leaving a green ticket with no print.
+      WHEN OTHERS THEN
+        RAISE LOG 'complete_kds_tickets print enqueue failed branch_id=%, ticket_ids=%, sqlstate=%, error=%',
+          p_branch_id,
+          v_updated_ticket_ids,
+          SQLSTATE,
+          SQLERRM;
+        RAISE;
     END;
   END IF;
 
@@ -15125,6 +15127,18 @@ BEGIN
     RETURN;
   END IF;
 
+  -- Serialize the per-branch/day kitchen queue sequence across concurrent
+  -- orders. The kitchen ticket_seq is derived from kitchen_send_batches
+  -- (MAX+1); this advisory lock keeps that derivation atomic without colliding
+  -- on the kitchen_send_batches UNIQUE (tenant, branch, counter_date,
+  -- ticket_seq) constraint.
+  PERFORM pg_advisory_xact_lock(
+    hashtextextended(
+      'kitchen_send_seq:' || v_order.tenant_id::TEXT || ':' || v_order.branch_id::TEXT,
+      0
+    )
+  );
+
   SELECT s.id INTO v_fallback_station_id
   FROM public.kds_stations s
   LEFT JOIN public.kds_station_categories sc ON sc.station_id = s.id
@@ -15163,20 +15177,11 @@ BEGIN
 
     SELECT EXISTS (
       SELECT 1
-      FROM public.printer_menu_categories pmc
-      JOIN public.printers p
-        ON p.id = pmc.printer_id
-       AND p.tenant_id = pmc.tenant_id
-       AND p.branch_id = pmc.branch_id
-       AND p.is_active = TRUE
-      JOIN public.printer_print_types ppt
-        ON ppt.printer_id = p.id
-       AND ppt.tenant_id = p.tenant_id
-       AND ppt.branch_id = p.branch_id
-       AND ppt.print_type = 'kitchen_ticket'
-      WHERE pmc.category_id = v_item.category_id
-        AND pmc.tenant_id = v_order.tenant_id
-        AND pmc.branch_id = v_order.branch_id
+      FROM public.printers p
+      WHERE p.tenant_id = v_order.tenant_id
+        AND p.branch_id = v_order.branch_id
+        AND p.is_active = TRUE
+        AND p.role IN ('kitchen_1', 'kitchen_2')
     ) INTO v_has_printer_route;
 
     IF v_station_id IS NULL AND v_has_printer_route THEN
@@ -15194,20 +15199,12 @@ BEGIN
          WHERE id = p_order_id
          RETURNING kitchen_send_count INTO v_send_seq;
 
-        INSERT INTO public.kitchen_daily_counters (
-          tenant_id, branch_id, counter_date, last_seq
-        )
-        VALUES (
-          v_order.tenant_id,
-          v_order.branch_id,
-          (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Ho_Chi_Minh')::date,
-          1
-        )
-        ON CONFLICT (tenant_id, branch_id, counter_date)
-        DO UPDATE SET
-          last_seq = public.kitchen_daily_counters.last_seq + 1,
-          updated_at = now()
-        RETURNING last_seq INTO v_ticket_seq;
+        SELECT COALESCE(MAX(ksb.ticket_seq), 0) + 1
+          INTO v_ticket_seq
+        FROM public.kitchen_send_batches ksb
+        WHERE ksb.tenant_id = v_order.tenant_id
+          AND ksb.branch_id = v_order.branch_id
+          AND ksb.counter_date = (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Ho_Chi_Minh')::date;
 
         v_order_number_clean := regexp_replace(
           btrim(COALESCE(v_order.order_number, '')),
@@ -15262,22 +15259,16 @@ BEGIN
     SELECT 1
     FROM public.order_items oi
     JOIN public.menu_items mi ON mi.id = oi.menu_item_id
-    JOIN public.printer_menu_categories pmc
-      ON pmc.category_id = mi.category_id
-     AND pmc.tenant_id = v_order.tenant_id
-     AND pmc.branch_id = v_order.branch_id
-    JOIN public.printers p
-      ON p.id = pmc.printer_id
-     AND p.tenant_id = pmc.tenant_id
-     AND p.branch_id = pmc.branch_id
-     AND p.is_active = TRUE
-    JOIN public.printer_print_types ppt
-      ON ppt.printer_id = p.id
-     AND ppt.tenant_id = p.tenant_id
-     AND ppt.branch_id = p.branch_id
-     AND ppt.print_type = 'kitchen_ticket'
     WHERE oi.order_id = p_order_id
       AND oi.sent_to_kitchen_at IS NULL
+      AND EXISTS (
+        SELECT 1
+        FROM public.printers p
+        WHERE p.tenant_id = v_order.tenant_id
+          AND p.branch_id = v_order.branch_id
+          AND p.is_active = TRUE
+          AND p.role IN ('kitchen_1', 'kitchen_2')
+      )
       AND NOT EXISTS (
         SELECT 1
         FROM public.kds_tickets kt
@@ -15301,20 +15292,12 @@ BEGIN
        WHERE id = p_order_id
        RETURNING kitchen_send_count INTO v_send_seq;
 
-      INSERT INTO public.kitchen_daily_counters (
-        tenant_id, branch_id, counter_date, last_seq
-      )
-      VALUES (
-        v_order.tenant_id,
-        v_order.branch_id,
-        (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Ho_Chi_Minh')::date,
-        1
-      )
-      ON CONFLICT (tenant_id, branch_id, counter_date)
-      DO UPDATE SET
-        last_seq = public.kitchen_daily_counters.last_seq + 1,
-        updated_at = now()
-      RETURNING last_seq INTO v_ticket_seq;
+      SELECT COALESCE(MAX(ksb.ticket_seq), 0) + 1
+        INTO v_ticket_seq
+      FROM public.kitchen_send_batches ksb
+      WHERE ksb.tenant_id = v_order.tenant_id
+        AND ksb.branch_id = v_order.branch_id
+        AND ksb.counter_date = (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Ho_Chi_Minh')::date;
 
       v_order_number_clean := regexp_replace(
         btrim(COALESCE(v_order.order_number, '')),
@@ -15381,20 +15364,11 @@ BEGIN
           ) AS item_payload
         FROM public.order_items oi
         JOIN public.menu_items mi ON mi.id = oi.menu_item_id
-        JOIN public.printer_menu_categories pmc
-          ON pmc.category_id = mi.category_id
-         AND pmc.tenant_id = v_order.tenant_id
-         AND pmc.branch_id = v_order.branch_id
         JOIN public.printers p
-          ON p.id = pmc.printer_id
-         AND p.tenant_id = pmc.tenant_id
-         AND p.branch_id = pmc.branch_id
+          ON p.tenant_id = v_order.tenant_id
+         AND p.branch_id = v_order.branch_id
          AND p.is_active = TRUE
-        JOIN public.printer_print_types ppt
-          ON ppt.printer_id = p.id
-         AND ppt.tenant_id = p.tenant_id
-         AND ppt.branch_id = p.branch_id
-         AND ppt.print_type = 'kitchen_ticket'
+         AND p.role IN ('kitchen_1', 'kitchen_2')
         WHERE oi.order_id = p_order_id
           AND oi.sent_to_kitchen_at IS NULL
           AND NOT EXISTS (
@@ -20224,7 +20198,7 @@ CREATE TABLE public.cash_entries (
     entry_date date DEFAULT ((now() AT TIME ZONE 'Asia/Ho_Chi_Minh'::text))::date NOT NULL,
     direction text NOT NULL,
     category text,
-    amount numeric(14,2) NOT NULL,
+    amount numeric(15,2) NOT NULL,
     note text,
     created_by uuid,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -27580,6 +27554,20 @@ CREATE POLICY branches_update ON public.branches FOR UPDATE TO authenticated USI
 --
 
 ALTER TABLE public.cash_entries ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: cash_entries cash_entries_select; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY cash_entries_select ON public.cash_entries FOR SELECT TO authenticated USING (((tenant_id = public.auth_tenant_id()) AND public.has_permission(branch_id, 'finance:view'::text)));
+
+
+--
+-- Name: cash_entries cash_entries_insert; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY cash_entries_insert ON public.cash_entries FOR INSERT TO authenticated WITH CHECK (((tenant_id = public.auth_tenant_id()) AND public.has_permission(branch_id, 'finance:expense_create'::text)));
+
 
 --
 -- Name: employees; Type: ROW SECURITY; Schema: public; Owner: -
