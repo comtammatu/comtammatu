@@ -32,9 +32,10 @@
 - [ ] (P2.5/V9) dead `feedbackTokenRateLimit`/`feedbackIpRateLimit` trong `packages/security/src/rate-limit.ts` (0 importer) — dọn khi merge security→shared
 
 **P2 — Cổng boot được (uozwee)**
-- [ ] V1 secrets fail-closed (✅ code done; owner rotate Telegram+CRON)
-- [ ] V2 auth hook bỏ `profiles.area_id`
-- [ ] V3 GRANTs (verify uozwee; auth-hook EXECUTE→`supabase_auth_admin`)
+> Workbench LIVE 2026-06-08: baseline apply SẠCH lên uozwee qua Node `pg` (no docker) → **58 tables / 258 funcs / 147 policies**. Cơ chế apply = `/tmp/pgapply` (pg client, host `aws-1-ap-southeast-1.pooler.supabase.com`, user `postgres.uozweehdeyflukijrynf`, pw=`SUPABASE_PASSWORD`). Audit CONFIRMED 100% trên DB thật + 3 surprise (xem V3/V11). Loop P2 = sửa baseline.sql/seed/companion → reset uozwee → re-apply (pg) → verify.
+- [x] V1 secrets fail-closed (✅ committed 34525349; owner rotate Telegram+CRON)
+- [ ] V2 auth hook bỏ `profiles.area_id` (CONFIRMED: hook đọc area_id, profiles không có cột)
+- [ ] V3 GRANTs **(VALIDATED — baseline 0 grant; Supabase KHÔNG auto-grant; cả `service_role` cũng bị khoá)**: full block `GRANT USAGE ON SCHEMA public` + `GRANT ALL ON ALL TABLES/SEQUENCES/FUNCTIONS` + `ALTER DEFAULT PRIVILEGES` cho anon/authenticated/service_role; **+ `supabase_auth_admin`: USAGE schema public+private + EXECUTE `custom_access_token_hook`** (surprise: hook hiện KHÔNG callable do thiếu schema-USAGE → GoTrue chết, không chỉ thiếu EXECUTE)
 - [ ] V4 lean seed (4 positions, ~40 perm-keys, system_settings)
 - [ ] V5 permission-grant path bỏ `permission_audit_log`
 - [ ] V6 `cash_entries` RLS policy + grant + amount(15,2)
@@ -43,7 +44,7 @@
 - [ ] V9 packages 4→3 (security→shared)
 
 **P2.5 — Baseline tự-chứa + cắt 58→44–46**
-- [ ] V10 realtime membership vào baseline + verify · V11 drop 6 cron-fn hỏng · V12 cắt DB (fold 7 dễ; high-blast=decision) · V13 FK tiền CASCADE→RESTRICT · V14 storage policies
+- [ ] V10 realtime membership vào baseline + verify · V11 drop 6 cron-fn hỏng (5 trỏ accounting_periods/ingredient_abc_class/mv_food_cost/mv_refresh_log/stock_issues; **+surprise: `compute_branch_daily_waste_caps`→`branch_daily_waste_cap`**) · V12 cắt DB (fold 7 dễ; high-blast=decision) · V13 FK tiền CASCADE→RESTRICT · V14 storage policies
 
 **P3 — Xoá CUT + repoint + types**
 - [ ] V15 regen types từ uozwee · V16 xoá GL/production/payroll trees + rebuild finance/inventory page · V17 drop ~70 zombie RPC + outbox triggers · V18 employee-scheduling repoint (decision) · V19 drift-linter

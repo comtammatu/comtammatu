@@ -1146,7 +1146,6 @@ DECLARE
   v_actor_tenant         BIGINT;
   v_actor_role_text      TEXT;
   v_actor_branch         BIGINT;
-  v_actor_area           BIGINT;
   v_target               RECORD;
   v_target_role          TEXT;
   v_final_role           TEXT;
@@ -1162,9 +1161,8 @@ BEGIN
   SELECT
     p.tenant_id,
     COALESCE(private.staff_role_from_position_code(po.code), 'unassigned') AS role_text,
-    p.branch_id,
-    p.area_id
-  INTO v_actor_tenant, v_actor_role_text, v_actor_branch, v_actor_area
+    p.branch_id
+  INTO v_actor_tenant, v_actor_role_text, v_actor_branch
   FROM public.profiles p
   JOIN public.positions po ON po.id = p.position_id
   WHERE p.id = v_actor_id
@@ -1237,23 +1235,6 @@ BEGIN
   ELSIF v_actor_role_text = 'super_manager' THEN
     IF v_target_role = 'owner' OR v_final_role = 'owner' THEN
       RAISE EXCEPTION 'super_manager cannot modify owner';
-    END IF;
-  ELSIF v_actor_role_text = 'area_manager' THEN
-    IF v_target_role IN ('owner','super_manager','area_manager') THEN
-      RAISE EXCEPTION 'area_manager cannot modify owner/super_manager/peer area_manager';
-    END IF;
-    IF v_final_role IN ('owner','super_manager','area_manager') THEN
-      RAISE EXCEPTION 'area_manager cannot set role above branch_manager';
-    END IF;
-    IF v_target.branch_id IS NOT NULL THEN
-      PERFORM 1 FROM public.area_branches
-      WHERE area_id = v_actor_area AND branch_id = v_target.branch_id AND tenant_id = v_actor_tenant;
-      IF NOT FOUND THEN RAISE EXCEPTION 'area_manager: target not in your area branches'; END IF;
-    END IF;
-    IF v_final_branch IS NOT NULL THEN
-      PERFORM 1 FROM public.area_branches
-      WHERE area_id = v_actor_area AND branch_id = v_final_branch AND tenant_id = v_actor_tenant;
-      IF NOT FOUND THEN RAISE EXCEPTION 'area_manager: target branch not in your area'; END IF;
     END IF;
   ELSIF v_actor_role_text = 'branch_manager' THEN
     IF v_target.branch_id IS DISTINCT FROM v_actor_branch THEN
@@ -2322,19 +2303,6 @@ BEGIN
     GET DIAGNOSTICS v_rows = ROW_COUNT;
 
     IF v_rows > 0 THEN
-      INSERT INTO public.permission_audit_log (
-        tenant_id, actor_user_id, target_user_id, branch_id,
-        permission_key, action, source_template_id, metadata
-      ) VALUES (
-        v_tenant_id, auth.uid(), p_target_user, v_effective_branch_id,
-        v_perm_key, 'apply_template', v_template.id,
-        jsonb_build_object(
-          'requested_branch_id', p_branch_id,
-          'template_id', v_template.id,
-          'valid_from', v_from,
-          'valid_until', p_valid_until
-        )
-      );
       v_inserted := v_inserted + 1;
     END IF;
   END LOOP;
@@ -6664,7 +6632,6 @@ BEGIN
   SELECT
     p.tenant_id,
     p.branch_id,
-    p.area_id,
     private.staff_role_from_position_code(po.code) AS user_role,
     po.code AS position_code
   INTO user_profile
@@ -6688,7 +6655,6 @@ BEGIN
       jsonb_build_object(
         'tenant_id', user_profile.tenant_id,
         'branch_id', user_profile.branch_id,
-        'area_id', user_profile.area_id,
         'user_role', user_profile.user_role,
         'position', user_profile.position_code
       )
@@ -6705,7 +6671,7 @@ $$;
 -- Name: FUNCTION custom_access_token_hook(event jsonb); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.custom_access_token_hook(event jsonb) IS 'Auth hook emits tenant, branch, area, position, and StaffRole bucket claims.';
+COMMENT ON FUNCTION public.custom_access_token_hook(event jsonb) IS 'Auth hook emits tenant, branch, position, and StaffRole bucket claims.';
 
 
 --
@@ -11106,19 +11072,6 @@ BEGIN
       v_from, p_valid_until
     )
     RETURNING id INTO v_grant_id;
-
-    INSERT INTO public.permission_audit_log (
-      tenant_id, actor_user_id, target_user_id, branch_id,
-      permission_key, action, source_template_id, metadata
-    ) VALUES (
-      v_tenant_id, auth.uid(), p_target_user, v_effective_branch_id,
-      p_permission_key, 'grant', p_source_template,
-      jsonb_build_object(
-        'requested_branch_id', p_branch_id,
-        'valid_from', v_from,
-        'valid_until', p_valid_until
-      )
-    );
   ELSE
     UPDATE public.staff_permissions
        SET valid_from = LEAST(valid_from, v_from),
@@ -15101,17 +15054,6 @@ BEGIN
     );
   GET DIAGNOSTICS v_deleted = ROW_COUNT;
 
-  IF v_deleted > 0 THEN
-    INSERT INTO public.permission_audit_log (
-      tenant_id, actor_user_id, target_user_id, branch_id,
-      permission_key, action, metadata
-    ) VALUES (
-      v_tenant_id, auth.uid(), p_target_user, v_effective_branch_id,
-      p_permission_key, 'revoke',
-      jsonb_build_object('requested_branch_id', p_branch_id)
-    );
-  END IF;
-
   RETURN v_deleted;
 END;
 $$;
@@ -17523,7 +17465,6 @@ DECLARE
   v_template RECORD;
   v_perm_key TEXT;
   v_branch BIGINT;
-  v_ab RECORD;
   v_added INTEGER := 0;
   v_rows INTEGER;
   v_effective_branch_id BIGINT;
@@ -17532,7 +17473,6 @@ BEGIN
     SELECT p.id AS user_id,
            p.tenant_id,
            p.branch_id,
-           p.area_id,
            pos.code AS position_code,
            private.staff_role_from_position_code(pos.code) AS role
       FROM public.profiles p
@@ -17558,23 +17498,7 @@ BEGIN
       CONTINUE;
     END IF;
 
-    IF v_profile.role = 'area_manager' THEN
-      FOR v_ab IN
-        SELECT ab.branch_id
-          FROM public.area_branches ab
-         WHERE ab.tenant_id = v_profile.tenant_id
-           AND ab.area_id = v_profile.area_id
-      LOOP
-        FOREACH v_perm_key IN ARRAY v_template.permission_keys LOOP
-          v_effective_branch_id := private.staff_permission_effective_branch_id(v_perm_key, v_ab.branch_id);
-          INSERT INTO public.staff_permissions (user_id, tenant_id, branch_id, permission_key, source_template)
-          VALUES (v_profile.user_id, v_profile.tenant_id, v_effective_branch_id, v_perm_key, v_template.id)
-          ON CONFLICT DO NOTHING;
-          GET DIAGNOSTICS v_rows = ROW_COUNT;
-          v_added := v_added + v_rows;
-        END LOOP;
-      END LOOP;
-    ELSIF v_profile.role IN ('owner', 'super_manager', 'office') THEN
+    IF v_profile.role IN ('owner', 'super_manager', 'office') THEN
       FOREACH v_perm_key IN ARRAY v_template.permission_keys LOOP
         v_effective_branch_id := private.staff_permission_effective_branch_id(v_perm_key, NULL);
         INSERT INTO public.staff_permissions (user_id, tenant_id, branch_id, permission_key, source_template)
@@ -17753,7 +17677,6 @@ DECLARE
   v_actor_role    TEXT;
   v_actor_tenant  BIGINT;
   v_actor_branch  BIGINT;
-  v_actor_area    BIGINT;
   v_target_role   TEXT;
   v_target_branch BIGINT;
   v_target_active BOOLEAN;
@@ -17766,9 +17689,8 @@ BEGIN
   SELECT
     COALESCE(private.staff_role_from_position_code(po.code), 'unassigned') AS role_text,
     p.tenant_id,
-    p.branch_id,
-    p.area_id
-  INTO v_actor_role, v_actor_tenant, v_actor_branch, v_actor_area
+    p.branch_id
+  INTO v_actor_role, v_actor_tenant, v_actor_branch
   FROM public.profiles p
   JOIN public.positions po ON po.id = p.position_id
   WHERE p.id = v_actor_id
@@ -17803,19 +17725,6 @@ BEGIN
   ELSIF v_actor_role = 'super_manager' THEN
     IF v_target_role = 'owner' THEN
       RAISE EXCEPTION 'permission_denied';
-    END IF;
-  ELSIF v_actor_role = 'area_manager' THEN
-    IF v_target_role IN ('owner', 'super_manager', 'area_manager') THEN
-      RAISE EXCEPTION 'permission_denied';
-    END IF;
-    IF v_target_branch IS NOT NULL THEN
-      PERFORM 1 FROM public.area_branches
-      WHERE area_id = v_actor_area
-        AND branch_id = v_target_branch
-        AND tenant_id = v_actor_tenant;
-      IF NOT FOUND THEN
-        RAISE EXCEPTION 'area_manager: target not in your area';
-      END IF;
     END IF;
   ELSIF v_actor_role = 'branch_manager' THEN
     IF v_target_branch IS DISTINCT FROM v_actor_branch THEN
@@ -28979,5 +28888,30 @@ CREATE POLICY webhook_events_select_admin ON public.webhook_events FOR SELECT TO
 --
 -- PostgreSQL database dump complete
 --
+
+
+--
+-- Schema-level GRANTs (V3).
+--
+-- pg_dump --no-privileges stripped every GRANT, and Supabase does not
+-- auto-grant schema public on a fresh project, so PostgREST (anon /
+-- authenticated) and GoTrue (supabase_auth_admin) are locked out even though
+-- RLS is enabled. RLS (147 policies, all 58 tables RLS-ENABLED) remains the
+-- real access gate, so GRANT ALL here matches Supabase's default posture and
+-- is safe. The supabase_auth_admin grants are the critical login fix: without
+-- schema USAGE it cannot invoke the access-token hook, regardless of the
+-- PUBLIC EXECUTE bit.
+--
+
+GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO anon, authenticated, service_role;
+GRANT USAGE ON SCHEMA public TO supabase_auth_admin;
+GRANT USAGE ON SCHEMA private TO supabase_auth_admin;
+GRANT EXECUTE ON FUNCTION public.custom_access_token_hook(jsonb) TO supabase_auth_admin;
 
 
