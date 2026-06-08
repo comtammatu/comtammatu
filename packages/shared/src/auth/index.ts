@@ -94,6 +94,7 @@ export {
   isBetaPath,
   isFeedbackPublicPath,
   isPublicAppPath,
+  isPublicRunnerPath,
   normalizeHost,
   resolveHostSurface,
   resolveLegacyRouteRedirectPath,

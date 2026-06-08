@@ -123,7 +123,7 @@ const MenuItemButton = memo(function MenuItemButton({
           />
         ) : (
           <span className="flex h-full w-full items-center justify-center bg-muted/60">
-            <IconUtensils className="size-6 text-muted-foreground/30" />
+            <IconUtensils className="size-6 text-muted-foreground/30 md:size-8" />
           </span>
         )}
       </span>
@@ -145,7 +145,7 @@ const MenuItemButton = memo(function MenuItemButton({
       {limitBadgeLabel ? (
         <Badge
           variant={limitBadgeVariant}
-          className="absolute left-2 top-2 z-10 text-xs shadow-md md:left-3 md:top-3"
+          className="absolute left-2 top-2 z-10 text-xs tabular-nums shadow-md md:left-3 md:top-3"
         >
           {limitBadgeLabel}
         </Badge>
@@ -332,7 +332,7 @@ function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
   const tabPillClassName =
     "group/tab !flex-none gap-1.5 bg-muted/50 px-3 py-2.5 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm md:gap-2 md:px-4";
   const tabBadgeClassName =
-    "hidden shrink-0 text-xs sm:inline-flex group-data-[state=active]/tab:border-primary-foreground/30 group-data-[state=active]/tab:bg-primary-foreground/15 group-data-[state=active]/tab:text-primary-foreground";
+    "hidden shrink-0 text-xs tabular-nums sm:inline-flex group-data-[state=active]/tab:border-primary-foreground/30 group-data-[state=active]/tab:bg-primary-foreground/15 group-data-[state=active]/tab:text-primary-foreground";
   const unifiedTabs = (
     <Tabs
       value={activeTabValue}
@@ -420,7 +420,7 @@ function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
                     <h2 className="font-heading truncate text-base font-bold text-foreground md:text-base md:font-semibold">
                       {category.name}
                     </h2>
-                    <Badge variant="outline" className="shrink-0 text-sm">
+                    <Badge variant="outline" className="shrink-0 text-sm tabular-nums">
                       {category.menu_items.length}
                     </Badge>
                   </div>

@@ -47,6 +47,9 @@ import { ACTIONS_VI, STATES_VI } from "@comtammatu/shared/messages";
 const DELETE_REVEAL_WIDTH = 80;
 const SWIPE_ACTIVATION_PX = 8;
 const SWIPE_REVEAL_THRESHOLD_PX = 40;
+// Wait slightly longer than the 150ms row fade-out (Item `transition-all
+// duration-150`) before unmounting so the exit animation finishes cleanly.
+const REMOVE_ANIMATION_MS = 180;
 
 export type SubmitOrderOptions = {
   priority?: boolean;
@@ -145,7 +148,7 @@ function CartPaneComponent({
         return next;
       });
       swipe.setRevealedKey(null);
-    }, 180);
+    }, REMOVE_ANIMATION_MS);
   }
 
   return (
@@ -204,7 +207,7 @@ function CartPaneComponent({
                   type="button"
                   variant="ghost"
                   size="touch"
-                  className="min-w-12 shrink-0 px-3 text-sm text-muted-foreground"
+                  className="min-w-12 shrink-0 px-3 text-sm text-muted-foreground hover:text-destructive"
                   onClick={() => setClearConfirmOpen(true)}
                 >
                   <IconTrash data-icon="inline-start" />
@@ -288,7 +291,7 @@ function CartPaneComponent({
           <p className="max-w-[16rem] text-sm leading-6 text-muted-foreground">
             {cart.orderType === "takeaway" || selectedTableNumber != null
               ? "Chạm món trên thực đơn để thêm vào đơn."
-              : "Chạm bàn bên trái hoặc chọn 'Mang về' để bắt đầu."}
+              : "Chạm bàn bên trái hoặc chọn “Mang về” để bắt đầu."}
           </p>
         </div>
       ) : (

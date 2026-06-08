@@ -21,6 +21,18 @@ const uiGlobalsSource = readFileSync(
 
 test("Runner page follows the KDS order-list vocabulary", () => {
   assert.match(runnerPageSource, /import Image from "next\/image";/);
+  assert.match(
+    runnerPageSource,
+    /import \{ createServiceClient \} from "@comtammatu\/database\/supabase\/service";/,
+  );
+  assert.match(runnerPageSource, /export const dynamic = "force-dynamic";/);
+  assert.doesNotMatch(runnerPageSource, /loadAuthState/);
+  assert.match(runnerPageSource, /\.select\("id, name, branch_kind, tenant_id"\)/);
+  assert.match(runnerPageSource, /const tenantId = branch\.tenant_id;/);
+  assert.equal(
+    [...runnerPageSource.matchAll(/\.eq\("tenant_id", tenantId\)/g)].length,
+    8,
+  );
   assert.match(runnerPageSource, /eyebrow: MODULE_LABELS_VI\.runner/);
   assert.match(runnerPageSource, /const RUNNER_MASCOT = \{/);
   assert.match(

@@ -27,12 +27,17 @@ export function isPublicAppPath(pathname: string): boolean {
   if (pathname.startsWith("/swe-worker-")) return true;
   if (pathname.startsWith("/demo/")) return true;
   if (/^\/br\/\d+\/pos\/manifest\.webmanifest$/.test(pathname)) return true;
+  if (isPublicRunnerPath(pathname)) return true;
   // /r/ prefix — public QR feedback submission pages (no auth required)
   if (pathname.startsWith("/r/")) return true;
 
   return PUBLIC_APP_PATHS.some(
     (path) => pathname === path || pathname.startsWith(`${path}/`),
   );
+}
+
+export function isPublicRunnerPath(pathname: string): boolean {
+  return /^\/br\/\d+\/runner\/?$/.test(pathname);
 }
 
 export function isBetaPath(pathname: string): boolean {

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { CircleAlert as IconAlertCircle } from "lucide-react";
 import Image from "next/image";
+import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { cn } from "@comtammatu/ui";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import {
@@ -11,7 +12,6 @@ import {
   type RunnerQueueItem,
 } from "@comtammatu/shared/runner";
 import { MODULE_LABELS_VI } from "@comtammatu/shared/labels";
-import { loadAuthState } from "@/_lib/auth";
 import { getVNDateString, getVNDayUtcRange } from "@/_lib/format-datetime";
 import {
   dedupeRowsById,
@@ -21,6 +21,8 @@ import {
 } from "../kds/lib/query-helpers";
 import { RunnerRealtimeRefresh } from "./runner-realtime-refresh";
 import { RunnerWaitTime } from "./runner-wait-time";
+
+export const dynamic = "force-dynamic";
 
 const RUNNER_ERROR_MESSAGE =
   "Không tải được màn gọi số. Vui lòng tải lại trang.";
@@ -89,7 +91,7 @@ type RunnerListRow = {
   status: RunnerListStatus;
 };
 
-type RunnerSupabase = Awaited<ReturnType<typeof loadAuthState>>["supabase"];
+type RunnerSupabase = ReturnType<typeof createServiceClient>;
 
 type RunnerQueryResult = {
   data: unknown[] | null;
@@ -144,14 +146,16 @@ function sortRunnerTicketsNewestFirst(
 
 async function fetchRunnerOrdersByIds(args: {
   supabase: RunnerSupabase;
+  tenantId: number;
   branchId: number;
   orderIds: number[];
 }): Promise<{ data: BuildRunnerQueueInput["orders"] | null; error: unknown }> {
-  const { supabase, branchId, orderIds } = args;
+  const { supabase, tenantId, branchId, orderIds } = args;
   const result = await fetchChunkedRows<unknown>(orderIds, async (ids) => {
     let ordersRes: RunnerQueryResult = await supabase
       .from("orders")
       .select(RUNNER_ORDER_SELECT_WITH_PRIORITY)
+      .eq("tenant_id", tenantId)
       .eq("branch_id", branchId)
       .in("id", ids);
 
@@ -159,6 +163,7 @@ async function fetchRunnerOrdersByIds(args: {
       ordersRes = await supabase
         .from("orders")
         .select(RUNNER_ORDER_SELECT_BASE)
+        .eq("tenant_id", tenantId)
         .eq("branch_id", branchId)
         .in("id", ids);
     }
@@ -172,19 +177,22 @@ async function fetchRunnerOrdersByIds(args: {
 
 async function fetchRunnerOrderItemsByIds(args: {
   supabase: RunnerSupabase;
+  tenantId: number;
   orderItemIds: number[];
 }): Promise<{ data: RunnerOrderItemQuantityRow[] | null; error: unknown }> {
-  const { supabase, orderItemIds } = args;
+  const { supabase, tenantId, orderItemIds } = args;
   const result = await fetchChunkedRows<unknown>(orderItemIds, async (ids) => {
     let itemsRes: RunnerQueryResult = await supabase
       .from("order_items")
       .select(RUNNER_ORDER_ITEM_SELECT_WITH_PRIORITY)
+      .eq("tenant_id", tenantId)
       .in("id", ids);
 
     if (isMissingPriorityColumn(itemsRes.error)) {
       itemsRes = await supabase
         .from("order_items")
         .select(RUNNER_ORDER_ITEM_SELECT_BASE)
+        .eq("tenant_id", tenantId)
         .in("id", ids);
     }
 
@@ -197,12 +205,13 @@ async function fetchRunnerOrderItemsByIds(args: {
 
 async function fetchRunnerKitchenBatchesByIds(args: {
   supabase: RunnerSupabase;
+  tenantId: number;
   batchIds: number[];
 }): Promise<{
   data: BuildRunnerQueueInput["kitchenBatches"] | null;
   error: unknown;
 }> {
-  const { supabase, batchIds } = args;
+  const { supabase, tenantId, batchIds } = args;
   return fetchChunkedRows<BuildRunnerQueueInput["kitchenBatches"][number]>(
     batchIds,
     async (ids) => {
@@ -211,6 +220,7 @@ async function fetchRunnerKitchenBatchesByIds(args: {
         .select(
           "id, order_id, kitchen_ticket_number, send_seq, kind, created_at",
         )
+        .eq("tenant_id", tenantId)
         .in("id", ids);
 
       return {
@@ -223,15 +233,17 @@ async function fetchRunnerKitchenBatchesByIds(args: {
 
 async function fetchRunnerVisibleTickets(args: {
   supabase: RunnerSupabase;
+  tenantId: number;
   branchId: number;
   todayStartIso: string;
 }): Promise<{ tickets: RunnerTicketSnapshot[]; error: boolean }> {
-  const { supabase, branchId, todayStartIso } = args;
+  const { supabase, tenantId, branchId, todayStartIso } = args;
   const activeTicketsResult = await fetchPagedRows<RunnerTicketSnapshot>(
     async (from, to) => {
       const { data, error } = await supabase
         .from("kds_tickets")
         .select(RUNNER_TICKET_SELECT)
+        .eq("tenant_id", tenantId)
         .eq("branch_id", branchId)
         .in("status", RUNNER_ACTIVE_STATUSES)
         .gte("created_at", todayStartIso)
@@ -268,6 +280,7 @@ async function fetchRunnerVisibleTickets(args: {
           const { data, error } = await supabase
             .from("kds_tickets")
             .select(RUNNER_TICKET_SELECT)
+            .eq("tenant_id", tenantId)
             .eq("branch_id", branchId)
             .in("status", RUNNER_VISIBLE_STATUSES)
             .gte("created_at", todayStartIso)
@@ -295,6 +308,7 @@ async function fetchRunnerVisibleTickets(args: {
           const { data, error } = await supabase
             .from("kds_tickets")
             .select(RUNNER_TICKET_SELECT)
+            .eq("tenant_id", tenantId)
             .eq("branch_id", branchId)
             .in("status", RUNNER_VISIBLE_STATUSES)
             .gte("created_at", todayStartIso)
@@ -328,22 +342,32 @@ export default async function RunnerPage({
 }) {
   const { branchId } = await params;
   const branchIdNum = Number(branchId);
-  const { supabase, claims } = await loadAuthState();
+  if (!Number.isInteger(branchIdNum) || branchIdNum <= 0) {
+    return <RunnerErrorState />;
+  }
+
+  const supabase = createServiceClient();
   const { startIso: todayStartIso } = getVNDayUtcRange(getVNDateString());
 
   const { data: branch, error: branchError } = await supabase
     .from("branches")
-    .select("id, name, branch_kind")
+    .select("id, name, branch_kind, tenant_id")
     .eq("id", branchIdNum)
-    .eq("tenant_id", claims.tenant_id)
     .maybeSingle();
 
-  if (branchError || !branch) {
+  if (
+    branchError ||
+    !branch ||
+    branch.branch_kind === "central_warehouse" ||
+    branch.branch_kind === "central_kitchen"
+  ) {
     return <RunnerErrorState />;
   }
 
+  const tenantId = branch.tenant_id;
   const ticketResult = await fetchRunnerVisibleTickets({
     supabase,
+    tenantId,
     branchId: branchIdNum,
     todayStartIso,
   });
@@ -367,15 +391,16 @@ export default async function RunnerPage({
     orderIds.length > 0
       ? fetchRunnerOrdersByIds({
           supabase,
+          tenantId,
           branchId: branchIdNum,
           orderIds,
         })
       : Promise.resolve({ data: [], error: null }),
     batchIds.length > 0
-      ? fetchRunnerKitchenBatchesByIds({ supabase, batchIds })
+      ? fetchRunnerKitchenBatchesByIds({ supabase, tenantId, batchIds })
       : Promise.resolve({ data: [], error: null }),
     orderItemIds.length > 0
-      ? fetchRunnerOrderItemsByIds({ supabase, orderItemIds })
+      ? fetchRunnerOrderItemsByIds({ supabase, tenantId, orderItemIds })
       : Promise.resolve({ data: [], error: null }),
   ]);
 

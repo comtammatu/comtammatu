@@ -79,7 +79,7 @@ export interface BuildRunnerQueueInput {
   servedAfterIso?: string;
 }
 
-const HIDDEN_ORDER_STATUSES = new Set(["completed", "cancelled"]);
+const HIDDEN_ORDER_STATUSES = new Set(["cancelled"]);
 const ORDER_DATE_SEGMENT_PATTERN = /^\d{6}(?:\d{2})?$/;
 const ORDER_SEQUENCE_SEGMENT_PATTERN = /^\d{1,5}$/;
 

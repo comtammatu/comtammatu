@@ -71,7 +71,7 @@ const base: BuildRunnerQueueInput = {
       order_number: "MV-20260524-009-CN1",
       order_type: "takeaway",
       table_id: null,
-      status: "completed",
+      status: "cancelled",
       created_at: "2026-05-24T03:03:00.000Z",
       tables: null,
     },
@@ -220,7 +220,7 @@ test("buildRunnerQueue preserves order-based append kitchen ticket suffixes", ()
   assert.equal(item?.referenceNumber, "#105-2");
 });
 
-test("buildRunnerQueue keeps preparing orders and hides completed orders", () => {
+test("buildRunnerQueue keeps preparing orders and hides cancelled orders", () => {
   const queue = buildRunnerQueue(base);
   const preparing = queue.find(
     (item) => item.orderNumber === "TC-20260524-008-CN1",
@@ -235,6 +235,52 @@ test("buildRunnerQueue keeps preparing orders and hides completed orders", () =>
     queue.some((item) => item.orderNumber === "MV-20260524-009-CN1"),
     false,
   );
+});
+
+test("buildRunnerQueue keeps completed paid orders while kitchen tickets are active", () => {
+  const input: BuildRunnerQueueInput = {
+    ...base,
+    tickets: [
+      {
+        id: 21,
+        order_id: 21,
+        order_item_id: 210,
+        kitchen_send_batch_id: 921,
+        status: "preparing",
+        bumped_at: null,
+        created_at: "2026-05-24T03:30:00.000Z",
+        updated_at: "2026-05-24T03:30:00.000Z",
+      },
+    ],
+    orders: [
+      {
+        id: 21,
+        order_number: "MV-20260524-021-CN1",
+        order_type: "takeaway",
+        table_id: null,
+        status: "completed",
+        created_at: "2026-05-24T03:30:00.000Z",
+        tables: null,
+      },
+    ],
+    kitchenBatches: [
+      {
+        id: 921,
+        order_id: 21,
+        kitchen_ticket_number: "#021",
+        send_seq: 1,
+        kind: "initial",
+        created_at: "2026-05-24T03:30:00.000Z",
+      },
+    ],
+  };
+
+  const [item] = buildRunnerQueue(input);
+
+  assert.equal(item?.lane, "active");
+  assert.equal(item?.status, "preparing");
+  assert.equal(item?.orderNumber, "MV-20260524-021-CN1");
+  assert.equal(item?.callNumber, "#021");
 });
 
 test("buildRunnerQueue follows KDS queue rank with item-level priority", () => {

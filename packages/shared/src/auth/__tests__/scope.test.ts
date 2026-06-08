@@ -18,6 +18,7 @@ import { resolveDiscoveredApps } from "../app-discovery";
 import {
   isFeedbackPublicPath,
   isPublicAppPath,
+  isPublicRunnerPath,
   normalizeHost,
   resolveHostSurface,
   resolveLegacyRouteRedirectPath,
@@ -278,12 +279,17 @@ test("resolvePostLoginRedirect → branch_manager on own POS → allowed", () =>
   );
 });
 
-test("isPublicAppPath PWA manifests bypass auth proxy", () => {
+test("isPublicAppPath public surfaces bypass auth proxy", () => {
   assert.equal(isPublicAppPath("/manifest.webmanifest"), true);
   assert.equal(isPublicAppPath("/sw.js"), true);
   assert.equal(isPublicAppPath("/payment/momo/return"), true);
   assert.equal(isPublicAppPath("/br/3/pos/manifest.webmanifest"), true);
+  assert.equal(isPublicAppPath("/br/3/runner"), true);
+  assert.equal(isPublicRunnerPath("/br/3/runner"), true);
+  assert.equal(isPublicRunnerPath("/br/3/runner/"), true);
   assert.equal(isPublicAppPath("/br/3/pos"), false);
+  assert.equal(isPublicRunnerPath("/br/abc/runner"), false);
+  assert.equal(isPublicRunnerPath("/br/3/runner/settings"), false);
   assert.equal(isPublicAppPath("/br/abc/pos/manifest.webmanifest"), false);
 });
 
