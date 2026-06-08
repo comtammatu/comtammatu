@@ -5,7 +5,6 @@ import {
   ensureBranch,
   ensureIngredient,
   ensureSupplier,
-  ensureInventoryLocation,
   createTestGrnDraft,
   getGrnStatus,
   getStockLevel,
@@ -69,13 +68,6 @@ async function buildGrnFixtures(): Promise<GrnFixtures> {
     ensureBranch(supabase, tenantId, "central_kitchen", "1"),
     ensureIngredient(supabase, tenantId, "grn"),
     ensureSupplier(supabase, tenantId),
-  ]);
-
-  // Ensure receive locations exist so confirm_goods_receipt_note can find them
-  await Promise.all([
-    ensureInventoryLocation(supabase, tenantId, cw1.id, "receive"),
-    ensureInventoryLocation(supabase, tenantId, cw2.id, "receive"),
-    ensureInventoryLocation(supabase, tenantId, ck.id, "receive"),
   ]);
 
   const {

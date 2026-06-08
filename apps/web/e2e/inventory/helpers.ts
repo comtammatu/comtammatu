@@ -1,9 +1,13 @@
 /**
  * Inventory E2E helpers — service-role Supabase utilities for seeding and
- * verifying Kho Tổng / Bếp Trung Tâm data in tests.
+ * verifying GRN / stock data on the lean DB.
  *
  * Uses the same pattern as e2e/helpers/supabase.ts (service-role client,
  * cleanup closures returned alongside data).
+ *
+ * The lean rebuild dropped the transfers + stock-issue + inventory_locations
+ * subsystems, so the corresponding seed/read helpers were removed; what remains
+ * covers GRN procurement (the surviving inventory e2e suite).
  *
  * Required env vars (same .env.test.local as other E2E suites):
  *   NEXT_PUBLIC_SUPABASE_URL
@@ -180,141 +184,26 @@ export async function ensureSupplier(
   return inserted.id;
 }
 
-// ─── Inventory location helpers ───────────────────────────────────────────────
-
-export async function ensureInventoryLocation(
-  supabase: ServiceClient,
-  tenantId: number,
-  branchId: number,
-  locationKind:
-    | "receive"
-    | "issue"
-    | "storage"
-    | "warehouse"
-    | "kitchen" = "storage",
-): Promise<number> {
-  const name = `E2E Loc ${branchId} ${locationKind}`;
-
-  const { data: branch, error: branchErr } = await supabase
-    .from("branches")
-    .select("branch_kind")
-    .eq("tenant_id", tenantId)
-    .eq("id", branchId)
-    .single();
-
-  if (branchErr || !branch) {
-    throw new Error(
-      `Failed to resolve branch for E2E location: ${branchErr?.message}`,
-    );
-  }
-
-  const desiredLocationKind =
-    locationKind === "kitchen"
-      ? "kitchen"
-      : locationKind === "receive" && branch.branch_kind === "central_kitchen"
-        ? "kitchen"
-        : "warehouse";
-
-  let existingQuery = supabase
-    .from("inventory_locations")
-    .select("id")
-    .eq("tenant_id", tenantId)
-    .eq("branch_id", branchId)
-    .eq("is_active", true);
-
-  if (locationKind === "receive") {
-    existingQuery = existingQuery.eq("is_default_receive", true);
-  } else if (locationKind === "issue") {
-    existingQuery = existingQuery.eq("is_default_issue", true);
-  } else {
-    existingQuery = existingQuery.eq("location_kind", desiredLocationKind);
-  }
-
-  const { data: existing } = await existingQuery
-    .order("sort_order", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-
-  if (existing) return existing.id;
-
-  const isDefaultReceive = locationKind === "receive";
-  const isDefaultIssue = locationKind === "issue";
-
-  const { data: inserted, error } = await supabase
-    .from("inventory_locations")
-    .insert({
-      tenant_id: tenantId,
-      branch_id: branchId,
-      name,
-      code: `E2E-${branchId}-${locationKind}`,
-      location_kind: desiredLocationKind,
-      is_active: true,
-      is_default_receive: isDefaultReceive,
-      is_default_issue: isDefaultIssue,
-      is_default_consumption: false,
-      sort_order: 999,
-    })
-    .select("id")
-    .single();
-
-  if (error || !inserted) {
-    throw new Error(
-      `Failed to create E2E inventory location: ${error?.message}`,
-    );
-  }
-
-  return inserted.id;
-}
-
-// ─── Stock level seeding ──────────────────────────────────────────────────────
-
-/**
- * Upsert a stock_levels row so transfers have something to ship.
- */
-export async function seedStockLevel(
-  supabase: ServiceClient,
-  tenantId: number,
-  branchId: number,
-  ingredientId: number,
-  qty: number,
-  locationId: number,
-): Promise<void> {
-  const { error } = await supabase.from("stock_levels").upsert(
-    {
-      tenant_id: tenantId,
-      branch_id: branchId,
-      ingredient_id: ingredientId,
-      current_quantity: qty,
-      avg_unit_cost: 10000,
-      location_id: locationId,
-    },
-    { onConflict: "ingredient_id,branch_id,location_id,tenant_id" },
-  );
-  if (error) throw new Error(`Failed to seed stock_levels: ${error.message}`);
-}
-
 // ─── Stock level reader ───────────────────────────────────────────────────────
 
+/**
+ * Sums the current quantity for an ingredient at a branch. On the lean schema
+ * `stock_levels` is keyed by (tenant, branch, ingredient) — location was
+ * dropped — so at most one row contributes, but the sum stays defensive.
+ */
 export async function getStockLevel(
   supabase: ServiceClient,
   tenantId: number,
   branchId: number,
   ingredientId: number,
-  locationId?: number,
 ): Promise<number | null> {
-  const query = supabase
+  const { data } = await supabase
     .from("stock_levels")
     .select("current_quantity")
     .eq("tenant_id", tenantId)
     .eq("branch_id", branchId)
     .eq("ingredient_id", ingredientId);
 
-  if (locationId != null) {
-    const { data } = await query.eq("location_id", locationId).maybeSingle();
-    return data ? Number(data.current_quantity) : null;
-  }
-
-  const { data } = await query;
   if (!data || data.length === 0) return null;
 
   return data.reduce((sum, row) => sum + Number(row.current_quantity ?? 0), 0);
@@ -412,118 +301,6 @@ export async function createTestGrnDraft(
     supplierId: opts.supplierId,
     cleanup,
   };
-}
-
-// ─── Transfer helpers ─────────────────────────────────────────────────────────
-
-export interface TestTransfer {
-  id: number;
-  transferNumber: string;
-  tenantId: number;
-  fromBranchId: number;
-  toBranchId: number;
-  ingredientId: number;
-  cleanup: () => Promise<void>;
-}
-
-/**
- * Creates a draft transfer + one line item via service-role.
- * Use this to seed transfers that need to be progressed through status steps.
- */
-export async function createTestTransferDraft(
-  supabase: ServiceClient,
-  opts: {
-    tenantId: number;
-    fromBranchId: number;
-    toBranchId: number;
-    ingredientId: number;
-    quantity?: number;
-    createdByUserId: string;
-    fromLocationId?: number;
-    toLocationId?: number;
-  },
-): Promise<TestTransfer> {
-  const transferNumber = `TRF-E2E-${Date.now()}`;
-  const qty = opts.quantity ?? 5;
-
-  const { data: transfer, error: tErr } = await supabase
-    .from("stock_transfers")
-    .insert({
-      tenant_id: opts.tenantId,
-      from_branch_id: opts.fromBranchId,
-      to_branch_id: opts.toBranchId,
-      transfer_number: transferNumber,
-      status: "draft",
-      created_by: opts.createdByUserId,
-      from_location_id: opts.fromLocationId ?? null,
-      to_location_id: opts.toLocationId ?? null,
-    })
-    .select("id")
-    .single();
-
-  if (tErr || !transfer) {
-    throw new Error(`Failed to create test transfer: ${tErr?.message}`);
-  }
-
-  const { error: lineErr } = await supabase
-    .from("stock_transfer_items")
-    .insert({
-      tenant_id: opts.tenantId,
-      transfer_id: transfer.id,
-      ingredient_id: opts.ingredientId,
-      quantity: qty,
-      unit: "kg",
-    });
-
-  if (lineErr) {
-    throw new Error(`Failed to create test transfer line: ${lineErr.message}`);
-  }
-
-  const cleanup = async () => {
-    const sb = createServiceClient();
-    await sb
-      .from("stock_movements")
-      .delete()
-      .eq("transfer_id", transfer.id)
-      .eq("tenant_id", opts.tenantId);
-    await sb
-      .from("stock_transfer_items")
-      .delete()
-      .eq("transfer_id", transfer.id)
-      .eq("tenant_id", opts.tenantId);
-    await sb
-      .from("stock_transfers")
-      .delete()
-      .eq("id", transfer.id)
-      .eq("tenant_id", opts.tenantId);
-  };
-
-  return {
-    id: transfer.id,
-    transferNumber,
-    tenantId: opts.tenantId,
-    fromBranchId: opts.fromBranchId,
-    toBranchId: opts.toBranchId,
-    ingredientId: opts.ingredientId,
-    cleanup,
-  };
-}
-
-// ─── Transfer status reader ───────────────────────────────────────────────────
-
-export async function getTransferStatus(
-  supabase: ServiceClient,
-  tenantId: number,
-  transferId: number,
-): Promise<string | null> {
-  const { data } = await supabase
-    .from("stock_transfers")
-    .select("status")
-    .eq("id", transferId)
-    .eq("tenant_id", tenantId)
-    .maybeSingle();
-
-  return data?.status ?? null;
 }
 
 // ─── GRN status reader ────────────────────────────────────────────────────────
