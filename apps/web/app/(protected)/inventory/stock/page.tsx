@@ -54,14 +54,10 @@ export default async function StockPage({
     stockRes,
     expiryAlertsRes,
     pendingGrnRes,
-    outboundTransferRes,
-    inboundTransferRes,
     movementHistoryRes,
     canReceiveGrn,
-    canCreateTransfer,
     canCreateStocktake,
     canWriteoff,
-    canCreatePurchaseOrder,
     canAdjustException,
   ] = await Promise.all([
     fetchIngredients(),
@@ -79,18 +75,6 @@ export default async function StockPage({
       .eq("branch_id", branchId)
       .eq("status", "draft"),
     supabase
-      .from("stock_transfers")
-      .select("id", { count: "exact", head: true })
-      .eq("tenant_id", claims.tenant_id)
-      .eq("from_branch_id", branchId)
-      .in("status", ["draft", "confirmed_ship"]),
-    supabase
-      .from("stock_transfers")
-      .select("id", { count: "exact", head: true })
-      .eq("tenant_id", claims.tenant_id)
-      .eq("to_branch_id", branchId)
-      .in("status", ["in_transit", "confirmed_receive"]),
-    supabase
       .from("stock_movements")
       .select(
         "id, ingredient_id, type, movement_subtype, quantity_change, unit_cost, reason, created_at, grn_id, transfer_id, issue_id, order_id, production_order_id",
@@ -102,14 +86,9 @@ export default async function StockPage({
     currentUserHasPermission(branchId, PERMISSION_KEYS.PROCUREMENT_GRN_CREATE),
     currentUserHasPermission(
       branchId,
-      PERMISSION_KEYS.INVENTORY_TRANSFER_CREATE,
-    ),
-    currentUserHasPermission(
-      branchId,
       PERMISSION_KEYS.INVENTORY_STOCKTAKE_CREATE,
     ),
     currentUserHasPermission(branchId, PERMISSION_KEYS.INVENTORY_WRITEOFF),
-    currentUserHasPermission(branchId, PERMISSION_KEYS.PROCUREMENT_PO_CREATE),
     currentUserHasPermission(branchId, PERMISSION_KEYS.INVENTORY_WRITE),
   ]);
 
@@ -231,22 +210,17 @@ export default async function StockPage({
       ? expiryAlertsRes.data.length
       : 0;
   const pendingGrnCount = pendingGrnRes.count ?? 0;
-  const pendingTransferCount =
-    (outboundTransferRes.count ?? 0) + (inboundTransferRes.count ?? 0);
   const summary: StockWorkSummary = {
     underThresholdCount,
     expiryCount,
     pendingGrnCount,
-    pendingTransferCount,
-    pendingWorkCount: pendingGrnCount + pendingTransferCount,
+    pendingWorkCount: pendingGrnCount,
   };
   const permissions: StockActionPermissions = {
     canReceiveGrn,
     canCreateIssue: canAdjustException,
-    canCreateTransfer,
     canCreateStocktake,
     canWriteoff,
-    canCreatePurchaseOrder,
     canAdjustException,
   };
   const movementHistory: StockMovementHistory[] = (

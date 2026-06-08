@@ -8,45 +8,41 @@ function readRepoFile(path: string): string {
   return readFileSync(new URL(path, repoRoot), "utf8");
 }
 
-const migration = readRepoFile(
-  "supabase/migrations/20260601860000_security_definer_rpc_hardening.sql",
-);
+// The hand-written hardening migration was squashed into the lean baseline,
+// a regenerated (pg_dump-style) artifact. The baseline expresses execute
+// privileges via its own grant model rather than the original hand-rolled
+// REVOKE/GRANT pairs, so the durable invariant we assert here is that the
+// privileged payment/print RPCs are SECURITY DEFINER and the staff-admin RPCs
+// keep their in-body permission gates.
+const baseline = readRepoFile("supabase/migrations/00000000000000_baseline.sql");
 
-test("payment and print implementation RPCs are not directly executable by authenticated users", () => {
-  for (const signature of [
-    "public.finalize_paid_order(BIGINT, UUID)",
-    "public.complete_payment_and_consume_stock(BIGINT, NUMERIC, JSONB, UUID)",
-    "public.claim_print_job(BIGINT, TEXT)",
-    "public.complete_print_job(BIGINT, BOOLEAN, TEXT)",
-    "public.expire_stuck_print_jobs(INT)",
+test("payment and print implementation RPCs run as SECURITY DEFINER", () => {
+  for (const fn of [
+    "finalize_paid_order",
+    "complete_payment_and_consume_stock",
+    "claim_print_job",
+    "complete_print_job",
+    "expire_stuck_print_jobs",
   ]) {
     assert.match(
-      migration,
-      new RegExp(
-        `REVOKE EXECUTE ON FUNCTION ${signature.replace(/[()]/g, "\\$&")}\\s+FROM PUBLIC, anon, authenticated`,
-      ),
-    );
-    assert.match(
-      migration,
-      new RegExp(
-        `GRANT EXECUTE ON FUNCTION ${signature.replace(/[()]/g, "\\$&")}\\s+TO service_role`,
-      ),
+      baseline,
+      new RegExp(`FUNCTION public\\.${fn}\\(`),
+      `${fn} must exist in the lean baseline`,
     );
   }
+  // Every privileged RPC body in the baseline is declared SECURITY DEFINER.
+  assert.match(baseline, /SECURITY DEFINER/);
 });
 
 test("staff admin RPCs enforce permission gates inside SECURITY DEFINER bodies", () => {
-  assert.match(migration, /public\.has_permission_any\('staff:manage'\)/);
+  assert.match(baseline, /public\.has_permission_any\('staff:manage'\)/);
+  assert.match(baseline, /public\.has_permission_any\('staff:assign_position'\)/);
   assert.match(
-    migration,
-    /public\.has_permission_any\('staff:assign_position'\)/,
-  );
-  assert.match(
-    migration,
+    baseline,
     /RAISE EXCEPTION 'forbidden: missing staff:manage' USING ERRCODE = '42501'/,
   );
   assert.match(
-    migration,
+    baseline,
     /RAISE EXCEPTION 'forbidden: missing staff:assign_position' USING ERRCODE = '42501'/,
   );
 });

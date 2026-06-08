@@ -3,19 +3,13 @@
 import { useMemo, type ReactNode } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import {
-  ChartBar as IconChartBar,
   ClipboardList as IconClipboardList,
-  Factory as IconBuildingFactory,
   FileText as IconFileText,
-  Hourglass as IconHourglass,
   LayoutDashboard as IconLayoutDashboard,
   Package as IconPackage,
   Receipt as IconReceipt,
   Settings as IconSettings,
-  ShoppingCart as IconShoppingCart,
-  Truck as IconTruck,
   Users as IconUsers,
-  Utensils as IconToolsKitchen,
   Warehouse as IconWarehouse,
 } from "lucide-react";
 import { type StaffRole } from "@comtammatu/shared/auth";
@@ -35,7 +29,6 @@ interface InventoryShellProps {
   siteName: string;
   siteKind: string;
   showProcurement: boolean;
-  showProduction: boolean;
   showCatalogManagement: boolean;
   showSettings: boolean;
   allowedBranches: InventoryBranchOption[];
@@ -52,14 +45,12 @@ function isStocktakeSessionPath(pathname: string | null): boolean {
 function buildInventoryGroups({
   userRole,
   showProcurement,
-  showProduction,
   showCatalogManagement,
   showSettings,
   siteKind,
 }: {
   userRole: StaffRole;
   showProcurement: boolean;
-  showProduction: boolean;
   showCatalogManagement: boolean;
   showSettings: boolean;
   siteKind: string;
@@ -94,16 +85,6 @@ function buildInventoryGroups({
           label: tNav("stock", "navigation"),
           icon: IconPackage,
         },
-        {
-          href: "/inventory/expiry",
-          label: tNav("expiry", "navigation"),
-          icon: IconHourglass,
-        },
-        {
-          href: "/inventory/reports",
-          label: tNav("reports", "navigation"),
-          icon: IconChartBar,
-        },
       ],
     });
 
@@ -126,61 +107,26 @@ function buildInventoryGroups({
         label: tNav("stocktake", "navigation"),
         icon: IconClipboardList,
       },
-      {
-        href: "/inventory/expiry",
-        label: tNav("expiry", "navigation"),
-        icon: IconHourglass,
-      },
-      {
-        href: "/inventory/issues",
-        label: "Hao hụt/điều chỉnh",
-        icon: IconFileText,
-      },
-      {
-        href: "/inventory/reports",
-        label: tNav("reports", "navigation"),
-        icon: IconChartBar,
-      },
     ],
   });
 
   if (showProcurement) {
     groups.push({
-      title: "2 · Nhập/Nhận/Đối soát",
+      title: "2 · Nhập/Đối soát",
       items: [
-        {
-          href: "/inventory/purchase-orders",
-          label: tNav("purchaseOrders", "navigation"),
-          icon: IconShoppingCart,
-        },
         {
           href: "/inventory/grn",
           label: tNav("grn", "navigation"),
           icon: IconReceipt,
         },
+        {
+          href: "/inventory/supplier-invoices",
+          label: tNav("supplierInvoices", "navigation"),
+          icon: IconFileText,
+        },
       ],
     });
   }
-
-  groups.push({
-    title: "3 · Điều phối/Sản xuất",
-    items: [
-      {
-        href: "/inventory/transfers",
-        label: isBranchSite ? "Nhận hàng & cấp bếp" : "Điều chuyển",
-        icon: IconTruck,
-      },
-      ...(showProduction
-        ? [
-            {
-              href: "/inventory/production",
-              label: "Lệnh sản xuất",
-              icon: IconBuildingFactory,
-            },
-          ]
-        : []),
-    ],
-  });
 
   if (showBackOffice) {
     groups.push({
@@ -213,15 +159,6 @@ function buildInventoryGroups({
               },
             ]
           : []),
-        ...(showProcurement
-          ? [
-              {
-                href: "/inventory/recipes",
-                label: tNav("recipes", "navigation"),
-                icon: IconToolsKitchen,
-              },
-            ]
-          : []),
       ],
     });
   }
@@ -239,7 +176,6 @@ export function InventoryShell({
   siteName,
   siteKind,
   showProcurement,
-  showProduction,
   showCatalogManagement,
   showSettings,
   allowedBranches,
@@ -276,7 +212,6 @@ export function InventoryShell({
       buildInventoryGroups({
         userRole,
         showProcurement,
-        showProduction,
         showCatalogManagement,
         showSettings,
         siteKind: effectiveSiteKind,
@@ -285,7 +220,6 @@ export function InventoryShell({
       effectiveSiteKind,
       showCatalogManagement,
       showProcurement,
-      showProduction,
       showSettings,
       userRole,
     ],

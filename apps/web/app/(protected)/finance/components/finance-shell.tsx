@@ -4,8 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
   BarChart3 as IconBarChart3,
-  Boxes as IconBoxes,
-  TrendingUp as IconTrendingUp,
+  ReceiptText as IconReceiptText,
   Wallet as IconWallet,
 } from "lucide-react";
 import type { ReactNode } from "react";
@@ -33,14 +32,9 @@ const NAV_GROUPS: ShellNavGroup[] = [
         icon: IconBarChart3,
       },
       {
-        href: "/admin/reports/inventory-value",
-        label: financeCopy.nav.items.inventoryValue,
-        icon: IconBoxes,
-      },
-      {
-        href: "/finance/food-cost",
-        label: financeCopy.nav.items.grossProfit,
-        icon: IconTrendingUp,
+        href: "/finance/invoices",
+        label: financeCopy.nav.items.invoices,
+        icon: IconReceiptText,
       },
     ],
   },

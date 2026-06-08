@@ -61,19 +61,32 @@ export async function upsertPrinter(
     return { success: false, error: "Không có quyền với chi nhánh này" };
   }
 
-  const { data, error } = await supabase.rpc("upsert_printer_with_routes", {
-    p_printer_id: input.id,
-    p_branch_id: parsed.data.branch_id,
-    p_role: parsed.data.role,
-    p_name: parsed.data.name,
-    p_lan_host: parsed.data.lan_host,
-    p_lan_port: parsed.data.lan_port ?? 9100,
-    p_paper_width_mm: parsed.data.paper_width_mm,
-    p_code_page: parsed.data.code_page,
-    p_is_active: parsed.data.is_active,
-    p_print_types: parsed.data.print_types,
-    p_category_ids: parsed.data.category_ids,
-  });
+  // HKD lean baseline: per-printer print-type / category routing tables are
+  // out of scope, so the printer is persisted directly without routing rows.
+  const row = {
+    tenant_id: claims.tenant_id,
+    branch_id: parsed.data.branch_id,
+    role: parsed.data.role,
+    name: parsed.data.name,
+    lan_host: parsed.data.lan_host,
+    lan_port: parsed.data.lan_port ?? 9100,
+    paper_width_mm: parsed.data.paper_width_mm,
+    code_page: parsed.data.code_page,
+    is_active: parsed.data.is_active,
+  };
+
+  const mutation =
+    input.id != null
+      ? supabase
+          .from("printers")
+          .update(row)
+          .eq("id", input.id)
+          .eq("tenant_id", claims.tenant_id)
+          .select("id")
+          .maybeSingle()
+      : supabase.from("printers").insert(row).select("id").maybeSingle();
+
+  const { data, error } = await mutation;
 
   if (error || data == null) {
     const msg = String(error?.message ?? "").toLowerCase();
@@ -83,9 +96,6 @@ export async function upsertPrinter(
         error: "Chi nhánh đã có máy in cho vai trò này",
       };
     }
-    if (msg.includes("category")) {
-      return { success: false, error: "Danh mục gắn máy in không hợp lệ" };
-    }
     if (msg.includes("branch")) {
       return { success: false, error: "Không có quyền với chi nhánh này" };
     }
@@ -93,7 +103,7 @@ export async function upsertPrinter(
   }
 
   revalidatePrinterPaths(parsed.data.branch_id);
-  return { success: true, data: { id: data } };
+  return { success: true, data: { id: data.id } };
 }
 
 export async function deletePrinter(id: number): Promise<ActionResult> {

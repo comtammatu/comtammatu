@@ -21,13 +21,6 @@ import {
   type JwtClaims,
   type ModuleKey,
 } from "@comtammatu/shared/auth";
-import { getClientIp } from "@lib/network/client-ip";
-
-// Module-level flag — emit one warning per warm Edge instance when the POS
-// network gate is disabled in production. Spec: regressions.md
-// POS-NETWORK-GATE-GRACE-IS-SECURITY-CEILING ("kill-switch is loud, logged
-// in proxy startup"). Vercel log drain captures this for SIEM ingestion.
-let NETWORK_GATE_OFF_WARNED = false;
 
 // Module-level flag — warn once per warm Edge instance when production runs
 // without NEXT_PUBLIC_FEEDBACK_HOST set. Without it, /r/* shares origin with
@@ -308,67 +301,9 @@ export async function proxy(request: NextRequest) {
             );
           }
 
-          // Network gate: only devices sharing NAT egress IP with the branch's
-          // print-agent (registered via /api/branch-presence) may load POS/KDS/Runner.
-          // Defense-in-depth ONLY — RLS + JWT remain the source of truth for
-          // data access (PostgREST direct calls bypass this gate). Kill-switch
-          // via POS_NETWORK_GATE=off for incident response.
-          //
-          // Auto-bypassed in non-production NODE_ENV (dev / test) — localhost
-          // requests resolve to 127.0.0.1 which getClientIp() correctly rejects
-          // as a private range, so without this skip every dev request would
-          // 307 to /access-denied. Vercel preview deploys run as production;
-          // set POS_NETWORK_GATE=off on those if you don't want the gate there.
-          //
-          // Admin roles already fail the branch-scope check above (their
-          // branch_id is null), so they never reach this point — no explicit
-          // bypass needed here.
-          const networkGateEnabled =
-            process.env.NODE_ENV === "production" &&
-            process.env.POS_NETWORK_GATE !== "off";
-
-          // Loud kill-switch: emit one warning per warm Edge instance when
-          // POS_NETWORK_GATE=off in production. SIEM/log-drain ingests this
-          // for alerting. Implements regressions.md
-          // POS-NETWORK-GATE-GRACE-IS-SECURITY-CEILING.
-          if (
-            !networkGateEnabled &&
-            process.env.NODE_ENV === "production" &&
-            process.env.POS_NETWORK_GATE === "off" &&
-            !NETWORK_GATE_OFF_WARNED
-          ) {
-            console.warn(
-              "[network-gate] disabled via POS_NETWORK_GATE=off — POS/KDS/Runner perimeter open. See regressions.md POS-NETWORK-GATE-GRACE-IS-SECURITY-CEILING.",
-            );
-            NETWORK_GATE_OFF_WARNED = true;
-          }
-
-          if (networkGateEnabled) {
-            const clientIp = getClientIp(request.headers);
-            const graceCutoff = new Date(
-              Date.now() - 30 * 60_000,
-            ).toISOString();
-            let trusted = false;
-            if (clientIp) {
-              const { data: trustRow } = await supabase
-                .from("branch_trusted_egress_ips")
-                .select("id")
-                .eq("branch_id", routeBranchId)
-                .eq("tenant_id", claims.tenant_id)
-                .eq("ip_address", clientIp)
-                .is("revoked_at", null)
-                .gte("last_seen_at", graceCutoff)
-                .maybeSingle();
-              trusted = trustRow !== null;
-            }
-            if (!trusted) {
-              return redirectToAccessDenied(
-                request,
-                response,
-                "untrusted-network",
-              );
-            }
-          }
+          // HKD lean baseline: the NAT egress-IP network gate
+          // (branch_trusted_egress_ips + /api/branch-presence) is out of scope.
+          // RLS + JWT remain the source of truth for data access.
         }
       }
     }

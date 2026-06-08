@@ -21,13 +21,6 @@ const revokeSchema = z.object({
   permission_key: z.string().min(1),
 });
 
-const applyTemplateSchema = z.object({
-  target_user_id: z.uuid(),
-  branch_id: z.coerce.number().int().positive().nullable(),
-  template_id: z.coerce.number().int().positive(),
-  valid_until: z.string().datetime({ offset: true }).optional().nullable(),
-});
-
 /* ─── grant ─── */
 
 export async function grantPermissionAction(
@@ -80,33 +73,6 @@ export async function revokePermissionAction(
   if (error) return { success: false, error: mapRpcError(error.message) };
   revalidatePath(`/admin/staff/${parsed.data.target_user_id}/permissions`);
   return { success: true, data: { rows_removed: data as number } };
-}
-
-/* ─── apply template ─── */
-
-export async function applyTemplateAction(
-  input: z.input<typeof applyTemplateSchema>,
-): Promise<ActionResult<{ rows_inserted: number }>> {
-  const parsed = applyTemplateSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Invalid input",
-    };
-  }
-  if (parsed.data.branch_id === null) {
-    return { success: false, error: "Vui lòng chọn chi nhánh." };
-  }
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("apply_template_to_user", {
-    p_target_user: parsed.data.target_user_id,
-    p_branch_id: parsed.data.branch_id,
-    p_template_id: parsed.data.template_id,
-    p_valid_until: parsed.data.valid_until ?? undefined,
-  });
-  if (error) return { success: false, error: mapRpcError(error.message) };
-  revalidatePath(`/admin/staff/${parsed.data.target_user_id}/permissions`);
-  return { success: true, data: { rows_inserted: data as number } };
 }
 
 /* ─── error mapping — never leak raw pg messages ─── */

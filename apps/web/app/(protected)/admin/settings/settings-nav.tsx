@@ -37,11 +37,6 @@ const TABS: Tab[] = [
     allowedRoles: TENANT_STRATEGY_ROLES,
   },
   {
-    href: "/admin/settings/areas",
-    label: "Khu vực",
-    allowedRoles: TENANT_STRATEGY_ROLES,
-  },
-  {
     href: "/admin/settings/tables",
     label: "Bàn",
     allowedRoles: BRANCH_FLOOR_SETTINGS_ROLES,

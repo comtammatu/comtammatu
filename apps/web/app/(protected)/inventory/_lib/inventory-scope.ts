@@ -34,30 +34,6 @@ const fetchAllActiveBranches = cache(
   },
 );
 
-const fetchAreaBranches = cache(
-  async (
-    supabase: TenantSupabase,
-    tenantId: number,
-    areaId: number,
-  ): Promise<InventoryBranchOption[]> => {
-    const { data, error } = await supabase
-      .from("area_branches")
-      .select("branches(id, name, branch_kind)")
-      .eq("tenant_id", tenantId)
-      .eq("area_id", areaId);
-    if (error || !data) return [];
-    const rows = data
-      .map((row) => row.branches as InventoryBranchOption | null)
-      .filter((b): b is InventoryBranchOption => b !== null);
-    return rows.sort((a, b) => {
-      if (a.branch_kind !== b.branch_kind) {
-        return a.branch_kind.localeCompare(b.branch_kind);
-      }
-      return a.id - b.id;
-    });
-  },
-);
-
 function pickDefault(
   branches: InventoryBranchOption[],
   preferred: number | null,
@@ -78,7 +54,6 @@ function pickDefault(
  * user's home branch, else first central_warehouse, else first allowed.
  *
  * - owner / super_manager / office → every active tenant branch
- * - area_manager                  → branches mapped in `area_branches`
  * - other roles                    → locked to `claims.branch_id`
  */
 export const resolveInventoryBranchScope = cache(
@@ -95,15 +70,6 @@ export const resolveInventoryBranchScope = cache(
         supabase,
         claims.tenant_id,
       );
-      canSelectAll = true;
-    } else if (claims.user_role === "area_manager") {
-      if (claims.area_id != null) {
-        allowedBranches = await fetchAreaBranches(
-          supabase,
-          claims.tenant_id,
-          claims.area_id,
-        );
-      }
       canSelectAll = true;
     } else if (claims.branch_id != null) {
       const allBranches = await fetchAllActiveBranches(

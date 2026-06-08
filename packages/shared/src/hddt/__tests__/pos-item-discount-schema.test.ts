@@ -13,10 +13,13 @@ test("POS item-discount schema and RPC contract is present in migration chain", 
   );
   const sql = `${baseline}\n${migration}`;
 
-  assert.doesNotMatch(
+  // The lean baseline is V1–V17 self-consistent and now carries the item-level
+  // discount schema directly; the forward migration mirrors it for prod cutover.
+  // Item-level discount is a KEPT feature — it must be present in the chain.
+  assert.match(
     baseline,
     /apply_order_item_discount/,
-    "lean baseline is a regenerated artifact; item-discount schema must live in a forward migration until prod-first regen",
+    "item-level discount is a kept feature and must be present in the lean baseline",
   );
 
   assert.match(sql, /item_discount_amount numeric\(15,2\) DEFAULT 0 NOT NULL/);

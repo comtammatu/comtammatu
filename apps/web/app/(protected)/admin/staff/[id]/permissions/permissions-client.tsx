@@ -1,11 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import {
-  Plus as IconPlus,
-  Trash as IconTrash,
-  Layers as IconStack,
-} from "lucide-react";
+import { Plus as IconPlus, Trash as IconTrash } from "lucide-react";
 import { formatVNDate, formatVNDateTime } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -23,11 +19,7 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import { toast } from "@comtammatu/ui/components/sonner";
-import {
-  applyTemplateAction,
-  grantPermissionAction,
-  revokePermissionAction,
-} from "./actions";
+import { grantPermissionAction, revokePermissionAction } from "./actions";
 
 interface BranchOpt {
   id: number;
@@ -40,13 +32,6 @@ interface PermKey {
   module: string;
   description: string;
   scope: string;
-}
-
-interface Template {
-  id: number;
-  name: string;
-  positionCode: string | null;
-  permissionKeys: string[];
 }
 
 interface Grant {
@@ -64,7 +49,6 @@ interface Props {
   currentGrants: Grant[];
   branches: BranchOpt[];
   permissionKeys: PermKey[];
-  templates: Template[];
 }
 
 export function PermissionsClient({
@@ -73,14 +57,10 @@ export function PermissionsClient({
   currentGrants,
   branches,
   permissionKeys,
-  templates,
 }: Props) {
   const [selectedBranch, setSelectedBranch] = useState<string>("");
   const [selectedPerm, setSelectedPerm] = useState<string>("");
   const [grantValidUntil, setGrantValidUntil] = useState<string>("");
-  const [templateBranch, setTemplateBranch] = useState<string>("");
-  const [templateId, setTemplateId] = useState<string>("");
-  const [templateValidUntil, setTemplateValidUntil] = useState<string>("");
   const [isPending, startTransition] = useTransition();
 
   const tenantGrants = useMemo(
@@ -137,30 +117,6 @@ export function PermissionsClient({
         toast.error(res.error ?? "Thất bại");
       } else {
         toast.success(`Đã thu hồi ${grant.permissionKey}`);
-      }
-    });
-  }
-
-  function handleApplyTemplate() {
-    if (!templateBranch || !templateId) {
-      toast.error("Chọn chi nhánh và template.");
-      return;
-    }
-    startTransition(async () => {
-      const res = await applyTemplateAction({
-        target_user_id: targetUserId,
-        branch_id: Number(templateBranch),
-        template_id: Number(templateId),
-        valid_until: templateValidUntil ? toIsoZ(templateValidUntil) : null,
-      });
-      if (!res.success) {
-        toast.error(res.error ?? "Thất bại");
-      } else {
-        toast.success(
-          `Đã áp dụng template (${res.data?.rows_inserted ?? 0} quyền mới)`,
-        );
-        setTemplateId("");
-        setTemplateValidUntil("");
       }
     });
   }
@@ -240,62 +196,6 @@ export function PermissionsClient({
           >
             <IconPlus className="mr-1 size-4" />
             Gán quyền
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* ─── Apply template ─── */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Áp dụng template</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="grid gap-3 sm:grid-cols-3">
-            <Select value={templateBranch} onValueChange={setTemplateBranch}>
-              <SelectTrigger>
-                <SelectValue placeholder="Chi nhánh" />
-              </SelectTrigger>
-              <SelectContent>
-                {branches.map((b) => (
-                  <SelectItem key={b.id} value={String(b.id)}>
-                    {b.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={templateId} onValueChange={setTemplateId}>
-              <SelectTrigger className="sm:col-span-2">
-                <SelectValue placeholder="Template" />
-              </SelectTrigger>
-              <SelectContent>
-                {templates.map((t) => (
-                  <SelectItem key={t.id} value={String(t.id)}>
-                    {t.name} ({t.permissionKeys.length} quyền)
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <label className="flex flex-col gap-1 text-xs text-muted-foreground">
-            Hạn kết thúc (tuỳ chọn)
-            <input
-              type="datetime-local"
-              value={templateValidUntil}
-              onChange={(e) => setTemplateValidUntil(e.target.value)}
-              className="max-w-xs rounded-md border border-input bg-background px-2 py-1 text-sm"
-            />
-          </label>
-          <p className="text-xs text-muted-foreground">
-            Template cộng dồn với quyền hiện có — chỉ thêm, không xóa. Nếu đặt
-            hạn, tất cả quyền mới cùng hạn.
-          </p>
-          <Button
-            onClick={handleApplyTemplate}
-            disabled={isPending || !templateBranch || !templateId}
-            variant="secondary"
-          >
-            <IconStack className="mr-1 size-4" />
-            Áp dụng
           </Button>
         </CardContent>
       </Card>

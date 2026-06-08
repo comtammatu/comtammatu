@@ -68,7 +68,7 @@ import { InteractiveCard } from "../_components/interactive-card";
 import { FormattedNumberInput } from "../_components/formatted-number-input";
 import { formatDateTime, formatQty, formatVND } from "../_lib/format";
 import { CATEGORY_TONE_CLASS } from "../_lib/constants";
-import { createStockIssueDraft, upsertStockIssueLine } from "../issue-actions";
+import { adjustStock } from "../stock-actions";
 import { AdjustStockDialog } from "./adjust-stock-dialog";
 
 import { ACTIONS_VI, FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
@@ -96,17 +96,14 @@ export type StockWorkSummary = {
   underThresholdCount: number;
   expiryCount: number;
   pendingGrnCount: number;
-  pendingTransferCount: number;
   pendingWorkCount: number;
 };
 
 export type StockActionPermissions = {
   canReceiveGrn: boolean;
   canCreateIssue: boolean;
-  canCreateTransfer: boolean;
   canCreateStocktake: boolean;
   canWriteoff: boolean;
-  canCreatePurchaseOrder: boolean;
   canAdjustException: boolean;
 };
 
@@ -365,34 +362,24 @@ function QuickStockIssueDialog({
     }
 
     startTransition(async () => {
-      const draftRes = await createStockIssueDraft({
+      // HKD lean baseline: issues/write-offs are recorded as a direct stock
+      // adjustment (negative movement) instead of a separate issue document.
+      const res = await adjustStock({
         branchId,
-        issueType,
-        notes: stockCopy.quickIssue.draftNotes(target.ingredient.name),
-      });
-      if (!draftRes.success || !draftRes.data) {
-        toast.error(draftRes.error ?? stockCopy.quickIssue.createDraftFailed);
-        return;
-      }
-
-      const issueId = Number((draftRes.data as { id: number }).id);
-      const lineRes = await upsertStockIssueLine({
-        issueId,
         ingredientId: target.ingredient.id,
-        quantity: parsedQuantity,
-        unit: unit.trim(),
-        reason: reason.trim(),
+        quantityChange: -parsedQuantity,
+        type: "adjustment",
+        reason: `${activeIssueType?.label ?? issueType}: ${reason.trim()}`,
       });
-      if (!lineRes.success) {
-        toast.error(lineRes.error ?? stockCopy.quickIssue.addLineFailed);
-        router.push(`/inventory/issues/${issueId}`);
+      if (!res.success) {
+        toast.error(res.error ?? stockCopy.quickIssue.addLineFailed);
         return;
       }
 
       toast.success(stockCopy.quickIssue.created(target.ingredient.name));
       onOpenChange(false);
       resetForm();
-      router.push(`/inventory/issues/${issueId}`);
+      router.refresh();
     });
   }
 
@@ -667,32 +654,11 @@ export function StockClient({
             primary
           />
         ) : null}
-        {permissions.canCreateTransfer ? (
-          <QuickActionButton
-            href={branchHref(branchId, "/inventory/transfers")}
-            icon={IconTruck}
-            label={stockCopy.actions.transfer}
-          />
-        ) : null}
         {permissions.canCreateStocktake ? (
           <QuickActionButton
             href={branchHref(branchId, "/inventory/stocktake")}
             icon={IconClipboardList}
             label={stockCopy.actions.stocktake}
-          />
-        ) : null}
-        {permissions.canWriteoff ? (
-          <QuickActionButton
-            href={branchHref(branchId, "/inventory/waste/new")}
-            icon={IconTrash}
-            label={stockCopy.actions.waste}
-          />
-        ) : null}
-        {permissions.canCreatePurchaseOrder ? (
-          <QuickActionButton
-            href={branchHref(branchId, "/inventory/purchase-orders/new")}
-            icon={IconShoppingCart}
-            label={stockCopy.actions.purchaseSuggestion}
           />
         ) : null}
 
@@ -843,16 +809,6 @@ export function StockClient({
                 {stockCopy.empty.firstLoadHint}
               </p>
             </div>
-            {permissions.canCreatePurchaseOrder ? (
-              <Button asChild size="sm">
-                <Link
-                  href={branchHref(branchId, "/inventory/purchase-orders/new")}
-                >
-                  <IconShoppingCart className="size-4" />
-                  {stockCopy.actions.purchaseSuggestion}
-                </Link>
-              </Button>
-            ) : null}
           </CardContent>
         </Card>
       ) : isMobile ? (

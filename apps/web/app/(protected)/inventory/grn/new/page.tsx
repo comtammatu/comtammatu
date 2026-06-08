@@ -21,11 +21,6 @@ import { MobilePage } from "../../_components/mobile/mobile-page";
 import { MobileSectionHeader } from "../../_components/mobile/mobile-section-header";
 import { InteractiveCard } from "../../_components/mobile/interactive-card";
 import { MobileEmptyState } from "../../_components/mobile/mobile-empty-state";
-import {
-  fetchOpenPurchaseOrdersForReceiving,
-  type OpenPurchaseOrderRow,
-} from "../../purchase-order-actions";
-import { GrnFromPoList } from "./grn-from-po-list";
 
 type SupplierRow = {
   id: number;
@@ -119,14 +114,7 @@ export default async function GrnNewSupplierPage() {
     redirect("/access-denied?reason=insufficient-permission");
   }
 
-  const [suppliers, openPosRes] = await Promise.all([
-    loadSuppliers(),
-    fetchOpenPurchaseOrdersForReceiving(),
-  ]);
-
-  const openPos: OpenPurchaseOrderRow[] = openPosRes.success
-    ? (openPosRes.data ?? [])
-    : [];
+  const suppliers = await loadSuppliers();
 
   return (
     <MobilePage>
@@ -135,15 +123,13 @@ export default async function GrnNewSupplierPage() {
         backLabel="Danh sách GRN"
         eyebrow="Nhập hàng"
         title="Chọn nguồn nhập"
-        description="Nhận hàng theo đơn đặt hàng (PO) đã gửi hoặc nhập ad-hoc."
+        description="Nhập hàng theo nhà cung cấp."
       />
-
-      {openPos.length > 0 ? <GrnFromPoList openPos={openPos} /> : null}
 
       <section className="flex flex-col gap-2">
         <div className="flex items-center justify-between px-1">
           <p className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
-            Nhập ad-hoc theo nhà cung cấp
+            Chọn nhà cung cấp
           </p>
         </div>
         {suppliers.length === 0 ? (

@@ -2,9 +2,9 @@
  * Barrel re-export — preserves backward compatibility for existing import sites.
  *
  * Prefer importing directly from the domain-specific files:
- * - supplier-actions.ts   — supplier CRUD
- * - purchase-order-actions.ts — PO lifecycle + price intelligence
- * - grn-actions.ts — GRN + invoices + recipes + AP payment
+ * - supplier-actions.ts        — supplier CRUD
+ * - grn-actions.ts             — GRN lifecycle
+ * - supplier-invoice-actions.ts — supplier invoices
  */
 export {
   fetchSuppliers,
@@ -14,27 +14,6 @@ export {
 } from "./supplier-actions";
 
 export {
-  fetchPurchaseOrders,
-  createPurchaseOrder,
-  fetchPurchaseOrderDetail,
-  upsertPurchaseOrderLine,
-  deletePurchaseOrderLine,
-  updatePurchaseOrderStatus,
-  fetchPoSuggestions,
-  fetchOpenPurchaseOrdersForReceiving,
-  fetchPriceDeviations,
-  fetchSinglePriceDeviation,
-  fetchIngredientPriceHistory,
-} from "./purchase-order-actions";
-export type {
-  PoSuggestionRow,
-  OpenPurchaseOrderRow,
-  PriceDeviationRow,
-  SinglePriceDeviation,
-  PriceHistoryRow,
-} from "./purchase-order-actions";
-
-export {
   fetchRecentActivity,
   fetchGrns,
   fetchGrnDetail,
@@ -42,28 +21,11 @@ export {
   upsertGrnLine,
   deleteGrnLine,
   confirmGrn,
-  fetchGrnsForPo,
-  createGrnFromPo,
 } from "./grn-actions";
+export type { RecentActivityItem } from "./grn-actions";
+
 export {
   createSupplierInvoice,
   fetchSupplierInvoices,
   recomputeInvoiceMatching,
 } from "./supplier-invoice-actions";
-export {
-  fetchRecipes,
-  fetchCentralKitchenWacMap,
-  upsertRecipeLines,
-  exportRecipes,
-  importRecipes,
-  downloadRecipeTemplate,
-  fetchMenuItemsForRecipes,
-} from "./recipe-actions";
-export type {
-  RecentActivityItem,
-  LinkedGrnRow,
-} from "./grn-actions";
-export type {
-  ImportRecipeIssue,
-  ImportRecipeSummary,
-} from "./recipe-actions";

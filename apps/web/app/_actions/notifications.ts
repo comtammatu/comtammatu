@@ -35,7 +35,7 @@ const listSchema = z.object({
 
 /**
  * List notifications visible to caller (RLS filters by role + branch).
- * Joins `notification_reads` so each row carries `read_at`.
+ * `read_at` lives directly on the notification row in the lean schema.
  */
 export async function listNotifications(
   input: z.input<typeof listSchema>,
@@ -48,8 +48,7 @@ export async function listNotifications(
     };
   }
   const { limit, before, unreadOnly } = parsed.data;
-  const { supabase, session } = await loadAuthState();
-  const userId = session.user.id;
+  const { supabase } = await loadAuthState();
 
   let query = supabase
     .from("notifications")
@@ -58,8 +57,7 @@ export async function listNotifications(
       id, tenant_id, target_branch_id, target_roles,
       kind, severity, title, body,
       entity_type, entity_id, action_url, meta,
-      created_at, expires_at,
-      notification_reads!left(read_at, user_id)
+      created_at, expires_at, read_at
     `,
     )
     .order("created_at", { ascending: false })
@@ -71,11 +69,6 @@ export async function listNotifications(
   if (error) return { success: false, error: "Không thể tải thông báo" };
 
   const mapped: NotificationItem[] = (data ?? []).map((row) => {
-    const readRow = Array.isArray(row.notification_reads)
-      ? row.notification_reads.find(
-          (r: { user_id: string; read_at: string }) => r.user_id === userId,
-        )
-      : null;
     return {
       id: row.id,
       tenant_id: row.tenant_id,
@@ -91,7 +84,7 @@ export async function listNotifications(
       meta: (row.meta ?? {}) as Record<string, unknown>,
       created_at: row.created_at,
       expires_at: row.expires_at,
-      read_at: readRow?.read_at ?? null,
+      read_at: row.read_at ?? null,
     };
   });
 
@@ -124,12 +117,13 @@ export async function markNotificationRead(
   if (!parsed.success) {
     return { success: false, error: "Dữ liệu không hợp lệ" };
   }
-  const { supabase, session } = await loadAuthState();
+  const { supabase } = await loadAuthState();
   const { error } = await supabase
-    .from("notification_reads")
-    .insert({ notification_id: parsed.data.id, user_id: session.user.id });
-  // 23505 = unique_violation → already read, treat as success
-  if (error && error.code !== "23505") {
+    .from("notifications")
+    .update({ read_at: new Date().toISOString() })
+    .eq("id", parsed.data.id)
+    .is("read_at", null);
+  if (error) {
     return { success: false, error: "Không thể đánh dấu đã đọc" };
   }
   return { success: true };

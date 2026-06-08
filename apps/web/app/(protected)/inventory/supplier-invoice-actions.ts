@@ -112,7 +112,7 @@ export async function fetchSupplierInvoices(
   let query = supabase
     .from("supplier_invoices")
     .select(
-      `id, invoice_number, invoice_date, total_amount, matching_status, subtotal, supplier_id, grn_id, due_date, payment_status, paid_amount, paid_at, suppliers ( id, name ), ${grnSelect}`,
+      `id, invoice_number, invoice_date, total_amount, subtotal, supplier_id, grn_id, due_date, payment_status, paid_amount, paid_at, suppliers ( id, name ), ${grnSelect}`,
     )
     .eq("tenant_id", claims.tenant_id)
     .order("invoice_date", { ascending: false });

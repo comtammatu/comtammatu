@@ -59,27 +59,18 @@ export default async function NewStocktakeSessionPage({
     }
   }
 
-  const locationsRes = await supabase
-    .from("inventory_locations")
-    .select("id, name, branch_id, location_kind, is_active")
-    .eq("is_active", true)
-    .order("name");
-
-  const allowedBranchIds = new Set(scope.allowedBranches.map((b) => b.id));
   const branches = scope.allowedBranches.map((b) => ({
     id: b.id,
     name: getBranchSiteDisplayName(b),
   }));
 
-  const locations =
-    (locationsRes.data ?? [])
-      .filter((l) => allowedBranchIds.has(l.branch_id as number))
-      .map((l) => ({
-        id: l.id as number,
-        name: l.name as string,
-        branchId: l.branch_id as number,
-        kind: (l.location_kind ?? null) as string | null,
-      })) ?? [];
+  // HKD lean baseline: stocktake is branch-scoped — no per-location splitting.
+  const locations: Array<{
+    id: number;
+    name: string;
+    branchId: number;
+    kind: string | null;
+  }> = [];
 
   return (
     <NewStocktakeSessionClient

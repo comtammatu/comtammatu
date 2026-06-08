@@ -8,7 +8,6 @@ import {
   getAuthContextWithPermission,
 } from "./_lib/auth";
 import { withAction } from "@/_lib/with-action";
-import { resolveDefaultInventoryLocation } from "./_lib/inventory-location-compat";
 import { resolveInventoryBranchScope } from "./_lib/inventory-scope";
 import { PG_ERR } from "./_lib/constants";
 import { getBranchSiteDisplayName } from "./_lib/branch-site-labels";
@@ -57,16 +56,8 @@ export async function createStocktakeSession(
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }
 
-  const defaultLocationId = await resolveDefaultInventoryLocation(
-    supabase,
-    claims.tenant_id,
-    parsedBranch.data,
-    "receive",
-  );
-
   const { data, error } = await supabase.rpc("create_stocktake_session", {
     p_branch_id: parsedBranch.data,
-    p_location_id: defaultLocationId ?? undefined,
   });
 
   if (error) {
@@ -102,7 +93,7 @@ export async function fetchStocktakeSessions(
   let query = supabase
     .from("stocktake_sessions")
     .select(
-      "id, branch_id, location_id, started_at, completed_at, status, notes, created_at, created_by, branches!stocktake_sessions_branch_id_fkey(id, name, branch_kind)",
+      "id, branch_id, started_at, completed_at, status, notes, created_at, created_by, branches!stocktake_sessions_branch_id_fkey(id, name, branch_kind)",
     )
     .eq("tenant_id", claims.tenant_id)
     .order("created_at", { ascending: false });

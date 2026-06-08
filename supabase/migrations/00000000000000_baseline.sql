@@ -26334,7 +26334,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_mv_daily_revenue_pk ON public.mv_daily_rev
 CREATE UNIQUE INDEX IF NOT EXISTS idx_mv_top_items_pk ON public.mv_top_items USING btree (period_start, branch_id, tenant_id, menu_item_id);
 
 -- ============================================================================
--- V15.5 RE-ADDITIONS (greenfield lean) — KEEP-feature DB objects the lean
+-- V15.5 RE-ADDITIONS (HKD lean) — KEEP-feature DB objects the lean
 -- cutover over-dropped. Appended after the pg_dump baseline body so every FK
 -- target (orders, order_items, shifts, employees, print_jobs, printers,
 -- goods_received_notes, grn_items, stock_movements, notifications) and helper

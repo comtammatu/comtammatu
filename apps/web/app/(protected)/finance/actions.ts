@@ -779,47 +779,6 @@ export async function fetchOrdersForDay(
 
 /* ─── fetchReconciliationByDay — Phase 3: per-day DT vs Sổ ─ */
 
-export async function fetchReconciliationByDay(
-  branchId: number | null,
-  startDate: string,
-  endDate: string,
-): Promise<ActionResult> {
-  const parsedBranch = z.coerce
-    .number()
-    .int()
-    .positive()
-    .nullable()
-    .safeParse(branchId);
-  if (!parsedBranch.success) {
-    return { success: false, error: "Branch ID không hợp lệ" };
-  }
-
-  const parsedStart = z.string().date().safeParse(startDate);
-  const parsedEnd = z.string().date().safeParse(endDate);
-  if (!parsedStart.success || !parsedEnd.success) {
-    return { success: false, error: "Ngày không hợp lệ (YYYY-MM-DD)" };
-  }
-
-  const ctx = await getAuthContextWithPermission(
-    REPORT_ROLES,
-    PERMISSION_KEYS.FINANCE_VIEW,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
-
-  // Same NULL-branch pass-through as get_revenue_rollup.
-  const { data, error } = await ctx.supabase.rpc("fn_reconcile_sales_by_day", {
-    p_branch_id: parsedBranch.data as number,
-    p_start_date: parsedStart.data,
-    p_end_date: parsedEnd.data,
-  });
-
-  if (error) {
-    return { success: false, error: "Không thể tải đối chiếu theo ngày." };
-  }
-
-  return { success: true, data: data ?? [] };
-}
-
 /* ─── fetchCashVarianceSummary — Phase 3: lệch tiền cuối ca ─ */
 
 export async function fetchCashVarianceSummary(
@@ -980,35 +939,6 @@ export async function fetchAccessibleBranches(): Promise<ActionResult> {
     return { success: true, data: data ?? [] };
   }
 
-  // area_manager: scope qua area_branches mapping.
-  if (claims.user_role === "area_manager" && claims.area_id != null) {
-    const { data, error } = await supabase
-      .from("area_branches")
-      .select("branch_id, branches!inner(id, name, is_active, branch_kind)")
-      .eq("tenant_id", claims.tenant_id)
-      .eq("area_id", claims.area_id)
-      .eq("branches.is_active", true)
-      .eq("branches.branch_kind", "branch");
-    if (error) {
-      return { success: false, error: "Không thể tải danh sách chi nhánh." };
-    }
-    const rows = (data ?? [])
-      .map((r) => r.branches)
-      .filter(
-        (
-          b,
-        ): b is {
-          id: number;
-          name: string;
-          is_active: boolean;
-          branch_kind: string;
-        } => Boolean(b),
-      )
-      .map((b) => ({ id: b.id, name: b.name }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-    return { success: true, data: rows };
-  }
-
   // branch_manager / cashier scope: chỉ thấy chi nhánh của mình.
   if (claims.branch_id != null) {
     const { data, error } = await supabase
@@ -1085,14 +1015,9 @@ export async function refreshMaterializedViews(): Promise<ActionResult> {
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
-  const { supabase } = ctx;
-
-  const { error: rpcErr } = await supabase.rpc("refresh_finance_views");
-
-  if (rpcErr) {
-    return { success: false, error: "Không thể làm mới dữ liệu báo cáo." };
-  }
-
+  // HKD lean baseline: finance revenue views are refreshed on the database
+  // schedule (summary_run_queue), so there is no manual refresh RPC. The
+  // caller still re-queries fresh data via router.refresh() after this returns.
   return { success: true };
 }
 

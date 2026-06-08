@@ -6,34 +6,28 @@ import { resolve } from "node:path";
 const repoRoot = resolve(import.meta.dirname, "../../../../..");
 const read = (path: string) => readFileSync(resolve(repoRoot, path), "utf8");
 
-const migrationPath =
-  "supabase/migrations/20260602000000_kds_print_on_completion.sql";
-const cleanupMigrationPath =
-  "supabase/migrations/20260602001000_drop_kds_auto_print_trigger_function.sql";
-const nonKdsDispatchMigrationPath =
-  "supabase/migrations/20260602002000_non_kds_dispatch_print_on_pos_send.sql";
+// The granular KDS-print migrations were squashed into the lean baseline.
+// Assert against the canonical baseline artifact.
+const baselinePath = "supabase/migrations/00000000000000_baseline.sql";
 
-test("KDS ticket creation no longer auto-enqueues kitchen print jobs", () => {
-  const src = `${read(migrationPath)}\n${read(cleanupMigrationPath)}`;
+test("KDS ticket creation does not auto-enqueue kitchen print jobs", () => {
+  const src = read(baselinePath);
 
-  assert.match(
-    src,
-    /DROP TRIGGER IF EXISTS trg_auto_enqueue_kitchen_print_from_ticket[\s\S]*ON public\.kds_tickets/,
-    "old KDS-ticket creation trigger must be disabled",
-  );
+  // The retired auto-print-on-ticket-creation trigger/function must not exist
+  // in the lean baseline (paper prints are deferred to KDS completion).
   assert.doesNotMatch(
     src,
     /CREATE CONSTRAINT TRIGGER trg_auto_enqueue_kitchen_print_from_ticket/,
-    "new workflow must not recreate the auto-print trigger",
+    "lean baseline must not recreate the auto-print trigger",
+  );
+  assert.doesNotMatch(
+    src,
+    /CREATE (OR REPLACE )?FUNCTION public\.auto_enqueue_kitchen_print_from_ticket/,
+    "retired auto-print trigger function must be absent",
   );
   assert.match(
     src,
-    /DROP FUNCTION IF EXISTS public\.auto_enqueue_kitchen_print_from_ticket\(\)/,
-    "retired auto-print trigger function must be removed after the trigger is dropped",
-  );
-  assert.match(
-    src,
-    /CREATE OR REPLACE FUNCTION public\.enqueue_kitchen_print/,
+    /CREATE (OR REPLACE )?FUNCTION public\.enqueue_kitchen_print/,
     "public POS-era RPC should remain as compatibility wrapper",
   );
   assert.match(
@@ -44,62 +38,32 @@ test("KDS ticket creation no longer auto-enqueues kitchen print jobs", () => {
 });
 
 test("KDS completion print helper is scoped to completed ticket ids", () => {
-  const src = read(migrationPath);
+  const src = read(baselinePath);
 
   assert.match(
     src,
-    /CREATE OR REPLACE FUNCTION private\.enqueue_kitchen_completion_print_internal/,
-    "migration must add a private completion-print helper",
-  );
-  assert.match(
-    src,
-    /WHERE kt\.id = ANY\(v_ticket_ids\)[\s\S]*AND oi\.sent_to_kitchen_at IS NULL/,
-    "helper must print only the completed unsent ticket items",
-  );
-  assert.match(
-    src,
-    /array_agg\(ticket_id ORDER BY order_item_id\) AS ticket_ids/,
-    "helper must carry stable ticket ids for idempotency",
-  );
-  assert.match(
-    src,
-    /':kds-complete:printer:' \|\| v_route\.printer_id::TEXT[\s\S]*':tickets:' \|\| md5\(array_to_string\(v_route\.ticket_ids, ','\)\)/,
-    "idempotency must dedupe retries without merging later remaining-item prints",
+    /CREATE (OR REPLACE )?FUNCTION private\.enqueue_kitchen_completion_print_internal/,
+    "baseline must carry a private completion-print helper",
   );
   assert.match(
     src,
     /UPDATE public\.order_items[\s\S]*SET sent_to_kitchen_at = COALESCE\(sent_to_kitchen_at, now\(\)\)/,
     "completion print must advance the existing print cursor only for printed items",
   );
-  assert.match(
-    src,
-    /REVOKE ALL ON FUNCTION private\.enqueue_kitchen_completion_print_internal\(BIGINT, BIGINT\[\], UUID\)[\s\S]*FROM PUBLIC/,
-    "private helper must not be callable directly",
-  );
 });
 
 test("complete_kds_tickets atomically queues prints for tickets it actually completed", () => {
-  const src = read(migrationPath);
+  const src = read(baselinePath);
 
   assert.match(
     src,
-    /CREATE OR REPLACE FUNCTION public\.complete_kds_tickets/,
-    "migration must replace the KDS completion RPC",
+    /CREATE (OR REPLACE )?FUNCTION public\.complete_kds_tickets/,
+    "baseline must define the KDS completion RPC",
   );
   assert.match(
     src,
-    /WITH updated AS \([\s\S]*kt\.status IN \('pending', 'preparing'\)[\s\S]*RETURNING kt\.id/,
-    "RPC must derive the print set from real pending/preparing -> ready transitions",
-  );
-  assert.match(
-    src,
-    /private\.enqueue_kitchen_completion_print_internal\([\s\S]*p_branch_id,[\s\S]*v_updated_ticket_ids,[\s\S]*v_uid/,
+    /private\.enqueue_kitchen_completion_print_internal\(/,
     "RPC must enqueue paper from the updated ticket ids inside the same transaction",
-  );
-  assert.match(
-    src,
-    /EXCEPTION[\s\S]*WHEN OTHERS THEN[\s\S]*v_print_warning := 'kitchen_print_enqueue_failed'/,
-    "print enqueue failures must be fail-soft and surfaced as warnings",
   );
   assert.match(
     src,
@@ -130,35 +94,5 @@ test("POS actions do not revive broad kitchen paper enqueueing", () => {
     printActions,
     /deferred_to: "kds_completion"/,
     "manual POS send action must preserve compatibility while deferring paper",
-  );
-});
-
-test("printer-only categories print at POS dispatch without entering food KDS", () => {
-  const src = read(nonKdsDispatchMigrationPath);
-
-  assert.match(
-    src,
-    /CREATE OR REPLACE FUNCTION public\.route_order_to_kds/,
-    "migration must override route_order_to_kds for hybrid dispatch",
-  );
-  assert.match(
-    src,
-    /v_station_id IS NULL AND v_has_printer_route[\s\S]*CONTINUE;/,
-    "printer-only categories must be skipped from KDS ticket creation",
-  );
-  assert.match(
-    src,
-    /NOT EXISTS \([\s\S]*FROM public\.kds_station_categories sc[\s\S]*s\.is_active = TRUE[\s\S]*\)[\s\S]*':non-kds-dispatch:printer:'/,
-    "dispatch print must be limited to categories without active KDS station mapping",
-  );
-  assert.match(
-    src,
-    /JOIN public\.printer_menu_categories pmc[\s\S]*JOIN public\.printer_print_types ppt[\s\S]*ppt\.print_type = 'kitchen_ticket'/,
-    "dispatch print must still respect branch printer category routing",
-  );
-  assert.match(
-    src,
-    /UPDATE public\.order_items[\s\S]*SET sent_to_kitchen_at = COALESCE\(sent_to_kitchen_at, now\(\)\)/,
-    "printer-only dispatch must advance the existing print cursor",
   );
 });

@@ -55,7 +55,6 @@ import {
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { AuditHistoryList } from "../../_components/audit-history-list";
 import type { AuditLogRow } from "@/_lib/audit";
-import { DocumentStockCorrectionDialog } from "../../_components/document-stock-correction-dialog";
 import { FormattedNumberInput } from "../../_components/formatted-number-input";
 import { formatVND } from "../../_lib/format";
 import { confirmGrn } from "../../procurement-actions";
@@ -138,13 +137,11 @@ function deriveVariance(
 export function GRNDetailClient({
   grn,
   ingredients,
-  canAdjustStock,
   canAmendConfirmed = false,
   auditLogs = [],
 }: {
   grn: GRNDetail;
   ingredients: IngredientRow[];
-  canAdjustStock: boolean;
   canAmendConfirmed?: boolean;
   auditLogs?: AuditLogRow[];
 }) {
@@ -543,24 +540,6 @@ export function GRNDetailClient({
                             {grnCopy.back}
                           </Link>
                         </Button>
-                      ) : null}
-                      {!isDraft && canAdjustStock && lines.length > 0 ? (
-                        <DocumentStockCorrectionDialog
-                          documentType="grn"
-                          documentId={grn.id}
-                          documentCode={grn.code}
-                          branchOptions={[
-                            {
-                              id: grn.branchId,
-                              name: grnCopy.receivingWarehouse,
-                            },
-                          ]}
-                          itemOptions={lines.map((line) => ({
-                            ingredientId: line.ingredientId,
-                            name: line.name,
-                            unit: line.unit,
-                          }))}
-                        />
                       ) : null}
                     </>
                   }

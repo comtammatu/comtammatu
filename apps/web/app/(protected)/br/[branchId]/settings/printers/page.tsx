@@ -24,14 +24,7 @@ export default async function BranchPrintersPage({
 
   const { supabase } = await loadAuthState();
 
-  const [
-    branchRes,
-    printersRes,
-    agentRes,
-    printTypesRes,
-    categoryRoutesRes,
-    categoriesRes,
-  ] = await Promise.all([
+  const [branchRes, printersRes, agentRes, categoriesRes] = await Promise.all([
     supabase
       .from("branches")
       .select("id, name")
@@ -50,14 +43,6 @@ export default async function BranchPrintersPage({
       .select("branch_id, agent_id, version, last_seen_at, is_online")
       .eq("branch_id", branchId),
     supabase
-      .from("printer_print_types")
-      .select("branch_id, printer_id, print_type")
-      .eq("branch_id", branchId),
-    supabase
-      .from("printer_menu_categories")
-      .select("branch_id, printer_id, category_id")
-      .eq("branch_id", branchId),
-    supabase
       .from("menu_categories")
       .select("id, name, type, sort_order")
       .eq("is_active", true)
@@ -67,29 +52,14 @@ export default async function BranchPrintersPage({
 
   if (branchRes.error || !branchRes.data) notFound();
   if (printersRes.error) throw new Error("Không thể tải máy in");
-  if (printTypesRes.error) throw new Error("Không thể tải loại phiếu in");
-  if (categoryRoutesRes.error)
-    throw new Error("Không thể tải routing danh mục");
   if (categoriesRes.error) throw new Error("Không thể tải danh mục");
 
-  const printTypesByPrinter = new Map<number, string[]>();
-  for (const row of printTypesRes.data ?? []) {
-    const list = printTypesByPrinter.get(row.printer_id) ?? [];
-    list.push(row.print_type);
-    printTypesByPrinter.set(row.printer_id, list);
-  }
-
-  const categoryIdsByPrinter = new Map<number, number[]>();
-  for (const row of categoryRoutesRes.data ?? []) {
-    const list = categoryIdsByPrinter.get(row.printer_id) ?? [];
-    list.push(row.category_id);
-    categoryIdsByPrinter.set(row.printer_id, list);
-  }
-
+  // HKD lean baseline: per-printer print-type / category routing is out of
+  // scope, so every printer carries empty routing lists.
   const printers = (printersRes.data ?? []).map((printer) => ({
     ...printer,
-    print_types: printTypesByPrinter.get(printer.id) ?? [],
-    category_ids: categoryIdsByPrinter.get(printer.id) ?? [],
+    print_types: [] as string[],
+    category_ids: [] as number[],
   }));
 
   return (

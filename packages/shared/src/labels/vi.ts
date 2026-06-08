@@ -10,7 +10,6 @@ export type ModuleLabelKey =
   | "staff"
   | "hr"
   | "finance"
-  | "accounting"
   | "reports"
   | "settings"
   | "pos"
@@ -35,7 +34,6 @@ export const MODULE_LABELS_VI: Record<ModuleLabelKey, string> = {
   staff: "Nhân viên",
   hr: "Nhân sự & tiền lương",
   finance: "Kế toán",
-  accounting: "Kỳ kế toán",
   reports: "Báo cáo",
   settings: "Cài đặt",
   pos: "POS",

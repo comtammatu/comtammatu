@@ -10,12 +10,6 @@ import {
   fetchTopItems,
   type FinanceDashboardSummary,
 } from "../actions";
-import { fetchFoodCost } from "../accounting-actions";
-import { fetchFiscalPeriods } from "../period-actions";
-import {
-  fetchReconciliation,
-  type ReconciliationReport,
-} from "../reconciliation-actions";
 import {
   parseFinanceParams,
   resolveFinanceRange,
@@ -23,7 +17,6 @@ import {
 import { diffVNDateDays } from "@comtammatu/shared/time";
 import type {
   FinanceDashboardHealth,
-  FiscalPeriodRow,
   TopItemRow,
 } from "../_lib/finance-types";
 import { RevenueClient } from "./revenue-client";
@@ -121,13 +114,6 @@ export interface CashierRow {
   qr_revenue: number;
 }
 
-interface FinanceFoodCostRow {
-  item_name: string | null;
-  food_cost_pct: number | null;
-}
-
-const RECONCILIATION_TOLERANCE = 1;
-const FOOD_COST_EXCEPTION_THRESHOLD = 60;
 // Hour-of-day RPC caps at 90d. The contract gives owners up to YTD on
 // the same surface, so when the resolved range exceeds 90d we skip
 // fetching the heatmap and show an inline "range too large" hint.
@@ -158,14 +144,11 @@ export default async function RevenueReportPage({
     rollupRes,
     kpisRes,
     prevKpisRes,
-    reconcileRes,
     cashVarianceRes,
     topItemsRes,
     hourRes,
     cashierRes,
     dashboardSummaryRes,
-    fiscalPeriodsRes,
-    foodCostRes,
     invoicesRes,
   ] = await Promise.all([
     fetchAccessibleBranches(),
@@ -183,11 +166,6 @@ export default async function RevenueReportPage({
           resolved.compare.end,
         )
       : Promise.resolve({ success: true as const, data: null }),
-    fetchReconciliation({
-      branchId: params.branch,
-      startDate: resolved.start,
-      endDate: resolved.end,
-    }),
     fetchCashVarianceSummary(params.branch, resolved.start, resolved.end),
     fetchTopItems(params.branch, resolved.start.slice(0, 7) + "-01"),
     hourlyEnabled
@@ -197,12 +175,6 @@ export default async function RevenueReportPage({
       ? fetchRevenueByCashier(params.branch, resolved.start, resolved.end)
       : Promise.resolve({ success: true as const, data: [] }),
     fetchFinanceDashboardSummary(params.branch, resolved.start, resolved.end),
-    fetchFiscalPeriods(),
-    fetchFoodCost({
-      startDate: resolved.start,
-      endDate: resolved.end,
-      ...(params.branch != null ? { branchId: params.branch } : {}),
-    }),
     fetchTaxInvoices(params.branch ?? undefined),
   ]);
 
@@ -233,22 +205,8 @@ export default async function RevenueReportPage({
       }
     : null;
 
-  // Pull the "sales" reconciliation row for the active range — feeds
-  // the inline reconciliation card. If RPC fails we silently degrade.
-  let reconcile: ReconcileSnippet | null = null;
-  if (reconcileRes.success && reconcileRes.data) {
-    const report = reconcileRes.data as ReconciliationReport;
-    const sales = report.categories.find((c) => c.category === "sales");
-    if (sales) {
-      reconcile = {
-        subledger_total: Number(sales.subledger_total ?? 0),
-        gl_total: Number(sales.gl_total ?? 0),
-        difference: Number(sales.difference ?? 0),
-        start: resolved.start,
-        end: resolved.end,
-      };
-    }
-  }
+  // HKD lean baseline: no GL reconciliation subledger — card omitted.
+  const reconcile: ReconcileSnippet | null = null;
 
   let cashVariance: CashVarianceSummary | null = null;
   if (cashVarianceRes.success && cashVarianceRes.data) {
@@ -276,58 +234,24 @@ export default async function RevenueReportPage({
     dashboardSummaryRes.success ? dashboardSummaryRes.data : null
   ) as FinanceDashboardSummary | null;
 
-  const fiscalPeriods = fiscalPeriodsRes.success
-    ? ((fiscalPeriodsRes.data ?? []) as FiscalPeriodRow[])
-    : [];
   const currentPeriodYear = Number(resolved.end.slice(0, 4));
   const currentPeriodMonth = Number(resolved.end.slice(5, 7));
-  const currentPeriod = fiscalPeriods.find(
-    (p) =>
-      p.period_year === currentPeriodYear &&
-      p.period_month === currentPeriodMonth,
-  );
-
-  let reconciliationExceptionCount = 0;
-  let reconciliationDifference = 0;
-  if (reconcileRes.success && reconcileRes.data) {
-    const report = reconcileRes.data as ReconciliationReport;
-    reconciliationExceptionCount = report.categories.filter(
-      (c) => Math.abs(Number(c.difference ?? 0)) > RECONCILIATION_TOLERANCE,
-    ).length;
-    reconciliationDifference = report.categories.reduce(
-      (sum, c) => sum + Math.abs(Number(c.difference ?? 0)),
-      0,
-    );
-  }
 
   const cashVarianceSessionCount = cashVariance?.session_count ?? 0;
   const cashVarianceAbsAmount = cashVariance?.abs_variance_total ?? 0;
 
-  const foodCostRows = foodCostRes.success
-    ? ((foodCostRes.data ?? []) as FinanceFoodCostRow[])
-    : [];
-  const foodCostExceptions = foodCostRows
-    .filter(
-      (row) => Number(row.food_cost_pct ?? 0) >= FOOD_COST_EXCEPTION_THRESHOLD,
-    )
-    .sort(
-      (a, b) => Number(b.food_cost_pct ?? 0) - Number(a.food_cost_pct ?? 0),
-    );
-  const topFoodCostException = foodCostExceptions[0] ?? null;
-
+  // HKD lean baseline: GL reconciliation, fiscal-period close, and recipe
+  // food-cost are out of scope — those health signals are reported as zero.
   const dashboardHealth: FinanceDashboardHealth = {
     currentPeriodLabel: `T${String(currentPeriodMonth).padStart(2, "0")}/${currentPeriodYear}`,
-    currentPeriodStatus: currentPeriod?.status ?? "missing",
-    reconciliationExceptionCount,
-    reconciliationDifference,
+    currentPeriodStatus: "missing",
+    reconciliationExceptionCount: 0,
+    reconciliationDifference: 0,
     cashVarianceSessionCount,
     cashVarianceAbsAmount,
-    foodCostExceptionCount: foodCostExceptions.length,
-    topFoodCostExceptionName: topFoodCostException?.item_name ?? null,
-    topFoodCostExceptionPct:
-      topFoodCostException?.food_cost_pct == null
-        ? null
-        : Number(topFoodCostException.food_cost_pct),
+    foodCostExceptionCount: 0,
+    topFoodCostExceptionName: null,
+    topFoodCostExceptionPct: null,
   };
 
   const invoiceAttentionCount = invoicesRes.success

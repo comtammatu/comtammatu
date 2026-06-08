@@ -14,41 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      accounting_periods: {
-        Row: {
-          closed_by: string | null
-          hard_closed_at: string | null
-          month: number
-          soft_closed_at: string | null
-          tenant_id: number
-          year: number
-        }
-        Insert: {
-          closed_by?: string | null
-          hard_closed_at?: string | null
-          month: number
-          soft_closed_at?: string | null
-          tenant_id: number
-          year: number
-        }
-        Update: {
-          closed_by?: string | null
-          hard_closed_at?: string | null
-          month?: number
-          soft_closed_at?: string | null
-          tenant_id?: number
-          year?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "accounting_periods_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       archive_run_log: {
         Row: {
           attempt_number: number
@@ -132,94 +97,6 @@ export type Database = {
             columns: ["triggered_by"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      area_branches: {
-        Row: {
-          area_id: number
-          branch_id: number
-          created_at: string
-          id: number
-          tenant_id: number
-        }
-        Insert: {
-          area_id: number
-          branch_id: number
-          created_at?: string
-          id?: never
-          tenant_id: number
-        }
-        Update: {
-          area_id?: number
-          branch_id?: number
-          created_at?: string
-          id?: never
-          tenant_id?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "area_branches_area_id_fkey"
-            columns: ["area_id"]
-            isOneToOne: false
-            referencedRelation: "areas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "area_branches_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "area_branches_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "area_branches_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      areas: {
-        Row: {
-          created_at: string
-          id: number
-          is_active: boolean
-          name: string
-          tenant_id: number
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id?: never
-          is_active?: boolean
-          name: string
-          tenant_id: number
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: never
-          is_active?: boolean
-          name?: string
-          tenant_id?: number
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "areas_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -413,84 +290,6 @@ export type Database = {
           },
         ]
       }
-      branch_daily_waste_cap: {
-        Row: {
-          avg_revenue_7d: number
-          branch_id: number
-          cap_vnd: number
-          computed_at: string
-        }
-        Insert: {
-          avg_revenue_7d: number
-          branch_id: number
-          cap_vnd: number
-          computed_at?: string
-        }
-        Update: {
-          avg_revenue_7d?: number
-          branch_id?: number
-          cap_vnd?: number
-          computed_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "branch_daily_waste_cap_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: true
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "branch_daily_waste_cap_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: true
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-        ]
-      }
-      branch_express_window: {
-        Row: {
-          branch_id: number
-          enabled: boolean
-          end_time: string
-          start_time: string
-          updated_at: string
-          updated_by: string | null
-        }
-        Insert: {
-          branch_id: number
-          enabled?: boolean
-          end_time?: string
-          start_time?: string
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Update: {
-          branch_id?: number
-          enabled?: boolean
-          end_time?: string
-          start_time?: string
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "branch_express_window_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: true
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "branch_express_window_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: true
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-        ]
-      }
       branch_feature_flags: {
         Row: {
           branch_id: number
@@ -610,162 +409,6 @@ export type Database = {
           },
         ]
       }
-      branch_override_attempts: {
-        Row: {
-          attempted_at: string
-          branch_id: number
-          id: number
-          success: boolean
-          user_id: string
-        }
-        Insert: {
-          attempted_at?: string
-          branch_id: number
-          id?: never
-          success: boolean
-          user_id: string
-        }
-        Update: {
-          attempted_at?: string
-          branch_id?: number
-          id?: never
-          success?: boolean
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "branch_override_attempts_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "branch_override_attempts_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-        ]
-      }
-      branch_override_codes: {
-        Row: {
-          branch_id: number
-          code_hash: string
-          rotated_at: string
-          rotated_by: string | null
-        }
-        Insert: {
-          branch_id: number
-          code_hash: string
-          rotated_at?: string
-          rotated_by?: string | null
-        }
-        Update: {
-          branch_id?: number
-          code_hash?: string
-          rotated_at?: string
-          rotated_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "branch_override_codes_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: true
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "branch_override_codes_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: true
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-        ]
-      }
-      branch_trusted_egress_ips: {
-        Row: {
-          branch_id: number
-          created_at: string
-          first_seen_at: string
-          id: number
-          ip_address: unknown
-          last_seen_at: string
-          registered_by_agent_id: string | null
-          registered_by_user: string | null
-          registered_via: string
-          revoked_at: string | null
-          revoked_by_user: string | null
-          tenant_id: number
-        }
-        Insert: {
-          branch_id: number
-          created_at?: string
-          first_seen_at?: string
-          id?: never
-          ip_address: unknown
-          last_seen_at?: string
-          registered_by_agent_id?: string | null
-          registered_by_user?: string | null
-          registered_via: string
-          revoked_at?: string | null
-          revoked_by_user?: string | null
-          tenant_id: number
-        }
-        Update: {
-          branch_id?: number
-          created_at?: string
-          first_seen_at?: string
-          id?: never
-          ip_address?: unknown
-          last_seen_at?: string
-          registered_by_agent_id?: string | null
-          registered_by_user?: string | null
-          registered_via?: string
-          revoked_at?: string | null
-          revoked_by_user?: string | null
-          tenant_id?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "branch_trusted_egress_ips_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "branch_trusted_egress_ips_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "branch_trusted_egress_ips_registered_by_user_fkey"
-            columns: ["registered_by_user"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "branch_trusted_egress_ips_revoked_by_user_fkey"
-            columns: ["revoked_by_user"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "branch_trusted_egress_ips_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       branch_zones: {
         Row: {
           branch_id: number
@@ -874,56 +517,60 @@ export type Database = {
           },
         ]
       }
-      chart_of_accounts: {
+      cash_entries: {
         Row: {
-          account_code: string
-          account_name: string
-          account_type: string
-          cashflow_section: string
+          amount: number
+          branch_id: number
+          category: string | null
           created_at: string
+          created_by: string | null
+          direction: string
+          entry_date: string
           id: number
-          is_active: boolean
-          level: number
-          parent_id: number | null
+          note: string | null
           tenant_id: number
-          updated_at: string
         }
         Insert: {
-          account_code: string
-          account_name: string
-          account_type: string
-          cashflow_section?: string
+          amount: number
+          branch_id: number
+          category?: string | null
           created_at?: string
+          created_by?: string | null
+          direction: string
+          entry_date?: string
           id?: never
-          is_active?: boolean
-          level?: number
-          parent_id?: number | null
+          note?: string | null
           tenant_id: number
-          updated_at?: string
         }
         Update: {
-          account_code?: string
-          account_name?: string
-          account_type?: string
-          cashflow_section?: string
+          amount?: number
+          branch_id?: number
+          category?: string | null
           created_at?: string
+          created_by?: string | null
+          direction?: string
+          entry_date?: string
           id?: never
-          is_active?: boolean
-          level?: number
-          parent_id?: number | null
+          note?: string | null
           tenant_id?: number
-          updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "chart_of_accounts_parent_id_fkey"
-            columns: ["parent_id"]
+            foreignKeyName: "cash_entries_branch_id_fkey"
+            columns: ["branch_id"]
             isOneToOne: false
-            referencedRelation: "chart_of_accounts"
+            referencedRelation: "branches"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "chart_of_accounts_tenant_id_fkey"
+            foreignKeyName: "cash_entries_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "cash_entries_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -1000,510 +647,6 @@ export type Database = {
           },
         ]
       }
-      employment_contracts: {
-        Row: {
-          contract_number: string
-          contract_sequence: number
-          contract_type: string
-          created_at: string
-          document_url: string | null
-          employee_id: number
-          end_date: string | null
-          gross_salary: number
-          id: number
-          insurance_base_salary: number
-          position: string
-          probation_end_date: string | null
-          signed_date: string
-          start_date: string
-          status: string
-          tenant_id: number
-          terminated_at: string | null
-          termination_notice_date: string | null
-          termination_reason: string | null
-          updated_at: string
-          work_location: string | null
-        }
-        Insert: {
-          contract_number: string
-          contract_sequence?: number
-          contract_type: string
-          created_at?: string
-          document_url?: string | null
-          employee_id: number
-          end_date?: string | null
-          gross_salary: number
-          id?: never
-          insurance_base_salary: number
-          position: string
-          probation_end_date?: string | null
-          signed_date: string
-          start_date: string
-          status?: string
-          tenant_id: number
-          terminated_at?: string | null
-          termination_notice_date?: string | null
-          termination_reason?: string | null
-          updated_at?: string
-          work_location?: string | null
-        }
-        Update: {
-          contract_number?: string
-          contract_sequence?: number
-          contract_type?: string
-          created_at?: string
-          document_url?: string | null
-          employee_id?: number
-          end_date?: string | null
-          gross_salary?: number
-          id?: never
-          insurance_base_salary?: number
-          position?: string
-          probation_end_date?: string | null
-          signed_date?: string
-          start_date?: string
-          status?: string
-          tenant_id?: number
-          terminated_at?: string | null
-          termination_notice_date?: string | null
-          termination_reason?: string | null
-          updated_at?: string
-          work_location?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "employment_contracts_employee_id_fkey"
-            columns: ["employee_id"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "employment_contracts_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      feedback_branch_review_settings: {
-        Row: {
-          branch_id: number
-          google_review_url: string | null
-          tenant_id: number
-          updated_at: string
-          updated_by: number | null
-        }
-        Insert: {
-          branch_id: number
-          google_review_url?: string | null
-          tenant_id: number
-          updated_at?: string
-          updated_by?: number | null
-        }
-        Update: {
-          branch_id?: number
-          google_review_url?: string | null
-          tenant_id?: number
-          updated_at?: string
-          updated_by?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "feedback_branch_review_settings_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "feedback_branch_review_settings_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "feedback_branch_review_settings_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      feedback_daily_reports: {
-        Row: {
-          avg_rating: number | null
-          branch_id: number | null
-          feedback_count: number
-          generated_at: string
-          id: number
-          llm_cost_usd: number
-          llm_model: string
-          metrics_json: Json
-          report_date: string
-          report_md: string
-          tenant_id: number
-        }
-        Insert: {
-          avg_rating?: number | null
-          branch_id?: number | null
-          feedback_count?: number
-          generated_at?: string
-          id?: never
-          llm_cost_usd?: number
-          llm_model: string
-          metrics_json?: Json
-          report_date: string
-          report_md: string
-          tenant_id: number
-        }
-        Update: {
-          avg_rating?: number | null
-          branch_id?: number | null
-          feedback_count?: number
-          generated_at?: string
-          id?: never
-          llm_cost_usd?: number
-          llm_model?: string
-          metrics_json?: Json
-          report_date?: string
-          report_md?: string
-          tenant_id?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "feedback_daily_reports_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "feedback_daily_reports_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-        ]
-      }
-      feedback_photo_cleanup_queue: {
-        Row: {
-          bucket_id: string
-          feedback_id: number | null
-          id: number
-          last_error: string | null
-          path: string
-          processed_at: string | null
-          queued_at: string
-          reason: string
-          tenant_id: number
-        }
-        Insert: {
-          bucket_id?: string
-          feedback_id?: number | null
-          id?: never
-          last_error?: string | null
-          path: string
-          processed_at?: string | null
-          queued_at?: string
-          reason: string
-          tenant_id: number
-        }
-        Update: {
-          bucket_id?: string
-          feedback_id?: number | null
-          id?: never
-          last_error?: string | null
-          path?: string
-          processed_at?: string | null
-          queued_at?: string
-          reason?: string
-          tenant_id?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "feedback_photo_cleanup_queue_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      feedback_qr_codes: {
-        Row: {
-          branch_id: number
-          created_at: string
-          created_by: number | null
-          id: number
-          is_active: boolean
-          label: string
-          rotated_at: string | null
-          table_id: number | null
-          tenant_id: number
-          token: string
-        }
-        Insert: {
-          branch_id: number
-          created_at?: string
-          created_by?: number | null
-          id?: never
-          is_active?: boolean
-          label: string
-          rotated_at?: string | null
-          table_id?: number | null
-          tenant_id: number
-          token: string
-        }
-        Update: {
-          branch_id?: number
-          created_at?: string
-          created_by?: number | null
-          id?: never
-          is_active?: boolean
-          label?: string
-          rotated_at?: string | null
-          table_id?: number | null
-          tenant_id?: number
-          token?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "feedback_qr_codes_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "feedback_qr_codes_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "feedback_qr_codes_table_id_fkey"
-            columns: ["table_id"]
-            isOneToOne: false
-            referencedRelation: "tables"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      feedback_settings: {
-        Row: {
-          ai_monthly_budget_usd: number
-          daily_report_hour_local: number
-          google_review_url: string | null
-          push_mode: string
-          tenant_id: number
-          threshold_rating: number
-          updated_at: string
-          updated_by: number | null
-        }
-        Insert: {
-          ai_monthly_budget_usd?: number
-          daily_report_hour_local?: number
-          google_review_url?: string | null
-          push_mode?: string
-          tenant_id: number
-          threshold_rating?: number
-          updated_at?: string
-          updated_by?: number | null
-        }
-        Update: {
-          ai_monthly_budget_usd?: number
-          daily_report_hour_local?: number
-          google_review_url?: string | null
-          push_mode?: string
-          tenant_id?: number
-          threshold_rating?: number
-          updated_at?: string
-          updated_by?: number | null
-        }
-        Relationships: []
-      }
-      feedbacks: {
-        Row: {
-          ai_categories: string[] | null
-          ai_processed_at: string | null
-          ai_sentiment_score: number | null
-          ai_severity: string | null
-          ai_summary_vi: string | null
-          alert_priority: number
-          alert_sent_telegram_at: string | null
-          branch_id: number
-          channel: string
-          comment: string
-          created_at: string
-          dish_names_snapshot: string[] | null
-          id: number
-          is_suspect: boolean
-          order_id_snapshot: number | null
-          order_total_snapshot: number | null
-          phone: string | null
-          photo_paths: string[]
-          photo_upload_consumed_at: string | null
-          photo_upload_expires_at: string | null
-          photo_upload_token_sha256: string | null
-          qr_code_id: number
-          rating: number
-          server_user_id_snapshot: number | null
-          submit_ip_hash: string | null
-          table_id: number | null
-          tenant_id: number
-          user_agent_short: string | null
-        }
-        Insert: {
-          ai_categories?: string[] | null
-          ai_processed_at?: string | null
-          ai_sentiment_score?: number | null
-          ai_severity?: string | null
-          ai_summary_vi?: string | null
-          alert_priority?: number
-          alert_sent_telegram_at?: string | null
-          branch_id: number
-          channel?: string
-          comment: string
-          created_at?: string
-          dish_names_snapshot?: string[] | null
-          id?: never
-          is_suspect?: boolean
-          order_id_snapshot?: number | null
-          order_total_snapshot?: number | null
-          phone?: string | null
-          photo_paths?: string[]
-          photo_upload_consumed_at?: string | null
-          photo_upload_expires_at?: string | null
-          photo_upload_token_sha256?: string | null
-          qr_code_id: number
-          rating: number
-          server_user_id_snapshot?: number | null
-          submit_ip_hash?: string | null
-          table_id?: number | null
-          tenant_id: number
-          user_agent_short?: string | null
-        }
-        Update: {
-          ai_categories?: string[] | null
-          ai_processed_at?: string | null
-          ai_sentiment_score?: number | null
-          ai_severity?: string | null
-          ai_summary_vi?: string | null
-          alert_priority?: number
-          alert_sent_telegram_at?: string | null
-          branch_id?: number
-          channel?: string
-          comment?: string
-          created_at?: string
-          dish_names_snapshot?: string[] | null
-          id?: never
-          is_suspect?: boolean
-          order_id_snapshot?: number | null
-          order_total_snapshot?: number | null
-          phone?: string | null
-          photo_paths?: string[]
-          photo_upload_consumed_at?: string | null
-          photo_upload_expires_at?: string | null
-          photo_upload_token_sha256?: string | null
-          qr_code_id?: number
-          rating?: number
-          server_user_id_snapshot?: number | null
-          submit_ip_hash?: string | null
-          table_id?: number | null
-          tenant_id?: number
-          user_agent_short?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "feedbacks_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "feedbacks_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "feedbacks_order_id_snapshot_fkey"
-            columns: ["order_id_snapshot"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "feedbacks_qr_code_id_fkey"
-            columns: ["qr_code_id"]
-            isOneToOne: false
-            referencedRelation: "feedback_qr_codes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "feedbacks_table_id_fkey"
-            columns: ["table_id"]
-            isOneToOne: false
-            referencedRelation: "tables"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      fiscal_periods: {
-        Row: {
-          closed_at: string | null
-          closed_by: string | null
-          created_at: string
-          id: number
-          notes: string | null
-          period_month: number
-          period_year: number
-          status: string
-          tenant_id: number
-          updated_at: string
-        }
-        Insert: {
-          closed_at?: string | null
-          closed_by?: string | null
-          created_at?: string
-          id?: never
-          notes?: string | null
-          period_month: number
-          period_year: number
-          status?: string
-          tenant_id: number
-          updated_at?: string
-        }
-        Update: {
-          closed_at?: string | null
-          closed_by?: string | null
-          created_at?: string
-          id?: never
-          notes?: string | null
-          period_month?: number
-          period_year?: number
-          status?: string
-          tenant_id?: number
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fiscal_periods_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       goods_received_notes: {
         Row: {
           branch_id: number
@@ -1512,7 +655,6 @@ export type Database = {
           express_approved: boolean | null
           grn_number: string
           id: number
-          journal_entry_id: number | null
           notes: string | null
           po_id: number | null
           received_by: string | null
@@ -1529,7 +671,6 @@ export type Database = {
           express_approved?: boolean | null
           grn_number: string
           id?: never
-          journal_entry_id?: number | null
           notes?: string | null
           po_id?: number | null
           received_by?: string | null
@@ -1546,7 +687,6 @@ export type Database = {
           express_approved?: boolean | null
           grn_number?: string
           id?: never
-          journal_entry_id?: number | null
           notes?: string | null
           po_id?: number | null
           received_by?: string | null
@@ -1579,20 +719,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "goods_received_notes_journal_entry_id_fkey"
-            columns: ["journal_entry_id"]
-            isOneToOne: false
-            referencedRelation: "journal_entries"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "goods_received_notes_po_id_fkey"
-            columns: ["po_id"]
-            isOneToOne: false
-            referencedRelation: "purchase_orders"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "goods_received_notes_received_by_fkey"
             columns: ["received_by"]
             isOneToOne: false
@@ -1608,219 +734,6 @@ export type Database = {
           },
           {
             foreignKeyName: "goods_received_notes_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      grn_baseline_pause: {
-        Row: {
-          created_at: string
-          created_by: string | null
-          id: number
-          ingredient_id: number
-          paused_until: string
-          reason: string
-          source_ref: Json | null
-          supplier_id: number
-          tenant_id: number
-          uom: string
-        }
-        Insert: {
-          created_at?: string
-          created_by?: string | null
-          id?: never
-          ingredient_id: number
-          paused_until: string
-          reason?: string
-          source_ref?: Json | null
-          supplier_id: number
-          tenant_id: number
-          uom: string
-        }
-        Update: {
-          created_at?: string
-          created_by?: string | null
-          id?: never
-          ingredient_id?: number
-          paused_until?: string
-          reason?: string
-          source_ref?: Json | null
-          supplier_id?: number
-          tenant_id?: number
-          uom?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "grn_baseline_pause_ingredient_id_fkey"
-            columns: ["ingredient_id"]
-            isOneToOne: false
-            referencedRelation: "ingredients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "grn_baseline_pause_supplier_id_fkey"
-            columns: ["supplier_id"]
-            isOneToOne: false
-            referencedRelation: "suppliers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "grn_baseline_pause_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      grn_express_extend_audit: {
-        Row: {
-          branch_id: number
-          created_at: string
-          extend_minutes: number
-          extended_until: string
-          id: number
-          note: string
-          tenant_id: number
-          user_id: string
-        }
-        Insert: {
-          branch_id: number
-          created_at?: string
-          extend_minutes: number
-          extended_until: string
-          id?: never
-          note: string
-          tenant_id: number
-          user_id: string
-        }
-        Update: {
-          branch_id?: number
-          created_at?: string
-          extend_minutes?: number
-          extended_until?: string
-          id?: never
-          note?: string
-          tenant_id?: number
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "grn_express_extend_audit_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "grn_express_extend_audit_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "grn_express_extend_audit_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      grn_hardblock_overrides: {
-        Row: {
-          baseline_avg_30d: number | null
-          branch_id: number
-          evidence_url: string
-          grn_item_id: number
-          id: number
-          ingredient_id: number
-          note: string
-          overridden_at: string
-          overridden_by: string
-          reason_code: string
-          submitted_price: number
-          supplier_id: number
-          tenant_id: number
-          uom: string
-          variance_pct: number
-        }
-        Insert: {
-          baseline_avg_30d?: number | null
-          branch_id: number
-          evidence_url: string
-          grn_item_id: number
-          id?: never
-          ingredient_id: number
-          note: string
-          overridden_at?: string
-          overridden_by: string
-          reason_code: string
-          submitted_price: number
-          supplier_id: number
-          tenant_id: number
-          uom: string
-          variance_pct: number
-        }
-        Update: {
-          baseline_avg_30d?: number | null
-          branch_id?: number
-          evidence_url?: string
-          grn_item_id?: number
-          id?: never
-          ingredient_id?: number
-          note?: string
-          overridden_at?: string
-          overridden_by?: string
-          reason_code?: string
-          submitted_price?: number
-          supplier_id?: number
-          tenant_id?: number
-          uom?: string
-          variance_pct?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "grn_hardblock_overrides_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "grn_hardblock_overrides_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "grn_hardblock_overrides_grn_item_id_fkey"
-            columns: ["grn_item_id"]
-            isOneToOne: false
-            referencedRelation: "grn_items"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "grn_hardblock_overrides_ingredient_id_fkey"
-            columns: ["ingredient_id"]
-            isOneToOne: false
-            referencedRelation: "ingredients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "grn_hardblock_overrides_supplier_id_fkey"
-            columns: ["supplier_id"]
-            isOneToOne: false
-            referencedRelation: "suppliers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "grn_hardblock_overrides_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -1940,97 +853,6 @@ export type Database = {
           },
         ]
       }
-      ingredient_abc_class: {
-        Row: {
-          branch_id: number
-          class: string
-          computed_at: string
-          cumulative_share: number
-          ingredient_id: number
-          stock_value: number
-          tenant_id: number
-        }
-        Insert: {
-          branch_id: number
-          class: string
-          computed_at?: string
-          cumulative_share?: number
-          ingredient_id: number
-          stock_value?: number
-          tenant_id: number
-        }
-        Update: {
-          branch_id?: number
-          class?: string
-          computed_at?: string
-          cumulative_share?: number
-          ingredient_id?: number
-          stock_value?: number
-          tenant_id?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "ingredient_abc_class_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "ingredient_abc_class_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "ingredient_abc_class_ingredient_id_fkey"
-            columns: ["ingredient_id"]
-            isOneToOne: false
-            referencedRelation: "ingredients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "ingredient_abc_class_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      ingredient_category_review_policy: {
-        Row: {
-          category: string
-          requires_manual_review: boolean
-          tenant_id: number
-          updated_at: string
-          updated_by: string | null
-        }
-        Insert: {
-          category: string
-          requires_manual_review?: boolean
-          tenant_id: number
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Update: {
-          category?: string
-          requires_manual_review?: boolean
-          tenant_id?: number
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "ingredient_category_review_policy_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       ingredients: {
         Row: {
           category: string | null
@@ -2101,274 +923,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "ingredients_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      inventory_locations: {
-        Row: {
-          branch_id: number
-          code: string
-          created_at: string
-          id: number
-          is_active: boolean
-          is_default_consumption: boolean
-          is_default_issue: boolean
-          is_default_receive: boolean
-          location_kind: string
-          name: string
-          sort_order: number
-          tenant_id: number
-          updated_at: string
-        }
-        Insert: {
-          branch_id: number
-          code: string
-          created_at?: string
-          id?: never
-          is_active?: boolean
-          is_default_consumption?: boolean
-          is_default_issue?: boolean
-          is_default_receive?: boolean
-          location_kind?: string
-          name: string
-          sort_order?: number
-          tenant_id: number
-          updated_at?: string
-        }
-        Update: {
-          branch_id?: number
-          code?: string
-          created_at?: string
-          id?: never
-          is_active?: boolean
-          is_default_consumption?: boolean
-          is_default_issue?: boolean
-          is_default_receive?: boolean
-          location_kind?: string
-          name?: string
-          sort_order?: number
-          tenant_id?: number
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "inventory_locations_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inventory_locations_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "inventory_locations_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      inventory_qc_settings: {
-        Row: {
-          alert_channel: string | null
-          alert_webhook_url: string | null
-          price_variance_review_pct: number
-          price_variance_warn_pct: number
-          qty_short_tolerance_pct: number
-          reject_requires_photo: boolean
-          tenant_id: number
-          updated_at: string
-          updated_by: string | null
-        }
-        Insert: {
-          alert_channel?: string | null
-          alert_webhook_url?: string | null
-          price_variance_review_pct?: number
-          price_variance_warn_pct?: number
-          qty_short_tolerance_pct?: number
-          reject_requires_photo?: boolean
-          tenant_id: number
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Update: {
-          alert_channel?: string | null
-          alert_webhook_url?: string | null
-          price_variance_review_pct?: number
-          price_variance_warn_pct?: number
-          qty_short_tolerance_pct?: number
-          reject_requires_photo?: boolean
-          tenant_id?: number
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "inventory_qc_settings_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: true
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inventory_qc_settings_updated_by_fkey"
-            columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      journal_entries: {
-        Row: {
-          branch_id: number | null
-          created_at: string
-          created_by: string | null
-          description: string
-          entry_date: string
-          entry_number: string
-          id: number
-          posted_at: string | null
-          posted_by: string | null
-          reference_id: number | null
-          reference_type: string
-          status: string
-          tenant_id: number
-          updated_at: string
-          void_journal_entry_id: number | null
-          voided_at: string | null
-          voided_by: string | null
-          voided_reason: string | null
-        }
-        Insert: {
-          branch_id?: number | null
-          created_at?: string
-          created_by?: string | null
-          description: string
-          entry_date: string
-          entry_number: string
-          id?: never
-          posted_at?: string | null
-          posted_by?: string | null
-          reference_id?: number | null
-          reference_type?: string
-          status?: string
-          tenant_id: number
-          updated_at?: string
-          void_journal_entry_id?: number | null
-          voided_at?: string | null
-          voided_by?: string | null
-          voided_reason?: string | null
-        }
-        Update: {
-          branch_id?: number | null
-          created_at?: string
-          created_by?: string | null
-          description?: string
-          entry_date?: string
-          entry_number?: string
-          id?: never
-          posted_at?: string | null
-          posted_by?: string | null
-          reference_id?: number | null
-          reference_type?: string
-          status?: string
-          tenant_id?: number
-          updated_at?: string
-          void_journal_entry_id?: number | null
-          voided_at?: string | null
-          voided_by?: string | null
-          voided_reason?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "journal_entries_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "journal_entries_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "journal_entries_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "journal_entries_void_journal_entry_id_fkey"
-            columns: ["void_journal_entry_id"]
-            isOneToOne: false
-            referencedRelation: "journal_entries"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      journal_entry_lines: {
-        Row: {
-          account_id: number
-          created_at: string
-          credit_amount: number
-          debit_amount: number
-          description: string | null
-          id: number
-          journal_entry_id: number
-          tenant_id: number
-        }
-        Insert: {
-          account_id: number
-          created_at?: string
-          credit_amount?: number
-          debit_amount?: number
-          description?: string | null
-          id?: never
-          journal_entry_id: number
-          tenant_id: number
-        }
-        Update: {
-          account_id?: number
-          created_at?: string
-          credit_amount?: number
-          debit_amount?: number
-          description?: string | null
-          id?: never
-          journal_entry_id?: number
-          tenant_id?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "journal_entry_lines_account_id_fkey"
-            columns: ["account_id"]
-            isOneToOne: false
-            referencedRelation: "chart_of_accounts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "journal_entry_lines_journal_entry_id_fkey"
-            columns: ["journal_entry_id"]
-            isOneToOne: false
-            referencedRelation: "journal_entries"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "journal_entry_lines_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -2569,55 +1123,6 @@ export type Database = {
           },
           {
             foreignKeyName: "kds_tickets_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      kitchen_daily_counters: {
-        Row: {
-          branch_id: number
-          counter_date: string
-          id: number
-          last_seq: number
-          tenant_id: number
-          updated_at: string
-        }
-        Insert: {
-          branch_id: number
-          counter_date: string
-          id?: never
-          last_seq?: number
-          tenant_id: number
-          updated_at?: string
-        }
-        Update: {
-          branch_id?: number
-          counter_date?: string
-          id?: never
-          last_seq?: number
-          tenant_id?: number
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "kitchen_daily_counters_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "kitchen_daily_counters_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "kitchen_daily_counters_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -2958,94 +1463,6 @@ export type Database = {
           },
         ]
       }
-      mv_refresh_log: {
-        Row: {
-          refreshed_at: string
-          view_name: string
-        }
-        Insert: {
-          refreshed_at?: string
-          view_name: string
-        }
-        Update: {
-          refreshed_at?: string
-          view_name?: string
-        }
-        Relationships: []
-      }
-      notification_outbox: {
-        Row: {
-          channel: string
-          created_at: string
-          id: number
-          last_error: string | null
-          payload: Json
-          retries: number
-          sent_at: string | null
-          status: string
-          tenant_id: number
-          topic: string
-        }
-        Insert: {
-          channel?: string
-          created_at?: string
-          id?: never
-          last_error?: string | null
-          payload: Json
-          retries?: number
-          sent_at?: string | null
-          status?: string
-          tenant_id: number
-          topic: string
-        }
-        Update: {
-          channel?: string
-          created_at?: string
-          id?: never
-          last_error?: string | null
-          payload?: Json
-          retries?: number
-          sent_at?: string | null
-          status?: string
-          tenant_id?: number
-          topic?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "notification_outbox_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      notification_reads: {
-        Row: {
-          notification_id: number
-          read_at: string
-          user_id: string
-        }
-        Insert: {
-          notification_id: number
-          read_at?: string
-          user_id: string
-        }
-        Update: {
-          notification_id?: number
-          read_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "notification_reads_notification_id_fkey"
-            columns: ["notification_id"]
-            isOneToOne: false
-            referencedRelation: "notifications"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       notifications: {
         Row: {
           action_url: string | null
@@ -3058,6 +1475,7 @@ export type Database = {
           id: number
           kind: string
           meta: Json
+          read_at: string | null
           severity: string
           target_branch_id: number | null
           target_roles: string[]
@@ -3075,6 +1493,7 @@ export type Database = {
           id?: never
           kind: string
           meta?: Json
+          read_at?: string | null
           severity?: string
           target_branch_id?: number | null
           target_roles: string[]
@@ -3092,6 +1511,7 @@ export type Database = {
           id?: never
           kind?: string
           meta?: Json
+          read_at?: string | null
           severity?: string
           target_branch_id?: number | null
           target_roles?: string[]
@@ -3543,14 +1963,12 @@ export type Database = {
           created_at: string
           created_by: string
           id: number
-          journal_entry_id: number | null
           method: string
           order_id: number
           paid_at: string | null
           provider_data: Json | null
           provider_ref: string | null
           status: string
-          stock_consumed_status: string | null
           tenant_id: number
           updated_at: string
         }
@@ -3560,14 +1978,12 @@ export type Database = {
           created_at?: string
           created_by: string
           id?: never
-          journal_entry_id?: number | null
           method: string
           order_id: number
           paid_at?: string | null
           provider_data?: Json | null
           provider_ref?: string | null
           status?: string
-          stock_consumed_status?: string | null
           tenant_id: number
           updated_at?: string
         }
@@ -3577,14 +1993,12 @@ export type Database = {
           created_at?: string
           created_by?: string
           id?: never
-          journal_entry_id?: number | null
           method?: string
           order_id?: number
           paid_at?: string | null
           provider_data?: Json | null
           provider_ref?: string | null
           status?: string
-          stock_consumed_status?: string | null
           tenant_id?: number
           updated_at?: string
         }
@@ -3608,13 +2022,6 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payments_journal_entry_id_fkey"
-            columns: ["journal_entry_id"]
-            isOneToOne: false
-            referencedRelation: "journal_entries"
             referencedColumns: ["id"]
           },
           {
@@ -3772,7 +2179,6 @@ export type Database = {
           approved_by: string | null
           created_at: string
           id: number
-          journal_entry_id: number | null
           paid_at: string | null
           period_month: number
           period_year: number
@@ -3785,7 +2191,6 @@ export type Database = {
           approved_by?: string | null
           created_at?: string
           id?: never
-          journal_entry_id?: number | null
           paid_at?: string | null
           period_month: number
           period_year: number
@@ -3798,7 +2203,6 @@ export type Database = {
           approved_by?: string | null
           created_at?: string
           id?: never
-          journal_entry_id?: number | null
           paid_at?: string | null
           period_month?: number
           period_year?: number
@@ -3808,82 +2212,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "payroll_periods_journal_entry_id_fkey"
-            columns: ["journal_entry_id"]
-            isOneToOne: false
-            referencedRelation: "journal_entries"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "payroll_periods_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      permission_audit_log: {
-        Row: {
-          action: string
-          actor_user_id: string
-          at: string
-          branch_id: number | null
-          id: number
-          metadata: Json
-          permission_key: string
-          source_template_id: number | null
-          target_user_id: string
-          tenant_id: number
-        }
-        Insert: {
-          action: string
-          actor_user_id: string
-          at?: string
-          branch_id?: number | null
-          id?: never
-          metadata?: Json
-          permission_key: string
-          source_template_id?: number | null
-          target_user_id: string
-          tenant_id: number
-        }
-        Update: {
-          action?: string
-          actor_user_id?: string
-          at?: string
-          branch_id?: number | null
-          id?: never
-          metadata?: Json
-          permission_key?: string
-          source_template_id?: number | null
-          target_user_id?: string
-          tenant_id?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "permission_audit_log_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "permission_audit_log_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "permission_audit_log_source_template_id_fkey"
-            columns: ["source_template_id"]
-            isOneToOne: false
-            referencedRelation: "role_templates"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "permission_audit_log_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -4124,53 +2453,6 @@ export type Database = {
           },
         ]
       }
-      posting_rules: {
-        Row: {
-          created_at: string
-          credit_account_code: string
-          debit_account_code: string
-          description: string
-          id: number
-          is_active: boolean
-          rule_code: string
-          tenant_id: number
-          transaction_type: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          credit_account_code: string
-          debit_account_code: string
-          description: string
-          id?: never
-          is_active?: boolean
-          rule_code: string
-          tenant_id: number
-          transaction_type: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          credit_account_code?: string
-          debit_account_code?: string
-          description?: string
-          id?: never
-          is_active?: boolean
-          rule_code?: string
-          tenant_id?: number
-          transaction_type?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "posting_rules_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       print_jobs: {
         Row: {
           attempts: number
@@ -4297,151 +2579,6 @@ export type Database = {
           },
         ]
       }
-      print_template_versions: {
-        Row: {
-          branch_id: number | null
-          content: Json
-          created_at: string
-          created_by: string | null
-          font_profile: string
-          id: number
-          is_active: boolean
-          kind: string
-          name: string
-          paper_width_mm: number
-          tenant_id: number | null
-          updated_at: string
-          updated_by: string | null
-          version: number
-        }
-        Insert: {
-          branch_id?: number | null
-          content: Json
-          created_at?: string
-          created_by?: string | null
-          font_profile?: string
-          id?: never
-          is_active?: boolean
-          kind: string
-          name: string
-          paper_width_mm?: number
-          tenant_id?: number | null
-          updated_at?: string
-          updated_by?: string | null
-          version: number
-        }
-        Update: {
-          branch_id?: number | null
-          content?: Json
-          created_at?: string
-          created_by?: string | null
-          font_profile?: string
-          id?: never
-          is_active?: boolean
-          kind?: string
-          name?: string
-          paper_width_mm?: number
-          tenant_id?: number | null
-          updated_at?: string
-          updated_by?: string | null
-          version?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "print_template_versions_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "print_template_versions_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "print_template_versions_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "print_template_versions_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "print_template_versions_updated_by_fkey"
-            columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      printer_agent_presence_tokens: {
-        Row: {
-          agent_id: string
-          branch_id: number
-          created_at: string
-          id: number
-          last_attempt_at: string | null
-          last_used_at: string | null
-          revoked_at: string | null
-          tenant_id: number
-          token_sha256: string
-        }
-        Insert: {
-          agent_id: string
-          branch_id: number
-          created_at?: string
-          id?: never
-          last_attempt_at?: string | null
-          last_used_at?: string | null
-          revoked_at?: string | null
-          tenant_id: number
-          token_sha256: string
-        }
-        Update: {
-          agent_id?: string
-          branch_id?: number
-          created_at?: string
-          id?: never
-          last_attempt_at?: string | null
-          last_used_at?: string | null
-          revoked_at?: string | null
-          tenant_id?: number
-          token_sha256?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "printer_agent_presence_tokens_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "printer_agent_presence_tokens_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "printer_agent_presence_tokens_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       printer_agents: {
         Row: {
           agent_id: string
@@ -4481,125 +2618,6 @@ export type Database = {
           },
           {
             foreignKeyName: "printer_agents_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      printer_menu_categories: {
-        Row: {
-          branch_id: number
-          category_id: number
-          created_at: string
-          id: number
-          printer_id: number
-          tenant_id: number
-        }
-        Insert: {
-          branch_id: number
-          category_id: number
-          created_at?: string
-          id?: never
-          printer_id: number
-          tenant_id: number
-        }
-        Update: {
-          branch_id?: number
-          category_id?: number
-          created_at?: string
-          id?: never
-          printer_id?: number
-          tenant_id?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "printer_menu_categories_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "printer_menu_categories_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "printer_menu_categories_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "menu_categories"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "printer_menu_categories_printer_id_tenant_id_branch_id_fkey"
-            columns: ["printer_id", "tenant_id", "branch_id"]
-            isOneToOne: false
-            referencedRelation: "printers"
-            referencedColumns: ["id", "tenant_id", "branch_id"]
-          },
-          {
-            foreignKeyName: "printer_menu_categories_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      printer_print_types: {
-        Row: {
-          branch_id: number
-          created_at: string
-          id: number
-          print_type: string
-          printer_id: number
-          tenant_id: number
-        }
-        Insert: {
-          branch_id: number
-          created_at?: string
-          id?: never
-          print_type: string
-          printer_id: number
-          tenant_id: number
-        }
-        Update: {
-          branch_id?: number
-          created_at?: string
-          id?: never
-          print_type?: string
-          printer_id?: number
-          tenant_id?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "printer_print_types_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "printer_print_types_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "printer_print_types_printer_id_tenant_id_branch_id_fkey"
-            columns: ["printer_id", "tenant_id", "branch_id"]
-            isOneToOne: false
-            referencedRelation: "printers"
-            referencedColumns: ["id", "tenant_id", "branch_id"]
-          },
-          {
-            foreignKeyName: "printer_print_types_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -4677,203 +2695,8 @@ export type Database = {
           },
         ]
       }
-      production_order_items: {
-        Row: {
-          created_at: string
-          finished_good_id: number
-          id: number
-          production_order_id: number
-          quantity: number
-          tenant_id: number
-          unit: string
-          unit_cost_at_production: number | null
-        }
-        Insert: {
-          created_at?: string
-          finished_good_id: number
-          id?: never
-          production_order_id: number
-          quantity: number
-          tenant_id: number
-          unit: string
-          unit_cost_at_production?: number | null
-        }
-        Update: {
-          created_at?: string
-          finished_good_id?: number
-          id?: never
-          production_order_id?: number
-          quantity?: number
-          tenant_id?: number
-          unit?: string
-          unit_cost_at_production?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "production_order_items_finished_good_id_fkey"
-            columns: ["finished_good_id"]
-            isOneToOne: false
-            referencedRelation: "ingredients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "production_order_items_production_order_id_fkey"
-            columns: ["production_order_id"]
-            isOneToOne: false
-            referencedRelation: "production_orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "production_order_items_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      production_orders: {
-        Row: {
-          branch_id: number
-          completed_at: string | null
-          created_at: string
-          created_by: string | null
-          id: number
-          journal_entry_id: number | null
-          notes: string | null
-          production_number: string
-          status: string
-          tenant_id: number
-          updated_at: string
-        }
-        Insert: {
-          branch_id: number
-          completed_at?: string | null
-          created_at?: string
-          created_by?: string | null
-          id?: never
-          journal_entry_id?: number | null
-          notes?: string | null
-          production_number: string
-          status?: string
-          tenant_id: number
-          updated_at?: string
-        }
-        Update: {
-          branch_id?: number
-          completed_at?: string | null
-          created_at?: string
-          created_by?: string | null
-          id?: never
-          journal_entry_id?: number | null
-          notes?: string | null
-          production_number?: string
-          status?: string
-          tenant_id?: number
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "production_orders_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "production_orders_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "production_orders_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "production_orders_journal_entry_id_fkey"
-            columns: ["journal_entry_id"]
-            isOneToOne: false
-            referencedRelation: "journal_entries"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "production_orders_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      production_recipes: {
-        Row: {
-          created_at: string
-          finished_good_id: number
-          id: number
-          ingredient_id: number
-          note: string | null
-          quantity: number
-          tenant_id: number
-          unit: string
-          updated_at: string
-          yield_factor: number
-        }
-        Insert: {
-          created_at?: string
-          finished_good_id: number
-          id?: never
-          ingredient_id: number
-          note?: string | null
-          quantity: number
-          tenant_id: number
-          unit: string
-          updated_at?: string
-          yield_factor?: number
-        }
-        Update: {
-          created_at?: string
-          finished_good_id?: number
-          id?: never
-          ingredient_id?: number
-          note?: string | null
-          quantity?: number
-          tenant_id?: number
-          unit?: string
-          updated_at?: string
-          yield_factor?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "production_recipes_finished_good_id_fkey"
-            columns: ["finished_good_id"]
-            isOneToOne: false
-            referencedRelation: "ingredients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "production_recipes_ingredient_id_fkey"
-            columns: ["ingredient_id"]
-            isOneToOne: false
-            referencedRelation: "ingredients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "production_recipes_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       profiles: {
         Row: {
-          area_id: number | null
           avatar_url: string | null
           branch_id: number | null
           created_at: string | null
@@ -4886,7 +2709,6 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          area_id?: number | null
           avatar_url?: string | null
           branch_id?: number | null
           created_at?: string | null
@@ -4899,7 +2721,6 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
-          area_id?: number | null
           avatar_url?: string | null
           branch_id?: number | null
           created_at?: string | null
@@ -4912,13 +2733,6 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "profiles_area_id_fkey"
-            columns: ["area_id"]
-            isOneToOne: false
-            referencedRelation: "areas"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "profiles_branch_id_fkey"
             columns: ["branch_id"]
@@ -4942,200 +2756,6 @@ export type Database = {
           },
           {
             foreignKeyName: "profiles_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      purchase_order_items: {
-        Row: {
-          id: number
-          ingredient_id: number
-          line_total: number | null
-          po_id: number
-          quantity: number
-          tenant_id: number
-          unit: string
-          unit_price_est: number | null
-        }
-        Insert: {
-          id?: never
-          ingredient_id: number
-          line_total?: number | null
-          po_id: number
-          quantity: number
-          tenant_id: number
-          unit: string
-          unit_price_est?: number | null
-        }
-        Update: {
-          id?: never
-          ingredient_id?: number
-          line_total?: number | null
-          po_id?: number
-          quantity?: number
-          tenant_id?: number
-          unit?: string
-          unit_price_est?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "purchase_order_items_ingredient_id_fkey"
-            columns: ["ingredient_id"]
-            isOneToOne: false
-            referencedRelation: "ingredients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "purchase_order_items_po_id_fkey"
-            columns: ["po_id"]
-            isOneToOne: false
-            referencedRelation: "purchase_orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "purchase_order_items_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      purchase_orders: {
-        Row: {
-          branch_id: number
-          created_at: string
-          created_by: string
-          display_id: string | null
-          id: number
-          notes: string | null
-          ordered_at: string
-          po_number: string
-          status: string
-          supplier_id: number
-          tenant_id: number
-          updated_at: string
-        }
-        Insert: {
-          branch_id: number
-          created_at?: string
-          created_by: string
-          display_id?: string | null
-          id?: never
-          notes?: string | null
-          ordered_at?: string
-          po_number: string
-          status?: string
-          supplier_id: number
-          tenant_id: number
-          updated_at?: string
-        }
-        Update: {
-          branch_id?: number
-          created_at?: string
-          created_by?: string
-          display_id?: string | null
-          id?: never
-          notes?: string | null
-          ordered_at?: string
-          po_number?: string
-          status?: string
-          supplier_id?: number
-          tenant_id?: number
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "purchase_orders_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "purchase_orders_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "purchase_orders_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "purchase_orders_supplier_id_fkey"
-            columns: ["supplier_id"]
-            isOneToOne: false
-            referencedRelation: "suppliers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "purchase_orders_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      recipes: {
-        Row: {
-          created_at: string
-          id: number
-          ingredient_id: number
-          menu_item_id: number
-          note: string | null
-          quantity: number
-          tenant_id: number
-          unit: string
-          yield_factor: number
-        }
-        Insert: {
-          created_at?: string
-          id?: never
-          ingredient_id: number
-          menu_item_id: number
-          note?: string | null
-          quantity: number
-          tenant_id: number
-          unit: string
-          yield_factor?: number
-        }
-        Update: {
-          created_at?: string
-          id?: never
-          ingredient_id?: number
-          menu_item_id?: number
-          note?: string | null
-          quantity?: number
-          tenant_id?: number
-          unit?: string
-          yield_factor?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "recipes_ingredient_id_fkey"
-            columns: ["ingredient_id"]
-            isOneToOne: false
-            referencedRelation: "ingredients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "recipes_menu_item_id_fkey"
-            columns: ["menu_item_id"]
-            isOneToOne: false
-            referencedRelation: "menu_items"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "recipes_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -5304,47 +2924,6 @@ export type Database = {
           },
           {
             foreignKeyName: "refunds_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      role_templates: {
-        Row: {
-          created_at: string
-          id: number
-          is_system: boolean
-          name: string
-          permission_keys: string[]
-          position_code: string | null
-          tenant_id: number
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id?: never
-          is_system?: boolean
-          name: string
-          permission_keys?: string[]
-          position_code?: string | null
-          tenant_id: number
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: never
-          is_system?: boolean
-          name?: string
-          permission_keys?: string[]
-          position_code?: string | null
-          tenant_id?: number
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "role_templates_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -5630,195 +3209,7 @@ export type Database = {
             referencedColumns: ["key"]
           },
           {
-            foreignKeyName: "staff_permissions_source_template_fkey"
-            columns: ["source_template"]
-            isOneToOne: false
-            referencedRelation: "role_templates"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "staff_permissions_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      stock_issue_items: {
-        Row: {
-          approval_required: boolean
-          id: number
-          ingredient_id: number
-          issue_id: number
-          photo_required: boolean
-          photo_urls: string[]
-          qty_ratio: number | null
-          quantity: number
-          reason: string | null
-          reason_code: string | null
-          rolling_15min_sum: number | null
-          tenant_id: number
-          total_cost: number | null
-          unit: string
-          unit_cost: number
-          waste_tier: number | null
-        }
-        Insert: {
-          approval_required?: boolean
-          id?: never
-          ingredient_id: number
-          issue_id: number
-          photo_required?: boolean
-          photo_urls?: string[]
-          qty_ratio?: number | null
-          quantity: number
-          reason?: string | null
-          reason_code?: string | null
-          rolling_15min_sum?: number | null
-          tenant_id: number
-          total_cost?: number | null
-          unit: string
-          unit_cost?: number
-          waste_tier?: number | null
-        }
-        Update: {
-          approval_required?: boolean
-          id?: never
-          ingredient_id?: number
-          issue_id?: number
-          photo_required?: boolean
-          photo_urls?: string[]
-          qty_ratio?: number | null
-          quantity?: number
-          reason?: string | null
-          reason_code?: string | null
-          rolling_15min_sum?: number | null
-          tenant_id?: number
-          total_cost?: number | null
-          unit?: string
-          unit_cost?: number
-          waste_tier?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "stock_issue_items_ingredient_id_fkey"
-            columns: ["ingredient_id"]
-            isOneToOne: false
-            referencedRelation: "ingredients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stock_issue_items_issue_id_fkey"
-            columns: ["issue_id"]
-            isOneToOne: false
-            referencedRelation: "stock_issues"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stock_issue_items_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      stock_issues: {
-        Row: {
-          approval_status: string
-          approved_at: string | null
-          approved_by: string | null
-          branch_id: number
-          created_at: string
-          created_by: string | null
-          id: number
-          issue_number: string
-          issue_type: string
-          issued_at: string
-          notes: string | null
-          shift_key: string | null
-          source_location_id: number | null
-          source_ref: Json | null
-          source_type: string
-          status: string
-          target_location_id: number | null
-          tenant_id: number
-          updated_at: string
-        }
-        Insert: {
-          approval_status?: string
-          approved_at?: string | null
-          approved_by?: string | null
-          branch_id: number
-          created_at?: string
-          created_by?: string | null
-          id?: never
-          issue_number: string
-          issue_type?: string
-          issued_at?: string
-          notes?: string | null
-          shift_key?: string | null
-          source_location_id?: number | null
-          source_ref?: Json | null
-          source_type?: string
-          status?: string
-          target_location_id?: number | null
-          tenant_id: number
-          updated_at?: string
-        }
-        Update: {
-          approval_status?: string
-          approved_at?: string | null
-          approved_by?: string | null
-          branch_id?: number
-          created_at?: string
-          created_by?: string | null
-          id?: never
-          issue_number?: string
-          issue_type?: string
-          issued_at?: string
-          notes?: string | null
-          shift_key?: string | null
-          source_location_id?: number | null
-          source_ref?: Json | null
-          source_type?: string
-          status?: string
-          target_location_id?: number | null
-          tenant_id?: number
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "stock_issues_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stock_issues_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "stock_issues_source_location_id_fkey"
-            columns: ["source_location_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_locations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stock_issues_target_location_id_fkey"
-            columns: ["target_location_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_locations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stock_issues_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -5834,7 +3225,6 @@ export type Database = {
           id: number
           ingredient_id: number
           last_counted_at: string | null
-          location_id: number
           tenant_id: number
           updated_at: string
         }
@@ -5845,7 +3235,6 @@ export type Database = {
           id?: never
           ingredient_id: number
           last_counted_at?: string | null
-          location_id: number
           tenant_id: number
           updated_at?: string
         }
@@ -5856,7 +3245,6 @@ export type Database = {
           id?: never
           ingredient_id?: number
           last_counted_at?: string | null
-          location_id?: number
           tenant_id?: number
           updated_at?: string
         }
@@ -5883,13 +3271,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "stock_levels_location_id_fkey"
-            columns: ["location_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_locations"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "stock_levels_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -5907,7 +3288,6 @@ export type Database = {
           id: number
           ingredient_id: number
           issue_id: number | null
-          location_id: number
           movement_subtype: string | null
           order_id: number | null
           production_order_id: number | null
@@ -5926,7 +3306,6 @@ export type Database = {
           id?: never
           ingredient_id: number
           issue_id?: number | null
-          location_id: number
           movement_subtype?: string | null
           order_id?: number | null
           production_order_id?: number | null
@@ -5945,7 +3324,6 @@ export type Database = {
           id?: never
           ingredient_id?: number
           issue_id?: number | null
-          location_id?: number
           movement_subtype?: string | null
           order_id?: number | null
           production_order_id?: number | null
@@ -5993,20 +3371,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "stock_movements_issue_id_fkey"
-            columns: ["issue_id"]
-            isOneToOne: false
-            referencedRelation: "stock_issues"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stock_movements_location_id_fkey"
-            columns: ["location_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_locations"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "stock_movements_order_id_fkey"
             columns: ["order_id"]
             isOneToOne: false
@@ -6014,311 +3378,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "stock_movements_production_order_id_fkey"
-            columns: ["production_order_id"]
-            isOneToOne: false
-            referencedRelation: "production_orders"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "stock_movements_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stock_movements_transfer_id_fkey"
-            columns: ["transfer_id"]
-            isOneToOne: false
-            referencedRelation: "stock_transfers"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      stock_transfer_items: {
-        Row: {
-          id: number
-          ingredient_id: number
-          quantity: number
-          quantity_received: number | null
-          receive_note: string | null
-          tenant_id: number
-          transfer_id: number
-          unit: string
-          unit_cost_at_ship: number | null
-        }
-        Insert: {
-          id?: never
-          ingredient_id: number
-          quantity: number
-          quantity_received?: number | null
-          receive_note?: string | null
-          tenant_id: number
-          transfer_id: number
-          unit: string
-          unit_cost_at_ship?: number | null
-        }
-        Update: {
-          id?: never
-          ingredient_id?: number
-          quantity?: number
-          quantity_received?: number | null
-          receive_note?: string | null
-          tenant_id?: number
-          transfer_id?: number
-          unit?: string
-          unit_cost_at_ship?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "stock_transfer_items_ingredient_id_fkey"
-            columns: ["ingredient_id"]
-            isOneToOne: false
-            referencedRelation: "ingredients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stock_transfer_items_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stock_transfer_items_transfer_id_fkey"
-            columns: ["transfer_id"]
-            isOneToOne: false
-            referencedRelation: "stock_transfers"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      stock_transfers: {
-        Row: {
-          created_at: string
-          created_by: string
-          from_branch_id: number
-          from_location_id: number | null
-          id: number
-          journal_entry_id: number | null
-          notes: string | null
-          receive_started_at: string | null
-          received_at: string | null
-          shipped_at: string | null
-          status: string
-          tenant_id: number
-          to_branch_id: number
-          to_location_id: number | null
-          transfer_number: string
-          updated_at: string
-          vehicle_info: string | null
-        }
-        Insert: {
-          created_at?: string
-          created_by: string
-          from_branch_id: number
-          from_location_id?: number | null
-          id?: never
-          journal_entry_id?: number | null
-          notes?: string | null
-          receive_started_at?: string | null
-          received_at?: string | null
-          shipped_at?: string | null
-          status?: string
-          tenant_id: number
-          to_branch_id: number
-          to_location_id?: number | null
-          transfer_number: string
-          updated_at?: string
-          vehicle_info?: string | null
-        }
-        Update: {
-          created_at?: string
-          created_by?: string
-          from_branch_id?: number
-          from_location_id?: number | null
-          id?: never
-          journal_entry_id?: number | null
-          notes?: string | null
-          receive_started_at?: string | null
-          received_at?: string | null
-          shipped_at?: string | null
-          status?: string
-          tenant_id?: number
-          to_branch_id?: number
-          to_location_id?: number | null
-          transfer_number?: string
-          updated_at?: string
-          vehicle_info?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "stock_transfers_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stock_transfers_from_branch_id_fkey"
-            columns: ["from_branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stock_transfers_from_branch_id_fkey"
-            columns: ["from_branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "stock_transfers_from_location_id_fkey"
-            columns: ["from_location_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_locations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stock_transfers_journal_entry_id_fkey"
-            columns: ["journal_entry_id"]
-            isOneToOne: false
-            referencedRelation: "journal_entries"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stock_transfers_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stock_transfers_to_branch_id_fkey"
-            columns: ["to_branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stock_transfers_to_branch_id_fkey"
-            columns: ["to_branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "stock_transfers_to_location_id_fkey"
-            columns: ["to_location_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_locations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      stocktake_conflicts: {
-        Row: {
-          client_payload: Json
-          conflict_type: string
-          id: number
-          ingredient_id: number
-          resolution: string | null
-          resolution_note: string | null
-          resolution_qty: number | null
-          resolved_at: string | null
-          resolved_by: string | null
-          round_no: number
-          server_payload: Json | null
-          session_id: number
-          submitted_at: string
-          submitted_by: string | null
-          tenant_id: number
-        }
-        Insert: {
-          client_payload: Json
-          conflict_type: string
-          id?: never
-          ingredient_id: number
-          resolution?: string | null
-          resolution_note?: string | null
-          resolution_qty?: number | null
-          resolved_at?: string | null
-          resolved_by?: string | null
-          round_no: number
-          server_payload?: Json | null
-          session_id: number
-          submitted_at?: string
-          submitted_by?: string | null
-          tenant_id: number
-        }
-        Update: {
-          client_payload?: Json
-          conflict_type?: string
-          id?: never
-          ingredient_id?: number
-          resolution?: string | null
-          resolution_note?: string | null
-          resolution_qty?: number | null
-          resolved_at?: string | null
-          resolved_by?: string | null
-          round_no?: number
-          server_payload?: Json | null
-          session_id?: number
-          submitted_at?: string
-          submitted_by?: string | null
-          tenant_id?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "stocktake_conflicts_ingredient_id_fkey"
-            columns: ["ingredient_id"]
-            isOneToOne: false
-            referencedRelation: "ingredients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stocktake_conflicts_session_id_fkey"
-            columns: ["session_id"]
-            isOneToOne: false
-            referencedRelation: "stocktake_sessions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stocktake_conflicts_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      stocktake_drafts: {
-        Row: {
-          draft_counts: Json
-          last_saved_at: string
-          saved_by: string | null
-          session_id: number
-        }
-        Insert: {
-          draft_counts?: Json
-          last_saved_at?: string
-          saved_by?: string | null
-          session_id: number
-        }
-        Update: {
-          draft_counts?: Json
-          last_saved_at?: string
-          saved_by?: string | null
-          session_id?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "stocktake_drafts_session_id_fkey"
-            columns: ["session_id"]
-            isOneToOne: true
-            referencedRelation: "stocktake_sessions"
             referencedColumns: ["id"]
           },
         ]
@@ -6418,7 +3481,6 @@ export type Database = {
           current_round: number
           id: number
           is_unaudited: boolean
-          location_id: number | null
           mode: string
           notes: string | null
           offline_enabled: boolean
@@ -6444,7 +3506,6 @@ export type Database = {
           current_round?: number
           id?: never
           is_unaudited?: boolean
-          location_id?: number | null
           mode?: string
           notes?: string | null
           offline_enabled?: boolean
@@ -6470,7 +3531,6 @@ export type Database = {
           current_round?: number
           id?: never
           is_unaudited?: boolean
-          location_id?: number | null
           mode?: string
           notes?: string | null
           offline_enabled?: boolean
@@ -6514,62 +3574,7 @@ export type Database = {
             referencedColumns: ["branch_id"]
           },
           {
-            foreignKeyName: "stocktake_sessions_location_id_fkey"
-            columns: ["location_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_locations"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "stocktake_sessions_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      stocktake_zone_locks: {
-        Row: {
-          acquired_at: string
-          expires_at: string
-          id: number
-          last_heartbeat_at: string
-          locked_by: string
-          session_id: number
-          tenant_id: number
-          zone_id: string
-        }
-        Insert: {
-          acquired_at?: string
-          expires_at: string
-          id?: never
-          last_heartbeat_at?: string
-          locked_by: string
-          session_id: number
-          tenant_id: number
-          zone_id: string
-        }
-        Update: {
-          acquired_at?: string
-          expires_at?: string
-          id?: never
-          last_heartbeat_at?: string
-          locked_by?: string
-          session_id?: number
-          tenant_id?: number
-          zone_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "stocktake_zone_locks_session_id_fkey"
-            columns: ["session_id"]
-            isOneToOne: false
-            referencedRelation: "stocktake_sessions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stocktake_zone_locks_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -6661,106 +3666,16 @@ export type Database = {
           },
         ]
       }
-      supplier_credit_notes: {
-        Row: {
-          amount: number
-          applied_amount: number
-          applied_at: string | null
-          created_at: string
-          created_by: string
-          credit_number: string
-          id: number
-          invoice_id: number | null
-          kind: string
-          notes: string | null
-          return_id: number
-          status: string
-          supplier_id: number
-          tenant_id: number
-        }
-        Insert: {
-          amount: number
-          applied_amount?: number
-          applied_at?: string | null
-          created_at?: string
-          created_by: string
-          credit_number: string
-          id?: never
-          invoice_id?: number | null
-          kind: string
-          notes?: string | null
-          return_id: number
-          status?: string
-          supplier_id: number
-          tenant_id: number
-        }
-        Update: {
-          amount?: number
-          applied_amount?: number
-          applied_at?: string | null
-          created_at?: string
-          created_by?: string
-          credit_number?: string
-          id?: never
-          invoice_id?: number | null
-          kind?: string
-          notes?: string | null
-          return_id?: number
-          status?: string
-          supplier_id?: number
-          tenant_id?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "supplier_credit_notes_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "supplier_credit_notes_invoice_id_fkey"
-            columns: ["invoice_id"]
-            isOneToOne: false
-            referencedRelation: "supplier_invoices"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "supplier_credit_notes_return_id_fkey"
-            columns: ["return_id"]
-            isOneToOne: false
-            referencedRelation: "supplier_returns"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "supplier_credit_notes_supplier_id_fkey"
-            columns: ["supplier_id"]
-            isOneToOne: false
-            referencedRelation: "suppliers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "supplier_credit_notes_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       supplier_invoices: {
         Row: {
           created_at: string
           created_by: string
-          credit_applied_amount: number
           due_date: string | null
           grn_id: number | null
           id: number
           invoice_date: string
           invoice_number: string
-          journal_entry_id: number | null
           matching_notes: string | null
-          matching_status: string
           paid_amount: number
           paid_at: string | null
           payment_status: string
@@ -6776,15 +3691,12 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by: string
-          credit_applied_amount?: number
           due_date?: string | null
           grn_id?: number | null
           id?: never
           invoice_date: string
           invoice_number: string
-          journal_entry_id?: number | null
           matching_notes?: string | null
-          matching_status?: string
           paid_amount?: number
           paid_at?: string | null
           payment_status?: string
@@ -6800,15 +3712,12 @@ export type Database = {
         Update: {
           created_at?: string
           created_by?: string
-          credit_applied_amount?: number
           due_date?: string | null
           grn_id?: number | null
           id?: never
           invoice_date?: string
           invoice_number?: string
-          journal_entry_id?: number | null
           matching_notes?: string | null
-          matching_status?: string
           paid_amount?: number
           paid_at?: string | null
           payment_status?: string
@@ -6837,20 +3746,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "supplier_invoices_journal_entry_id_fkey"
-            columns: ["journal_entry_id"]
-            isOneToOne: false
-            referencedRelation: "journal_entries"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "supplier_invoices_po_id_fkey"
-            columns: ["po_id"]
-            isOneToOne: false
-            referencedRelation: "purchase_orders"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "supplier_invoices_supplier_id_fkey"
             columns: ["supplier_id"]
             isOneToOne: false
@@ -6866,80 +3761,12 @@ export type Database = {
           },
         ]
       }
-      supplier_items: {
-        Row: {
-          created_at: string
-          created_by: string | null
-          id: number
-          ingredient_id: number
-          is_active: boolean
-          notes: string | null
-          pack_size: number | null
-          pack_uom: string | null
-          supplier_id: number
-          supplier_sku_code: string
-          tenant_id: number
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          created_by?: string | null
-          id?: never
-          ingredient_id: number
-          is_active?: boolean
-          notes?: string | null
-          pack_size?: number | null
-          pack_uom?: string | null
-          supplier_id: number
-          supplier_sku_code: string
-          tenant_id: number
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          created_by?: string | null
-          id?: never
-          ingredient_id?: number
-          is_active?: boolean
-          notes?: string | null
-          pack_size?: number | null
-          pack_uom?: string | null
-          supplier_id?: number
-          supplier_sku_code?: string
-          tenant_id?: number
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "supplier_items_ingredient_id_fkey"
-            columns: ["ingredient_id"]
-            isOneToOne: false
-            referencedRelation: "ingredients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "supplier_items_supplier_id_fkey"
-            columns: ["supplier_id"]
-            isOneToOne: false
-            referencedRelation: "suppliers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "supplier_items_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       supplier_payments: {
         Row: {
           amount: number
           created_at: string
           created_by: string | null
           id: number
-          journal_entry_id: number | null
           payment_date: string
           payment_method: string
           reference_note: string | null
@@ -6952,7 +3779,6 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: never
-          journal_entry_id?: number | null
           payment_date?: string
           payment_method: string
           reference_note?: string | null
@@ -6965,7 +3791,6 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: never
-          journal_entry_id?: number | null
           payment_date?: string
           payment_method?: string
           reference_note?: string | null
@@ -6975,13 +3800,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "supplier_payments_journal_entry_id_fkey"
-            columns: ["journal_entry_id"]
-            isOneToOne: false
-            referencedRelation: "journal_entries"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "supplier_payments_supplier_invoice_id_fkey"
             columns: ["supplier_invoice_id"]
             isOneToOne: false
@@ -6990,269 +3808,6 @@ export type Database = {
           },
           {
             foreignKeyName: "supplier_payments_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      supplier_price_list: {
-        Row: {
-          created_at: string
-          created_by: string | null
-          currency: string
-          effective_from: string
-          effective_to: string | null
-          id: number
-          ingredient_id: number
-          lead_time_days: number | null
-          min_order_qty: number | null
-          priority: number
-          source: string
-          source_ref: Json | null
-          supplier_id: number
-          tenant_id: number
-          unit_price: number
-          uom: string
-        }
-        Insert: {
-          created_at?: string
-          created_by?: string | null
-          currency?: string
-          effective_from?: string
-          effective_to?: string | null
-          id?: never
-          ingredient_id: number
-          lead_time_days?: number | null
-          min_order_qty?: number | null
-          priority?: number
-          source: string
-          source_ref?: Json | null
-          supplier_id: number
-          tenant_id: number
-          unit_price: number
-          uom: string
-        }
-        Update: {
-          created_at?: string
-          created_by?: string | null
-          currency?: string
-          effective_from?: string
-          effective_to?: string | null
-          id?: never
-          ingredient_id?: number
-          lead_time_days?: number | null
-          min_order_qty?: number | null
-          priority?: number
-          source?: string
-          source_ref?: Json | null
-          supplier_id?: number
-          tenant_id?: number
-          unit_price?: number
-          uom?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "supplier_price_list_ingredient_id_fkey"
-            columns: ["ingredient_id"]
-            isOneToOne: false
-            referencedRelation: "ingredients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "supplier_price_list_supplier_id_fkey"
-            columns: ["supplier_id"]
-            isOneToOne: false
-            referencedRelation: "suppliers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "supplier_price_list_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      supplier_return_items: {
-        Row: {
-          grn_item_id: number | null
-          id: number
-          ingredient_id: number
-          photo_url: string | null
-          quantity: number
-          reason_detail: string | null
-          return_id: number
-          stock_movement_id: number | null
-          tenant_id: number
-          total_cost: number
-          unit: string
-          unit_cost: number
-        }
-        Insert: {
-          grn_item_id?: number | null
-          id?: never
-          ingredient_id: number
-          photo_url?: string | null
-          quantity: number
-          reason_detail?: string | null
-          return_id: number
-          stock_movement_id?: number | null
-          tenant_id: number
-          total_cost: number
-          unit: string
-          unit_cost: number
-        }
-        Update: {
-          grn_item_id?: number | null
-          id?: never
-          ingredient_id?: number
-          photo_url?: string | null
-          quantity?: number
-          reason_detail?: string | null
-          return_id?: number
-          stock_movement_id?: number | null
-          tenant_id?: number
-          total_cost?: number
-          unit?: string
-          unit_cost?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "supplier_return_items_grn_item_id_fkey"
-            columns: ["grn_item_id"]
-            isOneToOne: false
-            referencedRelation: "grn_items"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "supplier_return_items_ingredient_id_fkey"
-            columns: ["ingredient_id"]
-            isOneToOne: false
-            referencedRelation: "ingredients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "supplier_return_items_return_id_fkey"
-            columns: ["return_id"]
-            isOneToOne: false
-            referencedRelation: "supplier_returns"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "supplier_return_items_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      supplier_returns: {
-        Row: {
-          branch_id: number
-          confirmed_at: string | null
-          confirmed_by: string | null
-          created_at: string
-          created_by: string
-          grn_id: number | null
-          id: number
-          notes: string | null
-          reason: string
-          resolution: string
-          return_number: string
-          source: string
-          status: string
-          supplier_id: number
-          tenant_id: number
-          total_value: number
-          updated_at: string
-        }
-        Insert: {
-          branch_id: number
-          confirmed_at?: string | null
-          confirmed_by?: string | null
-          created_at?: string
-          created_by: string
-          grn_id?: number | null
-          id?: never
-          notes?: string | null
-          reason: string
-          resolution?: string
-          return_number: string
-          source: string
-          status?: string
-          supplier_id: number
-          tenant_id: number
-          total_value?: number
-          updated_at?: string
-        }
-        Update: {
-          branch_id?: number
-          confirmed_at?: string | null
-          confirmed_by?: string | null
-          created_at?: string
-          created_by?: string
-          grn_id?: number | null
-          id?: never
-          notes?: string | null
-          reason?: string
-          resolution?: string
-          return_number?: string
-          source?: string
-          status?: string
-          supplier_id?: number
-          tenant_id?: number
-          total_value?: number
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "supplier_returns_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "supplier_returns_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "supplier_returns_confirmed_by_fkey"
-            columns: ["confirmed_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "supplier_returns_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "supplier_returns_grn_id_fkey"
-            columns: ["grn_id"]
-            isOneToOne: false
-            referencedRelation: "goods_received_notes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "supplier_returns_supplier_id_fkey"
-            columns: ["supplier_id"]
-            isOneToOne: false
-            referencedRelation: "suppliers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "supplier_returns_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -7710,134 +4265,6 @@ export type Database = {
           },
         ]
       }
-      telegram_destinations: {
-        Row: {
-          branch_id: number | null
-          chat_id: string
-          consecutive_failures: number
-          created_at: string
-          created_by: number | null
-          id: number
-          is_active: boolean
-          label: string
-          tenant_id: number
-        }
-        Insert: {
-          branch_id?: number | null
-          chat_id: string
-          consecutive_failures?: number
-          created_at?: string
-          created_by?: number | null
-          id?: never
-          is_active?: boolean
-          label: string
-          tenant_id: number
-        }
-        Update: {
-          branch_id?: number | null
-          chat_id?: string
-          consecutive_failures?: number
-          created_at?: string
-          created_by?: number | null
-          id?: never
-          is_active?: boolean
-          label?: string
-          tenant_id?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "telegram_destinations_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "telegram_destinations_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-        ]
-      }
-      telegram_outbox: {
-        Row: {
-          attempts: number
-          created_at: string
-          feedback_id: number
-          id: number
-          last_error: string | null
-          next_retry_at: string
-          sent_at: string | null
-          status: string
-        }
-        Insert: {
-          attempts?: number
-          created_at?: string
-          feedback_id: number
-          id?: never
-          last_error?: string | null
-          next_retry_at?: string
-          sent_at?: string | null
-          status?: string
-        }
-        Update: {
-          attempts?: number
-          created_at?: string
-          feedback_id?: number
-          id?: never
-          last_error?: string | null
-          next_retry_at?: string
-          sent_at?: string | null
-          status?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "telegram_outbox_feedback_id_fkey"
-            columns: ["feedback_id"]
-            isOneToOne: true
-            referencedRelation: "feedbacks"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "telegram_outbox_feedback_id_fkey"
-            columns: ["feedback_id"]
-            isOneToOne: true
-            referencedRelation: "feedbacks_with_masked_phone"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      tenant_po_counters: {
-        Row: {
-          next_seq: number
-          tenant_id: number
-          updated_at: string
-          year: number
-        }
-        Insert: {
-          next_seq?: number
-          tenant_id: number
-          updated_at?: string
-          year: number
-        }
-        Update: {
-          next_seq?: number
-          tenant_id?: number
-          updated_at?: string
-          year?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "tenant_po_counters_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       tenants: {
         Row: {
           created_at: string | null
@@ -7879,114 +4306,6 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
-      }
-      user_trust_score: {
-        Row: {
-          branch_id: number
-          grn_count_30d: number
-          last_incident_at: string | null
-          score: number
-          tenant_id: number
-          updated_at: string
-          user_id: string
-          variance_incidents_30d: number
-        }
-        Insert: {
-          branch_id: number
-          grn_count_30d?: number
-          last_incident_at?: string | null
-          score?: number
-          tenant_id: number
-          updated_at?: string
-          user_id: string
-          variance_incidents_30d?: number
-        }
-        Update: {
-          branch_id?: number
-          grn_count_30d?: number
-          last_incident_at?: string | null
-          score?: number
-          tenant_id?: number
-          updated_at?: string
-          user_id?: string
-          variance_incidents_30d?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_trust_score_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_trust_score_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "user_trust_score_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      vas_report_lines: {
-        Row: {
-          created_at: string
-          display_order: number
-          form_code: string
-          formula: Json
-          formula_version: string
-          id: number
-          is_total: boolean
-          level: number
-          line_code: string
-          line_label_vi: string
-          parent_line: string | null
-          tenant_id: number | null
-        }
-        Insert: {
-          created_at?: string
-          display_order: number
-          form_code: string
-          formula: Json
-          formula_version?: string
-          id?: never
-          is_total?: boolean
-          level?: number
-          line_code: string
-          line_label_vi: string
-          parent_line?: string | null
-          tenant_id?: number | null
-        }
-        Update: {
-          created_at?: string
-          display_order?: number
-          form_code?: string
-          formula?: Json
-          formula_version?: string
-          id?: never
-          is_total?: boolean
-          level?: number
-          line_code?: string
-          line_label_vi?: string
-          parent_line?: string | null
-          tenant_id?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "vas_report_lines_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       webhook_events: {
         Row: {
@@ -8050,123 +4369,6 @@ export type Database = {
       }
     }
     Views: {
-      feedbacks_with_masked_phone: {
-        Row: {
-          ai_categories: string[] | null
-          ai_processed_at: string | null
-          ai_sentiment_score: number | null
-          ai_severity: string | null
-          ai_summary_vi: string | null
-          alert_priority: number | null
-          alert_sent_telegram_at: string | null
-          branch_id: number | null
-          channel: string | null
-          comment: string | null
-          created_at: string | null
-          dish_names_snapshot: string[] | null
-          has_ip_hash: boolean | null
-          id: number | null
-          is_suspect: boolean | null
-          order_id_snapshot: number | null
-          order_total_snapshot: number | null
-          phone: string | null
-          photo_paths: string[] | null
-          qr_code_id: number | null
-          rating: number | null
-          server_user_id_snapshot: number | null
-          table_id: number | null
-          tenant_id: number | null
-        }
-        Insert: {
-          ai_categories?: string[] | null
-          ai_processed_at?: string | null
-          ai_sentiment_score?: number | null
-          ai_severity?: string | null
-          ai_summary_vi?: string | null
-          alert_priority?: number | null
-          alert_sent_telegram_at?: string | null
-          branch_id?: number | null
-          channel?: string | null
-          comment?: string | null
-          created_at?: string | null
-          dish_names_snapshot?: string[] | null
-          has_ip_hash?: never
-          id?: number | null
-          is_suspect?: boolean | null
-          order_id_snapshot?: number | null
-          order_total_snapshot?: number | null
-          phone?: never
-          photo_paths?: string[] | null
-          qr_code_id?: number | null
-          rating?: number | null
-          server_user_id_snapshot?: number | null
-          table_id?: number | null
-          tenant_id?: number | null
-        }
-        Update: {
-          ai_categories?: string[] | null
-          ai_processed_at?: string | null
-          ai_sentiment_score?: number | null
-          ai_severity?: string | null
-          ai_summary_vi?: string | null
-          alert_priority?: number | null
-          alert_sent_telegram_at?: string | null
-          branch_id?: number | null
-          channel?: string | null
-          comment?: string | null
-          created_at?: string | null
-          dish_names_snapshot?: string[] | null
-          has_ip_hash?: never
-          id?: number | null
-          is_suspect?: boolean | null
-          order_id_snapshot?: number | null
-          order_total_snapshot?: number | null
-          phone?: never
-          photo_paths?: string[] | null
-          qr_code_id?: number | null
-          rating?: number | null
-          server_user_id_snapshot?: number | null
-          table_id?: number | null
-          tenant_id?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "feedbacks_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "feedbacks_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "feedbacks_order_id_snapshot_fkey"
-            columns: ["order_id_snapshot"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "feedbacks_qr_code_id_fkey"
-            columns: ["qr_code_id"]
-            isOneToOne: false
-            referencedRelation: "feedback_qr_codes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "feedbacks_table_id_fkey"
-            columns: ["table_id"]
-            isOneToOne: false
-            referencedRelation: "tables"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       mv_daily_revenue: {
         Row: {
           branch_id: number | null
@@ -8185,50 +4387,6 @@ export type Database = {
           vietqr_revenue: number | null
         }
         Relationships: [
-          {
-            foreignKeyName: "orders_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "orders_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "orders_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      mv_food_cost: {
-        Row: {
-          branch_id: number | null
-          food_cost_pct: number | null
-          ingredient_cost: number | null
-          item_name: string | null
-          menu_item_id: number | null
-          period_end: string | null
-          period_start: string | null
-          quantity_sold: number | null
-          revenue: number | null
-          tenant_id: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "order_items_menu_item_id_fkey"
-            columns: ["menu_item_id"]
-            isOneToOne: false
-            referencedRelation: "menu_items"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "orders_branch_id_fkey"
             columns: ["branch_id"]
@@ -8297,9 +4455,6 @@ export type Database = {
           ingredient_name: string | null
           item_kind: string | null
           last_counted_at: string | null
-          location_id: number | null
-          location_kind: string | null
-          location_name: string | null
           max_stock_level: number | null
           min_stock_level: number | null
           reorder_point: number | null
@@ -8328,13 +4483,6 @@ export type Database = {
             columns: ["ingredient_id"]
             isOneToOne: false
             referencedRelation: "ingredients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stock_levels_location_id_fkey"
-            columns: ["location_id"]
-            isOneToOne: false
-            referencedRelation: "inventory_locations"
             referencedColumns: ["id"]
           },
           {
@@ -8527,14 +4675,6 @@ export type Database = {
           vat_rate: number
         }[]
       }
-      acquire_zone_lock: {
-        Args: {
-          p_session_id: number
-          p_ttl_seconds?: number
-          p_zone_id: string
-        }
-        Returns: Json
-      }
       admin_update_profile: {
         Args: {
           p_branch_id?: number
@@ -8565,10 +4705,6 @@ export type Database = {
         Args: { p_idempotency_key?: string; p_items: Json; p_order_id: number }
         Returns: Json
       }
-      apply_credit_note_to_invoice: {
-        Args: { p_amount: number; p_credit_id: number; p_invoice_id: number }
-        Returns: Json
-      }
       apply_order_discount: {
         Args: {
           p_note: string
@@ -8587,21 +4723,7 @@ export type Database = {
         }
         Returns: Json
       }
-      apply_template_to_user: {
-        Args: {
-          p_branch_id: number
-          p_target_user: string
-          p_template_id: number
-          p_valid_from?: string
-          p_valid_until?: string
-        }
-        Returns: number
-      }
       approve_shift_request: { Args: { p_request_id: number }; Returns: number }
-      approve_waste: {
-        Args: { p_decision: string; p_issue_id: number; p_note?: string }
-        Returns: undefined
-      }
       assign_auditor: {
         Args: {
           p_auditor_branch_id?: number
@@ -8619,28 +4741,9 @@ export type Database = {
         }
         Returns: Json
       }
-      auth_area_id: { Args: never; Returns: number }
       auth_branch_id: { Args: never; Returns: number }
       auth_role: { Args: never; Returns: string }
       auth_tenant_id: { Args: never; Returns: number }
-      auto_close_periods: { Args: never; Returns: number }
-      auto_post_journal: {
-        Args: {
-          p_branch_id: number
-          p_description: string
-          p_entry_date?: string
-          p_lines: Json
-          p_posted_by?: string
-          p_reference_id: number
-          p_reference_type: string
-          p_tenant_id: number
-        }
-        Returns: number
-      }
-      bulk_mark_feedback_suspect: {
-        Args: { p_feedback_ids: number[]; p_is_suspect: boolean }
-        Returns: number
-      }
       bump_kds_ticket: { Args: { p_ticket_id: number }; Returns: string }
       can_access_branch: { Args: { p_branch_id: number }; Returns: boolean }
       cancel_order: {
@@ -8651,7 +4754,6 @@ export type Database = {
         Args: { p_branch_id: number; p_payment_id: number; p_tenant_id: number }
         Returns: undefined
       }
-      cancel_production_order: { Args: { p_order_id: number }; Returns: Json }
       cancel_shift_request: {
         Args: { p_request_id: number }
         Returns: undefined
@@ -8678,23 +4780,6 @@ export type Database = {
         Args: { p_note: string; p_order_item_id: number }
         Returns: Json
       }
-      close_fiscal_period: {
-        Args: {
-          p_month: number
-          p_notes?: string
-          p_tenant_id: number
-          p_year: number
-        }
-        Returns: Json
-      }
-      close_period_hard: {
-        Args: { p_month: number; p_tenant_id: number; p_year: number }
-        Returns: undefined
-      }
-      close_period_soft: {
-        Args: { p_month: number; p_tenant_id: number; p_year: number }
-        Returns: undefined
-      }
       close_pos_session: {
         Args: {
           p_closing_cash: number
@@ -8706,17 +4791,6 @@ export type Database = {
       }
       close_recount_round: {
         Args: { p_round_no: number; p_session_id: number }
-        Returns: Json
-      }
-      commit_intra_branch_transfer: {
-        Args: {
-          p_branch_id: number
-          p_from_location_id: number
-          p_lines?: Json
-          p_notes?: string
-          p_to_location_id: number
-          p_transfer_number: string
-        }
         Returns: Json
       }
       complete_kds_tickets: {
@@ -8743,23 +4817,9 @@ export type Database = {
         Returns: undefined
       }
       complete_stocktake: { Args: { p_session_id: number }; Returns: Json }
-      compute_branch_daily_waste_caps: { Args: never; Returns: number }
       compute_discount_amount: {
         Args: { p_subtotal: number; p_type: string; p_value: number }
         Returns: number
-      }
-      compute_user_trust_score: {
-        Args: { p_branch_id: number; p_user_id: string }
-        Returns: number
-      }
-      configure_express_window: {
-        Args: {
-          p_branch_id: number
-          p_enabled: boolean
-          p_end_time?: string
-          p_start_time?: string
-        }
-        Returns: undefined
       }
       confirm_cash_payment: {
         Args: { p_cash_received: number; p_order_id: number }
@@ -8775,9 +4835,6 @@ export type Database = {
         }
         Returns: Json
       }
-      confirm_production_order: { Args: { p_order_id: number }; Returns: Json }
-      confirm_stock_issue: { Args: { p_issue_id: number }; Returns: Json }
-      confirm_supplier_return: { Args: { p_return_id: number }; Returns: Json }
       confirm_vietqr_payment: {
         Args: {
           p_amount: number
@@ -8788,24 +4845,7 @@ export type Database = {
         }
         Returns: Json
       }
-      consume_stock_for_order: { Args: { p_order_id: number }; Returns: Json }
-      consume_stock_for_order_service: {
-        Args: { p_actor_id?: string; p_order_id: number }
-        Returns: Json
-      }
       count_unread_notifications: { Args: never; Returns: number }
-      create_grn_from_po: { Args: { p_po_id: number }; Returns: Json }
-      create_manual_journal_entry: {
-        Args: {
-          p_branch_id?: number
-          p_description: string
-          p_entry_date: string
-          p_lines: Json
-          p_reference_id?: number
-          p_reference_type?: string
-        }
-        Returns: Json
-      }
       create_order: {
         Args: {
           p_branch_id: number
@@ -8834,87 +4874,11 @@ export type Database = {
         }
         Returns: Json
       }
-      create_production_order: {
-        Args: {
-          p_branch_id: number
-          p_items?: Json
-          p_notes?: string
-          p_production_number: string
-        }
-        Returns: Json
-      }
       create_refund: {
         Args: { p_amount: number; p_payment_id: number; p_reason: string }
         Returns: Json
       }
-      create_stock_transfer_draft: {
-        Args: {
-          p_from_branch_id: number
-          p_from_location_id?: number
-          p_lines?: Json
-          p_notes?: string
-          p_to_branch_id: number
-          p_to_location_id?: number
-          p_transfer_number: string
-          p_vehicle_info?: string
-        }
-        Returns: Json
-      }
-      create_stocktake_session: {
-        Args: { p_branch_id: number; p_location_id?: number }
-        Returns: Json
-      }
-      create_supplier_payment: {
-        Args: {
-          p_amount: number
-          p_payment_method: string
-          p_reference_note?: string
-          p_supplier_invoice_id: number
-          p_tenant_id: number
-        }
-        Returns: Json
-      }
-      create_supplier_return_from_grn: {
-        Args: {
-          p_grn_id: number
-          p_notes?: string
-          p_reason?: string
-          p_resolution?: string
-        }
-        Returns: Json
-      }
-      create_supplier_return_from_stock: {
-        Args: {
-          p_branch_id: number
-          p_lines: Json
-          p_notes: string
-          p_reason: string
-          p_resolution: string
-          p_supplier_id: number
-        }
-        Returns: Json
-      }
-      create_waste_entry: {
-        Args: {
-          p_branch_id: number
-          p_items: Json
-          p_location_id: number
-          p_notes?: string
-          p_source_ref?: Json
-          p_source_type?: string
-        }
-        Returns: Json
-      }
-      create_waste_from_order: {
-        Args: {
-          p_items: Json
-          p_location_id: number
-          p_note?: string
-          p_order_id: number
-          p_source_type: string
-        }
-        Returns: Json
-      }
+      create_stocktake_session: { Args: { p_branch_id: number }; Returns: Json }
       current_position: { Args: never; Returns: string }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
       edit_pending_order_item: {
@@ -8934,10 +4898,6 @@ export type Database = {
         Args: { p_session_id: number }
         Returns: Json
       }
-      enqueue_cancel_ticket_print: {
-        Args: { p_order_item_id: number; p_reason: string }
-        Returns: Json
-      }
       enqueue_edit_pending_order_item_quantity_print: {
         Args: {
           p_new_quantity: number
@@ -8948,15 +4908,6 @@ export type Database = {
         Returns: Json
       }
       enqueue_kitchen_print: { Args: { p_order_id: number }; Returns: Json }
-      enqueue_partial_cancel_ticket_print: {
-        Args: {
-          p_new_quantity: number
-          p_old_quantity: number
-          p_order_item_id: number
-          p_reason: string
-        }
-        Returns: Json
-      }
       enqueue_provisional_bill: {
         Args: {
           p_order_id: number
@@ -8977,10 +4928,6 @@ export type Database = {
         Args: { p_session_id: number }
         Returns: Json
       }
-      ensure_branch_inventory_location_defaults: {
-        Args: { p_branch_id: number; p_tenant_id: number }
-        Returns: undefined
-      }
       ensure_journal_write_permission: {
         Args: { p_branch_id?: number }
         Returns: undefined
@@ -8998,11 +4945,6 @@ export type Database = {
         Args: { p_stale_after_seconds?: number }
         Returns: number
       }
-      extend_express_window: {
-        Args: { p_branch_id: number; p_minutes: number; p_note: string }
-        Returns: string
-      }
-      feedback_retention_cleanup: { Args: never; Returns: Json }
       feedback_validate_categories: {
         Args: { p_cats: string[] }
         Returns: boolean
@@ -9034,68 +4976,6 @@ export type Database = {
           payment_paid_at: string
           payment_status: string
           tenant_id: number
-        }[]
-      }
-      fn_eval_account_expr: {
-        Args: {
-          p_end_date: string
-          p_expr: Json
-          p_start_date: string
-          p_tenant_id: number
-        }
-        Returns: number
-      }
-      fn_generate_b01_dn: {
-        Args: { p_as_of_date: string; p_tenant_id: number }
-        Returns: Json
-      }
-      fn_generate_b02_dn: {
-        Args: { p_end_date: string; p_start_date: string; p_tenant_id: number }
-        Returns: Json
-      }
-      fn_generate_b03_dn: {
-        Args: { p_end_date: string; p_start_date: string; p_tenant_id: number }
-        Returns: Json
-      }
-      fn_generate_form_01_gtgt: {
-        Args: { p_month: number; p_tenant_id: number; p_year: number }
-        Returns: Json
-      }
-      fn_reconcile_drilldown: {
-        Args: {
-          p_branch_id?: number
-          p_category: string
-          p_end_date: string
-          p_limit?: number
-          p_side: string
-          p_start_date: string
-          p_tenant_id: number
-        }
-        Returns: {
-          amount: number
-          branch_id: number
-          description: string
-          ref_date: string
-          ref_id: number
-          ref_label: string
-        }[]
-      }
-      fn_reconcile_period: {
-        Args: {
-          p_branch_id?: number
-          p_end_date: string
-          p_start_date: string
-          p_tenant_id: number
-        }
-        Returns: Json
-      }
-      fn_reconcile_sales_by_day: {
-        Args: { p_branch_id: number; p_end_date: string; p_start_date: string }
-        Returns: {
-          date: string
-          diff: number
-          gl_credit: number
-          revenue_paid: number
         }[]
       }
       get_branch_menu_daily_limits_for_pos: {
@@ -9145,25 +5025,6 @@ export type Database = {
           journal_posted_count: number
         }[]
       }
-      get_food_cost: {
-        Args: {
-          p_branch_id?: number
-          p_end_date?: string
-          p_start_date?: string
-        }
-        Returns: {
-          branch_id: number
-          food_cost_pct: number
-          ingredient_cost: number
-          item_name: string
-          menu_item_id: number
-          period_end: string
-          period_start: string
-          quantity_sold: number
-          revenue: number
-          tenant_id: number
-        }[]
-      }
       get_grn_price_baseline: {
         Args: { p_ingredient_id: number; p_supplier_id: number; p_uom?: string }
         Returns: {
@@ -9172,10 +5033,6 @@ export type Database = {
           last_seen_at: string
           sample_n: number
         }[]
-      }
-      get_ingredient_abc_class: {
-        Args: { p_branch_id: number; p_ingredient_id: number }
-        Returns: string
       }
       get_inventory_alerts: {
         Args: {
@@ -9189,8 +5046,6 @@ export type Database = {
           current_quantity: number
           ingredient_id: number
           ingredient_name: string
-          location_id: number
-          location_name: string
           reorder_point: number
           severity_rank: number
           shortage_ratio: number
@@ -9326,10 +5181,6 @@ export type Database = {
           tenant_id: number
         }[]
       }
-      gl_reconciliation: {
-        Args: { p_month: number; p_tenant_id: number; p_year: number }
-        Returns: Json
-      }
       grant_permission: {
         Args: {
           p_branch_id: number
@@ -9341,25 +5192,12 @@ export type Database = {
         }
         Returns: number
       }
-      grn_is_auto_approvable: { Args: { p_grn_id: number }; Returns: Json }
       has_permission: {
         Args: { p_branch_id: number; p_key: string }
         Returns: boolean
       }
       has_permission_any: { Args: { p_key: string }; Returns: boolean }
       has_position: { Args: { p_code: string }; Returns: boolean }
-      heartbeat_zone_lock: {
-        Args: {
-          p_session_id: number
-          p_ttl_seconds?: number
-          p_zone_id: string
-        }
-        Returns: string
-      }
-      inventory_requires_manual_review: {
-        Args: { p_ingredient_id: number }
-        Returns: boolean
-      }
       inventory_shift_key: {
         Args: { p_at?: string; p_branch_id: number }
         Returns: string
@@ -9424,24 +5262,6 @@ export type Database = {
         }
         Returns: Json
       }
-      next_manual_journal_entry_number: {
-        Args: { p_entry_date: string; p_tenant_id: number }
-        Returns: string
-      }
-      next_po_display_id: { Args: { p_tenant_id: number }; Returns: string }
-      override_grn_hardblock: {
-        Args: {
-          p_evidence_url: string
-          p_grn_item_id: number
-          p_note: string
-          p_reason_code: string
-        }
-        Returns: number
-      }
-      period_status_at: {
-        Args: { p_at: string; p_tenant_id: number }
-        Returns: string
-      }
       pos_enrich_order_sides: {
         Args: { p_main_item_id: number; p_sides: Json; p_tenant_id: number }
         Returns: {
@@ -9451,11 +5271,6 @@ export type Database = {
       }
       pos_order_modifier_sum: {
         Args: { p_main_item_id: number; p_modifiers: Json; p_tenant_id: number }
-        Returns: number
-      }
-      post_manual_journal_entry: { Args: { p_entry_id: number }; Returns: Json }
-      post_payroll_journal: {
-        Args: { p_payroll_period_id: number }
         Returns: number
       }
       print_template_block_visible: {
@@ -9563,37 +5378,12 @@ export type Database = {
         }
         Returns: Json
       }
-      refresh_abc_classification: { Args: never; Returns: number }
-      refresh_finance_views: { Args: never; Returns: undefined }
       refresh_inventory_dashboard: { Args: never; Returns: string }
-      register_branch_presence: {
-        Args: {
-          p_agent_id: string
-          p_branch_id: number
-          p_ip_address: unknown
-          p_tenant_id: number
-          p_token_sha256: string
-        }
-        Returns: {
-          ip: string
-          ok: boolean
-          skipped: boolean
-          status: string
-        }[]
-      }
       reject_shift_request: {
         Args: { p_reason?: string; p_request_id: number }
         Returns: undefined
       }
       release_table: { Args: { p_table_id: number }; Returns: undefined }
-      release_zone_lock: {
-        Args: { p_session_id: number; p_zone_id: string }
-        Returns: boolean
-      }
-      reopen_period: {
-        Args: { p_month: number; p_tenant_id: number; p_year: number }
-        Returns: undefined
-      }
       replace_tax_invoice: {
         Args: {
           p_agreement_date: string
@@ -9615,28 +5405,6 @@ export type Database = {
         Args: { p_branch_id: number; p_print_type: string; p_tenant_id: number }
         Returns: number
       }
-      resolve_po_price: {
-        Args: { p_ingredient_id: number; p_supplier_id: number; p_uom: string }
-        Returns: {
-          effective_from: string
-          lead_time_days: number
-          min_order_qty: number
-          source: string
-          unit_price: number
-        }[]
-      }
-      resolve_po_prices_batch: {
-        Args: { p_items: Json; p_supplier_id: number }
-        Returns: {
-          effective_from: string
-          ingredient_id: number
-          lead_time_days: number
-          min_order_qty: number
-          source: string
-          unit_price: number
-          uom: string
-        }[]
-      }
       resolve_print_template_version: {
         Args: { p_branch_id: number; p_kind: string; p_tenant_id: number }
         Returns: {
@@ -9647,19 +5415,6 @@ export type Database = {
           template_version: number
         }[]
       }
-      resolve_stocktake_conflict: {
-        Args: {
-          p_conflict_id: number
-          p_manual_qty?: number
-          p_note?: string
-          p_resolution: string
-        }
-        Returns: Json
-      }
-      restore_stock_for_order: {
-        Args: { p_actor_id: string; p_order_id: number }
-        Returns: number
-      }
       retry_print_job: { Args: { p_job_id: number }; Returns: boolean }
       reverse_payment_and_post: { Args: { p_refund_id: number }; Returns: Json }
       revoke_permission: {
@@ -9669,10 +5424,6 @@ export type Database = {
           p_target_user: string
         }
         Returns: number
-      }
-      rotate_branch_override_code: {
-        Args: { p_branch_id: number; p_new_code: string }
-        Returns: undefined
       }
       route_order_to_kds: { Args: { p_order_id: number }; Returns: undefined }
       save_item_modifiers: {
@@ -9697,10 +5448,6 @@ export type Database = {
           expiry_count: number
           low_stock_count: number
         }[]
-      }
-      seed_chart_of_accounts: {
-        Args: { p_tenant_id: number }
-        Returns: undefined
       }
       set_branch_kind: {
         Args: { p_branch_id: number; p_kind?: string }
@@ -9744,19 +5491,10 @@ export type Database = {
           p_auditor_id?: string
           p_blind_mode?: boolean
           p_branch_id: number
-          p_location_id?: number
           p_mode?: string
           p_threshold_pct?: number
           p_threshold_vnd?: number
         }
-        Returns: Json
-      }
-      stock_transfer_confirm_receive: {
-        Args: { p_transfer_id: number }
-        Returns: Json
-      }
-      stock_transfer_confirm_ship: {
-        Args: { p_transfer_id: number }
         Returns: Json
       }
       stock_transfer_list_branches: {
@@ -9768,28 +5506,8 @@ export type Database = {
           name: string
         }[]
       }
-      stock_transfer_mark_in_transit: {
-        Args: { p_transfer_id: number }
-        Returns: Json
-      }
-      stock_transfer_receive: {
-        Args: { p_items?: Json; p_transfer_id: number }
-        Returns: Json
-      }
       submit_count_round: {
         Args: { p_counts: Json; p_round_no: number; p_session_id: number }
-        Returns: Json
-      }
-      submit_feedback: {
-        Args: {
-          p_comment: string
-          p_ip_hash?: string
-          p_phone?: string
-          p_photo_paths?: string[]
-          p_rating: number
-          p_token: string
-          p_user_agent_short?: string
-        }
         Returns: Json
       }
       submit_shift_request: {
@@ -9800,16 +5518,6 @@ export type Database = {
           p_shift_id: number
         }
         Returns: number
-      }
-      sync_insurance_base: {
-        Args: { p_employee_id: number }
-        Returns: undefined
-      }
-      sync_missing_permissions_from_template: {
-        Args: never
-        Returns: {
-          rows_added: number
-        }[]
       }
       toggle_category_active: { Args: { p_id: number }; Returns: boolean }
       toggle_ingredient_active: { Args: { p_id: number }; Returns: boolean }
@@ -9840,10 +5548,6 @@ export type Database = {
         }
         Returns: Json
       }
-      transition_supplier_return: {
-        Args: { p_notes?: string; p_return_id: number; p_target_status: string }
-        Returns: Json
-      }
       transition_tax_invoice_state: {
         Args: {
           p_note?: string
@@ -9863,7 +5567,6 @@ export type Database = {
         }
         Returns: Json
       }
-      try_auto_approve_grn: { Args: { p_grn_id: number }; Returns: Json }
       update_ingredient_thresholds_bulk: {
         Args: { p_payload: Json }
         Returns: Json
@@ -9880,48 +5583,10 @@ export type Database = {
         Args: { p_new_status: string; p_order_id: number }
         Returns: Json
       }
-      upsert_printer_with_routes: {
-        Args: {
-          p_branch_id?: number
-          p_category_ids?: number[]
-          p_code_page?: string
-          p_is_active?: boolean
-          p_lan_host?: string
-          p_lan_port?: number
-          p_name?: string
-          p_paper_width_mm?: number
-          p_print_types?: string[]
-          p_printer_id?: number
-          p_role?: string
-        }
-        Returns: number
-      }
-      upsert_production_recipe_lines: {
-        Args: { p_finished_good_id: number; p_lines: Json }
-        Returns: Json
-      }
-      upsert_recipe_lines: {
-        Args: { p_lines: Json; p_menu_item_id: number }
-        Returns: Json
-      }
-      validate_journal_balance: {
-        Args: { p_entry_id: number }
-        Returns: boolean
-      }
-      verify_branch_override_code: {
-        Args: { p_branch_id: number; p_code: string }
-        Returns: boolean
-      }
-      void_manual_journal_entry: {
-        Args: { p_entry_id: number; p_reason: string }
-        Returns: Json
-      }
       void_order_item: {
         Args: { p_order_item_id: number; p_reason: string }
         Returns: Json
       }
-      weekly_grn_override_report: { Args: never; Returns: number }
-      weekly_waste_report: { Args: never; Returns: number }
     }
     Enums: {
       shift_request_status: "pending" | "approved" | "rejected" | "cancelled"

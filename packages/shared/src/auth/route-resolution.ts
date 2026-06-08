@@ -124,7 +124,6 @@ export function resolveModuleFromPath(pathname: string): ModuleKey | null {
   // Mapping kept so URL space resolves to access-denied via standard ACL flow
   // instead of falling through to admin-route landing redirect. See module-acl.ts.
   if (resolvedPathname.startsWith("/admin/inventory")) return "inventory_admin";
-  if (resolvedPathname.startsWith("/admin/accounting")) return "accounting";
 
   for (const prefix of INVENTORY_PROCUREMENT_PREFIXES) {
     if (

@@ -4,8 +4,23 @@ import { currentUserHasPermission } from "@/_lib/permissions";
 import { getAuthContextWithPermission } from "../../_lib/auth";
 import { fetchIngredients } from "../../ingredient-actions";
 import { fetchGrnDetail } from "../../procurement-actions";
-import { fetchQcSettings, type QcSettings } from "../../_lib/qc-settings";
 import { formatDate } from "../../_lib/format";
+
+// HKD lean baseline: QC settings table is out of scope — GRN detail uses a
+// fixed default tolerance set instead of per-tenant configurable thresholds.
+type QcSettings = {
+  qty_short_tolerance_pct: number;
+  price_variance_warn_pct: number;
+  price_variance_review_pct: number;
+  reject_requires_photo: boolean;
+};
+
+const DEFAULT_QC_SETTINGS: QcSettings = {
+  qty_short_tolerance_pct: 5,
+  price_variance_warn_pct: 5,
+  price_variance_review_pct: 15,
+  reject_requires_photo: true,
+};
 import { fetchEntityAuditLogs } from "@/_lib/audit";
 import { GRNDetailClient } from "./grn-detail-client";
 import type { GRNDetail } from "./grn-detail-client";
@@ -28,14 +43,7 @@ export default async function GRNDetailPage({
     PROCUREMENT_ROLES,
     PERMISSION_KEYS.PROCUREMENT_READ,
   );
-  const qcSettings: QcSettings = ctx
-    ? await fetchQcSettings(ctx.supabase, ctx.claims.tenant_id)
-    : {
-        qty_short_tolerance_pct: 5,
-        price_variance_warn_pct: 5,
-        price_variance_review_pct: 15,
-        reject_requires_photo: true,
-      };
+  const qcSettings: QcSettings = DEFAULT_QC_SETTINGS;
 
   const d = res.data as {
     grn: {
@@ -164,10 +172,6 @@ export default async function GRNDetailPage({
   const ingredients: IngredientRow[] = ingredientsRes.success
     ? ((ingredientsRes.data ?? []) as IngredientRow[])
     : [];
-  const canAdjustStock = await currentUserHasPermission(
-    d.grn.branch_id,
-    PERMISSION_KEYS.INVENTORY_WRITE,
-  );
   const canAmendConfirmed = await currentUserHasPermission(
     d.grn.branch_id,
     PERMISSION_KEYS.PROCUREMENT_GRN_AMEND,
@@ -177,7 +181,6 @@ export default async function GRNDetailPage({
     <GRNDetailClient
       grn={grn}
       ingredients={ingredients}
-      canAdjustStock={canAdjustStock}
       canAmendConfirmed={canAmendConfirmed}
       auditLogs={auditLogs}
     />

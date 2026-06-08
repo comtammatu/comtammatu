@@ -175,27 +175,6 @@ async function notifyStockConsumptionFailure(
   }
 }
 
-async function loadPaymentStockStatus(
-  supabase: ServiceClient,
-  paymentId: number,
-): Promise<string | null> {
-  const { data, error } = await supabase
-    .from("payments")
-    .select("stock_consumed_status")
-    .eq("id", paymentId)
-    .maybeSingle();
-
-  if (error) {
-    console.error(
-      "[momo-webhook] failed to read payment stock status",
-      error.code,
-    );
-    return null;
-  }
-
-  return data?.stock_consumed_status ?? null;
-}
-
 async function claimWebhookEvent(
   supabase: ServiceClient,
   input: {
@@ -424,34 +403,8 @@ export async function POST(request: Request) {
       return momoAcceptedResponse();
     }
     case "already_completed":
-      {
-        const stockStatus = await loadPaymentStockStatus(
-          supabase,
-          pendingPayment.id,
-        );
-        if (stockStatus && stockStatus !== "ok") {
-          await notifyStockConsumptionFailure(supabase, {
-            tenantId: pendingPayment.tenant_id,
-            branchId: pendingPayment.branch_id,
-            paymentId: pendingPayment.id,
-            orderId: pendingPayment.order_id,
-            stockStatus,
-          });
-          await markWebhookEvent(supabase, webhookEventId, {
-            payment_id: pendingPayment.id,
-            processing_status: "failed",
-            http_status: 500,
-            error_code: "stock_consumption_failed",
-          });
-          console.error(
-            `[momo-webhook] completed payment has stock status=${stockStatus}: payment=${pendingPayment.id}`,
-          );
-          return NextResponse.json(
-            { error: "processing_failed" },
-            { status: 500 },
-          );
-        }
-      }
+      // HKD lean baseline: payment no longer drives stock consumption, so a
+      // completed payment needs no post-hoc stock-status reconciliation.
       await markWebhookEvent(supabase, webhookEventId, {
         payment_id: pendingPayment.id,
         processing_status: "processed",

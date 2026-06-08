@@ -5,7 +5,6 @@ import type { ActionResult } from "@comtammatu/shared/types";
 import { INVENTORY_OPS_ROLES, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { getAuthContext } from "./_lib/auth";
 import { withAction } from "@/_lib/with-action";
-import { resolveDefaultInventoryLocation } from "./_lib/inventory-location-compat";
 import { PG_ERR } from "./_lib/constants";
 
 /* ─── Stock levels + manual adjustment ─── */
@@ -79,19 +78,6 @@ export const adjustStock = withAction(
       };
     }
 
-    const defaultLocationId = await resolveDefaultInventoryLocation(
-      supabase,
-      claims.tenant_id,
-      data.branchId,
-      "issue",
-    );
-    if (defaultLocationId == null) {
-      return {
-        success: false,
-        error: "Chi nhánh chưa có kho mặc định. Vui lòng liên hệ quản trị.",
-      };
-    }
-
     const { error } = await supabase.from("stock_movements").insert({
       tenant_id: claims.tenant_id,
       branch_id: data.branchId,
@@ -100,7 +86,6 @@ export const adjustStock = withAction(
       quantity_change: data.quantityChange,
       reason: data.reason ?? null,
       created_by: user.id,
-      location_id: defaultLocationId,
     });
 
     if (error) {

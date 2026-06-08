@@ -21,7 +21,6 @@ import {
 } from "lucide-react";
 import { TableEmptyStateRow } from "@/components/table-empty-state-row";
 import { FormattedNumberInput } from "./formatted-number-input";
-import { AbcClassChip } from "./abc-class-chip";
 import type { StocktakeLineBlind } from "../stocktake-actions";
 import type { DraftCounts } from "./stocktake-draft-saver";
 
@@ -175,8 +174,8 @@ function CountRow({
       <TableCell>
         <div className="font-medium">{line.ingredientName}</div>
       </TableCell>
-      <TableCell>
-        <AbcClassChip class_={line.abcClass} compact withTooltip />
+      <TableCell className="text-muted-foreground">
+        {line.abcClass ?? "—"}
       </TableCell>
       <TableCell className="text-muted-foreground">{line.unit}</TableCell>
       <TableCell className="text-right">

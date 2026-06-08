@@ -8,7 +8,6 @@ import type { ActionResult } from "@comtammatu/shared/types";
 import { withAction } from "@/_lib/with-action";
 import { getAuthContextWithPermission } from "./_lib/auth";
 import { fetchProcurementBranches } from "./_lib/procurement-branches";
-import { dispatchNotificationOutbox } from "./notifications-actions";
 
 const ROLES = PROCUREMENT_ROLES;
 
@@ -30,7 +29,7 @@ function canAccessProcurementBranch(
 
 export type RecentActivityItem = {
   id: number;
-  type: "po" | "grn" | "invoice";
+  type: "grn" | "invoice";
   code: string;
   supplier: string;
   date: string; // ISO datetime
@@ -48,14 +47,6 @@ export async function fetchRecentActivity(
   if (!ctx) return { success: false, error: "Không có quyền" };
   const { supabase, claims } = ctx;
 
-  let poQuery = supabase
-    .from("purchase_orders")
-    .select(
-      "id, po_number, status, ordered_at, suppliers ( name ), purchase_order_items ( line_total )",
-    )
-    .eq("tenant_id", claims.tenant_id)
-    .order("ordered_at", { ascending: false })
-    .limit(5);
   let grnQuery = supabase
     .from("goods_received_notes")
     .select(
@@ -67,50 +58,24 @@ export async function fetchRecentActivity(
   const invQuery = supabase
     .from("supplier_invoices")
     .select(
-      "id, invoice_number, matching_status, invoice_date, total_amount, suppliers ( name )",
+      "id, invoice_number, payment_status, invoice_date, total_amount, suppliers ( name )",
     )
     .eq("tenant_id", claims.tenant_id)
     .order("invoice_date", { ascending: false })
     .limit(5);
 
   if (branchId != null) {
-    poQuery = poQuery.eq("branch_id", branchId);
     grnQuery = grnQuery.eq("branch_id", branchId);
     // supplier_invoices has no branch_id — left tenant-wide intentionally.
   }
 
-  const [poRes, grnRes, invRes] = await Promise.all([
-    poQuery,
-    grnQuery,
-    invQuery,
-  ]);
+  const [grnRes, invRes] = await Promise.all([grnQuery, invQuery]);
 
-  if (poRes.error || grnRes.error || invRes.error) {
+  if (grnRes.error || invRes.error) {
     return { success: false, error: "Không thể tải hoạt động gần đây." };
   }
 
   const items: RecentActivityItem[] = [
-    ...(poRes.data ?? []).map((po) => {
-      const lines =
-        (po.purchase_order_items as Array<{
-          line_total: number | null;
-        }> | null) ?? [];
-      const hasAllPrices =
-        lines.length > 0 && lines.every((l) => l.line_total != null);
-      const total = hasAllPrices
-        ? lines.reduce((s, l) => s + Number(l.line_total), 0)
-        : null;
-      return {
-        id: po.id,
-        type: "po" as const,
-        code: po.po_number,
-        supplier:
-          (po.suppliers as { name: string } | null)?.name ?? "Không rõ NCC",
-        date: po.ordered_at ?? "",
-        status: po.status,
-        total,
-      };
-    }),
     ...(grnRes.data ?? []).map((grn) => {
       const lines =
         (grn.grn_items as Array<{
@@ -148,7 +113,7 @@ export async function fetchRecentActivity(
       supplier:
         (inv.suppliers as { name: string } | null)?.name ?? "Không rõ NCC",
       date: inv.invoice_date ?? "",
-      status: inv.matching_status,
+      status: inv.payment_status,
       total: inv.total_amount ? Number(inv.total_amount) : null,
     })),
   ];
@@ -170,7 +135,7 @@ export async function fetchGrns(branchId?: number): Promise<ActionResult> {
   let query = supabase
     .from("goods_received_notes")
     .select(
-      "id, grn_number, status, received_date, notes, supplier_id, branch_id, po_id, suppliers ( id, name ), purchase_orders ( po_number ), grn_items ( received_quantity, rejected_quantity, unit_cost )",
+      "id, grn_number, status, received_date, notes, supplier_id, branch_id, po_id, suppliers ( id, name ), grn_items ( received_quantity, rejected_quantity, unit_cost )",
     )
     .eq("tenant_id", claims.tenant_id)
     .order("received_date", { ascending: false });
@@ -194,7 +159,7 @@ export async function fetchGrnDetail(grnId: number): Promise<ActionResult> {
   const { data: grn, error: e1 } = await supabase
     .from("goods_received_notes")
     .select(
-      "*, branches ( id, name, branch_kind ), suppliers ( id, name ), purchase_orders ( id, po_number )",
+      "*, branches ( id, name, branch_kind ), suppliers ( id, name )",
     )
     .eq("id", id.data)
     .eq("tenant_id", claims.tenant_id)
@@ -559,25 +524,7 @@ export async function confirmGrn(grnId: number): Promise<ActionResult> {
     return { success: false, error: "Không thể xác nhận phiếu nhập." };
   }
 
-  const poId =
-    data && typeof data === "object" && !Array.isArray(data)
-      ? ((data as { po_id?: number | null }).po_id ?? null)
-      : null;
-  const reviewCount =
-    data && typeof data === "object" && !Array.isArray(data)
-      ? ((data as { review_count?: number }).review_count ?? 0)
-      : 0;
-
   revalidatePath("/inventory/grn");
-  if (poId) revalidatePath(`/inventory/purchase-orders/${poId}`);
-
-  // Fire-and-forget dispatch when there are review-flagged lines (real-time alert).
-  // Errors are swallowed — outbox row remains pending and will be retried on next dispatch.
-  if (reviewCount > 0) {
-    void dispatchNotificationOutbox().catch((e) => {
-      console.error("dispatchNotificationOutbox post-confirmGrn", e);
-    });
-  }
 
   return { success: true, data };
 }
@@ -680,82 +627,3 @@ export const amendGrnLine = withAction(
   },
 );
 
-/* ─── fetchGrnsForPo ─── */
-
-export interface LinkedGrnRow {
-  id: number;
-  grn_number: string;
-  status: string;
-  received_date: string;
-}
-
-export async function fetchGrnsForPo(poId: number): Promise<ActionResult> {
-  const id = z.coerce.number().int().positive().safeParse(poId);
-  if (!id.success) return { success: false, error: "ID không hợp lệ" };
-  const ctx = await getAuthContextWithPermission(
-    ROLES,
-    PERMISSION_KEYS.PROCUREMENT_READ,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
-  const { supabase, claims } = ctx;
-  const { data, error } = await supabase
-    .from("goods_received_notes")
-    .select("id, grn_number, status, received_date")
-    .eq("po_id", id.data)
-    .eq("tenant_id", claims.tenant_id)
-    .order("received_date", { ascending: false });
-  if (error) return { success: false, error: "Không thể tải phiếu nhập." };
-  return { success: true, data: data ?? [] };
-}
-
-/* ─── createGrnFromPo ───
- * Sprint 5 #2: collapsed to a single atomic Postgres RPC call.
- * The RPC `create_grn_from_po` (migration 20260508072423) validates PO
- * status, branch eligibility, supplier active, computes remaining qty,
- * locks the PO row FOR UPDATE to serialize concurrent callers, and
- * inserts header + items in one transaction. Any RAISE rolls back
- * atomically — no orphan headers possible.
- */
-
-const PG_ERR_TO_VI: Record<string, string> = {
-  insufficient_privilege: "Bạn không có quyền tạo phiếu nhập từ PO này.",
-  no_data_found: "PO không tồn tại hoặc đã nhận đủ hàng.",
-  check_violation:
-    "PO không đủ điều kiện (trạng thái, kho nhận, hoặc NCC không hợp lệ).",
-  invalid_parameter_value: "Tham số đầu vào không hợp lệ.",
-};
-
-export async function createGrnFromPo(poId: number): Promise<ActionResult> {
-  const id = z.coerce.number().int().positive().safeParse(poId);
-  if (!id.success) return { success: false, error: "ID không hợp lệ" };
-  const ctx = await getAuthContextWithPermission(
-    ROLES,
-    PERMISSION_KEYS.PROCUREMENT_GRN_CREATE,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
-  const { supabase } = ctx;
-
-  const { data, error } = await supabase.rpc("create_grn_from_po", {
-    p_po_id: id.data,
-  });
-
-  if (error) {
-    return {
-      success: false,
-      error: PG_ERR_TO_VI[error.code ?? ""] ?? "Không thể tạo phiếu nhập.",
-    };
-  }
-
-  const parsed = z
-    .object({
-      grn_id: z.coerce.number().int().positive(),
-      grn_number: z.string(),
-      lines: z.coerce.number().int().min(0),
-    })
-    .safeParse(data);
-  if (!parsed.success) {
-    return { success: false, error: "Phản hồi không hợp lệ từ máy chủ." };
-  }
-
-  return { success: true, data: { id: parsed.data.grn_id } };
-}

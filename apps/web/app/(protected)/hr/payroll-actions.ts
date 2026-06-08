@@ -119,68 +119,33 @@ export const calculatePayroll = withAction(
 
     const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
 
-    // Load employees who had any contract overlapping the period.
+    // Load employees employed at any point during the period.
     // Do NOT filter by is_active — terminated-within-period employees still
-    // need their final paycheck (BLLĐ Art 48).
+    // need their final paycheck (BLLĐ Art 48). HKD baseline folds the former
+    // employment_contracts rate fields onto the employee row, so the
+    // insurance/base-salary source of truth is the employee record itself.
     const { data: employees, error: empErr } = await supabase
       .from("employees")
-      .select("id, base_salary, dependents_count")
+      .select(
+        "id, base_salary, dependents_count, insurance_base_salary, start_date",
+      )
       .eq("tenant_id", claims.tenant_id);
 
     if (empErr) {
       return { success: false, error: "Không thể tải danh sách nhân viên." };
     }
 
-    // insurance_base_salary source of truth = employment_contracts active
-    // during this period (per labor-contracts.md §5.3). Pick the contract
-    // whose start_date ≤ period_end AND (end_date IS NULL OR end_date ≥
-    // period_start) — the one with the latest start_date wins for the
-    // period's effective rate.
-    const { data: contracts, error: contractErr } = await supabase
-      .from("employment_contracts")
-      .select(
-        "employee_id, insurance_base_salary, gross_salary, start_date, end_date, status",
-      )
-      .eq("tenant_id", claims.tenant_id)
-      .lte("start_date", endDate)
-      .or(`end_date.is.null,end_date.gte.${startDate}`);
-
-    if (contractErr) {
-      return { success: false, error: "Không thể tải hợp đồng lao động." };
-    }
-
-    // Map employee_id → applicable contract for this period (latest start_date
-    // that's ≤ endDate). Active OR terminated contracts are valid as long as
-    // they overlapped the period.
-    const contractByEmployee = new Map<
-      number,
-      {
-        insurance_base_salary: number;
-        gross_salary: number;
-        start_date: string;
-      }
-    >();
-    for (const c of contracts ?? []) {
-      const existing = contractByEmployee.get(c.employee_id);
-      if (!existing || c.start_date > existing.start_date) {
-        contractByEmployee.set(c.employee_id, {
-          insurance_base_salary: Number(c.insurance_base_salary ?? 0),
-          gross_salary: Number(c.gross_salary ?? 0),
-          start_date: c.start_date,
-        });
-      }
-    }
-
-    // Skip employees with no contract overlapping the period — they were
-    // not employed during this month.
-    const eligibleEmployees = employees.filter((emp) =>
-      contractByEmployee.has(emp.id),
+    // Skip employees who only started after the period closed — they were not
+    // employed during this month. A null start_date means the join date is
+    // unknown, so include them rather than silently dropping a paycheck.
+    const eligibleEmployees = (employees ?? []).filter(
+      (emp) => !emp.start_date || emp.start_date <= endDate,
     );
 
     if (eligibleEmployees.length === 0) {
       return {
         success: false,
-        error: "Không có nhân viên có hợp đồng trong kỳ này.",
+        error: "Không có nhân viên làm việc trong kỳ này.",
       };
     }
 
@@ -212,13 +177,12 @@ export const calculatePayroll = withAction(
     const entries = eligibleEmployees.map((emp) => {
       const att = attendanceMap.get(emp.id) ?? { present: 0, half: 0 };
       const workingDays = att.present + att.half * 0.5;
-      const contract = contractByEmployee.get(emp.id)!;
-      // Base salary fallback chain: employees.base_salary → contract.gross_salary
-      const baseSalary = Number(emp.base_salary ?? contract.gross_salary ?? 0);
-      // insurance_base = contract source of truth (NOT employees cache)
+      const baseSalary = Number(emp.base_salary ?? 0);
+      // insurance_base source of truth = employees.insurance_base_salary,
+      // falling back to base salary when no declared insurance rate exists.
       const insuranceBase =
-        contract.insurance_base_salary > 0
-          ? contract.insurance_base_salary
+        Number(emp.insurance_base_salary) > 0
+          ? Number(emp.insurance_base_salary)
           : baseSalary;
 
       const proratedSalary =

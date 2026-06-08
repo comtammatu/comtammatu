@@ -4,10 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { PERMISSION_KEYS, STAFF_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import {
-  getAuthContextWithPermission,
-  getAuthContextWithAnyPermission,
-} from "./_lib/auth";
+import { getAuthContextWithAnyPermission } from "./_lib/auth";
 
 /* ─── Dashboard summary (S12) ─── */
 
@@ -237,55 +234,3 @@ export async function refreshDashboardMv(): Promise<
   };
 }
 
-/* ─── Period close (S12 admin) ─── */
-
-const periodSchema = z.object({
-  year: z.coerce.number().int().min(2020).max(2100),
-  month: z.coerce.number().int().min(1).max(12),
-});
-
-async function callPeriodRpc(
-  rpcName: "close_period_soft" | "close_period_hard" | "reopen_period",
-  input: z.infer<typeof periodSchema>,
-): Promise<ActionResult<void>> {
-  const parsed = periodSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Input không hợp lệ",
-    };
-  }
-
-  const ctx = await getAuthContextWithPermission(
-    STAFF_ROLES,
-    PERMISSION_KEYS.ACCOUNTING_PERIOD_REOPEN,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
-  const { supabase, claims } = ctx;
-
-  const { error } = await supabase.rpc(rpcName, {
-    p_tenant_id: claims.tenant_id,
-    p_year: parsed.data.year,
-    p_month: parsed.data.month,
-  });
-  if (error) {
-    return {
-      success: false,
-      error: `Không ${rpcName.replace(/_/g, " ")} được`,
-    };
-  }
-  revalidatePath("/admin/accounting/periods");
-  return { success: true };
-}
-
-export async function closePeriodSoft(input: z.infer<typeof periodSchema>) {
-  return callPeriodRpc("close_period_soft", input);
-}
-
-export async function closePeriodHard(input: z.infer<typeof periodSchema>) {
-  return callPeriodRpc("close_period_hard", input);
-}
-
-export async function reopenPeriod(input: z.infer<typeof periodSchema>) {
-  return callPeriodRpc("reopen_period", input);
-}

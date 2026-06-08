@@ -1,38 +1,15 @@
 import type { JwtClaims } from "@comtammatu/shared/auth";
 
 export async function canAccessBranch(
-  // Supabase client type is intentionally loose here to avoid
-  // deep generic instantiation across generated Database types.
-  supabase: unknown,
+  // Supabase client kept in the signature for call-site compatibility; unused
+  // since the area scope was removed (flat-branch model).
+  _supabase: unknown,
   claims: JwtClaims,
   branchId: number,
 ): Promise<boolean> {
-  if (claims.user_role === "area_manager") {
-    if (claims.area_id == null) return false;
-
-    type Query = {
-      eq: (column: string, value: unknown) => Query;
-      maybeSingle: () => Promise<{ data: unknown; error: unknown }>;
-    };
-
-    const sb = supabase as {
-      from: (table: "area_branches") => {
-        select: (columns: "id") => Query;
-      };
-    };
-
-    const { data, error } = await sb
-      .from("area_branches")
-      .select("id")
-      .eq("tenant_id", claims.tenant_id)
-      .eq("area_id", claims.area_id)
-      .eq("branch_id", branchId)
-      .maybeSingle();
-
-    if (error) return false;
-    return Boolean(data);
-  }
-
+  // Area scope removed (flat-branch): the former per-area branch lookup against
+  // the dropped area-scope table is gone. Access is now purely branch-scoped
+  // (branch_id set) or tenant-wide (branch_id null, e.g. owner/manager).
   if (claims.branch_id != null) {
     return claims.branch_id === branchId;
   }

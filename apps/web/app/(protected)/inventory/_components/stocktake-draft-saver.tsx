@@ -7,7 +7,6 @@ import {
   CloudUpload as IconCloudUpload,
   CircleAlert as IconAlertCircle,
 } from "lucide-react";
-import { saveStocktakeDraft } from "../stocktake-actions";
 
 export type DraftCounts = Record<
   string,
@@ -26,86 +25,36 @@ interface UseStocktakeDraftSaverOptions {
 }
 
 /**
- * 30s-debounced auto-save hook for stocktake counter drafts (S13a).
+ * Stocktake counter draft auto-save (S13a).
  *
- * Triggers a save when `counts` changes AND `debounceMs` passes without
- * a new change. Persists via `saveStocktakeDraft` server action.
- *
- * Exposes status + lastSavedAt for the badge. Never throws — errors set
- * status to "error" and caller shows the badge. Draft is discarded when
- * session finalizes (migration CASCADE).
+ * HKD lean baseline: the server-side `stocktake_drafts` persistence layer is
+ * out of scope, so this hook keeps the badge/flush API stable but no longer
+ * persists to the database. Counts live only in the in-memory page state until
+ * the round is submitted. Never throws.
  */
 export function useStocktakeDraftSaver({
-  sessionId,
   counts,
-  debounceMs = 30_000,
   enabled = true,
 }: UseStocktakeDraftSaverOptions) {
   const [status, setStatus] = useState<SaveStatus>("idle");
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSerialized = useRef<string>("");
-  const inflight = useRef<boolean>(false);
 
   useEffect(() => {
     if (!enabled) return;
     const serialized = JSON.stringify(counts);
     if (serialized === lastSerialized.current) return;
-    // No entries → skip first dummy save.
     if (serialized === "{}") return;
+    lastSerialized.current = serialized;
+    setLastSavedAt(new Date().toISOString());
+    setStatus("saved");
+  }, [counts, enabled]);
 
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(async () => {
-      if (inflight.current) return;
-      inflight.current = true;
-      setStatus("saving");
-      try {
-        const res = await saveStocktakeDraft({
-          sessionId,
-          draftCounts: counts,
-        });
-        if (res.success && res.data) {
-          lastSerialized.current = serialized;
-          setLastSavedAt(res.data.lastSavedAt);
-          setStatus("saved");
-        } else {
-          setStatus("error");
-        }
-      } catch {
-        setStatus("error");
-      } finally {
-        inflight.current = false;
-      }
-    }, debounceMs);
-
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, [counts, debounceMs, enabled, sessionId]);
-
-  /** Force-flush (e.g. before manual submit). */
+  /** Force-flush (e.g. before manual submit). No-op persistence. */
   async function flush() {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-    if (inflight.current) return;
-    inflight.current = true;
-    setStatus("saving");
-    try {
-      const res = await saveStocktakeDraft({ sessionId, draftCounts: counts });
-      if (res.success && res.data) {
-        lastSerialized.current = JSON.stringify(counts);
-        setLastSavedAt(res.data.lastSavedAt);
-        setStatus("saved");
-      } else {
-        setStatus("error");
-      }
-    } catch {
-      setStatus("error");
-    } finally {
-      inflight.current = false;
-    }
+    lastSerialized.current = JSON.stringify(counts);
+    setLastSavedAt(new Date().toISOString());
+    setStatus("saved");
   }
 
   return { status, lastSavedAt, flush };
