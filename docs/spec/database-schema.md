@@ -42,7 +42,8 @@ The 378-file incremental chain could not replay from an empty DB (ordering bug a
   `storage.objects` owner).
 - **Option X**: production keeps its applied migration history; the baseline is the
   fresh/dev install path. Regenerate via `pnpm db:baseline:extract -- --project-ref=<matu-dev>`
-  (Docker-free libpq engine). Runbook: `docs/runbooks/matu-dev-migration-squash-2026-05-30.md`.
+  (Docker-free libpq engine). Fresh-env install notes live in
+  `supabase/migrations/README.md`.
 
 ## Source Ladder
 
@@ -68,7 +69,7 @@ Current high-level groups:
 - Menu, POS, orders, KDS, and runner.
 - Payments, refunds, webhooks, HĐĐT, and reconciliation.
 - Inventory, procurement, production, QC, and waste.
-- Finance, journal, fiscal period, VAS reporting, and audit.
+- Finance, HĐĐT, accountant export, advanced journal/fiscal-period/VAS reporting, and audit.
 - HR, contracts, shifts, attendance, payroll, and employee portal.
 - Print agent, printer fleet, print jobs, and document templates.
 - Feedback, notifications, trust, and security perimeter tables.

@@ -83,8 +83,6 @@ const checks = [
     pattern:
       /className=\{?['"][^'"]*\b(h-(10|11|12|14|16)|min-h-(12|14|16))\b/g,
     allowlist: {
-      "apps/web/app/(protected)/admin/feedback/qr/_components/qr-management-client.tsx": 1,
-      "apps/web/app/(protected)/br/[branchId]/kds/components/filter-bar.tsx": 2,
       "apps/web/app/(protected)/br/[branchId]/pos/_components/archived-orders-sheet.tsx": 2,
       "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx": 7,
       "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-summary.tsx": 1,
@@ -158,8 +156,6 @@ const checks = [
     pattern:
       /className=\{?['"][^'"]*\b(?:w|h|max-w|max-h|min-w|min-h|text)-\[[^\]]+\]/g,
     allowlist: {
-      "apps/web/app/(protected)/br/[branchId]/pos/_components/cart-pane.tsx": 1,
-      "apps/web/app/(protected)/finance/components/heatmap-grid.tsx": 2,
       "apps/web/app/(protected)/finance/revenue/revenue-client.tsx": 1,
       "apps/web/app/components/app-shell.tsx": 1,
     },

@@ -1,6 +1,6 @@
 # Cơm Tấm Má Tư — Bộ phần mềm quản lý vận hành và bán hàng
 
-Bộ phần mềm quản lý vận hành và bán hàng cho chuỗi Cơm Tấm Má Tư CTCP.
+Bộ phần mềm quản lý vận hành và bán hàng cho Hộ kinh doanh Cơm Tấm Má Tư.
 Single-tenant, multi-branch.
 
 Nhiệm vụ: bán đúng, bếp nhận đúng, thu tiền đúng, in/hóa đơn đúng, kho trừ đúng,
@@ -15,6 +15,7 @@ This file is the agent entrypoint. Keep it short and stable. Detailed, topic-spe
 Before implementation, read the applicable rule files:
 
 - Always read `docs/agent/rules/engineering.md` for repo commands, architecture, import boundaries, and core constraints.
+- Read `docs/agent/rules/skills.md` before selecting external skills, plugins, MCP tools, browser tools, or subagents.
 - Read `docs/agent/rules/database.md` for Supabase, migrations, RLS, ACL, auth, Server Actions, RPCs, or database type work.
 - Read `docs/agent/rules/ui.md` before any UI, UX, route surface, component, styling, or copy change.
 - Read `docs/agent/rules/workflow.md` for review-tier rules (T3 full debate / T2 self-review / T1 skip), verification, and completion gates.
@@ -24,10 +25,13 @@ Instruction memory and learning memory stay separate:
 
 - Shared rules and policies live in `AGENTS.md` and `docs/agent/rules/`.
 - `CLAUDE.md` is a compatibility shim only; do not duplicate rules there.
+- Skill/plugin routing lives in `docs/agent/rules/skills.md`; external skills are workflow aids, not project authority.
 - Regression lessons live in `tasks/regressions.md`.
 - Retrospectives and durable learnings live in `tasks/lessons.md`.
 - Current work tracking lives in `tasks/todo.md`.
-- Keep local agent/tool folders out of the repo: `.claude/`, `.codex/`, `.agents/`, `.gstack/`, `.omc/`, MCP tokens, plugin caches, and per-user tool settings.
+- Project-owned Agent Workspace config may live in the repo for Claude, Codex,
+  Cursor, or similar tools. Keep secrets, MCP tokens, plugin caches, generated
+  sessions, worktrees, and per-user local state out of version control.
 
 ## Critical Constraints
 
@@ -43,6 +47,7 @@ Instruction memory and learning memory stay separate:
 - NEVER apply migrations directly to production. Production flow: write migration file → PR → merge → owner applies manually.
 - After SQL migration is applied to the schema used for generated types, run `pnpm db:types`.
 - ACL single source: `packages/shared/src/auth/module-acl.ts`.
+- MUST follow `docs/agent/rules/skills.md` for skill/plugin/tool selection on non-trivial tasks.
 - NEVER create a separate agent-only documentation tree such as `docs/llm-wiki/`; use `AGENTS.md`, `docs/agent/rules/`, `docs/CODEBASE_MAP.md`, module docs, specs, runbooks, tasks, or worklogs according to the content type.
 
 ## UI Authority

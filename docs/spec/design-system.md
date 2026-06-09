@@ -1,6 +1,6 @@
 # Design System - Com Tam Ma Tu Web App
 
-> Version: 14.4.1 | Updated: 2026-06-09 | Status: locked single source for UI agents
+> Version: 14.5.0 | Updated: 2026-06-09 | Status: locked single source for UI agents
 
 ## Single Source Decision
 
@@ -214,11 +214,12 @@ Page padding MUST come from `AppPage` (not ad-hoc on the page root). Card paddin
 
 | Role                    | Class                                                                   | Source                                                                 |
 | ----------------------- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| Page H1                 | `font-heading text-xl sm:text-2xl font-semibold`                        | `AppPageHeader`                                                        |
+| Page H1                 | `font-heading text-xl sm:text-2xl font-semibold tracking-tight`         | `AppPageHeader`                                                        |
 | Section title           | `font-heading text-base font-semibold`                                  | `CardTitle`                                                            |
 | Sub-section / list head | `font-heading text-sm font-semibold`                                    | `Item title` slot                                                      |
-| Eyebrow / metadata      | `text-xs font-medium uppercase tracking-wide`                           | `AppPageHeader.eyebrow`                                                |
-| Dense eyebrow           | `text-2xs font-medium uppercase tracking-wide`                          | KDS chrome, audit row meta                                             |
+| Eyebrow / metadata      | `text-xs font-medium uppercase tracking-wide`                           | `AppPageHeader.eyebrow` (page-header lockup only)                      |
+| Table column header     | `text-xs font-medium uppercase tracking-wider text-muted-foreground`    | `TableHead`                                                            |
+| Dense eyebrow           | `text-2xs font-medium uppercase tracking-wider`                         | KDS chrome, audit row meta, mobile chrome labels                       |
 | Numeric input echo      | `text-3xl font-semibold tabular-nums`                                   | Number pad readout, scale display                                      |
 | Runner board header     | `text-runner-header font-semibold`                                      | Runner/KDS order board column headers, height-responsive display token |
 | Runner board row text   | `text-runner-board font-semibold`                                       | Runner/KDS order board data cells, height-responsive display token     |
@@ -233,6 +234,8 @@ Display call targets are a separate operational display role, not headings. Use 
 Runner/KDS customer boards must use Tailwind's built-in 12-column grid, not a custom percent grid: Đơn `col-span-4`, Số món `col-span-3`, Trạng thái `col-span-4`, Chờ `col-span-1`. The wait-time header is `Chờ`, not `Thời gian đợi`, because wait values are short and the label must not steal width from quantity/status. All four data cells use the same `text-runner-board` row typography. Runner display tokens scale with dynamic viewport height (`dvh`) and clamp between compact desktop and 2K/4K displays; they must not scale from viewport width. Compact desktop viewports must keep cell/header/footer padding below the `xl` breakpoint (`px-4 py-2`) so wrapped labels like `Mang về #041` and `2 món` do not collide with row dividers. The narrow wait-time column may use smaller horizontal padding than the other columns. Status cells MUST NOT add a separate `text-*` class on the data-text element; the label inherits row color so `tailwind-merge` cannot drop the shared row typography.
 
 `font-bold` only for receipt totals, page headers in print mode, and emphasis inside body copy. Default heading weight is `font-semibold`. `font-black` is not allowed in the app.
+
+Eyebrow tracking is locked per surface: `tracking-wide` for the single page-header eyebrow, `tracking-wider` for repeated dense / table / grid eyebrows. `tracking-tight` is allowed ONLY on `font-heading` titles — never on body, eyebrow, or `font-mono` text. Page H1 MUST come from `AppPageHeader`; hand-rolled `<h1>` headers (especially `sm:text-3xl`, which collides with the `text-3xl` numeric-echo reservation) are forbidden — route them through `AppPageHeader`.
 
 ### C. Icon Size by Role
 
@@ -269,7 +272,15 @@ Fixed heights `h-10`, `h-11`, `h-12`, `h-14`, `h-16` MUST NOT be applied to `<bu
 
 If a new touch tier is genuinely needed (e.g. tablet KDS oversized chef glove targets), add a variant to `Button` cva once. Never fake a button by setting `<button className="min-h-12 ...">` outside the primitive.
 
-`Input` height is fixed at `h-7` from the primitive. Vertical chrome should be controlled with `Field` / `FieldGroup` spacing, not by overriding input height.
+`Input` (the bare primitive) is fixed at `h-7`. Composite form controls rendered through the `apps/web/app/components/form/*` layer use a taller `h-10` so labels, addons, and touch targets sit comfortably — set once in that layer, never per page.
+
+| Control role                                                | Height | Source                                                                                          |
+| ----------------------------------------------------------- | ------ | ----------------------------------------------------------------------------------------------- |
+| Bare text / number `Input` primitive                        | `h-7`  | `Input` primitive (`packages/ui`)                                                               |
+| Form text / number field                                    | `h-10` | `form/text-field`, `form/number-field`                                                          |
+| Field-trigger (select, combobox, multi-select, date-picker) | `h-10` | `form/select-field`, `form/combobox*`, `form/multi-select-combobox`, `form/business-date-field` |
+
+`h-10` is permitted ONLY on these `form/*` field controls, applied through the shared wrapper. The forbidden fixed heights `h-10` / `h-11` / `h-12` / `h-14` / `h-16` above apply to elements acting as a **button CTA** (`<button>` / `<Link>` / `<Button>` used as an action) — a form-field control that holds input or opens a popover/list is governed by this table, not by the button-height ban. Do not hand-patch a raw `Input` or `SelectTrigger` to `h-10`; route it through the `form/*` wrapper so field height stays single-sourced. Vertical chrome should otherwise be controlled with `Field` / `FieldGroup` spacing, not ad-hoc height overrides.
 
 ### E. Radius Scale (4 tokens only)
 
@@ -285,6 +296,56 @@ If a new touch tier is genuinely needed (e.g. tablet KDS oversized chef glove ta
 ### F. Density Modes
 
 `AppPage density="compact"` and `Card size="sm"` are the two switches that move a surface from default to dense without rewriting spacing. POS/KDS/Inventory dense list views compose these. Per-module density classes (`*-dense`, `*-tight`) are not allowed.
+
+### G. Motion Contract
+
+Motion is functional only — it signals state change (loading, enter/exit, focus, attention), never decorates. The app uses Tailwind + Radix / `tw-animate-css` defaults; there is no animation library and none may be added.
+
+**Duration.** App surfaces author only two transition durations; everything else is owned by the Radix / `tw-animate-css` primitive layer and must not be hand-set per page.
+
+| Duration                      | Locked use                                                                            | Layer          |
+| ----------------------------- | ------------------------------------------------------------------------------------- | -------------- |
+| `duration-150`                | `transition-colors` / focus-ring / border feedback on interactive controls            | app + primitive |
+| `duration-300`                | Overlay / dialog / sheet enter–exit (Radix `animate-in` / `animate-out`)              | app + primitive |
+| `duration-100`, `duration-200`| Primitive-layer defaults inside `packages/ui/*` only — do not introduce in app code    | primitive only |
+| `duration-500`                | Full-screen idle/empty visuals only (Runner idle board); never on interactive controls | app (exception) |
+
+Arbitrary `duration-[…]` is NOT allowed in app code.
+
+**Easing.** Use Tailwind defaults: bare `transition*` (default ease), `ease-out` for enter, `ease-linear` only for continuous indicators (spinner, progress). Arbitrary `ease-[cubic-bezier(…)]` is reserved for the shared primitive layer and is not allowed in app surfaces.
+
+**Allowed animations.** `animate-spin` (only via `Spinner`), `animate-pulse` (skeleton / loading placeholders), `animate-in` / `animate-out` and `animate-accordion-*` (Radix-driven, via primitives), `animate-caret-blink` (input caret). No custom `@keyframes` outside `globals.css`.
+
+**Press feedback.** `active:scale-[…]` (≥ `0.97`) is allowed on tap targets for tactile press feedback. `hover:scale-*` grow/shrink on hover is forbidden on ERP surfaces — it reads as decorative.
+
+**Reduced motion (locked).** Any looping or attention-drawing animation (`animate-pulse` on non-skeleton elements, `animate-bounce`, urgency/age pulses, kinetic idle visuals) MUST be gated with `motion-safe:` (or a `prefers-reduced-motion` check) so it stops when the OS requests reduced motion. One-shot Radix enter/exit (`animate-in` / `animate-out`) and the loading `Spinner` are exempt — they are brief and non-looping. Prefer `motion-safe:` on the animated class over `motion-reduce:animate-none` on the static one.
+
+**Forbidden:**
+
+- Decorative, looping, kinetic, parallax, or scroll-reveal motion on any ERP surface (POS / KDS / Admin / Inventory / Employee).
+- Animating layout/size properties that thrash (`width` / `height` / `top` / `left`); animate `transform` / `opacity` / `box-shadow` / `color` instead.
+- Any third-party animation library (framer-motion, gsap, react-spring), or the reference's marketing-layer reveal curves (600–820 ms) and kinetic-text keyframes.
+
+## Elevation / Shadow
+
+The system is **border-first**: resting surfaces are separated by `--border`, not by shadow. Shadow is reserved for surfaces that genuinely float above the page. There is no `--shadow-*` token layer — elevation is expressed through the Tailwind shadow utilities below, locked per role.
+
+| Rung          | Utility                    | Locked role                                                                                                                          |
+| ------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Rest          | _(none — border only)_     | Base `Card`, page sections, table rows, resting tiles. `card.tsx` carries no shadow by design.                                       |
+| Hover         | `shadow-sm`                | Interactive/clickable card adapters on hover only — data-table + inventory `interactive-card.tsx`, `AppLinkCard` (`surface.tsx`, `transition-[box-shadow,border-color]`). |
+| Overlay       | `shadow-md`                | Popover-family floating layers: `popover`, `dropdown-menu`, `context-menu`, `menubar`, `navigation-menu`, `select`, `hover-card`.    |
+| Modal / Sheet | `shadow-lg`                | `sheet`, dialogs, and CTAs **inside a genuinely sticky/fixed action bar** (e.g. GRN-create and transfer-receive `sticky chrome-safe-bottom` footers). |
+| Ceiling       | `shadow-xl` / `shadow-2xl` | **Only** fixed surfaces floating over scrolling content: POS mobile action bar (`shadow-2xl`), KDS focus card / chart tooltip (`shadow-xl`). Nowhere else. |
+
+**Non-elevation override.** `pos-text-overlay` (`globals.css`, `filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.6))`) and `drop-shadow-*` image filters (e.g. the runner mascot) are text/image legibility effects, **not** part of the elevation ladder, and must not be reused as surface shadows.
+
+**Forbidden:**
+
+- No drop shadow on a resting `Card`, section, or table row — separate with `--border` instead.
+- No `--shadow-*` CSS variables or custom `box-shadow` values; use the utilities above.
+- No `shadow-lg` / `xl` / `2xl` on a non-floating surface (e.g. a CTA in a non-sticky resting footer) to "make it pop."
+- One rung per role: a popover is `shadow-md`, not `shadow-lg`.
 
 ## Component Authority
 
@@ -312,6 +373,18 @@ Default primitive mapping:
 | transient feedback    | `Sonner`                                                                    |
 
 Toast and durable notification behavior is specified in `docs/spec/toast-notification-system.md`.
+
+### Numeric / money cells (lock to Table)
+
+Money, quantity, unit-price, tax-rate, ID/code, and timestamp cells render with the operational-data font (`font-mono`), tabular figures, and right alignment so columns scan as a stable ledger.
+
+| Cell role                       | Required class set                              |
+| ------------------------------- | ----------------------------------------------- |
+| Money / quantity / price / rate | `text-right font-mono tabular-nums`             |
+| ID / code / order / receipt no. | `font-mono tabular-nums` (left-aligned allowed) |
+| Right-aligned non-numeric label | `text-right` (no `tabular-nums`)                |
+
+`font-mono` is mandatory on any numeric cell that participates in vertical column comparison (the Typography Contract applied to table bodies). A money/quantity cell written as `text-right tabular-nums` WITHOUT `font-mono` is contract drift — JetBrains Mono is the locked operational-data face, not Inter. These classes go on `TableCell` / `TableHead`, never on a page-specific Table clone; a shared numeric-cell wrapper is allowed only if it renders the shared `Table` primitive and emits exactly this class set. Forbidden: `text-left` money columns, numeric columns missing `tabular-nums`, money/quantity cells missing `font-mono`.
 
 Allowed app wrappers:
 

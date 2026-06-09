@@ -16,7 +16,7 @@ source of truth. Khi kết luận, đối chiếu theo nhóm authority này:
 - Business / workflow: [docs/ref/inventory.md](../../ref/inventory.md), [docs/ref/inventory-sop.md](../../ref/inventory-sop.md), [docs/ref/inventory-rbac-matrix.md](../../ref/inventory-rbac-matrix.md)
 - UI design-system: [docs/spec/design-system.md](../../spec/design-system.md)
 - UI implementation guide: [docs/modules/ui.md](../../modules/ui.md)
-- Historical context only: [docs/worklog/inventory/inventory-ux-contract.md](../../worklog/inventory/inventory-ux-contract.md)
+- Canonical Inventory context: [docs/ref/inventory.md](../../ref/inventory.md), [docs/ref/inventory-sop.md](../../ref/inventory-sop.md), and [docs/modules/web-app.md](../../modules/web-app.md)
 
 Boundary:
 

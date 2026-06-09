@@ -6,8 +6,9 @@ import {
   EmployeePage,
 } from "../components/employee-page";
 import {
-  getVNWeekEndDateString,
-  getVNWeekStartDateString,
+  getVNMonthEndDateString,
+  getVNMonthStartDateString,
+  getVNMonthYear,
 } from "@comtammatu/shared/time";
 import { messages } from "@lib/messages";
 
@@ -29,8 +30,13 @@ export default async function SchedulePage() {
 
   const { supabase, claims, employeeId } = ctx;
 
-  const weekStart = getVNWeekStartDateString();
-  const weekEndStr = getVNWeekEndDateString(weekStart);
+  const now = new Date();
+  const monthStart = getVNMonthStartDateString(now);
+  const currentMonth = getVNMonthYear(now);
+  const monthEndStr = getVNMonthEndDateString(
+    currentMonth.year,
+    currentMonth.month,
+  );
 
   const [shiftResult, attendanceResult] = await Promise.all([
     supabase
@@ -38,16 +44,16 @@ export default async function SchedulePage() {
       .select("date, shifts ( name, start_time, end_time )")
       .eq("employee_id", employeeId)
       .eq("tenant_id", claims.tenant_id)
-      .gte("date", weekStart)
-      .lte("date", weekEndStr)
+      .gte("date", monthStart)
+      .lte("date", monthEndStr)
       .order("date"),
     supabase
       .from("attendance_records")
       .select("date, check_in, check_out, status")
       .eq("employee_id", employeeId)
       .eq("tenant_id", claims.tenant_id)
-      .gte("date", weekStart)
-      .lte("date", weekEndStr)
+      .gte("date", monthStart)
+      .lte("date", monthEndStr)
       .order("date"),
   ]);
 
@@ -85,7 +91,7 @@ export default async function SchedulePage() {
           shifts: initialShifts,
           attendance: initialAttendance,
         }}
-        initialWeekStart={weekStart}
+        initialMonthStart={monthStart}
       />
     </EmployeePage>
   );

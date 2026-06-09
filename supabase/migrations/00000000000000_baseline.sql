@@ -26589,7 +26589,7 @@ CREATE TABLE public.tenants (
 -- Name: COLUMN tenants.owner_user_id; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public.tenants.owner_user_id IS 'Canonical auth identity of tenant owner — UUID FK to auth.users, ON DELETE RESTRICT. NOT NULL since H3b (2026-05-07). Distinct from `representative` (TEXT legal name) and `positions.code=''owner''` (HR label). has_permission() owner-bypass currently uses positions.code=''owner''; this column is data foundation for future ownership transfer RPC + UI. See docs/plan/adr/0005-owner-identity-dual-source.md, regressions.md TENANT-OWNER-USER-ID-CANONICAL.';
+COMMENT ON COLUMN public.tenants.owner_user_id IS 'Canonical auth identity of tenant owner — UUID FK to auth.users, ON DELETE RESTRICT. NOT NULL since H3b (2026-05-07). Distinct from `representative` (TEXT legal name) and `positions.code=''owner''` (HR label). has_permission() owner-bypass currently uses positions.code=''owner''; this column is data foundation for future ownership transfer RPC + UI. See docs/plan/adr/0005-owner-identity-source-separation.md, regressions.md TENANT-OWNER-USER-ID-CANONICAL.';
 
 
 --
@@ -41475,4 +41475,3 @@ ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON TABLES 
 --
 
 -- \unrestrict 9ogGhrdgidzHLr4W08xFqeuO5fJ4snQIJ4Gjcb0h90dqBKnyLmzn8TwzcDVqYIL
-

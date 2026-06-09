@@ -12,6 +12,7 @@
 
 - Onboarding kỹ thuật: [CODEBASE_MAP.md](CODEBASE_MAP.md)
 - Ngôn ngữ chuẩn + thuật ngữ dự án: [ref/glossary.md](ref/glossary.md)
+- Skill/plugin/tool routing cho agent: [agent/rules/skills.md](agent/rules/skills.md)
 - Kiến trúc hệ thống: [architecture/README.md](architecture/README.md)
 - UI Design System SSOT / Custom Theme contract: [spec/design-system.md](spec/design-system.md)
 - UI implementation guide, not a second authority: [modules/ui.md](modules/ui.md)
@@ -31,9 +32,7 @@
 - Training 1 trang: [ref/inventory-role-handoff.md](ref/inventory-role-handoff.md)
 - RBAC matrix: [ref/inventory-rbac-matrix.md](ref/inventory-rbac-matrix.md)
 - QA gate: [runbooks/inventory/pre-release-qa.md](runbooks/inventory/pre-release-qa.md)
-- Adoption tracking: [worklog/inventory/adoption-matrix.md](worklog/inventory/adoption-matrix.md)
-- UX workflow review: [worklog/inventory/inventory-ux-workflow-review.md](worklog/inventory/inventory-ux-workflow-review.md)
-- UX contract đã chốt: [worklog/inventory/inventory-ux-contract.md](worklog/inventory/inventory-ux-contract.md)
+- Runtime route/UI contract: [modules/web-app.md](modules/web-app.md)
 
 ### Trạng thái Inventory hiện tại
 
@@ -47,7 +46,8 @@
 - `architecture/`: cross-cutting architecture và các điểm vào/alias sang glossary chuẩn
 - `ref/`: canonical rules, boundary, business semantics, glossary chuẩn
 - `modules/` và `spec/`: technical structure và schema
+- `agent/rules/`: agent entry rules, workflow gates, skill routing, database/UI/engineering constraints
 - `spec/design-system.md`: single source of truth cho UI design-system; active shadcn preset, runtime configs, primitives, adapters, runbooks, worklogs, and regression rules only implement, verify, or enforce it
 - `plan/`: active decisions and ADRs
 - `runbooks/`: operational verification
-- `worklog/`: evolving progress/adoption artefacts
+- `worklog/`: current implementation contracts that have not yet been promoted to canonical docs

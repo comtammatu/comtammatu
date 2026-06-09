@@ -55,7 +55,11 @@ export interface InvoiceRequest {
   orderId: number;
   orderNumber: string;
 
-  /** Seller info (from tenants table) */
+  /**
+   * Provider-neutral seller fields. Viettel S-invoice currently does not send
+   * `sellerInfo`; seller identity is resolved by Vinvoice from supplierTaxCode
+   * and the registered account/template.
+   */
   sellerName: string;
   sellerTaxCode: string;
   sellerAddress: string;

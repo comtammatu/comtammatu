@@ -2,7 +2,10 @@
 
 ## Overview
 
-Turborepo monorepo deployed to Vercel. Supabase for database + auth. Upstash Redis for rate limiting. GitHub Actions for CI.
+Turborepo monorepo deployed to Vercel. Supabase provides database + auth, and
+Upstash Redis handles rate limiting. The current checkout does not carry active
+GitHub workflow files, so local gates remain the dependable verification path
+unless CI is restored.
 
 ## Monorepo Structure
 
@@ -86,7 +89,9 @@ Full setup guide: `docs/ref/setup.md`
 
 - **Vercel:** Auto-deploy from main branch. Environment variables set in Vercel dashboard.
 - **Supabase:** Migrations applied manually by owner (`supabase db push`) after PR merge.
-- **GitHub Actions:** CI pipeline (typecheck + build + lint). Secrets documented in commit `1223952`.
+- **CI:** no active `.github/workflows` files are present in the current checkout.
+  If CI is restored, it must run at least `pnpm typecheck`, `pnpm lint`, and
+  `pnpm build`.
 
 ## TypeScript Configuration
 

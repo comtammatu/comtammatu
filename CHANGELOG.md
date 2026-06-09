@@ -40,7 +40,7 @@ Four new files under `.github/` aligning the repo with standard GitHub conventio
 
 ### Added
 
-- **`.github/CODEOWNERS`** — `* @comtammatu` (single-tenant CTCP fallback). Path-specific overrides go above this rule when the team grows.
+- **`.github/CODEOWNERS`** — `* @comtammatu` (single-tenant owner fallback). Path-specific overrides go above this rule when the team grows.
 - **`.github/pull_request_template.md`** — checklist mirroring CLAUDE.md gates: typecheck/lint/build/tests, regression rule maintenance, no `Co-Authored-By: Claude` trailer, owner-action callout.
 - **`.github/ISSUE_TEMPLATE/bug_report.md`** — repro / expected / actual / environment / severity, with maintainer-side triage section.
 - **`.github/ISSUE_TEMPLATE/feature_request.md`** — problem / proposal / acceptance criteria / risk surface / explicit out-of-scope.

@@ -1,7 +1,7 @@
 # SOP Inventory Pilot — HQ / Bếp Trung Tâm / Kho Chi Nhánh / Bếp Chi Nhánh
 
-> Áp dụng: Cơm Tấm Má Tư CTCP  
-> Phạm vi: Luồng vận hành pilot cho nguyên liệu và thành phẩm  
+> Áp dụng: Hộ kinh doanh Cơm Tấm Má Tư
+> Phạm vi: Luồng vận hành pilot cho nguyên liệu và thành phẩm
 > Mô hình: `Kho Tổng / CW`, `Bếp trung tâm / CK`, `Kho chi nhánh`, `Bếp chi nhánh`
 
 ---

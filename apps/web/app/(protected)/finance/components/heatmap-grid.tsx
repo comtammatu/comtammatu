@@ -94,7 +94,7 @@ export function HeatmapGrid({
             x={labelGutter + h * cellPitch + cellSize / 2}
             y={10}
             textAnchor="middle"
-            className="fill-muted-foreground text-[10px]"
+            className="fill-muted-foreground text-3xs"
           >
             {String(h).padStart(2, "0")}h
           </text>
@@ -107,7 +107,7 @@ export function HeatmapGrid({
               x={labelGutter - 6}
               y={headerHeight + dow * cellPitch + cellSize - 3}
               textAnchor="end"
-              className="fill-muted-foreground text-[10px]"
+              className="fill-muted-foreground text-3xs"
             >
               {label}
             </text>

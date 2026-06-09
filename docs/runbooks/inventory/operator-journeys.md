@@ -7,7 +7,7 @@
 > - [ui-ux-rubric.md](./ui-ux-rubric.md)
 > - [route-cta-matrix.md](./route-cta-matrix.md)
 > - [pre-release-qa.md](./pre-release-qa.md)
-> - [../../worklog/inventory/evidence-log.md](../../worklog/inventory/evidence-log.md)
+> - Ghi evidence trực tiếp vào ticket/PR hoặc worklog hiện hành nếu chưa promote được vào canonical docs.
 
 Updated: `2026-04-17`
 

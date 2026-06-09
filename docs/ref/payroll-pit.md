@@ -1,6 +1,6 @@
 # Thuế TNCN & Lương — Personal Income Tax & Payroll
 
-> Áp dụng: Cơm Tấm Má Tư CTCP
+> Áp dụng: Hộ kinh doanh Cơm Tấm Má Tư
 > Khung pháp lý: Luật Thuế TNCN 2007 (sửa đổi 2012, 2014), TT 111/2013, TT 92/2015, NĐ 65/2013
 
 ---
@@ -154,7 +154,7 @@ CREATE TABLE payroll_entries (
   bhtn_employee       NUMERIC(15,2) NOT NULL,    -- gross_insurance × 1%
   total_insurance_employee NUMERIC(15,2) NOT NULL,
 
-  -- Bảo hiểm NSDLĐ đóng (chi phí công ty)
+  -- Bảo hiểm NSDLĐ đóng (chi phí hộ kinh doanh)
   bhxh_employer       NUMERIC(15,2) NOT NULL,    -- gross_insurance × 17.5%
   bhyt_employer       NUMERIC(15,2) NOT NULL,    -- gross_insurance × 3%
   bhtn_employer       NUMERIC(15,2) NOT NULL,    -- gross_insurance × 1%
@@ -305,7 +305,9 @@ export function calculatePayrollEntry(params: {
 
 ### 6.1 Quyết toán theo ủy quyền
 
-Nếu NLĐ chỉ có thu nhập từ 1 nơi → **ủy quyền quyết toán** cho công ty. Công ty quyết toán thay và gửi tờ khai QT-TNCN.
+Nếu NLĐ chỉ có thu nhập từ 1 nơi → có thể **ủy quyền quyết toán** cho NSDLĐ
+theo điều kiện pháp luật thuế hiện hành. Với Cơm Tấm Má Tư, NSDLĐ là Hộ kinh
+doanh/chủ hộ, không phải CTCP.
 
 **Hạn quyết toán**: ngày 31/3 năm kế tiếp (ví dụ: quyết toán năm 2025 → 31/3/2026).
 
@@ -344,9 +346,10 @@ ORDER BY e.full_name;
 
 ---
 
-## 7. Chi phí lương của công ty (Total Labor Cost)
+## 7. Chi phí lương của NSDLĐ (Total Labor Cost)
 
-Khi lập kế hoạch ngân sách, tổng chi phí lao động NSDLĐ phải chịu = Lương gross + Bảo hiểm phần công ty đóng:
+Khi lập kế hoạch ngân sách, tổng chi phí lao động NSDLĐ phải chịu = Lương
+gross + Bảo hiểm phần NSDLĐ đóng:
 
 ```
 Total labor cost = Gross salary
@@ -356,7 +359,7 @@ Total labor cost = Gross salary
                  = Gross × (1 + 21.5%) ≈ Gross × 1.215
 ```
 
-Ví dụ: Nhân viên lương gross 10 triệu → công ty thực tế chi ~12.15 triệu/tháng.
+Ví dụ: Nhân viên lương gross 10 triệu → HKD/NSDLĐ thực tế chi khoảng 12.15 triệu/tháng.
 
 ---
 

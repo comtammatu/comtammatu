@@ -77,6 +77,7 @@ Các cụm dưới đây bị xem là drift và phải thay bằng nhãn tiếng
 | `Restaurant Management System` | `hệ thống quản lý vận hành nhà hàng`                   |
 | `Merchant Platform`            | `bộ phần mềm quản lý vận hành và bán hàng`             |
 | `Báo cáo CEO`                  | `Báo cáo điều hành`                                    |
+| `CTCP`, `JSC`, `Công ty cổ phần` | `Hộ kinh doanh` / `HKD` cho mô hình hiện hành; chỉ dùng CTCP khi nói lịch sử hoặc lộ trình chuyển đổi |
 
 ## Quy tắc thực thi
 
@@ -91,7 +92,9 @@ Các cụm dưới đây bị xem là drift và phải thay bằng nhãn tiếng
 
 | Canonical English   | Nhãn tiếng Việt chuẩn   | Dùng khi nào                                                                        | Tránh dùng                                        |
 | ------------------- | ----------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------- |
-| `tenant`            | tenant / pháp nhân CTCP | Khi nói về legal owner cấp hệ thống, single-tenant row                              | công ty, hệ thống, brand nếu đang nói row dữ liệu |
+| `tenant`            | tenant / hồ sơ HKD      | Khi nói về chủ thể kinh doanh cấp hệ thống, single-tenant row                      | pháp nhân CTCP, công ty nếu đang nói row dữ liệu  |
+| `household business` | hộ kinh doanh (`HKD`)   | Mô hình pháp lý hiện hành của Má Tư                                                | CTCP, doanh nghiệp nếu không nói lộ trình chuyển đổi |
+| `registered owner`  | chủ hộ kinh doanh       | Người đại diện đăng ký HKD / người ký hồ sơ pháp lý                                | representative pháp nhân                           |
 | `branch`            | chi nhánh               | Site vận hành cấp L1                                                                | cửa hàng nếu đang nói entity DB                   |
 | `central_warehouse` | kho tổng (`CW`)         | Điểm nhập NCC đa thể hiện (có thể có nhiều Kho Tổng)                                | HQ, headquarters, trụ sở                          |
 | `central kitchen`   | bếp trung tâm           | Site sản xuất thành phẩm                                                            | tổng bếp, bếp tổng                                |
@@ -166,11 +169,10 @@ Các cụm dưới đây bị xem là drift và phải thay bằng nhãn tiếng
 
 `user_role` là **legacy claim** trong JWT, derived từ `positions.legacy_role_code`. Vai trò mới (`warehouse_manager`, `production_manager`) được thêm khi Auth v2 tách Kho và Bếp trung tâm thành workstream riêng.
 
-Blue schema hiện còn một số position code tiếng Việt không dấu như `kho_truong`,
+Một số dữ liệu cũ vẫn có position code tiếng Việt không dấu như `kho_truong`,
 `thu_kho`, `bep_truong`, `phu_bep`, `quan_ly_CN`, `quan_ly_vung`, `ke_toan`, và
-`ke_toan_truong`. Đây là legacy compatibility surface, không phải naming mẫu cho
-schema mới. Green baseline phải map các code này sang English `lower_snake_case`
-theo ADR-0004.
+`ke_toan_truong`. Đây là compatibility surface để duy trì JWT/RLS hiện tại, không
+phải naming mẫu cho position mới. Position mới dùng English `lower_snake_case`.
 
 ### Auth v2 — Position ⟂ Permission
 
@@ -211,7 +213,7 @@ Canonical rule (áp dụng 2026-04-24): payment confirmation → `orders.status=
 | ----------------- | ---------------------- | ----------------------------------------------------------------------- |
 | `payment_method`  | phương thức thanh toán | `cash`, `bank_transfer`, `momo`, `vietqr`                               |
 | `cash`            | tiền mặt               |                                                                         |
-| `bank_transfer`   | chuyển khoản           | Bắt buộc với giao dịch NCC ≥ 20 triệu để được khấu trừ VAT (TT 25/2018) |
+| `bank_transfer`   | chuyển khoản           | Ưu tiên cho giao dịch NCC giá trị lớn để đủ hồ sơ thanh toán/kế toán    |
 | `momo`            | ví MoMo                | Giữ tên thương hiệu, không dịch                                         |
 | `vietqr`          | VietQR                 | QR chuyển khoản liên ngân hàng, giữ nguyên tên                          |
 | `payment_status`  | trạng thái thanh toán  | `unpaid` → `partial` → `paid` (dùng cho `supplier_invoices`)            |
@@ -234,7 +236,7 @@ Canonical rule (áp dụng 2026-04-24): payment confirmation → `orders.status=
 
 | Canonical English        | Nhãn tiếng Việt                | Ghi chú                                                                         |
 | ------------------------ | ------------------------------ | ------------------------------------------------------------------------------- |
-| `value-added tax (VAT)`  | thuế GTGT                      | Phương pháp khấu trừ: đầu ra − đầu vào                                          |
+| `value-added tax (VAT)`  | thuế GTGT                      | Với HKD, phương pháp tính thuế theo cấu hình đăng ký/luật hiện hành; không mặc định khấu trừ |
 | `output VAT`             | GTGT đầu ra                    | Thu từ khách, nộp CQT                                                           |
 | `input VAT`              | GTGT đầu vào                   | Trả cho NCC, được khấu trừ nếu đủ điều kiện                                     |
 | `vat_rate`               | thuế suất GTGT                 | Lưu `NUMERIC(5,2)`, ví dụ `8.00`, `10.00`, `5.00` — **KHÔNG** lưu `0.08`        |
@@ -265,7 +267,7 @@ Canonical rule (áp dụng 2026-04-24): payment confirmation → `orders.status=
 | ----------------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------- |
 | `employee`              | nhân viên                    | Row `employees` — hồ sơ HR                                                                                            |
 | `employment contract`   | hợp đồng lao động (HĐLĐ)     | Row `employment_contracts`, source of truth cho `insurance_base_salary`                                               |
-| `NSDLĐ`                 | người sử dụng lao động       | Phía công ty, đóng BHXH 21.5%                                                                                         |
+| `NSDLĐ`                 | người sử dụng lao động       | Phía Hộ kinh doanh/chủ hộ khi thuê nhân viên, đóng BHXH 21.5%                                                         |
 | `NLĐ`                   | người lao động               | Phía nhân viên, đóng BHXH 10.5%                                                                                       |
 | `indefinite`            | HĐ không xác định thời hạn   | Mặc định sau 2 HĐ `fixed_term` liên tiếp                                                                              |
 | `fixed_term`            | HĐ xác định thời hạn         | 12–36 tháng, ký tối đa 2 lần                                                                                          |
@@ -320,7 +322,7 @@ File [apps/web/app/(protected)/inventory/\_lib/labels.ts](<../../apps/web/app/(p
 | `branch_warehouse`  | Kho chi nhánh  | Kho CN    | —       |
 | `branch_kitchen`    | Bếp chi nhánh  | Bếp CN    | —       |
 | `branch`            | Chi nhánh      | —         | `CN`    |
-| `tenant`            | Pháp nhân CTCP | Pháp nhân | —       |
+| `tenant`            | Hồ sơ HKD     | HKD       | —       |
 
 ### Bảng variants — POS / KDS / bán hàng
 
@@ -407,7 +409,7 @@ File [apps/web/app/(protected)/inventory/\_lib/labels.ts](<../../apps/web/app/(p
 | ------------------------ | ---------------------------- | -------------- | -------------- |
 | `employee`               | Nhân viên                    | NV             | —              |
 | `employment_contract`    | Hợp đồng lao động            | Hợp đồng       | `HĐLĐ`         |
-| `employer`               | Người sử dụng lao động       | Công ty        | `NSDLĐ`        |
+| `employer`               | Người sử dụng lao động       | NSDLĐ          | `NSDLĐ`        |
 | `employee_party`         | Người lao động               | Nhân viên      | `NLĐ`          |
 | `indefinite_contract`    | HĐ không xác định thời hạn   | HĐ vô thời hạn | —              |
 | `fixed_term_contract`    | HĐ xác định thời hạn         | HĐ có thời hạn | —              |

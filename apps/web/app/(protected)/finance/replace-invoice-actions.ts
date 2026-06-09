@@ -297,7 +297,7 @@ export async function replaceTaxInvoice(
   const providerResult = await provider.createInvoice({
     orderId: newId, // CRITICAL: NEW row id → fresh transactionUuid
     orderNumber: `REPLACE-${parsed.data.originalId}-${newId}`,
-    sellerName: "Cơm Tấm Má Tư CTCP",
+    sellerName: "",
     sellerTaxCode: process.env["COMPANY_TAX_CODE"] ?? "",
     sellerAddress: "",
     buyerName: parsed.data.buyerName,

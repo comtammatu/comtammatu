@@ -18,7 +18,7 @@ Chạy runbook này cùng với:
 - [ui-ux-rubric.md](./ui-ux-rubric.md)
 - [operator-journeys.md](./operator-journeys.md)
 - [route-cta-matrix.md](./route-cta-matrix.md)
-- [../../worklog/inventory/evidence-log.md](../../worklog/inventory/evidence-log.md)
+- Ghi evidence trực tiếp vào ticket/PR hoặc worklog hiện hành nếu chưa promote được vào canonical docs.
 
 Thiết bị ưu tiên:
 
@@ -36,7 +36,7 @@ Trước khi bắt đầu round QA:
    - `Senior Dev`: blast radius + affected routes/CTA
    - `QA/QC`: gate + evidence cần lưu
 2. Chọn journey và device tương ứng từ [operator-journeys.md](./operator-journeys.md)
-3. Mở [evidence-log.md](../../worklog/inventory/evidence-log.md) và điền kickoff block
+3. Ghi kickoff evidence vào ticket/PR hoặc worklog hiện hành
 4. Dùng [route-cta-matrix.md](./route-cta-matrix.md) làm checklist route/button phải audit; không dùng nó để override ACL, Inventory reference, hoặc design-system contract
 5. Chấm finding theo [ui-ux-rubric.md](./ui-ux-rubric.md), không theo cảm tính
 

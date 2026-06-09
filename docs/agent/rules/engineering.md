@@ -28,6 +28,8 @@ pnpm db:types     # Regenerate Supabase types after migration is applied to the 
 - ACL single source: `packages/shared/src/auth/module-acl.ts`.
 - NEVER add agent notes, dev commit notes, implementation explanations, or internal commentary to project UI.
 - Put durable explanations, guides, operational notes, and task notes in Markdown docs, guides, or note files inside the source tree.
+- Follow `docs/agent/rules/skills.md` before selecting external skills,
+  plugins, MCP tools, browser tools, or subagents for non-trivial work.
 
 ## Architecture
 

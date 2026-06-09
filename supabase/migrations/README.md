@@ -29,9 +29,8 @@ auto-applied migration) — generated 2026-05-30 from matu-dev + iexws, idempote
 - realtime publication membership (11 tables; `ADD TABLE` — fresh env only)
 - cron jobs (10) via `cron.schedule(...)`
 
-The `config.toml` auth-hook setting stays in the repo. (The older
-`docs/plan/supabase-managed-surfaces-install-bundle.sql` was the greenfield-target
-rehearsal version; the file above supersedes it for matu-dev/fresh installs.)
+The `config.toml` auth-hook setting stays in the repo. `supabase/managed-surfaces.install.sql`
+is the canonical companion install file for matu-dev and fresh environments.
 
 ## Existing environments (option X — 2026-05-30)
 
@@ -47,6 +46,16 @@ rehearsal version; the file above supersedes it for matu-dev/fresh installs.)
 
 ## Regenerating the baseline
 
-See the runbook. Always extract with a DIRECT privileged connection (libpq
-`pg_dump`), never `supabase db dump --linked` (it silently drops RLS-restricted
-tables — verified it dropped 18/118).
+Always extract with a DIRECT privileged connection (libpq `pg_dump`), never
+`supabase db dump --linked` (it silently drops RLS-restricted tables — verified
+it dropped 18/118).
+
+```bash
+pnpm db:baseline:extract:dry-run -- --project-ref=<matu-dev>
+pnpm db:baseline:extract -- --project-ref=<matu-dev>
+```
+
+After accepting a regenerated baseline, re-apply
+`supabase/managed-surfaces.install.sql` on a fresh env, run `pnpm db:types`
+against the updated type-source schema, then run `pnpm typecheck && pnpm lint &&
+pnpm build`.

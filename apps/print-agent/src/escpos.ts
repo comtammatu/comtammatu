@@ -240,7 +240,7 @@ export type BillBase = {
   branch_name?: string;
   branch_address?: string;
   branch_phone?: string;
-  /** MST doanh nghiệp (optional). */
+  /** MST người bán (optional). */
   branch_tax_code?: string | null;
   order_number: string;
   order_type: "dine_in" | "takeaway";

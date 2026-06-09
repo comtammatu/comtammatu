@@ -1,3 +1,0 @@
-# Single-tenant CTCP — every path falls back to the same owner.
-# Add path-specific overrides above this rule when the team grows.
-* @comtammatu

@@ -92,7 +92,7 @@ GIÁ THẤP / ĐƠN GIẢN
 | Multi-provider (Viettel/MISA/VNPT) | ✅            | ✅ (tự có)        | ✅ (tự có)       | ✅ (tự có)          | 🟡       | ⚠️    |
 | Hóa đơn đầu vào / Supplier         | ✅            | 🟡                | ❌               | 🟡                  | ❌       | ❌    |
 | 3-way matching (PO/GRN/HĐ)         | ✅            | ❌                | ❌               | ❌                  | ❌       | ❌    |
-| VAT khấu trừ đầu vào               | ✅            | ❌                | ❌               | 🟡                  | ❌       | ❌    |
+| Đối soát chứng từ đầu vào          | ✅            | ❌                | ❌               | 🟡                  | ❌       | ❌    |
 | Báo cáo thuế GTGT hàng tháng       | ✅            | 🟡                | 🟡               | ✅                  | ❌       | ❌    |
 
 ### 2.5 Kho hàng (Inventory)
@@ -141,7 +141,7 @@ GIÁ THẤP / ĐƠN GIẢN
 | Báo cáo theo chi nhánh       | ✅            | ✅   | ✅       | ✅                | ✅       | ✅    |
 | Phân tích menu / top món     | ✅            | ✅   | ✅       | ✅                | ✅       | 🟡    |
 | Food cost analysis           | ✅            | ✅   | 🟡       | ✅                | 🟡       | ❌    |
-| Báo cáo tài chính (VAS)      | ✅            | ❌   | ❌       | ✅ (MISA kế toán) | ❌       | ❌    |
+| Export kế toán / thuế HKD    | ✅            | ❌   | 🟡       | ✅ (MISA kế toán) | ❌       | ❌    |
 | Báo cáo lương & thuế TNCN    | ✅            | ⚠️   | ❌       | ⚠️                | ❌       | ❌    |
 | Báo cáo thuế GTGT            | ✅            | 🟡   | 🟡       | ✅                | ❌       | ❌    |
 | Materialized Views / OLAP    | ✅            | ❌   | ❌       | ❌                | ❌       | ❌    |
@@ -181,17 +181,21 @@ GIÁ THẤP / ĐƠN GIẢN
 | **MISA CukCuk**          | "Quản lý nhà hàng thông minh"   | Tích hợp kế toán MISA, e-invoice miễn phí   |
 | **Sapo FnB**             | "Quản lý đa kênh cho F&B"       | Online + offline, Facebook orders           |
 | **bePOS**                | "Zero learning curve POS"       | Mobile-first, siêu dễ dùng                  |
-| **Cơm Tấm Má Tư System** | Internal tool — custom-built    | Tùy biến 100%, pháp lý CTCP, không phí/user |
+| **Cơm Tấm Má Tư System** | Internal tool — custom-built    | Tùy biến 100%, phù hợp HKD F&B multi-branch, không phí/user |
 
 ### 3.2 Khoảng trống chưa ai chiếm (Positioning Gaps)
 
 Sau khi phân tích, có **3 khoảng trắng** rõ ràng mà không đối thủ nào lấp đầy tốt:
 
-**Gap 1 — Tuân thủ pháp lý CTCP đầy đủ**
-Không đối thủ nào hỗ trợ đồng bộ: HĐLĐ đúng BLLĐ 2019 + BHXH/BHYT/BHTN đúng tỷ lệ + thuế TNCN lũy tiến + quyết toán năm + báo cáo tài chính VAS. Đây là **lợi thế cạnh tranh lớn nhất** của hệ thống khi phục vụ CTCP.
+**Gap 1 — Tuân thủ HKD F&B sau bỏ thuế khoán**
+Không đối thủ nào hỗ trợ thật sự liền mạch: POS → HĐĐT HKD → sổ doanh thu
+theo chi nhánh → kho/giá vốn món → chứng từ NCC → export kế toán/thuế. Đây
+là lợi thế lớn nhất của hệ thống khi phục vụ HKD F&B multi-branch từ 2026.
 
-**Gap 2 — 3-way matching Procurement**
-Không ai có PO → GRN → Supplier Invoice với VAT khấu trừ đầu vào tự động. Chuỗi F&B lớn phải làm thủ công hoặc dùng thêm phần mềm kế toán riêng.
+**Gap 2 — Đối soát mua hàng F&B**
+Không ai có PO → GRN → hóa đơn NCC → chênh lệch giá/số lượng đủ sát với bếp
+trung tâm và kho chi nhánh. HKD F&B thường phải làm thủ công hoặc dùng thêm
+phần mềm kế toán riêng.
 
 **Gap 3 — Audit trail & RLS bảo mật cấp DB**
 Các phần mềm SaaS dùng logic phân quyền ở application layer. Hệ thống này dùng Row Level Security ở PostgreSQL → không thể bị bypass dù có bug ở tầng app.
@@ -238,7 +242,7 @@ Hệ thống Cơm Tấm Má Tư không cần cạnh tranh trực tiếp với Sa
 
 1. **Zero per-user, per-branch cost** — Không phí theo số user hay chi nhánh khi scale.
 2. **Full data ownership** — Không phụ thuộc vendor, không lo chính sách thay đổi, không data lock-in.
-3. **Tuân thủ pháp lý CTCP hoàn chỉnh** — HĐLĐ + BHXH + TNCN + HĐĐT + VAS reporting theo đúng pháp luật VN.
+3. **Tuân thủ HKD F&B thực dụng** — HĐĐT HKD, sổ doanh thu, chứng từ NCC, kho/giá vốn, HĐLĐ, BHXH và TNCN theo đúng phạm vi vận hành.
 4. **Có thể tùy biến 100%** — Workflow đặc thù của Cơm Tấm Má Tư được xây từ đầu, không ép vào template generic.
 5. **Security-first (RLS tầng DB)** — Không phần mềm SaaS nào có bảo mật dữ liệu ở tầng DB như PostgreSQL RLS.
 

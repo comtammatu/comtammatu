@@ -1,8 +1,13 @@
-# ADR 0005 — Owner Identity Dual Source
+# ADR 0005 — Owner Identity Source Separation
 
 **Status:** Accepted (2026-05-07)
 **Context:** H3b deferred work from H3a security audit
 **Decision drivers:** 4-agent debate (planner + analyst + architect + critic)
+
+This ADR remains active because the schema has a current `tenants.owner_user_id`
+column, but runtime owner-bypass intentionally still uses `positions.code='owner'`.
+It prevents future work from merging three different concepts: legal signatory,
+HR owner position, and canonical owner auth identity.
 
 ## Context
 
@@ -12,7 +17,7 @@ H3b was originally proposed to add `tenants.owner_user_id UUID` column AND exten
 
 Three concepts were conflated in original code:
 
-1. `tenants.representative TEXT` — Legal signatory name on CTCP documents
+1. `tenants.representative TEXT` — HKD owner / registered representative name for legal documents
 2. `positions.code='owner'` — HR label (display, JWT user_role derivation)
 3. (none) — Canonical auth identity for RLS owner-bypass
 
@@ -20,13 +25,13 @@ Three concepts were conflated in original code:
 
 **Adopt minimum-regret synthesis (Architect's Antithesis):**
 
-1. **Add `tenants.owner_user_id UUID REFERENCES auth.users(id) ON DELETE RESTRICT NOT NULL`** as the data foundation for canonical auth identity (this ADR + migration `20260601500000`).
+1. **Add `tenants.owner_user_id UUID REFERENCES auth.users(id) ON DELETE RESTRICT NOT NULL`** as the data foundation for canonical auth identity (this ADR + archived migration `20260601500000`, now folded into the baseline).
 2. **DEFER updating `has_permission()` / `_auth_v2_is_owner()` / `has_permission_any()`** to add second OR branch. No functional regression to fix — H3a sufficient.
 3. **Three concepts kept separate** with clear semantics:
 
 | Column                   | Type                              | Purpose                          | Owner-bypass?        |
 | ------------------------ | --------------------------------- | -------------------------------- | -------------------- |
-| `tenants.representative` | TEXT                              | Legal signatory name (CTCP docs) | ❌ Never             |
+| `tenants.representative` | TEXT                              | HKD owner / registered representative name | ❌ Never             |
 | `positions.code='owner'` | (lookup via profiles.position_id) | HR label, JWT user_role source   | ✅ Currently         |
 | `tenants.owner_user_id`  | UUID FK auth.users                | Canonical auth identity          | ⚠️ Future (deferred) |
 
@@ -113,9 +118,10 @@ UPDATE tenants t
 
 ## References
 
-- `supabase/migrations/20260601500000_h3b_tenants_owner_user_id.sql` — implementation
-- `supabase/migrations/20260601100000_auth_v3_h3a_position_id_required.sql` — H3a (closes silent-demote at source)
-- `supabase/migrations/20260423040000_auth_v2_m5_hotfix_has_permission.sql` — current owner-bypass (positions-based)
-- `supabase/migrations/20260401000000_initial_schema.sql:28` — `tenants.representative TEXT` (legal name, NOT auth)
+- `supabase/migrations/00000000000000_baseline.sql` — current schema baseline with `tenants.owner_user_id`
+- `supabase/migrations/_archive/20260601500000_h3b_tenants_owner_user_id.sql` — implementation history
+- `supabase/migrations/_archive/20260601100000_auth_v3_h3a_position_id_required.sql` — H3a (closes silent-demote at source)
+- `supabase/migrations/_archive/20260423040000_auth_v2_m5_hotfix_has_permission.sql` — current owner-bypass lineage (positions-based)
+- `supabase/migrations/_archive/20260401000000_initial_schema.sql:28` — `tenants.representative TEXT` (legal name, NOT auth)
 - `tasks/regressions.md` — TENANT-OWNER-USER-ID-CANONICAL (new), PROFILES-POSITION-ID-MUST-NOT-NULL (H3a sibling)
 - `docs/modules/auth.md` — Invariants section

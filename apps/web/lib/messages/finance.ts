@@ -50,7 +50,7 @@ export const finance = {
       "Chỉ hiện khi bạn có nhiều chi nhánh. Công thức vẫn giống màn hình cơ bản của chủ quán.",
     grossMarginLine: (margin: string) => `${margin} biên gộp`,
     stageBranchControl: "Theo dõi nhiều chi nhánh",
-    stageCompanyReporting: "Báo cáo công ty để riêng",
+    stageCompanyReporting: "Báo cáo kế toán để riêng",
     exceptionsTitle: "Điểm cần kiểm tra",
     exceptionsDescription:
       "Chỉ đưa ra ngoại lệ vận hành: lệch quỹ, thiếu giá vốn, HĐĐT kẹt, công nợ NCC hoặc chi vận hành chưa ghi nhận.",
@@ -290,7 +290,7 @@ export const finance = {
       apPayment: "Thanh toán NCC (331)",
     },
     status: {
-      enterpriseWide: "Toàn doanh nghiệp",
+      enterpriseWide: "Toàn HKD",
       different: "Lệch",
       notApplicable: "Không áp dụng",
       matched: "Khớp",

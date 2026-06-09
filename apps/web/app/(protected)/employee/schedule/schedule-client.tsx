@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { cn } from "@comtammatu/ui";
+import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Skeleton } from "@comtammatu/ui/components/skeleton";
 import {
@@ -22,15 +23,17 @@ import { EmployeePanel } from "../components/employee-page";
 import {
   fetchMySchedule,
   type ScheduleAttendance,
+  type ScheduleMonthData,
   type ScheduleShift,
-  type ScheduleWeekData,
 } from "./actions";
 import {
-  addVNDateDays,
+  formatISODateParts,
   formatVNTime,
   getVNDateString,
-  getVNWeekStartDateString,
+  getVNMonthEndDateString,
+  getVNMonthStartDateString,
   parseISODateParts,
+  shiftVNMonth,
 } from "@comtammatu/shared/time";
 import { messages } from "@lib/messages";
 
@@ -43,34 +46,101 @@ const ATTENDANCE_STATUS_LABELS: Record<string, string> = {
   half_day: "N\u1eeda ng\u00e0y",
 };
 
+const ATTENDANCE_STATUS_VARIANTS: Record<string, BadgeProps["variant"]> = {
+  present: "success",
+  late: "warning",
+  absent: "destructive",
+  half_day: "info",
+};
+
+interface CalendarCell {
+  dateStr: string | null;
+  dayNumber: number | null;
+  isToday: boolean;
+}
+
+interface ScheduleClientProps {
+  initialData: ScheduleMonthData;
+  initialMonthStart: string;
+}
+
 function formatDate(dateStr: string): string {
   const parts = parseISODateParts(dateStr);
   if (!parts) return dateStr;
   return `${String(parts.day).padStart(2, "0")}/${String(parts.month).padStart(2, "0")}/${parts.year}`;
 }
 
+function formatMonthTitle(monthStartStr: string): string {
+  const parts = parseISODateParts(monthStartStr);
+  if (!parts) return monthStartStr;
+  return `${copy.monthLabel} ${parts.month}/${parts.year}`;
+}
+
 function formatTime(iso: string | null | undefined): string {
   return iso ? formatVNTime(iso) : "\u2014";
 }
 
-function getDayName(dateStr: string): string {
-  const parts = parseISODateParts(dateStr);
-  if (!parts) return "";
-  const day = new Date(
-    Date.UTC(parts.year, parts.month - 1, parts.day, 5, 0, 0),
-  ).getUTCDay();
-  return copy.days[day] ?? "";
+function formatShiftTime(shift: ScheduleShift): string {
+  return `${shift.start_time.slice(0, 5)} - ${shift.end_time.slice(0, 5)}`;
 }
 
-function generateWeekDates(mondayStr: string): string[] {
-  return Array.from({ length: 7 }, (_, index) =>
-    addVNDateDays(mondayStr, index),
+function getMonthStartForOffset(monthStartStr: string, delta: number): string {
+  const parts = parseISODateParts(monthStartStr);
+  if (!parts) return getVNMonthStartDateString();
+  const shifted = shiftVNMonth(parts.year, parts.month, delta);
+  return formatISODateParts({ ...shifted, day: 1 });
+}
+
+function generateMonthCalendarCells(monthStartStr: string): CalendarCell[] {
+  const parts = parseISODateParts(monthStartStr);
+  if (!parts) return generateMonthCalendarCells(getVNMonthStartDateString());
+
+  const firstDate = new Date(Date.UTC(parts.year, parts.month - 1, 1, 5, 0, 0));
+  const mondayFirstOffset = (firstDate.getUTCDay() + 6) % 7;
+  const daysInMonth = Number(
+    getVNMonthEndDateString(parts.year, parts.month).slice(-2),
   );
+  const totalCells = Math.max(
+    35,
+    Math.ceil((mondayFirstOffset + daysInMonth) / 7) * 7,
+  );
+  const todayStr = getVNDateString();
+
+  return Array.from({ length: totalCells }, (_, index) => {
+    const dayNumber = index - mondayFirstOffset + 1;
+    if (dayNumber < 1 || dayNumber > daysInMonth) {
+      return { dateStr: null, dayNumber: null, isToday: false };
+    }
+
+    const dateStr = formatISODateParts({ ...parts, day: dayNumber });
+    return {
+      dateStr,
+      dayNumber,
+      isToday: dateStr === todayStr,
+    };
+  });
 }
 
-const EMPTY_WEEK: ScheduleWeekData = { shifts: [], attendance: [] };
-const SCHEDULE_SKELETON_FIXTURE_DATES = generateWeekDates("2026-01-05");
-const SCHEDULE_SKELETON_TODAY = "2026-01-06";
+function chunkCalendarRows(cells: CalendarCell[]): CalendarCell[][] {
+  const rows: CalendarCell[][] = [];
+  for (let index = 0; index < cells.length; index += 7) {
+    rows.push(cells.slice(index, index + 7));
+  }
+  return rows;
+}
+
+function getAttendanceLabel(attendance: ScheduleAttendance): string {
+  return ATTENDANCE_STATUS_LABELS[attendance.status] ?? attendance.status;
+}
+
+function getAttendanceVariant(
+  attendance: ScheduleAttendance,
+): BadgeProps["variant"] {
+  return ATTENDANCE_STATUS_VARIANTS[attendance.status] ?? "outline";
+}
+
+const EMPTY_MONTH: ScheduleMonthData = { shifts: [], attendance: [] };
+const SCHEDULE_SKELETON_FIXTURE_MONTH = "2026-01-01";
 const SCHEDULE_SKELETON_FIXTURE_SHIFTS: ScheduleShift[] = [
   {
     date: "2026-01-05",
@@ -85,13 +155,13 @@ const SCHEDULE_SKELETON_FIXTURE_SHIFTS: ScheduleShift[] = [
     end_time: "22:00",
   },
   {
-    date: "2026-01-08",
+    date: "2026-01-15",
     shift_name: "Ca s\u00e1ng",
     start_time: "07:00",
     end_time: "14:00",
   },
   {
-    date: "2026-01-10",
+    date: "2026-01-30",
     shift_name: "Ca t\u1ed1i",
     start_time: "16:00",
     end_time: "23:00",
@@ -112,44 +182,35 @@ const SCHEDULE_SKELETON_FIXTURE_ATTENDANCE: ScheduleAttendance[] = [
   },
 ];
 
-interface ScheduleClientProps {
-  initialData: ScheduleWeekData;
-  initialWeekStart: string;
-}
-
 function ScheduleSkeletonFallback() {
   return (
     <div className="rounded-md border bg-card">
-      <Table className="min-w-max table-fixed border-collapse">
+      <Table className="table-fixed border-collapse">
         <TableHeader>
           <TableRow className="bg-muted/40 hover:bg-muted/40">
-            <TableHead className="sticky left-0 z-20 w-24 border-r bg-muted/40">
-              <Skeleton className="h-4 w-12" />
-            </TableHead>
-            {Array.from({ length: 7 }).map((_, index) => (
+            {copy.monthWeekdays.map((day) => (
               <TableHead
-                key={index}
-                className="min-w-28 border-l p-2 align-top whitespace-normal"
+                key={day}
+                className="h-9 border-l text-center text-xs font-medium whitespace-normal first:border-l-0"
               >
-                <Skeleton className="mx-auto h-4 w-16" />
-                <Skeleton className="mx-auto mt-2 h-3 w-20" />
+                {day}
               </TableHead>
             ))}
           </TableRow>
         </TableHeader>
         <TableBody>
-          {Array.from({ length: 3 }).map((_, rowIndex) => (
+          {Array.from({ length: 5 }).map((_, rowIndex) => (
             <TableRow key={rowIndex} className="hover:bg-transparent">
-              <TableHead className="sticky left-0 z-10 w-24 border-r bg-card">
-                <Skeleton className="h-4 w-14" />
-              </TableHead>
               {Array.from({ length: 7 }).map((_, cellIndex) => (
                 <TableCell
                   key={cellIndex}
-                  className="min-w-28 border-l p-2 whitespace-normal"
+                  className="border-l border-t p-1 align-top whitespace-normal first:border-l-0"
                 >
-                  <Skeleton className="h-4 w-20" />
-                  <Skeleton className="mt-2 h-3 w-16" />
+                  <div className="flex min-h-24 flex-col gap-2 rounded-md p-2">
+                    <Skeleton className="h-4 w-6" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-3 w-3/4" />
+                  </div>
                 </TableCell>
               ))}
             </TableRow>
@@ -160,25 +221,92 @@ function ScheduleSkeletonFallback() {
   );
 }
 
-function formatShiftTime(shift: ScheduleShift): string {
-  return `${shift.start_time.slice(0, 5)} - ${shift.end_time.slice(0, 5)}`;
-}
+function CalendarCellContent({
+  attendance,
+  cell,
+  shift,
+}: {
+  attendance: ScheduleAttendance | undefined;
+  cell: CalendarCell;
+  shift: ScheduleShift | undefined;
+}) {
+  if (!cell.dateStr || cell.dayNumber == null) {
+    return (
+      <div aria-hidden="true" className="min-h-24 rounded-md bg-muted/30" />
+    );
+  }
 
-function getCalendarCellClass(isToday: boolean): string {
-  return cn(
-    "min-w-28 border-l p-2 align-top whitespace-normal",
-    isToday && "bg-primary/5",
+  const hasClock = Boolean(attendance?.check_in || attendance?.check_out);
+
+  return (
+    <div
+      className={cn(
+        "flex min-h-24 flex-col gap-1 rounded-md p-2",
+        cell.isToday && "bg-primary/5 ring-1 ring-primary/30",
+      )}
+    >
+      <div className="flex items-start justify-between gap-1">
+        <span
+          className={cn(
+            "font-mono text-sm font-semibold tabular-nums",
+            cell.isToday ? "text-primary" : "text-foreground",
+          )}
+        >
+          {cell.dayNumber}
+        </span>
+        {cell.isToday ? (
+          <Badge className="hidden max-w-full truncate sm:inline-flex">
+            {copy.today}
+          </Badge>
+        ) : null}
+      </div>
+
+      <div className="flex min-w-0 flex-col gap-1">
+        <span
+          className={cn(
+            "text-xs font-medium leading-5",
+            !shift && "text-muted-foreground",
+          )}
+        >
+          {shift?.shift_name ?? copy.rest}
+        </span>
+        <span className="font-mono text-xs tabular-nums text-muted-foreground">
+          {shift ? formatShiftTime(shift) : "\u2014"}
+        </span>
+      </div>
+
+      <div className="mt-auto flex min-w-0 flex-col gap-1">
+        {attendance ? (
+          <>
+            <Badge
+              variant={getAttendanceVariant(attendance)}
+              className="max-w-full truncate"
+            >
+              {getAttendanceLabel(attendance)}
+            </Badge>
+            {hasClock ? (
+              <span className="font-mono text-xs tabular-nums text-muted-foreground">
+                {copy.checkInShort} {formatTime(attendance.check_in)} {"\u00b7"}{" "}
+                {copy.checkOutShort} {formatTime(attendance.check_out)}
+              </span>
+            ) : null}
+          </>
+        ) : (
+          <span className="text-xs text-muted-foreground">
+            {copy.noAttendance}
+          </span>
+        )}
+      </div>
+    </div>
   );
 }
 
-function ScheduleWeekCalendarTable({
+function ScheduleMonthCalendarTable({
   data,
-  todayStr,
-  weekDates,
+  monthStart,
 }: {
-  data: ScheduleWeekData;
-  todayStr: string;
-  weekDates: string[];
+  data: ScheduleMonthData;
+  monthStart: string;
 }) {
   const shiftsByDate = new Map<string, ScheduleShift>();
   for (const shift of data.shifts) {
@@ -190,150 +318,47 @@ function ScheduleWeekCalendarTable({
     attendanceByDate.set(attendance.date, attendance);
   }
 
-  const calendarDays = weekDates.map((dateStr) => ({
-    attendance: attendanceByDate.get(dateStr),
-    dateStr,
-    dayName: getDayName(dateStr),
-    isToday: dateStr === todayStr,
-    shift: shiftsByDate.get(dateStr),
-  }));
+  const rows = chunkCalendarRows(generateMonthCalendarCells(monthStart));
 
   return (
     <div className="rounded-md border bg-card">
-      <Table className="min-w-max table-fixed border-collapse">
+      <Table className="table-fixed border-collapse">
         <TableHeader>
           <TableRow className="bg-muted/40 hover:bg-muted/40">
-            <TableHead className="sticky left-0 z-20 w-24 border-r bg-muted/40 align-bottom whitespace-normal">
-              <span className="font-heading text-sm font-semibold">
-                {copy.calendarAxisLabel}
-              </span>
-            </TableHead>
-            {calendarDays.map((day) => (
+            {copy.monthWeekdays.map((day) => (
               <TableHead
-                key={day.dateStr}
-                className={cn(
-                  "min-w-28 border-l p-2 text-center align-top whitespace-normal",
-                  day.isToday && "bg-primary/10 text-primary",
-                )}
+                key={day}
+                className="h-9 border-l text-center text-xs font-medium whitespace-normal first:border-l-0"
                 scope="col"
               >
-                <span className="block text-xs font-medium">
-                  {day.dayName}
-                </span>
-                <span className="mt-1 block font-mono text-sm font-semibold tabular-nums">
-                  {formatDate(day.dateStr)}
-                </span>
-                {day.isToday ? (
-                  <span className="mt-1 block text-xs font-medium">
-                    {copy.today}
-                  </span>
-                ) : null}
+                {day}
               </TableHead>
             ))}
           </TableRow>
         </TableHeader>
         <TableBody>
-          <TableRow className="hover:bg-transparent">
-            <TableHead
-              scope="row"
-              className="sticky left-0 z-10 w-24 border-r bg-card text-xs text-muted-foreground whitespace-normal"
-            >
-              {copy.rowShift}
-            </TableHead>
-            {calendarDays.map((day) => (
-              <TableCell
-                key={day.dateStr}
-                className={getCalendarCellClass(day.isToday)}
-              >
-                <div className="flex min-h-20 flex-col gap-1">
-                  <span
-                    className={cn(
-                      "text-sm font-medium",
-                      !day.shift && "text-muted-foreground",
-                    )}
-                  >
-                    {day.shift?.shift_name ?? copy.rest}
-                  </span>
-                  <span className="font-mono text-xs tabular-nums text-muted-foreground">
-                    {day.shift ? formatShiftTime(day.shift) : "\u2014"}
-                  </span>
-                </div>
-              </TableCell>
-            ))}
-          </TableRow>
-          <TableRow className="hover:bg-transparent">
-            <TableHead
-              scope="row"
-              className="sticky left-0 z-10 w-24 border-r bg-card text-xs text-muted-foreground whitespace-normal"
-            >
-              {copy.rowAttendance}
-            </TableHead>
-            {calendarDays.map((day) => {
-              const hasClock = Boolean(
-                day.attendance?.check_in || day.attendance?.check_out,
-              );
-
-              return (
+          {rows.map((row, rowIndex) => (
+            <TableRow key={rowIndex} className="hover:bg-transparent">
+              {row.map((cell, cellIndex) => (
                 <TableCell
-                  key={day.dateStr}
-                  className={getCalendarCellClass(day.isToday)}
+                  key={cell.dateStr ?? `${rowIndex}-${cellIndex}`}
+                  className="border-l border-t p-1 align-top whitespace-normal first:border-l-0"
                 >
-                  <div className="flex min-h-20 flex-col gap-1">
-                    {hasClock ? (
-                      <>
-                        <span className="font-mono text-xs tabular-nums">
-                          {copy.checkInShort}{" "}
-                          {formatTime(day.attendance?.check_in)}
-                        </span>
-                        <span className="font-mono text-xs tabular-nums">
-                          {copy.checkOutShort}{" "}
-                          {formatTime(day.attendance?.check_out)}
-                        </span>
-                      </>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">
-                        {copy.noAttendance}
-                      </span>
-                    )}
-                  </div>
+                  <CalendarCellContent
+                    attendance={
+                      cell.dateStr
+                        ? attendanceByDate.get(cell.dateStr)
+                        : undefined
+                    }
+                    cell={cell}
+                    shift={
+                      cell.dateStr ? shiftsByDate.get(cell.dateStr) : undefined
+                    }
+                  />
                 </TableCell>
-              );
-            })}
-          </TableRow>
-          <TableRow className="hover:bg-transparent">
-            <TableHead
-              scope="row"
-              className="sticky left-0 z-10 w-24 border-r bg-card text-xs text-muted-foreground whitespace-normal"
-            >
-              {copy.rowStatus}
-            </TableHead>
-            {calendarDays.map((day) => {
-              const attendanceLabel = day.attendance
-                ? (ATTENDANCE_STATUS_LABELS[day.attendance.status] ??
-                  day.attendance.status)
-                : copy.noAttendance;
-
-              return (
-                <TableCell
-                  key={day.dateStr}
-                  className={getCalendarCellClass(day.isToday)}
-                >
-                  <div className="flex min-h-20 items-start">
-                    <span
-                      className={cn(
-                        "text-xs font-medium",
-                        day.attendance
-                          ? "text-foreground"
-                          : "text-muted-foreground",
-                      )}
-                    >
-                      {attendanceLabel}
-                    </span>
-                  </div>
-                </TableCell>
-              );
-            })}
-          </TableRow>
+              ))}
+            </TableRow>
+          ))}
         </TableBody>
       </Table>
     </div>
@@ -342,81 +367,85 @@ function ScheduleWeekCalendarTable({
 
 export function ScheduleClient({
   initialData,
-  initialWeekStart,
+  initialMonthStart,
 }: ScheduleClientProps) {
-  const [weekStart, setWeekStart] = useState(initialWeekStart);
-  const [weekData, setWeekData] = useState<ScheduleWeekData>(initialData);
+  const [monthStart, setMonthStart] = useState(initialMonthStart);
+  const [monthData, setMonthData] = useState<ScheduleMonthData>(initialData);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  const todayStr = getVNDateString();
-  const currentMonday = getVNWeekStartDateString();
-  const isCurrentWeek = weekStart === currentMonday;
-  const weekDates = generateWeekDates(weekStart);
+  const currentMonthStart = getVNMonthStartDateString();
+  const isCurrentMonth = monthStart === currentMonthStart;
+  const monthParts = parseISODateParts(monthStart);
+  const monthEndStr = monthParts
+    ? getVNMonthEndDateString(monthParts.year, monthParts.month)
+    : monthStart;
+  const monthRangeLabel =
+    monthEndStr === monthStart
+      ? formatDate(monthStart)
+      : `${formatDate(monthStart)} - ${formatDate(monthEndStr)}`;
 
-  function loadWeek(newWeekStart: string) {
-    setWeekStart(newWeekStart);
+  function loadMonth(newMonthStart: string) {
+    setMonthStart(newMonthStart);
     setError(null);
     startTransition(async () => {
-      const result = await fetchMySchedule(newWeekStart);
+      const result = await fetchMySchedule(newMonthStart);
       if (result.success) {
-        setWeekData(result.data ?? EMPTY_WEEK);
+        setMonthData(result.data ?? EMPTY_MONTH);
       } else {
         setError(result.error ?? copy.loadError);
-        setWeekData(EMPTY_WEEK);
+        setMonthData(EMPTY_MONTH);
       }
     });
   }
 
-  function goToPrevWeek() {
-    loadWeek(addVNDateDays(weekStart, -7));
+  function goToPrevMonth() {
+    loadMonth(getMonthStartForOffset(monthStart, -1));
   }
 
-  function goToNextWeek() {
-    loadWeek(addVNDateDays(weekStart, 7));
+  function goToNextMonth() {
+    loadMonth(getMonthStartForOffset(monthStart, 1));
   }
 
-  function goToCurrentWeek() {
-    loadWeek(currentMonday);
+  function goToCurrentMonth() {
+    loadMonth(currentMonthStart);
   }
-
-  const weekEndStr = weekDates[6];
-  const weekLabel = weekEndStr
-    ? `${formatDate(weekStart)} - ${formatDate(weekEndStr)}`
-    : formatDate(weekStart);
 
   return (
     <>
-      <EmployeePanel title={copy.weekPanelTitle}>
+      <EmployeePanel title={copy.monthPanelTitle}>
         <div className="flex items-center justify-between gap-2">
           <Button
             variant="outline"
             size="touch"
             className="w-12 px-0"
-            onClick={goToPrevWeek}
+            onClick={goToPrevMonth}
             disabled={isPending}
-            aria-label={copy.prevWeek}
+            aria-label={copy.prevMonth}
           >
             <IconChevronLeft />
           </Button>
 
           <div className="flex flex-1 flex-col items-center gap-1 text-center">
-            <p className="font-mono text-sm font-medium tabular-nums">
-              {weekLabel}
+            <p className="font-heading text-base font-semibold">
+              {formatMonthTitle(monthStart)}
             </p>
-            {!isCurrentWeek ? (
+            <p className="font-mono text-xs font-medium tabular-nums text-muted-foreground">
+              {monthRangeLabel}
+            </p>
+            {!isCurrentMonth ? (
               <Button
                 type="button"
                 variant="link"
                 size="sm"
-                onClick={goToCurrentWeek}
+                onClick={goToCurrentMonth}
                 disabled={isPending}
               >
-                {copy.currentWeek}
+                {copy.currentMonth}
               </Button>
             ) : (
               <span className="text-xs font-medium text-primary">
-                {copy.currentWeek}
+                {copy.currentMonth}
               </span>
             )}
           </div>
@@ -425,9 +454,9 @@ export function ScheduleClient({
             variant="outline"
             size="touch"
             className="w-12 px-0"
-            onClick={goToNextWeek}
+            onClick={goToNextMonth}
             disabled={isPending}
-            aria-label={copy.nextWeek}
+            aria-label={copy.nextMonth}
           >
             <IconChevronRight />
           </Button>
@@ -445,7 +474,7 @@ export function ScheduleClient({
               variant="outline"
               size="touch"
               className="w-full sm:w-fit"
-              onClick={() => loadWeek(weekStart)}
+              onClick={() => loadMonth(monthStart)}
               disabled={isPending}
             >
               <IconRefresh data-icon="inline-start" />
@@ -454,27 +483,25 @@ export function ScheduleClient({
           </div>
         </EmployeePanel>
       ) : (
-        <EmployeePanel title={copy.weekListTitle}>
+        <EmployeePanel title={copy.monthListTitle}>
           <AppBoneyardSkeleton
-            name="employee-schedule-week"
+            name="employee-schedule-month"
             loading={isPending}
             fixture={
-              <ScheduleWeekCalendarTable
+              <ScheduleMonthCalendarTable
                 data={{
                   shifts: SCHEDULE_SKELETON_FIXTURE_SHIFTS,
                   attendance: SCHEDULE_SKELETON_FIXTURE_ATTENDANCE,
                 }}
-                todayStr={SCHEDULE_SKELETON_TODAY}
-                weekDates={SCHEDULE_SKELETON_FIXTURE_DATES}
+                monthStart={SCHEDULE_SKELETON_FIXTURE_MONTH}
               />
             }
             fallback={<ScheduleSkeletonFallback />}
             snapshotConfig={{ excludeSelectors: ["svg"] }}
           >
-            <ScheduleWeekCalendarTable
-              data={weekData}
-              todayStr={todayStr}
-              weekDates={weekDates}
+            <ScheduleMonthCalendarTable
+              data={monthData}
+              monthStart={monthStart}
             />
           </AppBoneyardSkeleton>
         </EmployeePanel>

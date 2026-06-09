@@ -2,6 +2,10 @@
 
 Use this file before changing UI, UX, route surfaces, styling, frontend copy, shadcn components, or operational POS/KDS flows.
 
+Also read `docs/agent/rules/skills.md` and route UI work through the shadcn/UI
+skill family when available. External design skills never override the Custom
+Theme contract below.
+
 ## Source Of Truth
 
 There is exactly one UI design-system source of truth:

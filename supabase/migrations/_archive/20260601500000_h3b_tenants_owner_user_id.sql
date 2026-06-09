@@ -24,7 +24,7 @@
 --   2. positions.code='owner'       — HR label (display + JWT user_role)
 --   3. tenants.owner_user_id UUID   — canonical auth identity (this file)
 --
--- See: docs/plan/adr/0005-owner-identity-dual-source.md
+-- See: docs/plan/adr/0005-owner-identity-source-separation.md
 -- See: tasks/regressions.md TENANT-OWNER-USER-ID-CANONICAL (new),
 --      PROFILES-POSITION-ID-MUST-NOT-NULL (H3a sibling).
 -- =============================================================
@@ -121,4 +121,4 @@ CREATE INDEX IF NOT EXISTS idx_tenants_owner_user_id
   ON public.tenants (owner_user_id);
 
 COMMENT ON COLUMN public.tenants.owner_user_id IS
-  'Canonical auth identity of tenant owner — UUID FK to auth.users, ON DELETE RESTRICT. NOT NULL since H3b (2026-05-07). Distinct from `representative` (TEXT legal name) and `positions.code=''owner''` (HR label). has_permission() owner-bypass currently uses positions.code=''owner''; this column is data foundation for future ownership transfer RPC + UI. See docs/plan/adr/0005-owner-identity-dual-source.md, regressions.md TENANT-OWNER-USER-ID-CANONICAL.';
+  'Canonical auth identity of tenant owner — UUID FK to auth.users, ON DELETE RESTRICT. NOT NULL since H3b (2026-05-07). Distinct from `representative` (TEXT legal name) and `positions.code=''owner''` (HR label). has_permission() owner-bypass currently uses positions.code=''owner''; this column is data foundation for future ownership transfer RPC + UI. See docs/plan/adr/0005-owner-identity-source-separation.md, regressions.md TENANT-OWNER-USER-ID-CANONICAL.';

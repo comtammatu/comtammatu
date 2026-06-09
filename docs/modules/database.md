@@ -43,23 +43,27 @@ Defined in `packages/database/package.json`:
 
 ## Schema — Current Shape
 
-Source of truth: generated types from the live schema. Snapshot generated from
-the current checkout on 2026-05-27 with `node scripts/project-snapshot.mjs`:
+Source of truth: generated types from the schema used by app code. Snapshot
+generated from the current checkout on 2026-05-30 with
+`node scripts/project-snapshot.mjs`:
 
-- **116 tables**, **9 views**, **241 RPC/SQL functions**
-- **366 migration files** in `supabase/migrations/`
-- **0 enums** — `staff_role` ENUM was dropped (Auth cleanup, 2026-04-23); roles are now strings derived from `positions.legacy_role_code`
+- **118 tables**, **9 views**, **241 RPC/SQL functions**
+- **2 active migration files** in `supabase/migrations/`: the baseline plus
+  forward migrations
+- **0 enums** — staff roles are strings carried in JWT claims; `position` is the
+  canonical claim and `user_role` remains the compatibility claim
 
 ### DB Source-of-Truth Ladder
 
 When facts disagree, trust the higher tier:
 
-| Tier | Source                                                               | What it tells you                                               |
-| ---- | -------------------------------------------------------------------- | --------------------------------------------------------------- |
-| 1    | `packages/database/src/types/database.types.ts`                      | The shape currently usable from app code (post `pnpm db:types`) |
-| 2    | Applied state of dev/prod DB                                         | What RLS, defaults, constraints actually enforce right now      |
-| 3    | `supabase/migrations/*.sql`                                          | What changes have been authored — file existence ≠ applied      |
-| 4    | Hand-written docs (`docs/modules/*`, `docs/spec/database-schema.md`) | Narrative + design rationale; lags 1-3 by definition            |
+| Tier | Source                                          | What it tells you                                               |
+| ---- | ----------------------------------------------- | --------------------------------------------------------------- |
+| 1    | `packages/database/src/types/database.types.ts` | The shape currently usable from app code (post `pnpm db:types`) |
+| 2    | Applied state of dev/prod DB                    | What RLS, defaults, constraints actually enforce right now      |
+| 3    | `supabase/migrations/*.sql`                     | What changes have been authored — file existence ≠ applied      |
+| 4    | `docs/spec/database-schema.md`                  | Schema source ladder, migration layout, and status vocabulary   |
+| 5    | Hand-written module docs                        | Narrative + design rationale; can lag the sources above         |
 
 ### Migration Status Vocabulary
 
@@ -122,7 +126,11 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON public.{table} TO authenticated;
 
 ## Migration Conventions
 
-Migrations live in `supabase/migrations/` with timestamp-prefixed filenames.
+Fresh/dev installs are baseline-first. `supabase/migrations/00000000000000_baseline.sql`
+is the public-schema install path; `supabase/managed-surfaces.install.sql` is the
+privileged companion for extensions, storage policies, realtime, and cron.
+Forward migrations live in `supabase/migrations/` with timestamp-prefixed
+filenames after the baseline.
 
 | Convention    | Rule                                                              |
 | ------------- | ----------------------------------------------------------------- |
@@ -131,7 +139,7 @@ Migrations live in `supabase/migrations/` with timestamp-prefixed filenames.
 | Time          | `TIMESTAMPTZ`                                                     |
 | Text          | `TEXT` (never VARCHAR)                                            |
 | Unique        | `UNIQUE(field, tenant_id)` — always composite                     |
-| Apply         | NEVER before PR merge — owner runs `supabase db push` after merge |
+| Apply         | NEVER before PR merge — owner runs the approved Supabase apply path after merge |
 | After applied | Run `pnpm db:types` to regenerate types                           |
 
 ## Security Functions (SECURITY DEFINER)

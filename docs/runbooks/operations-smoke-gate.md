@@ -26,7 +26,7 @@ chứng runtime trên dev/test/staging được duyệt.
 3. [docs/ref/inventory-sop.md](../ref/inventory-sop.md) cho luồng kho và tiêu hao.
 4. [docs/ref/einvoice-tax.md](../ref/einvoice-tax.md) cho HĐĐT.
 5. [docs/runbooks/pos-kds/print-agent-pilot.md](pos-kds/print-agent-pilot.md) cho agent in.
-6. [docs/runbooks/hddt-hybrid-cutover.md](hddt-hybrid-cutover.md) cho smoke Viettel S-invoice.
+6. [docs/runbooks/hddt-viettel-operations.md](hddt-viettel-operations.md) cho smoke Viettel S-invoice.
 
 ## Điều Kiện Vào Gate
 

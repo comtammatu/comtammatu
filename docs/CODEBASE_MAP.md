@@ -20,7 +20,7 @@
 | Database       | [database.md](modules/database.md)             | Supabase clients, types, migrations, RLS policies       | **High** — data integrity   |
 | Finance        | [finance.md](modules/finance.md)               | Finance Basic boundary, daily money, HĐĐT, payables     | **High** — cash/legal data  |
 | Web App        | [web-app.md](modules/web-app.md)               | Next.js routes, layouts, server actions, surface shells | Medium                      |
-| UI             | [ui.md](modules/ui.md)                         | Custom Theme application, shadcn primitives, surfaces    | Low                         |
+| UI             | [ui.md](modules/ui.md)                         | Custom Theme application, shadcn primitives, surfaces   | Low                         |
 | Security       | [security.md](modules/security.md)             | Rate limiting (Upstash Redis)                           | Medium                      |
 | Infrastructure | [infrastructure.md](modules/infrastructure.md) | Monorepo, build, deploy, environment                    | Medium                      |
 
@@ -29,6 +29,7 @@
 Khi cần đi sâu hơn theo loại tài liệu:
 
 - [docs/README.md](README.md) — cổng vào chung cho toàn bộ docs
+- [agent/rules/skills.md](agent/rules/skills.md) — routing cho external skills, plugins, MCP/browser tools, và subagents
 - [docs/ref/glossary.md](ref/glossary.md) — glossary chuẩn duy nhất cho toàn repo
 - [docs/architecture/README.md](architecture/README.md) — kiến trúc hệ thống và cross-cutting docs
 - [ref/README.md](ref/README.md) — canonical reference docs
@@ -52,7 +53,7 @@ source-of-truth inputs.
 | ------------------- | ------------------------------------------------------------------------------------- |
 | Web App             | Route surfaces, Server Actions, realtime hooks, POS/KDS/Admin/Inventory/Finance/HR UI |
 | Data Platform       | Supabase migrations, generated types, RLS, RPCs, database clients                     |
-| Docs And Operations | Source-of-truth docs, runbooks, task tracker, agent rules                             |
+| Docs And Operations | Source-of-truth docs, runbooks, task tracker, agent rules, skill routing              |
 | Shared Domain       | Business rules, auth helpers, provider contracts, formatting, labels                  |
 | UI System           | Custom Theme contract, shadcn/Radix primitive baseline, app surface components        |
 | Tooling And Config  | Turborepo, lint/build/test config, deployment config, scripts                         |
@@ -97,7 +98,8 @@ Use this flow before broad implementation work. It reduces route drift, UI drift
 ```mermaid
 flowchart LR
     request["New feature / bug / refactor"] --> classify["Classify surface<br/>public, protected, branch, admin, finance, inventory, POS/KDS"]
-    classify --> docs["Read source docs<br/>module doc + runbook + tasks/regressions"]
+    classify --> skills["Select skill plan<br/>docs/agent/rules/skills.md"]
+    skills --> docs["Read source docs<br/>module doc + runbook + tasks/regressions"]
     docs --> auth["Check control plane<br/>proxy.ts, route-resolution.ts, module-acl.ts, scope.ts"]
     auth --> data{"Touches database?"}
     data -->|yes| rpc["Design RLS/RPC/migration first<br/>atomic multi-item writes via RPC"]
@@ -112,6 +114,8 @@ flowchart LR
 
 Decision rules:
 
+- Skill/plugin selection starts at `docs/agent/rules/skills.md`. Do not let an
+  external skill override repo authority.
 - Route behavior starts at `apps/web/proxy.ts` and `packages/shared/src/auth/route-resolution.ts`. Do not fix route drift inside pages first.
 - ACL ownership starts at `packages/shared/src/auth/module-acl.ts`. Do not create parallel role maps in route components.
 - Scope belongs in URL params and JWT claims. Do not persist branch/tenant scope in browser storage.
@@ -123,17 +127,18 @@ Decision rules:
 
 Use this matrix when adding or moving files. It is the practical replacement for "where should this live?"
 
-| Change type                                  | Primary location                                                    | Must check                                                     | Avoid                                           |
-| -------------------------------------------- | ------------------------------------------------------------------- | -------------------------------------------------------------- | ----------------------------------------------- |
-| New protected route                          | `apps/web/app/(protected)/...`                                      | `proxy.ts`, `route-resolution.ts`, `module-acl.ts`, module doc | Duplicating ACL in layouts/pages                |
-| New Server Action                            | Adjacent `actions.ts` under route family                            | Zod schema, `withAction`/auth helper, RLS/RPC contract         | Returning raw Supabase error messages           |
-| New shared business rule                     | `packages/shared/src/<domain>/...`                                  | Existing package exports and tests                             | Importing app-only code into shared package     |
-| New database mutation spanning multiple rows | `supabase/migrations/*.sql` RPC + typed caller                      | RLS, GRANTs, `pnpm db:types` after apply                       | Multi-query partial writes in Server Actions    |
-| New Supabase client usage                    | `packages/database/src/supabase/*` or server-only barrel            | Import boundary table below                                    | `@comtammatu/database` barrel in `"use client"` |
-| New reusable UI primitive                    | `packages/ui/src/components/*`                                      | `docs/spec/design-system.md`, active shadcn baseline, `scripts/check-ui-contract.mjs` | Page-local one-off primitive clones             |
-| New route-specific UI composition            | `apps/web/app/**/_components` or route folder                       | `docs/spec/design-system.md`, shadcn primitives, surface components                   | New visual language outside design system       |
-| New print behavior                           | `apps/print-agent/src/*` plus branch settings route if configurable | Branch-scoped config, no deploy-only layout changes            | Hardcoded receipt/format changes per branch     |
-| New operational rule/runbook                 | `docs/modules/*`, `docs/runbooks/*`, `tasks/*`                      | `docs/agent/rules/references.md`                               | Separate agent-only doc trees                   |
+| Change type                                  | Primary location                                                    | Must check                                                                            | Avoid                                            |
+| -------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| New protected route                          | `apps/web/app/(protected)/...`                                      | `proxy.ts`, `route-resolution.ts`, `module-acl.ts`, module doc                        | Duplicating ACL in layouts/pages                 |
+| New Server Action                            | Adjacent `actions.ts` under route family                            | Zod schema, `withAction`/auth helper, RLS/RPC contract                                | Returning raw Supabase error messages            |
+| New shared business rule                     | `packages/shared/src/<domain>/...`                                  | Existing package exports and tests                                                    | Importing app-only code into shared package      |
+| New database mutation spanning multiple rows | `supabase/migrations/*.sql` RPC + typed caller                      | RLS, GRANTs, `pnpm db:types` after apply                                              | Multi-query partial writes in Server Actions     |
+| New Supabase client usage                    | `packages/database/src/supabase/*` or server-only barrel            | Import boundary table below                                                           | `@comtammatu/database` barrel in `"use client"`  |
+| New reusable UI primitive                    | `packages/ui/src/components/*`                                      | `docs/spec/design-system.md`, active shadcn baseline, `scripts/check-ui-contract.mjs` | Page-local one-off primitive clones              |
+| New route-specific UI composition            | `apps/web/app/**/_components` or route folder                       | `docs/spec/design-system.md`, shadcn primitives, surface components                   | New visual language outside design system        |
+| New print behavior                           | `apps/print-agent/src/*` plus branch settings route if configurable | Branch-scoped config, no deploy-only layout changes                                   | Hardcoded receipt/format changes per branch      |
+| New skill/plugin/tool routing rule           | `docs/agent/rules/skills.md` plus relevant entrypoint docs          | `AGENTS.md`, `docs/agent/rules/references.md`, `docs/agent/rules/workflow.md`         | Divergent workspace-only rules, secrets, plugin caches |
+| New operational rule/runbook                 | `docs/modules/*`, `docs/runbooks/*`, `tasks/*`                      | `docs/agent/rules/references.md`                                                      | Separate agent-only doc trees                    |
 
 ### Pilot Operating Model
 

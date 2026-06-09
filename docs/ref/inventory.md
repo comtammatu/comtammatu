@@ -1,6 +1,6 @@
 # Kho Hàng — Inventory Management
 
-> Áp dụng: Cơm Tấm Má Tư CTCP — quản lý kho nguyên liệu và thành phẩm F&B  
+> Áp dụng: Hộ kinh doanh Cơm Tấm Má Tư — quản lý kho nguyên liệu và thành phẩm F&B
 > Phạm vi: M5 Stock + M5-Ext — **Kho Tổng (nhập NCC) + Bếp trung tâm sản xuất thành phẩm + luân chuyển nội bộ + GRN + stocktake + báo cáo vận hành**. `supplier_invoice`, 3-way matching, payment status, và AP aging là Finance P1/handoff, không chặn Inventory pilot.
 
 ---
@@ -22,7 +22,7 @@ Nếu một ý tưởng mới không rõ nằm ở lớp nào, mặc định coi
 | Nguyên liệu `ingredients`       | Có — migration `20260406310000_stock.sql`                                                         | Thêm semantics rõ hơn cho hao hụt sơ chế                                                                                       | Không mở item master kiểu ERP nhiều lớp                      |
 | Tồn kho `stock_levels`          | Có — `current_quantity`, `avg_unit_cost`                                                          | Giữ WAC nhất quán ở mọi readout quan trọng                                                                                     | Không chuyển sang FIFO engine                                |
 | Biến động `stock_movements`     | Có — `adjustment`, `count_adjustment`, `consumption`, `grn_receipt`, `transfer_*`, `production_*` | Chuẩn hóa reason codes và report semantics                                                                                     | Không mở lot-first ledger / batch accounting                 |
-| Mô hình site                    | Có — `central_warehouse`, `branch`, `central_kitchen`                                             | Hỗ trợ linh hoạt `CW -> Bếp trung tâm`, `CW -> Kho chi nhánh`, `Bếp trung tâm -> Kho chi nhánh`, và tiêu hao tại bếp chi nhánh | Không mở tree `company -> region -> branch -> sub-location`  |
+| Mô hình site                    | Có — `central_warehouse`, `branch`, `central_kitchen`                                             | Hỗ trợ linh hoạt `CW -> Bếp trung tâm`, `CW -> Kho chi nhánh`, `Bếp trung tâm -> Kho chi nhánh`, và tiêu hao tại bếp chi nhánh | Không mở tree nhiều tầng kiểu `legal entity -> region -> branch -> sub-location` |
 | PO / GRN / NCC                  | Có — bảng + RPC `confirm_grn`                                                                     | Thêm `price variance` semantics v1                                                                                             | Không mở PR workflow nhiều bước                              |
 | Luân chuyển nội bộ              | Có — `stock_transfers` + workflow                                                                 | Củng cố short-receipt / discrepancy semantics                                                                                  | Không mở full logistics module                               |
 | HĐ NCC + 3-way matching         | Có nền dữ liệu — `supplier_invoices` + matching logic                                             | Finance P1/handoff sau khi stock loop ổn định                                                                                  | Không chặn Inventory pilot; không mở payment proposal engine |
@@ -38,7 +38,7 @@ Những thứ dưới đây **không phải mục tiêu của Inventory v1/pilot
 - `business_documents` workflow kernel
 - vendor portal
 - payment proposal batches / approval nhiều cấp
-- labor, overhead, intercompany accounting
+- labor, overhead, accounting giữa pháp nhân/nội bộ doanh nghiệp
 - location hierarchy enterprise nhiều tầng
 
 ---
@@ -322,7 +322,7 @@ Ngoài phạm vi v1:
 - payment proposal batches,
 - debit note / credit note engine đầy đủ,
 - approval thanh toán nhiều cấp,
-- intercompany AP.
+- AP giữa pháp nhân/nội bộ doanh nghiệp.
 
 ---
 

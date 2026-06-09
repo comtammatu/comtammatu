@@ -3,7 +3,7 @@
 ## Hierarchy
 
 ```
-Tenant (L0, single row: Cơm Tấm Má Tư CTCP)
+Tenant (L0, single row: Hộ kinh doanh Cơm Tấm Má Tư)
   └── Branch (L1, multiple: Chi nhánh Q1, Q3, ...)
         └── Staff (profiles, role-based)
 ```

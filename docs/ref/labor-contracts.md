@@ -1,6 +1,6 @@
 # Hợp Đồng Lao Động — Labor Contracts
 
-> Áp dụng: Cơm Tấm Má Tư CTCP
+> Áp dụng: Hộ kinh doanh Cơm Tấm Má Tư
 > Khung pháp lý: Bộ luật Lao động 2019 (BLLĐ), NĐ 145/2020, TT 10/2020
 
 ---
@@ -75,7 +75,9 @@
 ### 3.3 Kỳ đóng và hạn nộp
 
 - Đóng **hàng tháng**, hạn nộp: ngày **cuối tháng** của tháng phát sinh
-- Nộp qua cổng BHXH điện tử (baohiemxahoi.gov.vn) hoặc ngân hàng liên kết
+- Nộp qua cổng BHXH điện tử (baohiemxahoi.gov.vn) hoặc ngân hàng liên kết.
+  Trong docs nội bộ, phía Hộ kinh doanh được gọi bằng thuật ngữ pháp lý chung
+  là **NSDLĐ** thay vì "công ty".
 
 ---
 

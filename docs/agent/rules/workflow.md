@@ -14,6 +14,20 @@ Pick review depth by the task's blast radius, not by file count. Higher tiers AD
 
 When in doubt between tiers, pick the higher one.
 
+## Skill Plan Gate
+
+For every T2 or T3 task, write a short skill plan before coding. Use
+`docs/agent/rules/skills.md` to choose the minimum useful set:
+
+```text
+Skill plan: repo rules = engineering + <topic rules>; external skills = <names>;
+runtime tools = <browser/db/cli>; skipped = <reason>.
+```
+
+T1 work may skip this plan only when it is truly typo-only, doc-only, or a
+dependency version bump with no API change. State the T1 skip reason in the
+commit or PR body.
+
 ## The Four Perspectives
 
 These are the four questions every change must answer. T3 spawns one agent per role; T2 answers them inline.
@@ -32,6 +46,7 @@ Use the Agent tool (or Codex CLI / Claude SDK subagents) to spawn the four roles
 - Current task description
 - Relevant files from the codebase
 - `AGENTS.md` constraints
+- Skill plan from `docs/agent/rules/skills.md`
 - `tasks/regressions.md` rules (relevant rows only — full file is large)
 - Any related docs from `docs/`
 
@@ -55,6 +70,7 @@ For T3 changes, attach the synthesized contract to the PR description or to a wo
 Before coding, write a short block in the task notes / PR body:
 
 ```
+Skill plan: repo rules = …; external skills = …; runtime tools = …
 PM:   scope = …, acceptance = …, priority = …
 BA:   rules = …, edge cases = …, data flow = …
 Dev:  approach = …, files = …, risk = …

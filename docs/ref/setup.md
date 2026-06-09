@@ -175,7 +175,10 @@ Thêm các biến sau cho **Production** và **Preview**:
 > **Note:** `VERCEL_URL` is auto-injected by Vercel — do NOT set manually.
 > `SUPABASE_PROJECT_ID` is only needed for `pnpm db:types` (local/CI), not Vercel runtime.
 
-## 9. GitHub Actions Secrets
+## 9. CI Secrets (optional)
+
+The current checkout does not include active `.github/workflows` files. Use this
+section only if the owner restores GitHub Actions or another CI runner.
 
 GitHub → Repo Settings → Secrets and variables → Actions → New repository secret.
 
@@ -190,7 +193,7 @@ CI build cần `NEXT_PUBLIC_*` vars để Next.js build thành công:
 
 ### CI Workflow Usage
 
-Trong `.github/workflows/ci.yml`, thay placeholder bằng secrets:
+Nếu workflow CI được khôi phục, truyền secrets vào job build thay vì hardcode:
 
 ```yaml
 - name: Build

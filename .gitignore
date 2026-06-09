@@ -41,15 +41,30 @@ apps/web/tmp/
 supabase/.temp/
 supabase/.branches/
 
-# gstack (clone per-machine)
-.claude/skills/gstack/
-
 # MCP config (contains tokens)
 .mcp.json
 
-# Claude Code personal/machine-specific
-.claude/
-.agents/
+# Agent workspace local state
+.claude/settings.local.json
+.claude/skills/gstack/
+.claude/worktrees/
+.claude/.cache/
+.claude/cache/
+.claude/logs/
+.claude/tmp/
+.codex/sessions/
+.codex/.cache/
+.codex/cache/
+.codex/logs/
+.codex/tmp/
+.agents/.cache/
+.agents/cache/
+.agents/logs/
+.agents/tmp/
+.cursor/.cache/
+.cursor/cache/
+.cursor/logs/
+.cursor/tmp/
 .claire/
 .trae/
 
@@ -67,7 +82,6 @@ yarn-debug.log*
 yarn-error.log*
 codex-*.log
 codex-*.err.log
-.codex/
 
 # local screenshots (manual QA)
 pos-after*.png

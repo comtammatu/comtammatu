@@ -7,10 +7,19 @@ owner-approved greenfield target `staging` / `jmasiwuqiyedqvyfzhuq`. They must
 not be applied through the normal production migration flow and must not be
 moved into `supabase/migrations/` as-is.
 
-Use `docs/runbooks/supabase-greenfield-baseline.md` for the application order
-and acceptance gates. If a greenfield rehearsal change should graduate to the
-active production path, author a separate production-reviewed migration under
-`supabase/migrations/`.
+Apply these files only after the active public baseline and
+`supabase/managed-surfaces.install.sql` have been restored to an owner-approved
+empty dev/test target. Use filename order. If a rehearsal change should
+graduate to the active production path, author a separate production-reviewed
+migration under `supabase/migrations/`; do not copy a rehearsal file as-is.
+
+Acceptance gates:
+
+- target project ref is verified before apply;
+- no file under this directory is moved into `supabase/migrations/`;
+- `pnpm lint:db-boundary` passes;
+- `pnpm db:types` runs only after the approved target schema is updated;
+- `pnpm typecheck && pnpm lint && pnpm build` passes before marking runtime work complete.
 
 Boundary rules:
 

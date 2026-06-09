@@ -8,6 +8,13 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 
 ## Active implementation note — 2026-06-09
 
+- [x] **Employee Lịch monthly calendar correction:** T2 self-review before coding.
+  Surface = `/employee/schedule`; primary job = nhân viên nhìn lịch ca/ngày công như calendar tháng thật, đủ ngày trong tháng và đúng trục Thứ 2 đến Chủ nhật; change type = UI composition + schedule query range from week to month, no schema/RLS/money changes; primitives = existing Employee wrappers, `Button`, `Table`, `Badge`, `Skeleton`.
+  PM: scope = replace the weekly axis table with a monthly calendar grid; acceptance = title shows month/year, headers run Monday to Sunday, active cells cover every day of the selected month, blank alignment cells do not pretend to be days, and today/shift/attendance are visible in each day cell.
+  BA: rules = `shift_assignments` and `attendance_records` remain the only data sources; one year has 12 month navigation states; month boundaries must handle 28/29/30/31 days without dropping empty days.
+  Dev: approach = reuse shared VN date helpers and Employee panel shell, change only schedule page/action/client/copy plus this task note; risk = responsive density and date-boundary mistakes.
+  QA: tests = targeted calendar helper/source checks, `pnpm typecheck && pnpm lint && pnpm build`, and protected-route smoke when local auth/dev server allows.
+
 - [x] **Admin pages quick visual audit:** T2 self-review before coding.
   Surface = `/admin/**` page family; primary job = owner/super_manager rà từng màn Admin trên điện thoại vẫn thấy nhãn đúng tiếng Việt, hierarchy rõ, và tab phụ thể hiện màn hiện tại; change type = UI shell/page composition and copy refinement only, no DB/RLS/money changes; primitives = `AppShell`, `AppPage`, `AppPageHeader`, unframed sections, `SurfaceLinkCard`, link tabs.
   PM: scope = fix the highest-signal issues found by static + browser audit across Admin routes; acceptance = 25 Admin routes smoke without overflow, page titles/breadcrumb tails stay Vietnamese, reports landing matches dashboard cockpit clarity, feedback subnav has active state.
@@ -79,7 +86,7 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 
 ## Shipped (condensed — see git / `regressions.md` for detail)
 
-- **Pilot hardening 2026-05-24** (`docs/worklog/pilot-hardening-readiness-2026-05-24.md`): snapshot-doc refresh, schema-spec source-ladder, App-Router route-group migration reconciled (`typecheck/lint/build` green), network-gate hardening, prod payment migrations confirmed.
+- **Pilot hardening 2026-05-24**: snapshot-doc refresh, schema-spec source-ladder, App-Router route-group migration reconciled (`typecheck/lint/build` green), network-gate hardening, prod payment migrations confirmed.
 - **Interface closure IF-001..012** (2026-05-24): retired `matu-*`/Be-Vietnam-Pro pilot layer; static UI guards (`lint:ui-contract`, `check-client-storage`); heading/icon/button/radius scale fixes; server-side GRN draft state; Finance-Basic landing (4 owner metrics).
 - **Feedback /qa ISSUE-001..016** (2026-05-07/28): all shipped EXCEPT **ISSUE-004** (open below). CSP + security headers, photo-IDOR one-shot SHA-256 token, retention cascade, `feedback:view` defense-in-depth, inbox `(tenant,created_at)` index, unambiguous order-snapshot.
 - **Pre-deploy + M4 Payments + M6 Finance P0** (2026-04-27..05-24, T3): employee FK casts, POS network gate D9, refund RPCs (`reverse_payment_and_post`/`create_refund`), webhook idempotency + MoMo tenant-binding + fail-hard stock + server-recompute total, audit-log RPC-only + PII strip, HĐĐT cancel-reason ≥20, Finance-Basic scope contract. Open follow-ups below.
@@ -97,8 +104,6 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 - [x] **ISSUE-004 — feedback photo branch-tight storage RLS** — DONE 2026-05-30: `feedback_photos_authenticated_select` now requires tenant-path match + the feedback row's `has_permission(branch, 'feedback:view')` (path `<tenant>/<feedback_id>/<file>`), not just tenant. Applied to matu-dev (verified branch-tight) + folded into `supabase/managed-surfaces.install.sql` for fresh envs. Source: archived migration `20260602004000`. Prod apply owner-gated (storage policy — now unblocked since MCP/owner can create `storage.objects` policies).
 
 ## Shell helpers refactor — 2026-05-27 current status
-
-**Report:** `docs/worklog/shell-helpers-refactor-plan-2026-05-27.md`
 
 > Verified state 2026-05-31 (todo had drifted from code — re-audited via `Skip withAction` counts + LoC).
 
@@ -120,13 +125,13 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 ## Owner-gated / pre-go-live (NOT via agent; NOT to matu-prod)
 
 - [ ] Run real POS → payment → KDS/print → HĐĐT smoke in approved dev/test or staging with live provider credentials. [2026-05-28] `stock` leg dropped per owner policy "không trừ kho" (memory `project_pos_action_helper_refactor.md`; commit `e4eb93bc`); action-layer enforcement landed (`9ba83205`); **webhook stock-leg disable migration still pending owner authorize**.
-- [ ] **Dead RPCs (13 candidates, greenfield P5)** — OWNER-GATED T3, NOT dropped: all on money/auth/order paths and the monorepo grep cannot see the Flutter/external clients, so "no caller" is not conclusive. Each needs per-RPC owner sign-off + external-client confirmation.
+- [ ] **Dead RPC candidates (owner-gated)** — 13 candidates were found by static DB/source scan (`handle_new_user`, `has_position`, `post_payroll_journal`, `release_table`, `resolve_po_price`, `resolve_po_prices_batch`, `rotate_branch_override_code`, `set_branch_kind`, `sync_missing_permissions_from_template`, `transition_order_status`, `transition_order_item_status`, `try_auto_approve_grn`, `update_my_profile`). NOT dropped: all touch money/auth/order/procurement or external-client risk, and monorepo grep cannot prove no Flutter/external caller. Each needs per-RPC owner sign-off + T3 migration.
 - [ ] Apply the 3 Phase-1 RLS fixes (now under `supabase/migrations/_archive/`: `20260602008000` payroll, `009000` attendance, `010000` dedup) to the live prod IF it still serves — OWNER-gated, NOT via agent, **NOT to matu-prod**. matu-dev + the baseline already include them.
 - [ ] Uptime monitor on `/api/health` (UptimeRobot — ops, not code).
 
 ## Architecture / Schema / Migration (matu-dev) — 2026-05-30
 
-> Owner approved rebuilding matu-dev ("không cần giữ nguyên"). matu-dev only; never matu-prod. Runbook: `docs/runbooks/matu-dev-migration-squash-2026-05-30.md`.
+> Owner approved rebuilding matu-dev ("không cần giữ nguyên"). matu-dev only; never matu-prod. Current baseline contract lives in `docs/spec/database-schema.md` and `supabase/migrations/README.md`.
 
 - ✅ **DONE (Phase 1 + 2):** RLS policy dedup (`20260602010000`, closed `stock_transfer_items` any-tenant read+write bypass) + schema-health verified clean; baseline-first consolidation — `supabase/migrations/00000000000000_baseline.sql` (validated: rebuilt matu-dev exactly, replays from empty, `db:types`/typecheck match), 379 files → `_archive/`, option X (prod keeps history); managed-surfaces companion `supabase/managed-surfaces.install.sql` (extensions/buckets/14 storage policies/realtime/cron); Docker-free libpq extract engine (default) + `db:types` matu-dev default. (git `60c81ffd`/`f92cc4d4`/`8f73885f`/`43a3ec4b`.)
 - [x] **Phase 3** — DONE 2026-05-30: synced `docs/spec/database-schema.md` (snapshot → 118 tables/2 active migrations + baseline-first migration-layout section + live manifest) and `docs/CODEBASE_MAP.md` (counts 118 + baseline-first note) to the consolidated baseline.
@@ -164,7 +169,7 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 
 ## Doc maintenance reminders
 
-- When Inventory behavior changes → update `docs/ref/inventory.md` + `inventory-sop.md` + `docs/modules/web-app.md` + `docs/worklog/inventory/adoption-matrix.md` in the same PR.
+- When Inventory behavior changes → update `docs/ref/inventory.md`, `docs/ref/inventory-sop.md`, `docs/ref/inventory-rbac-matrix.md`, and `docs/modules/web-app.md` in the same PR.
 - When the real stock-split phase ships → update active Inventory docs in the same slice.
 
 ## Post-v1.0 (Tier 2)

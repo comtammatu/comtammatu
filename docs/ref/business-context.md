@@ -1,62 +1,105 @@
-# Bối cảnh nghiệp vụ — Cơm Tấm Má Tư CTCP
+# Bối cảnh nghiệp vụ — Hộ kinh doanh Cơm Tấm Má Tư
+
+> Last verified: 2026-06-09.
 
 ## Sản phẩm
 
-**Bộ phần mềm quản lý vận hành và bán hàng** cho chuỗi cơm tấm Cơm Tấm Má Tư CTCP.
+**Bộ phần mềm quản lý vận hành và bán hàng** cho Hộ kinh doanh Cơm Tấm
+Má Tư, mô hình F&B single-tenant, multi-branch.
 
-Phạm vi sản phẩm: POS, KDS, thực đơn, nhân sự, kho hàng, thanh toán, kế toán (HĐĐT/VAS), và nhân sự & tiền lương.
+Phạm vi sản phẩm: POS, KDS, thực đơn, nhân sự, kho hàng, thanh toán, HĐĐT
+HKD, đối soát tiền, báo cáo vận hành, và xuất dữ liệu cho kế toán/thuế.
 Nhiệm vụ hệ thống: bán đúng, bếp nhận đúng, thu tiền đúng, in/hóa đơn đúng,
 kho trừ đúng, và chủ/quản lý nhìn được tình trạng vận hành thật theo ngày.
 Đây là hệ thống quản lý vận hành nhà hàng chuyên biệt: gom lớp nền, báo cáo,
 và các domain vận hành vào một kiến trúc thống nhất.
 Không phải nền tảng nhiều merchant, không phải CRM độc lập, không phải ERP đa ngành, không phải phần mềm bán hàng đại trà.
 
-## Mô hình pháp lý
+## Mô hình pháp lý hiện hành
 
-Cơm Tấm Má Tư vận hành theo mô hình **Công ty Cổ Phần (CTCP)**. Nghĩa vụ pháp lý bắt buộc:
+Cơm Tấm Má Tư vận hành theo mô hình **Hộ kinh doanh (HKD)**, không phải
+Công ty Cổ phần. Trong docs hiện hành, `HKD` là thuật ngữ pháp lý mặc định;
+`CTCP`, `JSC`, `cổ phần`, `báo cáo tài chính doanh nghiệp`, và `VAS/TT200`
+chỉ được dùng khi nói về lịch sử, năng lực nâng cấp sau này, hoặc trường hợp
+chuyển đổi sang doanh nghiệp.
 
-### 1. HĐĐT — hóa đơn điện tử (v0.3.0)
+Các nguyên tắc vận hành đến tháng 06/2026:
 
-- **NĐ 70/2025**: mọi giao dịch B2C phải có hóa đơn điện tử
-- Cần Edge Function `einvoice-submit`, hỗ trợ nhiều provider
-- Bảng `tax_invoices` lưu trạng thái hóa đơn
+- HKD do chủ hộ hoặc thành viên hộ gia đình đăng ký; chủ hộ/chủ thể đăng ký
+  chịu trách nhiệm với hoạt động kinh doanh theo quy định về HKD.
+- Không mặc định coi HKD là pháp nhân doanh nghiệp. Trong DB, `tenant` là
+  hồ sơ chủ thể kinh doanh single-tenant, không phải "công ty mẹ".
+- Từ 01/01/2026, HKD/cá nhân kinh doanh không áp dụng phương pháp thuế khoán
+  và không còn nộp lệ phí môn bài theo NQ 198/2025/QH15; hệ thống phải ưu tiên
+  số liệu doanh thu, hóa đơn, chứng từ và sổ theo dõi đủ để kê khai.
+- Với F&B multi-branch, sản phẩm phải sẵn sàng cho HĐĐT và máy tính tiền kết
+  nối dữ liệu khi HKD thuộc diện bắt buộc hoặc tự nguyện đăng ký sử dụng HĐĐT.
+- Báo cáo tài chính VAS/BCTC doanh nghiệp không phải requirement mặc định cho
+  HKD. Finance mặc định là báo cáo vận hành: doanh thu, tiền đã thu, chi phí,
+  giá vốn món, tồn kho, công nợ NCC, HĐĐT, và export cho kế toán.
 
-### 2. Nhân sự & tiền lương CTCP (v0.5.0)
+## Nghĩa vụ nghiệp vụ chính
 
-- **BHXH bắt buộc**: NLĐ đóng 8%, NSDLĐ đóng 17.5%
-- **Thuế TNCN**: lũy tiến theo biểu thuế
-- Quyết toán cuối năm
-- Bảng lương hàng tháng
+### 1. HĐĐT và thuế HKD
 
-### 3. Báo cáo tài chính VAS (v0.5.0)
+- HĐĐT bán ra theo cấu hình HKD đã đăng ký với cơ quan thuế/provider, không
+  hardcode assumption "doanh nghiệp GTGT khấu trừ".
+- POS phải lưu đủ dữ liệu order/payment/buyer để phát hành, tra cứu, hủy/thay
+  thế, và xuất lại HĐĐT.
+- HĐĐT thất bại không được làm mất trạng thái đã thu tiền; Finance xử lý hàng
+  đợi HĐĐT sau.
 
-- BCTC theo chuẩn **VAS** (Vietnamese Accounting Standards):
-  - Bảng cân đối kế toán
-  - Kết quả kinh doanh
-  - Lưu chuyển tiền tệ
+### 2. Nhân sự và tiền lương
 
-## Yêu cầu pháp lý cho tenants table
+- HKD vẫn là người sử dụng lao động khi thuê nhân viên; thuật ngữ chuẩn là
+  `NSDLĐ`, `NLĐ`, `HĐLĐ`, `BHXH/BHYT/BHTN`, `TNCN`.
+- Sản phẩm pilot ưu tiên ngày công, ca làm, phiếu lương, và export dữ liệu cho
+  kế toán/thuế. Payroll pháp lý đầy đủ là capability hỗ trợ, không phải mặt
+  bằng mặc định cho mọi operator.
+
+### 3. Báo cáo vận hành F&B
+
+- Báo cáo mặc định: doanh thu theo ngày/chi nhánh, lợi nhuận gộp trước VAT,
+  giá vốn món, tồn kho, chênh lệch kiểm kê, thanh toán, HĐĐT cần xử lý.
+- Advanced COA/Journal/BCTC chỉ giữ như lớp kế toán nâng cao hoặc lộ trình
+  chuyển đổi sang doanh nghiệp; không dùng để định nghĩa UX pilot.
+
+## Yêu cầu đăng ký cho `tenants` table
 
 ```
-legal_name TEXT       — Tên đầy đủ pháp nhân
-tax_code TEXT UNIQUE  — MST 10 hoặc 13 số
-legal_address TEXT    — Địa chỉ đăng ký kinh doanh
-representative TEXT   — Người đại diện pháp luật
+legal_name TEXT       — Tên hộ kinh doanh / tên đăng ký người bán
+tax_code TEXT UNIQUE  — Mã số hộ kinh doanh / mã số thuế người bán
+legal_address TEXT    — Địa chỉ trụ sở HKD đã đăng ký
+representative TEXT   — Chủ hộ kinh doanh / người đại diện đăng ký
 ```
+
+Các field này phục vụ HĐĐT, in chứng từ, export kế toán, và đối soát thuế. Không
+được đồng bộ tự động `representative` với `owner_user_id`; một bên là thông tin
+đăng ký HKD, một bên là tài khoản auth owner trong hệ thống.
+
+## Căn cứ pháp lý theo dõi
+
+- Nghị định 168/2025/NĐ-CP: đăng ký và mã số hộ kinh doanh.
+- Nghị quyết 198/2025/QH15: bỏ thuế khoán và lệ phí môn bài từ 01/01/2026.
+- Nghị định 70/2025/NĐ-CP và Nghị định 68/2026/NĐ-CP: hóa đơn điện tử, khai
+  thuế, nộp thuế HKD/cá nhân kinh doanh.
+- Nghị quyết 204/2025/QH15: giảm thuế GTGT 2% từ 01/07/2025 đến 31/12/2026
+  cho nhóm hàng hóa/dịch vụ đủ điều kiện.
 
 ## Domain: chuỗi nhà hàng F&B
 
 ### Luồng mua hàng (v0.4.0)
 
 ```
-PO (intent) → GRN (actual received) → Supplier Invoice (VAT)
+PO (intent) → GRN (actual received) → Supplier Invoice / chứng từ NCC
                                         ↓
-                                   3-way matching → VAT deduction
+                                   3-way matching → cost/tax evidence
 ```
 
 - **PO** = Purchase Order (đặt hàng)
 - **GRN** = Goods Received Note (phiếu nhập kho — hàng thực nhận)
-- **Supplier Invoice** = hóa đơn đầu vào (cho khấu trừ VAT)
+- **Supplier Invoice** = hóa đơn/chứng từ đầu vào để đối soát chi phí, giá vốn,
+  và hồ sơ thuế
 - Giá vốn thực tế lấy từ GRN, KHÔNG lấy từ PO
 
 ### Luồng bán hàng (v0.3.0)

@@ -5,6 +5,7 @@ Use this file to find the source-of-truth docs for onboarding, implementation pl
 ## System Overview
 
 - Agent entrypoint: `AGENTS.md`
+- Skill/plugin/tool routing: `docs/agent/rules/skills.md`
 - Codebase map + module index: `docs/CODEBASE_MAP.md`
 - Auth & ACL: `docs/modules/auth.md`
 - Database: `docs/modules/database.md`
@@ -27,7 +28,7 @@ Use this file to find the source-of-truth docs for onboarding, implementation pl
 ## Business Domain
 
 - Reference index: `docs/ref/README.md`
-- CTCP business context: `docs/ref/business-context.md`
+- HKD business context: `docs/ref/business-context.md`
 - Setup guide: `docs/ref/setup.md`
 - HĐĐT & Thuế GTGT: `docs/ref/einvoice-tax.md`
 - Hợp đồng lao động: `docs/ref/labor-contracts.md`
@@ -42,15 +43,20 @@ Use this file to find the source-of-truth docs for onboarding, implementation pl
 - Regression rules: `tasks/regressions.md`
 - Lessons learned: `tasks/lessons.md`
 - Current tasks: `tasks/todo.md`
+- Skill/plugin routing rules: `docs/agent/rules/skills.md`
 - Runbook index: `docs/runbooks/README.md`
 - Worklog index: `docs/worklog/README.md`
 
 ## Memory Maintenance Rules
 
 - Put durable policy in `AGENTS.md` or topic files under `docs/agent/rules/`.
+- Put durable skill/plugin routing in `docs/agent/rules/skills.md`. Agent
+  Workspace config may point to these rules, but must not become a second
+  source of truth.
 - Do not create separate agent-only docs such as `docs/llm-wiki/`; place durable content in the normal source-of-truth docs above.
 - Put incident-specific failure prevention in `tasks/regressions.md`.
 - Put retrospective explanations in `tasks/lessons.md`.
-- Keep user-local or machine-local notes out of version-controlled shared rule files.
+- Keep secrets, generated sessions, cache files, and per-user local notes out of
+  version-controlled shared rule files.
 - Keep rules concrete and verifiable. Avoid vague guidance such as "write good code" or "be careful".
 - Do not add an archive tree or keep superseded implementation plans in the repo. When a decision is current, promote it into the source-of-truth doc above; when it is not current, remove it.

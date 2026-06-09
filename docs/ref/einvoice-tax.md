@@ -1,28 +1,41 @@
 # HĐĐT & Thuế GTGT — Hóa Đơn Điện Tử & Giá Trị Gia Tăng
 
-> Áp dụng: Cơm Tấm Má Tư CTCP — mô hình F&B multi-branch
-> Khung pháp lý: NĐ 123/2020, NĐ 70/2025, TT 78/2021, Luật Thuế GTGT 2024, NQ 142/2024
-> Last updated: 2026-05-23 (Viettel S-invoice only)
+> Áp dụng: Hộ kinh doanh Cơm Tấm Má Tư — mô hình F&B multi-branch
+> Khung pháp lý: NĐ 123/2020, NĐ 70/2025, NĐ 68/2026, TT 78/2021, Luật Thuế GTGT 2024, NQ 198/2025/QH15, NQ 204/2025/QH15
+> Last updated: 2026-06-09 (Viettel S-invoice only, HKD model)
 
 ---
 
 ## 1. Tổng quan nghĩa vụ pháp lý
 
-Cơm Tấm Má Tư CTCP là **doanh nghiệp đăng ký nộp thuế GTGT theo phương pháp khấu trừ**:
+Cơm Tấm Má Tư hiện vận hành theo mô hình **Hộ kinh doanh (HKD)**. Không mặc
+định áp dụng assumption CTCP/doanh nghiệp nộp GTGT theo phương pháp khấu trừ.
+HĐĐT, mẫu hóa đơn, phương pháp tính thuế, và kỳ khai thuế phải theo cấu hình
+HKD đã đăng ký với cơ quan thuế/provider.
 
-- Thuế GTGT đầu ra (thu từ khách hàng) → kê khai + nộp cho Cục Thuế
-- Thuế GTGT đầu vào (trả cho nhà cung cấp) → được **khấu trừ** khỏi thuế phải nộp
-- Thuế GTGT phải nộp = Đầu ra − Đầu vào (nếu âm → được hoàn thuế hoặc kết chuyển kỳ sau)
+Các mốc chính đến tháng 06/2026:
 
-**NĐ 70/2025**: kể từ 01/07/2025, mọi giao dịch B2C tại doanh nghiệp đã đăng ký HĐĐT phải xuất hóa đơn điện tử. Không được xuất hóa đơn giấy.
+- Từ 01/01/2026, HKD/cá nhân kinh doanh không áp dụng thuế khoán; số liệu POS,
+  HĐĐT, sổ doanh thu, và chứng từ phải đủ để kê khai.
+- HKD có doanh thu từ 01 tỷ đồng/năm trở lên thuộc diện bắt buộc sử dụng HĐĐT;
+  HKD doanh thu thấp hơn không bị buộc dùng HĐĐT nhưng được tiếp tục/tự nguyện
+  sử dụng nếu đã đăng ký hợp pháp và có nhu cầu minh bạch giao dịch.
+- HKD doanh thu trên 500 triệu đồng/năm thực hiện khai/nộp thuế theo NĐ
+  68/2026; trường hợp doanh thu năm từ 50 tỷ đồng trở xuống khai GTGT theo quý,
+  trên 50 tỷ đồng khai theo tháng.
+- NQ 204/2025/QH15 giảm 2% thuế GTGT từ 01/07/2025 đến 31/12/2026 cho nhóm
+  hàng hóa/dịch vụ đủ điều kiện; dịch vụ ăn uống thông thường đang được xử lý
+  theo mức 8% trong thời hạn này, trừ mặt hàng thuộc nhóm loại trừ.
 
 ### 1.1 Mô hình vận hành
 
-Hệ thống mặc định phát hành **HĐĐT per-order cho mọi payment POS**. Daily summary chỉ còn dùng cho backfill hoặc khi chủ trương vận hành chuyển sang template tổng hợp riêng.
+Trong chế độ HĐĐT active, hệ thống mặc định phát hành **HĐĐT per-order cho
+payment POS**. Daily summary chỉ còn dùng cho backfill hoặc khi chủ trương vận
+hành chuyển sang template tổng hợp riêng.
 
 | Luồng                 | Khi nào                     | Tần suất                     | Đối tượng pháp lý                                |
 | --------------------- | --------------------------- | ---------------------------- | ------------------------------------------------ |
-| **POS realtime**      | Mọi payment POS             | Per-order (ngay tại quầy)    | HĐ điện tử per-order; có MST nếu khách cung cấp  |
+| **POS realtime**      | Payment POS trong chế độ HĐĐT active | Per-order (ngay tại quầy)    | HĐ điện tử per-order; có MST nếu khách cung cấp  |
 | **B2C daily summary** | Backfill hoặc rollout riêng | 1 HĐ tổng hợp/chi nhánh/ngày | HĐ tổng hợp B2C (template riêng đăng ký với CQT) |
 
 Mỗi order chỉ thuộc **đúng 1** trong 2 luồng (không double-issue).
@@ -33,14 +46,17 @@ Mỗi order chỉ thuộc **đúng 1** trong 2 luồng (không double-issue).
 
 | Loại hàng hóa / dịch vụ                    | Thuế suất | Ghi chú                                                        |
 | ------------------------------------------ | --------- | -------------------------------------------------------------- |
-| Thực phẩm chế biến tại chỗ (ăn uống)       | **8%**    | Áp dụng từ 01/07/2023, gia hạn đến 31/12/2025 theo NQ 142/2024 |
+| Thực phẩm chế biến tại chỗ (ăn uống)       | **8%**    | Áp dụng giảm 2% đến 31/12/2026 theo NQ 204/2025/QH15 nếu không thuộc nhóm loại trừ |
 | Đồ uống có cồn                             | **10%**   | Bia, rượu                                                      |
-| Đồ uống không cồn                          | **8%**    | Nước ngọt, trà, cà phê đóng chai                               |
+| Đồ uống không cồn                          | **8%**    | Áp dụng giảm 2% đến 31/12/2026 nếu không thuộc nhóm loại trừ   |
 | Nguyên liệu thực phẩm thô (rau, thịt, gạo) | **5%**    | Khi mua từ nhà cung cấp                                        |
 | Dịch vụ vận chuyển nội địa                 | **8%**    | Phí giao hàng nếu có                                           |
 | Xuất khẩu                                  | **0%**    | Không áp dụng                                                  |
 
-> ⚠️ **Lưu ý hậu 31/12/2025**: NQ 142/2024 hết hiệu lực → thực phẩm chế biến tại chỗ + đồ uống không cồn quay về **10%** trừ khi có nghị quyết gia hạn mới. Cần monitor công văn Bộ Tài chính cuối Q4/2025 và chuẩn bị migration thay đổi `vat_rate` mặc định ở `menu_items`.
+> ⚠️ **Lưu ý hậu 31/12/2026**: NQ 204/2025/QH15 hết hiệu lực → các nhóm đang
+> được giảm 2% có thể quay về **10%** nếu không có chính sách gia hạn mới. Cần
+> monitor văn bản Bộ Tài chính/Quốc hội trước Q4/2026 và chuẩn bị migration thay
+> đổi `vat_rate` mặc định ở `menu_items` nếu chính sách đổi.
 
 > ⚠️ **Dev note**: Trường `vat_rate` trong `tax_invoices` và `supplier_invoices` lưu dưới dạng `NUMERIC(5,2)` (ví dụ: `8.00`, `10.00`). KHÔNG lưu dưới dạng thập phân `0.08`.
 
@@ -50,7 +66,7 @@ Mỗi order chỉ thuộc **đúng 1** trong 2 luồng (không double-issue).
 
 ### 3.1 Quy trình xuất hóa đơn
 
-#### POS realtime (per-order, bắt buộc)
+#### POS realtime (per-order, default trong chế độ HĐĐT active)
 
 ```
 Payment thành công tại POS
@@ -65,7 +81,9 @@ Payment thành công tại POS
   → Archive cron tải PDF/XML sau khi issued
 ```
 
-**Nghiệp vụ khóa**: khách không lấy hóa đơn vẫn phải phát hành HĐĐT cho giao dịch bán hàng. Form POS chỉ để nhập thêm thông tin người mua/MST, không phải opt-out xuất HĐĐT.
+**Nghiệp vụ khóa**: khi HĐĐT active, khách không lấy hóa đơn vẫn đi theo luồng
+phát hành HĐĐT cho giao dịch bán hàng theo template đã đăng ký. Form POS chỉ để
+nhập thêm thông tin người mua/MST, không phải opt-out xuất HĐĐT.
 
 #### B2C daily summary (tổng hợp ngày hôm trước)
 
@@ -89,12 +107,17 @@ Cron 02:05 ICT mỗi ngày (HOẶC admin manual trigger /finance/summary)
       → UPDATE summary_run_queue { status, finished_at }
 ```
 
-**Lưu ý vận hành**: khi POS per-order mandatory đang bật, daily summary bình thường sẽ không còn eligible orders vì mỗi payment đã có HĐ per-order. Giữ flow này cho backfill hoặc khi chủ trương vận hành chuyển sang template tổng hợp riêng.
+**Lưu ý vận hành**: khi POS per-order đang bật, daily summary bình thường sẽ
+không còn eligible orders vì mỗi payment đã có HĐ per-order. Giữ flow này cho
+backfill hoặc khi chủ trương vận hành chuyển sang template tổng hợp riêng.
 
 ### 3.2 Thông tin bắt buộc trên HĐĐT đầu ra
 
 ```
-- Tên, địa chỉ, MST người bán (lấy từ bảng tenants)
+- Tên, địa chỉ, MST người bán
+    + Vinvoice/S-invoice hiển thị theo hồ sơ người bán đã đăng ký với Viettel/CQT
+    + Runtime hiện KHÔNG tự gửi `sellerInfo`; app chỉ truyền `supplierTaxCode`
+      qua `COMPANY_TAX_CODE` cho endpoint/API lookup
 - Tên, địa chỉ, MST người mua
     + Khách có MST: bắt buộc tên + MST hợp lệ
     + Khách không lấy HĐ: ghi "Người mua không lấy hóa đơn", MST trống
@@ -355,16 +378,24 @@ Regression rule `HDDT-LATE-B2B-REQUEST-AFTER-BATCH-BLOCKED`.
 
 ---
 
-## 4. HĐGT Đầu Vào (mua nguyên liệu từ nhà cung cấp)
+## 4. Hóa đơn/chứng từ đầu vào (mua nguyên liệu từ nhà cung cấp)
 
-### 4.1 Điều kiện để được khấu trừ VAT đầu vào
+### 4.1 Điều kiện để ghi nhận hồ sơ thuế/chi phí
 
-1. Hóa đơn hợp lệ (có mã CQT, đúng thông tin MST người mua)
-2. Thanh toán qua ngân hàng cho giao dịch ≥ 20 triệu VND (TT 25/2018)
-3. Hàng hóa thực sự nhận đủ (có GRN xác nhận)
-4. Kê khai đúng kỳ thuế (trong tháng hoặc trước ngày 20 tháng sau)
+Với HKD, hệ thống không mặc định coi hóa đơn NCC là VAT đầu vào được khấu trừ.
+Mục tiêu v1 là lưu đủ hồ sơ để kế toán/thuế đối chiếu:
 
-> ⚠️ **3-way matching**: Hệ thống phải verify PO → GRN → Supplier Invoice trước khi cho phép kê khai VAT đầu vào. Chi tiết xem `docs/ref/inventory.md`.
+1. Hóa đơn/chứng từ hợp lệ từ NCC.
+2. Thông tin người mua khớp hồ sơ HKD khi NCC xuất hóa đơn cho Má Tư.
+3. Hàng hóa thực sự nhận đủ (có GRN xác nhận).
+4. Thanh toán và chứng từ đi kèm đủ để giải trình chi phí, đặc biệt với giao
+   dịch giá trị lớn.
+5. Kỳ khai/ghi nhận được gắn rõ để export cho kế toán.
+
+> ⚠️ **3-way matching**: Hệ thống phải verify PO → GRN → Supplier Invoice/chứng
+> từ NCC trước khi đưa vào export thuế/kế toán. Cờ `is_vat_deductible` là field
+> kỹ thuật phục vụ cấu hình kế toán nâng cao; không được hiển thị như default HKD
+> nếu chưa có quyết định pháp lý/kế toán riêng. Chi tiết xem `docs/ref/inventory.md`.
 
 ### 4.2 Database — bảng `supplier_invoices`
 
@@ -437,15 +468,28 @@ MISA meInvoice đã bị loại khỏi runtime dự án. Không dùng lại tài
 
 Implementation: `packages/shared/src/providers/impl/viettel-sinvoice.ts:115-426`.
 
+Verified current contract:
+
+- `COMPANY_TAX_CODE` là `supplierTaxCode` dùng trong URL
+  `InvoiceAPI/InvoiceWS/createInvoice/{supplierTaxCode}` và các API tra cứu/tải/hủy.
+- Provider body gửi `generalInvoiceInfo`, `buyerInfo`, `payments`, `itemInfo`,
+  `summarizeInfo`, `taxBreakdowns`; hiện KHÔNG gửi `sellerInfo`.
+- Theo tài liệu S-invoice, `sellerInfo` có thể được truyền hoặc lấy tự động từ
+  hệ thống hóa đơn điện tử; nếu truyền `sellerTaxCode`, dữ liệu người bán phải
+  khớp tài khoản/MST đăng nhập và các trường người bán trở thành ràng buộc.
+- Vì vậy KHÔNG thêm `SELLER_*` env hoặc override `sellerInfo` nếu chưa có tài
+  liệu Vinvoice/account registration cụ thể cho HKD Cơm Tấm Má Tư.
+
+```env
 SINVOICE_USERNAME=<account_mst, vd "0100109106-899">
 SINVOICE_PASSWORD=<api_password>
 SINVOICE_TEMPLATE_CODE=<đăng ký với CQT, vd "2/001" cho HĐ bán hàng từ MTT, "1/001" cho HĐ GTGT>
 SINVOICE_INVOICE_SERIES=<đăng ký với CQT, vd "C26MAA">
 SINVOICE_BASE_URL=https://api-vinvoice.viettel.vn # default
 SINVOICE_SANDBOX=false # informational; URL không đổi
-COMPANY_TAX_CODE=<MST = SINVOICE_USERNAME prefix>
+COMPANY_TAX_CODE=<supplierTaxCode đã đăng ký với Viettel/CQT>
 
-````
+```
 
 Auth flow:
 
@@ -467,7 +511,7 @@ Auth flow:
 | ------------------------------------- | --------------------- | --------------------------------------------- |
 | `1517` Invoice serial inactive        | Mẫu HĐ chưa kích hoạt | Active thông báo phát hành với CQT            |
 | `1521` / `47` `INVOICE_NO_DUPLICATED` | Số HĐ trùng           | Retry 1 phút sau (UNIQUE lock OK)             |
-| `1520` Invalid supplier tax code      | MST không khớp        | Check `COMPANY_TAX_CODE` env                  |
+| `1520` Invalid supplier tax code      | MST không khớp        | Check `COMPANY_TAX_CODE` với tài khoản/template Viettel |
 | `OUT_OF_INVOICE_NO`                   | Hết số HĐ trong dải   | Đăng ký dải mới với CQT                       |
 | `INVALID_USER_PASSWORD`               | Sai cred              | Kiểm tra `SINVOICE_USERNAME/PASSWORD`         |
 | `429` Too Many Requests               | Rate limit            | Cron auto retry next-cycle                    |
@@ -605,7 +649,7 @@ Hardcoded `'00000000-0000-0000-0000-000000000001'`. Seed qua migration vào `pro
 | Late MST sau summary backfill | Khách quay lại xin HĐ MST          | Kế toán lập HĐ điều chỉnh giảm trên provider portal + HĐ có MST mới     |
 | Cross-month cancel            | Hủy HĐ kỳ trước sau khi đã kê khai | Soft warning UI; defer hard-block đến period-close infra                |
 
-Các Sinvoice-specific error codes: xem §5.4 và `docs/runbooks/hddt-hybrid-cutover.md` §"Common Sinvoice errors".
+Các Sinvoice-specific error codes: xem §5.4 và `docs/runbooks/hddt-viettel-operations.md` §"Lỗi Thường Gặp".
 
 ---
 
@@ -680,7 +724,7 @@ Các Sinvoice-specific error codes: xem §5.4 và `docs/runbooks/hddt-hybrid-cut
 
 ## 12. Tài liệu liên quan
 
-- `docs/runbooks/hddt-hybrid-cutover.md` — runbook cutover prod, rollback, pilot metrics
+- `docs/runbooks/hddt-viettel-operations.md` — smoke/reconcile/archive cho Viettel S-invoice
 - `docs/ref/inventory.md` — 3-way matching GRN / PO / Supplier Invoice
 - `docs/spec/database-schema.md` — Schema đầy đủ
 - `apps/web/app/(protected)/finance/actions.ts:58-446` — `createTaxInvoice` + `cancelTaxInvoice`

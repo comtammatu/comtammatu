@@ -1,6 +1,6 @@
 # Cơm Tấm Má Tư
 
-Bộ phần mềm quản lý vận hành và bán hàng cho chuỗi Cơm Tấm Má Tư CTCP.
+Bộ phần mềm quản lý vận hành và bán hàng cho Hộ kinh doanh Cơm Tấm Má Tư.
 Single-tenant, multi-branch, đa kho.
 
 Nhiệm vụ hệ thống: bán đúng, bếp nhận đúng, thu tiền đúng, in/hóa đơn đúng,
@@ -19,7 +19,7 @@ Mô hình vận hành production: **Trụ sở chính (HQ) → Kho Tổng → B�
 | M3  | KDS                  | Realtime queue, bump/complete, station config, partial-cancel ticket                      | SHIPPED |
 | M4  | Payment              | Cash + VietQR (EMVCo QR, cashier-confirm) + Momo (IPN webhook). All live in production.   | SHIPPED |
 | M5  | Stock                | Ingredients, recipes, PO/GRN/3-way, stocktake, transfers, central kitchen                 | SHIPPED |
-| M6  | Finance              | Finance Basic, COA/Journal, BCTC TT200, reconciliation. HĐĐT active qua Viettel S-invoice | PARTIAL |
+| M6  | Finance              | Finance Basic, HĐĐT HKD, reconciliation, accountant export. Advanced COA/Journal deferred | PARTIAL |
 | M7  | Nhân sự & tiền lương | Employees, contracts, attendance, payslip. BHXH/PIT calc deferred                         | PARTIAL |
 
 Active tracker: [`tasks/todo.md`](tasks/todo.md).
@@ -131,4 +131,4 @@ pnpm --filter @comtammatu/web guides:capture     # Capture POS flow screenshots
 
 ## License
 
-Proprietary — Cơm Tấm Má Tư CTCP. All rights reserved.
+Proprietary — Hộ kinh doanh Cơm Tấm Má Tư. All rights reserved.

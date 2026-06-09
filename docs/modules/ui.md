@@ -74,10 +74,11 @@ quyen khoi phuc layer pilot.
 Read order cho agent khi lam UI:
 
 1. `AGENTS.md`
-2. `docs/spec/design-system.md`
-3. `docs/modules/ui.md`
-4. `tasks/regressions.md`
-5. Domain docs lien quan den route dang sua
+2. `docs/agent/rules/skills.md`
+3. `docs/spec/design-system.md`
+4. `docs/modules/ui.md`
+5. `tasks/regressions.md`
+6. Domain docs lien quan den route dang sua
 
 ## Primitive Baseline Contract
 

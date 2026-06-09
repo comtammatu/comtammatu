@@ -272,7 +272,7 @@ export async function createTaxInvoice(
     const result = await invoiceProvider.createInvoice({
       orderId: parsed.data.orderId,
       orderNumber: `ORD-${parsed.data.orderId}`,
-      sellerName: "Cơm Tấm Má Tư CTCP",
+      sellerName: "",
       sellerTaxCode: process.env["COMPANY_TAX_CODE"] ?? "",
       sellerAddress: "",
       buyerName,

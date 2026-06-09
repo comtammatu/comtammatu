@@ -285,7 +285,7 @@ function CartPaneComponent({
 
       {cart.items.length === 0 ? (
         <div className="flex min-h-0 flex-1 items-center justify-center px-6 text-center">
-          <p className="max-w-[16rem] text-sm leading-6 text-muted-foreground">
+          <p className="max-w-64 text-sm leading-6 text-muted-foreground">
             {cart.orderType === "takeaway" || selectedTableNumber != null
               ? "Chạm món trên thực đơn để thêm vào đơn."
               : "Chạm bàn bên trái hoặc chọn 'Mang về' để bắt đầu."}

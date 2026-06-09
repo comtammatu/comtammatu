@@ -39,6 +39,7 @@ import {
   DropdownMenuTrigger,
 } from "@comtammatu/ui/components/dropdown-menu";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
+import { Input } from "@comtammatu/ui/components/input";
 import { SelectField } from "@/components/form/select-field";
 import {
   createQrCode,
@@ -413,9 +414,8 @@ export function QrManagementClient({
             >
               Nhãn mới
             </label>
-            <input
+            <Input
               id="rename-label"
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               value={renameLabel}
               onChange={(e) => setRenameLabel(e.target.value)}
               maxLength={200}

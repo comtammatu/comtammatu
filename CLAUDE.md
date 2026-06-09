@@ -10,8 +10,10 @@ Before implementation:
 
 1. Read `AGENTS.md`.
 2. Read `docs/agent/rules/engineering.md`.
-3. Read any task-specific rules named by `AGENTS.md`.
+3. Read `docs/agent/rules/skills.md` before selecting external skills, plugins,
+   MCP tools, browser tools, or subagents.
+4. Read any task-specific rules named by `AGENTS.md`.
 
-Keep machine-local agent configuration out of the repository. Do not commit
-`.claude/`, `.codex/`, `.agents/`, MCP tokens, plugin caches, or per-user tool
-settings.
+Project-owned Agent Workspace config may live in the repository. Do not commit
+secrets, MCP tokens, plugin caches, generated sessions, worktrees, or per-user
+local state.

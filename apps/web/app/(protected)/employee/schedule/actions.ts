@@ -4,9 +4,12 @@ import { z } from "zod";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { extractClaimsFromAccessToken } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { getVNWeekEndDateString } from "@comtammatu/shared/time";
+import {
+  getVNMonthEndDateString,
+  parseISODateParts,
+} from "@comtammatu/shared/time";
 
-const weekStartSchema = z
+const monthStartSchema = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, { error: "Ngày không hợp lệ (YYYY-MM-DD)" });
 
@@ -24,20 +27,25 @@ export interface ScheduleAttendance {
   status: string;
 }
 
-export interface ScheduleWeekData {
+export interface ScheduleMonthData {
   shifts: ScheduleShift[];
   attendance: ScheduleAttendance[];
 }
 
 export async function fetchMySchedule(
-  weekStartDate: string,
-): Promise<ActionResult<ScheduleWeekData>> {
-  const parsed = weekStartSchema.safeParse(weekStartDate);
+  monthStartDate: string,
+): Promise<ActionResult<ScheduleMonthData>> {
+  const parsed = monthStartSchema.safeParse(monthStartDate);
   if (!parsed.success) {
     return {
       success: false,
       error: parsed.error.issues[0]?.message ?? "Ngày không hợp lệ",
     };
+  }
+
+  const monthParts = parseISODateParts(parsed.data);
+  if (!monthParts || monthParts.day !== 1) {
+    return { success: false, error: "Tháng không hợp lệ" };
   }
 
   const supabase = await createClient();
@@ -65,7 +73,10 @@ export async function fetchMySchedule(
     return { success: false, error: "Không tìm thấy hồ sơ nhân viên" };
   }
 
-  const weekEndDate = getVNWeekEndDateString(parsed.data);
+  const monthEndDate = getVNMonthEndDateString(
+    monthParts.year,
+    monthParts.month,
+  );
 
   const [shiftResult, attendanceResult] = await Promise.all([
     supabase
@@ -74,7 +85,7 @@ export async function fetchMySchedule(
       .eq("employee_id", employee.id)
       .eq("tenant_id", claims.tenant_id)
       .gte("date", parsed.data)
-      .lte("date", weekEndDate)
+      .lte("date", monthEndDate)
       .order("date"),
     supabase
       .from("attendance_records")
@@ -82,7 +93,7 @@ export async function fetchMySchedule(
       .eq("employee_id", employee.id)
       .eq("tenant_id", claims.tenant_id)
       .gte("date", parsed.data)
-      .lte("date", weekEndDate)
+      .lte("date", monthEndDate)
       .order("date"),
   ]);
 

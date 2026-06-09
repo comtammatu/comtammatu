@@ -2,6 +2,9 @@
 
 Use this file before changing Supabase queries, migrations, RLS, auth, ACL, Server Actions, RPC functions, or generated database types.
 
+Also read `docs/agent/rules/skills.md` and route database/auth work through the
+Supabase skill family when available.
+
 ## Query Boundary
 
 - MUST use `supabase-js` for all queries.

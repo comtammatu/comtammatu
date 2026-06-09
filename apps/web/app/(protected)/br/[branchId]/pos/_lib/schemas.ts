@@ -9,7 +9,7 @@
  *
  * Originally inlined in `order-actions.ts`. Moved here as part of the
  * WS-1a / WS-1b refactor (see
- * `docs/worklog/shell-helpers-refactor-plan-2026-05-27.md`).
+ * the POS action-helper cleanup).
  */
 
 import { z } from "zod";

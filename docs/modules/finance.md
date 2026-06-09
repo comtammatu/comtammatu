@@ -11,7 +11,10 @@ Finance Basic is **CONDITIONAL GO** only when the first screen answers four owne
 - **Chi vận hành**: kỳ này đã ghi nhận bao nhiêu chi phí vận hành?
 - **Lợi nhuận gộp**: doanh thu sau giảm giá/trước VAT trừ giá vốn món còn bao nhiêu?
 
-Do not expand Finance by default into a full enterprise accounting product. The legal entity is CTCP, but the product surface for pilot must serve restaurant operating finance first.
+Do not expand Finance by default into a full enterprise accounting product.
+The current business model is HKD, so the pilot surface must serve restaurant
+operating finance first: daily money, stock value, food cost, expenses, HĐĐT,
+and accountant export.
 
 ## Scope Boundary
 
@@ -24,11 +27,11 @@ screens to every operator from day one.
 | ----- | ------------------- | ------------------------------------ | -------------------------------------------------------------------------------------- |
 | 1     | `hkd_basic`         | Hộ kinh doanh / one-shop owner       | Daily cash, simple gross profit, inventory money, simple expenses, and exceptions only |
 | 2     | `branch_control`    | Multi-branch owner / operator        | Compare branches using the same formulas as HKD Basic, then drill into outliers        |
-| 3     | `company_reporting` | Accountant / company reporting owner | HĐĐT, AP, payroll liability, accountant exports, and advanced accounting reports       |
+| 3     | `accountant_reporting` | Accountant / reporting owner       | HĐĐT, AP, payroll liability, accountant exports, and advanced accounting reports       |
 
 The default `/finance` experience must start at `hkd_basic`. It may reveal
 `branch_control` comparison only when the user has more than one accessible
-branch. `company_reporting` routes stay available by permission, but they must
+branch. Accountant-reporting routes stay available by permission, but they must
 not become the default Finance landing while the business is still using HKD
 level operating reports.
 
@@ -79,7 +82,9 @@ Accounting Advanced is not the pilot default surface. It includes:
 - Payroll GL posting.
 - Full subledger-to-GL reconciliation.
 
-These capabilities may remain in code and database because they protect legal/accounting continuity, but they must not define the pilot UX until Finance Basic is stable.
+These capabilities may remain in code and database because they protect
+accounting continuity and a future conversion-to-company path, but they must
+not define the HKD pilot UX until Finance Basic is stable.
 
 ## Route Contract
 
@@ -123,7 +128,7 @@ Do not implement new Accounting Advanced work until Finance Basic passes the acc
 
 Do not add new finance KPIs unless they answer a daily operator question or a required accountant export question.
 
-Do not expose VAS/TT200 routes as the primary Finance experience for owner or branch operations.
+Do not expose VAS/TT200 routes as the primary Finance experience for owner or branch operations while Má Tư is operating as HKD.
 
 Do not call the module "done" because journal, statements, or chart of accounts exist. Those prove accounting capability, not restaurant finance readiness.
 

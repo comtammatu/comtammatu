@@ -147,7 +147,7 @@
 
 - Provider pháp lý đang có và đang vận hành thực tế cho Cơm Tấm Má Tư.
 - Runtime chỉ register `ViettelSinvoiceProvider`; không còn MISA/meInvoice implementation hay provider switch.
-- Một bộ `SINVOICE_*` env đơn giản hơn cho single-tenant CTCP.
+- Một bộ `SINVOICE_*` env đơn giản hơn cho single-tenant HKD.
 
 **Auth flow**:
 
@@ -158,7 +158,7 @@
 **Config runtime**:
 
 ```env
-COMPANY_TAX_CODE=<MST seller>
+COMPANY_TAX_CODE=<supplierTaxCode đã đăng ký với Viettel/CQT>
 SINVOICE_USERNAME=<account_mst>
 SINVOICE_PASSWORD=<api_password>
 SINVOICE_TEMPLATE_CODE=<template đăng ký CQT>
@@ -166,6 +166,11 @@ SINVOICE_INVOICE_SERIES=<series Viettel cấp>
 SINVOICE_BASE_URL=https://api-vinvoice.viettel.vn
 SINVOICE_SANDBOX=false
 ```
+
+Runtime hiện không gửi `sellerInfo` lên Vinvoice; người bán hiển thị theo hồ sơ
+đã cấu hình trong S-invoice cho `supplierTaxCode`. Không thêm `SELLER_*` env
+hoặc override thông tin người bán nếu chưa đối chiếu tài liệu/tài khoản Viettel
+cụ thể.
 
 Xem chi tiết schema trong `docs/ref/einvoice-tax.md`.
 
@@ -197,7 +202,7 @@ Xem chi tiết schema trong `docs/ref/einvoice-tax.md`.
 
 **Yêu cầu onboarding**:
 
-1. Đăng ký Zalo Official Account (OA) — có xác minh doanh nghiệp
+1. Đăng ký Zalo Official Account (OA) — xác minh theo hồ sơ kinh doanh hợp lệ
 2. Đăng ký ZNS service qua cổng Zalo Business
 3. Submit và chờ approve từng template (~3–5 ngày/template)
 4. Integrate API (trực tiếp hoặc qua Infobip)

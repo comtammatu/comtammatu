@@ -139,7 +139,7 @@ export async function executeSummaryRun(
     const providerResult = await provider.createInvoice({
       orderId: invoiceId,
       orderNumber: `SUMMARY-${branchId}-${summaryDate}`,
-      sellerName: "Cơm Tấm Má Tư CTCP",
+      sellerName: "",
       sellerTaxCode: process.env["COMPANY_TAX_CODE"] ?? "",
       sellerAddress: "",
       buyerName: BUYER_NOT_GET_INVOICE_NAME,

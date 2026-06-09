@@ -17,9 +17,21 @@ import {
   SlidersHorizontal as IconSlidersHorizontal,
   Utensils as IconUtensils,
   UserCircle as IconUserCircle,
+  type LucideIcon,
 } from "lucide-react";
 import { canAccess, type ModuleKey } from "@comtammatu/shared/auth";
+import { cn } from "@comtammatu/ui";
+import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemMedia,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
 import { Progress } from "@comtammatu/ui/components/progress";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
@@ -32,11 +44,54 @@ import {
 import {
   formatShiftRange,
   getTodayWorkState,
+  type TodayWorkState,
   type TodayWorkStatus,
 } from "./_lib/today-work-state";
 import { formatDateVN, formatTimeVN } from "./_lib/vn-business-date";
 
 const copy = messages.employee.home;
+
+type WorkStepState = "active" | "done" | "pending" | "skipped" | "waiting";
+
+interface WorkStep {
+  key: string;
+  title: string;
+  description: string;
+  icon: LucideIcon;
+  state: WorkStepState;
+}
+
+const WORK_STEP_BADGE_VARIANT = {
+  active: "info",
+  done: "success",
+  pending: "warning",
+  skipped: "secondary",
+  waiting: "outline",
+} satisfies Record<WorkStepState, BadgeProps["variant"]>;
+
+const WORK_STEP_ICON_CLASSNAME = {
+  active: "text-info",
+  done: "text-success",
+  pending: "text-warning",
+  skipped: "text-muted-foreground",
+  waiting: "text-muted-foreground",
+} satisfies Record<WorkStepState, string>;
+
+const WORK_STEP_ITEM_CLASSNAME = {
+  active: "border-info/40 bg-info/5",
+  done: "border-success/40 bg-success/5",
+  pending: "border-warning/40 bg-warning/5",
+  skipped: "bg-muted/30",
+  waiting: "",
+} satisfies Record<WorkStepState, string>;
+
+const WORK_STEP_LABEL = {
+  active: copy.workflowStepActive,
+  done: copy.workflowStepDone,
+  pending: copy.workflowStepPending,
+  skipped: copy.workflowStepSkipped,
+  waiting: copy.workflowStepWaiting,
+} satisfies Record<WorkStepState, string>;
 
 const OPERATION_HANDOFFS: Array<{
   moduleKey: ModuleKey;
@@ -180,6 +235,82 @@ function getWorkTitle(status: TodayWorkStatus): string {
   return copy.statusDone;
 }
 
+function getWorkDescription(status: TodayWorkStatus): string {
+  if (status === "missing_profile") return copy.descriptionNoProfile;
+  if (status === "missing_branch") return copy.descriptionNoBranch;
+  if (status === "not_required") return copy.descriptionNotRequired;
+  if (status === "not_started") return copy.descriptionNotStarted;
+  if (status === "working") return copy.descriptionWorking;
+  if (status === "ready_to_checkout") return copy.descriptionReadyToCheckout;
+  if (status === "checkout_pending") return copy.descriptionCheckoutPending;
+  return copy.descriptionDone;
+}
+
+function getStepState(
+  state: TodayWorkState,
+  step: "clock_in" | "tasks" | "checkout",
+): WorkStepState {
+  if (state.status === "not_required") return "skipped";
+
+  const hasCheckIn = Boolean(state.attendance?.checkIn);
+  const hasCheckOut = Boolean(state.attendance?.checkOut);
+
+  if (step === "clock_in") {
+    if (hasCheckIn) return "done";
+    if (
+      state.status === "missing_profile" ||
+      state.status === "missing_branch" ||
+      state.status === "not_started"
+    ) {
+      return "active";
+    }
+    return "waiting";
+  }
+
+  if (step === "tasks") {
+    if (!hasCheckIn) return "waiting";
+    if (
+      state.status === "ready_to_checkout" ||
+      state.status === "checkout_pending" ||
+      state.status === "done"
+    ) {
+      return "done";
+    }
+    return state.status === "working" ? "active" : "waiting";
+  }
+
+  if (hasCheckOut) return "done";
+  if (state.status === "checkout_pending") return "pending";
+  if (state.status === "ready_to_checkout") return "active";
+  return "waiting";
+}
+
+function getWorkflowSteps(state: TodayWorkState): WorkStep[] {
+  return [
+    {
+      key: "clock-in",
+      title: copy.clockIn,
+      description: copy.workflowClockInDescription,
+      icon: IconCamera,
+      state: getStepState(state, "clock_in"),
+    },
+    {
+      key: "tasks",
+      title: copy.shiftTasks,
+      description: copy.workflowTasksDescription,
+      icon: IconListChecks,
+      state: getStepState(state, "tasks"),
+    },
+    {
+      key: "checkout",
+      title: copy.clockOut,
+      description: copy.workflowCheckoutDescription,
+      icon: IconLogout,
+      state: getStepState(state, "checkout"),
+    },
+  ];
+}
+
 interface TodayMetric {
   label: string;
   value: ReactNode;
@@ -202,11 +333,11 @@ function TodayMetricGrid({ rows }: { rows: TodayMetric[] }) {
         >
           <span className="text-xs text-muted-foreground">{row.label}</span>
           <span
-            className={[
+            className={cn(
               "min-w-0 truncate text-sm font-medium",
-              row.mono ? "font-mono tabular-nums" : "",
+              row.mono && "font-mono tabular-nums",
               row.muted ? "text-muted-foreground" : "text-foreground",
-            ].join(" ")}
+            )}
           >
             {row.value}
           </span>
@@ -224,6 +355,46 @@ function TodayMetricGrid({ rows }: { rows: TodayMetric[] }) {
           ) : null}
         </div>
       ))}
+    </div>
+  );
+}
+
+function WorkStepList({ steps }: { steps: WorkStep[] }) {
+  return (
+    <div className="flex flex-col gap-2" aria-label={copy.workflowTitle}>
+      <p className="font-heading text-sm font-semibold">{copy.workflowTitle}</p>
+      <ItemGroup className="grid gap-2 md:grid-cols-3">
+        {steps.map((step) => {
+          const Icon = step.icon;
+          return (
+            <Item
+              key={step.key}
+              variant="outline"
+              size="sm"
+              className={cn(
+                "items-start sm:flex-nowrap",
+                WORK_STEP_ITEM_CLASSNAME[step.state],
+              )}
+            >
+              <ItemMedia
+                variant="icon"
+                className={WORK_STEP_ICON_CLASSNAME[step.state]}
+              >
+                <Icon />
+              </ItemMedia>
+              <ItemContent>
+                <ItemTitle>{step.title}</ItemTitle>
+                <ItemDescription>{step.description}</ItemDescription>
+              </ItemContent>
+              <ItemActions className="ml-auto">
+                <Badge variant={WORK_STEP_BADGE_VARIANT[step.state]}>
+                  {WORK_STEP_LABEL[step.state]}
+                </Badge>
+              </ItemActions>
+            </Item>
+          );
+        })}
+      </ItemGroup>
     </div>
   );
 }
@@ -275,6 +446,8 @@ export default async function EmployeePage() {
 
   const tone = getWorkTone(state.status);
   const title = getWorkTitle(state.status);
+  const description = getWorkDescription(state.status);
+  const workflowSteps = getWorkflowSteps(state);
   const currentShiftName =
     state.attendance?.shiftName ??
     (state.nextShift?.date === state.today ? state.nextShift.shiftName : null);
@@ -450,10 +623,26 @@ export default async function EmployeePage() {
           title={copy.todayWorkTitle}
           description={todayMeta}
           tone={tone}
-          contentClassName="gap-3"
+          contentClassName="gap-4"
         >
+          <div className="flex flex-col gap-3 border-b pb-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-muted-foreground">
+                {copy.nextActionTitle}
+              </p>
+              <p className="font-heading mt-1 text-base font-semibold tracking-tight">
+                {title}
+              </p>
+              <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
+                {description}
+              </p>
+            </div>
+            <div className="flex shrink-0 flex-col gap-2 sm:min-w-40">
+              {primaryAction}
+            </div>
+          </div>
+          <WorkStepList steps={workflowSteps} />
           <TodayMetricGrid rows={todayMetrics} />
-          <div className="flex flex-col gap-2 sm:flex-row">{primaryAction}</div>
         </EmployeePanel>
 
         <EmployeeActionSection
