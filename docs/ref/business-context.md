@@ -111,7 +111,7 @@ Waiter (POS) → KDS (realtime) → Chef bumps → Cashier pays → completed
 ### Vai trò nhân sự (8 cấp)
 
 ```
-owner > super_manager > area_manager > branch_manager > cashier > waiter > chef > office
+owner > super_manager > > branch_manager > cashier > waiter > chef > office
 ```
 
 ### Phương thức thanh toán (v0.3.0)

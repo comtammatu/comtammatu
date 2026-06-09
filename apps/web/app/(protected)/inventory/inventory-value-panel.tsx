@@ -31,23 +31,19 @@ import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import {
-  fetchInventoryValueByArea,
   fetchInventoryValueByBranch,
   fetchInventoryValueSystem,
 } from "./inventory-value-actions";
 import { messages } from "@lib/messages";
 import { AppPageHeader } from "@/components/surface";
 
-import { BRANCH_VI, TABLE_VI } from "@comtammatu/shared/messages";
+import { BRANCH_VI } from "@comtammatu/shared/messages";
 interface InventoryValuePanelProps {
   visibility: InventoryValueVisibility;
 }
 
 export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
   const [systemTotal, setSystemTotal] = useState<number | null>(null);
-  const [areaRows, setAreaRows] = useState<
-    { areaId: number; areaName: string; totalValue: number }[] | null
-  >(null);
   const [branchRows, setBranchRows] = useState<
     { branchId: number; branchName: string; totalValue: number }[] | null
   >(null);
@@ -65,17 +61,6 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
     });
   }, []);
 
-  const loadArea = useCallback(() => {
-    startTransition(async () => {
-      const res = await fetchInventoryValueByArea();
-      if (!res.success) {
-        toast.error(res.error ?? "Không thể tải dữ liệu");
-        return;
-      }
-      setAreaRows(res.data?.rows ?? []);
-    });
-  }, []);
-
   const loadBranch = useCallback(() => {
     startTransition(async () => {
       const res = await fetchInventoryValueByBranch();
@@ -89,40 +74,28 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
 
   useEffect(() => {
     if (visibility.system) loadSystem();
-    if (visibility.area) loadArea();
     if (visibility.branch) loadBranch();
   }, [
     visibility.system,
-    visibility.area,
     visibility.branch,
     loadSystem,
-    loadArea,
     loadBranch,
   ]);
 
   const refreshAll = () => {
     if (visibility.system) loadSystem();
-    if (visibility.area) loadArea();
     if (visibility.branch) loadBranch();
   };
 
-  if (!visibility.system && !visibility.area && !visibility.branch) {
+  if (!visibility.system && !visibility.branch) {
     return null;
   }
 
-  const defaultTab = visibility.system
-    ? "system"
-    : visibility.area
-      ? "area"
-      : "branch";
+  const defaultTab = visibility.system ? "system" : "branch";
 
-  const tabCount = [
-    visibility.system,
-    visibility.area,
-    visibility.branch,
-  ].filter(Boolean).length;
-  const areaTotal =
-    areaRows?.reduce((sum, row) => sum + Number(row.totalValue), 0) ?? 0;
+  const tabCount = [visibility.system, visibility.branch].filter(
+    Boolean,
+  ).length;
   const branchTotal =
     branchRows?.reduce((sum, row) => sum + Number(row.totalValue), 0) ?? 0;
   const SummaryBox = ({ children }: { children: ReactNode }) => (
@@ -157,11 +130,6 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
               {visibility.system && (
                 <TabsTrigger value="system">
                   {messages.inventory.value.tabs.system}
-                </TabsTrigger>
-              )}
-              {visibility.area && (
-                <TabsTrigger value="area">
-                  {messages.inventory.value.tabs.area}
                 </TabsTrigger>
               )}
               {visibility.branch && (
@@ -205,91 +173,6 @@ export function InventoryValuePanel({ visibility }: InventoryValuePanelProps) {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
-      )}
-
-      {visibility.area && (
-        <TabsContent value="area" className="mt-3">
-          {areaRows == null ? (
-            <p className="text-sm text-muted-foreground">
-              {APP_COPY_VI.loading}
-            </p>
-          ) : areaRows.length === 0 ? (
-            <Card>
-              <CardContent className="py-10 text-center">
-                <p className="text-base font-semibold">
-                  {APP_COPY_VI.noAreaData}
-                </p>
-              </CardContent>
-            </Card>
-          ) : isMobile ? (
-            <Card className="overflow-hidden">
-              <CardContent className="space-y-4 pt-6">
-                <SummaryBox>
-                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
-                    {messages.inventory.value.areaTotal}
-                  </p>
-                  <p className="mt-2 text-2xl font-semibold tabular-nums">
-                    {formatVND(areaTotal)}
-                  </p>
-                </SummaryBox>
-                <div className="-m-4 divide-y md:-m-5">
-                  {areaRows.map((row) => (
-                    <div
-                      key={row.areaId}
-                      className="flex items-center justify-between gap-3 px-4 py-3 md:px-5"
-                    >
-                      <span className="truncate text-sm font-medium">
-                        {row.areaName}
-                      </span>
-                      <span className="shrink-0 text-sm font-mono tabular-nums">
-                        {formatVND(row.totalValue)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card className="overflow-hidden">
-              <CardContent className="space-y-4 pt-6">
-                <SummaryBox>
-                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
-                    {messages.inventory.value.areaTotal}
-                  </p>
-                  <p className="mt-2 text-2xl font-semibold tabular-nums">
-                    {formatVND(areaTotal)}
-                  </p>
-                </SummaryBox>
-                <div className="-m-4 md:-m-5">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                          {TABLE_VI.area}
-                        </TableHead>
-                        <TableHead className="text-right text-xs font-semibold uppercase tracking-wider">
-                          {messages.inventory.value.inventoryValue}
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {areaRows.map((row) => (
-                        <TableRow key={row.areaId}>
-                          <TableCell className="font-medium">
-                            {row.areaName}
-                          </TableCell>
-                          <TableCell className="text-right font-mono tabular-nums">
-                            {formatVND(row.totalValue)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </TabsContent>
       )}
 

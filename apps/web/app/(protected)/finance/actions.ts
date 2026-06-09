@@ -25,7 +25,6 @@ const FINANCE_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
 const INVOICE_CREATE_ROLES: readonly StaffRole[] = [
   "owner",
   "super_manager",
-  "area_manager",
   "branch_manager",
   "cashier",
   "waiter",
@@ -33,7 +32,6 @@ const INVOICE_CREATE_ROLES: readonly StaffRole[] = [
 const REPORT_ROLES: readonly StaffRole[] = [
   "owner",
   "super_manager",
-  "area_manager",
   "branch_manager",
 ];
 
@@ -106,7 +104,7 @@ export async function createTaxInvoice(
     };
   }
 
-  // Branch scope check (area_manager must be in area_branches mapping)
+  // Branch scope check.
   if (!(await canAccessBranch(supabase, claims, order.branch_id))) {
     return {
       success: false,
@@ -956,10 +954,9 @@ export async function fetchRevenueByCashier(
 }
 
 /* ─── fetchAccessibleBranches — branches user có finance:view ─ */
-// Branch picker source. Owner/super_manager: all active operational
-// branches. area_manager: branches in their area. branch_manager:
-// only their own branch. Filter by `branch_kind='branch'` để loại
-// "tenant" / "area" rows (logical containers, không phát sinh DT).
+// Branch picker source. Owner/super_manager: all active operational branches.
+// Branch-scoped users only see their own branch. Filter by `branch_kind='branch'`
+// để loại non-operational rows, không phát sinh DT.
 export async function fetchAccessibleBranches(): Promise<ActionResult> {
   const ctx = await getAuthContextWithPermission(
     REPORT_ROLES,
@@ -982,35 +979,6 @@ export async function fetchAccessibleBranches(): Promise<ActionResult> {
       return { success: false, error: "Không thể tải danh sách chi nhánh." };
     }
     return { success: true, data: data ?? [] };
-  }
-
-  // area_manager: scope qua area_branches mapping.
-  if (claims.user_role === "area_manager" && claims.area_id != null) {
-    const { data, error } = await supabase
-      .from("area_branches")
-      .select("branch_id, branches!inner(id, name, is_active, branch_kind)")
-      .eq("tenant_id", claims.tenant_id)
-      .eq("area_id", claims.area_id)
-      .eq("branches.is_active", true)
-      .eq("branches.branch_kind", "branch");
-    if (error) {
-      return { success: false, error: "Không thể tải danh sách chi nhánh." };
-    }
-    const rows = (data ?? [])
-      .map((r) => r.branches)
-      .filter(
-        (
-          b,
-        ): b is {
-          id: number;
-          name: string;
-          is_active: boolean;
-          branch_kind: string;
-        } => Boolean(b),
-      )
-      .map((b) => ({ id: b.id, name: b.name }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-    return { success: true, data: rows };
   }
 
   // branch_manager / cashier scope: chỉ thấy chi nhánh của mình.

@@ -1,12 +1,12 @@
 # Auth & ACL Module
 
-> **Auth (shipped 2026-04-22/23):** Position (HR chức vụ) is separated from Permission (quyền truy cập). Authz runs against a normalized `staff_permissions(user_id, branch_id, permission_key, valid_from, valid_until)` table, gated by RLS via `has_permission(branch_id, key)`. Legacy role strings (`branch_manager`, `cashier`, …) are still emitted in JWT as `user_role` for backward compat — they're derived from `positions.legacy_role_code`. `profiles.role` column + `staff_role` enum **dropped**. See the Auth section below.
+> **Auth (shipped 2026-04-22/23):** Position (HR chức vụ) is separated from Permission (quyền truy cập). Authz runs against a normalized `staff_permissions(user_id, branch_id, permission_key, valid_from, valid_until)` table, gated by RLS via `has_permission(branch_id, key)`. Legacy role strings (`branch_manager`, `cashier`, …) are still emitted in JWT as `user_role` for backward compat — they're derived from `positions.code mapper`. `profiles.role` column + `staff_role` enum **dropped**. See the Auth section below.
 
 ## Overview
 
 Authentication and authorization for staff/operator surfaces. Protected requests pass through this module before reaching feature code. The auth chain spans four layers: Supabase Auth (identity), JWT custom claims hook (position + legacy-role injection), proxy.ts (route-level ACL enforcement), and RLS with `has_permission()` (row-level, permission-driven). Public customer surfaces such as `/br/[branchId]/runner` and `/r/*` bypass staff login by design.
 
-**Owner:** `packages/shared/src/auth/` + `apps/web/proxy.ts` + `supabase/migrations/*jwt*` + `supabase/migrations/*auth_v2*`
+**Owner:** `packages/shared/src/auth/` + `apps/web/proxy.ts` + `supabase/migrations/*jwt*` + `supabase/migrations/*auth*`
 
 ## Components
 
@@ -25,8 +25,8 @@ Authentication and authorization for staff/operator surfaces. Protected requests
 | `apps/web/app/_lib/auth.ts`                                     | `loadAuthState()` — shared claims reader for layouts/pages; throws if proxy invariant violated | Layout claims helper      |
 | `apps/web/proxy.ts`                                             | Next.js middleware — **single auth gate**: session + claims + module ACL + branch scope        | Request gateway           |
 | `supabase/migrations/*_jwt_custom_claims_hook.sql`              | `custom_access_token_hook()` — injects claims into JWT                                         | DB-level auth             |
-| `supabase/migrations/20260422120000_auth_v2_tables.sql`         | Auth core tables: `permission_keys`, `positions`, `role_templates`, `staff_permissions`        | Auth schema               |
-| `supabase/migrations/20260422120002_auth_v2_has_permission.sql` | `has_permission(branch, key)` / `has_permission_any(key)` SECURITY DEFINER helpers             | Auth RLS helpers          |
+| `supabase/migrations/20260422120000_auth_tables.sql`         | Auth core tables: `permission_keys`, `positions`, `role_templates`, `staff_permissions`        | Auth schema               |
+| `supabase/migrations/20260422120002_auth_has_permission.sql` | `has_permission(branch, key)` / `has_permission_any(key)` SECURITY DEFINER helpers             | Auth RLS helpers          |
 | `apps/web/app/(protected)/admin/staff/[id]/permissions/`        | Admin UI for grant/revoke + audit (page + client + actions)                                    | Permission admin UI       |
 | `apps/web/app/_lib/permissions.ts`                              | Server helpers `fetchCurrentUserPermissions()` + `currentUserHasPermission()`                  | App-side permission reads |
 
@@ -35,7 +35,6 @@ Authentication and authorization for staff/operator surfaces. Protected requests
 ```
 owner                          ← governance + tenant-wide oversight, including orders and inventory
 ├── super_manager              ← Trụ sở: vận hành + catalog NL, procurement
-├── area_manager               ← tenant-wide; area scope enforced via per-branch grants in `staff_permissions` (Auth)
 ├── branch_manager             ← single branch operations
 │   ├── cashier                ← POS (/br/[branchId]/pos)
 │   ├── waiter                 ← POS (/br/[branchId]/pos)
@@ -43,7 +42,7 @@ owner                          ← governance + tenant-wide oversight, including
 └── office                     ← HQ staff, no branch assignment
 ```
 
-Legacy role strings (`owner`, `cashier`, …) still exist as `STAFF_ROLES` TS constants and are emitted in JWT `user_role` for backward compat. They are **derived** from `positions.legacy_role_code` — the `staff_role` enum + `profiles.role` column were dropped (2026-04-23). To add a new legacy role value, update `STAFF_ROLES` + `positions.legacy_role_code` mapping in the seed. To add a new HR position, insert into `positions` with the proper `legacy_role_code` bridge.
+Compatibility access buckets (`owner`, `cashier`, …) still exist as `STAFF_ROLES` / `AccessBucket` TS constants and are emitted in JWT `user_role` for backward compatibility. They are derived from `positions.code` through the mapper in shared auth and SQL. HR display names live in `positions.label_vi` / `positions.label_en` and must not gate authz.
 
 ## RLS Gate Choice — `has_permission()` vs `auth_role()`
 
@@ -55,13 +54,13 @@ Two parallel ACL mechanisms exist; pick the right one:
 **Refactor history:**
 
 - 2026-05-07 H2a — `refunds_update` policy migrated from `auth_role() IN ('owner','super_manager')` → `has_permission(branch_id,'orders:refund_approve')` (`supabase/migrations/20260601200000_h2a_refunds_update_perm_gate.sql`). Closed 1h stale-revoke window for refund approve/reject which is reachable via direct UPDATE in `apps/web/app/(protected)/orders/refund-actions.ts`.
-- 2026-05-24 α4b — `admin_update_profile` and `toggle_profile_active` now derive actor role/branch/area live from `profiles + positions`; `set_branch_kind` gates on `settings:tenant` (`supabase/migrations/20260601810000_auth_v3_cut_auth_role_rpc_batch.sql`). `can_access_branch()` remains a separate RLS-policy batch because it is a shared branch-scope predicate.
+- 2026-05-24 α4b — `admin_update_profile` and `toggle_profile_active` now derive actor role and branch live from `profiles + positions`; `set_branch_kind` gates on `settings:tenant`. `can_access_branch()` remains a separate RLS-policy batch because it is a shared branch-scope predicate.
 - Backlog H2b — `hr_payroll` policies (`20260416040000:31,38,42,123,130,134`) follow same pattern; deferred pending business decision on payroll-specific permission keys.
 
 ## Invariants (post H3a, 2026-05-07)
 
 - **`profiles.position_id` is NOT NULL** + FK `ON DELETE RESTRICT`. Every active or inactive profile MUST point to a seeded position in its tenant. Enforced by migration `20260601100000_auth_v3_h3a_position_id_required.sql`.
-  - `handle_new_user` trigger raises `position_not_resolved` (SQLSTATE P0001) if `raw_app_meta_data->>'role'` does not map to a seeded position — signup fails loudly instead of inserting a broken profile (which would silently demote the new user to `'office'` via the JWT hook's `COALESCE(po.legacy_role_code, 'office')`).
+  - `handle_new_user` trigger raises `position_not_resolved` (SQLSTATE P0001) if `raw_app_meta_data->>'role'` does not map to a seeded position — signup fails loudly instead of inserting a broken profile.
   - `admin_update_profile` raises the same exception if a manager passes a role that does not resolve to a position for the tenant.
   - Deleting a position with active profiles raises `foreign_key_violation` (SQLSTATE 23503). Admins must reassign profiles before deleting.
 - **Owner identity has three separate meanings.** `tenants.representative` is a free-text legal-document name (TEXT, not UUID), `positions.code='owner'` is the current runtime owner-bypass / JWT role source, and `tenants.owner_user_id UUID NOT NULL` is the canonical owner auth identity column for future ownership-transfer UI/RPC. Do not wire `representative` into auth. Do not add a dual-source `has_permission()` branch unless the deferred H3b flip is intentionally shipped. See ADR 0005: `docs/plan/adr/0005-owner-identity-source-separation.md`.
@@ -75,7 +74,7 @@ Two parallel ACL mechanisms exist; pick the right one:
 | **Grant**      | `staff_permissions(user_id, branch_id, permission_key, valid_from, valid_until)` | Source of truth for authz. `branch_id IS NULL` ⇒ tenant-wide. Temporal window.                                                                                |
 | **Template**   | `role_templates(permission_keys[])`                                              | Preset bundle applied when assigning a position (snapshot; edits don't propagate).                                                                            |
 
-**Authz path (every request):** `proxy.ts` still does route-level module ACL via `canAccess(user_role, module)` as the fast gate. Row-level authz delegates to `has_permission(branch_id, key)` in RLS — owner bypass built-in, temporal validity filtered, area_manager scope preserved via per-branch grants (backfilled from `area_branches`).
+**Authz path (every request):** `proxy.ts` still does route-level module ACL via `canAccess(user_role, module)` as the fast gate. Row-level authz delegates to `has_permission(branch_id, key)` in RLS — owner bypass built-in, temporal validity filtered, branch access explicit through grants or `profiles.branch_id`.
 
 **Grant/revoke** goes through SECURITY DEFINER RPCs that enforce caller must hold `staff:assign_permission` and log every change to `permission_audit_log`:
 
@@ -90,7 +89,7 @@ Owner is protected: RPCs refuse to touch a user whose position code is `owner` (
 1. User submits credentials at `/login` (`apps/web/app/(public)/(auth)/login/actions.ts`)
 2. Server action calls `supabase.auth.signInWithPassword()`
 3. Supabase fires `custom_access_token_hook()` — SECURITY DEFINER
-4. Hook reads `profiles` + `positions`, injects `{tenant_id, branch_id, user_role, position}` into JWT `app_metadata`. `user_role` derives from `positions.legacy_role_code`; `position` is the HR code.
+4. Hook reads `profiles` + `positions`, injects `{tenant_id, branch_id, user_role, access_bucket, position, position_code}` into JWT `app_metadata`. `user_role` / `access_bucket` derive from `positions.code`; `position` is the HR code.
 5. JWT returned to client, stored in cookies via `@supabase/ssr`
 6. Every subsequent request:
    - Proxy calls `updateSession()` → `extractClaimsFromAccessToken(session.access_token)` → `canAccess(user_role, module)` (route gate)
@@ -102,30 +101,30 @@ Owner is protected: RPCs refuse to touch a user whose position code is `owner` (
 
 Defined in `packages/shared/src/auth/module-acl.ts`. Single source of truth — proxy.ts, admin shell, and layouts all read from here.
 
-| Module                                                  | owner | super_mgr | area_mgr | branch_mgr | wh_mgr | prod_mgr | cashier | waiter | chef | office |
-| ------------------------------------------------------- | ----- | --------- | -------- | ---------- | ------ | -------- | ------- | ------ | ---- | ------ |
-| dashboard                                               | ✓     | ✓         |          |            |        |          |         |        |      |        |
-| menu                                                    | ✓     | ✓         | ✓        | ✓          |        |          |         |        |      |        |
-| inventory                                               | ✓     | ✓         | ✓        | ✓          | ✓      | ✓        |         |        |      |        |
-| inventory_procurement (NCC, PO, GRN, HĐ NCC, công thức) | ✓     | ✓         |          |            | ✓      | ✓        |         |        |      |        |
-| inventory_admin (RETIRED — empty allowed_roles)         |       |           |          |            |        |          |         |        |      |        |
-| orders                                                  | ✓     | ✓         | ✓        | ✓          |        |          | ✓       |        |      |        |
-| staff                                                   | ✓     | ✓         |          |            |        |          |         |        |      |        |
-| hr                                                      | ✓     | ✓         |          |            |        |          |         |        |      |        |
-| crm                                                     | ✓     | ✓         |          |            |        |          |         |        |      |        |
-| finance                                                 | ✓     | ✓         |          |            |        |          |         |        |      |        |
-| accounting (period close/reopen)                        | ✓     | ✓         |          |            |        |          |         |        |      |        |
-| reports                                                 | ✓     | ✓         |          |            |        |          |         |        |      |        |
-| settings                                                | ✓     | ✓         | ✓        | ✓          |        |          |         |        |      |        |
-| pos                                                     |       |           |          | ✓          |        |          | ✓       | ✓      |      |        |
-| kds                                                     |       |           |          | ✓          |        |          |         |        | ✓    |        |
-| runner (staff nav/discovery only; display route is public) |       |           |          | ✓          |        |          | ✓       | ✓      | ✓    |        |
-| branch_settings                                         | ✓     | ✓         | ✓        | ✓          |        |          |         |        |      |        |
-| branch_menu_limits                                      | ✓     | ✓         | ✓        | ✓          |        |          | ✓       |        | ✓    |        |
-| employee                                                |       |           | ✓        | ✓          | ✓      | ✓        | ✓       | ✓      | ✓    | ✓      |
-| notifications                                           | ✓     | ✓         | ✓        | ✓          | ✓      | ✓        | ✓       | ✓      | ✓    | ✓      |
+| Module                                                  | owner | super_mgr | branch_mgr | wh_mgr | prod_mgr | cashier | waiter | chef | office |
+| ------------------------------------------------------- | ----- | --------- | ---------- | ------ | -------- | ------- | ------ | ---- | ------ |
+| dashboard                                               | ✓     | ✓         |            |        |          |         |        |      |        |
+| menu                                                    | ✓     | ✓         | ✓          |        |          |         |        |      |        |
+| inventory                                               | ✓     | ✓         | ✓          | ✓      | ✓        |         |        |      |        |
+| inventory_procurement (NCC, PO, GRN, HĐ NCC, công thức) | ✓     | ✓         |            | ✓      | ✓        |         |        |      |        |
+| inventory_admin (retired — empty allowed_roles)         |       |           |            |        |          |         |        |      |        |
+| orders                                                  | ✓     | ✓         | ✓          |        |          | ✓       |        |      |        |
+| staff                                                   | ✓     | ✓         |            |        |          |         |        |      |        |
+| hr                                                      | ✓     | ✓         |            |        |          |         |        |      |        |
+| crm                                                     | ✓     | ✓         |            |        |          |         |        |      |        |
+| finance                                                 | ✓     | ✓         |            |        |          |         |        |      |        |
+| accounting (period close/reopen)                        | ✓     | ✓         |            |        |          |         |        |      |        |
+| reports                                                 | ✓     | ✓         |            |        |          |         |        |      |        |
+| settings                                                | ✓     | ✓         | ✓          |        |          |         |        |      |        |
+| pos                                                     |       |           | ✓          |        |          | ✓       | ✓      |      |        |
+| kds                                                     |       |           | ✓          |        |          |         |        | ✓    |        |
+| runner (staff nav/discovery only; display route is public) |       |           | ✓          |        |          | ✓       | ✓      | ✓    |        |
+| branch_settings                                         | ✓     | ✓         | ✓          |        |          |         |        |      |        |
+| branch_menu_limits                                      | ✓     | ✓         | ✓          |        |          | ✓       |        | ✓    |        |
+| employee                                                |       |           | ✓          | ✓      | ✓        | ✓       | ✓      | ✓    | ✓      |
+| notifications                                           | ✓     | ✓         | ✓          | ✓      | ✓        | ✓       | ✓      | ✓    | ✓      |
 
-> `wh_mgr` = `warehouse_manager`, `prod_mgr` = `production_manager`. Route-level ACL đọc `user_role` từ JWT, derived từ `positions.legacy_role_code`. Row-level authz vẫn đi qua `has_permission(branch_id, key)` — matrix này chỉ là fast gate.
+> `wh_mgr` = `warehouse_manager`, `prod_mgr` = `production_manager`. Route-level ACL đọc `user_role` từ JWT, derived từ `positions.code`. Row-level authz vẫn đi qua `has_permission(branch_id, key)` — matrix này chỉ là fast gate.
 >
 > Inventory mutating RPC chính đã permission-gated; phần `auth_role()` còn lại là route/side/scope guard hoặc legacy helper. Xem `docs/ref/inventory-rbac-matrix.md` §6.
 >
@@ -133,9 +132,9 @@ Defined in `packages/shared/src/auth/module-acl.ts`. Single source of truth — 
 
 **Trang nhân viên boundary:** `employee` là bề mặt self-service / bàn giao vận hành cho staff không thuộc `ADMIN_ROLES`. `owner` và `super_manager` không vào `/employee/*`; request trực tiếp được đưa về Admin default route.
 
-**Owner (chủ sở hữu):** ngoài các module quản trị / giám sát còn có thể vào `orders` và `inventory` để kiểm tra trực tiếp vận hành tenant-level. Tuy vậy owner không được coi là operator hằng ngày trong inventory docs/UI; các bề mặt Inventory hiện tối ưu cho `super_manager`, `area_manager`, `branch_manager`.
+**Owner (chủ sở hữu):** ngoài các module quản trị / giám sát còn có thể vào `orders` và `inventory` để kiểm tra trực tiếp vận hành tenant-level. Tuy vậy owner không được coi là operator hằng ngày trong inventory docs/UI; các bề mặt Inventory hiện tối ưu cho `super_manager`, `branch_manager`, `warehouse_manager`, `production_manager`.
 
-**Inventory sub-route ACL:** `inventory` allows `owner`, `super_manager`, `area_manager`, `branch_manager`, `warehouse_manager`, `production_manager` cho tồn kho, điều chuyển, stocktake, expiry, reports, và branch operations. `inventory_procurement` ở cấp trụ sở/kho: `owner`, `super_manager`, `warehouse_manager`, `production_manager` vào `suppliers`, `purchase-orders`, `grn`, `supplier-invoices`, `recipes`, và `receiving` theo `route-resolution.ts`. `inventory_admin` (`/admin/inventory/*`) đã RETIRED qua `allowedRoles: []`: page files đã removed, nhưng URL space vẫn map qua module này để proxy chặn bằng ACL chuẩn thay vì xem như admin route chưa phân loại. `production` không dùng module riêng; Server Actions và DB/RPC/RLS hard-deny `area_manager` và `branch_manager` dù có manual production/menu grant. Operator production là `super_manager` / `production_manager`; `owner` có access kiểm tra/khẩn cấp nhưng không được UX dẫn như operator hằng ngày. `branch_manager` vì vậy chỉ nên thấy nhịp branch ops: nhận inbound transfer, tạo intra-branch transfer `Cấp bếp`, stocktake, adjustment/write-off.
+**Inventory sub-route ACL:** `inventory` allows `owner`, `super_manager`, `branch_manager`, `warehouse_manager`, `production_manager` cho tồn kho, điều chuyển, stocktake, expiry, reports, và branch operations. `inventory_procurement` ở cấp trụ sở/kho: `owner`, `super_manager`, `warehouse_manager`, `production_manager` vào `suppliers`, `purchase-orders`, `grn`, `supplier-invoices`, `recipes`, và `receiving` theo `route-resolution.ts`. `inventory_admin` (`/admin/inventory/*`) đã retired qua `allowedRoles: []`: page files đã removed, nhưng URL space vẫn map qua module này để proxy chặn bằng ACL chuẩn thay vì xem như admin route chưa phân loại. `production` không dùng module riêng; Server Actions và DB/RPC/RLS hard-deny `branch_manager` dù có manual production/menu grant. Operator production là `super_manager` / `production_manager`; `owner` có access kiểm tra/khẩn cấp nhưng không được UX dẫn như operator hằng ngày. `branch_manager` vì vậy chỉ nên thấy nhịp branch ops: nhận inbound transfer, tạo intra-branch transfer `Cấp bếp`, stocktake, adjustment/write-off.
 
 **UX boundary quan trọng:** nav có thể hẹp hơn module-level ACL để giảm nhiễu vận hành. Ví dụ `branch_manager` vẫn vào được `/inventory/transfers` để nhận hàng, nhưng UI không nên quảng bá action tạo inter-site transfer như tác vụ mặc định của vai trò này.
 
@@ -147,12 +146,11 @@ hardcode `/admin/dashboard`, vì non-admin role sẽ bị proxy đưa về defau
 Inventory route contract dùng danh sách active prefixes; unknown Inventory URL
 không được giữ trong post-login `returnTo`.
 
-**Settings sub-page ACL:** The settings module allows area_manager and branch_manager, but sub-pages have additional guards:
+**Settings sub-page ACL:** The settings module allows owner, super_manager, and branch_manager; sub-pages have additional guards:
 
 - `/admin/settings/branches` — owner, super_manager only (page-level redirect)
 - `/admin/settings/general` — owner, super_manager only (page-level redirect)
-- `/admin/settings/areas` — owner, super_manager only (page-level redirect)
-- `/admin/settings/tables`, `/admin/settings/kds`, `/admin/settings/pos`, `/admin/settings/payments`, `/admin/settings/printers` — all settings roles (area_manager, branch_manager see only their branch data)
+- `/admin/settings/tables`, `/admin/settings/kds`, `/admin/settings/pos`, `/admin/settings/payments`, `/admin/settings/printers` — all settings roles; branch_manager sees only their branch data
 
 ## Proxy Routing Logic — Single Gate
 
@@ -218,7 +216,7 @@ Single canonical helper cho "send blocked user somewhere they can read what happ
 | Change                      | Affected                                                                                                                                                                              |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Add new permission key      | Migration (INSERT into `permission_keys`) + `packages/shared/src/auth/permissions.ts` constant                                                                                        |
-| Add new position            | Migration (INSERT into `positions` with `legacy_role_code` mapping) + seed script                                                                                                     |
+| Add new position            | Migration (INSERT into `positions`) + seed script                                                                                                     |
 | Add new role_template       | Migration (INSERT into `role_templates`) or via admin RPC                                                                                                                             |
 | Add new module to route ACL | module-acl.ts + proxy.ts `resolveModule()` + nav-config.ts                                                                                                                            |
 | Change JWT claims shape     | hook SQL + types.ts + scope.ts + proxy.ts. Always check `record.tenant_id IS NOT NULL` not `record IS NOT NULL` in plpgsql (see `PLPGSQL-RECORD-IS-NOT-NULL` regression).             |

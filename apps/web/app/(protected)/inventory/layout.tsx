@@ -40,8 +40,7 @@ export default async function InventoryLayout({
     currentUserHasAnyPermissionAny(PRODUCTION_OPEN_PERMISSIONS),
     hasCurrentProductionBranchAccess(supabase, claims),
   ]);
-  const isOversightRole =
-    claims.user_role === "owner" || claims.user_role === "area_manager";
+  const isOversightRole = claims.user_role === "owner";
   const showProcurement =
     !isOversightRole &&
     canAccess(claims.user_role, "inventory_procurement") &&

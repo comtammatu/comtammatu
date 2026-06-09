@@ -56,11 +56,6 @@ function canAssignRole(
     if (targetRole === "owner") return "Không có quyền tạo chủ sở hữu";
     return null;
   }
-  if (actorRole === "area_manager") {
-    if (["owner", "super_manager", "area_manager"].includes(targetRole))
-      return "Không có quyền gán vai trò cao hơn quản lý chi nhánh";
-    return null;
-  }
   if (actorRole === "branch_manager") {
     if (!["cashier", "waiter", "chef"].includes(targetRole))
       return "Bạn chỉ có thể tạo thu ngân/phục vụ/bếp";

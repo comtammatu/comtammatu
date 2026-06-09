@@ -31,7 +31,6 @@ import { EmptyStatePanel } from "../components/empty-state-panel";
 import { toggleStaffActive } from "./actions";
 import { StaffFormDialog } from "./staff-form-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { ROLE_LABELS } from "./role-labels";
 import { TableEmptyStateRow } from "../components/table-empty-state-row";
 
 import { BRANCH_VI, FORM_VI, STAFF_VI } from "@comtammatu/shared/messages";
@@ -46,17 +45,28 @@ export interface StaffRow {
   full_name: string;
   phone: string | null;
   role: string;
+  position_label: string | null;
   branch_id: number | null;
   branch_name: string | null;
   is_active: boolean | null;
 }
 
+export interface PositionOption {
+  value: string;
+  label: string;
+}
+
 interface StaffTableProps {
   staff: StaffRow[];
   branches: BranchOption[];
+  positionOptions: PositionOption[];
 }
 
-export function StaffTable({ staff, branches }: StaffTableProps) {
+export function StaffTable({
+  staff,
+  branches,
+  positionOptions,
+}: StaffTableProps) {
   const [editStaff, setEditStaff] = useState<StaffRow | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -99,10 +109,7 @@ export function StaffTable({ staff, branches }: StaffTableProps) {
             <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
               <div>
                 <p className="text-muted-foreground">{STAFF_VI.role}</p>
-                <p className="mt-1">
-                  {ROLE_LABELS[member.role as keyof typeof ROLE_LABELS] ??
-                    member.role}
-                </p>
+                <p className="mt-1">{member.position_label ?? member.role}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">SĐT</p>
@@ -192,8 +199,7 @@ export function StaffTable({ staff, branches }: StaffTableProps) {
                 </TableCell>
                 <TableCell className="hidden sm:table-cell">
                   <Badge variant="secondary">
-                    {ROLE_LABELS[member.role as keyof typeof ROLE_LABELS] ??
-                      member.role}
+                    {member.position_label ?? member.role}
                   </Badge>
                 </TableCell>
                 <TableCell className="hidden text-muted-foreground md:table-cell">
@@ -259,6 +265,7 @@ export function StaffTable({ staff, branches }: StaffTableProps) {
         onOpenChange={(open) => !open && setEditStaff(null)}
         staff={editStaff}
         branches={branches}
+        positionOptions={positionOptions}
       />
     </>
   );

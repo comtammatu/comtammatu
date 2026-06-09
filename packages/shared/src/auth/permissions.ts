@@ -1,5 +1,5 @@
 /**
- * Auth v2 permission keys — canonical TypeScript mirror of `permission_keys` table.
+ * Auth permission keys — canonical TypeScript mirror of `permission_keys` table.
  *
  * These strings are the single source of truth for authz checks. They MUST
  * match the `key` column in the database exactly. When adding a new permission:

@@ -10,12 +10,10 @@
 --   - "Bếp trung tâm" (migration 20260417020000_seed_central_kitchen.sql) cho production_manager.
 --
 -- Step 0: resolve the central_warehouse branch used as HQ/dev warehouse.
--- Bước 0.75: đảm bảo area "Khu vực Vũng Tàu" tồn tại & gắn Đất Đỏ + Phước Hải.
 --
 -- Tài khoản QA được seed (password: Test1234!):
 --   • owner@comtammatu.vn              – owner (tenant-level, pin HQ)
 --   • supermanager@comtammatu.vn       – super_manager (keeper, không bị xoá)
---   • area.vungtau@comtammatu.vn       – area_manager (area "Khu vực Vũng Tàu")
 --   • warehouse@comtammatu.vn          – warehouse_manager (Trụ sở chính = warehouse)
 --   • production@comtammatu.vn        – production_manager (Bếp trung tâm)
 --   • manager.datdo@comtammatu.vn      – branch_manager Đất Đỏ
@@ -87,7 +85,6 @@ DECLARE
     'a0000006-0000-4000-8000-000000000006'::uuid, -- chef.datdo
     'a0000007-0000-4000-8000-000000000007'::uuid, -- cashier.phuochai
     'a0000008-0000-4000-8000-000000000008'::uuid, -- office
-    'a0000009-0000-4000-8000-000000000009'::uuid, -- area.vungtau
     'a000000a-0000-4000-8000-00000000000a'::uuid, -- warehouse
     'a000000b-0000-4000-8000-00000000000b'::uuid, -- production
     'a000000c-0000-4000-8000-00000000000c'::uuid, -- manager.phuochai
@@ -160,48 +157,12 @@ WHERE email IN (
   'chef.datdo@comtammatu.vn',
   'cashier.phuochai@comtammatu.vn',
   'office@comtammatu.vn',
-  'area.vungtau@comtammatu.vn',
   'warehouse@comtammatu.vn',
   'production@comtammatu.vn',
   'manager.phuochai@comtammatu.vn',
   'waiter.phuochai@comtammatu.vn',
   'chef.phuochai@comtammatu.vn'
 );
-
--- ─── 0.75) Seed area "Khu vực Vũng Tàu" covering Đất Đỏ + Phước Hải ───
--- Area manager needs an area to attach to; the junction membership drives RLS scope.
-DO $$
-DECLARE
-  v_tenant   BIGINT;
-  v_area     BIGINT;
-  v_datdo    BIGINT;
-  v_phuochai BIGINT;
-BEGIN
-  SELECT id INTO v_tenant FROM public.tenants WHERE slug = 'comtammatu' LIMIT 1;
-  SELECT id INTO v_datdo FROM public.branches WHERE tenant_id = v_tenant AND name = 'Chi nhánh Đất Đỏ' LIMIT 1;
-  SELECT id INTO v_phuochai FROM public.branches WHERE tenant_id = v_tenant AND name = 'Chi nhánh Phước Hải' LIMIT 1;
-
-  INSERT INTO public.areas (tenant_id, name, is_active)
-  VALUES (v_tenant, 'Khu vực Vũng Tàu', true)
-  ON CONFLICT (name, tenant_id) DO UPDATE
-    SET is_active = true,
-        updated_at = now()
-  RETURNING id INTO v_area;
-
-  IF v_area IS NULL THEN
-    SELECT id INTO v_area FROM public.areas
-    WHERE tenant_id = v_tenant AND name = 'Khu vực Vũng Tàu';
-  END IF;
-
-  INSERT INTO public.area_branches (tenant_id, area_id, branch_id)
-  VALUES (v_tenant, v_area, v_datdo)
-  ON CONFLICT (area_id, branch_id, tenant_id) DO NOTHING;
-
-  INSERT INTO public.area_branches (tenant_id, area_id, branch_id)
-  VALUES (v_tenant, v_area, v_phuochai)
-  ON CONFLICT (area_id, branch_id, tenant_id) DO NOTHING;
-END;
-$$;
 
 DO $$
 DECLARE
@@ -210,7 +171,6 @@ DECLARE
   v_phuochai BIGINT;
   v_hq       BIGINT;
   v_ck       BIGINT;
-  v_area_vt  BIGINT;
   v_pw       TEXT := 'Test1234!';
   v_crypt    TEXT;
 
@@ -245,15 +205,6 @@ BEGIN
     RAISE EXCEPTION 'Thiếu Bếp trung tâm — chạy migration 20260417020000_seed_central_kitchen.sql trước.';
   END IF;
 
-  SELECT id INTO v_area_vt
-  FROM public.areas
-  WHERE tenant_id = v_tenant AND name = 'Khu vực Vũng Tàu'
-  LIMIT 1;
-
-  IF v_area_vt IS NULL THEN
-    RAISE EXCEPTION 'Thiếu area Khu vực Vũng Tàu — block seed area chạy thất bại.';
-  END IF;
-
   FOR r IN
     SELECT *
     FROM (
@@ -274,9 +225,6 @@ BEGIN
       SELECT 'a0000007-0000-4000-8000-000000000007'::uuid, 'cashier.phuochai@comtammatu.vn'::text, 'cashier'::text, v_phuochai, 'Thu ngân Phước Hải'::text, 'EMP-CASH-PH'::text
       UNION ALL
       SELECT 'a0000008-0000-4000-8000-000000000008'::uuid, 'office@comtammatu.vn'::text, 'office'::text, NULL::bigint, 'Văn phòng'::text, 'EMP-OFF'::text
-      UNION ALL
-      -- Area manager: tenant-level, branch_id NULL; area_id set post-insert (see block 3).
-      SELECT 'a0000009-0000-4000-8000-000000000009'::uuid, 'area.vungtau@comtammatu.vn'::text, 'area_manager'::text, NULL::bigint, 'QL Khu vực Vũng Tàu'::text, 'EMP-AREA-VT'::text
       UNION ALL
       -- Warehouse manager: must be assigned to a central warehouse.
       SELECT 'a000000a-0000-4000-8000-00000000000a'::uuid, 'warehouse@comtammatu.vn'::text, 'warehouse_manager'::text, v_hq::bigint, 'QL Kho tổng'::text, 'EMP-WH'::text
@@ -419,16 +367,10 @@ BEGIN
     INSERT INTO public.employees (tenant_id, profile_id, employee_code, is_active)
     VALUES (v_tenant, r.user_id, r.emp_code, true);
   END LOOP;
-
-  -- handle_new_user trigger không set area_id; area_manager cần gán area thủ công.
-  UPDATE public.profiles
-     SET area_id = v_area_vt
-   WHERE id = 'a0000009-0000-4000-8000-000000000009'::uuid
-     AND tenant_id = v_tenant;
 END;
 $$;
 
--- ─── Auth v2: backfill staff_permissions cho tất cả profile vừa seed ──
+-- ─── Auth: backfill staff_permissions cho tất cả profile vừa seed ──
 -- handle_new_user chỉ set position_id; grant permissions qua template phải
 -- gọi tay. sync_missing_permissions_from_template() additive + idempotent.
 DO $$
@@ -436,7 +378,7 @@ DECLARE
   v_res RECORD;
 BEGIN
   SELECT * INTO v_res FROM public.sync_missing_permissions_from_template();
-  RAISE NOTICE 'Auth v2 seed: staff_permissions rows added=%', v_res.rows_added;
+  RAISE NOTICE 'Auth seed: staff_permissions rows added=%', v_res.rows_added;
 END $$;
 
 COMMIT;

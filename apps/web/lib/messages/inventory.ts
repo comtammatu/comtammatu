@@ -54,7 +54,6 @@ export const inventory = {
     description: "Xem nhanh tổng giá trị theo đúng phạm vi được phân quyền.",
     tabs: {
       system: "Toàn hệ thống",
-      area: "Theo khu vực",
       branch: "Theo chi nhánh",
     },
     currentValue: "Giá trị hiện tại",
@@ -62,7 +61,6 @@ export const inventory = {
     systemScope: "Toàn hệ thống",
     systemDescription:
       "Tổng hợp tất cả chi nhánh theo WAC hoặc giá tham chiếu.",
-    areaTotal: "Tổng theo khu vực",
     branchTotal: "Tổng theo chi nhánh",
     inventoryValue: "Giá trị tồn kho",
   },

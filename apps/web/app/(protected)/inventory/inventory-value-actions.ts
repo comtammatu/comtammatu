@@ -7,16 +7,9 @@ import { getBranchSiteDisplayName } from "./_lib/branch-site-labels";
 
 const SYSTEM_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
 
-const AREA_ROLES: readonly StaffRole[] = [
-  "owner",
-  "super_manager",
-  "area_manager",
-];
-
 const BRANCH_ROLES: readonly StaffRole[] = [
   "owner",
   "super_manager",
-  "area_manager",
   "branch_manager",
 ];
 
@@ -81,129 +74,6 @@ export async function fetchInventoryValueSystem(
   return { success: true, data: { totalValue } };
 }
 
-export interface AreaValueRow {
-  areaId: number;
-  areaName: string;
-  totalValue: number;
-}
-
-export async function fetchInventoryValueByArea(): Promise<
-  ActionResult<{ rows: AreaValueRow[] }>
-> {
-  const ctx = await getAuthContextWithPermission(
-    AREA_ROLES,
-    PERMISSION_KEYS.INVENTORY_READ,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
-
-  const { supabase, claims } = ctx;
-
-  let areasQuery = supabase
-    .from("areas")
-    .select("id, name")
-    .eq("tenant_id", claims.tenant_id)
-    .eq("is_active", true)
-    .order("name");
-
-  if (claims.user_role === "area_manager") {
-    if (claims.area_id == null) {
-      return {
-        success: false,
-        error: "Tài khoản quản lý khu vực chưa được gán khu vực.",
-      };
-    }
-    areasQuery = areasQuery.eq("id", claims.area_id);
-  }
-
-  const { data: areas, error: areasError } = await areasQuery;
-
-  if (areasError) {
-    return { success: false, error: "Không thể tải danh sách khu vực." };
-  }
-
-  const { data: areaBranches, error: abError } = await supabase
-    .from("area_branches")
-    .select("area_id, branch_id")
-    .eq("tenant_id", claims.tenant_id);
-
-  if (abError) {
-    return { success: false, error: "Không thể tải gán khu vực." };
-  }
-
-  const branchToArea = new Map<number, number>();
-  for (const row of areaBranches ?? []) {
-    if (!branchToArea.has(row.branch_id)) {
-      branchToArea.set(row.branch_id, row.area_id);
-    }
-  }
-
-  const { data: stockRows, error: stockError } = await supabase
-    .from("stock_levels")
-    .select(
-      `
-      branch_id,
-      current_quantity,
-      avg_unit_cost,
-      ingredients ( unit_cost )
-    `,
-    )
-    .eq("tenant_id", claims.tenant_id);
-
-  if (stockError) {
-    return { success: false, error: "Không thể tải tồn kho." };
-  }
-
-  const areaIds = new Set((areas ?? []).map((a) => a.id));
-  const totals = new Map<number, number>();
-  const unassignedKey = -1;
-  let unassigned = 0;
-
-  for (const a of areas ?? []) {
-    totals.set(a.id, 0);
-  }
-
-  for (const row of stockRows ?? []) {
-    const branchId = row.branch_id;
-    const mappedAreaId = branchToArea.get(branchId);
-    const line = computeLineValue(
-      Number(row.current_quantity),
-      row.avg_unit_cost != null ? Number(row.avg_unit_cost) : null,
-      (row.ingredients as IngredientCost)?.unit_cost != null
-        ? Number((row.ingredients as IngredientCost)?.unit_cost)
-        : null,
-    );
-
-    if (claims.user_role === "area_manager") {
-      if (claims.area_id != null && mappedAreaId === claims.area_id) {
-        totals.set(claims.area_id, (totals.get(claims.area_id) ?? 0) + line);
-      }
-      continue;
-    }
-
-    if (mappedAreaId != null && areaIds.has(mappedAreaId)) {
-      totals.set(mappedAreaId, (totals.get(mappedAreaId) ?? 0) + line);
-    } else {
-      unassigned += line;
-    }
-  }
-
-  const rows: AreaValueRow[] = (areas ?? []).map((a) => ({
-    areaId: a.id,
-    areaName: a.name,
-    totalValue: totals.get(a.id) ?? 0,
-  }));
-
-  if (claims.user_role !== "area_manager" && unassigned > 0) {
-    rows.push({
-      areaId: unassignedKey,
-      areaName: "Chưa gán khu vực",
-      totalValue: unassigned,
-    });
-  }
-
-  return { success: true, data: { rows } };
-}
-
 export interface BranchValueRow {
   branchId: number;
   branchName: string;
@@ -231,29 +101,6 @@ export async function fetchInventoryValueByBranch(): Promise<
       };
     }
     allowedBranchIds = [claims.branch_id];
-  } else if (claims.user_role === "area_manager") {
-    if (claims.area_id == null) {
-      return {
-        success: false,
-        error: "Tài khoản quản lý khu vực chưa được gán khu vực.",
-      };
-    }
-    const { data: ab, error: abError } = await supabase
-      .from("area_branches")
-      .select("branch_id")
-      .eq("tenant_id", claims.tenant_id)
-      .eq("area_id", claims.area_id);
-
-    if (abError) {
-      return {
-        success: false,
-        error: "Không thể tải chi nhánh trong khu vực.",
-      };
-    }
-    allowedBranchIds = (ab ?? []).map((r) => r.branch_id);
-    if (allowedBranchIds.length === 0) {
-      return { success: true, data: { rows: [] } };
-    }
   }
 
   let branchesQuery = supabase

@@ -35,7 +35,6 @@ function makeClaims(
   return {
     tenant_id: tenantId,
     branch_id: branchId,
-    area_id: null,
     user_role: role,
   };
 }
@@ -48,7 +47,6 @@ test("getDefaultRedirect → owner and super_manager land on /admin/dashboard", 
 
 test("getDefaultRedirect → all other roles land on /employee", () => {
   for (const role of [
-    "area_manager",
     "branch_manager",
     "warehouse_manager",
     "production_manager",
@@ -70,7 +68,6 @@ test("getBetaDefaultRedirect → owner and super_manager keep beta admin, others
     getBetaDefaultRedirect(makeClaims("super_manager")),
     "/beta/admin/dashboard",
   );
-  assert.equal(getBetaDefaultRedirect(makeClaims("area_manager")), "/employee");
   assert.equal(getBetaDefaultRedirect(makeClaims("cashier")), "/employee");
 });
 
@@ -85,7 +82,6 @@ test("resolveRoleHomeLink → shell home link follows role-accessible landing", 
   });
 
   for (const role of [
-    "area_manager",
     "branch_manager",
     "warehouse_manager",
     "production_manager",
@@ -104,7 +100,10 @@ test("resolveRoleHomeLink → shell home link follows role-accessible landing", 
 test("resolveRouteFamilyContract → classifies active app surfaces", () => {
   assert.equal(resolveRouteFamilyContract("/login")?.surface, "public");
   assert.equal(resolveRouteFamilyContract("/br/3/runner")?.surface, "public");
-  assert.equal(resolveRouteFamilyContract("/br/3/runner/history")?.id, "runner");
+  assert.equal(
+    resolveRouteFamilyContract("/br/3/runner/history")?.id,
+    "runner",
+  );
   assert.equal(
     resolveRouteFamilyContract("/br/3/runner/history")?.surface,
     "branch_operation",
@@ -227,7 +226,6 @@ test("resolvePostLoginRedirect → retired admin inventory returnTo is not prese
 
 test("resolvePostLoginRedirect → former admin roles cannot keep admin returnTo", () => {
   for (const role of [
-    "area_manager",
     "branch_manager",
     "warehouse_manager",
     "production_manager",
@@ -359,6 +357,21 @@ test("resolvePostLoginRedirect → branch_manager on own POS → allowed", () =>
   );
 });
 
+test("resolvePostLoginRedirect → branch_manager can enter HR shifts but not payroll", () => {
+  assert.equal(
+    resolvePostLoginRedirect(makeClaims("branch_manager", 3), "/hr"),
+    "/hr",
+  );
+  assert.equal(
+    resolvePostLoginRedirect(makeClaims("branch_manager", 3), "/hr/payroll"),
+    "/employee",
+  );
+  assert.equal(
+    resolvePostLoginRedirect(makeClaims("owner"), "/hr/payroll"),
+    "/hr/payroll",
+  );
+});
+
 test("isPublicAppPath PWA manifests and Runner display bypass auth proxy", () => {
   assert.equal(isPublicAppPath("/manifest.webmanifest"), true);
   assert.equal(isPublicAppPath("/sw.js"), true);
@@ -467,6 +480,8 @@ test("resolveLegacyRouteRedirectPath → admin finance redirects to canonical fi
 
 test("resolveModuleFromPath → branch menu limits and finance workspace map to modules", () => {
   assert.equal(resolveModuleFromPath("/finance/revenue"), "finance");
+  assert.equal(resolveModuleFromPath("/hr"), "hr");
+  assert.equal(resolveModuleFromPath("/hr/payroll"), "hr_payroll");
   assert.equal(
     resolveModuleFromPath("/br/3/menu-limits"),
     "branch_menu_limits",
@@ -515,7 +530,6 @@ test("canAccess → only owner and super_manager can access tenant admin modules
     assert.equal(canAccess("owner", moduleKey), true);
     assert.equal(canAccess("super_manager", moduleKey), true);
     for (const role of [
-      "area_manager",
       "branch_manager",
       "warehouse_manager",
       "production_manager",
@@ -530,12 +544,7 @@ test("canAccess → only owner and super_manager can access tenant admin modules
 });
 
 test("canAccess → settings includes branch floor setting roles", () => {
-  for (const role of [
-    "owner",
-    "super_manager",
-    "area_manager",
-    "branch_manager",
-  ] as const) {
+  for (const role of ["owner", "super_manager", "branch_manager"] as const) {
     assert.equal(canAccess(role, "settings"), true);
   }
   for (const role of [
@@ -563,12 +572,7 @@ test("canAccess → employee portal excludes admin-level roles", () => {
 });
 
 test("canAccess → checkout approvals are manager-tier, not whole employee portal", () => {
-  for (const role of [
-    "owner",
-    "super_manager",
-    "area_manager",
-    "branch_manager",
-  ] as const) {
+  for (const role of ["owner", "super_manager", "branch_manager"] as const) {
     assert.equal(canAccess(role, "employee_checkout_approvals"), true);
   }
 
@@ -582,6 +586,13 @@ test("canAccess → checkout approvals are manager-tier, not whole employee port
   ] as const) {
     assert.equal(canAccess(role, "employee_checkout_approvals"), false);
   }
+});
+
+test("canAccess → branch manager can access HR shift workspace but not payroll", () => {
+  assert.equal(canAccess("branch_manager", "hr"), true);
+  assert.equal(canAccess("branch_manager", "hr_payroll"), false);
+  assert.equal(canAccess("owner", "hr_payroll"), true);
+  assert.equal(canAccess("super_manager", "hr_payroll"), true);
 });
 
 test("resolveDiscoveredApps → settings entries are discoverable for authorized roles", () => {

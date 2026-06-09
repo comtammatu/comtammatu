@@ -1,9 +1,14 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
+import {
+  PERMISSION_KEYS,
+  type JwtClaims,
+  type StaffRole,
+} from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { getVNMonthEndDateString } from "@comtammatu/shared/time";
+import { getVNDateString, getVNMonthEndDateString } from "@comtammatu/shared/time";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { withAction } from "@/_lib/with-action";
@@ -13,7 +18,6 @@ const HR_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
 const SHIFT_ROLES: readonly StaffRole[] = [
   "owner",
   "super_manager",
-  "area_manager",
   "branch_manager",
 ];
 
@@ -106,20 +110,47 @@ const shiftSchema = z.object({
     .regex(/^\d{2}:\d{2}$/, { error: "Giờ kết thúc không hợp lệ (HH:MM)" }),
 });
 
+const updateShiftSchema = shiftSchema.extend({
+  shiftId: z.coerce.number().int().positive(),
+  isActive: z.boolean().optional(),
+});
+
+const deactivateShiftSchema = z.object({
+  branchId: z.coerce.number().int().positive(),
+  shiftId: z.coerce.number().int().positive(),
+});
+
 const fetchShiftsSchema = z.object({
   branchId: z.coerce.number().int().positive(),
 });
 
+async function ensureBranchAccess(
+  supabase: Parameters<typeof canAccessBranch>[0],
+  claims: JwtClaims,
+  branchId: number,
+): Promise<ActionResult | null> {
+  if (!(await canAccessBranch(supabase, claims, branchId))) {
+    return { success: false, error: "Không có quyền truy cập chi nhánh này" };
+  }
+  return null;
+}
+
+function revalidateHrPaths() {
+  revalidatePath("/hr");
+  revalidatePath("/employee");
+  revalidatePath("/employee/schedule");
+}
+
 export const fetchShifts = withAction(
-  { roles: SHIFT_ROLES, schema: fetchShiftsSchema },
+  {
+    roles: SHIFT_ROLES,
+    schema: fetchShiftsSchema,
+    permission: PERMISSION_KEYS.STAFF_MANAGE,
+    permissionBranchId: (data) => data.branchId,
+  },
   async (data, { supabase, claims }) => {
-    // Branch scope: branch_manager can only access their own branch
-    if (
-      claims.user_role === "branch_manager" &&
-      claims.branch_id !== data.branchId
-    ) {
-      return { success: false, error: "Không có quyền truy cập chi nhánh này" };
-    }
+    const accessError = await ensureBranchAccess(supabase, claims, data.branchId);
+    if (accessError) return accessError;
 
     const { data: result, error } = await supabase
       .from("shifts")
@@ -132,16 +163,45 @@ export const fetchShifts = withAction(
       return { success: false, error: "Không thể tải danh sách ca." };
     }
 
-    return { success: true, data: result ?? [] };
+    const today = getVNDateString();
+    const shiftIds = (result ?? []).map((shift) => shift.id);
+    const futureCounts = new Map<number, number>();
+
+    if (shiftIds.length > 0) {
+      const { data: futureRows } = await supabase
+        .from("shift_assignments")
+        .select("shift_id")
+        .eq("branch_id", data.branchId)
+        .eq("tenant_id", claims.tenant_id)
+        .gte("date", today)
+        .in("shift_id", shiftIds);
+
+      for (const row of futureRows ?? []) {
+        futureCounts.set(row.shift_id, (futureCounts.get(row.shift_id) ?? 0) + 1);
+      }
+    }
+
+    return {
+      success: true,
+      data: (result ?? []).map((shift) => ({
+        ...shift,
+        future_assignment_count: futureCounts.get(shift.id) ?? 0,
+      })),
+    };
   },
 );
 
 export const createShift = withAction(
-  { roles: SHIFT_ROLES, schema: shiftSchema, requireBranchScope: true },
+  {
+    roles: SHIFT_ROLES,
+    schema: shiftSchema,
+    permission: PERMISSION_KEYS.STAFF_MANAGE,
+    permissionBranchId: (data) => data.branchId,
+    requireBranchScope: true,
+  },
   async (data, { supabase, claims }) => {
-    if (!(await canAccessBranch(supabase, claims, data.branchId))) {
-      return { success: false, error: "Không có quyền truy cập chi nhánh này" };
-    }
+    const accessError = await ensureBranchAccess(supabase, claims, data.branchId);
+    if (accessError) return accessError;
 
     const { data: result, error } = await supabase
       .from("shifts")
@@ -152,7 +212,7 @@ export const createShift = withAction(
         start_time: data.startTime,
         end_time: data.endTime,
       })
-      .select("id")
+      .select("id, name, start_time, end_time, is_active")
       .single();
 
     if (error) {
@@ -162,6 +222,102 @@ export const createShift = withAction(
       return { success: false, error: "Không thể tạo ca." };
     }
 
+    revalidateHrPaths();
+    return { success: true, data: result };
+  },
+);
+
+export const updateShift = withAction(
+  {
+    roles: SHIFT_ROLES,
+    schema: updateShiftSchema,
+    permission: PERMISSION_KEYS.STAFF_MANAGE,
+    permissionBranchId: (data) => data.branchId,
+    requireBranchScope: true,
+  },
+  async (data, { supabase, claims }) => {
+    const accessError = await ensureBranchAccess(supabase, claims, data.branchId);
+    if (accessError) return accessError;
+
+    const today = getVNDateString();
+    const { data: historicalAssignments } = await supabase
+      .from("shift_assignments")
+      .select("id")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("branch_id", data.branchId)
+      .eq("shift_id", data.shiftId)
+      .lt("date", today)
+      .limit(1);
+
+    const { data: attendanceRows } = await supabase
+      .from("attendance_records")
+      .select("id")
+      .eq("tenant_id", claims.tenant_id)
+      .eq("branch_id", data.branchId)
+      .eq("shift_id", data.shiftId)
+      .limit(1);
+
+    if ((historicalAssignments?.length ?? 0) > 0 || (attendanceRows?.length ?? 0) > 0) {
+      return {
+        success: false,
+        error:
+          "Ca đã có lịch sử ngày công. Hãy ngưng dùng ca này rồi tạo ca mới.",
+      };
+    }
+
+    const { data: result, error } = await supabase
+      .from("shifts")
+      .update({
+        name: data.name,
+        start_time: data.startTime,
+        end_time: data.endTime,
+        is_active: data.isActive ?? true,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", data.shiftId)
+      .eq("tenant_id", claims.tenant_id)
+      .eq("branch_id", data.branchId)
+      .select("id, name, start_time, end_time, is_active")
+      .maybeSingle();
+
+    if (error || !result) {
+      return { success: false, error: "Không thể cập nhật ca." };
+    }
+
+    revalidateHrPaths();
+    return { success: true, data: result };
+  },
+);
+
+export const deactivateShift = withAction(
+  {
+    roles: SHIFT_ROLES,
+    schema: deactivateShiftSchema,
+    permission: PERMISSION_KEYS.STAFF_MANAGE,
+    permissionBranchId: (data) => data.branchId,
+    requireBranchScope: true,
+  },
+  async (data, { supabase, claims }) => {
+    const accessError = await ensureBranchAccess(supabase, claims, data.branchId);
+    if (accessError) return accessError;
+
+    const { data: result, error } = await supabase
+      .from("shifts")
+      .update({
+        is_active: false,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", data.shiftId)
+      .eq("tenant_id", claims.tenant_id)
+      .eq("branch_id", data.branchId)
+      .select("id, name, start_time, end_time, is_active")
+      .maybeSingle();
+
+    if (error || !result) {
+      return { success: false, error: "Không thể ngưng dùng ca." };
+    }
+
+    revalidateHrPaths();
     return { success: true, data: result };
   },
 );

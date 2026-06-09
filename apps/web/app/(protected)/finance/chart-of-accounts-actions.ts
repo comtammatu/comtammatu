@@ -6,11 +6,7 @@ import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { withAction } from "@/_lib/with-action";
 
-const COA_READ_ROLES: readonly StaffRole[] = [
-  "owner",
-  "super_manager",
-  "area_manager",
-];
+const COA_READ_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
 const COA_WRITE_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
 
 /* ─── Seed Chart of Accounts (auth-only) ─── */

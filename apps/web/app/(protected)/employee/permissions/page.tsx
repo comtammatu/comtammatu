@@ -3,7 +3,6 @@ import {
   ShieldCheck as IconShieldCheck,
   UserCircle as IconUserCircle,
 } from "lucide-react";
-import { ROLE_LABEL_VI } from "@comtammatu/shared/auth";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -45,12 +44,11 @@ export default async function PermissionsPage() {
   const tenantPerms = branchPermsRes.filter((p) => p.branchId === null);
   const scopedPerms = branchPermsRes.filter((p) => p.branchId !== null);
 
-  const position = claims.position ?? null;
+  const position = claims.position ?? claims.position_code ?? null;
   const legacyRole = claims.user_role;
   const positionDisplay = position
     ? (positionLabel.get(position) ?? position)
     : copy.notAssigned;
-  const roleDisplay = ROLE_LABEL_VI[legacyRole] ?? legacyRole;
 
   return (
     <EmployeePage
@@ -85,7 +83,7 @@ export default async function PermissionsPage() {
             },
             {
               label: copy.compatibleRole,
-              value: roleDisplay,
+              value: legacyRole,
             },
           ]}
         />

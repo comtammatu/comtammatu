@@ -89,7 +89,7 @@ apps/web/app/
 │   │   └── stock-movement/ # Stock movement reports
 │   └── settings/
 │       ├── layout.tsx      # Auth guard + role-aware SettingsNav for foundation controls
-│       ├── page.tsx        # Redirect: branch_manager/area_manager → tables, others → branches
+│       ├── page.tsx        # Redirect: branch_manager/ → tables, others → branches
 │       ├── general/        # System settings key/value — owner/super_manager only
 │       ├── branches/       # Branch CRUD + set_headquarters — owner/super_manager only
 │       ├── areas/          # Area management — owner/super_manager only

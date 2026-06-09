@@ -66,7 +66,7 @@ function buildInventoryGroups({
 }): ShellNavGroup[] {
   const isBranchSite = siteKind === "branch";
   const isBranchManager = userRole === "branch_manager";
-  const isOversight = userRole === "owner" || userRole === "area_manager";
+  const isOversight = userRole === "owner";
   const showBackOffice =
     !isBranchManager &&
     !isOversight &&

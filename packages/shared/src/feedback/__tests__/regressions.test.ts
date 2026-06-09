@@ -74,7 +74,7 @@ test("feedback photo upload requires one-shot token minted by submit_feedback", 
     "expected public feedback form to pass the upload token into photo upload",
   );
   assert.ok(
-    photoActionSrc.includes("createHash(\"sha256\")") &&
+    photoActionSrc.includes('createHash("sha256")') &&
       photoActionSrc.includes("photoUploadToken") &&
       photoActionSrc.includes('.eq("photo_upload_token_sha256", tokenHash)') &&
       photoActionSrc.includes('.is("photo_upload_consumed_at", null)') &&
@@ -100,9 +100,7 @@ test("submit_feedback snapshots orders only when table QR maps to one active unp
     "expected order snapshot lookup to exclude paid orders",
   );
   assert.ok(
-    src.includes(
-      "CASE WHEN COUNT(*) = 1 THEN MAX(id) ELSE NULL::BIGINT END",
-    ) &&
+    src.includes("CASE WHEN COUNT(*) = 1 THEN MAX(id) ELSE NULL::BIGINT END") &&
       src.includes("ELSE NULL::NUMERIC(15,2)"),
     "expected order id/total snapshots only when active order count is exactly one",
   );
@@ -111,9 +109,7 @@ test("submit_feedback snapshots orders only when table QR maps to one active unp
     "expected ambiguous multi-order tables to emit an ops warning",
   );
   assert.ok(
-    !/ORDER\s+BY\s+created_at\s+DESC\s+NULLS\s+LAST[\s\S]*LIMIT\s+1/i.test(
-      src,
-    ),
+    !/ORDER\s+BY\s+created_at\s+DESC\s+NULLS\s+LAST[\s\S]*LIMIT\s+1/i.test(src),
     "must not reintroduce the latest-order-wins snapshot heuristic",
   );
   assert.ok(
@@ -220,7 +216,7 @@ test("next.config.ts emits all security headers + disables X-Powered-By", () => 
   }
   assert.ok(
     src.includes("camera=(self)") && src.includes("geolocation=()"),
-    "expected camera allowed for Employee photo/QR while geolocation stays disabled",
+    "expected camera allowed for Employee photo capture while geolocation stays disabled",
   );
   assert.ok(
     /key:\s*"X-Frame-Options",\s*value:\s*"DENY"/.test(src),

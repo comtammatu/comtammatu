@@ -43,9 +43,9 @@ export async function fetchBranchMenuDailyLimits(
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   // Branch-scoped users can only inspect their own branch.
-  const isHqRole = (
-    ["owner", "super_manager", "area_manager"] as const
-  ).includes(ctx.claims.user_role as never);
+  const isHqRole = (["owner", "super_manager"] as const).includes(
+    ctx.claims.user_role as never,
+  );
   if (!isHqRole && ctx.claims.branch_id !== parsedBranchId.data) {
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }
@@ -109,9 +109,9 @@ export async function setBranchMenuDailyLimit(
   const ctx = await getAuthContext(LIMITS_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
-  const isHqRole = (
-    ["owner", "super_manager", "area_manager"] as const
-  ).includes(ctx.claims.user_role as never);
+  const isHqRole = (["owner", "super_manager"] as const).includes(
+    ctx.claims.user_role as never,
+  );
   if (!isHqRole && ctx.claims.branch_id !== parsed.data.branchId) {
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }
@@ -183,9 +183,9 @@ export async function clearBranchMenuDailyLimit(
   const ctx = await getAuthContext(LIMITS_ROLES);
   if (!ctx) return { success: false, error: "Không có quyền" };
 
-  const isHqRole = (
-    ["owner", "super_manager", "area_manager"] as const
-  ).includes(ctx.claims.user_role as never);
+  const isHqRole = (["owner", "super_manager"] as const).includes(
+    ctx.claims.user_role as never,
+  );
   if (!isHqRole && ctx.claims.branch_id !== parsed.data.branchId) {
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }

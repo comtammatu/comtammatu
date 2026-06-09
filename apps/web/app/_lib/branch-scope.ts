@@ -7,30 +7,10 @@ export async function canAccessBranch(
   claims: JwtClaims,
   branchId: number,
 ): Promise<boolean> {
-  if (claims.user_role === "area_manager") {
-    if (claims.area_id == null) return false;
+  void supabase;
 
-    type Query = {
-      eq: (column: string, value: unknown) => Query;
-      maybeSingle: () => Promise<{ data: unknown; error: unknown }>;
-    };
-
-    const sb = supabase as {
-      from: (table: "area_branches") => {
-        select: (columns: "id") => Query;
-      };
-    };
-
-    const { data, error } = await sb
-      .from("area_branches")
-      .select("id")
-      .eq("tenant_id", claims.tenant_id)
-      .eq("area_id", claims.area_id)
-      .eq("branch_id", branchId)
-      .maybeSingle();
-
-    if (error) return false;
-    return Boolean(data);
+  if (claims.user_role === "owner" || claims.user_role === "super_manager") {
+    return true;
   }
 
   if (claims.branch_id != null) {

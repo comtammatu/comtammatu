@@ -50,8 +50,7 @@ export const employee = {
     completed: "Đã hoàn thành",
     shiftTasks: "Việc trong ca",
     clockTodayTitle: "Chấm công hôm nay",
-    clockLongDescription:
-      "Chấm công vào bằng ảnh; kết ca bằng mã chi nhánh và quản lý duyệt.",
+    clockLongDescription: "Chấm công vào bằng ảnh; kết ca gửi quản lý duyệt.",
     nextShiftTitle: "Ca tiếp theo",
     defaultShiftName: "Ca làm",
     today: "Hôm nay",
@@ -90,6 +89,8 @@ export const employee = {
     managerToolsTitle: "Điều hành chi nhánh",
     managerToolsDescription:
       "Các công cụ điều hành chi nhánh theo quyền đang có hiệu lực.",
+    managerHrTitle: "Ca / ngày công",
+    managerHrDescription: "Phân ca và xem chấm công chi nhánh",
     posTitle: "POS",
     posDescription: "Bán hàng",
     managerPosDescription: "Mở ca, bán hàng, xử lý bàn",

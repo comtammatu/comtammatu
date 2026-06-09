@@ -36,13 +36,11 @@ export interface TodayAttendance {
   checkIn: string | null;
   checkOut: string | null;
   checkoutRequestedAt: string | null;
-  checkoutRequestedCodeVerified: boolean;
   checkoutRequestedByRole: string | null;
   checkoutApprovalTargetRoles: string[];
   checkoutApprovedAt: string | null;
   checkoutApprovedBy: string | null;
   checkInPhotoPath: string | null;
-  checkOutCodeVerified: boolean;
   shiftName: string | null;
   shiftStartTime: string | null;
   shiftEndTime: string | null;
@@ -140,13 +138,11 @@ export async function getTodayWorkState(): Promise<TodayWorkState> {
       check_in,
       check_out,
       checkout_requested_at,
-      checkout_requested_code_verified,
       checkout_requested_by_role,
       checkout_approval_target_roles,
       checkout_approved_at,
       checkout_approved_by,
       check_in_photo_path,
-      check_out_code_verified,
       branches ( name ),
       shifts ( name, start_time, end_time )
     `,
@@ -188,13 +184,11 @@ export async function getTodayWorkState(): Promise<TodayWorkState> {
         checkIn: record.check_in,
         checkOut: record.check_out,
         checkoutRequestedAt: record.checkout_requested_at,
-        checkoutRequestedCodeVerified: record.checkout_requested_code_verified,
         checkoutRequestedByRole: record.checkout_requested_by_role,
         checkoutApprovalTargetRoles: record.checkout_approval_target_roles,
         checkoutApprovedAt: record.checkout_approved_at,
         checkoutApprovedBy: record.checkout_approved_by,
         checkInPhotoPath: record.check_in_photo_path,
-        checkOutCodeVerified: record.check_out_code_verified,
         shiftName: shiftData?.name ?? null,
         shiftStartTime: shiftData?.start_time ?? null,
         shiftEndTime: shiftData?.end_time ?? null,

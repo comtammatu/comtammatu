@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Bell as IconBell, User as IconUser } from "lucide-react";
-import { ROLE_LABEL_VI } from "@comtammatu/shared/auth";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { BrandMark } from "@/components/brand";
@@ -14,10 +13,22 @@ export async function MobileHeader() {
   const { claims } = await loadAuthState();
   const ctx = await getEmployeeContext();
   const copy = messages.employee.header;
-  const unreadResult = await getUnreadCount().catch(() => null);
+  const positionCode = claims.position ?? claims.position_code ?? null;
+  const [unreadResult, positionResult] = await Promise.all([
+    getUnreadCount().catch(() => null),
+    positionCode
+      ? ctx?.supabase
+          .from("positions")
+          .select("label_vi")
+          .eq("tenant_id", claims.tenant_id)
+          .eq("code", positionCode)
+          .maybeSingle() ?? Promise.resolve({ data: null })
+      : Promise.resolve({ data: null }),
+  ]);
   const unread = unreadResult?.success ? (unreadResult.data?.count ?? 0) : 0;
 
-  const roleLabel = ROLE_LABEL_VI[claims.user_role] ?? claims.user_role;
+  const positionLabel =
+    positionResult.data?.label_vi ?? positionCode ?? claims.user_role;
   const branchName = ctx?.branchName ?? null;
 
   return (
@@ -39,7 +50,7 @@ export async function MobileHeader() {
         <EmployeeDesktopNav />
         <div className="flex shrink-0 items-center gap-2">
           <Badge variant="outline" className="hidden sm:inline-flex lg:hidden">
-            {roleLabel}
+            {positionLabel}
           </Badge>
           <Button
             asChild

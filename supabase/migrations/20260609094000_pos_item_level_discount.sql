@@ -326,7 +326,7 @@ BEGIN
   END IF;
 
   IF v_prof_role IS NULL OR v_prof_role NOT IN
-     ('owner', 'super_manager', 'area_manager', 'branch_manager', 'cashier', 'waiter')
+     ('owner', 'super_manager', 'branch_manager', 'cashier', 'waiter')
   THEN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
@@ -358,7 +358,7 @@ BEGIN
     RAISE EXCEPTION 'tenant mismatch' USING ERRCODE = '42501';
   END IF;
 
-  IF v_prof_role IN ('owner', 'super_manager', 'area_manager') THEN
+  IF v_prof_role IN ('owner', 'super_manager') THEN
     PERFORM 1 FROM public.branches b
     WHERE b.id = v_row.branch_id AND b.tenant_id = v_prof_tenant;
     IF NOT FOUND THEN
@@ -465,7 +465,7 @@ BEGIN
   END IF;
 
   IF v_prof_role IS NULL OR v_prof_role NOT IN
-     ('owner', 'super_manager', 'area_manager', 'branch_manager', 'cashier', 'waiter')
+     ('owner', 'super_manager', 'branch_manager', 'cashier', 'waiter')
   THEN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
@@ -497,7 +497,7 @@ BEGIN
     RAISE EXCEPTION 'tenant mismatch' USING ERRCODE = '42501';
   END IF;
 
-  IF v_prof_role IN ('owner', 'super_manager', 'area_manager') THEN
+  IF v_prof_role IN ('owner', 'super_manager') THEN
     PERFORM 1 FROM public.branches b
     WHERE b.id = v_row.branch_id AND b.tenant_id = v_prof_tenant;
     IF NOT FOUND THEN
@@ -552,11 +552,11 @@ COMMENT ON FUNCTION public.apply_order_item_discount(bigint, text, numeric, text
 COMMENT ON FUNCTION public.clear_order_item_discount(bigint, text) IS
   'Clear item-level discount with required reason. Blocks paid/terminal orders. Order total is normalized by triggers.';
 
-REVOKE ALL ON FUNCTION public.apply_order_item_discount(bigint, text, numeric, text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.apply_order_item_discount(bigint, text, numeric, text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.apply_order_item_discount(bigint, text, numeric, text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.apply_order_item_discount(bigint, text, numeric, text) TO service_role;
 
-REVOKE ALL ON FUNCTION public.clear_order_item_discount(bigint, text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.clear_order_item_discount(bigint, text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.clear_order_item_discount(bigint, text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.clear_order_item_discount(bigint, text) TO service_role;
 
@@ -597,7 +597,7 @@ BEGIN
   END IF;
 
   IF v_prof_role IS NULL OR v_prof_role NOT IN
-     ('owner', 'super_manager', 'area_manager', 'branch_manager', 'cashier', 'waiter')
+     ('owner', 'super_manager', 'branch_manager', 'cashier', 'waiter')
   THEN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
@@ -632,7 +632,7 @@ BEGIN
     RAISE EXCEPTION 'tenant mismatch' USING ERRCODE = '42501';
   END IF;
 
-  IF v_prof_role IN ('owner', 'super_manager', 'area_manager') THEN
+  IF v_prof_role IN ('owner', 'super_manager') THEN
     PERFORM 1 FROM public.branches b
     WHERE b.id = v_order.branch_id AND b.tenant_id = v_prof_tenant;
     IF NOT FOUND THEN
@@ -733,7 +733,7 @@ BEGIN
   END IF;
 
   IF v_prof_role IS NULL OR v_prof_role NOT IN
-     ('owner', 'super_manager', 'area_manager', 'branch_manager', 'cashier', 'waiter')
+     ('owner', 'super_manager', 'branch_manager', 'cashier', 'waiter')
   THEN
     RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
@@ -755,7 +755,7 @@ BEGIN
     RAISE EXCEPTION 'tenant mismatch' USING ERRCODE = '42501';
   END IF;
 
-  IF v_prof_role IN ('owner', 'super_manager', 'area_manager') THEN
+  IF v_prof_role IN ('owner', 'super_manager') THEN
     PERFORM 1 FROM public.branches b
     WHERE b.id = v_order.branch_id AND b.tenant_id = v_prof_tenant;
     IF NOT FOUND THEN
@@ -806,10 +806,10 @@ COMMENT ON FUNCTION public.apply_order_discount(bigint, text, numeric, text) IS
 COMMENT ON FUNCTION public.clear_order_discount(bigint) IS
   'Clear order-level discount only; item-level discounts remain active. Total discount is normalized by triggers.';
 
-REVOKE ALL ON FUNCTION public.apply_order_discount(bigint, text, numeric, text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.apply_order_discount(bigint, text, numeric, text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.apply_order_discount(bigint, text, numeric, text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.apply_order_discount(bigint, text, numeric, text) TO service_role;
 
-REVOKE ALL ON FUNCTION public.clear_order_discount(bigint) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.clear_order_discount(bigint) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.clear_order_discount(bigint) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.clear_order_discount(bigint) TO service_role;

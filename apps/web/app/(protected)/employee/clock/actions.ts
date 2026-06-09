@@ -1,24 +1,18 @@
 "use server";
 
-import { createHmac, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getVNDateString } from "@comtammatu/shared/time";
-import {
-  getAuthContext,
-  getAuthContextWithPermission,
-  probePermission,
-} from "@/_lib/auth";
+import { getAuthContext, probePermission } from "@/_lib/auth";
 import { getEmployeeContext } from "../_lib/employee-context";
 
-const CONFIG_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
 const CHECKOUT_APPROVAL_ROLES: readonly StaffRole[] = [
   "owner",
   "super_manager",
-  "area_manager",
   "branch_manager",
 ];
 const ATTENDANCE_PHOTO_BUCKET = "attendance-photos";
@@ -29,13 +23,19 @@ const PHOTO_MIME_TO_EXT = {
   "image/webp": "webp",
 } as const;
 
-const checkoutCodeSchema = z.object({
-  code: z
-    .string()
-    .trim()
-    .length(6, { error: "Mã kết ca phải có 6 ký tự" })
-    .regex(/^[0-9a-f]{6}$/i, { error: "Mã kết ca không hợp lệ" }),
-});
+type ClockInResult = {
+  attendanceId: number;
+  checkInTime: string;
+  nextPath: string;
+  alreadyRecorded?: boolean;
+};
+
+type ExistingClockInRecord = {
+  id: number;
+  check_in: string | null;
+  check_out: string | null;
+  checkout_requested_at: string | null;
+};
 
 const checklistToggleSchema = z.object({
   itemId: z.coerce.number().int().positive(),
@@ -44,10 +44,6 @@ const checklistToggleSchema = z.object({
 
 function getTodayVN(): string {
   return getVNDateString();
-}
-
-function computeDailyCode(secret: string, dateStr: string): string {
-  return createHmac("sha256", secret).update(dateStr).digest("hex").slice(0, 6);
 }
 
 function revalidateEmployeeWorkPaths() {
@@ -70,6 +66,25 @@ function getPhotoFromFormData(formData: FormData): File | null {
   return value;
 }
 
+function getExistingClockInPath(record: ExistingClockInRecord): string {
+  if (record.check_out || record.checkout_requested_at) return "/employee";
+  return "/employee/tasks";
+}
+
+function reuseExistingClockIn(
+  record: ExistingClockInRecord,
+): ActionResult<ClockInResult> {
+  return {
+    success: true,
+    data: {
+      attendanceId: record.id,
+      checkInTime: record.check_in ?? new Date().toISOString(),
+      nextPath: getExistingClockInPath(record),
+      alreadyRecorded: true,
+    },
+  };
+}
+
 function mapClockInError(message: string | undefined): string {
   if (message?.includes("duplicate_clock_in")) {
     return "Bạn đã chấm công vào hôm nay rồi.";
@@ -84,6 +99,14 @@ function mapClockInError(message: string | undefined): string {
 }
 
 function mapCheckoutError(message: string | undefined): string {
+  if (
+    message?.includes("permission denied for schema private") ||
+    message?.includes(
+      "permission denied for function employee_request_clock_out",
+    )
+  ) {
+    return "Hệ thống chưa cập nhật quyền kết ca. Liên hệ quản lý.";
+  }
   if (message?.includes("checklist_incomplete")) {
     return "Cần hoàn thành tất cả việc trong ca trước khi kết ca.";
   }
@@ -105,13 +128,16 @@ function mapCheckoutError(message: string | undefined): string {
   if (message?.includes("checkout_approver_not_allowed")) {
     return "Tài khoản này không có quyền duyệt kết ca.";
   }
+  if (message?.includes("checkout_approver_wrong_branch")) {
+    return "Không có quyền duyệt kết ca tại chi nhánh này.";
+  }
   return "Không thể kết ca. Vui lòng thử lại.";
 }
 
 export async function clockInWithPhoto(
   _prev: ActionResult | null,
   formData: FormData,
-): Promise<ActionResult<{ attendanceId: number; checkInTime: string }>> {
+): Promise<ActionResult<ClockInResult>> {
   const ctx = await getEmployeeContext();
   if (!ctx) return { success: false, error: "Chưa đăng nhập" };
 
@@ -144,20 +170,14 @@ export async function clockInWithPhoto(
 
   const { data: existing } = await service
     .from("attendance_records")
-    .select("id, check_out")
+    .select("id, check_in, check_out, checkout_requested_at")
     .eq("employee_id", ctx.employeeId)
     .eq("tenant_id", ctx.claims.tenant_id)
     .eq("date", today)
     .maybeSingle();
 
-  if (existing?.check_out) {
-    return {
-      success: false,
-      error: "Bạn đã hoàn thành chấm công hôm nay rồi.",
-    };
-  }
   if (existing) {
-    return { success: false, error: "Bạn đã chấm công vào hôm nay rồi." };
+    return reuseExistingClockIn(existing);
   }
 
   const { data: assignment } = await service
@@ -203,6 +223,19 @@ export async function clockInWithPhoto(
 
   if (rpcError || !attendanceId) {
     await service.storage.from(ATTENDANCE_PHOTO_BUCKET).remove([photoPath]);
+
+    if (rpcError?.message.includes("duplicate_clock_in")) {
+      const { data: duplicate } = await service
+        .from("attendance_records")
+        .select("id, check_in, check_out, checkout_requested_at")
+        .eq("employee_id", ctx.employeeId)
+        .eq("tenant_id", ctx.claims.tenant_id)
+        .eq("date", today)
+        .maybeSingle();
+
+      if (duplicate) return reuseExistingClockIn(duplicate);
+    }
+
     return {
       success: false,
       error: mapClockInError(rpcError?.message),
@@ -216,6 +249,7 @@ export async function clockInWithPhoto(
     data: {
       attendanceId,
       checkInTime,
+      nextPath: "/employee/tasks",
     },
   };
 }
@@ -288,24 +322,16 @@ export async function toggleChecklistItem(input: {
   return { success: true };
 }
 
-export async function clockOutWithCode(input: {
-  code: string;
-}): Promise<ActionResult<{ requestedAt: string }>> {
-  const parsed = checkoutCodeSchema.safeParse(input);
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Mã kết ca không hợp lệ",
-    };
-  }
-
+export async function requestCheckoutApproval(): Promise<
+  ActionResult<{ requestedAt: string }>
+> {
   const ctx = await getEmployeeContext();
   if (!ctx) return { success: false, error: "Chưa đăng nhập" };
 
   const service = createServiceClient();
   const { data: record } = await service
     .from("attendance_records")
-    .select("id, date, branch_id")
+    .select("id")
     .eq("employee_id", ctx.employeeId)
     .eq("tenant_id", ctx.claims.tenant_id)
     .is("check_out", null)
@@ -317,27 +343,8 @@ export async function clockOutWithCode(input: {
     return { success: false, error: "Không tìm thấy ca đang mở để kết ca." };
   }
 
-  const { data: config } = await service
-    .from("branch_attendance_config")
-    .select("attendance_secret")
-    .eq("branch_id", record.branch_id)
-    .eq("tenant_id", ctx.claims.tenant_id)
-    .maybeSingle();
-
-  if (!config) {
-    return {
-      success: false,
-      error: "Chi nhánh chưa có mã kết ca. Liên hệ quản lý.",
-    };
-  }
-
-  const expectedCode = computeDailyCode(config.attendance_secret, record.date);
-  if (parsed.data.code.toLowerCase() !== expectedCode.toLowerCase()) {
-    return { success: false, error: "Mã kết ca không đúng." };
-  }
-
   const { data: requestedAt, error } = await service.rpc(
-    "employee_request_clock_out_with_code",
+    "employee_request_clock_out",
     {
       p_tenant_id: ctx.claims.tenant_id,
       p_employee_id: ctx.employeeId,
@@ -346,6 +353,11 @@ export async function clockOutWithCode(input: {
   );
 
   if (error || !requestedAt) {
+    if (error) {
+      console.error("[employee/clock] request checkout rpc failed", {
+        code: error.code,
+      });
+    }
     return {
       success: false,
       error: mapCheckoutError(error?.message),
@@ -428,6 +440,11 @@ export async function approveCheckoutRequest(input: {
   );
 
   if (error || !checkOutTime) {
+    if (error) {
+      console.error("[employee/clock] approve checkout rpc failed", {
+        code: error.code,
+      });
+    }
     return {
       success: false,
       error: mapCheckoutError(error?.message),
@@ -436,43 +453,4 @@ export async function approveCheckoutRequest(input: {
 
   revalidateEmployeeWorkPaths();
   return { success: true, data: { checkOutTime } };
-}
-
-export async function generateDailyCode(
-  branchId: number,
-): Promise<ActionResult<{ code: string; date: string }>> {
-  const parsed = z.coerce.number().int().positive().safeParse(branchId);
-  if (!parsed.success) {
-    return { success: false, error: "ID chi nhánh không hợp lệ" };
-  }
-
-  const ctx = await getAuthContextWithPermission(
-    CONFIG_ROLES,
-    PERMISSION_KEYS.SETTINGS_BRANCH,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
-
-  const { claims } = ctx;
-
-  const { data: config } = await createServiceClient()
-    .from("branch_attendance_config")
-    .select("attendance_secret")
-    .eq("branch_id", parsed.data)
-    .eq("tenant_id", claims.tenant_id)
-    .maybeSingle();
-
-  if (!config) {
-    return {
-      success: false,
-      error: "Chưa cài đặt mã kết ca cho chi nhánh này",
-    };
-  }
-
-  const today = getTodayVN();
-  const code = computeDailyCode(config.attendance_secret, today);
-
-  return {
-    success: true,
-    data: { code, date: today },
-  };
 }

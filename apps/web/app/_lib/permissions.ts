@@ -1,5 +1,5 @@
 /**
- * Auth v2 permission fetchers.
+ * Auth permission fetchers.
  *
  * Server helpers read `staff_permissions` through the authenticated
  * Supabase client. RLS restricts callers to their own rows, so no extra
@@ -105,7 +105,7 @@ export const currentUserHasPermissionAny = cache(
 /**
  * Returns true if the user has ANY of the given permission keys (tenant-wide
  * or branch-scoped). Fires all RPCs in parallel — single network RTT — and
- * ORs the results. Each individual RPC still runs the `_auth_v2_is_owner`
+ * ORs the results. Each individual RPC still runs the owner bypass
  * server-side short-circuit.
  *
  * Empty `keys` returns `false` (matches sequential semantics). Errors in

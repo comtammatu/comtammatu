@@ -1,8 +1,8 @@
 -- =====================================================================
--- Employee Daily Work v1
+-- Employee Daily Work
 -- - Photo-only clock-in.
 -- - Checklist snapshot per attendance record.
--- - Code/QR checkout guarded by checklist completion.
+-- - Checklist completion is required before checkout handoff.
 -- - Harden attendance_records so Employee writes go through Server Actions +
 --   service-role RPCs only.
 -- =====================================================================
@@ -19,7 +19,7 @@ COMMENT ON COLUMN public.attendance_records.check_in_photo_path IS
   'Private Storage path in attendance-photos bucket for the employee clock-in photo.';
 
 COMMENT ON COLUMN public.attendance_records.check_out_code_verified IS
-  'True when end-shift checkout passed the branch closing code check in server action.';
+  'Legacy checkout-code flag retained for old attendance rows. Current Employee checkout uses manager approval.';
 
 -- ---------------------------------------------------------------------
 -- Private Storage bucket
@@ -281,7 +281,7 @@ BEGIN
     RAISE EXCEPTION 'branch_not_found' USING ERRCODE = 'P0002';
   END IF;
 
-  IF p_shift_id IS NOT NULL THEN
+  IF p_shift_id IS NOT NULL AND p_shift_id <> 0 THEN
     SELECT s.id
     INTO v_shift_id
     FROM public.shifts s
@@ -289,6 +289,10 @@ BEGIN
       AND s.tenant_id = p_tenant_id
       AND s.branch_id = p_branch_id
       AND COALESCE(s.is_active, true) = true;
+
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'shift_not_found' USING ERRCODE = 'P0002';
+    END IF;
   END IF;
 
   IF EXISTS (
@@ -528,4 +532,3 @@ GRANT EXECUTE ON FUNCTION public.employee_clock_out_with_code(
 GRANT EXECUTE ON FUNCTION public.upsert_shift_checklist_template(
   bigint, bigint, text[]
 ) TO service_role;
-

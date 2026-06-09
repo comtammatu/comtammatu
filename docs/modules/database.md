@@ -85,7 +85,7 @@ Tables are organized by domain. For per-table columns/constraints, read the migr
 | Domain        | Representative tables                                                                                                                                                  |
 | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Auth          | `permission_keys`, `positions`, `role_templates`, `staff_permissions`, `permission_audit_log`                                                                          |
-| Tenant + IA   | `tenants`, `branches`, `profiles`, `areas`, `area_branches`, `system_settings`, `branch_attendance_config`                                                             |
+| Tenant + IA   | `tenants`, `branches`, `profiles`, `system_settings`, `branch_attendance_config`                                                                                                |
 | Menu          | `menu_categories`, `menu_items`, `menu_item_variants`, `menu_item_modifiers`, `menu_item_available_sides`                                                              |
 | POS           | `pos_terminals`, `pos_sessions`, `branch_zones`, `tables`, `printer_configs`, `branch_menu_item_daily_limits`                                                          |
 | Orders / KDS  | `orders`, `order_items`, `order_status_history`, `kds_stations`, `kds_station_categories`, `kds_tickets`                                                               |
@@ -117,7 +117,7 @@ CREATE POLICY "Tenant isolation" ON public.{table}
 CREATE POLICY "Branch scope" ON public.{table}
   FOR SELECT USING (
     branch_id = auth_branch_id()
-    OR auth_role() IN ('owner', 'super_manager', 'area_manager')
+    OR auth_role() IN ('owner', 'super_manager')
   );
 
 -- 4. GRANT (mandatory — RLS without GRANT = silent block)

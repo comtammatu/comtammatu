@@ -1,5 +1,4 @@
 import { LogOut as IconLogout, User as IconUser } from "lucide-react";
-import { ROLE_LABEL_VI } from "@comtammatu/shared/auth";
 import { ACTIONS_VI, BRANCH_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
 import { loadAuthState } from "@/_lib/auth";
@@ -17,17 +16,29 @@ const copy = messages.employee.profile;
 export default async function ProfilePage() {
   const { session, claims } = await loadAuthState();
   const ctx = await getEmployeeContext();
+  const positionCode = claims.position ?? claims.position_code ?? null;
 
-  const roleLabel = ROLE_LABEL_VI[claims.user_role] ?? claims.user_role;
-
-  const { data: employee } = ctx
-    ? await ctx.supabase
-        .from("employees")
-        .select("employee_code, start_date")
-        .eq("id", ctx.employeeId)
-        .eq("tenant_id", claims.tenant_id)
-        .maybeSingle()
-    : { data: null };
+  const [employeeResult, positionResult] = await Promise.all([
+    ctx
+      ? ctx.supabase
+          .from("employees")
+          .select("employee_code, start_date")
+          .eq("id", ctx.employeeId)
+          .eq("tenant_id", claims.tenant_id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    positionCode
+      ? ctx?.supabase
+          .from("positions")
+          .select("label_vi")
+          .eq("tenant_id", claims.tenant_id)
+          .eq("code", positionCode)
+          .maybeSingle() ?? Promise.resolve({ data: null })
+      : Promise.resolve({ data: null }),
+  ]);
+  const employee = employeeResult.data;
+  const positionLabel =
+    positionResult.data?.label_vi ?? positionCode ?? claims.user_role;
 
   const displayName =
     session.user.user_metadata?.["full_name"] ??
@@ -38,7 +49,7 @@ export default async function ProfilePage() {
     <EmployeePage
       title={copy.title}
       description={copy.description}
-      badge={{ children: roleLabel, variant: "outline" }}
+      badge={{ children: positionLabel, variant: "outline" }}
     >
       <EmployeePanel
         icon={IconUser}

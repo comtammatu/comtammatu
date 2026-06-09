@@ -34,7 +34,6 @@ const FINANCE_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
 const READ_ROLES: readonly StaffRole[] = [
   "owner",
   "super_manager",
-  "area_manager",
   "branch_manager",
 ];
 

@@ -1,5 +1,6 @@
-export type { StaffRole, JwtClaims, ScopeIds } from "./types";
+export type { AccessBucket, StaffRole, JwtClaims, ScopeIds } from "./types";
 export {
+  ACCESS_BUCKETS,
   STAFF_ROLES,
   ADMIN_ROLES,
   BRANCH_ROLES,
@@ -37,7 +38,6 @@ export {
 } from "./scope";
 export {
   canViewInventoryValueSystem,
-  canViewInventoryValueByArea,
   canViewInventoryValueByBranch,
   getInventoryValueVisibility,
 } from "./inventory-value";

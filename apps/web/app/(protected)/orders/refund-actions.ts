@@ -14,7 +14,6 @@ import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 const FETCH_ROLES: StaffRole[] = [
   "owner",
   "super_manager",
-  "area_manager",
   "branch_manager",
   "cashier",
 ];
@@ -22,7 +21,6 @@ const FETCH_ROLES: StaffRole[] = [
 const CREATE_ROLES: StaffRole[] = [
   "owner",
   "super_manager",
-  "area_manager",
   "branch_manager",
   "cashier",
 ];

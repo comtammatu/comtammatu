@@ -17,7 +17,7 @@ import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { ACTIONS_VI, BRANCH_VI, ERRORS_VI } from "@comtammatu/shared/messages";
 import { SelectField, TextField } from "@/components/form";
-import { createShift } from "./actions";
+import { createShift, updateShift } from "./actions";
 import type { BranchOption, ShiftRow } from "./page";
 
 const shiftSchema = z.object({
@@ -34,7 +34,8 @@ interface ShiftFormDialogProps {
   onOpenChange: (open: boolean) => void;
   branches: BranchOption[];
   defaultBranchId: number | null;
-  onShiftCreated: (shift: ShiftRow) => void;
+  shift: ShiftRow | null;
+  onShiftSaved: (shift: ShiftRow) => void;
 }
 
 export function ShiftFormDialog({
@@ -42,7 +43,8 @@ export function ShiftFormDialog({
   onOpenChange,
   branches,
   defaultBranchId,
-  onShiftCreated,
+  shift,
+  onShiftSaved,
 }: ShiftFormDialogProps) {
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
@@ -60,14 +62,14 @@ export function ShiftFormDialog({
   useEffect(() => {
     if (open) {
       form.reset({
-        name: "",
+        name: shift?.name ?? "",
         branch_id: defaultBranchId?.toString() ?? "",
-        start_time: "",
-        end_time: "",
+        start_time: shift?.start_time?.slice(0, 5) ?? "",
+        end_time: shift?.end_time?.slice(0, 5) ?? "",
       });
       setServerError(null);
     }
-  }, [open, defaultBranchId, form]);
+  }, [open, defaultBranchId, form, shift]);
 
   const branchOptions = branches.map((b) => ({
     value: b.id.toString(),
@@ -77,24 +79,33 @@ export function ShiftFormDialog({
   function onValid(values: ShiftFormValues) {
     startTransition(async () => {
       setServerError(null);
-      const result = await createShift({
+      const payload = {
         branchId: Number(values.branch_id),
         name: values.name,
         startTime: values.start_time,
         endTime: values.end_time,
-      });
+      };
+      const result = shift
+        ? await updateShift({
+            ...payload,
+            shiftId: shift.id,
+            isActive: shift.is_active,
+          })
+        : await createShift(payload);
       if (!result.success) {
         setServerError(result.error ?? ERRORS_VI.fallback);
         return;
       }
-      toast.success("Đã tạo ca làm việc mới");
-      const created = result.data as { id: number } | null;
-      onShiftCreated({
-        id: created?.id ?? 0,
-        name: values.name,
-        start_time: values.start_time,
-        end_time: values.end_time,
-        is_active: true,
+      toast.success(shift ? "Đã cập nhật ca làm việc" : "Đã tạo ca làm việc mới");
+      const saved = result.data as ShiftRow | null;
+      onShiftSaved({
+        id: saved?.id ?? shift?.id ?? 0,
+        name: saved?.name ?? values.name,
+        start_time: saved?.start_time ?? values.start_time,
+        end_time: saved?.end_time ?? values.end_time,
+        is_active: saved?.is_active ?? shift?.is_active ?? true,
+        future_assignment_count:
+          saved?.future_assignment_count ?? shift?.future_assignment_count ?? 0,
       });
       onOpenChange(false);
     });
@@ -104,7 +115,7 @@ export function ShiftFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Thêm ca làm việc</DialogTitle>
+          <DialogTitle>{shift ? "Sửa ca làm việc" : "Thêm ca làm việc"}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={form.handleSubmit(onValid)} noValidate>
@@ -123,6 +134,7 @@ export function ShiftFormDialog({
               label="Chi nhánh"
               options={branchOptions}
               placeholder={BRANCH_VI.select}
+              disabled={Boolean(shift)}
               required
             />
 
@@ -163,7 +175,7 @@ export function ShiftFormDialog({
             </Button>
             <Button type="submit" disabled={isPending}>
               {isPending && <Spinner className="mr-2" />}
-              Tạo ca
+              {shift ? "Lưu ca" : "Tạo ca"}
             </Button>
           </DialogFooter>
         </form>

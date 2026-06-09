@@ -25,15 +25,19 @@ export function extractClaims(
   }
 
   const branchId = appMetadata.branch_id;
-  const areaId = appMetadata.area_id;
   const position = appMetadata.position;
+  const accessBucket = appMetadata.access_bucket;
+  const positionCode = appMetadata.position_code;
 
   return {
     tenant_id: tenantId,
     branch_id: typeof branchId === "number" ? branchId : null,
-    area_id: typeof areaId === "number" ? areaId : null,
     user_role: role as StaffRole,
+    access_bucket:
+      typeof accessBucket === "string" ? (accessBucket as StaffRole) : undefined,
     position: typeof position === "string" ? position : undefined,
+    position_code:
+      typeof positionCode === "string" ? positionCode : undefined,
   };
 }
 
@@ -241,9 +245,7 @@ export function resolvePostLoginRedirect(
 
     const allowCrossBranchSettings =
       (moduleKey === "branch_settings" || moduleKey === "branch_menu_limits") &&
-      (claims.user_role === "owner" ||
-        claims.user_role === "super_manager" ||
-        claims.user_role === "area_manager");
+      (claims.user_role === "owner" || claims.user_role === "super_manager");
 
     if (
       routeBranchId === null ||

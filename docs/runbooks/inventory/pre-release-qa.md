@@ -85,7 +85,7 @@ Kiểm theo đúng [inventory-rbac-matrix.md](../../ref/inventory-rbac-matrix.md
 | Role                                  | Phải đúng                                                                                                                                    |
 | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | `super_manager`                       | Vào được Inventory + procurement + production                                                                                                |
-| `area_manager`                        | Vào được Inventory read/ops surfaces, không vào procurement, không vào production                                                            |
+| ``                        | Vào được Inventory read/ops surfaces, không vào procurement, không vào production                                                            |
 | `branch_manager`                      | Vào được branch ops surfaces (`stock`, `transfers`, `issues`, `stocktake`, `expiry`, `reports`), không vào procurement, không vào production |
 | `owner`                               | Có thể đi qua ACL ở một số inventory routes nhưng không được UX dẫn như operator hằng ngày                                                   |
 | `office`, `cashier`, `waiter`, `chef` | Không vào Inventory route nếu ACL hiện tại chưa cho                                                                                          |
@@ -95,7 +95,7 @@ Kiểm theo đúng [inventory-rbac-matrix.md](../../ref/inventory-rbac-matrix.md
 - route bị cấm phải redirect/forbid đúng
 - nav không lộ link sai role
 - dashboard phải giữ mental model `task queue first`
-- `Production` phải ẩn khỏi `area_manager`/`branch_manager` ngay từ nav; `super_manager` và `production_manager` là operator, `owner` là oversight/deep-link access
+- `Production` phải ẩn khỏi ``/`branch_manager` ngay từ nav; `super_manager` và `production_manager` là operator, `owner` là oversight/deep-link access
 - `Ingredients / Suppliers / Recipes` không xuất hiện duplicate giữa menu chính và `Settings`
 - không có page nào “vào được nhưng dữ liệu null im lặng” do thiếu `GRANT` hoặc RLS sai
 - `owner` không được UX dẫn như inventory operator hằng ngày
@@ -113,7 +113,7 @@ Chạy flow smoke theo persona + device, không chỉ theo route rời rạc:
 - HQ procurement: desktop
 - Bếp trung tâm: tablet trước, desktop đối chiếu
 - Chi nhánh: tablet trước, mobile ergonomics riêng
-- Oversight (`area_manager`, `owner`): desktop
+- Oversight (``, `owner`): desktop
 
 Mỗi flow phải log:
 
@@ -148,8 +148,8 @@ Mỗi flow phải log:
 
 ### 3.3 Production
 
-- `super_manager` và `production_manager` thấy nav và vào được page; `owner` có thể deep-link để kiểm tra/khẩn cấp; `area_manager`/`branch_manager` bị chặn kể cả khi có manual grant
-- Direct DB smoke sau khi apply migration: `area_manager`/`branch_manager` có manual production/menu grant vẫn phải bị `42501` khi gọi `create_production_order`, `confirm_production_order`, `cancel_production_order`, `upsert_production_recipe_lines`, hoặc mutate `production_recipes` / `production_orders` / `production_order_items` qua PostgREST
+- `super_manager` và `production_manager` thấy nav và vào được page; `owner` có thể deep-link để kiểm tra/khẩn cấp; ``/`branch_manager` bị chặn kể cả khi có manual grant
+- Direct DB smoke sau khi apply migration: ``/`branch_manager` có manual production/menu grant vẫn phải bị `42501` khi gọi `create_production_order`, `confirm_production_order`, `cancel_production_order`, `upsert_production_recipe_lines`, hoặc mutate `production_recipes` / `production_orders` / `production_order_items` qua PostgREST
 - Tạo `production_order`
 - Fail đúng khi thiếu BOM hoặc thiếu nguyên liệu
 - Confirm thành công khi đủ điều kiện

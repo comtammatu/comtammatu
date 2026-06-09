@@ -35,7 +35,7 @@ Mapping với role thật trong hệ thống:
 - HQ procurement / HQ inventory operator: chủ yếu map vào `super_manager`
 - Central kitchen operator: hiện vẫn map vào `super_manager`
 - Branch receiving / stocktake operator: map vào `branch_manager`
-- Oversight: `area_manager` hoặc `super_manager` tùy scope hiện tại
+- Oversight: `` hoặc `super_manager` tùy scope hiện tại
 
 Nếu cần chi tiết quyền xem/tạo/xác nhận, xem [inventory-rbac-matrix.md](inventory-rbac-matrix.md).
 

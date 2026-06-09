@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import {
   Camera as IconCamera,
+  CalendarDays as IconCalendarDays,
   ChefHat as IconChefHat,
   CheckCircle2 as IconDone,
   ClipboardCheck as IconClipboardCheck,
@@ -136,6 +137,13 @@ const MANAGER_BRANCH_TOOLS: Array<{
     icon: IconClipboardCheck,
     title: copy.managerCheckoutApprovalsTitle,
     description: copy.managerCheckoutApprovalsDescription,
+  },
+  {
+    moduleKey: "hr",
+    href: () => "/hr",
+    icon: IconCalendarDays,
+    title: copy.managerHrTitle,
+    description: copy.managerHrDescription,
   },
   {
     moduleKey: "pos",

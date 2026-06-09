@@ -8,11 +8,7 @@ import {
 } from "@comtammatu/shared/time";
 import { withAction } from "@/_lib/with-action";
 
-const STATEMENT_ROLES: readonly StaffRole[] = [
-  "owner",
-  "super_manager",
-  "area_manager",
-];
+const STATEMENT_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
 
 export interface Tt200ReportLine {
   line_code: string;

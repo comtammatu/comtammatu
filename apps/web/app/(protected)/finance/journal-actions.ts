@@ -6,11 +6,7 @@ import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { withAction } from "@/_lib/with-action";
 
-const JOURNAL_READ_ROLES: readonly StaffRole[] = [
-  "owner",
-  "super_manager",
-  "area_manager",
-];
+const JOURNAL_READ_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
 const JOURNAL_WRITE_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
 
 /* ─── Fetch Journal Entries (auth-only, optional filters) ─── */

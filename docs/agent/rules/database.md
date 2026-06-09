@@ -52,12 +52,13 @@ Supabase skill family when available.
 {
   tenant_id: number,
   branch_id: number | null,
-  user_role: StaffRole,   // legacy-compat — positions.legacy_role_code
+  user_role: AccessBucket, // compatibility claim derived from positions.code
+  access_bucket: AccessBucket,
   position: string        // canonical — positions.code, "unassigned" if no row
 }
 ```
 
-The `position` claim was added in migration `20260423020000_auth_v2_m5_bridge.sql`.
+The `position` claim was added in migration `20260423020000_auth_m5_bridge.sql`.
 
 - ACL single source: `packages/shared/src/auth/module-acl.ts`.
 - Do not create a second auth policy layer in UI helpers.

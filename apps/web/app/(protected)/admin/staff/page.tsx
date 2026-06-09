@@ -20,18 +20,23 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
   const params = await searchParams;
   const supabase = await createClient();
 
-  // Fetch branches for filters + form
-  const { data: branches } = await supabase
-    .from("branches")
-    .select("id, name, branch_kind")
-    .eq("is_active", true)
-    .order("name");
+  const [{ data: branches }, { data: positions }] = await Promise.all([
+    supabase
+      .from("branches")
+      .select("id, name, branch_kind")
+      .eq("is_active", true)
+      .order("name"),
+    supabase
+      .from("positions")
+      .select("id, code, label_vi")
+      .order("label_vi"),
+  ]);
 
   // Build staff query — role is derived from positions.code via the role-bridge mapper.
   let query = supabase
     .from("profiles")
     .select(
-      "id, full_name, phone, branch_id, is_active, positions(code), branches(name)",
+      "id, full_name, phone, branch_id, position_id, is_active, positions(code, label_vi), branches(name)",
     )
     .order("full_name");
 
@@ -46,7 +51,7 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
 
   const { data: profiles } = await query;
 
-  type PositionJoin = { code: string | null } | null;
+  type PositionJoin = { code: string | null; label_vi: string | null } | null;
   type BranchJoin = { name: string } | null;
 
   const allStaff: StaffRow[] = (profiles ?? []).map((p) => ({
@@ -54,6 +59,7 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
     full_name: p.full_name,
     phone: p.phone,
     role: staffRoleFromPositionCode((p.positions as PositionJoin)?.code),
+    position_label: (p.positions as PositionJoin)?.label_vi ?? null,
     branch_id: p.branch_id,
     branch_name: (p.branches as BranchJoin)?.name ?? null,
     is_active: p.is_active,
@@ -71,20 +77,51 @@ export default async function StaffPage({ searchParams }: StaffPageProps) {
   });
 
   const branchOptions = branches ?? [];
+  const seenBuckets = new Set<string>();
+  const positionOptions = (positions ?? []).flatMap((position) => {
+    const bucket = staffRoleFromPositionCode(position.code);
+    if (
+      bucket === "unassigned" ||
+      bucket === "owner" ||
+      bucket === "super_manager" ||
+      seenBuckets.has(bucket)
+    ) {
+      return [];
+    }
+    seenBuckets.add(bucket);
+    return [
+      {
+        value: bucket,
+        label: position.label_vi ?? position.code,
+      },
+    ];
+  });
 
   return (
     <AppPage>
       <AppPageHeader
         title="Nhân viên"
-        description="Quản lý tài khoản và phân quyền nhân viên theo chi nhánh."
-        actions={<AddStaffButton branches={branchOptions} />}
+        description="Quản lý tài khoản, chức vụ hiển thị và phân quyền nhân viên theo chi nhánh."
+        actions={
+          <AddStaffButton
+            branches={branchOptions}
+            positionOptions={positionOptions}
+          />
+        }
       />
       <AppToolbar>
         <Suspense>
-          <StaffFilters branches={branchOptions} />
+          <StaffFilters
+            branches={branchOptions}
+            positionOptions={positionOptions}
+          />
         </Suspense>
       </AppToolbar>
-      <StaffTable staff={staff} branches={branchOptions} />
+      <StaffTable
+        staff={staff}
+        branches={branchOptions}
+        positionOptions={positionOptions}
+      />
     </AppPage>
   );
 }

@@ -201,8 +201,7 @@ export default async function StockPage({
     role === "owner" ||
     role === "super_manager" ||
     role === "warehouse_manager";
-  const canViewBranch =
-    canViewTotal || role === "area_manager" || role === "branch_manager";
+  const canViewBranch = canViewTotal || role === "branch_manager";
 
   const branchValue = canViewBranch
     ? ingredients.reduce((sum, i) => sum + i.qty * i.cost, 0)

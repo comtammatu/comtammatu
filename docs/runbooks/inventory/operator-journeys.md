@@ -190,7 +190,7 @@ Updated: `2026-04-17`
 
 ## 7. Area Manager Oversight Path
 
-- `persona`: `area_manager`
+- `persona`: ``
 - `site_kind`: tenant-wide oversight tạm thời
 - `device`: `desktop`
 - `starting route`: `/inventory`

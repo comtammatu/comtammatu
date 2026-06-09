@@ -26,7 +26,7 @@ Three concepts were conflated in original code:
 **Adopt minimum-regret synthesis (Architect's Antithesis):**
 
 1. **Add `tenants.owner_user_id UUID REFERENCES auth.users(id) ON DELETE RESTRICT NOT NULL`** as the data foundation for canonical auth identity (this ADR + archived migration `20260601500000`, now folded into the baseline).
-2. **DEFER updating `has_permission()` / `_auth_v2_is_owner()` / `has_permission_any()`** to add second OR branch. No functional regression to fix — H3a sufficient.
+2. **DEFER updating `has_permission()` / `_auth_is_owner()` / `has_permission_any()`** to add second OR branch. No functional regression to fix — H3a sufficient.
 3. **Three concepts kept separate** with clear semantics:
 
 | Column                   | Type                              | Purpose                          | Owner-bypass?        |
@@ -72,13 +72,13 @@ Three concepts were conflated in original code:
 
 **A. Full dual-source (original H3b):**
 
-- Add column + extend has_permission + extend has_permission_any + extend \_auth_v2_is_owner.
+- Add column + extend has_permission + extend has_permission_any + extend \_auth_is_owner.
 - Rejected: solves a problem H3a already prevents; introduces drift surface.
 
 **B. Single source migration (replace position-based check):**
 
 - Drop `positions.code='owner'` check entirely; rely solely on `tenants.owner_user_id`.
-- Rejected: invasive — breaks `_auth_v2_position_id_from_role` mapping (`20260423020000_auth_v2_m5_bridge.sql:108`), JWT user_role derivation, 17+ SQL sites referencing 'owner' position code.
+- Rejected: invasive — breaks `_auth_position_id_from_role` mapping (`20260423020000_auth_m5_bridge.sql:108`), JWT user_role derivation, 17+ SQL sites referencing 'owner' position code.
 
 **C. No-op (defer entire H3b):**
 
@@ -121,7 +121,7 @@ UPDATE tenants t
 - `supabase/migrations/00000000000000_baseline.sql` — current schema baseline with `tenants.owner_user_id`
 - `supabase/migrations/_archive/20260601500000_h3b_tenants_owner_user_id.sql` — implementation history
 - `supabase/migrations/_archive/20260601100000_auth_v3_h3a_position_id_required.sql` — H3a (closes silent-demote at source)
-- `supabase/migrations/_archive/20260423040000_auth_v2_m5_hotfix_has_permission.sql` — current owner-bypass lineage (positions-based)
+- `supabase/migrations/_archive/20260423040000_auth_m5_hotfix_has_permission.sql` — current owner-bypass lineage (positions-based)
 - `supabase/migrations/_archive/20260401000000_initial_schema.sql:28` — `tenants.representative TEXT` (legal name, NOT auth)
 - `tasks/regressions.md` — TENANT-OWNER-USER-ID-CANONICAL (new), PROFILES-POSITION-ID-MUST-NOT-NULL (H3a sibling)
 - `docs/modules/auth.md` — Invariants section

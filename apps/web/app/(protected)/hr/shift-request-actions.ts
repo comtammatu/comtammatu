@@ -7,7 +7,6 @@ import { withAction } from "@/_lib/with-action";
 const APPROVE_ROLES: readonly StaffRole[] = [
   "owner",
   "super_manager",
-  "area_manager",
   "branch_manager",
 ];
 

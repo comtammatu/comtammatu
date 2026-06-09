@@ -105,14 +105,11 @@ export async function loadInventoryDashboardData(
 
   // Sync gates first — short-circuit avoids unnecessary RPC fetches when
   // role/permission map already disqualifies the user.
-  const isOversightRole =
-    claims.user_role === "owner" || claims.user_role === "area_manager";
+  const isOversightRole = claims.user_role === "owner";
   const procurementSyncOk =
     !isOversightRole && canAccess(claims.user_role, "inventory_procurement");
   const productionSyncOk =
-    claims.user_role !== "owner" &&
-    claims.user_role !== "area_manager" &&
-    canAccessProductionSurface(claims.user_role);
+    claims.user_role !== "owner" && canAccessProductionSurface(claims.user_role);
 
   // Permission RPCs + branch scope are independent — fan them out in
   // parallel instead of awaiting them serially via &&. Saves 2-3 RTTs

@@ -250,16 +250,6 @@ async function runAfterSuccess<TInput, TData>(
  * context. `customAuth` swaps the auth resolver wholesale; `afterSuccess`
  * runs a non-fatal hook after a successful handler return.
  *
- * @example Standard:
- *   export const createArea = withAction(
- *     { roles: AREA_ADMIN_ROLES, schema: createAreaSchema },
- *     async (data, { supabase, claims }) => {
- *       const { error } = await supabase.from("areas").insert({...});
- *       if (error) return { success: false, error: "Không thể tạo khu vực." };
- *       return { success: true };
- *     },
- *   );
- *
  * @example Custom auth + afterSuccess (POS void pattern — see WS-1a):
  *   export const voidOrderItem = withActionPositional(
  *     {

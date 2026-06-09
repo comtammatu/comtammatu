@@ -136,94 +136,6 @@ export type Database = {
           },
         ]
       }
-      area_branches: {
-        Row: {
-          area_id: number
-          branch_id: number
-          created_at: string
-          id: number
-          tenant_id: number
-        }
-        Insert: {
-          area_id: number
-          branch_id: number
-          created_at?: string
-          id?: never
-          tenant_id: number
-        }
-        Update: {
-          area_id?: number
-          branch_id?: number
-          created_at?: string
-          id?: never
-          tenant_id?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "area_branches_area_id_fkey"
-            columns: ["area_id"]
-            isOneToOne: false
-            referencedRelation: "areas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "area_branches_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "area_branches_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "area_branches_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      areas: {
-        Row: {
-          created_at: string
-          id: number
-          is_active: boolean
-          name: string
-          tenant_id: number
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id?: never
-          is_active?: boolean
-          name: string
-          tenant_id: number
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: never
-          is_active?: boolean
-          name?: string
-          tenant_id?: number
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "areas_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       attendance_checklist_items: {
         Row: {
           attendance_record_id: number
@@ -288,6 +200,10 @@ export type Database = {
       attendance_records: {
         Row: {
           branch_id: number
+          check_in: string | null
+          check_in_photo_path: string | null
+          check_out: string | null
+          check_out_code_verified: boolean
           checkout_approval_note: string | null
           checkout_approval_target_roles: string[]
           checkout_approved_at: string | null
@@ -295,10 +211,6 @@ export type Database = {
           checkout_requested_at: string | null
           checkout_requested_by_role: string | null
           checkout_requested_code_verified: boolean
-          check_in: string | null
-          check_in_photo_path: string | null
-          check_out: string | null
-          check_out_code_verified: boolean
           code_verified: boolean | null
           created_at: string
           date: string
@@ -315,6 +227,10 @@ export type Database = {
         }
         Insert: {
           branch_id: number
+          check_in?: string | null
+          check_in_photo_path?: string | null
+          check_out?: string | null
+          check_out_code_verified?: boolean
           checkout_approval_note?: string | null
           checkout_approval_target_roles?: string[]
           checkout_approved_at?: string | null
@@ -322,10 +238,6 @@ export type Database = {
           checkout_requested_at?: string | null
           checkout_requested_by_role?: string | null
           checkout_requested_code_verified?: boolean
-          check_in?: string | null
-          check_in_photo_path?: string | null
-          check_out?: string | null
-          check_out_code_verified?: boolean
           code_verified?: boolean | null
           created_at?: string
           date: string
@@ -342,6 +254,10 @@ export type Database = {
         }
         Update: {
           branch_id?: number
+          check_in?: string | null
+          check_in_photo_path?: string | null
+          check_out?: string | null
+          check_out_code_verified?: boolean
           checkout_approval_note?: string | null
           checkout_approval_target_roles?: string[]
           checkout_approved_at?: string | null
@@ -349,10 +265,6 @@ export type Database = {
           checkout_requested_at?: string | null
           checkout_requested_by_role?: string | null
           checkout_requested_code_verified?: boolean
-          check_in?: string | null
-          check_in_photo_path?: string | null
-          check_out?: string | null
-          check_out_code_verified?: boolean
           code_verified?: boolean | null
           created_at?: string
           date?: string
@@ -4183,7 +4095,6 @@ export type Database = {
           is_system: boolean
           label_en: string | null
           label_vi: string
-          legacy_role_code: string
           tenant_id: number
         }
         Insert: {
@@ -4194,7 +4105,6 @@ export type Database = {
           is_system?: boolean
           label_en?: string | null
           label_vi: string
-          legacy_role_code: string
           tenant_id: number
         }
         Update: {
@@ -4205,7 +4115,6 @@ export type Database = {
           is_system?: boolean
           label_en?: string | null
           label_vi?: string
-          legacy_role_code?: string
           tenant_id?: number
         }
         Relationships: [
@@ -4967,7 +4876,6 @@ export type Database = {
       }
       profiles: {
         Row: {
-          area_id: number | null
           avatar_url: string | null
           branch_id: number | null
           created_at: string | null
@@ -4980,7 +4888,6 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          area_id?: number | null
           avatar_url?: string | null
           branch_id?: number | null
           created_at?: string | null
@@ -4993,7 +4900,6 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
-          area_id?: number | null
           avatar_url?: string | null
           branch_id?: number | null
           created_at?: string | null
@@ -5006,13 +4912,6 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "profiles_area_id_fkey"
-            columns: ["area_id"]
-            isOneToOne: false
-            referencedRelation: "areas"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "profiles_branch_id_fkey"
             columns: ["branch_id"]
@@ -8689,12 +8588,6 @@ export type Database = {
       }
     }
     Functions: {
-      _auth_v2_is_owner: { Args: { p_user: string }; Returns: boolean }
-      _auth_v2_position_id_from_role: {
-        Args: { p_role: string; p_tenant: number }
-        Returns: number
-      }
-      _auth_v2_role_to_position: { Args: { p_role: string }; Returns: string }
       _compute_grn_price_baseline: {
         Args: {
           p_ingredient_id: number
@@ -8811,7 +8704,9 @@ export type Database = {
         Returns: Json
       }
       auth_branch_id: { Args: never; Returns: number }
+      auth_is_owner: { Args: { p_user: string }; Returns: boolean }
       auth_role: { Args: never; Returns: string }
+      auth_role_to_position: { Args: { p_role: string }; Returns: string }
       auth_tenant_id: { Args: never; Returns: number }
       auto_close_periods: { Args: never; Returns: number }
       auto_post_journal: {
@@ -8827,9 +8722,38 @@ export type Database = {
         }
         Returns: number
       }
+      branch_manager_approve_employee_clock_out: {
+        Args: {
+          p_approved_by: string
+          p_attendance_id: number
+          p_branch_id: number
+          p_note?: string
+          p_tenant_id: number
+        }
+        Returns: string
+      }
+      bulk_delete_future_shift_assignments: {
+        Args: {
+          p_assignment_ids: number[]
+          p_branch_id: number
+          p_tenant_id: number
+        }
+        Returns: Json
+      }
       bulk_mark_feedback_suspect: {
         Args: { p_feedback_ids: number[]; p_is_suspect: boolean }
         Returns: number
+      }
+      bulk_upsert_shift_assignments: {
+        Args: {
+          p_branch_id: number
+          p_dates: string[]
+          p_employee_ids: number[]
+          p_mode?: string
+          p_shift_id: number
+          p_tenant_id: number
+        }
+        Returns: Json
       }
       bump_kds_ticket: { Args: { p_ticket_id: number }; Returns: string }
       can_access_branch: { Args: { p_branch_id: number }; Returns: boolean }
@@ -8847,16 +8771,6 @@ export type Database = {
         Returns: undefined
       }
       check_order_ready: { Args: { p_order_id: number }; Returns: undefined }
-      branch_manager_approve_employee_clock_out: {
-        Args: {
-          p_approved_by: string
-          p_attendance_id: number
-          p_branch_id: number
-          p_note?: string
-          p_tenant_id: number
-        }
-        Returns: string
-      }
       claim_print_job: {
         Args: { p_agent_id: string; p_job_id: number }
         Returns: boolean
@@ -8991,6 +8905,16 @@ export type Database = {
       consume_stock_for_order: { Args: { p_order_id: number }; Returns: Json }
       consume_stock_for_order_service: {
         Args: { p_actor_id?: string; p_order_id: number }
+        Returns: Json
+      }
+      copy_shift_assignments_week: {
+        Args: {
+          p_branch_id: number
+          p_mode?: string
+          p_source_week_start: string
+          p_target_week_start: string
+          p_tenant_id: number
+        }
         Returns: Json
       }
       count_unread_notifications: { Args: never; Returns: number }
@@ -9149,7 +9073,7 @@ export type Database = {
         }
         Returns: string
       }
-      employee_request_clock_out_with_code: {
+      employee_request_clock_out: {
         Args: {
           p_attendance_id: number
           p_employee_id: number
@@ -9678,6 +9602,10 @@ export type Database = {
       }
       pos_order_modifier_sum: {
         Args: { p_main_item_id: number; p_modifiers: Json; p_tenant_id: number }
+        Returns: number
+      }
+      position_id_from_access_bucket: {
+        Args: { p_access_bucket: string; p_tenant: number }
         Returns: number
       }
       post_manual_journal_entry: { Args: { p_entry_id: number }; Returns: Json }

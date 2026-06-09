@@ -1,11 +1,11 @@
 /**
- * Staff roles — ordered by privilege level (highest to lowest).
+ * Access buckets — ordered by privilege level (highest to lowest).
+ * These are compatibility auth buckets, not mutable HR position labels.
  * Customer role is handled by Flutter app only.
  */
-export const STAFF_ROLES = [
+export const ACCESS_BUCKETS = [
   "owner",
   "super_manager",
-  "area_manager",
   "branch_manager",
   "warehouse_manager",
   "production_manager",
@@ -15,7 +15,11 @@ export const STAFF_ROLES = [
   "office",
 ] as const;
 
-export type StaffRole = (typeof STAFF_ROLES)[number];
+export type AccessBucket = (typeof ACCESS_BUCKETS)[number];
+
+/** Compatibility alias while app code moves from StaffRole to AccessBucket. */
+export const STAFF_ROLES = ACCESS_BUCKETS;
+export type StaffRole = AccessBucket;
 
 /** Roles that can access /admin/ routes */
 export const ADMIN_ROLES: readonly StaffRole[] = [
@@ -34,13 +38,11 @@ export const BRANCH_ROLES: readonly StaffRole[] = [
 export const TENANT_LEVEL_ROLES: readonly StaffRole[] = [
   "owner",
   "super_manager",
-  "area_manager",
   "office",
 ] as const;
 
 /** Roles that managers can create/edit from the current staff screen */
 export const MANAGEABLE_STAFF_ROLES: readonly StaffRole[] = [
-  "area_manager",
   "branch_manager",
   "warehouse_manager",
   "production_manager",
@@ -67,7 +69,6 @@ export const HQ_EXCLUDED_OPERATIONAL_ROLES: readonly StaffRole[] = [
  */
 export const BRANCH_FLOOR_SETTINGS_ROLES: readonly StaffRole[] = [
   "super_manager",
-  "area_manager",
   "branch_manager",
 ] as const;
 
@@ -76,11 +77,13 @@ export function canManageBranchFloorSettings(role: StaffRole): boolean {
   return BRANCH_FLOOR_SETTINGS_ROLES.some((r) => r === role);
 }
 
-/** Vietnamese display labels for each role */
+/**
+ * Vietnamese labels for compatibility access buckets.
+ * Staff/HR UI should display `positions.label_vi` instead.
+ */
 export const ROLE_LABEL_VI: Record<StaffRole, string> = {
   owner: "Chủ sở hữu",
   super_manager: "Quản lý tổng",
-  area_manager: "Quản lý khu vực",
   branch_manager: "Quản lý chi nhánh",
   warehouse_manager: "Quản lý kho tổng",
   production_manager: "Quản lý sản xuất",
@@ -99,7 +102,6 @@ const POSITION_CODE_TO_STAFF_ROLE: Record<string, StaffRole> = {
   owner: "owner",
   super_manager: "super_manager",
   executive_assistant: "super_manager",
-  area_manager: "area_manager",
   branch_manager: "branch_manager",
   chief_accountant: "office",
   accountant: "office",
@@ -126,13 +128,14 @@ export function staffRoleFromPositionCode(
 export interface JwtClaims {
   tenant_id: number;
   branch_id: number | null;
-  area_id: number | null;
   user_role: StaffRole;
+  access_bucket?: AccessBucket;
   /**
    * Canonical HR position code (source of truth). `user_role` is derived from
    * it via the role-bridge mapper (`staffRoleFromPositionCode` / the SQL twin).
    */
   position?: string;
+  position_code?: string;
 }
 
 /** Scope IDs extracted from URL or JWT */

@@ -125,12 +125,9 @@ test.describe("Cấp bếp default_consumption warn-only contract", () => {
     const authEmail = process.env.E2E_CASHIER_EMAIL;
     if (authEmail) {
       const authUser = await resolveUserByEmail(supabase, authEmail);
-      const tenantWide = [
-        "owner",
-        "super_manager",
-        "office",
-        "area_manager",
-      ].includes(authUser.role);
+      const tenantWide = ["owner", "super_manager", "office"].includes(
+        authUser.role,
+      );
       if (!tenantWide && authUser.branchId != null) {
         targetBranchId = authUser.branchId;
       }

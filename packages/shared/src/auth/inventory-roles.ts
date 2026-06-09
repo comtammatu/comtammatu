@@ -12,7 +12,6 @@ export const INVENTORY_CATALOG_ROLES: readonly StaffRole[] = [
 export const INVENTORY_OPS_ROLES: readonly StaffRole[] = [
   "owner",
   "super_manager",
-  "area_manager",
   "branch_manager",
   "warehouse_manager",
   "production_manager",
@@ -27,14 +26,12 @@ export const PROCUREMENT_ROLES: readonly StaffRole[] = [
 ];
 
 /**
- * Phiếu trả NCC + credit notes — bao gồm cả branch_manager / area_manager
- * (chi nhánh phát hiện hàng hư trong kho mình cũng được đề xuất phiếu trả,
- * và quản lý vùng cần view để duyệt chéo).
+ * Phiếu trả NCC + credit notes — chi nhánh có thể đề xuất phiếu trả,
+ * còn cấp tenant/kho/bếp trung tâm xử lý phần quản trị.
  */
 export const SUPPLIER_RETURN_ROLES: readonly StaffRole[] = [
   "owner",
   "super_manager",
-  "area_manager",
   "branch_manager",
   "warehouse_manager",
   "production_manager",
@@ -44,7 +41,6 @@ export const SUPPLIER_RETURN_ROLES: readonly StaffRole[] = [
 export const SUPPLIER_CREDIT_NOTE_ROLES: readonly StaffRole[] = [
   "owner",
   "super_manager",
-  "area_manager",
   "warehouse_manager",
   "office",
 ];

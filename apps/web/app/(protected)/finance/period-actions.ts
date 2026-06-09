@@ -9,14 +9,10 @@ import { getAuthContextWithPermission } from "@/_lib/auth";
  * Role surface gate — who can reach the fiscal-periods surface at all.
  * Fine-grained authz is enforced via RLS (`fiscal_periods_*` policies) and
  * the `close_fiscal_period` / `gl_reconciliation` SECURITY DEFINER RPCs,
- * both guarded by Auth v2 permissions.
+ * both guarded by auth permissions.
  */
 const FINANCE_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
-const REPORT_ROLES: readonly StaffRole[] = [
-  "owner",
-  "super_manager",
-  "area_manager",
-];
+const REPORT_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
 
 /* ─── Fetch Fiscal Periods ─── */
 

@@ -9,7 +9,6 @@ import { getAuthContextWithPermission } from "@/_lib/auth";
 const MODERATE_ROLES: readonly StaffRole[] = [
   "owner",
   "super_manager",
-  "area_manager",
   "branch_manager",
 ];
 

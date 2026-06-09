@@ -37,7 +37,6 @@ export function findActiveNavItem(
 const PATH_SEGMENT_LABELS_VI: Record<string, string> = {
   accounting: "Kế toán",
   admin: "Quản trị",
-  areas: "Khu vực",
   audit: "Nhật ký quyền hạn",
   branches: "Điểm vận hành",
   crm: "Khách hàng",

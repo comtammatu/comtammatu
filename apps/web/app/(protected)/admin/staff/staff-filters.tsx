@@ -10,14 +10,17 @@ import {
 } from "@comtammatu/ui/components/select";
 import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
 import { BRANCH_VI } from "@comtammatu/shared/messages";
-import { MANAGEABLE_ROLES } from "./role-labels";
-import type { BranchOption } from "./staff-table";
+import type { BranchOption, PositionOption } from "./staff-table";
 
 interface StaffFiltersProps {
   branches: BranchOption[];
+  positionOptions: PositionOption[];
 }
 
-export function StaffFilters({ branches }: StaffFiltersProps) {
+export function StaffFilters({
+  branches,
+  positionOptions,
+}: StaffFiltersProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -38,13 +41,13 @@ export function StaffFilters({ branches }: StaffFiltersProps) {
         onValueChange={(v) => updateFilter("role", v)}
       >
         <SelectTrigger className="w-45">
-          <SelectValue placeholder="Tất cả vai trò" />
+          <SelectValue placeholder="Tất cả chức vụ" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">Tất cả vai trò</SelectItem>
-          {Object.entries(MANAGEABLE_ROLES).map(([value, label]) => (
-            <SelectItem key={value} value={value}>
-              {label}
+          <SelectItem value="all">Tất cả chức vụ</SelectItem>
+          {positionOptions.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
             </SelectItem>
           ))}
         </SelectContent>

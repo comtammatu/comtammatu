@@ -75,7 +75,7 @@ function redirectToDefaultLanding(
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Host gate (Auth v2 + feedback isolation) — runs BEFORE auth/public-path
+  // Host gate (auth + feedback isolation) — runs BEFORE auth/public-path
   // checks so the public feedback host cannot serve admin routes even though
   // proxy short-circuits `isPublicAppPath`. Single chokepoint; downstream
   // layouts/pages MUST NOT re-implement this.
@@ -248,8 +248,8 @@ export async function proxy(request: NextRequest) {
     }
 
     // Branch-scoped protected routes enforce
-    // URL branchId matches the user's assigned branch_id. Admin-level roles
-    // (owner/super_manager/area_manager) may traverse any branch's settings.
+    // URL branchId matches the user's assigned branch_id. Tenant-level roles
+    // (owner/super_manager) may traverse any branch's settings.
     // POS/KDS also require the branch be operational (not warehouse/central_kitchen).
     // The exact Runner customer board path is public and bypasses proxy auth;
     // keep runner here only for any future non-public runner child route.
@@ -269,7 +269,6 @@ export async function proxy(request: NextRequest) {
         const crossBranchRoles: readonly string[] = [
           "owner",
           "super_manager",
-          "area_manager",
         ];
         const allowCrossBranch =
           (moduleKey === "branch_settings" ||

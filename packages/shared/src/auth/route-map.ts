@@ -145,7 +145,7 @@ export const ROUTE_FAMILY_CONTRACTS = [
     surface: "workspace",
     entryPath: MODULE_ACL.hr.path,
     matchPrefixes: [MODULE_ACL.hr.path],
-    moduleKeys: ["hr"],
+    moduleKeys: ["hr", "hr_payroll"],
     primaryNav: "workspace-sidebar",
     backBehavior: "role-home",
     breadcrumbRoot: NAV_GROUP_LABELS_VI.workspaces,

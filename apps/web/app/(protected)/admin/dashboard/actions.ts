@@ -11,7 +11,6 @@ import { getAuthContextWithPermission } from "../_lib/auth";
 const DASHBOARD_ROLES: readonly StaffRole[] = [
   "owner",
   "super_manager",
-  "area_manager",
   "branch_manager",
 ];
 

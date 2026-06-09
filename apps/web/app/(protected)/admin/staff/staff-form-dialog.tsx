@@ -20,8 +20,7 @@ import { HQ_EXCLUDED_OPERATIONAL_ROLES } from "@comtammatu/shared/auth";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { SelectField, TextField, valuesToFormData } from "@/components/form";
 import { createStaff, updateStaff } from "./actions";
-import { MANAGEABLE_ROLES, TENANT_LEVEL_ROLES } from "./role-labels";
-import type { BranchOption, StaffRow } from "./staff-table";
+import type { BranchOption, PositionOption, StaffRow } from "./staff-table";
 
 const NO_BRANCH = "";
 
@@ -30,16 +29,13 @@ const staffSchema = z.object({
   password: z.string().optional(),
   full_name: z.string().trim().min(1, { error: "Họ tên không được trống" }),
   phone: z.string().trim().optional(),
-  role: z.string().min(1, { error: "Vui lòng chọn vai trò" }),
+  role: z.string().min(1, { error: "Vui lòng chọn chức vụ" }),
   branch_id: z.string().optional(),
 });
 
 type StaffFormValues = z.infer<typeof staffSchema>;
 
-const ROLE_OPTIONS = Object.entries(MANAGEABLE_ROLES).map(([value, label]) => ({
-  value,
-  label,
-}));
+const TENANT_LEVEL_ROLES: readonly StaffRole[] = ["office"];
 
 function toFormValues(staff: StaffRow | null | undefined): StaffFormValues {
   return {
@@ -57,6 +53,7 @@ interface StaffFormDialogProps {
   onOpenChange: (open: boolean) => void;
   staff?: StaffRow | null;
   branches: BranchOption[];
+  positionOptions: PositionOption[];
 }
 
 export function StaffFormDialog({
@@ -64,6 +61,7 @@ export function StaffFormDialog({
   onOpenChange,
   staff,
   branches,
+  positionOptions,
 }: StaffFormDialogProps) {
   const isEdit = !!staff;
   const [isPending, startTransition] = useTransition();
@@ -206,9 +204,9 @@ export function StaffFormDialog({
             <SelectField
               control={form.control}
               name="role"
-              label="Vai trò"
-              options={ROLE_OPTIONS}
-              placeholder="Chọn vai trò"
+              label="Chức vụ"
+              options={positionOptions}
+              placeholder="Chọn chức vụ"
               required
             />
 

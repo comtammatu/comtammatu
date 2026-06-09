@@ -31,7 +31,6 @@ const copy = messages.employee.home;
 const CHECKOUT_APPROVER_ROLES: readonly StaffRole[] = [
   "owner",
   "super_manager",
-  "area_manager",
   "branch_manager",
 ];
 
@@ -88,27 +87,13 @@ function normalizeBranch(branch: unknown): string | null {
 async function loadVisibleBranchIds({
   role,
   branchId,
-  areaId,
-  tenantId,
 }: {
   role: StaffRole;
   branchId: number | null;
-  areaId: number | null;
-  tenantId: number;
 }): Promise<number[] | null> {
   if (role === "owner" || role === "super_manager") return null;
   if (role === "branch_manager") return branchId ? [branchId] : [];
-  if (role !== "area_manager") return [];
-
-  if (!areaId) return branchId ? [branchId] : [];
-
-  const { data } = await createServiceClient()
-    .from("area_branches")
-    .select("branch_id")
-    .eq("tenant_id", tenantId)
-    .eq("area_id", areaId);
-
-  return (data ?? []).map((branch) => branch.branch_id);
+  return [];
 }
 
 export default async function CheckoutApprovalsPage() {
@@ -157,8 +142,6 @@ export default async function CheckoutApprovalsPage() {
   const visibleBranchIds = await loadVisibleBranchIds({
     role: claims.user_role,
     branchId,
-    areaId: claims.area_id,
-    tenantId: claims.tenant_id,
   });
   const scopedOut = visibleBranchIds !== null && visibleBranchIds.length === 0;
 

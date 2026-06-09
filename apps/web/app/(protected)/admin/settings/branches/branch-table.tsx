@@ -46,7 +46,6 @@ export interface BranchRow {
   phone: string | null;
   is_active: boolean | null;
   branch_kind: string | null;
-  hasAttendanceSecret: boolean;
   checklistItems: string[];
 }
 
@@ -195,7 +194,6 @@ export function BranchTable({ branches }: BranchTableProps) {
           branch={{
             id: attendanceBranch.id,
             name: attendanceBranch.name,
-            hasSecret: attendanceBranch.hasAttendanceSecret,
             checklistItems: attendanceBranch.checklistItems,
           }}
         />

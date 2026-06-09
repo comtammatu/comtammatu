@@ -15,6 +15,7 @@ export type ModuleKey =
   | "orders"
   | "staff"
   | "hr"
+  | "hr_payroll"
   | "crm"
   | "finance"
   | "accounting"
@@ -48,7 +49,7 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   },
   menu: {
     path: "/menu",
-    allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager"],
+    allowedRoles: ["owner", "super_manager", "branch_manager"],
     label: getModuleLabelVi("menu"),
   },
   inventory: {
@@ -56,7 +57,6 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     allowedRoles: [
       "owner",
       "super_manager",
-      "area_manager",
       "branch_manager",
       "warehouse_manager",
       "production_manager",
@@ -75,7 +75,7 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     label: getModuleLabelVi("inventory_procurement"),
   },
   /**
-   * Retired Inventory v1 admin surface. Runtime Inventory work is canonical
+   * Retired Inventory admin surface. Runtime Inventory work is canonical
    * under `/inventory/*`; keep the module key only so old URLs resolve through
    * the shared ACL instead of becoming an unclassified admin route.
    */
@@ -86,13 +86,7 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   },
   orders: {
     path: "/orders",
-    allowedRoles: [
-      "owner",
-      "super_manager",
-      "area_manager",
-      "branch_manager",
-      "cashier",
-    ],
+    allowedRoles: ["owner", "super_manager", "branch_manager", "cashier"],
     label: getModuleLabelVi("orders"),
   },
   staff: {
@@ -102,8 +96,13 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   },
   hr: {
     path: "/hr",
-    allowedRoles: ["owner", "super_manager"],
+    allowedRoles: ["owner", "super_manager", "branch_manager"],
     label: getModuleLabelVi("hr"),
+  },
+  hr_payroll: {
+    path: "/hr/payroll",
+    allowedRoles: ["owner", "super_manager"],
+    label: getModuleLabelVi("hr_payroll"),
   },
   crm: {
     path: "/admin/crm",
@@ -128,7 +127,7 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   },
   settings: {
     path: "/admin/settings",
-    allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager"],
+    allowedRoles: ["owner", "super_manager", "branch_manager"],
     label: getModuleLabelVi("settings"),
   },
   pos: {
@@ -148,7 +147,7 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   },
   branch_settings: {
     path: "/br/*/settings",
-    allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager"],
+    allowedRoles: ["owner", "super_manager", "branch_manager"],
     label: getModuleLabelVi("branch_settings"),
   },
   /**
@@ -161,7 +160,6 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     allowedRoles: [
       "owner",
       "super_manager",
-      "area_manager",
       "branch_manager",
       "cashier",
       "chef",
@@ -175,7 +173,7 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   },
   employee_checkout_approvals: {
     path: "/employee/checkout-approvals",
-    allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager"],
+    allowedRoles: ["owner", "super_manager", "branch_manager"],
     label: getModuleLabelVi("employee_checkout_approvals"),
   },
   notifications: {
@@ -185,7 +183,7 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
   },
   feedback: {
     path: "/admin/feedback",
-    allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager"],
+    allowedRoles: ["owner", "super_manager", "branch_manager"],
     label: getModuleLabelVi("feedback"),
   },
 };

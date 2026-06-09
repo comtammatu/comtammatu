@@ -114,7 +114,7 @@ function appendBranchId(href: string, branchId: number | null): string {
 }
 
 function isInventoryOversightRole(role: StaffRole): boolean {
-  return role === "owner" || role === "area_manager";
+  return role === "owner";
 }
 
 function buildFlowCards(props: DashboardProps): FlowCard[] {

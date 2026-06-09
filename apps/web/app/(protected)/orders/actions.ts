@@ -12,7 +12,6 @@ import { getVNDayUtcRange } from "@comtammatu/shared/time";
 const ALLOWED_ROLES: StaffRole[] = [
   "owner",
   "super_manager",
-  "area_manager",
   "branch_manager",
   "cashier",
 ];
@@ -401,7 +400,6 @@ function parseAuditNote(
 const ORDERS_READ_ROLES: StaffRole[] = [
   "owner",
   "super_manager",
-  "area_manager",
   "branch_manager",
   "cashier",
 ];

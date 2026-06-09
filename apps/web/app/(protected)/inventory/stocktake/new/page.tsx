@@ -39,7 +39,7 @@ export default async function NewStocktakeSessionPage({
   if (!claims) notFound();
 
   // Sidebar-selected branch drives the feature-flag gate and default session
-  // branch. For tenant-wide roles (owner/super_manager/area_manager) this is
+  // branch. For tenant-wide roles (owner/super_manager) this is
   // the sidebar picker; for branch-scoped roles it collapses to claims.branch_id.
   const requested = await resolveRequestedBranchId(sp.branchId);
   const scope = await resolveInventoryBranchScope(supabase, claims, requested);

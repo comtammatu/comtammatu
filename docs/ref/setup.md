@@ -104,7 +104,7 @@ Mật khẩu tất cả: `Test1234!`. Bao phủ toàn bộ `STAFF_ROLES`:
 | -------------------------------- | -------------------- | ------------------------------- |
 | `owner@comtammatu.vn`            | `owner`              | Tenant (pin HQ)                 |
 | `supermanager@comtammatu.vn`     | `super_manager`      | Tenant (pin HQ, keeper)         |
-| `area.vungtau@comtammatu.vn`     | `area_manager`       | Area "Khu vực Vũng Tàu"         |
+| `area.vungtau@comtammatu.vn`     | ``       | explicit branch grants         |
 | `warehouse@comtammatu.vn`        | `warehouse_manager`  | Trụ sở chính (warehouse)        |
 | `production@comtammatu.vn`       | `production_manager` | Bếp trung tâm (central kitchen) |
 | `manager.datdo@comtammatu.vn`    | `branch_manager`     | Chi nhánh Đất Đỏ                |

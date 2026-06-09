@@ -18,14 +18,6 @@ export default async function BranchesPage() {
     .order("branch_kind")
     .order("name");
 
-  // Check which branches have attendance secrets configured
-  const { data: configs } = await supabase
-    .from("branch_attendance_config")
-    .select("branch_id")
-    .eq("tenant_id", claims.tenant_id);
-
-  const configuredBranchIds = new Set((configs ?? []).map((c) => c.branch_id));
-
   const { data: checklistTemplates } = await supabase
     .from("shift_checklist_templates")
     .select("id, branch_id")
@@ -61,7 +53,6 @@ export default async function BranchesPage() {
 
   const branchesWithConfig = (branches ?? []).map((b) => ({
     ...b,
-    hasAttendanceSecret: configuredBranchIds.has(b.id),
     checklistItems: checklistByBranchId.get(b.id) ?? [],
   }));
 

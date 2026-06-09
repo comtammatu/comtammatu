@@ -674,7 +674,7 @@ Các Sinvoice-specific error codes: xem §5.4 và `docs/runbooks/hddt-viettel-op
 
 ### 9.3 Role matrix tổng hợp
 
-| Hành động                     | owner | super_manager | area_manager | branch_manager | cashier |
+| Hành động                     | owner | super_manager | | branch_manager | cashier |
 | ----------------------------- | :---: | :-----------: | :----------: | :------------: | :-----: |
 | Xem danh sách HĐĐT            |   ✓   |       ✓       |      ✓       |       ✓        |    ✓    |
 | Xem dashboard `/finance`      |   ✓   |       ✓       |      −       |       −        |    −    |

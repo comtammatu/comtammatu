@@ -410,7 +410,7 @@ Business-action matrix chi tiết cho Inventory xem ở [inventory-rbac-matrix.m
 Tóm tắt pilot hiện tại:
 
 - `super_manager`: role chính cho procurement, Kho Tổng, bếp trung tâm, production.
-- `area_manager`: vai trò giám sát inventory tenant-wide tạm thời; không vào procurement.
+- ``: vai trò giám sát inventory tenant-wide tạm thời; không vào procurement.
 - `branch_manager`: vận hành tồn kho, nhận transfer, stocktake, và điều phối tồn giữa kho chi nhánh / bếp chi nhánh trong site của mình; không vào procurement.
 - `owner`: xem qua `reports` / `finance`, không coi là operator Inventory hằng ngày.
 - `office`, `cashier`, `waiter`, `chef`: không có Inventory route theo ACL hiện tại.
