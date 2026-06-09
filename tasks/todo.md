@@ -86,7 +86,12 @@
 - [x] **V20 cash-book UI ✅** (commit `8e13ee7d`) — `/finance/cash-book` thu/chi + tổng kỳ, append-only trên `cash_entries` (RLS sẵn có, đã có integration test INSERT/SELECT). Gates xanh.
 - [x] **e2e cleanup ✅** (chip V19, commit `95de3066`): dropped cut-feature inventory e2e (transfer-direction/issue-label) + de-referenced dropped tables in grn-procurement/helpers.
 - [~] **V23 scorecard prep ✅ (agent done)** — pre-validate tĩnh 5 luồng (workflow `wf_be075699`): ✅ HĐĐT-khách-không-lấy (0 tap) · ✅ doanh-thu (≤1 tap); ⚠️ order (BORDERLINE 4–8 tap, AlertDialog +1); ❌ chốt ca · ❌ chấm-công (2 tap nếu QR auto-submit, 3–4 nếu nhập tay). **QĐ chủ 2026-06-09:** chốt-ca **GIỮ 9 ô mệnh giá** (đối-soát chính xác = chống thất thoát) → **nới target ≤5 → ~10 tap**; không sửa close-session. Còn lại = đo điện thoại thật (chủ).
-- [~] **V23 UX beat-Excel** — supplier-invoice **số HĐ để trống được ✅** (commit kế: DB `invoice_number` DROP NOT NULL trên uozwee+baseline · types · action optional+null · client label/display; verify rolled-back 2 NULL OK + dup blocked). Còn (chưa làm, vài mục cần chủ): GRN lump-sum/paste-Zalo (cần mẫu Zalo) · SKU import xlsx · adjust toggle Thêm/Bớt/Đặt · supplier "Khác" (BLOCKED-PRODUCT).
+- [x] **V23 UX beat-Excel (phần solo) ✅** —
+  - supplier-invoice **số HĐ để trống được ✅** (`a69e183d`): DB `invoice_number` DROP NOT NULL (uozwee+baseline) · types · action optional+null · client label/display; verify rolled-back 2 NULL OK + dup blocked.
+  - adjust kho **toggle Thêm/Bớt/Đặt ✅** (`3992c54b`): "Đặt" = đếm thực → delta vs tồn hiện tại (count_adjustment), preview tồn-sau, no-op bị chặn.
+  - **SKU import xlsx ✅ ĐÃ CÓ SẴN** (verified, không cần làm): `importIngredients` action + `parseSpreadsheetFile` (exceljs) + `IngredientImportExportMenu` đã render trong `ingredients-client.tsx` (template/export/import, dedup theo tên, báo lỗi từng dòng). Plan note stale.
+  - **ingredient-form `.min(1)` ✅ KHÔNG phải bug** (verified): `purchase_to_measure_factor` đã `.min(1)` (required) + `.refine(>0)` đúng.
+  - Còn (cần chủ): GRN lump-sum/paste-Zalo (cần mẫu tin Zalo) · supplier "Khác" (BLOCKED-PRODUCT).
 
 **P5 — Docs** · [x] **✅ DONE (commit `b257e482`)** — reframe ~31 docs CTCP→HKD lean (4 roles · flat-branch · no-deduct · cash-book · HĐĐT · lean inventory); CTCP/VAS/payroll banner-fenced as historical only; `database-schema.md`→59 tables; `CODEBASE_MAP`→1-app lean; `setup.md` seed→4 roles; promote durable rules (`use server` no-reexport · separation-not-LoC · docs-lean · SSoT) → `docs/agent/rules/` + AGENTS.md mirror; sync `database.md` refs (greenfield dev=uozwee). Excludes owner's `binh-ma-tu-tiktok`.
 
