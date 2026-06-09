@@ -65,7 +65,7 @@ export function HotkeyOverlay({ open, onOpenChange }: HotkeyOverlayProps) {
           </SheetHeader>
 
           <div className="flex-1 overflow-y-auto px-5 py-4">
-            <div className="grid gap-5 md:grid-cols-2">
+            <div className="grid gap-6 md:grid-cols-2">
               {GROUPS.map((group, idx) => (
                 <div key={group.title} className="flex flex-col gap-3">
                   <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">

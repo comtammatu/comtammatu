@@ -526,7 +526,7 @@ export function AppLinkCard({
   );
 
   const inner = (
-    <div className="group flex h-full flex-col justify-between gap-5 p-4">
+    <div className="group flex h-full flex-col justify-between gap-4 p-4">
       <div className="space-y-4">
         <div className="flex items-start justify-between gap-3">
           <div

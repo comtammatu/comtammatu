@@ -410,7 +410,7 @@ function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
 
         <ScrollArea className="min-h-0 flex-1 overflow-hidden">
           {visibleItems.length > 0 && isAllMenuActive ? (
-            <div className="flex flex-col gap-5 px-2 pb-28 pt-2 md:gap-6 md:px-3 md:py-3 lg:px-4">
+            <div className="flex flex-col gap-4 px-2 pb-28 pt-2 md:gap-6 md:px-3 md:py-3 lg:px-4">
               {visibleCategories.map((category) => (
                 <section
                   key={category.id}

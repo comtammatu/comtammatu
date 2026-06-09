@@ -574,7 +574,7 @@ function RunnerIdleAtmosphere({ state }: { state: RunnerIdleState }) {
           />
         ))}
       </div>
-      <div className="absolute inset-x-0 bottom-20 flex justify-center gap-10 opacity-60">
+      <div className="absolute inset-x-0 bottom-20 flex justify-center gap-6 opacity-60">
         {heatColumns.map((index) => (
           <span
             key={index}

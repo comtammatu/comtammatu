@@ -22,7 +22,7 @@ export function PosStatusShell({
   return (
     <AppEmptyState
       align="start"
-      className="gap-5 p-6 sm:p-8"
+      className="gap-6 p-6 sm:p-8"
       description={description}
       descriptionClassName="max-w-2xl text-base leading-7"
       icon={icon}
