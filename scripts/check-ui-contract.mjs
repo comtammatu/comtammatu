@@ -246,6 +246,9 @@ const textChecks = [
       "This is intentionally **one source of truth**, not a source-of-truth bundle.",
       "They must point back to this contract.",
       "the conflict is a bug to resolve",
+      "The design system is the Com Tam Ma Tu Custom Theme contract implemented on top",
+      "primitive baseline and runtime conformance evidence",
+      "It must never be used to overrule this file.",
     ],
   },
   {
@@ -254,7 +257,9 @@ const textChecks = [
     includes: [
       "There is exactly one UI design-system source of truth:",
       "`docs/spec/design-system.md`",
+      "That source defines the Com Tam Ma Tu Custom Theme.",
       "Everything else is evidence, implementation, or enforcement for that contract",
+      "NEVER treat the shadcn preset as authority to override the Custom Theme",
     ],
   },
   {
@@ -262,8 +267,11 @@ const textChecks = [
     file: "docs/modules/ui.md",
     includes: [
       "Single source of truth for agent decisions:",
-      "Runtime config, primitives, adapters, and regression rules are evidence and",
-      "They do not authorize a second design system",
+      "UI cua repo la Com Tam Ma Tu Custom Theme",
+      "Runtime config, primitives, adapters, runbooks, worklogs, and regression rules",
+      "are evidence/enforcement for that contract",
+      "design system:",
+      "Khong duoc coi `shadcn` preset la authority cao hon Custom Theme contract.",
     ],
   },
   {
@@ -283,12 +291,13 @@ const textChecks = [
     ],
   },
   {
-    id: "ui-module-runtime-token-contract",
+    id: "ui-module-contract-boundary",
     file: "docs/modules/ui.md",
     includes: [
-      "tier tokens `tier-elite` / `tier-note`",
-      "theme runtime trong `packages/ui/src/components/theme-script.tsx`",
-      "approved app utilities: `max-h-dvh-95`, `max-h-dvh-80`",
+      "`docs/spec/design-system.md`: Custom Theme authority",
+      "`docs/modules/ui.md`: implementation guide",
+      "`docs/runbooks/*`: verification checklists only.",
+      "`docs/worklog/*`: history/progress only",
     ],
   },
   {
@@ -363,13 +372,13 @@ const textChecks = [
   {
     id: "readme-design-system-contract-pointer",
     file: "README.md",
-    includes: ["Locked UI design-system contract"],
+    includes: ["UI design-system SSOT / Custom Theme contract"],
   },
   {
     id: "docs-index-design-system-contract-pointer",
     file: "docs/README.md",
     includes: [
-      "UI Design System SSOT: [spec/design-system.md](spec/design-system.md)",
+      "UI Design System SSOT / Custom Theme contract: [spec/design-system.md](spec/design-system.md)",
       "`spec/design-system.md`: single source of truth cho UI design-system",
     ],
   },

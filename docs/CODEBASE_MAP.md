@@ -20,7 +20,7 @@
 | Database       | [database.md](modules/database.md)             | Supabase clients, types, migrations, RLS policies       | **High** — data integrity   |
 | Finance        | [finance.md](modules/finance.md)               | Finance Basic boundary, daily money, HĐĐT, payables     | **High** — cash/legal data  |
 | Web App        | [web-app.md](modules/web-app.md)               | Next.js routes, layouts, server actions, surface shells | Medium                      |
-| UI             | [ui.md](modules/ui.md)                         | shadcn components, design tokens                        | Low                         |
+| UI             | [ui.md](modules/ui.md)                         | Custom Theme application, shadcn primitives, surfaces    | Low                         |
 | Security       | [security.md](modules/security.md)             | Rate limiting (Upstash Redis)                           | Medium                      |
 | Infrastructure | [infrastructure.md](modules/infrastructure.md) | Monorepo, build, deploy, environment                    | Medium                      |
 
@@ -54,7 +54,7 @@ source-of-truth inputs.
 | Data Platform       | Supabase migrations, generated types, RLS, RPCs, database clients                     |
 | Docs And Operations | Source-of-truth docs, runbooks, task tracker, agent rules                             |
 | Shared Domain       | Business rules, auth helpers, provider contracts, formatting, labels                  |
-| UI System           | shadcn/Radix primitives, app surface components, design tokens                        |
+| UI System           | Custom Theme contract, shadcn/Radix primitive baseline, app surface components        |
 | Tooling And Config  | Turborepo, lint/build/test config, deployment config, scripts                         |
 | Print Agent         | ESC-POS print daemon, LAN bridge, receipt/QR rendering                                |
 | Auth And Routing    | `proxy.ts`, route resolution, ACL, branch scope, auth tests                           |
@@ -104,7 +104,7 @@ flowchart LR
     data -->|no| route["Route/server-action boundary"]
     rpc --> route
     route --> ui{"Touches UI?"}
-    ui -->|yes| design["Use design-system primitives<br/>docs/spec/design-system.md + shadcn/ui"]
+    ui -->|yes| design["Use Custom Theme contract<br/>docs/spec/design-system.md + shadcn primitive baseline"]
     ui -->|no| verify
     design --> verify["Verify narrow path<br/>typecheck/lint/build or docs-only validation"]
     verify --> update["Update source-of-truth docs/tasks with real state"]
@@ -116,7 +116,7 @@ Decision rules:
 - ACL ownership starts at `packages/shared/src/auth/module-acl.ts`. Do not create parallel role maps in route components.
 - Scope belongs in URL params and JWT claims. Do not persist branch/tenant scope in browser storage.
 - Multi-row business writes belong in Supabase RPCs. Server Actions validate input and call the RPC; they do not orchestrate partial writes one query at a time.
-- UI changes stay inside the active design-system contract. New primitives belong in `packages/ui`; page-specific composition belongs in `apps/web/app`.
+- UI changes stay inside the Custom Theme contract in `docs/spec/design-system.md`. New primitives belong in `packages/ui`; page-specific composition belongs in `apps/web/app`.
 - Operational docs are part of the workflow. If runtime behavior changes, update the module doc/runbook/task tracker in the same slice.
 
 ### Project Placement Matrix
@@ -130,8 +130,8 @@ Use this matrix when adding or moving files. It is the practical replacement for
 | New shared business rule                     | `packages/shared/src/<domain>/...`                                  | Existing package exports and tests                             | Importing app-only code into shared package     |
 | New database mutation spanning multiple rows | `supabase/migrations/*.sql` RPC + typed caller                      | RLS, GRANTs, `pnpm db:types` after apply                       | Multi-query partial writes in Server Actions    |
 | New Supabase client usage                    | `packages/database/src/supabase/*` or server-only barrel            | Import boundary table below                                    | `@comtammatu/database` barrel in `"use client"` |
-| New reusable UI primitive                    | `packages/ui/src/components/*`                                      | `docs/spec/design-system.md`, `scripts/check-ui-contract.mjs`  | Page-local one-off primitive clones             |
-| New route-specific UI composition            | `apps/web/app/**/_components` or route folder                       | shadcn primitives, surface components                          | New visual language outside design system       |
+| New reusable UI primitive                    | `packages/ui/src/components/*`                                      | `docs/spec/design-system.md`, active shadcn baseline, `scripts/check-ui-contract.mjs` | Page-local one-off primitive clones             |
+| New route-specific UI composition            | `apps/web/app/**/_components` or route folder                       | `docs/spec/design-system.md`, shadcn primitives, surface components                   | New visual language outside design system       |
 | New print behavior                           | `apps/print-agent/src/*` plus branch settings route if configurable | Branch-scoped config, no deploy-only layout changes            | Hardcoded receipt/format changes per branch     |
 | New operational rule/runbook                 | `docs/modules/*`, `docs/runbooks/*`, `tasks/*`                      | `docs/agent/rules/references.md`                               | Separate agent-only doc trees                   |
 

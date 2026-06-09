@@ -13,7 +13,7 @@ comtammatu/
 ├── packages/
 │   ├── database/           # Supabase clients + generated types
 │   ├── shared/             # Auth types, ACL, utilities
-│   ├── ui/                 # shadcn/ui component library
+│   ├── ui/                 # shadcn/Radix primitives + token runtime
 │   └── security/           # Rate limiting
 ├── supabase/
 │   └── migrations/         # SQL migrations; owner manually applies prod after merge

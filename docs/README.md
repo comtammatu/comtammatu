@@ -13,8 +13,8 @@
 - Onboarding kỹ thuật: [CODEBASE_MAP.md](CODEBASE_MAP.md)
 - Ngôn ngữ chuẩn + thuật ngữ dự án: [ref/glossary.md](ref/glossary.md)
 - Kiến trúc hệ thống: [architecture/README.md](architecture/README.md)
-- UI Design System SSOT: [spec/design-system.md](spec/design-system.md)
-- UI implementation guide: [modules/ui.md](modules/ui.md)
+- UI Design System SSOT / Custom Theme contract: [spec/design-system.md](spec/design-system.md)
+- UI implementation guide, not a second authority: [modules/ui.md](modules/ui.md)
 - Database schema source ladder: [spec/database-schema.md](spec/database-schema.md)
 - Finance active boundary: [modules/finance.md](modules/finance.md)
 - Canonical business/reference docs: [ref/README.md](ref/README.md)
@@ -47,7 +47,7 @@
 - `architecture/`: cross-cutting architecture và các điểm vào/alias sang glossary chuẩn
 - `ref/`: canonical rules, boundary, business semantics, glossary chuẩn
 - `modules/` và `spec/`: technical structure và schema
-- `spec/design-system.md`: single source of truth cho UI design-system; runtime configs, primitives, adapters, and regression rules only enforce it
+- `spec/design-system.md`: single source of truth cho UI design-system; active shadcn preset, runtime configs, primitives, adapters, runbooks, worklogs, and regression rules only implement, verify, or enforce it
 - `plan/`: active decisions and ADRs
 - `runbooks/`: operational verification
 - `worklog/`: evolving progress/adoption artefacts

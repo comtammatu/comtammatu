@@ -53,7 +53,7 @@ If you find an issue in an unsupported version that also affects the supported l
 **In scope:**
 
 - The production web app at `https://app.comtammatu.com` (Next.js 16.2 / Vercel).
-- Source code in this GitHub repository (`comtammatu/comtammatu`), including `apps/web`, `packages/*`, and the database schema under `packages/database/migrations`.
+- Source code in this GitHub repository (`comtammatu/comtammatu`), including `apps/web`, `packages/*`, and the database schema under `supabase/migrations`.
 - The Supabase project backing production (RLS policies, RPC functions, auth hooks).
 - The QR feedback flow (`/r/[token]`), POS, KDS, and admin surfaces.
 
@@ -79,7 +79,7 @@ We will not pursue legal action against good-faith security researchers who:
 
 We do not currently run a paid bug bounty (single-tenant CTCP, no security budget). We can offer:
 
-- Public credit in the release notes (`docs/releases/X.Y.Z.md`) and the relevant CHANGELOG entry.
+- Public credit in the relevant `CHANGELOG.md` entry.
 - A private acknowledgement if you prefer to stay anonymous.
 
 ## Existing Security Posture (for reporters)
@@ -87,7 +87,7 @@ We do not currently run a paid bug bounty (single-tenant CTCP, no security budge
 So you don't waste time re-reporting things we already ship:
 
 - **CSP + headers:** `apps/web/next.config.ts` enforces Content-Security-Policy, Strict-Transport-Security (with `preload`), X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy. See `tasks/regressions.md` rule `SECURITY-HEADERS-IN-NEXT-CONFIG`.
-- **Feedback flow:** Origin check, honeypot, server-side validation (Zod 4), TOCTOU-safe photo update with `.or("photo_paths.is.null,photo_paths.eq.{}")`. See `apps/web/app/r/[token]/actions.ts`.
+- **Feedback flow:** Origin check, honeypot, server-side validation (Zod 4), TOCTOU-safe photo update with `.or("photo_paths.is.null,photo_paths.eq.{}")`. See `apps/web/app/(public)/r/[token]/actions.ts`.
 - **Auth:** Supabase Auth with JWT custom claims (`tenant_id`, `branch_id`, `user_role`); auth hook is `SECURITY DEFINER`; RLS on every tenant-scoped table.
 - **Server Actions:** All inputs validated with Zod 4 (per `AGENTS.md` constraints).
 - **Robots + security.txt:** `/robots.txt` disallows scraping `/r/`, `/admin/`. `/.well-known/security.txt` is RFC 9116-compliant with `Expires: 2027-05-09`.

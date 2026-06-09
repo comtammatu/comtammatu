@@ -8,20 +8,21 @@ Updated: `2026-04-17`
 
 ---
 
-## 1. Scope và source of truth
+## 1. Scope và audit inputs
 
-Luôn đối chiếu theo thứ tự này:
+File này là rubric audit Inventory, không phải design-system hoặc business
+source of truth. Khi kết luận, đối chiếu theo nhóm authority này:
 
-1. [docs/ref/inventory.md](../../ref/inventory.md)
-2. [docs/ref/inventory-sop.md](../../ref/inventory-sop.md)
-3. [docs/ref/inventory-rbac-matrix.md](../../ref/inventory-rbac-matrix.md)
-4. [docs/worklog/inventory/inventory-ux-contract.md](../../worklog/inventory/inventory-ux-contract.md)
-5. [docs/modules/ui.md](../../modules/ui.md)
+- Business / workflow: [docs/ref/inventory.md](../../ref/inventory.md), [docs/ref/inventory-sop.md](../../ref/inventory-sop.md), [docs/ref/inventory-rbac-matrix.md](../../ref/inventory-rbac-matrix.md)
+- UI design-system: [docs/spec/design-system.md](../../spec/design-system.md)
+- UI implementation guide: [docs/modules/ui.md](../../modules/ui.md)
+- Historical context only: [docs/worklog/inventory/inventory-ux-contract.md](../../worklog/inventory/inventory-ux-contract.md)
 
 Boundary:
 
 - Không audit theo gu thẩm mỹ cá nhân.
 - Không đề xuất UI vượt khỏi design system hiện tại.
+- Không dùng worklog để override `docs/spec/design-system.md`.
 - Nếu UI đúng chức năng nhưng làm user hiểu sai bước tiếp theo, vẫn tính là fail UX.
 
 ---

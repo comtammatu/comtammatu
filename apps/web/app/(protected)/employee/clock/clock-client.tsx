@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
@@ -39,7 +40,14 @@ interface ClockClientProps {
 }
 
 type PhotoState = "idle" | "ready" | "submitting" | "success" | "error";
-type CheckoutState = "idle" | "manual" | "scanning" | "submitting" | "success" | "error";
+type CameraState = "idle" | "starting" | "ready" | "capturing" | "error";
+type CheckoutState =
+  | "idle"
+  | "manual"
+  | "scanning"
+  | "submitting"
+  | "success"
+  | "error";
 
 const MAX_CLIENT_PHOTO_EDGE = 1280;
 const PHOTO_QUALITY = 0.82;
@@ -58,55 +66,46 @@ function ErrorAlert({ message }: { message: string }) {
   );
 }
 
-async function loadImage(file: File): Promise<HTMLImageElement> {
-  const url = URL.createObjectURL(file);
-  try {
-    const image = new Image();
-    image.decoding = "async";
-    image.src = url;
-    await image.decode();
-    return image;
-  } finally {
-    URL.revokeObjectURL(url);
-  }
-}
+async function capturePhotoFromVideo(
+  video: HTMLVideoElement,
+): Promise<File | null> {
+  const sourceWidth = video.videoWidth;
+  const sourceHeight = video.videoHeight;
+  if (!sourceWidth || !sourceHeight) return null;
 
-async function compressPhoto(file: File): Promise<File> {
-  try {
-    const image = await loadImage(file);
-    const scale = Math.min(
-      1,
-      MAX_CLIENT_PHOTO_EDGE / Math.max(image.naturalWidth, image.naturalHeight),
-    );
-    const width = Math.max(1, Math.round(image.naturalWidth * scale));
-    const height = Math.max(1, Math.round(image.naturalHeight * scale));
-    const canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return file;
-    ctx.drawImage(image, 0, 0, width, height);
+  const scale = Math.min(
+    1,
+    MAX_CLIENT_PHOTO_EDGE / Math.max(sourceWidth, sourceHeight),
+  );
+  const width = Math.max(1, Math.round(sourceWidth * scale));
+  const height = Math.max(1, Math.round(sourceHeight * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+  ctx.drawImage(video, 0, 0, width, height);
 
-    const blob = await new Promise<Blob | null>((resolve) => {
-      canvas.toBlob(resolve, "image/webp", PHOTO_QUALITY);
-    });
-    if (!blob) return file;
-    return new File([blob], "attendance.webp", { type: "image/webp" });
-  } catch {
-    return file;
-  }
+  const blob = await new Promise<Blob | null>((resolve) => {
+    canvas.toBlob(resolve, "image/webp", PHOTO_QUALITY);
+  });
+  return blob
+    ? new File([blob], "attendance.webp", { type: "image/webp" })
+    : null;
 }
 
 export function ClockClient({ state }: ClockClientProps) {
   const router = useRouter();
   const [photoState, setPhotoState] = useState<PhotoState>("idle");
+  const [cameraState, setCameraState] = useState<CameraState>("idle");
   const [checkoutState, setCheckoutState] = useState<CheckoutState>("idle");
   const [photo, setPhoto] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [manualCode, setManualCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const photoInputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const cameraStreamRef = useRef<MediaStream | null>(null);
   const scannerRef = useRef<HTMLDivElement>(null);
   const html5QrRef = useRef<unknown>(null);
 
@@ -115,6 +114,20 @@ export function ClockClient({ state }: ClockClientProps) {
       if (previewUrl) URL.revokeObjectURL(previewUrl);
     };
   }, [previewUrl]);
+
+  const stopCamera = useCallback(() => {
+    if (cameraStreamRef.current) {
+      for (const track of cameraStreamRef.current.getTracks()) {
+        track.stop();
+      }
+      cameraStreamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+  }, []);
+
+  useEffect(() => () => stopCamera(), [stopCamera]);
 
   const stopQrScan = useCallback((resetState = true) => {
     const scanner = html5QrRef.current as { stop: () => Promise<void> } | null;
@@ -127,25 +140,72 @@ export function ClockClient({ state }: ClockClientProps) {
 
   useEffect(() => () => stopQrScan(false), [stopQrScan]);
 
-  const handlePhotoSelected = useCallback(
-    (file: File | undefined) => {
-      if (!file) return;
-      setError(null);
-      setPhotoState("idle");
-      startTransition(async () => {
-        const compressed = await compressPhoto(file);
-        setPhoto(compressed);
-        setPhotoState("ready");
-        if (previewUrl) URL.revokeObjectURL(previewUrl);
-        setPreviewUrl(URL.createObjectURL(compressed));
+  const startCamera = useCallback(async () => {
+    setError(null);
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraState("error");
+      setError("Thiết bị hoặc trình duyệt chưa hỗ trợ chụp ảnh bằng camera.");
+      return;
+    }
+
+    setCameraState("starting");
+    stopCamera();
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: {
+          facingMode: "user",
+          width: { ideal: 1280 },
+          height: { ideal: 960 },
+        },
       });
-    },
-    [previewUrl],
-  );
+      cameraStreamRef.current = stream;
+
+      const video = videoRef.current;
+      if (!video) {
+        throw new Error("camera_video_not_ready");
+      }
+
+      video.srcObject = stream;
+      await video.play();
+      setCameraState("ready");
+    } catch {
+      stopCamera();
+      setCameraState("error");
+      setError("Không thể mở camera. Cho phép quyền camera rồi thử lại.");
+    }
+  }, [stopCamera]);
+
+  const capturePhoto = useCallback(async () => {
+    const video = videoRef.current;
+    if (!video || video.readyState < 2) {
+      setError("Camera chưa sẵn sàng. Thử lại sau một nhịp.");
+      return;
+    }
+
+    setError(null);
+    setPhotoState("idle");
+    setCameraState("capturing");
+    const captured = await capturePhotoFromVideo(video);
+
+    if (!captured) {
+      setCameraState("ready");
+      setError("Không thể chụp ảnh từ camera. Thử lại một lần nữa.");
+      return;
+    }
+
+    setPhoto(captured);
+    setPhotoState("ready");
+    setPreviewUrl(URL.createObjectURL(captured));
+    stopCamera();
+    setCameraState("idle");
+  }, [stopCamera]);
 
   const submitClockIn = useCallback(() => {
     if (!photo) {
-      setError("Cần chụp hoặc chọn ảnh chấm công.");
+      setError("Cần chụp ảnh chấm công.");
       return;
     }
 
@@ -157,6 +217,7 @@ export function ClockClient({ state }: ClockClientProps) {
       const result = await clockInWithPhoto(null, formData);
 
       if (result.success) {
+        stopCamera();
         setPhotoState("success");
         if (navigator.vibrate) navigator.vibrate(150);
         router.push("/employee/tasks");
@@ -166,7 +227,7 @@ export function ClockClient({ state }: ClockClientProps) {
         setError(result.error ?? "Chấm công vào thất bại.");
       }
     });
-  }, [photo, router]);
+  }, [photo, router, stopCamera]);
 
   const submitCheckout = useCallback(
     (code: string) => {
@@ -218,6 +279,11 @@ export function ClockClient({ state }: ClockClientProps) {
       setError("Không thể mở camera quét mã. Nhập mã kết ca thủ công.");
     }
   }, [submitCheckout]);
+
+  const cameraActive =
+    cameraState === "starting" ||
+    cameraState === "ready" ||
+    cameraState === "capturing";
 
   if (state.status === "missing_branch") {
     return (
@@ -433,21 +499,52 @@ export function ClockClient({ state }: ClockClientProps) {
         ]}
       />
 
-      <input
-        ref={photoInputRef}
-        type="file"
-        accept="image/jpeg,image/png,image/webp"
-        capture="user"
-        className="sr-only"
-        onChange={(event) => handlePhotoSelected(event.target.files?.[0])}
-      />
+      <div
+        className={
+          cameraActive || !previewUrl
+            ? "overflow-hidden rounded-lg border bg-muted/40"
+            : "hidden"
+        }
+        aria-hidden={!cameraActive && Boolean(previewUrl)}
+      >
+        <div className="relative aspect-[4/3] w-full">
+          <video
+            ref={videoRef}
+            className={
+              cameraState === "ready" || cameraState === "capturing"
+                ? "h-full w-full object-cover"
+                : "h-full w-full object-cover opacity-0"
+            }
+            autoPlay
+            muted
+            playsInline
+          />
+          {cameraState === "ready" || cameraState === "capturing" ? null : (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
+              {cameraState === "starting" ? (
+                <Spinner />
+              ) : (
+                <IconCamera className="size-6" />
+              )}
+              <span>
+                {cameraState === "starting"
+                  ? "Đang mở camera"
+                  : "Camera chưa mở"}
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
 
-      {previewUrl ? (
+      {!cameraActive && previewUrl ? (
         <div className="flex items-center gap-3 rounded-md border bg-muted/40 p-3">
-          <img
+          <Image
             src={previewUrl}
             alt=""
+            width={48}
+            height={48}
             className="size-12 rounded-md object-cover"
+            unoptimized
           />
           <div className="min-w-0 text-sm">
             <p className="font-medium">Ảnh chấm công đã sẵn sàng</p>
@@ -459,21 +556,68 @@ export function ClockClient({ state }: ClockClientProps) {
       {error ? <ErrorAlert message={error} /> : null}
 
       <div className="grid gap-2 sm:grid-cols-2">
-        <Button
-          type="button"
-          variant={photo ? "outline" : "default"}
-          size="touch"
-          onClick={() => photoInputRef.current?.click()}
-          disabled={isPending || photoState === "submitting"}
-        >
-          <IconCamera data-icon="inline-start" />
-          {photo ? "Chụp lại" : "Chụp ảnh"}
-        </Button>
+        {cameraState === "ready" || cameraState === "capturing" ? (
+          <>
+            <Button
+              type="button"
+              size="touch"
+              onClick={capturePhoto}
+              disabled={isPending || cameraState === "capturing"}
+            >
+              {cameraState === "capturing" ? (
+                <Spinner data-icon="inline-start" />
+              ) : (
+                <IconCamera data-icon="inline-start" />
+              )}
+              Chụp ảnh
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="touch"
+              disabled={cameraState === "capturing"}
+              onClick={() => {
+                stopCamera();
+                setCameraState("idle");
+              }}
+            >
+              {ACTIONS_VI.cancel}
+            </Button>
+          </>
+        ) : (
+          <Button
+            type="button"
+            variant={photo ? "outline" : "default"}
+            size="touch"
+            onClick={startCamera}
+            disabled={
+              isPending ||
+              photoState === "submitting" ||
+              cameraState === "starting"
+            }
+          >
+            {cameraState === "starting" ? (
+              <Spinner data-icon="inline-start" />
+            ) : (
+              <IconCamera data-icon="inline-start" />
+            )}
+            {cameraState === "starting"
+              ? "Đang mở camera"
+              : photo
+                ? "Chụp lại"
+                : "Mở camera"}
+          </Button>
+        )}
         <Button
           type="button"
           size="touch"
           onClick={submitClockIn}
-          disabled={!photo || isPending || photoState === "submitting"}
+          disabled={
+            !photo ||
+            isPending ||
+            cameraActive ||
+            photoState === "submitting"
+          }
         >
           {photoState === "submitting" || isPending ? (
             <Spinner data-icon="inline-start" />

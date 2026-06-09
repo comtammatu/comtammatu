@@ -49,8 +49,10 @@ Instruction memory and learning memory stay separate:
 
 - NEVER invent or redesign the UI outside the project's established design system.
 - NEVER exceed authority when editing UI; only make UI changes explicitly requested or clearly required by the task.
-- USE `shadcn/ui` components and the project's active preset as the default UI path.
-- BEFORE UI/UX rebuild work, read and follow `docs/spec/design-system.md` as the locked design-system contract.
+- UI design-system SSOT is `docs/spec/design-system.md`; it defines the Com Tam Ma Tu Custom Theme.
+- USE `shadcn/ui` components and the project's active preset as the primitive implementation baseline after the design-system contract selects the pattern.
+- NEVER treat `components.json`, `globals.css`, app wrappers, regression notes, or worklogs as competing UI authorities.
+- BEFORE UI/UX rebuild work, read and follow `docs/spec/design-system.md` as the locked Custom Theme contract.
 - UI/UX rebuild PRs MUST state the surface, primary user job, route family, change type, and primitives used before implementation.
 
 ## Architecture

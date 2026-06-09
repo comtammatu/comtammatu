@@ -37,7 +37,7 @@ Trước khi bắt đầu round QA:
    - `QA/QC`: gate + evidence cần lưu
 2. Chọn journey và device tương ứng từ [operator-journeys.md](./operator-journeys.md)
 3. Mở [evidence-log.md](../../worklog/inventory/evidence-log.md) và điền kickoff block
-4. Dùng [route-cta-matrix.md](./route-cta-matrix.md) làm source of truth cho route/button phải audit
+4. Dùng [route-cta-matrix.md](./route-cta-matrix.md) làm checklist route/button phải audit; không dùng nó để override ACL, Inventory reference, hoặc design-system contract
 5. Chấm finding theo [ui-ux-rubric.md](./ui-ux-rubric.md), không theo cảm tính
 
 ## 1. Required Gates

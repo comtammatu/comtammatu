@@ -3,7 +3,8 @@
 
 /* ============================================================
  * THEME — packages/ui/src/styles/globals.css
- * Runtime source: shadcn radix-lyra primitives + Ma Tu Concept 01 tokens.
+ * Runtime implementation: Com Tam Ma Tu Custom Theme token values on top of
+ * the shadcn radix-lyra primitive baseline.
  *
  * Override governance:
  *   1. Change global semantic tokens here only; never add route theme files.
@@ -22,8 +23,8 @@
 @source "../**/*.{ts,tsx}";
 
 /* ============================================================
- * ZONE A — PRESET FOUNDATION + MA TU CONCEPT 01 SEMANTIC TOKENS
- * Keep the shadcn token surface stable; tune values only through semantic vars.
+ * ZONE A — PRESET TOKEN SURFACE + MA TU CONCEPT 01 SEMANTIC TOKENS
+ * Keep the shadcn token surface stable; the Custom Theme owns semantic values.
  * ============================================================ */
 
 @theme inline {

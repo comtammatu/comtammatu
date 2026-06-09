@@ -2,14 +2,23 @@
 
 ## Overview
 
-UI cua repo phai di truc tiep tren `shadcn/ui` preset hien hanh. Khong con helper layer hay theme system rieng cua du an.
+UI cua repo la Com Tam Ma Tu Custom Theme (Ma Tu Concept 01) chay tren
+`shadcn/ui` primitive baseline hien hanh. `shadcn` preset la baseline de compose
+primitive va doi chieu runtime, khong phai source of truth cao hon contract.
+Khong con helper layer hay theme system rieng theo route/surface.
 
 Single source of truth for agent decisions:
 
 1. `docs/spec/design-system.md`
 
-Runtime config, primitives, adapters, and regression rules are evidence and
-enforcement for that contract. They do not authorize a second design system:
+File nay la implementation guide: cach ap dung contract vao app code, wrapper,
+forms, keyboard shortcut, overlay, feedback, va rebuild flow. Khong dung file
+nay de override token, typography, rhythm, visual role, hoac primitive authority
+da chot trong `docs/spec/design-system.md`.
+
+Runtime config, primitives, adapters, runbooks, worklogs, and regression rules
+are evidence/enforcement for that contract. They do not authorize a second
+design system:
 
 - `apps/web/components.json`
 - `packages/ui/components.json`
@@ -23,32 +32,26 @@ Runtime files are evidence. If runtime comments, package metadata, or generated
 tokens disagree with `docs/spec/design-system.md`, treat that as drift and fix
 the contract/runtime before building new UI.
 
-## Design System Contract
+## Contract Boundary
 
-Doc chot duy nhat: `docs/spec/design-system.md`.
+Tat ca UI/UX rebuild phai di theo `docs/spec/design-system.md` truoc khi sua
+runtime. Role split:
 
-Tat ca UI/UX rebuild phai di theo contract do truoc khi sua runtime. Design system cua repo la:
+- `docs/spec/design-system.md`: Custom Theme authority; owns tokens, typography,
+  rhythm, primitive roles, surface contracts, and retired-layer rules.
+- `docs/modules/ui.md`: implementation guide; owns composition, form, overlay,
+  feedback, shortcut, and rebuild workflow guidance.
+- `docs/agent/rules/ui.md`: fast-loading guardrails for agents.
+- `tasks/regressions.md`: negative rules from incidents; not an authority to
+  invent new visual language.
+- `docs/runbooks/*`: verification checklists only.
+- `docs/worklog/*`: history/progress only; promote stable decisions back to
+  spec/modules/tasks, then remove stale worklog claims.
 
-- shadcn preset hien hanh (`radix-lyra`, resolved preset `buFywKm`, `neutral`, `lucide`)
-- Ma Tu Concept 01 brand tokens trong `packages/ui/src/styles/globals.css`
-- tier tokens `tier-elite` / `tier-note` chi dung cho trust/variance/waste tier badges
-- Ma Tu Concept 01 typography: Inter body, Montserrat heading, JetBrains Mono operational data
-- Runner/KDS customer board typography uses shared height-responsive theme tokens: `text-runner-header`, `text-runner-board` for all four data cells, `text-runner-empty-secondary`, and `text-runner-footer`. These tokens scale with `dvh` and clamp between compact desktop and 2K/4K displays; they must not scale from viewport width. Below `xl`, Runner cells/header/footer use compact `px-4 py-2` spacing so wrapped labels like `Mang về #041` and `2 món` do not collide with row dividers; the narrow wait-time column may use smaller horizontal padding. Status labels must use the same `RunnerOrderCell` typography as every other data cell and must not add a separate `text-*` class on the data-text element. Board columns use Tailwind's built-in 12-column grid: Đơn `col-span-4`, Số món `col-span-3`, Trạng thái `col-span-4`, Chờ `col-span-1`; wait-time header copy must be `Chờ`, not `Thời gian đợi`.
-- Runner/KDS customer board empty state may use `/brand/mascot/be-suon-tuoi-runner.png` as a decorative mascot, while preserving the large primary empty-state copy, a smaller secondary line, and footer separation.
-- primitive source trong `packages/ui/src/components/*`
-- brand assets trong `apps/web/public/brand/`
-- runtime brand primitive trong `apps/web/app/components/brand.tsx`
-- app surface adapters trong `apps/web/app/components/surface.tsx`
-- copy source ladder: `docs/ref/glossary.md` cho nghia/chinh ta, `packages/shared/src/labels/vi.ts` cho domain labels dung chung, `@comtammatu/shared/messages` hoac `apps/web/lib/messages/*` cho action/state/error chung, `packages/shared/src/labels/legal-fixed.ts` cho legal labels, va domain dictionary cho route adapters
-- toast/notification contract trong `docs/spec/toast-notification-system.md`
-- theme runtime trong `packages/ui/src/components/theme-script.tsx` +
-  `packages/ui/src/components/theme-provider.tsx`; runtime hien co bi khoa o
-  light mode va bo qua theme preference cu trong `localStorage`
-- approved app utilities: `max-h-dvh-95`, `max-h-dvh-80`,
-  `pos-text-overlay`, `pos-safe-top`, `pos-safe-bottom`, `chrome-safe-pb`,
-  `chrome-safe-bottom`
-
-Khong duoc coi design system la mot layer moi tach rieng khoi shadcn. Neu can pattern moi, update `docs/spec/design-system.md` truoc, roi moi rollout vao code.
+Khong duoc coi `shadcn` preset la authority cao hon Custom Theme contract. Khong
+duoc coi Custom Theme la mot layer/fork moi tach rieng khoi shadcn primitives.
+Neu can pattern moi, update `docs/spec/design-system.md` truoc, roi moi rollout
+vao code.
 
 ### Legacy Pilot Layer Retirement
 
@@ -76,21 +79,20 @@ Read order cho agent khi lam UI:
 4. `tasks/regressions.md`
 5. Domain docs lien quan den route dang sua
 
-## Reset Contract
+## Primitive Baseline Contract
 
-Reset hien tai duoc thuc hien bang `shadcn` resolved preset `buFywKm` / `radix-lyra` cho monorepo `apps/web` + `packages/ui`, sau do map token semantic sang Ma Tu Concept 01.
+Baseline hien tai: `radix-lyra`, resolved preset `buFywKm`, `neutral`, `lucide`
+cho monorepo `apps/web` + `packages/ui`. Day la primitive implementation
+baseline; semantic token values va rhythm phai theo `docs/spec/design-system.md`.
 
 Dieu nay co nghia:
 
-- foundation phai theo file do `shadcn` bootstrap sinh ra
+- primitive structure phai theo file do `shadcn` bootstrap sinh ra
+- semantic token values phai theo `docs/spec/design-system.md`
 - brand color/typography phai di qua semantic token va font variables chung
-- body/content dung `font-sans` (Inter), heading/title dung `font-heading` (Montserrat), operational data/code/id/price/qty dung `font-mono` (JetBrains Mono)
-- static public artifact nhu `docs/status/index.html` phai mirror cung font stack; khong dung lai Be Vietnam Pro, Geist, `font-matu-body`, hoac font rieng theo surface
-- `--font-heading-runtime` chi la bien noi bo cua `next/font`; app UI chi dung `font-heading` / `--font-heading`
-- page/shell chi duoc compose tu primitives co san
+- page/shell chi duoc compose tu primitives co san va app surface adapters
 - logo/brand lockup trong web runtime phai di qua `BrandMark` / `BrandLockup`
-- khong duoc giu `app-*` helper classes
-- khong duoc giu custom background/theme chrome o root
+- khong duoc giu `app-*` helper classes hoac custom background/theme chrome o root
 
 ## Primitive Layer
 

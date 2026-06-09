@@ -6,6 +6,21 @@
 
 M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1–M9 — **all SHIPPED**. External integrations VietQR + Momo are wired with production credentials and active in real branches. HĐĐT is active through Viettel S-invoice only.
 
+## Active implementation note — 2026-06-09
+
+- [x] **Employee Portal / Interface UI framework:** T2 self-review before coding.
+  Surface = `/employee` route family; primary job = nhân viên mở màn hình là biết bước tiếp theo trong ca, còn quản lý chi nhánh có entry point vận hành nhưng không lấn át work loop; change type = UI shell/component refactor + UX composition, no DB/RLS/money changes; primitives = `AppPage`, `AppPageHeader`, `AppSection`, `Button`, `Badge`, `Item`, `ItemGroup`, `Checkbox`.
+  PM: scope = rebuild the Employee interface kit around daily work, tasks, and support/navigation; acceptance = one primary action per work state, reusable Employee components, mobile first viewport stays focused; priority = high because Employee is an operational surface.
+  BA: rules = attendance state drives the main CTA; checklist belongs after clock-in; manager tools stay ACL/branch scoped; missing profile/branch states must stay safe and explicit.
+  Dev: approach = reuse `apps/web/app/components/surface.tsx` and shadcn primitives through Employee wrappers; files = Employee shell/components, home, tasks, copy/tests as needed; risk = layout/copy regressions and accidental portal clutter.
+  QA: tests = `pnpm --filter @comtammatu/web test`, touched-file eslint, `pnpm typecheck && pnpm lint && pnpm build`; Playwright unauthenticated smoke confirms `/employee` redirects to login without horizontal overflow on desktop/mobile. Authenticated visual pass remains pending a valid `.env.test.local` or storage state.
+
+- [x] **Employee Portal / Branch Manager tools:** T2 self-review before coding.
+  PM: scope = restore visible branch-management entry points for Branch Manager inside `/employee`; acceptance = Branch Manager sees real branch tools even outside personal clock-in state; priority = high because the role currently feels empty.
+  BA: rules = personal attendance flow stays state-driven; management links must come from existing ACL + branch scope; no branch scope means no branch-operation links.
+  Dev: approach = reuse Employee shell/action-list primitives, existing `canAccess`, and JWT `claims.branch_id` fallback; files = Employee home, employee copy, static regression test; risk = UI visibility only.
+  QA: tests = source-level regression for branch-manager tools independent of attendance gating plus typecheck/lint/build; recheck employee daily-work flow still has one primary action.
+
 ## Shipped (condensed — see git / `regressions.md` for detail)
 
 - **Pilot hardening 2026-05-24** (`docs/worklog/pilot-hardening-readiness-2026-05-24.md`): snapshot-doc refresh, schema-spec source-ladder, App-Router route-group migration reconciled (`typecheck/lint/build` green), network-gate hardening, prod payment migrations confirmed.
@@ -25,7 +40,7 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 - [ ] **`payroll-client.tsx` stale vs actions/types** (found 2026-05-30 attempting to remove its blanket `@ts-nocheck`): (1) `createPayrollPeriod({ periodMonth: <"YYYY-MM" string> })` but `createPeriodSchema` wants `{ month, year }` numbers → **creating a payroll period from the UI fails zod validation** (real runtime bug, latent while payroll is Excel-managed); (2) `formatMonth(period_month:number)` but `formatMonth` expects a `"YYYY-MM"` string; (3) the list reads `total_gross/total_si/total_pit/total_net`, absent from `PayrollPeriodRow` + the page query → always-empty columns. Fix path: decide wire per-period totals vs drop the 4 columns, fix the create-period args + formatMonth, then drop the `@ts-nocheck`. Deprioritized (HKD pilot runs payroll in Excel for <5 employees).
 - [x] **ISSUE-004 — feedback photo branch-tight storage RLS** — DONE 2026-05-30: `feedback_photos_authenticated_select` now requires tenant-path match + the feedback row's `has_permission(branch, 'feedback:view')` (path `<tenant>/<feedback_id>/<file>`), not just tenant. Applied to matu-dev (verified branch-tight) + folded into `supabase/managed-surfaces.install.sql` for fresh envs. Source: archived migration `20260602004000`. Prod apply owner-gated (storage policy — now unblocked since MCP/owner can create `storage.objects` policies).
 
-## Shell helpers refactor — 2026-05-27 (owner-decision: architecture-audit plan was DRAFT → approve or revert)
+## Shell helpers refactor — 2026-05-27 current status
 
 **Report:** `docs/worklog/shell-helpers-refactor-plan-2026-05-27.md`
 

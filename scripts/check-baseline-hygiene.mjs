@@ -134,7 +134,7 @@ if (failures.length > 0) {
     );
   }
   console.error(
-    "Remove retired/deprecated/dead-code markers from active source, or move historical context to docs/archive with an explicit owner-approved reason.",
+    "Remove retired/deprecated/dead-code markers from active source, or promote current decisions to the right canonical doc with an explicit owner-approved reason.",
   );
   process.exit(1);
 }

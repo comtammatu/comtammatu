@@ -29,7 +29,7 @@ Active tracker: [`tasks/todo.md`](tasks/todo.md).
 - **Runtime:** Node.js ≥ 24
 - **Framework:** Next.js 16.2 (App Router, Turbopack dev, Webpack production build)
 - **Language:** TypeScript 6.0 (strict + `noUncheckedIndexedAccess`)
-- **UI:** React 19.2 · Tailwind CSS 4.2 · shadcn/ui (`radix-lyra`, preset `buFywKm`) · Radix
+- **UI:** React 19.2 · Tailwind CSS 4.2 · Com Tam Ma Tu Custom Theme on shadcn/ui (`radix-lyra`, preset `buFywKm`) · Radix
 - **Validation:** Zod 4
 - **Database:** Supabase (PostgREST + Auth + RLS), JWT custom claims hook
 - **Monorepo:** Turborepo 2.9 + pnpm 10.33
@@ -48,7 +48,7 @@ packages/
   database/         # Supabase clients (server / client / service / middleware) + types
   shared/           # Auth (module-acl, permissions, scope), labels, payroll calc, formatters
   security/         # Upstash Redis rate limiting
-  ui/               # shadcn/ui components (Radix + Tailwind 4)
+  ui/               # shadcn/Radix primitives + Tailwind 4 token runtime
 supabase/
   migrations/       # SQL migrations (production: file → PR → merge → owner apply)
 docs/
@@ -124,7 +124,7 @@ pnpm --filter @comtammatu/web guides:capture     # Capture POS flow screenshots
 | [`docs/plan/decisions.md`](docs/plan/decisions.md)             | Architecture decisions log                     |
 | [`docs/spec/architecture.md`](docs/spec/architecture.md)       | System architecture                            |
 | [`docs/spec/database-schema.md`](docs/spec/database-schema.md) | Database schema reference                      |
-| [`docs/spec/design-system.md`](docs/spec/design-system.md)     | Locked UI design-system contract               |
+| [`docs/spec/design-system.md`](docs/spec/design-system.md)     | UI design-system SSOT / Custom Theme contract  |
 | [`docs/modules/auth.md`](docs/modules/auth.md)                 | Auth v2 — Position ⟂ Permission model          |
 | [`docs/ref/setup.md`](docs/ref/setup.md)                       | Full setup (MCP, Supabase hook, seed accounts) |
 | [`tasks/regressions.md`](tasks/regressions.md)                 | Named regression rules — read before refactor  |

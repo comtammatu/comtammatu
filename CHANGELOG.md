@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Repo metadata — CodeQL SAST + CONTRIBUTING.md
 
-GitHub-native static analysis security testing (CodeQL on every push, PR, and weekly schedule with the `security-extended` query suite) plus a contributor guide aligning external contributors with `CLAUDE.md` quality gates and the 4-agent debate workflow. No source-code change. Long-form notes: `docs/releases/1.2.0.5.md`.
+GitHub-native static analysis security testing (CodeQL on every push, PR, and weekly schedule with the `security-extended` query suite) plus a contributor guide aligning external contributors with `CLAUDE.md` quality gates and the 4-agent debate workflow. No source-code change.
 
 ### Added
 
@@ -21,7 +21,7 @@ None for this release. The CodeQL workflow runs automatically on the next push t
 
 ### Repo metadata — `.github/SECURITY.md` + Dependabot
 
-Two new files under `.github/`: a GitHub-native Security policy (so the repo surfaces a "Security" tab pointing at our existing RFC 9116 `security.txt`) and a Dependabot configuration for monthly bundled dependency audits across pnpm + GitHub Actions. No source-code change. Long-form notes: `docs/releases/1.2.0.4.md`.
+Two new files under `.github/`: a GitHub-native Security policy (so the repo surfaces a "Security" tab pointing at our existing RFC 9116 `security.txt`) and a Dependabot configuration for monthly bundled dependency audits across pnpm + GitHub Actions. No source-code change.
 
 ### Added
 
@@ -36,7 +36,7 @@ None for this release. GitHub picks up `.github/SECURITY.md` and `.github/depend
 
 ### Repo metadata — CODEOWNERS + PR / issue templates
 
-Four new files under `.github/` aligning the repo with standard GitHub conventions. No source-code change. Long-form notes: `docs/releases/1.2.0.3.md`.
+Four new files under `.github/` aligning the repo with standard GitHub conventions. No source-code change.
 
 ### Added
 
@@ -53,7 +53,7 @@ None for this release. The `.github/` files take effect on the next PR / issue i
 
 ### Web-standard hardening — robots.txt + security.txt
 
-Two thin static-asset additions. No behavior change for end users; both target external crawlers and security researchers. Long-form notes: `docs/releases/1.2.0.2.md`.
+Two thin static-asset additions. No behavior change for end users; both target external crawlers and security researchers.
 
 ### Added
 
@@ -68,7 +68,7 @@ Same alias-promotion blocker as 1.2.0.1: the new files are NOT served by `app.co
 
 ### Security & reliability patch on top of 1.2.0.0 (QR feedback module hardening)
 
-Three Ralph cycles, 18 atomic commits, all CI green, architect-APPROVED. Closes 9 of the 16 known issues from the 2026-05-07 `/qa` pass plus 3 architect follow-ups. Long-form notes: `docs/releases/1.2.0.1.md`.
+Three Ralph cycles, 18 atomic commits, all CI green, architect-APPROVED. Closes 9 of the 16 known issues from the 2026-05-07 `/qa` pass plus 3 architect follow-ups.
 
 ### Added
 
@@ -129,7 +129,7 @@ First public release of the customer-feedback module. Customers scan QR → subm
 
 `TELEGRAM_BOT_TOKEN`, `CRON_SECRET`, `ALLOWED_ORIGINS_FEEDBACK`, `IP_HASH_SALT`, `NEXT_PUBLIC_APP_URL`, `ANTHROPIC_API_KEY`
 
-### Known issues (16 total — see `docs/releases/1.2.0.0.md` and `tasks/todo.md`)
+### Known issues (16 total — see `tasks/todo.md` and `tasks/regressions.md`)
 
 2 HIGH (origin-check bypass when env empty, missing security headers), 4 MEDIUM (photo IDOR, Vercel fire-and-forget, photo RLS branch gap, thank-you bypass), 6 LOW, 4 INFO. QA report: `.gstack/qa-reports/qa-report-feedback-module-2026-05-07.md` (health score 63.5/100, architect-verified).
 
@@ -140,7 +140,7 @@ First public release of the customer-feedback module. Customers scan QR → subm
 3. Smoke test 1 QR end-to-end — scan, submit ≤3★, verify Telegram alert arrives within 90s
 4. Address ISSUE-001 + ISSUE-012 + ISSUE-013 (top-3 follow-ups, ~45 min total)
 
-Full release notes: `docs/releases/1.2.0.0.md`. Other shipped work on `main` since `1.1.0.0` (security waves H1–H4 + M1–M7, HR shift-requests, KDS focus mode, perf passes, print-agent LAN-only) listed inline in that file.
+Other shipped work on `main` since `1.1.0.0` is preserved in git history and the release tags. Keep this changelog as the repo-level release summary.
 
 ---
 

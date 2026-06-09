@@ -41,7 +41,7 @@ The full suite is 147 tests today; they're fast (sub-500ms).
 
 ## Branching + PRs
 
-- The default branch is `main`. The owner currently commits directly to `main` for repo-metadata and small bugfixes (consistent with the cycle 1-7 release pattern in `docs/releases/`).
+- The default branch is `main`. The owner currently commits directly to `main` for repo-metadata and small bugfixes, with `CHANGELOG.md` and git tags as the release record.
 - For non-trivial changes (>3 LOC source code, schema migrations, security-sensitive paths), open a PR.
 - The PR template lives at [`.github/pull_request_template.md`](pull_request_template.md). Fill out the checklist — it mirrors the `AGENTS.md` gates.
 - A single owner reviews everything today (`.github/CODEOWNERS` routes `* @comtammatu`).
@@ -88,7 +88,7 @@ Initial acknowledgement: 5 business days. Severity-tiered fix windows (Critical 
 
 ## License + attribution
 
-This is a private, internal CTCP repo. There is no open-source license today. If you've contributed code via PR and want public credit, mention it in the PR — we'll cite contributors in the relevant `docs/releases/X.Y.Z.md` file.
+This is a private, internal CTCP repo. There is no open-source license today. If you've contributed code via PR and want public credit, mention it in the PR so the relevant `CHANGELOG.md` entry can acknowledge it.
 
 ## Document History
 

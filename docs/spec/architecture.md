@@ -84,7 +84,7 @@ USING (branch_id = auth_branch_id()
 @comtammatu/web
   ├── @comtammatu/shared    (auth types, ACL, scope helpers)
   ├── @comtammatu/database  (Supabase clients)
-  ├── @comtammatu/ui        (shadcn/ui components)
+  ├── @comtammatu/ui        (shadcn/Radix primitives + token runtime)
   └── @comtammatu/security  (Upstash rate limiting)
 ```
 
@@ -99,7 +99,7 @@ flowchart TB
     app["Execution Plane<br/>apps/web App Router + Server Actions"]
     domain["Domain Plane<br/>packages/shared"]
     data["Data Plane<br/>packages/database + supabase/*"]
-    ui["UI Plane<br/>packages/ui + design-system primitives"]
+    ui["UI Plane<br/>Custom Theme contract + packages/ui primitives"]
     edge["Branch Edge Plane<br/>apps/print-agent"]
     verify["Verification Plane<br/>Playwright, SQL tests, runbooks"]
 
@@ -124,7 +124,7 @@ Change ownership:
 | Execution   | Route behavior, Server Actions, realtime UI flows    | `apps/web/app/**`, route-local `actions.ts`, `apps/web/app/_lib/*`                                                                                 |
 | Domain      | Business rules shared across routes/providers        | `packages/shared/src/**`                                                                                                                           |
 | Data        | Schema, RLS, RPCs, generated types, Supabase clients | `supabase/migrations/**`, `packages/database/src/**`                                                                                               |
-| UI          | Reusable primitives and surface rhythm               | `packages/ui/src/components/**`, `apps/web/app/components/surface.tsx`, `docs/spec/design-system.md`                                               |
+| UI          | Custom Theme contract, reusable primitives, surface rhythm | `docs/spec/design-system.md`, `packages/ui/src/components/**`, `apps/web/app/components/surface.tsx`                                               |
 | Branch Edge | Local print daemon and branch print/QR behavior      | `apps/print-agent/src/**`, branch settings surfaces                                                                                                |
 | Docs/Ops    | Current source-of-truth, runbooks, active work state | `docs/CODEBASE_MAP.md`, `docs/modules/**`, `docs/runbooks/**`, `tasks/**`                                                                          |
 

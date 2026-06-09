@@ -1,10 +1,12 @@
 # Inventory Route CTA Matrix
 
-> Ma trận source of truth cho audit UI/UX theo route, section, và button/CTA.
+> Ma trận checklist cho audit UI/UX theo route, section, và button/CTA.
 >
 > Ghi chú:
 >
 > - `visible for role` mô tả kỳ vọng UX hiện tại, không thay thế ACL source of truth.
+> - Design-system authority vẫn là `docs/spec/design-system.md`.
+> - Business/workflow authority vẫn là `docs/ref/inventory.md` và các reference liên quan.
 > - `visible on device` là thiết bị phải audit trực tiếp.
 > - `severity if broken` là severity mặc định nếu CTA/surface không đúng kỳ vọng.
 

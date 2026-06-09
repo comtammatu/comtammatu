@@ -8,6 +8,9 @@ There is exactly one UI design-system source of truth:
 
 - `docs/spec/design-system.md`
 
+That source defines the Com Tam Ma Tu Custom Theme. The active shadcn preset is
+the primitive baseline and runtime evidence, not a higher design authority.
+
 Everything else is evidence, implementation, or enforcement for that contract,
 not a second authority:
 
@@ -38,21 +41,24 @@ External references:
 - NEVER exceed authority when editing UI; only make UI changes explicitly requested or clearly required by the task.
 - NEVER put agent notes, dev commit notes, implementation explanations, or internal commentary into user-facing UI.
 - ALWAYS follow project UI rules and regressions before changing any interface.
-- USE `shadcn/ui` components and the project's active preset as the default UI path.
+- USE `shadcn/ui` components and the project's active preset as the default
+  primitive implementation path after `docs/spec/design-system.md` has selected
+  the pattern.
+- NEVER treat the shadcn preset as authority to override the Custom Theme
+  contract.
 - NEVER override the visual contract of core primitives through ad-hoc wrappers, custom themes, or parallel surface systems.
 - USE `apps/web/app/components/surface.tsx` for repeated app-level page/header/section/toolbar/empty/link-card patterns; domain wrappers must delegate to it instead of cloning layout/chrome.
 - NEVER use `matu-surface`, `font-matu-body`, `bg-matu-*`, `text-matu-*`, `border-matu-*`, `rounded-matu-*`, `--spacing-matu-*`, or `--radius-matu-*` for app UI. Treat any touched usage as a regression unless the owner explicitly reactivates that layer through `docs/spec/design-system.md`.
-- BEFORE UI/UX rebuild work, read and follow `docs/spec/design-system.md` as the locked design-system contract.
+- BEFORE UI/UX rebuild work, read and follow `docs/spec/design-system.md` as the locked Custom Theme contract.
 - UI/UX rebuild PRs MUST state the surface, primary user job, route family, change type, and primitives used before implementation.
 
 ## Typography Rules
 
 - Ma Tu Concept 01 typography is fixed: Inter for body/content, Montserrat for headings/titles, and JetBrains Mono for tabular operational data.
 - Runtime source is `apps/web/app/layout.tsx` plus `packages/ui/src/styles/globals.css`; use `font-sans`, `font-heading`, and `font-mono` instead of raw `font-family`.
-- Static public UI artifacts such as `docs/status/index.html` must mirror the same font stack with local CSS variables.
 - NEVER add route-specific fonts, per-surface font variables, extra Google font families, or hardcoded fallback stacks.
 - NEVER reintroduce `Be Vietnam Pro`, Geist, system-only typography, `font-matu-body`, or `font-heading → font-sans` unless the design-system contract is explicitly changed first.
-- When changing typography, update `docs/spec/design-system.md`, `docs/modules/ui.md`, `tasks/regressions.md`, and runtime/static artifacts in the same change.
+- When changing typography, update `docs/spec/design-system.md`, `docs/modules/ui.md`, `tasks/regressions.md`, and runtime artifacts in the same change.
 
 ## Operational UI Philosophy
 

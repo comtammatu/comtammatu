@@ -1,11 +1,13 @@
 # Design System - Com Tam Ma Tu Web App
 
-> Version: 14.4.0 | Updated: 2026-05-28 | Status: locked single source for UI agents
+> Version: 14.4.1 | Updated: 2026-06-09 | Status: locked single source for UI agents
 
 ## Single Source Decision
 
 This file is the single design-system contract for agents building or reviewing
-UI in this repo. Runtime files prove whether the contract is implemented, but
+UI in this repo. It defines the Com Tam Ma Tu Custom Theme: Ma Tu Concept 01
+semantic tokens, typography, rhythm, brand usage, primitive roles, and app
+surface adapters. Runtime files prove whether the contract is implemented, but
 they do not authorize a second visual language.
 
 If a runtime file, package description, generated token file, or external
@@ -22,17 +24,26 @@ file is convenient.
 
 ## Decision
 
-The design system is the current shadcn preset plus the Ma Tu Concept 01 runtime brand tokens and primitives that already exist in this repo. It is not a separate theme layer, not a new component library, and not a parallel visual language.
+The design system is the Com Tam Ma Tu Custom Theme contract implemented on top
+of the current shadcn/Radix primitive baseline. The shadcn preset is the
+primitive baseline and runtime conformance evidence, not the design-system
+authority. It must never be used to overrule this file.
+
+Custom Theme means the locked Ma Tu Concept 01 semantic tokens, typography,
+spacing rhythm, component roles, brand primitives, and app surface adapters
+documented here. It does not mean a route-local theme layer, a new component
+library, a fork of shadcn primitives, or a parallel visual language.
 
 Active runtime:
 
+- custom theme: Com Tam Ma Tu Custom Theme / Ma Tu Concept 01
+- token source: `packages/ui/src/styles/globals.css`
 - `style`: `radix-lyra`
 - resolved preset code: `buFywKm`
 - `baseColor`: `neutral`
 - `cssVariables`: `true`
 - `iconLibrary`: `lucide`
-- primitive base: Radix/shadcn
-- brand concept: Ma Tu Concept 01
+- primitive baseline: Radix/shadcn
 - brand assets: `/brand/logo-matu.png`, `/brand/logo-matu-seal.png`, `/brand/logo-matu-vertical.png`, `/brand/mascot/be-suon-tuoi-runner.png`
 - web brand primitive: `apps/web/app/components/brand.tsx`
 - web app surface adapters: `apps/web/app/components/surface.tsx`
@@ -56,16 +67,18 @@ the pilot layer later, the design-system contract must be updated first.
 
 When deciding how to build UI, use this order:
 
-1. This contract: `docs/spec/design-system.md`
-2. Runtime config that must conform to it: `apps/web/components.json`, `packages/ui/components.json`, `packages/ui/src/styles/globals.css`, `apps/web/app/layout.tsx`
+1. Custom Theme contract: `docs/spec/design-system.md`
+2. Runtime shadcn config and token evidence that must conform to it: `apps/web/components.json`, `packages/ui/components.json`, `packages/ui/src/styles/globals.css`, `apps/web/app/layout.tsx`
 3. Primitive implementation that must conform to it: `packages/ui/src/components/*`
 4. App adapter implementation that must conform to it: `apps/web/app/components/surface.tsx`
 5. Implementation guide: `docs/modules/ui.md`
 6. Negative rules: `tasks/regressions.md`
 7. Product copy and terminology: `docs/ref/glossary.md`, `packages/shared/src/labels/vi.ts`, and domain dictionaries
 
-Do not invent a local exception when the contract is unclear. Pause and update
-the contract first.
+The active shadcn preset is the first implementation baseline for primitives
+after this contract has selected a pattern. It is never a higher authority than
+this contract. Do not invent a local exception when the contract is unclear.
+Pause and update the contract first.
 
 ## Product UX Thesis
 
@@ -139,7 +152,6 @@ Runtime typography source:
 
 - `apps/web/app/layout.tsx` loads `Inter`, `Montserrat`, and `JetBrains_Mono` through `next/font/google`.
 - `packages/ui/src/styles/globals.css` maps those font variables into Tailwind utilities.
-- `docs/status/index.html` is a static public artifact and must mirror the same font stack with local CSS variables.
 
 Required utility mapping:
 
@@ -157,7 +169,7 @@ Rules:
 - Use `font-mono` only for tabular operational data, IDs, codes, receipt/order numbers, prices, quantities, timestamps, and audit hashes.
 - Do not add route-specific `font-family`, custom font variables, or extra Google font families.
 - Do not reintroduce `Be Vietnam Pro`, Geist, system-only stacks, `font-matu-body`, or per-surface typography exceptions unless the design-system contract is explicitly changed first.
-- When changing typography runtime, update `apps/web/app/layout.tsx`, `packages/ui/src/styles/globals.css`, this contract, `docs/modules/ui.md`, `docs/agent/rules/ui.md`, `tasks/regressions.md`, and any public static artifact that renders the UI brand such as `docs/status/index.html`.
+- When changing typography runtime, update `apps/web/app/layout.tsx`, `packages/ui/src/styles/globals.css`, this contract, `docs/modules/ui.md`, `docs/agent/rules/ui.md`, and `tasks/regressions.md`.
 
 Rules:
 

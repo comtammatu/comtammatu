@@ -25,6 +25,10 @@ import {
   ItemMedia,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
+import {
+  Progress,
+  type ProgressTone,
+} from "@comtammatu/ui/components/progress";
 import { messages } from "@lib/messages";
 
 type EmployeeTone = "default" | "success" | "warning" | "info" | "destructive";
@@ -87,6 +91,42 @@ export function EmployeePage({
   );
 }
 
+interface EmployeeStackProps {
+  children: ReactNode;
+  className?: string;
+}
+
+export function EmployeeStack({ children, className }: EmployeeStackProps) {
+  return (
+    <div className={cn("flex min-w-0 flex-col gap-3", className)}>
+      {children}
+    </div>
+  );
+}
+
+interface EmployeeDashboardGridProps {
+  children: ReactNode;
+  aside?: ReactNode;
+  className?: string;
+}
+
+export function EmployeeDashboardGrid({
+  children,
+  aside,
+  className,
+}: EmployeeDashboardGridProps) {
+  if (!aside) {
+    return <EmployeeStack className={className}>{children}</EmployeeStack>;
+  }
+
+  return (
+    <div className={cn("grid grid-cols-1 gap-3 lg:grid-cols-3", className)}>
+      <EmployeeStack className="lg:col-span-2">{children}</EmployeeStack>
+      <aside className="flex min-w-0 flex-col gap-3">{aside}</aside>
+    </div>
+  );
+}
+
 interface EmployeePanelProps {
   title?: string;
   description?: string;
@@ -137,6 +177,89 @@ export function EmployeePanel({
     >
       {children}
     </AppSection>
+  );
+}
+
+interface EmployeeProgressSummaryProps {
+  label: string;
+  value: number;
+  description?: string;
+  tone?: ProgressTone;
+}
+
+export function EmployeeProgressSummary({
+  label,
+  value,
+  description,
+  tone = "default",
+}: EmployeeProgressSummaryProps) {
+  const safeValue = Math.max(0, Math.min(100, value));
+
+  return (
+    <div className="flex min-w-0 flex-col gap-2">
+      <div className="flex items-center justify-between gap-2 text-xs">
+        <span className="font-medium text-muted-foreground">{label}</span>
+        <span className="font-mono font-medium tabular-nums text-foreground">
+          {safeValue}%
+        </span>
+      </div>
+      <Progress value={safeValue} tone={tone} />
+      {description ? (
+        <p className="text-xs text-muted-foreground">{description}</p>
+      ) : null}
+    </div>
+  );
+}
+
+interface EmployeeWorkflowPanelProps {
+  title?: string;
+  description?: string;
+  icon?: ElementType;
+  tone?: EmployeeTone;
+  badge?: {
+    children: ReactNode;
+    variant?: BadgeProps["variant"];
+  };
+  details?: EmployeeDetailListProps["rows"];
+  detailsColumns?: EmployeeDetailListProps["columns"];
+  progress?: EmployeeProgressSummaryProps;
+  primaryAction?: ReactNode;
+  children?: ReactNode;
+  className?: string;
+}
+
+export function EmployeeWorkflowPanel({
+  title,
+  description,
+  icon,
+  tone = "default",
+  badge,
+  details,
+  detailsColumns = 2,
+  progress,
+  primaryAction,
+  children,
+  className,
+}: EmployeeWorkflowPanelProps) {
+  return (
+    <EmployeePanel
+      icon={icon}
+      title={title}
+      description={description}
+      tone={tone}
+      badge={badge}
+      className={className}
+      contentClassName="gap-4"
+    >
+      {details?.length ? (
+        <EmployeeDetailList columns={detailsColumns} rows={details} />
+      ) : null}
+      {progress ? <EmployeeProgressSummary {...progress} /> : null}
+      {children}
+      {primaryAction ? (
+        <div className="flex flex-col gap-2 sm:flex-row">{primaryAction}</div>
+      ) : null}
+    </EmployeePanel>
   );
 }
 
@@ -240,6 +363,54 @@ export function EmployeeActionItem({
         </ItemActions>
       </Link>
     </Item>
+  );
+}
+
+interface EmployeeActionSectionProps {
+  title: string;
+  description?: string;
+  links: Array<{
+    key: string;
+    href: string;
+    icon?: ElementType;
+    title: string;
+    description?: string;
+  }>;
+  columns?: 1 | 2;
+  size?: "default" | "sm";
+  className?: string;
+}
+
+export function EmployeeActionSection({
+  title,
+  description,
+  links,
+  columns = 2,
+  size = "sm",
+  className,
+}: EmployeeActionSectionProps) {
+  if (links.length === 0) return null;
+
+  return (
+    <EmployeePanel
+      title={title}
+      description={description}
+      size={size}
+      className={className}
+    >
+      <EmployeeActionList columns={columns}>
+        {links.map((link) => (
+          <EmployeeActionItem
+            key={link.key}
+            href={link.href}
+            icon={link.icon}
+            title={link.title}
+            description={link.description}
+            size={size}
+          />
+        ))}
+      </EmployeeActionList>
+    </EmployeePanel>
   );
 }
 
