@@ -186,7 +186,7 @@ export default async function PermissionAuditPage({ searchParams }: Props) {
                         </Link>
                       </TableCell>
                       <TableCell>
-                        <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                        <code className="rounded-md bg-muted px-1.5 py-0.5 text-xs">
                           {r.permission_key}
                         </code>
                       </TableCell>

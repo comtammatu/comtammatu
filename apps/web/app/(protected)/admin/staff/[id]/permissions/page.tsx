@@ -265,7 +265,7 @@ export default async function StaffPermissionsPage({ params }: Props) {
                             >
                               {a.action}
                             </Badge>
-                            <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs font-normal">
+                            <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs font-normal">
                               {a.permission_key}
                             </code>
                             <span className="ml-2 text-xs font-normal text-muted-foreground">

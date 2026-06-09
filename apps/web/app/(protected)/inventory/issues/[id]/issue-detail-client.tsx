@@ -506,7 +506,7 @@ export function IssueDetailClient({
                                     {formatQty(Number(line.quantity ?? 0))}
                                   </TableCell>
                                   <TableCell className="px-6 py-4">
-                                    <span className="rounded bg-muted px-2 py-1 text-xs font-medium">
+                                    <span className="rounded-md bg-muted px-2 py-1 text-xs font-medium">
                                       {line.unit ??
                                         line.ingredients?.unit ??
                                         ""}

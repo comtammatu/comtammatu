@@ -123,7 +123,7 @@ export function MenuImageInput({
             alt="Ảnh món"
             width={64}
             height={64}
-            className="size-16 rounded object-cover"
+            className="size-16 rounded-md object-cover"
           />
           <div className="flex flex-1 flex-wrap gap-2">
             <Button

@@ -202,15 +202,15 @@ export function PaymentsForm({
                 </Label>
                 <p className="text-sm text-muted-foreground">
                   {messages.settings.payments.momoNeeds}{" "}
-                  <code className="rounded bg-muted px-1 text-xs">
+                  <code className="rounded-md bg-muted px-1 text-xs">
                     MOMO_PARTNER_CODE
                   </code>
                   ,{" "}
-                  <code className="rounded bg-muted px-1 text-xs">
+                  <code className="rounded-md bg-muted px-1 text-xs">
                     MOMO_ACCESS_KEY
                   </code>
                   ,{" "}
-                  <code className="rounded bg-muted px-1 text-xs">
+                  <code className="rounded-md bg-muted px-1 text-xs">
                     MOMO_SECRET_KEY
                   </code>
                   .

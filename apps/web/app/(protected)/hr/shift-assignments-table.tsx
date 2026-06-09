@@ -352,7 +352,7 @@ export function ShiftAssignmentsTable({
                             {cellAssignments.map((a) => (
                               <div
                                 key={a.id}
-                                className="group flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-xs"
+                                className="group flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-xs"
                               >
                                 <span className="flex-1 truncate">
                                   {a.employees?.profiles?.full_name ??

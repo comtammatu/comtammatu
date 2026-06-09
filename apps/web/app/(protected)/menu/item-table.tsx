@@ -108,11 +108,11 @@ export function ItemTable({ items, categories, tenantId }: ItemTableProps) {
                       alt={item.name}
                       width={48}
                       height={48}
-                      className="size-12 rounded object-cover"
+                      className="size-12 rounded-md object-cover"
                       unoptimized
                     />
                   ) : (
-                    <div className="flex size-12 items-center justify-center rounded bg-muted text-muted-foreground">
+                    <div className="flex size-12 items-center justify-center rounded-md bg-muted text-muted-foreground">
                       <IconImage className="size-5" />
                     </div>
                   )}
