@@ -46,9 +46,8 @@ export interface BranchRow {
   phone: string | null;
   is_active: boolean | null;
   branch_kind: string | null;
-  latitude: number | null;
-  longitude: number | null;
   hasAttendanceSecret: boolean;
+  checklistItems: string[];
 }
 
 interface BranchTableProps {
@@ -196,9 +195,8 @@ export function BranchTable({ branches }: BranchTableProps) {
           branch={{
             id: attendanceBranch.id,
             name: attendanceBranch.name,
-            latitude: attendanceBranch.latitude,
-            longitude: attendanceBranch.longitude,
             hasSecret: attendanceBranch.hasAttendanceSecret,
+            checklistItems: attendanceBranch.checklistItems,
           }}
         />
       )}

@@ -219,6 +219,10 @@ test("next.config.ts emits all security headers + disables X-Powered-By", () => 
     );
   }
   assert.ok(
+    src.includes("camera=(self)") && src.includes("geolocation=()"),
+    "expected camera allowed for Employee photo/QR while geolocation stays disabled",
+  );
+  assert.ok(
     /key:\s*"X-Frame-Options",\s*value:\s*"DENY"/.test(src),
     "expected X-Frame-Options: DENY",
   );

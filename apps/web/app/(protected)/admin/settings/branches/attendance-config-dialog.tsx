@@ -1,25 +1,13 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import {
-  Key as IconKey,
-  MapPin as IconMapPin,
+  ClipboardList as IconChecklist,
   Copy as IconCopy,
+  Key as IconKey,
   RefreshCw as IconRefresh,
-  LocateFixed as IconCurrentLocation,
 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Item,
-  ItemActions,
-  ItemContent,
-  ItemDescription,
-  ItemTitle,
-} from "@comtammatu/ui/components/item";
-import { Spinner } from "@comtammatu/ui/components/spinner";
 import {
   Dialog,
   DialogContent,
@@ -27,43 +15,31 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@comtammatu/ui/components/dialog";
-import { FieldGroup } from "@comtammatu/ui/components/field";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemTitle,
+} from "@comtammatu/ui/components/item";
+import { Label } from "@comtammatu/ui/components/label";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { Spinner } from "@comtammatu/ui/components/spinner";
+import { Textarea } from "@comtammatu/ui/components/textarea";
 import { ACTIONS_VI, ERRORS_VI } from "@comtammatu/shared/messages";
-import { TextField, valuesToFormData } from "@/components/form";
 import { messages } from "@lib/messages";
 import {
-  updateBranchCoordinates,
   generateAttendanceSecret,
   getTodayCode,
+  saveBranchChecklist,
 } from "./attendance-actions";
 
-const coordsSchema = z.object({
-  latitude: z
-    .string()
-    .trim()
-    .min(1, { error: "Vĩ độ không được trống" })
-    .refine(
-      (v) => {
-        const n = Number(v);
-        return Number.isFinite(n) && n >= -90 && n <= 90;
-      },
-      { error: "Vĩ độ phải trong khoảng -90 đến 90" },
-    ),
-  longitude: z
-    .string()
-    .trim()
-    .min(1, { error: "Kinh độ không được trống" })
-    .refine(
-      (v) => {
-        const n = Number(v);
-        return Number.isFinite(n) && n >= -180 && n <= 180;
-      },
-      { error: "Kinh độ phải trong khoảng -180 đến 180" },
-    ),
-});
-
-type CoordsFormValues = z.infer<typeof coordsSchema>;
+const DEFAULT_CHECKLIST = [
+  "Chuẩn bị khu vực làm việc",
+  "Kiểm tra công cụ cần dùng",
+  "Hoàn tất việc được giao",
+  "Vệ sinh và bàn giao cuối ca",
+] as const;
 
 interface AttendanceConfigDialogProps {
   open: boolean;
@@ -71,9 +47,8 @@ interface AttendanceConfigDialogProps {
   branch: {
     id: number;
     name: string;
-    latitude: number | null;
-    longitude: number | null;
     hasSecret: boolean;
+    checklistItems: string[];
   };
 }
 
@@ -82,30 +57,20 @@ export function AttendanceConfigDialog({
   onOpenChange,
   branch,
 }: AttendanceConfigDialogProps) {
-  const [coordsPending, startCoordsTransition] = useTransition();
+  const [checklistPending, startChecklistTransition] = useTransition();
   const [secretPending, startSecretTransition] = useTransition();
-  const [coordsError, setCoordsError] = useState<string | null>(null);
+  const [checklistText, setChecklistText] = useState("");
   const [todayCode, setTodayCode] = useState<string | null>(null);
   const [todayDate, setTodayDate] = useState<string | null>(null);
-  const [geoLoading, setGeoLoading] = useState(false);
-  const [geoError, setGeoError] = useState<string | null>(null);
-
-  const form = useForm<CoordsFormValues>({
-    resolver: zodResolver(coordsSchema),
-    defaultValues: {
-      latitude: branch.latitude?.toString() ?? "",
-      longitude: branch.longitude?.toString() ?? "",
-    },
-  });
 
   useEffect(() => {
-    form.reset({
-      latitude: branch.latitude?.toString() ?? "",
-      longitude: branch.longitude?.toString() ?? "",
-    });
-    setGeoError(null);
-    setCoordsError(null);
-  }, [branch.id, branch.latitude, branch.longitude, form]);
+    setChecklistText(
+      (branch.checklistItems.length > 0
+        ? branch.checklistItems
+        : DEFAULT_CHECKLIST
+      ).join("\n"),
+    );
+  }, [branch.id, branch.checklistItems]);
 
   useEffect(() => {
     if (!open) {
@@ -114,46 +79,17 @@ export function AttendanceConfigDialog({
     }
   }, [open]);
 
-  function handleGetLocation() {
-    if (!navigator.geolocation) {
-      setGeoError(messages.settings.attendance.gpsUnsupported);
-      return;
-    }
-    setGeoLoading(true);
-    setGeoError(null);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        form.setValue("latitude", position.coords.latitude.toFixed(7), {
-          shouldValidate: true,
-        });
-        form.setValue("longitude", position.coords.longitude.toFixed(7), {
-          shouldValidate: true,
-        });
-        setGeoLoading(false);
-      },
-      (err) => {
-        setGeoLoading(false);
-        setGeoError(
-          err.code === 1
-            ? messages.settings.attendance.gpsDenied
-            : messages.settings.attendance.gpsUnavailable,
-        );
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
-    );
-  }
-
-  function onValidCoords(values: CoordsFormValues) {
-    startCoordsTransition(async () => {
-      setCoordsError(null);
-      const fd = valuesToFormData(values);
-      fd.set("branchId", String(branch.id));
-      const result = await updateBranchCoordinates(null, fd);
+  function handleSaveChecklist() {
+    startChecklistTransition(async () => {
+      const formData = new FormData();
+      formData.set("branchId", String(branch.id));
+      formData.set("items", checklistText);
+      const result = await saveBranchChecklist(null, formData);
       if (!result.success) {
-        setCoordsError(result.error ?? ERRORS_VI.fallback);
+        toast.error(result.error ?? ERRORS_VI.fallback);
         return;
       }
-      toast.success(messages.settings.attendance.coordinatesUpdated);
+      toast.success(messages.settings.attendance.checklistSaved);
     });
   }
 
@@ -199,71 +135,36 @@ export function AttendanceConfigDialog({
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* GPS Coordinates */}
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-sm font-medium">
-              <IconMapPin className="size-4" />
-              {messages.settings.attendance.gpsTitle}
+              <IconChecklist className="size-4" />
+              {messages.settings.attendance.checklistTitle}
             </div>
-            <form onSubmit={form.handleSubmit(onValidCoords)} noValidate>
-              <FieldGroup>
-                <div className="grid grid-cols-2 gap-3">
-                  <TextField
-                    control={form.control}
-                    name="latitude"
-                    label={messages.settings.attendance.latitudeLabel}
-                    type="number"
-                    step="0.0000001"
-                    placeholder="10.7769"
-                    required
-                  />
-                  <TextField
-                    control={form.control}
-                    name="longitude"
-                    label={messages.settings.attendance.longitudeLabel}
-                    type="number"
-                    step="0.0000001"
-                    placeholder="106.7009"
-                    required
-                  />
-                </div>
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="w-full"
-                  onClick={handleGetLocation}
-                  disabled={geoLoading}
-                >
-                  {geoLoading ? (
-                    <Spinner className="mr-2" />
-                  ) : (
-                    <IconCurrentLocation className="mr-2 size-4" />
-                  )}
-                  {messages.settings.attendance.currentLocation}
-                </Button>
-
-                {geoError && (
-                  <p className="text-sm text-destructive" role="alert">
-                    {geoError}
-                  </p>
-                )}
-                {coordsError && (
-                  <p className="text-sm text-destructive" role="alert">
-                    {coordsError}
-                  </p>
-                )}
-
-                <Button type="submit" size="sm" disabled={coordsPending}>
-                  {coordsPending && <Spinner className="mr-2" />}
-                  {messages.settings.attendance.saveCoordinates}
-                </Button>
-              </FieldGroup>
-            </form>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="shift-checklist">
+                {messages.settings.attendance.checklistLabel}
+              </Label>
+              <Textarea
+                id="shift-checklist"
+                value={checklistText}
+                onChange={(event) => setChecklistText(event.target.value)}
+                rows={6}
+              />
+              <p className="text-xs text-muted-foreground">
+                {messages.settings.attendance.checklistDescription}
+              </p>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleSaveChecklist}
+              disabled={checklistPending}
+            >
+              {checklistPending ? <Spinner data-icon="inline-start" /> : null}
+              {messages.settings.attendance.saveChecklist}
+            </Button>
           </div>
 
-          {/* Attendance Secret */}
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-sm font-medium">
               <IconKey className="size-4" />
@@ -278,16 +179,16 @@ export function AttendanceConfigDialog({
                 disabled={secretPending}
               >
                 {secretPending ? (
-                  <Spinner className="mr-2" />
+                  <Spinner data-icon="inline-start" />
                 ) : (
-                  <IconRefresh className="mr-2 size-4" />
+                  <IconRefresh data-icon="inline-start" />
                 )}
                 {branch.hasSecret
                   ? messages.settings.attendance.generateNewSecret
                   : messages.settings.attendance.generateSecret}
               </Button>
 
-              {branch.hasSecret && (
+              {branch.hasSecret ? (
                 <Button
                   variant="outline"
                   size="sm"
@@ -296,10 +197,10 @@ export function AttendanceConfigDialog({
                 >
                   {messages.settings.attendance.showTodayCode}
                 </Button>
-              )}
+              ) : null}
             </div>
 
-            {todayCode && (
+            {todayCode ? (
               <Item variant="muted" className="items-center sm:flex-nowrap">
                 <ItemContent>
                   <ItemTitle>
@@ -325,7 +226,7 @@ export function AttendanceConfigDialog({
                   </Button>
                 </ItemActions>
               </Item>
-            )}
+            ) : null}
           </div>
         </div>
 

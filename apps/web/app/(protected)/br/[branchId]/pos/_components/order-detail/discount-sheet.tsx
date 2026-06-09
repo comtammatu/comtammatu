@@ -26,6 +26,10 @@ export type DiscountType = "pct" | "vnd";
 interface DiscountSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  title?: string;
+  subtotalLabel?: string;
+  totalLabel?: string;
+  clearLabel?: string;
   /** Subtotal trước giảm — dùng để live preview + clamp UI. */
   subtotal: number;
   /** Phụ phí trên đơn — cộng vào total preview. */
@@ -61,6 +65,10 @@ interface DiscountSheetProps {
 export function DiscountSheet({
   open,
   onOpenChange,
+  title = "Chiết khấu",
+  subtotalLabel = FORM_VI.subtotal,
+  totalLabel = "Tổng mới",
+  clearLabel = "Bỏ chiết khấu",
   subtotal,
   serviceCharge,
   current,
@@ -140,7 +148,7 @@ export function DiscountSheet({
         className="flex flex-col data-[side=right]:w-full data-[side=right]:sm:max-w-md"
       >
         <SheetHeader className="border-b border-border/60 px-3 py-2.5 text-left sm:px-4">
-          <SheetTitle>Chiết khấu</SheetTitle>
+          <SheetTitle>{title}</SheetTitle>
         </SheetHeader>
 
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-3 py-4 sm:px-4">
@@ -201,7 +209,7 @@ export function DiscountSheet({
 
           <div className="rounded-md border border-border/60 bg-muted/40 p-3 text-sm">
             <div className="flex justify-between text-muted-foreground">
-              <span>{FORM_VI.subtotal}</span>
+              <span>{subtotalLabel}</span>
               <span className="tabular-nums">{formatVND(subtotal)}</span>
             </div>
             {serviceCharge > 0 && (
@@ -224,7 +232,7 @@ export function DiscountSheet({
               </span>
             </div>
             <div className="mt-1 flex justify-between border-t border-border/60 pt-1 font-semibold">
-              <span>Tổng mới</span>
+              <span>{totalLabel}</span>
               <span className="tabular-nums">{formatVND(previewTotal)}</span>
             </div>
           </div>
@@ -244,7 +252,7 @@ export function DiscountSheet({
               }
               className="sm:order-first"
             >
-              Bỏ chiết khấu
+              {clearLabel}
             </Button>
           ) : (
             <span className="hidden sm:block" aria-hidden />

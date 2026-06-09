@@ -32,6 +32,8 @@ export interface SessionOrder {
   tax_amount: number;
   service_charge: number;
   discount_amount: number;
+  order_discount_amount: number;
+  item_discount_amount: number;
   discount_type: string | null;
   discount_value: number | null;
   discount_note: string | null;

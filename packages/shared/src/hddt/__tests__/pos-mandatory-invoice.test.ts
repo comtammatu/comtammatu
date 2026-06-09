@@ -96,5 +96,46 @@ test("per-order HĐĐT payload expands POS modifiers and sides", () => {
       src.includes("buildInvoiceLineItemsFromOrderItems(activeItems)"),
       "provider item payload must split main item, paid modifiers, and sides",
     );
+    assert.ok(
+      src.includes("order_discount_amount"),
+      "HĐĐT order fetch must include order-level POS discount source",
+    );
+    assert.ok(
+      src.includes("subtotal, discount_amount"),
+      "HĐĐT order item fetch must include item-level POS discount_amount",
+    );
+    assert.ok(
+      src.includes("applyInvoiceLineDiscount("),
+      "provider item payload must allocate POS discounts to legal lines",
+    );
+    assert.ok(
+      src.includes("order.order_discount_amount ?? order.discount_amount ?? 0"),
+      "provider item payload must apply only the remaining order-level discount after item discounts",
+    );
   }
+});
+
+test("POS item-level discount migration and actions exist", () => {
+  const migration = read(
+    "supabase/migrations/20260609094000_pos_item_level_discount.sql",
+  );
+  const actions = read(
+    "apps/web/app/(protected)/br/[branchId]/pos/discount-actions.ts",
+  );
+
+  assert.ok(
+    migration.includes("ADD COLUMN IF NOT EXISTS order_discount_amount") &&
+      migration.includes("ADD COLUMN IF NOT EXISTS item_discount_amount"),
+    "orders must split total discount into order-level and item-level sources",
+  );
+  assert.ok(
+    migration.includes("ADD COLUMN IF NOT EXISTS discount_amount") &&
+      migration.includes("CREATE OR REPLACE FUNCTION public.apply_order_item_discount"),
+    "order_items must persist and mutate item-level discount metadata",
+  );
+  assert.ok(
+    actions.includes("applyOrderItemDiscount") &&
+      actions.includes("clearOrderItemDiscount"),
+    "POS Server Actions must expose item-level discount mutations",
+  );
 });

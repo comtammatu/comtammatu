@@ -15,15 +15,13 @@ const CONFIG_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
 
 const branchIdSchema = z.coerce.number().int().positive();
 
-const updateCoordsSchema = z.object({
+const checklistSchema = z.object({
   branchId: z.coerce.number().int().positive(),
-  latitude: z.coerce.number().min(-90).max(90),
-  longitude: z.coerce.number().min(-180).max(180),
+  items: z
+    .string()
+    .trim()
+    .min(1, { error: "Checklist không được trống" }),
 });
-
-/* ─── Pre-migration type helper ─── */
-// branch_attendance_config + branches.latitude/longitude pending migration
-// 20260417000000_attendance_pwa.sql — remove after pnpm db:types
 
 /* ─── Helpers ─── */
 
@@ -36,52 +34,6 @@ function computeDailyCode(secret: string, dateStr: string): string {
 }
 
 /* ─── Actions ─── */
-
-/** Update branch GPS coordinates */
-export async function updateBranchCoordinates(
-  _prev: ActionResult | null,
-  formData: FormData,
-): Promise<ActionResult> {
-  const parsed = updateCoordsSchema.safeParse({
-    branchId: formData.get("branchId"),
-    latitude: formData.get("latitude"),
-    longitude: formData.get("longitude"),
-  });
-
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Tọa độ không hợp lệ",
-    };
-  }
-
-  const ctx = await getAuthContextWithPermission(
-    CONFIG_ROLES,
-    PERMISSION_KEYS.SETTINGS_TENANT,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
-
-  const { supabase, claims } = ctx;
-
-  const { error } = await supabase
-    .from("branches")
-    .update({
-      latitude: parsed.data.latitude,
-      longitude: parsed.data.longitude,
-    })
-    .eq("id", parsed.data.branchId)
-    .eq("tenant_id", claims.tenant_id);
-
-  if (error) {
-    return {
-      success: false,
-      error: "Không thể cập nhật tọa độ. Vui lòng thử lại.",
-    };
-  }
-
-  revalidateSurfacePath("/admin/settings/branches");
-  return { success: true };
-}
 
 /** Generate and save a new attendance secret for a branch */
 export async function generateAttendanceSecret(
@@ -174,4 +126,59 @@ export async function getTodayCode(
   const code = computeDailyCode(config.attendance_secret, today);
 
   return { success: true, data: { code, date: today } };
+}
+
+export async function saveBranchChecklist(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const parsed = checklistSchema.safeParse({
+    branchId: formData.get("branchId"),
+    items: formData.get("items"),
+  });
+
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Checklist không hợp lệ",
+    };
+  }
+
+  const items = parsed.data.items
+    .split(/\r?\n/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  if (items.length === 0) {
+    return { success: false, error: "Checklist không được trống" };
+  }
+  if (items.length > 20) {
+    return { success: false, error: "Checklist tối đa 20 việc" };
+  }
+  if (items.some((item) => item.length > 120)) {
+    return { success: false, error: "Mỗi việc tối đa 120 ký tự" };
+  }
+
+  const ctx = await getAuthContextWithPermission(
+    CONFIG_ROLES,
+    PERMISSION_KEYS.SETTINGS_TENANT,
+  );
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { claims } = ctx;
+  const { error } = await createServiceClient().rpc(
+    "upsert_shift_checklist_template",
+    {
+      p_tenant_id: claims.tenant_id,
+      p_branch_id: parsed.data.branchId,
+      p_items: items,
+    },
+  );
+
+  if (error) {
+    return { success: false, error: "Không thể lưu checklist ca làm." };
+  }
+
+  revalidateSurfacePath("/admin/settings/branches");
+  return { success: true };
 }

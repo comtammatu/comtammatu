@@ -1,21 +1,20 @@
 import Link from "next/link";
 import { ListChecks as IconListChecks } from "lucide-react";
-import { getEmployeeContext } from "../_lib/employee-context";
-import { ClockClient } from "./clock-client";
+import { Button } from "@comtammatu/ui/components/button";
+import { messages } from "@lib/messages";
 import {
   EmployeeMissingProfileEmpty,
   EmployeePage,
 } from "../components/employee-page";
-import { Button } from "@comtammatu/ui/components/button";
-import { getTodayVN } from "../_lib/vn-business-date";
-import { messages } from "@lib/messages";
+import { getTodayWorkState } from "../_lib/today-work-state";
+import { ClockClient } from "./clock-client";
 
 const copy = messages.employee.home;
 
 export default async function ClockPage() {
-  const ctx = await getEmployeeContext();
+  const state = await getTodayWorkState();
 
-  if (!ctx) {
+  if (state.status === "missing_profile") {
     return (
       <EmployeePage
         title={copy.clockTodayTitle}
@@ -25,40 +24,6 @@ export default async function ClockPage() {
       </EmployeePage>
     );
   }
-
-  const { supabase, claims, employeeId } = ctx;
-
-  // Get today's attendance status
-  const today = getTodayVN();
-  const { data: record } = await supabase
-    .from("attendance_records")
-    .select("check_in, check_out, branch_id, branches ( name )")
-    .eq("employee_id", employeeId)
-    .eq("tenant_id", claims.tenant_id)
-    .eq("date", today)
-    .maybeSingle();
-
-  // Get active branches with GPS for branch selection
-  const { data: branches } = await supabase
-    .from("branches")
-    .select("id, name, latitude, longitude")
-    .eq("tenant_id", claims.tenant_id)
-    .eq("is_active", true)
-    .order("name");
-
-  const activeBranches = (branches ?? [])
-    .filter((b) => b.latitude != null && b.longitude != null)
-    .map((b) => ({
-      id: b.id,
-      name: b.name,
-      lat: Number(b.latitude),
-      lng: Number(b.longitude),
-    }));
-
-  const branchData = record?.branches as unknown as
-    | { name: string }
-    | null
-    | undefined;
 
   return (
     <EmployeePage
@@ -71,24 +36,14 @@ export default async function ClockPage() {
           size="touch"
           className="w-full sm:w-fit"
         >
-          <Link href="/employee/attendance">
+          <Link href="/employee/tasks">
             <IconListChecks data-icon="inline-start" />
-            {copy.attendanceTitle}
+            Việc trong ca
           </Link>
         </Button>
       }
     >
-      <ClockClient
-        initialStatus={{
-          clockedIn: !!record?.check_in && !record?.check_out,
-          clockedOut: !!record?.check_out,
-          checkInTime: record?.check_in ?? null,
-          checkOutTime: record?.check_out ?? null,
-          branchName: branchData?.name ?? null,
-        }}
-        branches={activeBranches}
-        defaultBranchId={claims.branch_id}
-      />
+      <ClockClient state={state} />
     </EmployeePage>
   );
 }

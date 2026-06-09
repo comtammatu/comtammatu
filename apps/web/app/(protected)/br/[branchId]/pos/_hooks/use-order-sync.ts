@@ -241,13 +241,23 @@ function applyOrderUpdate(
   // prior apply (mirror rule POS-DISCOUNT-CLEAR-METADATA-WHEN-AMOUNT-ZERO).
   const hasDiscountField =
     "discount_amount" in payload ||
+    "order_discount_amount" in payload ||
+    "item_discount_amount" in payload ||
     "discount_type" in payload ||
     "discount_value" in payload ||
     "discount_note" in payload;
   if (hasDiscountField) {
     const discountAmount = coerceMoney(payload.discount_amount);
     next.discount_amount = discountAmount ?? 0;
-    if (next.discount_amount > 0) {
+    const orderDiscountAmount = coerceMoney(payload.order_discount_amount);
+    if (orderDiscountAmount !== null) {
+      next.order_discount_amount = orderDiscountAmount;
+    }
+    const itemDiscountAmount = coerceMoney(payload.item_discount_amount);
+    if (itemDiscountAmount !== null) {
+      next.item_discount_amount = itemDiscountAmount;
+    }
+    if ((next.order_discount_amount ?? 0) > 0) {
       const discountType = coerceNullableString(payload.discount_type);
       if (discountType !== undefined) next.discount_type = discountType;
       const discountValue = coerceNullableNumber(payload.discount_value);
@@ -313,7 +323,11 @@ function buildOptimisticOrder(
   // server-side). When the dedup fallback fetch lands the authoritative row
   // the metadata, if any, replaces these defaults atomically via setOrders.
   const discountAmount = Number(payload.discount_amount ?? 0);
-  const hasDiscount = discountAmount > 0;
+  const orderDiscountAmount = Number(
+    payload.order_discount_amount ?? discountAmount,
+  );
+  const itemDiscountAmount = Number(payload.item_discount_amount ?? 0);
+  const hasOrderDiscount = orderDiscountAmount > 0;
 
   return {
     id,
@@ -334,15 +348,17 @@ function buildOptimisticOrder(
     tax_amount: Number(payload.tax_amount ?? 0),
     service_charge: Number(payload.service_charge ?? 0),
     discount_amount: discountAmount,
+    order_discount_amount: orderDiscountAmount,
+    item_discount_amount: itemDiscountAmount,
     discount_type:
-      hasDiscount && typeof payload.discount_type === "string"
+      hasOrderDiscount && typeof payload.discount_type === "string"
         ? payload.discount_type
         : null,
-    discount_value: hasDiscount
+    discount_value: hasOrderDiscount
       ? (coerceNullableNumber(payload.discount_value) ?? null)
       : null,
     discount_note:
-      hasDiscount && typeof payload.discount_note === "string"
+      hasOrderDiscount && typeof payload.discount_note === "string"
         ? payload.discount_note
         : null,
     total_amount: Number(payload.total_amount ?? 0),

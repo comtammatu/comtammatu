@@ -204,6 +204,8 @@ export const shiftCloseReportPayloadSchema = z.object({
   item_breakdown: z.array(shiftItemBreakdownLineSchema).optional(),
   /** Sum of paid orders.total_amount. */
   total_revenue: z.number(),
+  /** Sum of paid orders.discount_amount. */
+  discount_total: z.number().optional(),
   printed_at: z.string(),
 });
 

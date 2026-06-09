@@ -14,9 +14,7 @@ export default async function BranchesPage() {
 
   const { data: branches } = await supabase
     .from("branches")
-    .select(
-      "id, name, address, phone, is_active, branch_kind, latitude, longitude",
-    )
+    .select("id, name, address, phone, is_active, branch_kind")
     .order("branch_kind")
     .order("name");
 
@@ -28,11 +26,43 @@ export default async function BranchesPage() {
 
   const configuredBranchIds = new Set((configs ?? []).map((c) => c.branch_id));
 
+  const { data: checklistTemplates } = await supabase
+    .from("shift_checklist_templates")
+    .select("id, branch_id")
+    .eq("tenant_id", claims.tenant_id)
+    .eq("is_active", true);
+
+  const templateIds = (checklistTemplates ?? []).map((template) => template.id);
+  const { data: checklistItems } =
+    templateIds.length > 0
+      ? await supabase
+          .from("shift_checklist_template_items")
+          .select("template_id, title, sort_order")
+          .eq("tenant_id", claims.tenant_id)
+          .eq("is_active", true)
+          .in("template_id", templateIds)
+          .order("sort_order")
+      : { data: [] };
+
+  const templateBranchById = new Map(
+    (checklistTemplates ?? []).map((template) => [
+      template.id,
+      template.branch_id,
+    ]),
+  );
+  const checklistByBranchId = new Map<number, string[]>();
+  for (const item of checklistItems ?? []) {
+    const branchId = templateBranchById.get(item.template_id);
+    if (!branchId) continue;
+    const list = checklistByBranchId.get(branchId) ?? [];
+    list.push(item.title);
+    checklistByBranchId.set(branchId, list);
+  }
+
   const branchesWithConfig = (branches ?? []).map((b) => ({
     ...b,
-    latitude: b.latitude as number | null,
-    longitude: b.longitude as number | null,
     hasAttendanceSecret: configuredBranchIds.has(b.id),
+    checklistItems: checklistByBranchId.get(b.id) ?? [],
   }));
 
   return (

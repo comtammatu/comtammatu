@@ -41,7 +41,7 @@ const base: BuildRunnerQueueInput = {
       id: 4,
       order_id: 12,
       kitchen_send_batch_id: null,
-      status: "served",
+      status: "cancelled",
       bumped_at: null,
       created_at: "2026-05-24T03:03:00.000Z",
       updated_at: "2026-05-24T03:03:00.000Z",
@@ -220,7 +220,7 @@ test("buildRunnerQueue preserves order-based append kitchen ticket suffixes", ()
   assert.equal(item?.referenceNumber, "#105-2");
 });
 
-test("buildRunnerQueue keeps preparing orders and hides completed orders", () => {
+test("buildRunnerQueue keeps preparing orders and skips cancelled KDS tickets", () => {
   const queue = buildRunnerQueue(base);
   const preparing = queue.find(
     (item) => item.orderNumber === "TC-20260524-008-CN1",
@@ -235,6 +235,43 @@ test("buildRunnerQueue keeps preparing orders and hides completed orders", () =>
     queue.some((item) => item.orderNumber === "MV-20260524-009-CN1"),
     false,
   );
+});
+
+test("buildRunnerQueue keeps POS-completed orders while KDS tickets are live", () => {
+  const input: BuildRunnerQueueInput = {
+    ...base,
+    tickets: [
+      {
+        id: 23,
+        order_id: 23,
+        kitchen_send_batch_id: null,
+        status: "preparing",
+        bumped_at: null,
+        created_at: "2026-05-24T03:30:00.000Z",
+        updated_at: "2026-05-24T03:30:00.000Z",
+      },
+    ],
+    orders: [
+      {
+        id: 23,
+        order_number: "TC-20260524-023-CN1",
+        order_type: "dine_in",
+        table_id: 7,
+        status: "completed",
+        created_at: "2026-05-24T03:29:00.000Z",
+        tables: { number: 7 },
+      },
+    ],
+    kitchenBatches: [],
+  };
+
+  const [item] = buildRunnerQueue(input);
+
+  assert.equal(item?.orderNumber, "TC-20260524-023-CN1");
+  assert.equal(item?.lane, "active");
+  assert.equal(item?.status, "preparing");
+  assert.equal(item?.callPrefix, "Bàn");
+  assert.equal(item?.callNumber, "7");
 });
 
 test("buildRunnerQueue follows KDS queue rank with item-level priority", () => {

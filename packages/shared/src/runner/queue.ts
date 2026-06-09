@@ -79,7 +79,6 @@ export interface BuildRunnerQueueInput {
   servedAfterIso?: string;
 }
 
-const HIDDEN_ORDER_STATUSES = new Set(["completed", "cancelled"]);
 const ORDER_DATE_SEGMENT_PATTERN = /^\d{6}(?:\d{2})?$/;
 const ORDER_SEQUENCE_SEGMENT_PATTERN = /^\d{1,5}$/;
 
@@ -116,7 +115,9 @@ export function buildRunnerQueue(
     if (!isRunnerTicketStatus(ticket.status)) continue;
 
     const order = orderById.get(ticket.order_id);
-    if (!order || HIDDEN_ORDER_STATUSES.has(order.status)) continue;
+    // Runner follows KDS fulfillment state. POS `orders.status` may be
+    // `completed` immediately after payment while kitchen work is still live.
+    if (!order) continue;
 
     const batch =
       ticket.kitchen_send_batch_id === null

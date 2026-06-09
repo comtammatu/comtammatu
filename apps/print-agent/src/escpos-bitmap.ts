@@ -1143,7 +1143,12 @@ function diffSign(n: number): string {
 }
 
 function renderShiftItemBreakdown(p: ShiftCloseReportPayload): Uint8Array[] {
-  const items = p.item_breakdown ?? [];
+  const items = [...(p.item_breakdown ?? [])].sort(
+    (a, b) =>
+      (b.revenue ?? 0) - (a.revenue ?? 0) ||
+      (b.qty ?? 0) - (a.qty ?? 0) ||
+      (a.name || "").localeCompare(b.name || ""),
+  );
   if (items.length === 0) return [];
 
   const totalQty =
@@ -1246,6 +1251,11 @@ function renderShiftCloseReportBitmap(p: ShiftCloseReportPayload): Uint8Array {
   }
   if (p.cancelled_order_count > 0) {
     parts.push(line(pair48("Đơn đã hủy", `${p.cancelled_order_count} đơn`)));
+  }
+  if ((p.discount_total ?? 0) > 0) {
+    parts.push(
+      line(pair48("Chiết khấu", `-${fmtMoney(p.discount_total ?? 0)}`)),
+    );
   }
   parts.push(...renderShiftItemBreakdown(p));
   parts.push(divider("="));

@@ -7,6 +7,10 @@ export interface OrderItem {
   quantity: number;
   unit_price: number;
   subtotal: number;
+  discount_amount: number;
+  discount_type: "pct" | "vnd" | null;
+  discount_value: number | null;
+  discount_note: string | null;
   modifiers: CartModifier[];
   sides: CartSide[];
   note: string | null;
@@ -23,6 +27,8 @@ export interface OrderData {
   tax_amount: number;
   service_charge: number;
   discount_amount: number;
+  order_discount_amount: number;
+  item_discount_amount: number;
   /** 'pct' (theo %) hoặc 'vnd' (số tiền cố định). NULL khi không có giảm. */
   discount_type: "pct" | "vnd" | null;
   /** Giá trị gốc cashier nhập (10 cho 10%, 15000 cho 15.000đ). */

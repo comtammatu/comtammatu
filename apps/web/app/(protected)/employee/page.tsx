@@ -1,18 +1,16 @@
 import Link from "next/link";
 import {
-  CalendarDays as IconCalendarEvent,
+  Camera as IconCamera,
   ChefHat as IconChefHat,
+  CheckCircle2 as IconDone,
   Clock as IconClock,
-  CreditCard as IconCreditCard,
   ListChecks as IconListChecks,
-  LogIn as IconDoorEnter,
   LogOut as IconLogout,
   Monitor as IconDeviceDesktop,
   MonitorUp as IconMonitorUp,
   UserCircle as IconUserCircle,
 } from "lucide-react";
 import { canAccess } from "@comtammatu/shared/auth";
-import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
@@ -23,13 +21,12 @@ import {
   EmployeePage as EmployeePageShell,
   EmployeePanel,
 } from "./components/employee-page";
-import { getEmployeeContext } from "./_lib/employee-context";
 import {
-  formatDateVN,
-  formatTimeShort,
-  formatTimeVN,
-  getTodayVN,
-} from "./_lib/vn-business-date";
+  formatShiftRange,
+  getTodayWorkState,
+  type TodayWorkStatus,
+} from "./_lib/today-work-state";
+import { formatTimeVN } from "./_lib/vn-business-date";
 
 const copy = messages.employee.home;
 
@@ -57,72 +54,36 @@ const OPERATION_HANDOFFS = [
   },
 ] as const;
 
+function getWorkTone(status: TodayWorkStatus) {
+  if (status === "done") return "success" as const;
+  if (status === "working" || status === "ready_to_checkout") {
+    return "info" as const;
+  }
+  return "warning" as const;
+}
+
+function getWorkTitle(status: TodayWorkStatus): string {
+  if (status === "missing_profile") return copy.statusNoProfile;
+  if (status === "missing_branch") return copy.statusNoBranch;
+  if (status === "not_started") return copy.statusNotStarted;
+  if (status === "working") return copy.statusWorking;
+  if (status === "ready_to_checkout") return copy.statusReadyToCheckout;
+  return copy.statusDone;
+}
+
+function getWorkDescription(status: TodayWorkStatus): string {
+  if (status === "missing_profile") return copy.descriptionNoProfile;
+  if (status === "missing_branch") return copy.descriptionNoBranch;
+  if (status === "not_started") return copy.descriptionNotStarted;
+  if (status === "working") return copy.descriptionWorking;
+  if (status === "ready_to_checkout") return copy.descriptionReadyToCheckout;
+  return copy.descriptionDone;
+}
+
 export default async function EmployeePage() {
   const { supabase, claims } = await loadAuthState();
-  const ctx = await getEmployeeContext();
-  const branchId = ctx?.branchId ?? claims.branch_id;
-  const today = getTodayVN();
-
-  let clockState: "not_started" | "working" | "done" = "not_started";
-  let checkInTime: string | null = null;
-  let checkOutTime: string | null = null;
-  let clockBranchName: string | null = null;
-
-  if (ctx) {
-    const { data: record } = await ctx.supabase
-      .from("attendance_records")
-      .select("check_in, check_out, branches ( name )")
-      .eq("employee_id", ctx.employeeId)
-      .eq("tenant_id", claims.tenant_id)
-      .eq("date", today)
-      .maybeSingle();
-
-    if (record?.check_in && !record.check_out) {
-      clockState = "working";
-      checkInTime = record.check_in;
-      const branchData = record.branches as unknown as { name: string } | null;
-      clockBranchName = branchData?.name ?? null;
-    } else if (record?.check_out) {
-      clockState = "done";
-      checkInTime = record.check_in;
-      checkOutTime = record.check_out;
-      const branchData = record.branches as unknown as { name: string } | null;
-      clockBranchName = branchData?.name ?? null;
-    }
-  }
-
-  let nextShift: {
-    date: string;
-    shiftName: string;
-    startTime: string;
-    endTime: string;
-  } | null = null;
-
-  if (ctx) {
-    const { data: upcoming } = await ctx.supabase
-      .from("shift_assignments")
-      .select("date, shifts ( name, start_time, end_time )")
-      .eq("employee_id", ctx.employeeId)
-      .eq("tenant_id", claims.tenant_id)
-      .gte("date", today)
-      .order("date")
-      .limit(1)
-      .maybeSingle();
-
-    if (upcoming) {
-      const shift = upcoming.shifts as unknown as {
-        name: string;
-        start_time: string;
-        end_time: string;
-      } | null;
-      nextShift = {
-        date: upcoming.date,
-        shiftName: shift?.name ?? copy.defaultShiftName,
-        startTime: shift?.start_time ?? "—",
-        endTime: shift?.end_time ?? "—",
-      };
-    }
-  }
+  const state = await getTodayWorkState();
+  const branchId = state.branchId;
 
   let branchIsHq = false;
   if (branchId) {
@@ -138,7 +99,7 @@ export default async function EmployeePage() {
   }
 
   const operationHandoffs =
-    branchId && !branchIsHq
+    branchId && !branchIsHq && state.attendance?.checkIn && !state.attendance.checkOut
       ? OPERATION_HANDOFFS.filter((item) =>
           canAccess(claims.user_role, item.moduleKey),
         ).map((item) => ({
@@ -147,167 +108,117 @@ export default async function EmployeePage() {
         }))
       : [];
 
-  const hasEmployeeContext = Boolean(ctx);
+  const tone = getWorkTone(state.status);
+  const title = getWorkTitle(state.status);
+  const description = getWorkDescription(state.status);
+  const currentShiftName =
+    state.attendance?.shiftName ??
+    (state.nextShift?.date === state.today ? state.nextShift.shiftName : null);
+  const currentShiftRange = state.attendance?.shiftStartTime
+    ? `${state.attendance.shiftStartTime.slice(0, 5)} - ${state.attendance.shiftEndTime?.slice(0, 5) ?? "—"}`
+    : state.nextShift?.date === state.today
+      ? formatShiftRange(state.nextShift)
+      : "—";
 
-  const clockTone = !hasEmployeeContext
-    ? "warning"
-    : clockState === "working"
-      ? "info"
-      : clockState === "done"
-        ? "success"
-        : "warning";
-  const clockTitle = !hasEmployeeContext
-    ? copy.statusNoProfile
-    : clockState === "working"
-      ? copy.statusWorking
-      : clockState === "done"
-        ? copy.statusDone
-        : copy.statusNotStarted;
-  const clockDescription = !hasEmployeeContext
-    ? copy.descriptionNoProfile
-    : clockState === "working"
-      ? copy.descriptionWorking
-      : clockState === "done"
-        ? copy.descriptionDone
-        : copy.descriptionNotStarted;
-  const nextShiftDateLabel = nextShift
-    ? nextShift.date === today
-      ? copy.today
-      : formatDateVN(nextShift.date)
-    : null;
-  const nextShiftDescription = nextShift
-    ? `${nextShiftDateLabel} · ${formatTimeShort(nextShift.startTime)} - ${formatTimeShort(nextShift.endTime)}`
-    : copy.noNextShift;
-  const clockTimeLabel =
-    checkInTime && checkOutTime
-      ? `${formatTimeVN(checkInTime)} - ${formatTimeVN(checkOutTime)}`
-      : checkInTime
-        ? `${copy.checkIn} ${formatTimeVN(checkInTime)}`
-        : checkOutTime
-          ? `${copy.checkOut} ${formatTimeVN(checkOutTime)}`
-          : "—";
+  const detailRows = [
+    {
+      label: copy.branch,
+      value: state.branchName ?? copy.noBranch,
+      muted: !state.branchName,
+    },
+    {
+      label: copy.todayShiftTitle,
+      value: currentShiftName ? (
+        <span className="flex min-w-0 flex-col">
+          <span className="truncate">{currentShiftName}</span>
+          <span className="text-xs font-normal text-muted-foreground">
+            {currentShiftRange}
+          </span>
+        </span>
+      ) : (
+        copy.noTodayShift
+      ),
+      muted: !currentShiftName,
+    },
+    {
+      label: copy.workProgress,
+      value:
+        state.status === "not_started" || state.status === "missing_branch"
+          ? copy.notYet
+          : `${state.checklist.done}/${state.checklist.total} ${copy.tasksDone}`,
+      muted: state.status === "not_started" || state.status === "missing_branch",
+    },
+    {
+      label: copy.checkIn,
+      value: state.attendance?.checkIn
+        ? formatTimeVN(state.attendance.checkIn)
+        : "—",
+      muted: !state.attendance?.checkIn,
+    },
+    {
+      label: copy.checkOut,
+      value: state.attendance?.checkOut
+        ? formatTimeVN(state.attendance.checkOut)
+        : "—",
+      muted: !state.attendance?.checkOut,
+    },
+  ];
+
+  const primaryAction =
+    state.status === "missing_profile" ? (
+      <Button asChild variant="outline" size="touch" className="w-full sm:w-fit">
+        <Link href="/employee/profile">
+          <IconUserCircle data-icon="inline-start" />
+          {copy.profileTitle}
+        </Link>
+      </Button>
+    ) : state.status === "missing_branch" ? (
+      <Button asChild variant="outline" size="touch" className="w-full sm:w-fit">
+        <Link href="/employee/profile">
+          <IconUserCircle data-icon="inline-start" />
+          {copy.profileTitle}
+        </Link>
+      </Button>
+    ) : state.status === "not_started" ? (
+      <Button asChild size="touch" className="w-full sm:w-fit">
+        <Link href="/employee/clock">
+          <IconCamera data-icon="inline-start" />
+          {copy.clockIn}
+        </Link>
+      </Button>
+    ) : state.status === "working" ? (
+      <Button asChild size="touch" className="w-full sm:w-fit">
+        <Link href="/employee/tasks">
+          <IconListChecks data-icon="inline-start" />
+          {copy.shiftTasks}
+        </Link>
+      </Button>
+    ) : state.status === "ready_to_checkout" ? (
+      <Button asChild size="touch" className="w-full sm:w-fit">
+        <Link href="/employee/clock">
+          <IconLogout data-icon="inline-start" />
+          {copy.clockOut}
+        </Link>
+      </Button>
+    ) : (
+      <Button variant="outline" size="touch" className="w-full sm:w-fit" disabled>
+        <IconDone data-icon="inline-start" />
+        {copy.completed}
+      </Button>
+    );
 
   return (
     <EmployeePageShell title={copy.title} description={copy.description}>
       <EmployeePanel
-        icon={clockState === "not_started" ? IconDoorEnter : IconClock}
-        title={copy.workdayTitle}
-        description={clockDescription}
-        tone={clockTone}
-        badge={{ children: clockTitle, variant: clockTone }}
+        icon={state.status === "done" ? IconDone : IconClock}
+        title={copy.todayWorkTitle}
+        description={description}
+        tone={tone}
+        badge={{ children: title, variant: tone }}
         contentClassName="gap-4"
       >
-        <EmployeeDetailList
-          columns={3}
-          rows={[
-            {
-              label: copy.branch,
-              value: clockBranchName ?? ctx?.branchName ?? copy.noBranch,
-              muted: !clockBranchName && !ctx?.branchName,
-            },
-            {
-              label: copy.nextShiftTitle,
-              value: nextShift ? (
-                <span className="flex min-w-0 flex-col">
-                  <span className="truncate">{nextShift.shiftName}</span>
-                  <span className="text-xs font-normal text-muted-foreground">
-                    {nextShiftDescription}
-                  </span>
-                </span>
-              ) : (
-                copy.noNextShift
-              ),
-              muted: !nextShift,
-            },
-            {
-              label: copy.clockTime,
-              value: clockTimeLabel,
-              muted: !checkInTime && !checkOutTime,
-            },
-          ]}
-        />
-        <div className="flex flex-col gap-2 sm:flex-row">
-          {!hasEmployeeContext ? (
-            <Button
-              asChild
-              variant="outline"
-              size="touch"
-              className="w-full sm:w-fit"
-            >
-              <Link href="/employee/profile">
-                <IconUserCircle data-icon="inline-start" />
-                {copy.profileTitle}
-              </Link>
-            </Button>
-          ) : clockState !== "done" ? (
-            <Button asChild size="touch" className="w-full sm:w-fit">
-              <Link href="/employee/clock">
-                <IconDoorEnter data-icon="inline-start" />
-                {clockState === "working" ? copy.clockOut : copy.clockIn}
-              </Link>
-            </Button>
-          ) : (
-            <Button
-              asChild
-              variant="outline"
-              size="touch"
-              className="w-full sm:w-fit"
-            >
-              <Link href="/employee/attendance">
-                <IconListChecks data-icon="inline-start" />
-                {copy.attendanceTitle}
-              </Link>
-            </Button>
-          )}
-          {hasEmployeeContext ? (
-            <Button
-              asChild
-              variant="outline"
-              size="touch"
-              className="w-full sm:w-fit"
-            >
-              <Link href="/employee/schedule">
-                <IconCalendarEvent data-icon="inline-start" />
-                {copy.viewSchedule}
-              </Link>
-            </Button>
-          ) : null}
-        </div>
-      </EmployeePanel>
-
-      <EmployeePanel title={copy.selfServiceTitle}>
-        <EmployeeActionList columns={2}>
-          <EmployeeActionItem
-            href="/employee/schedule"
-            icon={IconCalendarEvent}
-            title={copy.scheduleTitle}
-            description={copy.scheduleDescription}
-          />
-          <EmployeeActionItem
-            href="/employee/shift-register"
-            icon={IconCalendarEvent}
-            title={copy.shiftRegisterTitle}
-            description={copy.shiftRegisterDescription}
-          />
-          <EmployeeActionItem
-            href="/employee/attendance"
-            icon={IconListChecks}
-            title={copy.attendanceTitle}
-            description={copy.attendanceDescription}
-          />
-          <EmployeeActionItem
-            href="/employee/payslip"
-            icon={IconCreditCard}
-            title={copy.payslipTitle}
-            description={copy.payslipDescription}
-          />
-          <EmployeeActionItem
-            href="/employee/profile"
-            icon={IconUserCircle}
-            title={copy.profileTitle}
-            description={copy.profileDescription}
-          />
-        </EmployeeActionList>
+        <EmployeeDetailList columns={3} rows={detailRows} />
+        <div className="flex flex-col gap-2 sm:flex-row">{primaryAction}</div>
       </EmployeePanel>
 
       {operationHandoffs.length > 0 ? (
@@ -330,17 +241,6 @@ export default async function EmployeePage() {
           </EmployeeActionList>
         </EmployeePanel>
       ) : null}
-
-      <form
-        action="/api/auth/signout"
-        method="post"
-        className="flex justify-start"
-      >
-        <Button type="submit" variant="outline" size="sm">
-          <IconLogout data-icon="inline-start" />
-          {ACTIONS_VI.signOut}
-        </Button>
-      </form>
     </EmployeePageShell>
   );
 }

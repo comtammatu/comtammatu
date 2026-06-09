@@ -1,6 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildInvoiceLineItemsFromOrderItems } from "../invoice-line-items";
+import {
+  applyInvoiceLineDiscount,
+  buildInvoiceLineItemsFromOrderItems,
+} from "../invoice-line-items";
 
 test("expands paid modifiers into separate HĐĐT lines", () => {
   const lines = buildInvoiceLineItemsFromOrderItems([
@@ -42,6 +45,140 @@ test("expands paid modifiers into separate HĐĐT lines", () => {
     lines.reduce((sum, line) => sum + line.amount, 0),
     54_000,
   );
+});
+
+test("allocates order discount across legal invoice lines", () => {
+  const lines = buildInvoiceLineItemsFromOrderItems([
+    {
+      item_name: "Cơm sườn cốt lết",
+      variant_name: null,
+      quantity: 1,
+      unit_price: 54_000,
+      subtotal: 54_000,
+      modifiers: [
+        { modifier_id: 1, name: "Bì", price: 7_000 },
+        { modifier_id: 2, name: "Chả", price: 7_000 },
+        { modifier_id: 3, name: "Trứng", price: 5_000 },
+      ],
+      sides: [],
+    },
+  ]);
+
+  const discounted = applyInvoiceLineDiscount(lines, 10_800);
+
+  assert.deepEqual(
+    discounted.map((line) => ({
+      name: line.name,
+      amount: line.amount,
+      discountAmount: line.discountAmount ?? 0,
+    })),
+    [
+      {
+        name: "Cơm sườn cốt lết",
+        amount: 35_000,
+        discountAmount: 7_000,
+      },
+      { name: "Bì", amount: 7_000, discountAmount: 1_400 },
+      { name: "Chả", amount: 7_000, discountAmount: 1_400 },
+      { name: "Trứng", amount: 5_000, discountAmount: 1_000 },
+    ],
+  );
+  assert.equal(
+    discounted.reduce((sum, line) => sum + (line.discountAmount ?? 0), 0),
+    10_800,
+  );
+});
+
+test("allocates item discount across that item's legal invoice lines", () => {
+  const lines = buildInvoiceLineItemsFromOrderItems([
+    {
+      item_name: "Cơm sườn cốt lết",
+      variant_name: null,
+      quantity: 1,
+      unit_price: 54_000,
+      subtotal: 54_000,
+      discount_amount: 10_800,
+      modifiers: [
+        { modifier_id: 1, name: "Bì", price: 7_000 },
+        { modifier_id: 2, name: "Chả", price: 7_000 },
+        { modifier_id: 3, name: "Trứng", price: 5_000 },
+      ],
+      sides: [],
+    },
+  ]);
+
+  assert.deepEqual(
+    lines.map((line) => ({
+      name: line.name,
+      amount: line.amount,
+      discountAmount: line.discountAmount ?? 0,
+    })),
+    [
+      {
+        name: "Cơm sườn cốt lết",
+        amount: 35_000,
+        discountAmount: 7_000,
+      },
+      { name: "Bì", amount: 7_000, discountAmount: 1_400 },
+      { name: "Chả", amount: 7_000, discountAmount: 1_400 },
+      { name: "Trứng", amount: 5_000, discountAmount: 1_000 },
+    ],
+  );
+  assert.equal(
+    lines.reduce((sum, line) => sum + (line.discountAmount ?? 0), 0),
+    10_800,
+  );
+});
+
+test("adds order discount to existing item line discounts", () => {
+  const discounted = applyInvoiceLineDiscount(
+    [
+      {
+        name: "Cơm sườn",
+        unit: "Phần",
+        quantity: 1,
+        unitPrice: 45_000,
+        amount: 45_000,
+        discountAmount: 5_000,
+      },
+      {
+        name: "Trứng",
+        unit: "Phần",
+        quantity: 1,
+        unitPrice: 5_000,
+        amount: 5_000,
+      },
+    ],
+    9_000,
+  );
+
+  assert.deepEqual(
+    discounted.map((line) => ({
+      name: line.name,
+      discountAmount: line.discountAmount ?? 0,
+    })),
+    [
+      { name: "Cơm sườn", discountAmount: 13_000 },
+      { name: "Trứng", discountAmount: 1_000 },
+    ],
+  );
+});
+
+test("clamps invoice line discount at sold line total", () => {
+  const discounted = applyInvoiceLineDiscount(
+    [
+      {
+        name: "Cơm sườn",
+        unit: "Phần",
+        quantity: 1,
+        unitPrice: 45_000,
+        amount: 45_000,
+      },
+    ],
+    50_000,
+  );
+
+  assert.equal(discounted[0]?.discountAmount, 45_000);
 });
 
 test("aggregates duplicate component lines by quantity", () => {

@@ -34,7 +34,10 @@ import {
   SYSTEM_SETTING_KEYS,
   SYSTEM_SETTING_DEFAULTS,
 } from "@comtammatu/shared/settings";
-import { buildInvoiceLineItemsFromOrderItems } from "@comtammatu/shared/hddt";
+import {
+  applyInvoiceLineDiscount,
+  buildInvoiceLineItemsFromOrderItems,
+} from "@comtammatu/shared/hddt";
 import { ensureInvoiceProviderRegistered } from "@lib/invoice-provider-init";
 import { getAuthContextWithPermission } from "@/_lib/auth";
 import { canAccessBranch } from "@/_lib/branch-scope";
@@ -98,8 +101,8 @@ export async function replaceTaxInvoice(
       `
       id, tenant_id, branch_id, order_id, status, invoice_kind,
       invoice_number, issued_at, provider_ref,
-      orders!inner ( id, total_amount,
-        order_items ( item_name, variant_name, quantity, unit_price, subtotal, modifiers, sides, status, vat_rate )
+      orders!inner ( id, total_amount, discount_amount, order_discount_amount,
+        order_items ( item_name, variant_name, quantity, unit_price, subtotal, discount_amount, modifiers, sides, status, vat_rate )
       )
     `,
     )
@@ -281,7 +284,10 @@ export async function replaceTaxInvoice(
   }
 
   // STEP C — Call provider with replacement context.
-  const invoiceItems = buildInvoiceLineItemsFromOrderItems(activeItems);
+  const invoiceItems = applyInvoiceLineDiscount(
+    buildInvoiceLineItemsFromOrderItems(activeItems),
+    Number(order.order_discount_amount ?? order.discount_amount ?? 0),
+  );
 
   // For TT78 originalTemplateCode: strip series, keep digit (e.g. "2/001" → "2").
   const originalTemplateCode =

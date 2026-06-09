@@ -318,6 +318,8 @@ const RECEIPT_LOADING_ORDER: OrderData = {
   tax_amount: 0,
   service_charge: 0,
   discount_amount: 0,
+  order_discount_amount: 0,
+  item_discount_amount: 0,
   discount_type: null,
   discount_value: null,
   discount_note: null,
@@ -345,6 +347,10 @@ const RECEIPT_LOADING_ORDER: OrderData = {
       quantity: 2,
       unit_price: 69000,
       subtotal: 138000,
+      discount_amount: 0,
+      discount_type: null,
+      discount_value: null,
+      discount_note: null,
       modifiers: [],
       sides: [],
       note: null,
@@ -1153,6 +1159,8 @@ export function BillReceipt({
                         subtotal={order.subtotal}
                         serviceCharge={order.service_charge}
                         discountAmount={order.discount_amount}
+                        orderDiscountAmount={order.order_discount_amount}
+                        itemDiscountAmount={order.item_discount_amount}
                         discountType={order.discount_type}
                         discountValue={order.discount_value}
                         discountNote={order.discount_note}
@@ -1219,6 +1227,8 @@ export function BillReceipt({
                         subtotal={order.subtotal}
                         serviceCharge={order.service_charge}
                         discountAmount={order.discount_amount}
+                        orderDiscountAmount={order.order_discount_amount}
+                        itemDiscountAmount={order.item_discount_amount}
                         discountType={order.discount_type}
                         discountValue={order.discount_value}
                         discountNote={order.discount_note}

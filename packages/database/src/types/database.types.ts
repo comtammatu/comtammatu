@@ -224,11 +224,74 @@ export type Database = {
           },
         ]
       }
+      attendance_checklist_items: {
+        Row: {
+          attendance_record_id: number
+          completed_at: string | null
+          created_at: string
+          id: number
+          is_done: boolean
+          sort_order: number
+          template_item_id: number | null
+          tenant_id: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          attendance_record_id: number
+          completed_at?: string | null
+          created_at?: string
+          id?: never
+          is_done?: boolean
+          sort_order: number
+          template_item_id?: number | null
+          tenant_id: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          attendance_record_id?: number
+          completed_at?: string | null
+          created_at?: string
+          id?: never
+          is_done?: boolean
+          sort_order?: number
+          template_item_id?: number | null
+          tenant_id?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_checklist_items_attendance_record_id_fkey"
+            columns: ["attendance_record_id"]
+            isOneToOne: false
+            referencedRelation: "attendance_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_checklist_items_template_item_id_fkey"
+            columns: ["template_item_id"]
+            isOneToOne: false
+            referencedRelation: "shift_checklist_template_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_checklist_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       attendance_records: {
         Row: {
           branch_id: number
           check_in: string | null
+          check_in_photo_path: string | null
           check_out: string | null
+          check_out_code_verified: boolean
           code_verified: boolean | null
           created_at: string
           date: string
@@ -246,7 +309,9 @@ export type Database = {
         Insert: {
           branch_id: number
           check_in?: string | null
+          check_in_photo_path?: string | null
           check_out?: string | null
+          check_out_code_verified?: boolean
           code_verified?: boolean | null
           created_at?: string
           date: string
@@ -264,7 +329,9 @@ export type Database = {
         Update: {
           branch_id?: number
           check_in?: string | null
+          check_in_photo_path?: string | null
           check_out?: string | null
+          check_out_code_verified?: boolean
           code_verified?: boolean | null
           created_at?: string
           date?: string
@@ -3175,6 +3242,10 @@ export type Database = {
         Row: {
           cancel_reason: string | null
           created_at: string
+          discount_amount: number
+          discount_note: string | null
+          discount_type: string | null
+          discount_value: number | null
           id: number
           is_priority: boolean
           item_name: string
@@ -3201,6 +3272,10 @@ export type Database = {
         Insert: {
           cancel_reason?: string | null
           created_at?: string
+          discount_amount?: number
+          discount_note?: string | null
+          discount_type?: string | null
+          discount_value?: number | null
           id?: never
           is_priority?: boolean
           item_name: string
@@ -3227,6 +3302,10 @@ export type Database = {
         Update: {
           cancel_reason?: string | null
           created_at?: string
+          discount_amount?: number
+          discount_note?: string | null
+          discount_type?: string | null
+          discount_value?: number | null
           id?: never
           is_priority?: boolean
           item_name?: string
@@ -3358,11 +3437,13 @@ export type Database = {
           id: number
           idempotency_key: string | null
           is_priority: boolean
+          item_discount_amount: number
           kitchen_send_count: number
           last_transfer_idempotency_key: string | null
           merge_request_key: string | null
           merged_into_order_id: number | null
           note: string | null
+          order_discount_amount: number
           order_number: string
           order_type: string
           payment_method: string | null
@@ -3395,11 +3476,13 @@ export type Database = {
           id?: never
           idempotency_key?: string | null
           is_priority?: boolean
+          item_discount_amount?: number
           kitchen_send_count?: number
           last_transfer_idempotency_key?: string | null
           merge_request_key?: string | null
           merged_into_order_id?: number | null
           note?: string | null
+          order_discount_amount?: number
           order_number: string
           order_type?: string
           payment_method?: string | null
@@ -3432,11 +3515,13 @@ export type Database = {
           id?: never
           idempotency_key?: string | null
           is_priority?: boolean
+          item_discount_amount?: number
           kitchen_send_count?: number
           last_transfer_idempotency_key?: string | null
           merge_request_key?: string | null
           merged_into_order_id?: number | null
           note?: string | null
+          order_discount_amount?: number
           order_number?: string
           order_type?: string
           payment_method?: string | null
@@ -4077,6 +4162,7 @@ export type Database = {
           is_system: boolean
           label_en: string | null
           label_vi: string
+          legacy_role_code: string
           tenant_id: number
         }
         Insert: {
@@ -4087,6 +4173,7 @@ export type Database = {
           is_system?: boolean
           label_en?: string | null
           label_vi: string
+          legacy_role_code: string
           tenant_id: number
         }
         Update: {
@@ -4097,6 +4184,7 @@ export type Database = {
           is_system?: boolean
           label_en?: string | null
           label_vi?: string
+          legacy_role_code?: string
           tenant_id?: number
         }
         Relationships: [
@@ -5396,6 +5484,103 @@ export type Database = {
           },
           {
             foreignKeyName: "shift_assignments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shift_checklist_template_items: {
+        Row: {
+          created_at: string
+          id: number
+          is_active: boolean
+          sort_order: number
+          template_id: number
+          tenant_id: number
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          id?: never
+          is_active?: boolean
+          sort_order: number
+          template_id: number
+          tenant_id: number
+          title: string
+        }
+        Update: {
+          created_at?: string
+          id?: never
+          is_active?: boolean
+          sort_order?: number
+          template_id?: number
+          tenant_id?: number
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_checklist_template_items_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "shift_checklist_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_checklist_template_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shift_checklist_templates: {
+        Row: {
+          branch_id: number
+          created_at: string
+          id: number
+          is_active: boolean
+          name: string
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          branch_id: number
+          created_at?: string
+          id?: never
+          is_active?: boolean
+          name?: string
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: number
+          created_at?: string
+          id?: never
+          is_active?: boolean
+          name?: string
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_checklist_templates_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_checklist_templates_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "shift_checklist_templates_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -8563,6 +8748,15 @@ export type Database = {
         }
         Returns: Json
       }
+      apply_order_item_discount: {
+        Args: {
+          p_note: string
+          p_order_item_id: number
+          p_type: string
+          p_value: number
+        }
+        Returns: Json
+      }
       apply_template_to_user: {
         Args: {
           p_branch_id: number
@@ -8595,7 +8789,6 @@ export type Database = {
         }
         Returns: Json
       }
-      auth_area_id: { Args: never; Returns: number }
       auth_branch_id: { Args: never; Returns: number }
       auth_role: { Args: never; Returns: string }
       auth_tenant_id: { Args: never; Returns: number }
@@ -8650,6 +8843,10 @@ export type Database = {
         Returns: Json
       }
       clear_order_discount: { Args: { p_order_id: number }; Returns: Json }
+      clear_order_item_discount: {
+        Args: { p_order_item_id: number; p_reason: string }
+        Returns: Json
+      }
       close_fiscal_period: {
         Args: {
           p_month: number
@@ -8901,6 +9098,25 @@ export type Database = {
           p_variant_name: string
         }
         Returns: Json
+      }
+      employee_clock_in_with_checklist: {
+        Args: {
+          p_branch_id: number
+          p_business_date: string
+          p_employee_id: number
+          p_photo_path: string
+          p_shift_id: number
+          p_tenant_id: number
+        }
+        Returns: number
+      }
+      employee_clock_out_with_code: {
+        Args: {
+          p_attendance_id: number
+          p_employee_id: number
+          p_tenant_id: number
+        }
+        Returns: string
       }
       enable_offline_for_session: {
         Args: { p_session_id: number }
@@ -9875,6 +10091,10 @@ export type Database = {
       upsert_recipe_lines: {
         Args: { p_lines: Json; p_menu_item_id: number }
         Returns: Json
+      }
+      upsert_shift_checklist_template: {
+        Args: { p_branch_id: number; p_items: string[]; p_tenant_id: number }
+        Returns: number
       }
       validate_journal_balance: {
         Args: { p_entry_id: number }

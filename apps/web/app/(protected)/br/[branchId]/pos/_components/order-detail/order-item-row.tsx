@@ -17,6 +17,10 @@ export interface OrderItemRowData {
   quantity: number;
   unit_price: number;
   subtotal: number;
+  discount_amount: number;
+  discount_type: "pct" | "vnd" | null;
+  discount_value: number | null;
+  discount_note: string | null;
   status: string;
   modifiers: CartModifier[];
   sides: CartSide[];
@@ -78,6 +82,10 @@ function useOrderItemChangeTone(row: OrderItemRowData): RowChangeTone {
         variantName: row.variant_name,
         unitPrice: row.unit_price,
         subtotal: row.subtotal,
+        discountAmount: row.discount_amount,
+        discountType: row.discount_type,
+        discountValue: row.discount_value,
+        discountNote: row.discount_note,
         status: row.status,
         modifiers: row.modifiers,
         sides: row.sides,
@@ -92,6 +100,10 @@ function useOrderItemChangeTone(row: OrderItemRowData): RowChangeTone {
       row.sides,
       row.status,
       row.subtotal,
+      row.discount_amount,
+      row.discount_type,
+      row.discount_value,
+      row.discount_note,
       row.unit_price,
       row.variant_name,
       row.is_priority,
@@ -156,6 +168,10 @@ export function OrderItemRow({ row, onTap }: OrderItemRowProps) {
   };
   const summary = getPosLineItemSummary(row);
   const changeTone = useOrderItemChangeTone(row);
+  const discountAmount = Math.max(0, Number(row.discount_amount ?? 0));
+  const netSubtotal = Math.max(0, row.subtotal - discountAmount);
+  const discountLine =
+    discountAmount > 0 ? `Giảm món: -${formatVND(discountAmount)}` : null;
 
   return (
     <li className="w-full min-w-0 max-w-full">
@@ -179,10 +195,11 @@ export function OrderItemRow({ row, onTap }: OrderItemRowProps) {
           <PosLineItemCompact
             quantity={row.quantity}
             title={displayName}
-            total={formatVND(row.subtotal)}
+            total={formatVND(netSubtotal)}
             options={summary.options}
             modifiers={summary.modifiers}
             sides={summary.sides}
+            discount={discountLine}
             note={summary.note}
             isPriority={summary.isPriority}
             quantityClassName={cancelled ? "opacity-50" : undefined}

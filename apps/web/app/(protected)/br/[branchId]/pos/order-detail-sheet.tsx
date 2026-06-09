@@ -63,6 +63,8 @@ import {
   setOrderItemPriority,
   applyOrderDiscount,
   clearOrderDiscount,
+  applyOrderItemDiscount,
+  clearOrderItemDiscount,
   setOrderServiceCharge,
   splitOrder,
   mergeOrders,
@@ -132,6 +134,10 @@ const ORDER_DETAIL_SKELETON_ITEMS: OrderItemRowData[] = [
     quantity: 2,
     unit_price: 65000,
     subtotal: 130000,
+    discount_amount: 0,
+    discount_type: null,
+    discount_value: null,
+    discount_note: null,
     status: "preparing",
     modifiers: [],
     sides: [],
@@ -145,6 +151,10 @@ const ORDER_DETAIL_SKELETON_ITEMS: OrderItemRowData[] = [
     quantity: 1,
     unit_price: 25000,
     subtotal: 25000,
+    discount_amount: 0,
+    discount_type: null,
+    discount_value: null,
+    discount_note: null,
     status: "pending",
     modifiers: [],
     sides: [],
@@ -158,6 +168,10 @@ const ORDER_DETAIL_SKELETON_ITEMS: OrderItemRowData[] = [
     quantity: 2,
     unit_price: 5000,
     subtotal: 10000,
+    discount_amount: 0,
+    discount_type: null,
+    discount_value: null,
+    discount_note: null,
     status: "ready",
     modifiers: [],
     sides: [],
@@ -351,6 +365,7 @@ export function OrderDetailSheet({
   const [showTransfer, setShowTransfer] = useState(false);
   const [transferTableId, setTransferTableId] = useState<string>("");
   const [showDiscount, setShowDiscount] = useState(false);
+  const [discountItemId, setDiscountItemId] = useState<number | null>(null);
   const [showServiceCharge, setShowServiceCharge] = useState(false);
   const [showSplit, setShowSplit] = useState(false);
   const [showMerge, setShowMerge] = useState(false);
@@ -365,6 +380,7 @@ export function OrderDetailSheet({
 
   useEffect(() => {
     setActionsItemId(null);
+    setDiscountItemId(null);
   }, [orderId]);
 
   const loadAsync = useCallback(async (): Promise<void> => {
@@ -748,6 +764,13 @@ export function OrderDetailSheet({
     onStartEditSent?.(target);
   };
 
+  const handleItemDiscountRequest = (itemId: number) => {
+    const target = data?.order_items.find((item) => item.id === itemId);
+    if (!target || target.status === "cancelled") return;
+    setActionsItemId(null);
+    setDiscountItemId(itemId);
+  };
+
   // From the per-item actions sheet → open ReduceQuantityDialog seeded with
   // current qty - 1 (most common case: khách bớt 1 phần). Reset reason so
   // any prior cancel-flow text doesn't leak into reduce.
@@ -868,6 +891,47 @@ export function OrderDetailSheet({
     });
   };
 
+  const handleApplyItemDiscount = (input: {
+    type: "pct" | "vnd";
+    value: number;
+    note: string;
+  }) => {
+    if (discountItemId === null) return;
+    const target = data?.order_items.find((item) => item.id === discountItemId);
+    if (!target) return;
+    startMutation(async () => {
+      const r = await applyOrderItemDiscount(branchId, {
+        orderItemId: target.id,
+        type: input.type,
+        value: input.value,
+        note: input.note,
+      });
+      if (r.success) {
+        notify.success("Đã áp chiết khấu món");
+        setDiscountItemId(null);
+        load();
+      } else {
+        notify.error(r.error ?? "Không thể áp chiết khấu món.");
+      }
+    });
+  };
+
+  const handleClearItemDiscount = (reason: string) => {
+    if (discountItemId === null) return;
+    const target = data?.order_items.find((item) => item.id === discountItemId);
+    if (!target) return;
+    startMutation(async () => {
+      const r = await clearOrderItemDiscount(branchId, target.id, reason);
+      if (r.success) {
+        notify.success("Đã bỏ chiết khấu món");
+        setDiscountItemId(null);
+        load();
+      } else {
+        notify.error(r.error ?? "Không thể bỏ chiết khấu món.");
+      }
+    });
+  };
+
   const handleSetServiceCharge = (input: { amount: number; note: string }) => {
     if (orderId === null) return;
     startMutation(async () => {
@@ -970,6 +1034,13 @@ export function OrderDetailSheet({
 
   const voidItem = data?.order_items.find((item) => item.id === voidItemId);
   const reduceItem = data?.order_items.find((item) => item.id === reduceItemId);
+  const discountItem = data?.order_items.find(
+    (item) => item.id === discountItemId,
+  );
+  const orderDiscountBase =
+    data == null
+      ? 0
+      : Math.max(0, data.subtotal - Number(data.item_discount_amount ?? 0));
   const activeItemCount =
     data?.order_items.filter((item) => item.status !== "cancelled").length ?? 0;
   // Tổng số PHẦN (đơn vị quantity) đang active trên đơn — drives the Tách
@@ -1196,6 +1267,8 @@ export function OrderDetailSheet({
                     subtotal={data.subtotal}
                     serviceCharge={data.service_charge}
                     discountAmount={data.discount_amount}
+                    orderDiscountAmount={data.order_discount_amount}
+                    itemDiscountAmount={data.item_discount_amount}
                     discountType={data.discount_type}
                     discountValue={data.discount_value}
                     discountNote={data.discount_note}
@@ -1332,7 +1405,7 @@ export function OrderDetailSheet({
                                     onClick={() => setShowDiscount(true)}
                                   >
                                     <IconCircleDollarSign />
-                                    {data.discount_amount > 0
+                                    {data.order_discount_amount > 0
                                       ? "Sửa chiết khấu"
                                       : "Chiết khấu"}
                                   </DropdownMenuItem>
@@ -1406,6 +1479,7 @@ export function OrderDetailSheet({
         onVoidRequest={handleVoidRequest}
         onReduceRequest={handleReduceRequest}
         onEditRequest={onStartEditSent ? handleEditRequest : undefined}
+        onDiscountRequest={handleItemDiscountRequest}
         onPriorityRequest={handleItemPriorityRequest}
       />
 
@@ -1463,17 +1537,44 @@ export function OrderDetailSheet({
         <DiscountSheet
           open={showDiscount}
           onOpenChange={setShowDiscount}
-          subtotal={data.subtotal}
+          subtotal={orderDiscountBase}
+          subtotalLabel={
+            data.item_discount_amount > 0 ? "Sau giảm món" : undefined
+          }
           serviceCharge={data.service_charge}
           current={{
             type: data.discount_type,
             value: data.discount_value,
             note: data.discount_note,
-            amount: data.discount_amount,
+            amount: data.order_discount_amount,
           }}
           isPending={isMutating}
           onSubmit={handleApplyDiscount}
           onClear={handleClearDiscount}
+        />
+      )}
+
+      {discountItem && (
+        <DiscountSheet
+          open={discountItemId !== null}
+          onOpenChange={(open) => {
+            if (!open) setDiscountItemId(null);
+          }}
+          title="Chiết khấu món"
+          subtotalLabel="Giá món"
+          totalLabel="Thành tiền mới"
+          clearLabel="Bỏ chiết khấu món"
+          subtotal={discountItem.subtotal}
+          serviceCharge={0}
+          current={{
+            type: discountItem.discount_type,
+            value: discountItem.discount_value,
+            note: discountItem.discount_note,
+            amount: discountItem.discount_amount,
+          }}
+          isPending={isMutating}
+          onSubmit={handleApplyItemDiscount}
+          onClear={handleClearItemDiscount}
         />
       )}
 
@@ -1513,7 +1614,7 @@ export function OrderDetailSheet({
           sourceTableId={data.table_id}
           sourceTableNumber={data.tables?.number ?? null}
           sourceHasPctDiscount={
-            data.discount_amount > 0 && data.discount_type === "pct"
+            data.order_discount_amount > 0 && data.discount_type === "pct"
           }
           isPending={isMutating}
           onSubmit={handleMerge}

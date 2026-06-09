@@ -359,6 +359,7 @@ export type ShiftCloseReportPayload = {
   total_item_quantity?: number;
   item_breakdown?: ShiftItemBreakdownLine[];
   total_revenue: number;
+  discount_total?: number;
   printed_at: string;
 };
 
@@ -1309,7 +1310,12 @@ const diffSign = (n: number): string => {
 };
 
 const renderShiftItemBreakdown = (p: ShiftCloseReportPayload): Uint8Array[] => {
-  const items = p.item_breakdown ?? [];
+  const items = [...(p.item_breakdown ?? [])].sort(
+    (a, b) =>
+      (b.revenue ?? 0) - (a.revenue ?? 0) ||
+      (b.qty ?? 0) - (a.qty ?? 0) ||
+      (a.name || "").localeCompare(b.name || ""),
+  );
   if (items.length === 0) return [];
 
   const totalQty =
@@ -1426,6 +1432,9 @@ export function renderShiftCloseReport(p: ShiftCloseReportPayload): Uint8Array {
   }
   if (p.cancelled_order_count > 0) {
     parts.push(pair("Đơn đã hủy", `${p.cancelled_order_count} đơn`));
+  }
+  if ((p.discount_total ?? 0) > 0) {
+    parts.push(pair("Chiết khấu", `-${fmtMoney(p.discount_total ?? 0)}`));
   }
   parts.push(...renderShiftItemBreakdown(p));
   parts.push(divider("="));

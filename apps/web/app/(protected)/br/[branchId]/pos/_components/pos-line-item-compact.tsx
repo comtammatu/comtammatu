@@ -9,6 +9,7 @@ interface PosLineItemCompactProps {
   options: string | null;
   modifiers?: readonly string[];
   sides?: readonly string[];
+  discount?: string | null;
   note: string | null;
   isPriority?: boolean;
   afterTitle?: ReactNode;
@@ -17,6 +18,7 @@ interface PosLineItemCompactProps {
   titleClassName?: string;
   totalClassName?: string;
   optionsClassName?: string;
+  discountClassName?: string;
   noteClassName?: string;
 }
 
@@ -29,6 +31,7 @@ function useLineChangeFeedback({
   options,
   modifiers,
   sides,
+  discount,
   note,
   isPriority,
 }: Pick<
@@ -39,6 +42,7 @@ function useLineChangeFeedback({
   | "options"
   | "modifiers"
   | "sides"
+  | "discount"
   | "note"
   | "isPriority"
 >): { tone: LineChangeTone; quantityDelta: number | null } {
@@ -51,10 +55,21 @@ function useLineChangeFeedback({
         options,
         modifiers,
         sides,
+        discount,
         note,
         isPriority,
       }),
-    [isPriority, modifiers, note, options, quantity, sides, title, total],
+    [
+      discount,
+      isPriority,
+      modifiers,
+      note,
+      options,
+      quantity,
+      sides,
+      title,
+      total,
+    ],
   );
   const previousRef = useRef<{ signature: string; quantity: number } | null>(
     null,
@@ -121,6 +136,7 @@ export function PosLineItemCompact({
   options,
   modifiers = [],
   sides = [],
+  discount,
   note,
   isPriority,
   afterTitle,
@@ -129,6 +145,7 @@ export function PosLineItemCompact({
   titleClassName,
   totalClassName,
   optionsClassName,
+  discountClassName,
   noteClassName,
 }: PosLineItemCompactProps) {
   const { tone, quantityDelta } = useLineChangeFeedback({
@@ -138,6 +155,7 @@ export function PosLineItemCompact({
     options,
     modifiers,
     sides,
+    discount,
     note,
     isPriority,
   });
@@ -206,6 +224,16 @@ export function PosLineItemCompact({
               )}
             >
               {options}
+            </p>
+          ) : null}
+          {discount ? (
+            <p
+              className={cn(
+                "min-w-0 break-words text-sm font-medium leading-snug text-success",
+                discountClassName,
+              )}
+            >
+              {discount}
             </p>
           ) : null}
           {note ? (

@@ -162,5 +162,16 @@ export async function getPosSessionReport(
     };
   }
 
-  return { success: true, data: validated.data };
+  return {
+    success: true,
+    data: {
+      ...validated.data,
+      top_items: [...validated.data.top_items].sort(
+        (a, b) =>
+          b.revenue - a.revenue ||
+          b.qty - a.qty ||
+          a.name.localeCompare(b.name),
+      ),
+    },
+  };
 }

@@ -11,6 +11,7 @@ import {
 } from "@comtammatu/ui/components/sheet";
 import {
   Check as IconCheck,
+  CircleDollarSign as IconCircleDollarSign,
   Flame as IconFlame,
   Minus as IconMinus,
   Pencil as IconPencil,
@@ -41,6 +42,7 @@ interface OrderItemActionsSheetProps {
    * và parent supply menu lookup. Optional vì caller cũ (employee waiter
    * portal) chưa cần đến. */
   onEditRequest?: (itemId: number) => void;
+  onDiscountRequest?: (itemId: number) => void;
   onPriorityRequest?: (itemId: number, next: boolean) => void;
 }
 
@@ -53,6 +55,7 @@ export function OrderItemActionsSheet({
   onVoidRequest,
   onReduceRequest,
   onEditRequest,
+  onDiscountRequest,
   onPriorityRequest,
 }: OrderItemActionsSheetProps) {
   const cancelled = item?.status === "cancelled";
@@ -67,6 +70,8 @@ export function OrderItemActionsSheet({
   // nothing to reduce — force the cashier into "Hủy món" so KDS card flips
   // cancelled instead of leaving a zombie qty=0 row.
   const canReduce = canManage && actionable && (item?.quantity ?? 0) >= 2;
+  const canDiscount =
+    canManage && actionable && item != null && onDiscountRequest != null;
   // Edit gates strictly on status='pending' — mirror server RPC. Khi chef
   // đã chuyển preparing/ready, đổi variant/topping = phí thực phẩm; cashier
   // phải dùng Hủy + Thêm. menu_item_id phải có để parent lookup MenuItem.
@@ -91,6 +96,11 @@ export function OrderItemActionsSheet({
         isPriority: false,
       };
   const statusLabel = item ? (STATUS_LABELS[item.status] ?? item.status) : "";
+  const discountAmount = Math.max(0, Number(item?.discount_amount ?? 0));
+  const netSubtotal =
+    item == null ? 0 : Math.max(0, item.subtotal - discountAmount);
+  const discountLine =
+    discountAmount > 0 ? `Giảm món: -${formatVND(discountAmount)}` : null;
 
   return (
     <Sheet
@@ -115,10 +125,11 @@ export function OrderItemActionsSheet({
             <PosLineItemCompact
               quantity={item.quantity}
               title={displayName}
-              total={formatVND(item.subtotal)}
+              total={formatVND(netSubtotal)}
               options={summary.options}
               modifiers={summary.modifiers}
               sides={summary.sides}
+              discount={discountLine}
               note={summary.note}
               isPriority={summary.isPriority}
               quantityClassName={cancelled ? "opacity-50" : undefined}
@@ -167,6 +178,21 @@ export function OrderItemActionsSheet({
             >
               <IconPencil data-icon="inline-start" />
               Sửa món
+            </Button>
+          )}
+          {canDiscount && (
+            <Button
+              type="button"
+              variant="outline"
+              size="touch"
+              className="w-full"
+              disabled={isPending}
+              onClick={() => {
+                if (item && onDiscountRequest) onDiscountRequest(item.id);
+              }}
+            >
+              <IconCircleDollarSign data-icon="inline-start" />
+              {discountAmount > 0 ? "Sửa chiết khấu món" : "Chiết khấu món"}
             </Button>
           )}
           {canPrioritize && (
@@ -220,6 +246,7 @@ export function OrderItemActionsSheet({
             !canVoid &&
             !canReduce &&
             !canEdit &&
+            !canDiscount &&
             !canPrioritize && (
               <p className="py-4 text-center text-sm text-muted-foreground">
                 Không có thao tác khả dụng cho món này.

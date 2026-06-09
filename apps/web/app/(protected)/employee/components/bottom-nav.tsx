@@ -4,10 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   CalendarDays as IconCalendarEvent,
-  Clock as IconClock,
-  CreditCard as IconCreditCard,
   Home as IconHome,
   ListChecks as IconListChecks,
+  UserCircle as IconUserCircle,
 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { messages } from "@lib/messages";
@@ -17,15 +16,9 @@ const copy = messages.employee.nav;
 const NAV_ITEMS = [
   { href: "/employee", label: copy.today, icon: IconHome, exact: true },
   {
-    href: "/employee/schedule",
-    label: copy.schedule,
-    icon: IconCalendarEvent,
-    exact: false,
-  },
-  {
-    href: "/employee/clock",
-    label: copy.clockShort,
-    icon: IconClock,
+    href: "/employee/tasks",
+    label: copy.tasks,
+    icon: IconListChecks,
     exact: false,
   },
   {
@@ -35,9 +28,15 @@ const NAV_ITEMS = [
     exact: false,
   },
   {
-    href: "/employee/payslip",
-    label: copy.payslipShort,
-    icon: IconCreditCard,
+    href: "/employee/schedule",
+    label: copy.schedule,
+    icon: IconCalendarEvent,
+    exact: false,
+  },
+  {
+    href: "/employee/profile",
+    label: copy.profileShort,
+    icon: IconUserCircle,
     exact: false,
   },
 ] as const;

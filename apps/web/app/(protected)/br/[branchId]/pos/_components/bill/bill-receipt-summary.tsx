@@ -31,6 +31,14 @@ function formatDate(dateStr: string) {
 export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
   const isPaid =
     order.payment_status === "paid" || order.status === "completed";
+  const itemDiscountAmount = Math.max(
+    0,
+    Number(order.item_discount_amount ?? 0),
+  );
+  const orderDiscountAmount = Math.max(
+    0,
+    Number(order.order_discount_amount ?? order.discount_amount ?? 0),
+  );
   const paymentLabel =
     order.status === "cancelled"
       ? messages.pos.receipt.paymentCancelled
@@ -231,18 +239,26 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
             <span>{formatVND(order.service_charge)}</span>
           </div>
         )}
-        {order.discount_amount > 0 && (
+        {itemDiscountAmount > 0 && (
+          <div className="flex justify-between">
+            <span>Chiết khấu món</span>
+            <span>-{formatVND(itemDiscountAmount)}</span>
+          </div>
+        )}
+        {orderDiscountAmount > 0 && (
           <div className="flex justify-between">
             <span>
-              {messages.pos.receipt.discount}
+              {itemDiscountAmount > 0
+                ? "Chiết khấu đơn"
+                : messages.pos.receipt.discount}
               {order.discount_type === "pct" && order.discount_value != null
                 ? ` (${order.discount_value}%)`
                 : ""}
             </span>
-            <span>-{formatVND(order.discount_amount)}</span>
+            <span>-{formatVND(orderDiscountAmount)}</span>
           </div>
         )}
-        {order.discount_amount > 0 && order.discount_note && (
+        {orderDiscountAmount > 0 && order.discount_note && (
           <div className="text-xs italic text-muted-foreground">
             {messages.pos.receipt.discountReason} {order.discount_note}
           </div>

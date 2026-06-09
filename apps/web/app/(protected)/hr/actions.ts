@@ -267,8 +267,8 @@ const checkOutSchema = z.object({
 
 export const checkOut = withAction(
   { roles: SHIFT_ROLES, schema: checkOutSchema, requireBranchScope: true },
-  async (data, { supabase, claims }) => {
-    let query = supabase
+  async (data, { claims }) => {
+    let query = createServiceClient()
       .from("attendance_records")
       .update({ check_out: new Date().toISOString() })
       .eq("id", data.attendanceId)
@@ -385,8 +385,8 @@ const updateAttendanceSchema = z.object({
 
 export const updateAttendanceStatus = withAction(
   { roles: SHIFT_ROLES, schema: updateAttendanceSchema, requireBranchScope: true },
-  async (data, { supabase, claims }) => {
-    let query = supabase
+  async (data, { claims }) => {
+    let query = createServiceClient()
       .from("attendance_records")
       .update({
         status: data.status,

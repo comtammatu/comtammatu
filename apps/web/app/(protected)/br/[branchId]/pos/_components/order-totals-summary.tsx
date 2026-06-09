@@ -9,6 +9,8 @@ export interface OrderTotalsSummaryProps {
   subtotal: number;
   serviceCharge: number;
   discountAmount: number;
+  orderDiscountAmount?: number;
+  itemDiscountAmount?: number;
   discountType: "pct" | "vnd" | null;
   discountValue: number | null;
   discountNote: string | null;
@@ -31,6 +33,8 @@ export function OrderTotalsSummary({
   subtotal,
   serviceCharge,
   discountAmount,
+  orderDiscountAmount,
+  itemDiscountAmount,
   discountType,
   discountValue,
   discountNote,
@@ -47,6 +51,21 @@ export function OrderTotalsSummary({
     "flex justify-between gap-2 font-bold tabular-nums",
     isCompact ? "text-sm" : "text-base",
   );
+  const hasSplitDiscountSource =
+    orderDiscountAmount !== undefined || itemDiscountAmount !== undefined;
+  const itemDiscount = Math.max(0, Number(itemDiscountAmount ?? 0));
+  const orderDiscount = Math.max(
+    0,
+    Number(
+      orderDiscountAmount ??
+        (hasSplitDiscountSource ? discountAmount - itemDiscount : discountAmount),
+    ),
+  );
+  const fallbackDiscount = Math.max(0, Number(discountAmount ?? 0));
+  const visibleItemDiscount = hasSplitDiscountSource ? itemDiscount : 0;
+  const visibleOrderDiscount = hasSplitDiscountSource
+    ? orderDiscount
+    : fallbackDiscount;
 
   return (
     <div className={cn("flex flex-col gap-1", className)}>
@@ -62,16 +81,27 @@ export function OrderTotalsSummary({
         </div>
       )}
 
-      {discountAmount > 0 && (
+      {visibleItemDiscount > 0 && (
+        <div className={cn(lineClass, "text-success")}>
+          <span>Chiết khấu món</span>
+          <span className="tabular-nums">
+            -{formatVND(visibleItemDiscount)}
+          </span>
+        </div>
+      )}
+
+      {visibleOrderDiscount > 0 && (
         <>
           <div className={cn(lineClass, "text-success")}>
             <span>
-              Chiết khấu
+              {visibleItemDiscount > 0 ? "Chiết khấu đơn" : "Chiết khấu"}
               {discountType === "pct" && discountValue != null
                 ? ` (${discountValue}%)`
                 : ""}
             </span>
-            <span className="tabular-nums">-{formatVND(discountAmount)}</span>
+            <span className="tabular-nums">
+              -{formatVND(visibleOrderDiscount)}
+            </span>
           </div>
           {discountNote && (
             <div className="text-xs italic text-muted-foreground">

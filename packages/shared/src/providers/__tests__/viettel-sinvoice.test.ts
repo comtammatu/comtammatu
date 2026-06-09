@@ -8,12 +8,18 @@ import {
   ViettelSinvoiceProvider,
 } from "../impl/viettel-sinvoice";
 
-const item = (name: string, qty: number, amount: number): InvoiceLineItem => ({
+const item = (
+  name: string,
+  qty: number,
+  amount: number,
+  discountAmount = 0,
+): InvoiceLineItem => ({
   name,
   unit: "Phần",
   quantity: qty,
   unitPrice: qty > 0 ? amount / qty : 0,
   amount,
+  ...(discountAmount > 0 ? { discountAmount } : {}),
 });
 
 /**
@@ -41,7 +47,7 @@ function assertValidators(
     );
     assert.ok(
       diff44 < 1,
-      `validator 44 failed for "${li.itemName}": expected=${(li.itemTotalAmountWithoutTax * vatRate) / 100} actual=${li.taxAmount} diff=${diff44}`,
+      `validator 44 failed for "${li.itemName}": expected=${((li.itemTotalAmountWithoutTax - li.itemDiscount) * vatRate) / 100} actual=${li.taxAmount} diff=${diff44}`,
     );
   }
   // 87: sumOfTotalLineAmountWithoutTax == Σ items.itemTotalAmountWithoutTax
@@ -54,6 +60,15 @@ function assertValidators(
     sumNetCheck,
     `validator 87: sumLineNet mismatch`,
   );
+  const sumDiscountCheck = result.itemInfo.reduce(
+    (s, l) => s + l.itemDiscount,
+    0,
+  );
+  assert.equal(
+    result.sumLineDiscount,
+    sumDiscountCheck,
+    `sumLineDiscount mismatch`,
+  );
   // 49: totalTaxAmount == Σ items.taxAmount
   const sumTaxCheck = result.itemInfo.reduce((s, l) => s + l.taxAmount, 0);
   assert.equal(
@@ -62,7 +77,10 @@ function assertValidators(
     `validator 49: sumLineTax mismatch`,
   );
   // totalGross consistency
-  assert.equal(result.totalGross, result.sumLineNet + result.sumLineTax);
+  assert.equal(
+    result.totalGross,
+    result.sumLineNet - result.sumLineDiscount + result.sumLineTax,
+  );
 }
 
 test("validator 43 regression: qty=7 lineGross=100 vatRate=8 (old impl rejected)", () => {
@@ -151,6 +169,53 @@ test("template 2 direct-sales mode keeps VAT-inclusive menu prices", () => {
       },
     ],
   );
+});
+
+test("direct-sales mode subtracts allocated line discounts from Sinvoice totals", () => {
+  const result = buildSinvoiceItemInfo(
+    [item("Cơm tấm khuyến mãi", 1, 100_000, 10_000)],
+    8,
+    true,
+    "direct_sales_gross",
+  );
+
+  assert.equal(result.sumLineNet, 100_000);
+  assert.equal(result.sumLineDiscount, 10_000);
+  assert.equal(result.sumLineTax, 0);
+  assert.equal(result.totalGross, 90_000);
+
+  const [line] = result.itemInfo;
+  assert.ok(line);
+  assert.equal(line.itemTotalAmountWithoutTax, 100_000);
+  assert.equal(line.itemTotalAmountAfterDiscount, 90_000);
+  assert.equal(line.itemTotalAmountWithTax, 90_000);
+  assert.equal(line.discount, 10_000);
+  assert.equal(line.itemDiscount, 10_000);
+  assert.equal(line.taxPercentage, -2);
+  assert.equal(line.taxAmount, 0);
+});
+
+test("VAT mode converts gross line discounts to net itemDiscount", () => {
+  const result = buildSinvoiceItemInfo(
+    [item("Cơm tấm VAT", 1, 108_000, 10_800)],
+    8,
+    true,
+  );
+
+  assertValidators(result, 8);
+  assert.equal(result.sumLineNet, 100_000);
+  assert.equal(result.sumLineDiscount, 10_000);
+  assert.equal(result.sumLineTax, 7_200);
+  assert.equal(result.totalGross, 97_200);
+
+  const [line] = result.itemInfo;
+  assert.ok(line);
+  assert.equal(line.itemTotalAmountWithoutTax, 100_000);
+  assert.equal(line.itemTotalAmountAfterDiscount, 90_000);
+  assert.equal(line.itemTotalAmountWithTax, 97_200);
+  assert.equal(line.discount, 10_000);
+  assert.equal(line.itemDiscount, 10_000);
+  assert.equal(line.taxAmount, 7_200);
 });
 
 test("validators pass for awkward qty divisions across multiple items", () => {
@@ -425,6 +490,104 @@ test("createInvoice: sends buyerNotGetInvoice flag for no-buyer-info sales", asy
     assert.equal(body.summarizeInfo?.totalAmountWithoutTax, 100_000);
     assert.equal(body.summarizeInfo?.totalTaxAmount, 0);
     assert.equal(body.summarizeInfo?.totalAmountWithTax, 100_000);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("createInvoice: sends direct-sales line discount and discounted summary", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{
+    input: Parameters<typeof fetch>[0];
+    init: NonNullable<Parameters<typeof fetch>[1]>;
+  }> = [];
+
+  globalThis.fetch = (async (input, init) => {
+    const requestInit = init ?? {};
+    calls.push({ input, init: requestInit });
+
+    if (String(input).endsWith("/auth/login")) {
+      return new Response(
+        JSON.stringify({ access_token: "test-token", expires_in: 3600 }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    return new Response(
+      JSON.stringify({
+        result: {
+          invoiceNo: "SBOX-DISCOUNT",
+          supplierTaxCode: "0100109106-509",
+        },
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  }) as typeof fetch;
+
+  try {
+    const provider = new ViettelSinvoiceProvider({
+      username: "0100109106-509",
+      password: "test-password",
+      taxCode: "0100109106-509",
+      templateCode: "2/001",
+      invoiceSeries: "C22TYY",
+      baseUrl: "https://example.test",
+    });
+
+    const result = await provider.createInvoice({
+      orderId: 22,
+      orderNumber: "SBOX-DISCOUNT",
+      sellerName: "Com Tam Ma Tu",
+      sellerTaxCode: "0100109106-509",
+      sellerAddress: "Sandbox",
+      buyerName: "Người mua không lấy hóa đơn",
+      buyerNotGetInvoice: true,
+      items: [item("Com tam discount", 1, 100_000, 10_000)],
+      subtotal: 83_333,
+      vatRate: 8,
+      vatAmount: 6_667,
+      totalAmount: 90_000,
+    });
+
+    assert.equal(result.status, "submitted");
+
+    const createCall = calls.find((call) =>
+      String(call.input).includes("/InvoiceAPI/InvoiceWS/createInvoice/"),
+    );
+    assert.ok(createCall, "expected createInvoice endpoint to be called");
+
+    const body = JSON.parse(String(createCall.init.body)) as {
+      itemInfo?: Array<{
+        itemTotalAmountWithoutTax?: number;
+        itemTotalAmountAfterDiscount?: number;
+        itemTotalAmountWithTax?: number;
+        discount?: number;
+        itemDiscount?: number;
+      }>;
+      summarizeInfo?: {
+        totalAmountAfterDiscount?: number;
+        totalAmountWithoutTax?: number;
+        totalTaxAmount?: number;
+        totalAmountWithTax?: number;
+        discountAmount?: number;
+      };
+      taxBreakdowns?: Array<{ taxableAmount?: number; taxAmount?: number }>;
+    };
+
+    const [line] = body.itemInfo ?? [];
+    assert.ok(line);
+    assert.equal(line.itemTotalAmountWithoutTax, 100_000);
+    assert.equal(line.itemTotalAmountAfterDiscount, 90_000);
+    assert.equal(line.itemTotalAmountWithTax, 90_000);
+    assert.equal(line.discount, 10_000);
+    assert.equal(line.itemDiscount, 10_000);
+    assert.equal(body.summarizeInfo?.discountAmount, 10_000);
+    assert.equal(body.summarizeInfo?.totalAmountAfterDiscount, 90_000);
+    assert.equal(body.summarizeInfo?.totalAmountWithoutTax, 90_000);
+    assert.equal(body.summarizeInfo?.totalTaxAmount, 0);
+    assert.equal(body.summarizeInfo?.totalAmountWithTax, 90_000);
+    assert.equal(body.taxBreakdowns?.[0]?.taxableAmount, 90_000);
+    assert.equal(body.taxBreakdowns?.[0]?.taxAmount, 0);
   } finally {
     globalThis.fetch = originalFetch;
   }

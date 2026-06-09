@@ -334,6 +334,7 @@ const baseShiftClose = {
     { name: "Them trung", source: "modifier", qty: 12, revenue: 120000 },
   ],
   total_revenue: 2500000,
+  discount_total: 125000,
   printed_at: "2026-05-05T16:31:00",
 } satisfies PrintPayload;
 
@@ -750,6 +751,16 @@ async function main() {
     "legacy text shift close main item row",
     legacyTextShiftClose,
     "Com tam suon bi cha           18        990.000",
+  );
+  assertTextIncludes(
+    "legacy text shift close discount",
+    legacyTextShiftClose,
+    "Chiết khấu",
+  );
+  assertTextIncludes(
+    "legacy text shift close discount amount",
+    legacyTextShiftClose,
+    "-125.000",
   );
   assertTextIncludes(
     "legacy text shift close side item row",

@@ -1,20 +1,22 @@
 "use client";
 
-import { useCallback, useRef, useState, useTransition } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import {
   Camera as IconCamera,
   CircleCheck as IconCircleCheck,
   CircleX as IconCircleX,
   Clock as IconClock,
   Keyboard as IconKeyboard,
-  MapPin as IconMapPin,
+  ListChecks as IconListChecks,
+  QrCode as IconQrCode,
 } from "lucide-react";
 import {
   Alert,
   AlertDescription,
   AlertTitle,
 } from "@comtammatu/ui/components/alert";
-import type { BadgeProps } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Empty,
@@ -25,97 +27,25 @@ import {
 } from "@comtammatu/ui/components/empty";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@comtammatu/ui/components/select";
 import { Spinner } from "@comtammatu/ui/components/spinner";
-import { ACTIONS_VI, BRANCH_VI } from "@comtammatu/shared/messages";
+import { ACTIONS_VI } from "@comtammatu/shared/messages";
 import { formatVNTime } from "@comtammatu/shared/time";
 import { EmployeeDetailList, EmployeePanel } from "../components/employee-page";
-import { clockIn, clockOut } from "./actions";
-
-interface Branch {
-  id: number;
-  name: string;
-  lat: number;
-  lng: number;
-}
-
-interface InitialStatus {
-  clockedIn: boolean;
-  clockedOut: boolean;
-  checkInTime: string | null;
-  checkOutTime: string | null;
-  branchName: string | null;
-}
-
-type ClockState =
-  | "idle"
-  | "checking_gps"
-  | "gps_passed"
-  | "scanning_code"
-  | "entering_code"
-  | "verifying"
-  | "success"
-  | "gps_failed"
-  | "code_invalid"
-  | "error";
+import type { TodayWorkState } from "../_lib/today-work-state";
+import { clockInWithPhoto, clockOutWithCode } from "./actions";
 
 interface ClockClientProps {
-  initialStatus: InitialStatus;
-  branches: Branch[];
-  defaultBranchId: number | null;
+  state: TodayWorkState;
 }
 
-const STATE_LABELS: Record<ClockState, string> = {
-  idle: "Sẵn sàng",
-  checking_gps: "Đang kiểm tra GPS",
-  gps_passed: "GPS hợp lệ",
-  scanning_code: "Đang quét QR",
-  entering_code: "Nhập mã",
-  verifying: "Đang xác minh",
-  success: "Thành công",
-  gps_failed: "GPS chưa hợp lệ",
-  code_invalid: "Mã chưa đúng",
-  error: "Có lỗi",
-};
+type PhotoState = "idle" | "ready" | "submitting" | "success" | "error";
+type CheckoutState = "idle" | "manual" | "scanning" | "submitting" | "success" | "error";
 
-const STATE_TONES: Record<ClockState, BadgeProps["variant"]> = {
-  idle: "secondary",
-  checking_gps: "warning",
-  gps_passed: "success",
-  scanning_code: "info",
-  entering_code: "info",
-  verifying: "warning",
-  success: "success",
-  gps_failed: "destructive",
-  code_invalid: "destructive",
-  error: "destructive",
-};
+const MAX_CLIENT_PHOTO_EDGE = 1280;
+const PHOTO_QUALITY = 0.82;
 
-function haversineMeters(
-  lat1: number,
-  lng1: number,
-  lat2: number,
-  lng2: number,
-): number {
-  const R = 6_371_000;
-  const toRad = (deg: number) => (deg * Math.PI) / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLng = toRad(lng2 - lng1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-function formatTime(iso: string): string {
-  return formatVNTime(iso);
+function formatTime(iso: string | null): string {
+  return iso ? formatVNTime(iso) : "—";
 }
 
 function ErrorAlert({ message }: { message: string }) {
@@ -128,126 +58,138 @@ function ErrorAlert({ message }: { message: string }) {
   );
 }
 
-export function ClockClient({
-  initialStatus,
-  branches,
-  defaultBranchId,
-}: ClockClientProps) {
-  const [state, setState] = useState<ClockState>("idle");
-  const [status, setStatus] = useState(initialStatus);
-  const [error, setError] = useState<string | null>(null);
-  const [gpsDistance, setGpsDistance] = useState<number | null>(null);
-  const [userCoords, setUserCoords] = useState<{
-    lat: number;
-    lng: number;
-  } | null>(null);
+async function loadImage(file: File): Promise<HTMLImageElement> {
+  const url = URL.createObjectURL(file);
+  try {
+    const image = new Image();
+    image.decoding = "async";
+    image.src = url;
+    await image.decode();
+    return image;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+async function compressPhoto(file: File): Promise<File> {
+  try {
+    const image = await loadImage(file);
+    const scale = Math.min(
+      1,
+      MAX_CLIENT_PHOTO_EDGE / Math.max(image.naturalWidth, image.naturalHeight),
+    );
+    const width = Math.max(1, Math.round(image.naturalWidth * scale));
+    const height = Math.max(1, Math.round(image.naturalHeight * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+    ctx.drawImage(image, 0, 0, width, height);
+
+    const blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob(resolve, "image/webp", PHOTO_QUALITY);
+    });
+    if (!blob) return file;
+    return new File([blob], "attendance.webp", { type: "image/webp" });
+  } catch {
+    return file;
+  }
+}
+
+export function ClockClient({ state }: ClockClientProps) {
+  const router = useRouter();
+  const [photoState, setPhotoState] = useState<PhotoState>("idle");
+  const [checkoutState, setCheckoutState] = useState<CheckoutState>("idle");
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [manualCode, setManualCode] = useState("");
-  const [selectedBranchId, setSelectedBranchId] = useState<number | null>(
-    () => {
-      if (
-        defaultBranchId != null &&
-        branches.some((branch) => branch.id === defaultBranchId)
-      ) {
-        return defaultBranchId;
-      }
-      return branches[0]?.id ?? null;
-    },
-  );
+  const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const photoInputRef = useRef<HTMLInputElement>(null);
   const scannerRef = useRef<HTMLDivElement>(null);
   const html5QrRef = useRef<unknown>(null);
 
-  const selectedBranch = branches.find(
-    (branch) => branch.id === selectedBranchId,
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  const stopQrScan = useCallback((resetState = true) => {
+    const scanner = html5QrRef.current as { stop: () => Promise<void> } | null;
+    if (scanner) {
+      void scanner.stop().catch(() => {});
+      html5QrRef.current = null;
+    }
+    if (resetState) setCheckoutState("idle");
+  }, []);
+
+  useEffect(() => () => stopQrScan(false), [stopQrScan]);
+
+  const handlePhotoSelected = useCallback(
+    (file: File | undefined) => {
+      if (!file) return;
+      setError(null);
+      setPhotoState("idle");
+      startTransition(async () => {
+        const compressed = await compressPhoto(file);
+        setPhoto(compressed);
+        setPhotoState("ready");
+        if (previewUrl) URL.revokeObjectURL(previewUrl);
+        setPreviewUrl(URL.createObjectURL(compressed));
+      });
+    },
+    [previewUrl],
   );
 
-  const checkGps = useCallback(() => {
-    if (!selectedBranch) {
-      setError("Vui lòng chọn chi nhánh");
+  const submitClockIn = useCallback(() => {
+    if (!photo) {
+      setError("Cần chụp hoặc chọn ảnh chấm công.");
       return;
     }
 
-    setState("checking_gps");
+    setPhotoState("submitting");
     setError(null);
+    startTransition(async () => {
+      const formData = new FormData();
+      formData.set("photo", photo);
+      const result = await clockInWithPhoto(null, formData);
 
-    if (!navigator.geolocation) {
-      setState("gps_failed");
-      setError("Trình duyệt không hỗ trợ GPS");
-      return;
-    }
+      if (result.success) {
+        setPhotoState("success");
+        if (navigator.vibrate) navigator.vibrate(150);
+        router.push("/employee/tasks");
+        router.refresh();
+      } else {
+        setPhotoState("error");
+        setError(result.error ?? "Chấm công vào thất bại.");
+      }
+    });
+  }, [photo, router]);
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        setUserCoords({ lat: latitude, lng: longitude });
-
-        const distance = haversineMeters(
-          latitude,
-          longitude,
-          selectedBranch.lat,
-          selectedBranch.lng,
-        );
-        setGpsDistance(Math.round(distance));
-
-        if (distance <= 200) {
-          setState("gps_passed");
-        } else {
-          setState("gps_failed");
-          setError(
-            `Bạn đang cách chi nhánh ${Math.round(distance)}m. Phải ở trong 200m.`,
-          );
-        }
-      },
-      (gpsError) => {
-        setState("gps_failed");
-        if (gpsError.code === 1) {
-          setError("Bạn đã từ chối quyền GPS. Vui lòng bật GPS và thử lại.");
-        } else if (gpsError.code === 2) {
-          setError("Không xác định được vị trí. Vui lòng thử lại.");
-        } else {
-          setError("GPS quá chậm. Vui lòng thử lại.");
-        }
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
-    );
-  }, [selectedBranch]);
-
-  const submitClockIn = useCallback(
+  const submitCheckout = useCallback(
     (code: string) => {
-      if (!selectedBranchId || !userCoords) return;
-
-      setState("verifying");
+      setCheckoutState("submitting");
       setError(null);
-
       startTransition(async () => {
-        const result = await clockIn({
-          branchId: selectedBranchId,
-          lat: userCoords.lat,
-          lng: userCoords.lng,
-          code,
-        });
-
-        if (result.success && result.data) {
-          setState("success");
-          setStatus({
-            clockedIn: true,
-            clockedOut: false,
-            checkInTime: result.data.checkInTime,
-            checkOutTime: null,
-            branchName: selectedBranch?.name ?? null,
-          });
-          if (navigator.vibrate) navigator.vibrate(200);
+        const result = await clockOutWithCode({ code });
+        if (result.success) {
+          setCheckoutState("success");
+          if (navigator.vibrate) navigator.vibrate(150);
+          router.push("/employee");
+          router.refresh();
         } else {
-          setState("code_invalid");
-          setError(result.error ?? "Chấm công thất bại");
+          setCheckoutState("error");
+          setError(result.error ?? "Kết ca thất bại.");
         }
       });
     },
-    [selectedBranchId, userCoords, selectedBranch],
+    [router],
   );
 
   const startQrScan = useCallback(async () => {
-    setState("scanning_code");
+    setCheckoutState("scanning");
     setError(null);
 
     try {
@@ -260,124 +202,24 @@ export function ClockClient({
 
       await scanner.start(
         { facingMode: "environment" },
-        { fps: 10, qrbox: { width: 250, height: 250 } },
+        { fps: 10, qrbox: { width: 240, height: 240 } },
         (decodedText: string) => {
           const code = decodedText.trim().slice(0, 6);
           if (/^[0-9a-f]{6}$/i.test(code)) {
             void scanner.stop().catch(() => {});
             html5QrRef.current = null;
-            submitClockIn(code);
+            submitCheckout(code);
           }
         },
         () => {},
       );
     } catch {
-      setState("gps_passed");
-      setError("Không thể mở camera. Vui lòng nhập mã thủ công.");
+      setCheckoutState("manual");
+      setError("Không thể mở camera quét mã. Nhập mã kết ca thủ công.");
     }
-  }, [submitClockIn]);
+  }, [submitCheckout]);
 
-  const stopQrScan = useCallback(() => {
-    const scanner = html5QrRef.current as { stop: () => Promise<void> } | null;
-    if (scanner) {
-      void scanner.stop().catch(() => {});
-      html5QrRef.current = null;
-    }
-    setState("gps_passed");
-  }, []);
-
-  const handleClockOut = useCallback(() => {
-    setError(null);
-    startTransition(async () => {
-      const result = await clockOut();
-      if (result.success && result.data) {
-        setStatus((prev) => ({
-          ...prev,
-          clockedIn: false,
-          clockedOut: true,
-          checkOutTime: result.data?.checkOutTime ?? null,
-        }));
-        if (navigator.vibrate) navigator.vibrate(200);
-      } else {
-        setError(result.error ?? "Chấm công ra thất bại");
-      }
-    });
-  }, []);
-
-  if (status.clockedOut) {
-    return (
-      <EmployeePanel
-        icon={IconCircleCheck}
-        title="Đã hoàn thành chấm công"
-        description="Hôm nay bạn đã có đủ giờ vào và giờ ra."
-        tone="success"
-        badge={{ children: "Hoàn thành", variant: "success" }}
-      >
-        <EmployeeDetailList
-          rows={[
-            {
-              label: BRANCH_VI.long,
-              value: status.branchName ?? "Chưa ghi nhận",
-              muted: !status.branchName,
-            },
-            {
-              label: "Giờ vào",
-              value: status.checkInTime ? formatTime(status.checkInTime) : "—",
-            },
-            {
-              label: "Giờ ra",
-              value: status.checkOutTime
-                ? formatTime(status.checkOutTime)
-                : "—",
-            },
-          ]}
-        />
-      </EmployeePanel>
-    );
-  }
-
-  if (status.clockedIn) {
-    return (
-      <EmployeePanel
-        icon={IconClock}
-        title="Đang làm việc"
-        description={
-          status.branchName ?? "Chi nhánh đã ghi nhận chấm công vào."
-        }
-        tone="info"
-        badge={{ children: "Đang mở", variant: "info" }}
-      >
-        <EmployeeDetailList
-          rows={[
-            {
-              label: "Giờ vào",
-              value: status.checkInTime ? formatTime(status.checkInTime) : "—",
-            },
-            { label: "Giờ ra", value: "—", muted: true },
-          ]}
-        />
-        <div className="flex">
-          <Button
-            size="touch"
-            variant="destructive"
-            className="w-full sm:w-fit"
-            onClick={handleClockOut}
-            disabled={isPending}
-          >
-            {isPending ? (
-              <Spinner data-icon="inline-start" />
-            ) : (
-              <IconClock data-icon="inline-start" />
-            )}
-            Chấm công ra
-          </Button>
-        </div>
-        {error ? <ErrorAlert message={error} /> : null}
-      </EmployeePanel>
-    );
-  }
-
-  if (branches.length === 0) {
+  if (state.status === "missing_branch") {
     return (
       <Empty>
         <EmptyMedia variant="icon">
@@ -386,182 +228,261 @@ export function ClockClient({
         <EmptyHeader>
           <EmptyTitle>Chưa thể chấm công</EmptyTitle>
           <EmptyDescription>
-            Chi nhánh chưa được thiết lập tọa độ GPS. Liên hệ quản lý để cấu
-            hình vị trí chi nhánh trong mục Thiết lập.
+            Tài khoản chưa được gắn chi nhánh. Liên hệ quản lý để cập nhật hồ
+            sơ.
           </EmptyDescription>
         </EmptyHeader>
       </Empty>
     );
   }
 
-  return (
-    <EmployeePanel
-      icon={IconMapPin}
-      title="Chấm công vào"
-      description="Kiểm tra GPS trước, sau đó quét QR hoặc nhập mã chi nhánh."
-      tone="info"
-      badge={{ children: STATE_LABELS[state], variant: STATE_TONES[state] }}
-    >
-      {branches.length > 1 &&
-      state !== "scanning_code" &&
-      state !== "verifying" &&
-      state !== "success" ? (
-        <div className="flex flex-col gap-2">
-          <Label>{BRANCH_VI.long}</Label>
-          <Select
-            value={selectedBranchId?.toString() ?? ""}
-            onValueChange={(value) => {
-              setSelectedBranchId(Number(value));
-              setState("idle");
-              setGpsDistance(null);
-              setError(null);
-            }}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder={BRANCH_VI.select} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                {branches.map((branch) => (
-                  <SelectItem key={branch.id} value={branch.id.toString()}>
-                    {branch.name}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-        </div>
-      ) : null}
+  if (state.status === "done") {
+    return (
+      <EmployeePanel
+        icon={IconCircleCheck}
+        title="Đã hoàn thành"
+        description="Hôm nay đã có đủ giờ vào và giờ ra."
+        tone="success"
+        badge={{ children: "Hoàn thành", variant: "success" }}
+      >
+        <EmployeeDetailList
+          rows={[
+            {
+              label: "Chi nhánh",
+              value: state.branchName ?? "Chưa ghi nhận",
+              muted: !state.branchName,
+            },
+            {
+              label: "Giờ vào",
+              value: formatTime(state.attendance?.checkIn ?? null),
+            },
+            {
+              label: "Giờ ra",
+              value: formatTime(state.attendance?.checkOut ?? null),
+            },
+          ]}
+        />
+      </EmployeePanel>
+    );
+  }
 
-      <EmployeeDetailList
-        rows={[
-          {
-            label: BRANCH_VI.long,
-            value: selectedBranch?.name ?? "Chưa chọn",
-            muted: !selectedBranch,
-          },
-          {
-            label: "Khoảng cách GPS",
-            value: gpsDistance == null ? "Chưa kiểm tra" : `${gpsDistance}m`,
-            muted: gpsDistance == null,
-          },
-        ]}
-      />
+  if (state.status === "working") {
+    return (
+      <EmployeePanel
+        icon={IconListChecks}
+        title="Việc trong ca"
+        description="Hoàn thành checklist trước khi kết ca."
+        tone="info"
+        badge={{
+          children: `${state.checklist.done}/${state.checklist.total} xong`,
+          variant: "info",
+        }}
+      >
+        <EmployeeDetailList
+          rows={[
+            {
+              label: "Chi nhánh",
+              value: state.branchName ?? "Chưa ghi nhận",
+              muted: !state.branchName,
+            },
+            {
+              label: "Giờ vào",
+              value: formatTime(state.attendance?.checkIn ?? null),
+            },
+          ]}
+        />
+        <Button asChild size="touch" className="w-full sm:w-fit">
+          <Link href="/employee/tasks">
+            <IconListChecks data-icon="inline-start" />
+            Việc trong ca
+          </Link>
+        </Button>
+      </EmployeePanel>
+    );
+  }
 
-      {state === "scanning_code" ? (
-        <div className="flex flex-col gap-3">
-          <div
-            ref={scannerRef}
-            id="qr-reader"
-            className="overflow-hidden rounded-lg border"
-          />
-          <Button variant="outline" onClick={stopQrScan} size="sm">
-            Hủy quét
-          </Button>
-        </div>
-      ) : null}
+  if (state.status === "ready_to_checkout") {
+    return (
+      <EmployeePanel
+        icon={IconClock}
+        title="Kết ca làm"
+        description="Quét QR hoặc nhập mã kết ca tại chi nhánh."
+        tone="success"
+        badge={{ children: "Sẵn sàng kết ca", variant: "success" }}
+      >
+        <EmployeeDetailList
+          rows={[
+            {
+              label: "Chi nhánh",
+              value: state.branchName ?? "Chưa ghi nhận",
+              muted: !state.branchName,
+            },
+            {
+              label: "Checklist",
+              value: `${state.checklist.done}/${state.checklist.total} xong`,
+            },
+          ]}
+        />
 
-      {state === "entering_code" ? (
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="manual-code">Mã chấm công</Label>
-            <Input
-              id="manual-code"
-              placeholder="abc123"
-              maxLength={6}
-              value={manualCode}
-              onChange={(event) => setManualCode(event.target.value)}
-              className="text-center font-mono text-lg"
-              autoFocus
+        {checkoutState === "scanning" ? (
+          <div className="flex flex-col gap-3">
+            <div
+              ref={scannerRef}
+              id="qr-reader"
+              className="overflow-hidden rounded-lg border"
             />
+            <Button variant="outline" onClick={() => stopQrScan()} size="sm">
+              Hủy quét
+            </Button>
           </div>
-          <div className="grid grid-cols-2 gap-2">
+        ) : null}
+
+        {checkoutState === "manual" || checkoutState === "error" ? (
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="checkout-code">Mã kết ca</Label>
+              <Input
+                id="checkout-code"
+                placeholder="abc123"
+                maxLength={6}
+                value={manualCode}
+                onChange={(event) => setManualCode(event.target.value)}
+                className="text-center font-mono text-lg"
+                autoFocus
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setManualCode("");
+                  setError(null);
+                  setCheckoutState("idle");
+                }}
+              >
+                {ACTIONS_VI.back}
+              </Button>
+              <Button
+                disabled={manualCode.length !== 6 || isPending}
+                onClick={() => submitCheckout(manualCode)}
+              >
+                {isPending ? <Spinner data-icon="inline-start" /> : null}
+                {ACTIONS_VI.confirm}
+              </Button>
+            </div>
+          </div>
+        ) : null}
+
+        {error ? <ErrorAlert message={error} /> : null}
+
+        {checkoutState === "idle" ? (
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Button size="touch" onClick={startQrScan}>
+              <IconQrCode data-icon="inline-start" />
+              Quét mã QR
+            </Button>
             <Button
+              type="button"
               variant="outline"
+              size="touch"
               onClick={() => {
-                setState("gps_passed");
+                setCheckoutState("manual");
                 setManualCode("");
                 setError(null);
               }}
             >
-              {ACTIONS_VI.back}
+              <IconKeyboard data-icon="inline-start" />
+              Nhập mã
             </Button>
-            <Button
-              disabled={manualCode.length !== 6 || isPending}
-              onClick={() => submitClockIn(manualCode)}
-            >
-              {isPending ? <Spinner data-icon="inline-start" /> : null}
-              {ACTIONS_VI.confirm}
-            </Button>
+          </div>
+        ) : null}
+
+        {checkoutState === "submitting" ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Spinner />
+            Đang kết ca...
+          </div>
+        ) : null}
+      </EmployeePanel>
+    );
+  }
+
+  return (
+    <EmployeePanel
+      icon={IconCamera}
+      title="Chấm công vào"
+      description="Chụp ảnh để bắt đầu ca hôm nay."
+      tone="info"
+      badge={{
+        children: photoState === "success" ? "Đã ghi nhận" : "Chưa vào ca",
+        variant: photoState === "success" ? "success" : "info",
+      }}
+    >
+      <EmployeeDetailList
+        rows={[
+          {
+            label: "Chi nhánh",
+            value: state.branchName ?? "Chưa gắn",
+            muted: !state.branchName,
+          },
+          {
+            label: "Ca hôm nay",
+            value: state.nextShift?.shiftName ?? "Chưa xếp ca",
+            muted: !state.nextShift,
+          },
+        ]}
+      />
+
+      <input
+        ref={photoInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        capture="user"
+        className="sr-only"
+        onChange={(event) => handlePhotoSelected(event.target.files?.[0])}
+      />
+
+      {previewUrl ? (
+        <div className="flex items-center gap-3 rounded-md border bg-muted/40 p-3">
+          <img
+            src={previewUrl}
+            alt=""
+            className="size-12 rounded-md object-cover"
+          />
+          <div className="min-w-0 text-sm">
+            <p className="font-medium">Ảnh chấm công đã sẵn sàng</p>
+            <p className="truncate text-muted-foreground">{photo?.name}</p>
           </div>
         </div>
       ) : null}
 
       {error ? <ErrorAlert message={error} /> : null}
 
-      {state === "idle" ? (
-        <Button size="touch" className="w-full sm:w-fit" onClick={checkGps}>
-          <IconMapPin data-icon="inline-start" />
-          Bắt đầu chấm công
-        </Button>
-      ) : null}
-
-      {state === "gps_failed" ||
-      state === "code_invalid" ||
-      state === "error" ? (
+      <div className="grid gap-2 sm:grid-cols-2">
         <Button
+          type="button"
+          variant={photo ? "outline" : "default"}
           size="touch"
-          className="w-full sm:w-fit"
-          onClick={() => {
-            setError(null);
-            if (state === "gps_failed") {
-              checkGps();
-            } else {
-              setState("gps_passed");
-            }
-          }}
+          onClick={() => photoInputRef.current?.click()}
+          disabled={isPending || photoState === "submitting"}
         >
-          {ACTIONS_VI.retry}
+          <IconCamera data-icon="inline-start" />
+          {photo ? "Chụp lại" : "Chụp ảnh"}
         </Button>
-      ) : null}
-
-      {state === "gps_passed" ? (
-        <div className="grid gap-2 sm:grid-cols-2">
-          <Button size="touch" onClick={startQrScan}>
-            <IconCamera data-icon="inline-start" />
-            Quét mã QR
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="touch"
-            onClick={() => {
-              setState("entering_code");
-              setManualCode("");
-              setError(null);
-            }}
-          >
-            <IconKeyboard data-icon="inline-start" />
-            Nhập mã thủ công
-          </Button>
-        </div>
-      ) : null}
-
-      {state === "checking_gps" || state === "verifying" ? (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Spinner />
-          {state === "checking_gps"
-            ? "Đang kiểm tra GPS..."
-            : "Đang xác minh..."}
-        </div>
-      ) : null}
-
-      {state === "success" ? (
-        <div className="flex items-center gap-2 text-sm text-success">
-          <IconCircleCheck className="size-4" />
-          Chấm công thành công.
-        </div>
-      ) : null}
+        <Button
+          type="button"
+          size="touch"
+          onClick={submitClockIn}
+          disabled={!photo || isPending || photoState === "submitting"}
+        >
+          {photoState === "submitting" || isPending ? (
+            <Spinner data-icon="inline-start" />
+          ) : (
+            <IconCircleCheck data-icon="inline-start" />
+          )}
+          Chấm công vào
+        </Button>
+      </div>
     </EmployeePanel>
   );
 }
