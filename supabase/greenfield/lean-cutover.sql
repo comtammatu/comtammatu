@@ -5,6 +5,15 @@
 -- đã fold; TRIM ~61 bảng dư → lean ~57 bảng (đủ + hardened + lean).
 -- Apply → pg_dump → produces the lean baseline.sql (replay-from-empty verified).
 --
+-- ⚠️ HISTORICAL — this is the ORIGINAL cutover transform. The canonical target
+--    has since evolved; the authoritative schema is now
+--    `../migrations/00000000000000_baseline.sql` (**59 tables**). Deltas since:
+--    V12 dropped `inventory_locations` (→ branch-grain stock); V15.5 RE-ADDED
+--    lean `shift_assignments`/`shift_requests` (so the DROP at STEP 3 below is
+--    superseded — they are KEPT); `cash_entries` RLS is now fully in baseline
+--    (the STEP-4 policy TODO is resolved). Use baseline.sql, not this file, as
+--    the ETL target of record (see migrate-data.sql).
+--
 -- ⚠️ THỨ TỰ CỨNG (grounded trên baseline.sql):
 --   1. Drop FK columns (journal_entry_id ×5 KEEP, profiles.area_id, matching cols) TRƯỚC
 --   2. Drop bảng CUT (CASCADE)

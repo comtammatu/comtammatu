@@ -1,7 +1,7 @@
 # Greenfield lean-baseline build + verify
 
 Reproducible pipeline that produces and verifies the HKD lean DB baseline
-(`../../migrations/00000000000000_baseline.sql`, 58 tables) — the "build on prod truth, fold cleanup,
+(`../../migrations/00000000000000_baseline.sql`, 59 tables) — the "build on prod truth, fold cleanup,
 trim, prove it replays" approach.
 
 ## Why this exists
@@ -22,7 +22,7 @@ prod pg_dump (read-only, 116 tbl, self-contained, has HĐĐT)
   + cleanup/hardening    greenfield/migrations ×11 + active + db_debt_cleanup ×6  (clean)
   + ../lean-cutover.sql  drop ~61 tables + 16 GL/production/transfer RPCs + cash_entries
   + dewire-rpcs.sql      9 money/GRN/dashboard RPCs — GL/consume branch removed
-  = ../../migrations/00000000000000_baseline.sql 58 tables · replay-from-empty 0 real errors
+  = ../../migrations/00000000000000_baseline.sql 59 tables · replay-from-empty 0 real errors
 ```
 
 ## Run
@@ -38,7 +38,7 @@ bash supabase/greenfield/verify/build-lean.sh
 - `dewire-rpcs.sql` — the 9 de-wired RPCs (CREATE OR REPLACE; "không trừ kho" + no GL).
 - `build-lean.sh` — the full build + replay-from-empty verification.
 - `../lean-cutover.sql` — the DROP/ALTER/cash_entries cutover (drops 61 tbl + 16 RPCs).
-- `../../migrations/00000000000000_baseline.sql` — OUTPUT: the verified lean schema (58 tables).
+- `../../migrations/00000000000000_baseline.sql` — OUTPUT: the verified lean schema (59 tables).
 
 ## Apply to a real env
 

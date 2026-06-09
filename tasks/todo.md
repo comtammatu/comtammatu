@@ -95,7 +95,7 @@
 
 **P5 — Docs** · [x] **✅ DONE (commit `b257e482`)** — reframe ~31 docs CTCP→HKD lean (4 roles · flat-branch · no-deduct · cash-book · HĐĐT · lean inventory); CTCP/VAS/payroll banner-fenced as historical only; `database-schema.md`→59 tables; `CODEBASE_MAP`→1-app lean; `setup.md` seed→4 roles; promote durable rules (`use server` no-reexport · separation-not-LoC · docs-lean · SSoT) → `docs/agent/rules/` + AGENTS.md mirror; sync `database.md` refs (greenfield dev=uozwee). Excludes owner's `binh-ma-tu-tiktok`.
 
-**P6 — Cutover (OWNER-GATED)** · [ ] V25 ETL `migrate-data.sql` + runbook + reconcile fail-loud
+**P6 — Cutover (OWNER-GATED)** · [~] **V25 ETL ARTIFACTS PREPARED (agent)** — `supabase/greenfield/{migrate-data.sql,reconcile.sql,migrate-data.sh}` + `docs/runbooks/greenfield-prod-cutover.md`. Intersection-copy (preserves PKs, auto-drops prod's removed cols), FK-ordered, reshape (branch_kind→branch, staff_permissions key-filter, orders.pos_session_id→NULL), seq re-sync, MV refresh. Guard fails-loud (empty target, auth.users prereq, freeze window, branch_kind domain, permission_keys seeded). reconcile = count + money(header+line+VAT) + HĐĐT immutability, to the cent. Helper+guard+reconcile compile/run-verified on uozwee (rolled back); adversarial-reviewed (`wf_ebe40a42`, 4 lenses) → fixed nested-dollar-quote bug + secret-via-env + richer money checks. **Still owner-gated to RUN** (provision lean project, auth.users migrate, read-only prod role, dry-run on clone, execute). Agent NEVER mutates prod.
 
 ## Surviving deferred items (still relevant under greenfield, NOT in the audit roadmap)
 
