@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { ArrowLeft as IconArrowLeft } from "lucide-react";
 import { canManageBranchFloorSettings } from "@comtammatu/shared/auth";
 import { Button } from "@comtammatu/ui/components/button";
+import { AppPageHeader } from "@/components/surface";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import {
@@ -81,14 +82,11 @@ export default async function BranchKdsSettingsPage({
             {messages.settings.branch.settingsBack}
           </Link>
         </Button>
-        <div className="min-w-0">
-          <h1 className="font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
-            {messages.settings.pages.kdsTitle}
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {branchRes.data.name}
-          </p>
-        </div>
+        <AppPageHeader
+          className="min-w-0 flex-1"
+          title={messages.settings.pages.kdsTitle}
+          description={branchRes.data.name}
+        />
       </div>
 
       <StationsClient

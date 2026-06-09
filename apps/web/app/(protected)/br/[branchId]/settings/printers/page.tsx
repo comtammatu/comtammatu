@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Button } from "@comtammatu/ui/components/button";
 import { ArrowLeft as IconArrowLeft } from "lucide-react";
+import { AppPageHeader } from "@/components/surface";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import {
@@ -101,14 +102,11 @@ export default async function BranchPrintersPage({
             {messages.settings.branch.posBack}
           </Link>
         </Button>
-        <div>
-          <h1 className="font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
-            {messages.settings.pages.printersTitle}
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {messages.settings.branch.printersDescription(branchRes.data.name)}
-          </p>
-        </div>
+        <AppPageHeader
+          className="min-w-0 flex-1"
+          title={messages.settings.pages.printersTitle}
+          description={messages.settings.branch.printersDescription(branchRes.data.name)}
+        />
       </div>
       <PrintersClient
         branches={[branchRes.data]}

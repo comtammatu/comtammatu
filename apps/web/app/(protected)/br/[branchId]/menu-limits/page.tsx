@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft as IconArrowLeft } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { formatVNLongDate } from "@comtammatu/shared/time";
+import { AppPageHeader } from "@/components/surface";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import { fetchBranchMenuDailyLimits } from "./actions";
@@ -46,14 +47,11 @@ export default async function BranchMenuLimitsPage({
             {messages.settings.branch.branchSettingsBack}
           </Link>
         </Button>
-        <div className="min-w-0">
-          <h1 className="font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
-            {messages.settings.branch.menuLimitsTitle}
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {branch.name} · {today}
-          </p>
-        </div>
+        <AppPageHeader
+          className="min-w-0 flex-1"
+          title={messages.settings.branch.menuLimitsTitle}
+          description={`${branch.name} · ${today}`}
+        />
       </div>
 
       <div className="rounded-md border bg-muted/30 p-4 text-sm leading-6 text-muted-foreground">
