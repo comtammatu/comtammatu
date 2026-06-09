@@ -1299,6 +1299,7 @@ export function StockClient({
           ingredientId={adjustTarget.id}
           ingredientName={adjustTarget.name}
           unit={adjustTarget.unit}
+          currentStock={adjustTarget.qty}
           onAdjusted={() => {
             setAdjustTarget(null);
             router.refresh();

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@comtammatu/ui/components/button";
@@ -13,30 +13,31 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@comtammatu/ui/components/dialog";
-import { FieldGroup } from "@comtammatu/ui/components/field";
+import { Field, FieldGroup, FieldLabel } from "@comtammatu/ui/components/field";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { NumberField, SelectField, TextareaField } from "@/components/form";
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@comtammatu/ui/components/toggle-group";
+import { QuantityField, TextareaField } from "@/components/form";
 import { adjustStock } from "../stock-actions";
 import { ACTIONS_VI, ERRORS_VI } from "@comtammatu/shared/messages";
 
-const ADJUST_TYPE_OPTIONS = [
-  { value: "adjustment", label: "Điều chỉnh thủ công" },
-  { value: "count_adjustment", label: "Kiểm kho" },
-] as const;
+type AdjustMode = "add" | "subtract" | "set";
 
 const adjustStockSchema = z.object({
-  adjust_type: z.enum(["adjustment", "count_adjustment"]),
-  quantity_change: z
+  mode: z.enum(["add", "subtract", "set"]),
+  quantity: z
     .string()
     .trim()
-    .min(1, { error: "Số lượng điều chỉnh không được trống" })
+    .min(1, { error: "Số lượng không được trống" })
     .refine(
       (v) => {
         const n = Number(v);
-        return Number.isFinite(n) && n !== 0;
+        return Number.isFinite(n) && n >= 0;
       },
-      { error: "Số lượng điều chỉnh không được bằng 0" },
+      { error: "Số lượng không hợp lệ" },
     ),
   reason: z.string().trim().optional(),
 });
@@ -44,10 +45,22 @@ const adjustStockSchema = z.object({
 type AdjustStockFormValues = z.infer<typeof adjustStockSchema>;
 
 const DEFAULT_VALUES: AdjustStockFormValues = {
-  adjust_type: "adjustment",
-  quantity_change: "",
+  mode: "add",
+  quantity: "",
   reason: "",
 };
+
+const MODE_LABEL: Record<AdjustMode, string> = {
+  add: "Thêm",
+  subtract: "Bớt",
+  set: "Đặt",
+};
+
+function formatQty(value: number): string {
+  return new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 3 }).format(
+    value,
+  );
+}
 
 interface AdjustStockDialogProps {
   open: boolean;
@@ -56,6 +69,7 @@ interface AdjustStockDialogProps {
   ingredientId: number;
   ingredientName: string;
   unit: string;
+  currentStock: number;
   onAdjusted: () => void;
 }
 
@@ -66,6 +80,7 @@ export function AdjustStockDialog({
   ingredientId,
   ingredientName,
   unit,
+  currentStock,
   onAdjusted,
 }: AdjustStockDialogProps) {
   const [isPending, startTransition] = useTransition();
@@ -83,16 +98,48 @@ export function AdjustStockDialog({
     }
   }, [open, ingredientId, form]);
 
+  const mode = form.watch("mode") as AdjustMode;
+  const quantityStr = form.watch("quantity");
+  const amount = Number(quantityStr);
+  const hasValidAmount =
+    quantityStr.trim() !== "" && Number.isFinite(amount) && amount >= 0;
+  const resultStock = !hasValidAmount
+    ? null
+    : mode === "add"
+      ? currentStock + amount
+      : mode === "subtract"
+        ? currentStock - amount
+        : amount;
+
   function onValid(values: AdjustStockFormValues) {
-    const parsedQuantityChange = Number(values.quantity_change);
+    const qty = Number(values.quantity);
+
+    let quantityChange: number;
+    let type: "adjustment" | "count_adjustment";
+    if (values.mode === "add") {
+      quantityChange = qty;
+      type = "adjustment";
+    } else if (values.mode === "subtract") {
+      quantityChange = -qty;
+      type = "adjustment";
+    } else {
+      // "Đặt" = set on-hand to an absolute count → delta vs current.
+      quantityChange = qty - currentStock;
+      type = "count_adjustment";
+    }
+
+    if (quantityChange === 0) {
+      setServerError("Tồn kho không thay đổi.");
+      return;
+    }
 
     startTransition(async () => {
       setServerError(null);
       const result = await adjustStock({
         branchId,
         ingredientId,
-        quantityChange: parsedQuantityChange,
-        type: values.adjust_type,
+        quantityChange,
+        type,
         reason: values.reason || undefined,
       });
 
@@ -101,11 +148,13 @@ export function AdjustStockDialog({
         return;
       }
 
-      toast.success(
-        parsedQuantityChange > 0
-          ? `Đã nhập ${parsedQuantityChange} ${unit} ${ingredientName}`
-          : `Đã xuất ${Math.abs(parsedQuantityChange)} ${unit} ${ingredientName}`,
-      );
+      const verb =
+        values.mode === "add"
+          ? `Đã thêm ${formatQty(qty)} ${unit}`
+          : values.mode === "subtract"
+            ? `Đã bớt ${formatQty(qty)} ${unit}`
+            : `Đã đặt tồn = ${formatQty(qty)} ${unit}`;
+      toast.success(`${verb} ${ingredientName}`);
       onOpenChange(false);
       onAdjusted();
     });
@@ -117,38 +166,72 @@ export function AdjustStockDialog({
         <DialogHeader>
           <DialogTitle>Điều chỉnh tồn kho</DialogTitle>
           <DialogDescription>
-            Nguyên liệu:{" "}
+            <span className="font-medium text-foreground">{ingredientName}</span>
+            {" — tồn hiện tại "}
             <span className="font-medium text-foreground">
-              {ingredientName}
+              {formatQty(currentStock)} {unit}
             </span>
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={form.handleSubmit(onValid)} noValidate>
           <FieldGroup>
-            <SelectField
-              control={form.control}
-              name="adjust_type"
-              label="Loại điều chỉnh"
-              options={ADJUST_TYPE_OPTIONS}
-            />
+            <Field>
+              <FieldLabel>Thao tác</FieldLabel>
+              <Controller
+                control={form.control}
+                name="mode"
+                render={({ field }) => (
+                  <ToggleGroup
+                    type="single"
+                    variant="outline"
+                    value={field.value}
+                    onValueChange={(v) => {
+                      if (v) field.onChange(v);
+                    }}
+                    className="justify-start"
+                  >
+                    <ToggleGroupItem value="add" className="px-4">
+                      {MODE_LABEL.add}
+                    </ToggleGroupItem>
+                    <ToggleGroupItem value="subtract" className="px-4">
+                      {MODE_LABEL.subtract}
+                    </ToggleGroupItem>
+                    <ToggleGroupItem value="set" className="px-4">
+                      {MODE_LABEL.set}
+                    </ToggleGroupItem>
+                  </ToggleGroup>
+                )}
+              />
+            </Field>
 
-            <NumberField
+            <QuantityField
               control={form.control}
-              name="quantity_change"
-              label={`Số lượng (${unit}) — dương = nhập, âm = xuất`}
-              allowNegative
-              maxFractionDigits={2}
-              placeholder="VD: 10 hoặc -5"
+              name="quantity"
+              label={
+                mode === "set"
+                  ? `Tồn thực đếm (${unit})`
+                  : `Số lượng (${unit})`
+              }
+              placeholder="VD: 10"
               required
             />
+
+            {resultStock !== null ? (
+              <p className="text-sm text-muted-foreground">
+                Tồn sau điều chỉnh:{" "}
+                <span className="font-medium text-foreground">
+                  {formatQty(resultStock)} {unit}
+                </span>
+              </p>
+            ) : null}
 
             <TextareaField
               control={form.control}
               name="reason"
               label="Lý do (tùy chọn)"
-              placeholder="VD: Nhập hàng sáng, Hao hụt..."
-              rows={3}
+              placeholder="VD: Nhập hàng sáng, Hao hụt, Kiểm kho..."
+              rows={2}
             />
 
             {serverError && (
