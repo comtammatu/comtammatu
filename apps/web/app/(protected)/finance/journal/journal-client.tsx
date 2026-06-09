@@ -224,7 +224,7 @@ export function JournalClient({ entries: initial, accounts }: Props) {
                   );
                   return (
                     <TableRow key={e.id}>
-                      <TableCell className="tabular-nums">
+                      <TableCell className="font-mono tabular-nums">
                         {e.entry_date}
                       </TableCell>
                       <TableCell className="max-w-sm">
@@ -238,7 +238,7 @@ export function JournalClient({ entries: initial, accounts }: Props) {
                       <TableCell>
                         {statusBadge(e.status, e.entry_number)}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums">
+                      <TableCell className="text-right font-mono tabular-nums">
                         {totalDr.toLocaleString("vi-VN")}
                       </TableCell>
                       <TableCell className="text-right">
@@ -412,10 +412,10 @@ export function JournalClient({ entries: initial, accounts }: Props) {
                       <TableCell className="font-medium">
                         {FORM_VI.totalAmount}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums font-medium">
+                      <TableCell className="text-right font-mono tabular-nums font-medium">
                         {totalDebit.toLocaleString("vi-VN")}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums font-medium">
+                      <TableCell className="text-right font-mono tabular-nums font-medium">
                         {totalCredit.toLocaleString("vi-VN")}
                       </TableCell>
                       <TableCell />

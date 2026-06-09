@@ -729,20 +729,20 @@ function ByDayTable({
               const matched = Math.abs(r.diff) <= TOLERANCE_VND;
               return (
                 <TableRow key={r.date}>
-                  <TableCell className="tabular-nums font-medium">
+                  <TableCell className="font-mono tabular-nums font-medium">
                     {r.date}
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">
+                  <TableCell className="text-right font-mono tabular-nums">
                     {formatVND(r.revenue_paid)}
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">
+                  <TableCell className="text-right font-mono tabular-nums">
                     {formatVND(r.gl_credit)}
                   </TableCell>
                   <TableCell
                     className={
                       matched
-                        ? "text-right tabular-nums text-success"
-                        : "text-right tabular-nums font-medium text-destructive"
+                        ? "text-right font-mono tabular-nums text-success"
+                        : "text-right font-mono tabular-nums font-medium text-destructive"
                     }
                   >
                     {matched
@@ -769,17 +769,17 @@ function ByDayTable({
               <TableCell className="font-medium">
                 {reconciliationCopy.byDay.total}
               </TableCell>
-              <TableCell className="text-right tabular-nums font-medium">
+              <TableCell className="text-right font-mono tabular-nums font-medium">
                 {formatVND(totalRevenue)}
               </TableCell>
-              <TableCell className="text-right tabular-nums font-medium">
+              <TableCell className="text-right font-mono tabular-nums font-medium">
                 {formatVND(totalGl)}
               </TableCell>
               <TableCell
                 className={
                   Math.abs(totalDiff) <= TOLERANCE_VND
-                    ? "text-right tabular-nums font-bold text-success"
-                    : "text-right tabular-nums font-bold text-destructive"
+                    ? "text-right font-mono tabular-nums font-bold text-success"
+                    : "text-right font-mono tabular-nums font-bold text-destructive"
                 }
               >
                 {Math.abs(totalDiff) <= TOLERANCE_VND

@@ -310,7 +310,7 @@ export function PosSessionsClient({
                           </span>
                         )}
                       </TableCell>
-                      <TableCell className="text-right font-medium tabular-nums">
+                      <TableCell className="text-right font-medium font-mono tabular-nums">
                         {formatVND(order.total_amount)}
                       </TableCell>
                       <TableCell>
@@ -650,10 +650,10 @@ function SessionReportCard({ report }: { report: PosSessionReport }) {
                         {ITEM_SOURCE_LABEL[item.source]}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">
+                    <TableCell className="text-right font-mono tabular-nums">
                       {item.qty}
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">
+                    <TableCell className="text-right font-mono tabular-nums">
                       {formatVND(item.revenue)}
                     </TableCell>
                   </TableRow>
@@ -756,7 +756,7 @@ function SessionReportCard({ report }: { report: PosSessionReport }) {
                           : "—"}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">
+                  <TableCell className="text-right font-mono tabular-nums">
                     -{formatVND(order.amount)}
                   </TableCell>
                   <TableCell className="max-w-xs truncate text-muted-foreground">

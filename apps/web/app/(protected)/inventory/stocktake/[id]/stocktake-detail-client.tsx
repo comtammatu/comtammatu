@@ -755,15 +755,15 @@ function ResultsPhase({
                           line.ingredients?.unit ??
                           inventoryCommon.noValue}
                       </TableCell>
-                      <TableCell className="text-sm tabular-nums">
+                      <TableCell className="text-sm font-mono tabular-nums">
                         {line.system_quantity}
                       </TableCell>
-                      <TableCell className="text-sm tabular-nums">
+                      <TableCell className="text-sm font-mono tabular-nums">
                         {line.counted_quantity ?? inventoryCommon.noValue}
                       </TableCell>
                       <TableCell
                         className={cn(
-                          "text-sm font-medium tabular-nums",
+                          "text-sm font-medium font-mono tabular-nums",
                           varianceColor,
                         )}
                       >

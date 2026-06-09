@@ -238,7 +238,7 @@ export function PrintJobsClient({
                     {STATUS_LABEL[j.status] ?? j.status}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-right text-xs tabular-nums">
+                <TableCell className="text-right text-xs font-mono tabular-nums">
                   {j.attempts}
                   {j.retry_count > 0 && (
                     <span className="text-muted-foreground">

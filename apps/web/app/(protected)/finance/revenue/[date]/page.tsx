@@ -351,7 +351,7 @@ export default async function RevenueDrillPage({
                           : "outline";
                       return (
                         <TableRow key={o.order_id}>
-                          <TableCell className="tabular-nums">
+                          <TableCell className="font-mono tabular-nums">
                             {formatVNTime(o.paid_at)}
                           </TableCell>
                           <TableCell className="font-mono text-xs">
@@ -363,10 +363,10 @@ export default async function RevenueDrillPage({
                           <TableCell className="text-sm text-muted-foreground">
                             {o.branch_name?.replace(/^Chi nhánh\s+/, "") ?? "—"}
                           </TableCell>
-                          <TableCell className="text-right tabular-nums">
+                          <TableCell className="text-right font-mono tabular-nums">
                             {o.customer_count}
                           </TableCell>
-                          <TableCell className="text-right tabular-nums">
+                          <TableCell className="text-right font-mono tabular-nums">
                             {o.item_count}
                           </TableCell>
                           <TableCell>
@@ -375,15 +375,15 @@ export default async function RevenueDrillPage({
                                 o.payment_method)
                               : "—"}
                           </TableCell>
-                          <TableCell className="text-right tabular-nums text-muted-foreground">
+                          <TableCell className="text-right font-mono tabular-nums text-muted-foreground">
                             {Number(o.discount_amount) > 0
                               ? formatVND(o.discount_amount)
                               : "—"}
                           </TableCell>
-                          <TableCell className="text-right tabular-nums text-muted-foreground">
+                          <TableCell className="text-right font-mono tabular-nums text-muted-foreground">
                             {formatVND(o.tax_amount)}
                           </TableCell>
-                          <TableCell className="text-right tabular-nums font-medium">
+                          <TableCell className="text-right font-mono tabular-nums font-medium">
                             {formatVND(o.total_amount)}
                           </TableCell>
                           <TableCell>
@@ -406,13 +406,13 @@ export default async function RevenueDrillPage({
                       <TableCell colSpan={7} className="font-medium">
                         Tổng
                       </TableCell>
-                      <TableCell className="text-right tabular-nums">
+                      <TableCell className="text-right font-mono tabular-nums">
                         {formatVND(totalDiscount)}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums">
+                      <TableCell className="text-right font-mono tabular-nums">
                         {formatVND(totalTax)}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums font-bold">
+                      <TableCell className="text-right font-mono tabular-nums font-bold">
                         {formatVND(totalRevenue)}
                       </TableCell>
                       <TableCell />

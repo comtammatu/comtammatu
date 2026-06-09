@@ -209,7 +209,7 @@ export function PeriodsClient({ periods: initial }: Props) {
               ) : (
                 periods.map((p) => (
                   <TableRow key={p.id}>
-                    <TableCell className="font-medium tabular-nums">
+                    <TableCell className="font-medium font-mono tabular-nums">
                       {formatPeriod(p.period_month, p.period_year)}
                     </TableCell>
                     <TableCell>
@@ -338,14 +338,14 @@ export function PeriodsClient({ periods: initial }: Props) {
                         <TableCell className="text-sm">
                           {item.category}
                         </TableCell>
-                        <TableCell className="text-right tabular-nums">
+                        <TableCell className="text-right font-mono tabular-nums">
                           {Number(item.subledger_total).toLocaleString("vi-VN")}
                         </TableCell>
-                        <TableCell className="text-right tabular-nums">
+                        <TableCell className="text-right font-mono tabular-nums">
                           {Number(item.gl_total).toLocaleString("vi-VN")}
                         </TableCell>
                         <TableCell
-                          className={`text-right tabular-nums font-medium ${hasDiff ? "text-destructive" : "text-success"}`}
+                          className={`text-right font-mono tabular-nums font-medium ${hasDiff ? "text-destructive" : "text-success"}`}
                         >
                           {hasDiff
                             ? Number(item.difference).toLocaleString("vi-VN")

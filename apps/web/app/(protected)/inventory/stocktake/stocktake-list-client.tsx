@@ -325,7 +325,7 @@ export function StocktakeListClient({
                     <TableCell className="text-sm">
                       {r.branches?.name ?? "—"}
                     </TableCell>
-                    <TableCell className="text-sm tabular-nums text-muted-foreground">
+                    <TableCell className="text-sm font-mono tabular-nums text-muted-foreground">
                       {formatDateShort(r.started_at ?? r.created_at)}
                     </TableCell>
                     <TableCell>

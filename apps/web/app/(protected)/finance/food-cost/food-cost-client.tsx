@@ -139,13 +139,13 @@ export function FoodCostClient({
                   return (
                     <TableRow key={i}>
                       <TableCell>{r.item_name ?? "—"}</TableCell>
-                      <TableCell className="text-right tabular-nums">
+                      <TableCell className="text-right font-mono tabular-nums">
                         {Number(r.quantity_sold ?? 0).toLocaleString("vi-VN")}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums">
+                      <TableCell className="text-right font-mono tabular-nums">
                         {formatVND(Number(r.revenue ?? 0))}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums">
+                      <TableCell className="text-right font-mono tabular-nums">
                         {formatVND(Number(r.ingredient_cost ?? 0))}
                       </TableCell>
                       <TableCell

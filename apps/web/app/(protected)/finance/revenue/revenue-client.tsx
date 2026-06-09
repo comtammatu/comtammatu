@@ -640,7 +640,7 @@ export function RevenueClient({
                     params.gran === "day" && drillBranchId != null;
                   return (
                     <TableRow key={r.period_start}>
-                      <TableCell className="font-medium tabular-nums">
+                      <TableCell className="font-medium font-mono tabular-nums">
                         {canDrill ? (
                           <Link
                             href={`/finance/revenue/${r.period_start}?branch=${drillBranchId}`}
@@ -652,25 +652,25 @@ export function RevenueClient({
                           r.period_label
                         )}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums">
+                      <TableCell className="text-right font-mono tabular-nums">
                         {r.order_count.toLocaleString("vi-VN")}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums">
+                      <TableCell className="text-right font-mono tabular-nums">
                         {r.total_covers.toLocaleString("vi-VN")}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums font-medium">
+                      <TableCell className="text-right font-mono tabular-nums font-medium">
                         {formatVND(netRevenuePreVatFor(r))}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums text-muted-foreground">
+                      <TableCell className="text-right font-mono tabular-nums text-muted-foreground">
                         {formatVND(r.cash_revenue)}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums text-muted-foreground">
+                      <TableCell className="text-right font-mono tabular-nums text-muted-foreground">
                         {formatVND(r.vietqr_revenue)}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums text-muted-foreground">
+                      <TableCell className="text-right font-mono tabular-nums text-muted-foreground">
                         {formatVND(r.momo_revenue)}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums text-muted-foreground">
+                      <TableCell className="text-right font-mono tabular-nums text-muted-foreground">
                         {formatVND(r.total_tax)}
                       </TableCell>
                     </TableRow>
@@ -682,25 +682,25 @@ export function RevenueClient({
                   <TableCell className="font-medium">
                     {revCopy.periodTable.total}
                   </TableCell>
-                  <TableCell className="text-right tabular-nums font-medium">
+                  <TableCell className="text-right font-mono tabular-nums font-medium">
                     {(kpis?.order_count ?? 0).toLocaleString("vi-VN")}
                   </TableCell>
-                  <TableCell className="text-right tabular-nums font-medium">
+                  <TableCell className="text-right font-mono tabular-nums font-medium">
                     {(kpis?.total_covers ?? 0).toLocaleString("vi-VN")}
                   </TableCell>
-                  <TableCell className="text-right tabular-nums font-bold">
+                  <TableCell className="text-right font-mono tabular-nums font-bold">
                     {formatVND(netRevenuePreVat)}
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">
+                  <TableCell className="text-right font-mono tabular-nums">
                     {formatVND(kpis?.cash_revenue ?? 0)}
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">
+                  <TableCell className="text-right font-mono tabular-nums">
                     {formatVND(kpis?.vietqr_revenue ?? 0)}
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">
+                  <TableCell className="text-right font-mono tabular-nums">
                     {formatVND(kpis?.momo_revenue ?? 0)}
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">
+                  <TableCell className="text-right font-mono tabular-nums">
                     {formatVND(kpis?.total_tax ?? 0)}
                   </TableCell>
                 </TableRow>
@@ -754,13 +754,13 @@ export function RevenueClient({
                       <TableCell className="font-medium">
                         {c.cashier_name}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums">
+                      <TableCell className="text-right font-mono tabular-nums">
                         {Number(c.order_count).toLocaleString("vi-VN")}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums font-medium">
+                      <TableCell className="text-right font-mono tabular-nums font-medium">
                         {formatVND(Number(c.net_revenue))}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums text-muted-foreground">
+                      <TableCell className="text-right font-mono tabular-nums text-muted-foreground">
                         {formatVND(Number(c.cash_revenue))}
                       </TableCell>
                     </TableRow>
@@ -806,10 +806,10 @@ export function RevenueClient({
                       <TableCell className="font-medium">
                         {item.item_name}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums">
+                      <TableCell className="text-right font-mono tabular-nums">
                         {Number(item.quantity_sold).toLocaleString("vi-VN")}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums">
+                      <TableCell className="text-right font-mono tabular-nums">
                         {formatVND(item.revenue)}
                       </TableCell>
                     </TableRow>

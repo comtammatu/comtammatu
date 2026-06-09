@@ -325,7 +325,7 @@ export function ExpiryListClient({
                     <TableCell className="font-mono text-sm">
                       {alert.batch_number ?? "\u2014"}
                     </TableCell>
-                    <TableCell className="text-sm tabular-nums text-muted-foreground">
+                    <TableCell className="text-sm font-mono tabular-nums text-muted-foreground">
                       {formatVNDate(alert.expiry_date)}
                     </TableCell>
                     <TableCell>
