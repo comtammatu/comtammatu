@@ -114,7 +114,7 @@ export function GrnFromPoList({ openPos }: Props) {
               <IconChevronRight
                 className={
                   rowPending
-                    ? "size-5 shrink-0 animate-pulse text-primary"
+                    ? "size-5 shrink-0 motion-safe:animate-pulse text-primary"
                     : "size-5 shrink-0 text-muted-foreground"
                 }
               />
