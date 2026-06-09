@@ -36,8 +36,8 @@ export default async function PayrollDetailPage({
   return (
     <AppPage>
       <AppPageHeader
-        eyebrow="Nhân sự & lương"
-        title={`Chi tiết bảng lương`}
+        eyebrow="Nhân sự"
+        title="Chi tiết lương đã chốt"
         description={`Kỳ lương #${periodId}`}
         tabs={
           <AppPageTabs

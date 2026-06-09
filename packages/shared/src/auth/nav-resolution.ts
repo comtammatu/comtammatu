@@ -1,11 +1,11 @@
 import type { StaffRole } from "./types";
-import { type ModuleKey, MODULE_ACL } from "./module-acl";
+import { canAccess, type ModuleKey, MODULE_ACL } from "./module-acl";
 import {
   resolveAdminDiscoveryGroups,
   resolveBranchOperationDiscoveryGroup,
   resolveWorkspaceDiscoveryGroup,
 } from "./app-discovery";
-import { NAV_GROUP_LABELS_VI } from "../labels";
+import { APP_COPY_VI, NAV_GROUP_LABELS_VI } from "../labels";
 
 export interface ResolvedNavLink {
   label: string;
@@ -22,6 +22,25 @@ export interface ResolvedNavGroup {
 export interface QuickLaunchGroup {
   title: string;
   items: ResolvedNavLink[];
+}
+
+export interface ResolvedHomeLink {
+  label: string;
+  href: string;
+}
+
+export function resolveRoleHomeLink(role: StaffRole): ResolvedHomeLink {
+  if (canAccess(role, "dashboard")) {
+    return {
+      label: APP_COPY_VI.adminSurface,
+      href: MODULE_ACL.dashboard.path,
+    };
+  }
+
+  return {
+    label: APP_COPY_VI.employeePortal,
+    href: MODULE_ACL.employee.path,
+  };
 }
 
 export function resolveNavLink(

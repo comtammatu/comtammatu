@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { CircleAlert as IconAlertCircle } from "lucide-react";
-import Image from "next/image";
+import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { cn } from "@comtammatu/ui";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import {
@@ -11,7 +11,6 @@ import {
   type RunnerQueueItem,
 } from "@comtammatu/shared/runner";
 import { MODULE_LABELS_VI } from "@comtammatu/shared/labels";
-import { loadAuthState } from "@/_lib/auth";
 import { getVNDateString, getVNDayUtcRange } from "@/_lib/format-datetime";
 import {
   dedupeRowsById,
@@ -19,6 +18,7 @@ import {
   fetchPagedRows,
   uniqueNumbers,
 } from "../kds/lib/query-helpers";
+import { RunnerIdleVisual, type RunnerIdleState } from "./runner-idle-visual";
 import { RunnerRealtimeRefresh } from "./runner-realtime-refresh";
 import { RunnerWaitTime } from "./runner-wait-time";
 
@@ -43,19 +43,14 @@ const RUNNER_COLUMN_SPAN = {
   status: 4,
   wait: 1,
 } as const;
-const RUNNER_MASCOT = {
-  src: "/brand/mascot/be-suon-tuoi-runner.png",
-  width: 384,
-  height: 512,
-  alt: "",
-} as const;
 const RUNNER_COPY = {
   eyebrow: MODULE_LABELS_VI.runner,
   pending: "Chờ",
   preparing: "Chuẩn bị",
   ready: "Sẵn sàng",
-  emptyServed: "Các món đã được phục vụ đầy đủ.",
-  emptyEnjoy: "Chúc quý khách dùng bữa ngon miệng.",
+  idleEmptyTitle: "Sẵn sàng nhận món mới.",
+  idleDoneTitle: "Các món đã được phục vụ đầy đủ.",
+  idleBrandLine: "Thịt tươi 100% - chúc quý khách dùng bữa ngon miệng.",
   itemUnit: "món",
   footer: {
     wifi: "WiFi: Má Tư",
@@ -89,16 +84,41 @@ type RunnerListRow = {
   status: RunnerListStatus;
 };
 
-type RunnerSupabase = Awaited<ReturnType<typeof loadAuthState>>["supabase"];
+type RunnerSupabase = ReturnType<typeof createServiceClient>;
 
 type RunnerQueryResult = {
   data: unknown[] | null;
   error: { message?: string } | null;
 };
 
+async function fetchRunnerTodayTicketCount(args: {
+  supabase: RunnerSupabase;
+  branchId: number;
+  todayStartIso: string;
+  todayEndIso: string;
+}): Promise<{ count: number; error: boolean }> {
+  const { supabase, branchId, todayStartIso, todayEndIso } = args;
+  const { count, error } = await supabase
+    .from("kds_tickets")
+    .select("id", { count: "exact", head: true })
+    .eq("branch_id", branchId)
+    .gte("created_at", todayStartIso)
+    .lt("created_at", todayEndIso);
+
+  if (error) {
+    return { count: 0, error: true };
+  }
+
+  return { count: count ?? 0, error: false };
+}
+
 function isMissingPriorityColumn(error: { message?: string } | null): boolean {
   const message = String(error?.message ?? "").toLowerCase();
   return message.includes("is_priority") && message.includes("column");
+}
+
+function isRunnerOperationalBranchKind(branchKind: string): boolean {
+  return branchKind !== "central_warehouse" && branchKind !== "central_kitchen";
 }
 
 function normalizeRunnerOrders(
@@ -328,17 +348,25 @@ export default async function RunnerPage({
 }) {
   const { branchId } = await params;
   const branchIdNum = Number(branchId);
-  const { supabase, claims } = await loadAuthState();
-  const { startIso: todayStartIso } = getVNDayUtcRange(getVNDateString());
+  if (!Number.isInteger(branchIdNum) || branchIdNum <= 0) {
+    return <RunnerErrorState />;
+  }
+
+  const supabase = createServiceClient();
+  const { startIso: todayStartIso, endIso: todayEndIso } =
+    getVNDayUtcRange(getVNDateString());
 
   const { data: branch, error: branchError } = await supabase
     .from("branches")
     .select("id, name, branch_kind")
     .eq("id", branchIdNum)
-    .eq("tenant_id", claims.tenant_id)
     .maybeSingle();
 
-  if (branchError || !branch) {
+  if (
+    branchError ||
+    !branch ||
+    !isRunnerOperationalBranchKind(branch.branch_kind)
+  ) {
     return <RunnerErrorState />;
   }
 
@@ -405,6 +433,23 @@ export default async function RunnerPage({
       quantityByOrderItemId,
     }),
   );
+  let idleState: RunnerIdleState | null = null;
+
+  if (rows.length === 0) {
+    const todayTicketCountResult = await fetchRunnerTodayTicketCount({
+      supabase,
+      branchId: branchIdNum,
+      todayStartIso,
+      todayEndIso,
+    });
+
+    if (todayTicketCountResult.error) {
+      return <RunnerErrorState />;
+    }
+
+    idleState = todayTicketCountResult.count > 0 ? "done" : "empty";
+  }
+
   const nowMs = Date.now();
 
   return (
@@ -415,7 +460,7 @@ export default async function RunnerPage({
         aria-label={`${RUNNER_COPY.eyebrow} ${branch.name}`}
         className="flex h-dvh min-h-0 w-full flex-col overflow-hidden bg-background"
       >
-        <RunnerOrderScreen rows={rows} nowMs={nowMs} />
+        <RunnerOrderScreen rows={rows} nowMs={nowMs} idleState={idleState} />
       </section>
     </>
   );
@@ -424,13 +469,15 @@ export default async function RunnerPage({
 function RunnerOrderScreen({
   rows,
   nowMs,
+  idleState,
 }: {
   rows: RunnerListRow[];
   nowMs: number;
+  idleState: RunnerIdleState | null;
 }) {
   return (
     <div className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-background">
-      <RunnerOrderBoard rows={rows} nowMs={nowMs} />
+      <RunnerOrderBoard rows={rows} nowMs={nowMs} idleState={idleState} />
       <RunnerFooter />
     </div>
   );
@@ -439,21 +486,30 @@ function RunnerOrderScreen({
 function RunnerOrderBoard({
   rows,
   nowMs,
+  idleState,
 }: {
   rows: RunnerListRow[];
   nowMs: number;
+  idleState: RunnerIdleState | null;
 }) {
   if (rows.length === 0) {
+    const resolvedIdleState = idleState ?? "empty";
+
     return (
-      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-6 overflow-hidden bg-background px-8 text-center">
-        <RunnerEmptyMascot />
-        <div className="flex max-w-full flex-col items-center gap-3">
-          <p className="max-w-full font-heading text-runner-board font-semibold text-foreground">
-            {RUNNER_COPY.emptyServed}
-          </p>
-          <p className="max-w-full font-heading text-runner-empty-secondary font-semibold text-muted-foreground">
-            {RUNNER_COPY.emptyEnjoy}
-          </p>
+      <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center gap-6 overflow-hidden bg-background px-8 text-center">
+        <RunnerIdleAtmosphere state={resolvedIdleState} />
+        <div className="relative z-10 flex flex-col items-center justify-center gap-6">
+          <RunnerIdleVisual state={resolvedIdleState} />
+          <div className="flex max-w-full flex-col items-center gap-3">
+            <p className="max-w-full font-heading text-runner-board font-semibold text-foreground">
+              {resolvedIdleState === "done"
+                ? RUNNER_COPY.idleDoneTitle
+                : RUNNER_COPY.idleEmptyTitle}
+            </p>
+            <p className="max-w-full font-heading text-runner-empty-secondary font-semibold text-muted-foreground">
+              {RUNNER_COPY.idleBrandLine}
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -494,17 +550,42 @@ function RunnerOrderBoard({
   );
 }
 
-function RunnerEmptyMascot() {
+function RunnerIdleAtmosphere({ state }: { state: RunnerIdleState }) {
+  const emberRows = Array.from({ length: 12 }, (_, index) => index);
+  const heatColumns = Array.from({ length: 5 }, (_, index) => index);
+
   return (
-    <Image
-      src={RUNNER_MASCOT.src}
-      width={RUNNER_MASCOT.width}
-      height={RUNNER_MASCOT.height}
-      alt={RUNNER_MASCOT.alt}
+    <div
       aria-hidden="true"
-      priority
-      className="h-56 w-auto shrink-0 object-contain drop-shadow-lg md:h-64"
-    />
+      className="pointer-events-none absolute inset-0 overflow-hidden"
+      data-runner-idle-atmosphere={state}
+    >
+      <div className="absolute inset-0 bg-gradient-to-b from-background via-warning/5 to-background" />
+      <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-warning/20 via-warning/10 to-transparent motion-safe:animate-pulse" />
+      <div className="absolute inset-x-0 bottom-0 border-t border-warning/20 bg-foreground/5" />
+      <div className="absolute inset-x-8 bottom-8 grid grid-cols-12 gap-2 opacity-80">
+        {emberRows.map((index) => (
+          <span
+            key={index}
+            className={cn(
+              "h-2 rounded-full",
+              index % 3 === 0 ? "bg-warning/45" : "bg-foreground/15 shadow-sm",
+            )}
+          />
+        ))}
+      </div>
+      <div className="absolute inset-x-0 bottom-20 flex justify-center gap-10 opacity-60">
+        {heatColumns.map((index) => (
+          <span
+            key={index}
+            className={cn(
+              "h-28 w-1 rounded-full bg-warning/25 blur-sm motion-safe:animate-pulse",
+              index % 2 === 0 ? "mb-6" : "mt-4",
+            )}
+          />
+        ))}
+      </div>
+    </div>
   );
 }
 

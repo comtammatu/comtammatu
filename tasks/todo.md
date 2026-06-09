@@ -8,18 +8,74 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 
 ## Active implementation note — 2026-06-09
 
+- [x] **Admin pages quick visual audit:** T2 self-review before coding.
+  Surface = `/admin/**` page family; primary job = owner/super_manager rà từng màn Admin trên điện thoại vẫn thấy nhãn đúng tiếng Việt, hierarchy rõ, và tab phụ thể hiện màn hiện tại; change type = UI shell/page composition and copy refinement only, no DB/RLS/money changes; primitives = `AppShell`, `AppPage`, `AppPageHeader`, unframed sections, `SurfaceLinkCard`, link tabs.
+  PM: scope = fix the highest-signal issues found by static + browser audit across Admin routes; acceptance = 25 Admin routes smoke without overflow, page titles/breadcrumb tails stay Vietnamese, reports landing matches dashboard cockpit clarity, feedback subnav has active state.
+  BA: rules = existing ACL/redirects stay unchanged; legacy admin redirects may continue to workspace routes; URL remains the source of route state.
+  Dev: approach = patch shared path-segment label resolver plus page-local Reports and Feedback surfaces; avoid new design tokens or wrapper systems; risk = label drift only.
+  QA: tests = targeted static grep/source checks, Playwright route matrix at mobile/desktop, then `pnpm typecheck && pnpm lint && pnpm build`.
+
+- [x] **Employee Công + Lịch calendar anatomy:** T2 self-review before coding.
+  Surface = `/employee/schedule` plus legacy `/employee/attendance`; primary job = nhân viên nhìn Công + Lịch như một calendar thật theo ngày, không phải danh sách/card grid cũ; change type = UI composition only, no DB/RLS/money changes; primitives = existing Employee wrappers, `Button`, `Table`, skeleton, calendar-style week navigation.
+  PM: scope = replace the schedule card grid with a real weekly calendar table; acceptance = visible header has 7 day columns with date/month/year, body rows map Ca/Công/Trạng thái, and `/employee/attendance` remains merged into this route.
+  BA: rules = shift assignments and attendance records remain the data source; no new status claims; empty/no-shift days must be visibly represented as calendar days, not omitted.
+  Dev: approach = rewrite only the schedule client layout and copy helpers, keep fetch/action shape unchanged, reuse shared table primitive and semantic tokens; files = employee schedule client/copy plus task notes.
+  QA: tests = `pnpm typecheck && pnpm lint && pnpm build`, `git diff --check`, and protected-route smoke after dev server restart; authenticated visual still depends on local login state.
+
+- [x] **Admin Dashboard responsive cockpit:** T2 self-review before coding.
+      Surface = `/admin/dashboard`; primary job = chủ/quản lý mở Dashboard trên điện thoại vẫn thấy ngay hôm nay cần xem gì, chỉ số nào quan trọng, và đi tiếp tới đúng workspace; change type = UI composition/responsive hierarchy only, no DB/RLS/money changes; primitives = `AppPage`, `AppPageHeader`, `AppSection`, `Card`, `Badge`, `Button`, `SurfaceLinkCard`.
+      PM: scope = reorganize the existing admin landing into a clear mobile-first cockpit; acceptance = first viewport has next-look items before secondary chrome, KPI cards scan on mobile, quick links are ACL-gated, and recent orders do not overflow.
+      BA: rules = module ACL remains source of truth; dashboard data remains read-only from existing stats action; no new business claims, no branch/scope state in storage.
+      Dev: approach = keep the existing HR shortcut work, compose from shared app surface adapters and shadcn primitives, and avoid new tokens/theme wrappers; files = admin dashboard page plus source-level regression if needed.
+      QA: tests = focused web test for ACL-scoped HR shortcut, `pnpm typecheck && pnpm lint && pnpm build`, plus browser smoke for `/admin/dashboard` desktop/mobile when auth/dev env allows.
+
+- [x] **Protected route map and navigation contract:** T2 self-review before coding.
+      Surface = protected route families across Admin, domain workspaces, branch operations, and Employee; primary job = user always knows which surface they are in, which route is the valid entry point, and how to leave without bouncing through an inaccessible page; change type = shared auth route contract + docs alignment, no DB/RLS/money changes; primitives = existing `MODULE_ACL`, `route-resolution`, `nav-config`, `AppShell`, shell/bottom-nav patterns.
+      PM: scope = codify the route family/home/back/breadcrumb contract before broad page redesign; acceptance = docs and shared auth code agree on active route families, unknown Inventory URLs do not become active contracts, and shell links keep role-safe home behavior.
+      BA: rules = URL remains the scope source; proxy/module ACL remains the permission source; branch-scoped routes require `branchId` in the path; browser history should be preserved for route changes while `router.replace` stays for same-page filter/tab state.
+      Dev: approach = add a small route-map resolver derived from existing ACL/nav contracts, export and test it, then update Web/Auth docs with the route family matrix; files = shared auth route-map/tests/index plus `docs/modules/web-app.md` and current task notes; risk = stale duplication if docs overpromise beyond runtime.
+      QA: tests = focused shared auth test for route family classification + role-home behavior, grep for stale route contracts, then full `pnpm typecheck && pnpm lint && pnpm build`.
+
+- [x] **Admin Dashboard HR entry:** T2 self-review before coding.
+      Surface = `/admin/dashboard`; primary job = owner/super_manager co loi vao HR tu dashboard dieu hanh ma khong phai tim trong sidebar/report; change type = UI navigation affordance only, no DB/RLS/money changes; primitives = unframed section, `SurfaceLinkCard`, ACL `canAccess`.
+      PM: scope = restore HR as an admin dashboard shortcut; acceptance = role co quyen HR thay card "Nhan su" tro ve `/hr`, dashboard khong day payroll thanh hot path.
+      BA: rules = ACL remains source of truth; card must hide for roles without HR access; existing `/hr` route contract unchanged.
+      Dev: approach = reuse `MODULE_ACL.hr` path/label and existing surface link-card; files = admin dashboard and source-level regression test; risk = copy/nav drift only.
+      QA: tests = static test for dashboard HR shortcut + `pnpm typecheck && pnpm lint && pnpm build`; unauthenticated smoke can still only verify auth redirect.
+
+- [x] **Employee compact daily surface:** T2 self-review before coding.
+      Surface = `/employee` route family; primary job = nhân viên nhìn nhanh ca hôm nay, checklist, lịch/công và hồ sơ tối thiểu mà không đọc lại cùng một trạng thái nhiều lần; change type = UI composition/copy refinement only, no DB/RLS/money changes; primitives = existing Employee wrappers, `AppPage`, `AppSection`, `Button`, `Item`, `Checkbox`.
+      PM: scope = rút gọn đúng bốn vùng user nêu: Hôm nay, Việc, Lịch/Công, Hồ sơ; acceptance = ca hôm nay có ngày và grid Chi nhánh/Giờ vào/Giờ ra/Tiến độ, checklist không còn badge/text dư, lịch thể hiện ngày tháng năm và ngày công trong cùng màn, hồ sơ không còn Thuế TNCN.
+      BA: rules = attendance/checklist state vẫn là dữ liệu nguồn; công không tách khỏi lịch trên hot path; route cũ có thể còn tồn tại nhưng không được đẩy như một surface trùng; không thêm claim/schema/action mới.
+      Dev: approach = reuse current Employee shell/components and schedule action data flow, extend schedule read shape for attendance, remove profile tax/dependents panel; files = employee home/tasks/schedule/profile/payslip copy and task notes; risk = copy drift and responsive density.
+      QA: tests = `pnpm typecheck && pnpm lint && pnpm build`, `git diff --check`, unauthenticated redirect smoke for `/employee` and `/employee/schedule`, plus Browser login-render smoke because no authenticated storage state was available.
+
+- [x] **Role-safe shell navigation cleanup:** T2 self-review before coding.
+      Surface = protected app shells and Inventory mobile entry links; primary job = user can leave a workspace through a valid role home instead of bouncing through an inaccessible admin dashboard or stale mobile route; change type = navigation affordance + route-link cleanup, no DB/RLS/money changes; primitives = `AppShell`, `Button`, `Link`, shared auth nav resolver.
+      PM: scope = fix the first confusing navigation layer before redesigning pages; acceptance = non-admin roles are not shown shell/home links to `/admin/dashboard`, admin roles still return to Admin, and Inventory mobile links use canonical routes.
+      BA: rules = proxy/module ACL remains the permission source; branch/tenant scope stays in URL/JWT only; removed mobile route labels must not survive as active links.
+      Dev: approach = add a shared role-home resolver, wire shells through it, and remove stale Inventory link/prefix usage; files = shared auth nav helpers/tests, AppShell and workspace shells, Inventory entry components.
+      QA: tests = focused shared auth route test plus targeted grep for stale/invalid shell links; `pnpm typecheck && pnpm lint && pnpm build` green after two type-only fixes in the in-progress Employee/HR checkout flow.
+
 - [x] **Employee Portal / Interface UI framework:** T2 self-review before coding.
-  Surface = `/employee` route family; primary job = nhân viên mở màn hình là biết bước tiếp theo trong ca, còn quản lý chi nhánh có entry point vận hành nhưng không lấn át work loop; change type = UI shell/component refactor + UX composition, no DB/RLS/money changes; primitives = `AppPage`, `AppPageHeader`, `AppSection`, `Button`, `Badge`, `Item`, `ItemGroup`, `Checkbox`.
-  PM: scope = rebuild the Employee interface kit around daily work, tasks, and support/navigation; acceptance = one primary action per work state, reusable Employee components, mobile first viewport stays focused; priority = high because Employee is an operational surface.
-  BA: rules = attendance state drives the main CTA; checklist belongs after clock-in; manager tools stay ACL/branch scoped; missing profile/branch states must stay safe and explicit.
-  Dev: approach = reuse `apps/web/app/components/surface.tsx` and shadcn primitives through Employee wrappers; files = Employee shell/components, home, tasks, copy/tests as needed; risk = layout/copy regressions and accidental portal clutter.
-  QA: tests = `pnpm --filter @comtammatu/web test`, touched-file eslint, `pnpm typecheck && pnpm lint && pnpm build`; Playwright unauthenticated smoke confirms `/employee` redirects to login without horizontal overflow on desktop/mobile. Authenticated visual pass remains pending a valid `.env.test.local` or storage state.
+      Surface = `/employee` route family; primary job = nhân viên mở màn hình là biết bước tiếp theo trong ca, còn quản lý chi nhánh có entry point vận hành nhưng không lấn át work loop; change type = UI shell/component refactor + UX composition, no DB/RLS/money changes; primitives = `AppPage`, `AppPageHeader`, `AppSection`, `Button`, `Badge`, `Item`, `ItemGroup`, `Checkbox`.
+      PM: scope = rebuild the Employee interface kit around daily work, tasks, and support/navigation; acceptance = one primary action per work state, reusable Employee components, mobile first viewport stays focused; priority = high because Employee is an operational surface.
+      BA: rules = attendance state drives the main CTA; checklist belongs after clock-in; manager tools stay ACL/branch scoped; missing profile/branch states must stay safe and explicit.
+      Dev: approach = reuse `apps/web/app/components/surface.tsx` and shadcn primitives through Employee wrappers; files = Employee shell/components, home, tasks, copy/tests as needed; risk = layout/copy regressions and accidental portal clutter.
+      QA: tests = `pnpm --filter @comtammatu/web test`, touched-file eslint, `pnpm typecheck && pnpm lint && pnpm build`; Playwright unauthenticated smoke confirms `/employee` redirects to login without horizontal overflow on desktop/mobile. Authenticated visual pass remains pending a valid `.env.test.local` or storage state.
 
 - [x] **Employee Portal / Branch Manager tools:** T2 self-review before coding.
-  PM: scope = restore visible branch-management entry points for Branch Manager inside `/employee`; acceptance = Branch Manager sees real branch tools even outside personal clock-in state; priority = high because the role currently feels empty.
-  BA: rules = personal attendance flow stays state-driven; management links must come from existing ACL + branch scope; no branch scope means no branch-operation links.
-  Dev: approach = reuse Employee shell/action-list primitives, existing `canAccess`, and JWT `claims.branch_id` fallback; files = Employee home, employee copy, static regression test; risk = UI visibility only.
-  QA: tests = source-level regression for branch-manager tools independent of attendance gating plus typecheck/lint/build; recheck employee daily-work flow still has one primary action.
+      PM: scope = restore visible branch-management entry points for Branch Manager inside `/employee`; acceptance = Branch Manager sees real branch tools even outside personal clock-in state; priority = high because the role currently feels empty.
+      BA: rules = personal attendance flow stays state-driven; management links must come from existing ACL + branch scope; no branch scope means no branch-operation links.
+      Dev: approach = reuse Employee shell/action-list primitives, existing `canAccess`, and JWT `claims.branch_id` fallback; files = Employee home, employee copy, static regression test; risk = UI visibility only.
+      QA: tests = source-level regression for branch-manager tools independent of attendance gating plus typecheck/lint/build; recheck employee daily-work flow still has one primary action.
+
+- [x] **HRM cho Hộ Kinh Doanh:** T2 self-review before coding.
+      Surface = `/employee` + `/hr` entry/copy layer; primary job = nhân viên chỉ thấy ca làm, việc trong ca, lịch ca, ngày công; chủ/quản lý thấy nhân viên, ca, chấm công trước khi chạm bảng lương; change type = UI/copy/IA refinement, no DB/RLS/money changes; primitives = existing Employee wrappers, `AppShell`, `Tabs`, `Button`, `Item`.
+      PM: scope = rút HRM về daily-work + ngày công cho HKD pilot; acceptance = bottom nav không còn giống HR portal, hồ sơ chỉ giữ theo dõi thiết yếu, HR admin nói rõ trọng tâm HKD; priority = high because payroll is still Excel-managed for the pilot.
+      BA: rules = không mất route dữ liệu hiện có; payroll/permissions vẫn truy cập trực tiếp khi cần nhưng không là hot path; ngày công phải dễ tìm từ hồ sơ; branch-manager operation tools vẫn ACL/branch scoped.
+      Dev: approach = change copy/nav/form/table composition only, reuse existing wrappers/actions, avoid schema and DB churn; files = employee messages/nav/profile/schedule, HR shell/page/client/form/table, reports entry, shared labels, glossary/auth docs; risk = terminology drift.
+      QA: tests = static copy grep, targeted ESLint, full typecheck/lint/build, unauthenticated browser smoke for `/employee` and `/hr`; manually review `/employee` first viewport, `/employee/profile`, and `/hr` labels for no portal clutter.
 
 ## Shipped (condensed — see git / `regressions.md` for detail)
 
@@ -104,7 +160,7 @@ M0–M7 + Auth v2 + POS PWA + Realtime hardening + Shadcn primitive migration M1
 
 ## N/A while Má Tư is a Hộ Kinh Doanh (no formal BCTC)
 
-- [ ] `voidJournalEntry` closed-period void still mutates signed BCTC — current-period reversal guard EXISTS (`20260527000000`); REMAINING: voiding a *posted* entry whose ORIGINAL `entry_date` is in a CLOSED period flips it → `voided` and statements (`statement-actions.ts:67,179`) filter `status='posted'` + `entry_date`, so the signed period changes retroactively. T3 decision: (A) reject void when original period closed [recommended], (B) keep original posted + only post reversal, (C) reports count reversed entries in original period. **DEFERRED 2026-05-30**: Hộ Kinh Doanh files no BCTC (TT 88/2021) → moot. Revisit only on conversion to a company form.
+- [ ] `voidJournalEntry` closed-period void still mutates signed BCTC — current-period reversal guard EXISTS (`20260527000000`); REMAINING: voiding a _posted_ entry whose ORIGINAL `entry_date` is in a CLOSED period flips it → `voided` and statements (`statement-actions.ts:67,179`) filter `status='posted'` + `entry_date`, so the signed period changes retroactively. T3 decision: (A) reject void when original period closed [recommended], (B) keep original posted + only post reversal, (C) reports count reversed entries in original period. **DEFERRED 2026-05-30**: Hộ Kinh Doanh files no BCTC (TT 88/2021) → moot. Revisit only on conversion to a company form.
 
 ## Doc maintenance reminders
 

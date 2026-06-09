@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { Briefcase as IconBriefcase, Wallet as IconWallet } from "lucide-react";
+import { Briefcase as IconBriefcase } from "lucide-react";
 import type { ReactNode } from "react";
-import type { StaffRole } from "@comtammatu/shared/auth";
+import { resolveRoleHomeLink, type StaffRole } from "@comtammatu/shared/auth";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import { Button } from "@comtammatu/ui/components/button";
 import { AppShell } from "@/components/app-shell";
@@ -13,13 +13,7 @@ const NAV_GROUPS: ShellNavGroup[] = [
   {
     title: "Nhân sự",
     items: [
-      { href: "/hr", label: "Nhân sự & chấm công", icon: IconBriefcase },
-      {
-        href: "/hr/payroll",
-        label: "Bảng lương",
-        icon: IconWallet,
-        matchPrefixes: ["/hr/payroll/"],
-      },
+      { href: "/hr", label: "Nhân viên, ca, công", icon: IconBriefcase },
     ],
   },
 ];
@@ -31,13 +25,15 @@ export interface HRShellProps {
 }
 
 export function HRShell({ children, user, role }: HRShellProps) {
+  const homeLink = resolveRoleHomeLink(role);
+
   return (
     <AppShell
       user={user}
       role={role}
       brand={{
         icon: IconBriefcase,
-        subLabel: "Chuyên trách",
+        subLabel: "Hộ Kinh Doanh",
         mainLabel: APP_COPY_VI.hrWorkspace,
       }}
       navGroups={NAV_GROUPS}
@@ -45,16 +41,11 @@ export function HRShell({ children, user, role }: HRShellProps) {
       pageHeader={{
         crumbLabel: APP_COPY_VI.hrWorkspaceSubtitle,
         description:
-          "Xử lý nhân sự, chấm công và bảng lương trong cùng một nơi.",
+          "Theo dõi nhân viên, ca làm và ngày công cho vận hành hằng ngày.",
         actions: (
-          <>
-            <Button asChild variant="outline" size="sm">
-              <Link href="/admin/dashboard">Quản trị</Link>
-            </Button>
-            <Button asChild size="sm">
-              <Link href="/hr/payroll">Bảng lương</Link>
-            </Button>
-          </>
+          <Button asChild variant="outline" size="sm">
+            <Link href={homeLink.href}>{homeLink.label}</Link>
+          </Button>
         ),
       }}
     >

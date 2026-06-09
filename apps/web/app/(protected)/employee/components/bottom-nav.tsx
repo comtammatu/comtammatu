@@ -22,12 +22,6 @@ const NAV_ITEMS = [
     exact: false,
   },
   {
-    href: "/employee/attendance",
-    label: copy.attendanceShort,
-    icon: IconListChecks,
-    exact: false,
-  },
-  {
     href: "/employee/schedule",
     label: copy.schedule,
     icon: IconCalendarEvent,

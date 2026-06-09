@@ -29,6 +29,7 @@
     "@comtammatu/shared": "workspace:*",
     "@comtammatu/ui": "workspace:*",
     "@hookform/resolvers": "^5.4.0",
+    "@lottiefiles/dotlottie-react": "^0.19.4",
     "@tanstack/react-table": "^8.21.3",
     "boneyard-js": "^1.8.1",
     "class-variance-authority": "^0.7.1",

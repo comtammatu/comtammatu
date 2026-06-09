@@ -18,6 +18,7 @@ export const notifications = {
     "pos.order_new": "Đơn mới",
     "pos.kds_out_of_stock": "Bếp báo hết món",
     "pos.shift_variance": "Lệch quỹ ca POS",
+    "attendance.checkout_requested": "Yêu cầu kết ca",
     "workflow.po_sent": "PO đã gửi",
     "workflow.grn_pending": "GRN chờ chốt",
     "workflow.transfer_in_transit": "Chuyển kho đang về",

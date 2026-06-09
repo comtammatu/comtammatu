@@ -14,29 +14,49 @@ const runnerWaitTimeSource = readFileSync(
   ),
   "utf8",
 );
+const runnerIdleVisualSource = readFileSync(
+  join(
+    process.cwd(),
+    "app/(protected)/br/[branchId]/runner/runner-idle-visual.tsx",
+  ),
+  "utf8",
+);
 const uiGlobalsSource = readFileSync(
   join(process.cwd(), "../../packages/ui/src/styles/globals.css"),
   "utf8",
 );
+const runnerIdleAnimationSource = readFileSync(
+  join(process.cwd(), "public/brand/mascot/be-suon-tuoi-runner-idle.json"),
+  "utf8",
+);
 
 test("Runner page follows the KDS order-list vocabulary", () => {
-  assert.match(runnerPageSource, /import Image from "next\/image";/);
+  assert.match(
+    runnerPageSource,
+    /import \{ createServiceClient \} from "@comtammatu\/database\/supabase\/service";/,
+  );
+  assert.match(
+    runnerPageSource,
+    /type RunnerSupabase = ReturnType<typeof createServiceClient>;/,
+  );
+  assert.match(runnerPageSource, /const supabase = createServiceClient\(\);/);
+  assert.match(
+    runnerPageSource,
+    /if \(!Number\.isInteger\(branchIdNum\) \|\| branchIdNum <= 0\)/,
+  );
+  assert.match(runnerPageSource, /isRunnerOperationalBranchKind/);
+  assert.doesNotMatch(runnerPageSource, /loadAuthState/);
+  assert.doesNotMatch(runnerPageSource, /@\/_lib\/auth/);
+  assert.doesNotMatch(runnerPageSource, /claims\.tenant_id/);
   assert.match(runnerPageSource, /eyebrow: MODULE_LABELS_VI\.runner/);
-  assert.match(runnerPageSource, /const RUNNER_MASCOT = \{/);
+  assert.match(runnerPageSource, /idleEmptyTitle: "Sẵn sàng nhận món mới\."/);
   assert.match(
     runnerPageSource,
-    /src: "\/brand\/mascot\/be-suon-tuoi-runner\.png"/,
-  );
-  assert.match(runnerPageSource, /width: 384/);
-  assert.match(runnerPageSource, /height: 512/);
-  assert.match(runnerPageSource, /alt: ""/);
-  assert.match(
-    runnerPageSource,
-    /emptyServed: "Các món đã được phục vụ đầy đủ\."/,
+    /idleDoneTitle: "Các món đã được phục vụ đầy đủ\."/,
   );
   assert.match(
     runnerPageSource,
-    /emptyEnjoy: "Chúc quý khách dùng bữa ngon miệng\."/,
+    /idleBrandLine: "Thịt tươi 100% - chúc quý khách dùng bữa ngon miệng\."/,
   );
   assert.match(runnerPageSource, /wifi: "WiFi: Má Tư"/);
   assert.match(runnerPageSource, /password: "Mật khẩu: xincamon"/);
@@ -78,16 +98,38 @@ test("Runner page follows the KDS order-list vocabulary", () => {
   assert.match(runnerPageSource, /text-runner-board/);
   assert.match(runnerPageSource, /text-runner-empty-secondary/);
   assert.match(runnerPageSource, /text-runner-footer/);
-  assert.match(runnerPageSource, /RunnerEmptyMascot/);
-  assert.match(runnerPageSource, /RunnerFooter/);
-  assert.match(runnerPageSource, /gap-6 overflow-hidden bg-background px-8/);
-  assert.match(runnerPageSource, /flex max-w-full flex-col items-center gap-3/);
-  assert.match(runnerPageSource, /aria-hidden="true"/);
-  assert.match(runnerPageSource, /priority/);
+  assert.match(runnerPageSource, /RunnerIdleVisual/);
+  assert.match(runnerPageSource, /type RunnerIdleState/);
+  assert.match(runnerPageSource, /fetchRunnerTodayTicketCount/);
   assert.match(
     runnerPageSource,
-    /className="h-56 w-auto shrink-0 object-contain drop-shadow-lg md:h-64"/,
+    /\.select\("id", \{ count: "exact", head: true \}\)/,
   );
+  assert.match(runnerPageSource, /\.lt\("created_at", todayEndIso\)/);
+  assert.match(
+    runnerPageSource,
+    /idleState = todayTicketCountResult\.count > 0 \? "done" : "empty";/,
+  );
+  assert.match(runnerPageSource, /if \(rows\.length === 0\)/);
+  assert.match(
+    runnerPageSource,
+    /<RunnerIdleVisual state=\{resolvedIdleState\} \/>/,
+  );
+  assert.match(
+    runnerPageSource,
+    /<RunnerIdleAtmosphere state=\{resolvedIdleState\} \/>/,
+  );
+  assert.match(runnerPageSource, /function RunnerIdleAtmosphere/);
+  assert.match(runnerPageSource, /data-runner-idle-atmosphere=\{state\}/);
+  assert.match(runnerPageSource, /bg-gradient-to-t from-warning\/20/);
+  assert.match(runnerPageSource, /grid grid-cols-12 gap-2 opacity-80/);
+  assert.match(runnerPageSource, /h-28 w-1 rounded-full bg-warning\/25/);
+  assert.match(runnerPageSource, /RunnerFooter/);
+  assert.match(
+    runnerPageSource,
+    /relative flex min-h-0 flex-1 flex-col items-center justify-center gap-6 overflow-hidden bg-background px-8/,
+  );
+  assert.match(runnerPageSource, /flex max-w-full flex-col items-center gap-3/);
   assert.match(
     runnerPageSource,
     /<RunnerOrderCell span=\{RUNNER_COLUMN_SPAN\.status\} mono>\s*\{statusLabel\}\s*<\/RunnerOrderCell>/,
@@ -187,6 +229,84 @@ test("Runner page follows the KDS order-list vocabulary", () => {
     /\.filter\(\(item\) => item\.lane === "served"\)/,
   );
   assert.doesNotMatch(runnerPageSource, /aria-label=\{`Runner/);
+});
+
+test("Runner idle visual uses local dotLottie asset with static mascot fallback", () => {
+  assert.match(runnerIdleVisualSource, /"use client";/);
+  assert.match(
+    runnerIdleVisualSource,
+    /import \{\s*DotLottieReact,\s*type DotLottie\s*\} from "@lottiefiles\/dotlottie-react";/,
+  );
+  assert.match(
+    runnerIdleVisualSource,
+    /export type RunnerIdleState = "empty" \| "done";/,
+  );
+  assert.match(
+    runnerIdleVisualSource,
+    /src: "\/brand\/mascot\/be-suon-tuoi-runner\.png"/,
+  );
+  assert.match(runnerIdleVisualSource, /width: 384/);
+  assert.match(runnerIdleVisualSource, /height: 512/);
+  assert.match(runnerIdleVisualSource, /alt: ""/);
+  assert.match(
+    runnerIdleVisualSource,
+    /const RUNNER_MASCOT_ANIMATION_SRC =\s*"\/brand\/mascot\/be-suon-tuoi-runner-idle\.json";/,
+  );
+  assert.match(runnerIdleVisualSource, /empty: \[0, 119\]/);
+  assert.match(runnerIdleVisualSource, /done: \[120, 239\]/);
+  assert.match(
+    runnerIdleVisualSource,
+    /window\.matchMedia\("\(prefers-reduced-motion: no-preference\)"\)/,
+  );
+  assert.match(
+    runnerIdleVisualSource,
+    /dotLottie\.addEventListener\("loadError", handleAnimationError\)/,
+  );
+  assert.match(
+    runnerIdleVisualSource,
+    /dotLottie\.addEventListener\("renderError", handleAnimationError\)/,
+  );
+  assert.match(
+    runnerIdleVisualSource,
+    /dotLottie\.removeEventListener\("loadError", handleAnimationError\)/,
+  );
+  assert.match(
+    runnerIdleVisualSource,
+    /dotLottie\.removeEventListener\("renderError", handleAnimationError\)/,
+  );
+  assert.match(runnerIdleVisualSource, /<Image/);
+  assert.match(runnerIdleVisualSource, /priority/);
+  assert.match(runnerIdleVisualSource, /<DotLottieReact/);
+  assert.match(runnerIdleVisualSource, /src=\{RUNNER_MASCOT_ANIMATION_SRC\}/);
+  assert.match(
+    runnerIdleVisualSource,
+    /segment=\{RUNNER_MASCOT_ANIMATION_SEGMENTS\[state\]\}/,
+  );
+  assert.match(runnerIdleVisualSource, /bg-warning\/15/);
+  assert.match(runnerIdleVisualSource, /bg-warning\/25/);
+  assert.match(runnerIdleVisualSource, /motion-safe:animate-bounce/);
+  assert.doesNotMatch(runnerIdleVisualSource, /IconCircleCheck/);
+  assert.doesNotMatch(runnerIdleVisualSource, /IconFlame/);
+  assert.doesNotMatch(
+    runnerIdleVisualSource,
+    /data-runner-idle-accent=\{state\}/,
+  );
+  assert.match(runnerIdleVisualSource, /autoplay/);
+  assert.match(runnerIdleVisualSource, /loop/);
+  assert.match(runnerIdleVisualSource, /data-runner-idle-state=\{state\}/);
+  assert.doesNotMatch(runnerIdleVisualSource, /@lottiefiles\/dotlottie-web/);
+  assert.doesNotMatch(runnerIdleVisualSource, /https?:\/\//);
+
+  const animation = JSON.parse(runnerIdleAnimationSource) as {
+    assets: Array<{ p?: string; u?: string }>;
+    markers: Array<{ cm?: string }>;
+  };
+  assert.equal(animation.assets[0]?.p, "be-suon-tuoi-runner.png");
+  assert.equal(animation.assets[0]?.u, "/brand/mascot/");
+  assert.deepEqual(
+    animation.markers.map((marker) => marker.cm),
+    ["empty", "done"],
+  );
 });
 
 test("Runner board uses responsive design-system text and Tailwind grid tokens", () => {

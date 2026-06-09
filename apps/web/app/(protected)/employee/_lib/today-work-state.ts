@@ -1,12 +1,15 @@
 import { getEmployeeContext } from "./employee-context";
 import { formatTimeShort, getTodayVN } from "./vn-business-date";
+import type { StaffRole } from "@comtammatu/shared/auth";
 
 export type TodayWorkStatus =
   | "missing_profile"
   | "missing_branch"
+  | "not_required"
   | "not_started"
   | "working"
   | "ready_to_checkout"
+  | "checkout_pending"
   | "done";
 
 export interface TodayChecklistItem {
@@ -32,6 +35,12 @@ export interface TodayAttendance {
   branchName: string | null;
   checkIn: string | null;
   checkOut: string | null;
+  checkoutRequestedAt: string | null;
+  checkoutRequestedCodeVerified: boolean;
+  checkoutRequestedByRole: string | null;
+  checkoutApprovalTargetRoles: string[];
+  checkoutApprovedAt: string | null;
+  checkoutApprovedBy: string | null;
   checkInPhotoPath: string | null;
   checkOutCodeVerified: boolean;
   shiftName: string | null;
@@ -44,6 +53,9 @@ export interface TodayWorkState {
   today: string;
   branchId: number | null;
   branchName: string | null;
+  userRole: StaffRole | null;
+  attendanceRequired: boolean;
+  approvalTargetLabel: string;
   attendance: TodayAttendance | null;
   nextShift: TodayShift | null;
   checklist: {
@@ -54,17 +66,31 @@ export interface TodayWorkState {
   };
 }
 
-function normalizeBranch(
-  branch: unknown,
-): { name: string | null } | null {
+const DEFAULT_ATTENDANCE_ROLES: readonly StaffRole[] = [
+  "cashier",
+  "waiter",
+  "chef",
+];
+
+function isDefaultAttendanceRole(role: StaffRole): boolean {
+  return DEFAULT_ATTENDANCE_ROLES.includes(role);
+}
+
+function getApprovalTargetLabel(role: StaffRole | null): string {
+  return role === "branch_manager" ? "quản lý cấp trên" : "quản lý chi nhánh";
+}
+
+function normalizeBranch(branch: unknown): { name: string | null } | null {
   if (!branch || typeof branch !== "object") return null;
   const maybe = branch as { name?: unknown };
   return { name: typeof maybe.name === "string" ? maybe.name : null };
 }
 
-function normalizeShift(
-  shift: unknown,
-): { name: string | null; start_time: string | null; end_time: string | null } | null {
+function normalizeShift(shift: unknown): {
+  name: string | null;
+  start_time: string | null;
+  end_time: string | null;
+} | null {
   if (!shift || typeof shift !== "object") return null;
   const maybe = shift as {
     name?: unknown;
@@ -73,8 +99,7 @@ function normalizeShift(
   };
   return {
     name: typeof maybe.name === "string" ? maybe.name : null,
-    start_time:
-      typeof maybe.start_time === "string" ? maybe.start_time : null,
+    start_time: typeof maybe.start_time === "string" ? maybe.start_time : null,
     end_time: typeof maybe.end_time === "string" ? maybe.end_time : null,
   };
 }
@@ -94,6 +119,9 @@ export async function getTodayWorkState(): Promise<TodayWorkState> {
       today,
       branchId: null,
       branchName: null,
+      userRole: null,
+      attendanceRequired: false,
+      approvalTargetLabel: getApprovalTargetLabel(null),
       attendance: null,
       nextShift: null,
       checklist: { items: [], total: 0, done: 0, remaining: 0 },
@@ -111,6 +139,12 @@ export async function getTodayWorkState(): Promise<TodayWorkState> {
       branch_id,
       check_in,
       check_out,
+      checkout_requested_at,
+      checkout_requested_code_verified,
+      checkout_requested_by_role,
+      checkout_approval_target_roles,
+      checkout_approved_at,
+      checkout_approved_by,
       check_in_photo_path,
       check_out_code_verified,
       branches ( name ),
@@ -153,6 +187,12 @@ export async function getTodayWorkState(): Promise<TodayWorkState> {
         branchName: branchData?.name ?? null,
         checkIn: record.check_in,
         checkOut: record.check_out,
+        checkoutRequestedAt: record.checkout_requested_at,
+        checkoutRequestedCodeVerified: record.checkout_requested_code_verified,
+        checkoutRequestedByRole: record.checkout_requested_by_role,
+        checkoutApprovalTargetRoles: record.checkout_approval_target_roles,
+        checkoutApprovedAt: record.checkout_approved_at,
+        checkoutApprovedBy: record.checkout_approved_by,
         checkInPhotoPath: record.check_in_photo_path,
         checkOutCodeVerified: record.check_out_code_verified,
         shiftName: shiftData?.name ?? null,
@@ -183,14 +223,23 @@ export async function getTodayWorkState(): Promise<TodayWorkState> {
   const done = checklistItems.filter((item) => item.done).length;
   const total = checklistItems.length;
   const remaining = Math.max(total - done, 0);
+  const hasTodayShift = nextShift?.date === today;
+  const attendanceRequired =
+    Boolean(attendance) ||
+    hasTodayShift ||
+    isDefaultAttendanceRole(claims.user_role);
 
   let status: TodayWorkStatus;
-  if (!attendance && !ctx.branchId) {
+  if (!attendance && !attendanceRequired) {
+    status = "not_required";
+  } else if (!attendance && !ctx.branchId) {
     status = "missing_branch";
   } else if (!attendance?.checkIn) {
     status = "not_started";
   } else if (attendance.checkOut) {
     status = "done";
+  } else if (attendance.checkoutRequestedAt) {
+    status = "checkout_pending";
   } else if (remaining > 0) {
     status = "working";
   } else {
@@ -202,6 +251,9 @@ export async function getTodayWorkState(): Promise<TodayWorkState> {
     today,
     branchId: attendance?.branchId ?? ctx.branchId,
     branchName: attendance?.branchName ?? ctx.branchName,
+    userRole: claims.user_role,
+    attendanceRequired,
+    approvalTargetLabel: getApprovalTargetLabel(claims.user_role),
     attendance,
     nextShift,
     checklist: {
@@ -212,4 +264,3 @@ export async function getTodayWorkState(): Promise<TodayWorkState> {
     },
   };
 }
-

@@ -1,9 +1,6 @@
-import Link from "next/link";
-import { Plus as IconPlus } from "lucide-react";
 import { getEmployeeContext } from "../_lib/employee-context";
 import { ScheduleClient } from "./schedule-client";
-import type { ScheduleShift } from "./actions";
-import { Button } from "@comtammatu/ui/components/button";
+import type { ScheduleAttendance, ScheduleShift } from "./actions";
 import {
   EmployeeMissingProfileEmpty,
   EmployeePage,
@@ -35,16 +32,26 @@ export default async function SchedulePage() {
   const weekStart = getVNWeekStartDateString();
   const weekEndStr = getVNWeekEndDateString(weekStart);
 
-  const { data } = await supabase
-    .from("shift_assignments")
-    .select("date, shifts ( name, start_time, end_time )")
-    .eq("employee_id", employeeId)
-    .eq("tenant_id", claims.tenant_id)
-    .gte("date", weekStart)
-    .lte("date", weekEndStr)
-    .order("date");
+  const [shiftResult, attendanceResult] = await Promise.all([
+    supabase
+      .from("shift_assignments")
+      .select("date, shifts ( name, start_time, end_time )")
+      .eq("employee_id", employeeId)
+      .eq("tenant_id", claims.tenant_id)
+      .gte("date", weekStart)
+      .lte("date", weekEndStr)
+      .order("date"),
+    supabase
+      .from("attendance_records")
+      .select("date, check_in, check_out, status")
+      .eq("employee_id", employeeId)
+      .eq("tenant_id", claims.tenant_id)
+      .gte("date", weekStart)
+      .lte("date", weekEndStr)
+      .order("date"),
+  ]);
 
-  const initialShifts: ScheduleShift[] = (data ?? []).map((row) => {
+  const initialShifts: ScheduleShift[] = (shiftResult.data ?? []).map((row) => {
     // supabase-js typegen infers M:1 FK as array, but PostgREST returns
     // a single object at runtime. Cast through unknown to match runtime.
     const shift = row.shifts as unknown as {
@@ -59,22 +66,25 @@ export default async function SchedulePage() {
       end_time: shift?.end_time ?? "00:00",
     };
   });
+  const initialAttendance: ScheduleAttendance[] = (
+    attendanceResult.data ?? []
+  ).map((row) => ({
+    date: row.date,
+    check_in: row.check_in,
+    check_out: row.check_out,
+    status: row.status,
+  }));
 
   return (
     <EmployeePage
       title={copy.scheduleTitle}
       description={copy.scheduleLongDescription}
-      action={
-        <Button asChild size="touch" className="w-full sm:w-fit">
-          <Link href="/employee/shift-register">
-            <IconPlus data-icon="inline-start" />
-            {copy.shiftRegisterTitle}
-          </Link>
-        </Button>
-      }
     >
       <ScheduleClient
-        initialShifts={initialShifts}
+        initialData={{
+          shifts: initialShifts,
+          attendance: initialAttendance,
+        }}
         initialWeekStart={weekStart}
       />
     </EmployeePage>

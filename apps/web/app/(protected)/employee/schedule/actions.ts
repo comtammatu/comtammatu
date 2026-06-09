@@ -17,9 +17,21 @@ export interface ScheduleShift {
   end_time: string;
 }
 
+export interface ScheduleAttendance {
+  date: string;
+  check_in: string | null;
+  check_out: string | null;
+  status: string;
+}
+
+export interface ScheduleWeekData {
+  shifts: ScheduleShift[];
+  attendance: ScheduleAttendance[];
+}
+
 export async function fetchMySchedule(
   weekStartDate: string,
-): Promise<ActionResult<ScheduleShift[]>> {
+): Promise<ActionResult<ScheduleWeekData>> {
   const parsed = weekStartSchema.safeParse(weekStartDate);
   if (!parsed.success) {
     return {
@@ -55,21 +67,30 @@ export async function fetchMySchedule(
 
   const weekEndDate = getVNWeekEndDateString(parsed.data);
 
-  // Fetch shift assignments for this employee in the week range
-  const { data, error } = await supabase
-    .from("shift_assignments")
-    .select("date, shifts ( name, start_time, end_time )")
-    .eq("employee_id", employee.id)
-    .eq("tenant_id", claims.tenant_id)
-    .gte("date", parsed.data)
-    .lte("date", weekEndDate)
-    .order("date");
+  const [shiftResult, attendanceResult] = await Promise.all([
+    supabase
+      .from("shift_assignments")
+      .select("date, shifts ( name, start_time, end_time )")
+      .eq("employee_id", employee.id)
+      .eq("tenant_id", claims.tenant_id)
+      .gte("date", parsed.data)
+      .lte("date", weekEndDate)
+      .order("date"),
+    supabase
+      .from("attendance_records")
+      .select("date, check_in, check_out, status")
+      .eq("employee_id", employee.id)
+      .eq("tenant_id", claims.tenant_id)
+      .gte("date", parsed.data)
+      .lte("date", weekEndDate)
+      .order("date"),
+  ]);
 
-  if (error) {
+  if (shiftResult.error || attendanceResult.error) {
     return { success: false, error: "Không tải được lịch ca." };
   }
 
-  const shifts: ScheduleShift[] = (data ?? []).map((row) => {
+  const shifts: ScheduleShift[] = (shiftResult.data ?? []).map((row) => {
     const shift = row.shifts as unknown as {
       name: string;
       start_time: string;
@@ -83,5 +104,14 @@ export async function fetchMySchedule(
     };
   });
 
-  return { success: true, data: shifts };
+  const attendance: ScheduleAttendance[] = (attendanceResult.data ?? []).map(
+    (row) => ({
+      date: row.date,
+      check_in: row.check_in,
+      check_out: row.check_out,
+      status: row.status,
+    }),
+  );
+
+  return { success: true, data: { shifts, attendance } };
 }

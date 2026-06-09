@@ -82,32 +82,6 @@ export function PayslipClient({ entries }: { entries: PayslipEntry[] }) {
                   muted: true,
                 },
                 {
-                  label: "Giảm trừ bản thân",
-                  value: `-${fmt(Number(entry.personal_deduction))}`,
-                  muted: true,
-                },
-                ...(Number(entry.dependent_count) > 0
-                  ? [
-                      {
-                        label: `Giảm trừ người phụ thuộc (${entry.dependent_count})`,
-                        value: `-${fmt(Number(entry.dependent_deduction))}`,
-                        muted: true,
-                      },
-                    ]
-                  : []),
-                {
-                  label: "Thu nhập tính thuế",
-                  value: fmt(Number(entry.taxable_income)),
-                },
-                {
-                  label: "Thuế TNCN",
-                  value:
-                    Number(entry.pit_tax) > 0
-                      ? `-${fmt(Number(entry.pit_tax))}`
-                      : "0",
-                  muted: true,
-                },
-                {
                   label: "Ngày công",
                   value: `${Number(entry.working_days)}/${Number(entry.standard_days)}`,
                 },

@@ -11,9 +11,9 @@ export default async function PayrollPage() {
   return (
     <AppPage>
       <AppPageHeader
-        eyebrow="Nhân sự & lương"
-        title="Bảng lương"
-        description="Quản lý kỳ lương và trạng thái chi trả."
+        eyebrow="Nhân sự"
+        title="Lương đã chốt"
+        description="Theo dõi kỳ lương đã tính khi cần đối soát."
       />
       <PayrollListClient initialPeriods={periods} />
     </AppPage>

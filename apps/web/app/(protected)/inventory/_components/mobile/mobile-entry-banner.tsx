@@ -9,7 +9,7 @@ import {
 export function MobileEntryBanner() {
   return (
     <Link
-      href="/inventory/m"
+      href="/inventory"
       className="group flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2.5 text-sm font-medium text-primary transition hover:bg-primary/10 active:scale-[0.99] md:hidden"
     >
       <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/15">

@@ -52,7 +52,7 @@ Generated snapshot: 116 public tables.
 | `branch_menu_item_daily_limits` | `MIGRATE` | POS operational limit state; cutover needs current-day counter rule. |
 | `branch_override_attempts` | `ARCHIVE_ONLY` | Security/audit attempt history; live state comes from active code hashes. |
 | `branch_override_codes` | `DEFER_DECISION` | Hashes may migrate or be rotated/re-provisioned at cutover. |
-| `branch_trusted_egress_ips` | `MIGRATE` | POS/KDS/Runner network perimeter. |
+| `branch_trusted_egress_ips` | `MIGRATE` | POS/KDS network perimeter. Runner display is public. |
 | `branch_zones` | `MIGRATE` | POS layout and table grouping. |
 | `branches` | `MIGRATE` | L1 operational identity. |
 | `chart_of_accounts` | `MIGRATE` | Finance/GL identity. |

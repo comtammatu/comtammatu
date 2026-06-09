@@ -2,37 +2,32 @@
 
 import { useState, useTransition } from "react";
 import { cn } from "@comtammatu/ui";
-import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@comtammatu/ui/components/empty";
-import {
-  Item,
-  ItemActions,
-  ItemContent,
-  ItemDescription,
-  ItemGroup,
-  ItemMedia,
-  ItemTitle,
-} from "@comtammatu/ui/components/item";
 import { Skeleton } from "@comtammatu/ui/components/skeleton";
 import {
-  CalendarDays as IconCalendarEvent,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@comtammatu/ui/components/table";
+import {
   ChevronLeft as IconChevronLeft,
   ChevronRight as IconChevronRight,
   RefreshCw as IconRefresh,
 } from "lucide-react";
 import { AppBoneyardSkeleton } from "@/_components/boneyard-skeleton";
 import { EmployeePanel } from "../components/employee-page";
-import { fetchMySchedule, type ScheduleShift } from "./actions";
+import {
+  fetchMySchedule,
+  type ScheduleAttendance,
+  type ScheduleShift,
+  type ScheduleWeekData,
+} from "./actions";
 import {
   addVNDateDays,
-  formatVNBusinessDate,
+  formatVNTime,
   getVNDateString,
   getVNWeekStartDateString,
   parseISODateParts,
@@ -41,8 +36,21 @@ import { messages } from "@lib/messages";
 
 const copy = messages.employee.schedule;
 
+const ATTENDANCE_STATUS_LABELS: Record<string, string> = {
+  present: "C\u00f3 m\u1eb7t",
+  late: "\u0110i tr\u1ec5",
+  absent: "V\u1eafng",
+  half_day: "N\u1eeda ng\u00e0y",
+};
+
 function formatDate(dateStr: string): string {
-  return formatVNBusinessDate(dateStr);
+  const parts = parseISODateParts(dateStr);
+  if (!parts) return dateStr;
+  return `${String(parts.day).padStart(2, "0")}/${String(parts.month).padStart(2, "0")}/${parts.year}`;
+}
+
+function formatTime(iso: string | null | undefined): string {
+  return iso ? formatVNTime(iso) : "\u2014";
 }
 
 function getDayName(dateStr: string): string {
@@ -60,6 +68,7 @@ function generateWeekDates(mondayStr: string): string[] {
   );
 }
 
+const EMPTY_WEEK: ScheduleWeekData = { shifts: [], attendance: [] };
 const SCHEDULE_SKELETON_FIXTURE_DATES = generateWeekDates("2026-01-05");
 const SCHEDULE_SKELETON_TODAY = "2026-01-06";
 const SCHEDULE_SKELETON_FIXTURE_SHIFTS: ScheduleShift[] = [
@@ -88,110 +97,255 @@ const SCHEDULE_SKELETON_FIXTURE_SHIFTS: ScheduleShift[] = [
     end_time: "23:00",
   },
 ];
+const SCHEDULE_SKELETON_FIXTURE_ATTENDANCE: ScheduleAttendance[] = [
+  {
+    date: "2026-01-05",
+    check_in: "2026-01-05T00:05:00.000Z",
+    check_out: "2026-01-05T07:00:00.000Z",
+    status: "present",
+  },
+  {
+    date: "2026-01-06",
+    check_in: "2026-01-06T07:10:00.000Z",
+    check_out: null,
+    status: "late",
+  },
+];
 
 interface ScheduleClientProps {
-  initialShifts: ScheduleShift[];
+  initialData: ScheduleWeekData;
   initialWeekStart: string;
 }
 
 function ScheduleSkeletonFallback() {
   return (
-    <ItemGroup>
-      {Array.from({ length: 7 }).map((_, i) => (
-        <Item key={i} variant="outline">
-          <ItemMedia>
-            <Skeleton className="size-8 rounded-md" />
-          </ItemMedia>
-          <ItemContent>
-            <Skeleton className="h-4 w-24" />
-            <Skeleton className="h-3 w-32" />
-          </ItemContent>
-        </Item>
-      ))}
-    </ItemGroup>
+    <div className="rounded-md border bg-card">
+      <Table className="min-w-max table-fixed border-collapse">
+        <TableHeader>
+          <TableRow className="bg-muted/40 hover:bg-muted/40">
+            <TableHead className="sticky left-0 z-20 w-24 border-r bg-muted/40">
+              <Skeleton className="h-4 w-12" />
+            </TableHead>
+            {Array.from({ length: 7 }).map((_, index) => (
+              <TableHead
+                key={index}
+                className="min-w-28 border-l p-2 align-top whitespace-normal"
+              >
+                <Skeleton className="mx-auto h-4 w-16" />
+                <Skeleton className="mx-auto mt-2 h-3 w-20" />
+              </TableHead>
+            ))}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {Array.from({ length: 3 }).map((_, rowIndex) => (
+            <TableRow key={rowIndex} className="hover:bg-transparent">
+              <TableHead className="sticky left-0 z-10 w-24 border-r bg-card">
+                <Skeleton className="h-4 w-14" />
+              </TableHead>
+              {Array.from({ length: 7 }).map((_, cellIndex) => (
+                <TableCell
+                  key={cellIndex}
+                  className="min-w-28 border-l p-2 whitespace-normal"
+                >
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="mt-2 h-3 w-16" />
+                </TableCell>
+              ))}
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   );
 }
 
-function ScheduleWeekList({
-  shifts,
+function formatShiftTime(shift: ScheduleShift): string {
+  return `${shift.start_time.slice(0, 5)} - ${shift.end_time.slice(0, 5)}`;
+}
+
+function getCalendarCellClass(isToday: boolean): string {
+  return cn(
+    "min-w-28 border-l p-2 align-top whitespace-normal",
+    isToday && "bg-primary/5",
+  );
+}
+
+function ScheduleWeekCalendarTable({
+  data,
   todayStr,
   weekDates,
 }: {
-  shifts: ScheduleShift[];
+  data: ScheduleWeekData;
   todayStr: string;
   weekDates: string[];
 }) {
   const shiftsByDate = new Map<string, ScheduleShift>();
-  for (const shift of shifts) {
+  for (const shift of data.shifts) {
     shiftsByDate.set(shift.date, shift);
   }
 
-  const hasSchedule =
-    shifts.length > 0 || weekDates.some((d) => shiftsByDate.has(d));
+  const attendanceByDate = new Map<string, ScheduleAttendance>();
+  for (const attendance of data.attendance) {
+    attendanceByDate.set(attendance.date, attendance);
+  }
+
+  const calendarDays = weekDates.map((dateStr) => ({
+    attendance: attendanceByDate.get(dateStr),
+    dateStr,
+    dayName: getDayName(dateStr),
+    isToday: dateStr === todayStr,
+    shift: shiftsByDate.get(dateStr),
+  }));
 
   return (
-    <div className="flex flex-col gap-3">
-      {!hasSchedule && (
-        <Empty>
-          <EmptyMedia variant="icon">
-            <IconCalendarEvent />
-          </EmptyMedia>
-          <EmptyHeader>
-            <EmptyTitle>{copy.emptyTitle}</EmptyTitle>
-            <EmptyDescription>{copy.emptyDescription}</EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      )}
-
-      <ItemGroup>
-        {(hasSchedule ? weekDates : []).map((dateStr) => {
-          const shift = shiftsByDate.get(dateStr);
-          const isToday = dateStr === todayStr;
-
-          return (
-            <Item
-              key={dateStr}
-              variant="outline"
-              className={cn(
-                "items-center",
-                isToday && "border-primary/50 bg-primary/5",
-              )}
-            >
-              <ItemContent>
-                <ItemTitle className={cn(isToday && "text-primary")}>
-                  {getDayName(dateStr)}
-                  {isToday ? <Badge variant="info">{copy.today}</Badge> : null}
-                </ItemTitle>
-                <ItemDescription>{formatDate(dateStr)}</ItemDescription>
-              </ItemContent>
-
-              <ItemActions className="text-right">
-                {shift ? (
-                  <div>
-                    <p className="text-sm font-medium">{shift.shift_name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {shift.start_time.slice(0, 5)} {"\u2013"}{" "}
-                      {shift.end_time.slice(0, 5)}
-                    </p>
-                  </div>
-                ) : (
-                  <Badge variant="outline">{copy.rest}</Badge>
+    <div className="rounded-md border bg-card">
+      <Table className="min-w-max table-fixed border-collapse">
+        <TableHeader>
+          <TableRow className="bg-muted/40 hover:bg-muted/40">
+            <TableHead className="sticky left-0 z-20 w-24 border-r bg-muted/40 align-bottom whitespace-normal">
+              <span className="font-heading text-sm font-semibold">
+                {copy.calendarAxisLabel}
+              </span>
+            </TableHead>
+            {calendarDays.map((day) => (
+              <TableHead
+                key={day.dateStr}
+                className={cn(
+                  "min-w-28 border-l p-2 text-center align-top whitespace-normal",
+                  day.isToday && "bg-primary/10 text-primary",
                 )}
-              </ItemActions>
-            </Item>
-          );
-        })}
-      </ItemGroup>
+                scope="col"
+              >
+                <span className="block text-xs font-medium">
+                  {day.dayName}
+                </span>
+                <span className="mt-1 block font-mono text-sm font-semibold tabular-nums">
+                  {formatDate(day.dateStr)}
+                </span>
+                {day.isToday ? (
+                  <span className="mt-1 block text-xs font-medium">
+                    {copy.today}
+                  </span>
+                ) : null}
+              </TableHead>
+            ))}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          <TableRow className="hover:bg-transparent">
+            <TableHead
+              scope="row"
+              className="sticky left-0 z-10 w-24 border-r bg-card text-xs text-muted-foreground whitespace-normal"
+            >
+              {copy.rowShift}
+            </TableHead>
+            {calendarDays.map((day) => (
+              <TableCell
+                key={day.dateStr}
+                className={getCalendarCellClass(day.isToday)}
+              >
+                <div className="flex min-h-20 flex-col gap-1">
+                  <span
+                    className={cn(
+                      "text-sm font-medium",
+                      !day.shift && "text-muted-foreground",
+                    )}
+                  >
+                    {day.shift?.shift_name ?? copy.rest}
+                  </span>
+                  <span className="font-mono text-xs tabular-nums text-muted-foreground">
+                    {day.shift ? formatShiftTime(day.shift) : "\u2014"}
+                  </span>
+                </div>
+              </TableCell>
+            ))}
+          </TableRow>
+          <TableRow className="hover:bg-transparent">
+            <TableHead
+              scope="row"
+              className="sticky left-0 z-10 w-24 border-r bg-card text-xs text-muted-foreground whitespace-normal"
+            >
+              {copy.rowAttendance}
+            </TableHead>
+            {calendarDays.map((day) => {
+              const hasClock = Boolean(
+                day.attendance?.check_in || day.attendance?.check_out,
+              );
+
+              return (
+                <TableCell
+                  key={day.dateStr}
+                  className={getCalendarCellClass(day.isToday)}
+                >
+                  <div className="flex min-h-20 flex-col gap-1">
+                    {hasClock ? (
+                      <>
+                        <span className="font-mono text-xs tabular-nums">
+                          {copy.checkInShort}{" "}
+                          {formatTime(day.attendance?.check_in)}
+                        </span>
+                        <span className="font-mono text-xs tabular-nums">
+                          {copy.checkOutShort}{" "}
+                          {formatTime(day.attendance?.check_out)}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">
+                        {copy.noAttendance}
+                      </span>
+                    )}
+                  </div>
+                </TableCell>
+              );
+            })}
+          </TableRow>
+          <TableRow className="hover:bg-transparent">
+            <TableHead
+              scope="row"
+              className="sticky left-0 z-10 w-24 border-r bg-card text-xs text-muted-foreground whitespace-normal"
+            >
+              {copy.rowStatus}
+            </TableHead>
+            {calendarDays.map((day) => {
+              const attendanceLabel = day.attendance
+                ? (ATTENDANCE_STATUS_LABELS[day.attendance.status] ??
+                  day.attendance.status)
+                : copy.noAttendance;
+
+              return (
+                <TableCell
+                  key={day.dateStr}
+                  className={getCalendarCellClass(day.isToday)}
+                >
+                  <div className="flex min-h-20 items-start">
+                    <span
+                      className={cn(
+                        "text-xs font-medium",
+                        day.attendance
+                          ? "text-foreground"
+                          : "text-muted-foreground",
+                      )}
+                    >
+                      {attendanceLabel}
+                    </span>
+                  </div>
+                </TableCell>
+              );
+            })}
+          </TableRow>
+        </TableBody>
+      </Table>
     </div>
   );
 }
 
 export function ScheduleClient({
-  initialShifts,
+  initialData,
   initialWeekStart,
 }: ScheduleClientProps) {
   const [weekStart, setWeekStart] = useState(initialWeekStart);
-  const [shifts, setShifts] = useState<ScheduleShift[]>(initialShifts);
+  const [weekData, setWeekData] = useState<ScheduleWeekData>(initialData);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -206,10 +360,10 @@ export function ScheduleClient({
     startTransition(async () => {
       const result = await fetchMySchedule(newWeekStart);
       if (result.success) {
-        setShifts(result.data ?? []);
+        setWeekData(result.data ?? EMPTY_WEEK);
       } else {
         setError(result.error ?? copy.loadError);
-        setShifts([]);
+        setWeekData(EMPTY_WEEK);
       }
     });
   }
@@ -228,7 +382,7 @@ export function ScheduleClient({
 
   const weekEndStr = weekDates[6];
   const weekLabel = weekEndStr
-    ? `${formatDate(weekStart)} \u2013 ${formatDate(weekEndStr)}`
+    ? `${formatDate(weekStart)} - ${formatDate(weekEndStr)}`
     : formatDate(weekStart);
 
   return (
@@ -247,7 +401,9 @@ export function ScheduleClient({
           </Button>
 
           <div className="flex flex-1 flex-col items-center gap-1 text-center">
-            <p className="text-sm font-medium">{weekLabel}</p>
+            <p className="font-mono text-sm font-medium tabular-nums">
+              {weekLabel}
+            </p>
             {!isCurrentWeek ? (
               <Button
                 type="button"
@@ -259,7 +415,9 @@ export function ScheduleClient({
                 {copy.currentWeek}
               </Button>
             ) : (
-              <Badge variant="info">{copy.currentWeek}</Badge>
+              <span className="text-xs font-medium text-primary">
+                {copy.currentWeek}
+              </span>
             )}
           </div>
 
@@ -276,7 +434,7 @@ export function ScheduleClient({
         </div>
       </EmployeePanel>
 
-      {error && (
+      {error ? (
         <EmployeePanel
           title={copy.loadError}
           description={error}
@@ -295,16 +453,17 @@ export function ScheduleClient({
             </Button>
           </div>
         </EmployeePanel>
-      )}
-
-      {!error && (
+      ) : (
         <EmployeePanel title={copy.weekListTitle}>
           <AppBoneyardSkeleton
             name="employee-schedule-week"
             loading={isPending}
             fixture={
-              <ScheduleWeekList
-                shifts={SCHEDULE_SKELETON_FIXTURE_SHIFTS}
+              <ScheduleWeekCalendarTable
+                data={{
+                  shifts: SCHEDULE_SKELETON_FIXTURE_SHIFTS,
+                  attendance: SCHEDULE_SKELETON_FIXTURE_ATTENDANCE,
+                }}
                 todayStr={SCHEDULE_SKELETON_TODAY}
                 weekDates={SCHEDULE_SKELETON_FIXTURE_DATES}
               />
@@ -312,8 +471,8 @@ export function ScheduleClient({
             fallback={<ScheduleSkeletonFallback />}
             snapshotConfig={{ excludeSelectors: ["svg"] }}
           >
-            <ScheduleWeekList
-              shifts={shifts}
+            <ScheduleWeekCalendarTable
+              data={weekData}
               todayStr={todayStr}
               weekDates={weekDates}
             />

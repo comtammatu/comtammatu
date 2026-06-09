@@ -23,8 +23,8 @@ export function EmployeePortalBackControl({
     >
       <Link
         href="/employee"
-        title="Quay lại Cổng nhân viên"
-        aria-label="Quay lại Cổng nhân viên"
+        title="Quay lại Trang nhân viên"
+        aria-label="Quay lại Trang nhân viên"
       >
         <IconDoorEnter className="size-4 shrink-0" />
         <span>Thoát</span>

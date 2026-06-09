@@ -15,6 +15,8 @@ import {
 } from "../types";
 import { canAccess } from "../module-acl";
 import { resolveDiscoveredApps } from "../app-discovery";
+import { resolveRoleHomeLink } from "../nav-resolution";
+import { resolveRouteFamilyContract } from "../route-map";
 import {
   isFeedbackPublicPath,
   isPublicAppPath,
@@ -22,6 +24,7 @@ import {
   resolveHostSurface,
   resolveLegacyRouteRedirectPath,
   resolveModuleFromPath,
+  isRunnerPublicDisplayPath,
 } from "../route-resolution";
 
 function makeClaims(
@@ -69,6 +72,79 @@ test("getBetaDefaultRedirect → owner and super_manager keep beta admin, others
   );
   assert.equal(getBetaDefaultRedirect(makeClaims("area_manager")), "/employee");
   assert.equal(getBetaDefaultRedirect(makeClaims("cashier")), "/employee");
+});
+
+test("resolveRoleHomeLink → shell home link follows role-accessible landing", () => {
+  assert.deepEqual(resolveRoleHomeLink("owner"), {
+    label: "Quản trị",
+    href: "/admin/dashboard",
+  });
+  assert.deepEqual(resolveRoleHomeLink("super_manager"), {
+    label: "Quản trị",
+    href: "/admin/dashboard",
+  });
+
+  for (const role of [
+    "area_manager",
+    "branch_manager",
+    "warehouse_manager",
+    "production_manager",
+    "cashier",
+    "waiter",
+    "chef",
+    "office",
+  ] as const) {
+    assert.deepEqual(resolveRoleHomeLink(role), {
+      label: "Trang nhân viên",
+      href: "/employee",
+    });
+  }
+});
+
+test("resolveRouteFamilyContract → classifies active app surfaces", () => {
+  assert.equal(resolveRouteFamilyContract("/login")?.surface, "public");
+  assert.equal(resolveRouteFamilyContract("/br/3/runner")?.surface, "public");
+  assert.equal(resolveRouteFamilyContract("/br/3/runner/history")?.id, "runner");
+  assert.equal(
+    resolveRouteFamilyContract("/br/3/runner/history")?.surface,
+    "branch_operation",
+  );
+  assert.equal(
+    resolveRouteFamilyContract("/admin/settings/tables")?.id,
+    "admin",
+  );
+  assert.equal(
+    resolveRouteFamilyContract("/admin/finance/revenue")?.id,
+    "finance",
+  );
+  assert.equal(
+    resolveRouteFamilyContract("/inventory/grn/123")?.id,
+    "inventory",
+  );
+  assert.equal(
+    resolveRouteFamilyContract("/employee/tasks")?.primaryNav,
+    "employee-bottom-nav",
+  );
+
+  const posFamily = resolveRouteFamilyContract("/br/3/pos");
+  assert.equal(posFamily?.id, "pos");
+  assert.equal(posFamily?.surface, "branch_operation");
+  assert.equal(posFamily?.requiresBranchId, true);
+});
+
+test("unknown inventory paths are not active route contracts", () => {
+  for (const pathname of [
+    "/inventory/not-a-real-route",
+    "/inventory/not-a-real-route/detail",
+    "/beta/inventory/not-a-real-route/detail",
+  ]) {
+    assert.equal(resolveModuleFromPath(pathname), null);
+    assert.equal(resolveRouteFamilyContract(pathname), null);
+    assert.equal(
+      resolvePostLoginRedirect(makeClaims("warehouse_manager"), pathname),
+      "/employee",
+    );
+  }
 });
 
 test("resolvePostLoginRedirect → null returnTo → default", () => {
@@ -119,6 +195,18 @@ test("resolvePostLoginRedirect → admin returnTo to employee portal falls back 
     assert.equal(
       resolvePostLoginRedirect(makeClaims(role), "/employee/profile"),
       "/admin/dashboard",
+    );
+  }
+});
+
+test("resolvePostLoginRedirect → admin returnTo to checkout approvals is preserved", () => {
+  for (const role of ADMIN_ROLES) {
+    assert.equal(
+      resolvePostLoginRedirect(
+        makeClaims(role),
+        "/employee/checkout-approvals",
+      ),
+      "/employee/checkout-approvals",
     );
   }
 });
@@ -246,27 +334,20 @@ test("resolvePostLoginRedirect → chef accessing own KDS → allowed", () => {
   );
 });
 
-test("resolvePostLoginRedirect → branch staff accessing own Runner → allowed", () => {
+test("resolvePostLoginRedirect → public Runner display bypasses branch auth returnTo gating", () => {
   assert.equal(
-    resolvePostLoginRedirect(makeClaims("waiter", 5), "/br/5/runner"),
+    resolvePostLoginRedirect(makeClaims("office", null), "/br/5/runner"),
     "/br/5/runner",
   );
   assert.equal(
-    resolvePostLoginRedirect(makeClaims("chef", 5), "/br/5/runner"),
-    "/br/5/runner",
+    resolvePostLoginRedirect(makeClaims("waiter", 5), "/br/7/runner"),
+    "/br/7/runner",
   );
 });
 
 test("resolvePostLoginRedirect → chef on wrong KDS branch → fallback", () => {
   assert.equal(
     resolvePostLoginRedirect(makeClaims("chef", 5), "/br/7/kds"),
-    "/employee",
-  );
-});
-
-test("resolvePostLoginRedirect → Runner on wrong branch → fallback", () => {
-  assert.equal(
-    resolvePostLoginRedirect(makeClaims("waiter", 5), "/br/7/runner"),
     "/employee",
   );
 });
@@ -278,12 +359,22 @@ test("resolvePostLoginRedirect → branch_manager on own POS → allowed", () =>
   );
 });
 
-test("isPublicAppPath PWA manifests bypass auth proxy", () => {
+test("isPublicAppPath PWA manifests and Runner display bypass auth proxy", () => {
   assert.equal(isPublicAppPath("/manifest.webmanifest"), true);
   assert.equal(isPublicAppPath("/sw.js"), true);
   assert.equal(isPublicAppPath("/payment/momo/return"), true);
+  assert.equal(
+    isPublicAppPath("/brand/mascot/be-suon-tuoi-runner-idle.json"),
+    true,
+  );
   assert.equal(isPublicAppPath("/br/3/pos/manifest.webmanifest"), true);
+  assert.equal(isPublicAppPath("/br/3/runner"), true);
+  assert.equal(isPublicAppPath("/br/3/runner/"), true);
+  assert.equal(isRunnerPublicDisplayPath("/br/3/runner"), true);
   assert.equal(isPublicAppPath("/br/3/pos"), false);
+  assert.equal(isPublicAppPath("/br/3/kds"), false);
+  assert.equal(isPublicAppPath("/br/abc/runner"), false);
+  assert.equal(isPublicAppPath("/br/3/runner/history"), false);
   assert.equal(isPublicAppPath("/br/abc/pos/manifest.webmanifest"), false);
 });
 
@@ -381,6 +472,11 @@ test("resolveModuleFromPath → branch menu limits and finance workspace map to 
     "branch_menu_limits",
   );
   assert.equal(resolveModuleFromPath("/br/3/runner"), "runner");
+  assert.equal(
+    resolveModuleFromPath("/employee/checkout-approvals"),
+    "employee_checkout_approvals",
+  );
+  assert.equal(resolveModuleFromPath("/employee/clock"), "employee");
 });
 
 test("resolvePostLoginRedirect → branch settings follows branch scope", () => {
@@ -463,6 +559,28 @@ test("canAccess → employee portal excludes admin-level roles", () => {
     (role) => !ADMIN_ROLES.includes(role),
   )) {
     assert.equal(canAccess(role, "employee"), true);
+  }
+});
+
+test("canAccess → checkout approvals are manager-tier, not whole employee portal", () => {
+  for (const role of [
+    "owner",
+    "super_manager",
+    "area_manager",
+    "branch_manager",
+  ] as const) {
+    assert.equal(canAccess(role, "employee_checkout_approvals"), true);
+  }
+
+  for (const role of [
+    "warehouse_manager",
+    "production_manager",
+    "cashier",
+    "waiter",
+    "chef",
+    "office",
+  ] as const) {
+    assert.equal(canAccess(role, "employee_checkout_approvals"), false);
   }
 });
 

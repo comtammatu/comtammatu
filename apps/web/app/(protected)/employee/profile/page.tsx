@@ -1,24 +1,16 @@
-import {
-  LogOut as IconLogout,
-  Receipt as IconReceipt,
-  ShieldCheck as IconShieldCheck,
-  User as IconUser,
-} from "lucide-react";
+import { LogOut as IconLogout, User as IconUser } from "lucide-react";
 import { ROLE_LABEL_VI } from "@comtammatu/shared/auth";
 import { ACTIONS_VI, BRANCH_VI } from "@comtammatu/shared/messages";
 import { Button } from "@comtammatu/ui/components/button";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import {
-  EmployeeActionItem,
-  EmployeeActionList,
   EmployeeDetailList,
   EmployeePage,
   EmployeePanel,
 } from "../components/employee-page";
 import { getEmployeeContext } from "../_lib/employee-context";
 import { formatDateVN } from "../_lib/vn-business-date";
-import { DependentsForm } from "./dependents-form";
 
 const copy = messages.employee.profile;
 
@@ -31,7 +23,7 @@ export default async function ProfilePage() {
   const { data: employee } = ctx
     ? await ctx.supabase
         .from("employees")
-        .select("employee_code, start_date, dependents_count")
+        .select("employee_code, start_date")
         .eq("id", ctx.employeeId)
         .eq("tenant_id", claims.tenant_id)
         .maybeSingle()
@@ -75,35 +67,6 @@ export default async function ProfilePage() {
             },
           ]}
         />
-      </EmployeePanel>
-
-      {ctx ? (
-        <EmployeePanel
-          icon={IconReceipt}
-          title={copy.taxTitle}
-          description={copy.taxDescription}
-        >
-          <DependentsForm initialCount={employee?.dependents_count ?? 0} />
-        </EmployeePanel>
-      ) : null}
-
-      <EmployeePanel title={copy.selfServiceTitle} size="sm">
-        <EmployeeActionList columns={2}>
-          <EmployeeActionItem
-            href="/employee/payslip"
-            icon={IconReceipt}
-            title={copy.payslipTitle}
-            description={copy.payslipDescription}
-            size="sm"
-          />
-          <EmployeeActionItem
-            href="/employee/permissions"
-            icon={IconShieldCheck}
-            title={copy.permissionsTitle}
-            description={copy.permissionsDescription}
-            size="sm"
-          />
-        </EmployeeActionList>
       </EmployeePanel>
 
       <form action="/api/auth/signout" method="post">

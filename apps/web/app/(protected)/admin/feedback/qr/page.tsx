@@ -98,7 +98,7 @@ export default async function QrPage() {
   return (
     <AppPage>
       <AppPageHeader
-        title="Quản lý QR codes"
+        title="Quản lý mã QR"
         description="Tạo và quản lý mã QR cho từng chi nhánh để thu thập phản hồi khách hàng."
       />
       <QrManagementClient qrCodes={qrCodes} branches={branchOptions} />

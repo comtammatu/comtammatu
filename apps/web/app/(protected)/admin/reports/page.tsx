@@ -2,7 +2,6 @@ import Link from "next/link";
 import {
   ArrowLeftRight as IconArrowLeftRight,
   Book as IconBook,
-  Briefcase as IconBriefcase,
   ClipboardList as IconClipboardList,
   Package as IconPackage,
   Receipt as IconReceipt,
@@ -10,14 +9,7 @@ import {
   TrendingUp as IconTrendingUp,
   Wallet as IconWallet,
 } from "lucide-react";
-import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@comtammatu/ui/components/card";
 import { canAccess } from "@comtammatu/shared/auth";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import { loadAuthState } from "@/_lib/auth";
@@ -55,16 +47,6 @@ export default async function ReportsPage() {
       badge: "Tổng hợp",
     });
   }
-  if (canAccess(claims.user_role, "hr")) {
-    executiveCards.push({
-      title: "Toàn cảnh bảng lương",
-      href: "/hr/payroll",
-      icon: <IconBriefcase />,
-      tone: "info",
-      badge: "Tổng hợp",
-    });
-  }
-
   const deepDiveCards: SurfaceLinkCardProps[] = [
     {
       title: "Biến động tồn kho",
@@ -110,11 +92,11 @@ export default async function ReportsPage() {
   }
 
   return (
-    <AppPage>
+    <AppPage width="wide" density="compact">
       <AppPageHeader
         eyebrow={APP_COPY_VI.executiveReporting}
         title="Báo cáo điều hành"
-        description="Xem nhanh các báo cáo quan trọng về doanh thu, tồn kho, tài chính và tiền lương."
+        description="Xem nhanh các báo cáo quan trọng về doanh thu, tồn kho, tài chính và ngày công."
         actions={
           <>
             <Button asChild variant="outline" size="sm">
@@ -127,21 +109,36 @@ export default async function ReportsPage() {
         }
       />
 
-      <Card>
-        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <section className="space-y-3">
+        <div className="space-y-1">
+          <h2 className="font-heading text-base font-semibold tracking-tight">
+            Báo cáo tổng hợp
+          </h2>
+          <p className="text-sm leading-6 text-muted-foreground">
+            Các chỉ số quan trọng cho doanh thu, tồn kho, tài chính và ngày
+            công.
+          </p>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {executiveCards.map((card) => (
+            <SurfaceLinkCard key={card.href} {...card} ctaLabel="Mở báo cáo" />
+          ))}
+        </div>
+      </section>
+
+      {deepDiveCards.length > 0 ? (
+        <section className="space-y-3">
           <div className="space-y-1">
-            <CardTitle>Báo cáo tổng hợp</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Các chỉ số quan trọng cho doanh thu, tồn kho, tài chính và lương.
+            <h2 className="font-heading text-base font-semibold tracking-tight">
+              Mở nhanh mục liên quan
+            </h2>
+            <p className="text-sm leading-6 text-muted-foreground">
+              Đi từ báo cáo sang các mục liên quan để xem chi tiết và xử lý công
+              việc.
             </p>
           </div>
-          <Badge variant="secondary" className="rounded-full px-3 py-1.5">
-            Điều hành
-          </Badge>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {executiveCards.map((card) => (
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {deepDiveCards.map((card) => (
               <SurfaceLinkCard
                 key={card.href}
                 {...card}
@@ -149,35 +146,7 @@ export default async function ReportsPage() {
               />
             ))}
           </div>
-        </CardContent>
-      </Card>
-
-      {deepDiveCards.length > 0 ? (
-        <Card>
-          <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="space-y-1">
-              <CardTitle>Mở nhanh mục liên quan</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Đi từ báo cáo sang các mục liên quan để xem chi tiết và xử lý
-                công việc.
-              </p>
-            </div>
-            <Badge variant="info" className="rounded-full px-3 py-1.5">
-              Chi tiết
-            </Badge>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {deepDiveCards.map((card) => (
-                <SurfaceLinkCard
-                  key={card.href}
-                  {...card}
-                  ctaLabel="Mở báo cáo"
-                />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        </section>
       ) : null}
     </AppPage>
   );

@@ -2,6 +2,7 @@ import { canAccess } from "./module-acl";
 import {
   isAdminRoutePath,
   isBetaPath,
+  isRunnerPublicDisplayPath,
   resolveLegacyRouteRedirectPath,
   resolveModuleFromPath,
   stripBetaPrefix,
@@ -204,6 +205,10 @@ export function resolvePostLoginRedirect(
   // Guard against bouncing the user back to the login route itself.
   if (targetUrl.pathname === "/login" || targetUrl.pathname === "/beta/login") {
     return fallback;
+  }
+
+  if (isRunnerPublicDisplayPath(targetUrl.pathname)) {
+    return `${targetUrl.pathname}${targetUrl.search}${targetUrl.hash}`;
   }
 
   const moduleKey = resolveModuleFromPath(targetUrl.pathname);

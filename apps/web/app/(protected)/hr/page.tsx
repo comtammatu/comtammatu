@@ -24,9 +24,9 @@ export default async function HrPage() {
   return (
     <AppPage width="wide">
       <AppPageHeader
-        eyebrow="Nhân sự & lương"
-        title="Nhân sự & Lương"
-        description="Quản lý nhân sự và dữ liệu lương theo chi nhánh."
+        eyebrow="Nhân sự"
+        title="Nhân sự"
+        description="Nhân viên, ca làm và ngày công cho mô hình Hộ Kinh Doanh."
       />
       <AppSection>
         <HrClient employees={employees} branches={branchOptions} />

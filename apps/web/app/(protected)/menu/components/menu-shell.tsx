@@ -6,7 +6,7 @@ import {
   Utensils as IconToolsKitchen,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import type { StaffRole } from "@comtammatu/shared/auth";
+import { resolveRoleHomeLink, type StaffRole } from "@comtammatu/shared/auth";
 import { Button } from "@comtammatu/ui/components/button";
 import { AppShell } from "@/components/app-shell";
 import type { ShellNavGroup } from "@/lib/shell-primitives";
@@ -25,6 +25,8 @@ export interface MenuShellProps {
 }
 
 export function MenuShell({ children, user, role }: MenuShellProps) {
+  const homeLink = resolveRoleHomeLink(role);
+
   return (
     <AppShell
       user={user}
@@ -42,7 +44,7 @@ export function MenuShell({ children, user, role }: MenuShellProps) {
           "Nhập danh mục, món ăn, biến thể và topping cho toàn chuỗi tại cùng một nơi.",
         actions: (
           <Button asChild variant="outline" size="sm">
-            <Link href="/admin/dashboard">Quản trị</Link>
+            <Link href={homeLink.href}>{homeLink.label}</Link>
           </Button>
         ),
       }}

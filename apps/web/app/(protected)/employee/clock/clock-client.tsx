@@ -66,6 +66,13 @@ function ErrorAlert({ message }: { message: string }) {
   );
 }
 
+function getCheckoutApprovalTargetLabel(state: TodayWorkState): string {
+  const targetRoles = state.attendance?.checkoutApprovalTargetRoles ?? [];
+  if (targetRoles.includes("branch_manager")) return "quản lý chi nhánh";
+  if (targetRoles.length > 0) return "quản lý cấp trên";
+  return state.approvalTargetLabel;
+}
+
 async function capturePhotoFromVideo(
   video: HTMLVideoElement,
 ): Promise<File | null> {
@@ -302,6 +309,41 @@ export function ClockClient({ state }: ClockClientProps) {
     );
   }
 
+  if (state.status === "not_required") {
+    return (
+      <EmployeePanel
+        icon={IconClock}
+        title="Không bắt buộc chấm công"
+        description="Hôm nay chưa có ca cần chấm công."
+        tone="info"
+        badge={{ children: "Không có ca", variant: "info" }}
+      >
+        <EmployeeDetailList
+          rows={[
+            {
+              label: "Chi nhánh",
+              value: state.branchName ?? "Chưa gắn",
+              muted: !state.branchName,
+            },
+            {
+              label: "Ca hôm nay",
+              value: state.nextShift?.shiftName ?? "Chưa xếp ca",
+              muted: !state.nextShift,
+            },
+          ]}
+        />
+        <Button
+          asChild
+          variant="outline"
+          size="touch"
+          className="w-full sm:w-fit"
+        >
+          <Link href="/employee/schedule">Xem lịch ca</Link>
+        </Button>
+      </EmployeePanel>
+    );
+  }
+
   if (state.status === "done") {
     return (
       <EmployeePanel
@@ -325,6 +367,38 @@ export function ClockClient({ state }: ClockClientProps) {
             {
               label: "Giờ ra",
               value: formatTime(state.attendance?.checkOut ?? null),
+            },
+          ]}
+        />
+      </EmployeePanel>
+    );
+  }
+
+  if (state.status === "checkout_pending") {
+    return (
+      <EmployeePanel
+        icon={IconClock}
+        title="Chờ quản lý duyệt"
+        description={`Yêu cầu kết ca đã gửi đến ${getCheckoutApprovalTargetLabel(
+          state,
+        )}.`}
+        tone="warning"
+        badge={{ children: "Chờ duyệt", variant: "warning" }}
+      >
+        <EmployeeDetailList
+          rows={[
+            {
+              label: "Chi nhánh",
+              value: state.branchName ?? "Chưa ghi nhận",
+              muted: !state.branchName,
+            },
+            {
+              label: "Giờ vào",
+              value: formatTime(state.attendance?.checkIn ?? null),
+            },
+            {
+              label: "Yêu cầu ra",
+              value: formatTime(state.attendance?.checkoutRequestedAt ?? null),
             },
           ]}
         />
@@ -371,10 +445,10 @@ export function ClockClient({ state }: ClockClientProps) {
     return (
       <EmployeePanel
         icon={IconClock}
-        title="Kết ca làm"
-        description="Quét QR hoặc nhập mã kết ca tại chi nhánh."
+        title="Gửi duyệt kết ca"
+        description={`Quét QR hoặc nhập mã kết ca, sau đó gửi ${state.approvalTargetLabel} duyệt.`}
         tone="success"
-        badge={{ children: "Sẵn sàng kết ca", variant: "success" }}
+        badge={{ children: "Sẵn sàng gửi duyệt", variant: "success" }}
       >
         <EmployeeDetailList
           rows={[
@@ -433,7 +507,7 @@ export function ClockClient({ state }: ClockClientProps) {
                 onClick={() => submitCheckout(manualCode)}
               >
                 {isPending ? <Spinner data-icon="inline-start" /> : null}
-                {ACTIONS_VI.confirm}
+                Gửi duyệt
               </Button>
             </div>
           </div>
@@ -466,7 +540,7 @@ export function ClockClient({ state }: ClockClientProps) {
         {checkoutState === "submitting" ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Spinner />
-            Đang kết ca...
+            Đang gửi yêu cầu...
           </div>
         ) : null}
       </EmployeePanel>
@@ -613,10 +687,7 @@ export function ClockClient({ state }: ClockClientProps) {
           size="touch"
           onClick={submitClockIn}
           disabled={
-            !photo ||
-            isPending ||
-            cameraActive ||
-            photoState === "submitting"
+            !photo || isPending || cameraActive || photoState === "submitting"
           }
         >
           {photoState === "submitting" || isPending ? (

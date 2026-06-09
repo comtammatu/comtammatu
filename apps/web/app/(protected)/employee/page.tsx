@@ -1,8 +1,10 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import {
   Camera as IconCamera,
   ChefHat as IconChefHat,
   CheckCircle2 as IconDone,
+  ClipboardCheck as IconClipboardCheck,
   Clock as IconClock,
   ListChecks as IconListChecks,
   LogOut as IconLogout,
@@ -18,20 +20,21 @@ import {
 } from "lucide-react";
 import { canAccess, type ModuleKey } from "@comtammatu/shared/auth";
 import { Button } from "@comtammatu/ui/components/button";
+import { Progress } from "@comtammatu/ui/components/progress";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import {
   EmployeeActionSection,
   EmployeeDashboardGrid,
+  EmployeePanel,
   EmployeePage as EmployeePageShell,
-  EmployeeWorkflowPanel,
 } from "./components/employee-page";
 import {
   formatShiftRange,
   getTodayWorkState,
   type TodayWorkStatus,
 } from "./_lib/today-work-state";
-import { formatTimeVN } from "./_lib/vn-business-date";
+import { formatDateVN, formatTimeVN } from "./_lib/vn-business-date";
 
 const copy = messages.employee.home;
 
@@ -72,6 +75,13 @@ const MANAGER_BRANCH_TOOLS: Array<{
   title: string;
   description: string;
 }> = [
+  {
+    moduleKey: "employee_checkout_approvals",
+    href: () => "/employee/checkout-approvals",
+    icon: IconClipboardCheck,
+    title: copy.managerCheckoutApprovalsTitle,
+    description: copy.managerCheckoutApprovalsDescription,
+  },
   {
     moduleKey: "pos",
     href: (branchId: number) => `/br/${branchId}/pos`,
@@ -148,7 +158,12 @@ const MANAGER_WORKSPACE_TOOLS: Array<{
 
 function getWorkTone(status: TodayWorkStatus) {
   if (status === "done") return "success" as const;
-  if (status === "working" || status === "ready_to_checkout") {
+  if (status === "checkout_pending") return "warning" as const;
+  if (
+    status === "working" ||
+    status === "ready_to_checkout" ||
+    status === "not_required"
+  ) {
     return "info" as const;
   }
   return "warning" as const;
@@ -157,19 +172,60 @@ function getWorkTone(status: TodayWorkStatus) {
 function getWorkTitle(status: TodayWorkStatus): string {
   if (status === "missing_profile") return copy.statusNoProfile;
   if (status === "missing_branch") return copy.statusNoBranch;
+  if (status === "not_required") return copy.statusNotRequired;
   if (status === "not_started") return copy.statusNotStarted;
   if (status === "working") return copy.statusWorking;
   if (status === "ready_to_checkout") return copy.statusReadyToCheckout;
+  if (status === "checkout_pending") return copy.statusCheckoutPending;
   return copy.statusDone;
 }
 
-function getWorkDescription(status: TodayWorkStatus): string {
-  if (status === "missing_profile") return copy.descriptionNoProfile;
-  if (status === "missing_branch") return copy.descriptionNoBranch;
-  if (status === "not_started") return copy.descriptionNotStarted;
-  if (status === "working") return copy.descriptionWorking;
-  if (status === "ready_to_checkout") return copy.descriptionReadyToCheckout;
-  return copy.descriptionDone;
+interface TodayMetric {
+  label: string;
+  value: ReactNode;
+  hint?: ReactNode;
+  muted?: boolean;
+  mono?: boolean;
+  progress?: {
+    value: number;
+    tone: "default" | "success" | "warning" | "destructive";
+  };
+}
+
+function TodayMetricGrid({ rows }: { rows: TodayMetric[] }) {
+  return (
+    <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+      {rows.map((row) => (
+        <div
+          key={row.label}
+          className="flex min-w-0 flex-col gap-2 rounded-md border bg-muted/30 p-3"
+        >
+          <span className="text-xs text-muted-foreground">{row.label}</span>
+          <span
+            className={[
+              "min-w-0 truncate text-sm font-medium",
+              row.mono ? "font-mono tabular-nums" : "",
+              row.muted ? "text-muted-foreground" : "text-foreground",
+            ].join(" ")}
+          >
+            {row.value}
+          </span>
+          {row.progress ? (
+            <Progress
+              value={row.progress.value}
+              tone={row.progress.tone}
+              className="h-1.5"
+            />
+          ) : null}
+          {row.hint ? (
+            <span className="truncate text-xs text-muted-foreground">
+              {row.hint}
+            </span>
+          ) : null}
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export default async function EmployeePage() {
@@ -197,7 +253,8 @@ export default async function EmployeePage() {
     branchId &&
     !branchIsHq &&
     state.attendance?.checkIn &&
-    !state.attendance.checkOut
+    !state.attendance.checkOut &&
+    !state.attendance.checkoutRequestedAt
       ? OPERATION_HANDOFFS.filter((item) =>
           canAccess(claims.user_role, item.moduleKey),
         ).map((item) => ({
@@ -218,7 +275,6 @@ export default async function EmployeePage() {
 
   const tone = getWorkTone(state.status);
   const title = getWorkTitle(state.status);
-  const description = getWorkDescription(state.status);
   const currentShiftName =
     state.attendance?.shiftName ??
     (state.nextShift?.date === state.today ? state.nextShift.shiftName : null);
@@ -228,33 +284,36 @@ export default async function EmployeePage() {
       ? formatShiftRange(state.nextShift)
       : "—";
 
-  const detailRows = [
+  const progressValue =
+    state.status === "done" ||
+    state.status === "ready_to_checkout" ||
+    state.status === "checkout_pending"
+      ? 100
+      : state.status === "working" && state.checklist.total > 0
+        ? Math.round((state.checklist.done / state.checklist.total) * 100)
+        : state.attendance?.checkIn
+          ? 50
+          : 0;
+  const progressHint =
+    state.checklist.total > 0
+      ? `${state.checklist.done}/${state.checklist.total}`
+      : state.status === "not_required"
+        ? copy.descriptionNotRequired
+        : state.status === "not_started" || state.status === "missing_branch"
+          ? copy.notYet
+          : title;
+  const progressTone =
+    tone === "success" ? "success" : tone === "warning" ? "warning" : "default";
+  const todayMeta = currentShiftName
+    ? `${formatDateVN(state.today)} · ${currentShiftName} ${currentShiftRange}`
+    : `${formatDateVN(state.today)} · ${copy.noTodayShift}`;
+  const checkOutDisplay =
+    state.attendance?.checkOut ?? state.attendance?.checkoutRequestedAt ?? null;
+  const todayMetrics: TodayMetric[] = [
     {
       label: copy.branch,
       value: state.branchName ?? copy.noBranch,
       muted: !state.branchName,
-    },
-    {
-      label: copy.todayShiftTitle,
-      value: currentShiftName ? (
-        <span className="flex min-w-0 flex-col">
-          <span className="truncate">{currentShiftName}</span>
-          <span className="text-xs font-normal text-muted-foreground">
-            {currentShiftRange}
-          </span>
-        </span>
-      ) : (
-        copy.noTodayShift
-      ),
-      muted: !currentShiftName,
-    },
-    {
-      label: copy.workProgress,
-      value:
-        state.status === "not_started" || state.status === "missing_branch"
-          ? copy.notYet
-          : `${state.checklist.done}/${state.checklist.total} ${copy.tasksDone}`,
-      muted: state.status === "not_started" || state.status === "missing_branch",
     },
     {
       label: copy.checkIn,
@@ -262,45 +321,65 @@ export default async function EmployeePage() {
         ? formatTimeVN(state.attendance.checkIn)
         : "—",
       muted: !state.attendance?.checkIn,
+      mono: true,
     },
     {
       label: copy.checkOut,
-      value: state.attendance?.checkOut
-        ? formatTimeVN(state.attendance.checkOut)
-        : "—",
-      muted: !state.attendance?.checkOut,
+      value: checkOutDisplay ? formatTimeVN(checkOutDisplay) : "—",
+      hint:
+        state.attendance?.checkoutRequestedAt && !state.attendance?.checkOut
+          ? copy.checkoutPending
+          : undefined,
+      muted: !checkOutDisplay,
+      mono: true,
+    },
+    {
+      label: copy.workProgress,
+      value: `${progressValue}%`,
+      hint: progressHint,
+      mono: true,
+      progress: {
+        value: progressValue,
+        tone: progressTone,
+      },
     },
   ];
-  const progressValue =
-    state.status === "done" || state.status === "ready_to_checkout"
-      ? 100
-      : state.status === "working" && state.checklist.total > 0
-        ? Math.round((state.checklist.done / state.checklist.total) * 100)
-        : state.attendance?.checkIn
-          ? 50
-          : 0;
-  const progressDescription =
-    state.checklist.total > 0
-      ? `${state.checklist.done}/${state.checklist.total} ${copy.tasksDone}`
-      : state.status === "not_started" || state.status === "missing_branch"
-        ? copy.notYet
-        : title;
-  const progressTone =
-    tone === "success" ? "success" : tone === "warning" ? "warning" : "default";
 
   const primaryAction =
     state.status === "missing_profile" ? (
-      <Button asChild variant="outline" size="touch" className="w-full sm:w-fit">
+      <Button
+        asChild
+        variant="outline"
+        size="touch"
+        className="w-full sm:w-fit"
+      >
         <Link href="/employee/profile">
           <IconUserCircle data-icon="inline-start" />
           {copy.profileTitle}
         </Link>
       </Button>
     ) : state.status === "missing_branch" ? (
-      <Button asChild variant="outline" size="touch" className="w-full sm:w-fit">
+      <Button
+        asChild
+        variant="outline"
+        size="touch"
+        className="w-full sm:w-fit"
+      >
         <Link href="/employee/profile">
           <IconUserCircle data-icon="inline-start" />
           {copy.profileTitle}
+        </Link>
+      </Button>
+    ) : state.status === "not_required" ? (
+      <Button
+        asChild
+        variant="outline"
+        size="touch"
+        className="w-full sm:w-fit"
+      >
+        <Link href="/employee/schedule">
+          <IconClock data-icon="inline-start" />
+          {copy.viewSchedule}
         </Link>
       </Button>
     ) : state.status === "not_started" ? (
@@ -324,8 +403,23 @@ export default async function EmployeePage() {
           {copy.clockOut}
         </Link>
       </Button>
+    ) : state.status === "checkout_pending" ? (
+      <Button
+        variant="outline"
+        size="touch"
+        className="w-full sm:w-fit"
+        disabled
+      >
+        <IconClock data-icon="inline-start" />
+        {copy.checkoutPending}
+      </Button>
     ) : (
-      <Button variant="outline" size="touch" className="w-full sm:w-fit" disabled>
+      <Button
+        variant="outline"
+        size="touch"
+        className="w-full sm:w-fit"
+        disabled
+      >
         <IconDone data-icon="inline-start" />
         {copy.completed}
       </Button>
@@ -351,22 +445,16 @@ export default async function EmployeePage() {
           ) : undefined
         }
       >
-        <EmployeeWorkflowPanel
+        <EmployeePanel
           icon={state.status === "done" ? IconDone : IconClock}
           title={copy.todayWorkTitle}
-          description={description}
+          description={todayMeta}
           tone={tone}
-          badge={{ children: title, variant: tone }}
-          details={detailRows}
-          detailsColumns={3}
-          progress={{
-            label: copy.workProgress,
-            value: progressValue,
-            description: progressDescription,
-            tone: progressTone,
-          }}
-          primaryAction={primaryAction}
-        />
+          contentClassName="gap-3"
+        >
+          <TodayMetricGrid rows={todayMetrics} />
+          <div className="flex flex-col gap-2 sm:flex-row">{primaryAction}</div>
+        </EmployeePanel>
 
         <EmployeeActionSection
           title={copy.operationToolsTitle}

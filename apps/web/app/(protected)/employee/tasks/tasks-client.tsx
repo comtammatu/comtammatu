@@ -1,15 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
-import { CheckCircle2 as IconDone, Circle as IconTodo } from "lucide-react";
-import { Badge } from "@comtammatu/ui/components/badge";
+import { useEffect, useState, useTransition } from "react";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
 import {
   Item,
   ItemActions,
   ItemContent,
   ItemGroup,
-  ItemMedia,
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { toast } from "@comtammatu/ui/components/sonner";
@@ -18,9 +15,10 @@ import { toggleChecklistItem } from "../clock/actions";
 
 interface TasksClientProps {
   items: TodayChecklistItem[];
+  disabled?: boolean;
 }
 
-export function TasksClient({ items }: TasksClientProps) {
+export function TasksClient({ items, disabled = false }: TasksClientProps) {
   const [localItems, setLocalItems] = useState(items);
   const [isPending, startTransition] = useTransition();
 
@@ -28,13 +26,10 @@ export function TasksClient({ items }: TasksClientProps) {
     setLocalItems(items);
   }, [items]);
 
-  const doneCount = useMemo(
-    () => localItems.filter((item) => item.done).length,
-    [localItems],
-  );
-
   function handleToggle(itemId: number, done: boolean) {
     const previous = localItems;
+    if (disabled) return;
+
     setLocalItems((current) =>
       current.map((item) => (item.id === itemId ? { ...item, done } : item)),
     );
@@ -54,26 +49,16 @@ export function TasksClient({ items }: TasksClientProps) {
         const checkboxId = `shift-task-${item.id}`;
         return (
           <Item key={item.id} variant="outline" className="sm:flex-nowrap">
-            <ItemMedia variant="icon">
-              {item.done ? (
-                <IconDone className="size-4 text-success" />
-              ) : (
-                <IconTodo className="size-4 text-muted-foreground" />
-              )}
-            </ItemMedia>
             <ItemContent>
               <ItemTitle className={item.done ? "text-muted-foreground" : ""}>
                 <label htmlFor={checkboxId}>{item.title}</label>
               </ItemTitle>
             </ItemContent>
             <ItemActions className="ml-auto">
-              <Badge variant={item.done ? "success" : "outline"}>
-                {item.done ? "Xong" : "Chưa làm"}
-              </Badge>
               <Checkbox
                 id={checkboxId}
                 checked={item.done}
-                disabled={isPending}
+                disabled={disabled || isPending}
                 onCheckedChange={(checked) => {
                   handleToggle(item.id, checked === true);
                 }}
@@ -83,10 +68,6 @@ export function TasksClient({ items }: TasksClientProps) {
           </Item>
         );
       })}
-      <div className="text-sm text-muted-foreground">
-        {doneCount}/{localItems.length} việc đã xong
-      </div>
     </ItemGroup>
   );
 }
-

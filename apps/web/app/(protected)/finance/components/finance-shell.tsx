@@ -9,7 +9,7 @@ import {
   Wallet as IconWallet,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import type { StaffRole } from "@comtammatu/shared/auth";
+import { resolveRoleHomeLink, type StaffRole } from "@comtammatu/shared/auth";
 import { Button } from "@comtammatu/ui/components/button";
 import { AppShell } from "@/components/app-shell";
 import { messages } from "@lib/messages";
@@ -64,6 +64,7 @@ export function FinanceShell({ children, user, role }: FinanceShellProps) {
   const branchId =
     Number.isFinite(parsedBranch) && parsedBranch > 0 ? parsedBranch : null;
   useFinanceRealtimeRefresh({ branchId });
+  const homeLink = resolveRoleHomeLink(role);
 
   return (
     <AppShell
@@ -82,7 +83,7 @@ export function FinanceShell({ children, user, role }: FinanceShellProps) {
         actions: (
           <>
             <Button asChild variant="outline" size="sm">
-              <Link href="/admin/dashboard">{financeCopy.shell.admin}</Link>
+              <Link href={homeLink.href}>{homeLink.label}</Link>
             </Button>
             <Button asChild size="sm">
               <Link href="/finance/revenue">

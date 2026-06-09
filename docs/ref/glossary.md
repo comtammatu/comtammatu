@@ -65,7 +65,7 @@ Các cụm dưới đây bị xem là drift và phải thay bằng nhãn tiếng
 
 | Drift term                     | Dùng thay                                              |
 | ------------------------------ | ------------------------------------------------------ |
-| `Employee Portal`              | `Cổng nhân viên`                                       |
+| `Employee Portal`              | `Trang nhân viên`                                      |
 | `Admin Shell`                  | `Khung quản trị` hoặc `nền tảng quản trị` tùy ngữ cảnh |
 | `Dashboard`                    | `Tổng quan` hoặc `buồng lái` tùy ngữ cảnh              |
 | `Stock`                        | `Kho hàng` hoặc `tồn kho` tùy ngữ cảnh                 |
@@ -73,7 +73,7 @@ Các cụm dưới đây bị xem là drift và phải thay bằng nhãn tiếng
 | `Shipped`                      | `Hoàn thành`                                           |
 | `Point of Sale`                | `POS`                                                  |
 | `Kitchen Display System`       | `KDS` hoặc `màn hình bếp`                              |
-| `HR / Payroll`, `HR & Payroll` | `Nhân sự & tiền lương`                                 |
+| `HR / Payroll`, `HR & Payroll` | `Nhân sự` trong UI HKD; dùng `nhân sự & tiền lương` trong docs pháp lý/payroll |
 | `Restaurant Management System` | `hệ thống quản lý vận hành nhà hàng`                   |
 | `Merchant Platform`            | `bộ phần mềm quản lý vận hành và bán hàng`             |
 | `Báo cáo CEO`                  | `Báo cáo điều hành`                                    |
@@ -162,7 +162,7 @@ Các cụm dưới đây bị xem là drift và phải thay bằng nhãn tiếng
 | `cashier`                      | thu ngân              | POS                                                                           |
 | `waiter`                       | phục vụ               | POS                                                                           |
 | `chef`                         | bếp                   | KDS                                                                           |
-| `office`                       | văn phòng             | Cổng nhân viên, không gắn site vận hành cụ thể                                |
+| `office`                       | văn phòng             | Trang nhân viên, không gắn site vận hành cụ thể                               |
 
 `user_role` là **legacy claim** trong JWT, derived từ `positions.legacy_role_code`. Vai trò mới (`warehouse_manager`, `production_manager`) được thêm khi Auth v2 tách Kho và Bếp trung tâm thành workstream riêng.
 
@@ -449,7 +449,7 @@ File [apps/web/app/(protected)/inventory/\_lib/labels.ts](<../../apps/web/app/(p
 | `inventory_ops`         | Kho hàng           | —          | —       |
 | `content_management`    | Quản trị nội dung  | Nội dung   | `CMS`   |
 | `customer_relationship` | Quản lý khách hàng | Khách hàng | `CRM`   |
-| `employee_portal`       | Cổng nhân viên     | Nhân viên  | —       |
+| `employee_portal`       | Trang nhân viên    | Nhân viên  | —       |
 | `dashboard`             | Tổng quan          | —          | —       |
 | `reports`               | Báo cáo            | —          | —       |
 

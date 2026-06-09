@@ -288,6 +288,13 @@ export type Database = {
       attendance_records: {
         Row: {
           branch_id: number
+          checkout_approval_note: string | null
+          checkout_approval_target_roles: string[]
+          checkout_approved_at: string | null
+          checkout_approved_by: string | null
+          checkout_requested_at: string | null
+          checkout_requested_by_role: string | null
+          checkout_requested_code_verified: boolean
           check_in: string | null
           check_in_photo_path: string | null
           check_out: string | null
@@ -308,6 +315,13 @@ export type Database = {
         }
         Insert: {
           branch_id: number
+          checkout_approval_note?: string | null
+          checkout_approval_target_roles?: string[]
+          checkout_approved_at?: string | null
+          checkout_approved_by?: string | null
+          checkout_requested_at?: string | null
+          checkout_requested_by_role?: string | null
+          checkout_requested_code_verified?: boolean
           check_in?: string | null
           check_in_photo_path?: string | null
           check_out?: string | null
@@ -328,6 +342,13 @@ export type Database = {
         }
         Update: {
           branch_id?: number
+          checkout_approval_note?: string | null
+          checkout_approval_target_roles?: string[]
+          checkout_approved_at?: string | null
+          checkout_approved_by?: string | null
+          checkout_requested_at?: string | null
+          checkout_requested_by_role?: string | null
+          checkout_requested_code_verified?: boolean
           check_in?: string | null
           check_in_photo_path?: string | null
           check_out?: string | null
@@ -8826,6 +8847,16 @@ export type Database = {
         Returns: undefined
       }
       check_order_ready: { Args: { p_order_id: number }; Returns: undefined }
+      branch_manager_approve_employee_clock_out: {
+        Args: {
+          p_approved_by: string
+          p_attendance_id: number
+          p_branch_id: number
+          p_note?: string
+          p_tenant_id: number
+        }
+        Returns: string
+      }
       claim_print_job: {
         Args: { p_agent_id: string; p_job_id: number }
         Returns: boolean
@@ -9111,6 +9142,14 @@ export type Database = {
         Returns: number
       }
       employee_clock_out_with_code: {
+        Args: {
+          p_attendance_id: number
+          p_employee_id: number
+          p_tenant_id: number
+        }
+        Returns: string
+      }
+      employee_request_clock_out_with_code: {
         Args: {
           p_attendance_id: number
           p_employee_id: number

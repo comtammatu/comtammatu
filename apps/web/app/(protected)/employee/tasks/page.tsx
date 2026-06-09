@@ -17,9 +17,8 @@ import { messages } from "@lib/messages";
 import {
   EmployeeMissingProfileEmpty,
   EmployeePage,
-  EmployeeWorkflowPanel,
+  EmployeePanel,
 } from "../components/employee-page";
-import { formatTimeVN } from "../_lib/vn-business-date";
 import { getTodayWorkState } from "../_lib/today-work-state";
 import { TasksClient } from "./tasks-client";
 
@@ -31,118 +30,90 @@ export default async function EmployeeTasksPage() {
 
   if (state.status === "missing_profile") {
     return (
-      <EmployeePage
-        title={copy.shiftTasks}
-        description={taskCopy.description}
-      >
+      <EmployeePage title={copy.shiftTasks}>
         <EmployeeMissingProfileEmpty />
       </EmployeePage>
     );
   }
 
-  if (state.status === "not_started" || state.status === "missing_branch") {
+  if (
+    state.status === "not_started" ||
+    state.status === "missing_branch" ||
+    state.status === "not_required"
+  ) {
     return (
-      <EmployeePage
-        title={copy.shiftTasks}
-        description={taskCopy.description}
-      >
-        <EmployeeWorkflowPanel
-          icon={IconCamera}
-          title={taskCopy.notStartedTitle}
-          description={taskCopy.notStartedDescription}
-          tone="warning"
-          badge={{ children: taskCopy.notStartedBadge, variant: "warning" }}
-          details={[
-            {
-              label: copy.branch,
-              value: state.branchName ?? copy.noBranch,
-              muted: !state.branchName,
-            },
-          ]}
-          detailsColumns={1}
-          progress={{
-            label: copy.workProgress,
-            value: 0,
-            description: copy.notYet,
-            tone: "warning",
-          }}
-          primaryAction={
-            state.status === "missing_branch" ? null : (
+      <EmployeePage title={copy.shiftTasks}>
+        <EmployeePanel
+          icon={state.status === "not_required" ? IconListChecks : IconCamera}
+          title={
+            state.status === "not_required"
+              ? copy.statusNotRequired
+              : taskCopy.notStartedTitle
+          }
+          description={
+            state.status === "missing_branch"
+              ? copy.descriptionNoBranch
+              : state.status === "not_required"
+                ? copy.descriptionNotRequired
+                : taskCopy.notStartedDescription
+          }
+          tone={state.status === "not_required" ? "info" : "warning"}
+        >
+          {state.status === "missing_branch" ||
+          state.status === "not_required" ? null : (
+            <div className="flex flex-col gap-2 sm:flex-row">
               <Button asChild size="touch" className="w-full sm:w-fit">
                 <Link href="/employee/clock">
                   <IconCamera data-icon="inline-start" />
                   {copy.clockIn}
                 </Link>
               </Button>
-            )
-          }
-        />
+            </div>
+          )}
+        </EmployeePanel>
       </EmployeePage>
     );
   }
 
   const allDone = state.checklist.remaining === 0;
-  const progressValue =
-    state.checklist.total > 0
-      ? Math.round((state.checklist.done / state.checklist.total) * 100)
-      : 100;
-  const badge = allDone
-    ? { children: taskCopy.doneBadge, variant: "success" as const }
-    : {
-        children: `${state.checklist.remaining} ${taskCopy.remainingSuffix}`,
-        variant: "warning" as const,
-      };
+  const checkoutPending = state.status === "checkout_pending";
+  const checkoutDone = state.status === "done";
 
   return (
     <EmployeePage
       title={copy.shiftTasks}
-      description={taskCopy.description}
       action={
-        allDone ? (
+        allDone && !checkoutPending && !checkoutDone ? (
           <Button asChild size="touch" className="w-full sm:w-fit">
             <Link href="/employee/clock">
               <IconClock data-icon="inline-start" />
               {copy.clockOut}
             </Link>
           </Button>
+        ) : checkoutPending ? (
+          <Button
+            variant="outline"
+            size="touch"
+            className="w-full sm:w-fit"
+            disabled
+          >
+            <IconClock data-icon="inline-start" />
+            {copy.checkoutPending}
+          </Button>
         ) : null
       }
     >
-      <EmployeeWorkflowPanel
+      <EmployeePanel
         icon={allDone ? IconDone : IconListChecks}
         title={taskCopy.checklistTitle}
-        description={
-          allDone
-            ? taskCopy.checklistDoneDescription
-            : taskCopy.checklistWorkingDescription
-        }
-        tone={allDone ? "success" : "info"}
-        badge={badge}
-        details={[
-          {
-            label: copy.branch,
-            value: state.branchName ?? copy.noBranch,
-            muted: !state.branchName,
-          },
-          {
-            label: copy.checkIn,
-            value: state.attendance?.checkIn
-              ? formatTimeVN(state.attendance.checkIn)
-              : "—",
-          },
-        ]}
-        progress={{
-          label: copy.workProgress,
-          value: progressValue,
-          description:
-            state.checklist.total > 0
-              ? `${state.checklist.done}/${state.checklist.total} ${copy.tasksDone}`
-              : taskCopy.noChecklistProgress,
-          tone: allDone ? "success" : "default",
-        }}
+        tone={checkoutPending ? "warning" : allDone ? "success" : "info"}
+        contentClassName="gap-2"
       >
         {state.checklist.items.length > 0 ? (
-          <TasksClient items={state.checklist.items} />
+          <TasksClient
+            items={state.checklist.items}
+            disabled={checkoutPending || checkoutDone}
+          />
         ) : (
           <Empty>
             <EmptyMedia variant="icon">
@@ -156,7 +127,7 @@ export default async function EmployeeTasksPage() {
             </EmptyHeader>
           </Empty>
         )}
-      </EmployeeWorkflowPanel>
+      </EmployeePanel>
     </EmployeePage>
   );
 }

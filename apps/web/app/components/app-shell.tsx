@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ArrowLeft as IconArrowLeft, LogOut as IconLogout } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
-import { ROLE_LABEL_VI } from "@comtammatu/shared/auth";
+import { resolveRoleHomeLink, ROLE_LABEL_VI } from "@comtammatu/shared/auth";
 import { Avatar, AvatarFallback } from "@comtammatu/ui/components/avatar";
 import { Badge } from "@comtammatu/ui/components/badge";
 import {
@@ -46,8 +46,10 @@ interface BrandConfig {
   mainLabel: ReactNode;
   logoVariant?: BrandMarkVariant | null;
   logoAlt?: string;
-  /** Show "back to admin" link above brand block. Default true. */
+  /** Show role-safe home link above brand block. Default true. */
   showBackLink?: boolean;
+  backHref?: string;
+  backLabel?: string;
 }
 
 interface PageHeaderConfig {
@@ -101,6 +103,9 @@ export function AppShell({
   const logoVariant =
     brand.logoVariant === undefined ? "seal" : brand.logoVariant;
   const showBackLink = brand.showBackLink ?? true;
+  const defaultBackLink = resolveRoleHomeLink(role);
+  const backHref = brand.backHref ?? defaultBackLink.href;
+  const backLabel = brand.backLabel ?? defaultBackLink.label;
   const triggerClass = collapsible === "icon" ? undefined : "md:hidden";
   const breadcrumbSegments = pageHeader.breadcrumbSegments ?? [];
 
@@ -110,11 +115,11 @@ export function AppShell({
         <SidebarHeader className="gap-3 p-4">
           {showBackLink ? (
             <Link
-              href="/admin/dashboard"
+              href={backHref}
               className="inline-flex items-center gap-1.5 text-xs font-medium text-sidebar-foreground/65 hover:text-sidebar-foreground group-data-[collapsible=icon]:hidden"
             >
               <IconArrowLeft className="size-3.5" />
-              {copy.admin}
+              {backLabel}
             </Link>
           ) : null}
           <div className="flex items-center gap-3">

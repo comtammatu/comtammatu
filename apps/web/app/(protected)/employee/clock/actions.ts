@@ -4,16 +4,23 @@ import { createHmac, randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
-import {
-  PERMISSION_KEYS,
-  type StaffRole,
-} from "@comtammatu/shared/auth";
+import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getVNDateString } from "@comtammatu/shared/time";
-import { getAuthContextWithPermission } from "@/_lib/auth";
+import {
+  getAuthContext,
+  getAuthContextWithPermission,
+  probePermission,
+} from "@/_lib/auth";
 import { getEmployeeContext } from "../_lib/employee-context";
 
 const CONFIG_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
+const CHECKOUT_APPROVAL_ROLES: readonly StaffRole[] = [
+  "owner",
+  "super_manager",
+  "area_manager",
+  "branch_manager",
+];
 const ATTENDANCE_PHOTO_BUCKET = "attendance-photos";
 const MAX_PHOTO_BYTES = 3_500_000;
 const PHOTO_MIME_TO_EXT = {
@@ -48,6 +55,7 @@ function revalidateEmployeeWorkPaths() {
   revalidatePath("/employee/clock");
   revalidatePath("/employee/tasks");
   revalidatePath("/employee/attendance");
+  revalidatePath("/employee/checkout-approvals");
 }
 
 function isSupportedPhotoMime(
@@ -81,6 +89,21 @@ function mapCheckoutError(message: string | undefined): string {
   }
   if (message?.includes("open_attendance_not_found")) {
     return "Không tìm thấy ca đang mở để kết ca.";
+  }
+  if (message?.includes("checkout_request_not_found")) {
+    return "Yêu cầu kết ca không còn ở trạng thái chờ duyệt.";
+  }
+  if (message?.includes("cannot_approve_own_checkout")) {
+    return "Không thể tự duyệt kết ca của mình.";
+  }
+  if (message?.includes("checkout_requires_upper_manager")) {
+    return "Yêu cầu kết ca của Quản lý chi nhánh cần quản lý cấp trên duyệt.";
+  }
+  if (message?.includes("branch_manager_can_only_approve_branch_staff")) {
+    return "Quản lý chi nhánh chỉ duyệt kết ca cho nhân viên ca sàn.";
+  }
+  if (message?.includes("checkout_approver_not_allowed")) {
+    return "Tài khoản này không có quyền duyệt kết ca.";
   }
   return "Không thể kết ca. Vui lòng thử lại.";
 }
@@ -226,7 +249,7 @@ export async function toggleChecklistItem(input: {
 
   const { data: record } = await service
     .from("attendance_records")
-    .select("id, check_out")
+    .select("id, check_out, checkout_requested_at")
     .eq("id", item.attendance_record_id)
     .eq("tenant_id", ctx.claims.tenant_id)
     .eq("employee_id", ctx.employeeId)
@@ -236,7 +259,16 @@ export async function toggleChecklistItem(input: {
     return { success: false, error: "Không có quyền cập nhật việc này." };
   }
   if (record.check_out) {
-    return { success: false, error: "Ca đã kết thúc, không thể sửa checklist." };
+    return {
+      success: false,
+      error: "Ca đã kết thúc, không thể sửa checklist.",
+    };
+  }
+  if (record.checkout_requested_at) {
+    return {
+      success: false,
+      error: "Yêu cầu kết ca đã gửi, không thể sửa checklist.",
+    };
   }
 
   const { error } = await service
@@ -258,7 +290,7 @@ export async function toggleChecklistItem(input: {
 
 export async function clockOutWithCode(input: {
   code: string;
-}): Promise<ActionResult<{ checkOutTime: string }>> {
+}): Promise<ActionResult<{ requestedAt: string }>> {
   const parsed = checkoutCodeSchema.safeParse(input);
   if (!parsed.success) {
     return {
@@ -304,12 +336,94 @@ export async function clockOutWithCode(input: {
     return { success: false, error: "Mã kết ca không đúng." };
   }
 
-  const { data: checkOutTime, error } = await service.rpc(
-    "employee_clock_out_with_code",
+  const { data: requestedAt, error } = await service.rpc(
+    "employee_request_clock_out_with_code",
     {
       p_tenant_id: ctx.claims.tenant_id,
       p_employee_id: ctx.employeeId,
       p_attendance_id: record.id,
+    },
+  );
+
+  if (error || !requestedAt) {
+    return {
+      success: false,
+      error: mapCheckoutError(error?.message),
+    };
+  }
+
+  revalidateEmployeeWorkPaths();
+  return { success: true, data: { requestedAt } };
+}
+
+const approveCheckoutSchema = z.object({
+  attendanceId: z.coerce.number().int().positive(),
+  note: z.string().trim().max(500).optional(),
+});
+
+export async function approveCheckoutRequest(input: {
+  attendanceId: number;
+  note?: string;
+}): Promise<ActionResult<{ checkOutTime: string }>> {
+  const parsed = approveCheckoutSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+    };
+  }
+
+  const ctx = await getAuthContext(CHECKOUT_APPROVAL_ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const service = createServiceClient();
+  const { data: request } = await service
+    .from("attendance_records")
+    .select("id, branch_id")
+    .eq("id", parsed.data.attendanceId)
+    .eq("tenant_id", ctx.claims.tenant_id)
+    .is("check_out", null)
+    .not("checkout_requested_at", "is", null)
+    .maybeSingle();
+
+  if (!request) {
+    return {
+      success: false,
+      error: "Yêu cầu kết ca không còn ở trạng thái chờ duyệt.",
+    };
+  }
+
+  const branchId = request.branch_id;
+  if (
+    ctx.claims.user_role === "branch_manager" &&
+    ctx.claims.branch_id !== branchId
+  ) {
+    return {
+      success: false,
+      error: "Không có quyền duyệt kết ca tại chi nhánh này.",
+    };
+  }
+
+  const canApprove = await probePermission(
+    ctx,
+    PERMISSION_KEYS.HR_APPROVE_SHIFT_REQUEST,
+    branchId,
+  );
+  if (!canApprove) {
+    return {
+      success: false,
+      error: "Không có quyền duyệt kết ca tại chi nhánh này.",
+    };
+  }
+
+  const { data: checkOutTime, error } = await service.rpc(
+    "branch_manager_approve_employee_clock_out",
+    {
+      p_tenant_id: ctx.claims.tenant_id,
+      p_branch_id: branchId,
+      p_attendance_id: parsed.data.attendanceId,
+      p_approved_by: ctx.user.id,
+      p_note: parsed.data.note ?? undefined,
     },
   );
 

@@ -11,16 +11,10 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
-import { formatVND } from "@comtammatu/shared/format";
 import type { EmployeeRow } from "./page";
 import { TableEmptyStateRow } from "@/components/table-empty-state-row";
 
 import { BRANCH_VI, FORM_VI, STAFF_VI } from "@comtammatu/shared/messages";
-const CONTRACT_LABELS: Record<string, string> = {
-  probation: "Thử việc",
-  fixed_term: "Có thời hạn",
-  indefinite: "Không thời hạn",
-};
 
 interface EmployeeTableProps {
   employees: EmployeeRow[];
@@ -40,15 +34,13 @@ export function EmployeeTable({ employees }: EmployeeTableProps) {
             <TableHead className="hidden md:table-cell">
               {STAFF_VI.role}
             </TableHead>
-            <TableHead className="hidden lg:table-cell">Hợp đồng</TableHead>
-            <TableHead className="hidden lg:table-cell">Lương cơ bản</TableHead>
             <TableHead>{FORM_VI.status}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {employees.length === 0 && (
             <TableEmptyStateRow
-              colSpan={7}
+              colSpan={5}
               title="Chưa có hồ sơ nhân viên nào"
               icon={
                 <IconUsers className="mx-auto size-8 text-muted-foreground" />
@@ -74,14 +66,6 @@ export function EmployeeTable({ employees }: EmployeeTableProps) {
                 ) : (
                   "—"
                 )}
-              </TableCell>
-              <TableCell className="hidden text-muted-foreground lg:table-cell">
-                {emp.contract_type
-                  ? (CONTRACT_LABELS[emp.contract_type] ?? emp.contract_type)
-                  : "—"}
-              </TableCell>
-              <TableCell className="hidden lg:table-cell">
-                {emp.base_salary !== null ? formatVND(emp.base_salary) : "—"}
               </TableCell>
               <TableCell>
                 <Badge variant={emp.is_active ? "default" : "outline"}>

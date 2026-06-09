@@ -2,7 +2,7 @@
 
 ## Tổng quan
 
-Ứng dụng Next.js 16.2 dùng App Router. Snapshot 2026-05-27 (`node scripts/project-snapshot.mjs`) có 109 `page.tsx` routes và 13 API route handlers. Các bề mặt chính: Admin (`/admin/*`), Inventory (`/inventory/*`), Finance (`/finance/*`), HR (`/hr/*`), Orders (`/orders`), Notifications (`/notifications`), POS (`/br/[branchId]/pos`), KDS (`/br/[branchId]/kds`), Runner (`/br/[branchId]/runner`), Branch settings (`/br/[branchId]/settings/*`), Branch menu limits (`/br/[branchId]/menu-limits`), Employee portal cho non-admin staff (`/employee/*`), plus public surfaces `/login`, `/access-denied`, `/r/*`, `/payment/momo/return`. Khung quản trị + Thực đơn + POS + KDS đã hoàn thành; Kho hàng hiện là bề mặt vận hành live cho Kho Tổng, Bếp Trung Tâm, và chi nhánh.
+Ứng dụng Next.js 16.2 dùng App Router. Snapshot 2026-05-27 (`node scripts/project-snapshot.mjs`) có 109 `page.tsx` routes và 13 API route handlers. Các bề mặt chính: Admin (`/admin/*`), Inventory (`/inventory/*`), Finance (`/finance/*`), HR (`/hr/*`), Orders (`/orders`), Notifications (`/notifications`), POS (`/br/[branchId]/pos`), KDS (`/br/[branchId]/kds`), Runner customer display (`/br/[branchId]/runner`), Branch settings (`/br/[branchId]/settings/*`), Branch menu limits (`/br/[branchId]/menu-limits`), Employee portal cho non-admin staff (`/employee/*`), plus public surfaces `/login`, `/access-denied`, `/r/*`, `/payment/momo/return`. Khung quản trị + Thực đơn + POS + KDS đã hoàn thành; Kho hàng hiện là bề mặt vận hành live cho Kho Tổng, Bếp Trung Tâm, và chi nhánh.
 
 **Phạm vi sở hữu:** `apps/web/`
 
@@ -12,6 +12,28 @@ Route groups `(protected)` and `(public)` are URL-neutral. The tree below is
 organized by runtime surface; the actual current files live under
 `apps/web/app/(protected)/*` for authenticated app surfaces and
 `apps/web/app/(public)/*` for public/auth/return surfaces.
+
+## Route contract hiện tại
+
+Runtime route contract sống ở `packages/shared/src/auth/route-map.ts`, còn
+quyền truy cập vẫn sống ở `packages/shared/src/auth/module-acl.ts`. Khi sửa
+route hoặc shell, cập nhật cả hai nơi liên quan: ACL quyết định ai được vào;
+route-map quyết định route thuộc surface nào, dùng chrome nào, và rời surface
+theo quy tắc nào.
+
+| Surface                  | Route family                                                                                         | Entry point                                           | Navigation / back contract                                                                                  | Breadcrumb / scope contract                                                                 |
+| ------------------------ | ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| Public / auth            | `/login`, `/access-denied`, `/r/*`, `/payment/momo/return`, `/br/[branchId]/runner`, public health/webhook endpoints | `/login`, external return URL, hoặc Runner display URL | Không dùng app shell. Không giữ app back link.                                                               | Không đọc tenant/branch scope từ UI state. Feedback host gate nằm ở proxy; Runner display tự validate branch trong page. |
+| Admin foundation         | `/admin/dashboard`, `/admin/reports/*`, `/admin/staff/*`, `/admin/settings/*`, `/admin/accounting/*`, `/admin/feedback/*` | `/admin/dashboard`                                    | `AdminShell` dùng admin sidebar và ẩn back link. Không dùng Admin như home chung cho mọi role.               | Breadcrumb root là `Quản trị`; AdminShell build breadcrumb từ active nav + path tail.       |
+| Domain workspaces        | `/menu/*`, `/orders/*`, `/inventory/*`, `/finance/*`, `/hr/*`, `/notifications/*`                    | `MODULE_ACL[module].path`                             | Workspace shell dùng sidebar/domain nav; link rời workspace phải đi qua `resolveRoleHomeLink(role)`.         | Breadcrumb root là nhóm `Công việc`; filter/tab state giữ trong URL, không lưu local state. |
+| Branch operations        | `/br/[branchId]/pos/*`, `/kds/*`, `/settings/*`, `/menu-limits/*` dưới cùng branch URL               | `/br/[branchId]/{pos,kds,settings,menu-limits}`        | Operational chrome hoặc in-flow controls. POS/KDS ưu tiên hành động trong ca, không quay về Admin. Staff discovery vẫn có thể link sang Runner display public. | `branchId` bắt buộc nằm trong URL; proxy enforce branch scope và network gate khi cần.      |
+| Employee portal          | `/employee/*`                                                                                        | `/employee`                                           | Employee dùng bottom/desktop nav trong surface; admin-level role không vào `/employee/*`.                    | Breadcrumb nhẹ theo task portal; không trộn HR admin/payroll thành hot path nhân viên.      |
+| Compatibility            | `/admin/inventory*`, `/admin/finance*`                                                               | Không có active entry point                           | `/admin/finance*` canonical redirect sang `/finance*`; `/admin/inventory*` đi qua ACL retired module.       | Docs/runtime không quảng bá URL compatibility như entry point.                             |
+
+History rule: route changes that move the user between pages should use normal
+`Link` / `router.push` so browser Back returns to the previous route. Use
+`router.replace` only for same-page tab/filter/search-param state where Back
+should not step through every filter tweak.
 
 ```
 apps/web/app/
@@ -88,9 +110,9 @@ apps/web/app/
 │   │   ├── actions.ts      # bump/recall tickets, station CRUD, category mapping
 │   │   ├── kds-board.tsx   # "use client" — realtime ticket board with Supabase subscription
 │   │   └── order-card.tsx  # Individual order card with bump/recall buttons
-│   ├── runner/             # Runner customer call screen (cashier, waiter, chef, branch_manager)
-│   │   ├── layout.tsx      # Auth + ACL + branch validation
-│   │   ├── page.tsx        # Read-only customer-facing queue display
+│   ├── runner/             # Public Runner customer call screen; file path is URL-neutral
+│   │   ├── layout.tsx      # Display shell only; no staff auth/account chrome
+│   │   ├── page.tsx        # Read-only customer-facing queue display via server-only service client
 │   │   └── runner-realtime-refresh.tsx # "use client" — realtime invalidation + poll fallback
 │   ├── menu-limits/        # Daily sales limits per (branch, menu item) — branch_settings co-owners + cashier + chef
 │   └── settings/           # Branch-scoped settings (kds, pos, pos-sessions, printers, tables)
@@ -120,7 +142,6 @@ apps/web/app/
 │   ├── expiry/             # Expiry tracking
 │   ├── waste/              # Waste flow — auto, new, approvals
 │   ├── reports/            # Inventory reporting with live data
-│   ├── m/                  # Mobile inventory routes — drafts, grn (+ new/[supplierId]), production, stock, transfers/[id]/receive
 │   └── settings/           # Inventory-specific settings
 │       ├── layout.tsx      # Settings nav
 │       ├── page.tsx        # Redirect to expiry settings
@@ -218,16 +239,17 @@ Browser request
 
 1. Create `apps/web/app/(protected)/admin/{module}/page.tsx`
 2. Add `ModuleKey` to `packages/shared/src/auth/module-acl.ts` with allowed roles
-3. Add route mapping in `apps/web/proxy.ts` → `resolveModule()`
-4. Add nav item in `packages/shared/src/auth/nav-config.ts`
-5. Verify: proxy routes correctly, sidebar shows/hides by role
+3. Add URL mapping in `packages/shared/src/auth/route-resolution.ts`
+4. Add route family / chrome contract in `packages/shared/src/auth/route-map.ts`
+5. Add nav item in `packages/shared/src/auth/nav-config.ts`
+6. Verify: proxy routes correctly, sidebar shows/hides by role, route family resolves to the intended surface
 
 ## Các lỗi thường gặp
 
 | Failure                                 | Signal                                   | Recovery                                                      |
 | --------------------------------------- | ---------------------------------------- | ------------------------------------------------------------- |
 | "use client" barrel import              | Turbopack build crash                    | Use `/supabase/client` import path                            |
-| Missing module in proxy resolveModule() | 404 or no ACL check                      | Add URL pattern → ModuleKey mapping                           |
+| Missing module in route-resolution      | 404 or no ACL check                      | Add URL pattern → ModuleKey mapping                           |
 | Missing nav entry                       | Page exists but unreachable from sidebar | Add to `ADMIN_NAV_GROUPS`                                     |
 | Layout auth check mismatch with proxy   | Double redirect or bypass                | Proxy is source of truth — layout checks are defense-in-depth |
 

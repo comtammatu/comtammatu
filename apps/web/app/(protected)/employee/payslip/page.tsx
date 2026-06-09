@@ -1,8 +1,5 @@
-import Link from "next/link";
-import { UserCircle as IconUserCircle } from "lucide-react";
 import { getEmployeeContext } from "../_lib/employee-context";
 import { PayslipClient } from "./payslip-client";
-import { Button } from "@comtammatu/ui/components/button";
 import {
   EmployeeMissingProfileEmpty,
   EmployeePage,
@@ -12,7 +9,6 @@ import { getTodayVN } from "../_lib/vn-business-date";
 import { messages } from "@lib/messages";
 
 const copy = messages.employee.payslip;
-const profileCopy = messages.employee.profile;
 
 export default async function PayslipPage(props: {
   searchParams: Promise<{ year?: string }>;
@@ -45,8 +41,7 @@ export default async function PayslipPage(props: {
     .select(
       `
       id, working_days, standard_days, base_salary, gross_total,
-      total_insurance_employee, personal_deduction, dependent_count,
-      dependent_deduction, taxable_income, pit_tax, net_salary,
+      total_insurance_employee, net_salary,
       payroll_periods!inner ( period_month, period_year, status )
     `,
     )
@@ -62,19 +57,6 @@ export default async function PayslipPage(props: {
       title={copy.title}
       description={copy.description}
       badge={{ children: `${copy.yearBadge} ${year}`, variant: "outline" }}
-      action={
-        <Button
-          asChild
-          variant="outline"
-          size="touch"
-          className="w-full sm:w-fit"
-        >
-          <Link href="/employee/profile">
-            <IconUserCircle data-icon="inline-start" />
-            {profileCopy.dependentsActionTitle}
-          </Link>
-        </Button>
-      }
     >
       <YearPicker selectedYear={year} currentYear={currentYear} />
       <PayslipClient entries={(entries ?? []) as unknown as PayslipEntry[]} />
@@ -95,11 +77,6 @@ export interface PayslipEntry {
   base_salary: number;
   gross_total: number;
   total_insurance_employee: number;
-  personal_deduction: number;
-  dependent_count: number;
-  dependent_deduction: number;
-  taxable_income: number;
-  pit_tax: number;
   net_salary: number;
   payroll_periods: {
     period_month: number;

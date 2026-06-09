@@ -247,10 +247,12 @@ export async function proxy(request: NextRequest) {
       }
     }
 
-    // Branch-scoped routes (POS/KDS + branch_settings + menu-limits) enforce
+    // Branch-scoped protected routes enforce
     // URL branchId matches the user's assigned branch_id. Admin-level roles
     // (owner/super_manager/area_manager) may traverse any branch's settings.
     // POS/KDS also require the branch be operational (not warehouse/central_kitchen).
+    // The exact Runner customer board path is public and bypasses proxy auth;
+    // keep runner here only for any future non-public runner child route.
     if (
       moduleKey === "pos" ||
       moduleKey === "kds" ||
@@ -309,7 +311,8 @@ export async function proxy(request: NextRequest) {
           }
 
           // Network gate: only devices sharing NAT egress IP with the branch's
-          // print-agent (registered via /api/branch-presence) may load POS/KDS/Runner.
+          // print-agent (registered via /api/branch-presence) may load protected
+          // POS/KDS branch surfaces. The exact Runner customer board path is public.
           // Defense-in-depth ONLY — RLS + JWT remain the source of truth for
           // data access (PostgREST direct calls bypass this gate). Kill-switch
           // via POS_NETWORK_GATE=off for incident response.
@@ -338,7 +341,7 @@ export async function proxy(request: NextRequest) {
             !NETWORK_GATE_OFF_WARNED
           ) {
             console.warn(
-              "[network-gate] disabled via POS_NETWORK_GATE=off — POS/KDS/Runner perimeter open. See regressions.md POS-NETWORK-GATE-GRACE-IS-SECURITY-CEILING.",
+              "[network-gate] disabled via POS_NETWORK_GATE=off — POS/KDS perimeter open. See regressions.md POS-NETWORK-GATE-GRACE-IS-SECURITY-CEILING.",
             );
             NETWORK_GATE_OFF_WARNED = true;
           }

@@ -3,6 +3,7 @@ import type { ModuleKey } from "./module-acl";
 export const PUBLIC_APP_PATHS = [
   "/api/health",
   "/api/webhooks",
+  "/brand",
   "/manifest.webmanifest",
   "/sw.js",
   "/access-denied",
@@ -19,14 +20,45 @@ export const INVENTORY_PROCUREMENT_PREFIXES = [
   "/inventory/supplier-invoices",
   "/inventory/recipes",
   "/inventory/receiving",
-  "/inventory/m/drafts",
-  "/inventory/m/grn",
 ] as const;
+
+export const INVENTORY_ROUTE_PREFIXES = [
+  "/inventory/dashboard",
+  "/inventory/drafts",
+  "/inventory/expiry",
+  "/inventory/grn",
+  "/inventory/ingredients",
+  "/inventory/issues",
+  "/inventory/production",
+  "/inventory/purchase-orders",
+  "/inventory/receiving",
+  "/inventory/recipes",
+  "/inventory/reports",
+  "/inventory/settings",
+  "/inventory/stock",
+  "/inventory/stocktake",
+  "/inventory/supplier-invoices",
+  "/inventory/supplier-returns",
+  "/inventory/suppliers",
+  "/inventory/transfers",
+  "/inventory/waste",
+] as const;
+
+function matchesPathPrefix(pathname: string, prefix: string): boolean {
+  return pathname === prefix || pathname.startsWith(`${prefix}/`);
+}
+
+export function isRunnerPublicDisplayPath(pathname: string): boolean {
+  const resolvedPathname = stripBetaPrefix(pathname);
+  return /^\/br\/\d+\/runner\/?$/.test(resolvedPathname);
+}
 
 export function isPublicAppPath(pathname: string): boolean {
   if (pathname.startsWith("/swe-worker-")) return true;
   if (pathname.startsWith("/demo/")) return true;
   if (/^\/br\/\d+\/pos\/manifest\.webmanifest$/.test(pathname)) return true;
+  // Runner is a customer-facing read-only display, not a staff login surface.
+  if (isRunnerPublicDisplayPath(pathname)) return true;
   // /r/ prefix — public QR feedback submission pages (no auth required)
   if (pathname.startsWith("/r/")) return true;
 
@@ -124,15 +156,15 @@ export function resolveModuleFromPath(pathname: string): ModuleKey | null {
   if (resolvedPathname.startsWith("/admin/feedback")) return "feedback";
 
   for (const prefix of INVENTORY_PROCUREMENT_PREFIXES) {
-    if (
-      resolvedPathname === prefix ||
-      resolvedPathname.startsWith(`${prefix}/`)
-    ) {
+    if (matchesPathPrefix(resolvedPathname, prefix)) {
       return "inventory_procurement";
     }
   }
 
-  if (resolvedPathname.startsWith("/inventory")) return "inventory";
+  if (resolvedPathname === "/inventory") return "inventory";
+  for (const prefix of INVENTORY_ROUTE_PREFIXES) {
+    if (matchesPathPrefix(resolvedPathname, prefix)) return "inventory";
+  }
   if (resolvedPathname.startsWith("/finance")) return "finance";
   if (resolvedPathname.startsWith("/menu")) return "menu";
   if (resolvedPathname.startsWith("/orders")) return "orders";
@@ -143,6 +175,9 @@ export function resolveModuleFromPath(pathname: string): ModuleKey | null {
   if (/^\/br\/\d+\/pos/.test(resolvedPathname)) return "pos";
   if (/^\/br\/\d+\/kds/.test(resolvedPathname)) return "kds";
   if (/^\/br\/\d+\/runner/.test(resolvedPathname)) return "runner";
+  if (resolvedPathname.startsWith("/employee/checkout-approvals")) {
+    return "employee_checkout_approvals";
+  }
   if (resolvedPathname.startsWith("/employee")) return "employee";
   if (resolvedPathname.startsWith("/notifications")) return "notifications";
 

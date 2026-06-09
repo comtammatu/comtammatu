@@ -18,6 +18,7 @@ Nơi lưu các artefact theo dõi tiến độ và adoption.
 - [employee-daily-work-v1-2026-06-09.md](employee-daily-work-v1-2026-06-09.md): Employee daily-work contract hiện tại
 - [pos-item-level-discount-migration-2026-06-09.md](pos-item-level-discount-migration-2026-06-09.md): item-level discount money migration contract
 - [pos-shift-close-discount-hddt-2026-06-09.md](pos-shift-close-discount-hddt-2026-06-09.md): close-shift + HĐĐT discount hotfix contract
+- [runner-public-display-2026-06-09.md](runner-public-display-2026-06-09.md): Runner public customer display contract
 - [runner-kds-status-logic-2026-06-09.md](runner-kds-status-logic-2026-06-09.md): Runner queue visibility rule
 - [pilot-hardening-readiness-2026-05-24.md](pilot-hardening-readiness-2026-05-24.md): historical pre-launch snapshot still referenced by current tracker
 

@@ -20,6 +20,7 @@ export type ModuleLabelKey =
   | "branch_settings"
   | "branch_menu_limits"
   | "employee"
+  | "employee_checkout_approvals"
   | "notifications"
   | "feedback";
 
@@ -35,7 +36,7 @@ export const MODULE_LABELS_VI: Record<ModuleLabelKey, string> = {
   inventory_admin: "Cấu hình kho",
   orders: "Đơn hàng bán",
   staff: "Nhân viên",
-  hr: "Nhân sự & tiền lương",
+  hr: "Nhân sự",
   crm: "Khách hàng",
   finance: "Kế toán",
   accounting: "Kỳ kế toán",
@@ -46,7 +47,8 @@ export const MODULE_LABELS_VI: Record<ModuleLabelKey, string> = {
   runner: "Màn gọi số",
   branch_settings: "Cài đặt chi nhánh",
   branch_menu_limits: "Hạn mức bán hàng ngày",
-  employee: "Cổng nhân viên",
+  employee: "Trang nhân viên",
+  employee_checkout_approvals: "Duyệt kết ca",
   notifications: "Thông báo",
   feedback: "Phản ánh khách",
 };
@@ -68,8 +70,8 @@ export const APP_COPY_VI = {
   quickAccess: "Mục nhanh",
   quickAccessAria: "Truy cập nhanh chức năng",
   employeePortal: "Trang nhân viên",
-  hrWorkspace: "Nhân sự & tiền lương",
-  hrWorkspaceSubtitle: "Ca làm và tiền lương",
+  hrWorkspace: "Nhân sự",
+  hrWorkspaceSubtitle: "Nhân viên, ca làm, ngày công",
   branchOperationsKds: "Bếp (KDS)",
   branchOperationsRunner: "Màn gọi số",
   loading: "Đang tải…",

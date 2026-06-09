@@ -63,6 +63,7 @@ export {
 export type {
   QuickLaunchGroup,
   ResolvedNavGroup,
+  ResolvedHomeLink,
   ResolvedNavLink,
 } from "./nav-resolution";
 export {
@@ -70,6 +71,7 @@ export {
   resolveBranchOperationItems,
   resolveNavLink,
   resolveQuickLaunchGroups,
+  resolveRoleHomeLink,
   resolveWorkspaceItems,
 } from "./nav-resolution";
 export type {
@@ -86,14 +88,26 @@ export {
   resolveDiscoveredApps,
   resolveWorkspaceDiscoveryGroup,
 } from "./app-discovery";
+export type {
+  RouteBackBehavior,
+  RouteFamilyContract,
+  RoutePrimaryNav,
+  RouteSurface,
+} from "./route-map";
+export {
+  ROUTE_FAMILY_CONTRACTS,
+  resolveRouteFamilyContract,
+} from "./route-map";
 export {
   BETA_ROUTE_PREFIX,
   INVENTORY_PROCUREMENT_PREFIXES,
+  INVENTORY_ROUTE_PREFIXES,
   PUBLIC_APP_PATHS,
   isAdminRoutePath,
   isBetaPath,
   isFeedbackPublicPath,
   isPublicAppPath,
+  isRunnerPublicDisplayPath,
   normalizeHost,
   resolveHostSurface,
   resolveLegacyRouteRedirectPath,

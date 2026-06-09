@@ -35,6 +35,7 @@ test("Employee home exposes Branch Manager tools outside personal attendance sta
 
   for (const expected of [
     'moduleKey: "pos"',
+    'moduleKey: "employee_checkout_approvals"',
     'moduleKey: "orders"',
     'moduleKey: "kds"',
     'moduleKey: "runner"',

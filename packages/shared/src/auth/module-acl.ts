@@ -26,6 +26,7 @@ export type ModuleKey =
   | "branch_settings"
   | "branch_menu_limits"
   | "employee"
+  | "employee_checkout_approvals"
   | "notifications"
   | "feedback";
 
@@ -171,6 +172,11 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
     path: "/employee",
     allowedRoles: EMPLOYEE_PORTAL_ROLES,
     label: getModuleLabelVi("employee"),
+  },
+  employee_checkout_approvals: {
+    path: "/employee/checkout-approvals",
+    allowedRoles: ["owner", "super_manager", "area_manager", "branch_manager"],
+    label: getModuleLabelVi("employee_checkout_approvals"),
   },
   notifications: {
     path: "/notifications",
