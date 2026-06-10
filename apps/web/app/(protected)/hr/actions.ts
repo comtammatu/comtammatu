@@ -10,7 +10,7 @@ import {
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getVNDateString, getVNMonthEndDateString } from "@comtammatu/shared/time";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
-import { getAuthContextWithPermission } from "@/_lib/auth";
+import { getAuthContext, probePermission } from "@/_lib/auth";
 import { withAction } from "@/_lib/with-action";
 import { canAccessBranch } from "@/_lib/branch-scope";
 
@@ -44,15 +44,41 @@ const employeeSchema = z.object({
 });
 
 export async function fetchEmployees(): Promise<ActionResult> {
-  const ctx = await getAuthContextWithPermission(
-    HR_EMPLOYEE_VIEW_ROLES,
-    PERMISSION_KEYS.STAFF_MANAGE,
-  );
-  if (!ctx) return { success: false, error: "Không có quyền" };
+  const baseCtx = await getAuthContext(HR_EMPLOYEE_VIEW_ROLES);
+  if (!baseCtx) return { success: false, error: "Không có quyền" };
 
-  const { supabase, claims } = ctx;
+  const { claims, user } = baseCtx;
+  const canViewEmployeesWithPermission =
+    claims.user_role === "branch_manager" ||
+    (await Promise.all([
+      probePermission(baseCtx, PERMISSION_KEYS.STAFF_MANAGE),
+      probePermission(baseCtx, PERMISSION_KEYS.HR_VIEW_EMPLOYEE),
+    ])).some(Boolean);
+  if (!canViewEmployeesWithPermission) {
+    return { success: false, error: "Không có quyền" };
+  }
 
-  let query = supabase
+  let branchManagerBranchId = claims.branch_id;
+  if (claims.user_role === "branch_manager" && branchManagerBranchId == null) {
+    const { data: profileBranch } = await baseCtx.supabase
+      .from("profiles")
+      .select("branch_id")
+      .eq("id", user.id)
+      .eq("tenant_id", claims.tenant_id)
+      .maybeSingle();
+    branchManagerBranchId = profileBranch?.branch_id ?? null;
+  }
+
+  // Branch manager read path is intentionally service-role backed:
+  // 1) supports older role-template states where `hr:view_employee`
+  //    has not been backfilled yet,
+  // 2) keeps tenant/branch scoping enforced in code for explicit safety.
+  const employeeClient =
+    claims.user_role === "branch_manager"
+      ? createServiceClient()
+      : baseCtx.supabase;
+
+  let query = employeeClient
     .from("employees")
     .select(
       `
@@ -69,10 +95,10 @@ export async function fetchEmployees(): Promise<ActionResult> {
     .order("created_at", { ascending: false });
 
   if (claims.user_role === "branch_manager") {
-    if (claims.branch_id == null) {
+    if (branchManagerBranchId == null) {
       return { success: true, data: [] };
     }
-    query = query.eq("profiles.branch_id", claims.branch_id);
+    query = query.eq("profiles.branch_id", branchManagerBranchId);
   }
 
   const { data, error } = await query;
