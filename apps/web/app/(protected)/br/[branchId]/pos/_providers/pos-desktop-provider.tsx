@@ -157,7 +157,7 @@ export function usePosArchivedInvalidationToken(): number {
   return useContext(ArchivedInvalidationContext);
 }
 
-function usePosDailyLimitStore(): DailyLimitStore {
+export function usePosDailyLimitStore(): DailyLimitStore {
   const ctx = useContext(DailyLimitStoreContext);
   if (!ctx)
     throw new Error("useDailyLimit must be used inside PosDesktopProvider");

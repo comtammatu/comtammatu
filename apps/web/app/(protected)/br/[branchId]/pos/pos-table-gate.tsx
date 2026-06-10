@@ -118,16 +118,11 @@ const TableButton = memo(function TableButton({
         <p className="text-3xl font-semibold leading-none tabular-nums">
           {table.number}
         </p>
-        <div className="flex shrink-0 flex-col items-end gap-1">
-          <p className="text-sm font-semibold tabular-nums opacity-80 sm:text-base lg:text-lg">
-            {messages.pos.tableGate.capacity(table.capacity)}
-          </p>
-          {orderCount >= 2 && (
-            <Badge variant="secondary" className="w-fit text-xs font-semibold">
-              {messages.pos.tableGate.multiBill(orderCount)}
-            </Badge>
-          )}
-        </div>
+        {orderCount >= 2 && (
+          <Badge variant="secondary" className="w-fit text-xs font-semibold">
+            {messages.pos.tableGate.multiBill(orderCount)}
+          </Badge>
+        )}
       </div>
     </Button>
   );

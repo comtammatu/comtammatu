@@ -23,6 +23,7 @@ import {
 import { Button } from "@comtammatu/ui/components/button";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
+import { AttendanceSettingsCard } from "./attendance-settings-card";
 
 type Tile = {
   href: string;
@@ -72,7 +73,7 @@ export default async function BranchSettingsHubPage({
     {
       href: `/br/${branchId}/settings/tables`,
       title: "Bàn",
-      description: "Danh sách bàn và sức chứa.",
+      description: "Danh sách bàn, khu vực và trạng thái.",
       icon: <IconArmchair />,
     },
     {
@@ -149,6 +150,12 @@ export default async function BranchSettingsHubPage({
       ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2">
+        <AttendanceSettingsCard
+          branch={{
+            id: branch.id,
+            name: branch.name,
+          }}
+        />
         {tiles.map((tile) => (
           <AppLinkCard
             key={`${tile.title}-${tile.href}`}

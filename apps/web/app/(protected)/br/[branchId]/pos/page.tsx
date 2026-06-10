@@ -210,7 +210,6 @@ export default async function PosPage({
 export interface BranchTable {
   id: number;
   number: number;
-  capacity: number;
   status: string;
   zone_id: number | null;
   branch_zones: { id: number; name: string } | null;

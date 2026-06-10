@@ -6,6 +6,7 @@ export const finance = {
     loading: "Đang tải...",
     filter: "Lọc",
     open: "Mở",
+    backToFinance: "Quay lại Tài chính",
     reportError: "Lỗi tạo báo cáo.",
   },
   shell: {
@@ -44,13 +45,13 @@ export const finance = {
       "Top nguyên liệu giữ nhiều vốn nhất theo tồn kho hiện tại và giá vốn đang có.",
     topItemsTitle: "Món kéo doanh thu",
     topItemsDescription:
-      "Món bán tốt trong tháng của kỳ đang xem; dùng để đối chiếu nhanh với biên gộp.",
+      "Món chính và món ăn kèm bán tốt trong đúng khoảng đang xem; dùng để đối chiếu nhanh với biên gộp.",
     branchTitle: "So sánh chi nhánh",
     branchDescription:
       "Chỉ hiện khi bạn có nhiều chi nhánh. Công thức vẫn giống màn hình cơ bản của chủ quán.",
     grossMarginLine: (margin: string) => `${margin} biên gộp`,
     stageBranchControl: "Theo dõi nhiều chi nhánh",
-    stageCompanyReporting: "Báo cáo kế toán để riêng",
+    stageCompanyReporting: "Hỗ trợ kế toán để riêng",
     exceptionsTitle: "Điểm cần kiểm tra",
     exceptionsDescription:
       "Chỉ đưa ra ngoại lệ vận hành: lệch quỹ, thiếu giá vốn, HĐĐT kẹt, công nợ NCC hoặc chi vận hành chưa ghi nhận.",
@@ -141,14 +142,14 @@ export const finance = {
       postingRules: "Quy tắc hạch toán",
       statements: "Báo cáo tài chính",
       foodCost: "Giá vốn món",
-      periods: "Kỳ kế toán",
+      periods: "Khóa kỳ",
       auditTrail: "Nhật ký kiểm toán",
     },
   },
   periodsAdmin: {
-    title: "Kỳ kế toán",
+    title: "Khóa kỳ hỗ trợ kế toán",
     description:
-      "Soft close tự động ngày 5 tháng sau • hard close ngày 15 (cron). Reopen cần typed confirm + audit trail.",
+      "Khóa mềm ngày 5 tháng sau, khóa cứng ngày 15 bằng cron. Mở lại kỳ cần xác nhận và lưu audit.",
   },
   revenueReport: {
     granularityLabel: {
@@ -212,8 +213,6 @@ export const finance = {
     emptyRange: "Không có dữ liệu trong khoảng đã chọn.",
     customers: "Khách",
     total: "Tổng",
-    layoutSimple: "Đơn giản",
-    layoutAdvanced: "Chuyên sâu",
     revenueByPeriod: "Doanh thu theo kỳ",
     quickStructure: "Cơ cấu nhanh",
     highlightedBranches: "Chi nhánh nổi bật",
@@ -230,16 +229,22 @@ export const finance = {
     topVarianceCashiers: "Top thu ngân lệch nhiều",
     sessionCount: (count: number) => `${count} ca`,
     noVariance: "Không có ca nào lệch trong khoảng — tốt.",
-    reconciliationTitle: "Đối chiếu sổ phụ POS ↔ sổ cái",
+    reconciliationTitle: "Đối chiếu POS ↔ ghi nhận tài chính",
     reconciliationDescription:
-      "Tổng doanh thu thanh toán (POS) so với tổng có TK 511 + 33311 đã hạch toán trong khoảng đang xem.",
+      "Tổng doanh thu thanh toán (POS) so với số đã ghi nhận trong khoảng đang xem.",
     posSubledger: "POS (sổ phụ)",
-    generalLedger: "Sổ cái (511 + 33311)",
+    generalLedger: "Đã ghi nhận",
     difference: "Chênh lệch",
     matched: "Khớp",
     openReconciliation: "Mở trang đối chiếu",
   },
   reconciliation: {
+    page: {
+      eyebrow: "Tài chính",
+      title: "Đối chiếu POS ↔ ghi nhận tài chính",
+      description:
+        "So sánh tiền đã thu và chứng từ nguồn với phần đã ghi nhận trong kỳ. Khi có chênh lệch, mở chi tiết để xem chứng từ gốc và dòng ghi nhận liên quan.",
+    },
     tabs: {
       period: "Đối chiếu kỳ",
       byDay: "DT theo ngày",
@@ -263,10 +268,10 @@ export const finance = {
       needsReview: "Cần kiểm tra",
     },
     table: {
-      categoryDetailTitle: "Chi tiết theo nhóm hạch toán",
+      categoryDetailTitle: "Chi tiết theo nhóm vận hành",
       group: "Nhóm",
       subledger: "Sổ phụ",
-      gl: "Sổ cái",
+      gl: "Đã ghi nhận",
       difference: "Chênh lệch",
       drilldown: "Drilldown",
       reference: "Tham chiếu",
@@ -280,14 +285,15 @@ export const finance = {
     drilldown: {
       title: (category: string) => `Chi tiết ${category}`,
       subledgerDescription: "Sổ phụ — chứng từ gốc · tối đa 200 dòng gần nhất",
-      glDescription: "Sổ cái — bút toán đã ghi nhận · tối đa 200 dòng gần nhất",
+      glDescription:
+        "Đã ghi nhận — dòng tài chính liên quan · tối đa 200 dòng gần nhất",
     },
     categoryLabels: {
-      sales: "Doanh thu + VAT (511+33311)",
-      cogs: "Giá vốn (621)",
-      inventoryIn: "Nhập kho NVL (152)",
-      payroll: "Lương nhân công (622)",
-      apPayment: "Thanh toán NCC (331)",
+      sales: "Doanh thu + VAT",
+      cogs: "Giá vốn",
+      inventoryIn: "Nhập kho nguyên liệu",
+      payroll: "Lương nhân công",
+      apPayment: "Thanh toán NCC",
     },
     status: {
       enterpriseWide: "Toàn HKD",
@@ -297,13 +303,13 @@ export const finance = {
     },
     byDay: {
       emptyDescription:
-        'Chọn khoảng ngày và bấm "Đối chiếu theo ngày" để xem chênh lệch DT POS ↔ Sổ cái cho từng ngày.',
-      title: "Đối chiếu DT POS ↔ Sổ cái — theo ngày",
+        'Chọn khoảng ngày và bấm "Đối chiếu theo ngày" để xem chênh lệch doanh thu POS ↔ ghi nhận tài chính cho từng ngày.',
+      title: "Đối chiếu doanh thu POS ↔ ghi nhận tài chính",
       description:
-        'Cột POS bucket theo `paid_at`, cột Sổ cái bucket theo `entry_date`, cùng giờ Việt Nam. Ngày khớp đến ±1 ₫ được đánh dấu "Khớp".',
+        'Cột POS bucket theo `paid_at`, cột đã ghi nhận bucket theo `entry_date`, cùng giờ Việt Nam. Ngày khớp đến ±1 ₫ được đánh dấu "Khớp".',
       date: "Ngày",
       posSubledger: "POS (sổ phụ)",
-      glSalesVat: "Sổ cái 511+33311",
+      glSalesVat: "Đã ghi nhận",
       total: "Tổng",
       zero: "0",
     },
@@ -324,8 +330,6 @@ export const finance = {
   dashboard: {
     branch: "Chi nhánh",
     branchPlaceholder: "Chọn chi nhánh",
-    simple: "Đơn giản",
-    advanced: "Chuyên sâu",
     liveBranch: (branchLabel: string) => `Live · ${branchLabel}`,
     noComparison: "Chưa tải được chỉ số so sánh.",
     comparison: (delta: string) => `${delta} so với hôm qua.`,
@@ -352,7 +356,7 @@ export const finance = {
     featureCta: "Mở",
     workflowTitle: "Luồng nghiệp vụ",
     workflowDescription:
-      "Các khu vực kế toán thường dùng để kiểm tra doanh thu, ghi sổ và chuẩn bị chốt kỳ.",
+      "Các khu vực vận hành dùng để kiểm tra doanh thu, hóa đơn và đối soát.",
     tabs: {
       revenue: "Doanh thu",
       invoices: (count: number) => `Hóa đơn điện tử (${count})`,
@@ -361,8 +365,8 @@ export const finance = {
     workQueue: {
       title: "Việc cần kiểm tra",
       description:
-        "Các điểm kế toán cần nhìn trước khi đi sâu vào báo cáo hoặc chốt kỳ.",
-      period: "Kỳ kế toán",
+        "Các điểm vận hành cần nhìn sau báo cáo doanh thu.",
+      period: "Kỳ khóa sổ",
       invoicesAttention: "HĐĐT cần xử lý",
       invoicesAttentionHint: "Nháp, đang ký hoặc đã gửi nhưng chưa có mã CQT",
       draftJournals: "Bút toán nháp",
@@ -540,7 +544,8 @@ export const finance = {
     },
     topItems: {
       title: "Top món bán chạy",
-      description: "Theo tháng chứa ngày bắt đầu kỳ đang xem.",
+      description:
+        "Tách món chính và món ăn kèm theo đúng khoảng ngày, chi nhánh đang lọc.",
       empty: "Chưa có dữ liệu món.",
       colName: "Tên món",
       colQty: "SL",
@@ -563,10 +568,10 @@ export const finance = {
     },
   },
   reconcileCard: {
-    title: "Đối chiếu sổ phụ ↔ sổ cái",
-    description: "So sánh tổng POS với bút toán 511 + 33311.",
+    title: "Đối chiếu POS ↔ ghi nhận tài chính",
+    description: "So sánh tổng POS với số đã ghi nhận trong kỳ.",
     posSubledger: "Sổ phụ POS",
-    generalLedger: "Sổ cái",
+    generalLedger: "Đã ghi nhận",
     difference: "Chênh lệch",
     matched: "Khớp",
     openDetail: "Mở đối chiếu chi tiết",
@@ -583,7 +588,7 @@ export const finance = {
     noVariance: "Không phát hiện lệch quỹ trong kỳ.",
   },
   invoicesPage: {
-    eyebrow: "Kế toán",
+    eyebrow: "HĐĐT HKD",
     title: "Hóa đơn điện tử",
     description:
       "Danh sách HĐĐT đã phát hành, đang ký, đã hủy hoặc khách lẻ không yêu cầu MST.",
@@ -596,11 +601,12 @@ export const finance = {
     },
     reconciliation: {
       label: "Đối chiếu sổ",
-      description: "So sánh sổ phụ POS/kho/lương với bút toán sổ cái.",
+      description:
+        "So sánh dữ liệu POS/kho/lương với số đã ghi nhận để tìm lệch.",
     },
     chartOfAccounts: {
       label: "Hệ thống tài khoản",
-      description: "Danh mục tài khoản VAS và phân loại lưu chuyển tiền tệ.",
+      description: "Danh mục tài khoản cho phần hỗ trợ kế toán.",
     },
     journal: {
       label: "Sổ nhật ký",
@@ -619,8 +625,8 @@ export const finance = {
       description: "Theo dõi WAC, food cost và biên lãi món bán.",
     },
     periods: {
-      label: "Kỳ kế toán",
-      description: "Mở kỳ, đối chiếu và khóa kỳ theo quy trình.",
+      label: "Khóa kỳ",
+      description: "Mở kỳ, đối chiếu và khóa kỳ khi cần hỗ trợ kế toán.",
     },
     auditTrail: {
       label: "Nhật ký kiểm toán",
@@ -628,8 +634,14 @@ export const finance = {
     },
     overview: {
       label: "Tổng quan module",
-      description: "Workspace chính cho kế toán và tài chính.",
+      description: "Workspace chính cho tài chính vận hành HKD.",
     },
+  },
+  summaryPage: {
+    eyebrow: "HĐĐT HKD",
+    title: "HĐ tổng hợp B2C",
+    description:
+      "Hoá đơn tổng hợp khách hàng không lấy hoá đơn theo TT 78/2021 §11.4. Cron tự động chạy 02:00 ICT mỗi ngày cho dữ liệu hôm trước; có thể trigger thủ công cho ngày cụ thể nếu cron lỗi hoặc cần re-run.",
   },
   coa: {
     typeLabels: {
@@ -645,12 +657,12 @@ export const finance = {
       financing: "Tài chính",
       none: "Không phân loại",
     },
-    seedSuccess: "Đã khởi tạo hệ thống tài khoản VAS",
+    seedSuccess: "Đã khởi tạo hệ thống tài khoản",
     seedError: "Lỗi khởi tạo",
     emptyTitle: "Chưa có hệ thống tài khoản",
     emptyDescription:
-      "Khởi tạo VAS để bắt đầu hạch toán và tạo báo cáo tài chính.",
-    seedAction: "Khởi tạo hệ thống tài khoản VAS",
+      "Khởi tạo hệ thống tài khoản khi cần hỗ trợ kế toán.",
+    seedAction: "Khởi tạo hệ thống tài khoản",
     searchLabel: "Tìm tài khoản",
     searchPlaceholder: "Mã hoặc tên tài khoản",
     allTypes: "Tất cả loại",
@@ -714,23 +726,24 @@ export const finance = {
       closing: "Đang đóng",
       closed: "Đã đóng",
     },
-    title: "Chu kỳ tài chính",
-    description: "Mở kỳ, chạy đối chiếu và khóa kỳ theo quy trình kế toán.",
+    title: "Khóa kỳ hỗ trợ kế toán",
+    description:
+      "Theo dõi kỳ ghi nhận, đối chiếu và khóa kỳ khi cần hỗ trợ kế toán.",
     openCurrent: "Mở kỳ tháng hiện tại",
     period: "Kỳ",
     closedDate: "Ngày đóng",
-    emptyTitle: "Chưa có kỳ kế toán",
-    emptyDescription: "Mở kỳ tháng hiện tại để bắt đầu ghi nhận và đối chiếu.",
+    emptyTitle: "Chưa có kỳ khóa sổ",
+    emptyDescription: "Mở kỳ tháng hiện tại để bắt đầu đối chiếu.",
     reconcile: "Đối chiếu",
     closePeriod: "Đóng kỳ",
-    closeDialogTitle: "Xác nhận đóng kỳ kế toán",
+    closeDialogTitle: "Xác nhận khóa kỳ",
     closeDialogDescription: (period: string) =>
-      `Đóng kỳ ${period}? Sau khi đóng, không thể ghi sổ bút toán vào kỳ này.`,
-    closeIntro: "Hệ thống sẽ làm mới báo cáo, chạy đối chiếu GL, và khóa kỳ.",
-    reconTitle: (period: string) => `Đối chiếu GL — ${period}`,
+      `Đóng kỳ ${period}? Sau khi đóng, không thể ghi nhận thêm vào kỳ này.`,
+    closeIntro: "Hệ thống sẽ làm mới báo cáo, chạy đối chiếu và khóa kỳ.",
+    reconTitle: (period: string) => `Đối chiếu kỳ — ${period}`,
     item: "Mục",
     sourceDocument: "Chứng từ gốc",
-    gl: "GL",
+    gl: "Đã ghi nhận",
     difference: "Chênh lệch",
     noData: "Không có dữ liệu.",
   },

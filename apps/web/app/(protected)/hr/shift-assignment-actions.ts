@@ -2,7 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
+import {
+  PERMISSION_KEYS,
+  type JwtClaims,
+  type StaffRole,
+} from "@comtammatu/shared/auth";
 import { withAction } from "@/_lib/with-action";
 import { canAccessBranch } from "@/_lib/branch-scope";
 import {
@@ -59,6 +63,10 @@ function normalizeStringArray(value: unknown): string[] {
     : [];
 }
 
+function nullableRpcNumber(value: number | null | undefined): number {
+  return (value ?? null) as unknown as number;
+}
+
 function normalizeBulkAssignmentResult(value: unknown): BulkAssignmentResult {
   const result =
     value && typeof value === "object"
@@ -90,6 +98,9 @@ function normalizeBulkDeleteResult(value: unknown): BulkDeleteAssignmentsResult 
 }
 
 function mapBulkAssignmentError(message: string | undefined): string {
+  if (message?.includes("checklist_template_not_found")) {
+    return "Checklist template không thuộc phạm vi chi nhánh này.";
+  }
   if (message?.includes("invalid_bulk_assignment_mode")) {
     return "Chế độ xử lý trùng không hợp lệ.";
   }
@@ -106,6 +117,25 @@ function mapBulkAssignmentError(message: string | undefined): string {
     return "Ca làm không hợp lệ hoặc đã ngưng dùng.";
   }
   return "Không thể phân ca hàng loạt.";
+}
+
+async function ensureChecklistTemplateAccess(
+  claims: JwtClaims,
+  branchId: number,
+  templateId: number | null | undefined,
+): Promise<string | null> {
+  if (templateId == null) return null;
+
+  const { data } = await createServiceClient()
+    .from("shift_checklist_templates")
+    .select("id")
+    .eq("tenant_id", claims.tenant_id)
+    .eq("id", templateId)
+    .eq("is_active", true)
+    .or(`branch_id.is.null,branch_id.eq.${branchId}`)
+    .maybeSingle();
+
+  return data ? null : "Checklist template không thuộc phạm vi chi nhánh này.";
 }
 
 function mapBulkDeleteError(message: string | undefined): string {
@@ -140,7 +170,9 @@ export const fetchShiftAssignments = withAction(
       .select(
         `
       id, date, branch_id, employee_id, shift_id,
+      checklist_template_id,
       shifts ( id, name, start_time, end_time ),
+      shift_checklist_templates ( id, name, branch_id ),
       employees (
         id, employee_code,
         profiles (
@@ -170,6 +202,7 @@ const createAssignmentSchema = z.object({
   employeeId: z.coerce.number().int().positive(),
   shiftId: z.coerce.number().int().positive(),
   date: dateSchema,
+  checklistTemplateId: z.coerce.number().int().positive().nullable().optional(),
 });
 
 export const createShiftAssignment = withAction(
@@ -183,6 +216,12 @@ export const createShiftAssignment = withAction(
     if (!(await canAccessBranch(supabase, claims, data.branchId))) {
       return { success: false, error: "Không có quyền truy cập chi nhánh này" };
     }
+    const checklistError = await ensureChecklistTemplateAccess(
+      claims,
+      data.branchId,
+      data.checklistTemplateId,
+    );
+    if (checklistError) return { success: false, error: checklistError };
 
     const { data: existing } = await supabase
       .from("shift_assignments")
@@ -208,11 +247,14 @@ export const createShiftAssignment = withAction(
         employee_id: data.employeeId,
         shift_id: data.shiftId,
         date: data.date,
+        checklist_template_id: data.checklistTemplateId ?? null,
       })
       .select(
         `
       id, date, branch_id, employee_id, shift_id,
+      checklist_template_id,
       shifts ( id, name, start_time, end_time ),
+      shift_checklist_templates ( id, name, branch_id ),
       employees (
         id, employee_code,
         profiles (
@@ -244,6 +286,7 @@ const bulkAssignShiftsSchema = z.object({
   employeeIds: z.array(z.coerce.number().int().positive()).min(1).max(200),
   dates: z.array(dateSchema).min(1).max(62),
   mode: z.enum(["skip_existing", "replace_future"]).default("skip_existing"),
+  checklistTemplateId: z.coerce.number().int().positive().nullable().optional(),
 });
 
 export const bulkAssignShifts = withAction(
@@ -258,6 +301,12 @@ export const bulkAssignShifts = withAction(
     if (!(await canAccessBranch(supabase, claims, data.branchId))) {
       return { success: false, error: "Không có quyền truy cập chi nhánh này" };
     }
+    const checklistError = await ensureChecklistTemplateAccess(
+      claims,
+      data.branchId,
+      data.checklistTemplateId,
+    );
+    if (checklistError) return { success: false, error: checklistError };
 
     const { data: result, error } = await createServiceClient().rpc(
       "bulk_upsert_shift_assignments",
@@ -268,6 +317,7 @@ export const bulkAssignShifts = withAction(
         p_employee_ids: data.employeeIds,
         p_dates: data.dates,
         p_mode: data.mode,
+        p_checklist_template_id: nullableRpcNumber(data.checklistTemplateId),
       },
     );
 
@@ -414,6 +464,7 @@ const updateShiftAssignmentSchema = z.object({
   employeeId: z.coerce.number().int().positive(),
   shiftId: z.coerce.number().int().positive(),
   date: dateSchema,
+  checklistTemplateId: z.coerce.number().int().positive().nullable().optional(),
 });
 
 export const updateShiftAssignment = withAction(
@@ -433,6 +484,12 @@ export const updateShiftAssignment = withAction(
     if (data.date <= today) {
       return { success: false, error: "Chỉ được sửa phân ca tương lai." };
     }
+    const checklistError = await ensureChecklistTemplateAccess(
+      claims,
+      data.branchId,
+      data.checklistTemplateId,
+    );
+    if (checklistError) return { success: false, error: checklistError };
 
     const service = createServiceClient();
     const [{ data: assignment }, { data: shift }, { data: employee }] =
@@ -479,6 +536,7 @@ export const updateShiftAssignment = withAction(
         employee_id: data.employeeId,
         shift_id: data.shiftId,
         date: data.date,
+        checklist_template_id: data.checklistTemplateId ?? null,
       })
       .eq("id", data.assignmentId)
       .eq("tenant_id", claims.tenant_id)
@@ -486,7 +544,9 @@ export const updateShiftAssignment = withAction(
       .select(
         `
       id, date, branch_id, employee_id, shift_id,
+      checklist_template_id,
       shifts ( id, name, start_time, end_time ),
+      shift_checklist_templates ( id, name, branch_id ),
       employees (
         id, employee_code,
         profiles (
@@ -531,7 +591,7 @@ export const fetchEmployeesForBranch = withAction(
       .from("employees")
       .select(
         `
-      id, employee_code,
+      id, employee_code, default_checklist_template_id,
       profiles (
         full_name,
         branch_id,

@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { cn } from "@comtammatu/ui";
+import { Badge } from "@comtammatu/ui/components/badge";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
 import {
   Item,
@@ -10,8 +12,17 @@ import {
   ItemTitle,
 } from "@comtammatu/ui/components/item";
 import { toast } from "@comtammatu/ui/components/sonner";
+import { messages } from "@lib/messages";
 import type { TodayChecklistItem } from "../_lib/today-work-state";
 import { toggleChecklistItem } from "../clock/actions";
+
+const taskCopy = messages.employee.tasks;
+const CHECKLIST_PHASES = ["dau_ca", "trong_ca", "cuoi_ca"] as const;
+const CHECKLIST_PHASE_LABELS = {
+  dau_ca: "Đầu ca",
+  trong_ca: "Trong ca",
+  cuoi_ca: "Cuối ca",
+} as const;
 
 interface TasksClientProps {
   items: TodayChecklistItem[];
@@ -44,30 +55,77 @@ export function TasksClient({ items, disabled = false }: TasksClientProps) {
   }
 
   return (
-    <ItemGroup className="gap-2">
-      {localItems.map((item) => {
-        const checkboxId = `shift-task-${item.id}`;
+    <div className="space-y-4">
+      {CHECKLIST_PHASES.map((phase) => {
+        const phaseItems = localItems.filter((item) => item.phase === phase);
+        if (phaseItems.length === 0) return null;
+
         return (
-          <Item key={item.id} variant="outline" className="sm:flex-nowrap">
-            <ItemContent>
-              <ItemTitle className={item.done ? "text-muted-foreground" : ""}>
-                <label htmlFor={checkboxId}>{item.title}</label>
-              </ItemTitle>
-            </ItemContent>
-            <ItemActions className="ml-auto">
-              <Checkbox
-                id={checkboxId}
-                checked={item.done}
-                disabled={disabled || isPending}
-                onCheckedChange={(checked) => {
-                  handleToggle(item.id, checked === true);
-                }}
-                aria-label={item.done ? "Đánh dấu chưa làm" : "Đánh dấu xong"}
-              />
-            </ItemActions>
-          </Item>
+          <div key={phase} className="space-y-2">
+            <div className="text-sm font-medium">
+              {CHECKLIST_PHASE_LABELS[phase]}
+            </div>
+            <ItemGroup className="gap-2">
+              {phaseItems.map((item) => {
+                const checkboxId = `shift-task-${item.id}`;
+                return (
+                  <Item
+                    key={item.id}
+                    variant="outline"
+                    className={cn(
+                      "min-h-16 items-center bg-card transition-[transform,background-color,border-color,box-shadow] duration-150 active:translate-y-px motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-200 motion-safe:hover:-translate-y-px sm:flex-nowrap",
+                      item.done
+                        ? "border-success/30 bg-success/5"
+                        : "hover:bg-muted/50",
+                      disabled && "bg-muted/40",
+                    )}
+                  >
+                    <ItemContent>
+                      <ItemTitle
+                        className={cn(
+                          "w-full text-sm leading-5",
+                          item.done && "text-muted-foreground",
+                        )}
+                      >
+                        <label
+                          className="w-full cursor-pointer"
+                          htmlFor={checkboxId}
+                        >
+                          {item.title}
+                        </label>
+                      </ItemTitle>
+                      {item.doneDefinition ? (
+                        <div className="mt-1 text-xs text-muted-foreground">
+                          {item.doneDefinition}
+                        </div>
+                      ) : null}
+                    </ItemContent>
+                      <ItemActions className="ml-auto shrink-0">
+                        {item.isRequired ? (
+                        <Badge variant="outline">{taskCopy.required}</Badge>
+                        ) : null}
+                      <Badge variant={item.done ? "success" : "secondary"}>
+                        {item.done ? taskCopy.done : taskCopy.todo}
+                      </Badge>
+                      <Checkbox
+                        id={checkboxId}
+                        checked={item.done}
+                        disabled={disabled || isPending}
+                        onCheckedChange={(checked) => {
+                          handleToggle(item.id, checked === true);
+                        }}
+                        aria-label={
+                          item.done ? taskCopy.markTodo : taskCopy.markDone
+                        }
+                      />
+                    </ItemActions>
+                  </Item>
+                );
+              })}
+            </ItemGroup>
+          </div>
         );
       })}
-    </ItemGroup>
+    </div>
   );
 }

@@ -14,24 +14,27 @@ export async function generateMetadata({
     appleWebApp: {
       capable: true,
       statusBarStyle: "default",
-      title: `CTMT POS CN${branchId}`,
+      title: "Má Tư POS",
     },
   };
 }
 
-export default function PosLayout({
+export default async function PosLayout({
   children,
+  params,
 }: {
   children: ReactNode;
   params: Promise<{ branchId: string }>;
 }) {
+  const { branchId } = await params;
+
   return (
     <main
       id="main-content"
       className="flex h-dvh min-h-dvh w-full flex-col touch-manipulation overflow-hidden bg-background md:min-h-screen"
     >
       <PosPwaProvider>
-        <PosPwaToolbar />
+        <PosPwaToolbar branchId={branchId} />
         {children}
       </PosPwaProvider>
     </main>

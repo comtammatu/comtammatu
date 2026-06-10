@@ -13,7 +13,7 @@ Nhiệm vụ hệ thống: bán đúng, bếp nhận đúng, thu tiền đúng, 
 kho trừ đúng, và chủ/quản lý nhìn được tình trạng vận hành thật theo ngày.
 Đây là hệ thống quản lý vận hành nhà hàng chuyên biệt: gom lớp nền, báo cáo,
 và các domain vận hành vào một kiến trúc thống nhất.
-Không phải nền tảng nhiều merchant, không phải CRM độc lập, không phải ERP đa ngành, không phải phần mềm bán hàng đại trà.
+Không phải nền tảng nhiều merchant, không phải hệ thống quản lý khách hàng độc lập, không phải ERP đa ngành, không phải phần mềm bán hàng đại trà.
 
 ## Mô hình pháp lý hiện hành
 

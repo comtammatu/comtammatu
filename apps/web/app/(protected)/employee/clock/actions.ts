@@ -15,6 +15,9 @@ const CHECKOUT_APPROVAL_ROLES: readonly StaffRole[] = [
   "super_manager",
   "branch_manager",
 ];
+const MANAGER_SIMPLE_ATTENDANCE_ROLES: readonly StaffRole[] = [
+  "branch_manager",
+];
 const ATTENDANCE_PHOTO_BUCKET = "attendance-photos";
 const MAX_PHOTO_BYTES = 3_500_000;
 const PHOTO_MIME_TO_EXT = {
@@ -41,6 +44,7 @@ const checklistToggleSchema = z.object({
   itemId: z.coerce.number().int().positive(),
   done: z.boolean(),
 });
+const managerClockOutSchema = z.object({}).strict();
 
 function getTodayVN(): string {
   return getVNDateString();
@@ -60,26 +64,40 @@ function isSupportedPhotoMime(
   return Object.hasOwn(PHOTO_MIME_TO_EXT, mime);
 }
 
+function isManagerSimpleAttendanceRole(role: StaffRole): boolean {
+  return MANAGER_SIMPLE_ATTENDANCE_ROLES.includes(role);
+}
+
 function getPhotoFromFormData(formData: FormData): File | null {
   const value = formData.get("photo");
   if (!value || typeof value === "string") return null;
   return value;
 }
 
-function getExistingClockInPath(record: ExistingClockInRecord): string {
-  if (record.check_out || record.checkout_requested_at) return "/employee";
+function getExistingClockInPath(
+  record: ExistingClockInRecord,
+  role: StaffRole,
+): string {
+  if (
+    record.check_out ||
+    record.checkout_requested_at ||
+    isManagerSimpleAttendanceRole(role)
+  ) {
+    return "/employee";
+  }
   return "/employee/tasks";
 }
 
 function reuseExistingClockIn(
   record: ExistingClockInRecord,
+  role: StaffRole,
 ): ActionResult<ClockInResult> {
   return {
     success: true,
     data: {
       attendanceId: record.id,
       checkInTime: record.check_in ?? new Date().toISOString(),
-      nextPath: getExistingClockInPath(record),
+      nextPath: getExistingClockInPath(record, role),
       alreadyRecorded: true,
     },
   };
@@ -177,7 +195,7 @@ export async function clockInWithPhoto(
     .maybeSingle();
 
   if (existing) {
-    return reuseExistingClockIn(existing);
+    return reuseExistingClockIn(existing, ctx.claims.user_role);
   }
 
   const { data: assignment } = await service
@@ -191,6 +209,36 @@ export async function clockInWithPhoto(
   const shiftId =
     assignment?.branch_id === ctx.branchId ? assignment.shift_id : null;
   const rpcShiftId = shiftId ?? 0;
+  const managerAttendanceOnly = isManagerSimpleAttendanceRole(
+    ctx.claims.user_role,
+  );
+
+  if (managerAttendanceOnly) {
+    const [{ data: employee }, { data: branch }] = await Promise.all([
+      service
+        .from("employees")
+        .select("id")
+        .eq("id", ctx.employeeId)
+        .eq("tenant_id", ctx.claims.tenant_id)
+        .eq("is_active", true)
+        .maybeSingle(),
+      service
+        .from("branches")
+        .select("id")
+        .eq("id", ctx.branchId)
+        .eq("tenant_id", ctx.claims.tenant_id)
+        .eq("is_active", true)
+        .maybeSingle(),
+    ]);
+
+    if (!employee) {
+      return { success: false, error: mapClockInError("employee_not_found") };
+    }
+    if (!branch) {
+      return { success: false, error: mapClockInError("branch_not_found") };
+    }
+  }
+
   const ext = PHOTO_MIME_TO_EXT[photo.type];
   const photoPath = `${ctx.claims.tenant_id}/${today}/${ctx.employeeId}/${randomUUID()}.${ext}`;
   const bytes = Buffer.from(await photo.arrayBuffer());
@@ -206,6 +254,61 @@ export async function clockInWithPhoto(
     return {
       success: false,
       error: "Không thể lưu ảnh chấm công. Vui lòng thử lại.",
+    };
+  }
+
+  if (managerAttendanceOnly) {
+    const { data: result, error: insertError } = await service
+      .from("attendance_records")
+      .insert({
+        tenant_id: ctx.claims.tenant_id,
+        branch_id: ctx.branchId,
+        employee_id: ctx.employeeId,
+        shift_id: shiftId,
+        date: today,
+        check_in: new Date().toISOString(),
+        status: "present",
+        method: "pwa",
+        code_verified: false,
+        check_in_photo_path: photoPath,
+      })
+      .select("id, check_in")
+      .single();
+
+    if (insertError || !result) {
+      await service.storage.from(ATTENDANCE_PHOTO_BUCKET).remove([photoPath]);
+
+      if (
+        insertError?.code === "23505" ||
+        insertError?.message.includes("duplicate_clock_in")
+      ) {
+        const { data: duplicate } = await service
+          .from("attendance_records")
+          .select("id, check_in, check_out, checkout_requested_at")
+          .eq("employee_id", ctx.employeeId)
+          .eq("tenant_id", ctx.claims.tenant_id)
+          .eq("date", today)
+          .maybeSingle();
+
+        if (duplicate) {
+          return reuseExistingClockIn(duplicate, ctx.claims.user_role);
+        }
+      }
+
+      return {
+        success: false,
+        error: mapClockInError(insertError?.message),
+      };
+    }
+
+    revalidateEmployeeWorkPaths();
+    return {
+      success: true,
+      data: {
+        attendanceId: result.id,
+        checkInTime: result.check_in ?? new Date().toISOString(),
+        nextPath: "/employee",
+      },
     };
   }
 
@@ -233,7 +336,9 @@ export async function clockInWithPhoto(
         .eq("date", today)
         .maybeSingle();
 
-      if (duplicate) return reuseExistingClockIn(duplicate);
+      if (duplicate) {
+        return reuseExistingClockIn(duplicate, ctx.claims.user_role);
+      }
     }
 
     return {
@@ -366,6 +471,67 @@ export async function requestCheckoutApproval(): Promise<
 
   revalidateEmployeeWorkPaths();
   return { success: true, data: { requestedAt } };
+}
+
+export async function clockOutManagerShift(
+  input: unknown = {},
+): Promise<ActionResult<{ checkOutTime: string }>> {
+  const parsed = managerClockOutSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ",
+    };
+  }
+
+  const ctx = await getEmployeeContext();
+  if (!ctx) return { success: false, error: "Chưa đăng nhập" };
+  if (!isManagerSimpleAttendanceRole(ctx.claims.user_role)) {
+    return {
+      success: false,
+      error: "Chỉ tài khoản quản lý chi nhánh được ra ca trực tiếp.",
+    };
+  }
+  if (!ctx.branchId) {
+    return {
+      success: false,
+      error: "Tài khoản chưa được gắn chi nhánh. Liên hệ quản lý.",
+    };
+  }
+
+  const checkOutTime = new Date().toISOString();
+  const { data: result, error } = await createServiceClient()
+    .from("attendance_records")
+    .update({
+      check_out: checkOutTime,
+      check_out_code_verified: false,
+      checkout_requested_at: null,
+      checkout_requested_by_role: null,
+      checkout_approval_target_roles: [],
+      checkout_approved_at: null,
+      checkout_approved_by: null,
+      checkout_approval_note: null,
+      updated_at: checkOutTime,
+    })
+    .eq("employee_id", ctx.employeeId)
+    .eq("tenant_id", ctx.claims.tenant_id)
+    .eq("branch_id", ctx.branchId)
+    .eq("date", getTodayVN())
+    .is("check_out", null)
+    .select("id, check_out")
+    .maybeSingle();
+
+  if (error || !result?.check_out) {
+    if (error) {
+      console.error("[employee/clock] manager direct checkout failed", {
+        code: error.code,
+      });
+    }
+    return { success: false, error: mapCheckoutError(error?.message) };
+  }
+
+  revalidateEmployeeWorkPaths();
+  return { success: true, data: { checkOutTime: result.check_out } };
 }
 
 const approveCheckoutSchema = z.object({

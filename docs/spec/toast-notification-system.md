@@ -1,6 +1,6 @@
 # Toast And Notification System
 
-> Status: design contract | Updated: 2026-04-28 | Scope: app-wide transient toast, durable in-app notifications, and external notification outbox
+> Status: design contract | Updated: 2026-06-10 | Scope: app-wide transient toast, durable in-app notifications, installed-PWA push, and external notification outbox
 
 ## UI Scope Declaration
 
@@ -15,10 +15,11 @@
 The system has three feedback channels with different durability:
 
 - Toast: short-lived client feedback for the action currently happening on screen. Use `toast` from `@comtammatu/ui/components/sonner`.
-- In-app notification: durable, role/branch-scoped work item stored in `public.notifications`, read state in `public.notification_reads`, and surfaced through `/notifications` or an approved bell/entry point.
+- In-app notification: durable, role/branch-scoped work item stored in `public.notifications`, read state in `public.notification_reads`, and surfaced through `/notifications`, Cổng nhân viên, or an approved bell/entry point.
+- Installed-PWA push: device-level alert for active staff subscriptions stored in `public.notification_push_subscriptions`, delivered through `/api/cron/notifications-push`, and linked back to `/notifications` or the notification action URL.
 - External outbox: delivery attempt queue in `public.notification_outbox` for webhook-style channels such as Slack, Discord, Telegram proxy, Zalo bridge, or future workers.
 
-Do not collapse these channels. A toast is not an audit trail. An in-app notification is not a replacement for immediate form feedback. The external outbox is not the unread feed.
+Do not collapse these channels. A toast is not an audit trail. An in-app notification is not a replacement for immediate form feedback. Installed-PWA push is only an attention layer over durable notifications. The external outbox is not the unread feed.
 
 ## Authority
 
@@ -26,11 +27,12 @@ Use these sources in order:
 
 1. Runtime UI contract: `docs/spec/design-system.md`
 2. Toast primitive: `packages/ui/src/components/sonner.tsx`
-3. Durable feed actions: `apps/web/app/_actions/notifications.ts`
+3. Durable feed and push actions: `apps/web/app/_actions/notifications.ts`
 4. Durable feed UI: `apps/web/app/_components/notification-*`
-5. Database contract: `supabase/migrations/20260425010000_create_notifications.sql`
-6. External outbox: `public.notification_outbox` and module-specific dispatchers
-7. Product vocabulary: `docs/ref/glossary.md`, `packages/shared/src/labels/vi.ts`, and domain dictionaries
+5. Installed-PWA push runtime: `apps/web/app/sw.ts`, `apps/web/lib/notifications/web-push.ts`, and `/api/cron/notifications-push`
+6. Database contract: `supabase/migrations/20260425010000_create_notifications.sql` and forward notification migrations
+7. External outbox: `public.notification_outbox` and module-specific dispatchers
+8. Product vocabulary: `docs/ref/glossary.md`, `packages/shared/src/labels/vi.ts`, and domain dictionaries
 
 ## Core Model
 
@@ -45,7 +47,13 @@ Workflow event
   -> public.notifications row
   -> RLS decides visibility by tenant, role, branch
   -> useNotifications refreshes list + unread count
-  -> /notifications, shell entry point, or future approved bell
+  -> /notifications, Cổng nhân viên, shell entry point, or approved bell
+
+Installed PWA push
+  -> public.notification_push_subscriptions row after user permission
+  -> cron dispatcher reads durable notifications idempotently
+  -> Web Push display from service worker
+  -> notification click focuses or opens the action URL
 
 External delivery
   -> notification_outbox row
@@ -61,11 +69,12 @@ MVP acceptance:
 - Any workflow event that must survive navigation, involve another role, or require follow-up creates a durable notification.
 - The notification feed supports unread count, mark-read, mark-all-read, entity deep links, severity, expiry, and deduplication.
 - Toasts and notifications share severity semantics and vocabulary, but do not share storage.
+- Android and iOS staff devices can opt in to installed-PWA push where the browser/platform supports Web Push.
 - Notification producers can be audited by event kind, entity, target role, target branch, and dedup key.
 
 Out of scope for the current contract:
 
-- Browser push subscriptions.
+- Native-app-only APNs/FCM SDK delivery.
 - Email/SMS/Zalo native delivery.
 - A second visual notification system outside shadcn/Sonner.
 - Per-user notification rows. Targeting stays role/branch based; read state is per user.

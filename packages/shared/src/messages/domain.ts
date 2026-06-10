@@ -65,9 +65,9 @@ export const PRODUCT_VI = {
 } as const;
 export type ProductKey = keyof typeof PRODUCT_VI;
 
-// Customer — formal "khách hàng" for CRM/admin; "khách" for POS toast short
-// form. HĐĐT buyer-name field is legally fixed; use LEGAL_FIXED_VI from the
-// labels module for that surface, never CUSTOMER_VI.
+// Customer — formal "khách hàng" for admin/legal context; "khách" for POS
+// toast short form. HĐĐT buyer-name field is legally fixed; use LEGAL_FIXED_VI
+// from the labels module for that surface, never CUSTOMER_VI.
 export const CUSTOMER_VI = {
   long: "Khách hàng",
   short: "Khách",

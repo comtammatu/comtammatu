@@ -15,11 +15,18 @@ import { withAction } from "@/_lib/with-action";
 import { canAccessBranch } from "@/_lib/branch-scope";
 
 const HR_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
+const HR_EMPLOYEE_VIEW_ROLES: readonly StaffRole[] = [
+  "owner",
+  "super_manager",
+  "branch_manager",
+];
 const SHIFT_ROLES: readonly StaffRole[] = [
   "owner",
   "super_manager",
   "branch_manager",
 ];
+const ATTENDANCE_PHOTO_BUCKET = "attendance-photos";
+const ATTENDANCE_PHOTO_SIGNED_URL_TTL_SECONDS = 300;
 
 /* ─── Employees ─── */
 
@@ -33,24 +40,26 @@ const employeeSchema = z.object({
   startDate: z.string().optional(),
   contractType: z.enum(["probation", "fixed_term", "indefinite"]).optional(),
   dependentsCount: z.coerce.number().int().min(0).default(0),
+  defaultChecklistTemplateId: z.coerce.number().int().positive().nullable().optional(),
 });
 
 export async function fetchEmployees(): Promise<ActionResult> {
   const ctx = await getAuthContextWithPermission(
-    HR_ROLES,
-    PERMISSION_KEYS.HR_MANAGE_EMPLOYEE,
+    HR_EMPLOYEE_VIEW_ROLES,
+    PERMISSION_KEYS.STAFF_MANAGE,
   );
   if (!ctx) return { success: false, error: "Không có quyền" };
 
   const { supabase, claims } = ctx;
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("employees")
     .select(
       `
       id, employee_code, id_number, bank_account, bank_name,
       base_salary, start_date, contract_type, dependents_count, is_active,
-      profiles (
+      default_checklist_template_id,
+      profiles!inner (
         id, full_name, phone, role, branch_id,
         branches ( name )
       )
@@ -58,6 +67,15 @@ export async function fetchEmployees(): Promise<ActionResult> {
     )
     .eq("tenant_id", claims.tenant_id)
     .order("created_at", { ascending: false });
+
+  if (claims.user_role === "branch_manager") {
+    if (claims.branch_id == null) {
+      return { success: true, data: [] };
+    }
+    query = query.eq("profiles.branch_id", claims.branch_id);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     return { success: false, error: "Không thể tải danh sách nhân viên." };
@@ -82,6 +100,7 @@ export const createEmployee = withAction(
         start_date: data.startDate ?? null,
         contract_type: data.contractType ?? null,
         dependents_count: data.dependentsCount,
+        default_checklist_template_id: data.defaultChecklistTemplateId ?? null,
       })
       .select("id")
       .single();
@@ -329,6 +348,10 @@ const fetchAttendanceSchema = z.object({
   month: z.string().regex(/^\d{4}-\d{2}$/),
 });
 
+const attendancePhotoSchema = z.object({
+  attendanceId: z.coerce.number().int().positive(),
+});
+
 export const fetchAttendance = withAction(
   { roles: SHIFT_ROLES, schema: fetchAttendanceSchema },
   async (data, { supabase, claims }) => {
@@ -346,14 +369,19 @@ export const fetchAttendance = withAction(
     const { data: result, error } = await supabase
       .from("attendance_records")
       .select(
-        `
-      id, date, check_in, check_out, status, note,
+      `
+      id, date, check_in, check_out, status, note, check_in_photo_path,
+      checklist_template_id,
       employee_id,
       employees (
         id, employee_code,
         profiles ( full_name )
       ),
-      shifts ( name, start_time, end_time )
+      shifts ( name, start_time, end_time ),
+      shift_checklist_templates ( name ),
+      attendance_checklist_items (
+        id, title, phase, done_definition, is_required, is_done, sort_order
+      )
     `,
       )
       .eq("branch_id", data.branchId)
@@ -368,6 +396,52 @@ export const fetchAttendance = withAction(
     }
 
     return { success: true, data: result ?? [] };
+  },
+);
+
+export const getAttendancePhotoUrl = withAction(
+  { roles: SHIFT_ROLES, schema: attendancePhotoSchema },
+  async (data, { supabase, claims }) => {
+    let query = supabase
+      .from("attendance_records")
+      .select("id, branch_id, check_in_photo_path")
+      .eq("id", data.attendanceId)
+      .eq("tenant_id", claims.tenant_id);
+
+    if (claims.user_role === "branch_manager") {
+      if (claims.branch_id == null) {
+        return { success: false, error: "Tài khoản chưa được gán chi nhánh." };
+      }
+      query = query.eq("branch_id", claims.branch_id);
+    }
+
+    const { data: record, error } = await query.maybeSingle();
+
+    if (error || !record) {
+      return { success: false, error: "Không tìm thấy dòng chấm công." };
+    }
+    if (!record.check_in_photo_path) {
+      return { success: false, error: "Dòng chấm công này chưa có ảnh." };
+    }
+
+    const { data: signed, error: signError } = await createServiceClient()
+      .storage.from(ATTENDANCE_PHOTO_BUCKET)
+      .createSignedUrl(
+        record.check_in_photo_path,
+        ATTENDANCE_PHOTO_SIGNED_URL_TTL_SECONDS,
+      );
+
+    if (signError || !signed) {
+      return { success: false, error: "Không thể tạo link xem ảnh." };
+    }
+
+    return {
+      success: true,
+      data: {
+        url: signed.signedUrl,
+        expires_in: ATTENDANCE_PHOTO_SIGNED_URL_TTL_SECONDS,
+      },
+    };
   },
 );
 
@@ -528,41 +602,6 @@ export const fetchAttendanceSummary = withAction(
     }
 
     return { success: true, data: Array.from(summaryMap.values()) };
-  },
-);
-
-/* ─── Update Attendance Status ─── */
-
-const updateAttendanceSchema = z.object({
-  attendanceId: z.coerce.number().int().positive(),
-  status: z.enum(["present", "absent", "late", "half_day"]),
-  note: z.string().optional(),
-});
-
-export const updateAttendanceStatus = withAction(
-  { roles: SHIFT_ROLES, schema: updateAttendanceSchema, requireBranchScope: true },
-  async (data, { claims }) => {
-    let query = createServiceClient()
-      .from("attendance_records")
-      .update({
-        status: data.status,
-        note: data.note ?? null,
-      })
-      .eq("id", data.attendanceId)
-      .eq("tenant_id", claims.tenant_id);
-
-    // Branch manager can only update attendance in their own branch
-    if (claims.branch_id) {
-      query = query.eq("branch_id", claims.branch_id);
-    }
-
-    const { data: result, error } = await query.select("id");
-
-    if (error || !result || result.length === 0) {
-      return { success: false, error: "Không thể cập nhật trạng thái." };
-    }
-
-    return { success: true };
   },
 );
 

@@ -72,7 +72,6 @@ const checks = [
     allowlist: {
       "apps/web/app/(protected)/inventory/_components/photo-upload-input.tsx": 2,
       "apps/web/app/(protected)/menu/menu-image-input.tsx": 1,
-      "apps/web/app/(public)/r/[token]/_components/feedback-form.tsx": 1,
     },
   },
   {

@@ -10,9 +10,10 @@ test("root PWA manifest requests portrait orientation", () => {
       new URL("../public/manifest.webmanifest", import.meta.url),
       "utf8",
     ),
-  ) as { orientation?: unknown };
+  ) as { orientation?: unknown; short_name?: unknown };
 
   assert.equal(manifest.orientation, "portrait");
+  assert.equal(manifest.short_name, "Má Tư");
 });
 
 test("POS PWA manifest requests portrait orientation per branch", async () => {
@@ -26,17 +27,19 @@ test("POS PWA manifest requests portrait orientation per branch", async () => {
     id?: unknown;
     orientation?: unknown;
     scope?: unknown;
+    short_name?: unknown;
     start_url?: unknown;
   };
 
   assert.equal(response.status, 200);
   assert.equal(manifest.id, "/br/3/pos");
   assert.equal(manifest.start_url, "/br/3/pos");
-  assert.equal(manifest.scope, "/br/3/");
+  assert.equal(manifest.scope, "/br/3/pos");
+  assert.equal(manifest.short_name, "Má Tư POS");
   assert.equal(manifest.orientation, "portrait");
 });
 
-test("KDS PWA manifest requests portrait orientation per branch", async () => {
+test("KDS PWA manifest requests landscape orientation per branch", async () => {
   const response = await getKdsManifest(
     new Request("https://app.test/br/3/kds/manifest.webmanifest") as Parameters<
       typeof getKdsManifest
@@ -47,14 +50,16 @@ test("KDS PWA manifest requests portrait orientation per branch", async () => {
     id?: unknown;
     orientation?: unknown;
     scope?: unknown;
+    short_name?: unknown;
     start_url?: unknown;
   };
 
   assert.equal(response.status, 200);
   assert.equal(manifest.id, "/br/3/kds");
   assert.equal(manifest.start_url, "/br/3/kds");
-  assert.equal(manifest.scope, "/br/3/");
-  assert.equal(manifest.orientation, "portrait");
+  assert.equal(manifest.scope, "/br/3/kds");
+  assert.equal(manifest.short_name, "Má Tư KDS");
+  assert.equal(manifest.orientation, "landscape");
 });
 
 test("POS PWA manifest keeps rejecting invalid branch ids", async () => {
@@ -77,4 +82,25 @@ test("KDS PWA manifest keeps rejecting invalid branch ids", async () => {
   );
 
   assert.equal(response.status, 400);
+});
+
+test("operational PWA install dismissal is isolated by app and branch", () => {
+  const toolbarSource = readFileSync(
+    new URL(
+      "../app/(protected)/br/[branchId]/_components/operational-pwa/toolbar.tsx",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+
+  assert.match(toolbarSource, /function getDismissStorageKey/);
+  assert.match(
+    toolbarSource,
+    /operational-pwa-install-dismissed:\$\{surface\}:\$\{branchId\}/,
+  );
+  assert.match(toolbarSource, /LEGACY_POS_DISMISS_STORAGE_KEY/);
+  assert.doesNotMatch(
+    toolbarSource,
+    /const DISMISS_STORAGE_KEY = "pos-pwa-install-dismissed"/,
+  );
 });

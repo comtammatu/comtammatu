@@ -35,20 +35,18 @@ export function findActiveNavItem(
 }
 
 const PATH_SEGMENT_LABELS_VI: Record<string, string> = {
-  accounting: "Kế toán",
+  accounting: "Hỗ trợ kế toán",
   admin: "Quản trị",
   audit: "Nhật ký quyền hạn",
   branches: "Điểm vận hành",
-  crm: "Khách hàng",
   dashboard: "Tổng quan vận hành",
-  feedback: "Phản ánh khách",
   finance: "Tài chính",
   general: "Cài đặt chung",
   "inventory-value": "Giá trị tồn kho",
   jobs: "Job in",
   kds: "Trạm bếp",
   payments: "Thanh toán",
-  periods: "Kỳ kế toán",
+  periods: "Khóa kỳ",
   pos: "POS",
   printers: "Máy in",
   qr: "Mã QR",

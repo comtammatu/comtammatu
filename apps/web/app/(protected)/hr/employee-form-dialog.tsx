@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: existing HR employee form keeps Vietnamese operational copy inline */
+
 import { useEffect, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -18,6 +20,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { ACTIONS_VI, ERRORS_VI } from "@comtammatu/shared/messages";
 import { TextField } from "@/components/form";
 import { createEmployee } from "./actions";
+import type { ChecklistTemplateRow } from "./checklist-types";
 
 const employeeSchema = z.object({
   profile_id: z
@@ -39,6 +42,7 @@ const DEFAULT_VALUES: EmployeeFormValues = {
 interface EmployeeFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  checklistTemplates?: ChecklistTemplateRow[];
 }
 
 export function EmployeeFormDialog({

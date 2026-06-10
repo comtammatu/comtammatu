@@ -3,12 +3,14 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { withActionPositional } from "@/_lib/with-action";
-import { calcItemSubtotal } from "./types";
+import { calcItemSubtotal, getPosLineItemDisplayName } from "./types";
 import type { CartState, CartItem } from "./types";
 import { POS_ERROR_CODES } from "./_utils/error-codes";
 import {
   appendOrderItemsSchema,
   markOrderItemServedSchema,
+  releaseDailyLimitHoldsSchema,
+  reserveDailyLimitHoldsSchema,
   submitOrderSchema,
   updateOrderStatusSchema,
 } from "./_lib/schemas";
@@ -16,12 +18,16 @@ import { posUseAuth } from "./_lib/auth";
 import {
   appendOrderItemsRpcFallback,
   appendOrderItemsRpcMappings,
+  dailyLimitHoldRpcFallback,
+  dailyLimitHoldRpcMappings,
+  mapDailyLimitRpcError,
   mapPriorityError,
   mapRpcError,
   markServedRpcFallback,
   markServedRpcMappings,
   submitOrderRpcFallback,
   submitOrderRpcMappings,
+  type DailyLimitItemLabel,
   updateOrderStatusRpcFallback,
   updateOrderStatusRpcMappings,
 } from "./_lib/messages";
@@ -39,6 +45,168 @@ async function markInitialOrderPriority(
 
   return `Đã đặt món, nhưng chưa đánh dấu ưu tiên. ${mapPriorityError(error.message, "order")}`;
 }
+
+function cartItemsToRpcItems(items: CartItem[]) {
+  return items.map((item) => ({
+    menu_item_id: item.menu_item_id,
+    variant_id: item.variant_id ?? null,
+    item_name: item.item_name,
+    variant_name: item.variant_name ?? null,
+    quantity: item.quantity,
+    unit_price: item.unit_price,
+    modifiers: item.modifiers.map((m) => ({
+      modifier_id: m.modifier_id,
+      name: m.name,
+      price: m.price,
+    })),
+    sides: item.sides.map((s) => ({
+      side_item_id: s.side_item_id,
+      name: s.name,
+      price: s.price,
+      quantity: s.quantity,
+      is_default: s.is_default,
+    })),
+    subtotal: calcItemSubtotal(item),
+    note: item.note ?? null,
+  }));
+}
+
+function cartItemsToDailyLimitItemLabels(
+  items: readonly CartItem[],
+): DailyLimitItemLabel[] {
+  const labels: DailyLimitItemLabel[] = [];
+  const seen = new Set<number>();
+
+  function addLabel(menuItemId: number, label: string): void {
+    if (seen.has(menuItemId)) return;
+    seen.add(menuItemId);
+    labels.push({ menuItemId, label });
+  }
+
+  for (const item of items) {
+    addLabel(item.menu_item_id, getPosLineItemDisplayName(item));
+
+    for (const side of item.sides) {
+      addLabel(side.side_item_id, side.name);
+    }
+  }
+
+  return labels;
+}
+
+export const reserveDailyLimitHolds = withActionPositional(
+  {
+    argsToInput: (
+      branchId: number,
+      holdToken: string,
+      items: CartItem[],
+      source: "pos_cart" | "pos_append",
+    ) => ({ branchId, holdToken, items, source }),
+    schema: reserveDailyLimitHoldsSchema,
+    customAuth: posUseAuth,
+    validationErrorCode: POS_ERROR_CODES.INPUT_INVALID_CART,
+    forbiddenErrorCode: POS_ERROR_CODES.AUTH_NO_PERMISSION,
+  },
+  async (
+    { branchId, holdToken, items, source },
+    { supabase, claims },
+  ): Promise<
+    ActionResult<{
+      hold_token: string;
+      expires_at?: string;
+      ttl_seconds?: number;
+      released_count?: number;
+      items?: unknown[];
+    }>
+  > => {
+    if (claims.branch_id !== branchId) {
+      return {
+        success: false,
+        error: "Không có quyền truy cập chi nhánh này",
+        errorCode: POS_ERROR_CODES.SCOPE_BRANCH_MISMATCH,
+      };
+    }
+
+    const { data, error } = await supabase.rpc(
+      "reserve_branch_menu_daily_holds",
+      {
+        p_branch_id: branchId,
+        p_hold_token: holdToken,
+        p_items: cartItemsToRpcItems(items),
+        p_source: source,
+      },
+    );
+
+    if (error) {
+      return mapDailyLimitRpcError(
+        error,
+        cartItemsToDailyLimitItemLabels(items),
+        dailyLimitHoldRpcMappings,
+        dailyLimitHoldRpcFallback,
+      );
+    }
+
+    return {
+      success: true,
+      data: (data ?? { hold_token: holdToken }) as {
+        hold_token: string;
+        expires_at?: string;
+        ttl_seconds?: number;
+        released_count?: number;
+        items?: unknown[];
+      },
+    };
+  },
+);
+
+export const releaseDailyLimitHolds = withActionPositional(
+  {
+    argsToInput: (branchId: number, holdToken: string) => ({
+      branchId,
+      holdToken,
+    }),
+    schema: releaseDailyLimitHoldsSchema,
+    customAuth: posUseAuth,
+    validationErrorCode: POS_ERROR_CODES.INPUT_INVALID_CART,
+    forbiddenErrorCode: POS_ERROR_CODES.AUTH_NO_PERMISSION,
+  },
+  async (
+    { branchId, holdToken },
+    { supabase, claims },
+  ): Promise<ActionResult<{ hold_token: string; released_count?: number }>> => {
+    if (claims.branch_id !== branchId) {
+      return {
+        success: false,
+        error: "Không có quyền truy cập chi nhánh này",
+        errorCode: POS_ERROR_CODES.SCOPE_BRANCH_MISMATCH,
+      };
+    }
+
+    const { data, error } = await supabase.rpc(
+      "release_branch_menu_daily_holds",
+      {
+        p_branch_id: branchId,
+        p_hold_token: holdToken,
+      },
+    );
+
+    if (error) {
+      return mapRpcError(
+        error,
+        dailyLimitHoldRpcMappings,
+        dailyLimitHoldRpcFallback,
+      );
+    }
+
+    return {
+      success: true,
+      data: (data ?? { hold_token: holdToken }) as {
+        hold_token: string;
+        released_count?: number;
+      },
+    };
+  },
+);
 
 /* ─── submitOrder ─── */
 
@@ -67,14 +235,21 @@ export const submitOrder = withActionPositional(
       cart: CartState,
       posSessionId?: number,
       idempotencyKey?: string,
-    ) => ({ branchId, cart, posSessionId, idempotencyKey }),
+      dailyLimitHoldToken?: string,
+    ) => ({
+      branchId,
+      cart,
+      posSessionId,
+      idempotencyKey,
+      dailyLimitHoldToken,
+    }),
     schema: submitOrderSchema,
     customAuth: posUseAuth,
     validationErrorCode: POS_ERROR_CODES.INPUT_INVALID_CART,
     forbiddenErrorCode: POS_ERROR_CODES.AUTH_NO_PERMISSION,
   },
   async (
-    { branchId, cart, posSessionId, idempotencyKey },
+    { branchId, cart, posSessionId, idempotencyKey, dailyLimitHoldToken },
     { supabase, claims, user },
   ): Promise<ActionResult<{ order_id: number; order_number: string }>> => {
     // JWT branch_id defence in depth (proxy already routes by branch, but
@@ -99,44 +274,41 @@ export const submitOrder = withActionPositional(
       };
     }
 
-    // Transform cart items to RPC JSONB format.
-    const rpcItems = cart.items.map((item) => ({
-      menu_item_id: item.menu_item_id,
-      variant_id: item.variant_id ?? null,
-      item_name: item.item_name,
-      variant_name: item.variant_name ?? null,
-      quantity: item.quantity,
-      unit_price: item.unit_price,
-      modifiers: item.modifiers.map((m) => ({
-        modifier_id: m.modifier_id,
-        name: m.name,
-        price: m.price,
-      })),
-      sides: item.sides.map((s) => ({
-        side_item_id: s.side_item_id,
-        name: s.name,
-        price: s.price,
-        quantity: s.quantity,
-        is_default: s.is_default,
-      })),
-      subtotal: calcItemSubtotal(item),
-      note: item.note ?? null,
-    }));
+    const rpcItems = cartItemsToRpcItems(cart.items);
 
-    const { data, error } = await supabase.rpc("create_order", {
-      p_tenant_id: claims.tenant_id,
-      p_branch_id: branchId,
-      p_created_by: user.id,
-      p_items: rpcItems,
-      p_order_type: cart.order_type,
-      p_table_id: cart.table_id ?? undefined,
-      p_pos_session_id: posSessionId ?? undefined,
-      p_note: cart.note ?? undefined,
-      p_idempotency_key: idempotencyKey ?? undefined,
-    });
+    const { data, error } =
+      dailyLimitHoldToken !== undefined
+        ? await supabase.rpc("create_order_with_daily_limit_hold", {
+            p_tenant_id: claims.tenant_id,
+            p_branch_id: branchId,
+            p_created_by: user.id,
+            p_items: rpcItems,
+            p_order_type: cart.order_type,
+            p_table_id: cart.table_id ?? undefined,
+            p_pos_session_id: posSessionId ?? undefined,
+            p_note: cart.note ?? undefined,
+            p_idempotency_key: idempotencyKey ?? undefined,
+            p_daily_limit_hold_token: dailyLimitHoldToken,
+          })
+        : await supabase.rpc("create_order", {
+            p_tenant_id: claims.tenant_id,
+            p_branch_id: branchId,
+            p_created_by: user.id,
+            p_items: rpcItems,
+            p_order_type: cart.order_type,
+            p_table_id: cart.table_id ?? undefined,
+            p_pos_session_id: posSessionId ?? undefined,
+            p_note: cart.note ?? undefined,
+            p_idempotency_key: idempotencyKey ?? undefined,
+          });
 
     if (error) {
-      return mapRpcError(error, submitOrderRpcMappings, submitOrderRpcFallback);
+      return mapDailyLimitRpcError(
+        error,
+        cartItemsToDailyLimitItemLabels(cart.items),
+        submitOrderRpcMappings,
+        submitOrderRpcFallback,
+      );
     }
 
     const result = data as unknown as {
@@ -185,13 +357,20 @@ export const appendOrderItems = withActionPositional(
       orderId: number,
       items: CartItem[],
       idempotencyKey?: string,
-    ) => ({ branchId, orderId, items, idempotencyKey }),
+      dailyLimitHoldToken?: string,
+    ) => ({
+      branchId,
+      orderId,
+      items,
+      idempotencyKey,
+      dailyLimitHoldToken,
+    }),
     schema: appendOrderItemsSchema,
     customAuth: posUseAuth,
     forbiddenErrorCode: POS_ERROR_CODES.AUTH_NO_PERMISSION,
   },
   async (
-    { branchId, orderId, items, idempotencyKey },
+    { branchId, orderId, items, idempotencyKey, dailyLimitHoldToken },
     { supabase, claims },
   ): Promise<
     ActionResult<{
@@ -210,38 +389,26 @@ export const appendOrderItems = withActionPositional(
       };
     }
 
-    const rpcItems = items.map((item) => ({
-      menu_item_id: item.menu_item_id,
-      variant_id: item.variant_id ?? null,
-      item_name: item.item_name,
-      variant_name: item.variant_name ?? null,
-      quantity: item.quantity,
-      unit_price: item.unit_price,
-      modifiers: item.modifiers.map((m) => ({
-        modifier_id: m.modifier_id,
-        name: m.name,
-        price: m.price,
-      })),
-      sides: item.sides.map((s) => ({
-        side_item_id: s.side_item_id,
-        name: s.name,
-        price: s.price,
-        quantity: s.quantity,
-        is_default: s.is_default,
-      })),
-      subtotal: calcItemSubtotal(item),
-      note: item.note ?? null,
-    }));
+    const rpcItems = cartItemsToRpcItems(items);
 
-    const { data, error } = await supabase.rpc("append_order_items", {
-      p_order_id: orderId,
-      p_items: rpcItems,
-      p_idempotency_key: idempotencyKey ?? undefined,
-    });
+    const { data, error } =
+      dailyLimitHoldToken !== undefined
+        ? await supabase.rpc("append_order_items_with_daily_limit_hold", {
+            p_order_id: orderId,
+            p_items: rpcItems,
+            p_idempotency_key: idempotencyKey ?? undefined,
+            p_daily_limit_hold_token: dailyLimitHoldToken,
+          })
+        : await supabase.rpc("append_order_items", {
+            p_order_id: orderId,
+            p_items: rpcItems,
+            p_idempotency_key: idempotencyKey ?? undefined,
+          });
 
     if (error) {
-      return mapRpcError(
+      return mapDailyLimitRpcError(
         error,
+        cartItemsToDailyLimitItemLabels(items),
         appendOrderItemsRpcMappings,
         appendOrderItemsRpcFallback,
       );
@@ -336,4 +503,3 @@ export const markOrderItemServed = withActionPositional(
     return { success: true, data: null };
   },
 );
-

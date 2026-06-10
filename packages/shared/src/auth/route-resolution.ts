@@ -56,11 +56,11 @@ export function isRunnerPublicDisplayPath(pathname: string): boolean {
 export function isPublicAppPath(pathname: string): boolean {
   if (pathname.startsWith("/swe-worker-")) return true;
   if (pathname.startsWith("/demo/")) return true;
-  if (/^\/br\/\d+\/pos\/manifest\.webmanifest$/.test(pathname)) return true;
+  if (/^\/br\/\d+\/(?:pos|kds)\/manifest\.webmanifest$/.test(pathname)) {
+    return true;
+  }
   // Runner is a customer-facing read-only display, not a staff login surface.
   if (isRunnerPublicDisplayPath(pathname)) return true;
-  // /r/ prefix — public QR feedback submission pages (no auth required)
-  if (pathname.startsWith("/r/")) return true;
 
   return PUBLIC_APP_PATHS.some(
     (path) => pathname === path || pathname.startsWith(`${path}/`),
@@ -90,35 +90,6 @@ export function isAdminRoutePath(pathname: string): boolean {
   );
 }
 
-export type HostSurface = "feedback" | "app" | "unknown";
-
-export function normalizeHost(
-  rawHost: string | null | undefined,
-): string | null {
-  if (!rawHost) return null;
-  const trimmed = rawHost.trim().toLowerCase();
-  if (!trimmed) return null;
-  const portIdx = trimmed.indexOf(":");
-  return portIdx === -1 ? trimmed : trimmed.slice(0, portIdx);
-}
-
-export function resolveHostSurface(
-  rawHost: string | null | undefined,
-  config: { feedbackHost?: string | null; appHost?: string | null },
-): HostSurface {
-  const host = normalizeHost(rawHost);
-  if (!host) return "unknown";
-  const feedback = normalizeHost(config.feedbackHost);
-  const app = normalizeHost(config.appHost);
-  if (feedback && host === feedback) return "feedback";
-  if (app && host === app) return "app";
-  return "unknown";
-}
-
-export function isFeedbackPublicPath(pathname: string): boolean {
-  return pathname.startsWith("/r/");
-}
-
 export function resolveLegacyRouteRedirectPath(
   pathname: string,
 ): string | null {
@@ -145,7 +116,6 @@ export function resolveModuleFromPath(pathname: string): ModuleKey | null {
   }
   if (resolvedPathname.startsWith("/admin/dashboard")) return "dashboard";
   if (resolvedPathname.startsWith("/admin/staff")) return "staff";
-  if (resolvedPathname.startsWith("/admin/crm")) return "crm";
   if (resolvedPathname.startsWith("/admin/reports")) return "reports";
   if (resolvedPathname.startsWith("/admin/settings")) return "settings";
   // /admin/inventory/* RETIRED: pages removed; module ACL has empty allowedRoles.
@@ -153,7 +123,6 @@ export function resolveModuleFromPath(pathname: string): ModuleKey | null {
   // instead of falling through to admin-route landing redirect. See module-acl.ts.
   if (resolvedPathname.startsWith("/admin/inventory")) return "inventory_admin";
   if (resolvedPathname.startsWith("/admin/accounting")) return "accounting";
-  if (resolvedPathname.startsWith("/admin/feedback")) return "feedback";
 
   for (const prefix of INVENTORY_PROCUREMENT_PREFIXES) {
     if (matchesPathPrefix(resolvedPathname, prefix)) {

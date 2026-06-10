@@ -1,11 +1,22 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { test } from "node:test";
 
 const repoRoot = new URL("../../../../../", import.meta.url);
 
 function readRepoFile(path: string): string {
-  return readFileSync(new URL(path, repoRoot), "utf8");
+  const candidate = new URL(path, repoRoot);
+  if (existsSync(candidate)) return readFileSync(candidate, "utf8");
+  if (path.startsWith("supabase/migrations/")) {
+    return readFileSync(
+      new URL(
+        path.replace("supabase/migrations/", "supabase/migrations/_archive/"),
+        repoRoot,
+      ),
+      "utf8",
+    );
+  }
+  return readFileSync(candidate, "utf8");
 }
 
 test("classic stocktake completion RPC is gated by stocktake_complete permission", () => {

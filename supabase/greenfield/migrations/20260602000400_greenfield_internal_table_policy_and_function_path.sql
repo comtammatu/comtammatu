@@ -2,8 +2,7 @@
 -- ============================================================================
 -- Greenfield follow-up hardening
 --
--- Make service-only table posture explicit at both the grant and RLS layers,
--- and pin the search_path for the immutable feedback category validator.
+-- Make service-only table posture explicit at both the grant and RLS layers.
 -- ============================================================================
 
 DROP POLICY IF EXISTS kitchen_daily_counters_service_only_no_client_access
@@ -35,6 +34,3 @@ CREATE POLICY tenant_po_counters_service_only_no_client_access
   TO anon, authenticated
   USING (false)
   WITH CHECK (false);
-
-ALTER FUNCTION public.feedback_validate_categories(text[])
-  SET search_path = '';

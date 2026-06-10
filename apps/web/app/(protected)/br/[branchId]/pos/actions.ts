@@ -16,6 +16,8 @@ export {
   fetchOrderForBill,
   fetchOrderDetail,
   appendOrderItems,
+  reserveDailyLimitHolds,
+  releaseDailyLimitHolds,
   voidOrderItem,
   reduceOrderItemQuantity,
   editPendingOrderItem,

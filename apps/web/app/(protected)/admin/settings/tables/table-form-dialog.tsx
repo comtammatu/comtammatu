@@ -21,11 +21,6 @@ const tableSchema = z.object({
     .trim()
     .min(1, { error: "Số bàn không được trống" })
     .refine((v) => Number(v) >= 1, { error: "Số bàn phải ≥ 1" }),
-  capacity: z
-    .string()
-    .trim()
-    .min(1, { error: "Sức chứa không được trống" })
-    .refine((v) => Number(v) >= 1, { error: "Sức chứa phải ≥ 1" }),
   zone_id: z.string().optional(),
   status: z.enum(TABLE_STATUSES).optional(),
 });
@@ -35,7 +30,6 @@ type TableFormValues = z.infer<typeof tableSchema>;
 function toFormValues(table: TableRow | null | undefined): TableFormValues {
   return {
     number: table?.number != null ? String(table.number) : "",
-    capacity: String(table?.capacity ?? 4),
     zone_id: table?.zone_id != null ? String(table.zone_id) : NO_ZONE,
     status: table?.status as TableFormValues["status"],
   };
@@ -76,7 +70,6 @@ export function TableFormDialog({
       onSubmit={async (values) => {
         const payload: Record<string, unknown> = {
           number: values.number,
-          capacity: values.capacity,
         };
         if (values.zone_id && values.zone_id !== NO_ZONE) {
           payload.zone_id = values.zone_id;
@@ -103,13 +96,6 @@ export function TableFormDialog({
             min={1}
             placeholder="VD: 1, 2, 3..."
             required
-          />
-          <TextField
-            control={form.control}
-            name="capacity"
-            label="Sức chứa (người)"
-            type="number"
-            min={1}
           />
           <SelectField
             control={form.control}

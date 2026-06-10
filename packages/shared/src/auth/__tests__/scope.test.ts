@@ -17,11 +17,9 @@ import { canAccess } from "../module-acl";
 import { resolveDiscoveredApps } from "../app-discovery";
 import { resolveRoleHomeLink } from "../nav-resolution";
 import { resolveRouteFamilyContract } from "../route-map";
+import { MODULE_LABELS_VI } from "../../labels";
 import {
-  isFeedbackPublicPath,
   isPublicAppPath,
-  normalizeHost,
-  resolveHostSurface,
   resolveLegacyRouteRedirectPath,
   resolveModuleFromPath,
   isRunnerPublicDisplayPath,
@@ -381,88 +379,18 @@ test("isPublicAppPath PWA manifests and Runner display bypass auth proxy", () =>
     true,
   );
   assert.equal(isPublicAppPath("/br/3/pos/manifest.webmanifest"), true);
+  assert.equal(isPublicAppPath("/br/3/kds/manifest.webmanifest"), true);
   assert.equal(isPublicAppPath("/br/3/runner"), true);
   assert.equal(isPublicAppPath("/br/3/runner/"), true);
   assert.equal(isRunnerPublicDisplayPath("/br/3/runner"), true);
+  assert.equal(isPublicAppPath("/r/abc123"), false);
   assert.equal(isPublicAppPath("/br/3/pos"), false);
   assert.equal(isPublicAppPath("/br/3/kds"), false);
+  assert.equal(isPublicAppPath("/br/3/settings/manifest.webmanifest"), false);
   assert.equal(isPublicAppPath("/br/abc/runner"), false);
   assert.equal(isPublicAppPath("/br/3/runner/history"), false);
   assert.equal(isPublicAppPath("/br/abc/pos/manifest.webmanifest"), false);
-});
-
-test("normalizeHost strips port + lowercases", () => {
-  assert.equal(
-    normalizeHost("Feedback.ComTamMatu.COM"),
-    "feedback.comtammatu.com",
-  );
-  assert.equal(
-    normalizeHost("feedback.comtammatu.com:443"),
-    "feedback.comtammatu.com",
-  );
-  assert.equal(normalizeHost("localhost:3000"), "localhost");
-  assert.equal(normalizeHost("  app.comtammatu.com  "), "app.comtammatu.com");
-  assert.equal(normalizeHost(""), null);
-  assert.equal(normalizeHost(null), null);
-  assert.equal(normalizeHost(undefined), null);
-});
-
-test("resolveHostSurface → matches configured hosts case-insensitive, port-agnostic", () => {
-  const cfg = {
-    feedbackHost: "feedback.comtammatu.com",
-    appHost: "app.comtammatu.com",
-  };
-  assert.equal(resolveHostSurface("feedback.comtammatu.com", cfg), "feedback");
-  assert.equal(resolveHostSurface("FEEDBACK.COMTAMMATU.COM", cfg), "feedback");
-  assert.equal(
-    resolveHostSurface("feedback.comtammatu.com:443", cfg),
-    "feedback",
-  );
-  assert.equal(resolveHostSurface("app.comtammatu.com", cfg), "app");
-  assert.equal(resolveHostSurface("app.comtammatu.com:443", cfg), "app");
-});
-
-test("resolveHostSurface → unknown host falls back to 'unknown' (Vercel preview, IP, missing)", () => {
-  const cfg = {
-    feedbackHost: "feedback.comtammatu.com",
-    appHost: "app.comtammatu.com",
-  };
-  assert.equal(
-    resolveHostSurface("comtammatu-pr-42.vercel.app", cfg),
-    "unknown",
-  );
-  assert.equal(resolveHostSurface("127.0.0.1", cfg), "unknown");
-  assert.equal(resolveHostSurface(null, cfg), "unknown");
-  assert.equal(resolveHostSurface("", cfg), "unknown");
-});
-
-test("resolveHostSurface → no env configured → all hosts fall through to 'unknown'", () => {
-  // Pre-cutover state: env vars unset → gate is a no-op, behaviour matches
-  // single-host deploy. resolveHostSurface MUST NOT default any host into a
-  // surface when config is empty (would expose admin or feedback wrongly).
-  assert.equal(
-    resolveHostSurface("feedback.comtammatu.com", {
-      feedbackHost: null,
-      appHost: null,
-    }),
-    "unknown",
-  );
-  assert.equal(
-    resolveHostSurface("app.comtammatu.com", {
-      feedbackHost: undefined,
-      appHost: undefined,
-    }),
-    "unknown",
-  );
-});
-
-test("isFeedbackPublicPath → only /r/* prefix", () => {
-  assert.equal(isFeedbackPublicPath("/r/abc123"), true);
-  assert.equal(isFeedbackPublicPath("/r/abc/thank-you"), true);
-  assert.equal(isFeedbackPublicPath("/r/"), true);
-  assert.equal(isFeedbackPublicPath("/admin/feedback"), false);
-  assert.equal(isFeedbackPublicPath("/api/r/abc"), false);
-  assert.equal(isFeedbackPublicPath("/"), false);
+  assert.equal(isPublicAppPath("/br/abc/kds/manifest.webmanifest"), false);
 });
 
 test("resolveLegacyRouteRedirectPath → admin finance redirects to canonical finance", () => {
@@ -525,7 +453,7 @@ test("resolvePostLoginRedirect → branch menu limits follows branch scope", () 
 });
 
 test("canAccess → only owner and super_manager can access tenant admin modules", () => {
-  const adminModules = ["dashboard", "staff", "crm", "reports"] as const;
+  const adminModules = ["dashboard", "staff", "reports"] as const;
   for (const moduleKey of adminModules) {
     assert.equal(canAccess("owner", moduleKey), true);
     assert.equal(canAccess("super_manager", moduleKey), true);
@@ -604,6 +532,18 @@ test("resolveDiscoveredApps → settings entries are discoverable for authorized
   );
   assert.equal(
     ownerApps.some((app) => app.moduleKey === "inventory_admin"),
+    false,
+  );
+  assert.equal(
+    ownerApps.some((app) => app.moduleKey === "accounting"),
+    false,
+  );
+  assert.equal(MODULE_LABELS_VI.accounting, "Hỗ trợ khóa kỳ");
+  assert.ok(
+    ownerApps.some((app) => app.moduleKey === "hr" && app.href === "/hr"),
+  );
+  assert.equal(
+    ownerApps.some((app) => app.moduleKey === "hr_payroll"),
     false,
   );
 

@@ -14,21 +14,24 @@ export async function generateMetadata({
     appleWebApp: {
       capable: true,
       statusBarStyle: "default",
-      title: `CTMT KDS CN${branchId}`,
+      title: "Má Tư KDS",
     },
   };
 }
 
-export default function KdsLayout({
+export default async function KdsLayout({
   children,
+  params,
 }: {
   children: ReactNode;
   params: Promise<{ branchId: string }>;
 }) {
+  const { branchId } = await params;
+
   return (
     <main className="flex h-dvh flex-col overflow-hidden bg-background text-foreground touch-manipulation">
       <OperationalPwaProvider>
-        <KdsPwaToolbar />
+        <KdsPwaToolbar branchId={branchId} />
         {children}
       </OperationalPwaProvider>
     </main>

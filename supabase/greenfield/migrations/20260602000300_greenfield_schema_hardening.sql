@@ -12,18 +12,15 @@
 -- ============================================================================
 
 -- Public views exposed through PostgREST must not bypass underlying RLS.
-ALTER VIEW public.feedbacks_with_masked_phone SET (security_invoker = true);
 ALTER VIEW public.printer_agent_status SET (security_invoker = true);
 ALTER VIEW public.v_print_agent_fleet SET (security_invoker = true);
 
 REVOKE ALL ON TABLE
-  public.feedbacks_with_masked_phone,
   public.printer_agent_status,
   public.v_print_agent_fleet
 FROM PUBLIC, anon;
 
 GRANT SELECT ON TABLE
-  public.feedbacks_with_masked_phone,
   public.printer_agent_status,
   public.v_print_agent_fleet
 TO authenticated, service_role;
@@ -100,7 +97,6 @@ DECLARE
     'auth_branch_id',
     'auth_role',
     'auth_tenant_id',
-    'bulk_mark_feedback_suspect',
     'bump_kds_ticket',
     'can_access_branch',
     'cancel_order',
@@ -221,7 +217,6 @@ DECLARE
     'stock_transfer_mark_in_transit',
     'stock_transfer_receive',
     'submit_count_round',
-    'submit_feedback',
     'submit_shift_request',
     'toggle_category_active',
     'toggle_ingredient_active',
@@ -241,9 +236,7 @@ DECLARE
     'void_manual_journal_entry',
     'void_order_item'
   ];
-  anon_rpc_names text[] := ARRAY[
-    'submit_feedback'
-  ];
+  anon_rpc_names text[] := ARRAY[]::text[];
   missing_names text[];
   proc_record record;
 BEGIN

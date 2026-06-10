@@ -6,6 +6,7 @@ import {
   ListChecks as IconListChecks,
 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
+import { Progress } from "@comtammatu/ui/components/progress";
 import {
   Empty,
   EmptyDescription,
@@ -18,20 +19,77 @@ import {
   EmployeeMissingProfileEmpty,
   EmployeePage,
   EmployeePanel,
+  EmployeeStatusStrip,
 } from "../components/employee-page";
 import { getTodayWorkState } from "../_lib/today-work-state";
+import { formatTimeVN } from "../_lib/vn-business-date";
 import { TasksClient } from "./tasks-client";
 
 const copy = messages.employee.home;
 const taskCopy = messages.employee.tasks;
+const managerTaskCopy = messages.employee.managerTasks;
 
 export default async function EmployeeTasksPage() {
   const state = await getTodayWorkState();
 
   if (state.status === "missing_profile") {
     return (
-      <EmployeePage title={copy.shiftTasks}>
+      <EmployeePage title={copy.shiftTasks} hideHeaderOnMobile>
         <EmployeeMissingProfileEmpty />
+      </EmployeePage>
+    );
+  }
+
+  if (state.managerAttendanceOnly) {
+    const actionLabel =
+      state.status === "ready_to_checkout"
+        ? copy.clockOutDirect
+        : state.status === "done"
+          ? copy.completed
+          : copy.clockIn;
+
+    return (
+      <EmployeePage title={copy.shiftTasks} hideHeaderOnMobile>
+        <EmployeePanel
+          icon={IconClock}
+          title={managerTaskCopy.noTaskTitle}
+          tone={state.status === "done" ? "success" : "info"}
+          contentClassName="gap-3"
+        >
+          <EmployeeStatusStrip
+            items={[
+              {
+                label: copy.checkInShort,
+                value: state.attendance?.checkIn
+                  ? formatTimeVN(state.attendance.checkIn)
+                  : "—",
+                muted: !state.attendance?.checkIn,
+                mono: true,
+              },
+              {
+                label: copy.checkOutShort,
+                value: state.attendance?.checkOut
+                  ? formatTimeVN(state.attendance.checkOut)
+                  : "—",
+                muted: !state.attendance?.checkOut,
+                mono: true,
+              },
+            ]}
+          />
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button
+              asChild
+              size="touch-lg"
+              className="w-full sm:w-fit"
+              variant={state.status === "done" ? "outline" : "default"}
+            >
+              <Link href="/employee/clock">
+                <IconClock data-icon="inline-start" />
+                {actionLabel}
+              </Link>
+            </Button>
+          </div>
+        </EmployeePanel>
       </EmployeePage>
     );
   }
@@ -42,7 +100,7 @@ export default async function EmployeeTasksPage() {
     state.status === "not_required"
   ) {
     return (
-      <EmployeePage title={copy.shiftTasks}>
+      <EmployeePage title={copy.shiftTasks} hideHeaderOnMobile>
         <EmployeePanel
           icon={state.status === "not_required" ? IconListChecks : IconCamera}
           title={
@@ -58,11 +116,12 @@ export default async function EmployeeTasksPage() {
                 : taskCopy.notStartedDescription
           }
           tone={state.status === "not_required" ? "info" : "warning"}
+          contentClassName="gap-3"
         >
           {state.status === "missing_branch" ||
           state.status === "not_required" ? null : (
             <div className="flex flex-col gap-2 sm:flex-row">
-              <Button asChild size="touch" className="w-full sm:w-fit">
+              <Button asChild size="touch-lg" className="w-full sm:w-fit">
                 <Link href="/employee/clock">
                   <IconCamera data-icon="inline-start" />
                   {copy.clockIn}
@@ -75,40 +134,51 @@ export default async function EmployeeTasksPage() {
     );
   }
 
-  const allDone = state.checklist.remaining === 0;
+  const allRequiredDone = state.checklist.requiredRemaining === 0;
   const checkoutPending = state.status === "checkout_pending";
   const checkoutDone = state.status === "done";
+  const progressValue =
+    state.checklist.total > 0
+      ? Math.round((state.checklist.done / state.checklist.total) * 100)
+      : 0;
+  const stateLabel = checkoutDone
+    ? copy.completed
+    : checkoutPending
+      ? copy.checkoutPending
+      : allRequiredDone
+        ? copy.statusReadyToCheckout
+        : `${state.checklist.requiredRemaining} ${taskCopy.requiredRemaining}`;
 
   return (
-    <EmployeePage
-      title={copy.shiftTasks}
-      action={
-        allDone && !checkoutPending && !checkoutDone ? (
-          <Button asChild size="touch" className="w-full sm:w-fit">
-            <Link href="/employee/clock">
-              <IconClock data-icon="inline-start" />
-              {copy.clockOut}
-            </Link>
-          </Button>
-        ) : checkoutPending ? (
-          <Button
-            variant="outline"
-            size="touch"
-            className="w-full sm:w-fit"
-            disabled
-          >
-            <IconClock data-icon="inline-start" />
-            {copy.checkoutPending}
-          </Button>
-        ) : null
-      }
-    >
+    <EmployeePage title={copy.shiftTasks} hideHeaderOnMobile>
       <EmployeePanel
-        icon={allDone ? IconDone : IconListChecks}
+        icon={allRequiredDone ? IconDone : IconListChecks}
         title={taskCopy.checklistTitle}
-        tone={checkoutPending ? "warning" : allDone ? "success" : "info"}
-        contentClassName="gap-2"
+        headerHint={`${state.checklist.done}/${state.checklist.total}`}
+        tone={checkoutPending ? "warning" : allRequiredDone ? "success" : "info"}
+        contentClassName="gap-3"
       >
+        <EmployeeStatusStrip
+          items={[
+            {
+              label: taskCopy.doneCount,
+              value: `${state.checklist.done}/${state.checklist.total}`,
+              mono: true,
+            },
+            {
+              label: taskCopy.state,
+              value: stateLabel,
+              muted: !allRequiredDone && !checkoutPending && !checkoutDone,
+            },
+          ]}
+        />
+
+        <Progress
+          value={progressValue}
+          tone={checkoutPending ? "warning" : allRequiredDone ? "success" : "default"}
+          className="h-2"
+        />
+
         {state.checklist.items.length > 0 ? (
           <TasksClient
             items={state.checklist.items}
@@ -127,6 +197,25 @@ export default async function EmployeeTasksPage() {
             </EmptyHeader>
           </Empty>
         )}
+
+        {allRequiredDone && !checkoutPending && !checkoutDone ? (
+          <Button asChild size="touch-lg" className="w-full sm:w-fit">
+            <Link href="/employee/clock">
+              <IconClock data-icon="inline-start" />
+              {copy.clockOut}
+            </Link>
+          </Button>
+        ) : checkoutPending ? (
+          <Button
+            variant="outline"
+            size="touch-lg"
+            className="w-full sm:w-fit"
+            disabled
+          >
+            <IconClock data-icon="inline-start" />
+            {copy.checkoutPending}
+          </Button>
+        ) : null}
       </EmployeePanel>
     </EmployeePage>
   );

@@ -81,7 +81,7 @@ function PosSessionHeaderComponent({
 
         {/* Single overflow ⋮ menu cho cả mobile + desktop sidebar.
             Thoát / Chốt ca gom vào đây để header gọn — tránh che
-            chỗ + tránh bấm nhầm "Chốt ca" giữa phiên thanh toán. F10 hotkey
+            thao tác + tránh bấm nhầm "Chốt ca" giữa phiên thanh toán. F10 hotkey
             vẫn mở Chốt ca nhanh trên desktop. */}
         <div className="flex shrink-0 items-center gap-1">
           {canManageMenuLimits ? (

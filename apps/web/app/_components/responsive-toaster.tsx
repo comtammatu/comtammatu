@@ -7,7 +7,7 @@ import { selectToasterPreset } from "./responsive-toaster-presets";
 
 /**
  * Toaster với config riêng cho thiết bị vận hành. Mobile toàn app và POS/KDS
- * mọi viewport dùng preset gọn (`top-center`, close button, 3-toast stack,
+ * mọi viewport dùng preset gọn (`top-center`, close button, 1-toast stack,
  * không expand); desktop ngoài POS/KDS giữ preset desktop (`top-right`,
  * expand khi hover, 5 toast cùng lúc).
  *

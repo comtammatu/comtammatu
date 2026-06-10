@@ -6,8 +6,6 @@
 --
 --   idx_kitchen_send_batches_order  ON kitchen_send_batches (tenant_id, order_id, send_seq)
 --     == kitchen_send_batches_tenant_id_order_id_send_seq_key (UNIQUE)   [name is misleading]
---   idx_telegram_outbox_feedback    ON telegram_outbox (feedback_id)
---     == telegram_outbox_feedback_id_key (UNIQUE)
 --
 -- NOT included here (require owner sign-off / representative telemetry, see worklog):
 --   - 13 dead-RPC candidates (T3; DEFINER/money/auth/order path).
@@ -17,4 +15,3 @@
 -- =============================================================
 
 DROP INDEX IF EXISTS public.idx_kitchen_send_batches_order;
-DROP INDEX IF EXISTS public.idx_telegram_outbox_feedback;

@@ -89,4 +89,81 @@ const serwist = new Serwist({
   runtimeCaching,
 });
 
+type PushPayload = {
+  title?: string;
+  body?: string;
+  icon?: string;
+  badge?: string;
+  tag?: string;
+  data?: {
+    url?: string;
+    notificationId?: number;
+    kind?: string;
+    severity?: string;
+    createdAt?: string;
+  };
+};
+
+function parsePushPayload(event: PushEvent): PushPayload {
+  if (!event.data) return {};
+  try {
+    return event.data.json() as PushPayload;
+  } catch {
+    return { body: event.data.text() };
+  }
+}
+
+self.addEventListener("push", (event: PushEvent) => {
+  const payload = parsePushPayload(event);
+  const title = payload.title || "Cơm Tấm Má Tư";
+  const options: NotificationOptions = {
+    body: payload.body,
+    icon: payload.icon || "/icons/icon-192.png",
+    badge: payload.badge || "/icons/favicon-32x32.png",
+    tag: payload.tag,
+    data: {
+      url: payload.data?.url || "/notifications",
+      notificationId: payload.data?.notificationId,
+      kind: payload.data?.kind,
+      severity: payload.data?.severity,
+      createdAt: payload.data?.createdAt,
+    },
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener("notificationclick", (event: NotificationEvent) => {
+  event.notification.close();
+
+  const rawUrl =
+    event.notification.data &&
+    typeof event.notification.data === "object" &&
+    "url" in event.notification.data &&
+    typeof event.notification.data.url === "string"
+      ? event.notification.data.url
+      : "/notifications";
+  const targetUrl = new URL(rawUrl, self.location.origin);
+
+  event.waitUntil(
+    (async () => {
+      const windows = await self.clients.matchAll({
+        type: "window",
+        includeUncontrolled: true,
+      });
+
+      for (const client of windows) {
+        const clientUrl = new URL(client.url);
+        if (clientUrl.origin === targetUrl.origin && "focus" in client) {
+          await client.focus();
+          if ("navigate" in client) await client.navigate(targetUrl.href);
+          return;
+        }
+      }
+
+      await self.clients.openWindow(targetUrl.href);
+    })(),
+  );
+});
+
 serwist.addEventListeners();

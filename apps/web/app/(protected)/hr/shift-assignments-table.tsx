@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: existing HR scheduling surface keeps Vietnamese operational copy inline */
+
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import {
   CalendarDays,
@@ -74,6 +76,10 @@ import {
   type BulkAssignmentResult,
 } from "./shift-assignment-actions";
 import type { BranchOption, ShiftRow } from "./page";
+import {
+  checklistTemplateOptionsForBranch,
+  type ChecklistTemplateRow,
+} from "./checklist-types";
 
 interface AssignmentRow {
   id: number;
@@ -81,11 +87,17 @@ interface AssignmentRow {
   branch_id: number;
   employee_id: number;
   shift_id: number;
+  checklist_template_id: number | null;
   shifts: {
     id: number;
     name: string;
     start_time: string;
     end_time: string;
+  } | null;
+  shift_checklist_templates: {
+    id: number;
+    name: string;
+    branch_id: number | null;
   } | null;
   employees: {
     id: number;
@@ -100,6 +112,7 @@ interface AssignmentRow {
 interface BranchEmployee {
   id: number;
   employee_code: string | null;
+  default_checklist_template_id: number | null;
   profiles: {
     full_name: string;
     branch_id: number | null;
@@ -209,8 +222,10 @@ function resultToast(result: BulkAssignmentResult) {
 
 export function ShiftAssignmentsTable({
   branches,
+  checklistTemplates,
 }: {
   branches: BranchOption[];
+  checklistTemplates: ChecklistTemplateRow[];
 }) {
   const initialBranchId = branches[0]?.id ?? null;
   const [selectedBranchId, setSelectedBranchId] = useState<number | null>(
@@ -229,6 +244,8 @@ export function ShiftAssignmentsTable({
   const [customStart, setCustomStart] = useState(getVNDateString());
   const [customEnd, setCustomEnd] = useState(addVNDateDays(getVNDateString(), 6));
   const [bulkShiftId, setBulkShiftId] = useState<string>("");
+  const [bulkChecklistTemplateId, setBulkChecklistTemplateId] =
+    useState("default");
   const [bulkMode, setBulkMode] =
     useState<BulkAssignmentMode>("skip_existing");
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<Set<number>>(
@@ -241,6 +258,8 @@ export function ShiftAssignmentsTable({
   const [editTarget, setEditTarget] = useState<AssignmentRow | null>(null);
   const [editEmployeeId, setEditEmployeeId] = useState("");
   const [editShiftId, setEditShiftId] = useState("");
+  const [editChecklistTemplateId, setEditChecklistTemplateId] =
+    useState("default");
   const [editDate, setEditDate] = useState("");
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -254,6 +273,11 @@ export function ShiftAssignmentsTable({
   const activeShifts = useMemo(
     () => shifts.filter((shift) => shift.is_active),
     [shifts],
+  );
+
+  const checklistOptions = useMemo(
+    () => checklistTemplateOptionsForBranch(checklistTemplates, selectedBranchId),
+    [checklistTemplates, selectedBranchId],
   );
 
   const visibleShifts = useMemo(() => {
@@ -438,6 +462,9 @@ export function ShiftAssignmentsTable({
     setEditTarget(assignment);
     setEditEmployeeId(assignment.employee_id.toString());
     setEditShiftId(assignment.shift_id.toString());
+    setEditChecklistTemplateId(
+      assignment.checklist_template_id?.toString() ?? "default",
+    );
     setEditDate(assignment.date);
   }
 
@@ -445,6 +472,7 @@ export function ShiftAssignmentsTable({
     setEditTarget(null);
     setEditEmployeeId("");
     setEditShiftId("");
+    setEditChecklistTemplateId("default");
     setEditDate("");
   }
 
@@ -464,6 +492,10 @@ export function ShiftAssignmentsTable({
         employeeIds,
         dates: bulkDates,
         mode: bulkMode,
+        checklistTemplateId:
+          bulkChecklistTemplateId === "default"
+            ? null
+            : Number(bulkChecklistTemplateId),
       });
       if (!result.success) {
         toast.error(result.error ?? "Không thể phân ca hàng loạt.");
@@ -527,6 +559,10 @@ export function ShiftAssignmentsTable({
         employeeId,
         shiftId,
         date: editDate,
+        checklistTemplateId:
+          editChecklistTemplateId === "default"
+            ? null
+            : Number(editChecklistTemplateId),
       });
       if (!result.success) {
         toast.error(result.error ?? "Không thể sửa phân ca.");
@@ -810,7 +846,7 @@ export function ShiftAssignmentsTable({
           </SheetHeader>
 
           <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-2">
                 <Label htmlFor="bulk-shift">Ca làm</Label>
                 <Select value={bulkShiftId} onValueChange={setBulkShiftId}>
@@ -849,6 +885,29 @@ export function ShiftAssignmentsTable({
                     <SelectItem value="replace_future">
                       Ghi đè phân ca trong tương lai
                     </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="bulk-checklist">Checklist override</Label>
+                <Select
+                  value={bulkChecklistTemplateId}
+                  onValueChange={setBulkChecklistTemplateId}
+                >
+                  <SelectTrigger id="bulk-checklist">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="default">Theo mặc định</SelectItem>
+                    {checklistOptions.map((template) => (
+                      <SelectItem
+                        key={template.id}
+                        value={template.id.toString()}
+                      >
+                        {template.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -1061,6 +1120,26 @@ export function ShiftAssignmentsTable({
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="edit-checklist">Checklist override</Label>
+              <Select
+                value={editChecklistTemplateId}
+                onValueChange={setEditChecklistTemplateId}
+              >
+                <SelectTrigger id="edit-checklist">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="default">Theo mặc định</SelectItem>
+                  {checklistOptions.map((template) => (
+                    <SelectItem key={template.id} value={template.id.toString()}>
+                      {template.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="edit-date">Ngày</Label>
               <Input
                 id="edit-date"
@@ -1204,7 +1283,8 @@ function AssignmentCell({
           </div>
           <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
             <Users className="size-3" />
-            {employeePositionLabel(assignment.employees)}
+            {employeePositionLabel(assignment.employees)} ·{" "}
+            {assignment.shift_checklist_templates?.name ?? "Checklist mặc định"}
           </div>
         </div>
       ))}

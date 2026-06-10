@@ -105,7 +105,7 @@ Current code has a broad `/finance/*` workspace. The target product contract is:
 | `/finance/periods`               | Advanced accounting          | Hide from default pilot nav                                           |
 | `/finance/statements`            | Advanced accounting          | Hide from default pilot nav                                           |
 | `/finance/audit-trail`           | Audit/admin support          | Keep accessible for owner/super_manager, but not core daily workflow  |
-| `/admin/accounting/periods`      | Advanced accounting admin    | Keep restricted                                                       |
+| `/admin/accounting/periods`      | Advanced accounting admin    | Keep restricted and direct-only; hide from default Admin nav          |
 
 Do not delete advanced routes without a data-retention and accounting review. First step is navigation and landing simplification.
 
@@ -138,7 +138,7 @@ Do not call the module "done" because journal, statements, or chart of accounts 
 - Chi vận hành has no dedicated simple expense entry workflow yet; the current read model depends on posted operating expense entries.
 - Inventory value exists under reporting/inventory, not as a native Finance route.
 - HĐĐT is active through Viettel S-invoice, but recovery and archival workflows are support workflows, not the Finance Basic landing.
-- Advanced accounting routes exist for continuity but must remain hidden from the default pilot Finance nav.
+- Advanced accounting routes exist for continuity but must remain hidden from the default pilot Finance/Admin nav.
 
 ## Source Files
 

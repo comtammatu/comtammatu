@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft as IconArrowLeft } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { formatVNLongDate } from "@comtammatu/shared/time";
-import { AppPageHeader } from "@/components/surface";
+import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
 import { loadAuthState } from "@/_lib/auth";
 import { messages } from "@lib/messages";
 import { fetchBranchMenuDailyLimits } from "./actions";
@@ -39,22 +39,21 @@ export default async function BranchMenuLimitsPage({
   const today = formatVNLongDate(new Date());
 
   return (
-    <div className="mx-auto max-w-5xl space-y-5 p-4 md:p-6">
-      <div className="flex flex-wrap items-center gap-3">
-        <Button asChild variant="outline" size="sm" className="gap-1">
-          <Link href={`/br/${branchId}/settings`}>
-            <IconArrowLeft className="size-4" />
-            {messages.settings.branch.branchSettingsBack}
-          </Link>
-        </Button>
-        <AppPageHeader
-          className="min-w-0 flex-1"
-          title={messages.settings.branch.menuLimitsTitle}
-          description={`${branch.name} · ${today}`}
-        />
-      </div>
+    <AppPage width="default">
+      <AppPageHeader
+        title={messages.settings.branch.menuLimitsTitle}
+        description={`${branch.name} · ${today}`}
+        actions={
+          <Button asChild variant="outline" size="sm" className="gap-1">
+            <Link href={`/br/${branchId}/settings`}>
+              <IconArrowLeft data-icon="inline-start" />
+              {messages.settings.branch.branchSettingsBack}
+            </Link>
+          </Button>
+        }
+      />
 
-      <div className="rounded-md border bg-muted/30 p-4 text-sm leading-6 text-muted-foreground">
+      <AppSection tone="info" size="sm">
         <p>
           {messages.settings.branch.menuLimitsIntroBefore}{" "}
           <span className="font-medium text-foreground">
@@ -68,9 +67,9 @@ export default async function BranchMenuLimitsPage({
             {result.error ?? messages.settings.branch.menuLimitsLoadFailed}
           </p>
         ) : null}
-      </div>
+      </AppSection>
 
       <MenuLimitsTable branchId={branchId} rows={rows} />
-    </div>
+    </AppPage>
   );
 }

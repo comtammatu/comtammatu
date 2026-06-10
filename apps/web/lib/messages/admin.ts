@@ -1,6 +1,35 @@
 export const admin = {
   reports: {
+    index: {
+      title: "Báo cáo điều hành",
+      description:
+        "Xem nhanh doanh thu, tồn kho, dòng tiền vận hành và ngày công.",
+      backToAdmin: "Về quản trị",
+      openSettings: "Mở cài đặt",
+      aggregateTitle: "Báo cáo tổng hợp",
+      aggregateDescription:
+        "Các chỉ số quan trọng cho doanh thu, tồn kho, tiền vận hành và ngày công.",
+      relatedTitle: "Mở nhanh mục liên quan",
+      relatedDescription:
+        "Đi từ báo cáo sang các mục liên quan để xem chi tiết và xử lý công việc.",
+      openReport: "Mở báo cáo",
+      summaryBadge: "Tổng hợp",
+      operationsBadge: "Vận hành",
+      detailsBadge: "Chi tiết",
+      cards: {
+        revenue: "Doanh thu",
+        inventoryValue: "Giá trị tồn kho",
+        stockMovement: "Biến động tồn kho",
+        finance: "Tài chính vận hành",
+        inventory: "Kho",
+        hr: "Nhân sự",
+      },
+    },
+    inventoryValue: {
+      title: "Giá trị tồn kho",
+    },
     stockMovement: {
+      pageTitle: "Biến động tồn kho",
       loadError: "Lỗi tải báo cáo",
       allBranchesPlaceholder: "Tất cả",
       dayPreset: (days: number) => `${days} ngày`,

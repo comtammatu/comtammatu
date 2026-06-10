@@ -34,28 +34,33 @@ import {
   X as IconX,
 } from "lucide-react";
 import {
-  isItemBlockedByDailyLimit,
-  remainingDailyQuota,
   type MenuCategory,
   type MenuItem,
   type MenuItemDailyLimit,
 } from "./pos-menu-types";
 import { useDailyLimit } from "./_providers/pos-desktop-provider";
+import {
+  isDailyLimitBlockedAfterDemand,
+  remainingDailyQuotaAfterDemand,
+} from "./_utils/daily-limit-draft";
 
 interface PosMenuGridProps {
   categories: MenuCategory[];
+  dailyLimitDemandByMenuItem?: ReadonlyMap<number, number>;
   onItemTap: (item: MenuItem) => void;
 }
 
 interface MenuItemButtonProps {
   item: MenuItem;
   sparseMenu: boolean;
+  dailyLimitDemandByMenuItem?: ReadonlyMap<number, number>;
   onItemTap: (item: MenuItem) => void;
 }
 
 interface MenuItemGridProps {
   items: MenuItem[];
   sparseMenu: boolean;
+  dailyLimitDemandByMenuItem?: ReadonlyMap<number, number>;
   onItemTap: (item: MenuItem) => void;
 }
 
@@ -64,13 +69,15 @@ const ALL_MENU_VALUE = "all";
 const MenuItemButton = memo(function MenuItemButton({
   item,
   sparseMenu,
+  dailyLimitDemandByMenuItem,
   onItemTap,
 }: MenuItemButtonProps) {
   // Per-item subscription qua external store — chỉ card này re-render
   // khi sold_today/is_disabled/limit_quantity của ID này đổi (Fix#4 B1).
   const dailyLimit: MenuItemDailyLimit | null = useDailyLimit(item.id);
-  const blocked = isItemBlockedByDailyLimit(dailyLimit);
-  const remaining = remainingDailyQuota(dailyLimit);
+  const draftDemand = dailyLimitDemandByMenuItem?.get(item.id) ?? 0;
+  const blocked = isDailyLimitBlockedAfterDemand(dailyLimit, draftDemand);
+  const remaining = remainingDailyQuotaAfterDemand(dailyLimit, draftDemand);
   const handleClick = useCallback(() => {
     if (blocked) return;
     onItemTap(item);
@@ -167,6 +174,7 @@ const MenuItemButton = memo(function MenuItemButton({
 const MenuItemGrid = memo(function MenuItemGrid({
   items,
   sparseMenu,
+  dailyLimitDemandByMenuItem,
   onItemTap,
 }: MenuItemGridProps) {
   return (
@@ -183,6 +191,7 @@ const MenuItemGrid = memo(function MenuItemGrid({
           key={item.id}
           item={item}
           sparseMenu={sparseMenu}
+          dailyLimitDemandByMenuItem={dailyLimitDemandByMenuItem}
           onItemTap={onItemTap}
         />
       ))}
@@ -190,7 +199,11 @@ const MenuItemGrid = memo(function MenuItemGrid({
   );
 });
 
-function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
+function PosMenuGridComponent({
+  categories,
+  dailyLimitDemandByMenuItem,
+  onItemTap,
+}: PosMenuGridProps) {
   const [, startMenuTransition] = useTransition();
   const [activeTabValue, setActiveTabValue] = useState<string>(ALL_MENU_VALUE);
   // Mobile: search input ẩn mặc định, hiện khi user tap icon 🔍.
@@ -427,6 +440,7 @@ function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
                   <MenuItemGrid
                     items={category.menu_items}
                     sparseMenu={false}
+                    dailyLimitDemandByMenuItem={dailyLimitDemandByMenuItem}
                     onItemTap={onItemTap}
                   />
                 </section>
@@ -439,6 +453,7 @@ function PosMenuGridComponent({ categories, onItemTap }: PosMenuGridProps) {
               <MenuItemGrid
                 items={visibleItems}
                 sparseMenu={sparseMenu}
+                dailyLimitDemandByMenuItem={dailyLimitDemandByMenuItem}
                 onItemTap={onItemTap}
               />
             </div>

@@ -1,8 +1,15 @@
 "use server";
 
 import { z } from "zod";
+import { STAFF_ROLES } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { loadAuthState } from "@/_lib/auth";
+import { getAuthContext, loadAuthState } from "@/_lib/auth";
+import {
+  buildNotificationPushPayload,
+  getWebPushPublicConfig,
+  sendWebPushNotification,
+  type WebPushSubscriptionRecord,
+} from "@lib/notifications/web-push";
 
 export interface NotificationItem {
   id: number;
@@ -25,6 +32,12 @@ export interface NotificationItem {
 export interface ListNotificationsResult {
   items: NotificationItem[];
   hasMore: boolean;
+}
+
+export interface PushRegistrationState {
+  configured: boolean;
+  publicKey: string | null;
+  activeSubscriptionCount: number;
 }
 
 const listSchema = z.object({
@@ -145,4 +158,193 @@ export async function markAllNotificationsRead(): Promise<
     return { success: false, error: "Không thể đánh dấu tất cả" };
   }
   return { success: true, data: { count: Number(data ?? 0) } };
+}
+
+const pushSubscriptionSchema = z.object({
+  endpoint: z.string().url().max(2048),
+  expirationTime: z.number().nullable().optional(),
+  keys: z.object({
+    p256dh: z.string().min(1).max(512),
+    auth: z.string().min(1).max(512),
+  }),
+  userAgent: z.string().max(500).nullable().optional(),
+  deviceLabel: z.string().max(120).nullable().optional(),
+});
+
+const pushEndpointSchema = z.object({
+  endpoint: z.string().url().max(2048),
+});
+
+export async function getPushRegistrationState(): Promise<
+  ActionResult<PushRegistrationState>
+> {
+  const ctx = await getAuthContext(STAFF_ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const publicConfig = getWebPushPublicConfig();
+  const { data, error } = await ctx.supabase
+    .from("notification_push_subscriptions")
+    .select("id")
+    .is("disabled_at", null);
+
+  if (error) {
+    return {
+      success: false,
+      error: "Không thể đọc trạng thái thông báo thiết bị",
+    };
+  }
+
+  return {
+    success: true,
+    data: {
+      ...publicConfig,
+      activeSubscriptionCount: data?.length ?? 0,
+    },
+  };
+}
+
+export async function savePushSubscription(
+  input: z.input<typeof pushSubscriptionSchema>,
+): Promise<ActionResult> {
+  const parsed = pushSubscriptionSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: "Dữ liệu thiết bị không hợp lệ" };
+  }
+
+  const ctx = await getAuthContext(STAFF_ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { endpoint, keys, userAgent, deviceLabel } = parsed.data;
+  const now = new Date().toISOString();
+  const { error } = await ctx.supabase
+    .from("notification_push_subscriptions")
+    .upsert(
+      {
+        tenant_id: ctx.claims.tenant_id,
+        user_id: ctx.user.id,
+        endpoint,
+        p256dh: keys.p256dh,
+        auth: keys.auth,
+        user_agent: userAgent ?? null,
+        device_label: deviceLabel ?? null,
+        updated_at: now,
+        last_seen_at: now,
+        disabled_at: null,
+        failure_count: 0,
+        last_error: null,
+      },
+      { onConflict: "tenant_id,user_id,endpoint" },
+    );
+
+  if (error) {
+    return { success: false, error: "Không thể bật thông báo thiết bị" };
+  }
+
+  return { success: true };
+}
+
+export async function removePushSubscription(
+  input: z.input<typeof pushEndpointSchema>,
+): Promise<ActionResult> {
+  const parsed = pushEndpointSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: "Dữ liệu thiết bị không hợp lệ" };
+  }
+
+  const ctx = await getAuthContext(STAFF_ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const { error } = await ctx.supabase
+    .from("notification_push_subscriptions")
+    .delete()
+    .eq("endpoint", parsed.data.endpoint);
+
+  if (error) {
+    return { success: false, error: "Không thể tắt thông báo thiết bị" };
+  }
+
+  return { success: true };
+}
+
+export async function sendTestPushNotification(): Promise<
+  ActionResult<{ sent: number; failed: number }>
+> {
+  const ctx = await getAuthContext(STAFF_ROLES);
+  if (!ctx) return { success: false, error: "Không có quyền" };
+
+  const publicConfig = getWebPushPublicConfig();
+  if (!publicConfig.configured) {
+    return { success: false, error: "Chưa cấu hình Web Push" };
+  }
+
+  const { data, error } = await ctx.supabase
+    .from("notification_push_subscriptions")
+    .select("id, endpoint, p256dh, auth")
+    .is("disabled_at", null);
+
+  if (error) {
+    return { success: false, error: "Không thể đọc thiết bị nhận thông báo" };
+  }
+
+  const subscriptions: WebPushSubscriptionRecord[] = (data ?? []).map(
+    (row) => ({
+      id: row.id,
+      endpoint: row.endpoint,
+      p256dh: row.p256dh,
+      auth: row.auth,
+    }),
+  );
+
+  if (subscriptions.length === 0) {
+    return { success: false, error: "Thiết bị chưa bật thông báo" };
+  }
+
+  const now = new Date().toISOString();
+  const payload = buildNotificationPushPayload({
+    id: 0,
+    kind: "system.test",
+    severity: "info",
+    title: "Thông báo thử",
+    body: "Thiết bị đã nhận được thông báo từ Cơm Tấm Má Tư.",
+    action_url: "/notifications",
+    created_at: now,
+  });
+
+  let sent = 0;
+  let failed = 0;
+  await Promise.all(
+    subscriptions.map(async (subscription) => {
+      const result = await sendWebPushNotification(subscription, payload);
+      if (result.success) {
+        sent++;
+        await ctx.supabase
+          .from("notification_push_subscriptions")
+          .update({
+            last_sent_at: now,
+            failure_count: 0,
+            last_error: null,
+            updated_at: now,
+          })
+          .eq("id", subscription.id);
+        return;
+      }
+
+      failed++;
+      await ctx.supabase
+        .from("notification_push_subscriptions")
+        .update({
+          disabled_at: result.expired ? now : null,
+          failure_count: 1,
+          last_error: result.error,
+          updated_at: now,
+        })
+        .eq("id", subscription.id);
+    }),
+  );
+
+  if (sent === 0) {
+    return { success: false, error: "Không gửi được thông báo thử" };
+  }
+
+  return { success: true, data: { sent, failed } };
 }

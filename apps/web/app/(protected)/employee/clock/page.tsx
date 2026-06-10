@@ -1,5 +1,8 @@
 import Link from "next/link";
-import { ListChecks as IconListChecks } from "lucide-react";
+import {
+  CalendarDays as IconCalendarDays,
+  ListChecks as IconListChecks,
+} from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { messages } from "@lib/messages";
 import {
@@ -16,10 +19,7 @@ export default async function ClockPage() {
 
   if (state.status === "missing_profile") {
     return (
-      <EmployeePage
-        title={copy.clockTodayTitle}
-        description={copy.clockLongDescription}
-      >
+      <EmployeePage title={copy.clockTodayTitle} hideHeaderOnMobile>
         <EmployeeMissingProfileEmpty />
       </EmployeePage>
     );
@@ -28,7 +28,7 @@ export default async function ClockPage() {
   return (
     <EmployeePage
       title={copy.clockTodayTitle}
-      description={copy.clockLongDescription}
+      hideHeaderOnMobile
       action={
         <Button
           asChild
@@ -36,9 +36,13 @@ export default async function ClockPage() {
           size="touch"
           className="w-full sm:w-fit"
         >
-          <Link href="/employee/tasks">
-            <IconListChecks data-icon="inline-start" />
-            Việc trong ca
+          <Link href={state.managerAttendanceOnly ? "/hr" : "/employee/tasks"}>
+            {state.managerAttendanceOnly ? (
+              <IconCalendarDays data-icon="inline-start" />
+            ) : (
+              <IconListChecks data-icon="inline-start" />
+            )}
+            {state.managerAttendanceOnly ? copy.managerHrTitle : copy.shiftTasks}
           </Link>
         </Button>
       }

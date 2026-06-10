@@ -27,8 +27,7 @@ const RAW_TAILWIND_PALETTE_MESSAGE =
 // etc. but not plain ASCII identifiers. Heuristic for "is this string
 // Vietnamese?" — false positives possible for European accented Latin but
 // rare in this single-locale codebase.
-const VI_DIACRITIC_REGEX =
-  /[À-ÿĂ-ăĐ-đƠ-ưẠ-ỹ]/;
+const VI_DIACRITIC_REGEX = /[À-ÿĂ-ăĐ-đƠ-ưẠ-ỹ]/;
 const VI_TARGET_ATTRS = /^(title|placeholder|aria-label|alt)$/;
 
 const I18N_BASELINE_PATH = `${__dirname}/eslint-i18n-baseline.json`;
@@ -59,9 +58,11 @@ function reportInlineVietnamese(context, node) {
 
 // Custom rule: flag inline Vietnamese strings in JSX text nodes and
 // user-facing attributes (title/placeholder/aria-label/alt). Severity is
-// "warn" for new offenders. Legacy offenders are explicitly baselined in
+// "error" for new offenders. Legacy offenders are explicitly baselined in
 // `eslint-i18n-baseline.json`; run with `I18N_BASELINE_DISABLE=1` to see the
-// full Phase 2 sweep list. Escape hatch: `// eslint-disable-next-line` with
+// full Phase 2 sweep list. New unbaselined offenders are errors, because
+// otherwise the legacy baseline can keep growing unnoticed. Escape hatch:
+// `// eslint-disable-next-line` with
 // `vi-allow:` reason for legal-fixed strings (HĐĐT/MST/...) or domain edge cases.
 // See tasks/regressions.md MESSAGES-SINGLE-SOURCE (2026-04-27).
 const i18nPlugin = {
@@ -71,7 +72,7 @@ const i18nPlugin = {
         type: "suggestion",
         docs: {
           description:
-            "Disallow inline Vietnamese string literals in JSX. Use ACTIONS_VI/STATES_VI/ERRORS_VI/domain dict from @comtammatu/shared/messages or apps/web/lib/messages/* instead.",
+            "Disallow unbaselined inline Vietnamese string literals in JSX. Use ACTIONS_VI/STATES_VI/ERRORS_VI/domain dict from @comtammatu/shared/messages or apps/web/lib/messages/* instead.",
         },
         schema: [],
         messages: {
@@ -88,8 +89,7 @@ const i18nPlugin = {
           },
           JSXAttribute(node) {
             const name = node.name?.name;
-            if (typeof name !== "string" || !VI_TARGET_ATTRS.test(name))
-              return;
+            if (typeof name !== "string" || !VI_TARGET_ATTRS.test(name)) return;
             const value = node.value;
             if (
               value?.type === "Literal" &&
@@ -149,7 +149,7 @@ export default tseslint.config(
       i18n: i18nPlugin,
     },
     rules: {
-      "i18n/no-inline-vietnamese": "warn",
+      "i18n/no-inline-vietnamese": "error",
     },
   },
   {

@@ -1,8 +1,19 @@
 "use client";
 
+/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: HR attendance checklist detail copy is local to this manager review surface */
+
+import Image from "next/image";
 import { useState, useTransition } from "react";
+import { Image as IconImage } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Badge } from "@comtammatu/ui/components/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@comtammatu/ui/components/dialog";
 import {
   Table,
   TableBody,
@@ -31,20 +42,30 @@ import {
   getVNMonthString,
   formatVNTime,
 } from "@comtammatu/shared/time";
+import { messages } from "@lib/messages";
 import {
   fetchAttendance,
   fetchAttendanceSummary,
-  updateAttendanceStatus,
+  getAttendancePhotoUrl,
 } from "./actions";
 import type { BranchOption } from "./page";
+import {
+  CHECKLIST_PHASE_LABELS,
+  CHECKLIST_PHASES,
+  type ChecklistPhase,
+} from "./checklist-types";
+
+const attendanceCopy = messages.employee.hrAttendance;
 
 interface AttendanceRecord {
   id: number;
   date: string;
   check_in: string | null;
   check_out: string | null;
+  check_in_photo_path: string | null;
   status: string;
   note: string | null;
+  checklist_template_id: number | null;
   employee_id: number;
   employees: {
     id: number;
@@ -52,6 +73,16 @@ interface AttendanceRecord {
     profiles: { full_name: string } | null;
   } | null;
   shifts: { name: string; start_time: string; end_time: string } | null;
+  shift_checklist_templates: { name: string } | null;
+  attendance_checklist_items: {
+    id: number;
+    title: string;
+    phase: string;
+    done_definition: string;
+    is_required: boolean;
+    is_done: boolean;
+    sort_order: number;
+  }[];
 }
 
 interface AttendanceSummaryRow {
@@ -66,10 +97,10 @@ interface AttendanceSummaryRow {
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  present: "Có mặt",
-  late: "Đi trễ",
-  absent: "Vắng",
-  half_day: "Nửa ngày",
+  present: attendanceCopy.present,
+  late: attendanceCopy.late,
+  absent: attendanceCopy.absent,
+  half_day: attendanceCopy.halfDay,
 };
 
 const STATUS_COLORS: Record<
@@ -95,7 +126,7 @@ export function AttendanceTable({ branches }: AttendanceTableProps) {
   const [selectedMonth, setSelectedMonth] = useState(() => {
     return getVNMonthString();
   });
-  const [view, setView] = useState<"detail" | "summary">("summary");
+  const [view, setView] = useState<"clock" | "summary">("summary");
   const [isPending, startTransition] = useTransition();
 
   function loadData(branchId: number, month: string) {
@@ -120,32 +151,13 @@ export function AttendanceTable({ branches }: AttendanceTableProps) {
     });
   }
 
-  function handleStatusChange(attendanceId: number, newStatus: string) {
-    startTransition(async () => {
-      const result = await updateAttendanceStatus({
-        attendanceId,
-        status: newStatus as "present" | "absent" | "late" | "half_day",
-      });
-      if (result.success) {
-        setRecords((prev) =>
-          prev.map((r) =>
-            r.id === attendanceId ? { ...r, status: newStatus } : r,
-          ),
-        );
-        toast.success("Đã cập nhật trạng thái");
-      } else {
-        toast.error(result.error ?? ERRORS_VI.fallback);
-      }
-    });
-  }
-
   // Generate month options (last 6 months)
   const monthOptions = getVNMonthSequenceBack(6).map(({ date }) =>
     date.slice(0, 7),
   );
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-3">
         <Select
           value={selectedBranch.toString()}
@@ -188,17 +200,17 @@ export function AttendanceTable({ branches }: AttendanceTableProps) {
               loadData(selectedBranch, selectedMonth);
             }}
           >
-            Tổng hợp
+            {attendanceCopy.summaryView}
           </Button>
           <Button
-            variant={view === "detail" ? "default" : "ghost"}
+            variant={view === "clock" ? "default" : "ghost"}
             size="sm"
             onClick={() => {
-              setView("detail");
+              setView("clock");
               loadData(selectedBranch, selectedMonth);
             }}
           >
-            Chi tiết
+            {attendanceCopy.clockView}
           </Button>
         </div>
 
@@ -208,11 +220,7 @@ export function AttendanceTable({ branches }: AttendanceTableProps) {
       {view === "summary" ? (
         <SummaryView data={summary} />
       ) : (
-        <DetailView
-          data={records}
-          onStatusChange={handleStatusChange}
-          isPending={isPending}
-        />
+        <DetailView data={records} />
       )}
     </div>
   );
@@ -222,7 +230,7 @@ function SummaryView({ data }: { data: AttendanceSummaryRow[] }) {
   if (data.length === 0) {
     return (
       <p className="py-8 text-center text-sm text-muted-foreground">
-        Chọn chi nhánh và tháng, sau đó nhấn tải dữ liệu.
+        {attendanceCopy.loadHint}
       </p>
     );
   }
@@ -232,12 +240,18 @@ function SummaryView({ data }: { data: AttendanceSummaryRow[] }) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Mã NV</TableHead>
-            <TableHead>Họ tên</TableHead>
-            <TableHead className="text-center">Có mặt</TableHead>
-            <TableHead className="text-center">Đi trễ</TableHead>
-            <TableHead className="text-center">Vắng</TableHead>
-            <TableHead className="text-center">Nửa ngày</TableHead>
+            <TableHead>{attendanceCopy.employeeCode}</TableHead>
+            <TableHead>{attendanceCopy.fullName}</TableHead>
+            <TableHead className="text-center">
+              {attendanceCopy.present}
+            </TableHead>
+            <TableHead className="text-center">{attendanceCopy.late}</TableHead>
+            <TableHead className="text-center">
+              {attendanceCopy.absent}
+            </TableHead>
+            <TableHead className="text-center">
+              {attendanceCopy.halfDay}
+            </TableHead>
             <TableHead className="text-center">{FORM_VI.total}</TableHead>
           </TableRow>
         </TableHeader>
@@ -271,79 +285,282 @@ function SummaryView({ data }: { data: AttendanceSummaryRow[] }) {
 
 function DetailView({
   data,
-  onStatusChange,
-  isPending,
 }: {
   data: AttendanceRecord[];
-  onStatusChange: (id: number, status: string) => void;
-  isPending: boolean;
 }) {
+  const [photoOpen, setPhotoOpen] = useState(false);
+  const [checklistRecord, setChecklistRecord] =
+    useState<AttendanceRecord | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<{
+    url: string;
+    employeeName: string;
+    date: string;
+  } | null>(null);
+  const [pendingPhotoId, setPendingPhotoId] = useState<number | null>(null);
+  const [, startPhotoTransition] = useTransition();
+
+  function openPhoto(record: AttendanceRecord) {
+    if (!record.check_in_photo_path) return;
+
+    setPendingPhotoId(record.id);
+    startPhotoTransition(async () => {
+      const result = await getAttendancePhotoUrl({
+        attendanceId: record.id,
+      });
+      setPendingPhotoId(null);
+
+      if (!result.success || !result.data?.url) {
+        toast.error(result.error ?? attendanceCopy.photoLoadError);
+        return;
+      }
+
+      setPhotoPreview({
+        url: result.data.url,
+        employeeName: record.employees?.profiles?.full_name ?? STAFF_VI.long,
+        date: record.date,
+      });
+      setPhotoOpen(true);
+    });
+  }
+
   if (data.length === 0) {
     return (
       <p className="py-8 text-center text-sm text-muted-foreground">
-        Chưa có dữ liệu chấm công.
+        {attendanceCopy.empty}
       </p>
     );
   }
 
   return (
-    <div className="rounded-md border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>{FORM_VI.date}</TableHead>
-            <TableHead>{STAFF_VI.long}</TableHead>
-            <TableHead>Ca</TableHead>
-            <TableHead>Vào</TableHead>
-            <TableHead>Ra</TableHead>
-            <TableHead>{FORM_VI.status}</TableHead>
-            <TableHead>{FORM_VI.notes}</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {data.map((record) => (
-            <TableRow key={record.id}>
-              <TableCell className="font-mono text-sm">{record.date}</TableCell>
-              <TableCell>
-                {record.employees?.profiles?.full_name ?? "—"}
-              </TableCell>
-              <TableCell className="text-sm text-muted-foreground">
-                {record.shifts?.name ?? "—"}
-              </TableCell>
-              <TableCell className="font-mono text-sm">
-                {record.check_in ? formatVNTime(record.check_in) : "—"}
-              </TableCell>
-              <TableCell className="font-mono text-sm">
-                {record.check_out ? formatVNTime(record.check_out) : "—"}
-              </TableCell>
-              <TableCell>
-                <Select
-                  value={record.status}
-                  onValueChange={(v) => onStatusChange(record.id, v)}
-                  disabled={isPending}
-                >
-                  <SelectTrigger className="h-7 w-28">
-                    <Badge
-                      variant={STATUS_COLORS[record.status] ?? "secondary"}
-                    >
-                      {STATUS_LABELS[record.status] ?? record.status}
-                    </Badge>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="present">Có mặt</SelectItem>
-                    <SelectItem value="late">Đi trễ</SelectItem>
-                    <SelectItem value="absent">Vắng</SelectItem>
-                    <SelectItem value="half_day">Nửa ngày</SelectItem>
-                  </SelectContent>
-                </Select>
-              </TableCell>
-              <TableCell className="max-w-32 truncate text-sm text-muted-foreground">
-                {record.note ?? ""}
-              </TableCell>
+    <>
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{FORM_VI.date}</TableHead>
+              <TableHead>{STAFF_VI.long}</TableHead>
+              <TableHead>{attendanceCopy.shift}</TableHead>
+              <TableHead>Template</TableHead>
+              <TableHead>Checklist</TableHead>
+              <TableHead>{attendanceCopy.checkIn}</TableHead>
+              <TableHead>{attendanceCopy.checkOut}</TableHead>
+              <TableHead>{attendanceCopy.recordState}</TableHead>
+              <TableHead>{attendanceCopy.photo}</TableHead>
+              <TableHead>{FORM_VI.notes}</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {data.map((record) => {
+              const photoPending = pendingPhotoId === record.id;
+              return (
+                <TableRow key={record.id}>
+                  <TableCell className="font-mono text-sm">
+                    {record.date}
+                  </TableCell>
+                  <TableCell>
+                    {record.employees?.profiles?.full_name ?? "—"}
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {record.shifts?.name ?? "—"}
+                  </TableCell>
+                  <TableCell className="text-sm">
+                    {record.shift_checklist_templates?.name ?? (
+                      <span className="text-muted-foreground">Chưa gán</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <ChecklistProgressButton
+                      record={record}
+                      onOpen={() => setChecklistRecord(record)}
+                    />
+                  </TableCell>
+                  <TableCell className="font-mono text-sm">
+                    {record.check_in ? formatVNTime(record.check_in) : "—"}
+                  </TableCell>
+                  <TableCell className="font-mono text-sm">
+                    {record.check_out ? formatVNTime(record.check_out) : "—"}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={STATUS_COLORS[record.status] ?? "secondary"}>
+                      {record.check_out
+                        ? attendanceCopy.checkedOut
+                        : record.check_in
+                          ? attendanceCopy.inShift
+                          : (STATUS_LABELS[record.status] ?? record.status)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {record.check_in_photo_path ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={pendingPhotoId !== null}
+                        onClick={() => openPhoto(record)}
+                      >
+                        {photoPending ? (
+                          <Spinner data-icon="inline-start" />
+                        ) : (
+                          <IconImage data-icon="inline-start" />
+                        )}
+                        {attendanceCopy.viewPhoto}
+                      </Button>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">
+                        {attendanceCopy.noPhoto}
+                      </span>
+                    )}
+                  </TableCell>
+                  <TableCell className="max-w-48 truncate text-sm text-muted-foreground">
+                    {record.note ?? ""}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
+
+      <Dialog
+        open={photoOpen}
+        onOpenChange={(open) => {
+          setPhotoOpen(open);
+          if (!open) setPhotoPreview(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{attendanceCopy.photoDialogTitle}</DialogTitle>
+            <DialogDescription>
+              {attendanceCopy.photoDialogDescription}
+            </DialogDescription>
+          </DialogHeader>
+          {photoPreview ? (
+            <Image
+              src={photoPreview.url}
+              alt={attendanceCopy.photoAlt(
+                photoPreview.employeeName,
+                photoPreview.date,
+              )}
+              width={960}
+              height={720}
+              className="h-auto max-h-dvh-80 w-full rounded-md object-contain"
+              unoptimized
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={checklistRecord !== null}
+        onOpenChange={(open) => {
+          if (!open) setChecklistRecord(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Checklist ca làm</DialogTitle>
+            <DialogDescription>
+              {checklistRecord
+                ? `${checklistRecord.employees?.profiles?.full_name ?? "Nhân viên"} · ${checklistRecord.date}`
+                : ""}
+            </DialogDescription>
+          </DialogHeader>
+          {checklistRecord ? (
+            <ChecklistDetail record={checklistRecord} />
+          ) : null}
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+function normalizePhase(value: string): ChecklistPhase {
+  return CHECKLIST_PHASES.includes(value as ChecklistPhase)
+    ? (value as ChecklistPhase)
+    : "trong_ca";
+}
+
+function checklistProgress(record: AttendanceRecord) {
+  const items = record.attendance_checklist_items ?? [];
+  const required = items.filter((item) => item.is_required);
+  return {
+    total: items.length,
+    done: items.filter((item) => item.is_done).length,
+    requiredTotal: required.length,
+    requiredDone: required.filter((item) => item.is_done).length,
+  };
+}
+
+function ChecklistProgressButton({
+  record,
+  onOpen,
+}: {
+  record: AttendanceRecord;
+  onOpen: () => void;
+}) {
+  const progress = checklistProgress(record);
+  if (progress.total === 0) {
+    return <span className="text-sm text-muted-foreground">Trống</span>;
+  }
+
+  return (
+    <Button type="button" variant="outline" size="sm" onClick={onOpen}>
+      {progress.requiredDone}/{progress.requiredTotal} bắt buộc ·{" "}
+      {progress.done}/{progress.total}
+    </Button>
+  );
+}
+
+function ChecklistDetail({ record }: { record: AttendanceRecord }) {
+  const items = [...(record.attendance_checklist_items ?? [])].sort(
+    (a, b) => a.sort_order - b.sort_order,
+  );
+
+  if (items.length === 0) {
+    return (
+      <p className="py-6 text-center text-sm text-muted-foreground">
+        Ca này không có checklist snapshot.
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {CHECKLIST_PHASES.map((phase) => {
+        const phaseItems = items.filter(
+          (item) => normalizePhase(item.phase) === phase,
+        );
+        if (phaseItems.length === 0) return null;
+
+        return (
+          <div key={phase} className="space-y-2">
+            <div className="text-sm font-medium">
+              {CHECKLIST_PHASE_LABELS[phase]}
+            </div>
+            <div className="divide-y rounded-md border">
+              {phaseItems.map((item) => (
+                <div key={item.id} className="flex gap-3 p-3">
+                  <Badge variant={item.is_done ? "success" : "secondary"}>
+                    {item.is_done ? "Xong" : "Chưa làm"}
+                  </Badge>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-medium">{item.title}</div>
+                    {item.done_definition ? (
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {item.done_definition}
+                      </div>
+                    ) : null}
+                  </div>
+                  {item.is_required ? (
+                    <Badge variant="outline">Bắt buộc</Badge>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

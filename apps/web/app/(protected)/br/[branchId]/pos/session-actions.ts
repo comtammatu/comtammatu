@@ -53,7 +53,6 @@ export async function fetchTablesForBranch(
       `
       id,
       number,
-      capacity,
       status,
       zone_id,
       branch_zones (

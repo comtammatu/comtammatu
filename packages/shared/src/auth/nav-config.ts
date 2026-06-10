@@ -53,19 +53,9 @@ export const ADMIN_NAV_GROUPS: NavGroupConfig[] = [
         label: APP_COPY_VI.foundationalStaff,
       },
       {
-        moduleKey: "accounting",
-        icon: "Receipt",
-        label: "Kỳ kế toán",
-      },
-      {
         moduleKey: "settings",
         icon: "Settings",
         label: APP_COPY_VI.systemSetup,
-      },
-      {
-        moduleKey: "feedback",
-        icon: "MessageSquare",
-        label: "Phản ánh khách",
       },
     ],
   },

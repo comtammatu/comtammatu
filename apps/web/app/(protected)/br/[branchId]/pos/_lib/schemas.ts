@@ -173,6 +173,10 @@ export const submitOrderSchema = z.object({
     .string()
     .uuid({ error: "Mã giao dịch không hợp lệ" })
     .optional(),
+  dailyLimitHoldToken: z
+    .string()
+    .uuid({ error: "Mã giữ suất không hợp lệ" })
+    .optional(),
 });
 
 export type SubmitOrderInput = z.infer<typeof submitOrderSchema>;
@@ -197,6 +201,38 @@ export const appendOrderItemsSchema = z.object({
     .string()
     .uuid({ error: "Mã giao dịch không hợp lệ" })
     .optional(),
+  dailyLimitHoldToken: z
+    .string()
+    .uuid({ error: "Mã giữ suất không hợp lệ" })
+    .optional(),
 });
 
 export type AppendOrderItemsInput = z.infer<typeof appendOrderItemsSchema>;
+
+const dailyLimitHoldSourceSchema = z.enum(["pos_cart", "pos_append"]);
+
+export const reserveDailyLimitHoldsSchema = z.object({
+  branchId: z.coerce
+    .number()
+    .int()
+    .positive({ error: "Branch ID không hợp lệ" }),
+  holdToken: z.string().uuid({ error: "Mã giữ suất không hợp lệ" }),
+  items: z.array(cartItemSchema),
+  source: dailyLimitHoldSourceSchema,
+});
+
+export type ReserveDailyLimitHoldsInput = z.infer<
+  typeof reserveDailyLimitHoldsSchema
+>;
+
+export const releaseDailyLimitHoldsSchema = z.object({
+  branchId: z.coerce
+    .number()
+    .int()
+    .positive({ error: "Branch ID không hợp lệ" }),
+  holdToken: z.string().uuid({ error: "Mã giữ suất không hợp lệ" }),
+});
+
+export type ReleaseDailyLimitHoldsInput = z.infer<
+  typeof releaseDailyLimitHoldsSchema
+>;

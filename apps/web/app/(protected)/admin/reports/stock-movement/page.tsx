@@ -1,6 +1,7 @@
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import { loadAuthState } from "@/_lib/auth";
 import { AppPage, AppPageHeader } from "@/components/surface";
+import { messages } from "@lib/messages";
 import { StockMovementClient } from "./stock-movement-client";
 
 export default async function StockMovementReportPage() {
@@ -22,7 +23,7 @@ export default async function StockMovementReportPage() {
     <AppPage>
       <AppPageHeader
         eyebrow={APP_COPY_VI.executiveReporting}
-        title="Biến động tồn kho"
+        title={messages.admin.reports.stockMovement.pageTitle}
       />
       <StockMovementClient
         branches={activeBranches}

@@ -7,8 +7,6 @@
 // NOTE: InvoiceRow lives below — extended with `archived_at` 2026-05-13
 // for the Path D PDF/XML archive feature.
 
-export type FinanceLayoutMode = "simple" | "advanced";
-
 export interface DailyRevenueRow {
   date: string;
   branch_id: number;

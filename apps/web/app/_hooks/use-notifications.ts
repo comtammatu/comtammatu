@@ -101,6 +101,10 @@ export function useNotifications({
     refreshRef.current = refresh;
   }, [refresh]);
 
+  useEffect(() => {
+    void refreshRef.current();
+  }, []);
+
   useRealtimeChannel(
     (supabase) =>
       supabase

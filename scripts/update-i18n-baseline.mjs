@@ -8,19 +8,15 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const webRoot = resolve(repoRoot, "apps/web");
 const outPath = resolve(webRoot, "eslint-i18n-baseline.json");
 
-const result = spawnSync(
-  "pnpm",
-  ["--filter", "@comtammatu/web", "exec", "eslint", ".", "-f", "json"],
-  {
-    cwd: repoRoot,
-    encoding: "utf8",
-    env: {
-      ...process.env,
-      I18N_BASELINE_DISABLE: "1",
-    },
-    maxBuffer: 50 * 1024 * 1024,
+const result = spawnSync("pnpm", ["exec", "eslint", ".", "-f", "json"], {
+  cwd: webRoot,
+  encoding: "utf8",
+  env: {
+    ...process.env,
+    I18N_BASELINE_DISABLE: "1",
   },
-);
+  maxBuffer: 50 * 1024 * 1024,
+});
 
 if (result.error) {
   throw result.error;
@@ -49,7 +45,7 @@ writeFileSync(
       version: 1,
       rule: "i18n/no-inline-vietnamese",
       description:
-        "Baseline for legacy inline Vietnamese JSX copy. New occurrences not listed here still report in pnpm lint.",
+        "Baseline for legacy inline Vietnamese JSX copy. New occurrences not listed here fail pnpm lint.",
       generatedAt: new Date().toISOString().slice(0, 10),
       count: entries.length,
       entries,
@@ -59,4 +55,6 @@ writeFileSync(
   )}\n`,
 );
 
-console.log(`Updated ${relative(repoRoot, outPath)} with ${entries.length} entries.`);
+console.log(
+  `Updated ${relative(repoRoot, outPath)} with ${entries.length} entries.`,
+);

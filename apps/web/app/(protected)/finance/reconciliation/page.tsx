@@ -3,6 +3,7 @@ import { ArrowLeft as IconArrowLeft } from "lucide-react";
 import { createClient } from "@comtammatu/database/supabase/server";
 import { Button } from "@comtammatu/ui/components/button";
 import { AppPage, AppPageHeader } from "@/components/surface";
+import { messages } from "@lib/messages";
 import {
   getVNDateString,
   getVNMonthStartDateString,
@@ -14,6 +15,7 @@ interface Props {
 }
 
 export default async function ReconciliationPage({ searchParams }: Props) {
+  const copy = messages.finance.reconciliation.page;
   const params = await searchParams;
   const supabase = await createClient();
 
@@ -50,13 +52,14 @@ export default async function ReconciliationPage({ searchParams }: Props) {
     <AppPage>
       <Button asChild variant="ghost" size="sm" className="-ml-3 self-start">
         <Link href="/finance">
-          <IconArrowLeft className="mr-1 size-4" /> Quay lại Tài chính
+          <IconArrowLeft data-icon="inline-start" />
+          {messages.finance.common.backToFinance}
         </Link>
       </Button>
       <AppPageHeader
-        eyebrow="Tài chính"
-        title="Đối chiếu sổ phụ ↔ sổ cái"
-        description="So sánh tổng phát sinh sổ phụ (POS, kho, nhân sự, công nợ) với tổng bút toán đã ghi nhận trong sổ cái. Khi có chênh lệch, drilldown để xem chứng từ gốc và bút toán liên quan."
+        eyebrow={copy.eyebrow}
+        title={copy.title}
+        description={copy.description}
       />
 
       <ReconciliationClient

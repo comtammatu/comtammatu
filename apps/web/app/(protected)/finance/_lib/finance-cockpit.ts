@@ -541,7 +541,7 @@ export async function fetchFinanceCockpit(
     fetchInventoryValueByBranch(),
     fetchCashVarianceSummary(params.branch, resolved.start, resolved.end),
     fetchFinanceDashboardSummary(params.branch, resolved.start, resolved.end),
-    fetchTopItems(params.branch, resolved.start.slice(0, 7) + "-01"),
+    fetchTopItems(params.branch, resolved.start, resolved.end),
     fetchOperatingExpenseTotal({
       supabase,
       tenantId: claims.tenant_id,

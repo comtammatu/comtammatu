@@ -8,6 +8,7 @@ import {
   ListChecks as IconListChecks,
   UserCircle as IconUserCircle,
 } from "lucide-react";
+import { cn } from "@comtammatu/ui";
 import { Button } from "@comtammatu/ui/components/button";
 import { messages } from "@lib/messages";
 
@@ -45,10 +46,10 @@ export function BottomNav() {
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 px-2 pt-2 chrome-safe-pb backdrop-blur sm:px-4 lg:hidden print:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t bg-card/95 px-3 pt-2 shadow-sm chrome-safe-pb backdrop-blur lg:hidden print:hidden"
       aria-label={copy.ariaLabel}
     >
-      <div className="no-scrollbar mx-auto flex max-w-4xl items-stretch gap-1 overflow-x-auto">
+      <div className="no-scrollbar mx-auto flex max-w-lg items-stretch gap-1 overflow-x-auto">
         {NAV_ITEMS.map((item) => {
           const active = isActive(pathname, item.href, item.exact);
           const Icon = item.icon;
@@ -58,7 +59,12 @@ export function BottomNav() {
               asChild
               variant={active ? "secondary" : "ghost"}
               size="touch"
-              className="min-w-14 flex-1 flex-col gap-0.5 px-1 text-2xs sm:min-w-16"
+              data-active={active ? "true" : undefined}
+              className={cn(
+                "min-w-0 flex-1 flex-col gap-1 px-1 text-2xs transition-[transform,background-color,color,box-shadow] duration-150 active:translate-y-px",
+                active &&
+                  "shadow-sm motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 motion-safe:duration-150",
+              )}
             >
               <Link href={item.href} aria-current={active ? "page" : undefined}>
                 <Icon data-icon="inline-start" strokeWidth={active ? 2.4 : 2} />

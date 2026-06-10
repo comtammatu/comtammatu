@@ -7,11 +7,8 @@ import {
   isAdminRole,
   isAdminRoutePath,
   isBetaPath,
-  isFeedbackPublicPath,
   isPublicAppPath,
-  normalizeHost,
   PERMISSION_KEYS,
-  resolveHostSurface,
   resolveLegacyRouteRedirectPath,
   resolveModuleFromPath,
   resolvePostLoginRedirect,
@@ -28,11 +25,6 @@ import { getClientIp } from "@lib/network/client-ip";
 // POS-NETWORK-GATE-GRACE-IS-SECURITY-CEILING ("kill-switch is loud, logged
 // in proxy startup"). Vercel log drain captures this for SIEM ingestion.
 let NETWORK_GATE_OFF_WARNED = false;
-
-// Module-level flag — warn once per warm Edge instance when production runs
-// without NEXT_PUBLIC_FEEDBACK_HOST set. Without it, /r/* shares origin with
-// admin → cookie/SW/CSP boundary collapses. Mirrors POS network gate pattern.
-let FEEDBACK_HOST_UNSET_WARNED = false;
 
 /** Create a redirect that preserves Set-Cookie from updateSession response */
 function redirectWithCookies(
@@ -74,59 +66,6 @@ function redirectToDefaultLanding(
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-
-  // Host gate (auth + feedback isolation) — runs BEFORE auth/public-path
-  // checks so the public feedback host cannot serve admin routes even though
-  // proxy short-circuits `isPublicAppPath`. Single chokepoint; downstream
-  // layouts/pages MUST NOT re-implement this.
-  //
-  // Opt-in via env: when NEXT_PUBLIC_FEEDBACK_HOST is unset, gate is a no-op
-  // and behaviour matches pre-split (single host serves both surfaces). Set
-  // both NEXT_PUBLIC_FEEDBACK_HOST and NEXT_PUBLIC_APP_HOST in production to
-  // enforce origin isolation between /r/* (public) and admin/POS.
-  const feedbackHost = process.env.NEXT_PUBLIC_FEEDBACK_HOST;
-  const appHost = process.env.NEXT_PUBLIC_APP_HOST;
-  const hostHeader = request.headers.get("host");
-  const hostSurface = resolveHostSurface(hostHeader, {
-    feedbackHost,
-    appHost,
-  });
-
-  // Loud warning once per warm Edge instance when production runs without the
-  // feedback host configured. Mirrors POS network gate kill-switch pattern.
-  if (
-    process.env.NODE_ENV === "production" &&
-    !feedbackHost &&
-    !FEEDBACK_HOST_UNSET_WARNED
-  ) {
-    console.warn(
-      "[host-gate] NEXT_PUBLIC_FEEDBACK_HOST unset in production — feedback /r/* shares origin with admin app. See regressions.md FEEDBACK-HOST-SPLIT-COOKIE-DOMAIN-MUST-BE-HOST-ONLY.",
-    );
-    FEEDBACK_HOST_UNSET_WARNED = true;
-  }
-
-  if (hostSurface === "feedback") {
-    // Feedback host: only `/r/*` is reachable. Everything else (admin, login,
-    // /api/*, /sw.js, /manifest.webmanifest, /favicon-related root) returns
-    // 404 — admin paths must not enumerate on the public origin.
-    if (!isFeedbackPublicPath(pathname)) {
-      return new NextResponse(null, { status: 404 });
-    }
-    // /r/* on feedback host — bypass auth + skip session refresh entirely so
-    // no `sb-*-auth-token` cookie is ever set on the feedback origin.
-    return NextResponse.next();
-  }
-
-  if (hostSurface === "app" && feedbackHost && isFeedbackPublicPath(pathname)) {
-    // App host receiving /r/* (e.g. legacy printed QR or shared link) →
-    // 308 to feedback host so the canonical origin serves the form. 308 keeps
-    // method + body so any future POST to /r/<token> redirects intact.
-    const target = new URL(
-      pathname + request.nextUrl.search,
-      `https://${normalizeHost(feedbackHost) ?? feedbackHost}`,
-    );
-    return NextResponse.redirect(target, 308);
-  }
 
   const surface: AuthSurface = isBetaPath(pathname) ? "beta" : "legacy";
 

@@ -141,8 +141,11 @@ export type Database = {
           attendance_record_id: number
           completed_at: string | null
           created_at: string
+          done_definition: string
           id: number
           is_done: boolean
+          is_required: boolean
+          phase: string
           sort_order: number
           template_item_id: number | null
           tenant_id: number
@@ -153,8 +156,11 @@ export type Database = {
           attendance_record_id: number
           completed_at?: string | null
           created_at?: string
+          done_definition?: string
           id?: never
           is_done?: boolean
+          is_required?: boolean
+          phase?: string
           sort_order: number
           template_item_id?: number | null
           tenant_id: number
@@ -165,8 +171,11 @@ export type Database = {
           attendance_record_id?: number
           completed_at?: string | null
           created_at?: string
+          done_definition?: string
           id?: never
           is_done?: boolean
+          is_required?: boolean
+          phase?: string
           sort_order?: number
           template_item_id?: number | null
           tenant_id?: number
@@ -204,6 +213,7 @@ export type Database = {
           check_in_photo_path: string | null
           check_out: string | null
           check_out_code_verified: boolean
+          checklist_template_id: number | null
           checkout_approval_note: string | null
           checkout_approval_target_roles: string[]
           checkout_approved_at: string | null
@@ -231,6 +241,7 @@ export type Database = {
           check_in_photo_path?: string | null
           check_out?: string | null
           check_out_code_verified?: boolean
+          checklist_template_id?: number | null
           checkout_approval_note?: string | null
           checkout_approval_target_roles?: string[]
           checkout_approved_at?: string | null
@@ -258,6 +269,7 @@ export type Database = {
           check_in_photo_path?: string | null
           check_out?: string | null
           check_out_code_verified?: boolean
+          checklist_template_id?: number | null
           checkout_approval_note?: string | null
           checkout_approval_target_roles?: string[]
           checkout_approved_at?: string | null
@@ -293,6 +305,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_print_agent_fleet"
             referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "attendance_records_checklist_template_id_fkey"
+            columns: ["checklist_template_id"]
+            isOneToOne: false
+            referencedRelation: "shift_checklist_templates"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "attendance_records_employee_id_fkey"
@@ -539,6 +558,96 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_print_agent_fleet"
             referencedColumns: ["branch_id"]
+          },
+        ]
+      }
+      branch_menu_item_daily_holds: {
+        Row: {
+          branch_id: number
+          committed_at: string | null
+          created_at: string
+          expires_at: string
+          held_by: string
+          hold_token: string
+          id: number
+          limit_date: string
+          menu_item_id: number
+          order_id: number | null
+          quantity: number
+          released_at: string | null
+          source: string
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          branch_id: number
+          committed_at?: string | null
+          created_at?: string
+          expires_at: string
+          held_by: string
+          hold_token: string
+          id?: never
+          limit_date?: string
+          menu_item_id: number
+          order_id?: number | null
+          quantity: number
+          released_at?: string | null
+          source?: string
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: number
+          committed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          held_by?: string
+          hold_token?: string
+          id?: never
+          limit_date?: string
+          menu_item_id?: number
+          order_id?: number | null
+          quantity?: number
+          released_at?: string | null
+          source?: string
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_menu_item_daily_holds_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_menu_item_daily_holds_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "branch_menu_item_daily_holds_menu_item_id_fkey"
+            columns: ["menu_item_id"]
+            isOneToOne: false
+            referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_menu_item_daily_holds_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_menu_item_daily_holds_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -938,6 +1047,7 @@ export type Database = {
           base_salary: number | null
           contract_type: string | null
           created_at: string
+          default_checklist_template_id: number | null
           dependents_count: number
           employee_code: string | null
           id: number
@@ -955,6 +1065,7 @@ export type Database = {
           base_salary?: number | null
           contract_type?: string | null
           created_at?: string
+          default_checklist_template_id?: number | null
           dependents_count?: number
           employee_code?: string | null
           id?: never
@@ -972,6 +1083,7 @@ export type Database = {
           base_salary?: number | null
           contract_type?: string | null
           created_at?: string
+          default_checklist_template_id?: number | null
           dependents_count?: number
           employee_code?: string | null
           id?: never
@@ -984,6 +1096,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "employees_default_checklist_template_id_fkey"
+            columns: ["default_checklist_template_id"]
+            isOneToOne: false
+            referencedRelation: "shift_checklist_templates"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "employees_profile_id_fkey"
             columns: ["profile_id"]
@@ -1083,376 +1202,6 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      feedback_branch_review_settings: {
-        Row: {
-          branch_id: number
-          google_review_url: string | null
-          tenant_id: number
-          updated_at: string
-          updated_by: number | null
-        }
-        Insert: {
-          branch_id: number
-          google_review_url?: string | null
-          tenant_id: number
-          updated_at?: string
-          updated_by?: number | null
-        }
-        Update: {
-          branch_id?: number
-          google_review_url?: string | null
-          tenant_id?: number
-          updated_at?: string
-          updated_by?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "feedback_branch_review_settings_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "feedback_branch_review_settings_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "feedback_branch_review_settings_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      feedback_daily_reports: {
-        Row: {
-          avg_rating: number | null
-          branch_id: number | null
-          feedback_count: number
-          generated_at: string
-          id: number
-          llm_cost_usd: number
-          llm_model: string
-          metrics_json: Json
-          report_date: string
-          report_md: string
-          tenant_id: number
-        }
-        Insert: {
-          avg_rating?: number | null
-          branch_id?: number | null
-          feedback_count?: number
-          generated_at?: string
-          id?: never
-          llm_cost_usd?: number
-          llm_model: string
-          metrics_json?: Json
-          report_date: string
-          report_md: string
-          tenant_id: number
-        }
-        Update: {
-          avg_rating?: number | null
-          branch_id?: number | null
-          feedback_count?: number
-          generated_at?: string
-          id?: never
-          llm_cost_usd?: number
-          llm_model?: string
-          metrics_json?: Json
-          report_date?: string
-          report_md?: string
-          tenant_id?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "feedback_daily_reports_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "feedback_daily_reports_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-        ]
-      }
-      feedback_photo_cleanup_queue: {
-        Row: {
-          bucket_id: string
-          feedback_id: number | null
-          id: number
-          last_error: string | null
-          path: string
-          processed_at: string | null
-          queued_at: string
-          reason: string
-          tenant_id: number
-        }
-        Insert: {
-          bucket_id?: string
-          feedback_id?: number | null
-          id?: never
-          last_error?: string | null
-          path: string
-          processed_at?: string | null
-          queued_at?: string
-          reason: string
-          tenant_id: number
-        }
-        Update: {
-          bucket_id?: string
-          feedback_id?: number | null
-          id?: never
-          last_error?: string | null
-          path?: string
-          processed_at?: string | null
-          queued_at?: string
-          reason?: string
-          tenant_id?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "feedback_photo_cleanup_queue_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      feedback_qr_codes: {
-        Row: {
-          branch_id: number
-          created_at: string
-          created_by: number | null
-          id: number
-          is_active: boolean
-          label: string
-          rotated_at: string | null
-          table_id: number | null
-          tenant_id: number
-          token: string
-        }
-        Insert: {
-          branch_id: number
-          created_at?: string
-          created_by?: number | null
-          id?: never
-          is_active?: boolean
-          label: string
-          rotated_at?: string | null
-          table_id?: number | null
-          tenant_id: number
-          token: string
-        }
-        Update: {
-          branch_id?: number
-          created_at?: string
-          created_by?: number | null
-          id?: never
-          is_active?: boolean
-          label?: string
-          rotated_at?: string | null
-          table_id?: number | null
-          tenant_id?: number
-          token?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "feedback_qr_codes_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "feedback_qr_codes_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "feedback_qr_codes_table_id_fkey"
-            columns: ["table_id"]
-            isOneToOne: false
-            referencedRelation: "tables"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      feedback_settings: {
-        Row: {
-          ai_monthly_budget_usd: number
-          daily_report_hour_local: number
-          google_review_url: string | null
-          push_mode: string
-          tenant_id: number
-          threshold_rating: number
-          updated_at: string
-          updated_by: number | null
-        }
-        Insert: {
-          ai_monthly_budget_usd?: number
-          daily_report_hour_local?: number
-          google_review_url?: string | null
-          push_mode?: string
-          tenant_id: number
-          threshold_rating?: number
-          updated_at?: string
-          updated_by?: number | null
-        }
-        Update: {
-          ai_monthly_budget_usd?: number
-          daily_report_hour_local?: number
-          google_review_url?: string | null
-          push_mode?: string
-          tenant_id?: number
-          threshold_rating?: number
-          updated_at?: string
-          updated_by?: number | null
-        }
-        Relationships: []
-      }
-      feedbacks: {
-        Row: {
-          ai_categories: string[] | null
-          ai_processed_at: string | null
-          ai_sentiment_score: number | null
-          ai_severity: string | null
-          ai_summary_vi: string | null
-          alert_priority: number
-          alert_sent_telegram_at: string | null
-          branch_id: number
-          channel: string
-          comment: string
-          created_at: string
-          dish_names_snapshot: string[] | null
-          id: number
-          is_suspect: boolean
-          order_id_snapshot: number | null
-          order_total_snapshot: number | null
-          phone: string | null
-          photo_paths: string[]
-          photo_upload_consumed_at: string | null
-          photo_upload_expires_at: string | null
-          photo_upload_token_sha256: string | null
-          qr_code_id: number
-          rating: number
-          server_user_id_snapshot: number | null
-          submit_ip_hash: string | null
-          table_id: number | null
-          tenant_id: number
-          user_agent_short: string | null
-        }
-        Insert: {
-          ai_categories?: string[] | null
-          ai_processed_at?: string | null
-          ai_sentiment_score?: number | null
-          ai_severity?: string | null
-          ai_summary_vi?: string | null
-          alert_priority?: number
-          alert_sent_telegram_at?: string | null
-          branch_id: number
-          channel?: string
-          comment: string
-          created_at?: string
-          dish_names_snapshot?: string[] | null
-          id?: never
-          is_suspect?: boolean
-          order_id_snapshot?: number | null
-          order_total_snapshot?: number | null
-          phone?: string | null
-          photo_paths?: string[]
-          photo_upload_consumed_at?: string | null
-          photo_upload_expires_at?: string | null
-          photo_upload_token_sha256?: string | null
-          qr_code_id: number
-          rating: number
-          server_user_id_snapshot?: number | null
-          submit_ip_hash?: string | null
-          table_id?: number | null
-          tenant_id: number
-          user_agent_short?: string | null
-        }
-        Update: {
-          ai_categories?: string[] | null
-          ai_processed_at?: string | null
-          ai_sentiment_score?: number | null
-          ai_severity?: string | null
-          ai_summary_vi?: string | null
-          alert_priority?: number
-          alert_sent_telegram_at?: string | null
-          branch_id?: number
-          channel?: string
-          comment?: string
-          created_at?: string
-          dish_names_snapshot?: string[] | null
-          id?: never
-          is_suspect?: boolean
-          order_id_snapshot?: number | null
-          order_total_snapshot?: number | null
-          phone?: string | null
-          photo_paths?: string[]
-          photo_upload_consumed_at?: string | null
-          photo_upload_expires_at?: string | null
-          photo_upload_token_sha256?: string | null
-          qr_code_id?: number
-          rating?: number
-          server_user_id_snapshot?: number | null
-          submit_ip_hash?: string | null
-          table_id?: number | null
-          tenant_id?: number
-          user_agent_short?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "feedbacks_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "feedbacks_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "feedbacks_order_id_snapshot_fkey"
-            columns: ["order_id_snapshot"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "feedbacks_qr_code_id_fkey"
-            columns: ["qr_code_id"]
-            isOneToOne: false
-            referencedRelation: "feedback_qr_codes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "feedbacks_table_id_fkey"
-            columns: ["table_id"]
-            isOneToOne: false
-            referencedRelation: "tables"
             referencedColumns: ["id"]
           },
         ]
@@ -2703,6 +2452,86 @@ export type Database = {
           },
         ]
       }
+      leave_requests: {
+        Row: {
+          branch_id: number
+          created_at: string
+          employee_id: number
+          end_date: string
+          id: number
+          leave_type: string
+          reason: string | null
+          rejected_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          start_date: string
+          status: string
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          branch_id: number
+          created_at?: string
+          employee_id: number
+          end_date: string
+          id?: never
+          leave_type?: string
+          reason?: string | null
+          rejected_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          start_date: string
+          status?: string
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: number
+          created_at?: string
+          employee_id?: number
+          end_date?: string
+          id?: never
+          leave_type?: string
+          reason?: string | null
+          rejected_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          start_date?: string
+          status?: string
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leave_requests_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_requests_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_print_agent_fleet"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "leave_requests_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       menu_categories: {
         Row: {
           created_at: string
@@ -3013,6 +2842,119 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "notification_outbox_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_push_deliveries: {
+        Row: {
+          attempt_count: number
+          created_at: string
+          error: string | null
+          last_attempt_at: string | null
+          notification_id: number
+          sent_at: string | null
+          status: string
+          subscription_id: number
+          updated_at: string
+        }
+        Insert: {
+          attempt_count?: number
+          created_at?: string
+          error?: string | null
+          last_attempt_at?: string | null
+          notification_id: number
+          sent_at?: string | null
+          status?: string
+          subscription_id: number
+          updated_at?: string
+        }
+        Update: {
+          attempt_count?: number
+          created_at?: string
+          error?: string | null
+          last_attempt_at?: string | null
+          notification_id?: number
+          sent_at?: string | null
+          status?: string
+          subscription_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_push_deliveries_notification_id_fkey"
+            columns: ["notification_id"]
+            isOneToOne: false
+            referencedRelation: "notifications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_push_deliveries_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "notification_push_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          device_label: string | null
+          disabled_at: string | null
+          endpoint: string
+          failure_count: number
+          id: number
+          last_error: string | null
+          last_seen_at: string
+          last_sent_at: string | null
+          p256dh: string
+          tenant_id: number
+          updated_at: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          device_label?: string | null
+          disabled_at?: string | null
+          endpoint: string
+          failure_count?: number
+          id?: never
+          last_error?: string | null
+          last_seen_at?: string
+          last_sent_at?: string | null
+          p256dh: string
+          tenant_id: number
+          updated_at?: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          device_label?: string | null
+          disabled_at?: string | null
+          endpoint?: string
+          failure_count?: number
+          id?: never
+          last_error?: string | null
+          last_seen_at?: string
+          last_sent_at?: string | null
+          p256dh?: string
+          tenant_id?: number
+          updated_at?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_push_subscriptions_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -5348,6 +5290,7 @@ export type Database = {
       shift_assignments: {
         Row: {
           branch_id: number
+          checklist_template_id: number | null
           created_at: string
           date: string
           employee_id: number
@@ -5357,6 +5300,7 @@ export type Database = {
         }
         Insert: {
           branch_id: number
+          checklist_template_id?: number | null
           created_at?: string
           date: string
           employee_id: number
@@ -5366,6 +5310,7 @@ export type Database = {
         }
         Update: {
           branch_id?: number
+          checklist_template_id?: number | null
           created_at?: string
           date?: string
           employee_id?: number
@@ -5387,6 +5332,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_print_agent_fleet"
             referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "shift_assignments_checklist_template_id_fkey"
+            columns: ["checklist_template_id"]
+            isOneToOne: false
+            referencedRelation: "shift_checklist_templates"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "shift_assignments_employee_id_fkey"
@@ -5414,8 +5366,11 @@ export type Database = {
       shift_checklist_template_items: {
         Row: {
           created_at: string
+          done_definition: string
           id: number
           is_active: boolean
+          is_required: boolean
+          phase: string
           sort_order: number
           template_id: number
           tenant_id: number
@@ -5423,8 +5378,11 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          done_definition?: string
           id?: never
           is_active?: boolean
+          is_required?: boolean
+          phase?: string
           sort_order: number
           template_id: number
           tenant_id: number
@@ -5432,8 +5390,11 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          done_definition?: string
           id?: never
           is_active?: boolean
+          is_required?: boolean
+          phase?: string
           sort_order?: number
           template_id?: number
           tenant_id?: number
@@ -5458,29 +5419,32 @@ export type Database = {
       }
       shift_checklist_templates: {
         Row: {
-          branch_id: number
+          branch_id: number | null
           created_at: string
           id: number
           is_active: boolean
           name: string
+          role_code: string | null
           tenant_id: number
           updated_at: string
         }
         Insert: {
-          branch_id: number
+          branch_id?: number | null
           created_at?: string
           id?: never
           is_active?: boolean
           name?: string
+          role_code?: string | null
           tenant_id: number
           updated_at?: string
         }
         Update: {
-          branch_id?: number
+          branch_id?: number | null
           created_at?: string
           id?: never
           is_active?: boolean
           name?: string
+          role_code?: string | null
           tenant_id?: number
           updated_at?: string
         }
@@ -7800,105 +7764,6 @@ export type Database = {
           },
         ]
       }
-      telegram_destinations: {
-        Row: {
-          branch_id: number | null
-          chat_id: string
-          consecutive_failures: number
-          created_at: string
-          created_by: number | null
-          id: number
-          is_active: boolean
-          label: string
-          tenant_id: number
-        }
-        Insert: {
-          branch_id?: number | null
-          chat_id: string
-          consecutive_failures?: number
-          created_at?: string
-          created_by?: number | null
-          id?: never
-          is_active?: boolean
-          label: string
-          tenant_id: number
-        }
-        Update: {
-          branch_id?: number | null
-          chat_id?: string
-          consecutive_failures?: number
-          created_at?: string
-          created_by?: number | null
-          id?: never
-          is_active?: boolean
-          label?: string
-          tenant_id?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "telegram_destinations_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "telegram_destinations_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-        ]
-      }
-      telegram_outbox: {
-        Row: {
-          attempts: number
-          created_at: string
-          feedback_id: number
-          id: number
-          last_error: string | null
-          next_retry_at: string
-          sent_at: string | null
-          status: string
-        }
-        Insert: {
-          attempts?: number
-          created_at?: string
-          feedback_id: number
-          id?: never
-          last_error?: string | null
-          next_retry_at?: string
-          sent_at?: string | null
-          status?: string
-        }
-        Update: {
-          attempts?: number
-          created_at?: string
-          feedback_id?: number
-          id?: never
-          last_error?: string | null
-          next_retry_at?: string
-          sent_at?: string | null
-          status?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "telegram_outbox_feedback_id_fkey"
-            columns: ["feedback_id"]
-            isOneToOne: true
-            referencedRelation: "feedbacks"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "telegram_outbox_feedback_id_fkey"
-            columns: ["feedback_id"]
-            isOneToOne: true
-            referencedRelation: "feedbacks_with_masked_phone"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       tenant_po_counters: {
         Row: {
           next_seq: number
@@ -8140,123 +8005,6 @@ export type Database = {
       }
     }
     Views: {
-      feedbacks_with_masked_phone: {
-        Row: {
-          ai_categories: string[] | null
-          ai_processed_at: string | null
-          ai_sentiment_score: number | null
-          ai_severity: string | null
-          ai_summary_vi: string | null
-          alert_priority: number | null
-          alert_sent_telegram_at: string | null
-          branch_id: number | null
-          channel: string | null
-          comment: string | null
-          created_at: string | null
-          dish_names_snapshot: string[] | null
-          has_ip_hash: boolean | null
-          id: number | null
-          is_suspect: boolean | null
-          order_id_snapshot: number | null
-          order_total_snapshot: number | null
-          phone: string | null
-          photo_paths: string[] | null
-          qr_code_id: number | null
-          rating: number | null
-          server_user_id_snapshot: number | null
-          table_id: number | null
-          tenant_id: number | null
-        }
-        Insert: {
-          ai_categories?: string[] | null
-          ai_processed_at?: string | null
-          ai_sentiment_score?: number | null
-          ai_severity?: string | null
-          ai_summary_vi?: string | null
-          alert_priority?: number | null
-          alert_sent_telegram_at?: string | null
-          branch_id?: number | null
-          channel?: string | null
-          comment?: string | null
-          created_at?: string | null
-          dish_names_snapshot?: string[] | null
-          has_ip_hash?: never
-          id?: number | null
-          is_suspect?: boolean | null
-          order_id_snapshot?: number | null
-          order_total_snapshot?: number | null
-          phone?: never
-          photo_paths?: string[] | null
-          qr_code_id?: number | null
-          rating?: number | null
-          server_user_id_snapshot?: number | null
-          table_id?: number | null
-          tenant_id?: number | null
-        }
-        Update: {
-          ai_categories?: string[] | null
-          ai_processed_at?: string | null
-          ai_sentiment_score?: number | null
-          ai_severity?: string | null
-          ai_summary_vi?: string | null
-          alert_priority?: number | null
-          alert_sent_telegram_at?: string | null
-          branch_id?: number | null
-          channel?: string | null
-          comment?: string | null
-          created_at?: string | null
-          dish_names_snapshot?: string[] | null
-          has_ip_hash?: never
-          id?: number | null
-          is_suspect?: boolean | null
-          order_id_snapshot?: number | null
-          order_total_snapshot?: number | null
-          phone?: never
-          photo_paths?: string[] | null
-          qr_code_id?: number | null
-          rating?: number | null
-          server_user_id_snapshot?: number | null
-          table_id?: number | null
-          tenant_id?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "feedbacks_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "feedbacks_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "feedbacks_order_id_snapshot_fkey"
-            columns: ["order_id_snapshot"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "feedbacks_qr_code_id_fkey"
-            columns: ["qr_code_id"]
-            isOneToOne: false
-            referencedRelation: "feedback_qr_codes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "feedbacks_table_id_fkey"
-            columns: ["table_id"]
-            isOneToOne: false
-            referencedRelation: "tables"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       mv_daily_revenue: {
         Row: {
           branch_id: number | null
@@ -8649,6 +8397,15 @@ export type Database = {
         Args: { p_idempotency_key?: string; p_items: Json; p_order_id: number }
         Returns: Json
       }
+      append_order_items_with_daily_limit_hold: {
+        Args: {
+          p_daily_limit_hold_token?: string
+          p_idempotency_key?: string
+          p_items: Json
+          p_order_id: number
+        }
+        Returns: Json
+      }
       apply_credit_note_to_invoice: {
         Args: { p_amount: number; p_credit_id: number; p_invoice_id: number }
         Returns: Json
@@ -8680,6 +8437,10 @@ export type Database = {
           p_valid_until?: string
         }
         Returns: number
+      }
+      approve_leave_request: {
+        Args: { p_request_id: number }
+        Returns: undefined
       }
       approve_shift_request: { Args: { p_request_id: number }; Returns: number }
       approve_waste: {
@@ -8740,23 +8501,36 @@ export type Database = {
         }
         Returns: Json
       }
-      bulk_mark_feedback_suspect: {
-        Args: { p_feedback_ids: number[]; p_is_suspect: boolean }
-        Returns: number
-      }
-      bulk_upsert_shift_assignments: {
-        Args: {
-          p_branch_id: number
-          p_dates: string[]
-          p_employee_ids: number[]
-          p_mode?: string
-          p_shift_id: number
-          p_tenant_id: number
-        }
-        Returns: Json
-      }
+      bulk_upsert_shift_assignments:
+        | {
+            Args: {
+              p_branch_id: number
+              p_dates: string[]
+              p_employee_ids: number[]
+              p_mode?: string
+              p_shift_id: number
+              p_tenant_id: number
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_branch_id: number
+              p_checklist_template_id?: number
+              p_dates: string[]
+              p_employee_ids: number[]
+              p_mode?: string
+              p_shift_id: number
+              p_tenant_id: number
+            }
+            Returns: Json
+          }
       bump_kds_ticket: { Args: { p_ticket_id: number }; Returns: string }
       can_access_branch: { Args: { p_branch_id: number }; Returns: boolean }
+      cancel_leave_request: {
+        Args: { p_request_id: number }
+        Returns: undefined
+      }
       cancel_order: {
         Args: { p_order_id: number; p_reason: string }
         Returns: Json
@@ -8935,6 +8709,22 @@ export type Database = {
           p_branch_id: number
           p_created_by: string
           p_customer_count?: number
+          p_idempotency_key?: string
+          p_items: Json
+          p_note?: string
+          p_order_type?: string
+          p_pos_session_id?: number
+          p_table_id?: number
+          p_tenant_id: number
+        }
+        Returns: Json
+      }
+      create_order_with_daily_limit_hold: {
+        Args: {
+          p_branch_id: number
+          p_created_by: string
+          p_customer_count?: number
+          p_daily_limit_hold_token?: string
           p_idempotency_key?: string
           p_items: Json
           p_note?: string
@@ -9152,11 +8942,6 @@ export type Database = {
       extend_express_window: {
         Args: { p_branch_id: number; p_minutes: number; p_note: string }
         Returns: string
-      }
-      feedback_retention_cleanup: { Args: never; Returns: Json }
-      feedback_validate_categories: {
-        Args: { p_cats: string[] }
-        Returns: boolean
       }
       finalize_paid_order: {
         Args: { p_actor_id?: string; p_order_id: number }
@@ -9460,23 +9245,42 @@ export type Database = {
           unit: string
         }[]
       }
-      get_top_items: {
-        Args: {
-          p_branch_id?: number
-          p_limit?: number
-          p_period_start?: string
-        }
-        Returns: {
-          branch_id: number
-          item_name: string
-          menu_item_id: number
-          period_end: string
-          period_start: string
-          quantity_sold: number
-          revenue: number
-          tenant_id: number
-        }[]
-      }
+      get_top_items:
+        | {
+            Args: {
+              p_branch_id?: number
+              p_limit?: number
+              p_period_start?: string
+            }
+            Returns: {
+              branch_id: number
+              item_name: string
+              menu_item_id: number
+              period_end: string
+              period_start: string
+              quantity_sold: number
+              revenue: number
+              tenant_id: number
+            }[]
+          }
+        | {
+            Args: {
+              p_branch_id: number
+              p_end_date: string
+              p_limit?: number
+              p_start_date: string
+            }
+            Returns: {
+              branch_id: number
+              item_name: string
+              menu_item_id: number
+              period_end: string
+              period_start: string
+              quantity_sold: number
+              revenue: number
+              tenant_id: number
+            }[]
+          }
       gl_reconciliation: {
         Args: { p_month: number; p_tenant_id: number; p_year: number }
         Returns: Json
@@ -9592,6 +9396,13 @@ export type Database = {
       period_status_at: {
         Args: { p_at: string; p_tenant_id: number }
         Returns: string
+      }
+      pos_daily_limit_item_quantities: {
+        Args: { p_items: Json }
+        Returns: {
+          menu_item_id: number
+          quantity: number
+        }[]
       }
       pos_enrich_order_sides: {
         Args: { p_main_item_id: number; p_sides: Json; p_tenant_id: number }
@@ -9736,9 +9547,17 @@ export type Database = {
           status: string
         }[]
       }
+      reject_leave_request: {
+        Args: { p_reason?: string; p_request_id: number }
+        Returns: undefined
+      }
       reject_shift_request: {
         Args: { p_reason?: string; p_request_id: number }
         Returns: undefined
+      }
+      release_branch_menu_daily_holds: {
+        Args: { p_branch_id: number; p_hold_token: string }
+        Returns: Json
       }
       release_table: { Args: { p_table_id: number }; Returns: undefined }
       release_zone_lock: {
@@ -9765,6 +9584,16 @@ export type Database = {
           p_vat_rate: number
         }
         Returns: number
+      }
+      reserve_branch_menu_daily_holds: {
+        Args: {
+          p_branch_id: number
+          p_hold_token: string
+          p_items: Json
+          p_source?: string
+          p_ttl_seconds?: number
+        }
+        Returns: Json
       }
       resolve_branch_printer_for_type: {
         Args: { p_branch_id: number; p_print_type: string; p_tenant_id: number }
@@ -9935,17 +9764,15 @@ export type Database = {
         Args: { p_counts: Json; p_round_no: number; p_session_id: number }
         Returns: Json
       }
-      submit_feedback: {
+      submit_leave_request: {
         Args: {
-          p_comment: string
-          p_ip_hash?: string
-          p_phone?: string
-          p_photo_paths?: string[]
-          p_rating: number
-          p_token: string
-          p_user_agent_short?: string
+          p_branch_id: number
+          p_end_date: string
+          p_leave_type?: string
+          p_reason?: string
+          p_start_date: string
         }
-        Returns: Json
+        Returns: number
       }
       submit_shift_request: {
         Args: {
@@ -10060,7 +9887,13 @@ export type Database = {
         Returns: Json
       }
       upsert_shift_checklist_template: {
-        Args: { p_branch_id: number; p_items: string[]; p_tenant_id: number }
+        Args: {
+          p_branch_id: number
+          p_items: Json
+          p_name: string
+          p_template_id: number
+          p_tenant_id: number
+        }
         Returns: number
       }
       validate_journal_balance: {

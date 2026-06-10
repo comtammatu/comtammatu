@@ -207,6 +207,28 @@
   --tier-note-foreground: oklch(0.214 0.009 43.1);
 }
 
+/* Sonner operational preset: keep the dismiss target inside the toast. */
+[data-sonner-toast][data-styled="true"].cn-toast {
+  padding-inline-end: 2.75rem;
+}
+
+[data-sonner-toast][data-styled="true"] .cn-toast-close {
+  top: 0.5rem;
+  right: 0.5rem;
+  left: auto;
+  width: 2rem;
+  height: 2rem;
+  transform: none;
+  border-color: var(--border);
+  background: var(--background);
+  color: var(--foreground);
+}
+
+[data-sonner-toast][data-styled="true"] .cn-toast-close:hover {
+  background: var(--muted);
+  border-color: var(--border);
+}
+
 /* ============================================================
  * ZONE C — APP UTILITIES (variants, font, base)
  * Inlined byte-equivalent of `shadcn/tailwind.css` (shadcn 4.8.0)

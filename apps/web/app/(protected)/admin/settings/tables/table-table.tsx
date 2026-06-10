@@ -46,6 +46,7 @@ import {
   STATES_VI,
   TABLE_VI,
 } from "@comtammatu/shared/messages";
+import { messages } from "@lib/messages";
 import { TableEmptyStateRow } from "../../components/table-empty-state-row";
 
 export interface TableRow {
@@ -53,7 +54,6 @@ export interface TableRow {
   branch_id: number;
   zone_id: number | null;
   number: number;
-  capacity: number;
   status: string;
   zone_name: string | null;
 }
@@ -76,7 +76,7 @@ export function TableTable({ tables, zones }: TableTableProps) {
     if (!result.success) {
       toast.error(result.error);
     } else {
-      toast.success(`${STATES_VI.deleted} bàn`);
+      toast.success(`${STATES_VI.deleted} ${TABLE_VI.long.toLowerCase()}`);
       setDeleteId(null);
     }
   }
@@ -89,7 +89,6 @@ export function TableTable({ tables, zones }: TableTableProps) {
             <TRow>
               <TableHead>{TABLE_VI.long}</TableHead>
               <TableHead>{TABLE_VI.area}</TableHead>
-              <TableHead className="hidden md:table-cell">Sức chứa</TableHead>
               <TableHead>{FORM_VI.status}</TableHead>
               <TableHead className="w-12" />
             </TRow>
@@ -97,8 +96,8 @@ export function TableTable({ tables, zones }: TableTableProps) {
           <TableBody>
             {tables.length === 0 && (
               <TableEmptyStateRow
-                colSpan={5}
-                title="Chưa có bàn nào"
+                colSpan={4}
+                title={messages.settings.tables.emptyTitle}
                 icon={
                   <IconToolsKitchen className="mx-auto size-8 text-muted-foreground" />
                 }
@@ -110,13 +109,12 @@ export function TableTable({ tables, zones }: TableTableProps) {
                 className={pendingDeleteId === table.id ? "opacity-60" : ""}
               >
                 <TableCell>
-                  <span className="font-medium">Bàn {table.number}</span>
+                  <span className="font-medium">
+                    {messages.settings.tables.tableLabel(table.number)}
+                  </span>
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   {table.zone_name ?? "—"}
-                </TableCell>
-                <TableCell className="hidden text-muted-foreground md:table-cell">
-                  {table.capacity} người
                 </TableCell>
                 <TableCell>
                   <Badge
@@ -173,9 +171,11 @@ export function TableTable({ tables, zones }: TableTableProps) {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Xóa bàn?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {messages.settings.tables.deleteTitle}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Bàn sẽ bị xóa vĩnh viễn. Hành động này không thể hòan tác.
+              {messages.settings.tables.deleteDescription}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

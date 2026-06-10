@@ -17,15 +17,12 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { Plus as IconPlus } from "lucide-react";
 import { createPayrollPeriod, fetchPayrollPeriods } from "../payroll-actions";
 import type { PayrollPeriodRow } from "./page";
-import { ERRORS_VI, FORM_VI } from "@comtammatu/shared/messages";
+import { ERRORS_VI } from "@comtammatu/shared/messages";
 import { formatVNDate, getVNMonthYear } from "@comtammatu/shared/time";
+import { messages } from "@lib/messages";
 
-const STATUS_LABELS: Record<string, string> = {
-  draft: "Nháp",
-  calculated: "Đã tính",
-  approved: "Đã duyệt",
-  paid: "Đã trả",
-};
+const copy = messages.hr.payroll.list;
+const statusLabels = messages.hr.payroll.statusLabels;
 
 const STATUS_VARIANTS: Record<
   string,
@@ -53,7 +50,7 @@ export function PayrollListClient({
         year: now.year,
       });
       if (result.success) {
-        toast.success("Đã tạo kỳ lương");
+        toast.success(copy.createdToast);
         const reload = await fetchPayrollPeriods();
         if (reload.success) {
           setPeriods((reload.data ?? []) as PayrollPeriodRow[]);
@@ -68,7 +65,7 @@ export function PayrollListClient({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          {periods.length} kỳ lương
+          {copy.count(periods.length)}
         </p>
         <Button onClick={handleCreate} disabled={isPending}>
           {isPending ? (
@@ -76,7 +73,7 @@ export function PayrollListClient({
           ) : (
             <IconPlus className="mr-2 size-4" />
           )}
-          Tạo kỳ lương tháng này
+          {copy.createCurrentMonth}
         </Button>
       </div>
 
@@ -84,10 +81,10 @@ export function PayrollListClient({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Kỳ</TableHead>
-              <TableHead>{FORM_VI.status}</TableHead>
-              <TableHead>Duyệt lúc</TableHead>
-              <TableHead>Trả lúc</TableHead>
+              <TableHead>{copy.period}</TableHead>
+              <TableHead>{copy.status}</TableHead>
+              <TableHead>{copy.approvedAt}</TableHead>
+              <TableHead>{copy.paidAt}</TableHead>
               <TableHead />
             </TableRow>
           </TableHeader>
@@ -98,18 +95,19 @@ export function PayrollListClient({
                   colSpan={5}
                   className="py-8 text-center text-muted-foreground"
                 >
-                  Chưa có kỳ lương nào
+                  {copy.empty}
                 </TableCell>
               </TableRow>
             )}
             {periods.map((p) => (
               <TableRow key={p.id}>
                 <TableCell className="font-medium">
-                  Tháng {p.period_month}/{p.period_year}
+                  {copy.periodName(p.period_month, p.period_year)}
                 </TableCell>
                 <TableCell>
                   <Badge variant={STATUS_VARIANTS[p.status] ?? "secondary"}>
-                    {STATUS_LABELS[p.status] ?? p.status}
+                    {statusLabels[p.status as keyof typeof statusLabels] ??
+                      p.status}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
@@ -120,7 +118,7 @@ export function PayrollListClient({
                 </TableCell>
                 <TableCell>
                   <Button variant="ghost" size="sm" asChild>
-                    <Link href={`/hr/payroll/${p.id}`}>Chi tiết</Link>
+                    <Link href={`/hr/payroll/${p.id}`}>{copy.details}</Link>
                   </Button>
                 </TableCell>
               </TableRow>

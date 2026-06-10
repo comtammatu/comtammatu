@@ -58,14 +58,17 @@ test("Employee clock client and actions no longer use GPS for clock-in/out", () 
   assert.ok(
     actionSrc.includes("clockInWithPhoto") &&
       actionSrc.includes("toggleChecklistItem") &&
-      actionSrc.includes("requestCheckoutApproval"),
+      actionSrc.includes("requestCheckoutApproval") &&
+      actionSrc.includes("clockOutManagerShift"),
     "expected new Employee Daily Work server actions",
   );
   assert.ok(
-    actionSrc.includes("employee_clock_in_with_checklist") &&
+      actionSrc.includes("employee_clock_in_with_checklist") &&
       actionSrc.includes("employee_request_clock_out") &&
+      actionSrc.includes("!isManagerSimpleAttendanceRole(ctx.claims.user_role)") &&
+      actionSrc.includes("checkout_requested_at: null") &&
       actionSrc.includes(".remove([photoPath])"),
-    "expected clock-in/out to use RPCs and clean up uploaded photo on RPC failure",
+    "expected floor-staff clock-in/out to use RPCs, manager self-checkout to stay direct and scoped, and failed photo rows to clean up",
   );
   assert.ok(
     actionSrc.includes("alreadyRecorded") &&
@@ -97,6 +100,87 @@ test("Employee clock client and actions no longer use GPS for clock-in/out", () 
       `action must not contain ${forbidden}`,
     );
   }
+});
+
+test("Employee checklist templates are managed as HR templates, not roles", () => {
+  const migration = read(
+    "supabase/migrations/20260610170000_hr_checklist_template_library.sql",
+  );
+  const actionSrc = read("apps/web/app/(protected)/employee/clock/actions.ts");
+  const checklistActionSrc = read(
+    "apps/web/app/(protected)/hr/checklist-actions.ts",
+  );
+  const hrClientSrc = read("apps/web/app/(protected)/hr/hr-client.tsx");
+  const employeeTableSrc = read(
+    "apps/web/app/(protected)/hr/employee-table.tsx",
+  );
+  const assignmentTableSrc = read(
+    "apps/web/app/(protected)/hr/shift-assignments-table.tsx",
+  );
+  const branchSettingsPageSrc = read(
+    "apps/web/app/(protected)/br/[branchId]/settings/page.tsx",
+  );
+  const branchSettingsCardSrc = read(
+    "apps/web/app/(protected)/br/[branchId]/settings/attendance-settings-card.tsx",
+  );
+
+  for (const expected of [
+    "ALTER COLUMN branch_id DROP NOT NULL",
+    "Legacy compatibility only. Checklist selection no longer uses role_code.",
+    "default_checklist_template_id bigint",
+    "checklist_template_id bigint",
+    "phase text NOT NULL DEFAULT 'trong_ca'",
+    "done_definition text NOT NULL DEFAULT ''",
+    "is_required boolean NOT NULL DEFAULT true",
+    "v_template_id := COALESCE(v_assignment_template_id, v_employee_template_id)",
+    "p_items jsonb",
+    "AND i.is_required = true",
+    "p_checklist_template_id bigint DEFAULT NULL",
+    "v_source.checklist_template_id",
+  ]) {
+    assert.ok(migration.includes(expected), `expected ${expected}`);
+  }
+
+  for (const templateName of [
+    "Quầy",
+    "Phục vụ",
+    "Nướng",
+    "Phụ bếp",
+    "Tạp vụ",
+  ]) {
+    assert.ok(
+      migration.includes(`'${templateName}'`),
+      `expected seed template ${templateName}`,
+    );
+  }
+
+  assert.ok(
+    !actionSrc.includes("p_role_code") &&
+      !migration.includes("t.role_code = v_role_code"),
+    "checklist selection must not depend on system role_code",
+  );
+  assert.ok(
+    checklistActionSrc.includes("saveChecklistTemplate") &&
+      checklistActionSrc.includes("setEmployeeDefaultChecklist") &&
+      checklistActionSrc.includes('"upsert_shift_checklist_template"') &&
+      checklistActionSrc.includes("doneDefinition") &&
+      checklistActionSrc.includes("isRequired"),
+    "HR checklist actions must save templates through the JSON RPC and set employee defaults",
+  );
+  assert.ok(
+    hrClientSrc.includes('<TabsTrigger value="checklist">') &&
+      hrClientSrc.includes("ChecklistTemplatesTable") &&
+      employeeTableSrc.includes("Checklist mặc định") &&
+      assignmentTableSrc.includes("Checklist override"),
+    "HR UI must expose template library, employee defaults, and shift overrides",
+  );
+  assert.ok(
+    branchSettingsPageSrc.includes("AttendanceSettingsCard") &&
+      branchSettingsCardSrc.includes('href="/hr"') &&
+      !branchSettingsPageSrc.includes("role_code") &&
+      !branchSettingsCardSrc.includes("AttendanceConfigDialog"),
+    "branch settings hub must route checklist configuration to HR instead of the old role editor",
+  );
 });
 
 test("Employee checkout approval keeps checkout pending until Branch Manager approves", () => {
@@ -156,10 +240,14 @@ test("Employee checkout approval keeps checkout pending until Branch Manager app
   assert.ok(
     workStateSrc.includes('"checkout_pending"') &&
       workStateSrc.includes('"not_required"') &&
+      workStateSrc.includes("managerAttendanceOnly") &&
+      workStateSrc.includes("isManagerSimpleAttendanceRole") &&
       workStateSrc.includes("DEFAULT_ATTENDANCE_ROLES") &&
+      workStateSrc.includes("requiredRemaining") &&
+      workStateSrc.includes("isRequired") &&
       workStateSrc.includes("attendance.checkoutRequestedAt") &&
       workStateSrc.includes("approvalTargetLabel"),
-    "expected work state to expose checkout pending and non-required attendance status",
+    "expected work state to expose floor-staff checkout pending, required-only checklist progress, plus branch-manager attendance-only status",
   );
   assert.ok(
     approvalsPageSrc.includes("CHECKOUT_APPROVER_ROLES") &&

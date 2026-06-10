@@ -8,12 +8,15 @@ import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import { Button } from "@comtammatu/ui/components/button";
 import { AppShell } from "@/components/app-shell";
 import type { ShellNavGroup } from "@/lib/shell-primitives";
+import { messages } from "@lib/messages";
+
+const copy = messages.hr.shell;
 
 const NAV_GROUPS: ShellNavGroup[] = [
   {
-    title: "Nhân sự",
+    title: copy.navTitle,
     items: [
-      { href: "/hr", label: "Nhân viên, ca, công", icon: IconBriefcase },
+      { href: "/hr", label: copy.navMain, icon: IconBriefcase },
     ],
   },
 ];
@@ -33,15 +36,14 @@ export function HRShell({ children, user, role }: HRShellProps) {
       role={role}
       brand={{
         icon: IconBriefcase,
-        subLabel: "Hộ Kinh Doanh",
+        subLabel: copy.brandSubLabel,
         mainLabel: APP_COPY_VI.hrWorkspace,
       }}
       navGroups={NAV_GROUPS}
-      defaultPageTitle="Tổng quan"
+      defaultPageTitle={copy.defaultPageTitle}
       pageHeader={{
         crumbLabel: APP_COPY_VI.hrWorkspaceSubtitle,
-        description:
-          "Theo dõi nhân viên, ca làm và ngày công cho vận hành hằng ngày.",
+        description: copy.pageDescription,
         actions: (
           <Button asChild variant="outline" size="sm">
             <Link href={homeLink.href}>{homeLink.label}</Link>

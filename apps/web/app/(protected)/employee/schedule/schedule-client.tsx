@@ -1,7 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { cn } from "@comtammatu/ui";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@comtammatu/ui/components/alert";
 import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Skeleton } from "@comtammatu/ui/components/skeleton";
@@ -14,6 +20,7 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 import {
+  CalendarPlus as IconCalendarPlus,
   ChevronLeft as IconChevronLeft,
   ChevronRight as IconChevronRight,
   RefreshCw as IconRefresh,
@@ -53,6 +60,13 @@ const ATTENDANCE_STATUS_VARIANTS: Record<string, BadgeProps["variant"]> = {
   half_day: "info",
 };
 
+const ATTENDANCE_DOT_CLASS_NAMES: Record<string, string> = {
+  present: "bg-success",
+  late: "bg-warning",
+  absent: "bg-destructive",
+  half_day: "bg-info",
+};
+
 interface CalendarCell {
   dateStr: string | null;
   dayNumber: number | null;
@@ -89,6 +103,34 @@ function getMonthStartForOffset(monthStartStr: string, delta: number): string {
   if (!parts) return getVNMonthStartDateString();
   const shifted = shiftVNMonth(parts.year, parts.month, delta);
   return formatISODateParts({ ...shifted, day: 1 });
+}
+
+function isDateInViewedMonth(dateStr: string, monthStartStr: string): boolean {
+  const dateParts = parseISODateParts(dateStr);
+  const monthParts = parseISODateParts(monthStartStr);
+  return Boolean(
+    dateParts &&
+    monthParts &&
+    dateParts.year === monthParts.year &&
+    dateParts.month === monthParts.month,
+  );
+}
+
+function getDefaultSelectedDate(
+  monthStartStr: string,
+  data: ScheduleMonthData,
+): string {
+  const todayStr = getVNDateString();
+  if (isDateInViewedMonth(todayStr, monthStartStr)) return todayStr;
+
+  const firstActiveDate = [
+    ...data.shifts.map((shift) => shift.date),
+    ...data.attendance.map((attendance) => attendance.date),
+  ]
+    .filter((dateStr) => isDateInViewedMonth(dateStr, monthStartStr))
+    .sort()[0];
+
+  return firstActiveDate ?? monthStartStr;
 }
 
 function generateMonthCalendarCells(monthStartStr: string): CalendarCell[] {
@@ -137,6 +179,24 @@ function getAttendanceVariant(
   attendance: ScheduleAttendance,
 ): BadgeProps["variant"] {
   return ATTENDANCE_STATUS_VARIANTS[attendance.status] ?? "outline";
+}
+
+function getAttendanceDotClassName(attendance: ScheduleAttendance): string {
+  return ATTENDANCE_DOT_CLASS_NAMES[attendance.status] ?? "bg-muted-foreground";
+}
+
+function createScheduleMaps(data: ScheduleMonthData) {
+  const shiftsByDate = new Map<string, ScheduleShift>();
+  for (const shift of data.shifts) {
+    shiftsByDate.set(shift.date, shift);
+  }
+
+  const attendanceByDate = new Map<string, ScheduleAttendance>();
+  for (const attendance of data.attendance) {
+    attendanceByDate.set(attendance.date, attendance);
+  }
+
+  return { attendanceByDate, shiftsByDate };
 }
 
 const EMPTY_MONTH: ScheduleMonthData = { shifts: [], attendance: [] };
@@ -191,7 +251,7 @@ function ScheduleSkeletonFallback() {
             {copy.monthWeekdays.map((day) => (
               <TableHead
                 key={day}
-                className="h-9 border-l text-center text-xs font-medium whitespace-normal first:border-l-0"
+                className="h-8 border-l text-center text-2xs font-medium whitespace-normal first:border-l-0 sm:h-9 sm:text-xs"
               >
                 {day}
               </TableHead>
@@ -206,10 +266,10 @@ function ScheduleSkeletonFallback() {
                   key={cellIndex}
                   className="border-l border-t p-1 align-top whitespace-normal first:border-l-0"
                 >
-                  <div className="flex min-h-24 flex-col gap-2 rounded-md p-2">
+                  <div className="flex aspect-square flex-col gap-2 rounded-md p-1 sm:aspect-video sm:p-2">
                     <Skeleton className="h-4 w-6" />
                     <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-3 w-3/4" />
+                    <Skeleton className="hidden h-3 w-3/4 sm:block" />
                   </div>
                 </TableCell>
               ))}
@@ -224,31 +284,55 @@ function ScheduleSkeletonFallback() {
 function CalendarCellContent({
   attendance,
   cell,
+  onSelectDate,
+  selected,
   shift,
 }: {
   attendance: ScheduleAttendance | undefined;
   cell: CalendarCell;
+  onSelectDate: (dateStr: string) => void;
+  selected: boolean;
   shift: ScheduleShift | undefined;
 }) {
   if (!cell.dateStr || cell.dayNumber == null) {
     return (
-      <div aria-hidden="true" className="min-h-24 rounded-md bg-muted/30" />
+      <div
+        aria-hidden="true"
+        className="aspect-square rounded-md bg-muted/30 sm:aspect-video"
+      />
     );
   }
 
   const hasClock = Boolean(attendance?.check_in || attendance?.check_out);
+  const ariaParts = [
+    formatDate(cell.dateStr),
+    shift
+      ? `${copy.rowShift}: ${shift.shift_name} ${formatShiftTime(shift)}`
+      : copy.noShiftForDay,
+    attendance
+      ? `${copy.rowAttendance}: ${getAttendanceLabel(attendance)}`
+      : copy.noAttendance,
+  ];
 
   return (
-    <div
+    <button
+      type="button"
+      aria-label={ariaParts.join(". ")}
+      aria-pressed={selected}
+      onClick={() => {
+        if (cell.dateStr) onSelectDate(cell.dateStr);
+      }}
       className={cn(
-        "flex min-h-24 flex-col gap-1 rounded-md p-2",
+        "flex aspect-square w-full flex-col gap-0.5 rounded-md bg-background p-1 text-left transition-[background-color,box-shadow,transform] duration-150 active:translate-y-px motion-safe:hover:-translate-y-px sm:aspect-video sm:gap-1 sm:p-2",
         cell.isToday && "bg-primary/5 ring-1 ring-primary/30",
+        selected &&
+          "bg-info/10 shadow-sm ring-2 ring-info/40 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 motion-safe:duration-150",
       )}
     >
       <div className="flex items-start justify-between gap-1">
         <span
           className={cn(
-            "font-mono text-sm font-semibold tabular-nums",
+            "font-mono text-xs font-semibold tabular-nums sm:text-sm",
             cell.isToday ? "text-primary" : "text-foreground",
           )}
         >
@@ -262,73 +346,77 @@ function CalendarCellContent({
       </div>
 
       <div className="flex min-w-0 flex-col gap-1">
-        <span
-          className={cn(
-            "text-xs font-medium leading-5",
-            !shift && "text-muted-foreground",
-          )}
-        >
-          {shift?.shift_name ?? copy.rest}
-        </span>
-        <span className="font-mono text-xs tabular-nums text-muted-foreground">
-          {shift ? formatShiftTime(shift) : "\u2014"}
-        </span>
+        {shift ? (
+          <>
+            <span className="hidden line-clamp-1 text-xs font-medium leading-5 sm:block">
+              {shift.shift_name}
+            </span>
+            <span className="hidden font-mono text-xs tabular-nums text-muted-foreground sm:block">
+              {formatShiftTime(shift)}
+            </span>
+          </>
+        ) : null}
       </div>
 
-      <div className="mt-auto flex min-w-0 flex-col gap-1">
+      <div className="mt-auto flex min-w-0 items-center gap-1.5">
+        {shift ? (
+          <span
+            className="size-1.5 shrink-0 rounded-full bg-primary"
+            aria-hidden="true"
+          />
+        ) : null}
         {attendance ? (
           <>
+            <span
+              className={cn(
+                "size-1.5 shrink-0 rounded-full",
+                getAttendanceDotClassName(attendance),
+              )}
+              aria-hidden="true"
+            />
             <Badge
               variant={getAttendanceVariant(attendance)}
-              className="max-w-full truncate"
+              className="hidden max-w-full truncate sm:inline-flex"
             >
               {getAttendanceLabel(attendance)}
             </Badge>
             {hasClock ? (
-              <span className="font-mono text-xs tabular-nums text-muted-foreground">
+              <span className="hidden font-mono text-xs tabular-nums text-muted-foreground sm:inline">
                 {copy.checkInShort} {formatTime(attendance.check_in)} {"\u00b7"}{" "}
                 {copy.checkOutShort} {formatTime(attendance.check_out)}
               </span>
             ) : null}
           </>
-        ) : (
-          <span className="text-xs text-muted-foreground">
-            {copy.noAttendance}
-          </span>
-        )}
+        ) : null}
       </div>
-    </div>
+    </button>
   );
 }
 
 function ScheduleMonthCalendarTable({
-  data,
+  attendanceByDate,
   monthStart,
+  onSelectDate,
+  selectedDate,
+  shiftsByDate,
 }: {
-  data: ScheduleMonthData;
+  attendanceByDate: Map<string, ScheduleAttendance>;
   monthStart: string;
+  onSelectDate: (dateStr: string) => void;
+  selectedDate: string;
+  shiftsByDate: Map<string, ScheduleShift>;
 }) {
-  const shiftsByDate = new Map<string, ScheduleShift>();
-  for (const shift of data.shifts) {
-    shiftsByDate.set(shift.date, shift);
-  }
-
-  const attendanceByDate = new Map<string, ScheduleAttendance>();
-  for (const attendance of data.attendance) {
-    attendanceByDate.set(attendance.date, attendance);
-  }
-
   const rows = chunkCalendarRows(generateMonthCalendarCells(monthStart));
 
   return (
-    <div className="rounded-md border bg-card">
+    <div className="rounded-md border bg-card motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-200">
       <Table className="table-fixed border-collapse">
         <TableHeader>
           <TableRow className="bg-muted/40 hover:bg-muted/40">
             {copy.monthWeekdays.map((day) => (
               <TableHead
                 key={day}
-                className="h-9 border-l text-center text-xs font-medium whitespace-normal first:border-l-0"
+                className="h-8 border-l text-center text-2xs font-medium whitespace-normal first:border-l-0 sm:h-9 sm:text-xs"
                 scope="col"
               >
                 {day}
@@ -351,6 +439,8 @@ function ScheduleMonthCalendarTable({
                         : undefined
                     }
                     cell={cell}
+                    onSelectDate={onSelectDate}
+                    selected={cell.dateStr === selectedDate}
                     shift={
                       cell.dateStr ? shiftsByDate.get(cell.dateStr) : undefined
                     }
@@ -365,12 +455,102 @@ function ScheduleMonthCalendarTable({
   );
 }
 
+function SelectedDayDetail({
+  attendance,
+  dateStr,
+  shift,
+}: {
+  attendance: ScheduleAttendance | undefined;
+  dateStr: string;
+  shift: ScheduleShift | undefined;
+}) {
+  const hasClock = Boolean(attendance?.check_in || attendance?.check_out);
+
+  return (
+    <div className="flex flex-col gap-3 rounded-md border bg-background p-3 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-200">
+      <div className="flex min-w-0 items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="font-heading text-sm font-semibold">
+            {copy.selectedDayTitle}
+          </p>
+          <p className="text-xs text-muted-foreground">{formatDate(dateStr)}</p>
+        </div>
+        {dateStr === getVNDateString() ? (
+          <Badge variant="outline">{copy.today}</Badge>
+        ) : null}
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="min-w-0 rounded-md border px-2 py-2 transition-[background-color,border-color] duration-150">
+          <p className="truncate text-2xs font-medium text-muted-foreground">
+            {copy.rowShift}
+          </p>
+          <p className="mt-1 truncate text-sm font-semibold">
+            {shift?.shift_name ?? copy.noShiftForDay}
+          </p>
+        </div>
+        <div className="min-w-0 rounded-md border px-2 py-2 transition-[background-color,border-color] duration-150">
+          <p className="truncate text-2xs font-medium text-muted-foreground">
+            {copy.timeRange}
+          </p>
+          <p className="mt-1 truncate font-mono text-sm font-semibold tabular-nums">
+            {shift ? formatShiftTime(shift) : "\u2014"}
+          </p>
+        </div>
+        <div className="min-w-0 rounded-md border px-2 py-2 transition-[background-color,border-color] duration-150">
+          <p className="truncate text-2xs font-medium text-muted-foreground">
+            {copy.rowAttendance}
+          </p>
+          <p
+            className={cn(
+              "mt-1 truncate text-sm font-semibold",
+              !attendance && "text-muted-foreground",
+            )}
+          >
+            {attendance ? getAttendanceLabel(attendance) : copy.noAttendance}
+          </p>
+        </div>
+        <div className="min-w-0 rounded-md border px-2 py-2 transition-[background-color,border-color] duration-150">
+          <p className="truncate text-2xs font-medium text-muted-foreground">
+            {copy.clockRange}
+          </p>
+          <p
+            className={cn(
+              "mt-1 truncate font-mono text-sm font-semibold tabular-nums",
+              !hasClock && "text-muted-foreground",
+            )}
+          >
+            {hasClock
+              ? `${copy.checkInShort} ${formatTime(attendance?.check_in)} · ${copy.checkOutShort} ${formatTime(attendance?.check_out)}`
+              : "\u2014"}
+          </p>
+        </div>
+      </div>
+
+      <Button
+        asChild
+        variant="outline"
+        size="touch"
+        className="w-full sm:w-fit"
+      >
+        <Link href="/employee/shift-register">
+          <IconCalendarPlus data-icon="inline-start" />
+          {messages.employee.home.shiftRegisterTitle}
+        </Link>
+      </Button>
+    </div>
+  );
+}
+
 export function ScheduleClient({
   initialData,
   initialMonthStart,
 }: ScheduleClientProps) {
   const [monthStart, setMonthStart] = useState(initialMonthStart);
   const [monthData, setMonthData] = useState<ScheduleMonthData>(initialData);
+  const [selectedDate, setSelectedDate] = useState(() =>
+    getDefaultSelectedDate(initialMonthStart, initialData),
+  );
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -391,10 +571,13 @@ export function ScheduleClient({
     startTransition(async () => {
       const result = await fetchMySchedule(newMonthStart);
       if (result.success) {
-        setMonthData(result.data ?? EMPTY_MONTH);
+        const nextData = result.data ?? EMPTY_MONTH;
+        setMonthData(nextData);
+        setSelectedDate(getDefaultSelectedDate(newMonthStart, nextData));
       } else {
         setError(result.error ?? copy.loadError);
         setMonthData(EMPTY_MONTH);
+        setSelectedDate(getDefaultSelectedDate(newMonthStart, EMPTY_MONTH));
       }
     });
   }
@@ -411,101 +594,115 @@ export function ScheduleClient({
     loadMonth(currentMonthStart);
   }
 
+  const { attendanceByDate, shiftsByDate } = createScheduleMaps(monthData);
+  const selectedShift = shiftsByDate.get(selectedDate);
+  const selectedAttendance = attendanceByDate.get(selectedDate);
+
   return (
-    <>
-      <EmployeePanel title={copy.monthPanelTitle}>
-        <div className="flex items-center justify-between gap-2">
+    <EmployeePanel
+      title={formatMonthTitle(monthStart)}
+      description={monthRangeLabel}
+      headerHint={
+        isCurrentMonth ? (
+          <Badge variant="outline">{copy.currentMonth}</Badge>
+        ) : undefined
+      }
+      contentClassName="gap-3"
+    >
+      <div className="flex items-center justify-between gap-2">
+        <Button
+          variant="outline"
+          size="touch"
+          className="w-12 px-0 transition-transform duration-150 active:translate-y-px"
+          onClick={goToPrevMonth}
+          disabled={isPending}
+          aria-label={copy.prevMonth}
+        >
+          <IconChevronLeft />
+        </Button>
+        {!isCurrentMonth ? (
           <Button
-            variant="outline"
-            size="touch"
-            className="w-12 px-0"
-            onClick={goToPrevMonth}
+            type="button"
+            variant="link"
+            size="sm"
+            onClick={goToCurrentMonth}
             disabled={isPending}
-            aria-label={copy.prevMonth}
           >
-            <IconChevronLeft />
+            {copy.currentMonth}
           </Button>
-
-          <div className="flex flex-1 flex-col items-center gap-1 text-center">
-            <p className="font-heading text-base font-semibold">
-              {formatMonthTitle(monthStart)}
-            </p>
-            <p className="font-mono text-xs font-medium tabular-nums text-muted-foreground">
-              {monthRangeLabel}
-            </p>
-            {!isCurrentMonth ? (
-              <Button
-                type="button"
-                variant="link"
-                size="sm"
-                onClick={goToCurrentMonth}
-                disabled={isPending}
-              >
-                {copy.currentMonth}
-              </Button>
-            ) : (
-              <span className="text-xs font-medium text-primary">
-                {copy.currentMonth}
-              </span>
-            )}
-          </div>
-
-          <Button
-            variant="outline"
-            size="touch"
-            className="w-12 px-0"
-            onClick={goToNextMonth}
-            disabled={isPending}
-            aria-label={copy.nextMonth}
-          >
-            <IconChevronRight />
-          </Button>
-        </div>
-      </EmployeePanel>
+        ) : (
+          <span className="text-xs font-medium text-muted-foreground">
+            {copy.calendarAxisLabel}
+          </span>
+        )}
+        <Button
+          variant="outline"
+          size="touch"
+          className="w-12 px-0 transition-transform duration-150 active:translate-y-px"
+          onClick={goToNextMonth}
+          disabled={isPending}
+          aria-label={copy.nextMonth}
+        >
+          <IconChevronRight />
+        </Button>
+      </div>
 
       {error ? (
-        <EmployeePanel
-          title={copy.loadError}
-          description={error}
-          tone="destructive"
-        >
-          <div className="flex">
-            <Button
-              variant="outline"
-              size="touch"
-              className="w-full sm:w-fit"
-              onClick={() => loadMonth(monthStart)}
-              disabled={isPending}
-            >
-              <IconRefresh data-icon="inline-start" />
-              {copy.retry}
-            </Button>
-          </div>
-        </EmployeePanel>
+        <div className="flex flex-col gap-2">
+          <Alert variant="destructive">
+            <AlertTitle>{copy.loadError}</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+          <Button
+            variant="outline"
+            size="touch"
+            className="w-full sm:w-fit"
+            onClick={() => loadMonth(monthStart)}
+            disabled={isPending}
+          >
+            <IconRefresh data-icon="inline-start" />
+            {copy.retry}
+          </Button>
+        </div>
       ) : (
-        <EmployeePanel title={copy.monthListTitle}>
-          <AppBoneyardSkeleton
-            name="employee-schedule-month"
-            loading={isPending}
-            fixture={
-              <ScheduleMonthCalendarTable
-                data={{
+        <AppBoneyardSkeleton
+          name="employee-schedule-month"
+          loading={isPending}
+          fixture={
+            <ScheduleMonthCalendarTable
+              {...createScheduleMaps({
+                shifts: SCHEDULE_SKELETON_FIXTURE_SHIFTS,
+                attendance: SCHEDULE_SKELETON_FIXTURE_ATTENDANCE,
+              })}
+              monthStart={SCHEDULE_SKELETON_FIXTURE_MONTH}
+              onSelectDate={() => undefined}
+              selectedDate={getDefaultSelectedDate(
+                SCHEDULE_SKELETON_FIXTURE_MONTH,
+                {
                   shifts: SCHEDULE_SKELETON_FIXTURE_SHIFTS,
                   attendance: SCHEDULE_SKELETON_FIXTURE_ATTENDANCE,
-                }}
-                monthStart={SCHEDULE_SKELETON_FIXTURE_MONTH}
-              />
-            }
-            fallback={<ScheduleSkeletonFallback />}
-            snapshotConfig={{ excludeSelectors: ["svg"] }}
-          >
-            <ScheduleMonthCalendarTable
-              data={monthData}
-              monthStart={monthStart}
+                },
+              )}
             />
-          </AppBoneyardSkeleton>
-        </EmployeePanel>
+          }
+          fallback={<ScheduleSkeletonFallback />}
+          snapshotConfig={{ excludeSelectors: ["svg"] }}
+        >
+          <ScheduleMonthCalendarTable
+            attendanceByDate={attendanceByDate}
+            monthStart={monthStart}
+            onSelectDate={setSelectedDate}
+            selectedDate={selectedDate}
+            shiftsByDate={shiftsByDate}
+          />
+          <SelectedDayDetail
+            key={selectedDate}
+            attendance={selectedAttendance}
+            dateStr={selectedDate}
+            shift={selectedShift}
+          />
+        </AppBoneyardSkeleton>
       )}
-    </>
+    </EmployeePanel>
   );
 }

@@ -5,6 +5,7 @@ import { admin } from "./admin";
 import { common } from "./common";
 import { employee } from "./employee";
 import { finance } from "./finance";
+import { hr } from "./hr";
 import { inventory } from "./inventory";
 import { notifications } from "./notifications";
 import { payment } from "./payment";
@@ -17,6 +18,7 @@ export const messages = {
   auth,
   employee,
   finance,
+  hr,
   inventory,
   notifications,
   payment,

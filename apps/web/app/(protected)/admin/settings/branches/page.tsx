@@ -18,51 +18,13 @@ export default async function BranchesPage() {
     .order("branch_kind")
     .order("name");
 
-  const { data: checklistTemplates } = await supabase
-    .from("shift_checklist_templates")
-    .select("id, branch_id")
-    .eq("tenant_id", claims.tenant_id)
-    .eq("is_active", true);
-
-  const templateIds = (checklistTemplates ?? []).map((template) => template.id);
-  const { data: checklistItems } =
-    templateIds.length > 0
-      ? await supabase
-          .from("shift_checklist_template_items")
-          .select("template_id, title, sort_order")
-          .eq("tenant_id", claims.tenant_id)
-          .eq("is_active", true)
-          .in("template_id", templateIds)
-          .order("sort_order")
-      : { data: [] };
-
-  const templateBranchById = new Map(
-    (checklistTemplates ?? []).map((template) => [
-      template.id,
-      template.branch_id,
-    ]),
-  );
-  const checklistByBranchId = new Map<number, string[]>();
-  for (const item of checklistItems ?? []) {
-    const branchId = templateBranchById.get(item.template_id);
-    if (!branchId) continue;
-    const list = checklistByBranchId.get(branchId) ?? [];
-    list.push(item.title);
-    checklistByBranchId.set(branchId, list);
-  }
-
-  const branchesWithConfig = (branches ?? []).map((b) => ({
-    ...b,
-    checklistItems: checklistByBranchId.get(b.id) ?? [],
-  }));
-
   return (
     <SettingsPageShell
       title={messages.settings.pages.branchesTitle}
       description={messages.settings.pages.branchCount(branches?.length ?? 0)}
       actions={<AddBranchButton />}
     >
-      <BranchTable branches={branchesWithConfig} />
+      <BranchTable branches={branches ?? []} />
     </SettingsPageShell>
   );
 }

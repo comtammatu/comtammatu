@@ -26,14 +26,22 @@ export const settings = {
     tablesTitle: "Sơ đồ bàn",
     tablesDescription: "Quản lý sơ đồ bàn ăn theo chi nhánh",
   },
+  tables: {
+    emptyTitle: "Chưa có bàn nào",
+    tableLabel: (tableNumber: number | string) => `Bàn ${tableNumber}`,
+    deleteTitle: "Xóa bàn?",
+    deleteDescription:
+      "Bàn sẽ bị xóa vĩnh viễn. Hành động này không thể hoàn tác.",
+  },
   attendance: {
     title: (branchName: string) => `Cấu hình ca làm — ${branchName}`,
     checklistTitle: "Checklist ca làm",
-    checklistLabel: "Mỗi dòng là một việc",
+    checklistLabel: (roleLabel: string) =>
+      `Mỗi dòng là một việc cho ${roleLabel}`,
     checklistDescription:
-      "Checklist được chụp lại khi nhân viên chấm công vào; sửa ở đây không đổi ca đã tạo.",
+      "Checklist được chụp lại khi nhân viên chấm công vào; để trống nếu vai trò này không cần checklist.",
     saveChecklist: "Lưu checklist",
-    checklistSaved: "Đã lưu checklist ca làm",
+    checklistSaved: (roleLabel: string) => `Đã lưu checklist cho ${roleLabel}`,
   },
   network: {
     title: (branchName: string) => `Cổng mạng POS/KDS — ${branchName}`,
@@ -116,6 +124,11 @@ export const settings = {
     hqBadge: "Trụ sở",
     hqDescription:
       "Chi nhánh trụ sở/kho trung tâm không áp dụng cấu hình Khu vực, Bàn, POS hay Máy in. Chỉ Thực đơn ở đây là có ý nghĩa.",
+    attendanceChecklistTitle: "Cấu hình chấm công",
+    attendanceChecklistDescription:
+      "Checklist template và phân công công việc được quản lý trong HR.",
+    attendanceChecklistAction: "Mở HR",
+    attendanceChecklistMetric: "việc",
     menuLimitsTitle: "Hạn mức bán hàng ngày",
     menuLimitsIntroBefore:
       "Đặt số phần tối đa mỗi món bán trong ngày — ví dụ 30 suất Sườn cốt lết. Khi POS đã đặt đủ số phần, món sẽ không chọn được đến hết ngày. Bật",

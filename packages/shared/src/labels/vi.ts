@@ -10,7 +10,6 @@ export type ModuleLabelKey =
   | "staff"
   | "hr"
   | "hr_payroll"
-  | "crm"
   | "finance"
   | "accounting"
   | "reports"
@@ -22,8 +21,7 @@ export type ModuleLabelKey =
   | "branch_menu_limits"
   | "employee"
   | "employee_checkout_approvals"
-  | "notifications"
-  | "feedback";
+  | "notifications";
 
 type SiteLike = {
   branch_kind?: string | null;
@@ -39,9 +37,8 @@ export const MODULE_LABELS_VI: Record<ModuleLabelKey, string> = {
   staff: "Nhân viên",
   hr: "Nhân sự",
   hr_payroll: "Lương",
-  crm: "Khách hàng",
-  finance: "Kế toán",
-  accounting: "Kỳ kế toán",
+  finance: "Tài chính",
+  accounting: "Hỗ trợ khóa kỳ",
   reports: "Báo cáo",
   settings: "Cài đặt",
   pos: "POS",
@@ -52,7 +49,6 @@ export const MODULE_LABELS_VI: Record<ModuleLabelKey, string> = {
   employee: "Trang nhân viên",
   employee_checkout_approvals: "Duyệt kết ca",
   notifications: "Thông báo",
-  feedback: "Phản ánh khách",
 };
 
 export const NAV_GROUP_LABELS_VI = {
@@ -278,7 +274,7 @@ export const INVENTORY_ERROR_LABELS_VI = {
   shift_cap_exceeded: "Vượt hạn mức waste ca này",
   branch_daily_cap_exceeded: "Vượt cap waste ngày của chi nhánh",
   self_approval_forbidden: "Không thể tự duyệt phiếu của mình",
-  period_hard_closed: "Kỳ kế toán đã khóa cứng",
+  period_hard_closed: "Kỳ khóa sổ đã khóa cứng",
   zone_lock_held_by_other: "Vùng đang được người khác đếm",
   baseline_unavailable: "Chưa đủ dữ liệu giá — cần QLV duyệt thủ công",
   hardblock_evidence_required: "Cần upload PDF bằng chứng",

@@ -5,7 +5,7 @@ Single-tenant, multi-branch, đa kho.
 
 Nhiệm vụ hệ thống: bán đúng, bếp nhận đúng, thu tiền đúng, in/hóa đơn đúng,
 kho trừ đúng, và chủ/quản lý nhìn được tình trạng vận hành thật theo ngày.
-Không phải nền tảng nhiều merchant, không phải CRM độc lập, không phải ERP đa ngành.
+Không phải nền tảng nhiều merchant, không phải ERP đa ngành.
 
 Mô hình vận hành production: **Trụ sở chính (HQ) → Kho Tổng → Bếp Trung Tâm → Chi nhánh**.
 
@@ -68,7 +68,7 @@ scripts/            # SQL seeds, lint helpers
 | Path                        | Audience         | Surface                                       |
 | --------------------------- | ---------------- | --------------------------------------------- |
 | `/login`                    | Public           | Authentication                                |
-| `/admin/*`                  | Manager+         | Dashboard, settings, staff, reports, CRM      |
+| `/admin/*`                  | Manager+         | Dashboard, settings, staff, reports           |
 | `/menu`                     | Manager+         | Menu CRUD                                     |
 | `/inventory/*`              | Inventory roles  | Canonical inventory hub (PO, GRN, stocktake…) |
 | `/finance/*`                | Finance roles    | COA, journal, statements, food-cost, periods  |

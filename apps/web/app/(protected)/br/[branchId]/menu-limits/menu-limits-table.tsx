@@ -3,10 +3,21 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { RotateCcw as IconReset, Save as IconSave } from "lucide-react";
-import { Badge } from "@comtammatu/ui/components/badge";
+import { Save as IconSave, Search as IconSearch } from "lucide-react";
+import { AppEmptyState, AppSection, AppToolbar } from "@/components/surface";
+import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Input } from "@comtammatu/ui/components/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@comtammatu/ui/components/input-group";
+import {
+  Progress,
+  type ProgressTone,
+} from "@comtammatu/ui/components/progress";
+import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Switch } from "@comtammatu/ui/components/switch";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
@@ -17,11 +28,14 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
+import { formatVND } from "@comtammatu/shared/format";
+import { normalizeSearch } from "@lib/search";
 import {
   type MenuLimitRow,
   setBranchMenuDailyLimit,
   clearBranchMenuDailyLimit,
 } from "./actions";
+import { messages } from "@lib/messages";
 
 interface Props {
   branchId: number;
@@ -49,36 +63,108 @@ function isDirty(row: MenuLimitRow, draft: RowDraft): boolean {
 }
 
 function isConfigured(row: MenuLimitRow): boolean {
-  return row.limit_id !== null;
+  return (
+    row.limit_id !== null || row.limit_quantity !== null || row.is_disabled
+  );
+}
+
+function getRemaining(row: MenuLimitRow): number | null {
+  if (row.limit_quantity == null) return null;
+  return Math.max(0, row.limit_quantity - row.sold_today);
+}
+
+function getProgress(row: MenuLimitRow): {
+  value: number;
+  tone: ProgressTone;
+  limit: number;
+} | null {
+  if (row.limit_quantity == null) return null;
+
+  const value = Math.min(
+    100,
+    Math.round((row.sold_today / row.limit_quantity) * 100),
+  );
+  if (row.is_disabled) {
+    return { value, tone: "destructive", limit: row.limit_quantity };
+  }
+  if (row.sold_today >= row.limit_quantity) {
+    return { value, tone: "warning", limit: row.limit_quantity };
+  }
+  return { value, tone: "success", limit: row.limit_quantity };
+}
+
+function getStatusBadge(row: MenuLimitRow): {
+  label: string;
+  variant: BadgeProps["variant"];
+} {
+  const remaining = getRemaining(row);
+
+  if (row.is_disabled) {
+    return { label: messages.pos.menu.disabled, variant: "destructive" };
+  }
+  if (remaining !== null && remaining <= 0) {
+    return { label: messages.pos.menu.soldOut, variant: "warning" };
+  }
+  if (remaining !== null) {
+    return {
+      label: messages.pos.menu.remaining(remaining),
+      variant: "success",
+    };
+  }
+  return { label: messages.pos.menu.unlimited, variant: "outline" };
 }
 
 export function MenuLimitsTable({ branchId, rows }: Props) {
   const router = useRouter();
+  const [query, setQuery] = useState("");
   const [drafts, setDrafts] = useState<Record<number, RowDraft>>(() =>
-    Object.fromEntries(rows.map((r) => [r.menu_item_id, buildDraft(r)])),
+    Object.fromEntries(rows.map((row) => [row.menu_item_id, buildDraft(row)])),
   );
   const [pendingId, setPendingId] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const grouped = useMemo(() => {
+    const needle = normalizeSearch(query).trim();
     const map = new Map<
       number,
       { categoryId: number; categoryName: string; items: MenuLimitRow[] }
     >();
-    for (const r of rows) {
-      const existing = map.get(r.category_id);
+
+    for (const row of rows) {
+      if (needle) {
+        const haystack = normalizeSearch(
+          `${row.item_name} ${row.category_name}`,
+        );
+        if (!haystack.includes(needle)) continue;
+      }
+
+      const existing = map.get(row.category_id);
       if (existing) {
-        existing.items.push(r);
+        existing.items.push(row);
       } else {
-        map.set(r.category_id, {
-          categoryId: r.category_id,
-          categoryName: r.category_name,
-          items: [r],
+        map.set(row.category_id, {
+          categoryId: row.category_id,
+          categoryName: row.category_name,
+          items: [row],
         });
       }
     }
+
     return Array.from(map.values());
-  }, [rows]);
+  }, [query, rows]);
+
+  const summary = useMemo(
+    () => ({
+      total: rows.length,
+      limited: rows.filter((row) => row.limit_quantity !== null).length,
+      disabled: rows.filter((row) => row.is_disabled).length,
+      exhausted: rows.filter((row) => {
+        const remaining = getRemaining(row);
+        return remaining !== null && remaining <= 0 && !row.is_disabled;
+      }).length,
+    }),
+    [rows],
+  );
 
   function updateDraft(id: number, patch: Partial<RowDraft>) {
     setDrafts((prev) => ({
@@ -88,115 +174,167 @@ export function MenuLimitsTable({ branchId, rows }: Props) {
   }
 
   function handleSave(row: MenuLimitRow) {
-    const draft = drafts[row.menu_item_id];
-    if (!draft) return;
-
+    const draft = drafts[row.menu_item_id] ?? buildDraft(row);
     const trimmed = draft.qtyText.trim();
     let qty: number | null = null;
+
     if (trimmed !== "") {
       const parsed = Number(trimmed);
-      if (!Number.isInteger(parsed) || parsed <= 0) {
-        toast.error("Số lượng phải là số nguyên dương");
+      if (!Number.isInteger(parsed) || parsed <= 0 || parsed > 9999) {
+        toast.error("Hạn mức phải là số nguyên từ 1 đến 9999.");
         return;
       }
       qty = parsed;
     }
 
-    setPendingId(row.menu_item_id);
-    startTransition(async () => {
-      const result = await setBranchMenuDailyLimit({
-        branchId,
-        menuItemId: row.menu_item_id,
-        limitQuantity: qty,
-        isDisabled: draft.isDisabled,
-      });
-      setPendingId(null);
-      if (!result.success) {
-        toast.error(result.error ?? "Không lưu được hạn mức");
-        return;
-      }
-      toast.success(`Đã cập nhật: ${row.item_name}`);
-      router.refresh();
-    });
-  }
+    const shouldClear = qty === null && !draft.isDisabled;
+    const configured = isConfigured(row);
 
-  function handleClear(row: MenuLimitRow) {
     setPendingId(row.menu_item_id);
     startTransition(async () => {
-      const result = await clearBranchMenuDailyLimit({
-        branchId,
-        menuItemId: row.menu_item_id,
-      });
-      setPendingId(null);
-      if (!result.success) {
-        toast.error(result.error ?? "Không bỏ được hạn mức");
-        return;
+      try {
+        const result =
+          shouldClear && configured
+            ? await clearBranchMenuDailyLimit({
+                branchId,
+                menuItemId: row.menu_item_id,
+              })
+            : await setBranchMenuDailyLimit({
+                branchId,
+                menuItemId: row.menu_item_id,
+                limitQuantity: qty,
+                isDisabled: draft.isDisabled,
+              });
+
+        if (!result.success) {
+          toast.error(result.error ?? "Không lưu được hạn mức.");
+          return;
+        }
+
+        toast.success(`Đã cập nhật: ${row.item_name}`);
+        router.refresh();
+      } finally {
+        setPendingId(null);
       }
-      // Reset draft back to "no limit, not disabled".
-      updateDraft(row.menu_item_id, { qtyText: "", isDisabled: false });
-      toast.success(`Đã bỏ hạn mức: ${row.item_name}`);
-      router.refresh();
     });
   }
 
   if (rows.length === 0) {
     return (
-      <div className="rounded-md border bg-muted/30 p-6 text-sm text-muted-foreground">
-        Chưa có món nào trong thực đơn. Hãy{" "}
-        <Link className="underline" href="/menu">
-          thêm món
-        </Link>{" "}
-        trước khi cấu hình hạn mức bán.
-      </div>
+      <AppEmptyState
+        title={messages.pos.menu.empty}
+        description={messages.pos.menu.menuLimitsEmptyDescription}
+      >
+        <Button asChild variant="outline" size="sm">
+          <Link href="/menu">{messages.pos.menu.openMenu}</Link>
+        </Button>
+      </AppEmptyState>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <>
+      <AppToolbar
+        search={
+          <InputGroup className="h-9 w-full sm:w-80">
+            <InputGroupAddon>
+              <IconSearch />
+            </InputGroupAddon>
+            <InputGroupInput
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={messages.pos.menu.searchPlaceholder}
+              aria-label={messages.pos.menu.searchAria}
+            />
+          </InputGroup>
+        }
+        filters={
+          <>
+            <Badge variant="outline">
+              {messages.pos.menu.itemCount(summary.total)}
+            </Badge>
+            <Badge variant="success">
+              {messages.pos.menu.limitedCount(summary.limited)}
+            </Badge>
+            <Badge variant="warning">
+              {messages.pos.menu.exhaustedCount(summary.exhausted)}
+            </Badge>
+            <Badge variant="destructive">
+              {messages.pos.menu.disabledCount(summary.disabled)}
+            </Badge>
+          </>
+        }
+      />
+
+      {grouped.length === 0 ? (
+        <AppEmptyState title={messages.pos.menu.noResults} compact />
+      ) : null}
+
       {grouped.map((group) => (
-        <section
+        <AppSection
           key={group.categoryId}
-          className="rounded-md border bg-card"
-          aria-label={group.categoryName}
+          title={group.categoryName}
+          badge={{
+            children: messages.pos.menu.itemCount(group.items.length),
+            variant: "outline",
+          }}
+          contentFlush
+          contentScroll
         >
-          <div className="border-b bg-muted/40 px-4 py-2 text-sm font-semibold">
-            {group.categoryName}
-          </div>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="min-w-40">Món</TableHead>
-                <TableHead className="hidden md:table-cell">Đã bán</TableHead>
-                <TableHead className="w-32">Hạn mức (suất)</TableHead>
-                <TableHead className="w-24">Tắt món</TableHead>
-                <TableHead className="w-48 text-right" />
+                <TableHead className="min-w-56">
+                  {messages.pos.menu.itemLabel}
+                </TableHead>
+                <TableHead className="min-w-44">
+                  {messages.pos.menu.statusLabel}
+                </TableHead>
+                <TableHead className="w-36">
+                  {messages.pos.menu.soldLabel}
+                </TableHead>
+                <TableHead className="w-40">
+                  {messages.pos.menu.totalLimitLabel}
+                </TableHead>
+                <TableHead className="w-24">
+                  {messages.pos.menu.toggleDisabled}
+                </TableHead>
+                <TableHead className="w-32 text-right" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {group.items.map((row) => {
                 const draft = drafts[row.menu_item_id] ?? buildDraft(row);
                 const dirty = isDirty(row, draft);
-                const configured = isConfigured(row);
-                const exhausted =
-                  row.limit_quantity != null &&
-                  row.sold_today >= row.limit_quantity;
                 const rowPending = isPending && pendingId === row.menu_item_id;
+                const status = getStatusBadge(row);
+                const progress = getProgress(row);
+
                 return (
                   <TableRow key={row.menu_item_id}>
                     <TableCell>
                       <div className="font-medium">{row.item_name}</div>
-                      {row.is_disabled ? (
-                        <Badge variant="destructive" className="mt-1 text-xs">
-                          Đang tắt
-                        </Badge>
-                      ) : exhausted ? (
-                        <Badge variant="warning" className="mt-1 text-xs">
-                          Hết suất hôm nay
-                        </Badge>
-                      ) : null}
+                      <div className="font-mono text-xs tabular-nums text-muted-foreground">
+                        {formatVND(row.base_price)}
+                      </div>
                     </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      <span className="tabular-nums text-sm">
+                    <TableCell>
+                      <div className="flex flex-col gap-2">
+                        <Badge variant={status.variant}>{status.label}</Badge>
+                        {progress ? (
+                          <Progress
+                            value={progress.value}
+                            tone={progress.tone}
+                            aria-label={messages.pos.menu.soldProgressAria(
+                              row.sold_today,
+                              progress.limit,
+                            )}
+                          />
+                        ) : null}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className="font-mono text-sm tabular-nums">
                         {row.sold_today}
                         {row.limit_quantity != null
                           ? ` / ${row.limit_quantity}`
@@ -209,14 +347,17 @@ export function MenuLimitsTable({ branchId, rows }: Props) {
                         min={1}
                         max={9999}
                         inputMode="numeric"
-                        placeholder="Không giới hạn"
+                        placeholder={messages.pos.menu.unlimited}
                         value={draft.qtyText}
                         disabled={rowPending}
-                        onChange={(e) =>
+                        onChange={(event) =>
                           updateDraft(row.menu_item_id, {
-                            qtyText: e.target.value,
+                            qtyText: event.target.value,
                           })
                         }
+                        aria-label={messages.pos.menu.totalLimitInputAria(
+                          row.item_name,
+                        )}
                       />
                     </TableCell>
                     <TableCell>
@@ -228,41 +369,35 @@ export function MenuLimitsTable({ branchId, rows }: Props) {
                             isDisabled: checked,
                           })
                         }
-                        aria-label={`Tắt món ${row.item_name}`}
+                        aria-label={messages.pos.menu.disableItemAria(
+                          row.item_name,
+                        )}
                       />
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        {configured ? (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            disabled={rowPending}
-                            onClick={() => handleClear(row)}
-                          >
-                            <IconReset className="size-4" />
-                            Bỏ hạn mức
-                          </Button>
-                        ) : null}
+                      {dirty ? (
                         <Button
                           type="button"
                           size="sm"
-                          disabled={rowPending || !dirty}
+                          disabled={rowPending}
                           onClick={() => handleSave(row)}
                         >
-                          <IconSave className="size-4" />
-                          Lưu
+                          {rowPending ? (
+                            <Spinner data-icon="inline-start" />
+                          ) : (
+                            <IconSave data-icon="inline-start" aria-hidden />
+                          )}
+                          {messages.pos.menu.updateLimit}
                         </Button>
-                      </div>
+                      ) : null}
                     </TableCell>
                   </TableRow>
                 );
               })}
             </TableBody>
           </Table>
-        </section>
+        </AppSection>
       ))}
-    </div>
+    </>
   );
 }

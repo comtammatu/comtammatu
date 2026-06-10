@@ -12,13 +12,13 @@ import type {
   FinanceDashboardSummary,
 } from "../_lib/finance-types";
 
-// Operational queue strip — sits at the top of every Finance route so
-// the owner sees pending work (open period, draft journals, recon
-// exceptions, cash variance) regardless of which surface they land on.
+// Operational queue strip — keep the default Finance support queue focused on
+// HKD operating checks. Accounting-close tiles exist for direct support routes,
+// but are not part of the pilot default set.
 //
 // Architect §1: extracted from finance-client.tsx:485-547 so the same
 // data composition works for /finance/revenue, /finance/reconciliation,
-// /finance/statements, /finance/food-cost. The owner page-level RSCs
+// and /finance/food-cost. The owner page-level RSCs
 // fetch the inputs once and pass them down.
 
 const FOOD_COST_EXCEPTION_THRESHOLD = 60;
@@ -41,10 +41,8 @@ export type WorkQueueTile =
   | "foodCost"
   | "webhook";
 
-const ALL_TILES: WorkQueueTile[] = [
-  "period",
+const DEFAULT_TILES: WorkQueueTile[] = [
   "invoices",
-  "journals",
   "reconciliation",
   "cash",
   "foodCost",
@@ -113,7 +111,7 @@ export function WorkQueueStrip({
   hide = [],
   className,
 }: WorkQueueStripProps) {
-  const visible = ALL_TILES.filter((t) => !hide.includes(t));
+  const visible = DEFAULT_TILES.filter((t) => !hide.includes(t));
   if (visible.length === 0) return null;
 
   return (

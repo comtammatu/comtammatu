@@ -10,15 +10,199 @@
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { ActionResult } from "@comtammatu/shared/types";
+import { z } from "zod";
 import {
   includesAny,
   mapRpcError,
   type RpcErrorFallback,
+  type RpcErrorLike,
   type RpcErrorMapping,
 } from "@/_lib/rpc-error-map";
 import type { AfterSuccessHook } from "@/_lib/with-action";
 import { POS_ERROR_CODES } from "../_utils/error-codes";
 import type { ReduceItemInput, VoidItemInput } from "./schemas";
+
+type DailyLimitConflictReason =
+  | "daily_limit_item_disabled"
+  | "daily_limit_exceeded";
+
+const dailyLimitConflictDetailSchema = z.object({
+  reason: z
+    .enum(["daily_limit_item_disabled", "daily_limit_exceeded"])
+    .optional(),
+  menu_item_id: z.number().int().positive().optional(),
+  item_id: z.number().int().positive().optional(),
+  limit_quantity: z.number().int().nonnegative().nullable().optional(),
+  sold_today: z.number().int().nonnegative().nullable().optional(),
+  held_quantity: z.number().int().nonnegative().nullable().optional(),
+  requested_quantity: z.number().int().positive().nullable().optional(),
+});
+
+type DailyLimitConflictDetail = z.infer<
+  typeof dailyLimitConflictDetailSchema
+>;
+
+type DailyLimitRpcErrorLike = RpcErrorLike & {
+  details?: unknown;
+};
+
+export interface DailyLimitItemLabel {
+  menuItemId: number;
+  label: string;
+}
+
+function inferDailyLimitConflictReason(
+  message: string | null | undefined,
+): DailyLimitConflictReason | null {
+  const lower = (message ?? "").toLowerCase();
+  if (lower.includes("daily_limit_item_disabled")) {
+    return "daily_limit_item_disabled";
+  }
+  if (lower.includes("daily_limit_exceeded")) return "daily_limit_exceeded";
+  return null;
+}
+
+function parseJsonDetail(details: unknown): unknown {
+  if (typeof details !== "string") return details;
+  const trimmed = details.trim();
+  if (!trimmed.startsWith("{")) return null;
+
+  try {
+    return JSON.parse(trimmed) as unknown;
+  } catch {
+    return null;
+  }
+}
+
+function parseLegacyDailyLimitMessage(
+  message: string | null | undefined,
+): DailyLimitConflictDetail | null {
+  const raw = message ?? "";
+  const disabled = raw.match(/daily_limit_item_disabled:\s*(\d+)/i);
+  if (disabled?.[1]) {
+    return {
+      reason: "daily_limit_item_disabled",
+      menu_item_id: Number(disabled[1]),
+    };
+  }
+
+  const exceeded = raw.match(
+    /daily_limit_exceeded:\s*item\s+(\d+),\s*limit\s+(\d+),\s*sold\s+(\d+),\s*held\s+(\d+),\s*requested\s+(\d+)/i,
+  );
+  if (!exceeded) return null;
+
+  const [, menuItemId, limitQuantity, soldToday, heldQuantity, requested] =
+    exceeded;
+  if (
+    menuItemId === undefined ||
+    limitQuantity === undefined ||
+    soldToday === undefined ||
+    heldQuantity === undefined ||
+    requested === undefined
+  ) {
+    return null;
+  }
+
+  return {
+    reason: "daily_limit_exceeded",
+    menu_item_id: Number(menuItemId),
+    limit_quantity: Number(limitQuantity),
+    sold_today: Number(soldToday),
+    held_quantity: Number(heldQuantity),
+    requested_quantity: Number(requested),
+  };
+}
+
+function parseDailyLimitConflictDetail(
+  error: DailyLimitRpcErrorLike,
+): DailyLimitConflictDetail | null {
+  const parsed = dailyLimitConflictDetailSchema.safeParse(
+    parseJsonDetail(error.details),
+  );
+  if (parsed.success) {
+    const inferredReason =
+      parsed.data.reason ?? inferDailyLimitConflictReason(error.message);
+    return {
+      ...parsed.data,
+      ...(inferredReason !== null ? { reason: inferredReason } : {}),
+    };
+  }
+
+  return parseLegacyDailyLimitMessage(error.message);
+}
+
+function getDailyLimitItemLabel(
+  itemLabels: readonly DailyLimitItemLabel[],
+  menuItemId: number,
+): string {
+  return (
+    itemLabels.find((item) => item.menuItemId === menuItemId)?.label ??
+    `Món #${String(menuItemId)}`
+  );
+}
+
+function formatDailyLimitConflictMessage(
+  detail: DailyLimitConflictDetail,
+  itemLabels: readonly DailyLimitItemLabel[],
+): string | null {
+  const reason = detail.reason;
+  const menuItemId = detail.menu_item_id ?? detail.item_id;
+  if (!reason || menuItemId === undefined) return null;
+
+  const itemLabel = getDailyLimitItemLabel(itemLabels, menuItemId);
+  if (reason === "daily_limit_item_disabled") {
+    return `${itemLabel} đang bị tắt bán hôm nay — bỏ khỏi giỏ hoặc đổi món.`;
+  }
+
+  const limit = detail.limit_quantity;
+  const sold = detail.sold_today ?? null;
+  const held = detail.held_quantity ?? null;
+  const requested = detail.requested_quantity ?? null;
+
+  if (
+    typeof limit === "number" &&
+    typeof sold === "number" &&
+    typeof held === "number" &&
+    typeof requested === "number"
+  ) {
+    const remaining = Math.max(limit - sold - held, 0);
+    if (remaining > 0 && requested > remaining) {
+      return `${itemLabel} chỉ còn ${String(remaining)} suất, giỏ đang cần ${String(requested)} — giảm số lượng hoặc đổi món.`;
+    }
+    if (held > 0 && sold < limit) {
+      return `${itemLabel} đang được máy khác giữ suất cuối — thử lại sau ít phút hoặc đổi món.`;
+    }
+  }
+
+  return `${itemLabel} đã hết suất hôm nay — giảm số lượng hoặc đổi món.`;
+}
+
+export function mapDailyLimitRpcError<TData = unknown>(
+  error: DailyLimitRpcErrorLike,
+  itemLabels: readonly DailyLimitItemLabel[],
+  mappings: readonly RpcErrorMapping[],
+  fallback: RpcErrorFallback,
+): ActionResult<TData> {
+  const detail = parseDailyLimitConflictDetail(error);
+  const message =
+    detail !== null
+      ? formatDailyLimitConflictMessage(detail, itemLabels)
+      : null;
+
+  if (message !== null) {
+    return {
+      success: false,
+      error: message,
+      errorCode:
+        detail?.reason === "daily_limit_item_disabled"
+          ? POS_ERROR_CODES.DAILY_LIMIT_ITEM_DISABLED
+          : POS_ERROR_CODES.DAILY_LIMIT_EXCEEDED,
+    };
+  }
+
+  return mapRpcError(error, mappings, fallback);
+}
 
 /* ────────────────────────────────────────────────────────────────────────── */
 /*  voidOrderItem — main RPC error vocabulary                                 */
@@ -667,6 +851,33 @@ export const appendOrderItemsRpcMappings: readonly RpcErrorMapping[] = [
 
 export const appendOrderItemsRpcFallback: RpcErrorFallback = {
   userMessage: "Không thể thêm món. Vui lòng thử lại.",
+  errorCode: POS_ERROR_CODES.RPC_GENERIC,
+};
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/*  dailyLimitHolds — reserve/release draft quota                             */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+export const dailyLimitHoldRpcMappings: readonly RpcErrorMapping[] = [
+  {
+    match: includesAny("permission denied", "branch scope mismatch"),
+    errorCode: POS_ERROR_CODES.AUTH_NO_PERMISSION,
+    userMessage: "Không có quyền giữ suất bán ở chi nhánh này.",
+  },
+  {
+    match: includesAny("daily_limit_item_disabled"),
+    errorCode: POS_ERROR_CODES.DAILY_LIMIT_ITEM_DISABLED,
+    userMessage: "Có món đã bị tắt trong ngày — bỏ khỏi giỏ trước khi đặt.",
+  },
+  {
+    match: includesAny("daily_limit_exceeded"),
+    errorCode: POS_ERROR_CODES.DAILY_LIMIT_EXCEEDED,
+    userMessage: "Có món vừa hết suất hôm nay — giảm số lượng hoặc đổi món.",
+  },
+];
+
+export const dailyLimitHoldRpcFallback: RpcErrorFallback = {
+  userMessage: "Không thể giữ suất món. Vui lòng thử lại.",
   errorCode: POS_ERROR_CODES.RPC_GENERIC,
 };
 

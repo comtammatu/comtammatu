@@ -1001,7 +1001,8 @@ export async function fetchAccessibleBranches(): Promise<ActionResult> {
 
 export async function fetchTopItems(
   branchId: number | null,
-  periodStart: string,
+  startDate: string,
+  endDate: string,
 ): Promise<ActionResult> {
   const parsedBranch = z.coerce
     .number()
@@ -1013,14 +1014,16 @@ export async function fetchTopItems(
     return { success: false, error: "Branch ID không hợp lệ" };
   }
 
-  const parsedPeriod = z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .safeParse(periodStart);
-  if (!parsedPeriod.success) {
+  const parsedStart = z.string().date().safeParse(startDate);
+  const parsedEnd = z.string().date().safeParse(endDate);
+  if (
+    !parsedStart.success ||
+    !parsedEnd.success ||
+    parsedStart.data > parsedEnd.data
+  ) {
     return {
       success: false,
-      error: "Ngày bắt đầu không hợp lệ (YYYY-MM-DD)",
+      error: "Khoảng ngày không hợp lệ (YYYY-MM-DD)",
     };
   }
 
@@ -1032,12 +1035,10 @@ export async function fetchTopItems(
 
   const { supabase } = ctx;
 
-  // RLS does not apply to materialized views — access goes through a
-  // SECURITY DEFINER wrapper that re-checks tenant_id + branch + ACL.
-  // See migration 20260427000000_secure_finance_mvs_revoke_grants.sql.
   const { data, error } = await supabase.rpc("get_top_items", {
     p_branch_id: parsedBranch.data as number,
-    p_period_start: parsedPeriod.data,
+    p_start_date: parsedStart.data,
+    p_end_date: parsedEnd.data,
     p_limit: 20,
   });
 

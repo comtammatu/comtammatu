@@ -1,16 +1,19 @@
 type OperationalApp = "pos" | "kds";
+type OperationalOrientation = "portrait" | "landscape";
 
 const APP_LABELS: Record<
   OperationalApp,
-  { label: string; description: string }
+  { label: string; description: string; orientation: OperationalOrientation }
 > = {
   pos: {
     label: "POS",
     description: "Điểm bán hàng - Cơm Tấm Má Tư",
+    orientation: "portrait",
   },
   kds: {
     label: "KDS",
     description: "Màn hình bếp - Cơm Tấm Má Tư",
+    orientation: "landscape",
   },
 };
 
@@ -40,16 +43,16 @@ export function buildOperationalManifest(
   return {
     id: `/br/${branchId}/${app}`,
     name: `Cơm Tấm Má Tư - ${appConfig.label} CN${branchId}`,
-    short_name: `${appConfig.label} CN${branchId}`,
+    short_name: `Má Tư ${appConfig.label}`,
     description: appConfig.description,
     lang: "vi",
     display: "standalone",
     display_override: ["window-controls-overlay", "standalone"],
     start_url: `/br/${branchId}/${app}`,
-    scope: `/br/${branchId}/`,
+    scope: `/br/${branchId}/${app}`,
     background_color: "#fff6ee",
     theme_color: "#fff6ee",
-    orientation: "portrait",
+    orientation: appConfig.orientation,
     categories: ["business", "productivity"],
     prefer_related_applications: false,
     icons: [

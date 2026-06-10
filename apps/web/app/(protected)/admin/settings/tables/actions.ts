@@ -78,11 +78,6 @@ const createTableSchema = z.object({
   number: z.coerce.number().int().positive({ error: "Số bàn không hợp lệ" }),
   branch_id: z.coerce.number().int().positive({ error: "Chọn chi nhánh" }),
   zone_id: z.coerce.number().int().positive().optional(),
-  capacity: z.coerce
-    .number()
-    .int()
-    .min(1, { error: "Sức chứa phải ít nhất 1" })
-    .default(4),
 });
 
 const updateTableSchema = z.object({
@@ -90,11 +85,6 @@ const updateTableSchema = z.object({
   number: z.coerce.number().int().positive({ error: "Số bàn không hợp lệ" }),
   branch_id: z.coerce.number().int().positive({ error: "Chọn chi nhánh" }),
   zone_id: z.coerce.number().int().positive().optional(),
-  capacity: z.coerce
-    .number()
-    .int()
-    .min(1, { error: "Sức chứa phải ít nhất 1" })
-    .default(4),
   status: z.enum(TABLE_STATUSES).optional(),
 });
 
@@ -233,7 +223,6 @@ export const createTable = withFormAction(
         number: fd.get("number"),
         branch_id: fd.get("branch_id"),
         zone_id: zoneId,
-        capacity: fd.get("capacity") || 4,
       };
     },
   },
@@ -253,7 +242,6 @@ export const createTable = withFormAction(
       branch_id: data.branch_id,
       zone_id: data.zone_id ?? null,
       number: data.number,
-      capacity: data.capacity,
     });
 
     if (error) {
@@ -281,7 +269,6 @@ export const updateTable = withFormAction(
         number: fd.get("number"),
         branch_id: fd.get("branch_id"),
         zone_id: zoneId,
-        capacity: fd.get("capacity") || 4,
         status: rawStatus ? rawStatus : undefined,
       };
     },
@@ -303,7 +290,6 @@ export const updateTable = withFormAction(
         number: data.number,
         branch_id: data.branch_id,
         zone_id: data.zone_id ?? null,
-        capacity: data.capacity,
         ...(data.status ? { status: data.status } : {}),
       })
       .eq("id", data.id)

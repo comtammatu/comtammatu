@@ -105,16 +105,12 @@ export {
   PUBLIC_APP_PATHS,
   isAdminRoutePath,
   isBetaPath,
-  isFeedbackPublicPath,
   isPublicAppPath,
   isRunnerPublicDisplayPath,
-  normalizeHost,
-  resolveHostSurface,
   resolveLegacyRouteRedirectPath,
   resolveModuleFromPath,
   stripBetaPrefix,
 } from "./route-resolution";
-export type { HostSurface } from "./route-resolution";
 export type {
   BlockedStateCopy,
   BlockedStateReasonCode,

@@ -7,10 +7,6 @@
   "regions": ["sin1"],
   "crons": [
     {
-      "path": "/api/cron/feedback-daily-report",
-      "schedule": "0 19 * * *"
-    },
-    {
       "path": "/api/cron/hddt-daily-summary",
       "schedule": "5 19 * * *"
     },
@@ -27,8 +23,8 @@
       "schedule": "0 5,11,17,23 * * *"
     },
     {
-      "path": "/api/cron/feedback-retention",
-      "schedule": "0 20 * * *"
+      "path": "/api/cron/notifications-push",
+      "schedule": "*/2 * * * *"
     }
   ]
 }

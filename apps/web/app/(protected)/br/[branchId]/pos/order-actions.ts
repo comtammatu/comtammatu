@@ -21,6 +21,8 @@ export {
 export {
   submitOrder,
   appendOrderItems,
+  reserveDailyLimitHolds,
+  releaseDailyLimitHolds,
   updateOrderStatus,
   markOrderItemServed,
 } from "./order-lifecycle";

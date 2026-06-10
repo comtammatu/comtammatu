@@ -63,6 +63,7 @@ const toneSectionVariant = {
 interface EmployeePageProps {
   title: string;
   description?: string;
+  hideHeaderOnMobile?: boolean;
   badge?: {
     children: ReactNode;
     variant?: BadgeProps["variant"];
@@ -74,17 +75,19 @@ interface EmployeePageProps {
 export function EmployeePage({
   title,
   description,
+  hideHeaderOnMobile = false,
   badge,
   action,
   children,
 }: EmployeePageProps) {
   return (
-    <div className="flex w-full flex-col gap-3">
+    <div className="flex w-full flex-col gap-3 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-200">
       <AppPageHeader
         title={title}
         description={description}
         badge={badge}
         actions={action}
+        className={hideHeaderOnMobile ? "sr-only sm:not-sr-only" : undefined}
       />
       <div className="flex flex-col gap-3">{children}</div>
     </div>
@@ -130,6 +133,7 @@ export function EmployeeDashboardGrid({
 interface EmployeePanelProps {
   title?: string;
   description?: string;
+  headerHint?: ReactNode;
   icon?: ElementType;
   tone?: EmployeeTone;
   badge?: {
@@ -146,6 +150,7 @@ interface EmployeePanelProps {
 export function EmployeePanel({
   title,
   description,
+  headerHint,
   icon: Icon,
   tone = "default",
   badge,
@@ -159,6 +164,7 @@ export function EmployeePanel({
     <AppSection
       title={title}
       description={description}
+      headerHint={headerHint}
       icon={Icon ? <Icon /> : undefined}
       iconClassName={toneIconClassName[tone]}
       badge={
@@ -170,13 +176,63 @@ export function EmployeePanel({
           : undefined
       }
       action={action}
-      className={className}
+      className={cn(
+        "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-200",
+        className,
+      )}
       contentClassName={contentClassName}
       size={size}
       tone={toneSectionVariant[tone]}
     >
       {children}
     </AppSection>
+  );
+}
+
+interface EmployeeStatusStripProps {
+  items: Array<{
+    label: string;
+    value: ReactNode;
+    muted?: boolean;
+    mono?: boolean;
+  }>;
+  className?: string;
+}
+
+export function EmployeeStatusStrip({
+  items,
+  className,
+}: EmployeeStatusStripProps) {
+  return (
+    <div
+      className={cn(
+        "grid gap-2",
+        items.length === 1 && "grid-cols-1",
+        items.length === 2 && "grid-cols-2",
+        items.length >= 3 && "grid-cols-3",
+        className,
+      )}
+    >
+      {items.map((item) => (
+        <div
+          key={item.label}
+          className="flex min-w-0 flex-col gap-1 rounded-md border bg-background px-2 py-2 transition-[background-color,border-color,box-shadow] duration-150 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 motion-safe:duration-200"
+        >
+          <span className="truncate text-2xs font-medium text-muted-foreground">
+            {item.label}
+          </span>
+          <span
+            className={cn(
+              "min-w-0 truncate text-sm font-semibold",
+              item.mono && "font-mono tabular-nums",
+              item.muted ? "text-muted-foreground" : "text-foreground",
+            )}
+          >
+            {item.value}
+          </span>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -196,7 +252,7 @@ export function EmployeeProgressSummary({
   const safeValue = Math.max(0, Math.min(100, value));
 
   return (
-    <div className="flex min-w-0 flex-col gap-2">
+    <div className="flex min-w-0 flex-col gap-2 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-200">
       <div className="flex items-center justify-between gap-2 text-xs">
         <span className="font-medium text-muted-foreground">{label}</span>
         <span className="font-mono font-medium tabular-nums text-foreground">
@@ -257,7 +313,9 @@ export function EmployeeWorkflowPanel({
       {progress ? <EmployeeProgressSummary {...progress} /> : null}
       {children}
       {primaryAction ? (
-        <div className="flex flex-col gap-2 sm:flex-row">{primaryAction}</div>
+        <div className="flex flex-col gap-2 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-200 sm:flex-row">
+          {primaryAction}
+        </div>
       ) : null}
     </EmployeePanel>
   );
@@ -345,10 +403,21 @@ export function EmployeeActionItem({
   size,
 }: EmployeeActionItemProps) {
   return (
-    <Item asChild variant="outline" size={size} className="items-center">
+    <Item
+      asChild
+      variant="outline"
+      size={size}
+      className={cn(
+        "group/employee-action min-h-14 items-center bg-card transition-[transform,background-color,border-color,box-shadow] duration-150 hover:bg-muted/50 active:translate-y-px motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-200 motion-safe:hover:-translate-y-px hover:shadow-sm",
+        size === "sm" && "min-h-12",
+      )}
+    >
       <Link href={href}>
         {Icon ? (
-          <ItemMedia variant="icon">
+          <ItemMedia
+            variant="icon"
+            className="rounded-md bg-muted p-2 text-primary transition-colors duration-150 group-hover/employee-action:bg-primary/10 group-active/employee-action:bg-primary/10"
+          >
             <Icon />
           </ItemMedia>
         ) : null}
@@ -358,8 +427,8 @@ export function EmployeeActionItem({
             <ItemDescription>{description}</ItemDescription>
           ) : null}
         </ItemContent>
-        <ItemActions>
-          <IconChevronRight className="size-4 text-muted-foreground" />
+        <ItemActions className="text-muted-foreground">
+          <IconChevronRight className="transition-transform duration-150 group-active/employee-action:translate-x-0.5" />
         </ItemActions>
       </Link>
     </Item>

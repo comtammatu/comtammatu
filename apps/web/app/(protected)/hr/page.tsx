@@ -1,13 +1,17 @@
 import { fetchEmployees } from "./actions";
+import { fetchChecklistTemplates } from "./checklist-actions";
 import { HrClient } from "./hr-client";
 import { loadAuthState } from "@/_lib/auth";
 import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
+import { messages } from "@lib/messages";
 
 export default async function HrPage() {
   const { supabase, claims } = await loadAuthState();
+  const copy = messages.hr.workspace;
   const canManageEmployees =
     claims.user_role === "owner" || claims.user_role === "super_manager";
   const isBranchManager = claims.user_role === "branch_manager";
+  const canViewEmployees = canManageEmployees || isBranchManager;
 
   const branchesPromise =
     isBranchManager && claims.branch_id == null
@@ -27,10 +31,11 @@ export default async function HrPage() {
           return query;
         })();
 
-  const [employeesResult, { data: branches }] = await Promise.all([
-    canManageEmployees
+  const [employeesResult, checklistResult, { data: branches }] = await Promise.all([
+    canViewEmployees
       ? fetchEmployees()
       : Promise.resolve({ success: true, data: [] }),
+    fetchChecklistTemplates(),
     branchesPromise,
   ]);
 
@@ -39,16 +44,19 @@ export default async function HrPage() {
     : [];
 
   const branchOptions = (branches ?? []) as BranchOption[];
+  const checklistTemplates = checklistResult.success
+    ? (checklistResult.data ?? [])
+    : [];
 
   return (
     <AppPage width="wide">
       <AppPageHeader
-        eyebrow="Nhân sự"
-        title={isBranchManager ? "Ca và ngày công" : "Nhân sự"}
+        eyebrow={copy.eyebrow}
+        title={isBranchManager ? copy.branchManagerTitle : copy.ownerTitle}
         description={
           isBranchManager
-            ? "Quản lý ca, phân ca và ngày công của chi nhánh được gán."
-            : "Nhân viên, ca làm và ngày công cho mô hình Hộ Kinh Doanh."
+            ? copy.branchManagerDescription
+            : copy.ownerDescription
         }
       />
       <AppSection>
@@ -56,6 +64,9 @@ export default async function HrPage() {
           employees={employees}
           branches={branchOptions}
           canManageEmployees={canManageEmployees}
+          canViewEmployees={canViewEmployees}
+          checklistTemplates={checklistTemplates}
+          canManageGlobalChecklist={canManageEmployees}
         />
       </AppSection>
     </AppPage>
@@ -79,6 +90,7 @@ export interface EmployeeRow {
   contract_type: string | null;
   dependents_count: number;
   is_active: boolean;
+  default_checklist_template_id: number | null;
   profiles: {
     id: string;
     full_name: string;

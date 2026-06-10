@@ -18,7 +18,7 @@
 | ---------------- | ---------------------------------------- | ------------------------------ | ------------------------------------------------- |
 | **Hủy món**      | Khách đổi ý / món hết / nhập sai         | swipe món sang trái            | Món `cancelled`, KDS ticket cancel                |
 | **Hủy đơn**      | Khách bỏ về / đơn nhập nhầm hoàn toàn    | có quyền `pos:cancel_order`    | Toàn đơn `cancelled`, bàn về trống                |
-| **Chuyển bàn**   | Khách dời chỗ ngồi                       | bàn đích `available`           | Đơn bind sang bàn mới, bàn cũ về trống            |
+| **Chuyển bàn**   | Khách đổi sang bàn khác                  | bàn đích `available`           | Đơn bind sang bàn mới, bàn cũ về trống            |
 | **Tách hóa đơn** | 1 nhóm khách chia bill                   | đơn `dine_in` + ≥2 món         | Tạo đơn mới cùng bàn, chuyển 1 phần món qua       |
 | **Gộp hóa đơn**  | 2 đơn cùng bàn → gộp 1 (1 người trả hết) | bàn có ≥2 đơn `dine_in` active | Đơn được chọn nhận hết món, đơn nguồn `cancelled` |
 

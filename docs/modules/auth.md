@@ -4,7 +4,7 @@
 
 ## Overview
 
-Authentication and authorization for staff/operator surfaces. Protected requests pass through this module before reaching feature code. The auth chain spans four layers: Supabase Auth (identity), JWT custom claims hook (position + legacy-role injection), proxy.ts (route-level ACL enforcement), and RLS with `has_permission()` (row-level, permission-driven). Public customer surfaces such as `/br/[branchId]/runner` and `/r/*` bypass staff login by design.
+Authentication and authorization for staff/operator surfaces. Protected requests pass through this module before reaching feature code. The auth chain spans four layers: Supabase Auth (identity), JWT custom claims hook (position + legacy-role injection), proxy.ts (route-level ACL enforcement), and RLS with `has_permission()` (row-level, permission-driven). Public customer surfaces such as `/br/[branchId]/runner` bypass staff login by design.
 
 **Owner:** `packages/shared/src/auth/` + `apps/web/proxy.ts` + `supabase/migrations/*jwt*` + `supabase/migrations/*auth*`
 
@@ -14,7 +14,7 @@ Authentication and authorization for staff/operator surfaces. Protected requests
 | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------- |
 | `packages/shared/src/auth/types.ts`                             | Role enum, JWT claims shape (`user_role` + optional `position`), scope types                   | Core types                |
 | `packages/shared/src/auth/module-acl.ts`                        | Module → allowed roles mapping, `canAccess()`, `getAccessibleModules()`                        | Route-level ACL (legacy)  |
-| `packages/shared/src/auth/permissions.ts`                       | `PERMISSION_KEYS` (87 keys), `hasPermission()`, `hasAny/All` pure fns — **Auth authz**         | Permission catalog        |
+| `packages/shared/src/auth/permissions.ts`                       | `PERMISSION_KEYS` (86 keys), `hasPermission()`, `hasAny/All` pure fns — **Auth authz**         | Permission catalog        |
 | `packages/shared/src/auth/scope.ts`                             | `extractClaims()` + `decodeJwtAppMetadata()` + `extractClaimsFromAccessToken()`                | JWT claim extraction      |
 | `packages/shared/src/auth/route-resolution.ts`                  | Public/legacy/beta route helpers + URL → `ModuleKey` mapping                                  | Proxy route mapping       |
 | `packages/shared/src/auth/route-map.ts`                         | Route family contract: surface, entry point, chrome, back behavior, breadcrumb root            | Navigation contract       |
@@ -29,6 +29,11 @@ Authentication and authorization for staff/operator surfaces. Protected requests
 | `supabase/migrations/20260422120002_auth_has_permission.sql` | `has_permission(branch, key)` / `has_permission_any(key)` SECURITY DEFINER helpers             | Auth RLS helpers          |
 | `apps/web/app/(protected)/admin/staff/[id]/permissions/`        | Admin UI for grant/revoke + audit (page + client + actions)                                    | Permission admin UI       |
 | `apps/web/app/_lib/permissions.ts`                              | Server helpers `fetchCurrentUserPermissions()` + `currentUserHasPermission()`                  | App-side permission reads |
+
+Discovery invariant: `MODULE_ACL.hr_payroll` vẫn gate `/hr/payroll/*` cho
+owner/super_manager, nhưng không nằm trong `DOMAIN_WORKSPACE_ITEMS` hoặc app
+discovery mặc định. HKD pilot mở `/hr` cho nhân viên/ca/ngày công trước; payroll
+chỉ là direct-support khi cần đối soát/chốt lương.
 
 ## Role Hierarchy
 
@@ -70,7 +75,7 @@ Two parallel ACL mechanisms exist; pick the right one:
 | Concept        | Storage                                                                          | Purpose                                                                                                                                                       |
 | -------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Position**   | `positions` (per tenant) + `profiles.position_id`                                | HR chức vụ label. Existing data may still carry compatibility codes like `kho_truong` / `quan_ly_CN`; new position codes use English `lower_snake_case`. Does not gate authz. |
-| **Permission** | `permission_keys` catalog (global)                                               | Canonical action strings: `inventory:read`, `pos:use`, 87 keys.                                                                                               |
+| **Permission** | `permission_keys` catalog (global)                                               | Canonical action strings: `inventory:read`, `pos:use`, 86 keys.                                                                                               |
 | **Grant**      | `staff_permissions(user_id, branch_id, permission_key, valid_from, valid_until)` | Source of truth for authz. `branch_id IS NULL` ⇒ tenant-wide. Temporal window.                                                                                |
 | **Template**   | `role_templates(permission_keys[])`                                              | Preset bundle applied when assigning a position (snapshot; edits don't propagate).                                                                            |
 
@@ -111,9 +116,8 @@ Defined in `packages/shared/src/auth/module-acl.ts`. Single source of truth — 
 | orders                                                  | ✓     | ✓         | ✓          |        |          | ✓       |        |      |        |
 | staff                                                   | ✓     | ✓         |            |        |          |         |        |      |        |
 | hr                                                      | ✓     | ✓         |            |        |          |         |        |      |        |
-| crm                                                     | ✓     | ✓         |            |        |          |         |        |      |        |
 | finance                                                 | ✓     | ✓         |            |        |          |         |        |      |        |
-| accounting (period close/reopen)                        | ✓     | ✓         |            |        |          |         |        |      |        |
+| accounting (direct-only period close/reopen)             | ✓     | ✓         |            |        |          |         |        |      |        |
 | reports                                                 | ✓     | ✓         |            |        |          |         |        |      |        |
 | settings                                                | ✓     | ✓         | ✓          |        |          |         |        |      |        |
 | pos                                                     |       |           | ✓          |        |          | ✓       | ✓      |      |        |
@@ -158,7 +162,7 @@ không được giữ trong post-login `returnTo`.
 
 The `proxy(request)` function evaluates in order:
 
-1. **Public paths bypass auth:** `/api/health`, `/api/webhooks`, `/sw.js`, `/access-denied`, `/r/*`, `/payment/momo/*`, and exact `/br/[branchId]/runner` (`route-resolution.ts:isPublicAppPath`). The access-denied page is public so a blocked-but-authenticated user can read the copy without re-entering the ACL loop.
+1. **Public paths bypass auth:** `/api/health`, `/api/webhooks`, `/sw.js`, `/access-denied`, `/payment/momo/*`, and exact `/br/[branchId]/runner` (`route-resolution.ts:isPublicAppPath`). The access-denied page is public so a blocked-but-authenticated user can read the copy without re-entering the ACL loop.
 2. **Legacy canonical redirects:** `/admin/finance/*` redirects to `/finance/*` through `resolveLegacyRouteRedirectPath()` before module ACL. The same helper is used by post-login `returnTo` resolution.
 3. **Login page:** authenticated users bounce to `resolvePostLoginRedirect(claims, returnTo, { surface })`; unauthenticated users see the form.
 4. **Unauthenticated → `/login?returnTo=<current-url>`** (surface-aware: beta users go to `/beta/login`).

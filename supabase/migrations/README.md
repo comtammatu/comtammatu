@@ -3,7 +3,7 @@
 `00000000000000_baseline.sql` is the **canonical public-schema install** for a
 fresh environment. Generated 2026-05-30 from matu-dev (`nikkridjukdbqvkvqlmi`)
 via libpq `pg_dump 18` and validated to replay from an empty public schema. The
-378-file historical chain could **not** replay from empty (ordering bug at
+358-file historical chain could **not** replay from empty (ordering bug at
 `20260508055046` — references `order_items.vat_rate` before `20260509000000`
 creates it), which is why this baseline exists.
 
@@ -12,7 +12,7 @@ creates it), which is why this baseline exists.
 - `00000000000000_baseline.sql` — full public schema: tables, functions, RLS
   policies, indexes, grants, materialized views, the auth hook
   (`custom_access_token_hook` + its grant). Apply first on a fresh env.
-- `_archive/` — the 379 historical incremental migrations, retained for history.
+- `_archive/` — the 358 historical incremental migrations, retained for history.
   NOT the install path; NOT applied by a fresh `supabase db reset`.
 
 ## Managed surfaces (NOT in the baseline)
@@ -23,7 +23,7 @@ AFTER the baseline on a fresh env. It is a privileged install step (NOT an
 auto-applied migration) — generated 2026-05-30 from matu-dev + iexws, idempotent:
 
 - extensions (pgcrypto, uuid-ossp, hypopg, index_advisor, pg_cron)
-- storage buckets (5) + storage.objects RLS policies (14) — **the policy section
+- storage buckets (4) + storage.objects RLS policies (12) — **the policy section
   needs `storage.objects` ownership (`supabase_storage_admin`); run it as that
   role / via the Dashboard if a plain migration role errors with "must be owner"**
 - realtime publication membership (11 tables; `ADD TABLE` — fresh env only)

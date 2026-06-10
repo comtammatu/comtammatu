@@ -39,9 +39,7 @@ export default async function BranchTablesSettingsPage({
       .order("name"),
     supabase
       .from("tables")
-      .select(
-        "id, branch_id, zone_id, number, capacity, status, branch_zones(name)",
-      )
+      .select("id, branch_id, zone_id, number, status, branch_zones(name)")
       .eq("branch_id", branchId)
       .order("number"),
   ]);
@@ -55,7 +53,6 @@ export default async function BranchTablesSettingsPage({
     branch_id: t.branch_id,
     zone_id: t.zone_id,
     number: t.number,
-    capacity: t.capacity,
     status: t.status,
     zone_name: t.branch_zones?.name ?? null,
   }));

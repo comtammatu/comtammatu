@@ -58,11 +58,6 @@ INSERT INTO public.permission_keys (key, module, description, scope) VALUES
   ('hr:terminate',                   'hr',                 'Chấm dứt hợp đồng',                              'tenant'),
   ('hr:dependent_manage',            'hr',                 'Quản lý người phụ thuộc (NPT)',                  'tenant'),
 
-  -- crm
-  ('crm:read',                       'crm',                'Xem dữ liệu khách hàng',                         'either'),
-  ('crm:write',                      'crm',                'Sửa dữ liệu khách hàng',                         'either'),
-  ('crm:campaign_send',              'crm',                'Gửi chiến dịch marketing',                       'tenant'),
-
   -- finance
   ('finance:view',                   'finance',            'Xem báo cáo tài chính',                          'either'),
   ('finance:expense_create',         'finance',            'Tạo chi phí',                                    'either'),
@@ -269,7 +264,6 @@ BEGIN
         'orders:read','orders:write','orders:void','orders:refund',
         'staff:view','staff:manage','staff:assign_permission','staff:assign_position',
         'hr:view_employee','hr:manage_employee','hr:contract_create','hr:contract_sign','hr:dependent_manage','hr:terminate',
-        'crm:read','crm:write','crm:campaign_send',
         'finance:view','finance:expense_create','finance:expense_approve',
         'finance:payroll_calculate','finance:ap_pay',
         'reports:view_branch','reports:view_tenant','reports:export','reports:pit_export',

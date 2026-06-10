@@ -85,7 +85,7 @@ Tables are organized by domain. For per-table columns/constraints, read the migr
 | Domain        | Representative tables                                                                                                                                                  |
 | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Auth          | `permission_keys`, `positions`, `role_templates`, `staff_permissions`, `permission_audit_log`                                                                          |
-| Tenant + IA   | `tenants`, `branches`, `profiles`, `system_settings`, `branch_attendance_config`                                                                                                |
+| Tenant + IA   | `tenants`, `branches`, `profiles`, `system_settings`, `branch_attendance_config`                                                                                       |
 | Menu          | `menu_categories`, `menu_items`, `menu_item_variants`, `menu_item_modifiers`, `menu_item_available_sides`                                                              |
 | POS           | `pos_terminals`, `pos_sessions`, `branch_zones`, `tables`, `printer_configs`, `branch_menu_item_daily_limits`                                                          |
 | Orders / KDS  | `orders`, `order_items`, `order_status_history`, `kds_stations`, `kds_station_categories`, `kds_tickets`                                                               |
@@ -97,7 +97,7 @@ Tables are organized by domain. For per-table columns/constraints, read the migr
 | HR            | `employees`, `employment_contracts`, `shifts`, `shift_assignments`, `attendance_records`, `payroll_periods`, `payroll_entries`                                         |
 | Print agent   | `print_jobs` (claim/complete/expire RPCs), `printer_configs`                                                                                                           |
 | Trust / QC    | `branch_trusted_egress_ips`, `branch_override_codes`, `branch_override_attempts`, `inventory_qc_settings`                                                              |
-| Notifications | `notifications`, `branch_feature_flags`                                                                                                                                |
+| Notifications | `notifications`, `notification_reads`, `notification_push_subscriptions`, `notification_push_deliveries`, `notification_outbox`, `branch_feature_flags`                |
 
 For the per-column / per-policy reference of a specific table, prefer reading the originating migration and generated types. Do not recreate hand-written schema dumps; they drift from generated types and applied database state.
 
@@ -132,15 +132,15 @@ privileged companion for extensions, storage policies, realtime, and cron.
 Forward migrations live in `supabase/migrations/` with timestamp-prefixed
 filenames after the baseline.
 
-| Convention    | Rule                                                              |
-| ------------- | ----------------------------------------------------------------- |
-| PK            | `BIGINT GENERATED ALWAYS AS IDENTITY`                             |
-| Money         | `NUMERIC(15,2)`                                                   |
-| Time          | `TIMESTAMPTZ`                                                     |
-| Text          | `TEXT` (never VARCHAR)                                            |
-| Unique        | `UNIQUE(field, tenant_id)` — always composite                     |
+| Convention    | Rule                                                                            |
+| ------------- | ------------------------------------------------------------------------------- |
+| PK            | `BIGINT GENERATED ALWAYS AS IDENTITY`                                           |
+| Money         | `NUMERIC(15,2)`                                                                 |
+| Time          | `TIMESTAMPTZ`                                                                   |
+| Text          | `TEXT` (never VARCHAR)                                                          |
+| Unique        | `UNIQUE(field, tenant_id)` — always composite                                   |
 | Apply         | NEVER before PR merge — owner runs the approved Supabase apply path after merge |
-| After applied | Run `pnpm db:types` to regenerate types                           |
+| After applied | Run `pnpm db:types` to regenerate types                                         |
 
 ## Security Functions (SECURITY DEFINER)
 

@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { getVNDateString } from "@/_lib/format-datetime";
 import { messages } from "@lib/messages";
 import {
-  RotateCcw as IconReset,
   Save as IconSave,
   Search as IconSearch,
   SlidersHorizontal as IconSliders,
@@ -160,10 +159,7 @@ export function MenuLimitsSheet({
     }));
   }
 
-  function replaceRow(
-    menuItemId: number,
-    patch: Partial<MenuLimitRow>,
-  ): void {
+  function replaceRow(menuItemId: number, patch: Partial<MenuLimitRow>): void {
     const nextRows = localRows.map((row) =>
       row.menu_item_id === menuItemId ? { ...row, ...patch } : row,
     );
@@ -185,8 +181,36 @@ export function MenuLimitsSheet({
       limitQuantity = parsed;
     }
 
+    const shouldClear = limitQuantity === null && !draft.isDisabled;
+    const configured = isConfigured(row);
+
     setPendingId(row.menu_item_id);
     startSaveTransition(async () => {
+      if (shouldClear && configured) {
+        const result = await clearBranchMenuDailyLimit({
+          branchId,
+          menuItemId: row.menu_item_id,
+        });
+        setPendingId(null);
+
+        if (!result.success) {
+          toast.error(result.error ?? "Không lưu được hạn mức.");
+          return;
+        }
+
+        updateDraft(row.menu_item_id, { qtyText: "", isDisabled: false });
+        replaceRow(row.menu_item_id, {
+          limit_id: null,
+          limit_date: null,
+          limit_quantity: null,
+          is_disabled: false,
+          sold_today: 0,
+        });
+        toast.success(`Đã cập nhật: ${row.item_name}`);
+        router.refresh();
+        return;
+      }
+
       const result = await setBranchMenuDailyLimit({
         branchId,
         menuItemId: row.menu_item_id,
@@ -212,33 +236,6 @@ export function MenuLimitsSheet({
         sold_today: result.data.sold_today,
       });
       toast.success(`Đã cập nhật: ${row.item_name}`);
-      router.refresh();
-    });
-  }
-
-  function handleClear(row: MenuLimitRow) {
-    setPendingId(row.menu_item_id);
-    startSaveTransition(async () => {
-      const result = await clearBranchMenuDailyLimit({
-        branchId,
-        menuItemId: row.menu_item_id,
-      });
-      setPendingId(null);
-
-      if (!result.success) {
-        toast.error(result.error ?? "Không bỏ được hạn mức.");
-        return;
-      }
-
-      updateDraft(row.menu_item_id, { qtyText: "", isDisabled: false });
-      replaceRow(row.menu_item_id, {
-        limit_id: null,
-        limit_date: null,
-        limit_quantity: null,
-        is_disabled: false,
-        sold_today: 0,
-      });
-      toast.success(`Đã bỏ hạn mức: ${row.item_name}`);
       router.refresh();
     });
   }
@@ -298,7 +295,6 @@ export function MenuLimitsSheet({
             {filteredRows.map((row) => {
               const draft = drafts[row.menu_item_id] ?? buildDraft(row);
               const dirty = isDirty(row, draft);
-              const configured = isConfigured(row);
               const remaining = getRemaining(row);
               const exhausted = remaining !== null && remaining === 0;
               const rowPending = isSaving && pendingId === row.menu_item_id;
@@ -387,35 +383,21 @@ export function MenuLimitsSheet({
                     </div>
 
                     <div className="flex justify-end gap-2">
-                      {configured ? (
+                      {dirty ? (
                         <Button
                           type="button"
-                          variant="ghost"
                           size="sm"
                           disabled={rowPending}
-                          onClick={() => handleClear(row)}
+                          onClick={() => handleSave(row)}
                         >
                           {rowPending ? (
                             <Spinner data-icon="inline-start" />
                           ) : (
-                            <IconReset data-icon="inline-start" aria-hidden />
+                            <IconSave data-icon="inline-start" aria-hidden />
                           )}
-                          {messages.pos.menu.clearLimit}
+                          {messages.pos.menu.updateLimit}
                         </Button>
                       ) : null}
-                      <Button
-                        type="button"
-                        size="sm"
-                        disabled={rowPending || !dirty}
-                        onClick={() => handleSave(row)}
-                      >
-                        {rowPending ? (
-                          <Spinner data-icon="inline-start" />
-                        ) : (
-                          <IconSave data-icon="inline-start" aria-hidden />
-                        )}
-                        {messages.pos.menu.saveLimit}
-                      </Button>
                     </div>
                   </div>
                 </section>

@@ -28,7 +28,7 @@ URL: `/br/{branchId}/pos` (sau khi ca đã mở, mặc định landing trên mà
 - Header: nút "Thoát" (về cổng nhân viên), tên máy POS, nút "Chốt ca".
 - 2 tab "Tại bàn" / "Mang về" — mặc định **Tại bàn** đang chọn.
 - Danh sách bàn theo khu vực (ví dụ "Ngoài sân"), badge `8 trống` ở góc phải zone.
-- Mỗi bàn hiện: số bàn, sức chứa, badge trạng thái (`Trống` xanh / `Đang dùng` vàng / `Đã đặt` xám).
+- Mỗi bàn hiện: số bàn và badge trạng thái (`Trống` xanh / `Đang dùng` vàng / `Đã đặt` xám).
 
 **Bạn quyết định:** khách ngồi tại bàn → giữ tab "Tại bàn"; khách lấy về → chuyển tab "Mang về" (xem Bước 3).
 

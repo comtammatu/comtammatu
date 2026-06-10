@@ -23,7 +23,6 @@ CREATE EXTENSION IF NOT EXISTS pg_cron;
 
 -- ── Section B: storage buckets ──
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types) VALUES
-  ('feedback-photos',       'feedback-photos',       false, 5242880,  ARRAY['image/jpeg','image/png','image/webp','image/heic']),
   ('grn-evidence',          'grn-evidence',          false, NULL,     NULL),
   ('hddt-archive',          'hddt-archive',          false, 10485760, ARRAY['application/pdf','application/xml','text/xml']),
   ('inventory-attachments', 'inventory-attachments', true,  10485760, ARRAY['image/jpeg','image/png','image/webp','image/heic','application/pdf']),
@@ -31,24 +30,6 @@ INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_typ
 ON CONFLICT (id) DO NOTHING;
 
 -- ── Section C: storage.objects RLS policies (require storage owner) ──
--- Branch-tight (ISSUE-004): path tenant match + the feedback row's branch must
--- pass feedback:view. Path convention: <tenant_id>/<feedback_id>/<filename>.
-DROP POLICY IF EXISTS "feedback_photos_authenticated_select" ON storage.objects;
-CREATE POLICY "feedback_photos_authenticated_select" ON storage.objects FOR SELECT TO authenticated
-  USING (
-    bucket_id = 'feedback-photos'
-    AND (storage.foldername(name))[1] = (auth.jwt() ->> 'tenant_id')
-    AND EXISTS (
-      SELECT 1 FROM public.feedbacks f
-      WHERE f.id = CASE WHEN (storage.foldername(name))[2] ~ '^[0-9]{1,18}$' THEN ((storage.foldername(name))[2])::BIGINT ELSE NULL::BIGINT END
-        AND f.tenant_id::TEXT = (storage.foldername(name))[1]
-        AND f.tenant_id = public.auth_tenant_id()
-        AND public.has_permission(f.branch_id, 'feedback:view')
-    )
-  );
-DROP POLICY IF EXISTS "feedback_photos_service_role_all" ON storage.objects;
-CREATE POLICY "feedback_photos_service_role_all" ON storage.objects FOR ALL TO service_role
-  USING (bucket_id = 'feedback-photos') WITH CHECK (bucket_id = 'feedback-photos');
 DROP POLICY IF EXISTS "grn_evidence_no_delete" ON storage.objects;
 CREATE POLICY "grn_evidence_no_delete" ON storage.objects FOR DELETE TO authenticated
   USING (bucket_id <> 'grn-evidence');

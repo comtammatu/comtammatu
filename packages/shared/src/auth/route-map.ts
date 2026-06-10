@@ -46,7 +46,6 @@ export const ROUTE_FAMILY_CONTRACTS = [
     matchPrefixes: [
       "/login",
       "/access-denied",
-      "/r",
       "/payment/momo",
       "/api/health",
       "/api/webhooks",
@@ -80,11 +79,9 @@ export const ROUTE_FAMILY_CONTRACTS = [
     moduleKeys: [
       "dashboard",
       "staff",
-      "crm",
       "reports",
       "settings",
       "accounting",
-      "feedback",
     ],
     primaryNav: "admin-sidebar",
     backBehavior: "none",

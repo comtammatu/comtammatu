@@ -19,10 +19,7 @@ export default async function SchedulePage() {
 
   if (!ctx) {
     return (
-      <EmployeePage
-        title={copy.scheduleTitle}
-        description={copy.scheduleLongDescription}
-      >
+      <EmployeePage title={copy.scheduleTitle} hideHeaderOnMobile>
         <EmployeeMissingProfileEmpty />
       </EmployeePage>
     );
@@ -82,10 +79,7 @@ export default async function SchedulePage() {
   }));
 
   return (
-    <EmployeePage
-      title={copy.scheduleTitle}
-      description={copy.scheduleLongDescription}
-    >
+    <EmployeePage title={copy.scheduleTitle} hideHeaderOnMobile>
       <ScheduleClient
         initialData={{
           shifts: initialShifts,

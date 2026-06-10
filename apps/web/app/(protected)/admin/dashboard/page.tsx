@@ -6,7 +6,6 @@ import {
   BarChart3 as IconBarChart,
   Briefcase as IconBriefcase,
   DollarSign as IconCurrencyDollar,
-  MessageSquare as IconMessageSquare,
   Package as IconPackage,
   Receipt as IconReceipt,
   Settings as IconSettings,
@@ -395,21 +394,10 @@ function buildShortcutCards(
     cards.push({
       title: MODULE_ACL.finance.label,
       href: MODULE_ACL.finance.path,
-      description: "Dòng tiền, đối soát và kỳ kế toán.",
+      description: "Doanh thu, tồn kho, chi vận hành và lãi gộp.",
       icon: <IconWallet />,
       tone: "success",
       ctaLabel: ADMIN_DASHBOARD_COPY.financeCta,
-    });
-  }
-
-  if (canAccess(role, "feedback")) {
-    cards.push({
-      title: MODULE_ACL.feedback.label,
-      href: MODULE_ACL.feedback.path,
-      description: "Ý kiến khách, QR và kênh nhận thông báo.",
-      icon: <IconMessageSquare />,
-      tone: "warning",
-      ctaLabel: ADMIN_DASHBOARD_COPY.feedbackCta,
     });
   }
 
@@ -529,8 +517,7 @@ const ADMIN_DASHBOARD_COPY = {
   ordersCta: "Mở đơn hàng",
   staffCta: "Mở nhân viên",
   inventoryCta: "Mở kho",
-  financeCta: "Mở kế toán",
-  feedbackCta: "Mở phản ánh",
+  financeCta: "Mở tài chính",
   settingsCta: "Mở cài đặt",
   hrCta: "Mở nhân sự",
 } as const;

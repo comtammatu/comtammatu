@@ -19,6 +19,7 @@ export const OPERATIONAL_TOAST_ROUTE_PATTERN =
 
 const TOAST_CLASS_NAMES = {
   toast: "cn-toast",
+  closeButton: "cn-toast-close",
 };
 
 const COMPACT_TOAST_OFFSET = {
@@ -31,22 +32,27 @@ const COMPACT_TOAST_OFFSET = {
  * Compact preset — mobile (whole app) and POS/KDS (any viewport):
  * - `top-center` — avoids notch / Dynamic Island, doesn't cover a bottom FAB,
  *   sits near thumb-reach for tap-action / swipe-dismiss.
- * - `closeButton` — tap ✕ to dismiss without swiping.
- * - `visibleToasts: 3` + `expand: false` — tight stack for POS/KDS on
- *   phone/tablet, not the desktop-PC assumption.
+ * - `closeButton` — tap X to dismiss without swiping.
+ * - `visibleToasts: 1` + `expand: false` — operational surfaces never let
+ *   stacked feedback cover the next cashier / kitchen action.
+ * - Short default `duration` — routine feedback clears quickly; callers can
+ *   still opt into longer warning/error toasts when the next step needs it.
  * - `offset` + `mobileOffset` — tablets don't fall back to Sonner's desktop offset.
  */
 export const COMPACT_TOAST_PRESET = {
   richColors: true,
   position: "top-center",
-  visibleToasts: 3,
+  visibleToasts: 1,
   closeButton: true,
   expand: false,
-  gap: 8,
+  duration: 1800,
+  gap: 4,
   offset: COMPACT_TOAST_OFFSET,
   mobileOffset: COMPACT_TOAST_OFFSET,
+  swipeDirections: ["top", "right", "left"],
   containerAriaLabel: "Thông báo thao tác",
   toastOptions: {
+    closeButtonAriaLabel: "Đóng thông báo",
     classNames: TOAST_CLASS_NAMES,
   },
 } satisfies ToasterPreset;

@@ -109,7 +109,6 @@ Các cụm dưới đây bị xem là drift và phải thay bằng nhãn tiếng
 | `restaurant operations system`           | bộ phần mềm quản lý vận hành và bán hàng | Nhãn chính của `comtammatu`; dùng cho entrypoint/docs sản phẩm |
 | `admin`                                  | quản trị              | Tenant-level management surface                                   |
 | `content management system (CMS)`        | quản trị nội dung     | Dùng cho banner, promo, landing content, media, SEO metadata      |
-| `customer relationship management (CRM)` | quản lý khách hàng    | Dùng cho hồ sơ khách, lịch sử mua, loyalty, voucher, segmentation |
 | `inventory ops`                          | điều hành kho         | Có thể rút gọn `Kho hàng` trong nav                               |
 | `point of sale (POS)`                    | POS                   | Không ép dịch thành `điểm bán` trong UI                           |
 | `kitchen display system (KDS)`           | KDS                   | Có thể chú thích `màn hình bếp` ở docs/onboarding                 |
@@ -449,7 +448,6 @@ File [apps/web/app/(protected)/inventory/\_lib/labels.ts](<../../apps/web/app/(p
 | `admin`                 | Quản trị           | —          | —       |
 | `inventory_ops`         | Kho hàng           | —          | —       |
 | `content_management`    | Quản trị nội dung  | Nội dung   | `CMS`   |
-| `customer_relationship` | Quản lý khách hàng | Khách hàng | `CRM`   |
 | `employee_portal`       | Trang nhân viên    | Nhân viên  | —       |
 | `dashboard`             | Tổng quan          | —          | —       |
 | `reports`               | Báo cáo            | —          | —       |

@@ -136,8 +136,8 @@ function readEnvLocalValue(key) {
 
 // Build a DIRECT superuser connection for the dump. The `supabase db dump
 // --linked` temp-login role silently OMITS tables it cannot see — verified
-// 2026-05-30 that it dropped 18/118 public tables (feedbacks, webhook_events,
-// telegram_*, etc.) with exit 0 and no warning, even with --role postgres.
+// 2026-05-30 that it dropped RLS-restricted public tables (for example
+// webhook_events) with exit 0 and no warning, even with --role postgres.
 // A direct postgres connection dumps the full schema. See
 // supabase/migrations/README.md.
 function buildBaselineDbUrl(expectedRef) {

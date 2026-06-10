@@ -32,6 +32,7 @@ export interface UsePosAppendReturn {
   performAppend: (
     target: AppendTargetLike,
     items: CartItem[],
+    dailyLimitHoldToken: string,
     opts?: PerformAppendOptions,
   ) => Promise<void>;
 }
@@ -45,6 +46,7 @@ export function usePosAppend(args: UsePosAppendArgs): UsePosAppendReturn {
     async (
       target: AppendTargetLike,
       items: CartItem[],
+      dailyLimitHoldToken: string,
       opts?: PerformAppendOptions,
     ): Promise<void> => {
       if (pendingRef.current) {
@@ -60,6 +62,7 @@ export function usePosAppend(args: UsePosAppendArgs): UsePosAppendReturn {
           target.orderId,
           items,
           key,
+          dailyLimitHoldToken,
         );
 
         if (!result.success) {

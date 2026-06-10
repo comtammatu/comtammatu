@@ -78,6 +78,7 @@ export interface SubmitPosOrderArgs {
   cartSnapshot: CartSnapshot;
   tableId?: number | null;
   isPriority?: boolean;
+  dailyLimitHoldToken?: string;
 }
 
 type SubmitResult = Awaited<ReturnType<typeof submitOrder>>;
@@ -113,6 +114,7 @@ export async function submitPosOrderWithRetry(
       buildSubmitOrderCart(args),
       args.sessionId,
       idempotencyKey,
+      args.dailyLimitHoldToken,
     );
     if (result.success) break;
     if (!shouldRetrySubmit(result.errorCode, result.error)) break;

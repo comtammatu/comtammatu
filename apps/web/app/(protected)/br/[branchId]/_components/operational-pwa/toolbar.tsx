@@ -24,11 +24,19 @@ import {
   useIsStandalone,
 } from "./provider";
 
-// Legacy key kept intentionally: this is only an install-hint preference, not
-// branch/session/workflow scope.
-const DISMISS_STORAGE_KEY = "pos-pwa-install-dismissed";
-
 type OperationalPwaSurface = "pos" | "kds";
+const LEGACY_POS_DISMISS_STORAGE_KEY = "pos-pwa-install-dismissed";
+
+function getDismissStorageKey(
+  surface: OperationalPwaSurface,
+  branchId: string,
+) {
+  return `operational-pwa-install-dismissed:${surface}:${branchId}`;
+}
+
+function hasStoredDismissal(keys: readonly string[]) {
+  return keys.some((key) => window.localStorage.getItem(key) === "true");
+}
 
 interface OperationalPwaCopy {
   appLabel: string;
@@ -77,11 +85,17 @@ function buildCopy(surface: OperationalPwaSurface): OperationalPwaCopy {
 }
 
 export function OperationalPwaToolbar({
+  branchId,
   surface,
 }: {
+  branchId: string;
   surface: OperationalPwaSurface;
 }) {
   const copy = useMemo(() => buildCopy(surface), [surface]);
+  const dismissStorageKey = useMemo(
+    () => getDismissStorageKey(surface, branchId),
+    [branchId, surface],
+  );
   const isOnline = useIsOnline();
   const isStandalone = useIsStandalone();
   const isIosPwaInstall = useIsIosPwaInstall();
@@ -95,12 +109,17 @@ export function OperationalPwaToolbar({
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
-      const stored = window.localStorage.getItem(DISMISS_STORAGE_KEY);
-      if (stored === "true") setInstallDismissed(true);
+      const dismissKeys =
+        surface === "pos"
+          ? [dismissStorageKey, LEGACY_POS_DISMISS_STORAGE_KEY]
+          : [dismissStorageKey];
+      if (hasStoredDismissal(dismissKeys)) {
+        setInstallDismissed(true);
+      }
     } catch {
       // localStorage may be blocked in private mode — ignore.
     }
-  }, []);
+  }, [dismissStorageKey, surface]);
 
   const hasBrowserPrompt = install != null && install.available;
   const installAvailable = hasBrowserPrompt || isIosPwaInstall;
@@ -123,12 +142,12 @@ export function OperationalPwaToolbar({
     setInstallDismissed(true);
     try {
       if (typeof window !== "undefined") {
-        window.localStorage.setItem(DISMISS_STORAGE_KEY, "true");
+        window.localStorage.setItem(dismissStorageKey, "true");
       }
     } catch {
       // ignore
     }
-  }, []);
+  }, [dismissStorageKey]);
 
   if (isStandalone) return null;
   if (isOnline && installDismissed) return null;
@@ -218,10 +237,10 @@ export function OperationalPwaToolbar({
   );
 }
 
-export function PosPwaToolbar() {
-  return <OperationalPwaToolbar surface="pos" />;
+export function PosPwaToolbar({ branchId }: { branchId: string }) {
+  return <OperationalPwaToolbar branchId={branchId} surface="pos" />;
 }
 
-export function KdsPwaToolbar() {
-  return <OperationalPwaToolbar surface="kds" />;
+export function KdsPwaToolbar({ branchId }: { branchId: string }) {
+  return <OperationalPwaToolbar branchId={branchId} surface="kds" />;
 }

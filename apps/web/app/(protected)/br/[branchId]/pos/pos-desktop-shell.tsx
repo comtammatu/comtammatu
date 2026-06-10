@@ -83,7 +83,12 @@ const ArchivedOrdersSheet = dynamic(
     })),
   { ssr: false },
 );
-import { fetchActiveOrderForTable, editPendingOrderItem } from "./actions";
+import {
+  fetchActiveOrderForTable,
+  editPendingOrderItem,
+  reserveDailyLimitHolds,
+  releaseDailyLimitHolds,
+} from "./actions";
 import type { OrderItemRowData } from "./_components/order-detail/order-item-row";
 import { usePosAppend } from "./_hooks/use-pos-append";
 import { submitPosOrderWithRetry } from "./_utils/submit-with-retry";
@@ -104,6 +109,7 @@ import type {
 import type { OrderDetailData } from "./order-detail-sheet";
 import {
   PosDesktopProvider,
+  usePosDailyLimitStore,
   usePosOperationalDispatch,
   usePosOrders,
   usePosTables,
@@ -116,6 +122,7 @@ import {
   useCartItemCount,
   useCartOrderType,
   useCartQuantity,
+  useCartSnapshot,
 } from "./_hooks/use-cart";
 import { useActiveTable } from "./_hooks/use-active-table";
 import { useAppendTarget } from "./_hooks/use-append-target";
@@ -124,6 +131,12 @@ import {
   isActiveUnpaidPosOrder,
 } from "./_lib/table-order-visual-state";
 import { makeCartKey, makeNotedCartKey } from "./_utils/cart-key";
+import {
+  buildDailyLimitDemand,
+  findDailyLimitBlockForProposal,
+  type DailyLimitBlock,
+  type ProposedDailyLimitLine,
+} from "./_utils/daily-limit-draft";
 import { messages } from "@lib/messages";
 
 interface PosDesktopShellProps {
@@ -158,6 +171,13 @@ interface PosDesktopShellProps {
   initialVietQrConfig: VietQrConfig | null;
 }
 
+type DailyLimitHoldSource = "pos_cart" | "pos_append";
+
+interface DailyLimitHoldSyncState {
+  inFlight: boolean;
+  queuedItems: CartItem[] | null;
+}
+
 function isOrderAwaitingPayment(order: {
   status: string;
   payment_status: string | null;
@@ -166,6 +186,18 @@ function isOrderAwaitingPayment(order: {
     ACTIVE_POS_STATUSES.includes(order.status) &&
     order.payment_status !== "paid"
   );
+}
+
+function formatDailyLimitBlockMessage(block: DailyLimitBlock): string {
+  if (block.reason === "disabled") {
+    return `${block.itemName} đang tắt hôm nay.`;
+  }
+
+  if (block.available <= 0) {
+    return `${block.itemName} đã hết suất hôm nay.`;
+  }
+
+  return `${block.itemName} chỉ còn ${block.available} suất.`;
 }
 
 export function PosDesktopShell(props: PosDesktopShellProps) {
@@ -415,6 +447,124 @@ function PosDesktopInner({
     number | null
   >(null);
   const isMobile = useIsMobile();
+  const cartHoldTokenRef = useRef<string | null>(null);
+  const appendHoldTokenRef = useRef<string | null>(null);
+  const cartHoldSyncRef = useRef<DailyLimitHoldSyncState>({
+    inFlight: false,
+    queuedItems: null,
+  });
+  const appendHoldSyncRef = useRef<DailyLimitHoldSyncState>({
+    inFlight: false,
+    queuedItems: null,
+  });
+
+  const getDailyLimitHoldToken = useCallback(
+    (source: DailyLimitHoldSource): string => {
+      const ref =
+        source === "pos_cart" ? cartHoldTokenRef : appendHoldTokenRef;
+      ref.current ??= crypto.randomUUID();
+      return ref.current;
+    },
+    [],
+  );
+
+  const resetDailyLimitHoldToken = useCallback(
+    (source: DailyLimitHoldSource): void => {
+      const ref =
+        source === "pos_cart" ? cartHoldTokenRef : appendHoldTokenRef;
+      ref.current = crypto.randomUUID();
+    },
+    [],
+  );
+
+  const reserveDailyLimitSnapshot = useCallback(
+    async (
+      items: CartItem[],
+      source: DailyLimitHoldSource,
+      options: { showError?: boolean } = {},
+    ): Promise<boolean> => {
+      const result = await reserveDailyLimitHolds(
+        branchId,
+        getDailyLimitHoldToken(source),
+        items,
+        source,
+      );
+
+      if (!result.success) {
+        if (options.showError !== false && items.length > 0) {
+          toast.error(result.error ?? "Không thể giữ suất món.");
+        }
+        return false;
+      }
+
+      return true;
+    },
+    [branchId, getDailyLimitHoldToken],
+  );
+
+  const flushDailyLimitHoldSync = useCallback(
+    (source: DailyLimitHoldSource): void => {
+      const sync =
+        source === "pos_cart"
+          ? cartHoldSyncRef.current
+          : appendHoldSyncRef.current;
+      if (sync.inFlight || sync.queuedItems === null) return;
+
+      sync.inFlight = true;
+
+      void (async () => {
+        try {
+          while (sync.queuedItems !== null) {
+            const items = sync.queuedItems;
+            sync.queuedItems = null;
+            const holdToken = getDailyLimitHoldToken(source);
+            const result = await reserveDailyLimitHolds(
+              branchId,
+              holdToken,
+              items,
+              source,
+            );
+
+            if (!result.success && items.length > 0) {
+              toast.error(result.error ?? "Không thể giữ suất món.");
+            }
+
+            const currentToken =
+              source === "pos_cart"
+                ? cartHoldTokenRef.current
+                : appendHoldTokenRef.current;
+            if (currentToken !== null && currentToken !== holdToken) {
+              void releaseDailyLimitHolds(branchId, holdToken);
+            }
+          }
+        } finally {
+          sync.inFlight = false;
+        }
+      })();
+    },
+    [branchId, getDailyLimitHoldToken],
+  );
+
+  const queueDailyLimitHoldSync = useCallback(
+    (source: DailyLimitHoldSource, items: CartItem[]): void => {
+      const sync =
+        source === "pos_cart"
+          ? cartHoldSyncRef.current
+          : appendHoldSyncRef.current;
+      sync.queuedItems = items;
+      flushDailyLimitHoldSync(source);
+    },
+    [flushDailyLimitHoldSync],
+  );
+
+  const releaseDailyLimitHoldToken = useCallback(
+    (source: DailyLimitHoldSource): void => {
+      const token = getDailyLimitHoldToken(source);
+      resetDailyLimitHoldToken(source);
+      void releaseDailyLimitHolds(branchId, token);
+    },
+    [branchId, getDailyLimitHoldToken, resetDailyLimitHoldToken],
+  );
 
   const menuItemById = useMemo(() => {
     const map = new Map<number, MenuItem>();
@@ -547,6 +697,52 @@ function PosDesktopInner({
 
   const canSubmit =
     cartItemCount > 0 && (cartOrderType === "takeaway" || selectedTableUsable);
+  const cartSnapshot = useCartSnapshot();
+  const dailyLimitStore = usePosDailyLimitStore();
+  const activeDraftLines = useMemo(
+    () => [...cartSnapshot.items, ...appendDraftItems],
+    [appendDraftItems, cartSnapshot.items],
+  );
+  const dailyLimitDemandByMenuItem = useMemo(
+    () => buildDailyLimitDemand(activeDraftLines),
+    [activeDraftLines],
+  );
+  const getDailyLimitBlock = useCallback(
+    (
+      proposed: ProposedDailyLimitLine,
+      excludeKeys?: ReadonlySet<string>,
+    ): DailyLimitBlock | null =>
+      findDailyLimitBlockForProposal({
+        activeDraftLines,
+        excludeKeys,
+        proposed,
+        getLimit: (menuItemId) => dailyLimitStore.get(menuItemId),
+      }),
+    [activeDraftLines, dailyLimitStore],
+  );
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      queueDailyLimitHoldSync("pos_cart", cartSnapshot.items);
+    }, 120);
+
+    return () => window.clearTimeout(timeout);
+  }, [cartSnapshot.items, queueDailyLimitHoldSync]);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      queueDailyLimitHoldSync(
+        "pos_append",
+        appendTarget == null ? [] : appendDraftItems,
+      );
+    }, 120);
+
+    return () => window.clearTimeout(timeout);
+  }, [
+    appendDraftItems,
+    appendTarget,
+    queueDailyLimitHoldSync,
+  ]);
 
   const focusOrderWorkflow = useCallback(
     (orderId: number, orderNumber?: string | null) => {
@@ -618,8 +814,14 @@ function PosDesktopInner({
     setEditingCartItem(null);
     setEditingAppendItem(null);
     setCartDrawerOpen(false);
+    releaseDailyLimitHoldToken("pos_append");
     focusOrderWorkflow(target.orderId, target.orderNumber);
-  }, [appendTarget, clearAppendTarget, focusOrderWorkflow]);
+  }, [
+    appendTarget,
+    clearAppendTarget,
+    focusOrderWorkflow,
+    releaseDailyLimitHoldToken,
+  ]);
 
   const handleSubmitAppendDraft = useCallback(() => {
     if (
@@ -633,24 +835,33 @@ function PosDesktopInner({
     const target = appendTarget;
     const items = appendDraftItems;
     setAppendSubmitting(true);
-    void performAppend(target, items, {
-      onSuccess: () => {
-        setAppendDraftItems([]);
-        clearAppendTarget();
-        setCustomizerItem(null);
-        setEditingCartItem(null);
-        setEditingAppendItem(null);
-        setCartDrawerOpen(false);
-        focusOrderWorkflow(target.orderId, target.orderNumber);
-      },
-    }).finally(() => setAppendSubmitting(false));
+    void (async () => {
+      const reserved = await reserveDailyLimitSnapshot(items, "pos_append");
+      if (!reserved) return;
+
+      await performAppend(target, items, getDailyLimitHoldToken("pos_append"), {
+        onSuccess: () => {
+          resetDailyLimitHoldToken("pos_append");
+          setAppendDraftItems([]);
+          clearAppendTarget();
+          setCustomizerItem(null);
+          setEditingCartItem(null);
+          setEditingAppendItem(null);
+          setCartDrawerOpen(false);
+          focusOrderWorkflow(target.orderId, target.orderNumber);
+        },
+      });
+    })().finally(() => setAppendSubmitting(false));
   }, [
     appendDraftItems,
     appendSubmitting,
     appendTarget,
     clearAppendTarget,
     focusOrderWorkflow,
+    getDailyLimitHoldToken,
     performAppend,
+    reserveDailyLimitSnapshot,
+    resetDailyLimitHoldToken,
   ]);
 
   const handleTableSelect = useCallback(
@@ -783,6 +994,13 @@ function PosDesktopInner({
       const isPrioritySubmit = options?.priority === true;
       startTransition(async () => {
         const cartSnapshot = cartStore.getSnapshot();
+        const reserved = await reserveDailyLimitSnapshot(
+          cartSnapshot.items,
+          "pos_cart",
+        );
+        if (!reserved) return;
+
+        const dailyLimitHoldToken = getDailyLimitHoldToken("pos_cart");
         const submittedOrderType = cartSnapshot.orderType;
         const result = await submitPosOrderWithRetry({
           branchId,
@@ -790,6 +1008,7 @@ function PosDesktopInner({
           cartSnapshot,
           tableId: selectedTableId,
           isPriority: isPrioritySubmit,
+          dailyLimitHoldToken,
         });
 
         if (result.success && result.data) {
@@ -813,6 +1032,7 @@ function PosDesktopInner({
             toast.warning(priorityWarning);
           }
 
+          resetDailyLimitHoldToken("pos_cart");
           clearCart();
           if (submittedOrderType === "takeaway") {
             setPostSubmitPaymentOrderId(null);
@@ -856,12 +1076,15 @@ function PosDesktopInner({
       branchId,
       cartStore,
       clearCart,
+      getDailyLimitHoldToken,
       selectedTableId,
       setActiveTable,
       setCartOrderType,
       session.id,
       tables,
       focusOrderWorkflow,
+      reserveDailyLimitSnapshot,
+      resetDailyLimitHoldToken,
       refreshOperational,
       router,
     ],
@@ -883,6 +1106,16 @@ function PosDesktopInner({
           setEditingAppendItem(null);
           setCustomizerItem(item);
         } else {
+          const block = getDailyLimitBlock({
+            menuItemId: item.id,
+            itemName: item.name,
+            quantity: 1,
+            sides: [],
+          });
+          if (block) {
+            toast.warning(formatDailyLimitBlockMessage(block));
+            return;
+          }
           const line: CartItem = {
             key: makeCartKey(item.id, undefined, [], []),
             menu_item_id: item.id,
@@ -902,11 +1135,27 @@ function PosDesktopInner({
         setEditingAppendItem(null);
         setCustomizerItem(item);
       } else {
+        const block = getDailyLimitBlock({
+          menuItemId: item.id,
+          itemName: item.name,
+          quantity: 1,
+          sides: [],
+        });
+        if (block) {
+          toast.warning(formatDailyLimitBlockMessage(block));
+          return;
+        }
         setShowOrders(false);
         addCartItem(item);
       }
     },
-    [addAppendDraftItem, addCartItem, appendSubmitting, appendTarget],
+    [
+      addAppendDraftItem,
+      addCartItem,
+      appendSubmitting,
+      appendTarget,
+      getDailyLimitBlock,
+    ],
   );
 
   const handleCartItemCustomize = useCallback(
@@ -971,6 +1220,23 @@ function PosDesktopInner({
       note: string | undefined,
       quantity: number,
     ) => {
+      if (!editingSentItem) {
+        const excludeKey = editingCartItem?.key ?? editingAppendItem?.key;
+        const block = getDailyLimitBlock(
+          {
+            menuItemId: item.id,
+            itemName: item.name,
+            quantity,
+            sides,
+          },
+          excludeKey ? new Set([excludeKey]) : undefined,
+        );
+        if (block) {
+          toast.warning(formatDailyLimitBlockMessage(block));
+          return;
+        }
+      }
+
       // edit-sent: call server action — không in-place mutate cart store.
       // Đặt branch này TRƯỚC editingCartItem/editingAppendItem để safety:
       // editingSentItem chỉ set khi parent gọi handleStartEditSent.
@@ -1137,6 +1403,7 @@ function PosDesktopInner({
       editingAppendItem,
       editingCartItem,
       editingSentItem,
+      getDailyLimitBlock,
       refreshOperational,
       replaceCartItems,
     ],
@@ -1516,7 +1783,11 @@ function PosDesktopInner({
         <div className="flex min-h-0 flex-1 overflow-hidden bg-background/35">
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             {appendBannerRow}
-            <MenuPane categories={categories} onItemTap={handleItemTap} />
+            <MenuPane
+              categories={categories}
+              dailyLimitDemandByMenuItem={dailyLimitDemandByMenuItem}
+              onItemTap={handleItemTap}
+            />
           </div>
           {sidebars}
         </div>

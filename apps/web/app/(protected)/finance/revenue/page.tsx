@@ -189,7 +189,7 @@ export default async function RevenueReportPage({
       endDate: resolved.end,
     }),
     fetchCashVarianceSummary(params.branch, resolved.start, resolved.end),
-    fetchTopItems(params.branch, resolved.start.slice(0, 7) + "-01"),
+    fetchTopItems(params.branch, resolved.start, resolved.end),
     hourlyEnabled
       ? fetchRevenueByHour(params.branch, resolved.start, resolved.end)
       : Promise.resolve({ success: true as const, data: [] }),

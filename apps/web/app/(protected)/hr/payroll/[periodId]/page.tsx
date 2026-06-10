@@ -4,6 +4,7 @@ import { AppPage, AppPageHeader, AppEmptyState } from "@/components/surface";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { AuditHistoryList } from "@/components/audit-history-list";
 import { PayrollDetailClient } from "./payroll-detail-client";
+import { messages } from "@lib/messages";
 
 export default async function PayrollDetailPage({
   params,
@@ -11,6 +12,7 @@ export default async function PayrollDetailPage({
   params: Promise<{ periodId: string }>;
 }) {
   const { periodId } = await params;
+  const copy = messages.hr.payroll;
   const id = Number(periodId);
 
   if (!id || id <= 0) {
@@ -18,8 +20,8 @@ export default async function PayrollDetailPage({
       <AppPage>
         <AppEmptyState
           mode="no-access"
-          title="ID không hợp lệ"
-          description="Không thể mở chi tiết bảng lương vì mã kỳ lương không đúng."
+          title={copy.detail.invalidTitle}
+          description={copy.detail.invalidDescription}
         />
       </AppPage>
     );
@@ -36,15 +38,24 @@ export default async function PayrollDetailPage({
   return (
     <AppPage>
       <AppPageHeader
-        eyebrow="Nhân sự"
-        title="Chi tiết lương đã chốt"
-        description={`Kỳ lương #${periodId}`}
+        eyebrow={copy.eyebrow}
+        title={copy.detail.title}
+        description={copy.detail.description(periodId)}
+        badge={{ children: copy.supportBadge, variant: "secondary" }}
         tabs={
           <AppPageTabs
             items={[
-              { value: "overview", label: "Tổng quan" },
-              { value: "entries", label: "Đơn vị", count: entries.length },
-              { value: "history", label: "Lịch sử", count: auditLogs.length },
+              { value: "overview", label: copy.detail.tabs.overview },
+              {
+                value: "entries",
+                label: copy.detail.tabs.entries,
+                count: entries.length,
+              },
+              {
+                value: "history",
+                label: copy.detail.tabs.history,
+                count: auditLogs.length,
+              },
             ]}
           >
             <TabsContent value="overview" className="mt-4">

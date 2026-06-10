@@ -26,9 +26,11 @@ import {
 import type { PayrollEntryRow } from "./page";
 import { useState } from "react";
 import { ERRORS_VI, STAFF_VI } from "@comtammatu/shared/messages";
+import { messages } from "@lib/messages";
 
 const fmt = (n: number) =>
   n.toLocaleString("vi-VN", { maximumFractionDigits: 0 });
+const copy = messages.hr.payroll.detail;
 
 interface PayrollDetailClientProps {
   periodId: number;
@@ -56,7 +58,9 @@ export function PayrollDetailClient({
       const result = await calculatePayroll({ periodId });
       if (result.success) {
         toast.success(
-          `Đã tính lương cho ${(result.meta as { employeeCount: number })?.employeeCount ?? 0} nhân viên`,
+          copy.toast.calculated(
+            (result.meta as { employeeCount: number })?.employeeCount ?? 0,
+          ),
         );
         reload();
       } else {
@@ -69,7 +73,7 @@ export function PayrollDetailClient({
     startTransition(async () => {
       const result = await approvePayroll({ periodId });
       if (result.success) {
-        toast.success("Đã duyệt bảng lương");
+        toast.success(copy.toast.approved);
       } else {
         toast.error(result.error ?? ERRORS_VI.fallback);
       }
@@ -80,7 +84,7 @@ export function PayrollDetailClient({
     startTransition(async () => {
       const result = await markPayrollPaid({ periodId });
       if (result.success) {
-        toast.success("Đã đánh dấu thanh toán");
+        toast.success(copy.toast.paid);
       } else {
         toast.error(result.error ?? ERRORS_VI.fallback);
       }
@@ -109,7 +113,7 @@ export function PayrollDetailClient({
           ) : (
             <IconCalculator className="mr-2 size-4" />
           )}
-          Tính lương
+          {copy.actions.calculate}
         </Button>
         <Button
           onClick={handleApprove}
@@ -117,7 +121,7 @@ export function PayrollDetailClient({
           variant="outline"
         >
           <IconCircleCheck className="mr-2 size-4" />
-          Duyệt
+          {copy.actions.approve}
         </Button>
         <Button
           onClick={handlePay}
@@ -125,18 +129,24 @@ export function PayrollDetailClient({
           variant="outline"
         >
           <IconCreditCard className="mr-2 size-4" />
-          Thanh toán
+          {copy.actions.pay}
         </Button>
       </div>
 
       {/* Summary */}
       {entries.length > 0 && (
         <div className="grid gap-3 sm:grid-cols-5">
-          <SummaryCard label="Tổng Gross" value={totalGross} />
-          <SummaryCard label="BH NLĐ" value={totalInsEmp} />
-          <SummaryCard label="Thuế TNCN" value={totalPit} />
-          <SummaryCard label="Thực lĩnh" value={totalNet} highlight />
-          <SummaryCard label="BH Cty đóng" value={totalInsEmployer} />
+          <SummaryCard label={copy.summary.gross} value={totalGross} />
+          <SummaryCard
+            label={copy.summary.employeeInsurance}
+            value={totalInsEmp}
+          />
+          <SummaryCard label={copy.summary.pit} value={totalPit} />
+          <SummaryCard label={copy.summary.net} value={totalNet} highlight />
+          <SummaryCard
+            label={copy.summary.employerInsurance}
+            value={totalInsEmployer}
+          />
         </div>
       )}
 
@@ -146,13 +156,23 @@ export function PayrollDetailClient({
           <TableHeader>
             <TableRow>
               <TableHead>{STAFF_VI.long}</TableHead>
-              <TableHead className="text-right">Ngày công</TableHead>
-              <TableHead className="text-right">Lương Gross</TableHead>
-              <TableHead className="text-right">BH NLĐ</TableHead>
-              <TableHead className="text-right">Giảm trừ</TableHead>
-              <TableHead className="text-right">TNTT</TableHead>
-              <TableHead className="text-right">Thuế TNCN</TableHead>
-              <TableHead className="text-right font-bold">Thực lĩnh</TableHead>
+              <TableHead className="text-right">
+                {copy.table.workingDays}
+              </TableHead>
+              <TableHead className="text-right">{copy.table.gross}</TableHead>
+              <TableHead className="text-right">
+                {copy.table.employeeInsurance}
+              </TableHead>
+              <TableHead className="text-right">
+                {copy.table.deductions}
+              </TableHead>
+              <TableHead className="text-right">
+                {copy.table.taxableIncome}
+              </TableHead>
+              <TableHead className="text-right">{copy.table.pit}</TableHead>
+              <TableHead className="text-right font-bold">
+                {copy.table.net}
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -162,7 +182,7 @@ export function PayrollDetailClient({
                   colSpan={8}
                   className="py-8 text-center text-muted-foreground"
                 >
-                  Chưa có dữ liệu. Nhấn "Tính lương" để bắt đầu.
+                  {copy.table.empty}
                 </TableCell>
               </TableRow>
             )}
@@ -206,7 +226,7 @@ export function PayrollDetailClient({
             ))}
             {entries.length > 0 && (
               <TableRow className="bg-muted/50 font-bold">
-                <TableCell>TỔNG ({entries.length} NV)</TableCell>
+                <TableCell>{copy.table.total(entries.length)}</TableCell>
                 <TableCell />
                 <TableCell className="text-right font-mono">
                   {fmt(totalGross)}

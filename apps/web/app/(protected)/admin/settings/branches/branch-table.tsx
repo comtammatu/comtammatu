@@ -1,9 +1,10 @@
 "use client";
 
+/* eslint-disable i18n/no-inline-vietnamese -- vi-allow: existing settings branch table keeps Vietnamese operational copy inline */
+
 import { useState, useTransition } from "react";
 import {
   Building as IconBuilding,
-  Clock as IconClock,
   Ellipsis as IconDots,
   Pencil as IconPencil,
   Shield as IconShield,
@@ -33,7 +34,6 @@ import {
 } from "@comtammatu/shared/labels";
 import { toggleBranchActive } from "./actions";
 import { BranchFormDialog } from "./branch-form-dialog";
-import { AttendanceConfigDialog } from "./attendance-config-dialog";
 import { NetworkConfigDialog } from "./network-config-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { TableEmptyStateRow } from "../../components/table-empty-state-row";
@@ -46,7 +46,6 @@ export interface BranchRow {
   phone: string | null;
   is_active: boolean | null;
   branch_kind: string | null;
-  checklistItems: string[];
 }
 
 interface BranchTableProps {
@@ -55,9 +54,6 @@ interface BranchTableProps {
 
 export function BranchTable({ branches }: BranchTableProps) {
   const [editBranch, setEditBranch] = useState<BranchRow | null>(null);
-  const [attendanceBranch, setAttendanceBranch] = useState<BranchRow | null>(
-    null,
-  );
   const [networkBranch, setNetworkBranch] = useState<BranchRow | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -161,12 +157,6 @@ export function BranchTable({ branches }: BranchTableProps) {
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
-                        onClick={() => setAttendanceBranch(branch)}
-                      >
-                        <IconClock className="mr-2 size-4" />
-                        Cấu hình chấm công
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
                         onClick={() => setNetworkBranch(branch)}
                       >
                         <IconShield className="mr-2 size-4" />
@@ -186,18 +176,6 @@ export function BranchTable({ branches }: BranchTableProps) {
         onOpenChange={(open) => !open && setEditBranch(null)}
         branch={editBranch}
       />
-
-      {attendanceBranch && (
-        <AttendanceConfigDialog
-          open={!!attendanceBranch}
-          onOpenChange={(open) => !open && setAttendanceBranch(null)}
-          branch={{
-            id: attendanceBranch.id,
-            name: attendanceBranch.name,
-            checklistItems: attendanceBranch.checklistItems,
-          }}
-        />
-      )}
 
       {networkBranch && (
         <NetworkConfigDialog

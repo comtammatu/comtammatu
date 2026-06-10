@@ -15,6 +15,9 @@ export type TodayWorkStatus =
 export interface TodayChecklistItem {
   id: number;
   title: string;
+  phase: "dau_ca" | "trong_ca" | "cuoi_ca";
+  doneDefinition: string;
+  isRequired: boolean;
   sortOrder: number;
   done: boolean;
   completedAt: string | null;
@@ -52,6 +55,7 @@ export interface TodayWorkState {
   branchId: number | null;
   branchName: string | null;
   userRole: StaffRole | null;
+  managerAttendanceOnly: boolean;
   attendanceRequired: boolean;
   approvalTargetLabel: string;
   attendance: TodayAttendance | null;
@@ -61,6 +65,9 @@ export interface TodayWorkState {
     total: number;
     done: number;
     remaining: number;
+    requiredTotal: number;
+    requiredDone: number;
+    requiredRemaining: number;
   };
 }
 
@@ -70,8 +77,18 @@ const DEFAULT_ATTENDANCE_ROLES: readonly StaffRole[] = [
   "chef",
 ];
 
+const MANAGER_SIMPLE_ATTENDANCE_ROLES: readonly StaffRole[] = [
+  "branch_manager",
+];
+
 function isDefaultAttendanceRole(role: StaffRole): boolean {
   return DEFAULT_ATTENDANCE_ROLES.includes(role);
+}
+
+export function isManagerSimpleAttendanceRole(
+  role: StaffRole | null,
+): boolean {
+  return role !== null && MANAGER_SIMPLE_ATTENDANCE_ROLES.includes(role);
 }
 
 function getApprovalTargetLabel(role: StaffRole | null): string {
@@ -118,15 +135,25 @@ export async function getTodayWorkState(): Promise<TodayWorkState> {
       branchId: null,
       branchName: null,
       userRole: null,
+      managerAttendanceOnly: false,
       attendanceRequired: false,
       approvalTargetLabel: getApprovalTargetLabel(null),
       attendance: null,
       nextShift: null,
-      checklist: { items: [], total: 0, done: 0, remaining: 0 },
+      checklist: {
+        items: [],
+        total: 0,
+        done: 0,
+        remaining: 0,
+        requiredTotal: 0,
+        requiredDone: 0,
+        requiredRemaining: 0,
+      },
     };
   }
 
   const { supabase, claims, employeeId } = ctx;
+  const managerAttendanceOnly = isManagerSimpleAttendanceRole(claims.user_role);
 
   const { data: record } = await supabase
     .from("attendance_records")
@@ -198,7 +225,9 @@ export async function getTodayWorkState(): Promise<TodayWorkState> {
   const { data: checklistRows } = attendance
     ? await supabase
         .from("attendance_checklist_items")
-        .select("id, title, sort_order, is_done, completed_at")
+        .select(
+          "id, title, phase, done_definition, is_required, sort_order, is_done, completed_at",
+        )
         .eq("tenant_id", claims.tenant_id)
         .eq("attendance_record_id", attendance.id)
         .order("sort_order")
@@ -208,6 +237,12 @@ export async function getTodayWorkState(): Promise<TodayWorkState> {
     (item) => ({
       id: item.id,
       title: item.title,
+      phase:
+        item.phase === "dau_ca" || item.phase === "cuoi_ca"
+          ? item.phase
+          : "trong_ca",
+      doneDefinition: item.done_definition,
+      isRequired: item.is_required,
       sortOrder: item.sort_order,
       done: item.is_done,
       completedAt: item.completed_at,
@@ -217,11 +252,16 @@ export async function getTodayWorkState(): Promise<TodayWorkState> {
   const done = checklistItems.filter((item) => item.done).length;
   const total = checklistItems.length;
   const remaining = Math.max(total - done, 0);
+  const requiredItems = checklistItems.filter((item) => item.isRequired);
+  const requiredTotal = requiredItems.length;
+  const requiredDone = requiredItems.filter((item) => item.done).length;
+  const requiredRemaining = Math.max(requiredTotal - requiredDone, 0);
   const hasTodayShift = nextShift?.date === today;
   const attendanceRequired =
     Boolean(attendance) ||
     hasTodayShift ||
-    isDefaultAttendanceRole(claims.user_role);
+    isDefaultAttendanceRole(claims.user_role) ||
+    managerAttendanceOnly;
 
   let status: TodayWorkStatus;
   if (!attendance && !attendanceRequired) {
@@ -232,9 +272,11 @@ export async function getTodayWorkState(): Promise<TodayWorkState> {
     status = "not_started";
   } else if (attendance.checkOut) {
     status = "done";
+  } else if (managerAttendanceOnly) {
+    status = "ready_to_checkout";
   } else if (attendance.checkoutRequestedAt) {
     status = "checkout_pending";
-  } else if (remaining > 0) {
+  } else if (requiredRemaining > 0) {
     status = "working";
   } else {
     status = "ready_to_checkout";
@@ -246,6 +288,7 @@ export async function getTodayWorkState(): Promise<TodayWorkState> {
     branchId: attendance?.branchId ?? ctx.branchId,
     branchName: attendance?.branchName ?? ctx.branchName,
     userRole: claims.user_role,
+    managerAttendanceOnly,
     attendanceRequired,
     approvalTargetLabel: getApprovalTargetLabel(claims.user_role),
     attendance,
@@ -255,6 +298,9 @@ export async function getTodayWorkState(): Promise<TodayWorkState> {
       total,
       done,
       remaining,
+      requiredTotal,
+      requiredDone,
+      requiredRemaining,
     },
   };
 }
