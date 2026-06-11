@@ -175,26 +175,6 @@ async function notifyStockConsumptionFailure(
   }
 }
 
-async function loadPaymentStockStatus(
-  supabase: ServiceClient,
-  paymentId: number,
-): Promise<string | null> {
-  const { data, error } = await supabase
-    .from("payments")
-    .select("stock_consumed_status")
-    .eq("id", paymentId)
-    .maybeSingle();
-
-  if (error) {
-    console.error(
-      "[momo-webhook] failed to read payment stock status",
-      error.code,
-    );
-    return null;
-  }
-
-  return data?.stock_consumed_status ?? null;
-}
 
 async function claimWebhookEvent(
   supabase: ServiceClient,
@@ -389,75 +369,20 @@ export async function POST(request: Request) {
   const result = Array.isArray(rpcData) ? rpcData[0] : rpcData;
   const status = (result?.status ?? "") as string;
   const detail = (result?.detail ?? "") as string;
-  const stockConsumed = result?.stock_consumed === true;
 
   switch (status) {
-    case "completed": {
-      if (!stockConsumed) {
-        await notifyStockConsumptionFailure(supabase, {
-          tenantId: pendingPayment.tenant_id,
-          branchId: pendingPayment.branch_id,
-          paymentId: pendingPayment.id,
-          orderId: pendingPayment.order_id,
-          stockStatus: detail,
-        });
-        await markWebhookEvent(supabase, webhookEventId, {
-          payment_id: pendingPayment.id,
-          processing_status: "failed",
-          http_status: 500,
-          error_code: "stock_consumption_failed",
-        });
-        console.error(
-          `[momo-webhook] stock consumption failed: payment=${pendingPayment.id} ${detail}`,
-        );
-        return NextResponse.json(
-          { error: "processing_failed" },
-          { status: 500 },
-        );
-      }
-
-      await markWebhookEvent(supabase, webhookEventId, {
-        payment_id: pendingPayment.id,
-        processing_status: "processed",
-        http_status: 204,
-      });
-      return momoAcceptedResponse();
-    }
+    // Payments never consume stock (policy 2026-05-28, migration
+    // 20260611001000): completed is accepted unconditionally.
+    case "completed":
     case "already_completed":
-      {
-        const stockStatus = await loadPaymentStockStatus(
-          supabase,
-          pendingPayment.id,
-        );
-        if (stockStatus && stockStatus !== "ok") {
-          await notifyStockConsumptionFailure(supabase, {
-            tenantId: pendingPayment.tenant_id,
-            branchId: pendingPayment.branch_id,
-            paymentId: pendingPayment.id,
-            orderId: pendingPayment.order_id,
-            stockStatus,
-          });
-          await markWebhookEvent(supabase, webhookEventId, {
-            payment_id: pendingPayment.id,
-            processing_status: "failed",
-            http_status: 500,
-            error_code: "stock_consumption_failed",
-          });
-          console.error(
-            `[momo-webhook] completed payment has stock status=${stockStatus}: payment=${pendingPayment.id}`,
-          );
-          return NextResponse.json(
-            { error: "processing_failed" },
-            { status: 500 },
-          );
-        }
-      }
       await markWebhookEvent(supabase, webhookEventId, {
         payment_id: pendingPayment.id,
         processing_status: "processed",
         http_status: 204,
       });
       return momoAcceptedResponse();
+    // Defensive: only reachable while the pre-20260611001000 RPC (which
+    // still had a stock leg) is deployed.
     case "stock_failed":
       await notifyStockConsumptionFailure(supabase, {
         tenantId: pendingPayment.tenant_id,

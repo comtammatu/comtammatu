@@ -28,10 +28,15 @@ test("MoMo webhook binds payment lookup to signed tenant/order scope", () => {
   );
 });
 
-test("MoMo webhook fails closed when stock is not consumed", () => {
+test("MoMo webhook accepts completed unconditionally per no-stock-deduction policy, keeps defensive stock_failed 500", () => {
   const source = readRepoFile("apps/web/app/api/webhooks/momo/route.ts");
 
-  assert.match(source, /result\?\.stock_consumed === true/);
+  // No-stock-deduction policy (migration 20260611001000): completed /
+  // already_completed accepted unconditionally, no stock_consumed gate.
+  assert.doesNotMatch(source, /stock_consumed === true/);
+  assert.match(source, /case "completed":\s*\n\s*case "already_completed":/);
+  // stock_failed stays defensive (pre-migration RPC) and fail-closed 500
+  // so MoMo retries.
   assert.match(source, /case "stock_failed":/);
   assert.match(source, /error_code: "stock_consumption_failed"/);
   assert.match(source, /status: 500/);
