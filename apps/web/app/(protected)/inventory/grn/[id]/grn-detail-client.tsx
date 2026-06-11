@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import type { FormEvent, TransitionStartFunction } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
@@ -151,7 +152,10 @@ export function GRNDetailClient({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const isMobile = searchParams.get("m") === "1";
+  // Device-derived, not param-derived: the old `?m=1` flag had no setter
+  // anywhere in the codebase, so the mobile post-confirm navigation and
+  // back-link paths below never activated for phone receivers.
+  const isMobile = useIsMobile() === true;
   const isReview = searchParams.get("review") === "1";
   const [isConfirming, startConfirm] = useTransition();
   const [isSaving, startSave] = useTransition();
