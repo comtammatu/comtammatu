@@ -1,8 +1,7 @@
+import { formatVND } from "@comtammatu/shared/format";
 import { formatVNDate, formatVNDateTime } from "@comtammatu/shared/time";
 
-export function formatVND(n: number): string {
-  return n.toLocaleString("vi-VN");
-}
+export { formatVND };
 
 /**
  * Compact VND display that returns the placeholder dash for null/0 values.
@@ -15,7 +14,7 @@ export function formatVndCompactOrDash(
   dash = "—",
 ): string {
   if (n == null || n === 0) return dash;
-  return `${formatVND(n)}đ`;
+  return formatVND(n);
 }
 
 export function parseOptionalNumber(

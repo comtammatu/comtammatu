@@ -10,12 +10,12 @@ import {
 } from "@comtammatu/ui/components/empty";
 import { EmployeeDetailList, EmployeePanel } from "../components/employee-page";
 import type { PayslipEntry } from "./page";
+import { formatVND } from "@comtammatu/shared/format";
 import { messages } from "@lib/messages";
 
 const copy = messages.employee.payslip;
 
-const fmt = (n: number) =>
-  `${n.toLocaleString("vi-VN", { maximumFractionDigits: 0 })} ₫`;
+const fmt = formatVND;
 
 const PERIOD_STATUS_LABELS: Record<string, string> = {
   paid: "Đã trả",

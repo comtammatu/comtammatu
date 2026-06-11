@@ -394,7 +394,7 @@ Money, quantity, unit-price, tax-rate, ID/code, and timestamp cells render with 
 | ID / code / order / receipt no. | `font-mono tabular-nums` (left-aligned allowed) |
 | Right-aligned non-numeric label | `text-right` (no `tabular-nums`)                |
 
-`font-mono` is mandatory on any numeric cell that participates in vertical column comparison (the Typography Contract applied to table bodies). A money/quantity cell written as `text-right tabular-nums` WITHOUT `font-mono` is contract drift — JetBrains Mono is the locked operational-data face, not Inter. These classes go on `TableCell` / `TableHead`, never on a page-specific Table clone; a shared numeric-cell wrapper is allowed only if it renders the shared `Table` primitive and emits exactly this class set. Forbidden: `text-left` money columns, numeric columns missing `tabular-nums`, money/quantity cells missing `font-mono`.
+Money values render through `formatVND` from `@comtammatu/shared/format` (single style `45.000đ`); page-local VND formatters and raw `toLocaleString("vi-VN")` money calls are ratcheted by `vnd-format-ssot`. `font-mono` is mandatory on any numeric cell that participates in vertical column comparison (the Typography Contract applied to table bodies). A money/quantity cell written as `text-right tabular-nums` WITHOUT `font-mono` is contract drift — JetBrains Mono is the locked operational-data face, not Inter. These classes go on `TableCell` / `TableHead`, never on a page-specific Table clone; a shared numeric-cell wrapper is allowed only if it renders the shared `Table` primitive and emits exactly this class set. Forbidden: `text-left` money columns, numeric columns missing `tabular-nums`, money/quantity cells missing `font-mono`.
 
 Allowed app wrappers:
 
