@@ -1,4 +1,4 @@
-type OperationalApp = "pos" | "kds";
+type OperationalApp = "pos" | "kds" | "runner";
 type OperationalOrientation = "portrait" | "landscape";
 
 const APP_LABELS: Record<
@@ -13,6 +13,11 @@ const APP_LABELS: Record<
   kds: {
     label: "KDS",
     description: "Màn hình bếp - Cơm Tấm Má Tư",
+    orientation: "landscape",
+  },
+  runner: {
+    label: "Gọi số",
+    description: "Màn gọi số - Cơm Tấm Má Tư",
     orientation: "landscape",
   },
 };

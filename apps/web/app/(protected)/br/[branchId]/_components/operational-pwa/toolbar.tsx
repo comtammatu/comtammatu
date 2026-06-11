@@ -12,19 +12,21 @@ import {
 } from "@comtammatu/ui/components/dialog";
 import {
   Download as IconDownload,
+  RefreshCw as IconRefreshCw,
   Share2 as IconShare,
   WifiOff as IconWifiOff,
   X as IconX,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  useHasNewVersion,
   useInstallPrompt,
   useIsIosPwaInstall,
   useIsOnline,
   useIsStandalone,
 } from "./provider";
 
-type OperationalPwaSurface = "pos" | "kds";
+type OperationalPwaSurface = "pos" | "kds" | "runner";
 
 function getDismissStorageKey(
   surface: OperationalPwaSurface,
@@ -45,6 +47,8 @@ interface OperationalPwaCopy {
   installButtonShort: string;
   dismissLabel: string;
   installButtonLabel: string;
+  updateHint: string;
+  updateButton: string;
   iosDialogTitle: string;
   iosDialogDescription: string;
   iosSteps: readonly string[];
@@ -52,8 +56,14 @@ interface OperationalPwaCopy {
 }
 
 function buildCopy(surface: OperationalPwaSurface): OperationalPwaCopy {
-  const appLabel = surface === "pos" ? "POS" : "KDS";
-  const jobLabel = surface === "pos" ? "đơn/thanh toán" : "trạng thái bếp";
+  const appLabel =
+    surface === "pos" ? "POS" : surface === "kds" ? "KDS" : "màn gọi số";
+  const jobLabel =
+    surface === "pos"
+      ? "đơn/thanh toán"
+      : surface === "kds"
+        ? "trạng thái bếp"
+        : "trạng thái món";
 
   return {
     appLabel,
@@ -67,6 +77,8 @@ function buildCopy(surface: OperationalPwaSurface): OperationalPwaCopy {
     installButtonShort: "Cài",
     dismissLabel: "Tạm ẩn lời nhắc",
     installButtonLabel: `Cài đặt ${appLabel} lên thiết bị`,
+    updateHint: "Có phiên bản mới của ứng dụng.",
+    updateButton: "Tải lại",
     iosDialogTitle: `Cài đặt ${appLabel} trên iOS`,
     iosDialogDescription:
       "Safari và trình duyệt iOS không mở hộp thoại cài đặt trực tiếp.",
@@ -94,6 +106,7 @@ export function OperationalPwaToolbar({
   const isOnline = useIsOnline();
   const isStandalone = useIsStandalone();
   const isIosPwaInstall = useIsIosPwaInstall();
+  const hasNewVersion = useHasNewVersion();
   const install = useInstallPrompt();
   const [installPending, setInstallPending] = useState(false);
   const [iosDialogOpen, setIosDialogOpen] = useState(false);
@@ -139,6 +152,39 @@ export function OperationalPwaToolbar({
       // ignore
     }
   }, [dismissStorageKey]);
+
+  // The update banner is the one row that must ALSO show in standalone —
+  // installed tablets running a whole shift are exactly the clients that
+  // break on a stale chunk after a deploy. It cannot be dismissed.
+  if (hasNewVersion) {
+    return (
+      <div
+        className="flex shrink-0 items-center gap-2 border-b border-border/60 bg-background/90 px-2 py-1.5 md:px-4"
+        role="region"
+        aria-label={copy.regionLabel}
+      >
+        <div
+          className="flex min-w-0 flex-1 items-center gap-2 text-sm font-semibold text-foreground"
+          role="alert"
+        >
+          <IconRefreshCw className="size-4 shrink-0" />
+          <span className="truncate">{copy.updateHint}</span>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="touch"
+          className="shrink-0 text-sm font-semibold"
+          onClick={() => {
+            window.location.reload();
+          }}
+        >
+          <IconRefreshCw data-icon="inline-start" />
+          {copy.updateButton}
+        </Button>
+      </div>
+    );
+  }
 
   if (isStandalone) return null;
   if (isOnline && installDismissed) return null;
@@ -234,4 +280,8 @@ export function PosPwaToolbar({ branchId }: { branchId: string }) {
 
 export function KdsPwaToolbar({ branchId }: { branchId: string }) {
   return <OperationalPwaToolbar branchId={branchId} surface="kds" />;
+}
+
+export function RunnerPwaToolbar({ branchId }: { branchId: string }) {
+  return <OperationalPwaToolbar branchId={branchId} surface="runner" />;
 }

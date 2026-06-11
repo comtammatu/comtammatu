@@ -2,6 +2,7 @@
 
 export {
   PwaRuntimeProvider as OperationalPwaProvider,
+  useHasNewVersion,
   useInstallPrompt,
   useIsIosPwaInstall,
   useIsOnline,

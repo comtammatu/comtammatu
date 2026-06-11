@@ -23,6 +23,7 @@ interface PwaRuntimeContextValue {
   isOnline: boolean;
   isStandalone: boolean;
   isIos: boolean;
+  hasNewVersion: boolean;
   installPrompt: BeforeInstallPromptEvent | null;
   clearInstallPrompt: () => void;
 }
@@ -56,6 +57,44 @@ export function PwaRuntimeProvider({ children }: { children: ReactNode }) {
   const [isIos, setIsIos] = useState(false);
   const [installPrompt, setInstallPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
+  const [hasNewVersion, setHasNewVersion] = useState(false);
+
+  // The service worker uses skipWaiting + clientsClaim, so a deploy swaps
+  // the SW underneath a long-lived tab; old lazy chunks then 404
+  // (ChunkLoadError) on the next navigation. Surface the swap so the
+  // operational toolbar can offer a one-tap reload instead of a crash.
+  useEffect(() => {
+    if (!("serviceWorker" in navigator)) return;
+    let cancelled = false;
+    // controllerchange also fires when the FIRST SW claims an
+    // uncontrolled page — that's an install, not an update.
+    let hadController = navigator.serviceWorker.controller != null;
+    const markNewVersion = () => {
+      if (!cancelled) setHasNewVersion(true);
+    };
+    const handleControllerChange = () => {
+      if (!hadController) {
+        hadController = true;
+        return;
+      }
+      markNewVersion();
+    };
+    navigator.serviceWorker.addEventListener(
+      "controllerchange",
+      handleControllerChange,
+    );
+    void navigator.serviceWorker.getRegistration().then((registration) => {
+      if (cancelled || !registration) return;
+      if (registration.waiting != null) markNewVersion();
+    });
+    return () => {
+      cancelled = true;
+      navigator.serviceWorker.removeEventListener(
+        "controllerchange",
+        handleControllerChange,
+      );
+    };
+  }, []);
 
   useEffect(() => {
     setIsOnline(navigator.onLine);
@@ -106,10 +145,18 @@ export function PwaRuntimeProvider({ children }: { children: ReactNode }) {
       isOnline,
       isStandalone,
       isIos,
+      hasNewVersion,
       installPrompt,
       clearInstallPrompt,
     }),
-    [isOnline, isStandalone, isIos, installPrompt, clearInstallPrompt],
+    [
+      isOnline,
+      isStandalone,
+      isIos,
+      hasNewVersion,
+      installPrompt,
+      clearInstallPrompt,
+    ],
   );
 
   return (
@@ -129,6 +176,12 @@ export function useIsStandalone(): boolean {
   const ctx = useContext(PwaRuntimeContext);
   if (ctx == null) return false;
   return ctx.isStandalone;
+}
+
+export function useHasNewVersion(): boolean {
+  const ctx = useContext(PwaRuntimeContext);
+  if (ctx == null) return false;
+  return ctx.hasNewVersion;
 }
 
 export function useIsIosPwaInstall(): boolean {
