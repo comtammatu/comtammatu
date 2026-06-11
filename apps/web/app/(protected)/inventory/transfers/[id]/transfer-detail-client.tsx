@@ -15,14 +15,13 @@ import { Button } from "@comtammatu/ui/components/button";
 import { FormattedNumberInput } from "../../_components/formatted-number-input";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
-  Table,
-  TableBody,
   TableCell,
-  TableHead,
-  TableHeader,
   TableRow,
-  TableFooter,
 } from "@comtammatu/ui/components/table";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/data-table/data-table";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { toast } from "@comtammatu/ui/components/sonner";
 import {
@@ -39,7 +38,6 @@ import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { AuditHistoryList } from "../../_components/audit-history-list";
 import type { AuditLogRow } from "@/_lib/audit";
 import { TimelineStepper } from "../../_components/timeline-stepper";
-import { TableEmptyStateRow } from "../../_components/table-empty-state-row";
 import { tRoute, tTerm } from "../../_lib/dictionary";
 import { formatVND } from "../../_lib/format";
 import {
@@ -80,6 +78,8 @@ export type TransferDetail = {
     received: number | null;
   }>;
 };
+
+type TransferLineItem = TransferDetail["items"][number];
 
 export function TransferDetailClient({
   transfer,
@@ -270,6 +270,67 @@ export function TransferDetailClient({
     });
   }
 
+  const lineColumns: DataTableColumn<TransferLineItem>[] = [
+    {
+      key: "ingredient",
+      header: tTerm("ingredient"),
+      render: (item) => (
+        <div className="flex flex-col">
+          <span className="font-bold">{item.name}</span>
+          <span className="text-xs text-muted-foreground">{item.sku}</span>
+        </div>
+      ),
+    },
+    {
+      key: "qty",
+      header: copy.sentQty,
+      className: "text-right font-mono tabular-nums font-semibold",
+      render: (item) => item.qty,
+    },
+    {
+      key: "unit",
+      header: copy.unit,
+      render: (item) => <Badge variant="secondary">{item.unit}</Badge>,
+    },
+    {
+      key: "cost",
+      header: copy.wacCost,
+      className: "text-right font-mono tabular-nums",
+      render: (item) => formatVND(item.cost),
+    },
+    {
+      key: "amount",
+      header: copy.lineAmount,
+      className: "text-right font-mono tabular-nums",
+      render: (item) => formatVND(item.total),
+    },
+    {
+      key: "received",
+      header: copy.receivedQty,
+      className: "text-right",
+      render: (item) =>
+        isReceiveMode ? (
+          <FormattedNumberInput
+            value={receiveQty[item.ingredientId] ?? ""}
+            onValueChange={(value) =>
+              setReceiveQty((prev) => ({
+                ...prev,
+                [item.ingredientId]: value,
+              }))
+            }
+            maxFractionDigits={3}
+            className="h-9 text-right"
+          />
+        ) : item.received != null ? (
+          <span className="font-mono tabular-nums">{item.received}</span>
+        ) : (
+          <span className="italic text-muted-foreground">
+            {copy.notReceived}
+          </span>
+        ),
+    },
+  ];
+
   return (
     <AppPage>
       <AppPageHeader
@@ -380,174 +441,50 @@ export function TransferDetailClient({
                       }
                       contentFlush
                     >
-                      <div className="space-y-3 p-6 md:hidden">
-                        {transfer.items.map((item) => (
-                          <Card
-                            key={item.sku || item.name}
-                            className="bg-muted/30"
-                          >
-                            <div className="flex items-start justify-between gap-3">
-                              <div>
-                                <p className="font-bold">{item.name}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  {item.sku}
-                                </p>
-                              </div>
-                              <Badge variant="secondary">{item.unit}</Badge>
-                            </div>
-                            <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                              <div>
-                                <p className="text-muted-foreground">
-                                  {copy.sentQty}
-                                </p>
-                                <p className="font-semibold">{item.qty}</p>
-                              </div>
-                              <div>
-                                <p className="text-muted-foreground">
-                                  {copy.receivedQty}
-                                </p>
-                                {isReceiveMode ? (
-                                  <FormattedNumberInput
-                                    value={receiveQty[item.ingredientId] ?? ""}
-                                    onValueChange={(value) =>
-                                      setReceiveQty((prev) => ({
-                                        ...prev,
-                                        [item.ingredientId]: value,
-                                      }))
-                                    }
-                                    maxFractionDigits={3}
-                                    className="h-9"
-                                  />
-                                ) : (
-                                  <p className="font-semibold">
-                                    {item.received != null ? (
-                                      item.received
-                                    ) : (
-                                      <span className="italic text-muted-foreground">
-                                        {copy.notReceived}
-                                      </span>
-                                    )}
-                                  </p>
+                      <DataTable
+                        className="p-4 md:p-0"
+                        columns={lineColumns}
+                        data={transfer.items}
+                        getRowKey={(item) => item.sku || item.name}
+                        emptyTitle={copy.emptyTransferItemsTitle}
+                        emptyDescription={copy.emptyTransferItemsDescription}
+                        mobileCardRender={(item) => (
+                          <TransferLineMobileCard
+                            item={item}
+                            isReceiveMode={isReceiveMode}
+                            receiveValue={receiveQty[item.ingredientId] ?? ""}
+                            onReceiveValueChange={(value) =>
+                              setReceiveQty((prev) => ({
+                                ...prev,
+                                [item.ingredientId]: value,
+                              }))
+                            }
+                          />
+                        )}
+                        mobileFooter={
+                          <div className="rounded-md border bg-muted/20 p-3 text-sm">
+                            <div className="flex items-center justify-between gap-3">
+                              <span className="text-muted-foreground">
+                                {copy.totalValue}
+                              </span>
+                              <span className="font-mono font-semibold tabular-nums text-primary">
+                                {messages.inventory.common.currencyCompact(
+                                  formatVND(transfer.total),
                                 )}
-                              </div>
-                              <div>
-                                <p className="text-muted-foreground">
-                                  {copy.wacCost}
-                                </p>
-                                <p className="font-semibold">
-                                  {formatVND(item.cost)}
-                                </p>
-                              </div>
-                              <div>
-                                <p className="text-muted-foreground">
-                                  {FORM_VI.amount}
-                                </p>
-                                <p className="font-semibold text-primary">
-                                  {formatVND(item.total)}
-                                </p>
-                              </div>
+                              </span>
                             </div>
-                          </Card>
-                        ))}
-                      </div>
-
-                      <div className="hidden md:block">
-                        <Table>
-                          <TableHeader>
-                            <TableRow className="bg-muted/40">
-                              {[
-                                { label: tTerm("ingredient"), align: "" },
-                                { label: copy.sentQty, align: "text-right" },
-                                { label: copy.unit, align: "" },
-                                { label: copy.wacCost, align: "text-right" },
-                                { label: copy.lineAmount, align: "text-right" },
-                                {
-                                  label: copy.receivedQty,
-                                  align: "text-right",
-                                },
-                              ].map((h) => (
-                                <TableHead
-                                  key={h.label}
-                                  className={`px-6 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wider ${h.align}`}
-                                >
-                                  {h.label}
-                                </TableHead>
-                              ))}
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {transfer.items.length === 0 && (
-                              <TableEmptyStateRow
-                                colSpan={6}
-                                paddingClassName="py-16"
-                                title={copy.emptyTransferItemsTitle}
-                                description={copy.emptyTransferItemsDescription}
-                              />
-                            )}
-                            {transfer.items.map((item) => (
-                              <TableRow
-                                key={item.sku || item.name}
-                                className="group transition-colors"
-                              >
-                                <TableCell className="px-6 py-4">
-                                  <div className="flex flex-col">
-                                    <span className="font-bold">
-                                      {item.name}
-                                    </span>
-                                    <span className="text-xs text-muted-foreground">
-                                      {item.sku}
-                                    </span>
-                                  </div>
-                                </TableCell>
-                                <TableCell className="px-6 py-4 text-right font-mono tabular-nums font-semibold">
-                                  {item.qty}
-                                </TableCell>
-                                <TableCell className="px-6 py-4">
-                                  <Badge variant="secondary">{item.unit}</Badge>
-                                </TableCell>
-                                <TableCell className="px-6 py-4 text-right font-mono tabular-nums">
-                                  {formatVND(item.cost)}
-                                </TableCell>
-                                <TableCell className="px-6 py-4 text-right font-mono tabular-nums">
-                                  {formatVND(item.total)}
-                                </TableCell>
-                                <TableCell className="px-6 py-4 text-right">
-                                  {isReceiveMode ? (
-                                    <FormattedNumberInput
-                                      value={
-                                        receiveQty[item.ingredientId] ?? ""
-                                      }
-                                      onValueChange={(value) =>
-                                        setReceiveQty((prev) => ({
-                                          ...prev,
-                                          [item.ingredientId]: value,
-                                        }))
-                                      }
-                                      maxFractionDigits={3}
-                                      className="h-9 text-right"
-                                    />
-                                  ) : item.received != null ? (
-                                    <span className="font-mono tabular-nums">
-                                      {item.received}
-                                    </span>
-                                  ) : (
-                                    <span className="italic text-muted-foreground">
-                                      {copy.notReceived}
-                                    </span>
-                                  )}
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                          <TableFooter>
+                          </div>
+                        }
+                        desktopFooter={
+                          <>
                             <TableRow className="border-border">
                               <TableCell
                                 colSpan={4}
-                                className="px-6 py-3 text-right text-sm text-muted-foreground"
+                                className="text-right text-sm text-muted-foreground"
                               >
                                 {copy.ingredientValue}
                               </TableCell>
-                              <TableCell className="px-6 py-3 text-right font-mono tabular-nums">
+                              <TableCell className="text-right font-mono tabular-nums">
                                 {messages.inventory.common.currencyCompact(
                                   formatVND(transfer.subtotal),
                                 )}
@@ -557,11 +494,11 @@ export function TransferDetailClient({
                             <TableRow className="border-border">
                               <TableCell
                                 colSpan={4}
-                                className="px-6 py-3 text-right text-sm text-muted-foreground"
+                                className="text-right text-sm text-muted-foreground"
                               >
                                 {copy.shippingFee}
                               </TableCell>
-                              <TableCell className="px-6 py-3 text-right font-mono tabular-nums">
+                              <TableCell className="text-right font-mono tabular-nums">
                                 {messages.inventory.common.currencyCompact(
                                   formatVND(transfer.shipping),
                                 )}
@@ -571,20 +508,20 @@ export function TransferDetailClient({
                             <TableRow className="border-border">
                               <TableCell
                                 colSpan={4}
-                                className="px-6 py-3 text-right text-sm font-bold"
+                                className="text-right text-sm font-bold"
                               >
                                 {copy.totalValue}
                               </TableCell>
-                              <TableCell className="px-6 py-3 text-right font-mono tabular-nums font-bold text-primary">
+                              <TableCell className="text-right font-mono tabular-nums font-bold text-primary">
                                 {messages.inventory.common.currencyCompact(
                                   formatVND(transfer.total),
                                 )}
                               </TableCell>
                               <TableCell />
                             </TableRow>
-                          </TableFooter>
-                        </Table>
-                      </div>
+                          </>
+                        }
+                      />
                     </AppSection>
                   </div>
 
@@ -694,5 +631,65 @@ export function TransferDetailClient({
         }
       />
     </AppPage>
+  );
+}
+
+function TransferLineMobileCard({
+  item,
+  isReceiveMode,
+  receiveValue,
+  onReceiveValueChange,
+}: {
+  item: TransferLineItem;
+  isReceiveMode: boolean;
+  receiveValue: string;
+  onReceiveValueChange: (value: string) => void;
+}) {
+  const copy = messages.inventory.transfer;
+  return (
+    <Card className="bg-muted/30">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="font-bold">{item.name}</p>
+          <p className="text-xs text-muted-foreground">{item.sku}</p>
+        </div>
+        <Badge variant="secondary">{item.unit}</Badge>
+      </div>
+      <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+        <div>
+          <p className="text-muted-foreground">{copy.sentQty}</p>
+          <p className="font-semibold">{item.qty}</p>
+        </div>
+        <div>
+          <p className="text-muted-foreground">{copy.receivedQty}</p>
+          {isReceiveMode ? (
+            <FormattedNumberInput
+              value={receiveValue}
+              onValueChange={onReceiveValueChange}
+              maxFractionDigits={3}
+              className="h-9"
+            />
+          ) : (
+            <p className="font-semibold">
+              {item.received != null ? (
+                item.received
+              ) : (
+                <span className="italic text-muted-foreground">
+                  {copy.notReceived}
+                </span>
+              )}
+            </p>
+          )}
+        </div>
+        <div>
+          <p className="text-muted-foreground">{copy.wacCost}</p>
+          <p className="font-semibold">{formatVND(item.cost)}</p>
+        </div>
+        <div>
+          <p className="text-muted-foreground">{FORM_VI.amount}</p>
+          <p className="font-semibold text-primary">{formatVND(item.total)}</p>
+        </div>
+      </div>
+    </Card>
   );
 }
