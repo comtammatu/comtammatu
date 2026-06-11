@@ -2,7 +2,7 @@
 
 import { KpiCard } from "@/components/kpi/kpi-card";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import {
   TriangleAlert as IconAlertTriangle,
   ChevronRight as IconChevronRight,
@@ -163,6 +163,16 @@ export function ReconciliationClient({
       setReport(res.data as ReconciliationReport);
     });
   }
+
+  // First open runs with the default range immediately — the page used
+  // to sit empty until the owner found the "Chạy" button. The button
+  // stays for re-running after changing filters.
+  const autoRunRef = useRef(false);
+  useEffect(() => {
+    if (autoRunRef.current) return;
+    autoRunRef.current = true;
+    handleRun();
+  }, []);
 
   function loadByDay() {
     setByDayLoading(true);

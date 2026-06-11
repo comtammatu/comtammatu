@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { readDevicePref, writeDevicePref } from "@lib/device-prefs";
 import type { KdsStation, OrderTypeFilter } from "../types";
 
 function parseOrderTypeFilter(v: string | null): OrderTypeFilter {
@@ -44,6 +45,22 @@ export function useKdsFilters(stations: KdsStation[]): KdsFilters {
     return stations.some((s) => s.id === n) ? n : null;
   }, [searchParams, stations]);
 
+  // A kitchen tablet is pinned to its station; standalone PWA launches at
+  // the bare start_url, so the station pick used to reset every relaunch.
+  // URL stays SSOT — the device pref only seeds it once when absent.
+  const stationPrefKey = `kds:station:${pathname}`;
+  const stationRestoredRef = useRef(false);
+  useEffect(() => {
+    if (stationRestoredRef.current) return;
+    stationRestoredRef.current = true;
+    if (searchParams.get("station") !== null) return;
+    const saved = readDevicePref(stationPrefKey);
+    if (saved === null || saved === "all") return;
+    const n = Number(saved);
+    if (!Number.isFinite(n) || !stations.some((s) => s.id === n)) return;
+    replaceQuery({ station: saved });
+  }, [replaceQuery, searchParams, stationPrefKey, stations]);
+
   const orderTypeFilter = useMemo(
     () => parseOrderTypeFilter(searchParams.get("orderType")),
     [searchParams],
@@ -53,9 +70,10 @@ export function useKdsFilters(stations: KdsStation[]): KdsFilters {
 
   const setStation = useCallback(
     (value: string | null) => {
+      writeDevicePref(stationPrefKey, value ?? "all");
       replaceQuery({ station: value === "all" ? null : value });
     },
-    [replaceQuery],
+    [replaceQuery, stationPrefKey],
   );
 
   const setOrderType = useCallback(
@@ -68,8 +86,9 @@ export function useKdsFilters(stations: KdsStation[]): KdsFilters {
   );
 
   const clearAll = useCallback(() => {
+    writeDevicePref(stationPrefKey, "all");
     replaceQuery({ station: null, status: null, orderType: null });
-  }, [replaceQuery]);
+  }, [replaceQuery, stationPrefKey]);
 
   return {
     activeStationId,
