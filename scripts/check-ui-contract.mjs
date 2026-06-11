@@ -125,8 +125,6 @@ const checks = [
       "apps/web/app/(protected)/menu/import-export-menu.tsx": 1,
       "apps/web/app/(protected)/menu/item-table.tsx": 2,
       "apps/web/app/(protected)/menu/menu-image-input.tsx": 1,
-      "apps/web/app/(protected)/orders/orders-client.tsx": 1,
-      "apps/web/app/(protected)/orders/refunds-client.tsx": 1,
     },
   },
   {
@@ -249,8 +247,6 @@ const checks = [
       "apps/web/app/(protected)/inventory/issues/[id]/issue-detail-client.tsx": 1,
       "apps/web/app/(protected)/inventory/purchase-orders/[id]/po-detail-client.tsx": 1,
       "apps/web/app/(protected)/inventory/transfers/[id]/transfer-detail-client.tsx": 1,
-      "apps/web/app/(protected)/orders/orders-client.tsx": 1,
-      "apps/web/app/(protected)/orders/refunds-client.tsx": 1,
     },
   },
 ];

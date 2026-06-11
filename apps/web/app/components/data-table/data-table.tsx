@@ -68,6 +68,7 @@ interface DataTableProps<T> {
   pageSize?: number;
   currentPage?: number;
   onPageChange?: (page: number) => void;
+  onRowClick?: (row: T) => void;
   className?: string;
 }
 
@@ -88,10 +89,11 @@ export function DataTable<T>({
   pageSize,
   currentPage,
   onPageChange,
+  onRowClick,
   className,
 }: DataTableProps<T>) {
   const isMobile = useIsMobile();
-  const colSpan = columns.filter((c) => !c.hideOnMobile).length + 1;
+  const colSpan = columns.length;
   const total = totalCount ?? data.length;
   const showPagination = pageSize != null && total > pageSize;
 
@@ -146,7 +148,13 @@ export function DataTable<T>({
             />
           ) : (
             data.map((row) => (
-              <TableRow key={getRowKey(row)}>
+              <TableRow
+                key={getRowKey(row)}
+                className={cn(
+                  onRowClick && "cursor-pointer hover:bg-muted/45",
+                )}
+                onClick={onRowClick ? () => onRowClick(row) : undefined}
+              >
                 {columns.map((col) => (
                   <TableCell key={col.key} className={col.className}>
                     {col.render(row)}

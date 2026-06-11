@@ -17,24 +17,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@comtammatu/ui/components/card";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@comtammatu/ui/components/empty";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@comtammatu/ui/components/table";
 import { approveRefund, fetchRefunds } from "./refund-actions";
 import type { RefundRow } from "./refund-actions";
-import { TableEmptyStateRow } from "@/components/table-empty-state-row";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/data-table/data-table";
 
 /* ─── Status helpers ─── */
 
@@ -90,6 +78,111 @@ export function RefundsClient({
       setActioningId(null);
     });
   }
+
+  const columns: DataTableColumn<RefundRow>[] = [
+    {
+      key: "order_number",
+      header: "Mã đơn",
+      render: (refund) => (
+        <span className="font-mono text-sm font-medium">
+          {refund.order_number}
+        </span>
+      ),
+    },
+    {
+      key: "branch",
+      header: BRANCH_VI.long,
+      className: "text-sm",
+      render: (refund) => refund.branch_name,
+    },
+    {
+      key: "amount",
+      header: "Số tiền",
+      className: "text-right",
+      render: (refund) => (
+        <span className="font-mono font-medium tabular-nums">
+          {formatVND(refund.amount)}
+        </span>
+      ),
+    },
+    {
+      key: "reason",
+      header: FORM_VI.reason,
+      className: "max-w-xs",
+      render: (refund) => (
+        <span className="block truncate text-sm">{refund.reason}</span>
+      ),
+    },
+    {
+      key: "creator",
+      header: "Người tạo",
+      className: "text-sm",
+      render: (refund) => refund.created_by_name,
+    },
+    {
+      key: "created_at",
+      header: "Thời gian",
+      className: "text-sm text-muted-foreground",
+      render: (refund) => formatVNDateTime(refund.created_at),
+    },
+    {
+      key: "status",
+      header: FORM_VI.status,
+      render: (refund) => <StatusBadge domain="refund" value={refund.status} />,
+    },
+    ...(canApprove
+      ? [
+          {
+            key: "actions",
+            header: "Hành động",
+            className: "text-right",
+            render: (refund: RefundRow) =>
+              refund.status === "pending" ? (
+                <div className="flex justify-end gap-1.5">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-success/20 text-success hover:bg-success/10 hover:text-success"
+                    disabled={isPending && actioningId === refund.id}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleApprove(refund.id, true);
+                    }}
+                  >
+                    {isPending && actioningId === refund.id ? (
+                      <Spinner className="size-3.5" />
+                    ) : (
+                      <IconCircleCheck className="size-3.5" />
+                    )}
+                    <span className="ml-1">Duyệt</span>
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-destructive/20 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    disabled={isPending && actioningId === refund.id}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleApprove(refund.id, false);
+                    }}
+                  >
+                    {isPending && actioningId === refund.id ? (
+                      <Spinner className="size-3.5" />
+                    ) : (
+                      <IconCircleX className="size-3.5" />
+                    )}
+                    <span className="ml-1">Từ chối</span>
+                  </Button>
+                </div>
+              ) : (
+                <span className="text-xs text-muted-foreground">
+                  {refund.approved_by_name ?? "—"}
+                </span>
+              ),
+          },
+        ]
+      : []),
+  ];
 
   return (
     <>
@@ -179,25 +272,15 @@ export function RefundsClient({
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
-          {refunds.length === 0 ? (
-            <Empty className="border bg-card py-10">
-              <EmptyMedia variant="icon">
-                <IconRotate />
-              </EmptyMedia>
-              <EmptyHeader>
-                <EmptyTitle className="text-sm font-semibold">
-                  Không có yêu cầu hoàn tiền nào
-                </EmptyTitle>
-                <EmptyDescription className="text-xs leading-5">
-                  Dữ liệu trống cho bộ lọc hiện tại.
-                </EmptyDescription>
-              </EmptyHeader>
-            </Empty>
-          ) : null}
-
-          <div className="space-y-3 md:hidden">
-            {refunds.map((refund) => (
-              <Card key={refund.id}>
+<DataTable
+            columns={columns}
+            data={refunds}
+            getRowKey={(refund) => refund.id}
+            emptyTitle="Không có yêu cầu hoàn tiền nào"
+            emptyDescription="Dữ liệu trống cho bộ lọc hiện tại."
+            emptyIcon={<IconRotate />}
+            mobileCardRender={(refund) => (
+              <Card>
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -271,119 +354,8 @@ export function RefundsClient({
                   </div>
                 </CardContent>
               </Card>
-            ))}
-          </div>
-
-          <div className="hidden overflow-hidden rounded-3xl md:block">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Mã đơn</TableHead>
-                  <TableHead className="hidden sm:table-cell">
-                    {BRANCH_VI.long}
-                  </TableHead>
-                  <TableHead className="text-right">Số tiền</TableHead>
-                  <TableHead className="hidden md:table-cell">
-                    {FORM_VI.reason}
-                  </TableHead>
-                  <TableHead className="hidden lg:table-cell">
-                    Người tạo
-                  </TableHead>
-                  <TableHead className="hidden lg:table-cell">
-                    Thời gian
-                  </TableHead>
-                  <TableHead>{FORM_VI.status}</TableHead>
-                  {canApprove && (
-                    <TableHead className="text-right">Hành động</TableHead>
-                  )}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {refunds.length === 0 && (
-                  <TableEmptyStateRow
-                    colSpan={canApprove ? 8 : 7}
-                    paddingClassName="py-16"
-                    title="Không có yêu cầu hoàn tiền nào"
-                    description="Dữ liệu trống cho bộ lọc hiện tại."
-                    icon={
-                      <IconRotate className="mx-auto size-8 text-muted-foreground" />
-                    }
-                  />
-                )}
-                {refunds.map((refund) => (
-                  <TableRow key={refund.id}>
-                    <TableCell>
-                      <span className="font-mono text-sm font-medium">
-                        {refund.order_number}
-                      </span>
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell text-sm">
-                      {refund.branch_name}
-                    </TableCell>
-                    <TableCell className="text-right font-mono font-medium">
-                      {formatVND(refund.amount)}
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell text-sm max-w-xs truncate">
-                      {refund.reason}
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell text-sm">
-                      {refund.created_by_name}
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
-                      {formatVNDateTime(refund.created_at)}
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge domain="refund" value={refund.status} />
-                    </TableCell>
-                    {canApprove && (
-                      <TableCell className="text-right">
-                        {refund.status === "pending" ? (
-                          <div className="flex justify-end gap-1.5">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="border-success/20 text-success hover:bg-success/10 hover:text-success"
-                              disabled={isPending && actioningId === refund.id}
-                              onClick={() => handleApprove(refund.id, true)}
-                            >
-                              {isPending && actioningId === refund.id ? (
-                                <Spinner className="size-3.5" />
-                              ) : (
-                                <IconCircleCheck className="size-3.5" />
-                              )}
-                              <span className="ml-1 hidden sm:inline">
-                                Duyệt
-                              </span>
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="border-destructive/20 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                              disabled={isPending && actioningId === refund.id}
-                              onClick={() => handleApprove(refund.id, false)}
-                            >
-                              {isPending && actioningId === refund.id ? (
-                                <Spinner className="size-3.5" />
-                              ) : (
-                                <IconCircleX className="size-3.5" />
-                              )}
-                              <span className="ml-1 hidden sm:inline">
-                                Từ chối
-                              </span>
-                            </Button>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">
-                            {refund.approved_by_name ?? "—"}
-                          </span>
-                        )}
-                      </TableCell>
-                    )}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+            )}
+          />
         </CardContent>
       </Card>
     </>

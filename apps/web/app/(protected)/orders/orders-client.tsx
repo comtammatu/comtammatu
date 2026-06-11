@@ -23,7 +23,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@comtammatu/ui/components/card";
-import { AppEmptyState } from "@/components/surface";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
@@ -34,18 +33,70 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@comtammatu/ui/components/table";
 import { fetchOrders } from "./actions";
 import { OrderDetailSheet } from "./order-detail-sheet";
 import type { OrderRow, FetchOrdersFilters } from "./actions";
-import { TableEmptyStateRow } from "@/components/table-empty-state-row";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/data-table/data-table";
+
+const ORDER_COLUMNS: DataTableColumn<OrderRow>[] = [
+  {
+    key: "order_number",
+    header: "Mã đơn",
+    render: (order) => (
+      <span className="font-mono text-sm font-medium">
+        {order.order_number}
+      </span>
+    ),
+  },
+  {
+    key: "branch",
+    header: BRANCH_VI.long,
+    className: "text-sm",
+    render: (order) => order.branch_name,
+  },
+  {
+    key: "staff",
+    header: STAFF_VI.long,
+    className: "text-sm",
+    render: (order) => order.created_by_name,
+  },
+  {
+    key: "created_at",
+    header: "Thời gian",
+    className: "text-sm text-muted-foreground",
+    render: (order) => formatVNDateTime(order.created_at),
+  },
+  {
+    key: "total",
+    header: FORM_VI.totalAmount,
+    className: "text-right",
+    render: (order) => (
+      <span className="font-mono font-medium tabular-nums">
+        {formatVND(order.total_amount)}
+      </span>
+    ),
+  },
+  {
+    key: "payment",
+    header: "Thanh toán",
+    render: (order) =>
+      order.payment_method ? (
+        <Badge variant="outline" className="text-xs">
+          {getPaymentMethodLabelVi(order.payment_method)}
+        </Badge>
+      ) : (
+        <span className="text-xs text-muted-foreground">—</span>
+      ),
+  },
+  {
+    key: "status",
+    header: FORM_VI.status,
+    render: (order) => <StatusBadge domain="order" value={order.status} />,
+  },
+];
 
 /* ─── Props ─── */
 
@@ -275,25 +326,21 @@ export function OrdersClient({
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
-          {displayOrders.length === 0 ? (
-            <AppEmptyState
-              className="md:hidden"
-              mode={hasFilters ? "no-results" : "no-data"}
-              title="Không có đơn hàng nào"
-              description={
-                hasFilters
-                  ? "Thử xóa bộ lọc hoặc đổi mốc thời gian để mở rộng kết quả."
-                  : "Hệ thống chưa có đơn nào trong phạm vi đang xem."
-              }
-              icon={<IconShoppingBag />}
-              compact
-            />
-          ) : null}
-
-          <div className="space-y-3 md:hidden">
-            {displayOrders.map((order) => (
+<DataTable
+            columns={ORDER_COLUMNS}
+            data={displayOrders}
+            getRowKey={(order) => order.id}
+            onRowClick={setSelectedOrder}
+            emptyTitle="Không có đơn hàng nào"
+            emptyDescription={
+              hasFilters
+                ? "Thử xóa bộ lọc hoặc đổi mốc thời gian để mở rộng kết quả."
+                : "Hệ thống chưa có đơn nào trong phạm vi đang xem."
+            }
+            emptyIcon={<IconShoppingBag />}
+            emptyMode={hasFilters ? "no-results" : "no-data"}
+            mobileCardRender={(order) => (
               <button
-                key={order.id}
                 type="button"
                 onClick={() => setSelectedOrder(order)}
                 className="rounded-lg border bg-muted/30 text-card-foreground w-full p-4 text-left transition-colors hover:bg-muted/20"
@@ -336,88 +383,8 @@ export function OrdersClient({
                   )}
                 </div>
               </button>
-            ))}
-          </div>
-
-          <div className="hidden overflow-hidden rounded-3xl border border-border/70 md:block">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Mã đơn</TableHead>
-                  <TableHead className="hidden sm:table-cell">
-                    {BRANCH_VI.long}
-                  </TableHead>
-                  <TableHead className="hidden md:table-cell">
-                    {STAFF_VI.long}
-                  </TableHead>
-                  <TableHead className="hidden lg:table-cell">
-                    Thời gian
-                  </TableHead>
-                  <TableHead className="text-right">
-                    {FORM_VI.totalAmount}
-                  </TableHead>
-                  <TableHead className="hidden sm:table-cell">
-                    Thanh toán
-                  </TableHead>
-                  <TableHead>{FORM_VI.status}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {displayOrders.length === 0 && (
-                  <TableEmptyStateRow
-                    colSpan={7}
-                    paddingClassName="py-16"
-                    title="Không có đơn hàng nào"
-                    description={
-                      hasFilters
-                        ? "Thử xóa bộ lọc hoặc đổi mốc thời gian để mở rộng kết quả."
-                        : "Hệ thống chưa có đơn nào trong phạm vi đang xem."
-                    }
-                    icon={
-                      <IconShoppingBag className="mx-auto size-8 text-muted-foreground" />
-                    }
-                  />
-                )}
-                {displayOrders.map((order) => (
-                  <TableRow
-                    key={order.id}
-                    className="cursor-pointer hover:bg-muted/45"
-                    onClick={() => setSelectedOrder(order)}
-                  >
-                    <TableCell>
-                      <span className="font-mono text-sm font-medium">
-                        {order.order_number}
-                      </span>
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell text-sm">
-                      {order.branch_name}
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell text-sm">
-                      {order.created_by_name}
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
-                      {formatVNDateTime(order.created_at)}
-                    </TableCell>
-                    <TableCell className="text-right font-mono font-medium">
-                      {formatVND(order.total_amount)}
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell">
-                      {order.payment_method ? (
-                        <Badge variant="outline" className="text-xs">
-                          {getPaymentMethodLabelVi(order.payment_method)}
-                        </Badge>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                        <StatusBadge domain="order" value={order.status} />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+            )}
+          />
         </CardContent>
       </Card>
 
