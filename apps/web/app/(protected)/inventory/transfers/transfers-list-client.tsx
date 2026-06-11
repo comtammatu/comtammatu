@@ -16,31 +16,17 @@ import {
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { formatVNDate } from "@comtammatu/shared/time";
 import { Button } from "@comtammatu/ui/components/button";
-import { Card, CardContent } from "@comtammatu/ui/components/card";
-import { AppEmptyState } from "@/components/surface";
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
   InputGroupText,
 } from "@comtammatu/ui/components/input-group";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@comtammatu/ui/components/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@comtammatu/ui/components/table";
 import { cn } from "@comtammatu/ui";
-import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/data-table/data-table";
 import { matchesSearch } from "@lib/search";
 import { fetchStockTransfers } from "../transfer-actions";
 import { CreateTransferDialog } from "./create-transfer-dialog";
@@ -49,10 +35,9 @@ import type {
   InventoryLocation,
 } from "./create-transfer-dialog";
 import type { IngredientRow } from "../page";
-import { AppPage, AppPageHeader, AppToolbar } from "@/components/surface";
+import { AppPage, AppPageHeader } from "@/components/surface";
 import { InteractiveCard } from "../_components/interactive-card";
 import { StatusBadge } from "../_components/status-badge";
-import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import { messages } from "@lib/messages";
 
 import { FORM_VI } from "@comtammatu/shared/messages";
@@ -110,16 +95,6 @@ function classifyTransfer(
   return "history";
 }
 
-const STATUS_FILTER_OPTIONS = [
-  { value: "all", label: copy.list.allStatuses },
-  { value: "draft", label: copy.steps.draft },
-  { value: "confirmed_ship", label: copy.steps.shipped },
-  { value: "in_transit", label: copy.steps.inTransit },
-  { value: "confirmed_receive", label: copy.steps.checking },
-  { value: "received", label: copy.steps.received },
-  { value: "cancelled", label: copy.steps.cancelled },
-];
-
 export function TransfersListClient({
   initial,
   branches,
@@ -142,7 +117,6 @@ export function TransfersListClient({
   initialCreateOpen?: boolean;
 }) {
   const router = useRouter();
-  const isMobile = useIsMobile();
   const isBranchManager = userRole === "branch_manager";
   const userBranchKind =
     userBranchId == null
@@ -165,7 +139,6 @@ export function TransfersListClient({
   const [rows, setRows] = useState(initial);
   const [open, setOpen] = useState(() => initialCreateOpen && canCreate);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [activeTab, setActiveTab] = useState<Tab>("receive");
 
   const createLabel = isBranchManager
@@ -210,12 +183,11 @@ export function TransfersListClient({
     [tabGroups],
   );
 
+  // One filtering model for every breakpoint: the job-based tabs
+  // (Nhận / Chuyển / Lịch sử). The desktop-only status Select duplicated
+  // the lifecycle with a second vocabulary and is retired.
   const searchFiltered = useMemo(() => {
-    const source = isMobile ? tabGroups[activeTab] : rows;
-    let list = source;
-    if (!isMobile && statusFilter !== "all") {
-      list = list.filter((r) => r.status === statusFilter);
-    }
+    let list = tabGroups[activeTab];
     const q = search.trim();
     if (q) {
       list = list.filter((r) =>
@@ -226,7 +198,7 @@ export function TransfersListClient({
       );
     }
     return list;
-  }, [isMobile, rows, tabGroups, activeTab, search, statusFilter]);
+  }, [tabGroups, activeTab, search]);
 
   function handleCreated(id: number) {
     fetchStockTransfers(userBranchId ?? undefined).then((res) => {
@@ -240,133 +212,83 @@ export function TransfersListClient({
     return `${basePath}/${id}${scopeQuery}`;
   }
 
-  // ─── Mobile layout ──────────────────────────────────────────────────
-  if (isMobile) {
-    return (
-      <>
-        <AppPage width="narrow">
-          <AppPageHeader
-            eyebrow="Kho hàng"
-            title={pageTitle}
-            actions={
-              canCreate ? (
-                <Button size="sm" onClick={() => setOpen(true)}>
-                  <IconPlus className="size-4" />
-                  {createLabel}
-                </Button>
-              ) : undefined
-            }
-          />
-          {/* Tab navigation */}
-          <nav className="grid grid-cols-3 gap-1 rounded-md border bg-muted/30 p-1">
-            {(Object.keys(tabLabels) as Tab[]).map((tab) => {
-              const active = tab === activeTab;
-              return (
-                <button
-                  key={tab}
-                  type="button"
-                  onClick={() => setActiveTab(tab)}
-                  className={cn(
-                    "flex items-center justify-center rounded-lg px-2 py-2.5 text-xs font-semibold transition",
-                    active
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  {tabLabels[tab]}
-                  {tabCounts[tab] > 0 && (
-                    <span
-                      className={cn(
-                        "ml-1.5 rounded-full px-1.5 py-0.5 text-xs tabular-nums",
-                        active
-                          ? "bg-primary/15 text-primary"
-                          : "bg-muted text-muted-foreground",
-                      )}
-                    >
-                      {tabCounts[tab]}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </nav>
-
-          {/* IconSearch */}
-          <InputGroup className="h-10">
-            <InputGroupAddon>
-              <IconSearch />
-            </InputGroupAddon>
-            <InputGroupInput
-              type="search"
-              placeholder={copy.list.searchPlaceholder}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </InputGroup>
-
-          {/* Mobile cards */}
-          {searchFiltered.length === 0 ? (
-            <AppEmptyState
-              compact
-              mode={search ? "no-results" : "no-data"}
-              icon={
-                activeTab === "receive" ? (
-                  <IconPackageImport />
-                ) : activeTab === "dispatch" ? (
-                  <IconSend />
-                ) : (
-                  <IconPackageOff />
-                )
-              }
-              title={
-                search
-                  ? copy.list.noTransfersFound
-                  : activeTab === "receive"
-                    ? copy.list.noReceiveTransfers
-                    : activeTab === "dispatch"
-                      ? copy.list.noDispatchTransfers
-                      : copy.list.noHistory
-              }
-              description={
-                search
-                  ? copy.list.searchEmptyHint
-                  : activeTab === "receive"
-                    ? copy.list.receiveEmptyHint
-                    : activeTab === "dispatch"
-                      ? copy.list.dispatchEmptyHint
-                      : copy.list.historyEmptyHint
-              }
-            />
-          ) : (
-            <div className="flex flex-col gap-2">
-              {searchFiltered.map((r) => (
-                <MobileTransferCard
-                  key={r.id}
-                  row={r}
-                  tab={activeTab}
-                  href={detailHref(r.id)}
-                />
-              ))}
-            </div>
-          )}
-        </AppPage>
-
-        <CreateTransferDialog
-          open={open}
-          onOpenChange={setOpen}
-          branches={branches}
-          ingredients={ingredients}
-          locations={locations}
-          hqBranchId={hqBranchId}
-          userBranchId={userBranchId}
-          userRole={userRole}
-          onCreated={handleCreated}
-        />
-      </>
+  const emptyIcon =
+    activeTab === "receive" ? (
+      <IconPackageImport />
+    ) : activeTab === "dispatch" ? (
+      <IconSend />
+    ) : (
+      <IconPackageOff />
     );
-  }
+  const emptyTitle = search
+    ? copy.list.noTransfersFound
+    : activeTab === "receive"
+      ? copy.list.noReceiveTransfers
+      : activeTab === "dispatch"
+        ? copy.list.noDispatchTransfers
+        : copy.list.noHistory;
+  const emptyDescription = search
+    ? copy.list.searchEmptyHint
+    : activeTab === "receive"
+      ? copy.list.receiveEmptyHint
+      : activeTab === "dispatch"
+        ? copy.list.dispatchEmptyHint
+        : copy.list.historyEmptyHint;
 
-  // ─── Desktop layout ─────────────────────────────────────────────────
+  const columns: DataTableColumn<TransferListRow>[] = [
+    {
+      key: "transfer_number",
+      header: copy.list.transferNumber,
+      className: "font-medium",
+      render: (r) => r.transfer_number,
+    },
+    {
+      key: "route",
+      header: copy.list.route,
+      render: (r) => (
+        <div className="flex items-center gap-1.5 text-sm">
+          <span>{r.from_branch_name}</span>
+          <IconArrowRight className="size-3 text-muted-foreground" />
+          <span>{r.to_branch_name}</span>
+        </div>
+      ),
+    },
+    {
+      key: "status",
+      header: FORM_VI.status,
+      render: (r) => <StatusBadge status={r.status} size="sm" />,
+    },
+    {
+      key: "created_at",
+      header: copy.list.createdAt,
+      className: "text-sm text-muted-foreground",
+      render: (r) => formatVNDate(r.created_at),
+    },
+    {
+      key: "movement",
+      header: copy.list.shippedReceivedAt,
+      className: "text-sm text-muted-foreground",
+      render: (r) =>
+        r.shipped_at
+          ? `Xuất: ${formatVNDate(r.shipped_at)}`
+          : r.received_at
+            ? `Nhận: ${formatVNDate(r.received_at)}`
+            : "—",
+    },
+    {
+      key: "open",
+      header: "",
+      className: "w-10",
+      render: (r) => (
+        <Button variant="ghost" size="icon-sm" asChild>
+          <Link href={detailHref(r.id)}>
+            <IconArrowRight className="size-4" />
+          </Link>
+        </Button>
+      ),
+    },
+  ];
+
   return (
     <AppPage>
       <AppPageHeader
@@ -381,106 +303,70 @@ export function TransfersListClient({
           ) : undefined
         }
       />
-      <AppToolbar>
-        <div className="flex flex-1 flex-wrap items-end gap-3">
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder={copy.list.allStatuses} />
-            </SelectTrigger>
-            <SelectContent>
-              {STATUS_FILTER_OPTIONS.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <InputGroup className="h-10 flex-1">
-            <InputGroupAddon>
-              <IconSearch />
-            </InputGroupAddon>
-            <InputGroupInput
-              type="search"
-              placeholder={copy.list.searchPlaceholder}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            <InputGroupAddon align="inline-end">
-              <InputGroupText>
-                {searchFiltered.length} / {rows.length}
-              </InputGroupText>
-            </InputGroupAddon>
-          </InputGroup>
-        </div>
-      </AppToolbar>
-
-      {/* Table */}
-      <Card>
-        <CardContent flush>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{copy.list.transferNumber}</TableHead>
-                <TableHead>{copy.list.route}</TableHead>
-                <TableHead>{FORM_VI.status}</TableHead>
-                <TableHead>{copy.list.createdAt}</TableHead>
-                <TableHead>{copy.list.shippedReceivedAt}</TableHead>
-                <TableHead className="w-10" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {searchFiltered.length === 0 && (
-                <TableEmptyStateRow
-                  colSpan={6}
-                  title={
-                    search || statusFilter !== "all"
-                      ? copy.list.noTransfersFound
-                      : copy.list.emptyTransfers
-                  }
-                />
+      <nav className="grid grid-cols-3 gap-1 rounded-md border bg-muted/30 p-1">
+        {(Object.keys(tabLabels) as Tab[]).map((tab) => {
+          const active = tab === activeTab;
+          return (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setActiveTab(tab)}
+              className={cn(
+                "flex items-center justify-center rounded-lg px-2 py-2.5 text-xs font-semibold transition",
+                active
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
               )}
-              {searchFiltered.map((r) => {
-                const dateDisplay = r.shipped_at
-                  ? `Xuất: ${formatVNDate(r.shipped_at)}`
-                  : r.received_at
-                    ? `Nhận: ${formatVNDate(r.received_at)}`
-                    : "—";
+            >
+              {tabLabels[tab]}
+              {tabCounts[tab] > 0 && (
+                <span
+                  className={cn(
+                    "ml-1.5 rounded-full px-1.5 py-0.5 text-xs tabular-nums",
+                    active
+                      ? "bg-primary/15 text-primary"
+                      : "bg-muted text-muted-foreground",
+                  )}
+                >
+                  {tabCounts[tab]}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </nav>
 
-                return (
-                  <TableRow key={r.id}>
-                    <TableCell className="font-medium">
-                      {r.transfer_number}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1.5 text-sm">
-                        <span>{r.from_branch_name}</span>
-                        <IconArrowRight className="size-3 text-muted-foreground" />
-                        <span>{r.to_branch_name}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge status={r.status} size="sm" />
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {formatVNDate(r.created_at)}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {dateDisplay}
-                    </TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="icon-sm" asChild>
-                        <Link href={detailHref(r.id)}>
-                          <IconArrowRight className="size-4" />
-                        </Link>
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      <InputGroup className="h-10">
+        <InputGroupAddon>
+          <IconSearch />
+        </InputGroupAddon>
+        <InputGroupInput
+          type="search"
+          placeholder={copy.list.searchPlaceholder}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <InputGroupAddon align="inline-end">
+          <InputGroupText>
+            {searchFiltered.length} / {rows.length}
+          </InputGroupText>
+        </InputGroupAddon>
+      </InputGroup>
+
+      <DataTable
+        className="md:rounded-md md:border"
+        columns={columns}
+        data={searchFiltered}
+        getRowKey={(r) => r.id}
+        emptyTitle={emptyTitle}
+        emptyDescription={emptyDescription}
+        emptyMode={search ? "no-results" : "no-data"}
+        emptyIcon={emptyIcon}
+        mobileCardRender={(r) => (
+          <MobileTransferCard row={r} tab={activeTab} href={detailHref(r.id)} />
+        )}
+      />
+
       <CreateTransferDialog
         open={open}
         onOpenChange={setOpen}

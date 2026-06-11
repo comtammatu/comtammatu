@@ -160,7 +160,10 @@ export function IssuesClient({
   const [isPending, startTransition] = useTransition();
   const selectedBranchKind =
     branches.find((b) => b.id === Number(branchId))?.branchKind ?? null;
-  const showExportAction = !isMobile && selectedBranchKind !== "branch";
+  // Capability-gated only — the CSV builds client-side and downloads fine
+  // on phones; hiding it by breakpoint forced warehouse staff back to a
+  // desktop just to press one button.
+  const showExportAction = selectedBranchKind !== "branch";
 
   const filtered = useMemo(() => {
     let result = issues;
