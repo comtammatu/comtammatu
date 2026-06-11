@@ -3,7 +3,6 @@ import Link from "next/link";
 import {
   ArrowDown as IconArrowDown,
   ArrowUp as IconArrowUp,
-  BarChart3 as IconBarChart,
   Briefcase as IconBriefcase,
   DollarSign as IconCurrencyDollar,
   Package as IconPackage,
@@ -48,14 +47,20 @@ import {
   SurfaceLinkCard,
   type SurfaceLinkCardProps,
 } from "@/components/surface-link-card";
-import { fetchDashboardStats } from "./actions";
+import {
+  fetchAdminOverview,
+  fetchDashboardStats,
+  type AdminOverview,
+} from "./actions";
 
 interface StatCardProps {
   title: string;
   value: string;
-  change: number;
+  change?: number;
   helper: string;
   icon: ElementType;
+  href?: string;
+  className?: string;
 }
 
 type RecentOrders = Awaited<
@@ -95,9 +100,24 @@ function ChangeBadge({ change }: { change: number }) {
   );
 }
 
-function StatCard({ title, value, change, helper, icon: Icon }: StatCardProps) {
-  return (
-    <Card size="sm" className="h-full min-w-0">
+function StatCard({
+  title,
+  value,
+  change,
+  helper,
+  icon: Icon,
+  href,
+  className,
+}: StatCardProps) {
+  const card = (
+    <Card
+      size="sm"
+      className={cn(
+        "h-full min-w-0",
+        href && "transition-[box-shadow,border-color] hover:shadow-sm",
+        !href && className,
+      )}
+    >
       <CardHeader>
         <div className="flex min-w-0 items-start justify-between gap-3">
           <CardTitle className="truncate text-sm font-medium text-muted-foreground">
@@ -109,13 +129,21 @@ function StatCard({ title, value, change, helper, icon: Icon }: StatCardProps) {
         </div>
       </CardHeader>
       <CardContent className="space-y-2">
-        <p className="truncate font-mono text-2xl font-semibold tabular-nums">
+        <p className="truncate font-mono text-xl font-semibold tabular-nums sm:text-2xl">
           {value}
         </p>
-        <ChangeBadge change={change} />
+        {change !== undefined ? <ChangeBadge change={change} /> : null}
         <p className="text-xs text-muted-foreground">{helper}</p>
       </CardContent>
     </Card>
+  );
+
+  if (!href) return card;
+
+  return (
+    <Link href={href} className={cn("block h-full min-w-0", className)}>
+      {card}
+    </Link>
   );
 }
 
@@ -165,52 +193,6 @@ function FocusItem({
         </ItemActions>
       ) : null}
     </Item>
-  );
-}
-
-function TodayPulse({
-  revenue,
-  orders,
-  avgOrderValue,
-}: {
-  revenue: number;
-  orders: number;
-  avgOrderValue: number;
-}) {
-  return (
-    <Card className="min-w-0">
-      <CardHeader>
-        <CardTitle>{ADMIN_DASHBOARD_COPY.todayPulseTitle}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            {ADMIN_DASHBOARD_COPY.collectedRevenueLabel}
-          </p>
-          <p className="mt-1 truncate font-mono text-2xl font-semibold tabular-nums text-primary">
-            {formatVND(revenue)}
-          </p>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-          <div className="rounded-md border p-3">
-            <p className="text-xs text-muted-foreground">
-              {ADMIN_DASHBOARD_COPY.todayOrdersLabel}
-            </p>
-            <p className="mt-1 font-mono text-lg font-semibold tabular-nums">
-              {orders.toLocaleString("vi-VN")}
-            </p>
-          </div>
-          <div className="rounded-md border p-3">
-            <p className="text-xs text-muted-foreground">
-              {ADMIN_DASHBOARD_COPY.avgOrderLabel}
-            </p>
-            <p className="mt-1 truncate font-mono text-lg font-semibold tabular-nums">
-              {formatVND(Math.round(avgOrderValue))}
-            </p>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
   );
 }
 
@@ -292,7 +274,7 @@ function DashboardFocus({
       );
 
   return (
-    <Card className="min-w-0 lg:col-span-2">
+    <Card className="min-w-0">
       <CardHeader>
         <CardTitle>{ADMIN_DASHBOARD_COPY.focusTitle}</CardTitle>
       </CardHeader>
@@ -334,17 +316,6 @@ function buildShortcutCards(
   role: Parameters<typeof canAccess>[0],
 ): SurfaceLinkCardProps[] {
   const cards: SurfaceLinkCardProps[] = [];
-
-  if (canAccess(role, "reports")) {
-    cards.push({
-      title: MODULE_ACL.reports.label,
-      href: MODULE_ACL.reports.path,
-      description: "Doanh thu, tồn kho, tài chính và ngày công.",
-      icon: <IconBarChart />,
-      tone: "primary",
-      ctaLabel: ADMIN_DASHBOARD_COPY.reportsCta,
-    });
-  }
 
   if (canAccess(role, "hr")) {
     cards.push({
@@ -416,13 +387,19 @@ function RecentOrderSection({ orders }: { orders: RecentOrders }) {
   );
 }
 
-function StatGrid({
+function OverviewGrid({
   todayRevenue,
   todayOrders,
   avgOrderValue,
   revenueChange,
   ordersChange,
   avgChange,
+  overview,
+  reportsHref,
+  ordersHref,
+  financeHref,
+  foodCostHref,
+  inventoryHref,
 }: {
   todayRevenue: number;
   todayOrders: number;
@@ -430,24 +407,32 @@ function StatGrid({
   revenueChange: number;
   ordersChange: number;
   avgChange: number;
+  overview: AdminOverview;
+  reportsHref?: string;
+  ordersHref?: string;
+  financeHref?: string;
+  foodCostHref?: string;
+  inventoryHref?: string;
 }) {
   return (
     <section className="space-y-3">
       <div className="space-y-1">
         <h2 className="font-heading text-base font-semibold tracking-tight">
-          {ADMIN_DASHBOARD_COPY.statsTitle}
+          {ADMIN_DASHBOARD_COPY.overviewTitle}
         </h2>
         <p className="text-sm leading-6 text-muted-foreground">
-          {ADMIN_DASHBOARD_COPY.statsDescription}
+          {ADMIN_DASHBOARD_COPY.overviewDescription}
         </p>
       </div>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
         <StatCard
           title={ADMIN_DASHBOARD_COPY.revenueLabel}
           value={formatVND(todayRevenue)}
           change={revenueChange}
           helper={ADMIN_DASHBOARD_COPY.revenueHelper}
           icon={IconCurrencyDollar}
+          href={reportsHref}
+          className="col-span-2 sm:col-span-1"
         />
         <StatCard
           title={ADMIN_DASHBOARD_COPY.todayOrdersLabel}
@@ -455,6 +440,7 @@ function StatGrid({
           change={ordersChange}
           helper={ADMIN_DASHBOARD_COPY.ordersHelper}
           icon={IconReceipt}
+          href={ordersHref}
         />
         <StatCard
           title={ADMIN_DASHBOARD_COPY.avgOrderLabel}
@@ -463,6 +449,38 @@ function StatGrid({
           helper={ADMIN_DASHBOARD_COPY.avgOrderHelper}
           icon={IconTrendingUp}
         />
+        {overview.finance ? (
+          <>
+            <StatCard
+              title={ADMIN_DASHBOARD_COPY.grossProfitLabel}
+              value={formatVND(Math.round(overview.finance.grossProfit))}
+              helper={ADMIN_DASHBOARD_COPY.grossProfitHelper}
+              icon={IconTrendingUp}
+              href={financeHref}
+            />
+            <StatCard
+              title={ADMIN_DASHBOARD_COPY.costLabel}
+              value={formatVND(
+                Math.round(
+                  overview.finance.ingredientCost +
+                    overview.finance.operatingExpense,
+                ),
+              )}
+              helper={ADMIN_DASHBOARD_COPY.costHelper}
+              icon={IconWallet}
+              href={foodCostHref}
+            />
+          </>
+        ) : null}
+        {overview.inventoryValue !== null ? (
+          <StatCard
+            title={ADMIN_DASHBOARD_COPY.inventoryValueLabel}
+            value={formatVND(Math.round(overview.inventoryValue))}
+            helper={ADMIN_DASHBOARD_COPY.inventoryValueHelper}
+            icon={IconPackage}
+            href={inventoryHref}
+          />
+        ) : null}
       </div>
     </section>
   );
@@ -484,17 +502,21 @@ const ADMIN_DASHBOARD_COPY = {
   noRecentOrderFocusTitle: "Chưa có đơn mới trong danh sách gần đây",
   ordersFocusDescription: (change: string) =>
     `${change}% đơn bán so với hôm qua.`,
-  todayPulseTitle: "Nhịp hôm nay",
-  collectedRevenueLabel: "Doanh thu đã thu",
-  statsTitle: "Chỉ số hôm nay",
-  statsDescription:
-    "So sánh nhanh với hôm qua để biết ca bán đang đi theo hướng nào.",
+  overviewTitle: "Tổng quan hệ thống",
+  overviewDescription:
+    "Doanh thu, chi phí, lợi nhuận hôm nay và giá trị tồn kho hiện tại.",
   revenueLabel: "Doanh thu",
   todayOrdersLabel: "Đơn bán",
   avgOrderLabel: "Trung bình/đơn",
   revenueHelper: "Tổng tiền đã thu trong ngày.",
   ordersHelper: "Số đơn đã thanh toán.",
   avgOrderHelper: "Giá trị trung bình mỗi đơn.",
+  grossProfitLabel: "Lợi nhuận gộp",
+  grossProfitHelper: "Doanh thu trước VAT trừ chi phí nguyên liệu hôm nay.",
+  costLabel: "Chi phí",
+  costHelper: "Nguyên liệu và chi vận hành hôm nay.",
+  inventoryValueLabel: "Giá trị tồn kho",
+  inventoryValueHelper: "Giá trị tồn kho hiện tại trong phạm vi quản trị.",
   shortcutTitle: "Mở nhanh quản trị",
   shortcutDescription: "Các khu vực quản lý cần vào thường xuyên trong ngày.",
   recentOrdersTitle: "Đơn hàng gần đây",
@@ -521,9 +543,10 @@ function formatTime(iso: string): string {
 }
 
 export default async function DashboardPage() {
-  const [{ claims }, stats] = await Promise.all([
+  const [{ claims }, stats, overview] = await Promise.all([
     loadAuthState(),
     fetchDashboardStats(),
+    fetchAdminOverview(),
   ]);
   const revenueChange = computeChange(
     stats.todayRevenue,
@@ -546,6 +569,15 @@ export default async function DashboardPage() {
   const hrHref = canAccess(claims.user_role, "hr")
     ? MODULE_ACL.hr.path
     : undefined;
+  const financeHref = canAccess(claims.user_role, "finance")
+    ? MODULE_ACL.finance.path
+    : undefined;
+  const foodCostHref = canAccess(claims.user_role, "finance")
+    ? "/finance/food-cost"
+    : undefined;
+  const inventoryHref = canAccess(claims.user_role, "inventory")
+    ? MODULE_ACL.inventory.path
+    : undefined;
 
   return (
     <AppPage width="wide" density="compact">
@@ -558,29 +590,28 @@ export default async function DashboardPage() {
         }}
       />
 
-      <section className="grid gap-3 lg:grid-cols-3">
-        <DashboardFocus
-          revenueChange={revenueChange}
-          ordersChange={ordersChange}
-          recentOrder={recentOrder}
-          reportsHref={reportsHref}
-          ordersHref={ordersHref}
-          hrHref={hrHref}
-        />
-        <TodayPulse
-          revenue={stats.todayRevenue}
-          orders={stats.todayOrders}
-          avgOrderValue={stats.avgOrderValue}
-        />
-      </section>
-
-      <StatGrid
+      <OverviewGrid
         todayRevenue={stats.todayRevenue}
         todayOrders={stats.todayOrders}
         avgOrderValue={stats.avgOrderValue}
         revenueChange={revenueChange}
         ordersChange={ordersChange}
         avgChange={avgChange}
+        overview={overview}
+        reportsHref={reportsHref}
+        ordersHref={ordersHref}
+        financeHref={financeHref}
+        foodCostHref={foodCostHref}
+        inventoryHref={inventoryHref}
+      />
+
+      <DashboardFocus
+        revenueChange={revenueChange}
+        ordersChange={ordersChange}
+        recentOrder={recentOrder}
+        reportsHref={reportsHref}
+        ordersHref={ordersHref}
+        hrHref={hrHref}
       />
 
       {shortcutCards.length > 0 ? (
