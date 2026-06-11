@@ -35,7 +35,12 @@ const RUNNER_ORDER_ITEM_SELECT_WITH_PRIORITY =
 const RUNNER_ORDER_ITEM_SELECT_BASE = "id, order_id, quantity";
 const RUNNER_ACTIVE_STATUSES = ["pending", "preparing"] as const;
 const RUNNER_VISIBLE_STATUSES = ["pending", "preparing", "ready"] as const;
-const RUNNER_VISIBLE_ROW_LIMIT = 4;
+// 4 rows on small boards, 6 on xl TVs. The server cannot know the
+// breakpoint, so it renders up to the xl limit and rows 5-6 collapse
+// below xl via `hidden xl:grid`; the overflow footer mirrors the same
+// split with responsive visibility.
+const RUNNER_ROW_LIMIT_BASE = 4;
+const RUNNER_ROW_LIMIT_XL = 6;
 // Fully-bumped orders have no active sibling ticket left, so the anchor
 // queries below can no longer reach them; this window keeps them on the
 // board until hand-off (POS marks served) or timeout.
@@ -55,6 +60,7 @@ const RUNNER_COPY = {
   idleDoneTitle: "Các món đã được phục vụ đầy đủ.",
   idleBrandLine: "Thịt tươi 100% - chúc quý khách dùng bữa ngon miệng.",
   itemUnit: "món",
+  moreOrders: (count: number) => `Còn ${String(count)} đơn đang chuẩn bị`,
   footer: {
     wifi: "WiFi: Má Tư",
     password: "Mật khẩu: xincamon",
@@ -540,7 +546,9 @@ function RunnerOrderBoard({
     );
   }
 
-  const visibleRows = rows.slice(0, RUNNER_VISIBLE_ROW_LIMIT);
+  const visibleRows = rows.slice(0, RUNNER_ROW_LIMIT_XL);
+  const overflowBase = rows.length - RUNNER_ROW_LIMIT_BASE;
+  const overflowXl = rows.length - RUNNER_ROW_LIMIT_XL;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
@@ -560,17 +568,35 @@ function RunnerOrderBoard({
       </div>
       <div
         role="list"
-        className="grid min-h-0 flex-1 grid-rows-4 overflow-hidden"
+        className="grid min-h-0 flex-1 grid-rows-4 overflow-hidden xl:grid-rows-6"
       >
         {visibleRows.map((row, index) => (
           <RunnerOrderListRow
             key={row.key}
             row={row}
             featured={index === 0}
+            hiddenBelowXl={index >= RUNNER_ROW_LIMIT_BASE}
             nowMs={nowMs}
           />
         ))}
       </div>
+      {overflowBase > 0 ? (
+        <p
+          className={cn(
+            "shrink-0 border-t border-border bg-muted/70 px-4 py-1.5 text-center font-heading text-runner-footer font-semibold text-muted-foreground",
+            overflowXl <= 0 && "xl:hidden",
+          )}
+        >
+          <span className="xl:hidden">
+            {RUNNER_COPY.moreOrders(overflowBase)}
+          </span>
+          {overflowXl > 0 ? (
+            <span className="hidden xl:inline">
+              {RUNNER_COPY.moreOrders(overflowXl)}
+            </span>
+          ) : null}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -649,10 +675,12 @@ function RunnerColumnHeader({
 function RunnerOrderListRow({
   row,
   featured,
+  hiddenBelowXl,
   nowMs,
 }: {
   row: RunnerListRow;
   featured: boolean;
+  hiddenBelowXl: boolean;
   nowMs: number;
 }) {
   const statusLabel = getRunnerStatusLabel(row.status);
@@ -664,6 +692,7 @@ function RunnerOrderListRow({
         "grid h-full min-h-0 w-full grid-cols-12 items-stretch gap-0 divide-x divide-border/70 border-b border-l-4",
         getRunnerRowClass(row.status),
         featured && "border-l-primary",
+        hiddenBelowXl && "hidden xl:grid",
       )}
     >
       <RunnerOrderCell span={RUNNER_COLUMN_SPAN.order} mono>

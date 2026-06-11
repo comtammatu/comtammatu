@@ -81,8 +81,14 @@ test("Runner page follows the KDS order-list vocabulary", () => {
   );
   assert.match(runnerPageSource, /\.in\("status", RUNNER_ACTIVE_STATUSES\)/);
   assert.match(runnerPageSource, /\.in\("status", RUNNER_VISIBLE_STATUSES\)/);
-  assert.match(runnerPageSource, /const RUNNER_VISIBLE_ROW_LIMIT = 4;/);
-  assert.match(runnerPageSource, /rows\.slice\(0, RUNNER_VISIBLE_ROW_LIMIT\)/);
+  assert.match(runnerPageSource, /const RUNNER_ROW_LIMIT_BASE = 4;/);
+  assert.match(runnerPageSource, /const RUNNER_ROW_LIMIT_XL = 6;/);
+  assert.match(runnerPageSource, /rows\.slice\(0, RUNNER_ROW_LIMIT_XL\)/);
+  assert.match(runnerPageSource, /hiddenBelowXl && "hidden xl:grid"/);
+  assert.match(
+    runnerPageSource,
+    /moreOrders: \(count: number\) => `Còn \$\{String\(count\)\} đơn đang chuẩn bị`/,
+  );
   assert.match(runnerPageSource, /className="flex h-dvh min-h-0 w-full/);
   assert.match(runnerPageSource, /className="flex h-full min-h-0 w-full/);
   assert.match(runnerPageSource, /grid-rows-4/);
@@ -97,7 +103,7 @@ test("Runner page follows the KDS order-list vocabulary", () => {
   assert.match(runnerPageSource, /divide-x divide-border\/70/);
   assert.match(runnerPageSource, /role="list"/);
   assert.match(runnerPageSource, /role="listitem"/);
-  assert.match(runnerPageSource, /flex-1 grid-rows-4/);
+  assert.match(runnerPageSource, /flex-1 grid-rows-4 overflow-hidden xl:grid-rows-6/);
   assert.match(runnerPageSource, /text-runner-header/);
   assert.match(runnerPageSource, /text-runner-board/);
   assert.match(runnerPageSource, /text-runner-empty-secondary/);
