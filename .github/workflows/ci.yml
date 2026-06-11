@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # Supabase env is read lazily at request time (packages/database/src/
+      # supabase/_env.ts), never required to compile. Placeholders keep any
+      # build-time prerender path from throwing on a missing URL.
+      NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
+      TURBO_TELEMETRY_DISABLED: "1"
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      # Reads the pnpm version from package.json "packageManager".
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm typecheck
+
+      - run: pnpm lint
+
+      - run: pnpm test
+
+      - run: pnpm build

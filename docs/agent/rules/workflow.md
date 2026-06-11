@@ -83,10 +83,11 @@ This is for the next reader (future you, the owner, a reviewer) — make it stan
 
 Before marking implementation work complete:
 
-1. `pnpm typecheck && pnpm lint && pnpm build` MUST pass.
+1. `pnpm typecheck && pnpm lint && pnpm build` MUST pass. For release-grade slices, prefer `pnpm verify` (adds deps audit, baseline hygiene, and tests).
 2. For T3, re-check the QA/QC and BA reports against the diff: did the test plan get covered? Are the business rules implemented?
 3. For T2, re-read your own self-review block and confirm the diff matches it.
 4. For T1, state why the debate was skipped in the commit body.
+5. CI (`.github/workflows/ci.yml`) runs typecheck, lint, test, and build on every push/PR. Landed work is complete only with green CI.
 
 ## Skip Conditions (T1 only)
 

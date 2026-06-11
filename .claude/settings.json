@@ -1,0 +1,58 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rg:*)",
+      "Bash(ls:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git branch:*)",
+      "Bash(git remote -v)",
+      "Bash(pnpm typecheck:*)",
+      "Bash(pnpm lint)",
+      "Bash(pnpm lint:*)",
+      "Bash(pnpm test:*)",
+      "Bash(pnpm build)",
+      "Bash(pnpm verify)",
+      "Bash(pnpm deps:audit)",
+      "Bash(pnpm db:types)"
+    ],
+    "deny": [
+      "Bash(supabase db push:*)",
+      "Bash(supabase db reset:*)",
+      "Bash(supabase migration up:*)",
+      "Bash(supabase migration repair:*)",
+      "Bash(supabase link:*)",
+      "Bash(supabase functions deploy:*)",
+      "Bash(supabase secrets set:*)",
+      "Bash(supabase config push:*)",
+      "mcp__supabase__apply_migration",
+      "mcp__supabase__deploy_edge_function",
+      "mcp__supabase__pause_project",
+      "mcp__supabase__restore_project"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "^Bash$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-prod-db.mjs\""
+          }
+        ]
+      },
+      {
+        "matcher": "^mcp__.+__(apply_migration|execute_sql|deploy_edge_function|pause_project|restore_project|create_branch|merge_branch|reset_branch|rebase_branch|delete_branch)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-prod-db.mjs\""
+          }
+        ]
+      }
+    ]
+  }
+}
