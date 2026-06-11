@@ -9,25 +9,11 @@ import {
 } from "lucide-react";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { Card, CardContent } from "@comtammatu/ui/components/card";
-import {
-  Empty,
-  EmptyHeader,
-  EmptyTitle,
-} from "@comtammatu/ui/components/empty";
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
 } from "@comtammatu/ui/components/input-group";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@comtammatu/ui/components/table";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,12 +30,15 @@ import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { matchesSearch } from "@lib/search";
 import { AppPageHeader } from "@/components/surface";
 import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/data-table/data-table";
+import {
   InventoryFilterBar,
   InventoryPageContent,
 } from "../_components/inventory-page-layout";
 import { InteractiveCard } from "../_components/interactive-card";
 import { StatusBadge } from "../_components/status-badge";
-import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import { deleteSupplier, fetchSuppliers } from "../procurement-actions";
 import { SupplierDialog } from "./supplier-dialog";
 import type { SupplierRow } from "./supplier-dialog";
@@ -87,6 +76,73 @@ function SupplierAvatar({
         .slice(0, 2)
         .join("")}
     </div>
+  );
+}
+
+function SupplierMobileCard({
+  supplier,
+  index,
+  onEdit,
+  onDelete,
+}: {
+  supplier: SupplierRow;
+  index: number;
+  onEdit: (row: SupplierRow) => void;
+  onDelete: (id: number) => void;
+}) {
+  return (
+    <InteractiveCard
+      minHeight="mobile"
+      padding="default"
+      className="flex-col items-stretch gap-2"
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-3">
+          <SupplierAvatar name={supplier.name} colorIndex={index} />
+          <div className="min-w-0">
+            <p className="truncate font-semibold">{supplier.name}</p>
+            <p className="text-xs text-muted-foreground">
+              {supplier.phone ?? "—"}
+            </p>
+          </div>
+        </div>
+        <StatusBadge
+          status={supplier.is_active ? "active" : "suspended"}
+          size="sm"
+        />
+      </div>
+      <div className="flex items-center justify-between border-t pt-2">
+        <div className="flex min-w-0 flex-col gap-0.5 text-xs text-muted-foreground">
+          {supplier.tax_code && (
+            <span className="font-mono">MST: {supplier.tax_code}</span>
+          )}
+          {supplier.address && (
+            <span className="truncate">{supplier.address}</span>
+          )}
+        </div>
+        <div className="flex items-center gap-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => onEdit(supplier)}
+            aria-label={`Sửa ${supplier.name}`}
+          >
+            <IconPencil className="size-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => onDelete(supplier.id)}
+            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+            aria-label={`Xóa ${supplier.name}`}
+          >
+            <IconTrash className="size-4" />
+          </Button>
+        </div>
+      </div>
+    </InteractiveCard>
   );
 }
 
@@ -138,6 +194,79 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
     });
   }
 
+  const columns: DataTableColumn<SupplierRow>[] = [
+    {
+      key: "name",
+      header: "Nhà cung cấp",
+      render: (s, i) => (
+        <div className="flex items-center gap-3">
+          <SupplierAvatar name={s.name} colorIndex={i} />
+          <p className="text-sm font-semibold">{s.name}</p>
+        </div>
+      ),
+    },
+    {
+      key: "tax_code",
+      header: "Mã số thuế",
+      render: (s) => (
+        <span className="font-mono text-sm text-muted-foreground">
+          {s.tax_code ?? "—"}
+        </span>
+      ),
+    },
+    {
+      key: "phone",
+      header: "Điện thoại",
+      render: (s) => (
+        <span className="font-mono text-sm">{s.phone ?? "—"}</span>
+      ),
+    },
+    {
+      key: "address",
+      header: "Địa chỉ",
+      render: (s) => (
+        <p className="max-w-44 truncate text-sm text-muted-foreground">
+          {s.address ?? "—"}
+        </p>
+      ),
+    },
+    {
+      key: "status",
+      header: FORM_VI.status,
+      render: (s) => (
+        <StatusBadge status={s.is_active ? "active" : "suspended"} size="sm" />
+      ),
+    },
+    {
+      key: "actions",
+      header: FORM_VI.action,
+      className: "w-24 text-right",
+      render: (s) => (
+        <div className="flex items-center justify-end gap-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => openEdit(s)}
+            aria-label={`Sửa ${s.name}`}
+          >
+            <IconPencil className="size-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => setDeleteConfirmId(s.id)}
+            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+            aria-label={`Xóa ${s.name}`}
+          >
+            <IconTrash className="size-4" />
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
   return (
     <>
       <InventoryPageContent width={isMobile ? "narrow" : "wide"}>
@@ -150,7 +279,6 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
             </Button>
           }
         />
-        {/* IconSearch */}
         <InventoryFilterBar>
           <InputGroup className={cn("flex-1", isMobile && "h-12 basis-full")}>
             <InputGroupAddon>
@@ -169,162 +297,32 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
           </Badge>
         </InventoryFilterBar>
 
-        {/* Desktop: Table / Mobile: Cards */}
-        {isMobile ? (
-          <div className="flex flex-col gap-2">
-            {filtered.length === 0 ? (
-              <Empty className="py-8">
-                <EmptyHeader>
-                  <EmptyTitle className="text-sm font-semibold">
-                    {search.trim()
-                      ? "Không tìm thấy nhà cung cấp phù hợp"
-                      : "Chưa có nhà cung cấp nào"}
-                  </EmptyTitle>
-                </EmptyHeader>
-              </Empty>
-            ) : (
-              filtered.map((s, i) => (
-                <InteractiveCard
-                  key={s.id}
-                  minHeight="mobile"
-                  padding="default"
-                  className="flex-col items-stretch gap-2"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-3">
-                      <SupplierAvatar name={s.name} colorIndex={i} />
-                      <div className="min-w-0">
-                        <p className="truncate font-semibold">{s.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {s.phone ?? "—"}
-                        </p>
-                      </div>
-                    </div>
-                    <StatusBadge
-                      status={s.is_active ? "active" : "suspended"}
-                      size="sm"
-                    />
-                  </div>
-                  <div className="flex items-center justify-between border-t pt-2">
-                    <div className="flex gap-2 text-xs text-muted-foreground">
-                      {s.tax_code && (
-                        <span className="font-mono">MST: {s.tax_code}</span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openEdit(s)}
-                        aria-label={`Sửa ${s.name}`}
-                      >
-                        <IconPencil className="size-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setDeleteConfirmId(s.id)}
-                        className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                        aria-label={`Xóa ${s.name}`}
-                      >
-                        <IconTrash className="size-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </InteractiveCard>
-              ))
-            )}
-          </div>
-        ) : (
-          <Card>
-            <CardContent flush>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nhà cung cấp</TableHead>
-                    <TableHead>Mã số thuế</TableHead>
-                    <TableHead>Điện thoại</TableHead>
-                    <TableHead>Địa chỉ</TableHead>
-                    <TableHead>{FORM_VI.status}</TableHead>
-                    <TableHead className="w-24 text-right">
-                      {FORM_VI.action}
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filtered.length === 0 && (
-                    <TableEmptyStateRow
-                      colSpan={6}
-                      title={
-                        search.trim()
-                          ? "Không tìm thấy nhà cung cấp phù hợp"
-                          : "Chưa có nhà cung cấp"
-                      }
-                      description={
-                        search.trim()
-                          ? "Thử tên, mã số thuế hoặc số điện thoại khác."
-                          : 'Nhấn "Thêm nhà cung cấp" để bắt đầu.'
-                      }
-                    />
-                  )}
-                  {filtered.map((s, i) => (
-                    <TableRow key={s.id} className="group">
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <SupplierAvatar name={s.name} colorIndex={i} />
-                          <p className="text-sm font-semibold">{s.name}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-mono text-sm text-muted-foreground">
-                        {s.tax_code ?? "—"}
-                      </TableCell>
-                      <TableCell className="font-mono text-sm">
-                        {s.phone ?? "—"}
-                      </TableCell>
-                      <TableCell className="max-w-44 truncate text-sm text-muted-foreground">
-                        {s.address ?? "—"}
-                      </TableCell>
-                      <TableCell>
-                        <StatusBadge
-                          status={s.is_active ? "active" : "suspended"}
-                          size="sm"
-                        />
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => openEdit(s)}
-                            aria-label={`Sửa ${s.name}`}
-                          >
-                            <IconPencil className="size-4" />
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setDeleteConfirmId(s.id)}
-                            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                            aria-label={`Xóa ${s.name}`}
-                          >
-                            <IconTrash className="size-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        )}
+        <DataTable
+          columns={columns}
+          data={filtered}
+          getRowKey={(s) => s.id}
+          emptyTitle={
+            search.trim()
+              ? "Không tìm thấy nhà cung cấp phù hợp"
+              : "Chưa có nhà cung cấp"
+          }
+          emptyDescription={
+            search.trim()
+              ? "Thử tên, mã số thuế hoặc số điện thoại khác."
+              : 'Nhấn "Thêm nhà cung cấp" để bắt đầu.'
+          }
+          emptyMode={search.trim() ? "no-results" : "no-data"}
+          mobileCardRender={(s, i) => (
+            <SupplierMobileCard
+              supplier={s}
+              index={i}
+              onEdit={openEdit}
+              onDelete={setDeleteConfirmId}
+            />
+          )}
+        />
       </InventoryPageContent>
 
-      {/* Create / Edit Dialog */}
       <SupplierDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
@@ -332,7 +330,6 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
         onSaved={reload}
       />
 
-      {/* Delete Confirmation */}
       <AlertDialog
         open={deleteConfirmId != null}
         onOpenChange={(o) => {

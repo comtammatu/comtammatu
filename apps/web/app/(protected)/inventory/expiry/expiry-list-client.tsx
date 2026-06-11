@@ -11,7 +11,6 @@ import { ACTIONS_VI, BRANCH_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
 import { formatVNDate } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,13 +21,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@comtammatu/ui/components/alert-dialog";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@comtammatu/ui/components/empty";
 import {
   InputGroup,
   InputGroupAddon,
@@ -50,14 +42,6 @@ import {
   SelectValue,
 } from "@comtammatu/ui/components/select";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@comtammatu/ui/components/table";
-import {
   Tabs,
   TabsContent,
   TabsList,
@@ -65,19 +49,23 @@ import {
 } from "@comtammatu/ui/components/tabs";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
-import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { matchesSearch } from "@lib/search";
 import { FormattedNumberInput } from "../_components/formatted-number-input";
 import { AppPage, AppPageHeader, AppToolbar } from "@/components/surface";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/data-table/data-table";
 import { adjustStock } from "../stock-actions";
 import { fetchExpiryAlerts } from "../alert-actions";
-import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import type { BranchOption, ExpiryAlertRow } from "../page";
 
 interface WriteOffTarget {
   alert: ExpiryAlertRow;
   quantity: string;
 }
+
+type ExpiryDisplayRow = ExpiryAlertRow & { rowKey: string };
 
 const URGENCY_META: Record<string, { label: string; className: string }> = {
   expired: {
@@ -93,6 +81,51 @@ const URGENCY_META: Record<string, { label: string; className: string }> = {
     className: "bg-warning/10 text-warning border-warning/30",
   },
 };
+
+function ExpiryAlertCard({
+  alert,
+  disabled,
+  onWriteOff,
+}: {
+  alert: ExpiryAlertRow;
+  disabled: boolean;
+  onWriteOff: (alert: ExpiryAlertRow) => void;
+}) {
+  const meta = URGENCY_META[alert.urgency] ?? {
+    label: alert.urgency,
+    className: "bg-muted text-muted-foreground",
+  };
+  return (
+    <Item size="sm" className="justify-between rounded-lg border bg-muted/30">
+      <ItemContent>
+        <ItemTitle className="text-sm font-medium">
+          <span className="truncate">{alert.ingredient_name}</span>
+          <Badge className={cn("text-xs shrink-0", meta.className)}>
+            {alert.urgency === "expired"
+              ? "Đã hết hạn"
+              : `${alert.days_remaining} ngày`}
+          </Badge>
+        </ItemTitle>
+        <ItemDescription className="truncate">
+          Lô: {alert.batch_number ?? "—"} · GRN: {alert.grn_number} ·{" "}
+          {alert.branch_name} · {formatVNDate(alert.expiry_date)}
+        </ItemDescription>
+      </ItemContent>
+      <ItemActions>
+        <Button
+          variant="destructive"
+          size="sm"
+          className="h-7 gap-1.5 text-xs shrink-0"
+          onClick={() => onWriteOff(alert)}
+          disabled={disabled}
+        >
+          <IconTrash className="size-3.5" />
+          Xóa sổ
+        </Button>
+      </ItemActions>
+    </Item>
+  );
+}
 
 export function ExpiryListClient({
   initial,
@@ -115,7 +148,6 @@ export function ExpiryListClient({
   const [urgencyFilter, setUrgencyFilter] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [writeOff, setWriteOff] = useState<WriteOffTarget | null>(null);
-  const isMobile = useIsMobile();
 
   const isBranchLocked = userRole === "branch_manager" && userBranchId != null;
 
@@ -209,168 +241,97 @@ export function ExpiryListClient({
     });
   }
 
+  const columns: DataTableColumn<ExpiryDisplayRow>[] = [
+    {
+      key: "ingredient",
+      header: PRODUCT_VI.rawIngredient,
+      className: "text-sm font-medium",
+      render: (alert) => alert.ingredient_name,
+    },
+    {
+      key: "batch",
+      header: "Lô hàng",
+      className: "font-mono text-sm",
+      render: (alert) => alert.batch_number ?? "—",
+    },
+    {
+      key: "expiry",
+      header: "Ngày hết hạn",
+      className: "text-sm font-mono tabular-nums text-muted-foreground",
+      render: (alert) => formatVNDate(alert.expiry_date),
+    },
+    {
+      key: "remaining",
+      header: "Còn lại",
+      render: (alert) =>
+        alert.urgency === "expired" ? (
+          <Badge className="bg-destructive/10 text-destructive border-destructive/30 text-xs">
+            Đã hết hạn
+          </Badge>
+        ) : (
+          <span
+            className={cn(
+              "text-sm font-medium tabular-nums",
+              alert.urgency === "critical"
+                ? "text-destructive"
+                : "text-warning",
+            )}
+          >
+            {alert.days_remaining} ngày
+          </span>
+        ),
+    },
+    {
+      key: "grn",
+      header: "Phiếu nhập",
+      className: "font-mono text-sm",
+      render: (alert) => alert.grn_number,
+    },
+    {
+      key: "branch",
+      header: BRANCH_VI.long,
+      className: "text-sm",
+      render: (alert) => alert.branch_name,
+    },
+    {
+      key: "actions",
+      header: "Hành động",
+      render: (alert) => (
+        <Button
+          variant="destructive"
+          size="sm"
+          className="h-7 gap-1.5 text-xs"
+          onClick={() => openWriteOff(alert)}
+          disabled={isPending}
+        >
+          <IconTrash className="size-3.5" />
+          Xóa sổ
+        </Button>
+      ),
+    },
+  ];
+
   function renderTable(items: ExpiryAlertRow[]) {
+    const rows: ExpiryDisplayRow[] = items.map((alert, idx) => ({
+      ...alert,
+      rowKey: `${alert.ingredient_id}-${alert.grn_number}-${alert.batch_number ?? ""}-${String(idx)}`,
+    }));
     return (
-      <Card>
-        <CardContent flush>
-          {isMobile ? (
-            <div className="divide-y">
-              {items.length === 0 && (
-                <Empty className="border-0 py-10">
-                  <EmptyMedia variant="icon">
-                    <IconCircleCheck />
-                  </EmptyMedia>
-                  <EmptyHeader>
-                    <EmptyTitle className="text-sm font-semibold">
-                      Không có hàng sắp hết hạn
-                    </EmptyTitle>
-                    <EmptyDescription className="text-xs leading-5">
-                      Tất cả nguyên liệu còn trong hạn sử dụng
-                    </EmptyDescription>
-                  </EmptyHeader>
-                </Empty>
-              )}
-              {items.map((alert, idx) => {
-                const meta = URGENCY_META[alert.urgency] ?? {
-                  label: alert.urgency,
-                  className: "bg-muted text-muted-foreground",
-                };
-                return (
-                  <Item
-                    key={`${alert.ingredient_id}-${alert.grn_number}-${alert.batch_number ?? ""}-${String(idx)}`}
-                    size="sm"
-                    className="justify-between bg-muted/30"
-                  >
-                    <ItemContent>
-                      <ItemTitle className="text-sm font-medium">
-                        <span className="truncate">
-                          {alert.ingredient_name}
-                        </span>
-                        <Badge
-                          className={cn("text-xs shrink-0", meta.className)}
-                        >
-                          {alert.urgency === "expired"
-                            ? "Đã hết hạn"
-                            : `${alert.days_remaining} ngày`}
-                        </Badge>
-                      </ItemTitle>
-                      <ItemDescription className="truncate">
-                        Lô: {alert.batch_number ?? "—"} · GRN:{" "}
-                        {alert.grn_number} · {alert.branch_name}
-                      </ItemDescription>
-                    </ItemContent>
-                    <ItemActions>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        className="h-7 gap-1.5 text-xs shrink-0"
-                        onClick={() => openWriteOff(alert)}
-                        disabled={isPending}
-                      >
-                        <IconTrash className="size-3.5" />
-                        Xóa sổ
-                      </Button>
-                    </ItemActions>
-                  </Item>
-                );
-              })}
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                    {PRODUCT_VI.rawIngredient}
-                  </TableHead>
-                  <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                    Lô hàng
-                  </TableHead>
-                  <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                    Ngày hết hạn
-                  </TableHead>
-                  <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                    Còn lại
-                  </TableHead>
-                  <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                    Phiếu nhập
-                  </TableHead>
-                  <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                    {BRANCH_VI.long}
-                  </TableHead>
-                  <TableHead className="text-xs font-semibold uppercase tracking-wider">
-                    Hành động
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {items.length === 0 && (
-                  <TableEmptyStateRow
-                    colSpan={7}
-                    paddingClassName="py-16"
-                    icon={
-                      <IconCircleCheck className="mx-auto size-10 text-success/40" />
-                    }
-                    title="Không có hàng sắp hết hạn"
-                    description="Tất cả nguyên liệu còn trong hạn sử dụng"
-                  />
-                )}
-                {items.map((alert, idx) => (
-                  <TableRow
-                    key={`${alert.ingredient_id}-${alert.grn_number}-${alert.batch_number ?? ""}-${String(idx)}`}
-                    className="hover:bg-muted/30 transition-colors"
-                  >
-                    <TableCell className="text-sm font-medium">
-                      {alert.ingredient_name}
-                    </TableCell>
-                    <TableCell className="font-mono text-sm">
-                      {alert.batch_number ?? "\u2014"}
-                    </TableCell>
-                    <TableCell className="text-sm font-mono tabular-nums text-muted-foreground">
-                      {formatVNDate(alert.expiry_date)}
-                    </TableCell>
-                    <TableCell>
-                      {alert.urgency === "expired" ? (
-                        <Badge className="bg-destructive/10 text-destructive border-destructive/30 text-xs">
-                          Đã hết hạn
-                        </Badge>
-                      ) : (
-                        <span
-                          className={cn(
-                            "text-sm font-medium tabular-nums",
-                            alert.urgency === "critical"
-                              ? "text-destructive"
-                              : "text-warning",
-                          )}
-                        >
-                          {alert.days_remaining} ngày
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell className="font-mono text-sm">
-                      {alert.grn_number}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {alert.branch_name}
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        className="h-7 gap-1.5 text-xs"
-                        onClick={() => openWriteOff(alert)}
-                        disabled={isPending}
-                      >
-                        <IconTrash className="size-3.5" />
-                        Xóa sổ
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+      <DataTable
+        columns={columns}
+        data={rows}
+        getRowKey={(row) => row.rowKey}
+        emptyTitle="Không có hàng sắp hết hạn"
+        emptyDescription="Tất cả nguyên liệu còn trong hạn sử dụng"
+        emptyIcon={<IconCircleCheck />}
+        mobileCardRender={(row) => (
+          <ExpiryAlertCard
+            alert={row}
+            disabled={isPending}
+            onWriteOff={openWriteOff}
+          />
+        )}
+      />
     );
   }
 

@@ -13,7 +13,6 @@ import type { StaffRole } from "@comtammatu/shared/auth";
 import { formatVNDate } from "@comtammatu/shared/time";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
   Dialog,
   DialogContent,
@@ -34,28 +33,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@comtammatu/ui/components/table";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { cn } from "@comtammatu/ui";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { matchesSearch } from "@lib/search";
 import { messages } from "@lib/messages";
+import { AppPage, AppPageHeader, AppToolbar } from "@/components/surface";
 import {
-  AppEmptyState,
-  AppPage,
-  AppPageHeader,
-  AppToolbar,
-} from "@/components/surface";
+  DataTable,
+  type DataTableColumn,
+} from "@/components/data-table/data-table";
 import { StatusBadge } from "../_components/status-badge";
 import { InteractiveCard } from "../_components/interactive-card";
-import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import { createStocktakeSession, fetchStocktakeSessions } from "../actions";
 
 import { ACTIONS_VI, BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
@@ -80,6 +69,34 @@ export interface BranchOption {
 function formatDateShort(dateStr: string | null): string {
   if (!dateStr) return "—";
   return formatVNDate(dateStr);
+}
+
+function StocktakeSessionCard({
+  row,
+  routeBase,
+}: {
+  row: StocktakeSessionRow;
+  routeBase: string;
+}) {
+  return (
+    <InteractiveCard minHeight="mobile" padding="default" asChild>
+      <Link
+        href={`${routeBase}/${row.id}?branchId=${row.branch_id}`}
+        className="flex-col items-stretch gap-2"
+      >
+        <div className="flex items-center justify-between gap-2">
+          <span className="font-mono text-sm font-medium">KK-{row.id}</span>
+          <StatusBadge status={row.status} />
+        </div>
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span>{row.branches?.name ?? "—"}</span>
+          <span className="tabular-nums">
+            {formatDateShort(row.started_at ?? row.created_at)}
+          </span>
+        </div>
+      </Link>
+    </InteractiveCard>
+  );
 }
 
 export function StocktakeListClient({
@@ -163,6 +180,51 @@ export function StocktakeListClient({
     doCreate(bid);
   }
 
+  const isFiltered = Boolean(search) || statusFilter !== "all";
+
+  const columns: DataTableColumn<StocktakeSessionRow>[] = [
+    {
+      key: "code",
+      header: messages.inventory.stocktake.sessionCode,
+      className: "font-mono text-sm font-medium",
+      render: (r) => `KK-${r.id}`,
+    },
+    {
+      key: "branch",
+      header: BRANCH_VI.long,
+      className: "text-sm",
+      render: (r) => r.branches?.name ?? "—",
+    },
+    {
+      key: "started",
+      header: messages.inventory.stocktake.startedAt,
+      className: "text-sm font-mono tabular-nums text-muted-foreground",
+      render: (r) => formatDateShort(r.started_at ?? r.created_at),
+    },
+    {
+      key: "status",
+      header: FORM_VI.status,
+      render: (r) => <StatusBadge status={r.status} />,
+    },
+    {
+      key: "details",
+      header: "",
+      className: "w-10",
+      render: (r) => (
+        <Button
+          variant="ghost"
+          size="icon-lg"
+          asChild
+          aria-label={messages.inventory.stocktake.detailsAria}
+        >
+          <Link href={`${routeBase}/${r.id}?branchId=${r.branch_id}`}>
+            <IconArrowRight className="size-4" />
+          </Link>
+        </Button>
+      ),
+    },
+  ];
+
   return (
     <AppPage width={isMobile ? "narrow" : "wide"}>
       <AppPageHeader
@@ -234,124 +296,24 @@ export function StocktakeListClient({
         ) : null}
       </AppToolbar>
 
-      {/* Content */}
-      {isMobile ? (
-        <div className="flex flex-col gap-2">
-          {filtered.length === 0 ? (
-            <AppEmptyState
-              mode={search || statusFilter !== "all" ? "no-results" : "no-data"}
-              title={
-                search || statusFilter !== "all"
-                  ? messages.inventory.stocktake.noSessionsMatched
-                  : messages.inventory.stocktake.noSessions
-              }
-              description={
-                search || statusFilter !== "all"
-                  ? undefined
-                  : messages.inventory.stocktake.noSessionsHint
-              }
-            />
-          ) : (
-            filtered.map((r) => (
-              <InteractiveCard
-                key={r.id}
-                minHeight="mobile"
-                padding="default"
-                asChild
-              >
-                <Link
-                  href={`${routeBase}/${r.id}?branchId=${r.branch_id}`}
-                  className="flex-col items-stretch gap-2"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-mono text-sm font-medium">
-                      KK-{r.id}
-                    </span>
-                    <StatusBadge status={r.status} />
-                  </div>
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>{r.branches?.name ?? "—"}</span>
-                    <span className="tabular-nums">
-                      {formatDateShort(r.started_at ?? r.created_at)}
-                    </span>
-                  </div>
-                </Link>
-              </InteractiveCard>
-            ))
-          )}
-        </div>
-      ) : (
-        <Card>
-          <CardContent flush>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>
-                    {messages.inventory.stocktake.sessionCode}
-                  </TableHead>
-                  <TableHead>{BRANCH_VI.long}</TableHead>
-                  <TableHead>
-                    {messages.inventory.stocktake.startedAt}
-                  </TableHead>
-                  <TableHead>{FORM_VI.status}</TableHead>
-                  <TableHead className="w-10" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.length === 0 ? (
-                  <TableEmptyStateRow
-                    colSpan={5}
-                    paddingClassName="py-16"
-                    icon={
-                      <IconClipboardCheck className="mx-auto size-10 text-muted-foreground/40" />
-                    }
-                    title={
-                      search || statusFilter !== "all"
-                        ? messages.inventory.stocktake.noSessionsMatched
-                        : messages.inventory.stocktake.noSessions
-                    }
-                    description={
-                      search || statusFilter !== "all"
-                        ? undefined
-                        : messages.inventory.stocktake.noSessionsHint
-                    }
-                  />
-                ) : null}
-                {filtered.map((r) => (
-                  <TableRow key={r.id}>
-                    <TableCell className="font-mono text-sm font-medium">
-                      KK-{r.id}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {r.branches?.name ?? "—"}
-                    </TableCell>
-                    <TableCell className="text-sm font-mono tabular-nums text-muted-foreground">
-                      {formatDateShort(r.started_at ?? r.created_at)}
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge status={r.status} />
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon-lg"
-                        asChild
-                        aria-label={messages.inventory.stocktake.detailsAria}
-                      >
-                        <Link
-                          href={`${routeBase}/${r.id}?branchId=${r.branch_id}`}
-                        >
-                          <IconArrowRight className="size-4" />
-                        </Link>
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
+      <DataTable
+        columns={columns}
+        data={filtered}
+        getRowKey={(r) => r.id}
+        emptyTitle={
+          isFiltered
+            ? messages.inventory.stocktake.noSessionsMatched
+            : messages.inventory.stocktake.noSessions
+        }
+        emptyDescription={
+          isFiltered ? undefined : messages.inventory.stocktake.noSessionsHint
+        }
+        emptyMode={isFiltered ? "no-results" : "no-data"}
+        emptyIcon={<IconClipboardCheck />}
+        mobileCardRender={(r) => (
+          <StocktakeSessionCard row={r} routeBase={routeBase} />
+        )}
+      />
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>

@@ -12,12 +12,6 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyTitle,
-} from "@comtammatu/ui/components/empty";
-import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
@@ -30,21 +24,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@comtammatu/ui/components/table";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { cn } from "@comtammatu/ui";
 import { matchesSearch } from "@lib/search";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/data-table/data-table";
 import { AppPage, AppPageHeader, AppToolbar } from "@/components/surface";
 import { InteractiveCard } from "../_components/interactive-card";
 import { StatusBadge } from "../_components/status-badge";
-import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import { tRoute, tStatus } from "../_lib/dictionary";
 import type { SupplierRow } from "../suppliers/suppliers-client";
 
@@ -144,6 +133,75 @@ export function PurchaseOrdersClient({
       statusFilter !== ALL_FILTER_VALUE ||
       supplierFilter !== ALL_FILTER_VALUE);
 
+  const columns: DataTableColumn<PurchaseOrderRow>[] = [
+    {
+      key: "po_number",
+      header: "Số PO",
+      className: "min-w-40",
+      render: (row) => (
+        <span className="font-mono font-medium">
+          {row.display_id ?? row.po_number}
+        </span>
+      ),
+    },
+    {
+      key: "supplier",
+      header: "Nhà cung cấp",
+      className: "min-w-52",
+      render: (row) => (
+        <span className="text-muted-foreground">
+          {row.suppliers?.name ?? "Chưa gắn nhà cung cấp"}
+        </span>
+      ),
+    },
+    {
+      key: "status",
+      header: FORM_VI.status,
+      className: "min-w-36",
+      render: (row) => <StatusBadge status={row.status} size="sm" />,
+    },
+    {
+      key: "ordered_at",
+      header: "Ngày đặt",
+      className: "min-w-32",
+      render: (row) => (
+        <span
+          className="text-muted-foreground"
+          title={formatRelative(row.ordered_at)}
+        >
+          {formatDate(row.ordered_at)}
+        </span>
+      ),
+    },
+    {
+      key: "notes",
+      header: FORM_VI.notes,
+      render: (row) => (
+        <p
+          className={cn(
+            "max-w-md truncate text-sm text-muted-foreground",
+            !row.notes && "text-muted-foreground/60",
+          )}
+        >
+          {row.notes ?? "Không có ghi chú"}
+        </p>
+      ),
+    },
+    {
+      key: "action",
+      header: FORM_VI.action,
+      className: "w-28 text-right",
+      render: (row) => (
+        <Button asChild size="sm" variant="outline">
+          <Link href={`${purchaseOrdersBasePath}/${row.id}`}>
+            Xem
+            <IconArrowRight className="size-4" />
+          </Link>
+        </Button>
+      ),
+    },
+  ];
+
   return (
     <AppPage width={isMobile ? "narrow" : "wide"}>
       <AppPageHeader
@@ -231,136 +289,69 @@ export function PurchaseOrdersClient({
 
       {/* Table / Mobile list */}
       <Card>
-        <CardContent flush>
-          {isMobile ? (
-            <div className="divide-y">
-              {filteredRows.length === 0 ? (
-                <Empty className="py-8">
-                  <EmptyHeader>
-                    <EmptyTitle className="text-sm font-semibold">
-                      {showEmptyResults
-                        ? "Không tìm thấy đơn đặt hàng phù hợp"
-                        : "Chưa có đơn đặt hàng"}
-                    </EmptyTitle>
-                    <EmptyDescription className="text-xs leading-5">
-                      {showEmptyResults
-                        ? "Thử đổi bộ lọc hoặc từ khóa để xem thêm kết quả."
-                        : 'Nhấn "Tạo PO" để bắt đầu lập đơn mua đầu tiên.'}
-                    </EmptyDescription>
-                  </EmptyHeader>
-                </Empty>
-              ) : null}
-
-              {filteredRows.map((row) => (
-                <InteractiveCard
-                  key={row.id}
-                  asChild
-                  minHeight="mobile"
-                  padding="default"
-                >
-                  <Link
-                    href={`${purchaseOrdersBasePath}/${row.id}`}
-                    className="block"
-                  >
-                    <div className="min-w-0 flex-1 space-y-1">
-                      <p className="font-mono text-sm font-semibold">
-                        {row.display_id ?? row.po_number}
-                      </p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {row.suppliers?.name ?? "Chưa gắn nhà cung cấp"}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Ngày đặt:{" "}
-                        <span title={formatRelative(row.ordered_at)}>
-                          {formatDate(row.ordered_at)}
-                        </span>
-                      </p>
-                      {row.notes ? (
-                        <p className="truncate text-xs text-muted-foreground">
-                          {row.notes}
-                        </p>
-                      ) : null}
-                    </div>
-                    <div className="flex shrink-0 flex-col items-end gap-1">
-                      <StatusBadge status={row.status} size="sm" />
-                      <IconArrowRight className="size-4 text-muted-foreground" />
-                    </div>
-                  </Link>
-                </InteractiveCard>
-              ))}
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="min-w-40">Số PO</TableHead>
-                  <TableHead className="min-w-52">Nhà cung cấp</TableHead>
-                  <TableHead className="min-w-36">{FORM_VI.status}</TableHead>
-                  <TableHead className="min-w-32">Ngày đặt</TableHead>
-                  <TableHead>{FORM_VI.notes}</TableHead>
-                  <TableHead className="w-28 text-right">
-                    {FORM_VI.action}
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredRows.length === 0 ? (
-                  <TableEmptyStateRow
-                    colSpan={6}
-                    title={
-                      showEmptyResults
-                        ? "Không tìm thấy đơn đặt hàng phù hợp"
-                        : "Chưa có đơn đặt hàng"
-                    }
-                    description={
-                      showEmptyResults
-                        ? "Thử đổi bộ lọc hoặc từ khóa để xem thêm kết quả."
-                        : 'Nhấn "Tạo PO" để bắt đầu lập đơn mua đầu tiên.'
-                    }
-                  />
-                ) : null}
-
-                {filteredRows.map((row) => (
-                  <TableRow key={row.id}>
-                    <TableCell className="font-mono font-medium">
-                      {row.display_id ?? row.po_number}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {row.suppliers?.name ?? "Chưa gắn nhà cung cấp"}
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge status={row.status} size="sm" />
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      <span title={formatRelative(row.ordered_at)}>
-                        {formatDate(row.ordered_at)}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <p
-                        className={cn(
-                          "max-w-md truncate text-sm text-muted-foreground",
-                          !row.notes && "text-muted-foreground/60",
-                        )}
-                      >
-                        {row.notes ?? "Không có ghi chú"}
-                      </p>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button asChild size="sm" variant="outline">
-                        <Link href={`${purchaseOrdersBasePath}/${row.id}`}>
-                          Xem
-                          <IconArrowRight className="size-4" />
-                        </Link>
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
+        <CardContent flush className="max-md:px-4">
+          <DataTable
+            columns={columns}
+            data={filteredRows}
+            getRowKey={(row) => row.id}
+            emptyTitle={
+              showEmptyResults
+                ? "Không tìm thấy đơn đặt hàng phù hợp"
+                : "Chưa có đơn đặt hàng"
+            }
+            emptyDescription={
+              showEmptyResults
+                ? "Thử đổi bộ lọc hoặc từ khóa để xem thêm kết quả."
+                : 'Nhấn "Tạo PO" để bắt đầu lập đơn mua đầu tiên.'
+            }
+            emptyMode={showEmptyResults ? "no-results" : "no-data"}
+            mobileCardRender={(row) => (
+              <PurchaseOrderCard
+                row={row}
+                href={`${purchaseOrdersBasePath}/${row.id}`}
+              />
+            )}
+          />
         </CardContent>
       </Card>
     </AppPage>
+  );
+}
+
+function PurchaseOrderCard({
+  row,
+  href,
+}: {
+  row: PurchaseOrderRow;
+  href: string;
+}) {
+  return (
+    <InteractiveCard asChild minHeight="mobile" padding="default">
+      <Link href={href} className="block">
+        <div className="min-w-0 flex-1 space-y-1">
+          <p className="font-mono text-sm font-semibold">
+            {row.display_id ?? row.po_number}
+          </p>
+          <p className="truncate text-xs text-muted-foreground">
+            {row.suppliers?.name ?? "Chưa gắn nhà cung cấp"}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Ngày đặt:{" "}
+            <span title={formatRelative(row.ordered_at)}>
+              {formatDate(row.ordered_at)}
+            </span>
+          </p>
+          {row.notes ? (
+            <p className="truncate text-xs text-muted-foreground">
+              {row.notes}
+            </p>
+          ) : null}
+        </div>
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          <StatusBadge status={row.status} size="sm" />
+          <IconArrowRight className="size-4 text-muted-foreground" />
+        </div>
+      </Link>
+    </InteractiveCard>
   );
 }

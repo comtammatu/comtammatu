@@ -74,6 +74,7 @@ interface DataTableProps<T> {
   currentPage?: number;
   onPageChange?: (page: number) => void;
   onRowClick?: (row: T) => void;
+  rowClassName?: (row: T, index: number) => string | undefined;
   className?: string;
   /**
    * Document-table totals (e.g. PO/transfer/issue line sheets). Rendered
@@ -103,6 +104,7 @@ export function DataTable<T>({
   currentPage,
   onPageChange,
   onRowClick,
+  rowClassName,
   className,
   desktopFooter,
   mobileFooter,
@@ -168,6 +170,7 @@ export function DataTable<T>({
                 key={getRowKey(row)}
                 className={cn(
                   onRowClick && "cursor-pointer hover:bg-muted/45",
+                  rowClassName?.(row, index),
                 )}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
               >

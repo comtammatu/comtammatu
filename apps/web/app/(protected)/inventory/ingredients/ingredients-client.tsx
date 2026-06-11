@@ -31,21 +31,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@comtammatu/ui/components/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@comtammatu/ui/components/table";
 import { cn } from "@comtammatu/ui";
 import { useIsMobile } from "@comtammatu/ui/hooks/use-mobile";
 import { matchesSearch } from "@lib/search";
-import { AppPageHeader, AppEmptyState, AppPage } from "@/components/surface";
+import { AppPageHeader, AppPage } from "@/components/surface";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/data-table/data-table";
 import { InteractiveCard } from "../_components/interactive-card";
 import { StatusBadge } from "../_components/status-badge";
-import { TableEmptyStateRow } from "../_components/table-empty-state-row";
 import { formatVND } from "../_lib/format";
 import { CATEGORY_TONE_CLASS } from "../_lib/constants";
 import { fetchIngredients, toggleIngredientActive } from "../ingredient-actions";
@@ -78,6 +73,97 @@ const conversionNumberFormatter = new Intl.NumberFormat("vi-VN", {
 
 function conversionLabel(item: IngredientRow): string {
   return `1 ${item.purchase_unit} = ${conversionNumberFormatter.format(item.purchase_to_measure_factor ?? 1)} ${item.measure_unit}`;
+}
+
+function categoryToneClass(category: string | null): string {
+  return (
+    CATEGORY_TONE_CLASS[category ?? ""] ?? "bg-muted text-muted-foreground"
+  );
+}
+
+function ThresholdBadges({ item }: { item: IngredientRow }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      <Badge variant="destructive">Min {item.min_stock_level ?? 0}</Badge>
+      <Badge variant="secondary">Max {item.max_stock_level ?? 0}</Badge>
+      <Badge variant="success">Re {item.reorder_point ?? 0}</Badge>
+    </div>
+  );
+}
+
+function IngredientMobileCard({
+  item,
+  isPending,
+  onToggleActive,
+  onEdit,
+}: {
+  item: IngredientRow;
+  isPending: boolean;
+  onToggleActive: (item: IngredientRow) => void;
+  onEdit: (item: IngredientRow) => void;
+}) {
+  return (
+    <InteractiveCard minHeight="tap" className="flex-col items-stretch gap-0 p-0">
+      <div className="flex items-start justify-between gap-3 px-4 pt-3 pb-1">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="truncate font-semibold">{item.name}</p>
+            {item.category ? (
+              <Badge className={cn("text-xs", categoryToneClass(item.category))}>
+                {item.category}
+              </Badge>
+            ) : null}
+            <StatusBadge
+              status={item.is_active ? "active" : "suspended"}
+              size="sm"
+            />
+          </div>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {item.sku ?? "—"} &middot; {conversionLabel(item)}
+          </p>
+        </div>
+      </div>
+      <div className="px-4 py-1">
+        <ThresholdBadges item={item} />
+      </div>
+      <div className="flex items-center justify-between gap-2 px-4 pb-3 pt-1">
+        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <span>{storageLabel(item.storage_type)}</span>
+          {item.unit_cost != null ? (
+            <span className="font-mono">{formatVND(item.unit_cost)}đ</span>
+          ) : null}
+        </div>
+        <div className="flex items-center gap-1">
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={() => onToggleActive(item)}
+            aria-label={
+              item.is_active ? `Ẩn ${item.name}` : `Hiện lại ${item.name}`
+            }
+            disabled={isPending}
+          >
+            {item.is_active ? (
+              <IconEyeOff className="size-4" />
+            ) : (
+              <IconEye className="size-4" />
+            )}
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={() => onEdit(item)}
+            aria-label={`Sửa ${item.name}`}
+          >
+            <IconPencil className="size-4" />
+            <span className="ml-1">{ACTIONS_VI.edit}</span>
+          </Button>
+        </div>
+      </div>
+    </InteractiveCard>
+  );
 }
 
 export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
@@ -227,128 +313,120 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
     </Card>
   );
 
-  if (isMobile) {
-    return (
-      <AppPage mobile scroll>
-        <AppPageHeader
-          title="Nguyên liệu"
-          actions={
-            <div className="flex items-center gap-2">
-              <IngredientImportExportMenu onImported={reload} />
-              <Button type="button" onClick={openCreate}>
-                Tạo nguyên liệu
-              </Button>
-            </div>
-          }
-        />
-        <div className="space-y-4">
-          {filterBar}
-
-          {filtered.length === 0 ? (
-            <AppEmptyState
-              mode={searchQuery.trim() ? "no-results" : "no-data"}
-              title={
-                searchQuery.trim()
-                  ? "Không tìm thấy nguyên liệu phù hợp"
-                  : "Chưa có nguyên liệu"
-              }
-              description={
-                searchQuery.trim()
-                  ? "Thử bộ lọc hoặc từ khóa khác."
-                  : 'Nhấn "Tạo nguyên liệu" để bắt đầu danh mục.'
-              }
-            />
-          ) : null}
-
-          <div className="space-y-2">
-            {filtered.map((item) => {
-              const categoryTone =
-                CATEGORY_TONE_CLASS[item.category ?? ""] ??
-                "bg-muted text-muted-foreground";
-
-              return (
-                <InteractiveCard
-                  key={item.id}
-                  minHeight="tap"
-                  className="flex-col items-stretch gap-0 p-0"
-                >
-                  <div className="flex items-start justify-between gap-3 px-4 pt-3 pb-1">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="truncate font-semibold">{item.name}</p>
-                        {item.category ? (
-                          <Badge className={cn("text-xs", categoryTone)}>
-                            {item.category}
-                          </Badge>
-                        ) : null}
-                        <StatusBadge
-                          status={item.is_active ? "active" : "suspended"}
-                          size="sm"
-                        />
-                      </div>
-                      <p className="mt-0.5 text-xs text-muted-foreground">
-                        {item.sku ?? "—"} &middot; {conversionLabel(item)}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between gap-2 px-4 pb-3 pt-1">
-                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                      <span>{storageLabel(item.storage_type)}</span>
-                      {item.unit_cost != null ? (
-                        <span className="font-mono">
-                          {formatVND(item.unit_cost)}đ
-                        </span>
-                      ) : null}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleToggleActive(item)}
-                        aria-label={
-                          item.is_active
-                            ? `Ẩn ${item.name}`
-                            : `Hiện lại ${item.name}`
-                        }
-                        disabled={isPending}
-                      >
-                        {item.is_active ? (
-                          <IconEyeOff className="size-4" />
-                        ) : (
-                          <IconEye className="size-4" />
-                        )}
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => openEdit(item)}
-                        aria-label={`Sửa ${item.name}`}
-                      >
-                        <IconPencil className="size-4" />
-                        <span className="ml-1">{ACTIONS_VI.edit}</span>
-                      </Button>
-                    </div>
-                  </div>
-                </InteractiveCard>
-              );
-            })}
+  const columns: DataTableColumn<IngredientRow>[] = [
+    {
+      key: "name",
+      header: PRODUCT_VI.rawIngredient,
+      className: "min-w-52",
+      render: (item) => (
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <p className="font-semibold">{item.name}</p>
+            {item.category ? (
+              <Badge className={categoryToneClass(item.category)}>
+                {item.category}
+              </Badge>
+            ) : null}
           </div>
         </div>
-
-        <IngredientDialog
-          open={dialogOpen}
-          onOpenChange={setDialogOpen}
-          ingredient={editingIngredient}
-          onSaved={reload}
-        />
-      </AppPage>
-    );
-  }
+      ),
+    },
+    {
+      key: "sku",
+      header: "SKU",
+      className: "min-w-28",
+      render: (item) => (
+        <span className="font-mono text-sm text-muted-foreground">
+          {item.sku || "—"}
+        </span>
+      ),
+    },
+    {
+      key: "unit",
+      header: FORM_VI.unit,
+      className: "min-w-40",
+      render: (item) => (
+        <div className="space-y-1 text-sm">
+          <p>Nhập: {item.purchase_unit}</p>
+          <p className="text-muted-foreground">Tính: {item.measure_unit}</p>
+          <p className="text-muted-foreground">{conversionLabel(item)}</p>
+        </div>
+      ),
+    },
+    {
+      key: "storage",
+      header: "Bảo quản",
+      className: "min-w-36",
+      render: (item) => storageLabel(item.storage_type),
+    },
+    {
+      key: "unit_cost",
+      header: "Giá tham chiếu",
+      className: "min-w-32",
+      render: (item) => (
+        <span className="font-mono">
+          {item.unit_cost != null ? `${formatVND(item.unit_cost)}đ` : "—"}
+        </span>
+      ),
+    },
+    {
+      key: "thresholds",
+      header: "Ngưỡng tồn",
+      className: "min-w-44",
+      render: (item) => <ThresholdBadges item={item} />,
+    },
+    {
+      key: "status",
+      header: FORM_VI.status,
+      className: "min-w-28",
+      render: (item) => (
+        <StatusBadge status={item.is_active ? "active" : "suspended"} />
+      ),
+    },
+    {
+      key: "actions",
+      header: FORM_VI.action,
+      className: "w-24 text-right",
+      render: (item) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              aria-label={`Tác vụ cho ${item.name}`}
+              disabled={isPending}
+            >
+              <IconDots className="size-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => openEdit(item)}>
+              <IconPencil className="mr-2 size-4" />
+              {ACTIONS_VI.edit}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => handleToggleActive(item)}>
+              {item.is_active ? (
+                <>
+                  <IconEyeOff className="mr-2 size-4" />
+                  Ẩn nguyên liệu
+                </>
+              ) : (
+                <>
+                  <IconEye className="mr-2 size-4" />
+                  Hiện lại
+                </>
+              )}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+    },
+  ];
 
   return (
-    <AppPage scroll>
+    <AppPage mobile={isMobile} scroll>
       <AppPageHeader
         title="Nguyên liệu"
         actions={
@@ -362,142 +440,30 @@ export function IngredientsClient({ initial }: { initial: IngredientRow[] }) {
       />
       {filterBar}
 
-      <Card>
-        <CardContent flush>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="min-w-52">
-                  {PRODUCT_VI.rawIngredient}
-                </TableHead>
-                <TableHead className="min-w-28">SKU</TableHead>
-                <TableHead className="min-w-40">{FORM_VI.unit}</TableHead>
-                <TableHead className="min-w-36">Bảo quản</TableHead>
-                <TableHead className="min-w-32">Giá tham chiếu</TableHead>
-                <TableHead className="min-w-44">Ngưỡng tồn</TableHead>
-                <TableHead className="min-w-28">{FORM_VI.status}</TableHead>
-                <TableHead className="w-24 text-right">
-                  {FORM_VI.action}
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.length === 0 ? (
-                <TableEmptyStateRow
-                  colSpan={8}
-                  title={
-                    searchQuery.trim()
-                      ? "Không tìm thấy nguyên liệu phù hợp"
-                      : "Chưa có nguyên liệu"
-                  }
-                  description={
-                    searchQuery.trim()
-                      ? "Thử bộ lọc hoặc từ khóa khác."
-                      : 'Nhấn "Tạo nguyên liệu" để bắt đầu danh mục.'
-                  }
-                />
-              ) : null}
-
-              {filtered.map((item) => {
-                const categoryTone =
-                  CATEGORY_TONE_CLASS[item.category ?? ""] ??
-                  "bg-muted text-muted-foreground";
-                const isActive = item.is_active;
-
-                return (
-                  <TableRow key={item.id}>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <p className="font-semibold">{item.name}</p>
-                          {item.category ? (
-                            <Badge className={categoryTone}>
-                              {item.category}
-                            </Badge>
-                          ) : null}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-mono text-sm text-muted-foreground">
-                      {item.sku || "—"}
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1 text-sm">
-                        <p>Nhập: {item.purchase_unit}</p>
-                        <p className="text-muted-foreground">
-                          Tính: {item.measure_unit}
-                        </p>
-                        <p className="text-muted-foreground">
-                          {conversionLabel(item)}
-                        </p>
-                      </div>
-                    </TableCell>
-                    <TableCell>{storageLabel(item.storage_type)}</TableCell>
-                    <TableCell className="font-mono">
-                      {item.unit_cost != null
-                        ? `${formatVND(item.unit_cost)}đ`
-                        : "—"}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-2">
-                        <Badge variant="destructive">
-                          Min {item.min_stock_level ?? 0}
-                        </Badge>
-                        <Badge variant="secondary">
-                          Max {item.max_stock_level ?? 0}
-                        </Badge>
-                        <Badge variant="success">
-                          Re {item.reorder_point ?? 0}
-                        </Badge>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge status={isActive ? "active" : "suspended"} />
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="ghost"
-                            aria-label={`Tác vụ cho ${item.name}`}
-                            disabled={isPending}
-                          >
-                            <IconDots className="size-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => openEdit(item)}>
-                            <IconPencil className="mr-2 size-4" />
-                            {ACTIONS_VI.edit}
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() => handleToggleActive(item)}
-                          >
-                            {item.is_active ? (
-                              <>
-                                <IconEyeOff className="mr-2 size-4" />
-                                Ẩn nguyên liệu
-                              </>
-                            ) : (
-                              <>
-                                <IconEye className="mr-2 size-4" />
-                                Hiện lại
-                              </>
-                            )}
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      <DataTable
+        columns={columns}
+        data={filtered}
+        getRowKey={(item) => item.id}
+        emptyTitle={
+          searchQuery.trim()
+            ? "Không tìm thấy nguyên liệu phù hợp"
+            : "Chưa có nguyên liệu"
+        }
+        emptyDescription={
+          searchQuery.trim()
+            ? "Thử bộ lọc hoặc từ khóa khác."
+            : 'Nhấn "Tạo nguyên liệu" để bắt đầu danh mục.'
+        }
+        emptyMode={searchQuery.trim() ? "no-results" : "no-data"}
+        mobileCardRender={(item) => (
+          <IngredientMobileCard
+            item={item}
+            isPending={isPending}
+            onToggleActive={handleToggleActive}
+            onEdit={openEdit}
+          />
+        )}
+      />
 
       <IngredientDialog
         open={dialogOpen}
