@@ -238,6 +238,37 @@ const checks = [
     allowlist: {
     },
   },
+  {
+    id: "use-is-mobile-budget",
+    description:
+      "useIsMobile is for composition-level switches (page width, drawer vs sheet, wizard density) — list surfaces use the shared DataTable adapter. Budget only shrinks.",
+    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
+    pattern: /\buseIsMobile\b/g,
+    allowlist: {
+      "apps/web/app/(protected)/br/[branchId]/pos/_components/archived-orders-sheet.tsx": 2,
+      "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-sheet.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/pos/pos-desktop-shell.tsx": 3,
+      "apps/web/app/(protected)/inventory/_components/inventory-shell.tsx": 2,
+      "apps/web/app/(protected)/inventory/dashboard-client.tsx": 2,
+      "apps/web/app/(protected)/inventory/grn/[id]/grn-detail-client.tsx": 2,
+      "apps/web/app/(protected)/inventory/grn/grn-list-client.tsx": 2,
+      "apps/web/app/(protected)/inventory/grn/new/[supplierId]/grn-create-client.tsx": 2,
+      "apps/web/app/(protected)/inventory/ingredients/ingredients-client.tsx": 2,
+      "apps/web/app/(protected)/inventory/inventory-value-panel.tsx": 2,
+      "apps/web/app/(protected)/inventory/issues/issues-client.tsx": 2,
+      "apps/web/app/(protected)/inventory/purchase-orders/new/new-po-client.tsx": 2,
+      "apps/web/app/(protected)/inventory/purchase-orders/purchase-orders-client.tsx": 2,
+      "apps/web/app/(protected)/inventory/receiving/receiving-client.tsx": 2,
+      "apps/web/app/(protected)/inventory/stock/stock-client.tsx": 2,
+      "apps/web/app/(protected)/inventory/stocktake/[id]/stocktake-detail-client.tsx": 2,
+      "apps/web/app/(protected)/inventory/stocktake/stocktake-list-client.tsx": 2,
+      "apps/web/app/(protected)/inventory/supplier-invoices/supplier-invoices-client.tsx": 2,
+      "apps/web/app/(protected)/inventory/suppliers/suppliers-client.tsx": 2,
+      "apps/web/app/_components/responsive-toaster.tsx": 2,
+      "apps/web/app/components/data-table/data-table-toolbar.tsx": 2,
+      "apps/web/app/components/data-table/data-table.tsx": 2,
+    },
+  },
 ];
 
 const failures = [];
