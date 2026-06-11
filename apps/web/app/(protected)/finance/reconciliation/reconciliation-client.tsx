@@ -1,5 +1,7 @@
 "use client";
 
+import { KpiCard } from "@/components/kpi/kpi-card";
+
 import { useState, useTransition } from "react";
 import {
   TriangleAlert as IconAlertTriangle,
@@ -289,28 +291,32 @@ export function ReconciliationClient({
         {report ? (
           <>
             <div className="grid gap-3 sm:grid-cols-3">
-              <SummaryCard
-                title={reconciliationCopy.summary.range}
+              <KpiCard
+                label={reconciliationCopy.summary.range}
                 value={`${report.start_date} → ${report.end_date}`}
                 hint={branchName(report.branch_id)}
               />
-              <SummaryCard
-                title={reconciliationCopy.summary.totalDifference}
+              <KpiCard
+                label={reconciliationCopy.summary.totalDifference}
                 value={formatVND(summary.totalDiff)}
                 hint={reconciliationCopy.summary.tolerance(
                   formatVND(TOLERANCE_VND),
                 )}
-                highlight={Math.abs(summary.totalDiff) > TOLERANCE_VND}
+                tone={
+                  Math.abs(summary.totalDiff) > TOLERANCE_VND
+                    ? "warning"
+                    : "neutral"
+                }
               />
-              <SummaryCard
-                title={reconciliationCopy.summary.exceptionCount}
+              <KpiCard
+                label={reconciliationCopy.summary.exceptionCount}
                 value={`${summary.exceptions} / ${report.categories.length}`}
                 hint={
                   summary.exceptions === 0
                     ? reconciliationCopy.summary.matchedAll
                     : reconciliationCopy.summary.needsReview
                 }
-                highlight={summary.exceptions > 0}
+                tone={summary.exceptions > 0 ? "warning" : "neutral"}
               />
             </div>
 
@@ -543,36 +549,6 @@ function labelForCategory(c: ReconciliationCategory): string {
     case "ap_payment":
       return reconciliationCopy.categoryLabels.apPayment;
   }
-}
-
-function SummaryCard({
-  title,
-  value,
-  hint,
-  highlight,
-}: {
-  title: string;
-  value: string;
-  hint?: string;
-  highlight?: boolean;
-}) {
-  return (
-    <Card>
-      <CardContent className="space-y-1 p-4">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          {title}
-        </p>
-        <p
-          className={`text-xl font-semibold ${
-            highlight ? "text-warning-foreground" : ""
-          }`}
-        >
-          {value}
-        </p>
-        {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
-      </CardContent>
-    </Card>
-  );
 }
 
 function CategoryRow({

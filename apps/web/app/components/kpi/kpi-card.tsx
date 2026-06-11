@@ -44,7 +44,7 @@ const DOT_TONE: Record<KpiTone, string> = {
 
 interface KpiCardProps {
   label: string;
-  value: string;
+  value: ReactNode;
   /** Compare delta (built via buildCompareDelta) */
   delta?: CompareDelta | null;
   /** Compare period label e.g. "vs kỳ trước" */
@@ -59,6 +59,9 @@ interface KpiCardProps {
   sparkline?: TrendPoint[];
   /** Sparkline screen-reader description */
   sparklineLabel?: string;
+  /** Optional glyph shown top-right in a muted box (replaces the tone dot) */
+  icon?: ReactNode;
+  className?: string;
 }
 
 export function KpiCard({
@@ -71,6 +74,8 @@ export function KpiCard({
   href,
   sparkline,
   sparklineLabel,
+  icon,
+  className,
 }: KpiCardProps) {
   const Body = (
     <CardContent
@@ -83,18 +88,27 @@ export function KpiCard({
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           {label}
         </p>
-        <span className="flex items-center gap-1.5">
+        {icon ? (
           <span
-            className={cn("size-1.5 rounded-full", DOT_TONE[tone])}
+            className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground"
             aria-hidden
-          />
-          {href ? (
-            <ArrowUpRight
-              className="size-3.5 text-muted-foreground"
+          >
+            {icon}
+          </span>
+        ) : (
+          <span className="flex items-center gap-1.5">
+            <span
+              className={cn("size-1.5 rounded-full", DOT_TONE[tone])}
               aria-hidden
             />
-          ) : null}
-        </span>
+            {href ? (
+              <ArrowUpRight
+                className="size-3.5 text-muted-foreground"
+                aria-hidden
+              />
+            ) : null}
+          </span>
+        )}
       </div>
       <p className={cn("text-2xl font-bold tabular-nums", VALUE_TONE[tone])}>
         {value}
@@ -124,7 +138,7 @@ export function KpiCard({
   );
 
   if (!href) {
-    return <Card>{Body}</Card>;
+    return <Card className={className}>{Body}</Card>;
   }
   // Card primitive is a div with no asChild slot, so we wrap the whole
   // card in a Link. Display:block keeps the card's own layout intact;
@@ -132,8 +146,11 @@ export function KpiCard({
   return (
     <Link
       href={href}
-      className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-      aria-label={`${label}: ${value}`}
+      className={cn(
+        "block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        className,
+      )}
+      aria-label={typeof value === "string" ? `${label}: ${value}` : label}
     >
       <Card>{Body}</Card>
     </Link>

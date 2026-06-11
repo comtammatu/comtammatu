@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Button } from "@comtammatu/ui/components/button";
-import { Item, ItemContent, ItemTitle } from "@comtammatu/ui/components/item";
 import { ArrowLeft as IconArrowLeft } from "lucide-react";
 import {
   canManageBranchFloorSettings,
@@ -15,6 +14,7 @@ import {
   type BranchOption,
 } from "./print-jobs-client";
 import { SettingsPageShell } from "../../settings-page-shell";
+import { KpiCard } from "@/components/kpi/kpi-card";
 import { messages } from "@lib/messages";
 
 type SearchParams = {
@@ -174,22 +174,22 @@ export default async function PrintJobsPage({
       }
     >
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <StatCard
+        <KpiCard
           label={messages.settings.printers.statPending}
           value={pendingRes.count ?? 0}
           tone="warning"
         />
-        <StatCard
+        <KpiCard
           label={messages.settings.printers.statFailed24h}
           value={failedRes.count ?? 0}
           tone={(failedRes.count ?? 0) > 0 ? "destructive" : "neutral"}
         />
-        <StatCard
+        <KpiCard
           label={messages.settings.printers.statPrintedToday}
           value={printedTodayRes.count ?? 0}
           tone="success"
         />
-        <StatCard
+        <KpiCard
           label={messages.settings.printers.statAgentOnline}
           value={`${onlineCount} / ${agentTotal}`}
           tone={
@@ -207,33 +207,6 @@ export default async function PrintJobsPage({
         currentBranchLocked={scopedBranch != null}
       />
     </SettingsPageShell>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: number | string;
-  tone: "neutral" | "success" | "warning" | "destructive";
-}) {
-  const toneClass =
-    tone === "success"
-      ? "border-success/40 text-success"
-      : tone === "warning"
-        ? "border-warning/40 text-warning"
-        : tone === "destructive"
-          ? "border-destructive/30 text-destructive"
-          : "border-border/60 text-muted-foreground";
-  return (
-    <Item variant="outline" className={toneClass}>
-      <ItemContent>
-        <ItemTitle className="text-xs uppercase opacity-70">{label}</ItemTitle>
-        <div className="text-2xl font-semibold">{value}</div>
-      </ItemContent>
-    </Item>
   );
 }
 

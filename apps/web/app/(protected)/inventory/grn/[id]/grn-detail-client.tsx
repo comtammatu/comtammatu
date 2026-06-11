@@ -58,6 +58,7 @@ import type { AuditLogRow } from "@/_lib/audit";
 import { DocumentStockCorrectionDialog } from "../../_components/document-stock-correction-dialog";
 import { FormattedNumberInput } from "../../_components/formatted-number-input";
 import { formatVND } from "../../_lib/format";
+import { KpiCard } from "@/components/kpi/kpi-card";
 import { confirmGrn } from "../../procurement-actions";
 import { amendGrnLine, deleteGrnLine, upsertGrnLine } from "../../grn-actions";
 import { tRoute } from "../../_lib/dictionary";
@@ -404,37 +405,44 @@ export function GRNDetailClient({
                 ) : null}
 
                 <div className="grid gap-3 md:grid-cols-4">
-                  <SummaryCard label={grnCopy.linkedPo}>
-                    {grn.poCode && grn.poId ? (
-                      <Link
-                        href={`/inventory/purchase-orders/${grn.poId}`}
-                        className="text-primary hover:underline"
-                      >
-                        {grn.poCode}
-                      </Link>
-                    ) : (
-                      <span className="text-muted-foreground">
-                        {inventoryCommon.noValue}
+                  <KpiCard
+                    label={grnCopy.linkedPo}
+                    value={
+                      grn.poCode && grn.poId ? (
+                        <Link
+                          href={`/inventory/purchase-orders/${grn.poId}`}
+                          className="text-primary hover:underline"
+                        >
+                          {grn.poCode}
+                        </Link>
+                      ) : (
+                        <span className="text-muted-foreground">
+                          {inventoryCommon.noValue}
+                        </span>
+                      )
+                    }
+                  />
+                  <KpiCard label={grnCopy.supplier} value={grn.supplier} />
+                  <KpiCard
+                    label={grnCopy.totalReceivedValue}
+                    value={
+                      <span className="text-primary">
+                        {inventoryCommon.currency(formatVND(stats.total))}
                       </span>
-                    )}
-                  </SummaryCard>
-                  <SummaryCard label={grnCopy.supplier}>
-                    {grn.supplier}
-                  </SummaryCard>
-                  <SummaryCard label={grnCopy.totalReceivedValue}>
-                    <span className="text-primary">
-                      {inventoryCommon.currency(formatVND(stats.total))}
-                    </span>
-                  </SummaryCard>
-                  <SummaryCard label={grnCopy.priceReviewNeeded}>
-                    <span
-                      className={
-                        stats.reviewLines > 0 ? "text-destructive" : ""
-                      }
-                    >
-                      {grnCopy.reviewRatio(stats.reviewLines, lines.length)}
-                    </span>
-                  </SummaryCard>
+                    }
+                  />
+                  <KpiCard
+                    label={grnCopy.priceReviewNeeded}
+                    value={
+                      <span
+                        className={
+                          stats.reviewLines > 0 ? "text-destructive" : ""
+                        }
+                      >
+                        {grnCopy.reviewRatio(stats.reviewLines, lines.length)}
+                      </span>
+                    }
+                  />
                 </div>
 
                 <OverviewLinesPreview lines={lines} />
@@ -1028,23 +1036,6 @@ function AddGrnLineDialog({
         </form>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function SummaryCard({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <Card>
-      <CardContent>
-        <Badge variant="secondary">{label}</Badge>
-        <div className="mt-3 text-lg font-semibold">{children}</div>
-      </CardContent>
-    </Card>
   );
 }
 
