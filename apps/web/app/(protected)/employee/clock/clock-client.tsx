@@ -130,6 +130,12 @@ export function ClockClient({ state }: ClockClientProps) {
 
   useEffect(() => () => stopCamera(), [stopCamera]);
 
+  // The not-started screen has exactly one job — take the check-in photo —
+  // so the camera opens itself once on mount. One-shot: a manual cancel
+  // must not re-trigger it, and the "Mở camera" button stays as the
+  // fallback when permission is denied.
+  const autoStartCameraRef = useRef(false);
+
   const startCamera = useCallback(async () => {
     setError(null);
 
@@ -167,6 +173,13 @@ export function ClockClient({ state }: ClockClientProps) {
       setError("Không thể mở camera. Cho phép quyền camera rồi thử lại.");
     }
   }, [stopCamera]);
+
+  useEffect(() => {
+    if (autoStartCameraRef.current) return;
+    if (state.status !== "not_started") return;
+    autoStartCameraRef.current = true;
+    void startCamera();
+  }, [startCamera, state.status]);
 
   const capturePhoto = useCallback(async () => {
     const video = videoRef.current;

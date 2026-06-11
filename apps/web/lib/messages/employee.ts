@@ -205,7 +205,7 @@ export const employee = {
   hrAttendance: {
     summaryView: "Tổng hợp",
     clockView: "Vào / ra",
-    loadHint: "Chọn chi nhánh và tháng, sau đó nhấn tải dữ liệu.",
+    loadHint: "Chưa có dữ liệu chấm công cho chi nhánh và tháng đã chọn.",
     employeeCode: "Mã NV",
     fullName: "Họ tên",
     present: "Có mặt",

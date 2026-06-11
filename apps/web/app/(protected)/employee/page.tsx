@@ -3,6 +3,7 @@ import {
   Camera as IconCamera,
   ChefHat as IconChefHat,
   CheckCircle2 as IconDone,
+  ClipboardCheck as IconClipboardCheck,
   Clock as IconClock,
   ListChecks as IconListChecks,
   LogOut as IconLogout,
@@ -10,7 +11,13 @@ import {
   MonitorUp as IconMonitorUp,
   UserCircle as IconUserCircle,
 } from "lucide-react";
-import { canAccess, type ModuleKey } from "@comtammatu/shared/auth";
+import {
+  canAccess,
+  PERMISSION_KEYS,
+  type ModuleKey,
+  type StaffRole,
+} from "@comtammatu/shared/auth";
+import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Progress } from "@comtammatu/ui/components/progress";
@@ -31,6 +38,14 @@ import {
 import { formatDateVN, formatTimeVN } from "./_lib/vn-business-date";
 
 const copy = messages.employee.home;
+
+// Must mirror CHECKOUT_APPROVER_ROLES in checkout-approvals/page.tsx —
+// the card and its destination route gate on the same set.
+const CHECKOUT_APPROVER_ROLES: readonly StaffRole[] = [
+  "owner",
+  "super_manager",
+  "branch_manager",
+];
 
 const OPERATION_HANDOFFS: Array<{
   moduleKey: ModuleKey;
@@ -133,6 +148,40 @@ export default async function EmployeePage() {
     branchIsHq =
       data?.branch_kind === "central_warehouse" ||
       data?.branch_kind === "central_kitchen";
+  }
+
+  // Checkout requests BLOCK the requesting employee until a manager
+  // approves — the count surfaces the queue on the screen managers
+  // already open, instead of three taps deep behind Profile.
+  let pendingCheckouts = 0;
+  if (CHECKOUT_APPROVER_ROLES.includes(claims.user_role)) {
+    const service = createServiceClient();
+    let countQuery = service
+      .from("attendance_records")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", claims.tenant_id)
+      .contains("checkout_approval_target_roles", [claims.user_role])
+      .is("check_out", null)
+      .not("checkout_requested_at", "is", null);
+    if (claims.user_role === "branch_manager") {
+      countQuery = countQuery.eq("branch_id", claims.branch_id ?? -1);
+    }
+    const permissionPromise =
+      typeof claims.branch_id === "number"
+        ? supabase.rpc("has_permission", {
+            p_branch_id: claims.branch_id,
+            p_key: PERMISSION_KEYS.HR_APPROVE_CHECKOUT,
+          })
+        : supabase.rpc("has_permission_any", {
+            p_key: PERMISSION_KEYS.HR_APPROVE_CHECKOUT,
+          });
+    const [permissionResult, countResult] = await Promise.all([
+      permissionPromise,
+      countQuery,
+    ]);
+    if (permissionResult.data === true) {
+      pendingCheckouts = countResult.count ?? 0;
+    }
   }
 
   // POS/KDS/Runner entry points always render by permission — proxy ACL is
@@ -360,6 +409,23 @@ export default async function EmployeePage() {
             <EmployeeStatusStrip items={todaySummaryItems} />
           </div>
         </EmployeePanel>
+
+        {pendingCheckouts > 0 ? (
+          <EmployeePanel
+            icon={IconClipboardCheck}
+            title={copy.checkoutApprovalsTitle}
+            tone="warning"
+            badge={{ children: String(pendingCheckouts), variant: "warning" }}
+            size="sm"
+          >
+            <Button asChild size="touch" className="w-full sm:w-fit">
+              <Link href="/employee/checkout-approvals">
+                <IconClipboardCheck data-icon="inline-start" />
+                {copy.checkoutApprovalsTitle}
+              </Link>
+            </Button>
+          </EmployeePanel>
+        ) : null}
 
         <EmployeeActionSection
           title={copy.operationToolsTitle}

@@ -3,7 +3,7 @@
 /* eslint-disable i18n/no-inline-vietnamese -- vi-allow: HR attendance checklist detail copy is local to this manager review surface */
 
 import Image from "next/image";
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { Image as IconImage } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -143,19 +143,26 @@ export function AttendanceTable({ branches }: AttendanceTableProps) {
   const [view, setView] = useState<"clock" | "summary">("summary");
   const [isPending, startTransition] = useTransition();
 
-  function loadData(branchId: number, month: string) {
+  // `nextView` rides as a parameter: the view-toggle handlers call
+  // setView + loadData in the same tick, so reading `view` from the
+  // closure would fetch the PREVIOUS mode and render an empty table.
+  function loadData(
+    branchId: number,
+    month: string,
+    nextView: "clock" | "summary" = view,
+  ) {
     setSelectedBranch(branchId);
     setSelectedMonth(month);
     startTransition(async () => {
       const [viewResult, leaveResult] = await Promise.all([
-        view === "summary"
+        nextView === "summary"
           ? fetchAttendanceSummary({ branchId, month })
           : fetchAttendance({ branchId, month }),
         fetchApprovedLeaveMonth({ branchId, month }),
       ]);
 
       if (viewResult.success) {
-        if (view === "summary") {
+        if (nextView === "summary") {
           setSummary((viewResult.data ?? []) as AttendanceSummaryRow[]);
         } else {
           setRecords((viewResult.data ?? []) as AttendanceRecord[]);
@@ -171,6 +178,15 @@ export function AttendanceTable({ branches }: AttendanceTableProps) {
       }
     });
   }
+
+  // Initial load on mount — the tab used to open blank with a hint
+  // pointing at a load button that does not exist.
+  const initialLoadRef = useRef(false);
+  useEffect(() => {
+    if (initialLoadRef.current) return;
+    initialLoadRef.current = true;
+    loadData(selectedBranch, selectedMonth);
+  }, []);
 
   // Generate month options (last 6 months)
   const monthOptions = getVNMonthSequenceBack(6).map(({ date }) =>
@@ -218,7 +234,7 @@ export function AttendanceTable({ branches }: AttendanceTableProps) {
             size="sm"
             onClick={() => {
               setView("summary");
-              loadData(selectedBranch, selectedMonth);
+              loadData(selectedBranch, selectedMonth, "summary");
             }}
           >
             {attendanceCopy.summaryView}
@@ -228,7 +244,7 @@ export function AttendanceTable({ branches }: AttendanceTableProps) {
             size="sm"
             onClick={() => {
               setView("clock");
-              loadData(selectedBranch, selectedMonth);
+              loadData(selectedBranch, selectedMonth, "clock");
             }}
           >
             {attendanceCopy.clockView}
