@@ -24,7 +24,7 @@ import {
 } from "@comtammatu/ui/components/alert-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { formatVND } from "@comtammatu/shared/format";
-import { cancelTaxInvoice } from "./actions";
+import { cancelTaxInvoice, createTaxInvoice } from "./actions";
 import { forceResyncTaxInvoice } from "./reconcile-invoice-actions";
 import { getArchiveDownloadUrl } from "./archive-actions";
 import { replaceTaxInvoice } from "./replace-invoice-actions";
@@ -36,6 +36,7 @@ import {
 import { formatVNDateTime, getVNDateString } from "@/_lib/format-datetime";
 
 import { FORM_VI, ORDER_VI } from "@comtammatu/shared/messages";
+import { messages } from "@lib/messages";
 import { StatusBadge } from "@/components/status-badge";
 
 function isResyncable(status: string): boolean {
@@ -67,6 +68,7 @@ export function InvoiceList({ initialInvoices }: InvoiceListProps) {
   const [cancelReason, setCancelReason] = useState("");
   const [isPending, startTransition] = useTransition();
   const [resyncingId, setResyncingId] = useState<number | null>(null);
+  const [reissuingId, setReissuingId] = useState<number | null>(null);
   const [replaceTarget, setReplaceTarget] = useState<InvoiceRow | null>(null);
   const [replaceReason, setReplaceReason] = useState("");
   const [replaceAgreementRef, setReplaceAgreementRef] = useState("");
@@ -226,6 +228,50 @@ export function InvoiceList({ initialInvoices }: InvoiceListProps) {
     });
   }
 
+  // Drafts are provider-rejected issuances; the server-side retry path
+  // (`createTaxInvoice` reusing the existing draft row) predates this
+  // button — the UI was the missing link, not the backend.
+  function handleReissue(inv: InvoiceRow) {
+    const orderId = inv.order_id;
+    if (orderId === null) {
+      toast.error(messages.finance.invoiceList.reissueNoOrder);
+      return;
+    }
+    setReissuingId(inv.id);
+    startTransition(async () => {
+      try {
+        const result = await createTaxInvoice({
+          orderId,
+          buyerName: inv.buyer_name ?? undefined,
+          buyerTaxCode: inv.buyer_tax_code ?? undefined,
+        });
+        if (!result.success) {
+          toast.error(result.error ?? messages.finance.invoiceList.reissueFailed);
+          return;
+        }
+        const issued = result.data as {
+          invoice_number?: string | null;
+          status?: string;
+        } | null;
+        toast.success(messages.finance.invoiceList.reissueSuccess);
+        setInvoices((prev) =>
+          prev.map((row) =>
+            row.id === inv.id
+              ? {
+                  ...row,
+                  status: issued?.status ?? row.status,
+                  invoice_number:
+                    issued?.invoice_number ?? row.invoice_number,
+                }
+              : row,
+          ),
+        );
+      } finally {
+        setReissuingId(null);
+      }
+    });
+  }
+
   function renderActions(inv: InvoiceRow, variant: "card" | "table") {
     const dense = variant === "table";
     const size = dense ? "icon" : "sm";
@@ -260,6 +306,24 @@ export function InvoiceList({ initialInvoices }: InvoiceListProps) {
               {dense ? <span className="sr-only">Tải XML</span> : "XML"}
             </Button>
           </>
+        ) : null}
+        {inv.status === "draft" ? (
+          <Button
+            variant="ghost"
+            size={size}
+            onClick={() => handleReissue(inv)}
+            disabled={isPending && reissuingId === inv.id}
+            title={messages.finance.invoiceList.reissueTitle}
+          >
+            <IconRefreshCw className="size-4" />
+            {dense ? (
+              <span className="sr-only">
+                {messages.finance.invoiceList.reissue}
+              </span>
+            ) : (
+              messages.finance.invoiceList.reissue
+            )}
+          </Button>
         ) : null}
         {isResyncable(inv.status) ? (
           <Button

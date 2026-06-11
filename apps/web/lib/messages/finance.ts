@@ -1,4 +1,11 @@
 export const finance = {
+  invoiceList: {
+    reissue: "Phát hành lại",
+    reissueTitle: "Phát hành lại HĐĐT",
+    reissueSuccess: "Đã phát hành lại HĐĐT",
+    reissueFailed: "Không thể phát hành lại HĐĐT",
+    reissueNoOrder: "Hóa đơn không gắn đơn hàng — không thể phát hành lại",
+  },
   common: {
     noValue: "—",
     allBranches: "Tất cả chi nhánh",

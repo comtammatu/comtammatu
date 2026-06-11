@@ -32,6 +32,7 @@ export interface TopItemRow {
 
 export interface InvoiceRow {
   id: number;
+  order_id: number | null;
   invoice_number: string | null;
   status: string;
   buyer_name: string | null;

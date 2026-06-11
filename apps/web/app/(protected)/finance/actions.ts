@@ -526,7 +526,7 @@ export async function fetchTaxInvoices(
     .from("tax_invoices")
     .select(
       `
-      id, invoice_number, status, buyer_name, buyer_tax_code,
+      id, order_id, invoice_number, status, buyer_name, buyer_tax_code,
       subtotal, vat_rate, vat_amount, total_amount,
       issued_at, cancelled_at, archived_at, created_at,
       orders ( order_number )
