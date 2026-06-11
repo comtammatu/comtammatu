@@ -17,7 +17,10 @@ import {
   fetchActiveOrders,
   fetchDailyLimitsForPos,
   fetchTablesForBranch,
+  updateOrderStatus,
 } from "../actions";
+import { toast } from "@comtammatu/ui/components/sonner";
+import { messages } from "@lib/messages";
 import { CartStore } from "./cart-store";
 import { useOrderSync } from "../_hooks/use-order-sync";
 import { useDailyLimitSync } from "../_hooks/use-daily-limit-sync";
@@ -28,6 +31,7 @@ import {
 import type { MenuItemDailyLimit } from "../pos-menu-types";
 import { makeRealtimeCoalescer } from "@/_utils/realtime-scheduler";
 import { playAppSignal } from "@lib/audio-signal";
+import { readDevicePref, writeDevicePref } from "@lib/device-prefs";
 import type { OrderType } from "../types";
 
 export type DailyLimitsMap = ReadonlyMap<number, MenuItemDailyLimit>;
@@ -99,6 +103,11 @@ type OperationalDispatch = {
   /** Deduped full refresh. Used by SUBSCRIBED catch-up + stale poll. */
   refreshAllDeduped: () => void;
   setTables: (tables: BranchTable[]) => void;
+  /**
+   * One-tap hand-off: mark an order served from the order list or the
+   * "Bếp hoàn thành" toast without opening the detail sheet.
+   */
+  serveOrder: (orderId: number) => void;
 };
 
 const OrdersContext = createContext<SessionOrder[] | null>(null);
@@ -225,7 +234,14 @@ export function PosDesktopProvider({
   }
   const dailyLimitStore = dailyLimitStoreRef.current;
   const [archivedToken, setArchivedToken] = useState(0);
+  // Default OFF; the device preference loads after mount to avoid a
+  // hydration mismatch. Without persistence the alert channel silently
+  // resets to muted on every reload/PWA relaunch.
   const [soundEnabled, setSoundEnabled] = useState(false);
+  const soundPrefKey = `pos:sound:${String(branchId)}`;
+  useEffect(() => {
+    if (readDevicePref(soundPrefKey) === "1") setSoundEnabled(true);
+  }, [soundPrefKey]);
   const bumpArchivedToken = useCallback(() => {
     setArchivedToken((t) => t + 1);
   }, []);
@@ -252,9 +268,10 @@ export function PosDesktopProvider({
     setSoundEnabled((current) => {
       const next = !current;
       if (next) playAppSignal("pos", true);
+      writeDevicePref(soundPrefKey, next ? "1" : "0");
       return next;
     });
-  }, []);
+  }, [soundPrefKey]);
   const soundValue = useMemo<PosSoundContextValue>(
     () => ({ soundEnabled, toggleSound }),
     [soundEnabled, toggleSound],
@@ -350,6 +367,21 @@ export function PosDesktopProvider({
     [loadDailyLimits],
   );
 
+  const serveOrder = useCallback(
+    (orderId: number) => {
+      void (async () => {
+        const result = await updateOrderStatus(orderId, "served");
+        if (result.success) {
+          toast.success(messages.pos.order.markedServed);
+          refreshOrdersDeduped();
+        } else {
+          toast.error(result.error ?? messages.pos.order.statusUpdateFailed);
+        }
+      })();
+    },
+    [refreshOrdersDeduped],
+  );
+
   useOrderSync({
     branchId,
     setTables,
@@ -359,6 +391,7 @@ export function PosDesktopProvider({
     refreshOrders: refreshOrdersDeduped,
     refreshAll: refreshAllDeduped,
     onArchivedInvalidate: bumpArchivedToken,
+    onServeOrder: serveOrder,
     soundEnabled,
     skipFirstSubscribedRefresh: initialOrdersSeeded,
   });
@@ -380,8 +413,9 @@ export function PosDesktopProvider({
       refreshOrdersDeduped,
       refreshAllDeduped,
       setTables,
+      serveOrder,
     }),
-    [refreshAll, loadOrders, refreshOrdersDeduped, refreshAllDeduped],
+    [refreshAll, loadOrders, refreshOrdersDeduped, refreshAllDeduped, serveOrder],
   );
 
   return (

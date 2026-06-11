@@ -80,7 +80,7 @@ export function BoardHeader({
             <Button
               type="button"
               variant="ghost"
-              size="icon-sm"
+              size="icon-lg"
               aria-label={KDS_HEADER_COPY.completionHistory}
               onClick={onCompletionHistoryOpen}
             >
@@ -94,7 +94,7 @@ export function BoardHeader({
             <Button
               type="button"
               variant={soundEnabled ? "secondary" : "ghost"}
-              size="icon-sm"
+              size="icon-lg"
               aria-label={soundEnabled ? "Tắt chuông KDS" : "Bật chuông KDS"}
               aria-pressed={soundEnabled}
               onClick={onSoundToggle}
@@ -115,7 +115,7 @@ export function BoardHeader({
             <Button
               type="button"
               variant={isFullscreen ? "secondary" : "ghost"}
-              size="icon-sm"
+              size="icon-lg"
               aria-label={
                 isFullscreen ? "Thoát toàn màn hình" : "Mở toàn màn hình"
               }

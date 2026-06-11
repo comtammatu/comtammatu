@@ -6,7 +6,10 @@ import { cn } from "@comtammatu/ui";
 import { ScrollArea } from "@comtammatu/ui/components/scroll-area";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
-import { Receipt as IconReceipt } from "lucide-react";
+import {
+  ConciergeBell as IconConciergeBell,
+  Receipt as IconReceipt,
+} from "lucide-react";
 import { messages } from "@lib/messages";
 import {
   Item,
@@ -163,6 +166,11 @@ interface ActiveOrdersListProps {
     orderNumber: string,
     summary?: SessionOrder,
   ) => void;
+  /**
+   * One-tap hand-off for `ready` rows. The detail-sheet path stays as
+   * fallback when omitted.
+   */
+  onServeOrder?: (orderId: number) => void;
 }
 
 /**
@@ -176,6 +184,7 @@ function ActiveOrdersListComponent({
   orders,
   onViewBill,
   onViewDetail,
+  onServeOrder,
 }: ActiveOrdersListProps) {
   const activeOrders = useMemo(
     () =>
@@ -206,6 +215,7 @@ function ActiveOrdersListComponent({
           <ItemGroup className="gap-2">
             {activeOrders.map((order) => {
               const waitingPayment = order.payment_status !== "paid";
+              const showServe = order.status === "ready" && !!onServeOrder;
 
               return (
                 <Item
@@ -255,7 +265,7 @@ function ActiveOrdersListComponent({
                     </Button>
                     <Button
                       data-testid={`pos-order-bill-${order.id}`}
-                      variant="default"
+                      variant={showServe ? "outline" : "default"}
                       size="touch"
                       className="px-3 text-sm"
                       onClick={() => onViewBill(order.id, "payment")}
@@ -263,6 +273,18 @@ function ActiveOrdersListComponent({
                       <IconReceipt data-icon="inline-start" />
                       {messages.pos.orderHistory.payment}
                     </Button>
+                    {showServe ? (
+                      <Button
+                        data-testid={`pos-order-serve-${order.id}`}
+                        variant="default"
+                        size="touch"
+                        className="px-3 text-sm"
+                        onClick={() => onServeOrder(order.id)}
+                      >
+                        <IconConciergeBell data-icon="inline-start" />
+                        {messages.pos.orderHistory.serve}
+                      </Button>
+                    ) : null}
                   </ItemFooter>
                 </Item>
               );

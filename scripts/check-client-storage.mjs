@@ -19,6 +19,10 @@ const ALLOWLIST = {
       count: 2,
       reason: "operational PWA install hint dismissal only",
     },
+  "apps/web/lib/device-prefs.ts": {
+    count: 2,
+    reason: "device-local operational preferences (POS/KDS sound) only",
+  },
 };
 
 function walkFiles(rootDir, extensions) {

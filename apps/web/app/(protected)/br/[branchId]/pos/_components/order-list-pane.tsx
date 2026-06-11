@@ -40,7 +40,7 @@ function OrderListPaneComponent({
   onOpenArchivedSheet,
 }: OrderListPaneProps) {
   const orders = usePosOrders();
-  const { refreshOrders } = usePosOperationalDispatch();
+  const { refreshOrders, serveOrder } = usePosOperationalDispatch();
   const activeOrderCount = orders.length;
 
   return (
@@ -86,6 +86,7 @@ function OrderListPaneComponent({
         orders={orders}
         onViewBill={onViewBill}
         onViewDetail={onViewDetail}
+        onServeOrder={serveOrder}
       />
 
       {onOpenArchivedSheet ? (

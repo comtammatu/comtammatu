@@ -6,7 +6,11 @@
 
 M0–M7 + Auth + POS PWA + Realtime hardening + Shadcn primitive migration M1–M9 — **all SHIPPED**. External integrations VietQR + Momo are wired with production credentials and active in real branches. HĐĐT is active through Viettel S-invoice only.
 
-## Active implementation note — 2026-06-11
+## Active implementation note — 2026-06-11 (đợt UX vận hành: ready→handoff / peak / fail-im-lặng)
+
+- [ ] **Chương trình UX E2E từ khảo sát 12-agent 2026-06-11** — kế hoạch đầy đủ tại plan đã duyệt (Batch 0 land đợt treo ✓ 6 commit; Batch 1 ready→handoff; B2 peak; B3 fail-im-lặng; B4 bớt tap; B5 visual+phụ; B6 W4.4). Ghi nhận chờ owner: (1) dashboard trộn 2 hệ quy chiếu tài chính (doanh thu = tiền đã thu vs lãi gộp = subtotal trước VAT chỉ trừ nguyên liệu) — cần chốt định nghĩa metric trước khi sửa; (2) tile tín-hiệu-thiết-bị trên dashboard chỉ xét lại nếu sau B3 vẫn sót lỗi in.
+
+- [x] **B1 ready→handoff (T2):** PM: đơn xong-toàn-bộ biến mất khỏi runner/KDS đúng lúc cần gọi số (anchor query chỉ lấy ready cùng batch active) + tín hiệu bếp-xong ở POS không hành động được + âm báo reset tắt mỗi reload. BA: lane ready/served đã có sẵn trong buildRunnerQueue; RPC update_pos_order_status enum-lock 'served'; KHÔNG migration. Dev: (1.1) query thứ 3 ready bumped_at ≤15' + display-rank ready-first (tách khỏi aggregation rank — nhóm mixed không bị dán nhãn ready); (1.2) bỏ RUNNER_FEATURED_STATUS override, featured chỉ còn border-l-primary; (1.3) onServeOrder qua dispatch context — toast ready có action + nút Phục vụ trên dòng ready (payment hạ outline trên dòng đó); (1.4) device-prefs.ts helper duy nhất được allowlist client-storage (POS+KDS sound theo branch), KDS header icon 28→36px. QA: shared queue tests +2 case, runner-copy reconcile, gates per commit.
 
 - [x] **UI molecule W0–W4 (D014) — khung loading/error/404 + StatusBadge SSOT + tiền tệ/KPI + Empty/Confirm + ListSurface:** T2 self-review.
       Skill plan: repo rules = engineering + ui + skills + workflow; external skills = none (audit đã chốt, đây là rollout adapter); runtime tools = local gates + dev smoke; skipped = browser deep-flow (auth session).

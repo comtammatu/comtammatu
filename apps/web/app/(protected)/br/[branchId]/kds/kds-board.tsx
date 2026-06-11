@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useKeyboardShortcut } from "@/_lib/use-keyboard-shortcut";
 import { playAppSignal } from "@lib/audio-signal";
+import { readDevicePref, writeDevicePref } from "@lib/device-prefs";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { TickProvider } from "./hooks/use-board-tick";
 import { useKdsRealtime } from "./hooks/use-kds-realtime";
@@ -158,7 +159,13 @@ export function KdsBoard({
   const filters = useKdsFilters(stations);
   const { mode, setMode } = useKdsViewMode();
   const [menuLimits, setMenuLimits] = useState(initialMenuLimits);
+  // Default OFF; device preference loads after mount (hydration-safe).
+  // Without persistence the new-ticket bell resets to muted every reload.
   const [soundEnabled, setSoundEnabled] = useState(false);
+  const soundPrefKey = `kds:sound:${String(branchId)}`;
+  useEffect(() => {
+    if (readDevicePref(soundPrefKey) === "1") setSoundEnabled(true);
+  }, [soundPrefKey]);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [completionHistoryOpen, setCompletionHistoryOpen] = useState(false);
   const boardRootRef = useRef<HTMLDivElement | null>(null);
@@ -240,9 +247,10 @@ export function KdsBoard({
       if (next) {
         playAppSignal("kds", true);
       }
+      writeDevicePref(soundPrefKey, next ? "1" : "0");
       return next;
     });
-  }, []);
+  }, [soundPrefKey]);
 
   useEffect(() => {
     const onFullscreenChange = () => {
