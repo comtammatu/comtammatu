@@ -84,8 +84,8 @@ function AppendDraftPaneComponent({
           <Button
             type="button"
             variant="ghost"
-            size="icon-sm"
-            className="shrink-0 text-muted-foreground"
+            size="touch"
+            className="w-12 shrink-0 px-0 text-muted-foreground"
             aria-label={
               onClosePane
                 ? messages.pos.appendDraft.closeAria

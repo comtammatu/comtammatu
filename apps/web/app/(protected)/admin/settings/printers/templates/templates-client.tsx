@@ -12,6 +12,7 @@ import { toast } from "@comtammatu/ui/components/sonner";
 import { AppSection } from "@/components/surface";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
+import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Checkbox } from "@comtammatu/ui/components/checkbox";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
@@ -55,7 +56,6 @@ import { Tabs, TabsList, TabsTrigger } from "@comtammatu/ui/components/tabs";
 import {
   ChevronDown as IconChevronDown,
   ChevronUp as IconChevronUp,
-  Loader2 as IconLoader,
   Printer as IconPrinter,
   RotateCcw as IconRotateCcw,
   Save as IconSave,
@@ -456,7 +456,7 @@ export function TemplatesClient({
               )}
               {previewPending ? (
                 <div className="absolute inset-0 flex items-center justify-center bg-background/50">
-                  <IconLoader className="size-5 animate-spin" />
+                  <Spinner className="size-5" />
                 </div>
               ) : null}
             </div>
@@ -545,7 +545,7 @@ export function TemplatesClient({
                         onClick={handleSave}
                       >
                         {actionPending ? (
-                          <IconLoader className="size-4 animate-spin" />
+                          <Spinner className="size-4" />
                         ) : null}
                         {copy.saveConfirm}
                       </Button>

@@ -9,6 +9,7 @@ import {
   RefreshCw as IconRefreshCw,
 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
+import { Spinner } from "@comtammatu/ui/components/spinner";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import { Textarea } from "@comtammatu/ui/components/textarea";
@@ -333,11 +334,11 @@ export function InvoiceList({ initialInvoices }: InvoiceListProps) {
             disabled={isPending && resyncingId === inv.id}
             title="Đồng bộ lại với provider"
           >
-            <IconRefreshCw
-              className={`size-4 ${
-                isPending && resyncingId === inv.id ? "animate-spin" : ""
-              }`}
-            />
+            {isPending && resyncingId === inv.id ? (
+              <Spinner className="size-4" />
+            ) : (
+              <IconRefreshCw className="size-4" />
+            )}
             {dense ? <span className="sr-only">Đồng bộ lại</span> : "Đồng bộ"}
           </Button>
         ) : null}

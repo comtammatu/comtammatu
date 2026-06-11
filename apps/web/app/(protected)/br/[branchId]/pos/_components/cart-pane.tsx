@@ -159,8 +159,8 @@ function CartPaneComponent({
             <Button
               type="button"
               variant="ghost"
-              size="icon-sm"
-              className="text-muted-foreground"
+              size="touch"
+              className="w-12 px-0 text-muted-foreground"
               aria-label="Đóng giỏ đơn"
               onClick={onClosePane}
             >
@@ -213,8 +213,8 @@ function CartPaneComponent({
                 <Button
                   type="button"
                   variant="ghost"
-                  size="icon-sm"
-                  className="text-muted-foreground hover:text-destructive"
+                  size="touch"
+                  className="w-12 px-0 text-muted-foreground hover:text-destructive"
                   aria-label="Xóa đơn nháp"
                   onClick={() => setClearConfirmOpen(true)}
                 >
@@ -225,8 +225,8 @@ function CartPaneComponent({
                 <Button
                   type="button"
                   variant="ghost"
-                  size="icon-sm"
-                  className="text-muted-foreground"
+                  size="touch"
+                  className="w-12 px-0 text-muted-foreground"
                   aria-label="Đóng giỏ đơn"
                   onClick={onClosePane}
                 >
