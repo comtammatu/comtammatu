@@ -119,7 +119,7 @@ const checks = [
       "apps/web/app/(protected)/admin/settings/payments/payments-form.tsx": 3,
       "apps/web/app/(protected)/admin/staff/[id]/permissions/page.tsx": 1,
       "apps/web/app/(protected)/admin/staff/audit/page.tsx": 1,
-      "apps/web/app/(protected)/finance/components/trend-sparkline.tsx": 1,
+      "apps/web/app/components/kpi/trend-sparkline.tsx": 1,
       "apps/web/app/(protected)/hr/shift-assignments-table.tsx": 1,
       "apps/web/app/(protected)/inventory/issues/[id]/issue-detail-client.tsx": 1,
       "apps/web/app/(protected)/menu/import-export-menu.tsx": 1,
@@ -210,6 +210,22 @@ const checks = [
       "apps/web/app/(protected)/inventory/ingredients/ingredients-client.tsx": 1,
       "apps/web/app/(protected)/inventory/production-order-list.tsx": 2,
       "apps/web/app/(protected)/inventory/purchase-orders/new/new-po-client.tsx": 16,
+    },
+  },
+  {
+    id: "stat-card-ssot",
+    description:
+      "KPI/stat metric cards are single-sourced in apps/web/app/components/kpi/; page-local StatCard/SummaryCard/MetricCard definitions must not spread.",
+    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
+    pattern:
+      /\b(?:function|const)\s+(?:StatCard|SummaryCard|MetricCard|KpiCard)\b/g,
+    allowlist: {
+      "apps/web/app/(protected)/admin/dashboard/page.tsx": 1,
+      "apps/web/app/(protected)/admin/settings/printers/jobs/page.tsx": 1,
+      "apps/web/app/(protected)/finance/reconciliation/reconciliation-client.tsx": 1,
+      "apps/web/app/(protected)/hr/payroll/[periodId]/payroll-detail-client.tsx": 1,
+      "apps/web/app/(protected)/inventory/grn/[id]/grn-detail-client.tsx": 1,
+      "apps/web/app/components/kpi/kpi-card.tsx": 1,
     },
   },
 ];

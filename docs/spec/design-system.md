@@ -384,6 +384,15 @@ Business-state labels and badge colors are single-sourced:
 - Unknown values render as the raw key with `outline` — never throw on DB data.
 - Intentional exceptions: `pos/_lib/order-status-display.ts` (cashier 5-label collapse; variants must still match the registry), `kds/lib/status-config.ts` (hot path), `inventory/_lib/dictionary.ts` + `inventory/_lib/ui.ts` (per-entity re-model is a later wave).
 
+### KPI / stat-value role (lock to KpiCard)
+
+Dashboard and report metric values render through `KpiCard`
+(`apps/web/app/components/kpi/kpi-card.tsx`): uppercase 2xs label, value
+`text-2xl font-bold tabular-nums`, optional `CompareChip` delta and sparkline,
+and a drill-down `href` per the owner Q-spec. Page-local
+StatCard/SummaryCard/MetricCard definitions are ratcheted by `stat-card-ssot`;
+register a variant on `KpiCard` instead of cloning the card.
+
 ### Numeric / money cells (lock to Table)
 
 Money, quantity, unit-price, tax-rate, ID/code, and timestamp cells render with the operational-data font (`font-mono`), tabular figures, and right alignment so columns scan as a stable ledger.

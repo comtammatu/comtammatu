@@ -22,7 +22,7 @@ import {
   buildCompareDelta,
   CompareChip,
   type CompareDelta,
-} from "./components/compare-chip";
+} from "@/components/kpi/compare-chip";
 import { FilterBar } from "./components/filter-bar";
 import {
   parseFinanceParams,

@@ -14,7 +14,7 @@ import { PRODUCT_VI } from "@comtammatu/shared/messages";
 import { TableEmptyStateRow } from "@/components/table-empty-state-row";
 import { messages } from "@lib/messages";
 import { FilterBar } from "../components/filter-bar";
-import { KpiCard } from "../components/kpi-card";
+import { KpiCard } from "@/components/kpi/kpi-card";
 import type { FinanceParams } from "../_lib/finance-params";
 import type { FoodCostRow } from "./page";
 

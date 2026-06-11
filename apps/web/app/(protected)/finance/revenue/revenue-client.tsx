@@ -33,7 +33,7 @@ import type { FinanceParams } from "../_lib/finance-params";
 import {
   buildCompareDelta,
   type CompareDelta,
-} from "../components/compare-chip";
+} from "@/components/kpi/compare-chip";
 
 // Recharts is the heaviest dependency on this route (~95 KB gz). Defer it
 // to a dynamic chunk so KPI cards + work queue strip render before the
@@ -57,7 +57,7 @@ const RevenueChartsBlock = dynamic(
 import { ExportToolbar, type CsvSection } from "../components/export-toolbar";
 import { FilterBar } from "../components/filter-bar";
 import { HeatmapGrid, type HeatmapCell } from "../components/heatmap-grid";
-import { KpiCard } from "../components/kpi-card";
+import { KpiCard } from "@/components/kpi/kpi-card";
 import { MvStalenessBanner } from "../components/mv-staleness-banner";
 import { WorkQueueStrip } from "../components/work-queue-strip";
 import { messages } from "@lib/messages";
