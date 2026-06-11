@@ -344,7 +344,7 @@ export function SuppliersClient({ initial }: { initial: SupplierRow[] }) {
             <AlertDialogTitle>Xác nhận xóa</AlertDialogTitle>
             <AlertDialogDescription>
               Xóa nhà cung cấp &ldquo;{deleteTarget?.name}&rdquo;? Hành động này
-              không thể hòan tác.
+              không thể hoàn tác.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

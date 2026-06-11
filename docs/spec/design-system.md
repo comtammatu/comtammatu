@@ -1,6 +1,6 @@
 # Design System - Com Tam Ma Tu Web App
 
-> Version: 14.6.0 | Updated: 2026-06-11 | Status: locked single source for UI agents
+> Version: 14.7.0 | Updated: 2026-06-11 | Status: locked single source for UI agents
 
 ## Single Source Decision
 
@@ -373,6 +373,16 @@ Default primitive mapping:
 | transient feedback    | `Sonner`                                                                    |
 
 Toast and durable notification behavior is specified in `docs/spec/toast-notification-system.md`.
+
+### Status vocabulary (lock to StatusBadge)
+
+Business-state labels and badge colors are single-sourced:
+
+- Labels: `packages/shared/src/labels/vi.ts` (`*_STATUS_LABELS_VI`; keys are the DB CHECK vocabulary, never invented states).
+- Variant + rendering: `apps/web/app/components/status-badge.tsx` (`StatusBadge`, `getStatusBadgeMeta`).
+- New page-local `STATUS_*` label/variant maps are forbidden (ratchet `status-label-ssot`); register the domain instead.
+- Unknown values render as the raw key with `outline` — never throw on DB data.
+- Intentional exceptions: `pos/_lib/order-status-display.ts` (cashier 5-label collapse; variants must still match the registry), `kds/lib/status-config.ts` (hot path), `inventory/_lib/dictionary.ts` + `inventory/_lib/ui.ts` (per-entity re-model is a later wave).
 
 ### Numeric / money cells (lock to Table)
 

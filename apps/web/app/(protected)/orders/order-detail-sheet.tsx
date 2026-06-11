@@ -25,6 +25,8 @@ import {
 /* ─── Helpers ─── */
 
 import { BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
+import { getPaymentMethodLabelVi } from "@comtammatu/shared/labels";
+import { StatusBadge } from "@/components/status-badge";
 
 type ItemStatusBadge =
   | "warning"
@@ -72,59 +74,6 @@ function formatSide(s: OrderItemSide): string {
     ? `${s.name}${qtySuffix} (+${formatVND(totalPrice)})`
     : `${s.name}${qtySuffix}`;
 }
-const ORDER_STATUS_LABELS: Record<string, string> = {
-  pending: "Chờ xử lý",
-  in_progress: "Đang làm",
-  ready: "Sẵn sàng",
-  completed: "Hòan thành",
-  cancelled: "Đã hủy",
-};
-
-const PAYMENT_METHOD_LABELS: Record<string, string> = {
-  cash: "Tiền mặt",
-  vietqr: "VietQR",
-  momo: "MoMo",
-};
-
-const PAYMENT_STATUS_LABELS: Record<string, string> = {
-  pending: "Chờ thanh toán",
-  paid: "Đã thanh toán",
-  failed: "Thất bại",
-  refunded: "Hòan tiền",
-};
-
-function orderStatusTone(
-  status: string,
-): "neutral" | "success" | "warning" | "danger" | "info" {
-  switch (status) {
-    case "completed":
-      return "success";
-    case "in_progress":
-      return "warning";
-    case "ready":
-      return "info";
-    case "cancelled":
-      return "danger";
-    default:
-      return "neutral";
-  }
-}
-
-function paymentStatusBadgeVariant(
-  status: string,
-): "default" | "outline" | "secondary" | "destructive" {
-  switch (status) {
-    case "paid":
-      return "default";
-    case "pending":
-      return "secondary";
-    case "failed":
-      return "destructive";
-    default:
-      return "outline";
-  }
-}
-
 /* ─── Props ─── */
 
 interface OrderDetailSheetProps {
@@ -245,21 +194,7 @@ export function OrderDetailSheet({
           <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
             <span className="text-muted-foreground">{FORM_VI.status}</span>
             <div>
-              <Badge
-                variant={
-                  orderStatusTone(order.status) === "success"
-                    ? "success"
-                    : orderStatusTone(order.status) === "warning"
-                      ? "warning"
-                      : orderStatusTone(order.status) === "info"
-                        ? "info"
-                        : orderStatusTone(order.status) === "danger"
-                          ? "destructive"
-                          : "secondary"
-                }
-              >
-                {ORDER_STATUS_LABELS[order.status] ?? order.status}
-              </Badge>
+              <StatusBadge domain="order" value={order.status} />
             </div>
 
             <span className="text-muted-foreground">{BRANCH_VI.long}</span>
@@ -284,15 +219,9 @@ export function OrderDetailSheet({
               <div className="flex items-center justify-between text-sm">
                 <div className="flex items-center gap-2">
                   <Badge variant="outline">
-                    {PAYMENT_METHOD_LABELS[order.payment.method] ??
-                      order.payment.method}
+                    {getPaymentMethodLabelVi(order.payment.method)}
                   </Badge>
-                  <Badge
-                    variant={paymentStatusBadgeVariant(order.payment.status)}
-                  >
-                    {PAYMENT_STATUS_LABELS[order.payment.status] ??
-                      order.payment.status}
-                  </Badge>
+                  <StatusBadge domain="payment" value={order.payment.status} />
                 </div>
                 <span className="font-mono font-medium">
                   {formatVND(order.payment.amount)}
@@ -308,16 +237,13 @@ export function OrderDetailSheet({
               </p>
               <div className="flex items-center gap-2 text-sm">
                 <Badge variant="outline">
-                  {PAYMENT_METHOD_LABELS[order.payment_method] ??
-                    order.payment_method}
+                  {getPaymentMethodLabelVi(order.payment_method)}
                 </Badge>
                 {order.payment_status && (
-                  <Badge
-                    variant={paymentStatusBadgeVariant(order.payment_status)}
-                  >
-                    {PAYMENT_STATUS_LABELS[order.payment_status] ??
-                      order.payment_status}
-                  </Badge>
+                  <StatusBadge
+                    domain="order-payment"
+                    value={order.payment_status}
+                  />
                 )}
               </div>
             </div>

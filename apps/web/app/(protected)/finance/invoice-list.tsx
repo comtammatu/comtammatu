@@ -530,7 +530,7 @@ export function InvoiceList({ initialInvoices }: InvoiceListProps) {
               <strong>
                 {cancelTarget?.invoice_number ?? `#${cancelTarget?.id}`}
               </strong>
-              ? Hành động này không thể hòan tác. Lý do hủy được lưu vào hồ sơ
+              ? Hành động này không thể hoàn tác. Lý do hủy được lưu vào hồ sơ
               HĐĐT theo yêu cầu của Nghị định 70/2025.
             </AlertDialogDescription>
           </AlertDialogHeader>

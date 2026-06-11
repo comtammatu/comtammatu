@@ -439,7 +439,7 @@ function buildTasks(props: DashboardProps): TaskItem[] {
     items.push({
       key: "st",
       title: `${props.activeStocktakes} phiên kiểm kê đang mở`,
-      description: "Hòan tất để khóa chênh lệch.",
+      description: "Hoàn tất để khóa chênh lệch.",
       href: paths.stocktake,
       icon: <IconClipboardList className="size-4" />,
       severity: "success",

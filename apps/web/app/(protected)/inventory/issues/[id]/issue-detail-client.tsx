@@ -636,7 +636,7 @@ export function IssueDetailClient({
             <AlertDialogTitle>{surface.confirmTitle}</AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-2">
-                <p>Thao tác này sẽ trừ tồn kho và không thể hòan tác.</p>
+                <p>Thao tác này sẽ trừ tồn kho và không thể hoàn tác.</p>
                 {lines.length > 0 ? (
                   <Card className="bg-muted/30 text-left">
                     <CardContent className="space-y-2 pt-6">

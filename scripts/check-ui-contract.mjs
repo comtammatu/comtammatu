@@ -159,6 +159,62 @@ const checks = [
       "apps/web/app/components/app-shell.tsx": 1,
     },
   },
+  {
+    id: "status-label-ssot",
+    description:
+      "Status label/variant maps are single-sourced in @comtammatu/shared labels + apps/web/app/components/status-badge.tsx; page-local STATUS_* maps must not spread.",
+    roots: [{ dir: "apps/web/app", extensions: [".ts", ".tsx"] }],
+    pattern:
+      /\bconst\s+[A-Z][A-Z0-9_]*STATUS[A-Z0-9_]*(?:\s*:\s*[^=\n]+)?\s*=\s*[{[]/g,
+    allowlist: {
+      "apps/web/app/(protected)/admin/dashboard/page.tsx": 1,
+      "apps/web/app/(protected)/admin/settings/tables/constants.ts": 1,
+      "apps/web/app/(protected)/br/[branchId]/kds/actions.ts": 1,
+      "apps/web/app/(protected)/br/[branchId]/kds/hooks/use-kds-realtime.ts": 2,
+      "apps/web/app/(protected)/br/[branchId]/kds/page.tsx": 2,
+      "apps/web/app/(protected)/br/[branchId]/pos/order-history.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/runner/page.tsx": 2,
+      "apps/web/app/(protected)/br/[branchId]/settings/pos-sessions/pos-sessions-client.tsx": 1,
+      "apps/web/app/(protected)/employee/payslip/payslip-client.tsx": 1,
+      "apps/web/app/(protected)/employee/schedule/schedule-client.tsx": 2,
+      "apps/web/app/(protected)/inventory/supplier-invoices/supplier-invoices-client.tsx": 2,
+    },
+  },
+  {
+    id: "vnd-format-ssot",
+    description:
+      "VND money rendering goes through formatVND from @comtammatu/shared/format; local vi-VN formatters must not spread.",
+    roots: [{ dir: "apps/web/app", extensions: [".ts", ".tsx"] }],
+    pattern:
+      /toLocaleString\(\s*["']vi-VN["']|Intl\.NumberFormat\(\s*["']vi-VN["']|\b(?:function|const)\s+formatVND\b/g,
+    allowlist: {
+      "apps/web/app/(protected)/admin/dashboard/page.tsx": 2,
+      "apps/web/app/(protected)/admin/reports/stock-movement/stock-movement-client.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/pos/_components/bill/bill-receipt-summary.tsx": 1,
+      "apps/web/app/(protected)/br/[branchId]/runner/page.tsx": 1,
+      "apps/web/app/(protected)/employee/payslip/payslip-client.tsx": 1,
+      "apps/web/app/(protected)/finance/_lib/finance-cockpit.ts": 2,
+      "apps/web/app/(protected)/finance/audit-trail/audit-trail-client.tsx": 1,
+      "apps/web/app/(protected)/finance/components/work-queue-strip.tsx": 1,
+      "apps/web/app/(protected)/finance/food-cost/food-cost-client.tsx": 1,
+      "apps/web/app/(protected)/finance/journal/journal-client.tsx": 4,
+      "apps/web/app/(protected)/finance/page.tsx": 2,
+      "apps/web/app/(protected)/finance/periods/periods-client.tsx": 3,
+      "apps/web/app/(protected)/finance/revenue/[date]/page.tsx": 2,
+      "apps/web/app/(protected)/finance/revenue/revenue-charts-internal.tsx": 2,
+      "apps/web/app/(protected)/finance/revenue/revenue-client.tsx": 9,
+      "apps/web/app/(protected)/hr/payroll/[periodId]/payroll-detail-client.tsx": 1,
+      "apps/web/app/(protected)/inventory/_components/audit-history-list.tsx": 1,
+      "apps/web/app/(protected)/inventory/_components/auto-approve-eval-panel.tsx": 2,
+      "apps/web/app/(protected)/inventory/_components/document-stock-correction-dialog.tsx": 1,
+      "apps/web/app/(protected)/inventory/_lib/format.ts": 4,
+      "apps/web/app/(protected)/inventory/grn/[id]/grn-detail-client.tsx": 1,
+      "apps/web/app/(protected)/inventory/ingredient-table.tsx": 1,
+      "apps/web/app/(protected)/inventory/ingredients/ingredients-client.tsx": 1,
+      "apps/web/app/(protected)/inventory/production-order-list.tsx": 2,
+      "apps/web/app/(protected)/inventory/purchase-orders/new/new-po-client.tsx": 16,
+    },
+  },
 ];
 
 const failures = [];

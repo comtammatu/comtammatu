@@ -332,3 +332,38 @@ export function getPaymentMethodLabelVi(
   if (!method) return "";
   return (PAYMENT_METHOD_LABELS_VI as Record<string, string>)[method] ?? method;
 }
+
+/** orders.status (DB orders_status_check) — full back-office vocabulary.
+ * POS cashier view intentionally collapses these states
+ * (apps/web pos/_lib/order-status-display.ts). */
+export const ORDER_STATUS_LABELS_VI = {
+  new: "Mới tạo",
+  confirmed: "Đã xác nhận",
+  preparing: "Đang chuẩn bị",
+  ready: "Sẵn sàng",
+  served: "Đã phục vụ",
+  completed: "Hoàn thành",
+  cancelled: "Đã hủy",
+} as const;
+
+/** orders.payment_status (DB orders_payment_status_check). */
+export const ORDER_PAYMENT_STATUS_LABELS_VI = {
+  unpaid: "Chưa thanh toán",
+  pending: "Chờ thanh toán",
+  paid: "Đã thanh toán",
+} as const;
+
+/** payments.status (DB payments_status_check) — per payment record. */
+export const PAYMENT_RECORD_STATUS_LABELS_VI = {
+  pending: "Chờ thanh toán",
+  completed: "Đã thanh toán",
+  failed: "Thất bại",
+  refunded: "Hoàn tiền",
+} as const;
+
+/** refunds.status (DB refunds_status_check). */
+export const REFUND_STATUS_LABELS_VI = {
+  pending: "Chờ duyệt",
+  approved: "Đã duyệt",
+  rejected: "Từ chối",
+} as const;

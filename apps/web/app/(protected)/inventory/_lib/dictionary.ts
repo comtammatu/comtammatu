@@ -103,7 +103,7 @@ const VI_DICTIONARY: InventoryDictionary = {
     partially_received: { short: "Nhận một phần", long: "Đã nhận một phần" },
     in_transit: { short: "Đang giao", long: "Đang vận chuyển" },
     received: { long: "Đã nhận" },
-    completed: { short: "Xong", long: "Hòan thành" },
+    completed: { short: "Xong", long: "Hoàn thành" },
     cancelled: { long: "Đã hủy" },
     pending: { short: "Chờ xử lý", long: "Chờ xử lý" },
     in_progress: { short: "Đang làm", long: "Đang thực hiện" },

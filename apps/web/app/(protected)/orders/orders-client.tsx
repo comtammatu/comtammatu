@@ -10,6 +10,11 @@ import {
   STAFF_VI,
   STATES_VI,
 } from "@comtammatu/shared/messages";
+import {
+  ORDER_STATUS_LABELS_VI,
+  getPaymentMethodLabelVi,
+} from "@comtammatu/shared/labels";
+import { StatusBadge } from "@/components/status-badge";
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
@@ -41,47 +46,6 @@ import { fetchOrders } from "./actions";
 import { OrderDetailSheet } from "./order-detail-sheet";
 import type { OrderRow, FetchOrdersFilters } from "./actions";
 import { TableEmptyStateRow } from "@/components/table-empty-state-row";
-
-/* ─── Status config ─── */
-
-const ORDER_STATUSES = [
-  { value: "pending", label: "Chờ xử lý" },
-  { value: "in_progress", label: "Đang làm" },
-  { value: "ready", label: "Sẵn sàng" },
-  { value: "completed", label: "Hòan thành" },
-  { value: "cancelled", label: "Đã hủy" },
-] as const;
-
-type OrderStatus = (typeof ORDER_STATUSES)[number]["value"];
-
-function statusBadgeVariant(
-  status: string,
-): "neutral" | "info" | "success" | "danger" | "warning" {
-  switch (status as OrderStatus) {
-    case "pending":
-      return "warning";
-    case "in_progress":
-      return "info";
-    case "ready":
-      return "success";
-    case "completed":
-      return "success";
-    case "cancelled":
-      return "danger";
-    default:
-      return "neutral";
-  }
-}
-
-function statusLabel(status: string): string {
-  return ORDER_STATUSES.find((s) => s.value === status)?.label ?? status;
-}
-
-const PAYMENT_METHOD_LABELS: Record<string, string> = {
-  cash: "Tiền mặt",
-  vietqr: "VietQR",
-  momo: "MoMo",
-};
 
 /* ─── Props ─── */
 
@@ -141,7 +105,7 @@ export function OrdersClient({
   const displayOrders = useMemo(() => orders, [orders]);
   const orderSummary = useMemo(() => {
     const pending = displayOrders.filter(
-      (order) => order.status === "pending" || order.status === "in_progress",
+      (order) => order.status !== "completed" && order.status !== "cancelled",
     ).length;
     const completed = displayOrders.filter(
       (order) => order.status === "completed",
@@ -178,7 +142,7 @@ export function OrdersClient({
               {orderSummary.completed}
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Đơn đã hòan tất trong tập kết quả hiện tại.
+              Đơn đã hoàn tất trong tập kết quả hiện tại.
             </p>
           </CardContent>
         </Card>
@@ -235,11 +199,13 @@ export function OrdersClient({
                 <SelectValue placeholder="Tất cả" />
               </SelectTrigger>
               <SelectContent>
-                {ORDER_STATUSES.map((s) => (
-                  <SelectItem key={s.value} value={s.value}>
-                    {s.label}
-                  </SelectItem>
-                ))}
+                {Object.entries(ORDER_STATUS_LABELS_VI).map(
+                  ([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ),
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -340,21 +306,7 @@ export function OrdersClient({
                       {order.branch_name}
                     </p>
                   </div>
-                  <Badge
-                    variant={
-                      statusBadgeVariant(order.status) === "warning"
-                        ? "warning"
-                        : statusBadgeVariant(order.status) === "info"
-                          ? "info"
-                          : statusBadgeVariant(order.status) === "success"
-                            ? "success"
-                            : statusBadgeVariant(order.status) === "danger"
-                              ? "destructive"
-                              : "secondary"
-                    }
-                  >
-                    {statusLabel(order.status)}
-                  </Badge>
+                  <StatusBadge domain="order" value={order.status} />
                 </div>
                 <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                   <div>
@@ -376,8 +328,7 @@ export function OrdersClient({
                   </p>
                   {order.payment_method ? (
                     <Badge variant="outline" className="text-xs">
-                      {PAYMENT_METHOD_LABELS[order.payment_method] ??
-                        order.payment_method}
+                      {getPaymentMethodLabelVi(order.payment_method)}
                     </Badge>
                   ) : (
                     <span className="text-xs text-muted-foreground">—</span>
@@ -452,29 +403,14 @@ export function OrdersClient({
                     <TableCell className="hidden sm:table-cell">
                       {order.payment_method ? (
                         <Badge variant="outline" className="text-xs">
-                          {PAYMENT_METHOD_LABELS[order.payment_method] ??
-                            order.payment_method}
+                          {getPaymentMethodLabelVi(order.payment_method)}
                         </Badge>
                       ) : (
                         <span className="text-xs text-muted-foreground">—</span>
                       )}
                     </TableCell>
                     <TableCell>
-                      <Badge
-                        variant={
-                          statusBadgeVariant(order.status) === "warning"
-                            ? "warning"
-                            : statusBadgeVariant(order.status) === "info"
-                              ? "info"
-                              : statusBadgeVariant(order.status) === "success"
-                                ? "success"
-                                : statusBadgeVariant(order.status) === "danger"
-                                  ? "destructive"
-                                  : "secondary"
-                        }
-                      >
-                        {statusLabel(order.status)}
-                      </Badge>
+                        <StatusBadge domain="order" value={order.status} />
                     </TableCell>
                   </TableRow>
                 ))}

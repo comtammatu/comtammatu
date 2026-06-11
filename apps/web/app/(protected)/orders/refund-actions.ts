@@ -74,13 +74,13 @@ function mapRefundRpcError(message: string): string {
     normalized.includes("payment_not_completed") ||
     normalized.includes("refund requires completed")
   ) {
-    return "Chỉ có thể hòan tiền thanh toán đã hoàn tất";
+    return "Chỉ có thể hoàn tiền thanh toán đã hoàn tất";
   }
   if (
     normalized.includes("refund_exceeds_remaining") ||
     normalized.includes("exceeds payment amount")
   ) {
-    return "Số tiền hòan vượt quá phần còn lại của thanh toán";
+    return "Số tiền hoàn vượt quá phần còn lại của thanh toán";
   }
   if (
     normalized.includes("permission denied") ||
@@ -99,10 +99,10 @@ function mapRefundRpcError(message: string): string {
     return "Chưa thể xử lý do cấu hình kế toán chưa sẵn sàng";
   }
   if (normalized.includes("restore_stock_for_order")) {
-    return "Không thể khôi phục tồn kho khi hòan tiền";
+    return "Không thể khôi phục tồn kho khi hoàn tiền";
   }
 
-  return "Không thể xử lý hòan tiền";
+  return "Không thể xử lý hoàn tiền";
 }
 
 /* ─── Actions ─── */
@@ -141,20 +141,20 @@ export async function createRefund(input: {
     payment.branch_id,
   );
   if (!canRefundBranch) {
-    return { success: false, error: "Không có quyền hòan tiền đơn này" };
+    return { success: false, error: "Không có quyền hoàn tiền đơn này" };
   }
 
   if (payment.status !== "completed") {
     return {
       success: false,
-      error: "Chỉ có thể hòan tiền thanh toán đã hoàn tất",
+      error: "Chỉ có thể hoàn tiền thanh toán đã hoàn tất",
     };
   }
 
   if (amount > payment.amount) {
     return {
       success: false,
-      error: "Số tiền hòan không được vượt quá số tiền thanh toán",
+      error: "Số tiền hoàn không được vượt quá số tiền thanh toán",
     };
   }
 
@@ -170,7 +170,7 @@ export async function createRefund(input: {
 
   const result = rpcData as RefundRpcResult | null;
   if (result?.status !== "created" || typeof result.refund_id !== "number") {
-    return { success: false, error: "Không thể tạo yêu cầu hòan tiền" };
+    return { success: false, error: "Không thể tạo yêu cầu hoàn tiền" };
   }
 
   return { success: true, data: { refundId: result.refund_id } };
@@ -203,11 +203,11 @@ export async function approveRefund(input: {
     .single();
 
   if (fetchErr || !refund) {
-    return { success: false, error: "Không tìm thấy yêu cầu hòan tiền" };
+    return { success: false, error: "Không tìm thấy yêu cầu hoàn tiền" };
   }
 
   if (refund.status !== "pending") {
-    return { success: false, error: "Yêu cầu hòan tiền đã được xử lý" };
+    return { success: false, error: "Yêu cầu hoàn tiền đã được xử lý" };
   }
 
   const canApproveBranch = await probePermission(
@@ -236,7 +236,7 @@ export async function approveRefund(input: {
       result?.status !== "approved" &&
       result?.status !== "already_approved"
     ) {
-      return { success: false, error: "Không thể duyệt yêu cầu hòan tiền" };
+      return { success: false, error: "Không thể duyệt yêu cầu hoàn tiền" };
     }
 
     return { success: true };
@@ -249,7 +249,7 @@ export async function approveRefund(input: {
     .eq("tenant_id", claims.tenant_id);
 
   if (updateErr) {
-    return { success: false, error: "Không thể cập nhật yêu cầu hòan tiền" };
+    return { success: false, error: "Không thể cập nhật yêu cầu hoàn tiền" };
   }
 
   return { success: true };
@@ -301,7 +301,7 @@ export async function fetchRefunds(
   const { data, error } = await query;
 
   if (error) {
-    return { success: false, error: "Không thể tải danh sách hòan tiền" };
+    return { success: false, error: "Không thể tải danh sách hoàn tiền" };
   }
 
   const rows = data ?? [];

@@ -40,7 +40,7 @@ export function OrdersShell({ children, user, role }: OrdersShellProps) {
       pageHeader={{
         crumbLabel: "Đối soát · Đơn hàng",
         description:
-          "Tra cứu lịch sử đơn hàng, xử lý hòan tiền và đối soát doanh thu.",
+          "Tra cứu lịch sử đơn hàng, xử lý hoàn tiền và đối soát doanh thu.",
         actions: (
           <Button asChild variant="outline" size="sm">
             <Link href={homeLink.href}>{homeLink.label}</Link>

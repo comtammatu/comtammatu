@@ -39,27 +39,7 @@ import { TableEmptyStateRow } from "@/components/table-empty-state-row";
 /* ─── Status helpers ─── */
 
 import { BRANCH_VI, FORM_VI, STATES_VI } from "@comtammatu/shared/messages";
-const REFUND_STATUS_LABELS: Record<string, string> = {
-  pending: "Chờ duyệt",
-  approved: "Đã duyệt",
-  rejected: "Từ chối",
-};
-
-function refundStatusTone(
-  status: string,
-): "neutral" | "warning" | "success" | "danger" {
-  switch (status) {
-    case "pending":
-      return "warning";
-    case "approved":
-      return "success";
-    case "rejected":
-      return "danger";
-    default:
-      return "neutral";
-  }
-}
-
+import { StatusBadge } from "@/components/status-badge";
 /* ─── Props ─── */
 
 interface RefundsClientProps {
@@ -149,7 +129,7 @@ export function RefundsClient({
               {formatVND(totalRefundAmount)}
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Tổng số tiền hòan của tập kết quả đang xem.
+              Tổng số tiền hoàn của tập kết quả đang xem.
             </p>
           </CardContent>
         </Card>
@@ -159,10 +139,10 @@ export function RefundsClient({
         <CardContent className="flex flex-wrap items-center justify-between gap-4 p-4">
           <div className="space-y-1.5">
             <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              Điều phối hòan tiền
+              Điều phối hoàn tiền
             </p>
             <p className="text-sm text-muted-foreground">
-              {refunds.length} yêu cầu hòan tiền trong danh sách hiện tại.
+              {refunds.length} yêu cầu hoàn tiền trong danh sách hiện tại.
             </p>
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="warning" className="rounded-full px-3 py-1.5">
@@ -193,9 +173,9 @@ export function RefundsClient({
 
       <Card>
         <CardHeader>
-          <CardTitle>Yêu cầu hòan tiền</CardTitle>
+          <CardTitle>Yêu cầu hoàn tiền</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Duyệt, từ chối và rà soát các yêu cầu hòan tiền tại một nơi.
+            Duyệt, từ chối và rà soát các yêu cầu hoàn tiền tại một nơi.
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -206,7 +186,7 @@ export function RefundsClient({
               </EmptyMedia>
               <EmptyHeader>
                 <EmptyTitle className="text-sm font-semibold">
-                  Không có yêu cầu hòan tiền nào
+                  Không có yêu cầu hoàn tiền nào
                 </EmptyTitle>
                 <EmptyDescription className="text-xs leading-5">
                   Dữ liệu trống cho bộ lọc hiện tại.
@@ -228,19 +208,7 @@ export function RefundsClient({
                         {refund.branch_name}
                       </p>
                     </div>
-                    <Badge
-                      variant={
-                        refundStatusTone(refund.status) === "warning"
-                          ? "warning"
-                          : refundStatusTone(refund.status) === "success"
-                            ? "success"
-                            : refundStatusTone(refund.status) === "danger"
-                              ? "destructive"
-                              : "secondary"
-                      }
-                    >
-                      {REFUND_STATUS_LABELS[refund.status] ?? refund.status}
-                    </Badge>
+                    <StatusBadge domain="refund" value={refund.status} />
                   </div>
                   <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                     <div>
@@ -335,7 +303,7 @@ export function RefundsClient({
                   <TableEmptyStateRow
                     colSpan={canApprove ? 8 : 7}
                     paddingClassName="py-16"
-                    title="Không có yêu cầu hòan tiền nào"
+                    title="Không có yêu cầu hoàn tiền nào"
                     description="Dữ liệu trống cho bộ lọc hiện tại."
                     icon={
                       <IconRotate className="mx-auto size-8 text-muted-foreground" />
@@ -365,19 +333,7 @@ export function RefundsClient({
                       {formatVNDateTime(refund.created_at)}
                     </TableCell>
                     <TableCell>
-                      <Badge
-                        variant={
-                          refundStatusTone(refund.status) === "warning"
-                            ? "warning"
-                            : refundStatusTone(refund.status) === "success"
-                              ? "success"
-                              : refundStatusTone(refund.status) === "danger"
-                                ? "destructive"
-                                : "secondary"
-                        }
-                      >
-                        {REFUND_STATUS_LABELS[refund.status] ?? refund.status}
-                      </Badge>
+                      <StatusBadge domain="refund" value={refund.status} />
                     </TableCell>
                     {canApprove && (
                       <TableCell className="text-right">

@@ -174,7 +174,7 @@ export function StocktakeCountClient({
             </Button>
             {!editable ? (
               <Button variant="outline" size="sm" disabled>
-                {status === "completed" ? "Đã hòan thành" : "Không thể sửa"}
+                {status === "completed" ? "Đã hoàn thành" : "Không thể sửa"}
               </Button>
             ) : null}
           </BlindCountingGridToolbar>

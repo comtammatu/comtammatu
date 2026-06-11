@@ -87,7 +87,7 @@ export function ProductionStats({
       description: "Cần chốt để ghi tiêu hao",
     },
     {
-      label: "Đã hòan tất",
+      label: "Đã hoàn tất",
       value: totals.completed,
       description: "Đã nhập thành phẩm",
     },
@@ -115,8 +115,8 @@ export function ProductionStats({
         : "Cần đội quản trị danh mục tạo ít nhất một thành phẩm trước khi bếp trung tâm lập BOM và lệnh sản xuất."
       : readinessState === "missing-raw-material"
         ? canManageCatalog
-          ? "Tạo nguyên liệu đầu vào để hòan thiện BOM trước khi xác nhận sản xuất."
-          : "Cần đội quản trị danh mục bổ sung nguyên liệu đầu vào trước khi hòan thiện BOM sản xuất."
+          ? "Tạo nguyên liệu đầu vào để hoàn thiện BOM trước khi xác nhận sản xuất."
+          : "Cần đội quản trị danh mục bổ sung nguyên liệu đầu vào trước khi hoàn thiện BOM sản xuất."
         : readinessState === "missing-recipe"
           ? canManageRecipes
             ? "Cấu hình ít nhất một BOM sản xuất trước khi xác nhận lệnh."

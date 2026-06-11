@@ -51,7 +51,7 @@ export default async function OrdersPage() {
       <AppPageHeader
         eyebrow="Điều phối giao dịch"
         title={ORDER_VI.long}
-        description="Theo dõi đơn bán và hòan tiền trong cùng một nơi để xử lý nhanh."
+        description="Theo dõi đơn bán và hoàn tiền trong cùng một nơi để xử lý nhanh."
         actions={
           <Button asChild variant="outline" size="sm">
             <Link href="/admin/reports">Báo cáo</Link>
@@ -63,7 +63,7 @@ export default async function OrdersPage() {
               { value: "orders", label: "Danh sách đơn" },
               {
                 value: "refunds",
-                label: "Hòan tiền",
+                label: "Hoàn tiền",
                 count: pendingRefundCount > 0 ? pendingRefundCount : undefined,
               },
             ]}
