@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { Badge } from "@comtammatu/ui/components/badge";
 import {
   Table,
   TableBody,
@@ -13,22 +12,8 @@ import {
 import { Button } from "@comtammatu/ui/components/button";
 import type { SupplierReturnRow } from "./page";
 
-const STATUS_LABELS: Record<string, string> = {
-  draft: "Nháp",
-  confirmed: "Đã xác nhận",
-  cancelled: "Đã huỷ",
-};
-
-const STATUS_VARIANTS: Record<
-  string,
-  "default" | "secondary" | "destructive" | "outline"
-> = {
-  draft: "secondary",
-  confirmed: "default",
-  cancelled: "destructive",
-};
-
 import { formatVND as formatVndNumber } from "../_lib/format";
+import { StatusBadge } from "../_components/status-badge";
 import { messages as inventoryMessages } from "@lib/messages";
 
 const formatReturnValue = (v: number | null) =>
@@ -61,9 +46,7 @@ export function SupplierReturnsClient({
               <TableCell>{r.suppliers?.name ?? "—"}</TableCell>
               <TableCell>{r.branches?.name ?? "—"}</TableCell>
               <TableCell>
-                <Badge variant={STATUS_VARIANTS[r.status] ?? "secondary"}>
-                  {STATUS_LABELS[r.status] ?? r.status}
-                </Badge>
+                <StatusBadge status={r.status} size="sm" />
               </TableCell>
               <TableCell className="text-right font-mono">
                 {formatReturnValue(r.total_value)}

@@ -30,6 +30,8 @@ const STATUS_BADGE_VARIANTS: Record<string, BadgeProps["variant"]> = {
   draft: "secondary",
   confirmed: "success",
   sent: "info",
+  credited: "success",
+  refunded: "success",
   partially_received: "warning",
   in_transit: "info",
   received: "success",

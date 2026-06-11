@@ -1,6 +1,6 @@
 "use client";
 
-import { Badge } from "@comtammatu/ui/components/badge";
+import { StatusBadge } from "../../_components/status-badge";
 import {
   Table,
   TableBody,
@@ -10,12 +10,6 @@ import {
   TableRow,
   TableFooter,
 } from "@comtammatu/ui/components/table";
-
-const STATUS_LABELS: Record<string, string> = {
-  draft: "Nháp",
-  confirmed: "Đã xác nhận",
-  cancelled: "Đã huỷ",
-};
 
 const REASON_LABELS: Record<string, string> = {
   damaged: "Hàng hỏng",
@@ -82,9 +76,7 @@ export function SupplierReturnDetailClient({ header, lines }: Props) {
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="rounded-lg border p-3">
           <p className="text-xs text-muted-foreground">Trạng thái</p>
-          <Badge className="mt-2" variant="secondary">
-            {STATUS_LABELS[header.status] ?? header.status}
-          </Badge>
+          <StatusBadge status={header.status} className="mt-2" />
         </div>
         <div className="rounded-lg border p-3">
           <p className="text-xs text-muted-foreground">Lý do</p>

@@ -100,6 +100,8 @@ const VI_DICTIONARY: InventoryDictionary = {
     draft: { long: "Nháp" },
     confirmed: { short: "Xác nhận", long: "Đã xác nhận" },
     sent: { long: "Đã gửi" },
+    credited: { long: "Đã ghi credit" },
+    refunded: { long: "Đã hoàn tiền" },
     partially_received: { short: "Nhận một phần", long: "Đã nhận một phần" },
     in_transit: { short: "Đang giao", long: "Đang vận chuyển" },
     received: { long: "Đã nhận" },
