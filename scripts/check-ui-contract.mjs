@@ -173,7 +173,6 @@ const checks = [
       "apps/web/app/(protected)/br/[branchId]/kds/page.tsx": 2,
       "apps/web/app/(protected)/br/[branchId]/pos/order-history.tsx": 1,
       "apps/web/app/(protected)/br/[branchId]/runner/page.tsx": 2,
-      "apps/web/app/(protected)/br/[branchId]/settings/pos-sessions/pos-sessions-client.tsx": 1,
       "apps/web/app/(protected)/employee/payslip/payslip-client.tsx": 1,
       "apps/web/app/(protected)/employee/schedule/schedule-client.tsx": 2,
       "apps/web/app/(protected)/inventory/supplier-invoices/supplier-invoices-client.tsx": 2,

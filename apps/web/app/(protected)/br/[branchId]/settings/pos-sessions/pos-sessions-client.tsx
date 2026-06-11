@@ -15,6 +15,11 @@ import {
 import { AppEmptyState, AppSection } from "@/components/surface";
 import { TableEmptyStateRow } from "@/components/table-empty-state-row";
 import { formatVND } from "@comtammatu/shared/format";
+import { getPaymentMethodLabelVi } from "@comtammatu/shared/labels";
+import {
+  StatusBadge,
+  getStatusBadgeMeta,
+} from "@/components/status-badge";
 import { cn } from "@comtammatu/ui";
 import { Alert, AlertDescription } from "@comtammatu/ui/components/alert";
 import { Badge } from "@comtammatu/ui/components/badge";
@@ -123,26 +128,9 @@ interface PosSessionsClientProps {
   canOverrideVariance: boolean;
 }
 
-const ORDER_STATUS_LABEL: Record<string, string> = {
-  new: "Mới",
-  confirmed: "Đã xác nhận",
-  preparing: "Đang làm",
-  ready: "Sẵn sàng",
-  served: "Đã phục vụ",
-  completed: "Hoàn thành",
-  cancelled: "Đã hủy",
-};
-
-const PAYMENT_METHOD_LABEL: Record<string, string> = {
-  cash: "Tiền mặt",
-  vietqr: "VietQR",
-  momo: "MoMo",
-  bank_transfer: "Chuyển khoản",
-};
-
 function paymentMethodLabel(method: string | null): string {
   if (!method) return "—";
-  return PAYMENT_METHOD_LABEL[method] ?? method;
+  return getPaymentMethodLabelVi(method);
 }
 
 /** Server tính: max(50.000đ, 0.5% × expected_cash). Mirror inline cho UI
@@ -287,17 +275,7 @@ export function PosSessionsClient({
                       </TableCell>
                       <TableCell>{formatTime(order.created_at)}</TableCell>
                       <TableCell>
-                        <Badge
-                          variant={
-                            order.status === "cancelled"
-                              ? "destructive"
-                              : order.status === "completed"
-                                ? "secondary"
-                                : "outline"
-                          }
-                        >
-                          {ORDER_STATUS_LABEL[order.status] ?? order.status}
-                        </Badge>
+                        <StatusBadge domain="order" value={order.status} />
                       </TableCell>
                       <TableCell>
                         {order.payment_status === "paid" ? (
@@ -901,18 +879,13 @@ function OrderDetailSheet({
               </div>
 
               <div className="flex flex-wrap gap-2">
-                <Badge
-                  variant={
-                    order.status === "cancelled"
-                      ? "destructive"
-                      : order.status === "completed"
-                        ? "secondary"
-                        : "outline"
-                  }
-                >
-                  {messages.settings.posSessions.orderStatus}:{" "}
-                  {ORDER_STATUS_LABEL[order.status] ?? order.status}
-                </Badge>
+                <StatusBadge
+                  domain="order"
+                  value={order.status}
+                  label={`${messages.settings.posSessions.orderStatus}: ${
+                    getStatusBadgeMeta("order", order.status).label
+                  }`}
+                />
                 <Badge
                   variant={
                     order.payment_status === "paid" ? "secondary" : "outline"

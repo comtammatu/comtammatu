@@ -1,8 +1,10 @@
+import { KDS_TICKET_STATUS_LABELS_VI } from "@comtammatu/shared/labels";
+
 export const STATUS_CONFIG = {
-  pending: { label: "Chờ", variant: "warning" as const },
-  preparing: { label: "Đang chuẩn bị", variant: "warning" as const },
-  ready: { label: "Sẵn sàng", variant: "success" as const },
-  cancelled: { label: "Đã hủy", variant: "destructive" as const },
+  pending: { label: KDS_TICKET_STATUS_LABELS_VI.pending, variant: "warning" as const },
+  preparing: { label: KDS_TICKET_STATUS_LABELS_VI.preparing, variant: "warning" as const },
+  ready: { label: KDS_TICKET_STATUS_LABELS_VI.ready, variant: "success" as const },
+  cancelled: { label: KDS_TICKET_STATUS_LABELS_VI.cancelled, variant: "destructive" as const },
 } as const;
 
 export type StatusVariant = "warning" | "success" | "destructive";

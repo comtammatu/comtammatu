@@ -16,12 +16,10 @@
  * those keep full granularity by design.
  */
 
-export type OrderStatusVariant =
-  | "default"
-  | "secondary"
-  | "destructive"
-  | "outline"
-  | "success";
+import { getStatusBadgeMeta } from "@/components/status-badge";
+import type { BadgeProps } from "@comtammatu/ui/components/badge";
+
+export type OrderStatusVariant = NonNullable<BadgeProps["variant"]>;
 
 export interface OrderStatusInfo {
   label: string;
@@ -50,10 +48,16 @@ export function getPosOrderStatusInfo(
   order: OrderStatusInput,
 ): OrderStatusInfo {
   if (order.status === "cancelled") {
-    return { label: "Đã hủy", variant: "destructive" };
+    return {
+      label: "Đã hủy",
+      variant: getStatusBadgeMeta("order", "cancelled").variant,
+    };
   }
   if (order.payment_status === "paid") {
-    return { label: "Đã thanh toán", variant: "success" };
+    return {
+      label: "Đã thanh toán",
+      variant: getStatusBadgeMeta("order-payment", "paid").variant,
+    };
   }
   switch (order.status) {
     case "new":
@@ -61,9 +65,15 @@ export function getPosOrderStatusInfo(
     case "preparing":
       return { label: formatOrderAge(order.created_at), variant: "default" };
     case "ready":
-      return { label: "Sẵn sàng", variant: "success" };
+      return {
+        label: "Sẵn sàng",
+        variant: getStatusBadgeMeta("order", "ready").variant,
+      };
     case "served":
-      return { label: "Đã phục vụ", variant: "success" };
+      return {
+        label: "Đã phục vụ",
+        variant: getStatusBadgeMeta("order", "served").variant,
+      };
     default:
       return { label: order.status, variant: "outline" };
   }

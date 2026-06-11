@@ -385,3 +385,12 @@ export const PRINT_JOB_STATUS_LABELS_VI = {
   expired: "Hết hạn",
   cancelled: "Đã hủy",
 } as const;
+
+/** kds_tickets.status (DB kds_tickets_status_check). */
+export const KDS_TICKET_STATUS_LABELS_VI = {
+  pending: "Chờ",
+  preparing: "Đang chuẩn bị",
+  ready: "Sẵn sàng",
+  served: "Đã phục vụ",
+  cancelled: "Đã hủy",
+} as const;

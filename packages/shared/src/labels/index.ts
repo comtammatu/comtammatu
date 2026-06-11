@@ -42,5 +42,6 @@ export {
   REFUND_STATUS_LABELS_VI,
   TABLE_STATUS_LABELS_VI,
   PRINT_JOB_STATUS_LABELS_VI,
+  KDS_TICKET_STATUS_LABELS_VI,
   getPaymentMethodLabelVi,
 } from "./vi";
