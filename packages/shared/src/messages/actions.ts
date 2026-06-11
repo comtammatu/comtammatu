@@ -18,6 +18,7 @@ export const ACTIONS_VI = {
   reject: "Từ chối",
   submit: "Gửi",
   back: "Quay lại",
+  goHome: "Về trang chính",
   next: "Tiếp",
   previous: "Trước",
   refresh: "Làm mới",

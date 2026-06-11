@@ -518,7 +518,7 @@ export function DashboardClient(props: DashboardProps) {
         "confirmed_receive",
       ].includes(t.status),
     )
-    .slice(isMobile ? 2 : 3);
+    .slice(0, isMobile ? 2 : 3);
   const activeStocktakeList = stocktakeSessions.filter(
     (s) => s.status === "in_progress",
   );

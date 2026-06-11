@@ -12,6 +12,9 @@ export const ERRORS_VI = {
   rateLimited: "Quá nhiều yêu cầu, vui lòng đợi",
   saveFailed: "Không thể lưu, vui lòng thử lại",
   loadFailed: "Không thể tải dữ liệu",
+  pageNotFound: "Không tìm thấy trang",
+  pageNotFoundHint: "Đường dẫn không tồn tại hoặc nội dung đã bị xóa",
+  errorCode: "Mã lỗi",
 } as const;
 
 export type ErrorKey = keyof typeof ERRORS_VI;

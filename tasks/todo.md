@@ -6,6 +6,14 @@
 
 M0–M7 + Auth + POS PWA + Realtime hardening + Shadcn primitive migration M1–M9 — **all SHIPPED**. External integrations VietQR + Momo are wired with production credentials and active in real branches. HĐĐT is active through Viettel S-invoice only.
 
+## Active implementation note — 2026-06-11
+
+- [ ] **UI molecule W0–W4 (D014) — khung loading/error/404 + StatusBadge SSOT + tiền tệ/KPI + Empty/Confirm + ListSurface:** T2 self-review.
+      Skill plan: repo rules = engineering + ui + skills + workflow; external skills = none (audit đã chốt, đây là rollout adapter); runtime tools = local gates + dev smoke; skipped = browser deep-flow (auth session).
+      Surface = toàn bộ route families; primary job = mọi điều hướng có phản hồi brand (loading/error/404) + molecule dùng chung thay 25 status map / 10 KPI card / 5 empty / 4 confirm / 2 cây responsive; change type = visual refactor + 2 behavior fix (`/orders` vocab vs DB CHECK, slice transfers inventory dashboard).
+      W0.1 DONE: `components/page-skeleton|error-panel|not-found-panel` + root `error/not-found/global-error` + `(protected)/loading` + fix `.slice(0,n)` dashboard inventory + 4 key copy vào shared messages + mục "Loading / Error / Not-found Frame" trong design-system.md + D014.
+      QA per commit: `pnpm typecheck && pnpm lint && pnpm build`; check-ui-contract allowlist chỉ giảm.
+
 ## Active implementation note — 2026-06-10
 
 - [x] **Employee Portal + HRM leave requests:** T3 full debate captured in `docs/worklog/employee-leave-requests-2026-06-10.md` before coding.

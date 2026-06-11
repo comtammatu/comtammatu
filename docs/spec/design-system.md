@@ -1,6 +1,6 @@
 # Design System - Com Tam Ma Tu Web App
 
-> Version: 14.5.0 | Updated: 2026-06-09 | Status: locked single source for UI agents
+> Version: 14.6.0 | Updated: 2026-06-11 | Status: locked single source for UI agents
 
 ## Single Source Decision
 
@@ -459,6 +459,16 @@ Forbidden wrappers:
 - Search, filters, counts, and bulk actions should live together.
 - Empty, loading, error, and blocked states must use approved primitives or wrappers.
 - Do not repeat the same workflow state in header, rail, sidebar, gate, and board.
+
+## Loading / Error / Not-found Frame
+
+Route-level transition states are part of the design system, not per-page improvisation.
+
+- Every route family exposes `loading.tsx` built from `PageSkeleton` / `PageSpinner` (`apps/web/app/components/page-skeleton.tsx`). Do not hand-roll new ad-hoc route skeleton layouts; POS keeps its purpose-built `PosPageSkeleton`.
+- KDS, runner, and other realtime boards use `PageSpinner`, never a placeholder board skeleton — fake tickets on an operational screen are forbidden.
+- Every route family exposes `error.tsx` delegating to `ErrorPanel` (`apps/web/app/components/error-panel.tsx`): `AppEmptyState mode="error"`, retry via `reset()`, and the error digest in small mono print. `apps/web/app/global-error.tsx` is the single surface allowed to use inline styles, because root CSS may be unavailable when it renders.
+- Not-found renders through `NotFoundPanel` (`apps/web/app/components/not-found-panel.tsx`); `apps/web/app/not-found.tsx` covers the app, and per-family `not-found.tsx` exists only where `notFound()` is called and a shell is worth preserving.
+- Copy for these frames comes from `@comtammatu/shared/messages` (`ACTIONS_VI`, `STATES_VI`, `ERRORS_VI`); do not inline new Vietnamese strings here.
 
 ## Copy Contract
 
