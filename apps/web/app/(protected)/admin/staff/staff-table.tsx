@@ -18,20 +18,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@comtammatu/ui/components/dropdown-menu";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@comtammatu/ui/components/table";
 import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
 import { toggleStaffActive } from "./actions";
 import { StaffFormDialog } from "./staff-form-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { AppEmptyState } from "@/components/surface";
-import { TableEmptyStateRow } from "@/components/table-empty-state-row";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/data-table/data-table";
 
 import { BRANCH_VI, FORM_VI, STAFF_VI } from "@comtammatu/shared/messages";
 export interface BranchOption {
@@ -62,6 +56,71 @@ interface StaffTableProps {
   positionOptions: PositionOption[];
 }
 
+function StaffActiveBadge({ active }: { active: boolean | null }) {
+  return (
+    <Badge variant={active !== false ? "default" : "outline"}>
+      {active !== false
+        ? ACTIVE_STATE_LABELS_VI.active
+        : ACTIVE_STATE_LABELS_VI.inactive}
+    </Badge>
+  );
+}
+
+function StaffActionsMenu({
+  member,
+  variant,
+  onEdit,
+  onToggle,
+}: {
+  member: StaffRow;
+  variant: "card" | "table";
+  onEdit: (member: StaffRow) => void;
+  onToggle: (id: string) => void;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        {variant === "card" ? (
+          <Button variant="ghost" size="sm" className="rounded-full">
+            <IconDots className="size-4" />
+            Tác vụ
+          </Button>
+        ) : (
+          <Button variant="ghost" size="icon-lg">
+            <IconDots className="size-4" />
+            <span className="sr-only">Menu</span>
+          </Button>
+        )}
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onSelect={() => onEdit(member)}>
+          <IconPencil className="mr-2 size-4" />
+          Chỉnh sửa
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href={`/admin/staff/${member.id}/permissions`}>
+            <IconKey className="mr-2 size-4" />
+            Quyền hạn
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => onToggle(member.id)}>
+          {member.is_active !== false ? (
+            <>
+              <IconToggleLeft className="mr-2 size-4" />
+              Vô hiệu hóa
+            </>
+          ) : (
+            <>
+              <IconToggleRight className="mr-2 size-4" />
+              Kích hoạt
+            </>
+          )}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 export function StaffTable({
   staff,
   branches,
@@ -79,22 +138,66 @@ export function StaffTable({
     });
   }
 
+  const columns: DataTableColumn<StaffRow>[] = [
+    {
+      key: "name",
+      header: STAFF_VI.long,
+      render: (member) => (
+        <span className="font-medium">{member.full_name}</span>
+      ),
+    },
+    {
+      key: "role",
+      header: STAFF_VI.role,
+      render: (member) => (
+        <Badge variant="secondary">
+          {member.position_label ?? member.role}
+        </Badge>
+      ),
+    },
+    {
+      key: "branch",
+      header: BRANCH_VI.long,
+      className: "text-muted-foreground",
+      render: (member) => member.branch_name ?? "—",
+    },
+    {
+      key: "phone",
+      header: "SĐT",
+      className: "text-muted-foreground",
+      render: (member) => member.phone ?? "—",
+    },
+    {
+      key: "status",
+      header: FORM_VI.status,
+      render: (member) => <StaffActiveBadge active={member.is_active} />,
+    },
+    {
+      key: "actions",
+      header: "",
+      className: "w-12",
+      render: (member) => (
+        <StaffActionsMenu
+          member={member}
+          variant="table"
+          onEdit={setEditStaff}
+          onToggle={handleToggleActive}
+        />
+      ),
+    },
+  ];
+
   return (
     <>
-      {staff.length === 0 ? (
-        <AppEmptyState
-          className="md:hidden"
-          title="Chưa có nhân viên nào"
-          icon={<IconUsers />}
-        />
-      ) : null}
-
-      <div className="space-y-3 md:hidden">
-        {staff.map((member) => (
-          <div
-            key={member.id}
-            className={`rounded-lg border border-border/70 bg-background p-4 transition-colors ${isPending ? "opacity-60" : ""}`}
-          >
+      <DataTable
+        columns={columns}
+        data={staff}
+        getRowKey={(member) => member.id}
+        emptyTitle="Chưa có nhân viên nào"
+        emptyIcon={<IconUsers />}
+        className={isPending ? "opacity-60" : undefined}
+        mobileCardRender={(member) => (
+          <div className="rounded-lg border border-border/70 bg-background p-4 transition-colors">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="font-medium">{member.full_name}</p>
@@ -102,13 +205,7 @@ export function StaffTable({
                   {member.branch_name ?? "—"}
                 </p>
               </div>
-              <Badge
-                variant={member.is_active !== false ? "default" : "outline"}
-              >
-                {member.is_active !== false
-                  ? ACTIVE_STATE_LABELS_VI.active
-                  : ACTIVE_STATE_LABELS_VI.inactive}
-              </Badge>
+              <StaffActiveBadge active={member.is_active} />
             </div>
             <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
               <div>
@@ -121,148 +218,16 @@ export function StaffTable({
               </div>
             </div>
             <div className="mt-4 flex items-center justify-end">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="rounded-full">
-                    <IconDots className="size-4" />
-                    Tác vụ
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onSelect={() => setEditStaff(member)}>
-                    <IconPencil className="mr-2 size-4" />
-                    Chỉnh sửa
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href={`/admin/staff/${member.id}/permissions`}>
-                      <IconKey className="mr-2 size-4" />
-                      Quyền hạn
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onSelect={() => handleToggleActive(member.id)}
-                  >
-                    {member.is_active !== false ? (
-                      <>
-                        <IconToggleLeft className="mr-2 size-4" />
-                        Vô hiệu hóa
-                      </>
-                    ) : (
-                      <>
-                        <IconToggleRight className="mr-2 size-4" />
-                        Kích hoạt
-                      </>
-                    )}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <StaffActionsMenu
+                member={member}
+                variant="card"
+                onEdit={setEditStaff}
+                onToggle={handleToggleActive}
+              />
             </div>
           </div>
-        ))}
-      </div>
-
-      <div className="hidden rounded-md border md:block">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50 hover:bg-muted/50">
-              <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                {STAFF_VI.long}
-              </TableHead>
-              <TableHead className="hidden text-xs font-medium uppercase tracking-wider text-muted-foreground sm:table-cell">
-                {STAFF_VI.role}
-              </TableHead>
-              <TableHead className="hidden text-xs font-medium uppercase tracking-wider text-muted-foreground md:table-cell">
-                {BRANCH_VI.long}
-              </TableHead>
-              <TableHead className="hidden text-xs font-medium uppercase tracking-wider text-muted-foreground lg:table-cell">
-                SĐT
-              </TableHead>
-              <TableHead className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                {FORM_VI.status}
-              </TableHead>
-              <TableHead className="w-12" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {staff.length === 0 && (
-              <TableEmptyStateRow
-                colSpan={6}
-                title="Chưa có nhân viên nào"
-                icon={
-                  <IconUsers className="mx-auto size-8 text-muted-foreground" />
-                }
-              />
-            )}
-            {staff.map((member) => (
-              <TableRow
-                key={member.id}
-                className={`transition-colors hover:bg-muted/30 ${isPending ? "opacity-60" : ""}`}
-              >
-                <TableCell>
-                  <span className="font-medium">{member.full_name}</span>
-                </TableCell>
-                <TableCell className="hidden sm:table-cell">
-                  <Badge variant="secondary">
-                    {member.position_label ?? member.role}
-                  </Badge>
-                </TableCell>
-                <TableCell className="hidden text-muted-foreground md:table-cell">
-                  {member.branch_name ?? "—"}
-                </TableCell>
-                <TableCell className="hidden text-muted-foreground lg:table-cell">
-                  {member.phone ?? "—"}
-                </TableCell>
-                <TableCell>
-                  <Badge
-                    variant={member.is_active !== false ? "default" : "outline"}
-                  >
-                    {member.is_active !== false
-                      ? ACTIVE_STATE_LABELS_VI.active
-                      : ACTIVE_STATE_LABELS_VI.inactive}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon-lg">
-                        <IconDots className="size-4" />
-                        <span className="sr-only">Menu</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onSelect={() => setEditStaff(member)}>
-                        <IconPencil className="mr-2 size-4" />
-                        Chỉnh sửa
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link href={`/admin/staff/${member.id}/permissions`}>
-                          <IconKey className="mr-2 size-4" />
-                          Quyền hạn
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onSelect={() => handleToggleActive(member.id)}
-                      >
-                        {member.is_active !== false ? (
-                          <>
-                            <IconToggleLeft className="mr-2 size-4" />
-                            Vô hiệu hóa
-                          </>
-                        ) : (
-                          <>
-                            <IconToggleRight className="mr-2 size-4" />
-                            Kích hoạt
-                          </>
-                        )}
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+        )}
+      />
 
       <StaffFormDialog
         open={!!editStaff}
