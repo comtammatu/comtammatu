@@ -1,0 +1,26 @@
+{
+  "name": "@comtammatu/print-render",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./png": "./src/render-png.ts",
+    "./templates": "./src/template-content.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test src/__tests__/*.test.ts",
+    "fonts:embed": "node scripts/embed-fonts.mjs"
+  },
+  "dependencies": {
+    "pureimage": "^0.4.18",
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.4",
+    "@types/qrcode": "^1.5.5",
+    "tsx": "^4.22.3",
+    "typescript": "^6.0.3"
+  }
+}

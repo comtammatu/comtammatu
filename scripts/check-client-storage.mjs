@@ -33,7 +33,13 @@ function walkFiles(rootDir, extensions) {
     if (!dir) continue;
 
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-      if (entry.name === "node_modules" || entry.name === ".next") continue;
+      if (
+        entry.name === "node_modules" ||
+        entry.name === ".next" ||
+        entry.name === "dist" ||
+        entry.name === "dist-bundle"
+      )
+        continue;
 
       const fullPath = path.join(dir, entry.name);
       if (entry.isDirectory()) {

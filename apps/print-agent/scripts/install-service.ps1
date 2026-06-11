@@ -1,13 +1,14 @@
 # Install Cơm Tấm Má Tư print-agent as a Windows Service via NSSM.
 # Runs via Node.js directly (`node.exe dist\index.js`). Requires Node 24+ installed.
-# Run as Administrator. Reads configuration from .env in dist-bin/.
+# Run as Administrator. Reads configuration from .env at the bundle root
+# (next to dist/ and scripts/).
 
 param(
   [string]$ServiceName = "ComTamMaTu-PrintAgent",
   [string]$NodePath    = (Get-Command node.exe -ErrorAction SilentlyContinue).Source,
   [string]$EntryPath   = (Resolve-Path (Join-Path $PSScriptRoot "..\dist\index.js")).Path,
-  [string]$WorkingDir  = (Resolve-Path (Join-Path $PSScriptRoot "..\dist-bin")).Path,
-  [string]$EnvFile     = (Join-Path $PSScriptRoot "..\dist-bin\.env"),
+  [string]$WorkingDir  = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path,
+  [string]$EnvFile     = (Join-Path $PSScriptRoot "..\.env"),
   [string]$LogDir      = "C:\ProgramData\ComTamMaTu\print-agent\logs"
 )
 
@@ -30,7 +31,7 @@ if (-not (Test-Path $EntryPath)) {
   Write-Error "dist/index.js not found at $EntryPath. Run 'pnpm -F @comtammatu/print-agent build' first."
 }
 if (-not (Test-Path $EnvFile)) {
-  Write-Error ".env not found at $EnvFile. Copy .env.example and fill in SUPABASE_URL / SERVICE_ROLE_KEY / AGENT_TENANT_ID / AGENT_BRANCH_ID."
+  Write-Error ".env not found at $EnvFile. Copy .env.example to .env at the bundle root (upgrading from an old install: move dist-bin\.env here) and fill in SUPABASE_URL / SERVICE_ROLE_KEY / AGENT_TENANT_ID / AGENT_BRANCH_ID."
 }
 
 if (-not (Test-Path $LogDir)) { New-Item -ItemType Directory -Path $LogDir -Force | Out-Null }

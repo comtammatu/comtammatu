@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@comtammatu/database": "workspace:*",
+    "@comtammatu/print-render": "workspace:*",
     "@comtammatu/security": "workspace:*",
     "@comtammatu/shared": "workspace:*",
     "@comtammatu/ui": "workspace:*",

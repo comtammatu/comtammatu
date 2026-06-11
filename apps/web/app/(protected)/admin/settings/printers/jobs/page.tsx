@@ -35,7 +35,6 @@ const JOB_TYPES = [
   "kitchen_ticket",
   "receipt",
   "provisional_bill",
-  "reprint",
   "cancel_ticket",
 ] as const;
 

@@ -1,7 +1,9 @@
 import { config as loadEnv } from "dotenv";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { renderPayload, type PrintPayload } from "./escpos.js";
-import { renderPayloadBitmap } from "./escpos-bitmap.js";
+import {
+  renderPayloadBitmap,
+  type PrintPayload,
+} from "@comtammatu/print-render";
 import { sendRawLAN } from "./lan.js";
 
 loadEnv({ path: [".env.local", ".env"], quiet: true });
@@ -25,7 +27,6 @@ type PrintJobRow = {
   job_type:
     | "kitchen_ticket"
     | "receipt"
-    | "reprint"
     | "cancel_ticket"
     | "provisional_bill"
     | "shift_close_report";
@@ -39,18 +40,10 @@ type PrintJobRow = {
     | "cancelled";
 };
 
-type PrintMode = "text" | "bitmap";
-
 const requireEnv = (k: string): string => {
   const v = process.env[k];
   if (!v) throw new Error(`Missing env ${k}`);
   return v;
-};
-
-const parsePrintMode = (raw: string | undefined): PrintMode => {
-  const v = (raw ?? "text").toLowerCase();
-  if (v === "text" || v === "bitmap") return v;
-  throw new Error(`Invalid PRINT_MODE=${raw} (expected 'text' or 'bitmap')`);
 };
 
 const webBaseUrl = process.env.WEB_BASE_URL ?? null;
@@ -75,8 +68,7 @@ const config = {
   branchId: Number(requireEnv("AGENT_BRANCH_ID")),
   tenantId: Number(requireEnv("AGENT_TENANT_ID")),
   agentId,
-  version: process.env.AGENT_VERSION ?? "0.3.0",
-  printMode: parsePrintMode(process.env.PRINT_MODE),
+  version: process.env.AGENT_VERSION ?? "1.0.0",
   // Network gate: agent registers its NAT egress IP every 5 min via the
   // web app's /api/branch-presence endpoint. Web app then enforces "POS/KDS
   // only from devices on this branch's wifi" in proxy.ts.
@@ -225,10 +217,7 @@ async function dispatch(job: PrintJobRow): Promise<void> {
     throw new Error(`printer ${printer.id} missing lan_host`);
   }
 
-  const bytes =
-    config.printMode === "bitmap"
-      ? await renderPayloadBitmap(job.payload)
-      : renderPayload(job.payload);
+  const bytes = await renderPayloadBitmap(job.payload);
 
   await sendRawLAN(printer.lan_host, printer.lan_port ?? 9100, bytes);
 }
@@ -309,7 +298,7 @@ async function reapStuckJobs(supabase: SupabaseClient): Promise<void> {
 
 async function main() {
   console.log(
-    `[agent] starting ${config.agentId} v${config.version} branch=${config.branchId} print_mode=${config.printMode}`,
+    `[agent] starting ${config.agentId} v${config.version} branch=${config.branchId}`,
   );
   const supabase = createClient(config.supabaseUrl, config.serviceKey, {
     auth: { persistSession: false, autoRefreshToken: false },

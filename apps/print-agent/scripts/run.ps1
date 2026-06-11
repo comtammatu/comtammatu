@@ -4,7 +4,7 @@
 param(
   [string]$NodePath  = (Get-Command node.exe -ErrorAction SilentlyContinue).Source,
   [string]$EntryPath = (Join-Path $PSScriptRoot "..\dist\index.js"),
-  [string]$EnvFile   = (Join-Path $PSScriptRoot "..\dist-bin\.env")
+  [string]$EnvFile   = (Join-Path $PSScriptRoot "..\.env")
 )
 
 $ErrorActionPreference = "Stop"

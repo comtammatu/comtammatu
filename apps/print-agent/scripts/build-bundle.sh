@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # ============================================================================
-# Build deploy bundle cho print-agent — zip dist/ + scripts/ + assets/ +
-# .env.example + README.
+# Build deploy bundle cho print-agent — zip dist/index.js (self-contained)
+# + scripts cài service + .env.example + README.
 #
 # Output: apps/print-agent/dist-bundle/print-agent-bundle-vX.Y.Z.zip
 # Ops gửi file này cho từng chi nhánh để deploy. Mỗi chi nhánh:
 #   1. Unzip vào C:\ComTamMaTu\print-agent\
-#   2. Copy .env.example → dist-bin/.env, fill credentials
+#   2. Copy .env.example → .env (bundle root), fill credentials
 #   3. Run scripts/install-service.ps1
 #
 # Run từ root repo: bash apps/print-agent/scripts/build-bundle.sh
@@ -48,20 +48,18 @@ fi
 rm -rf "$STAGING"
 mkdir -p "$STAGING"
 
-# 3. Copy artifacts
+# 3. Copy artifacts — dist/index.js is a self-contained esbuild bundle
+# (deps + fonts embedded), so the bundle ships no node_modules and no assets.
 echo "==> Copy artifacts to $STAGING"
 cp -r "$AGENT_DIR/dist"          "$STAGING/dist"
 cp -r "$AGENT_DIR/scripts"       "$STAGING/scripts"
-cp -r "$AGENT_DIR/assets"        "$STAGING/assets"
 cp    "$AGENT_DIR/package.json"  "$STAGING/package.json"
 cp    "$AGENT_DIR/.env.example"  "$STAGING/.env.example"
 cp    "$AGENT_DIR/README.md"     "$STAGING/README.md"
 
-# Strip dev-only test scripts từ bundle (ops không cần)
-rm -f "$STAGING/scripts/test-codepage.ts"
-rm -f "$STAGING/scripts/test-bitmap.ts"
-rm -f "$STAGING/scripts/test-vn27.ts"
-rm -f "$STAGING/scripts/test-all.ts"
+# Strip dev-only scripts từ bundle (ops không cần)
+rm -f "$STAGING/scripts/test-print.ts"
+rm -f "$STAGING/scripts/build-bundle.sh"
 
 # 4. Tạo INSTALL.md ngắn gọn cho ops (TL;DR)
 cat > "$STAGING/INSTALL.md" <<EOF
@@ -72,7 +70,7 @@ cat > "$STAGING/INSTALL.md" <<EOF
 1. Cài Node.js 24+: https://nodejs.org/
 2. Cài NSSM: \`choco install nssm\` (cần Chocolatey) hoặc tải từ https://nssm.cc/
 3. Unzip bundle này vào \`C:\\ComTamMaTu\\print-agent\\\`
-4. Mở thư mục, mở file \`.env.example\` → "Save As" thành \`dist-bin\\.env\`
+4. Mở thư mục, mở file \`.env.example\` → "Save As" thành \`.env\` (cùng thư mục)
 5. Mở \`.env\` bằng Notepad, fill 4 dòng:
    - SUPABASE_URL
    - SUPABASE_SERVICE_ROLE_KEY
@@ -87,6 +85,14 @@ cat > "$STAGING/INSTALL.md" <<EOF
    \`\`\`powershell
    Get-Service ComTamMaTu-PrintAgent
    \`\`\`
+
+## Nâng cấp từ bản cũ (đã có service chạy)
+
+1. Unzip đè bundle mới vào thư mục cũ
+2. Nếu file cấu hình đang ở \`dist-bin\\.env\` (bản cũ): move nó ra thư mục gốc
+   thành \`.env\` (cạnh thư mục dist)
+3. Chạy lại \`scripts\\install-service.ps1\` (PowerShell as Administrator) —
+   script tự gỡ service cũ và cài lại
 
 ## Smoke test sau install
 

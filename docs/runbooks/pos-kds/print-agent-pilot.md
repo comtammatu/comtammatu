@@ -43,8 +43,8 @@ Complete all items before opening the branch for the day.
 
 - [ ] **Node.js 24+** installed (`node --version` ≥ v24). Download from nodejs.org.
 - [ ] NSSM installed (`choco install nssm` or download from nssm.cc)
-- [ ] `apps/print-agent/dist/` copied to máy POS (sau khi rebuild qua `pnpm build`)
-- [ ] `.env` đặt tại `apps/print-agent/dist-bin/.env` chứa:
+- [ ] Bundle unzip vào máy POS (build qua `pnpm --filter @comtammatu/print-agent build` + `scripts/build-bundle.sh` — chỉ cần `dist/index.js`)
+- [ ] `.env` đặt tại thư mục gốc bundle (cạnh `dist/`) chứa:
   ```
   SUPABASE_URL=https://<ref>.supabase.co
   SUPABASE_SERVICE_ROLE_KEY=<service role JWT>

@@ -8,12 +8,13 @@
  * Bold uses Roboto Mono Bold variant.
  */
 
-import { Bitmap, registerFont } from "pureimage";
-import { fileURLToPath } from "node:url";
-import path from "node:path";
+import { Bitmap } from "pureimage";
+import { FAMILY_BOLD, FAMILY_REG, ensureFontsLoaded } from "./fonts";
+
+export { ensureFontsLoaded };
 
 // 80mm thermal paper @ 203dpi ≈ 576 printable dots.
-const DOTS_WIDTH = 576;
+export const DOTS_WIDTH = 576;
 const BYTES_PER_ROW = DOTS_WIDTH / 8; // 72
 
 // Canvas fills the full 576-dot printable area. 48 chars × 12-dot glyph
@@ -23,78 +24,22 @@ const MARGIN_LEFT = 0;
 const MARGIN_RIGHT = 0;
 const DRAW_WIDTH = DOTS_WIDTH - MARGIN_LEFT - MARGIN_RIGHT; // 576 dots
 
-// ─── PD805KL Bitmap Layout Spec ──────────────────────────────────────────
-//
-// Physical:
-//   Paper 80mm, printable 72mm = 576 dots @ 203dpi
-//   Self-test Font A = 48 chars/line (12 dots/char)
-//
-// Canvas:
-//   Width:          576 dots         (matches printer printable width)
-//   Left margin:      0 dots         (full-bleed; thin glyphs may clip ~1 dot
-//                                      on left edge — accepted trade-off so
-//                                      48 chars × 12 dots fills exactly 576)
-//   Right margin:     0 dots
-//   Drawing area:   576 dots         (= DRAW_WIDTH)
-//
-// Normal size (default for text, meta rows, table borders):
-//   Font:           Roboto Mono Regular 20px
-//   Glyph width:    ~12 dots
-//   Max chars/line: 48  (48 × 12 = 576; slight right edge trim accepted)
-//   Line height:    26 dots
-//
-// Double size (for banners, headers, TỔNG CỘNG):
-//   Font:           Roboto Mono Bold 40px (2× normal)
-//   Glyph width:    ~24 dots
-//   Max chars/line: 24  (24 × 24 = 576)  ← HARD LIMIT
-//   Line height:    52 dots
-//
-// Layout rules:
-//   - Normal lines → use full 48-char width (compat with text-mode pair/
-//     table helpers in escpos.ts)
-//   - Double-size lines → MUST be ≤ 24 chars (half width). Pair-formatted
-//     lines like "TỔNG CỘNG ... 158.850đ" need a compact 24-char layout
-//     at double-size, not the 48-char padded version.
-//   - Long item names → wrap across multiple double-size lines, or keep
-//     item name at normal size and use prefix banner double-size.
+// Layout spec:
+//   Normal size: Roboto Mono Regular 20px, ~12 dots/glyph,
+//     48 chars/line, 26-dot line height
+//   Double size: Roboto Mono Bold 40px, ~24 dots/glyph,
+//     24 chars/line (HARD LIMIT), 52-dot line height
+//   Line spacing zero so rasters stack pixel-exact.
 const FONT_SIZE_NORMAL = 20;
 const FONT_SIZE_DOUBLE = 40;
 
-// Line height tight to font size — no extra leading. Rasters emit
-// back-to-back with line-spacing=0 so vertical alignment is pixel-exact.
-const LINE_HEIGHT_NORMAL = 26;
-const LINE_HEIGHT_DOUBLE = 52;
+export const LINE_HEIGHT_NORMAL = 26;
+export const LINE_HEIGHT_DOUBLE = 52;
 
 /** Max chars per line at normal size (matches PD805KL Font A = 48). */
 export const CHARS_PER_LINE_NORMAL = 48;
 /** Max chars per line at double size (half of normal). */
 export const CHARS_PER_LINE_DOUBLE = 24;
-
-const FAMILY_REG = "RobotoMono";
-const FAMILY_BOLD = "RobotoMono-Bold";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-// In dev (tsx): __dirname = apps/print-agent/src/ → ../assets/fonts/
-// In tsc build: __dirname = apps/print-agent/dist/ → ../assets/fonts/
-// In pkg .exe:  __dirname = /snapshot/<...>/dist/   → ../assets/fonts/ (pkg.assets)
-const FONT_DIR = path.resolve(__dirname, "../assets/fonts");
-
-let fontsReady: Promise<void> | null = null;
-
-/** Register + async-load both font faces. Idempotent. */
-export const ensureFontsLoaded = (): Promise<void> => {
-  if (fontsReady) return fontsReady;
-  const reg = registerFont(
-    path.join(FONT_DIR, "RobotoMono-Regular.ttf"),
-    FAMILY_REG,
-  );
-  const bold = registerFont(
-    path.join(FONT_DIR, "RobotoMono-Bold.ttf"),
-    FAMILY_BOLD,
-  );
-  fontsReady = Promise.all([reg.load(), bold.load()]).then(() => undefined);
-  return fontsReady;
-};
 
 export type RenderOpts = {
   bold?: boolean;
@@ -104,9 +49,8 @@ export type RenderOpts = {
    * cancel tickets. Paints a solid black line, writes white glyphs. */
   inverse?: boolean;
   /** Strike-through: draw a horizontal black line through the text middle
-   * after rasterizing. Used for cancelled item names so chef + customer
-   * see "gạch ngang" treatment. ESC/POS has no native strikethrough, so
-   * we paint it directly into the bitmap. */
+   * after rasterizing. ESC/POS has no native strikethrough, so it is
+   * painted directly into the bitmap. */
   strikethrough?: boolean;
 };
 
@@ -124,8 +68,7 @@ const packPixels = (bitmap: Bitmap): Uint8Array => {
         const x = xByte * 8 + bit;
         if (x >= width) break;
         const idx = (y * width + x) * 4;
-        // Threshold on R channel (bitmap is drawn in grayscale via black on white).
-        // Red < 128 = dark pixel → set bit (MSB first).
+        // Threshold on R channel (bitmap is grayscale black-on-white).
         const r = data[idx] ?? 255;
         if (r < 128) {
           byte |= 0x80 >> bit;
@@ -156,16 +99,12 @@ const wrapRasterCommand = (packed: Uint8Array, height: number): Uint8Array => {
 };
 
 /**
- * Render a single line of text at the given style as an ESC/POS raster
- * command. Caller appends commands sequentially on the printer — no trailing
- * newline byte is emitted (the raster itself occupies vertical space).
+ * Draw a single styled line of text onto a fresh Bitmap. Used by both the
+ * ESC/POS raster path and the PNG preview path so they stay pixel-identical.
  *
  * MUST be called after `ensureFontsLoaded()` resolves.
  */
-export const renderLineRaster = (
-  text: string,
-  opts: RenderOpts = {},
-): Uint8Array => {
+export const drawLineBitmap = (text: string, opts: RenderOpts = {}): Bitmap => {
   const fontSize = opts.double ? FONT_SIZE_DOUBLE : FONT_SIZE_NORMAL;
   const lineHeight = opts.double ? LINE_HEIGHT_DOUBLE : LINE_HEIGHT_NORMAL;
   const family = opts.bold ? FAMILY_BOLD : FAMILY_REG;
@@ -177,16 +116,13 @@ export const renderLineRaster = (
   // only print black/white — anti-aliased grays become dithered mess.
   ctx.imageSmoothingEnabled = false;
 
-  // Background: inverse mode paints the whole line black.
   ctx.fillStyle = opts.inverse ? "black" : "white";
   ctx.fillRect(0, 0, DOTS_WIDTH, lineHeight);
 
-  // Measure + align (glyph colour flips too).
   ctx.fillStyle = opts.inverse ? "white" : "black";
   ctx.font = `${fontSize} ${family}`;
   ctx.textBaseline = "top" as never;
 
-  // All drawing happens inside [MARGIN_LEFT, MARGIN_LEFT + DRAW_WIDTH].
   let x = MARGIN_LEFT;
   if (opts.align === "center" || opts.align === "right") {
     const metrics = ctx.measureText(text);
@@ -200,8 +136,6 @@ export const renderLineRaster = (
   // Small top padding so ascenders don't clip.
   ctx.fillText(text, x, 2);
 
-  // Strike-through: draw a 2-dot black line through the vertical middle of
-  // the text only (not the full canvas — leaves left/right padding clean).
   if (opts.strikethrough) {
     const metrics = ctx.measureText(text);
     const w = Math.ceil(metrics.width);
@@ -211,12 +145,19 @@ export const renderLineRaster = (
     ctx.fillRect(x, midY, w, strokeH);
   }
 
-  return wrapRasterCommand(packPixels(img), lineHeight);
+  return img;
 };
 
-/** Blank vertical whitespace in bitmap mode. Since we zero line-spacing
- * around rasters, emit an empty raster of the desired height (default =
- * one normal line). */
+/** Render a single line as an ESC/POS raster command. */
+export const renderLineRaster = (
+  text: string,
+  opts: RenderOpts = {},
+): Uint8Array => {
+  const img = drawLineBitmap(text, opts);
+  return wrapRasterCommand(packPixels(img), img.height);
+};
+
+/** Blank vertical whitespace as an empty raster (default = one normal line). */
 export const blankLine = (height = LINE_HEIGHT_NORMAL): Uint8Array => {
   const packed = new Uint8Array(BYTES_PER_ROW * height); // all zeros = white
   return wrapRasterCommand(packed, height);
@@ -226,17 +167,14 @@ export type Segment = {
   text: string;
   bold?: boolean;
   double?: boolean;
-  /** Per-segment strikethrough — only the segment's text gets the line.
-   * Used by cancel ticket so the qty prefix stays clean while item name
-   * itself gets gạch ngang. */
+  /** Per-segment strikethrough — only the segment's text gets the line. */
   strikethrough?: boolean;
 };
 
 /**
- * Render a row composed of multiple text segments drawn left-to-right on
- * a single raster, each with its own size/weight. Line height = max
- * segment height. Used by kitchen tickets where ` x2 | ` is normal-size
- * but the item name is double-size on the same visual row.
+ * Render a row composed of multiple text segments drawn left-to-right on a
+ * single raster, each with its own size/weight. Line height = max segment
+ * height. Used by the printer smoke-test scripts.
  */
 export const renderMixedRow = (segments: Segment[]): Uint8Array => {
   const height = segments.some((s) => s.double)
@@ -255,8 +193,6 @@ export const renderMixedRow = (segments: Segment[]): Uint8Array => {
     const fontSize = seg.double ? FONT_SIZE_DOUBLE : FONT_SIZE_NORMAL;
     const family = seg.bold ? FAMILY_BOLD : FAMILY_REG;
     ctx.font = `${fontSize} ${family}`;
-    // Baseline-align smaller segments to the top of the larger ones so
-    // they sit on the same visual row (use top offset = height diff).
     const yOffset = seg.double
       ? 2
       : Math.max(2, height - LINE_HEIGHT_NORMAL + 2);
@@ -264,8 +200,6 @@ export const renderMixedRow = (segments: Segment[]): Uint8Array => {
     const metrics = ctx.measureText(seg.text);
     const segWidth = Math.ceil(metrics.width);
     if (seg.strikethrough) {
-      // Strike-through: 2-dot (normal) or 3-dot (double) horizontal line
-      // through the vertical middle of THIS segment only.
       const segLineHeight = seg.double
         ? LINE_HEIGHT_DOUBLE
         : LINE_HEIGHT_NORMAL;
@@ -280,9 +214,8 @@ export const renderMixedRow = (segments: Segment[]): Uint8Array => {
   return wrapRasterCommand(packPixels(img), height);
 };
 
-/** Zero printer line-spacing — MUST wrap a raster block to prevent the
- * printer from inserting its default ~30-dot feed between raster lines,
- * which causes vertical gaps and apparent misalignment. */
+/** Zero printer line-spacing — MUST wrap raster blocks to prevent the
+ * printer from inserting its default ~30-dot feed between raster lines. */
 export const lineSpacingZero = (): Uint8Array =>
   new Uint8Array([0x1b, 0x33, 0x00]);
 

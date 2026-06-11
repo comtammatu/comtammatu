@@ -21,7 +21,6 @@ apps/web/public/workbox-*.js
 
 # build
 dist/
-apps/print-agent/dist-bin/
 apps/print-agent/dist-bundle/
 
 # misc

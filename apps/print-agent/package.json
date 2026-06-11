@@ -1,32 +1,25 @@
 {
   "name": "@comtammatu/print-agent",
-  "version": "0.3.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "main": "dist/index.js",
-  "bin": {
-    "comtammatu-print-agent": "dist/index.js"
-  },
   "scripts": {
     "dev": "tsx src/index.ts",
-    "build": "tsc -p tsconfig.json",
+    "build": "node -e \"fs.rmSync('dist',{recursive:true,force:true})\" && esbuild src/index.ts --bundle --platform=node --target=node24 --format=esm --outfile=dist/index.js --external:bufferutil --external:utf-8-validate --banner:js=\"import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);\"",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
     "presence:provision": "tsx src/ops/provision-presence-token.ts",
-    "test:codepage": "tsx scripts/test-codepage.ts",
-    "test:bitmap": "tsx scripts/test-bitmap.ts",
-    "test:vn27": "tsx scripts/test-vn27.ts",
-    "test:all": "tsx scripts/test-all.ts",
-    "test:document": "tsx scripts/test-document-render.ts"
+    "test:print": "tsx scripts/test-print.ts"
   },
   "dependencies": {
+    "@comtammatu/print-render": "workspace:*",
     "@supabase/supabase-js": "^2.106.1",
-    "dotenv": "^17.4.2",
-    "iconv-lite": "^0.6.3",
-    "pureimage": "^0.4.18"
+    "dotenv": "^17.4.2"
   },
   "devDependencies": {
     "@types/node": "^24.12.4",
+    "esbuild": "^0.25.12",
     "tsx": "^4.22.3",
     "typescript": "^6.0.3"
   }

@@ -1,7 +1,8 @@
 # @comtammatu/print-agent
 
 Thermal print agent for Cơm Tấm Má Tư. Subscribes to Supabase Realtime for `print_jobs`,
-renders ESC/POS, dispatches to LAN (TCP:9100) thermal printers.
+rasterizes print documents to ESC/POS (bitmap mode), dispatches to LAN (TCP:9100)
+thermal printers.
 
 **1 agent per branch** serves all 3 printers at that branch (receipt / kitchen_1 / kitchen_2).
 
@@ -44,11 +45,13 @@ and do not ship `.env.local`.
 ## Build
 
 ```bash
-pnpm build          # tsc → dist/
+pnpm build          # esbuild → dist/index.js (single self-contained file)
 ```
 
-`dist/index.js` is the entry point launched via `node dist/index.js`. There is no
-standalone binary build — agent always runs through Node.
+`dist/index.js` bundles all dependencies (including `@comtammatu/print-render`
+and the embedded Roboto Mono fonts) — branch machines need Node only, no
+`node_modules` and no asset folders. There is no standalone binary build —
+agent always runs through Node.
 
 ## Run
 
@@ -91,9 +94,6 @@ Uninstall:
 | `AGENT_BRANCH_ID`            | yes                          | Numeric branch id this agent serves                                                                                                                                                                                                                     |
 | `AGENT_ID`                   | required with presence       | Stable identifier. Required when `PRINT_AGENT_PRESENCE_TOKEN` is set because presence tokens are bound to this value.                                                                                                                                   |
 | `AGENT_VERSION`              | no                           | Reported in heartbeat row                                                                                                                                                                                                                               |
-| `PRINT_MODE`                 | no                           | `text` (default) emits ESC/POS text commands using the printer's CP1258 firmware font. `bitmap` rasterizes Vietnamese via Roboto Mono TTF and emits raster image commands — use this on PDIT PD805KL / clones whose firmware has no usable CP1258 font. |
-| `PRINT_CODEPAGE_ID`          | no                           | Text-mode only. ESC/POS register index for CP1258. Default `38` (Epson). Xprinter often `30`.                                                                                                                                                           |
-| `PRINT_ASCII`                | no                           | Text-mode only. `1` to strip Vietnamese diacritics if no codepage works.                                                                                                                                                                                |
 | `WEB_BASE_URL`               | no                           | Web app base URL for branch-presence registration.                                                                                                                                                                                                      |
 | `PRINT_AGENT_PRESENCE_TOKEN` | required with `WEB_BASE_URL` | Raw per-agent bearer token for `/api/branch-presence`. Store only its SHA-256 hash in `printer_agent_presence_tokens`.                                                                                                                                  |
 
@@ -120,59 +120,39 @@ pnpm --filter @comtammatu/print-agent presence:provision -- status \
 The old global shared-token mode is retired; one leaked branch token must not
 register another branch.
 
-## Bitmap mode (recommended for PDIT PD805KL)
+## Rendering
 
-If the printer firmware has no usable CP1258 font (PDIT PD805KL reports a
-"Vietnam" code page at id 27, but ships with empty glyphs — verified via
-self-test), set `PRINT_MODE=bitmap`:
+Rendering lives in `@comtammatu/print-render` (shared with the admin template
+editor preview, so paper and preview stay pixel-identical). The agent
+rasterizes every line via pureimage + Roboto Mono (embedded in the bundle),
+sending `GS v 0` raster image commands. This bypasses
+firmware font tables entirely — the printer just prints pixels, so Vietnamese
+renders correctly on any ESC/POS printer (PDIT PD805KL and clones included).
+Native ESC/POS QR commands are still used for payment QR codes.
 
-```bash
-echo "PRINT_MODE=bitmap" >> .env
-```
+Ticket layouts are data-driven: each `print_jobs.payload` carries a
+`document` block list materialized from `print_template_versions` by the
+database. Change layouts there — not in per-branch agent deployments. When a
+payload has no `document` (template apply fail-soft), the agent rebuilds an
+equivalent block list locally from the typed payload.
 
-The agent then rasterizes every line via pureimage + Roboto Mono (TTF
-bundled in `assets/fonts/`), sending `GS v 0` raster image commands
-instead of text bytes. This bypasses firmware font tables entirely — the
-printer just prints pixels. Native ESC/POS QR commands still work.
-
-Layout constraints in bitmap mode (576-dot canvas, Roboto Mono @ 20px):
+Layout constraints (576-dot canvas, Roboto Mono @ 20px):
 
 - Normal text: max 48 chars/line
 - Double-size banners (BÀN, TỔNG CỘNG, etc.): **max 24 chars/line** —
   content that exceeds this gets clipped off the right edge.
 
-Smoke-test before enabling in production:
+Smoke-test against a real printer:
 
 ```bash
-PRINTER_HOST=192.168.1.240 TYPE=all pnpm test:all   # receipts + bill
-PRINTER_HOST=192.168.1.241 TYPE=kitchen pnpm test:all
+PRINTER_HOST=192.168.1.240 pnpm test:print                      # all 5 ticket kinds
+PRINTER_HOST=192.168.1.241 TYPE=kitchen_ticket pnpm test:print  # one kind
 ```
 
-## Vietnamese encoding calibration (text mode only)
-
-Thermal printers decode high-byte characters via an ESC/POS code-page register,
-whose numeric id for CP1258 (Vietnamese) **varies by firmware**. The default
-(`38`, Epson) works on TM-series; clones (Xprinter, PDIT PD805KL) use other ids.
-
-If Vietnamese renders as garbled glyphs (`Co?m su?o?|n`, `Co'm`, `Tại chỗ` →
-`T?i ch?`), run the calibration sheet:
+Render-only check (no printer needed):
 
 ```bash
-PRINTER_HOST=192.168.1.50 pnpm test:codepage
-```
-
-The printer emits one block per candidate (`15`, `28`, `30`, `38`, `52`). Read
-the paper, find the block whose Vietnamese looks correct, then persist:
-
-```bash
-echo "PRINT_CODEPAGE_ID=30" >> .env   # example for Xprinter XP-T80A
-```
-
-Restart the agent. If **no** codepage renders correctly, switch to bitmap mode
-above (preferred), or strip diacritics:
-
-```bash
-echo "PRINT_ASCII=1" >> .env          # readable but ugly
+pnpm --filter @comtammatu/print-render test
 ```
 
 ## Runtime loops
@@ -185,23 +165,20 @@ echo "PRINT_ASCII=1" >> .env          # readable but ugly
 
 ## Running on Termux (Android) / Raspberry Pi / other Linux
 
-For branches whose POS is an Android tablet (no Windows PC):
+For branches whose POS is an Android tablet (no Windows PC). The bundle is
+self-contained — build it once at the repo, then the device only needs Node:
 
 ```bash
-# Termux (Android): install Node 24
-pkg install nodejs-lts git
+# At the repo (any machine):
+pnpm --filter @comtammatu/print-agent build
+bash apps/print-agent/scripts/build-bundle.sh
 
-# Clone (or copy just apps/print-agent) and install:
-git clone <repo> && cd <repo>/apps/print-agent
-pnpm install
-
-# Configure
+# Termux (Android): install Node 24, copy + unzip the bundle, then:
+pkg install nodejs-lts
 cp .env.example .env
 # ...fill SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, AGENT_TENANT_ID, AGENT_BRANCH_ID
-
-# Build + run
-pnpm build && pnpm start
-# Or keep alive under Termux:
+node dist/index.js
+# Keep alive under Termux:
 #   pkg install termux-services && sv-enable print-agent
 ```
 

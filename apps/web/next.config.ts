@@ -47,6 +47,7 @@ const nextConfig: NextConfig = {
     "@comtammatu/database",
     "@comtammatu/ui",
     "@comtammatu/security",
+    "@comtammatu/print-render",
   ],
   turbopack: {
     root: resolve(import.meta.dirname, "../.."),

@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Button } from "@comtammatu/ui/components/button";
-import { Activity as IconActivity } from "lucide-react";
+import {
+  Activity as IconActivity,
+  FileText as IconFileText,
+} from "lucide-react";
 import {
   canManageBranchFloorSettings,
   TENANT_LEVEL_ROLES,
@@ -116,12 +119,22 @@ export default async function PrintersPage() {
       title={messages.settings.pages.printersTitle}
       description={messages.settings.pages.printersDescription}
       actions={
-        <Button asChild variant="outline" size="sm" className="gap-1">
-          <Link href="/admin/settings/printers/jobs">
-            <IconActivity className="size-3.5" />
-            {messages.settings.pages.printMonitor}
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          {isTenantLevel ? (
+            <Button asChild variant="outline" size="sm" className="gap-1">
+              <Link href="/admin/settings/printers/templates">
+                <IconFileText className="size-3.5" />
+                {messages.settings.pages.printTemplatesEntry}
+              </Link>
+            </Button>
+          ) : null}
+          <Button asChild variant="outline" size="sm" className="gap-1">
+            <Link href="/admin/settings/printers/jobs">
+              <IconActivity className="size-3.5" />
+              {messages.settings.pages.printMonitor}
+            </Link>
+          </Button>
+        </div>
       }
     >
       <PrintersClient

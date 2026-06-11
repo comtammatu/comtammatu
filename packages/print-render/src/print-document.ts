@@ -122,11 +122,6 @@ export type PrintDocumentFooterBlock = {
   lines?: string[];
 };
 
-export type PrintDocumentLegacyBlock = {
-  type: "kitchenTicket" | "cancelTicket" | "shiftCloseReport";
-  payload?: unknown;
-};
-
 export type PrintDocumentBlock =
   | PrintDocumentTextBlock
   | PrintDocumentRowBlock
@@ -141,8 +136,7 @@ export type PrintDocumentBlock =
   | PrintDocumentCashChangeBlock
   | PrintDocumentNoteBlock
   | PrintDocumentPaymentQrBlock
-  | PrintDocumentFooterBlock
-  | PrintDocumentLegacyBlock;
+  | PrintDocumentFooterBlock;
 
 export type PrintDocument = {
   schema_version: 1;

@@ -191,6 +191,9 @@ export function resolveBankBin(bankCode: string): string {
  * Build the VietQR EMVCo payment string for thermal printing. Returns
  * `null` when required fields are missing so the caller can skip QR
  * rendering gracefully (e.g. tenant without bank config).
+ *
+ * MIRRORED by public.print_vietqr_emvco (SQL) for server-side receipt
+ * enqueues — keep TLV layout, sanitization, and CRC output identical.
  */
 export function buildVietQrEmvco(input: {
   bankCode: string;
