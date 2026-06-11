@@ -25,6 +25,12 @@ type AgentStatus = {
 const OFFLINE_THRESHOLD_MS = 60_000;
 const POLL_INTERVAL_MS = 30_000;
 
+const FAILED_BADGE_COPY = {
+  title: (count: number) => `${String(count)} lệnh in lỗi trong 24 giờ qua`,
+  long: (count: number) => `Máy in: ${String(count)} lỗi`,
+  short: (count: number) => `${String(count)} lỗi`,
+};
+
 function computeStatus(
   agentId: string | null,
   lastSeenAt: string | null,
@@ -51,6 +57,7 @@ export function PrinterStatusBadge({
     isOnline: false,
     hasAgent: false,
   });
+  const [failedCount, setFailedCount] = useState(0);
 
   // Fetch + 30s poll. Stays separate from the realtime channel so the
   // helper can own the auth-await dance. Uses its own short-lived
@@ -58,17 +65,27 @@ export function PrinterStatusBadge({
   // supabase-js's underlying connection pool internally).
   const fetchStatus = useCallback(async () => {
     const supabase = createClient();
-    const { data } = await supabase
-      .from("printer_agent_status")
-      .select("agent_id, last_seen_at")
-      .eq("branch_id", branchId)
-      .maybeSingle();
+    const sinceIso = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const [statusRes, failedRes] = await Promise.all([
+      supabase
+        .from("printer_agent_status")
+        .select("agent_id, last_seen_at")
+        .eq("branch_id", branchId)
+        .maybeSingle(),
+      supabase
+        .from("print_jobs")
+        .select("id", { count: "exact", head: true })
+        .eq("branch_id", branchId)
+        .in("status", ["failed", "expired"])
+        .gte("created_at", sinceIso),
+    ]);
     setStatus(
       computeStatus(
-        (data?.agent_id as string | undefined) ?? null,
-        (data?.last_seen_at as string | undefined) ?? null,
+        (statusRes.data?.agent_id as string | undefined) ?? null,
+        (statusRes.data?.last_seen_at as string | undefined) ?? null,
       ),
     );
+    setFailedCount(failedRes.count ?? 0);
   }, [branchId]);
 
   const fetchStatusRef = useRef(fetchStatus);
@@ -142,7 +159,21 @@ export function PrinterStatusBadge({
     [branchId],
   );
 
-  const badge = !status.hasAgent ? (
+  // A failed job outranks the heartbeat tone: agent online + dead printer
+  // looked healthy before — the count is the actual paper-out-of-tray truth.
+  const badge = failedCount > 0 ? (
+    <Badge
+      variant="outline"
+      className="gap-1 border-destructive/40 text-destructive"
+      title={FAILED_BADGE_COPY.title(failedCount)}
+    >
+      <IconPrinterOff className="size-3.5" />
+      <span className="hidden sm:inline">
+        {FAILED_BADGE_COPY.long(failedCount)}
+      </span>
+      <span className="sm:hidden">{FAILED_BADGE_COPY.short(failedCount)}</span>
+    </Badge>
+  ) : !status.hasAgent ? (
     <Badge
       variant="outline"
       className="gap-1 text-muted-foreground"

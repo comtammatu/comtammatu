@@ -1,22 +1,12 @@
 "use server";
 
 import { z } from "zod";
-import {
-  MODULE_ACL,
-  PERMISSION_KEYS,
-  type StaffRole,
-} from "@comtammatu/shared/auth";
+import { MODULE_ACL, PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import { buildVietQrEmvco, resolveBankBin } from "@comtammatu/shared/providers";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getAuthContextWithPermission } from "../../_lib/auth";
 
 const POS_ROLES = MODULE_ACL.pos.allowedRoles;
-
-const MANAGER_ROLES: readonly StaffRole[] = [
-  "owner",
-  "super_manager",
-  "branch_manager",
-];
 
 const orderIdSchema = z.coerce
   .number()
@@ -27,6 +17,30 @@ const jobIdSchema = z.coerce
   .number()
   .int()
   .positive({ error: "Job ID không hợp lệ" });
+
+const AGENT_OFFLINE_THRESHOLD_MS = 60_000;
+
+/**
+ * Enqueue succeeded but no agent heartbeat within the threshold — the
+ * paper will only come out once the agent reconnects. Callers downgrade
+ * their success toast to a warning so the counter knows to check.
+ */
+async function isPrintAgentOffline(
+  supabase: NonNullable<
+    Awaited<ReturnType<typeof getAuthContextWithPermission>>
+  >["supabase"],
+  branchId: number,
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("printer_agent_status")
+    .select("last_seen_at")
+    .eq("branch_id", branchId)
+    .maybeSingle();
+  if (error) return false;
+  const lastSeenAt = data?.last_seen_at;
+  if (typeof lastSeenAt !== "string") return true;
+  return Date.now() - new Date(lastSeenAt).getTime() >= AGENT_OFFLINE_THRESHOLD_MS;
+}
 
 type KitchenEnqueueResult = {
   order_id: number;
@@ -101,7 +115,9 @@ export async function sendToKitchen(
 
 export async function printReceipt(
   orderId: number,
-): Promise<ActionResult<{ job_id: number; printer_id: number }>> {
+): Promise<
+  ActionResult<{ job_id: number; printer_id: number; agent_offline: boolean }>
+> {
   const parsed = orderIdSchema.safeParse(orderId);
   if (!parsed.success) {
     return { success: false, error: "Order ID không hợp lệ" };
@@ -113,7 +129,7 @@ export async function printReceipt(
   );
   if (!ctx) return { success: false, error: "Không có quyền in" };
 
-  const { supabase } = ctx;
+  const { supabase, claims } = ctx;
 
   const { data, error } = await supabase.rpc("enqueue_receipt_print", {
     p_order_id: parsed.data,
@@ -150,13 +166,23 @@ export async function printReceipt(
     };
   }
 
-  return { success: true, data: result };
+  const agentOffline =
+    typeof claims.branch_id === "number"
+      ? await isPrintAgentOffline(supabase, claims.branch_id)
+      : false;
+
+  return { success: true, data: { ...result, agent_offline: agentOffline } };
 }
 
 export async function printProvisionalBill(
   orderId: number,
 ): Promise<
-  ActionResult<{ job_id: number; printer_id: number; qr_type: string | null }>
+  ActionResult<{
+    job_id: number;
+    printer_id: number;
+    qr_type: string | null;
+    agent_offline: boolean;
+  }>
 > {
   const parsed = orderIdSchema.safeParse(orderId);
   if (!parsed.success) {
@@ -282,7 +308,12 @@ export async function printProvisionalBill(
     };
   }
 
-  return { success: true, data: result };
+  const agentOffline =
+    typeof claims.branch_id === "number"
+      ? await isPrintAgentOffline(supabase, claims.branch_id)
+      : false;
+
+  return { success: true, data: { ...result, agent_offline: agentOffline } };
 }
 
 export async function retryPrintJob(jobId: number): Promise<ActionResult> {
@@ -291,8 +322,11 @@ export async function retryPrintJob(jobId: number): Promise<ActionResult> {
     return { success: false, error: "Job ID không hợp lệ" };
   }
 
+  // Same gate as printReceipt: whoever may print may also retry a failed
+  // job at the counter (D012 merged-role reality — no manager round-trip
+  // for a paper jam).
   const ctx = await getAuthContextWithPermission(
-    MANAGER_ROLES,
+    POS_ROLES,
     PERMISSION_KEYS.POS_PRINT,
   );
   if (!ctx) return { success: false, error: "Không có quyền thử lại" };

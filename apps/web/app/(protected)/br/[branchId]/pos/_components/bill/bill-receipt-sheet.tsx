@@ -959,7 +959,13 @@ export function BillReceipt({
     startPrintTransition(async () => {
       const result = await printProvisionalBill(orderId);
       if (result.success) {
-        toast.success("Đã gửi phiếu tạm tính tới máy in");
+        if (result.data?.agent_offline) {
+          toast.warning(
+            "Máy in đang offline — phiếu tạm tính sẽ in khi kết nối lại",
+          );
+        } else {
+          toast.success("Đã gửi phiếu tạm tính tới máy in");
+        }
       } else {
         toast.error(result.error ?? "Không thể in phiếu tạm tính");
       }
@@ -974,7 +980,11 @@ export function BillReceipt({
     startPrintTransition(async () => {
       const result = await printReceipt(orderId);
       if (result.success) {
-        toast.success("Đã gửi hóa đơn tới máy in");
+        if (result.data?.agent_offline) {
+          toast.warning("Máy in đang offline — hóa đơn sẽ in khi kết nối lại");
+        } else {
+          toast.success("Đã gửi hóa đơn tới máy in");
+        }
       } else {
         toast.error(result.error ?? "Không thể in hóa đơn");
       }

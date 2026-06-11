@@ -24,6 +24,7 @@ import { messages } from "@lib/messages";
 import { CartStore } from "./cart-store";
 import { useOrderSync } from "../_hooks/use-order-sync";
 import { useDailyLimitSync } from "../_hooks/use-daily-limit-sync";
+import { usePrintJobAlerts } from "../_hooks/use-print-job-alerts";
 import {
   createDailyLimitStore,
   type DailyLimitStore,
@@ -395,6 +396,8 @@ export function PosDesktopProvider({
     soundEnabled,
     skipFirstSubscribedRefresh: initialOrdersSeeded,
   });
+
+  usePrintJobAlerts({ branchId, soundEnabled });
 
   // RSC always seeds the limits map (even if empty) — initial SUBSCRIBED
   // skips its catchup; reconnect SUBSCRIBED refetches via dedupe to fill

@@ -841,7 +841,11 @@ export function OrderDetailSheet({
     startMutation(async () => {
       const r = await printReceipt(orderId);
       if (r.success) {
-        notify.success("Đã gửi hóa đơn tới máy in");
+        if (r.data?.agent_offline) {
+          notify.warning("Máy in đang offline — hóa đơn sẽ in khi kết nối lại");
+        } else {
+          notify.success("Đã gửi hóa đơn tới máy in");
+        }
       } else {
         notify.error(r.error ?? "Không thể in hóa đơn");
       }
