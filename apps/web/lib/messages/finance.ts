@@ -721,11 +721,6 @@ export const finance = {
     createDraft: "Tạo nháp",
   },
   periods: {
-    statusLabels: {
-      open: "Đang mở",
-      closing: "Đang đóng",
-      closed: "Đã đóng",
-    },
     title: "Khóa kỳ hỗ trợ kế toán",
     description:
       "Theo dõi kỳ ghi nhận, đối chiếu và khóa kỳ khi cần hỗ trợ kế toán.",

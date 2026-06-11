@@ -1,10 +1,12 @@
 import {
+  FISCAL_PERIOD_STATUS_LABELS_VI,
   ORDER_PAYMENT_STATUS_LABELS_VI,
   ORDER_STATUS_LABELS_VI,
   PAYMENT_RECORD_STATUS_LABELS_VI,
   PRINT_JOB_STATUS_LABELS_VI,
   REFUND_STATUS_LABELS_VI,
   TABLE_STATUS_LABELS_VI,
+  TAX_INVOICE_STATUS_LABELS_VI,
 } from "@comtammatu/shared/labels";
 import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
 
@@ -71,6 +73,26 @@ const STATUS_DOMAINS = {
       failed: "destructive",
       expired: "warning",
       cancelled: "outline",
+    },
+  },
+  "tax-invoice": {
+    labels: TAX_INVOICE_STATUS_LABELS_VI,
+    variants: {
+      draft: "secondary",
+      signing: "outline",
+      submitted: "outline",
+      issued: "success",
+      cancelled: "destructive",
+      replaced: "secondary",
+      not_required: "secondary",
+    },
+  },
+  "fiscal-period": {
+    labels: FISCAL_PERIOD_STATUS_LABELS_VI,
+    variants: {
+      open: "success",
+      closing: "warning",
+      closed: "outline",
     },
   },
 } satisfies Record<string, DomainConfig>;

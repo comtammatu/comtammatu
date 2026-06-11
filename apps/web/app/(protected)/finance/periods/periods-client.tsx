@@ -10,7 +10,6 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 import { Button } from "@comtammatu/ui/components/button";
-import { Badge } from "@comtammatu/ui/components/badge";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
 import {
   Dialog,
@@ -33,6 +32,7 @@ import {
 } from "@comtammatu/shared/messages";
 import { AppToolbar } from "@/components/surface";
 import { TableEmptyStateRow } from "@/components/table-empty-state-row";
+import { StatusBadge } from "@/components/status-badge";
 import { messages } from "@lib/messages";
 import { formatVNDate, getVNMonthYear } from "@/_lib/format-datetime";
 import {
@@ -46,14 +46,6 @@ interface Props {
   periods: FiscalPeriodRow[];
 }
 
-const STATUS_LABEL: Record<string, string> =
-  messages.finance.periods.statusLabels;
-
-const STATUS_VARIANT: Record<string, "default" | "secondary" | "outline"> = {
-  open: "default",
-  closing: "secondary",
-  closed: "outline",
-};
 
 function formatPeriod(month: number, year: number) {
   return `T${String(month).padStart(2, "0")}/${year}`;
@@ -213,9 +205,7 @@ export function PeriodsClient({ periods: initial }: Props) {
                       {formatPeriod(p.period_month, p.period_year)}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={STATUS_VARIANT[p.status] ?? "secondary"}>
-                        {STATUS_LABEL[p.status] ?? p.status}
-                      </Badge>
+                      <StatusBadge domain="fiscal-period" value={p.status} />
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {formatVNDate(p.closed_at)}

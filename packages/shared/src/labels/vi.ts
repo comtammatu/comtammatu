@@ -394,3 +394,21 @@ export const KDS_TICKET_STATUS_LABELS_VI = {
   served: "Đã phục vụ",
   cancelled: "Đã hủy",
 } as const;
+
+/** tax_invoices.status (DB tax_invoices_status_check). */
+export const TAX_INVOICE_STATUS_LABELS_VI = {
+  draft: "Nháp",
+  signing: "Đang ký",
+  submitted: "Chờ CQT",
+  issued: "Đã phát hành",
+  cancelled: "Đã hủy",
+  replaced: "Đã thay thế",
+  not_required: "Không bắt buộc",
+} as const;
+
+/** fiscal_periods.status (DB fiscal_periods_status_check). */
+export const FISCAL_PERIOD_STATUS_LABELS_VI = {
+  open: "Đang mở",
+  closing: "Đang đóng",
+  closed: "Đã đóng",
+} as const;

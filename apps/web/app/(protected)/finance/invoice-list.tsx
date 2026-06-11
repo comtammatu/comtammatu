@@ -9,7 +9,6 @@ import {
   Receipt as IconReceipt,
   RefreshCw as IconRefreshCw,
 } from "lucide-react";
-import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Empty,
@@ -49,28 +48,7 @@ import { TableEmptyStateRow } from "@/components/table-empty-state-row";
 import { formatVNDateTime, getVNDateString } from "@/_lib/format-datetime";
 
 import { FORM_VI, ORDER_VI } from "@comtammatu/shared/messages";
-const STATUS_LABEL: Record<string, string> = {
-  draft: "Nháp",
-  signing: "Đang ký",
-  submitted: "Chờ CQT",
-  issued: "Đã phát hành",
-  cancelled: "Đã hủy",
-  replaced: "Đã thay thế",
-  not_required: "Không bắt buộc",
-};
-
-const STATUS_VARIANT: Record<
-  string,
-  "secondary" | "default" | "destructive" | "outline"
-> = {
-  draft: "secondary",
-  signing: "outline",
-  submitted: "outline",
-  issued: "default",
-  cancelled: "destructive",
-  replaced: "secondary",
-  not_required: "secondary",
-};
+import { StatusBadge } from "@/components/status-badge";
 
 function isResyncable(status: string): boolean {
   return status === "signing" || status === "submitted";
@@ -291,9 +269,7 @@ export function InvoiceList({ initialInvoices }: InvoiceListProps) {
                     {inv.orders?.order_number ?? `#${inv.id}`}
                   </p>
                 </div>
-                <Badge variant={STATUS_VARIANT[inv.status] ?? "secondary"}>
-                  {STATUS_LABEL[inv.status] ?? inv.status}
-                </Badge>
+                <StatusBadge domain="tax-invoice" value={inv.status} />
               </div>
               <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
                 <div>
@@ -432,9 +408,7 @@ export function InvoiceList({ initialInvoices }: InvoiceListProps) {
                     {formatVND(inv.total_amount)}
                   </TableCell>
                   <TableCell>
-                    <Badge variant={STATUS_VARIANT[inv.status] ?? "secondary"}>
-                      {STATUS_LABEL[inv.status] ?? inv.status}
-                    </Badge>
+                    <StatusBadge domain="tax-invoice" value={inv.status} />
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {formatDate(inv.issued_at ?? inv.created_at)}
