@@ -374,6 +374,18 @@ Default primitive mapping:
 
 Toast and durable notification behavior is specified in `docs/spec/toast-notification-system.md`.
 
+### List Surface contract (lock to DataTable)
+
+Responsive list/table surfaces use the shared `DataTable`
+(`apps/web/app/components/data-table/data-table.tsx`): `mobileCardRender` for
+the phone card list, the `Table` primitive for desktop, `AppEmptyState` /
+`TableEmptyStateRow` for empty states, and shared pagination. Hand-maintained
+twin JSX trees (`md:hidden` card list + `hidden … md:block` table) are frozen
+by the `responsive-double-render` ratchet and migrate to `DataTable` per
+route family. Mobile and desktop MUST expose the same fields, status colors,
+and actions for the same row. The retired inventory copy of the data-table
+suite must not be reintroduced.
+
 ### Empty / Confirm (lock to adapters)
 
 - Empty states render through `AppEmptyState` (page/section) or

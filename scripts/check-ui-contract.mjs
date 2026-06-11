@@ -236,6 +236,23 @@ const checks = [
     pattern: /window\.(?:confirm|alert)\(/g,
     allowlist: {},
   },
+  {
+    id: "responsive-double-render",
+    description:
+      "Parallel mobile/desktop JSX trees (hidden … md:block twins) must not spread; migrate list surfaces to the shared DataTable adapter instead.",
+    roots: [{ dir: "apps/web/app", extensions: [".tsx"] }],
+    pattern: /\bhidden\b[^"'\n]*\bmd:block\b/g,
+    allowlist: {
+      "apps/web/app/(protected)/admin/reports/stock-movement/stock-movement-client.tsx": 2,
+      "apps/web/app/(protected)/admin/staff/staff-table.tsx": 1,
+      "apps/web/app/(protected)/finance/invoice-list.tsx": 1,
+      "apps/web/app/(protected)/inventory/issues/[id]/issue-detail-client.tsx": 1,
+      "apps/web/app/(protected)/inventory/purchase-orders/[id]/po-detail-client.tsx": 1,
+      "apps/web/app/(protected)/inventory/transfers/[id]/transfer-detail-client.tsx": 1,
+      "apps/web/app/(protected)/orders/orders-client.tsx": 1,
+      "apps/web/app/(protected)/orders/refunds-client.tsx": 1,
+    },
+  },
 ];
 
 const failures = [];
