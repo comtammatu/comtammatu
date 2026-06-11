@@ -487,6 +487,11 @@ function OrderColumn({
   onCompleteTickets: (ticketIds: number[]) => Promise<void>;
   currentGroupKey: string | null;
 }) {
+  // Peak relief: a long lane packs two cards per row on xl so the cook can
+  // scan 8-10 orders without scrolling. The narrow add-on lane (col-span-2)
+  // cannot fit two readable cards, so it always stays a single column.
+  const dense = column.orders.length > 5 && column.id !== "add_on";
+
   return (
     <section
       data-testid={`kds-column-${column.id}`}
@@ -498,7 +503,11 @@ function OrderColumn({
     >
       <div
         data-testid={`kds-column-list-${column.id}`}
-        className="min-h-0 flex-1 space-y-1.5 overflow-y-auto xl:space-y-2"
+        className={cn(
+          "min-h-0 flex-1 space-y-1.5 overflow-y-auto xl:space-y-2",
+          dense &&
+            "xl:grid xl:grid-cols-2 xl:content-start xl:gap-2 xl:space-y-0",
+        )}
       >
         {column.orders.length === 0 ? (
           <div
