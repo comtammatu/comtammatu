@@ -367,3 +367,21 @@ export const REFUND_STATUS_LABELS_VI = {
   approved: "Đã duyệt",
   rejected: "Từ chối",
 } as const;
+
+/** tables.status (DB tables_status_check). */
+export const TABLE_STATUS_LABELS_VI = {
+  available: "Trống",
+  occupied: "Đang dùng",
+  reserved: "Đã đặt",
+  maintenance: "Bảo trì",
+} as const;
+
+/** print_jobs.status (DB print_jobs_status_check). */
+export const PRINT_JOB_STATUS_LABELS_VI = {
+  pending: "Chờ",
+  processing: "Đang in",
+  printed: "Đã in",
+  failed: "Lỗi",
+  expired: "Hết hạn",
+  cancelled: "Đã hủy",
+} as const;

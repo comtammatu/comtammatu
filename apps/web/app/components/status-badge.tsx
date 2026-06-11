@@ -2,7 +2,9 @@ import {
   ORDER_PAYMENT_STATUS_LABELS_VI,
   ORDER_STATUS_LABELS_VI,
   PAYMENT_RECORD_STATUS_LABELS_VI,
+  PRINT_JOB_STATUS_LABELS_VI,
   REFUND_STATUS_LABELS_VI,
+  TABLE_STATUS_LABELS_VI,
 } from "@comtammatu/shared/labels";
 import { Badge, type BadgeProps } from "@comtammatu/ui/components/badge";
 
@@ -49,6 +51,26 @@ const STATUS_DOMAINS = {
       pending: "warning",
       approved: "success",
       rejected: "destructive",
+    },
+  },
+  table: {
+    labels: TABLE_STATUS_LABELS_VI,
+    variants: {
+      available: "success",
+      occupied: "secondary",
+      reserved: "outline",
+      maintenance: "destructive",
+    },
+  },
+  "print-job": {
+    labels: PRINT_JOB_STATUS_LABELS_VI,
+    variants: {
+      pending: "outline",
+      processing: "secondary",
+      printed: "success",
+      failed: "destructive",
+      expired: "warning",
+      cancelled: "outline",
     },
   },
 } satisfies Record<string, DomainConfig>;

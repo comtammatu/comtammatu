@@ -2,14 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import {
-  ACTIONS_VI,
-  BRANCH_VI,
-  FORM_VI,
-  STATES_VI,
-} from "@comtammatu/shared/messages";
+import { ACTIONS_VI, BRANCH_VI, FORM_VI } from "@comtammatu/shared/messages";
+import { PRINT_JOB_STATUS_LABELS_VI } from "@comtammatu/shared/labels";
 import { formatVNDateTime } from "@comtammatu/shared/time";
-import { Badge } from "@comtammatu/ui/components/badge";
+import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   Select,
@@ -61,27 +57,6 @@ interface Props {
   filterJobType: string | null;
   currentBranchLocked: boolean;
 }
-
-const STATUS_LABEL: Record<string, string> = {
-  pending: "Chờ",
-  processing: "Đang in",
-  printed: "Đã in",
-  failed: "Lỗi",
-  expired: "Hết hạn",
-  cancelled: STATES_VI.cancelled,
-};
-
-const STATUS_VARIANT: Record<
-  string,
-  "default" | "outline" | "secondary" | "destructive"
-> = {
-  pending: "outline",
-  processing: "secondary",
-  printed: "default",
-  failed: "destructive",
-  expired: "destructive",
-  cancelled: "outline",
-};
 
 const JOB_TYPE_LABEL: Record<string, string> = {
   kitchen_ticket: "Phiếu bếp",
@@ -160,7 +135,7 @@ export function PrintJobsClient({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tất cả trạng thái</SelectItem>
-            {Object.entries(STATUS_LABEL).map(([k, v]) => (
+            {Object.entries(PRINT_JOB_STATUS_LABELS_VI).map(([k, v]) => (
               <SelectItem key={k} value={k}>
                 {v}
               </SelectItem>
@@ -234,9 +209,7 @@ export function PrintJobsClient({
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Badge variant={STATUS_VARIANT[j.status] ?? "outline"}>
-                    {STATUS_LABEL[j.status] ?? j.status}
-                  </Badge>
+                  <StatusBadge domain="print-job" value={j.status} />
                 </TableCell>
                 <TableCell className="text-right text-xs font-mono tabular-nums">
                   {j.attempts}

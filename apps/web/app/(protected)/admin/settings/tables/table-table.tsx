@@ -7,7 +7,6 @@ import {
   Trash as IconTrash,
   Utensils as IconToolsKitchen,
 } from "lucide-react";
-import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import {
   DropdownMenu,
@@ -35,8 +34,7 @@ import {
   AlertDialogTitle,
 } from "@comtammatu/ui/components/alert-dialog";
 import { deleteTable } from "./actions";
-import { STATUS_LABELS, STATUS_VARIANTS } from "./constants";
-import type { TableStatus } from "./constants";
+import { StatusBadge } from "@/components/status-badge";
 import { TableFormDialog } from "./table-form-dialog";
 import type { ZoneRow } from "./zone-table";
 import { toast } from "@comtammatu/ui/components/sonner";
@@ -117,13 +115,7 @@ export function TableTable({ tables, zones }: TableTableProps) {
                   {table.zone_name ?? "—"}
                 </TableCell>
                 <TableCell>
-                  <Badge
-                    variant={
-                      STATUS_VARIANTS[table.status as TableStatus] ?? "outline"
-                    }
-                  >
-                    {STATUS_LABELS[table.status as TableStatus] ?? table.status}
-                  </Badge>
+                  <StatusBadge domain="table" value={table.status} />
                 </TableCell>
                 <TableCell>
                   <DropdownMenu>

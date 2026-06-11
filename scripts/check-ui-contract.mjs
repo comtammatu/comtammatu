@@ -167,7 +167,6 @@ const checks = [
     pattern:
       /\bconst\s+[A-Z][A-Z0-9_]*STATUS[A-Z0-9_]*(?:\s*:\s*[^=\n]+)?\s*=\s*[{[]/g,
     allowlist: {
-      "apps/web/app/(protected)/admin/dashboard/page.tsx": 1,
       "apps/web/app/(protected)/admin/settings/tables/constants.ts": 1,
       "apps/web/app/(protected)/br/[branchId]/kds/actions.ts": 1,
       "apps/web/app/(protected)/br/[branchId]/kds/hooks/use-kds-realtime.ts": 2,

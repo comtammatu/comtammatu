@@ -41,6 +41,7 @@ import {
 import { formatVND } from "@comtammatu/shared/format";
 import { formatVNTime } from "@comtammatu/shared/time";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
+import { StatusBadge } from "@/components/status-badge";
 import { loadAuthState } from "@/_lib/auth";
 import { AppPage, AppPageHeader, AppSection } from "@/components/surface";
 import {
@@ -243,19 +244,7 @@ function RecentOrderList({ orders }: { orders: RecentOrders }) {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-            <Badge
-              variant={
-                order.status === "cancelled"
-                  ? "destructive"
-                  : order.status === "ready"
-                    ? "success"
-                    : order.status === "in_progress"
-                      ? "info"
-                      : "secondary"
-              }
-            >
-              {ORDER_STATUS_LABELS[order.status] ?? order.status}
-            </Badge>
+            <StatusBadge domain="order" value={order.status} />
             <span className="font-mono text-sm font-medium tabular-nums">
               {formatVND(order.total_amount)}
             </span>
@@ -521,14 +510,6 @@ const ADMIN_DASHBOARD_COPY = {
   settingsCta: "Mở cài đặt",
   hrCta: "Mở nhân sự",
 } as const;
-
-const ORDER_STATUS_LABELS: Record<string, string> = {
-  pending: "Chờ",
-  in_progress: "Đang làm",
-  ready: "Sẵn sàng",
-  completed: "Hoàn thành",
-  cancelled: "Hủy",
-};
 
 function computeChange(today: number, yesterday: number): number {
   if (yesterday === 0) return today > 0 ? 100 : 0;
