@@ -194,9 +194,10 @@ export async function fetchProductionOrders(): Promise<
     };
   });
 
-  // Draft orders chưa qua RPC nên unit_cost_at_production còn null. Tính tạm
-  // bằng BOM × WAC tại CK (mirror logic confirm_production_order RPC) để UI
-  // hiện được tổng chi phí ước tính trước khi xác nhận.
+  // Draft orders haven't been through the RPC, so unit_cost_at_production is
+  // still null. Estimate as BOM × WAC at the central kitchen (mirrors the
+  // confirm_production_order RPC) so the UI can show an estimated total
+  // cost before confirmation.
   const draftFgIds = new Set<number>();
   for (const order of rows) {
     if (order.status === "draft") {

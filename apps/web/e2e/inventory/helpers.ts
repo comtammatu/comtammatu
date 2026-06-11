@@ -618,7 +618,7 @@ export async function resolveInventoryManagerUser(
   const { data: positions, error: posErr } = await supabase
     .from("positions")
     .select("id")
-    .eq("code", "warehouse_head");
+    .eq("code", "warehouse_manager");
 
   if (posErr) {
     throw new Error(

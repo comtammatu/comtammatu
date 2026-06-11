@@ -160,9 +160,6 @@ interface PosDesktopShellProps {
   canCloseShift: boolean;
   /** `pos:confirm_payment` — gate phương thức"Tiền mặt" trên bill (cashier+). */
   canConfirmCash: boolean;
-  /** `pos:close_shift_variance_override` — cho phép đóng ca khi chênh lệch
-   *  vượt ngưỡng (BM+). Cashier không có quyền → block ở UI khi variance gate. */
-  canOverrideVariance: boolean;
   /** `branch_menu_limits` module ACL — cashier/BM can lock dishes from POS. */
   canManageMenuLimits: boolean;
   /** Tenant payment methods seeded từ RSC — bill render không phải đợi fetch. */
@@ -231,7 +228,6 @@ export function PosDesktopShell(props: PosDesktopShellProps) {
         categories={props.categories}
         canCloseShift={props.canCloseShift}
         canConfirmCash={props.canConfirmCash}
-        canOverrideVariance={props.canOverrideVariance}
         canManageMenuLimits={props.canManageMenuLimits}
         initialPaymentMethods={props.initialPaymentMethods}
         initialVietQrConfig={props.initialVietQrConfig}
@@ -247,7 +243,6 @@ function PosDesktopInner({
   categories: initialCategories,
   canCloseShift,
   canConfirmCash,
-  canOverrideVariance,
   canManageMenuLimits,
   initialPaymentMethods,
   initialVietQrConfig,
@@ -256,7 +251,6 @@ function PosDesktopInner({
   categories: MenuCategory[];
   canCloseShift: boolean;
   canConfirmCash: boolean;
-  canOverrideVariance: boolean;
   canManageMenuLimits: boolean;
   initialPaymentMethods: readonly PaymentMethod[];
   initialVietQrConfig: VietQrConfig | null;
@@ -267,9 +261,9 @@ function PosDesktopInner({
   const tables = usePosTables();
   const { refreshOrders, refreshOrdersDeduped } = usePosOperationalDispatch();
 
-  // Categories thẳng từ RSC seed, không re-map mỗi event. Daily-limit slice
-  // được MenuItemButton tự subscribe qua `useDailyLimit(item.id)` — chỉ card
-  // có limit đổi mới re-render thay vì cả grid (Fix#4 B1, Architect option b).
+  // Categories come straight from the RSC seed — no re-mapping per event.
+  // MenuItemButton subscribes to the daily-limit slice via
+  // `useDailyLimit(item.id)`, so only cards whose limit changed re-render.
   const categories: MenuCategory[] = initialCategories;
   const menuLimitRows = useMemo<MenuLimitRow[]>(
     () =>
@@ -311,14 +305,14 @@ function PosDesktopInner({
 
   const router = useRouter();
 
-  // Cross-tab realtime: khi cashier (hoặc BM) đóng ca từ tab/máy khác,
-  // payload UPDATE bay tới đây với `new.status='closed'`. Refresh route
-  // để page re-fetch active session — nếu chưa có ca mới, page render
-  // SessionGate / "liên hệ thu ngân" tự động.
+  // Cross-tab realtime: when the session is closed from another tab/device,
+  // the UPDATE payload lands here with `new.status='closed'`; refresh the
+  // route so the page re-fetches the active session (SessionGate renders
+  // when none is open).
   //
-  // Defense-in-depth (rule REALTIME-SUBSCRIBE-NEEDS-STATUS-CALLBACK):
-  // status callback skip lần SUBSCRIBED đầu (state đã seed từ RSC), reload
-  // mỗi reconnect sau đó để bắt event missed mid-disconnect.
+  // Defense-in-depth (rule REALTIME-SUBSCRIBE-NEEDS-STATUS-CALLBACK): the
+  // status callback skips the first SUBSCRIBED (state already seeded from
+  // RSC) and reloads on later reconnects to catch events missed offline.
   useRealtimeChannel(
     (supabase) => {
       let initialSubscribe = true;
@@ -370,10 +364,11 @@ function PosDesktopInner({
   const [editingAppendItem, setEditingAppendItem] = useState<CartItem | null>(
     null,
   );
-  // Tap-to-edit cho món ĐÃ GỬI bếp khi status='pending'. Lưu order_item_id
-  // riêng để onConfirm gọi editPendingOrderItem (không in-place mutate cart
-  // store). seedCartItem chỉ dùng để pre-populate customizer state — KHÔNG
-  // ghi vào cart store. Server RPC re-validate status='pending'.
+  // Tap-to-edit for an item already SENT to the kitchen while
+  // status='pending'. Stores order_item_id so onConfirm calls
+  // editPendingOrderItem (no in-place cart-store mutation). seedCartItem only
+  // pre-populates customizer state — never written to the cart store. The
+  // server RPC re-validates status='pending'.
   const [editingSentItem, setEditingSentItem] = useState<{
     orderItemId: number;
     seedCartItem: CartItem;
@@ -392,10 +387,10 @@ function PosDesktopInner({
   const [billInitialOrder, setBillInitialOrder] = useState<OrderData | null>(
     null,
   );
-  // Header-only seed cho non-detail bill paths (F9 / list / picker / post-
-  // submit toast). `usePosOrders()` đã có sẵn snapshot `SessionOrder` —
-  // derive thay vì thêm state. BillReceipt dùng để paint dialog title (số
-  // đơn + total) ngay khi mở, fetch full bill chạy nền.
+  // Header-only seed for non-detail bill paths (F9 / list / picker /
+  // post-submit toast). `usePosOrders()` already holds a `SessionOrder`
+  // snapshot — derive instead of adding state. BillReceipt paints the dialog
+  // title (order number + total) immediately; the full bill fetch runs behind.
   const billHeaderSeed = useMemo<SessionOrder | null>(
     () =>
       billOrderId !== null
@@ -407,8 +402,8 @@ function PosDesktopInner({
   const [orderDetailNumber, setOrderDetailNumber] = useState<string | null>(
     null,
   );
-  // Lightweight summary handed to OrderDetailSheet so its header (số đơn,
-  // bàn / mang về) renders immediately on a list-row tap. Fresh fetch always
+  // Lightweight summary handed to OrderDetailSheet so its header (order
+  // number, table/takeaway) renders immediately on a list-row tap. Fresh fetch always
   // wins for items + totals; this only fills the gap during the items
   // skeleton phase. Cleared on sheet close + on table-tap (which provides
   // full data via orderDetailSeed instead).
@@ -431,9 +426,9 @@ function PosDesktopInner({
   const [appendSubmitting, setAppendSubmitting] = useState(false);
   const [detailRefreshTick, setDetailRefreshTick] = useState(0);
   const [hotkeyOpen, setHotkeyOpen] = useState(false);
-  // Multi-order-per-table (PR3 Gộp bàn Option A): when user taps an occupied
-  // table, show a picker listing active orders +"Tạo đơn mới" button. The
-  // picker is the only path to start a 2nd order on the same physical table.
+  // Multi-order-per-table: when the user taps an occupied table, show a
+  // picker listing active orders + a "Tạo đơn mới" button. The picker is the
+  // only path to start a 2nd order on the same physical table.
   //
   // Storing only the table id (not a snapshot of orders) keeps the picker
   // tied to live `orders` state — when realtime fires (another terminal
@@ -644,7 +639,7 @@ function PosDesktopInner({
     setEditingAppendItem(null);
   }, [appendTarget?.orderId]);
 
-  // Count active orders per table — drives the"N đơn" badge on multi-order
+  // Count active orders per table — drives the "N đơn" badge on multi-order
   // tables and the picker's order list.
   const orderCountByTable = useMemo(() => {
     const map = new Map<number, number>();
@@ -876,9 +871,9 @@ function PosDesktopInner({
         return;
       }
 
-      // Multi-order-per-table: tap on occupied table opens a picker showing
-      // active orders +"Tạo đơn mới" button. The picker is the discoverable
-      // entry point for the new"2nd order on same bàn" flow.
+      // Multi-order-per-table: tapping an occupied table opens a picker
+      // showing active orders + a "Tạo đơn mới" button — the discoverable
+      // entry point for a 2nd order on the same table.
       const activeOrders = orders.filter(
         (o) =>
           o.table_id === table.id &&
@@ -888,7 +883,7 @@ function PosDesktopInner({
       if (activeOrders.length === 0) {
         // Edge case: tables.status is occupied but no active order surfaces in
         // the current orders list (stale realtime, cross-session race). Fall
-        // back to the legacy single-fetch path so the cashier still sees the
+        // back to the single-fetch fallback path so the cashier still sees the
         // row instead of an empty picker.
         startTransition(async () => {
           const result = await fetchActiveOrderForTable(branchId, table.id);
@@ -1046,8 +1041,8 @@ function PosDesktopInner({
             setOrderDetailSeed(null);
             setOrderDetailSummary(null);
             setActiveTable(null);
-            // Reset orderType về home (dine_in nếu có bàn, ngược lại giữ takeaway)
-            // → trang nhảy về "Chọn bàn | Mang về" đối xứng với flow dine_in.
+            // Reset orderType to home (dine_in when tables exist, else keep
+            // takeaway) → jump back to "Chọn bàn | Mang về", symmetric with dine_in.
             setCartOrderType(tables.length > 0 ? "dine_in" : "takeaway");
             void refreshOperational();
             return;
@@ -1173,10 +1168,11 @@ function PosDesktopInner({
     [menuItemById],
   );
 
-  // OrderDetailSheet → "Sửa món" tap. Lookup MenuItem từ menuItemById
-  // (nếu menu thay đổi/đã reload, item.menu_item_id có thể không còn) +
-  // construct seedCartItem từ row snapshot để customizer pre-populate state.
-  // Server-side guard re-validates status='pending'; UI gate là UX hint.
+  // OrderDetailSheet → "Sửa món" tap. Look up the MenuItem in menuItemById
+  // (item.menu_item_id may be gone if the menu changed/reloaded) and build
+  // seedCartItem from the row snapshot so the customizer can pre-populate.
+  // The server-side guard re-validates status='pending'; the UI gate is only
+  // a UX hint.
   const handleStartEditSent = useCallback(
     (snapshot: OrderItemRowData) => {
       if (snapshot.menu_item_id == null) {
@@ -1200,7 +1196,7 @@ function PosDesktopInner({
         sides: snapshot.sides,
         note: snapshot.note ?? undefined,
       };
-      // Clear other editing modes — chỉ 1 customizer flow active một lúc.
+      // Clear other editing modes — only one customizer flow active at a time.
       setEditingCartItem(null);
       setEditingAppendItem(null);
       setEditingSentItem({ orderItemId: snapshot.id, seedCartItem });
@@ -1237,9 +1233,9 @@ function PosDesktopInner({
         }
       }
 
-      // edit-sent: call server action — không in-place mutate cart store.
-      // Đặt branch này TRƯỚC editingCartItem/editingAppendItem để safety:
-      // editingSentItem chỉ set khi parent gọi handleStartEditSent.
+      // edit-sent: call the server action — never mutate the cart store in
+      // place. This branch goes BEFORE editingCartItem/editingAppendItem:
+      // editingSentItem is only set when the parent calls handleStartEditSent.
       if (editingSentItem) {
         const orderItemId = editingSentItem.orderItemId;
         startTransition(async () => {
@@ -1432,7 +1428,7 @@ function PosDesktopInner({
       // Clear any table-tap seed: this path (OrderListPane row tap) does
       // NOT have the full detail with items, so OrderDetailSheet falls
       // back to its own fetch. The summary, when available, lets the
-      // sheet header (số đơn, bàn / mang về) render instantly while items
+      // sheet header (order number, table/takeaway) render instantly while items
       // load — saves the 500-1000ms blank-modal flash on slow networks.
       setOrderDetailSeed(null);
       setOrderDetailSummary(summary ?? null);
@@ -1671,8 +1667,8 @@ function PosDesktopInner({
     : undefined;
 
   // Back-to-main handler: dine_in → clear table → table gate; takeaway →
-  // flip mode → table gate. Wired to mobile header back arrow (next to số
-  // bàn) — bottom action bar không còn "Đổi bàn" để cashier khỏi với xa.
+  // flip mode → table gate. Wired to the mobile header back arrow (next to
+  // the table number) — kept out of the bottom action bar so it stays in reach.
   const handleSwitchTableMode = useCallback(() => {
     if (cartOrderType === "dine_in") {
       setShowOrders(false);
@@ -1864,8 +1860,8 @@ function PosDesktopInner({
           toast.message("Chạm món trên menu để thêm");
         }}
         onStartEditSent={(snapshot) => {
-          // Close detail trước rồi mới mở customizer — tránh stack 2 sheet
-          // trên mobile (focus trap fight). Snapshot the detail context
+          // Close the detail before opening the customizer — avoids stacking
+          // two sheets on mobile (focus-trap fight). Snapshot the detail context
           // first so closeCustomizerAndMaybeReopenDetail can restore it
           // after the customizer dismisses (POS-DETAIL-REOPEN-AFTER-
           // CUSTOMIZER).
@@ -1904,7 +1900,6 @@ function PosDesktopInner({
         sessionId={session.id}
         open={showCloseSession}
         onOpenChange={setShowCloseSession}
-        canOverrideVariance={canOverrideVariance}
       />
 
       <ArchivedOrdersSheet

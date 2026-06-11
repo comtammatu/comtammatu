@@ -7,7 +7,7 @@ export const KDS_ACTIVE_TICKET_STATUSES = [
 ] as const;
 
 export const KDS_CLEANUP_RETENTION_HOURS = 6;
-export const KDS_CLEANUP_RETENTION_MS =
+const KDS_CLEANUP_RETENTION_MS =
   KDS_CLEANUP_RETENTION_HOURS * 60 * 60 * 1000;
 
 export function getKdsCleanupCutoffIso(now: Date = new Date()): string {

@@ -47,7 +47,7 @@ export default async function RecipesPage() {
       const items: RecipeItem[] = (row.recipes ?? []).map((line) => {
         const qty = Number(line.quantity ?? 0);
         const ingredientId = line.ingredients?.id ?? line.ingredient_id ?? 0;
-        // WAC (giá nhập trung bình tại CK) ưu tiên hơn unit_cost (giá tham chiếu thủ công).
+        // WAC (average received cost at the CK) takes precedence over unit_cost (manual reference price).
         const wac = wacMap[String(ingredientId)];
         const unitCost =
           wac != null ? wac : Number(line.ingredients?.unit_cost ?? 0);

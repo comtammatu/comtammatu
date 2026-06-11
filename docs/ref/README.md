@@ -22,7 +22,6 @@ Tài liệu tham chiếu dài hạn cho repo này.
 
 ## Các tài liệu khác
 
-- [binh-ma-tu-tiktok/README.md](binh-ma-tu-tiktok/README.md): content contract và AI hậu kỳ cho kênh TikTok Bình "Má Tư"
 - [einvoice-tax.md](einvoice-tax.md)
 - [labor-contracts.md](labor-contracts.md)
 - [payroll-pit.md](payroll-pit.md)

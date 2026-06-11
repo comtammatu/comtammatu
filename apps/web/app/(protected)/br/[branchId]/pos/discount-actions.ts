@@ -311,9 +311,10 @@ export async function clearOrderDiscount(
     return { success: false, error: "Không có quyền truy cập chi nhánh này" };
   }
 
-  // Snapshot discount cũ ngay TRƯỚC RPC để audit ghi lại đầy đủ — sau RPC
-  // các cột này về NULL nên không recover được nữa. Đơn nằm khác branch sẽ
-  // bị RLS lọc → `oldData=null`, RPC vẫn raise tenant/branch mismatch.
+  // Snapshot the old discount BEFORE the RPC so the audit captures it —
+  // after the RPC these columns are NULL and unrecoverable. An order on
+  // another branch is filtered by RLS → `oldData=null`, and the RPC still
+  // raises the tenant/branch mismatch.
   const { data: existing } = await supabase
     .from("orders")
     .select(
@@ -344,9 +345,9 @@ export async function clearOrderDiscount(
     };
   }
 
-  // Fire-and-forget audit. Cashier xoá chiết khấu = tác động tài chính
-  // nên cần trace lý do; đối xứng với `apply_order_discount` (đã ghi note
-  // vào `orders.discount_note`) và `void_order_item` (RPC tự log).
+  // Fire-and-forget audit. Clearing a discount is a financial action that
+  // needs a traceable reason — symmetric with `apply_order_discount` (note
+  // stored in `orders.discount_note`) and `void_order_item` (RPC self-logs).
   await logAudit(supabase, {
     action: "order.discount.cleared",
     entityType: "orders",
@@ -597,8 +598,8 @@ const splitInputSchema = z.object({
   sourceOrderId: orderIdSchema,
   // Each entry: move `quantity` units of `itemId` from source to new order.
   // quantity == row.quantity → full-line move (in-place UPDATE order_id);
-  // quantity <  row.quantity → partial (clone sang đơn mới, giảm qty source).
-  // Cho phép tách "2 Cơm sườn" (1 row qty=2) thành 2 bill mỗi 1 phần.
+  // quantity <  row.quantity → partial (clone onto the new order, reduce
+  // the source qty). Lets "2 Cơm sườn" (1 row qty=2) split into 2 bills.
   items: z
     .array(
       z.object({

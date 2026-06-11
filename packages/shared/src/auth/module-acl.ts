@@ -180,10 +180,3 @@ export const MODULE_ACL: Record<ModuleKey, ModuleAcl> = {
 export function canAccess(role: StaffRole, moduleKey: ModuleKey): boolean {
   return MODULE_ACL[moduleKey].allowedRoles.includes(role);
 }
-
-/** Get all modules a role can access */
-export function getAccessibleModules(role: StaffRole): ModuleKey[] {
-  return (Object.keys(MODULE_ACL) as ModuleKey[]).filter((key) =>
-    MODULE_ACL[key].allowedRoles.includes(role),
-  );
-}

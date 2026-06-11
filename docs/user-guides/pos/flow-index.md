@@ -8,7 +8,7 @@
 | [POS-04](flows/pos-04-append-items.md)   | Thêm món vào đơn đang phục vụ                   | Phục vụ, Thu ngân    | `pos:use`                     | ✅ Đã có guide   |
 | [POS-05](flows/pos-05-payment.md)        | Thanh toán đơn (tiền mặt / chuyển khoản + HĐĐT) | Thu ngân             | `pos:confirm_payment`         | ✅ Đã có guide   |
 | [POS-06](flows/pos-06-mark-served.md)    | Đánh dấu đã phục vụ (audit, ≠ thanh toán)       | Phục vụ, Thu ngân    | `pos:use`                     | ✅ Đã có guide   |
-| [POS-07](flows/pos-07-modify-order.md)   | Sửa đơn (chuyển bàn / hủy / tách / gộp)         | Thu ngân, Quản lý CN | `pos:use`, `pos:cancel_order` | ✅ Đã có guide   |
+| [POS-07](flows/pos-07-modify-order.md)   | Sửa đơn (chuyển bàn / hủy / tách / gộp)         | Thu ngân, Quản lý CN | `pos:use`, `pos:void_order`   | ✅ Đã có guide   |
 | [POS-08](flows/pos-08-exceptions.md)     | Xử lý ngoại lệ (mất mạng / máy in / HĐĐT lỗi)   | Tất cả               | —                             | ✅ Đã có guide   |
 | [POS-09](flows/pos-09-close-session.md)  | Đóng ca POS + đối soát tiền                     | Thu ngân, Quản lý CN | `pos:close_shift`             | ✅ Đã có guide   |
 

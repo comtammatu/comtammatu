@@ -209,7 +209,7 @@ export const confirmCashPaymentRpcFallback: RpcErrorFallback = {
  *    is the shared payment vocabulary; the shorter `amount_mismatch`
  *    is the `create_payment` RPC's own check ("Số tiền không khớp.").
  * 3. Shared payment vocabulary — mirrors `mapPaymentRpcMessage` so the
- *    handler can drop its call to the legacy local helper. Vocabulary
+ *    handler can drop its call to the older local helper. Vocabulary
  *    is inlined (not via the helper) so the mapping table is the single
  *    source of truth; `mapPaymentRpcMessage` remains exported for VietQR
  *    + confirmPayment callers that still flow through the local helper

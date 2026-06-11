@@ -72,9 +72,10 @@ export function OrderItemActionsSheet({
   const canReduce = canManage && actionable && (item?.quantity ?? 0) >= 2;
   const canDiscount =
     canManage && actionable && item != null && onDiscountRequest != null;
-  // Edit gates strictly on status='pending' — mirror server RPC. Khi chef
-  // đã chuyển preparing/ready, đổi variant/topping = phí thực phẩm; cashier
-  // phải dùng Hủy + Thêm. menu_item_id phải có để parent lookup MenuItem.
+  // Edit gates strictly on status='pending' — mirrors the server RPC. Once
+  // the chef moved to preparing/ready, changing variant/topping wastes food;
+  // the cashier must void + re-add. menu_item_id must exist for the parent
+  // MenuItem lookup.
   const canEdit =
     canManage &&
     item != null &&

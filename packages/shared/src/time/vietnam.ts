@@ -1,7 +1,5 @@
 export const VN_TIME_ZONE = "Asia/Ho_Chi_Minh";
 export const VN_LOCALE = "vi-VN";
-export const VN_UTC_OFFSET_HOURS = 7;
-export const VN_UTC_OFFSET_MS = VN_UTC_OFFSET_HOURS * 60 * 60 * 1000;
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const ISO_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;

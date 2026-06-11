@@ -247,7 +247,7 @@ export function getPresetRange(
 }
 
 // Compare period semantics (BA §3 + Q4):
-//   prev_period  = same length, lùi liền kề (default)
+//   prev_period  = same length, immediately preceding (default)
 //   prev_week    = shift exactly 7 days back
 //   prev_month   = shift to same DOM in previous month, pad if missing
 //   prev_year    = shift exactly 1 year back
@@ -338,8 +338,8 @@ export function resolveFinanceRange(
 }
 
 // Same-time-of-day cutoff (Q1 + BA §3): when range=today, server actions
-// pass cutoff=now ISO so "today vs hôm qua" compares cùng giờ. Returns
-// null otherwise — RPCs must accept null = full-day.
+// pass cutoff=now ISO so today-vs-yesterday compares the same hours.
+// Returns null otherwise — RPCs must accept null = full-day.
 export function getCutoffTime(
   params: FinanceParams,
   now: Date = new Date(),

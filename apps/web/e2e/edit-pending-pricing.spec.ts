@@ -114,13 +114,8 @@ test.describe("Edit pending order item — pricing recompute", () => {
     }
   });
 
-  // Modifier-aware pricing test deferred — needs menu_item_modifiers fixture
-  // wiring. When that lands, copy this spec and replace the qty bump with
-  // a modifier toggle in the customizer; assert unit_price reflects
-  // base + variant + modifier + side per migration 20260518000000.
-  test.fixme("changing modifiers recomputes unit_price from canonical menu prices", async () => {
-    // Pending menu_item_modifiers fixture — see helpers/supabase.ts TODO.
-  });
+  // TODO: modifier-aware pricing e2e — needs menu_item_modifiers fixtures in
+  // helpers/supabase.ts (assert unit_price = base + variant + modifier + side).
 });
 
 async function resolveOrderItemId(orderId: number): Promise<number> {

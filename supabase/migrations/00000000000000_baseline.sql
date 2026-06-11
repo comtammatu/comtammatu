@@ -1,8 +1,8 @@
 -- =====================================================================
 -- Consolidated baseline — public schema (canonical fresh-env install).
--- Generated 2026-05-30 from matu-dev (nikkridjukdbqvkvqlmi) via libpq pg_dump 18.
--- Validated: replays from an empty public schema (psql --single-transaction, exit 0);
--- rebuilt matu-dev EXACTLY (118 tables / 279 fns / 273 policies / 523 indexes);
+-- Generated 2026-05-30 via libpq pg_dump 18.
+-- Validated: replays from an empty public schema (psql --single-transaction, exit 0)
+-- and rebuilds the source schema exactly (118 tables / 279 fns / 273 policies / 523 indexes);
 -- db:types from the rebuilt DB == committed types. Supersedes _archive/ chain.
 -- Managed surfaces (extensions, storage buckets+policies, realtime publication,
 -- cron jobs) are NOT in this public dump — see supabase/migrations/README.md.

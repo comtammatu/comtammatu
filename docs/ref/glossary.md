@@ -158,8 +158,8 @@ Các cụm dưới đây bị xem là drift và phải thay bằng nhãn tiếng
 | `owner`                        | chủ sở hữu            | Vai trò cao nhất cấp tenant                                                   |
 | `super_manager`                | quản lý tổng          | Vận hành cấp tenant (CW + CK)                                                 |
 | `branch_manager`               | quản lý chi nhánh     | Quản trị một chi nhánh vận hành                                               |
-| `warehouse_manager`            | quản lý kho tổng      | Procurement + kho Trụ sở; blue legacy position codes: `kho_truong`, `thu_kho` |
-| `production_manager`           | quản lý sản xuất      | Bếp trung tâm; blue legacy position code: `bep_truong`                        |
+| `warehouse_manager`            | quản lý kho tổng      | Procurement + kho Trụ sở                                                      |
+| `production_manager`           | quản lý sản xuất      | Bếp trung tâm                                                                 |
 | `cashier`                      | thu ngân              | POS                                                                           |
 | `waiter`                       | phục vụ               | POS                                                                           |
 | `chef`                         | bếp                   | KDS                                                                           |
@@ -167,16 +167,20 @@ Các cụm dưới đây bị xem là drift và phải thay bằng nhãn tiếng
 
 `user_role` là compatibility claim trong JWT, derived từ `positions.code`. Vai trò mới (`warehouse_manager`, `production_manager`) được thêm khi Auth tách Kho và Bếp trung tâm thành workstream riêng.
 
-Một số dữ liệu cũ vẫn có position code tiếng Việt không dấu như `kho_truong`,
-`thu_kho`, `bep_truong`, `phu_bep`, `quan_ly_CN`, `ke_toan`, và
-`ke_toan_truong`. Đây là compatibility surface để duy trì JWT/RLS hiện tại, không
-phải naming mẫu cho position mới. Position mới dùng English `lower_snake_case`.
+Position code tiếng Việt legacy (`quan_ly_CN`, `kho_truong`, `thu_kho`,
+`bep_truong`, `phu_bep`, `ke_toan`, `ke_toan_truong`, `tro_ly_giam_doc`) đã được
+rename/loại bỏ tận gốc bởi migration `20260610230000_canonical_position_codes_lean`.
+Bộ mã canonical CHỈ gồm 11 mã English: `owner`, `super_manager`, `branch_manager`,
+`warehouse_manager`, `production_manager`, `head_chef`, `kitchen_helper`, `chef`,
+`cashier`, `waiter`, `office`. Thêm mã mới = cập nhật ĐỒNG THỜI
+`POSITION_CODE_TO_STAFF_ROLE` (shared TS) + SQL twin
+`private.staff_role_from_position_code` trong cùng PR.
 
 ### Auth — Position ⟂ Permission
 
 | Thuật ngữ                   | Code identifier                                         | Ý nghĩa                                                                                                                         |
 | --------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| position (chức vụ)          | `positions(code, label_vi, label_en)`                | Nhãn HR của nhân viên. Không gate authz trực tiếp. Code mới dùng English, vd `head_chef`, `warehouse_head`, `warehouse_keeper`. |
+| position (chức vụ)          | `positions(code, label_vi, label_en)`                | Nhãn HR của nhân viên. Không gate authz trực tiếp. Code thuộc bộ 11 mã English canonical, vd `head_chef`, `warehouse_manager`. |
 | permission key (khóa quyền) | `permission_keys(key)`                                  | Chuỗi canonical cho hành động, vd `inventory:production_create`. Đơn vị authz nhỏ nhất.                                         |
 | template (bộ quyền mẫu)     | `role_templates(position_code, permission_keys[])`      | Preset quyền gắn với 1 position; snapshot, không propagate khi edit.                                                            |
 | grant (cấp quyền)           | `staff_permissions(user_id, branch_id, permission_key)` | Quyền thật của user tại branch cụ thể. `branch_id IS NULL` = tenant-wide.                                                       |

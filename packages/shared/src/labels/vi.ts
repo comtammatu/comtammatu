@@ -78,13 +78,13 @@ export const APP_COPY_VI = {
   noScopedBranches: "Không có chi nhánh trong phạm vi",
 } as const;
 
-export const SITE_KIND_LABELS_VI: Record<SiteKind, string> = {
+const SITE_KIND_LABELS_VI: Record<SiteKind, string> = {
   central_warehouse: "Kho tổng",
   central_kitchen: "Bếp trung tâm",
   branch: "Chi nhánh",
 };
 
-export const INVENTORY_SITE_KIND_LABELS_VI: Record<SiteKind, string> = {
+const INVENTORY_SITE_KIND_LABELS_VI: Record<SiteKind, string> = {
   central_warehouse: "Kho tổng",
   central_kitchen: "Bếp trung tâm",
   branch: "Kho chi nhánh",
@@ -117,10 +117,6 @@ export function getModuleLabelVi(moduleKey: string): string {
   return MODULE_LABELS_VI[moduleKey as ModuleLabelKey] ?? moduleKey;
 }
 
-export function getSiteLabelVi(site: SiteLike): string {
-  return getSiteKindLabelVi(resolveSiteKind(site));
-}
-
 export function getInventorySiteLabelVi(site: SiteLike): string {
   return getInventorySiteKindLabelVi(resolveSiteKind(site));
 }
@@ -128,15 +124,6 @@ export function getInventorySiteLabelVi(site: SiteLike): string {
 // =============================================================
 // Inventory redesign vocabulary (S10-S15 UI wiring)
 // =============================================================
-
-/** GRN price variance tier names (Q3 spec) */
-export const VARIANCE_TIER_LABELS_VI = {
-  0: "Bình thường",
-  1: "Gợi ý",
-  2: "Xác nhận",
-  3: "Ghi chú + override",
-  4: "Chặn cứng",
-} as const;
 
 /** Variance tier short copy (inline hint) */
 export const VARIANCE_TIER_HINT_VI = {
@@ -178,14 +165,6 @@ export const WASTE_REASON_LABELS_VI = {
   other: "Khác",
 } as const;
 
-/** Approval status (waste + GRN hardblock) */
-export const APPROVAL_STATUS_LABELS_VI = {
-  not_required: "Không cần duyệt",
-  pending: "Chờ duyệt",
-  approved: "Đã duyệt",
-  rejected: "Đã từ chối",
-} as const;
-
 /** Stocktake session mode (Q2 spec) */
 export const STOCKTAKE_MODE_LABELS_VI = {
   daily: "Kiểm kê ngày",
@@ -195,41 +174,11 @@ export const STOCKTAKE_MODE_LABELS_VI = {
   spot: "Kiểm tra đột xuất",
 } as const;
 
-/** Stocktake session status */
-export const STOCKTAKE_STATUS_LABELS_VI = {
-  in_progress: "Đang đếm",
-  completed: "Đã hòan thành",
-  cancelled: "Đã hủy",
-} as const;
-
-/** Shift segments (anti-split policy) */
-export const SHIFT_SEGMENT_LABELS_VI = {
-  morning: "Ca sáng",
-  afternoon: "Ca chiều",
-  evening: "Ca tối",
-} as const;
-
 /** ABC class Pareto tiers */
 export const ABC_CLASS_LABELS_VI = {
   A: "Nhóm A (top 80%)",
   B: "Nhóm B (15%)",
   C: "Nhóm C (5%)",
-} as const;
-
-/** Offline stocktake conflict resolution options */
-export const CONFLICT_RESOLUTION_LABELS_VI = {
-  keep_server: "Giữ số trên server",
-  apply_client: "Áp số từ thiết bị",
-  manual_value: "Nhập số khác",
-  reject: "Hủy (không áp dụng)",
-} as const;
-
-/** Offline stocktake conflict types */
-export const CONFLICT_TYPE_LABELS_VI = {
-  is_final_overwrite: "Ghi đè số đã chốt",
-  concurrent_round_submit: "2 thiết bị cùng lúc",
-  clock_tamper: "Giờ thiết bị sai lệch",
-  unknown: "Không xác định",
 } as const;
 
 /** Hardblock override reason codes (Q3 §B5) */
@@ -266,38 +215,9 @@ export const AUTO_APPROVE_FAIL_REASON_VI = {
   trust_score_lt70: "Điểm tin cậy chưa đủ",
 } as const;
 
-/** Error messages for inventory forms */
-export const INVENTORY_ERROR_LABELS_VI = {
-  photo_required: "Cần ảnh chứng minh (waste tier ≥ 1)",
-  note_too_short: "Ghi chú tối thiểu ký tự",
-  rate_limit_exceeded: "Đã vượt giới hạn thử lại — vui lòng đợi",
-  shift_cap_exceeded: "Vượt hạn mức waste ca này",
-  branch_daily_cap_exceeded: "Vượt cap waste ngày của chi nhánh",
-  self_approval_forbidden: "Không thể tự duyệt phiếu của mình",
-  period_hard_closed: "Kỳ khóa sổ đã khóa cứng",
-  zone_lock_held_by_other: "Vùng đang được người khác đếm",
-  baseline_unavailable: "Chưa đủ dữ liệu giá — cần QLV duyệt thủ công",
-  hardblock_evidence_required: "Cần upload PDF bằng chứng",
-  offline_clock_invalid: "Giờ thiết bị không hợp lệ",
-  stocktake_not_final: "Còn dòng chưa chốt — không thể đóng phiên",
-} as const;
-
-/** GRN line variance tier label helper */
-export function getVarianceTierLabelVi(tier: number | null): string {
-  if (tier === null || tier === undefined) return "Chưa đánh giá";
-  return (
-    (VARIANCE_TIER_LABELS_VI as Record<number, string>)[tier] ?? String(tier)
-  );
-}
-
 /** Waste reason code label helper */
 export function getWasteReasonLabelVi(code: string): string {
   return (WASTE_REASON_LABELS_VI as Record<string, string>)[code] ?? code;
-}
-
-/** Stocktake mode label helper */
-export function getStocktakeModeLabelVi(mode: string): string {
-  return (STOCKTAKE_MODE_LABELS_VI as Record<string, string>)[mode] ?? mode;
 }
 
 // ─── Payment method labels ────────────────────────────────────────────────
@@ -325,13 +245,6 @@ export const PAYMENT_METHOD_LABELS_FULL_VI = {
   vietqr: "Chuyển khoản (VietQR)",
   unknown: "Khác",
 } as const;
-
-export function getPaymentMethodLabelVi(
-  method: string | null | undefined,
-): string {
-  if (!method) return "";
-  return (PAYMENT_METHOD_LABELS_VI as Record<string, string>)[method] ?? method;
-}
 
 /** orders.status (DB orders_status_check) — full back-office vocabulary.
  * POS cashier view intentionally collapses these states
@@ -367,6 +280,13 @@ export const REFUND_STATUS_LABELS_VI = {
   approved: "Đã duyệt",
   rejected: "Từ chối",
 } as const;
+
+export function getPaymentMethodLabelVi(
+  method: string | null | undefined,
+): string {
+  if (!method) return "";
+  return (PAYMENT_METHOD_LABELS_VI as Record<string, string>)[method] ?? method;
+}
 
 /** tables.status (DB tables_status_check). */
 export const TABLE_STATUS_LABELS_VI = {

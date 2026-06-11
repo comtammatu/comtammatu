@@ -38,7 +38,7 @@ export default async function StocktakeCountPage({
     );
   }
 
-  // Feature flag gate — route the counter to legacy detail when S13a is off.
+  // Feature flag gate — route the counter to the pre-redesign detail screen when the flag is off.
   const flagEnabled = await isFeatureEnabledForBranch(
     supabase,
     sessionBranchId,

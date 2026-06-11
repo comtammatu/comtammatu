@@ -118,7 +118,7 @@ export async function fetchRecentActivity(
           rejected_quantity: number | null;
           unit_cost: number | null;
         }> | null) ?? [];
-      // Tổng giá trị nhập kho = (received − rejected) × unit_cost (số thực vào kho)
+      // Total received value = (received − rejected) × unit_cost (net into stock)
       const total =
         lines.length > 0
           ? lines.reduce(
@@ -386,7 +386,7 @@ const grnLineSchema = z
   .object({
     grnId: z.coerce.number().int().positive(),
     ingredientId: z.coerce.number().int().positive(),
-    // Số đã giao (gross delivered). Stock impact = receivedQuantity − rejectedQuantity.
+    // "Số đã giao" (gross delivered). Stock impact = receivedQuantity − rejectedQuantity.
     receivedQuantity: z.coerce.number().min(0),
     unit: z.string().min(1),
     unitCost: z.coerce.number().min(0),
@@ -396,7 +396,7 @@ const grnLineSchema = z
     receivingTemperature: z.coerce.number().optional().nullable(),
     batchNumber: z.string().trim().optional().nullable(),
     expiryDate: z.string().date().optional().nullable(),
-    // QC fields — rejectedQuantity là subset của receivedQuantity
+    // QC fields — rejectedQuantity is a subset of receivedQuantity
     rejectedQuantity: z.coerce.number().min(0).optional(),
     rejectionReason: z.string().trim().max(500).optional().nullable(),
     rejectedPhotoUrl: z.string().trim().url().optional().nullable(),
@@ -445,7 +445,7 @@ export const upsertGrnLine = withAction(
     }
 
     let rejected = data.rejectedQuantity ?? 0;
-    // Nếu user đánh dấu "rejected" toàn dòng, auto set rejected = received (số đã giao = số bị từ chối).
+    // When the user marks the whole line "rejected", auto-set rejected = received.
     if (data.qualityStatus === "rejected") {
       rejected = data.receivedQuantity;
     }

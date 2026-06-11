@@ -136,7 +136,7 @@ export default async function GRNDetailPage({
     };
   });
 
-  // Tổng giá trị nhập kho = cost × accepted (số thực vào kho sau khi trừ trả NCC)
+  // Total received value = cost × accepted (net into stock after supplier returns)
   const totalAmount = items.reduce((sum, i) => sum + i.cost * i.accepted, 0);
 
   const grn: GRNDetail = {

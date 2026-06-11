@@ -13,7 +13,7 @@ export {
   staffRoleFromPositionCode,
 } from "./types";
 export type { ModuleKey } from "./module-acl";
-export { MODULE_ACL, canAccess, getAccessibleModules } from "./module-acl";
+export { MODULE_ACL, canAccess } from "./module-acl";
 export type { PermissionKey } from "./permissions";
 export {
   PERMISSION_KEYS,
@@ -22,32 +22,20 @@ export {
   hasAllPermissions,
   hasAnyPermission,
 } from "./permissions";
-export type { AuthSurface } from "./scope";
 export {
-  decodeJwtAppMetadata,
-  extractClaims,
   extractClaimsFromAccessToken,
-  getBetaDefaultRedirect,
-  getScope,
   getDefaultRedirect,
   getSafeInternalReturnTo,
   isAdminRole,
-  isBranchRole,
   resolvePostLoginRedirect,
-  toBetaPath,
 } from "./scope";
-export {
-  canViewInventoryValueSystem,
-  canViewInventoryValueByBranch,
-  getInventoryValueVisibility,
-} from "./inventory-value";
+export { getInventoryValueVisibility } from "./inventory-value";
 export type { InventoryValueVisibility } from "./inventory-value";
 export {
   INVENTORY_CATALOG_ROLES,
   INVENTORY_OPS_ROLES,
   PROCUREMENT_ROLES,
   SUPPLIER_RETURN_ROLES,
-  SUPPLIER_CREDIT_NOTE_ROLES,
 } from "./inventory-roles";
 export type {
   NavItemConfig,
@@ -99,26 +87,18 @@ export {
   resolveRouteFamilyContract,
 } from "./route-map";
 export {
-  BETA_ROUTE_PREFIX,
   INVENTORY_PROCUREMENT_PREFIXES,
   INVENTORY_ROUTE_PREFIXES,
   PUBLIC_APP_PATHS,
   isAdminRoutePath,
-  isBetaPath,
   isPublicAppPath,
   isRunnerPublicDisplayPath,
   resolveLegacyRouteRedirectPath,
   resolveModuleFromPath,
-  stripBetaPrefix,
 } from "./route-resolution";
 export type {
   BlockedStateCopy,
   BlockedStateReasonCode,
   ResolvedBlockedState,
 } from "./blocked-state";
-export {
-  buildAccessDeniedPath,
-  isBlockedStateReasonCode,
-  readBlockedStateFromSearchParams,
-  resolveBlockedState,
-} from "./blocked-state";
+export { buildAccessDeniedPath, resolveBlockedState } from "./blocked-state";

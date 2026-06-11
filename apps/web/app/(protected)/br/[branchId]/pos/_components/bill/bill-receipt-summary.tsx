@@ -142,8 +142,8 @@ export function BillReceiptSummary({ order }: BillReceiptSummaryProps) {
           {order.order_items.map((item) => {
             const displayName = getPosLineItemDisplayName(item);
             // unit_price = base + variant_adj + modifier_sum + sides_sum
-            // (server-recompute) → tách ra để mỗi modifier/side hiển thị
-            // Thành tiền của riêng nó. Yêu cầu chủ quán: "không gộp chung".
+            // (server-recomputed) → split it so every modifier/side shows
+            // its own line amount; never lump them together.
             const modifierSum = item.modifiers.reduce(
               (sum, m) => sum + m.price,
               0,

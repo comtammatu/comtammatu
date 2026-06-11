@@ -1,7 +1,12 @@
 # Thuế TNCN & Lương — Personal Income Tax & Payroll
 
 > Áp dụng: Hộ kinh doanh Cơm Tấm Má Tư
-> Khung pháp lý: Luật Thuế TNCN 2007 (sửa đổi 2012, 2014), TT 111/2013, TT 92/2015, NĐ 65/2013
+> Khung pháp lý (đến 06/2026): Luật Thuế TNCN 2025 (109/2025/QH15, hiệu lực
+> 01/07/2026, biểu thuế mới áp dụng từ kỳ tính thuế 2026); NQ
+> 110/2025/UBTVQH15 (giảm trừ gia cảnh mới từ kỳ tính thuế 2026); Luật BHXH
+> 2024 (41/2024/QH15) + NĐ 158/2025 (BHXH bắt buộc, gồm chủ hộ kinh doanh);
+> NĐ 293/2025 (lương tối thiểu vùng từ 01/01/2026). Luật Thuế TNCN
+> 2007/TT 111/2013 chỉ còn dùng cho quyết toán các kỳ ≤ 2025.
 
 ---
 
@@ -26,8 +31,8 @@
 Thu nhập chịu thuế = Lương gross + Phụ cấp chịu thuế - Các khoản miễn thuế
 
 Thu nhập tính thuế = Thu nhập chịu thuế
-                   - Giảm trừ bản thân (11 triệu)
-                   - Giảm trừ người phụ thuộc (4.4 triệu × số người)
+                   - Giảm trừ bản thân (15.5 triệu — kỳ tính thuế 2026)
+                   - Giảm trừ người phụ thuộc (6.2 triệu × số người)
                    - BHXH + BHYT + BHTN do NLĐ đóng (10.5% lương BH)
                    - Đóng góp từ thiện, nhân đạo (nếu có)
 ```
@@ -36,17 +41,20 @@ Thu nhập tính thuế = Thu nhập chịu thuế
 
 ## 2. Biểu thuế TNCN lũy tiến (Thu nhập từ tiền lương, tiền công)
 
-| Bậc | Thu nhập tính thuế/tháng   | Thuế suất | Số thuế tính nhanh       |
-| --- | -------------------------- | --------- | ------------------------ |
-| 1   | Đến 5 triệu                | 5%        | = TNTT × 5%              |
-| 2   | Trên 5 triệu đến 10 triệu  | 10%       | = TNTT × 10% − 250,000   |
-| 3   | Trên 10 triệu đến 18 triệu | 15%       | = TNTT × 15% − 750,000   |
-| 4   | Trên 18 triệu đến 32 triệu | 20%       | = TNTT × 20% − 1,650,000 |
-| 5   | Trên 32 triệu đến 52 triệu | 25%       | = TNTT × 25% − 3,250,000 |
-| 6   | Trên 52 triệu đến 80 triệu | 30%       | = TNTT × 30% − 5,850,000 |
-| 7   | Trên 80 triệu              | 35%       | = TNTT × 35% − 9,850,000 |
+Biểu 5 bậc theo Luật Thuế TNCN 2025 (109/2025/QH15), áp dụng từ kỳ tính thuế
+2026:
+
+| Bậc | Thu nhập tính thuế/tháng    | Thuế suất | Số thuế tính nhanh        |
+| --- | --------------------------- | --------- | ------------------------- |
+| 1   | Đến 10 triệu                | 5%        | = TNTT × 5%               |
+| 2   | Trên 10 triệu đến 30 triệu  | 10%       | = TNTT × 10% − 500,000    |
+| 3   | Trên 30 triệu đến 60 triệu  | 20%       | = TNTT × 20% − 3,500,000  |
+| 4   | Trên 60 triệu đến 100 triệu | 30%       | = TNTT × 30% − 9,500,000  |
+| 5   | Trên 100 triệu              | 35%       | = TNTT × 35% − 14,500,000 |
 
 > **Số thuế tính nhanh** giúp tính trực tiếp mà không cần tính từng bậc.
+> Biểu 7 bậc cũ (Luật 2007) chỉ còn dùng khi quyết toán các kỳ ≤ 2025; cách
+> khấu trừ chuyển tiếp trong năm 2026 theo hướng dẫn của cơ quan thuế.
 
 ### Ví dụ tính thuế
 
@@ -59,22 +67,28 @@ Lương BH: 25,000,000 (đăng ký đóng toàn phần)
 BHXH NLĐ đóng = 25,000,000 × 10.5% = 2,625,000
 
 Thu nhập chịu thuế = 25,000,000 (lương không tính phụ cấp miễn)
-Thu nhập tính thuế = 25,000,000 - 11,000,000 (bản thân) - 4,400,000 (1 NP thuộc) - 2,625,000
-                   = 6,975,000
+Thu nhập tính thuế = 25,000,000 - 15,500,000 (bản thân) - 6,200,000 (1 NP thuộc) - 2,625,000
+                   = 675,000
 
-Thuế = 6,975,000 × 10% - 250,000 = 447,500 VND
+Thuế = 675,000 × 5% = 33,750 VND
 ```
+
+> Với mức giảm trừ 15,5 triệu từ kỳ 2026, đa số vị trí vận hành của quán
+> (waiter/cashier/chef 6–12 triệu) không phát sinh thuế TNCN phải khấu trừ.
 
 ---
 
 ## 3. Giảm trừ gia cảnh
 
-### 3.1 Mức giảm trừ (áp dụng từ 01/07/2020)
+### 3.1 Mức giảm trừ (từ kỳ tính thuế 2026 — NQ 110/2025/UBTVQH15)
 
 | Loại                | Mức giảm trừ/tháng | Mức giảm trừ/năm |
 | ------------------- | ------------------ | ---------------- |
-| Bản thân NLĐ        | **11,000,000 VND** | 132,000,000 VND  |
-| Mỗi người phụ thuộc | **4,400,000 VND**  | 52,800,000 VND   |
+| Bản thân NLĐ        | **15,500,000 VND** | 186,000,000 VND  |
+| Mỗi người phụ thuộc | **6,200,000 VND**  | 74,400,000 VND   |
+
+> Mức cũ 11,000,000 / 4,400,000 (từ 01/07/2020) chỉ dùng cho quyết toán các
+> kỳ tính thuế ≤ 2025.
 
 ### 3.2 Điều kiện người phụ thuộc hợp lệ
 
@@ -361,6 +375,16 @@ Total labor cost = Gross salary
 
 Ví dụ: Nhân viên lương gross 10 triệu → HKD/NSDLĐ thực tế chi khoảng 12.15 triệu/tháng.
 
+### 7.1 BHXH bắt buộc của chủ hộ kinh doanh (từ 01/07/2025)
+
+Theo Luật BHXH 2024 + NĐ 158/2025/NĐ-CP: chủ hộ của HKD có đăng ký kinh
+doanh **nộp thuế theo phương pháp kê khai** thuộc diện BHXH bắt buộc từ
+01/07/2025 (trừ người đang hưởng lương hưu/trợ cấp BHXH hoặc đã đủ tuổi nghỉ
+hưu). Chủ hộ tự chọn mức tiền lương làm căn cứ đóng, không thấp hơn mức tham
+chiếu (hiện 2,340,000 VND) và không quá 20 lần mức tham chiếu; tự đóng toàn
+bộ (BHXH + BHYT ≈ 29.5% mức đã chọn). Khoản này nằm ngoài bảng lương nhân
+viên — theo dõi như chi phí của chủ hộ.
+
 ---
 
 ## 8. Các mức lương tham chiếu
@@ -372,7 +396,8 @@ Ví dụ: Nhân viên lương gross 10 triệu → HKD/NSDLĐ thực tế chi kh
 | Branch Manager               | 20–35 triệu            |                           |
 | Area Manager                 | 35–55 triệu            |                           |
 
-**Lương tối thiểu vùng 2025** (Hà Nội, TP.HCM — Vùng I): **4,960,000 VND/tháng**.
+**Lương tối thiểu vùng từ 01/01/2026** (NĐ 293/2025/NĐ-CP — Vùng I, gồm
+TP.HCM): **5,310,000 VND/tháng** (Vùng II 4,730,000; Vùng III 4,140,000).
 
 > Lương trong HĐ phải ≥ lương tối thiểu vùng.
 

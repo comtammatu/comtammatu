@@ -88,7 +88,7 @@ const postIdSchema = z.object({
 });
 
 // Rule JE-VOID-REVERSING-ONLY: void reason ≥20 chars (mirrors
-// HDDT-CANCEL-REASON-MIN-20). A void leaves the row in sổ cái
+// HDDT-CANCEL-REASON-MIN-20). A void leaves the row in the ledger
 // permanently; the auditor needs a real, descriptive reason —
 // "đảo bút toán" (15 chars) is useless to a tax inspection.
 const voidSchema = z.object({

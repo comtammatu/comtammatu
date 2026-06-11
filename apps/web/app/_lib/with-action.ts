@@ -77,7 +77,8 @@ type BaseActionOptions<
   afterSuccess?: AfterSuccessHook<z.infer<TSchema>, TData>;
   /**
    * Stable `errorCode` applied to schema-validation failures. Defaults to
-   * `undefined` (no code) for backward compatibility. Actions that surface
+   * `undefined` (no code) so existing callers keep their current contract.
+   * Actions that surface
    * input failures in retry/branch logic (e.g. `submitOrder` using
    * `POS_ERROR_CODES.INPUT_INVALID_CART`) should opt in. The Zod-derived
    * Vietnamese message stays on `result.error`.
@@ -313,7 +314,7 @@ export function withAction<TSchema extends z.ZodType, TData = unknown>(
  * not need to change.
  *
  * Use this when the caller cannot adopt object-input (e.g. React form
- * actions wired through `<form action={fn}>`, or legacy positional APIs the
+ * actions wired through `<form action={fn}>`, or positional APIs the
  * client already calls in many places).
  */
 export function withActionPositional<

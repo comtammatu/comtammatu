@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
 
-// Báo cáo doanh thu đã được hợp nhất vào surface Finance để tránh
-// phân mảnh giữa /admin/reports/* và /finance/*. Giữ route cũ làm
-// redirect để các bookmark / link cũ vẫn hoạt động — preserve mọi
-// query params (granularity, start, end, branch).
+// The revenue report is consolidated into the Finance surface to avoid
+// fragmenting /admin/reports/* vs /finance/*. The old route stays as a
+// redirect so bookmarks / old links keep working — preserves all query
+// params (granularity, start, end, branch).
 export default async function LegacyRevenueReportRedirect({
   searchParams,
 }: {

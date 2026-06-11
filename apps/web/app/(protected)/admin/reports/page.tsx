@@ -1,4 +1,3 @@
-import Link from "next/link";
 import {
   ArrowLeftRight as IconArrowLeftRight,
   ClipboardList as IconClipboardList,
@@ -7,7 +6,6 @@ import {
   ShieldCheck as IconShieldCheck,
   TrendingUp as IconTrendingUp,
 } from "lucide-react";
-import { Button } from "@comtammatu/ui/components/button";
 import { canAccess } from "@comtammatu/shared/auth";
 import { APP_COPY_VI } from "@comtammatu/shared/labels";
 import { loadAuthState } from "@/_lib/auth";
@@ -25,31 +23,34 @@ export default async function ReportsPage() {
   const executiveCards: SurfaceLinkCardProps[] = [
     {
       title: copy.cards.revenue,
-      href: "/admin/reports/revenue",
+      description: copy.cardDescriptions.revenue,
+      href: "/finance/revenue",
       icon: <IconTrendingUp />,
       tone: "primary" as const,
       badge: copy.summaryBadge,
     },
     {
       title: copy.cards.inventoryValue,
+      description: copy.cardDescriptions.inventoryValue,
       href: "/admin/reports/inventory-value",
       icon: <IconPackage />,
       tone: "info" as const,
       badge: copy.summaryBadge,
     },
-  ];
-  const deepDiveCards: SurfaceLinkCardProps[] = [
     {
       title: copy.cards.stockMovement,
+      description: copy.cardDescriptions.stockMovement,
       href: "/admin/reports/stock-movement",
       icon: <IconArrowLeftRight />,
       tone: "info" as const,
       badge: copy.operationsBadge,
     },
   ];
+  const deepDiveCards: SurfaceLinkCardProps[] = [];
   if (canAccess(claims.user_role, "finance")) {
     deepDiveCards.push({
       title: copy.cards.finance,
+      description: copy.cardDescriptions.finance,
       href: "/finance",
       icon: <IconReceipt />,
       tone: "success",
@@ -59,6 +60,7 @@ export default async function ReportsPage() {
   if (canAccess(claims.user_role, "inventory")) {
     deepDiveCards.push({
       title: copy.cards.inventory,
+      description: copy.cardDescriptions.inventory,
       href: "/inventory/reports",
       icon: <IconClipboardList />,
       tone: "info",
@@ -68,6 +70,7 @@ export default async function ReportsPage() {
   if (canAccess(claims.user_role, "hr")) {
     deepDiveCards.push({
       title: copy.cards.hr,
+      description: copy.cardDescriptions.hr,
       href: "/hr",
       icon: <IconShieldCheck />,
       tone: "info",
@@ -81,16 +84,6 @@ export default async function ReportsPage() {
         eyebrow={APP_COPY_VI.executiveReporting}
         title={copy.title}
         description={copy.description}
-        actions={
-          <>
-            <Button asChild variant="outline" size="sm">
-              <Link href="/admin/dashboard">{copy.backToAdmin}</Link>
-            </Button>
-            <Button asChild size="sm">
-              <Link href="/admin/settings">{copy.openSettings}</Link>
-            </Button>
-          </>
-        }
       />
 
       <section className="space-y-3">
@@ -102,7 +95,7 @@ export default async function ReportsPage() {
             {copy.aggregateDescription}
           </p>
         </div>
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {executiveCards.map((card) => (
             <SurfaceLinkCard
               key={card.href}

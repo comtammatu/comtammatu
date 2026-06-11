@@ -18,7 +18,7 @@ Rate limiting via Upstash Redis. Protects API routes and auth endpoints from abu
 | Limiter          | Limit       | Window     | Used By                                                        |
 | ---------------- | ----------- | ---------- | -------------------------------------------------------------- |
 | `rateLimit`      | 60 requests | 1 minute   | General API routes                                             |
-| `loginRateLimit` | 5 attempts  | 15 minutes | Login action (`apps/web/app/(public)/(auth)/login/actions.ts`) |
+| `loginRateLimit` | 10 attempts | 5 minutes  | Login action (`apps/web/app/(public)/(auth)/login/actions.ts`) |
 
 Both use Upstash Redis sliding window algorithm.
 
@@ -45,9 +45,9 @@ if (!success) {
 | Failure             | Signal                         | Recovery                                                                                                            |
 | ------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
 | Upstash unreachable | Rate limit check throws        | **Fail open** — allow the request. Availability > abuse protection for MVP. Add monitoring alert when this happens. |
-| Missing env vars    | Runtime error on first request | Set `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`                                                         |
+| Missing env vars    | Degrade sang `noopLimiter` — **fail open**: mọi `limit()` trả `success=true`, app chạy KHÔNG có rate limit (không error, không log) | ⚠️ Prod PHẢI set `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN`, nếu không brute-force protection bị tắt im lặng |
 
 ## Design Rationale
 
 - **Upstash over local Redis:** Serverless-compatible. No persistent connection needed. Works on Vercel Edge.
-- **Separate login limiter:** Brute-force protection with stricter limits (5/15min vs 60/min).
+- **Separate login limiter:** Brute-force protection with stricter limits (10/5min vs 60/min).

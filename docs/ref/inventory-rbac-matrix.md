@@ -36,16 +36,17 @@
 
 ## 2. Positions liên quan Inventory (Cơm Tấm Má Tư — tenant_id=1)
 
-| Position code   | Label VI           | `position_code`   | Scope vận hành mặc định                                    |
-| --------------- | ------------------ | -------------------- | ---------------------------------------------------------- |
-| `owner`         | Chủ sở hữu         | `owner`              | Tenant-wide bypass (owner bypass trong `has_permission()`) |
-| `super_manager` | Giám đốc điều hành | `super_manager`      | Tenant-wide operations + procurement                       |
-| `quan_ly_CN`    | Quản lý chi nhánh  | `branch_manager`     | Branch của mình                                            |
-| `kho_truong`    | Kho trưởng         | `warehouse_manager`  | Kho Tổng / CW (procurement + outbound transfer)            |
-| `thu_kho`       | Thủ kho            | `warehouse_manager`  | Staff-level warehouse (nhận hàng + stocktake)              |
-| `bep_truong`    | Bếp trưởng         | `production_manager` | Bếp trung tâm (sản xuất + KDS)                             |
+| Position code       | Label VI           | Access bucket        | Scope vận hành mặc định                                    |
+| ------------------- | ------------------ | -------------------- | ---------------------------------------------------------- |
+| `owner`             | Chủ sở hữu         | `owner`              | Tenant-wide bypass (owner bypass trong `has_permission()`) |
+| `super_manager`     | Giám đốc điều hành | `super_manager`      | Tenant-wide operations + procurement                       |
+| `branch_manager`    | Quản lý chi nhánh  | `branch_manager`     | Branch của mình                                            |
+| `warehouse_manager` | Kho trưởng         | `warehouse_manager`  | Kho Tổng / CW (procurement + outbound transfer)            |
+| `head_chef`         | Bếp trưởng         | `production_manager` | Bếp trung tâm (sản xuất + KDS)                             |
 
-> Các position POS/KDS (`cashier`, `waiter`, `chef`, `phu_bep`) không có Inventory grant mặc định; chỉ tác động tồn kho gián tiếp qua consumption flow.
+> Position code legacy (`quan_ly_CN`, `kho_truong`, `bep_truong`, `phu_bep`) đã rename về English; `thu_kho`, `ke_toan`, `ke_toan_truong`, `tro_ly_giam_doc` đã xóa hẳn (0 nhân sự) — migration `20260610230000_canonical_position_codes_lean`. Tên cũ trong các ghi chú lịch sử bên dưới giữ nguyên vì mô tả migration đã chạy.
+>
+> Các position POS/KDS (`cashier`, `waiter`, `chef`, `kitchen_helper`) không có Inventory grant mặc định; chỉ tác động tồn kho gián tiếp qua consumption flow.
 
 ---
 
@@ -99,8 +100,8 @@ Matrix dưới đây là snapshot template (`role_templates.permission_keys`) m�
 
 Edit template không tự propagate toàn cục. Khi sửa template, quyền của nhân viên cũ chỉ đổi qua thao tác apply/backfill rõ ràng; manual override được giữ lại.
 
-| Permission key                 | owner bypass | super_manager | branch_manager | kho_truong | thu_kho | bep_truong |
-| ------------------------------ | :----------: | :-----------: | :------------: | :--------: | :-----: | :--------: |
+| Permission key                 | owner bypass | super_manager | branch_manager | warehouse_manager | thu_kho¹ | head_chef |
+| ------------------------------ | :----------: | :-----------: | :------------: | :---------------: | :------: | :-------: |
 | `inventory:read`               |      ✅      |      ✅       |       ✅       |     ✅     |   ✅    |     ✅     |
 | `inventory:write`              |      ✅      |      ✅       |       ✅       |     ✅     |   ✅    |     ❌     |
 | `inventory:transfer_create`    |      ✅      |      ✅       |      ✅\*      |     ✅     |   ❌    |     ✅     |
@@ -128,13 +129,14 @@ Edit template không tự propagate toàn cục. Khi sửa template, quyền c�
 - ✅\* = key có trong template nhưng runtime/app/RPC giới hạn hướng hoặc branch scope
 - ❌ = không trong template
 - ⚠️ **held** = cố ý không cấp; việc thuộc super_manager / accounting
+- ¹ template `thu_kho` đã XÓA (migration `20260610230000`, 0 nhân sự); cột giữ lại để đọc grant lịch sử còn trong `staff_permissions` — tuyển thủ kho mới thì tạo position+template mới thuộc bucket `warehouse_manager`
 
 **Contract notes:**
 
 - `branch_manager` giữ `inventory:transfer_create` chỉ để commit one-step intra-branch `Cấp bếp`; không được tạo/ship inter-site outbound.
 - `branch_manager` giữ `inventory:transfer_receive` chỉ để nhận inbound về đúng branch của mình.
 - Multi-branch oversight phải đi qua explicit branch grants hoặc tenant-level permission rõ ràng; không có scope trung gian.
-- `bep_truong` / `production_manager` sở hữu vòng CK: receive CW → CK, create/ship CK → branch, và quản trị production recipes.
+- `head_chef` / `production_manager` sở hữu vòng CK: receive CW → CK, create/ship CK → branch, và quản trị production recipes.
 - Production hard-deny `branch_manager` ở Server Actions, RPC và RLS dù có manual grant production/menu; operator production là `super_manager` / `production_manager`, còn `owner` là oversight/emergency access.
 
 ---

@@ -45,11 +45,12 @@ interface ItemCustomizerProps {
     quantity: number,
   ) => void;
   /**
-   * - `new`: thêm món vào giỏ đơn mới
-   * - `append`: thêm món vào đơn đã gửi (append draft)
-   * - `edit`: sửa món trong giỏ chưa gửi
-   * - `edit-sent`: sửa món ĐÃ GỬI bếp khi status='pending' (server-side gated).
-   *   Parent gọi `editPendingOrderItem` server action sau khi onConfirm fire. */
+   * - `new`: add an item to a new order's cart
+   * - `append`: add an item to an already-sent order (append draft)
+   * - `edit`: edit an item in the unsent cart
+   * - `edit-sent`: edit an item already SENT to the kitchen while
+   *   status='pending' (server-side gated). The parent calls the
+   *   `editPendingOrderItem` server action after onConfirm fires. */
   mode?: "new" | "append" | "edit" | "edit-sent";
   appendOrderLabel?: string | null;
   initialCartItem?: CartItem | null;

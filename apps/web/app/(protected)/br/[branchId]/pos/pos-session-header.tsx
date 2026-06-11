@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@comtammatu/ui/components/dropdown-menu";
 import { BrandMark } from "@/components/brand";
+import { PrinterStatusBadge } from "./printer-status-badge";
 import { usePosSession, usePosSound } from "./_providers/pos-desktop-provider";
 import {
   ArrowLeft as IconArrowLeft,
@@ -79,11 +80,12 @@ function PosSessionHeaderComponent({
           ) : null}
         </div>
 
-        {/* Single overflow ⋮ menu cho cả mobile + desktop sidebar.
-            Thoát / Chốt ca gom vào đây để header gọn — tránh che
-            thao tác + tránh bấm nhầm "Chốt ca" giữa phiên thanh toán. F10 hotkey
-            vẫn mở Chốt ca nhanh trên desktop. */}
+        {/* Single overflow ⋮ menu for both mobile + desktop sidebar.
+            Exit / close-shift live here to keep the header small — and to
+            avoid a mis-tap on "Chốt ca" mid-payment. The F10 hotkey still
+            opens close-shift quickly on desktop. */}
         <div className="flex shrink-0 items-center gap-1">
+          <PrinterStatusBadge branchId={branchId} />
           {canManageMenuLimits ? (
             <MenuLimitsSheet
               branchId={branchId}

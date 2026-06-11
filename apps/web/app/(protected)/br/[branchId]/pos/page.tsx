@@ -51,9 +51,8 @@ export default async function PosPage({
 
   const branchIdNum = Number(branchId);
 
-  // Per-branch model (Owner D7, 2026-04-27): branch chỉ có 0 hoặc 1 session
-  // đang mở (DB enforce UNIQUE(branch_id) WHERE status='open'). Disambiguation
-  // qua MultiSessionPicker / `?terminal=` URL param đã retired.
+  // Per-branch model (D7): a branch has 0 or 1 open session
+  // (DB UNIQUE(branch_id) WHERE status='open').
   const [sessionResult, permFlags] = await Promise.all([
     fetchActiveSession(branchIdNum),
     fetchPosPermissionFlags(branchIdNum),
@@ -76,9 +75,9 @@ export default async function PosPage({
 
   const session = (sessionResult.data ?? null) as ActiveSession | null;
 
-  // No open session → chỉ role có quyền thao tác két (cashier/branch_manager)
-  // mới được tự mở ca. Waiter chỉ có pos:use → chặn tại đây, hướng dẫn liên hệ
-  // thu ngân để tránh dead-end ở form "Mở ca".
+  // No open session → only cashbox-permission roles (cashier/branch_manager)
+  // may open one. A waiter only has pos:use → block here and point them to
+  // the cashier, instead of dead-ending in the open-shift form.
   if (session === null) {
     if (!permFlags.canOpenShift) {
       return (
@@ -133,9 +132,9 @@ export default async function PosPage({
     await Promise.all([
       fetchMenuForPos(branchIdNum),
       fetchTablesForBranch(branchIdNum),
-      // Tenant-stable settings seeded ở RSC. Admin payment-settings save phải
-      // gọi `revalidatePath('/br/[branchId]/pos', 'page')` + `revalidateTag('payment-config')`
-      // để bust cache.
+      // Tenant-stable settings seeded in RSC. The admin payment-settings save
+      // must call `revalidatePath('/br/[branchId]/pos', 'page')` +
+      // `revalidateTag('payment-config')` to bust this cache.
       fetchPaymentMethodsForPos(branchIdNum),
       fetchVietQrConfig(branchIdNum),
     ]);
@@ -197,7 +196,6 @@ export default async function PosPage({
         initialOpenOrderId={initialOpenOrderId}
         canCloseShift={permFlags.canCloseShift}
         canConfirmCash={permFlags.canConfirmCash}
-        canOverrideVariance={permFlags.canOverrideVariance}
         canManageMenuLimits={permFlags.canManageMenuLimits}
         initialPaymentMethods={initialPaymentMethods}
         initialVietQrConfig={initialVietQrConfig}

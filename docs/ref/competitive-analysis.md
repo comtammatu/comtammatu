@@ -1,6 +1,6 @@
 # Phân Tích Cạnh Tranh — Phần Mềm Quản Lý F&B Việt Nam
 
-> Cập nhật: 2026-04-01
+> Cập nhật: 2026-04-01 (cập nhật theo D012 2026-06-10: offline/VNPay đã loại bỏ)
 > Phạm vi: Thị trường phần mềm quản lý nhà hàng / F&B nội địa Việt Nam
 > Mục đích: Xác định lợi thế cạnh tranh và feature gaps của hệ thống Cơm Tấm Má Tư
 
@@ -80,7 +80,6 @@ GIÁ THẤP / ĐƠN GIẢN
 | Tiền mặt                          | ✅            | ✅   | ✅       | ✅          | ✅       | ✅    |
 | VietQR / chuyển khoản             | ✅            | ✅   | ✅       | ✅          | ✅       | ✅    |
 | MoMo                              | ✅            | ✅   | 🟡       | ✅          | ✅       | ✅    |
-| VNPay                             | ❌ Post-v1    | 🟡   | ✅       | 🟡          | ✅       | ✅    |
 | Visa/Mastercard                   | ❌            | 🟡   | ✅       | 🟡          | ✅       | ✅    |
 | Thanh toán chia nhiều phương thức | ❌            | ✅   | ✅       | ✅          | ✅       | ✅    |
 
@@ -227,11 +226,11 @@ Các phần mềm SaaS dùng logic phân quyền ở application layer. Hệ th�
 
 | Điểm yếu hiện tại                  | Mức độ ảnh hưởng             | Roadmap giải quyết          |
 | ---------------------------------- | ---------------------------- | --------------------------- |
-| Không có offline mode              | 🔴 Cao — mất điện / mất mạng | Post-v1.0 (PWA + IndexedDB) |
+| Không có offline mode              | 🔴 Cao — mất điện / mất mạng | offline đã loại bỏ (D012)   |
 | Chưa kết nối GrabFood / ShopeeFood | 🟠 Trung bình                | Post-v1.0 (nếu có)          |
 | QR Self-order chưa live            | 🟡 Thấp                      | Post-v1.0                   |
 | Chưa có app mobile native          | 🟡 Thấp                      | PWA đủ dùng trước mắt       |
-| Chưa có tách bill                  | 🟡 Thấp                      | backlog                     |
+| Tách bill                          | 🟡 Thấp                      | đã ship (POS-07 splitOrder) |
 | Chưa có marketing automation       | 🟢 Thấp                      | Post-v1.0                   |
 
 ---

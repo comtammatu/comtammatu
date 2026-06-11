@@ -1,18 +1,20 @@
 /**
- * POS-06 Đánh dấu đã phục vụ — capture spec.
+ * POS-06 Mark served — capture spec.
  *
- * Mục đích: làm rõ `served` = món đã ra bàn (audit-only), KHÔNG phải
- * thanh toán xong và KHÔNG khóa thao tác sau (vẫn append/void/transfer
- * được). Thường dùng để KDS biết món nào đã ra hết, hoặc waiter báo
- * cashier biết đơn đã hòan thành phục vụ trước khi tính tiền.
+ * Purpose: make clear that `served` = food delivered to the table
+ * (audit-only). It is NOT payment, and it does NOT lock later actions
+ * (append/void/transfer still work). Typically used so KDS knows
+ * everything went out, or so the waiter signals the cashier that serving
+ * finished before payment.
  *
  * 3 main steps + 1 variant:
- *   step-01-order-detail     — chi tiết đơn với 4 nút action visible
- *   step-02-tap-serve        — highlight nút "Phục vụ"
- *   step-03-still-payable    — sau khi phục vụ, nút Thanh toán vẫn còn
- *   variant-payment-warning  — cảnh báo "Đơn chưa đánh dấu đã phục vụ" trong bill (nhắc nhở chứ không khóa)
+ *   step-01-order-detail     — order detail with the 4 action buttons visible
+ *   step-02-tap-serve        — "Phục vụ" button highlighted
+ *   step-03-still-payable    — pay button still present after serving
+ *   variant-payment-warning  — "Đơn chưa đánh dấu đã phục vụ" warning in the
+ *                              bill (a reminder, not a lock)
  *
- * Chạy: pnpm --filter @comtammatu/web guides:capture --grep="POS-06"
+ * Run: pnpm --filter @comtammatu/web guides:capture --grep="POS-06"
  */
 
 import { test, type Page } from "@playwright/test";
@@ -118,10 +120,10 @@ test.describe("POS-06 Đánh dấu đã phục vụ", () => {
       },
       setup: async (p) => {
         await gotoOrderDetail(p, ctx.branchId);
-        // Tap "Phục vụ" để đổi trạng thái
+        // Tap "Phục vụ" to flip the status
         const serveBtn = p.getByRole("button", { name: /^Phục vụ$/i }).first();
         await serveBtn.click();
-        // Đợi state update — nút có thể đổi label hoặc món có badge mới
+        // Wait for the update — the button label or item badges may change
         await p.waitForTimeout(800);
       },
       annotations: [
@@ -157,7 +159,7 @@ test.describe("POS-06 Đánh dấu đã phục vụ", () => {
       },
       setup: async (p) => {
         await gotoOrderDetail(p, ctx.branchId);
-        // Tap Thanh toán → bill mở với alert "chưa đánh dấu phục vụ"
+        // Tap pay → bill opens with the "chưa đánh dấu phục vụ" alert
         const payBtn = p
           .getByRole("button", { name: /Thanh toán\s*-/i })
           .first();

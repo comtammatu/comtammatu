@@ -3,40 +3,19 @@
 > Updated after every correction from user.
 > Format: Pattern -> Rule -> Prevention
 
-1. **Migration ordering matters for data constraints**
-   - Pattern: Added CHECK constraint before cleaning up legacy data that violates it
-   - Rule: Always UPDATE/DELETE violating rows BEFORE adding CHECK/NOT NULL constraints
-   - Prevention: In migration, put data cleanup steps first, then DDL constraints. Use `NOT VALID` + `VALIDATE CONSTRAINT` for large tables.
+1. **Migration ordering matters for data constraints** — codified as `tasks/regressions.md` CONSTRAINT-BEFORE-CLEANUP.
 
-2. **REVOKE must cover all DML operations**
-   - Pattern: Revoked UPDATE but forgot INSERT/DELETE were still granted from initial migration
-   - Rule: When switching to RPC-only, revoke all of INSERT/UPDATE/DELETE and drop any ALL policies
-   - Prevention: After writing REVOKE, grep initial migration for matching GRANTs to confirm full coverage.
+2. **REVOKE must cover all DML operations** — codified as `tasks/regressions.md` REVOKE-ALL-DML.
 
-3. **Cross-reference role definitions across all docs**
-   - Pattern: office defined as "HQ-wide" in role table but "own branch" in SELECT scope table
-   - Rule: Role scope must be consistent across: enum comments, spec docs, RLS policies, HR/payroll docs
-   - Prevention: When adding/modifying a role's scope, search all docs for that role name and update every reference.
+3. **Cross-reference role definitions across all docs** — codified as `tasks/regressions.md` ROLE-SCOPE-CONSISTENCY.
 
-4. **Verify build before marking task complete**
-   - Pattern: Marked S2 tasks "completed" before running typecheck+build. Build failed on `boolean | null` mismatch and missing `system_settings` type stub.
-   - Rule: Never mark done until `pnpm typecheck && pnpm build` output is green in terminal
-   - Prevention: Run build immediately after writing code. When adding new DB tables, check generated `database.types.ts` first — if table is missing, add type stub before writing any code that references it.
+4. **Verify build before marking task complete** — codified as `tasks/regressions.md` VERIFY-BEFORE-DONE + TYPE-STUB-BEFORE-CODE.
 
-5. **Follow session protocol strictly**
-   - Pattern: Skipped Task Contract, domain skills, `/review`, roadmap update
-   - Rule: Session protocol is mandatory, not optional — every step exists for a reason
-   - Prevention: At session START, paste Task Contract template and fill it. At CLOSE, run `/review`, update roadmap, update lessons if corrected.
+5. _(retired 2026-06-10 — "Follow session protocol strictly" trỏ Task Contract / `/review` / roadmap, đều không còn tồn tại trong repo.)_
 
-6. **Local verify must match CI pipeline exactly**
-   - Pattern: `/verify` only ran typecheck + build, but CI also runs lint. Unused vars passed locally, failed on push.
-   - Rule: `/verify` = `pnpm typecheck && pnpm lint && pnpm build` — must mirror CI steps exactly
-   - Prevention: Updated `/verify` skill to include `pnpm lint`. Before adding any new CI step, update `/verify` to match.
+6. **Local verify must match CI pipeline exactly** — codified in `docs/agent/rules/workflow.md` §Verification (`pnpm typecheck && pnpm lint && pnpm build`) + `tasks/regressions.md` VERIFY-BEFORE-DONE.
 
-7. **Domain terminology has a single source of truth**
-   - Pattern: Ad-hoc hardcoded Vietnamese copy introduced drift terms (e.g. "Employee Portal" instead of canonical label, "Kiểm kê kho" instead of "Stocktake")
-   - Rule: All domain/UI wording must come from one of three canonical sources: `docs/ref/glossary.md` (business meaning), `packages/shared/src/labels/vi.ts` (shared labels), or `apps/web/app/(protected)/inventory/_lib/dictionary.ts` (inventory-specific adapters). Never introduce new copy inline.
-   - Prevention: When adding or changing copy, update the canonical source first (or in the same PR). Run `pnpm lint:copy` to catch drift. See regression rule TERMINOLOGY-SOURCE-OF-TRUTH.
+7. **Domain terminology has a single source of truth** — codified as `tasks/regressions.md` TERMINOLOGY-SOURCE-OF-TRUTH (+ `pnpm lint:copy`).
 
 8. **Do not fake preset UI with raw elements**
    - Pattern: Used plain `div` / `span` / `p` plus Tailwind classes to imitate preset-backed `Card`, `Badge`, `Button`, `Table`, or other shadcn primitives.
@@ -64,6 +43,5 @@
     - Prevention: Added `pnpm clean:web` script at root (uses `node scripts/clean-web.mjs`, cross-platform). When changing types in mid-session, default to clean rebuild to avoid the trap.
 
 13. **Bash `run_in_background` notification exit-code is unreliable; ALWAYS read the output file**
-    - Pattern: Background `pnpm build` reported `exit code 0` in the system task-notification, but reading the output file showed `ELIFECYCLE Command failed with exit code 1` and a `Failed to type check` error. The notification mechanism does NOT reliably capture true exit status for chained pnpm/turbo invocations on Windows pnpm shim.
-    - Rule: After every Bash `run_in_background` task completion, READ the output file before treating it as success. The summary `Tasks: N successful, M total` line in the file is authoritative; the notification's exit-code is advisory.
-    - Prevention: Develop the habit `tail -10 <output_file>` immediately after each bg notification, treat the notification as "done" not "succeeded". For build/test gates, parse for `Failed:` token explicitly — exit-0 + `Failed:` line = real failure.
+    - Rule: Treat the bg-completion notification as "done", not "succeeded" — for chained pnpm/turbo invocations the notification can report exit 0 while the output contains `ELIFECYCLE ... exit code 1` / `Failed to type check`. The output file's own summary (`Tasks: N successful` / `Failed:` token) is authoritative.
+    - Prevention: `tail -10 <output_file>` after every bg notification; exit-0 + `Failed:` line = real failure.

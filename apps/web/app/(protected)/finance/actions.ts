@@ -112,7 +112,7 @@ export async function createTaxInvoice(
     };
   }
 
-  // Check no existing active invoice for this order. Legacy `not_required`
+  // Check no existing active invoice for this order. Older `not_required`
   // rows do NOT count as active so we can issue the legally required HĐĐT
   // for orders that were paid before the mandatory-per-payment correction.
   //
@@ -174,10 +174,10 @@ export async function createTaxInvoice(
 
   // Per-line VAT aggregation (rule VAT-PER-LINE-NOT-PER-INVOICE).
   // Each order_item carries its own vat_rate snapshot. For uniform-rate
-  // orders this is mathematically equivalent to the legacy
+  // orders this is mathematically equivalent to the previous
   // `total / (1 + system_rate)` formula; for mixed-rate orders
-  // (cơm 8% + bia 10%) it produces the correct subtotal/VAT breakdown
-  // that the legacy single-rate division could not.
+  // (food 8% + beer 10%) it produces the correct subtotal/VAT breakdown
+  // that the previous single-rate division could not.
   const activeItems = order.order_items.filter(
     (item) => item.status !== "cancelled",
   );
@@ -592,10 +592,10 @@ export async function fetchDailyRevenue(
 const REVENUE_GRANULARITY = ["day", "week", "month"] as const;
 export type RevenueGranularity = (typeof REVENUE_GRANULARITY)[number];
 
-// p_branch_id null = aggregate qua mọi branch caller có finance:view.
-// Khi null, ACL được enforce bên trong RPC qua has_permission(branch, key)
-// per row. Khi specific, RPC kiểm tra has_permission(p_branch_id, key)
-// một lần ở entry.
+// p_branch_id null = aggregate over every branch the caller has
+// finance:view on. When null, ACL is enforced inside the RPC via
+// has_permission(branch, key) per row; when specific, the RPC checks
+// has_permission(p_branch_id, key) once at entry.
 export async function fetchRevenueRollup(
   branchId: number | null,
   startDate: string,
@@ -779,7 +779,7 @@ export async function fetchOrdersForDay(
   return { success: true, data: data ?? [] };
 }
 
-/* ─── fetchReconciliationByDay — Phase 3: per-day DT vs Sổ ─ */
+/* ─── fetchReconciliationByDay — per-day revenue vs ledger ─ */
 
 export async function fetchReconciliationByDay(
   branchId: number | null,
@@ -822,7 +822,7 @@ export async function fetchReconciliationByDay(
   return { success: true, data: data ?? [] };
 }
 
-/* ─── fetchCashVarianceSummary — Phase 3: lệch tiền cuối ca ─ */
+/* ─── fetchCashVarianceSummary — cash variance at shift close ─ */
 
 export async function fetchCashVarianceSummary(
   branchId: number | null,
@@ -865,9 +865,9 @@ export async function fetchCashVarianceSummary(
   return { success: true, data: data?.[0] ?? null };
 }
 
-/* ─── fetchRevenueByHour — heatmap 7×24 cho consolidated revenue ── */
-// 90-day cap enforced at RPC level (matches application guard). Hour
-// bucket dùng `(paid_at AT TIME ZONE 'Asia/Ho_Chi_Minh')` để khớp với
+/* ─── fetchRevenueByHour — 7×24 heatmap for consolidated revenue ── */
+// 90-day cap enforced at RPC level (matches the application guard). The
+// hour bucket uses `(paid_at AT TIME ZONE 'Asia/Ho_Chi_Minh')` to match
 // rule REVENUE-BUCKET-BY-PAID-AT-LOCAL-TZ. Returns 1 row per (dow, hour).
 export async function fetchRevenueByHour(
   branchId: number | null,
@@ -953,10 +953,10 @@ export async function fetchRevenueByCashier(
   return { success: true, data: data ?? [] };
 }
 
-/* ─── fetchAccessibleBranches — branches user có finance:view ─ */
+/* ─── fetchAccessibleBranches — branches with finance:view ─ */
 // Branch picker source. Owner/super_manager: all active operational branches.
-// Branch-scoped users only see their own branch. Filter by `branch_kind='branch'`
-// để loại non-operational rows, không phát sinh DT.
+// Branch-scoped users only see their own branch. Filter by
+// `branch_kind='branch'` to drop non-operational rows with no revenue.
 export async function fetchAccessibleBranches(): Promise<ActionResult> {
   const ctx = await getAuthContextWithPermission(
     REPORT_ROLES,
@@ -981,7 +981,7 @@ export async function fetchAccessibleBranches(): Promise<ActionResult> {
     return { success: true, data: data ?? [] };
   }
 
-  // branch_manager / cashier scope: chỉ thấy chi nhánh của mình.
+  // branch_manager / cashier scope: only their own branch.
   if (claims.branch_id != null) {
     const { data, error } = await supabase
       .from("branches")

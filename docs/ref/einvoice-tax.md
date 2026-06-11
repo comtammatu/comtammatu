@@ -1,8 +1,11 @@
 # HĐĐT & Thuế GTGT — Hóa Đơn Điện Tử & Giá Trị Gia Tăng
 
 > Áp dụng: Hộ kinh doanh Cơm Tấm Má Tư — mô hình F&B multi-branch
-> Khung pháp lý: NĐ 123/2020, NĐ 70/2025, NĐ 68/2026, TT 78/2021, Luật Thuế GTGT 2024, NQ 198/2025/QH15, NQ 204/2025/QH15
-> Last updated: 2026-06-09 (Viettel S-invoice only, HKD model)
+> Khung pháp lý (đến 06/2026):
+> Hóa đơn chứng từ — NĐ 123/2020 (sửa đổi bởi NĐ 70/2025, hiệu lực 01/06/2025) + TT 32/2025/TT-BTC (thay TT 78/2021, hiệu lực 01/06/2025).
+> Thuế HKD — NQ 198/2025/QH15 (bỏ thuế khoán, miễn lệ phí môn bài từ 01/01/2026) + NĐ 68/2026/NĐ-CP (05/03/2026, chính sách thuế & quản lý thuế HKD/CNKD) + Luật Thuế GTGT 48/2024/QH15 + NQ 204/2025/QH15 (giảm GTGT 01/07/2025–31/12/2026) + Luật Thuế TNCN sửa đổi 2025 (hiệu lực 01/07/2026).
+> Kế toán HKD — TT 152/2025/TT-BTC (31/12/2025, thay TT 88/2021 từ 01/01/2026).
+> Last updated: 2026-06-11 (Viettel S-invoice only, HKD model)
 
 ---
 
@@ -15,17 +18,31 @@ HKD đã đăng ký với cơ quan thuế/provider.
 
 Các mốc chính đến tháng 06/2026:
 
-- Từ 01/01/2026, HKD/cá nhân kinh doanh không áp dụng thuế khoán; số liệu POS,
-  HĐĐT, sổ doanh thu, và chứng từ phải đủ để kê khai.
-- HKD có doanh thu từ 01 tỷ đồng/năm trở lên thuộc diện bắt buộc sử dụng HĐĐT;
-  HKD doanh thu thấp hơn không bị buộc dùng HĐĐT nhưng được tiếp tục/tự nguyện
-  sử dụng nếu đã đăng ký hợp pháp và có nhu cầu minh bạch giao dịch.
-- HKD doanh thu trên 500 triệu đồng/năm thực hiện khai/nộp thuế theo NĐ
-  68/2026; trường hợp doanh thu năm từ 50 tỷ đồng trở xuống khai GTGT theo quý,
-  trên 50 tỷ đồng khai theo tháng.
-- NQ 204/2025/QH15 giảm 2% thuế GTGT từ 01/07/2025 đến 31/12/2026 cho nhóm
-  hàng hóa/dịch vụ đủ điều kiện; dịch vụ ăn uống thông thường đang được xử lý
-  theo mức 8% trong thời hạn này, trừ mặt hàng thuộc nhóm loại trừ.
+- Từ 01/01/2026: bỏ phương pháp thuế khoán và miễn lệ phí môn bài cho HKD
+  (NQ 198/2025/QH15). Số liệu POS, HĐĐT, sổ doanh thu, chứng từ phải đủ để
+  kê khai.
+- NĐ 68/2026/NĐ-CP (hiệu lực 05/03/2026) chia HKD theo 4 nhóm doanh thu/năm:
+  - **Nhóm 1** ≤ 500 triệu: miễn GTGT + TNCN, chỉ thông báo doanh thu năm
+    (trước 31/01 năm sau).
+  - **Nhóm 2** > 500 triệu – 3 tỷ: GTGT theo tỷ lệ % trên doanh thu; TNCN
+    mặc định theo % doanh thu hoặc tự nguyện chọn tính theo thu nhập; khai
+    theo quý.
+  - **Nhóm 3** > 3 – 50 tỷ: TNCN bắt buộc tính theo (doanh thu − chi phí);
+    khai theo quý + quyết toán năm.
+  - **Nhóm 4** > 50 tỷ: khai theo tháng + quyết toán năm.
+  - Má Tư thuộc nhóm theo doanh thu thực tế từng năm — kế toán xác nhận nhóm
+    và phương pháp TNCN khi chốt hồ sơ kê khai.
+- HĐĐT: HKD doanh thu ≥ 1 tỷ/năm bán trực tiếp đến người tiêu dùng (gồm ăn
+  uống) bắt buộc dùng HĐĐT khởi tạo từ máy tính tiền kết nối CQT từ 01/06/2025
+  (NĐ 70/2025); NĐ 68/2026 giữ yêu cầu HĐĐT có mã CQT/máy tính tiền từ mức
+  doanh thu 1 tỷ. HKD doanh thu thấp hơn được dùng tự nguyện.
+- Kế toán: TT 152/2025/TT-BTC thay TT 88/2021 từ 01/01/2026 — bộ sổ kế toán
+  tổ chức theo nhóm doanh thu (mẫu S1a / S2a–S2e / S3a-HKD); export của hệ
+  thống phải đối chiếu được với bộ sổ này.
+- NQ 204/2025/QH15 giảm 2% GTGT (10% → 8%) từ 01/07/2025 đến 31/12/2026 cho
+  nhóm hàng hóa/dịch vụ đủ điều kiện. Với HKD tính GTGT theo tỷ lệ % trên
+  doanh thu, mức giảm là 20% của tỷ lệ % khi xuất hóa đơn cho hàng hóa/dịch
+  vụ thuộc diện giảm (ăn uống 3% → hiệu dụng 2,4% trong thời hạn này).
 
 ### 1.1 Mô hình vận hành
 
@@ -42,7 +59,26 @@ Mỗi order chỉ thuộc **đúng 1** trong 2 luồng (không double-issue).
 
 ---
 
-## 2. Thuế suất GTGT áp dụng cho F&B
+## 2. Thuế suất GTGT/TNCN áp dụng cho F&B
+
+### 2.1 Phương pháp hiện hành của HKD: tỷ lệ % trên doanh thu
+
+HKD kê khai (không đăng ký phương pháp khấu trừ) nộp GTGT + TNCN theo tỷ lệ %
+trên doanh thu (NĐ 68/2026 + biểu ngành nghề pháp luật GTGT/TNCN):
+
+| Ngành áp dụng cho Má Tư           | GTGT   | TNCN     | Ghi chú                                                              |
+| --------------------------------- | ------ | -------- | -------------------------------------------------------------------- |
+| Dịch vụ ăn uống (tại chỗ/mang đi) | **3%** | **1,5%** | GTGT hiệu dụng **2,4%** đến 31/12/2026 (NQ 204/2025 giảm 20% tỷ lệ) |
+
+- Mẫu HĐ bán hàng từ máy tính tiền (`2/...`): giá trên hóa đơn là giá bán đã
+  gồm thuế, KHÔNG có dòng VAT riêng (xem §3.2).
+- Nghĩa vụ GTGT của HKD phương pháp trực tiếp KHÔNG phải "8% trên giá chưa
+  thuế". Mức 8%/10% bên dưới chỉ áp dụng nếu HKD đăng ký phương pháp khấu trừ
+  với CQT (xuất HĐ GTGT mẫu `1/...`).
+- Nhóm 3 (> 3 tỷ): TNCN không theo 1,5% doanh thu mà theo (doanh thu − chi
+  phí) — chứng từ chi phí đầu vào (§4) trở thành dữ liệu thuế trực tiếp.
+
+### 2.2 Nếu đăng ký phương pháp khấu trừ (HĐ GTGT mẫu `1/...`)
 
 | Loại hàng hóa / dịch vụ                    | Thuế suất | Ghi chú                                                        |
 | ------------------------------------------ | --------- | -------------------------------------------------------------- |
@@ -142,6 +178,11 @@ backfill hoặc khi chủ trương vận hành chuyển sang template tổng h�
 - Chữ ký số của người bán
 ```
 
+> ⚠️ **Chiết khấu cấp đơn**: HĐĐT phải phân bổ chiết khấu cấp đơn xuống từng
+> dòng hàng theo tỷ lệ, không vượt line amount; tổng khai báo CQT = số tiền
+> khách thực trả sau chiết khấu. Nếu submit hóa đơn fail thì KHÔNG rollback
+> payment (failure-isolation).
+
 ### 3.3 Các trạng thái HĐĐT (state machine)
 
 ```
@@ -149,7 +190,7 @@ draft → signing → submitted → issued      ← trạng thái hợp lệ
                              ↓
                           cancelled         ← hủy hợp lệ (≥20 ký tự lý do)
                              ↓
-                          replaced          ← thay thế bằng HĐ mới (TT 78)
+                          replaced          ← thay thế bằng HĐ mới (TT 32/2025)
 
 [Legacy-only]
 draft → not_required                       ← không được tạo mới
@@ -190,7 +231,7 @@ RPC raise `illegal_transition` (ERRCODE 22023) khi cố gắng nhảy ngoài mat
 | `cancelled` / `replaced` | `settings:tenant`   |
 | Tất cả transition khác   | `orders:write`      |
 
-`cancel`/`replace` cần owner/super_manager (kèm biên bản hủy theo TT 78). Issuance flow (`draft → signing → submitted → issued`) cho phép cashier+ thực hiện.
+`cancel`/`replace` cần owner/super_manager (kèm biên bản hủy/thay thế theo NĐ 123/2020 sửa đổi + TT 32/2025). Issuance flow (`draft → signing → submitted → issued`) cho phép cashier+ thực hiện.
 
 #### Idempotency
 
@@ -527,12 +568,15 @@ Auth flow:
 
 ## 6. Kê khai & báo cáo thuế
 
-### 6.1 Kê khai thuế GTGT hàng tháng (Tờ khai 01/GTGT)
+### 6.1 Kê khai thuế (HKD kê khai theo NĐ 68/2026)
 
-- **Hạn nộp**: ngày 20 tháng tiếp theo (ví dụ: tháng 3 → nộp trước 20/4)
-- **Dữ liệu cần**:
-  - Tổng GTGT đầu ra: `tax_invoices WHERE status = 'issued'` (cả `per_order` lẫn `daily_summary`)
-  - Tổng GTGT đầu vào: `supplier_invoices WHERE is_vat_deductible = true`
+- **Kỳ khai theo nhóm doanh thu**: nhóm > 500 triệu – 3 tỷ và nhóm > 3 – 50 tỷ
+  khai **theo quý** (nhóm > 3 – 50 tỷ thêm quyết toán năm); nhóm > 50 tỷ khai
+  **theo tháng** + quyết toán năm. Mẫu tờ khai và hạn nộp cụ thể theo hướng
+  dẫn quản lý thuế hiện hành — kế toán chốt lịch với CQT.
+- **Dữ liệu hệ thống cung cấp**:
+  - Doanh thu + GTGT đầu ra: `tax_invoices WHERE status = 'issued'` (cả `per_order` lẫn `daily_summary`)
+  - Chi phí/chứng từ đầu vào: `supplier_invoices` (nhóm 3 dùng trực tiếp cho TNCN theo doanh thu − chi phí; cờ `is_vat_deductible` chỉ dùng khi đã đăng ký phương pháp khấu trừ)
 - **Nộp qua**: eTax Mobile hoặc phần mềm kế toán — **không nộp trực tiếp từ hệ thống này**
 
 ### 6.2 Dashboard `/finance` (RPC `get_finance_dashboard_summary`)

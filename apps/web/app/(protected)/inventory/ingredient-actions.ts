@@ -97,7 +97,7 @@ function resolvePurchaseUnit(input: Partial<IngredientInput>) {
   return input.purchase_unit?.trim() || input.unit?.trim() || null;
 }
 
-/* ─── fetchIngredients (full catalog — SM quản lý danh mục; ops xem theo nghiệp vụ) ─── */
+/* ─── fetchIngredients (full catalog — SM manages it; ops view by workflow) ─── */
 
 export async function fetchIngredients(limit = 2000): Promise<ActionResult> {
   const ctx = await getAuthContext(INVENTORY_OPS_ROLES);

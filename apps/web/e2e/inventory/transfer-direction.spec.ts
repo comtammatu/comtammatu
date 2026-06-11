@@ -429,9 +429,18 @@ test.describe("Transfer direction — CK→CW rejected (Scenario 4)", () => {
     const supabase = createServiceClient();
     const fx = await buildFixtures();
 
-    // Attempt to create a CK→CW transfer via the UI transfer creation form
-    await page.goto("/inventory/transfers/new");
+    // Attempt to create a CK→CW transfer via the UI. There is no
+    // /inventory/transfers/new route — creation happens in CreateTransferDialog,
+    // opened from the "Tạo phiếu" button on the transfers list page.
+    await page.goto("/inventory/transfers");
     await page.waitForLoadState("networkidle");
+
+    const createButton = page.getByRole("button", {
+      name: /tạo phiếu|cấp bếp/i,
+    });
+    if (await createButton.isVisible({ timeout: 5_000 }).catch(() => false)) {
+      await createButton.click();
+    }
 
     // Select from-branch = CK and to-branch = CW
     const fromSelect = page
@@ -508,12 +517,21 @@ test.describe("Transfer direction — CW→CW rejected (Scenario 5)", () => {
   }) => {
     const fx = await buildFixtures();
 
-    // Drive through the UI creation form — expect the app-layer branch-kind guard
-    // to fire (fromKind === 'central_warehouse' && toKind === 'central_warehouse'
-    // is not in the whitelist, so the trigger fires and the action maps it to the
-    // user-facing message).
-    await page.goto("/inventory/transfers/new");
+    // Drive through the UI creation dialog — expect the app-layer branch-kind
+    // guard to fire (fromKind === 'central_warehouse' && toKind ===
+    // 'central_warehouse' is not in the whitelist, so the trigger fires and the
+    // action maps it to the user-facing message). There is no
+    // /inventory/transfers/new route — creation happens in CreateTransferDialog,
+    // opened from the "Tạo phiếu" button on the transfers list page.
+    await page.goto("/inventory/transfers");
     await page.waitForLoadState("networkidle");
+
+    const createButton = page.getByRole("button", {
+      name: /tạo phiếu|cấp bếp/i,
+    });
+    if (await createButton.isVisible({ timeout: 5_000 }).catch(() => false)) {
+      await createButton.click();
+    }
 
     const fromSelect = page
       .locator('[name="fromBranchId"], [data-testid="from-branch-select"]')

@@ -1,18 +1,18 @@
 /**
- * POS-03 Tạo đơn mới + gửi bếp — capture spec.
+ * POS-03 Create order + send to kitchen — capture spec.
  *
  * 5 main steps + 1 variant:
- *   step-01-menu-overview     — menu mở, highlight search + category tabs
- *   step-02-tap-item          — chạm món → vào giỏ
- *   step-03-cart-review       — mở giỏ, thấy item + qty + giá
- *   step-04-add-note          — gõ ghi chú đơn
- *   step-05-ready-to-submit   — highlight nút "Đặt món" sẵn sàng gửi
- *   variant-customizer        — món có modifier/sides → customizer drawer mở
+ *   step-01-menu-overview     — menu open, search + category tabs highlighted
+ *   step-02-tap-item          — tap an item → added to cart
+ *   step-03-cart-review       — cart open, item + qty + price visible
+ *   step-04-add-note          — typing an order note
+ *   step-05-ready-to-submit   — "Đặt món" button highlighted, ready to send
+ *   variant-customizer        — item with modifiers/sides → customizer drawer
  *
- * Chạy: pnpm --filter @comtammatu/web guides:capture --grep="POS-03"
+ * Run: pnpm --filter @comtammatu/web guides:capture --grep="POS-03"
  *
- * Note: KHÔNG actually click "Đặt món" trong step-05 — tránh tạo orphan
- * order trong DB test. Chỉ highlight button.
+ * Note: NEVER actually click "Đặt món" in step-05 — it would create an
+ * orphan order in the test DB. Only highlight the button.
  */
 
 import { test, type Page } from "@playwright/test";
@@ -28,8 +28,8 @@ const MODULE = "pos";
 const TOTAL = 5;
 
 /**
- * Helper: navigate POS → tap bàn trống → đợi menu hiện.
- * Mỗi step độc lập setup từ đầu (mode "serial" không guarantee state).
+ * Helper: navigate to POS → tap an empty table → wait for the menu.
+ * Every step sets up from scratch (mode "serial" does not guarantee state).
  */
 async function gotoMenuViaTable(p: Page, branchId: number): Promise<void> {
   await p.goto(`/br/${String(branchId)}/pos`);
@@ -128,13 +128,13 @@ test.describe("POS-03 Tạo đơn mới + gửi bếp", () => {
       setup: async (p) => {
         await gotoMenuViaTable(p, ctx.branchId);
         await tapBasicMenuItem(p);
-        // Mở cart drawer
+        // Open the cart drawer
         const cartBtn = p
           .getByRole("button", { name: /Giỏ mới|Giỏ đơn mới/i })
           .first();
         await cartBtn.waitFor({ state: "visible", timeout: 5000 });
         await cartBtn.click();
-        // Đợi cart drawer + nút "Đặt món (n)"
+        // Wait for the cart drawer + the "Đặt món (n)" button
         await p
           .getByRole("button", { name: /Đặt món/i })
           .waitFor({ state: "visible", timeout: 5000 });
@@ -243,19 +243,19 @@ test.describe("POS-03 Tạo đơn mới + gửi bếp", () => {
       setup: async (p) => {
         await gotoMenuViaTable(p, ctx.branchId);
         // Tap a higher-priced item more likely to have modifiers/sides
-        // ("Sườn Một Gang" / "Sườn Cốt Lết" trong seed)
+        // ("Sườn Một Gang" / "Sườn Cốt Lết" in the seed data)
         const item = p
           .getByRole("button", { name: /Sườn Một Gang|Sườn Cốt Lết|Sườn Cây/i })
           .first();
         await item.waitFor({ state: "visible", timeout: 8000 });
         await item.click();
-        // Đợi customizer drawer (có heading món hoặc nút "Thêm vào giỏ")
-        // Nếu món không có modifier, customizer không mở → fallback timeout
+        // Wait for the customizer drawer (item heading or "Thêm vào giỏ").
+        // Items without modifiers never open it → fall back on timeout
         await p
           .getByRole("button", { name: /Thêm vào giỏ|Cập nhật giỏ/i })
           .waitFor({ state: "visible", timeout: 4000 })
           .catch(() => {
-            // Item không có customizer — capture menu state thay thế
+            // Item has no customizer — capture the menu state instead
           });
       },
       annotations: [

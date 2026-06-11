@@ -502,9 +502,9 @@ export function BillReceipt({
         ? Boolean(vietQrConfig)
         : false); // MoMo: confirmed via IPN webhook, not cashier action
 
-  // Tooltip giải thích lý do disabled — cashier nhìn vào nút mờ phải biết
-  // mình thiếu thao tác gì (mất kết nối, MST sai, khách chưa đủ tiền, chưa
-  // tạo QR). Không cần Tooltip component vì native `title=` đủ ngắn gọn.
+  // Tooltip explaining why the button is disabled — a dimmed button must
+  // tell the cashier what is missing (offline, bad tax code, not enough
+  // cash, QR not created). Native `title=` is enough; no Tooltip component.
   const disabledReason = canConfirmPaid
     ? null
     : !isOnline
@@ -867,8 +867,8 @@ export function BillReceipt({
 
   const handleConfirmPaid = useCallback(() => {
     if (!order || orderId === null || !canConfirmPaid) return;
-    // Freeze invoice payload at click — chống race nếu cashier sửa form
-    // trong lúc submit đang chạy.
+    // Freeze the invoice payload at click — guards against the cashier
+    // editing the form while the submit is in flight.
     const invoicePayload = buildInvoicePayload(invoiceForm);
 
     startActionTransition(async () => {
@@ -966,9 +966,9 @@ export function BillReceipt({
     });
   }, [orderId]);
 
-  // In lại hóa đơn cho đơn đã thanh toán / cancelled. Reuse printPending
-  // state — hai thao tác không xảy ra cùng lúc (provisional chỉ trên đơn
-  // chưa paid; reprint chỉ trên đơn read-only).
+  // Reprint the receipt for a paid/cancelled order. Reuses printPending
+  // state — the two actions never run together (provisional print is for
+  // unpaid orders only; reprint is for read-only orders only).
   const handleReprintReceipt = useCallback(() => {
     if (orderId === null) return;
     startPrintTransition(async () => {
@@ -1014,9 +1014,10 @@ export function BillReceipt({
     order != null && !isReadOnlyOrder && order.status !== "served";
   const dialogTitleLabel =
     isReceiptIntent || isReadOnlyOrder ? "Hóa đơn" : "Thanh toán";
-  // Header preview: full `order` thắng nếu có; không thì dùng SessionOrder
-  // seed cho non-detail paths (F9 / list / picker / post-submit toast). Cho
-  // cashier xác nhận đúng đơn ngay khi dialog mở, trong lúc fetch chạy nền.
+  // Header preview: the full `order` wins when present; otherwise use the
+  // SessionOrder seed for non-detail paths (F9 / list / picker / post-submit
+  // toast). Lets the cashier confirm the right order the moment the dialog
+  // opens, while the fetch runs in the background.
   const dialogTitleHeader =
     order ?? (initialHeaderSeed?.id === orderId ? initialHeaderSeed : null);
   const dialogTitle = dialogTitleHeader

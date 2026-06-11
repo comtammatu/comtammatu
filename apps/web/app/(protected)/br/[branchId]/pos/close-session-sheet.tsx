@@ -61,9 +61,6 @@ interface CloseSessionSheetProps {
   sessionId: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** @deprecated D8 (2026-04-27) bỏ variance gate — prop giữ lại để
-   * backward-compat với caller cũ; không còn ảnh hưởng UI. */
-  canOverrideVariance?: boolean;
 }
 
 export function CloseSessionSheet({
@@ -100,8 +97,9 @@ export function CloseSessionSheet({
         };
         setSummary(payload);
         setStep("reconcile");
-        // D8: variance breach giờ chỉ là cảnh báo. Server đã insert
-        // notification cho manager qua trigger; UI báo cashier biết.
+        // D8: a variance breach is only a warning. The server already
+        // inserted the manager notification via trigger; the UI just
+        // informs the cashier.
         if (payload.variance_breached) {
           toast.warning("Lệch quỹ vượt ngưỡng — đã gửi cảnh báo cho quản lý", {
             description: `Chênh lệch ${formatVND(

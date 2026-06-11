@@ -4,7 +4,6 @@ import {
   resolvePostLoginRedirect,
   getSafeInternalReturnTo,
   getDefaultRedirect,
-  getBetaDefaultRedirect,
 } from "../scope";
 import { buildAccessDeniedPath } from "../blocked-state";
 import {
@@ -55,18 +54,6 @@ test("getDefaultRedirect → all other roles land on /employee", () => {
   ] as const) {
     assert.equal(getDefaultRedirect(makeClaims(role)), "/employee");
   }
-});
-
-test("getBetaDefaultRedirect → owner and super_manager keep beta admin, others use employee portal", () => {
-  assert.equal(
-    getBetaDefaultRedirect(makeClaims("owner")),
-    "/beta/admin/dashboard",
-  );
-  assert.equal(
-    getBetaDefaultRedirect(makeClaims("super_manager")),
-    "/beta/admin/dashboard",
-  );
-  assert.equal(getBetaDefaultRedirect(makeClaims("cashier")), "/employee");
 });
 
 test("resolveRoleHomeLink → shell home link follows role-accessible landing", () => {
@@ -133,7 +120,6 @@ test("unknown inventory paths are not active route contracts", () => {
   for (const pathname of [
     "/inventory/not-a-real-route",
     "/inventory/not-a-real-route/detail",
-    "/beta/inventory/not-a-real-route/detail",
   ]) {
     assert.equal(resolveModuleFromPath(pathname), null);
     assert.equal(resolveRouteFamilyContract(pathname), null);
@@ -399,10 +385,6 @@ test("resolveLegacyRouteRedirectPath → admin finance redirects to canonical fi
     resolveLegacyRouteRedirectPath("/admin/finance/revenue"),
     "/finance/revenue",
   );
-  assert.equal(
-    resolveLegacyRouteRedirectPath("/beta/admin/finance/revenue"),
-    "/beta/finance/revenue",
-  );
   assert.equal(resolveLegacyRouteRedirectPath("/admin/dashboard"), null);
 });
 
@@ -575,53 +557,6 @@ test("canAccess → retired inventory_admin module is unavailable to every role"
   for (const role of STAFF_ROLES) {
     assert.equal(canAccess(role, "inventory_admin"), false);
   }
-});
-
-test("resolvePostLoginRedirect → beta surface → admin returnTo becomes /beta/admin/dashboard", () => {
-  assert.equal(
-    resolvePostLoginRedirect(
-      makeClaims("super_manager"),
-      "/beta/admin/dashboard",
-      { surface: "beta" },
-    ),
-    "/beta/admin/dashboard",
-  );
-});
-
-test("resolvePostLoginRedirect → beta surface + /beta/login returnTo → beta default", () => {
-  assert.equal(
-    resolvePostLoginRedirect(makeClaims("super_manager"), "/beta/login", {
-      surface: "beta",
-    }),
-    "/beta/admin/dashboard",
-  );
-});
-
-test("resolvePostLoginRedirect → beta surface rejects unknown admin returnTo", () => {
-  assert.equal(
-    resolvePostLoginRedirect(makeClaims("owner"), "/admin/not-a-route", {
-      surface: "beta",
-    }),
-    "/beta/admin/dashboard",
-  );
-});
-
-test("resolvePostLoginRedirect → beta surface + cross-branch POS → fallback", () => {
-  assert.equal(
-    resolvePostLoginRedirect(makeClaims("cashier", 3), "/beta/br/7/pos", {
-      surface: "beta",
-    }),
-    "/employee",
-  );
-});
-
-test("resolvePostLoginRedirect → beta surface + own-branch POS → allowed", () => {
-  assert.equal(
-    resolvePostLoginRedirect(makeClaims("cashier", 3), "/beta/br/3/pos", {
-      surface: "beta",
-    }),
-    "/beta/br/3/pos",
-  );
 });
 
 test("getSafeInternalReturnTo → accepts internal paths", () => {

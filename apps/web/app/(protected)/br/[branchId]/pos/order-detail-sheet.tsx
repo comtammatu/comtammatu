@@ -268,8 +268,8 @@ function OrderDetailSheetSkeletonFallback() {
 /**
  * Branch ID is required for the discount/split/merge server actions —
  * they all gate on JWT.branch_id matching this URL param. Optional in the
- * type only to preserve back-compat for any caller that hasn't been
- * updated yet; the discount/split/merge buttons are gated on its presence.
+ * type because some render sites do not thread it through; the
+ * discount/split/merge buttons are gated on its presence.
  */
 export interface OrderDetailSheetProps {
   branchId: number;
@@ -342,8 +342,8 @@ export function OrderDetailSheet({
   const [canManage, setCanManage] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Two transitions on purpose:
-  //   - `isMutating` gates the action buttons (Confirm in dialogs, Phục vụ /
-  //     Chuyển bàn / Thao tác in the footer). It clears the moment the
+  //   - `isMutating` gates the action buttons (Confirm in dialogs, "Phục vụ"
+  //     / "Chuyển bàn" / "Thao tác" in the footer). It clears the moment the
   //     Server Action returns, so cashier can chain the next tap.
   //   - `isRefetching` covers the background fetchOrderDetail that follows
   //     a mutation (or initial mount). It keeps the skeleton visible for
@@ -458,8 +458,8 @@ export function OrderDetailSheet({
   // value means the mount itself does not trigger a redundant fetch —
   // critical when the parent provides a seed via `initialOrder`, since
   // `0 == null` is false and the naive check would call `load()` and
-  // flip `isPending=true`, briefly disabling Chuyển bàn / Đã phục vụ /
-  // Hủy đơn even though the seed already painted the data.
+  // flip `isPending=true`, briefly disabling "Chuyển bàn" / "Đã phục vụ" /
+  // "Hủy đơn" even though the seed already painted the data.
   const lastRefreshTokenRef = useRef(refreshToken);
   useEffect(() => {
     if (orderId === null) return;
@@ -742,7 +742,7 @@ export function OrderDetailSheet({
   };
 
   // From the per-item actions sheet → close it and open the existing
-  // VoidItemDialog (which collects the lý-do-hủy reason). Sequencing the
+  // VoidItemDialog (which collects the void reason). Sequencing the
   // two prevents stacked focus traps from fighting on mobile.
   const handleVoidRequest = (itemId: number) => {
     setActionsItemId(null);
@@ -772,8 +772,8 @@ export function OrderDetailSheet({
   };
 
   // From the per-item actions sheet → open ReduceQuantityDialog seeded with
-  // current qty - 1 (most common case: khách bớt 1 phần). Reset reason so
-  // any prior cancel-flow text doesn't leak into reduce.
+  // current qty - 1 (most common case: the customer drops one portion).
+  // Reset reason so any prior cancel-flow text doesn't leak into reduce.
   const handleReduceRequest = (itemId: number) => {
     const target = data?.order_items.find((item) => item.id === itemId);
     if (!target || target.quantity < 2) return;
@@ -988,7 +988,7 @@ export function OrderDetailSheet({
         // Keep onOrderUpdated so the orders LIST picks up the brand-new row
         // (realtime INSERT in useOrderSync handles it too, but the parent
         // also wants tables status to refresh — split can flip the source's
-        // bàn header indicator). `load()` dropped: detail's own realtime
+        // table header indicator). `load()` dropped: detail's own realtime
         // channel patches the source order's mutated totals automatically.
         await onOrderUpdated?.();
       } else {
@@ -1021,10 +1021,10 @@ export function OrderDetailSheet({
     });
   };
 
-  // Multi-order-per-table alignment (PR3): a target bàn that is `occupied`
-  // is now a valid transfer destination — the order joins the existing
-  // order(s) on that bàn. `reserved` and `maintenance` still excluded; the
-  // bàn hiện tại always shows so cashier keeps it as a fallback option.
+  // Multi-order-per-table alignment: an `occupied` target table is a valid
+  // transfer destination — the order joins the existing order(s) on it.
+  // `reserved` and `maintenance` stay excluded; the current table always
+  // shows so the cashier keeps it as a fallback option.
   const availableTables = tables.filter(
     (t) =>
       t.status === "available" ||
@@ -1043,8 +1043,8 @@ export function OrderDetailSheet({
       : Math.max(0, data.subtotal - Number(data.item_discount_amount ?? 0));
   const activeItemCount =
     data?.order_items.filter((item) => item.status !== "cancelled").length ?? 0;
-  // Tổng số PHẦN (đơn vị quantity) đang active trên đơn — drives the Tách
-  // hoá đơn gate so 1 row qty=2 (e.g. "2 Cơm sườn") still qualifies.
+  // Total active UNITS (quantity, not rows) on the order — drives the
+  // split-bill gate so one row with qty=2 (e.g. "2 Cơm sườn") still qualifies.
   const activeUnitCount =
     data?.order_items
       .filter((item) => item.status !== "cancelled")
@@ -1095,9 +1095,9 @@ export function OrderDetailSheet({
     data?.order_type === "dine_in" &&
     data?.table_id != null &&
     tableSiblingCount >= 2;
-  // "Chuyển bàn" gom vào dropdown ⋮ thay vì 1 nút full-width riêng — giảm
-  // chiều cao footer + giúp cashier giữ ngón cái gần CTA chính (Thanh toán
-  // / Thêm món / Phục vụ).
+  // "Chuyển bàn" lives in the ⋮ dropdown instead of its own full-width
+  // button — keeps the footer short and the cashier's thumb near the main
+  // CTAs ("Thanh toán" / "Thêm món" / "Phục vụ").
   const canShowMoreMenu =
     canShowBillInMenu ||
     canShowReorder ||

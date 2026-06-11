@@ -22,11 +22,6 @@ const KNOWN_TARGETS = {
     passwordEnv: "SUPABASE_PASSWORD_IEXW",
     explicitUrlEnv: "SUPABASE_DB_URL_IEXW",
   },
-  nikkridjukdbqvkvqlmi: {
-    // matu-dev (dev sandbox). Owner confirmed 2026-05-30: SUPABASE_PASSWORD = matu-dev.
-    passwordEnv: "SUPABASE_PASSWORD",
-    explicitUrlEnv: "SUPABASE_DB_URL_MATU_DEV",
-  },
 };
 
 function printHelp() {

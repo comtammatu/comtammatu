@@ -179,7 +179,7 @@ function buildKpis({
   };
 }
 
-async function fetchOperatingExpenseTotal({
+export async function fetchOperatingExpenseTotal({
   supabase,
   tenantId,
   branchId,

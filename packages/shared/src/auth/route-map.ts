@@ -5,7 +5,6 @@ import {
   isPublicAppPath,
   resolveLegacyRouteRedirectPath,
   resolveModuleFromPath,
-  stripBetaPrefix,
 } from "./route-resolution";
 
 export type RouteSurface =
@@ -225,7 +224,7 @@ export const ROUTE_FAMILY_CONTRACTS = [
 function normalizeRoutePath(pathname: string): string {
   const pathOnly = pathname.split(/[?#]/, 1)[0] || "/";
   const legacyRedirectPath = resolveLegacyRouteRedirectPath(pathOnly);
-  return stripBetaPrefix(legacyRedirectPath ?? pathOnly);
+  return legacyRedirectPath ?? pathOnly;
 }
 
 function escapeRegex(input: string): string {

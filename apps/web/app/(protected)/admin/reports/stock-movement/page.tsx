@@ -24,6 +24,7 @@ export default async function StockMovementReportPage() {
       <AppPageHeader
         eyebrow={APP_COPY_VI.executiveReporting}
         title={messages.admin.reports.stockMovement.pageTitle}
+        description={messages.admin.reports.stockMovement.pageDescription}
       />
       <StockMovementClient
         branches={activeBranches}

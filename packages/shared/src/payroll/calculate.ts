@@ -1,16 +1,12 @@
 /**
  * Payroll Calculation Logic
  *
- * Tính lương + BHXH + thuế TNCN theo luật VN.
+ * Salary + social insurance + PIT per Vietnamese law.
  * Ref: docs/ref/payroll-pit.md
  *
  * Constants are versioned via `legal-versions.ts`. Pass `effectiveDate`
  * (Date or ISO string) — or `periodYear` + `periodMonth` — to pick the
  * correct rule set for the payroll period being calculated.
- *
- * The legacy `INSURANCE_CAP`, `PERSONAL_DEDUCTION`, etc. exports below
- * remain for backward compatibility and reflect the LATEST version. New
- * call sites should pass an effectiveDate / period and not rely on these.
  */
 
 import {
@@ -27,34 +23,13 @@ export type { PayrollLegalVersion, PitBracket };
 const LATEST_VERSION =
   PAYROLL_LEGAL_VERSIONS[PAYROLL_LEGAL_VERSIONS.length - 1]!;
 
-/** @deprecated pass effectiveDate to calculatePayrollEntry instead */
-export const INSURANCE_CAP = LATEST_VERSION.insuranceCap;
-/** @deprecated pass effectiveDate to calculatePayrollEntry instead */
-export const PERSONAL_DEDUCTION = LATEST_VERSION.personalDeduction;
-/** @deprecated pass effectiveDate to calculatePayrollEntry instead */
-export const DEPENDENT_DEDUCTION = LATEST_VERSION.dependentDeduction;
-
-/** @deprecated read from PayrollLegalVersion instead */
-export const EMPLOYEE_BHXH_RATE = LATEST_VERSION.employeeBhxhRate;
-/** @deprecated read from PayrollLegalVersion instead */
-export const EMPLOYEE_BHYT_RATE = LATEST_VERSION.employeeBhytRate;
-/** @deprecated read from PayrollLegalVersion instead */
-export const EMPLOYEE_BHTN_RATE = LATEST_VERSION.employeeBhtnRate;
-
-/** @deprecated read from PayrollLegalVersion instead */
-export const EMPLOYER_BHXH_RATE = LATEST_VERSION.employerBhxhRate;
-/** @deprecated read from PayrollLegalVersion instead */
-export const EMPLOYER_BHYT_RATE = LATEST_VERSION.employerBhytRate;
-/** @deprecated read from PayrollLegalVersion instead */
-export const EMPLOYER_BHTN_RATE = LATEST_VERSION.employerBhtnRate;
-
 /**
- * Tính thuế TNCN theo biểu lũy tiến.
- * @param taxableIncome - Thu nhập tính thuế (sau giảm trừ), VND/tháng
- * @param brackets - Biểu thuế áp dụng. Defaults to LATEST_VERSION brackets
- *                   for backward compatibility.
+ * Progressive PIT calculation.
+ * @param taxableIncome - Taxable income (after deductions), VND/month
+ * @param brackets - Tax brackets to apply. Defaults to LATEST_VERSION
+ *                   brackets for backward compatibility.
  */
-export function calculatePIT(
+function calculatePIT(
   taxableIncome: number,
   brackets: readonly PitBracket[] = LATEST_VERSION.pitBrackets,
 ): number {
@@ -97,27 +72,27 @@ export interface PayrollEntryInput {
 }
 
 export interface PayrollEntryResult {
-  // BH NLĐ
+  // Employee insurance
   bhxhEmployee: number;
   bhytEmployee: number;
   bhtnEmployee: number;
   totalInsuranceEmployee: number;
 
-  // BH NSDLĐ
+  // Employer insurance
   bhxhEmployer: number;
   bhytEmployer: number;
   bhtnEmployer: number;
   totalInsuranceEmployer: number;
 
-  // Giảm trừ
+  // Deductions
   personalDeduction: number;
   dependentDeduction: number;
 
-  // Thuế
+  // Tax
   taxableIncome: number;
   pitTax: number;
 
-  // Lương thực lĩnh
+  // Net pay
   netSalary: number;
 
   // Insurance base actually used (after cap)
@@ -128,7 +103,7 @@ export interface PayrollEntryResult {
 }
 
 /**
- * Tính đầy đủ một dòng payroll cho 1 nhân viên.
+ * Compute one full payroll row for one employee.
  *
  * Constants are resolved from `effectiveDate` / `legalVersion` / now (in
  * that priority order). The result includes `legalVersionEffectiveFrom`
@@ -144,23 +119,23 @@ export function calculatePayrollEntry(
     version.insuranceCap,
   );
 
-  // BH NLĐ đóng
+  // Employee insurance contributions
   const bhxhEmployee = Math.round(insuranceBase * version.employeeBhxhRate);
   const bhytEmployee = Math.round(insuranceBase * version.employeeBhytRate);
   const bhtnEmployee = Math.round(insuranceBase * version.employeeBhtnRate);
   const totalInsuranceEmployee = bhxhEmployee + bhytEmployee + bhtnEmployee;
 
-  // BH NSDLĐ đóng
+  // Employer insurance contributions
   const bhxhEmployer = Math.round(insuranceBase * version.employerBhxhRate);
   const bhytEmployer = Math.round(insuranceBase * version.employerBhytRate);
   const bhtnEmployer = Math.round(insuranceBase * version.employerBhtnRate);
   const totalInsuranceEmployer = bhxhEmployer + bhytEmployer + bhtnEmployer;
 
-  // Giảm trừ
+  // Deductions
   const personalDeduction = version.personalDeduction;
   const dependentDeduction = input.dependentCount * version.dependentDeduction;
 
-  // Thu nhập tính thuế
+  // Taxable income
   const taxableIncome = Math.max(
     0,
     input.grossTotal -
@@ -172,7 +147,7 @@ export function calculatePayrollEntry(
 
   const pitTax = calculatePIT(taxableIncome, version.pitBrackets);
 
-  // Lương thực lĩnh
+  // Net pay
   const netSalary =
     input.grossTotal +
     input.taxExemptAllowances -

@@ -5,7 +5,6 @@
 ## Nên đọc trước
 
 - [../ref/glossary.md](../ref/glossary.md) — nguồn chuẩn duy nhất cho ngôn ngữ dự án, thuật ngữ nghiệp vụ, và quy tắc đặt tên
-- [ubiquitous-language.md](ubiquitous-language.md) — alias/redirect từ entry cũ ở `architecture/`
 - [../spec/architecture.md](../spec/architecture.md) — tổng quan kiến trúc hệ thống hiện tại
 - [../spec/database-schema.md](../spec/database-schema.md) — schema chuẩn và ranh giới dữ liệu
 - [../modules/auth.md](../modules/auth.md) — auth, vai trò, JWT claims, ACL

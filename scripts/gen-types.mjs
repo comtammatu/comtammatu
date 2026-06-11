@@ -7,8 +7,8 @@
 // work the same way on cmd vs sh. Lesson #11–#13 in `tasks/lessons.md`.
 //
 // Behavior:
-// - Resolves project id from $SUPABASE_PROJECT_ID env or hardcoded fallback
-//   (matches `comtammatu` dev DB per project memory `reference_supabase_projects`).
+// - Resolves project id from $SUPABASE_PROJECT_ID env, then .env.local, then a
+//   hardcoded fallback (currently the production project — see note below).
 // - Captures only stdout; CLI update notice on stderr is shown in console
 //   but never poisons the types file.
 // - Writes to `packages/database/src/types/database.types.ts`.
@@ -28,11 +28,11 @@ function readEnvLocalProjectId() {
   return "";
 }
 
-// Last-resort fallback ONLY. This is PROD (iexws) which is UNCUT — reaching it
-// means SUPABASE_PROJECT_ID is unset AND .env.local has none, a dev-machine
-// misconfiguration. Pulling types from prod reintroduces dropped columns
-// (e.g. legacy_role_code). Prefer the env var or .env.local (= matu-dev, the
-// greenfield-cut dev source).
+// Fallback project ref. This is PROD (iexws), read-only for type generation.
+// There is currently NO dev Supabase project: the former dev ref was deleted,
+// and .env.local also points at prod. Until the owner provisions a new dev
+// project, generated types reflect the live prod schema. Once a dev ref
+// exists, set SUPABASE_PROJECT_ID (or .env.local) to it instead.
 const DEV_PROJECT_ID = "iexwsuaqqenyjiskawoj";
 const projectId =
   process.env["SUPABASE_PROJECT_ID"]?.trim() ||

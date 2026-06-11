@@ -112,10 +112,8 @@ export async function fetchPosTerminals(
       .eq("tenant_id", claims.tenant_id)
       .eq("is_active", true)
       .order("name", { ascending: true }),
-    // Per-branch model (Owner D7, 2026-04-27): branch chỉ có 1 ca mở duy
-    // nhất → flag mở-ca thuộc branch, không thuộc terminal. UI giờ chỉ
-    // dùng list để hiển thị tên máy (audit/preference); việc 1 trong các
-    // máy "đang có ca mở" không còn block các máy khác.
+    // Per-branch model (D7): one open session per branch — the open flag
+    // belongs to the branch, not the terminal.
     supabase
       .from("pos_sessions")
       .select("id")
@@ -157,17 +155,15 @@ export async function fetchPosTerminals(
 /* ─── fetchActiveSession ─── */
 
 /**
- * Trả ca POS đang mở của chi nhánh (bất kỳ ai mở).
+ * Returns the branch's open POS session, whoever opened it.
  *
- * Per-branch model (Owner D7, 2026-04-27): DB enforce
- * `UNIQUE(branch_id) WHERE status='open'` → tối đa 1 row khớp.
- * Cashier mở → waiter / cashier / branch_manager cùng branch ride session
- * đó. Orders bind `pos_session_id` của ca đó; `orders.created_by` giữ
- * audit "ai ring", `session.opened_by` giữ audit "ai chịu trách nhiệm tiền".
+ * Per-branch model (D7): DB enforces `UNIQUE(branch_id) WHERE status='open'`,
+ * so at most one row matches. Same-branch staff ride that session; orders bind
+ * its `pos_session_id`, `orders.created_by` keeps the ring audit and
+ * `session.opened_by` keeps the cash-responsibility audit.
  *
- * Regression guard (rule POS-SESSION-SCOPE-PER-BRANCH): KHÔNG filter
- * `opened_by = user.id` — sẽ chặn waiter (không có `pos:open_cashbox`)
- * khỏi ca cashier đã mở, vỡ luồng take-order.
+ * Regression guard (POS-SESSION-SCOPE-PER-BRANCH): do NOT filter by
+ * `opened_by = user.id` — it locks waiters out of the cashier's session.
  */
 export async function fetchActiveSession(
   branchId: number,
@@ -224,37 +220,28 @@ export async function fetchActiveSession(
 /* ─── fetchPosPermissionFlags ─── */
 
 /**
- * Lấy cờ quyền thao tác POS của user trên chi nhánh (1 call, 4 RPC song song
- * + 1 module-ACL flag).
+ * POS permission flags for the user on a branch (3 RPCs in parallel + 1
+ * module-ACL flag).
  *
- * - `canOpenShift` (`pos:open_cashbox`): gate render SessionGate ở page-level.
- *   Waiter (chỉ có `pos:use`) không mở ca được → hiện màn "liên hệ thu ngân".
- * - `canCloseShift` (`pos:close_shift`): gate nút "Chốt ca" ở header. Waiter
- *   ride cashier's session nhưng KHÔNG được thấy nút đóng ca.
- * - `canConfirmCash` (`pos:confirm_payment`): gate phương thức "Tiền mặt" trên
- *   bill — cash chạm két vật lý → chỉ cashier/branch_manager+. Waiter vẫn
- *   thấy/chọn VietQR/MoMo (e-wallet không chạm cash drawer).
- * - `canOverrideVariance` (`pos:close_shift_variance_override`): gate hiện
- *   ô nhập "Lý do chênh lệch" + cho phép submit khi |diff| > threshold.
- *   Cashier KHÔNG có quyền này → variance vượt ngưỡng → BM phải đăng nhập
- *   để close (decision D3, 2026-04-26).
- * - `canManageMenuLimits` (`branch_menu_limits` module ACL): gate nút khóa
- *   món / hạn mức trên POS. Waiter dùng POS nhưng không chỉnh hạn mức.
+ * - `canOpenShift` (`pos:open_cashbox`): gates SessionGate at page level.
+ * - `canCloseShift` (`pos:close_shift`): gates the close-shift button.
+ * - `canConfirmCash` (`pos:confirm_payment`): gates the cash method on the
+ *   bill — cash touches the physical drawer; e-wallets stay available.
+ * - `canManageMenuLimits` (module ACL `branch_menu_limits`): gates menu
+ *   lock/limit controls on POS.
  *
- * Defense in depth: server-side RPC vẫn reject bất kỳ bypass UI nào.
+ * Defense in depth: server-side RPCs still reject any UI bypass.
  */
 export async function fetchPosPermissionFlags(branchId: number): Promise<{
   canOpenShift: boolean;
   canCloseShift: boolean;
   canConfirmCash: boolean;
-  canOverrideVariance: boolean;
   canManageMenuLimits: boolean;
 }> {
   const deny = {
     canOpenShift: false,
     canCloseShift: false,
     canConfirmCash: false,
-    canOverrideVariance: false,
     canManageMenuLimits: false,
   };
   const parsedBranchId = branchIdSchema.safeParse(branchId);
@@ -264,7 +251,7 @@ export async function fetchPosPermissionFlags(branchId: number): Promise<{
   if (!ctx) return deny;
   if (ctx.claims.branch_id !== parsedBranchId.data) return deny;
 
-  const [openRes, closeRes, cashRes, varianceRes] = await Promise.all([
+  const [openRes, closeRes, cashRes] = await Promise.all([
     ctx.supabase.rpc("has_permission", {
       p_branch_id: parsedBranchId.data,
       p_key: PERMISSION_KEYS.POS_OPEN_CASHBOX,
@@ -277,17 +264,12 @@ export async function fetchPosPermissionFlags(branchId: number): Promise<{
       p_branch_id: parsedBranchId.data,
       p_key: PERMISSION_KEYS.POS_CONFIRM_PAYMENT,
     }),
-    ctx.supabase.rpc("has_permission", {
-      p_branch_id: parsedBranchId.data,
-      p_key: PERMISSION_KEYS.POS_CLOSE_SHIFT_VARIANCE_OVERRIDE,
-    }),
   ]);
 
   return {
     canOpenShift: !openRes.error && openRes.data === true,
     canCloseShift: !closeRes.error && closeRes.data === true,
     canConfirmCash: !cashRes.error && cashRes.data === true,
-    canOverrideVariance: !varianceRes.error && varianceRes.data === true,
     canManageMenuLimits: MENU_LIMIT_ROLES.includes(ctx.claims.user_role),
   };
 }
@@ -296,8 +278,7 @@ export async function fetchPosPermissionFlags(branchId: number): Promise<{
 
 const openPosSessionSchema = z.object({
   branchId: branchIdSchema,
-  // terminalId optional sau D7 (2026-04-27): chỉ là metadata audit (máy nào
-  // physically mở ca). NULL = ca chung của chi nhánh.
+  // Optional since D7: audit metadata only (which device opened the shift).
   terminalId: z.coerce
     .number()
     .int()
@@ -306,10 +287,8 @@ const openPosSessionSchema = z.object({
   openingCash: z.coerce.number().min(0, { error: "Tiền mở ca không hợp lệ" }),
 });
 
-// Mở ca = ghi tiền đầu ca → yêu cầu quyền thao tác két (cashier / branch_manager).
-// Bất đối xứng với close (POS_CLOSE_SHIFT) đã có — đồng bộ để chặn waiter.
-// `forbiddenError` giữ nguyên copy "Không có quyền mở ca" để không đổi UX của
-// money/cashbox path khi chuyển từ block hand-rolled sang helper.
+// Opening a shift writes opening cash → requires cashbox permission,
+// symmetric with close (POS_CLOSE_SHIFT) so waiters are blocked on both.
 export const openPosSession = withActionPositional(
   {
     argsToInput: (
@@ -340,7 +319,6 @@ export const openPosSession = withActionPositional(
       .insert({
         tenant_id: claims.tenant_id,
         branch_id: branchId,
-        // terminal_id nullable sau D7 — UI mở ca không bắt buộc chọn máy.
         terminal_id: terminalId ?? null,
         opened_by: user.id,
         opening_cash: openingCash,
@@ -349,8 +327,8 @@ export const openPosSession = withActionPositional(
       .single();
 
     if (error) {
-      // Partial unique index violation: branch đã có session đang mở
-      // (per-branch invariant từ migration 20260503000000_pos_session_per_branch).
+      // Partial unique index violation: the branch already has an open
+      // session (per-branch invariant, migration 20260503000000).
       if (error.code === "23505") {
         return {
           success: false,
@@ -384,10 +362,9 @@ const closeSessionSchema = z.object({
 });
 
 /**
- * D8 (2026-04-27): variance gate retired — close không còn block. RPC chỉ
- * raise các lỗi "thực sự" (session_not_found, session_already_closed, hoặc
- * unknown). UI đọc `meta.code` để tách path; variance breach giờ được
- * server emit qua notifications, không qua exception.
+ * D8: variance gate retired — close no longer blocks. The RPC only raises
+ * real errors (session_not_found, session_already_closed, unknown); the UI
+ * branches on `meta.code`, and variance breaches arrive via notifications.
  */
 export type CloseSessionErrorCode =
   | "session_not_found"

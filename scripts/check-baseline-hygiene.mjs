@@ -29,20 +29,16 @@ const CLASSIFIED_FILES = new Map([
     "UI freeze guard vocabulary; not runtime implementation.",
   ],
   [
-    "scripts/check-v2-imports.mjs",
-    "v2-import guard vocabulary; describes forbidden legacy wrapper imports, not runtime.",
-  ],
-  [
     "scripts/update-i18n-baseline.mjs",
-    "i18n baseline tooling vocabulary; describes the legacy inline-Vietnamese baseline.",
+    "i18n baseline tooling vocabulary; describes the inline-Vietnamese baseline mechanism.",
   ],
   [
     "packages/shared/src/auth/scope.ts",
-    "AuthSurface routing domain type; 'legacy' is a surface value (legacy vs beta UI), not cruft.",
+    "resolveLegacyRouteRedirectPath — live URL canonicalization for old route shapes (/admin/finance → /finance), not cruft.",
   ],
   [
     "packages/shared/src/auth/__tests__/scope.test.ts",
-    "Test description vocabulary for the AuthSurface routing cases.",
+    "Test description vocabulary for resolveLegacyRouteRedirectPath URL canonicalization cases.",
   ],
   [
     "packages/shared/src/auth/types.ts",
@@ -51,6 +47,10 @@ const CLASSIFIED_FILES = new Map([
   [
     "packages/shared/src/payroll/calculate.ts",
     "Transitional @deprecated payroll field pointing to PayrollLegalVersion; retained for back-compat pending a separate payroll cleanup.",
+  ],
+  [
+    "packages/shared/src/auth/__tests__/employee-daily-work-static.test.ts",
+    "Asserts the exact SQL comment string shipped in the checklist-template migration; the marker word lives in asserted migration content, not dead code.",
   ],
 ]);
 

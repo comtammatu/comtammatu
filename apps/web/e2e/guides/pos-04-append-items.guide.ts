@@ -1,17 +1,17 @@
 /**
- * POS-04 Thêm món vào đơn đang phục vụ — capture spec.
+ * POS-04 Append items to a live order — capture spec.
  *
  * 5 main steps + 1 variant:
- *   step-01-open-order-detail  — chi tiết đơn (sheet) mở từ multi-order picker
- *   step-02-tap-add-items      — highlight nút "Thêm món"
- *   step-03-append-banner      — banner "Thêm món vào đơn #N" + menu
- *   step-04-draft-review       — pane "Món sẽ gửi thêm" với draft items
- *   step-05-submit-append      — highlight "Gửi món thêm"
- *   variant-cancel-append      — "Hủy thêm món" → quay về đơn không thêm
+ *   step-01-open-order-detail  — order detail sheet opened via multi-order picker
+ *   step-02-tap-add-items      — "Thêm món" button highlighted
+ *   step-03-append-banner      — "Thêm món vào đơn #N" banner + menu
+ *   step-04-draft-review       — "Món sẽ gửi thêm" pane with draft items
+ *   step-05-submit-append      — "Gửi món thêm" highlighted
+ *   variant-cancel-append      — "Hủy thêm món" → back to the order, nothing added
  *
- * Chạy: pnpm --filter @comtammatu/web guides:capture --grep="POS-04"
+ * Run: pnpm --filter @comtammatu/web guides:capture --grep="POS-04"
  *
- * Note: KHÔNG actually click submit — tránh tạo orphan order_items thật.
+ * Note: NEVER actually click submit — it would create real orphan order_items.
  */
 
 import { test, type Page } from "@playwright/test";
@@ -26,7 +26,7 @@ const FLOW = "pos-04";
 const MODULE = "pos";
 const TOTAL = 5;
 
-/** Navigate POS → tap bàn occupied → tap order trong multi-order picker. */
+/** Navigate to POS → tap an occupied table → tap the order in the multi-order picker. */
 async function gotoOrderDetail(p: Page, branchId: number): Promise<void> {
   await p.goto(`/br/${String(branchId)}/pos`);
   const occupiedBtn = p.locator('button[aria-label*="Đang dùng"]').first();
@@ -53,8 +53,8 @@ async function gotoOrderDetail(p: Page, branchId: number): Promise<void> {
 async function enterAppendMode(p: Page): Promise<void> {
   const addBtn = p.getByRole("button", { name: /Thêm món/i }).first();
   await addBtn.click();
-  // Banner / menu shows up — wait for "Thêm món vào đơn" heading or
-  // Tìm món placeholder
+  // Banner / menu shows up — wait for the "Thêm món vào đơn" heading or
+  // the "Tìm món" placeholder
   await p
     .getByPlaceholder(/Tìm món/i)
     .waitFor({ state: "visible", timeout: 8000 });
@@ -167,13 +167,13 @@ test.describe("POS-04 Thêm món vào đơn đang phục vụ", () => {
         await gotoOrderDetail(p, ctx.branchId);
         await enterAppendMode(p);
         await tapBasicMenuItem(p);
-        // Mobile: action bar có button "Món thêm" thay vì "Giỏ đơn mới"
+        // Mobile: the action bar shows a "Món thêm" button instead of "Giỏ đơn mới"
         const drawerBtn = p
           .getByRole("button", { name: /Món thêm|Mở món thêm/i })
           .first();
         await drawerBtn.waitFor({ state: "visible", timeout: 5000 });
         await drawerBtn.click();
-        // Đợi pane "Món sẽ gửi thêm"
+        // Wait for the "Món sẽ gửi thêm" pane
         await p
           .getByRole("button", { name: /Gửi món thêm/i })
           .waitFor({ state: "visible", timeout: 5000 });

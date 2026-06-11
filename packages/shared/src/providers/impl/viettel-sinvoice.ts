@@ -21,8 +21,8 @@ import {
  *   - Endpoint ex:  /services/einvoiceapplication/api/InvoiceAPI/InvoiceWS/createInvoice/{supplierTaxCode}
  *
  * Test accounts (HDSD §I, password: 2wsxCDE#):
- *   - 0100109106-501/504/505/507/899  — kiểm tra dữ liệu đầu vào (server tính lại)
- *   - 0100109106-509                  — KHÔNG kiểm tra (server nhận như input)
+ *   - 0100109106-501/504/505/507/899  — strict input validation (server recomputes)
+ *   - 0100109106-509                  — NO validation (server takes input as-is)
  *
  * Auth methods (HDSD §II + Postman §5.5):
  *   - POST /auth/login with JSON { username, password }.
@@ -136,8 +136,8 @@ export function buildSinvoiceTransactionUuid(invoiceId: number): string {
  *   - Template `2/...` → invoiceType `"2"` (HĐ bán hàng — F&B/MTT)
  *   - Template `3/...` → invoiceType `"3"` ...
  *
- * Legacy TT32 templates like `01GTKT0/001` map to `"01GTKT"` form;
- * we do NOT support those (project uses TT78 exclusively since 2026).
+ * Legacy TT32-era (pre-2026) templates like `01GTKT0/001` map to the
+ * `"01GTKT"` form; we do NOT support those (TT78-style codes only since 2026).
  *
  * Throws if templateCode shape is unrecognised so misconfigured env
  * surfaces loudly at boot rather than producing rejected invoices.

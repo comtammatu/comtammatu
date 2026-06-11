@@ -49,7 +49,7 @@ export const inventory = {
       `${quantity} • ${count} phiếu`,
   },
   value: {
-    eyebrow: "Value Visibility",
+    eyebrow: "Báo cáo",
     title: "Giá trị tồn kho",
     description: "Xem nhanh tổng giá trị theo đúng phạm vi được phân quyền.",
     tabs: {
@@ -179,7 +179,7 @@ export const inventory = {
         `${required} ${unit} đặt → ${actual} ${unit} nhận`,
       rejectedSuffix: (quantity: number, unit: string) =>
         ` • Trả ${quantity} ${unit}`,
-      // Hiển thị 4 con số rõ ràng: đặt, đã giao, vào kho thực (giao−trả), trả NCC
+      // Shows 4 explicit numbers: ordered, delivered, net into stock (delivered−returned), returned to supplier
       orderedDeliveredAccepted: (
         ordered: number,
         delivered: number,

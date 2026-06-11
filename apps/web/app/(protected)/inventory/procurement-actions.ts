@@ -1,5 +1,6 @@
 /**
- * Barrel re-export — preserves backward compatibility for existing import sites.
+ * Barrel re-export keeping existing import paths; implementations live in
+ * sibling files.
  *
  * Prefer importing directly from the domain-specific files:
  * - supplier-actions.ts   — supplier CRUD

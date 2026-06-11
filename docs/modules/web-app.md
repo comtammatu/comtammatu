@@ -72,7 +72,6 @@ apps/web/app/
 │   ├── components/
 │   │   └── admin-shell.tsx # Sidebar nav, executive shell, role-based filtering
 │   ├── dashboard/          # Operations cockpit landing
-│   ├── menu/               # Menu master data domain (reachable via domain map, not primary Admin nav)
 │   ├── accounting/
 │   │   └── periods/        # Direct-only period close/reopen support (owner/super_manager; ACCOUNTING_PERIOD_REOPEN gated)
 │   ├── inventory/          # REMOVED — URL space maps to retired inventory_admin ACL only
@@ -86,10 +85,9 @@ apps/web/app/
 │   │   └── stock-movement/ # Stock movement reports
 │   └── settings/
 │       ├── layout.tsx      # Auth guard + role-aware SettingsNav for foundation controls
-│       ├── page.tsx        # Redirect: branch_manager/ → tables, others → branches
+│       ├── page.tsx        # Redirect: branch_manager → tables, others → branches
 │       ├── general/        # System settings key/value — owner/super_manager only
 │       ├── branches/       # Branch CRUD + set_headquarters — owner/super_manager only
-│       ├── areas/          # Area management — owner/super_manager only
 │       ├── tables/         # Tables & zones per branch — all settings roles (branch-scoped)
 │       ├── pos/            # POS terminal settings
 │       ├── kds/            # KDS station settings
@@ -152,9 +150,16 @@ apps/web/app/
     ├── health/route.ts            # GET health check
     ├── auth/signout/route.ts      # POST logout
     ├── branch-presence/route.ts   # Branch presence beacon (POS/KDS heartbeats)
+    ├── cron/hddt-archive/route.ts        # Cron: tải PDF/XML HĐĐT đã issued
+    ├── cron/hddt-daily-summary/route.ts  # Cron: HĐĐT B2C daily summary (02:05 ICT)
+    ├── cron/hddt-reconcile/route.ts      # Cron: poll CQT reconcile trạng thái HĐĐT
+    ├── cron/kds-maintenance/route.ts     # Cron: KDS ticket maintenance/cleanup
+    ├── cron/notifications-push/route.ts  # Cron: dispatch Web Push notifications
     ├── debug/claims/route.ts      # Dev: dump JWT claims (gated; not for prod use)
     └── webhooks/momo/route.ts     # Momo webhook handler (HMAC-validated)
 ```
+
+> Ngoài `api/`, còn 2 `route.ts` PWA manifest: `(protected)/br/[branchId]/pos/manifest.webmanifest/route.ts` + `(protected)/br/[branchId]/kds/manifest.webmanifest/route.ts`.
 
 ## Thành phần chính
 

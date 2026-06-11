@@ -134,7 +134,7 @@ export async function ensureMinTables(
 
   const have = existing?.length ?? 0;
   if (have >= minCount) {
-    // Reset all existing to 'available' để clean state
+    // Reset all existing tables to 'available' for a clean state
     if (existing) {
       for (const t of existing) {
         if (t.status !== "available") {
@@ -161,15 +161,15 @@ export async function ensureMinTables(
 }
 
 /**
- * Đảm bảo có 1 bàn status='occupied' với 1+ đơn 'confirmed' bound vào nó.
- * Trả về tableId + orderNumber để spec có thể assert.
+ * Ensure one table with status='occupied' and 1+ 'confirmed' orders bound
+ * to it. Returns tableId + tableNumber so specs can assert.
  */
 export async function ensureOccupiedTableWithOrder(
   ctx: CashierContext,
 ): Promise<{ tableId: number; tableNumber: number }> {
   const supabase = createServiceClient();
 
-  // Tìm session đang mở của cashier để bind order
+  // Find the cashier's open session to bind the order to
   const { data: openSession } = await supabase
     .from("pos_sessions")
     .select("id")
@@ -185,7 +185,7 @@ export async function ensureOccupiedTableWithOrder(
     );
   }
 
-  // Đảm bảo có ít nhất 2 bàn (1 trống + 1 sẽ chiếm)
+  // Ensure at least 2 tables (1 stays free + 1 gets occupied)
   await ensureMinTables(ctx, 2);
 
   const { data: tables } = await supabase
@@ -202,7 +202,7 @@ export async function ensureOccupiedTableWithOrder(
     throw new Error("ensureOccupiedTableWithOrder: không tạo được bàn");
   }
 
-  // Tìm 1 menu_item bất kỳ active để gắn order_item
+  // Find any active menu_item to attach the order_item to
   const { data: menuItem } = await supabase
     .from("menu_items")
     .select("id, name, base_price")
@@ -214,7 +214,7 @@ export async function ensureOccupiedTableWithOrder(
     throw new Error("ensureOccupiedTableWithOrder: branch chưa có menu_item");
   }
 
-  // Cleanup các order cũ của bàn này (idempotent)
+  // Clean up this table's old orders (idempotent)
   const { data: oldOrders } = await supabase
     .from("orders")
     .select("id")
@@ -264,7 +264,7 @@ export async function ensureOccupiedTableWithOrder(
     .single();
 
   if (order) {
-    // 2 dòng item để split workflow available (canShowSplit cần activeItemCount >= 2)
+    // 2 item rows so the split workflow is available (canShowSplit needs activeItemCount >= 2)
     await supabase.from("order_items").insert([
       {
         tenant_id: ctx.tenantId,
@@ -334,7 +334,7 @@ export async function ensureSecondOrderSameTable(
     );
   }
 
-  // Đếm đơn active trên bàn
+  // Count active orders on the table
   const { data: existing } = await supabase
     .from("orders")
     .select("id")
@@ -342,7 +342,7 @@ export async function ensureSecondOrderSameTable(
     .eq("tenant_id", ctx.tenantId)
     .in("status", ["pending", "confirmed", "ready", "served"]);
 
-  if ((existing?.length ?? 0) >= 2) return; // đã đủ
+  if ((existing?.length ?? 0) >= 2) return; // already enough
 
   const { data: menuItem } = await supabase
     .from("menu_items")
@@ -419,8 +419,3 @@ export async function ensureMinTerminals(
     });
   }
 }
-
-// `openSessionsOnAllTerminals` retired sau Owner D7 (2026-04-27).
-// Per-branch model = chỉ 1 ca active/branch → fixture multi-session
-// trên nhiều terminal cùng lúc không còn valid (vi phạm UNIQUE).
-// MultiSessionPicker variant trong POS-01 guide đã removed.

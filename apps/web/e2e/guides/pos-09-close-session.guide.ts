@@ -1,21 +1,21 @@
 /**
- * POS-09 Đóng ca POS — capture spec.
+ * POS-09 Close POS shift — capture spec.
  *
- * Cashier chốt ca cuối ngày: đếm tiền mặt cuối ca theo mệnh giá → hệ
- * thống tự tính chênh lệch (closing - opening - cash payments) → ghi chú
- * lý do (nếu lệch) → confirm chốt.
+ * The cashier closes the end-of-day shift: count closing cash by
+ * denomination → the system computes the variance (closing − opening −
+ * cash payments) → note a reason when it differs → confirm.
  *
  * 4 main steps + 1 variant:
- *   step-01-tap-close-shift   — nút "Chốt ca" trên header
- *   step-02-close-sheet       — sheet "Đóng ca bán hàng" mở
- *   step-03-difference        — nhập tiền cuối → chênh lệch hiện
- *   step-04-confirm           — confirm chốt với chênh lệch
- *   variant-significant-diff  — cảnh báo chênh lệch lớn
+ *   step-01-tap-close-shift   — "Chốt ca" button on the header
+ *   step-02-close-sheet       — "Đóng ca bán hàng" sheet open
+ *   step-03-difference        — closing cash entered → variance shown
+ *   step-04-confirm           — confirm with a variance present
+ *   variant-significant-diff  — large-variance warning
  *
- * Chạy: pnpm --filter @comtammatu/web guides:capture --grep="POS-09"
+ * Run: pnpm --filter @comtammatu/web guides:capture --grep="POS-09"
  *
- * Note: KHÔNG actually click confirm — nếu chốt ca, cashier auth phải mở
- * lại ca cho các test khác (phá serial state).
+ * Note: NEVER actually click confirm — closing the shift would force
+ * reopening it for the other tests (breaks the serial state).
  */
 
 import { test, type Page } from "@playwright/test";
@@ -28,7 +28,7 @@ const TOTAL = 4;
 
 async function gotoPosMain(p: Page, branchId: number): Promise<void> {
   await p.goto(`/br/${String(branchId)}/pos`);
-  // Đợi nút Chốt ca trên header
+  // Wait for the "Chốt ca" button on the header
   await p
     .getByRole("button", { name: /Chốt ca/i })
     .first()
@@ -40,7 +40,7 @@ async function openCloseSheet(p: Page): Promise<void> {
     .getByRole("button", { name: /Chốt ca POS|^Chốt ca$/i })
     .first();
   await closeBtn.click();
-  // Đợi sheet "Đóng ca bán hàng"
+  // Wait for the "Đóng ca bán hàng" sheet
   await p
     .getByText(/Đóng ca bán hàng/i)
     .waitFor({ state: "visible", timeout: 5000 });
@@ -119,8 +119,8 @@ test.describe("POS-09 Đóng ca POS", () => {
       setup: async (p) => {
         await gotoPosMain(p, ctx.branchId);
         await openCloseSheet(p);
-        // Nhập 1 mệnh giá để chênh lệch hiện
-        // Find any number input và fill 1
+        // Enter one denomination so the variance shows up:
+        // find any number input and fill 1
         const firstInput = p
           .locator('input[inputmode="numeric"], input[type="number"]')
           .first();
@@ -152,15 +152,15 @@ test.describe("POS-09 Đóng ca POS", () => {
       setup: async (p) => {
         await gotoPosMain(p, ctx.branchId);
         await openCloseSheet(p);
-        // Nhập 1 mệnh giá nhỏ để confirm button enabled
+        // Enter one small denomination so the confirm button enables
         const firstInput = p
           .locator('input[inputmode="numeric"], input[type="number"]')
           .first();
         await firstInput.waitFor({ state: "visible", timeout: 5000 });
         await firstInput.fill("5");
-        // Page Down để cuộn sheet đến nút confirm — KHÔNG dùng locator
-        // scrollIntoViewIfNeeded vì nó match cả button header → Radix
-        // sheet auto-dismiss khi focus outside.
+        // Scroll the sheet to the confirm button via keyboard — do NOT use
+        // locator scrollIntoViewIfNeeded: it also matches the header button
+        // and the Radix sheet auto-dismisses when focus lands outside.
         await p.keyboard.press("End");
         await p.waitForTimeout(300);
       },
@@ -192,7 +192,7 @@ test.describe("POS-09 Đóng ca POS", () => {
       setup: async (p) => {
         await gotoPosMain(p, ctx.branchId);
         await openCloseSheet(p);
-        // Nhập 1 mệnh giá 500k (large) để trigger significant diff
+        // Enter a large 500k denomination to trigger the significant diff
         const firstInput = p
           .locator('input[inputmode="numeric"], input[type="number"]')
           .first();

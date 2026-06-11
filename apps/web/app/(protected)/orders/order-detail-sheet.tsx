@@ -98,8 +98,8 @@ export function OrderDetailSheet({
 
   const orderId = order?.id ?? null;
 
-  // Fetch lịch sử thao tác. Tách thành callback để vừa dùng cho mount-effect
-  // vừa dùng cho realtime callback (chia sẻ logic, không bị stale closure).
+  // Fetch the audit timeline. Extracted as a callback so the mount effect
+  // and the realtime callback share it without stale closures.
   const loadAudit = useCallback((id: number) => {
     startAuditTransition(async () => {
       const result = await fetchOrderAuditLog(id);
@@ -112,9 +112,9 @@ export function OrderDetailSheet({
     });
   }, []);
 
-  // List view bỏ items để giữ payload nhỏ — load on-demand. order_items
-  // intentionally KHÔNG có trong realtime publication; ta piggyback signal
-  // từ order_status_history (cùng RPC ghi cả 2) để refresh items.
+  // The list view omits items to keep the payload small — loaded on demand.
+  // order_items is intentionally NOT in the realtime publication; we
+  // piggyback on order_status_history (the same RPC writes both) to refresh.
   const loadItems = useCallback((id: number) => {
     startItemsTransition(async () => {
       const result = await fetchOrderItems(id);
@@ -127,8 +127,8 @@ export function OrderDetailSheet({
     });
   }, []);
 
-  // Lazy fetch khi sheet mở cho 1 đơn cụ thể. Reset khi đổi đơn / đóng sheet
-  // để tránh hiển thị stale của đơn trước.
+  // Lazy fetch when the sheet opens for a specific order. Reset on order
+  // change / sheet close so the previous order's data never shows stale.
   useEffect(() => {
     if (!open || orderId == null) {
       setAudit(null);
@@ -145,12 +145,12 @@ export function OrderDetailSheet({
     loadItems(orderId);
   }, [open, orderId, loadAudit, loadItems]);
 
-  // Realtime: cashier ở terminal khác hủy/sửa/phục vụ → INSERT vào
-  // order_status_history. Subscribe filter `order_id=eq.X` để timeline tự
-  // refresh mà quản lý không phải đóng/mở lại sheet. Migration
-  // 20260520010000_audit_log_completeness.sql đã add table vào
-  // supabase_realtime publication. order_items không có trong publication
-  // (xem 20260428000000_pos_realtime_publication.sql) nên ta refetch cùng.
+  // Realtime: a cashier on another terminal cancels/edits/serves → INSERT
+  // into order_status_history. Subscribing with filter `order_id=eq.X` keeps
+  // the timeline fresh without closing/reopening the sheet. Migration
+  // 20260520010000_audit_log_completeness.sql added the table to the
+  // supabase_realtime publication; order_items is not in the publication
+  // (see 20260428000000_pos_realtime_publication.sql) so we refetch it too.
   useRealtimeChannel(
     (supabase) => {
       if (!open || orderId == null) return null;

@@ -29,11 +29,11 @@ export interface OrderData {
   discount_amount: number;
   order_discount_amount: number;
   item_discount_amount: number;
-  /** 'pct' (theo %) hoặc 'vnd' (số tiền cố định). NULL khi không có giảm. */
+  /** 'pct' (percentage) or 'vnd' (fixed amount). NULL when no discount. */
   discount_type: "pct" | "vnd" | null;
-  /** Giá trị gốc cashier nhập (10 cho 10%, 15000 cho 15.000đ). */
+  /** Raw value the cashier entered (10 for 10%, 15000 for 15.000đ). */
   discount_value: number | null;
-  /** Ghi chú lý do giảm giá (≥ 3 ký tự sau trim). */
+  /** Discount reason note (≥ 3 chars after trim). */
   discount_note: string | null;
   total_amount: number;
   customer_count: number;
@@ -41,9 +41,9 @@ export interface OrderData {
   is_priority: boolean;
   created_at: string;
   table_id: number | null;
-  /** Đơn nguồn nếu đơn này được tách ra. NULL nếu tạo trực tiếp. */
+  /** Source order if this one was split off. NULL if created directly. */
   split_from_order_id: number | null;
-  /** Đơn target nếu đơn này đã bị gộp vào đơn khác. */
+  /** Target order if this one was merged into another. */
   merged_into_order_id: number | null;
   cash_received: number | null;
   cash_change: number | null;
@@ -53,9 +53,9 @@ export interface OrderData {
     address: string | null;
     phone: string | null;
   } | null;
-  /** profiles.full_name của orders.created_by — người tạo/order đơn.
-   * Shape khớp supabase select join `profiles!orders_created_by_fkey(full_name)`.
-   * Optional để giữ back-compat với fixture payload (vd RECEIPT_LOADING_ORDER). */
+  /** profiles.full_name of orders.created_by — who rang the order.
+   * Shape matches the supabase join `profiles!orders_created_by_fkey(full_name)`.
+   * Optional — fixture payloads (e.g. RECEIPT_LOADING_ORDER) omit it. */
   profiles?: { full_name: string } | null;
   order_items: OrderItem[];
 }

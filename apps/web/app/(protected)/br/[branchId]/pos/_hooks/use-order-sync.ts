@@ -194,9 +194,9 @@ function coerceNullableNumber(value: unknown): number | null | undefined {
 // raw row over a SessionOrder would leak unknown fields, so we project only
 // the SessionOrder shape and coerce numeric/text variants supabase-realtime
 // stringifies (e.g. NUMERIC → string). When `table_id` shifts (e.g. POS
-// `transfer_order_table` ghép bàn), we resolve `tables.number` from the
+// `transfer_order_table` table merge), we resolve `tables.number` from the
 // cached tables snapshot so the sidebar's `Bàn X` label flips with the
-// new bàn instead of pinning the stale JOIN from `current`.
+// new table instead of pinning the stale JOIN from `current`.
 //
 // REPLICA IDENTITY FULL on `public.orders` (migration 20260425024802) ensures
 // every UPDATE payload carries the entire row — patches below trust that

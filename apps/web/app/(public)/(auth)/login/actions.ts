@@ -60,8 +60,6 @@ export async function login(
   const { email, password } = parsed.data;
   const rawReturnTo = formData.get("returnTo");
   const returnTo = typeof rawReturnTo === "string" ? rawReturnTo : null;
-  const rawSurface = formData.get("surface");
-  const surface = rawSurface === "beta" ? "beta" : "legacy";
 
   // Rate limiting — 10 attempts per 5 min, keyed by IP
   // Bypass in dev via DISABLE_LOGIN_RATE_LIMIT=true
@@ -135,5 +133,5 @@ export async function login(
     return { error: GENERIC_LOGIN_ERROR };
   }
 
-  redirect(resolvePostLoginRedirect(claims, returnTo, { surface }));
+  redirect(resolvePostLoginRedirect(claims, returnTo));
 }

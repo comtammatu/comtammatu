@@ -173,7 +173,7 @@ export async function fetchArchivedOrders(
 
   if (typeof q === "string" && q.length > 0) {
     // ILIKE prefix-or-suffix match on order_number. Cashiers cite the
-    // last 3 digits of the đơn most of the time; ILIKE %q% covers that.
+    // last 3 digits of the order most of the time; ILIKE %q% covers that.
     // Wildcard escape: PostgREST `ilike` value is the literal pattern
     // string — caller's q is sanitized by Zod max-length only. Strip
     // PostgREST reserved chars so no operator injection is possible.
@@ -666,8 +666,8 @@ export async function fetchOrderItemsForReorder(orderId: number): Promise<
   ];
 
   // Parallel fetch: menu base prices, variant adjustments, modifier prices.
-  // Trước đây chạy tuần tự ⇒ 3 round-trips; reorder chậm khi mạng lag. Three
-  // queries không phụ thuộc nhau, an toàn để Promise.all → 1 wall-time RTT.
+  // The three queries are independent, so Promise.all collapses what used
+  // to be 3 sequential round-trips into 1 wall-time RTT.
   const [menuRes, variantRes, modifierRes] = await Promise.all([
     supabase
       .from("menu_items")
@@ -722,9 +722,9 @@ export async function fetchOrderItemsForReorder(orderId: number): Promise<
 
   const cartItems: CartItem[] = [];
   let skippedCount = 0;
-  // Đếm dòng có chênh lệch giữa giá lưu trên `order_items.unit_price` (snapshot
-  // lúc gửi bếp) và giá menu hiện tại (base + variant). Cashier cần biết để
-  // không reorder mặc định mà bỏ qua giá đã đổi sau đó.
+  // Count rows where the stored `order_items.unit_price` (snapshot at send
+  // time) differs from the current menu price (base + variant). The cashier
+  // must see this so a default reorder doesn't silently skip price changes.
   let priceChangedCount = 0;
 
   for (const r of rows ?? []) {

@@ -284,45 +284,12 @@ test.describe("GRN at central_kitchen — new flow (Scenario 2)", () => {
     }
   });
 
-  test("confirm_goods_receipt_note RPC rejects GRN whose branch is not CW or CK", async ({
-    page: _page,
-  }) => {
-    const supabase = createServiceClient();
-    const fx = await buildGrnFixtures();
-
-    // Seed an operational branch GRN directly (bypassing the INSERT trigger by
-    // temporarily using a branch that was CW then changed is not possible in E2E;
-    // instead we create a GRN for a valid branch then update branch_id via service role).
-    // The simpler approach: call the RPC with a GRN that has an operational branch_id
-    // by creating it raw and then calling the RPC.
-
-    const opBranch = await ensureBranch(
-      supabase,
-      fx.tenantId,
-      "branch",
-      "grn-rpc-test",
-    );
-
-    // Service-role bypasses the INSERT trigger for testing purposes by disabling triggers
-    // is not feasible in Supabase JS; instead we document that the INSERT trigger already
-    // rejects such rows (covered by Scenario 1 trigger test above).
-    // This test verifies that confirm_goods_receipt_note also has its own guard.
-    // We achieve this by asserting the RPC returns the expected error when called with
-    // a GRN id that belongs to an operational branch — but since we cannot insert such
-    // a GRN (trigger fires), we document this as covered by the RPC function body
-    // (lines 166–172 of the migration SQL).
-    //
-    // Verification: the confirm_goods_receipt_note function body checks branch_kind IN
-    // ('central_warehouse', 'central_kitchen') and raises 'grn_branch_must_be_procurement'
-    // with ERRCODE 23514 if not found. This is belt-and-suspenders after the INSERT trigger.
-    test.skip(
-      true,
-      "Double-guard in confirm_goods_receipt_note cannot be exercised without bypassing " +
-        "the INSERT trigger (trg_grn_procurement_branch). " +
-        "The INSERT trigger test (Scenario 1) provides full coverage of this path. " +
-        `Operational branch id for reference: ${opBranch.id}`,
-    );
-  });
+  // Double-guard: confirm_goods_receipt_note also rejects GRNs whose branch
+  // is not CW/CK (raises 'grn_branch_must_be_procurement', ERRCODE 23514).
+  // It cannot be exercised in E2E without bypassing the INSERT trigger
+  // (trg_grn_procurement_branch), which supabase-js cannot disable. The INSERT
+  // trigger test (Scenario 1) provides full coverage of this path; the RPC
+  // body check is belt-and-suspenders after the trigger.
 });
 
 // ─── Scenario 8: Semantic — received_quantity = "Số đã giao" (gross delivered) ─
@@ -551,25 +518,10 @@ test.describe("RBAC — warehouse_manager cannot create GRN for another CW (Scen
     await expect(errorMsg).toBeVisible({ timeout: 10_000 });
   });
 
-  test("canAccessProcurementBranch rejects at server action layer — direct RPC simulation", async ({
-    page: _page,
-  }) => {
-    const fx = await buildGrnFixtures();
-
-    // Verify that the RBAC check in grn-actions.ts is the barrier, not only the DB.
-    // Service-role inserts bypass auth checks, so we document that app-layer enforcement
-    // is what protects this path: canAccessProcurementBranch() in createGrnDraft returns
-    // { success: false, error: "Bạn chỉ được tạo phiếu nhập cho kho của mình." }
-    // when isBranchScopedProcurementRole(claims.user_role) && claims.branch_id !== branchId.
-    //
-    // The service-role client has no JWT claims, so we cannot simulate this server-side
-    // check via supabase-js directly. The UI path above (first test in this describe block)
-    // exercises the full stack. This test documents the code path for reference.
-    test.skip(
-      true,
-      "Server action RBAC check is exercised by the UI test above. " +
-        "canAccessProcurementBranch is in grn-actions.ts and uses JWT claims — " +
-        `requires a real session. CW-1: ${fx.cw1Id}, CW-2: ${fx.cw2Id}.`,
-    );
-  });
+  // Server action RBAC: canAccessProcurementBranch() in grn-actions.ts is the
+  // app-layer barrier (returns "Bạn chỉ được tạo phiếu nhập cho kho của mình."
+  // when isBranchScopedProcurementRole(claims.user_role) && claims.branch_id
+  // !== branchId). It uses JWT claims, so a service-role client cannot simulate
+  // it directly — the UI test above (first test in this describe block)
+  // exercises the full stack.
 });

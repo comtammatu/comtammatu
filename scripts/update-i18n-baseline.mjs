@@ -45,7 +45,7 @@ writeFileSync(
       version: 1,
       rule: "i18n/no-inline-vietnamese",
       description:
-        "Baseline for legacy inline Vietnamese JSX copy. New occurrences not listed here fail pnpm lint.",
+        "Baseline for existing inline Vietnamese JSX copy. New occurrences not listed here fail pnpm lint.",
       generatedAt: new Date().toISOString().slice(0, 10),
       count: entries.length,
       entries,

@@ -143,7 +143,6 @@ test("Accounting period support copy stays direct-support framed", () => {
     )?.[0] ?? "";
 
   assert.match(sharedLabels, /accounting: "Hỗ trợ khóa kỳ"/);
-  assert.match(sharedLabels, /period_hard_closed: "Kỳ khóa sổ đã khóa cứng"/);
   assert.match(shellPrimitives, /accounting: "Hỗ trợ kế toán"/);
   assert.match(shellPrimitives, /periods: "Khóa kỳ"/);
   assert.match(periodsAdminCopy, /title: "Khóa kỳ hỗ trợ kế toán"/);

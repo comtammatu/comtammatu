@@ -106,14 +106,9 @@ test.describe("Cash payment -> POS close", () => {
     }
   });
 
-  test("payment succeeds even when stock deduction fails (non-fatal verification)", async ({
-    page: _page,
-  }) => {
-    test.skip(
-      true,
-      "Structural test: demonstrated by the main cash payment test when stock_levels are empty",
-    );
-  });
+  // "payment succeeds even when stock deduction fails" is a structural
+  // property demonstrated by the main cash payment test when stock_levels
+  // are empty — no dedicated test needed.
 
   // POS-SERVED-NOT-TABLE-TERMINAL + PAYMENT-AUTO-COMPLETES-ORDER:
   // Cashier may pay a dine-in order while the chef has bumped some tickets

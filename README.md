@@ -99,9 +99,9 @@ pnpm dev                               # Turbopack dev server (http://localhost:
 pnpm dev                # Turbopack dev (all apps)
 pnpm dev:web            # Web only
 pnpm dev:print          # Print agent only
-pnpm build              # Production build (Next.js uses --webpack for service worker)
+pnpm build              # Production build (next build + Serwist service worker)
 pnpm typecheck          # TS check across packages
-pnpm lint               # ESLint + lint-copy + v2-imports guard
+pnpm lint               # ESLint + copy/db-boundary/UI-contract/client-storage guards
 pnpm format             # Prettier
 pnpm bones:build        # Pre-render skeleton boneyard
 pnpm db:types           # Regenerate Supabase types — needs SUPABASE_PROJECT_ID env

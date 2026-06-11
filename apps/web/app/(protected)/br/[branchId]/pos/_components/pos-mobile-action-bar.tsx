@@ -66,9 +66,9 @@ function PosMobileActionBarComponent({
     );
   }
 
-  // Chưa chọn bàn / chưa setup → CTA duy nhất là mở danh sách đơn trong ca.
-  // Cashier cần truy cập đơn cũ để append món hoặc thanh toán nhiều đơn mang
-  // về song song — không thể ép vào 1 đơn duy nhất.
+  // No table picked / not set up → the only CTA is opening the session's
+  // order list. The cashier needs older orders to append items or pay
+  // several takeaway orders in parallel — never force a single order.
   if (!menuContextReady) {
     return (
       <div className={ACTION_BAR_CLASS}>

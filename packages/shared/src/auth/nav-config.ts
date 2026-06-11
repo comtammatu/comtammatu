@@ -52,6 +52,9 @@ export const ADMIN_NAV_GROUPS: NavGroupConfig[] = [
         icon: "Users",
         label: APP_COPY_VI.foundationalStaff,
       },
+      // Accounting (period close) stays OUT of the default nav (HKD scope,
+      // see docs/plan/decisions.md); /admin/accounting is reachable directly
+      // by permission only.
       {
         moduleKey: "settings",
         icon: "Settings",

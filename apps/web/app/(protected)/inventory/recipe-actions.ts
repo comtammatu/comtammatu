@@ -63,8 +63,9 @@ export async function fetchRecipes(): Promise<ActionResult> {
   return { success: true, data: data ?? [] };
 }
 
-// WAC = giá trung bình thực tế (avg_unit_cost) ở stock_levels của bếp trung tâm.
-// Một CK thường có 1 row/nguyên liệu; nếu hệ thống có 2 CK thì lấy mean across rows.
+// WAC = the actual average cost (avg_unit_cost) in the central kitchen's
+// stock_levels. A CK usually has 1 row per ingredient; with 2 CKs take the
+// mean across rows.
 export async function fetchCentralKitchenWacMap(): Promise<
   ActionResult<Record<string, number>>
 > {

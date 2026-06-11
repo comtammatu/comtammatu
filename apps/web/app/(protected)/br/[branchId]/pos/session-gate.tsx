@@ -63,10 +63,10 @@ export function SessionGate({ branchId, terminals }: SessionGateProps) {
     if (!canOpen) return;
 
     startTransition(async () => {
-      // Auto-pick first active terminal cho audit metadata. Per-branch model
-      // không bắt cashier chọn — UI 1-tap, terminal_id chỉ ghi sổ "máy nào
-      // physically mở ca". Nếu cashier muốn pick chính xác, admin có thể
-      // edit pos_terminals list (deactivate máy không dùng).
+      // Auto-pick the first active terminal for audit metadata. The
+      // per-branch model never makes the cashier choose — 1-tap UI;
+      // terminal_id only records which device opened the shift. For exact
+      // picking, an admin can deactivate unused pos_terminals.
       const firstTerminal = terminals[0];
       const result = await openPosSession(
         branchId,

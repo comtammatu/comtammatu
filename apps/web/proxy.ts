@@ -6,14 +6,11 @@ import {
   extractClaimsFromAccessToken,
   isAdminRole,
   isAdminRoutePath,
-  isBetaPath,
   isPublicAppPath,
   PERMISSION_KEYS,
   resolveLegacyRouteRedirectPath,
   resolveModuleFromPath,
   resolvePostLoginRedirect,
-  stripBetaPrefix,
-  type AuthSurface,
   type BlockedStateReasonCode,
   type JwtClaims,
   type ModuleKey,
@@ -55,10 +52,9 @@ function redirectToDefaultLanding(
   request: NextRequest,
   sessionResponse: NextResponse,
   claims: JwtClaims,
-  surface: AuthSurface,
 ): NextResponse {
   const url = new URL(
-    resolvePostLoginRedirect(claims, null, { surface }),
+    resolvePostLoginRedirect(claims, null),
     request.nextUrl.origin,
   );
   return redirectWithCookies(url, sessionResponse);
@@ -66,8 +62,6 @@ function redirectToDefaultLanding(
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-
-  const surface: AuthSurface = isBetaPath(pathname) ? "beta" : "legacy";
 
   // Public paths — skip auth. Includes `/access-denied` so the page can render
   // for any authenticated-but-blocked user without re-entering the ACL loop.
@@ -108,7 +102,7 @@ export async function proxy(request: NextRequest) {
   }
 
   // Login page: special handling.
-  if (pathname === "/login" || pathname === "/beta/login") {
+  if (pathname === "/login") {
     if (request.method !== "GET" || request.headers.has("next-action")) {
       return response;
     }
@@ -118,7 +112,7 @@ export async function proxy(request: NextRequest) {
     if (claims) {
       const returnTo = request.nextUrl.searchParams.get("returnTo");
       const url = new URL(
-        resolvePostLoginRedirect(claims, returnTo, { surface }),
+        resolvePostLoginRedirect(claims, returnTo),
         request.nextUrl.origin,
       );
       return redirectWithCookies(url, response);
@@ -129,7 +123,7 @@ export async function proxy(request: NextRequest) {
   // Not authenticated → send to login with returnTo preserved.
   if (!session) {
     const url = request.nextUrl.clone();
-    url.pathname = surface === "beta" ? "/beta/login" : "/login";
+    url.pathname = "/login";
     url.search = "";
     url.searchParams.set(
       "returnTo",
@@ -162,7 +156,7 @@ export async function proxy(request: NextRequest) {
         isAdminRoutePath(pathname) ||
         (moduleKey === "employee" && isAdminRole(claims.user_role))
       ) {
-        return redirectToDefaultLanding(request, response, claims, surface);
+        return redirectToDefaultLanding(request, response, claims);
       }
 
       return redirectToAccessDenied(
@@ -199,9 +193,7 @@ export async function proxy(request: NextRequest) {
       moduleKey === "branch_settings" ||
       moduleKey === "branch_menu_limits"
     ) {
-      const routePath =
-        surface === "beta" ? stripBetaPrefix(pathname) : pathname;
-      const pathMatch = routePath.match(/^\/br\/(\d+)\//);
+      const pathMatch = pathname.match(/^\/br\/(\d+)\//);
       if (pathMatch) {
         const routeBranchId = Number(pathMatch[1]);
 
@@ -316,7 +308,7 @@ export async function proxy(request: NextRequest) {
   } else if (isAdminRoutePath(pathname)) {
     // Admin route with no module mapping — redirect to default landing
     // to avoid serving admin pages without ACL enforcement.
-    return redirectToDefaultLanding(request, response, claims, surface);
+    return redirectToDefaultLanding(request, response, claims);
   }
 
   return response;

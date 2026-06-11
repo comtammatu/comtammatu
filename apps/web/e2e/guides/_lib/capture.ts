@@ -119,8 +119,8 @@ export async function captureScenario(
   // Hide Next dev overlay + skeleton noise BEFORE settle wait.
   await hideDevChrome(page);
 
-  // Đợi fonts ready để tránh capture chữ FOUT (Flash of Unstyled Text).
-  // Best-effort: nếu page đóng giữa chừng, bỏ qua và dùng screenshot ngay.
+  // Wait for fonts so the capture avoids FOUT (Flash of Unstyled Text).
+  // Best-effort: if the page closes mid-wait, fall through to the screenshot.
   try {
     await page.evaluate(() => document.fonts.ready);
   } catch {
@@ -146,9 +146,9 @@ export async function captureScenario(
   const shotBase64 = shotBuf.toString("base64");
 
   // Compose iPhone frame + annotations in a 2nd page.
-  // Explicit deviceScaleFactor:1 — Playwright Chromium khi DPR>1 sẽ
-  // interpret viewport như device-px, làm body width:418px chỉ fill nửa
-  // viewport. PNG output ở 1x (CSS px), đủ nét cho user-guide markdown.
+  // Explicit deviceScaleFactor:1 — with DPR>1 Playwright Chromium
+  // interprets the viewport as device px, so body width:418px fills only
+  // half. PNG output stays 1x (CSS px), sharp enough for guide markdown.
   const composeContext = await browser.newContext({
     viewport: { width: CANVAS.width, height: CANVAS.height },
     deviceScaleFactor: 1,
@@ -163,8 +163,8 @@ export async function captureScenario(
     annotations: resolved,
   });
 
-  // Set GUIDES_DUMP_HTML=1 để dump composed HTML cùng folder mockup —
-  // debug khi annotation/frame render lệch. File hậu tố `.debug.html`.
+  // Set GUIDES_DUMP_HTML=1 to dump the composed HTML next to the mockup —
+  // for debugging when annotations/frame render off. Suffix `.debug.html`.
   if (process.env.GUIDES_DUMP_HTML === "1") {
     const dumpPath = mockupPath(
       scenario.module,
@@ -174,8 +174,8 @@ export async function captureScenario(
     await fs.writeFile(dumpPath, composed);
   }
 
-  // waitUntil: "load" → đợi `load` event = mọi <img> (kể cả base64 inline)
-  // đã decode xong.
+  // waitUntil: "load" → the `load` event means every <img> (including
+  // inline base64) has finished decoding.
   await composePage.setContent(composed, { waitUntil: "load" });
 
   const composedBuf = await composePage.screenshot({

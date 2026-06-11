@@ -357,12 +357,12 @@ Default primitive mapping:
 
 | Need                  | Use                                                                         |
 | --------------------- | --------------------------------------------------------------------------- |
-| command/action        | `Button`, `ButtonGroup`, `Toggle`, `ToggleGroup`                            |
+| command/action        | `Button`, `Toggle`, `ToggleGroup`                                           |
 | state label           | `Badge`                                                                     |
 | framed repeated item  | `Card`                                                                      |
 | dense data            | `Table`                                                                     |
 | segmented view        | `Tabs`                                                                      |
-| form input            | `Input`, `Textarea`, `Select`, `Checkbox`, `RadioGroup`, `Switch`, `Slider` |
+| form input            | `Input`, `Textarea`, `Select`, `Checkbox`, `RadioGroup`, `Switch`           |
 | dialog flow           | `Dialog`, `AlertDialog`, `Sheet`, `Drawer`                                  |
 | empty/no result/error | `Empty` or approved wrappers around `Empty`                                 |
 | loading               | `Spinner`, `Skeleton`, `Progress`                                           |

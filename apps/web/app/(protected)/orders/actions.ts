@@ -381,11 +381,11 @@ function parseAuditNote(
   }
 
   if (note.startsWith("mark_item_served ")) {
-    // 'mark_item_served 123' — không có lý do, raw_note đã đủ context.
+    // 'mark_item_served 123' — no reason; the raw note is enough context.
     return { action: "mark_item_served", label: "Phục vụ món", reason: null };
   }
 
-  // cancel_order chỉ ghi p_reason → toStatus='cancelled', note là raw reason.
+  // cancel_order only writes p_reason → toStatus='cancelled', note is the raw reason.
   if (toStatus === "cancelled") {
     return { action: "cancel", label: "Hủy đơn", reason: note };
   }
@@ -459,7 +459,7 @@ export async function fetchOrderAuditLog(
   return { success: true, data: entries };
 }
 
-/* ─── fetchOrderItems — load on-demand khi mở order detail sheet ─── */
+/* ─── fetchOrderItems — loaded on demand when the detail sheet opens ─── */
 
 /**
  * List view (`fetchOrders`) cố tình bỏ items để giữ RSC payload nhỏ. Sheet

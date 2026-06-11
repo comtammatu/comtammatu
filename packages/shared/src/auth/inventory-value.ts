@@ -1,12 +1,12 @@
 import type { StaffRole } from "./types";
 
 /** Giá trị tồn kho — toàn hệ thống: Owner, Super Manager */
-export function canViewInventoryValueSystem(role: StaffRole): boolean {
+function canViewInventoryValueSystem(role: StaffRole): boolean {
   return role === "owner" || role === "super_manager";
 }
 
 /** Theo chi nhánh: Owner, Super Manager, Manager (branch_manager) */
-export function canViewInventoryValueByBranch(role: StaffRole): boolean {
+function canViewInventoryValueByBranch(role: StaffRole): boolean {
   return (
     role === "owner" ||
     role === "super_manager" ||

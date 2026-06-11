@@ -12,8 +12,6 @@ export const admin = {
       title: "Báo cáo điều hành",
       description:
         "Xem nhanh doanh thu, tồn kho, dòng tiền vận hành và ngày công.",
-      backToAdmin: "Về quản trị",
-      openSettings: "Mở cài đặt",
       aggregateTitle: "Báo cáo tổng hợp",
       aggregateDescription:
         "Các chỉ số quan trọng cho doanh thu, tồn kho, tiền vận hành và ngày công.",
@@ -32,12 +30,22 @@ export const admin = {
         inventory: "Kho",
         hr: "Nhân sự",
       },
+      cardDescriptions: {
+        revenue: "Doanh thu theo ngày, chi nhánh và phương thức thanh toán.",
+        inventoryValue: "Tổng giá trị tồn kho toàn hệ thống và theo chi nhánh.",
+        stockMovement: "Nhập – xuất – tồn nguyên liệu theo kỳ.",
+        finance: "Thu chi vận hành, lãi gộp và food cost.",
+        inventory: "Báo cáo kho chi tiết: tồn, nhập hàng, hao hụt.",
+        hr: "Chấm công và ngày công nhân viên.",
+      },
     },
     inventoryValue: {
       title: "Giá trị tồn kho",
     },
     stockMovement: {
       pageTitle: "Biến động tồn kho",
+      pageDescription:
+        "Theo dõi nhập – xuất – tồn nguyên liệu theo kỳ và theo chi nhánh.",
       loadError: "Lỗi tải báo cáo",
       allBranchesPlaceholder: "Tất cả",
       dayPreset: (days: number) => `${days} ngày`,

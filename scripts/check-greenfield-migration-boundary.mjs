@@ -13,6 +13,9 @@ const GREENFIELD_ONLY_FILENAMES = new Set([
   "20260602000500_canonical_position_codes.sql",
   "20260602000600_harden_procurement_catalog_scope.sql",
   "20260602000700_cut_position_role_bridge_runtime.sql",
+  "20260602000800_cut_pos_role_bridge_runtime.sql",
+  "20260602000900_drop_legacy_role_code_column.sql",
+  "20260602001000_drop_redundant_indexes.sql",
 ]);
 
 const DISALLOWED_MARKERS = [

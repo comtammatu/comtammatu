@@ -71,11 +71,7 @@ const BLOCKED_STATE_REASON_COPY: Record<
   },
 };
 
-interface SearchParamsReader {
-  get(name: string): string | null;
-}
-
-export function isBlockedStateReasonCode(
+function isBlockedStateReasonCode(
   value: string | null | undefined,
 ): value is BlockedStateReasonCode {
   return (
@@ -100,23 +96,10 @@ export function resolveBlockedState(
   };
 }
 
-export function readBlockedStateFromSearchParams(
-  searchParams: SearchParamsReader,
-): ResolvedBlockedState | null {
-  if (searchParams.get("forbidden") !== "1") {
-    return null;
-  }
-
-  return resolveBlockedState(searchParams.get("reason"));
-}
-
 /**
  * Build the canonical access-denied URL. Proxy and server actions redirect
  * here when a request is blocked by ACL or branch-scope — it is the single
  * destination for "authenticated but not allowed".
- *
- * There is one `/access-denied` route; the beta surface shares it today. If
- * beta grows its own shell, introduce `/beta/access-denied` and branch here.
  */
 export function buildAccessDeniedPath(
   reason: BlockedStateReasonCode,

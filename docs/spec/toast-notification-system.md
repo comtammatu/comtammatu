@@ -30,7 +30,7 @@ Use these sources in order:
 3. Durable feed and push actions: `apps/web/app/_actions/notifications.ts`
 4. Durable feed UI: `apps/web/app/_components/notification-*`
 5. Installed-PWA push runtime: `apps/web/app/sw.ts`, `apps/web/lib/notifications/web-push.ts`, and `/api/cron/notifications-push`
-6. Database contract: `supabase/migrations/20260425010000_create_notifications.sql` and forward notification migrations
+6. Database contract: `supabase/migrations/00000000000000_baseline.sql` (bảng notifications; migration gốc nằm trong `_archive/`) and forward notification migrations
 7. External outbox: `public.notification_outbox` and module-specific dispatchers
 8. Product vocabulary: `docs/ref/glossary.md`, `packages/shared/src/labels/vi.ts`, and domain dictionaries
 
@@ -114,7 +114,6 @@ Out of scope for the current contract:
 | Auto-waste soft-fails after POS void succeeds | Warning toast                             | Optional task for admin if follow-up is required | Optional                             |
 | GRN price variance needs approval             | Yes for submitter                         | Yes for approver role                            | Optional                             |
 | Stock low recurring alert                     | No unless user triggered check            | Yes with dedup key                               | Optional                             |
-| Stocktake conflict created offline            | Yes after sync                            | Yes for QLV/Admin queue                          | Optional                             |
 | KDS ticket received                           | Usually no toast if visible in live queue | Optional only for cross-station handoff          | No                                   |
 | Print job retry failed                        | Error toast for operator                  | Yes for settings/admin if repeated               | Optional                             |
 
@@ -339,7 +338,7 @@ Current runtime pieces:
 - `apps/web/app/_components/notification-list.tsx`: feed composition.
 - `apps/web/app/_components/notification-item.tsx`: item row and action URL navigation.
 - `apps/web/app/notifications/page.tsx`: full feed route.
-- `apps/web/app/_components/notification-bell-floating.tsx`: currently disabled globally; re-enable only with an approved shell placement.
+- Chuông desktop floating: ĐÃ XÓA 2026-06-10 (stub return null từ 24/04, owner quyết xóa). Mobile dùng chuông trong mobile-header; nếu mở lại desktop bell cần shell placement được duyệt + khôi phục component từ git history (`7649253e`).
 
 UI rules:
 

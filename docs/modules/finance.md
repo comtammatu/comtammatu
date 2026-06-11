@@ -43,6 +43,7 @@ Finance Basic is the pilot-facing finance surface. It owns four primary metrics:
    - Completed paid orders by branch/date.
    - Revenue must be bucketed by completed payment time in Vietnam local date.
    - The owner-facing number may show total collected, with before-VAT revenue as supporting context.
+   - Top món dùng đúng `resolved.start→end` như mọi KPI khác; side items trong `order_items.sides` được đếm thành món riêng và doanh thu side bị trừ khỏi dòng món chính để không double-count (migrations `20260609151615` + `20260609161402`, đã apply prod).
 
 2. **Inventory value**
    - Current stock value from inventory stock levels.

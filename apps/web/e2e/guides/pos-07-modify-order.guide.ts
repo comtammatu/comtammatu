@@ -1,21 +1,21 @@
 /**
- * POS-07 Sửa đơn — chuyển bàn, hủy, tách, gộp — capture spec.
+ * POS-07 Modify order — transfer / cancel / split / merge — capture spec.
  *
- * Hub các thao tác chỉnh sửa đơn:
- *   - Chuyển bàn — di chuyển đơn sang bàn khác
- *   - Hủy đơn — hủy toàn bộ (cần lý do)
- *   - Tách hóa đơn — chia 1 đơn thành 2 (chia tiền cho khách)
- *   - Gộp hóa đơn — gộp nhiều đơn thành 1 (1 khách trả hết)
- *   - (Per-item void: vuốt món sang trái → mention trong markdown, không capture)
+ * Hub for the order-modification actions:
+ *   - "Chuyển bàn" — move the order to another table
+ *   - "Hủy đơn" — cancel the whole order (reason required)
+ *   - "Tách hóa đơn" — split one order into two (split the bill)
+ *   - "Gộp hóa đơn" — merge orders into one (one customer pays all)
+ *   - (Per-item void: swipe left — mentioned in the markdown, not captured)
  *
  * 4 main steps + 1 variant:
- *   step-01-more-menu        — dropdown "Khác..." mở, thấy các option
- *   step-02-cancel-confirm   — dialog xác nhận Hủy đơn (cần lý do)
- *   step-03-transfer-picker  — picker chọn bàn mới
- *   step-04-split-flow       — UI tách hóa đơn
- *   variant-merge-flow       — UI gộp hóa đơn
+ *   step-01-more-menu        — "Khác..." dropdown open, options visible
+ *   step-02-cancel-confirm   — cancel confirmation dialog (reason required)
+ *   step-03-transfer-picker  — new-table picker
+ *   step-04-split-flow       — split-bill UI
+ *   variant-merge-flow       — merge-bill UI
  *
- * Chạy: pnpm --filter @comtammatu/web guides:capture --grep="POS-07"
+ * Run: pnpm --filter @comtammatu/web guides:capture --grep="POS-07"
  */
 
 import { test, type Page } from "@playwright/test";
@@ -103,7 +103,7 @@ test.describe("POS-07 Sửa đơn — chuyển bàn / hủy / tách / gộp", ()
           .getByRole("menuitem", { name: /Hủy đơn/i })
           .first();
         await cancelItem.click();
-        // AlertDialog "Hủy đơn ...?" + textarea Lý do
+        // "Hủy đơn ...?" AlertDialog + reason textarea
         await p
           .getByPlaceholder(/Lý do/i)
           .waitFor({ state: "visible", timeout: 5000 });
@@ -140,7 +140,7 @@ test.describe("POS-07 Sửa đơn — chuyển bàn / hủy / tách / gộp", ()
           .getByRole("button", { name: /Chuyển bàn/i })
           .first();
         await transferBtn.click();
-        // Đợi picker dialog/sheet với list bàn
+        // Wait for the picker dialog/sheet with the table list
         await p
           .getByText(/Chọn bàn|Bàn đích/i)
           .first()
@@ -179,7 +179,7 @@ test.describe("POS-07 Sửa đơn — chuyển bàn / hủy / tách / gộp", ()
           .getByRole("menuitem", { name: /Tách hóa đơn|Tách hóa đơn/i })
           .first();
         await splitItem.click();
-        // Đợi split UI
+        // Wait for the split UI
         await p.waitForTimeout(800);
       },
       annotations: [
@@ -198,7 +198,7 @@ test.describe("POS-07 Sửa đơn — chuyển bàn / hủy / tách / gộp", ()
     const ctx = await getCashierContext();
     await ensureSingleOpenSession(ctx);
     const occupied = await ensureOccupiedTableWithOrder(ctx);
-    // Cần đơn thứ 2 cùng bàn cho merge available
+    // A 2nd order on the same table is required for merge to be available
     await ensureSecondOrderSameTable(ctx, occupied.tableId);
 
     await captureScenario(page, browser, {
@@ -216,7 +216,7 @@ test.describe("POS-07 Sửa đơn — chuyển bàn / hủy / tách / gộp", ()
         const mergeItem = p
           .getByRole("menuitem", { name: /Gộp hóa đơn|Gộp hóa đơn/i })
           .first();
-        // Merge có thể disabled nếu không có đơn khác cùng bàn — capture as-is
+        // Merge can be disabled when no other order shares the table — capture as-is
         await mergeItem.click().catch(() => {});
         await p.waitForTimeout(800);
       },

@@ -1,19 +1,14 @@
 import { canAccess } from "./module-acl";
 import {
-  isAdminRoutePath,
-  isBetaPath,
   isRunnerPublicDisplayPath,
   resolveLegacyRouteRedirectPath,
   resolveModuleFromPath,
-  stripBetaPrefix,
 } from "./route-resolution";
-import type { JwtClaims, ScopeIds, StaffRole } from "./types";
-import { ADMIN_ROLES, BRANCH_ROLES } from "./types";
-
-export type AuthSurface = "legacy" | "beta";
+import type { JwtClaims, StaffRole } from "./types";
+import { ADMIN_ROLES } from "./types";
 
 /** Extract claims from Supabase user app_metadata */
-export function extractClaims(
+function extractClaims(
   appMetadata: Record<string, unknown>,
 ): JwtClaims | null {
   const tenantId = appMetadata.tenant_id;
@@ -53,7 +48,7 @@ export function extractClaims(
  * Environment: Node.js or edge runtimes (uses Buffer/atob). Safe in both
  * because we try `Buffer` first, then fall back to `atob`.
  */
-export function decodeJwtAppMetadata(
+function decodeJwtAppMetadata(
   accessToken: string | null | undefined,
 ): Record<string, unknown> | null {
   if (!accessToken) return null;
@@ -101,14 +96,6 @@ export function extractClaimsFromAccessToken(
   return extractClaims(appMetadata);
 }
 
-/** Get scope IDs from claims */
-export function getScope(claims: JwtClaims): ScopeIds {
-  return {
-    tenantId: claims.tenant_id,
-    branchId: claims.branch_id,
-  };
-}
-
 /** Determine the default redirect path for a role after login */
 export function getDefaultRedirect(claims: JwtClaims): string {
   const { user_role } = claims;
@@ -118,32 +105,6 @@ export function getDefaultRedirect(claims: JwtClaims): string {
   }
 
   // All non-admin staff land on the employee workspace.
-  return "/employee";
-}
-
-export function toBetaPath(pathname: string): string {
-  const safePath = getSafeInternalReturnTo(pathname);
-
-  if (!safePath) {
-    return "/beta";
-  }
-
-  if (safePath === "/") {
-    return "/beta";
-  }
-
-  if (isBetaPath(safePath)) {
-    return safePath;
-  }
-
-  return `/beta${safePath}`;
-}
-
-export function getBetaDefaultRedirect(claims: JwtClaims): string {
-  if (ADMIN_ROLES.includes(claims.user_role)) {
-    return "/beta/admin/dashboard";
-  }
-
   return "/employee";
 }
 
@@ -163,15 +124,6 @@ export function getSafeInternalReturnTo(
   }
 }
 
-function getSurfaceDefaultRedirect(
-  claims: JwtClaims,
-  surface: AuthSurface,
-): string {
-  return surface === "beta"
-    ? getBetaDefaultRedirect(claims)
-    : getDefaultRedirect(claims);
-}
-
 /**
  * Resolve the post-login destination for a user.
  *
@@ -179,35 +131,27 @@ function getSurfaceDefaultRedirect(
  *  1. Caller-supplied `returnTo`, when it is safe, resolves to a module the
  *     role can access, and — for branch-scoped modules — matches the user's
  *     branch.
- *  2. Role's default landing page (`getDefaultRedirect` /
- *     `getBetaDefaultRedirect`).
- *
- * Surface is carried through so beta users stay on `/beta/*` and legacy users
- * stay on root paths.
+ *  2. Role's default landing page (`getDefaultRedirect`).
  */
 export function resolvePostLoginRedirect(
   claims: JwtClaims,
   returnTo: string | null | undefined,
-  options?: { surface?: AuthSurface },
 ): string {
-  const surface: AuthSurface = options?.surface ?? "legacy";
-  const fallback = getSurfaceDefaultRedirect(claims, surface);
+  const fallback = getDefaultRedirect(claims);
   const safeReturnTo = getSafeInternalReturnTo(returnTo);
 
   if (!safeReturnTo) {
     return fallback;
   }
 
-  const targetPath =
-    surface === "beta" ? toBetaPath(safeReturnTo) : safeReturnTo;
-  const targetUrl = new URL(targetPath, "http://localhost");
+  const targetUrl = new URL(safeReturnTo, "http://localhost");
   const legacyRedirectPath = resolveLegacyRouteRedirectPath(targetUrl.pathname);
   if (legacyRedirectPath) {
     targetUrl.pathname = legacyRedirectPath;
   }
 
   // Guard against bouncing the user back to the login route itself.
-  if (targetUrl.pathname === "/login" || targetUrl.pathname === "/beta/login") {
+  if (targetUrl.pathname === "/login") {
     return fallback;
   }
 
@@ -217,15 +161,9 @@ export function resolvePostLoginRedirect(
 
   const moduleKey = resolveModuleFromPath(targetUrl.pathname);
 
-  // Non-module paths (e.g. /beta home) are allowed when surface matches.
+  // Non-module paths fall back to the role's default landing page.
   if (!moduleKey) {
-    if (isAdminRoutePath(targetUrl.pathname)) {
-      return fallback;
-    }
-
-    return surface === "beta"
-      ? `${targetUrl.pathname}${targetUrl.search}${targetUrl.hash}`
-      : fallback;
+    return fallback;
   }
 
   if (!canAccess(claims.user_role, moduleKey)) {
@@ -239,8 +177,7 @@ export function resolvePostLoginRedirect(
     moduleKey === "branch_settings" ||
     moduleKey === "branch_menu_limits"
   ) {
-    const routePath = stripBetaPrefix(targetUrl.pathname);
-    const branchMatch = routePath.match(/^\/br\/(\d+)\//);
+    const branchMatch = targetUrl.pathname.match(/^\/br\/(\d+)\//);
     const routeBranchId = branchMatch ? Number(branchMatch[1]) : null;
 
     const allowCrossBranchSettings =
@@ -261,9 +198,4 @@ export function resolvePostLoginRedirect(
 /** Check if a role is admin-level */
 export function isAdminRole(role: StaffRole): boolean {
   return ADMIN_ROLES.includes(role);
-}
-
-/** Check if a role is branch-level */
-export function isBranchRole(role: StaffRole): boolean {
-  return BRANCH_ROLES.includes(role);
 }

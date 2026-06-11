@@ -82,9 +82,9 @@ export type GRNDetailItem = {
   poQuantity: number | null;
   poUnitPrice: number | null;
   required: number;
-  // Số đã giao (gross delivered từ NCC). Stock impact = actual − rejected.
+  // "Số đã giao" (gross delivered by the supplier). Stock impact = actual − rejected.
   actual: number;
-  // Số nhận tốt vào kho thực = actual − rejected (derived ở page.tsx)
+  // Net good quantity into stock = actual − rejected (derived in page.tsx)
   accepted: number;
   rejected: number;
   rejectionReason: string;
@@ -181,7 +181,7 @@ export function GRNDetailClient({
         (variance != null && Math.abs(variance) > qc.priceVarianceReviewPct)
       );
     }).length;
-    // Tổng giá trị nhập kho = cost × (delivered − rejected)
+    // Total received value = cost × (delivered − rejected)
     const total = lines.reduce(
       (sum, l) => sum + l.cost * (l.actual - l.rejected),
       0,
@@ -301,7 +301,7 @@ export function GRNDetailClient({
         return grnCopy.validation.rejectPhotoRequired(l.name);
       }
       const tolerance = qc.qtyShortTolerancePct;
-      // Short-delivery: NCC giao ít hơn ngưỡng. Dùng `actual` (gross delivered) trực tiếp.
+      // Short delivery: the supplier delivered below the threshold. Uses `actual` (gross delivered) directly.
       if (
         l.poQuantity != null &&
         l.poQuantity > 0 &&
@@ -1226,7 +1226,7 @@ function LineRow({
           ? "text-warning font-semibold"
           : "text-muted-foreground";
 
-  // Hàng giao ít: NCC chưa giao đủ ngưỡng so với PO. Dùng số đã giao (actual) trực tiếp.
+  // Short delivery: supplier under the PO threshold. Uses gross delivered (actual) directly.
   const shortDeliveryRequired =
     line.poQuantity != null &&
     line.poQuantity > 0 &&

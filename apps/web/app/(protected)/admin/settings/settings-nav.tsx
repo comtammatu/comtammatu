@@ -8,6 +8,9 @@ import {
   type StaffRole,
 } from "@comtammatu/shared/auth";
 import { Separator } from "@comtammatu/ui/components/separator";
+import { messages } from "@lib/messages";
+
+const copy = messages.settings.nav;
 
 interface Tab {
   href: string;
@@ -23,32 +26,37 @@ const TENANT_STRATEGY_ROLES = [
 const TABS: Tab[] = [
   {
     href: "/admin/settings/branches",
-    label: "Chi nhánh",
+    label: copy.branches,
     allowedRoles: TENANT_STRATEGY_ROLES,
   },
   {
     href: "/admin/settings/general",
-    label: "Chung",
+    label: copy.general,
     allowedRoles: TENANT_STRATEGY_ROLES,
   },
   {
     href: "/admin/settings/payments",
-    label: "Thanh toán",
+    label: copy.payments,
     allowedRoles: TENANT_STRATEGY_ROLES,
   },
   {
     href: "/admin/settings/tables",
-    label: "Bàn",
+    label: copy.tables,
     allowedRoles: BRANCH_FLOOR_SETTINGS_ROLES,
   },
   {
     href: "/admin/settings/pos",
-    label: "POS",
+    label: copy.pos,
     allowedRoles: BRANCH_FLOOR_SETTINGS_ROLES,
   },
   {
     href: "/admin/settings/kds",
-    label: "Trạm bếp",
+    label: copy.kds,
+    allowedRoles: BRANCH_FLOOR_SETTINGS_ROLES,
+  },
+  {
+    href: "/admin/settings/printers",
+    label: copy.printers,
     allowedRoles: BRANCH_FLOOR_SETTINGS_ROLES,
   },
 ];
@@ -62,7 +70,7 @@ export function SettingsNav({ role }: { role: StaffRole }) {
     <>
       <nav
         className="flex items-center gap-1 overflow-x-auto"
-        aria-label="Mục cài đặt"
+        aria-label={copy.ariaLabel}
       >
         {visibleTabs.map((tab) => {
           const isActive = pathname.startsWith(tab.href);

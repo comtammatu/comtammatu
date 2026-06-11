@@ -635,7 +635,7 @@ export function DashboardClient(props: DashboardProps) {
         </div>
       </section>
 
-      {/* KPI cards — Giá trị tồn kho lives in header meta to avoid duplication. */}
+      {/* KPI cards — "Giá trị tồn kho" lives in header meta to avoid duplication. */}
       <div
         className={cn(
           "grid gap-3",

@@ -62,15 +62,16 @@ source-of-truth inputs.
 | Tests               | Playwright route coverage and shared unit tests                                       |
 | Core                | Repository metadata, E2E helpers, cross-cutting supporting files                      |
 
-Generated checkout snapshot from 2026-05-30 (`node scripts/project-snapshot.mjs`):
+Generated checkout snapshot from 2026-06-10 (`node scripts/project-snapshot.mjs`):
 
-| Area                                                         |             Count |
-| ------------------------------------------------------------ | ----------------: |
-| `apps/web/app/**/page.tsx` routes                            |               109 |
-| API route handlers                                           |                13 |
-| Generated DB tables / views / functions / enums              | 118 / 9 / 241 / 0 |
-| Active SQL migrations (baseline-first; +379 archived)        |                 2 |
-| Test/spec files under `apps/web/e2e` + `packages/shared/src` |                40 |
+| Area                                                         |               Count |
+| ------------------------------------------------------------ | ------------------: |
+| `apps/web/app/**/page.tsx` routes (committed)                |                 103 |
+| API route handlers (`route.ts`: 10 api + 2 PWA manifest)     |                  12 |
+| Generated DB tables / views / functions / enums              | 115 / 8 / ~255 / 1 (`shift_request_status`) |
+| Active SQL migrations (baseline-first; +379 archived)        |                  26 |
+| Test/spec files (`apps/web/e2e` + `packages/shared/src`)     |                  32 |
+| Test files under `apps/web/tests`                            |                  36 |
 
 > Migrations are **baseline-first** since 2026-05-30: `supabase/migrations/00000000000000_baseline.sql` (canonical public-schema install) + forward migrations, with the 379-file historical chain under `supabase/migrations/_archive/` and managed surfaces in `supabase/managed-surfaces.install.sql`. See `docs/spec/database-schema.md`.
 
@@ -223,7 +224,7 @@ sequenceDiagram
 | #   | Unknown                                                                                                                                                                                                    | Verification Step                                                             | Impact                                              |
 | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | --------------------------------------------------- |
 | 1   | has tenant-wide access (no intermediate scope table)                                                                                                                                                | Deferred — tracked as item **H3** in `tasks/todo.md` "Deferred to post-pilot" | May need migration later                            |
-| 2   | Test coverage exists but is still concentrated: current checkout has 40 test/spec files, including 9 Playwright specs, with gaps around full POS→payment→stock→print→HĐĐT smoke and live provider behavior | Expand route smoke + end-to-end pilot runbooks before scale                   | Refactor regressions possible on uncovered surfaces |
+| 2   | Test coverage exists but is still concentrated: current checkout has 32 test/spec files under `apps/web/e2e` + `packages/shared/src` plus 36 files under `apps/web/tests`, with gaps around full POS→payment→stock→print→HĐĐT smoke and live provider behavior | Expand route smoke + end-to-end pilot runbooks before scale                   | Refactor regressions possible on uncovered surfaces |
 
 ## Priority Recommendations
 

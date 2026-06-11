@@ -7,16 +7,14 @@ Nơi lưu các artefact theo dõi tiến độ và adoption.
 
 ## Active Notes
 
+- [hrm-truc-ngay-cong-2026-06-10.md](hrm-truc-ngay-cong-2026-06-10.md): HRM "1 trục Ngày công" contract (bỏ đăng ký ca/phân ca)
 - [employee-daily-work-2026-06-09.md](employee-daily-work-2026-06-09.md): Employee daily-work contract hiện tại
+- [employee-pwa-shell-2026-06-11.md](employee-pwa-shell-2026-06-11.md): Employee PWA shell và install/offline affordance
 - [employee-leave-requests-2026-06-10.md](employee-leave-requests-2026-06-10.md): Employee leave request + HRM approval contract
 - [employee-checkout-approval-2026-06-09.md](employee-checkout-approval-2026-06-09.md): checkout approval contract cho Employee daily work
-- [migration-hotfix-2026-06-09.md](migration-hotfix-2026-06-09.md): T3 contract cho migration hotfix scope trung gian + employee clock-in
-- [pos-item-level-discount-migration-2026-06-09.md](pos-item-level-discount-migration-2026-06-09.md): item-level discount money migration contract
-- [pos-shift-close-discount-hddt-2026-06-09.md](pos-shift-close-discount-hddt-2026-06-09.md): close-shift + HĐĐT discount hotfix contract
-- [finance-revenue-date-range-2026-06-09.md](finance-revenue-date-range-2026-06-09.md): Finance Revenue range-bound top items contract
-- [runner-public-display-2026-06-09.md](runner-public-display-2026-06-09.md): Runner public customer display contract
-- [runner-kds-status-logic-2026-06-09.md](runner-kds-status-logic-2026-06-09.md): Runner queue visibility rule
-- [runner-idle-mascot-visual-2026-06-09.md](runner-idle-mascot-visual-2026-06-09.md): Runner idle visual contract
+- [pos-daily-limit-holds-2026-06-10.md](pos-daily-limit-holds-2026-06-10.md): daily-limit hold reservation contract cho POS order create/append
+- [hr-checklist-template-library-2026-06-10.md](hr-checklist-template-library-2026-06-10.md): HR checklist template library + employee daily checklist contract
+- [notifications-pwa-cleanup-2026-06-10.md](notifications-pwa-cleanup-2026-06-10.md): Notification inbox + PWA push cleanup contract
 
 ## Quy tắc
 

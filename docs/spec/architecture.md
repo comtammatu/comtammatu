@@ -160,23 +160,8 @@ Top-level surfaces (see `module-acl.ts` for canonical role lists):
 
 ## Infrastructure Strategy
 
-> Decision: D008 — cloud-first MVP, local-first Phase 2.
-
 ```
-MVP (v1.0.0):
-  Browser → proxy.ts → Next.js → Supabase Cloud
-  + PWA Service Worker cache cho offline cơ bản
-
-Post-v1.0 (nếu cần):
-  Branch LAN: Mini PC + Bun + SQLite
-    POS/KDS → local server (< 1ms)
-    Sync worker → Supabase Cloud (mỗi 1-5 min)
+Browser → proxy.ts → Next.js → Supabase Cloud
 ```
 
-| Module      | MVP runs on | Post-v1.0 option       |
-| ----------- | ----------- | ---------------------- |
-| Admin, Menu | Cloud       | Cloud (giữ nguyên)     |
-| POS, KDS    | Cloud + PWA | Local-first per branch |
-| Payment     | Cloud       | Local-first per branch |
-| Stock       | Cloud       | Hybrid                 |
-| Finance, HR | Cloud       | Cloud (giữ nguyên)     |
+Local-First/offline đã LOẠI BỎ vĩnh viễn theo D012 (2026-06-10) — cloud + PWA là kiến trúc cuối.

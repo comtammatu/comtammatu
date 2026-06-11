@@ -1,8 +1,8 @@
 # Supabase migrations — baseline-first
 
 `00000000000000_baseline.sql` is the **canonical public-schema install** for a
-fresh environment. Generated 2026-05-30 from matu-dev (`nikkridjukdbqvkvqlmi`)
-via libpq `pg_dump 18` and validated to replay from an empty public schema. The
+fresh environment. Generated 2026-05-30 via libpq `pg_dump 18` and validated to
+replay from an empty public schema. The
 358-file historical chain could **not** replay from empty (ordering bug at
 `20260508055046` — references `order_items.vat_rate` before `20260509000000`
 creates it), which is why this baseline exists.
@@ -20,7 +20,7 @@ creates it), which is why this baseline exists.
 `--schema=public` excludes Supabase-managed surfaces. Apply
 **`../managed-surfaces.install.sql`** (i.e. `supabase/managed-surfaces.install.sql`)
 AFTER the baseline on a fresh env. It is a privileged install step (NOT an
-auto-applied migration) — generated 2026-05-30 from matu-dev + iexws, idempotent:
+auto-applied migration), idempotent:
 
 - extensions (pgcrypto, uuid-ossp, hypopg, index_advisor, pg_cron)
 - storage buckets (4) + storage.objects RLS policies (12) — **the policy section
@@ -30,14 +30,12 @@ auto-applied migration) — generated 2026-05-30 from matu-dev + iexws, idempote
 - cron jobs (10) via `cron.schedule(...)`
 
 The `config.toml` auth-hook setting stays in the repo. `supabase/managed-surfaces.install.sql`
-is the canonical companion install file for matu-dev and fresh environments.
+is the canonical companion install file for fresh environments.
 
 ## Existing environments (option X — 2026-05-30)
 
 - **Production (`iexwsuaqqenyjiskawoj`) keeps its applied migration history.** It
   is NOT reset to the baseline; the baseline is for fresh/dev envs.
-- matu-dev was rebuilt from the baseline 2026-05-30 (schema verified exact). Its
-  `schema_migrations` history may be repaired separately to baseline-first.
 - **Production still needs the 2026-05-30 fixes applied** (now under `_archive/`,
   also in git history) — owner-gated:
   - `20260602008000_payroll_entries_self_read_paid_only.sql`
@@ -51,8 +49,8 @@ Always extract with a DIRECT privileged connection (libpq `pg_dump`), never
 it dropped 18/118).
 
 ```bash
-pnpm db:baseline:extract:dry-run -- --project-ref=<matu-dev>
-pnpm db:baseline:extract -- --project-ref=<matu-dev>
+pnpm db:baseline:extract:dry-run -- --project-ref=<dev-project-ref>
+pnpm db:baseline:extract -- --project-ref=<dev-project-ref>
 ```
 
 After accepting a regenerated baseline, re-apply

@@ -12,7 +12,7 @@ import { getVNDateString, getVNMonthEndDateString } from "../time/vietnam";
  *   - NQ 954/2020/UBTVQH14 (2020-07-01): set 11M / 4.4M
  *   - NQ 110/2025/UBTVQH15 (2026-01-01): bump to 15.5M / 6.2M
  *   - NĐ 65/2013 + amendments: BHXH/BHYT/BHTN rates (stable)
- *   - Lương cơ sở 2.34M (NĐ 73/2024, effective 2024-07-01) → BHXH cap = 46.8M
+ *   - Statutory base salary 2.34M (NĐ 73/2024, effective 2024-07-01) → BHXH cap = 46.8M
  *
  * Adding a new version:
  *   1. Append entry to PAYROLL_LEGAL_VERSIONS in chronological order.
@@ -87,7 +87,7 @@ export const PAYROLL_LEGAL_VERSIONS: readonly PayrollLegalVersion[] = [
       "NQ 954/2020/UBTVQH14 + TT 111/2013/TT-BTC (giảm trừ 11M / 4.4M, BHXH cap 29.8M)",
     personalDeduction: 11_000_000,
     dependentDeduction: 4_400_000,
-    insuranceCap: 29_800_000, // 20 × lương cơ sở 1.49M (pre 2024-07)
+    insuranceCap: 29_800_000, // 20 × statutory base salary 1.49M (pre 2024-07)
     ...STANDARD_BHXH_BHYT_BHTN_RATES,
     pitBrackets: PIT_BRACKETS_2007,
   },

@@ -9,7 +9,6 @@ export const PUBLIC_APP_PATHS = [
   "/access-denied",
   "/payment/momo",
 ] as const;
-export const BETA_ROUTE_PREFIX = "/beta" as const;
 
 export const INVENTORY_PROCUREMENT_PREFIXES = [
   "/inventory/ingredients",
@@ -49,8 +48,7 @@ function matchesPathPrefix(pathname: string, prefix: string): boolean {
 }
 
 export function isRunnerPublicDisplayPath(pathname: string): boolean {
-  const resolvedPathname = stripBetaPrefix(pathname);
-  return /^\/br\/\d+\/runner\/?$/.test(resolvedPathname);
+  return /^\/br\/\d+\/runner\/?$/.test(pathname);
 }
 
 export function isPublicAppPath(pathname: string): boolean {
@@ -67,89 +65,61 @@ export function isPublicAppPath(pathname: string): boolean {
   );
 }
 
-export function isBetaPath(pathname: string): boolean {
-  return (
-    pathname === BETA_ROUTE_PREFIX ||
-    pathname.startsWith(`${BETA_ROUTE_PREFIX}/`)
-  );
-}
-
-export function stripBetaPrefix(pathname: string): string {
-  if (!isBetaPath(pathname)) {
-    return pathname;
-  }
-
-  const stripped = pathname.slice(BETA_ROUTE_PREFIX.length);
-  return stripped.length > 0 ? stripped : "/";
-}
-
 export function isAdminRoutePath(pathname: string): boolean {
-  const resolvedPathname = stripBetaPrefix(pathname);
-  return (
-    resolvedPathname === "/admin" || resolvedPathname.startsWith("/admin/")
-  );
+  return pathname === "/admin" || pathname.startsWith("/admin/");
 }
 
 export function resolveLegacyRouteRedirectPath(
   pathname: string,
 ): string | null {
-  const betaPath = isBetaPath(pathname);
-  const resolvedPathname = stripBetaPrefix(pathname);
-
-  if (
-    resolvedPathname === "/admin/finance" ||
-    resolvedPathname.startsWith("/admin/finance/")
-  ) {
-    const suffix = resolvedPathname.slice("/admin/finance".length);
-    const target = `/finance${suffix}`;
-    return betaPath ? `${BETA_ROUTE_PREFIX}${target}` : target;
+  if (pathname === "/admin/finance" || pathname.startsWith("/admin/finance/")) {
+    const suffix = pathname.slice("/admin/finance".length);
+    return `/finance${suffix}`;
   }
 
   return null;
 }
 
 export function resolveModuleFromPath(pathname: string): ModuleKey | null {
-  const resolvedPathname = stripBetaPrefix(pathname);
-
-  if (resolvedPathname === "/admin" || resolvedPathname === "/admin/") {
+  if (pathname === "/admin" || pathname === "/admin/") {
     return "dashboard";
   }
-  if (resolvedPathname.startsWith("/admin/dashboard")) return "dashboard";
-  if (resolvedPathname.startsWith("/admin/staff")) return "staff";
-  if (resolvedPathname.startsWith("/admin/reports")) return "reports";
-  if (resolvedPathname.startsWith("/admin/settings")) return "settings";
+  if (pathname.startsWith("/admin/dashboard")) return "dashboard";
+  if (pathname.startsWith("/admin/staff")) return "staff";
+  if (pathname.startsWith("/admin/reports")) return "reports";
+  if (pathname.startsWith("/admin/settings")) return "settings";
   // /admin/inventory/* RETIRED: pages removed; module ACL has empty allowedRoles.
   // Mapping kept so URL space resolves to access-denied via standard ACL flow
   // instead of falling through to admin-route landing redirect. See module-acl.ts.
-  if (resolvedPathname.startsWith("/admin/inventory")) return "inventory_admin";
-  if (resolvedPathname.startsWith("/admin/accounting")) return "accounting";
+  if (pathname.startsWith("/admin/inventory")) return "inventory_admin";
+  if (pathname.startsWith("/admin/accounting")) return "accounting";
 
   for (const prefix of INVENTORY_PROCUREMENT_PREFIXES) {
-    if (matchesPathPrefix(resolvedPathname, prefix)) {
+    if (matchesPathPrefix(pathname, prefix)) {
       return "inventory_procurement";
     }
   }
 
-  if (resolvedPathname === "/inventory") return "inventory";
+  if (pathname === "/inventory") return "inventory";
   for (const prefix of INVENTORY_ROUTE_PREFIXES) {
-    if (matchesPathPrefix(resolvedPathname, prefix)) return "inventory";
+    if (matchesPathPrefix(pathname, prefix)) return "inventory";
   }
-  if (resolvedPathname.startsWith("/finance")) return "finance";
-  if (resolvedPathname.startsWith("/menu")) return "menu";
-  if (resolvedPathname.startsWith("/orders")) return "orders";
-  if (resolvedPathname.startsWith("/hr/payroll")) return "hr_payroll";
-  if (resolvedPathname.startsWith("/hr")) return "hr";
-  if (/^\/br\/\d+\/settings/.test(resolvedPathname)) return "branch_settings";
-  if (/^\/br\/\d+\/menu-limits/.test(resolvedPathname))
+  if (pathname.startsWith("/finance")) return "finance";
+  if (pathname.startsWith("/menu")) return "menu";
+  if (pathname.startsWith("/orders")) return "orders";
+  if (pathname.startsWith("/hr/payroll")) return "hr_payroll";
+  if (pathname.startsWith("/hr")) return "hr";
+  if (/^\/br\/\d+\/settings/.test(pathname)) return "branch_settings";
+  if (/^\/br\/\d+\/menu-limits/.test(pathname))
     return "branch_menu_limits";
-  if (/^\/br\/\d+\/pos/.test(resolvedPathname)) return "pos";
-  if (/^\/br\/\d+\/kds/.test(resolvedPathname)) return "kds";
-  if (/^\/br\/\d+\/runner/.test(resolvedPathname)) return "runner";
-  if (resolvedPathname.startsWith("/employee/checkout-approvals")) {
+  if (/^\/br\/\d+\/pos/.test(pathname)) return "pos";
+  if (/^\/br\/\d+\/kds/.test(pathname)) return "kds";
+  if (/^\/br\/\d+\/runner/.test(pathname)) return "runner";
+  if (pathname.startsWith("/employee/checkout-approvals")) {
     return "employee_checkout_approvals";
   }
-  if (resolvedPathname.startsWith("/employee")) return "employee";
-  if (resolvedPathname.startsWith("/notifications")) return "notifications";
+  if (pathname.startsWith("/employee")) return "employee";
+  if (pathname.startsWith("/notifications")) return "notifications";
 
   return null;
 }

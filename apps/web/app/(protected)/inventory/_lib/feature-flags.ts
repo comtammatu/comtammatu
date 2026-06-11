@@ -6,10 +6,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  * `20260425170000_s10_foundation_branch_feature_flags.sql`.
  */
 export const INVENTORY_FEATURE_FLAGS = {
-  S10_GRN_VARIANCE: "inv_s10_grn_variance",
   S11_WASTE_TIER: "inv_s11_waste_tier",
   INVENTORY_STOCKTAKE_REDESIGNED: "inv_stocktake_redesigned",
-  S14_AUTO_APPROVE: "inv_s14_auto_approve",
 } as const;
 
 export type InventoryFeatureFlag =

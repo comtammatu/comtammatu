@@ -6,8 +6,6 @@ import { ConfirmDialogProvider } from "@comtammatu/ui/components/confirm-dialog"
 import { ThemeProvider } from "@comtammatu/ui/components/theme-provider";
 import { getThemeScriptHtml } from "@comtammatu/ui/components/theme-script";
 import { TooltipProvider } from "@comtammatu/ui/components/tooltip";
-import { BoneyardRegistry } from "./_components/boneyard-registry";
-import { NotificationBellFloating } from "./_components/notification-bell-floating";
 import { ResponsiveToaster } from "./_components/responsive-toaster";
 import { SerwistProvider } from "./serwist-provider";
 import "@comtammatu/ui/globals.css";
@@ -94,14 +92,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           forcedTheme="light"
           disableTransitionOnChange
         >
-          <BoneyardRegistry />
           <SerwistProvider
             swUrl="/sw.js"
             disable={process.env.NODE_ENV === "development"}
           >
             <TooltipProvider>{children}</TooltipProvider>
           </SerwistProvider>
-          <NotificationBellFloating />
           <ResponsiveToaster />
           <ConfirmDialogProvider />
         </ThemeProvider>

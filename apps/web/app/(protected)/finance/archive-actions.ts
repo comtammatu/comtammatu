@@ -5,7 +5,7 @@
  *   - getArchiveDownloadUrl(invoiceId, kind) — mint 5-min signed URL
  *     for /finance/invoices "Tải PDF/XML" buttons. Gate: finance:view.
  *   - forceArchiveTaxInvoice(invoiceId) — single-row manual archive.
- *     Gate: settings:tenant (matches reconcile force-resync siết).
+ *     Gate: settings:tenant (matches the tightened reconcile force-resync gate).
  *   - backfillArchiveByDateRange(branchId, from, to) — bulk backfill
  *     for invoices issued before this feature shipped. Gate:
  *     settings:tenant. Enqueues + processes sequentially (respects

@@ -57,8 +57,8 @@ import { messages } from "@lib/messages";
 import { FORM_VI, PRODUCT_VI } from "@comtammatu/shared/messages";
 export interface PosSessionRow {
   id: number;
-  // Per-branch model (Owner D7, 2026-04-27): nullable. NULL = ca chung của
-  // chi nhánh, không liên kết terminal vật lý cụ thể.
+  // Per-branch model (D7): nullable. NULL = branch-wide session, not tied
+  // to a specific physical terminal.
   terminal_id: number | null;
   opened_by: string;
   closed_by: string | null;
@@ -123,9 +123,6 @@ interface PosSessionsClientProps {
   selectedSessionId: number | null;
   orders: PosSessionOrder[];
   report: PosSessionReport | null;
-  /** @deprecated D8 (2026-04-27): variance gate retired. Prop giữ để
-   * backward-compat với CloseSessionSheet, không gate UI nữa. */
-  canOverrideVariance: boolean;
 }
 
 function paymentMethodLabel(method: string | null): string {
@@ -152,7 +149,6 @@ export function PosSessionsClient({
   selectedSessionId,
   orders,
   report,
-  canOverrideVariance,
 }: PosSessionsClientProps) {
   const [closeSheetOpen, setCloseSheetOpen] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
@@ -315,7 +311,6 @@ export function PosSessionsClient({
           sessionId={selectedSession.id}
           open={closeSheetOpen}
           onOpenChange={setCloseSheetOpen}
-          canOverrideVariance={canOverrideVariance}
         />
       ) : null}
 

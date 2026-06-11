@@ -20,7 +20,6 @@ export interface UseKdsMutationsArgs {
 }
 
 export interface KdsMutations {
-  handleBump: (ticketId: number) => Promise<void>;
   handleRecall: (ticketId: number) => Promise<void>;
   handleOutOfStock: (ticketId: number) => Promise<void>;
   handleCompleteTickets: (ticketIds: number[]) => Promise<void>;
@@ -92,40 +91,6 @@ export function useKdsMutations({
     pendingTicketIdsRef.current = next;
     setPendingTicketIds(next);
   }, []);
-
-  const handleBump = useCallback(
-    async (ticketId: number) => {
-      if (!beginTicketMutation(ticketId)) return;
-
-      setTickets((prev) =>
-        prev.map((t) => {
-          if (t.id !== ticketId) return t;
-          const nextStatus =
-            t.status === "pending"
-              ? "preparing"
-              : t.status === "preparing"
-                ? "ready"
-                : t.status;
-          return { ...t, status: nextStatus };
-        }),
-      );
-
-      try {
-        const sb = supabaseRef.current;
-        const { error } = await sb.rpc("bump_kds_ticket", {
-          p_ticket_id: ticketId,
-        });
-
-        if (error) {
-          toast.error("Không thể cập nhật trạng thái món. Vui lòng thử lại.");
-          await refreshBoardSnapshot();
-        }
-      } finally {
-        endTicketMutation(ticketId);
-      }
-    },
-    [beginTicketMutation, endTicketMutation, refreshBoardSnapshot, setTickets],
-  );
 
   const handleRecall = useCallback(
     async (ticketId: number) => {
@@ -272,7 +237,6 @@ export function useKdsMutations({
   );
 
   return {
-    handleBump,
     handleRecall,
     handleOutOfStock,
     handleCompleteTickets,

@@ -4,8 +4,8 @@ import { useCallback, useMemo } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 /** Two KDS modes:
- *  - `focus` (mặc định): đang làm — 1 đơn duy nhất full màn hình, auto-advance khi xong.
- *  - `comprehensive`: tổng quan — grid nhiều đơn, scan-by-glance.
+ *  - `focus` (default): cooking — a single full-screen ticket, auto-advancing when done.
+ *  - `comprehensive`: overview — a multi-ticket grid, scan-by-glance.
  */
 export type KdsViewMode = "comprehensive" | "focus";
 

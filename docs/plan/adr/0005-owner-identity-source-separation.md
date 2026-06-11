@@ -78,7 +78,7 @@ Three concepts were conflated in original code:
 **B. Single source migration (replace position-based check):**
 
 - Drop `positions.code='owner'` check entirely; rely solely on `tenants.owner_user_id`.
-- Rejected: invasive — breaks `_auth_position_id_from_role` mapping (`20260423020000_auth_m5_bridge.sql:108`), JWT user_role derivation, 17+ SQL sites referencing 'owner' position code.
+- Rejected: invasive — breaks `_auth_position_id_from_role` mapping (`20260423020000_auth_v2_m5_bridge.sql:108`), JWT user_role derivation, 17+ SQL sites referencing 'owner' position code.
 
 **C. No-op (defer entire H3b):**
 
@@ -121,7 +121,7 @@ UPDATE tenants t
 - `supabase/migrations/00000000000000_baseline.sql` — current schema baseline with `tenants.owner_user_id`
 - `supabase/migrations/_archive/20260601500000_h3b_tenants_owner_user_id.sql` — implementation history
 - `supabase/migrations/_archive/20260601100000_auth_v3_h3a_position_id_required.sql` — H3a (closes silent-demote at source)
-- `supabase/migrations/_archive/20260423040000_auth_m5_hotfix_has_permission.sql` — current owner-bypass lineage (positions-based)
+- `supabase/migrations/_archive/20260423040000_auth_v2_m5_hotfix_has_permission.sql` — current owner-bypass lineage (positions-based)
 - `supabase/migrations/_archive/20260401000000_initial_schema.sql:28` — `tenants.representative TEXT` (legal name, NOT auth)
 - `tasks/regressions.md` — TENANT-OWNER-USER-ID-CANONICAL (new), PROFILES-POSITION-ID-MUST-NOT-NULL (H3a sibling)
 - `docs/modules/auth.md` — Invariants section

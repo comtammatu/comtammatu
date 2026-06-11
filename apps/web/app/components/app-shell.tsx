@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { ArrowLeft as IconArrowLeft, LogOut as IconLogout } from "lucide-react";
 import type { StaffRole } from "@comtammatu/shared/auth";
 import { resolveRoleHomeLink, ROLE_LABEL_VI } from "@comtammatu/shared/auth";
+import { cn } from "@comtammatu/ui";
 import { Avatar, AvatarFallback } from "@comtammatu/ui/components/avatar";
 import { Badge } from "@comtammatu/ui/components/badge";
 import {
@@ -38,6 +39,7 @@ import {
   type ShellNavGroup,
 } from "@/lib/shell-primitives";
 import { BrandMark, type BrandMarkVariant } from "@/components/brand";
+import { WorkspaceBottomNav } from "@/components/workspace-bottom-nav";
 import { messages } from "@lib/messages";
 
 interface BrandConfig {
@@ -74,6 +76,11 @@ export interface AppShellProps {
   pageHeader: PageHeaderConfig;
   /** Sidebar collapsible mode. Default "offcanvas" (mobile drawer). */
   collapsible?: "icon" | "offcanvas";
+  /**
+   * Mobile-only workspace bottom navbar (ACL-resolved tabs + drawer
+   * trigger). Default true for all back-office shells.
+   */
+  bottomNav?: boolean;
 }
 
 export function AppShell({
@@ -85,6 +92,7 @@ export function AppShell({
   defaultPageTitle,
   pageHeader,
   collapsible = "offcanvas",
+  bottomNav = true,
 }: AppShellProps) {
   const pathname = usePathname();
   const copy = messages.common;
@@ -266,10 +274,14 @@ export function AppShell({
           ) : null}
         </header>
 
-        <main id="main-content" className="flex-1 p-4">
+        <main
+          id="main-content"
+          className={cn("flex-1 p-4", bottomNav && "pb-24 lg:pb-4")}
+        >
           <div className="space-y-4">{children}</div>
         </main>
       </SidebarInset>
+      {bottomNav ? <WorkspaceBottomNav role={role} /> : null}
     </SidebarProvider>
   );
 }

@@ -771,8 +771,8 @@ function AddIssueLineDialog({
       return;
     }
 
-    // Đơn giá (WAC) áp dụng từ stock_levels.avg_unit_cost tại thời điểm
-    // confirm phiếu — không cho người dùng nhập tay để tránh lệch giá vốn.
+    // Unit cost (WAC) comes from stock_levels.avg_unit_cost at confirm
+    // time — never user-entered, to keep COGS from drifting.
     startTransition(async () => {
       const res = await upsertStockIssueLine({
         issueId,

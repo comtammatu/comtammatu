@@ -1,18 +1,18 @@
 /**
- * POS-01 Mở ca POS — capture spec.
+ * POS-01 Open POS shift — capture spec.
  *
- * Per-branch model (Owner D7, 2026-04-27): chi nhánh có tối đa 1 ca POS
- * active cùng lúc, mở ca không cần chọn terminal cụ thể. UI chỉ còn 1 ô
- * Tiền đầu ca + nút "Mở ca POS".
+ * Per-branch model (D7): a branch has at most one active POS session, and
+ * opening a shift does not require picking a terminal. The UI is just one
+ * opening-cash field + the "Mở ca POS" button.
  *
  * 3 main steps + 1 variant:
- *   step-01-form-empty   — vào màn mở ca trống
- *   step-02-enter-cash   — focus ô tiền, nhập số
- *   step-03-ready        — form hợp lệ, button active
- *   step-04-pos-main     — vào màn POS chính sau khi mở
- *   variant-no-terminal  — chi nhánh chưa có máy POS (skip - destructive)
+ *   step-01-form-empty   — empty open-shift screen
+ *   step-02-enter-cash   — cash field focused, amount typed
+ *   step-03-ready        — form valid, button active
+ *   step-04-pos-main     — POS main screen after opening
+ *   variant-no-terminal  — branch without a POS terminal (skip - destructive)
  *
- * Chạy: pnpm --filter @comtammatu/web guides:capture --grep="POS-01"
+ * Run: pnpm --filter @comtammatu/web guides:capture --grep="POS-01"
  */
 
 import { test } from "@playwright/test";

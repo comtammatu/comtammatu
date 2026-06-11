@@ -89,14 +89,21 @@ supabase link --project-ref YOUR_PROJECT_ID
 2. After creating, update their profile:
 
 ```sql
+-- profiles không có cột role; chức vụ là FK position_id → positions (tenant-scoped)
 UPDATE public.profiles
-SET role = 'owner', full_name = 'Your Name'
+SET position_id = (
+      SELECT p.id FROM public.positions p
+      WHERE p.code = 'owner'
+        AND p.tenant_id = profiles.tenant_id
+      LIMIT 1
+    ),
+    full_name = 'Your Name'
 WHERE id = '<user-uuid>';
 ```
 
 ### Seed QA Test Accounts (dev / staging)
 
-Preferred CLI: `supabase db query --linked --file supabase/seed.sql`. SQL Editor fallback: run `scripts/sql/dev/seed_dev_auth_users.sql` as role `postgres`. The seed is idempotent and can be rerun.
+Preferred CLI: `supabase db query --linked --file supabase/seed.sql`. SQL Editor fallback: paste `supabase/seed.sql` and run as role `postgres`. The seed is idempotent and can be rerun.
 
 Mật khẩu tất cả: `Test1234!`. Bao phủ toàn bộ `STAFF_ROLES`:
 
@@ -104,7 +111,6 @@ Mật khẩu tất cả: `Test1234!`. Bao phủ toàn bộ `STAFF_ROLES`:
 | -------------------------------- | -------------------- | ------------------------------- |
 | `owner@comtammatu.vn`            | `owner`              | Tenant (pin HQ)                 |
 | `supermanager@comtammatu.vn`     | `super_manager`      | Tenant (pin HQ, keeper)         |
-| `area.vungtau@comtammatu.vn`     | ``       | explicit branch grants         |
 | `warehouse@comtammatu.vn`        | `warehouse_manager`  | Trụ sở chính (warehouse)        |
 | `production@comtammatu.vn`       | `production_manager` | Bếp trung tâm (central kitchen) |
 | `manager.datdo@comtammatu.vn`    | `branch_manager`     | Chi nhánh Đất Đỏ                |

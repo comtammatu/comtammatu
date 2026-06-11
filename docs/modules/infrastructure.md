@@ -12,7 +12,8 @@ unless CI is restored.
 ```
 comtammatu/
 ├── apps/
-│   └── web/                # Next.js 16.2 — the only deployable app
+│   ├── web/                # Next.js 16.2 — deployable web app (Vercel)
+│   └── print-agent/        # ESC/POS print daemon — chạy thật tại chi nhánh (runbook: docs/runbooks/pos-kds/print-agent-pilot.md)
 ├── packages/
 │   ├── database/           # Supabase clients + generated types
 │   ├── shared/             # Auth types, ACL, utilities

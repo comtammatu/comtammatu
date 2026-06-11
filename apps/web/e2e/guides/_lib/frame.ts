@@ -117,7 +117,7 @@ function renderAnnotation(a: ResolvedAnnotation): string {
       break;
   }
 
-  // Clamp box vào viewport
+  // Clamp the box into the viewport
   boxX = Math.max(8, Math.min(VIEWPORT.width - boxW - 8, boxX));
   boxY = Math.max(8, Math.min(VIEWPORT.height - boxH - 8, boxY));
 

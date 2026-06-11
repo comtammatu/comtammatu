@@ -114,22 +114,11 @@ export function AdminShell({
       pageHeader={{
         breadcrumbSegments,
         crumbLabel: APP_COPY_VI.adminFoundation,
-        actions: (
-          <>
-            {canAccess(role, "employee") && (
-              <Button asChild variant="outline" size="sm">
-                <Link href="/employee">{MODULE_LABELS_VI.employee}</Link>
-              </Button>
-            )}
-            {canAccess(role, "reports") && (
-              <Button asChild size="sm">
-                <Link href="/admin/reports">
-                  {APP_COPY_VI.executiveReporting}
-                </Link>
-              </Button>
-            )}
-          </>
-        ),
+        actions: canAccess(role, "employee") ? (
+          <Button asChild variant="outline" size="sm">
+            <Link href="/employee">{MODULE_LABELS_VI.employee}</Link>
+          </Button>
+        ) : undefined,
       }}
       collapsible="icon"
     >

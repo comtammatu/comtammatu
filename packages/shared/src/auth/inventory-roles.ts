@@ -36,11 +36,3 @@ export const SUPPLIER_RETURN_ROLES: readonly StaffRole[] = [
   "warehouse_manager",
   "production_manager",
 ];
-
-/** AP credit-note workspace — finance + procurement + senior ops. */
-export const SUPPLIER_CREDIT_NOTE_ROLES: readonly StaffRole[] = [
-  "owner",
-  "super_manager",
-  "warehouse_manager",
-  "office",
-];

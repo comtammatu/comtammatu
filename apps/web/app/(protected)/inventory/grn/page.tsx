@@ -25,7 +25,7 @@ export default async function GRNListPage({
       ((row.purchase_orders as Record<string, unknown>)?.po_number as string) ??
       "—",
     date: row.received_date ? formatDate(row.received_date as string) : "—",
-    // Tổng giá trị nhập kho = (delivered − rejected) × unit_cost (số thực vào kho)
+    // Total received value = (delivered − rejected) × unit_cost (net into stock)
     total: (
       (row.grn_items as Array<{
         received_quantity: number | null;

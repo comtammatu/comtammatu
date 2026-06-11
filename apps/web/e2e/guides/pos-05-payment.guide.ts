@@ -1,18 +1,18 @@
 /**
- * POS-05 Thanh toán đơn — capture spec.
+ * POS-05 Pay an order — capture spec.
  *
- * Bill sheet là ALL-IN-ONE: 1 sheet duy nhất chứa method picker, tendered
- * input, quick amount chips, HĐĐT checkbox, Hủy/Đã thanh toán/In tạm tính.
- * Không có cash-tendered dialog popup riêng.
+ * The bill sheet is ALL-IN-ONE: a single sheet holds the method picker,
+ * tendered input, quick amount chips, e-invoice checkbox and the cancel /
+ * confirm / provisional-print actions. There is no separate cash dialog.
  *
  * 4 main steps + 1 variant:
- *   step-01-open-bill         — bill sheet mở (default Tiền mặt selected)
- *   step-02-cash-amount       — quick amount chips điền tổng nhận
- *   step-03-invoice-toggle    — HĐĐT checkbox
+ *   step-01-open-bill         — bill sheet open ("Tiền mặt" selected by default)
+ *   step-02-cash-amount       — quick amount chips fill the tendered total
+ *   step-03-invoice-toggle    — e-invoice checkbox
  *   step-04-confirm           — "Đã thanh toán" button
- *   variant-transfer          — chọn Chuyển khoản → QR / banking info
+ *   variant-transfer          — "Chuyển khoản" selected → QR / banking info
  *
- * Chạy: pnpm --filter @comtammatu/web guides:capture --grep="POS-05"
+ * Run: pnpm --filter @comtammatu/web guides:capture --grep="POS-05"
  *
  * Note: KHÔNG actually click "Đã thanh toán" — tránh đổi đơn fixture sang
  * `paid` (sẽ phá variant POS-04 / POS-05 lần chạy sau).
@@ -91,15 +91,15 @@ test.describe("POS-05 Thanh toán đơn", () => {
       step: { number: 2, total: TOTAL, title: "Nhập tiền khách đưa" },
       setup: async (p) => {
         await gotoBillSheet(p, ctx.branchId);
-        // Click chip ĐẦU TIÊN có giá > tổng đơn (overpay → tiền thừa).
-        // Chip set tự generate theo total → không hardcode 20k/30k vì
-        // fixture có thể đổi.
+        // Click the FIRST chip above the order total (overpay → change due).
+        // The chip set is generated from the total → no hardcoded 20k/30k,
+        // the fixture amounts can change.
         const chip = p
           .locator("button")
           .filter({ hasText: /^\s*\d+\.\d+đ\s*$/ })
           .nth(1);
         await chip.click().catch(() => {
-          // Không có chip phù hợp — capture as-is (default Tổng nhận = total)
+          // No suitable chip — capture as-is (tendered defaults to the total)
         });
       },
       annotations: [
@@ -194,7 +194,7 @@ test.describe("POS-05 Thanh toán đơn", () => {
           .first();
         await transferBtn.scrollIntoViewIfNeeded().catch(() => {});
         await transferBtn.click();
-        // Đợi QR / info hiện
+        // Wait for the QR / banking info to appear
         await p.waitForTimeout(800);
       },
       annotations: [

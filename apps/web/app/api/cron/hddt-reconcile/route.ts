@@ -50,7 +50,7 @@ export async function POST(request: Request) {
   const provided = authHeader?.startsWith("Bearer ")
     ? authHeader.slice("Bearer ".length).trim()
     : null;
-  if (!provided || !timingSafeEquals(provided, expected)) {
+  if (!expected || !provided || !timingSafeEquals(provided, expected)) {
     return unauthorized();
   }
 

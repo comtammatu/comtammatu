@@ -30,7 +30,7 @@ URL: `/br/{branchId}/pos` (qua bàn occupied → đơn → "Thanh toán")
 
 **Bạn thấy:** Sheet "Phương thức thanh toán" mở từ phải:
 
-- 2 phương thức: **Tiền mặt** (mặc định chọn) + **Chuyển khoản**.
+- 3 phương thức: **Tiền mặt** (mặc định chọn), **VietQR** (chuyển khoản), **MoMo**.
 - "Tổng tạm tính: {tổng}đ".
 - Ô "Tổng nhận" (mặc định = tổng tiền — tức khách trả đúng).
 - 5 chip mệnh giá nhanh: 15k / 16k / 20k / 30k / 100k (auto-fit theo tổng).
@@ -160,7 +160,6 @@ URL: `/br/{branchId}/pos` (qua bàn occupied → đơn → "Thanh toán")
 ### Code path
 
 - **Bill sheet (mobile drawer / desktop side):** [apps/web/app/(protected)/br/[branchId]/pos/\_components/bill/bill-receipt-sheet.tsx](<../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/_components/bill/bill-receipt-sheet.tsx>)
-- **Payment picker:** [apps/web/app/(protected)/br/[branchId]/pos/\_components/bill/bill-receipt-payment-picker.tsx](<../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/_components/bill/bill-receipt-payment-picker.tsx>)
 - **Cash tendered logic:** trong `bill-receipt-sheet.tsx` (không có dialog riêng — tất cả trong 1 sheet)
 - **Invoice form:** [apps/web/app/(protected)/br/[branchId]/pos/\_components/bill/invoice-form-section.tsx](<../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/_components/bill/invoice-form-section.tsx>)
 - **Server actions:** [apps/web/app/(protected)/br/[branchId]/pos/payment-actions.ts](<../../../../apps/web/app/(protected)/br/%5BbranchId%5D/pos/payment-actions.ts>)

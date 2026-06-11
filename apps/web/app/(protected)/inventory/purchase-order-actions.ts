@@ -86,8 +86,8 @@ export const createPurchaseOrder = withAction(
       return { success: false, error: "Không thể cấp số PO." };
     }
     const displayId = String(nextDisplay);
-    // Keep po_number == display_id (legacy column for back-compat references
-    // in audit_logs/exports/HĐĐT).
+    // Keep po_number == display_id; the legacy column is still referenced
+    // by audit_logs/exports/e-invoices.
     const poNumber = displayId;
 
     const { data: row, error } = await supabase

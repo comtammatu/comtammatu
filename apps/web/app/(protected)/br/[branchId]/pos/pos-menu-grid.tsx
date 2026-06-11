@@ -72,8 +72,8 @@ const MenuItemButton = memo(function MenuItemButton({
   dailyLimitDemandByMenuItem,
   onItemTap,
 }: MenuItemButtonProps) {
-  // Per-item subscription qua external store — chỉ card này re-render
-  // khi sold_today/is_disabled/limit_quantity của ID này đổi (Fix#4 B1).
+  // Per-item subscription via the external store — only this card re-renders
+  // when this id's sold_today/is_disabled/limit_quantity changes.
   const dailyLimit: MenuItemDailyLimit | null = useDailyLimit(item.id);
   const draftDemand = dailyLimitDemandByMenuItem?.get(item.id) ?? 0;
   const blocked = isDailyLimitBlockedAfterDemand(dailyLimit, draftDemand);
@@ -105,18 +105,18 @@ const MenuItemButton = memo(function MenuItemButton({
       aria-disabled={blocked}
       aria-label={`${item.name}, ${formatVND(item.base_price)}`}
       className={cn(
-        // aspect-[4/5] giữ card scale theo width — không lấy min-h cố định
-        // gây quá cao trên mobile. iPhone 390px width → 2-col gap-3 → mỗi
-        // card ~181×226px, vừa scan-rộng nhưng không tốn dọc.
+        // aspect-[4/5] keeps the card scaling with width — a fixed min-h
+        // gets too tall on mobile (390px width → 2-col gap-3 → ~181×226px
+        // per card).
         "group relative aspect-[4/5] h-auto min-w-0 w-full overflow-hidden p-0 text-left shadow-sm transition-transform hover:shadow-md active:scale-[0.97]",
         sparseMenu && "md:aspect-[3/2]",
         blocked && "opacity-60 grayscale hover:shadow-sm",
       )}
       onClick={handleClick}
     >
-      {/* Ảnh phủ kín thẻ — `object-cover` cắt vừa khung, ảnh món luôn được
-          điền hết khung không có viền trắng. Khi không có ảnh, fallback bằng
-          icon Utensils tone muted. */}
+      {/* Photo fills the card — `object-cover` crops to the frame with no
+          white edges; falls back to a muted Utensils icon when the item has
+          no image. */}
       <span className="absolute inset-0 block">
         {item.image_url ? (
           <Image
@@ -135,10 +135,10 @@ const MenuItemButton = memo(function MenuItemButton({
         )}
       </span>
 
-      {/* Gradient đen từ dưới lên — giúp tên món nền trắng đọc rõ trên ảnh sáng. */}
+      {/* Bottom-up black gradient keeps the white item name readable on bright photos. */}
       <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-transparent" />
 
-      {/* Giá — góc trên phải, badge primary nổi với shadow. */}
+      {/* Price — top right, primary badge with shadow. */}
       <span
         className={cn(
           "absolute right-2 top-2 z-10 inline-flex items-center rounded-md bg-primary px-2 py-1 text-sm font-bold tabular-nums text-primary-foreground shadow-md md:right-3 md:top-3 md:text-base",
@@ -148,7 +148,7 @@ const MenuItemButton = memo(function MenuItemButton({
         {formatVND(item.base_price)}
       </span>
 
-      {/* Daily-limit badge — góc trên trái, không che giá. */}
+      {/* Daily-limit badge — top left, never covers the price. */}
       {limitBadgeLabel ? (
         <Badge
           variant={limitBadgeVariant}
@@ -158,7 +158,7 @@ const MenuItemButton = memo(function MenuItemButton({
         </Badge>
       ) : null}
 
-      {/* Tên món — overlay đáy ảnh, text trắng + drop-shadow chống lệch nền. */}
+      {/* Item name — overlaid at the photo bottom; white text + drop shadow for contrast. */}
       <span
         className={cn(
           "pos-text-overlay absolute inset-x-3 bottom-3 z-10 line-clamp-2 text-base font-bold leading-snug text-white md:inset-x-4 md:bottom-4 md:text-lg",
@@ -206,9 +206,9 @@ function PosMenuGridComponent({
 }: PosMenuGridProps) {
   const [, startMenuTransition] = useTransition();
   const [activeTabValue, setActiveTabValue] = useState<string>(ALL_MENU_VALUE);
-  // Mobile: search input ẩn mặc định, hiện khi user tap icon 🔍.
-  // Khi active, input thay chỗ tabs row (cùng 1 dòng) + nút "Hủy" để collapse.
-  // Desktop (md+) luôn hiện cả 2 cùng dòng nên flag này không ảnh hưởng.
+  // Mobile: the search input is hidden by default and opens from the search
+  // icon; while active it replaces the tabs row, with a "Hủy" button to
+  // collapse. Desktop (md+) always shows both, so this flag has no effect.
   const [isSearchActive, setIsSearchActive] = useState(false);
 
   const availableCategories = useMemo(
@@ -336,12 +336,12 @@ function PosMenuGridComponent({
     </InputGroup>
   );
 
-  // Tabs unified mobile + desktop: bỏ TabsList muted container, mỗi tab là 1
-  // chip standalone bg-muted/50 — active flip sang primary để nổi rõ. Badge
-  // số lượng (chỉ sm+) tự đảo màu khi tab active để không lẫn vào primary bg.
-  // QUAN TRỌNG: shadcn TabsTrigger default có `flex-1` (auto-stretch chia
-  // đều TabsList width) — phải dùng `!flex-none` để không bị ép kích thước,
-  // chip giữ width theo content và scroll ngang khi tràn.
+  // Unified tabs for mobile + desktop: no muted TabsList container; each tab
+  // is a standalone bg-muted/50 chip that flips to primary when active. The
+  // count badge (sm+ only) inverts its colors on the active tab.
+  // IMPORTANT: shadcn TabsTrigger defaults to `flex-1` (stretches across the
+  // TabsList width) — `!flex-none` is required so chips keep content width
+  // and overflow scrolls horizontally.
   const tabPillClassName =
     "group/tab !flex-none gap-1.5 bg-muted/50 px-3 py-2.5 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm md:gap-2 md:px-4";
   const tabBadgeClassName =
@@ -414,7 +414,7 @@ function PosMenuGridComponent({
             )}
           </div>
 
-          {/* Desktop (md+): search + tabs cùng dòng. */}
+          {/* Desktop (md+): search + tabs on one line. */}
           <div className="hidden md:flex md:items-center md:gap-3">
             {searchInput}
             {unifiedTabs}

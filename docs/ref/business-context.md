@@ -1,6 +1,6 @@
 # Bối cảnh nghiệp vụ — Hộ kinh doanh Cơm Tấm Má Tư
 
-> Last verified: 2026-06-09.
+> Last verified: 2026-06-11.
 
 ## Sản phẩm
 
@@ -32,8 +32,13 @@ Các nguyên tắc vận hành đến tháng 06/2026:
 - Từ 01/01/2026, HKD/cá nhân kinh doanh không áp dụng phương pháp thuế khoán
   và không còn nộp lệ phí môn bài theo NQ 198/2025/QH15; hệ thống phải ưu tiên
   số liệu doanh thu, hóa đơn, chứng từ và sổ theo dõi đủ để kê khai.
-- Với F&B multi-branch, sản phẩm phải sẵn sàng cho HĐĐT và máy tính tiền kết
-  nối dữ liệu khi HKD thuộc diện bắt buộc hoặc tự nguyện đăng ký sử dụng HĐĐT.
+- HKD doanh thu ≥ 1 tỷ/năm bán trực tiếp đến người tiêu dùng (gồm ăn uống) đã
+  thuộc diện bắt buộc HĐĐT khởi tạo từ máy tính tiền kết nối CQT từ 01/06/2025
+  (NĐ 70/2025); NĐ 68/2026 phân HKD thành 4 nhóm doanh thu với nghĩa vụ
+  sổ sách/kê khai khác nhau — chi tiết ở `einvoice-tax.md` §1.
+- Chế độ kế toán HKD theo TT 152/2025/TT-BTC (thay TT 88/2021 từ 01/01/2026),
+  bộ sổ tổ chức theo nhóm doanh thu; export của hệ thống phải đối chiếu được
+  với bộ sổ này.
 - Báo cáo tài chính VAS/BCTC doanh nghiệp không phải requirement mặc định cho
   HKD. Finance mặc định là báo cáo vận hành: doanh thu, tiền đã thu, chi phí,
   giá vốn món, tồn kho, công nợ NCC, HĐĐT, và export cho kế toán.
@@ -77,14 +82,25 @@ Các field này phục vụ HĐĐT, in chứng từ, export kế toán, và đ�
 được đồng bộ tự động `representative` với `owner_user_id`; một bên là thông tin
 đăng ký HKD, một bên là tài khoản auth owner trong hệ thống.
 
-## Căn cứ pháp lý theo dõi
+## Căn cứ pháp lý theo dõi (đến 06/2026)
 
-- Nghị định 168/2025/NĐ-CP: đăng ký và mã số hộ kinh doanh.
-- Nghị quyết 198/2025/QH15: bỏ thuế khoán và lệ phí môn bài từ 01/01/2026.
-- Nghị định 70/2025/NĐ-CP và Nghị định 68/2026/NĐ-CP: hóa đơn điện tử, khai
-  thuế, nộp thuế HKD/cá nhân kinh doanh.
-- Nghị quyết 204/2025/QH15: giảm thuế GTGT 2% từ 01/07/2025 đến 31/12/2026
-  cho nhóm hàng hóa/dịch vụ đủ điều kiện.
+- Đăng ký HKD: Nghị định 168/2025/NĐ-CP (đăng ký và mã số hộ kinh doanh).
+- Thuế HKD: NQ 198/2025/QH15 (bỏ thuế khoán + miễn lệ phí môn bài từ
+  01/01/2026); NĐ 68/2026/NĐ-CP (05/03/2026 — 4 nhóm doanh thu, chính sách
+  thuế + quản lý thuế HKD/CNKD); Luật Thuế GTGT 48/2024/QH15; NQ 204/2025/QH15
+  (giảm GTGT 01/07/2025–31/12/2026).
+- Hóa đơn chứng từ: NĐ 123/2020 (sửa đổi bởi NĐ 70/2025, máy tính tiền từ
+  01/06/2025) + TT 32/2025/TT-BTC (thay TT 78/2021 từ 01/06/2025).
+- Kế toán HKD: TT 152/2025/TT-BTC (thay TT 88/2021 từ 01/01/2026, sổ theo
+  nhóm doanh thu).
+- TNCN: Luật Thuế TNCN 2025 (109/2025/QH15, hiệu lực 01/07/2026, biểu 5 bậc
+  từ kỳ tính thuế 2026); NQ 110/2025/UBTVQH15 (giảm trừ gia cảnh 15,5tr/6,2tr
+  từ kỳ tính thuế 2026).
+- Lao động/BHXH: Luật BHXH 2024 (41/2024/QH15) + NĐ 158/2025 (chủ hộ KD nộp
+  thuế kê khai thuộc BHXH bắt buộc từ 01/07/2025); NĐ 293/2025 (lương tối
+  thiểu vùng mới từ 01/01/2026).
+- Chi tiết áp dụng: thuế/hóa đơn ở `einvoice-tax.md`; lương/TNCN/BHXH ở
+  `payroll-pit.md`; HĐLĐ ở `labor-contracts.md`.
 
 ## Domain: chuỗi nhà hàng F&B
 
@@ -108,15 +124,17 @@ PO (intent) → GRN (actual received) → Supplier Invoice / chứng từ NCC
 Waiter (POS) → KDS (realtime) → Chef bumps → Cashier pays → completed
 ```
 
-### Vai trò nhân sự (8 cấp)
+### Vai trò nhân sự (9 access bucket)
 
 ```
-owner > super_manager > > branch_manager > cashier > waiter > chef > office
+owner, super_manager, branch_manager, warehouse_manager, production_manager,
+cashier, waiter, chef, office
 ```
+
+Nguồn chuẩn: `ACCESS_BUCKETS` trong `packages/shared/src/auth/types.ts`.
 
 ### Phương thức thanh toán (v0.3.0)
 
 - Tiền mặt
 - VietQR (bank transfer)
 - Momo (e-wallet)
-- VNPay (post-v1.0)

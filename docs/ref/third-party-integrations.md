@@ -13,7 +13,7 @@
 | **QR thanh toán**     | VietQR (NAPAS)     | —                    | Payment              |
 | **E-wallet #1**       | MoMo               | —                    | Payment              |
 | **E-wallet #2**       | ZaloPay            | —                    | Post-v1.0            |
-| **Card payment**      | VNPay              | —                    | Post-v1.0            |
+| **Card payment**      | VNPay              | —                    | Đã loại bỏ (D012 2026-06-10) |
 | **HĐĐT**              | Viettel S-invoice  | —                    | Finance              |
 | **OTP / Notify**      | Zalo ZNS           | SpeedSMS             | Post-v1.0            |
 | **Email**             | Resend.com         | —                    | Finance              |
@@ -113,7 +113,7 @@
 
 ### 1.4 VNPay — Card & Gateway
 
-**Lựa chọn**: ⏳ **Post-v1.0**
+**Lựa chọn**: ❌ **Đã loại bỏ (D012 2026-06-10)**
 
 | Thuộc tính | Giá trị                                                             |
 | ---------- | ------------------------------------------------------------------- |
@@ -124,7 +124,7 @@
 | Onboarding | 48h, cần MST + giấy phép KD + TmnCode                               |
 | Best for   | Visa/Mastercard, du khách nước ngoài                                |
 
-**Lý do defer**: Phức tạp onboarding, phí cao hơn. Cần khi có khách quốc tế hoặc cần card payment.
+**Lý do loại bỏ**: Đã loại khỏi roadmap theo D012 (2026-06-10). Phức tạp onboarding, phí cao hơn; không có nhu cầu card payment trong mô hình HKD hiện tại.
 
 ---
 
@@ -395,7 +395,8 @@ Giả định: 500 order/ngày, 5 chi nhánh, ~15,000 order/tháng
 | **Payment**              | VietQR + MoMo                                         |
 | **Finance**              | Viettel S-invoice + Resend email                      |
 | **Nhân sự & tiền lương** | Xuất data BHXH / thuế TNCN (no API, just export)      |
-| **Post-v1.0**            | Zalo ZNS, SpeedSMS, ZaloPay, VNPay, GrabFood, Ahamove |
+| **Post-v1.0**            | Zalo ZNS, SpeedSMS, ZaloPay, GrabFood, Ahamove        |
+| **Đã loại bỏ**           | VNPay (D012 2026-06-10)                               |
 
 ---
 

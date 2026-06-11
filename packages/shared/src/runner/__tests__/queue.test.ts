@@ -134,7 +134,7 @@ test("formatRunnerOrderLabel preserves leading zeroes with branch suffixes", () 
   );
 });
 
-test("formatRunnerOrderLabel falls back for legacy or malformed takeaway codes", () => {
+test("formatRunnerOrderLabel falls back for old-format or malformed takeaway codes", () => {
   assert.equal(
     formatRunnerOrderLabel(makeRunnerItem({ orderNumber: "MV-0007" })),
     "Mang về MV-0007",

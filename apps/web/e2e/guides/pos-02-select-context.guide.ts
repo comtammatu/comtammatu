@@ -1,16 +1,16 @@
 /**
- * POS-02 Chọn bối cảnh bán hàng — capture spec.
+ * POS-02 Pick the sales context — capture spec.
  *
- * Mobile POS hiện toggle "Tại bàn" / "Mang về" ngay header → cashier
- * không cần mở cart drawer để switch order_type.
+ * Mobile POS shows the "Tại bàn" / "Mang về" toggle right in the header →
+ * the cashier never opens the cart drawer just to switch order_type.
  *
  * 3 main steps + 1 variant:
- *   step-01-table-tab        — POS main, tab "Tại bàn" active, table grid
- *   step-02-tap-empty-table  — chạm bàn trống → menu pane hiện
- *   step-03-takeaway-tab     — chuyển tab "Mang về" → menu pane (no table)
- *   variant-multi-order      — chạm bàn đang dùng → multi-order picker
+ *   step-01-table-tab        — POS main, "Tại bàn" tab active, table grid
+ *   step-02-tap-empty-table  — tap an empty table → menu pane appears
+ *   step-03-takeaway-tab     — switch to "Mang về" → menu pane (no table)
+ *   variant-multi-order      — tap an occupied table → multi-order picker
  *
- * Chạy: pnpm --filter @comtammatu/web guides:capture --grep="POS-02"
+ * Run: pnpm --filter @comtammatu/web guides:capture --grep="POS-02"
  */
 
 import { test } from "@playwright/test";
@@ -41,7 +41,7 @@ test.describe("POS-02 Chọn bối cảnh bán hàng", () => {
       step: { number: 1, total: TOTAL, title: "Vào màn POS chính" },
       setup: async (p) => {
         await p.goto(`/br/${String(ctx.branchId)}/pos`);
-        // Đợi danh sách bàn render
+        // Wait for the table list to render
         await p
           .getByText(/trống/i)
           .first()
@@ -80,7 +80,7 @@ test.describe("POS-02 Chọn bối cảnh bán hàng", () => {
           .first();
         await firstAvailable.waitFor({ state: "visible", timeout: 10000 });
         await firstAvailable.click();
-        // Đợi menu pane hiện — search box xuất hiện khi vào menu mode
+        // Wait for the menu pane — the search box appears in menu mode
         await p
           .getByPlaceholder(/Tìm món/i)
           .waitFor({ state: "visible", timeout: 8000 });
@@ -113,13 +113,13 @@ test.describe("POS-02 Chọn bối cảnh bán hàng", () => {
       },
       setup: async (p) => {
         await p.goto(`/br/${String(ctx.branchId)}/pos`);
-        // Đợi tab Mang về visible
+        // Wait for the "Mang về" tab to be visible
         const takeawayTab = p
           .getByRole("tab", { name: /Mang về/i })
           .or(p.locator('button:has-text("Mang về")').first());
         await takeawayTab.waitFor({ state: "visible", timeout: 10000 });
         await takeawayTab.click();
-        // Đợi menu pane hiện
+        // Wait for the menu pane
         await p
           .getByPlaceholder(/Tìm món/i)
           .waitFor({ state: "visible", timeout: 8000 });

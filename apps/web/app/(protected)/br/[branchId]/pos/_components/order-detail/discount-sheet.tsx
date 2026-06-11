@@ -156,8 +156,8 @@ export function DiscountSheet({
             value={type}
             onValueChange={(v) => {
               setType(v as DiscountType);
-              // Reset value khi đổi tab — 10% và 10đ là 2 nghĩa khác nhau,
-              // giữ lại số cũ dễ gây nhầm.
+              // Reset the value on tab switch — 10% and 10đ mean different
+              // things; keeping the old number invites mistakes.
               setValueText("");
             }}
           >

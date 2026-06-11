@@ -5,7 +5,7 @@ a hand-maintained per-column schema dump.
 
 ## Current Snapshot
 
-Generated from the current checkout on 2026-05-30 with:
+Generated from the current checkout on 2026-06-10 with:
 
 ```bash
 node scripts/project-snapshot.mjs
@@ -13,16 +13,11 @@ node scripts/project-snapshot.mjs
 
 | Area                                        | Count |
 | ------------------------------------------- | ----: |
-| Public tables in generated types            |   118 |
-| Public views in generated types             |     9 |
-| Public RPC/SQL functions in generated types |   241 |
-| Public enums in generated types             |     0 |
-| Active SQL migration files                  |     2 |
-
-Live-schema manifest (matu-dev, verified 2026-05-30): **118 tables · 3 views + 6
-materialized views · 279 `pg_proc` public functions** (generated types list only
-the 241 RPC/SQL-callable) · **273 public RLS policies · 523 indexes · 14
-`storage.objects` policies · 11 realtime-published tables · 10 cron jobs**.
+| Public tables in generated types            |   115 |
+| Public views in generated types             |     8 |
+| Public RPC/SQL functions in generated types |  ~255 |
+| Public enums in generated types             |     1 (`shift_request_status`) |
+| Active SQL migration files                  |    26 |
 
 The early-2026 hand-written table-by-table reference has been removed. Use the
 source ladder below instead of resurrecting stale schema dumps.
@@ -41,9 +36,10 @@ The 378-file incremental chain could not replay from an empty DB (ordering bug a
   applied after the baseline on a fresh env (storage-policy section needs
   `storage.objects` owner).
 - **Option X**: production keeps its applied migration history; the baseline is the
-  fresh/dev install path. Regenerate via `pnpm db:baseline:extract -- --project-ref=<matu-dev>`
-  (Docker-free libpq engine). Fresh-env install notes live in
-  `supabase/migrations/README.md`.
+  fresh/dev install path. Regeneration via `pnpm db:baseline:extract -- --project-ref=<dev-ref>`
+  (Docker-free libpq engine) is currently **blocked**: matu-dev đã bị xóa và hiện
+  KHÔNG có dev project nào — cần owner cấp/khôi phục một dev ref trước khi chạy
+  lại extract. Fresh-env install notes live in `supabase/migrations/README.md`.
 
 ## Source Ladder
 
