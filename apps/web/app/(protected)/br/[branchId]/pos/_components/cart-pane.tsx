@@ -74,9 +74,7 @@ function CartPaneComponent({
   const cart = useCart();
   const activeTable = useActiveTable();
 
-  const [submitIntent, setSubmitIntent] = useState<
-    "normal" | "priority" | null
-  >(null);
+  const [submitIntent, setSubmitIntent] = useState<"priority" | null>(null);
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
   const [removingKeys, setRemovingKeys] = useState<Set<string>>(
     () => new Set(),
@@ -115,7 +113,7 @@ function CartPaneComponent({
           !isSubmitting &&
           !hasRemovingItems
         ) {
-          setSubmitIntent("normal");
+          onSubmitOrder();
         }
       },
     },
@@ -424,7 +422,7 @@ function CartPaneComponent({
                     size="touch-lg"
                     disabled={!canSubmit || isSubmitting || hasRemovingItems}
                     aria-keyshortcuts="Meta+Enter Control+Enter"
-                    onClick={() => setSubmitIntent("normal")}
+                    onClick={() => onSubmitOrder()}
                   >
                     {isSubmitting ? (
                       <>
@@ -460,8 +458,12 @@ function CartPaneComponent({
                   </Button>
                 </div>
 
+                {/* Normal submit fires immediately: the button already
+                    shows count + total, and pending items stay editable
+                    after send (editPendingOrderItem). Only the rare
+                    queue-jumping priority send keeps its confirm. */}
                 <AlertDialog
-                  open={submitIntent !== null}
+                  open={submitIntent === "priority"}
                   onOpenChange={(open) => {
                     if (!open) setSubmitIntent(null);
                   }}
@@ -469,35 +471,23 @@ function CartPaneComponent({
                   <AlertDialogContent>
                     <AlertDialogHeader>
                       <AlertDialogTitle>
-                        {submitIntent === "priority"
-                          ? cart.orderType === "takeaway"
-                            ? "Ưu tiên đơn mang về?"
-                            : selectedTableNumber != null
-                              ? `Ưu tiên đơn bàn ${selectedTableNumber}?`
-                              : "Ưu tiên đơn này?"
-                          : cart.orderType === "takeaway"
-                            ? "Gửi bếp đơn mang về?"
-                            : selectedTableNumber != null
-                              ? `Gửi bếp cho bàn ${selectedTableNumber}?`
-                              : "Gửi bếp?"}
+                        {cart.orderType === "takeaway"
+                          ? "Ưu tiên đơn mang về?"
+                          : selectedTableNumber != null
+                            ? `Ưu tiên đơn bàn ${selectedTableNumber}?`
+                            : "Ưu tiên đơn này?"}
                       </AlertDialogTitle>
                       <AlertDialogDescription>
-                        {totalQuantity} món · {formatVND(cart.total)}
-                        {submitIntent === "priority" ? " · Ưu tiên bếp" : ""}
+                        {totalQuantity} món · {formatVND(cart.total)} · Ưu tiên
+                        bếp
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Sửa lại</AlertDialogCancel>
                       <AlertDialogAction
-                        onClick={() =>
-                          onSubmitOrder({
-                            priority: submitIntent === "priority",
-                          })
-                        }
+                        onClick={() => onSubmitOrder({ priority: true })}
                       >
-                        {submitIntent === "priority"
-                          ? "Xác nhận ưu tiên"
-                          : "Gửi bếp"}
+                        Xác nhận ưu tiên
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>

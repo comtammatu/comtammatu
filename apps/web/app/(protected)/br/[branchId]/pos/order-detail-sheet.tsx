@@ -319,6 +319,12 @@ export interface OrderDetailSheetProps {
    * bàn already has guests before confirming a multi-order ghép. */
   orderCountByTable?: Map<number, number>;
   onOrderUpdated?: () => void | Promise<void>;
+  /**
+   * Start a SECOND order on this order's table. Replaces the picker's
+   * "Tạo đơn mới" entry point for single-order tables, which now open
+   * the detail sheet directly instead of the picker.
+   */
+  onCreateOrderOnTable?: (tableId: number) => void;
 }
 
 export function OrderDetailSheet({
@@ -337,6 +343,7 @@ export function OrderDetailSheet({
   tables,
   orderCountByTable,
   onOrderUpdated,
+  onCreateOrderOnTable,
 }: OrderDetailSheetProps) {
   const [data, setData] = useState<OrderDetailData | null>(null);
   const [canManage, setCanManage] = useState(false);
@@ -1395,6 +1402,24 @@ export function OrderDetailSheet({
                                 Tạo đơn mới
                               </DropdownMenuItem>
                             )}
+                            {onCreateOrderOnTable != null &&
+                              data.order_type === "dine_in" &&
+                              data.table_id != null &&
+                              ACTIVE_POS_STATUSES.includes(data.status) &&
+                              data.payment_status !== "paid" && (
+                                <DropdownMenuItem
+                                  disabled={isMutating}
+                                  onClick={() => {
+                                    const tableId = data.table_id;
+                                    if (tableId == null) return;
+                                    onClose();
+                                    onCreateOrderOnTable(tableId);
+                                  }}
+                                >
+                                  <IconCirclePlus />
+                                  Thêm đơn cho bàn
+                                </DropdownMenuItem>
+                              )}
                           </DropdownMenuGroup>
                           {(canShowDiscount ||
                             canShowServiceCharge ||

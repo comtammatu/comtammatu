@@ -871,14 +871,23 @@ function PosDesktopInner({
         return;
       }
 
-      // Multi-order-per-table: tapping an occupied table opens a picker
-      // showing active orders + a "Tạo đơn mới" button — the discoverable
-      // entry point for a 2nd order on the same table.
+      // Single active order — the overwhelming case — opens its detail
+      // directly; the picker's "Tạo đơn mới" entry moved into the sheet's
+      // "Thêm đơn cho bàn" menu item. The picker only earns its tap when
+      // the table really holds 2+ orders.
       const activeOrders = orders.filter(
         (o) =>
           o.table_id === table.id &&
           isActiveUnpaidPosOrder(o, ACTIVE_POS_STATUSES),
       );
+
+      if (activeOrders.length === 1) {
+        const order = activeOrders[0];
+        if (order) {
+          focusOrderWorkflow(order.id, order.order_number);
+          return;
+        }
+      }
 
       if (activeOrders.length === 0) {
         // Edge case: tables.status is occupied but no active order surfaces in
@@ -958,6 +967,15 @@ function PosDesktopInner({
     setActiveTable(tableId);
     setCartDrawerOpen(false);
   }, [pickerTableId, setActiveTable]);
+
+  const handleCreateOrderOnTable = useCallback(
+    (tableId: number) => {
+      setAllowOccupiedTableId(tableId);
+      setActiveTable(tableId);
+      setCartDrawerOpen(false);
+    },
+    [setActiveTable],
+  );
 
   const handleOrderTypeChange = useCallback(
     (type: OrderType) => {
@@ -1839,6 +1857,7 @@ function PosDesktopInner({
         initialOrder={orderDetailSeed?.order ?? null}
         initialCanManage={orderDetailSeed?.canManage ?? false}
         initialSummary={orderDetailSummary}
+        onCreateOrderOnTable={handleCreateOrderOnTable}
         onClose={closeOrderDetail}
         onOpenBill={(id, seed) => {
           closeOrderDetail();

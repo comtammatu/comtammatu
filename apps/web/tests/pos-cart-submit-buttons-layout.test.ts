@@ -23,10 +23,10 @@ test("POS cart makes Gửi bếp the primary submit action and keeps Ưu tiên s
 
   const [sendKitchenButton, priorityButton] = submitButtons;
 
-  assert.match(
-    sendKitchenButton ?? "",
-    /onClick=\{\(\) => setSubmitIntent\("normal"\)\}/,
-  );
+  // Normal submit fires immediately — no confirm dialog tax on every
+  // order. Only the priority path keeps its AlertDialog.
+  assert.match(sendKitchenButton ?? "", /onClick=\{\(\) => onSubmitOrder\(\)\}/);
+  assert.doesNotMatch(sendKitchenButton ?? "", /setSubmitIntent\("normal"\)/);
   assert.match(sendKitchenButton ?? "", /Gửi bếp \(\{totalQuantity\}\)/);
   assert.match(
     sendKitchenButton ?? "",
