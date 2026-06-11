@@ -19,6 +19,6 @@ QA: verify migration contains RLS/RPC/grants/search path, TS permissions/types a
 ## State
 
 - Migration file: `supabase/migrations/20260610110000_employee_leave_requests.sql`
-- Migration status: drafted
-- Live DB apply: pending owner-approved dev/test target
-- Generated DB types: manually mirrored for local build until live `pnpm db:types` can run after apply
+- Migration status: applied to prod (ledger `20260610110000 employee_leave_requests`)
+- Generated DB types: manually mirrored for local build
+- Follow-up: chạy `pnpm db:types` từ schema live khi có dev ref

@@ -8,6 +8,7 @@ import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import { getVNDateString } from "@comtammatu/shared/time";
 import { getAuthContext, probePermission } from "@/_lib/auth";
+import { resolveDefaultShiftId } from "../_lib/default-shift";
 import { getEmployeeContext } from "../_lib/employee-context";
 
 const CHECKOUT_APPROVAL_ROLES: readonly StaffRole[] = [
@@ -198,16 +199,16 @@ export async function clockInWithPhoto(
     return reuseExistingClockIn(existing, ctx.claims.user_role);
   }
 
-  const { data: assignment } = await service
-    .from("shift_assignments")
-    .select("shift_id, branch_id")
-    .eq("employee_id", ctx.employeeId)
+  // Attach the branch shift matching current VN time so the timesheet
+  // still records a shift (there is no shift registration).
+  const { data: branchShifts } = await service
+    .from("shifts")
+    .select("id, start_time, end_time")
     .eq("tenant_id", ctx.claims.tenant_id)
-    .eq("date", today)
-    .maybeSingle();
+    .eq("branch_id", ctx.branchId)
+    .eq("is_active", true);
+  const shiftId = resolveDefaultShiftId(branchShifts ?? []);
 
-  const shiftId =
-    assignment?.branch_id === ctx.branchId ? assignment.shift_id : null;
   const rpcShiftId = shiftId ?? 0;
   const managerAttendanceOnly = isManagerSimpleAttendanceRole(
     ctx.claims.user_role,
@@ -584,7 +585,7 @@ export async function approveCheckoutRequest(input: {
 
   const canApprove = await probePermission(
     ctx,
-    PERMISSION_KEYS.HR_APPROVE_SHIFT_REQUEST,
+    PERMISSION_KEYS.HR_APPROVE_CHECKOUT,
     branchId,
   );
   if (!canApprove) {

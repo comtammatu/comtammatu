@@ -25,17 +25,12 @@ import {
 } from "./provider";
 
 type OperationalPwaSurface = "pos" | "kds";
-const LEGACY_POS_DISMISS_STORAGE_KEY = "pos-pwa-install-dismissed";
 
 function getDismissStorageKey(
   surface: OperationalPwaSurface,
   branchId: string,
 ) {
   return `operational-pwa-install-dismissed:${surface}:${branchId}`;
-}
-
-function hasStoredDismissal(keys: readonly string[]) {
-  return keys.some((key) => window.localStorage.getItem(key) === "true");
 }
 
 interface OperationalPwaCopy {
@@ -109,17 +104,13 @@ export function OperationalPwaToolbar({
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
-      const dismissKeys =
-        surface === "pos"
-          ? [dismissStorageKey, LEGACY_POS_DISMISS_STORAGE_KEY]
-          : [dismissStorageKey];
-      if (hasStoredDismissal(dismissKeys)) {
+      if (window.localStorage.getItem(dismissStorageKey) === "true") {
         setInstallDismissed(true);
       }
     } catch {
       // localStorage may be blocked in private mode — ignore.
     }
-  }, [dismissStorageKey, surface]);
+  }, [dismissStorageKey]);
 
   const hasBrowserPrompt = install != null && install.available;
   const installAvailable = hasBrowserPrompt || isIosPwaInstall;

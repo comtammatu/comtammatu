@@ -19,7 +19,6 @@ import { EmployeeTable } from "./employee-table";
 import { EmployeeFormDialog } from "./employee-form-dialog";
 import { ShiftsTable } from "./shifts-table";
 import { AttendanceTable } from "./attendance-table";
-import { ShiftAssignmentsTable } from "./shift-assignments-table";
 import { LeaveRequestsTable } from "./leave-requests-table";
 import { ChecklistTemplatesTable } from "./checklist-templates-table";
 import type { BranchOption, EmployeeRow, ShiftRow } from "./page";
@@ -56,7 +55,7 @@ export function HrClient({
     branches[0]?.id ?? null,
   );
   const [isPending, startTransition] = useTransition();
-  const defaultTab = canViewEmployees ? "employees" : "assignments";
+  const defaultTab = canViewEmployees ? "employees" : "attendance";
 
   function loadShifts(branchId: number) {
     setSelectedBranchId(branchId);
@@ -88,7 +87,6 @@ export function HrClient({
         ) : null}
         <TabsTrigger value="shifts">{copy.tabs.shifts}</TabsTrigger>
         <TabsTrigger value="checklist">{copy.tabs.checklist}</TabsTrigger>
-        <TabsTrigger value="assignments">{copy.tabs.assignments}</TabsTrigger>
         {/* eslint-disable-next-line i18n/no-inline-vietnamese -- vi-allow: static HR attendance tab contract */}
         <TabsTrigger value="attendance">Chấm công</TabsTrigger>
         <TabsTrigger value="leave">{copy.tabs.leave}</TabsTrigger>
@@ -101,10 +99,12 @@ export function HrClient({
               {copy.employeeCount(employees.length)}
             </p>
             {canManageEmployees ? (
-              <Button onClick={() => setAddOpen(true)}>
-                <IconUserPlus className="mr-2 size-4" />
-                {copy.addEmployee}
-              </Button>
+              <div className="flex gap-2">
+                <Button onClick={() => setAddOpen(true)}>
+                  <IconUserPlus className="mr-2 size-4" />
+                  {copy.addEmployee}
+                </Button>
+              </div>
             ) : null}
           </div>
           <EmployeeTable
@@ -153,13 +153,6 @@ export function HrClient({
               );
             })
           }
-        />
-      </TabsContent>
-
-      <TabsContent value="assignments" className="mt-4">
-        <ShiftAssignmentsTable
-          branches={branches}
-          checklistTemplates={checklistTemplates}
         />
       </TabsContent>
 

@@ -6,7 +6,7 @@ export const hr = {
     ownerDescription:
       "Nhân viên, ca làm, ngày công và nghỉ phép cho mô hình Hộ kinh doanh.",
     branchManagerDescription:
-      "Quản lý ca, phân ca, giờ vào/ra và nghỉ phép của chi nhánh được gán.",
+      "Nhân viên, ca làm, ngày công và nghỉ phép của chi nhánh được gán.",
   },
   shell: {
     navTitle: "Nhân sự",
@@ -20,7 +20,6 @@ export const hr = {
     tabs: {
       shifts: "Ca",
       checklist: "Checklist",
-      assignments: "Phân ca",
       attendance: "Chấm công",
       leave: "Nghỉ phép",
     },

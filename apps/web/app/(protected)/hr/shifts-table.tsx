@@ -103,7 +103,6 @@ export function ShiftsTable({
               <TableHead>{BRANCH_VI.long}</TableHead>
               <TableHead>Giờ bắt đầu</TableHead>
               <TableHead>Giờ kết thúc</TableHead>
-              <TableHead>Tương lai</TableHead>
               <TableHead>{FORM_VI.status}</TableHead>
               <TableHead className="text-right">Thao tác</TableHead>
             </TableRow>
@@ -111,7 +110,7 @@ export function ShiftsTable({
           <TableBody>
             {shifts.length === 0 && !isPending && (
               <TableEmptyStateRow
-                colSpan={7}
+                colSpan={6}
                 title={
                   selectedBranchId === null
                     ? "Chọn chi nhánh để xem ca làm việc"
@@ -141,11 +140,6 @@ export function ShiftsTable({
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {shift.end_time}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">
-                      {shift.future_assignment_count ?? 0} phân ca
-                    </Badge>
                   </TableCell>
                   <TableCell>
                     <Badge variant={shift.is_active ? "default" : "outline"}>

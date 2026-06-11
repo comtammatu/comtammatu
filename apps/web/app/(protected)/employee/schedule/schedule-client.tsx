@@ -20,7 +20,7 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 import {
-  CalendarPlus as IconCalendarPlus,
+  CalendarX as IconCalendarX,
   ChevronLeft as IconChevronLeft,
   ChevronRight as IconChevronRight,
   RefreshCw as IconRefresh,
@@ -30,6 +30,7 @@ import { EmployeePanel } from "../components/employee-page";
 import {
   fetchMySchedule,
   type ScheduleAttendance,
+  type ScheduleLeave,
   type ScheduleMonthData,
   type ScheduleShift,
 } from "./actions";
@@ -185,7 +186,42 @@ function getAttendanceDotClassName(attendance: ScheduleAttendance): string {
   return ATTENDANCE_DOT_CLASS_NAMES[attendance.status] ?? "bg-muted-foreground";
 }
 
-function createScheduleMaps(data: ScheduleMonthData) {
+type LeaveDayStatus = ScheduleLeave["status"];
+
+function addDaysToISODate(dateStr: string, days: number): string {
+  const parts = parseISODateParts(dateStr);
+  if (!parts) return dateStr;
+  const shifted = new Date(
+    Date.UTC(parts.year, parts.month - 1, parts.day + days),
+  );
+  return shifted.toISOString().slice(0, 10);
+}
+
+function expandLeavesByDate(
+  leaves: ScheduleLeave[],
+  monthStartStr: string,
+  monthEndStr: string,
+): Map<string, LeaveDayStatus> {
+  const leaveByDate = new Map<string, LeaveDayStatus>();
+  for (const leave of leaves) {
+    const from =
+      leave.start_date > monthStartStr ? leave.start_date : monthStartStr;
+    const to = leave.end_date < monthEndStr ? leave.end_date : monthEndStr;
+    for (
+      let dateStr = from;
+      dateStr <= to;
+      dateStr = addDaysToISODate(dateStr, 1)
+    ) {
+      // "approved" wins over "pending" when two requests overlap the same day.
+      if (leave.status === "approved" || !leaveByDate.has(dateStr)) {
+        leaveByDate.set(dateStr, leave.status);
+      }
+    }
+  }
+  return leaveByDate;
+}
+
+function createScheduleMaps(data: ScheduleMonthData, monthStartStr: string) {
   const shiftsByDate = new Map<string, ScheduleShift>();
   for (const shift of data.shifts) {
     shiftsByDate.set(shift.date, shift);
@@ -196,10 +232,24 @@ function createScheduleMaps(data: ScheduleMonthData) {
     attendanceByDate.set(attendance.date, attendance);
   }
 
-  return { attendanceByDate, shiftsByDate };
+  const monthParts = parseISODateParts(monthStartStr);
+  const monthEndStr = monthParts
+    ? getVNMonthEndDateString(monthParts.year, monthParts.month)
+    : monthStartStr;
+  const leaveByDate = expandLeavesByDate(
+    data.leaves,
+    monthStartStr,
+    monthEndStr,
+  );
+
+  return { attendanceByDate, leaveByDate, shiftsByDate };
 }
 
-const EMPTY_MONTH: ScheduleMonthData = { shifts: [], attendance: [] };
+const EMPTY_MONTH: ScheduleMonthData = {
+  shifts: [],
+  attendance: [],
+  leaves: [],
+};
 const SCHEDULE_SKELETON_FIXTURE_MONTH = "2026-01-01";
 const SCHEDULE_SKELETON_FIXTURE_SHIFTS: ScheduleShift[] = [
   {
@@ -241,6 +291,14 @@ const SCHEDULE_SKELETON_FIXTURE_ATTENDANCE: ScheduleAttendance[] = [
     status: "late",
   },
 ];
+const SCHEDULE_SKELETON_FIXTURE_LEAVES: ScheduleLeave[] = [
+  { start_date: "2026-01-20", end_date: "2026-01-21", status: "approved" },
+];
+const SCHEDULE_SKELETON_FIXTURE: ScheduleMonthData = {
+  shifts: SCHEDULE_SKELETON_FIXTURE_SHIFTS,
+  attendance: SCHEDULE_SKELETON_FIXTURE_ATTENDANCE,
+  leaves: SCHEDULE_SKELETON_FIXTURE_LEAVES,
+};
 
 function ScheduleSkeletonFallback() {
   return (
@@ -281,15 +339,21 @@ function ScheduleSkeletonFallback() {
   );
 }
 
+function getLeaveLabel(leave: LeaveDayStatus): string {
+  return leave === "approved" ? copy.leaveApproved : copy.leavePending;
+}
+
 function CalendarCellContent({
   attendance,
   cell,
+  leave,
   onSelectDate,
   selected,
   shift,
 }: {
   attendance: ScheduleAttendance | undefined;
   cell: CalendarCell;
+  leave: LeaveDayStatus | undefined;
   onSelectDate: (dateStr: string) => void;
   selected: boolean;
   shift: ScheduleShift | undefined;
@@ -312,6 +376,7 @@ function CalendarCellContent({
     attendance
       ? `${copy.rowAttendance}: ${getAttendanceLabel(attendance)}`
       : copy.noAttendance,
+    ...(leave ? [getLeaveLabel(leave)] : []),
   ];
 
   return (
@@ -388,6 +453,25 @@ function CalendarCellContent({
             ) : null}
           </>
         ) : null}
+        {leave ? (
+          <>
+            <span
+              className={cn(
+                "size-1.5 shrink-0 rounded-full",
+                leave === "approved" ? "bg-info" : "bg-warning",
+              )}
+              aria-hidden="true"
+            />
+            {!attendance ? (
+              <Badge
+                variant={leave === "approved" ? "info" : "outline"}
+                className="hidden max-w-full truncate sm:inline-flex"
+              >
+                {getLeaveLabel(leave)}
+              </Badge>
+            ) : null}
+          </>
+        ) : null}
       </div>
     </button>
   );
@@ -395,12 +479,14 @@ function CalendarCellContent({
 
 function ScheduleMonthCalendarTable({
   attendanceByDate,
+  leaveByDate,
   monthStart,
   onSelectDate,
   selectedDate,
   shiftsByDate,
 }: {
   attendanceByDate: Map<string, ScheduleAttendance>;
+  leaveByDate: Map<string, LeaveDayStatus>;
   monthStart: string;
   onSelectDate: (dateStr: string) => void;
   selectedDate: string;
@@ -439,6 +525,9 @@ function ScheduleMonthCalendarTable({
                         : undefined
                     }
                     cell={cell}
+                    leave={
+                      cell.dateStr ? leaveByDate.get(cell.dateStr) : undefined
+                    }
                     onSelectDate={onSelectDate}
                     selected={cell.dateStr === selectedDate}
                     shift={
@@ -458,10 +547,12 @@ function ScheduleMonthCalendarTable({
 function SelectedDayDetail({
   attendance,
   dateStr,
+  leave,
   shift,
 }: {
   attendance: ScheduleAttendance | undefined;
   dateStr: string;
+  leave: LeaveDayStatus | undefined;
   shift: ScheduleShift | undefined;
 }) {
   const hasClock = Boolean(attendance?.check_in || attendance?.check_out);
@@ -475,9 +566,16 @@ function SelectedDayDetail({
           </p>
           <p className="text-xs text-muted-foreground">{formatDate(dateStr)}</p>
         </div>
-        {dateStr === getVNDateString() ? (
-          <Badge variant="outline">{copy.today}</Badge>
-        ) : null}
+        <div className="flex shrink-0 items-center gap-1.5">
+          {leave ? (
+            <Badge variant={leave === "approved" ? "info" : "outline"}>
+              {getLeaveLabel(leave)}
+            </Badge>
+          ) : null}
+          {dateStr === getVNDateString() ? (
+            <Badge variant="outline">{copy.today}</Badge>
+          ) : null}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -533,9 +631,9 @@ function SelectedDayDetail({
         size="touch"
         className="w-full sm:w-fit"
       >
-        <Link href="/employee/shift-register">
-          <IconCalendarPlus data-icon="inline-start" />
-          {messages.employee.home.shiftRegisterTitle}
+        <Link href="/employee/leave">
+          <IconCalendarX data-icon="inline-start" />
+          {copy.requestLeaveCta}
         </Link>
       </Button>
     </div>
@@ -594,9 +692,13 @@ export function ScheduleClient({
     loadMonth(currentMonthStart);
   }
 
-  const { attendanceByDate, shiftsByDate } = createScheduleMaps(monthData);
+  const { attendanceByDate, leaveByDate, shiftsByDate } = createScheduleMaps(
+    monthData,
+    monthStart,
+  );
   const selectedShift = shiftsByDate.get(selectedDate);
   const selectedAttendance = attendanceByDate.get(selectedDate);
+  const selectedLeave = leaveByDate.get(selectedDate);
 
   return (
     <EmployeePanel
@@ -670,18 +772,15 @@ export function ScheduleClient({
           loading={isPending}
           fixture={
             <ScheduleMonthCalendarTable
-              {...createScheduleMaps({
-                shifts: SCHEDULE_SKELETON_FIXTURE_SHIFTS,
-                attendance: SCHEDULE_SKELETON_FIXTURE_ATTENDANCE,
-              })}
+              {...createScheduleMaps(
+                SCHEDULE_SKELETON_FIXTURE,
+                SCHEDULE_SKELETON_FIXTURE_MONTH,
+              )}
               monthStart={SCHEDULE_SKELETON_FIXTURE_MONTH}
               onSelectDate={() => undefined}
               selectedDate={getDefaultSelectedDate(
                 SCHEDULE_SKELETON_FIXTURE_MONTH,
-                {
-                  shifts: SCHEDULE_SKELETON_FIXTURE_SHIFTS,
-                  attendance: SCHEDULE_SKELETON_FIXTURE_ATTENDANCE,
-                },
+                SCHEDULE_SKELETON_FIXTURE,
               )}
             />
           }
@@ -690,6 +789,7 @@ export function ScheduleClient({
         >
           <ScheduleMonthCalendarTable
             attendanceByDate={attendanceByDate}
+            leaveByDate={leaveByDate}
             monthStart={monthStart}
             onSelectDate={setSelectedDate}
             selectedDate={selectedDate}
@@ -699,6 +799,7 @@ export function ScheduleClient({
             key={selectedDate}
             attendance={selectedAttendance}
             dateStr={selectedDate}
+            leave={selectedLeave}
             shift={selectedShift}
           />
         </AppBoneyardSkeleton>

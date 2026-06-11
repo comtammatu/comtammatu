@@ -10,10 +10,26 @@ test("root PWA manifest requests portrait orientation", () => {
       new URL("../public/manifest.webmanifest", import.meta.url),
       "utf8",
     ),
-  ) as { orientation?: unknown; short_name?: unknown };
+  ) as {
+    categories?: unknown;
+    name?: unknown;
+    orientation?: unknown;
+    scope?: unknown;
+    short_name?: unknown;
+    shortcuts?: Array<{ name?: unknown; url?: unknown }>;
+    start_url?: unknown;
+  };
 
+  assert.equal(manifest.name, "Cơm Tấm Má Tư - Nhân viên");
   assert.equal(manifest.orientation, "portrait");
-  assert.equal(manifest.short_name, "Má Tư");
+  assert.equal(manifest.scope, "/employee");
+  assert.equal(manifest.short_name, "Má Tư NV");
+  assert.equal(manifest.start_url, "/employee");
+  assert.deepEqual(manifest.categories, ["business", "productivity"]);
+  assert.deepEqual(
+    manifest.shortcuts?.map((shortcut) => shortcut.url),
+    ["/employee", "/employee/clock", "/employee/tasks", "/employee/schedule"],
+  );
 });
 
 test("POS PWA manifest requests portrait orientation per branch", async () => {
@@ -98,9 +114,6 @@ test("operational PWA install dismissal is isolated by app and branch", () => {
     toolbarSource,
     /operational-pwa-install-dismissed:\$\{surface\}:\$\{branchId\}/,
   );
-  assert.match(toolbarSource, /LEGACY_POS_DISMISS_STORAGE_KEY/);
-  assert.doesNotMatch(
-    toolbarSource,
-    /const DISMISS_STORAGE_KEY = "pos-pwa-install-dismissed"/,
-  );
+  assert.doesNotMatch(toolbarSource, /LEGACY_POS_DISMISS_STORAGE_KEY/);
+  assert.doesNotMatch(toolbarSource, /pos-pwa-install-dismissed/);
 });

@@ -27,9 +27,16 @@ export interface ScheduleAttendance {
   status: string;
 }
 
+export interface ScheduleLeave {
+  start_date: string;
+  end_date: string;
+  status: "pending" | "approved";
+}
+
 export interface ScheduleMonthData {
   shifts: ScheduleShift[];
   attendance: ScheduleAttendance[];
+  leaves: ScheduleLeave[];
 }
 
 export async function fetchMySchedule(
@@ -78,42 +85,52 @@ export async function fetchMySchedule(
     monthParts.month,
   );
 
-  const [shiftResult, attendanceResult] = await Promise.all([
-    supabase
-      .from("shift_assignments")
-      .select("date, shifts ( name, start_time, end_time )")
-      .eq("employee_id", employee.id)
-      .eq("tenant_id", claims.tenant_id)
-      .gte("date", parsed.data)
-      .lte("date", monthEndDate)
-      .order("date"),
+  const [attendanceResult, leaveResult] = await Promise.all([
     supabase
       .from("attendance_records")
-      .select("date, check_in, check_out, status")
+      .select("date, check_in, check_out, status, shifts ( name, start_time, end_time )")
       .eq("employee_id", employee.id)
       .eq("tenant_id", claims.tenant_id)
       .gte("date", parsed.data)
       .lte("date", monthEndDate)
       .order("date"),
+    // Leave ranges overlapping the viewed month (RLS self-select).
+    supabase
+      .from("leave_requests")
+      .select("start_date, end_date, status")
+      .eq("employee_id", employee.id)
+      .eq("tenant_id", claims.tenant_id)
+      .in("status", ["pending", "approved"])
+      .lte("start_date", monthEndDate)
+      .gte("end_date", parsed.data)
+      .order("start_date"),
   ]);
 
-  if (shiftResult.error || attendanceResult.error) {
+  if (attendanceResult.error || leaveResult.error) {
     return { success: false, error: "Không tải được lịch ca." };
   }
 
-  const shifts: ScheduleShift[] = (shiftResult.data ?? []).map((row) => {
-    const shift = row.shifts as unknown as {
-      name: string;
-      start_time: string;
-      end_time: string;
-    } | null;
-    return {
-      date: row.date,
-      shift_name: shift?.name ?? "Ca làm",
-      start_time: shift?.start_time ?? "00:00",
-      end_time: shift?.end_time ?? "00:00",
-    };
-  });
+  const shifts: ScheduleShift[] = (attendanceResult.data ?? []).flatMap(
+    (row) => {
+      // supabase-js typegen infers M:1 FK as array, but PostgREST returns
+      // a single object at runtime. Cast through unknown to match runtime.
+      const shift = row.shifts as unknown as {
+        name: string;
+        start_time: string;
+        end_time: string;
+      } | null;
+      return shift
+        ? [
+            {
+              date: row.date,
+              shift_name: shift.name,
+              start_time: shift.start_time,
+              end_time: shift.end_time,
+            },
+          ]
+        : [];
+    },
+  );
 
   const attendance: ScheduleAttendance[] = (attendanceResult.data ?? []).map(
     (row) => ({
@@ -124,5 +141,17 @@ export async function fetchMySchedule(
     }),
   );
 
-  return { success: true, data: { shifts, attendance } };
+  const leaves: ScheduleLeave[] = (leaveResult.data ?? []).flatMap((row) =>
+    row.status === "pending" || row.status === "approved"
+      ? [
+          {
+            start_date: row.start_date,
+            end_date: row.end_date,
+            status: row.status,
+          },
+        ]
+      : [],
+  );
+
+  return { success: true, data: { shifts, attendance, leaves } };
 }

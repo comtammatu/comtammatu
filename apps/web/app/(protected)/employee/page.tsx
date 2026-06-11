@@ -24,7 +24,6 @@ import {
   EmployeeStatusStrip,
 } from "./components/employee-page";
 import {
-  formatShiftRange,
   getTodayWorkState,
   type TodayWorkState,
   type TodayWorkStatus,
@@ -66,20 +65,22 @@ const OPERATION_HANDOFFS: Array<{
 function getWorkTone(status: TodayWorkStatus) {
   if (status === "done") return "success" as const;
   if (status === "checkout_pending") return "warning" as const;
-  if (
-    status === "working" ||
-    status === "ready_to_checkout" ||
-    status === "not_required"
-  ) {
+  if (status === "working" || status === "not_required") {
     return "info" as const;
   }
   return "warning" as const;
 }
 
+function canRequestCheckout(state: TodayWorkState): boolean {
+  return (
+    state.managerAttendanceOnly || state.checklist.requiredRemaining === 0
+  );
+}
+
 function getWorkTitle(state: TodayWorkState): string {
   const status = state.status;
   if (state.managerAttendanceOnly) {
-    if (status === "ready_to_checkout") return copy.managerAttendanceTitle;
+    if (status === "working") return copy.managerAttendanceTitle;
     if (status === "done") return copy.statusDone;
     if (status === "not_started") return copy.statusNotStarted;
   }
@@ -89,7 +90,6 @@ function getWorkTitle(state: TodayWorkState): string {
   if (status === "not_required") return copy.statusNotRequired;
   if (status === "not_started") return copy.statusNotStarted;
   if (status === "working") return copy.statusWorking;
-  if (status === "ready_to_checkout") return copy.statusReadyToCheckout;
   if (status === "checkout_pending") return copy.statusCheckoutPending;
   return copy.statusDone;
 }
@@ -97,7 +97,7 @@ function getWorkTitle(state: TodayWorkState): string {
 function getWorkDescription(state: TodayWorkState): string {
   const status = state.status;
   if (state.managerAttendanceOnly) {
-    if (status === "ready_to_checkout") {
+    if (status === "working") {
       return copy.managerAttendanceDescription;
     }
     if (status === "done") return copy.descriptionDone;
@@ -108,8 +108,11 @@ function getWorkDescription(state: TodayWorkState): string {
   if (status === "missing_branch") return copy.descriptionNoBranch;
   if (status === "not_required") return copy.descriptionNotRequired;
   if (status === "not_started") return copy.descriptionNotStarted;
-  if (status === "working") return copy.descriptionWorking;
-  if (status === "ready_to_checkout") return copy.descriptionReadyToCheckout;
+  if (status === "working") {
+    return state.checklist.total > 0 && state.checklist.requiredRemaining === 0
+      ? copy.descriptionReadyToCheckout
+      : copy.descriptionWorking;
+  }
   if (status === "checkout_pending") return copy.descriptionCheckoutPending;
   return copy.descriptionDone;
 }
@@ -132,13 +135,10 @@ export default async function EmployeePage() {
       data?.branch_kind === "central_kitchen";
   }
 
+  // POS/KDS/Runner entry points always render by permission — proxy ACL is
+  // the access gate. Hiding them by clock state locks staff out.
   const operationHandoffs =
-    state.status === "working" &&
-    branchId &&
-    !branchIsHq &&
-    state.attendance?.checkIn &&
-    !state.attendance.checkOut &&
-    !state.attendance.checkoutRequestedAt
+    branchId && !branchIsHq
       ? OPERATION_HANDOFFS.filter((item) =>
           canAccess(claims.user_role, item.moduleKey),
         ).map((item) => ({
@@ -150,14 +150,10 @@ export default async function EmployeePage() {
   const tone = getWorkTone(state.status);
   const title = getWorkTitle(state);
   const description = getWorkDescription(state);
-  const currentShiftName =
-    state.attendance?.shiftName ??
-    (state.nextShift?.date === state.today ? state.nextShift.shiftName : null);
+  const currentShiftName = state.attendance?.shiftName ?? null;
   const currentShiftRange = state.attendance?.shiftStartTime
     ? `${state.attendance.shiftStartTime.slice(0, 5)} - ${state.attendance.shiftEndTime?.slice(0, 5) ?? "—"}`
-    : state.nextShift?.date === state.today
-      ? formatShiftRange(state.nextShift)
-      : "—";
+    : "—";
 
   const progressValue = state.managerAttendanceOnly
     ? state.attendance?.checkOut
@@ -165,9 +161,7 @@ export default async function EmployeePage() {
       : state.attendance?.checkIn
         ? 50
         : 0
-    : state.status === "done" ||
-        state.status === "ready_to_checkout" ||
-        state.status === "checkout_pending"
+    : state.status === "done" || state.status === "checkout_pending"
       ? 100
       : state.status === "working" && state.checklist.total > 0
         ? Math.round((state.checklist.done / state.checklist.total) * 100)
@@ -282,19 +276,21 @@ export default async function EmployeePage() {
         </Link>
       </Button>
     ) : state.status === "working" ? (
-      <Button asChild size="touch-lg" className={primaryActionClassName}>
-        <Link href="/employee/tasks">
-          <IconListChecks data-icon="inline-start" />
-          {copy.shiftTasks}
-        </Link>
-      </Button>
-    ) : state.status === "ready_to_checkout" ? (
-      <Button asChild size="touch-lg" className={primaryActionClassName}>
-        <Link href="/employee/clock">
-          <IconLogout data-icon="inline-start" />
-          {state.managerAttendanceOnly ? copy.clockOutDirect : copy.clockOut}
-        </Link>
-      </Button>
+      canRequestCheckout(state) ? (
+        <Button asChild size="touch-lg" className={primaryActionClassName}>
+          <Link href="/employee/clock">
+            <IconLogout data-icon="inline-start" />
+            {state.managerAttendanceOnly ? copy.clockOutDirect : copy.clockOut}
+          </Link>
+        </Button>
+      ) : (
+        <Button asChild size="touch-lg" className={primaryActionClassName}>
+          <Link href="/employee/tasks">
+            <IconListChecks data-icon="inline-start" />
+            {copy.shiftTasks}
+          </Link>
+        </Button>
+      )
     ) : state.status === "checkout_pending" ? (
       <Button
         variant="outline"

@@ -115,8 +115,8 @@ export function EmployeeTable({
                   {emp.profiles?.branches?.name ?? "—"}
                 </TableCell>
                 <TableCell className="hidden md:table-cell">
-                  {emp.profiles?.role ? (
-                    <Badge variant="secondary">{emp.profiles.role}</Badge>
+                  {emp.profiles?.positions?.label_vi ? (
+                    <Badge variant="secondary">{emp.profiles.positions.label_vi}</Badge>
                   ) : (
                     "—"
                   )}

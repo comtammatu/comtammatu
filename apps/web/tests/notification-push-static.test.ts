@@ -37,6 +37,18 @@ test("push dispatcher cron is configured and idempotent", () => {
   assert.match(vercel, /\/api\/cron\/notifications-push/);
 });
 
+test("push targeting matches access buckets, not raw position codes", () => {
+  const route = read("../app/api/cron/notifications-push/route.ts");
+  const targeting = read("../lib/notifications/push-targeting.ts");
+
+  // target_roles carries access buckets (RLS compares auth_role());
+  // matching raw position codes once dropped branch_manager pushes.
+  assert.match(route, /@lib\/notifications\/push-targeting/);
+  assert.doesNotMatch(route, /target_roles\.includes\(position\.code\)/);
+  assert.match(targeting, /staffRoleFromPositionCode/);
+  assert.match(targeting, /target_roles\.includes\(bucket\)/);
+});
+
 test("push subscription migration has RLS, grants, and delivery ledger", () => {
   const migration = read(
     "../../../supabase/migrations/20260610154520_notification_push_subscriptions.sql",

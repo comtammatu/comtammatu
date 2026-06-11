@@ -8,6 +8,7 @@ import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { getCronSecret } from "@comtammatu/shared/runtime";
+import { canReceiveNotification } from "@lib/notifications/push-targeting";
 import {
   buildNotificationPushPayload,
   getWebPushPublicConfig,
@@ -53,8 +54,6 @@ type DeliveryRow = {
   attempt_count: number;
 };
 
-const TENANT_WIDE_ROLES = new Set(["owner", "super_manager"]);
-
 function timingSafeEquals(a: string, b: string): boolean {
   const MAX = 256;
   const ba = Buffer.alloc(MAX);
@@ -72,23 +71,6 @@ function unauthorized() {
   );
 }
 
-function canReceiveNotification(
-  notification: NotificationRow,
-  subscription: SubscriptionRow,
-  profile: ProfileRow | undefined,
-  position: PositionRow | undefined,
-): boolean {
-  if (!profile || !position) return false;
-  if (profile.is_active === false) return false;
-  if (profile.tenant_id !== notification.tenant_id) return false;
-  if (subscription.tenant_id !== notification.tenant_id) return false;
-  if (position.tenant_id !== notification.tenant_id) return false;
-  if (!notification.target_roles.includes(position.code)) return false;
-  if (notification.target_branch_id === null) return true;
-  if (profile.branch_id === notification.target_branch_id) return true;
-  return TENANT_WIDE_ROLES.has(position.code);
-}
-
 function deliveryKey(notificationId: number, subscriptionId: number): string {
   return `${notificationId}:${subscriptionId}`;
 }
@@ -99,7 +81,7 @@ export async function POST(request: Request) {
   const provided = authHeader?.startsWith("Bearer ")
     ? authHeader.slice("Bearer ".length).trim()
     : null;
-  if (!provided || !timingSafeEquals(provided, expected)) {
+  if (!expected || !provided || !timingSafeEquals(provided, expected)) {
     return unauthorized();
   }
 

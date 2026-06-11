@@ -8,7 +8,6 @@ export type TodayWorkStatus =
   | "not_required"
   | "not_started"
   | "working"
-  | "ready_to_checkout"
   | "checkout_pending"
   | "done";
 
@@ -21,14 +20,6 @@ export interface TodayChecklistItem {
   sortOrder: number;
   done: boolean;
   completedAt: string | null;
-}
-
-export interface TodayShift {
-  date: string;
-  shiftId: number | null;
-  shiftName: string;
-  startTime: string | null;
-  endTime: string | null;
 }
 
 export interface TodayAttendance {
@@ -59,7 +50,6 @@ export interface TodayWorkState {
   attendanceRequired: boolean;
   approvalTargetLabel: string;
   attendance: TodayAttendance | null;
-  nextShift: TodayShift | null;
   checklist: {
     items: TodayChecklistItem[];
     total: number;
@@ -119,9 +109,14 @@ function normalizeShift(shift: unknown): {
   };
 }
 
-export function formatShiftRange(shift: TodayShift | null): string {
-  if (!shift) return "—";
-  return `${formatTimeShort(shift.startTime)} - ${formatTimeShort(shift.endTime)}`;
+export function formatAttendanceShiftRange(
+  attendance: Pick<
+    TodayAttendance,
+    "shiftStartTime" | "shiftEndTime"
+  > | null,
+): string {
+  if (!attendance?.shiftStartTime) return "—";
+  return `${formatTimeShort(attendance.shiftStartTime)} - ${formatTimeShort(attendance.shiftEndTime)}`;
 }
 
 export async function getTodayWorkState(): Promise<TodayWorkState> {
@@ -139,7 +134,6 @@ export async function getTodayWorkState(): Promise<TodayWorkState> {
       attendanceRequired: false,
       approvalTargetLabel: getApprovalTargetLabel(null),
       attendance: null,
-      nextShift: null,
       checklist: {
         items: [],
         total: 0,
@@ -178,27 +172,6 @@ export async function getTodayWorkState(): Promise<TodayWorkState> {
     .eq("tenant_id", claims.tenant_id)
     .eq("date", today)
     .maybeSingle();
-
-  const { data: upcoming } = await supabase
-    .from("shift_assignments")
-    .select("date, shift_id, shifts ( name, start_time, end_time )")
-    .eq("employee_id", employeeId)
-    .eq("tenant_id", claims.tenant_id)
-    .gte("date", today)
-    .order("date")
-    .limit(1)
-    .maybeSingle();
-
-  const nextShiftData = normalizeShift(upcoming?.shifts);
-  const nextShift: TodayShift | null = upcoming
-    ? {
-        date: upcoming.date,
-        shiftId: upcoming.shift_id,
-        shiftName: nextShiftData?.name ?? "Ca làm",
-        startTime: nextShiftData?.start_time ?? null,
-        endTime: nextShiftData?.end_time ?? null,
-      }
-    : null;
 
   const branchData = normalizeBranch(record?.branches);
   const shiftData = normalizeShift(record?.shifts);
@@ -256,13 +229,13 @@ export async function getTodayWorkState(): Promise<TodayWorkState> {
   const requiredTotal = requiredItems.length;
   const requiredDone = requiredItems.filter((item) => item.done).length;
   const requiredRemaining = Math.max(requiredTotal - requiredDone, 0);
-  const hasTodayShift = nextShift?.date === today;
   const attendanceRequired =
     Boolean(attendance) ||
-    hasTodayShift ||
     isDefaultAttendanceRole(claims.user_role) ||
     managerAttendanceOnly;
 
+  // Once clocked in, status stays "working" until checkout is submitted;
+  // "checklist done, ready to check out" is a CTA hint, not a status.
   let status: TodayWorkStatus;
   if (!attendance && !attendanceRequired) {
     status = "not_required";
@@ -272,14 +245,10 @@ export async function getTodayWorkState(): Promise<TodayWorkState> {
     status = "not_started";
   } else if (attendance.checkOut) {
     status = "done";
-  } else if (managerAttendanceOnly) {
-    status = "ready_to_checkout";
   } else if (attendance.checkoutRequestedAt) {
     status = "checkout_pending";
-  } else if (requiredRemaining > 0) {
-    status = "working";
   } else {
-    status = "ready_to_checkout";
+    status = "working";
   }
 
   return {
@@ -292,7 +261,6 @@ export async function getTodayWorkState(): Promise<TodayWorkState> {
     attendanceRequired,
     approvalTargetLabel: getApprovalTargetLabel(claims.user_role),
     attendance,
-    nextShift,
     checklist: {
       items: checklistItems,
       total,

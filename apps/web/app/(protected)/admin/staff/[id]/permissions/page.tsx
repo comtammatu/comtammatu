@@ -98,7 +98,7 @@ export default async function StaffPermissionsPage({ params }: Props) {
     ? `${position.label_vi} (${position.code})`
     : "Chưa gán";
 
-  // Resolve actor names for Lịch sử tab
+  // Resolve actor names for the "Lịch sử" tab
   const actorIds = Array.from(
     new Set(auditList.map((a) => a.actor_user_id).filter(Boolean) as string[]),
   );

@@ -149,10 +149,10 @@ export default async function CheckoutApprovalsPage() {
     claims.user_role === "branch_manager" && branchId
       ? supabase.rpc("has_permission", {
           p_branch_id: branchId,
-          p_key: PERMISSION_KEYS.HR_APPROVE_SHIFT_REQUEST,
+          p_key: PERMISSION_KEYS.HR_APPROVE_CHECKOUT,
         })
       : supabase.rpc("has_permission_any", {
-          p_key: PERMISSION_KEYS.HR_APPROVE_SHIFT_REQUEST,
+          p_key: PERMISSION_KEYS.HR_APPROVE_CHECKOUT,
         });
 
   const recordsQuery = service

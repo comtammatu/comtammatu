@@ -26,6 +26,8 @@ const CHECKLIST_ROLES: readonly StaffRole[] = [
   "branch_manager",
 ];
 
+const CHECKLIST_OWNER_ROLES: readonly StaffRole[] = ["owner", "super_manager"];
+
 const templateItemSchema = z.object({
   title: z.string().trim().min(1).max(120),
   phase: z.enum(CHECKLIST_PHASES),
@@ -48,6 +50,15 @@ const setEmployeeDefaultChecklistSchema = z.object({
 const archiveChecklistTemplateSchema = z.object({
   templateId: z.coerce.number().int().positive(),
 });
+
+const applyCashierChecklistTemplateSchema = z.object({});
+
+const CASHIER_ROLE_CODE = "cashier";
+const CASHIER_CHECKLIST_TEMPLATE_NAME = "Phục vụ";
+
+interface AppliedChecklistTemplateResult {
+  updatedCount: number;
+}
 
 type ChecklistItemRow = {
   id: number;
@@ -357,6 +368,39 @@ export const setEmployeeDefaultChecklist = withAction(
 
     revalidateChecklistPaths();
     return { success: true };
+  },
+);
+
+export const applyCashierChecklistTemplate = withAction(
+  {
+    roles: CHECKLIST_OWNER_ROLES,
+    schema: applyCashierChecklistTemplateSchema,
+    permission: PERMISSION_KEYS.STAFF_MANAGE,
+  },
+  async (_data, { claims }) => {
+    const { data: updatedCount, error } = await createServiceClient().rpc(
+      "apply_checklist_template_to_role",
+      {
+        p_tenant_id: claims.tenant_id,
+        p_role: CASHIER_ROLE_CODE,
+        p_template_name: CASHIER_CHECKLIST_TEMPLATE_NAME,
+      },
+    );
+
+    if (error) {
+      const message =
+        error.message.includes("checklist_template_not_found")
+          ? "Không tìm thấy template 'Phục vụ'. Vui lòng kiểm tra seed template trước."
+          : "Không thể gán template checklist cho vai trò cashier.";
+      return { success: false, error: message };
+    }
+
+    const count = Number(updatedCount ?? 0);
+    revalidateChecklistPaths();
+    return {
+      success: true,
+      data: { updatedCount: count } satisfies AppliedChecklistTemplateResult,
+    };
   },
 );
 

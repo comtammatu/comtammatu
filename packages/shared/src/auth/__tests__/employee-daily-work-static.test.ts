@@ -114,9 +114,6 @@ test("Employee checklist templates are managed as HR templates, not roles", () =
   const employeeTableSrc = read(
     "apps/web/app/(protected)/hr/employee-table.tsx",
   );
-  const assignmentTableSrc = read(
-    "apps/web/app/(protected)/hr/shift-assignments-table.tsx",
-  );
   const branchSettingsPageSrc = read(
     "apps/web/app/(protected)/br/[branchId]/settings/page.tsx",
   );
@@ -170,9 +167,8 @@ test("Employee checklist templates are managed as HR templates, not roles", () =
   assert.ok(
     hrClientSrc.includes('<TabsTrigger value="checklist">') &&
       hrClientSrc.includes("ChecklistTemplatesTable") &&
-      employeeTableSrc.includes("Checklist mặc định") &&
-      assignmentTableSrc.includes("Checklist override"),
-    "HR UI must expose template library, employee defaults, and shift overrides",
+      employeeTableSrc.includes("Checklist mặc định"),
+    "HR UI must expose template library and employee defaults",
   );
   assert.ok(
     branchSettingsPageSrc.includes("AttendanceSettingsCard") &&
@@ -230,7 +226,7 @@ test("Employee checkout approval keeps checkout pending until Branch Manager app
 
   assert.ok(
     actionSrc.includes("probePermission") &&
-      actionSrc.includes("PERMISSION_KEYS.HR_APPROVE_SHIFT_REQUEST") &&
+      actionSrc.includes("PERMISSION_KEYS.HR_APPROVE_CHECKOUT") &&
       actionSrc.includes('"owner"') &&
       actionSrc.includes('"super_manager"') &&
       actionSrc.includes("employee_request_clock_out") &&
@@ -254,7 +250,7 @@ test("Employee checkout approval keeps checkout pending until Branch Manager app
       approvalsPageSrc.includes("checkout_approval_target_roles") &&
       approvalsPageSrc.includes("has_permission_any") &&
       approvalsPageSrc.includes("has_permission") &&
-      approvalsPageSrc.includes("HR_APPROVE_SHIFT_REQUEST"),
+      approvalsPageSrc.includes("HR_APPROVE_CHECKOUT"),
     "expected approval page to be manager-tier and permission scoped",
   );
 });

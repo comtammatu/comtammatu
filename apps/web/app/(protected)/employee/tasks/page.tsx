@@ -42,7 +42,7 @@ export default async function EmployeeTasksPage() {
 
   if (state.managerAttendanceOnly) {
     const actionLabel =
-      state.status === "ready_to_checkout"
+      state.status === "working"
         ? copy.clockOutDirect
         : state.status === "done"
           ? copy.completed

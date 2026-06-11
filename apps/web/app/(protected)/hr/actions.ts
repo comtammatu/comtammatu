@@ -8,7 +8,7 @@ import {
   type StaffRole,
 } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
-import { getVNDateString, getVNMonthEndDateString } from "@comtammatu/shared/time";
+import { getVNMonthEndDateString } from "@comtammatu/shared/time";
 import { createServiceClient } from "@comtammatu/database/supabase/service";
 import { getAuthContext, probePermission } from "@/_lib/auth";
 import { withAction } from "@/_lib/with-action";
@@ -42,6 +42,35 @@ const employeeSchema = z.object({
   dependentsCount: z.coerce.number().int().min(0).default(0),
   defaultChecklistTemplateId: z.coerce.number().int().positive().nullable().optional(),
 });
+
+async function loadEmployeeProfileBranch(
+  tenantId: number,
+  profileId: string,
+): Promise<number | null | undefined> {
+  const { data } = await createServiceClient()
+    .from("profiles")
+    .select("branch_id")
+    .eq("tenant_id", tenantId)
+    .eq("id", profileId)
+    .maybeSingle();
+
+  return data?.branch_id;
+}
+
+async function loadChecklistTemplateBranch(
+  tenantId: number,
+  templateId: number,
+): Promise<number | null | undefined> {
+  const { data } = await createServiceClient()
+    .from("shift_checklist_templates")
+    .select("branch_id")
+    .eq("tenant_id", tenantId)
+    .eq("id", templateId)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  return data?.branch_id;
+}
 
 export async function fetchEmployees(): Promise<ActionResult> {
   const baseCtx = await getAuthContext(HR_EMPLOYEE_VIEW_ROLES);
@@ -86,11 +115,12 @@ export async function fetchEmployees(): Promise<ActionResult> {
       base_salary, start_date, contract_type, dependents_count, is_active,
       default_checklist_template_id,
       profiles!inner (
-        id, full_name, phone, role, branch_id,
+        id, full_name, phone, branch_id,
+        positions ( label_vi ),
         branches ( name )
       )
     `,
-    )
+      )
     .eq("tenant_id", claims.tenant_id)
     .order("created_at", { ascending: false });
 
@@ -113,6 +143,36 @@ export async function fetchEmployees(): Promise<ActionResult> {
 export const createEmployee = withAction(
   { roles: HR_ROLES, schema: employeeSchema },
   async (data, { supabase, claims }) => {
+    const employeeBranchId = await loadEmployeeProfileBranch(
+      claims.tenant_id,
+      data.profileId,
+    );
+    if (employeeBranchId === undefined) {
+      return {
+        success: false,
+        error: "Không thể xác định chi nhánh của nhân viên.",
+      };
+    }
+
+    if (data.defaultChecklistTemplateId != null) {
+      const templateBranchId = await loadChecklistTemplateBranch(
+        claims.tenant_id,
+        data.defaultChecklistTemplateId,
+      );
+      if (templateBranchId === undefined) {
+        return {
+          success: false,
+          error: "Checklist template không tồn tại hoặc đã bị ngưng sử dụng.",
+        };
+      }
+      if (templateBranchId != null && templateBranchId !== employeeBranchId) {
+        return {
+          success: false,
+          error: "Checklist template không thuộc phạm vi chi nhánh này.",
+        };
+      }
+    }
+
     const { data: result, error } = await supabase
       .from("employees")
       .insert({
@@ -208,31 +268,7 @@ export const fetchShifts = withAction(
       return { success: false, error: "Không thể tải danh sách ca." };
     }
 
-    const today = getVNDateString();
-    const shiftIds = (result ?? []).map((shift) => shift.id);
-    const futureCounts = new Map<number, number>();
-
-    if (shiftIds.length > 0) {
-      const { data: futureRows } = await supabase
-        .from("shift_assignments")
-        .select("shift_id")
-        .eq("branch_id", data.branchId)
-        .eq("tenant_id", claims.tenant_id)
-        .gte("date", today)
-        .in("shift_id", shiftIds);
-
-      for (const row of futureRows ?? []) {
-        futureCounts.set(row.shift_id, (futureCounts.get(row.shift_id) ?? 0) + 1);
-      }
-    }
-
-    return {
-      success: true,
-      data: (result ?? []).map((shift) => ({
-        ...shift,
-        future_assignment_count: futureCounts.get(shift.id) ?? 0,
-      })),
-    };
+    return { success: true, data: result ?? [] };
   },
 );
 
@@ -284,16 +320,6 @@ export const updateShift = withAction(
     const accessError = await ensureBranchAccess(supabase, claims, data.branchId);
     if (accessError) return accessError;
 
-    const today = getVNDateString();
-    const { data: historicalAssignments } = await supabase
-      .from("shift_assignments")
-      .select("id")
-      .eq("tenant_id", claims.tenant_id)
-      .eq("branch_id", data.branchId)
-      .eq("shift_id", data.shiftId)
-      .lt("date", today)
-      .limit(1);
-
     const { data: attendanceRows } = await supabase
       .from("attendance_records")
       .select("id")
@@ -302,7 +328,7 @@ export const updateShift = withAction(
       .eq("shift_id", data.shiftId)
       .limit(1);
 
-    if ((historicalAssignments?.length ?? 0) > 0 || (attendanceRows?.length ?? 0) > 0) {
+    if ((attendanceRows?.length ?? 0) > 0) {
       return {
         success: false,
         error:

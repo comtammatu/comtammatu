@@ -104,8 +104,6 @@ export function ShiftFormDialog({
         start_time: saved?.start_time ?? values.start_time,
         end_time: saved?.end_time ?? values.end_time,
         is_active: saved?.is_active ?? shift?.is_active ?? true,
-        future_assignment_count:
-          saved?.future_assignment_count ?? shift?.future_assignment_count ?? 0,
       });
       onOpenChange(false);
     });

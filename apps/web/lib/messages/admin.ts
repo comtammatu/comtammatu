@@ -1,4 +1,12 @@
 export const admin = {
+  nav: {
+    ariaLabel: "Điều hướng quản trị",
+    overview: "Tổng quan",
+    reports: "Báo cáo",
+    inventory: "Kho",
+    finance: "Tài chính",
+    menu: "Menu",
+  },
   reports: {
     index: {
       title: "Báo cáo điều hành",

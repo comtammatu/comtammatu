@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { PERMISSION_KEYS, type StaffRole } from "@comtammatu/shared/auth";
+import { getVNMonthEndDateString } from "@comtammatu/shared/time";
 import { withAction } from "@/_lib/with-action";
 
 const REVIEW_ROLES: readonly StaffRole[] = [
@@ -14,6 +15,52 @@ const REVIEW_ROLES: readonly StaffRole[] = [
 const fetchSchema = z.object({
   branchId: z.coerce.number().int().positive(),
 });
+
+const fetchMonthSchema = z.object({
+  branchId: z.coerce.number().int().positive(),
+  month: z
+    .string()
+    .regex(/^\d{4}-\d{2}$/, { error: "Tháng không hợp lệ (YYYY-MM)" }),
+});
+
+// Approved leave ranges overlapping the viewed month (attendance tab).
+export const fetchApprovedLeaveMonth = withAction(
+  {
+    roles: REVIEW_ROLES,
+    schema: fetchMonthSchema,
+    permission: PERMISSION_KEYS.HR_APPROVE_LEAVE_REQUEST,
+    permissionBranchId: (data) => data.branchId,
+  },
+  async (data, { supabase, claims }) => {
+    const [year, mon] = data.month.split("-").map(Number);
+    const startDate = `${data.month}-01`;
+    const endDate = getVNMonthEndDateString(year!, mon!);
+
+    const { data: result, error } = await supabase
+      .from("leave_requests")
+      .select(
+        `
+        id, start_date, end_date, leave_type,
+        employees (
+          id, employee_code,
+          profiles ( full_name )
+        )
+      `,
+      )
+      .eq("tenant_id", claims.tenant_id)
+      .eq("branch_id", data.branchId)
+      .eq("status", "approved")
+      .lte("start_date", endDate)
+      .gte("end_date", startDate)
+      .order("start_date");
+
+    if (error) {
+      return { success: false, error: "Không thể tải nghỉ phép trong tháng." };
+    }
+
+    return { success: true, data: result ?? [] };
+  },
+);
 
 export const fetchLeaveRequests = withAction(
   {

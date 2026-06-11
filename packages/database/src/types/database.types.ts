@@ -5287,82 +5287,6 @@ export type Database = {
           },
         ]
       }
-      shift_assignments: {
-        Row: {
-          branch_id: number
-          checklist_template_id: number | null
-          created_at: string
-          date: string
-          employee_id: number
-          id: number
-          shift_id: number
-          tenant_id: number
-        }
-        Insert: {
-          branch_id: number
-          checklist_template_id?: number | null
-          created_at?: string
-          date: string
-          employee_id: number
-          id?: never
-          shift_id: number
-          tenant_id: number
-        }
-        Update: {
-          branch_id?: number
-          checklist_template_id?: number | null
-          created_at?: string
-          date?: string
-          employee_id?: number
-          id?: never
-          shift_id?: number
-          tenant_id?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "shift_assignments_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "shift_assignments_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "shift_assignments_checklist_template_id_fkey"
-            columns: ["checklist_template_id"]
-            isOneToOne: false
-            referencedRelation: "shift_checklist_templates"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "shift_assignments_employee_id_fkey"
-            columns: ["employee_id"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "shift_assignments_shift_id_fkey"
-            columns: ["shift_id"]
-            isOneToOne: false
-            referencedRelation: "shifts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "shift_assignments_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       shift_checklist_template_items: {
         Row: {
           created_at: string
@@ -5465,100 +5389,6 @@ export type Database = {
           },
           {
             foreignKeyName: "shift_checklist_templates_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      shift_requests: {
-        Row: {
-          assignment_id: number | null
-          branch_id: number
-          created_at: string
-          date: string
-          employee_id: number
-          id: number
-          note: string | null
-          rejected_reason: string | null
-          reviewed_at: string | null
-          reviewed_by: string | null
-          shift_id: number
-          status: Database["public"]["Enums"]["shift_request_status"]
-          tenant_id: number
-          updated_at: string
-        }
-        Insert: {
-          assignment_id?: number | null
-          branch_id: number
-          created_at?: string
-          date: string
-          employee_id: number
-          id?: never
-          note?: string | null
-          rejected_reason?: string | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          shift_id: number
-          status?: Database["public"]["Enums"]["shift_request_status"]
-          tenant_id: number
-          updated_at?: string
-        }
-        Update: {
-          assignment_id?: number | null
-          branch_id?: number
-          created_at?: string
-          date?: string
-          employee_id?: number
-          id?: never
-          note?: string | null
-          rejected_reason?: string | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          shift_id?: number
-          status?: Database["public"]["Enums"]["shift_request_status"]
-          tenant_id?: number
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "shift_requests_assignment_id_fkey"
-            columns: ["assignment_id"]
-            isOneToOne: false
-            referencedRelation: "shift_assignments"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "shift_requests_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "shift_requests_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "v_print_agent_fleet"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "shift_requests_employee_id_fkey"
-            columns: ["employee_id"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "shift_requests_shift_id_fkey"
-            columns: ["shift_id"]
-            isOneToOne: false
-            referencedRelation: "shifts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "shift_requests_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -8406,6 +8236,10 @@ export type Database = {
         }
         Returns: Json
       }
+      apply_checklist_template_to_role: {
+        Args: { p_role: string; p_template_name: string; p_tenant_id: number }
+        Returns: number
+      }
       apply_credit_note_to_invoice: {
         Args: { p_amount: number; p_credit_id: number; p_invoice_id: number }
         Returns: Json
@@ -8442,7 +8276,6 @@ export type Database = {
         Args: { p_request_id: number }
         Returns: undefined
       }
-      approve_shift_request: { Args: { p_request_id: number }; Returns: number }
       approve_waste: {
         Args: { p_decision: string; p_issue_id: number; p_note?: string }
         Returns: undefined
@@ -8493,38 +8326,6 @@ export type Database = {
         }
         Returns: string
       }
-      bulk_delete_future_shift_assignments: {
-        Args: {
-          p_assignment_ids: number[]
-          p_branch_id: number
-          p_tenant_id: number
-        }
-        Returns: Json
-      }
-      bulk_upsert_shift_assignments:
-        | {
-            Args: {
-              p_branch_id: number
-              p_dates: string[]
-              p_employee_ids: number[]
-              p_mode?: string
-              p_shift_id: number
-              p_tenant_id: number
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_branch_id: number
-              p_checklist_template_id?: number
-              p_dates: string[]
-              p_employee_ids: number[]
-              p_mode?: string
-              p_shift_id: number
-              p_tenant_id: number
-            }
-            Returns: Json
-          }
       bump_kds_ticket: { Args: { p_ticket_id: number }; Returns: string }
       can_access_branch: { Args: { p_branch_id: number }; Returns: boolean }
       cancel_leave_request: {
@@ -8540,10 +8341,6 @@ export type Database = {
         Returns: undefined
       }
       cancel_production_order: { Args: { p_order_id: number }; Returns: Json }
-      cancel_shift_request: {
-        Args: { p_request_id: number }
-        Returns: undefined
-      }
       check_order_ready: { Args: { p_order_id: number }; Returns: undefined }
       claim_print_job: {
         Args: { p_agent_id: string; p_job_id: number }
@@ -8679,16 +8476,6 @@ export type Database = {
       consume_stock_for_order: { Args: { p_order_id: number }; Returns: Json }
       consume_stock_for_order_service: {
         Args: { p_actor_id?: string; p_order_id: number }
-        Returns: Json
-      }
-      copy_shift_assignments_week: {
-        Args: {
-          p_branch_id: number
-          p_mode?: string
-          p_source_week_start: string
-          p_target_week_start: string
-          p_tenant_id: number
-        }
         Returns: Json
       }
       count_unread_notifications: { Args: never; Returns: number }
@@ -9551,10 +9338,6 @@ export type Database = {
         Args: { p_reason?: string; p_request_id: number }
         Returns: undefined
       }
-      reject_shift_request: {
-        Args: { p_reason?: string; p_request_id: number }
-        Returns: undefined
-      }
       release_branch_menu_daily_holds: {
         Args: { p_branch_id: number; p_hold_token: string }
         Returns: Json
@@ -9774,15 +9557,6 @@ export type Database = {
         }
         Returns: number
       }
-      submit_shift_request: {
-        Args: {
-          p_branch_id: number
-          p_date: string
-          p_note?: string
-          p_shift_id: number
-        }
-        Returns: number
-      }
       sync_insurance_base: {
         Args: { p_employee_id: number }
         Returns: undefined
@@ -9916,7 +9690,7 @@ export type Database = {
       weekly_waste_report: { Args: never; Returns: number }
     }
     Enums: {
-      shift_request_status: "pending" | "approved" | "rejected" | "cancelled"
+      [_ in never]: never
     }
     CompositeTypes: {
       [_ in never]: never
@@ -10043,8 +9817,6 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {
-      shift_request_status: ["pending", "approved", "rejected", "cancelled"],
-    },
+    Enums: {},
   },
 } as const

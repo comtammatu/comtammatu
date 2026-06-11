@@ -48,6 +48,7 @@ import {
   fetchAttendanceSummary,
   getAttendancePhotoUrl,
 } from "./actions";
+import { fetchApprovedLeaveMonth } from "./leave-request-actions";
 import type { BranchOption } from "./page";
 import {
   CHECKLIST_PHASE_LABELS,
@@ -96,6 +97,18 @@ interface AttendanceSummaryRow {
   total: number;
 }
 
+interface ApprovedLeaveRow {
+  id: number;
+  start_date: string;
+  end_date: string;
+  leave_type: string;
+  employees: {
+    id: number;
+    employee_code: string;
+    profiles: { full_name: string } | null;
+  } | null;
+}
+
 const STATUS_LABELS: Record<string, string> = {
   present: attendanceCopy.present,
   late: attendanceCopy.late,
@@ -120,6 +133,7 @@ interface AttendanceTableProps {
 export function AttendanceTable({ branches }: AttendanceTableProps) {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [summary, setSummary] = useState<AttendanceSummaryRow[]>([]);
+  const [leaves, setLeaves] = useState<ApprovedLeaveRow[]>([]);
   const [selectedBranch, setSelectedBranch] = useState<number>(
     branches[0]?.id ?? 0,
   );
@@ -133,20 +147,27 @@ export function AttendanceTable({ branches }: AttendanceTableProps) {
     setSelectedBranch(branchId);
     setSelectedMonth(month);
     startTransition(async () => {
-      if (view === "summary") {
-        const result = await fetchAttendanceSummary({ branchId, month });
-        if (result.success) {
-          setSummary((result.data ?? []) as AttendanceSummaryRow[]);
+      const [viewResult, leaveResult] = await Promise.all([
+        view === "summary"
+          ? fetchAttendanceSummary({ branchId, month })
+          : fetchAttendance({ branchId, month }),
+        fetchApprovedLeaveMonth({ branchId, month }),
+      ]);
+
+      if (viewResult.success) {
+        if (view === "summary") {
+          setSummary((viewResult.data ?? []) as AttendanceSummaryRow[]);
         } else {
-          toast.error(result.error ?? ERRORS_VI.fallback);
+          setRecords((viewResult.data ?? []) as AttendanceRecord[]);
         }
       } else {
-        const result = await fetchAttendance({ branchId, month });
-        if (result.success) {
-          setRecords((result.data ?? []) as AttendanceRecord[]);
-        } else {
-          toast.error(result.error ?? ERRORS_VI.fallback);
-        }
+        toast.error(viewResult.error ?? ERRORS_VI.fallback);
+      }
+
+      if (leaveResult.success) {
+        setLeaves((leaveResult.data ?? []) as ApprovedLeaveRow[]);
+      } else {
+        setLeaves([]);
       }
     });
   }
@@ -222,6 +243,68 @@ export function AttendanceTable({ branches }: AttendanceTableProps) {
       ) : (
         <DetailView data={records} />
       )}
+
+      <ApprovedLeavePanel leaves={leaves} />
+    </div>
+  );
+}
+
+function formatLeaveDate(dateStr: string): string {
+  const [year, month, day] = dateStr.split("-");
+  if (!year || !month || !day) return dateStr;
+  return `${day}/${month}/${year}`;
+}
+
+function ApprovedLeavePanel({ leaves }: { leaves: ApprovedLeaveRow[] }) {
+  if (leaves.length === 0) return null;
+
+  const leaveCopy = messages.hr.leave;
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-2">
+        <p className="text-sm font-medium">{attendanceCopy.leaveTitle}</p>
+        <Badge variant="info">{attendanceCopy.leaveCount(leaves.length)}</Badge>
+      </div>
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{attendanceCopy.employeeCode}</TableHead>
+              <TableHead>{attendanceCopy.fullName}</TableHead>
+              <TableHead>{attendanceCopy.leaveRange}</TableHead>
+              <TableHead>{attendanceCopy.leaveType}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {leaves.map((leave) => {
+              const typeLabel =
+                leaveCopy.types[
+                  leave.leave_type as keyof typeof leaveCopy.types
+                ] ?? leaveCopy.types.other;
+              return (
+                <TableRow key={leave.id}>
+                  <TableCell className="font-mono">
+                    {leave.employees?.employee_code ?? "—"}
+                  </TableCell>
+                  <TableCell>
+                    {leave.employees?.profiles?.full_name ??
+                      leaveCopy.fallbackEmployee}
+                  </TableCell>
+                  <TableCell className="font-mono tabular-nums">
+                    {leave.start_date === leave.end_date
+                      ? formatLeaveDate(leave.start_date)
+                      : `${formatLeaveDate(leave.start_date)} - ${formatLeaveDate(leave.end_date)}`}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{typeLabel}</Badge>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }

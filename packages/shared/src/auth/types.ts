@@ -95,26 +95,22 @@ export const ROLE_LABEL_VI: Record<StaffRole, string> = {
 
 /**
  * Canonical HR position code → StaffRole bucket. TS mirror of the SQL
- * `private.staff_role_from_position_code()` installed by the greenfield
- * role-bridge cut. Returns "unassigned" for unknown/missing codes (fail-safe).
+ * `private.staff_role_from_position_code()` — change both in the same PR
+ * (migration 20260610230000 is the current twin). Only the 11 canonical
+ * English codes below; unknown codes return "unassigned" (fail-safe).
  */
 const POSITION_CODE_TO_STAFF_ROLE: Record<string, StaffRole> = {
   owner: "owner",
   super_manager: "super_manager",
-  executive_assistant: "super_manager",
   branch_manager: "branch_manager",
-  chief_accountant: "office",
-  accountant: "office",
   office: "office",
-  warehouse_head: "warehouse_manager",
-  warehouse_keeper: "warehouse_manager",
-  head_chef: "production_manager",
-  chef: "chef",
-  kitchen_helper: "chef",
-  cashier: "cashier",
-  waiter: "waiter",
   warehouse_manager: "warehouse_manager",
   production_manager: "production_manager",
+  head_chef: "production_manager",
+  kitchen_helper: "chef",
+  chef: "chef",
+  cashier: "cashier",
+  waiter: "waiter",
 };
 
 export function staffRoleFromPositionCode(

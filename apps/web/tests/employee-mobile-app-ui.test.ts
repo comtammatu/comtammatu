@@ -10,6 +10,10 @@ function readWebSource(path: string): string {
 const employeeLayoutSource = readWebSource(
   "app/(protected)/employee/layout.tsx",
 );
+const pwaRuntimeSource = readWebSource("app/components/pwa-runtime.tsx");
+const employeePwaToolbarSource = readWebSource(
+  "app/(protected)/employee/components/employee-pwa-toolbar.tsx",
+);
 const employeeHeaderSource = readWebSource(
   "app/(protected)/employee/components/mobile-header.tsx",
 );
@@ -41,6 +45,7 @@ const employeeProfileSource = readWebSource(
 const employeeProfileManagerSheetSource = readWebSource(
   "app/(protected)/employee/profile/manager-tools-sheet.tsx",
 );
+const employeeMessagesSource = readWebSource("lib/messages/employee.ts");
 
 test("Employee shell is phone-first and touch-safe", () => {
   assert.match(
@@ -52,6 +57,16 @@ test("Employee shell is phone-first and touch-safe", () => {
     employeeLayoutSource,
     /contentClassName="max-w-lg lg:max-w-3xl"/,
     "Employee content should stay phone-first instead of stretching like a dashboard",
+  );
+  assert.match(
+    employeeLayoutSource,
+    /<PwaRuntimeProvider>[\s\S]*<EmployeePwaToolbar \/>/,
+    "Employee layout should mount the PWA runtime and install/offline toolbar inside the shell",
+  );
+  assert.match(
+    employeeLayoutSource,
+    /title: "Má Tư NV"/,
+    "Employee installed app chrome should have a clear staff-facing title",
   );
   assert.match(
     employeeHeaderSource,
@@ -87,6 +102,49 @@ test("Employee shell is phone-first and touch-safe", () => {
     employeeBottomNavSource,
     /active &&[\s\S]*motion-safe:zoom-in-95/,
     "Bottom navigation active tab should use motion-safe feedback only",
+  );
+});
+
+test("Employee PWA shell explains install and offline state without persisted workflow storage", () => {
+  assert.match(
+    pwaRuntimeSource,
+    /const \[isOnline, setIsOnline\] = useState\(true\)/,
+    "PWA online state should stay hydration-safe on first paint",
+  );
+  assert.match(
+    pwaRuntimeSource,
+    /beforeinstallprompt/,
+    "PWA runtime should capture the browser install prompt",
+  );
+  assert.match(
+    employeePwaToolbarSource,
+    /useIsOnline[\s\S]*useIsStandalone[\s\S]*useInstallPrompt/,
+    "Employee PWA toolbar should read online, standalone, and install state from the runtime",
+  );
+  assert.match(
+    employeePwaToolbarSource,
+    /role="alert"[\s\S]*copy\.offline/,
+    "Offline state should be visible in the Employee shell",
+  );
+  assert.match(
+    employeePwaToolbarSource,
+    /setHelpMode\(isIosPwaInstall \? "ios" : "browser"\)/,
+    "Install action should fall back to clear platform instructions when no browser prompt is available",
+  );
+  assert.match(
+    employeePwaToolbarSource,
+    /DialogTitle>\{helpCopy\.title\}/,
+    "Install instructions should use an accessible Dialog title",
+  );
+  assert.doesNotMatch(
+    employeePwaToolbarSource,
+    /localStorage|sessionStorage/,
+    "Employee PWA shell must not persist scope or workflow state in browser storage",
+  );
+  assert.match(
+    employeeMessagesSource,
+    /pwa:\s*\{[\s\S]*installHint: "Cài Trang nhân viên để mở nhanh mỗi ca\."/,
+    "Employee copy should name the staff app and explain the install job directly",
   );
 });
 
@@ -148,8 +206,17 @@ test("Employee workflow surfaces keep one strong mobile action and list feedback
   );
   assert.match(
     employeeHomeSource,
-    /const operationHandoffs =\s*state\.status === "working" &&/,
-    "Operation handoffs must not crowd ready-to-checkout or done states",
+    /const operationHandoffs =\s*branchId && !branchIsHq\s*\?\s*OPERATION_HANDOFFS\.filter/,
+    "Operation handoffs stay ACL-gated and hidden on HQ-kind branches",
+  );
+  const operationHandoffSource =
+    employeeHomeSource.match(
+      /const operationHandoffs =[\s\S]*?const tone = getWorkTone/,
+    )?.[0] ?? "";
+  assert.doesNotMatch(
+    operationHandoffSource,
+    /state\.(status|attendance)/,
+    "Operation handoffs must not be tied to clock-in or working state",
   );
   assert.match(
     employeeTasksSource,
@@ -247,8 +314,13 @@ test("Employee workflow surfaces keep one strong mobile action and list feedback
   );
   assert.match(
     employeeScheduleClientSource,
-    /href="\/employee\/shift-register"/,
-    "Schedule should expose shift registration as a secondary in-panel action",
+    /href="\/employee\/leave"/,
+    "Schedule should expose leave request as a secondary in-panel action",
+  );
+  assert.doesNotMatch(
+    employeeScheduleClientSource,
+    /shift-register/,
+    "Shift registration flow was removed — schedule must not link to it",
   );
   assert.match(
     employeeScheduleClientSource,

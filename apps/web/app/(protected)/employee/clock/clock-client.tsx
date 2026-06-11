@@ -276,8 +276,8 @@ export function ClockClient({ state }: ClockClientProps) {
             },
             {
               label: clockCopy.todayShiftLabel,
-              value: state.nextShift?.shiftName ?? clockCopy.noTodayShift,
-              muted: !state.nextShift,
+              value: state.attendance?.shiftName ?? clockCopy.noTodayShift,
+              muted: !state.attendance?.shiftName,
             },
           ]}
         />
@@ -354,7 +354,11 @@ export function ClockClient({ state }: ClockClientProps) {
     );
   }
 
-  if (state.status === "working") {
+  if (
+    state.status === "working" &&
+    !managerAttendanceOnly &&
+    state.checklist.requiredRemaining > 0
+  ) {
     return (
       <EmployeePanel
         icon={IconListChecks}
@@ -388,7 +392,7 @@ export function ClockClient({ state }: ClockClientProps) {
     );
   }
 
-  if (state.status === "ready_to_checkout") {
+  if (state.status === "working") {
     const checkoutTitle = managerAttendanceOnly
       ? clockCopy.managerCheckoutTitle
       : clockCopy.staffCheckoutTitle;
@@ -490,8 +494,8 @@ export function ClockClient({ state }: ClockClientProps) {
           },
           {
             label: clockCopy.todayShiftLabel,
-            value: state.nextShift?.shiftName ?? clockCopy.noTodayShift,
-            muted: !state.nextShift,
+            value: state.attendance?.shiftName ?? clockCopy.noTodayShift,
+            muted: !state.attendance?.shiftName,
           },
         ]}
       />

@@ -39,7 +39,8 @@ interface PosTestContext {
   branchId: number;
   cashier: TestStaffProfile;
   posSessionId: number;
-  terminalId: number;
+  /** Nullable: pos_sessions.terminal_id is audit metadata (D7); a pre-opened session may have no terminal. */
+  terminalId: number | null;
   tableId: number;
   menuItemId: number;
   menuItemName: string;
@@ -75,7 +76,7 @@ export interface TestKdsOrderWithTickets {
   orderId: number;
   orderItemIds: number[];
   orderNumber: string;
-  paymentStatus: string;
+  paymentStatus: string | null;
   tableId: number;
   ticketIds: number[];
   cleanup: () => Promise<void>;
@@ -193,7 +194,7 @@ export async function resolveChefCredentials() {
     tenantId: chefProfile.tenant_id,
     branchId: chefProfile.branch_id ?? cashier.branchId,
     fullName: chefProfile.full_name,
-    role: chefProfile.role,
+    role: chefProfile.positions.code,
     password: explicitPassword ?? process.env.E2E_CASHIER_PASSWORD ?? null,
   };
 }
@@ -344,6 +345,9 @@ async function ensureTerminalAndSession(
     .maybeSingle();
 
   if (openSession) {
+    if (openSession.terminal_id == null) {
+      throw new Error("E2E: open POS session has no terminal_id");
+    }
     return {
       terminalId: openSession.terminal_id,
       posSessionId: openSession.id,
@@ -867,7 +871,7 @@ export async function createKdsTestOrderWithTickets(
     orderId: order.id,
     orderItemIds,
     orderNumber,
-    paymentStatus: order.payment_status,
+    paymentStatus: order.payment_status ?? "unpaid",
     tableId: context.tableId,
     ticketIds,
     cleanup,

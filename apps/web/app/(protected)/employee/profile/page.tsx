@@ -1,5 +1,4 @@
 import {
-  CalendarDays as IconCalendarEvent,
   CalendarX as IconCalendarX,
   LogOut as IconLogout,
   ShieldCheck as IconShieldCheck,
@@ -46,12 +45,6 @@ type ManagerLink = {
 };
 
 const PERSONAL_LINKS: ProfileLink[] = [
-  {
-    key: "shift-register",
-    href: "/employee/shift-register",
-    icon: IconCalendarEvent,
-    title: homeCopy.shiftRegisterTitle,
-  },
   {
     key: "leave",
     href: "/employee/leave",

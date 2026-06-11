@@ -80,12 +80,7 @@ export const PERMISSION_KEYS = {
   // hr
   HR_VIEW_EMPLOYEE: "hr:view_employee",
   HR_MANAGE_EMPLOYEE: "hr:manage_employee",
-  HR_CONTRACT_CREATE: "hr:contract_create",
-  HR_CONTRACT_SIGN: "hr:contract_sign",
-  HR_TERMINATE: "hr:terminate",
-  HR_DEPENDENT_MANAGE: "hr:dependent_manage",
-  HR_REGISTER_SHIFT: "hr:register_shift",
-  HR_APPROVE_SHIFT_REQUEST: "hr:approve_shift_request",
+  HR_APPROVE_CHECKOUT: "hr:approve_checkout",
   HR_REQUEST_LEAVE: "hr:request_leave",
   HR_APPROVE_LEAVE_REQUEST: "hr:approve_leave_request",
 

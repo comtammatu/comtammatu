@@ -95,7 +95,9 @@ export interface EmployeeRow {
     id: string;
     full_name: string;
     phone: string | null;
-    role: string;
+    positions: {
+      label_vi: string | null;
+    } | null;
     branch_id: number | null;
     branches: { name: string } | null;
   } | null;
@@ -107,5 +109,4 @@ export interface ShiftRow {
   start_time: string;
   end_time: string;
   is_active: boolean;
-  future_assignment_count?: number;
 }

@@ -18,9 +18,12 @@ import { FieldGroup } from "@comtammatu/ui/components/field";
 import { Spinner } from "@comtammatu/ui/components/spinner";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { ACTIONS_VI, ERRORS_VI } from "@comtammatu/shared/messages";
-import { TextField } from "@/components/form";
+import { SelectField, TextField } from "@/components/form";
 import { createEmployee } from "./actions";
-import type { ChecklistTemplateRow } from "./checklist-types";
+import {
+  checklistTemplateLabel,
+  type ChecklistTemplateRow,
+} from "./checklist-types";
 
 const employeeSchema = z.object({
   profile_id: z
@@ -29,6 +32,7 @@ const employeeSchema = z.object({
     .min(1, { error: "Profile UUID không được trống" }),
   employee_code: z.string().trim().optional(),
   start_date: z.string().optional(),
+  default_checklist_template_id: z.string().optional(),
 });
 
 type EmployeeFormValues = z.infer<typeof employeeSchema>;
@@ -37,6 +41,7 @@ const DEFAULT_VALUES: EmployeeFormValues = {
   profile_id: "",
   employee_code: "",
   start_date: "",
+  default_checklist_template_id: "none",
 };
 
 interface EmployeeFormDialogProps {
@@ -48,9 +53,11 @@ interface EmployeeFormDialogProps {
 export function EmployeeFormDialog({
   open,
   onOpenChange,
+  checklistTemplates,
 }: EmployeeFormDialogProps) {
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
+  const availableTemplates = checklistTemplates ?? [];
 
   const form = useForm<EmployeeFormValues>({
     resolver: zodResolver(employeeSchema),
@@ -67,10 +74,16 @@ export function EmployeeFormDialog({
   function onValid(values: EmployeeFormValues) {
     startTransition(async () => {
       setServerError(null);
+      const defaultTemplateId =
+        values.default_checklist_template_id &&
+        values.default_checklist_template_id !== "none"
+          ? Number(values.default_checklist_template_id)
+          : null;
       const result = await createEmployee({
         profileId: values.profile_id,
         employeeCode: values.employee_code || undefined,
         startDate: values.start_date || undefined,
+        defaultChecklistTemplateId: defaultTemplateId,
         dependentsCount: 0,
       });
       if (!result.success) {
@@ -112,6 +125,20 @@ export function EmployeeFormDialog({
                 name="start_date"
                 label="Ngày bắt đầu"
                 type="date"
+              />
+
+              <SelectField
+                control={form.control}
+                name="default_checklist_template_id"
+                label="Checklist mặc định"
+                options={[
+                  { value: "none", label: "Không gán mặc định" },
+                  ...availableTemplates.map((template) => ({
+                    value: template.id.toString(),
+                    label: checklistTemplateLabel(template),
+                  })),
+                ]}
+                placeholder="Không gán mặc định"
               />
             </div>
 
