@@ -184,6 +184,11 @@ export const pos = {
     handleOrder: "Xử lý đơn",
     payment: "Thanh toán",
     serve: "Phục vụ",
+    sections: {
+      serve: (count: number) => `Cần phục vụ (${count})`,
+      pay: (count: number) => `Chờ thanh toán (${count})`,
+      cooking: (count: number) => `Đang nấu (${count})`,
+    },
   },
   multiOrderTablePicker: {
     title: (tableNumber: number | null, orderCount: number) =>
