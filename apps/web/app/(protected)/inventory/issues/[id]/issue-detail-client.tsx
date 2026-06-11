@@ -41,20 +41,15 @@ import { Label } from "@comtammatu/ui/components/label";
 import { Textarea } from "@comtammatu/ui/components/textarea";
 import { Combobox } from "@/components/form";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@comtammatu/ui/components/table";
+  DataTable,
+  type DataTableColumn,
+} from "@/components/data-table/data-table";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { AppPage, AppPageHeader } from "@/components/surface";
 import { AppPageTabs, TabsContent } from "@/components/app-page-tabs";
 import { AuditHistoryList } from "../../_components/audit-history-list";
 import type { AuditLogRow } from "@/_lib/audit";
 import { FormattedNumberInput } from "../../_components/formatted-number-input";
-import { TableEmptyStateRow } from "../../_components/table-empty-state-row";
 import { DocumentStockCorrectionDialog } from "../../_components/document-stock-correction-dialog";
 import { tRoute, tTerm } from "../../_lib/dictionary";
 import { formatDateTime, formatQty, formatVND } from "../../_lib/format";
@@ -243,6 +238,76 @@ export function IssueDetailClient({
     });
   }
 
+  const lineColumns: DataTableColumn<IssueLine>[] = [
+    {
+      key: "ingredient",
+      header: tTerm("ingredient"),
+      render: (line) => (
+        <div className="flex flex-col">
+          <span className="font-bold">
+            {line.ingredients?.name ?? `#${line.ingredient_id}`}
+          </span>
+          <span className="text-xs text-muted-foreground">
+            ID: {line.ingredient_id}
+          </span>
+        </div>
+      ),
+    },
+    {
+      key: "qty",
+      header: "Số lượng",
+      className: "text-right font-semibold",
+      render: (line) => formatQty(Number(line.quantity ?? 0)),
+    },
+    {
+      key: "unit",
+      header: "Đơn vị",
+      render: (line) => (
+        <span className="rounded-md bg-muted px-2 py-1 text-xs font-medium">
+          {line.unit ?? line.ingredients?.unit ?? ""}
+        </span>
+      ),
+    },
+    {
+      key: "unitCost",
+      header: "Đơn giá (WAC)",
+      className: "text-right font-medium",
+      render: (line) => formatVND(Number(line.unit_cost ?? 0)),
+    },
+    {
+      key: "total",
+      header: "Thành tiền",
+      className: "text-right font-bold",
+      render: (line) => formatVND(Number(line.total_cost ?? 0)),
+    },
+    {
+      key: "reason",
+      header: tTerm("issueReason"),
+      className: "text-sm text-muted-foreground",
+      render: (line) => line.reason ?? "—",
+    },
+    {
+      key: "actions",
+      header: "",
+      className: "text-center",
+      render: (line) =>
+        isDraft ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => setPendingDeleteId(line.id)}
+            disabled={isPending}
+            className="text-muted-foreground hover:text-destructive"
+          >
+            <IconTrash className="size-4" />
+          </Button>
+        ) : (
+          <span className="text-xs text-muted-foreground">—</span>
+        ),
+    },
+  ];
+
   return (
     <AppPage>
       <AppPageHeader
@@ -376,177 +441,20 @@ export function IssueDetailClient({
                         compact
                       />
                     ) : (
-                      <>
-                        <div className="space-y-3 p-4 md:hidden">
-                          {lines.map((line) => (
-                            <Card key={line.id} className="bg-muted/20">
-                              <CardContent>
-                                <div className="flex items-start justify-between gap-3">
-                                  <div>
-                                    <p className="font-bold">
-                                      {line.ingredients?.name ??
-                                        `#${line.ingredient_id}`}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                      ID: {line.ingredient_id}
-                                    </p>
-                                  </div>
-                                  {isDraft ? (
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="icon"
-                                      onClick={() =>
-                                        setPendingDeleteId(line.id)
-                                      }
-                                      disabled={isPending}
-                                      className="text-muted-foreground hover:text-destructive"
-                                    >
-                                      <IconTrash className="size-4" />
-                                    </Button>
-                                  ) : null}
-                                </div>
-                                <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                                  <div>
-                                    <p className="text-muted-foreground">
-                                      {FORM_VI.quantity}
-                                    </p>
-                                    <p className="font-semibold">
-                                      {formatQty(Number(line.quantity ?? 0))}
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <p className="text-muted-foreground">
-                                      {FORM_VI.unit}
-                                    </p>
-                                    <p className="font-semibold">
-                                      {line.unit ??
-                                        line.ingredients?.unit ??
-                                        "—"}
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <p className="text-muted-foreground">
-                                      Đơn giá (WAC)
-                                    </p>
-                                    <p className="font-semibold">
-                                      {formatVND(Number(line.unit_cost ?? 0))}
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <p className="text-muted-foreground">
-                                      {FORM_VI.amount}
-                                    </p>
-                                    <p className="font-semibold text-primary">
-                                      {formatVND(Number(line.total_cost ?? 0))}
-                                    </p>
-                                  </div>
-                                </div>
-                                <div className="mt-4 rounded-lg bg-background px-3 py-2 text-sm">
-                                  <p className="text-muted-foreground">
-                                    {tTerm("issueReason")}
-                                  </p>
-                                  <p className="mt-1">{line.reason ?? "—"}</p>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          ))}
-                        </div>
-
-                        <div className="hidden md:block">
-                          <Table>
-                            <TableHeader>
-                              <TableRow className="bg-muted/40">
-                                {[
-                                  { label: tTerm("ingredient"), align: "" },
-                                  { label: "Số lượng", align: "text-right" },
-                                  { label: "Đơn vị", align: "" },
-                                  {
-                                    label: "Đơn giá (WAC)",
-                                    align: "text-right",
-                                  },
-                                  { label: "Thành tiền", align: "text-right" },
-                                  { label: tTerm("issueReason"), align: "" },
-                                  { label: "", align: "text-center" },
-                                ].map((header) => (
-                                  <TableHead
-                                    key={header.label || "delete"}
-                                    className={`px-6 py-4 whitespace-nowrap text-xs font-bold uppercase tracking-wider ${header.align}`}
-                                  >
-                                    {header.label}
-                                  </TableHead>
-                                ))}
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {lines.length === 0 && (
-                                <TableEmptyStateRow
-                                  colSpan={7}
-                                  title="Phiếu xuất chưa có dữ liệu"
-                                  description="Danh sách nguyên liệu sẽ hiển thị tại đây khi phiếu có dòng hàng."
-                                />
-                              )}
-                              {lines.map((line) => (
-                                <TableRow
-                                  key={line.id}
-                                  className="transition-colors"
-                                >
-                                  <TableCell className="px-6 py-4">
-                                    <div className="flex flex-col">
-                                      <span className="font-bold">
-                                        {line.ingredients?.name ??
-                                          `#${line.ingredient_id}`}
-                                      </span>
-                                      <span className="text-xs text-muted-foreground">
-                                        ID: {line.ingredient_id}
-                                      </span>
-                                    </div>
-                                  </TableCell>
-                                  <TableCell className="px-6 py-4 text-right font-semibold">
-                                    {formatQty(Number(line.quantity ?? 0))}
-                                  </TableCell>
-                                  <TableCell className="px-6 py-4">
-                                    <span className="rounded-md bg-muted px-2 py-1 text-xs font-medium">
-                                      {line.unit ??
-                                        line.ingredients?.unit ??
-                                        ""}
-                                    </span>
-                                  </TableCell>
-                                  <TableCell className="px-6 py-4 text-right font-medium">
-                                    {formatVND(Number(line.unit_cost ?? 0))}
-                                  </TableCell>
-                                  <TableCell className="px-6 py-4 text-right font-bold">
-                                    {formatVND(Number(line.total_cost ?? 0))}
-                                  </TableCell>
-                                  <TableCell className="px-6 py-4 text-sm text-muted-foreground">
-                                    {line.reason ?? "—"}
-                                  </TableCell>
-                                  <TableCell className="px-6 py-4 text-center">
-                                    {isDraft ? (
-                                      <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() =>
-                                          setPendingDeleteId(line.id)
-                                        }
-                                        disabled={isPending}
-                                        className="text-muted-foreground hover:text-destructive"
-                                      >
-                                        <IconTrash className="size-4" />
-                                      </Button>
-                                    ) : (
-                                      <span className="text-xs text-muted-foreground">
-                                        —
-                                      </span>
-                                    )}
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </div>
-                      </>
+                      <DataTable
+                        className="p-4 md:p-0"
+                        columns={lineColumns}
+                        data={lines}
+                        getRowKey={(line) => line.id}
+                        mobileCardRender={(item) => (
+                          <IssueLineMobileCard
+                            item={item}
+                            isDraft={isDraft}
+                            isPending={isPending}
+                            onDelete={setPendingDeleteId}
+                          />
+                        )}
+                      />
                     )}
 
                     <div className="mt-4 flex justify-end rounded-lg border border-border/60 bg-muted/30 p-5 sm:p-6 lg:p-8">
@@ -880,5 +788,76 @@ function AddIssueLineDialog({
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function IssueLineMobileCard({
+  item,
+  isDraft,
+  isPending,
+  onDelete,
+}: {
+  item: IssueLine;
+  isDraft: boolean;
+  isPending: boolean;
+  onDelete: (lineId: number) => void;
+}) {
+  return (
+    <Card className="bg-muted/20">
+      <CardContent>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="font-bold">
+              {item.ingredients?.name ?? `#${item.ingredient_id}`}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              ID: {item.ingredient_id}
+            </p>
+          </div>
+          {isDraft ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => onDelete(item.id)}
+              disabled={isPending}
+              className="text-muted-foreground hover:text-destructive"
+            >
+              <IconTrash className="size-4" />
+            </Button>
+          ) : null}
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+          <div>
+            <p className="text-muted-foreground">{FORM_VI.quantity}</p>
+            <p className="font-semibold">
+              {formatQty(Number(item.quantity ?? 0))}
+            </p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">{FORM_VI.unit}</p>
+            <p className="font-semibold">
+              {item.unit ?? item.ingredients?.unit ?? "—"}
+            </p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Đơn giá (WAC)</p>
+            <p className="font-semibold">
+              {formatVND(Number(item.unit_cost ?? 0))}
+            </p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">{FORM_VI.amount}</p>
+            <p className="font-semibold text-primary">
+              {formatVND(Number(item.total_cost ?? 0))}
+            </p>
+          </div>
+        </div>
+        <div className="mt-4 rounded-lg bg-background px-3 py-2 text-sm">
+          <p className="text-muted-foreground">{tTerm("issueReason")}</p>
+          <p className="mt-1">{item.reason ?? "—"}</p>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
