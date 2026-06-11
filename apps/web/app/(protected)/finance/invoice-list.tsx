@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from "react";
 import {
-  Archive as IconArchive,
   Download as IconDownload,
   FileEdit as IconFileEdit,
   FileX as IconFileX,
@@ -10,12 +9,6 @@ import {
   RefreshCw as IconRefreshCw,
 } from "lucide-react";
 import { Button } from "@comtammatu/ui/components/button";
-import {
-  Empty,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@comtammatu/ui/components/empty";
 import { Input } from "@comtammatu/ui/components/input";
 import { Label } from "@comtammatu/ui/components/label";
 import { Textarea } from "@comtammatu/ui/components/textarea";
@@ -29,14 +22,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@comtammatu/ui/components/alert-dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@comtammatu/ui/components/table";
 import { toast } from "@comtammatu/ui/components/sonner";
 import { formatVND } from "@comtammatu/shared/format";
 import { cancelTaxInvoice } from "./actions";
@@ -44,7 +29,10 @@ import { forceResyncTaxInvoice } from "./reconcile-invoice-actions";
 import { getArchiveDownloadUrl } from "./archive-actions";
 import { replaceTaxInvoice } from "./replace-invoice-actions";
 import type { InvoiceRow } from "./_lib/finance-types";
-import { TableEmptyStateRow } from "@/components/table-empty-state-row";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/data-table/data-table";
 import { formatVNDateTime, getVNDateString } from "@/_lib/format-datetime";
 
 import { FORM_VI, ORDER_VI } from "@comtammatu/shared/messages";
@@ -238,28 +226,162 @@ export function InvoiceList({ initialInvoices }: InvoiceListProps) {
     });
   }
 
+  function renderActions(inv: InvoiceRow, variant: "card" | "table") {
+    const dense = variant === "table";
+    const size = dense ? "icon" : "sm";
+    return (
+      <div
+        className={
+          dense
+            ? "flex items-center justify-end gap-1"
+            : "flex items-center gap-2"
+        }
+      >
+        {inv.archived_at ? (
+          <>
+            <Button
+              variant="ghost"
+              size={size}
+              onClick={() => handleDownload(inv, "pdf")}
+              disabled={isPending}
+              title="Tải PDF"
+            >
+              <IconDownload className="size-4" />
+              {dense ? <span className="sr-only">Tải PDF</span> : "PDF"}
+            </Button>
+            <Button
+              variant="ghost"
+              size={size}
+              onClick={() => handleDownload(inv, "xml")}
+              disabled={isPending}
+              title="Tải XML"
+            >
+              <IconDownload className="size-4" />
+              {dense ? <span className="sr-only">Tải XML</span> : "XML"}
+            </Button>
+          </>
+        ) : null}
+        {isResyncable(inv.status) ? (
+          <Button
+            variant="ghost"
+            size={size}
+            onClick={() => handleResync(inv)}
+            disabled={isPending && resyncingId === inv.id}
+            title="Đồng bộ lại với provider"
+          >
+            <IconRefreshCw
+              className={`size-4 ${
+                isPending && resyncingId === inv.id ? "animate-spin" : ""
+              }`}
+            />
+            {dense ? <span className="sr-only">Đồng bộ lại</span> : "Đồng bộ"}
+          </Button>
+        ) : null}
+        {inv.status === "issued" ? (
+          <>
+            <Button
+              variant="ghost"
+              size={size}
+              onClick={() => openReplaceDialog(inv)}
+              title="Thay thế hóa đơn"
+            >
+              <IconFileEdit className="size-4" />
+              {dense ? (
+                <span className="sr-only">Thay thế hóa đơn</span>
+              ) : (
+                "Thay thế"
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size={size}
+              className="text-destructive hover:text-destructive"
+              onClick={() => setCancelTarget(inv)}
+              title="Hủy hóa đơn"
+            >
+              <IconFileX className="size-4" />
+              {dense ? (
+                <span className="sr-only">Hủy hóa đơn</span>
+              ) : (
+                "Hủy hóa đơn"
+              )}
+            </Button>
+          </>
+        ) : null}
+      </div>
+    );
+  }
+
+  const columns: DataTableColumn<InvoiceRow>[] = [
+    {
+      key: "invoice_number",
+      header: "Số HĐ",
+      className: "font-mono text-sm",
+      render: (inv) => inv.invoice_number ?? "—",
+    },
+    {
+      key: "order",
+      header: ORDER_VI.long,
+      className: "text-sm text-muted-foreground",
+      render: (inv) => inv.orders?.order_number ?? `#${inv.id}`,
+    },
+    {
+      key: "buyer",
+      header: "Người mua",
+      render: (inv) =>
+        inv.buyer_name ? (
+          <div>
+            <p className="text-sm">{inv.buyer_name}</p>
+            {inv.buyer_tax_code && (
+              <p className="text-xs text-muted-foreground">
+                MST: {inv.buyer_tax_code}
+              </p>
+            )}
+          </div>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        ),
+    },
+    {
+      key: "total",
+      header: FORM_VI.value,
+      className: "text-right",
+      render: (inv) => (
+        <span className="font-mono text-sm tabular-nums">
+          {formatVND(inv.total_amount)}
+        </span>
+      ),
+    },
+    {
+      key: "status",
+      header: FORM_VI.status,
+      render: (inv) => <StatusBadge domain="tax-invoice" value={inv.status} />,
+    },
+    {
+      key: "time",
+      header: "Thời gian",
+      className: "text-sm text-muted-foreground",
+      render: (inv) => formatDate(inv.issued_at ?? inv.created_at),
+    },
+    {
+      key: "actions",
+      header: "",
+      className: "w-16",
+      render: (inv) => renderActions(inv, "table"),
+    },
+  ];
+
   return (
     <>
       <div className="space-y-4">
-        {invoices.length === 0 ? (
-          <Empty className="py-8">
-            <EmptyMedia variant="icon">
-              <IconReceipt />
-            </EmptyMedia>
-            <EmptyHeader>
-              <EmptyTitle className="text-sm font-semibold">
-                Chưa có hóa đơn nào
-              </EmptyTitle>
-            </EmptyHeader>
-          </Empty>
-        ) : null}
-
-        <div className="space-y-3 md:hidden">
-          {invoices.map((inv) => (
-            <div
-              key={inv.id}
-              className="rounded-lg border border-border/70 bg-background p-4"
-            >
+<DataTable
+          columns={columns}
+          data={invoices}
+          getRowKey={(inv) => inv.id}
+          emptyTitle="Chưa có hóa đơn nào"
+          emptyIcon={<IconReceipt />}
+          mobileCardRender={(inv) => (
+            <div className="rounded-lg border border-border/70 bg-background p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="font-mono text-sm">
@@ -292,204 +414,11 @@ export function InvoiceList({ initialInvoices }: InvoiceListProps) {
                 <p className="text-xs text-muted-foreground">
                   {formatDate(inv.issued_at ?? inv.created_at)}
                 </p>
-                <div className="flex items-center gap-2">
-                  {inv.archived_at ? (
-                    <>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDownload(inv, "pdf")}
-                        disabled={isPending}
-                      >
-                        <IconDownload className="size-4" />
-                        PDF
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDownload(inv, "xml")}
-                        disabled={isPending}
-                      >
-                        <IconDownload className="size-4" />
-                        XML
-                      </Button>
-                    </>
-                  ) : null}
-                  {isResyncable(inv.status) ? (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleResync(inv)}
-                      disabled={isPending && resyncingId === inv.id}
-                    >
-                      <IconRefreshCw
-                        className={`size-4 ${
-                          isPending && resyncingId === inv.id
-                            ? "animate-spin"
-                            : ""
-                        }`}
-                      />
-                      Đồng bộ
-                    </Button>
-                  ) : null}
-                  {inv.status === "issued" ? (
-                    <>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openReplaceDialog(inv)}
-                      >
-                        <IconFileEdit className="size-4" />
-                        Thay thế
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-destructive hover:text-destructive"
-                        onClick={() => setCancelTarget(inv)}
-                      >
-                        <IconFileX className="size-4" />
-                        Hủy hóa đơn
-                      </Button>
-                    </>
-                  ) : null}
-                </div>
+                {renderActions(inv, "card")}
               </div>
             </div>
-          ))}
-        </div>
-
-        <div className="hidden rounded-md border md:block">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Số HĐ</TableHead>
-                <TableHead>{ORDER_VI.long}</TableHead>
-                <TableHead>Người mua</TableHead>
-                <TableHead className="text-right">{FORM_VI.value}</TableHead>
-                <TableHead>{FORM_VI.status}</TableHead>
-                <TableHead>Thời gian</TableHead>
-                <TableHead className="w-16" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {invoices.length === 0 && (
-                <TableEmptyStateRow
-                  colSpan={7}
-                  title="Chưa có hóa đơn nào"
-                  icon={
-                    <IconReceipt className="mx-auto size-8 text-muted-foreground" />
-                  }
-                />
-              )}
-              {invoices.map((inv) => (
-                <TableRow key={inv.id}>
-                  <TableCell className="font-mono text-sm">
-                    {inv.invoice_number ?? "—"}
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {inv.orders?.order_number ?? `#${inv.id}`}
-                  </TableCell>
-                  <TableCell>
-                    {inv.buyer_name ? (
-                      <div>
-                        <p className="text-sm">{inv.buyer_name}</p>
-                        {inv.buyer_tax_code && (
-                          <p className="text-xs text-muted-foreground">
-                            MST: {inv.buyer_tax_code}
-                          </p>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right font-mono text-sm">
-                    {formatVND(inv.total_amount)}
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge domain="tax-invoice" value={inv.status} />
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {formatDate(inv.issued_at ?? inv.created_at)}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center justify-end gap-1">
-                      {inv.archived_at ? (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="size-8"
-                            onClick={() => handleDownload(inv, "pdf")}
-                            disabled={isPending}
-                            title="Tải PDF"
-                          >
-                            <IconArchive className="size-4" />
-                            <span className="sr-only">Tải PDF</span>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="size-8"
-                            onClick={() => handleDownload(inv, "xml")}
-                            disabled={isPending}
-                            title="Tải XML"
-                          >
-                            <IconDownload className="size-4" />
-                            <span className="sr-only">Tải XML</span>
-                          </Button>
-                        </>
-                      ) : null}
-                      {isResyncable(inv.status) ? (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="size-8"
-                          onClick={() => handleResync(inv)}
-                          disabled={isPending && resyncingId === inv.id}
-                          title="Đồng bộ lại với provider"
-                        >
-                          <IconRefreshCw
-                            className={`size-4 ${
-                              isPending && resyncingId === inv.id
-                                ? "animate-spin"
-                                : ""
-                            }`}
-                          />
-                          <span className="sr-only">Đồng bộ lại</span>
-                        </Button>
-                      ) : null}
-                      {inv.status === "issued" && (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="size-8"
-                            onClick={() => openReplaceDialog(inv)}
-                            title="Thay thế hóa đơn"
-                          >
-                            <IconFileEdit className="size-4" />
-                            <span className="sr-only">Thay thế hóa đơn</span>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="size-8 text-destructive hover:text-destructive"
-                            onClick={() => setCancelTarget(inv)}
-                          >
-                            <IconFileX className="size-4" />
-                            <span className="sr-only">Hủy hóa đơn</span>
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+          )}
+        />
       </div>
 
       <AlertDialog
