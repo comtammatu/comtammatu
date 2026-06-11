@@ -12,6 +12,7 @@ import { Badge } from "@comtammatu/ui/components/badge";
 import {
   Breadcrumb,
   BreadcrumbItem,
+  BreadcrumbLink,
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
@@ -57,7 +58,8 @@ interface BrandConfig {
 interface PageHeaderConfig {
   /** Either a single Badge label or breadcrumb chain segments. */
   crumbLabel?: ReactNode;
-  breadcrumbSegments?: string[];
+  /** Segments with an href render as links; plain strings stay static. */
+  breadcrumbSegments?: Array<string | { label: string; href?: string }>;
   description?: ReactNode;
   actions?: ReactNode;
   /** Renders LEFT of actions in the desktop header row, after page title. */
@@ -228,18 +230,37 @@ export function AppShell({
                 {breadcrumbSegments.length > 0 ? (
                   <Breadcrumb>
                     <BreadcrumbList>
-                      {breadcrumbSegments.map((segment, idx) => (
-                        <Fragment key={`${segment}-${String(idx)}`}>
-                          <BreadcrumbItem>
-                            <BreadcrumbPage className="font-normal text-muted-foreground">
-                              {segment}
-                            </BreadcrumbPage>
-                          </BreadcrumbItem>
-                          {idx < breadcrumbSegments.length - 1 && (
-                            <BreadcrumbSeparator />
-                          )}
-                        </Fragment>
-                      ))}
+                      {breadcrumbSegments.map((segment, idx) => {
+                        const label =
+                          typeof segment === "string"
+                            ? segment
+                            : segment.label;
+                        const href =
+                          typeof segment === "string"
+                            ? undefined
+                            : segment.href;
+                        return (
+                          <Fragment key={`${label}-${String(idx)}`}>
+                            <BreadcrumbItem>
+                              {href ? (
+                                <BreadcrumbLink
+                                  asChild
+                                  className="font-normal text-muted-foreground"
+                                >
+                                  <Link href={href}>{label}</Link>
+                                </BreadcrumbLink>
+                              ) : (
+                                <BreadcrumbPage className="font-normal text-muted-foreground">
+                                  {label}
+                                </BreadcrumbPage>
+                              )}
+                            </BreadcrumbItem>
+                            {idx < breadcrumbSegments.length - 1 && (
+                              <BreadcrumbSeparator />
+                            )}
+                          </Fragment>
+                        );
+                      })}
                     </BreadcrumbList>
                   </Breadcrumb>
                 ) : pageHeader.crumbLabel ? (

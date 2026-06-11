@@ -7,6 +7,8 @@ import {
   LayoutDashboard as IconLayoutDashboard,
   Menu as IconMenu,
   Package as IconPackage,
+  Receipt as IconReceipt,
+  Utensils as IconUtensils,
   Wallet as IconWallet,
 } from "lucide-react";
 import {
@@ -28,6 +30,8 @@ const NAV_ITEMS: ReadonlyArray<{
   icon: typeof IconLayoutDashboard;
 }> = [
   { moduleKey: "dashboard", label: copy.overview, icon: IconLayoutDashboard },
+  { moduleKey: "orders", label: copy.orders, icon: IconReceipt },
+  { moduleKey: "menu", label: copy.menuItems, icon: IconUtensils },
   { moduleKey: "reports", label: copy.reports, icon: IconBarChart },
   { moduleKey: "inventory", label: copy.inventory, icon: IconPackage },
   { moduleKey: "finance", label: copy.finance, icon: IconWallet },

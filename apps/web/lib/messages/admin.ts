@@ -3,6 +3,8 @@ export const admin = {
     ariaLabel: "Điều hướng quản trị",
     overview: "Tổng quan",
     reports: "Báo cáo",
+    orders: "Đơn hàng",
+    menuItems: "Thực đơn",
     inventory: "Kho",
     finance: "Tài chính",
     menu: "Menu",

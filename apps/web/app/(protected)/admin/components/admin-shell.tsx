@@ -66,15 +66,20 @@ function mapResolvedNavGroups(
 function buildBreadcrumbTrail(
   pathname: string,
   groups: ShellNavGroup[],
-): string[] {
+): Array<{ label: string; href?: string }> {
   const active = findActiveNavItem(groups, pathname);
-  if (!active) return [APP_COPY_VI.adminSurface];
-  const pathTail = pathname
-    .slice(active.href.length)
-    .split("/")
-    .filter(Boolean)
-    .map((segment) => formatPathSegment(segment));
-  return [APP_COPY_VI.adminSurface, active.label, ...pathTail];
+  if (!active) return [{ label: APP_COPY_VI.adminSurface }];
+  const tailSegments = pathname.slice(active.href.length).split("/").filter(Boolean);
+  let accumulatedHref = active.href;
+  const pathTail = tailSegments.map((segment) => {
+    accumulatedHref = `${accumulatedHref}/${segment}`;
+    return { label: formatPathSegment(segment), href: accumulatedHref };
+  });
+  return [
+    { label: APP_COPY_VI.adminSurface, href: "/admin/dashboard" },
+    { label: active.label, href: active.href },
+    ...pathTail,
+  ];
 }
 
 export function AdminShell({
