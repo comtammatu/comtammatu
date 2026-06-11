@@ -323,7 +323,7 @@ function compareRunnerQueueItems(
   a: RunnerQueueItem,
   b: RunnerQueueItem,
 ): number {
-  const rankDelta = runnerQueueRank(a) - runnerQueueRank(b);
+  const rankDelta = runnerQueueDisplayRank(a) - runnerQueueDisplayRank(b);
   if (rankDelta !== 0) return rankDelta;
 
   const aTime = new Date(a.sortAt).getTime();
@@ -348,8 +348,14 @@ function pickRunnerQueueStatus(
     : next;
 }
 
-function runnerQueueRank(item: RunnerQueueItem): number {
-  return runnerQueueStatusRank(item.status, item.isPriority);
+// Display rank: ready first — the call screen's job is hand-off, so orders
+// waiting at the pass outrank cooking ones. Distinct from
+// runnerQueueStatusRank, which aggregates a group to its least-done ticket.
+function runnerQueueDisplayRank(item: RunnerQueueItem): number {
+  if (item.status === "ready") return 0;
+  if (item.status === "preparing") return 1;
+  if (item.status === "pending") return item.isPriority ? 2 : 3;
+  return 4;
 }
 
 function runnerQueueStatusRank(

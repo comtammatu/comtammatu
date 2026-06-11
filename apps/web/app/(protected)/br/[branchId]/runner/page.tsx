@@ -36,7 +36,10 @@ const RUNNER_ORDER_ITEM_SELECT_BASE = "id, order_id, quantity";
 const RUNNER_ACTIVE_STATUSES = ["pending", "preparing"] as const;
 const RUNNER_VISIBLE_STATUSES = ["pending", "preparing", "ready"] as const;
 const RUNNER_VISIBLE_ROW_LIMIT = 4;
-const RUNNER_FEATURED_STATUS = "preparing";
+// Fully-bumped orders have no active sibling ticket left, so the anchor
+// queries below can no longer reach them; this window keeps them on the
+// board until hand-off (POS marks served) or timeout.
+const RUNNER_READY_WINDOW_MS = 15 * 60 * 1_000;
 const RUNNER_COLUMN_SPAN = {
   order: 4,
   quantity: 3,
@@ -245,8 +248,9 @@ async function fetchRunnerVisibleTickets(args: {
   supabase: RunnerSupabase;
   branchId: number;
   todayStartIso: string;
+  readyAfterIso: string;
 }): Promise<{ tickets: RunnerTicketSnapshot[]; error: boolean }> {
-  const { supabase, branchId, todayStartIso } = args;
+  const { supabase, branchId, todayStartIso, readyAfterIso } = args;
   const activeTicketsResult = await fetchPagedRows<RunnerTicketSnapshot>(
     async (from, to) => {
       const { data, error } = await supabase
@@ -335,6 +339,26 @@ async function fetchRunnerVisibleTickets(args: {
     chunks.push(ungroupedTicketsResult.data ?? []);
   }
 
+  const recentReadyResult = await fetchPagedRows<RunnerTicketSnapshot>(
+    async (from, to) => {
+      const { data, error } = await supabase
+        .from("kds_tickets")
+        .select(RUNNER_TICKET_SELECT)
+        .eq("branch_id", branchId)
+        .eq("status", "ready")
+        .gte("bumped_at", readyAfterIso)
+        .gte("created_at", todayStartIso)
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .range(from, to);
+
+      return { data: (data ?? null) as RunnerTicketSnapshot[] | null, error };
+    },
+  );
+
+  if (recentReadyResult.error) return { tickets: [], error: true };
+  chunks.push(recentReadyResult.data ?? []);
+
   return {
     tickets: sortRunnerTicketsNewestFirst(dedupeRowsById(chunks.flat())),
     error: false,
@@ -374,6 +398,7 @@ export default async function RunnerPage({
     supabase,
     branchId: branchIdNum,
     todayStartIso,
+    readyAfterIso: new Date(Date.now() - RUNNER_READY_WINDOW_MS).toISOString(),
   });
 
   if (ticketResult.error) {
@@ -630,19 +655,15 @@ function RunnerOrderListRow({
   featured: boolean;
   nowMs: number;
 }) {
-  const statusLabel = getRunnerStatusLabel(
-    featured ? RUNNER_FEATURED_STATUS : row.status,
-    { featured },
-  );
+  const statusLabel = getRunnerStatusLabel(row.status);
 
   return (
     <div
       role="listitem"
       className={cn(
         "grid h-full min-h-0 w-full grid-cols-12 items-stretch gap-0 divide-x divide-border/70 border-b border-l-4",
-        featured
-          ? "border-primary bg-primary text-primary-foreground"
-          : getRunnerRowClass(row.status),
+        getRunnerRowClass(row.status),
+        featured && "border-l-primary",
       )}
     >
       <RunnerOrderCell span={RUNNER_COLUMN_SPAN.order} mono>
@@ -760,12 +781,7 @@ function resolveRunnerListStatus(item: RunnerQueueItem): RunnerListStatus {
 
 function getRunnerStatusLabel(
   status: RunnerListStatus,
-  options?: { featured?: boolean },
 ): "Chờ" | "Chuẩn bị" | "Sẵn sàng" {
-  if (options?.featured === true) {
-    return RUNNER_COPY.preparing;
-  }
-
   if (status === "preparing") {
     return RUNNER_COPY.preparing;
   }

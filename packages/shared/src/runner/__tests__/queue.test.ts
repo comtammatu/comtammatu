@@ -274,7 +274,7 @@ test("buildRunnerQueue keeps POS-completed orders while KDS tickets are live", (
   assert.equal(item?.callNumber, "7");
 });
 
-test("buildRunnerQueue follows KDS queue rank with item-level priority", () => {
+test("buildRunnerQueue puts ready hand-offs first, then KDS queue rank with item-level priority", () => {
   const input: BuildRunnerQueueInput = {
     ...base,
     tickets: [
@@ -366,15 +366,69 @@ test("buildRunnerQueue follows KDS queue rank with item-level priority", () => {
   assert.deepEqual(
     queue.map((item) => item.orderNumber),
     [
+      "MV-20260524-030-CN1",
       "MV-20260524-033-CN1",
       "MV-20260524-032-CN1",
       "MV-20260524-031-CN1",
-      "MV-20260524-030-CN1",
     ],
   );
-  assert.equal(queue[1]?.isPriority, true);
-  assert.equal(queue[1]?.status, "pending");
-  assert.equal(queue[3]?.lane, "ready");
+  assert.equal(queue[0]?.lane, "ready");
+  assert.equal(queue[2]?.isPriority, true);
+  assert.equal(queue[2]?.status, "pending");
+});
+
+test("buildRunnerQueue keeps a fully-bumped order on the ready lane ahead of cooking orders", () => {
+  const input: BuildRunnerQueueInput = {
+    ...base,
+    tickets: [
+      {
+        id: 40,
+        order_id: 40,
+        kitchen_send_batch_id: null,
+        status: "ready",
+        bumped_at: "2026-05-24T03:05:00.000Z",
+        created_at: "2026-05-24T03:00:00.000Z",
+        updated_at: "2026-05-24T03:05:00.000Z",
+      },
+      {
+        id: 41,
+        order_id: 41,
+        kitchen_send_batch_id: null,
+        status: "preparing",
+        bumped_at: null,
+        created_at: "2026-05-24T02:50:00.000Z",
+        updated_at: "2026-05-24T02:50:00.000Z",
+      },
+    ],
+    orders: [
+      {
+        id: 40,
+        order_number: "MV-20260524-040-CN1",
+        order_type: "takeaway",
+        table_id: null,
+        status: "completed",
+        created_at: "2026-05-24T03:00:00.000Z",
+        tables: null,
+      },
+      {
+        id: 41,
+        order_number: "MV-20260524-041-CN1",
+        order_type: "takeaway",
+        table_id: null,
+        status: "preparing",
+        created_at: "2026-05-24T02:50:00.000Z",
+        tables: null,
+      },
+    ],
+    kitchenBatches: [],
+  };
+
+  const queue = buildRunnerQueue(input);
+
+  assert.equal(queue[0]?.orderNumber, "MV-20260524-040-CN1");
+  assert.equal(queue[0]?.lane, "ready");
+  assert.equal(queue[0]?.status, "ready");
+  assert.equal(queue[1]?.lane, "active");
 });
 
 test("buildRunnerQueue keeps mixed KDS batch statuses in one active row", () => {

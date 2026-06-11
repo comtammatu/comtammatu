@@ -60,7 +60,11 @@ test("Runner page follows the KDS order-list vocabulary", () => {
   );
   assert.match(runnerPageSource, /wifi: "WiFi: Má Tư"/);
   assert.match(runnerPageSource, /password: "Mật khẩu: xincamon"/);
-  assert.match(runnerPageSource, /const RUNNER_FEATURED_STATUS = "preparing";/);
+  assert.match(
+    runnerPageSource,
+    /const RUNNER_READY_WINDOW_MS = 15 \* 60 \* 1_000;/,
+  );
+  assert.doesNotMatch(runnerPageSource, /RUNNER_FEATURED_STATUS/);
   assert.match(runnerPageSource, /preparing: "Chuẩn bị"/);
   assert.match(runnerPageSource, /order: "Đơn"/);
   assert.match(runnerPageSource, /quantity: "Số món"/);
@@ -134,11 +138,14 @@ test("Runner page follows the KDS order-list vocabulary", () => {
     runnerPageSource,
     /<RunnerOrderCell span=\{RUNNER_COLUMN_SPAN\.status\} mono>\s*\{statusLabel\}\s*<\/RunnerOrderCell>/,
   );
-  assert.match(runnerPageSource, /bg-primary text-primary-foreground/);
   assert.match(
     runnerPageSource,
-    /featured \? RUNNER_FEATURED_STATUS : row\.status/,
+    /const statusLabel = getRunnerStatusLabel\(row\.status\);/,
   );
+  assert.match(runnerPageSource, /featured && "border-l-primary"/);
+  assert.doesNotMatch(runnerPageSource, /bg-primary text-primary-foreground/);
+  assert.match(runnerPageSource, /\.eq\("status", "ready"\)/);
+  assert.match(runnerPageSource, /\.gte\("bumped_at", readyAfterIso\)/);
   assert.match(runnerPageSource, /getRunnerStatusLabel/);
   assert.match(runnerPageSource, /RunnerOrderCell/);
   assert.match(
