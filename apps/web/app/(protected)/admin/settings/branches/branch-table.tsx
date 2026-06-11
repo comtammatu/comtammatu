@@ -36,7 +36,7 @@ import { toggleBranchActive } from "./actions";
 import { BranchFormDialog } from "./branch-form-dialog";
 import { NetworkConfigDialog } from "./network-config-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { TableEmptyStateRow } from "../../components/table-empty-state-row";
+import { TableEmptyStateRow } from "@/components/table-empty-state-row";
 
 import { FORM_VI } from "@comtammatu/shared/messages";
 export interface BranchRow {

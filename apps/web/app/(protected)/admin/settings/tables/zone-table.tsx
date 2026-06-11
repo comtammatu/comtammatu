@@ -37,7 +37,7 @@ import {
 import { deleteZone } from "./actions";
 import { ZoneFormDialog } from "./zone-form-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { TableEmptyStateRow } from "../../components/table-empty-state-row";
+import { TableEmptyStateRow } from "@/components/table-empty-state-row";
 
 export interface ZoneRow {
   id: number;

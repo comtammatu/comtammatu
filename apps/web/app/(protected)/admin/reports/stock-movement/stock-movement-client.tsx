@@ -27,7 +27,7 @@ import {
   TableHeader,
   TableRow,
 } from "@comtammatu/ui/components/table";
-import { EmptyStatePanel } from "../../components/empty-state-panel";
+import { AppEmptyState } from "@/components/surface";
 import {
   fetchBranchMovementSummary,
   fetchStockMovementReport,
@@ -181,10 +181,7 @@ export function StockMovementClient({
       {error && <p className="text-sm text-destructive">{error}</p>}
 
       {!loaded && !error && (
-        <EmptyStatePanel
-          className="py-12"
-          title={stockMovementCopy.choosePeriodTitle}
-        />
+        <AppEmptyState title={stockMovementCopy.choosePeriodTitle} />
       )}
 
       {loaded && (
@@ -200,8 +197,7 @@ export function StockMovementClient({
 
           <TabsContent value="detail" className="mt-4">
             {movementRows.length === 0 ? (
-              <EmptyStatePanel
-                className="py-12"
+              <AppEmptyState
                 title={stockMovementCopy.emptyTitle}
                 description={stockMovementCopy.detailEmptyDescription}
               />
@@ -382,8 +378,7 @@ export function StockMovementClient({
 
           <TabsContent value="branch" className="mt-4">
             {branchRows.length === 0 ? (
-              <EmptyStatePanel
-                className="py-12"
+              <AppEmptyState
                 title={stockMovementCopy.emptyTitle}
                 description={stockMovementCopy.branchEmptyDescription}
               />

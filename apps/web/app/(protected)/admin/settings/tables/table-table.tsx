@@ -45,7 +45,7 @@ import {
   TABLE_VI,
 } from "@comtammatu/shared/messages";
 import { messages } from "@lib/messages";
-import { TableEmptyStateRow } from "../../components/table-empty-state-row";
+import { TableEmptyStateRow } from "@/components/table-empty-state-row";
 
 export interface TableRow {
   id: number;

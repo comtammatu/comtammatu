@@ -277,6 +277,7 @@ export function OrdersClient({
         <CardContent className="space-y-4">
           {displayOrders.length === 0 ? (
             <AppEmptyState
+              className="md:hidden"
               mode={hasFilters ? "no-results" : "no-data"}
               title="Không có đơn hàng nào"
               description={

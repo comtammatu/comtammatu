@@ -32,7 +32,8 @@ import { MoneyVndInput, QuantityInput } from "@/components/form";
 import { matchesSearch } from "@lib/search";
 import { MobilePage } from "../../../_components/mobile/mobile-page";
 import { MobileSectionHeader } from "../../../_components/mobile/mobile-section-header";
-import { MobileEmptyState } from "../../../_components/mobile/mobile-empty-state";
+import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { AppEmptyState } from "@/components/surface";
 import { TouchButton } from "../../../_components/mobile/touch-button";
 import { NumberPadSheet } from "../../../_components/mobile/number-pad-sheet";
 import {
@@ -231,7 +232,12 @@ export function GrnCreateClient({
   }
 
   async function discardDraft() {
-    if (!window.confirm("Xóa phiếu nháp này? Các dòng đã nhập sẽ mất.")) return;
+    const ok = await confirm({
+      title: "Xóa phiếu nháp này?",
+      description: "Các dòng đã nhập sẽ mất.",
+      variant: "destructive",
+    });
+    if (!ok) return;
     if (serverGrnId !== null) {
       const res = await discardGrnDraft({ grnId: serverGrnId });
       if (!res.success) {
@@ -372,8 +378,9 @@ export function GrnCreateClient({
 
       <div className="flex flex-col gap-2">
         {filtered.length === 0 ? (
-          <MobileEmptyState
-            icon={IconSearch}
+          <AppEmptyState
+            compact
+            icon={<IconSearch />}
             title="Không thấy nguyên liệu"
             description="Thử từ khóa khác hoặc kiểm tra lại danh mục."
           />

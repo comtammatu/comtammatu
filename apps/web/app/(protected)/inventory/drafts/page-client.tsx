@@ -10,7 +10,9 @@ import {
 import { Badge } from "@comtammatu/ui/components/badge";
 import { Button } from "@comtammatu/ui/components/button";
 import { Card, CardContent } from "@comtammatu/ui/components/card";
-import { MobileEmptyState } from "../_components/mobile/mobile-empty-state";
+import { confirm } from "@comtammatu/ui/components/confirm-dialog";
+import { toast } from "@comtammatu/ui/components/sonner";
+import { AppEmptyState } from "@/components/surface";
 import { MobilePage } from "../_components/mobile/mobile-page";
 import { MobileSectionHeader } from "../_components/mobile/mobile-section-header";
 import { discardGrnDraft } from "../grn-actions";
@@ -45,12 +47,16 @@ export function MobileDraftsClient({ drafts }: { drafts: ServerDraftRow[] }) {
   }
 
   async function handleDiscard(draft: ServerDraftRow) {
-    if (!window.confirm(`Xóa nháp của ${draft.supplierName}?`)) return;
+    const ok = await confirm({
+      title: `Xóa nháp của ${draft.supplierName}?`,
+      variant: "destructive",
+    });
+    if (!ok) return;
     setPending(true);
     try {
       const res = await discardGrnDraft({ grnId: draft.grnId });
       if (!res.success) {
-        window.alert(res.error ?? "Không thể hủy phiếu nháp.");
+        toast.error(res.error ?? "Không thể hủy phiếu nháp.");
         return;
       }
       router.refresh();
@@ -70,8 +76,9 @@ export function MobileDraftsClient({ drafts }: { drafts: ServerDraftRow[] }) {
       />
 
       {drafts.length === 0 ? (
-        <MobileEmptyState
-          icon={IconClipboardList}
+        <AppEmptyState
+          compact
+          icon={<IconClipboardList />}
           title="Chưa có phiếu nháp"
           description="Bắt đầu tạo phiếu nhập để hệ thống lưu lại tiến độ cho bạn."
         />

@@ -27,11 +27,11 @@ import {
   TableRow,
 } from "@comtammatu/ui/components/table";
 import { ACTIVE_STATE_LABELS_VI } from "@comtammatu/shared/labels";
-import { EmptyStatePanel } from "../components/empty-state-panel";
 import { toggleStaffActive } from "./actions";
 import { StaffFormDialog } from "./staff-form-dialog";
 import { toast } from "@comtammatu/ui/components/sonner";
-import { TableEmptyStateRow } from "../components/table-empty-state-row";
+import { AppEmptyState } from "@/components/surface";
+import { TableEmptyStateRow } from "@/components/table-empty-state-row";
 
 import { BRANCH_VI, FORM_VI, STAFF_VI } from "@comtammatu/shared/messages";
 export interface BranchOption {
@@ -82,7 +82,11 @@ export function StaffTable({
   return (
     <>
       {staff.length === 0 ? (
-        <EmptyStatePanel title="Chưa có nhân viên nào" icon={<IconUsers />} />
+        <AppEmptyState
+          className="md:hidden"
+          title="Chưa có nhân viên nào"
+          icon={<IconUsers />}
+        />
       ) : null}
 
       <div className="space-y-3 md:hidden">

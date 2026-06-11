@@ -20,7 +20,7 @@ import {
 import { MobilePage } from "../../_components/mobile/mobile-page";
 import { MobileSectionHeader } from "../../_components/mobile/mobile-section-header";
 import { InteractiveCard } from "../../_components/mobile/interactive-card";
-import { MobileEmptyState } from "../../_components/mobile/mobile-empty-state";
+import { AppEmptyState } from "@/components/surface";
 import {
   fetchOpenPurchaseOrdersForReceiving,
   type OpenPurchaseOrderRow,
@@ -147,8 +147,9 @@ export default async function GrnNewSupplierPage() {
           </p>
         </div>
         {suppliers.length === 0 ? (
-          <MobileEmptyState
-            icon={IconUsers}
+          <AppEmptyState
+            compact
+            icon={<IconUsers />}
             title="Chưa có nhà cung cấp"
             description="Thêm nhà cung cấp ở mục Quản lý trước khi tạo phiếu nhập."
           />

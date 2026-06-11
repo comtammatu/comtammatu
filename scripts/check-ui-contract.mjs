@@ -228,6 +228,14 @@ const checks = [
       "apps/web/app/components/kpi/kpi-card.tsx": 1,
     },
   },
+  {
+    id: "no-native-dialog",
+    description:
+      "Use confirm() from @comtammatu/ui/components/confirm-dialog and Sonner toasts; native window.confirm/alert are forbidden.",
+    roots: [{ dir: "apps/web/app", extensions: [".ts", ".tsx"] }],
+    pattern: /window\.(?:confirm|alert)\(/g,
+    allowlist: {},
+  },
 ];
 
 const failures = [];

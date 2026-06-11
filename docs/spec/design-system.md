@@ -374,6 +374,20 @@ Default primitive mapping:
 
 Toast and durable notification behavior is specified in `docs/spec/toast-notification-system.md`.
 
+### Empty / Confirm (lock to adapters)
+
+- Empty states render through `AppEmptyState` (page/section) or
+  `TableEmptyStateRow` (inside a `Table`); the raw `Empty*` primitives are
+  reserved for approved wrappers (`surface.tsx`, employee surface layer).
+  `EmptyStatePanel` and the inventory `MobileEmptyState` are retired.
+- A list surface renders ONE empty treatment per breakpoint — never a panel
+  and a table row stacked on the same viewport.
+- Simple yes/no destructive confirmation uses `confirm()` from
+  `@comtammatu/ui/components/confirm-dialog` (provider mounted in the root
+  layout). Native `window.confirm` / `window.alert` are forbidden (ratchet
+  `no-native-dialog`). Hand-rolled `AlertDialog` stays only for flows that
+  collect input (reason, quantity) before confirming.
+
 ### Status vocabulary (lock to StatusBadge)
 
 Business-state labels and badge colors are single-sourced:
