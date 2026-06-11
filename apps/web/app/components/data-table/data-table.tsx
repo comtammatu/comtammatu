@@ -5,6 +5,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
@@ -24,7 +25,11 @@ export interface DataTableColumn<T> {
   key: string;
   header: string;
   className?: string;
-  render: (row: T) => ReactNode;
+  /**
+   * `index` enables inline-edit document tables (patchLine-style row
+   * mutations keyed by position). Render-only consumers ignore it.
+   */
+  render: (row: T, index: number) => ReactNode;
   hideOnMobile?: boolean;
 }
 
@@ -63,13 +68,21 @@ interface DataTableProps<T> {
   emptyIcon?: ReactNode;
   emptyMode?: "no-data" | "no-results";
   totalCount?: number;
-  mobileCardRender: (row: T) => ReactNode;
+  mobileCardRender: (row: T, index: number) => ReactNode;
   actions?: ReactNode;
   pageSize?: number;
   currentPage?: number;
   onPageChange?: (page: number) => void;
   onRowClick?: (row: T) => void;
   className?: string;
+  /**
+   * Document-table totals (e.g. PO/transfer/issue line sheets). Rendered
+   * as `<TableFooter>` rows on desktop and as a block under the card
+   * list on mobile — pass `<TableRow>`s for desktop via this prop and a
+   * mobile-friendly block via `mobileFooter`.
+   */
+  desktopFooter?: ReactNode;
+  mobileFooter?: ReactNode;
 }
 
 /* ------------------------------------------------------------------ */
@@ -91,6 +104,8 @@ export function DataTable<T>({
   onPageChange,
   onRowClick,
   className,
+  desktopFooter,
+  mobileFooter,
 }: DataTableProps<T>) {
   const isMobile = useIsMobile();
   const colSpan = columns.length;
@@ -109,10 +124,11 @@ export function DataTable<T>({
             icon={emptyIcon}
           />
         ) : (
-          data.map((row) => (
-            <div key={getRowKey(row)}>{mobileCardRender(row)}</div>
+          data.map((row, index) => (
+            <div key={getRowKey(row)}>{mobileCardRender(row, index)}</div>
           ))
         )}
+        {data.length > 0 ? mobileFooter : null}
         {showPagination && (
           <DataTablePagination
             pageSize={pageSize}
@@ -147,7 +163,7 @@ export function DataTable<T>({
               mode={emptyMode}
             />
           ) : (
-            data.map((row) => (
+            data.map((row, index) => (
               <TableRow
                 key={getRowKey(row)}
                 className={cn(
@@ -157,13 +173,16 @@ export function DataTable<T>({
               >
                 {columns.map((col) => (
                   <TableCell key={col.key} className={col.className}>
-                    {col.render(row)}
+                    {col.render(row, index)}
                   </TableCell>
                 ))}
               </TableRow>
             ))
           )}
         </TableBody>
+        {desktopFooter != null && data.length > 0 ? (
+          <TableFooter>{desktopFooter}</TableFooter>
+        ) : null}
       </Table>
       {showPagination && (
         <DataTablePagination

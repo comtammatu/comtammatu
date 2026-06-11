@@ -386,6 +386,13 @@ route family. Mobile and desktop MUST expose the same fields, status colors,
 and actions for the same row. The retired inventory copy of the data-table
 suite must not be reintroduced.
 
+Inline-edit document sheets (PO/transfer/issue lines) use the same adapter:
+`render`/`mobileCardRender` receive `(row, index)` so per-line mutations
+(`patchLine(index)`) work without a parallel tree, and document totals render
+through `desktopFooter` (TableFooter rows) + `mobileFooter` (block under the
+card list). Line inputs MUST be controlled (value from parent state) so the
+breakpoint switch can remount them safely.
+
 ### Empty / Confirm (lock to adapters)
 
 - Empty states render through `AppEmptyState` (page/section) or

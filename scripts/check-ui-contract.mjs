@@ -237,7 +237,6 @@ const checks = [
     pattern: /\bhidden\b[^"'\n]*\bmd:block\b/g,
     allowlist: {
       "apps/web/app/(protected)/inventory/issues/[id]/issue-detail-client.tsx": 1,
-      "apps/web/app/(protected)/inventory/purchase-orders/[id]/po-detail-client.tsx": 1,
       "apps/web/app/(protected)/inventory/transfers/[id]/transfer-detail-client.tsx": 1,
     },
   },
