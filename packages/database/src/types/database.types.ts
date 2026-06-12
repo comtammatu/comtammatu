@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       accounting_periods: {
@@ -9303,6 +9328,22 @@ export type Database = {
         Args: { p_payload: Json }
         Returns: Json
       }
+      print_vietqr_ascii: {
+        Args: { p_max: number; p_value: string }
+        Returns: string
+      }
+      print_vietqr_bank_bin: { Args: { p_bank_code: string }; Returns: string }
+      print_vietqr_crc16: { Args: { p_input: string }; Returns: string }
+      print_vietqr_emvco: {
+        Args: {
+          p_account_name: string
+          p_account_no: string
+          p_amount: number
+          p_bank_code: string
+          p_description: string
+        }
+        Returns: string
+      }
       recall_kds_ticket: { Args: { p_ticket_id: number }; Returns: string }
       recompute_supplier_invoice_matching: {
         Args: { p_invoice_id: number }
@@ -9453,6 +9494,15 @@ export type Database = {
       save_item_variants: {
         Args: { p_item_id: number; p_variants: Json }
         Returns: undefined
+      }
+      save_print_template_version: {
+        Args: {
+          p_content: Json
+          p_kind: string
+          p_name: string
+          p_paper_width_mm: number
+        }
+        Returns: Json
       }
       save_station_categories: {
         Args: { p_category_ids: number[]; p_station_id: number }
@@ -9816,6 +9866,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },

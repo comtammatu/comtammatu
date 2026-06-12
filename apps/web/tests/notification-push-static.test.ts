@@ -15,6 +15,18 @@ test("service worker handles Web Push display and notification click routing", (
   assert.match(source, /clients\.openWindow/);
 });
 
+test("development layout unregisters stale service workers", () => {
+  const layout = read("../app/layout.tsx");
+  const reset = read("../app/dev-service-worker-reset.tsx");
+
+  assert.match(layout, /disable=\{process\.env\.NODE_ENV === "development"\}/);
+  assert.match(layout, /<DevServiceWorkerReset \/>/);
+  assert.match(reset, /getRegistrations/);
+  assert.match(reset, /registration\.unregister/);
+  assert.match(reset, /window\.caches\.delete/);
+  assert.match(reset, /window\.location\.reload/);
+});
+
 test("notification actions expose push subscription lifecycle", () => {
   const source = read("../app/_actions/notifications.ts");
 

@@ -27,6 +27,7 @@ apps/print-agent/dist-bundle/
 .DS_Store
 
 # Playwright
+.playwright-cli/
 apps/web/.playwright/
 apps/web/playwright-report/
 apps/web/test-results/

@@ -7,6 +7,7 @@ import { ThemeProvider } from "@comtammatu/ui/components/theme-provider";
 import { getThemeScriptHtml } from "@comtammatu/ui/components/theme-script";
 import { TooltipProvider } from "@comtammatu/ui/components/tooltip";
 import { ResponsiveToaster } from "./_components/responsive-toaster";
+import { DevServiceWorkerReset } from "./dev-service-worker-reset";
 import { SerwistProvider } from "./serwist-provider";
 import "@comtammatu/ui/globals.css";
 import { cn } from "@/lib/utils";
@@ -98,6 +99,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           >
             <TooltipProvider>{children}</TooltipProvider>
           </SerwistProvider>
+          {process.env.NODE_ENV === "development" ? (
+            <DevServiceWorkerReset />
+          ) : null}
           <ResponsiveToaster />
           <ConfirmDialogProvider />
         </ThemeProvider>

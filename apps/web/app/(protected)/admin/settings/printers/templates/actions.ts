@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import type { Json } from "@comtammatu/database";
 import { PERMISSION_KEYS } from "@comtammatu/shared/auth";
 import type { ActionResult } from "@comtammatu/shared/types";
 import {
@@ -99,6 +100,10 @@ function templateContext() {
   );
 }
 
+function toSupabaseJson(value: unknown): Json {
+  return JSON.parse(JSON.stringify(value)) as Json;
+}
+
 export async function savePrintTemplate(
   input: z.infer<typeof saveSchema>,
 ): Promise<ActionResult<{ id: number; version: number }>> {
@@ -113,15 +118,14 @@ export async function savePrintTemplate(
   const ctx = await templateContext();
   if (!ctx) return { success: false, error: "Không có quyền sửa mẫu phiếu" };
 
-  // RPC added by migration 20260611150000; regenerate db types after apply.
   const { data, error } = await ctx.supabase.rpc(
-    "save_print_template_version" as never,
+    "save_print_template_version",
     {
       p_kind: parsed.data.kind,
       p_name: parsed.data.name,
       p_paper_width_mm: parsed.data.paper_width_mm,
-      p_content: parsed.data.content,
-    } as never,
+      p_content: toSupabaseJson(parsed.data.content),
+    },
   );
 
   if (error) {

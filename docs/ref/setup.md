@@ -48,12 +48,13 @@ Repo chỉ giữ template không có token: `.mcp.json.example`. File chạy th�
 cp .mcp.json.example .mcp.json
 ```
 
-Edit `.mcp.json` — fill tokens:
+MCP dùng remote HTTP + OAuth, không hardcode PAT trong repo. Sau khi copy file,
+mở agent trong project root và kích hoạt luồng đăng nhập MCP của client.
 
-| Server       | Token source                                                                           | Purpose                   |
-| ------------ | -------------------------------------------------------------------------------------- | ------------------------- |
-| **supabase** | [supabase.com/dashboard/account/tokens](https://supabase.com/dashboard/account/tokens) | SQL, migrations, type gen |
-| **vercel**   | [vercel.com/account/tokens](https://vercel.com/account/tokens)                         | Deploy, logs, runtime     |
+| Server       | URL                                                                                                                               | Scope                                                     |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| **supabase** | `https://mcp.supabase.com/mcp?project_ref=iexwsuaqqenyjiskawoj&read_only=true&features=database,debugging,development,docs`       | Project-scoped, read-only production inspection + docs    |
+| **vercel**   | `https://mcp.vercel.com`                                                                                                          | Vercel projects, deployments, logs, runtime docs via OAuth |
 
 Optional (install globally as needed):
 

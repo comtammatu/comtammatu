@@ -1,18 +1,12 @@
 {
   "mcpServers": {
     "supabase": {
-      "command": "npx",
-      "args": ["-y", "@supabase/mcp-server"],
-      "env": {
-        "SUPABASE_ACCESS_TOKEN": "YOUR_TOKEN_HERE"
-      }
+      "type": "http",
+      "url": "https://mcp.supabase.com/mcp?project_ref=iexwsuaqqenyjiskawoj&read_only=true&features=database,debugging,development,docs"
     },
     "vercel": {
-      "command": "npx",
-      "args": ["-y", "vercel-mcp-server"],
-      "env": {
-        "VERCEL_TOKEN": "YOUR_TOKEN_HERE"
-      }
+      "type": "http",
+      "url": "https://mcp.vercel.com"
     }
   }
 }
